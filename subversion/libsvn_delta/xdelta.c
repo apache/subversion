@@ -278,7 +278,7 @@ compute_delta (svn_txdelta__ops_baton_t *build_baton,
 
       /* If we didn't find a real match, insert the byte at the target
          position into the pending insert.  */
-      if (match == FALSE)
+      if (! match)
         {
 
           if (pending_insert != NULL)
@@ -292,7 +292,7 @@ compute_delta (svn_txdelta__ops_baton_t *build_baton,
              didn't find a match, we are going to generate a copy instruction
              when we should have generated an insert, so something about the
              condition above, or what the match routine did, is wrong.  */
-          assert (match == TRUE);
+          assert (match);
 
           if (pending_insert)
             {

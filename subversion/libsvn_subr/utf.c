@@ -490,12 +490,8 @@ check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
 
               return svn_error_createf
                 (APR_EINVAL, NULL,
-                 _("Safe data:\n"
-                   "\"%s\"\n"
-                   "... was followed by non-ASCII byte %d.\n"
-                   "\n"
-                   "Non-ASCII character detected (see above), "
-                   "and unable to convert to/from UTF-8"),
+                 _("Safe data '%s' was followed by non-ASCII byte %d: "
+                   "unable to convert to/from UTF-8"),
                  error_data, *((const unsigned char *) data));
             }
           else

@@ -416,8 +416,8 @@ copy_dir_administratively (const char *src_path,
      After the commit, ra_dav should regenerate them and re-store them as
      an optimization.  Note we use the normal locking mechanism here, even
      though this directory has not yet been added to the parent. */
-  SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, dst_path, TRUE, -1,
-                             pool));
+  SVN_ERR (svn_wc_adm_open3 (&adm_access, NULL, dst_path, TRUE, -1,
+                             cancel_func, cancel_baton, pool));
   SVN_ERR (svn_wc__remove_wcprops (adm_access, TRUE, pool));
   SVN_ERR (convert_deleted_to_schedule_delete (adm_access, pool));
   SVN_ERR (svn_wc_adm_close (adm_access));
@@ -467,8 +467,8 @@ svn_wc_copy (const char *src_path,
        _("Cannot copy to '%s' as it is scheduled for deletion"),
        svn_path_local_style (svn_wc_adm_access_path (dst_parent), pool));
 
-  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, src_path, FALSE, -1,
-                                   pool));
+  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, src_path, FALSE, -1,
+                                   cancel_func, cancel_baton, pool));
 
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
   

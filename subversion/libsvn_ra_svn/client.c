@@ -1105,11 +1105,10 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
       else
         cphash = NULL;
 
-      if (limit && ++nreceived > limit)
-        break;
+      if (! (limit && ++nreceived > limit))
+        SVN_ERR(receiver(receiver_baton, cphash, rev, author, date, message,
+                         subpool));
 
-      SVN_ERR(receiver(receiver_baton, cphash, rev, author, date, message,
-                       subpool));
       apr_pool_clear(subpool);
     }
   apr_pool_destroy(subpool);

@@ -322,7 +322,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "  If specified, PEGREV determines in which revision the target is "
        "first\n"
        "  looked up.\n"),
-    {'r', 'q', svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
+    {'r', 'q', 'N', svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt, svn_cl__native_eol_opt, 
      svn_cl__ignore_externals_opt} },
 
@@ -780,7 +780,7 @@ main (int argc, const char * const *argv)
   svn_config_t *cfg;
   
   /* Initialize the app. */
-  if (svn_cmdline_init ("svn", stderr) != EXIT_SUCCESS)
+  if (svn_cmdline_init2 ("svn", stderr, FALSE) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   /* Create our top-level pool.  Use a seperate mutexless allocator,
@@ -1156,8 +1156,8 @@ main (int argc, const char * const *argv)
           svn_wc_adm_access_t *adm_access;
           const svn_wc_entry_t *e;
           const char *fname_utf8 = svn_path_internal_style (dash_F_arg, pool);
-          err = svn_wc_adm_probe_open2 (&adm_access, NULL, fname_utf8,
-                                        FALSE, 0, pool);
+          err = svn_wc_adm_probe_open3 (&adm_access, NULL, fname_utf8,
+                                        FALSE, 0, NULL, NULL, pool);
           if (! err)
             err = svn_wc_entry (&e, fname_utf8, adm_access, FALSE, pool);
           if ((err == SVN_NO_ERROR) && e)

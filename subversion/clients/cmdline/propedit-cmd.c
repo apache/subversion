@@ -210,8 +210,9 @@ svn_cl__propedit (apr_getopt_t *os,
             propval = svn_string_create ("", subpool);
           
           /* Split the path if it is a file path. */
-          SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target,
-                                           FALSE, 0, subpool));
+          SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, target,
+                                           FALSE, 0, ctx->cancel_func,
+                                           ctx->cancel_baton, subpool));
           SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, subpool));
           if (! entry)
             return svn_error_createf
@@ -245,7 +246,7 @@ svn_cl__propedit (apr_getopt_t *os,
               
               SVN_ERR (svn_client_propset2 (pname_utf8, propval, target, 
                                             FALSE, opt_state->force,
-                                            subpool));
+                                            ctx, subpool));
               SVN_ERR
                 (svn_cmdline_printf
                  (subpool, _("Set new value for property '%s' on '%s'\n"),

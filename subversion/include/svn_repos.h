@@ -612,8 +612,8 @@ svn_repos_history2 (svn_fs_t *fs,
 /**
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_repos_history(), but with @a authz_read_func and
- * @a authz_read_baton always set to NULL.
+ * Similar to @c svn_repos_history, but with @a authz_read_func
+ * and @a authz_read_baton always set to NULL.
  */
 svn_error_t *
 svn_repos_history (svn_fs_t *fs,
@@ -910,7 +910,7 @@ svn_error_t *svn_repos_fs_change_rev_prop2 (svn_repos_t *repos,
 /**
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_repos_fs_change_rev_prop2(), but with the
+ * Similar to @c svn_repos_fs_change_rev_prop2, but with the
  * @a authz_read_func parameter always NULL.
  */
 svn_error_t *svn_repos_fs_change_rev_prop (svn_repos_t *repos,
@@ -1195,7 +1195,7 @@ svn_error_t *svn_repos_dump_fs2 (svn_repos_t *repos,
 /**
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_repos_dump_fs2(), but with the @a use_deltas
+ * Similar to @c svn_repos_dump_fs2, but with the @a use_deltas
  * parameter always set to @c FALSE.
  */
 svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
@@ -1260,7 +1260,7 @@ svn_error_t *svn_repos_load_fs2 (svn_repos_t *repos,
 /**
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_repos_load_fs2, but with @a use_pre_commit_hook and
+ * Similar to @c svn_repos_load_fs2, but with @a use_pre_commit_hook and
  * @a use_post_commit_hook always @c FALSE.
  */
 svn_error_t *svn_repos_load_fs (svn_repos_t *repos,
@@ -1465,8 +1465,8 @@ typedef struct svn_repos_parse_fns_t
 /**
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_repos_parse_dumpstream2, but uses the more limited
- * svn_repos_parser_fns_t vtable type.
+ * Similar to @c svn_repos_parse_dumpstream2, but uses the more limited
+ * @c svn_repos_parser_fns_t vtable type.
  */
 svn_error_t *
 svn_repos_parse_dumpstream (svn_stream_t *stream,
@@ -1480,7 +1480,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
 /**
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_repos_get_fs_build_parser2, but yields the more
+ * Similar to @c svn_repos_get_fs_build_parser2, but yields the more
  * limited svn_repos_parser_fns_t vtable type.
  */
 svn_error_t *

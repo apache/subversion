@@ -438,6 +438,14 @@ svn_client_create_context (svn_client_ctx_t **ctx,
  * If @a ctx->notify_func is non-null, invoke @a ctx->notify_func with 
  * @a ctx->notify_baton as the checkout progresses.
  *
+ * If @a recurse is true, check out recursively.  Otherwise, check out
+ * just the directory represented by @a URL and its immediate
+ * non-directory children, but none of its child directories (if any).
+ *
+ * If @a URL refers to a file rather than a directory, return the
+ * error SVN_ERR_UNSUPPORTED_FEATURE.  If @a URL does not exist,
+ * return the error SVN_ERR_RA_ILLEGAL_URL.
+ *
  * Use @a pool for any temporary allocation.
  */
 svn_error_t *
@@ -492,6 +500,10 @@ svn_client_checkout (svn_revnum_t *result_rev,
  * If @a ignore_externals is set, don't process externals definitions
  * as part of this operation.
  *
+ * If @a recurse is true, update directories recursively; otherwise,
+ * update just their immediate entries, but not their child
+ * directories (if any).
+ *
  * If @a ctx->notify_func is non-null, invoke @a ctx->notify_func with
  * @a ctx->notify_baton for each item handled by the update, and also for
  * files restored from text-base.  If @a ctx->cancel_func is non-null, invoke
@@ -537,6 +549,10 @@ svn_client_update (svn_revnum_t *result_rev,
  * @a revision must be of kind @c svn_opt_revision_number,
  * @c svn_opt_revision_head, or @c svn_opt_revision_date; otherwise,
  * return @c SVN_ERR_CLIENT_BAD_REVISION.
+ *
+ * If @a recurse is true, and @a path is a directory, switch it
+ * recursively; otherwise, switch just @a path and its immediate
+ * entries, but not its child directories (if any).
  *
  * If @a ctx->notify_func is non-null, invoke it with @a ctx->notify_baton 
  * on paths affected by the switch.  Also invoke it for files may be restored
@@ -782,7 +798,7 @@ svn_client_status2 (svn_revnum_t *result_rev,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  *
  * Similar to svn_client_status2(), but with the @a ignore_externals
- * parameter always set to @c TRUE.
+ * parameter always set to @c FALSE.
  */
 svn_error_t *
 svn_client_status (svn_revnum_t *result_rev,
@@ -1001,7 +1017,7 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
  * changed between @a start_revision and @a end_revision.  @a path can
  * be either a working-copy path or URL.
  *
- * All other options are handled identically to svn_client_diff2.
+ * All other options are handled identically to @c svn_client_diff2.
  */
 svn_error_t *svn_client_diff_peg2 (const apr_array_header_t *diff_options,
                                    const char *path,
@@ -1098,7 +1114,7 @@ svn_client_merge (const char *source1,
  * revision @a peg_revision, as it changed between @a revision1 and @a
  * revision2.  
  *
- * All other options are handled identically to svn_client_merge.
+ * All other options are handled identically to @c svn_client_merge.
  */
 svn_error_t *
 svn_client_merge_peg (const char *source,
@@ -1328,6 +1344,9 @@ svn_client_move (svn_client_commit_info_t **commit_info,
  * @a propname is "svn:mime-type", but @a propval is not a valid
  * mime-type).
  *
+ * If @a ctx->cancel_func is non-null, invoke it passing @a
+ * ctx->cancel_baton at various places during the operation.
+ *
  * Use @a pool for all memory allocation.
  */
 svn_error_t *
@@ -1336,6 +1355,7 @@ svn_client_propset2 (const char *propname,
                      const char *target,
                      svn_boolean_t recurse,
                      svn_boolean_t force,
+                     svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
 /**
@@ -1568,6 +1588,12 @@ svn_client_revprop_list (apr_hash_t **props,
  * will use the standard eol marker.  Any other value will cause the
  * SVN_ERR_IO_UNKNOWN_EOL error to be returned.
  *
+ * If @a recurse is TRUE, export recursively.  Otherwise, export
+ * just the directory represented by @a from and its immediate
+ * non-directory children, but none of its child directories (if any).
+ * Also, if @a recurse is FALSE, the export will behave as if
+ * @a ignore_externals is TRUE.
+ *
  * All allocations are done in @a pool.
  */ 
 svn_error_t *
@@ -1578,6 +1604,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
                     const svn_opt_revision_t *revision,
                     svn_boolean_t force, 
                     svn_boolean_t ignore_externals,
+                    svn_boolean_t recurse,
                     const char *native_eol,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
@@ -1707,6 +1734,115 @@ svn_client_cat (svn_stream_t *out,
                 const svn_opt_revision_t *revision,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool);
+
+
+/** @since New in 1.2.
+ *
+ * A structure which describes various system-generated metadata about
+ * a working-copy path or URL.
+ */
+typedef struct svn_info_t
+{
+  /* Where the item lives in the repository. */
+  const char *URL;
+
+  /* The revision of the object.  If path_or_url is a working-copy
+     path, then this is its current working revnum.  If path_or_url
+     is a URL, then this is the repos revision that path_or_url lives in. */
+  svn_revnum_t rev;
+
+  /* The node's kind. */
+  svn_node_kind_t kind;
+
+  /* The root URL of the repository. */
+  const char *repos_root_URL;
+  
+  /* The repository's UUID. */
+  const char *repos_UUID;
+
+  /* The last revision in which this object changed. */
+  svn_revnum_t last_changed_rev;
+  
+  /* The date of the last_changed_rev. */
+  apr_time_t last_changed_date;
+  
+  /* The author of the last_changed_rev. */
+  const char *last_changed_author;
+
+  /* Whether or not to ignore the next 10 wc-specific fields. */
+  svn_boolean_t has_wc_info;
+
+  /* The following things only apply to a working-copy path.  See
+     svn_wc_entry_t explanations. */
+  svn_wc_schedule_t schedule;
+  const char *copyfrom_url;
+  svn_revnum_t copyfrom_rev;
+  apr_time_t text_time;
+  apr_time_t prop_time;
+  const char *checksum;
+  const char *conflict_old;
+  const char *conflict_new;
+  const char *conflict_wrk;
+  const char *prejfile;
+
+} svn_info_t;
+
+
+/** @since New in 1.2. 
+ *
+ * The callback invoked by svn_client_info().  Each invocation
+ * describes @a path with the information present in @a info.  Note
+ * that any fields within @a info may be NULL if information is
+ * unavailable.  Use @a pool for all temporary allocation.
+ */
+typedef svn_error_t *(*svn_info_receiver_t)
+     (void *baton,
+      const char *path,
+      const svn_info_t *info,
+      apr_pool_t *pool);
+
+/**
+ * @since New in 1.2.
+ *
+ * Invoke @a receiver with @a receiver_baton to return information
+ * about @a path_or_url in @a revision.  The information returned is
+ * system-generated metadata, not the sort of "property" metadata
+ * created by users.  See @c svn_info_t.
+ *
+ * If both revision arguments are either @c
+ * svn_opt_revision_unspecified or NULL, then information will be
+ * pulled soley from the working copy; no network connections will be
+ * made.
+ *
+ * Otherwise, information will be pulled from a repository.  The
+ * actual node revision selected is determined by the @a path_or_url
+ * as it exists in @a peg_revision.  If @a peg_revision is @c
+ * svn_opt_revision_unspecified, then it defaults to @c
+ * svn_opt_revision_head for URLs or @c svn_opt_revision_working for
+ * WC targets.
+ *
+ * If @a path_or_url is not a local path, then if @a revision is of
+ * kind @c svn_opt_revision_previous (or some other kind that requires
+ * a local path), an error will be returned, because the desired
+ * revision cannot be determined.
+ *
+ * Use the authentication baton cached in @a ctx to authenticate
+ * against the repository.
+ *
+ * If @a recurse is true (and @a path_or_url is a directory) this will
+ * be a recursive operation, invoking @a receiver on each child.
+ *
+ */
+svn_error_t *
+svn_client_info (const char *path_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 svn_info_receiver_t receiver,
+                 void *receiver_baton,
+                 svn_boolean_t recurse,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
 
 
 

@@ -101,8 +101,8 @@ restore_file (const char *file_path,
   SVN_ERR (svn_wc__maybe_set_executable (NULL, file_path, adm_access, pool));
 
   /* Remove any text conflict */
-  SVN_ERR (svn_wc_resolved_conflict (file_path, adm_access, TRUE, FALSE, FALSE,
-                                     NULL, NULL, pool));
+  SVN_ERR (svn_wc_resolved_conflict2 (file_path, adm_access, TRUE, FALSE,
+                                      FALSE, NULL, NULL, NULL, NULL, pool));
 
   SVN_ERR (svn_wc_entry (&entry, file_path, adm_access, FALSE, pool));
   assert(entry != NULL);

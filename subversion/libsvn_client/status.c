@@ -99,7 +99,9 @@ svn_client_status2 (svn_revnum_t *result_rev,
   sb.deleted_in_repos = FALSE;
 
   SVN_ERR (svn_wc_adm_open_anchor (&anchor_access, &target_access, &target,
-                                   path, FALSE, descend ? -1 : 1, pool));
+                                   path, FALSE, descend ? -1 : 1,
+                                   ctx->cancel_func, ctx->cancel_baton,
+                                   pool));
   anchor = svn_wc_adm_access_path (anchor_access);
 
   /* Get the status edit, and use our wrapping status function/baton

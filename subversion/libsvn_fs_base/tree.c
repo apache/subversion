@@ -370,7 +370,7 @@ not_found (svn_fs_root_t *root, const char *path)
     return
       svn_error_createf
       (SVN_ERR_FS_NOT_FOUND, 0,
-       "File not found: transaction '%s', path '%s'",
+       _("File not found: transaction '%s', path '%s'"),
        root->txn, path);
   else
     return
@@ -391,7 +391,7 @@ already_exists (svn_fs_root_t *root, const char *path)
     return
       svn_error_createf
       (SVN_ERR_FS_ALREADY_EXISTS, 0,
-       "File already exists: filesystem '%s', transaction '%s', path '%s'",
+       _("File already exists: filesystem '%s', transaction '%s', path '%s'"),
        fs->path, root->txn, path);
   else
     return
@@ -407,7 +407,7 @@ not_txn (svn_fs_root_t *root)
 {
   return svn_error_create
     (SVN_ERR_FS_NOT_TXN_ROOT, NULL,
-     "Root object must be a transaction root");
+     _("Root object must be a transaction root"));
 }
 
 
@@ -811,7 +811,7 @@ open_path (parent_path_t **parent_path_p,
       /* The path isn't finished yet; we'd better be in a directory.  */
       if (svn_fs_base__dag_node_kind (child) != svn_node_dir)
         SVN_ERR_W (svn_fs_base__err_not_directory (fs, path_so_far),
-                   apr_pstrcat (pool, "Failure opening '", path, "'", NULL));
+                   apr_psprintf (pool, _("Failure opening '%s'"), path));
 
       rest = next;
       here = child;
@@ -1364,7 +1364,7 @@ base_props_changed (svn_boolean_t *changed_p,
   if (root1->fs != root2->fs)
     return svn_error_create
       (SVN_ERR_FS_GENERAL, NULL,
-       "Asking props changed in two different filesystems");
+       _("Asking props changed in two different filesystems"));
 
   args.root1      = root1;
   args.root2      = root2;
@@ -1695,8 +1695,9 @@ deltify_mutable (svn_fs_t *fs,
             pred_id = tpi_args.pred_id;
 
             if (pred_id == NULL)
-              return svn_error_create (SVN_ERR_FS_CORRUPT, 0,
-                                       "Corrupt DB: faulty predecessor count");
+              return svn_error_create
+                (SVN_ERR_FS_CORRUPT, 0,
+                 _("Corrupt DB: faulty predecessor count"));
 
             count++;
           }
@@ -1770,7 +1771,7 @@ update_ancestry (svn_fs_t *fs,
   if (strcmp (svn_fs_base__id_txn_id (target_id), txn_id))
     return svn_error_createf
       (SVN_ERR_FS_NOT_MUTABLE, NULL,
-       "Unexpected immutable node at '%s'", target_path);
+       _("Unexpected immutable node at '%s'"), target_path);
   SVN_ERR (svn_fs_bdb__get_node_revision (&noderev, fs, target_id, trail));
   noderev->predecessor_id = source_id;
   noderev->predecessor_count = source_pred_count;
@@ -1819,8 +1820,8 @@ undelete_change (svn_fs_t *fs,
          as we expected it to be in the changes table. */
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
-         "No deletion changes for path '%s' "
-         "in transaction '%s' of filesystem '%s'",
+         _("No deletion changes for path '%s' "
+           "in transaction '%s' of filesystem '%s'"),
          path, txn_id, fs->path);
     }
 
@@ -1838,7 +1839,7 @@ conflict_err (svn_stringbuf_t *conflict_path,
 {
   svn_stringbuf_set (conflict_path, path);
   return svn_error_createf (SVN_ERR_FS_CONFLICT, NULL,
-                            "Conflict at '%s'", path);
+                            _("Conflict at '%s'"), path);
 }
 
 
@@ -1885,7 +1886,7 @@ merge (svn_stringbuf_t *conflict_p,
     {
       return svn_error_create
         (SVN_ERR_FS_CORRUPT, NULL,
-         "Bad merge; ancestor, source, and target not all in same fs");
+         _("Bad merge; ancestor, source, and target not all in same fs"));
     }
 
   /* We have the same fs, now check it. */
@@ -1901,7 +1902,7 @@ merge (svn_stringbuf_t *conflict_p,
       svn_string_t *id_str = svn_fs_base__id_unparse (target_id, trail->pool);
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL,
-         "Bad merge; target '%s' has id '%s', same as ancestor",
+         _("Bad merge; target '%s' has id '%s', same as ancestor"),
          target_path, id_str->data);
     }
 
@@ -2150,7 +2151,7 @@ merge (svn_stringbuf_t *conflict_p,
                   if (! svn_fs_base__dag_check_mutable (target, txn_id))
                     return svn_error_createf
                       (SVN_ERR_FS_NOT_MUTABLE, NULL,
-                       "Unexpected immutable node at '%s'", target_path);
+                       _("Unexpected immutable node at '%s'"), target_path);
 
                   SVN_ERR (svn_fs_base__dag_set_entry
                            (target, t_entry->name, s_entry->id,
@@ -2240,7 +2241,7 @@ merge (svn_stringbuf_t *conflict_p,
               if (! svn_fs_base__dag_check_mutable (target, txn_id))
                 return svn_error_createf
                   (SVN_ERR_FS_NOT_MUTABLE, NULL,
-                   "Unexpected immutable node at '%s'", target_path);
+                   _("Unexpected immutable node at '%s'"), target_path);
 
               SVN_ERR (svn_fs_base__dag_delete (target, t_entry->name,
                                                 txn_id, trail));
@@ -2334,7 +2335,7 @@ merge (svn_stringbuf_t *conflict_p,
           if (! svn_fs_base__dag_check_mutable (target, txn_id))
             return svn_error_createf
               (SVN_ERR_FS_NOT_MUTABLE, NULL,
-               "Unexpected immutable node at '%s'", target_path);
+               _("Unexpected immutable node at '%s'"), target_path);
 
           SVN_ERR (svn_fs_base__dag_set_entry
                    (target, s_entry->name, s_entry->id, txn_id, trail));
@@ -2505,7 +2506,7 @@ txn_body_commit (void *baton, trail_t *trail)
                                                       trail->pool);
       return svn_error_createf
         (SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
-         "Transaction '%s' out of date with respect to revision '%s'",
+         _("Transaction '%s' out of date with respect to revision '%s'"),
          txn_name, id_str->data);
     }
 
@@ -2681,7 +2682,7 @@ base_merge (const char **conflict_p,
     {
       return svn_error_create
         (SVN_ERR_FS_CORRUPT, NULL,
-         "Bad merge; ancestor, source, and target not all in same fs");
+         _("Bad merge; ancestor, source, and target not all in same fs"));
     }
 
   /* ### kff todo: is there any compelling reason to get the nodes in
@@ -2853,7 +2854,7 @@ txn_body_delete (void *baton,
   /* We can't remove the root of the filesystem.  */
   if (! parent_path->parent)
     return svn_error_create (SVN_ERR_FS_ROOT_DIR, NULL,
-                             "The root directory cannot be deleted");
+                             _("The root directory cannot be deleted"));
 
   /* Make the parent directory mutable, and do the deletion.  */
   SVN_ERR (make_path_mutable (root, parent_path->parent, path, trail));
@@ -2992,8 +2993,9 @@ copy_helper (svn_fs_root_t *from_root,
     return not_txn (to_root);
 
   if (from_root->is_txn_root)
-    return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                             "Copy from mutable tree not currently supported");
+    return svn_error_create
+      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+       _("Copy from mutable tree not currently supported"));
 
   args.from_root         = from_root;
   args.from_path         = from_path;
@@ -3467,9 +3469,9 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH,
            NULL,
-           "Base checksum mismatch on '%s':\n"
-           "   expected:  %s\n"
-           "     actual:  %s\n",
+           _("Base checksum mismatch on '%s':\n"
+             "   expected:  %s\n"
+             "     actual:  %s\n"),
            tb->path, tb->base_checksum, hex);
     }
 
@@ -3713,7 +3715,7 @@ base_contents_changed (svn_boolean_t *changed_p,
   if (root1->fs != root2->fs)
     return svn_error_create
       (SVN_ERR_FS_GENERAL, NULL,
-       "Asking contents changed in two different filesystems");
+       _("Asking contents changed in two different filesystems"));
 
   /* Check that both paths are files. */
   {
@@ -3722,12 +3724,12 @@ base_contents_changed (svn_boolean_t *changed_p,
     SVN_ERR (base_check_path (&kind, root1, path1, pool));
     if (kind != svn_node_file)
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL, "'%s' is not a file", path1);
+        (SVN_ERR_FS_GENERAL, NULL, _("'%s' is not a file"), path1);
 
     SVN_ERR (base_check_path (&kind, root2, path2, pool));
     if (kind != svn_node_file)
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL, "'%s' is not a file", path2);
+        (SVN_ERR_FS_GENERAL, NULL, _("'%s' is not a file"), path2);
   }
 
   args.root1      = root1;

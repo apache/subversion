@@ -273,9 +273,14 @@ dav_svn__file_revs_report(const dav_resource *resource,
 
   if (serr)
     {
-      derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR, serr->message,
-                                 resource->pool);
-      goto cleanup;
+      /* We don't 'goto cleanup' because ap_fflush() tells httpd
+         to write the HTTP headers out, and that includes whatever
+         r->status is at that particular time.  When we call
+         dav_svn_convert_err(), we don't immediately set r->status
+         right then, so r->status remains 0, hence HTTP status 200
+         would be misleadingly returned. */
+      return (dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  serr->message, resource->pool));
     }
   
   if ((serr = maybe_send_header(&frb)))

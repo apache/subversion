@@ -35,6 +35,7 @@
 
 #include "../libsvn_delta/delta.h"
 
+#include "svn_private_config.h"
 
 
 /*** Helper Functions ***/
@@ -99,7 +100,7 @@ delta_string_keys (apr_array_header_t **keys,
   if (rep->kind != rep_kind_delta)
     return svn_error_create
       (SVN_ERR_FS_GENERAL, NULL,
-       "Representation is not of type 'delta'");
+       _("Representation is not of type 'delta'"));
 
   /* Set up a convenience variable. */
   chunks = rep->contents.delta.chunks;
@@ -150,6 +151,11 @@ struct compose_handler_baton
   svn_txdelta_window_t *window;
   apr_pool_t *window_pool;
 
+  /* If the incoming window was self-compressed, and the combined WINDOW
+     exists from previous iterations, SOURCE_BUF will point to the
+     expanded self-compressed window. */
+  char *source_buf;
+
   /* The trail for this operation. WINDOW_POOL will be a child of
      TRAIL->pool. No allocations will be made from TRAIL->pool itself. */
   trail_t *trail;
@@ -166,7 +172,9 @@ struct compose_handler_baton
 
 
 /* Handle one window. If BATON is emtpy, copy the WINDOW into it;
-   otherwise, combine WINDOW with the one in BATON. */
+   otherwise, combine WINDOW with the one in BATON, unless WINDOW
+   is self-compressed (i.e., does not copy from the source view),
+   in which case expand. */
 
 static svn_error_t *
 compose_handler (svn_txdelta_window_t *window, void *baton)
@@ -178,18 +186,38 @@ compose_handler (svn_txdelta_window_t *window, void *baton)
   if (!cb->init && !window)
     return SVN_NO_ERROR;
 
+  /* We should never get here if we've already expanded a
+     self-compressed window. */
+  assert (!cb->source_buf);
+
   if (cb->window)
     {
-      /* Combine the incoming window with whatever's in the baton. */
-      apr_pool_t *composite_pool = svn_pool_create (cb->trail->pool);
-      svn_txdelta_window_t *composite;
+      if (window && (window->sview_len == 0 || window->src_ops == 0))
+        {
+          /* This is a self-compressed window. Don't combine it with
+             the others, because the combiner may go quadratic. Instead,
+             expand it here and signal that the combination has
+             ended. */
+          apr_size_t source_len = window->tview_len;
+          assert (cb->window->sview_len == source_len);
+          cb->source_buf = apr_palloc (cb->window_pool, source_len);
+          svn_txdelta__apply_instructions (window, NULL,
+                                           cb->source_buf, &source_len);
+          cb->done = TRUE;
+        }
+      else
+        {
+          /* Combine the incoming window with whatever's in the baton. */
+          apr_pool_t *composite_pool = svn_pool_create (cb->trail->pool);
+          svn_txdelta_window_t *composite;
 
-      composite = svn_txdelta__compose_windows (window, cb->window,
-                                                composite_pool);
-      svn_pool_destroy (cb->window_pool);
-      cb->window = composite;
-      cb->window_pool = composite_pool;
-      cb->done = (composite->sview_len == 0 || composite->src_ops == 0);
+          composite = svn_txdelta__compose_windows (window, cb->window,
+                                                    composite_pool);
+          svn_pool_destroy (cb->window_pool);
+          cb->window = composite;
+          cb->window_pool = composite_pool;
+          cb->done = (composite->sview_len == 0 || composite->src_ops == 0);
+        }
     }
   else if (window)
     {
@@ -320,7 +348,13 @@ rep_undeltify_range (svn_fs_t *fs,
 
       /* cb.window is the combined delta window. Read the source text
          into a buffer. */
-      if (fulltext && cb.window->sview_len > 0 && cb.window->src_ops > 0)
+      if (cb.source_buf)
+        {
+          /* The combiner already created the source text from a
+             self-compressed window. */
+          source_buf = cb.source_buf;
+        }
+      else if (fulltext && cb.window->sview_len > 0 && cb.window->src_ops > 0)
         {
           apr_size_t source_len = cb.window->sview_len;
           source_buf = apr_palloc (cb.window_pool, source_len);
@@ -331,8 +365,7 @@ rep_undeltify_range (svn_fs_t *fs,
         }
       else
         {
-          static char empty_buf[] = "";
-          source_buf = empty_buf; /* Won't read anything from here. */
+          source_buf = NULL;    /* Won't read anything from here. */
         }
 
       if (offset > 0)
@@ -451,7 +484,7 @@ rep_read_range (svn_fs_t *fs,
               if (first_chunk->version != chunk->version)
                 return svn_error_createf
                   (SVN_ERR_FS_CORRUPT, NULL,
-                   "Diff version inconsistencies in representation '%s'",
+                   _("Diff version inconsistencies in representation '%s'"),
                    rep_key);
 
               rep_key = chunk->rep_key;
@@ -707,9 +740,10 @@ svn_fs_base__rep_contents (svn_string_t *str,
   if (contents_size > SVN_MAX_OBJECT_SIZE)
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
-       "Rep contents are too large "
-       "(got %" SVN_FILESIZE_T_FMT ", limit is %" APR_SIZE_T_FMT ")",
-       contents_size, SVN_MAX_OBJECT_SIZE);
+       _("Rep contents are too large: "
+         "got %s, limit is %s"),
+       apr_psprintf (trail->pool, "%" SVN_FILESIZE_T_FMT, contents_size),
+       apr_psprintf (trail->pool, "%" APR_SIZE_T_FMT, SVN_MAX_OBJECT_SIZE));
   else
     str->len = (apr_size_t) contents_size;
 
@@ -722,7 +756,7 @@ svn_fs_base__rep_contents (svn_string_t *str,
   if (len != str->len)
     return svn_error_createf
       (SVN_ERR_FS_CORRUPT, NULL,
-       "Failure reading rep '%s'", rep_key);
+       _("Failure reading rep '%s'"), rep_key);
 
   /* Just the standard paranoia. */
   {
@@ -738,9 +772,9 @@ svn_fs_base__rep_contents (svn_string_t *str,
     if (! svn_md5_digests_match (checksum, rep->checksum))
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
-         "Checksum mismatch on rep '%s':\n"
-         "   expected:  %s\n"
-         "     actual:  %s\n", rep_key,
+         _("Checksum mismatch on rep '%s':\n"
+           "   expected:  %s\n"
+           "     actual:  %s\n"), rep_key,
          svn_md5_digest_to_cstring (rep->checksum, trail->pool),
          svn_md5_digest_to_cstring (checksum, trail->pool));
   }
@@ -822,9 +856,9 @@ txn_body_read_rep (void *baton, trail_t *trail)
               if (! svn_md5_digests_match (checksum, rep->checksum))
                 return svn_error_createf
                   (SVN_ERR_FS_CORRUPT, NULL,
-                   "Checksum mismatch on rep '%s':\n"
-                   "   expected:  %s\n"
-                   "     actual:  %s\n", args->rb->rep_key,
+                   _("Checksum mismatch on rep '%s':\n"
+                     "   expected:  %s\n"
+                     "     actual:  %s\n"), args->rb->rep_key,
                    svn_md5_digest_to_cstring (rep->checksum, trail->pool),
                    svn_md5_digest_to_cstring (checksum, trail->pool));
             }
@@ -835,7 +869,7 @@ txn_body_read_rep (void *baton, trail_t *trail)
       return
         svn_error_create
         (SVN_ERR_FS_REP_CHANGED, NULL,
-         "Null rep, but offset past zero already");
+         _("Null rep, but offset past zero already"));
     }
   else
     *(args->len) = 0;
@@ -947,7 +981,7 @@ rep_write (svn_fs_t *fs,
   if (! rep_is_mutable (rep, txn_id))
     return svn_error_createf
       (SVN_ERR_FS_REP_NOT_MUTABLE, NULL,
-       "Rep '%s' is not mutable", rep_key);
+       _("Rep '%s' is not mutable"), rep_key);
 
   if (rep->kind == rep_kind_fulltext)
     {
@@ -961,7 +995,7 @@ rep_write (svn_fs_t *fs,
          in this file, and it creates them fulltext. */
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
-         "Rep '%s' both mutable and non-fulltext", rep_key);
+         _("Rep '%s' both mutable and non-fulltext"), rep_key);
     }
   else /* unknown kind */
     abort ();
@@ -1138,7 +1172,7 @@ rep_contents_clear (svn_fs_t *fs,
   if (! rep_is_mutable (rep, txn_id))
     return svn_error_createf
       (SVN_ERR_FS_REP_NOT_MUTABLE, NULL,
-       "Rep '%s' is not mutable", rep_key);
+       _("Rep '%s' is not mutable"), rep_key);
 
   assert (rep->kind == rep_kind_fulltext);
 
@@ -1257,7 +1291,7 @@ write_svndiff_strings (void *baton, const char *data, apr_size_t *len)
   /* Make sure we (still) have a key. */
   if (wb->key == NULL)
     return svn_error_create (SVN_ERR_FS_GENERAL, NULL,
-                             "Failed to get new string key");
+                             _("Failed to get new string key"));
 
   /* Restore *LEN to the value it *would* have been were it not for
      header stripping. */
@@ -1332,7 +1366,7 @@ svn_fs_base__rep_deltify (svn_fs_t *fs,
   if (strcmp (target, source) == 0)
     return svn_error_createf
       (SVN_ERR_FS_CORRUPT, NULL,
-       "Attempt to deltify '%s' against itself",
+       _("Attempt to deltify '%s' against itself"),
        target);
 
   /* Set up a handler for the svndiff data, which will write each
@@ -1398,7 +1432,7 @@ svn_fs_base__rep_deltify (svn_fs_t *fs,
   if (! digest)
     return svn_error_createf
       (SVN_ERR_DELTA_MD5_CHECKSUM_ABSENT, NULL,
-       "Failed to calculate MD5 digest for '%s'",
+       _("Failed to calculate MD5 digest for '%s'"),
        source);
 
   /* Construct a list of the strings used by the old representation so
@@ -1491,4 +1525,3 @@ svn_fs_base__rep_deltify (svn_fs_t *fs,
 
   return SVN_NO_ERROR;
 }
-

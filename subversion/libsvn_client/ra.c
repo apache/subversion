@@ -250,8 +250,9 @@ invalidate_wc_props (void *baton,
   path = svn_path_join (cb->base_dir, path, pool);
   SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, cb->base_access, path,
                                       pool));
-  SVN_ERR (svn_wc_walk_entries (path, adm_access, &walk_callbacks, &wb,
-                                FALSE, pool));
+  SVN_ERR (svn_wc_walk_entries2 (path, adm_access, &walk_callbacks, &wb,
+                                 FALSE, cb->ctx->cancel_func,
+                                 cb->ctx->cancel_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -282,7 +283,7 @@ svn_client__open_ra_session (svn_ra_session_t **ra_session,
   cb->base_access = base_access;
   cb->pool = pool;
   cb->commit_items = commit_items;
-  cb->config = ctx->config;
+  cb->ctx = ctx;
 
   SVN_ERR (svn_ra_open (ra_session, base_url, cbtable, cb, ctx->config, pool));
 
@@ -693,8 +694,9 @@ svn_client__repos_locations (const char **start_url,
     {
       svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
-      SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, path,
-                                       FALSE, 0, pool));
+      SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, path,
+                                       FALSE, 0, ctx->cancel_func,
+                                       ctx->cancel_baton, pool));
       SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
       SVN_ERR (svn_wc_adm_close (adm_access));
       if (entry->copyfrom_url && revision->kind == svn_opt_revision_working)

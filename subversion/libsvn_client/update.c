@@ -73,7 +73,9 @@ svn_client__update_internal (svn_revnum_t *result_rev,
 
   /* Use PATH to get the update's anchor and targets and get a write lock */
   SVN_ERR (svn_wc_adm_open_anchor (&adm_access, &dir_access, &target, path,
-                                   TRUE, recurse ? -1 : 0, pool));
+                                   TRUE, recurse ? -1 : 0,
+                                   ctx->cancel_func, ctx->cancel_baton,
+                                   pool));
   anchor = svn_wc_adm_access_path (adm_access);
 
   /* Get full URL from the ANCHOR. */

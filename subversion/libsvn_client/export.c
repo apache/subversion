@@ -119,9 +119,18 @@ copy_one_versioned_file (const char *from,
   
   /* Only export 'added' files when the revision is WORKING.
      Otherwise, skip the 'added' files, since they didn't exist
-     in the BASE revision and don't have an associated text-base. */
-  if (! entry || (revision->kind != svn_opt_revision_working &&
-                  entry->schedule == svn_wc_schedule_add))
+     in the BASE revision and don't have an associated text-base.
+
+     Don't export 'deleted' files and directories unless it's a
+     revision other than WORKING.  These files and directories
+     don't really exists in WORKING.
+
+     Finally, don't export an unversioned item. */
+  if (! entry ||
+      (revision->kind != svn_opt_revision_working &&
+       entry->schedule == svn_wc_schedule_add) ||
+      (revision->kind == svn_opt_revision_working &&
+       entry->schedule == svn_wc_schedule_delete))
     return SVN_NO_ERROR;
 
   if (revision->kind != svn_opt_revision_working)
@@ -214,6 +223,7 @@ copy_versioned_files (const char *from,
                       const char *to,
                       svn_opt_revision_t *revision,
                       svn_boolean_t force,
+                      svn_boolean_t recurse,
                       const char *native_eol,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
@@ -222,12 +232,13 @@ copy_versioned_files (const char *from,
   const svn_wc_entry_t *entry;
   svn_error_t *err;
   apr_pool_t *iterpool;
-  apr_hash_t *dirents;
+  apr_hash_t *entries;
   apr_hash_index_t *hi;
   apr_finfo_t finfo;
 
-  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, from, FALSE,
-                                   0, pool));
+  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, from, FALSE,
+                                   0, ctx->cancel_func, ctx->cancel_baton,
+                                   pool));
   err = svn_wc_entry (&entry, from, adm_access, FALSE, pool);
   if (err)
     {
@@ -244,11 +255,17 @@ copy_versioned_files (const char *from,
       return SVN_NO_ERROR;
     }
 
-  /* Only export entries with the 'added' status if revision
-     is WORKING.  Otherwise, skip it, as it doesn't exist in any
-     revision other than WORKING. */
-  if (revision->kind != svn_opt_revision_working &&
-      entry->schedule == svn_wc_schedule_add)
+  /* Only export 'added' files when the revision is WORKING.
+     Otherwise, skip the 'added' files, since they didn't exist
+     in the BASE revision and don't have an associated text-base.
+
+     Don't export 'deleted' files and directories unless it's a
+     revision other than WORKING.  These files and directories
+     don't really exists in WORKING. */
+  if ((revision->kind != svn_opt_revision_working &&
+       entry->schedule == svn_wc_schedule_add) ||
+      (revision->kind == svn_opt_revision_working &&
+       entry->schedule == svn_wc_schedule_delete))
     return SVN_NO_ERROR;
 
   if (entry->kind == svn_node_dir)
@@ -269,12 +286,11 @@ copy_versioned_files (const char *from,
             svn_error_clear (err);
         }
 
-      SVN_ERR (svn_io_get_dirents (&dirents, from, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, adm_access, TRUE, pool));
 
       iterpool = svn_pool_create (pool);
-      for (hi = apr_hash_first (pool, dirents); hi; hi = apr_hash_next (hi))
+      for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
         {
-          const svn_node_kind_t *type;
           const char *item;
           const void *key;
           void *val;
@@ -284,7 +300,7 @@ copy_versioned_files (const char *from,
           apr_hash_this (hi, &key, NULL, &val);
           
           item = key;
-          type = val;
+          entry = val;
           
           if (ctx->cancel_func)
             SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
@@ -292,23 +308,29 @@ copy_versioned_files (const char *from,
           /* ### We could also invoke ctx->notify_func somewhere in
              ### here... Is it called for, though?  Not sure. */ 
           
-          if (*type == svn_node_dir)
+          if (entry->kind == svn_node_dir)
             {
-              if (strcmp (item, SVN_WC_ADM_DIR_NAME) == 0)
+              if (strcmp (item, SVN_WC_ENTRY_THIS_DIR) == 0)
                 {
-                  ; /* skip this, it's an administrative directory. */
+                  ; /* skip this, it's the current directory that we're
+                       handling now. */
                 }
               else
                 {
-                  const char *new_from = svn_path_join (from, item, iterpool);
-                  const char *new_to = svn_path_join (to, item, iterpool);
+                  if (recurse)
+                    {
+                      const char *new_from = svn_path_join (from, item, 
+                                                            iterpool);
+                      const char *new_to = svn_path_join (to, item, iterpool);
                   
-                  SVN_ERR (copy_versioned_files (new_from, new_to, revision,
-                                                 force, native_eol, ctx,
-                                                 iterpool));
+                      SVN_ERR (copy_versioned_files (new_from, new_to, 
+                                                     revision, force, recurse,
+                                                     native_eol, ctx,
+                                                     iterpool));
+                    }
                 }
             }
-          else if (*type == svn_node_file)
+          else if (entry->kind == svn_node_file)
             {
               const char *new_from = svn_path_join (from, item, iterpool);
               const char *new_to = svn_path_join (to, item, iterpool);
@@ -744,6 +766,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
                     const svn_opt_revision_t *revision,
                     svn_boolean_t force, 
                     svn_boolean_t ignore_externals,
+                    svn_boolean_t recurse,
                     const char *native_eol,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
@@ -851,7 +874,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
                                       &reporter, &report_baton,
                                       revnum,
                                       "", /* no sub-target */
-                                      TRUE, /* recurse */
+                                      recurse,
                                       export_editor, edit_baton, pool));
 
           SVN_ERR (reporter->set_path (report_baton, "", revnum,
@@ -875,7 +898,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
             SVN_ERR (open_root_internal
                      (to, force, ctx->notify_func, ctx->notify_baton, pool));
 
-          if (! ignore_externals)
+          if (! ignore_externals && recurse)
             SVN_ERR (svn_client__fetch_externals (eb->externals, TRUE, 
                                                   &use_sleep, ctx, pool));
         }
@@ -893,7 +916,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
       
       /* just copy the contents of the working copy into the target path. */
       SVN_ERR (copy_versioned_files (from, to, &working_revision, force, 
-                                     native_eol, ctx, pool));
+                                     recurse, native_eol, ctx, pool));
     }
   
 
@@ -929,7 +952,8 @@ svn_client_export2 (svn_revnum_t *result_rev,
   peg_revision.kind = svn_opt_revision_unspecified;
 
   return svn_client_export3 (result_rev, from, to, &peg_revision,
-                             revision, force, FALSE, native_eol, ctx, pool);
+                             revision, force, FALSE, TRUE,
+                             native_eol, ctx, pool);
 }
 
   

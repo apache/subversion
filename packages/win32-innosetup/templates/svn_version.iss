@@ -5,6 +5,6 @@
 ; mk_distro and set the version info from there.
 ; This file is ignored by the Subversion repository when it resides in
 ; "packages\win32-innosetup".
-#define svn_version "X.XX.X"
-#define svn_pretxtrelease "XX"
-#define svn_release "XXXX"
+#define svn_version "X.X.X"
+#define svn_pretxtrevision "-r"
+#define svn_revision "11581"

@@ -46,7 +46,7 @@ check_already_open (svn_fs_t *fs)
 {
   if (fs->fsap_data)
     return svn_error_create (SVN_ERR_FS_ALREADY_OPEN, 0,
-                             "Filesystem object already open");
+                             _("Filesystem object already open"));
   else
     return SVN_NO_ERROR;
 }

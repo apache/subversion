@@ -42,6 +42,7 @@ Targets::Targets(const char *path)
 {
     m_targetArray = NULL;
     m_targets.push_back (path);
+    m_error_occured = NULL;
 }
 void Targets::add(const char *path)
 {
@@ -76,7 +77,14 @@ const apr_array_header_t *Targets::array (const Pool & pool)
                 {
                     return NULL;
                 }
-                const char *tt = svn_path_internal_style (text, pool.pool());
+                //const char *tt = svn_path_internal_style (text, pool.pool());
+                const char *tt = (const char *)text;
+                svn_error_t *err = JNIUtil::preprocessPath(tt, pool.pool());
+                if(err != NULL)
+                {
+                    m_error_occured = err;
+                    break;
+                }
                 m_targets.push_back(tt);
             }
             if(JNIUtil::isJavaExceptionThrown())
@@ -112,4 +120,10 @@ const apr_array_header_t *Targets::array (const Pool & pool)
 Targets::Targets(jobjectArray jtargets)
 {
     m_targetArray = jtargets;
+    m_error_occured = NULL;
+}
+
+svn_error_t *Targets::error_occured()
+{
+    return m_error_occured;
 }

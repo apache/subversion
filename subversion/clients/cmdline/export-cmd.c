@@ -74,6 +74,7 @@ svn_cl__export (apr_getopt_t *os,
   err = svn_client_export3 (NULL, truefrom, to, &peg_revision,
                             &(opt_state->start_revision),
                             opt_state->force, opt_state->ignore_externals,
+                            opt_state->nonrecursive ? FALSE : TRUE, 
                             opt_state->native_eol, ctx,
                             pool);
   if (err && err->apr_err == SVN_ERR_WC_OBSTRUCTED_UPDATE && !opt_state->force)

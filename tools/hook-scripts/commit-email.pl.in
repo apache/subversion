@@ -57,6 +57,9 @@ my $no_diff_deleted = 0;
 # $no_diff_added to 1.
 my $no_diff_added = 0;
 
+# End of Configuration section.
+######################################################################
+
 # Since the path to svnlook depends upon the local installation
 # preferences, check that the required programs exist to insure that
 # the administrator has set up the script properly.
@@ -214,9 +217,11 @@ unless (-d _)
 ######################################################################
 # Harvest data using svnlook.
 
-# Change into /tmp so that svnlook diff can create its .svnlook
-# directory.
-my $tmp_dir = '/tmp';
+# Change into suitable directory so that svnlook diff can create its .svnlook
+# directory. This could be removed - it's only for compatibility with
+# 1.0.x svnlook - from 1.1.0, svnlook will be sensible about choosing a
+# temporary directory all by itself.
+my $tmp_dir = ( -d $ENV{'TEMP'} ? $ENV{'TEMP'} : '/tmp' );
 chdir($tmp_dir)
   or die "$0: cannot chdir `$tmp_dir': $!\n";
 

@@ -94,7 +94,8 @@ svn_client_switch (svn_revnum_t *result_rev,
   /* ### Need to lock the whole target tree to invalidate wcprops. Does
      non-recursive switch really need to invalidate the whole tree? */
   SVN_ERR (svn_wc_adm_open_anchor (&adm_access, &dir_access, &target, path,
-                                   TRUE, -1, pool));
+                                   TRUE, -1, ctx->cancel_func,
+                                   ctx->cancel_baton, pool));
   anchor = svn_wc_adm_access_path (adm_access);
 
   SVN_ERR (svn_wc_entry (&entry, anchor, adm_access, FALSE, pool));

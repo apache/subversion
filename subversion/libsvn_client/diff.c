@@ -1371,8 +1371,8 @@ convert_to_url (const char **url,
     }
 
   /* ### This may not be a good idea, see issue 880 */
-  SVN_ERR (svn_wc_adm_probe_open2(&adm_access, NULL, path, FALSE,
-                                  0, pool));
+  SVN_ERR (svn_wc_adm_probe_open3(&adm_access, NULL, path, FALSE,
+                                  0, NULL, NULL, pool));
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
   SVN_ERR (svn_wc_adm_close (adm_access));
   if (! entry)
@@ -1746,7 +1746,9 @@ diff_wc_wc (const apr_array_header_t *options,
           "and its working files are supported at this time")));
 
   SVN_ERR (svn_wc_adm_open_anchor (&adm_access, &target_access, &target,
-                                   path1, FALSE, recurse ? -1 : 0, pool));
+                                   path1, FALSE, recurse ? -1 : 0,
+                                   ctx->cancel_func, ctx->cancel_baton,
+                                   pool));
 
   /* Resolve named revisions to real numbers. */
   SVN_ERR (svn_client__get_revision_number
@@ -1963,7 +1965,9 @@ diff_repos_wc (const apr_array_header_t *options,
   SVN_ERR (convert_to_url (&url1, path1, pool));
 
   SVN_ERR (svn_wc_adm_open_anchor (&adm_access, &dir_access, &target,
-                                   path2, FALSE, recurse ? -1 : 0, pool));
+                                   path2, FALSE, recurse ? -1 : 0,
+                                   ctx->cancel_func, ctx->cancel_baton,
+                                   pool));
   anchor = svn_wc_adm_access_path (adm_access);
 
   /* Fetch the URL of the anchor directory. */
@@ -2437,8 +2441,10 @@ svn_client_merge (const char *source1,
   else
     path2 = source2;
 
-  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target_wcpath,
-                                   ! dry_run, recurse ? -1 : 0, pool));
+  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, target_wcpath,
+                                   ! dry_run, recurse ? -1 : 0,
+                                   ctx->cancel_func, ctx->cancel_baton,
+                                   pool));
 
   SVN_ERR (svn_wc_entry (&entry, target_wcpath, adm_access, FALSE, pool));
   if (entry == NULL)
@@ -2544,8 +2550,10 @@ svn_client_merge_peg (const char *source,
   else
     path = source;
 
-  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target_wcpath,
-                                   ! dry_run, recurse ? -1 : 0, pool));
+  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, target_wcpath,
+                                   ! dry_run, recurse ? -1 : 0,
+                                   ctx->cancel_func, ctx->cancel_baton,
+                                   pool));
 
   SVN_ERR (svn_wc_entry (&entry, target_wcpath, adm_access, FALSE, pool));
   if (entry == NULL)

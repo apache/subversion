@@ -85,12 +85,15 @@ def export_working_copy_with_mods(sbox):
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
   kappa_path = os.path.join(wc_dir, 'kappa')
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
 
   svntest.main.file_append(mu_path, 'appended mu text')
   svntest.main.file_append(rho_path, 'new appended text for rho')
 
   svntest.main.file_append(kappa_path, "This is the file 'kappa'.")
   svntest.main.run_svn(None, 'add', kappa_path)
+  svntest.main.run_svn(None, 'rm', E_path, gamma_path)
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu',
@@ -100,6 +103,7 @@ def export_working_copy_with_mods(sbox):
                       contents=expected_disk.desc['A/D/G/rho'].contents
                       + 'new appended text for rho')
   expected_disk.add({'kappa' : Item("This is the file 'kappa'.")})
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E', 'A/D/gamma')
 
   export_target = sbox.add_wc_path('export')
 
@@ -254,6 +258,8 @@ def export_working_copy_at_base_revision(sbox):
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   kappa_path = os.path.join(wc_dir, 'kappa')
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
 
   # Appends some text to A/mu, and add a new file
   # called kappa.  These modifications should *not*
@@ -261,6 +267,7 @@ def export_working_copy_at_base_revision(sbox):
   svntest.main.file_append(mu_path, 'Appended text')
   svntest.main.file_append(kappa_path, "This is the file 'kappa'.")
   svntest.main.run_svn(None, 'add', kappa_path)
+  svntest.main.run_svn(None, 'rm', E_path, gamma_path)
 
   # Note that we don't tweak the expected disk tree at all,
   # since the appended text and kappa should not be present.
