@@ -66,10 +66,9 @@ typedef struct {
  * namespace @a nspace and name @a name is found. If no elements are found,
  * tries to find and return element identified by @c ELEM_unknown. If that is
  * not found, returns NULL pointer. */
-static const svn_ra_dav__xml_elm_t *lookup_elem(
-                                          const svn_ra_dav__xml_elm_t *table,
-                                          const char *nspace,
-                                          const char *name)
+static const svn_ra_dav__xml_elm_t *
+lookup_elem(const svn_ra_dav__xml_elm_t *table, const char *nspace,
+            const char *name)
 {
   /* placeholder for `unknown' element if it's present */
   const svn_ra_dav__xml_elm_t *elem_unknown = NULL;
@@ -92,7 +91,36 @@ static const svn_ra_dav__xml_elm_t *lookup_elem(
   return elem_unknown;
 }
 
-/* (Neon 0.24) Start element parsing.
+/** Fill in temporary structure for ELEM_unknown element.
+ *
+ * Call only for element ELEM_unknown!
+ * For Neon 0.23 API compatibility, we need to fill the XML element structure
+ * with real namespace and element name, as "old-style" handler used to get
+ * that from Neon parser. This is a hack, so don't expect it to be elegant.
+ * The @a elem_pointer is a reference to element pointer which is returned
+ * by lookup_elem, and supposedly points at en entry in the XML elements
+ * table supplied by an "old-style" handler. @a elem_unknown_temporary is
+ * a reference to XML element structure allocated on the stack. There's
+ * no reason to allocate it anywhere else because it's going to use
+ * @a nspace and @a name which are passed into the "new-style" handler by
+ * the Neon parser, so the structure pointed at by @a elem_unknown_temporary
+ * must die when the calling function completes. This function is designed
+ * to be called from "new-style" startelm and endelm callbacks. */
+static void
+handle_unknown(const svn_ra_dav__xml_elm_t **elem_pointer,
+               svn_ra_dav__xml_elm_t *elem_unknown_temporary,
+               const char *nspace, const char *name)
+{
+  elem_unknown_temporary->nspace = nspace;
+  elem_unknown_temporary->name = name;
+  elem_unknown_temporary->id = (*elem_pointer)->id;
+  elem_unknown_temporary->flags = (*elem_pointer)->flags;
+
+  /* The pointer will use temporary record instead of a table record */
+  *elem_pointer = elem_unknown_temporary;
+}
+
+/** (Neon 0.24) Start element parsing.
  *
  * Calls "old-style" API callbacks validate_cb and startelm_cb to emulate
  * Neon 0.23 parser. @a userdata is a @c neon_shim_baton_t instance.
@@ -103,10 +131,12 @@ static const svn_ra_dav__xml_elm_t *lookup_elem(
  *   >0 =>  accept this element; value is state for this element.
  * The 'parent' integer is the state returned by the handler of the
  * parent element. */
-static int shim_startelm(void *userdata, int parent_state, const char *nspace,
-                         const char *name, const char **attrs)
+static int
+shim_startelm(void *userdata, int parent_state, const char *nspace,
+              const char *name, const char **attrs)
 {
   neon_shim_baton_t *baton = userdata;
+  svn_ra_dav__xml_elm_t elem_unknown_temporary;
   const svn_ra_dav__xml_elm_t *elem = lookup_elem(baton->elements, nspace,
                                                   name);
   int rc;
@@ -123,6 +153,9 @@ static int shim_startelm(void *userdata, int parent_state, const char *nspace,
   if (rc != SVN_RA_DAV__XML_VALID) {
     return (rc == SVN_RA_DAV__XML_DECLINE) ? NE_XML_DECLINE : NE_XML_ABORT;
   }
+
+  if (elem->id == ELEM_unknown)
+    handle_unknown(&elem, &elem_unknown_temporary, nspace, name);
 
   rc = baton->startelm_cb(baton->original_userdata, elem, attrs);
   if (rc != SVN_RA_DAV__XML_VALID) {
@@ -165,6 +198,7 @@ static int shim_endelm(void *userdata, int state, const char *nspace,
                        const char *name)
 {
   const neon_shim_baton_t *baton = userdata;
+  svn_ra_dav__xml_elm_t elem_unknown_temporary;
   const svn_ra_dav__xml_elm_t *elem = lookup_elem(baton->elements, nspace,
                                                   name);
   int rc;
@@ -172,15 +206,15 @@ static int shim_endelm(void *userdata, int state, const char *nspace,
   if (!elem)
     return -1; /* shouldn't be here if startelm didn't abort the parse */
 
-  /* TODO: ask Neon to create a whitespace-suppressing parser */
-  svn_stringbuf_strip_whitespace(baton->cdata_accum);
+  if (elem->id == ELEM_unknown)
+    handle_unknown(&elem, &elem_unknown_temporary, nspace, name);
 
   rc = baton->endelm_cb(baton->original_userdata,
                         elem,
                         baton->cdata_accum->data);
-  if (rc != SVN_RA_DAV__XML_VALID) {
+  if (rc != SVN_RA_DAV__XML_VALID)
     return -1; /* abort the parse */
-  }
+
   return 0; /* no error */
 }
 

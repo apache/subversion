@@ -794,13 +794,11 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "###   http-timeout             Timeout for HTTP requests in seconds\n"
         "###   http-compression         Whether to compress HTTP requests\n"
         "###   neon-debug-mask          Debug mask for Neon HTTP library\n"
-        "###   ssl-authorities-file     File listing known and trusted CAs\n"
+        "###   ssl-authority-files      List of files, each of a trusted CAs\n"
         "###   ssl-ignore-unknown-ca    Allow untrusted server certificates\n"
         "###   ssl-ignore-invalid-date  Allow expired/postdated certificates\n"
         "###   ssl-ignore-host-mismatch Allow certificates for other servers\n"
-        "###   ssl-client-cert-file     Client certificate file location\n"
-        "###   ssl-client-cert-type     Can be either 'pem' or 'pkcs12'\n"
-        "###   ssl-client-key-file      Client Key location, if not in cert\n"
+        "###   ssl-client-cert-file     PKCS#12 format client certificate file\n"
         "###   ssl-client-cert-password Client Key password, if needed.\n"
         "###\n"
         "### HTTP timeouts, if given, are specified in seconds.  A timeout\n"
@@ -854,10 +852,10 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "### list those exceptions under 'http-proxy-exceptions'.  This only\n"
         "### overrides defaults, not explicitly matched server names.\n"
         "###\n"
-        "### 'ssl-authorities-file' points to the location of the file\n"
-        "### containing a list of known and trusted SSL Certificate \n"
-        "### Authorities (CAs). See details above for overriding security\n"
-        "### issues due to SSL\n"
+        "### 'ssl-authority-files' is a semicolon-delimited list of files,\n"
+        "### each pointing to a PEM-encoded Certificate Authority (CA) \n"
+	"### SSL certificate.  See details above for overriding security \n"
+	"### due to SSL.\n"
         "# [global]\n"
         "# http-proxy-exceptions = *.exception.com, www.internal-site.org\n"
         "# http-proxy-host = defaultproxy.whatever.com\n"
@@ -867,7 +865,7 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "# http-compression = yes\n"
         "# No http-timeout, so just use the builtin default.\n"
         "# No neon-debug-mask, so neon debugging is disabled.\n"
-        "# ssl-authorities-file = /path/to/CAcerts.pem\n";
+        "# ssl-authority-files = /path/to/CAcert.pem;/path/to/CAcert2.pem\n";
 
       apr_err = apr_file_open (&f, path,
                                (APR_WRITE | APR_CREATE | APR_EXCL),

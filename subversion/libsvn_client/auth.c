@@ -516,7 +516,7 @@ client_ssl_cert_file_first_credentials (void **credentials_p,
   const char *server_group = apr_hash_get (parameters,
                                            SVN_AUTH_PARAM_SERVER_GROUP,
                                            APR_HASH_KEY_STRING);
-  const char *cert_file, *key_file, *cert_type;
+  const char *cert_file;
 
   cert_file = svn_config_get_server_setting (cfg, server_group,
                                              SVN_CONFIG_OPTION_SSL_CLIENT_CERT_FILE,
@@ -526,28 +526,7 @@ client_ssl_cert_file_first_credentials (void **credentials_p,
     {
       svn_auth_cred_client_ssl_t *cred = apr_palloc (pool, sizeof (*cred));
       
-      key_file = svn_config_get_server_setting (cfg, server_group,
-                                                SVN_CONFIG_OPTION_SSL_CLIENT_KEY_FILE,
-                                                NULL);
-      cert_type = svn_config_get_server_setting (cfg, server_group,
-                                                 SVN_CONFIG_OPTION_SSL_CLIENT_CERT_TYPE,
-                                                 "pem");
       cred->cert_file = cert_file;
-      cred->key_file = key_file;
-      if ((strcmp (cert_type, "pem") == 0) ||
-          (strcmp (cert_type, "PEM") == 0))
-        {
-          cred->cert_type = svn_auth_ssl_pem_cert_type;
-        }
-      else if ((strcmp (cert_type, "pkcs12") == 0) ||
-               (strcmp (cert_type, "PKCS12") == 0))
-        {
-          cred->cert_type = svn_auth_ssl_pkcs12_cert_type;
-        }
-      else
-        {
-          cred->cert_type = svn_auth_ssl_unknown_cert_type;
-        }
       *credentials_p = cred;
     }
   else
