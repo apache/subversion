@@ -148,8 +148,12 @@ walk_tree (svn_fs_root_t *root,
         {
           void *new_dir_baton;
 
+          /* We pass 2 invalid ancestry args, which allows the editor
+             to infer them via inheritance.  We do *not* pass real
+             args, since we're not referencing any existing working
+             copy paths.  We don't want the editor to "copy" anything. */
           SVN_ERR (editor->add_directory (dirent_name, dir_baton,
-                                          URL_path,
+                                          NULL,
                                           SVN_INVALID_REVNUM, 
                                           &new_dir_baton));
           SVN_ERR (set_any_props (root, dirent_path, new_dir_baton,
