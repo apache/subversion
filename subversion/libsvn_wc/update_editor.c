@@ -1042,7 +1042,19 @@ add_or_open_file (const char *path,
      It certainly doesn't hurt to re-add the file.  We can't possibly
      get the entry showing up twice in `entries', since it's a hash;
      and we know that we won't lose any local mods.  Let the existing
-     entry be overwritten. */
+     entry be overwritten.
+
+     sussman follows up to himself, many months later: the above
+     scenario is fine, as long as the pre-existing entry isn't
+     scheduled for addition.  that's a genuine tree-conflict,
+     regardless of whether the working file still exists.  */
+
+  if (adding && entry && entry->schedule == svn_wc_schedule_add)
+    return svn_error_createf
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL,
+       "failed to add file '%s': \nobject of the same name is already "
+       "scheduled for addition", fb->path);
+    
 
   /* If replacing, make sure the .svn entry already exists. */
   if ((! adding) && (! entry))
