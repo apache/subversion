@@ -345,6 +345,10 @@ SVN_ERROR_START
               SVN_ERR_WC_CATEGORY_START + 19,
               "Invalid operation on the current working directory")  
 
+  SVN_ERRDEF (SVN_ERR_WC_FORMAT_UPGRADE,
+              SVN_ERR_WC_CATEGORY_START + 20,
+              "Unable to upgrade working administrative format")  
+
   /* fs errors */
 
   SVN_ERRDEF (SVN_ERR_FS_GENERAL,
