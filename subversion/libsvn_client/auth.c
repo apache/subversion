@@ -508,20 +508,17 @@ get_creds (const char **username,
     return SVN_NO_ERROR;
 
   /* Get the password. */
-  if (prompt_username)
+  if (def_password)
     {
-      if (def_password == NULL)
-        {
-          prompt_password = def_password;
-        }
-      else
-        {
-          const char *prompt = apr_psprintf (pool, "%s's password: ", 
-                                             prompt_username);
-          SVN_ERR (pb->prompt_func (&prompt_password, prompt,
-                                    TRUE, /* don't echo to screen */
-                                    pb->prompt_baton, pool));
-        }
+      prompt_password = def_password;
+    }
+  else
+    {
+      const char *prompt = apr_psprintf (pool, "%s's password: ", 
+                                         prompt_username);
+      SVN_ERR (pb->prompt_func (&prompt_password, prompt,
+                                TRUE, /* don't echo to screen */
+                                pb->prompt_baton, pool));
     }
 
   if (username)
