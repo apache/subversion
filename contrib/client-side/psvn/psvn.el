@@ -1,5 +1,5 @@
 ;;; psvn.el --- Subversion interface for emacs
-;; Copyright (C) 2002-2004 by Stefan Reichoer
+;; Copyright (C) 2002-2005 by Stefan Reichoer
 
 ;; Author: Stefan Reichoer, <stefan@xsteve.at>
 ;; $Id$
@@ -157,6 +157,8 @@
 
 ;;; Code:
 
+(require 'easymenu)
+
 ;;; user setable variables
 (defvar svn-status-verbose t "*Add '-v' to svn status call.")
 (defvar svn-log-edit-file-name "++svn-log++" "*Name of a saved log file.")
@@ -176,6 +178,8 @@ Possible values are: commit, revert.")
 (defvar svn-status-default-log-arguments ""
   "*Arguments to pass to svn log.
 \(used in `svn-status-show-svn-log'; override these by giving prefixes\).")
+
+(defvar svn-trac-project-root nil "Path for an eventual existing trac issue tracker.")
 
 ;;; hooks
 (defvar svn-log-edit-mode-hook nil "Hook run when entering `svn-log-edit-mode'.")
@@ -725,6 +729,8 @@ A and B must be line-info's."
   "Subkeymap used in `svn-status-mode' for property commands.")
 (defvar svn-status-mode-options-map ()
   "Subkeymap used in `svn-status-mode' for option commands.")
+(defvar svn-status-mode-trac-map ()
+  "Subkeymap used in `svn-status-mode' for trac issue tracker commands.")
 
 (when (not svn-status-mode-map)
   (setq svn-status-mode-map (make-sparse-keymap))
@@ -831,7 +837,12 @@ A and B must be line-info's."
   (define-key svn-status-mode-options-map (kbd "s") 'svn-status-save-state)
   (define-key svn-status-mode-options-map (kbd "l") 'svn-status-load-state)
   (define-key svn-status-mode-options-map (kbd "x") 'svn-status-toggle-sort-status-buffer)
+  (define-key svn-status-mode-options-map (kbd "t") 'svn-status-set-trac-project-root)
   (define-key svn-status-mode-map (kbd "O") svn-status-mode-options-map))
+(when (not svn-status-mode-trac-map)
+  (setq svn-status-mode-trac-map (make-sparse-keymap))
+  (define-key svn-status-mode-trac-map (kbd "t") 'svn-trac-browse-timeline)
+  (define-key svn-status-mode-map (kbd "T") svn-status-mode-trac-map))
 
 (easy-menu-define svn-status-mode-menu svn-status-mode-map
   "'svn-status-mode' menu"
@@ -876,8 +887,12 @@ A and B must be line-info's."
     ("Options"
      ["Save Options" svn-status-save-state t]
      ["Load Options" svn-status-load-state t]
+     ["Set Trac project root" svn-status-set-trac-project-root t]
      ["Toggle sorting of *svn-status* buffer" svn-status-toggle-sort-status-buffer
       :style toggle :selected svn-status-sort-status-buffer]
+     )
+    ("Trac"
+     ["Browse timeline" svn-trac-browse-timeline t]
      )
     "---"
     ["Edit Next SVN Cmd Line" svn-status-toggle-edit-cmd-flag t]
@@ -2759,6 +2774,7 @@ When called with a prefix argument, ask the user for the revision."
     (delete-region (point-min) (point-max))
     (setq svn-status-options
           (list
+           (list "svn-trac-project-root" svn-trac-project-root)
            (list "sort-status-buffer" svn-status-sort-status-buffer)
            (list "elide-list" svn-status-elided-list)))
     (insert (pp-to-string svn-status-options))
@@ -2774,6 +2790,8 @@ When called with a prefix argument, ask the user for the revision."
           (setq svn-status-options (read (current-buffer)))
           (setq svn-status-sort-status-buffer
                 (nth 1 (assoc "sort-status-buffer" svn-status-options)))
+          (setq svn-trac-project-root
+                (nth 1 (assoc "svn-trac-project-root" svn-status-options)))
           (setq svn-status-elided-list
                 (nth 1 (assoc "elide-list" svn-status-options)))
           (when svn-status-elided-list (svn-status-apply-elide-list)))
@@ -2790,6 +2808,25 @@ display routine for svn-status is available."
   (message (concat "The *svn-status* buffer will be"
                    (if svn-status-sort-status-buffer "" " not")
                    " sorted.")))
+
+(defun svn-status-set-trac-project-root ()
+  (interactive)
+  (setq svn-trac-project-root
+        (read-string "Trac project root (e.g.: http://projects.edgewall.com/trac/): "
+                     svn-trac-project-root))
+  (when (yes-or-no-p "Save the new setting for svn-trac-project-root to disk? ")
+    (svn-status-save-state)))
+
+;; --------------------------------------------------------------------------------
+;; svn status trac integration
+;; --------------------------------------------------------------------------------
+(defun svn-trac-browse-timeline ()
+  "Open the trac timeline view for the current svn repository."
+  (interactive)
+  (unless svn-trac-project-root
+    (svn-status-set-trac-project-root))
+  (browse-url (concat svn-trac-project-root "timeline")))
+
 
 ;;;------------------------------------------------------------
 ;;; resolve conflicts using ediff
