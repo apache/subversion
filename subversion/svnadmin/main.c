@@ -996,14 +996,13 @@ subcommand_lslocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Fetch all locks on or below the root directory. */
   SVN_ERR (svn_repos_fs_get_locks (&locks, repos, "/", NULL, NULL, pool));
 
-  SVN_ERR (svn_cmdline_printf (pool, "\n"));
-  
   for (hi = apr_hash_first (pool, locks); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       void *val;
       const char *path, *cr_date, *exp_date;
       svn_lock_t *lock;
+      int comment_lines;
       
       apr_hash_this (hi, &key, NULL, &val);
       path = key;
@@ -1028,8 +1027,12 @@ subcommand_lslocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                    _("        Created: %s\n"), cr_date));
       SVN_ERR (svn_cmdline_printf (pool,
                                    _("        Expires: %s\n"), exp_date));
+
+      comment_lines = svn_cstring_count_newlines (lock->comment);
       SVN_ERR (svn_cmdline_printf (pool,
-                                   _("        Comment: %s\n\n"),
+                                   _("        Comment: (%i %s)\n%s\n"),
+                                   comment_lines, 
+                                   (comment_lines > 1) ? "lines" : "line",
                                    lock->comment ? lock->comment : "none"));
     }
   

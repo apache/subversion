@@ -320,6 +320,13 @@ void svn_cstring_split_append (apr_array_header_t *array,
 svn_boolean_t svn_cstring_match_glob_list (const char *str,
                                            apr_array_header_t *list);
 
+/** Return the number of lines in @a msg, allowing any kind of newline
+ * termination (CR, CRLF, or LFCR), even inconsistent.  The minimum
+ * number of lines in @a msg is 1 -- even the empty string is
+ * considered to have one line, since we always print log messages,
+ * lock comments, etc. with a trailing newline.
+ */
+int svn_cstring_count_newlines (const char *msg);
 
 /** @} */
 
