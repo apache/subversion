@@ -252,23 +252,13 @@ svn_opt_subcommand_help (const char *subcommand,
  *
  *   - For "head", set REVISION->kind to svn_opt_revision_head.
  *
- *   - For "first", set REVISION->kind to svn_opt_revision_number
- *     and REVISION->value.number to 0.  ### iffy, but might be useful
- *     when mixed with dates ###
- *
  *   - For "prev", set REVISION->kind to svn_opt_revision_previous.
  *
  *   - For "base", set REVISION->kind to svn_opt_revision_base.
  *
- *   - For "committed" or "changed", set REVISION->kind to
- *     svn_opt_revision_committed.
+ *   - For "committed", set REVISION->kind to svn_opt_revision_committed.
  *
  * If match, return 0, else return -1 and don't touch REVISION.
- *
- * ### should we enforce a requirement that users write out these
- * words in full?  Actually, we probably will need to start enforcing
- * it as date parsing gets more sophisticated and the chances of a
- * first-letter overlap between a valid date and a valid word go up.
  */
 static int
 revision_from_word (svn_opt_revision_t *revision, const char *word)
@@ -276,11 +266,6 @@ revision_from_word (svn_opt_revision_t *revision, const char *word)
   if (strcasecmp (word, "head") == 0)
     {
       revision->kind = svn_opt_revision_head;
-    }
-  else if (strcasecmp (word, "first") == 0)
-    {
-      revision->kind = svn_opt_revision_number;
-      revision->value.number = 0;
     }
   else if (strcasecmp (word, "prev") == 0)
     {
@@ -290,8 +275,7 @@ revision_from_word (svn_opt_revision_t *revision, const char *word)
     {
       revision->kind = svn_opt_revision_base;
     }
-  else if ((strcasecmp (word, "committed") == 0)
-           || (strcasecmp (word, "changed") == 0))
+  else if (strcasecmp (word, "committed") == 0)
     {
       revision->kind = svn_opt_revision_committed;
     }
