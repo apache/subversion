@@ -84,9 +84,13 @@ fail (apr_pool_t *pool, const char *fmt, ...)
 }
 
 
-static const char *config_keys[] = { "a", "b", NULL };
-static const char *config_values[] = { "Aa", "100", NULL };
-
+static const char *config_keys[] = { "foo", "a", "b", "c", "d", "e", "f", "g",
+                                     "h", "i", NULL };
+static const char *config_values[] = { "bar", "Aa", "100", "bar",
+                                       "a %(bogus)s oyster bar",
+                                       "%(bogus)s shmoo %(",
+                                       "%Aa", "lyrical bard", "%(unterminated",
+                                       "Aa 100", NULL };
 
 static svn_error_t *
 test1 (const char **msg, 
@@ -117,7 +121,14 @@ test1 (const char **msg,
       py_val = (char *) config_values[i];
       svn_config_get(cfg, (const char **) &c_val, "section1", key,
                      "default value");
-      if (c_val != NULL && py_val != NULL && strcmp(c_val, py_val) != 0)
+#if 0
+      printf("Testing expected value '%s' against '%s' for "
+             "option '%s'\n", py_val, c_val, key);
+#endif
+      /* Fail iff one value is null, or the strings don't match. */
+      if ((c_val == NULL ^ py_val == NULL)
+          || (c_val != NULL && py_val != NULL
+              && apr_strnatcmp(c_val, py_val) != 0))
         return fail(pool, "Expected value '%s' not equal to '%s' for "
                     "option '%s'", py_val, c_val, key);
     }

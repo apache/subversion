@@ -61,6 +61,7 @@ svn_error_t *svn_config__parse_file (svn_config_t *cfg,
                                      const char *file,
                                      svn_boolean_t must_exist);
 
+#define SVN_CONFIG__DEFAULT_SECTION "DEFAULT"
 
 #ifdef SVN_WIN32
 /* Get the common or user-specific AppData folder */
