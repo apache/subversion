@@ -14,9 +14,10 @@ usage: 1. log [PATH]
 
   Each log message is printed just once, even if more than one of the
   affected paths for that revision were explicitly requested.  Logs
-  follow copy history by default; use --strict to disable this.
-  For example:
+  follow copy history by default.  Use --stop-on-copy to disable this
+  behavior, which can be useful for determining branchpoints.
 
+  Examples:
     svn log
     svn log foo.c
     svn log http://www.example.com/repo/project/foo.c
@@ -34,7 +35,7 @@ Valid options:
   -q [--quiet]             : print as little as possible
   -v [--verbose]           : print extra information
   --targets arg            : pass contents of file ARG as additional args
-  --strict                 : use strict semantics
+  --stop-on-copy           : do not cross copies while traversing history
   --incremental            : give output suitable for concatenation
   --xml                    : output in XML
   --username arg           : specify a username ARG

@@ -762,9 +762,6 @@ svn_client_log (const apr_array_header_t *targets,
  * associated with revision @a end of @a path_or_url, using @a start
  * as the default source of all blame. 
  *
- * If @a strict_node_history is set, copy history (if any exists) will
- * not be traversed while harvesting revision logs for each target.
- *
  * If @a start->kind or @a end->kind is @c svn_opt_revision_unspecified,
  * return the error @c SVN_ERR_CLIENT_BAD_REVISION.
  *
@@ -774,7 +771,6 @@ svn_error_t *
 svn_client_blame (const char *path_or_url,
                   const svn_opt_revision_t *start,
                   const svn_opt_revision_t *end,
-                  svn_boolean_t strict_node_history,
                   svn_client_blame_receiver_t receiver,
                   void *receiver_baton,
                   svn_client_ctx_t *ctx,

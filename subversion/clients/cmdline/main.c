@@ -93,6 +93,8 @@ const apr_getopt_option_t svn_cl__options[] =
                       "pass contents of file ARG as additional args"},
     {"xml",           svn_cl__xml_opt, 0, "output in XML"},
     {"strict",        svn_cl__strict_opt, 0, "use strict semantics"},
+    {"stop-on-copy",  svn_cl__stop_on_copy_opt, 0, 
+                      "do not cross copies while traversing history"},
     {"no-ignore",     svn_cl__no_ignore_opt, 0,
                       "disregard default and svn:ignore property ignores"},
     {"no-auth-cache", svn_cl__no_auth_cache_opt, 0,
@@ -156,10 +158,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   { "blame", svn_cl__blame, {"praise", "annotate", "ann"},
     "Output the content of specified files or\n"
     "URLs with revision and author information in-line.\n"
-    "usage: blame TARGET...\n"
-    "\n"
-    "  Blame will follow copy history by default; use --strict to disable.\n",
-    {'r', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt, svn_cl__strict_opt} },
+    "usage: blame TARGET...\n",
+    {'r', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "cat", svn_cl__cat, {0},
     "Output the content of specified files or URLs.\n"
@@ -329,14 +329,15 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "\n"
     "  Each log message is printed just once, even if more than one of the\n"
     "  affected paths for that revision were explicitly requested.  Logs\n"
-    "  follow copy history by default; use --strict to disable this.\n"
-    "  For example:\n"
+    "  follow copy history by default.  Use --stop-on-copy to disable this\n"
+    "  behavior, which can be useful for determining branchpoints.\n"
     "\n"
+    "  Examples:\n"
     "    svn log\n"
     "    svn log foo.c\n"
     "    svn log http://www.example.com/repo/project/foo.c\n"
     "    svn log http://www.example.com/repo/project foo.c bar.c\n",
-    {'r', 'q', 'v', svn_cl__targets_opt, svn_cl__strict_opt,
+    {'r', 'q', 'v', svn_cl__targets_opt, svn_cl__stop_on_copy_opt,
      svn_cl__incremental_opt, svn_cl__xml_opt, SVN_CL__AUTH_OPTIONS, 
      svn_cl__config_dir_opt} },
 
@@ -862,6 +863,9 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__xml_opt:
         opt_state.xml = TRUE;
+        break;
+      case svn_cl__stop_on_copy_opt:
+        opt_state.stop_on_copy = TRUE;
         break;
       case svn_cl__strict_opt:
         opt_state.strict = TRUE;

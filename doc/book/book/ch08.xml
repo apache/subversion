@@ -366,14 +366,23 @@ $ svn log -r 1729:{2/17/02}
         </varlistentry>
         
         <varlistentry>
+          <term><option>--stop-on-copy</option></term>
+          <listitem>
+            <para>Causes a Subversion subcommand which is traversing
+            the history of a versioned resource to stop harvesting
+            that historical information when a copy&mdash;that is, a
+            location in history where that resource was copied from
+            another location in the repository&mdash;is
+            encountered.</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
           <term><option>--strict</option></term>
           <listitem>
-            <para>Causes Subversion to use strict semantics.  By
-            default, the log subcommand will cross copy boundaries
-            when generating output for a file&mdash;using this
-            switch makes log output log messages that
-            <quote>strictly</quote> belong to the path
-            specified.</para>
+            <para>Causes Subversion to use strict semantics, a notion
+            which is rather vague unless talking about specific
+            subcommands.</para>
           </listitem>
         </varlistentry>
         
@@ -1751,9 +1760,9 @@ svn list --verbose file:///tmp/repos
 
           <para>Each log message is printed just once, even if more
             than one of the affected paths for that revision were
-            explicitly requested.  Logs cross copy history by
-            default; use <option>--strict</option> to disable
-            this.</para>
+            explicitly requested.  Logs follow copy history by
+            default.  Use --stop-on-copy to disable this behavior,
+            which can be useful for determining branchpoints.</para>
 
         </refsect1>
         <refsect1>
@@ -1783,7 +1792,7 @@ svn list --verbose file:///tmp/repos
 --password PASS
 --no-auth-cache
 --non-interactive
---strict
+--stop-on-copy
 --incremental
 --xml
           </screen>
