@@ -841,7 +841,7 @@ svn_client_blame (const char *path_or_url,
  * additional command line options to the diff processes invoked to compare
  * files.
  *
- * the authentication baton cached in @a ctx is used to communicate with 
+ * The authentication baton cached in @a ctx is used to communicate with 
  * the repository.
  */
 svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
@@ -920,7 +920,7 @@ svn_error_t *svn_client_diff_peg (const apr_array_header_t *diff_options,
  * If @a dry_run is @a true the merge is carried out, and full notification
  * feedback is provided, but the working copy is not modified.
  *
- * the authentication baton cached in @a ctx is used to communicate with the 
+ * The authentication baton cached in @a ctx is used to communicate with the 
  * repository.
  */
 svn_error_t *
@@ -1081,7 +1081,7 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
  *   - The move operation will be immediately committed.  If the
  *     commit succeeds, allocate (in @a pool) and populate @a *commit_info.
  *
- * If @a src_path is a working copy path
+ * If @a src_path is a working copy path:
  *
  *   - @a dst_path must also be a working copy path (existent or not).
  *
@@ -1356,7 +1356,7 @@ svn_client_export (svn_revnum_t *result_rev,
  * @a path_or_url is a file, return only the dirent for the file.  If @a
  * path_or_url is non-existent, return @c SVN_ERR_FS_NOT_FOUND.
  *
- * The hash maps entrynames (<tt>const char *</tt>) to @c svn_dirent_t *'s.  
+ * The hash maps entry names (<tt>const char *</tt>) to @c svn_dirent_t *'s.  
  * Do all allocation in @a pool.
  *
  * Use authentication baton cached in @a ctx to authenticate against the 
