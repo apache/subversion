@@ -1112,6 +1112,22 @@ svn_wc__eol_style_from_value (enum svn_wc__eol_style *style,
 }
 
 
+void svn_wc__eol_value_from_string (const char **value,
+                                    const char *eol)
+{
+  if (eol == NULL)
+    *value = NULL;
+  else if (! strcmp ("\n", eol))
+    *value = "LF";
+  else if (! strcmp ("\r", eol))
+    *value = "CR";
+  else if (! strcmp ("\r\n", eol))
+    *value = "CRLF";
+  else
+    *value = NULL;
+}
+
+
 /* Helper for svn_wc__get_keywords().
    
    Given a file at PATH, look up KEYWORD (or a mapping thereof) in its

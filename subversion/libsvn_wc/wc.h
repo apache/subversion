@@ -810,6 +810,11 @@ void svn_wc__eol_style_from_value (enum svn_wc__eol_style *style,
                                    const char **eol,
                                    const char *value);
 
+/* Reverse parser.  Given a real EOL string ("\n", "\r", or "\r\n"),
+   return an encoded *VALUE ("LF", "CR", "CRLF") that one might see in
+   the property value. */
+void svn_wc__eol_value_from_string (const char **value,
+                                    const char *eol);
 
 /* Expand keywords for the file at PATH, by parsing some
    SVN_PROP_KEYWORDS value.  If any keywords are found, allocate

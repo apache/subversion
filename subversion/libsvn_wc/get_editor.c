@@ -1435,6 +1435,17 @@ close_file (void *file_baton)
                    using the old value.  */
               }
           }
+
+        /* Guess what?  We can't pass a literal "\n" or "\r\n" to our
+           xml-producing routines.  That's because expat will parse
+           them back as plain old spaces.  Thus we must use the same
+           string values that we see attached to the 'svn:eol-style'
+           property: {CR, LF, CRLF, native}.  The log-running code
+           will change these back into real eol strings. */
+
+        /* Encode eol_str. */
+        svn_wc__eol_value_from_string (&eol_str, eol_str);
+
       }
 
       /* Decide which value of 'svn:keywords' to use. */
@@ -1740,7 +1751,7 @@ close_file (void *file_baton)
                                                  SVN_WC__LOG_CP,
                                                  fb->name,
                                                  tmp_working,
-                                                 "\n",
+                                                 "LF",
                                                  TRUE, /* repair */
                                                  keywords,
                                                  FALSE); /* expand */
