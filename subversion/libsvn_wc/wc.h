@@ -1,5 +1,5 @@
 /*
- * wc_adm.c :  routines for managing working copies, especially SVN/.
+ * wc.h :  shared stuff internal to the svn_wc library.
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
@@ -49,114 +49,19 @@
 
 
 
-#include <stdio.h>       /* for sprintf() */
-#include <stdlib.h>
-#include <apr_pools.h>
-#include <apr_hash.h>
-#include <apr_file_io.h>
-#include "svn_types.h"
-#include "svn_string.h"
-#include "svn_error.h"
-#include "svn_hash.h"
-#include "svn_wc.h"
+/* kff todo: these don't block, they just return yes or no, prolly. */
+svn_error_t *svn_wc__read_lock (svn_string_t *path, apr_pool_t *pool);
+svn_error_t *svn_wc__write_lock (svn_string_t *path, apr_pool_t *pool);
 
-#include "wc.h"
+/* Return temporary working name based on PATH.
+   For a given PATH, the working name is the same every time. */
+svn_string_t *svn_wc__working_name (svn_string_t *path, apr_pool_t *pool);
 
-
-svn_error_t *
-svn_wc__read_lock (svn_string_t *path, apr_pool_t *pool)
-{
-  return 0;
-}
-
-
-svn_error_t *
-svn_wc__write_lock (svn_string_t *path, apr_pool_t *pool)
-{
-  return 0;
-}
-
-
-
-svn_string_t *
-svn_wc__working_name (svn_string_t *path, apr_pool_t *pool)
-{
-  /* fooo */
-  return path;
-}
-
-
-
-
-svn_error_t *
-svn_wc__set_up_new_dir (svn_string_t *path, 
-                        svn_string_t *ancestor_path,
-                        svn_vernum_t ancestor_version,
-                        apr_pool_t *pool)
-{
-  apr_status_t apr_err;
-  apr_err = apr_make_dir (path->data, APR_OS_DEFAULT, pool);
-
-  /* kff todo: yeah, and now set up SVN/ subdir and friends too. */
-
-  if (apr_err)
-    return svn_create_error (apr_err, 0, path->data, NULL, pool);
-  else
-    return 0;
-}
-
-
-
-
-/* kff todo: not all of these really belong in wc_adm.  Some may get
-   broken out into other files later.  They're just here to satisfy
-   the public header file that they exist. */
-
-svn_error_t *
-svn_wc_rename (svn_string_t *src, svn_string_t *dst)
-{
-  return 0;
-}
-
-
-svn_error_t *
-svn_wc_copy (svn_string_t *src, svn_string_t *dst)
-{
-  return 0;
-}
-
-
-svn_error_t *
-svn_wc_add (apr_array_header_t *paths)
-{
-  return 0;
-}
-
-
-svn_error_t *
-svn_wc_delete (apr_array_header_t *paths)
-{
-  return 0;
-}
-
-
-svn_error_t *
-svn_wc_get_path_prop (svn_string_t **value,
-                      svn_string_t *propname,
-                      svn_string_t *path)
-{
-  return 0;
-}
-
-
-svn_error_t *
-svn_wc_get_dirent_prop (svn_string_t **value,
-                        svn_string_t *propname,
-                        svn_string_t *path)
-{
-  return 0;
-}
-
+/* Create DIR as a working copy directory. */
+svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
+                                     svn_string_t *ancestor_path,
+                                     svn_vernum_t ancestor_vernum,
+                                     apr_pool_t *pool);
 
 
 
