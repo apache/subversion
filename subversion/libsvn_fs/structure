@@ -283,14 +283,16 @@ representation.  Here are the two forms currently recognized:
    (("fulltext" ...) KEY)
        The data is at KEY in the `strings' table.
 
-   (("delta" ...) REP-KEY DIFF CHECKSUM)
+   (("delta" ...) REP-KEY DIFF SIZE CHECKSUM)
        where DIFF is, right now, ("svndiff" STRING-KEY).  Apply the
        delta at STRING-KEY in the `strings' table against the fulltext
        derived from REP-KEY in the `representations' table.  "Derived"
        because REP-KEY might not refer to a fulltext, in which case
        further processing is necessary before the data at STRING-KEY
-       can be applied against it.  CHECKSUM is a checksum on the
-       resulting fulltext.
+       can be applied against it.
+
+       SIZE is the length in bytes of the resulting fulltext, and
+       CHECKSUM is a checksum on the fulltext.
 
 In the future, there may be other representations, for example
 indicating that the text is stored elsewhere in the database, or
@@ -302,7 +304,7 @@ Let's work through an example node revision:
 
 The entry for key "2345" in `representations' is:
 
-   (("delta") "2343" ("svndiff" "1729") CHECKSUM)
+   (("delta") "2343" ("svndiff" "1729") 65 CHECKSUM)
 
 and the entry for key "2343" in `representations' is:
 
@@ -736,12 +738,13 @@ Representations:
 
          REPRESENTATION ::= FULLTEXT | DELTA ;
                FULLTEXT ::= (("fulltext" FLAG ...) STRING-KEY) ;
-                  DELTA ::= (("delta" FLAG ...) REP-KEY DIFF CHECKSUM) ;
+                  DELTA ::= (("delta" FLAG ...) REP-KEY DIFF SIZE CHECKSUM) ;
                    FLAG ::= "mutable" | ;
                    DIFF ::= ("svndiff" STRING-KEY) ;
                 REP-KEY ::= atom ;
              STRING-KEY ::= atom ;
 
+                   SIZE ::= number ;
                CHECKSUM ::= ("md5" BYTES) ;
                   BYTES ::= atom ;
 

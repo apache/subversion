@@ -43,9 +43,9 @@
 
    In the latter case, if REP refers to an immutable representation,
    then *NEW_REP refers to a mutable copy of it (a deep copy,
-   including a new copy of the underlying string); else if REP is the
-   empty string or null, *NEW_REP refers to a new, empty mutable
-   representation (containing a new, empty string).
+   including the rep's contents); else if REP is the empty string or
+   null, *NEW_REP refers to a new, empty mutable representation
+   (containing a new, empty string).
 
    If REP is neither null nor empty, but does not refer to any
    representation, the error SVN_ERR_FS_NO_SUCH_REPRESENTATION is
@@ -88,7 +88,11 @@ svn_error_t *svn_fs__rep_contents_size (apr_size_t *size,
 
 /* Set STR->data to the contents of REP in FS, and STR->len to the
    contents' length, as part of TRAIL.  The data is allocated in
-   TRAIL->pool.  */
+   TRAIL->pool.  If an error occurs, the effect on STR->data and
+   STR->len is undefined.
+
+   Note: this is the fulltext contents, no matter how the contents are
+   represented in storage.  */
 svn_error_t *svn_fs__rep_contents (svn_string_t *str,
                                    svn_fs_t *fs,
                                    const char *rep,
