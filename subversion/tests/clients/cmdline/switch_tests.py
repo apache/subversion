@@ -587,6 +587,7 @@ def delete_subdir(sbox):
   expected_disk.remove('A/B/F')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak('A', switched='S')
+  expected_status.remove('A/B/F')
   expected_status.tweak('', 'iota', wc_rev=1)
 
   # XFails with a 'directory not locked' error for A/B/F
@@ -613,7 +614,7 @@ test_list = [ None,
               rev_update_switched_things,
               log_switched_file,
               relocate_deleted_and_missing,
-              XFail(delete_subdir)
+              delete_subdir
               ]
 
 if __name__ == '__main__':
