@@ -472,7 +472,9 @@ typedef struct svn_delta_edit_fns_t
      the root of the filesystem.)  Like any other directory baton, the
      producer should call `close_directory' on ROOT_BATON when they're
      done.  */
-  svn_error_t *(*replace_root) (void *edit_baton,
+  svn_error_t *(*replace_root) (svn_string_t *ancestor_path,
+                                svn_vernum_t ancestor_version,
+                                void *edit_baton,
                                 void **dir_baton);
 
 
