@@ -157,8 +157,8 @@ typedef struct propfind_ctx_t
   int status; /* status for the current <propstat> (or 0 if unknown). */
   apr_hash_t *propbuffer; /* holds properties until their status is known. */
   ne_xml_elmid last_open_id; /* the id of the last opened tag. */
+  ne_xml_parser *parser; /* xml parser handling the PROPSET request. */
 
-  ne_xml_parser *parser;
   apr_pool_t *pool;
 
 } propfind_ctx_t;
@@ -298,6 +298,8 @@ static int start_element(void *userdata,
       /* these are our user-visible properties, presumably. */
       pc->encoding = ne_xml_get_attr(pc->parser, atts, SVN_DAV_PROP_NS_DAV,
                                      "encoding");
+      if (pc->encoding)
+        pc->encoding = apr_pstrdup(pc->pool, pc->encoding);
       break;
 
     default:
@@ -431,6 +433,7 @@ static int end_element(void *userdata,
             {
               return 1;
             }
+          pc->encoding = NULL;
         }
       else /* no encoding, so just transform the CDATA into an svn_string_t. */
         {
@@ -447,6 +450,14 @@ static int end_element(void *userdata,
   return 0;
 }
 
+
+static void set_parser(ne_xml_parser *parser,
+                       void *baton)
+{
+  propfind_ctx_t *pc = baton;
+  pc->parser = parser;
+}
+  
 
 svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
                                     ne_session *sess,
@@ -508,8 +519,9 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
   pc.props = apr_hash_make(pool);
 
   /* Create and dispatch the request! */
-  err = svn_ra_dav__parsed_request(sess, "PROPFIND", url, body->data, 0,
-                                   propfind_elements, validate_element,
+  err = svn_ra_dav__parsed_request(sess, "PROPFIND", url, body->data, 0, 
+                                   set_parser, propfind_elements, 
+                                   validate_element, 
                                    start_element, end_element, 
                                    &pc, extra_headers, pool);
 

@@ -1410,7 +1410,7 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
 
   *revision = SVN_INVALID_REVNUM;
   err = svn_ra_dav__parsed_request(ras->sess, "REPORT",
-                                   ras->root.path, body, NULL,
+                                   ras->root.path, body, NULL, NULL,
                                    drev_report_elements,
                                    drev_validate_element,
                                    drev_start_element, drev_end_element,
@@ -2340,7 +2340,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
     }
 
   err = svn_ra_dav__parsed_request(rb->ras->sess, "REPORT", vcc,
-                                   NULL, rb->tmpfile,
+                                   NULL, rb->tmpfile, NULL,
                                    report_elements, validate_element,
                                    start_element, end_element, rb,
                                    NULL, rb->ras->pool);
@@ -2358,7 +2358,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
       svn_error_clear (err);
       err = svn_ra_dav__parsed_request(rb->ras->sess, "REPORT",
                                        rb->ras->root.path,
-                                       NULL, rb->tmpfile,
+                                       NULL, rb->tmpfile, NULL,
                                        report_elements, validate_element,
                                        start_element, end_element, rb,
                                        NULL, rb->ras->pool);
