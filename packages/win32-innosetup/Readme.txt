@@ -32,8 +32,8 @@ Introduction
 
   Inno Setup
   ----------
-  Inno Setup QuickStart Pack 4.2.1. This package gives you Inno Setup (IS)
-  4.2.1 and "Inno Setup Pre Processor" (ISPP) which works with your downloaded
+  Inno Setup QuickStart Pack 4.2.5. This package gives you Inno Setup (IS)
+  4.2.5 and "Inno Setup Pre Processor" (ISPP) which works with your downloaded
   version of IS:
     http://www.jrsoftware.org/isdl.php
 

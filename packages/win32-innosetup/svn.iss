@@ -29,7 +29,7 @@ Compression=lzma
 InternalCompressLevel=max
 SolidCompression=true
 AppCopyright={#= svn_cpr}
-UninstallDisplayIcon={app}\svn.exe
+UninstallDisplayIcon={app}\bin\svn.exe
 UninstallDisplayName=Subversion {#= svn_version}{#= svn_pretxtrevision}{#= svn_revision} (Uninstall)
 AlwaysShowDirOnReadyPage=true
 AlwaysShowGroupOnReadyPage=true
@@ -89,6 +89,7 @@ Source: {#= path_authzsvn}\mod_authz_svn.so; DestDir: {app}\httpd; Flags: ignore
 
 ;Helpers ---------------------------------------------------------------------
 Source: {#= path_svnpath}\svnpath.exe; DestDir: {app}\helpers; Flags: ignoreversion
+Source: UninsHs.exe; DestDir: {app}; Flags: ignoreversion onlyifdoesntexist
 
 ; Debug symbols;
 #ifdef inc_dbgsyms
@@ -111,9 +112,17 @@ Source: svn.url; DestDir: {app}
 [INI]
 Filename: {app}\svn.url; Section: InternetShortcut; Key: URL; String: http://subversion.tigris.org/
 
+; Reinstall, repair and uninstall with UninsHS
+FileName: {app}\UninsHs.dat; Section: Common; Key: Software; String: Subversion
+FileName: {app}\UninsHs.dat; Section: Common; Key: Install; String: svn-{#= svn_version}-setup.exe
+FileName: {app}\UninsHs.dat; Section: Common; Key: Language; String: {language}
+FileName: {app}\UninsHs.dat; Section: Common; Key: Remove; String: {uninstallexe}
+FileName: {app}\UninsHs.dat; Section: Common; Key: Group; String: {groupname}
+FileName: {app}\UninsHs.dat; Section: Common; Key: Components; String: {code:ComponentList|x}
+
 [Icons]
 Name: {group}\Subversion on the Web; Filename: {app}\svn.url
-Name: {group}\Uninstall Subversion; Filename: {uninstallexe}
+Name: {group}\Uninstall Subversion; Filename: {app}\UninsHs.exe
 Name: {group}\Licenses\Subversion; Filename: {app}\SubversionLicense.txt
 Name: {group}\Licenses\Berkeley DB Licence; Filename: {app}\BerkeleyLicense.txt
 Name: {group}\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; IconFilename: {app}\bin\svn.exe; Comment: The standard Subversion documentation; IconIndex: 0
@@ -125,6 +134,7 @@ Name: {group}\Download and install shfolder.dll; Filename: {app}\doc\missing_shf
 
 [UninstallDelete]
 Type: files; Name: {app}\svn.url
+Type: filesandordirs; Name: {app}\UninsHs.dat
 
 [Types]
 #ifdef inc_dbgsyms
@@ -151,10 +161,14 @@ Root: HKLM; SubKey: SOFTWARE\Tigris.org\Subversion; ValueType: string; ValueName
 Root: HKLM; Subkey: SYSTEM\CurrentControlSet\Control\Session Manager\Environment; ValueType: string; ValueName: APR_ICONV_PATH; ValueData: {app}\iconv; Flags: uninsdeletevalue noerror
 
 [Run]
-Filename: {app}\helpers\svnpath.exe; Parameters: "add ""{app}\bin"""
+Filename: {app}\helpers\svnpath.exe; Parameters: "add ""{app}\bin"""; StatusMsg: Editing the path...
+Filename: {app}\UninsHs.exe; Parameters: /r; Flags: runminimized
 
 [UninstallRun]
 Filename: {app}\helpers\svnpath.exe; Parameters: "remove ""{app}\bin"""
+
+[Languages]
+Name: en; MessagesFile: compiler:Default.isl
 
 [Code]
 #include "is_main.pas"
