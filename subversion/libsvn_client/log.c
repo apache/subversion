@@ -63,6 +63,14 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
   apr_array_header_t *condensed_targets;
   svn_revnum_t start_revnum, end_revnum;
 
+  if ((start->kind == svn_client_revision_unspecified)
+      || (end->kind == svn_client_revision_unspecified))
+    {
+      return svn_error_create
+        (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
+         "svn_client_log: caller failed to supply revision");
+    }
+
   SVN_ERR (svn_path_condense_targets (&basename, &condensed_targets,
                                       targets, pool));
 
@@ -71,11 +79,11 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
   if (! entry)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
-       "svn_client_update: %s is not under revision control", basename->data);
+       "svn_client_log: %s is not under revision control", basename->data);
   if (! entry->url)
     return svn_error_createf
       (SVN_ERR_WC_ENTRY_MISSING_URL, 0, NULL, pool,
-       "svn_client_update: entry '%s' has no URL", basename->data);
+       "svn_client_log: entry '%s' has no URL", basename->data);
   URL = svn_stringbuf_dup (entry->url, pool);
 
   /* Get the RA library that handles URL. */
@@ -90,9 +98,6 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
            (&start_revnum, ra_lib, session, start, basename->data, pool));
   SVN_ERR (svn_client__get_revision_number
            (&end_revnum, ra_lib, session, end, basename->data, pool));
-
-  if (! SVN_IS_VALID_REVNUM (end_revnum))
-    end_revnum = 1;  /* default to the oldest commit */
 
   SVN_ERR (ra_lib->get_log (session,
                             condensed_targets,  /* ### todo: or `targets'? */

@@ -491,19 +491,23 @@ svn_client_status (apr_hash_t **statushash,
 
 
 /* Invoke RECEIVER with RECEIVER_BATON on each log message from START
-   to END in turn.  
+   to END in turn, inclusive (but never invoke RECEIVER on a given log
+   message more than once).
   
-   PATHS contains all the working copy paths (as svn_stringbuf_t *'s)
-   for which log messages are desired; the common prefix of PATHS
+   TARGETS contains all the working copy paths (as svn_stringbuf_t *'s)
+   for which log messages are desired; the common prefix of TARGETS
    determines the repository and auth info.  RECEIVER is invoked only
    on messages whose revisions involved a change to some path in
-   PATHS.
+   TARGETS.
   
    ### todo: the above paragraph is not fully implemented yet.
   
    If DISCOVER_CHANGED_PATHS is set, then the `changed_paths' argument
    to RECEIVER will be passed on each invocation.
   
+   If START->kind or END->kind is svn_revision_unspecified_kind,
+   return the error SVN_ERR_CLIENT_BAD_REVISION.
+
    Use POOL for any temporary allocation.
  */
 svn_error_t *
