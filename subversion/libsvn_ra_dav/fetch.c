@@ -1597,7 +1597,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
     case ELEM_resource:
       att = get_attr(atts, "path");
       /* ### verify we got it. punt on error. */
-      rb->current_wcprop_path = svn_path_join(rb->target, att, rb->ras->pool);
+      rb->current_wcprop_path = apr_pstrdup(rb->ras->pool, att);
       break;
 
     case ELEM_open_directory:
@@ -2647,7 +2647,8 @@ svn_error_t * svn_ra_dav__do_switch(void *session_baton,
                         switch_url,
                         recurse,
                         TRUE,
-                        TRUE,
+                        FALSE, /* ### Disabled, pre-1.2 servers sometimes
+                                  return incorrect resource-walk data */
                         wc_update,
                         wc_update_baton,
                         TRUE, /* fetch_content */
