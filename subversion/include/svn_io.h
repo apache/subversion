@@ -68,6 +68,12 @@ svn_error_t *svn_io_check_path (const char *path,
                                 svn_node_kind_t *kind,
                                 apr_pool_t *pool);
 
+/** Like svn_io_check_path(), but resolve symlinks.  This returns the
+    same varieties of @a kind as svn_io_check_path(). */ 
+svn_error_t *svn_io_check_resolved_path (const char *path,
+                                         svn_node_kind_t *kind,
+                                         apr_pool_t *pool);
+
 
 /** Open a uniquely named file in a given directory.
  *

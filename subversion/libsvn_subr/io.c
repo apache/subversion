@@ -43,12 +43,16 @@
 
 
 
-
-svn_error_t *
-svn_io_check_path (const char *path,
-                   svn_node_kind_t *kind,
-                   apr_pool_t *pool)
+/* Helper for svn_io_check_path() and svn_io_check_resolved_path();
+   essentially the same semantics as those two, with the obvious
+   interpretation for RESOLVE_SYMLINKS. */
+static svn_error_t *
+io_check_path (const char *path,
+               svn_boolean_t resolve_symlinks,
+               svn_node_kind_t *kind,
+               apr_pool_t *pool)
 {
+  apr_int32_t flags;
   apr_finfo_t finfo;
   apr_status_t apr_err;
   const char *path_apr;
@@ -57,15 +61,16 @@ svn_io_check_path (const char *path,
     path = ".";
 
   /* Not using svn_io_stat() here because we want to check the
-     apr_err return anyway. */
+     apr_err return explicitly. */
   SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, path, pool));
-  apr_err = apr_stat (&finfo, path_apr,
-                      (APR_FINFO_MIN | APR_FINFO_LINK), pool);
+
+  flags = resolve_symlinks ? APR_FINFO_MIN : (APR_FINFO_MIN | APR_FINFO_LINK);
+  apr_err = apr_stat (&finfo, path_apr, flags, pool);
 
   if (apr_err && !APR_STATUS_IS_ENOENT(apr_err))
     return svn_error_createf
       (apr_err, NULL,
-       "svn_io_check_path: problem checking path \"%s\"", path);
+       "check_path: problem checking path \"%s\"", path);
   else if (APR_STATUS_IS_ENOENT(apr_err))
     *kind = svn_node_none;
   else if (finfo.filetype == APR_NOFILE)
@@ -82,6 +87,23 @@ svn_io_check_path (const char *path,
     *kind = svn_node_unknown;
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_io_check_resolved_path (const char *path,
+                            svn_node_kind_t *kind,
+                            apr_pool_t *pool)
+{
+  return io_check_path (path, TRUE, kind, pool);
+}
+
+svn_error_t *
+svn_io_check_path (const char *path,
+                   svn_node_kind_t *kind,
+                   apr_pool_t *pool)
+{
+  return io_check_path (path, FALSE, kind, pool);
 }
 
 
