@@ -80,10 +80,6 @@ echo "Committing from ${TEST_DIR_1} to ${COMMIT_RESULTFILE_NAME}-2.xml."
 
 check_status 6
 
-# FIXME: remove this line when the xml file created above is correct.
-# Right now, we can't update from it.
-exit 0
-
 ### Update.
 echo "Updating ${TEST_DIR_2} from changes in ${TEST_DIR_1}."
 (cd ${TEST_DIR_2};                                                    \
