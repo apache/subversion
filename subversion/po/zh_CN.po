@@ -2792,13 +2792,13 @@ msgstr "尚不支持混合的存取规则 (“%s”与“%s”)"
 #: libsvn_client/diff.c:273
 #, c-format
 msgid "%s\t(revision %ld)"
-msgstr "%s\t(修订版 %ld)"
+msgstr "%s\t（修订版 %ld）"
 
 # as-is
 #: libsvn_client/diff.c:275
 #, c-format
 msgid "%s\t(working copy)"
-msgstr "%s\t(工作拷贝)"
+msgstr "%s\t（工作拷贝）"
 
 #: libsvn_client/diff.c:418
 #, c-format
