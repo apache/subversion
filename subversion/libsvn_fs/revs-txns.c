@@ -118,7 +118,7 @@ svn_fs_youngest_rev (svn_revnum_t *youngest_p,
   SVN_ERR (svn_fs__check_fs (fs));
 
   args.fs = fs;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_youngest_rev, &args, pool));
+  SVN_ERR (svn_fs__retry (fs, txn_body_youngest_rev, &args, 1, pool));
 
   *youngest_p = args.youngest;
   return SVN_NO_ERROR;
@@ -169,7 +169,7 @@ svn_fs_revision_prop (svn_string_t **value_p,
   args.fs = fs;
   args.rev = rev;
   args.propname = propname;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_revision_prop, &args, pool));
+  SVN_ERR (svn_fs__retry (fs, txn_body_revision_prop, &args, 1, pool));
 
   *value_p = value;
   return SVN_NO_ERROR;
@@ -210,7 +210,7 @@ svn_fs_revision_proplist (apr_hash_t **table_p,
   args.table_p = &table;
   args.fs = fs;
   args.rev = rev;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_revision_proplist, &args, pool));
+  SVN_ERR (svn_fs__retry (fs, txn_body_revision_proplist, &args, 1, pool));
 
   *table_p = table;
   return SVN_NO_ERROR;
@@ -280,7 +280,7 @@ svn_fs_change_rev_prop (svn_fs_t *fs,
   args.rev = rev;
   args.name = name;
   args.value = value;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_change_rev_prop, &args, pool));
+  SVN_ERR (svn_fs__retry (fs, txn_body_change_rev_prop, &args, 1, pool));
 
   return SVN_NO_ERROR;
 }
@@ -464,7 +464,7 @@ svn_fs_txn_prop (svn_string_t **value_p,
   args.fs = fs;
   svn_fs_txn_name (&args.id, txn, pool);
   args.propname = propname;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_txn_prop, &args, pool));
+  SVN_ERR (svn_fs__retry (fs, txn_body_txn_prop, &args, 1, pool));
 
   *value_p = value;
   return SVN_NO_ERROR;
@@ -509,7 +509,7 @@ svn_fs_txn_proplist (apr_hash_t **table_p,
   args.table_p = &table;
   args.fs = fs;
   svn_fs_txn_name (&args.id, txn, pool);
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_txn_proplist, &args, pool));
+  SVN_ERR (svn_fs__retry (fs, txn_body_txn_proplist, &args, 1, pool));
 
   *table_p = table;
   return SVN_NO_ERROR;
@@ -577,7 +577,7 @@ svn_fs_change_txn_prop (svn_fs_txn_t *txn,
   svn_fs_txn_name (&args.id, txn, pool);
   args.name = name;
   args.value = value;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_change_txn_prop, &args, pool));
+  SVN_ERR (svn_fs__retry (fs, txn_body_change_txn_prop, &args, 1, pool));
 
   return SVN_NO_ERROR;
 }

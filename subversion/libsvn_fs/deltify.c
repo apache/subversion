@@ -108,7 +108,7 @@ svn_fs_undeltify (svn_fs_root_t *root,
   args.fs = svn_fs_root_fs (root);
 
   /* Now, do the undeltification. */
-  SVN_ERR (svn_fs__retry_txn (args.fs, txn_body_undeltify, &args, pool));
+  SVN_ERR (svn_fs__retry (args.fs, txn_body_undeltify, &args, 1, pool));
 
   /* If we aren't recursing, we're done. */
   if (! recursive)

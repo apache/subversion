@@ -211,8 +211,8 @@ svn_fs_txn_root (svn_fs_root_t **root_p,
 
   args.root_p = &root;
   args.txn    = txn;
-  SVN_ERR (svn_fs__retry_txn (svn_fs_txn_fs (txn), txn_body_txn_root,
-                              &args, pool));
+  SVN_ERR (svn_fs__retry (svn_fs_txn_fs (txn), txn_body_txn_root,
+                          &args, 1, pool));
 
   *root_p = root;
   return SVN_NO_ERROR;
@@ -257,7 +257,7 @@ svn_fs_revision_root (svn_fs_root_t **root_p,
   args.root_p = &root;
   args.fs     = fs;
   args.rev    = rev;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_revision_root, &args, pool));
+  SVN_ERR (svn_fs__retry (fs, txn_body_revision_root, &args, 1, pool));
 
   *root_p = root;
   return SVN_NO_ERROR;
@@ -910,7 +910,7 @@ svn_fs_node_id (const svn_fs_id_t **id_p,
   args.root = root;
   args.path = path;
 
-  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_node_id, &args, pool));
+  SVN_ERR (svn_fs__retry (root->fs, txn_body_node_id, &args, 1, pool));
   *id_p = id;
   return SVN_NO_ERROR;
 }
@@ -946,8 +946,8 @@ svn_fs_node_created_rev (svn_revnum_t *revision,
   args.revision = SVN_INVALID_REVNUM;
   args.root = root;
   args.path = path;
-  SVN_ERR (svn_fs__retry_txn 
-           (root->fs, txn_body_node_created_rev, &args, pool));
+  SVN_ERR (svn_fs__retry (root->fs, txn_body_node_created_rev, 
+                          &args, 1, pool));
   *revision = args.revision;
   return SVN_NO_ERROR;
 }
@@ -983,8 +983,8 @@ svn_fs_node_created_path (const char **created_path,
   args.created_path = created_path;
   args.root = root;
   args.path = path;
-  SVN_ERR (svn_fs__retry_txn 
-           (root->fs, txn_body_node_created_path, &args, pool));
+  SVN_ERR (svn_fs__retry (root->fs, txn_body_node_created_path, 
+                          &args, 1, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1024,7 +1024,7 @@ node_kind (svn_node_kind_t *kind_p,
   /* Use the node id to get the real kind. */
   args.id = node_id;
   args.fs = svn_fs_root_fs (root);
-  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_node_kind, &args, pool));
+  SVN_ERR (svn_fs__retry (root->fs, txn_body_node_kind, &args, 1, pool));
 
   *kind_p = args.kind;
   return SVN_NO_ERROR;
@@ -1157,7 +1157,7 @@ svn_fs_is_different (int *is_different,
   args.root2 = root2;
   args.path2 = path2;
 
-  SVN_ERR (svn_fs__retry_txn (root1->fs, txn_body_is_different, &args, pool));
+  SVN_ERR (svn_fs__retry (root1->fs, txn_body_is_different, &args, 1, pool));
   *is_different = args.is_different;
   return SVN_NO_ERROR;
 }
@@ -1204,7 +1204,7 @@ svn_fs_node_prop (svn_string_t **value_p,
   args.root     = root;
   args.path     = path;
   args.propname = propname;
-  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_node_prop, &args, pool));
+  SVN_ERR (svn_fs__retry (root->fs, txn_body_node_prop, &args, 1, pool));
 
   *value_p = value;
   return SVN_NO_ERROR;
@@ -1245,7 +1245,7 @@ svn_fs_node_proplist (apr_hash_t **table_p,
   args.root = root;
   args.path = path;
 
-  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_node_proplist, &args, pool));
+  SVN_ERR (svn_fs__retry (root->fs, txn_body_node_proplist, &args, 1, pool));
 
   *table_p = table;
   return SVN_NO_ERROR;
@@ -1313,8 +1313,8 @@ svn_fs_change_node_prop (svn_fs_root_t *root,
   args.path  = path;
   args.name  = name;
   args.value = value;
-  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_change_node_prop, &args,
-                              pool));
+  SVN_ERR (svn_fs__retry (root->fs, txn_body_change_node_prop, 
+                          &args, 1, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1368,8 +1368,8 @@ svn_fs_props_changed (int *changed_p,
   args.changed_p  = changed_p;
   args.pool       = pool;
 
-  SVN_ERR (svn_fs__retry_txn (root1->fs, txn_body_props_changed,
-                              &args, pool));
+  SVN_ERR (svn_fs__retry (root1->fs, txn_body_props_changed,
+                          &args, 1, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1555,7 +1555,7 @@ deltify_mutable (svn_fs_t *fs,
   td_args.root = root;
   td_args.path = path;
   td_args.is_dir = is_dir;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_txn_deltify, &td_args, pool));
+  SVN_ERR (svn_fs__retry (fs, txn_body_txn_deltify, &td_args, 1, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2234,7 +2234,7 @@ struct merge_args
 
   /* If a conflict results, this is updated to the path in the txn that
      conflicted.  It must point to a valid svn_stringbuf_t before calling
-     svn_fs__retry_txn, as this determines the pool used to allocate any
+     svn_fs__retry, as this determines the pool used to allocate any
      required memory. */
   svn_stringbuf_t *conflict;
 };
@@ -2451,8 +2451,8 @@ svn_fs_commit_txn (const char **conflict_p,
          may have changed by then -- that's why we're careful to get
          this root in its own bdb txn here). */
       get_root_args.root = youngish_root;
-      SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_root,
-                                  &get_root_args, pool));
+      SVN_ERR (svn_fs__retry (fs, txn_body_get_root,
+                              &get_root_args, 1, pool));
       youngish_root_node = get_root_args.node;
       
       /* Try to merge.  If the merge succeeds, the base root node of
@@ -2463,7 +2463,7 @@ svn_fs_commit_txn (const char **conflict_p,
       merge_args.source_node = youngish_root_node;
       merge_args.txn = txn;
       merge_args.conflict = svn_stringbuf_create ("", pool);
-      err = svn_fs__retry_txn (fs, txn_body_merge, &merge_args, pool);
+      err = svn_fs__retry (fs, txn_body_merge, &merge_args, 1, pool);
       if (err)
         {
           if ((err->apr_err == SVN_ERR_FS_CONFLICT) && conflict_p)
@@ -2473,7 +2473,7 @@ svn_fs_commit_txn (const char **conflict_p,
       
       /* Try to commit. */
       commit_args.txn = txn;
-      err = svn_fs__retry_txn (fs, txn_body_commit, &commit_args, pool);
+      err = svn_fs__retry (fs, txn_body_commit, &commit_args, 1, pool);
       if (err && (err->apr_err == SVN_ERR_FS_TXN_OUT_OF_DATE))
         {
           /* Did someone else finish committing a new revision while we
@@ -2556,12 +2556,12 @@ svn_fs_merge (const char **conflict_p,
 
   /* Get the ancestor node. */
   get_root_args.root = ancestor_root;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_root, &get_root_args, pool));
+  SVN_ERR (svn_fs__retry (fs, txn_body_get_root, &get_root_args, 1, pool));
   ancestor = get_root_args.node;
 
   /* Get the source node. */
   get_root_args.root = source_root;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_root, &get_root_args, pool));
+  SVN_ERR (svn_fs__retry (fs, txn_body_get_root, &get_root_args, 1, pool));
   source = get_root_args.node;
   
   /* Open a txn for the txn root into which we're merging. */
@@ -2574,7 +2574,7 @@ svn_fs_merge (const char **conflict_p,
   merge_args.ancestor_node = ancestor;
   merge_args.txn = txn;
   merge_args.conflict = svn_stringbuf_create ("", pool);
-  err = svn_fs__retry_txn (fs, txn_body_merge, &merge_args, pool);
+  err = svn_fs__retry (fs, txn_body_merge, &merge_args, 1, pool);
   if (err)
     {
       if ((err->apr_err == SVN_ERR_FS_CONFLICT) && conflict_p)
@@ -2630,7 +2630,7 @@ svn_fs_dir_entries (apr_hash_t **table_p,
   args.table_p = &table;
   args.root    = root;
   args.path    = path;
-  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_dir_entries, &args, pool));
+  SVN_ERR (svn_fs__retry (root->fs, txn_body_dir_entries, &args, 1, pool));
 
   /* Add in the kind data. */
   if (table)
@@ -2649,7 +2649,7 @@ svn_fs_dir_entries (apr_hash_t **table_p,
           entry = val;
           nk_args.id = entry->id;
           nk_args.fs = fs;
-          SVN_ERR (svn_fs__retry_txn (fs, txn_body_node_kind, &nk_args, pool));
+          SVN_ERR (svn_fs__retry (fs, txn_body_node_kind, &nk_args, 1, pool));
           entry->kind = nk_args.kind;
         }
     }
@@ -2721,7 +2721,7 @@ svn_fs_make_dir (svn_fs_root_t *root,
 
   args.root = root;
   args.path = path;
-  return svn_fs__retry_txn (root->fs, txn_body_make_dir, &args, pool);
+  return svn_fs__retry (root->fs, txn_body_make_dir, &args, 1, pool);
 }
                               
 
@@ -2791,7 +2791,7 @@ svn_fs_delete (svn_fs_root_t *root,
   args.root        = root;
   args.path        = path;
   args.delete_tree = FALSE;
-  return svn_fs__retry_txn (root->fs, txn_body_delete, &args, pool);
+  return svn_fs__retry (root->fs, txn_body_delete, &args, 1, pool);
 }
 
 
@@ -2805,7 +2805,7 @@ svn_fs_delete_tree (svn_fs_root_t *root,
   args.root        = root;
   args.path        = path;
   args.delete_tree = TRUE;
-  return svn_fs__retry_txn (root->fs, txn_body_delete, &args, pool);
+  return svn_fs__retry (root->fs, txn_body_delete, &args, 1, pool);
 }
 
 
@@ -2923,7 +2923,7 @@ svn_fs_copy (svn_fs_root_t *from_root,
   args.to_path           = to_path;
   args.preserve_history  = 1;
 
-  return svn_fs__retry_txn (to_root->fs, txn_body_copy, &args, pool);
+  return svn_fs__retry (to_root->fs, txn_body_copy, &args, 1, pool);
 }
 
 
@@ -2944,7 +2944,7 @@ svn_fs_revision_link (svn_fs_root_t *from_root,
   args.to_path           = path;
   args.preserve_history  = 0;
 
-  return svn_fs__retry_txn (to_root->fs, txn_body_copy, &args, pool);
+  return svn_fs__retry (to_root->fs, txn_body_copy, &args, 1, pool);
 }
 
 
@@ -2986,7 +2986,7 @@ svn_fs_copied_from (svn_revnum_t *rev_p,
   args.path = path;
   args.pool = pool;
 
-  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_copied_from, &args, pool));
+  SVN_ERR (svn_fs__retry (root->fs, txn_body_copied_from, &args, 1, pool));
 
   *rev_p  = args.result_rev;
   *path_p = args.result_path;
@@ -3053,7 +3053,7 @@ svn_fs_make_file (svn_fs_root_t *root,
 
   args.root = root;
   args.path = path;
-  return svn_fs__retry_txn (root->fs, txn_body_make_file, &args, pool);
+  return svn_fs__retry (root->fs, txn_body_make_file, &args, 1, pool);
 }
 
 
@@ -3089,7 +3089,7 @@ svn_fs_file_length (svn_filesize_t *length_p,
 
   args.root = root;
   args.path = path;
-  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_file_length, &args, pool));
+  SVN_ERR (svn_fs__retry (root->fs, txn_body_file_length, &args, 1, pool));
 
   *length_p = args.length;
   return SVN_NO_ERROR;
@@ -3125,7 +3125,7 @@ svn_fs_file_md5_checksum (unsigned char digest[],
   args.root = root;
   args.path = path;
   args.digest = digest;
-  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_file_checksum, &args, pool));
+  SVN_ERR (svn_fs__retry (root->fs, txn_body_file_checksum, &args, 1, pool));
 
   return SVN_NO_ERROR;
 }
@@ -3186,8 +3186,8 @@ svn_fs_file_contents (svn_stream_t **contents,
   fb->pool = pool;
 
   /* Create the readable stream in the context of a db txn.  */
-  SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (root),
-                              txn_body_get_file_contents, fb, pool));
+  SVN_ERR (svn_fs__retry (svn_fs_root_fs (root), 
+                          txn_body_get_file_contents, fb, 1, pool));
   
   *contents = fb->file_stream;
   return SVN_NO_ERROR;
@@ -3319,9 +3319,8 @@ window_consumer (svn_txdelta_window_t *window, void *baton)
   /* Is the window NULL?  If so, we're done, and we need to tell the
      dag subsystem that we're finished with our edits. */
   if (! window)
-    SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (tb->root),
-                                txn_body_txdelta_finalize_edits, tb,
-                                tb->pool));
+    SVN_ERR (svn_fs__retry (svn_fs_root_fs (tb->root),
+                            txn_body_txdelta_finalize_edits, tb, 1, tb->pool));
 
 
   return SVN_NO_ERROR;
@@ -3421,8 +3420,8 @@ svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
   else
     tb->result_checksum = NULL;
 
-  SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (root),
-                              txn_body_apply_textdelta, tb, pool));
+  SVN_ERR (svn_fs__retry (svn_fs_root_fs (root),
+                          txn_body_apply_textdelta, tb, 1, pool));
   
   *contents_p = window_consumer;
   *contents_baton_p = tb;
@@ -3499,8 +3498,8 @@ text_stream_closer (void *baton)
   struct text_baton_t *tb = baton;
 
   /* Need to tell fs that we're done sending text */
-  SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (tb->root),
-                              txn_body_fulltext_finalize_edits, tb, tb->pool));
+  SVN_ERR (svn_fs__retry (svn_fs_root_fs (tb->root),
+                          txn_body_fulltext_finalize_edits, tb, 1, tb->pool));
 
   return SVN_NO_ERROR;
 }
@@ -3557,8 +3556,8 @@ svn_fs_apply_text (svn_stream_t **contents_p,
   else
     tb->result_checksum = NULL;
 
-  SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (root),
-                              txn_body_apply_text, tb, pool));
+  SVN_ERR (svn_fs__retry (svn_fs_root_fs (root), 
+                          txn_body_apply_text, tb, 1, pool));
   
   *contents_p = tb->stream;
   return SVN_NO_ERROR;
@@ -3624,8 +3623,8 @@ svn_fs_contents_changed (int *changed_p,
   args.changed_p  = changed_p;
   args.pool       = pool;
 
-  SVN_ERR (svn_fs__retry_txn (root1->fs, txn_body_contents_changed,
-                              &args, pool));
+  SVN_ERR (svn_fs__retry (root1->fs, txn_body_contents_changed,
+                          &args, 1, pool));
 
   return SVN_NO_ERROR;
 }
@@ -3701,8 +3700,8 @@ svn_fs_paths_changed (apr_hash_t **changed_paths_p,
   struct paths_changed_args args;
   args.root = root;
   args.changes = NULL;
-  SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (root), txn_body_paths_changed,
-                              &args, pool));
+  SVN_ERR (svn_fs__retry (svn_fs_root_fs (root), txn_body_paths_changed,
+                          &args, 1, pool));
   *changed_paths_p = args.changes;
   return SVN_NO_ERROR;
 }
@@ -3943,8 +3942,8 @@ txn_body_history_prev (void *baton, trail_t *trail)
   rr_args.root_p = &root;
   rr_args.fs = fs;
   rr_args.rev = revision;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_revision_root, &rr_args, 
-                              trail->pool));
+  SVN_ERR (svn_fs__retry (fs, txn_body_revision_root, &rr_args, 1, 
+                          trail->pool));
 
   /* Open PATH/REVISION, and get its node and a bunch of other goodies.  */
   SVN_ERR (get_dag (&node, root, path, trail));
@@ -4039,7 +4038,7 @@ svn_error_t *svn_fs_history_prev (svn_fs_history_t **prev_history_p,
       args.history = history;
       args.cross_copies = cross_copies;
       args.pool = pool;
-      SVN_ERR (svn_fs__retry_txn (fs, txn_body_history_prev, &args, pool));
+      SVN_ERR (svn_fs__retry (fs, txn_body_history_prev, &args, 1, pool));
     }
 
   *prev_history_p = prev_history;
