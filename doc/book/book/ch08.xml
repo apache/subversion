@@ -1762,7 +1762,7 @@ svn list --verbose file:///tmp/repos
             than one of the affected paths for that revision were
             explicitly requested.  Logs follow copy history by
             default.  Use --stop-on-copy to disable this behavior,
-            which can be useful for determining branchpoints.</para>
+            which can be useful for determining branch points.</para>
 
         </refsect1>
         <refsect1>
@@ -2538,8 +2538,9 @@ Properties on 'foo.c':
 
           <para>Set PROPNAME to PROPVAL on files, directories, or
           revisions. The first example creates a versioned, local
-          propchange in the working copy, and the second creates an
-          unversioned, remote propchange on a repository revision.</para>
+          property change in the working copy, and the second creates
+          an unversioned, remote property change change on a repository
+          revision.</para>
 
           <tip>
             <para>Subversion has a number of <quote>special</quote>
@@ -4036,7 +4037,7 @@ sally
         <refsect1>
           <title>Examples</title>
 
-          <para>This shows the contents of a file in transation
+          <para>This shows the contents of a file in transaction
             <literal>ax8</literal>, located at 
             <filename>/trunk/README</filename>:</para>
 
