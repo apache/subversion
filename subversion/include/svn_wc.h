@@ -1017,6 +1017,14 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
                             apr_pool_t *pool);
 
 
+
+/** A callback for reporting svn_wc_status_t * items. */
+
+typedef void (*svn_wc_status_func_t) (void *baton,
+                                      const char *path,
+                                      svn_wc_status_t *status);
+
+
 /** Under @a path, fill @a statushash mapping paths to @c svn_wc_status_t
  * structures.  All fields in each struct will be filled in except for
  * @c repos_rev, which would presumably be filled in by the caller.

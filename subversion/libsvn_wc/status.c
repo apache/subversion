@@ -40,29 +40,6 @@
 #include "props.h"
 
 
-svn_error_t *
-svn_wc_get_default_ignores (apr_array_header_t **patterns,
-                            apr_hash_t *config,
-                            apr_pool_t *pool)
-{
-  svn_config_t *cfg = config ? apr_hash_get (config, 
-                                             SVN_CONFIG_CATEGORY_CONFIG, 
-                                             APR_HASH_KEY_STRING) : NULL;
-  const char *val;
-
-  /* Check the Subversion run-time configuration for global ignores.
-     If no configuration value exists, we fall back to our defaults. */
-  svn_config_get (cfg, &val, SVN_CONFIG_SECTION_MISCELLANY, 
-                  SVN_CONFIG_OPTION_GLOBAL_IGNORES,
-                  SVN_CONFIG_DEFAULT_GLOBAL_IGNORES);
-  *patterns = apr_array_make (pool, 16, sizeof (const char *));
-
-  /* Split the patterns on whitespace, and stuff them into *PATTERNS. */
-  svn_cstring_split_append (*patterns, val, "\n\r\t\v ", FALSE, pool);
-  return SVN_NO_ERROR;
-}
-
-                        
 /* Fill in *STATUS for PATH, whose entry data is in ENTRY.  Allocate
    *STATUS in POOL. 
 
@@ -315,37 +292,25 @@ assemble_status (svn_wc_status_t **status,
 
 
 /* Given an ENTRY object representing PATH, build a status structure
-   and store it in STATUSHASH.  */
+   and pass it off to the STATUS_FUNC. */
 static svn_error_t *
-add_status_structure (apr_hash_t *statushash,
-                      const char *path,
+add_status_structure (const char *path,
                       svn_wc_adm_access_t *adm_access,
                       const svn_wc_entry_t *entry,
                       const svn_wc_entry_t *parent_entry,
                       svn_node_kind_t path_kind,
                       svn_boolean_t get_all,
                       svn_boolean_t is_ignored,
-                      svn_wc_notify_func_t notify_func,
-                      void *notify_baton,
+                      svn_wc_status_func_t status_func,
+                      void *status_baton,
                       apr_pool_t *pool)
 {
   svn_wc_status_t *statstruct;
   
   SVN_ERR (assemble_status (&statstruct, path, adm_access, entry, parent_entry,
                             path_kind, get_all, is_ignored, pool));
-  if (statstruct)
-    {
-      apr_hash_set (statushash, path, APR_HASH_KEY_STRING, statstruct);
-      if (notify_func != NULL)
-        (*notify_func) (notify_baton, path, svn_wc_notify_status,
-                        statstruct->entry ? 
-                         statstruct->entry->kind : svn_node_unknown,
-                        NULL,
-                        svn_wc_notify_state_inapplicable,
-                        svn_wc_notify_state_inapplicable,
-                        SVN_INVALID_REVNUM);
-
-    }
+  if (statstruct && (status_func))
+      (*status_func) (status_baton, path, statstruct);
   
   return SVN_NO_ERROR;
 }
@@ -395,18 +360,14 @@ collect_ignore_patterns (apr_array_header_t *patterns,
 } 
 
 
-/* Add a status structure for NAME to the STATUSHASH, assuming 
-   that the file is unversioned.  This function should never
-   be called on a versioned entry. 
+/* Create a status structure for NAME, and pass it off via the
+   STATUS_FUNC, assuming that the path is unversioned.  This function
+   should never be called on a versioned entry.
 
    NAME is the basename of the unversioned file whose status is being 
    requested. 
 
    PATH_KIND is the node kind of NAME as determined by the caller.
-
-   STATUSHASH is a mapping from path to status structure.  On entry, it 
-   may or may not contain status structures for other paths.  Upon return
-   it may contain a status structure for NAME.
 
    ADM_ACCESS is an access baton for the working copy path. 
 
@@ -418,22 +379,17 @@ collect_ignore_patterns (apr_array_header_t *patterns,
    If NO_IGNORE is non-zero, the item will be added regardless of whether 
    it is ignored; otherwise we will only add the item if it does not 
    match any of the patterns in PATTERNS.
-   
-   If a status structure for the item is added, NOTIFY_FUNC will called 
-   with the path of the item and the NOTIFY_BATON.  NOTIFY_FUNC may be 
-   NULL if no such notification is required.
 
    Allocate everything in POOL.
 */
 static svn_error_t *
 add_unversioned_item (const char *name, 
                       svn_node_kind_t path_kind, 
-                      apr_hash_t *statushash,
                       svn_wc_adm_access_t *adm_access, 
                       apr_array_header_t *patterns,
                       svn_boolean_t no_ignore,
-                      svn_wc_notify_func_t notify_func,
-                      void *notify_baton,
+                      svn_wc_status_func_t status_func,
+                      void *status_baton,
                       apr_pool_t *pool)
 {
   int ignore_me;
@@ -448,16 +404,15 @@ add_unversioned_item (const char *name,
                                       name, pool);
       
       /* Add this item to the status hash. */
-      SVN_ERR (add_status_structure (statushash,
-                                     printable_path,
+      SVN_ERR (add_status_structure (printable_path,
                                      adm_access,
                                      NULL, /* no entry */
                                      NULL,
                                      path_kind,
                                      FALSE,
                                      ignore_me, /* is_ignored */
-                                     notify_func,
-                                     notify_baton,
+                                     status_func,
+                                     status_baton,
                                      pool));
     }
 
@@ -474,11 +429,10 @@ add_unversioned_item (const char *name,
 static svn_error_t *
 add_unversioned_path (const char *path,
                       svn_node_kind_t path_kind,
-                      apr_hash_t *statushash,
                       svn_wc_adm_access_t *adm_access,
                       apr_array_header_t *default_ignores,
-                      svn_wc_notify_func_t notify_func,
-                      void *notify_baton,
+                      svn_wc_status_func_t status_func,
+                      void *status_baton,
                       apr_pool_t *pool)
 {
   char *name;
@@ -489,15 +443,15 @@ add_unversioned_path (const char *path,
                                     pool));
 
   name = svn_path_basename (path, pool);
-  return add_unversioned_item (name, path_kind, statushash, adm_access,
-                               patterns, TRUE, notify_func, notify_baton,
-                               pool);
+  return add_unversioned_item (name, path_kind, adm_access, patterns, 
+                               TRUE, status_func, status_baton, pool);
 }
 
-/* Add all items that are NOT in ENTRIES (which is a list of PATH's
-   versioned things) to the STATUSHASH as unversioned items,
-
-   allocating everything in POOL.
+/* Create status structures for all items that are NOT in ENTRIES
+   (which is a list of PATH's versioned things) as unversioned items,
+   and pass those structures to the STATUS_FUNC.
+ 
+   Use POOL for all allocations.
 
    IGNORES contains the list of patterns to be ignored.
 
@@ -522,17 +476,16 @@ add_unversioned_path (const char *path,
 static svn_error_t *
 add_unversioned_items (svn_wc_adm_access_t *adm_access,
                        apr_hash_t *entries,
-                       apr_hash_t *statushash,
                        apr_array_header_t *ignores,
                        svn_boolean_t no_ignore,
-                       svn_wc_notify_func_t notify_func,
-                       void *notify_baton,
+                       svn_wc_status_func_t status_func,
+                       void *status_baton,
                        apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *dirents;
   apr_hash_index_t *hi;
-  apr_array_header_t *patterns;
+  apr_array_header_t *patterns = NULL;
 
   /* Read PATH's dirents. */
   SVN_ERR (svn_io_get_dirents (&dirents, svn_wc_adm_access_path (adm_access),
@@ -546,8 +499,6 @@ add_unversioned_items (svn_wc_adm_access_t *adm_access,
       SVN_ERR (collect_ignore_patterns (patterns, ignores, 
                                         adm_access, subpool));
     }
-  else
-    patterns = NULL;
 
   /* Add empty status structures for each of the unversioned things. */
   for (hi = apr_hash_first (subpool, dirents); hi; hi = apr_hash_next (hi))
@@ -570,9 +521,9 @@ add_unversioned_items (svn_wc_adm_access_t *adm_access,
       if (! strcmp (keystring, SVN_WC_ADM_DIR_NAME))
         continue;
 
-      SVN_ERR (add_unversioned_item (keystring, *path_kind, statushash, 
+      SVN_ERR (add_unversioned_item (keystring, *path_kind,
                                      adm_access, patterns, no_ignore,
-                                     notify_func, notify_baton, pool));
+                                     status_func, status_baton, pool));
     }
 
   svn_pool_destroy (subpool);
@@ -581,56 +532,19 @@ add_unversioned_items (svn_wc_adm_access_t *adm_access,
 }
 
 
-svn_error_t *
-svn_wc_status (svn_wc_status_t **status,
-               const char *path,
-               svn_wc_adm_access_t *adm_access,
-               apr_pool_t *pool)
-{
-  svn_wc_status_t *s;
-  const svn_wc_entry_t *entry = NULL;
-  const svn_wc_entry_t *parent_entry = NULL;
-
-  if (adm_access)
-    SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
-
-  /* If we have an entry, and PATH is not a root, then we need a parent
-     entry */
-  if (entry)
-    {
-      svn_boolean_t is_root;
-      SVN_ERR (svn_wc_is_wc_root (&is_root, path, adm_access, pool));
-      if (! is_root)
-        {
-          const char *parent_path = svn_path_dirname (path, pool);
-          svn_wc_adm_access_t *parent_access;
-          SVN_ERR (svn_wc_adm_open (&parent_access, NULL, parent_path,
-                                    FALSE, FALSE, pool));
-          SVN_ERR (svn_wc_entry (&parent_entry, parent_path, parent_access,
-                                 FALSE, pool));
-        }
-    }
-
-  SVN_ERR (assemble_status (&s, path, adm_access, entry, parent_entry,
-                            svn_node_unknown, TRUE, FALSE, pool));
-  *status = s;
-  return SVN_NO_ERROR;
-}
-
 /* Fill STATUSHASH with (pointers to) svn_wc_status_t structures for the
    directory PATH and for all its entries.  ADM_ACCESS is an access baton
    for PATH, PARENT_ENTRY is the entry for the parent of PATH or NULL if
    PATH is a working copy root. */
 static svn_error_t *
-get_dir_status (apr_hash_t *statushash,
-                const svn_wc_entry_t *parent_entry,
+get_dir_status (const svn_wc_entry_t *parent_entry,
                 svn_wc_adm_access_t *adm_access,
                 apr_array_header_t *ignores,
                 svn_boolean_t descend,
                 svn_boolean_t get_all,
                 svn_boolean_t no_ignore,
-                svn_wc_notify_func_t notify_func,
-                void *notify_baton,
+                svn_wc_status_func_t status_func,
+                void *status_baton,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
                 svn_wc_traversal_info_t *traversal_info,
@@ -648,9 +562,8 @@ get_dir_status (apr_hash_t *statushash,
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
 
   /* Add the unversioned items to the status output. */
-  SVN_ERR (add_unversioned_items (adm_access, entries, statushash,
-                                  ignores, no_ignore,
-                                  notify_func, notify_baton, pool));
+  SVN_ERR (add_unversioned_items (adm_access, entries, ignores, no_ignore,
+                                  status_func, status_baton, pool));
   path = svn_wc_adm_access_path (adm_access);
   SVN_ERR (svn_wc_entry (&dir_entry, path, adm_access, FALSE, pool));
 
@@ -680,188 +593,83 @@ get_dir_status (apr_hash_t *statushash,
       void *val;
       const char *base_name;
       const svn_wc_entry_t *entry;
-
-      /* Put fullpath into the request pool since it becomes a key
-         in the output statushash hash table. */
-      const char *fullpath
-        = apr_pstrdup (pool, svn_wc_adm_access_path (adm_access));
+      svn_node_kind_t fullpath_kind;
+      const char *fullpath = svn_wc_adm_access_path (adm_access);
 
       /* Get the next dirent */
       apr_hash_this (hi, &key, NULL, &val);
       base_name = key;
-      if (strcmp (base_name, SVN_WC_ENTRY_THIS_DIR) != 0)
-        fullpath = svn_path_join (fullpath, base_name, pool);
-
       entry = val;
 
       /* ### todo: What if the subdir is from another repository? */
           
-      /* Do *not* store THIS_DIR in the statushash, unless this
-         path has never been seen before.  We don't want to add
-         the path key twice. */
+      /* Handle "this-dir". */
       if (strcmp (base_name, SVN_WC_ENTRY_THIS_DIR) == 0)
         {
-          svn_wc_status_t *status 
-            = apr_hash_get (statushash, fullpath, APR_HASH_KEY_STRING);
-          if (! status)
-            SVN_ERR (add_status_structure (statushash, fullpath, adm_access,
-                                           entry, parent_entry, svn_node_dir,
-                                           get_all, FALSE,
-                                           notify_func, notify_baton, pool));
+          SVN_ERR (add_status_structure (fullpath, adm_access, entry, 
+                                         parent_entry, svn_node_dir,
+                                         get_all, FALSE, status_func, 
+                                         status_baton, pool));
+          continue;
         }
       else
         {
-          svn_node_kind_t fullpath_kind;
+          fullpath = svn_path_join (fullpath, base_name, pool);
+        }
 
-          /* Get the entry's kind on disk. */
-          SVN_ERR (svn_io_check_path (fullpath, &fullpath_kind, pool));
+      /* Get the entry's kind on disk. */
+      SVN_ERR (svn_io_check_path (fullpath, &fullpath_kind, pool));
 
-          if (fullpath_kind == svn_node_dir)
+      if (fullpath_kind == svn_node_dir)
+        {
+          /* Directory entries are incomplete.  We must get their full
+             entry from their own THIS_DIR entry.  svn_wc_entry does
+             this for us if it can.
+
+             Of course, if there has been a kind-changing replacement
+             (for example, there is an entry for a file 'foo', but
+             'foo' exists as a *directory* on disk), we don't want to
+             reach down into that subdir to try to flesh out a
+             "complete entry".  */
+
+          const svn_wc_entry_t *fullpath_entry = entry;
+          
+          if (entry->kind == fullpath_kind)
+            SVN_ERR (svn_wc_entry (&fullpath_entry, fullpath, 
+                                   adm_access, FALSE, pool));
+
+          /* Descend only if the subdirectory is a working copy
+             directory (and DESCEND is non-zero ofcourse)  */
+          if (descend && fullpath_entry != entry)
             {
-              /* Directory entries are incomplete.  We must get
-                 their full entry from their own THIS_DIR entry.
-                 svn_wc_entry does this for us if it can.
-
-                 Of course, if there has been a kind-changing
-                 replacement (for example, there is an entry for a
-                 file 'foo', but 'foo' exists as a *directory* on
-                 disk), we don't want to reach down into that
-                 subdir to try to flesh out a "complete entry".  */
-
-              const svn_wc_entry_t *fullpath_entry = entry;
-
-              if (entry->kind == fullpath_kind)
-                SVN_ERR (svn_wc_entry (&fullpath_entry, fullpath, 
-                                       adm_access, FALSE, pool));
-
-              /* Descend only if the subdirectory is a working copy
-                 directory (and DESCEND is non-zero ofcourse)  */
-              if (descend && fullpath_entry != entry)
-                {
-                  svn_wc_adm_access_t *dir_access;
-                  SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access,
-                                                fullpath, pool));
-                  SVN_ERR (get_dir_status (statushash, dir_entry,
-                                           dir_access, ignores, descend,
-                                           get_all, no_ignore, notify_func,
-                                           notify_baton, cancel_func,
-                                           cancel_baton, traversal_info, 
-                                           pool));
-                }
-              else
-                SVN_ERR (add_status_structure 
-                         (statushash, fullpath, adm_access, fullpath_entry, 
-                          dir_entry, fullpath_kind, get_all, FALSE,
-                          notify_func, notify_baton, pool));
-
+              svn_wc_adm_access_t *dir_access;
+              SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access,
+                                            fullpath, pool));
+              SVN_ERR (get_dir_status (dir_entry, dir_access, ignores, descend,
+                                       get_all, no_ignore, status_func,
+                                       status_baton, cancel_func,
+                                       cancel_baton, traversal_info, pool));
             }
           else
             {
-              /* File entries are ... just fine! */
-              SVN_ERR (add_status_structure 
-                       (statushash, fullpath, adm_access, entry, dir_entry,
-                        fullpath_kind, get_all, FALSE,
-                        notify_func, notify_baton, pool));
+              SVN_ERR (add_status_structure (fullpath, adm_access, 
+                                             fullpath_entry, dir_entry, 
+                                             fullpath_kind, get_all, FALSE,
+                                             status_func, status_baton, pool));
             }
         }
+      else
+        {
+          /* File entries are ... just fine! */
+          SVN_ERR (add_status_structure (fullpath, adm_access, entry, 
+                                         dir_entry, fullpath_kind, get_all, 
+                                         FALSE, status_func, status_baton, 
+                                         pool));
+        }
     }
 
   return SVN_NO_ERROR;
 }
-
-svn_error_t *
-svn_wc_statuses (apr_hash_t *statushash,
-                 const char *path,
-                 svn_wc_adm_access_t *adm_access,
-                 svn_boolean_t descend,
-                 svn_boolean_t get_all,
-                 svn_boolean_t no_ignore,
-                 svn_wc_notify_func_t notify_func,
-                 void *notify_baton,
-                 svn_cancel_func_t cancel_func,
-                 void *cancel_baton,
-                 apr_hash_t *config,
-                 svn_wc_traversal_info_t *traversal_info,
-                 apr_pool_t *pool)
-{
-  svn_node_kind_t kind;
-  const svn_wc_entry_t *entry;
-  apr_array_header_t *ignores;
-
-  /* Is PATH a directory or file? */
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
-  
-  /* Read the default ignores from the config hash. */
-  SVN_ERR (svn_wc_get_default_ignores (&ignores, config, pool));
-  
-  /* If path points to just one file, or at least to just one
-     non-directory, store just one status structure in the
-     STATUSHASH and return. */
-  if (kind != svn_node_dir)
-    {
-      const svn_wc_entry_t *parent_entry;
-      /* Get the entry for this file. Place it into the specified pool since
-         we're going to return it in statushash. */
-      SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
-
-      /* Convert the entry into a status structure, store in the hash.
-         
-         ### Notice that because we're getting one specific file,
-         we're ignoring the GET_ALL flag and unconditionally fetching
-         the status structure. */
-      if (!entry) 
-        SVN_ERR (add_unversioned_path (path, kind, statushash, adm_access,
-                                       ignores, notify_func, notify_baton,
-                                       pool));
-      else
-        {
-          SVN_ERR (svn_wc_entry (&parent_entry,
-                                 svn_path_dirname (path,pool),
-                                 adm_access, FALSE, pool));
-          SVN_ERR (add_status_structure (statushash, path, adm_access, entry,
-                                         parent_entry, kind, TRUE, FALSE,
-                                         notify_func, notify_baton, pool));
-        }
-    }
-
-  /* Fill the hash with a status structure for *each* entry in PATH */
-  else
-    {
-      int wc_format_version;
-      svn_boolean_t is_root;
-      const svn_wc_entry_t *parent_entry;
-
-      SVN_ERR (svn_wc_check_wc (path, &wc_format_version, pool));
-
-      /* A wc format of 0 means this directory is not being versioned
-         at all (not by Subversion, anyway). */
-      if (wc_format_version == 0)
-        return add_unversioned_path (path, kind, statushash, adm_access,
-                                     ignores, notify_func, notify_baton, pool);
-
-      SVN_ERR (svn_wc_is_wc_root (&is_root, path, adm_access, pool));
-      if (! is_root)
-        {
-          const char *parent_path = svn_path_dirname (path, pool);
-          svn_wc_adm_access_t *parent_access;
-          SVN_ERR (svn_wc_adm_open (&parent_access, NULL, parent_path,
-                                    FALSE, FALSE, pool));
-          SVN_ERR (svn_wc_entry (&parent_entry, parent_path, parent_access,
-                                 FALSE, pool));
-        }
-      else
-        parent_entry = NULL;
-
-      SVN_ERR (get_dir_status(statushash, parent_entry, adm_access,
-                              ignores, descend, get_all, no_ignore,
-                              notify_func, notify_baton,
-                              cancel_func, cancel_baton, traversal_info,
-                              pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 
 struct edit_baton
 {
@@ -895,7 +703,40 @@ struct edit_baton
 
 
 
-/*** Helper ***/
+/*** Helpers ***/
+
+/* Return a deep copy of the ORIG_STAT status structure, allocated
+   from POOL. */
+static svn_wc_status_t *
+dup_status (svn_wc_status_t *orig_stat,
+            apr_pool_t *pool)
+{
+  svn_wc_status_t *new_stat = apr_palloc (pool, sizeof (*new_stat));
+  
+  /* Shallow copy all members. */
+  *new_stat = *orig_stat;
+  
+  /* No go back and dup the deep item. */
+  if (orig_stat->entry)
+    new_stat->entry = svn_wc_entry_dup (orig_stat->entry, pool);
+
+  /* Return the new hotness. */
+  return new_stat;
+}
+
+
+/* A faux status callback function for stashing STATUS item in an hash
+   (which is the BATON), keyed on PATH. */
+static void
+hash_stash (void *baton,
+            const char *path,
+            svn_wc_status_t *status)
+{
+  apr_hash_t *stat_hash = baton;
+  apr_pool_t *hash_pool = apr_hash_pool_get (stat_hash);
+  apr_hash_set (stat_hash, apr_pstrdup (hash_pool, path), 
+                APR_HASH_KEY_STRING, dup_status (status, hash_pool));
+}
 
 
 /* Look up the key PATH in EDIT_BATON->STATUSHASH.
@@ -1385,9 +1226,6 @@ close_edit (void *edit_baton,
 
 
 
-/*** Returning editors. ***/
-
-
 /*** Public API ***/
 
 svn_error_t *
@@ -1457,6 +1295,160 @@ svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                                               editor,
                                               edit_baton,
                                               pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_get_default_ignores (apr_array_header_t **patterns,
+                            apr_hash_t *config,
+                            apr_pool_t *pool)
+{
+  svn_config_t *cfg = config ? apr_hash_get (config, 
+                                             SVN_CONFIG_CATEGORY_CONFIG, 
+                                             APR_HASH_KEY_STRING) : NULL;
+  const char *val;
+
+  /* Check the Subversion run-time configuration for global ignores.
+     If no configuration value exists, we fall back to our defaults. */
+  svn_config_get (cfg, &val, SVN_CONFIG_SECTION_MISCELLANY, 
+                  SVN_CONFIG_OPTION_GLOBAL_IGNORES,
+                  SVN_CONFIG_DEFAULT_GLOBAL_IGNORES);
+  *patterns = apr_array_make (pool, 16, sizeof (const char *));
+
+  /* Split the patterns on whitespace, and stuff them into *PATTERNS. */
+  svn_cstring_split_append (*patterns, val, "\n\r\t\v ", FALSE, pool);
+  return SVN_NO_ERROR;
+}
+
+                        
+svn_error_t *
+svn_wc_status (svn_wc_status_t **status,
+               const char *path,
+               svn_wc_adm_access_t *adm_access,
+               apr_pool_t *pool)
+{
+  svn_wc_status_t *s;
+  const svn_wc_entry_t *entry = NULL;
+  const svn_wc_entry_t *parent_entry = NULL;
+
+  if (adm_access)
+    SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
+
+  /* If we have an entry, and PATH is not a root, then we need a parent
+     entry */
+  if (entry)
+    {
+      svn_boolean_t is_root;
+      SVN_ERR (svn_wc_is_wc_root (&is_root, path, adm_access, pool));
+      if (! is_root)
+        {
+          const char *parent_path = svn_path_dirname (path, pool);
+          svn_wc_adm_access_t *parent_access;
+          SVN_ERR (svn_wc_adm_open (&parent_access, NULL, parent_path,
+                                    FALSE, FALSE, pool));
+          SVN_ERR (svn_wc_entry (&parent_entry, parent_path, parent_access,
+                                 FALSE, pool));
+        }
+    }
+
+  SVN_ERR (assemble_status (&s, path, adm_access, entry, parent_entry,
+                            svn_node_unknown, TRUE, FALSE, pool));
+  *status = s;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_statuses (apr_hash_t *statushash,
+                 const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 svn_boolean_t descend,
+                 svn_boolean_t get_all,
+                 svn_boolean_t no_ignore,
+                 svn_wc_notify_func_t notify_func,
+                 void *notify_baton,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_hash_t *config,
+                 svn_wc_traversal_info_t *traversal_info,
+                 apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+  apr_array_header_t *ignores;
+  const svn_wc_entry_t *parent_entry = NULL;
+
+  /* Is PATH a directory or file? */
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  
+  /* Read the default ignores from the config hash. */
+  SVN_ERR (svn_wc_get_default_ignores (&ignores, config, pool));
+  
+  /* If path points to just one file, or at least to just one
+     non-directory, store just one status structure in the
+     STATUSHASH and return. */
+  if (kind != svn_node_dir)
+    {
+      const svn_wc_entry_t *entry;
+
+      /* Get the entry for this path. Place it into the specified pool since
+         we're going to return it in statushash. */
+      SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
+
+      /* Convert the entry into a status structure, store in the hash.
+         
+         ### Notice that because we're getting one specific file,
+         we're ignoring the GET_ALL flag and unconditionally fetching
+         the status structure. */
+      if (! entry) 
+        {
+          SVN_ERR (add_unversioned_path (path, kind, adm_access, ignores, 
+                                         hash_stash, (void *)statushash,
+                                         pool));
+        }
+      else
+        {
+          SVN_ERR (svn_wc_entry (&parent_entry, svn_path_dirname (path, pool),
+                                 adm_access, FALSE, pool));
+          SVN_ERR (add_status_structure (path, adm_access, entry,
+                                         parent_entry, kind, TRUE, FALSE,
+                                         hash_stash, (void *)statushash, 
+                                         pool));
+        }
+    }
+
+  /* Fill the hash with a status structure for *each* entry in PATH */
+  else
+    {
+      int wc_format_version;
+      svn_boolean_t is_root;
+      
+      SVN_ERR (svn_wc_check_wc (path, &wc_format_version, pool));
+
+      /* A wc format of 0 means this directory is not being versioned
+         at all (not by Subversion, anyway). */
+      if (wc_format_version == 0)
+          return add_unversioned_path (path, kind, adm_access, ignores, 
+                                       hash_stash, (void *)statushash, pool);
+
+      SVN_ERR (svn_wc_is_wc_root (&is_root, path, adm_access, pool));
+      if (! is_root)
+        {
+          const char *parent_path = svn_path_dirname (path, pool);
+          svn_wc_adm_access_t *parent_access;
+          SVN_ERR (svn_wc_adm_open (&parent_access, NULL, parent_path,
+                                    FALSE, FALSE, pool));
+          SVN_ERR (svn_wc_entry (&parent_entry, parent_path, parent_access,
+                                 FALSE, pool));
+        }
+
+      SVN_ERR (get_dir_status (parent_entry, adm_access,
+                               ignores, descend, get_all, no_ignore,
+                               hash_stash, (void *)statushash,
+                               cancel_func, cancel_baton, traversal_info,
+                               pool));
+    }
 
   return SVN_NO_ERROR;
 }
