@@ -90,11 +90,11 @@ add_component_internal (svn_string_t *path,
   canonicalize (result, style);
 
   /* First tack on the separator. */
-  if (! svn_string_isempty (path))
-    svn_string_appendbytes (path, &dirsep, sizeof (dirsep), pool);
+  if (! svn_string_isempty (result))
+    svn_string_appendbytes (result, &dirsep, sizeof (dirsep), pool);
 
   /* Then tack on the new component itself. */
-  svn_string_appendbytes (path, component, len, pool);
+  svn_string_appendbytes (result, component, len, pool);
 
   canonicalize (result, style);
 
