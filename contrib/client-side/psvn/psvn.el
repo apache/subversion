@@ -588,6 +588,7 @@ The results are used to build the `svn-status-info' variable."
                                            revision-width
                                            revision-width
                                            author-width))
+      (setq svn-status-info (nreverse svn-status-info))
       (when svn-status-sort-status-buffer
         (setq svn-status-info (sort svn-status-info 'svn-status-sort-predicate))))))
 
@@ -1011,9 +1012,10 @@ Symbolic links to directories count as directories (see `file-directory-p')."
   (interactive)
   ;(message (format "buffer-name: %s" (buffer-name)))
   (unless (string= (buffer-name) "*svn-status*")
-    (delete-other-windows)
-    (split-window-vertically)
-    (switch-to-buffer "*svn-status*"))
+    ;;(delete-other-windows)
+    ;;(split-window-vertically)
+    ;;(switch-to-buffer "*svn-status*")
+    (set-buffer "*svn-status*"))
   (svn-status-mode)
   (let ((st-info svn-status-info)
         (buffer-read-only nil)
@@ -2361,6 +2363,23 @@ display routine for svn-status is available."
   (message (concat "The *svn-status* buffer will be"
                    (if svn-status-sort-status-buffer "" " not")
                    " sorted.")))
+
+;; --------------------------------------------------------------------------------
+;; svn status profiling
+;; --------------------------------------------------------------------------------
+;;; Note about profiling psvn:
+;;  (load-library "elp")
+;;  M-x elp-reset-all
+;;  (elp-instrument-package "svn-")
+;;  M-x svn-status
+;;  M-x elp-results
+
+(defun svn-status-elp-init ()
+  (interactive)
+  (require 'elp)
+  (elp-reset-all)
+  (elp-instrument-package "svn-")
+  (message "Run the desired svn command (e.g. M-x svn-status), then use M-x elp-results."))
 
 
 (provide 'psvn)
