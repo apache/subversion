@@ -26,6 +26,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "apr_pools.h"
+#include "apr_file_io.h"
+#include "svn_io.h"
 #include "svn_error.h"
 #include "svn_string.h"   /* This includes <apr_*.h> */
 
@@ -370,6 +372,118 @@ test12 (const char **msg,
     return fail (pool, "test failed");
 }
 
+static svn_error_t *
+check_string_contents(svn_stringbuf_t *string,
+                      const char *ftext,
+                      apr_size_t ftext_len,
+                      int repeat,
+                      apr_pool_t *pool)
+{
+  const char *data;
+  apr_size_t len;
+  int i;
+
+  data = string->data;
+  len = string->len;
+  for (i = 0; i < repeat; ++i)
+    {
+      if (len < ftext_len || memcmp(ftext, data, ftext_len))
+        return fail (pool, "comparing failed");
+      data += ftext_len;
+      len -= ftext_len;
+    }
+  if (len < 1 || memcmp(data, "\0", 1))
+    return fail (pool, "comparing failed");
+  data += 1;
+  len -= 1;
+  for (i = 0; i < repeat; ++i)
+    {
+      if (len < ftext_len || memcmp(ftext, data, ftext_len))
+        return fail (pool, "comparing failed");
+      data += ftext_len;
+      len -= ftext_len;
+    }
+
+  if (len)
+    return fail (pool, "comparing failed");
+
+  return SVN_NO_ERROR;
+}
+                      
+
+static svn_error_t *
+test13 (const char **msg, 
+        svn_boolean_t msg_only,
+        apr_pool_t *pool)
+{
+  svn_stringbuf_t *s;
+  const char fname[] = "stringtest.tmp";
+  apr_file_t *file;
+  apr_status_t status;
+  apr_size_t len;
+  int i, repeat;
+  const char ftext[] =
+    "Just some boring text. Avoiding newlines 'cos I don't know"
+    "if any of the Subversion platfoms will mangle them! There's no"
+    "need to test newline handling here anyway, it's not relevant.";
+
+  *msg = "create string from file";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  status = apr_file_open (&file, fname, APR_WRITE | APR_TRUNCATE | APR_CREATE,
+                          APR_OS_DEFAULT, pool);
+  if (!APR_STATUS_IS_SUCCESS(status))
+    return fail (pool, "opening file");
+
+  repeat = 100;
+
+  /* Some text */
+  for (i = 0; i < repeat; ++i)
+    {
+      status = apr_file_write_full (file, ftext, sizeof(ftext) - 1, &len);
+      if (!APR_STATUS_IS_SUCCESS(status))
+        return fail (pool, "writing file");
+    }
+
+  /* A null byte, I don't *think* any of our platforms mangle these */
+  status = apr_file_write_full (file, "\0", 1, &len);
+  if (!APR_STATUS_IS_SUCCESS(status))
+    return fail (pool, "writing file");
+
+  /* Some more text */
+  for (i = 0; i < repeat; ++i)
+    {
+      status = apr_file_write_full (file, ftext, sizeof(ftext) - 1, &len);
+      if (!APR_STATUS_IS_SUCCESS(status))
+        return fail (pool, "writing file");
+    }
+
+  status = apr_file_close (file);
+  if (!APR_STATUS_IS_SUCCESS(status))
+    return fail (pool, "closing file");
+
+  SVN_ERR (svn_string_from_file (&s, fname, pool));
+  SVN_ERR (check_string_contents (s, ftext, sizeof(ftext) - 1, repeat, pool));
+
+  /* Reset to avoid false positives */
+  s = NULL;
+
+  status = apr_file_open (&file, fname, APR_READ, APR_OS_DEFAULT, pool);
+  if (!APR_STATUS_IS_SUCCESS(status))
+    return fail (pool, "opening file");
+
+  SVN_ERR (svn_string_from_aprfile(&s, file, pool));
+  SVN_ERR (check_string_contents (s, ftext, sizeof(ftext) - 1, repeat, pool));
+
+  status = apr_file_close (file);
+  if (!APR_STATUS_IS_SUCCESS(status))
+    return fail (pool, "closing file");
+
+  return SVN_NO_ERROR;
+}
+
 
 /*
    ====================================================================
@@ -396,6 +510,7 @@ svn_error_t *(*test_funcs[])(const char **msg,
   test10,
   test11,
   test12,
+  test13,
   NULL
 };
 
