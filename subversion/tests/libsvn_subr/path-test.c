@@ -100,9 +100,9 @@ test_path_split (const char **msg,
   for (i = 0; i < 5; i++)
     {
       svn_stringbuf_t *path = svn_stringbuf_create (paths[i][0], pool);
-      svn_stringbuf_t *dir, *basename;
+      svn_stringbuf_t *dir, *base_name;
 
-      svn_path_split (path, &dir, &basename, pool);
+      svn_path_split (path, &dir, &base_name, pool);
 
       if (strcmp (dir->data, paths[i][1]))
         {
@@ -111,12 +111,12 @@ test_path_split (const char **msg,
              "svn_path_split (%s) returned dirname '%s' instead of '%s'",
              path->data, dir->data, paths[i][1]);
         }
-      if (strcmp (basename->data, paths[i][2]))
+      if (strcmp (base_name->data, paths[i][2]))
         {
           return svn_error_createf
             (SVN_ERR_TEST_FAILED, 0, NULL, pool,
              "svn_path_split (%s) returned basename '%s' instead of '%s'",
-             path->data, basename->data, paths[i][2]);
+             path->data, base_name->data, paths[i][2]);
         }
     }
   return SVN_NO_ERROR;

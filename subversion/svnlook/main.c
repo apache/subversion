@@ -297,7 +297,7 @@ open_writable_binary_file (apr_file_t **fh,
   apr_array_header_t *path_pieces;
   apr_status_t apr_err;
   int i;
-  svn_stringbuf_t *full_path, *dir, *basename;
+  svn_stringbuf_t *full_path, *dir, *base_name;
   
   /* Try the easy way to open the file. */
   apr_err = apr_file_open (fh, path->data, 
@@ -306,7 +306,7 @@ open_writable_binary_file (apr_file_t **fh,
   if (! apr_err)
     return SVN_NO_ERROR;
 
-  svn_path_split (path, &dir, &basename, pool);
+  svn_path_split (path, &dir, &base_name, pool);
 
   /* If the file path has no parent, then we've already tried to open
      it as best as we care to try above. */

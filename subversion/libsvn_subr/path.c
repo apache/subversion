@@ -363,10 +363,10 @@ svn_path_basename (const char *path, apr_pool_t *pool)
 void
 svn_path_split (const svn_stringbuf_t *path, 
                 svn_stringbuf_t **dirpath,
-                svn_stringbuf_t **basename,
+                svn_stringbuf_t **base_name,
                 apr_pool_t *pool)
 {
-  assert (dirpath != basename);
+  assert (dirpath != base_name);
 
   if (dirpath)
     {
@@ -379,9 +379,9 @@ svn_path_split (const svn_stringbuf_t *path,
       *dirpath = n_dirpath;
     }
 
-  if (basename)
+  if (base_name)
     {
-      *basename =
+      *base_name =
         svn_stringbuf_create (svn_path_basename (path->data, pool), pool);
     }
 }

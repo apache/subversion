@@ -664,7 +664,7 @@ log_do_committed (struct log_runner *loggy,
   svn_stringbuf_t *sname = svn_stringbuf_create (name, pool);
   svn_boolean_t wc_root, overwrote_working = FALSE, remove_executable = FALSE;
   svn_stringbuf_t *full_path;
-  svn_stringbuf_t *pdir, *basename;
+  svn_stringbuf_t *pdir, *base_name;
   apr_hash_t *entries;
   svn_wc_entry_t *entry;
   apr_time_t text_time = 0; /* By default, don't override old stamp. */
@@ -799,23 +799,23 @@ log_do_committed (struct log_runner *loggy,
             continue;
           
           /* Determine what arguments to hand to our removal function,
-             and let BASENAME double as an "ok" flag to run that function. */
-          basename = NULL;
+             and let BASE_NAME double as an "ok" flag to run that function. */
+          base_name = NULL;
           if (cur_entry->kind == svn_node_file)
             {
               pdir = loggy->path;
-              basename = svn_stringbuf_create ((const char *)key, pool);
+              base_name = svn_stringbuf_create ((const char *)key, pool);
             }
           else if (cur_entry->kind == svn_node_dir)
             {
               pdir = svn_stringbuf_dup (loggy->path, pool);
               svn_path_add_component_nts (pdir, (const char *) key);
-              basename = svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool);
+              base_name = svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool);
             }
 
-          if (basename)
+          if (base_name)
             SVN_ERR (svn_wc_remove_from_revision_control 
-                     (pdir, basename, FALSE, pool));
+                     (pdir, base_name, FALSE, pool));
         }
     }
 
@@ -1024,11 +1024,11 @@ log_do_committed (struct log_runner *loggy,
 
   /* Make sure our entry exists in the parent (if the parent is even a
      SVN working copy directory). */
-  svn_path_split (loggy->path, &pdir, &basename, pool);
+  svn_path_split (loggy->path, &pdir, &base_name, pool);
   SVN_ERR (svn_wc_entries_read (&entries, pdir, FALSE, pool));
-  if (apr_hash_get (entries, basename->data, APR_HASH_KEY_STRING))
+  if (apr_hash_get (entries, base_name->data, APR_HASH_KEY_STRING))
     {
-      if ((err = svn_wc__entry_modify (pdir, basename, entry,
+      if ((err = svn_wc__entry_modify (pdir, base_name, entry,
                                        (SVN_WC__ENTRY_MODIFY_SCHEDULE 
                                         | SVN_WC__ENTRY_MODIFY_COPIED
                                         | SVN_WC__ENTRY_MODIFY_DELETED

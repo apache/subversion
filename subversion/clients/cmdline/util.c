@@ -204,13 +204,13 @@ svn_cl__args_to_target_array (apr_getopt_t *os,
       tstr.len  = target->len;
       if (! svn_path_is_url (&tstr))
         {
-          const char *basename = svn_path_basename (target->data, pool);
+          const char *base_name = svn_path_basename (target->data, pool);
 
           /* If this target is a Subversion administrative directory,
              skip it.  TODO: Perhaps this check should not call the
              target a SVN admin dir unless svn_wc_check_wc passes on
              the target, too? */
-          if (! strcmp (basename, SVN_WC_ADM_DIR_NAME))
+          if (! strcmp (base_name, SVN_WC_ADM_DIR_NAME))
             continue;
         }
       else

@@ -58,7 +58,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
   svn_ra_plugin_t *ra_lib;  
   void *ra_baton, *session;
   svn_stringbuf_t *URL;
-  svn_stringbuf_t *basename = NULL;
+  svn_stringbuf_t *base_name = NULL;
   svn_string_t path_str;
   apr_array_header_t *condensed_targets;
   svn_revnum_t start_revnum, end_revnum;
@@ -114,22 +114,22 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
 
       /* Use local working copy.  */
 
-      SVN_ERR (svn_path_condense_targets (&basename, &condensed_targets,
+      SVN_ERR (svn_path_condense_targets (&base_name, &condensed_targets,
                                           targets, pool));
 
       if (condensed_targets->nelts == 0)
         (*((svn_stringbuf_t**)apr_array_push (condensed_targets))) =
             svn_stringbuf_create("", pool);
 
-      SVN_ERR (svn_wc_entry (&entry, basename, FALSE, pool));
+      SVN_ERR (svn_wc_entry (&entry, base_name, FALSE, pool));
       if (! entry)
         return svn_error_createf
           (SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL, pool,
-          "svn_client_log: %s is not under revision control", basename->data);
+          "svn_client_log: %s is not under revision control", base_name->data);
       if (! entry->url)
         return svn_error_createf
           (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool,
-          "svn_client_log: entry '%s' has no URL", basename->data);
+          "svn_client_log: entry '%s' has no URL", base_name->data);
       URL = svn_stringbuf_dup (entry->url, pool);
     }
 
@@ -138,10 +138,10 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
 
   /* Open a repository session to the URL. If we got here from a full URL
-     passed to the command line, then we don't pass basename or
+     passed to the command line, then we don't pass base_name or
      do_auth/use_admin to open the ra_session.  */
-  if (NULL != basename)
-    SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, basename,
+  if (NULL != base_name)
+    SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, base_name,
                                           NULL, TRUE, TRUE, TRUE, 
                                           auth_baton, pool));
   else
@@ -152,10 +152,10 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
   /* Get the revisions based on the users "hints".  */
   SVN_ERR (svn_client__get_revision_number
            (&start_revnum, ra_lib, session, start, 
-            basename ? basename->data : NULL, pool));
+            base_name ? base_name->data : NULL, pool));
   SVN_ERR (svn_client__get_revision_number
            (&end_revnum, ra_lib, session, end, 
-            basename ? basename->data : NULL, pool));
+            base_name ? base_name->data : NULL, pool));
 
   err = ra_lib->get_log (session,
                          condensed_targets,

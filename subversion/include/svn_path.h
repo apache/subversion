@@ -119,21 +119,21 @@ void svn_path_remove_component (svn_stringbuf_t *path);
 
 
 
-/* Divide PATH into *DIRPATH and *BASENAME, return them by reference,
+/* Divide PATH into *DIRPATH and *BASE_NAME, return them by reference,
  * in their own storage in POOL.
  *
- * If DIRPATH or BASENAME is null, then that one will not be used.
+ * If DIRPATH or BASE_NAME is null, then that one will not be used.
  *
- * DIRPATH or BASENAME may be PATH's own address, but they may not
+ * DIRPATH or BASE_NAME may be PATH's own address, but they may not
  * both be PATH's address; in fact, in general they must not be the
  * same, or the results are undefined.
  *
- * The separator between DIRPATH and BASENAME is not included in
+ * The separator between DIRPATH and BASE_NAME is not included in
  * either of the new names.
  */
 void svn_path_split (const svn_stringbuf_t *path,
                      svn_stringbuf_t **dirpath,
-                     svn_stringbuf_t **basename,
+                     svn_stringbuf_t **base_name,
                      apr_pool_t *pool);
 
 

@@ -67,11 +67,11 @@ svn_cl__commit (apr_getopt_t *os,
 
   if ((! condensed_targets) || (! condensed_targets->nelts))
     {
-      svn_stringbuf_t *parent_dir, *basename;
+      svn_stringbuf_t *parent_dir, *base_name;
 
       SVN_ERR (svn_wc_get_actual_target (base_dir, &parent_dir, 
-                                         &basename, pool));
-      if (basename)
+                                         &base_name, pool));
+      if (base_name)
         svn_stringbuf_set (base_dir, parent_dir->data);
     }
 

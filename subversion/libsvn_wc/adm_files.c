@@ -353,13 +353,13 @@ sync_adm_file (svn_stringbuf_t *path,
 svn_error_t *
 svn_wc__sync_text_base (svn_stringbuf_t *path, apr_pool_t *pool)
 {
-  svn_stringbuf_t *newpath, *basename;
-  svn_path_split (path, &newpath, &basename, pool);
+  svn_stringbuf_t *newpath, *base_name;
+  svn_path_split (path, &newpath, &base_name, pool);
   return sync_adm_file (newpath,
                         SVN_WC__BASE_EXT,
                         pool,
                         SVN_WC__ADM_TEXT_BASE,
-                        basename->data,
+                        base_name->data,
                         NULL);
 }
 
@@ -368,15 +368,15 @@ svn_wc__text_base_path (const svn_stringbuf_t *path,
                         svn_boolean_t tmp,
                         apr_pool_t *pool)
 {
-  svn_stringbuf_t *newpath, *basename;
-  svn_path_split (path, &newpath, &basename, pool);
+  svn_stringbuf_t *newpath, *base_name;
+  svn_path_split (path, &newpath, &base_name, pool);
   extend_with_adm_name (newpath,
                         SVN_WC__BASE_EXT,
                         0,
                         pool,
                         tmp ? SVN_WC__ADM_TMP : "",
                         SVN_WC__ADM_TEXT_BASE,
-                        basename->data,
+                        base_name->data,
                         NULL);
     
   return newpath;
@@ -786,8 +786,8 @@ svn_wc__close_empty_file (apr_file_t *fp,
                           svn_stringbuf_t *path,
                           apr_pool_t *pool)
 {
-  svn_stringbuf_t *newpath, *basename;
-  svn_path_split (path, &newpath, &basename, pool);
+  svn_stringbuf_t *newpath, *base_name;
+  svn_path_split (path, &newpath, &base_name, pool);
   return close_adm_file (fp, newpath, NULL, 0, pool,
                          SVN_WC__ADM_EMPTY_FILE, NULL);
 }
@@ -799,10 +799,10 @@ svn_wc__open_text_base (apr_file_t **handle,
                         apr_int32_t flags,
                         apr_pool_t *pool)
 {
-  svn_stringbuf_t *newpath, *basename;
-  svn_path_split (path, &newpath, &basename, pool);
+  svn_stringbuf_t *newpath, *base_name;
+  svn_path_split (path, &newpath, &base_name, pool);
   return open_adm_file (handle, newpath, SVN_WC__BASE_EXT, flags, pool,
-                        SVN_WC__ADM_TEXT_BASE, basename->data, NULL);
+                        SVN_WC__ADM_TEXT_BASE, base_name->data, NULL);
 }
 
 
@@ -812,10 +812,10 @@ svn_wc__close_text_base (apr_file_t *fp,
                          int write,
                          apr_pool_t *pool)
 {
-  svn_stringbuf_t *newpath, *basename;
-  svn_path_split (path, &newpath, &basename, pool);
+  svn_stringbuf_t *newpath, *base_name;
+  svn_path_split (path, &newpath, &base_name, pool);
   return close_adm_file (fp, newpath, SVN_WC__BASE_EXT, write, pool,
-                         SVN_WC__ADM_TEXT_BASE, basename->data, NULL);
+                         SVN_WC__ADM_TEXT_BASE, base_name->data, NULL);
 }
 
 
@@ -850,7 +850,7 @@ svn_wc__open_props (apr_file_t **handle,
                     svn_boolean_t wcprops,
                     apr_pool_t *pool)
 {
-  svn_stringbuf_t *parent_dir, *basename;
+  svn_stringbuf_t *parent_dir, *base_name;
   enum svn_node_kind kind;
 
   /* Check if path is a file or a dir. */
@@ -858,7 +858,7 @@ svn_wc__open_props (apr_file_t **handle,
 
   /* If file, split the path. */
   if (kind == svn_node_file)
-    svn_path_split (path, &parent_dir, &basename, pool);
+    svn_path_split (path, &parent_dir, &base_name, pool);
   else    
     parent_dir = path;
   
@@ -877,7 +877,7 @@ svn_wc__open_props (apr_file_t **handle,
                               SVN_WC__ADM_DIR_PROP_BASE, NULL);
       else
         return open_adm_file (handle, parent_dir, SVN_WC__BASE_EXT, flags,
-                              pool, SVN_WC__ADM_PROP_BASE, basename->data,
+                              pool, SVN_WC__ADM_PROP_BASE, base_name->data,
                               NULL);
     }
   else if (wcprops)
@@ -887,7 +887,7 @@ svn_wc__open_props (apr_file_t **handle,
                               SVN_WC__ADM_DIR_WCPROPS, NULL);
       else
         return open_adm_file (handle, parent_dir, NULL, flags,
-                              pool, SVN_WC__ADM_WCPROPS, basename->data,
+                              pool, SVN_WC__ADM_WCPROPS, base_name->data,
                               NULL);
     }
   else /* plain old property file */
@@ -897,7 +897,7 @@ svn_wc__open_props (apr_file_t **handle,
                               SVN_WC__ADM_DIR_PROPS, NULL);
       else
         return open_adm_file (handle, parent_dir, NULL, flags,
-                              pool, SVN_WC__ADM_PROPS, basename->data,
+                              pool, SVN_WC__ADM_PROPS, base_name->data,
                               NULL);
     }
 }
@@ -912,7 +912,7 @@ svn_wc__close_props (apr_file_t *fp,
                      int sync,
                      apr_pool_t *pool)
 {
-  svn_stringbuf_t *parent_dir, *basename;
+  svn_stringbuf_t *parent_dir, *base_name;
   enum svn_node_kind kind;
 
   /* Check if path is a file or a dir. */
@@ -920,7 +920,7 @@ svn_wc__close_props (apr_file_t *fp,
 
   /* If file, split the path. */
   if (kind == svn_node_file)
-    svn_path_split (path, &parent_dir, &basename, pool);
+    svn_path_split (path, &parent_dir, &base_name, pool);
   else    
     parent_dir = path;
   
@@ -939,7 +939,7 @@ svn_wc__close_props (apr_file_t *fp,
                                SVN_WC__ADM_DIR_PROP_BASE, NULL);
       else
         return close_adm_file (fp, parent_dir, SVN_WC__BASE_EXT, sync, pool,
-                               SVN_WC__ADM_PROP_BASE, basename->data, NULL);
+                               SVN_WC__ADM_PROP_BASE, base_name->data, NULL);
     }
   else if (wcprops)
     {
@@ -948,7 +948,7 @@ svn_wc__close_props (apr_file_t *fp,
                                SVN_WC__ADM_DIR_WCPROPS, NULL);
       else
         return close_adm_file (fp, parent_dir, NULL, sync, pool,
-                               SVN_WC__ADM_WCPROPS, basename->data, NULL);
+                               SVN_WC__ADM_WCPROPS, base_name->data, NULL);
     }
   else /* plain old property file */
     {
@@ -957,7 +957,7 @@ svn_wc__close_props (apr_file_t *fp,
                                SVN_WC__ADM_DIR_PROPS, NULL);
       else
         return close_adm_file (fp, parent_dir, NULL, sync, pool,
-                                 SVN_WC__ADM_PROPS, basename->data, NULL);
+                                 SVN_WC__ADM_PROPS, base_name->data, NULL);
     }
 
 }
@@ -970,7 +970,7 @@ svn_wc__sync_props (svn_stringbuf_t *path,
                     svn_boolean_t wcprops,
                     apr_pool_t *pool)
 {
-  svn_stringbuf_t *parent_dir, *basename;
+  svn_stringbuf_t *parent_dir, *base_name;
   enum svn_node_kind kind;
 
   /* Check if path is a file or a dir. */
@@ -978,7 +978,7 @@ svn_wc__sync_props (svn_stringbuf_t *path,
 
   /* If file, split the path. */
   if (kind == svn_node_file)
-    svn_path_split (path, &parent_dir, &basename, pool);
+    svn_path_split (path, &parent_dir, &base_name, pool);
   else    
     parent_dir = path;
   
@@ -997,7 +997,7 @@ svn_wc__sync_props (svn_stringbuf_t *path,
                               SVN_WC__ADM_DIR_PROP_BASE, NULL);
       else
         return sync_adm_file (parent_dir, SVN_WC__BASE_EXT, pool,
-                              SVN_WC__ADM_PROP_BASE, basename->data, NULL);
+                              SVN_WC__ADM_PROP_BASE, base_name->data, NULL);
     }
   else if (wcprops)
     {
@@ -1006,7 +1006,7 @@ svn_wc__sync_props (svn_stringbuf_t *path,
                               SVN_WC__ADM_DIR_WCPROPS, NULL);
       else
         return sync_adm_file (parent_dir, SVN_WC__BASE_EXT, pool,
-                              SVN_WC__ADM_WCPROPS, basename->data, NULL);
+                              SVN_WC__ADM_WCPROPS, base_name->data, NULL);
     }
   else /* plain old property file */
     {
@@ -1015,7 +1015,7 @@ svn_wc__sync_props (svn_stringbuf_t *path,
                               SVN_WC__ADM_DIR_PROPS, NULL);
       else
         return sync_adm_file (parent_dir, NULL, pool,
-                              SVN_WC__ADM_PROPS, basename->data, NULL);
+                              SVN_WC__ADM_PROPS, base_name->data, NULL);
     }
 
 }

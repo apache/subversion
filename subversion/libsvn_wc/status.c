@@ -464,7 +464,7 @@ svn_wc_statuses (apr_hash_t *statushash,
         {
           const void *key;
           void *val;
-          const char *basename;
+          const char *base_name;
           apr_ssize_t keylen;
 
           /* Put fullpath into the request pool since it becomes a key
@@ -473,10 +473,10 @@ svn_wc_statuses (apr_hash_t *statushash,
 
           /* Get the next dirent */
           apr_hash_this (hi, &key, &keylen, &val);
-          basename = (const char *) key;
-          if (strcmp (basename, SVN_WC_ENTRY_THIS_DIR) != 0)
+          base_name = (const char *) key;
+          if (strcmp (base_name, SVN_WC_ENTRY_THIS_DIR) != 0)
             {
-              svn_path_add_component_nts (fullpath, basename);
+              svn_path_add_component_nts (fullpath, base_name);
             }
 
           entry = (svn_wc_entry_t *) val;
@@ -495,7 +495,7 @@ svn_wc_statuses (apr_hash_t *statushash,
           /* Do *not* store THIS_DIR in the statushash, unless this
              path has never been seen before.  We don't want to add
              the path key twice. */
-          if (! strcmp (basename, SVN_WC_ENTRY_THIS_DIR))
+          if (! strcmp (base_name, SVN_WC_ENTRY_THIS_DIR))
             {
               svn_wc_status_t *s = apr_hash_get (statushash,
                                                  fullpath->data,

@@ -30,14 +30,14 @@ path_stat (svn_boolean_t *exists,
            apr_pool_t *pool)
 {
   apr_hash_t *dirents;
-  svn_stringbuf_t *parent, *basename;
+  svn_stringbuf_t *parent, *base_name;
   svn_error_t *err;
 
   /* Sanity check: does path actually exist??  ### oddly, there is no
      'svn_fs_stat', so they only way we can check is by opening its
      -parent- and doing a hash lookup! */
 
-  svn_path_split (path, &parent, &basename, pool);
+  svn_path_split (path, &parent, &base_name, pool);
     
   err = svn_fs_dir_entries (&dirents, shcxt->root, parent->data, pool);
   if (err)
@@ -48,7 +48,7 @@ path_stat (svn_boolean_t *exists,
 
   /* else... */
 
-  if ((apr_hash_get (dirents, basename->data, basename->len))
+  if ((apr_hash_get (dirents, base_name->data, base_name->len))
       || (! strcmp (path->data, "/")))
     *exists = TRUE;
   else

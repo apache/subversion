@@ -1073,16 +1073,16 @@ svn_wc_prop_set (const char *name,
 
       if (svn_wc_keywords_differ (old_keywords, new_keywords, FALSE))
         {
-          svn_stringbuf_t *pdir, *basename;
+          svn_stringbuf_t *pdir, *base_name;
           svn_wc_entry_t tmp_entry;
 
           /* If we changed the keywords or newlines, void the entry
              timestamp for this file, so svn_wc_text_modified_p() does
              a real (albeit slow) check later on. */
-          svn_path_split (pathbuf, &pdir, &basename, pool);
+          svn_path_split (pathbuf, &pdir, &base_name, pool);
           tmp_entry.kind = svn_node_file;
           tmp_entry.text_time = 0;
-          SVN_ERR (svn_wc__entry_modify (pdir, basename, &tmp_entry,
+          SVN_ERR (svn_wc__entry_modify (pdir, base_name, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_TEXT_TIME,
                                          pool));
         }

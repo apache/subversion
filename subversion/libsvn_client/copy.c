@@ -67,7 +67,7 @@ wc_to_wc_copy (svn_stringbuf_t *src_path,
                apr_pool_t *pool)
 {
   svn_node_kind_t src_kind, dst_kind;
-  svn_stringbuf_t *unused, *parent = dst_path, *basename;
+  svn_stringbuf_t *unused, *parent = dst_path, *base_name;
 
   /* Verify that SRC_PATH exists. */
   SVN_ERR (svn_io_check_path (src_path->data, &src_kind, pool));
@@ -82,9 +82,9 @@ wc_to_wc_copy (svn_stringbuf_t *src_path,
      error out. */
   SVN_ERR (svn_io_check_path (dst_path->data, &dst_kind, pool));
   if (dst_kind == svn_node_none)
-    svn_path_split (dst_path, &parent, &basename, pool);
+    svn_path_split (dst_path, &parent, &base_name, pool);
   else if (dst_kind == svn_node_dir)
-    svn_path_split (src_path, &unused, &basename, pool);
+    svn_path_split (src_path, &unused, &base_name, pool);
   else
     return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL, pool,
                               "file `%s' already exists.", dst_path->data);
@@ -97,7 +97,7 @@ wc_to_wc_copy (svn_stringbuf_t *src_path,
     }
 
   /* Perform the copy and (optionally) delete. */
-  SVN_ERR (svn_wc_copy (src_path, parent, basename,
+  SVN_ERR (svn_wc_copy (src_path, parent, base_name,
                         notify_func, notify_baton, pool));
   if (is_move)
     {
@@ -119,7 +119,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
                      svn_boolean_t is_move,
                      apr_pool_t *pool)
 {
-  svn_stringbuf_t *top_url, *src_rel, *dst_rel, *basename, *unused;
+  svn_stringbuf_t *top_url, *src_rel, *dst_rel, *base_name, *unused;
   apr_array_header_t *src_pieces = NULL, *dst_pieces = NULL;
   svn_revnum_t youngest;
   void *ra_baton, *sess;
@@ -220,11 +220,11 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
                                dst_rel ? dst_rel->data : NULL, youngest));
   if (dst_kind == svn_node_none)
     {
-      svn_path_split (dst_url, &unused, &basename, pool);
+      svn_path_split (dst_url, &unused, &base_name, pool);
       dst_pieces->nelts--; /* hack - where's apr_array_pop()? */
     }
   else if (dst_kind == svn_node_dir)
-    svn_path_split (src_url, &unused, &basename, pool);
+    svn_path_split (src_url, &unused, &base_name, pool);
   else
     return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL, pool,
                               "file `%s' already exists.", dst_url->data);
@@ -266,7 +266,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
         }
     }
   /* Add our file/dir with copyfrom history. */
-  svn_path_add_component (telepath, basename);
+  svn_path_add_component (telepath, base_name);
   if (src_kind == svn_node_dir)
     {
       SVN_ERR (editor->add_directory (telepath->data, batons[i], src_url->data,
@@ -460,7 +460,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
                   void *after_edit_baton,
                   apr_pool_t *pool)
 {
-  svn_stringbuf_t *anchor, *target, *parent, *basename;
+  svn_stringbuf_t *anchor, *target, *parent, *base_name;
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   const svn_delta_editor_t *editor;
@@ -479,7 +479,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   SVN_ERR (svn_io_check_path (src_path->data, &src_kind, pool));
 
   /* Split the SRC_PATH into a parent and basename. */
-  svn_path_split (src_path, &parent, &basename, pool);
+  svn_path_split (src_path, &parent, &base_name, pool);
   if (svn_path_is_empty (parent))
     parent = svn_stringbuf_create (".", pool);
 
@@ -515,7 +515,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
     {
       /* DST_URL is an existing directory URL.  The URL we will be
          creating, then, is DST_URL+BASENAME. */
-      svn_path_add_component (base_url, basename);
+      svn_path_add_component (base_url, base_name);
     }
   else
     {
@@ -684,13 +684,13 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
   SVN_ERR (svn_io_check_path (dst_path->data, &dst_kind, pool));
   if (dst_kind == svn_node_dir)
     {
-      svn_stringbuf_t *unused, *basename;
-      svn_path_split (src_url, &unused, &basename, pool);
+      svn_stringbuf_t *unused, *base_name;
+      svn_path_split (src_url, &unused, &base_name, pool);
 
       /* We shouldn't affect the caller's dst_path, so dup first and
          then extend. */
       dst_path = svn_stringbuf_dup (dst_path, pool);
-      svn_path_add_component (dst_path, basename);
+      svn_path_add_component (dst_path, base_name);
     }
   else if (dst_kind != svn_node_none)  /* must be a file */
     return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL, pool,
