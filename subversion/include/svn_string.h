@@ -77,13 +77,14 @@ typedef struct
 
 typedef struct
 {
-  char *data;                /* pointer to the bytestring */
-  apr_size_t len;            /* length of bytestring */
-  apr_size_t blocksize;      /* total size of buffer allocated */
-  /* pool from which this string was originally allocated, and is not
-     necessarily specific to this string.  This is used only for
-     allocating more memory from when the string needs to grow.  */
-  apr_pool_t *pool;          
+  apr_pool_t *pool;      /* pool from which this string was originally
+                            allocated, and is not necessarily specific
+                            to this string.  This is used only for
+                            allocating more memory from when the
+                            string needs to grow.  */
+  char *data;            /* pointer to the bytestring */
+  apr_size_t len;        /* length of bytestring */
+  apr_size_t blocksize;  /* total size of buffer allocated */
 } svn_stringbuf_t;
 
 
