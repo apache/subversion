@@ -95,7 +95,7 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
   int rv;
 
   /* create/prep the request */
-  req = http_request_create(ras->sess, "MKACTIVITY", url);
+  req = http_request_create(ras->sess, method, url);
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL,
@@ -115,7 +115,7 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
                                rv, method, url);
     }
 
-  *code = http_get_status(&req)->code;
+  *code = http_get_status(req)->code;
 
   http_request_destroy(req);
 
