@@ -1847,11 +1847,16 @@ main (int argc, const char * const *argv)
       switch (opt_id) 
         {
         case 'r':
-          opt_state.rev = atoi (opt_arg);
-          if (! SVN_IS_VALID_REVNUM (opt_state.rev))
-            SVN_INT_ERR (svn_error_create
-                         (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                          _("Invalid revision number supplied")));
+          {
+            char *digits_end = NULL;
+            opt_state.rev = strtol (opt_arg, &digits_end, 10);
+            if ((! SVN_IS_VALID_REVNUM (opt_state.rev))
+                || (! digits_end)
+                || *digits_end)
+              SVN_INT_ERR (svn_error_create
+                           (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("Invalid revision number supplied")));
+          }
           break;
 
         case 't':
