@@ -2520,6 +2520,8 @@ txn_body_merge (void *baton, trail_t *trail)
 }
 
 
+/* Verify that there registed with TRAIL->fs all the locks necessary to
+   permit all the changes associate with TXN_NAME. */
 static svn_error_t *
 verify_locks (const char *txn_name,
               trail_t *trail,
@@ -2532,10 +2534,6 @@ verify_locks (const char *txn_name,
   svn_stringbuf_t *last_recursed = NULL;
   int i;
 
-  /* Locks may have been added (or stolen) between the calling of
-     previous svn_fs.h functions and svn_fs_commit_txn(), so we need
-     to re-examine every changed-path in the txn and re-verify all
-     discovered locks. */
   /* Fetch the changes for this transaction. */
   SVN_ERR (svn_fs_bdb__changes_fetch (&changes, trail->fs, txn_name, 
                                       trail, pool));
