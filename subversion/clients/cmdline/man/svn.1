@@ -1,7 +1,7 @@
 .\" You can view this file with:
 .\" nroff -man [filename]
 .\"
-.TH svn 1 "7 Jan 2002" "svn M4" "Subversion Command Line Tool"
+.TH svn 1 "22 Jan 2002" "svn 0.8" "Subversion Command Line Tool"
 .SH NAME
 svn \- Subversion command line tool
 .SH SYNOPSIS
@@ -48,7 +48,7 @@ Operate recursively (default).
 \fB-d\fP or \fB--destination\fP \fBDEST\dP
 Target directory to operate on.
 .TP
-\fB-f\fP or \fB--force\fP
+\fB--force\fP
 Force. Don't ask any questions, I know what I'm doing.
 .TP
 \fB-m\fP or \fB--message\fP \fBMSG\fP
@@ -101,11 +101,11 @@ command, run
 \fBsvn help command\fP.
 .TP
 \fBadd\fP \fIfile\fP\|.\|.\|.
-(Aliases: ad, new) Use this command to enroll new files in \fBsvn\fP records
-of your working directory.  The files will be added to the repository the next
-time you run "svn commit". Note: You should use the "svn import" command to
-bootstrap new sources into the source repository. "svn add" is only used for
-adding new files to an already checked-out module.
+Use this command to enroll new files in \fBsvn\fP records of your working
+directory.  The files will be added to the repository the next time you run
+"svn commit". Note: You should use the "svn import" command to bootstrap new
+sources into the source repository. "svn add" is only used for adding new
+files to an already checked-out module.
 
 \fBexample:\fP svn add foo.c bar.h baz/ bat/*.m
 .TP
