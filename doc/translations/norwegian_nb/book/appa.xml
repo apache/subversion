@@ -8,16 +8,15 @@
       Det er hovedsaklig en liste over forskjeller mellom de to 
       systemene som om den er <quote>sett fra en h&#248;yde av 3.000 
       meter</quote>.
-      For hver seksjon refererer vi tilbake til relevante kapitler 
-      n&#229;r det er mulig.</para>
+      For hver seksjon refererer vi tilbake til relevante kapitler n&#229;r 
+      det er mulig.</para>
 
-    <para>Selv om m&#229;let til Subversion er &#229; overta dagens og 
-      fremtidens brukermasse, var det n&#248;dvendig med nye funksjoner 
-      og forandringer i oppbygningen for &#229; ordne enkelte 
-      <quote>&#248;delagte</quote> virkem&#229;ter i CVS.
-      Dette betyr at du som CVS-bruker kanskje m&#229; bryte vaner 
-      &#8212; av den typen du har glemt var merkelige til &#229; begynne 
-      med.</para>
+    <para>Selv om m&#229;let til Subversion er &#229; overta dagens og fremtidens 
+      brukermasse, var det n&#248;dvendig med nye funksjoner og forandringer 
+      i oppbygningen for &#229; ordne enkelte <quote>&#248;delagte</quote> 
+      virkem&#229;ter i CVS.
+      Dette betyr at du som CVS-bruker kanskje m&#229; bryte vaner &#8212; av den 
+      typen du har glemt var merkelige til &#229; begynne med.</para>
 
   </simplesect>
 
@@ -32,22 +31,20 @@
       hver fil har en tilsvarende RCS-fil i depotet, og depotet er lagt 
       ut p&#229; bortimot samme m&#229;te som prosjekttreet ditt.</para>
 
-    <para>I Subversion ser depotet ut som et enkeltst&#229;ende 
-      filsystem.
+    <para>I Subversion ser depotet ut som et enkeltst&#229;ende filsystem.
       Hver innlegging resulterer i et helt nytt filsystemtre;
       depotet er i grunnen en rekke av tr&#230;r.
-      Hvert av disse tr&#230;rne er merket med hvert sitt 
-      revisjonsnummer.
-      N&#229;r noen snakker om <quote>revisjon 54</quote>, snakker de om 
-      et spesifikt tre (og indirekte, s&#229;nn som filsystemet s&#229; 
-      ut etter den 54. innleggingen).</para>
+      Hvert av disse tr&#230;rne er merket med hvert sitt revisjonsnummer.
+      N&#229;r noen snakker om <quote>revisjon 54</quote>, snakker de om et 
+      spesifikt tre (og indirekte, s&#229;nn som filsystemet s&#229; ut etter den 
+      54. innleggingen).</para>
 
     <para>Teknisk sett gir det ingen ingen mening &#229; snakke om 
       <quote>revisjon 5 av <filename>foo.c</filename></quote>.
       Istedenfor vil man si <quote><filename>foo.c</filename> som den 
       fremst&#229;r i revisjon 5</quote>.
-      V&#230;r ogs&#229; forsiktig n&#229;r du gj&#248;r deg antakelser 
-      om utviklingen av en fil.
+      V&#230;r ogs&#229; forsiktig n&#229;r du gj&#248;r deg antakelser om utviklingen av en 
+      fil.
       I CVS er revisjon 5 og 6 av <filename>foo.c</filename> alltid 
       forskjellig.
       I Subversion er det mest sannsynlig at <filename>foo.c</filename> 
@@ -66,8 +63,8 @@
     <title>Katalogversjoner</title>
     <para>I tillegg til &#229; arkivere innholdet av filene, holder 
       Subversion ogs&#229; orden p&#229; trestrukturer.
-      Dette er en av hovedgrunnene til at Subversion ble skrevet for 
-      &#229; erstatte CVS.</para>
+      Dette er en av hovedgrunnene til at Subversion ble skrevet for &#229; 
+      erstatte CVS.</para>
 
     <para>Her er hva dette har &#229; si for deg, som en tidligere 
       CVS-bruker:</para>
@@ -75,12 +72,12 @@
     <itemizedlist>
       <listitem>
         <para>Kommandoene <command>svn add</command> og <command>svn 
-          delete</command> virker n&#229; ogs&#229; p&#229; kataloger, 
-          akkurat som de gj&#248;r p&#229; filer.
+          delete</command> virker n&#229; ogs&#229; p&#229; kataloger, akkurat som de 
+          gj&#248;r p&#229; filer.
           Det samme gjelder <command>svn copy</command> og <command>svn 
           move</command>.
-          Disse kommandoene for&#229;rsaker imidlertid ingen 
-          &#248;yeblikkelige forandringer i depotet.
+          Disse kommandoene for&#229;rsaker imidlertid ingen &#248;yeblikkelige 
+          forandringer i depotet.
           Istedenfor blir de elementene det gjelder <quote>lagt i 
           k&#248;</quote> for tillegging eller sletting.
           Det vil ikke bli gjort noen forandringer i depotet f&#248;r du 
@@ -98,50 +95,47 @@
     <para>La oss snakke mer om det siste punktet.
       Versjonskontroll av kataloger er et vanskelig problem.
       Fordi vi &#248;nsker &#229; tillate kopier som inneholder blandede 
-      revisjoner, er det lagt inn begrensninger i hvor langt vi kan 
-      g&#229; n&#229;r det gjelder &#229; misbruke denne 
-      modellen.</para>
+      revisjoner, er det lagt inn begrensninger i hvor langt vi kan g&#229; 
+      n&#229;r det gjelder &#229; misbruke denne modellen.</para>
 
     <para>Fra et teoretisk synspunkt definerer vi <quote>revisjon 5 av 
-      katalogen <filename>foo</filename></quote> til &#229; bety en 
-      spesifikk samling av katalogposter og egenskaper.
-      Tenk deg s&#229; at vi begynner &#229; legge til og fjerne filer 
-      fra <filename>foo</filename>, og deretter legger det inn.
-      Det ville v&#230;re l&#248;gn &#229; si at vi fortsatt har 
-      revisjon 5 av <filename>foo</filename>.
+      katalogen <filename>foo</filename></quote> til &#229; bety en spesifikk 
+      samling av katalogposter og egenskaper.
+      Tenk deg s&#229; at vi begynner &#229; legge til og fjerne filer fra 
+      <filename>foo</filename>, og deretter legger det inn.
+      Det ville v&#230;re l&#248;gn &#229; si at vi fortsatt har revisjon 5 av 
+      <filename>foo</filename>.
       Imidlertid, hvis vi &#248;ker revisjonsnummeret for 
-      <filename>foo</filename> etter innleggingen, ville det ogs&#229; 
-      v&#230;re en l&#248;gn;
-      det kan v&#230;re andre forandiringer i <filename>foo</filename> 
-      som vi forel&#248;pig ikke har mottatt, fordi vi ikke har 
-      oppdatert enda.</para>
+      <filename>foo</filename> etter innleggingen, ville det ogs&#229; v&#230;re 
+      en l&#248;gn;
+      det kan v&#230;re andre forandiringer i <filename>foo</filename> som vi 
+      forel&#248;pig ikke har mottatt, fordi vi ikke har oppdatert 
+      enda.</para>
     
-    <para>Subversion tar seg av dette problemet ved &#229; i all 
-      stillhet unders&#248;ke innlagte tillegginger og slettinger i 
+    <para>Subversion tar seg av dette problemet ved &#229; i all stillhet 
+      unders&#248;ke innlagte tillegginger og slettinger i 
       <filename>.svn</filename>, det sjekkes at alt er i orden i henhold 
       til depotet, og det nye revisjonsnummeret blir korrekt satt for 
       katalogen.
       <emphasis>Derfor, det er kun etter en oppdatering det er helt 
-      sikkert &#229; si at du har en <quote>perfekt</quote> revisjon av 
-      en katalog.</emphasis>
+      sikkert &#229; si at du har en <quote>perfekt</quote> revisjon av en 
+      katalog.</emphasis>
       Mesteparten av tiden vil arbeidskopien din inneholde 
       <quote>uperfekte</quote> katalogrevisjoner.</para>
     
-    <para>P&#229; samme m&#229;te vil et problem oppst&#229; hvis du 
-      fors&#248;ker &#229; legge inn forandringer i egenskapene for en 
-      katalog.
-      Normalt ville innleggingen &#248;ke det lokale revisjonsnummeret 
-      for arbeidskatalogen.
-      Men ogs&#229; her ville det v&#230;re en l&#248;gn, fordi det kan 
-      v&#230;re tillegg og slettinger som katalogen fortsatt ikke har, 
-      fordi ingen oppdatering er gjort.
+    <para>P&#229; samme m&#229;te vil et problem oppst&#229; hvis du fors&#248;ker &#229; legge 
+      inn forandringer i egenskapene for en katalog.
+      Normalt ville innleggingen &#248;ke det lokale revisjonsnummeret for 
+      arbeidskatalogen.
+      Men ogs&#229; her ville det v&#230;re en l&#248;gn, fordi det kan v&#230;re tillegg og 
+      slettinger som katalogen fortsatt ikke har, fordi ingen 
+      oppdatering er gjort.
       <emphasis>Derfor f&#229;r du ikke lov til &#229; legge inn 
       egenskapsforandringer p&#229; en katalog hvis den ikke er 
       oppdatert.</emphasis></para>
 
-    <para>For videre diskusjon om begrensningene p&#229; 
-      versjonskontroll for kataloger, se <xref 
-      linkend="svn-ch-2-sect-3.4"/>.</para>
+    <para>For videre diskusjon om begrensningene p&#229; versjonskontroll for 
+      kataloger, se <xref linkend="svn-ch-2-sect-3.4"/>.</para>
 
   </sect1>
 
@@ -152,17 +146,16 @@
   <sect1 id="svn-ap-a-sect-3">
     <title>Flere frakoblede operasjoner</title>
 
-    <para>I de senere &#229;r har diskplass blitt h&#229;rreisende 
-      billig og tilgjengelig, i motsetning til b&#229;ndbredde.
+    <para>I de senere &#229;r har diskplass blitt h&#229;rreisende billig og 
+      tilgjengelig, i motsetning til b&#229;ndbredde.
       Derfor er arbeidskopiene til Subversion blitt optimalisert for den 
       mer dyrebare ressursen.</para>
 
     <para>Den administrative katalogen <filename>.svn</filename> tjener 
-      samme form&#229;l som <filename>CVS</filename>-katalogen, unntatt 
-      at den ogs&#229; lagrer skrivebeskyttede, <quote>rene</quote> 
-      kopier av filene dine.
-      Dette gj&#248;r at du kan gj&#248;re mange ting uten 
-      nettforbindelse:</para>
+      samme form&#229;l som <filename>CVS</filename>-katalogen, unntatt at 
+      den ogs&#229; lagrer skrivebeskyttede, <quote>rene</quote> kopier av 
+      filene dine.
+      Dette gj&#248;r at du kan gj&#248;re mange ting uten nettforbindelse:</para>
     
     <variablelist>
       
@@ -192,14 +185,13 @@
 
     </variablelist>
 
-    <para>I tillegg tillater de originale filene Subversionklienten 
-      &#229; sende oppdateringen som en differansefil, noe CVS ikke kan 
+    <para>I tillegg tillater de originale filene Subversionklienten &#229; 
+      sende oppdateringen som en differansefil, noe CVS ikke kan 
       gj&#248;re.</para>
 
     <para>Den siste delkommandoen i listen er ny;
-      den vil ikke bare fjerne lokale forandringer, men den vil 
-      ogs&#229; fjerne operasjoner som tillegg og slettinger fra 
-      k&#248;en.
+      den vil ikke bare fjerne lokale forandringer, men den vil ogs&#229; 
+      fjerne operasjoner som tillegg og slettinger fra k&#248;en.
       Dette er den foretrukne m&#229;ten &#229; tilbakestille en fil.
       Kommandoene <command>rm file; svn update</command> vil fortsatt 
       virke, men det utydeliggj&#248;r meningen med oppdatering.
@@ -213,35 +205,34 @@
   <sect1 id="svn-ap-a-sect-4">
     <title>Skille mellom status og oppdatering</title>
 
-    <para>I Subversion har vi pr&#248;vd &#229; fjerne en del av 
-      forvirringen ang&#229;ende kommandoene <command>cvs 
-      status</command> og <command>cvs update</command>.</para>
+    <para>I Subversion har vi pr&#248;vd &#229; fjerne en del av forvirringen 
+      ang&#229;ende kommandoene <command>cvs status</command> og <command>cvs 
+      update</command>.</para>
 
     <para>Kommandoen <command>cvs status</command> har to form&#229;l:
-      For det f&#248;rste &#229; vise brukeren alle lokale forandringer 
-      i arbeidskopien, og for det andre &#229; vise brukeren hvilke 
-      filer som er utdatert.
-      Uheldigvis, p&#229; grunn av CVSs uoversiktlige utlisting, er det 
-      mange CVS-brukere som ikke bruker denne kommandoen i det hele 
-      tatt.
-      Istedenfor har de lagt seg til vanen &#229; kj&#248;re 
-      <command>cvs up</command> eller <command>cvs up -n</command> for 
-      &#229; f&#229; en rask oversikt over forandringene.
-      Hvis brukere glemmer &#229; bruke <option>-n</option>-valget, vil 
-      dette f&#248;re til at det flettes inn forandringer fra depotet 
-      som de kanskje ikke er klare til &#229; h&#229;ndtere.</para>
+      For det f&#248;rste &#229; vise brukeren alle lokale forandringer i 
+      arbeidskopien, og for det andre &#229; vise brukeren hvilke filer som 
+      er utdatert.
+      Uheldigvis, p&#229; grunn av CVSs uoversiktlige utlisting, er det mange 
+      CVS-brukere som ikke bruker denne kommandoen i det hele tatt.
+      Istedenfor har de lagt seg til vanen &#229; kj&#248;re <command>cvs 
+      update</command> eller <command>cvs update -n</command> for &#229; f&#229; 
+      en rask oversikt over forandringene.
+      Hvis brukere glemmer &#229; bruke <option>-n</option>-valget, vil dette 
+      f&#248;re til at det flettes inn forandringer fra depotet som de 
+      kanskje ikke er klare til &#229; h&#229;ndtere.</para>
 
-    <para>Med Subversion har vi fors&#248;kt &#229; fjerne dette rotet 
-      ved &#229; gj&#248;re informasjonen fra <command>svn 
-      status</command> lettlest b&#229;de for menneske og maskin.
+    <para>Med Subversion har vi fors&#248;kt &#229; fjerne dette rotet ved &#229; gj&#248;re 
+      informasjonen fra <command>svn status</command> lettlest b&#229;de for 
+      menneske og maskin.
       I tillegg begrenser informasjonen fra <command>svn 
-      update</command> seg til kun &#229; inneholde filer som blir 
-      oppdatert, <emphasis>ikke</emphasis> lokale endringer.</para>
+      update</command> seg til kun &#229; inneholde filer som blir oppdatert, 
+      <emphasis>ikke</emphasis> lokale endringer.</para>
 
     <para><command>svn status</command> lister alle filer som inneholder 
       lokale forandringer.
-      Standard oppf&#248;rsel er &#229; ikke kontakte depotet og 
-      nettverkskontakt er derfor ikke n&#248;dvendig.
+      Standard oppf&#248;rsel er &#229; ikke kontakte depotet og nettverkskontakt 
+      er derfor ikke n&#248;dvendig.
       Denne delkommandoen godtar en god del valg, dette er de mest 
       vanlige:</para>
 
@@ -302,8 +293,9 @@ Status against revision:   1066
       <filename>faces.html</filename> vil bli patchet hvis vi 
       oppdaterer, og at <filename>bloo.png</filename> er en fil som 
       nylig er lagt til i depotet.
-      (Tegnet <command>-</command> ved siden av bloo.png betyr at den 
-      ikke eksisterer enda i arbeidskopien.)</para>
+      (Tegnet <command>-</command> ved siden av 
+      <filename>bloo.png</filename> betyr at den ikke eksisterer enda i 
+      arbeidskopien.)</para>
 
     <!-- ###TODO describe -u here as well as -uv. -u and -v use
          different <quote>long</quote> formats and need to be
@@ -336,9 +328,9 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
       <quote><command>P</command></quote>- og 
       <quote><command>U</command></quote>-kode inn i en 
       <command>U</command>.
-      N&#229;r en fletting eller konflikt oppst&#229;r, skriver 
-      Subversion rett og slett bare <command>G</command> eller 
-      <command>C</command>, istedenfor en hel setning om det.</para>
+      N&#229;r en fletting eller konflikt oppst&#229;r, skriver Subversion rett og 
+      slett bare <command>G</command> eller <command>C</command>, 
+      istedenfor en hel setning om det.</para>
 
     <para>For en mer detaljert diskusjon om <command>svn 
       status</command>, se <xref linkend="svn-ch-3-sect-4.3.1" 
@@ -354,25 +346,24 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
     <title>Forgreninger og merker</title>
 
     <para>Subversion skiller ikke mellom omr&#229;der i filsystemet og 
-      omr&#229;der for <quote>forgreninger</quote>, forgreninger og 
-      merker er vanlige kataloger i filsystemet.
-      Dette er muligens det st&#248;rste enkeltst&#229;ende mentale 
-      hinderet en CVS-bruker m&#229; forsere.
+      omr&#229;der for <quote>forgreninger</quote>, forgreninger og merker er 
+      vanlige kataloger i filsystemet.
+      Dette er muligens det st&#248;rste enkeltst&#229;ende mentale hinderet en 
+      CVS-bruker m&#229; forsere.
       Les alt om det i <xref linkend="svn-ch-4"/>.</para>
 
 
     <warning>
       <para>Siden Subversion behandler forgreninger og merker som 
-        ordin&#230;re kataloger, husk alltid p&#229; &#229; hente ut 
-        katalogen kalt <literal>trunk</literal> 
+        ordin&#230;re kataloger, husk alltid p&#229; &#229; hente ut katalogen kalt 
+        <literal>trunk</literal> 
         (<literal>http://svn.example.com/repos/calc/trunk/</literal>) 
         fra prosjektet ditt, og ikke selve prosjektet 
         (<literal>http://svn.example.com/repos/calc/</literal>).
-        Hvis du gj&#248;r den feilen &#229; hente ut selve prosjektet, 
-        vil du ende opp med en kopi som inneholder en kopi av prosjektet 
-        for hver eneste gren og merke som du 
-        har.<footnote><para>Forutsatt at du ikke g&#229;r tom for 
-        diskplass f&#248;r uthentingen er 
+        Hvis du gj&#248;r den feilen &#229; hente ut selve prosjektet, vil du ende 
+        opp med en kopi som inneholder en kopi av prosjektet for hver 
+        eneste gren og merke som du har.<footnote><para>Forutsatt at du 
+        ikke g&#229;r tom for diskplass f&#248;r uthentingen er 
         ferdig.</para></footnote></para>
     </warning>
 
@@ -390,11 +381,10 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
       Egenskaper er vilk&#229;rlige navn/verdi-par koblet til filer og 
       kataloger i arbeidskopien din.</para>
     
-    <para>For &#229; sette eller lese et egenskapsnavn, bruk 
-      delkommandoene <command>svn propset</command> og <command>svn 
-      propget</command>.
-      For &#229; liste ut alle egenskaper ved et objekt, bruk 
-      <command>svn proplist</command>.</para>
+    <para>For &#229; sette eller lese et egenskapsnavn, bruk delkommandoene 
+      <command>svn propset</command> og <command>svn propget</command>.
+      For &#229; liste ut alle egenskaper ved et objekt, bruk <command>svn 
+      proplist</command>.</para>
 
     <para>For mer informasjon, se <xref 
       linkend="svn-ch-7-sect-2"/>.</para>
@@ -410,18 +400,17 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
     <para>CVS markerer konflikter med innlagte 
       <quote>konfliktmerker</quote>, og skriver en <command>C</command> 
       under oppdatering.
-      Historisk sett har dette laget problemer, fordi CVS ikke gj&#248;r 
-      nok.
+      Historisk sett har dette laget problemer, fordi CVS ikke gj&#248;r nok.
       Mange brukere glemmer (eller ser ikke) <command>C</command>-en 
       etter den fyker forbi p&#229; terminalen deres.
       Ofte glemmer de at konfliktmerkene er der i det hele tatt, og de 
       legger deretter inn filer som inneholder konfliktmerker.</para>
     
-    <para>Subversion l&#248;ser dette problemet ved &#229; gj&#248;re 
-      konflikter mer synlige.
-      Den husker at en fil har en konflikt, og vil ikke tillate deg 
-      &#229; legge inn forandringene dine f&#248;r du kj&#248;rer 
-      <command>svn resolved</command>.
+    <para>Subversion l&#248;ser dette problemet ved &#229; gj&#248;re konflikter mer 
+      synlige.
+      Den husker at en fil har en konflikt, og vil ikke tillate deg &#229; 
+      legge inn forandringene dine f&#248;r du kj&#248;rer <command>svn 
+      resolved</command>.
       Se <xref linkend="svn-ch-3-sect-4.4"/> for flere detaljer.</para>
   </sect1>
 
@@ -431,57 +420,54 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
   <sect1 id="svn-ap-a-sect-8">
     <title>Bin&#230;re filer og konverteringer</title>
 
-    <para>Generelt sett behandler Subversion bin&#230;re filer mer 
-      elegant enn CVS.
-      Fordi CVS bruker RCS, kan den bare lagre hele kopier av 
-      bin&#230;re filer som forandres. <!-- ###FIXME: Det der er feil, 
-      CVS lagrer ogs&#229; diff i depotet. Og CVS bruker ikke RCS mer. 
-      Skal poste til dev@ om det. -->
+    <para>Generelt sett behandler Subversion bin&#230;re filer mer elegant 
+      enn CVS.
+      Fordi CVS bruker RCS, kan den bare lagre hele kopier av bin&#230;re 
+      filer som forandres. <!-- ###FIXME: Det der er feil, CVS lagrer 
+      ogs&#229; diff i depotet. Og CVS bruker ikke RCS mer. Skal poste til 
+      dev@ om det. -->
       Men internt behandler Subversion forskjeller mellom filer ved 
-      hjelp av en bin&#230;rdata-basert algoritme, uansett om de 
-      inneholder tekst eller bin&#230;re data.
+      hjelp av en bin&#230;rdata-basert algoritme, uansett om de inneholder 
+      tekst eller bin&#230;re data.
       Dette betyr at alle filer er lagret differensielt (pakket) i 
       depotet, og sm&#229; forandringer blir alltid sendt over 
       nettverket.</para>
     
     <para>CVS-brukere m&#229; merke bin&#230;re filer med flagget 
-      <option>-kb</option>, for &#229; forhindre data &#229; bli rotet 
-      til (p&#229; grunn av n&#248;kkelordutvidelser og oversettelse av 
-      linjeslutt).
+      <option>-kb</option>, for &#229; forhindre data &#229; bli rotet til (p&#229; 
+      grunn av n&#248;kkelordutvidelser og oversettelse av linjeslutt).
       Dette glemmer de noen ganger.</para>
 
     <para>Subversion tar den mer paranoide ruten:
-      Til &#229; begynne med utf&#248;rer den ingen form for 
-      n&#248;kkelordutvidelser hvis du ikke ber den spesielt om &#229; 
-      gj&#248;re det (Se <xref linkend="svn-ch-7-sect-2.3.4"/> og <xref 
+      Til &#229; begynne med utf&#248;rer den ingen form for n&#248;kkelordutvidelser 
+      hvis du ikke ber den spesielt om &#229; gj&#248;re det (Se <xref 
+      linkend="svn-ch-7-sect-2.3.4"/> og <xref 
       linkend="svn-ch-7-sect-2.3.5"/> for flere detaljer).
-      Standard oppf&#248;rsel for Subversion er &#229; behandle alle 
-      fildata som rene strenger av bytes, og filer blir alltid lagret i 
-      depotet i en uoversatt tilstand.</para>
+      Standard oppf&#248;rsel for Subversion er &#229; behandle alle fildata som 
+      rene strenger av bytes, og filer blir alltid lagret i depotet i en 
+      uoversatt tilstand.</para>
 
     <para>For det andre har Subversion et internt begrep om en fil er 
-      <quote>tekst</quote> eller <quote>bin&#230;re</quote> data, men 
-      dette begrepet er <emphasis>bare</emphasis> bevart i 
-      arbeidskopien.
+      <quote>tekst</quote> eller <quote>bin&#230;re</quote> data, men dette 
+      begrepet er <emphasis>bare</emphasis> bevart i arbeidskopien.
       Under en <command>svn update</command> vil Subversion utf&#248;re 
-      kontekstbaserte flettinger p&#229; tekstfiler som inneholder 
-      lokale endringer, men vil ikke fors&#248;ke dette for bin&#230;re 
-      filer.</para>
+      kontekstbaserte flettinger p&#229; tekstfiler som inneholder lokale 
+      endringer, men vil ikke fors&#248;ke dette for bin&#230;re filer.</para>
 
-    <para>For &#229; avgj&#248;re hvorvidt en kontekstbasert fletting er 
-      mulig, leser Subversion 
-      <literal>svn:mime-type</literal>-egenskapen.
+    <para>For &#229; avgj&#248;re hvorvidt en kontekstbasert fletting er mulig, 
+      leser Subversion <literal>svn:mime-type</literal>-egenskapen.
       Hvis filen ikke har noen 
       <literal>svn:mime-type</literal>-egenskap, eller den har en 
-      mime-type som indikerer tekst (for eksempel text/*), g&#229;r 
-      Subversion ut i fra at det er tekst.
+      mime-type som indikerer tekst (for eksempel 
+      <literal>text/*</literal>), g&#229;r Subversion ut i fra at det er 
+      tekst.
       Ellers g&#229;r Subversion ut i fra at filen er bin&#230;r.
-      Subversion hjelper ogs&#229; brukere ved &#229; kj&#248;re en 
-      algoritme som sjekker om en fil er bin&#230;r for kommandoene 
-      <command>svn import</command> og <command>svn add</command>.
+      Subversion hjelper ogs&#229; brukere ved &#229; kj&#248;re en algoritme som 
+      sjekker om en fil er bin&#230;r for kommandoene <command>svn 
+      import</command> og <command>svn add</command>.
       Disse kommandoene gjetter godt og setter (muligens) en bin&#230;r 
-      <literal>svn:mime-type</literal>-egenskap p&#229; filen som blir 
-      lagt til.
+      <literal>svn:mime-type</literal>-egenskap p&#229; filen som blir lagt 
+      til.
       (Hvis Subversion gjetter feil, kan brukeren alltids fjerne eller 
       redigere egenskapen for h&#229;nd.)</para>
 
@@ -513,16 +499,15 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
 
     <title>Autentisering</title>
 
-    <para>Med CVSs pserver er du n&#248;dt til &#229; <quote>logge 
-      inn</quote> p&#229; tjeneren f&#248;r du kan utf&#248;re lese- 
-      eller skriveoperasjoner &#8212; du m&#229; til og med logge inn 
-      for anonyme operasjoner.
-      Med et Subversiondepot som bruker Apache HTTPD p&#229; tjeneren, 
-      oppgir du ingen autentiseringsopplysninger, tjeneren vil 
-      sp&#248;rre deg etter opplysningene (enten disse er brukernavn og 
-      passord, et klientsertifikat, eller til og med begge).
-      S&#229; hvis depotet er lesbart for hele verden, trenger du ikke 
-      &#229; autentisere i det hele tatt for leseoperasjoner.</para>
+    <para>Med CVSs pserver er du n&#248;dt til &#229; <quote>logge inn</quote> p&#229; 
+      tjeneren f&#248;r du kan utf&#248;re lese- eller skriveoperasjoner &#8212; du m&#229; 
+      til og med logge inn for anonyme operasjoner.
+      Med et Subversiondepot som bruker Apache HTTPD p&#229; tjeneren, oppgir 
+      du ingen autentiseringsopplysninger, tjeneren vil sp&#248;rre deg etter 
+      opplysningene (enten disse er brukernavn og passord, et 
+      klientsertifikat, eller til og med begge).
+      S&#229; hvis depotet er lesbart for hele verden, trenger du ikke &#229; 
+      autentisere i det hele tatt for leseoperasjoner.</para>
 
     <para>I likhet med CVS vil Subversion lagre dine 
       autentiseringsopplysninger p&#229; disken (i katalogen 
@@ -542,44 +527,42 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
 
     <title>Konvertere et depot fra CVS til Subversion</title>
 
-    <para>Kanskje den viktigste m&#229;ten &#229; gj&#248;re CVS-brukere 
-      kjent med Subversion er &#229; la dem fortsette arbeidet p&#229; 
-      prosjektene deres ved bruk av det nye systemet.
-      Mens dette kan bli gjennomf&#248;rt til en viss grad ved &#229; 
-      bruke et Subversiondepot som inneholder en flat import av et 
-      eksportert CVS-depot, vil den mer gjennomf&#248;rte l&#248;sningen 
-      ikke bare inneholde den siste versjonen av dataene, men ogs&#229; 
-      hele historien, fra et system til et annet.
-      Dette er et ekstremt vanskelig problem &#229; l&#248;se som 
-      involverer &#229; fastsl&#229; et sett med forandringer uten at 
-      atomiske egenskaper er tilgjengelige, og &#229; oversette mellom 
-      systemenes forskjellige forgreningsm&#229;ter, i tillegg til andre 
-      komplikasjoner.
-      Til tross for dette er det en h&#229;ndfull verkt&#248;y som 
-      p&#229;st&#229;r i hvertfall delvis &#229; kunne konvertere 
-      eksisterende CVS-depoter til Subversion.</para>
+    <para>Kanskje den viktigste m&#229;ten &#229; gj&#248;re CVS-brukere kjent med 
+      Subversion er &#229; la dem fortsette arbeidet p&#229; prosjektene deres ved 
+      bruk av det nye systemet.
+      Mens dette kan bli gjennomf&#248;rt til en viss grad ved &#229; bruke et 
+      Subversiondepot som inneholder en flat import av et eksportert 
+      CVS-depot, vil den mer gjennomf&#248;rte l&#248;sningen ikke bare inneholde 
+      den siste versjonen av dataene, men ogs&#229; hele historien, fra et 
+      system til et annet.
+      Dette er et ekstremt vanskelig problem &#229; l&#248;se som involverer &#229; 
+      fastsl&#229; et sett med forandringer uten at atomiske egenskaper er 
+      tilgjengelige, og &#229; oversette mellom systemenes forskjellige 
+      forgreningsm&#229;ter, i tillegg til andre komplikasjoner.
+      Til tross for dette er det en h&#229;ndfull verkt&#248;y som p&#229;st&#229;r i 
+      hvertfall delvis &#229; kunne konvertere eksisterende CVS-depoter til 
+      Subversion.</para>
 
     <para>Et slikt verkt&#248;y er cvs2svn (<systemitem 
       class="url">http://cvs2svn.tigris.org/</systemitem>), et 
       Pythonskript originalt laget av medlemmer fra Subversions 
       utviklermilj&#248;.
-      Andre inkluderer et programtillegg av Chia-liang Kao til 
-      verkt&#248;yet VCP (<systemitem 
+      Andre inkluderer et programtillegg av Chia-liang Kao til verkt&#248;yet 
+      VCP (<systemitem 
       class="url">http://svn.clkao.org/revml/branches/svn-perl/</systemitem>) 
       og Lev Serebryakovs RefineCVS (<systemitem 
       class="url">http://lev.serebryakov.spb.ru/refinecvs/</systemitem>).
-      Disse verkt&#248;yene er komplette i varierende grad, og kan komme 
-      til &#229; gj&#248;re helt forskjellige vurderinger om hvordan 
-      historien til CVS-depotet skal behandles.
-      Uansett hvilket verkt&#248;y du bestemmer deg for &#229; bruke, 
-      v&#230;r n&#248;ye med &#229; utf&#248;re s&#229; mye verifisering 
-      som du kan p&#229; konverteringsresultatet &#8212; n&#229;r alt 
-      kommer til alt har du jobbet hardt for &#229; lage denne 
+      Disse verkt&#248;yene er komplette i varierende grad, og kan komme til 
+      &#229; gj&#248;re helt forskjellige vurderinger om hvordan historien til 
+      CVS-depotet skal behandles.
+      Uansett hvilket verkt&#248;y du bestemmer deg for &#229; bruke, v&#230;r n&#248;ye med 
+      &#229; utf&#248;re s&#229; mye verifisering som du kan p&#229; konverteringsresultatet 
+      &#8212; n&#229;r alt kommer til alt har du jobbet hardt for &#229; lage denne 
       historien!</para>
 
     <para>For en oppdatert samling av lenker til kjente 
-      konverteringsverkt&#248;y, bes&#248;k lenkesiden p&#229; 
-      hjemmesiden til Subversion (<systemitem 
+      konverteringsverkt&#248;y, bes&#248;k lenkesiden p&#229; hjemmesiden til 
+      Subversion (<systemitem 
       class="url">http://subversion.tigris.org/project_links.html</systemitem>).</para>
 
   </sect1>

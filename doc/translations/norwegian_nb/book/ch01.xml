@@ -1,20 +1,23 @@
 <chapter id="svn-ch-1">
 
-  <title>Introduction</title>
+  <title>Introduksjon</title>
 
   <simplesect>
-    <para>Version control is the art of managing changes to
-      information.  It has long been a critical tool for programmers,
-      who typically spend their time making small changes to software
-      and then undoing those changes the next day.  But the usefulness
-      of version control software extends far beyond the bounds of the
-      software development world.  Anywhere you can find people using
-      computers to manage information that changes often, there is
-      room for version control.  And that's where Subversion comes
-      into play.</para>
+    <para>Versjonskontroll er kunsten &#229; behandle forandringer i 
+      informasjon.
+      Det har lenge v&#230;rt et kritisk verkt&#248;y for programmerere, som 
+      typisk nok bruker tiden sin p&#229; &#229; gj&#248;re sm&#229; forandringer til 
+      programvare og deretter forandrer det tilbake dagen etterp&#229;.
+      Men nyttigheten av versjonskontroll rekker langt forbi grensene 
+      for programutviklingsverdenen.
+      Alle steder du finner folk som bruker datamaskiner til &#229; behandle 
+      informasjon som forandrer seg ofte, der er det plass for 
+      versjonskontroll.
+      Og det er her Subversion kommer inn i bildet.</para>
 
-    <para>This chapter contains a high-level introduction to
-      Subversion&mdash;what it is; what it does; how to get it.</para>
+    <para>Dette kapitlet inneholder en h&#248;ytsvevende introduksjon til 
+      Subversion &#8212; hva det er, hva det gj&#248;r og hvordan f&#229; tak i 
+      det.</para>
 
   </simplesect>
 
@@ -24,40 +27,46 @@
   <!-- ================================================================= -->
   <sect1 id="svn-ch-1-sect-1">
 
-    <title>What is Subversion?</title>
+    <title>Hva er Subversion?</title>
       
-    <para>Subversion is a free/open-source version control system.
-      That is, Subversion manages files and directories over time.  A
-      tree of files is placed into a central
-      <firstterm>repository</firstterm>.  The repository is much like
-      an ordinary file server, except that it remembers every change
-      ever made to your files and directories.  This allows you to
-      recover older versions of your data, or examine the history of
-      how your data changed.  In this regard, many people think of a
-      version control system as a sort of <quote>time
-      machine</quote>.</para>
+    <para>Subversion er et fritt/opensource versjonskontrollsystem.
+      Det betyr: Subversion behandler filer og kataloger over tid.
+      Et tre av filer er plassert inn i et sentralt 
+      <firstterm>depot</firstterm>.
+      Depotet ligner mye p&#229; en vanlig filtjener, med det unntaket at den 
+      husker hver eneste forandring noensinne gjort p&#229; filene og 
+      katalogene.
+      Dette tillater deg &#229; hente fram eldre versjoner av dataene dine, 
+      eller studere historien for hvordan dataene dine har forandret 
+      seg.
+      I anledning dette tenker mange p&#229; versjonskontroll som en slags 
+      <quote>tidsmaskin</quote>.</para>
     
-    <para>Subversion can access its repository across networks, which
-      allows it to be used by people on different computers.  At some
-      level, the ability for various people to modify and manage the
-      same set of data from their respective locations fosters
-      collaboration.  Progress can occur more quickly without a single
-      conduit through which all modifications must occur.  And because
-      the work is versioned, you need not fear that quality is the
-      trade-off for losing that conduit&mdash;if some incorrect change
-      is made to the data, just undo that change.</para>
+    <para>Subversion kan aksessere depotet sitt via datanettverk, som 
+      tillater det &#229; bli brukt av personer p&#229; forskjellige maskiner.
+      P&#229; et visst niv&#229; gir muligheten for forskjellige personer til &#229; 
+      modifisere og behandle den samme datamengden seg utslag i 
+      samarbeid.
+      Fremgangen kan g&#229; fortere uten en trang flaskehals all 
+      forandringene m&#229; g&#229; gjennom.
+      Og fordi arbeidet er versjonert, trenger du ikke frykte at 
+      kvaliteten er noe du m&#229; gi avkall p&#229; n&#229;r du mister denne 
+      flaskehalsen &#8212; hvis en feil forandring er gjort med dataene, bare 
+      omgj&#248;r denne forandringen.</para>
 
-    <para>Some version control systems are also software configuration
-      management (SCM) systems.  These systems are specifically
-      tailored to manage trees of source code, and have many features
-      that are specific to software development&mdash;such as natively
-      understanding programming languages, or supplying tools for
-      building software.  Subversion, however, is not one of these
-      systems.  It is a general system that can be used to manage
-      <emphasis>any</emphasis> collection of files.  For you, those
-      files might be source code&mdash;for others, anything from
-      grocery shopping lists to digital video mixdowns and
-      beyond.</para>
+    <para>Noen versjonskontrollsystemer er ogs&#229; <!-- &#164; 
+      --><foreignphrase>software configuration 
+      management</foreignphrase>-systemer (SCM).
+      Disse systemene er spesielt beregnet p&#229; &#229; vedlikeholde tr&#230;r av 
+      kildekode, og har mange funksjoner som er spesifikk til 
+      programutvikling &#8212; som en viss forst&#229;else av programmeringsspr&#229;k, 
+      eller de tilbyr verkt&#248;y for &#229; bygge programvare.
+      Subversion, derimot, er ikke et av disse systemene.
+      Det er et generelt system som kan bli brukt til &#229; vedlikeholde en 
+      <emphasis>hvilken som helst</emphasis> samling av filer.
+      For ditt vedkommende kan det v&#230;re kildekode &#8212; for andre, alt fra 
+      huskelister til butikken til redigeringsfiler for digital video og 
+      annet.</para>
 
   </sect1>
 
@@ -66,71 +75,80 @@
   <!-- ================================================================= -->
   <sect1 id="svn-ch-1-sect-2">
 
-    <title>Subversion's History</title>
+    <title>Subversions historie</title>
 
-    <para>In early 2000, CollabNet, Inc. (<systemitem
-      class="url">http://www.collab.net</systemitem>) began seeking
-      developers to write a replacement for CVS.  CollabNet offers a
-      collaboration software suite called SourceCast, of which one
-      component is version control.  Although SourceCast used CVS as
-      its initial version control system, CVS's limitations were
-      obvious from the beginning, and CollabNet knew it would
-      eventually have to find something better.  Unfortunately, CVS
-      had become the <foreignphrase>de facto</foreignphrase> standard
-      in the open source world largely because there
-      <emphasis>wasn't</emphasis> anything better, at least not under
-      a free license.  So CollabNet determined to write a new version
-      control system from scratch, retaining the basic ideas of CVS,
-      but without the bugs and misfeatures.</para>
+    <para>Tidlig i &#229;r 2000 startet CollabNet, Inc. (<systemitem
+      class="url">http://www.collab.net</systemitem>) letingen etter 
+      utviklere for &#229; skrive en erstatning for CVS.
+      CollabNet tilbyr programvare for &#229; muliggj&#248;re samarbeid &#8212; 
+      SourceCast &#8212; der en komponent er versjonskontroll.
+      Selv om SourceCast brukte CVS som sitt f&#248;rste 
+      versjonskontrollsystem, var begrensningene i CVS helt fra 
+      begynnelsen veldig tydelige, og CollabNet visste at noe bedre 
+      m&#229;tte finnes p&#229; et eller annet tidspunkt.
+      Uheldigvis hadde CVS blitt <foreignphrase>de 
+      facto</foreignphrase>-standarden i opensource-verdenen fordi det 
+      <emphasis>ikke fantes</emphasis> noe bedre, ihvertfall ikke under 
+      en fri lisens.
+      S&#229; CollabNet gikk inn for &#229; skrive et nytt versjonskontrollsystem 
+      fra scratch, basert p&#229; de grunnleggende id&#233;ene fra CVS, men uten 
+      feilene og manglende funksjoner.</para>
 
-    <para>In February 2000, they contacted Karl Fogel, the author of
-      <citetitle>Open Source Development with CVS</citetitle>
-      (Coriolis, 1999), and asked if he'd like to work on this new
-      project.  Coincidentally, at the time Karl was already
-      discussing a design for a new version control system with his
-      friend Jim Blandy.  In 1995, the two had started Cyclic
-      Software, a company providing CVS support contracts, and
-      although they later sold the business, they still used CVS every
-      day at their jobs.  Their frustration with CVS had led Jim to
-      think carefully about better ways to manage versioned data, and
-      he'd already come up with not only the name
-      <quote>Subversion</quote>, but also with the basic design of the
-      Subversion repository.  When CollabNet called, Karl immediately
-      agreed to work on the project, and Jim got his employer, RedHat
-      Software, to essentially donate him to the project for an
-      indefinite period of time.  CollabNet hired Karl and Ben
-      Collins-Sussman, and detailed design work began in May.  With
-      the help of some well-placed prods from Brian Behlendorf and
-      Jason Robbins of CollabNet, and Greg Stein (at the time an
-      independent developer active in the WebDAV/DeltaV specification
-      process), Subversion quickly attracted a community of active
-      developers.  It turned out that many people had had the same
-      frustrating experiences with CVS, and welcomed the chance to
-      finally do something about it.</para>
+    <para>I februar 2000 kontaktet de Karl Fogel, forfatteren av 
+      <citetitle>Open Source Development with CVS</citetitle> (Coriolis, 
+      1999), og spurte om han ville arbeide p&#229; dette nye prosjektet.
+      Tilfeldigvis diskuterte Karl p&#229; dette tidspunktet et design for et 
+      nytt versjonskontrollsystem med sin venn Jim Blandy.
+      I 1995 startet de to Cyclic Software, et firma som tilb&#248;d 
+      kontrakter for CVS-st&#248;tte, og selv om de senere solgte 
+      forretningen, brukte de fortsatt CVS hver dag p&#229; jobben.
+      Frustrasjonen deres over CVS hadde f&#229;tt Jim til &#229; tenke n&#248;ye over 
+      bedre veier til &#229; behandle versjonerte data, og han hadde allerede 
+      kommet opp med ikke bare navnet <quote>Subversion</quote>, men 
+      ogs&#229; med det grunnleggende designet av depotet for Subversion.
+      Da foresp&#248;rselen kom fra CollabNet, gikk Karl &#248;yeblikket med p&#229; &#229; 
+      arbeide med prosjektet, og Jim fikk sin arbeidsgiver, RedHat 
+      Software, til &#229; hovedsaklig donere ham til prosjektet for en 
+      udefinert tidsperiode.
+      CollabNet ansatte Karl og Ben Collins-Sussman, og detaljert 
+      designarbeid startet i mai.
+      Med hjelp av noen velplasserte n&#229;lestikk fra Brian Behlendorf, 
+      Jason Robbins fra CollabNet og Greg Stein (p&#229; den tiden en 
+      uavhengig utvikler aktiv innen spesifikasjonsprosessen for 
+      WebDAV/DeltaV), fikk Subversion raskt trukket til seg en samling 
+      aktive utviklere.
+      Det viste seg at mange folk hadde hatt de samme frustrerende 
+      opplevelsene med CVS, og &#248;nsket sjansen til &#229; endelig f&#229; gjort noe 
+      med dette velkommen.</para>
 
-    <para>The original design team settled on some simple goals.  They
-      didn't want to break new ground in version control methodology,
-      they just wanted to fix CVS.  They decided that Subversion would
-      match CVS's features, and preserve the same development model,
-      but not duplicate CVS's most obvious flaws.  And although it did
-      not need to be a drop-in replacement for CVS, it should be
-      similar enough that any CVS user could make the switch with
-      little effort.</para>
+    <para>Den originale designgruppen satte seg enkle m&#229;l.
+      De ville ikke bryte nytt land innen versjonskontrollteknikken, de 
+      ville bare forbedre CVS.
+      De bestemte seg for at Subversion skulle ha de samme funksjonene 
+      som CVS og beholde den samme utviklingsmodellen, men uten de mest 
+      &#229;penbare feilene i CVS.
+      Og selv om det n&#248;dvendigvis ikke skulle v&#230;re en fullstendig 
+      erstatning for CVS, skulle det v&#230;re likt nok til at enhver 
+      CVS-bruker kunne gjennomf&#248;re overgangen med sm&#229; 
+      anstrengelser.</para>
 
-    <para>After fourteen months of coding, Subversion became
-      <quote>self-hosting</quote> on August 31, 2001.  That is,
-      Subversion developers stopped using CVS to manage Subversion's
-      own source code, and started using Subversion instead.</para>
+    <para>Etter fjorten m&#229;neder med programmering ble Subversion 
+      <quote>selvlagrende</quote> den 31. august 2001.
+      Det bet&#248;d at Subversionutviklerne avsluttet bruken av CVS til &#229; 
+      vedlikeholde Subversions kildekode, og gikk over til &#229; bruke 
+      Subversion istedenfor.</para>
 
-    <para>While CollabNet started the project, and still funds a large
-      chunk of the work (it pays the salaries of a few full-time
-      Subversion developers), Subversion is run like most open-source
-      projects, governed by a loose, transparent set of rules that
-      encourage meritocracy.  CollabNet's copyright license is fully
-      compliant with the Debian Free Software Guidelines.  In other
-      words, anyone is free to download, modify, and redistribute
-      Subversion as he pleases; no permission from CollabNet or anyone
-      else is required.</para>
+    <para>Selv om CollabNet startet prosjektet, og fortsatt finansierer 
+      en stor del av arbeidet (de betaler l&#248;nningene for noen f&#229; 
+      fulltidsansatte Subversionutviklere), drives Subversion som de 
+      fleste opensource-prosjekter, styrt av et l&#248;st sammensatt og 
+      gjennomsiktig regelverk som oppmuntrer til elitestyre.
+      CollabNets copyrightlisens er fullstendig i samsvar med Debians 
+      retningslinjer for fri software &#8212; <foreignphrase>Debian Free 
+      Software Guidelines</foreignphrase>.
+      Med andre ord, alle kan hente, modifisere og redistribuere 
+      Subversion som de selv &#248;nsker; ingen tillatelse fra CollabNet 
+      eller andre er n&#248;dvendig.</para>
 
   </sect1>
 
@@ -139,121 +157,129 @@
   <!-- ================================================================= -->
   <sect1 id="svn-ch-1-sect-3">
 
-    <title>Subversion's Features</title>
+    <title>Subversions fordeler</title>
 
-    <para>When discussing the features that Subversion brings to the
-      version control table, it is often helpful to speak of them in
-      terms of how they improve upon CVS's design.  If you're not
-      familiar with CVS, you may not understand all of these features.
-      And if you're not familiar with version control at all, your
-      eyes may glaze over unless you first read <xref
-      linkend="svn-ch-2"/>, in which we provide a gentle introduction
-      to version control in general.</para>
+    <para>N&#229;r vi diskuterer funksjonalitetene som Subversion bringer til 
+      <!-- &#164; -->versjonskontrollbordet, hjelper det ofte &#229; snakke om dem 
+      i vendinger som beskriver hvordan de er forbedringer i forhold til 
+      m&#229;ten CVS er konstruert.
+      Hvis du ikke er vant med CVS, er det ikke sikkert du forst&#229;r alle 
+      disse funksjonene.
+      Og hvis du ikke er kjent med versjonskontroll i det hele tatt, kan 
+      nok blikket sl&#248;ves s&#229;fremt du ikke har lest <xref
+      linkend="svn-ch-2"/>, hvor vi foretar en forsiktig introduksjon 
+      til versjonskontroll generelt.</para>
 
-    <para>Subversion provides:</para>
+    <para>Subversion tilbyr:</para>
 
     <variablelist>
       <varlistentry>
-        <term>Directory versioning</term>
+        <term>Versjonering av kataloger</term>
         <listitem>
-          <para>CVS only tracks the history of individual files, but
-            Subversion implements a <quote>virtual</quote> versioned
-            filesystem that tracks changes to whole directory trees
-            over time.  Files <emphasis>and</emphasis> directories are
-            versioned.</para>
+          <para>CVS holder bare rede p&#229; historien til individuelle 
+            filer, men Subversion implementerer et 
+            <quote>virtuelt</quote> versjonert filsystem som f&#248;lger 
+            forandringer til hele katalogtr&#230;r over tid.
+            Filer <emphasis>og</emphasis> kataloger er 
+            versjonert.</para>
         </listitem>
       </varlistentry>
 
       <varlistentry>
-        <term>True version history</term>
+        <term>Sann versjonshistorie</term>
         <listitem>
-          <para>Since CVS is limited to file versioning, operations
-            such as copies and renames&mdash;which might happen to
-            files, but which are really changes to the contents of
-            some containing directory&mdash;aren't supported in CVS.
-            Additionally, in CVS you cannot replace a versioned file
-            with some new thing of the same name without the new item
-            inheriting the history of the old&mdash;perhaps completely
-            unrelated&mdash; file.  With Subversion, you can add,
-            delete, copy, and rename both files and directories.  And
-            every newly added file begins with a fresh, clean
-            history all its own.</para>
+        <para>Siden CVS er begrenset til versjonering av filer, er ikke 
+          operasjoner som kopiering og navneskifte &#8212; som kan hende med 
+          filer, men som egentlig er forandringer i innholdet av 
+          katalogen de ligger i &#8212; st&#248;ttet i CVS.
+          I tillegg kan du ikke i CVS erstatte en versjonert fil med en 
+          ny ting med det samme navnet uten at det nye elementet overtar 
+          historien til den gamle &#8212; kanskje helt urelaterte &#8212; filen.
+          Med Subversion kan du legge til, slette, kopiere og skifte 
+          navn p&#229; b&#229;de filer og kataloger.
+          Og hver fil som er nylig lagt til begynner med en frisk, ren 
+          historie helt for seg selv.</para>
         </listitem>
       </varlistentry>
 
       <varlistentry>
-        <term>Atomic commits</term>
+        <term>Atomisk innlegging</term>
         <listitem>
-          <para>A collection of modifications either goes into the
-            repository completely, or not at all.  This allows
-            developers to construct and commit changes as logical
-            chunks, and prevents problems that can occur when only a
-            portion of a set of changes is successfully sent to the
-            repository.</para>
+          <para>En samling av forandringer g&#229;r enten fullstendig inn i 
+            depotet, eller ikke i det hele tatt.
+            Dette tillater utviklerne &#229; konstruere og legge inn 
+            forandringer som logiske porsjoner, og forhindrer problemer 
+            som kan oppst&#229; n&#229;r bare en del av forandringene ble lagt inn 
+            i depotet.</para>
         </listitem>
       </varlistentry>
 
       <varlistentry>
-        <term>Versioned metadata</term>
+        <term>Versjonerte metadata</term>
         <listitem>
-          <para>Each file and directory has a set of
-            properties&mdash;keys and their values&mdash; associated
-            with it.  You can create and store any arbitrary key/value
-            pairs you wish.  Properties are versioned over time, just
-            like file contents.</para>
+          <para>Hver fil og katalog har et sett med egenskaper &#8212; 
+            egenskapsnavn og deres verdier &#8212; assosiert med seg.
+            Du kan opprette og lagre ethvert vilk&#229;rlig 
+            egenskapsnavn/verdi-par som du &#248;nsker.
+            Egenskaper er versjonert over tid, akkurat som 
+            filinnhold.</para>
         </listitem>
       </varlistentry>
 
       <varlistentry>
-        <term>Choice of network layers</term>
+        <term>Valg av nettverkslag</term>
         <listitem>
-          <para>Subversion has an abstracted notion of repository
-            access, making it easy for people to implement new network
-            mechanisms.  Subversion can plug into the Apache HTTP
-            Server as an extension module.  This gives Subversion a
-            big advantage in stability and interoperability, and
-            instant access to existing features provided by that
-            server&mdash;authentication, authorization, wire
-            compression, and so on.  A more lightweight, standalone
-            Subversion server process is also available.  This server
-            speaks a custom protocol which can be easily tunneled over
-            SSH.</para>
+          <para>Subversion har et l&#248;st definert begrep om depottilgang, 
+            noe som gj&#248;r det enkelt for brukere &#229; implementere nye 
+            nettverksmekanismer.
+            Subversion kan plugges inn i Apache HTTP-serveren som en 
+            tilleggsmodul.
+            Dette gir Subversion en stor fordel innen stabilitet og 
+            kommunikasjon med brukere og prosesser, og &#248;yeblikkelig 
+            tilgang til eksisterende funksjoner som denne serveren 
+            tilbyr &#8212; autentisering, autorisasjon, <!-- &#164; --><quote>wire 
+            compression</quote> og s&#229; videre.
+            En lettere egenst&#229;ende Subversiontjener-prosess er ogs&#229; 
+            tilgjengelig.
+            Denne tjeneren snakker en tilpasset protokoll som lett kan 
+            bli kj&#248;rt gjennom en SSH-tunnel.</para>
         </listitem>
       </varlistentry>
 
       <varlistentry>
-        <term>Consistent data handling</term>
+        <term>Konsekvent databehandling</term>
         <listitem>
-          <para>Subversion expresses file differences using a binary
-            differencing algorithm, which works identically on both
-            text (human-readable) and binary (human-unreadable) files.
-            Both types of files are stored equally compressed in the
-            repository, and differences are transmitted in both
-            directions across the network.</para>
+          <para>Subversion uttrykker filforskjeller ved en bin&#230;r 
+            forskjellsalgoritme som fungerer likt b&#229;de p&#229; tekst (lesbar 
+            for det menneskelige &#248;ye) og bin&#230;re (uleselige for 
+            mennesker) filer.
+            Begge filtypene pakkes p&#229; samme m&#229;te i depotet, og 
+            forskjeller blir overf&#248;rt i begge retninger over 
+            nettverket.</para>
         </listitem>
       </varlistentry>
 
       <varlistentry>
-        <term>Efficient branching and tagging</term>
+        <term>Effektiv forgrening og merking</term>
         <listitem>
-          <para>
-            The cost of branching and tagging need not be proportional to the
-            project size.  Subversion creates branches and tags by
-            simply copying the project, using a mechanism similar to a
-            hard-link.  Thus these operations take only a very small,
-            constant amount of time.
-          </para>
+          <para>Belastningen ved &#229; forgrene eller merke trenger ikke &#229; 
+            v&#230;re proporsjonal med prosjektst&#248;rrelsen.
+            Subversion lager forgreninger og merker ved &#229; rett og slett 
+            kopiere prosjektet, ved hjelp av en mekanisme lik en hard 
+            lenke.
+            Dermed tar disse operasjonene bare en liten, konstant 
+            tid.</para>
         </listitem>
       </varlistentry>
       
       <varlistentry>
-        <term>Hackability</term>
+        <term><quote>Hackability</quote></term><!-- &#164; -->
         <listitem>
-          <para>Subversion has no historical baggage; it is
-            implemented as a collection of shared C libraries with
-            well-defined APIs.  This makes Subversion extremely
-            maintainable and usable by other applications and
-            languages.</para>
+          <para>Subversion har ingen historisk bagasje; den er 
+            implementert som en samling av delte C-biblioteker med 
+            veldefinerte programmeringsgrensesnitt.
+            Dette gj&#248;r Subversion ekstremt lett &#229; vedlikeholde og lett &#229; 
+            bruke av andre applikasjoner og spr&#229;k.</para>
         </listitem>
       </varlistentry>
 
@@ -266,26 +292,28 @@
   <!-- ================================================================= -->
   <sect1 id="svn-ch-1-sect-4">
 
-    <title>Subversion's Architecture</title>
+    <title>Subversions arkitektur</title>
 
-    <para><xref linkend="svn-ch-1-dia-1"/> illustrates what one might
-      call a <quote>mile-high</quote> view of Subversion's
-      design.</para>
+    <para><xref linkend="svn-ch-1-dia-1"/> illustrerer hva man kan kalle 
+      en <quote>mileh&#248;y</quote> oversikt over Subversions design.</para>
     
     <figure id="svn-ch-1-dia-1">
-      <title>Subversion's Architecture</title>
+      <title>Subversions arkitektur</title>
       <graphic fileref="images/ch01dia1.png"/>
     </figure>
 
-    <para>On one end is a Subversion repository that holds all of your
-      versioned data.  On the other end is your Subversion client
-      program, which manages local reflections of portions of that
-      versioned data (called <quote>working copies</quote>).  Between
-      these extremes are multiple routes through various Repository
-      Access (RA) layers.  Some of these routes go across computer
-      networks and through network servers which then access the
-      repository.  Others bypass the network altogether and access the
-      repository directly.</para>
+    <para>P&#229; den ene kanten er et Subversiondepot som inneholder alle 
+      dine versjonerte data.
+      I den andre enden er Subversionklienten din, som styrer med lokale 
+      avspeilinger av deler av disse versjonerte dataene (kalt 
+      <quote>arbeidskopier</quote>).
+      Mellom disse yttergrensene er det flere ruter gjennom diverse 
+      tilgangslag &#8212; <foreignphrase>Repository Access 
+      (RA)</foreignphrase>.
+      Noen av disse rutene g&#229;r over datanettverk og gjennom datatjenere 
+      som deretter aksesserer depotet.
+      Andre dropper hele nettverket og bruker direkte tilgang til 
+      depotet.</para>
 
   </sect1>
 
@@ -294,40 +322,42 @@
   <!-- ================================================================= -->
   <sect1 id="svn-ch-1-sect-5">
 
-    <title>Installing Subversion</title>
+    <title>Installering av Subversion</title>
 
-    <para>Subversion is built on a portability layer called APR (the
-      Apache Portable Runtime library).  This means Subversion should
-      work on any operating system that the Apache httpd server runs
-      on: Windows, Linux, all flavors of BSD, Mac OS X, Netware, and
-      others.</para>
+    <para>Subversion er bygget p&#229; et portabilitetslag kalt APR 
+      (biblioteket <foreignphrase>Apache Portable 
+      Runtime</foreignphrase>).
+      Dette betyr at Subversion skal kunne virke p&#229; alle 
+      operativsystemer som Apache httpd-serveren kj&#248;rer p&#229;:
+      Windows, Linux, alle varianter av BSD, Mac OS X, Netware og 
+      andre.</para>
 
-    <para>The easiest way to get Subversion is to download a binary
-      package built for your operating system.  Subversion's website
-      (<systemitem
-      class="url">http://subversion.tigris.org</systemitem>) often has
-      these packages available for download, posted by volunteers.
-      The site usually contains graphical installer packages for users
-      of Microsoft operating systems.  If you run a Unix-like
-      operating system, you can use your system's native package
-      distribution system (RPMs, DEBs, the ports tree, etc.) to get
-      Subversion.</para>
+    <para>Den letteste m&#229;ten &#229; f&#229; tak i Subversion er &#229; hente en bin&#230;r 
+      pakke bygget for ditt operativsystem.
+      Subversions hjemmeside (<systemitem
+      class="url">http://subversion.tigris.org</systemitem>) har ofte 
+      disse pakkene tilgjengelig for nedlasting, lagt ut av frivillige.
+      Denne plassen inneholder vanligvis grafiske installasjonspakker 
+      for brukere av operativsystemer fra Microsoft.
+      Hvis du kj&#248;rer et Unix-lignende operativsystem, kan du bruke 
+      systemets innebyggede distribusjonssystem (RPM-filer, DEB-filer, 
+      <quote>ports</quote>-treet, osv.) for &#229; hente Subversion.</para>
 
-    <para>Alternately, you can build Subversion directly from source
-      code.  From the Subversion website, download the latest
-      source-code release.  After unpacking it, follow the
-      instructions in the <filename>INSTALL</filename> file to build
-      it.  Note that a released source package contains everything you
-      need to build a command-line client capable of talking to a
-      remote repository (in particular, the apr, apr-util, and neon
-      libraries).  But optional portions of Subversion have many other
-      dependencies, such as Berkeley DB and possibly Apache httpd.  If
-      you want to do a complete build, make sure you have all of the
-      packages documented in the <filename>INSTALL</filename> file.
-      If you plan to work on Subversion itself, you can use your
-      client program to grab the latest, bleeding-edge source code.
-      This is documented in <xref
-      linkend="svn-ch-8-sect-6.2"/>.</para>
+    <para>Du kan ogs&#229; bygge Subversion direkte fra kildekode.
+      Siste versjon av den kan hentes fra Subversions hjemmeside.
+      Etter at du har pakket den ut, f&#248;lg instruksjonene i filen 
+      <filename>INSTALL</filename> for &#229; kompilere den.
+      Merk at en offentliggjort kildekodepakke inneholder alt du trenger 
+      for &#229; bygge en kommandolinjeklient i stand til &#229; kommunisere med 
+      et fjerntliggende depot (i s&#230;rdeleshet, bibliotekene apr, apr-util 
+      og neon).
+      Men valgfrie deler av Subversion har mange andre avhengigheter, 
+      som Berkeley DB og muligens Apache httpd.
+      Hvis du vil foreta en komplett kompilering, v&#230;r sikker p&#229; at du 
+      har alle pakkene dokumentert i <filename>INSTALL</filename>-filen.
+      Hvis du planlegger &#229; arbeide p&#229; selve Subversion, kan du bruke 
+      svn-klienten din for &#229; hente den siste rykende ferske kildekoden.
+      Dette er dokumentert i <xref linkend="svn-ch-8-sect-6.2"/>.</para>
 
   </sect1>
 
@@ -336,76 +366,79 @@
   <!-- ================================================================= -->
   <sect1 id="svn-ch-1-sect-6">
 
-    <title>Subversion's Components</title>
+    <title>Subversions komponenter</title>
     
-    <para>Subversion, once installed, has a number of different
-      pieces.  The following is a quick overview of what you get.
-      Don't be alarmed if the brief descriptions leave you scratching
-      your head&mdash;there are <emphasis>plenty</emphasis> more pages
-      in this book devoted to alleviating that confusion.</para>
+    <para>Subversion, n&#229;r den er installert, best&#229;r av flere deler.
+      Det f&#248;lgende er en rask oversikt over hva du f&#229;r.
+      Ikke bli skremt hvis den snaue beskrivelsen etterlater deg med &#229; 
+      kl&#248; deg i hodet &#8212; det er <emphasis>mange</emphasis> flere sider i 
+      denne boken beregnet p&#229; &#229; fjerne denne forvirringen.</para>
 
     <variablelist>
       <varlistentry>
         <term>svn</term>
         <listitem>
-          <para>The command-line client program.</para>
+          <para>Kommandolinjeklienten.</para>
         </listitem>
       </varlistentry>
 
       <varlistentry>
         <term>svnversion</term>
         <listitem>
-          <para>A program for reporting the state (in terms of
-            revisions of the items present) of a working copy.</para>
+          <para>Et program for &#229; rapportere tilstanden (i betydningen av 
+            revisjonener for de elementene som finnes) for en 
+            arbeidskopi.</para>
         </listitem>
       </varlistentry>
 
       <varlistentry>
         <term>svnlook</term>
         <listitem>
-          <para>A tool for inspecting a Subversion repository.</para>
+          <para>Et verkt&#248;y for &#229; inspisere et Subversiondepot.</para>
         </listitem>
       </varlistentry>
 
       <varlistentry>
         <term>svnadmin</term>
         <listitem>
-          <para>A tool for creating, tweaking or repairing a Subversion
-            repository.</para>
+          <para>Et verkt&#248;y for &#229; lage, tilpasse eller reparere et 
+            Subversiondepot.</para>
         </listitem>
       </varlistentry>
 
       <varlistentry>
         <term>svndumpfilter</term>
         <listitem>
-          <para>A program for filtering Subversion repository dumpfile
-            format streams.</para>
+          <para>Et program for &#229; filtrere str&#248;mmer i dumpfil-format for 
+            et Subversiondepot.</para>
         </listitem>
       </varlistentry>
 
       <varlistentry>
         <term>mod_dav_svn</term>
         <listitem>
-          <para>A plug-in module for the Apache HTTP Server, used to
-            make your repository available to others over a
-            network.</para>
+          <para>En programtilleggsmodul for Apache HTTP-serveren, brukt 
+            til &#229; gj&#248;re depotet ditt tilgjengelig for andre over et 
+            nettverk.</para>
         </listitem>
       </varlistentry>
 
       <varlistentry>
         <term>svnserve</term>
         <listitem>
-          <para>A custom standalone server program, runnable as a
-            daemon process or invokable by SSH; another way to make
-            your repository available to others over a network.</para>
+          <para>Et tilpasset selvstendig tjenerprogram, kj&#248;rbar som en 
+            daemon-prosess eller startbar av SSH;
+            en annen m&#229;te &#229; gj&#248;re depotet ditt tilgjengelig for andre 
+            over et nettverk.</para>
         </listitem>
       </varlistentry>
     </variablelist>
 
-    <para>Assuming you have Subversion installed correctly, you should
-      be ready to start.  The next two chapters will walk you through
-      the use of <command>svn</command>, Subversion's command-line client 
-      program.</para>
+    <para>Forutsatt at du har Subversion korrekt installert, er du klar 
+      til &#229; starte.
+      De neste to kapitlene vil vise deg bruken av 
+      <command>svn</command>, Subversions klient for 
+      kommandolinjebruk.</para>
 
   </sect1>
 
@@ -415,57 +448,64 @@
   <!-- ================================================================= -->
   <sect1 id="svn-ch-1-sect-7">
 
-    <title>A Quick Start</title>
+    <title>En rask start</title>
     
-    <para>Some people have trouble absorbing a new technology by
-      reading the sort of "top down" approach provided by this book.
-      This section is a very short introduction to Subversion, and is
-      designed to give "bottom up" learners a fighting chance.  If
-      you're one of those folks who prefers to learn by
-      experimentation, the following demonstration will get you up and
-      running.  Along the way, we give links to the relevant chapters
-      of this book.</para>
+    <para>Noen personer har problemer med &#229; absorbere en ny teknologi 
+      ved &#229; lese dokumentasjon lagt ut etter et &#171;ovenfra og 
+      ned&#187;-prinsipp som i denne boken.
+      Denne seksjonen er en veldig kort introduksjon til Subversion., og 
+      er ment &#229; gi personer som l&#230;rer &#171;nedenfra og opp&#187; en sjanse.
+      Hvis du er en av dem som liker &#229; l&#230;re gjennom eksperimentering, 
+      vil den f&#248;lgende demonstrasjonen f&#229; deg opp &#229; kj&#248;re.
+      Under gjennomgangen vil vi gi deg lenker til de relevante 
+      kapitlene i denne boken.</para>
 
-    <para>If you're new to the entire concept of version control or to
-      the <quote>copy-modify-merge</quote> model used by both CVS and
-      Subversion, then you should read <xref linkend="svn-ch-2"/>
-      before going any further.</para>
+    <para>Hvis du er ny innen hele konseptet med versjonskontroll eller 
+      til <quote>kopier-rediger-flett</quote>-modellen brukt av b&#229;de CVS 
+      og Subversion, b&#248;r du lese <xref linkend="svn-ch-2"/> f&#248;r du g&#229;r 
+      videre.</para>
 
     <note>
-      <para>The following example assumes that you have
-      <command>svn</command>, the Subversion commandline client, and
-      <command>svnadmin</command>, the administrative tool, ready to
-      go.  It also assumes that your <command>svn</command> client has
-      been compiled against Berkeley DB.  To verify this, run
-      <command>svn --version</command> and make sure the
-      <literal>ra_local</literal> module is available.  Without this
-      module, the client cannot access <literal>file://</literal>
-      URLs.</para>
+      <para>Det f&#248;lgende eksemplet forutsetter at du har 
+        <command>svn</command>, kommandolinjeklienten, og 
+        <command>svnadmin</command>, det administrative verkt&#248;yet, klar 
+        til kj&#248;ring.
+        Det forutsetter ogs&#229; at <command>svn</command>-klienten er 
+        kompilert med st&#248;tte for Berkeley DB.
+        For &#229; sjekke dette, kj&#248;r <command>svn --version</command> og se 
+        at <literal>ra_local</literal>-modulen er tilgjengelig.
+        Uten denne modulen, kan ikke klienten f&#229; adgang til URLer av 
+        typen <literal>file://</literal>.</para>
     </note>
 
-    <para>Subversion stores all versioned data in a central
-    repository.  To begin, create a new repository:</para>
+    <para>Subversion lagrer alle versjonerte data i et sentralt depot. 
+      For &#229; begynne, lag et nytt depot:</para>
 
     <screen>
-$ svnadmin create /path/to/repos
-$ ls /path/to/repos
+$ svnadmin create /sti/til/depot
+$ ls /sti/til/depot
 conf/  dav/  db/  format  hooks/  locks/  README.txt
 </screen>
 
-    <para>This command creates a new directory
-    <filename>/path/to/repos</filename> which contains a Subversion
-    repository.  Make sure that this directory lives on a local disk,
-    <emphasis>not</emphasis> a network share.  This new directory
-    mainly contains a collection of Berkeley DB database files.  You
-    won't see your versioned files if you peek inside.  For more
-    information about repository creation and maintenance, see <xref
-    linkend="svn-ch-5"/>.</para>
+    <para>Denne kommandoen lager en ny katalog 
+      <filename>/sti/til/depot</filename> som inneholder et 
+      Subversiondepot.
+      V&#230;r sikker p&#229; at denne katalogen er p&#229; en lokal disk, 
+      <emphasis>ikke</emphasis> en disk p&#229; nettverket.
+      Denne nye katalogen inneholder inneholder hovedsaklig en samling 
+      med Berkeley DB databasefiler.
+      Du vil ikke se dine versjonerte filer hvis du tar en kikk 
+      innenfor.
+      For mer informasjon om opprettelse og vedlikehold av depot, se 
+      <xref
+      linkend="svn-ch-5"/>.</para>
 
-    <para>Next, create a tree of files and directories to import into
-    the repository.  For reasons that will be clear later on (see
-    <xref linkend="svn-ch-4"/>), your structure should contain three
-    top-level directories named <filename>branches</filename>,
-    <filename>tags</filename>, and <filename>trunk</filename>:</para>
+    <para>Deretter, lag et tre av filer og kataloger som skal importeres 
+      inn i depotet.
+      For grunner som vil bli forklart senere (se <xref 
+      linkend="svn-ch-4"/>), b&#248;r strukturen inneholde tre toppkataloger 
+      kalt <filename>branches</filename>, <filename>tags</filename> og 
+      <filename>trunk</filename>:</para>
 
     <screen>
 /tmp/project/branches/
@@ -474,69 +514,72 @@ conf/  dav/  db/  format  hooks/  locks/  README.txt
                foo.c
                bar.c
                Makefile
-               &hellip;
+               &#8230;
 </screen>
 
-    <para>Once you have a tree of data ready to go, import the data
-    into the repository with the <command>svn import</command>
-    command (see <xref linkend="svn-ch-3-sect-7.3"/>):</para>
+    <para>N&#229;r du har klart et tre med data, importer dataene inn i 
+      depotet med kommandoen  <command>svn import</command> (se <xref 
+      linkend="svn-ch-3-sect-7.3"/>):</para>
 
     <screen>
-$ svn import /tmp/project file:///path/to/repos -m "initial import"
+$ svn import /tmp/project file:///sti/til/depot -m "Grunnleggende import"
 Adding         /tmp/project/branches
 Adding         /tmp/project/tags
 Adding         /tmp/project/trunk
 Adding         /tmp/project/trunk/foo.c
 Adding         /tmp/project/trunk/bar.c
 Adding         /tmp/project/trunk/Makefile
-&hellip;
+&#8230;
 Committed revision 1.
 $ 
 </screen>
 
-    <para>Now the repository contains this tree of data.  Note that
-      the original <filename>/tmp/project</filename> directory is
-      unchanged; Subversion is unaware of it.  (In fact, you can even
-      delete that directory if you wish.)  In order to start
-      manipulating repository data, you need to create a new
-      <quote>working copy</quote> of the data, a sort of private
-      workspace.  Ask Subversion to <quote>check out</quote> a working
-      copy of the repository's <filename>trunk</filename>
-      directory:</para>
+    <para>N&#229; inneholder depotet dette treet med data.
+      Legg merke til at den originale 
+      <filename>/tmp/project</filename>-katalogen er uforandret, 
+      Subversion kjenner ikke til den.
+      (Faktisk kan du til og med slette denne katalogen hvis du &#248;nsker 
+      det.)
+      For &#229; starte med &#229; manipulere dataene i depotet, m&#229; du lage en ny 
+      <quote>arbeidskopi</quote> av dataene, et slags personlig 
+      arbeidsomr&#229;de.
+      Be Subversion om &#229; <quote>hente ut</quote> en arbeidskopi fra 
+      katalogen <filename>trunk</filename> i depotet:</para>
 
     <screen>
-$ svn checkout file:///path/to/repos/trunk project
+$ svn checkout file:///sti/til/depot/trunk project
 A  project/foo.c
 A  project/bar.c
 A  project/Makefile
-&hellip;
+&#8230;
 Checked out revision 1.
 </screen>
 
-    <para>Now you have a personal copy of part of the repository in a
-      new directory named <filename>project</filename>.  You can edit
-      the files in your working copy and then commit those changes
-      back into the repository.</para>
+    <para>N&#229; har du en personlig kopi av en del av depotet i en ny 
+      katalog kalt <filename>project</filename>.
+      Du kan redigere filene i arbeidskopien og deretter legge inn disse 
+      forandringene inn i depotet.</para>
 
     <itemizedlist>
-      <listitem><para>Enter your working copy and edit a
-      file's contents.</para></listitem>
-      <listitem><para>Run <command>svn diff</command> to see unified
-      diff output of your changes.</para></listitem>
-      <listitem><para>Run <command>svn commit</command> to commit the
-      new version of your file to the repository.</para></listitem>
-      <listitem><para>Run <command>svn update</command> to bring your
-      working copy <quote>up-to-date</quote> with the repository.
-      </para></listitem>
+      <listitem><para>G&#229; inn i arbeidskopien og rediger innholdet av en 
+      fil.</para></listitem>
+      <listitem><para>Kj&#248;r kommandoen <command>svn diff</command> for &#229; 
+      se en <foreignphrase>unified diff</foreignphrase> (forskjellsfil) 
+      over forandringene dine.</para></listitem>
+      <listitem><para>Kj&#248;r <command>svn commit</command> for &#229; legge inn 
+      den nye versjonen av filen din til depotet.</para></listitem>
+      <listitem><para>Kj&#248;r <command>svn update</command> for &#229; gj&#248;re 
+      arbeidskopien din <quote>up-to-date</quote> med 
+      depotet.</para></listitem>
     </itemizedlist>
 
-    <para>For a full tour of all the things you can do with your
-      working copy, read <xref linkend="svn-ch-3"/>.</para>
+    <para>For en full gjennomgang av tingene som du kan gj&#248;re med 
+      arbeidskopien din, les <xref linkend="svn-ch-3"/>.</para>
 
-    <para>At this point, you have the option of making your repository
-      available to others over a network.  See <xref
-      linkend="svn-ch-6"/> to learn about the different sorts of
-      server processes available and how to configure them.</para>
+    <para>Ved dette punktet har du valget om &#229; gj&#248;re depotet ditt 
+      tilgjengelig over et nettverk.
+      Se <xref linkend="svn-ch-6"/> for &#229; l&#230;re om de forskjellige 
+      tjenerprosessene tilgjengelig og hvordan du setter dem opp.</para>
 
   </sect1>
 
@@ -547,4 +590,5 @@ Checked out revision 1.
 local variables: 
 sgml-parent-document: ("book.xml" "chapter")
 end:
+vim: set textwidth=72 nowrap formatoptions+=w2 expandtab shiftwidth=2 tabstop=2 softtabstop=2 fileencoding=utf8 :
 -->

@@ -8,24 +8,23 @@ ch00.xml. -->
 
   <simplesect>
 
-    <para>En d&#229;rlig FAQ (Ofte stilte sp&#248;rsm&#229;l) er en som 
-      ikke er satt sammen av sp&#248;rsm&#229;l brukere faktisk stiller, 
-      men det som forfatterne <emphasis>&#248;nsker</emphasis> at folk 
-      ville sp&#248;rre om.
+    <para>En d&#229;rlig FAQ (Ofte stilte sp&#248;rsm&#229;l) er en som ikke er satt 
+      sammen av sp&#248;rsm&#229;l brukere faktisk stiller, men det som 
+      forfatterne <emphasis>&#248;nsker</emphasis> at folk ville sp&#248;rre om.
       Du har kanskje sett noe lignende som dette f&#248;r:</para>
 
     <blockquote>
-      <para>Spm.: Hvordan kan jeg bruke Glorbosoft XYZ til &#229; 
-        &#248;ke lagproduktiviteten?</para>
+      <para>Spm.: Hvordan kan jeg bruke Glorbosoft XYZ til &#229; &#248;ke 
+        lagproduktiviteten?</para>
     </blockquote>
 
     <blockquote>
-      <para> Sv.: Mange av v&#229;re kunder vil vite hvordan de kan 
-        maksimere produktiviteten gjennom v&#229;re patenterte 
+      <para> Sv.: Mange av v&#229;re kunder vil vite hvordan de kan maksimere 
+        produktiviteten gjennom v&#229;re patenterte 
         kontor-gruppevarel&#248;sninger.
         Svaret er enkelt:
-        F&#248;rst, klikk p&#229; 
-        <quote><literal>Fil</literal></quote>-menyen, rull ned til 
+        F&#248;rst, klikk p&#229; <quote><literal>Fil</literal></quote>-menyen, 
+        rull ned til 
         <quote><literal>&#216;k&#160;produktiviteten</literal></quote>, 
         deretter&#8230;</para>
     </blockquote>
@@ -34,112 +33,99 @@ ch00.xml. -->
       FAQ-er i det hele tatt.
       Ingen ringer teknisk support og sp&#248;r:
       <quote>Hvordan kan vi &#248;ke produktiviteten?</quote>
-      Istedenfor sp&#248;r folk h&#248;yst spesifikke sp&#248;rsm&#229;l 
-      som for eksempel:
+      Istedenfor sp&#248;r folk h&#248;yst spesifikke sp&#248;rsm&#229;l som for eksempel:
       <quote>Hvordan kan vi forandre kalendersystemet til &#229; sende 
-      p&#229;minnelser to dager i forveien istedenfor en?</quote> og 
-      s&#229; videre.
-      Men det er er mye lettere &#229; lage sp&#248;rsm&#229;l 
-      istedenfor &#229; oppdage de sp&#248;rsm&#229;leme som egentlig 
-      blir stilt.
-      Det &#229; sette sammen en FAQ m&#229; v&#230;re en sammenhengende 
-      og organisert prosess som varer hele levetiden til programmet, 
-      innkommende sp&#248;rsm&#229;l m&#229; bli lagret, responsen 
-      fulgt, og alt dette m&#229; samles i en fyldig, s&#248;kbar helhet 
-      som avspeiler den kollektive opplevelsen for brukerne ute i det 
-      fri.
+      p&#229;minnelser to dager i forveien istedenfor en?</quote> og s&#229; 
+      videre.
+      Men det er er mye lettere &#229; lage sp&#248;rsm&#229;l istedenfor &#229; oppdage de 
+      sp&#248;rsm&#229;leme som egentlig blir stilt.
+      Det &#229; sette sammen en FAQ m&#229; v&#230;re en sammenhengende og organisert 
+      prosess som varer hele levetiden til programmet, innkommende 
+      sp&#248;rsm&#229;l m&#229; bli lagret, responsen fulgt, og alt dette m&#229; samles i 
+      en fyldig, s&#248;kbar helhet som avspeiler den kollektive opplevelsen 
+      for brukerne ute i det fri.
       Det krever en t&#229;lmodig og observant innstilling hos en som 
       befinner seg i felten.
-      Ingen store hypoteser, ingen visjon&#230;re uttalelser her &#8212; 
-      &#229;pne &#248;yne og n&#248;yaktige notater er det som trengs 
-      mest.</para>
+      Ingen store hypoteser, ingen visjon&#230;re uttalelser her &#8212; &#229;pne &#248;yne 
+      og n&#248;yaktige notater er det som trengs mest.</para>
 
     <para>Det jeg liker med denne boken er at den vokste fram nettopp 
       gjennom en slik prosess, og dette vises p&#229; hver eneste side.
-      Den er det direkte resultatet av forfatterens m&#248;ter med 
-      brukerne.
+      Den er det direkte resultatet av forfatterens m&#248;ter med brukerne.
       Det begynte med Ben Collins-Sussmans observasjon av at folk spurte 
-      de samme enkle sp&#248;rsm&#229;lene om og om igjen p&#229; 
-      mailinglisten til Subversion:
+      de samme enkle sp&#248;rsm&#229;lene om og om igjen p&#229; mailinglisten til 
+      Subversion:
       Hva er standard fremgangsm&#229;te for &#229; bruke Subversion?
       Virker forgreninger og merker p&#229; samme m&#229;te som i andre 
       versjonskontrollsystemer?
       Hvordan kan jeg finne ut hvem som gjorde en spesiell 
       forandring?</para>
 
-    <para>Frustrert over &#229; se de samme sp&#248;rsm&#229;lene dag 
-      etter dag, jobbet Ben intenst over en m&#229;ned sommeren 2002 for 
-      &#229; skrive <citetitle>The Subversion Handbook</citetitle>, en 
-      60-siders h&#229;ndbok som tok for seg all grunnleggende bruk av 
-      Subversion.
-      H&#229;ndboken tok ikke m&#229;l av seg &#229; v&#230;re komplett, 
-      men den ble distribuert med Subversion og hjalp brukere over den 
-      innledende humpen i l&#230;rekurven.
-      Da O&#8217;Reilly and Associates bestemte seg for &#229; publisere 
-      en fullversjon av Subversion-boken, var minste motstands vei 
-      opplagt:
+    <para>Frustrert over &#229; se de samme sp&#248;rsm&#229;lene dag etter dag, jobbet 
+      Ben intenst over en m&#229;ned sommeren 2002 for &#229; skrive 
+      <citetitle>The Subversion Handbook</citetitle>, en 60-siders 
+      h&#229;ndbok som tok for seg all grunnleggende bruk av Subversion.
+      H&#229;ndboken tok ikke m&#229;l av seg &#229; v&#230;re komplett, men den ble 
+      distribuert med Subversion og hjalp brukere over den innledende 
+      humpen i l&#230;rekurven.
+      Da O&#8217;Reilly and Associates bestemte seg for &#229; publisere en 
+      fullversjon av Subversion-boken, var minste motstands vei opplagt:
       &#197; utvide h&#229;ndboken.</para>
 
     <para>De tre medforfatterne av den nye boken ble dermed presentert 
       for en uvanlig mulighet.
-      Offisielt var deres oppgave &#229; skrive en bok ovenfra og ned, 
-      &#229; starte med innholdet og et innledende utkast.
-      Men de hadde ogs&#229; tilgang til en jevn str&#248;m &#8212; 
-      faktisk en ukontrollerbar geysir &#8212; av materiale som kom fra 
-      gressrotplan.
-      Subversion var allerede i hendene p&#229; tusenvis av tidlige 
-      brukere, og disse brukerne ga tonnevis med tilbakemeldinger, ikke 
-      bare om Subversion, men om den eksisterende 
-      dokumentasjonen.</para>
+      Offisielt var deres oppgave &#229; skrive en bok ovenfra og ned, &#229; 
+      starte med innholdet og et innledende utkast.
+      Men de hadde ogs&#229; tilgang til en jevn str&#248;m &#8212; faktisk en 
+      ukontrollerbar geysir &#8212; av materiale som kom fra gressrotplan.
+      Subversion var allerede i hendene p&#229; tusenvis av tidlige brukere, 
+      og disse brukerne ga tonnevis med tilbakemeldinger, ikke bare om 
+      Subversion, men om den eksisterende dokumentasjonen.</para>
 
-    <para>Gjennom hele tiden de skrev denne boken, tr&#229;lte Ben, Mike 
-      og Brian konstant malilinglisten til Subversion og fulgte med i 
+    <para>Gjennom hele tiden de skrev denne boken, tr&#229;lte Ben, Mike og 
+      Brian konstant malilinglisten til Subversion og fulgte med i 
       snakkerom mens de n&#248;ye skrev ned problemer brukere hadde i 
       virkelige situasjoner.
-      &#197; holde &#248;ye med slike tilbakemeldinger er en del av 
-      deres arbeidsoppgaver hos CollabNet uansett, og det ga dem en stor 
+      &#197; holde &#248;ye med slike tilbakemeldinger er en del av deres 
+      arbeidsoppgaver hos CollabNet uansett, og det ga dem en stor 
       fordel n&#229;r de satte i gang med &#229; dokumentere Subversion.
       Boken de produserte er fast forankret i erfaringens grunnfjell, 
-      ikke i den skiftende sanden av &#248;nsketenkning; den kombinerer 
-      de beste aspektene av en brukerh&#229;ndbok og en liste over ofte 
-      spurte sp&#248;rsm&#229;l.
+      ikke i den skiftende sanden av &#248;nsketenkning; den kombinerer de 
+      beste aspektene av en brukerh&#229;ndbok og en liste over ofte spurte 
+      sp&#248;rsm&#229;l.
       Denne tosidigheten er kanskje ikke s&#229; merkbar ved f&#248;rste 
       gjennomlesing.
-      Tatt i rekkef&#248;lge, forside til bakside, er boken rett og 
-      slett en likefrem beskrivelse av et stykke programvare.
+      Tatt i rekkef&#248;lge, forside til bakside, er boken rett og slett en 
+      likefrem beskrivelse av et stykke programvare.
       Oversikten finnes der, den obligatoriske guidede gjennomgangen, 
       kapittelet om administrativ konfigurasjon, noen avanserte tema, og 
-      selvf&#248;lgelig en referanse over kommandoer og problemer som 
-      kan dukke opp.
-      Bare n&#229;r du kommer tilbake til den senere, n&#229;r du vil 
-      lete opp l&#248;sningen p&#229; et spesifikt problem, da viser det 
-      seg:
-      Detaljene i fortellingen kan bare v&#230;re resultatet av 
-      m&#248;ter med det uventede, eksemplene finslipt av virkelige 
-      bruksm&#229;ter, og mest av alt forst&#229;elsen av brukerens 
-      behov og hvordan situasjonen tar seg ut fra brukerens 
-      st&#229;sted.</para>
+      selvf&#248;lgelig en referanse over kommandoer og problemer som kan 
+      dukke opp.
+      Bare n&#229;r du kommer tilbake til den senere, n&#229;r du vil lete opp 
+      l&#248;sningen p&#229; et spesifikt problem, da viser det seg:
+      Detaljene i fortellingen kan bare v&#230;re resultatet av m&#248;ter med det 
+      uventede, eksemplene finslipt av virkelige bruksm&#229;ter, og mest av 
+      alt forst&#229;elsen av brukerens behov og hvordan situasjonen tar seg 
+      ut fra brukerens st&#229;sted.</para>
 
-    <para>Selvf&#248;lgelig, ingen kan love at denne boken vil kunne 
-      svare p&#229; hvert eneste sp&#248;rsm&#229;l du har om 
-      Subversion.
-      Noen ganger vil presisjonen i hva den forventer av 
-      sp&#248;rsm&#229;l v&#230;re uhyggelig telepatisk;
+    <para>Selvf&#248;lgelig, ingen kan love at denne boken vil kunne svare p&#229; 
+      hvert eneste sp&#248;rsm&#229;l du har om Subversion.
+      Noen ganger vil presisjonen i hva den forventer av sp&#248;rsm&#229;l v&#230;re 
+      uhyggelig telepatisk;
       andre ganger kan du finne et hull i fellesskapets kunnskap, og du 
       st&#229;r tomhendt tilbake.
-      N&#229;r dette skjer, er den beste tingen du kan gj&#248;re &#229; 
-      sende en epost til <email>users@subversion.tigris.org</email> og 
-      legge fram problemet ditt.
+      N&#229;r dette skjer, er den beste tingen du kan gj&#248;re &#229; sende en epost 
+      til <email>users@subversion.tigris.org</email> og legge fram 
+      problemet ditt.
       Forfatterne er fortsatt der, de f&#248;lger fortsatt med, og disse 
-      best&#229;r ikke bare av de tre p&#229; forsiden, men ogs&#229; 
-      mange andre som har bidratt med korreksjoner og originalt 
-      materiale.
-      Fra fellesskapets synspunkt er det &#229; l&#248;se problemet ditt 
-      bare en behagelig bieffekt av et mye st&#248;rre prosjekt &#8212; 
-      det &#229; sakte tilpasse boken, og aller helst Subversion selv, 
-      til &#229; samsvare mer med hvordan den faktisk brukes.
-      De er ivrige etter &#229; h&#248;re fra deg, ikke bare fordi de 
-      kan hjelpe deg, men fordi du kan hjelpe dem.
+      best&#229;r ikke bare av de tre p&#229; forsiden, men ogs&#229; mange andre som 
+      har bidratt med korreksjoner og originalt materiale.
+      Fra fellesskapets synspunkt er det &#229; l&#248;se problemet ditt bare en 
+      behagelig bieffekt av et mye st&#248;rre prosjekt &#8212; det &#229; sakte 
+      tilpasse boken, og aller helst Subversion selv, til &#229; samsvare mer 
+      med hvordan den faktisk brukes.
+      De er ivrige etter &#229; h&#248;re fra deg, ikke bare fordi de kan hjelpe 
+      deg, men fordi du kan hjelpe dem.
       Det er med Subversion som med alle aktive prosjekter innen fri 
       programvare, <emphasis>du er ikke alene</emphasis>.</para>
 
