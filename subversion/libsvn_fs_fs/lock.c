@@ -716,7 +716,7 @@ get_lock_from_path_helper (svn_fs_t *fs,
    LOCKS.  FD, if non-NULL, will be read from by read_entries_file
    instead of read_entries_file opening PATH. */
 static svn_error_t *
-get_locks_under_path (apr_hash_t **locks, 
+get_locks_under_path (apr_hash_t *locks, 
                       svn_fs_t *fs, 
                       const char *path,
                       apr_file_t *fd,
@@ -752,7 +752,7 @@ get_locks_under_path (apr_hash_t **locks,
           SVN_ERR (read_lock_from_hash_name (&lock, fs, child, fd, pool));
           SVN_ERR (svn_io_file_close (fd, pool));
 
-          apr_hash_set (*locks, lock->path, APR_HASH_KEY_STRING, lock);
+          apr_hash_set (locks, lock->path, APR_HASH_KEY_STRING, lock);
         }
       else /* It's another entries file.  Recurse. */ 
         SVN_ERR (get_locks_under_path (locks, fs, abs_path, fd, pool));
@@ -1064,7 +1064,7 @@ svn_fs_fs__get_locks (apr_hash_t **locks,
   SVN_ERR (abs_path_to_lock_file (&abs_path, fs, path, pool));
   
   /* Recursively walk lock "tree" */
-  SVN_ERR (get_locks_under_path (locks, fs, abs_path, NULL, pool));
+  SVN_ERR (get_locks_under_path (*locks, fs, abs_path, NULL, pool));
   
   return SVN_NO_ERROR;
 }
