@@ -35,7 +35,7 @@
   </simplesect>
   
   
-  <sect1 id="svn-ch-2-sect-1" > 
+  <sect1 id="svn-ch-2-sect-1">
     <!-- @ENGLISH {{{
     <title>The Repository</title>  
     @ENGLISH }}} -->
@@ -1311,7 +1311,7 @@ calc/Makefile:6
       <para>This may sound like a lot to keep track of, but the
         <command>svn status</command> command will show you the state
         of any item in your working copy.  For more information on
-        that command, see <xref linkend="svn-ch-3-sect-4.3.1" />.</para>
+        that command, see <xref linkend="svn-ch-3-sect-5.3.1" />.</para>
       @ENGLISH }}} -->
       <para>Dette kan h&#248;res ut som mye &#229; holde greie p&#229;, men 
         <command>svn status</command>-kommandoen vil vise deg tilstanden 

@@ -1984,13 +1984,13 @@ umask 002
 
     <para>Another common problem is often encountered on Unix-like
       systems.  As a repository is used, BerkeleyDB occasionally
-      creates new logfiles to journal its actions.  Even if the
+      creates new log files to journal its actions.  Even if the
       repository is wholly owned by the <command>svn</command> group,
       these newly created files won't necessarily be owned by that
       same group, which then creates more permissions problems for
       your users.  A good workaround is to set the group SUID bit on
       the repository's <filename>db</filename> directory.  This causes
-      all newly-created logfiles to have the same group owner as the
+      all newly-created log files to have the same group owner as the
       parent directory.</para>
 
     <para>Once you've jumped through these hoops, your repository

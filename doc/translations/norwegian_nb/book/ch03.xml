@@ -543,7 +543,7 @@ $ svn log --revision {2002-11-20}:4040
 
       <!-- @ENGLISH {{{
       <para>Users should be aware of a subtlety that can become quite
-        a stumblingblock when dealing with dates in Subversion.  Since
+        a stumbling-block when dealing with dates in Subversion.  Since
         the timestamp of a revision is stored as a property of the
         revision&mdash;an unversioned, modifiable
         property&mdash;revision timestamps can be changed to represent
@@ -897,7 +897,7 @@ Checked out revision 2499.
       </listitem>
     </itemizedlist>
 
-    <sect2 id="svn-ch-3-sect-4.1">
+    <sect2 id="svn-ch-3-sect-5.1">
       <!-- @ENGLISH {{{
       <title>Update Your Working Copy</title>
       @ENGLISH }}} -->
@@ -1062,7 +1062,7 @@ Updated to revision 2.
 
     </sect2>
 
-    <sect2 id="svn-ch-3-sect-4.2">
+    <sect2 id="svn-ch-3-sect-5.2">
       <!-- @ENGLISH {{{
       <title>Make Changes to Your Working Copy</title>
       @ENGLISH }}} -->
@@ -1340,7 +1340,7 @@ Updated to revision 2.
 
     </sect2>
 
-    <sect2 id="svn-ch-3-sect-4.3">
+    <sect2 id="svn-ch-3-sect-5.3">
       <!-- @ENGLISH {{{
       <title>Examine Your Changes</title>
       @ENGLISH }}} -->
@@ -1408,7 +1408,7 @@ Updated to revision 2.
         arbeidsfilene dine er forandret, og til og med tillate deg &#229; 
         omgj&#248;re forandringene dine uten &#229; kontakte depotet.</para>
       
-      <sect3 id="svn-ch-3-sect-4.3.1">
+      <sect3 id="svn-ch-3-sect-5.3.1">
         <title><command>svn status</command></title>
         
         <!-- @ENGLISH {{{
@@ -1956,7 +1956,7 @@ Status against revision:   46
 
       </sect3>
 
-      <sect3 id="svn-ch-3-sect-4.3.2">
+      <sect3 id="svn-ch-3-sect-5.3.2">
         <title><command>svn diff</command></title>
         
         <!-- @ENGLISH {{{
@@ -2098,7 +2098,7 @@ $ svn diff &gt; patchfil
 
       </sect3>
 
-      <sect3 id="svn-ch-3-sect-4.3.3">
+      <sect3 id="svn-ch-3-sect-5.3.3">
         <title><command>svn revert</command></title>
 
         <!-- @ENGLISH {{{
@@ -2268,7 +2268,7 @@ $ svn status README
 
     </sect2>
 
-    <sect2 id="svn-ch-3-sect-4.4">
+    <sect2 id="svn-ch-3-sect-5.4">
       <!-- @ENGLISH {{{
       <title>Resolve Conflicts (Merging Others' Changes)</title>
       @ENGLISH }}} -->
@@ -2557,7 +2557,7 @@ $ svn resolved sandwich.txt
 Resolved conflicted state of 'sandwich.txt'
 </screen>
 
-      <sect3 id="svn-ch-3-sect-4.4.1">
+      <sect3 id="svn-ch-3-sect-5.4.1">
         <!-- @ENGLISH {{{
         <title>Merging Conflicts by Hand</title>
         @ENGLISH }}} -->
@@ -2715,7 +2715,7 @@ $ svn commit -m "Go ahead and use my sandwich, discarding Sally's edits."
 
       </sect3>
 
-      <sect3 id="svn-ch-3-sect-4.4.2">
+      <sect3 id="svn-ch-3-sect-5.4.2">
         <!-- @ENGLISH {{{
         <title>Copying a File Onto Your Working File</title>
         @ENGLISH }}} -->
@@ -2744,7 +2744,7 @@ $ svn resolved sandwich.txt
 
       </sect3>
 
-      <sect3 id="svn-ch-3-sect-4.4.3">
+      <sect3 id="svn-ch-3-sect-5.4.3">
         <!-- @ENGLISH {{{
         <title>Punting: Using <command>svn revert</command></title>
         @ENGLISH }}} -->
@@ -2799,7 +2799,7 @@ sandwich.txt
       
     </sect2>
     
-    <sect2 id="svn-ch-3-sect-4.5">
+    <sect2 id="svn-ch-3-sect-5.5">
       <!-- @ENGLISH {{{
       <title>Commit Your Changes</title>
       @ENGLISH }}} -->
@@ -3048,7 +3048,7 @@ svn: Out of date: 'rules.txt' in transaction 'g'
       </variablelist>
 
 
-    <sect2 id="svn-ch-3-sect-5.1">
+    <sect2 id="svn-ch-3-sect-6.1">
       <title><command>svn log</command></title>
 
       <!-- @ENGLISH {{{
@@ -3239,7 +3239,7 @@ $
            
     </sect2>
 
-    <sect2 id="svn-ch-3-sect-5.2">
+    <sect2 id="svn-ch-3-sect-6.2">
       <title>svn diff</title>
 
       <!-- @ENGLISH {{{
@@ -3287,7 +3287,7 @@ $
 
       </itemizedlist>
       
-      <sect3 id="svn-ch-3-sect-5.2.1">
+      <sect3 id="svn-ch-3-sect-6.2.1">
         <!-- @ENGLISH {{{
         <title>Examining Local Changes</title>
         @ENGLISH }}} -->
@@ -3323,7 +3323,7 @@ $
         
       </sect3>
 
-      <sect3 id="svn-ch-3-sect-5.2.2">
+      <sect3 id="svn-ch-3-sect-6.2.2">
         <!-- @ENGLISH {{{
         <title>Comparing Working Copy to Repository</title>
         @ENGLISH }}} -->
@@ -3359,7 +3359,7 @@ $
           
       </sect3>
 
-      <sect3 id="svn-ch-3-sect-5.2.3">
+      <sect3 id="svn-ch-3-sect-6.2.3">
         <!-- @ENGLISH {{{
         <title>Comparing Repository to Repository</title>
         @ENGLISH }}} -->
@@ -3425,7 +3425,7 @@ $
 
     </sect2>
 
-    <sect2 id="svn-ch-3-sect-5.3">
+    <sect2 id="svn-ch-3-sect-6.3">
        <title><command>svn cat</command></title>
 
       <!-- @ENGLISH {{{
@@ -3499,7 +3499,7 @@ $
 
       </sect2>
 
-    <sect2 id="svn-ch-3-sect-5.4">
+    <sect2 id="svn-ch-3-sect-6.4">
       <title><command>svn list</command></title>
       
       <!-- @ENGLISH {{{
@@ -3551,7 +3551,7 @@ $ svn list --verbose http://svn.collab.net/repos/svn
  
     </sect2>
 
-    <sect2 id="svn-ch-3-sect-5.5">
+    <sect2 id="svn-ch-3-sect-6.5">
       <!-- @ENGLISH {{{
       <title>A Final Word on History</title>
       @ENGLISH }}} -->

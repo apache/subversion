@@ -2010,7 +2010,7 @@ $ svn list --verbose file:///tmp/repos
 </screen>
 
           <para>For further details, see <xref
-            linkend="svn-ch-3-sect-5.4"/>.</para>
+            linkend="svn-ch-3-sect-6.4"/>.</para>
 
         </refsect1>
       </refentry>
@@ -3004,7 +3004,7 @@ property 'owner-pic' set on 'moo.c'
             conflict-related artifact files and allows PATH to be
             committed again; that is, it tells Subversion that the
             conflicts have been <quote>resolved</quote>.  See <xref
-            linkend="svn-ch-3-sect-4.4"/> for an in-depth look at
+            linkend="svn-ch-3-sect-5.4"/> for an in-depth look at
             resolving conflicts.</para>
         </refsect1>
 
@@ -3491,7 +3491,7 @@ Head revision:   981
 </screen>
 
           <para>For many more examples of <command>svn status</command>,
-            see <xref linkend="svn-ch-3-sect-4.3.1"/>.</para>
+            see <xref linkend="svn-ch-3-sect-5.3.1"/>.</para>
 
         </refsect1>
       </refentry>
@@ -3586,14 +3586,14 @@ Updated to revision 31.
               copy.</para>
           </tip>
 
-          <para>Sometimes an administrator might change the "base
-            location" of your repository&mdash;in other words, the
+          <para>Sometimes an administrator might change the <quote>base
+            location</quote> of your repository&mdash;in other words, the
             contents of the repository doesn't change, but the main
             URL used to reach the root of the repository does.  For
             example, the hostname may change, or the URL schema, or
             perhaps just the path which leads to the repository.
             Rather than checkout a new working copy, you can have the
-            <command>svn switch</command> command "rewrite" the
+            <command>svn switch</command> command <quote>rewrite</quote> the
             beginnings of all the URLs in your working copy.  Use the
             <option>--relocate</option> command to do the
             substitution.  No file contents are changed, nor is the
@@ -3851,7 +3851,7 @@ Updated to revision 30.
           <term><option>--parent-dir
           <replaceable>DIR</replaceable></option></term>
           <listitem>
-            <para>When loading a dumpfile, root paths at
+            <para>When loading a dump file, root paths at
               <replaceable>DIR</replaceable> instead of
               <filename>/</filename>.</para>
           </listitem>
