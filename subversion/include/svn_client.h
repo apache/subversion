@@ -532,7 +532,7 @@ svn_client_add2 (const char *path,
                  apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Similar to svn_client_add2(), but with the @a force parameter
  * always set to @c FALSE.
@@ -779,7 +779,7 @@ svn_client_log2 (const apr_array_header_t *targets,
 
 
 /**
- * @deprecated provided for compatibility with the 1.0.0 API
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Similar to svn_client_log2, but with the @a limit parameter set to 0.
  */
@@ -1450,7 +1450,7 @@ svn_client_export2 (svn_revnum_t *result_rev,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Similar to svn_client_export2(), but with the @a native_eol parameter
  * always set to @c NULL.

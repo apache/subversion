@@ -117,7 +117,7 @@ svn_error_t *svn_wc_adm_open2 (svn_wc_adm_access_t **adm_access,
                                apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Similar to svn_wc_adm_open2().  @a depth is set to -1 if @a tree_lock
  * is @c TRUE, else 0.
@@ -150,7 +150,7 @@ svn_error_t *svn_wc_adm_probe_open2 (svn_wc_adm_access_t **adm_access,
                                      apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Similar to svn_wc_adm_probe_open2().  @a depth is set to -1 if
  * @a tree_lock is @c TRUE, else 0.
@@ -242,7 +242,7 @@ svn_error_t *svn_wc_adm_probe_try2 (svn_wc_adm_access_t **adm_access,
                                     apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Similar to svn_wc_adm_probe_try2().  @a depth is set to -1 if
  * @a tree_lock is @c TRUE, else 0.
@@ -371,7 +371,7 @@ svn_wc_parse_externals_description2 (apr_array_header_t **externals_p,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Similar to svn_wc_parse_externals_description2, but returns the
  * parsed externals in a hash instead of an array.  This function
@@ -733,7 +733,7 @@ typedef struct svn_wc_diff_callbacks2_t
 
 } svn_wc_diff_callbacks2_t;
 
-/** @deprecated Provided for backward compatibility with the 1.1.0 API.
+/** @deprecated Provided for backward compatibility with the 1.1 API.
  *
  * Similar to @c svn_wc_callbakcs2_t, but with file additions/content
  * changes and property changes split into different functions.
@@ -1986,7 +1986,7 @@ svn_error_t *svn_wc_get_diff_editor3 (svn_wc_adm_access_t *anchor,
                                       apr_pool_t *pool);
 
 
-/** @deprecated Provided for backwards compatibility with the 1.1.0 API.
+/** @deprecated Provided for backward compatibility with the 1.1 API.
  *
  * Similar to @c svn_wc_get_diff_editor3(), but with an
  * @c svn_wc_diff_callbacks_t instead of @c svn_wc_diff_callbacks2_t. */
@@ -2006,7 +2006,7 @@ svn_error_t *svn_wc_get_diff_editor2 (svn_wc_adm_access_t *anchor,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Similar to svn_wc_get_diff_editor2(), but with @ignore_ancestry
  * always set to @c FALSE.
@@ -2053,7 +2053,7 @@ svn_error_t *svn_wc_diff3 (svn_wc_adm_access_t *anchor,
                            apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.1.0 API.
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  *
  * Similar to @c svn_wc_diff3, but with a @c svn_wc_diff_callbacks_t argument
  * instead of @c svn_wc_diff_callbacks2_t. */
@@ -2066,7 +2066,7 @@ svn_error_t *svn_wc_diff2 (svn_wc_adm_access_t *anchor,
                            apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Similar to svn_wc_diff2(), but with @a ignore_ancestry always set
  * to @c FALSE.
