@@ -164,10 +164,16 @@ void apr_pool_destroy(apr_pool_t *p);
 /* ----------------------------------------------------------------------- */
 
 %include svn_types.h
-%include svn_io.h
 %include svn_pools.h
 %include svn_version.h
 %include svn_time.h
+
+/* SWIG won't follow through to APR's defining this to be empty, so we
+   need to do it manually, before SWIG sees this in svn_io.h. */
+#define __attribute__(x)
+
+%include svn_io.h
+
 
 %{
 #include <apr.h>
