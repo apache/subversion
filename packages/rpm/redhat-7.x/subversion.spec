@@ -28,15 +28,17 @@ BuildPreReq: apache >= %{apache_version}
 BuildPreReq: apache-devel >= %{apache_version}
 BuildPreReq: apache-libapr-devel >= %{apache_version}
 BuildPreReq: autoconf >= 2.53
+BuildPreReq: automake >= 1.6.3
 BuildPreReq: db4-devel >= 4.0.14
 BuildPreReq: expat-devel
 BuildPreReq: gdbm-devel
-BuildPreReq: libtool >= 1.4.2
+BuildPreReq: libtool >= 1.4.2-12
 BuildPreReq: neon-devel >= %{neon_version}
 BuildPreReq: openssl-devel
 BuildPreReq: python2
 BuildPreReq: python2-devel
 BuildPreReq: swig >= 1.3.16
+BuildPreReq: swig-runtime >= 1.3.16
 BuildPreReq: texinfo
 BuildPreReq: zlib-devel
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
@@ -415,6 +417,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/bin/svnversion
 /usr/lib/libsvn_client*so*
 /usr/lib/libsvn_delta*so*
+/usr/lib/libsvn_diff*so*
 /usr/lib/libsvn_fs*so*
 /usr/lib/libsvn_ra*so*
 /usr/lib/libsvn_repos*so*
