@@ -118,7 +118,9 @@ timestamps_equal_p (svn_boolean_t *equal_p,
   svn_string_t *timestr;
 
   /* Split FILENAME into a parent path and entryname. */
-  /* TODO !!!! */
+  entryname = svn_path_last_component (filename, SVN_PATH_LOCAL_STYLE, pool);
+  dirpath = svn_string_dup (filename, pool);
+  svn_path_remove_component (dirpath, SVN_PATH_LOCAL_STYLE);
 
   /* Lookup this entryname in the `entries' file, and specifically
      retrieve the value of its timestamp. */
@@ -270,7 +272,6 @@ svn_wc__file_modified_p (svn_boolean_t *modified_p,
                          svn_string_t *filename,
                          apr_pool_t *pool)
 {
-  apr_status_t status;
   svn_boolean_t identical_p;
   svn_error_t *err;
   svn_string_t *textbase_filename;
