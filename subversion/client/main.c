@@ -66,7 +66,10 @@
 /* Hrm... how to get a private enum namespace?  Do I have to use the
    svn prefix, or is there another way?  There's no storage being
    declared here, so `static' shouldn't work. */
-enum command { svn_cl_checkout = 1, svn_cl_update, svn_cl_commit };
+enum command { checkout_command = 1,
+               update_command,
+               add_command,
+               commit_command };
 
 
 static void
@@ -75,7 +78,7 @@ parse_command_options (int argc,
                        int i,
                        char *progname,
                        svn_string_t **xml_file,
-                       svn_string_t **dest_dir,
+                       svn_string_t **target,
                        svn_vernum_t *version,
                        apr_pool_t *pool)
 {
@@ -101,7 +104,7 @@ parse_command_options (int argc,
               exit (1);
             }
           else
-            *dest_dir = svn_string_create (argv[i], pool);
+            *target = svn_string_create (argv[i], pool);
         }
       else if (strcmp (argv[i], "--version") == 0)
         {
@@ -115,11 +118,7 @@ parse_command_options (int argc,
             *version = (svn_vernum_t) atoi (argv[i]);
         }
       else
-        {
-          fprintf (stderr, "%s: unknown or untimely argument \"%s\"\n",
-                   progname, argv[i]);
-          exit (1);
-        }
+        *target = svn_string_create (argv[i], pool);
     }
 }
 
@@ -132,7 +131,7 @@ parse_options (int argc,
                char **argv,
                enum command *command,
                svn_string_t **xml_file,
-               svn_string_t **dest_dir,
+               svn_string_t **target,  /* dest_dir or file */
                svn_vernum_t *version,
                apr_pool_t *pool)
 {
@@ -144,17 +143,22 @@ parse_options (int argc,
       /* todo: do the cvs synonym thing eventually */
       if (strcmp (argv[i], "checkout") == 0)
         {
-          *command = svn_cl_checkout;
+          *command = checkout_command;
           goto do_command_opts;
         }
       else if (strcmp (argv[i], "update") == 0)
         {
-          *command = svn_cl_update;
+          *command = update_command;
+          goto do_command_opts;
+        }
+      else if (strcmp (argv[i], "add") == 0)
+        {
+          *command = add_command;
           goto do_command_opts;
         }
       else if (strcmp (argv[i], "commit") == 0)
         {
-          *command = svn_cl_commit;
+          *command = commit_command;
           goto do_command_opts;
         }
       else
@@ -166,14 +170,12 @@ parse_options (int argc,
     }
 
  do_command_opts:
-  parse_command_options (argc, argv, ++i, s,
-                         xml_file, dest_dir, version,
-                         pool);
+  parse_command_options (argc, argv, ++i, s, xml_file, target, version, pool);
 
   /* Sanity checks: make sure we got what we needed. */
   if (! *command)
     {
-      fprintf (stderr, "%s: no command given!\n", s);
+      fprintf (stderr, "%s: no command given\n", s);
       exit (1);
     }
   if (! *xml_file)
@@ -181,14 +183,14 @@ parse_options (int argc,
       fprintf (stderr, "%s: need \"--xml-file FILE.XML\"\n", s);
       exit (1);
     }
-  else if ((*command == svn_cl_commit) && (*version == SVN_INVALID_VERNUM))
+  else if ((*command == commit_command) && (*version == SVN_INVALID_VERNUM))
     {
       fprintf (stderr, "%s: please use \"--version VER\" "
                "to specify target version\n", s);
       exit (1);
     }
-  else if ((*command == svn_cl_checkout) && (*dest_dir == NULL))
-    *dest_dir = svn_string_create (".", pool);
+  else if ((*command == checkout_command) && (*target == NULL))
+    *target = svn_string_create (".", pool);
 }
 
 
@@ -199,25 +201,28 @@ main (int argc, char **argv)
   apr_pool_t *pool;
   svn_vernum_t new_version = SVN_INVALID_VERNUM;
   svn_string_t *xml_file = NULL;
-  svn_string_t *dest_dir = NULL;
+  svn_string_t *target = NULL;
   enum command command = 0;
 
   apr_initialize ();
   pool = svn_pool_create (NULL, NULL);
-  
-  parse_options (argc, argv, &command, &xml_file, &dest_dir, &new_version,
+
+  parse_options (argc, argv, &command, &xml_file, &target, &new_version,
                  pool);
   
   switch (command)
     {
-    case svn_cl_checkout:
-      err = svn_client_checkout (dest_dir, xml_file, pool);
+    case checkout_command:
+      err = svn_client_checkout (target, xml_file, pool);
       break;
-    case svn_cl_update:
-      err = svn_client_update (dest_dir, xml_file, pool);
+    case update_command:
+      err = svn_client_update (target, xml_file, pool);
       break;
-    case svn_cl_commit:
-      err = svn_client_commit (dest_dir, xml_file, new_version, pool);
+    case add_command:
+      err = svn_client_add (target, pool);
+      break;
+    case commit_command:
+      err = svn_client_commit (target, xml_file, new_version, pool);
       break;
     default:
       fprintf (stderr, "no command given");

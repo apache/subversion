@@ -69,6 +69,8 @@ svn_client_update (svn_string_t *path,
                    apr_pool_t *pool)
 {
   /* kff todo */
+  printf ("libsvn_client: update %s (xml_src == %s)\n",
+          path->data, xml_src->data);
 
   return SVN_NO_ERROR;
 }
