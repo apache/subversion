@@ -570,7 +570,7 @@ do_file_callback (svn_delta__digger_t *digger,
     return err;
 
   /* Store FILE_BATON in the digger, too, for safekeeping. */
-  digger->file_baton = file_baton;
+  digger->file_baton = youngest_frame->file_baton;
 
   
   return SVN_NO_ERROR;
