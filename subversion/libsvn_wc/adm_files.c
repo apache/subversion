@@ -897,8 +897,6 @@ check_adm_exists (svn_boolean_t *exists,
         svn_error_clear (err);
         wc_exists = FALSE;
       }
-    else if (wc_format > SVN_WC__VERSION)
-      wc_exists = FALSE;
     else
       wc_exists = TRUE;
   }

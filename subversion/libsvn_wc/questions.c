@@ -68,22 +68,49 @@ svn_wc_check_wc (const char *path,
 
       err = svn_io_read_version_file (wc_format, format_file_path, pool);
 
-      if (err || (*wc_format > SVN_WC__VERSION))
+      if (err)
         {
-          /* It really doesn't matter if it was a version mismatch or
-             an error, or if an error, what kind.  If there's anything
-             wrong at all, then for our purposes this is not a working
-             copy, so return 0. */
-          if (err)
-            svn_error_clear (err);
-
+          /* If the format file could not be opened for any reason,
+             then for our purposes this is not a working copy, so
+             return 0. */
+          svn_error_clear (err);
           *wc_format = 0;
+        }
+      else
+        {
+          /* If we managed to read the format file we assume that we
+             are dealing with a real wc so we can return a nice
+             error. */
+          SVN_ERR (svn_wc__check_format (*wc_format, path, pool));
         }
     }
 
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_wc__check_format (int wc_format, const char *path, apr_pool_t *pool)
+{
+  if (wc_format < 2)
+    {
+      return svn_error_createf
+        (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+         "working copy format of '%s' is too old (%d);\n"
+         "please check out your working copy again",
+         path, wc_format);
+    }
+  else if (wc_format > SVN_WC__VERSION)
+    {
+      return svn_error_createf
+        (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+         "this client is too old to work with working copy '%s';\n"
+         "please get a newer Subversion client",
+         path);
+    }
+
+  return SVN_NO_ERROR;
+}
 
 
 
