@@ -190,13 +190,14 @@ class GeneratorBase:
         include_deps.update(more_deps)
 
     for objname, sources in self.graph.get_deps(DT_OBJECT):
-      if isinstance(objname, SWIGObject):
-        ### the .c file is generated, so we can't scan it. this isn't a
-        ### very good test. ideally, the test would be to look for a
-        ### dependency node for the source, meaning it is generated, and
-        ### punt on it then.
-        continue
       assert len(sources) == 1
+      if isinstance(objname, SWIGObject):
+        for ifile in self.graph.get_sources(DT_SWIG_C, sources[0]):
+          if isinstance(ifile, SWIGSource):
+            for short in _find_includes(ifile.fname, include_deps):
+              self.graph.add(DT_SWIG_C, sources[0], include_deps[short][0])
+        continue
+
       hdrs = [ ]
       for short in _find_includes(sources[0].fname, include_deps):
         self.graph.add(DT_OBJECT, objname, include_deps[short][0])
@@ -293,6 +294,10 @@ class SourceFile(DependencyNode):
   def __init__(self, fname, reldir):
     DependencyNode.__init__(self, fname)
     self.reldir = reldir
+class SWIGSource(SourceFile):
+  def __init__(self, fname):
+    SourceFile.__init__(self, fname, os.path.dirname(fname))
+  pass
 
 # the SWIG utility libraries
 class SWIGUtilPython(ObjectFile):
@@ -494,10 +499,10 @@ class TargetSWIG(Target):
     ### simple assertions for now
     assert len(sources) == 1
 
-    ifile, reldir = sources[0]
-    assert ifile[-2:] == '.i'
+    ipath, reldir = sources[0]
+    assert ipath[-2:] == '.i'
 
-    dir, iname = os.path.split(ifile)
+    dir, iname = os.path.split(ipath)
     cname = iname[:-2] + '.c'
     oname = iname[:-2] + self._objext
 
@@ -506,6 +511,8 @@ class TargetSWIG(Target):
       libname = iname[3:-2] + self._libext
     else:
       libname = '_' + iname[:-2] + self._libext
+
+    ifile = SWIGSource(ipath)
 
     for lang in self.cfg.swig_lang:
       abbrev = lang_abbrev[lang]

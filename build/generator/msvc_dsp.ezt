@@ -62,7 +62,8 @@ SOURCE=[sources.path][if-any sources.reldir]
 # PROP Intermediate_Dir "[rootpath]\[configs.name]\[target.path]\[sources.reldir]"
 [end][end]
 !ENDIF
-[end][if-any sources.swig_language]
+[end][for sources.user_deps][if-index sources.user_deps first]
+USERDEP__=[else] [end]"[sources.user_deps]"[end][if-any sources.swig_language]
 
 # Begin Custom Build
 
