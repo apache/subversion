@@ -111,7 +111,10 @@ def run_svn(*varargs):
 
 def repos_to_url(path_to_svn_repos):
   """This does what you think it does."""
-  return 'file://%s' % os.path.abspath(path_to_svn_repos)
+  rpath = os.path.abspath(path_to_svn_repos)
+  if rpath[0] != '/':
+    rpath = '/' + rpath
+  return 'file://%s' % string.replace(rpath, os.sep, '/')
 
 
 class Log:
