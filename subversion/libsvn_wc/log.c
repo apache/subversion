@@ -303,45 +303,16 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
 
 svn_error_t *
 svn_wc__cleanup (svn_string_t *path,
+                 apr_hash_t *targets,
                  svn_boolean_t bail_on_lock,
                  apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_hash_t *entries = NULL;
   apr_hash_index_t *hi;
+  svn_boolean_t care_about_this_dir = 0;
 
-  if (bail_on_lock)
-    {
-      svn_boolean_t locked;
-      err = svn_wc__locked (&locked, path, pool);
-      if (err)
-        return err;
-
-      if (locked)
-        return svn_error_createf (SVN_ERR_WC_LOCKED,
-                                  0,
-                                  NULL,
-                                  pool,
-                                  "svn_wc__cleanup: %s locked",
-                                  path->data);
-    }
-
-  /* Eat what's put in front of us. */
-  err = svn_wc__run_log (path, pool);
-  if (err)
-    return err;
-
-  /* Remove any lock here.  But we couldn't even be here if there were
-     a lock file and bail_on_lock were set, so do the obvious check
-     first. */
-  if (! bail_on_lock)
-    {
-      err = svn_wc__unlock (path, pool);
-      if (err && (err->apr_err != APR_ENOENT))
-        return err;
-    }
-
-  /* Find versioned subdirs and recurse on them. */
+  /* Recurse on versioned subdirs first, oddly enough. */
   err = svn_wc__entries_read (&entries, path, pool);
   if (err)
     return err;
@@ -356,6 +327,26 @@ svn_wc__cleanup (svn_string_t *path,
       apr_hash_this (hi, &key, &keylen, &val);
       entry = val;
 
+      /* If TARGETS tells us to care about this dir, we may need to
+         clean up locks later.  So find out in advance. */
+      if (targets)
+        {
+          if (! care_about_this_dir)
+            {
+              svn_string_t *target = svn_string_dup (path, pool);
+              svn_path_add_component 
+                (target,
+                 svn_string_ncreate ((char *) key, keylen, pool),
+                 svn_path_local_style,
+                 pool);
+              
+              if (apr_hash_get (targets, target->data, target->len))
+                care_about_this_dir = 1;
+            }
+        }
+      else
+        care_about_this_dir = 1;
+
       if (entry->kind == svn_dir_kind)
         {
           svn_string_t *subdir = svn_string_dup (path, pool);
@@ -364,8 +355,43 @@ svn_wc__cleanup (svn_string_t *path,
                                   svn_path_local_style,
                                   pool);
 
-          err = svn_wc__cleanup (subdir, bail_on_lock, pool);
+          err = svn_wc__cleanup (subdir, targets, bail_on_lock, pool);
           if (err)
+            return err;
+        }
+    }
+
+
+  if (care_about_this_dir)
+    {
+      if (bail_on_lock)
+        {
+          svn_boolean_t locked;
+          err = svn_wc__locked (&locked, path, pool);
+          if (err)
+            return err;
+          
+          if (locked)
+            return svn_error_createf (SVN_ERR_WC_LOCKED,
+                                      0,
+                                      NULL,
+                                      pool,
+                                      "svn_wc__cleanup: %s locked",
+                                      path->data);
+        }
+      
+      /* Eat what's put in front of us. */
+      err = svn_wc__run_log (path, pool);
+      if (err)
+        return err;
+      
+      /* Remove any lock here.  But we couldn't even be here if there were
+         a lock file and bail_on_lock were set, so do the obvious check
+         first. */
+      if (! bail_on_lock)
+        {
+          err = svn_wc__unlock (path, pool);
+          if (err && (err->apr_err != APR_ENOENT))
             return err;
         }
     }
@@ -411,18 +437,31 @@ svn_wc__log_commit (svn_string_t *path,
           if (err)
             return err;
         }
-      else if (apr_hash_get (targets, key, keylen))
+      else
         {
-          /* entry->kind == svn_file_kind, and the file was actually
-             involved in the commit. */
-
           svn_string_t *logtag = svn_string_create ("", pool);
           char *verstr = apr_psprintf (pool, "%ld", version);
           apr_file_t *log_fp = NULL;
           
-          err = svn_wc__open_adm_file (&log_fp,
-                                       path,
-                                       SVN_WC__ADM_LOG,
+          /* entry->kind == svn_file_kind, but was the file actually
+             involved in the commit? */
+          
+          if (targets)
+            {
+              svn_string_t *target = svn_string_dup (path, pool);
+              svn_path_add_component
+                (target,
+                 svn_string_ncreate ((char *) key, keylen, pool),
+                 svn_path_local_style,
+                 pool);
+              
+              if (! apr_hash_get (targets, target->data, target->len))
+                continue;
+            }
+          
+          /* Yes, the file was involved in the commit. */
+
+          err = svn_wc__open_adm_file (&log_fp, path, SVN_WC__ADM_LOG,
                                        (APR_WRITE | APR_APPEND | APR_CREATE),
                                        pool);
           if (err)
