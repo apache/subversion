@@ -1082,8 +1082,7 @@ report_revisions (svn_string_t *wc_path,
 /*** Public Interfaces ***/
 
 svn_error_t *
-svn_wc_crawl_local_mods (apr_hash_t **targets,
-                         svn_string_t *root_directory,
+svn_wc_crawl_local_mods (svn_string_t *root_directory,
                          const svn_delta_edit_fns_t *edit_fns,
                          void *edit_baton,
                          apr_pool_t *pool)
@@ -1118,8 +1117,6 @@ svn_wc_crawl_local_mods (apr_hash_t **targets,
       err = edit_fns->close_edit (edit_baton);
       if (err) return err;
     }
-
-  *targets = affected_targets;
 
   /* The commit is complete, and revisions have been bumped. */
 
