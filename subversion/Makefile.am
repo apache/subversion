@@ -6,7 +6,7 @@
 ##         libsvn_svr                  \
 ##         libsvn_wc
 
-SUBDIRS = libsvn_string libsvn_subr
+SUBDIRS = libsvn_string libsvn_subr libsvn_delta
 
 ## Include these extra files when building `dist' target
 
