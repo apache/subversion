@@ -1222,7 +1222,7 @@ merge_delete_notify_func (void *baton,
 
   /* Skip the notification for the path we called svn_client__wc_delete() with,
    * because it will be outputed by repos_diff.c:delete_item */  
-  if (!strcmp(path,mdb->path_skip))
+  if (strcmp (path,mdb->path_skip) != 0)
     return;
   
   /* svn_client__wc_delete() is written primarily for scheduling operations not
@@ -1277,7 +1277,7 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
                                       merge_b->pool));
         err = svn_client__wc_delete (path, parent_access, merge_b->force,
                                      merge_b->dry_run,
-                                     merge_delete_notify_func, (void *) &mdb,
+                                     merge_delete_notify_func, &mdb,
                                      merge_b->ctx, subpool);
         if (err && state)
           {
