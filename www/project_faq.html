@@ -48,6 +48,8 @@
 <li><a href="#windows-repository">I'm running Subversion under windows
     and I can create a repository fine, but I get errors trying to
     import or check out from it.  What's wrong?</a></li>
+<li><a href="#write-over-dav">I'm having trouble doing write
+    operations to a Subversion repository over a network.</a></li>
 <p>
 <strong>References:</strong>
 </p>
@@ -424,6 +426,40 @@ the drive spec.  For example:
 d:
 svn import file:///some/path/to/repos/on/d/drive e:\file\to\be\imported
 </pre>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3>I'm having trouble doing write <a name="write-over-dav">
+    operations to a Subversion repository over a network.</a></h3>
+
+<p>For example, one user reported that imports worked fine over local
+access:
+<ul>
+<pre>
+  $ mkdir test
+  $ touch test/testfile
+  $ svn import file:///var/svn/test test test -m "Initial import"
+  Adding         test/testfile
+  Transmitting file data .
+  Committed revision 1.
+</pre>
+</ul>
+But not from a remote host:
+<ul>
+<pre>
+  $ svn import http://svn.sabi.net/test testfile -m "import"
+  nicholas's password: xxxxxxx
+
+  svn_error: #21110 : <Activity not found>
+
+  The specified activity does not exist.
+</pre>
+</ul>
+</p>
+
+<p> We've seen this when the REPOS/dav/ directory is not writable by
+the httpd process.  Check the permissions to ensure Apache can write
+to the <tt>dav/</tt> directory (and to <tt>db/</tt>, of course).  </p>
 
 <![CDATA[=========================================================]]>
 
