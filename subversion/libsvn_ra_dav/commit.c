@@ -542,6 +542,46 @@ static int do_setprop(void *rec, const char *name, const char *value)
   return 1;
 }
 
+/* 
+A very long note about enforcing directory-up-to-dateness when
+proppatching, writ by Ben: 
+
+Once upon a time, I thought it would be necessary to attach the
+X-SVN-Version-Name header to every PROPPATCH request we send.  This
+would allow mod_dav_svn to verify that a directory is up-to-date.
+
+But it turns out that mod_dav_svn screams and errors if you *ever* try
+to CHECKOUT an out-of-date VR.  And furthermore, a directory is never
+a 'committable' (according to svn_client_commit) unless it has a
+propchange.  Therefore:
+
+1. when ra_dav's commit editor attempts to CHECKOUT a parent directory
+   because some child is being added or deleted, it's *unable* to get
+   the VR cache, and thus just gets the HEAD one instead.  So it ends
+   up always doing a CHECKOUT of the latest version of the directory.
+   This is actually fine; Subversion's semantics allow us to
+   add/delete children on out-of-date directories.  If, in dav terms,
+   this means always checking out the latest directory, so be it.  Any
+   namespace conflicts will be detected with the actual PUT or DELETE
+   of the child.
+
+2. when ra_dav's commit editor receives a directory propchange, it
+   *is* able to get the VR cache (because the dir is a "committable"),
+   and thus it does a CHECKOUT of the older directory.  And mod_dav_svn
+   will scream if the VR is out-of-date, which is exactly what we want in
+   the directory propchange scenario.
+
+The only potential badness here is the case of committing a directory
+with a propchange, and an add/rm of its child.  This commit should
+fail, due to the out-of-date propchange.  However, it's *possible*
+that it will fail for a different reason:  we might attempt the add/rm
+first, which means checking out the parent VR, which *would* be
+available from the cache, and thus we get an early error.  Instead of
+seeing an error about 'cannot proppatch out-of-date dir', the user
+will see an error about 'cannot checkout out-of-date parent'.  Not
+really a big deal I guess.
+
+*/
 static svn_error_t * do_proppatch(svn_ra_session_t *ras,
                                   const resource_t *rsrc,
                                   resource_baton_t *rb)
