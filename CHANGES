@@ -1,6 +1,6 @@
 Version 1.0.1
-(branching XX March 2004, from /branches/1.0.x)
-http://svn.collab.net/repos/svn/tags/XXX
+(12 March 2004, from /branches/1.0.x)
+http://svn.collab.net/repos/svn/tags/1.0.1
 
  User-visible changes:
  * allow anonymous access checking in mod_authz_svn
@@ -45,7 +45,7 @@ http://svn.collab.net/repos/svn/tags/XXX
 
 
 Version 1.0.0
-(branching 23 February 2004, from /branches/1.0.x)
+(23 February 2004, from /branches/1.0.x)
 http://svn.collab.net/repos/svn/tags/1.0.0
 
  User-visible changes:
