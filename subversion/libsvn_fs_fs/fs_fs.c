@@ -219,28 +219,92 @@ svn_fs__fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs__fs_youngest_revision (svn_revnum_t *youngest_p,
-                              svn_fs_t *fs,
-                              apr_pool_t *pool)
+/* Find the youngest revision in a repository at path FS_PATH and
+   return it in *YOUNGEST_P.  Perform temporary allocations in
+   POOL. */
+static svn_error_t *
+get_youngest (svn_revnum_t *youngest_p,
+              const char *fs_path,
+              apr_pool_t *pool)
 {
   apr_file_t *revision_file;
   char buf[80];
   apr_size_t len;
 
   SVN_ERR (svn_io_file_open (&revision_file,
-                             svn_path_join (fs->fs_path, SVN_FS_FS__CURRENT,
+                             svn_path_join (fs_path, SVN_FS_FS__CURRENT,
                                             pool),
                              APR_READ, APR_OS_DEFAULT, pool));
 
   len = sizeof (buf);
   SVN_ERR (svn_io_file_read (revision_file, buf, &len, pool));
   buf[len] = '\0';
-
+  
   *youngest_p = atoi (buf);
-
+  
   SVN_ERR (svn_io_file_close (revision_file, pool));
+  
+  return SVN_NO_ERROR;
+}
 
+svn_error_t *
+svn_fs__fs_hotcopy (const char *src_path,
+                    const char *dst_path,
+                    apr_pool_t *pool)
+{
+  const char *src_subdir, *dst_subdir;
+  svn_revnum_t youngest, rev;
+
+  /* Copy the current file. */
+  SVN_ERR (svn_io_dir_file_copy (src_path, dst_path, SVN_FS_FS__CURRENT, pool));
+
+  /* Copy the uuid. */
+  SVN_ERR (svn_io_dir_file_copy (src_path, dst_path, SVN_FS_FS__UUID, pool));
+
+  /* Find the youngest revision from this current file. */
+  SVN_ERR (get_youngest (&youngest, dst_path, pool));
+
+  /* Copy the necessary rev files. */
+  src_subdir = svn_path_join (src_path, SVN_FS_FS__REVS_DIR, pool);
+  dst_subdir = svn_path_join (dst_path, SVN_FS_FS__REVS_DIR, pool);
+
+  SVN_ERR (svn_io_make_dir_recursively (dst_subdir, pool));
+  
+  for (rev = 0; rev <= youngest; rev++)
+      SVN_ERR (svn_io_dir_file_copy (src_subdir, dst_subdir,
+                                     apr_psprintf (pool, "%"
+                                                   SVN_REVNUM_T_FMT, rev),
+                                     pool));
+
+  /* Copy the necessary revprop files. */
+  src_subdir = svn_path_join (src_path, SVN_FS_FS__REVPROPS_DIR, pool);
+  dst_subdir = svn_path_join (dst_path, SVN_FS_FS__REVPROPS_DIR, pool);
+
+  SVN_ERR (svn_io_make_dir_recursively (dst_subdir, pool));
+
+  for (rev = 0; rev <= youngest; rev++)
+    SVN_ERR (svn_io_dir_file_copy (src_subdir, dst_subdir,
+                                   apr_psprintf (pool, "%"
+                                                 SVN_REVNUM_T_FMT, rev),
+                                   pool));
+
+  /* Make an empty transactions directory for now.  Eventually some
+     method of copying in progress transactions will need to be
+     developed.*/
+  dst_subdir = svn_path_join (dst_path, SVN_FS_FS__TXNS_DIR, pool);
+  SVN_ERR (svn_io_make_dir_recursively (dst_subdir, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs__fs_youngest_revision (svn_revnum_t *youngest_p,
+                              svn_fs_t *fs,
+                              apr_pool_t *pool)
+{
+  SVN_ERR (get_youngest (youngest_p, fs->fs_path, pool));
+  
   return SVN_NO_ERROR;
 }
 
