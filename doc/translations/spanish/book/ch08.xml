@@ -1487,19 +1487,24 @@ if __name__ == '__main__':
       <function>svn_pool_clear()</function>, y
       <function>svn_pool_destroy()</function>.</para>
 
-    <para>While pools are helpful for basic memory management, the
-      pool construct really shines in looping and recursive scenarios.
-      Since loops are often unbounded in their iterations, and
-      recursions in their depth, memory consumption in these areas of
-      the code can become unpredictable.  Fortunately, using nested
-      memory pools can be a great way to easily manage these
-      potentially hairy situations.  The following example
-      demonstrates the basic use of nested pools in a situation that
-      is fairly common&mdash;recursively crawling a directory tree,
-      doing some task to each thing in the tree.</para>
+    <para>Aunque las áreas de memoria son útiles para tareas
+      básicas de gestiónde memoria, este tipo de estructura
+      realmente brilla con los bucles y la recursividad. Dado que
+      los bucles a menudo pueden terminar en cualquier momento
+      <!-- TODO parafraseado correcto de unbounded loop. Mirar
+      si en castellano existe un término más corto que signifique
+      lo mismo-->, y las funciones recursivas volver a cualquier
+      profundidad, el consumo de memoria en este tipo de situaciones
+      puede ser impredecible. Afortunadamente, usar áreas de memoria
+      anidadas puede ser un método excelente para tratar con estas
+      situaciones peliagudas. El siguiente ejemplo demuestra el
+      uso básico de áreas de memoria anidadas en una situación que
+      es bastante común&mdash;recorrer de forma recursiva un árbol
+      de directorios realizando cierta tarea sobre cada elemento
+      del árbol.</para>
 
     <example id="svn-ch-8-sect-5-ex-1">
-      <title>Effective Pool Usage</title>
+      <title>Uso efectivo de áreas de memoria</title>
       <programlisting>
 /* Recursively crawl over DIRECTORY, adding the paths of all its file
    children to the FILES array, and doing some task to each path
@@ -1584,19 +1589,20 @@ crawl_dir (apr_array_header_t *files,
 </programlisting>
     </example>
 
-    <para>The previous example demonstrates effective pool usage in
-      <emphasis>both</emphasis> looping and recursive situations.
-      Each recursion begins by making a subpool of the pool passed to
-      the function.  This subpool is used for the looping region, and
-      cleared with each iteration.  The result is memory usage is
-      roughly proportional to the depth of the recursion, not to total
-      number of file and directories present as children of the
-      top-level directory.  When the first call to this recursive
-      function finally finishes, there is actually very little data
-      stored in the pool that was passed to it.  Now imagine the extra
-      complexity that would be present if this function had to
-      <function>alloc()</function> and <function>free()</function>
-      every single piece of data used!</para>
+    <para>El ejemplo anterior demuestra un uso efectivo de áreas
+      de memoria en situaciones con bucles y recursividad. Cada
+      recursión comienza creando una sub área de memoria del área
+      pasada a la función. Esta sub área es usada por la región con
+      bucles, y limpiada en cada iteración. Esto da como resultado
+      que el consumo de memoria sea a grandes rasgos proporcional a
+      la profundidad de la recursión, no al número total de ficheros
+      y directorios presentes como hijos del directorio de nivel
+      superior. Cuando la primera llamada a esta función recursiva
+      finalmente termina, hay realmente muy pocos datos almacenados
+      en el área de memoria que recibió como parámetro. ¡Ahora
+      imagine la complejidad adicional que estaría presente en
+      esta función si tuviese que reservar y liberar cada pieza
+      individual de datos usados!</para>
     
     <para>Pools might not be ideal for every application, but they are
       extremely useful in Subversion.  As a Subversion developer,
