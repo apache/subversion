@@ -20,6 +20,19 @@
 
 %include typemaps.i
 
+/* ----------------------------------------------------------------------- 
+   include svn_types.h early. other .i files will import svn_types.i which
+   then includes svn_types.h, making further includes get skipped. we want
+   to actually generate wrappers, so manage svn_types.h right here.
+*/
+%ignore svn_error;
+
+%include svn_types.h
+
+
+/* ----------------------------------------------------------------------- 
+   moving along...
+*/
 %import apr.i
 %import svn_types.i
 %import svn_string.i
@@ -38,6 +51,13 @@
 %ignore svn_io_fd_from_file;
 %ignore svn_io_get_dirents;
 %ignore svn_io_run_cmd;
+%ignore svn_io_remove_file;
+%ignore svn_io_remove_dir;
+%ignore svn_io_make_dir_recursively;
+%ignore svn_io_set_file_read_only;
+%ignore svn_io_set_file_read_write;
+%ignore svn_io_set_file_executable;
+%ignore svn_io_filesizes_different_p;
 
 %ignore apr_check_dir_empty;
 
@@ -113,6 +133,18 @@
 }
 
 /* -----------------------------------------------------------------------
+   the second argument to svn_parse_date is unused: always pass NULL
+*/
+
+%typemap(ignore) struct getdate_time *now {
+    $1 = NULL;
+}
+
+/* ignore the related structure */
+/* ### hmm... this structure isn't namespace protected?! */
+%ignore getdate_time;
+
+/* -----------------------------------------------------------------------
    wrap some specific APR functionality
 */
 
@@ -125,6 +157,7 @@ void apr_pool_destroy(apr_pool_t *p);
 
 /* ----------------------------------------------------------------------- */
 
+%include svn_types.h
 %include svn_io.h
 %include svn_pools.h
 %include svn_version.h
