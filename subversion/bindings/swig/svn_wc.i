@@ -45,6 +45,7 @@
 /* we can't use the OUTPARAM cuz that is only for pointers. use the
    standard OUTPARAM definition for 'int' instead. */
 %apply int *OUTPUT { svn_boolean_t * };
+%apply int *OUTPUT { int * };
 
 /* ----------------------------------------------------------------------- */
 
