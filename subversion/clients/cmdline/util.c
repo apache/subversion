@@ -46,7 +46,7 @@ array_push_svn_string (apr_array_header_t *array,
                        const char *str,
                        apr_pool_t *pool)
 {
-  (*((svn_string_t **) apr_array_push (array)))
+  (*((svn_stringbuf_t **) apr_array_push (array)))
     = svn_string_create (str, pool);
 }
 
@@ -94,7 +94,7 @@ svn_cl__parse_num_args (apr_getopt_t *os,
 {
   int i;
   
-  opt_state->args = apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (svn_string_t *));
+  opt_state->args = apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (svn_stringbuf_t *));
 
   /* loop for num_args and add each arg to the args array */
   for (i = 0; i < num_args; i++)
@@ -119,7 +119,7 @@ svn_cl__parse_all_args (apr_getopt_t *os,
                         const char *subcommand,
                         apr_pool_t *pool)
 {
-  opt_state->args = apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (svn_string_t *));
+  opt_state->args = apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (svn_stringbuf_t *));
 
   if (os->ind >= os->argc)
     {
@@ -142,12 +142,12 @@ svn_cl__args_to_target_array (apr_getopt_t *os,
                               apr_pool_t *pool)
 {
   apr_array_header_t *targets =
-    apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (svn_string_t *));
+    apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (svn_stringbuf_t *));
 
   for (; os->ind < os->argc; os->ind++)
     {
-      svn_string_t *target = svn_string_create (os->argv[os->ind], pool);
-      svn_string_t *basename = svn_path_last_component (target,
+      svn_stringbuf_t *target = svn_string_create (os->argv[os->ind], pool);
+      svn_stringbuf_t *basename = svn_path_last_component (target,
                                                         svn_path_local_style,
                                                         pool);
       /* If this target is not a Subversion administrative directory,

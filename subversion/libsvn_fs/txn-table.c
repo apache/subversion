@@ -80,8 +80,8 @@ put_txn (svn_fs_t *fs,
          trail_t *trail)
 {
   apr_pool_t *pool = trail->pool;
-  svn_string_t *unparsed_root_id = svn_fs_unparse_id (root_id, pool);
-  svn_string_t *unparsed_base_root_id = svn_fs_unparse_id (base_root_id, pool);
+  svn_stringbuf_t *unparsed_root_id = svn_fs_unparse_id (root_id, pool);
+  svn_stringbuf_t *unparsed_base_root_id = svn_fs_unparse_id (base_root_id, pool);
   skel_t *txn_skel = svn_fs__make_empty_list (pool);
   DBT key, value;
 
@@ -408,10 +408,10 @@ svn_error_t *svn_fs__get_txn_list (char ***names_p,
 
 
 struct txn_prop_args {
-  svn_string_t **value_p;
+  svn_stringbuf_t **value_p;
   svn_fs_t *fs;
   const char *id;
-  svn_string_t *propname;
+  svn_stringbuf_t *propname;
 };
 
 
@@ -436,13 +436,13 @@ txn_body_txn_prop (void *baton,
 
 
 svn_error_t *
-svn_fs_txn_prop (svn_string_t **value_p,
+svn_fs_txn_prop (svn_stringbuf_t **value_p,
                  svn_fs_txn_t *txn,
-                 svn_string_t *propname,
+                 svn_stringbuf_t *propname,
                  apr_pool_t *pool)
 {
   struct txn_prop_args args;
-  svn_string_t *value;
+  svn_stringbuf_t *value;
   svn_fs_t *fs = svn_fs_txn_fs (txn);
 
   SVN_ERR (svn_fs__check_fs (fs));
@@ -507,8 +507,8 @@ svn_fs_txn_proplist (apr_hash_t **table_p,
 struct change_txn_prop_args {
   svn_fs_t *fs;
   const char *id;
-  svn_string_t *name;
-  svn_string_t *value;
+  svn_stringbuf_t *name;
+  svn_stringbuf_t *value;
 };
 
 
@@ -536,8 +536,8 @@ txn_body_change_txn_prop (void *baton, trail_t *trail)
 
 svn_error_t *
 svn_fs_change_txn_prop (svn_fs_txn_t *txn,
-                        svn_string_t *name,
-                        svn_string_t *value,
+                        svn_stringbuf_t *name,
+                        svn_stringbuf_t *value,
                         apr_pool_t *pool)
 {
   struct change_txn_prop_args args;

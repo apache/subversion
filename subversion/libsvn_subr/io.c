@@ -39,7 +39,7 @@ struct svn_stream_t {
 
 
 svn_error_t *
-svn_io_check_path (const svn_string_t *path,
+svn_io_check_path (const svn_stringbuf_t *path,
                    enum svn_node_kind *kind,
                    apr_pool_t *pool)
 {
@@ -74,8 +74,8 @@ svn_io_check_path (const svn_string_t *path,
 
 svn_error_t *
 svn_io_open_unique_file (apr_file_t **f,
-                         svn_string_t **unique_name,
-                         const svn_string_t *path,
+                         svn_stringbuf_t **unique_name,
+                         const svn_stringbuf_t *path,
                          const char *suffix,
                          apr_pool_t *pool)
 {
@@ -311,7 +311,7 @@ apr_append_file (const char *src, const char *dst, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_io_copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
+svn_io_copy_file (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool)
 {
   apr_status_t apr_err;
 
@@ -329,7 +329,7 @@ svn_io_copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_io_append_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
+svn_io_append_file (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool)
 {
   apr_status_t apr_err;
 
@@ -351,7 +351,7 @@ svn_io_append_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
 
 svn_error_t *
 svn_io_file_affected_time (apr_time_t *apr_time,
-                           svn_string_t *path,
+                           svn_stringbuf_t *path,
                            apr_pool_t *pool)
 {
   apr_finfo_t finfo;
@@ -568,15 +568,15 @@ svn_stream_t *svn_stream_from_stdio (FILE *fp, apr_pool_t *pool)
 
 /* TODO write test for this, then refactor. */
 svn_error_t *
-svn_string_from_file (svn_string_t **result, const char *filename, apr_pool_t *pool)
+svn_string_from_file (svn_stringbuf_t **result, const char *filename, apr_pool_t *pool)
 {
   /* ### this function must be fixed to do an apr_stat() for SIZE,
      ### alloc the buffer, then read the file into the buffer. Using
-     ### an svn_string_t means quadratic memory usage: start with
+     ### an svn_stringbuf_t means quadratic memory usage: start with
      ### BUFSIZE, allocate 2*BUFSIZE, then alloc 4*BUFSIZE, etc.
      ### The pools keep each of those allocs around. */
 
-  svn_string_t *res;
+  svn_stringbuf_t *res;
   apr_status_t apr_err;
   char buf[BUFSIZ];
   apr_size_t len;

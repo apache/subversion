@@ -59,8 +59,8 @@ typedef svn_error_t *svn_repos_commit_hook_t (svn_revnum_t new_revision,
 svn_error_t *svn_repos_get_editor (svn_delta_edit_fns_t **editor,
                                    void **edit_baton,
                                    svn_fs_t *fs,
-                                   svn_string_t *base_path,
-                                   svn_string_t *log_msg,
+                                   svn_stringbuf_t *base_path,
+                                   svn_stringbuf_t *log_msg,
                                    svn_repos_commit_hook_t *hook,
                                    void *hook_baton,
                                    apr_pool_t *pool);
@@ -79,7 +79,7 @@ svn_error_t *
 svn_repos_begin_report (void **report_baton,
                         svn_revnum_t revnum,
                         svn_fs_t *fs,
-                        svn_string_t *fs_base,
+                        svn_stringbuf_t *fs_base,
                         const svn_delta_edit_fns_t *update_editor,
                         void *update_baton,
                         apr_pool_t *pool);
@@ -95,7 +95,7 @@ svn_repos_begin_report (void **report_baton,
    (useful when creating a txn, for example).  */
 svn_error_t *
 svn_repos_set_path (void *report_baton,
-                    svn_string_t *path,
+                    svn_stringbuf_t *path,
                     svn_revnum_t revision);
 
 
@@ -105,7 +105,7 @@ svn_repos_set_path (void *report_baton,
    (This allows the reporter's driver to describe missing pieces of a
    working copy, so that 'svn up' can recreate them.) */   
 svn_error_t *svn_repos_delete_path (void *report_baton,
-                                    svn_string_t *path);
+                                    svn_stringbuf_t *path);
 
 /* Make the filesystem compare the transaction to a revision and have
    it drive an update editor (using svn_repos_delta_dirs()).  Then
@@ -140,10 +140,10 @@ svn_repos_finish_report (void *report_baton);
    size of the delta.  */
 svn_error_t *
 svn_repos_dir_delta (svn_fs_root_t *source_root,
-                     svn_string_t *source_path,
+                     svn_stringbuf_t *source_path,
                      apr_hash_t *source_rev_diffs,
                      svn_fs_root_t *target_root,
-                     svn_string_t *target_path,
+                     svn_stringbuf_t *target_path,
                      const svn_delta_edit_fns_t *editor,
                      void *edit_baton,
                      apr_pool_t *pool);
@@ -206,8 +206,8 @@ svn_repos_dir_delta (svn_fs_root_t *source_root,
 svn_error_t *
 svn_repos_update (svn_fs_root_t *target_root,
                   svn_fs_root_t *source_root,
-                  svn_string_t *parent_dir,
-                  svn_string_t *entry,
+                  svn_stringbuf_t *parent_dir,
+                  svn_stringbuf_t *entry,
                   apr_hash_t *source_rev_diffs,
                   const svn_delta_edit_fns_t *editor,
                   void *edit_baton,

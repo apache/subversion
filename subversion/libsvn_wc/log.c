@@ -31,7 +31,7 @@ struct log_runner
 {
   apr_pool_t *pool;
   svn_xml_parser_t *parser;
-  svn_string_t *path;  /* the dir in which this is all happening */
+  svn_stringbuf_t *path;  /* the dir in which this is all happening */
 };
 
 
@@ -54,7 +54,7 @@ enum svn_wc__xfer_action {
  * as CMD.
  */
 svn_error_t *
-svn_wc_run_cmd_in_directory (svn_string_t *path,
+svn_wc_run_cmd_in_directory (svn_stringbuf_t *path,
                              const char *cmd,
                              const char *const *args,
                              apr_file_t *infile,
@@ -155,14 +155,14 @@ svn_wc_run_cmd_in_directory (svn_string_t *path,
 /* Copy (or rename, if RENAME is non-zero) NAME to DEST, assuming that
    PATH is the common parent of both locations. */
 static svn_error_t *
-file_xfer_under_path (svn_string_t *path,
+file_xfer_under_path (svn_stringbuf_t *path,
                       const char *name,
                       const char *dest,
                       enum svn_wc__xfer_action action,
                       apr_pool_t *pool)
 {
   apr_status_t status;
-  svn_string_t *full_from_path, *full_dest_path;
+  svn_stringbuf_t *full_from_path, *full_dest_path;
 
   full_from_path = svn_string_dup (path, pool);
   full_dest_path = svn_string_dup (path, pool);
@@ -192,12 +192,12 @@ file_xfer_under_path (svn_string_t *path,
 
 
 static svn_error_t *
-replace_text_base (svn_string_t *path,
+replace_text_base (svn_stringbuf_t *path,
                    const char *name,
                    apr_pool_t *pool)
 {
-  svn_string_t *filepath;
-  svn_string_t *tmp_text_base;
+  svn_stringbuf_t *filepath;
+  svn_stringbuf_t *tmp_text_base;
   svn_error_t *err;
   enum svn_node_kind kind;
 
@@ -271,7 +271,7 @@ log_do_run_cmd (struct log_runner *loggy,
   
   if (infile_name)
     {
-      svn_string_t *infile_path
+      svn_stringbuf_t *infile_path
         = svn_string_dup (loggy->path, loggy->pool);
       svn_path_add_component_nts (infile_path, infile_name,
                                   svn_path_local_style);
@@ -285,7 +285,7 @@ log_do_run_cmd (struct log_runner *loggy,
   
   if (outfile_name)
     {
-      svn_string_t *outfile_path
+      svn_stringbuf_t *outfile_path
         = svn_string_dup (loggy->path, loggy->pool);
       svn_path_add_component_nts (outfile_path, outfile_name,
                                   svn_path_local_style);
@@ -302,7 +302,7 @@ log_do_run_cmd (struct log_runner *loggy,
   
   if (errfile_name)
     {
-      svn_string_t *errfile_path
+      svn_stringbuf_t *errfile_path
         = svn_string_dup (loggy->path, loggy->pool);
       svn_path_add_component_nts (errfile_path, errfile_name,
                                   svn_path_local_style);
@@ -361,7 +361,7 @@ static svn_error_t *
 log_do_rm (struct log_runner *loggy, const char *name)
 {
   apr_status_t apr_err;
-  svn_string_t *full_path;
+  svn_stringbuf_t *full_path;
 
   full_path = svn_string_dup (loggy->path, loggy->pool);
   svn_path_add_component_nts (full_path, name, svn_path_local_style);
@@ -384,7 +384,7 @@ log_do_detect_conflict (struct log_runner *loggy,
   svn_error_t *err;
   apr_status_t apr_err;
   apr_finfo_t finfo;
-  svn_string_t *full_path;
+  svn_stringbuf_t *full_path;
 
   const char *rejfile =
     svn_xml_get_attr_value (SVN_WC_ENTRY_ATTR_REJFILE, atts);
@@ -451,11 +451,11 @@ log_do_modify_entry (struct log_runner *loggy,
 {
   svn_error_t *err;
   apr_hash_t *ah = svn_xml_make_att_hash (atts, loggy->pool);
-  svn_string_t *sname = svn_string_create (name, loggy->pool);
-  svn_string_t *tfile = svn_string_dup (loggy->path, loggy->pool);
+  svn_stringbuf_t *sname = svn_string_create (name, loggy->pool);
+  svn_stringbuf_t *tfile = svn_string_dup (loggy->path, loggy->pool);
   svn_wc_entry_t *entry;
   apr_uint16_t modify_flags;
-  svn_string_t *valuestr;
+  svn_stringbuf_t *valuestr;
 
   /* Convert the attributes into an entry structure. */
   SVN_ERR (svn_wc__atts_to_entry (&entry, &modify_flags, ah, loggy->pool));
@@ -499,7 +499,7 @@ log_do_modify_entry (struct log_runner *loggy,
   if ((modify_flags & SVN_WC__ENTRY_MODIFY_PROP_TIME)
       && (! strcmp (valuestr->data, SVN_WC_TIMESTAMP_WC)))
     {
-      svn_string_t *pfile;
+      svn_stringbuf_t *pfile;
       enum svn_node_kind pfile_kind;
       apr_time_t prop_time;
 
@@ -552,9 +552,9 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
 {
   svn_wc_entry_t *entry;
   svn_error_t *err = NULL;
-  svn_string_t *sname = svn_string_create (name, loggy->pool);
-  svn_string_t *full_path = svn_string_dup (loggy->path, loggy->pool);
-  svn_string_t *this_dir = svn_string_create (SVN_WC_ENTRY_THIS_DIR,
+  svn_stringbuf_t *sname = svn_string_create (name, loggy->pool);
+  svn_stringbuf_t *full_path = svn_string_dup (loggy->path, loggy->pool);
+  svn_stringbuf_t *this_dir = svn_string_create (SVN_WC_ENTRY_THIS_DIR,
                                               loggy->pool);
 
   /* Figure out if 'name' is a dir or a file */
@@ -600,14 +600,14 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
  * SVN_WC__LOG_ATTR_PROP_REJFILE.
  */
 static svn_error_t *
-conflict_if_rejfile (svn_string_t *parent_dir,
+conflict_if_rejfile (svn_stringbuf_t *parent_dir,
                      const char *rejfile,
                      const char *entry,
                      const char *rejfile_type,
                      apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_string_t *rejfile_full_path;
+  svn_stringbuf_t *rejfile_full_path;
   enum svn_node_kind kind;
 
   rejfile_full_path = svn_string_dup (parent_dir, pool);
@@ -741,14 +741,14 @@ log_do_committed (struct log_runner *loggy,
                               "missing revision attr for %s", name);
   else
     {
-      svn_string_t *working_file;
-      svn_string_t *tmp_base;
+      svn_stringbuf_t *working_file;
+      svn_stringbuf_t *tmp_base;
       apr_time_t text_time = 0; /* By default, don't override old stamp. */
       apr_time_t prop_time = 0; /* By default, don't override old stamp. */
       enum svn_node_kind kind;
       svn_wc_entry_t *entry;
-      svn_string_t *prop_path, *tmp_prop_path, *prop_base_path;
-      svn_string_t *sname = svn_string_create (name, loggy->pool);
+      svn_stringbuf_t *prop_path, *tmp_prop_path, *prop_base_path;
+      svn_stringbuf_t *sname = svn_string_create (name, loggy->pool);
       svn_boolean_t is_this_dir;
 
       /* `name' is either a file's basename, or SVN_WC_ENTRY_THIS_DIR. */
@@ -757,7 +757,7 @@ log_do_committed (struct log_runner *loggy,
       /* Determine the actual full path of the affected item so we can
          easily read its entry and check its state. */
       {
-        svn_string_t *full_path;
+        svn_stringbuf_t *full_path;
 
         full_path = svn_string_dup (loggy->path, loggy->pool);
         if (! is_this_dir)
@@ -789,7 +789,7 @@ log_do_committed (struct log_runner *loggy,
           if (! is_this_dir)
             {
               /* If we get here, `name' is a file's basename.
-                 `basename' is an svn_string_t version of it.  Check
+                 `basename' is an svn_stringbuf_t version of it.  Check
                  for textual changes. */
               working_file = svn_string_dup (loggy->path, loggy->pool);
               svn_path_add_component (working_file,
@@ -942,7 +942,7 @@ log_do_committed (struct log_runner *loggy,
              state in the parent's entry for this directory. */
           if (is_this_dir)
             {
-              svn_string_t *pdir, *basename;
+              svn_stringbuf_t *pdir, *basename;
               
               svn_path_split (loggy->path, &pdir, &basename,
                               svn_path_local_style, loggy->pool);
@@ -1051,7 +1051,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
 /*** Using the parser to run the log file. ***/
 
 svn_error_t *
-svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
+svn_wc__run_log (svn_stringbuf_t *path, apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_status_t apr_err;
@@ -1121,7 +1121,7 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
     {
       /* Blow away the entire administrative dir, and all those below
          it too.  Don't remove any working files, though. */
-      svn_string_t *this_dir = 
+      svn_stringbuf_t *this_dir = 
         svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
       SVN_ERR (svn_wc_remove_from_revision_control (path, this_dir,
                                                     FALSE, pool));
@@ -1135,7 +1135,7 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
 /*** Recursively do log things. ***/
 
 svn_error_t *
-svn_wc__cleanup (svn_string_t *path,
+svn_wc__cleanup (svn_stringbuf_t *path,
                  apr_hash_t *targets,
                  svn_boolean_t bail_on_lock,
                  apr_pool_t *pool)
@@ -1171,7 +1171,7 @@ svn_wc__cleanup (svn_string_t *path,
         {
           if (! care_about_this_dir)
             {
-              svn_string_t *target = svn_string_dup (path, pool);
+              svn_stringbuf_t *target = svn_string_dup (path, pool);
               svn_path_add_component 
                 (target,
                  svn_string_ncreate ((char *) key, keylen, pool),
@@ -1187,7 +1187,7 @@ svn_wc__cleanup (svn_string_t *path,
       if ((entry->kind == svn_node_dir) && (! is_this_dir))
         {
           /* Recurse */
-          svn_string_t *subdir = svn_string_dup (path, pool);
+          svn_stringbuf_t *subdir = svn_string_dup (path, pool);
           svn_path_add_component (subdir,
                                   svn_string_create ((char *) key, pool),
                                   svn_path_local_style);
@@ -1220,7 +1220,7 @@ svn_wc__cleanup (svn_string_t *path,
       /* Is there a log?  If so, run it and then remove it. */
       {
         enum svn_node_kind kind;
-        svn_string_t *log_path = svn_wc__adm_path (path, 0, pool,
+        svn_stringbuf_t *log_path = svn_wc__adm_path (path, 0, pool,
                                                    SVN_WC__ADM_LOG, NULL);
         
         err = svn_io_check_path (log_path, &kind, pool);

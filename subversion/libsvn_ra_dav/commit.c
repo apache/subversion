@@ -55,7 +55,7 @@ typedef struct
   const char *vsn_url;
   const char *wr_url;
 
-  svn_string_t *local_path;
+  svn_stringbuf_t *local_path;
 } resource_t;
 
 typedef struct
@@ -71,14 +71,14 @@ typedef struct
   apr_array_header_t *deleted;
 
   /* name of local prop to hold the version resource's URL */
-  svn_string_t *vsn_url_name;
+  svn_stringbuf_t *vsn_url_name;
 
   svn_ra_get_wc_prop_func_t get_func;
   svn_ra_set_wc_prop_func_t set_func;
   svn_ra_close_commit_func_t close_func;
   void *close_baton;
 
-  svn_string_t *log_msg;
+  svn_stringbuf_t *log_msg;
 
 } commit_ctx_t;
 
@@ -93,7 +93,7 @@ typedef struct
 {
   apr_pool_t *pool;
   apr_file_t *tmpfile;
-  svn_string_t *fname;
+  svn_stringbuf_t *fname;
   resource_baton_t *file;
 } put_baton_t;
 
@@ -156,7 +156,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc, resource_t *rsrc)
 
   if (cc->get_func != NULL)
     {
-      svn_string_t *vsn_url_value;
+      svn_stringbuf_t *vsn_url_value;
 
       SVN_ERR( (*cc->get_func)(cc->close_baton, rsrc->local_path,
                                cc->vsn_url_name, &vsn_url_value) );
@@ -187,7 +187,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc, resource_t *rsrc)
 }
 
 static svn_error_t * get_activity_url(commit_ctx_t *cc,
-                                      svn_string_t **activity_url)
+                                      svn_stringbuf_t **activity_url)
 {
 
   if (cc->get_func != NULL)
@@ -196,9 +196,9 @@ static svn_error_t * get_activity_url(commit_ctx_t *cc,
          property store. */
 
       /* ### damn, this is annoying to have to create strings */
-      svn_string_t * propname = svn_string_create(SVN_RA_DAV__LP_ACTIVITY_URL,
+      svn_stringbuf_t * propname = svn_string_create(SVN_RA_DAV__LP_ACTIVITY_URL,
                                                   cc->ras->pool);
-      svn_string_t * path = svn_string_create(".", cc->ras->pool);
+      svn_stringbuf_t * path = svn_string_create(".", cc->ras->pool);
 
       /* get the URL where we should create activities */
       SVN_ERR( (*cc->get_func)(cc->close_baton, path, propname,
@@ -224,10 +224,10 @@ static svn_error_t * get_activity_url(commit_ctx_t *cc,
 
 static svn_error_t * create_activity(commit_ctx_t *cc)
 {
-  svn_string_t * activity_url;
+  svn_stringbuf_t * activity_url;
   apr_uuid_t uuid;
   char uuid_buf[APR_UUID_FORMATTED_LENGTH];
-  svn_string_t uuid_str = { uuid_buf, sizeof(uuid_buf), 0, NULL };
+  svn_stringbuf_t uuid_str = { uuid_buf, sizeof(uuid_buf), 0, NULL };
   int code;
 
   /* get the URL where we'll create activities */
@@ -280,7 +280,7 @@ static svn_error_t * add_child(resource_t **child,
     }
   else
     {
-      svn_string_t *vsn_url_value;
+      svn_stringbuf_t *vsn_url_value;
 
       /* NOTE: we cannot use get_version_url() here. If we don't have the
          right version url, then we certainly can't use the "head" (which
@@ -392,8 +392,8 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
 
 static void record_prop_change(apr_pool_t *pool,
                                apr_hash_t **prop_changes,
-                               const svn_string_t *name,
-                               const svn_string_t *value)
+                               const svn_stringbuf_t *name,
+                               const svn_stringbuf_t *value)
 {
   if (*prop_changes == NULL)
     *prop_changes = apr_hash_make(pool);
@@ -458,7 +458,7 @@ static svn_error_t * commit_replace_root(void *edit_baton,
   return NULL;
 }
 
-static svn_error_t * commit_delete_entry(svn_string_t *name,
+static svn_error_t * commit_delete_entry(svn_stringbuf_t *name,
                                          void *parent_baton)
 {
   resource_baton_t *parent = parent_baton;
@@ -495,9 +495,9 @@ static svn_error_t * commit_delete_entry(svn_string_t *name,
   return NULL;
 }
 
-static svn_error_t * commit_add_dir(svn_string_t *name,
+static svn_error_t * commit_add_dir(svn_stringbuf_t *name,
                                     void *parent_baton,
-                                    svn_string_t *copyfrom_path,
+                                    svn_stringbuf_t *copyfrom_path,
                                     svn_revnum_t copyfrom_revision,
                                     void **child_baton)
 {
@@ -529,7 +529,7 @@ static svn_error_t * commit_add_dir(svn_string_t *name,
   return NULL;
 }
 
-static svn_error_t * commit_rep_dir(svn_string_t *name,
+static svn_error_t * commit_rep_dir(svn_stringbuf_t *name,
                                     void *parent_baton,
                                     svn_revnum_t base_revision,
                                     void **child_baton)
@@ -556,8 +556,8 @@ static svn_error_t * commit_rep_dir(svn_string_t *name,
 }
 
 static svn_error_t * commit_change_dir_prop(void *dir_baton,
-                                            svn_string_t *name,
-                                            svn_string_t *value)
+                                            svn_stringbuf_t *name,
+                                            svn_stringbuf_t *value)
 {
   resource_baton_t *dir = dir_baton;
 
@@ -581,9 +581,9 @@ static svn_error_t * commit_close_dir(void *dir_baton)
   return NULL;
 }
 
-static svn_error_t * commit_add_file(svn_string_t *name,
+static svn_error_t * commit_add_file(svn_stringbuf_t *name,
                                      void *parent_baton,
-                                     svn_string_t *copyfrom_path,
+                                     svn_stringbuf_t *copyfrom_path,
                                      svn_revnum_t copyfrom_revision,
                                      void **file_baton)
 {
@@ -621,7 +621,7 @@ static svn_error_t * commit_add_file(svn_string_t *name,
   return NULL;
 }
 
-static svn_error_t * commit_rep_file(svn_string_t *name,
+static svn_error_t * commit_rep_file(svn_stringbuf_t *name,
                                      void *parent_baton,
                                      svn_revnum_t base_revision,
                                      void **file_baton)
@@ -736,7 +736,7 @@ static svn_error_t * commit_apply_txdelta(void *file_baton,
   resource_baton_t *file = file_baton;
   apr_pool_t *subpool;
   put_baton_t *baton;
-  svn_string_t *path;
+  svn_stringbuf_t *path;
   svn_stream_t *stream;
 
   /* construct a writable stream that gathers its contents into a buffer */
@@ -749,7 +749,7 @@ static svn_error_t * commit_apply_txdelta(void *file_baton,
   /* ### oh, hell. Neon's request body support is either text (a C string),
      ### or a FILE*. since we are getting binary data, we must use a FILE*
      ### for now. isn't that special? */
-  /* ### fucking svn_string_t */
+  /* ### fucking svn_stringbuf_t */
   path = svn_string_create(".svn_commit", subpool);
   SVN_ERR( svn_io_open_unique_file(&baton->tmpfile, &baton->fname, path,
                                    ".ra_dav", subpool) );
@@ -769,8 +769,8 @@ static svn_error_t * commit_apply_txdelta(void *file_baton,
 
 static svn_error_t * commit_change_file_prop(
   void *file_baton,
-  svn_string_t *name,
-  svn_string_t *value)
+  svn_stringbuf_t *name,
+  svn_stringbuf_t *value)
 {
   resource_baton_t *file = file_baton;
 
@@ -817,7 +817,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   void *session_baton,
   const svn_delta_edit_fns_t **editor,
   void **edit_baton,
-  svn_string_t *log_msg,
+  svn_stringbuf_t *log_msg,
   svn_ra_get_wc_prop_func_t get_func,
   svn_ra_set_wc_prop_func_t set_func,
   svn_ra_close_commit_func_t close_func,

@@ -19,9 +19,9 @@
 
 
 svn_error_t *
-svn_fs__get_prop (svn_string_t **value_p,
+svn_fs__get_prop (svn_stringbuf_t **value_p,
                   skel_t *proplist,
-                  svn_string_t *name,
+                  svn_stringbuf_t *name,
                   apr_pool_t *pool)
 {
   skel_t *prop;
@@ -86,8 +86,8 @@ svn_fs__make_prop_hash (apr_hash_t **prop_hash,
 
 svn_error_t *
 svn_fs__set_prop (skel_t *proplist,
-                  svn_string_t *name,
-                  svn_string_t *value,
+                  svn_stringbuf_t *name,
+                  svn_stringbuf_t *value,
                   apr_pool_t *pool)
 {
   skel_t *prop;

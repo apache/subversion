@@ -58,8 +58,8 @@ typedef struct {
   /* the current resource */
   dav_resource res;             /* wres.resource refers here */
   dav_resource_private info;    /* the info in res */
-  svn_string_t *uri;            /* the uri within res */
-  svn_string_t *repos_path;     /* the repos_path within res */
+  svn_stringbuf_t *uri;            /* the uri within res */
+  svn_stringbuf_t *repos_path;     /* the repos_path within res */
 
 } dav_svn_walker_context;
 
@@ -751,7 +751,7 @@ static dav_resource *dav_svn_create_private_resource(
     enum dav_svn_private_restype restype)
 {
   dav_resource_combined *comb;
-  svn_string_t *path;
+  svn_stringbuf_t *path;
   const struct special_defn *defn;
 
   for (defn = special_subdirs; defn->name != NULL; ++defn)
@@ -958,7 +958,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 static dav_error * dav_svn_get_parent_resource(const dav_resource *resource,
                                                dav_resource **parent_resource)
 {
-  svn_string_t *path = resource->info->uri_path;
+  svn_stringbuf_t *path = resource->info->uri_path;
 
   /* the root of the repository has no parent */
   if (path->len == 1 && *path->data == '/')
@@ -1195,7 +1195,7 @@ static dav_error * dav_svn_write_stream(dav_stream *stream, const void *buf,
     {
       svn_txdelta_window_t window = { 0 };
       svn_txdelta_op_t op;
-      svn_string_t data = { (char *)buf, bufsize, bufsize, NULL };
+      svn_stringbuf_t data = { (char *)buf, bufsize, bufsize, NULL };
 
       op.action_code = svn_txdelta_new;
       op.offset = 0;
@@ -1232,7 +1232,7 @@ const char * dav_svn_getetag(const dav_resource *resource)
 {
   svn_error_t *serr;
   svn_fs_id_t *id;      /* ### want const here */
-  svn_string_t *idstr;
+  svn_stringbuf_t *idstr;
 
   /* if the resource doesn't exist, isn't a simple REGULAR or VERSION
      resource, or it is a Baseline, then it has no etag. */
@@ -1606,7 +1606,7 @@ dav_resource *dav_svn_create_working_resource(const dav_resource *base,
                                               const char *txn_name)
 {
   dav_resource_combined *comb;
-  svn_string_t *path;
+  svn_stringbuf_t *path;
 
   if (base->baselined)
     path = svn_string_createf(base->pool, "/%s/wbl/%s/%ld",

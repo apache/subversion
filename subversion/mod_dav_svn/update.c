@@ -92,7 +92,7 @@ static void send_vsn_url(item_baton_t *baton)
 {
   svn_error_t *serr;
   svn_fs_id_t *id;
-  svn_string_t *stable_id;
+  svn_stringbuf_t *stable_id;
   const char *href;
 
   /* note: baton->path has a leading "/" */
@@ -117,7 +117,7 @@ static void send_vsn_url(item_baton_t *baton)
 static void add_helper(svn_boolean_t is_dir,
 		       const char *name,
 		       item_baton_t *parent,
-		       svn_string_t *copyfrom_path,
+		       svn_stringbuf_t *copyfrom_path,
 		       svn_revnum_t copyfrom_revision,
 		       void **child_baton)
 {
@@ -215,7 +215,7 @@ static svn_error_t * upd_replace_root(void *edit_baton,
   return NULL;
 }
 
-static svn_error_t * upd_delete_entry(svn_string_t *name,
+static svn_error_t * upd_delete_entry(svn_stringbuf_t *name,
 				      void *parent_baton)
 {
   item_baton_t *parent = parent_baton;
@@ -227,9 +227,9 @@ static svn_error_t * upd_delete_entry(svn_string_t *name,
   return NULL;
 }
 
-static svn_error_t * upd_add_directory(svn_string_t *name,
+static svn_error_t * upd_add_directory(svn_stringbuf_t *name,
 				       void *parent_baton,
-				       svn_string_t *copyfrom_path,
+				       svn_stringbuf_t *copyfrom_path,
 				       svn_revnum_t copyfrom_revision,
 				       void **child_baton)
 {
@@ -239,7 +239,7 @@ static svn_error_t * upd_add_directory(svn_string_t *name,
   return NULL;
 }
 
-static svn_error_t * upd_replace_directory(svn_string_t *name,
+static svn_error_t * upd_replace_directory(svn_stringbuf_t *name,
 					   void *parent_baton,
 					   svn_revnum_t base_revision,
 					   void **child_baton)
@@ -250,8 +250,8 @@ static svn_error_t * upd_replace_directory(svn_string_t *name,
 }
 
 static svn_error_t * upd_change_xxx_prop(void *baton,
-					 svn_string_t *name,
-					 svn_string_t *value)
+					 svn_stringbuf_t *name,
+					 svn_stringbuf_t *value)
 {
   item_baton_t *b = baton;
 
@@ -270,9 +270,9 @@ static svn_error_t * upd_close_directory(void *dir_baton)
   return NULL;
 }
 
-static svn_error_t * upd_add_file(svn_string_t *name,
+static svn_error_t * upd_add_file(svn_stringbuf_t *name,
 				  void *parent_baton,
-				  svn_string_t *copyfrom_path,
+				  svn_stringbuf_t *copyfrom_path,
 				  svn_revnum_t copyfrom_revision,
 				  void **file_baton)
 {
@@ -282,7 +282,7 @@ static svn_error_t * upd_add_file(svn_string_t *name,
   return NULL;
 }
 
-static svn_error_t * upd_replace_file(svn_string_t *name,
+static svn_error_t * upd_replace_file(svn_stringbuf_t *name,
 				      void *parent_baton,
 				      svn_revnum_t base_revision,
 				      void **file_baton)
@@ -334,11 +334,11 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   apr_xml_elem *child;
   void *rbaton;
   update_ctx_t uc = { 0 };
-  svn_string_t *fs_base;
+  svn_stringbuf_t *fs_base;
   svn_revnum_t revnum = SVN_INVALID_REVNUM;
   int ns;
   svn_error_t *serr;
-  svn_string_t *pathstr;
+  svn_stringbuf_t *pathstr;
 
   if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
     {

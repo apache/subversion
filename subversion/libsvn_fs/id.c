@@ -230,11 +230,11 @@ svn_fs_parse_id (const char *data,
 }
 
 
-svn_string_t *
+svn_stringbuf_t *
 svn_fs_unparse_id (const svn_fs_id_t *id,
                    apr_pool_t *pool)
 {
-  svn_string_t *unparsed = svn_string_ncreate (0, 0, pool);
+  svn_stringbuf_t *unparsed = svn_string_ncreate (0, 0, pool);
   int i;
 
   for (i = 0; id[i] != -1; i++)

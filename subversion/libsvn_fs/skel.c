@@ -256,14 +256,14 @@ explicit_atom (char *data,
 /* Unparsing skeletons.  */
 
 static apr_size_t estimate_unparsed_size (skel_t *);
-static svn_string_t *unparse (skel_t *, svn_string_t *,
+static svn_stringbuf_t *unparse (skel_t *, svn_stringbuf_t *,
                               apr_pool_t *);
 
 
-svn_string_t *
+svn_stringbuf_t *
 svn_fs__unparse_skel (skel_t *skel, apr_pool_t *pool)
 {
-  svn_string_t *str;
+  svn_stringbuf_t *str;
   
   /* Allocate a string to hold the data.  */
   str = apr_palloc (pool, sizeof (*str));
@@ -342,8 +342,8 @@ use_implicit (skel_t *skel)
 
 /* Append the concrete representation of SKEL to the string STR.
    Grow S with new space from POOL as necessary.  */
-static svn_string_t *
-unparse (skel_t *skel, svn_string_t *str, apr_pool_t *pool)
+static svn_stringbuf_t *
+unparse (skel_t *skel, svn_stringbuf_t *str, apr_pool_t *pool)
 {
   if (skel->is_atom)
     {
@@ -498,7 +498,7 @@ svn_fs__matches_atom (skel_t *skel, const char *str)
 
 
 int
-svn_fs__atom_matches_string (skel_t *skel, svn_string_t *str)
+svn_fs__atom_matches_string (skel_t *skel, svn_stringbuf_t *str)
 {
   if (skel
       && skel->is_atom)

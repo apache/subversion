@@ -68,8 +68,8 @@ static void dav_svn_db_close(dav_db *db)
 static dav_error *dav_svn_db_fetch(dav_db *db, dav_datum key,
                                    dav_datum *pvalue)
 {
-  svn_string_t propname = { key.dptr, key.dsize, 0, NULL };
-  svn_string_t *propval;
+  svn_stringbuf_t propname = { key.dptr, key.dsize, 0, NULL };
+  svn_stringbuf_t *propval;
   svn_error_t *serr;
 
   serr = svn_fs_node_prop(&propval, db->resource->info->root.root,
@@ -94,8 +94,8 @@ static dav_error *dav_svn_db_fetch(dav_db *db, dav_datum key,
 
 static dav_error *dav_svn_db_store(dav_db *db, dav_datum key, dav_datum value)
 {
-  svn_string_t propname = { key.dptr, key.dsize, 0, NULL };
-  svn_string_t propval = { value.dptr, value.dsize, 0, NULL };
+  svn_stringbuf_t propname = { key.dptr, key.dsize, 0, NULL };
+  svn_stringbuf_t propval = { value.dptr, value.dsize, 0, NULL };
   svn_error_t *serr;
 
   /* ### hope node is open, and it is mutable */
@@ -115,7 +115,7 @@ static dav_error *dav_svn_db_store(dav_db *db, dav_datum key, dav_datum value)
 
 static dav_error *dav_svn_db_remove(dav_db *db, dav_datum key)
 {
-  svn_string_t propname = { key.dptr, key.dsize, 0, NULL };
+  svn_stringbuf_t propname = { key.dptr, key.dsize, 0, NULL };
   svn_error_t *serr;
 
   /* ### hope node is open, and it is mutable */
@@ -135,8 +135,8 @@ static dav_error *dav_svn_db_remove(dav_db *db, dav_datum key)
 
 static int dav_svn_db_exists(dav_db *db, dav_datum key)
 {
-  svn_string_t propname = { key.dptr, key.dsize, 0, NULL };
-  svn_string_t *propval;
+  svn_stringbuf_t propname = { key.dptr, key.dsize, 0, NULL };
+  svn_stringbuf_t *propval;
   svn_error_t *serr;
 
   serr = svn_fs_node_prop(&propval, db->resource->info->root.root,

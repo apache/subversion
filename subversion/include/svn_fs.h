@@ -298,7 +298,7 @@ svn_fs_id_t *svn_fs_parse_id (const char *data, apr_size_t len,
 /* Return a Subversion string containing the unparsed form of the node
    or node revision id ID.  Allocate the string containing the
    unparsed form in POOL.  */
-svn_string_t *svn_fs_unparse_id (const svn_fs_id_t *id, apr_pool_t *pool);
+svn_stringbuf_t *svn_fs_unparse_id (const svn_fs_id_t *id, apr_pool_t *pool);
 
 
 /* Transactions.  */
@@ -475,15 +475,15 @@ svn_error_t *svn_fs_list_transactions (char ***names_p,
 /* Set *VALUE_P to the value of the property named PROPNAME on
    transaction TXN.  If TXN has no property by that name, set *VALUE_P
    to zero.  Allocate the result in POOL.  */
-svn_error_t *svn_fs_txn_prop (svn_string_t **value_p,
+svn_error_t *svn_fs_txn_prop (svn_stringbuf_t **value_p,
                               svn_fs_txn_t *txn,
-                              svn_string_t *propname,
+                              svn_stringbuf_t *propname,
                               apr_pool_t *pool);
 
 
 /* Set *TABLE_P to the entire property list of transaction TXN in
    filesystem FS, as an APR hash table allocated in POOL.  The
-   resulting table maps property names to pointers to svn_string_t
+   resulting table maps property names to pointers to svn_stringbuf_t
    objects containing the property value.  */
 svn_error_t *svn_fs_txn_proplist (apr_hash_t **table_p,
                                   svn_fs_txn_t *txn,
@@ -496,8 +496,8 @@ svn_error_t *svn_fs_txn_proplist (apr_hash_t **table_p,
    removed altogether.  Do any necessary temporary allocation in
    POOL. */
 svn_error_t *svn_fs_change_txn_prop (svn_fs_txn_t *txn,
-                                     svn_string_t *name,
-                                     svn_string_t *value,
+                                     svn_stringbuf_t *name,
+                                     svn_stringbuf_t *value,
                                      apr_pool_t *pool);
 
 
@@ -622,16 +622,16 @@ svn_error_t *svn_fs_node_id (svn_fs_id_t **id_p,
 /* Set *VALUE_P to the value of the property named PROPNAME of PATH in
    ROOT.  If the node has no property by that name, set *VALUE_P to
    zero.  Allocate the result in POOL.  */
-svn_error_t *svn_fs_node_prop (svn_string_t **value_p,
+svn_error_t *svn_fs_node_prop (svn_stringbuf_t **value_p,
                                svn_fs_root_t *root,
                                const char *path,
-                               svn_string_t *propname,
+                               svn_stringbuf_t *propname,
                                apr_pool_t *pool);
    
 
 /* Set *TABLE_P to the entire property list of PATH in ROOT, as an APR
    hash table allocated in POOL.  The resulting table maps property
-   names to pointers to svn_string_t objects containing the property
+   names to pointers to svn_stringbuf_t objects containing the property
    value.  */
 svn_error_t *svn_fs_node_proplist (apr_hash_t **table_p,
                                    svn_fs_root_t *root,
@@ -648,8 +648,8 @@ svn_error_t *svn_fs_node_proplist (apr_hash_t **table_p,
    Do any necessary temporary allocation in POOL.  */
 svn_error_t *svn_fs_change_node_prop (svn_fs_root_t *root,
                                       const char *path,
-                                      svn_string_t *name,
-                                      svn_string_t *value,
+                                      svn_stringbuf_t *name,
+                                      svn_stringbuf_t *value,
                                       apr_pool_t *pool);
 
 
@@ -876,16 +876,16 @@ svn_error_t *svn_fs_youngest_rev (svn_revnum_t *youngest_p,
 /* Set *VALUE_P to the value of the property named PROPNAME on
    revision REV in the filesystem FS.  If REV has no property by that
    name, set *VALUE_P to zero.  Allocate the result in POOL.  */
-svn_error_t *svn_fs_revision_prop (svn_string_t **value_p,
+svn_error_t *svn_fs_revision_prop (svn_stringbuf_t **value_p,
                                    svn_fs_t *fs,
                                    svn_revnum_t rev,
-                                   svn_string_t *propname,
+                                   svn_stringbuf_t *propname,
                                    apr_pool_t *pool);
 
 
 /* Set *TABLE_P to the entire property list of revision REV in
    filesystem FS, as an APR hash table allocated in POOL.  The
-   resulting table maps property names to pointers to svn_string_t
+   resulting table maps property names to pointers to svn_stringbuf_t
    objects containing the property value.  */
 svn_error_t *svn_fs_revision_proplist (apr_hash_t **table_p,
                                        svn_fs_t *fs,
@@ -908,8 +908,8 @@ svn_error_t *svn_fs_revision_proplist (apr_hash_t **table_p,
    Do any necessary temporary allocation in POOL.  */
 svn_error_t *svn_fs_change_rev_prop (svn_fs_t *fs,
                                      svn_revnum_t rev,
-                                     svn_string_t *name,
-                                     svn_string_t *value,
+                                     svn_stringbuf_t *name,
+                                     svn_stringbuf_t *value,
                                      apr_pool_t *pool);
 
 

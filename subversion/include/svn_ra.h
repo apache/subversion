@@ -35,16 +35,16 @@ extern "C" {
 /* A function type which allows the RA layer to fetch WC properties
    during a commit.  */
 typedef svn_error_t *(*svn_ra_get_wc_prop_func_t) (void *close_baton,
-                                                   svn_string_t *path,
-                                                   svn_string_t *name,
-                                                   svn_string_t **value);
+                                                   svn_stringbuf_t *path,
+                                                   svn_stringbuf_t *name,
+                                                   svn_stringbuf_t **value);
 
 /* A function type which allows the RA layer to store WC properties
    after a commit.  */
 typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *close_baton,
-                                                   svn_string_t *path,
-                                                   svn_string_t *name,
-                                                   svn_string_t *value);
+                                                   svn_stringbuf_t *path,
+                                                   svn_stringbuf_t *name,
+                                                   svn_stringbuf_t *value);
 
 
 /* A function type for "cleaning up" after a commit.  The client layer
@@ -52,7 +52,7 @@ typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *close_baton,
    each PATH that was committed, allowing the client to bump revision
    numbers. */
 typedef svn_error_t *(*svn_ra_close_commit_func_t) (void *close_baton,
-                                                    svn_string_t *path,
+                                                    svn_stringbuf_t *path,
                                                     svn_revnum_t new_rev);
 
 
@@ -66,12 +66,12 @@ typedef struct svn_ra_reporter_t
      paths.  PATH is relative to the URL specified in open(), and must
      be given in `svn_path_url_style'. */
   svn_error_t *(*set_path) (void *report_baton,
-                            svn_string_t *path,
+                            svn_stringbuf_t *path,
                             svn_revnum_t revision);
 
   /* Describing a working copy PATH as missing. */
   svn_error_t *(*delete_path) (void *report_baton,
-                               svn_string_t *path);
+                               svn_stringbuf_t *path);
     
   /* WC calls this when the state report is finished; any directories
      or files not explicitly `set' above are assumed to be at the
@@ -105,7 +105,7 @@ typedef struct svn_ra_plugin_t
      returned and then used (opaquely) for all further interactions
      with the repository. */
   svn_error_t *(*open) (void **session_baton,
-                        svn_string_t *repository_URL,
+                        svn_stringbuf_t *repository_URL,
                         apr_pool_t *pool);
 
 
@@ -145,7 +145,7 @@ typedef struct svn_ra_plugin_t
   svn_error_t *(*get_commit_editor) (void *session_baton,
                                      const svn_delta_edit_fns_t **editor,
                                      void **edit_baton,
-                                     svn_string_t *log_msg,
+                                     svn_stringbuf_t *log_msg,
                                      svn_ra_get_wc_prop_func_t get_func,
                                      svn_ra_set_wc_prop_func_t set_func,
                                      svn_ra_close_commit_func_t close_func,
@@ -278,7 +278,7 @@ svn_error_t *svn_ra_get_ra_library (svn_ra_plugin_t **library,
 
 /* Return a *DESCRIPTIONS string (allocated in POOL) that is a textual
    list of all available RA libraries. */
-svn_error_t *svn_ra_print_ra_libraries (svn_string_t **descriptions,
+svn_error_t *svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
                                         void *ra_baton,
                                         apr_pool_t *pool);
 

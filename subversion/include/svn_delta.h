@@ -134,7 +134,7 @@ typedef struct svn_txdelta_window_t {
   svn_txdelta_op_t *ops;
 
   /* New data, for use by any `svn_delta_new' instructions.  */
-  svn_string_t *new_data;
+  svn_stringbuf_t *new_data;
 
   /* The sub-pool that this window is living in, needed for
      svn_txdelta_free_window() */
@@ -185,7 +185,7 @@ void svn_txdelta (svn_txdelta_stream_t **stream,
 
 
 /* Send the contents of STRING to window-handler HANDLER.  */
-svn_error_t *svn_txdelta_send_string (svn_string_t *string,
+svn_error_t *svn_txdelta_send_string (svn_stringbuf_t *string,
                                       svn_txdelta_window_handler_t handler,
                                       void *handler_baton,
                                       apr_pool_t *pool);
@@ -428,7 +428,7 @@ typedef struct svn_delta_edit_fns_t
    * If you're reading this comment long after 22 Dec 2000, then
    * apparently no one has thought of a better name, so it's probably
    * time to remove the comment. */
-  svn_error_t *(*delete_entry) (svn_string_t *name,
+  svn_error_t *(*delete_entry) (svn_stringbuf_t *name,
                                 void *parent_baton);
 
 
@@ -440,9 +440,9 @@ typedef struct svn_delta_edit_fns_t
      COPYFROM_PATH is non-NULL, this add has history (which is the
      copy case), and its most recent path-y alias was COPYFROM_PATH,
      which was at version COPYFROM_REVISION. */
-  svn_error_t *(*add_directory) (svn_string_t *name,
+  svn_error_t *(*add_directory) (svn_stringbuf_t *name,
                                  void *parent_baton,
-                                 svn_string_t *copyfrom_path,
+                                 svn_stringbuf_t *copyfrom_path,
                                  svn_revnum_t copyfrom_revision,
                                  void **child_baton);
 
@@ -451,7 +451,7 @@ typedef struct svn_delta_edit_fns_t
      that will be used as the PARENT_BATON for subsequent changes in
      this subdirectory.  BASE_REVISION is the current revision of the
      subdirectory. */
-  svn_error_t *(*replace_directory) (svn_string_t *name,
+  svn_error_t *(*replace_directory) (svn_stringbuf_t *name,
                                      void *parent_baton,
                                      svn_revnum_t base_revision,
                                      void **child_baton);
@@ -462,8 +462,8 @@ typedef struct svn_delta_edit_fns_t
      - VALUE is the new value of the property, or zero if the property
      should be removed altogether.  */
   svn_error_t *(*change_dir_prop) (void *dir_baton,
-                                   svn_string_t *name,
-                                   svn_string_t *value);
+                                   svn_stringbuf_t *name,
+                                   svn_stringbuf_t *value);
 
   /* We are done processing a subdirectory, whose baton is DIR_BATON
      (set by add_directory or replace_directory).  We won't be using
@@ -481,9 +481,9 @@ typedef struct svn_delta_edit_fns_t
      history (which is the copy case), and its most recent path-y
      alias was COPYFROM_PATH, which was at version
      COPYFROM_REVISION. */
-  svn_error_t *(*add_file) (svn_string_t *name,
+  svn_error_t *(*add_file) (svn_stringbuf_t *name,
                             void *parent_baton,
-                            svn_string_t *copy_path,
+                            svn_stringbuf_t *copy_path,
                             svn_revnum_t copy_revision,
                             void **file_baton);
 
@@ -492,7 +492,7 @@ typedef struct svn_delta_edit_fns_t
      whatever value it stores there will be passed through to
      apply_textdelta and/or apply_propdelta.  This file has a current
      revision of BASE_REVISION.  */
-  svn_error_t *(*replace_file) (svn_string_t *name,
+  svn_error_t *(*replace_file) (svn_stringbuf_t *name,
                                 void *parent_baton,
                                 svn_revnum_t base_revision,
                                 void **file_baton);
@@ -518,8 +518,8 @@ typedef struct svn_delta_edit_fns_t
      - VALUE is the new value of the property, or zero if the property
      should be removed altogether.  */
   svn_error_t *(*change_file_prop) (void *file_baton,
-                                    svn_string_t *name,
-                                    svn_string_t *value);
+                                    svn_stringbuf_t *name,
+                                    svn_stringbuf_t *value);
 
   /* We are done processing a file, whose baton is FILE_BATON (set by
      `add_file' or `replace_file').  We won't be using the baton any
@@ -612,12 +612,12 @@ svn_delta_get_xml_editor (svn_stream_t *output,
 
 /* A function type that can be used for bumping revision numbers. */
 typedef svn_error_t * (*svn_bump_func_t) (void *baton,
-                                          svn_string_t *path,
+                                          svn_stringbuf_t *path,
                                           svn_revnum_t new_rev);
 
 /* Return an *EDITOR (and *EDIT_BATON) which notices paths that are
    committed.  Each commited path is pushed onto ARRAY, allocated from
-   POOL.  ARRAY must be initialized to store (svn_string_t *) objects.
+   POOL.  ARRAY must be initialized to store (svn_stringbuf_t *) objects.
 
    The arguments {NEW_REV, BUMP_FUNC, BUMP_BATON} are an optional set
    of args;  if specified, then close_edit() will use them to bump
@@ -647,7 +647,7 @@ typedef struct svn_delta_xml_parser_t svn_delta_xml_parser_t;
 svn_error_t  *svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
                                          const svn_delta_edit_fns_t *editor,
                                          void *edit_baton,
-                                         svn_string_t *base_path, 
+                                         svn_stringbuf_t *base_path, 
                                          svn_revnum_t base_revision,
                                          apr_pool_t *pool);
 
@@ -676,7 +676,7 @@ svn_delta_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal,
 svn_error_t *svn_delta_xml_auto_parse (svn_stream_t *source,
                                        const svn_delta_edit_fns_t *editor,
                                        void *edit_baton,
-                                       svn_string_t *base_path,
+                                       svn_stringbuf_t *base_path,
                                        svn_revnum_t base_revision,
                                        apr_pool_t *pool);
 
@@ -690,8 +690,8 @@ svn_error_t *svn_delta_xml_auto_parse (svn_stream_t *source,
    properties, in which case we use an apr_array of the type below. */
 typedef struct svn_prop_t
 {
-  svn_string_t *name;
-  svn_string_t *value;
+  svn_stringbuf_t *name;
+  svn_stringbuf_t *value;
 } svn_prop_t;
 
 

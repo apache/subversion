@@ -44,7 +44,7 @@ svn_cl__delete (apr_getopt_t *os,
   if (targets->nelts)
     for (i = 0; i < targets->nelts; i++)
       {
-        svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
+        svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
         err = svn_client_delete (target, opt_state->force, pool);
         if (err)
           return err;
@@ -74,7 +74,7 @@ svn_cl__undelete (apr_getopt_t *os,
   if (targets->nelts)
     for (i = 0; i < targets->nelts; i++)
       {
-        svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
+        svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
         err = svn_client_undelete (target, recursive, pool);
         if (err)
           return err;

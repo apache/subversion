@@ -49,8 +49,8 @@ struct context {
    for the property, or zero if the property should be deleted.  */
 typedef svn_error_t *proplist_change_fn_t (struct context *c,
                                            void *object,
-                                           svn_string_t *name,
-                                           svn_string_t *value,
+                                           svn_stringbuf_t *name,
+                                           svn_stringbuf_t *value,
                                            apr_pool_t *pool);
 
 
@@ -61,28 +61,28 @@ typedef svn_error_t *proplist_change_fn_t (struct context *c,
 
 /* Retrieving the base revision from the path/revision hash.  */
 static svn_revnum_t get_revision_from_hash (apr_hash_t *hash, 
-                                            svn_string_t *path,
+                                            svn_stringbuf_t *path,
                                             apr_pool_t *pool);
 
 
 /* proplist_change_fn_t property changing functions.  */
 static svn_error_t *change_dir_prop (struct context *c, 
                                      void *object,
-                                     svn_string_t *name, 
-                                     svn_string_t *value,
+                                     svn_stringbuf_t *name, 
+                                     svn_stringbuf_t *value,
                                      apr_pool_t *pool);
 
 static svn_error_t *change_file_prop (struct context *c, 
                                       void *object,
-                                      svn_string_t *name, 
-                                      svn_string_t *value,
+                                      svn_stringbuf_t *name, 
+                                      svn_stringbuf_t *value,
                                       apr_pool_t *pool);
 
 
 /* Constructing deltas for properties of files and directories.  */
 static svn_error_t *delta_proplists (struct context *c,
-                                     svn_string_t *source_path,
-                                     svn_string_t *target_path,
+                                     svn_stringbuf_t *source_path,
+                                     svn_stringbuf_t *target_path,
                                      proplist_change_fn_t *change_fn,
                                      void *object,
                                      apr_pool_t *pool);
@@ -96,47 +96,47 @@ static svn_error_t *send_text_delta (struct context *c,
 
 static svn_error_t *delta_files (struct context *c, 
                                  void *file_baton,
-                                 svn_string_t *source_path,
-                                 svn_string_t *target_path,
+                                 svn_stringbuf_t *source_path,
+                                 svn_stringbuf_t *target_path,
                                  apr_pool_t *pool);
 
 
 /* Generic directory deltafication routines.  */
 static svn_error_t *delete (struct context *c, 
                             void *dir_baton, 
-                            svn_string_t *target_entry,
+                            svn_stringbuf_t *target_entry,
                             apr_pool_t *pool);
 
 static svn_error_t *add_file_or_dir (struct context *c, 
                                      void *dir_baton, 
-                                     svn_string_t *target_parent, 
-                                     svn_string_t *target_entry,
-                                     svn_string_t *source_parent, 
-                                     svn_string_t *source_entry,
+                                     svn_stringbuf_t *target_parent, 
+                                     svn_stringbuf_t *target_entry,
+                                     svn_stringbuf_t *source_parent, 
+                                     svn_stringbuf_t *source_entry,
                                      apr_pool_t *pool);
 
 static svn_error_t *replace_file_or_dir (struct context *c, 
                                          void *dir_baton,
-                                         svn_string_t *target_parent,
-                                         svn_string_t *target_entry,
-                                         svn_string_t *source_parent, 
-                                         svn_string_t *source_entry,
+                                         svn_stringbuf_t *target_parent,
+                                         svn_stringbuf_t *target_entry,
+                                         svn_stringbuf_t *source_parent, 
+                                         svn_stringbuf_t *source_entry,
                                          apr_pool_t *pool);
 
 #if 0 /* comment out until used, to avoid compiler warning */
 static svn_error_t *find_nearest_entry (svn_fs_dirent_t **s_entry,
                                         int *distance,
                                         struct context *c, 
-                                        svn_string_t *source_parent, 
-                                        svn_string_t *target_parent,
+                                        svn_stringbuf_t *source_parent, 
+                                        svn_stringbuf_t *target_parent,
                                         svn_fs_dirent_t *t_entry,
                                         apr_pool_t *pool);
 #endif /* 0 */
 
 static svn_error_t *delta_dirs (struct context *c, 
                                 void *dir_baton,
-                                svn_string_t *source_path, 
-                                svn_string_t *target_path,
+                                svn_stringbuf_t *source_path, 
+                                svn_stringbuf_t *target_path,
                                 apr_pool_t *pool);
 
 
@@ -145,8 +145,8 @@ static svn_error_t *delta_dirs (struct context *c,
 svn_error_t *
 svn_repos_update (svn_fs_root_t *target_root,
                   svn_fs_root_t *source_root,
-                  svn_string_t *parent_dir,
-                  svn_string_t *entry,
+                  svn_stringbuf_t *parent_dir,
+                  svn_stringbuf_t *entry,
                   apr_hash_t *source_rev_diffs,
                   const svn_delta_edit_fns_t *editor,
                   void *edit_baton,
@@ -156,7 +156,7 @@ svn_repos_update (svn_fs_root_t *target_root,
   struct context c;
   int source_parent_is_dir;
   int target_parent_is_dir;
-  svn_string_t *full_path;
+  svn_stringbuf_t *full_path;
   svn_fs_id_t *source_id;
   svn_fs_id_t *target_id;
   int distance;
@@ -289,10 +289,10 @@ svn_repos_update (svn_fs_root_t *target_root,
 
 svn_error_t *
 svn_repos_dir_delta (svn_fs_root_t *source_root,
-                     svn_string_t *source_path,
+                     svn_stringbuf_t *source_path,
                      apr_hash_t *source_rev_diffs,
                      svn_fs_root_t *target_root,
-                     svn_string_t *target_path,
+                     svn_stringbuf_t *target_path,
                      const svn_delta_edit_fns_t *editor,
                      void *edit_baton,
                      apr_pool_t *pool)
@@ -390,11 +390,11 @@ svn_repos_dir_delta (svn_fs_root_t *source_root,
    numbers as values) for the revision associated with the given PATH.
    Perform all necessary memory allocations in POOL.  */
 static svn_revnum_t
-get_revision_from_hash (apr_hash_t *hash, svn_string_t *path,
+get_revision_from_hash (apr_hash_t *hash, svn_stringbuf_t *path,
                         apr_pool_t *pool)
 {
   void *val;
-  svn_string_t *path_copy;
+  svn_stringbuf_t *path_copy;
   svn_revnum_t revision = SVN_INVALID_REVNUM;
 
   if (! hash)
@@ -439,7 +439,7 @@ get_revision_from_hash (apr_hash_t *hash, svn_string_t *path,
    function. */
 static svn_error_t *
 change_dir_prop (struct context *c, void *object,
-                 svn_string_t *name, svn_string_t *value, apr_pool_t *pool)
+                 svn_stringbuf_t *name, svn_stringbuf_t *value, apr_pool_t *pool)
 {
   return c->editor->change_dir_prop (object, name, value);
 }
@@ -450,7 +450,7 @@ change_dir_prop (struct context *c, void *object,
    function. */
 static svn_error_t *
 change_file_prop (struct context *c, void *object,
-                  svn_string_t *name, svn_string_t *value, apr_pool_t *pool)
+                  svn_stringbuf_t *name, svn_stringbuf_t *value, apr_pool_t *pool)
 {
   return c->editor->change_file_prop (object, name, value);
 }
@@ -468,8 +468,8 @@ change_file_prop (struct context *c, void *object,
    CHANGE_FN. */
 static svn_error_t *
 delta_proplists (struct context *c,
-                 svn_string_t *source_path,
-                 svn_string_t *target_path,
+                 svn_stringbuf_t *source_path,
+                 svn_stringbuf_t *target_path,
                  proplist_change_fn_t *change_fn,
                  void *object,
                  apr_pool_t *pool)
@@ -496,7 +496,7 @@ delta_proplists (struct context *c,
 
   for (hi = apr_hash_first (t_props); hi; hi = apr_hash_next (hi))
     {
-      svn_string_t *s_value, *t_value, *t_name;
+      svn_stringbuf_t *s_value, *t_value, *t_name;
       const void *key;
       void *val;
       apr_size_t klen;
@@ -533,7 +533,7 @@ delta_proplists (struct context *c,
     {
       for (hi = apr_hash_first (s_props); hi; hi = apr_hash_next (hi))
         {
-          svn_string_t *s_value, *s_name;
+          svn_stringbuf_t *s_value, *s_name;
           const void *key;
           void *val;
           apr_size_t klen;
@@ -593,8 +593,8 @@ send_text_delta (struct context *c,
    properties from those in SOURCE_PATH to those in TARGET_PATH. */
 static svn_error_t *
 delta_files (struct context *c, void *file_baton,
-             svn_string_t *source_path,
-             svn_string_t *target_path,
+             svn_stringbuf_t *source_path,
+             svn_stringbuf_t *target_path,
              apr_pool_t *pool)
 {
   svn_txdelta_stream_t *delta_stream;
@@ -645,7 +645,7 @@ delta_files (struct context *c, void *file_baton,
 static svn_error_t *
 delete (struct context *c, 
         void *dir_baton, 
-        svn_string_t *target_entry,
+        svn_stringbuf_t *target_entry,
         apr_pool_t *pool)
 {
   return c->editor->delete_entry (target_entry, dir_baton);
@@ -658,15 +658,15 @@ delete (struct context *c,
    calls.  Pass DIR_BATON through to editor functions that require it.  */
 static svn_error_t *
 add_file_or_dir (struct context *c, void *dir_baton,
-                 svn_string_t *target_parent,
-                 svn_string_t *target_entry,
-                 svn_string_t *source_parent,
-                 svn_string_t *source_entry,
+                 svn_stringbuf_t *target_parent,
+                 svn_stringbuf_t *target_entry,
+                 svn_stringbuf_t *source_parent,
+                 svn_stringbuf_t *source_entry,
                  apr_pool_t *pool)
 {
   int is_dir;
-  svn_string_t *target_full_path = 0;
-  svn_string_t *source_full_path = 0;
+  svn_stringbuf_t *target_full_path = 0;
+  svn_stringbuf_t *source_full_path = 0;
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
 
   if (!target_parent || !target_entry)
@@ -733,15 +733,15 @@ add_file_or_dir (struct context *c, void *dir_baton,
 static svn_error_t *
 replace_file_or_dir (struct context *c, 
                      void *dir_baton,
-                     svn_string_t *target_parent, 
-                     svn_string_t *target_entry,
-                     svn_string_t *source_parent, 
-                     svn_string_t *source_entry,
+                     svn_stringbuf_t *target_parent, 
+                     svn_stringbuf_t *target_entry,
+                     svn_stringbuf_t *source_parent, 
+                     svn_stringbuf_t *source_entry,
                      apr_pool_t *pool)
 {
   int is_dir;
-  svn_string_t *source_full_path = 0;
-  svn_string_t *target_full_path = 0;
+  svn_stringbuf_t *source_full_path = 0;
+  svn_stringbuf_t *target_full_path = 0;
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
 
   if (!target_parent || !target_entry)
@@ -810,8 +810,8 @@ static svn_error_t *
 find_nearest_entry (svn_fs_dirent_t **s_entry,
                     int *distance,
                     struct context *c, 
-                    svn_string_t *source_parent, 
-                    svn_string_t *target_parent,
+                    svn_stringbuf_t *source_parent, 
+                    svn_stringbuf_t *target_parent,
                     svn_fs_dirent_t *t_entry,
                     apr_pool_t *pool)
 {
@@ -819,9 +819,9 @@ find_nearest_entry (svn_fs_dirent_t **s_entry,
   apr_hash_index_t *hi;
   int best_distance = -1;
   svn_fs_dirent_t *best_entry = NULL;
-  svn_string_t *source_full_path;
-  svn_string_t *target_full_path;
-  svn_string_t *target_entry;
+  svn_stringbuf_t *source_full_path;
+  svn_stringbuf_t *target_full_path;
+  svn_stringbuf_t *target_entry;
   int t_is_dir;
   apr_pool_t *subpool;
   
@@ -926,13 +926,13 @@ find_nearest_entry (svn_fs_dirent_t **s_entry,
 static svn_error_t *
 delta_dirs (struct context *c, 
             void *dir_baton,
-            svn_string_t *source_path, 
-            svn_string_t *target_path,
+            svn_stringbuf_t *source_path, 
+            svn_stringbuf_t *target_path,
             apr_pool_t *pool)
 {
   apr_hash_t *s_entries = 0, *t_entries = 0;
   apr_hash_index_t *hi;
-  svn_string_t *target_name = svn_string_create ("", pool);
+  svn_stringbuf_t *target_name = svn_string_create ("", pool);
   apr_pool_t *subpool;
 
   /* Compare the property lists.  */

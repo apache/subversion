@@ -46,7 +46,7 @@ static const char *timestamp_format =
 "%s %d %s %d %02d:%02d:%02d.%03d (day %03d, dst %d, gmt_off %06d)";
 
 
-svn_string_t *
+svn_stringbuf_t *
 svn_wc__time_to_string (apr_time_t t, apr_pool_t *pool)
 {
   char *t_cstr;
@@ -96,7 +96,7 @@ find_matching_string (char *str, const char strings[][4])
 
 
 apr_time_t
-svn_wc__string_to_time (svn_string_t *tstr)
+svn_wc__string_to_time (svn_stringbuf_t *tstr)
 {
   apr_exploded_time_t exploded_time;
   char wday[4], month[4];

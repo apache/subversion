@@ -143,11 +143,11 @@ extern "C" {
  */
 svn_error_t *svn_test_get_editor (const svn_delta_edit_fns_t **editor,
                                   void **edit_baton,
-                                  svn_string_t *editor_name,
+                                  svn_stringbuf_t *editor_name,
                                   svn_stream_t *out_stream,
                                   int indentation,
                                   svn_boolean_t verbose,
-                                  svn_string_t *path,
+                                  svn_stringbuf_t *path,
                                   enum svn_path_style style,
                                   apr_pool_t *pool);
      

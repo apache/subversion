@@ -86,9 +86,9 @@ svn_cl__checkout (apr_getopt_t *os,
    */
   for (i = 0; i < opt_state->args->nelts; i++)
     {
-      svn_string_t *local_dir;
-      svn_string_t *repos_url
-        = ((svn_string_t **) (opt_state->args->elts))[0];
+      svn_stringbuf_t *local_dir;
+      svn_stringbuf_t *repos_url
+        = ((svn_stringbuf_t **) (opt_state->args->elts))[0];
 
       /* Ensure that we have a default dir to checkout into. */
       if (! opt_state->target)

@@ -106,7 +106,7 @@ static svn_error_t *send_response(mr_baton *baton, svn_boolean_t is_dir)
   const char *href;
   const char *rt;
   svn_fs_id_t *id;
-  svn_string_t *stable_id;
+  svn_stringbuf_t *stable_id;
   const char *vsn_url;
   apr_status_t status;
 
@@ -177,7 +177,7 @@ static svn_error_t *mr_replace_root(void *edit_baton,
   return NULL;
 }
 
-static svn_error_t *mr_delete_entry(svn_string_t *name,
+static svn_error_t *mr_delete_entry(svn_stringbuf_t *name,
                                     void *parent_baton)
 {
   mr_baton *parent = parent_baton;
@@ -189,9 +189,9 @@ static svn_error_t *mr_delete_entry(svn_string_t *name,
   return NULL;
 }
 
-static svn_error_t *mr_add_directory(svn_string_t *name,
+static svn_error_t *mr_add_directory(svn_stringbuf_t *name,
                                      void *parent_baton,
-                                     svn_string_t *copyfrom_path,
+                                     svn_stringbuf_t *copyfrom_path,
                                      svn_revnum_t copyfrom_revision,
                                      void **child_baton)
 {
@@ -212,7 +212,7 @@ static svn_error_t *mr_add_directory(svn_string_t *name,
   return NULL;
 }
 
-static svn_error_t *mr_replace_directory(svn_string_t *name,
+static svn_error_t *mr_replace_directory(svn_stringbuf_t *name,
                                          void *parent_baton,
                                          svn_revnum_t base_revision,
                                          void **child_baton)
@@ -228,8 +228,8 @@ static svn_error_t *mr_replace_directory(svn_string_t *name,
 }
 
 static svn_error_t *mr_change_dir_prop(void *dir_baton,
-                                       svn_string_t *name,
-                                       svn_string_t *value)
+                                       svn_stringbuf_t *name,
+                                       svn_stringbuf_t *value)
 {
   mr_baton *dir = dir_baton;
 
@@ -256,9 +256,9 @@ static svn_error_t *mr_close_directory(void *dir_baton)
   return NULL;
 }
 
-static svn_error_t *mr_add_file(svn_string_t *name,
+static svn_error_t *mr_add_file(svn_stringbuf_t *name,
                                 void *parent_baton,
-                                svn_string_t *copy_path,
+                                svn_stringbuf_t *copy_path,
                                 svn_revnum_t copy_revision,
                                 void **file_baton)
 {
@@ -275,7 +275,7 @@ static svn_error_t *mr_add_file(svn_string_t *name,
   return NULL;
 }
 
-static svn_error_t *mr_replace_file(svn_string_t *name,
+static svn_error_t *mr_replace_file(svn_stringbuf_t *name,
                                     void *parent_baton,
                                     svn_revnum_t base_revision,
                                     void **file_baton)
@@ -317,7 +317,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   svn_revnum_t *rev_ptr;
   svn_delta_edit_fns_t *editor;
   merge_response_ctx mrc = { 0 };
-  svn_string_t *rootpath;
+  svn_stringbuf_t *rootpath;
 
   serr = svn_fs_revision_root(&committed_root, repos->fs, new_rev, pool);
   if (serr != NULL)

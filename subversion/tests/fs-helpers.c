@@ -90,13 +90,13 @@ svn_test__create_fs_and_repos (svn_fs_t **fs_p,
 
 
 svn_error_t *
-svn_test__stream_to_string (svn_string_t **string,
+svn_test__stream_to_string (svn_stringbuf_t **string,
                             svn_stream_t *stream, 
                             apr_pool_t *pool)
 {
   char buf[50];
   apr_size_t len;
-  svn_string_t *str = svn_string_create ("", pool);
+  svn_stringbuf_t *str = svn_string_create ("", pool);
 
   do 
     {
@@ -122,7 +122,7 @@ svn_test__set_file_contents (svn_fs_root_t *root,
 {
   svn_txdelta_window_handler_t consumer_func;
   void *consumer_baton;
-  svn_string_t *wstring = svn_string_create (contents, pool);
+  svn_stringbuf_t *wstring = svn_string_create (contents, pool);
 
   SVN_ERR (svn_fs_apply_textdelta (&consumer_func, &consumer_baton,
                                    root, path, pool));
@@ -136,7 +136,7 @@ svn_test__set_file_contents (svn_fs_root_t *root,
 svn_error_t *
 svn_test__get_file_contents (svn_fs_root_t *root,
                              const char *path,
-                             svn_string_t **str, 
+                             svn_stringbuf_t **str, 
                              apr_pool_t *pool)
 {
   svn_stream_t *stream;
@@ -154,7 +154,7 @@ svn_test__get_file_contents (svn_fs_root_t *root,
 static svn_error_t *
 get_dir_entries (apr_hash_t *tree_entries,
                  svn_fs_root_t *root,
-                 svn_string_t *path, 
+                 svn_stringbuf_t *path, 
                  apr_pool_t *pool)
 {
   apr_hash_t *entries;
@@ -170,7 +170,7 @@ get_dir_entries (apr_hash_t *tree_entries,
       apr_size_t keylen;
       void *val;
       svn_fs_dirent_t *dirent;
-      svn_string_t *full_path;
+      svn_stringbuf_t *full_path;
       int is_dir;
  
       apr_hash_this (hi, &key, &keylen, &val);
@@ -204,7 +204,7 @@ validate_tree_entry (svn_fs_root_t *root,
                      apr_pool_t *pool)
 {
   svn_stream_t *rstream;
-  svn_string_t *rstring;
+  svn_stringbuf_t *rstring;
   int is_dir;
 
   /* Verify that this is the expected type of node */
@@ -246,7 +246,7 @@ svn_test__validate_tree (svn_fs_root_t *root,
   apr_hash_t *tree_entries;
   int i;
   apr_pool_t *subpool = svn_pool_create (pool);
-  svn_string_t *root_dir = svn_string_create ("", subpool);
+  svn_stringbuf_t *root_dir = svn_string_create ("", subpool);
   
   /* Create our master hash for storing the entries */
   tree_entries = apr_hash_make (pool);
@@ -345,8 +345,8 @@ svn_test__check_greek_tree (svn_fs_root_t *root,
                             apr_pool_t *pool)
 {
   svn_stream_t *rstream;
-  svn_string_t *rstring;
-  svn_string_t *content;
+  svn_stringbuf_t *rstring;
+  svn_stringbuf_t *content;
   int i;
 
   const char *file_contents[12][2] =

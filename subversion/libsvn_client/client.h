@@ -33,9 +33,9 @@ svn_client__checkout_internal (const svn_delta_edit_fns_t *before_editor,
                                void *before_edit_baton,
                                const svn_delta_edit_fns_t *after_editor,
                                void *after_edit_baton,
-                               svn_string_t *path,
-                               svn_string_t *xml_src,
-                               svn_string_t *ancestor_path,
+                               svn_stringbuf_t *path,
+                               svn_stringbuf_t *xml_src,
+                               svn_stringbuf_t *ancestor_path,
                                svn_revnum_t ancestor_revision,
                                apr_pool_t *pool);
 
@@ -45,8 +45,8 @@ svn_client__update_internal (const svn_delta_edit_fns_t *before_editor,
                              void *before_edit_baton,
                              const svn_delta_edit_fns_t *after_editor,
                              void *after_edit_baton,
-                             svn_string_t *path,
-                             svn_string_t *xml_src,
+                             svn_stringbuf_t *path,
+                             svn_stringbuf_t *xml_src,
                              svn_revnum_t ancestor_revision,
                              apr_pool_t *pool);
 

@@ -202,7 +202,7 @@ svn_ra_get_ra_library (svn_ra_plugin_t **library,
 
 
 svn_error_t *
-svn_ra_print_ra_libraries (svn_string_t **descriptions,
+svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
                            void *ra_baton,
                            apr_pool_t *pool)
 {

@@ -320,7 +320,7 @@ call_functions_with_unopened_fs (const char **msg,
   }
 
   {
-    svn_string_t *ignored, *unused;
+    svn_stringbuf_t *ignored, *unused;
     err = svn_fs_revision_prop (&ignored, fs, 0, unused, pool);
     SVN_ERR (check_no_fs_error (err, pool));
   }
@@ -332,7 +332,7 @@ call_functions_with_unopened_fs (const char **msg,
   }
 
   {
-    svn_string_t *unused1, *unused2;
+    svn_stringbuf_t *unused1, *unused2;
     err = svn_fs_change_rev_prop (fs, 0, unused1, unused2, pool);
     SVN_ERR (check_no_fs_error (err, pool));
   }
@@ -408,8 +408,8 @@ write_and_read_file (const char **msg,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
   svn_stream_t *rstream;
-  svn_string_t *rstring;
-  svn_string_t *wstring = svn_string_create ("Wicki wild, wicki wicki wild.",
+  svn_stringbuf_t *rstring;
+  svn_stringbuf_t *wstring = svn_string_create ("Wicki wild, wicki wicki wild.",
                                              pool);
 
   *msg = "write and read a file's contents";
@@ -617,7 +617,7 @@ revision_props (const char **msg,
 {
   svn_fs_t *fs;
   apr_hash_t *proplist;
-  svn_string_t *value;
+  svn_stringbuf_t *value;
   int i;
 
   const char *initial_props[4][2] = { 
@@ -685,7 +685,7 @@ revision_props (const char **msg,
      the expected values. */
   SVN_ERR (svn_fs_revision_proplist (&proplist, fs, 0, pool));
   {
-    svn_string_t *prop_value;
+    svn_stringbuf_t *prop_value;
 
     if (apr_hash_count (proplist) != 4 )
       return svn_error_createf
@@ -732,7 +732,7 @@ transaction_props (const char **msg,
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   apr_hash_t *proplist;
-  svn_string_t *value;
+  svn_stringbuf_t *value;
   svn_revnum_t after_rev;
   int i;
 
@@ -802,7 +802,7 @@ transaction_props (const char **msg,
      the expected values. */
   SVN_ERR (svn_fs_txn_proplist (&proplist, txn, pool));
   {
-    svn_string_t *prop_value;
+    svn_stringbuf_t *prop_value;
 
     if (apr_hash_count (proplist) != 4 )
       return svn_error_createf
@@ -849,7 +849,7 @@ transaction_props (const char **msg,
      existed on the transaction just prior to its being committed. */
   SVN_ERR (svn_fs_revision_proplist (&proplist, fs, after_rev, pool));
   {
-    svn_string_t *prop_value;
+    svn_stringbuf_t *prop_value;
 
     if (apr_hash_count (proplist) != 4 )
       return svn_error_createf
@@ -897,7 +897,7 @@ node_props (const char **msg,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
   apr_hash_t *proplist;
-  svn_string_t *value;
+  svn_stringbuf_t *value;
   int i;
 
   const char *initial_props[4][2] = { 
@@ -970,7 +970,7 @@ node_props (const char **msg,
      the expected values. */
   SVN_ERR (svn_fs_node_proplist (&proplist, txn_root, "music.txt", pool));
   {
-    svn_string_t *prop_value;
+    svn_stringbuf_t *prop_value;
 
     if (apr_hash_count (proplist) != 4 )
       return svn_error_createf
@@ -1093,7 +1093,7 @@ txn_body_check_id (void *baton, trail_t *trail)
     args->present = TRUE;
   else
     {
-      svn_string_t *id_str = svn_fs_unparse_id (args->id, trail->pool);
+      svn_stringbuf_t *id_str = svn_fs_unparse_id (args->id, trail->pool);
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, 0, NULL, trail->pool,
          "error looking for node revision id \"%s\"", id_str->data);
@@ -1133,7 +1133,7 @@ check_id_present (svn_fs_t *fs, svn_fs_id_t *id, apr_pool_t *pool)
 
   if (! present)
     {
-      svn_string_t *id_str = svn_fs_unparse_id (id, pool);
+      svn_stringbuf_t *id_str = svn_fs_unparse_id (id, pool);
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "node revision id \"%s\" absent when should be present",
@@ -1153,7 +1153,7 @@ check_id_absent (svn_fs_t *fs, svn_fs_id_t *id, apr_pool_t *pool)
 
   if (present)
     {
-      svn_string_t *id_str = svn_fs_unparse_id (id, pool);
+      svn_stringbuf_t *id_str = svn_fs_unparse_id (id, pool);
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "node revision id \"%s\" present when should be absent",
@@ -1803,8 +1803,8 @@ fetch_by_id (const char **msg,
   /* Get the IDs of some random paths, then fetch some content by ID. */
   {
     svn_fs_id_t *iota_id, *beta_id, *C_id, *D_id, *omega_id;
-    svn_string_t *iota_str, *beta_str, *C_str, *D_str, *omega_str;
-    svn_string_t *not_an_id_str = svn_string_create ("fish", pool);
+    svn_stringbuf_t *iota_str, *beta_str, *C_str, *D_str, *omega_str;
+    svn_stringbuf_t *not_an_id_str = svn_string_create ("fish", pool);
     apr_hash_t *entries;
     apr_off_t len;
     void *val;
@@ -1898,7 +1898,7 @@ fetch_by_id (const char **msg,
       
     {
       svn_stream_t *contents_stream;
-      svn_string_t *contents_string;
+      svn_stringbuf_t *contents_string;
 
       SVN_ERR (svn_fs_file_contents (&contents_stream, id_root,
                                      omega_str->data, pool));
@@ -2450,7 +2450,7 @@ merging_commit (const char **msg,
     /* (1) E exists in both ANCESTOR and B, and refers to the same
        node revision.  Replace E with A's node revision.  */
     {
-      svn_string_t *old_mu_contents;
+      svn_stringbuf_t *old_mu_contents;
       SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
       SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
       SVN_ERR (svn_test__get_file_contents 
@@ -2620,7 +2620,7 @@ merging_commit (const char **msg,
     /* (1) E exists in both ANCESTOR and B, and refers to the same node
        revision.  Replace E with A's node revision.  */
     {
-      svn_string_t *old_lambda_ctnts;
+      svn_stringbuf_t *old_lambda_ctnts;
       SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
       SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
       SVN_ERR (svn_test__get_file_contents 

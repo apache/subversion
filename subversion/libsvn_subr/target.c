@@ -28,8 +28,8 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_path_get_absolute(svn_string_t **pabsolute,
-                      const svn_string_t *relative,
+svn_path_get_absolute(svn_stringbuf_t **pabsolute,
+                      const svn_stringbuf_t *relative,
                       apr_pool_t *pool)
 {
   char buffer[APR_PATH_MAX];
@@ -83,9 +83,9 @@ svn_path_get_absolute(svn_string_t **pabsolute,
 }
 
 svn_error_t *
-svn_path_split_if_file(svn_string_t *path,
-                       svn_string_t **pdirectory,
-                       svn_string_t **pfile,
+svn_path_split_if_file(svn_stringbuf_t *path,
+                       svn_stringbuf_t **pdirectory,
+                       svn_stringbuf_t **pfile,
                        apr_pool_t * pool)
 {
   apr_finfo_t finfo;
@@ -118,7 +118,7 @@ svn_path_split_if_file(svn_string_t *path,
 }
 
 svn_error_t *
-svn_path_condense_targets (svn_string_t **pbasedir,
+svn_path_condense_targets (svn_stringbuf_t **pbasedir,
                            apr_array_header_t ** pcondensed_targets,
                            const apr_array_header_t *targets,
                            enum svn_path_style style,
@@ -133,7 +133,7 @@ svn_path_condense_targets (svn_string_t **pbasedir,
   else
     {
       int i, j, num_condensed = targets->nelts;
-      svn_string_t *file;
+      svn_stringbuf_t *file;
       svn_boolean_t *removed
         = apr_pcalloc (pool, (targets->nelts * sizeof (svn_boolean_t)));
       
@@ -147,20 +147,20 @@ svn_path_condense_targets (svn_string_t **pbasedir,
          even do the loop if we don't need to condense the targets. */
       
       apr_array_header_t *abs_targets
-        = apr_array_make (pool, targets->nelts, sizeof (svn_string_t*));
+        = apr_array_make (pool, targets->nelts, sizeof (svn_stringbuf_t*));
       
       SVN_ERR (svn_path_get_absolute (pbasedir,
-                                      ((svn_string_t **) targets->elts)[0],
+                                      ((svn_stringbuf_t **) targets->elts)[0],
                                       pool));
       
-      (*((svn_string_t**)apr_array_push (abs_targets))) = *pbasedir;
+      (*((svn_stringbuf_t**)apr_array_push (abs_targets))) = *pbasedir;
       
       for (i = 1; i < targets->nelts; ++i)
         {
-          svn_string_t *rel = ((svn_string_t **)targets->elts)[i];
-          svn_string_t *absolute;
+          svn_stringbuf_t *rel = ((svn_stringbuf_t **)targets->elts)[i];
+          svn_stringbuf_t *absolute;
           SVN_ERR (svn_path_get_absolute (&absolute, rel, pool));
-          (*((svn_string_t **)apr_array_push (abs_targets))) = absolute;
+          (*((svn_stringbuf_t **)apr_array_push (abs_targets))) = absolute;
           *pbasedir = svn_path_get_longest_ancestor (*pbasedir, 
                                                      absolute, 
                                                      style,
@@ -182,18 +182,18 @@ svn_path_condense_targets (svn_string_t **pbasedir,
 
               for (j = i + 1; j < abs_targets->nelts; ++j)
                 {
-                  svn_string_t *abs_targets_i;
-                  svn_string_t *abs_targets_j;
-                  svn_string_t *ancestor;
+                  svn_stringbuf_t *abs_targets_i;
+                  svn_stringbuf_t *abs_targets_j;
+                  svn_stringbuf_t *ancestor;
 
                   if (removed[j])
                     continue;
 
                   abs_targets_i = 
-                    ((svn_string_t **)abs_targets->elts)[i];
+                    ((svn_stringbuf_t **)abs_targets->elts)[i];
 
                   abs_targets_j = 
-                    ((svn_string_t **)abs_targets->elts)[j];
+                    ((svn_stringbuf_t **)abs_targets->elts)[j];
 
                   ancestor = svn_path_get_longest_ancestor 
                     (abs_targets_i, abs_targets_j, style, pool);
@@ -218,7 +218,7 @@ svn_path_condense_targets (svn_string_t **pbasedir,
              remove the target. */
           for (i = 0; i < abs_targets->nelts; ++i)
             {
-              svn_string_t *abs_targets_i = ((svn_string_t **)
+              svn_stringbuf_t *abs_targets_i = ((svn_stringbuf_t **)
                                              abs_targets->elts)[i];
               if ((svn_string_compare (abs_targets_i, *pbasedir))
                   && !removed[i])
@@ -230,7 +230,7 @@ svn_path_condense_targets (svn_string_t **pbasedir,
           
           /* Now create the return array, and copy the non-removed items */
           *pcondensed_targets = apr_array_make (pool, num_condensed,
-                                                sizeof (svn_string_t*));
+                                                sizeof (svn_stringbuf_t*));
           
           for (i = 0; i < abs_targets->nelts; ++i)
             {
@@ -239,11 +239,11 @@ svn_path_condense_targets (svn_string_t **pbasedir,
               if (removed[i])
                 continue;
 
-              rel_item = ((svn_string_t**)abs_targets->elts)[i]->data;
+              rel_item = ((svn_stringbuf_t**)abs_targets->elts)[i]->data;
 
               rel_item += (*pbasedir)->len + 1;
 
-              (*((svn_string_t**)apr_array_push (*pcondensed_targets)))
+              (*((svn_stringbuf_t**)apr_array_push (*pcondensed_targets)))
                 = svn_string_create (rel_item, pool);
             }
         }
@@ -255,7 +255,7 @@ svn_path_condense_targets (svn_string_t **pbasedir,
         {
           /* If there was just one target, and it was a file, then
              return it as the sole condensed target. */
-          (*((svn_string_t**)apr_array_push (*pcondensed_targets))) = file;
+          (*((svn_stringbuf_t**)apr_array_push (*pcondensed_targets))) = file;
         }
     }
   
@@ -288,11 +288,11 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
 
   /* Create our list of absolute paths for our "keepers" */
   abs_targets = apr_array_make (temp_pool, targets->nelts, 
-                                sizeof (svn_string_t *));
+                                sizeof (svn_stringbuf_t *));
 
   /* Create our list of untainted paths for our "keepers" */
   rel_targets = apr_array_make (pool, targets->nelts,
-                                sizeof (svn_string_t *));
+                                sizeof (svn_stringbuf_t *));
 
   /* For each target in our list we do the following:
 
@@ -304,8 +304,8 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
   */
   for (i = 0; i < targets->nelts; i++)
     {
-      svn_string_t *rel_path = ((svn_string_t **)targets->elts)[i];
-      svn_string_t *abs_path;
+      svn_stringbuf_t *rel_path = ((svn_stringbuf_t **)targets->elts)[i];
+      svn_stringbuf_t *abs_path;
       int j;
       svn_boolean_t keep_me;
 
@@ -317,7 +317,7 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
       keep_me = TRUE;
       for (j = 0; j < abs_targets->nelts; j++)
         {
-          svn_string_t *keeper = ((svn_string_t **)abs_targets->elts)[j];
+          svn_stringbuf_t *keeper = ((svn_stringbuf_t **)abs_targets->elts)[j];
           
           /* Quit here if we find this path already in the keepers. */
           if (svn_string_compare (keeper, abs_path))
@@ -338,8 +338,8 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
          and its original path to REL_TARGETS. */
       if (keep_me)
         {
-          (* ((svn_string_t **) apr_array_push (abs_targets))) = abs_path;
-          (* ((svn_string_t **) apr_array_push (rel_targets))) = rel_path;
+          (* ((svn_stringbuf_t **) apr_array_push (abs_targets))) = abs_path;
+          (* ((svn_stringbuf_t **) apr_array_push (rel_targets))) = rel_path;
         }
     }
   

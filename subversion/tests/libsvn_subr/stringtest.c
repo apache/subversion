@@ -43,7 +43,7 @@ fail (apr_pool_t *pool, const char *fmt, ...)
 
 /* Some of our own global variables, for simplicity.  Yes,
    simplicity. */
-svn_string_t *a = NULL, *b = NULL, *c = NULL;
+svn_stringbuf_t *a = NULL, *b = NULL, *c = NULL;
 const char *phrase_1 = "hello, ";
 const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
 
@@ -53,7 +53,7 @@ const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
 static svn_error_t *
 test1 (const char **msg, apr_pool_t *pool)
 {
-  *msg = "make svn_string_t from cstring";
+  *msg = "make svn_stringbuf_t from cstring";
   a = svn_string_create (phrase_1, pool);
   
   /* Test that length, data, and null-termination are correct. */
@@ -67,7 +67,7 @@ test1 (const char **msg, apr_pool_t *pool)
 static svn_error_t *
 test2 (const char **msg, apr_pool_t *pool)
 {
-  *msg = "make svn_string_t from substring of cstring";
+  *msg = "make svn_stringbuf_t from substring of cstring";
   b = svn_string_ncreate (phrase_2, 16, pool);
   
   /* Test that length, data, and null-termination are correct. */
@@ -84,7 +84,7 @@ test3 (const char **msg, apr_pool_t *pool)
   char *tmp;
   size_t old_len;
   
-  *msg = "append svn_string_t to svn_string_t";
+  *msg = "append svn_stringbuf_t to svn_stringbuf_t";
 
   a = svn_string_create (phrase_1, pool);
   b = svn_string_ncreate (phrase_2, 16, pool);
@@ -109,7 +109,7 @@ test4 (const char **msg, apr_pool_t *pool)
   a = svn_string_create (phrase_1, pool);
   svn_string_appendcstr (a, "new bytes to append");
   
-  *msg = "append C string to svn_string_t";
+  *msg = "append C string to svn_stringbuf_t";
 
   /* Test that length, data, and null-termination are correct. */
   if (svn_string_compare 
@@ -217,7 +217,7 @@ test9 (const char **msg, apr_pool_t *pool)
 static svn_error_t *
 test10 (const char **msg, apr_pool_t *pool)
 {
-  svn_string_t *s;
+  svn_stringbuf_t *s;
   
   apr_size_t num_chopped_1 = 0;
   apr_size_t num_chopped_2 = 0;
@@ -255,7 +255,7 @@ test10 (const char **msg, apr_pool_t *pool)
 static svn_error_t *
 test11 (const char **msg, apr_pool_t *pool)
 {
-  svn_string_t *s, *t;
+  svn_stringbuf_t *s, *t;
   size_t len_1 = 0;
   size_t len_2 = 0;
   size_t block_len_1 = 0;
@@ -289,7 +289,7 @@ test11 (const char **msg, apr_pool_t *pool)
 static svn_error_t *
 test12 (const char **msg, apr_pool_t *pool)
 {
-  svn_string_t *s;
+  svn_stringbuf_t *s;
   
   *msg = "formatting strings from varargs";
 

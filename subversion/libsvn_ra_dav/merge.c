@@ -73,16 +73,16 @@ typedef struct {
   int response_parent;  /* what element did DAV:response appear within? */
 
   int href_parent;      /* what element is the DAV:href appearing within? */
-  svn_string_t *href;   /* current response */
+  svn_stringbuf_t *href;   /* current response */
 
   int status;           /* HTTP status for this DAV:propstat */
   enum merge_rtype rtype;       /* DAV:resourcetype of this resource */
 
-  svn_string_t *vsn_name;	/* DAV:version-name for this resource */
-  svn_string_t *vsn_url;	/* DAV:checked-in for this resource */
+  svn_stringbuf_t *vsn_name;	/* DAV:version-name for this resource */
+  svn_stringbuf_t *vsn_url;	/* DAV:checked-in for this resource */
 
-  /* ### damned set_prop needs an svn_string_t for a constant */
-  svn_string_t *vsn_url_name;
+  /* ### damned set_prop needs an svn_stringbuf_t for a constant */
+  svn_stringbuf_t *vsn_url_name;
 
   /* if resources arrive before we know the target revision, then we store
      their PATH -> VERSION-URL mappings in here. when the revision arrives,
@@ -105,16 +105,16 @@ static void add_ignored(merge_ctx_t *mc, const char *cdata)
 
 static svn_error_t *bump_resource(merge_ctx_t *mc, char *path, char *vsn_url)
 {
-  svn_string_t path_str = { 0 };
-  svn_string_t vsn_url_str = { 0 };
+  svn_stringbuf_t path_str = { 0 };
+  svn_stringbuf_t vsn_url_str = { 0 };
 
   /* import case. just punt for now. */
   if (mc->close_commit == NULL)
     return NULL;
 
-  /* ### damned callbacks take svn_string_t even though they don't plan
+  /* ### damned callbacks take svn_stringbuf_t even though they don't plan
      ### to change the values whatsoever... */
-  /* set up two svn_string_t values around the path and vsn_url. */
+  /* set up two svn_stringbuf_t values around the path and vsn_url. */
   path_str.data = path;
   path_str.len = strlen(path);
   path_str.blocksize = path_str.len + 1;
@@ -503,7 +503,7 @@ svn_error_t * svn_ra_dav__merge_activity(
 {
   merge_ctx_t mc = { 0 };
   const char *body;
-  svn_string_t *path_str;
+  svn_stringbuf_t *path_str;
   int i;
 
   mc.pool = pool;

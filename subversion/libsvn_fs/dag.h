@@ -357,7 +357,7 @@ svn_error_t *svn_fs__dag_get_contents (svn_stream_t **contents,
    interface will need to be revised to handle large files; let's get
    things working first.)  */
 svn_error_t *svn_fs__dag_set_contents (dag_node_t *file,
-                                       svn_string_t *contents,
+                                       svn_stringbuf_t *contents,
                                        trail_t *trail);
 
 

@@ -39,14 +39,14 @@
 /*** Initialization of the entries file. ***/
 
 svn_error_t *
-svn_wc__entries_init (svn_string_t *path,
-                      svn_string_t *ancestor_path,
+svn_wc__entries_init (svn_stringbuf_t *path,
+                      svn_stringbuf_t *ancestor_path,
                       apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_status_t apr_err;
   apr_file_t *f = NULL;
-  svn_string_t *accum = NULL;
+  svn_stringbuf_t *accum = NULL;
   char *initial_revstr = apr_psprintf (pool, "%d", 0);
 
   /* Create the entries file, which must not exist prior to this. */
@@ -117,7 +117,7 @@ struct entries_accumulator
   apr_hash_t *entries; 
 
   /* The dir whose entries file this is. */
-  svn_string_t *path;
+  svn_stringbuf_t *path;
 
   /* The parser that's parsing it, for signal_expat_bailout(). */
   svn_xml_parser_t *parser;
@@ -145,7 +145,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                        apr_pool_t *pool)
 {
   svn_wc_entry_t *entry = alloc_entry (pool);
-  svn_string_t *name;
+  svn_stringbuf_t *name;
   
   *modify_flags = 0;
   entry->attributes = atts;
@@ -157,7 +157,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 
   /* Attempt to set revision (resolve_to_defaults may do it later, too) */
   {
-    svn_string_t *revision_str
+    svn_stringbuf_t *revision_str
       = apr_hash_get (entry->attributes,
                       SVN_WC_ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING);
 
@@ -179,7 +179,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 
   /* Set up kind. */
   {
-    svn_string_t *kindstr
+    svn_stringbuf_t *kindstr
       = apr_hash_get (entry->attributes,
                       SVN_WC_ENTRY_ATTR_KIND, APR_HASH_KEY_STRING);
 
@@ -204,7 +204,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 
   /* Look for a schedule attribute on this entry. */
   {
-    svn_string_t *schedulestr
+    svn_stringbuf_t *schedulestr
       = apr_hash_get (entry->attributes,
                       SVN_WC_ENTRY_ATTR_SCHEDULE, APR_HASH_KEY_STRING);
     
@@ -232,7 +232,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
   
   /* Look for an existence attribute */
   {
-    svn_string_t *existencestr
+    svn_stringbuf_t *existencestr
       = apr_hash_get (entry->attributes,
                       SVN_WC_ENTRY_ATTR_EXISTENCE, APR_HASH_KEY_STRING);
     
@@ -258,7 +258,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 
   /* Is this entry in a state of mental torment (conflict)? */
   {
-    svn_string_t *conflictstr
+    svn_stringbuf_t *conflictstr
       = apr_hash_get (entry->attributes,
                       SVN_WC_ENTRY_ATTR_CONFLICTED, APR_HASH_KEY_STRING);
         
@@ -284,7 +284,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 
   /* Attempt to set up timestamps. */
   {
-    svn_string_t *text_timestr, *prop_timestr;
+    svn_stringbuf_t *text_timestr, *prop_timestr;
     
     text_timestr = apr_hash_get (entry->attributes,
                                  SVN_WC_ENTRY_ATTR_TEXT_TIME,
@@ -341,7 +341,7 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
     {
       apr_hash_t *attributes = svn_xml_make_att_hash (atts, accum->pool);
       svn_wc_entry_t *entry;
-      svn_string_t *name;
+      svn_stringbuf_t *name;
       svn_error_t *err;
       apr_uint16_t modify_flags = 0;
 
@@ -383,7 +383,7 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
       && (! ((dst->schedule == svn_wc_schedule_add)
              || (dst->schedule == svn_wc_schedule_replace))))
     {
-      svn_string_t *name = apr_hash_get (dst->attributes,
+      svn_stringbuf_t *name = apr_hash_get (dst->attributes,
                                          SVN_WC_ENTRY_ATTR_NAME,
                                          APR_HASH_KEY_STRING);
       dst->ancestor = svn_string_dup (src->ancestor, pool);
@@ -396,7 +396,7 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
 /* Resolve any missing information in ENTRIES by deducing from the
    directory's own entry (which must already be present in ENTRIES). */
 static svn_error_t *
-resolve_to_defaults (svn_string_t *path,
+resolve_to_defaults (svn_stringbuf_t *path,
                      apr_hash_t *entries,
                      apr_pool_t *pool)
 {
@@ -434,7 +434,7 @@ resolve_to_defaults (svn_string_t *path,
       apr_size_t keylen;
       void *val;
       svn_wc_entry_t *this_entry;
-      svn_string_t *entryname;
+      svn_stringbuf_t *entryname;
 
       apr_hash_this (hi, &key, &keylen, &val);
       this_entry = val;
@@ -470,7 +470,7 @@ resolve_to_defaults (svn_string_t *path,
 static void
 normalize_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
 {
-  svn_string_t *valuestr;
+  svn_stringbuf_t *valuestr;
 
   /* Revision */
   if (SVN_IS_VALID_REVNUM (entry->revision))
@@ -578,7 +578,7 @@ normalize_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
 /* Fill ENTRIES according to PATH's entries file. */
 static svn_error_t *
 read_entries (apr_hash_t *entries,
-              svn_string_t *path,
+              svn_stringbuf_t *path,
               svn_boolean_t get_all_missing_info,
               apr_pool_t *pool)
 {
@@ -646,7 +646,7 @@ read_entries (apr_hash_t *entries,
 
 svn_error_t *
 svn_wc_entry (svn_wc_entry_t **entry,
-              svn_string_t *path,
+              svn_stringbuf_t *path,
               apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -699,7 +699,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
          Either way, if PATH is a versioned entity, it is versioned as
          a file.  So look split and look in parent for entry info. */
 
-      svn_string_t *dir, *basename;
+      svn_stringbuf_t *dir, *basename;
       svn_path_split (path, &dir, &basename, svn_path_local_style, pool);
 
       if (svn_path_is_empty (dir, svn_path_local_style))
@@ -726,7 +726,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
 
 svn_error_t *
 svn_wc_entries_read (apr_hash_t **entries,
-                     svn_string_t *path,
+                     svn_stringbuf_t *path,
                      apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -747,7 +747,7 @@ svn_wc_entries_read (apr_hash_t **entries,
    entry for "this dir" THIS_DIR for comparison/optimization.
    Allocations are done in POOL.  */
 static svn_error_t *
-write_entry (svn_string_t **output,
+write_entry (svn_stringbuf_t **output,
              svn_wc_entry_t *this_entry,
              const char *this_entry_name,
              svn_wc_entry_t *this_dir,
@@ -788,7 +788,7 @@ write_entry (svn_string_t **output,
         }
       else
         {
-          svn_string_t *this_path;
+          svn_stringbuf_t *this_path;
 
           /* If this is not the "this dir" entry, and the revision is
              the same as that of the "this dir" entry, don't out the
@@ -828,11 +828,11 @@ write_entry (svn_string_t **output,
 
 svn_error_t *
 svn_wc__entries_write (apr_hash_t *entries,
-                       svn_string_t *path,
+                       svn_stringbuf_t *path,
                        apr_pool_t *pool)
 {
   svn_error_t *err = NULL, *err2 = NULL;
-  svn_string_t *bigstr = NULL;
+  svn_stringbuf_t *bigstr = NULL;
   apr_file_t *outfile = NULL;
   apr_status_t apr_err;
   apr_hash_index_t *hi;
@@ -912,7 +912,7 @@ svn_wc__entries_write (apr_hash_t *entries,
    those properties described by the set of changes. */
 static void
 fold_entry (apr_hash_t *entries,
-            svn_string_t *name,
+            svn_stringbuf_t *name,
             apr_uint16_t modify_flags,
             svn_revnum_t revision,
             enum svn_node_kind kind,
@@ -970,12 +970,12 @@ fold_entry (apr_hash_t *entries,
           apr_size_t klen;
           void *v;
           const char *key;
-          svn_string_t *val;
+          svn_stringbuf_t *val;
           
           /* Get a hash key and value */
           apr_hash_this (hi, &k, &klen, &v);
           key = (const char *) k;
-          val = (svn_string_t *) v;
+          val = (svn_stringbuf_t *) v;
           
           apr_hash_set (entry->attributes, key, APR_HASH_KEY_STRING, val);
         }
@@ -1017,7 +1017,7 @@ fold_entry (apr_hash_t *entries,
 /* kff todo: we shouldn't have this function in the interface, probably. */
 void
 svn_wc__entry_remove (apr_hash_t *entries,
-                      svn_string_t *name)
+                      svn_stringbuf_t *name)
 {
   apr_hash_set (entries, name->data, name->len, NULL);
 }
@@ -1032,7 +1032,7 @@ svn_wc__entry_remove (apr_hash_t *entries,
    reflect the caller's original intent. */
 static svn_error_t *
 fold_state_changes (apr_hash_t *entries,
-                    svn_string_t *name,
+                    svn_stringbuf_t *name,
                     apr_uint16_t *modify_flags,
                     enum svn_wc_schedule_t *schedule,
                     apr_pool_t *pool)
@@ -1279,8 +1279,8 @@ fold_state_changes (apr_hash_t *entries,
    transform the requested changes, folds the changes, then syncs
    entries to disk.  */
 svn_error_t *
-svn_wc__entry_modify (svn_string_t *path,
-                      svn_string_t *name,
+svn_wc__entry_modify (svn_stringbuf_t *path,
+                      svn_stringbuf_t *name,
                       apr_uint16_t modify_flags,
                       svn_revnum_t revision,
                       enum svn_node_kind kind,
@@ -1364,16 +1364,16 @@ svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
       void *v;
 
       const char *key;
-      svn_string_t *val;
+      svn_stringbuf_t *val;
 
-      svn_string_t *new_keystring, *new_valstring;
+      svn_stringbuf_t *new_keystring, *new_valstring;
 
       /* Get a hash key and value */
       apr_hash_this (hi, &k, &klen, &v);
       key = (const char *) k;
-      val = (svn_string_t *) v;
+      val = (svn_stringbuf_t *) v;
 
-      /* Allocate two *new* svn_string_t's from them, out of POOL. */
+      /* Allocate two *new* svn_stringbuf_t's from them, out of POOL. */
       new_keystring = svn_string_ncreate (key, klen, pool);
       new_valstring = svn_string_dup (val, pool);
 
@@ -1426,7 +1426,7 @@ svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
  * implicitly) in NAMED_TARGETS:
  *
  * Each key in NAMED_TARGETS is a path to a file or directory, and the
- * value is the (svn_string_t *) corresponding to that path (this is
+ * value is the (svn_stringbuf_t *) corresponding to that path (this is
  * done for convenience).  The goal of NAMED_TARGETS is to reflect the
  * behavior of svn on the command line.  For example, if you invoke
  *
@@ -1484,7 +1484,7 @@ svn_wc__compose_paths (apr_hash_t *paths, apr_pool_t *pool)
       const void *key;
       apr_size_t keylen;
       void *val;
-      svn_string_t *path;
+      svn_stringbuf_t *path;
 
       apr_hash_this (hi, &key, &keylen, &val);
       path = val;
@@ -1500,7 +1500,7 @@ svn_wc__compose_paths (apr_hash_t *paths, apr_pool_t *pool)
       const void *key;
       apr_size_t keylen;
       void *val;
-      svn_string_t *path;
+      svn_stringbuf_t *path;
 
       apr_hash_this (hi, &key, &keylen, &val);
       path = val;
@@ -1509,7 +1509,7 @@ svn_wc__compose_paths (apr_hash_t *paths, apr_pool_t *pool)
          shorter parent path is already in the hash.  If it is, remove
          the original path from the hash. */
       {
-        svn_string_t *shrinking = svn_string_dup (path, pool);
+        svn_stringbuf_t *shrinking = svn_string_dup (path, pool);
         for (svn_path_remove_component (shrinking, svn_path_local_style);
              (! svn_string_isempty (shrinking));
              svn_path_remove_component (shrinking, svn_path_local_style))

@@ -437,7 +437,7 @@ svn_txdelta_apply (svn_stream_t *source,
 /* Convenience routines */
 
 svn_error_t * 
-svn_txdelta_send_string (svn_string_t *string,
+svn_txdelta_send_string (svn_stringbuf_t *string,
                          svn_txdelta_window_handler_t handler,
                          void *handler_baton,
                          apr_pool_t *pool)

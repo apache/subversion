@@ -816,10 +816,10 @@ svn_fs_is_different (int *is_different,
 
 struct node_prop_args
 {
-  svn_string_t **value_p;
+  svn_stringbuf_t **value_p;
   svn_fs_root_t *root;
   const char *path;
-  svn_string_t *propname;
+  svn_stringbuf_t *propname;
 };
 
 
@@ -843,14 +843,14 @@ txn_body_node_prop (void *baton,
 
 
 svn_error_t *
-svn_fs_node_prop (svn_string_t **value_p,
+svn_fs_node_prop (svn_stringbuf_t **value_p,
                   svn_fs_root_t *root,
                   const char *path,
-                  svn_string_t *propname,
+                  svn_stringbuf_t *propname,
                   apr_pool_t *pool)
 {
   struct node_prop_args args;
-  svn_string_t *value;
+  svn_stringbuf_t *value;
 
   args.value_p  = &value;
   args.root     = root;
@@ -911,8 +911,8 @@ svn_fs_node_proplist (apr_hash_t **table_p,
 struct change_node_prop_args {
   svn_fs_root_t *root;
   const char *path;
-  svn_string_t *name;
-  svn_string_t *value;
+  svn_stringbuf_t *name;
+  svn_stringbuf_t *value;
 };
 
 
@@ -937,8 +937,8 @@ txn_body_change_node_prop (void *baton,
 svn_error_t *
 svn_fs_change_node_prop (svn_fs_root_t *root,
                          const char *path,
-                         svn_string_t *name,
-                         svn_string_t *value,
+                         svn_stringbuf_t *name,
+                         svn_stringbuf_t *value,
                          apr_pool_t *pool)
 {
   struct change_node_prop_args args;
@@ -1030,7 +1030,7 @@ merge (const char **conflict_p,
   /* It's improper to call this function with ancestor == target. */
   if (svn_fs_id_eq (ancestor_id, target_id))
     {
-      svn_string_t *id_str = svn_fs_unparse_id (target_id, trail->pool);
+      svn_stringbuf_t *id_str = svn_fs_unparse_id (target_id, trail->pool);
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, 0, NULL, trail->pool,
          "Bad merge call -- target `%s' has id `%s', same as ancestor.",
@@ -1523,7 +1523,7 @@ txn_body_commit (void *baton, trail_t *trail)
      start, instead of having to transform one of them. */ 
   if (! svn_fs_id_eq (y_rev_root_id, svn_fs__dag_get_id (txn_base_root_node)))
     {
-      svn_string_t *id_str = svn_fs_unparse_id (y_rev_root_id, trail->pool);
+      svn_stringbuf_t *id_str = svn_fs_unparse_id (y_rev_root_id, trail->pool);
       return svn_error_createf
         (SVN_ERR_TXN_OUT_OF_DATE, 0, NULL, trail->pool,
          "txn `%s' out of date w.r.t. revision `%s'", txn_name, id_str->data);
@@ -2174,7 +2174,7 @@ typedef struct txdelta_baton_t
   /* This string holds the entire "growing" target in memory.  Yes,
      this is bad!  Someday we'll tell berkeley db to operate directly
      on substrings of table values. */
-  svn_string_t *target_string;
+  svn_stringbuf_t *target_string;
 
   /* Information about the file into which we will eventually dump
      target_string:  */
@@ -2195,7 +2195,7 @@ typedef struct txdelta_baton_t
 
 
 /* Helper function of generic type `svn_write_fn_t'.  Implements a
-   writable stream which appends to an svn_string_t. */
+   writable stream which appends to an svn_stringbuf_t. */
 static svn_error_t *
 write_to_string (void *baton, const char *data, apr_size_t *len)
 {

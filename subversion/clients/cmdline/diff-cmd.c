@@ -45,7 +45,7 @@ svn_cl__diff (apr_getopt_t *os,
 
   for (i = 0; i < targets->nelts; i++)
     {
-      svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
+      svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
 
       err = svn_cl__print_file_diff (target, pool);
       if (err) return err;

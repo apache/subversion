@@ -51,7 +51,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   void *session_baton,
   const svn_delta_edit_fns_t **editor,
   void **edit_baton,
-  svn_string_t *log_msg,
+  svn_stringbuf_t *log_msg,
   svn_ra_get_wc_prop_func_t get_func,
   svn_ra_set_wc_prop_func_t set_func,
   svn_ra_close_commit_func_t close_func,
@@ -135,7 +135,7 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
                                              apr_pool_t *pool);
 
 /* send an OPTIONS request to fetch the activity-collection-set */
-svn_error_t * svn_ra_dav__get_activity_url(svn_string_t **activity_url,
+svn_error_t * svn_ra_dav__get_activity_url(svn_stringbuf_t **activity_url,
                                            svn_ra_session_t *ras,
                                            const char *url,
                                            apr_pool_t *pool);
@@ -200,7 +200,7 @@ svn_error_t * svn_ra_dav__merge_activity(
    ### initializing it with a fake string (and copying it) */
 #define MAKE_BUFFER(p) svn_string_ncreate("", 0, (p))
 
-void svn_ra_dav__copy_href(svn_string_t *dst, const char *src);
+void svn_ra_dav__copy_href(svn_stringbuf_t *dst, const char *src);
 
 #endif  /* RA_DAV_H */
 

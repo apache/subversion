@@ -52,7 +52,7 @@ add_dir_recursive (const char *dirname,
        APR_STATUS_IS_SUCCESS (apr_err);
        apr_err = apr_dir_read (&this_entry, APR_FINFO_NORM, dir))
     {
-      svn_string_t *fullpath;
+      svn_stringbuf_t *fullpath;
 
       /* Skip over SVN admin directories. */
       if (strcmp (this_entry.name, SVN_WC_ADM_DIR_NAME) == 0)
@@ -103,7 +103,7 @@ add_dir_recursive (const char *dirname,
 
 
 svn_error_t *
-svn_client_add (svn_string_t *path, 
+svn_client_add (svn_stringbuf_t *path, 
                 svn_boolean_t recursive,
                 apr_pool_t *pool)
 {
@@ -142,7 +142,7 @@ svn_client_add (svn_string_t *path,
 
 
 svn_error_t *
-svn_client_unadd (svn_string_t *path, 
+svn_client_unadd (svn_stringbuf_t *path, 
                   apr_pool_t *pool)
 {
   svn_error_t *err;

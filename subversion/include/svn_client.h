@@ -84,10 +84,10 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                      void *before_edit_baton,
                      const svn_delta_edit_fns_t *after_editor,
                      void *after_edit_baton,
-                     svn_string_t *URL,
-                     svn_string_t *path,
+                     svn_stringbuf_t *URL,
+                     svn_stringbuf_t *path,
                      svn_revnum_t revision,
-                     svn_string_t *xml_src,
+                     svn_stringbuf_t *xml_src,
                      apr_pool_t *pool);
 
 
@@ -112,31 +112,31 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
                    void *after_edit_baton,
-                   svn_string_t *path,
-                   svn_string_t *xml_src,
+                   svn_stringbuf_t *path,
+                   svn_stringbuf_t *xml_src,
                    svn_revnum_t revision,
                    apr_pool_t *pool);
 
 
 svn_error_t *
-svn_client_add (svn_string_t *path,
+svn_client_add (svn_stringbuf_t *path,
                 svn_boolean_t recursive,
                 apr_pool_t *pool);
 
 
 svn_error_t *
-svn_client_unadd (svn_string_t *path,
+svn_client_unadd (svn_stringbuf_t *path,
                   apr_pool_t *pool);
 
 
 svn_error_t *
-svn_client_delete (svn_string_t *path,
+svn_client_delete (svn_stringbuf_t *path,
                    svn_boolean_t force,
                    apr_pool_t *pool);
 
 
 svn_error_t *
-svn_client_undelete (svn_string_t *path,
+svn_client_undelete (svn_stringbuf_t *path,
                      svn_boolean_t recursive,
                      apr_pool_t *pool);
 
@@ -180,11 +180,11 @@ svn_error_t *svn_client_import (const svn_delta_edit_fns_t *before_editor,
                                 void *before_edit_baton,
                                 const svn_delta_edit_fns_t *after_editor,
                                 void *after_edit_baton,                   
-                                svn_string_t *path,
-                                svn_string_t *url,
-                                svn_string_t *new_entry,
-                                svn_string_t *log_msg,
-                                svn_string_t *xml_dst,
+                                svn_stringbuf_t *path,
+                                svn_stringbuf_t *url,
+                                svn_stringbuf_t *new_entry,
+                                svn_stringbuf_t *log_msg,
+                                svn_stringbuf_t *xml_dst,
                                 svn_revnum_t revision,
                                 apr_pool_t *pool);
 
@@ -193,7 +193,7 @@ svn_error_t *svn_client_import (const svn_delta_edit_fns_t *before_editor,
    batons (BEFORE_EDITOR, BEFORE_EDIT_BATON / AFTER_EDITOR,
    AFTER_EDIT_BATON).  Store LOG_MSG as the log for the commit.
 
-   TARGETS is an array of svn_string_t * paths to commit.  They need
+   TARGETS is an array of svn_stringbuf_t * paths to commit.  They need
    not be canonicalized nor condensed; this function will take care of
    that.
 
@@ -212,15 +212,15 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
                    const svn_delta_edit_fns_t *after_editor,
                    void *after_edit_baton,                   
                    const apr_array_header_t *targets,
-                   svn_string_t *log_msg,
-                   svn_string_t *xml_dst,
+                   svn_stringbuf_t *log_msg,
+                   svn_stringbuf_t *xml_dst,
                    svn_revnum_t revision,  /* this param is temporary */
                    apr_pool_t *pool);
 
 
 svn_error_t *
 svn_client_status (apr_hash_t **statushash,
-                   svn_string_t *path,
+                   svn_stringbuf_t *path,
                    svn_boolean_t descend,
                    apr_pool_t *pool);
 
@@ -234,8 +234,8 @@ svn_client_status (apr_hash_t **statushash,
    routine to remove the pristine file, in case the pristine file is
    fetched and dumped somewhere by the RA layer. */
 svn_error_t *
-svn_client_file_diff (svn_string_t *path,
-                      svn_string_t **pristine_copy_path,
+svn_client_file_diff (svn_stringbuf_t *path,
+                      svn_stringbuf_t **pristine_copy_path,
                       apr_pool_t *pool);
 
 

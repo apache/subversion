@@ -36,11 +36,11 @@ svn_cl__commit (apr_getopt_t *os,
 {
   apr_array_header_t *targets;
   apr_array_header_t *condensed_targets;
-  svn_string_t *message;
-  svn_string_t *base_dir;
-  svn_string_t *cur_dir;
-  svn_string_t *remainder;
-  svn_string_t *trace_dir;
+  svn_stringbuf_t *message;
+  svn_stringbuf_t *base_dir;
+  svn_stringbuf_t *cur_dir;
+  svn_stringbuf_t *remainder;
+  svn_stringbuf_t *trace_dir;
   const svn_delta_edit_fns_t *trace_editor;
   void *trace_edit_baton;
 

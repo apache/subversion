@@ -1,5 +1,5 @@
 /*
- * paths.c:   a path manipulation library using svn_string_t
+ * paths.c:   a path manipulation library using svn_stringbuf_t
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -66,7 +66,7 @@ get_separator_from_style (enum svn_path_style style)
 
 
 void
-svn_path_canonicalize (svn_string_t *path, enum svn_path_style style)
+svn_path_canonicalize (svn_stringbuf_t *path, enum svn_path_style style)
 {
   char dirsep = get_separator_from_style (style);
 
@@ -86,7 +86,7 @@ svn_path_canonicalize (svn_string_t *path, enum svn_path_style style)
 
 
 static void
-add_component_internal (svn_string_t *path,
+add_component_internal (svn_stringbuf_t *path,
                         const char *component,
                         size_t len,
                         enum svn_path_style style)
@@ -102,7 +102,7 @@ add_component_internal (svn_string_t *path,
 
 
 void
-svn_path_add_component_nts (svn_string_t *path, 
+svn_path_add_component_nts (svn_stringbuf_t *path, 
                             const char *component,
                             enum svn_path_style style)
 {
@@ -111,8 +111,8 @@ svn_path_add_component_nts (svn_string_t *path,
 
 
 void
-svn_path_add_component (svn_string_t *path, 
-                        const svn_string_t *component,
+svn_path_add_component (svn_stringbuf_t *path, 
+                        const svn_stringbuf_t *component,
                         enum svn_path_style style)
 {
   add_component_internal (path, component->data, component->len, style);
@@ -120,7 +120,7 @@ svn_path_add_component (svn_string_t *path,
 
 
 void
-svn_path_remove_component (svn_string_t *path, enum svn_path_style style)
+svn_path_remove_component (svn_stringbuf_t *path, enum svn_path_style style)
 {
   char dirsep = get_separator_from_style (style);
 
@@ -131,8 +131,8 @@ svn_path_remove_component (svn_string_t *path, enum svn_path_style style)
 }
 
 
-svn_string_t *
-svn_path_last_component (const svn_string_t *path,
+svn_stringbuf_t *
+svn_path_last_component (const svn_stringbuf_t *path,
                          enum svn_path_style style,
                          apr_pool_t *pool)
 {
@@ -153,13 +153,13 @@ svn_path_last_component (const svn_string_t *path,
 
 
 void
-svn_path_split (const svn_string_t *path, 
-                svn_string_t **dirpath,
-                svn_string_t **basename,
+svn_path_split (const svn_stringbuf_t *path, 
+                svn_stringbuf_t **dirpath,
+                svn_stringbuf_t **basename,
                 enum svn_path_style style,
                 apr_pool_t *pool)
 {
-  svn_string_t *n_dirpath, *n_basename;
+  svn_stringbuf_t *n_dirpath, *n_basename;
 
   assert (dirpath != basename);
 
@@ -181,7 +181,7 @@ svn_path_split (const svn_string_t *path,
 
 
 int
-svn_path_is_thisdir (const svn_string_t *path, enum svn_path_style style)
+svn_path_is_thisdir (const svn_stringbuf_t *path, enum svn_path_style style)
 {
   char dirsep = get_separator_from_style (style);
 
@@ -196,7 +196,7 @@ svn_path_is_thisdir (const svn_string_t *path, enum svn_path_style style)
 
 
 int
-svn_path_is_empty (const svn_string_t *path, enum svn_path_style style)
+svn_path_is_empty (const svn_stringbuf_t *path, enum svn_path_style style)
 {
   return ((path == NULL)
           || (svn_string_isempty (path))
@@ -205,8 +205,8 @@ svn_path_is_empty (const svn_string_t *path, enum svn_path_style style)
 
 
 int
-svn_path_compare_paths (const svn_string_t *path1,
-                        const svn_string_t *path2,
+svn_path_compare_paths (const svn_stringbuf_t *path1,
+                        const svn_stringbuf_t *path2,
                         enum svn_path_style style)
 {
   size_t min_len = ((path1->len) < (path2->len)) ? path1->len : path2->len;
@@ -229,13 +229,13 @@ svn_path_compare_paths (const svn_string_t *path1,
 
 
 
-svn_string_t *
-svn_path_get_longest_ancestor (const svn_string_t *path1,
-                               const svn_string_t *path2,
+svn_stringbuf_t *
+svn_path_get_longest_ancestor (const svn_stringbuf_t *path1,
+                               const svn_stringbuf_t *path2,
                                enum svn_path_style style,
                                apr_pool_t *pool)
 {
-  svn_string_t *common_path;
+  svn_stringbuf_t *common_path;
   char dirsep = get_separator_from_style (style);
   int i = 0;
   int last_dirsep = 0;
@@ -280,9 +280,9 @@ svn_path_get_longest_ancestor (const svn_string_t *path1,
    If not, return NULL.
    If so, return the "remainder" path.  (The substring which, when
    appended to PATH1, yields PATH2.) */
-svn_string_t *
-svn_path_is_child (const svn_string_t *path1,
-                   const svn_string_t *path2,
+svn_stringbuf_t *
+svn_path_is_child (const svn_stringbuf_t *path1,
+                   const svn_stringbuf_t *path2,
                    enum svn_path_style style,
                    apr_pool_t *pool)
 {
@@ -335,24 +335,24 @@ store_component (apr_array_header_t *array,
                  apr_size_t len,
                  apr_pool_t *pool)
 {
-  svn_string_t **receiver;
+  svn_stringbuf_t **receiver;
   
-  svn_string_t *component = svn_string_ncreate (bytes, len, pool);
+  svn_stringbuf_t *component = svn_string_ncreate (bytes, len, pool);
 
-  receiver = (svn_string_t **) apr_array_push (array);
+  receiver = (svn_stringbuf_t **) apr_array_push (array);
   *receiver = component;
 }
 
 
 apr_array_header_t *
-svn_path_decompose (const svn_string_t *path,
+svn_path_decompose (const svn_stringbuf_t *path,
                     enum svn_path_style style,
                     apr_pool_t *pool)
 {
   int i, oldi;
 
   apr_array_header_t *components = 
-    apr_array_make (pool, 1, sizeof(svn_string_t *));
+    apr_array_make (pool, 1, sizeof(svn_stringbuf_t *));
 
   char dirsep = get_separator_from_style (style);
   i = oldi = 0;

@@ -48,15 +48,15 @@ struct edit_baton
      directory at which the edit is rooted) plus the TARGET (the
      actual thing we wish to update).  For checkouts, ANCHOR holds the
      whole path, and TARGET is unused. */
-  svn_string_t *anchor;
-  svn_string_t *target;
+  svn_stringbuf_t *anchor;
+  svn_stringbuf_t *target;
 
   /* The revision we're targeting...or something like that. */
   svn_revnum_t target_revision;
 
   /* These used only in checkouts. */
   svn_boolean_t is_checkout;
-  svn_string_t *ancestor_path;
+  svn_stringbuf_t *ancestor_path;
 
   apr_pool_t *pool;
 };
@@ -65,10 +65,10 @@ struct edit_baton
 struct dir_baton
 {
   /* The path to this directory. */
-  svn_string_t *path;
+  svn_stringbuf_t *path;
 
   /* Basename of this directory. */
-  svn_string_t *name;
+  svn_stringbuf_t *name;
 
   /* The number of other changes associated with this directory in the
      delta (typically, the number of files being changed here, plus
@@ -117,7 +117,7 @@ struct handler_baton
  * NAME and PARENT_BATON can be null, meaning this is the root baton.
  */
 static struct dir_baton *
-make_dir_baton (svn_string_t *name,
+make_dir_baton (svn_stringbuf_t *name,
                 struct edit_baton *edit_baton,
                 struct dir_baton *parent_baton,
                 apr_pool_t *pool)
@@ -125,7 +125,7 @@ make_dir_baton (svn_string_t *name,
   struct edit_baton *eb = edit_baton;
   apr_pool_t *subpool = svn_pool_create (pool);
   struct dir_baton *d = apr_pcalloc (subpool, sizeof (*d));
-  svn_string_t *path;
+  svn_stringbuf_t *path;
 
   if (parent_baton)
     {
@@ -234,10 +234,10 @@ struct file_baton
   apr_pool_t *pool;
 
   /* Name of this file (its entry in the directory). */
-  const svn_string_t *name;
+  const svn_stringbuf_t *name;
 
   /* Path to this file, either abs or relative to the change-root. */
-  svn_string_t *path;
+  svn_stringbuf_t *path;
 
   /* This gets set if the file underwent a text change, which guides
      the code that syncs up the adm dir and working copy. */
@@ -272,11 +272,11 @@ struct file_baton
 /* Make a file baton, using a new subpool of PARENT_DIR_BATON's pool.
    NAME is just one component, not a path. */
 static struct file_baton *
-make_file_baton (struct dir_baton *parent_dir_baton, svn_string_t *name)
+make_file_baton (struct dir_baton *parent_dir_baton, svn_stringbuf_t *name)
 {
   apr_pool_t *subpool = svn_pool_create (parent_dir_baton->pool);
   struct file_baton *f = apr_pcalloc (subpool, sizeof (*f));
-  svn_string_t *path = svn_string_dup (parent_dir_baton->path,
+  svn_stringbuf_t *path = svn_string_dup (parent_dir_baton->path,
                                        subpool);
 
   /* Make the file's on-disk name. */
@@ -338,7 +338,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
     {
       /* We failed to apply the patch; clean up the temporary file.  */
       apr_pool_t *pool = svn_pool_create (fb->pool);
-      svn_string_t *tmppath = svn_wc__text_base_path (fb->path, TRUE, pool);
+      svn_stringbuf_t *tmppath = svn_wc__text_base_path (fb->path, TRUE, pool);
 
       apr_file_remove (tmppath->data, pool);
       svn_pool_destroy (pool);
@@ -363,8 +363,8 @@ window_handler (svn_txdelta_window_t *window, void *baton)
  * DIRECTORY, then an error will be returned. 
  */
 static svn_error_t *
-prep_directory (svn_string_t *path,
-                svn_string_t *ancestor_path,
+prep_directory (svn_stringbuf_t *path,
+                svn_stringbuf_t *ancestor_path,
                 svn_revnum_t ancestor_revision,
                 svn_boolean_t force,
                 apr_pool_t *pool)
@@ -417,7 +417,7 @@ replace_root (void *edit_baton,
   struct edit_baton *eb = edit_baton;
   struct dir_baton *d;
   svn_error_t *err;
-  svn_string_t *ancestor_path;
+  svn_stringbuf_t *ancestor_path;
   svn_revnum_t ancestor_revision;
 
   *dir_baton = d = make_dir_baton (NULL, eb, NULL, eb->pool);
@@ -441,13 +441,13 @@ replace_root (void *edit_baton,
 
 
 static svn_error_t *
-delete_entry (svn_string_t *name, void *parent_baton)
+delete_entry (svn_stringbuf_t *name, void *parent_baton)
 {
   svn_error_t *err;
   struct dir_baton *parent_dir_baton = parent_baton;
   apr_status_t apr_err;
   apr_file_t *log_fp = NULL;
-  svn_string_t *log_item = svn_string_create ("", parent_dir_baton->pool);
+  svn_stringbuf_t *log_item = svn_string_create ("", parent_dir_baton->pool);
 
   err = svn_wc__lock (parent_dir_baton->path, 0, parent_dir_baton->pool);
   if (err)
@@ -499,9 +499,9 @@ delete_entry (svn_string_t *name, void *parent_baton)
 
 
 static svn_error_t *
-add_directory (svn_string_t *name,
+add_directory (svn_stringbuf_t *name,
                void *parent_baton,
-               svn_string_t *copyfrom_path,
+               svn_stringbuf_t *copyfrom_path,
                svn_revnum_t copyfrom_revision,
                void **child_baton)
 {
@@ -553,7 +553,7 @@ add_directory (svn_string_t *name,
       /* If the copyfrom args are both invalid, inherit the URL from the
          parent, and make the revision equal to the global target
          revision. */
-      svn_string_t *new_URL;
+      svn_stringbuf_t *new_URL;
       svn_wc_entry_t *parent_entry;
       SVN_ERR (svn_wc_entry (&parent_entry,
                              parent_dir_baton->path,
@@ -601,7 +601,7 @@ add_directory (svn_string_t *name,
 
 
 static svn_error_t *
-replace_directory (svn_string_t *name,
+replace_directory (svn_stringbuf_t *name,
                    void *parent_baton,
                    svn_revnum_t base_revision,
                    void **child_baton)
@@ -626,10 +626,10 @@ replace_directory (svn_string_t *name,
 
 static svn_error_t *
 change_dir_prop (void *dir_baton,
-                 svn_string_t *name,
-                 svn_string_t *value)
+                 svn_stringbuf_t *name,
+                 svn_stringbuf_t *value)
 {
-  svn_string_t *local_name, *local_value;
+  svn_stringbuf_t *local_name, *local_value;
   svn_prop_t *propchange, **receiver;
   struct dir_baton *db = dir_baton;
 
@@ -697,7 +697,7 @@ close_directory (void *dir_baton)
       apr_file_t *log_fp = NULL;
 
       /* to hold log messages: */
-      svn_string_t *entry_accum = svn_string_create ("", db->pool);
+      svn_stringbuf_t *entry_accum = svn_string_create ("", db->pool);
 
       /* Lock down the administrative area */
       err = svn_wc__lock (db->path, 0, db->pool);
@@ -805,9 +805,9 @@ close_directory (void *dir_baton)
 
 /* Common code for add_file() and replace_file(). */
 static svn_error_t *
-add_or_replace_file (svn_string_t *name,
+add_or_replace_file (svn_stringbuf_t *name,
                      void *parent_baton,
-                     svn_string_t *ancestor_path,
+                     svn_stringbuf_t *ancestor_path,
                      svn_revnum_t ancestor_revision,
                      void **file_baton,
                      svn_boolean_t adding)  /* 0 if replacing */
@@ -874,9 +874,9 @@ add_or_replace_file (svn_string_t *name,
 
 
 static svn_error_t *
-add_file (svn_string_t *name,
+add_file (svn_stringbuf_t *name,
           void *parent_baton,
-          svn_string_t *copyfrom_path,
+          svn_stringbuf_t *copyfrom_path,
           svn_revnum_t copyfrom_revision,
           void **file_baton)
 {
@@ -886,7 +886,7 @@ add_file (svn_string_t *name,
 
 
 static svn_error_t *
-replace_file (svn_string_t *name,
+replace_file (svn_stringbuf_t *name,
               void *parent_baton,
               svn_revnum_t base_revision,
               void **file_baton)
@@ -968,11 +968,11 @@ apply_textdelta (void *file_baton,
 
 static svn_error_t *
 change_file_prop (void *file_baton,
-                  svn_string_t *name,
-                  svn_string_t *value)
+                  svn_stringbuf_t *name,
+                  svn_stringbuf_t *value)
 {
   struct file_baton *fb = file_baton;
-  svn_string_t *local_name, *local_value;
+  svn_stringbuf_t *local_name, *local_value;
   svn_prop_t *propchange, **receiver;
 
   /* Duplicate storage of name/value pair;  they should live in the
@@ -1023,7 +1023,7 @@ close_file (void *file_baton)
   svn_error_t *err;
   apr_status_t apr_err;
   char *revision_str = NULL;
-  svn_string_t *entry_accum;
+  svn_stringbuf_t *entry_accum;
 
   err = svn_wc__lock (fb->dir_baton->path, 0, fb->pool);
   if (err)
@@ -1084,9 +1084,9 @@ close_file (void *file_baton)
   if (fb->text_changed)
     {
       enum svn_node_kind wfile_kind = svn_node_unknown;
-      svn_string_t *tmp_txtb = svn_wc__text_base_path (fb->name, 1, fb->pool);
-      svn_string_t *txtb     = svn_wc__text_base_path (fb->name, 0, fb->pool);
-      svn_string_t *received_diff_filename;
+      svn_stringbuf_t *tmp_txtb = svn_wc__text_base_path (fb->name, 1, fb->pool);
+      svn_stringbuf_t *txtb     = svn_wc__text_base_path (fb->name, 0, fb->pool);
+      svn_stringbuf_t *received_diff_filename;
       
       err = svn_io_check_path (fb->path, &wfile_kind, fb->pool);
       if (err)
@@ -1111,11 +1111,11 @@ close_file (void *file_baton)
           const char *diff_args[6];
 
           apr_file_t *received_diff_file;
-          svn_string_t *tmp_txtb_full_path
+          svn_stringbuf_t *tmp_txtb_full_path
             = svn_wc__text_base_path (fb->path, 1, fb->pool);
-          svn_string_t *txtb_full_path
+          svn_stringbuf_t *txtb_full_path
             = svn_wc__text_base_path (fb->path, 0, fb->pool);
-          svn_string_t *tmp_loc
+          svn_stringbuf_t *tmp_loc
             = svn_wc__adm_path (fb->dir_baton->path, 1, fb->pool, 
                                 fb->name->data, NULL);
           
@@ -1215,10 +1215,10 @@ close_file (void *file_baton)
       else if (wfile_kind == svn_node_file)
         {
           /* Patch repos changes into an existing local file. */
-          svn_string_t *patch_cmd = svn_string_create (SVN_CLIENT_PATCH,
+          svn_stringbuf_t *patch_cmd = svn_string_create (SVN_CLIENT_PATCH,
                                                        fb->pool);
           apr_file_t *reject_file = NULL;
-          svn_string_t *reject_filename = NULL;
+          svn_stringbuf_t *reject_filename = NULL;
           
           /* Get the reject file ready. */
           /* kff todo: code dup with above, abstract it? */
@@ -1468,7 +1468,7 @@ close_edit (void *edit_baton)
          need this bumping, and only directory updates at that.
          Updated files should already be up-to-date. */
       svn_wc_entry_t *entry;
-      svn_string_t *full_path = svn_string_dup (eb->anchor, eb->pool);
+      svn_stringbuf_t *full_path = svn_string_dup (eb->anchor, eb->pool);
       if (eb->target)
         svn_path_add_component (full_path, eb->target,
                                 svn_path_local_style);
@@ -1491,10 +1491,10 @@ close_edit (void *edit_baton)
 
 /* Helper for the two public editor-supplying functions. */
 static svn_error_t *
-make_editor (svn_string_t *dest,
+make_editor (svn_stringbuf_t *dest,
              svn_revnum_t target_revision,
              svn_boolean_t is_checkout,
-             svn_string_t *ancestor_path,
+             svn_stringbuf_t *ancestor_path,
              const svn_delta_edit_fns_t **editor,
              void **edit_baton,
              apr_pool_t *pool)
@@ -1551,7 +1551,7 @@ make_editor (svn_string_t *dest,
 
 
 svn_error_t *
-svn_wc_get_update_editor (svn_string_t *dest,
+svn_wc_get_update_editor (svn_stringbuf_t *dest,
                           svn_revnum_t target_revision,
                           const svn_delta_edit_fns_t **editor,
                           void **edit_baton,
@@ -1565,8 +1565,8 @@ svn_wc_get_update_editor (svn_string_t *dest,
 
 
 svn_error_t *
-svn_wc_get_checkout_editor (svn_string_t *dest,
-                            svn_string_t *ancestor_path,
+svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
+                            svn_stringbuf_t *ancestor_path,
                             svn_revnum_t target_revision,
                             const svn_delta_edit_fns_t **editor,
                             void **edit_baton,
@@ -1663,12 +1663,12 @@ svn_wc_get_checkout_editor (svn_string_t *dest,
 
    These conditions apply whether X is a file or directory.  */
 svn_error_t *
-svn_wc_get_actual_update_target (svn_string_t *path,
-                                 svn_string_t **parent_dir,
-                                 svn_string_t **entry,
+svn_wc_get_actual_update_target (svn_stringbuf_t *path,
+                                 svn_stringbuf_t **parent_dir,
+                                 svn_stringbuf_t **entry,
                                  apr_pool_t *pool)
 {
-  svn_string_t *dirname, *basename;
+  svn_stringbuf_t *dirname, *basename;
   svn_boolean_t is_wc;
 
   /* Case I:  If PATH is the current working directory, do not lop off

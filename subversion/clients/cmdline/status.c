@@ -93,7 +93,7 @@ generate_status_codes (char *str_status,
 }
 
 void
-svn_cl__print_status (svn_string_t *path, svn_wc_status_t *status)
+svn_cl__print_status (svn_stringbuf_t *path, svn_wc_status_t *status)
 {
   svn_revnum_t entry_rev;
   char str_status[3];

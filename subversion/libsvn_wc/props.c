@@ -72,14 +72,14 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
       const void *key;
       apr_size_t klen;
       void *val;
-      svn_string_t *propval1, *propval2;
+      svn_stringbuf_t *propval1, *propval2;
 
       /* Get next property */
       apr_hash_this (hi, &key, &klen, &val);
-      propval1 = (svn_string_t *) val;
+      propval1 = (svn_stringbuf_t *) val;
 
       /* Does property name exist in localprops? */
-      propval2 = (svn_string_t *) apr_hash_get (localprops, key, klen);
+      propval2 = (svn_stringbuf_t *) apr_hash_get (localprops, key, klen);
 
       if (propval2 == NULL)
         {
@@ -108,14 +108,14 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
       const void *key;
       apr_size_t klen;
       void *val;
-      svn_string_t *propval1, *propval2;
+      svn_stringbuf_t *propval1, *propval2;
 
       /* Get next property */
       apr_hash_this (hi, &key, &klen, &val);
-      propval2 = (svn_string_t *) val;
+      propval2 = (svn_stringbuf_t *) val;
 
       /* Does property name exist in baseprops? */
-      propval1 = (svn_string_t *) apr_hash_get (baseprops, key, klen);
+      propval1 = (svn_stringbuf_t *) apr_hash_get (baseprops, key, klen);
 
       if (propval1 == NULL)
         {
@@ -158,7 +158,7 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
 
 */
 svn_boolean_t
-svn_wc__conflicting_propchanges_p (svn_string_t **description,
+svn_wc__conflicting_propchanges_p (svn_stringbuf_t **description,
                                    svn_prop_t *local,
                                    svn_prop_t *update,
                                    apr_pool_t *pool)
@@ -229,7 +229,7 @@ svn_wc__conflicting_propchanges_p (svn_string_t **description,
    properties and load this file into HASH.  Otherwise, leave HASH
    untouched.  */
 svn_error_t *
-svn_wc__load_prop_file (svn_string_t *propfile_path,
+svn_wc__load_prop_file (svn_stringbuf_t *propfile_path,
                         apr_hash_t *hash,
                         apr_pool_t *pool)
 {
@@ -274,7 +274,7 @@ svn_wc__load_prop_file (svn_string_t *propfile_path,
 /* Given a HASH full of property name/values, write them to a file
    located at PROPFILE_PATH */
 svn_error_t *
-svn_wc__save_prop_file (svn_string_t *propfile_path,
+svn_wc__save_prop_file (svn_stringbuf_t *propfile_path,
                         apr_hash_t *hash,
                         apr_pool_t *pool)
 {
@@ -314,7 +314,7 @@ svn_wc__save_prop_file (svn_string_t *propfile_path,
    CONFLICT_DESCRIPTION to file. */
 static svn_error_t *
 append_prop_conflict (apr_file_t *fp,
-                      svn_string_t *conflict_description,
+                      svn_stringbuf_t *conflict_description,
                       apr_pool_t *pool)
 {
   /* TODO:  someday, perhaps prefix each conflict_description with a
@@ -336,9 +336,9 @@ append_prop_conflict (apr_file_t *fp,
    return the name of the file in REJECT_FILE.  If no such file exists,
    return (REJECT_FILE = NULL). */
 svn_error_t *
-svn_wc__get_existing_prop_reject_file (svn_string_t **reject_file,
-                                       svn_string_t *path,
-                                       const svn_string_t *name,
+svn_wc__get_existing_prop_reject_file (svn_stringbuf_t **reject_file,
+                                       svn_stringbuf_t *path,
+                                       const svn_stringbuf_t *name,
                                        apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -360,7 +360,7 @@ svn_wc__get_existing_prop_reject_file (svn_string_t **reject_file,
   atts = the_entry->attributes;
   
   *reject_file = 
-    (svn_string_t *) apr_hash_get (atts, SVN_WC_ENTRY_ATTR_PREJFILE,
+    (svn_stringbuf_t *) apr_hash_get (atts, SVN_WC_ENTRY_ATTR_PREJFILE,
                                    APR_HASH_KEY_STRING);
 
   return SVN_NO_ERROR;
@@ -377,24 +377,24 @@ svn_wc__get_existing_prop_reject_file (svn_string_t **reject_file,
 
 
 svn_error_t *
-svn_wc__do_property_merge (svn_string_t *path,
-                           const svn_string_t *name,
+svn_wc__do_property_merge (svn_stringbuf_t *path,
+                           const svn_stringbuf_t *name,
                            apr_array_header_t *propchanges,
                            apr_pool_t *pool,
-                           svn_string_t **entry_accum)
+                           svn_stringbuf_t **entry_accum)
 {
   int i;
   svn_error_t *err;
   svn_boolean_t is_dir;
   
   /* Zillions of pathnames to compute!  yeargh!  */
-  svn_string_t *base_propfile_path, *local_propfile_path;
-  svn_string_t *base_prop_tmp_path, *local_prop_tmp_path;
-  svn_string_t *tmp_prop_base, *real_prop_base;
-  svn_string_t *tmp_props, *real_props;
+  svn_stringbuf_t *base_propfile_path, *local_propfile_path;
+  svn_stringbuf_t *base_prop_tmp_path, *local_prop_tmp_path;
+  svn_stringbuf_t *tmp_prop_base, *real_prop_base;
+  svn_stringbuf_t *tmp_props, *real_props;
 
-  svn_string_t *entryname;
-  svn_string_t *full_path;
+  svn_stringbuf_t *entryname;
+  svn_stringbuf_t *full_path;
   
   apr_array_header_t *local_propchanges; /* propchanges that the user
                                             has made since last update */
@@ -403,10 +403,10 @@ svn_wc__do_property_merge (svn_string_t *path,
 
   /* For writing conflicts to a .prej file */
   apr_file_t *reject_fp = NULL;           /* the real conflicts file */
-  svn_string_t *reject_path = NULL;
+  svn_stringbuf_t *reject_path = NULL;
 
   apr_file_t *reject_tmp_fp = NULL;       /* the temporary conflicts file */
-  svn_string_t *reject_tmp_path = NULL;
+  svn_stringbuf_t *reject_tmp_path = NULL;
 
   if (name == NULL)
     {
@@ -454,7 +454,7 @@ svn_wc__do_property_merge (svn_string_t *path,
     {
       int j;
       int found_match = 0;          
-      svn_string_t *conflict_description;
+      svn_stringbuf_t *conflict_description;
       svn_prop_t *update_change, *local_change;
       
       update_change = (((svn_prop_t **)(propchanges)->elts)[i]);
@@ -495,8 +495,8 @@ svn_wc__do_property_merge (svn_string_t *path,
               {
                 /* This is the very first prop conflict found on this
                    node. */
-                svn_string_t *tmppath;
-                svn_string_t *tmpname;
+                svn_stringbuf_t *tmppath;
+                svn_stringbuf_t *tmpname;
 
                 /* Get path to /temporary/ local prop file */
                 err = svn_wc__prop_path (&tmppath, full_path, 1, pool);
@@ -685,8 +685,8 @@ svn_wc__do_property_merge (svn_string_t *path,
         {
           /* Reserve a new .prej file *above* the SVN/ directory by
              opening and closing it. */
-          svn_string_t *reserved_path;
-          svn_string_t *full_reject_path = svn_string_dup (path, pool);
+          svn_stringbuf_t *reserved_path;
+          svn_stringbuf_t *full_reject_path = svn_string_dup (path, pool);
 
           if (is_dir)
             svn_path_add_component (full_reject_path,
@@ -775,12 +775,12 @@ svn_wc__do_property_merge (svn_string_t *path,
    returns 'wc' props instead of normal props.  */
 static svn_error_t *
 wcprop_list (apr_hash_t **props,
-             svn_string_t *path,
+             svn_stringbuf_t *path,
              apr_pool_t *pool)
 {
   svn_error_t *err;
   enum svn_node_kind kind, pkind;
-  svn_string_t *prop_path;
+  svn_stringbuf_t *prop_path;
   
   *props = apr_hash_make (pool);
 
@@ -822,9 +822,9 @@ wcprop_list (apr_hash_t **props,
 /* This is what RA_DAV will use to fetch 'wc' properties.  It will be
    passed to ra_session_baton->do_commit(). */
 svn_error_t *
-svn_wc__wcprop_get (svn_string_t **value,
-                    svn_string_t *name,
-                    svn_string_t *path,
+svn_wc__wcprop_get (svn_stringbuf_t **value,
+                    svn_stringbuf_t *name,
+                    svn_stringbuf_t *path,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -846,9 +846,9 @@ svn_wc__wcprop_get (svn_string_t **value,
 /* This is what RA_DAV will use to store 'wc' properties.  It will be
    passed to ra_session_baton->do_commit(). */
 svn_error_t *
-svn_wc__wcprop_set (svn_string_t *name,
-                    svn_string_t *value,
-                    svn_string_t *path,
+svn_wc__wcprop_set (svn_stringbuf_t *name,
+                    svn_stringbuf_t *value,
+                    svn_stringbuf_t *path,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -897,12 +897,12 @@ svn_wc__wcprop_set (svn_string_t *name,
 
 svn_error_t *
 svn_wc_prop_list (apr_hash_t **props,
-                  svn_string_t *path,
+                  svn_stringbuf_t *path,
                   apr_pool_t *pool)
 {
   svn_error_t *err;
   enum svn_node_kind kind, pkind;
-  svn_string_t *prop_path;
+  svn_stringbuf_t *prop_path;
   
   *props = apr_hash_make (pool);
 
@@ -945,9 +945,9 @@ svn_wc_prop_list (apr_hash_t **props,
 
 
 svn_error_t *
-svn_wc_prop_get (svn_string_t **value,
-                 svn_string_t *name,
-                 svn_string_t *path,
+svn_wc_prop_get (svn_stringbuf_t **value,
+                 svn_stringbuf_t *name,
+                 svn_stringbuf_t *path,
                  apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -969,9 +969,9 @@ svn_wc_prop_get (svn_string_t **value,
 
 
 svn_error_t *
-svn_wc_prop_set (svn_string_t *name,
-                 svn_string_t *value,
-                 svn_string_t *path,
+svn_wc_prop_set (svn_stringbuf_t *name,
+                 svn_stringbuf_t *value,
+                 svn_stringbuf_t *path,
                  apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -1013,7 +1013,7 @@ svn_wc_prop_set (svn_string_t *name,
 
 
 svn_boolean_t
-svn_wc_is_wc_prop (svn_string_t *name)
+svn_wc_is_wc_prop (svn_stringbuf_t *name)
 {
   size_t prefix_len = sizeof (SVN_PROP_WC_PREFIX) - 1;
 

@@ -84,7 +84,7 @@ encode_int (char *p, apr_off_t val)
 
 /* Append an encoded integer to a string.  */
 static void
-append_encoded_int (svn_string_t *header, apr_off_t val, apr_pool_t *pool)
+append_encoded_int (svn_stringbuf_t *header, apr_off_t val, apr_pool_t *pool)
 {
   char buf[128], *p;
 
@@ -98,8 +98,8 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 {
   struct encoder_baton *eb = baton;
   apr_pool_t *pool = svn_pool_create (eb->pool);
-  svn_string_t *instructions = svn_string_create ("", pool);
-  svn_string_t *header = svn_string_create ("", pool);
+  svn_stringbuf_t *instructions = svn_string_create ("", pool);
+  svn_stringbuf_t *header = svn_string_create ("", pool);
   char ibuf[128], *ip;
   svn_txdelta_op_t *op;
   svn_error_t *err;
@@ -219,7 +219,7 @@ struct decode_baton
   apr_pool_t *subpool;
 
   /* The actual svndiff data buffer, living within subpool.  */
-  svn_string_t *buffer;
+  svn_stringbuf_t *buffer;
 
   /* The offset and size of the last source view, so that we can check
      to make sure the next one isn't sliding backwards.  */

@@ -149,10 +149,10 @@ make_file_baton (struct edit_baton *eb, enum elemtype addreplace)
    depending on where the prop_delta is in the little tree.  The
    element type we are currently in is recorded inside EB.  */
 
-static svn_string_t *
+static svn_stringbuf_t *
 get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
 {
-  svn_string_t *str = svn_string_create ("", pool);
+  svn_stringbuf_t *str = svn_string_create ("", pool);
   struct file_baton *fb;
 
   /* Unwind.  Start from the leaves and go back as far as necessary.  */
@@ -170,7 +170,7 @@ get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
       if (fb->txdelta_id == 0)
         {
           char buf[128];
-          svn_string_t *idstr;
+          svn_stringbuf_t *idstr;
 
           /* Leak a little memory from pool to create idstr; all of our
              callers are using temporary pools anyway.  */
@@ -229,10 +229,10 @@ get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
    EB->elem to the value of DIRFILE for consistency.  */
 static svn_error_t *
 output_addreplace (struct edit_baton *eb, enum elemtype addreplace,
-                   enum elemtype dirfile, svn_string_t *name,
-                   svn_string_t *base_path, svn_revnum_t base_revision)
+                   enum elemtype dirfile, svn_stringbuf_t *name,
+                   svn_stringbuf_t *base_path, svn_revnum_t base_revision)
 {
-  svn_string_t *str;
+  svn_stringbuf_t *str;
   apr_pool_t *pool = svn_pool_create (eb->pool);
   svn_error_t *err;
   apr_size_t len;
@@ -254,7 +254,7 @@ output_addreplace (struct edit_baton *eb, enum elemtype addreplace,
   }
   if (SVN_IS_VALID_REVNUM(base_revision))
   {
-    svn_string_t *buf = svn_string_createf (pool, "%lu", 
+    svn_stringbuf_t *buf = svn_string_createf (pool, "%lu", 
                                            (unsigned long) base_revision);
     if (addreplace == elem_add)
       {
@@ -283,9 +283,9 @@ output_addreplace (struct edit_baton *eb, enum elemtype addreplace,
    in.  This function sets EB->elem to ELEM for consistency.  */
 static svn_error_t *
 output_propset (struct edit_baton *eb, enum elemtype elem,
-                svn_string_t *name, svn_string_t *value)
+                svn_stringbuf_t *name, svn_stringbuf_t *value)
 {
-  svn_string_t *str;
+  svn_stringbuf_t *str;
   apr_pool_t *pool = svn_pool_create (eb->pool);
   svn_error_t *err;
   apr_size_t len;
@@ -328,7 +328,7 @@ replace_root (void *edit_baton, svn_revnum_t base_revision, void **dir_baton)
 {
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
   apr_pool_t *pool = svn_pool_create (eb->pool);
-  svn_string_t *str = NULL;
+  svn_stringbuf_t *str = NULL;
   apr_size_t len;
   apr_hash_t *att;
   svn_error_t *err;
@@ -338,7 +338,7 @@ replace_root (void *edit_baton, svn_revnum_t base_revision, void **dir_baton)
   att = apr_hash_make (pool);
   if (SVN_IS_VALID_REVNUM(base_revision))
   {
-    svn_string_t *br_buf;
+    svn_stringbuf_t *br_buf;
 
     br_buf = svn_string_createf (pool, "%lu", 
                                  (unsigned long) base_revision);
@@ -347,7 +347,7 @@ replace_root (void *edit_baton, svn_revnum_t base_revision, void **dir_baton)
   }
   if (SVN_IS_VALID_REVNUM(eb->target_revision))
   {
-    svn_string_t *tr_buf;
+    svn_stringbuf_t *tr_buf;
 
     tr_buf = svn_string_createf (pool, "%lu", 
                                  (unsigned long) eb->target_revision);
@@ -369,11 +369,11 @@ replace_root (void *edit_baton, svn_revnum_t base_revision, void **dir_baton)
 
 
 static svn_error_t *
-delete_entry (svn_string_t *name, void *parent_baton)
+delete_entry (svn_stringbuf_t *name, void *parent_baton)
 {
   struct dir_baton *db = (struct dir_baton *) parent_baton;
   struct edit_baton *eb = db->edit_baton;
-  svn_string_t *str;
+  svn_stringbuf_t *str;
   apr_pool_t *pool = svn_pool_create (eb->pool);
   svn_error_t *err;
   apr_size_t len;
@@ -391,9 +391,9 @@ delete_entry (svn_string_t *name, void *parent_baton)
 
 
 static svn_error_t *
-add_directory (svn_string_t *name,
+add_directory (svn_stringbuf_t *name,
                void *parent_baton,
-               svn_string_t *copyfrom_path,
+               svn_stringbuf_t *copyfrom_path,
                svn_revnum_t copyfrom_revision,
                void **child_baton)
 {
@@ -407,7 +407,7 @@ add_directory (svn_string_t *name,
 
 
 static svn_error_t *
-replace_directory (svn_string_t *name,
+replace_directory (svn_stringbuf_t *name,
                    void *parent_baton,
                    svn_revnum_t base_revision,
                    void **child_baton)
@@ -423,8 +423,8 @@ replace_directory (svn_string_t *name,
 
 static svn_error_t *
 change_dir_prop (void *dir_baton,
-                 svn_string_t *name,
-                 svn_string_t *value)
+                 svn_stringbuf_t *name,
+                 svn_stringbuf_t *value)
 {
   struct dir_baton *db = (struct dir_baton *) dir_baton;
   struct edit_baton *eb = db->edit_baton;
@@ -438,7 +438,7 @@ close_directory (void *dir_baton)
 {
   struct dir_baton *db = (struct dir_baton *) dir_baton;
   struct edit_baton *eb = db->edit_baton;
-  svn_string_t *str;
+  svn_stringbuf_t *str;
   svn_error_t *err;
   apr_size_t len;
 
@@ -463,9 +463,9 @@ close_directory (void *dir_baton)
 
 
 static svn_error_t *
-add_file (svn_string_t *name,
+add_file (svn_stringbuf_t *name,
           void *parent_baton,
-          svn_string_t *copyfrom_path,
+          svn_stringbuf_t *copyfrom_path,
           svn_revnum_t copyfrom_revision,
           void **file_baton)
 {
@@ -481,7 +481,7 @@ add_file (svn_string_t *name,
 
 
 static svn_error_t *
-replace_file (svn_string_t *name,
+replace_file (svn_stringbuf_t *name,
               void *parent_baton,
               svn_revnum_t base_revision,
               void **file_baton)
@@ -514,7 +514,7 @@ finish_svndiff_data (void *baton)
   struct file_baton *fb = (struct file_baton *) baton;
   struct edit_baton *eb = fb->edit_baton;
   apr_pool_t *subpool = svn_pool_create (eb->pool);
-  svn_string_t *str = NULL;
+  svn_stringbuf_t *str = NULL;
   svn_error_t *err;
   apr_size_t slen;
 
@@ -533,7 +533,7 @@ apply_textdelta (void *file_baton,
 {
   struct file_baton *fb = (struct file_baton *) file_baton;
   struct edit_baton *eb = fb->edit_baton;
-  svn_string_t *str = NULL;
+  svn_stringbuf_t *str = NULL;
   apr_pool_t *pool = svn_pool_create (eb->pool);
   svn_error_t *err;
   apr_size_t len;
@@ -589,8 +589,8 @@ apply_textdelta (void *file_baton,
 
 static svn_error_t *
 change_file_prop (void *file_baton,
-                  svn_string_t *name,
-                  svn_string_t *value)
+                  svn_stringbuf_t *name,
+                  svn_stringbuf_t *value)
 {
   struct file_baton *fb = (struct file_baton *) file_baton;
   struct edit_baton *eb = fb->edit_baton;
@@ -604,7 +604,7 @@ close_file (void *file_baton)
 {
   struct file_baton *fb = (struct file_baton *) file_baton;
   struct edit_baton *eb = fb->edit_baton;
-  svn_string_t *str;
+  svn_stringbuf_t *str;
   svn_error_t *err = SVN_NO_ERROR;
   apr_size_t len;
 
@@ -632,7 +632,7 @@ close_edit (void *edit_baton)
 {
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
   svn_error_t *err;
-  svn_string_t *str = NULL;
+  svn_stringbuf_t *str = NULL;
   apr_size_t len;
 
   svn_xml_make_close_tag (&str, eb->pool, SVN_DELTA__XML_TAG_DELTA_PKG);

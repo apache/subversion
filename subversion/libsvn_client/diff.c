@@ -36,8 +36,8 @@
 /*** Public Interface. ***/
 
 svn_error_t *
-svn_client_file_diff (svn_string_t *path,
-                      svn_string_t **pristine_copy_path,
+svn_client_file_diff (svn_stringbuf_t *path,
+                      svn_stringbuf_t **pristine_copy_path,
                       apr_pool_t *pool)
 {
   svn_error_t *err;

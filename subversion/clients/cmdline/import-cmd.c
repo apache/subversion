@@ -35,12 +35,12 @@ svn_cl__import (apr_getopt_t *os,
                 apr_pool_t *pool)
 {
   apr_array_header_t *targets;
-  svn_string_t *message;
+  svn_stringbuf_t *message;
 
-  svn_string_t *path;
-  svn_string_t *url;
-  svn_string_t *new_entry;
-  svn_string_t *printpath;
+  svn_stringbuf_t *path;
+  svn_stringbuf_t *url;
+  svn_stringbuf_t *new_entry;
+  svn_stringbuf_t *printpath;
 
   const svn_delta_edit_fns_t *trace_editor;
   void *trace_edit_baton;
@@ -89,13 +89,13 @@ svn_cl__import (apr_getopt_t *os,
       (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
        "repository url required when importing");
   else
-    url = ((svn_string_t **) (targets->elts))[0];
+    url = ((svn_stringbuf_t **) (targets->elts))[0];
 
   /* Get a local path. */
   if (targets->nelts < 2)
     path = svn_string_create (".", pool);
   else
-    path = ((svn_string_t **) (targets->elts))[1];
+    path = ((svn_stringbuf_t **) (targets->elts))[1];
 
   /* Because we're working outside the context of a working copy, we
      don't want the trace_editor to print out the 'local' paths like
@@ -109,7 +109,7 @@ svn_cl__import (apr_getopt_t *os,
     new_entry = NULL;  /* tells import() to create many entries at top
                           level. */
   else if (targets->nelts == 3)
-    new_entry = ((svn_string_t **) (targets->elts))[2];
+    new_entry = ((svn_stringbuf_t **) (targets->elts))[2];
   else
     return svn_error_create
       (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,

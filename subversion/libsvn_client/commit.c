@@ -38,7 +38,7 @@
 /* Apply PATH's contents (as a delta against the empty string) to
    FILE_BATON in EDITOR.  Use POOL for any temporary allocation.  */
 static svn_error_t *
-send_file_contents (svn_string_t *path,
+send_file_contents (svn_stringbuf_t *path,
                     void *file_baton,
                     const svn_delta_edit_fns_t *editor,
                     apr_pool_t *pool)
@@ -104,8 +104,8 @@ send_file_contents (svn_string_t *path,
 static svn_error_t *
 import_file (const svn_delta_edit_fns_t *editor,
              void *dir_baton,
-             svn_string_t *path,
-             svn_string_t *name,
+             svn_stringbuf_t *path,
+             svn_stringbuf_t *name,
              apr_pool_t *pool)
 {
   void *file_baton;
@@ -129,7 +129,7 @@ import_file (const svn_delta_edit_fns_t *editor,
 static svn_error_t *
 import_dir (const svn_delta_edit_fns_t *editor, 
             void *dir_baton,
-            svn_string_t *path,
+            svn_stringbuf_t *path,
             apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -142,14 +142,14 @@ import_dir (const svn_delta_edit_fns_t *editor,
        APR_STATUS_IS_SUCCESS (apr_err);
        apr_err = apr_dir_read (&this_entry, APR_FINFO_NORM, dir))
     {
-      svn_string_t *new_path = svn_string_dup (path, subpool);
+      svn_stringbuf_t *new_path = svn_string_dup (path, subpool);
       svn_path_add_component (new_path,
                               svn_string_create (this_entry.name, subpool),
                               svn_path_local_style);
 
       if (this_entry.filetype == APR_DIR)
         {
-          svn_string_t *name = svn_string_create (this_entry.name, subpool);
+          svn_stringbuf_t *name = svn_string_create (this_entry.name, subpool);
           void *this_dir_baton;
 
           /* Skip entries for this dir and its parent.  
@@ -236,8 +236,8 @@ import_dir (const svn_delta_edit_fns_t *editor,
  * not necessarily the root.)
  */
 static svn_error_t *
-import (svn_string_t *path,
-        svn_string_t *new_entry,
+import (svn_stringbuf_t *path,
+        svn_stringbuf_t *new_entry,
         const svn_delta_edit_fns_t *editor,
         void *edit_baton,
         apr_pool_t *pool)
@@ -364,12 +364,12 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
                void *before_edit_baton,
                const svn_delta_edit_fns_t *after_editor,
                void *after_edit_baton,                   
-               svn_string_t *base_dir,
+               svn_stringbuf_t *base_dir,
                apr_array_header_t *condensed_targets,
-               svn_string_t *url,            /* null unless importing */
-               svn_string_t *new_entry,      /* null except when importing */
-               svn_string_t *log_msg,
-               svn_string_t *xml_dst,
+               svn_stringbuf_t *url,            /* null unless importing */
+               svn_stringbuf_t *new_entry,      /* null except when importing */
+               svn_stringbuf_t *log_msg,
+               svn_stringbuf_t *xml_dst,
                svn_revnum_t revision,
                apr_pool_t *pool)
 {
@@ -389,7 +389,7 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
   svn_boolean_t is_import;
   struct svn_wc_close_commit_baton ccb = {base_dir, pool};
   apr_array_header_t *tgt_array
-    = apr_array_make (pool, 1, sizeof (svn_string_t *));
+    = apr_array_make (pool, 1, sizeof (svn_stringbuf_t *));
   
   if (url) 
     is_import = TRUE;
@@ -544,11 +544,11 @@ svn_client_import (const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
                    void *after_edit_baton,                   
-                   svn_string_t *path,
-                   svn_string_t *url,
-                   svn_string_t *new_entry,
-                   svn_string_t *log_msg,
-                   svn_string_t *xml_dst,
+                   svn_stringbuf_t *path,
+                   svn_stringbuf_t *url,
+                   svn_stringbuf_t *new_entry,
+                   svn_stringbuf_t *log_msg,
+                   svn_stringbuf_t *xml_dst,
                    svn_revnum_t revision,
                    apr_pool_t *pool)
 {
@@ -570,12 +570,12 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
                    const svn_delta_edit_fns_t *after_editor,
                    void *after_edit_baton,                   
                    const apr_array_header_t *targets,
-                   svn_string_t *log_msg,
-                   svn_string_t *xml_dst,
+                   svn_stringbuf_t *log_msg,
+                   svn_stringbuf_t *xml_dst,
                    svn_revnum_t revision,
                    apr_pool_t *pool)
 {
-  svn_string_t *base_dir;
+  svn_stringbuf_t *base_dir;
   apr_array_header_t *condensed_targets;
 
   SVN_ERR (svn_path_condense_targets (&base_dir,

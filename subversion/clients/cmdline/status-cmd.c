@@ -46,7 +46,7 @@ svn_cl__status (apr_getopt_t *os,
 
   for (i = 0; i < targets->nelts; i++)
     {
-      svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
+      svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
 
       /* kff todo: eventually, the hard-coded 1 as the DESCEND
          parameter below should be replaced with a pass-thru DESCEND

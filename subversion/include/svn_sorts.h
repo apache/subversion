@@ -29,12 +29,12 @@ extern "C" {
 
 
 
-/* Compare two svn_string_t's, returning an integer greater than,
+/* Compare two svn_stringbuf_t's, returning an integer greater than,
  * equal to, or less than 0, according as A is greater than, equal to,
  * or less than B.
  *
  * You can use this to do an in-place sort of an apr_array_header_t
- * HDR of svn_string_t's like so:
+ * HDR of svn_stringbuf_t's like so:
  * 
  *   qsort (HDR->elts, HDR->nelts, HDR->elt_size,
  *          svn_path_compare_strings_as_paths);

@@ -35,7 +35,7 @@ static const struct hip_xml_elm options_elements[] =
 };
 
 typedef struct {
-  svn_string_t *activity_url;
+  svn_stringbuf_t *activity_url;
   apr_pool_t *pool;
 
 } options_ctx_t;
@@ -91,7 +91,7 @@ static int end_element(void *userdata, const struct hip_xml_elm *elm,
   return 0;
 }
 
-svn_error_t * svn_ra_dav__get_activity_url(svn_string_t **activity_url,
+svn_error_t * svn_ra_dav__get_activity_url(svn_stringbuf_t **activity_url,
                                            svn_ra_session_t *ras,
                                            const char *url,
                                            apr_pool_t *pool)

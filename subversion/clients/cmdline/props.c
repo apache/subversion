@@ -42,12 +42,12 @@ svn_cl__print_prop_hash (apr_hash_t *prop_hash,
       apr_size_t klen;
       void *val;
       
-      svn_string_t *propkey, *propval;
+      svn_stringbuf_t *propkey, *propval;
 
       /* Get next property */
       apr_hash_this (hi, &key, &klen, &val);
       propkey = svn_string_ncreate (key, klen, pool);
-      propval = (svn_string_t *) val;
+      propval = (svn_stringbuf_t *) val;
 
       printf ("%s : %s\n", propkey->data, propval->data);
     } 

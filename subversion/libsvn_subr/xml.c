@@ -25,8 +25,8 @@
 /*** XML escaping. ***/
 
 void
-svn_xml_escape_string (svn_string_t **outstr,
-                       svn_string_t *string,
+svn_xml_escape_string (svn_stringbuf_t **outstr,
+                       svn_stringbuf_t *string,
                        apr_pool_t *pool)
 {
   const char *start = string->data, *end = start + string->len;
@@ -193,7 +193,7 @@ svn_xml_get_attr_value (const char *name, const char **atts)
 /*** Printing XML ***/
 
 void
-svn_xml_make_header (svn_string_t **str, apr_pool_t *pool)
+svn_xml_make_header (svn_stringbuf_t **str, apr_pool_t *pool)
 {
   if (*str == NULL)
     *str = svn_string_create ("", pool);
@@ -243,7 +243,7 @@ svn_xml_ap_to_hash (va_list ap, apr_pool_t *pool)
   
   while ((key = va_arg (ap, char *)) != NULL)
     {
-      svn_string_t *val = va_arg (ap, svn_string_t *);
+      svn_stringbuf_t *val = va_arg (ap, svn_stringbuf_t *);
       apr_hash_set (ht, key, APR_HASH_KEY_STRING, val);
     }
 
@@ -283,7 +283,7 @@ svn_xml_hash_atts_preserving (const char **atts,
 
 
 void
-svn_xml_make_open_tag_hash (svn_string_t **str,
+svn_xml_make_open_tag_hash (svn_stringbuf_t **str,
                             apr_pool_t *pool,
                             enum svn_xml_open_tag_style style,
                             const char *tagname,
@@ -309,7 +309,7 @@ svn_xml_make_open_tag_hash (svn_string_t **str,
       svn_string_appendcstr (*str, "\n   ");
       svn_string_appendcstr (*str, (char *) key);
       svn_string_appendcstr (*str, "=\"");
-      svn_xml_escape_string (str, (svn_string_t *) val, pool);
+      svn_xml_escape_string (str, (svn_stringbuf_t *) val, pool);
       svn_string_appendcstr (*str, "\"");
     }
 
@@ -322,7 +322,7 @@ svn_xml_make_open_tag_hash (svn_string_t **str,
 
 
 void
-svn_xml_make_open_tag_v (svn_string_t **str,
+svn_xml_make_open_tag_v (svn_stringbuf_t **str,
                          apr_pool_t *pool,
                          enum svn_xml_open_tag_style style,
                          const char *tagname,
@@ -338,7 +338,7 @@ svn_xml_make_open_tag_v (svn_string_t **str,
 
 
 void
-svn_xml_make_open_tag (svn_string_t **str,
+svn_xml_make_open_tag (svn_stringbuf_t **str,
                        apr_pool_t *pool,
                        enum svn_xml_open_tag_style style,
                        const char *tagname,
@@ -352,7 +352,7 @@ svn_xml_make_open_tag (svn_string_t **str,
 }
 
 
-void svn_xml_make_close_tag (svn_string_t **str,
+void svn_xml_make_close_tag (svn_stringbuf_t **str,
                              apr_pool_t *pool,
                              const char *tagname)
 {

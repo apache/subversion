@@ -306,9 +306,9 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
                                    "the transaction root (restart the "
                                    "commit).");
 #else
-              svn_string_t *r_id = svn_fs_unparse_id(resource->info->node_id,
+              svn_stringbuf_t *r_id = svn_fs_unparse_id(resource->info->node_id,
                                                      resource->pool);
-              svn_string_t *t_id = svn_fs_unparse_id(res_id, resource->pool);
+              svn_stringbuf_t *t_id = svn_fs_unparse_id(res_id, resource->pool);
               const char *msg = apr_psprintf(resource->pool,
                                              "id mismatch: r=%s  t=%s",
                                              r_id->data, t_id->data);

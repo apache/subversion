@@ -42,10 +42,10 @@ svn_test__create_fs_and_repos (svn_fs_t **fs_p,
 
 
 /* Read all data from a generic read STREAM, and return it in STRING.
-   Allocate the svn_string_t in APRPOOL.  (All data in STRING will be
+   Allocate the svn_stringbuf_t in APRPOOL.  (All data in STRING will be
    dup'ed from STREAM using APRPOOL too.) */
 svn_error_t *
-svn_test__stream_to_string (svn_string_t **string,
+svn_test__stream_to_string (svn_stringbuf_t **string,
                             svn_stream_t *stream, 
                             apr_pool_t *pool);
 
@@ -63,7 +63,7 @@ svn_test__set_file_contents (svn_fs_root_t *root,
 svn_error_t *
 svn_test__get_file_contents (svn_fs_root_t *root,
                              const char *path,
-                             svn_string_t **str, 
+                             svn_stringbuf_t **str, 
                              apr_pool_t *pool);
 
 

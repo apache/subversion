@@ -40,7 +40,7 @@ fail (apr_pool_t *pool, const char *fmt, ...)
 
 
 /* Free everything from pool, and return an empty Subversion string.  */
-static svn_string_t *
+static svn_stringbuf_t *
 get_empty_string (apr_pool_t *pool)
 {
   svn_pool_clear (pool);
@@ -50,7 +50,7 @@ get_empty_string (apr_pool_t *pool)
 
 /* Parse a skeleton from a Subversion string.  */
 static skel_t *
-parse_str (svn_string_t *str, apr_pool_t *pool)
+parse_str (svn_stringbuf_t *str, apr_pool_t *pool)
 {
   return svn_fs__parse_skel (str->data, str->len, pool);
 }
@@ -162,7 +162,7 @@ check_atom (skel_t *skel, const char *data, int len)
    terminated by the character TERM.  BYTE must be a name byte,
    and TERM must be a valid skel separator, or NUL.  */
 static void
-put_implicit_length_byte (svn_string_t *str, char byte, char term)
+put_implicit_length_byte (svn_stringbuf_t *str, char byte, char term)
 {
   if (! skel_is_name (byte))
     abort ();
@@ -213,7 +213,7 @@ gen_implicit_length_all_chars (int *len_p)
    that's legal in such atoms, terminated by the valid atom terminator
    TERM.  */
 static void
-put_implicit_length_all_chars (svn_string_t *str, char term)
+put_implicit_length_all_chars (svn_stringbuf_t *str, char term)
 {
   int len;
   char *name = gen_implicit_length_all_chars (&len);
@@ -247,7 +247,7 @@ check_implicit_length_all_chars (skel_t *skel)
 static svn_error_t *
 parse_implicit_length (const char **msg, apr_pool_t *pool)
 {
-  svn_string_t *str = get_empty_string (pool);
+  svn_stringbuf_t *str = get_empty_string (pool);
   skel_t *skel;
 
   *msg = "parse implicit-length atoms";
@@ -290,7 +290,7 @@ parse_implicit_length (const char **msg, apr_pool_t *pool)
    bytes at DATA, in explicit-length form, using SEP as the separator
    between the length and the data.  */
 static void
-put_explicit_length (svn_string_t *str, const char *data, int len, char sep)
+put_explicit_length (svn_stringbuf_t *str, const char *data, int len, char sep)
 {
   char *buf = (char *) alloca (len + 100);
   int length_len;
@@ -325,7 +325,7 @@ try_explicit_length (const char *data, int len, int check_len,
                      apr_pool_t *pool)
 {
   int i;
-  svn_string_t *str = get_empty_string (pool);
+  svn_stringbuf_t *str = get_empty_string (pool);
   skel_t *skel;
 
   /* Try it with every possible separator character.  */
@@ -433,7 +433,7 @@ parse_invalid_atoms (const char **msg, apr_pool_t *pool)
 /* Append the start of a list to STR, using LEN bytes of the
    whitespace character SPACE.  */
 static void
-put_list_start (svn_string_t *str, char space, int len)
+put_list_start (svn_stringbuf_t *str, char space, int len)
 {
   int i;
 
@@ -449,7 +449,7 @@ put_list_start (svn_string_t *str, char space, int len)
 /* Append the end of a list to STR, using LEN bytes of the
    whitespace character SPACE.  */
 static void
-put_list_end (svn_string_t *str, char space, int len)
+put_list_end (svn_stringbuf_t *str, char space, int len)
 {
   int i;
 
@@ -519,7 +519,7 @@ parse_list (const char **msg, apr_pool_t *pool)
 		    if (skel_is_name ( (apr_byte_t)atom_byte))
 		      {
 			int i;
-			svn_string_t *str = get_empty_string (pool);
+			svn_stringbuf_t *str = get_empty_string (pool);
 			skel_t *skel;
 			skel_t *child;
 
@@ -542,7 +542,7 @@ parse_list (const char **msg, apr_pool_t *pool)
                      legal in an implicit-length atom as the element.  */
 		  {
 		    int i;
-		    svn_string_t *str = get_empty_string (pool);
+		    svn_stringbuf_t *str = get_empty_string (pool);
 		    skel_t *skel;
 		    skel_t *child;
 
@@ -566,7 +566,7 @@ parse_list (const char **msg, apr_pool_t *pool)
 		  for (atom_byte = 0; atom_byte < 256; atom_byte++)
 		    {
 		      int i;
-		      svn_string_t *str = get_empty_string (pool);
+		      svn_stringbuf_t *str = get_empty_string (pool);
 		      skel_t *skel;
 		      skel_t *child;
 		      char buf[1];
@@ -592,7 +592,7 @@ parse_list (const char **msg, apr_pool_t *pool)
 		     an element.  */
 		  {
 		    int i;
-		    svn_string_t *str = get_empty_string (pool);
+		    svn_stringbuf_t *str = get_empty_string (pool);
 		    skel_t *skel;
 		    skel_t *child;
 		    char data[256];
@@ -635,7 +635,7 @@ parse_list (const char **msg, apr_pool_t *pool)
 	       sep_count < 100;
 	       sep_count < 10 ? sep_count++ : (sep_count *= 3))
 	    {
-	      svn_string_t *str;
+	      svn_stringbuf_t *str;
 
 	      /* A list with only a separator.  */
 	      str = get_empty_string (pool);
@@ -746,7 +746,7 @@ unparse_implicit_length (const char **msg, apr_pool_t *pool)
     for (byte = 0; byte < 256; byte++)
       if (skel_is_name ( (apr_byte_t)byte))
 	{
-	  svn_string_t *str = get_empty_string (pool);
+	  svn_stringbuf_t *str = get_empty_string (pool);
 	  char buf =  (char)byte;
 	  skel_t *skel = build_atom (1, &buf, pool);
 
@@ -774,7 +774,7 @@ unparse_list (const char **msg, apr_pool_t *pool)
 
   /* Make a list of all the single-byte implicit-length atoms.  */
   {
-    svn_string_t *str = get_empty_string (pool);
+    svn_stringbuf_t *str = get_empty_string (pool);
     int byte;
     skel_t *list = empty (pool);
     skel_t *reparsed, *elt;
@@ -822,7 +822,7 @@ unparse_list (const char **msg, apr_pool_t *pool)
 
   /* Make a list of lists.  */
   {
-    svn_string_t *str = get_empty_string (pool);
+    svn_stringbuf_t *str = get_empty_string (pool);
     skel_t *top = empty (pool);
     skel_t *reparsed;
     int i;
