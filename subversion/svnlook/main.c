@@ -633,7 +633,7 @@ generate_label (const char **label,
   svn_string_t *date;
   const char *datestr;
   const char *name = NULL;
-  svn_revnum_t rev;
+  svn_revnum_t rev = SVN_INVALID_REVNUM;
 
   if (svn_fs_is_revision_root (root))
     {
