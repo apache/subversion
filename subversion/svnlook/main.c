@@ -1198,11 +1198,13 @@ do_cat (svnlook_ctxt_t *c, const char *path, apr_pool_t *pool)
 
   SVN_ERR (svn_fs_file_contents (&fstream, root, path, pool));
   SVN_ERR (svn_stream_for_stdout (&stdout_stream, pool));
-  do {
-    SVN_ERR (check_cancel (NULL));
-    SVN_ERR (svn_stream_read (fstream, buf, &len));
-    SVN_ERR (svn_stream_write (stdout_stream, buf, &len));
-  } while (len == BUFSIZ);
+  do 
+    {
+      SVN_ERR (check_cancel (NULL));
+      SVN_ERR (svn_stream_read (fstream, buf, &len));
+      SVN_ERR (svn_stream_write (stdout_stream, buf, &len));
+    } 
+  while (len == BUFSIZ);
 
   return SVN_NO_ERROR;
 }
