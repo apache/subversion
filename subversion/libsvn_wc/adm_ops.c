@@ -93,14 +93,15 @@ recursively_tweak_entries (svn_stringbuf_t *dirpath,
           svn_path_add_component_nts (child_url, name);
         }
       
-      /* If a file, tweak the entry. */
-      if (current_entry->kind == svn_node_file)
+      /* If a file (or deleted dir), tweak the entry. */
+      if ((current_entry->kind == svn_node_file)
+          || (current_entry->deleted))
         SVN_ERR (svn_wc__tweak_entry (entries, 
                                       svn_stringbuf_create (name, subpool),
                                       child_url, new_rev, subpool));
       
       /* If a dir, recurse. */
-      else if (current_entry->kind == svn_node_dir)
+      else if (current_entry->kind == svn_node_dir)        
         {
           svn_stringbuf_t *child_path = svn_stringbuf_dup (dirpath, subpool);
           svn_path_add_component_nts (child_path, name);
@@ -705,18 +706,24 @@ svn_wc_add (svn_stringbuf_t *path,
                               "'%s' not found", path->data);
 
   /* Get the original entry for this path if one exists (perhaps
-     this is actually a replacement of a previously deleted thing). */
-  if (svn_wc_entry (&orig_entry, path, FALSE, pool))
+     this is actually a replacement of a previously deleted thing).
+     
+     Note that this is one of the few functions that is allowed to see
+    'deleted' entries;  it's totally fine to have an entry that is
+     scheduled for addition and still previously 'deleted'.  */
+  if (svn_wc_entry (&orig_entry, path, TRUE, pool))
     orig_entry = NULL;
 
   /* You can only add something that is not in revision control, or
-     that is slated for deletion from revision control, unless, of
-     course, you're specifying an addition with -history-; then it's
-     okay for the object to be under version control already; it's not
-     really new.  */
+     that is slated for deletion from revision control, or has been
+     previously 'deleted', unless, of course, you're specifying an
+     addition with -history-; then it's okay for the object to be
+     under version control already; it's not really new.  */
   if (orig_entry)
     {
-      if ((! copyfrom_url) && (orig_entry->schedule != svn_wc_schedule_delete))
+      if ((! copyfrom_url) 
+          && (orig_entry->schedule != svn_wc_schedule_delete)
+          && (! orig_entry->deleted))
         {
           return svn_error_createf 
             (SVN_ERR_ENTRY_EXISTS, 0, NULL, pool,
@@ -1142,6 +1149,27 @@ svn_wc_revert (svn_stringbuf_t *path,
   /* Additions. */
   if (entry->schedule == svn_wc_schedule_add)
     {
+      /* Before removing item from revision control, notice if the
+         entry is in a 'deleted' state; this is critical for
+         directories, where this state only exists in its parent's
+         entry. */
+      svn_boolean_t was_deleted = FALSE;
+      svn_stringbuf_t *parent, *basey;
+
+      if (entry->kind == svn_node_file)
+        was_deleted = entry->deleted;
+      else if (entry->kind == svn_node_dir)
+        {
+          apr_hash_t *entries;
+          svn_wc_entry_t *parents_entry;
+          svn_path_split (path, &parent, &basey, pool);
+          SVN_ERR (svn_wc_entries_read (&entries, parent, TRUE, pool));
+          parents_entry = apr_hash_get (entries, basey->data,
+                                        APR_HASH_KEY_STRING);
+          if (parents_entry)
+            was_deleted = parents_entry->deleted;
+        }
+
       /* Remove the item from revision control. */
       if (entry->kind == svn_node_dir)
         SVN_ERR (svn_wc_remove_from_revision_control 
@@ -1156,6 +1184,28 @@ svn_wc_revert (svn_stringbuf_t *path,
          and we've definitely reverted PATH at this point. */
       recursive = FALSE;
       reverted = TRUE;
+
+      /* If the removed item was *also* in a 'deleted' state, make
+         sure we leave just a plain old 'deleted' entry behind in the
+         parent. */
+      if (was_deleted)
+        {
+          svn_wc_entry_t *tmpentry;
+          tmpentry = apr_pcalloc (pool, sizeof(*tmpentry));
+          tmpentry->kind = entry->kind;
+          tmpentry->deleted = TRUE;
+
+          if (entry->kind == svn_node_dir)
+            SVN_ERR (svn_wc__entry_modify (parent, basey, tmpentry,
+                                           SVN_WC__ENTRY_MODIFY_KIND
+                                           | SVN_WC__ENTRY_MODIFY_DELETED,
+                                           pool));
+          else
+              SVN_ERR (svn_wc__entry_modify (p_dir, bname, tmpentry,
+                                             SVN_WC__ENTRY_MODIFY_KIND
+                                             | SVN_WC__ENTRY_MODIFY_DELETED,
+                                             pool));
+        }
     }
 
   /* Regular prop and text edit. */
