@@ -89,7 +89,7 @@ Candidate changes:
     
     Justification: Lots and lots of TSVN users are hit by this.
     Votes:
-      +1: bliss, sussman
+      +1: bliss, sussman, cmpilato
 
   * r10112, r10113, r10215, r10440, r10441, r10458, r10711, r10775
     Backport Perl bindings fixes from the 1.1.x branch
