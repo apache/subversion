@@ -4,8 +4,9 @@
 
 %define name subversion
 %define version @VERSION@
-%define release @RELEASE@
-%define apache-ver 2.0.43
+%define repos_rev @REPOS_REV@
+%define release @REPOS_REV@.@MDK_RELEASE@mdk
+%define apache_ver 2.0.43
 
 Summary:	Wicked CVS Replacement
 Name:		%{name}
@@ -13,15 +14,15 @@ Version:	%{version}
 Release:	%{release}
 License:	BSD
 URL:		http://subversion.tigris.org
-Source0:	subversion-%{version}.tar.bz2
+Source0:	subversion-%{version}-%{repos_rev}.tar.bz2
 Source1:	46_mod_dav_svn.conf
 Source2:	rcsparse.py
 Patch0:		svn-install.patch
 Patch1:		cvs2svn.patch
 Patch2:		python_swig_setup.py.patch
 Packager:	Michael Ballbach <ballbach@rten.net>
-Buildroot:	%_tmppath/%name-%version-%release-root
-BuildRequires:	apache2-devel >= %{apache-ver}
+BuildRoot:	%_tmppath/%name-%version-%release-root
+BuildRequires:	apache2-devel >= %{apache_ver}
 BuildRequires:	libneon0.23-devel >= 0.23.4
 BuildRequires:	db4.0-devel >= 4.0.14
 BuildRequires:	python >= 2.2.0
