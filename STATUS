@@ -43,3 +43,11 @@ Candidate changes:
     Votes:
       +1: maxb
 
+  * r10652
+    Fix missing UTF-8 -> native recoding in 'svn log' output.
+    Justification:
+      Solves user experience in very common operation.
+    Backporting result:
+      Merge without conflicts (at r10652).
+    Votes:
+      +1: dionisos
