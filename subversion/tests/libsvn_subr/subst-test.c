@@ -223,6 +223,7 @@ substitute_and_verify (const char *test_name,
                        const char *date,
                        const char *author,
                        const char *url,
+                       /* ### todo: sub_boolean_t expand, */
                        apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -237,8 +238,17 @@ substitute_and_verify (const char *test_name,
   SVN_ERR (remove_file (src_fname, pool));
   SVN_ERR (remove_file (dst_fname, pool));
   SVN_ERR (create_file (src_fname, src_eol, pool));
+
+
+  /* ### todo: Once the 'expand' argument is present, we'll need to
+     stop assuming that all keyword translations are expansions (they
+     could be contraction, instead).  For now, we know they are all
+     expansions, though, so we tell svn_io_copy_and_translate to
+     expand. */
   err = svn_io_copy_and_translate (src_fname, dst_fname, dst_eol, repair,
-                                   rev, date, author, url, pool);
+                                   rev, date, author, url, TRUE /* expand */,
+                                   pool);
+
 
   /* Conversion should have failed, if src has mixed eol, and the
      repair flag was not set, and we requested eol translation. */

@@ -98,6 +98,7 @@ file_xfer_under_path (svn_stringbuf_t *path,
                                         date,
                                         author,
                                         url,
+                                        TRUE, /* ### todo: expand? */
                                         pool);
 
     case svn_wc__xfer_mv:

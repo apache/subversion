@@ -1362,13 +1362,17 @@ close_file (void *file_baton)
                                (txtb_full_path->data,
                                 tr_txtb->data,
                                 eol_str,
-                                0, NULL, NULL, NULL, NULL, fb->pool));
+                                0, NULL, NULL, NULL, NULL, 
+                                TRUE, /* ### todo: expand? */
+                                fb->pool));
 
                       SVN_ERR (svn_io_copy_and_translate 
                                (tmp_txtb_full_path->data,
                                 tr_tmp_txtb->data,
                                 eol_str,
-                                0, NULL, NULL, NULL, NULL, fb->pool));
+                                0, NULL, NULL, NULL, NULL, 
+                                TRUE, /* ### todo: expand? */
+                                fb->pool));
                       
                       /* now set our vars to point to the translated
                          files. */

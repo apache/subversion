@@ -360,8 +360,17 @@ svn_io_append_file (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool
 
 
 /*** Helpers for svn_io_copy_and_translate ***/
+/* #define this to turn on translation */
+/*
+#define SVN_TRANSLATE
+*/
 
-#if 0
+/* #define this to turn on newline translation */
+/*
+#define SVN_TRANSLATE_NEWLINES
+*/
+
+#ifdef SVN_TRANSLATE
 /* Return an SVN error for status ERR, using VERB and PATH to describe
    the error, and allocating the svn_error_t in POOL.  */
 static svn_error_t *
@@ -397,7 +406,8 @@ translate_write (apr_file_t *file,
 /* Perform the substition of VALUE into keyword string BUF (with len
    *LEN), given a pre-parsed KEYWORD (and KEYWORD_LEN), and updating
    *LEN to the new size of the substituted result.  Return TRUE if all
-   goes well, FALSE otherwise.  */
+   goes well, FALSE otherwise.  If VALUE is NULL, keyword will be
+   contracted, else it will be expanded.  */
 static svn_boolean_t
 translate_keyword_subst (char *buf,
                          apr_size_t *len,
@@ -411,7 +421,7 @@ translate_keyword_subst (char *buf,
   assert (*len <= SVN_KEYWORD_MAX_LEN);
   assert ((buf[0] == '$') && (buf[*len - 1] == '$'));
 
-  /* Need at least a keyword and two $'s.  */
+  /* Need at least a keyword and two $'s. */
   if (*len < keyword_len + 2)
     return FALSE;
 
@@ -505,23 +515,8 @@ translate_keyword_subst (char *buf,
    string, and return TRUE.  If this buffer doesn't contain a known
    keyword pattern, leave BUF and *LEN untouched and return FALSE.
 
-   BUF can contain:
-
-   - AN UNEXPANDED KEYWORD - $Keyword$: If the corresponding keyword
-     value argument is NULL, do nothing, else perform the translation.
-     Regardless, return TRUE to indicate that a keyword substitution
-     was handled.
-
-   - AN EXPANDED KEYWORD - $Keyword: [value ]$: If the corresponding
-     keyword value argument is NULL, unexpand the keyword, else
-     replace the old expansion with a new one that reflects the
-     keyword value.  Return TRUE to indicate that a keyword
-     substitution was handled.
-
-   - something that isn't keywordy at all: Return FALSE.  
-
-   REVISION, DATE, AUTHOR, and URL are the keyword value arguments
-   spoken of above.  
+   See the docstring for svn_io_copy_and_translate for how the EXPAND,
+   REVISION, DATE, AUTHOR, and URL parameters work.
 
    NOTE: It is assumed that BUF has been allocated to be at least
    SVN_KEYWORD_MAX_LEN bytes longs, and that the data in BUF is less
@@ -533,6 +528,7 @@ translate_keyword_subst (char *buf,
 static svn_boolean_t
 translate_keyword (char *buf,
                    apr_size_t *len,
+                   svn_boolean_t expand,
                    const char *revision,
                    const char *date,
                    const char *author,
@@ -547,61 +543,73 @@ translate_keyword (char *buf,
   assert ((buf[0] == '$') && (buf[*len - 1] == '$'));
 
   /* Revision */
-  value = revision;
+  if ((value = revision))
+    {
+      keyword = SVN_KEYWORD_REVISION_LONG;
+      keyword_len = strlen (SVN_KEYWORD_REVISION_LONG);
+      if (translate_keyword_subst (buf, len, keyword, keyword_len, 
+                                   expand ? value : NULL))
+        return TRUE;
 
-  keyword = SVN_KEYWORD_REVISION_LONG;
-  keyword_len = strlen (SVN_KEYWORD_REVISION_LONG);
-  if (translate_keyword_subst (buf, len, keyword, keyword_len, value))
-    return TRUE;
-
-  keyword = SVN_KEYWORD_REVISION_SHORT;
-  keyword_len = strlen (SVN_KEYWORD_REVISION_SHORT);
-  if (translate_keyword_subst (buf, len, keyword, keyword_len, value))
-    return TRUE;
+      keyword = SVN_KEYWORD_REVISION_SHORT;
+      keyword_len = strlen (SVN_KEYWORD_REVISION_SHORT);
+      if (translate_keyword_subst (buf, len, keyword, keyword_len, 
+                                   expand ? value : NULL))
+        return TRUE;
+    }
 
   /* Date */
-  value = date;
+  if ((value = date))
+    {
+      keyword = SVN_KEYWORD_DATE_LONG;
+      keyword_len = strlen (SVN_KEYWORD_DATE_LONG);
+      if (translate_keyword_subst (buf, len, keyword, keyword_len, 
+                                   expand ? value : NULL))
+        return TRUE;
 
-  keyword = SVN_KEYWORD_DATE_LONG;
-  keyword_len = strlen (SVN_KEYWORD_DATE_LONG);
-  if (translate_keyword_subst (buf, len, keyword, keyword_len, value))
-    return TRUE;
-
-  keyword = SVN_KEYWORD_DATE_SHORT;
-  keyword_len = strlen (SVN_KEYWORD_DATE_SHORT);
-  if (translate_keyword_subst (buf, len, keyword, keyword_len, value))
-    return TRUE;
+      keyword = SVN_KEYWORD_DATE_SHORT;
+      keyword_len = strlen (SVN_KEYWORD_DATE_SHORT);
+      if (translate_keyword_subst (buf, len, keyword, keyword_len, 
+                                   expand ? value : NULL))
+        return TRUE;
+    }
 
   /* Author */
-  value = author;
+  if ((value = author))
+    {
+      keyword = SVN_KEYWORD_AUTHOR_LONG;
+      keyword_len = strlen (SVN_KEYWORD_AUTHOR_LONG);
+      if (translate_keyword_subst (buf, len, keyword, keyword_len, 
+                                   expand ? value : NULL))
+        return TRUE;
 
-  keyword = SVN_KEYWORD_AUTHOR_LONG;
-  keyword_len = strlen (SVN_KEYWORD_AUTHOR_LONG);
-  if (translate_keyword_subst (buf, len, keyword, keyword_len, value))
-    return TRUE;
-
-  keyword = SVN_KEYWORD_AUTHOR_SHORT;
-  keyword_len = strlen (SVN_KEYWORD_AUTHOR_SHORT);
-  if (translate_keyword_subst (buf, len, keyword, keyword_len, value))
-    return TRUE;
+      keyword = SVN_KEYWORD_AUTHOR_SHORT;
+      keyword_len = strlen (SVN_KEYWORD_AUTHOR_SHORT);
+      if (translate_keyword_subst (buf, len, keyword, keyword_len, 
+                                   expand ? value : NULL))
+        return TRUE;
+    }
 
   /* URL */
-  value = url;
+  if ((value = url))
+    {
+      keyword = SVN_KEYWORD_URL_LONG;
+      keyword_len = strlen (SVN_KEYWORD_URL_LONG);
+      if (translate_keyword_subst (buf, len, keyword, keyword_len, 
+                                   expand ? value : NULL))
+        return TRUE;
 
-  keyword = SVN_KEYWORD_URL_LONG;
-  keyword_len = strlen (SVN_KEYWORD_URL_LONG);
-  if (translate_keyword_subst (buf, len, keyword, keyword_len, value))
-    return TRUE;
-
-  keyword = SVN_KEYWORD_URL_SHORT;
-  keyword_len = strlen (SVN_KEYWORD_URL_SHORT);
-  if (translate_keyword_subst (buf, len, keyword, keyword_len, value))
-    return TRUE;
+      keyword = SVN_KEYWORD_URL_SHORT;
+      keyword_len = strlen (SVN_KEYWORD_URL_SHORT);
+      if (translate_keyword_subst (buf, len, keyword, keyword_len, 
+                                   expand ? value : NULL))
+        return TRUE;
+    }
 
   /* No translations were successful.  Return FALSE. */
   return FALSE;
 }
-#endif /* 0 */
+#endif /* SVN_TRANSLATE */
 
 svn_error_t *
 svn_io_copy_and_translate (const char *src,
@@ -612,12 +620,10 @@ svn_io_copy_and_translate (const char *src,
                            const char *date,
                            const char *author,
                            const char *url,
+                           svn_boolean_t expand,
                            apr_pool_t *pool)
 {
-  return svn_io_copy_file (svn_stringbuf_create (src, pool),
-                           svn_stringbuf_create (dst, pool),
-                           pool);
-#if 0
+#ifdef SVN_TRANSLATE
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
   apr_status_t apr_err;
   svn_error_t *err = SVN_NO_ERROR;
@@ -629,9 +635,9 @@ svn_io_copy_and_translate (const char *src,
   char       keyword_buf[SVN_KEYWORD_MAX_LEN] = { 0 };
   apr_size_t keyword_off = 0;
 
-#ifdef HANDLING_NEWLINES
+#ifdef SVN_TRANSLATE_NEWLINES
   char       src_format[3] = { 0 };
-#endif /* HANDLING_NEWLINES */
+#endif /* SVN_TRANSLATE_NEWLINES */
 
   /* Open source file. */
   apr_err = apr_file_open (&s, src, APR_READ, APR_OS_DEFAULT, pool);
@@ -712,7 +718,7 @@ svn_io_copy_and_translate (const char *src,
         case '$':
           /* A-ha!  A keyword delimiter!  */
 
-#ifdef HANDLING_NEWLINES
+#ifdef SVN_TRANSLATE_NEWLINES
           /* If we are currently collecting up a possible newline
              string, this puts an end to that collection.  Flush the
              newline buffer (translating as necessary) and move
@@ -722,7 +728,7 @@ svn_io_copy_and_translate (const char *src,
               /* ### todo: Translate the newline here. */
               newline_off = 0;
             }
-#endif /* HANDLING_NEWLINES */
+#endif /* SVN_TRANSLATE_NEWLINES */
 
           /* Put this character into the keyword buffer. */
           keyword_buf[keyword_off++] = c;
@@ -735,7 +741,7 @@ svn_io_copy_and_translate (const char *src,
           /* Else, it must be the end of one!  Attempt to translate
              the buffer. */
           len = keyword_off;
-          if (translate_keyword (keyword_buf, &len, 
+          if (translate_keyword (keyword_buf, &len, expand,
                                  revision, date, author, url))
             {
               /* We successfully found and translated a keyword.  We
@@ -770,17 +776,17 @@ svn_io_copy_and_translate (const char *src,
               keyword_off = 0;
             }
 
-#ifdef HANDLING_NEWLINES
+#ifdef SVN_TRANSLATE_NEWLINES
           if (eol_str)
             {
               /* Handle this as a translatable newline */
               break;
             }
-#else /* HANDLING_NEWLINES */
+#else /* SVN_TRANSLATE_NEWLINES */
           /* Write out this character. */
           if ((err = translate_write (d, dst, (const void *)&c, 1, pool)))
             goto cleanup;
-#endif /* HANDLING_NEWLINES */
+#endif /* SVN_TRANSLATE_NEWLINES */
 
           break;
 
@@ -803,7 +809,7 @@ svn_io_copy_and_translate (const char *src,
               break;
             }
 
-#ifdef HANDLING_NEWLINES
+#ifdef SVN_TRANSLATE_NEWLINES
           /* If we're in a potential newline separator, this character
              terminates that search, so we need to flush our newline
              buffer (translating as necessary) and then output this
@@ -813,7 +819,7 @@ svn_io_copy_and_translate (const char *src,
               /* ### todo:  I mean it--do the work! */
               break;
             }
-#endif /* HANDLING_NEWLINES */
+#endif /* SVN_TRANSLATE_NEWLINES */
 
           /* Write out this character. */
           if ((err = translate_write (d, dst, (const void *)&c, 1, pool)))
@@ -830,7 +836,11 @@ svn_io_copy_and_translate (const char *src,
     apr_file_close (d); /* toss */
   apr_file_remove (dst, pool); /* toss */
   return err;
-#endif /* 0 */
+#else /* SVN_TRANSLATE */
+  return svn_io_copy_file (svn_stringbuf_create (src, pool),
+                           svn_stringbuf_create (dst, pool),
+                           pool);
+#endif /* SVN_TRANSLATE */
 }
 
 
