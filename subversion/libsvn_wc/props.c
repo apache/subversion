@@ -241,7 +241,8 @@ svn_wc__load_prop_file (const char *propfile_path,
       apr_file_t *propfile = NULL;
 
       SVN_ERR_W (svn_io_file_open (&propfile, propfile_path,
-                                   APR_READ, APR_OS_DEFAULT, pool),
+                                   APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
+                                   pool),
                  "load_prop_file: can't open propfile");
 
       status = svn_hash_read (hash, svn_pack_bytestring,
