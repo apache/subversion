@@ -37,8 +37,8 @@
 
 
 
-/* Set @a *result to the result of prompting the user with @a prompt.
- * Allocate @a *result in @a pool.
+/* Set @a *result to the result of prompting the user with @a
+ * prompt_msg.  Allocate @a *result in @a pool.
  *
  * If @a hide is true, then try to avoid displaying the user's input.
  */
