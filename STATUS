@@ -38,11 +38,12 @@ Candidate changes:
     Votes:
       +1: ghudson, sussman, brane
 
-  * r10398:
+  * r10389, r10398:
     Don't always patch the apr-util files for BDB when generating
-    Windows build scripts.
+    Windows build scripts (introduced in r10206).
     Justification:
       trivial fix, avoids breaking the apr-util build by mistake,
-      will make my life easier as long as the branch 1.1.x is live.
+      will make my life easier as long as the 1.1.x branch is live.
+      r10389 is a doc and utility fix for r10206.
     Votes:
       +3: brane. That should be enough :-)
