@@ -29,6 +29,9 @@ General Problems (someone grab these):
    - switch the copyright notices from "... 2000 ..." to "2000-2001".
      note: tools/check-license.py is handy for this
 
+   - svn_string.c::svn_string_createf(): follow the comments about
+     refactoring to prevent double memory usage
+
 Ben & Karl todo:
 
    - clean up the interface in libsvn_client.  make it more canonical.
