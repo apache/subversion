@@ -14,7 +14,7 @@ Candidate changes:
     Justification:
       Memory bugs are bad; could result in incorrect behavior.
     Votes:
-      +1: ghudson, bliss
+      +1: ghudson, bliss, mbk
 
 Status of 1.1.1:
 ================
