@@ -51,6 +51,10 @@ libsvn_fs_la_LIBADD = -ldb
 
 INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_EXPAT_INCLUDES@
 
+## ### db.h uses u_long which is a BSDism. make sure it has the right
+## ### typedefs from sys/types.h
+CPPFLAGS = @CPPFLAGS@ -D_BSD_SOURCE=1
+
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent
 
