@@ -472,7 +472,7 @@ ANCESTOR:
 - First, the merge fails unless A, B, and ANCESTOR are all the same kind
   of node.
 - If A and B are text files:
-  - If A is an ancestor of B, the B is the merged result.
+  - If A is an ancestor of B, then B is the merged result.
   - If A is identical to B, then B (arbitrarily) is the merged result.
   - Otherwise, the merge fails.
 - If A and B are both directories:
@@ -599,7 +599,7 @@ Syntactic elements
 
 Table keys:
 
-                     ID ::= node.id ;
+                     ID ::= node.revision-id ;
                     TXN ::= number ;
 ##            BASE-PATH ::= [xbc todo: whatzis?]
 
@@ -623,8 +623,8 @@ Filesystem revisions:
 Transactions:
 
             TRANSACTION ::= ("transaction" ROOT-ID BASE-ROOT-ID) ;
-                ROOT-ID ::= node.id ;
-           BASE-ROOT-ID ::= node.id ;
+                ROOT-ID ::= node.revision-id ;
+           BASE-ROOT-ID ::= node.revision-id ;
 
 
 Clones:
@@ -632,8 +632,8 @@ Clones:
 	      CLONE-KEY ::= TXN ' ' BASE-PATH
                   CLONE ::= ("cloned" CLONE-ID)
                           | ("moved" PARENT-CLONE-ID ENTRY-NAME);
-               CLONE-ID ::= node.id ;
-        PARENT-CLONE-ID ::= node.id ;
+               CLONE-ID ::= node.revision-id ;
+        PARENT-CLONE-ID ::= node.revision-id ;
              ENTRY-NAME ::= atom ;
 
 
@@ -649,7 +649,7 @@ Node revisions:
                  HEADER ::= (KIND PROPLIST FLAG ...) ;
                    KIND ::= "file" | "dir" ;
                    FLAG ::= ("mutable" PARENT-ID) ;
-	      PARENT-ID ::= node.id ;
+	      PARENT-ID ::= node.revision-id ;
 
 
 
