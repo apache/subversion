@@ -161,6 +161,19 @@ svn_error_t *svn_wc__adm_steal_write_lock (svn_wc_adm_access_t **adm_access,
 svn_error_t *svn_wc__adm_is_cleanup_required (svn_boolean_t *cleanup,
                                               svn_wc_adm_access_t *adm_access,
                                               apr_pool_t *pool);
+
+/* Store ENTRIES in the cache in ADM_ACCESS appropriate for SHOW_DELETED.
+   ENTRIES may be NULL. */
+void svn_wc__adm_access_set_entries (svn_wc_adm_access_t *adm_access,
+                                     svn_boolean_t show_deleted,
+                                     apr_hash_t *entries);
+
+/* Return the entries hash appropriate for SHOW_DELETED cached in
+   ADM_ACCESS. The returned hash may be NULL. */
+apr_hash_t *svn_wc__adm_access_entries (svn_wc_adm_access_t *adm_access,
+                                        svn_boolean_t show_deleted);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

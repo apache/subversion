@@ -133,7 +133,7 @@ svn_client_add (const char *path,
   svn_wc_adm_access_t *adm_access;
   const char *parent_path = svn_path_remove_component_nts (path, pool);
 
-  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, FALSE, pool));
+  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, TRUE, pool));
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   if ((kind == svn_node_dir) && (recursive))
@@ -216,7 +216,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
          base directory, do not want to store auth data, and do not
          (necessarily) have an admin area for temp files. */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, NULL,
-                                            NULL, FALSE, FALSE, TRUE, 
+                                            NULL, NULL, FALSE, FALSE, TRUE, 
                                             auth_baton, pool));
 
       /* Fetch RA commit editor */

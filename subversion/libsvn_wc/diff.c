@@ -120,7 +120,7 @@ reverse_propchanges (apr_hash_t *baseprops,
  */
 struct edit_baton {
   /* ANCHOR/TARGET represent the base of the hierarchy to be compared. */
-  const char *anchor;
+  svn_wc_adm_access_t *anchor;
   const char *target;
 
   /* The callbacks and callback argument that implement the file comparison
@@ -209,7 +209,7 @@ struct file_baton {
  * descend into subdirectories.
  */
 static struct edit_baton *
-make_editor_baton (const char *anchor,
+make_editor_baton (svn_wc_adm_access_t *anchor,
                    const char *target,
                    const svn_wc_diff_callbacks_t *callbacks,
                    void *callback_baton,
@@ -219,8 +219,8 @@ make_editor_baton (const char *anchor,
   apr_pool_t *subpool = svn_pool_create (pool);
   struct edit_baton *eb = apr_palloc (subpool, sizeof (*eb));
 
-  eb->anchor = anchor;  /* ### Why is this not copied? */
-  eb->target = target;  /* ### Why is this not copied? */
+  eb->anchor = anchor;
+  eb->target = apr_pstrdup (subpool, target);
   eb->callbacks = callbacks;
   eb->callback_baton = callback_baton;
   eb->recurse = recurse;
@@ -270,10 +270,13 @@ make_dir_baton (const char *name,
   else
     {
       if (name)
-        dir_baton->path = svn_path_join (edit_baton->anchor, name,
-                                         dir_baton->pool);
+        dir_baton->path
+          = svn_path_join (svn_wc_adm_access_path (edit_baton->anchor),
+                           name, dir_baton->pool);
       else
-        dir_baton->path = apr_pstrdup (dir_baton->pool, edit_baton->anchor);
+        dir_baton->path
+          = apr_pstrdup (dir_baton->pool,
+                         svn_wc_adm_access_path (edit_baton->anchor));
     }
 
   return dir_baton;
@@ -359,6 +362,7 @@ file_diff (struct dir_baton *dir_baton,
   const char *pristine_copy, *empty_file;
   svn_boolean_t modified;
   enum svn_wc_schedule_t schedule = entry->schedule;
+  svn_wc_adm_access_t *adm_access;
 
   /* If the directory is being added, then this file will need to be
      added. */
@@ -396,7 +400,9 @@ file_diff (struct dir_baton *dir_baton,
                 path,
                 dir_baton->edit_baton->callback_baton));
 
-      SVN_ERR (svn_wc_props_modified_p (&modified, path, pool));
+      SVN_ERR (svn_wc_adm_retrieve (&adm_access, dir_baton->edit_baton->anchor,
+                                    dir_baton->path, pool));
+      SVN_ERR (svn_wc_props_modified_p (&modified, path, adm_access, pool));
       if (modified)
         {
           apr_array_header_t *propchanges;
@@ -414,7 +420,9 @@ file_diff (struct dir_baton *dir_baton,
       break;
 
     default:
-      SVN_ERR (svn_wc_text_modified_p (&modified, path, pool));
+      SVN_ERR (svn_wc_adm_retrieve (&adm_access, dir_baton->edit_baton->anchor,
+                                    dir_baton->path, pool));
+      SVN_ERR (svn_wc_text_modified_p (&modified, path, adm_access, pool));
       if (modified)
         {
           const char *translated;
@@ -427,7 +435,8 @@ file_diff (struct dir_baton *dir_baton,
              tmp translated copy too.  But what the heck, diff is
              already expensive, translating twice for the sake of code
              modularity is liveable. */
-          SVN_ERR (svn_wc_translated_file (&translated, path, pool));
+          SVN_ERR (svn_wc_translated_file (&translated, path, adm_access,
+                                           pool));
           
           err = dir_baton->edit_baton->callbacks->file_changed
             (NULL, NULL,
@@ -445,7 +454,7 @@ file_diff (struct dir_baton *dir_baton,
             return err;
         }
 
-      SVN_ERR (svn_wc_props_modified_p (&modified, path, pool));
+      SVN_ERR (svn_wc_props_modified_p (&modified, path, adm_access, pool));
       if (modified)
         {
           apr_array_header_t *propchanges;
@@ -481,6 +490,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
   apr_hash_index_t *hi;
   svn_boolean_t in_anchor_not_target;
   apr_pool_t *subpool;
+  svn_wc_adm_access_t *adm_access;
 
   /* This directory should have been unchanged or replaced, not added,
      since an added directory can only contain added files and these will
@@ -495,15 +505,19 @@ directory_elements_diff (struct dir_baton *dir_baton,
      skipped. */
   in_anchor_not_target =
     (dir_baton->edit_baton->target
-     && (! svn_path_compare_paths_nts (dir_baton->path,
-                                       dir_baton->edit_baton->anchor)));
+     && (! svn_path_compare_paths_nts
+         (dir_baton->path,
+          svn_wc_adm_access_path (dir_baton->edit_baton->anchor))));
+
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, dir_baton->edit_baton->anchor,
+                                dir_baton->path, dir_baton->pool));
 
   /* Check for property mods on this directory. */
   if (!in_anchor_not_target)
     {
       svn_boolean_t modified;
 
-      SVN_ERR (svn_wc_props_modified_p (&modified, dir_baton->path,
+      SVN_ERR (svn_wc_props_modified_p (&modified, dir_baton->path, adm_access,
                                         dir_baton->pool));
       if (modified)
         {
@@ -522,8 +536,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
         }
     }
 
-  SVN_ERR (svn_wc_entries_read (&entries, dir_baton->path,
-                                FALSE, dir_baton->pool));
+  SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, dir_baton->pool));
 
   subpool = svn_pool_create (dir_baton->pool);
 
@@ -640,8 +653,11 @@ delete_entry (svn_stringbuf_t *name_s,
   svn_wc_entry_t *entry;
   struct dir_baton *b;
   const char *path = svn_path_join (pb->path, name, pool);
+  svn_wc_adm_access_t *adm_access;
 
-  SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
+  SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, pb->edit_baton->anchor,
+                                      path, pool));
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
   switch (entry->kind)
     {
     case svn_node_file:
@@ -906,12 +922,15 @@ static svn_error_t *
 close_file (void *file_baton)
 {
   struct file_baton *b = file_baton;
+  svn_wc_adm_access_t *adm_access;
   svn_wc_entry_t *entry;
 
   /* The path to the temporary copy of the pristine repository version. */
   const char *temp_file_path
     = svn_wc__text_base_path (b->wc_path, TRUE, b->pool);
-  SVN_ERR (svn_wc_entry (&entry, b->wc_path, FALSE, b->pool));
+  SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, b->edit_baton->anchor,
+                                      b->wc_path, b->pool));
+  SVN_ERR (svn_wc_entry (&entry, b->wc_path, adm_access, FALSE, b->pool));
 
   if (b->added)
     {
@@ -931,7 +950,8 @@ close_file (void *file_baton)
       svn_error_t *err1, *err2 = SVN_NO_ERROR;
       const char *translated;
       
-      SVN_ERR (svn_wc_translated_file (&translated, b->path, b->pool));
+      SVN_ERR (svn_wc_translated_file (&translated, b->path, adm_access,
+                                       b->pool));
 
       err1 = b->edit_baton->callbacks->file_changed
         (NULL, NULL,
@@ -1064,7 +1084,7 @@ close_edit (void *edit_baton)
 
 /* Create a diff editor and baton. */
 svn_error_t *
-svn_wc_get_diff_editor (const char *anchor,
+svn_wc_get_diff_editor (svn_wc_adm_access_t *anchor,
                         const char *target,
                         const svn_wc_diff_callbacks_t *callbacks,
                         void *callback_baton,
@@ -1102,7 +1122,7 @@ svn_wc_get_diff_editor (const char *anchor,
 
 /* Compare working copy against the text-base. */
 svn_error_t *
-svn_wc_diff (const char *anchor,
+svn_wc_diff (svn_wc_adm_access_t *anchor,
              const char *target,
              const svn_wc_diff_callbacks_t *callbacks,
              void *callback_baton,
@@ -1113,16 +1133,20 @@ svn_wc_diff (const char *anchor,
   struct dir_baton *b;
   svn_wc_entry_t *entry;
   const char *target_path;
+  svn_wc_adm_access_t *adm_access;
 
   eb = make_editor_baton (anchor, target, callbacks, callback_baton,
                           recurse, pool);
 
   if (target)
-    target_path = svn_path_join (anchor, target, eb->pool);
+    target_path = svn_path_join (svn_wc_adm_access_path (anchor), target,
+                                 eb->pool);
   else
-    target_path = apr_pstrdup (eb->pool, anchor);
+    target_path = apr_pstrdup (eb->pool, svn_wc_adm_access_path (anchor));
 
-  SVN_ERR (svn_wc_entry (&entry, target_path, FALSE, eb->pool));
+  SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, anchor, target_path,
+                                      eb->pool));
+  SVN_ERR (svn_wc_entry (&entry, target_path, adm_access, FALSE, eb->pool));
 
   if (entry->kind == svn_node_dir)
     b = make_dir_baton (target, NULL, eb, FALSE, eb->pool);

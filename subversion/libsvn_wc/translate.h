@@ -88,7 +88,7 @@ void svn_wc__eol_value_from_string (const char **value,
    in the list, allocate *KEYWORDS from POOL, and then populate its
    entries with the related keyword values (also allocated in POOL).
    If no keywords are found in the list, or if there is no list, set
-   *KEYWORDS to NULL.
+   *KEYWORDS to NULL.  ADM_ACCESS must be an access baton for PATH.
 
    If FORCE_LIST is non-null, use it as the list; else use the
    SVN_PROP_KEYWORDS property for PATH.  In either case, use PATH to
@@ -98,6 +98,7 @@ void svn_wc__eol_value_from_string (const char **value,
 */
 svn_error_t *svn_wc__get_keywords (svn_wc_keywords_t **keywords,
                                    const char *path,
+                                   svn_wc_adm_access_t *adm_access,
                                    const char *force_list,
                                    apr_pool_t *pool);
 

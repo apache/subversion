@@ -108,6 +108,7 @@ add_committable (apr_hash_t *committables,
 static svn_error_t *
 harvest_committables (apr_hash_t *committables,
                       const char *path,
+                      svn_wc_adm_access_t *adm_access,
                       const char *url,
                       const char *copyfrom_url,
                       svn_wc_entry_t *entry,
@@ -145,7 +146,7 @@ harvest_committables (apr_hash_t *committables,
          recurse anyway, so... ) */
       svn_error_t *err;
       svn_wc_entry_t *e = NULL;
-      err = svn_wc_entries_read (&entries, path, FALSE, subpool);
+      err = svn_wc_entries_read (&entries, adm_access, FALSE, subpool);
       if (err)
         {
           svn_error_clear_all (err);
@@ -222,7 +223,7 @@ harvest_committables (apr_hash_t *committables,
 
       /* If this is not a WC root then its parent's revision is
          admissible for comparitive purposes. */
-      SVN_ERR (svn_wc_is_wc_root (&wc_root, path, subpool));
+      SVN_ERR (svn_wc_is_wc_root (&wc_root, path, adm_access, subpool));
       if (! wc_root)
         {
           if (parent_entry)
@@ -251,14 +252,15 @@ harvest_committables (apr_hash_t *committables,
   if (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
     {
       /* See if there are property modifications to send. */
-      SVN_ERR (svn_wc_props_modified_p (&prop_mod, path, subpool));
+      SVN_ERR (svn_wc_props_modified_p (&prop_mod, path, adm_access, subpool));
 
       /* Regular adds of files have text mods, but for copies we have
          to test for textual mods.  Directories simply don't have text! */
       if (entry->kind == svn_node_file)
         {
           if (state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
-            SVN_ERR (svn_wc_text_modified_p (&text_mod, path, subpool));
+            SVN_ERR (svn_wc_text_modified_p (&text_mod, path, adm_access,
+                                             subpool));
           else
             text_mod = TRUE;
         }
@@ -271,8 +273,8 @@ harvest_committables (apr_hash_t *committables,
     {
       /* Check for local mods: text+props for files, props alone for dirs. */
       if (entry->kind == svn_node_file)
-        SVN_ERR (svn_wc_text_modified_p (&text_mod, path, subpool));
-      SVN_ERR (svn_wc_props_modified_p (&prop_mod, path, subpool));
+        SVN_ERR (svn_wc_text_modified_p (&text_mod, path, adm_access, subpool));
+      SVN_ERR (svn_wc_props_modified_p (&prop_mod, path, adm_access, subpool));
     }
 
   /* Set text/prop modification flags accordingly. */
@@ -312,6 +314,7 @@ harvest_committables (apr_hash_t *committables,
           const char *name;
           const char *used_url = NULL;
           const char *name_uri = NULL;
+          svn_wc_adm_access_t *dir_access;
 
           /* ### Why do we need to alloc these? */
           const char *full_path = apr_pstrdup (loop_pool, path);
@@ -357,8 +360,14 @@ harvest_committables (apr_hash_t *committables,
             }
 
           /* Recurse. */
+          if (this_entry->kind == svn_node_dir)
+            SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, full_path,
+                                          subpool));
+          else
+            dir_access = adm_access;
+
           SVN_ERR (harvest_committables 
-                   (committables, full_path,
+                   (committables, full_path, dir_access,
                     used_url ? used_url : this_entry->url,
                     this_cf_url,
                     (svn_wc_entry_t *)val, 
@@ -380,12 +389,13 @@ harvest_committables (apr_hash_t *committables,
 
 svn_error_t *
 svn_client__harvest_committables (apr_hash_t **committables,
-                                  const char *parent_dir,
+                                  svn_wc_adm_access_t *parent_dir,
                                   apr_array_header_t *targets,
                                   svn_boolean_t nonrecursive,
                                   apr_pool_t *pool)
 {
   int i = 0;
+  svn_wc_adm_access_t *dir_access;
 
   /* Create the COMMITTABLES hash. */
   *committables = apr_hash_make (pool);
@@ -395,22 +405,26 @@ svn_client__harvest_committables (apr_hash_t **committables,
      harvest_committables() and possibly stored by it. */ 
   do
     {
+      svn_wc_adm_access_t *adm_access;
       svn_wc_entry_t *entry;
       const char *url;
-      const char *target = apr_pstrdup (pool, parent_dir);
+      const char *target = apr_pstrdup (pool,
+                                        svn_wc_adm_access_path (parent_dir));
 
       /* Add the relative portion of our full path (if there are no
          relative paths, TARGET will just be PARENT_DIR for a single
          iteration. */
       if (targets->nelts)
         {
-          target = svn_path_join (parent_dir,  
+          target = svn_path_join (svn_wc_adm_access_path (parent_dir),  
                                   (((const char **) targets->elts)[i]),
                                   pool);
         }
 
       /* No entry?  This TARGET isn't even under version control! */
-      SVN_ERR (svn_wc_entry (&entry, target, FALSE, pool));
+      SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, parent_dir,
+                                          target, pool));
+      SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
       if (! entry)
         return svn_error_create 
           (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool, target);
@@ -418,6 +432,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
       if (! entry->url)
         {
           const char *parent, *base_name;
+          svn_wc_adm_access_t *parent_access;
           svn_wc_entry_t *p_entry;
           svn_boolean_t wc_root;
 
@@ -431,7 +446,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
                target);
 
           /* Check for WC-root-ness. */
-          SVN_ERR (svn_wc_is_wc_root (&wc_root, target, pool));
+          SVN_ERR (svn_wc_is_wc_root (&wc_root, target, adm_access, pool));
           if (wc_root)
             return svn_error_createf 
               (SVN_ERR_ILLEGAL_TARGET, 0, NULL, pool, 
@@ -442,7 +457,9 @@ svn_client__harvest_committables (apr_hash_t **committables,
              isn't) and possibly scheduled for addition (illegal target if
              it is). */
           svn_path_split_nts (target, &parent, &base_name, pool);
-          SVN_ERR (svn_wc_entry (&p_entry, parent, FALSE, pool));
+          SVN_ERR (svn_wc_adm_retrieve (&parent_access, parent_dir, parent,
+                                        pool));
+          SVN_ERR (svn_wc_entry (&p_entry, parent, parent_access, FALSE, pool));
           if (! p_entry)
             return svn_error_createf 
               (SVN_ERR_WC_CORRUPT, 0, NULL, pool, 
@@ -474,7 +491,13 @@ svn_client__harvest_committables (apr_hash_t **committables,
            target);
 
       /* Handle our TARGET. */
-      SVN_ERR (harvest_committables (*committables, target, 
+      SVN_ERR (svn_wc_adm_retrieve (&dir_access, parent_dir,
+                                    (entry->kind == svn_node_dir
+                                     ? target
+                                     : svn_path_remove_component_nts (target,
+                                                                      pool)),
+                                    pool));
+      SVN_ERR (harvest_committables (*committables, target, dir_access,
                                      url, NULL, entry, NULL, FALSE, FALSE, 
                                      nonrecursive, pool));
 
@@ -490,6 +513,7 @@ svn_error_t *
 svn_client__get_copy_committables (apr_hash_t **committables,
                                    const char *new_url,
                                    const char *target,
+                                   svn_wc_adm_access_t *adm_access,
                                    apr_pool_t *pool)
 {
   svn_wc_entry_t *entry;
@@ -498,13 +522,13 @@ svn_client__get_copy_committables (apr_hash_t **committables,
   *committables = apr_hash_make (pool);
 
   /* Read the entry for TARGET. */
-  SVN_ERR (svn_wc_entry (&entry, target, FALSE, pool));
+  SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
   if (! entry)
     return svn_error_create 
       (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool, target);
       
   /* Handle our TARGET. */
-  SVN_ERR (harvest_committables (*committables, target, 
+  SVN_ERR (harvest_committables (*committables, target, adm_access,
                                  new_url, entry->url, entry, NULL,
                                  FALSE, TRUE, FALSE, pool));
 
@@ -717,6 +741,7 @@ struct file_mod_t
 static svn_error_t *
 do_item_commit (const char *url,
                 svn_client_commit_item_t *item,
+                svn_wc_adm_access_t *adm_access,
                 const svn_delta_editor_t *editor,
                 apr_array_header_t *db_stack,
                 int *stack_ptr,
@@ -863,7 +888,7 @@ do_item_commit (const char *url,
             }
         }
 
-      SVN_ERR (svn_wc_entry (&tmp_entry, item->path, TRUE, pool));
+      SVN_ERR (svn_wc_entry (&tmp_entry, item->path, adm_access, TRUE, pool));
       SVN_ERR (svn_wc_transmit_prop_deltas 
                (item->path, tmp_entry, editor,
                 (kind == svn_node_dir) ? dir_baton : file_baton, 
@@ -916,6 +941,7 @@ static svn_error_t *get_test_editor (const svn_delta_editor_t **editor,
 svn_error_t *
 svn_client__do_commit (const char *base_url,
                        apr_array_header_t *commit_items,
+                       svn_wc_adm_access_t *adm_access,
                        const svn_delta_editor_t *editor,
                        void *edit_baton,
                        svn_wc_notify_func_t notify_func,
@@ -955,6 +981,7 @@ svn_client__do_commit (const char *base_url,
      driving the editor. */
   for (i = 0; i < commit_items->nelts; i++)
     {
+      svn_wc_adm_access_t *item_access;
       const char *item_url, *item_dir, *item_name;
       const char *common = NULL;
       size_t common_len;
@@ -1027,7 +1054,9 @@ svn_client__do_commit (const char *base_url,
         }
 
       /*** Step D - Commit the item.  ***/
-      SVN_ERR (do_item_commit (item_url, item, editor,
+      SVN_ERR (svn_wc_adm_probe_retrieve (&item_access, adm_access, item->path,
+                                          pool));
+      SVN_ERR (do_item_commit (item_url, item, item_access, editor,
                                db_stack, &stack_ptr, file_mods, *tempfiles,
                                notify_func, notify_baton, notify_path_prefix,
                                pool));
@@ -1056,8 +1085,9 @@ svn_client__do_commit (const char *base_url,
       svn_client_commit_item_t *item;
       void *val;
       void *file_baton;
-      const char *tempfile;
+      const char *tempfile, *dir_path;
       svn_boolean_t fulltext = FALSE;
+      svn_wc_adm_access_t *item_access;
       
       /* Get the next entry. */
       apr_hash_this (hi, &key, &klen, &val);
@@ -1079,7 +1109,10 @@ svn_client__do_commit (const char *base_url,
       if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         fulltext = TRUE;
 
-      SVN_ERR (svn_wc_transmit_text_deltas (item->path, fulltext,
+      dir_path = svn_path_remove_component_nts (item->path, mod->subpool);
+      SVN_ERR (svn_wc_adm_retrieve (&item_access, adm_access, dir_path,
+                                    mod->subpool));
+      SVN_ERR (svn_wc_transmit_text_deltas (item->path, item_access, fulltext,
                                             editor, file_baton, 
                                             &tempfile, mod->subpool));
       if (tempfile && *tempfiles)

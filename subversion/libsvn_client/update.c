@@ -67,7 +67,7 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
   SVN_ERR (svn_wc_adm_open (&adm_access, NULL, anchor, TRUE, TRUE, pool));
 
   /* Get full URL from the ANCHOR. */
-  SVN_ERR (svn_wc_entry (&entry, anchor, FALSE, pool));
+  SVN_ERR (svn_wc_entry (&entry, anchor, adm_access, FALSE, pool));
   if (! entry)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
@@ -107,6 +107,8 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
     {
       void *ra_baton, *session;
       svn_ra_plugin_t *ra_lib;
+      svn_node_kind_t kind;
+      svn_wc_adm_access_t *dir_access;
 
       /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -114,7 +116,7 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
 
       /* Open an RA session for the URL */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
-                                            NULL, TRUE, TRUE, TRUE, 
+                                            adm_access, NULL, TRUE, TRUE, TRUE, 
                                             auth_baton, pool));
 
       /* ### todo: shouldn't svn_client__get_revision_number be able
@@ -131,10 +133,18 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
                                   recurse,
                                   wrapped_old_editor, wrapped_old_edit_baton));
 
+      SVN_ERR (svn_io_check_path (path, &kind, pool));
+      SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access,
+                                    (kind == svn_node_dir
+                                     ? path
+                                     : svn_path_remove_component_nts (path,
+                                                                      pool)),
+                                    pool));
+
       /* Drive the reporter structure, describing the revisions within
          PATH.  When we call reporter->finish_report, the
          update_editor will be driven by svn_repos_dir_delta. */
-      err = svn_wc_crawl_revisions (path, reporter, report_baton,
+      err = svn_wc_crawl_revisions (path, dir_access, reporter, report_baton,
                                     TRUE, recurse,
                                     notify_func, notify_baton,
                                     traversal_info, pool);

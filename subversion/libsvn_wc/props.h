@@ -60,13 +60,13 @@ svn_wc__conflicting_propchanges_p (const svn_string_t **description,
                                    const svn_prop_t *update,
                                    apr_pool_t *pool);
 
-/* Look up the entry NAME within PATH and see if it has a `current'
+/* Look up the entry NAME within ADM_ACCESS and see if it has a `current'
    reject file describing a state of conflict.  If such a file exists,
    return the name of the file in REJECT_FILE.  If no such file exists,
    return (REJECT_FILE = NULL). */
 svn_error_t *
 svn_wc__get_existing_prop_reject_file (const char **reject_file,
-                                       const char *path,
+                                       svn_wc_adm_access_t *adm_access,
                                        const char *name,
                                        apr_pool_t *pool);
 
@@ -86,17 +86,17 @@ svn_error_t *svn_wc__save_prop_file (const char *propfile_path,
                                      apr_pool_t *pool);
 
 
-/* Given PATH/NAME and an array of PROPCHANGES, merge the changes into
+/* Given ADM_ACCESS/NAME and an array of PROPCHANGES, merge the changes into
    the working copy.  Necessary log entries will be appended to
    ENTRY_ACCUM.
 
    If we are attempting to merge changes to a directory, simply pass
-   the directory as PATH and NULL for NAME.
+   ADM_ACCESS and NULL for NAME.
 
    If conflicts are found when merging, they are placed into a
    temporary .prej file within SVN. Log entries are then written to
    move this file into PATH, or to append the conflicts to the file's
-   already-existing .prej file in PATH.
+   already-existing .prej file in ADM_ACCESS.
 
    If STATE is non-null, set *STATE to the state of the local properties
    after the merge.
@@ -109,7 +109,7 @@ svn_error_t *svn_wc__save_prop_file (const char *propfile_path,
 */
 svn_error_t *svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
                                        apr_hash_t **conflicts,
-                                       const char *path,
+                                       svn_wc_adm_access_t *adm_access,
                                        const char *name,
                                        const apr_array_header_t *propchanges,
                                        apr_pool_t *pool,
@@ -130,10 +130,10 @@ svn_error_t *svn_wc__wcprop_set (const char *name,
                                  const char *path,
                                  apr_pool_t *pool);
 
-/* Remove all wc properties under PATH, recursively.  Do any temporary
-   allocation in POOL.  If PATH is not a directory, return the error
-   SVN_ERR_WC_NOT_DIRECTORY. */
-svn_error_t *svn_wc__remove_wcprops (const char *path, apr_pool_t *pool);
+/* Remove all wc properties under ADM_ACCESS, recursively.  Do any
+   temporary allocation in POOL.  */
+svn_error_t *svn_wc__remove_wcprops (svn_wc_adm_access_t *adm_access,
+                                     apr_pool_t *pool);
 
 
 #ifdef __cplusplus

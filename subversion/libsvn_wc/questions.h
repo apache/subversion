@@ -39,14 +39,16 @@ enum svn_wc__timestamp_kind
 };
 
 
-/* Set *EQUAL_P to true if PATH's TIMESTAMP_KIND timestamp is the same
- * as the one recorded in its `entries' file, else to set to false.
+/* Set *EQUAL_P to true if PATH's TIMESTAMP_KIND timestamp is the same as
+ * the one recorded in its `entries' file, else to set to false. ADM_ACCESS
+ * must be an access baton for PATH.
  *
  * Use POOL for any temporary allocation.
  */
 svn_error_t *
 svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
                             const char *path,
+                            svn_wc_adm_access_t *adm_access,
                             const enum svn_wc__timestamp_kind timestamp_kind,
                             apr_pool_t *pool);
 
@@ -69,7 +71,8 @@ svn_error_t *svn_wc__files_contents_same_p (svn_boolean_t *same,
  * for VERSIONED_FILE's eol and keyword properties, but leaves
  * BASE_FILE alone (as though BASE_FILE were a text-base file, which
  * it usually is, only sometimes we're calling this on incoming
- * temporary text-bases).
+ * temporary text-bases).  ADM_ACCESS must be an access baton for
+ * VERSIONED_FILE.
  * 
  * If an error is returned, the effect on *MODIFIED_P is undefined.
  * 
@@ -77,6 +80,7 @@ svn_error_t *svn_wc__files_contents_same_p (svn_boolean_t *same,
  */
 svn_error_t *svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
                                               const char *versioned_file,
+                                              svn_wc_adm_access_t *adm_access,
                                               const char *base_file,
                                               apr_pool_t *pool);
 

@@ -66,12 +66,16 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
   svn_ra_plugin_t *ra_lib;
   svn_revnum_t revnum;
   svn_error_t *err = NULL;
+  svn_wc_adm_access_t *adm_access;
 
   /* Sanity check.  Without these, the switch is meaningless. */
   assert (path);
   assert (switch_url && (switch_url[0] != '\0'));
 
-  SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
+  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, TRUE, recurse,
+                                  pool));
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
+  
   if (! entry)
     return svn_error_createf
       (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
@@ -82,7 +86,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
       SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
       
       /* get the parent entry */
-      SVN_ERR (svn_wc_entry (&session_entry, anchor, FALSE, pool));
+      SVN_ERR (svn_wc_entry (&session_entry, anchor, adm_access, FALSE, pool));
       if (! entry)
         return svn_error_createf
           (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
@@ -124,19 +128,17 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
       void *switch_edit_baton;
       const svn_delta_edit_fns_t *wrapped_old_editor;
       void *wrapped_old_edit_baton;
-      svn_wc_adm_access_t *adm_access;
       svn_wc_traversal_info_t *traversal_info
         = svn_wc_init_traversal_info (pool);
 
       /* Open an RA session to 'source' URL */
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, path,
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL,
+                                            path, adm_access,
                                             NULL, TRUE, TRUE, FALSE, 
                                             auth_baton, pool));
       SVN_ERR (svn_client__get_revision_number
                (&revnum, ra_lib, session, revision, path, pool));
 
-      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, anchor, TRUE, recurse,
-                                pool));
       /* Fetch the switch (update) editor.  If REVISION is invalid, that's
          okay; the RA driver will call editor->set_target_revision() later
          on. */
@@ -168,11 +170,15 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
          We pass NULL for traversal_info because this is a switch, not
          an update, and therefore we don't want to handle any
          externals except the ones directly affected by the switch. */ 
-      err = svn_wc_crawl_revisions (path, reporter, report_baton,
+      err = svn_wc_crawl_revisions (path, adm_access, reporter, report_baton,
                                     TRUE, recurse,
                                     notify_func, notify_baton,
                                     NULL, /* no traversal info */
                                     pool);
+
+      /* ### BUG? Given that svn_wc_crawl_revisions is not using SVN_ERR
+         ### should svn_client__handle_externals and svn_wc_adm_close below
+         ### do the same? */
 
       /* We handle externals after the switch is complete, so that
          handling external items (and any errors therefrom) doesn't
@@ -182,8 +188,6 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
                                              auth_baton,
                                              FALSE,
                                              pool));
-
-      SVN_ERR (svn_wc_adm_close (adm_access));
     }
   
   else if (entry->kind == svn_node_file)
@@ -218,7 +222,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
          WC, so that ra_dav's implementation of get_file() can use the
          svndiff data to construct a fulltext.  */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, switch_url, NULL,
-                                            NULL, TRUE, TRUE, TRUE,
+                                            NULL, NULL, TRUE, TRUE, TRUE,
                                             auth_baton, pool));
       SVN_ERR (svn_client__get_revision_number
                (&revnum, ra_lib, session, revision, path, pool));
@@ -252,12 +256,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
       {
         svn_wc_notify_state_t content_state;
         svn_wc_notify_state_t prop_state;
-        svn_wc_adm_access_t *adm_access;
-        const char *parent_path = svn_path_remove_component_nts (path, pool);
 
-        SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, FALSE,
-                                  pool));
-        
         SVN_ERR (svn_wc_install_file (&content_state, &prop_state,
                                       adm_access,
                                       path, fetched_rev,
@@ -266,7 +265,6 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
                                       switch_url, /* new url */
                                       pool));     
 
-        SVN_ERR (svn_wc_adm_close (adm_access));
         if (notify_func != NULL)
           (*notify_func) (notify_baton, path, svn_wc_notify_update_update,
                           svn_node_file,
@@ -285,6 +283,8 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
 
   /* Close the RA session. */
   SVN_ERR (ra_lib->close (session));
+
+  SVN_ERR (svn_wc_adm_close (adm_access));
 
   return SVN_NO_ERROR;
 }

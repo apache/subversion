@@ -74,7 +74,7 @@ enum svn_wc__xfer_action {
                                        the current property vals of NAME.
 */
 static svn_error_t *
-file_xfer_under_path (const char *path,
+file_xfer_under_path (svn_wc_adm_access_t *adm_access,
                       const char *name,
                       const char *dest,
                       enum svn_wc__xfer_action action,
@@ -83,8 +83,10 @@ file_xfer_under_path (const char *path,
   svn_error_t *err;
   const char *full_from_path, *full_dest_path;
 
-  full_from_path = svn_path_join (path, name, pool);
-  full_dest_path = svn_path_join (path, dest, pool);
+  full_from_path = svn_path_join (svn_wc_adm_access_path (adm_access), name,
+                                  pool);
+  full_dest_path = svn_path_join (svn_wc_adm_access_path (adm_access), dest,
+                                  pool);
 
   switch (action)
     {
@@ -106,7 +108,8 @@ file_xfer_under_path (const char *path,
         enum svn_wc__eol_style style;
         svn_boolean_t toggled;
 
-        SVN_ERR (svn_wc__get_keywords (&keywords, full_dest_path, NULL, pool));
+        SVN_ERR (svn_wc__get_keywords (&keywords, full_dest_path, adm_access,
+                                       NULL, pool));
         SVN_ERR (svn_wc__get_eol_style (&style, &eol_str,
                                         full_dest_path, pool));
 
@@ -130,7 +133,8 @@ file_xfer_under_path (const char *path,
         /* I don't think this has any callers yet, but my conscience
            says that this option should be here anyway. :-) */
         svn_wc_keywords_t *keywords;
-        SVN_ERR (svn_wc__get_keywords (&keywords, full_from_path, NULL, pool));
+        SVN_ERR (svn_wc__get_keywords (&keywords, full_from_path, adm_access,
+                                       NULL, pool));
         
         return svn_wc_copy_and_translate (full_from_path,
                                           full_dest_path,
@@ -182,7 +186,7 @@ file_xfer_under_path (const char *path,
  */
 static svn_error_t *
 install_committed_file (svn_boolean_t *overwrote_working,
-                        const char *path,
+                        svn_wc_adm_access_t *adm_access,
                         const char *name,
                         apr_pool_t *pool)
 {
@@ -200,7 +204,7 @@ install_committed_file (svn_boolean_t *overwrote_working,
   /* start off assuming that the working file isn't touched. */
   *overwrote_working = FALSE;
 
-  filepath = svn_path_join (path, name, pool);
+  filepath = svn_path_join (svn_wc_adm_access_path (adm_access), name, pool);
 
   /* In the commit, newlines and keywords may have been
    * canonicalized and/or contracted... Or they may not have
@@ -221,7 +225,7 @@ install_committed_file (svn_boolean_t *overwrote_working,
 
   /* start off getting the latest translation prop values. */
   SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol_str, filepath, pool));
-  SVN_ERR (svn_wc__get_keywords (&keywords, filepath, NULL, pool));
+  SVN_ERR (svn_wc__get_keywords (&keywords, filepath, adm_access, NULL, pool));
 
   svn_path_split_nts (filepath, &pdir, &bname, pool);
   tmp_wfile = svn_wc__adm_path (pdir, TRUE, pool, bname, NULL);
@@ -457,8 +461,8 @@ log_do_file_xfer (struct log_runner *loggy,
                               "missing dest attr in %s",
                               svn_wc_adm_access_path (loggy->adm_access));
 
-  err = file_xfer_under_path (svn_wc_adm_access_path (loggy->adm_access),
-                              name, dest, action, loggy->pool);
+  err = file_xfer_under_path (loggy->adm_access, name, dest, action,
+                              loggy->pool);
   if (err)
     signal_error (loggy, err);
 
@@ -592,6 +596,7 @@ log_do_modify_entry (struct log_runner *loggy,
 static svn_error_t *
 log_do_delete_entry (struct log_runner *loggy, const char *name)
 {
+  svn_wc_adm_access_t *adm_access;
   svn_wc_entry_t *entry;
   svn_error_t *err = NULL;
   const char *full_path
@@ -599,7 +604,9 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
                      loggy->pool);
 
   /* Figure out if 'name' is a dir or a file */
-  svn_wc_entry (&entry, full_path, FALSE, loggy->pool);
+  SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, loggy->adm_access, full_path,
+                                      loggy->pool));
+  SVN_ERR (svn_wc_entry (&entry, full_path, adm_access, FALSE, loggy->pool));
 
   if (! entry)
     /* Hmm....this entry is already absent from the revision control
@@ -612,9 +619,6 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
      attempt to destroy all working files & dirs too. */
   if (entry->kind == svn_node_dir)
     {
-      svn_wc_adm_access_t *adm_access;
-      SVN_ERR (svn_wc_adm_retrieve (&adm_access, loggy->adm_access, full_path,
-                                    loggy->pool));
       err = svn_wc_remove_from_revision_control (adm_access,
                                                  SVN_WC_ENTRY_THIS_DIR,
                                                  TRUE, loggy->pool);
@@ -656,6 +660,7 @@ log_do_committed (struct log_runner *loggy,
   apr_time_t text_time = 0; /* By default, don't override old stamp. */
   apr_time_t prop_time = 0; /* By default, don't override old stamp. */
   svn_node_kind_t kind;
+  svn_wc_adm_access_t *adm_access;
 
   /* Determine the actual full path of the affected item. */
   if (! is_this_dir)
@@ -675,7 +680,9 @@ log_do_committed (struct log_runner *loggy,
      entry, or if the entry states that our item is not either "this
      dir" or a file kind, perhaps this isn't really the entry our log
      creator was expecting.  */
-  SVN_ERR (svn_wc_entry (&entry, full_path, TRUE, pool));
+  SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, loggy->adm_access, full_path,
+                                      pool));
+  SVN_ERR (svn_wc_entry (&entry, full_path, adm_access, TRUE, pool));
   if ((! entry) || ((! is_this_dir) && (entry->kind != svn_node_file)))
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, pool,
                               "log command for dir '%s' is mislocated", name);
@@ -729,6 +736,7 @@ log_do_committed (struct log_runner *loggy,
           /* If the parent entry's working rev 'lags' behind new_rev... */
           SVN_ERR (svn_wc_entry (&parentry,
                                  svn_wc_adm_access_path (loggy->adm_access),
+                                 loggy->adm_access,
                                  TRUE, pool));
           if (new_rev > parentry->revision)
             {
@@ -774,9 +782,7 @@ log_do_committed (struct log_runner *loggy,
               
       /* Loop over all children entries, look for items scheduled for
          deletion. */
-      SVN_ERR (svn_wc_entries_read (&entries,
-                                    svn_wc_adm_access_path (loggy->adm_access),
-                                    TRUE, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, loggy->adm_access, TRUE, pool));
       for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
         {
           const void *key;
@@ -842,7 +848,9 @@ log_do_committed (struct log_runner *loggy,
           const char *chosen;
 
           /* Verify that the working file is the same as the tmpf file. */
-          if ((err = svn_wc__versioned_file_modcheck (&same, wf, tmpf, pool)))
+          if ((err = svn_wc__versioned_file_modcheck (&same, wf,
+                                                      loggy->adm_access,
+                                                      tmpf, pool)))
             return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
                                       "error comparing `%s' and `%s'",
                                       wf, tmpf);
@@ -978,8 +986,7 @@ log_do_committed (struct log_runner *loggy,
       /* Okay, NOW install the new file, which may involve expanding
          keywords. */
       if ((err = install_committed_file
-           (&overwrote_working, svn_wc_adm_access_path (loggy->adm_access),
-            name, pool)))
+           (&overwrote_working, loggy->adm_access, name, pool)))
         return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
                                   "error replacing text-base: %s", name);
 
@@ -1051,6 +1058,7 @@ log_do_committed (struct log_runner *loggy,
      Version Control Land), in which case we're all finished here. */
   SVN_ERR (svn_wc_is_wc_root (&wc_root,
                               svn_wc_adm_access_path (loggy->adm_access),
+                              loggy->adm_access,
                               pool));
   if (wc_root)
     return SVN_NO_ERROR;
@@ -1059,7 +1067,8 @@ log_do_committed (struct log_runner *loggy,
      SVN working copy directory). */
   svn_path_split_nts (svn_wc_adm_access_path (loggy->adm_access), &pdir,
                       &base_name, pool);
-  SVN_ERR (svn_wc_entries_read (&entries, pdir, FALSE, pool));
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, loggy->adm_access, pdir, pool));
+  SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
   if (apr_hash_get (entries, base_name, APR_HASH_KEY_STRING))
     {
       svn_wc_adm_access_t *parent_access;
@@ -1234,7 +1243,8 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
     {
       svn_wc_entry_t *thisdir_entry, *parent_entry, *tmpentry;
       SVN_ERR (svn_wc_entry (&thisdir_entry,
-                             svn_wc_adm_access_path (adm_access), FALSE, pool));
+                             svn_wc_adm_access_path (adm_access), adm_access,
+                             FALSE, pool));
 
       /* Blow away the entire directory, and all those below it too. */
       SVN_ERR (svn_wc_remove_from_revision_control (adm_access,
@@ -1245,15 +1255,17 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
          recreate 'deleted' entry in parent. */
       {
         const char *parent, *bname;
+        svn_wc_adm_access_t *parent_access;
+
         svn_path_split_nts (svn_wc_adm_access_path (adm_access), &parent,
                             &bname, pool);
-        SVN_ERR (svn_wc_entry (&parent_entry, parent, FALSE, pool));
+        SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent,
+                                      pool));
+        SVN_ERR (svn_wc_entry (&parent_entry, parent, parent_access, FALSE,
+                               pool));
         
         if (thisdir_entry->revision > parent_entry->revision)
           {
-            svn_wc_adm_access_t *parent_access;
-            SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent,
-                                          pool));
             tmpentry = apr_pcalloc (pool, sizeof(*tmpentry));
             tmpentry->kind = svn_node_dir;
             tmpentry->deleted = TRUE;
@@ -1305,7 +1317,7 @@ svn_wc_cleanup (const char *path,
                                          path, pool));
 
   /* Recurse on versioned subdirs first, oddly enough. */
-  SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));
+  SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
 
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {

@@ -47,6 +47,7 @@
    that file to FILE_PATH with possible translations/expansions.  */
 static svn_error_t *
 restore_file (const char *file_path,
+              svn_wc_adm_access_t *adm_access,
               apr_pool_t *pool)
 {
   const char *text_base_path, *tmp_text_base_path;
@@ -64,7 +65,7 @@ restore_file (const char *file_path,
   SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol,
                                   file_path, pool));
   SVN_ERR (svn_wc__get_keywords (&keywords,
-                                 file_path, NULL, pool));
+                                 file_path, adm_access, NULL, pool));
   
   /* When copying the tmp-text-base out to the working copy, make
      sure to do any eol translations or keyword substitutions,
@@ -99,7 +100,7 @@ restore_file (const char *file_path,
 /* The recursive crawler that describes a mixed-revision working
    copy to an RA layer.  Used to initiate updates.
 
-   This is a depth-first recursive walk of DIR_PATH under WC_PATH.
+   This is a depth-first recursive walk of DIR_PATH under ADM_ACCESS.
    Look at each entry and check if its revision is different than
    DIR_REV.  If so, report this fact to REPORTER.  If an entry is
    missing from disk, report its absence to REPORTER.  
@@ -117,7 +118,7 @@ restore_file (const char *file_path,
    will be restored from text-base and NOTIFY_FUNC/NOTIFY_BATON
    will be called to report the restoration. */
 static svn_error_t *
-report_revisions (const char *wc_path,
+report_revisions (svn_wc_adm_access_t *adm_access,
                   const char *dir_path,
                   svn_revnum_t dir_rev,
                   const svn_ra_reporter_t *reporter,
@@ -134,14 +135,16 @@ report_revisions (const char *wc_path,
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_wc_entry_t *dot_entry;
   const char *this_url, *this_path, *this_full_path;
+  svn_wc_adm_access_t *dir_access;
 
   /* Construct the actual 'fullpath' = wc_path + dir_path */
   const char *full_path
-    = svn_path_join (wc_path, dir_path, subpool);
+    = svn_path_join (svn_wc_adm_access_path (adm_access), dir_path, subpool);
 
   /* Get both the SVN Entries and the actual on-disk entries.   Also
      notice that we're picking up 'deleted' entries too. */
-  SVN_ERR (svn_wc_entries_read (&entries, full_path, TRUE, subpool));
+  SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, full_path, subpool));
+  SVN_ERR (svn_wc_entries_read (&entries, dir_access, TRUE, subpool));
   SVN_ERR (svn_io_get_dirents (&dirents, full_path, subpool));
   
   /* Do the real reporting and recursing. */
@@ -241,7 +244,7 @@ report_revisions (const char *wc_path,
               && (current_entry->schedule != svn_wc_schedule_replace))
             {
               /* Recreate file from text-base. */
-              SVN_ERR (restore_file (this_full_path, pool));
+              SVN_ERR (restore_file (this_full_path, dir_access, pool));
               
               /* Report the restoration to the caller. */
               if (notify_func != NULL)
@@ -273,6 +276,7 @@ report_revisions (const char *wc_path,
       
       else if (current_entry->kind == svn_node_dir && recurse)
         {
+          svn_wc_adm_access_t *subdir_access;
           svn_wc_entry_t *subdir_entry;
 
           if (missing)
@@ -297,7 +301,9 @@ report_revisions (const char *wc_path,
           
           /* We need to read the full entry of the directory from its
              own "this dir", if available. */
-          SVN_ERR (svn_wc_entry (&subdir_entry, this_full_path,
+          SVN_ERR (svn_wc_adm_retrieve (&subdir_access, adm_access,
+                                        this_full_path, subpool));
+          SVN_ERR (svn_wc_entry (&subdir_entry, this_full_path, subdir_access,
                                  TRUE, subpool));
 
           /* Possibly report a disjoint URL... */
@@ -336,7 +342,7 @@ report_revisions (const char *wc_path,
             }
 
           /* Recurse. */
-          SVN_ERR (report_revisions (wc_path, this_path,
+          SVN_ERR (report_revisions (adm_access, this_path,
                                      subdir_entry->revision,
                                      reporter, report_baton,
                                      notify_func, notify_baton,
@@ -362,6 +368,7 @@ report_revisions (const char *wc_path,
    for updates. */
 svn_error_t *
 svn_wc_crawl_revisions (const char *path,
+                        svn_wc_adm_access_t *adm_access,
                         const svn_ra_reporter_t *reporter,
                         void *report_baton,
                         svn_boolean_t restore_files,
@@ -380,12 +387,13 @@ svn_wc_crawl_revisions (const char *path,
   /* The first thing we do is get the base_rev from the working copy's
      ROOT_DIRECTORY.  This is the first revnum that entries will be
      compared to. */
-  SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
   base_rev = entry->revision;
   if (base_rev == SVN_INVALID_REVNUM)
     {
       SVN_ERR (svn_wc_entry (&parent_entry, 
                              svn_path_remove_component_nts (path, pool),
+                             adm_access,
                              FALSE, pool));
       base_rev = parent_entry->revision;
     }
@@ -417,7 +425,7 @@ svn_wc_crawl_revisions (const char *path,
         {
           /* Recursively crawl ROOT_DIRECTORY and report differing
              revisions. */
-          err = report_revisions (path,
+          err = report_revisions (adm_access,
                                   "",
                                   base_rev,
                                   reporter, report_baton,
@@ -437,7 +445,7 @@ svn_wc_crawl_revisions (const char *path,
       if (missing && restore_files)
         {
           /* Recreate file from text-base. */
-          err = restore_file (path, pool);
+          err = restore_file (path, adm_access, pool);
           if (err)
             goto abort_report;
 
@@ -454,7 +462,7 @@ svn_wc_crawl_revisions (const char *path,
       /* Split PATH into parent PDIR and basename BNAME. */
       svn_path_split_nts (path, &pdir, &bname, pool);
       if (! parent_entry)
-        SVN_ERR (svn_wc_entry (&parent_entry, pdir, FALSE, pool));
+        SVN_ERR (svn_wc_entry (&parent_entry, pdir, adm_access, FALSE, pool));
       
       if (parent_entry 
           && parent_entry->url 
@@ -507,6 +515,7 @@ svn_wc_crawl_revisions (const char *path,
 
 svn_error_t *
 svn_wc_transmit_text_deltas (const char *path,
+                             svn_wc_adm_access_t *adm_access,
                              svn_boolean_t fulltext,
                              const svn_delta_editor_t *editor,
                              void *file_baton,
@@ -539,7 +548,7 @@ svn_wc_transmit_text_deltas (const char *path,
      Note that since the translation routine doesn't let you choose
      the filename, we have to do one extra copy.  But what the heck,
      we're about to generate an svndiff anyway. */
-  SVN_ERR (svn_wc_translated_file (&tmpf, path, pool));
+  SVN_ERR (svn_wc_translated_file (&tmpf, path, adm_access, pool));
   tmp_base = svn_wc__text_base_path (path, TRUE, pool);
   SVN_ERR (svn_io_copy_file (tmpf, tmp_base, FALSE, pool));
 
@@ -565,7 +574,7 @@ svn_wc_transmit_text_deltas (const char *path,
       const char *tb = svn_wc__text_base_path (path, FALSE, pool);
       svn_wc_entry_t *ent;
       
-      SVN_ERR (svn_wc_entry (&ent, path, FALSE, pool));
+      SVN_ERR (svn_wc_entry (&ent, path, adm_access, FALSE, pool));
       SVN_ERR (svn_io_file_checksum (&checksum, tb, pool));
       
       /* For backwards compatibility, no checksum means assume a match. */

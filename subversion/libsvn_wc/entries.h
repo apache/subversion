@@ -71,10 +71,10 @@ svn_error_t *svn_wc__entries_init (const char *path,
                                    apr_pool_t *pool);
 
 
-/* Create or overwrite an `entries' file for PATH using the contents
+/* Create or overwrite an `entries' file for ADM_ACCESS using the contents
    of ENTRIES.  See also svn_wc_entries_read() in the public api. */
 svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
-                                    const char *path,
+                                    svn_wc_adm_access_t *adm_access,
                                     apr_pool_t *pool);
 
 

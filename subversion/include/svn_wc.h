@@ -97,6 +97,17 @@ svn_error_t *svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
                               svn_boolean_t tree_lock,
                               apr_pool_t *pool);
 
+/* Checks the working copy to determine the node type of PATH.  If PATH is
+   a versioned directory then the behaviour is like that of
+   svn_wc_adm_open, otherwise, if PATH is a file, an unversioned directory,
+   or does not exist, then the behaviour is like that of svn_wc_adm_open
+   with PATH replaced by the parent directory of PATH. */
+svn_error_t *svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
+                                    svn_wc_adm_access_t *associated,
+                                    const char *path,
+                                    svn_boolean_t write_lock,
+                                    svn_boolean_t tree_lock,
+                                    apr_pool_t *pool);
 
 /* Return, in *ADM_ACCESS, a pointer to an existing access baton associated
    with PATH.  PATH must be a directory that is locked as part of the set
@@ -108,6 +119,16 @@ svn_error_t *svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
                                   const char *path,
                                   apr_pool_t *pool);
 
+/* Checks the working copy to determine the node type of PATH.  If PATH is
+   a versioned directory then the behaviour is like that of
+   svn_wc_adm_retrieve, otherwise, if PATH is a file, an unversioned
+   directory, or does not exist, then the behaviour is like that of
+   svn_wc_adm_retrieve with PATH replaced by the parent directory of
+   PATH. */
+svn_error_t *svn_wc_adm_probe_retrieve (svn_wc_adm_access_t **adm_access,
+                                        svn_wc_adm_access_t *associated,
+                                        const char *path,
+                                        apr_pool_t *pool);
 
 /* Give up the access baton ADM_ACCESS, and its lock if any. This will
    recursively close any batons in the same set that are direct
@@ -346,7 +367,8 @@ svn_error_t *svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
 
 /* Set *MODIFIED_P to non-zero if FILENAME's text is modified
    w.r.t. the base revision, else set *MODIFIED_P to zero.
-   FILENAME is a path to the file, not just a basename. 
+   FILENAME is a path to the file, not just a basename. ADM_ACCESS
+   must be an access baton for FILENAME.
 
    If FILENAME does not exist, consider it unmodified.  If it exists
    but is not under revision control (not even scheduled for
@@ -354,13 +376,16 @@ svn_error_t *svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
 */
 svn_error_t *svn_wc_text_modified_p (svn_boolean_t *modified_p,
                                      const char *filename,
+                                     svn_wc_adm_access_t *adm_access,
                                      apr_pool_t *pool);
 
 
 /* Set *MODIFIED_P to non-zero if PATH's properties are modified
-   w.r.t. the base revision, else set MODIFIED_P to zero. */
+   w.r.t. the base revision, else set MODIFIED_P to zero. ADM_ACCESS
+   must be an access baton for PATH. */
 svn_error_t *svn_wc_props_modified_p (svn_boolean_t *modified_p,
                                       const char *path,
+                                      svn_wc_adm_access_t *adm_access,
                                       apr_pool_t *pool);
 
 
@@ -438,19 +463,26 @@ typedef struct svn_wc_entry_t
  * 'deleted', not scheduled for re-addition, and SHOW_DELETED is
  * false, then set *ENTRY to NULL.
  *
+ * If PATH is not a directory then ADM_ACCESS must be an access baton for
+ * the parent directory of PATH.  To avoid needing to know whether PATH is
+ * a directory or not, if PATH is a directory ADM_ACCESS can still be be an
+ * access baton for the parent of PATH so long as the access baton for PATH
+ * itself is in the same access baton set.
+ *
  * Note that it is possible for PATH to be absent from disk but still
  * under revision control; and conversely, it is possible for PATH to
  * be present, but not under revision control.
  */
 svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
                            const char *path,
+                           svn_wc_adm_access_t *adm_access,
                            svn_boolean_t show_deleted,
                            apr_pool_t *pool);
 
 
-/* Parse the `entries' file for PATH and return a hash ENTRIES, whose
-   keys are (const char *) entry names and values are (svn_wc_entry_t
-   *).  Allocate ENTRIES, and its keys and values, in POOL.
+/* Parse the `entries' file for ADM_ACCESS and return a hash ENTRIES, whose
+   keys are (const char *) entry names and values are (svn_wc_entry_t *).
+   Allocate ENTRIES, and its keys and values, in POOL.
    
    Entries that are in a 'deleted' state (and not scheduled for
    re-addition) are not returned in the hash, unless SHOW_DELETED is true.
@@ -462,7 +494,7 @@ svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
    routine to open its PATH and read the SVN_WC_ENTRY_THIS_DIR
    structure, or call svn_wc_get_entry on its PATH. */
 svn_error_t *svn_wc_entries_read (apr_hash_t **entries,
-                                  const char *path,
+                                  svn_wc_adm_access_t *adm_access,
                                   svn_boolean_t show_deleted,
                                   apr_pool_t *pool);
 
@@ -485,10 +517,11 @@ svn_error_t *svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
                                   apr_pool_t *pool);
 
 /* Set *URL and *REV to the ancestor url and revision for PATH,
-   allocating in POOL. */
+   allocating in POOL.  ADM_ACCESS must ba an access baton for PATH. */
 svn_error_t *svn_wc_get_ancestry (char **url,
                                   svn_revnum_t *rev,
                                   const char *path,
+                                  svn_wc_adm_access_t *adm_access,
                                   apr_pool_t *pool);
 
 
@@ -512,7 +545,8 @@ typedef struct svn_wc_entry_callbacks_t
    Do a recursive depth-first entry-walk beginning on PATH, which can
    be a file or dir.  Call callbacks in WALK_CALLBACKS, passing
    WALK_BATON to each.  Use POOL for looping, recursion, and to
-   allocate all entries returned.
+   allocate all entries returned.  ADM_ACCESS must be an access baton
+   for PATH.
 
    Like our other entries interfaces, entries that are in a 'deleted'
    state (and not scheduled for re-addition) are not discovered,
@@ -527,6 +561,7 @@ typedef struct svn_wc_entry_callbacks_t
    distinguished by looking for SVN_WC_ENTRY_THIS_DIR in the 'name'
    field of the entry.]   */
 svn_error_t *svn_wc_walk_entries (const char *path,
+                                  svn_wc_adm_access_t *adm_access,
                                   const svn_wc_entry_callbacks_t 
                                                      *walk_callbacks,
                                   void *walk_baton,
@@ -613,7 +648,8 @@ typedef struct svn_wc_status_t
 
 
 /* Fill *STATUS for PATH, allocating in POOL, with the exception of
-   the repos_rev field, which is normally filled in by the caller. 
+   the repos_rev field, which is normally filled in by the caller.
+   ADM_ACCESS must be an access baton for PATH.
 
    Here are some things to note about the returned structure.  A quick
    examination of the STATUS->text_status after a successful return of
@@ -637,12 +673,14 @@ typedef struct svn_wc_status_t
    svn_wc_status_kind structure above for some hints.  */
 svn_error_t *svn_wc_status (svn_wc_status_t **status, 
                             const char *path, 
+                            svn_wc_adm_access_t *adm_access,
                             apr_pool_t *pool);
 
 
 /* Under PATH, fill STATUSHASH mapping paths to svn_wc_status_t
  * structures.  All fields in each struct will be filled in except for
  * repos_rev, which would presumably be filled in by the caller.
+ * ADM_ACCESS must be an access baton for PATH.
  *
  * PATH will usually be a directory, since for a regular file, you would
  * have used svn_wc_status().  However, it is no error if PATH is not
@@ -660,6 +698,7 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  * subdirectories.  In other words, a full recursion. */
 svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
                               const char *path,
+                              svn_wc_adm_access_t *adm_access,
                               svn_boolean_t descend,
                               svn_boolean_t get_all,
                               svn_boolean_t no_ignore,
@@ -671,16 +710,18 @@ svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
    modifications that would be received on update, and that sets
    *YOUNGEST to the youngest revision in the repository (the editor
    also sets the repos_rev field in each svn_wc_status_t structure
-   to the same value).
+   to the same value).  ADM_ACCESS must be an access baton for PATH.
 
    If DESCEND is zero, then only immediate children of PATH will be
-   done.
+   done, otherwise ADM_ACCESS should be part of an access baton set
+   for the PATH hierarchy.
 
    Allocate the editor itself in POOL, but the editor does temporary
    allocations in a subpool of POOL.  */
 svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        const char *path,
+                                       svn_wc_adm_access_t *adm_access,
                                        svn_boolean_t descend,
                                        apr_hash_t *statushash,
                                        svn_revnum_t *youngest,
@@ -950,7 +991,8 @@ void svn_wc_edited_externals (apr_hash_t **externals_old,
    directory, this depth-first crawl will be a short one.
 
    No locks are or logs are created, nor are any animals harmed in the
-   process.  No cleanup is necessary.
+   process.  No cleanup is necessary.  ADM_ACCESS must be an access baton
+   for the PATH hierarchy, it does not require a write lock.
 
    After all revisions are reported, REPORTER->finish_report() is
    called, which immediately causes the RA layer to update the working
@@ -968,6 +1010,7 @@ void svn_wc_edited_externals (apr_hash_t **externals_old,
    svn_wc_init_traversal_info.)  */
 svn_error_t *
 svn_wc_crawl_revisions (const char *path,
+                        svn_wc_adm_access_t *adm_access,
                         const svn_ra_reporter_t *reporter,
                         void *report_baton,
                         svn_boolean_t restore_files,
@@ -989,6 +1032,7 @@ svn_wc_crawl_revisions (const char *path,
  */
 svn_error_t *svn_wc_is_wc_root (svn_boolean_t *wc_root,
                                 const char *path,
+                                svn_wc_adm_access_t *adm_access,
                                 apr_pool_t *pool);
 
 
@@ -1204,7 +1248,8 @@ svn_error_t *svn_wc_prop_list (apr_hash_t **props,
 
 
 /* Set *VALUE to the value of regular property NAME for PATH,
-   allocating *VALUE in POOL.  If no such prop, set *VALUE to NULL. */
+   allocating *VALUE in POOL.  If no such prop, set *VALUE to NULL.
+   ADM_ACCESS must be an access baton for PATH. */
 svn_error_t *svn_wc_prop_get (const svn_string_t **value,
                               const char *name,
                               const char *path,
@@ -1213,10 +1258,11 @@ svn_error_t *svn_wc_prop_get (const svn_string_t **value,
 /* Set regular property NAME to VALUE for PATH.  Do any temporary
    allocation in POOL.  If NAME is not a valid property for PATH,
    return SVN_ERR_ILLEGAL_TARGET.  If VALUE is null, remove property
-   NAME. */
+   NAME.  ADM_ACCESS must be an access baton with a write lock for PATH. */
 svn_error_t *svn_wc_prop_set (const char *name,
                               const svn_string_t *value,
                               const char *path,
+                              svn_wc_adm_access_t *adm_access,
                               apr_pool_t *pool);
 
 
@@ -1257,9 +1303,10 @@ svn_boolean_t svn_wc_is_entry_prop (const char *name);
  * files are to be compared.
  *
  * RECURSE determines whether to descend into subdirectories when TARGET
- * is a directory.
+ * is a directory.  If RECURSE is TRUE then ANCHOR should be part of an
+ * access baton set for the TARGET hierarchy.
  */
-svn_error_t *svn_wc_get_diff_editor (const char *anchor,
+svn_error_t *svn_wc_get_diff_editor (svn_wc_adm_access_t *anchor,
                                      const char *target,
                                      const svn_wc_diff_callbacks_t *callbacks,
                                      void *callback_baton,
@@ -1277,9 +1324,10 @@ svn_error_t *svn_wc_get_diff_editor (const char *anchor,
  * files are to be compared.
  *
  * RECURSE determines whether to descend into subdirectories when TARGET
- * is a directory.
+ * is a directory.  If RECURSE is TRUE then ANCHOR should be part of an
+ * access baton set for the TARGET hierarchy.
  */
-svn_error_t *svn_wc_diff (const char *anchor,
+svn_error_t *svn_wc_diff (svn_wc_adm_access_t *anchor,
                           const char *target,
                           const svn_wc_diff_callbacks_t *callbacks,
                           void *callback_baton,
@@ -1463,17 +1511,17 @@ svn_wc_get_auth_file (const char *path,
 
 
 /* Store a file named FILENAME with CONTENTS in the authentication
-   area of PATH's administrative directory.  PATH must be a working
-   copy directory.  If no such file exists, it will be created.  If
-   the file exists already, it will be completely overwritten with the
-   new contents.  If RECURSE is true, this file will be stored in every
-   administrative area below PATH as well. 
+   area of ADM_ACCESS's administrative directory. If no such file
+   exists, it will be created.  If the file exists already, it will
+   be completely overwritten with the new contents.  If RECURSE is
+   true, this file will be stored in every administrative area below
+   ADM_ACCESS as well. 
 
    Note: CONTENTS is a stringbuf because maybe we'll need to store
    binary contents in an auth file.  If that's unlikely, then we
    should change it to const char *.  */
 svn_error_t *
-svn_wc_set_auth_file (const char *path,
+svn_wc_set_auth_file (svn_wc_adm_access_t *adm_access,
                       svn_boolean_t recurse,
                       const char *filename,
                       svn_stringbuf_t *contents,
@@ -1594,6 +1642,7 @@ svn_error_t *svn_wc_copy_and_translate (const char *src,
  */
 svn_error_t *svn_wc_translated_file (const char **xlated_p,
                                      const char *vfile,
+                                     svn_wc_adm_access_t *adm_access,
                                      apr_pool_t *pool);
 
 
@@ -1603,7 +1652,8 @@ svn_error_t *svn_wc_translated_file (const char **xlated_p,
 
 /* Send the local modifications for versioned file PATH (with
    matching FILE_BATON) through EDITOR, then close FILE_BATON
-   afterwards.  Use POOL for any temporary allocation.
+   afterwards.  Use POOL for any temporary allocation and
+   ADM_ACCESS as an access baton for PATH.
   
    This process creates a copy of PATH with keywords and eol
    untranslated.  If TEMPFILE is non-null, set *TEMPFILE to the path
@@ -1624,6 +1674,7 @@ svn_error_t *svn_wc_translated_file (const char **xlated_p,
    text-delta styled editor drivers.
 */
 svn_error_t *svn_wc_transmit_text_deltas (const char *path,
+                                          svn_wc_adm_access_t *adm_access,
                                           svn_boolean_t fulltext,
                                           const svn_delta_editor_t *editor,
                                           void *file_baton,

@@ -242,9 +242,12 @@ svn_cl__info (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = ((const char **) (targets->elts))[i];
+      svn_wc_adm_access_t *adm_access;
       svn_wc_entry_t *entry;
 
-      svn_wc_entry (&entry, target, FALSE, pool);
+      SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target, FALSE,
+                                      opt_state->recursive, pool));
+      SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
       if (! entry)
         {
           /* Print non-versioned message and extra newline separator. */
@@ -264,7 +267,8 @@ svn_cl__info (apr_getopt_t *os,
         {
           if (opt_state->recursive)
             /* the generic entry-walker: */
-            SVN_ERR (svn_wc_walk_entries (target, &entry_walk_callbacks, pool,
+            SVN_ERR (svn_wc_walk_entries (target, adm_access,
+                                          &entry_walk_callbacks, pool,
                                           FALSE, pool));
           else
             SVN_ERR (print_entry (target, entry, pool));

@@ -121,26 +121,24 @@ svn_wc_check_wc (const char *path,
 svn_error_t *
 svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
                             const char *path,
+                            svn_wc_adm_access_t *adm_access,
                             const enum svn_wc__timestamp_kind timestamp_kind,
                             apr_pool_t *pool)
 {
   apr_time_t wfile_time, entrytime = 0;
-  const char *dirpath, *entryname;
+  const char *entryname;
   apr_hash_t *entries = NULL;
   struct svn_wc_entry_t *entry;
   enum svn_node_kind kind;
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   if (kind == svn_node_dir)
-    {
-      dirpath = path;
-      entryname = SVN_WC_ENTRY_THIS_DIR;
-    }
+    entryname = SVN_WC_ENTRY_THIS_DIR;
   else
-    svn_path_split_nts (path, &dirpath, &entryname, pool);
+    svn_path_split_nts (path, NULL, &entryname, pool);
 
   /* Get the timestamp from the entries file */
-  SVN_ERR (svn_wc_entries_read (&entries, dirpath, FALSE, pool));
+  SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
   entry = apr_hash_get (entries, entryname, APR_HASH_KEY_STRING);
 
   /* Can't compare timestamps for an unversioned file. */
@@ -290,6 +288,7 @@ svn_wc__files_contents_same_p (svn_boolean_t *same,
 svn_error_t *
 svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
                                  const char *versioned_file,
+                                 svn_wc_adm_access_t *adm_access,
                                  const char *base_file,
                                  apr_pool_t *pool)
 {
@@ -297,7 +296,8 @@ svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
   const char *tmp_vfile;
   svn_error_t *err = SVN_NO_ERROR;
 
-  SVN_ERR (svn_wc_translated_file (&tmp_vfile, versioned_file, pool));
+  SVN_ERR (svn_wc_translated_file (&tmp_vfile, versioned_file, adm_access,
+                                   pool));
   
   err = svn_wc__files_contents_same_p (&same, tmp_vfile, base_file, pool);
   *modified_p = (! same);
@@ -312,6 +312,7 @@ svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
 svn_error_t *
 svn_wc_text_modified_p (svn_boolean_t *modified_p,
                         const char *filename,
+                        svn_wc_adm_access_t *adm_access,
                         apr_pool_t *pool)
 {
   const char *textbase_filename;
@@ -332,7 +333,7 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
      wrong in certain rare cases, but with the addition of a forced
      delay after commits (see revision 419 and issue #542) it's highly
      unlikely to be a problem. */
-  SVN_ERR (svn_wc__timestamps_equal_p (&equal_timestamps, filename,
+  SVN_ERR (svn_wc__timestamps_equal_p (&equal_timestamps, filename, adm_access,
                                        svn_wc__text_time, subpool));
   if (equal_timestamps)
     {
@@ -354,6 +355,7 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
   /* Otherwise, fall back on the standard mod detector. */
   SVN_ERR (svn_wc__versioned_file_modcheck (modified_p,
                                             filename,
+                                            adm_access,
                                             textbase_filename,
                                             subpool));
 

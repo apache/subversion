@@ -76,6 +76,8 @@ get_committed_rev (void *baton,
 {
   svn_client__callback_baton_t *cb = baton;
   svn_wc_entry_t *ent;
+  const char *path;
+  svn_wc_adm_access_t *adm_access;
 
   *rev = SVN_INVALID_REVNUM;
 
@@ -91,8 +93,12 @@ get_committed_rev (void *baton,
           if (! strcmp (relpath, 
                         svn_path_uri_decode (item->url, pool)))
             {
+              svn_wc_adm_access_t *item_access;
+              SVN_ERR (svn_wc_adm_probe_retrieve (&item_access, cb->base_access,
+                                                  item->path, pool));
               /* ### Passing `show_deleted_items' flag, is this right? */
-              SVN_ERR (svn_wc_entry (&ent, item->path, TRUE, pool));
+              SVN_ERR (svn_wc_entry (&ent, item->path, item_access, TRUE,
+                                     pool));
               if (ent)
                 *rev = ent->cmt_rev;
 
@@ -107,7 +113,10 @@ get_committed_rev (void *baton,
   else if (cb->base_dir == NULL)
     return SVN_NO_ERROR;
 
-  SVN_ERR (svn_wc_entry (&ent, svn_path_join (cb->base_dir, relpath, pool),
+  path = svn_path_join (cb->base_dir, relpath, pool);
+  SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, cb->base_access, path,
+                                      pool));
+  SVN_ERR (svn_wc_entry (&ent, path, adm_access,
                          TRUE, pool));
   if (ent)
     *rev = ent->cmt_rev;
@@ -191,6 +200,7 @@ svn_client__open_ra_session (void **session_baton,
                              const svn_ra_plugin_t *ra_lib,
                              const char *base_url,
                              const char *base_dir,
+                             svn_wc_adm_access_t *base_access,
                              apr_array_header_t *commit_items,
                              svn_boolean_t do_store,
                              svn_boolean_t use_admin,
@@ -209,6 +219,7 @@ svn_client__open_ra_session (void **session_baton,
 
   cb->auth_baton = auth_baton;
   cb->base_dir = base_dir;
+  cb->base_access = base_access;
   cb->do_store = do_store;
   cb->pool = pool;
   cb->commit_items = commit_items;

@@ -86,7 +86,7 @@ svn_client_ls (apr_hash_t **dirents,
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url, pool));
 
   /* Open a repository session to the URL. */
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, NULL,
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, NULL, NULL,
                                         NULL, FALSE, FALSE, TRUE, 
                                         auth_baton, pool));
 
@@ -117,7 +117,7 @@ svn_client_ls (apr_hash_t **dirents,
       /* Re-open the session to the file's parent instead. */
       svn_path_split_nts (url, &parent_url, &base_name, pool);
       SVN_ERR (ra_lib->close (session));
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, parent_url,
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, parent_url, NULL,
                                             NULL, NULL, FALSE, FALSE, TRUE, 
                                             auth_baton, pool));
 

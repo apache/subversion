@@ -712,6 +712,7 @@ svn_wc_copy_and_translate (const char *src,
 svn_error_t *
 svn_wc_translated_file (const char **xlated_p,
                         const char *vfile,
+                        svn_wc_adm_access_t *adm_access,
                         apr_pool_t *pool)
 {
   enum svn_wc__eol_style style;
@@ -719,7 +720,7 @@ svn_wc_translated_file (const char **xlated_p,
   svn_wc_keywords_t *keywords;
   
   SVN_ERR (svn_wc__get_eol_style (&style, &eol, vfile, pool));
-  SVN_ERR (svn_wc__get_keywords (&keywords, vfile, NULL, pool));
+  SVN_ERR (svn_wc__get_keywords (&keywords, vfile, adm_access, NULL, pool));
 
   if ((style == svn_wc__eol_style_none) && (! keywords))
     {
@@ -1003,6 +1004,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
 svn_error_t *
 svn_wc__get_keywords (svn_wc_keywords_t **keywords,
                       const char *path,
+                      svn_wc_adm_access_t *adm_access,
                       const char *force_list,
                       apr_pool_t *pool)
 {
@@ -1067,7 +1069,7 @@ svn_wc__get_keywords (svn_wc_keywords_t **keywords,
           
           /* If we haven't already read the entry in, do so now. */
           if (! entry)
-            SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
+             SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
 
           /* Now, try to expand the keyword. */
           SVN_ERR (expand_keyword (&tmp_keywords, &is_valid,

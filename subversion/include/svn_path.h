@@ -204,7 +204,8 @@ svn_path_get_absolute (const char **pabsolute,
 
 /* Return the path part of PATH in *PDIRECTORY, and the file part in *PFILE.
    If PATH is a directory, set *PDIRECTORY to PATH, and *PFILE to the
-   empty string. */
+   empty string.  If PATH does not exist it is treated as if it is a file,
+   since directories do not normally vanish. */
 svn_error_t *
 svn_path_split_if_file(const char *path,
                        const char **pdirectory, 
