@@ -221,8 +221,7 @@ add_or_replace_dir (svn_string_t *name,
   d->path = svn_string_dup (pd->path, pd->edit_baton->pool);
   svn_path_add_component (d->path,
                           svn_string_create (Aname, pd->edit_baton->pool),
-                          svn_path_local_style,
-                          pd->edit_baton->pool);
+                          svn_path_local_style);
   d->edit_baton = pd->edit_baton;
   d->indent_level = (pd->indent_level + indent_amount);
   print_spaces (d->indent_level);

@@ -294,7 +294,7 @@ take_from_entry (svn_wc__entry_t *src, svn_wc__entry_t *dst, apr_pool_t *pool)
                                          APR_HASH_KEY_STRING);
       dst->ancestor = svn_string_dup (src->ancestor, pool);
       svn_path_add_component (dst->ancestor, name,
-                              svn_path_repos_style, pool);
+                              svn_path_repos_style);
     }
 }
 
