@@ -447,7 +447,12 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
                                          &commit_editor, &commit_edit_baton,
                                          pool));
 
-      if (SVN_IS_VALID_REVNUM(revision))
+      if (!SVN_IS_VALID_REVNUM(revision))
+        {
+          editor = commit_editor;
+          edit_baton = commit_edit_baton;
+        }
+      else
         {
           /* If we're supposed to bump revisions to REVISION, then
              fetch tracking editor and compose it.  Committed targets
