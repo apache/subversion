@@ -54,7 +54,10 @@
 
 
 #include <svn_types.h>
+#include <svn_string.h>
 #include <apr_errno.h>     /* APR's error system */
+#include <stdio.h>
+
 
 
 /* 
@@ -69,7 +72,7 @@
 
 typedef struct svn_error_t
 {
-  ap_status_t errno;           /* native OS errno */
+  ap_status_t err;             /* native OS errno */
   svn_boolean_t fatal;         /* is this a fatal error? */
   svn_string_t *message;       /* description from top-level caller */
   svn_string_t *description;   /* generic description from ap_strerror() */
@@ -80,7 +83,7 @@ typedef struct svn_error_t
 
 /* svn_error_t constructor */
 
-svn_error_t *svn_create_error (ap_status_t errno, 
+svn_error_t *svn_create_error (ap_status_t err,
                                svn_boolean_t fatal,
                                svn_string_t *message,
                                ap_pool_t *pool);

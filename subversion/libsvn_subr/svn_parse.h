@@ -48,12 +48,32 @@
 
 
 
+#ifndef __SVN_PARSE_H__
+#define __SVN_PARSE_H__
+
+#include <svn_types.h>
+#include <svn_string.h>
+#include <svn_error.h>
+#include <apr_pools.h>
+#include <apr_hash.h>
+#include <apr_file_io.h>
+#include <ctype.h>           /* isspace() */
 
 
+/* 
+   Returns a hash of hashes.
 
+   For file format, see `notes/svn-config-files'
+*/
+
+ap_hash_t * svn_parse (svn_string_t *filename, ap_pool_t *pool);
+
+
+#endif /* __SVN_PARSE_H__ */
 
 
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
  * end: */
+
