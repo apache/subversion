@@ -426,7 +426,6 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
       apr_hash_t *headers;
       void *node_baton;
       const char *valstr;
-      svn_boolean_t eof;
       svn_boolean_t found_node = FALSE;
       const char *value;
 
