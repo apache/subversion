@@ -143,11 +143,11 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
      do_auth/use_admin to open the ra_session.  */
   if (NULL != base_name)
     SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, base_name,
-                                          NULL, NULL, TRUE, TRUE, 
+                                          NULL, NULL, TRUE, TRUE, TRUE, 
                                           auth_baton, pool));
   else
     SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL, NULL,
-                                          NULL, FALSE, FALSE, 
+                                          NULL, FALSE, FALSE, TRUE, 
                                           auth_baton, pool));
 
   /* Get the revisions based on the users "hints".  */

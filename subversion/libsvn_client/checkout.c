@@ -97,7 +97,7 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
          for storing temp files.  We do, however, want to store auth data
          after the checkout builds the WC. */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, path,
-                                            NULL, NULL, TRUE, FALSE,
+                                            NULL, NULL, TRUE, FALSE, TRUE,
                                             auth_baton, pool));
 
       SVN_ERR (svn_client__get_revision_number

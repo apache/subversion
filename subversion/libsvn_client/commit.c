@@ -490,7 +490,8 @@ get_ra_editor (void **ra_baton,
   SVN_ERR (svn_client__open_ra_session (session, *ra_lib,
                                         base_url, base_dir, base_access,
                                         commit_items, is_commit,
-                                        is_commit, auth_baton, pool));
+                                        is_commit, !is_commit,
+                                        auth_baton, pool));
   
   /* Fetch RA commit editor. */
   return (*ra_lib)->get_commit_editor (*session, editor, edit_baton, 
@@ -538,12 +539,12 @@ svn_client_import (svn_client_commit_info_t **commit_info,
        "the name \"%s\" is reserved and cannot be imported",
        SVN_WC_ADM_DIR_NAME);
 
+  /* Create a new commit item and add it to the array. */
   if (log_msg_func)
     {
       /* If there's a log message gatherer, create a temporary commit
          item array solely to help generate the log message.  The
          array is not used for the import itself. */
-
       svn_client_commit_item_t *item;
       const char *tmp_file;
       apr_array_header_t *commit_items 
