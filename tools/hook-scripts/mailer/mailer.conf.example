@@ -132,8 +132,11 @@ diff = /usr/bin/diff -u -L %(label_from)s -L %(label_to)s %(from)s %(to)s
 
 [defaults]
 
-# The default prefix for the Subject: header
-subject_prefix =
+# The default prefix for the Subject: header for commits
+commit_subject_prefix =
+
+# The default prefix for the Subject: header for propchanges
+propchange_subject_prefix =
 
 # The default From: and To: addresses for commit messages.  If the
 # from_addr is not specified or it is specified but there is no text
@@ -170,7 +173,8 @@ suppress_deletes = yes
 # # send notifications if any web pages are changed
 # for_paths = .*\.html
 # # set a custom prefix
-# subject_prefix = [commit]
+# commit_subject_prefix = [commit]
+# propchange_subject_prefix = [propchange]
 # # override the default, sending these elsewhere
 # to_addr = www-commits@example.com
 # # use the revision author as the from address
