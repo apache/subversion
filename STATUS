@@ -341,7 +341,7 @@ the section for unapproved changes.)
       +1: kfogel, david, striker
 
 
-   * Issue #1693
+   * r8222
      Improved signal handling for svnadmin, svnlook and svn
      Justification: Avoids uncontrolled termination resulting in
         wedged repositories. API change. Low risk.
