@@ -460,14 +460,13 @@ In addition to the GNU standards, Subversion uses these conventions:
       so you get svn-dev.el and svnbook.el when needed:
 
          ;;; Begin Subversion development section
-         (setq svntree-path "~/projects/subversion/")
-
          (defun my-find-file-hook ()
-           (setq svntree-path (expand-file-name svntree-path))
-           (if (string-match (concat svntree-path "doc/book") buffer-file-name)
-               (load (concat svntree-path "doc/book/tools/svnbook"))
-             (if (string-match svntree-path buffer-file-name)
-                 (load (concat svntree-path "tools/dev/svn-dev")))))
+           (let ((svntree-path (expand-file-name "~/projects/subversion/)))
+             (if (string-match (concat svntree-path "doc/book")
+                               buffer-file-name)
+                 (load (concat svntree-path "doc/book/tools/svnbook"))
+               (if (string-match svntree-path buffer-file-name)
+                   (load (concat svntree-path "tools/dev/svn-dev"))))))
   
          (add-hook 'find-file-hooks 'my-find-file-hook)
          ;;; End Subversion development section
