@@ -343,6 +343,10 @@ SVN_ERROR_START
               SVN_ERR_WC_CATEGORY_START + 19,
               "Invalid operation on the current working directory")  
 
+  SVN_ERRDEF (SVN_ERR_WC_BAD_ADM_LOG_START,
+              SVN_ERR_WC_CATEGORY_START + 20,
+              "Problem on first log entry in a working copy")
+
   /* fs errors */
 
   SVN_ERRDEF (SVN_ERR_FS_GENERAL,
