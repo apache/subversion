@@ -1,4 +1,4 @@
-%define apache_version 2.0.32-0.1
+%define apache_version 2.0.32-0.2
 %define neon_version 0.18.5
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
@@ -12,15 +12,15 @@ Patch0: expat.patch
 Patch1: install.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
-Requires: apache-apr >= %{apache_version}
-Requires: apache-apr-utils >= %{apache_version}
+Requires: apache-libapr >= %{apache_version}
+Requires: apache-libapr-util >= %{apache_version}
 Requires: db >= 4.0.14
 Requires: expat
 Requires: neon = %{neon_version}
 Requires: /sbin/install-info
 BuildPreReq: apache-devel >= %{apache_version}
-BuildPreReq: apache-apr-devel >= %{apache_version}
-BuildPreReq: apache-apr-utils-devel >= %{apache_version}
+BuildPreReq: apache-libapr-devel >= %{apache_version}
+BuildPreReq: apache-libapr-util-devel >= %{apache_version}
 BuildPreReq: autoconf >= 2.52
 BuildPreReq: db-devel >= 4.0.14
 BuildPreReq: expat-devel
@@ -38,7 +38,33 @@ with the "rpm -Uvh --prefix /your/favorite/path" command. This is useful
 if you don't have root access on your machine but would like to use this
 package.
 
+%package devel
+Group: Utilities/System
+Summary: Development package for Subversion developers.
+Requires: subversion = %{version}-%{release}
+%description devel
+The subversion-devel package includes the static libraries and include files
+for developers interacing with the subversion package.
+
+%package server
+Group: Utilities/System
+Summary: Apache server module for Subversion server.
+Requires: apache-libapr >= %{apache_version}
+Requires: apache-libapr-util >= %{apache_version}
+Requires: perl
+Requires: subversion = %{version}-%{release}
+BuildPreReq: apache-devel >= %{apache_version}
+%description server
+The subversion-server package adds the Subversion server Apache module to
+the Apache directories and configuration.
+
 %changelog
+* Mon Feb 11 2002 David Summers <david@summersoft.fay.ar.us> 0.8.0-1132
+- Updated to APR and APR-UTIL 2002.02.11.
+- Updated to apache-2.0.32-0.2. (Requires apache-libapr and apache-libapr-util).
+- Took out a (now non-existant) documentation file.
+- Moved SPEC file changelog to after all package definitions.
+  
 * Sun Feb 03 2002 David Summers <david@summersoft.fay.ar.us> 0.8.0-1153
 - Updated to neon-0.18.5.
 - Broke up apache and apache-devel into apache-apr, apache-apr-devel,
@@ -65,26 +91,6 @@ package.
 
 * Thu Sep 27 2001 David Summers <david@summersoft.fay.ar.us>
 - Release M3-r117: Initial Version.
-
-%package devel
-Group: Utilities/System
-Summary: Development package for Subversion developers.
-Requires: subversion = %{version}-%{release}
-%description devel
-The subversion-devel package includes the static libraries and include files
-for developers interacing with the subversion package.
-
-%package server
-Group: Utilities/System
-Summary: Apache server module for Subversion server.
-Requires: apache-apr >= %{apache_version}
-Requires: apache-apr-utils >= %{apache_version}
-Requires: perl
-Requires: subversion = %{version}-%{release}
-BuildPreReq: apache-devel >= %{apache_version}
-%description server
-The subversion-server package adds the Subversion server Apache module to
-the Apache directories and configuration.
 
 %prep
 %setup -q
@@ -207,8 +213,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
-%doc BUGS COMMITTERS COPYING HACKING IDEAS INSTALL PORTING
-%doc README TASKS
+%doc BUGS COMMITTERS COPYING HACKING IDEAS INSTALL PORTING README
 %doc tools subversion/LICENSE
 /usr/bin/svn
 /usr/bin/svnadmin
