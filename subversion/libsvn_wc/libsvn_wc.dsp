@@ -131,11 +131,11 @@ SOURCE=.\props.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\questions.c
+SOURCE=.\providers.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\simple_wc_provider.c
+SOURCE=.\questions.c
 # End Source File
 # Begin Source File
 
