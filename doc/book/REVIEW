@@ -9,27 +9,7 @@ Overall Book Comments
 
             http://www.svnbook.org/examples/
 
-        #2) Blair
-
-            All the diff output needs to be updated.  Here's the top
-            of the old format:
-
-                $ svn diff
-                Index: ./bar.c
-                ============================================================
-                --- ./bar.c
-                +++ ./bar.c     Mon Jul 15 17:58:18 2002
-
-            And here's the top of the new.  I'm using the new internal
-            diff engine here.
-
-                $ svn diff
-                Index: c
-                ============================================================
-                --- c   (revision 10)
-                +++ c   (working copy)
-
-        #3) naked
+        #2) naked
 
             Usage of spaces around &mdash; is inconsistent - but I
             guess these kind of problems are fixed by O'Reilly in any

@@ -46,25 +46,17 @@ To be fixed by cmpilato:
 --------------------------------------------------------------
 
 To be fixed by fitz:
-  - Check svnadmin and svnlook commands for flags in ch09
-    [[ In progress ]]
 
   - new 'svn diff' UI (when it's done) -- affects ch03, ch09, and
     maybe other chapters.
 
   - some folks want a glossary.  that's good, since we have a
     glossary.xml anyway.  :-)  probably something we do at the last minute.
+    (I think O'Reilly does this)
 --------------------------------------------------------------
 
 To be fixed by sussman:
 
---------------------------------------------------------------
-
-To be fixed by kfogel:
-
-  - cvs2svn.py is a lot more complex now, with many more switches,
-    especially since it now converts branches and tags.  Need to
-    expand our coverage of this in Appendix B.
 
 
 
