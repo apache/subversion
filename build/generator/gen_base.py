@@ -488,6 +488,7 @@ class TargetSWIG(TargetLib):
     TargetLib.__init__(self, name, options, cfg, extmap)
     self.lang = lang
     self.desc = self.desc + ' for ' + lang_full_name[lang]
+    self.include_runtime = options.get('include-runtime') == 'yes'
 
     ### hmm. this is Makefile-specific
     self.link_cmd = '$(LINK_%s_WRAPPER)' % string.upper(lang_abbrev[lang])
@@ -548,36 +549,6 @@ class TargetSWIG(TargetLib):
     def get_dep_targets(self, target):
       target = self.targets.get(target.lang, None)
       return target and [target] or [ ]
-
-class TargetSWIGRuntime(TargetSWIG):
-  def add_dependencies(self, graph, cfg, extmap):
-    abbrev = lang_abbrev[self.lang]
-    name = 'swig' + abbrev
-    cname = name + '.c'
-    oname = name + extmap['lib', 'object']
-    libname = name + extmap['lib', 'target']
-
-    self.name = self.lang + '_runtime' 
-    self.path = build_path_join(self.path, self.lang)
-    self.filename = build_path_join(self.path, libname)
-    self.external_lib = '-lswig' + abbrev
-
-    cfile = SWIGObject(build_path_join(self.path, cname), self.lang)
-    ofile = SWIGObject(build_path_join(self.path, oname), self.lang)
-    graph.add(DT_OBJECT, ofile, cfile)
-    graph.add(DT_LINK, self.name, ofile)
-    graph.add(DT_INSTALL, 'swig_runtime-' + abbrev, self)
-
-  class Section(TargetSWIG.Section):
-    def create_targets(self, graph, name, cfg, extmap):
-      self.targets = { }
-      for lang in cfg.swig_lang:
-        if lang == 'java':
-          # java doesn't seem to have a separate runtime  
-          continue      
-        target = self.target_class(name, self.options, cfg, extmap, lang)
-        target.add_dependencies(graph, cfg, extmap)
-        self.targets[lang] = target
 
 class TargetSWIGLib(TargetLib):
   def __init__(self, name, options, cfg, extmap):
@@ -733,7 +704,6 @@ _build_types = {
   'doc' : TargetDoc,
   'swig' : TargetSWIG,
   'project' : TargetProject,
-  'swig_runtime' : TargetSWIGRuntime,
   'swig_lib' : TargetSWIGLib,
   'swig_project' : TargetSWIGProject,
   'ra-module': TargetRaModule,

@@ -79,8 +79,6 @@ void SWIG_MakePtr(SV *, void *, swig_type_info *, int flags);
 
 #endif /* SVN_NEED_SWIG_TYPES */
 
-apr_pool_t *svn_swig_pl_get_current_pool (void);
-void svn_swig_pl_set_current_pool (apr_pool_t *pool);
 apr_pool_t *svn_swig_pl_make_pool (SV *obj);
 
 typedef enum perl_func_invoker {

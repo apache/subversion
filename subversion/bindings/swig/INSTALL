@@ -219,10 +219,6 @@ BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
         md %PERL_LIBS%\auto\SVN\_Core
         copy Release\subversion\bindings\swig\perl\_Core.dll %PERL_LIBS%\auto\SVN\_Core
         copy Release\subversion\bindings\swig\perl\_Core.pdb %PERL_LIBS%\auto\SVN\_Core
-        copy Release\subversion\bindings\swig\perl\swigpl.dll %PERL_LIBS%\auto\SVN\_Core
-        copy Release\subversion\bindings\swig\perl\swigpl.pdb %PERL_LIBS%\auto\SVN\_Core
-        copy Release\subversion\bindings\swig\perl\libsvn_swig_perl\libsvn_swig_perl-1.dll %PERL_LIBS%\auto\SVN\_Core
-        copy Release\subversion\bindings\swig\perl\libsvn_swig_perl\libsvn_swig_perl-1.pdb %PERL_LIBS%\auto\SVN\_Core
 
         md %PERL_LIBS%\auto\SVN\_Delta
         copy Release\subversion\bindings\swig\perl\_Delta.dll %PERL_LIBS%\auto\SVN\_Delta
