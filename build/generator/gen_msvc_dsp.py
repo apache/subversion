@@ -67,7 +67,6 @@ class Generator(gen_win.WinGeneratorBase):
       'configs' : configs,
       'includes' : self.get_win_includes(target),
       'sources' : sources,
-      'swig_options': self.swig_options,
       'default_platform' : self.platforms[0],
       'default_config' : configs[0].name,
       'is_exe' : ezt.boolean(isinstance(target, gen_base.TargetExe)),
