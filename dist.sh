@@ -1,13 +1,13 @@
 #!/bin/sh
 
 #
-# USAGE: ./dist.sh VERSION REVISION [REPOS-PATH]
+# USAGE: ./dist.sh -v VERSION -r REVISION [-rs REVISION-SVN] [-pr REPOS-PATH]
 #
 #   Create a distribution tarball, labelling it with the given VERSION.
-#   The REVISION will be used in the version string. The tarball will be
-#   constructed from the root located at REPOS-PATH. If REPOS-PATH is
-#   not specified then the default is "branches/VERSION". For
-#   example, the command line:
+#   The REVISION or REVISION-SVN will be used in the version string.
+#   The tarball will be constructed from the root located at REPOS-PATH.
+#   If REPOS-PATH is not specified then the default is "branches/VERSION".
+#   For example, the command line:
 #
 #      ./dist.sh 0.24.2 6284
 #
@@ -17,8 +17,45 @@
 #   before running this script in the top-level directory.
 #
 
-if [ -z "$1" ] || [ -z "$2" ]; then
-  echo "USAGE: ./dist.sh VERSION REVISION [REPOS-PATH]"
+# Let's check and set all the arguments
+ARG_PREV=""
+
+for ARG in $@
+do
+  if [ "$ARG_PREV" ]; then
+
+    case $ARG_PREV in
+       -v) VERSION="$ARG" ;;
+       -r) REVISION="$ARG" ;;
+      -rs) REVISION_SVN="$ARG" ;;
+      -pr) REPOS_PATH="$ARG" ;;
+        *) ARG_PREV=$ARG ;;
+    esac
+
+    ARG_PREV=""
+
+  else
+
+    case $ARG in
+      -v|-r|-rs|-pr)
+        ARG_PREV=$ARG
+        ;;
+      *)
+        echo -n " USAGE: ./dist.sh -v VERSION -r REVISION"
+        echo    " [-rs REVISION-SVN ] [-pr REPOS-PATH]"
+        exit 1
+        ;;
+    esac
+  fi
+done
+
+if [ -z "$REVISION_SVN" ]; then
+  REVISION_SVN=$REVISION
+fi
+
+if [ -z "$VERSION" ] || [ -z "$REVISION" ] ; then
+  echo -n " USAGE: ./dist.sh -v VERSION -r REVISION"
+  echo    " [-rs REVISION-SVN ] [-pr REPOS-PATH]"
   exit 1
 fi
 
@@ -37,11 +74,6 @@ if [ ! -d neon ]; then
   exit 1
 fi
 
-VERSION="$1"
-
-REVISION="$2"
-
-REPOS_PATH="$3"
 if [ -z "$REPOS_PATH" ]; then
   REPOS_PATH="branches/$VERSION"
 else
@@ -53,8 +85,9 @@ DIST_SANDBOX=.dist_sandbox
 DISTPATH="$DIST_SANDBOX/$DISTNAME"
 
 echo "Distribution will be named: $DISTNAME"
+echo "  relase branch's revision: $REVISION"
+echo "     executable's revision: $REVISION_SVN"
 echo "     constructed from path: /$REPOS_PATH"
-
 echo "Building new design docs in docs/ ..."
 
 make doc-design
@@ -117,7 +150,7 @@ EOF
 vsn_file="$DISTPATH/subversion/include/svn_version.h"
 
 sed -e \
- "/#define *SVN_VER_TAG/s/dev build/r$REVISION/" \
+ "/#define *SVN_VER_TAG/s/dev build/r$REVISION_SVN/" \
   < "$vsn_file" > "$vsn_file.tmp"
 
 sed -e \
@@ -125,7 +158,7 @@ sed -e \
   < "$vsn_file.tmp" > "$vsn_file.unq"
 
 sed -e \
- "/#define *SVN_VER_REVISION/s/0/$REVISION/" \
+ "/#define *SVN_VER_REVISION/s/0/$REVISION_SVN/" \
   < "$vsn_file.unq" > "$vsn_file"
 
 rm -f "$vsn_file.tmp"
