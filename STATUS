@@ -58,3 +58,11 @@ Candidate changes:
     Justification: small change in javahl binding only
     Votes:
       +1: pmayweg
+
+  * r9338, r9340
+    Add various missing library dependencies to build.conf, for various
+    binding-related stuff.
+    Justification: Trivial change, correctness, needed to allow build of
+    bindings on platforms with stricter linking requirements.
+    Votes:
+      +1: maxb
