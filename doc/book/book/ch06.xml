@@ -1137,7 +1137,7 @@ $ svn status
 
         <variablelist>
           <varlistentry>
-            <term>LastChangedDate</term>
+            <term><literal>LastChangedDate</literal></term>
             <listitem>
               <para>This keyword describes the last time the file was
                 changed in the repository, and looks something like
@@ -1147,7 +1147,7 @@ $ svn status
             </listitem>
           </varlistentry>
           <varlistentry>
-            <term>LastChangedRevision</term>
+            <term><literal>LastChangedRevision</literal></term>
             <listitem>
               <para>This keyword describes the last revision in which
                 this file changed in the repository, and looks
@@ -1157,7 +1157,7 @@ $ svn status
             </listitem>
           </varlistentry>
           <varlistentry>
-            <term>LastChangedBy</term>
+            <term><literal>LastChangedBy</literal></term>
             <listitem>
               <para>This keyword describes the last user to change
                 this file in the repository, and looks something like
@@ -1166,7 +1166,7 @@ $ svn status
             </listitem>
           </varlistentry>
           <varlistentry>
-            <term>HeadURL</term>
+            <term><literal>HeadURL</literal></term>
             <listitem>
               <para>This keyword describes the full URL to the latest
                 version of the file in the repository, and looks
@@ -1177,7 +1177,7 @@ $ svn status
             </listitem>
           </varlistentry>
           <varlistentry>
-            <term>Id</term>
+            <term><literal>Id</literal></term>
             <listitem>
               <para>This keyword is compressed combination of the
                 other keywords.  Its substitution looks something like
@@ -1292,62 +1292,127 @@ Cumulus clouds are appearing more frequently as summer approaches.
       <sect3 id="svn-ch-6-sect-2.3.5">
         <title><literal>svn:eol-style</literal></title>
 
-        <para>By default, Subversion doesn't pay any attention to the
-          type of line ending markers used in your files.  Files are
-          assumed to contain human-readable data unless Subversion is
-          told otherwise, and that only for the purpose of generating
-          contextual difference reports.  But to Subversion, bytes are
-          bytes.</para>
+        <para>Unless otherwise noted using a versioned file's
+          <literal>svn:mime-type</literal> property, Subversion
+          assumes that file contains human-readable data.  Generally
+          speaking, Subversion only uses this knowledge to determine
+          if contextual differences reports for that file are
+          possible.  Otherwise, to Subversion, bytes are bytes.</para>
         
-        <para>Unfortunately, different operating system use different
-          tokens to represent the end of a line of text in a file.
-          For example, the usual line ending token used in software on
-          the Windows platform is a pair of ASCII control
-          characters&mdash;carriage return (<literal>CR</literal>) and
-          line feed (<literal>LF</literal>).  Unix software, however,
-          just uses the LF character to denote the end of a line.
-          Unfortunately, not all of the various tools on these
-          operation systems are prepared to understand files that
-          contain line endings in a format that differs from the
-          <firstterm>native line ending style</firstterm> of the
-          operation system on which they are running.  Common results
-          are that Unix programs treat the <literal>CR</literal>
-          character present in Windows files as a regular character
-          (usually rendered as <literal>^M</literal>), and that
-          Windows programs combine all of the lines of a Unix file
-          into one giant line because no carriage return-linefeed
-          (<literal>CRLF</literal>) character combination was found to
-          denote the end of line.</para>
+        <para>This means that by default, Subversion doesn't pay any
+          attention to the type of <firstterm>end-of-line (EOL)
+          markers</firstterm> used in your files.  Unfortunately,
+          different operating system use different tokens to represent
+          the end of a line of text in a file.  For example, the usual
+          line ending token used by software on the Windows platform
+          is a pair of ASCII control characters&mdash;carriage return
+          (<literal>CR</literal>) and line feed
+          (<literal>LF</literal>).  Unix software, however, just uses
+          the <literal>LF</literal> character to denote the end of a
+          line.</para>
 
-        <!-- ### cmpilato was here. -->
+        <para>Not all of the various tools on these operation systems
+          are prepared to understand files that contain line endings
+          in a format that differs from the <firstterm>native line
+          ending style</firstterm> of the operating system on which
+          they are running.  Common results are that Unix programs
+          treat the <literal>CR</literal> character present in Windows
+          files as a regular character (usually rendered as
+          <literal>^M</literal>), and that Windows programs combine
+          all of the lines of a Unix file into one giant line because
+          no carriage return-linefeed (or <literal>CRLF</literal>)
+          character combination was found to denote the end of
+          line.</para>
+
+        <para>This sensitivity to foreign EOL markers can become
+          frustraing for folks who share a file across different
+          operating systems.  For example, consider a source code
+          file, and developers that edit this file on both Windows and
+          Unix systems.  If all the developers always use tools which
+          preserve the line ending style of the file, no problems
+          occur.</para>
+
+        <para>But in practice, many common tools either fail to
+          properly read a file with foreign EOL markers, or they
+          convert the file's line endings to the native style when the
+          file is saved.  If the former is true for a developer, he
+          has to use an external conversion utility (such as
+          <command>dos2unix</command> or its companion,
+          <command>unix2dos</command>) to prepare the file for
+          editing.  The latter case requires no extra preparation.
+          But both cases result in a file that differs from the
+          original quite literally on every line of the file!  Prior
+          to committing his changes, the has two choices.  Either he
+          can use a conversion utility to restore the modified file to
+          the same line ending style that it was in before his edits
+          were made.  Or, he can simply commit the file&mdash;new EOL
+          markers and all.</para>
+
+        <para>The result of scenarios like there include wasted time
+          and unnecessary modifications to committed files.  Wasted
+          time is painful enough.  But when commits change every line
+          in a file, this complicates the job of determining which of
+          those lines were changed in a non-trivial way.  Where was
+          that bug really fixed?  On what line was a syntax error
+          introduced?</para>
+
+        <para>The solution this problem is the
+          <literal>svn:eol-style</literal> property.  When this
+          property is set to a valid value, Subversion uses it to
+          determine what special processing to perform on the file so
+          that the file's line ending style isn't flip-flopping with
+          every commit that comes from a different operating
+          system.  The valid values are:</para>
+
+        <variablelist>
+          <varlistentry>
+            <term><literal>native</literal></term>
+            <listitem>
+              <para>This causes the file to contain the EOL markers
+                that are native to the operating system on which
+                Subversion was run.  In other words, if a user on a
+                Windows machine checks out a working copy that
+                contains a file with a
+                <literal>svn:eol-style</literal> property set to
+                <literal>native</literal>, that file will contain
+                <literal>CRLF</literal> EOL markers.  A unix user
+                checking out a working copy which contains the same
+                file will see <literal>LF</literal> EOL markers in his
+                copy of the file.</para>
+
+              <para>Note that Subversion will actually store the file
+                in the repository using normalized
+                <literal>LF</literal> EOL markers regardless of the
+                operating system.  This is basically transparent to
+                the user, though.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>CRLF</literal></term>
+            <listitem>
+              <para>This causes the file to contain
+                <literal>CRLF</literal> sequences for EOL markers.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>LF</literal></term>
+            <listitem>
+              <para>This causes the file to contain
+                <literal>LF</literal> characters for EOL markers.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>CR</literal></term>
+            <listitem>
+              <para>This causes the file to contain
+                <literal>CR</literal> characters for EOL markers.
+                This line ending style is not very common.  It was
+                used on older Macintosh platforms (on which Subversion
+                doesn't even run).</para>
+            </listitem>
+          </varlistentry>
+        </variablelist>
         
-        <para>If developers are working on different platforms, line
-          endings can sometimes become troublesome.  For example, if a
-          Win32 developer and Unix developer took turns modifying a
-          file, its line endings might flip-flop back and forth from
-          revision to revision in the repository.  This makes
-          examining or merging differences very difficult, as
-          <emphasis>every</emphasis> line appears to be changed in
-          each version of the file.</para>
-
-        <para>The solution here is to set the
-          <literal>svn:eol-style</literal> property to
-          <literal>native</literal>.  This makes the file always
-          appear with the <quote>native</quote> line endings of each
-          developer's operating system.  Note, however, that the file
-          will always contain <literal>LF</literal> endings in the
-          repository.  This prevents the line-ending
-          <quote>churn</quote> from revision to revision.</para>
-
-        <para>Alternately, you can force files to always retain a
-          fixed, specific line ending: set a file's
-          <literal>svn:eol-style</literal> property to one of
-          <literal>LF</literal>, <literal>CR</literal> or
-          <literal>CRLF</literal>.  A Win32 <filename>.dsp</filename>
-          file, for example, which is used by Microsoft development
-          tools, should always have <literal>CRLF</literal>
-          endings.</para>
-
       </sect3>
 
       <sect3 id="svn-ch-6-sect-2.3.6">
