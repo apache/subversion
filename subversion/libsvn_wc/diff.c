@@ -479,6 +479,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   svn_boolean_t in_anchor_not_target;
+  apr_pool_t *subpool, *baton_pool;
 
   /* This directory should have been been unchanged or replaced, not added,
      since an added directory can only contain added files and these will
@@ -520,10 +521,14 @@ directory_elements_diff (struct dir_baton *dir_baton,
         }
     }
 
-  SVN_ERR (svn_wc_entries_read (&entries, dir_baton->path,
-                                FALSE, dir_baton->pool));
+  baton_pool = dir_baton->pool;
+  subpool = svn_pool_create (baton_pool);
+  dir_baton->pool = subpool;
 
-  for (hi = apr_hash_first (dir_baton->pool, entries); hi;
+  SVN_ERR (svn_wc_entries_read (&entries, dir_baton->path,
+                                FALSE, baton_pool));
+
+  for (hi = apr_hash_first (baton_pool, entries); hi;
        hi = apr_hash_next (hi))
     {
       const void *key;
@@ -589,7 +594,10 @@ directory_elements_diff (struct dir_baton *dir_baton,
         default:
           break;
         }
+      svn_pool_clear(subpool);
     }
+  svn_pool_destroy (subpool);
+  dir_baton->pool = baton_pool;
 
   return SVN_NO_ERROR;
 }
