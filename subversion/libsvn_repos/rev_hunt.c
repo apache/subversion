@@ -137,19 +137,6 @@ svn_repos_dated_revision (svn_revnum_t *revision,
 }
 
 
-
-
-/*  Given a ROOT/PATH within some filesystem, return three pieces of
-    information allocated in POOL:
-
-      - set *COMMITTED_REV to the revision in which the object was
-        last modified.  (In fs parlance, this is the revision in which
-        the particular node-rev-id was 'created'.)
-    
-      - set *COMMITTED_DATE to the date of said revision.
-
-      - set *LAST_AUTHOR to the author of said revision.    
- */
 svn_error_t *
 svn_repos_get_committed_info (svn_revnum_t *committed_rev,
                               const char **committed_date,
@@ -176,8 +163,8 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
   SVN_ERR (svn_fs_revision_prop (&last_author_s, fs, *committed_rev,
                                  SVN_PROP_REVISION_AUTHOR, pool));
 
-  *committed_date = committed_date_s->data;
-  *last_author = last_author_s->data;
+  *committed_date = committed_date_s ? committed_date_s->data : NULL;
+  *last_author = last_author_s ? last_author_s->data : NULL;
   
   return SVN_NO_ERROR;
 }

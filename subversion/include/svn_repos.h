@@ -276,9 +276,11 @@ svn_repos_dated_revision (svn_revnum_t *revision,
         last modified.  (In fs parlance, this is the revision in which
         the particular node-rev-id was 'created'.)
     
-      - set *COMMITTED_DATE to the date of said revision.
+      - set *COMMITTED_DATE to the date of said revision, or NULL if
+        not available.
 
-      - set *LAST_AUTHOR to the author of said revision.    
+      - set *LAST_AUTHOR to the author of said revision, or NULL if
+         not available.
  */
 svn_error_t *
 svn_repos_get_committed_info (svn_revnum_t *committed_rev,
