@@ -34,6 +34,7 @@
 #include <ne_xml.h>
 
 #include "svn_error.h"
+#include "svn_pools.h"
 #include "svn_delta.h"
 #include "svn_io.h"
 #include "svn_ra.h"
@@ -684,7 +685,10 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
 ** ### next are subdir elems, possibly fetch-file, then fetch-prop.
 */
 
-static int validate_element(void *userdata, ne_xml_elmid parent, ne_xml_elmid child)
+/* This implements the `ne_xml_validate_cb' prototype. */
+static int validate_element(void *userdata,
+                            ne_xml_elmid parent,
+                            ne_xml_elmid child)
 {
   /* We're being very strict with the validity of XML elements here. If
      something exists that we don't know about, then we might not update
@@ -773,6 +777,7 @@ static void push_dir(report_baton_t *rb, void *baton)
 }
 
 
+/* This implements the `ne_xml_startelm_cb' prototype. */
 static int start_element(void *userdata, const struct ne_xml_elm *elm,
                          const char **atts)
 {
@@ -1004,6 +1009,7 @@ add_node_props (report_baton_t *rb)
   return SVN_NO_ERROR;
 }
 
+/* This implements the `ne_xml_endelm_cb' prototype. */
 static int end_element(void *userdata, 
                        const struct ne_xml_elm *elm,
                        const char *cdata)
@@ -1372,6 +1378,140 @@ svn_error_t * svn_ra_dav__do_status(void *session_baton,
 }
 
 
+
+/*** Log ***/
+
+
+/* Userdata for the Neon XML element callbacks. */
+struct log_baton
+{
+  /* Allocate log message information.
+   * NOTE: this pool may be cleared multiple times as log messages are
+   * received.
+   */
+  apr_pool_t *subpool;
+
+  /* Information about each log item in turn. */
+  svn_revnum_t revision;
+  const char *author;
+  const char *date;
+  const char *msg;
+
+  /* Client's callback, invoked on the above fields when the end of an
+     item is seen. */
+  svn_log_message_receiver_t receiver;
+  void *receiver_baton;
+
+  /* If `receiver' returns error, it is stored here. */
+  svn_error_t *err;
+};
+
+
+/* Prepare LB to start accumulating the next log item, by wiping all
+ * information related to the previous item and clearing the pool in
+ * which they were allocated.  Do not touch any stored error, however.
+ */
+static void
+reset_log_item (struct log_baton *lb)
+{
+  lb->revision = SVN_INVALID_REVNUM;
+  lb->author   = NULL;
+  lb->date     = NULL;
+  lb->msg      = NULL;
+
+  svn_pool_clear (lb->subpool);
+}
+
+
+/*
+ * This implements the `ne_xml_validate_cb' prototype.
+ */
+static int
+log_validate(void *userdata, ne_xml_elmid parent, ne_xml_elmid child)
+{
+  /* ### todo */
+  return NE_XML_VALID;
+}
+
+
+/*
+ * This implements the `ne_xml_startelm_cb' prototype.
+ */
+static int
+log_start_element(void *userdata,
+                  const struct ne_xml_elm *elm,
+                  const char **atts)
+{
+  /* ### todo */
+  return NE_XML_VALID;
+}
+
+
+/*
+ * This implements the `ne_xml_endelm_cb' prototype.
+ */
+static int
+log_end_element(void *userdata,
+                const struct ne_xml_elm *elm,
+                const char *cdata)
+{
+  struct log_baton *lb = userdata;
+
+  /* ### I'd love to switch on elm->id here, but some of our element
+     names are in the DAV namespace and therefore their element enums
+     are not defined here.  I guess those enums are defined in mod_dav
+     or something, but of course, the client can't (right now) refer
+     to them...  So am strcmp()'ing the name instead.  Greg, does this
+     problem have anything to do with that new header file you
+     proposed? */
+
+  /* ### The start_element and end_element handlers for update and
+     status don't bother to check namespaces, so this code doesn't
+     either.  Is that kosher?  */
+
+  if (strcmp(elm->name, "version-name") == 0)
+    lb->revision = atol (cdata);
+  else if (strcmp(elm->name, "creator-displayname") == 0)
+    lb->author = apr_pstrdup (lb->subpool, cdata);
+  else if (strcmp(elm->name, "date") == 0)
+    lb->date = apr_pstrdup (lb->subpool, cdata);
+  else if (strcmp(elm->name, "comment") == 0)
+    lb->msg = apr_pstrdup (lb->subpool, cdata);
+  else if (strcmp(elm->name, "log-item") == 0)
+    {
+      /* ### Naive call for now.  We still need to arrange things so
+         that last_call gets passed properly, which will
+         be... interesting.  Well, not so bad, just need to put an
+         attribute on the end element of the last item.  This is a
+         change to mod_dav_svn too. */
+    
+      svn_error_t *err = (*(lb->receiver))(lb->receiver_baton,
+                                           NULL,
+                                           lb->revision,
+                                           lb->author,
+                                           lb->date,
+                                           lb->msg,
+                                           0);
+      
+      reset_log_item (lb);
+      
+      if (err)
+        {
+          lb->err = err;         /* ### Wrap an existing error, if any? */
+          return NE_XML_INVALID; /* ### Any other way to express an err? */
+        }
+    }
+  else if (strcmp(elm->name, "log-report") == 0)
+    {
+      /* ### todo: what to do here?  We're (hopefully) going to handle
+         the whole last_call thing another way, so maybe the end of
+         the report means nothing... */
+    }
+
+  return NE_XML_VALID;
+}
+
+
 svn_error_t * svn_ra_dav__get_log(void *session_baton,
                                   apr_array_header_t *paths,
                                   svn_revnum_t start,
@@ -1389,21 +1529,80 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
    * report and invoke RECEIVER (which is an entirely separate
    * instance of `svn_log_message_receiver_t') on each individual
    * message in that report.
-   *
-   * Question: where in mod_dav_svn to put this new stuff?
-   *
-   * See ../libsvn_ra_local/ra_plugin.c:get_log() for an example, not
-   * that very much can be shared beyond the svn_repos_get_logs()
-   * call.
    */
 
-  SVN_ERR( (*receiver)(receiver_baton,
-                       NULL,
-                       SVN_INVALID_REVNUM,
-                       "(none)",
-                       "(none)",
-                       "log not implemented over ra_dav yet",
-                       1) );
+  int i;
+  svn_ra_session_t *ras = session_baton;
+  svn_stringbuf_t *request_body = svn_stringbuf_create("", ras->pool);
+  struct log_baton lb;
+
+  /* ### todo: I don't understand why the static, file-global
+     variables shared by update and status are called `report_head'
+     and `report_tail', instead of `request_head' and `request_tail'.
+     Maybe Greg can explain?  Meanwhile, I'm tentatively using
+     "request_*" for my local vars below. */
+
+  const char log_request_head[]
+    = "<S:log-report xmlns:S=\"" SVN_XML_NAMESPACE "\">" DEBUG_CR;
+
+  const char log_request_tail[] = "</S:log-report>" DEBUG_CR;
+  
+  static const struct ne_xml_elm log_report_elements[] =
+    {
+      { SVN_XML_NAMESPACE, "log-item", ELEM_log_item, 0 },
+      { SVN_XML_NAMESPACE, "date", ELEM_log_date, NE_XML_CDATA },
+      { "DAV:", "version-name", ELEM_version_name, NE_XML_CDATA },
+      { "DAV:", "creator-displayname", ELEM_creator_displayname,
+        NE_XML_CDATA },
+      { "DAV:", "comment", ELEM_comment, NE_XML_CDATA },
+      { NULL }
+    };
+  
+
+  /* Construct the request body. */
+  svn_stringbuf_appendcstr(request_body, log_request_head);
+  svn_stringbuf_appendcstr(request_body,
+                           apr_psprintf(ras->pool, "<S:start-revision>%lu"
+                                        "</S:start-revision>", start));
+  svn_stringbuf_appendcstr(request_body,
+                           apr_psprintf(ras->pool, "<S:end-revision>%lu"
+                                        "</S:end-revision>", end));
+  if (discover_changed_paths)
+    {
+      svn_stringbuf_appendcstr(request_body,
+                               apr_psprintf(ras->pool,
+                                            "<S:discover-changed-paths/>"));
+    }
+    
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *this_path = (((svn_stringbuf_t **)paths->elts)[i])->data;
+      /* ### todo: want to xml-escape the path, but can't use
+         apr_xml_quote_string() here because we don't use apr_util
+         yet.  Should use svn_xml_escape_blah() instead? */
+      svn_stringbuf_appendcstr(request_body,
+                               apr_psprintf(ras->pool,
+                                            "<S:path>%s</S:path>", this_path));
+    }
+
+  svn_stringbuf_appendcstr(request_body, log_request_tail);
+
+  lb.receiver = receiver;
+  lb.receiver_baton = receiver_baton;
+  lb.subpool = svn_pool_create (ras->pool);
+  reset_log_item (&lb);
+
+  SVN_ERR( svn_ra_dav__parsed_request(ras,
+                                      "REPORT",
+                                      ras->root.path,
+                                      request_body->data,
+                                      0,  /* ignored */
+                                      log_report_elements, 
+                                      log_validate,
+                                      log_start_element,
+                                      log_end_element,
+                                      &lb,
+                                      ras->pool) );
   
   return SVN_NO_ERROR;
 }
