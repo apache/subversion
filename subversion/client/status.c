@@ -27,17 +27,13 @@
 
 
 /* Edit the three-byte string STR_STATUS, based on the contents of
-   TEXT_STATUS and PROP_STATUS. 
-   
-   If VERBOSE is set, STR_STATUS will show the status of both text and
-   prop. 
-
-   If VERBOSE is not set, STR_STATUS will contain only one simplified
-   status code, based on a logical combination of the two.  */
+   TEXT_STATUS and PROP_STATUS.  PROP_TIME is used to determine if
+   properties exist in the first place (when prop_status is 'none') */
 static void
 generate_status_codes (char *str_status,
                        enum svn_wc_status_kind text_status,
-                       enum svn_wc_status_kind prop_status)
+                       enum svn_wc_status_kind prop_status,
+                       apr_time_t prop_time)
 {
   char text_statuschar, prop_statuschar;
 
@@ -66,19 +62,17 @@ generate_status_codes (char *str_status,
       break;
     }
 
-  /* Properties stay `invisible' unless they're locally modified,
-     merged or conflicted. */
+  /* If a properties exist, show an underscore.  If not, show a
+     space. */
+  if (prop_time)
+    prop_statuschar = '_';
+  else
+    prop_statuschar = ' ';
+
+  /* Addendum:  if properties are modified, merged, or conflicted,
+     show that instead. */
   switch (prop_status)
     {
-    case svn_wc_status_none:
-      prop_statuschar = ' ';
-      break;
-    case svn_wc_status_added:
-      prop_statuschar = ' ';
-      break;
-    case svn_wc_status_deleted:
-      prop_statuschar = ' ';
-      break;
     case svn_wc_status_modified:
       prop_statuschar = 'M';
       break;
@@ -89,7 +83,6 @@ generate_status_codes (char *str_status,
       prop_statuschar = 'C';
       break;
     default:
-      prop_statuschar = '?';
       break;
     }
   
@@ -105,7 +98,8 @@ svn_cl__print_status (svn_string_t *path, svn_wc_status_t *status)
   /* Create either a one or two character status code */
   generate_status_codes (str_status,
                          status->text_status,
-                         status->prop_status);
+                         status->prop_status,
+                         status->entry->prop_time);
   
   /* Grab the entry revision once, safely. */
   if (status->entry)
