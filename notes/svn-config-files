@@ -29,3 +29,13 @@ This format is parsed by svn_parse(), located in svn_subr/svn_parse.c.
 This routine stores all key/vals as svn_string_t (bytestrings) within
 ap_hash_t (APR's hash type).
 
+
+----------------
+
+Let's rethink this, and create a system which allows "nesty" syntax,
+something like scheme.
+
+The main point is still to define sections/keys/vals.
+
+
+

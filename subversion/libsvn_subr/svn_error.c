@@ -155,6 +155,21 @@ svn_handle_error (svn_error_t *err, FILE *stream)
 
 
 
+/* Very dumb "default" warning handler -- used by all policies, unless
+   svn_svr_warning_callback() is used to set the warning handler
+   differently.  */
+
+void 
+svn_handle_warning (void *data, char *fmt, ...)
+{
+  fprintf (stderr, fmt, ...);
+  fprintf (stderr, "\n");
+  fflush (stderr);
+}
+
+
+
+
 
 /* 
  * local variables:

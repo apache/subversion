@@ -138,9 +138,7 @@ svn__svr_load_all_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
   ap_hash_index_t *hash_index;
   void *key, *val;
   size_t keylen;
-  svn_error_t *err, *latesterr;
-
-  err = latesterr = NULL;
+  svn_error_t *err;
   
   /* Initialize the APR DSO mechanism*/
   ap_status_t result = ap_dso_init();
@@ -168,19 +166,12 @@ svn__svr_load_all_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
 
       err = svn_svr_load_plugin (policy, &keystring, val);
       if (err)
-        {
-          /* Nest all errors returned from failed plugins, 
-             but DON'T RETURN yet!  */
-          err->child = latesterr;
-          latesterr = err;
-        }
+        return 
+          svn_quick_wrap_error 
+          (err, "svn__svr_load_all_plugins(): a plugin failed to load.");
     }
-
-
-  if (latesterr)
-    return latesterr;
-  else
-    return SVN_NO_ERROR;
+  
+  return SVN_NO_ERROR;
 }
 
 
@@ -213,6 +204,10 @@ svn_svr_init (svn_svr_policies_t **policy,
   *policy->global_restrictions = ap_make_hash (pool);
   *policy->plugins = ap_make_hash (pool);
 
+  /* Set brain-dead warning handler as default */
+
+  *policy->warning = svn_handle_warning;
+  *policy->data = NULL;
 
   /* A policy structure has its own private memory pool, a sub-pool of
      the pool passed in.  */
@@ -236,8 +231,6 @@ svn_svr_load_policy (svn_svr_policies_t *policy,
 {
   ap_hash_t *configdata;
   svn_error_t *err;
-  svn_error_t *warning = NULL;
-  svn_error_t *latest_warning = NULL;
 
   /* Parse the file, get a hash-of-hashes back */
   err = svn_parse (&configdata, filename, policy->pool);
@@ -275,7 +268,6 @@ svn_svr_load_policy (svn_svr_policies_t *policy,
                aliases, alrady as we want them.  Just store this value
                in our policy structure! */
 
-            printf ("svr_init(): got repository aliases.\n");
             policy->repos_aliases = (ap_hash_t *) val;
           }
 
@@ -286,7 +278,6 @@ svn_svr_load_policy (svn_svr_policies_t *policy,
                commands; again, we just store a pointer to this hash
                in our policy (the commands are interpreted elsewhere) */
 
-            printf ("svr_init(): got security restrictions.\n");
             policy->global_restrictions = (ap_hash_t *) val;
           }
 
@@ -297,35 +288,21 @@ svn_svr_load_policy (svn_svr_policies_t *policy,
                libraries to load up.  We'll definitely do that here
                and now! */
             
-            printf ("svr_init(): loading list of plugins...\n");
-            
             svn__svr_load_all_plugins ((ap_hash_t *) val, policy);
-
           }
 
         else
           {
-            char *finalmsg = 
-              ap_psprintf 
-              (pool, 
-               "svn_parse(): warning: ignoring unknown section: %s",
-               svn_string_2cstring ((svn_string_t *) key, pool));
-            
-            /* Batch up a new warning */
-            warning = 
-              svn_create_error (SVN_WARNING, NULL, finalmsg, NULL, pool);
-            warning->child = latest_warning; /* wrap the batch */
-            latest_warning = warning;  /* new top of batch */
+            policy->warning 
+              (policy->data, 
+               "svn_parse():  ignoring unknown section: `%s'",
+               svn_string_2cstring, ((svn_string_t *) key, pool));
           }
       }    /* for (hash_index...)  */
        
   } /* closing of Uberhash walk-through */
   
-
-  if (latest_warning)
-    return latest_warning;
-  else
-    return SVN_NO_ERROR;
+  return SVN_NO_ERROR;
 }
 
 

@@ -141,6 +141,16 @@ typedef struct svn_svr_policies_t
      KEY = bytestring data,  VAL = (svn_svr_plugin_t *)   */
   ap_hash_t *plugins;
 
+  /* A client callback function for reporting warnings.  The first
+     argument is simply passed along from the client.  FMT is a
+     printf-style format string; it is followed by printf-style
+     arguments.  */
+  void (*warning) (void *data, char *fmt, ...);
+
+  /* A pointer to pass through to the client's warning callback
+     function.  */
+  void *warning_data;
+
   /* A convience memory pool, in case a server routine ever needs one */
   ap_pool_t *pool;                   
   
@@ -214,6 +224,13 @@ svn_error_t * svn_svr_load_plugin (svn_svr_policies_t *policy,
 svn_error_t * svn_svr_register_plugin (svn_svr_policies_t *policy,
                                        svn_string_t *dso_filename,
                                        svn_svr_plugin_t *new_plugin);
+
+
+/* Set the warning callback function for use with policy.  */
+
+extern void svn_svr_warning_callback (svn_server_policies_t *policy,
+			              void (*warning) (void *, char *, ...),
+				      void *data);
 
 
 /* Three routines for checking authorization.
