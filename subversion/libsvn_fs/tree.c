@@ -3183,9 +3183,11 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
       unsigned char digest[MD5_DIGESTSIZE];
       const char *hex;
 
+      /* Until we finalize the node, its data_key points to the old
+         contents, in other words, the base text. */
       SVN_ERR (svn_fs__dag_file_checksum (digest, tb->node, trail));
       hex = svn_md5_digest_to_cstring (digest, trail->pool);
-      if (strcmp (tb->base_checksum, hex) != 0)
+      if (hex && (strcmp (tb->base_checksum, hex) != 0))
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH, 
            NULL,

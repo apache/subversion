@@ -32,6 +32,7 @@ extern const char svn_md5_empty_string_digest[];
 
 /** Return the hex representation of @a digest, which must be
  * MD5_DIGESTSIZE bytes long, allocating the string in @a pool.
+ * If @a digest is all zeros, then return NULL.
  */
 const char *svn_md5_digest_to_cstring (unsigned char digest[],
                                        apr_pool_t *pool);
