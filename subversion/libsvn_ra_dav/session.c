@@ -39,6 +39,8 @@
 
 #include "ra_dav.h"
 
+#define DEFAULT_HTTP_TIMEOUT 3600
+
 
 /* a cleanup routine attached to the pool that contains the RA session
    baton. */
@@ -641,11 +643,10 @@ svn_ra_dav__open (void **session_baton,
           }
       }
 
-    if (timeout)
-      {
-        ne_set_read_timeout(sess, timeout);
-        ne_set_read_timeout(sess2, timeout);
-      }
+    if (!timeout)
+      timeout = DEFAULT_HTTP_TIMEOUT;
+    ne_set_read_timeout(sess, timeout);
+    ne_set_read_timeout(sess2, timeout);
   }
 
   /* make sure we will eventually destroy the session */
