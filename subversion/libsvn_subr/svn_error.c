@@ -495,12 +495,7 @@ svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
   if ((err->apr_err > APR_OS_START_USEERR) 
       && (err->apr_err <= APR_OS_START_CANONERR))
     fprintf (stream, "\nsvn_error: #%d : <%s>\n", err->apr_err,
-#ifdef TEST_ALTERNATE_ERROR_SYSTEM
-             svn_strerror (err->apr_err, buf, sizeof(buf))
-#else
-             svn_strerror (err->apr_err, err->pool)
-#endif
-             );
+             svn_strerror (err->apr_err, buf, sizeof (buf)));
 
   /* Otherwise, this must be an APR error code. */
   else
@@ -542,17 +537,17 @@ svn_handle_warning (void *data, const char *fmt, ...)
 
 /* svn_strerror() and helpers */
 
-#ifdef TEST_ALTERNATE_ERROR_SYSTEM
-
 typedef struct {
   svn_errno_t errcode;
   const char *errdesc;
 } err_defn;
 
+/* To understand what is going on here, read svn_error_codes.h. */
 #define SVN_ERROR_BUILD_ARRAY
 #include "svn_error_codes.h"
 
-char * svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize)
+char *
+svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize)
 {
   const err_defn *defn;
 
@@ -565,287 +560,6 @@ char * svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize)
 
   return apr_strerror (statcode, buf, bufsize);
 }
-
-#else /* TEST_ALTERNATE_ERROR_SYSTEM */
-
-/* Helper for initialize_svn_error_descriptions */
-static void
-set_error_hash (apr_hash_t *ht, 
-                apr_pool_t *pool,
-                apr_status_t err,
-                const char *description)
-{
-  apr_status_t *e = apr_pcalloc (pool, sizeof(*e));
-  
-  *e = err;
-  apr_hash_set (ht, e, sizeof(*e), description);
-}
-
-
-/* Return a hash which maps svn-specific errorcodes (apr_status_t) to
-   their english descriptions (const char *). */
-
-static apr_hash_t *
-initialize_svn_error_descriptions (apr_pool_t *pool)
-{
-  apr_hash_t *ht = apr_hash_make (pool);
-
-  /* Here we go. */
-
-  set_error_hash (ht, pool, SVN_WARNING,
-                  "Warning");
-  
-  set_error_hash (ht, pool, SVN_ERR_NOT_AUTHORIZED,
-                  "Not authorized");
-  
-  set_error_hash (ht, pool, SVN_ERR_PLUGIN_LOAD_FAILURE,
-                  "Failure loading plugin");
-  
-  set_error_hash (ht, pool, SVN_ERR_UNKNOWN_FS_ACTION,
-                  "Unknown fs action");
-
-  set_error_hash (ht, pool, SVN_ERR_UNEXPECTED_EOF,
-                  "Unexpected end of file");
-
-  set_error_hash (ht, pool, SVN_ERR_MALFORMED_FILE,
-                  "Malformed file");
-
-  set_error_hash (ht, pool, SVN_ERR_INCOMPLETE_DATA,
-                  "Incomplete data");
-
-  set_error_hash (ht, pool, SVN_ERR_MALFORMED_XML,
-                  "XML data was not well-formed");
-
-  set_error_hash (ht, pool, SVN_ERR_UNFRUITFUL_DESCENT,
-                  "WC descent came up empty");
-
-  set_error_hash (ht, pool, SVN_ERR_BAD_FILENAME,
-                  "Bogus filename");
-
-  set_error_hash (ht, pool, SVN_ERR_UNSUPPORTED_FEATURE,
-                  "Trying to use unsupported feature");
-
-  set_error_hash (ht, pool, SVN_ERR_XML_ATTRIB_NOT_FOUND,
-                  "No such XML tag attribute");
-
-  set_error_hash (ht, pool, SVN_ERR_XML_MISSING_ANCESTRY,
-                  "<delta-pkg> is missing ancestry");
-
-  set_error_hash (ht, pool, SVN_ERR_XML_UNKNOWN_ENCODING,
-                  "Unrecognized binary data encoding; can't decode");
-
-  set_error_hash (ht, pool, SVN_ERR_UNKNOWN_NODE_KIND,
-                  "Unknown svn_node_kind");
-
-  set_error_hash (ht, pool, SVN_ERR_WC_OBSTRUCTED_UPDATE,
-                  "Obstructed update; unversioned item in the way");
-
-  set_error_hash (ht, pool, SVN_ERR_WC_UNWIND_MISMATCH,
-                  "Mismatch popping the wc unwind stack");
- 
-  set_error_hash (ht, pool, SVN_ERR_WC_UNWIND_EMPTY,
-                  "Attempt to pop empty wc unwind stack");
-
-  set_error_hash (ht, pool, SVN_ERR_WC_UNWIND_NOT_EMPTY,
-                  "Attempt to unlock with non-empty unwind stack");
-
-  set_error_hash (ht, pool, SVN_ERR_WC_LOCKED,
-                  "Attempted to lock an already-locked dir");
-
-  set_error_hash (ht, pool, SVN_ERR_WC_BAD_ADM_LOG,
-                  "Logfile is corrupted");
-
-  set_error_hash (ht, pool, SVN_ERR_WC_PATH_NOT_FOUND,
-                  "Can't find a working copy path");
-
-  set_error_hash (ht, pool, SVN_ERR_WC_ENTRY_NOT_FOUND,
-                  "Can't find an entry");
-
-  set_error_hash (ht, pool, SVN_ERR_WC_ENTRY_EXISTS,
-                  "Entry already exists");
- 
-  set_error_hash (ht, pool, SVN_ERR_WC_ENTRY_MISSING_REVISION,
-                  "Entry has no revision");
-
-  set_error_hash (ht, pool, SVN_ERR_WC_ENTRY_MISSING_ANCESTRY,
-                  "Entry no has no ancestor");
-
-  set_error_hash (ht, pool, SVN_ERR_WC_ENTRY_ATTRIBUTE_INVALID,
-                  "Entry has an invalid attribute");
-
-  set_error_hash (ht, pool, SVN_ERR_WC_ENTRY_BOGUS_MERGE,
-                  "Bogus entry attributes during entry merge");
-
-  set_error_hash (ht, pool, SVN_ERR_WC_NOT_UP_TO_DATE,
-                  "Working copy is not up-to-date");
-
-  set_error_hash (ht, pool, SVN_ERR_WC_LEFT_LOCAL_MOD,
-                  "Left locally modified or unversioned files");
-
-  set_error_hash (ht, pool, SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
-                  "Ran out of unique names");
-
-  set_error_hash (ht, pool, SVN_ERR_WC_FOUND_CONFLICT,
-                  "Found a conflict in working copy");
-
-  set_error_hash (ht, pool, SVN_ERR_WC_CORRUPT,
-                  "Working copy is corrupt");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_GENERAL,
-                  "General filesystem error");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_CLEANUP,
-                  "Error closing filesystem");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_ALREADY_OPEN,
-                  "Filesystem is already open");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_NOT_OPEN,
-                  "Filesystem is not open");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_CORRUPT,
-                  "Filesystem is corrupt");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_PATH_SYNTAX,
-                  "Invalid filesystem path syntax");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_NO_SUCH_REVISION,
-                  "Invalid filesytem revision number");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_NO_SUCH_TRANSACTION,
-                  "Invalid filesystem transaction name");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_NO_SUCH_ENTRY,
-                  "Filesystem dir has no such entry");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_NO_SUCH_REPRESENTATION,
-                  "Filesystem has no such representation");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_NO_SUCH_STRING,
-                  "Filesystem has no such string");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_NOT_FOUND,
-                  "Filesystem has no such file");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_ID_NOT_FOUND,
-                  "Filesystem has no such node-rev-id");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_NOT_ID,
-                  "String does not represent a node or node-rev-id");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_NOT_DIRECTORY,
-                  "Name does not refer to an filesystem directory");
- 
-  set_error_hash (ht, pool, SVN_ERR_FS_NOT_FILE,
-                  "Name does not refer to an filesystem file");
- 
-  set_error_hash (ht, pool, SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT,
-                  "Name is not a single path component");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_NOT_MUTABLE,
-                  "Attempt to change immutable filesystem node");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_ALREADY_EXISTS,
-                  "File already exists in revision.");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_DIR_NOT_EMPTY,
-                  "Attempt to remove non-empty filesytem directory");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_ROOT_DIR,
-                  "Attempt to remove or recreate fs root dir");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_NOT_TXN_ROOT,
-                  "Object is not a transaction root");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_NOT_REVISION_ROOT,
-                  "Object is not a revision root");
-
-  set_error_hash (ht, pool, SVN_ERR_FS_CONFLICT,
-                  "Merge conflict during commit");
-
-  set_error_hash (ht, pool, SVN_ERR_TXN_OUT_OF_DATE,
-                  "Transaction is out of date");
-
-  set_error_hash (ht, pool, SVN_ERR_BERKELEY_DB,
-                  "Berkeley DB error");
-
-  set_error_hash (ht, pool, SVN_ERR_RA_ILLEGAL_URL,
-                  "Bad URL passed to RA layer");
-
-  set_error_hash (ht, pool, SVN_ERR_RA_SOCK_INIT,
-                  "RA layer failed to init socket layer");
-
-  set_error_hash (ht, pool, SVN_ERR_RA_HOSTNAME_LOOKUP,
-                  "RA layer failed hostname lookup");
-
-  set_error_hash (ht, pool, SVN_ERR_RA_CREATING_REQUEST,
-                  "RA layer failed to create HTTP request");
-
-  set_error_hash (ht, pool, SVN_ERR_RA_REQUEST_FAILED,
-                  "RA layer's server request failed");
-
-  set_error_hash (ht, pool, SVN_ERR_RA_MKACTIVITY_FAILED,
-                  "RA layer failed to make activity for commit");
- 
-  set_error_hash (ht, pool, SVN_ERR_RA_DELETE_FAILED,
-                  "RA layer failed to delete server resource");
-
-  set_error_hash (ht, pool, SVN_ERR_RA_NOT_VERSIONED_RESOURCE,
-                  "URL is not a versioned resource");
-
-  set_error_hash (ht, pool, SVN_ERR_RA_BAD_REVISION_REPORT,
-                  "Bogus revision report");
- 
-  set_error_hash (ht, pool, SVN_ERR_BAD_CONTAINING_POOL,
-                  "Bad parent pool passed to svn_make_pool");
-
-  set_error_hash (ht, pool, SVN_ERR_APMOD_MISSING_PATH_TO_FS,
-                  "Apache has no path to an SVN filesystem");
-
-  set_error_hash (ht, pool, SVN_ERR_APMOD_MALFORMED_URI,
-                  "Apache got a malformed URI");
-
-  set_error_hash (ht, pool, SVN_ERR_TEST_FAILED,
-                  "Test failed");
-
-  set_error_hash (ht, pool, SVN_ERR_CL_ARG_PARSING_ERROR,
-                  "Client error in parsing arguments");
-
-  set_error_hash (ht, pool, SVN_ERR_CL_ADM_DIR_RESERVED,
-                  "Attempted command in administrative dir");
-
-  set_error_hash (ht, pool, SVN_ERR_LAST,
-                  "The final error");
-
-  return ht;
-}
-
-
-
-const char *
-svn_strerror (apr_status_t apr_err, apr_pool_t *pool)
-{
-  const char *description;
-
-  /* This hash is initialized -once-, the first time this routine is
-     called. */
-  static apr_hash_t *desc_hash = NULL;
-
-  if (! desc_hash)
-    desc_hash = initialize_svn_error_descriptions (pool);
-  
-  description = (const char *) apr_hash_get (desc_hash,
-                                             &apr_err,
-                                             sizeof(apr_err));
-  if (! description)
-    return "no description available";
-
-  else
-    return description;
-}
-
-#endif /* TEST_ALTERNATE_ERROR_SYSTEM */
-
 
 
 
