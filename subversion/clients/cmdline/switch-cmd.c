@@ -63,8 +63,8 @@ svn_cl__switch (apr_getopt_t *os,
     }
   else
     {
-      switch_url = ((const char **) (targets->elts))[1];
-      target = ((const char **) (targets->elts))[0];
+      switch_url = ((const char **) (targets->elts))[0];
+      target = ((const char **) (targets->elts))[1];
     }
 
   /* Validate the switch_url */
