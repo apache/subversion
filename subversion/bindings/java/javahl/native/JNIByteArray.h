@@ -34,6 +34,7 @@ private:
 	jbyteArray m_array;
 	jbyte *m_data;
 public:
+	bool isNull();
 	const signed char * getBytes();
 	int getLength();
 	JNIByteArray(jbyteArray jba);
