@@ -20,6 +20,10 @@
 
 #include <apr.h>
 
+
+/* Return a pseudo-random number based on SEED, and modify SEED.  This
+   is a "good" pseudo-random number generator, intended to replace all
+   those "bad" rand() implementations out there. */
 apr_uint32_t svn_test_rand (apr_uint32_t *seed);
 
 

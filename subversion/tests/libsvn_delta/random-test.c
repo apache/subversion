@@ -100,7 +100,7 @@ static void init_params (apr_uint32_t *seed,
 static FILE *
 generate_random_file (apr_uint32_t maxlen,
                       apr_uint32_t subseed_base,
-                      unsigned long *seed,
+                      apr_uint32_t *seed,
                       const char *random_bytes,
                       apr_uint32_t bytes_range,
                       int dump_files)
@@ -415,7 +415,7 @@ random_combine_test (const char **msg,
   apr_uint32_t seed;
   svn_error_t *err = do_random_combine_test (msg, msg_only, pool, &seed);
   if (!msg_only)
-    printf("SEED: Last seen = %lu\n", seed);
+    printf("SEED: Last seen = %lu\n", (unsigned long) seed);
   return err;
 }
 
