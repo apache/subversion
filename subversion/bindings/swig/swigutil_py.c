@@ -166,6 +166,28 @@ PyObject *svn_swig_py_array_to_list(const apr_array_header_t *strings)
     return NULL;
 }
 
+PyObject *svn_swig_py_revarray_to_list(const apr_array_header_t *revs)
+{
+    PyObject *list = PyList_New(revs->nelts);
+    int i;
+
+    for (i = 0; i < revs->nelts; ++i)
+      {
+        PyObject *ob;
+
+        ob = PyInt_FromLong(APR_ARRAY_IDX(revs, i, svn_revnum_t));
+        if (ob == NULL)
+            goto error;
+        PyList_SET_ITEM(list, i, ob);
+    }
+
+    return list;
+
+  error:
+    Py_DECREF(list);
+    return NULL;
+}
+
 const apr_array_header_t *svn_swig_py_strings_to_array(PyObject *source,
                                                        apr_pool_t *pool)
 {
