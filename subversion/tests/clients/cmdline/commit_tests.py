@@ -785,7 +785,7 @@ def hudson_part_1_variation_2():
   # Create expected commit output.
   #   We should see messages that gamma is Deleting and then Adding,
   #   which results in our "stacked" value of `Replacing'.
-  output_list = [ [gamma_path, None, {}, {'verb' : 'Replacing' }] ]
+  output_list = [ [gamma_path, None, {}, {'verb' : 'Adding' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
   
   # After committing, status should show only gamma at revision 2.
