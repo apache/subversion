@@ -150,11 +150,12 @@ typedef enum svn_errno_t {
   /* The caller attempted to change a node which is not mutable.  */
   SVN_ERR_FS_NOT_MUTABLE,
 
-  /* You tried to create a new file in a filesystem, but the file
-     already exists. */
+  /* You tried to create a new file in a filesystem revision, but the
+     file already exists. */
   SVN_ERR_FS_ALREADY_EXISTS,
 
-  /* You tried to remove the root directory of a filesystem. */
+  /* You tried to remove the root directory of a filesystem
+     revision. */
   SVN_ERR_FS_ROOT_DIR,
 
   /* The transaction could not be committed, because of a conflict with
