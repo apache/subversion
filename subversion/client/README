@@ -18,7 +18,7 @@ So:
    svn update --xml-file FILE.XML --revision N
 
 You may be wondering why --revision is on the command line.  Don't
-worry, they won't be in a real-life client.  The issue right now is
+worry, it won't be in a real-life client.  The issue right now is
 that the client and server aren't actually talking to one another, so
 information that they would have exchanged has to be passed manually,
 by a human (excuse me, I mean by a developer).
@@ -88,7 +88,7 @@ conversion.  These two filters are completely independent of one another.
 * Keyword substitution (on/OFF) per filesystem object. Children of
   directories inherit this property.
 
-STOPPED HERE -Fitz $Date: 2001-03-19 06:39:23 $
+STOPPED HERE -Fitz $Date: 2001-04-03 01:20:55 $
 
 * End-of-line conversion (on/OFF) per filesystem object. Children of
   directories inherit this property.
