@@ -978,7 +978,7 @@ copy_db_file_safely (const char *src_dir,
                           APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf (status, NULL,
-                              "Can't open file '%s' for reading.",
+                              "Can't open file '%s' for reading",
                               file_src_path);
 
   /* Open destination file. */
@@ -987,7 +987,7 @@ copy_db_file_safely (const char *src_dir,
                           APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf (status, NULL,
-                              "Can't open file '%s' for writing.",
+                              "Can't open file '%s' for writing",
                               file_dst_path);
 
   /* Allocate our read/write buffer. */
@@ -1007,7 +1007,7 @@ copy_db_file_safely (const char *src_dir,
           apr_file_close(s);  /* toss any error */
           apr_file_close(d);  /* toss any error */
           return svn_error_createf (status, NULL,
-                                    "Error reading file '%s'.",
+                                    "Error reading file '%s'",
                                     file_src_path);
         }
     
@@ -1018,7 +1018,7 @@ copy_db_file_safely (const char *src_dir,
           apr_file_close(s);  /* toss any error */
           apr_file_close(d);  /* toss any error */
           return svn_error_createf (status, NULL,
-                                    "Error writing file '%s'.",
+                                    "Error writing file '%s'",
                                     file_dst_path);
         }
     
@@ -1026,11 +1026,11 @@ copy_db_file_safely (const char *src_dir,
         {
           status = apr_file_close(s);
           if (status)
-            return svn_error_createf (status, NULL, "Can't close file '%s'.",
+            return svn_error_createf (status, NULL, "Can't close file '%s'",
                                       file_src_path);
           status = apr_file_close(d);
           if (status)
-            return svn_error_createf (status, NULL, "Can't close file '%s'.",
+            return svn_error_createf (status, NULL, "Can't close file '%s'",
                                       file_dst_path);
 
           break;  /* got EOF on read, all files closed, all done. */
@@ -1129,7 +1129,7 @@ base_hotcopy (const char *src_path,
                  _("Error copying logfile;  the DB_LOG_AUTOREMOVE feature \n"
                    "may be interfering with the hotcopy algorithm.  If \n"
                    "the problem persists, try deactivating this feature \n"
-                   "in DB_CONFIG."));
+                   "in DB_CONFIG"));
             else
               return err;
           }
@@ -1148,7 +1148,7 @@ base_hotcopy (const char *src_path,
            _("Error running catastrophic recovery on hotcopy;  the \n"
              "DB_LOG_AUTOREMOVE feature may be interfering with the \n"
              "hotcopy algorithm.  If the problem persists, try deactivating \n"
-             "this feature in DB_CONFIG."));
+             "this feature in DB_CONFIG"));
       else
         return err;
     }
