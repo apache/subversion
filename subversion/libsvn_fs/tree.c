@@ -12,6 +12,20 @@
  */
 
 
+/* The job of this layer is to take a filesystem with lots of node
+   sharing going on --- the real DAG filesystem as it appears in the
+   database --- and make it look and act like an ordinary tree
+   filesystem, with no sharing.
+
+   We do just-in-time cloning: you can walk from some unfinished
+   transaction's root down into directories and files shared with
+   committed revisions; as soon as you try to change something, the
+   appropriate nodes get cloned (and parent directory entries updated)
+   invisibly, behind your back.  Any other references you have to
+   nodes that have been cloned by other changes, even made by other
+   processes, are automatically updated to point to the right clones.  */
+
+
 #include <stdlib.h>
 #include <string.h>
 #include "svn_fs.h"
@@ -19,7 +33,9 @@
 #include "id.h"
 #include "fs.h"
 #include "err.h"
+#include "trail.h"
 #include "clones-table.h"
+#include "txn-table.h"
 #include "dag.h"
 
 
@@ -33,12 +49,14 @@ typedef enum {
 } kind_t;
 
 
-/* The path from some node to the root of a revision.  This is the
-   path of directories we need to clone to change this node.  */
+/* The path of directory entry names from some node to the root of a
+   revision.  The root directory's path is the null pointer.  This is
+   the path of parent directory entries we need to update to clone a
+   given DAG node.  */
 struct clone_path_t {
 
-  /* The path from the parent of this node to the root, or zero if
-     this is the root.  */
+  /* The path of the parent directory.  Zero if this is a child of the
+     root directory.  */
   struct clone_path_t *parent;
 
   /* The name of this node in that parent directory.  */
@@ -49,7 +67,34 @@ struct clone_path_t {
 
 typedef struct clone_path_t clone_path_t;
 
-struct svn_fs_node_t {
+
+/* There are essentially two kinds of nodes:
+
+   - Nodes which we reached via the root of some committed revision
+     ("revision nodes").  These are easy, since they never change.  We
+     just hold a reference to the dag node, and that's that.
+
+   - Nodes which we reached via the root of some unfinished Subversion
+     transaction ("transaction nodes").  These are more complicated to
+     handle, since nodes in a Subversion transaction can be cloned at
+     any time, perhaps even by other processes.  We divide transaction
+     nodes into three subclasses:
+
+     - Nodes which haven't yet been cloned --- to the best of our
+       knowledge.  Cloning could happen at any time.  ("uncloned
+       transaction nodes".)
+
+     - Nodes which we know have been cloned.  ("cloned transaction
+       nodes".)
+
+   Note that, since the Berkeley DB transaction in which a node is
+   cloned may later be aborted, a node may change status from
+   "cloned transaction node" back to an "uncloned transaction node".
+   It's really not safe to use a given svn_fs_node_t within the
+   context of two Berkeley DB transactions simultanously.  */
+
+struct svn_fs_node_t
+{
 
   /* What filesystem does this node belong to?  */
   svn_fs_t *fs;
@@ -61,42 +106,45 @@ struct svn_fs_node_t {
   /* What kind of node is this?  */
   kind_t kind;
 
-  /* If this node was reached from the root of a transaction, the name
-     of that transaction, allocated in POOL.  Otherwise, this is zero.  */
+  /* For transaction nodes, the name of that transaction, allocated in
+     POOL.  For revision nodes, this is zero.  */
   const char *txn;
 
-  /* If this node was reached from the root of a revision, this is
-     that revision.  Otherwise, it's -1.  */
+  /* For revision nodes, the number of that revision.  For transaction
+     nodes, it's -1.  */
   svn_revnum_t rev;
 
-  /* If this node was reached from the root of a transaction, and it
-     has *not* been cloned (so far as we know), this is the path from
-     the node to the root of the transaction's base revision.
-     Otherwise, this is zero.  */
+  /* For transaction nodes, non-zero if the node has been cloned.  */
+  int is_cloned;
+
+  /* For uncloned transaction nodes, this is the path from the node to
+     the root of the transaction's base revision --- the nodes we need
+     to clone to change this one.
+
+     If we turn a node from uncloned to cloned as part of some
+     Berkeley DB transaction, this continues to be valid at least
+     until that transaction has been successfully committed.  */
   clone_path_t *clone_path;
 
-  /* This node, as managed by the DAG filesystem.
-
-     If we reached this node via the root of a transaction (that is,
-     txn != 0), and we don't think it's been cloned yet (that is,
-     clone_path != 0), then we must be cautious in using this field,
-     since another process could clone the node at any time.
-
-     You can call either `make_clone' or `check_for_clone' as part of
-     a Berkeley DB transaction to get an appropriate node to use.
-     They'll cache their results in the node, so they'll be quick after
-     the first call.  */
+  /* The DAG node itself.  Well, our best guess, anyway:
+     - For revision nodes and cloned transaction nodes, this is
+       reliably the correct DAG node reference.
+     - For uncloned transaction nodes, this field is untrustworthy,
+       since the node could be cloned at any moment, perhaps even via
+       operations on other nodes within the same Berkeley DB
+       transaction.  Instead of using this field, you should use the
+       `txn' and `clone_path' members to look up this node in the
+       `clones' table, and go by what you find there.
+     The `check_for_clone' and `make_clone' functions handle all this
+     logic correctly, so you may want to simply call those functions
+     instead of using this field directly.  */
   dag_node_t *dag_node;
 
+  /* For a transaction node that got cloned as part of an as-of-yet
+     uncommitted trail, this is a reference to the original node.
+     Outside of that situation, this is zero.  */
+  dag_node_t *original_dag_node;
 
-  /* The first time we call `make_clone' or `check_for_clone' on this
-     this node within some Berkeley DB transaction, we cache the
-     result here.  As the first action within a new Berkeley DB
-     transaction, it's very important to call `txn_prep_node', which
-     will clear this cache.  It's nice, but not necessary, to call
-     `txn_finalize_node' after a transaction succeeds, which installs
-     this value in a more permanent place.  */
-  dag_node_t *clone_cache;
 };
 
 
@@ -104,6 +152,7 @@ struct svn_fs_node_t {
 /* Internal node operations.  */
 
 
+#if 0
 /* Return a new, partially initialized node object in FS, allocated
    from POOL.  */
 static svn_fs_node_t *
@@ -122,7 +171,8 @@ new_node_object (svn_fs_t *fs,
 }
 
 
-/* Create a clone_path_t node in POOL, using PARENT and NAME.  */
+/* Create a clone path referring to the directory entry named NAME in
+   the directory given by PARENT.  Allocate the new node in POOL.  */
 static clone_path_t *
 new_child (clone_path_t *parent,
 	   const char *name,
@@ -135,96 +185,205 @@ new_child (clone_path_t *parent,
 
   return path;
 }
+#endif
 
 
 
 /* Clone tracking.  */
 
 
-/* Prepare NODE for participation in a Berkeley DB transaction.  You
-   must call this on every pre-existing node you'll use in a
-   transaction, to make sure it doesn't carry clones from aborted
-   transactions.  */
-static void
-txn_prep_node (svn_fs_node_t *node)
-{
-  node->clone_cache = 0;
-}
-
-
-/* Finalize NODE after a successful transaction.  You can call this
-   after a Berkeley DB transaction using NODE succeeds, to permanently
-   record any clones found of NODE.  */
-static void
-txn_finalize_node (svn_fs_node_t *node)
-{
-  if (node->clone_cache
-      && node->clone_cache != node->dag_node)
-    {
-      node->clone_path = 0;
-      node->dag_node = node->clone_cache;
-    }
-
-  node->clone_cache = 0;
-}
-
-
-/* If NODE has been cloned in DB_TXN, set *DAG_P to the clone,
-   allocated in POOL.  Otherwise, set *DAG_P to the original node,
-   shared with NODE.
-
-   When it does find a clone, it would be nice if this function could
-   simply stash the new DAG node in NODE->dag_node, and zero
-   NODE->clone_path --- effectively caching the results of the clone
-   check in the node itself.  However, if DB_TXN aborts, we need to
-   unwind that side effect.  At the moment, it looks easier to simply
-   put off any side effects to the node structure until the
-   transaction succeeds.  */
-static svn_error_t *
-check_for_clone (dag_node_t **node_p,
-		 svn_fs_node_t *node,
-		 DB_TXN *db_txn,
-		 apr_pool_t *pool)
-{
-  abort ();
-}
-
-
 /* Return a string representing the path from the root directory
    represented by PATH, allocated in POOL.  */
 static char *
-path_to_string (clone_path_t *path,
-		apr_pool_t *pool)
+clone_path_to_string (clone_path_t *path,
+		      apr_pool_t *pool)
 {
-  abort ();
+  clone_path_t *p;
+  int path_len;
+  char *string, *end;
+
+  /* How long is the string form of the path going to be?  */
+  path_len = 0;
+  for (p = path; p; p = p->parent)
+    path_len += strlen (p->name) + 1;
+
+  string = apr_palloc (pool, path_len + 1);
+  end = string + path_len;
+  for (p = path; p->name; p = p->parent)
+    {
+      int name_len = strlen (p->name);
+      end -= name_len;
+      memcpy (end, p->name, name_len);
+      *--end = '/';
+    }
+
+  if (string != end)
+    abort ();
+
+  return string;
 }
 
 
-/* Clone PATH, and set *CLONE_P to a dag_node_t for the clone we make
-   (or find) of PATH->dag_node.  FS, SVN_TXN, and DB_TXN are the
-   filesystem, Subversion transaction, and Berkeley DB transaction the
-   clone takes place in.  Allocate *CLONE_P, and do any other
-   necessary temporary allocation in POOL.  */
+/* Undo function for set_clone.  */
+static void
+undo_set_clone (void *baton)
+{
+  svn_fs_node_t *node = baton;
+
+  node->dag_node = node->original_dag_node;
+  node->original_dag_node = 0;
+  node->is_cloned = 0;
+}
+
+
+/* Set NODE's DAG_NODE member to CLONE, set its `is_cloned' flag, and
+   prepare to undo all this if TRAIL is aborted.  */
+static void
+set_clone (svn_fs_node_t *node,
+	   dag_node_t *clone,
+	   trail_t *trail)
+{
+  /* If we're setting dag_node, the original_dag_node should always be
+     zero.  */
+  if (node->original_dag_node)
+    abort ();
+
+  /* Stash away the original node, and drop in the new node.  */
+  node->original_dag_node = node->dag_node;
+  node->dag_node = clone;
+
+  /* "Stand back, Gertrude!  You've been cloned!"  */
+  node->is_cloned = 1;
+
+  /* If TRAIL is aborted, undo this change.  */
+  svn_fs__record_undo (trail, undo_set_clone, node);
+}
+
+
+/* If NODE has been cloned in TRAIL, update NODE's DAG node reference
+   to refer to the clone.  */
+static svn_error_t *
+check_for_clone (svn_fs_node_t *node,
+		 trail_t *trail)
+{
+  /* If we do find a clone of NODE, we cache that fact, so that
+     subsequent calls can return without doing any I/O.
+
+     However, if we find that NODE has *not* yet been cloned, we can't
+     cache that fact --- make_clone could be applied to some child of
+     NODE, or someone might clone some other node object referring to
+     the same node.  This means that, for uncloned nodes, every call
+     to check_for_clone goes to disk for its answer.  It would be nice
+     to remove that necessity somehow.  */
+
+  if (! node->txn)
+    {
+      /* We reached this node from the root of a revision, so there
+	 will never be a clone of this node.  */
+      return 0;
+    }
+
+  if (node->is_cloned)
+    {
+      /* We've already cloned this node, and updated its `dag_node'
+         member.  */
+      return 0;
+    }
+
+  /* Are we looking for the clone of the transaction's root directory?  */
+  if (! node->clone_path)
+    {
+      /* Find the transaction's current root directory.  */
+      const svn_fs_id_t *node_id = svn_fs__dag_get_id (node->dag_node);
+      svn_fs_id_t *root_id, *base_root_id;
+
+      svn_fs__get_txn (&root_id, &base_root_id, node->txn, trail);
+
+      /* If NODE refers to the transaction's current root, we're up to
+         date.  */
+      if (svn_fs_id_eq (node_id, root_id))
+	return 0;
+
+      /* If NODE refers to the transaction's uncloned root, which is
+	 different from the current root, update it to point to the
+	 current root.  */
+      else if (svn_fs_id_eq (node_id, base_root_id))
+	{
+	  dag_node_t *cloned_root;
+
+	  SVN_ERR (svn_fs__dag_txn_node (&cloned_root,
+					 node->fs, node->txn, root_id,
+					 trail));
+	  set_clone (node, cloned_root, trail);
+	  return 0;
+	}
+
+      /* Otherwise, NODE has no clone path, but it's referring to
+	 neither the old nor the new directory.  Freak out.  */
+      else
+	abort ();
+    }
+
+  {
+    /* We're looking for a clone of some random subdirectory.  Check
+       the `clones' table.  */
+    char *base_path = clone_path_to_string (node->clone_path, trail->pool);
+    skel_t *clone_info;
+    skel_t *clone_id_skel;
+
+    SVN_ERR (svn_fs__check_clone (&clone_info, node->fs, node->txn, base_path,
+				  trail));
+    if (clone_info
+	&& svn_fs__is_cloned (&clone_id_skel, clone_info))
+      {
+	/* The node has been cloned, and clone_id_skel contains the
+	   clone's ID.  */
+	svn_fs_id_t *clone_id = svn_fs_parse_id (clone_id_skel->data,
+						 clone_id_skel->len,
+						 trail->pool);
+	dag_node_t *clone;
+
+	if (! clone_id)
+	  return svn_fs__err_corrupt_clone (node->fs, node->txn, base_path);
+
+	SVN_ERR (svn_fs__dag_txn_node (&clone, node->fs, node->txn, clone_id,
+				       trail));
+
+	set_clone (node, clone, trail);
+	return 0;
+      }
+
+    /* The node has not yet been cloned in this transaction, so the
+       reference to the original is still accurate.  */
+    return 0;
+  }
+}
+
+
+/* Clone the node indicated by PATH in SVN_TXN in FS, as part of
+   TRAIL.  Clone parents as necessary.  Set *CLONE_P to a dag_node_t
+   for the clone we make (or find); allocate *CLONE_P in TRAIL->pool.
+
+   This is the fabled "bubble up" function.  */
 static svn_error_t *
 clone_path (dag_node_t **clone_p,
 	    svn_fs_t *fs,
 	    const char *svn_txn,
 	    clone_path_t *path,
-	    DB_TXN *db_txn,
-	    apr_pool_t *pool)
+	    trail_t *trail)
 {
   /* Are we trying to clone a subdirectory, or the root directory?  */
   if (path)
     {
       /* We're trying to clone a subdirectory, not the root.  Has this
          node already been cloned?  */
-      char *base_path = path_to_string (path, pool);
+      char *base_path = clone_path_to_string (path, trail->pool);
       skel_t *clone_info;
       skel_t *clone_id_skel, *parent_clone_id_skel, *entry_name_skel;
 
       /* Check the `clones' table for an entry for this path.  */
       SVN_ERR (svn_fs__check_clone (&clone_info, fs, svn_txn, base_path,
-				    db_txn, pool));
+				    trail));
 
       if (! clone_info)
 	{
@@ -234,10 +393,13 @@ clone_path (dag_node_t **clone_p,
 	  dag_node_t *parent_clone, *child_clone;
 	    
 	  SVN_ERR (clone_path (&parent_clone, fs, svn_txn, path->parent,
-			       db_txn, pool));
-	  SVN_ERR (svn_fs__dag_clone (&child_clone, parent_clone, path->name,
-				      db_txn, pool));
+			       trail));
+	  SVN_ERR (svn_fs__dag_clone_child (&child_clone, parent_clone,
+					    path->name, trail));
 	  svn_fs__dag_close (parent_clone);
+	  SVN_ERR (svn_fs__record_clone (fs, svn_txn, base_path,
+					 svn_fs__dag_get_id (child_clone),
+					 trail));
 
 	  *clone_p = child_clone;
 	  return 0;
@@ -246,11 +408,14 @@ clone_path (dag_node_t **clone_p,
 	{
 	  svn_fs_id_t *clone_id = svn_fs_parse_id (clone_id_skel->data,
 						   clone_id_skel->len,
-						   pool);
+						   trail->pool);
 	  dag_node_t *clone;
 
+	  if (! clone_id)
+	    return svn_fs__err_corrupt_clone (fs, svn_txn, base_path);
+
 	  SVN_ERR (svn_fs__dag_txn_node (&clone, fs, svn_txn, clone_id,
-					 db_txn, pool));
+					 trail));
 
 	  *clone_p = clone;
 	  return 0;
@@ -261,15 +426,21 @@ clone_path (dag_node_t **clone_p,
 	  svn_fs_id_t *parent_clone_id
 	    = svn_fs_parse_id (parent_clone_id_skel->data,
 			       parent_clone_id_skel->len,
-			       pool);
+			       trail->pool);
 	  dag_node_t *parent_clone, *child_clone;
+
+	  if (! parent_clone_id)
+	    return svn_fs__err_corrupt_clone (fs, svn_txn, base_path);
 
 	  SVN_ERR (svn_fs__dag_txn_node (&parent_clone, fs, svn_txn,
 					 parent_clone_id,
-					 db_txn, pool));
-	  SVN_ERR (svn_fs__dag_clone (&child_clone, parent_clone, path->name,
-				      db_txn, pool));
+					 trail));
+	  SVN_ERR (svn_fs__dag_clone_child (&child_clone, parent_clone,
+					    path->name, trail));
 	  svn_fs__dag_close (parent_clone);
+	  SVN_ERR (svn_fs__record_clone (fs, svn_txn, base_path,
+					 svn_fs__dag_get_id (child_clone),
+					 trail));
 	    
 	  *clone_p = child_clone;
 	  return 0;
@@ -279,22 +450,46 @@ clone_path (dag_node_t **clone_p,
     }
   else
     {
-      /* We're cloning the root directory.  */
-      abort ();
+      /* We're trying to clone the root directory.  */
+      dag_node_t *root_clone;
+
+      SVN_ERR (svn_fs__dag_clone_root (&root_clone, fs, svn_txn,
+				       trail));
+
+      /* There's no need to make an entry in the `clones' table for
+	 this, since we use the `transactions' entry itself to record
+	 root directory clones, and svn_fs__dag_clone_root updates
+	 that.  */
+
+      *clone_p = root_clone;
+      return 0;
     }
 }
 	    
 
-/* Clone NODE in DB_TXN, if it hasn't been cloned already.  In either
-   case, set *NODE_P to the clone, allocated either in POOL, or in
-   NODE->pool.  */
+/* Clone NODE in TRAIL, if it hasn't been cloned already.  After this
+   call, NODE refers to the clone.  */
 static svn_error_t *
-make_clone (dag_node_t **node_p,
-	    svn_fs_node_t *node,
-	    DB_TXN *db_txn,
-	    apr_pool_t *pool)
+make_clone (svn_fs_node_t *node,
+	    trail_t *trail)
 {
-  abort ();
+  dag_node_t *node_clone;
+
+  if (! node->txn)
+    return svn_fs__err_not_mutable (node->fs,
+				    svn_fs__dag_get_id (node->dag_node));
+
+  /* If the node has already been cloned, we're done.  */
+  if (node->is_cloned)
+    return 0;
+
+  /* As far as we know, this node hasn't been cloned yet.
+     Make/find the clone, cloning any parents as necessary.  */
+  SVN_ERR (clone_path (&node_clone, node->fs, node->txn, node->clone_path,
+		       trail));
+
+  set_clone (node, node_clone, trail);
+  return 0;
 }
 
 
@@ -360,20 +555,18 @@ struct get_node_prop_args
   svn_string_t **value_p;
   svn_fs_node_t *node;
   svn_string_t *propname;
-  apr_pool_t *pool;
 };
 
 
 static svn_error_t *
 txn_body_get_node_prop (void *baton,
-			DB_TXN *db_txn)
+			trail_t *trail)
 {
   struct get_node_prop_args *args = baton;
-  dag_node_t *dag_node;
   skel_t *proplist, *prop;
 
-  SVN_ERR (check_for_clone (&dag_node, args->node, db_txn, args->pool));
-  SVN_ERR (svn_fs__dag_get_proplist (&proplist, dag_node, db_txn, args->pool));
+  SVN_ERR (check_for_clone (args->node, trail));
+  SVN_ERR (svn_fs__dag_get_proplist (&proplist, args->node->dag_node, trail));
   
   /* Search the proplist for a property with the right name.  */
   for (prop = proplist->children; prop; prop = prop->next->next)
@@ -385,7 +578,7 @@ txn_body_get_node_prop (void *baton,
 	  && ! memcmp (name->data, args->propname->data, name->len))
 	{
 	  *(args->value_p) = svn_string_ncreate (value->data, value->len,
-						 args->pool);
+						 trail->pool);
 	  return 0;
 	}
     }
@@ -407,9 +600,8 @@ svn_fs_get_node_prop (svn_string_t **value_p,
   args.value_p  = &value;
   args.node     = node;
   args.propname = propname;
-  args.pool     = pool;
 
-  SVN_ERR (svn_fs__retry_txn (node->fs, txn_body_get_node_prop, &args));
+  SVN_ERR (svn_fs__retry_txn (node->fs, txn_body_get_node_prop, &args, pool));
 
   *value_p = value;
   return 0;
@@ -429,20 +621,18 @@ struct change_node_prop_args {
   svn_fs_node_t *node;
   svn_string_t *name;
   svn_string_t *value;
-  apr_pool_t *pool;
 };
 
 
 static svn_error_t *
 txn_body_change_node_prop (void *baton,
-			   DB_TXN *db_txn)
+			   trail_t *trail)
 {
   struct change_node_prop_args *args = baton;
-  dag_node_t *dag_node;
   skel_t *proplist, *prop;
 
-  SVN_ERR (make_clone (&dag_node, args->node, db_txn, args->pool));
-  SVN_ERR (svn_fs__dag_get_proplist (&proplist, dag_node, db_txn, args->pool));
+  SVN_ERR (make_clone (args->node, trail));
+  SVN_ERR (svn_fs__dag_get_proplist (&proplist, args->node->dag_node, trail));
   
   /* Delete the skel, either replacing or adding the given property.  */
   for (prop = proplist->children; prop; prop = prop->next->next)
@@ -468,15 +658,15 @@ txn_body_change_node_prop (void *baton,
     {
       svn_fs__prepend (svn_fs__mem_atom (args->value->data,
 					 args->value->len,
-					 args->pool),
+					 trail->pool),
 		       proplist);
       svn_fs__prepend (svn_fs__mem_atom (args->name->data,
 					 args->name->len,
-					 args->pool),
+					 trail->pool),
 		       proplist);
     }
 
-  SVN_ERR (svn_fs__dag_set_proplist (dag_node, proplist, db_txn, args->pool));
+  SVN_ERR (svn_fs__dag_set_proplist (args->node->dag_node, proplist, trail));
 
   return 0;
 }
@@ -493,9 +683,9 @@ svn_fs_change_node_prop (svn_fs_node_t *node,
   args.node  = node;
   args.name  = name;
   args.value = value;
-  args.pool  = pool;
 
-  SVN_ERR (svn_fs__retry_txn (node->fs, txn_body_change_node_prop, &args));
+  SVN_ERR (svn_fs__retry_txn (node->fs, txn_body_change_node_prop, &args,
+			      pool));
 
   return 0;
 }
@@ -516,6 +706,7 @@ svn_fs_merge (const char **conflict_p,
 /* Directories.  */
 
 
+#if 0
 /* Starting from PARENT, traverse PATH, and set *NODE_P to a newly
    opened svn_fs_node_t for whatever we find there.  Do all this as
    part of the Berkeley DB transaction DB_TXN.  Allocate the new node,
@@ -530,6 +721,7 @@ traverse_path (svn_fs_node_t **node_p,
 {
   abort ();
 }
+#endif
 
 
 svn_error_t *
@@ -577,6 +769,7 @@ svn_fs_rename (svn_fs_node_t *old_parent,
 	       apr_pool_t *pool)
 {
   abort ();
+  /* [[Don't forget to record renames in the `clones' table.]]  */
 }
 
 
@@ -588,5 +781,3 @@ svn_fs_copy (svn_fs_node_t *parent,
 {
   abort ();
 }
-
-
