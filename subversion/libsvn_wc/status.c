@@ -361,6 +361,8 @@ add_unversioned_items (svn_stringbuf_t *path,
         }
     }
 
+  svn_pool_destroy (subpool);
+
   return SVN_NO_ERROR;
 }
 
