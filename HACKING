@@ -46,9 +46,9 @@ simply excellent volunteers who are interested in building a better
 version control system.
 
 The community exists mainly through mailing lists and a Subversion
-repository:
+repository.  To participate:
 
-Go to http://subversion.tigris.org and
+Go to http://subversion.tigris.org/ and
 
    *  Join the "dev", "svn", and "announce" mailing lists.
       The dev list, dev@subversion.tigris.org, is where almost all
@@ -56,9 +56,11 @@ Go to http://subversion.tigris.org and
       you might want to check the list archives first.  The "svn"
       list receives automated commit emails.
 
-   *  Print out and digest the Spec.  (The postscript might look
-      better than the PDF.)  The Spec will give you a theoretical
-      overview of Subversion's design.
+   *  Print out and digest the Subversion design specification.
+      This document can be found in the "File sharing" area of the
+      website in the Documentation/Design folder.  A PDF and an HTML
+      version are available on the web.  The design spec will give you
+      a theoretical overview of Subversion's design.
 
 There are many ways to join the project, either by writing code, or by
 testing and/or helping to manage the bug database.  If you'd like to
@@ -79,7 +81,7 @@ looking and testing for issues that are either invalid, or are
 duplicates of other issues.  Both kinds are very common, the first
 because bugs often get unknowingly fixed as side effects of other
 changes in the code, and the second because people sometimes file an
-issue without noticing that it has already been reported.  If you're
+issue without noticing that it has already been reported.  If you are
 not sure about an issue, post a question to dev@subversion.tigris.org.
 ("Subversion: We're here to help you help us!")
 
@@ -98,25 +100,30 @@ Theory and documentation
       A design spec was written in June 2000, and is a bit out of
       date.  But it still gives a good theoretical introduction to the
       inner workings of the repository, and to Subversion's various
-      layers.  Look in doc/programmer/design/, or look at one of the
-      versions posted on the Subversion website.
+      layers.  The Texinfo source is in 'doc/programmer/design/', or
+      look at one of the versions posted on the Subversion website.
 
 
    2. WEBDAV
       Greg Stein has written an introduction to Subversion's network
       protocol, which is an extended dialect of HTTP.  The document is
-      'www/webdav-usage.html', and is also posted on the website.
+      'www/webdav-usage.html', and is also posted on the website in
+      the "File sharing" section.
 
 
    3. USER MANUAL
-      We've started documenting some of the behavior of the client;
-      it's only a small beginning, but it may help.  Look at
-      doc/user/manual/ for this project.
+      Subversion: The Definitive Guide is an upcoming title to be
+      published by O'Reilly that shows in detail how to effectively
+      use Subversion.  This book is still being written, so the
+      contents are still in flux.  You may find it in the
+      Documentation/Book folder on the "File sharing" section of the
+      Subversion website.  The XML source is in 'doc/book/book'.
 
 
    4. SYSTEM NOTES
       A lot of the design ideas for particular aspects of the system
-      have been documented in individual files in the notes directory.
+      have been documented in individual files in the 'notes'
+      directory.
 
 
 
@@ -129,8 +136,8 @@ with the existing code base and interfaces.
 Check out a copy of Subversion (anonymously, if you don't yet have an
 account with commit-access) -- so you can look at the code base.
 
-Within subversion/include/ are a bunch of header files with huge doc
-comments.  If you read through these, you'll have a pretty good
+Within 'subversion/include/' are a bunch of header files with huge
+doc comments.  If you read through these, you'll have a pretty good
 understanding of the implementation details.  Here's a suggested
 perusal order:
 
@@ -142,7 +149,7 @@ perusal order:
 
    *  client-side interfaces:  svn_ra.h, svn_wc.h, svn_client.h
 
-   *  the repository and versioned filesystem:  svn_repos.h svn_fs.h
+   *  the repository and versioned filesystem:  svn_repos.h, svn_fs.h
 
 
 Subversion tries to stay portable by using only ANSI/ISO C and by
@@ -152,7 +159,7 @@ information can be found at http://apr.apache.org.
 
 Because Subversion depends so heavily on APR, it may be hard to
 understand Subversion without first glancing over certain header files
-in APR (look in apr/include/):
+in APR (look in 'apr/include/'):
 
    *  memory pools:  apr_pools.h
 
@@ -258,7 +265,7 @@ it's more important to make code readable than to fit that extra line
 on the screen.
 
 The controversial GNU convention of putting a space between a function
-name and its opening paren is optional in Subversion.  If you're
+name and its opening parenthesis is optional in Subversion.  If you're
 editing an area of code that already seems to have a consistent
 preference about this, then just stick with that; otherwise, pick
 whichever way you like.
@@ -348,8 +355,7 @@ Using page breaks
 We're using page breaks (the Ctrl-L character, ASCII 12) for section
 boundaries in both code and plaintext prose files.  This file is a
 good example of how it's done: each section starts with a page break,
-and the immediately after the page break comes the title of the
-section.
+and immediately after the page break comes the title of the section.
 
 This helps out people who use the Emacs page commands, such as
 `pages-directory' and `narrow-to-page'.  Such people are not as scarce
@@ -536,7 +542,7 @@ Automated tests
 ===============
 
 For a description of how to use and add tests to Subversion's
-automated test framework, please read subversion/tests/README.
+automated test framework, please read 'subversion/tests/README'.
 
 
 
@@ -655,11 +661,12 @@ The wildcard is okay in the description for `handle_parser_warning',
 but only because the two structures were mentioned by full name
 elsewhere in the log entry.
 
-Note how each file gets its own entry, and the changes within a file
-are grouped by symbol, with the symbols are listed in parentheses
-followed by a colon, followed by text describing the change.  Please
-adhere to this format -- not only does consistency aid readability, it
-also allows software to colorize log entries automatically.
+Note how each file gets its own entry prefixed with an "*", and the
+changes within a file are grouped by symbol, with the symbols listed
+in parentheses followed by a colon, followed by text describing the
+change.  Please adhere to this format -- not only does consistency aid
+readability, it also allows software to colorize log entries
+automatically.
 
 If your change is related to a specific issue in the issue tracker,
 then include a string like "issue #N" in the log message.  For
@@ -747,11 +754,11 @@ instead.
 
 The email message should start off with a log message, as described in
 "Writing log messages" above.  The patch itself should be in unified
-diff format, preferably inserted directly into the body of your
-message (rather than MIME-attached, uuencoded, or otherwise
-opaqified).  If your mailer wraps long lines, then you will need to
-attach your patch.  Please ensure the MIME type of the attachment is
-text/plain (some mailers allow you to set the MIME type; for some
+diff format (e.g., with "svn diff"), preferably inserted directly into
+the body of your message (rather than MIME-attached, uuencoded, or
+otherwise opaqified).  If your mailer wraps long lines, then you will
+need to attach your patch.  Please ensure the MIME type of the attachment
+is text/plain (some mailers allow you to set the MIME type; for some
 others, you might have to use a .txt extension on your patch file). Do
 not compress or otherwise encode the attached patch.
 
