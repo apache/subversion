@@ -1141,12 +1141,12 @@ the same guidelines.
 Compatibility
 =============
 
-Before 1.0, we require only that each major interim release be
-compatible with the one before it.  For example, a 0.20 server must
-work with a 0.19 client, but may be incompatible with a 0.18 client
-(though gratuitous incompatibility should be avoided whenever
-possible, of course).  Minor numbers don't count: 0.20.1, 0.20.2, etc,
-must be compatible with 0.19.*.
+Before 1.0, we require only that each interim release be compatible
+with the one before it.  For example, a 0.20 server must work with a
+0.19 client, but may be incompatible with a 0.18 client (though
+gratuitous incompatibility should be avoided whenever possible, of
+course).  Patch levels don't count: 0.20.1, 0.20.2, etc, must be
+compatible with 0.19.*.
 
 The purpose of this policy is to help early adopters make good
 decisions about when to upgrade, without impeding development too
