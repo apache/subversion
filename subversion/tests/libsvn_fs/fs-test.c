@@ -400,25 +400,49 @@ create_greek_tree_transaction (const char **msg)
   
   /* Create a friggin' tree, already! */
   SVN_ERR (svn_fs_make_file (txn_root, "iota", pool));
+  SVN_ERR (set_file_contents (txn_root, "iota",
+                              "This is the file 'iota'.", pool));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/mu", pool));
+  SVN_ERR (set_file_contents (txn_root, "A/mu",
+                              "This is the file 'mu'.", pool));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/B", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/lambda", pool));
+  SVN_ERR (set_file_contents (txn_root, "A/B/lambda",
+                              "This is the file 'lambda'.", pool));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/E", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/E/alpha", pool));
+  SVN_ERR (set_file_contents (txn_root, "A/B/E/alpha",
+                              "This is the file 'alpha'.", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/E/beta", pool));
+  SVN_ERR (set_file_contents (txn_root, "A/B/E/beta",
+                              "This is the file 'beta'.", pool));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/E/F", pool));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/C", pool));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/D", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/D/gamma", pool));
+  SVN_ERR (set_file_contents (txn_root, "A/B/D/gamma",
+                              "This is the file 'gamma'.", pool));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/D/G", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/D/G/pi", pool));
+  SVN_ERR (set_file_contents (txn_root, "A/B/D/G/pi",
+                              "This is the file 'pi'.", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/D/G/rho", pool));
+  SVN_ERR (set_file_contents (txn_root, "A/B/D/G/rho",
+                              "This is the file 'rho'.", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/D/G/tau", pool));
+  SVN_ERR (set_file_contents (txn_root, "A/B/D/G/tau",
+                              "This is the file 'tau'.", pool));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/D/H", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/D/H/chi", pool));
+  SVN_ERR (set_file_contents (txn_root, "A/B/D/H/chi",
+                              "This is the file 'chi'.", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/D/H/psi", pool));
+  SVN_ERR (set_file_contents (txn_root, "A/B/D/H/psi",
+                              "This is the file 'psi'.", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/D/H/omega", pool));
+  SVN_ERR (set_file_contents (txn_root, "A/B/D/H/omega",
+                              "This is the file 'omega'.", pool));
 
   /* Close the transaction and fs. */
   SVN_ERR (svn_fs_close_txn (txn));
