@@ -82,7 +82,6 @@
 %ignore svn_io_set_file_read_write;
 %ignore svn_io_set_file_executable;
 %ignore svn_io_filesizes_different_p;
-%ignore svn_io_file_printf;
 
 %ignore apr_check_dir_empty;
 

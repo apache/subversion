@@ -54,6 +54,27 @@ static const char under_string[] =
 
 /* Utilities */
 
+/* Wrapper for @c apr_file_printf(), which see.  @a format is a utf8-encoded
+   string after it is formatted, so this function can convert it to
+   native encoding before printing. */
+static svn_error_t *
+file_printf_from_utf8 (apr_file_t *fptr, const char *format, ...)
+{
+  va_list ap;
+  const char *buf, *buf_apr;
+
+  va_start (ap, format);
+  buf = apr_pvsprintf (apr_file_pool_get (fptr), format, ap); 
+  va_end(ap);
+
+  SVN_ERR (svn_path_cstring_from_utf8 (&buf_apr, buf,
+                                       apr_file_pool_get (fptr)));
+
+  return svn_io_file_write_full (fptr, buf_apr, strlen (buf_apr), 
+                                 NULL, apr_file_pool_get (fptr));
+}
+
+
 /* A helper func that writes out verbal descriptions of property diffs
    to FILE.   Of course, the apr_file_t will probably be the 'outfile'
    passed to svn_client_diff, which is probably stdout. */
@@ -66,11 +87,11 @@ display_prop_diffs (const apr_array_header_t *propchanges,
 {
   int i;
 
-  SVN_ERR (svn_io_file_printf (file,
-                               APR_EOL_STR "Property changes on: %s"
-                               APR_EOL_STR, path));
+  SVN_ERR (file_printf_from_utf8 (file,
+                                  APR_EOL_STR "Property changes on: %s"
+                                  APR_EOL_STR, path));
 
-  /* ### todo [issue #1533]: Use svn_io_file_printf() to convert this
+  /* ### todo [issue #1533]: Use file_printf_from_utf8() to convert this
      line of dashes to native encoding, at least conditionally?  Or is
      it better to have under_string always output the same, so
      programs can find it?  Also, what about checking for error? */
@@ -89,8 +110,8 @@ display_prop_diffs (const apr_array_header_t *propchanges,
       else
         original_value = NULL;
       
-      SVN_ERR (svn_io_file_printf (file, "Name: %s" APR_EOL_STR,
-                                   propchange->name));
+      SVN_ERR (file_printf_from_utf8 (file, "Name: %s" APR_EOL_STR,
+                                      propchange->name));
 
       /* For now, we have a rather simple heuristic: if this is an
          "svn:" property, then assume the value is UTF-8 and must
@@ -103,7 +124,7 @@ display_prop_diffs (const apr_array_header_t *propchanges,
           {
             if (val_is_utf8)
               {
-                SVN_ERR (svn_io_file_printf
+                SVN_ERR (file_printf_from_utf8
                          (file, "   - %s" APR_EOL_STR, original_value->data));
               }
             else
@@ -118,7 +139,7 @@ display_prop_diffs (const apr_array_header_t *propchanges,
           {
             if (val_is_utf8)
               {
-                SVN_ERR (svn_io_file_printf
+                SVN_ERR (file_printf_from_utf8
                          (file, "   + %s" APR_EOL_STR,
                           propchange->value->data));
               }
@@ -132,7 +153,7 @@ display_prop_diffs (const apr_array_header_t *propchanges,
       }
     }
 
-  /* ### todo [issue #1533]: Use svn_io_file_printf() to convert this
+  /* ### todo [issue #1533]: Use file_printf_from_utf8() to convert this
      to native encoding, at least conditionally?  Or is it better to
      have under_string always output the same eol, so programs can
      find it consistently?  Also, what about checking for error? */
@@ -533,7 +554,7 @@ diff_file_deleted_no_diff (svn_wc_adm_access_t *adm_access,
   if (state)
     *state = svn_wc_notify_state_unknown;
 
-  SVN_ERR (svn_io_file_printf
+  SVN_ERR (file_printf_from_utf8
            (diff_cmd_baton->outfile,
             "Index: %s (deleted)" APR_EOL_STR "%s" APR_EOL_STR, 
             path, equal_string));
