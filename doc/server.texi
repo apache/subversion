@@ -67,7 +67,7 @@ contents, the Subversion Filesystem records changes to file meta-data
 
 There are two main files that describe the Subversion filesystem.
 
-First, read the section below (@xref{Repostitory Structure}) for a
+First, read the section below (@xref{Repository Structure}.) for a
 general overview of how the fileystem works.
 
 Once you've done this, read Jim Blandy's own structural overview, which
@@ -769,6 +769,11 @@ For the initial release of Subversion,
 
 @node Server Library
 @section Server Library
+
+@menu
+* Security::
+@end menu
+
 
 
 This library no longer exists in the current Subversion design; all

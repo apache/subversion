@@ -46,6 +46,9 @@ We need to write a tool which will convert a CVS repository into an SVN
 repository, preserving all history.  This is absolutely critical in
 persuading people to switch to SVN.
 
+Bob Miller <@email{kbob@@jogger-egg.com}> has already started work on
+this tool, which can be found in @file{tools/cvs2svn/}.
+
 
 @node User Interface for Branches and Tags
 @subsection User Interface for Branches and Tags
@@ -200,6 +203,9 @@ cool idea, and we should leave the door open for it.
 Suggested by Jason Robbins; he mentioned this as a nice thing to have
 someday.  It makes repositories easy to transport.
 
+Subversion already has an XML DTD that it uses for testing updates and
+commits;  this DTD may be 80% of the "exchange" format we're looking
+for. 
 
 @node SMTP access
 @subsection SMTP access
