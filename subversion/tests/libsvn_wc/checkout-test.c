@@ -52,6 +52,7 @@ apply_delta (svn_stream_t *delta,
                                     /* Assume we're checking out root. */
                                     svn_stringbuf_create ("", pool),
                                     revision,
+                                    TRUE, /* Recurse */
                                     &editor,
                                     &edit_baton,
                                     pool);
