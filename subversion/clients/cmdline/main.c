@@ -651,8 +651,7 @@ main (int argc, const char * const *argv)
   int received_opts[SVN_OPT_MAX_OPTIONS];
   int i, num_opts = 0;
   const svn_opt_subcommand_desc_t *subcommand = NULL;
-  svn_boolean_t log_under_version_control = FALSE;
-  svn_boolean_t log_is_pathname = FALSE;
+  const char *dash_m_arg = NULL, *dash_F_arg = NULL;
   apr_status_t apr_err;
   svn_cl__cmd_baton_t command_baton;
   svn_auth_baton_t *ab;
@@ -710,20 +709,11 @@ main (int argc, const char * const *argv)
 
       switch (opt_id) {
       case 'm':
-        {
-          apr_finfo_t finfo;
-          if (apr_stat (&finfo, opt_arg, APR_FINFO_MIN, pool) == APR_SUCCESS)
-            {
-              /* woah! that log message is a file. I doubt the user
-                 intended that. */
-              log_is_pathname = TRUE;
-            }
-        }
-
         /* Note that there's no way here to detect if the log message
            contains a zero byte -- if it does, then opt_arg will just
            be shorter than the user intended.  Oh well. */
         opt_state.message = apr_pstrdup (pool, opt_arg);
+        dash_m_arg = opt_arg;
         break;
       case 'r':
         if (opt_state.start_revision.kind != svn_opt_revision_unspecified)
@@ -771,7 +761,7 @@ main (int argc, const char * const *argv)
         break;
       case 'F':
         err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, pool);
-        if (!err)
+        if (! err)
           err = svn_stringbuf_from_file (&(opt_state.filedata),
                                          utf8_opt_arg, pool);
         if (err)
@@ -781,23 +771,7 @@ main (int argc, const char * const *argv)
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
-        
-        /* Find out if log message file is under revision control. */
-        {
-          svn_wc_adm_access_t *adm_access;
-          const svn_wc_entry_t *e;
-          const char *filename_utf8 = svn_path_internal_style (utf8_opt_arg,
-                                                               pool);
-
-          err = svn_wc_adm_probe_open (&adm_access, NULL, filename_utf8,
-                                       FALSE, FALSE, pool);
-          if (! err)
-            err = svn_wc_entry (&e, filename_utf8, adm_access, FALSE, pool);
-          if ((err == SVN_NO_ERROR) && e)
-            log_under_version_control = TRUE;
-          if (err)
-            svn_error_clear (err);
-        }
+        dash_F_arg = opt_arg;
         break;
       case svn_cl__targets_opt:
         {
@@ -1043,41 +1017,63 @@ main (int argc, const char * const *argv)
         }
     }
 
-  /* if we're running a command that could result in a commit, verify that 
-     any log message we were given on the command line makes sense. */
-  if (subcommand->cmd_func == svn_cl__commit
-      || subcommand->cmd_func == svn_cl__copy
-      || subcommand->cmd_func == svn_cl__delete
-      || subcommand->cmd_func == svn_cl__import
-      || subcommand->cmd_func == svn_cl__mkdir
-      || subcommand->cmd_func == svn_cl__move)
+  /* if we're running a command that could result in a commit, verify
+     that any log message we were given on the command line makes
+     sense (unless we've also been instructed not to care). */
+  if ((! opt_state.force_log) 
+      && (subcommand->cmd_func == svn_cl__commit
+          || subcommand->cmd_func == svn_cl__copy
+          || subcommand->cmd_func == svn_cl__delete
+          || subcommand->cmd_func == svn_cl__import
+          || subcommand->cmd_func == svn_cl__mkdir
+          || subcommand->cmd_func == svn_cl__move))
     {
-      /* If the log message file is under revision control, that's
-         probably not what the user intended. */
-      if (log_under_version_control && (! opt_state.force_log))
+      /* If the -F argument is a file that's under revision control,
+         that's probably not what the user intended. */
+      if (dash_F_arg)
         {
-          err = svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE,
-                                  NULL,
-                                  "Log message file is a versioned file; "
-                                  "use '--force-log' to override");
-          svn_handle_error (err, stderr, FALSE);
-          svn_error_clear (err);
-          svn_pool_destroy (pool);
-          return EXIT_FAILURE;
+          svn_wc_adm_access_t *adm_access;
+          const svn_wc_entry_t *e;
+          const char *fname_utf8 = svn_path_internal_style (dash_F_arg, pool);
+
+          printf ("STAT\n");
+          err = svn_wc_adm_probe_open (&adm_access, NULL, fname_utf8,
+                                       FALSE, FALSE, pool);
+          if (! err)
+            err = svn_wc_entry (&e, fname_utf8, adm_access, FALSE, pool);
+          if ((err == SVN_NO_ERROR) && e)
+            {
+              err = svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE,
+                                      NULL,
+                                      "Log message file is a versioned file; "
+                                      "use '--force-log' to override");
+              svn_handle_error (err, stderr, FALSE);
+              svn_error_clear (err);
+              svn_pool_destroy (pool);
+              return EXIT_FAILURE;
+            }
+          if (err)
+            svn_error_clear (err);
         }
 
-      /* If the log message is just a pathname, then the user probably did
-         not intend that. */
-      if (log_is_pathname && !opt_state.force_log)
+      /* If the -m argument is a file at all, that's probably not what
+         the user intended. */
+      if (dash_m_arg)
         {
-          err = svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME, NULL,
-                                  "The log message is a pathname "
-                                  "(was -F intended?); use '--force-log' "
-                                  "to override");
-          svn_handle_error (err, stderr, FALSE);
-          svn_error_clear (err);
-          svn_pool_destroy (pool);
-          return EXIT_FAILURE;
+          apr_finfo_t finfo;
+          printf ("STAT\n");
+          if (apr_stat (&finfo, dash_m_arg, 
+                        APR_FINFO_MIN, pool) == APR_SUCCESS)
+            {
+              err = svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME, NULL,
+                                      "The log message is a pathname "
+                                      "(was -F intended?); use '--force-log' "
+                                      "to override");
+              svn_handle_error (err, stderr, FALSE);
+              svn_error_clear (err);
+              svn_pool_destroy (pool);
+              return EXIT_FAILURE;
+            }
         }
     }
 
