@@ -30,6 +30,13 @@ Candidate changes:
     Votes:
       +1: maxb
 
+  * r13954
+    Remove GCCisms.
+    Justification:
+      We are C89, nothing else.
+    Votes:
+      +1: lundblad
+
 Approved changes (further review is welcome, but not required):
 
   [None]
