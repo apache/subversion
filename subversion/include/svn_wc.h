@@ -1397,8 +1397,11 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
 
 
 
-/** A callback for reporting an @c svn_wc_status_t item @a status for
-    @a path. */
+/** A callback for reporting a @a status about @a path. 
+ *
+ * @a baton is a closure object; it should be provided by the
+ * implementation, and passed by the caller.
+ */
 typedef void (*svn_wc_status_func_t) (void *baton,
                                       const char *path,
                                       svn_wc_status_t *status);
@@ -2375,6 +2378,9 @@ svn_wc_cleanup (const char *path,
  *
  * Called for each relocated file/directory.  @a uuid contains the
  * expected repository UUID, @a url contains the tentative URL.
+ *
+ * @a baton is a closure object; it should be provided by the
+ * implementation, and passed by the caller.
  */
 typedef svn_error_t *(*svn_wc_relocation_validator_t) (void *baton,
                                                        const char *uuid,
