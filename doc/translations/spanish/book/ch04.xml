@@ -486,13 +486,13 @@ Changed paths:
 
     <para>Ahora usted y Sally están trabajando en ramas paralelas del
       proyecto: usted está trabajando en una rama privada, y Sally
-      está trabajando en el <firstterm>trunk</firstterm>, o línea
-      principal de desarrollo.<!-- TODO trunk --></para>
+      está trabajando en el <firstterm>tronco</firstterm>, o línea
+      principal de desarrollo.</para>
 
     <para>En proyectos que tienen grandes cantidades de
       contribuyentes, es habitual que la mayoría tengan copias
-      locales del trunk.  Cuando alguien necesita hacer un cambio a
-      largo plazo que puede molestar en el trunk, un procedimiento
+      locales del tronco.  Cuando alguien necesita hacer un cambio a
+      largo plazo que puede molestar en el tronco, un procedimiento
       estándar es crear una rama privada y realizar ahí los cambios
       hasta que todo el trabajo esté completo.</para>
 

@@ -101,7 +101,7 @@ cheap copy -> copia ligera
 lazy copy -> copia vaga
     Horrible traducción literal. ¿Sugerencias?
 
-trunk -> pendiente por traducir
+trunk -> tronco
     Se refiere al nombre que recibe la línea de desarrollo
     principal del repositorio que no está asociada a ninguna rama
-    en particular.
+    en particular. Traducción obtenida del manual de CVS en español.
