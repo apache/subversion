@@ -31,6 +31,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_ra.h"
+#include "svn_pools.h"
 
 #include "ra_dav.h"
 
@@ -67,6 +68,10 @@ enum merge_rtype {
 
 typedef struct {
   apr_pool_t *pool;
+
+  /* a clearable subpool of pool, for loops.  Do not use for anything
+     that must persist beyond the scope of your function! */
+  apr_pool_t *scratchpool;
 
   /* any error that may have occurred during the MERGE response handling */
   svn_error_t *err;
@@ -150,13 +155,14 @@ static svn_boolean_t okay_to_bump_path (const char *path,
 
 /* If committed PATH appears in MC->valid_targets, and an MC->push_prop
  * function exists, then store VSN_URL as the SVN_RA_DAV__LP_VSN_URL
- * property on PATH.
+ * property on PATH.  Use POOL for all allocations. 
  *
  * Otherwise, just return SVN_NO_ERROR.
  */
 static svn_error_t *bump_resource(merge_ctx_t *mc,
                                   const char *path,
-                                  char *vsn_url)
+                                  char *vsn_url,
+                                  apr_pool_t *pool)
 {
   /* no sense in doing any more work if there's no property setting
      function at our disposal. */
@@ -167,7 +173,7 @@ static svn_error_t *bump_resource(merge_ctx_t *mc,
      committed target.  The commit-tracking editor built this list for
      us, and took care not to include directories unless they were
      directly committed (i.e., received a property change). */
-  if (! okay_to_bump_path (path, mc->valid_targets, mc->pool))
+  if (! okay_to_bump_path (path, mc->valid_targets, pool))
     return SVN_NO_ERROR;
 
   /* Okay, NOW set the new version url. */
@@ -179,13 +185,14 @@ static svn_error_t *bump_resource(merge_ctx_t *mc,
 
     SVN_ERR( (*mc->push_prop)(mc->cb_baton, path,
                               SVN_RA_DAV__LP_VSN_URL, &vsn_url_str,
-                              mc->pool) );
+                              pool) );
   }
 
   return SVN_NO_ERROR;
 }
 
-static svn_error_t * handle_resource(merge_ctx_t *mc)
+static svn_error_t * handle_resource(merge_ctx_t *mc,
+                                     apr_pool_t *pool)
 {
   const char *relative;
 
@@ -256,8 +263,8 @@ static svn_error_t * handle_resource(merge_ctx_t *mc)
     relative = mc->href->data + mc->base_len + 1;
 
   /* bump the resource */
-  relative = svn_path_uri_decode (relative, mc->pool);
-  return bump_resource(mc, relative, mc->vsn_url->data);
+  relative = svn_path_uri_decode (relative, pool);
+  return bump_resource(mc, relative, mc->vsn_url->data, pool);
 }
 
 static int validate_element(void *userdata, ne_xml_elmid parent,
@@ -480,7 +487,7 @@ static int end_element(void *userdata, const struct ne_xml_elm *elm,
 
         /* the end of a DAV:response means that we've seen all the information
            related to this resource. process it. */
-        err = handle_resource(mc);
+        err = handle_resource(mc, mc->scratchpool);
         if (err != NULL)
           {
             /* ### how best to handle this error? for now, just remember the
@@ -488,6 +495,7 @@ static int end_element(void *userdata, const struct ne_xml_elm *elm,
             if (mc->err == NULL)
               mc->err = err;
           }
+        svn_pool_clear (mc->scratchpool);
       }
       break;
 
@@ -535,6 +543,7 @@ svn_error_t * svn_ra_dav__merge_activity(
   apr_hash_t *extra_headers = NULL;
 
   mc.pool = pool;
+  mc.scratchpool = svn_pool_create (pool);
   mc.base_href = repos_url;
   mc.base_len = strlen(repos_url);
   mc.rev = SVN_INVALID_REVNUM;
@@ -587,6 +596,8 @@ svn_error_t * svn_ra_dav__merge_activity(
     *committed_author = mc.last_author->len 
                         ? apr_pstrdup(ras->pool, mc.last_author->data)
                         : NULL;
+
+  svn_pool_destroy(mc.scratchpool);
 
   return NULL;
 }
