@@ -33,34 +33,21 @@
 #define SVN_FS_WANT_DB_PATCH	14
 
 
-/* Paths to configuration files */
-/*#define SVN_CLIENT_GLOBAL_CONF "/etc/svn.conf"*/
-/*#define SVN_CLIENT_USER_CONF "~/.svnrc"*/
-#define SVN_CLIENT_GLOBAL_CONF \
-    "REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Config"
-#define SVN_CLIENT_USER_CONF \
-    "REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Config"
-
-
-/* FIXME: */
-#define SVN_CLIENT_DIFF "c:\\progra~1\\cygnus\\cygwin\\bin\\diff.exe"
-#define SVN_CLIENT_DIFF3 "c:\\progra~1\\cygnus\\cygwin\\bin\\diff3.exe"
-
-/* Diff program */
+/* Default paths to diff and diff3. We require a recent enough version
+   of GNU diffutils where diff3 supports the --diff-program option.
+   These locations and flags can be changed in the Registry or user
+   config file anyway. */
 #ifndef SVN_CLIENT_DIFF
-#  define SVN_CLIENT_DIFF "X:/path/to/diff.exe"
+#  define SVN_CLIENT_DIFF "C:\\Cygwin\\bin\\diff.exe"
+#endif
+#ifndef SVN_CLIENT_DIFF3
+#  define SVN_CLIENT_DIFF3 "C:\\Cygwin\\bin\\diff3.exe"
+#  define SVN_DIFF3_HAS_DIFF_PROGRAM_ARG 1
 #endif
 
-/* Diff3 program */
-#ifndef SVN_CLIENT_DIFF3
-#  define SVN_CLIENT_DIFF3 "X:/path/to/diff3.exe"
-#endif
 
 /* Path separator for local filesystem */
 #define SVN_PATH_LOCAL_SEPARATOR '\\'
-
-/* Whether the trailing /. in local paths should be stripped */
-#define SVN_PATH_STRIP_TRAILING_SLASHDOT 1
 
 /* Link local repos access library to client */
 #define SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL
