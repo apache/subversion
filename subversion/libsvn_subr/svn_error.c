@@ -132,7 +132,7 @@ svn_handle_error (svn_error_t *err, FILE *stream)
   /* Pretty-print the error */
   /* Note: we can also log errors here someday. */
   
-  fprintf (stream, "\nsvn_error: apr_err %d, src_err %d: %s", 
+  fprintf (stream, "\nsvn_error: apr_err %d, src_err %d", 
            err->apr_err,
            err->src_err);
   fprintf (stream, "  canonical err %d : %s\n",
