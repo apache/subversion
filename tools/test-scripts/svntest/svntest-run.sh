@@ -73,23 +73,7 @@ test -x $TEST_ROOT/$OBJ/subversion/svnversion/svnversion || FAIL; PASS
 # and if it is not, do initial fire up for it
 if test "xyes" = "x$RAMDISK";
 then
-    test -x $TEST_ROOT/$OBJ/subversion/tests/clients || {
-        START "re-initializing ramdisk" "Re-initializing ramdisk"
-        mount_ramdisk "$TEST_ROOT/$OBJ/subversion/tests" \
-            >> "$LOG_FILE" 2>&1 || FAIL
-        cd "$TEST_ROOT/$OBJ"
-        $MAKE  mkdir-init > "$LOG_FILE.ramdisk" 2>&1
-        test $? = 0 || {
-            FAIL_LOG "$LOG_FILE.ramdisk"
-            FAIL
-        }
-        $MAKE $MAKE_OPTS > "$LOG_FILE.ramdisk" 2>&1
-        test $? = 0 || {
-            FAIL_LOG "$LOG_FILE.ramdisk"
-            FAIL
-        }
-        PASS
-    }
+    reinitialize_ramdisk
 fi
 
 # Prepare the server

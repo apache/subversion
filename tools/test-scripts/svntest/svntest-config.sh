@@ -18,17 +18,17 @@ INST_DIR="$TEST_ROOT/inst"
 # Everything in those directories will be wiped out
 # by installation procedure. See svntest-rebuild-generic.sh
 
-SVN_NAME="svn"
-SVN_REPO="$TEST_ROOT/$SVN_NAME"
+SVN_NAME=${SVN_NAME:="svn"}
+SVN_REPO=${SVN_REPO:="$TEST_ROOT/$SVN_NAME"}
 
-APR_NAME="apr-0.9"
-APR_REPO="$TEST_ROOT/$APR_NAME"
+APR_NAME=${APR_NAME:="apr-0.9"}
+APR_REPO=${ARP_REPO:="$TEST_ROOT/$APR_NAME"}
 
-APU_NAME="apr-util-0.9"
-APU_REPO="$TEST_ROOT/$APU_NAME"
+APU_NAME=${APU_NAME:="apr-util-0.9"}
+APU_REPO=${APU_REPO:="$TEST_ROOT/$APU_NAME"}
 
-HTTPD_NAME="httpd-2.0"
-HTTPD_REPO="$TEST_ROOT/$HTTPD_NAME"
+HTTPD_NAME=${HTTPD_NAME:="httpd-2.0"}
+HTTPD_REPO=${HTTPD_REPO:="$TEST_ROOT/$HTTPD_NAME"}
 
 
 MAKE_OPTS=
@@ -39,12 +39,19 @@ RAMDISK=no
 #
 # Whether to test the BDB backend, TEST_FSFS=<yes|no>
 #
-TEST_BDB=yes
+TEST_BDB=${TEST_BDB:="yes"}
 
 #
 # Whether to test the FSFS backend, TEST_FSFS=<yes|no>
 #
-TEST_FSFS=yes
+TEST_FSFS=${TEST_FSFS:="yes"}
+
+#
+# Whether to test varius bindings
+#
+TEST_BINDINGS_SWIG_PERL=${TEST_BINDINGS_SWIG_PERL:="no"}
+TEST_BINDINGS_JAVAHL=${TEST_BINDINGS_JAVAHL:="no"}
+TEST_BINDINGS_SWIG_PYHTON=${TEST_BINDINGS_SWIG_PYHTON:="no"}
 
 # This should correspond with your httpd Listen directive
 RA_DAV_CHECK_ARGS="BASE_URL=http://localhost:42024"
@@ -153,6 +160,11 @@ UMOUNT="$BIN/umount"
 REVPREFIX=`$SVN info $SVN_REPO | $SED -ne 's@^URL:.*/repos/svn/\(branches/\)*\(.*\)$@\2 r@p'`
 
 #
+# Revision number for the e-mail subject
+#
+REVISION=`$SVN info $SVN_REPO | $SED -ne 's@^Revision: \(.*\)$@\1@p'`
+
+#
 # Helper functions
 #
 
@@ -225,3 +237,27 @@ umount_ramdisk() {
     fi
     return 0
 }
+
+#
+# Re-initialize ramdisk if it is currently unmounted.
+#
+reinitialize_ramdisk () {
+    test -x "$TEST_ROOT/$OBJ/subversion/tests/clients" || {
+        START "re-initializing ramdisk" "Re-initializing ramdisk"
+        mount_ramdisk "$TEST_ROOT/$OBJ/subversion/tests" \
+            >> "$LOG_FILE" 2>&1 || FAIL
+        cd "$TEST_ROOT/$OBJ"
+        $MAKE  mkdir-init > "$LOG_FILE.ramdisk" 2>&1
+        test $? = 0 || {
+            FAIL_LOG "$LOG_FILE.ramdisk"
+            FAIL
+        }
+        $MAKE $MAKE_OPTS > "$LOG_FILE.ramdisk" 2>&1
+        test $? = 0 || {
+            FAIL_LOG "$LOG_FILE.ramdisk"
+            FAIL
+        }
+        PASS
+    }
+}
+
