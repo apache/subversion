@@ -36,9 +36,7 @@ extern "C" {
 
 
 
-/** A general in-memory representation of a single property.
- *
- * A general in-memory representation of a single property.  Most of
+/** A general in-memory representation of a single property.  Most of
  * the time, property lists will be stored completely in hashes.  But
  * sometimes it's useful to have an "ordered" collection of
  * properties, in which case we use an apr_array of the type below.
@@ -90,9 +88,6 @@ svn_boolean_t svn_prop_is_svn_prop (const char *prop_name);
 
 
 /** If @a propname requires that its value be stored as UTF8/LF in the
- * repository, then return @c TRUE, else return @c FALSE.
- *
- * If @a propname requires that its value be stored as UTF8/LF in the
  * repository, then return @c TRUE.  Else return @c FALSE.  This is for
  * users of libsvn_client or libsvn_fs, since it their responsibility
  * to do this translation in both directions.  (See
@@ -103,9 +98,6 @@ svn_boolean_t svn_prop_needs_translation (const char *propname);
 
 
 /** Given an @a proplist array of @c svn_prop_t structures, allocate three
- * new arrays in @a pool.
- *
- * Given an @a proplist array of @c svn_prop_t structures, allocate three
  * new arrays in @a pool.  Categorize each property and then create new
  * @c svn_prop_t structures in the proper lists.  Each new @c svn_prop_t
  * structure's fields will point to the same data within @a proplist's
@@ -170,8 +162,6 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 
 /** Describes external items to check out into this directory. 
  *
- * Describes external items to check out into this directory. 
- *
  * The format is a series of lines, such as:
  *
  *<pre>   localdir1           http://url.for.external.source/etc/
@@ -188,9 +178,7 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 
 /** @} */
 
-/** Invisible properties
- *
- * WC props are props that are invisible to users:  they're generated
+/** WC props are props that are invisible to users:  they're generated
  * by an RA layer, and stored in secret parts of .svn/.
  *
  * @defgroup svn_prop_invisible_props Invisible properties
@@ -199,7 +187,6 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 
 /** The propname *prefix* that makes a propname a "WC property". 
  *
- * The propname *prefix* that makes a propname a "WC property". 
  * For example, ra_dav might store a versioned-resource url as a WC
  * prop like this:
  *
@@ -212,9 +199,7 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
  */
 #define SVN_PROP_WC_PREFIX     SVN_PROP_PREFIX "wc:"
 
-/** Another type of non-user-visible property.
- *
- * Another type of non-user-visible property.  "Entry properties" are
+/** Another type of non-user-visible property.  "Entry properties" are
  * stored as fields with the administrative 'entries' file.  
  */
 #define SVN_PROP_ENTRY_PREFIX  SVN_PROP_PREFIX "entry:"

@@ -61,7 +61,7 @@ typedef svn_error_t *(*svn_ra_svn_command_handler)(svn_ra_svn_conn_t *conn,
 
 /** Command table, used by @c svn_ra_svn_handle_commands.
  *
- * If TERMINATE is set, command-handling will cease after command is 
+ * If @c terminate is set, command-handling will cease after command is 
  * processed.
  */
 typedef struct {
@@ -217,9 +217,6 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
                                           const char *fmt, ...);
 
 /** Accept commands over the network and handle them according to
- * @a commands.
- *
- * Accept commands over the network and handle them according to
  * @a commands.  Command handlers will be passed @a conn, a subpool of 
  * @a pool (cleared after each command is handled), the parameters of the
  * command, and @a baton.  Commands will be accepted until a terminating

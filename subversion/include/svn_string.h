@@ -275,9 +275,7 @@ svn_boolean_t svn_string_compare_stringbuf (const svn_string_t *str1,
  * @{
  */
 
-/** Split @a input into substrings.
- *
- * Divide @a input into substrings along @a sep_char boundaries, return an
+/** Divide @a input into substrings along @a sep_char boundaries, return an
  * array of copies of those substrings, allocating both the array and
  * the copies in @a pool.
  *
@@ -296,9 +294,7 @@ apr_array_header_t *svn_cstring_split (const char *input,
                                        svn_boolean_t chop_whitespace,
                                        apr_pool_t *pool);
 
-/** Split @a input into substrings and append the results to @a array.
- *
- * Like @c svn_cstring_split(), but append to existing @a array instead of
+/** Like @c svn_cstring_split(), but append to existing @a array instead of
  * creating a new one.  Allocate the copied substrings in @a pool
  * (i.e., caller decides whether or not to pass @a array->pool as @a pool).
  */

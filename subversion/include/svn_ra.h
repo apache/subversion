@@ -60,9 +60,6 @@ typedef svn_error_t *(*svn_ra_get_wc_prop_func_t) (void *baton,
                                                    apr_pool_t *pool);
 
 /** This is a function type which allows the RA layer to store new
- * working copy properties during update-like operations.
- *
- * This is a function type which allows the RA layer to store new
  * working copy properties during update-like operations.  See the
  * comments for @c svn_ra_get_wc_prop_func_t for @a baton, @a path, and 
  * @a name. The @a value is the value that will be stored for the property; 
@@ -75,9 +72,6 @@ typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *baton,
                                                    apr_pool_t *pool);
 
 /** This is a function type which allows the RA layer to store new
- * working copy properties as part of a commit.
- *
- * This is a function type which allows the RA layer to store new
  * working copy properties as part of a commit.  See the comments for
  * @c svn_ra_get_wc_prop_func_t for @a baton, @a path, and @a name.  
  * The @a value is the value that will be stored for the property; a 
@@ -98,9 +92,6 @@ typedef svn_error_t *(*svn_ra_push_wc_prop_func_t) (void *baton,
                                                     apr_pool_t *pool);
 
 /** This is a function type which allows the RA layer to invalidate
- * (i.e., remove) wcprops.
- *
- * This is a function type which allows the RA layer to invalidate
  * (i.e., remove) wcprops.  See the documentation for
  * @c svn_ra_get_wc_prop_func_t for @a baton, @a path, and @a name.
  *
@@ -113,13 +104,13 @@ typedef svn_error_t *(*svn_ra_invalidate_wc_props_func_t) (void *baton,
                                                            apr_pool_t *pool);
 
 
-/** A function type for retrieving the youngest revision from a repos.   */
+/** A function type for retrieving the youngest revision from a repos. */
 typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t) 
        (void *session_baton,
         svn_revnum_t *latest_revnum);
 
 
-/** The update Reporter
+/** The update Reporter.
  *
  * A vtable structure which allows a working copy to describe a
  * subset (or possibly all) of its working-copy to an RA layer.
@@ -190,15 +181,14 @@ typedef struct svn_ra_reporter_t
 typedef struct svn_ra_callbacks_t
 {
   /** Open a unique temporary file for writing in the working copy.
-   *
-   * Open a unique temporary file for writing in the working copy.
    * This file will be automatically deleted when @a fp is closed.
    */
   svn_error_t *(*open_tmp_file) (apr_file_t **fp,
                                  void *callback_baton);
   
-  /* An authentication baton, created by the application, which is
-     capable of retrieving all known types of credentials.  */
+  /** An authentication baton, created by the application, which is
+   * capable of retrieving all known types of credentials.
+   */
   svn_auth_baton_t *auth_baton;
 
   /*** The following items may be set to NULL to disallow the RA layer
@@ -231,7 +221,7 @@ typedef struct svn_ra_callbacks_t
 
 /*----------------------------------------------------------------------*/
 
-/** The RA Library 
+/** The RA Library. 
  *
  * A vtable structure which encapsulates all the functionality of a
  * particular repository-access implementation.
@@ -252,9 +242,7 @@ typedef struct svn_ra_plugin_t
 
   /* The vtable hooks */
   
-  /** Open a repository session to @a repos_url.
-   *
-   * Open a repository session to @a repos_url.  Return an opaque object
+  /** Open a repository session to @a repos_url.  Return an opaque object
    * representing this session in @a *session_baton, allocated in @a pool.
    *
    * @a callbacks/@a callback_baton is a table of callbacks provided by the
@@ -274,9 +262,7 @@ typedef struct svn_ra_plugin_t
                         apr_hash_t *config,
                         apr_pool_t *pool);
 
-  /** Get the latest revision number from the repository.
-   *
-   * Get the latest revision number from the repository. This is
+  /** Get the latest revision number from the repository. This is
    * useful for the `svn status' command.  :)
    *
    * Use @a pool for memory allocation.
@@ -296,7 +282,6 @@ typedef struct svn_ra_plugin_t
 
   /** Set the property @a name to @a value on revision @a rev.
    *
-   * Set the property @a name to @a value on revision @a rev.
    * Please note that properties attached to revisions are **unversioned**.
    *
    * Use @a pool for memory allocation.
@@ -308,9 +293,6 @@ typedef struct svn_ra_plugin_t
                                    apr_pool_t *pool);
 
   /** Set @a *props to the list of unversioned properties attached to
-   * revision @a rev.
-   *
-   * Set @a *props to the list of unversioned properties attached to
    * revision @a rev.  The hash maps (<tt>const char *</tt>) names to
    * (<tt>@c svn_string_t *</tt>) values.
    *
@@ -322,9 +304,6 @@ typedef struct svn_ra_plugin_t
                                 apr_pool_t *pool);
 
   /** Set @a *value to the value of unversioned property @a name attached to
-   * revision @a rev.
-   *
-   * Set @a *value to the value of unversioned property @a name attached to
    * revision @a rev.  If @a rev has no property by that name, set @a *value 
    * to @c NULL.
    *
@@ -337,9 +316,6 @@ typedef struct svn_ra_plugin_t
                             apr_pool_t *pool);
                                    
   /** Set @a *editor and @a *edit_baton to an editor for committing changes
-   * to the repository, using @a log_msg as the log message.
-   *
-   * Set @a *editor and @a *edit_baton to an editor for committing changes
    * to the repository, using @a log_msg as the log message.  The
    * revisions being committed against are passed to the editor
    * functions, starting with the rev argument to @c open_root.  The path
@@ -381,8 +357,6 @@ typedef struct svn_ra_plugin_t
                                      apr_pool_t *pool);
 
   /** Fetch the contents and properties of file @a path at @a revision.
-   *
-   * Fetch the contents and properties of file @a path at @a revision.
    * Interpret @a path relative to the url in @a session_baton.  Use
    * @a pool for all allocations.
    *
@@ -409,9 +383,6 @@ typedef struct svn_ra_plugin_t
                             apr_pool_t *pool);
 
   /** If @a dirents is non @c NULL, set @a *dirents to contain all the entries
-   * of directory @a path at @a revision.
-   *
-   * If @a dirents is non @c NULL, set @a *dirents to contain all the entries
    * of directory @a path at @a revision.  The keys of @a dirents will be 
    * entry names (<tt>const char *</tt>), and the values dirents 
    * (<tt>@c svn_dirent_t *</tt>).  Use @a pool for all allocations.
@@ -441,10 +412,6 @@ typedef struct svn_ra_plugin_t
 
   /** Check out revision @a revision of the url specified in
    * @a session_baton, using @a editor and @a edit_baton to create the 
-   * working copy.
-   *
-   * Check out revision @a revision of the url specified in
-   * @a session_baton, using @a editor and @a edit_baton to create the 
    * working copy.  If @a recurse is non-zero, create the full working tree, 
    * else just its topmost directory. 
    *
@@ -461,8 +428,6 @@ typedef struct svn_ra_plugin_t
 
 
   /** Ask the network layer to update a working copy.
-   *
-   * Ask the network layer to update a working copy.
    *
    * The client initially provides an @a update_editor/@a baton to the 
    * RA layer; this editor contains knowledge of where the change will
@@ -498,9 +463,6 @@ typedef struct svn_ra_plugin_t
                              apr_pool_t *pool);
 
   /** Ask the network layer to 'switch' a working copy to a new
-   * @a switch_url.
-   *
-   * Ask the network layer to 'switch' a working copy to a new
    * @a switch_url;  it's another form of @c do_update().
    *
    *    [Please note: this function cannot be used to switch a single
@@ -545,9 +507,6 @@ typedef struct svn_ra_plugin_t
   /** Ask the network layer to describe the status of a working copy
    * with respect to the @a head revision of the repository.
    *
-   * Ask the network layer to describe the status of a working copy
-   * with respect to the @a head revision of the repository.
-   *
    * The client initially provides an @a status_editor/@a baton to the RA
    * layer; this editor contains knowledge of where the change will
    * begin in the working copy (when @c open_root() is called).
@@ -578,9 +537,7 @@ typedef struct svn_ra_plugin_t
                              apr_pool_t *pool);
 
 
-  /** Ask the network layer to 'diff' a working copy against @a versus_url.
-   *
-   * Ask the network layer to 'diff' a working copy against @a versus_url;
+  /** Ask the network layer to 'diff' a working copy against @a versus_url;
    * it's another form of @c do_update().
    *
    *    [Please note: this function cannot be used to diff a single
@@ -630,9 +587,6 @@ typedef struct svn_ra_plugin_t
                            apr_pool_t *pool);
 
   /** Invoke @a receiver with @a receiver_baton on each log message from
-   * @a start to @a end.
-   *
-   * Invoke @a receiver with @a receiver_baton on each log message from
    * @a start to @a end.  @a start may be greater or less than @a end; 
    * this just controls whether the log messages are processed in descending 
    * or ascending revision number order.
@@ -693,9 +647,7 @@ typedef struct svn_ra_plugin_t
      will probably want them eventually, hence this start block.  */
 
 
-  /** Set @a *kind to node kind associated with @a path at @a revision.
-   *
-   * Set @a *kind to node kind associated with @a path at @a revision.  
+  /** Set @a *kind to node kind associated with @a path at @a revision.  
    * If @a path does not exist under @a revision, set @a *kind to 
    * @c svn_node_none.  @a path is relative to the session's parent URL.
    *
@@ -740,9 +692,6 @@ typedef svn_error_t *(*svn_ra_init_func_t) (int abi_version,
                                             apr_hash_t *hash);
 
 /** The current ABI (Application Binary Interface) version for the
- * RA plugin model.
- *
- * The current ABI (Application Binary Interface) version for the
  * RA plugin model. This version number will change when the ABI
  * between the SVN core (e.g. libsvn_client) and the RA plugin changes.
  *
@@ -795,9 +744,6 @@ svn_error_t * svn_ra_init_ra_libs (void **ra_baton, apr_pool_t *pool);
 
 
 /** Return an ra vtable-@a library (already within @a ra_baton) which can
- * handle URL.
- *
- * Return an ra vtable-@a library (already within @a ra_baton) which can
  * handle URL.  A number of svn_client_* routines will call this
  * internally, but client apps might use it too.  
  *

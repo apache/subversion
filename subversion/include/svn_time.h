@@ -34,25 +34,17 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/** Convert a time value to a string.
- *
- * Convert @a when to a <tt>const char *</tt> representation allocated
+/** Convert @a when to a <tt>const char *</tt> representation allocated
  * in @a pool.  Use svn_time_from_cstring() for the reverse
  * conversion.
  */
 const char *svn_time_to_cstring (apr_time_t when, apr_pool_t *pool);
 
-/** Convert a string to a time value.
- *
- * Convert @a timestr to an @c apr_time_t @a when, allocated in @a
- * pool.
- */
+/** Convert @a timestr to an @c apr_time_t @a when, allocated in @a pool. */
 svn_error_t *svn_time_from_cstring (apr_time_t *when, const char *data,
                                     apr_pool_t *pool);
 
-/** Convert a time value to a display string.
- *
- * Convert @a when to a <tt>const char *</tt> representation allocated
+/** Convert @a when to a <tt>const char *</tt> representation allocated
  * in @a pool, suitable for human display.
  */
 const char *svn_time_to_human_cstring (apr_time_t when, apr_pool_t *pool);
@@ -64,9 +56,7 @@ struct getdate_time {
   short timezone;
 };
 
-/** Parse a date to a time value.
- *
- * The one interface in our @c getdate.y parser; convert
+/** The one interface in our @c getdate.y parser; convert
  * human-readable date @a text into a standard C @c time_t.  The 2nd
  * argument is unused; we always pass @c NULL.
  */

@@ -70,7 +70,7 @@ extern "C" {
  * If libsvn_client is unable to retrieve certain authorization
  * information, it can use this callback; the application will then
  * directly query the user with @a prompt and return the answer in 
- * @c info, allocated in @a pool.  @a baton is provided at the same 
+ * @a info, allocated in @a pool.  @a baton is provided at the same 
  * time as the callback, and @a hide indicates that the user's answer 
  * should not be displayed on the screen.
  */
@@ -103,10 +103,7 @@ svn_client_get_simple_prompt_provider (const svn_auth_provider_t **provider,
                                        apr_pool_t *pool);
 
 
-/** Fetch an authentication provider which prompts the user for a
- * username.
- *
- * Set @a *provider and @a *provider_baton to an authentication
+/** Set @a *provider and @a *provider_baton to an authentication
  * provider of type @c svn_auth_cred_username_t that gets information by
  * prompting the user with @a prompt_func and @a prompt_baton.  If
  * @c SVN_AUTH_PARAM_DEFAULT_USERNAME is defined as a runtime parameter
@@ -153,7 +150,7 @@ svn_client_get_username_provider (const svn_auth_provider_t **provider,
                                   apr_pool_t *pool);
 
 
-/** Set @a *provider and @ *provider_baton to an authentication
+/** Set @a *provider and @a *provider_baton to an authentication
  *  provider for type @c svn_auth_cred_server_ssl_t. This provider retrieves
  *  its credentials from the configuration mechanism. The returned credential
  *  is used to override SSL security on an error.
@@ -175,7 +172,7 @@ svn_client_get_ssl_server_file_provider (const svn_auth_provider_t **provider,
                                          void **provider_baton,
                                          apr_pool_t *pool);
 
-/** Set @a *provider and @ *provider_baton to an authentication
+/** Set @a *provider and @a *provider_baton to an authentication
  *  provider for type @c svn_auth_cred_client_ssl_t. This provider retrieves
  *  its credentials from the configuration mechanism. The returned credential
  *  is used to load the appropriate client certificate for authentication when
@@ -195,7 +192,7 @@ svn_client_get_ssl_client_file_provider (const svn_auth_provider_t **provider,
                                          void **provider_baton,
                                          apr_pool_t *pool);
 
-/** Set @a *provider and @ *provider_baton to an authentication
+/** Set @a *provider and @a *provider_baton to an authentication
  *  provider for type @c svn_auth_cred_client_ssl_pass_t. This provider
  *  retrieves its credentials from the configuration mechanism. The returned
  *  credential is used when a loaded client certificate is protected by a
@@ -215,7 +212,7 @@ svn_client_get_ssl_pw_file_provider (const svn_auth_provider_t **provider,
                                      void **provider_baton,
                                      apr_pool_t *pool);
 
-/** Set @a *provider and @ *provider_baton to an authentication
+/** Set @a *provider and @a *provider_baton to an authentication
  *  provider for type @c svn_auth_cred_server_ssl_t. This provider retrieves
  *  its credentials by using the @a prompt_func and @a prompt_baton. The
  *  returned credential is used to override SSL security on an error.
@@ -233,7 +230,7 @@ svn_client_get_ssl_server_prompt_provider(const svn_auth_provider_t **provider,
                                           void *prompt_baton,
                                           apr_pool_t *pool);
 
-/** Set @a *provider and @ *provider_baton to an authentication
+/** Set @a *provider and @a *provider_baton to an authentication
  *  provider for type @c svn_auth_cred_client_ssl_t. This provider retrieves
  *  its credentials by using the @a prompt_func and @a prompt_baton. The
  *  returned credential is used to load the appropriate client certificate for
@@ -248,7 +245,7 @@ svn_client_get_ssl_client_prompt_provider(const svn_auth_provider_t **provider,
                                           void *prompt_baton,
                                           apr_pool_t *pool);
 
-/** Set @a *provider and @ *provider_baton to an authentication
+/** Set @a *provider and @a *provider_baton to an authentication
  *  provider for type @c svn_auth_cred_client_ssl_pass_t. This provider
  *  retrieves its credentials by using the @a prompt_func and @a prompt_baton.
  *  The returned credential is used when a loaded client certificate is
@@ -582,7 +579,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
 
 /** Import file or directory @a path into repository directory @a url at
  * head, authenticating with the authentication baton cached in @a ctx, 
- * and using @a ctx->log_msg_func/@ctx->log_msg_baton to get a log message 
+ * and using @a ctx->log_msg_func/@a ctx->log_msg_baton to get a log message 
  * for the (implied) commit.  Set @a *commit_info to the results of the 
  * commit, allocated in @a pool.
  *
@@ -664,9 +661,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                    apr_pool_t *pool);
 
 
-/** Obtain the statuses of all the items in a working copy path.
- *
- * Given @a path to a working copy directory (or single file), allocate
+/** Given @a path to a working copy directory (or single file), allocate
  * and return a hash @a statushash which maps (<tt>char *</tt>) paths to
  * (@c svn_wc_status_t *) structures.
  *
@@ -711,9 +706,7 @@ svn_client_status (apr_hash_t **statushash,
                    apr_pool_t *pool);
 
 
-/** Obtain log information from the repository.
- *
- * Invoke @a receiver with @a receiver_baton on each log message from @a 
+/** Invoke @a receiver with @a receiver_baton on each log message from @a 
  * start to @a end in turn, inclusive (but never invoke @a receiver on a 
  * given log message more than once).
  *
@@ -1067,9 +1060,7 @@ svn_client_revprop_set (const char *propname,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool);
                         
-/** Get properties from an entry in a working copy or repository.
- *
- * Set @a *props to a hash table whose keys are `<tt>char *</tt>' paths,
+/** Set @a *props to a hash table whose keys are `<tt>char *</tt>' paths,
  * prefixed by @a target (a working copy path or a url), of items on
  * which property @a propname is set, and whose values are `@c svn_string_t
  * *' representing the property value for @a propname at that path.
@@ -1100,9 +1091,7 @@ svn_client_propget (apr_hash_t **props,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 
-/** Get a revision property from a repository URL.
- *
- * Set @a *propname to the value of @a propval on revision @a revision 
+/** Set @a *propname to the value of @a propval on revision @a revision 
  * in the repository represented by @a url.  Use the authentication baton 
  * in @a ctx for authentication, and @a pool for all memory allocation.  
  * Return the actual rev queried in @a *set_rev.
@@ -1122,9 +1111,7 @@ svn_client_revprop_get (const char *propname,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool);
 
-/** List the properties on an entry in a working copy or repository.
- *
- * Set @a *props to the regular properties of @a target, a url or working
+/** Set @a *props to the regular properties of @a target, a url or working
  * copy path.
  *
  * Each element of the returned array is (@c svn_client_proplist_item_t *).
@@ -1152,9 +1139,7 @@ svn_client_proplist (apr_array_header_t **props,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
-/** List the revision properties on an entry in a repository.
- *
- * Set @a *props to a hash of the revision props attached to @a revision in
+/** Set @a *props to a hash of the revision props attached to @a revision in
  * the repository represented by @a url.  Use the authentication baton cached 
  * in @a ctx for authentication, and @a pool for all memory allocation.  
  * Return the actual rev queried in @a *set_rev.
@@ -1205,9 +1190,7 @@ svn_client_export (const char *from,
                    apr_pool_t *pool);
 
 
-/** List the contents of @a path_or_url.
- *
- * Set @a *dirents to a newly allocated hash of entries for @a path_or_url
+/** Set @a *dirents to a newly allocated hash of entries for @a path_or_url
  * at @a revision.
  *
  * If @a path_or_url is a directory, return all dirents in the hash.  If
@@ -1291,9 +1274,6 @@ svn_client_uuid_from_url (const char **uuid,
 
 
 /** Return the repository @a uuid for working-copy @a path, allocated
- *  in @a pool, using network if required.
- *
- * Return the repository @a uuid for working-copy @a path, allocated
  * in @a pool.  Use @a adm_access to retrieve the uuid from @a path's
  * entry; if not present in the entry, then call
  * svn_client_uuid_from_url() to retrieve, using the entry's url.  @a

@@ -105,9 +105,6 @@ svn_error_t *svn_error_createf (apr_status_t apr_err,
   (svn_error__locate(__FILE__,__LINE__), (svn_error_createf))
 
 /** A quick n' easy way to create a wrappered exception with your own
- * message, before throwing it up the stack.
- *
- * A quick n' easy way to create a wrappered exception with your own
  * message, before throwing it up the stack.  (It uses all of the
  * child's fields.)
  */
@@ -117,9 +114,7 @@ svn_error_t *svn_error_quick_wrap (svn_error_t *child, const char *new_msg);
 #define svn_error_quick_wrap \
   (svn_error__locate(__FILE__,__LINE__), (svn_error_quick_wrap))
 
-/** Add @a new_err to the end of @a chain's chain of errors.
- *
- * Add @a new_err to the end of @a chain's chain of errors.  The @a new_err 
+/** Add @a new_err to the end of @a chain's chain of errors.  The @a new_err 
  * chain will be copied into @a chain's pool and destroyed, so @a new_err 
  * itself becomes invalid after this function.
  */
