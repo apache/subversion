@@ -569,7 +569,9 @@ svn_cl__get_log_message (const char **log_msg,
         const char *msg2;  /* ### shim */
         err = svn_cl__edit_externally (&msg2, lmb->base_dir,
                                        tmp_message->data, pool);
-        message = svn_stringbuf_create (msg2, pool);
+        if (msg2) {
+            message = svn_stringbuf_create (msg2, pool);
+        }
       }
 
       if (err)
