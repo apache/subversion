@@ -700,7 +700,7 @@ case "$svn_lib_berkeley_db" in
 You don't seem to have Berkeley DB version $db_version or newer
 installed and linked to APR-UTIL.  We have created Makefiles which
 will build without the Berkeley DB back-end; your repositories will
-use FSFS as the default back-end. You can find the latest version of 
+use FSFS as the default back-end.  You can find the latest version of
 Berkeley DB here:
   http://www.sleepycat.com/download/index.shtml
 ])
