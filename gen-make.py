@@ -58,7 +58,8 @@ def main(fname, oname=None):
     else:
       install[install_type] = [ target ]
 
-    if install_type == 'test' and bldtype == 'exe':
+    if install_type == 'test' and bldtype == 'exe' \
+       and parser.get(target, 'testing') != 'skip':
       test_progs.append(tpath)
 
     sources, s_errors = _collect_paths(parser.get(target, 'sources'), path)
@@ -221,6 +222,7 @@ _cfg_defaults = {
   'libs' : '',
   'custom' : '',
   'install' : '',
+  'testing' : '',
   }
 
 _predef_sections = [
