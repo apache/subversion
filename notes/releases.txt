@@ -183,12 +183,9 @@
    c. Commit the modifications of www/project_status.html and
       www/latest_tarball.html.
 
-   d. Go to http://svn.collab.net and click on the "Update the
-      live web site" link.  Click 'Publish' then visit
-      http://subversion.tigris.org/project_status.html to make sure
-      the changes are there.  You may have to hit 'Reload' if this
-      page was previously visited, and therefore cached by your
-      browser.
+   d. Remind someone with an @collab.net address to update the live
+      web site (we used to have a servlet for this, but at the moment
+      we don't).
 
 10. Post news item <http://subversion.tigris.org/servlets/ProjectNewsAdd>,
     and send an announcement to dev@ and announce@ lists.
