@@ -27,7 +27,7 @@
       Subversion's property (or <quote>metadata</quote>) support, and
       how to modify Subversion's default behaviors by tweaking its
       run-time configuration area.  We will describe how you can use
-      module definitions to instruct Subversion to pull data from
+      externals definitions to instruct Subversion to pull data from
       multiple repositories.  We'll cover in detail some of the
       additional client- and server-side tools that are part of the
       Subversion distribution.</para>
@@ -1423,21 +1423,20 @@ Cumulus clouds are appearing more frequently as summer approaches.
         <title><literal>svn:externals</literal></title>
 
         <para>The <literal>svn:externals</literal> property contains
-          module definitions which instruct Subversion to populate a
-          versioned directory with one or more other checked-out
-          Subversion working copies.  For more information on this
-          keyword and its use, see <xref
-          linkend="svn-ch-6-sect-3"/>.</para>
+          instructions for Subversion to populate a versioned
+          directory with one or more other checked-out Subversion
+          working copies.  For more information on this keyword and
+          its use, see <xref linkend="svn-ch-6-sect-3"/>.</para>
 
       </sect3>
     </sect2>
   </sect1>
 
   <!-- ******************************************************************* -->
-  <!-- *** SECTION 3:  MODULES                                         *** -->
+  <!-- *** SECTION 3:  EXTERNALS DEFINITIONS                           *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-6-sect-3">
-    <title>Modules</title>
+    <title>Externals</title>
     
     <para>Sometimes it is useful to construct a working copy that is
       made out of a number of different checkouts.  For example, you
@@ -1451,13 +1450,14 @@ Cumulus clouds are appearing more frequently as summer approaches.
       same checkout operations that you did.</para>
 
     <para>Fortunately, Subversion provides support for
-      <firstterm>module</firstterm> definitions.  A module is a
-      mapping of a local directory to the URL of a versioned resource.
-      In Subversion, you declare module definitions in groups using
-      the <literal>svn:externals</literal> property.  This property is
-      set on a versioned directory, and its value is a multi-line
-      table of subdirectories (relative to the versioned directory on
-      which the property is set) and Subversion repository URLs.</para>
+      <firstterm>externals definitions</firstterm>.  An externals
+      definition is a mapping of a local directory to the URL of a
+      versioned resource.  In Subversion, you declare externals
+      definitions in groups using the <literal>svn:externals</literal>
+      property.  This property is set on a versioned directory, and
+      its value is a multi-line table of subdirectories (relative to
+      the versioned directory on which the property is set) and
+      Subversion repository URLs.</para>
 
     <screen>
 $ svn propget svn:externals calc
@@ -1469,16 +1469,16 @@ third-party/skins/toolkit   http://svn.red-bean.com/repos/skin-maker
     <para>The convenience of the <literal>svn:externals</literal>
       property is that once it is set on a versioned directory,
       everyone who checks out a working copy with that directory also
-      gets the benefit of the module definition.  In other words, once
-      one person has made the effort to define those nested working
-      copy checkouts, no one else has to bother&mdash;Subversion will,
-      upon checkout of the original working copy, also checkout the
-      module working copies.</para>
+      gets the benefit of the externals definition.  In other words,
+      once one person has made the effort to define those nested
+      working copy checkouts, no one else has to
+      bother&mdash;Subversion will, upon checkout of the original
+      working copy, also checkout the external working copies.</para>
 
-    <para>Note the previous module definition example.  When someone
-      checks out a working copy of the <filename>calc</filename>
-      directory, Subversion also continues to checkout the items found
-      in its module definition.</para>
+    <para>Note the previous externals definition example.  When
+      someone checks out a working copy of the
+      <filename>calc</filename> directory, Subversion also continues
+      to checkout the items found in its externals definition.</para>
 
     <screen>
 $ svn checkout http://svn.example.com/repos/calc
@@ -1501,18 +1501,18 @@ Fetching external item into calc/third-party/skins
 &hellip;
 </screen>
 
-    <para>If you need to change the module definition, you can do so
-      using the regular property modification subcommands.  When you
-      commit a change to the <literal>svn:externals</literal>
+    <para>If you need to change the externals definition, you can do
+      so using the regular property modification subcommands.  When
+      you commit a change to the <literal>svn:externals</literal>
       property, Subversion will syncronize the checked-out items
-      against the changed module definition when you next run
+      against the changed externals definition when you next run
       <command>svn update</command>.  The same thing will happen when
       others update their working copies and receive your changes to
-      the module definition.</para>
+      the externals definition.</para>
 
     <!-- ### TECH-CHECK: Does this stuff really work?  Ben had a
          comment here that was more than a little doubtful.  We *do*
-         have module tests in place.  Perhaps Ben's update did nothing
+         have externals tests in place.  Perhaps Ben's update did nothing
          because his directory was already up-to-date?  -->
     
   </sect1>
