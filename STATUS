@@ -146,3 +146,13 @@ Candidate changes:
     Justification: Must keeps the precious data nice and safe
     Votes:
      +1: ghudson, kfogel, brane
+
+  * r10528
+     Fix bug in overzealous out-of-dateness commit checks.
+     (Allows 'svn cp wc URL' to work correctly. (issue #1994))
+    Justification:  
+      We recommend 'svn cp wc URL' as a way of tagging in the book,
+      so the bug's existence is embarrassing.  Risk is low: it's a
+      one-line fix to the logic that we've always intended.
+    Votes:
+     +1: sussman, cmpilato
