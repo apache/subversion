@@ -613,10 +613,10 @@ svn_fs__parse_copy_skel (svn_fs__copy_t **copy_p,
                                    skel->children->next->data,
                                    skel->children->next->len);
 
-  /* SRC-REV */
-  copy->src_revision = atoi (apr_pstrmemdup (pool,
-                                             skel->children->next->next->data,
-                                             skel->children->next->next->len));
+  /* SRC-TXN-ID */
+  copy->src_txn_id = apr_pstrmemdup (pool,
+                                     skel->children->next->next->data,
+                                     skel->children->next->next->len);
 
   /* DST-NODE-ID */
   copy->dst_noderev_id 
@@ -1062,10 +1062,11 @@ svn_fs__unparse_copy_skel (skel_t **skel_p,
   tmp_str = svn_fs_unparse_id (copy->dst_noderev_id, pool);
   svn_fs__prepend (svn_fs__mem_atom (tmp_str->data, tmp_str->len, pool), skel);
 
-  /* SRC-REV */
-  tmp_str = svn_string_createf (pool, "%" SVN_REVNUM_T_FMT, 
-                                copy->src_revision);
-  svn_fs__prepend (svn_fs__mem_atom (tmp_str->data, tmp_str->len, pool), skel);
+  /* SRC-TXN-ID */
+  if ((copy->src_txn_id) && (*copy->src_txn_id))
+    svn_fs__prepend (svn_fs__str_atom (copy->src_txn_id, pool), skel);
+  else
+    svn_fs__prepend (svn_fs__mem_atom (NULL, 0, pool), skel);
 
   /* SRC-PATH */
   if ((copy->src_path) && (*copy->src_path))

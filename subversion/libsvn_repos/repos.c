@@ -626,7 +626,12 @@ svn_repos_open (svn_repos_t **repos_p,
                                 svn_path_join (path, SVN_REPOS__FORMAT, pool),
                                 pool))
     {
-      version = 0;
+      if (0 != SVN_REPOS__VERSION)
+        return svn_error_createf 
+          (SVN_ERR_REPOS_UNSUPPORTED_VERSION, 0, NULL, pool,
+           "Expected version '%d' of repository; found no version at all; "
+           "is `%s' a valid repository path?",
+           SVN_REPOS__VERSION, path);
     }
 
   if (version != SVN_REPOS__VERSION)

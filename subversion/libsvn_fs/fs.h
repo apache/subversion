@@ -240,7 +240,7 @@ typedef struct
   const char *src_path;
 
   /* Revision of copy source. */
-  svn_revnum_t src_revision;
+  const char *src_txn_id;
 
   /* Node-revision of copy destination. */
   const svn_fs_id_t *dst_noderev_id;
