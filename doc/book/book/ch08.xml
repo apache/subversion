@@ -95,7 +95,7 @@
           <row>
             <entry>mod_authz_svn</entry>
             <entry>Apache authorization module for Subversion
-            repositories access via WebDAV.</entry>
+            repositories access via WebDAV</entry>
           </row>
           <row>
             <entry>mod_dav_svn</entry>
