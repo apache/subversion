@@ -1171,7 +1171,7 @@ fold_state_changes (apr_hash_t *entries,
 
   /* If we're not about to modify the existence, we'll use the
      existence of the current entry (if one it exists -- ha!) */
-  if ((! *modify_flags & SVN_WC__ENTRY_MODIFY_EXISTENCE) && (entry))
+  if ((! (*modify_flags & SVN_WC__ENTRY_MODIFY_EXISTENCE)) && (entry))
     existence = entry->existence;
 
   /* If we're not merging in changes, only the _add, _delete, _replace
