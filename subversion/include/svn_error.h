@@ -78,6 +78,9 @@ typedef enum svn_errno_t {
   /* The xml delta we got was not valid. */
   SVN_ERR_MALFORMED_XML,
 
+  /* A working copy "descent" crawl came up empty */
+  SVN_ERR_UNFRUITFUL_DESCENT
+
   /* There's no such xml tag attribute */
   SVN_ERR_XML_ATTRIB_NOT_FOUND,
 
