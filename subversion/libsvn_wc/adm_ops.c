@@ -523,12 +523,15 @@ svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
 static svn_error_t *
 add_to_revision_control (svn_stringbuf_t *path,
                          enum svn_node_kind kind,
+                         svn_stringbuf_t *ancestor_path,
                          apr_pool_t *pool)
 {
   svn_stringbuf_t *parent_dir, *basename;
-  svn_wc_entry_t *orig_entry;
+  svn_stringbuf_t *copyfrom_url, *copyfrom_rev;
+  svn_wc_entry_t *orig_entry, *anc_entry;
   svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
   apr_status_t apr_err;
+  apr_hash_t *atts = apr_hash_make (pool);
 
   /* Get the original entry for this path if one exists (perhaps
      this is actually a replacement of a previously deleted thing). */
@@ -567,18 +570,36 @@ add_to_revision_control (svn_stringbuf_t *path,
   if (svn_path_is_empty (parent_dir, svn_path_local_style))
     parent_dir = svn_stringbuf_create (".", pool);
 
-  /* Now, add the entry for this directory to the parent_dir's
+  /* If a copy ancestor was given, put the proper ancestry info in a hash. */
+  if (ancestor_path)
+    {
+      SVN_ERR (svn_wc_entry (&anc_entry, ancestor_path, pool));
+      copyfrom_url = svn_stringbuf_dup (anc_entry->ancestor, pool);
+      copyfrom_rev = svn_stringbuf_createf (pool, "%ld", anc_entry->revision);
+      apr_hash_set (atts, 
+                    SVN_WC_ENTRY_ATTR_COPYFROM_URL, APR_HASH_KEY_STRING,
+                    copyfrom_url);
+      apr_hash_set (atts, 
+                    SVN_WC_ENTRY_ATTR_COPYFROM_REV, APR_HASH_KEY_STRING,
+                    copyfrom_rev);
+    }
+
+
+  /* Now, add the entry for this item to the parent_dir's
      entries file, marking it for addition. */
   /* ### todo:  Should we NOT reset the revision if this is a replace? */
   SVN_ERR (svn_wc__entry_modify
            (parent_dir, basename,
             (SVN_WC__ENTRY_MODIFY_SCHEDULE
              | SVN_WC__ENTRY_MODIFY_REVISION
-             | SVN_WC__ENTRY_MODIFY_KIND),
+             | SVN_WC__ENTRY_MODIFY_KIND
+             | SVN_WC__ENTRY_MODIFY_ATTRIBUTES),
             0, kind,
             svn_wc_schedule_add,
             svn_wc_existence_normal,
-            FALSE, 0, 0, NULL, pool, NULL));
+            FALSE, 0, 0, 
+            atts,  /* may or may not contain copyfrom args */
+            pool, NULL));
 
   /* If this is a replacement, we need to reset the properties for
      PATH. */
@@ -605,19 +626,19 @@ add_to_revision_control (svn_stringbuf_t *path,
   else
     {
       svn_wc_entry_t *p_entry;
-      svn_stringbuf_t *ancestor_path;
+      svn_stringbuf_t *p_path;
 
       /* Get the entry for this directory's parent.  We need to snatch
          the ancestor path out of there. */
       SVN_ERR (svn_wc_entry (&p_entry, parent_dir, pool));
   
-      /* Derive the ancestor path for our new addition here. */
-      ancestor_path = svn_stringbuf_dup (p_entry->ancestor, pool);
-      svn_path_add_component (ancestor_path, basename, svn_path_url_style);
+      /* Derive the parent path for our new addition here. */
+      p_path = svn_stringbuf_dup (p_entry->ancestor, pool);
+      svn_path_add_component (p_path, basename, svn_path_url_style);
   
       /* Make sure this new directory has an admistrative subdirectory
          created inside of it */
-      SVN_ERR (svn_wc__ensure_adm (path, ancestor_path, 0, pool));
+      SVN_ERR (svn_wc__ensure_adm (path, p_path, 0, pool));
 
       /* And finally, make sure this entry is marked for addition in
          its own administrative directory. */
@@ -626,6 +647,7 @@ add_to_revision_control (svn_stringbuf_t *path,
                 (SVN_WC__ENTRY_MODIFY_SCHEDULE
                  | SVN_WC__ENTRY_MODIFY_REVISION 
                  | SVN_WC__ENTRY_MODIFY_KIND
+                 | SVN_WC__ENTRY_MODIFY_ATTRIBUTES
                  | SVN_WC__ENTRY_MODIFY_FORCE),
                 0, svn_node_dir,
                 ((orig_entry 
@@ -633,7 +655,9 @@ add_to_revision_control (svn_stringbuf_t *path,
                  ? svn_wc_schedule_replace 
                  : svn_wc_schedule_add),
                 svn_wc_existence_normal,
-                FALSE, 0, 0, NULL, pool, NULL));
+                FALSE, 0, 0, 
+                atts,  /* may or may not contain copyfrom args */
+                pool, NULL));
     }
   
   /* Now, call our client feedback function. */
@@ -651,16 +675,20 @@ add_to_revision_control (svn_stringbuf_t *path,
 
 
 svn_error_t *
-svn_wc_add_directory (svn_stringbuf_t *dir, apr_pool_t *pool)
+svn_wc_add_directory (svn_stringbuf_t *dir,
+                      svn_stringbuf_t *ancestor_path,
+                      apr_pool_t *pool)
 {
-  return add_to_revision_control (dir, svn_node_dir, pool);
+  return add_to_revision_control (dir, svn_node_dir, ancestor_path, pool);
 }
 
 
 svn_error_t *
-svn_wc_add_file (svn_stringbuf_t *file, apr_pool_t *pool)
+svn_wc_add_file (svn_stringbuf_t *file,
+                 svn_stringbuf_t *ancestor_path,
+                 apr_pool_t *pool)
 {
-  return add_to_revision_control (file, svn_node_file, pool);
+  return add_to_revision_control (file, svn_node_file, ancestor_path, pool);
 }
 
 

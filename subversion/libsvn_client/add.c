@@ -46,6 +46,7 @@ add_dir_recursive (const char *dirname,
 
   /* Add this directory to revision control. */
   SVN_ERR (svn_wc_add_directory (svn_stringbuf_create (dirname, pool),
+                                 NULL,
                                  pool));
 
   /* Create a subpool for iterative memory control. */
@@ -81,7 +82,7 @@ add_dir_recursive (const char *dirname,
         SVN_ERR (add_dir_recursive (fullpath->data, subpool));
 
       else if (this_entry.filetype == APR_REG)
-        SVN_ERR (svn_wc_add_file (fullpath, subpool));
+        SVN_ERR (svn_wc_add_file (fullpath, NULL, subpool));
 
       /* Clean out the per-iteration pool. */
       svn_pool_clear (subpool);
@@ -120,14 +121,14 @@ svn_client_add (svn_stringbuf_t *path,
   
   if (kind == svn_node_file)
     {
-      err = svn_wc_add_file (path, pool);
+      err = svn_wc_add_file (path, NULL, pool);
     }
   else if (kind == svn_node_dir)
     {
       if (recursive)
         SVN_ERR (add_dir_recursive (path->data, pool));
       else
-        err = svn_wc_add_directory (path, pool);
+        err = svn_wc_add_directory (path, NULL, pool);
     }
   else
     return
