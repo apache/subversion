@@ -161,7 +161,7 @@ SVN_ERROR_START
               "Bogus entry attributes during entry merge")
 
   SVN_ERRDEF (SVN_ERR_WC_NOT_UP_TO_DATE,
-              "Working copy os not up-to-date")
+              "Working copy is not up-to-date")
 
   SVN_ERRDEF (SVN_ERR_WC_LEFT_LOCAL_MOD,
               "Left locally modified or unversioned files")
