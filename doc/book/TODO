@@ -48,6 +48,12 @@ To be fixed by cmpilato:
      not overwritten by a tarball explode wouldn't be missing, they'd
      be untouched).
 
+   - In 'hooks' section, explain that hooks launch with no environment
+     (and thus no $PATH), so absolute paths to binaries need to be
+     used.  This FAQ comes up over and over and over and over and over
+     and over.
+
+
 --------------------------------------------------------------
 
 To be fixed by sussman:
