@@ -63,6 +63,21 @@ class SVNTreeUnequal(Failure):
   def __init__(self):
     Failure.__init__(self, self.__class__)
 
+# Exception raised if two lines are unequal
+class SVNLineUnequal(Failure):
+  def __init__(self):
+    Failure.__init__(self, self.__class__)
+
+# Exception raised if an expected error is not found
+class SVNUnmatchedError(Failure):
+  def __init__(self):
+    Failure.__init__(self, self.__class__)
+
+# Exception raised if a commit failed
+class SVNCommitFailure(Failure):
+  def __init__(self):
+    Failure.__init__(self, self.__class__)
+
 # Exception raised if one node is file and other is dir
 class SVNTypeMismatch(Failure):
   def __init__(self):
