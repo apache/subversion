@@ -1315,7 +1315,7 @@ svn_repos_hotcopy (const char *src_path,
 
   SVN_ERR (create_locks (dst_repos, pool));
 
-  SVN_ERR (create_repos_dir (dst_repos->db_path, pool));
+  SVN_ERR (svn_io_dir_make_sgid (dst_repos->db_path, APR_OS_DEFAULT, pool));
 
   /* Open repository, since before we only initialized the directories. 
      Above is a work around because lock creation functions expect a

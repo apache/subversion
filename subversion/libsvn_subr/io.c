@@ -22,7 +22,10 @@
 #include <assert.h>
 
 #ifndef WIN32
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
+#include <errno.h>
 #endif
 
 #include <apr_lib.h>
@@ -1891,7 +1894,7 @@ svn_io_file_rename (const char *from_path, const char *to_path,
    should be set on the newly created directory. */
 static svn_error_t *
 dir_make (const char *path, apr_fileperms_t perm,
-          svn_boolean_t hidden, apr_pool_t *pool)
+          svn_boolean_t hidden, svn_boolean_t sgid, apr_pool_t *pool)
 {
   apr_status_t status;
   const char *path_apr;
@@ -1919,20 +1922,42 @@ dir_make (const char *path, apr_fileperms_t perm,
     }
 #endif
 
+#ifndef WIN32
+  if (sgid)
+  {
+    struct stat st;
+
+    if (stat (path_apr, &st) != 0)
+      return svn_error_wrap_apr (APR_FROM_OS_ERROR (errno),
+                                 "Can't stat new directory '%s'", path);
+    if (chmod (path_apr, (st.st_mode & ~S_IFMT) | S_ISGID) != 0)
+      return svn_error_wrap_apr (APR_FROM_OS_ERROR (errno),
+                                 "Can't set sgid bit on new directory '%s'",
+                                 path);
+  }
+#endif
+
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_io_dir_make (const char *path, apr_fileperms_t perm, apr_pool_t *pool)
 {
-  return dir_make (path, perm, FALSE, pool);
+  return dir_make (path, perm, FALSE, FALSE, pool);
 }
 
 svn_error_t *
 svn_io_dir_make_hidden (const char *path, apr_fileperms_t perm,
                         apr_pool_t *pool)
 {
-  return dir_make (path, perm, TRUE, pool);
+  return dir_make (path, perm, TRUE, FALSE, pool);
+}
+
+svn_error_t *
+svn_io_dir_make_sgid (const char *path, apr_fileperms_t perm,
+                      apr_pool_t *pool)
+{
+  return dir_make (path, perm, FALSE, TRUE, pool);
 }
 
 
