@@ -90,9 +90,6 @@ svn_client_cat (svn_stream_t *out,
   eol_style = apr_hash_get (props, SVN_PROP_EOL_STYLE, APR_HASH_KEY_STRING);
   keywords = apr_hash_get (props, SVN_PROP_KEYWORDS, APR_HASH_KEY_STRING);
 
-  /* FIXME: Someday we should also check the keywords property and if it's 
-   * set do keyword expansion, but that's a fair amount of work. */
-
   if ((mime_type && svn_mime_type_is_binary (mime_type->data))
       || (! eol_style && ! keywords))
     {
