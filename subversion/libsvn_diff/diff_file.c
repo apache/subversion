@@ -488,8 +488,7 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
     {
       /* Special case if we reach the end of file AND the last line is in the
          changed range AND the file doesn't end with a newline */
-      if (bytes_processed && (type == svn_diff__file_output_unified_delete
-                              || type == svn_diff__file_output_unified_insert))
+      if (bytes_processed && (type != svn_diff__file_output_unified_skip))
         {
           svn_stringbuf_appendcstr(baton->hunk,
                                    "\n\\ No newline at end of file\n");
