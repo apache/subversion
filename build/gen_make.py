@@ -156,9 +156,8 @@ class MakefileGenerator(gen_base.GeneratorBase):
           base, ext = os.path.splitext(fname)
           name = string.replace(base, 'mod_', '')
           self.ofile.write('\tcd %s ; '
-                           'apxs_libexecdir="$(DESTDIR)`$(APXS) -q LIBEXECDIR`" ; '
-                           '$(MKDIR) "$$apxs_libexecdir" ; '
-                           '$(INSTALL_MOD_SHARED) -S LIBEXECDIR="$$apxs_libexecdir" -n %s %s\n'
+                           '$(MKDIR) "$(APACHE_LIBEXECDIR)" ; '
+                           '$(INSTALL_MOD_SHARED) -n %s %s\n'
                            % (dirname, name, fname))
           if ext == '.la':
             la_tweaked[file + '-a'] = None
