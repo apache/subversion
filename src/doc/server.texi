@@ -127,11 +127,30 @@ implement this same API on top of a more powerful SQL system.
 
 The @dfn{Subversion Filesystem} (abbreviated: @dfn{svn_fs}) gives us an
 abstract way of thinking about the way files are stored and versioned in
-a repository -- independent of the actual means of storage.  Like any
-typical UNIX-like filesystem, files are stored in a tree.  However,
-while CVS uses the actual UNIX filesystem to hold a repository, the
-svn_fs implements files and directories as database objects
-(@xref{Database}.)
+a repository -- independent of the actual means of storage.  
+
+Like any typical UNIX-like filesystem, files are stored in a tree.
+However, while CVS uses the actual UNIX filesystem to hold a repository,
+the svn_fs implements files and directories as database objects
+(@xref{Database}.)  This not only gives us low-level transactions, but
+allows us to store @dfn{properties} ( or ``meta-data'') with each file,
+directory, directory entry, and even version number.  For example, here
+are some useful properties we can store:
+
+@itemize @bullet
+@item 
+  author
+@item 
+  creation date
+@item
+  modification date
+@item
+  Access Control List (ACL)
+@item
+  file type (text, binary, etc.)
+@item
+  file encoding (ASCII, Unicode, UTF-8, etc.)
+@end itemize
 
 The primary user of the svn_fs interface will be the "Main" Subversion
 library, explained later on in this document.  However, other server
