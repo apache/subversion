@@ -99,7 +99,7 @@ static const dav_liveprop_group dav_svn_liveprop_group =
 
 static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
                                            int propid, dav_prop_insert what,
-                                           ap_text_header *phdr)
+                                           apr_text_header *phdr)
 {
   const char *value;
   const char *s;
@@ -361,7 +361,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
                      "D:namespace=\"%s\"/>" DEBUG_CR,
                      info->name, dav_svn_namespace_uris[info->ns]);
   }
-  ap_text_append(p, phdr, s);
+  apr_text_append(p, phdr, s);
 
   /* we inserted whatever was asked for */
   return what;
@@ -376,7 +376,7 @@ static int dav_svn_is_writable(const dav_resource *resource, int propid)
 }
 
 static dav_error * dav_svn_patch_validate(const dav_resource *resource,
-                                          const ap_xml_elem *elem,
+                                          const apr_xml_elem *elem,
                                           int operation, void **context,
                                           int *defer_to_dead)
 {
@@ -386,7 +386,7 @@ static dav_error * dav_svn_patch_validate(const dav_resource *resource,
 }
 
 static dav_error * dav_svn_patch_exec(const dav_resource *resource,
-                                      const ap_xml_elem *elem,
+                                      const apr_xml_elem *elem,
                                       int operation, void *context,
                                       dav_liveprop_rollback **rollback_ctx)
 {
@@ -444,7 +444,7 @@ int dav_svn_find_liveprop(const dav_resource *resource,
 }
 
 void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
-                                  dav_prop_insert what, ap_text_header *phdr)
+                                  dav_prop_insert what, apr_text_header *phdr)
 {
     const dav_liveprop_spec *spec;
 

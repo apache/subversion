@@ -64,38 +64,38 @@ static dav_error *open_txn(svn_fs_txn_t **ptxn, svn_fs_t *fs,
   return NULL;
 }
 
-static void dav_svn_get_vsn_options(apr_pool_t *p, ap_text_header *phdr)
+static void dav_svn_get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
 {
   /* Note: we append pieces with care for Web Folders's 63-char limit
      on the DAV: header */
 
-  ap_text_append(p, phdr,
-                 "version-control,checkout,working-resource");
-  ap_text_append(p, phdr,
-                 "merge,baseline,activity,version-controlled-collection");
+  apr_text_append(p, phdr,
+                  "version-control,checkout,working-resource");
+  apr_text_append(p, phdr,
+                  "merge,baseline,activity,version-controlled-collection");
 
   /* ### fork-control? */
 }
 
 static dav_error *dav_svn_get_option(const dav_resource *resource,
-                                     const ap_xml_elem *elem,
-                                     ap_text_header *option)
+                                     const apr_xml_elem *elem,
+                                     apr_text_header *option)
 {
   /* ### DAV:version-history-collection-set */
 
-  if (elem->ns == AP_XML_NS_DAV_ID)
+  if (elem->ns == APR_XML_NS_DAV_ID)
     {
       if (strcmp(elem->name, "activity-collection-set") == 0)
         {
-          ap_text_append(resource->pool, option,
-                         "<D:activity-collection-set>");
-          ap_text_append(resource->pool, option,
-                         dav_svn_build_uri(resource->info->repos,
-                                           DAV_SVN_BUILD_URI_ACT_COLLECTION,
-                                           SVN_INVALID_REVNUM, NULL,
-                                           1 /* add_href */, resource->pool));
-          ap_text_append(resource->pool, option,
-                         "</D:activity-collection-set>");
+          apr_text_append(resource->pool, option,
+                          "<D:activity-collection-set>");
+          apr_text_append(resource->pool, option,
+                          dav_svn_build_uri(resource->info->repos,
+                                            DAV_SVN_BUILD_URI_ACT_COLLECTION,
+                                            SVN_INVALID_REVNUM, NULL,
+                                            1 /* add_href */, resource->pool));
+          apr_text_append(resource->pool, option,
+                          "</D:activity-collection-set>");
         }
     }
 
@@ -385,14 +385,14 @@ static dav_error *dav_svn_avail_reports(const dav_resource *resource,
   return NULL;
 }
 
-static int dav_svn_report_label_header_allowed(const ap_xml_doc *doc)
+static int dav_svn_report_label_header_allowed(const apr_xml_doc *doc)
 {
   return 0;
 }
 
 static dav_error *dav_svn_deliver_report(request_rec *r,
                                          const dav_resource *resource,
-                                         const ap_xml_doc *doc,
+                                         const apr_xml_doc *doc,
                                          ap_filter_t *output)
 {
   int ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
@@ -449,7 +449,7 @@ static dav_error *dav_svn_make_activity(dav_resource *resource)
 
 static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
                                 int no_auto_merge, int no_checkout,
-                                ap_xml_elem *prop_elem,
+                                apr_xml_elem *prop_elem,
                                 ap_filter_t *output)
 {
   apr_pool_t *pool;
