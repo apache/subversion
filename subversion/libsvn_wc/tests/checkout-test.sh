@@ -19,6 +19,6 @@ done
 #    ./checkout-test checkout-${num}.delta ${num}/this/is/a/test/dir
 # done
 
-./checkout-test checkout-1.delta this/is/a/test/dir
+./checkout-test checkout-1.delta this
 
 # That's it.  Right now, we test by inspecting them by hand.

@@ -32,7 +32,7 @@ ${SVN_PROG} delete --force this/A/D/H/omega
 
 echo
 echo "Deleting one of the added files, without --force."
-${SVN_PROG} delete --force this/A/B/E/newfile2
+${SVN_PROG} delete this/A/B/E/newfile2
 
 ### Disable commits until they're working.
 # echo

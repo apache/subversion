@@ -658,6 +658,12 @@ do_entry (svn_string_t *path,
       if (err)
         return err;
     }
+  else if ((! baton->looping) && (! setting) && (! baton->found_it))
+    {
+      return svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+                                "entries.c do_entry(): entry %s not found",
+                                entryname->data);
+    }
   else
     {
       if (version_receiver)
@@ -729,39 +735,45 @@ svn_wc__entry_merge (svn_string_t *path,
                            &existing_version, &existing_kind,
                            pool,
                            &existing_hash);
-  if (err) return err;
-
-  if (version == SVN_INVALID_VERNUM)
-    version = existing_version;
-  if (! kind)
-    kind = existing_kind;
-
-  /* Walk the va_list, storing attributes into the existing hash */
-  va_start (ap, pool);
-  while ((key = va_arg (ap, char *)) != NULL)
+  if (err && (err->apr_err != SVN_ERR_WC_ENTRY_NOT_FOUND))
+    return err;
+  else if (err && (err->apr_err == SVN_ERR_WC_ENTRY_NOT_FOUND))
+    /* No previous entry to merge with, so we must make a fresh hash. */
+    existing_hash = apr_make_hash (pool);
+  else /* There is an entry, so merge with it, overriding. */
     {
-      svn_string_t *val;
-
-      /* Treat add and delete specially. */
-      if ((strcmp (key, SVN_WC__ENTRIES_ATTR_ADD) == 0)
-          && (apr_hash_get (existing_hash, SVN_WC__ENTRIES_ATTR_DELETE,
-                            strlen (SVN_WC__ENTRIES_ATTR_DELETE))))
+      if (version == SVN_INVALID_VERNUM)
+        version = existing_version;
+      if (! kind)
+        kind = existing_kind;
+      
+      /* Walk the va_list, storing attributes into the existing hash */
+      va_start (ap, pool);
+      while ((key = va_arg (ap, char *)) != NULL)
         {
-          apr_hash_set (existing_hash, SVN_WC__ENTRIES_ATTR_DELETE,
-                        strlen (SVN_WC__ENTRIES_ATTR_DELETE), NULL);
-          allow_duplicate = 1;
+          svn_string_t *val;
+          
+          /* Treat add and delete specially. */
+          if ((strcmp (key, SVN_WC__ENTRIES_ATTR_ADD) == 0)
+              && (apr_hash_get (existing_hash, SVN_WC__ENTRIES_ATTR_DELETE,
+                                strlen (SVN_WC__ENTRIES_ATTR_DELETE))))
+            {
+              apr_hash_set (existing_hash, SVN_WC__ENTRIES_ATTR_DELETE,
+                            strlen (SVN_WC__ENTRIES_ATTR_DELETE), NULL);
+              allow_duplicate = 1;
+            }
+          else if ((strcmp (key, SVN_WC__ENTRIES_ATTR_DELETE) == 0)
+                   && (apr_hash_get (existing_hash, SVN_WC__ENTRIES_ATTR_ADD,
+                                     strlen (SVN_WC__ENTRIES_ATTR_ADD))))
+            {
+              deleting_an_added_file = 1;
+            }
+          
+          val = va_arg (ap, svn_string_t *);
+          apr_hash_set (existing_hash, key, strlen (key), val);
         }
-      else if ((strcmp (key, SVN_WC__ENTRIES_ATTR_DELETE) == 0)
-               && (apr_hash_get (existing_hash, SVN_WC__ENTRIES_ATTR_ADD,
-                                 strlen (SVN_WC__ENTRIES_ATTR_ADD))))
-        {
-          deleting_an_added_file = 1;
-        }
-
-      val = va_arg (ap, svn_string_t *);
-      apr_hash_set (existing_hash, key, strlen (key), val);
+      va_end (ap);
     }
-  va_end (ap);
 
   if (deleting_an_added_file)
     err = do_entry (path, pool, entryname,
@@ -784,10 +796,6 @@ svn_wc__entry_merge (svn_string_t *path,
 }
 
 
-
-
-
-
 svn_error_t *
 svn_wc__entry_get (svn_string_t *path,
                    svn_string_t *entryname,
@@ -807,9 +815,14 @@ svn_wc__entry_get (svn_string_t *path,
                   0, /* not setting */
                   ht);
   if (err)
-    return err;
+    {
+      if (hash)
+        *hash = NULL;
+      return err;
+    }
 
-  *hash = ht;
+  if (hash) 
+    *hash = ht;
 
   return SVN_NO_ERROR;
 }
@@ -822,6 +835,8 @@ svn_error_t *svn_wc__entry_remove (svn_string_t *path,
 {
   svn_error_t *err;
 
+  /* kff todo: this whole do_entry() interface has become a burden.
+     Rethink this, it should be a natural fix. */
   err = do_entry (path,
                   pool,
                   entryname,
