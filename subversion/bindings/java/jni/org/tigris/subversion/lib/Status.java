@@ -42,11 +42,26 @@ public class Status
 	    this.repos_text_status = repos_text_status;
 	    this.repos_prop_status = repos_prop_status;
 	}
+    public Status(Entry entry, int repos_rev,
+		  int text_status, int prop_status,
+		  boolean locked, 
+		  int repos_text_status,
+		  int repos_prop_status)
+	{
+	    this(entry, new Revision(repos_rev),
+		   new StatusKind(text_status),
+		   new StatusKind(prop_status),
+		   locked,
+		   new StatusKind(repos_text_status),
+		   new StatusKind(repos_prop_status));
+	}
 }
 
-/* local variables:
+/* 
+ * local variables:
  * eval: (load-file "../../../../../../../svn-dev.el")
- * end: */
+ * end: 
+ */
 
 
 
