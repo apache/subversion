@@ -121,7 +121,8 @@ svn_error_create (apr_status_t apr_err,
 
   err = make_error_internal (apr_err, child);
 
-  err->message = (const char *) apr_pstrdup (err->pool, message);
+  if (message)
+    err->message = (const char *) apr_pstrdup (err->pool, message);
 
   return err;
 }
@@ -224,8 +225,7 @@ convert_string_for_output (const char *src, apr_pool_t *pool)
 
 
 static void
-handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal,
-              int depth, apr_status_t parent_apr_err)
+print_error (svn_error_t *err, FILE *stream, svn_boolean_t print_strerror)
 {
   char errbuf[256];
   const char *err_string;
@@ -243,10 +243,9 @@ handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal,
 
   fprintf (stream, ": (apr_err=%d)\n", err->apr_err);
 #endif /* SVN_DEBUG */
-
-  /* When we're recursing, don't repeat the top-level message if its
-     the same as before. */
-  if (depth == 0 || err->apr_err != parent_apr_err)
+  
+  /* Only print the same APR error string once. */
+  if (print_strerror)
     {
       /* Is this a Subversion-specific error code? */
       if ((err->apr_err > APR_OS_START_USEERR)
@@ -262,21 +261,25 @@ handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal,
   if (err->message)
     fprintf (stream, "svn: %s\n",
              convert_string_for_output (err->message, err->pool));
-  fflush (stream);
-
-  if (err->child)
-    handle_error (err->child, stream, FALSE, depth + 1, err->apr_err);
-
-  if (fatal)
-    /* XXX Shouldn't we exit(1) here instead, so that atexit handlers
-       get called?  --xbc */
-    abort ();
 }
 
 void
 svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
 {
-  handle_error (err, stream, fatal, 0, APR_SUCCESS);
+  apr_status_t parent_apr_err = APR_SUCCESS;
+
+  while (err)
+    {
+      print_error (err, stream, (err->apr_err != parent_apr_err));
+      parent_apr_err = err->apr_err;
+      err = err->child;
+    }
+
+  fflush (stream);
+  if (fatal)
+    /* XXX Shouldn't we exit(1) here instead, so that atexit handlers
+       get called?  --xbc */
+    abort ();
 }
 
 
