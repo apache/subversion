@@ -25,6 +25,7 @@ TABLE OF CONTENTS
    * Automated tests
    * Writing test cases before code
    * Debugging the server
+   * Tracking down memory leaks
    * Writing log messages
    * Patch submission guidelines
    * Filing bugs / issues
@@ -545,6 +546,9 @@ In summary:
      some hidden magic pool.  In limited cases, objects may record the
      pool used for their construction so that they can construct
      sub-parts, but these cases should be examined carefully.
+
+See also the section "Tracking down memory leaks" for tips on
+diagnosing pool usage problems.
 
 
 
