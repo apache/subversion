@@ -76,35 +76,35 @@ Greg:
    - mod_dav_svn:
       - implement copy/move in the repos
 
-      - liveprop hooks:
-	core: getcontentlength, creationdate, getetag,
-	      getlastmodified, resourcetype
-	deltav: label-name-set
+      - liveprop hooks: rest of liveprops
+	- what is missing?
+	- what is needed for SVN vs DAV/DeltaV interop?
 
-      - vsn hooks: ???  REPORT and MKACTIVITY first
-        REPORT: need the SVN:status-report
-	need: MERGE (activity)
-	validate proper support for VERSION-CONTROL. this would be the 
-	  missing piece for DeltaV "Core" support.
+      - vsn hooks: any others for DAV/DeltaV interop?
 
       - version resource URL prep should look up the node
-      - CHECKOUT of a VR URL should verify the node ID of the
-        REPOS_PATH in the latest revision matches the node ID in the
-	VR URL (if not, they are checking out an old copy)
 
       - change the dav_svn_ prefix to ??? (svn_mod_dav_svn too long;
 	svn_mds? svn_dav? leave it?
 
-   - mod_dav: no apparent changes until vsn comes in
-      - need: MERGE
-      - verify Vasta's work against our needs: REPORT, LABEL
+   - mod_dav:
+     - switch property handling to buckets/brigades
+     - switch dav_stream to buckets/brigades
 
-   - libsvn_ra_dav:
-      - update editor
-      - commit editor
+   M3 ITEMS:
+   - get/set properties over the wire
+   - cvs2svn
+   - Python bindings
+     - just enough for cvs2svn
+     - the rest
+   - code up a basic hook system after Karl specs what we need
+     - just enough for M3 (prolly post-commit only)
+     - the rest
+   - DB_RUN_RECOVERY handling
+   - pool review
 
+   WHENEVER:
    - APR: move apr_copy_file() from SVN. and apr_append_file, etc.
-
    - security checks (e.g. system() usage in wc/get_editor)
 
 
