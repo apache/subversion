@@ -202,7 +202,7 @@ class Generator(gen_base.GeneratorBase):
                                                  os.path.basename(file))))
         self.ofile.write('\n')
 
-      elif area != 'test' and area != 'fs-test':
+      elif area != 'test' and area != 'bdb-test':
         area_var = string.replace(area, '-', '_')
         upper_var = string.upper(area_var)
         self.ofile.write('install-%s: %s\n'
