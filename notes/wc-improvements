@@ -107,6 +107,23 @@ implement, some of them may not work at all.
   and store it in svn_wc_t.  Then when we come to do a timestamp sleep
   we can do it from the that time rather than the current time.
 
+- Store working file size in the entries file and use it as another
+  shortcut to detect modifications.  This should not need any extra
+  system calls, the stat() for timestamp can also return the size.
+  When it triggers it will be much faster than possibly detranslating
+  and then doing a byte-by-byte comparison.
+
+- Make the entries file smaller.  The properties committed-date 
+  committed-rev and last-author are really only needed for keyword
+  expansion, so only store them if the appropriate svn:keywords value
+  is present.  Note that committed-rev has a more general use as rPREV,
+  however just about all uses of rPREV involve repository access so
+  rPREV could be determined via an RA call.  Removing the three
+  properties could reduce entries file size by as much as one third,
+  it's possible that might make reading, writing and parsing faster.
+  It would reduce the memory used to cache the entries, an ABI change
+  to svn_wc_entry_t might reduce it further.
+
 - Optimise property handling
   http://svn.haxx.se/dev/archive-2004-11/0318.shtml
 
