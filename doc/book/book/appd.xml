@@ -117,7 +117,7 @@
   
       <para>Because RFC 2518 left out versioning concepts, another
         capable group was left with the responsiblity of writing RFC
-        3256, which adds versioning to WebDAV.  WebDAV/DeltaV clients
+        3253, which adds versioning to WebDAV.  WebDAV/DeltaV clients
         and servers are often called just <quote>DeltaV</quote>
         clients and servers, since DeltaV implies the existence of
         basic WebDAV.</para>
@@ -328,7 +328,7 @@
       <title>Autoversioning Support</title>
       
       <para>At the time of writing, the truth is that there are very
-        few DeltaV clients in the world; RFC 3256 is still relatively
+        few DeltaV clients in the world; RFC 3253 is still relatively
         new.  However users do have access to <quote>generic</quote>
         clients, because almost every modern operating system now has
         a integrated basic WebDAV client.  With this in mind,
