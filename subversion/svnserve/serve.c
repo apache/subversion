@@ -908,6 +908,84 @@ static svn_error_t *check_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *get_locations(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                  apr_array_header_t *params, void *baton)
+{
+  svn_error_t *err, *write_err;
+  server_baton_t *b = baton;
+  svn_revnum_t revision;
+  apr_array_header_t *location_revisions, *loc_revs_proto;
+  svn_ra_svn_item_t *elt;
+  int i;
+  const char *relative_path;
+  svn_revnum_t peg_revision;
+  apr_hash_t *fs_locations;
+  apr_hash_index_t *iter;
+  const char *abs_path;
+  const void *iter_key;
+  void *iter_value;
+
+  /* Parse the arguments. */
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "crl", &relative_path,
+                                 &peg_revision,
+                                 &loc_revs_proto));
+
+  abs_path = svn_path_join(b->fs_path, relative_path, pool);
+
+  location_revisions = apr_array_make(pool, loc_revs_proto->nelts,
+                                      sizeof(svn_revnum_t));
+  for (i = 0; i < loc_revs_proto->nelts; i++)
+    {
+      elt = &APR_ARRAY_IDX(loc_revs_proto, i, svn_ra_svn_item_t);
+      if (elt->kind != SVN_RA_SVN_NUMBER)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                "Get-locations location revisions entry "
+                                "not a revision number");
+      revision = (svn_revnum_t)(elt->u.number);
+      APR_ARRAY_PUSH(location_revisions, svn_revnum_t) = revision;
+    }
+  SVN_ERR(trivial_auth_request(conn, pool, b));
+
+  /* All the parameters are fine - let's perform the query against the
+   * repository. */
+
+  /* We store both err and write_err here, so the client will get
+   * the "done" even if there was an error in fetching the results. */
+
+  err = svn_repos_trace_node_locations(b->fs, &fs_locations, abs_path,
+                                       peg_revision, location_revisions,
+                                       pool);
+
+  /* Now, write the results to the connection. */
+  if (!err)
+    {
+      if (fs_locations)
+        {
+          for (iter = apr_hash_first(pool, fs_locations); iter;
+              iter = apr_hash_next(iter))
+            {
+              apr_hash_this(iter, &iter_key, NULL, &iter_value);
+              SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "rc",
+                                             *(const svn_revnum_t *)iter_key,
+                                             (const char *)iter_value));
+            }
+        }
+    }
+
+  write_err = svn_ra_svn_write_word(conn, pool, "done");
+  if (write_err)
+    {
+      svn_error_clear(err);
+      return write_err;
+    }
+  SVN_CMD_ERR(err);
+
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
+
+  return SVN_NO_ERROR;
+}
+
+
 static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "get-latest-rev",  get_latest_rev },
   { "get-dated-rev",   get_dated_rev },
@@ -923,6 +1001,7 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "diff",            diff },
   { "log",             log_cmd },
   { "check-path",      check_path },
+  { "get-locations",   get_locations },
   { NULL }
 };
 

@@ -504,6 +504,11 @@ int dav_svn_get_last_modified_time (const char **datestring,
                                     enum dav_svn_time_format format,
                                     apr_pool_t *pool);
 
+dav_error * dav_svn__get_locations_report(const dav_resource *resource,
+                                          const apr_xml_doc *doc,
+                                          ap_filter_t *output);
+
+
 
 
 #ifdef __cplusplus

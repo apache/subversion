@@ -626,7 +626,9 @@ enum {
   ELEM_name_creator_displayname,
   ELEM_svn_error,
   ELEM_human_readable,
-  ELEM_repository_uuid
+  ELEM_repository_uuid,
+  ELEM_get_locations_report,
+  ELEM_location
 };
 
 /* ### docco */
@@ -697,6 +699,15 @@ svn_ra_dav__request_dispatch(int *code_p,
                              int okay_2,
                              apr_pool_t *pool);
 
+/*
+ * Implements the get_locations RA layer function. */
+svn_error_t *
+svn_ra_dav__get_locations (void *session_baton,
+                           apr_hash_t **locations,
+                           const char *path,
+                           svn_revnum_t peg_revision,
+                           apr_array_header_t *location_revisions,
+                           apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

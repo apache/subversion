@@ -843,6 +843,27 @@ svn_ra_local__get_dir (void *session_baton,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+svn_ra_local__get_locations (void *session_baton,
+                             apr_hash_t **locations,
+                             const char *relative_path,
+                             svn_revnum_t peg_revision,
+                             apr_array_header_t *location_revisions,
+                             apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sbaton = session_baton;
+  const char *abs_path;
+
+  /* Append the relative path to the base FS path to get an
+     absolute repository path. */
+  abs_path = svn_path_join (sbaton->fs_path, relative_path, pool);
+
+  SVN_ERR (svn_repos_trace_node_locations (sbaton->fs, locations, abs_path,
+                                           peg_revision, location_revisions,
+                                           pool));
+
+  return SVN_NO_ERROR;
+}
 
 
 /*----------------------------------------------------------------*/
@@ -869,7 +890,8 @@ static const svn_ra_plugin_t ra_local_plugin =
   svn_ra_local__get_log,
   svn_ra_local__do_check_path,
   svn_ra_local__get_uuid,
-  svn_ra_local__get_repos_root
+  svn_ra_local__get_repos_root,
+  svn_ra_local__get_locations
 };
 
 
