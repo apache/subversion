@@ -1037,7 +1037,7 @@ check_adm_exists (svn_boolean_t *exists,
          on this being a working copy, in order to determine if this is a
          working copy! */
       svn_wc_adm_access_t *adm_access;
-      svn_wc_entry_t *entry;
+      const svn_wc_entry_t *entry;
 
       SVN_ERR (svn_wc_adm_open (&adm_access, NULL, path, FALSE, FALSE, pool));
       SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));

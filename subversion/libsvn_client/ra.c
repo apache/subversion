@@ -75,7 +75,7 @@ get_committed_rev (void *baton,
                    apr_pool_t *pool)
 {
   svn_client__callback_baton_t *cb = baton;
-  svn_wc_entry_t *ent;
+  const svn_wc_entry_t *ent;
   const char *path;
   svn_wc_adm_access_t *adm_access;
 

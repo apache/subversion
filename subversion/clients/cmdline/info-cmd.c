@@ -44,7 +44,7 @@ svn_cl__info_print_time (apr_time_t atime,
 
 static svn_error_t *
 print_entry (const char *target,
-             svn_wc_entry_t *entry,
+             const svn_wc_entry_t *entry,
              apr_pool_t *pool)
 {
   svn_boolean_t text_conflict = FALSE, props_conflict = FALSE;
@@ -201,7 +201,7 @@ print_entry (const char *target,
 
 static svn_error_t *
 info_found_entry_callback (const char *path,
-                           svn_wc_entry_t *entry,
+                           const svn_wc_entry_t *entry,
                            void *walk_baton)
 {
   apr_pool_t *pool = walk_baton;
@@ -245,7 +245,7 @@ svn_cl__info (apr_getopt_t *os,
     {
       const char *target = ((const char **) (targets->elts))[i];
       svn_wc_adm_access_t *adm_access;
-      svn_wc_entry_t *entry;
+      const svn_wc_entry_t *entry;
 
       SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target, FALSE,
                                       opt_state->recursive, pool));

@@ -307,7 +307,7 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
       for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
         {
           void *val;
-          svn_wc_entry_t *entry;
+          const svn_wc_entry_t *entry;
           svn_wc_adm_access_t *entry_access;
           const char *entry_path;
           svn_error_t *svn_err;
@@ -590,26 +590,83 @@ svn_wc__adm_is_cleanup_required (svn_boolean_t *cleanup,
   return SVN_NO_ERROR;
 }
 
+/* Ensure that the cache for the pruned hash (no deleted entries) in
+   ADM_ACCESS is valid if the full hash is cached.  POOL is used for
+   local, short term, memory allocation.
+
+   ### Should this sort of processing be in entries.c? */
+static void
+prune_deleted (svn_wc_adm_access_t *adm_access,
+               apr_pool_t *pool)
+{
+  if (! adm_access->entries && adm_access->entries_deleted)
+    {
+      apr_hash_index_t *hi;
+
+      /* I think it will be common for there to be no deleted entries, so
+         it is worth checking for that case as we can optimise it. */
+      for (hi = apr_hash_first (pool, adm_access->entries_deleted);
+           hi;
+           hi = apr_hash_next (hi))
+        {
+          void *val;
+          svn_wc_entry_t *entry;
+          apr_hash_this (hi, NULL, NULL, &val);
+          entry = val;
+          if (entry->deleted)
+            break;
+        }
+
+      if (! hi)
+        {
+          /* There are no deleted entries, so we can use the full hash */
+          adm_access->entries = adm_access->entries_deleted;
+          return;
+        }
+
+      /* Construct pruned hash without deleted entries */
+      adm_access->entries = apr_hash_make (adm_access->pool);
+      for (hi = apr_hash_first (pool, adm_access->entries_deleted);
+           hi;
+           hi = apr_hash_next (hi))
+        {
+          void *val;
+          const void *key;
+          svn_wc_entry_t *entry;
+
+          apr_hash_this (hi, &key, NULL, &val);
+          entry = val;
+          if (! entry->deleted)
+            apr_hash_set (adm_access->entries, key, APR_HASH_KEY_STRING, entry);
+        }
+    }
+}
+
 
 void
 svn_wc__adm_access_set_entries (svn_wc_adm_access_t *adm_access,
                                 svn_boolean_t show_deleted,
                                 apr_hash_t *entries)
 {
-#if SVN_WC_ADM_CACHE_ENTRIES
   if (show_deleted)
     adm_access->entries_deleted = entries;
   else
     adm_access->entries = entries;
-#endif
 }
 
 
 apr_hash_t *
 svn_wc__adm_access_entries (svn_wc_adm_access_t *adm_access,
-                            svn_boolean_t show_deleted)
+                            svn_boolean_t show_deleted,
+                            apr_pool_t *pool)
 {
-  return show_deleted ? adm_access->entries_deleted : adm_access->entries;
+  if (! show_deleted)
+    {
+      prune_deleted (adm_access, pool);
+      return adm_access->entries;
+    }
+  else
+    return adm_access->entries_deleted;
 }
 
 

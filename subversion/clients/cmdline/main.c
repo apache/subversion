@@ -583,7 +583,7 @@ main (int argc, const char * const *argv)
         /* Find out if log message file is under revision control. */
         {
           svn_wc_adm_access_t *adm_access;
-          svn_wc_entry_t *e;
+          const svn_wc_entry_t *e;
 
           err = svn_wc_adm_probe_open (&adm_access, NULL, utf8_opt_arg, FALSE,
                                        FALSE, pool);

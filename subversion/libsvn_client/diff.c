@@ -387,7 +387,7 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
     case svn_node_file:
       {
         /* file already exists, is it under version control? */
-        svn_wc_entry_t *entry;
+        const svn_wc_entry_t *entry;
         svn_error_t *err;
         SVN_ERR (svn_wc_entry (&entry, mine, adm_access, FALSE, subpool));
 
@@ -463,7 +463,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
   enum svn_node_kind kind;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
   const char *copyfrom_url, *child;
 
   child = svn_path_is_child (merge_b->target, path, subpool);
@@ -622,7 +622,7 @@ convert_to_url (const char **url,
                 apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;  /* ### FIXME local */
-  svn_wc_entry_t *entry;      
+  const svn_wc_entry_t *entry;      
 
   if (svn_path_is_url (path))
     {
@@ -1294,7 +1294,7 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
                   apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
 
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target_wcpath,
                                   TRUE, recurse, pool));

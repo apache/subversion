@@ -794,7 +794,7 @@ repos_to_wc_copy (const char *src_url,
           
           /* We just did a checkout; whatever revision we just got, that
              should be the copyfrom_revision when we commit later. */
-          svn_wc_entry_t *d_entry;
+          const svn_wc_entry_t *d_entry;
           svn_wc_adm_access_t *dst_access;
           SVN_ERR (svn_wc_adm_open (&dst_access, adm_access, dst_path,
                                     TRUE, TRUE, pool));
@@ -958,7 +958,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
               /* We can convert the working copy path to a URL based on the
                  entries file. */
               svn_wc_adm_access_t *adm_access;  /* ### FIXME local */
-              svn_wc_entry_t *entry;
+              const svn_wc_entry_t *entry;
               SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, src_path,
                                               FALSE, FALSE, pool));
               SVN_ERR (svn_wc_entry (&entry, src_path, adm_access, FALSE,

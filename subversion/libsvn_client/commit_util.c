@@ -111,8 +111,8 @@ harvest_committables (apr_hash_t *committables,
                       svn_wc_adm_access_t *adm_access,
                       const char *url,
                       const char *copyfrom_url,
-                      svn_wc_entry_t *entry,
-                      svn_wc_entry_t *parent_entry,
+                      const svn_wc_entry_t *entry,
+                      const svn_wc_entry_t *parent_entry,
                       svn_boolean_t adds_only,
                       svn_boolean_t copy_mode,
                       svn_boolean_t nonrecursive,
@@ -125,6 +125,7 @@ harvest_committables (apr_hash_t *committables,
   const char *p_path;
   svn_boolean_t tconflict, pconflict;
   const char *cf_url = NULL;
+  svn_revnum_t cf_rev = entry->copyfrom_rev;
 
   assert (entry);
   assert (url);
@@ -145,7 +146,7 @@ harvest_committables (apr_hash_t *committables,
          entry for it (we were going to have to do this eventually to
          recurse anyway, so... ) */
       svn_error_t *err;
-      svn_wc_entry_t *e = NULL;
+      const svn_wc_entry_t *e = NULL;
       err = svn_wc_entries_read (&entries, adm_access, FALSE, subpool);
       if (err)
         {
@@ -239,7 +240,7 @@ harvest_committables (apr_hash_t *committables,
           state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
           state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
           adds_only = TRUE;
-          entry->copyfrom_rev = entry->revision;
+          cf_rev = entry->revision;
           if (copy_mode)
             cf_url = entry->url;
           else
@@ -288,7 +289,7 @@ harvest_committables (apr_hash_t *committables,
     {
       /* Finally, add the committable item. */
       add_committable (committables, path, entry->kind, url,
-                       cf_url ? entry->copyfrom_rev : entry->revision, 
+                       cf_url ? cf_rev : entry->revision, 
                        cf_url, state_flags);
     }
 
@@ -300,7 +301,7 @@ harvest_committables (apr_hash_t *committables,
           || (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)))
     {
       apr_hash_index_t *hi;
-      svn_wc_entry_t *this_entry;
+      const svn_wc_entry_t *this_entry;
       apr_pool_t *loop_pool = svn_pool_create (subpool);
 
       /* Loop over all other entries in this directory, skipping the
@@ -370,7 +371,7 @@ harvest_committables (apr_hash_t *committables,
                    (committables, full_path, dir_access,
                     used_url ? used_url : this_entry->url,
                     this_cf_url,
-                    (svn_wc_entry_t *)val, 
+                    this_entry,
                     entry,
                     adds_only,
                     copy_mode,
@@ -406,7 +407,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
   do
     {
       svn_wc_adm_access_t *adm_access;
-      svn_wc_entry_t *entry;
+      const svn_wc_entry_t *entry;
       const char *url;
       const char *target = apr_pstrdup (pool,
                                         svn_wc_adm_access_path (parent_dir));
@@ -433,7 +434,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
         {
           const char *parent, *base_name;
           svn_wc_adm_access_t *parent_access;
-          svn_wc_entry_t *p_entry;
+          const svn_wc_entry_t *p_entry;
           svn_boolean_t wc_root;
 
           /* An entry with no URL should only come about when it is
@@ -516,7 +517,7 @@ svn_client__get_copy_committables (apr_hash_t **committables,
                                    svn_wc_adm_access_t *adm_access,
                                    apr_pool_t *pool)
 {
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
 
   /* Create the COMMITTABLES hash. */
   *committables = apr_hash_make (pool);
@@ -868,7 +869,7 @@ do_item_commit (const char *url,
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
     {
       const char *tempfile;
-      svn_wc_entry_t *tmp_entry;
+      const svn_wc_entry_t *tmp_entry;
 
       if (kind == svn_node_file)
         {

@@ -62,7 +62,7 @@ svn_wc__remove_wcprops (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
       const void *key;
       void *val;
       const char *name;
-      svn_wc_entry_t *current_entry;
+      const svn_wc_entry_t *current_entry;
       const char *child_path;
 
       apr_hash_this (hi, &key, NULL, &val);
@@ -129,7 +129,7 @@ copy_file_administratively (const char *src_path,
                             apr_pool_t *pool)
 {
   enum svn_node_kind dst_kind;
-  svn_wc_entry_t *src_entry, *dst_entry;
+  const svn_wc_entry_t *src_entry, *dst_entry;
 
   /* The 'dst_path' is simply dst_parent/dst_basename */
   const char *dst_path
@@ -265,7 +265,7 @@ copy_dir_administratively (const char *src_path,
                            void *notify_baton,
                            apr_pool_t *pool)
 {
-  svn_wc_entry_t *src_entry;
+  const svn_wc_entry_t *src_entry;
   svn_wc_adm_access_t *adm_access;
 
   /* The 'dst_path' is simply dst_parent/dst_basename */

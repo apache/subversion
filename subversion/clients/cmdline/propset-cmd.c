@@ -100,7 +100,7 @@ svn_cl__propset (apr_getopt_t *os,
       else
         {
           svn_wc_adm_access_t *adm_access;          
-          svn_wc_entry_t *entry;
+          const svn_wc_entry_t *entry;
           SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target,
                                           FALSE, FALSE, pool));
           SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));

@@ -86,7 +86,7 @@ copy_versioned_files (const char *from,
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *dirents;
   svn_wc_adm_access_t *adm_access;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
   svn_error_t *err;
 
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, from, FALSE, FALSE, pool));
