@@ -156,18 +156,16 @@ get_canonical_command (const char *cmd)
 
 /*** Help. ***/
 
-/* Print the canonical command corresponding to CMD, all its aliases,
+/* Print the canonical command name for CMD, all its aliases,
    and if HELP is set, print the help string for the command too. */
 static void
-print_command_info (const char *cmd, svn_boolean_t help, apr_pool_t *pool)
+print_command_info (const svn_cl__cmd_desc_t *cmd_desc,
+                    svn_boolean_t help, 
+                    apr_pool_t *pool)
 {
-  const svn_cl__cmd_desc_t *this_cmd = get_canonical_command (cmd);
+  const svn_cl__cmd_desc_t *this_cmd = get_canonical_command (cmd_desc->name);
   const svn_cl__cmd_desc_t *canonical_cmd = this_cmd;
   svn_boolean_t first_time;
-
-  /* Shouldn't happen, but who knows? */
-  if (this_cmd == NULL)
-    return;
 
   /* Print the canonical command name. */
   fputs (canonical_cmd->name, stdout);
@@ -215,7 +213,7 @@ print_generic_help (apr_pool_t *pool)
     if (! cmd_table[i].is_alias)
       {
         printf ("   ");
-        print_command_info (cmd_table[i].name, FALSE, pool);
+        print_command_info (cmd_table + i, FALSE, pool);
         printf ("\n");
       }
 }
@@ -239,7 +237,11 @@ svn_cl__help (svn_cl__opt_state_t *opt_state,
     for (i = 0; i < targets->nelts; i++)
       {
         svn_string_t *this = (((svn_string_t **) (targets)->elts))[i];
-        print_command_info (this->data, TRUE, pool);
+        const svn_cl__cmd_desc_t *cmd = get_canonical_command (this->data);
+        if (cmd)
+          print_command_info (cmd, TRUE, pool);
+        else
+          fprintf (stderr, "\"%s\": unknown command.\n", this->data);
       }
   else
     print_generic_help (pool);
@@ -384,31 +386,28 @@ main (int argc, char **argv)
       }
     }
 
-  /* Did user request help?  If so, deliver, no matter what other
-     options or arguments were specified. */
+  /* Else, handle the subcommand and regular arguments, adjusting if
+     the user asked for help on subcommands (as opposed to actually
+     invoking a subcommand). */
   if (opt_state.help)
-    {
-      svn_cl__help (NULL, targets, pool);
-      apr_destroy_pool (pool);
-      return EXIT_SUCCESS;
-    }
+    subcommand = get_canonical_command ("help");
+  else
+    subcommand = NULL;
 
-  /* Else, handle the subcommand and regular arguments. */
-  subcommand = NULL;
+  /* Do the subcommand and arguments. */
   for (; os->ind < os->argc; os->ind++)
     {
       const char *this_arg = os->argv[os->ind];
 
-      /* The first non-option we see is always the subcommand. */
+      /* The first non-option we see is always the subcommand, unless
+         the subcommand is already set to `help'. */
       if (subcommand == NULL)
         {
           subcommand = get_canonical_command (this_arg);
           if (subcommand == NULL)
             {
               fprintf (stderr, "unknown command: %s\n", this_arg);
-              svn_cl__help (NULL, targets, pool);
-              apr_destroy_pool (pool);
-              return EXIT_FAILURE;
+              subcommand = get_canonical_command ("help");
             }
         }
       else
