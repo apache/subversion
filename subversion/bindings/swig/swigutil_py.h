@@ -56,6 +56,10 @@ swig_type_info *SWIG_TypeQuery(const char *name);
 
 #endif /* SVN_NEED_SWIG_TYPES */
 
+/* Functions to manage python's global interpreter lock */
+void release_py_lock(void);
+void acquire_py_lock(void);
+
 
 /* helper function to convert an apr_hash_t* (char* -> svnstring_t*) to
    a Python dict */
