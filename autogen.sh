@@ -4,8 +4,6 @@
 
 # Make sure the APR directory is present
 if [ ! -d apr ]; then
-  echo ""
-  echo "...Uh oh, there is a problem."
   echo "You don't have an apr/ subdirectory here.  Please get one:"
   echo ""
   echo "   cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvs login"
@@ -15,19 +13,14 @@ if [ ! -d apr ]; then
   echo ""
   echo "Run that right here in the top-level of the Subversion tree."
   echo ""
-  exit 1
+  PREREQ_FAILED="yes"
 fi
-
-# run a quick test to ensure required tools are kosher
-(cd apr && build/buildcheck.sh) || exit 1
 
 # Make sure the Neon directory is present
 NEON_WANTED=0.15.3
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_WANTED}.tar.gz"
 
 if [ ! -d neon ]; then
-  echo ""
-  echo "...Uh oh, there is a problem."
   echo "You don't have a neon/ subdirectory here."
   echo "Please get neon ${NEON_WANTED} from:"
   echo "       ${NEON_URL}"
@@ -35,22 +28,35 @@ if [ ! -d neon ]; then
   echo "Unpack the archive using tar/gunzip and rename the resulting"
   echo "directory from ./neon-${NEON_WANTED}/ to ./neon/"
   echo ""
+  PREREQ_FAILED="yes"
+else
+   NEON_VERSION=`ac-helpers/get-neon-ver.sh neon`
+   if test "$NEON_WANTED" != "$NEON_VERSION"; then
+     echo "You have a neon/ subdir containing version $NEON_VERSION,"
+     echo "but Subversion needs neon ${NEON_WANTED}."
+     echo "Please get neon ${NEON_WANTED} from:"
+     echo "       ${NEON_URL}"
+     echo ""
+     echo "Unpack the archive using tar/gunzip and rename the resulting"
+     echo "directory from ./neon-${NEON_WANTED}/ to ./neon/"
+     echo ""
+     PREREQ_FAILED="yes"
+   fi
+fi
+
+
+#
+# If PREREQ_FAILED == "yes", then one or more required packages could
+# not be found in-tree, so exit now.
+#
+if [ "${PREREQ_FAILED}" = "yes" ]; then
   exit 1
 fi
-NEON_VERSION=`ac-helpers/get-neon-ver.sh neon`
-if test "$NEON_WANTED" != "$NEON_VERSION"; then
-  echo ""
-  echo "...Uh oh, there is a problem."
-  echo "You have a neon/ subdir containing version $NEON_VERSION,"
-  echo "but Subversion needs neon ${NEON_WANTED}."
-  echo "Please get neon ${NEON_WANTED} from:"
-  echo "       ${NEON_URL}"
-  echo ""
-  echo "Unpack the archive using tar/gunzip and rename the resulting"
-  echo "directory from ./neon-${NEON_WANTED}/ to ./neon/"
-  echo ""
-  exit 1
-fi
+
+
+# Run a quick test to ensure APR is kosher.
+(cd apr && build/buildcheck.sh) || exit 1
+
 
 #
 # Handle some libtool helper files
