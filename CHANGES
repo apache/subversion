@@ -7,14 +7,14 @@ http://svn.collab.net/repos/svn/tags/0.30.0
       - no more 'ssl-ignore-unknown-ca' option
       - 'ssl-ignore-host-mismatch' is renamed to 'ssl-override-cert-hostname'
       - new 'ssl-trust-default-ca' option to trust 'default' openssl CAs
- * 'svn log' doesn't no longer dies on unversioned args (r6989, #777)
+ * 'svn log' no longer dies on unversioned args (r6989, #777)
  * local mods now obstruct 'svn up' deletions (r7050, #1196)
- * 'svnserve' now takes optional (unauthenticated) -u username arg (r7060)
+ * 'svnserve' now notices (unauthenticated) --username arg (r7060)
  * no more 'svnadmin createtxn' subcommand. (r7062)
- * 'svn ls -v' now shows years when appropriate
+ * 'svn ls -v' shows years when appropriate
  * document some new things in Book (r7014), plus minor technical fixes
  * website changes:  new sidebar, new 'svn links' page, new tigris.org!!
- * other issues:  hooks use proper stdout handles on win32 (r7001),
+ * other bugfixes:  hooks use proper stdout handles on win32 (r7001),
    prevent copies of copies in wc (r7077, #1259), display failed
    revprop change over ra_dav (r7081, #1520), 'svn st -u' throws RA
    error properly (r7094, #1506)
@@ -27,7 +27,7 @@ http://svn.collab.net/repos/svn/tags/0.30.0
  * more cvs2svn bugfixes:  issue #1504, #1421, #1514, and new --username arg.
  * python testsuite only raises exceptions, never status codes. (#1192)
  * various libsvn_fs re-org (prepwork) for issue #1499.
- * other issues: code-complete timestamp feature (r6983, #1445), add
+ * other bugfixes: code-complete timestamp feature (r6983, #1445), add
    op-counting features to trails (r6984, #655), fs UUID caching
    (r7037), almost finish win32 iconv issues (#872), restored-file
    entry-timestamp bugfix (r7090, #1523), always print CWD as '.' (r7097)
