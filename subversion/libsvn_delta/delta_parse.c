@@ -533,7 +533,8 @@ do_file_callback (svn_delta_digger_t *digger,
                              NULL, digger->pool);
 
   digger->vcdiff_parser = svn_make_vcdiff_parser (window_consumer,
-                                                  consumer_baton);
+                                                  consumer_baton,
+                                                  digger->pool);
 
   return SVN_NO_ERROR;
 }
