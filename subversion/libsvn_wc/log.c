@@ -1353,7 +1353,7 @@ svn_wc_cleanup (svn_stringbuf_t *path,
   
   /* Remove the lock here, making sure that the administrative
      directory still exists after running the log! */
-  if (svn_wc__adm_path_exists (path, 0, pool))
+  if (svn_wc__adm_path_exists (path, 0, pool, NULL))
     {
       err = svn_wc__unlock (path, pool);
       if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
