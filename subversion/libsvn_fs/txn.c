@@ -158,16 +158,17 @@ static int
 compare_transactions_keys (const DBT *ak, const DBT *bk)
 {
   int a, b;
-  char *a_end, *b_end;
+  const char *a_end;
+  const char *b_end;
 
   /* Parse the two keys.  */
   a = svn_fs__getsize (ak->data, ak->size, &a_end, 10000000);
   b = svn_fs__getsize (bk->data, bk->size, &b_end, 10000000);
 
   /* Are they well-formed?  */
-  if (a_end != (char *) ak->data + ak->size)
+  if (a_end != (const char *) ak->data + ak->size)
     a_end = 0;
-  if (b_end != (char *) bk->data + bk->size)
+  if (b_end != (const char *) bk->data + bk->size)
     b_end = 0;
 
   /* If both keys are well-formed, then compare them numerically.  */
@@ -337,12 +338,12 @@ begin_txn_body (void *baton,
 
   /* Try to parse the key as a number.  */
   {
-    char *end;
+    const char *end;
     id = svn_fs__getsize (key.data, key.size, &end, 10000000);
 
     /* If we didn't consume the entire key as the number, then it's a
        bogus key.  */
-    if (end != (char *) key.data + key.size)
+    if (end != (const char *) key.data + key.size)
       {
 	svn_err = (svn_error_createf
 		   (SVN_ERR_FS_CORRUPT, 0, 0, svn_txn->fs->pool,

@@ -53,8 +53,8 @@
 /* Converting text to numbers.  */
 
 apr_size_t
-svn_fs__getsize (char *data, apr_size_t len,
-		 char **endptr,
+svn_fs__getsize (const char *data, apr_size_t len,
+		 const char **endptr,
 		 apr_size_t max)
 {
   /* We can't detect overflow by simply comparing value against max,

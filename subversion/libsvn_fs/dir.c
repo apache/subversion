@@ -400,11 +400,14 @@ svn_fs_dir_entries (apr_hash_t **table_p,
 
       /* If the node is immutable, name_skel points into the node's
 	 copy of the data, so we need to copy it.  Otherwise, we know
-	 it's already allocated in pool, so we can just reference it.  */
+	 it's already allocated in pool, so we can just reference it.
+
+         dirent->name should be considered "const" by callers, so it
+         should be safe to return them a reference to our data. */
       if (dir_node_is_mutable)
 	{
 	  dirent->name = NEW (pool, svn_string_t);
-	  dirent->name->data = name_skel->data;
+	  dirent->name->data = (char *)name_skel->data;
 	  dirent->name->len = name_skel->len;
 	}
       else
