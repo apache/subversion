@@ -499,7 +499,10 @@ svn_client_switch (svn_revnum_t *result_rev,
                    apr_pool_t *pool);
 
 
-/** Schedule a working copy @a path for addition to the repository.
+/**
+ * @since New in 1.1.
+ *
+ * Schedule a working copy @a path for addition to the repository.
  *
  * @a path's parent must be under revision control already, but @a 
  * path is not.  If @a recursive is set, then assuming @a path is a 
