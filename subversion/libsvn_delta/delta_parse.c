@@ -363,8 +363,8 @@ do_directory_callback (svn_delta_digger_t *digger,
      wonder if it's such a good idea to use svn_string_t in situations
      where (char *) is so much more natural, though... */
   const char *ancestor, *ver;
-  svn_string_t *base_path = NULL;
-  svn_version_t base_version = 0;
+  svn_string_t *ancestor_path = NULL;
+  svn_version_t ancestor_version = 0;
   svn_string_t *dir_name = NULL;
 
   /* Only proceed if the walker callback exists. */
@@ -386,25 +386,25 @@ do_directory_callback (svn_delta_digger_t *digger,
      attributes of the current <dir> tag. */
   ancestor = get_attribute_value (atts, "ancestor");
   if (ancestor)
-    base_path = svn_string_create (ancestor, digger->pool);
+    ancestor_path = svn_string_create (ancestor, digger->pool);
   ver = get_attribute_value (atts, "ver");
   if (ver)
-    base_version = atoi (ver);
+    ancestor_version = atoi (ver);
 
   /* Call our walker's callback. */
   if (replace_p)
     err = (* (digger->walker->replace_directory)) (dir_name,
                                                    digger->walk_baton,
                                                    youngest_frame->baton,
-                                                   base_path,
-                                                   base_version,
+                                                   ancestor_path,
+                                                   ancestor_version,
                                                    &child_baton);
   else
     err = (* (digger->walker->add_directory)) (dir_name,
                                                digger->walk_baton,
                                                youngest_frame->baton,
-                                               base_path,
-                                               base_version,
+                                               ancestor_path,
+                                               ancestor_version,
                                                &child_baton);
   if (err) 
     return err;
@@ -465,8 +465,8 @@ do_file_callback (svn_delta_digger_t *digger,
 {
   svn_error_t *err;
   const char *ancestor, *ver;
-  svn_string_t *base_path = NULL;
-  svn_version_t base_version = 0;
+  svn_string_t *ancestor_path = NULL;
+  svn_version_t ancestor_version = 0;
   svn_string_t *dir_name = NULL;
 
   /* Only proceed if the walker callback exists. */
@@ -488,24 +488,24 @@ do_file_callback (svn_delta_digger_t *digger,
      attributes of the current <dir> tag. */
   ancestor = get_attribute_value (atts, "ancestor");
   if (ancestor)
-    base_path = svn_string_create (ancestor, digger->pool);
+    ancestor_path = svn_string_create (ancestor, digger->pool);
   ver = get_attribute_value (atts, "ver");
   if (ver)
-    base_version = atoi (ver);
+    ancestor_version = atoi (ver);
 
   /* Call our walker's callback, and get back a window handler & baton. */
   if (replace_p)
     err = (* (digger->walker->replace_file)) (dir_name,
                                               digger->walk_baton,
                                               youngest_frame->baton,
-                                              base_path,
-                                              base_version);
+                                              ancestor_path,
+                                              ancestor_version);
   else
     err = (* (digger->walker->add_file)) (dir_name,
                                           digger->walk_baton,
                                           youngest_frame->baton,
-                                          base_path,
-                                          base_version);
+                                          ancestor_path,
+                                          ancestor_version);
 
   if (err)
     return err;

@@ -292,8 +292,9 @@ typedef struct svn_delta_walk_t
      - PARENT_BATON is the baton for the current directory, whose
        entries we are adding/removing/replacing.
 
-     - If BASE_PATH is non-zero, then BASE_PATH and BASE_VERSION
-       indicate the ancestor of the resulting object.
+     - If ANCESTOR_PATH is non-zero, then ANCESTOR_PATH and
+       ANCESTOR_VERSION indicate the ancestor of the resulting
+       object.
 
      - PDELTA is a property delta structure, describing either changes
        to the existing object's properties (for the `replace_FOO'
@@ -328,23 +329,24 @@ typedef struct svn_delta_walk_t
      the value this callback stores in *CHILD_BATON as the
      PARENT_BATON for further changes in the new subdirectory.  The
      subdirectory is described as a series of changes to the base; if
-     BASE_PATH is zero, the changes are relative to an empty directory.  */
+     ANCESTOR_PATH is zero, the changes are relative to an empty
+     directory. */
   svn_error_t *(*add_directory) (svn_string_t *name,
 				 void *walk_baton, void *parent_baton,
-				 svn_string_t *base_path,
-				 svn_vernum_t base_version,
+				 svn_string_t *ancestor_path,
+				 svn_vernum_t ancestor_version,
 				 void **child_baton);
 
   /* We are going to change the directory entry named NAME to a
      subdirectory.  The callback must store a value in *CHILD_BATON
      that will be used as the PARENT_BATON for subsequent changes in
      this subdirectory.  The subdirectory is described as a series of
-     changes to the base; if BASE_PATH is zero, the changes are
+     changes to the base; if ANCESTOR_PATH is zero, the changes are
      relative to an empty directory.  */
   svn_error_t *(*replace_directory) (svn_string_t *name,
 				     void *walk_baton, void *parent_baton,
-				     svn_string_t *base_path,
-				     svn_vernum_t base_version,
+				     svn_string_t *ancestor_path,
+				     svn_vernum_t ancestor_version,
 				     void **child_baton);
 
   /* We are done processing a subdirectory, whose baton is
@@ -358,8 +360,8 @@ typedef struct svn_delta_walk_t
   
   /* We're about to start receiving text-delta windows. HANDLER and
      HANDLER_BATON specify a function to consume a series of these
-     windows.  If BASE_PATH is zero, the changes are relative to the
-     empty file. */
+     windows.  If ANCESTOR_PATH is zero, the changes are relative to
+     the empty file. */
   svn_error_t *(*begin_textdelta) (void *walk_baton, void *parent_baton,
                                    svn_text_delta_window_handler_t **handler,
                                    void **handler_baton);
@@ -367,7 +369,7 @@ typedef struct svn_delta_walk_t
 
   /* We're about to start receiving a prop-delta. HANDLER and
      HANDLER_BATON specify a function to consume a series of
-     propchange chunks.  If BASE_PATH is zero, the changes are
+     propchange chunks.  If ANCESTOR_PATH is zero, the changes are
      relative to the empty file. 
   
      Note: this is the "fully streamy" interface referred to earlier.
@@ -389,17 +391,17 @@ typedef struct svn_delta_walk_t
   /* We are going to add a new file named NAME.    */
   svn_error_t *(*add_file) (svn_string_t *name,
 			    void *walk_baton, void *parent_baton,
-			    svn_string_t *base_path,
-			    svn_vernum_t base_version);
+			    svn_string_t *ancestor_path,
+			    svn_vernum_t ancestor_version);
 
 
   /* We are going to change the directory entry named NAME to a file.
      TEXT_DELTA specifies the file contents as a delta relative to the
-     base, or the empty file if BASE_PATH is zero.  */
+     base, or the empty file if ANCESTOR_PATH is zero.  */
   svn_error_t *(*replace_file) (svn_string_t *name,
 				void *walk_baton, void *parent_baton,
-				svn_string_t *base_path,
-				svn_vernum_t base_version);
+				svn_string_t *ancestor_path,
+				svn_vernum_t ancestor_version);
 
 
 } svn_delta_walk_t;

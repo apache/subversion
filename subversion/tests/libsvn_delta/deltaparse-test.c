@@ -74,12 +74,12 @@ test_delete (svn_string_t *filename, void *walk_baton, void *parent_baton)
 svn_error_t *
 test_add_directory (svn_string_t *name,
                     void *walk_baton, void *parent_baton,
-                    svn_string_t *base_path,
-                    long int base_version,
+                    svn_string_t *ancestor_path,
+                    long int ancestor_version,
                     void **child_baton)
 {
   printf ("ADD_DIR event:  name '%s', ancestor '%s' version %d\n",
-          name->data, base_path->data, base_version);
+          name->data, ancestor_path->data, ancestor_version);
   
   return SVN_NO_ERROR;
 }
@@ -88,12 +88,12 @@ test_add_directory (svn_string_t *name,
 svn_error_t *
 test_replace_directory (svn_string_t *name,
                         void *walk_baton, void *parent_baton,
-                        svn_string_t *base_path,
-                        long int base_version,
+                        svn_string_t *ancestor_path,
+                        long int ancestor_version,
                         void **child_baton)
 {
   printf ("REPLACE_DIR event:  name '%s', ancestor '%s' version %d\n",
-          name->data, base_path->data, base_version);
+          name->data, ancestor_path->data, ancestor_version);
   
   return SVN_NO_ERROR;
 }
@@ -134,11 +134,11 @@ test_begin_textdelta (void *walk_baton, void *parent_baton,
 svn_error_t *
 test_add_file (svn_string_t *name,
                void *walk_baton, void *parent_baton,
-               svn_string_t *base_path,
-               long int base_version)
+               svn_string_t *ancestor_path,
+               long int ancestor_version)
 {
   printf ("ADD_FILE event:  name '%s', ancestor '%s' version %d\n",
-          name->data, base_path->data, base_version);
+          name->data, ancestor_path->data, ancestor_version);
   
   return SVN_NO_ERROR;
 }
@@ -148,11 +148,11 @@ test_add_file (svn_string_t *name,
 svn_error_t *
 test_replace_file (svn_string_t *name,
                    void *walk_baton, void *parent_baton,
-                   svn_string_t *base_path,
-                   long int base_version)
+                   svn_string_t *ancestor_path,
+                   long int ancestor_version)
 {
   printf ("REPLACE_FILE event:  name '%s', ancestor '%s' version %d\n",
-          name->data, base_path->data, base_version);
+          name->data, ancestor_path->data, ancestor_version);
   
   return SVN_NO_ERROR;
 }
