@@ -130,7 +130,7 @@ PYTHON_DISTUTIL = $(SWIG_SRC_DIR)/python/setup.py                        \
                   -L$(abs_builddir)/subversion/libsvn_wc/.libs           \
                   -L$(abs_builddir)/subversion/libsvn_subr/.libs         \
                   -L$(abs_builddir)/subversion/bindings/swig/.libs       \
-                  $(SWIG_LDFLAGS)
+                  $(SWIG_PY_SETUP_LDFLAGS)
 
 all: external-all local-all
 clean: external-clean local-clean
