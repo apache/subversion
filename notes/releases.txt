@@ -158,7 +158,7 @@
    new branch (with the minor version number incremented), apply
    fixes, and go through the release process again.
 
-9. Update www/project_status.html on trunk.
+9. Update the website.
 
    a. Edit the www/project_status.html file appropriately in /trunk *NOT*
       in the release branch and commit.
@@ -168,9 +168,16 @@
 
          svn switch http://svn.collab.net/repos/svn/trunk
 
-      then edit the www/project_status.html file appropriately and commit.
+      then edit the www/project_status.html file appropriately.
 
-   b. Go to http://svn.collab.net and click on the "Update the
+   b. Edit the www/latest_tarball.html file (again, in /trunk),
+      replacing the redirection URL with the "file sharing" URL of the
+      new tarball.
+
+   c. Commit the modifications of www/project_status.html and
+      www/latest_tarball.html.
+
+   d. Go to http://svn.collab.net and click on the "Update the
       live web site" link.  Click 'Publish' then visit
       http://subversion.tigris.org/project_status.html to make sure
       the changes are there.  You may have to hit 'Reload' if this
