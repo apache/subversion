@@ -134,7 +134,7 @@ simple_wc_save_creds (svn_boolean_t *saved,
 
 
 /* The provider. */
-const svn_auth_provider_t simple_wc_provider = 
+static const svn_auth_provider_t simple_wc_provider = 
   {
     SVN_AUTH_CRED_SIMPLE,  /* username/passwd creds */
     simple_wc_first_creds,

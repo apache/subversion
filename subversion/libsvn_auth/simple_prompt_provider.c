@@ -19,12 +19,8 @@
 
 
 #include "svn_client.h"
-#include "svn_wc.h"
 #include "svn_auth.h"
 
-
-/* Bikeshed:  how many times we re-try prompting. */
-#define SVN_AUTH_SIMPLE_PROMPT_RETRY_LIMIT  2
 
 
 typedef struct
@@ -32,6 +28,9 @@ typedef struct
   /* a callback function/baton that prompts the user */
   svn_auth_prompt_t prompt_func;
   void *prompt_baton;
+
+  /* how many times to re-prompt after the first one fails */
+  int retry_limit;
 
   /* a default username, to try before prompting.  can be NULL. */
   const char *default_username;
@@ -44,9 +43,8 @@ typedef struct
 
 typedef struct
 {
-  /* the same callback from the main provider baton */
-  svn_auth_prompt_t prompt_func;
-  void *prompt_baton;
+  /* The original provider baton */
+  simple_prompt_provider_baton_t *pb;
 
   /* how many times we've reprompted */
   int retries;
@@ -62,11 +60,10 @@ simple_prompt_first_creds (void **credentials,
                            void *provider_baton,
                            apr_pool_t *pool)
 {
-  simple_prompt_provider_baton_t *pb
-    = (simple_prompt_provider_baton_t *) provider_baton;
+  simple_prompt_provider_baton_t *pb = provider_baton;
   svn_auth_cred_simple_t *creds = apr_pcalloc (pool, sizeof(*creds));
   simple_prompt_iter_baton_t *ibaton = apr_pcalloc (pool, sizeof(*ibaton));
-  char *username, *password;
+  const char *username, *password;
 
   if (pb->default_username == NULL)
     {
@@ -76,7 +73,7 @@ simple_prompt_first_creds (void **credentials,
     }
   else
     {
-      username = (char *) pb->default_username;
+      username = pb->default_username;
     }
 
   if (pb->default_password == NULL)
@@ -88,7 +85,7 @@ simple_prompt_first_creds (void **credentials,
     }
   else
     {
-      password = (char *) pb->default_password;
+      password = pb->default_password;
     }
 
   creds->username = username;
@@ -96,8 +93,7 @@ simple_prompt_first_creds (void **credentials,
   *credentials = creds;
 
   ibaton->retries = 0;
-  ibaton->prompt_func = pb->prompt_func;
-  ibaton->prompt_baton = pb->prompt_baton;
+  ibaton->pb = pb;
   *iter_baton = ibaton;
 
   return SVN_NO_ERROR;
@@ -111,13 +107,11 @@ simple_prompt_next_creds (void **credentials,
                           void *iter_baton,
                           apr_pool_t *pool)
 {
-  simple_prompt_iter_baton_t *ib
-    = (simple_prompt_iter_baton_t *) iter_baton;
+  simple_prompt_iter_baton_t *ib = iter_baton;
   svn_auth_cred_simple_t *creds;
   const char *prompt;
-  char *username, *password;
 
-  if (ib->retries >= SVN_AUTH_SIMPLE_PROMPT_RETRY_LIMIT)
+  if (ib->retries >= ib->pb->retry_limit)
     {
       /* give up, go on to next provider. */
       *credentials = NULL;
@@ -127,17 +121,15 @@ simple_prompt_next_creds (void **credentials,
 
   creds = apr_pcalloc (pool, sizeof(*creds));
 
-  SVN_ERR (ib->prompt_func (&username, "username: ",
-                            FALSE, /* screen echo ok */
-                            ib->prompt_baton, pool));
+  SVN_ERR (ib->pb->prompt_func (&creds->username, "username: ",
+                                FALSE, /* screen echo ok */
+                                ib->pb->prompt_baton, pool));
 
-  prompt = apr_psprintf (pool, "%s's password: ", username);
-  SVN_ERR (ib->prompt_func (&password, prompt,
-                            TRUE, /* don't echo to screen */
-                            ib->prompt_baton, pool));
-
-  creds->username = username;
-  creds->password = password;
+  prompt = apr_psprintf (pool, "%s's password: ", creds->username);
+  SVN_ERR (ib->pb->prompt_func (&creds->password, prompt,
+                                TRUE, /* don't echo to screen */
+                                ib->pb->prompt_baton, pool));
+  
   *credentials = creds;
 
   return SVN_NO_ERROR;
@@ -146,7 +138,7 @@ simple_prompt_next_creds (void **credentials,
 
 
 /* The provider. */
-const svn_auth_provider_t simple_prompt_provider = 
+static const svn_auth_provider_t simple_prompt_provider = 
   {
     SVN_AUTH_CRED_SIMPLE,  /* username/passwd creds */
     simple_prompt_first_creds,
@@ -161,6 +153,7 @@ svn_auth_get_simple_prompt_provider (const svn_auth_provider_t **provider,
                                      void **provider_baton,
                                      svn_auth_prompt_t prompt_func,
                                      void *prompt_baton,
+                                     int retry_limit,
                                      const char *default_username,
                                      const char *default_password,
                                      apr_pool_t *pool)
@@ -168,8 +161,12 @@ svn_auth_get_simple_prompt_provider (const svn_auth_provider_t **provider,
   simple_prompt_provider_baton_t *pb = apr_pcalloc (pool, sizeof(*pb));
   pb->prompt_func = prompt_func;
   pb->prompt_baton = prompt_baton;
-  pb->default_username = apr_pstrdup (pool, default_username);
-  pb->default_password = apr_pstrdup (pool, default_password);
+  pb->retry_limit = retry_limit;
+
+  if (default_username)
+    pb->default_username = apr_pstrdup (pool, default_username);
+  if (default_password)
+    pb->default_password = apr_pstrdup (pool, default_password);
 
   *provider = &simple_prompt_provider;
   *provider_baton = pb;

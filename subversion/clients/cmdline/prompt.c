@@ -73,13 +73,11 @@ svn_cl__make_auth_baton (svn_cl__opt_state_t *opt_state,
 
 
 
-/*** Our implementation of the 'auth info callback' routine, 
-     as defined in svn_client.h.   This callback is passed to any
-     libsvn_client routine that needs to authenticate against a
-     repository. ***/
+/*** Our implementation of the 'prompt callback' routine, as defined
+     in svn_auth.h.  (See svn_auth_prompt_t.)  */
 
 svn_error_t *
-svn_cl__prompt_user (char **result,
+svn_cl__prompt_user (const char **result,
                      const char *prompt,
                      svn_boolean_t hide,
                      void *baton,
