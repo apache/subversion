@@ -69,18 +69,24 @@ fi
 # check that our local copies of files match up with those in APR(UTIL)
 #
 if test -d ./apr; then
-  if ! cmp -s ./ac-helpers/find_apr.m4 ./apr/build/find_apr.m4; then
+  if cmp -s ./ac-helpers/find_apr.m4 ./apr/build/find_apr.m4; then
+    :
+  else
     echo "buildcheck: local copy of find_apr.m4 does not match APR's copy."
     echo "            An updated copy of find_apr.m4 may need to be checked in."
   fi
-  if ! cmp -s ./build/PrintPath ./apr/build/PrintPath; then
+  if cmp -s ./build/PrintPath ./apr/build/PrintPath; then
+    :
+  else
     echo "buildcheck: local copy of PrintPath does not match APR's copy."
     echo "            An updated copy of PrintPath may need to be checked in."
   fi
 fi
 
 if test -d ./apr-util; then
-  if ! cmp -s ./ac-helpers/find_apu.m4 ./apr-util/build/find_apu.m4; then
+  if cmp -s ./ac-helpers/find_apu.m4 ./apr-util/build/find_apu.m4; then
+    :
+  else
     echo "buildcheck: local copy of find_apu.m4 does not match APRUTIL's copy."
     echo "            An updated copy of find_apu.m4 may need to be checked in."
   fi
