@@ -12,11 +12,14 @@ short-term tasks to it, if that's helpful.
 Ben todo:
    - adm_crawler.c: finish emitting properties and doing proper
      conflict detection
-   - Oy.  Do properties on *directories* work yet?  :)  Test n' hack.
    - update-after-editor: isn't printing `G' for prop merges.  isn't
      printing `C' for either textual or property conflicts.  fix this.
+   - better yet:  decide if we're going to print two-column statuses.
    - link svn_wc_prop_patch() svn_wc_prop_get() to svn binary.  I'm
      tired of changing properties with a text editor. :)
+   - use svn_wc__prop_path and svn_wc__prop_base_path whereever possible.
+   - use karl's forthcoming "magic" adm/entryname routine whereever
+     possible, once it exists.
 
 Karl working copy todo:
    - use apr process api instead of system(), don't use redirection
