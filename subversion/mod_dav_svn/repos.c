@@ -1282,6 +1282,43 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   /* capture warnings during cleanup of the FS */
   svn_fs_set_warning_func(repos->fs, log_warning, r);
 
+  /* if an authenticated username is present, attach it to the FS */
+  if (r->user)
+    {
+      svn_fs_access_t *access_ctx;
+
+      serr = svn_fs_create_access (&access_ctx, r->user, r->pool);
+      if (serr)
+        {
+          const char *new_msg = "Could not create fs access context.";
+          svn_error_t *sanitized_error = svn_error_create(serr->apr_err,
+                                                          NULL, new_msg);
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
+                        "%s", serr->message);
+          svn_error_clear(serr);
+          return dav_svn_convert_err (sanitized_error,
+                                      HTTP_INTERNAL_SERVER_ERROR,
+                                      apr_psprintf(r->pool, new_msg),
+                                      r->pool);
+        }
+
+      serr = svn_fs_set_access (repos->fs, access_ctx);
+      if (serr)
+        {
+          const char *new_msg = "Could not attach access context to fs.";
+          svn_error_t *sanitized_error = svn_error_create(serr->apr_err,
+                                                          NULL, new_msg);
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
+                        "%s", serr->message);
+          svn_error_clear(serr);
+          return dav_svn_convert_err (sanitized_error,
+                                      HTTP_INTERNAL_SERVER_ERROR,
+                                      apr_psprintf(r->pool, new_msg),
+                                      r->pool);
+        }      
+    }
+
+
   /* Figure out the type of the resource. Note that we have a PARSE step
      which is separate from a PREP step. This is because the PARSE can
      map multiple URLs to the same resource type. The PREP operates on

@@ -253,6 +253,7 @@ extern const dav_hooks_repository dav_svn_hooks_repos;
 extern const dav_hooks_propdb dav_svn_hooks_propdb;
 extern const dav_hooks_liveprop dav_svn_hooks_liveprop;
 extern const dav_hooks_vsn dav_svn_hooks_vsn;
+extern const dav_hooks_locks dav_svn_hooks_locks;
 
 /* for the repository referred to by this request, where is the SVN FS? */
 const char *dav_svn_get_fs_path(request_rec *r);

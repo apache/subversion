@@ -335,7 +335,7 @@ static dav_provider dav_svn_provider =
 {
     &dav_svn_hooks_repos,
     &dav_svn_hooks_propdb,
-    NULL,                       /* locks */
+    &dav_svn_hooks_locks,
     &dav_svn_hooks_vsn,
     NULL,                       /* binding */
     NULL                        /* search */
