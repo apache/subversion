@@ -381,11 +381,12 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
   
   /* Otherwise, fall back on filesize and/or byte-for-byte comparison. */
 
-  /* ### todo: add keyword handling here too. */
   {
     enum svn_wc__eol_style style;
     const char *eol;
     
+    /* ### todo: add keyword handling here too. */
+
     SVN_ERR (svn_wc__get_eol_style (&style, &eol, filename->data, subpool));
     if ((style == svn_wc__eol_style_none)
         || (style == svn_wc__eol_style_fixed))
