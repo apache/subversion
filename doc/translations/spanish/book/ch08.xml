@@ -205,29 +205,31 @@
         de versionado hasta el momento inicial en el cual comenzó
         a añadir cosas al sistema de archivos.</para>
 
-      <para>All the modifications you make to your tree are done
-        within the context of a Subversion transaction.  The following
-        is a simplified general routine for modifying your
-        filesystem:</para>
+      <para>Todas las modificaciones que haga a su árbol se
+        realizarán en el contexto de una transacción de
+        Subversion. Lo siguiente es una rutina general simplificada
+        para modificar su sistema de ficheros:</para>
 
       <orderedlist>
         <listitem>
-          <para>Begin a Subversion transaction.</para>
+          <para>Comience una transacción de Subversion.</para>
         </listitem>
         <listitem>
-          <para>Make your changes (adds, deletes, property
-            modifications, etc.).</para>
+          <para>Realice sus cambios (adiciones, borrados,
+            modificación de propiedades, etc.).</para>
         </listitem>
         <listitem>
-          <para>Commit your transaction.</para>
+          <para>Finalice su transacción.</para>
         </listitem>
       </orderedlist>
 
-      <para>Once you have committed your transaction, your filesystem
-        modifications are permanently stored as historical artifacts.
-        Each of these cycles generates a single new revision of your
-        tree, and each revision is forever accessible as an immutable
-        snapshot of <quote>the way things were.</quote></para>
+      <para>Una vez ha finalizado su transacción, las modificaciones
+        a su sistema de ficheros se almacenan permanentemente como
+        artefactos históricos <!-- TODO historical artifacts? -->.
+        Cada uno de estos ciclos genera una nueva revisión de su
+        árbol, y cada revisión es accesible para siempre como
+        una instantánea inmutable de <quote>cómo estaban las
+        cosas.</quote></para>
 
       <sidebar>
         <title>The Transaction Distraction</title>
