@@ -1,3 +1,16 @@
+Version 0.28.2 (released 29 Aug 2003, revision 6946)
+http://svn.collab.net/repos/svn/tags/0.28.2
+
+ User-visible changes:
+ * MAJOR BUGFIX:  revert revision 6764.
+
+      The new history-searching code was over-stressing our use
+      of BerkeleyDB transactions, causing checkouts to go
+      twice as slow and lose all concurrent-client scalability.
+
+      This is a temporary fix for a larger design problem.  See issue
+      http://subversion.tigris.org/issues/show_bug.cgi?id=1499
+
 Version 0.28.1
 (released 28 Aug 2003,http://svn.collab.net/repos/svn/tags/0.28.1)
 
