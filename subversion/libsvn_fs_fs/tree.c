@@ -670,7 +670,7 @@ open_path (parent_path_t **parent_path_p,
   dag_node_t *here; /* The directory we're currently looking at.  */
   parent_path_t *parent_path; /* The path from HERE up to the root.  */
   const char *rest; /* The portion of PATH we haven't traversed yet.  */
-  const char *canon_path = svn_fs__canonicalize_abspath (path, pool);
+  const char *canon_path = svn_fs_fs__canonicalize_abspath (path, pool);
   const char *path_so_far = "/";
 
   /* Make a parent_path item for the root node, using its own current
@@ -889,7 +889,7 @@ get_dag (dag_node_t **dag_node_p,
   dag_node_t *node = NULL;
 
   /* Canonicalize the input PATH. */
-  path = svn_fs__canonicalize_abspath (path, pool);
+  path = svn_fs_fs__canonicalize_abspath (path, pool);
 
   /* If ROOT is a revision root, we'll look for the DAG in our cache. */
   node = dag_node_cache_get (root, path, pool);
@@ -932,7 +932,7 @@ add_change (svn_fs_t *fs,
             apr_pool_t *pool)
 {
   SVN_ERR (svn_fs_fs__add_change (fs, txn_id,
-                                  svn_fs__canonicalize_abspath (path, pool),
+                                  svn_fs_fs__canonicalize_abspath (path, pool),
                                   noderev_id, change_kind, text_mod, prop_mod,
                                   copyfrom_rev, copyfrom_path,
                                   pool));
@@ -1246,7 +1246,7 @@ undelete_change (svn_fs_t *fs,
   svn_fs_path_change_t *this_change;
 
   /* Canonicalize PATH. */
-  path = svn_fs__canonicalize_abspath (path, pool);
+  path = svn_fs_fs__canonicalize_abspath (path, pool);
 
   /* First, get the changes associated with TXN_ID. */
   SVN_ERR (svn_fs_fs__txn_changes_fetch (&changes, fs, txn_id, NULL, pool));
@@ -2300,7 +2300,7 @@ copy_helper (svn_fs_root_t *from_root,
                                     from_node,
                                     preserve_history,
                                     svn_fs_revision_root_revision (from_root),
-                                    svn_fs__canonicalize_abspath (from_path,
+                                    svn_fs_fs__canonicalize_abspath (from_path,
                                                                   pool),
                                     txn_id, pool));
 
@@ -3026,7 +3026,7 @@ fs_node_history (svn_fs_history_t **history_p,
 
   /* Okay, all seems well.  Build our history object and return it. */
   *history_p = assemble_history (root->fs,
-                                 svn_fs__canonicalize_abspath (path, pool),
+                                 svn_fs_fs__canonicalize_abspath (path, pool),
                                  root->rev, FALSE, NULL, 
                                  SVN_INVALID_REVNUM, pool);
   return SVN_NO_ERROR;

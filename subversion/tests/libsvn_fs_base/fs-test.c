@@ -4789,7 +4789,7 @@ canonicalize_abspath (const char **msg,
     { "///foo///bar///baz///", "/foo/bar/baz" },
   };
 
-  *msg = "test svn_fs__canonicalize_abspath";
+  *msg = "test svn_fs_base__canonicalize_abspath";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -4798,7 +4798,7 @@ canonicalize_abspath (const char **msg,
     {
       const char *input = paths[i][0];
       const char *output = paths[i][1];
-      const char *actual = svn_fs__canonicalize_abspath (input, pool);
+      const char *actual = svn_fs_base__canonicalize_abspath (input, pool);
       
       if ((! output) && (! actual))
         continue;

@@ -1470,7 +1470,7 @@ svn_fs_base__dag_copy (dag_node_t *to_node,
          reserved above.  */
       SVN_ERR (svn_fs_bdb__create_copy
                (fs, copy_id,
-                svn_fs__canonicalize_abspath (from_path, trail->pool),
+                svn_fs_base__canonicalize_abspath (from_path, trail->pool),
                 from_txn_id, id, copy_kind_real, trail));
 
       /* Finally, add the COPY_ID to the transaction's list of copies
