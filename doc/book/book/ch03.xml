@@ -789,7 +789,7 @@ $ svn diff > patchfile
           mistake; perhaps you accidentally typed that text into the
           wrong file in your editor.</para>
       
-        <para>This is a perfect opportunity to use <command>svn
+        <para>This is a prime example for using <command>svn
           revert</command>.</para>
            
         <screen>
@@ -797,16 +797,15 @@ $ svn revert README
 Reverted ./README
         </screen>
         
-        <para>Subversion reverts the file to its pre-modified state by
+        <para>The file is reverted to its pre-modified state by
           overwriting it with the cached <quote>pristine</quote> copy
           from the <filename>.svn</filename> area.  But also note that
-          <command>svn revert</command> can undo
-          <emphasis>any</emphasis> scheduled operations&mdashfor
-          example, you might decide that you don't want to add a new
-          file after all:</para>
+          <command>svn revert</command> can undo any scheduled
+          operations&mdash;in case you decide that you don't want to
+          add a new file after all:</para>
 
         <screen>
-$ svn status foo
+$ svn st foo
 ?      foo
 
 $ svn add foo
@@ -815,7 +814,7 @@ A         foo
 $ svn revert foo
 Reverted foo
 
-$ svn status foo
+$ svn st foo
 ?      foo
         </screen>
 
@@ -823,16 +822,16 @@ $ svn status foo
           control:</para>
 
         <screen>
-$ svn status README 
+$ svn st README 
        README
 
-$ svn delete README 
+$ svn rm README 
 D         README
 
 $ svn revert README
 Reverted README
 
-$ svn status README
+$ svn st README
        README
         </screen>
 
@@ -862,9 +861,7 @@ $ svn status README
           version.  Since at commit time CVS has only the user's
           edited version of a file, it has to send that
           <emphasis>entire file</emphasis> to the server in order to
-          relay the local modifications.  At first glance, this might
-          not seem too bad, but imagine the repercussions if you
-          change 1 line of a 400MB file!</para>
+          relay the local modifications.</para>
     </sidebar>
 
     </sect2>
@@ -877,156 +874,81 @@ $ svn status README
           update</command> and some interesting things occur:</para>
       
       <screen>
-$ svn update
+$ svn up
 U  ./INSTALL
 G  ./README
 C  ./bar.c
       </screen>
            
       <para>The <computeroutput>U</computeroutput> and
-        <computeroutput>G</computeroutput> codes are no cause for
-        concern; those files cleanly absorbed changes from the
+        <computeroutput>G</computeroutput> codes are nothing to sweat
+        about; those files cleanly absorbed changes from the
         repository.  The <computeroutput>G</computeroutput> stands for
         mer<computeroutput>G</computeroutput>ed, which means that the
-        file had local changes to begin with, but the changes coming
-        from the repository didn't overlap in any way.</para>
+        file had local changes to begin with, but the repository
+        changes didn't overlap in any way.</para>
            
       <para>But the <computeroutput>C</computeroutput> stands for
-        conflict.  This means that the changes from the server overlapped
+        conflict.  This means that the server's changes overlapped
         with your own, and now you have to manually choose between
         them.</para>
            
-      <para>Whenever a conflict occurs, your Subversion client does
-      the following:</para>
+      <para>Whenever a conflict occurs:</para>
            
       <itemizedlist>
 
         <listitem>
-          <para>Subversion prints a <computeroutput>C</computeroutput> during
-            the update, and remembers that the file is
+          <para>A <computeroutput>C</computeroutput> is printed during
+            the update, and Subversion remembers that the file is
             <quote>conflicted.</quote></para>
         </listitem>
 
         <listitem>
-          <para>Subversion places <firstterm>Conflict markers</firstterm> into the file, to visibly
+          <para>Conflict markers are placed into the file, to visibly
            demonstrate the overlapping areas.</para>
         </listitem>
 
-<!-- ###TODO begin airport -->
-
         <listitem>
-          <para>For every conflicted file, Subversion places three
-          extra files in your working copy:
-
-<!-- ###TODO make this a varlist -->
-<!-- ###TODO sidebar about svn not screwing up your file. -->
-          <itemizedlist>
-
-        <listitem>
-          <para>filename.*.mine
-          This is your file as it existed in your working copy before you updated your
-          working copy&mdash;that is, without conflict markers.  This
-          file has your latest changes in it.
-
-          </para>
-        </listitem>filename.*.oldrev
-          This is the file that was the BASE revision before you
-        updated your working copy.  That is, it the file that you
-        checked out before you made your latest edits.
-</para>
-
-        <listitem>
-          <para>filename.*.newrevision
-          This is the file that your Subversion client just received
-          from the server when you updated your working copy.  This
-          file corresponds to the HEAD revision of the repository.
-          </para>
-        </listitem>
-
-</itemizedlist>
-
-          <para>
+          <para>Three fulltext files are created; these files are the
+            original three files that could not be merged together.
+            Given the a file named <filename>ORIG_NAME</filename>, the
+            three new fulltext files have filenames of the
+            form<filename>ORIG_NAME.*.mine</filename>,<filename>ORIG_NAME.*.rOLD_REV</filename>
+            and <filename>ORIG_NAME.*.rNEW_REV</filename>.
             Here<literal>*</literal> represents some random digits
-            that Subversion chooses, "oldrev
-
+            that SVN chooses,<filename>ORIG_NAME.*.mine</filename> is
+            a copy of the file that existed in your local working copy
+            before the merge and without any conflict
+            markers,<filename>ORIG_NAME.*.rOLD_REV</filename> is the
+            original version of <filename>ORIG_NAME</filename> at the
+            revision that your working copy is based off of
+            with<literal>OLD_REV</literal> replaced with the specific
+            revision number, and
+            <filename>ORIG_NAME.*.rNEW_REV</filename> is the original
+            version of<filename>ORIG_NAME</filename> that the file is
+            being merged to, again with<filename>NEW_REV</filename>
+            replaced with the specific revision number.</para>
         </listitem>
 
       </itemizedlist>
-
-<para>For example, Sally makes changes to the file sandwich in the
-repository.  Harry has just changed the file in his working copy and
-checked it in.  Sally updates her working copy before checking in and
-she gets a conflict:</para>
-
-<screen>
-$ svn update
-C  sandwich
-Updated to revision 2.
-$ ls -1
-sandwich                       
-sandwich.59528.00001.r2        
-sandwich.59524.00001.r1
-sandwich.59532.00001.mine
-$
-</screen>
-<!-- ###TODO What happens if the revnum is gt 99999?-->
       
       <para>At this point, Subversion will <emphasis>not</emphasis>
-        allow you to commit the file
-        <filename>sandwich</filename>until the three temporary files
+        allow you to commit the file until the three temporary files
         are removed.</para>
-
-<screen>
-$ svn ci -m "Add a few more things"
-subversion/libsvn_client/commit.c:654: (apr_err=155015, src_err=0)
-svn: A conflict in working copy obstructs the current operation
-svn: Commit failed (details follow):
-subversion/libsvn_client/commit_util.c:180: (apr_err=155015, src_err=0)
-svn: Aborting commit: '/home/sally/svn-work/sandwich' remains in conflict.
-</screen>
-
            
       <para>If you get a conflict, you need to either (1) hand-merge
         the conflicted text (by examining and editing the conflict
         markers within the file), (2) copy one of the tmpfiles on top
         of your working file, or (3) run <command>svn revert</command>
         to toss all of your changes.</para>
-
-<!-- ###TODO Talk more here about conflict markers and external diff
-programs -->
-
-<screen>
-$ cp sandwich.59532.00001.mine sandwich
-</screen>
            
       <para>Once you've resolved the conflict, you need to let
-        Subversion know by removing the three temporary files.  (The
+        Subversion know by removing the three tmpfiles.  (The
         <command>svn resolve</command> command, by the way, is a
         shortcut that does nothing but automatically remove the three
-        temporary files for you.)  When those files are gone,
-        Subversion no longer considers the file to be in a state of
-        conflict anymore.</para>
-
-<screen>
-$ svn resolve sandwich
-Resolved conflicted state of sandwich
-</screen>
-
-<para>Now you're ready to check in your changes</para>
-
-<screen>
-$ svn ci -m "Add a few more things"
-Sending        sandwich
-Transmitting file data .
-Committed revision 3.
-</screen>
-
-<para>Note that<command>svn resolve/command>, unlike most of the
-other commands we've dealt with in this chapter, requires an argument.
-In any case, you want to be careful and only run <command>svn
-resolve</command> when you're certain that you've fixed the conflict
-in your file&mdash;once the temporary files are removed, Subversion
-will even let you check in a file with conflict markers.</para>
+        tmpfiles for you.)  When the tmpfiles are gone, Subversion no
+        longer considers the file to be in a state of conflict
+        anymore.</para>
            
     </sect2>
 
@@ -1035,37 +957,24 @@ will even let you check in a file with conflict markers.</para>
 
       <para>Finally!  Your edits are finished, you've merged all
         updates from the server, and you're ready to commit your
-        changes to the repository.</para>
+        changes.</para>
       
       <para>The <command>svn commit</command> command sends all (or,
            if you specify files or directories, some) of your changes
            to the repository.  When you commit a change, you need to
            supply a <firstterm>log message</firstterm>, describing
-           your change.  Your log message will be attached
-           to the new revision you create.  If your log message is
-           brief, you may wish to supply it on the command line using
-           the <option>--message</option> (or <option>-m</option>):</para>
+           your change.  Your log message will be permanently attached
+           to the new revision you create.</para>
            
       <screen>
 $ svn commit -m "Added include lines and corrected # of cheese slices."
 Sending        bar.c
 Transmitting file data .
 Committed revision 3.
+$
       </screen>
            
-      <para>However, if you've been composing your log message as you
-        work, you may want to tell Subversion to get the message from
-        a file:</para>
-
-      <screen>
-svn ci -F logmsg 
-Sending        sandwich
-Transmitting file data .
-Committed revision 4.
-      </screen>
-
-
-Another way to specify a log message is to place it in a
+      <para>Another way to specify a log message is to place it in a
         file, and pass the filename with the <option>-F</option>
         switch.  If you fail to specify either the <option>-m</option> or
         <option>-F</option> switch, then Subversion will
