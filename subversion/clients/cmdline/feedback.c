@@ -78,7 +78,10 @@ notify (void *baton,
   switch (action)
     {
     case svn_wc_notify_skip:
-      printf ("Skipped %s\n", path_native);
+      if (content_state == svn_wc_notify_state_missing)
+        printf ("Skipped missing target: %s\n", path_native);
+      else
+        printf ("Skipped %s\n", path_native);
       break;
 
     case svn_wc_notify_update_delete:

@@ -543,6 +543,13 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
   svn_boolean_t has_local_mods;
   enum svn_wc_merge_outcome_t merge_outcome;
 
+  /* Easy out:  no access baton means there ain't no merge target */
+  if (adm_access == NULL)
+    {
+      *state = svn_wc_notify_state_missing;
+      return SVN_NO_ERROR;
+    }
+
   /* This callback is essentially no more than a wrapper around
      svn_wc_merge().  Thank goodness that all the
      diff-editor-mechanisms are doing the hard work of getting the
@@ -571,7 +578,7 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
       else if (merge_outcome == svn_wc_merge_merged)
         *state = svn_wc_notify_state_changed;
       else if (merge_outcome == svn_wc_merge_no_merge)
-        *state = svn_wc_notify_state_unknown;
+        *state = svn_wc_notify_state_missing;
       else /* merge_outcome == svn_wc_merge_unchanged */
         *state = svn_wc_notify_state_unchanged;
     }
