@@ -36,7 +36,7 @@
 
 
 enum {
-  ELEM_resourcetype = 0x1000,
+  ELEM_resourcetype = DAV_ELM_207_UNUSED,
   ELEM_collection,
   ELEM_target,
   ELEM_activity_collection_set
