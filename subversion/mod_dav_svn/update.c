@@ -1077,7 +1077,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           if (serr != NULL)
             {
               return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "Could not parse src-path URL.");
+                                         "Could not parse src-path URL.",
+                                         resource->pool);
             }
           src_path = this_info.repos_path;
         }
@@ -1100,7 +1101,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           if (serr != NULL)
             {
               return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "Could not parse dst-path URL.");
+                                         "Could not parse dst-path URL.",
+                                         resource->pool);
             }
           dst_path = this_info.repos_path;
         }
@@ -1158,7 +1160,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
         {
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                      "Could not determine the youngest "
-                                     "revision for the update process.");
+                                     "revision for the update process.",
+                                     resource->pool);
         }
     }
 
@@ -1224,7 +1227,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                    revnum, resource->pool)))
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "The revision root could not be created.");
+                                 "The revision root could not be created.",
+                                 resource->pool);
     }
 
   /* When we call svn_repos_finish_report, it will ultimately run
@@ -1245,7 +1249,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "The state report gatherer could not be "
-                                 "created.");
+                                 "created.",
+                                 resource->pool);
     }
 
   /* scan the XML doc for state information */
@@ -1283,7 +1288,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                 derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                            "A failure occurred while "
                                            "recording one of the items of "
-                                           "working copy state.");
+                                           "working copy state.",
+                                           resource->pool);
                 goto cleanup;
               }
 
@@ -1301,7 +1307,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                 derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                            "A failure occurred while "
                                            "recording one of the items of "
-                                           "working copy state.");
+                                           "working copy state.",
+                                           resource->pool);
                 goto cleanup;
               }
 
@@ -1327,7 +1334,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                 derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                            "A failure occurred while "
                                            "recording one of the (missing) "
-                                           "items of working copy state.");
+                                           "items of working copy state.",
+                                           resource->pool);
                 goto cleanup;
               }
           }
@@ -1340,7 +1348,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
     {
       derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "A failure occurred while "
-                                 "driving the update report editor");
+                                 "driving the update report editor",
+                                 resource->pool);
       goto cleanup;
     }
 
@@ -1362,7 +1371,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
       if (serr)
         {
           derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Failed to find the kind of a path");
+                                     "Failed to find the kind of a path",
+                                     resource->pool);
           goto cleanup;
         }
 
@@ -1377,7 +1387,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           if (serr)
             {
               derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "Failed to find the revision root");
+                                         "Failed to find the revision root",
+                                         resource->pool);
               goto cleanup;
             }
 
@@ -1385,7 +1396,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           if (serr)
             {
               derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "Unable to begin resource walk");
+                                         "Unable to begin resource walk",
+                                         resource->pool);
               goto cleanup;
             }
 
@@ -1410,7 +1422,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           if (serr)
             {
               derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "Resource walk failed.");
+                                         "Resource walk failed.",
+                                         resource->pool);
               goto cleanup;
             }
           
@@ -1418,7 +1431,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           if (serr)
             {
               derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "Unable to complete resource walk.");
+                                         "Unable to complete resource walk.",
+                                         resource->pool);
               goto cleanup;
             }
         }
@@ -1432,7 +1446,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
       if (serr)
         {
           derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Unable to complete update report.");
+                                     "Unable to complete update report.",
+                                     resource->pool);
           goto cleanup;
         }
     }
@@ -1444,7 +1459,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   if (((apr_err = ap_fflush(output, uc.bb))) && (! derr))
     derr = dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
                                HTTP_INTERNAL_SERVER_ERROR,
-                               "Error flushing brigade.");
+                               "Error flushing brigade.",
+                               resource->pool);
 
   /* if an error was produced EITHER by the dir_delta drive or the
      resource-walker... */
