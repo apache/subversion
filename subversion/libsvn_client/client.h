@@ -320,8 +320,8 @@ svn_client__get_diff_editor (const char *target,
    At the successful return of this function, COMMITTABLES will be an
    apr_hash_t * hash of apr_array_header_t * arrays (of
    svn_client_commit_item_t * structures), keyed on const char *
-   canonical repository URLs.  Also, LOCKED_DIRS will be an apr_hash_t
-   * hash of meaningless data keyed on const char * working copy path
+   canonical repository URLs.  Also, LOCKED_DIRS will be an apr_hash_t *
+   hash of svn_wc_adm_access_t * keyed on const char * working copy path
    directory names which were locked in the process of this crawl.
    These will need to be unlocked again post-commit.
 
@@ -329,7 +329,6 @@ svn_client__get_diff_editor (const char *target,
    found in TARGETS will not be crawled for modifications.  */
 svn_error_t *
 svn_client__harvest_committables (apr_hash_t **committables,
-                                  apr_hash_t **locked_dirs,
                                   const char *parent_dir,
                                   apr_array_header_t *targets,
                                   svn_boolean_t nonrecursive,
@@ -344,7 +343,6 @@ svn_client__harvest_committables (apr_hash_t **committables,
    to a new repository URL (NEW_URL). */
 svn_error_t *
 svn_client__get_copy_committables (apr_hash_t **committables,
-                                   apr_hash_t **locked_dirs,
                                    const char *new_url,
                                    const char *target,
                                    apr_pool_t *pool);

@@ -53,7 +53,7 @@ svn_boolean_t svn_wc__adm_path_exists (const char *path,
 
 
 /* Make `PATH/<adminstrative_subdir>/THING'. */
-svn_error_t *svn_wc__make_adm_thing (const char *path,
+svn_error_t *svn_wc__make_adm_thing (svn_wc_adm_access_t *adm_access,
                                      const char *thing,
                                      int type,
                                      apr_fileperms_t perms,
@@ -259,15 +259,16 @@ svn_error_t *svn_wc__ensure_adm (const char *path,
                                  apr_pool_t *pool);
 
 
-/* Blow away the admistrative directory associated with directory
-   PATH, make sure beforehand that it isn't locked. */
-svn_error_t *svn_wc__adm_destroy (const char *path,
+/* Blow away the admistrative directory associated with the access baton
+   ADM_ACCESS.  It is safe to close the baton after calling this
+   function. */
+svn_error_t *svn_wc__adm_destroy (svn_wc_adm_access_t *adm_access,
                                   apr_pool_t *pool);
 
 
 /* Cleanup the temporary storage area of the administrative
    directory. */
-svn_error_t *svn_wc__adm_cleanup_tmp_area (const char *path, 
+svn_error_t *svn_wc__adm_cleanup_tmp_area (svn_wc_adm_access_t *adm_access,
                                            apr_pool_t *pool);
 
 

@@ -467,6 +467,39 @@ def no_copy_overwrites(sbox):
   return 0
 
 
+# Takes out working-copy locks for A/B2 and child A/B2/E. At one stage
+# during issue 749 the second lock cause an already-locked error.
+def copy_modify_commit(sbox):
+  "copy a directory hierarchy and modify before commit"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  outlines, errlines = svntest.main.run_svn(None, 'cp',
+                                            wc_dir + '/A/B', wc_dir + '/A/B2',
+                                            '-m', 'fooogle')
+  if errlines:
+    print "Whoa, failed to copy A/B to A/B2"
+    return 1
+  
+  alpha_path = os.path.join(wc_dir, 'A', 'B2', 'E', 'alpha')
+  svntest.main.file_append(alpha_path, "modified alpha")
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B2' : Item(verb='Adding'),
+    'A/B2/E/alpha' : Item(verb='Sending'),
+    })
+
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output,
+                                            None,
+                                            None,
+                                            None, None,
+                                            None, None,
+                                            wc_dir):
+    return 1
+
 ########################################################################
 # Run the tests
 
@@ -478,6 +511,7 @@ test_list = [ None,
               receive_copy_in_update,
               resurrect_deleted_dir,
               no_copy_overwrites,
+              copy_modify_commit,
              ]
 
 if __name__ == '__main__':
