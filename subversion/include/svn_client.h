@@ -412,6 +412,25 @@ svn_client_file_diff (svn_stringbuf_t *path,
                       apr_pool_t *pool);
 
 
+/* Given a PATH in the working copy, compare the working copy against a
+ * revision in the repository. The repository revision can be specified as
+ * REVISION, or as a time TM.
+ *
+ * If PATH is a directory and RECURSE is true, this will be a recursive
+ * operation.
+ *
+ * DIFF_OPTIONS is used to pass additional command line options to the diff
+ * processes invoked to compare files.
+ */
+svn_error_t *svn_client_diff (svn_stringbuf_t *path,
+                              apr_array_header_t *diff_options,
+                              svn_client_auth_baton_t *auth_baton,
+                              svn_revnum_t revision,
+                              apr_time_t tm,
+                              svn_boolean_t recurse,
+                              apr_pool_t *pool);
+
+
 /* Recursively cleanup a working copy directory DIR, finishing any
    incomplete operations, removing lockfiles, etc. */
 svn_error_t *

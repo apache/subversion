@@ -376,6 +376,17 @@ svn_wc__text_base_path (const svn_stringbuf_t *path,
   return newpath;
 }
 
+svn_stringbuf_t *
+svn_wc__empty_file_path (const svn_stringbuf_t *path,
+                         apr_pool_t *pool)
+{
+  svn_stringbuf_t *empty_file_path = svn_stringbuf_dup (path, pool);
+  svn_path_remove_component (empty_file_path, svn_path_local_style);
+  extend_with_adm_name (empty_file_path, NULL, 0, pool, SVN_WC__ADM_EMPTY_FILE,
+                        NULL);
+  return empty_file_path;
+}
+
 
 static svn_error_t *
 prop_path_internal (svn_stringbuf_t **prop_path,
@@ -719,6 +730,30 @@ svn_wc__close_adm_file (apr_file_t *fp,
      retains the allocated memory.) */
   return close_adm_file (fp, (svn_stringbuf_t *) path, NULL,
                          sync, pool, fname, NULL);
+}
+
+
+svn_error_t *
+svn_wc__open_empty_file (apr_file_t **handle,
+                         svn_stringbuf_t *path,
+                         apr_pool_t *pool)
+{
+  svn_stringbuf_t *newpath;
+  svn_path_split (path, &newpath, NULL, svn_path_local_style, pool);
+  return open_adm_file (handle, newpath, NULL, APR_READ, pool,
+                        SVN_WC__ADM_EMPTY_FILE, NULL);
+}
+
+
+svn_error_t *
+svn_wc__close_empty_file (apr_file_t *fp,
+                          svn_stringbuf_t *path,
+                          apr_pool_t *pool)
+{
+  svn_stringbuf_t *newpath, *basename;
+  svn_path_split (path, &newpath, &basename, svn_path_local_style, pool);
+  return close_adm_file (fp, newpath, NULL, 0, pool,
+                         SVN_WC__ADM_EMPTY_FILE, NULL);
 }
 
 
@@ -1203,6 +1238,15 @@ init_adm (svn_stringbuf_t *path,
 
   /* SVN_WC__ADM_ENTRIES */
   SVN_ERR (svn_wc__entries_init (path, url, pool));
+
+
+  /* SVN_WC__ADM_EMPTY_FILE exists because sometimes an readable, empty
+     file is required (in the repository diff for example). Creating such a
+     file temporarily, only to delete it again, would appear to be less
+     efficient than just having one around. It doesn't take up much space
+     after all. */
+  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_EMPTY_FILE, svn_node_file,
+                                   APR_UREAD, 0, pool));
 
   /* THIS FILE MUST BE CREATED LAST: 
      After this exists, the dir is considered complete. */

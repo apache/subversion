@@ -93,8 +93,9 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "rm",         TRUE, NULL, NULL },
 
   { "diff",       FALSE, svn_cl__diff,
-    "Display local file changes as contextual diffs.\n"
-    "usage: diff [TARGETS]\n" },
+    "Display local changes in the working copy, or changes between the\n"
+    "working copy and the repository if a revision is given.\n"
+    "usage: diff [-r REV] [TARGETS]\n" },
   { "di",         TRUE, NULL, NULL },
 
   { "help",       FALSE, svn_cl__help,
