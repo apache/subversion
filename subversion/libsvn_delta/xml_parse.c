@@ -267,6 +267,62 @@ maybe_derive_ancestry (svn_delta__stackframe_t *dest_frame, apr_pool_t *pool)
 */
 
 
+/* If FRAME represents an <add> or <replace> command, check if the
+   "name" attribute conflicts with an preexisting dirent name in the
+   parent (tree-delta) frame.  If so, return error.  If not, store the
+   dirent name in parent's "namespace" hash. 
+
+   Assumes that FRAME has not yet been appended to DIGGER->STACK.
+*/
+static svn_error_t *
+check_dirent_namespace (svn_delta__digger_t *digger,
+                        svn_delta__stackframe_t *frame)
+{
+  apr_hash_t *namespace = NULL;
+  void *dirent_exists = NULL;
+
+  /* Sanity: check frame's type.  If we're not looking at directory
+     entries, just leave. */
+  if ((frame->tag != svn_delta__XML_add)
+       && (frame->tag != svn_delta__XML_replace))
+    return SVN_NO_ERROR;
+
+  namespace= digger->stack->namespace;
+  
+  if (namespace == NULL)
+    return 
+      svn_create_error 
+      (SVN_ERR_MALFORMED_XML, 0, 
+       "check_dirent_namespace: parent frame has no namespace hash.",
+       NULL, digger->pool);
+
+  if ((frame->name == NULL) || (svn_string_isempty (frame->name)))
+    return
+      svn_create_error
+      (SVN_ERR_MALFORMED_XML, 0,
+       "check_dirent_namespace: <add> or <replace> has no `name' attribute.",
+       NULL, digger->pool);
+  
+  /* Is "name" in the namespace already? */
+  dirent_exists = apr_hash_get (namespace,
+                                frame->name->data,
+                                frame->name->len);
+  if (dirent_exists)
+    return 
+      svn_create_errorf
+      (SVN_ERR_MALFORMED_XML, 0, NULL, digger->pool,
+       "check_dirent_namespace: non-unique dirent name '%s'",
+       frame->name->data);
+
+  else /* dirent_exists == NULL, so this is a unique dirent name */
+    apr_hash_set (namespace, frame->name->data, frame->name->len, (void *) 1);
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
 /* Decide if it's valid XML to append NEW_FRAME to DIGGER's stack.  If
    so, append the frame and inherit the parent's baton.  If not,
    return a validity error. (TAGNAME is used for error message.) */
@@ -275,6 +331,7 @@ do_stack_append (svn_delta__digger_t *digger,
                  svn_delta__stackframe_t *new_frame,
                  const char *tagname)
 {
+  svn_error_t *err;
   apr_pool_t *pool = digger->pool;
   svn_delta__stackframe_t *youngest_frame = digger->stack;
 
@@ -346,6 +403,12 @@ do_stack_append (svn_delta__digger_t *digger,
                && (new_frame->tag != svn_delta__XML_dir))
         return XML_validation_error (pool, tagname, FALSE);
 
+      /* Final check: if this is an <add> or <replace>, make sure the
+         "name" attribute is unique within the parent <tree-delta>. */
+
+      err = check_dirent_namespace (digger, new_frame);
+      if (err)
+        return err;
 
       /* The XML is valid.  Do the append.  */
       youngest_frame->next = new_frame;
@@ -900,6 +963,11 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   value = get_attribute_value (atts, "ver");
   if (value)
     new_frame->ancestor_version = atoi (value);
+
+  /* If this frame represents a tree-delta, initialize an internal
+     hashtable to hold dirent names. */
+  if (new_frame->tag == svn_delta__XML_treedelta)
+    new_frame->namespace = apr_make_hash (my_digger->pool);
   
   /*  Append new frame to stack, validating in the process. 
       If successful, new frame will automatically inherit parent's baton. */
