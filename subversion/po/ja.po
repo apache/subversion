@@ -6768,3 +6768,6 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgstr ""
 #~ "リポジトリを他のプロセスが利用中の場合、終了する\n"
 #~ "                             代わりに待ちます"
+
+#~ msgid "Impossibly long repository root from server"
+#~ msgstr "サーバから送られてきたリポジトリのルートが長すぎます"
