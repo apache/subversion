@@ -431,6 +431,7 @@ int main(int argc, const char *const *argv)
           status = apr_proc_fork(&proc, connection_pool);
           if (status == APR_INCHILD)
             {
+              apr_socket_close(sock);
               svn_error_clear(serve(conn, &params, connection_pool));
               apr_socket_close(usock);
               exit(0);
