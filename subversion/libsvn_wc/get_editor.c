@@ -1115,7 +1115,7 @@ change_file_prop (void *file_baton,
   /* If the keywords property was set, remember info for close_file(). */
   if (! strcmp (local_name->data, SVN_PROP_KEYWORDS))
     {
-      fb->new_keywords_value = value;
+      fb->new_keywords_value = local_value;
       fb->got_new_keywords_value = TRUE;
     }
 
@@ -1124,7 +1124,7 @@ change_file_prop (void *file_baton,
 }
 
 
-/* Helper function for close_edit.
+/* Helper function for close_file.
 
    Create (or append to) *ENTRY_ACCUM an XML log message for log
    command TAGNAME, with attributes NAME, DEST, EOL_STR, REPAIR,
@@ -1191,6 +1191,62 @@ make_translation_open_tag (svn_stringbuf_t **entry_accum,
   
   svn_xml_make_open_tag_hash (entry_accum, pool, style, tagname, hash);
   return;
+}
+
+
+/* Another helper for close_file, which is now the size of a small
+   planet.  Look through array of 'svn:entry' PROPS.  If any property
+   matches a keyword (and is already set in KEYWORDS) then make
+   KEYWORDS field point to this new value. */
+static void
+latest_keyword_data (apr_array_header_t *props,
+                     svn_io_keywords_t *keywords,
+                     apr_pool_t *pool)
+{
+  int i;
+
+  if (! (props && keywords))
+    return;
+
+  /* foreach prop... */
+  for (i = 0; i < props->nelts; i++)
+    {
+      svn_stringbuf_t *propname;
+      svn_prop_t *prop;
+      prop = (((svn_prop_t **)(props)->elts)[i]);
+      
+      /* strip the 'svn:entry:' prefix from the property name. */
+      propname = svn_stringbuf_dup (prop->name, pool);
+      svn_wc__strip_entry_prefix (propname);
+     
+      if (keywords->revision
+          && (! strcmp (propname->data, SVN_ENTRY_ATTR_COMMITTED_REV)))
+        {
+          keywords->revision->data = prop->value->data;
+          keywords->revision->len = prop->value->len;
+        }
+
+      if (keywords->date
+          && (! strcmp (propname->data, SVN_ENTRY_ATTR_COMMITTED_DATE)))
+        {
+          keywords->date->data = prop->value->data;
+          keywords->date->len = prop->value->len;
+        }
+
+      if (keywords->author
+          && (! strcmp (propname->data, SVN_ENTRY_ATTR_LAST_AUTHOR)))
+        {
+          keywords->author->data = prop->value->data;
+          keywords->author->len = prop->value->len;
+        }
+
+      if (keywords->url
+          && (! strcmp (propname->data, SVN_WC_ENTRY_ATTR_URL)))
+        {
+          keywords->url->data = prop->value->data;
+          keywords->url->len = prop->value->len;
+        }
+    }
 }
 
 
@@ -1374,13 +1430,9 @@ close_file (void *file_baton)
                 eol_style = fb->new_style;
                 eol_str = fb->new_eol;
 
-                /* And also:  when we call svn_wc_text_modified_p()
-                   below, it needs to know this new value.  So we'll
-                   set this value immediately.  This is allowed,
-                   because we know it won't conflict! */
-                SVN_ERR (svn_wc_prop_set 
-                         (svn_stringbuf_create (SVN_PROP_EOL_STYLE, fb->pool),
-                          fb->new_value, fb->path, fb->pool));
+                /* We're not writing out the latest value of the
+                   property, because text_modified_p should still be
+                   using the old value.  */
               }
           }
       }
@@ -1415,16 +1467,19 @@ close_file (void *file_baton)
                                                fb->new_keywords_value->data,
                                                fb->pool));
 
-
-                /* And also:  when we call svn_wc_text_modified_p()
-                   below, it needs to know this new value.  So we'll
-                   set this value immediately.  This is allowed,
-                   because we know it won't conflict! */
-                SVN_ERR (svn_wc_prop_set 
-                         (svn_stringbuf_create (SVN_PROP_KEYWORDS, fb->pool),
-                          fb->new_keywords_value, fb->path, fb->pool));
+                /* We're not writing out the latest value of the
+                   property, because text_modified_p should still be
+                   using the old value.  */
               }
           }
+
+        /* Now, guess what.  We now have a grip on the correct *set*
+           of keywords to expand.  But the latest *values* of the
+           keywords aren't yet in the entries file.  This routine
+           might overwrite any values in KEYWORDS by examining fresh
+           data cached in fb->entrypropchanges. */
+        latest_keyword_data (fb->entrypropchanges, keywords, fb->pool);
+
       }
 
 
