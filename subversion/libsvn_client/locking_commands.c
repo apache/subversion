@@ -120,6 +120,16 @@ svn_client_lock (const svn_lock_t **lock_p, const char *path,
 
   *lock_p = lock;
 
+  { /* if svn:needs-lock is present, then make the file read-write. */
+    const svn_string_t *needs_lock;
+
+    SVN_ERR (svn_wc_prop_get (&needs_lock, SVN_PROP_NEEDS_LOCK, 
+                              path, adm_access, pool));
+    if (needs_lock)
+        SVN_ERR (svn_io_set_file_read_write_carefully (path, TRUE, 
+                                                       FALSE, pool));
+  }
+
   return SVN_NO_ERROR;
 }
 
@@ -173,6 +183,16 @@ svn_client_unlock (const char *path, svn_boolean_t force,
 
   /* Remove any lock token from the WC. */
   SVN_ERR (svn_wc_remove_lock (path, adm_access, pool));
+
+  { /* if svn:needs-lock is present, then make the file read-only. */
+    const svn_string_t *needs_lock;
+
+    SVN_ERR (svn_wc_prop_get (&needs_lock, SVN_PROP_NEEDS_LOCK, 
+                              path, adm_access, pool));
+    if (needs_lock)
+        SVN_ERR (svn_io_set_file_read_write_carefully (path, FALSE, 
+                                                       FALSE, pool));
+  }
 
   return SVN_NO_ERROR;
 }
