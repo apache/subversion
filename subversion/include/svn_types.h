@@ -318,8 +318,7 @@ typedef svn_error_t * (*svn_commit_callback_t) (
  * processing a stream of data.
  *
  * For example, when copying data from one stream to another, do it in
- * blocks of this size; also, the standard size of one svndiff window;
- * etc.
+ * blocks of this size.
  */
 #define SVN_STREAM_CHUNK_SIZE 102400
 

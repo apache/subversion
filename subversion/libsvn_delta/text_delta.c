@@ -263,7 +263,7 @@ svn_txdelta (svn_txdelta_stream_t **stream,
   (*stream)->target = target;
   (*stream)->more = TRUE;
   (*stream)->pos = 0;
-  (*stream)->buf = apr_palloc (pool, 2 * SVN_STREAM_CHUNK_SIZE);
+  (*stream)->buf = apr_palloc (pool, 2 * SVN_DELTA_WINDOW_SIZE);
 
   /* Initialize MD5 digest calculation. */
   apr_md5_init (&((*stream)->context));
@@ -298,8 +298,8 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
                          apr_pool_t *pool)
 {
   svn_error_t *err;
-  apr_size_t source_len = SVN_STREAM_CHUNK_SIZE;
-  apr_size_t target_len = SVN_STREAM_CHUNK_SIZE;
+  apr_size_t source_len = SVN_DELTA_WINDOW_SIZE;
+  apr_size_t target_len = SVN_DELTA_WINDOW_SIZE;
   
   /* Read the source stream. */
   err = svn_stream_read (stream->source, stream->buf, &source_len);
