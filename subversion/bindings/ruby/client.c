@@ -20,6 +20,7 @@
 #include "svn_ruby.h"
 #include "delta_editor.h"
 #include "wc.h"
+#include "log.h"
 #include "util.h"
 #include "error.h"
 
@@ -512,6 +513,14 @@ cl_status (VALUE self, VALUE aPath,
 }
 
 static VALUE
+cl_log (int argc, VALUE *argv, VALUE self)
+{
+  svn_client_auth_baton_t *auth_baton;
+  Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
+  return svn_ruby_client_log (argc, argv, self, auth_baton);
+}
+
+static VALUE
 cl_file_diff (VALUE class, VALUE aPath)
 {
   svn_stringbuf_t *path;
@@ -741,6 +750,7 @@ void svn_ruby_init_client (void)
   rb_define_method (cSvnClient, "import", cl_import, -1);
   rb_define_method (cSvnClient, "commit", cl_commit, -1);
   rb_define_method (cSvnClient, "status", cl_status, 4);
+  rb_define_method (cSvnClient, "log", cl_log, -1);
   rb_define_singleton_method (cSvnClient, "fileDiff", cl_file_diff, 1);
   rb_define_singleton_method (cSvnClient, "cleanup", cl_cleanup, 1);
   rb_define_singleton_method (cSvnClient, "revert", cl_revert, 2);
