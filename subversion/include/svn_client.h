@@ -389,13 +389,16 @@ typedef struct svn_client_ctx_t
 
 
 /** Initialize a client context.
- * Return a client context in @a *ctx (allocated in @a pool) that 
- * represents a particular instance of the svn client.  
+ * Set @a *ctx to a client context object, allocated in @a pool, that
+ * represents a particular instance of an svn client.
  *
  * In order to avoid backwards compatability problems, clients must 
  * use this function to intialize and allocate the 
  * @c svn_client_ctx_t structure rather than doing so themselves, as 
  * the size of this structure may change in the future. 
+ * 
+ * The current implementation never returns error, but callers should
+ * still check for error, for compatibility with future versions.
  */ 
 svn_error_t *
 svn_client_create_context (svn_client_ctx_t **ctx,
