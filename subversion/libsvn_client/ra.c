@@ -570,7 +570,7 @@ svn_client__repos_locations (const char **start_url,
 
   /* Populate most of our log receiver baton structure. */
   SVN_ERR (ra_lib->get_repos_root (ra_session, &repos_url, pool));
-  lrb.last_path = url + strlen (repos_url);
+  lrb.last_path = svn_path_uri_decode (url + strlen (repos_url), pool);
   lrb.start_revision = start_revnum;
   lrb.end_revision = end_revnum;
   lrb.peg_revision = peg_revnum;
@@ -672,5 +672,97 @@ svn_client__repos_locations (const char **start_url,
       (*end_revision)->value.number = lrb.end_revision;
     }
     
+  return SVN_NO_ERROR;
+}
+
+
+
+
+svn_error_t *
+svn_client__ra_lib_from_path (svn_ra_plugin_t **ra_lib_p,
+                              void **session_p,
+                              svn_revnum_t *rev_p,
+                              const char **url_p,
+                              const char *path_or_url,
+                              const svn_opt_revision_t *revision,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *pool)
+{
+  const char *initial_url, *url;
+  void *ra_baton, *session;
+  svn_ra_plugin_t *ra_lib;
+  apr_pool_t *ra_subpool;
+  const svn_opt_revision_t *good_rev;
+  svn_revnum_t rev;
+  
+  /* Open an RA session to the incoming URL. */
+  SVN_ERR (svn_client_url_from_path (&initial_url, path_or_url, pool));
+  if (! initial_url)
+    return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
+                              _("'%s' has no URL"), path_or_url);
+
+  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, initial_url, pool));
+
+  ra_subpool = svn_pool_create (pool);
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, initial_url,
+                                        NULL, NULL, NULL, FALSE, FALSE,
+                                        ctx, ra_subpool));
+
+  if (svn_path_is_url (path_or_url))
+    {
+      /* If an explicit URL was passed in, just use it. */
+      good_rev = revision;
+      url = initial_url;
+    }
+  else
+    {
+      /* For a working copy path, don't blindly use its initial_url
+         from the entries file.  Run the history function to get the
+         object's (possibly different) url in REVISION. */
+      svn_opt_revision_t base_rev, dead_end_rev, start_rev;
+      svn_opt_revision_t *ignored_rev, *new_rev;
+      const char *ignored_url;
+
+      dead_end_rev.kind = svn_opt_revision_unspecified;
+      base_rev.kind = svn_opt_revision_base;
+
+      if (revision->kind == svn_opt_revision_unspecified)
+        start_rev.kind = svn_opt_revision_base;
+      else
+        start_rev = *revision;
+
+      SVN_ERR (svn_client__repos_locations (&url, &new_rev,
+                                            &ignored_url, &ignored_rev,
+                                            /* peg coords are path@BASE: */
+                                            path_or_url, &base_rev,
+                                            /* search range: */
+                                            &start_rev, &dead_end_rev,
+                                            ra_lib, session,
+                                            ctx, pool));
+      good_rev = new_rev;
+
+      /* If 'url' turns out to be different than 'initial_url', then we
+         need to open a new RA session to it. */
+      if (strcmp (url, initial_url) != 0)
+        {
+          svn_pool_clear (ra_subpool);
+          SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url,
+                                                NULL, NULL, NULL, FALSE, FALSE,
+                                                ctx, ra_subpool));
+        }
+    }
+
+  /* Resolve good_rev into a real revnum. */
+  SVN_ERR (svn_client__get_revision_number (&rev, ra_lib, session,
+                                            good_rev, url, pool));
+  if (! SVN_IS_VALID_REVNUM (rev))
+    SVN_ERR (ra_lib->get_latest_revnum (session, &rev, pool));
+
+  *ra_lib_p = ra_lib;
+  *session_p = session;
+  *rev_p = rev;
+  *url_p = url;
+
   return SVN_NO_ERROR;
 }

@@ -286,7 +286,7 @@ svn_client_blame (const char *target,
   struct log_message_baton lmb;
   apr_array_header_t *condensed_targets;
   svn_ra_plugin_t *ra_lib; 
-  void *ra_baton, *session;
+  void *session;
   const char *url;
   svn_revnum_t start_revnum, end_revnum;
   struct blame *walk;
@@ -307,23 +307,13 @@ svn_client_blame (const char *target,
   iterpool = svn_pool_create (pool);
   lastpool = svn_pool_create (pool);
 
-  SVN_ERR (svn_client_url_from_path (&url, target, pool));
-  if (! url)
-    return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                              "'%s' has no URL", target);
-
-
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url, pool));
-
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, NULL,
-                                        NULL, NULL, FALSE, FALSE,
-                                        ctx, pool));
+  /* Get an RA plugin for this filesystem object. */
+  SVN_ERR (svn_client__ra_lib_from_path (&ra_lib, &session, &end_revnum,
+                                         &url, target, end,
+                                         ctx, pool));
 
   SVN_ERR (svn_client__get_revision_number (&start_revnum, ra_lib, session,
                                             start, target, pool));
-  SVN_ERR (svn_client__get_revision_number (&end_revnum, ra_lib, session,
-                                            end, target, pool));
 
   if (end_revnum < start_revnum)
     return svn_error_create
