@@ -28,7 +28,8 @@
 
 #include <svn_pools.h>
 #include <svn_config.h>
-#include "svn_path.h"
+#include <svn_path.h>
+#include <apr_file_info.h>
 #include "svn_private_config.h"
 #ifdef WIN32
 /* FIXME: We're using an internal APR header here, which means we
@@ -709,4 +710,64 @@ void JNIUtil::throwNullPointerException(const char *message)
     env->ThrowNew(clazz, message);
     setExceptionThrown();
     env->DeleteLocalRef(clazz);
+}
+svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t * pool)
+{
+  /* URLs and wc-paths get treated differently. */
+  if (svn_path_is_url (path))
+    {
+      /* No need to canonicalize a URL's case or path separators. */
+
+      /* Convert to URI. */
+      path = svn_path_uri_from_iri (path, pool);
+      /* Auto-escape some ASCII characters. */
+      path = svn_path_uri_autoescape (path, pool);
+
+      /* The above doesn't guarantee a valid URI. */
+      if (! svn_path_is_uri_safe (path))
+        return svn_error_createf (SVN_ERR_BAD_URL, 0,
+                                  _("URL '%s' is not properly URI-encoded"),
+                                  path);
+
+      /* Verify that no backpaths are present in the URL. */
+      if (svn_path_is_backpath_present (path))
+        return svn_error_createf (SVN_ERR_BAD_URL, 0,
+                                  _("URL '%s' contains a '..' element"),
+                                  path);
+      
+      /* strip any trailing '/' */
+      path = svn_path_canonicalize (path, pool);
+    }
+  else  /* not a url, so treat as a path */
+    {
+      const char *apr_target;
+      char *truenamed_target; /* APR-encoded */
+      apr_status_t apr_err;
+
+      /* canonicalize case, and change all separators to '/'. */
+      SVN_ERR (svn_path_cstring_from_utf8 (&apr_target, path,
+                                           pool));
+      apr_err = apr_filepath_merge (&truenamed_target, "", apr_target,
+                                    APR_FILEPATH_TRUENAME, pool);
+
+      if (!apr_err)
+        /* We have a canonicalized APR-encoded target now. */
+        apr_target = truenamed_target;
+      else if (APR_STATUS_IS_ENOENT (apr_err))
+        /* It's okay for the file to not exist, that just means we
+           have to accept the case given to the client. We'll use
+           the original APR-encoded target. */
+        ;
+      else
+        return svn_error_createf (apr_err, NULL,
+                                  _("Error resolving case of '%s'"),
+                                  svn_path_local_style (path,
+                                                        pool));
+
+      /* convert back to UTF-8. */
+      SVN_ERR (svn_path_cstring_to_utf8 (&path, apr_target, pool));
+      path = svn_path_canonicalize (path, pool);
+
+    }
+  return NULL;
 }
