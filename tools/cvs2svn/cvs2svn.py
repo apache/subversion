@@ -390,8 +390,12 @@ class Dump:
 
     if f_st[0] & stat.S_IXUSR:
       is_executable = 1
+      # "K 14\n" + "svn:executable\n" + "V 1\n" + "*\n" + "PROPS-END\n"
+      props_len = 36
     else:
       is_executable = 0
+      # just "PROPS-END\n"
+      props_len = 10
 
     basename = os.path.basename(rcs_file[:-2])
     pipe = os.popen('co -q -p%s \'%s\'' % (cvs_rev, rcs_file), 'r', 102400)
@@ -418,13 +422,18 @@ class Dump:
     self.dumpfile.write('Node-path: %s\n' % svn_path)
     self.dumpfile.write('Node-kind: file\n')
     self.dumpfile.write('Node-action: %s\n' % action)
-    self.dumpfile.write('Prop-content-length: %d\n' % 10)  ### svn:executable?
+    self.dumpfile.write('Prop-content-length: %d\n' % props_len)
     self.dumpfile.write('Text-content-length: ')
     pos = self.dumpfile.tell()
     self.dumpfile.write('0000000000000000\n')
     self.dumpfile.write('Text-content-md5: 00000000000000000000000000000000\n')
     self.dumpfile.write('Content-length: 0000000000000000\n')
     self.dumpfile.write('\n')
+    if is_executable:
+      self.dumpfile.write('K 14\n')
+      self.dumpfile.write('svn:executable\n')
+      self.dumpfile.write('V 1\n')
+      self.dumpfile.write('*\n')
     self.dumpfile.write('PROPS-END\n')
 
     # Insert the rev contents, calculating length and checksum as we go.
@@ -448,11 +457,9 @@ class Dump:
     self.dumpfile.write(checksum.hexdigest())
     # 35... + 32 bytes of checksum + 1 newline + len('Content-length: ') == 84
     self.dumpfile.seek(pos + 84, 0)
-    # ### THIS IS WRONG.
-    # ### The content length should be the length of property data
-    # ### plus the text data plus all the decorations around them.
-    # ### (Calculating it may involve the svn:executable property.)
-    self.dumpfile.write(string.rjust(str(length), 16))
+    # The content length is the length of property data, text data,
+    # and any metadata around/inside around them.
+    self.dumpfile.write(string.rjust(str(length + props_len), 16))
     # Jump back to the end of the stream
     self.dumpfile.seek(0, 2)
 
