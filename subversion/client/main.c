@@ -98,9 +98,9 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "pg",         TRUE, NULL, 1, NULL },
 
   { "propset",    FALSE, svn_cl__propset, 2, 
-    "Set property PROPNAME to PROPVAL on the named files and directories.\n"
+    "Set property PROPNAME to PROPVAL on files and directories.\n"
     "usage: propset PROPNAME [PROPVAL | --valfile VALFILE] "
-    "[TARGET1 [TARGET2] ...]\n"},
+    "[TARGETS]\n"},
   { "pset",       TRUE, NULL, 2, NULL },
   { "ps",         TRUE, NULL, 2, NULL },
 
