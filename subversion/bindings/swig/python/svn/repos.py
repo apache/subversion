@@ -21,7 +21,19 @@ import svn.core
 import svn.delta
 from types import StringType, IntType, FloatType, LongType
 
-from libsvn.repos import *
+import libsvn.repos
+
+# copy the wrapper functions out of the extension module, dropping the
+# 'svn_repos_' prefix.
+for name in dir(libsvn.repos):
+  if name[:10] == 'svn_repos_':
+    vars()[name[10:]] = getattr(libsvn.repos, name)
+
+  # XXX: For compatibility reasons, also include the prefixed name
+  vars()[name] = getattr(libsvn.repos, name)
+
+# we don't want these symbols exported
+del name, libsvn
 
 
 class ChangedPath:

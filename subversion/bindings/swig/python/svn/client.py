@@ -14,4 +14,16 @@
 ######################################################################
 #
 
-from libsvn.client import *
+import libsvn.client
+
+# copy the wrapper functions out of the extension module, dropping the
+# 'svn_client_' prefix.
+for name in dir(libsvn.client):
+  if name[:11] == 'svn_client_':
+    vars()[name[11:]] = getattr(libsvn.client, name)
+
+  # XXX: For compatibility reasons, also include the prefixed name
+  vars()[name] = getattr(libsvn.client, name)
+
+# we don't want these symbols exported
+del name, libsvn

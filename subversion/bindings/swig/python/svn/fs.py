@@ -30,14 +30,13 @@ import core
 
 # copy the wrapper functions out of the extension module, dropping the
 # 'svn_fs_' prefix.
-# XXX this might change in the future once we have a consistent naming
-# scheme
 for name in dir(libsvn.fs):
   if name[:7] == 'svn_fs_':
     vars()[name[7:]] = getattr(libsvn.fs, name)
 
 # we don't want these symbols exported
 del name, libsvn
+
 
 def entries(root, path, pool):
   "Call dir_entries returning a dictionary mappings names to IDs."

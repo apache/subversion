@@ -14,4 +14,16 @@
 ######################################################################
 #
 
-from libsvn.ra import *
+import libsvn.ra
+
+# copy the wrapper functions out of the extension module, dropping the
+# 'svn_ra_' prefix.
+for name in dir(libsvn.ra):
+  if name[:7] == 'svn_ra_':
+    vars()[name[7:]] = getattr(libsvn.ra, name)
+
+  # XXX: For compatibility reasons, also include the prefixed name
+  vars()[name] = getattr(libsvn.ra, name)
+
+# we don't want these symbols exported
+del name, libsvn

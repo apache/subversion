@@ -14,7 +14,20 @@
 ######################################################################
 #
 
-from libsvn.delta import *
+import libsvn.delta
+
+# copy the wrapper functions out of the extension module, dropping the
+# 'svn_delta_' prefix.
+for name in dir(libsvn.delta):
+  if name[:10] == 'svn_delta_':
+    vars()[name[10:]] = getattr(libsvn.delta, name)
+
+  # XXX: For compatibility reasons, also include the prefixed name
+  vars()[name] = getattr(libsvn.delta, name)
+
+# we don't want these symbols exported
+del name, libsvn
+
 
 class Editor:
 
