@@ -1,7 +1,7 @@
 /*
  * track_editor.c : editor implementation which tracks committed targets
  *
-      * ====================================================================
+ * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which

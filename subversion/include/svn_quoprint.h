@@ -1,6 +1,6 @@
 /*  svn_quoprint.h:  quoted-printable encoding and decoding functions.
  *
-      * ====================================================================
+ * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which

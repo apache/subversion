@@ -1,7 +1,7 @@
 /*
  * entries.c :  manipulating the administrative `entries' file.
  *
-      * ====================================================================
+ * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
