@@ -66,6 +66,7 @@ send_file_contents (const char *path,
   apr_file_t *f = NULL;
   svn_error_t *err = SVN_NO_ERROR;
   const svn_string_t *eol_style_val = NULL, *keywords_val = NULL;
+  svn_boolean_t special = FALSE;
 
   /* If there are properties, look for EOL-style and keywords ones. */
   if (properties)
@@ -74,6 +75,8 @@ send_file_contents (const char *path,
                                     sizeof (SVN_PROP_EOL_STYLE) - 1);
       keywords_val = apr_hash_get (properties, SVN_PROP_KEYWORDS,
                                    sizeof (SVN_PROP_KEYWORDS) - 1);
+      if (apr_hash_get (properties, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING))
+        special = TRUE;
     }
 
   /* Get an editor func that wants to consume the delta stream. */
@@ -83,22 +86,11 @@ send_file_contents (const char *path,
   /* If we have EOL styles or keywords to de-translate, do it.  Any
      EOL style gets translated to "\n", the repository-normal format.
      Keywords get unexpanded.  */
-  if (eol_style_val || keywords_val)
+  if (eol_style_val || keywords_val || special)
     {
       svn_subst_keywords_t keywords = {0};
       const char *temp_dir;
-      svn_stream_t *tmp_stream;
       apr_file_t *tmp_f;
-
-      /* Get a readable stream of the file's contents. */
-      SVN_ERR (svn_io_file_open (&f, path, APR_READ, APR_OS_DEFAULT, pool));
-      contents = svn_stream_from_aprfile (f, pool);
-
-      /* Generate a keyword structure. */
-      if (keywords_val)
-        SVN_ERR (svn_subst_build_keywords (&keywords, keywords_val->data, 
-                                           APR_STRINGIFY(SVN_INVALID_REVNUM),
-                                           "", 0, "", pool));
 
       /* Now create a new tempfile, and open a stream to it. */
       SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
@@ -106,21 +98,21 @@ send_file_contents (const char *path,
                (&tmp_f, &tmpfile_path,
                 svn_path_join (temp_dir, "svn-import", pool),
                 ".tmp", FALSE, pool));
-      tmp_stream = svn_stream_from_aprfile (tmp_f, pool);
+      SVN_ERR (svn_io_file_close (tmp_f, pool));
 
-      /* Copy the original file to the temporary one, de-translating
-         along the way. */
-      if ((err = svn_subst_translate_stream (contents, tmp_stream, 
-                                             eol_style_val ? "\n" : NULL,
-                                             FALSE,
-                                             keywords_val ? &keywords : NULL,
-                                             FALSE)))
-        goto cleanup;
-
-      /* Close our original and temporary files. */
-      if ((err = svn_io_file_close (f, pool)))
-        goto cleanup;
-      if ((err = svn_io_file_close (tmp_f, pool)))
+      /* Generate a keyword structure. */
+      if (keywords_val)
+        SVN_ERR (svn_subst_build_keywords (&keywords, keywords_val->data, 
+                                           APR_STRINGIFY(SVN_INVALID_REVNUM),
+                                           "", 0, "", pool));
+      
+      if ((err = svn_subst_copy_and_translate2 (path, tmpfile_path,
+                                                eol_style_val ? "\n" : NULL,
+                                                FALSE,
+                                                keywords_val ? &keywords : NULL,
+                                                FALSE,
+                                                special,
+                                                pool)))
         goto cleanup;
     }
 
@@ -180,14 +172,23 @@ import_file (const svn_delta_editor_t *editor,
   const char *text_checksum;
   apr_hash_t* properties;
   apr_hash_index_t *hi;
+  svn_node_kind_t kind;
 
   /* Add the file, using the pool from the FILES hash. */
   SVN_ERR (editor->add_file (edit_path, dir_baton, NULL, SVN_INVALID_REVNUM, 
                              pool, &file_baton));
 
-  /* add automatic properties */
-  SVN_ERR (svn_client__get_auto_props (&properties, &mimetype, path, ctx,
-                                       pool));
+  SVN_ERR (svn_io_check_special_path (path, &kind, pool));
+
+  if (kind != svn_node_special)
+    {
+      /* add automatic properties */
+      SVN_ERR (svn_client__get_auto_props (&properties, &mimetype, path, ctx,
+                                           pool));
+    }
+  else
+    properties = apr_hash_make (pool);
+      
   if (properties)
     {
       for (hi = apr_hash_first (pool, properties); hi; hi = apr_hash_next (hi))
@@ -209,6 +210,20 @@ import_file (const svn_delta_editor_t *editor,
                          svn_wc_notify_state_inapplicable,
                          svn_wc_notify_state_inapplicable,
                          SVN_INVALID_REVNUM);
+
+  /* If this is a special file, we need to set the svn:special
+     property and create a temporary detranslated version in order to
+     send to the server. */
+  if (kind == svn_node_special)
+    {
+      apr_hash_set (properties, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING,
+                    svn_string_create (SVN_PROP_SPECIAL_VALUE, pool));
+      SVN_ERR (editor->change_file_prop (file_baton, SVN_PROP_SPECIAL,
+                                         apr_hash_get (properties,
+                                                       SVN_PROP_SPECIAL,
+                                                       APR_HASH_KEY_STRING),
+                                         pool));
+    }
 
   /* Now, transmit the file contents. */
   SVN_ERR (send_file_contents (path, file_baton, editor, 
