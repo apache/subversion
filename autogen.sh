@@ -59,12 +59,12 @@ fi
 # Handle the neon/ subdir
 if [ ! -d neon ]; then
   echo ""
-  echo "You don't have a neon/ subdirectory here.  Please get the latest"
-  echo "Neon distribution from:"
-  echo "    http://www.webdav.org/neon/"
+  echo "You don't have a neon/ subdirectory here."
+  echo "Please get neon 0.7.4 from:"
+  echo "       http://www.webdav.org/neon/neon-0.7.4.tar.gz"
   echo ""
   echo "Unpack the archive using tar/gunzip and rename the resulting"
-  echo "directory from ./neon-X.Y.Z/ to ./neon/"
+  echo "directory from ./neon-0.7.4/ to ./neon/"
   echo ""
   exit 1
 fi
