@@ -21,7 +21,12 @@
 #include "apr_strings.h"
 #include "svn_error.h"
 
-#define SVN_ERROR_POOL "svn-error-pool"
+/* Key for the error pool itself. */
+#define SVN_ERROR_POOL              "svn-error-pool"
+
+/* Key for a boolean signifying whether the error pool is a subpool of
+   the pool whose prog_data we got it from. */
+#define SVN_ERROR_POOL_ROOTED_HERE  "svn-error-pool-rooted-here"
 
 
 
@@ -88,51 +93,104 @@ abort_on_pool_failure (int retcode)
   abort ();
 }
 
+
+static apr_status_t
+svn_error__make_error_pool (apr_pool_t *parent, apr_pool_t **error_pool)
+{
+  apr_status_t apr_err;
+
+  /* Create a subpool to hold all error allocations. We use a subpool rather
+     than the parent itself, so that we can clear the error pool. */
+  *error_pool = apr_make_sub_pool (parent, abort_on_pool_failure);
+  
+  /* Set the error pool on itself. */
+  apr_err = apr_set_userdata (*error_pool, SVN_ERROR_POOL, apr_null_cleanup,
+                              *error_pool);
+
+  return apr_err;
+}
+
+
+/* Get POOL's error pool into *ERROR_POOL.
+ * 
+ * If ROOTED_HERE is not null, then
+ *   - If the error pool is a direct subpool of POOL, set *ROOTED_HERE to 1
+ *   - Else set *ROOTED_HERE to 0
+ * Else don't touch *ROOTED_HERE.
+ *
+ * Abort if POOL does not have an error pool.
+ */
+static void
+svn_error__get_error_pool (apr_pool_t *pool,
+                           apr_pool_t **error_pool,
+                           svn_boolean_t *rooted_here)
+{
+  apr_get_userdata ((void **) error_pool, SVN_ERROR_POOL, pool);
+  if (*error_pool == NULL)
+    abort_on_pool_failure (SVN_ERR_BAD_CONTAINING_POOL);
+
+  if (rooted_here)
+    apr_get_userdata ((void *) rooted_here, SVN_ERROR_POOL_ROOTED_HERE, pool);
+}
+
+
+/* Set POOL's error pool to ERROR_POOL.
+ *
+ * If ROOTED_HERE is non-zero, then record the fact that ERROR_POOL is
+ * a direct subpool of POOL.
+ *
+ * If unable to set either, abort.
+ */
+static void
+svn_error__set_error_pool (apr_pool_t *pool,
+                           apr_pool_t *error_pool,
+                           svn_boolean_t rooted_here)
+{
+  apr_status_t apr_err;
+
+  apr_err = apr_set_userdata (error_pool, SVN_ERROR_POOL,
+                              apr_null_cleanup, pool);
+  if (apr_err)
+    abort_on_pool_failure (apr_err);
+
+  if (rooted_here)
+    {
+      apr_err = apr_set_userdata ((void *) 1, SVN_ERROR_POOL_ROOTED_HERE,
+                                  apr_null_cleanup, pool);
+      if (apr_err)
+        abort_on_pool_failure (apr_err);
+    }
+}
+
+
+/* Set P's error pool to that of P's parent.  P's parent must exist
+   and have an error pool, else we abort. */
+static void
+svn_pool__inherit_error_pool (apr_pool_t *p)
+{
+  apr_pool_t *error_pool;
+
+  if (p->parent == NULL)
+    abort_on_pool_failure (SVN_ERR_BAD_CONTAINING_POOL);
+
+  svn_error__get_error_pool (p->parent, &error_pool, NULL);
+  svn_error__set_error_pool (p, error_pool, 0);
+}
+
+
 apr_status_t
 svn_error_init_pool (apr_pool_t *top_pool)
 {
   apr_pool_t *error_pool;
   apr_status_t apr_err;
 
-  /* Create a subpool to hold all error allocations. We use a subpool rather
-     than the parent itself, so that we can clear the error pool. */
-  error_pool = apr_make_sub_pool (top_pool, abort_on_pool_failure);
-
-  /* Set the error pool on itself. */
-  apr_err = apr_set_userdata (error_pool, SVN_ERROR_POOL, apr_null_cleanup,
-                              error_pool);
-  if (apr_err != APR_SUCCESS)
+  apr_err = svn_error__make_error_pool (top_pool, &error_pool);
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
     return apr_err;
 
-  /* Set the error pool on the top-most pool */
-  return apr_set_userdata (error_pool, SVN_ERROR_POOL, apr_null_cleanup,
-                           top_pool);
-}
+  svn_error__set_error_pool (top_pool, error_pool, 1);
 
-static void
-svn_pool__attach_error_pool(apr_pool_t *p)
-{
-  apr_pool_t *error_pool;
-  apr_status_t apr_err;
-  apr_pool_t *parent_pool;
-
-  if (p->parent == NULL)
-    parent_pool = p;
-  else
-    parent_pool = p->parent;
-
-  /* Fetch the error pool from the parent (possibly the new one). */
-  apr_get_userdata ((void **) &error_pool, SVN_ERROR_POOL, parent_pool);
-  if (error_pool == NULL)
-    abort_on_pool_failure (SVN_ERR_BAD_CONTAINING_POOL);
-
-  /* Set the error pool on the newly-created pool. */
-  apr_err = apr_set_userdata (error_pool,
-                              SVN_ERROR_POOL,
-                              apr_null_cleanup,
-                              p);
-  if (apr_err)
-    abort_on_pool_failure (apr_err);
+  return 0;
 }
 
 
@@ -152,8 +210,8 @@ svn_pool_create (apr_pool_t *parent_pool)
       if (apr_err)
         abort_on_pool_failure (apr_err);
     }
-
-  svn_pool__attach_error_pool (ret_pool);
+  else
+    svn_pool__inherit_error_pool (ret_pool);
   
   return ret_pool;
 }
@@ -161,13 +219,33 @@ svn_pool_create (apr_pool_t *parent_pool)
 
 
 void 
-svn_pool_clear(apr_pool_t *p)
+svn_pool_clear (apr_pool_t *p)
 {
+  apr_pool_t *error_pool;
+  svn_boolean_t subpool_of_p_p;  /* That's "predicate" to you, bud. */
+    
+  if (p->parent)
+    svn_error__get_error_pool (p->parent, &error_pool, &subpool_of_p_p);
+  else
+    {
+      error_pool = NULL;    /* Paranoia. */
+      subpool_of_p_p = 1;   /* The only possibility. */
+    }
+
   apr_clear_pool (p);
-  /* Clearing the pool, invalidates all userdata attached to the pool,
-	 so reattach the error pool. */
-  
-  svn_pool__attach_error_pool (p);
+
+  /* Clearing the pool invalidated all userdata attached to it,
+     so we must reattach its error pool.  However, clearing a pool
+     also destroys all its subpools; if the error pool was a subpool
+     of p (meaning it was created for p, rather than inherited from
+     p's parent), then we must conjure up a new error pool here.
+     Otherwise, we should stick with the old one, no point creating a
+     new error pool when we have a perfectly good one at hand. */
+
+  if (subpool_of_p_p)
+    svn_error__make_error_pool (p, &error_pool);
+
+  svn_error__set_error_pool (p, error_pool, subpool_of_p_p);
 }
 
 
