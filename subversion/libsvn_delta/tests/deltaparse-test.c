@@ -368,6 +368,10 @@ int main(int argc, char *argv[])
                                   indent our printf's */
   void *my_parent_baton = NULL;
 
+  svn_vernum_t base_version;
+  svn_string_t *base_path;
+
+
   /* Process args */
   if (argc != 2)
     {
@@ -409,10 +413,15 @@ int main(int argc, char *argv[])
   my_editor.change_dir_prop    = test_change_dir_prop;
   my_editor.change_dirent_prop = test_change_dirent_prop;
 
+  /* Set context variables for evaluating a tree-delta */
+  base_version = 1;
+  base_path = svn_string_create ("/root", globalpool);
 
   /* Fire up the XML parser */
   err = svn_xml_auto_parse (my_read_func, source_baton, 
-                            &my_editor,                 
+                            &my_editor,
+                            base_path,
+                            base_version,
                             &my_edit_baton,
                             my_parent_baton,            
                             globalpool);
