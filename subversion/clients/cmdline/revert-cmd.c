@@ -25,6 +25,7 @@
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_path.h"
+#include "svn_pools.h"
 #include "svn_error.h"
 #include "cl.h"
 
@@ -42,29 +43,28 @@ svn_cl__revert (apr_getopt_t *os,
   svn_boolean_t recursive = opt_state->recursive;
   svn_wc_notify_func_t notify_func = NULL;
   void *notify_baton = NULL;
+  apr_pool_t *subpool;
 
   targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
 
-  /* Revert has no implicit dot-target `.', so don't you put that code
-     here! */
+  /* Revert has no implicit dot-target `.', so don't you put that code here! */
+  if (! targets->nelts)
+    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
 
   if (! opt_state->quiet)
     svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool); 
 
-  if (targets->nelts)
-    for (i = 0; i < targets->nelts; i++)
-      {
-        const char *target = ((const char **) (targets->elts))[i];
-        
-        SVN_ERR (svn_client_revert
-                 (target, recursive, notify_func, notify_baton, pool));
-      }
-  else
+  subpool = svn_pool_create (pool);
+  for (i = 0; i < targets->nelts; i++)
     {
-      svn_cl__subcommand_help ("revert", pool);
-      return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
+      const char *target = ((const char **) (targets->elts))[i];
+      
+      SVN_ERR (svn_client_revert (target, recursive, 
+                                  notify_func, notify_baton, subpool));
+      svn_pool_clear (subpool);
     }
   
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 

@@ -54,10 +54,8 @@ svn_cl__switch (apr_getopt_t *os,
      switch to ("switch_url"). */
   targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
   if (targets->nelts == 0)
-    {
-      svn_cl__subcommand_help ("switch", pool);
-      return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
-    }
+    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
+
   if (targets->nelts == 1)
     {
       switch_url = ((const char **) (targets->elts))[0];
