@@ -2,8 +2,8 @@
 #### run-fs-tests.sh --- run filesystem test programs
 
 ## Remove database files cretaed by the tests.
-if [ -d test-repo ]; then
-  rm -fr test-repo;
+if [ -d test-repo-1 ]; then
+  rm -fr test-repo-*;
 fi
 
 > ./tests.log
