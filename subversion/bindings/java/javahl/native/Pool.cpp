@@ -21,6 +21,8 @@
 
 #include "Pool.h"
 #include "JNIUtil.h"
+#include "JNIMutex.h"
+#include "JNICriticalSection.h"
 #include <svn_pools.h>
 
 
@@ -30,6 +32,7 @@
 
 Pool::Pool(bool exclusive)
 {
+    JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
 	m_pool = svn_pool_create(JNIUtil::getPool());
 	if(!exclusive)
 	{
@@ -39,6 +42,7 @@ Pool::Pool(bool exclusive)
 
 Pool::~Pool()
 {
+    JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
 	if(JNIUtil::getRequestPool() == this)
 	{
 		JNIUtil::setRequestPool(NULL);
