@@ -30,7 +30,7 @@ extern "C" {
 /*** Functions. ***/
 
 /* Create an entirely new, mutable node in the filesystem FS, whose
-   NODE-REVISION is NODEREVL, as part of TRAIL.  Set *ID_P to the new
+   NODE-REVISION is NODEREV, as part of TRAIL.  Set *ID_P to the new
    node revision's ID.  Use TRAIL->pool for any temporary allocation.
 
    TXN_ID is the Subversion transaction under which this occurs.

@@ -147,6 +147,8 @@ int svn_fs__dag_is_directory (dag_node_t *node);
    list of NODE, as part of TRAIL.  The hash has const char * names
    (the property names) and svn_string_t * values (the property values).
 
+   If properties do not exist on NODE, *PROPLIST_P will be set to NULL.
+
    The returned skel is allocated in TRAIL->pool.  */
 svn_error_t *svn_fs__dag_get_proplist (apr_hash_t **proplist_p,
                                        dag_node_t *node,
@@ -372,7 +374,10 @@ svn_error_t *svn_fs__dag_get_contents (svn_stream_t **contents,
 /* Return a generic writable stream in *CONTENTS with which to set the
    contents of FILE as part of TRAIL.  Allocate the stream in POOL,
    which may or may not be TRAIL->pool.  TXN_ID is the Subversion
-   transaction under which this occurs.  */
+   transaction under which this occurs.
+
+   Any previous edits on the file will be deleted, and a new edit
+   stream will be constructed.  */
 svn_error_t *svn_fs__dag_get_edit_stream (svn_stream_t **contents,
                                           dag_node_t *file,
                                           apr_pool_t *pool,
@@ -382,7 +387,9 @@ svn_error_t *svn_fs__dag_get_edit_stream (svn_stream_t **contents,
 
 /* Signify the completion of edits to FILE made using the stream
    returned by svn_fs__dag_get_edit_stream, as part of TRAIL.  TXN_ID
-   is the Subversion transaction under which this occurs.  */
+   is the Subversion transaction under which this occurs.
+
+   This operation is a no-op if no edits are present.  */
 svn_error_t *svn_fs__dag_finalize_edits (dag_node_t *file,
                                          const char *txn_id, 
                                          trail_t *trail);

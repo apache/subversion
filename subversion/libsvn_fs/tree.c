@@ -935,7 +935,7 @@ txn_body_node_proplist (void *baton, trail_t *trail)
 {
   struct node_proplist_args *args = baton;
   parent_path_t *parent_path;
-  apr_hash_t *proplist = NULL;
+  apr_hash_t *proplist;
 
   SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
   SVN_ERR (svn_fs__dag_get_proplist (&proplist, parent_path->node, trail));
@@ -978,7 +978,7 @@ txn_body_change_node_prop (void *baton,
 {
   struct change_node_prop_args *args = baton;
   parent_path_t *parent_path;
-  apr_hash_t *proplist = NULL;
+  apr_hash_t *proplist;
 
   SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
   SVN_ERR (make_path_mutable (args->root, parent_path, args->path, trail));
@@ -2218,14 +2218,14 @@ txn_body_dir_entries (void *baton,
 {
   struct dir_entries_args *args = baton;
   parent_path_t *parent_path;
-  apr_hash_t *entries = NULL;
+  apr_hash_t *entries;
 
   SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
 
   /* Get the entries for PARENT_PATH. */
   SVN_ERR (svn_fs__dag_dir_entries (&entries, parent_path->node, trail));
 
-  /* Initialize the return value to an empty hash. */
+  /* Potentially initialize the return value to an empty hash. */
   *args->table_p = entries ? entries : apr_hash_make (trail->pool);
   return SVN_NO_ERROR;
 }
