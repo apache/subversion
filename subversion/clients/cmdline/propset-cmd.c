@@ -51,11 +51,8 @@ svn_cl__propset (apr_getopt_t *os,
   }
   /* PROPNAME and PROPVAL expected as first 2 arguments if filedata
      was NULL */
-  err = svn_cl__parse_num_args (os, opt_state,
-                                "propset", num_args_wanted, pool);
-
-  if (err)
-    return err;
+  SVN_ERR (svn_cl__parse_num_args (os, opt_state,
+                                   "propset", num_args_wanted, pool));
 
   propname  = ((svn_stringbuf_t **) (opt_state->args->elts))[0];
   if (num_args_wanted == 2)
@@ -70,9 +67,7 @@ svn_cl__propset (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
-      err = svn_wc_prop_set (propname, propval, target, pool);
-      if (err)
-        return err;
+      SVN_ERR (svn_wc_prop_set (propname, propval, target, pool));
 
       if (! opt_state->quiet)
         printf ("property `%s' set on %s.\n", propname->data, target->data);

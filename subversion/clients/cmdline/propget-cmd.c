@@ -45,11 +45,8 @@ svn_cl__propget (apr_getopt_t *os,
   int i;
 
   /* PROPNAME is first argument */
-  err = svn_cl__parse_num_args (os, opt_state,
-                                "propget", 1, pool);
-
-  if (err)
-    return err;
+  SVN_ERR (svn_cl__parse_num_args (os, opt_state,
+                                   "propget", 1, pool));
 
   propname = ((svn_stringbuf_t **) (opt_state->args->elts))[0];
 
