@@ -281,7 +281,6 @@ else
   (cd "$DIST_SANDBOX" > /dev/null && zip -q -r - "$DISTNAME") > \
     "$DISTNAME.zip"
 fi
-exit 1
 echo "Removing sandbox..."
 rm -rf "$DIST_SANDBOX"
 
