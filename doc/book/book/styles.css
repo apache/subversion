@@ -17,7 +17,7 @@ BODY
 H1
 {
     font-family: times new roman,times,serif;
-    font-size: 30pt;
+    font-size: 250%;
     font-style: normal;
     font-weight: bold;
     color: black;
@@ -26,7 +26,7 @@ H1
 H2
 {
     font-family: times new roman,times,serif;
-    font-size: 24px;
+    font-size: 150%;
     font-style: normal;
     font-weight: bold;
     color: black;
@@ -35,7 +35,7 @@ H2
 H3
 {
     font-family: times new roman,times,serif;
-    font-size: 20px;
+    font-size: 125%;
     font-style: normal;
     font-weight: bold;
     color: black;
@@ -44,7 +44,7 @@ H3
 H4
 {
     font-family: times new roman,times,serif;
-    font-size: 16px;
+    font-size: 100%;
     font-style: normal;
     font-weight: bold;
     color: black;
@@ -53,7 +53,6 @@ H4
 P,LI,UL,OL,DD,DT,TD
 {
     font-family: times new roman,times,serif;
-    font-size: 12pt;
     font-style: normal;
     font-weight: normal;
     color: black;
@@ -62,7 +61,6 @@ P,LI,UL,OL,DD,DT,TD
 TT,PRE
 {
     font-family: courier new,courier,fixed;
-    font-size: 10pt;
     font-style: normal;
     font-weight: normal;
     color: black;
@@ -92,7 +90,7 @@ IMG
 .author
 {
     font-family: times new roman,times,serif;
-    font-size: 12pt;
+    font-size: 100%;
     font-style: italic;
     font-weight: normal;
     color: black;
