@@ -1648,21 +1648,25 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
 
         /* Text base. */
         svn_thang = svn_wc__text_base_path (full_path, 0, subpool);
+        SVN_ERR (svn_io_set_file_read_write (svn_thang, FALSE, subpool));
         SVN_ERR (remove_file_if_present (svn_thang, subpool));
 
         /* Working prop file. */
         SVN_ERR (svn_wc__prop_path (&svn_thang, full_path, adm_access, FALSE,
                                     subpool));
+        SVN_ERR (svn_io_set_file_read_write (svn_thang, FALSE, subpool));
         SVN_ERR (remove_file_if_present (svn_thang, subpool));
 
         /* Prop base file. */
         SVN_ERR (svn_wc__prop_base_path (&svn_thang, full_path, adm_access,
                                          FALSE, subpool));
+        SVN_ERR (svn_io_set_file_read_write (svn_thang, FALSE, subpool));
         SVN_ERR (remove_file_if_present (svn_thang, subpool));
 
         /* wc-prop file. */
         SVN_ERR (svn_wc__wcprop_path (&svn_thang, full_path, adm_access, FALSE,
                                       subpool));
+        SVN_ERR (svn_io_set_file_read_write (svn_thang, FALSE, subpool));
         SVN_ERR (remove_file_if_present (svn_thang, subpool));
       }
 
