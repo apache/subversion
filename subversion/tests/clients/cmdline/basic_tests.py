@@ -1017,6 +1017,16 @@ def basic_delete(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'rm', '--force', foo_path)
 
+  # At one stage deleting an URL dumped core
+  iota_URL = svntest.main.current_repo_url + '/iota'
+
+  svntest.actions.run_and_verify_svn(None,
+                                     ["\n", "Committed revision 2.\n"], None,
+                                     'rm', '-m', 'delete iota URL',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     iota_URL)
+
 #----------------------------------------------------------------------
 
 def basic_checkout_deleted(sbox):

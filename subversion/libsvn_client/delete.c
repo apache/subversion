@@ -233,7 +233,8 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
                                ctx,
                                pool));
 
-  SVN_ERR (svn_wc_adm_close (adm_access));
+  if (adm_access)
+    SVN_ERR (svn_wc_adm_close (adm_access));
 
   return SVN_NO_ERROR;
 }
