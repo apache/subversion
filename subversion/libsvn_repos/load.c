@@ -303,7 +303,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
                             apr_pool_t *pool)
 {
   svn_stringbuf_t *linebuf;
-  void *current_rev_baton = NULL;
+  void *rev_baton = NULL;
   char *buffer = apr_palloc (pool, SVN_STREAM_CHUNK_SIZE);
   apr_size_t buflen = SVN_STREAM_CHUNK_SIZE;
   apr_pool_t *linepool = svn_pool_create (pool);
@@ -312,7 +312,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
 
   /* The first two lines of the stream are the dumpfile-format version
      number, and a blank line. */
-  SVN_ERR (svn_stream_readline (stream, &linebuf, pool));
+  SVN_ERR (svn_stream_readline (stream, &linebuf, linepool));
   SVN_ERR (validate_format_version (linebuf->data));
 
   /* A dumpfile "record" is defined to be a header-block of
@@ -331,90 +331,98 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
   
   while (1)
     {
+      apr_hash_t *headers;
+      void *node_baton;
+      const char *valstr;
+      svn_boolean_t found_node = FALSE;
+
+      /* Clear our per-line pool. */
+      svn_pool_clear (linepool);
+
       /* Keep reading blank lines until we discover a new record, or until
          the stream runs out. */
-      SVN_ERR (svn_stream_readline (stream, &linebuf, pool));
+      SVN_ERR (svn_stream_readline (stream, &linebuf, linepool));
       
       if (linebuf == NULL)
         break;   /* end of stream, go home. */
 
-      if ((linebuf->len > 0) && (! apr_isspace (linebuf->data[0])))
+      if ((linebuf->len == 0) || (apr_isspace (linebuf->data[0])))
+        continue; /* empty line ... loop */
+
+      /*** Found the beginning of a new record. ***/ 
+
+      /* The last line we read better be a header of some sort.
+         Read the whole header-block into a hash. */
+      SVN_ERR (read_header_block (stream, linebuf, &headers, linepool));
+
+      /* Create some kind of new record object. */
+
+      /* Is this a revision record? */
+      if (apr_hash_get (headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER,
+                        APR_HASH_KEY_STRING))
         {
-          /* Found the beginning of a new record. */ 
-          apr_hash_t *headers;
-          void *node_baton;
-          const char *valstr;
-          svn_boolean_t found_node = FALSE;
-
-          /* The last line we read better be a header of some sort.
-             Read the whole header-block into a hash. */
-          SVN_ERR (read_header_block (stream, linebuf, &headers, linepool));
-
-          /* Create some kind of new record object. */
-          if (apr_hash_get (headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER,
-                            APR_HASH_KEY_STRING))
+          /* If we already have a rev_baton open, we need to close it
+             and clear the per-revision subpool. */
+          if (rev_baton != NULL)
             {
-              /* Found a new revision record. */
-              if (current_rev_baton != NULL)
-                {
-                  SVN_ERR (parse_fns->close_revision (current_rev_baton));
-                  svn_pool_clear (revpool);
-                }
-
-              SVN_ERR (parse_fns->new_revision_record (&current_rev_baton,
-                                                       headers, parse_baton,
-                                                       revpool));
-            }
-          else if (apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_PATH,
-                                 APR_HASH_KEY_STRING))
-            {
-              /* Found a new node record. */
-              SVN_ERR (parse_fns->new_node_record (&node_baton,
-                                                   headers,
-                                                   current_rev_baton,
-                                                   nodepool));
-              found_node = TRUE;
-            }
-          else            
-            /* What the heck is this record?!? */
-            return svn_error_create (SVN_ERR_MALFORMED_STREAM_DATA,
-                                     0, NULL, pool,
-                                     "Unrecognized record type in stream.");
-
-
-          /* Is there a content-block to parse? */
-          if ((valstr = apr_hash_get (headers,
-                                      SVN_REPOS_DUMPFILE_CONTENT_LENGTH,
-                                      APR_HASH_KEY_STRING)))
-            {
-              apr_size_t content_length = (apr_size_t) atoi (valstr);
-
-              SVN_ERR (parse_content_block (stream, content_length,
-                                            parse_fns,
-                                            found_node ? 
-                                              node_baton : current_rev_baton,
-                                            found_node,
-                                            buffer, buflen,
-                                            found_node ?
-                                              nodepool : revpool));
-            }
-          
-          /* Done processing this node-record. */
-          if (found_node)
-            {
-              SVN_ERR (parse_fns->close_node (node_baton));
-              svn_pool_clear (nodepool);
+              SVN_ERR (parse_fns->close_revision (rev_baton));
+              svn_pool_clear (revpool);
             }
 
-        } /* end of processing for one record. */
+          SVN_ERR (parse_fns->new_revision_record (&rev_baton,
+                                                   headers, parse_baton,
+                                                   revpool));
+        }
+
+      /* Or is this, perhaps, a node record? */
+      else if (apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_PATH,
+                             APR_HASH_KEY_STRING))
+        {
+          SVN_ERR (parse_fns->new_node_record (&node_baton,
+                                               headers,
+                                               rev_baton,
+                                               nodepool));
+          found_node = TRUE;
+        }
+
+      /* Or is this bogosity?! */
+      else
+        {
+          /* What the heck is this record?!? */
+          return svn_error_create (SVN_ERR_MALFORMED_STREAM_DATA,
+                                   0, NULL, pool,
+                                   "Unrecognized record type in stream.");
+        }
       
-      svn_pool_clear (linepool);
+      /* Is there a content-block to parse? */
+      if ((valstr = apr_hash_get (headers,
+                                  SVN_REPOS_DUMPFILE_CONTENT_LENGTH,
+                                  APR_HASH_KEY_STRING)))
+        {
+          SVN_ERR (parse_content_block (stream, 
+                                        (apr_size_t) atoi (valstr),
+                                        parse_fns,
+                                        found_node ? node_baton : rev_baton,
+                                        found_node,
+                                        buffer, buflen,
+                                        found_node ? nodepool : revpool));
+        }
+      
+      /* If we just finished processing a node record, we need to
+         close the node record and clear the per-node subpool. */
+      if (found_node)
+        {
+          SVN_ERR (parse_fns->close_node (node_baton));
+          svn_pool_clear (nodepool);
+        }
+      
+      /*** End of processing for one record. ***/
 
     } /* end of stream */
 
   /* Close out whatever revision we're in. */
-  if (current_rev_baton != NULL)
-    SVN_ERR (parse_fns->close_revision (current_rev_baton));
+  if (rev_baton != NULL)
+    SVN_ERR (parse_fns->close_revision (rev_baton));
 
   svn_pool_destroy (linepool);
   svn_pool_destroy (revpool);

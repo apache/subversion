@@ -839,6 +839,8 @@ svn_fs__unparse_node_revision_skel (skel_t **skel_p,
       svn_fs__prepend (svn_fs__mem_atom (id_str->data, id_str->len, pool), 
                        header_skel);
     }
+  else
+    svn_fs__prepend (svn_fs__mem_atom (NULL, 0, pool), header_skel);
 
   /* KIND */
   if (noderev->kind == svn_node_file)
