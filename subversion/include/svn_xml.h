@@ -204,3 +204,9 @@ void svn_xml_make_close_tag (svn_string_t **str,
 
 
 #endif /* SVN_XML_H */
+
+/* --------------------------------------------------------------
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end: 
+ */
