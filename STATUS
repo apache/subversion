@@ -69,48 +69,48 @@ already know about.)
 
 
    * r8023, r8030, r8040
-   Fixes to make 'svn blame' work with i18n and uri-escaped filenames.
-   Justification: Correctness.  [feel free to extend this, anyone.]
-   Votes:
+     Fixes to make 'svn blame' work with i18n and uri-escaped filenames.
+     Justification: Correctness.  [feel free to extend this, anyone.]
+     Votes:
 
 
    * r8048
-   Fix a handle leak that caused a test failure on Windows.
-   Justification: Windows correctness, test failure, and went into 0.35.1.
-   Votes: 
+     Fix a handle leak that caused a test failure on Windows.
+     Justification: Windows correctness, test failure, and went into 0.35.1.
+     Votes: 
 
 
    * r8052, r8062  (issue #1660)
-   Make svn_config__parse_file do charset conversion.
-   Justification: Correctness, and went into 0.35.1.
-   Votes:
+     Make svn_config__parse_file do charset conversion.
+     Justification: Correctness, and went into 0.35.1.
+     Votes:
 
 
    * r8021
-   'svn revert' performance improvement (timestamp sleep once, not N times)
-   Justification: presumably that it's small & safe?  Mike?  Anyone?
-   Votes: 
+     'svn revert' performance improvement (timestamp sleep once, not N times)
+     Justification: presumably that it's small & safe?  Mike?  Anyone?
+     Votes: 
 
 
    * r8006
-   SSL providers retry.
-   Justification: API, consistency with other provider behavior
-   Votes:
+     SSL providers retry.
+     Justification: API, consistency with other provider behavior
+     Votes:
 
 
    * r8013
-   Add may_save option to the auth prompt functions and credentials.
-   Justification: trivial change, but important for GUI clients
-   Votes:
+     Add may_save option to the auth prompt functions and credentials.
+     Justification: trivial change, but important for GUI clients
+     Votes:
 
 
    * r8065
-   Update references to BDB version in documentation.
-   Justification: very low risk, and accurate documentation is good
-   Votes:
+     Update references to BDB version in documentation.
+     Justification: very low risk, and accurate documentation is good
+     Votes:
 
 
    * Issue #1652
-   Error messages cf most important conventions [patch in issue].
-   Justification: low impact (though huge); better user experience
-   Votes:
+     Error messages cf most important conventions [patch in issue].
+     Justification: low impact (though huge); better user experience
+     Votes:
