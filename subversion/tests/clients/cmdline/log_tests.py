@@ -486,8 +486,8 @@ def url_missing_in_head(sbox):
     raise svntest.Failure
 
 #----------------------------------------------------------------------
-def setup_copyfrom_history(sbox):
-  "setup repository with copyfrom history"
+def log_through_copyfrom_history(sbox):
+  "'svn log TGT' with copyfrom history"
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -499,35 +499,60 @@ def setup_copyfrom_history(sbox):
   svntest.main.file_append (mu_path, "2")
   svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
                                       '-m', "Log message for revision 2")
-  svntest.main.file_append (mu_path, "3")
+  svntest.main.file_append (mu2_path, "this is mu2")
+  svntest.actions.run_and_verify_svn (None, None, [], 'add', mu2_path)
   svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
                                       '-m', "Log message for revision 3")
+  svntest.actions.run_and_verify_svn (None, None, [], 'rm', mu2_path)
+  svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
+                                      '-m', "Log message for revision 4")
+  svntest.main.file_append (mu_path, "5")
+  svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
+                                      '-m', "Log message for revision 5")
 
   svntest.actions.run_and_verify_svn (None, None, [],
-                                      'cp', '-r', '2', mu_URL, mu2_URL,
-                                      '-m', "Log message for revision 4")
+                                      'cp', '-r', '5', mu_URL, mu2_URL,
+                                      '-m', "Log message for revision 6")
+  svntest.actions.run_and_verify_svn (None, None, [], 'up', wc_dir)
 
-def log_through_copyfrom_history(sbox):
-  "'svn log URL' with copyfrom history"
-  setup_copyfrom_history(sbox)
-  mu2_URL = svntest.main.current_repo_url + '/A/mu2'
+  # The full log for mu2 is relatively unsurprising
+  output, errput = svntest.main.run_svn (None, 'log', mu2_path)
+  if errput:
+    raise svntest.Failure
+  log_chain = parse_log_output (output)
+  if check_log_chain (log_chain, [6, 5, 2, 1]):
+    raise svntest.Failure
+
   output, errput = svntest.main.run_svn (None, 'log', mu2_URL)
   if errput:
     raise svntest.Failure
   log_chain = parse_log_output (output)
-  if check_log_chain (log_chain, [4, 2, 1]):
+  if check_log_chain (log_chain, [6, 5, 2, 1]):
     raise svntest.Failure
 
-# XFail because it tries to get /A/mu2 at rev 2
-def log_rN_through_copyfrom_history(sbox):
-  "'svn log -rN URL' with copyfrom history"
-  setup_copyfrom_history(sbox)
-  mu2_URL = svntest.main.current_repo_url + '/A/mu2'
-  output, errput = svntest.main.run_svn (None, 'log', '-r', '2', mu2_URL)
+  # First "oddity", the full log for mu2 doesn't include r3, but the -r3
+  # log works!
+  output, errput = svntest.main.run_svn (None, 'log', '-r', '3', mu2_path)
   if errput:
     raise svntest.Failure
   log_chain = parse_log_output (output)
-  if check_log_chain (log_chain, [2]):
+  if check_log_chain (log_chain, [3]):
+    raise svntest.Failure
+
+  output, errput = svntest.main.run_svn (None, 'log', '-r', '3', mu2_URL)
+  if errput:
+    raise svntest.Failure
+  log_chain = parse_log_output (output)
+  if check_log_chain (log_chain, [3]):
+    raise svntest.Failure
+
+  # Second "oddity", the full log for mu2 includes r2, but the -r2 log
+  # fails!
+  output, errput = svntest.main.run_svn (1, 'log', '-r', '2', mu2_path)
+  if not errput or output:
+    raise svntest.Failure
+  output, errput = svntest.main.run_svn (1, 'log', '-r', '2', mu2_URL)
+  if not errput or output:
     raise svntest.Failure
   
 ########################################################################
@@ -544,7 +569,6 @@ test_list = [ None,
               log_with_path_args,
               url_missing_in_head,
               log_through_copyfrom_history,
-              XFail(log_rN_through_copyfrom_history),
              ]
 
 if __name__ == '__main__':
