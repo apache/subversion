@@ -33,6 +33,8 @@
 #include "svn_utf.h"
 #include "svn_hash.h"
 #include "svn_md5.h"
+#include "../libsvn_delta/delta.h"
+
 #include "id.h"
 #include "fs.h"
 #include "err.h"
@@ -844,9 +846,9 @@ struct rep_args_t
   svn_boolean_t is_delta;
   svn_boolean_t is_delta_vs_empty;
   
-  svn_revnum_t delta_revision;
-  apr_off_t delta_offset;
-  apr_size_t delta_length;
+  svn_revnum_t base_revision;
+  apr_off_t base_offset;
+  apr_size_t base_length;
 };
 
 /* Read the next line from file FILE and parse it as a text
@@ -857,9 +859,10 @@ read_rep_line (struct rep_args_t **rep_args_p,
                apr_file_t *file,
                apr_pool_t *pool)
 {
-  char buffer[80];
+  char buffer[160];
   apr_size_t limit;
   struct rep_args_t *rep_args;
+  char *str, *last_str;
   
   limit = sizeof (buffer);
   SVN_ERR (svn_io_read_length_line (file, buffer, &limit, pool));
@@ -867,13 +870,13 @@ read_rep_line (struct rep_args_t **rep_args_p,
   rep_args = apr_pcalloc (pool, sizeof (*rep_args));
   rep_args->is_delta = FALSE;
 
-  if (strcmp (buffer, "PLAIN") == 0)
+  if (strcmp (buffer, SVN_FS_FS__PLAIN) == 0)
     {
       *rep_args_p = rep_args;
       return SVN_NO_ERROR;
     }
 
-  if (strcmp (buffer, "DELTA") == 0)
+  if (strcmp (buffer, SVN_FS_FS__DELTA) == 0)
     {
       /* This is a delta against the empty stream. */
       rep_args->is_delta = TRUE;
@@ -882,9 +885,31 @@ read_rep_line (struct rep_args_t **rep_args_p,
       return SVN_NO_ERROR;
     }
 
-  abort ();
+  rep_args->is_delta = TRUE;
+  rep_args->is_delta_vs_empty = FALSE;
+  
+  /* We have hopefully a DELTA vs. a non-empty base revision. */
+  str = apr_strtok (buffer, " ", &last_str);
+  if (! str || (strcmp (str, SVN_FS_FS__DELTA) != 0)) goto err;
 
+  str = apr_strtok (NULL, " ", &last_str);
+  if (! str) goto err;
+  rep_args->base_revision = atol (str);
+
+  str = apr_strtok (NULL, " ", &last_str);
+  if (! str) goto err;
+  rep_args->base_offset = apr_atoi64 (str);
+
+  str = apr_strtok (NULL, " ", &last_str);
+  if (! str) goto err;
+  rep_args->base_length = apr_atoi64 (str);
+
+  *rep_args_p = rep_args;
   return SVN_NO_ERROR;
+
+ err:
+  return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                           "Malformed representation header.");
 }
 
 /* Given a revision file REV_FILE, find the Node-ID of the header
@@ -1078,78 +1103,117 @@ svn_fs__fs_revision_proplist (apr_hash_t **proplist_p,
   return SVN_NO_ERROR;
 }
 
+/* Represents where in the current svndiff data block each
+   representation is. */
+struct rep_state
+{
+  apr_file_t *file;
+  apr_off_t start;  /* The starting offset for the raw
+                       svndiff/plaintext data minus header. */
+  apr_off_t off;    /* The current offset into the file. */
+  apr_off_t end;    /* The end offset of the raw data. */
+  int ver;          /* If a delta, what svndiff version? */
+  int chunk_index;  /* Something important I'm sure. */
+};
+
+/* Build an array of rep_state structures in *LIST giving the delta
+   reps from first_rep to a plain-text or self-compressed rep.  Set
+   *SRC_STATE to the plain-text rep we find at the end of the chain,
+   or to NULL if the final delta representation is self-compressed.
+   The representation to start from is designated by filesystem FS, id
+   ID, and representation REP. */
+static svn_error_t *
+build_rep_list (apr_array_header_t **list,
+                struct rep_state **src_state,
+                svn_fs_t *fs,
+                const svn_fs_id_t *id,
+                svn_fs__representation_t *first_rep,
+                apr_pool_t *pool)
+{
+  svn_fs__representation_t rep;
+  struct rep_state *rs;
+  struct rep_args_t *rep_args;
+  apr_file_t *file;
+  unsigned char buf[4];
+  apr_size_t len;
+
+  *list = apr_array_make (pool, 1, sizeof (struct rep_state *));
+  rep = *first_rep;
+
+  while (1)
+    {
+      SVN_ERR (open_and_seek_representation (&file, fs, id, &rep, pool));
+      SVN_ERR (read_rep_line (&rep_args, file, pool));
+
+      /* Create the rep_state for this representation. */
+      rs = apr_pcalloc (pool, sizeof (*rs));
+      rs->file = file;
+      rs->start = 0;
+      SVN_ERR (svn_io_file_seek (file, APR_CUR, &rs->start, pool));
+      rs->off = rs->start;
+      rs->end = rs->start + rep.size;
+      
+      if (rep_args->is_delta == FALSE)
+        {
+          /* This is a plaintext, so just return the current rep_state. */
+          *src_state = rs;
+          return SVN_NO_ERROR;
+        }
+
+      /* We are dealing with a delta, find out what version. */
+      SVN_ERR (svn_io_file_read_full (file, buf, 4, NULL, pool));
+      if (! ((buf[0] == 'S') && (buf[1] == 'V') && (buf[2] == 'N')))
+        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                 "Malformed svndiff data in representation.");
+      rs->ver = buf[3];
+      rs->chunk_index = 0;
+      rs->off += 4;
+
+      /* Push this rep onto the list.  If it's self-compressed, we're done. */
+      APR_ARRAY_PUSH (*list, struct rep_state *) = rs;
+      if (rep_args->is_delta_vs_empty)
+        {
+          *src_state = NULL;
+          return SVN_NO_ERROR;
+        }
+
+      rep.revision = rep_args->base_revision;
+      rep.offset = rep_args->base_offset;
+      rep.size = rep_args->base_length;
+      rep.txn_id = NULL;
+      rep.is_directory_contents = FALSE;
+    }
+}
+
+
 struct rep_read_baton
 {
   /* The FS from which we're reading. */
   svn_fs_t *fs;
 
-  /* Location of the representation we want to read. */
-  apr_file_t *rep_file;
+  /* The state of all prior delta representations. */
+  apr_array_header_t *rs_list;
 
-  /* How many bytes have been read from the rep file already. */
-  svn_filesize_t rep_offset;
+  /* The plaintext state, if there is a plaintext. */
+  struct rep_state *src_state;
 
-  /* How many bytes are there in this deltafied representation. */
-  apr_size_t rep_size;
-
-  /* Is this text-representation in delta format? */
-  svn_boolean_t is_delta;
-  
-  /* Streams to use with the delta handler. */
-  svn_stream_t *wstream, *target_stream;
+  /* Some important state to remember. */
+  int chunk_index;
+  char *buf;
+  apr_size_t buf_pos;
+  apr_size_t buf_len;
   
   /* MD5 checksum.  Initialized when the baton is created, updated as
      we read data, and finalized when the stream is closed. */
   struct apr_md5_ctx_t md5_context;
 
-  /* The length of the rep's contents (as fulltext, that is,
-     independent of how the rep actually stores the data.)  This is
-     retrieved when the baton is created, and used to determine when
-     we have read the last byte, at which point we compare checksums.
-
-     Getting this at baton creation time makes interleaved reads and
-     writes on the same rep in the same trail impossible.  But we're
-     not doing that, and probably no one ever should.  And anyway if
-     they do, they should see problems immediately. */
-  svn_filesize_t size;
-
-  /* Set to FALSE when the baton is created, TRUE when the md5_context
-     is digestified. */
-  svn_boolean_t checksum_finalized;
-
   /* Used for temporary allocations, iff `trail' (above) is null.  */
   apr_pool_t *pool;
-
-  svn_stringbuf_t *nonconsumed_data;
 };
-
-/* Handler to be called when txdelta has a new window of data read.
-   BATON is of type rep_read_baton, DATA points to the data being
-   written and *LEN contains the length of data being written.
-
-   This function just buffers that data so that it can be read from
-   the content stream at the proper time.*/
-static svn_error_t *
-read_contents_write_handler (void *baton,
-                             const char *data,
-                             apr_size_t *len)
-{
-  struct rep_read_baton *b = baton;
-  
-  svn_stringbuf_appendbytes (b->nonconsumed_data, data, *len);
-
-  return SVN_NO_ERROR;
-}
 
 /* Create a rep_read_baton structure for node revision NODEREV in
    filesystem FS and store it in *RB_P.  Perform all allocations in
-   POOL.
-
-   This opens the revision file and positions the file stream at the
-   beginning of the text representation.  In addition, if the
-   representation is in delta format, it sets up the delta handling
-   chain.
-*/
+   POOL.  */
 static svn_error_t *
 rep_read_get_baton (struct rep_read_baton **rb_p,
                     svn_fs_t *fs,
@@ -1158,53 +1222,15 @@ rep_read_get_baton (struct rep_read_baton **rb_p,
                     apr_pool_t *pool)
 {
   struct rep_read_baton *b;
-  struct rep_args_t *rep_args;
-  svn_stream_t *empty_stream;
-  svn_txdelta_window_handler_t handler;
-  void *handler_baton;
 
   b = apr_pcalloc (pool, sizeof (*b));
   apr_md5_init (&(b->md5_context));
 
   b->fs = fs;
-  b->pool = pool;
-  b->rep_offset = 0;
-  b->rep_size = rep->size;
-  b->size = rep->expanded_size;
-  b->nonconsumed_data = svn_stringbuf_create ("", pool);
-  b->is_delta = FALSE;
-
-  /* Open the revision file. */
-  SVN_ERR (open_and_seek_representation (&b->rep_file, fs, id, rep, pool));
-
-  /* Read in the REP line. */
-  SVN_ERR (read_rep_line (&rep_args, b->rep_file, pool));
-
-  if (rep_args->is_delta)
-    {
-      /* Set up the delta handler. */
-      if (rep_args->is_delta_vs_empty == FALSE)
-        abort ();
-      
-      /* Create a stream that txdelta apply can write to, where we will
-         accumulate undeltified data. */
-      b->target_stream = svn_stream_create (b, pool);
-      svn_stream_set_write (b->target_stream, read_contents_write_handler);
-      
-      /* For now the empty stream is always our base revision. */
-      empty_stream = svn_stream_empty (pool);
-      
-      /* Create a handler that can process chunks of txdelta. */
-      svn_txdelta_apply (empty_stream, b->target_stream, NULL, NULL,
-                         pool, &handler, &handler_baton);
-
-      /* Create a writable stream that will call our handler when svndiff
-         data is written to it. */
-      b->wstream = svn_txdelta_parse_svndiff (handler, handler_baton, 
-                                              FALSE, pool);
-
-      b->is_delta = TRUE;
-    }
+  SVN_ERR (build_rep_list (&b->rs_list, &b->src_state, fs, id, rep, pool));
+  b->chunk_index = 0;
+  b->buf = NULL;
+  b->pool = svn_pool_create (pool);
 
   /* Save our output baton. */
   *rb_p = b;
@@ -1212,88 +1238,174 @@ rep_read_get_baton (struct rep_read_baton **rb_p,
   return SVN_NO_ERROR;
 }
 
-/* Handles closing the content stream.  BATON is of type
-   rep_read_baton. */
+/* Get one delta window that is a result of combining all the deltas
+   from the current desired representation identified in *RB, to its
+   final base representation.  Store the window in *RESULT*/
 static svn_error_t *
-rep_read_contents_close (void *baton)
+get_combined_window (svn_txdelta_window_t **result,
+                     struct rep_read_baton *rb)
 {
-  struct rep_read_baton *rb = baton;
-  
-  /* Clean up our baton. */
-  SVN_ERR (svn_io_file_close (rb->rep_file, rb->pool));
-  if (rb->wstream)
-    SVN_ERR (svn_stream_close (rb->wstream));
+  apr_pool_t *pool, *new_pool;
+  int i, this_chunk;
+  svn_txdelta_window_t *window, *nwin;
+  svn_stream_t *stream;
+  struct rep_state *rs;
 
-  if (rb->target_stream)
-    SVN_ERR (svn_stream_close (rb->target_stream));
+  this_chunk = rb->chunk_index++;
+  pool = svn_pool_create (rb->pool);
 
+  /* Read the next window from the original rep. */
+  rs = APR_ARRAY_IDX (rb->rs_list, 0, struct rep_state *);
+  stream = svn_stream_from_aprfile (rs->file, pool);
+  SVN_ERR (svn_txdelta_read_svndiff_window (&window, stream, rs->ver, pool));
+  rs->chunk_index++;
+  rs->off = 0;
+  SVN_ERR (svn_io_file_seek (rs->file, APR_CUR, &rs->off, pool));
+  if (rs->off > rs->end)
+    return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                             "Reading one svndiff window read beyond the end "
+                             "of the representation.");
+
+  /* Combine in the windows from the other delta reps, if needed. */
+  for (i = 1; i < rb->rs_list->nelts; i++)
+    {
+      svn_txdelta__compose_ctx_t context;
+
+      if (window->src_ops == 0)
+        break;
+
+      rs = APR_ARRAY_IDX (rb->rs_list, i, struct rep_state *);
+
+      /* Skip windows to reach the current chunk if we aren't there yet. */
+      while (rs->chunk_index < this_chunk)
+        {
+          SVN_ERR (svn_txdelta_skip_svndiff_window (rs->file, rs->ver, pool));
+          rs->chunk_index++;
+          rs->off = 0;
+          SVN_ERR (svn_io_file_seek (rs->file, APR_CUR, &rs->off, pool));
+          if (rs->off >= rs->end)
+            return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                     "Reading one svndiff window read beyond "
+                                     "the end of the representation.");
+        }
+
+      /* Read the next window. */
+      stream = svn_stream_from_aprfile (rs->file, pool);
+      SVN_ERR (svn_txdelta_read_svndiff_window (&nwin, stream, rs->ver, pool));
+      rs->chunk_index++;
+      rs->off = 0;
+      SVN_ERR (svn_io_file_seek (rs->file, APR_CUR, &rs->off, pool));
+
+      if (rs->off > rs->end)
+        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                 "Reading one svndiff window read beyond "
+                                 "the end of the representation.");
+
+      /* Combine this window with the current one.  Cycles pools so that we
+         only need to hold three windows at a time. */
+      new_pool = svn_pool_create (rb->pool);
+      window = svn_txdelta__compose_windows (nwin, window, &context, new_pool);
+      svn_pool_destroy (pool);
+      pool = new_pool;
+    }
+
+  *result = window;
   return SVN_NO_ERROR;
 }
-  
 
-/* BATON is of type `rep_read_baton':
-
-   Read into BATON->rb->buf the *(BATON->len) bytes starting at
-   BATON->rb->offset.  Afterwards, *LEN is the number of bytes
-   actually read, and BATON->rb->offset is incremented by that amount.
-*/
-
+/* BATON is of type `rep_read_baton', return the next *LEN bytes of
+   the representation and store them in *BUF. */
 static svn_error_t *
 rep_read_contents (void *baton,
                    char *buf,
                    apr_size_t *len)
 {
   struct rep_read_baton *rb = baton;
-  apr_size_t size = 0;
-  char file_buf[4096];
+  apr_size_t copy_len, remaining = *len;
+  char *sbuf, *cur = buf;
+  struct rep_state *rs;
+  svn_txdelta_window_t *window;
 
-  if (rb->is_delta)
+  /* Special case for when there are no delta reps, only a plain
+     text. */
+  if (rb->rs_list->nelts == 0)
     {
-
-      while (rb->nonconsumed_data->len < *len) {
-        /* Until we have enough data to return, keep trying to send out
-           more svndiff data. */
-        
-        size = sizeof (file_buf);
-        if (size > (rb->rep_size - rb->rep_offset))
-          size = rb->rep_size - rb->rep_offset;
-        
-        /* Check to see if we've read the entire representation. */
-        if (size == 0) break;
-        
-        SVN_ERR (svn_io_file_read (rb->rep_file, file_buf, &size, rb->pool));
-
-        rb->rep_offset += size;
-        
-        SVN_ERR (svn_stream_write (rb->wstream, file_buf, &size));
-      }
-      
-      /* Send out all the data we have, up to *len. */
-      size = *len;
-      if (size > rb->nonconsumed_data->len)
-        size = rb->nonconsumed_data->len;
-      
-      memcpy (buf, rb->nonconsumed_data->data, size);
-      
-      /* Remove the things we just wrote from the stringbuf. */
-      memmove (rb->nonconsumed_data->data, rb->nonconsumed_data + size,
-               rb->nonconsumed_data->len - size);
-      
-      svn_stringbuf_chop (rb->nonconsumed_data, size);
-      
-      *len = size;
+      copy_len = remaining;
+      rs = rb->src_state;
+      if (copy_len > rs->end - rs->off)
+        copy_len = rs->end - rs->off;
+      SVN_ERR (svn_io_file_read_full (rs->file, cur, copy_len, NULL, rb->pool));
+      rs->off += copy_len;
+      *len = copy_len;
+      return SVN_NO_ERROR;
     }
-  else
+
+  while (remaining > 0)
     {
-      /* This is a plaintext file. */
+      /* If we have buffered data from a previous chunk, use that. */
+      if (rb->buf)
+        {
+          /* Determine how much to copy from the buffer. */
+          copy_len = rb->buf_len - rb->buf_pos;
+          if (copy_len > remaining)
+            copy_len = remaining;
 
-      if ((*len + rb->rep_offset) > rb->size)
-        *len = rb->size - rb->rep_offset;
-      
-      SVN_ERR (svn_io_file_read_full (rb->rep_file, buf, *len, len, rb->pool));
+          /* Actually copy the data. */
+          memcpy (cur, rb->buf + rb->buf_pos, copy_len);
+          rb->buf_pos += copy_len;
+          cur += copy_len;
+          remaining -= copy_len;
 
-      rb->rep_offset += *len;
+          /* If the buffer is all used up, clear it and empty the
+             local pool. */
+          if (rb->buf_pos == rb->buf_len)
+            {
+              svn_pool_clear (rb->pool);
+              rb->buf = NULL;
+            }
+        }
+
+      rs = APR_ARRAY_IDX (rb->rs_list, 0, struct rep_state *);
+      if (rs->off == rs->end)
+        break;
+
+      /* Get more buffered data by evaluating a chunk. */
+      SVN_ERR (get_combined_window (&window, rb));
+      if (window->src_ops > 0)
+        {
+          if (! rb->src_state)
+            return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                     "svndiff data requested "
+                                     "non-existant source.");
+          rs = rb->src_state;
+          sbuf = apr_pcalloc (rb->pool, window->sview_len);
+          if (! ((rs->start + window->sview_offset) < rs->end))
+            return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                     "svndiff requested position beyond end "
+                                     "of stream.");
+          if ((rs->start + window->sview_offset) != rs->off)
+            {
+              rs->off = rs->start + window->sview_offset;
+              SVN_ERR (svn_io_file_seek (rs->file, APR_SET, &rs->off,
+                                         rb->pool));
+            }
+          SVN_ERR (svn_io_file_read_full (rs->file, sbuf, window->sview_len,
+                                          NULL, rb->pool));
+          rs->off += window->sview_len;
+        }
+      else
+        sbuf = NULL;
+
+      rb->buf_len = window->tview_len;
+      rb->buf = apr_pcalloc (rb->pool, rb->buf_len);
+      svn_txdelta__apply_instructions (window, sbuf, rb->buf, &rb->buf_len);
+      if (rb->buf_len != window->tview_len)
+        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                 "svndiff window length is corrupt.");
+      rb->buf_pos = 0;
     }
+
+  *len = cur - buf;
 
   return SVN_NO_ERROR;
 }
@@ -1305,8 +1417,8 @@ rep_read_contents (void *baton,
    a representation of EXPANDED_SIZE bytes.  If it is a plaintext
    representation, SIZE == EXPANDED_SIZE.
 
-   If REV equals SVN_INVALID_REVNUM, then this representation is
-   asssumed to be empty, and an empty stream is returned.
+   If REP is NULL, the representation is assumed to be empty, and the
+   empty stream is returned.
 */
 static svn_error_t *
 get_representation_at_offset (svn_stream_t **contents_p,
@@ -1326,7 +1438,6 @@ get_representation_at_offset (svn_stream_t **contents_p,
       SVN_ERR (rep_read_get_baton (&rb, fs, id, rep, pool));
       *contents_p = svn_stream_create (rb, pool);
       svn_stream_set_read (*contents_p, rep_read_contents);
-      svn_stream_set_close (*contents_p, rep_read_contents_close);
     }
   
   return SVN_NO_ERROR;
