@@ -33,9 +33,33 @@
 
 /*** Hook drivers. ***/
 
+static svn_error_t *
+run_cmd_with_output (const char *cmd,
+                     const char **args,
+                     apr_pool_t *pool)
+{
+  apr_file_t *outhandle, *errhandle;
+  apr_status_t apr_err;
+  
+  /* Get an apr_file_t representing stdout and stderr. */
+  apr_err = apr_file_open_stdout (&outhandle, pool);
+  if (apr_err)
+    return svn_error_create 
+      (apr_err, 0, NULL, pool,
+       "run_cmd_with_output: can't open handle to stdout");
+  apr_err = apr_file_open_stderr (&errhandle, pool);
+  if (apr_err)
+    return svn_error_create 
+      (apr_err, 0, NULL, pool,
+       "run_cmd_with_output: can't open handle to stderr");
+
+  return svn_io_run_cmd (".", cmd, args, NULL, outhandle, errhandle, pool);
+}
+
+
 /* Run the start-commit hook for FS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  */
-static svn_error_t  *
+static svn_error_t *
 run_start_commit_hook (svn_fs_t *fs,
                        const char *user,
                        apr_pool_t *pool)
@@ -54,10 +78,12 @@ run_start_commit_hook (svn_fs_t *fs,
       args[2] = user;
       args[3] = NULL;
 
-      if ((err = svn_io_run_cmd (".", hook, args, NULL, NULL, NULL, pool)))
-        return svn_error_createf 
-          (SVN_ERR_REPOS_HOOK_FAILURE, 0, err, pool,
-           "run_start_commit_hook: running cmd `%s'", hook);
+      if ((err = run_cmd_with_output (hook, args, pool)))
+        {
+          return svn_error_createf 
+            (SVN_ERR_REPOS_HOOK_FAILURE, 0, err, pool,
+             "run_start_commit_hook: error running cmd `%s'", hook);
+        }
     }
 
   return SVN_NO_ERROR;
@@ -85,11 +111,11 @@ run_pre_commit_hook (svn_fs_t *fs,
       args[2] = txn_name;
       args[3] = NULL;
 
-      if ((err = svn_io_run_cmd (".", hook, args, NULL, NULL, NULL, pool)))
+      if ((err = run_cmd_with_output (hook, args, pool)))
         {
           return svn_error_createf 
             (SVN_ERR_REPOS_HOOK_FAILURE, 0, err, pool,
-             "run_pre_commit_hook: running cmd `%s'", hook);
+             "run_pre_commit_hook: error running cmd `%s'", hook);
         }
     }
 
@@ -118,11 +144,11 @@ run_post_commit_hook (svn_fs_t *fs,
       args[2] = apr_psprintf (pool, "%lu", rev);
       args[3] = NULL;
 
-      if ((err = svn_io_run_cmd (".", hook, args, NULL, NULL, NULL, pool)))
+      if ((err = run_cmd_with_output (hook, args, pool)))
         {
           return svn_error_createf 
             (SVN_ERR_REPOS_HOOK_FAILURE, 0, err, pool,
-             "run_post_commit_hook: running cmd `%s'", hook);
+             "run_post_commit_hook: error running cmd `%s'", hook);
         }
     }
 
