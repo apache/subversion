@@ -367,16 +367,16 @@ def update_lose_external(sbox):
   # it (G and H) which are not being removed.  We expect them to
   # remain -- in other words:
   #
-  #      BEFORE                              AFTER
-  #    ----------                          ----------     
-  #    A/exdir_A                           A/exdir_A
-  #    A/exdir_A/.svn/...                    <GONE>
-  #    A/exdir_A/mu                          <GONE>
-  #    A/exdir_A/B/...                       <GONE>
-  #    A/exdir_A/C/...                       <GONE>
-  #    A/exdir_A/D/...                       <GONE>
-  #    A/exdir_A/G/...                     A/exdir_A/G/...
-  #    A/exdir_A/H/...                     A/exdir_A/H/...
+  #      BEFORE                                AFTER
+  #    ------------                          ------------
+  #    A/D/exdir_A                           A/D/exdir_A
+  #    A/D/exdir_A/.svn/...                    <GONE>
+  #    A/D/exdir_A/mu                          <GONE>
+  #    A/D/exdir_A/B/...                       <GONE>
+  #    A/D/exdir_A/C/...                       <GONE>
+  #    A/D/exdir_A/D/...                       <GONE>
+  #    A/D/exdir_A/G/...                     A/D/exdir_A/G/...
+  #    A/D/exdir_A/H/...                     A/D/exdir_A/H/...
 
   new_externals_desc = \
            "exdir_A/G         " + os.path.join(other_repo_url, "A/D/G") + \
@@ -624,7 +624,7 @@ def update_receive_change_under_external(sbox):
 test_list = [ None,
               checkout_with_externals,
               update_receive_new_external,
-              # update_lose_external,
+              update_lose_external,
               update_change_pristine_external,
               update_change_modified_external,
               update_receive_change_under_external,
