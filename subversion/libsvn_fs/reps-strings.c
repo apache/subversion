@@ -418,7 +418,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
        right, for not much gain. */
 
     {
-      svn_txdelta_op_t *op;
+      const svn_txdelta_op_t *op;
       int i;
       apr_size_t len_read = 0;
       apr_size_t copy_amt = 0;

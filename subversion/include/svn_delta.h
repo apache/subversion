@@ -131,14 +131,11 @@ typedef struct svn_txdelta_window_t {
   /* The number of instructions in this window.  */
   int num_ops;
 
-  /* The allocated size of the ops array.  */
-  int ops_size;
-  
   /* The instructions for this window.  */
-  svn_txdelta_op_t *ops;
+  const svn_txdelta_op_t *ops;
 
   /* New data, for use by any `svn_delta_new' instructions.  */
-  svn_stringbuf_t *new_data;
+  const svn_string_t *new_data;
 
 } svn_txdelta_window_t;
 

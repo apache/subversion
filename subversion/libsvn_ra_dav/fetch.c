@@ -563,12 +563,10 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
 
       svn_txdelta_window_t window = { 0 };
       svn_txdelta_op_t op;
-      svn_stringbuf_t data;
+      svn_string_t data;
 
-      data.data		= (char *)buf;
-      data.len		= len;
-      data.blocksize	= len;
-      data.pool		= frc->pool;
+      data.data	= buf;
+      data.len = len;
 
       op.action_code = svn_txdelta_new;
       op.offset = 0;
@@ -576,7 +574,6 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
 
       window.tview_len = len;       /* result will be this long */
       window.num_ops = 1;
-      window.ops_size = 1;          /* ### why is this here? */
       window.ops = &op;
       window.new_data = &data;
 

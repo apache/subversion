@@ -106,7 +106,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   svn_stringbuf_t *instructions = svn_stringbuf_create ("", pool);
   svn_stringbuf_t *header = svn_stringbuf_create ("", pool);
   char ibuf[128], *ip;
-  svn_txdelta_op_t *op;
+  const svn_txdelta_op_t *op;
   svn_error_t *err;
   apr_size_t len;
 
@@ -401,6 +401,8 @@ write_handler (void *baton,
     {
       apr_pool_t *newpool;
       svn_txdelta_window_t window = { 0 };
+      svn_string_t new_data;
+      svn_txdelta_op_t *ops;
 
       /* Read the header, if we have enough bytes for that.  */
       p = (const unsigned char *) db->buffer->data;
@@ -467,11 +469,10 @@ write_handler (void *baton,
       window.sview_offset = sview_offset;
       window.sview_len = sview_len;
       window.tview_len = tview_len;
-      window.num_ops = ninst;
-      window.ops_size = ninst;
-      window.ops = apr_palloc (db->subpool, ninst * sizeof (*window.ops));
+
+      ops = apr_palloc (db->subpool, ninst * sizeof (*ops));
       npos = 0;
-      for (op = window.ops; op < window.ops + ninst; op++)
+      for (op = ops; op < ops + ninst; op++)
 	{
 	  p = decode_instruction (op, p, end);
 	  if (op->action_code == svn_txdelta_new)
@@ -480,8 +481,12 @@ write_handler (void *baton,
 	      npos += op->length;
 	    }
 	}
-      window.new_data
-        = svn_stringbuf_ncreate ((const char *) p, newlen, db->subpool);
+      window.num_ops = ninst;
+      window.ops = ops;
+
+      new_data.data = (const char *)p;
+      new_data.len = newlen;
+      window.new_data = &new_data;
 
       /* Send it off.  */
       err = db->consumer_func (&window, db->consumer_baton);

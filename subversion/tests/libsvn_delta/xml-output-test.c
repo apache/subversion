@@ -37,6 +37,7 @@ int main(int argc, char **argv)
   const svn_delta_edit_fns_t *editor;
   svn_txdelta_window_handler_t handler;
   svn_txdelta_window_t window;
+  svn_txdelta_op_t op;
   void *edit_baton, *root_baton, *dir_baton, *file_baton, *handler_baton;
   svn_stringbuf_t *foo_string;
   svn_stringbuf_t *bar_string;
@@ -57,13 +58,14 @@ int main(int argc, char **argv)
   window.sview_offset = 0;
   window.sview_len = 0;
   window.tview_len = 10;
+
+  op.action_code = svn_txdelta_new;
+  op.offset = 0;
+  op.length = 10;
   window.num_ops = 1;
-  window.ops_size = 1;
-  window.ops = apr_palloc (pool, sizeof (*window.ops));
-  window.ops[0].action_code = svn_txdelta_new;
-  window.ops[0].offset = 0;
-  window.ops[0].length = 10;
-  window.new_data = svn_stringbuf_create ("test delta", pool);
+  window.ops = &op;
+
+  window.new_data = svn_string_create ("test delta", pool);
 
   svn_delta_get_xml_editor (svn_stream_from_stdio (stdout, pool),
 			    &editor, &edit_baton, pool);

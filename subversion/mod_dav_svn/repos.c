@@ -1274,7 +1274,10 @@ static dav_error * dav_svn_write_stream(dav_stream *stream, const void *buf,
     {
       svn_txdelta_window_t window = { 0 };
       svn_txdelta_op_t op;
-      svn_stringbuf_t data = { (char *)buf, bufsize, bufsize, NULL };
+      svn_string_t data;
+
+      data.data = buf;
+      data.len = bufsize;
 
       op.action_code = svn_txdelta_new;
       op.offset = 0;
@@ -1282,7 +1285,6 @@ static dav_error * dav_svn_write_stream(dav_stream *stream, const void *buf,
 
       window.tview_len = bufsize;   /* result will be this long */
       window.num_ops = 1;
-      window.ops_size = 1;          /* ### why is this here? */
       window.ops = &op;
       window.new_data = &data;
 
