@@ -246,67 +246,14 @@ svn_cl__auth_ssl_client_prompt (svn_auth_cred_client_ssl_t **cred_p,
                                 void *baton,
                                 apr_pool_t *pool)
 {
-  const char *cert_file = NULL, *key_file = NULL;
-  size_t cert_file_len;
-  const char *extension;
-  svn_auth_ssl_cert_type_t cert_type;
+  const char *cert_file = NULL;
+  svn_auth_cred_client_ssl_t *cred;
 
   SVN_ERR (prompt (&cert_file, "client certificate filename: ", FALSE, pool));
 
-  if ((cert_file == NULL) || (cert_file[0] == 0))
-    {
-      *cred_p = NULL;
-      return SVN_NO_ERROR;
-    }
-
-  cert_file_len = strlen (cert_file);
-  extension = cert_file + cert_file_len - 4;
-  if ((strcmp (extension, ".p12") == 0) ||
-      (strcmp (extension, ".P12") == 0))
-    {
-      cert_type = svn_auth_ssl_pkcs12_cert_type;
-    }
-  else if ((strcmp (extension, ".pem") == 0) || 
-           (strcmp (extension, ".PEM") == 0))
-    {
-      cert_type = svn_auth_ssl_pem_cert_type;
-    }
-  else
-    {
-      const char *type;
-      SVN_ERR (prompt (&type, "cert type ('pem' or 'pkcs12'): ", FALSE, pool));
-      if ((strcmp (type, "pkcs12") == 0) ||
-          (strcmp (type, "PKCS12") == 0))
-        {
-          cert_type = svn_auth_ssl_pkcs12_cert_type;
-        }
-      else if ((strcmp (type, "pem") == 0) || 
-               (strcmp (type, "PEM") == 0))
-        {
-          cert_type = svn_auth_ssl_pem_cert_type;
-        }
-      else
-        {
-          return svn_error_createf (SVN_ERR_INCORRECT_PARAMS, NULL,
-                                    "unknown ssl certificate type '%s'", type);
-        }
-    }
-  
-  if (cert_type == svn_auth_ssl_pem_cert_type)
-    {
-      SVN_ERR (prompt (&key_file, "optional key file: ", FALSE, pool));
-    }
-
-  if (key_file && key_file[0] == 0)
-    {
-      key_file = NULL;
-    }
-
-  /* Build and return the credentials. */
-  *cred_p = apr_pcalloc (pool, sizeof (**cred_p));
-  (*cred_p)->cert_file = cert_file;
-  (*cred_p)->key_file = key_file;
-  (*cred_p)->cert_type = cert_type;
+  cred = apr_palloc (pool, sizeof(*cred));
+  cred->cert_file = cert_file;
+  *cred_p = cred;
 
   return SVN_NO_ERROR;
 }

@@ -420,29 +420,27 @@ static int end_element(void *userdata,
           name = defn->name;          
         }
 
-      /* Handle the property value. */
-      value = svn_string_create(cdata, pc->pool);
+      /* Check for encoding attribute. */
+      if (pc->encoding == NULL) {
+        /* Handle the property value by converting it to string. */
+        value = svn_string_create(cdata, pc->pool);
+        break;
+      }
 
-      /* Is there an encoding on this property?  Handle it. */
-      if (pc->encoding)
-        {
-          if (strcmp(pc->encoding, "base64") == 0)
-            {
-              svn_string_t in;
-              in.data = cdata;
-              in.len = strlen(cdata);
-              value = svn_base64_decode_string(&in, pc->pool);
-            }
-          else /* unknown encoding type! */
-            {
-              return SVN_RA_DAV__XML_INVALID;
-            }
-          pc->encoding = NULL;
-        }
-      else /* no encoding, so just transform the CDATA into an svn_string_t. */
-        {
-          value = svn_string_create(cdata, pc->pool);
-        }
+      /* Check for known encoding type */
+      if (strcmp(pc->encoding, "base64") != 0)
+        return SVN_RA_DAV__XML_INVALID;
+
+      /* There is an encoding on this property, handle it.
+       * the braces are needed to allocate "in" on the stack. */
+      {
+        svn_string_t in;
+        in.data = cdata;
+        in.len = strlen(cdata);
+        value = svn_base64_decode_string(&in, pc->pool);
+      }
+
+      pc->encoding = NULL; /* Reset encoding for future attribute(s). */
     }
 
   /*** Handling resource properties from here out. ***/

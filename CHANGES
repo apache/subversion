@@ -2,10 +2,17 @@ Version 0.29.0 (released ?? Sep 2003, revision ????)
 http://svn.collab.net/repos/svn/tags/0.28.0
 
  User-visible changes:
- * ???
+ * 'svn status' now streams its response.  (r6913, #1426)
+ * 'svn status' now recurses into externals (r6913, #1428)
+ * SSL changes:  (r6958, #1371)
+     - dropped support for PEM-encoded client certs, only accept PCKS12 now.
+     - ~/.subversion/'servers' file changed: 
+          'ssl-authority-files' is now list of CA files
+          no more 'ssl-client-cert-type' and 'ssl-client-key-file' variables.
 
  Developer-visible changes:
- * GUI developers take note: prompting API changed (r6928, issue #1214)
+ * GUI developers take note: prompting API changed (r6928, #1214)
+ * we now compile against either neon 0.23.9 *or* neon 0.24.0 (r6958, #1371)
 
 
 Version 0.28.2 (released 29 Aug 2003, revision 6946)
