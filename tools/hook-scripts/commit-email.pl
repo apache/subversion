@@ -363,6 +363,35 @@ foreach my $project (@project_settings_list)
     push(@head, "From: $mail_from\n");
     push(@head, "Subject: $subject\n");
     push(@head, "Reply-to: $reply_to\n") if $reply_to;
+
+    ### Below, we set the content-type etc, but see these comments
+    ### from Greg Stein on why this is not a full solution.
+    #
+    # From: Greg Stein <gstein@lyra.org>
+    # Subject: Re: svn commit: rev 2599 - trunk/tools/cgi
+    # To: dev@subversion.tigris.org
+    # Date: Fri, 19 Jul 2002 23:42:32 -0700
+    # 
+    # Well... that isn't strictly true. The contents of the files
+    # might not be UTF-8, so the "diff" portion will be hosed.
+    # 
+    # If you want a truly "proper" commit message, then you'd use
+    # multipart MIME messages, with each file going into its own part,
+    # and labeled with an appropriate MIME type and charset. Of
+    # course, we haven't defined a charset property yet, but no biggy.
+    # 
+    # Going with multipart will surely throw out the notion of "cut
+    # out the patch from the email and apply." But then again: the
+    # commit emailer could see that all portions are in the same
+    # charset and skip the multipart thang. 
+    # 
+    # etc etc
+    # 
+    # Basically: adding/tweaking the content-type is nice, but don't
+    # think that is the proper solution.
+    push(@head, "Content-Type: text/plain; charset=UTF-8\n");
+    push(@head, "Content-Transfer-Encoding: 8bit\n");
+
     push(@head, "\n");
 
     if ($sendmail =~ /\w/ and @email_addresses)
