@@ -111,8 +111,6 @@ local-extraclean: local-distclean
 
 local-install: @INSTALL_RULES@
 
-### the chmod really sucks, but some repository files don't have it like
-### they should ...
 check: $(TEST_DEPS) @FS_TEST_DEPS@
 	@logfile=`pwd`/tests.log ; \
 	echo > $$logfile ; \
@@ -123,22 +121,26 @@ check: $(TEST_DEPS) @FS_TEST_DEPS@
 	    progdir=`echo $$prog | sed 's?/[^/]*$$??'` ; \
 	    echo -n "Running all tests in $$progbase..." ; \
 	    echo "START: $$progbase" >> $$logfile ; \
-	    if echo $$prog | grep \.py > /dev/null; then  \
+	    if echo $$progbase | grep \\.py$$ > /dev/null; then  \
 		runprog="$(PYTHON) $$progbase" ; \
-	    else  \
+	    elif echo $$progbase | grep \\.sh$$ > /dev/null; then  \
+		runprog="$(SHELL) $$progbase" ; \
+	    elif test -x $$prog ; then \
 		runprog="./$$progbase" ; \
+	    else  \
+		echo "Don't know what to do about $$progbase" ; \
+		exit 1 ; \
 	    fi ; \
 	    if ( cd $$progdir && $$runprog ) >> $$logfile ; then \
 		echo "SUCCESS" ; \
 	    else \
 		failed=yes; \
-		echo "FAILED" ; \
-		echo "--- at least one test FAILED, check tests.log." ; \
 	    fi; \
 	    echo "END: $$progbase" >> $$logfile ; \
 	    echo >> $$logfile ; \
 	done ; \
 	if test "$$failed" = "yes"; then \
+	    echo "at least one test FAILED, checking tests.log." ; \
 	    grep FAIL $$logfile || true ; \
 	fi
 
