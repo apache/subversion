@@ -302,29 +302,12 @@ static svn_error_t *ra_svn_abort_edit(void *edit_baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-static const svn_delta_editor_t ra_svn_editor = {
-  ra_svn_target_rev,
-  ra_svn_open_root,
-  ra_svn_delete_entry,
-  ra_svn_add_dir,
-  ra_svn_open_dir,
-  ra_svn_change_dir_prop,
-  ra_svn_close_dir,
-  ra_svn_add_file,
-  ra_svn_open_file,
-  ra_svn_apply_textdelta,
-  NULL, /* ### todo#510: implement ra_svn_apply_text() */
-  ra_svn_change_file_prop,
-  ra_svn_close_file,
-  ra_svn_close_edit,
-  ra_svn_abort_edit
-};
-
 void svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
 			   void **edit_baton, svn_ra_svn_conn_t *conn,
 			   apr_pool_t *pool, svn_ra_svn_edit_callback callback,
                            void *callback_baton)
 {
+  svn_delta_editor_t *ra_svn_editor = svn_delta_default_editor (pool);
   ra_svn_edit_baton_t *eb;
 
   eb = apr_palloc(pool, sizeof(*eb));
@@ -332,7 +315,23 @@ void svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
   eb->callback = callback;
   eb->callback_baton = callback_baton;
 
-  *editor = &ra_svn_editor;
+  ra_svn_editor->set_target_revision = ra_svn_target_rev;
+  ra_svn_editor->open_root = ra_svn_open_root;
+  ra_svn_editor->delete_entry = ra_svn_delete_entry;
+  ra_svn_editor->add_directory = ra_svn_add_dir;
+  ra_svn_editor->open_directory = ra_svn_open_dir;
+  ra_svn_editor->change_dir_prop = ra_svn_change_dir_prop;
+  ra_svn_editor->close_directory = ra_svn_close_dir;
+  ra_svn_editor->add_file = ra_svn_add_file;
+  ra_svn_editor->open_file = ra_svn_open_file;
+  ra_svn_editor->apply_textdelta = ra_svn_apply_textdelta;
+  /* ### todo#510: ra_svn_editor->apply_text = ra_svn_apply_text; */ 
+  ra_svn_editor->change_file_prop = ra_svn_change_file_prop;
+  ra_svn_editor->close_file = ra_svn_close_file;
+  ra_svn_editor->close_edit = ra_svn_close_edit;
+  ra_svn_editor->abort_edit = ra_svn_abort_edit;
+
+  *editor = ra_svn_editor;
   *edit_baton = eb;
 }
 
