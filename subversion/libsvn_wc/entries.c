@@ -380,7 +380,8 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
     dst->revision = src->revision;
   
   /* Inherits parent's ancestor if doesn't have an ancestor of one's
-     own and is not marked for addition */
+     own and is not marked for addition.  An entry being added doesn't
+     really have ancestry yet.  */
   if ((! dst->ancestor) 
       && (! ((dst->schedule == svn_wc_schedule_add)
              || (dst->schedule == svn_wc_schedule_replace))))
