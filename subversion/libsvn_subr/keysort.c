@@ -96,8 +96,8 @@ counted_length_compare (const void *obj1, const void *obj2)
   int retval;
   size_t smaller_size;
 
-  item1 = (apr_item_t *) obj1;
-  item2 = (apr_item_t *) obj2;
+  item1 =  *((apr_item_t **) obj1);
+  item2 =  *((apr_item_t **) obj2);
 
   smaller_size = ((item1->size) < (item2->size)) ? item1->size : item2->size;
   retval =  strncmp (item1->key, item2->key, smaller_size);
