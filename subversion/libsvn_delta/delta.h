@@ -113,6 +113,8 @@ typedef struct svn_xml__stackframe_t
 
   svn_string_t *ref_id;  /* if this frame is a postfix text-delta,
                             here is its ID string */
+  svn_string_t *encoding; /* if this frame is a text-delta, here is
+                             encoding, if it specified one */
 
   svn_boolean_t hashed;  /* TRUE iff this is a <file> tag whose
                             file_baton has been stored in a postfix

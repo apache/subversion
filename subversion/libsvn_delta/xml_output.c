@@ -22,6 +22,7 @@
 #include "svn_io.h"
 #include "svn_xml.h"
 #include "svn_base64.h"
+#include "svn_quoprint.h"
 #include "apr_pools.h"
 
 
@@ -480,15 +481,15 @@ apply_textdelta (void *file_baton,
   apr_pool_t *pool = svn_pool_create (eb->pool);
   svn_error_t *err;
   apr_size_t len;
-  svn_stream_t *output;
+  svn_stream_t *output, *encoder;
+  apr_hash_t *att;
 
+  att = apr_make_hash (pool);
   if (fb->txdelta_id == 0)
     {
       /* We are inside a file element (possibly in a prop-delta) and
          are outputting a text-delta inline.  */
       str = get_to_elem (eb, elem_file, pool);
-      svn_xml_make_open_tag (&str, pool, svn_xml_protect_pcdata,
-                             "text-delta", NULL);
     }
   else
     {
@@ -497,9 +498,14 @@ apply_textdelta (void *file_baton,
          text-delta.  */
       char buf[128];
       sprintf(buf, "%d", fb->txdelta_id);
-      svn_xml_make_open_tag (&str, pool, svn_xml_protect_pcdata, "text-delta",
-                             "id", svn_string_create (buf, pool), NULL);
+      apr_hash_set (att, "id", strlen("id"), svn_string_create (buf, pool));
     }
+#ifdef QUOPRINT_SVNDIFFS
+  apr_hash_set (att, "encoding", strlen("encoding"),
+                svn_string_create ("quoted-printable", pool));
+#endif
+  svn_xml_make_open_tag_hash (&str, pool, svn_xml_protect_pcdata,
+                              "text-delta", att);
   fb->txdelta_id = -1;
 
   len = str->len;
@@ -511,8 +517,12 @@ apply_textdelta (void *file_baton,
   output = svn_stream_create (fb, fb->pool);
   svn_stream_set_write (output, output_svndiff_data);
   svn_stream_set_close (output, finish_svndiff_data);
-  svn_txdelta_to_svndiff (svn_base64_encode (output, eb->pool), eb->pool,
-                          handler, handler_baton);
+#ifdef QUOPRINT_SVNDIFFS
+  encoder = svn_quoprint_encode (output, eb->pool);
+#else
+  encoder = svn_base64_encode (output, eb->pool);
+#endif
+  svn_txdelta_to_svndiff (encoder, eb->pool, handler, handler_baton);
 
   return err;
 }

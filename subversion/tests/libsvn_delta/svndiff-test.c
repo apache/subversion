@@ -16,6 +16,7 @@
 #include <string.h>
 #include <apr_general.h>
 #include "svn_base64.h"
+#include "svn_quoprint.h"
 #include "svn_delta.h"
 #include "svn_error.h"
 
@@ -28,7 +29,7 @@ main (int argc, char **argv)
   svn_txdelta_stream_t *txdelta_stream;
   svn_txdelta_window_t *window;
   svn_txdelta_window_handler_t *svndiff_handler;
-  svn_stream_t *base64_stream;
+  svn_stream_t *encoder;
   void *svndiff_baton;
 
   source_file = fopen (argv[1], "rb");
@@ -38,10 +39,12 @@ main (int argc, char **argv)
   svn_txdelta (&txdelta_stream, svn_stream_from_stdio (source_file, NULL),
 	       svn_stream_from_stdio (target_file, NULL), NULL);
 
-  base64_stream = svn_base64_encode (svn_stream_from_stdio (stdout, NULL),
-                                     NULL);
-  svn_txdelta_to_svndiff (base64_stream, NULL, &svndiff_handler,
-                          &svndiff_baton);
+#ifdef QUOPRINT_SVNDIFFS
+  encoder = svn_quoprint_encode (svn_stream_from_stdio (stdout, NULL), NULL);
+#else
+  encoder = svn_base64_encode (svn_stream_from_stdio (stdout, NULL), NULL);
+#endif
+  svn_txdelta_to_svndiff (encoder, NULL, &svndiff_handler, &svndiff_baton);
   do {
     svn_txdelta_next_window (&window, txdelta_stream);
     svndiff_handler (window, svndiff_baton);
