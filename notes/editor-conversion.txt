@@ -4,7 +4,7 @@ Conversion of old EDITORS to the new editor interface
 DONE    clients/cmdline/trace-commit.c
 DONE    clients/cmdline/trace-update.c
         libsvn_client/cancellation_editor.c
-        libsvn_client/repos_diff.c
+DONE    libsvn_client/repos_diff.c
 DONE    libsvn_delta/compose_editors.c
         libsvn_delta/pipe_editors.c
 DONE    libsvn_delta/track_editor.c

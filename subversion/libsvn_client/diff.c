@@ -333,6 +333,8 @@ diff_or_merge (const svn_delta_editor_t *after_editor, /* ### still unused */
   else   /* ### todo: there may be uncovered cases remaining */
     {
       /* Pure repository comparison. */
+      const svn_delta_editor_t *new_diff_editor;
+      void *new_diff_edit_baton;
 
       /* Open a second session used to request individual file
          contents. Although a session can be used for multiple requests, it
@@ -356,8 +358,14 @@ diff_or_merge (const svn_delta_editor_t *after_editor, /* ### still unused */
                                             recurse,
                                             ra_lib, session2,
                                             start_revnum,
-                                            &diff_editor, &diff_edit_baton,
+                                            &new_diff_editor,
+                                            &new_diff_edit_baton,
                                             pool));
+
+      /* Make the repos-diff-editor look "old" style.  
+         ### Remove this wrapping someday.*/
+      svn_delta_compat_wrap (&diff_editor, &diff_edit_baton,
+                             new_diff_editor, new_diff_edit_baton, pool);
 
       SVN_ERR (ra_lib->do_update (session,
                                   &reporter, &report_baton,
