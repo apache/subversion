@@ -60,7 +60,11 @@ The subversion-server package adds the Subversion server Apache module to
 the Apache directories and configuration.
 
 %changelog
-* Fri Feb 22 2002 Blair Zajac <blair@orcaware.com> 0.10.0-1364
+* Sun Feb 24 2002 David Summers <david@summersoft.fay.ar.us> 0.9.0-1373
+- Fixed expat.patch to not have to make so many changes by writing a small
+  shell script that changes libexpat to -lexpat.
+
+* Fri Feb 22 2002 Blair Zajac <blair@orcaware.com> 0.9.0-1364
 - Updated to neon-0.19.2.
 
 * Mon Feb 11 2002 David Summers <david@summersoft.fay.ar.us> 0.8.0-1250
@@ -104,6 +108,7 @@ the Apache directories and configuration.
 
 # Fix up expat library.
 %patch0 -p1
+sed -e 's;libexpat;-lexpat;' < build.conf > build.conf.new && mv build.conf build.conf.old && mv build.conf.new build.conf
 
 sh autogen.sh
 
