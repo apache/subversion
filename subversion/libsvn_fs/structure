@@ -1,3 +1,5 @@
+Subversion on Berkeley DB
+
 There are many different ways to implement the Subversion filesystem
 interface.  You could implement it directly using ordinary POSIX
 filesystem operations; you could build it using an SQL server as a
@@ -7,28 +9,9 @@ This implementation of the Subversion filesystem interface is built on
 top of Berkeley DB (http://www.sleepycat.com).  Berkeley DB supports
 transactions and recoverability, making it well-suited for Subversion.
 
-In a Subversion filesystem, a `node' corresponds roughly to an
-`inode' in a Unix filesystem:
-- A node is either a file or a directory.
-- A node's contents change over time.
-- When you change a node's contents, it's still the same node; it's
-  just been changed.  So a node's identity isn't bound to a specific
-  set of contents.
-- If you rename a node, it's still the same node, just under a
-  different name.  So a node's identity isn't bound to a particular
-  filename.
 
-A `node version' refers to a node's contents at a specific point in
-time.  Changing a node's contents always creates a new version of that
-node.  Once created, a node version's contents never change.
-
-When we create a node, its initial contents are the initial version of
-the node.  As users make changes to the node over time, we create new
-versions of that same node.  When a user commits a change that deletes
-a file from the filesystem, we don't delete the node, or any version
-of it --- those stick around to allow us to recreate prior versions of
-the filesystem.  Instead, we just remove the reference to the node
-from the directory.
+
+ID's
 
 Within the database, we refer to nodes and node versions using strings
 of numbers separated by periods that look a lot like RCS revision
@@ -65,6 +48,42 @@ whether and how two nodes are related.  Simply by looking at the node
 version id's, we can tell that the difference from 100.10.3.11 to
 100.12 is the difference from 100.10.3.11 to 100.10, plus the
 difference from 100.10 to 100.12.
+
+
+How nodes are represented in the database.
+
+The database contains a table called "nodes", which is a btree indexed
+by node version ID's, mapping them onto a description of their
+contents.  Each node specifies whether it's a directory or a file, and
+whether it's full-text or a delta vs. the next node version.
+
+
+
+
+
+Since the "nodes" table is a btree, it's efficent to walk over the
+entries in order of increasing or decreasing node ID's.  In fact,
+Berkeley DB lets us provide our own key ordering function, so we can
+arrange the nodes for quick traversal, given our access patterns.
+
+Here's the sort order we use:
+
+- Nodes are sorted by their node number.
+- All the versions of a given node come together, in order of 
+  increasing version number.
+- Each node's versions node are followed by a record whose key is
+  "NODENUM.head".  This lets us quickly find the head of any given
+  chain of node versions by looking for "NODENUM.head", and then going
+  back one record.
+- All branches off any version of a node come immediately after that
+  node, ordered by increasing version number.
+
+
+
+
+
+
+
 
 
 Transactions
