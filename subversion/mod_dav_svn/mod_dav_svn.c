@@ -43,14 +43,23 @@ typedef struct {
 
 } dav_svn_server_conf;
 
+/* A tri-state enum used for per directory on/off flags.  Note that
+   it's important that DAV_SVN_FLAG_DEFAULT is 0 to make
+   dav_svn_merge_dir_config do the right thing. */
+enum dav_svn_flag {
+  DAV_SVN_FLAG_DEFAULT,
+  DAV_SVN_FLAG_ON,
+  DAV_SVN_FLAG_OFF
+};
+
 /* per-dir configuration */
 typedef struct {
-  const char *fs_path;          /* path to the SVN FS */
-  const char *repo_name;        /* repository name */
-  const char *xslt_uri;         /* XSL transform URI */
-  const char *fs_parent_path;   /* path to parent of SVN FS'es  */
-  svn_boolean_t autoversioning; /* whether autoversioning is active */
-  svn_boolean_t do_path_authz;  /* whether GET subrequests are active */
+  const char *fs_path;              /* path to the SVN FS */
+  const char *repo_name;            /* repository name */
+  const char *xslt_uri;             /* XSL transform URI */
+  const char *fs_parent_path;       /* path to parent of SVN FS'es  */
+  enum dav_svn_flag autoversioning; /* whether autoversioning is active */
+  enum dav_svn_flag do_path_authz;  /* whether GET subrequests are active */
 } dav_svn_dir_conf;
 
 #define INHERIT_VALUE(parent, child, field) \
@@ -90,9 +99,6 @@ static void *dav_svn_create_dir_config(apr_pool_t *p, char *dir)
 {
     /* NOTE: dir==NULL creates the default per-dir config */
     dav_svn_dir_conf *conf = apr_pcalloc(p, sizeof(*conf));
-
-    /* Be secure by default. */
-    conf->do_path_authz = TRUE;
 
     return conf;
 }
@@ -142,9 +148,9 @@ static const char *dav_svn_autoversioning_cmd(cmd_parms *cmd, void *config,
   dav_svn_dir_conf *conf = config;
 
   if (arg)
-    conf->autoversioning = TRUE;
+    conf->autoversioning = DAV_SVN_FLAG_ON;
   else
-    conf->autoversioning = FALSE;
+    conf->autoversioning = DAV_SVN_FLAG_OFF;
 
   return NULL;
 }
@@ -155,9 +161,9 @@ static const char *dav_svn_pathauthz_cmd(cmd_parms *cmd, void *config,
   dav_svn_dir_conf *conf = config;
 
   if (arg)
-    conf->do_path_authz = TRUE;
+    conf->do_path_authz = DAV_SVN_FLAG_ON;
   else
-    conf->do_path_authz = FALSE;
+    conf->do_path_authz = DAV_SVN_FLAG_OFF;
 
   return NULL;
 }
@@ -273,7 +279,7 @@ svn_boolean_t dav_svn_get_autoversioning_flag(request_rec *r)
     dav_svn_dir_conf *conf;
 
     conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-    return conf->autoversioning;
+    return conf->autoversioning == DAV_SVN_FLAG_ON;
 }
 
 svn_boolean_t dav_svn_get_pathauthz_flag(request_rec *r)
@@ -281,7 +287,7 @@ svn_boolean_t dav_svn_get_pathauthz_flag(request_rec *r)
     dav_svn_dir_conf *conf;
 
     conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-    return conf->do_path_authz;
+    return conf->do_path_authz != DAV_SVN_FLAG_OFF;
 }
 
 
