@@ -185,6 +185,12 @@ svn_string_appendbytes (svn_string_t *str, const char *bytes,
   size_t total_len;
   void *start_address;
 
+  if (str == NULL)
+    {
+      str = svn_string_ncreate (bytes, count, pool);
+      return;
+    }
+
   total_len = str->len + count;  /* total size needed */
 
   /* +1 for null terminator. */
