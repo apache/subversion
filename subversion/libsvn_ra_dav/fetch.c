@@ -946,7 +946,8 @@ static int validate_element(void *userdata,
     case ELEM_prop:
       if (child == ELEM_version_name
           || child == ELEM_creationdate
-          || child == ELEM_creator_displayname)
+          || child == ELEM_creator_displayname
+          || child == ELEM_remove_prop)
         return NE_XML_VALID;
       else
         return NE_XML_INVALID;
