@@ -45,32 +45,33 @@ extern "C" {
    use the short option letter as identifier.  */
 typedef enum {
   svn_cl__ancestor_path_opt = SVN_OPT_FIRST_LONGOPT_ID,
-  svn_cl__force_opt,
-  svn_cl__force_log_opt,
-  svn_cl__encoding_opt,
-  svn_cl__version_opt,
-  svn_cl__auth_username_opt,
   svn_cl__auth_password_opt,
-  svn_cl__targets_opt,
-  svn_cl__incremental_opt,
-  svn_cl__xml_opt,
-  svn_cl__strict_opt,
-  svn_cl__no_ignore_opt,
-  svn_cl__no_auth_cache_opt,
-  svn_cl__non_interactive_opt,
-  svn_cl__no_diff_deleted,
+  svn_cl__auth_username_opt,
+  svn_cl__autoprops_opt,
+  svn_cl__config_dir_opt,
+  svn_cl__diff_cmd_opt,
   svn_cl__dry_run_opt,
+  svn_cl__editor_cmd_opt,
+  svn_cl__encoding_opt,
+  svn_cl__force_log_opt,
+  svn_cl__force_opt,
+  svn_cl__incremental_opt,
+  svn_cl__merge_cmd_opt,
+  svn_cl__new_cmd_opt,
+  svn_cl__no_auth_cache_opt,
+  svn_cl__no_autoprops_opt,
+  svn_cl__no_diff_deleted,
+  svn_cl__no_ignore_opt,
+  svn_cl__non_interactive_opt,
+  svn_cl__notice_ancestry_opt,
+  svn_cl__old_cmd_opt,
   svn_cl__relocate_opt,
   svn_cl__revprop_opt,
-  svn_cl__diff_cmd_opt,
-  svn_cl__merge_cmd_opt,
-  svn_cl__notice_ancestry_opt,
-  svn_cl__editor_cmd_opt,
-  svn_cl__old_cmd_opt,
-  svn_cl__new_cmd_opt,
-  svn_cl__config_dir_opt,
-  svn_cl__autoprops_opt,
-  svn_cl__no_autoprops_opt
+  svn_cl__stop_on_copy_opt,
+  svn_cl__strict_opt,
+  svn_cl__targets_opt,
+  svn_cl__version_opt,
+  svn_cl__xml_opt
 } svn_cl__longopt_t;
 
 
@@ -114,6 +115,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_auth_cache;   /* do not cache authentication information */
   svn_boolean_t no_diff_deleted; /* do not show diffs for deleted files */
   svn_boolean_t notice_ancestry; /* notice ancestry for diff-y operations */
+  svn_boolean_t stop_on_copy;    /* don't cross copies during processing */
   svn_boolean_t dry_run;         /* try operation but make no changes */
   svn_boolean_t revprop;         /* operate on a revision property */
   const char *diff_cmd;          /* the external diff command to use */
