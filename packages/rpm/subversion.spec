@@ -127,7 +127,16 @@ if [ -f /usr/bin/autoconf-2.53 ]; then
 fi
 sh autogen.sh
 
-./configure \
+LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_delta/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_fs/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_repos/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_dav/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_local/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_subr/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_wc/.libs \
+	" ./configure \
 	--prefix=/usr \
 	--with-apxs=%{apache_dir}/usr/bin/apxs \
 	--with-apr=%{apache_dir}/bin/apr-config \
@@ -242,7 +251,13 @@ fi
 /usr/bin/svn
 /usr/bin/svnadmin
 /usr/bin/svnlook
-/usr/lib/libsvn*so*
+/usr/lib/libsvn_client*so*
+/usr/lib/libsvn_delta*so*
+/usr/lib/libsvn_fs*so*
+/usr/lib/libsvn_ra*so*
+/usr/lib/libsvn_repos*so*
+/usr/lib/libsvn_subr*so*
+/usr/lib/libsvn_wc*so*
 /usr/share/man/man1/*
 /usr/share/info/*
 
