@@ -84,7 +84,10 @@ svn_fs__retry_txn (svn_fs_t *fs,
 
       if (! svn_err)
         {
-          /* The transaction succeeded!  Commit it.  */
+          /* The transaction succeeded!  Commit it.
+             According to the example in the Berkeley DB manual,
+             txn_commit doesn't return DB_LOCK_DEADLOCK --- all
+             deadlocks are reported earlier.  */
           SVN_ERR (DB_WRAP (fs,
                             "committing Berkeley DB transaction",
                             txn_commit (trail->db_txn, 0)));
