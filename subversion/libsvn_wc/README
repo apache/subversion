@@ -77,7 +77,7 @@ Structure of the Working Copy
 Working copy meta-information is stored in SVN/ subdirectories,
 analogous to CVS/ sudirs:
 
-   SVN/README                   /* No, it's not this file.  Details below. */
+  .svn/README                   /* No, it's not this file.  Details below. */
        format                   /* Contains wc adm format version. */
        repository               /* Where this stuff came from. */
        entries                  /* Various adm info for each directory entry */
@@ -193,7 +193,7 @@ analogous to CVS/ sudirs:
    Child directories of the current directory are recorded here, but
    their ancestry information is omitted.  The idea is to make the
    child's existence known to the current directory; all other
-   information about the child directory is stored in its own SVN/
+   information about the child directory is stored in its own .svn/
    subdir.
 
 `dir-props'
@@ -217,7 +217,7 @@ analogous to CVS/ sudirs:
 
 `lock'
 
-   Present iff some client is using this SVN/ subdir for anything.
+   Present iff some client is using this .svn/ subdir for anything.
    kff todo: I think we don't need read vs write types, nor
    race-condition protection, due to the way locking is called.  We'll
    see, though.
@@ -238,7 +238,7 @@ analogous to CVS/ sudirs:
 
    To do a fresh checkout of `iota' in directory `.'
 
-      1. add_file() produces the new ./SVN/tmp/SVN/entries, which
+      1. add_file() produces the new ./.svn/tmp/.svn/entries, which
          probably is the same as the original `entries' file since
          `iota' is likely to be the same revision as its parent
          directory.  (But not necessarily...)
@@ -272,18 +272,18 @@ analogous to CVS/ sudirs:
    Probably the same routine will be used by finish_file() and in
    crash recovery.
 
-   Note that foo/SVN/log always uses paths relative to foo/, for
+   Note that foo/.svn/log always uses paths relative to foo/, for
    example, this:
    
        <!-- THIS IS GOOD -->
-       <mv name="SVN/tmp/prop-base/name"
-           dest="SVN/prop-base/name">
+       <mv name=".svn/tmp/prop-base/name"
+           dest=".svn/prop-base/name">
            
    rather than this:
 
        <!-- THIS WOULD BE BAD -->
-       <mv name="/home/joe/project/SVN/tmp/prop-base/name"
-           dest="/home/joe/project/SVN/prop-base/name">
+       <mv name="/home/joe/project/.svn/tmp/prop-base/name"
+           dest="/home/joe/project/.svn/prop-base/name">
 
    or this:
 
@@ -292,22 +292,22 @@ analogous to CVS/ sudirs:
            dest="prop-base/name">
 
    The problem with the second way is that is violates the
-   separability of SVN subdirectories -- a subdir should be operable
+   separability of .svn subdirectories -- a subdir should be operable
    independent of its location in the local filesystem.  
 
    The problem with the third way is that it can't conveniently refer
-   to the user's actual working files, only to files inside SVN/.
+   to the user's actual working files, only to files inside .svn/.
 
 `tmp'
 
    A shallow mirror of the working directory (i.e., the parent of the
-   SVN/ subdirectory), giving us reproducible tmp names.
+   .svn/ subdirectory), giving us reproducible tmp names.
 
    When the working copy library needs a tmp file for something in the
-   SVN dir, it uses tmp/thing, for example SVn/tmp/entries, or
-   SVN/tmp/text-base/foo.c.  When it needs a *very* temporary file for
-   something in SVN (such as when local changes during an update), use
-   tmp/SVN/blah$PID.tmp.  Since no SVN/ file ever has a .blah
+   .svn dir, it uses tmp/thing, for example .svn/tmp/entries, or
+   .svn/tmp/text-base/foo.c.  When it needs a *very* temporary file for
+   something in .svn (such as when local changes during an update), use
+   tmp/.svn/blah$PID.tmp.  Since no .svn/ file ever has a .blah
    extension, if something ends in .*, then it must be a tmp file.
 
    See discussion of the `log' file for more details.
@@ -360,7 +360,7 @@ analogous to CVS/ sudirs:
 
    Note that because these properties aren't being versioned, we don't
    bother to keep pristine forms of them in a 'base' area.  Nor do we
-   paranoid-ly move them through SVN/tmp/ when changing them.  These
+   paranoid-ly move them through .svn/tmp/ when changing them.  These
    sorts of behaviors are meant for preserving sacred user data,
    especially local modifications.  wcprops, on the other hand, are
    just internal tracking data used by the system, like the 'entries'
@@ -379,7 +379,7 @@ analogous to CVS/ sudirs:
 ------------------------
 todo: some loose ends
 
-   1. filename escaping in SVN/entries
+   1. filename escaping in .svn/entries
    2. 
 
 
