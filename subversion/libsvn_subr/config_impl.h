@@ -21,6 +21,8 @@
 #ifndef SVN_LIBSVN_SUBR_CONFIG_IMPL_H
 #define SVN_LIBSVN_SUBR_CONFIG_IMPL_H
 
+#define APR_WANT_STDIO
+#include <apr_want.h>
 
 #include <apr_hash.h>
 #include "svn_types.h"
@@ -145,6 +147,15 @@ svn_config__user_config_path (const char *config_dir,
                               const char *fname,
                               apr_pool_t *pool);
 
+
+/* Open a config file FILENAME with mode MODE. FILENAME is encoded in
+   UTF-8, so use POOL for any temporary storage needed for
+   conversions. */
+svn_error_t *
+svn_config__open_file (FILE **pfile,
+                       const char *filename,
+                       const char *mode,
+                       apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
