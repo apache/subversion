@@ -275,7 +275,7 @@ main (int argc, const char * const *argv)
       {
         svn_revnum_t youngest_rev;
         svn_fs_root_t *rev_root;
-        apr_array_header_t *revs;
+        apr_array_header_t *revs, *paths;
         int i;
 
         if (argc != 4)
@@ -284,11 +284,14 @@ main (int argc, const char * const *argv)
             /* NOTREACHED */
           }
 
+        paths = apr_array_make (pool, 1, sizeof (const char *));
+        (*(const char **)apr_array_push(paths)) = argv[3];
+
         INT_ERR (svn_repos_open (&repos, path, pool));
         fs = svn_repos_fs (repos);
         svn_fs_youngest_rev (&youngest_rev, fs, pool);
         INT_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, pool));
-        INT_ERR (svn_fs_revisions_changed (&revs, rev_root, argv[3], pool));
+        INT_ERR (svn_fs_revisions_changed (&revs, rev_root, paths, pool));
         for (i = 0; i < revs->nelts; i++)
           {
             svn_revnum_t this_rev = ((svn_revnum_t *)revs->elts)[i];

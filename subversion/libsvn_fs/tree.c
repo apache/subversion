@@ -36,6 +36,8 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
+#include "svn_hash.h"
+#include "svn_sorts.h"
 #include "skel.h"
 #include "id.h"
 #include "fs.h"
@@ -2752,7 +2754,7 @@ struct revisions_changed_args
 {
   apr_array_header_t **revs;
   svn_fs_t *fs;
-  svn_fs_id_t *id;
+  apr_array_header_t *ids;
   apr_pool_t *pool;
 };
 
@@ -2761,38 +2763,61 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
 {
   struct revisions_changed_args *args = baton;
   apr_array_header_t *array;
-  dag_node_t *node;
-  svn_fs_id_t *tmp_id;
-  svn_revnum_t revision;
+  int i;
+  apr_pool_t *subpool = svn_pool_create(args->pool);
+  svn_revnum_t prev_rev;
 
   /* Allocate an array for holding revision numbers. */
-  array = apr_array_make (args->pool, 4, sizeof (svn_revnum_t));
+  array = apr_array_make (subpool, 4, sizeof (svn_revnum_t));
 
-  /* Loop, from ID, through its predecessors, until it ceases to
-     exist. */
-  tmp_id = svn_fs_copy_id (args->id, args->pool);
-  do
+  /* Check the ID for each path */
+  for (i = 0; i < args->ids->nelts; i++)
     {
-      int len = svn_fs_id_length (tmp_id);
+      svn_fs_id_t *tmp_id = APR_ARRAY_IDX(args->ids, i, svn_fs_id_t *);
 
-      /* Get the dag node for this id. */
-      SVN_ERR (svn_fs__dag_get_node (&node, args->fs, tmp_id, trail));
+      /* Loop, from ID, through its predecessors, until it ceases to
+         exist.  */
+      do
+        {
+          svn_revnum_t revision;
+          dag_node_t *node;
+          int len = svn_fs_id_length (tmp_id);
 
-      /* Now get the revision from the dag. */
-      SVN_ERR (svn_fs__dag_get_revision (&revision, node, trail));
+          /* Get the dag node for this id. */
+          SVN_ERR (svn_fs__dag_get_node (&node, args->fs, tmp_id, trail));
 
-      /* And put the revision into our array. */
-      (*((svn_revnum_t *) apr_array_push (array))) = revision;
+          /* Now get the revision from the dag. */
+          SVN_ERR (svn_fs__dag_get_revision (&revision, node, trail));
 
-      /* Hack up TMP_ID so that it represents its own predecessor. */
-      tmp_id[len - 1]--;
-      if (tmp_id[len - 1] == 0)
-        tmp_id[len - 2] = -1;
+          (*((svn_revnum_t *) apr_array_push (array))) = revision;
+
+          /* Hack up TMP_ID so that it represents its own predecessor.
+           * Node IDs come in pairs, terminated by a trailing -1. So we
+           * process a pair until the ID gets down to zero, then mock up
+           * the -1 so we'll process the previous one.  */
+        tmp_id[len - 1]--;
+        if (tmp_id[len - 1] == 0)
+          tmp_id[len - 2] = -1;
+        }
+      while (tmp_id[0] != -1);
     }
-  while (tmp_id[0] != -1);
 
-  /* Now make the array "go live". */
-  *(args->revs) = array;
+  /* Now sort the array */
+  qsort(array->elts, array->nelts, array->elt_size,
+        svn_sort_compare_revisions);
+
+  /* Now build the return array, removing duplicates along the way. */
+  *(args->revs) = apr_array_make (args->pool, 4, sizeof (svn_revnum_t));
+  prev_rev = SVN_INVALID_REVNUM;
+  for (i = 0; i < array->nelts; i++)
+    {
+      if (APR_ARRAY_IDX(array, i, svn_revnum_t) != prev_rev)
+        (*((svn_revnum_t *) apr_array_push (*(args->revs)))) =
+            APR_ARRAY_IDX(array, i, svn_revnum_t);
+      prev_rev = APR_ARRAY_IDX(array, i, svn_revnum_t);
+    }
+
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
@@ -2800,22 +2825,35 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
 svn_error_t *
 svn_fs_revisions_changed (apr_array_header_t **revs,
                           svn_fs_root_t *root,
-                          const char *path,
+                          const apr_array_header_t *paths,
                           apr_pool_t *pool)
 {
   struct revisions_changed_args args;
   svn_fs_t *fs = svn_fs_root_fs (root);
+  int i;
+  svn_fs_id_t *tmp_id;
+  const char *this_path;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Populate the baton. */
   args.revs = revs;
   args.fs = fs;
   args.pool = pool;
+  args.ids = apr_array_make (subpool, 1, sizeof (svn_fs_id_t *));
 
-  /* Get the node-id for PATH under ROOT. */
-  SVN_ERR (svn_fs_node_id (&(args.id), root, path, pool));
+  /* Get the node-id for each PATH under ROOT. */
+  for (i = 0; i < paths->nelts; i++)
+    {
+      this_path = APR_ARRAY_IDX(paths, i, const char *);
+      SVN_ERR (svn_fs_node_id (&tmp_id, root, this_path, subpool));
+      *((svn_fs_id_t **) apr_array_push (args.ids)) = svn_fs_copy_id(tmp_id, subpool);
+    }
 
   /* Call the real function under the umbrella of a trail. */
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_revisions_changed, &args, pool));
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_revisions_changed, &args, subpool));
+
+  /* Destroy all memory used, except the revisions array */
+  svn_pool_destroy(subpool);
 
   /* Return the array. */
   return SVN_NO_ERROR;

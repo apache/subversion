@@ -189,8 +189,20 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   
   { "log", svn_cl__log, {0},
     "Show the log messages for a set of revision(s) and/or file(s).\n"
-    "usage: svn log [PATH1 [PATH2] ...] \n",
-    {'r', 'v', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
+    "usage: svn log [URL] [PATH1 [PATH2] ...] \n"
+    "    Either get the log messages for local PATHs or PATHs at the\n"
+    "    URL. If URL is given by itself, then log messages are output for\n"
+    "    that specific path. The -v option will include a list of affected\n"
+    "    files for each log message. Examples are:\n"
+    "\n"
+    "    svn log\n"
+    "\n"
+    "    svn log foo.c\n"
+    "\n"
+    "    svn log http://www.example.com/repo/project/foo.c\n"
+    "\n"
+    "    svn log http://www.example.com/repo/project foo.c bar.c\n",
+    {'r', 'D', 'v', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
   
   { "merge", svn_cl__merge, {0},
     "Merge changes in the working copy.  IMPLEMENTATION INCOMPLETE.\n"

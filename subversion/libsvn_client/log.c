@@ -58,8 +58,8 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
   svn_ra_plugin_t *ra_lib;  
   void *ra_baton, *session;
   svn_stringbuf_t *URL;
-  svn_wc_entry_t *entry;
-  svn_stringbuf_t *basename;
+  svn_stringbuf_t *basename = NULL;
+  svn_string_t path_str;
   apr_array_header_t *condensed_targets;
   svn_revnum_t start_revnum, end_revnum;
 
@@ -71,36 +71,101 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
          "svn_client_log: caller failed to supply revision");
     }
 
-  SVN_ERR (svn_path_condense_targets (&basename, &condensed_targets,
-                                      targets, pool));
+  start_revnum = end_revnum = SVN_INVALID_REVNUM;
 
-  /* Get full URL from the common path, carefully. */
-  SVN_ERR (svn_wc_entry (&entry, basename, pool));
-  if (! entry)
-    return svn_error_createf
-      (SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL, pool,
-       "svn_client_log: %s is not under revision control", basename->data);
-  if (! entry->url)
-    return svn_error_createf
-      (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool,
-       "svn_client_log: entry '%s' has no URL", basename->data);
-  URL = svn_stringbuf_dup (entry->url, pool);
+  path_str.data = (APR_ARRAY_IDX(targets, 0, svn_stringbuf_t *))->data;
+  path_str.len = strlen(path_str.data);
+
+  /* Use the passed URL, if there is one.  */
+  if (svn_path_is_url (&path_str))
+    {
+      /* Set the URL from our first target */
+      URL = svn_path_uri_encode(&path_str, pool);
+
+      /* Initialize this array, since we'll be building it below */
+      condensed_targets = apr_array_make (pool, 1, sizeof(svn_stringbuf_t *));
+
+      /* The logic here is this: If we get passed one argument, we assume
+         it is the full URL to a file/dir we want log info for. If we get
+         a URL plus some paths, then we assume that the URL is the base,
+         and that the paths passed are relative to it.  */
+      if (targets->nelts > 1)
+        {
+          int i;
+
+          /* We have some paths, let's use them. Start after the URL.  */
+          for (i = 1; i < targets->nelts; i++)
+            (*((svn_stringbuf_t **)apr_array_push (condensed_targets))) =
+                APR_ARRAY_IDX(targets, i, svn_stringbuf_t *);
+        }
+      else
+        {
+          /* Currently, this doesn't work as expected. We need to know if
+           * the single URL passed is pointing to a directory or a file.
+           * For example, passing:
+           *
+           *         http://repo.com/repo/project/Makefile
+           *
+           * is fairly simple to handle. You Simply Split the last
+           * component off (Makefile) and push it into condensed_targets,
+           * and then make the URL the base dir (minus Makefile). Problem
+           * is, this wont work for:
+           *
+           *         http://repo.com/repo
+           *
+           * where stripping off a component will break the call. We need
+           * a way to find out from the server if this URL points to a
+           * directory or a file. If it points to a directory, we have
+           * can pass it straight through. A file can be split as
+           * explained above.  */
+          return svn_error_create
+            (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+             "currently you must provide paths with a URL");
+        }
+    }
+  else
+    {
+      svn_wc_entry_t *entry;
+
+      /* Use local working copy.  */
+
+      SVN_ERR (svn_path_condense_targets (&basename, &condensed_targets,
+                                          targets, pool));
+
+      SVN_ERR (svn_wc_entry (&entry, basename, pool));
+      if (! entry)
+        return svn_error_createf
+          (SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL, pool,
+          "svn_client_log: %s is not under revision control", basename->data);
+      if (! entry->url)
+        return svn_error_createf
+          (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool,
+          "svn_client_log: entry '%s' has no URL", basename->data);
+      URL = svn_stringbuf_dup (entry->url, pool);
+    }
 
   /* Get the RA library that handles URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
 
-  /* Open a repository session to the URL. */
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, basename,
-                                        TRUE, TRUE, auth_baton, pool));
+  /* Open a repository session to the URL. If we got here from a full URL
+     passed to the command line, then we don't pass basename or
+     do_auth/use_admin to open the ra_session.  */
+  if (NULL != basename)
+    SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, basename,
+                                          TRUE, TRUE, auth_baton, pool));
+  else
+    SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL, FALSE,
+                                          FALSE, auth_baton, pool));
 
+  /* Get the revisions based on the users "hints".  */
   SVN_ERR (svn_client__get_revision_number
-           (&start_revnum, ra_lib, session, start, basename->data, pool));
+           (&start_revnum, ra_lib, session, start, basename ? basename->data : NULL, pool));
   SVN_ERR (svn_client__get_revision_number
-           (&end_revnum, ra_lib, session, end, basename->data, pool));
+           (&end_revnum, ra_lib, session, end, basename ? basename->data : NULL, pool));
 
   SVN_ERR (ra_lib->get_log (session,
-                            condensed_targets,  /* ### todo: or `targets'? */
+                            condensed_targets,
                             start_revnum,
                             end_revnum,
                             discover_changed_paths,
