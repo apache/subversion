@@ -18,6 +18,7 @@
 #include <svn_error.h>
 #include <svn_string.h>
 #include <svn_fs.h>
+#include <svn_repos.h>
 
 #include "svn_ruby.h"
 #include "fs_root.h"
@@ -394,11 +395,48 @@ fs_list_transactions (VALUE self)
   }
 }
 
+
+
+static VALUE
+repos_open (VALUE class, VALUE aPath)
+{
+  apr_pool_t *pool;
+  svn_fs_t *fs;
+  svn_error_t *err;
+  char *path;
+
+  VALUE obj, argv[1];
+  svn_ruby_fs_t *rb_fs;
+
+  Check_Type (aPath, T_STRING);
+  path = StringValuePtr (aPath);
+  pool = svn_pool_create (NULL);
+  err = svn_repos_open (&fs, path, pool);
+
+  if (err)
+    {
+      apr_pool_destroy (pool);
+      svn_ruby_raise (err);
+    }
+
+  obj = Data_Make_Struct (class, svn_ruby_fs_t, 0, fs_free, rb_fs);
+  rb_fs->fs = fs;
+  rb_fs->pool = pool;
+  rb_fs->closed = FALSE;
+  argv[0] = aPath;
+  rb_obj_call_init (obj, 1, argv);
+
+  return obj;
+}
+
+/* ### Write binding of svn_repos_begin_report */
+
+
 
 void
 svn_ruby_init_fs ()
 {
-  VALUE cSvnFS;
+  VALUE cSvnFS, cSvnRepos;
 
   cSvnFS = rb_define_class_under (svn_ruby_mSvn, "Fs", rb_cObject);
   rb_define_singleton_method (cSvnFS, "new", fs_open, 1);
@@ -418,4 +456,8 @@ svn_ruby_init_fs ()
   rb_define_method (cSvnFS, "beginTxn", fs_begin_txn, 1);
   rb_define_method (cSvnFS, "openTxn", fs_open_txn, 1);
   rb_define_method (cSvnFS, "listTransactions", fs_list_transactions, 0);
+
+  cSvnRepos = rb_define_class_under (svn_ruby_mSvn, "Repos", cSvnFS);
+  rb_define_singleton_method (cSvnRepos, "new", repos_open, 1);
+  rb_define_singleton_method (cSvnRepos, "open", repos_open, 1);
 }
