@@ -32,7 +32,37 @@ path_index = svntest.actions.path_index
 ### a subcommand for dumping multi-line detailed information about
 ### versioned things.  Until then, we'll stick with the traditional
 ### verification methods.
- 
+
+def get_routine_status_list(wc_dir):
+  """get the routine status list for WC_DIR at the completion of an
+  initial call to do_routine_switching()"""
+  
+  # Construct some paths for convenience
+  ADH_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  chi_path = os.path.join(ADH_path, 'chi')
+  omega_path = os.path.join(ADH_path, 'omega')
+  psi_path = os.path.join(ADH_path, 'psi')
+  pi_path = os.path.join(ADH_path, 'pi')
+  tau_path = os.path.join(ADH_path, 'tau')
+  rho_path = os.path.join(ADH_path, 'rho')
+
+  # Now generate a status list
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  status_list.pop(path_index(status_list, chi_path))
+  status_list.pop(path_index(status_list, omega_path))
+  status_list.pop(path_index(status_list, psi_path))
+  status_list.append([pi_path, None, {}, {'status' : '_ ',
+                                          'wc_rev' : '1',
+                                          'repos_rev' : '1'}])
+  status_list.append([rho_path, None, {}, {'status' : '_ ',
+                                           'wc_rev' : '1',
+                                           'repos_rev' : '1'}])
+  status_list.append([tau_path, None, {}, {'status' : '_ ',
+                                           'wc_rev' : '1',
+                                           'repos_rev' : '1'}])
+  return status_list
+
+
 def do_routine_switching(wc_dir, verify):
   """perform some routine switching of the working copy WC_DIR for
   other tests to use.  If VERIFY, then do a full verification of the
@@ -114,18 +144,15 @@ def do_routine_switching(wc_dir, verify):
     status_list.pop(path_index(status_list, chi_path))
     status_list.pop(path_index(status_list, omega_path))
     status_list.pop(path_index(status_list, psi_path))
-    status_list.append([pi_path, None, {},
-                        {'status' : '_ ',
-                         'wc_rev' : '1',
-                         'repos_rev' : '1'}])
-    status_list.append([rho_path, None, {},
-                        {'status' : '_ ',
-                         'wc_rev' : '1',
-                         'repos_rev' : '1'}])
-    status_list.append([tau_path, None, {},
-                        {'status' : '_ ',
-                         'wc_rev' : '1',
-                         'repos_rev' : '1'}])
+    status_list.append([pi_path, None, {}, {'status' : '_ ',
+                                            'wc_rev' : '1',
+                                            'repos_rev' : '1'}])
+    status_list.append([rho_path, None, {}, {'status' : '_ ',
+                                             'wc_rev' : '1',
+                                             'repos_rev' : '1'}])
+    status_list.append([tau_path, None, {}, {'status' : '_ ',
+                                             'wc_rev' : '1',
+                                             'repos_rev' : '1'}])
     expected_status_tree = svntest.tree.build_generic_tree(status_list)
   
     # Do the switch and check the results in three ways.
@@ -137,6 +164,15 @@ def do_routine_switching(wc_dir, verify):
   else:
     svntest.main.run_svn(None, 'switch', ADH_path, ADG_url)
 
+  ### One final check to make sure that the function
+  ### get_routine_status_list() is always up-to-date with what this
+  ### function is doing.
+  if verify:
+    status_list = get_routine_status_list(wc_dir)
+    expected_status_tree = svntest.tree.build_generic_tree(status_list)
+    if svntest.actions.run_and_verify_status(wc_dir, expected_status_tree):
+      return 1
+    
   return 0
 
 
@@ -209,9 +245,9 @@ def commit_switched_things(sbox):
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Created expected status tree.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  status_list = get_routine_status_list(wc_dir)
   for item in status_list:
-    item[3]['repos_rev'] = '2'     # post-commit status
+    item[3]['repos_rev'] = '2'
     if ((item[0] == iota_path)
         or (item[0] == alpha_path)
         or (item[0] == Hpi_path)):
@@ -221,8 +257,7 @@ def commit_switched_things(sbox):
                       {'status' : '_ ',
                        'wc_rev' : '2',
                        'repos_rev' : '2'}])
-  status_list.append([zeta_path, None,
-                      "This is the file 'zeta'.",
+  status_list.append([zeta_path, None, {},
                       {'status' : '_ ',
                        'wc_rev' : '2',
                        'repos_rev' : '2'}])
@@ -235,7 +270,6 @@ def commit_switched_things(sbox):
                                             None, None, None, None, None,
                                             wc_dir):
     return 1
-    svntest.main.run_svn(None, 'ci', '-m', 'foo', wc_dir)
 
   return 0
   
