@@ -159,6 +159,14 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
                                "The specified baseline is not the latest "
                                "baseline, so it may not be checked out.");
         }
+
+      /* ### hmm. what if the transaction root's revision is different
+         ### from this baseline? i.e. somebody created a new revision while
+         ### we are processing this commit.
+         ###
+         ### first question: what does the client *do* with a working
+         ### baseline? knowing that, and how it maps to our backend, then
+         ### we can figure out what to do here. */
     }
   else
     {
@@ -229,8 +237,7 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
 
   *working_resource = dav_svn_create_working_resource(resource,
                                                       parse.activity_id,
-                                                      txn_name,
-                                                      resource->info->repos_path);
+                                                      txn_name);
   return NULL;
 }
 

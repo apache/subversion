@@ -90,6 +90,7 @@ enum dav_svn_private_restype {
   DAV_SVN_RESTYPE_VCC_COLLECTION,       /* .../$svn/vcc/ */
   DAV_SVN_RESTYPE_BC_COLLECTION,        /* .../$svn/bc/  */
   DAV_SVN_RESTYPE_BLN_COLLECTION,       /* .../$svn/bln/ */
+  DAV_SVN_RESTYPE_WBL_COLLECTION,       /* .../$svn/wbl/ */
   DAV_SVN_RESTYPE_VCC                   /* .../$svn/vcc/NAME */
 };
 
@@ -139,7 +140,7 @@ struct dav_resource_private {
   /* The FS repository path to this resource, with a leading "/". Note
      that this is "/" the root. This value will be NULL for resources
      that have no corresponding resource within the repository (such as
-     the PRIVATE resources, or Baselines). */
+     the PRIVATE resources, Baselines, or Working Baselines). */
   const char *repos_path;
 
   /* the FS repository this resource is associated with */
@@ -226,8 +227,7 @@ dav_error *dav_svn_create_activity(dav_svn_repos *repos,
 /* construct a working resource */
 dav_resource *dav_svn_create_working_resource(const dav_resource *base,
                                               const char *activity_id,
-                                              const char *txn_name,
-                                              const char *repos_path);
+                                              const char *txn_name);
 
 
 enum dav_svn_build_what {

@@ -116,7 +116,6 @@ static int dav_svn_parse_working_uri(dav_resource_combined *comb,
   /* format: ACTIVITY_ID/REPOS_PATH */
 
   /* ### what to do with LABEL and USE_CHECKED_IN ?? */
-  /* ### working baselines? */
 
   comb->res.type = DAV_RESOURCE_TYPE_WORKING;
   comb->res.working = TRUE;
@@ -280,6 +279,36 @@ static int dav_svn_parse_baseline_uri(dav_resource_combined *comb,
   return FALSE;
 }
 
+static int dav_svn_parse_wrk_baseline_uri(dav_resource_combined *comb,
+                                          const char *path,
+                                          const char *label,
+                                          int use_checked_in)
+{
+  const char *slash;
+
+  /* format: ACTIVITY_ID/REVISION */
+
+  /* ### what to do with LABEL and USE_CHECKED_IN ?? */
+
+  comb->res.type = DAV_RESOURCE_TYPE_WORKING;
+  comb->res.working = TRUE;
+  comb->res.versioned = TRUE;
+  comb->res.baselined = TRUE;
+
+  if ((slash = ap_strchr_c(path, '/')) == NULL
+      || slash == path
+      || slash[1] == '\0')
+    return TRUE;
+
+  comb->priv.root.activity_id = apr_pstrndup(comb->res.pool, path,
+                                             slash - path);
+  comb->priv.root.rev = atoi(slash + 1);
+
+  /* NOTE: comb->priv.repos_path == NULL */
+
+  return FALSE;
+}
+
 static const struct special_defn
 {
   const char *name;
@@ -311,6 +340,7 @@ static const struct special_defn
   { "vcc", dav_svn_parse_vcc_uri, DAV_SVN_RESTYPE_VCC_COLLECTION },
   { "bc", dav_svn_parse_baseline_coll_uri, DAV_SVN_RESTYPE_BC_COLLECTION },
   { "bln", dav_svn_parse_baseline_uri, DAV_SVN_RESTYPE_BLN_COLLECTION },
+  { "wbl", dav_svn_parse_wrk_baseline_uri, DAV_SVN_RESTYPE_WBL_COLLECTION },
 
   { NULL } /* sentinel */
 };
@@ -538,8 +568,6 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
   svn_fs_txn_t *txn;
   svn_error_t *serr;
 
-  /* ### working baselines? */
-
   if (txn_name == NULL)
     {
       /* ### HTTP_BAD_REQUEST is probably wrong */
@@ -549,6 +577,15 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
                            "client software.");
     }
   comb->priv.root.txn_name = txn_name;
+
+  if (comb->res.baselined)
+    {
+      /* a Working Baseline */
+
+      /* ### are we really done? */
+
+      return NULL;
+    }
 
   /* get the FS transaction, given its name */
   serr = svn_fs_open_txn(&txn, comb->priv.repos->fs, txn_name, pool);
@@ -1452,13 +1489,19 @@ static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
 
 dav_resource *dav_svn_create_working_resource(const dav_resource *base,
                                               const char *activity_id,
-                                              const char *txn_name,
-                                              const char *repos_path)
+                                              const char *txn_name)
 {
   dav_resource_combined *comb;
-  svn_string_t *path = svn_string_createf(base->pool, "/%s/wrk/%s%s",
-                                          base->info->repos->special_uri,
-                                          activity_id, repos_path);
+  svn_string_t *path;
+
+  if (base->baselined)
+    path = svn_string_createf(base->pool, "/%s/wbl/%s/%ld",
+                              base->info->repos->special_uri,
+                              activity_id, base->info->root.rev);
+  else
+    path = svn_string_createf(base->pool, "/%s/wrk/%s%s",
+                              base->info->repos->special_uri,
+                              activity_id, base->info->repos_path);
   
 
   comb = apr_pcalloc(base->pool, sizeof(*comb));
@@ -1467,7 +1510,8 @@ dav_resource *dav_svn_create_working_resource(const dav_resource *base,
   comb->res.exists = TRUE;      /* ### not necessarily correct */
   comb->res.versioned = TRUE;
   comb->res.working = TRUE;
-  /* collection = baselined = FALSE.   ### not necessarily correct */
+  comb->res.baselined = base->baselined;
+  /* collection = FALSE.   ### not necessarily correct */
 
   comb->res.uri = apr_pstrcat(base->pool, base->info->repos->root_path,
                               path->data, NULL);
@@ -1477,8 +1521,8 @@ dav_resource *dav_svn_create_working_resource(const dav_resource *base,
 
   comb->priv.uri_path = path;
   comb->priv.repos = base->info->repos;
-  comb->priv.repos_path = repos_path;
-  comb->priv.root.rev = SVN_INVALID_REVNUM;
+  comb->priv.repos_path = base->info->repos_path;
+  comb->priv.root.rev = base->info->root.rev;
   comb->priv.root.activity_id = activity_id;
   comb->priv.root.txn_name = txn_name;
 
