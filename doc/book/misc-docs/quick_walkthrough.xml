@@ -17,14 +17,14 @@
     <title>Make a Repository</title>
 
     <para>The Subversion client has an abstract interface for
-      accessing a repository.  Two <quote>Repository Access</quote>
+      accessing a repository.  Three <quote>Repository Access</quote>
       (RA) implementations currently exist as libraries.  You can see
       which methods are available to your svn client like so:</para>
 
       <screen>
 $ svn --version
-svn, version 0.16.0
-   compiled Jan  3 2003, 16:43:58
+svn, version 0.29.0 (r6976)
+   compiled Sep  6 2003, 19:19:59
 
 Copyright (C) 2000-2003 CollabNet.
 Subversion is open source software, see @uref{http://subversion.tigris.org/}
@@ -32,9 +32,12 @@ Subversion is open source software, see @uref{http://subversion.tigris.org/}
 The following repository access (RA) modules are available:
 
 * ra_dav : Module for accessing a repository via WebDAV (DeltaV) protocol.
-     - handles 'http' schema
+  - handles 'http' schema
+  - handles 'https' schema
 * ra_local : Module for accessing a repository on local disk.
-     - handles 'file' schema
+  - handles 'file' schema
+* ra_svn : Module for accessing a repository using the svn network protocol.
+  - handles 'svn' schema
       </screen>
 
     <para>If you don't see ra_local, it probably means that Berkeley
