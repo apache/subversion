@@ -18,6 +18,7 @@ Ben todo:
 Karl working copy todo:
    - work on properties, or work with someone on props
    - fix working copy identification/allergy code
+   - make sure type-changing replacements work right
    - to get commits working:
          - check XML outputter (get_to_elem)
          - find & fix that pesky alloc bug, arrgh, is it in APR pools??
