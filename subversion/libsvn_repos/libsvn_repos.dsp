@@ -99,6 +99,10 @@ SOURCE=.\lock.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\log.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\node_tree.c
 # End Source File
 # Begin Source File
