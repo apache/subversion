@@ -69,7 +69,7 @@ dir_deltas (const char **msg,
 
   /* Create and commit the greek tree. */
   SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
-  SVN_ERR (svn_repos_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
   SVN_ERR (svn_fs_close_txn (txn));
 
   /***********************************************************************/

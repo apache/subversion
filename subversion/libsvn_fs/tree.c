@@ -1691,6 +1691,8 @@ svn_fs_commit_txn (const char **conflict_p,
 
   svn_error_t *err;
 
+  /* ### todo: run pre-commit hooks. */
+
   while (1729)
     {
       struct get_root_args get_root_args;
@@ -1762,6 +1764,8 @@ svn_fs_commit_txn (const char **conflict_p,
           break;
         }
     }
+
+  /* ### todo: run post-commit hooks. */
 
   return SVN_NO_ERROR;
 }
