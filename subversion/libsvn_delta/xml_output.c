@@ -446,16 +446,23 @@ output_svndiff_data (void *baton, const char *data, apr_size_t *len,
 {
   struct file_baton *fb = (struct file_baton *) baton;
   struct edit_baton *eb = fb->edit_baton;
+
+  /* Just pass through the write request to the editor's output stream.  */
+  return svn_stream_write (eb->output, data, len);
+}
+
+
+static svn_error_t *
+finish_svndiff_data (void *baton)
+{
+  struct file_baton *fb = (struct file_baton *) baton;
+  struct edit_baton *eb = fb->edit_baton;
   apr_pool_t *subpool = svn_pool_create (eb->pool);
   svn_string_t *str = NULL;
   svn_error_t *err;
   apr_size_t slen;
 
-  if (*len == 0)
-    svn_xml_make_close_tag (&str, subpool, "text-delta");
-  else
-    str = svn_string_ncreate (data, *len, subpool);
-
+  svn_xml_make_close_tag (&str, subpool, "text-delta");
   slen = str->len;
   err = svn_stream_write (eb->output, str->data, &slen);
   apr_destroy_pool (subpool);
@@ -501,9 +508,10 @@ apply_textdelta (void *file_baton,
   apr_destroy_pool (pool);
 
   /* Set up a handler which will write base64-encoded svndiff data to
-     the editor's output stream via output_svndiff_data().  */
+     the editor's output stream.  */
   output = svn_stream_create (fb, fb->pool);
   svn_stream_set_write (output, output_svndiff_data);
+  svn_stream_set_close (output, finish_svndiff_data);
   svn_txdelta_to_svndiff (svn_base64_encode (output, eb->pool), eb->pool,
                           handler, handler_baton);
 
@@ -561,6 +569,8 @@ close_edit (void *edit_baton)
   svn_xml_make_close_tag (&str, eb->pool, "delta-pkg");
   len = str->len;
   err = svn_stream_write (eb->output, str->data, &len);
+  if (err == SVN_NO_ERROR)
+    err = svn_stream_close (eb->output);
   apr_destroy_pool (eb->pool);
   return err;
 }
