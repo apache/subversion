@@ -300,7 +300,7 @@ output_propset (struct edit_baton *eb, enum elemtype elem,
       svn_xml_make_open_tag (&str, pool, svn_xml_protect_pcdata, 
                              SVN_DELTA__XML_TAG_SET,
                              SVN_DELTA__XML_ATTR_NAME, name, NULL);
-      svn_xml_escape_string (&str, value, pool);
+      svn_xml_escape_stringbuf (&str, value, pool);
       svn_xml_make_close_tag (&str, pool, SVN_DELTA__XML_TAG_SET);
     }
   else

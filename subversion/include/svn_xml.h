@@ -45,26 +45,48 @@ enum svn_xml_open_tag_style {
 };
 
 
-/* A utility function to escape a string so that it may be used in XML
-   output as character data or as an attribute value.  *outstr must be
-   NULL (in which case a new string is created), or it must point to
-   an existing string to append to.  */
-void svn_xml_escape_string (svn_stringbuf_t **outstr,
-			    const svn_stringbuf_t *string,
-			    apr_pool_t *pool);
+/* Create or append in *OUTSTR an xml-escaped version of STRING,
+ * suitable for output as character data or as an attribute value.
+ * If *OUTSTR is NULL, store a new stringbuf, else append to the
+ * existing stringbuf there.
+ */
+void svn_xml_escape_stringbuf (svn_stringbuf_t **outstr,
+                               const svn_stringbuf_t *string,
+                               apr_pool_t *pool);
 
-/* Unescape an XML-escaped string.  NOTE:  This function recognizes
-   only the following XML escape strings:
+/* Same as `svn_xml_escape_stringbuf', but STRING is a null-terminated
+ * C string.
+ */
+void svn_xml_escape_nts (svn_stringbuf_t **outstr,
+                         const char *string,
+                         apr_pool_t *pool);
 
-      &amp;    - &
-      &apos;   - '
-      &gt;     - >
-      &lt;     - <
-      &quot;   - "
-*/
-void svn_xml_unescape_string (svn_stringbuf_t **outstr,
-                              const svn_stringbuf_t *string,
-                              apr_pool_t *pool);
+
+/* Create or append in *OUTSTR the unescaped version of the
+ * xml-escaped string STRING.  If *OUTSTR is NULL, store a new
+ * stringbuf, else append to the existing stringbuf there.
+ *
+ * NOTE:  This function recognizes only the following XML escapes:
+ *
+ *    &amp;    - &
+ *    &apos;   - '
+ *    &gt;     - >
+ *    &lt;     - <
+ *    &quot;   - "
+ */
+void svn_xml_unescape_stringbuf (svn_stringbuf_t **outstr,
+                                 const svn_stringbuf_t *string,
+                                 apr_pool_t *pool);
+
+
+/* Same as `svn_xml_unescape_stringbuf', but STRING is a
+ * null-terminated C string.
+ */
+void svn_xml_unescape_nts (svn_stringbuf_t **outstr,
+                           const char *string,
+                           apr_pool_t *pool);
+
+
 
 /*---------------------------------------------------------------*/
 
