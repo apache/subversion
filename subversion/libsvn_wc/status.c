@@ -35,7 +35,7 @@
 
 static void add_default_ignores (apr_array_header_t *patterns)
 {
-  static const char *ignores[] = 
+  static const char * const ignores[] = 
   {
     "*.o", "*.lo", "*.la", "#*#", "*.rej", "*~", ".#*",
     /* what else? */
