@@ -151,9 +151,10 @@ svn_path_is_empty (const svn_string_t *path, enum svn_path_style style)
 }
 
 
-int svn_path_compare_paths (const svn_string_t *path1,
-                            const svn_string_t *path2,
-                            enum svn_path_style style)
+int
+svn_path_compare_paths (const svn_string_t *path1,
+                        const svn_string_t *path2,
+                        enum svn_path_style style)
 {
   size_t min_len = ((path1->len) < (path2->len)) ? path1->len : path2->len;
   size_t i;
@@ -171,6 +172,36 @@ int svn_path_compare_paths (const svn_string_t *path1,
   else
     return strncmp (path1->data + i, path2->data + i, (min_len - i));
 }
+
+
+
+svn_string_t *
+svn_path_get_longest_ancestor (const svn_string_t *path1,
+                               const svn_string_t *path2,
+                               apr_pool_t *pool)
+{
+  svn_string_t *common_path;
+  int i = 0;
+
+  if ((! path1) || (! path2)
+      || (svn_string_isempty (path1)) || (svn_string_isempty (path2)))
+    return NULL;
+  
+  while (path1->data[i] == path2->data[i])
+    {
+      i++;
+      if ((i > path1->len) || (i > path2->len))
+        break;
+    }
+
+  /* i is now the offset of the first _non_-matching byte. */
+  common_path = svn_string_ncreate (path1->data, i, pool);  
+
+  svn_path_canonicalize (common_path, svn_path_local_style);
+
+  return common_path;
+}
+
 
 
 
