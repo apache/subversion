@@ -2337,12 +2337,16 @@ $ # svnserve is still running, but the user is returned to the prompt
         <para>In this scenario, each time the client attempts to
           contact the Subversion repository, a new
           <command>svnserve</command> process is started on the server
-          machine by the SSH layer.  This is, in fact, the same way
-          that CVS works when using its <literal>:ext:</literal>
-          access method and SSH.  SSH itself requires an authenticated
-          user, so there is no anonymity.  And since the access is not
-          anonymous, the authenticated username is stored as the
-          author of any repository changes.</para>
+          machine by the SSH layer.  There's no need to run a
+          standalone <command>svnserve</command> daemon; the client's
+          authenticated SSH connection launches a private svnserve
+          process on the server machine, running as the authenticated
+          user.  This is, in fact, the same way that CVS works when
+          using its <literal>:ext:</literal> access method and SSH.
+          SSH itself requires an authenticated user, so there is no
+          anonymity.  And since the access is not anonymous, the
+          authenticated username is stored as the author of any
+          repository changes.</para>
 
         <para>To configure your client to perform SSH tunneling, you
           just need to edit your <filename>servers</filename> run-time
