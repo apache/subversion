@@ -160,7 +160,7 @@
 
 %typemap(java, arginit) apr_pool_t *pool(apr_pool_t *_global_pool) {
     /* ### HACK: Get the input variable based on naming convention */
-	_global_pool = (apr_pool_t *)j$1;
+	_global_pool = *(apr_pool_t **)&j$1;
 	$1 = 0;
 }
 
