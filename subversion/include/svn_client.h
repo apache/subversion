@@ -57,6 +57,30 @@ extern "C" {
 
 
 
+/*** Various ways of specifying revisions. ***/
+
+enum svn_client_revision_kind {
+  svn_client_revision_unspecified,   /* No revision information given. */
+  svn_client_revision_number,        /* revision given as number */
+  svn_client_revision_date,          /* revision given as date */
+  svn_client_revision_commited,      /* .svn/entries:commited-rev */
+  svn_client_revision_previous,      /* .svn/entries:commited-rev - 1 :-) */
+  svn_client_revision_current,       /* .svn/entries revision */
+  svn_client_revision_head           /* repository youngest */
+};
+
+
+/* A revision, specified in one of `svn_client_revision_kind' ways. */
+typedef struct svn_client_revision_t {
+  enum svn_client_revision_kind kind;
+  union {
+    svn_revnum_t number;
+    apr_time_t date;
+  } value;
+} svn_client_revision_t;
+
+
+
 /*** Authentication stuff -- new M4 Edition  ***/
 
 /*  The new authentication system allows the RA layer to "pull"
