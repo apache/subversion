@@ -67,10 +67,12 @@ is, for the entities in question, have there been divergent changes
 between working copy and repository?  If so, then the working copy is
 out-of-date.
 
-Updates, on the other hand, can affect the working copy.  Updates
-merge changes into the working copy where possible (not only textual
-changes, but even tree-structure changes), and describe conflicts as
-usefully as possible when merging is not an option.
+Updates, on the other hand, can affect the working copy.  (BEN SEZ:
+instead of "can affect the working copy", how about "are supposed to
+affect the working copy"?) Updates merge changes into the working copy
+where possible (not only textual changes, but even tree-structure
+changes), and describe conflicts as usefully as possible when merging
+is not an option.
 
 To understand how the above happens, you need to know
 
@@ -268,6 +270,12 @@ which has already made it into the repository versus which exists only
 in someone's working copy.  Incompatibility is incompatibility,
 independent of timing.
 
+(BEN SEZ: Right!  No matter how you look at it, we're attempting to
+merge two branches.  It's irrelevant that one branch happens to be the
+"mainline" repository branch.  We may want to mention that all of the
+following logic will still apply when we actually merge "official"
+repository branches too.)
+
 So what these tables really show is how to decide when two changes are
 compatible.  They're a brute force guide to the changespace, mapping
 each kind of change against each other kind of change, and telling
@@ -349,6 +357,8 @@ columns one and two).
 [Yes, the table mirrors itself across the diagonal -- I filled in both
 sides anyway, to see if my mind would come to the same conclusions for
 the same intersections.  It did. :-) -kff]
+
+(BEN SEZ:  [grin])
 
 A note about Table 2: the "if name conflicts" clause means there's a
 conflict if the same child name is mentioned in both changes.  (It
