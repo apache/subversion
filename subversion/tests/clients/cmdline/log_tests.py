@@ -395,7 +395,7 @@ def versioned_log_message(sbox):
 
 
 def log_with_empty_repos(sbox):
-  "Test 'svn log' on an empty repository"
+  "test 'svn log' on an empty repository"
 
   # Create virgin repos
   svntest.main.create_repos(sbox.repo_dir)

@@ -161,7 +161,7 @@ def keywords_off(path):
 #----------------------------------------------------------------------
 
 def keywords_from_birth(sbox):
-  "Commit new files with keywords active from birth"
+  "commit new files with keywords active from birth"
 
   if sbox.build():
     return 1
