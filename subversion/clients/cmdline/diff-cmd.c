@@ -79,13 +79,6 @@ svn_cl__diff (apr_getopt_t *os,
 
       if (svn_path_is_url (target1))
         {
-          if (! svn_path_is_url (target2))
-            return svn_error_create
-              (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-             "Diffing URL against local path not yet supported; see\n"
-             "     http://subversion.tigris.org/issues/show_bug.cgi?id=1061\n"
-             "     for more details.");
-
           /* The form 'svn diff URL1@N URL2@M'. */
 
           /* The @revs have already been parsed out if they were

@@ -1298,6 +1298,13 @@ svn_client_diff (const apr_array_header_t *options,
   diff_cmd_baton.revnum1 = SVN_INVALID_REVNUM;
   diff_cmd_baton.revnum2 = SVN_INVALID_REVNUM;
 
+  if ((svn_path_is_url (path1)) != (svn_path_is_url (path2)))
+    return svn_error_create
+      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+       "Diffing URL against local path not yet supported; see\n"
+       "     http://subversion.tigris.org/issues/show_bug.cgi?id=1061\n"
+       "     for more details.");
+
   return do_diff (options,
                   auth_baton,
                   path1, revision1,
