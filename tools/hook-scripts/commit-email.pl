@@ -192,7 +192,7 @@ chdir($tmp_dir)
   or die "$0: cannot chdir `$tmp_dir': $!\n";
 
 # Get the author, date, and log from svnlook.
-my @svnlooklines = &read_from_process($svnlook, 'info', $repos, '-r', $rev)
+my @svnlooklines = &read_from_process($svnlook, 'info', $repos, '-r', $rev);
 my $author = shift @svnlooklines;
 my $date = shift @svnlooklines;
 shift @svnlooklines;
@@ -252,7 +252,7 @@ foreach my $line (@svnlooklines)
   }
 
 # Get the diff from svnlook.
-my @difflines = &read_from_process($svnlook, 'diff', $repos, '-r', $rev)
+my @difflines = &read_from_process($svnlook, 'diff', $repos, '-r', $rev);
 
 ######################################################################
 # Modified directory name collapsing.
