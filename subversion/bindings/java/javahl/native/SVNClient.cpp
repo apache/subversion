@@ -493,11 +493,12 @@ void SVNClient::revert(const char *path, bool recurse)
     apr_pool_t * apr_pool = subPool.pool ();
     m_lastPath = svn_path_internal_style (path, apr_pool);
    	svn_client_ctx_t *ctx = getContext(NULL);
+    Targets target (m_lastPath.c_str () );
 	if(ctx == NULL)
 	{
 		return;
 	}
-	svn_error_t *Err = svn_client_revert (m_lastPath.c_str (), recurse, ctx, apr_pool);
+	svn_error_t *Err = svn_client_revert (target.array(subPool), recurse, ctx, apr_pool);
 
     if(Err != NULL)
  		JNIUtil::handleSVNError(Err);
