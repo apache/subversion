@@ -58,7 +58,9 @@ Go to http://subversion.tigris.org and
       better than the PDF.)  The Spec will give you a theoretical
       overview of Subversion's design.
 
-If you'd like to contribute code, then look at:
+There are many ways to join the project, either by writing code, or by
+testing and/or helping to manage the bug database.  If you'd like to
+contribute, then look at:
 
    *  The bugs/issues database
       http://subversion.tigris.org/servlets/ProjectIssues
@@ -69,6 +71,15 @@ If you'd like to contribute code, then look at:
 To submit code, simply send your patches to dev@subversion.tigris.org.
 No, wait, first read the rest of this file, _then_ start sending
 patches to dev@subversion.tigris.org. :-)
+
+To help manage the issues database, read over the issue summaries,
+looking and testing for issues that are either invalid, or are
+duplicates of other issues.  Both kinds are very common, the first
+because bugs often get unknowingly fixed as side effects of other
+changes in the code, and the second because people sometimes file an
+issue without noticing that it has already been reported.  If you're
+not sure about an issue, post a question to dev@subversion.tigris.org.
+("Subversion: We're here to help you help us!")
 
 
 
