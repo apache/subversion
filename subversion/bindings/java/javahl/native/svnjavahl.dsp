@@ -214,6 +214,10 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
+SOURCE=.\BlameCallback.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\JNIByteArray.cpp
 # End Source File
 # Begin Source File
@@ -282,6 +286,10 @@ SOURCE=.\Targets.cpp
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
+SOURCE=.\BlameCallback.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\JNIByteArray.h
 # End Source File
 # Begin Source File
@@ -348,6 +356,73 @@ SOURCE=.\version.h
 # Begin Group "Java Source Files"
 
 # PROP Default_Filter "*.java"
+# Begin Source File
+
+SOURCE=..\src\org\tigris\subversion\javahl\BlameCallback.java
+
+!IF  "$(CFG)" == "svnjavahl - Win32 Release"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\BlameCallback.java
+
+"..\cls\org\tigris\subversion\javahl\BlameCallback.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/BlameCallback.java
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\BlameCallback.java
+
+"..\cls\org\tigris\subversion\javahl\BlameCallback.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/BlameCallback.java
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB40"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\BlameCallback.java
+
+"..\cls\org\tigris\subversion\javahl\BlameCallback.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/BlameCallback.java
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB40"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\BlameCallback.java
+
+"..\cls\org\tigris\subversion\javahl\BlameCallback.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/BlameCallback.java
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Debug DB42"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\BlameCallback.java
+
+"..\cls\org\tigris\subversion\javahl\BlameCallback.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/BlameCallback.java
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "svnjavahl - Win32 Release DB42"
+
+# Begin Custom Build
+InputPath=..\src\org\tigris\subversion\javahl\BlameCallback.java
+
+"..\cls\org\tigris\subversion\javahl\BlameCallback.class" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	javac -d ../cls -sourcepath ../src -g ../src/org/tigris/subversion/javahl/BlameCallback.java
+
+# End Custom Build
+
+!ENDIF 
+
+# End Source File
 # Begin Source File
 
 SOURCE=..\src\org\tigris\subversion\javahl\ClientException.java

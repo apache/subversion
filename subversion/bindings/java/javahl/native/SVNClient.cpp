@@ -26,6 +26,7 @@
 #include "Pool.h"
 #include "Targets.h"
 #include "Revision.h"
+#include "BlameCallback.h"
 #include "JNIByteArray.h"
 #include <svn_client.h>
 #include <svn_sorts.h>
@@ -1754,4 +1755,40 @@ jbyteArray SVNClient::blame(const char *path, Revision &revisionStart, Revision 
 	}
 
 	return ret;
+}
+static svn_error_t *
+blame_receiver2 (void *baton,
+                apr_off_t line_no,
+                svn_revnum_t revision,
+                const char *author,
+                const char *date,
+                const char *line,
+                apr_pool_t *pool)
+{
+	((BlameCallback *)baton)->callback(revision, author, date, line, pool);
+	return NULL;
+}
+void SVNClient::blame(const char *path, Revision &revisionStart, Revision &revisionEnd, BlameCallback *callback)
+{
+  Pool subPool;
+  apr_pool_t * apr_pool = subPool.pool ();
+  m_lastPath = svn_path_internal_style (path, apr_pool);
+	
+  svn_client_ctx_t *ctx = getContext(NULL);
+  if(ctx == NULL)
+  {
+	return;
+  }
+  svn_error_t * error = svn_client_blame (path,
+                                 revisionStart.revision(),
+                                 revisionEnd.revision(),
+                                 blame_receiver2,
+								 callback,
+                                 ctx,
+                                 apr_pool);
+  if(error != SVN_NO_ERROR)
+  {
+ 	JNIUtil::handleSVNError(error);
+	return;
+  }
 }
