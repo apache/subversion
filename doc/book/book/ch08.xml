@@ -1701,9 +1701,9 @@ examples/
 
           <screen>
 svn list --verbose file:///tmp/repos
-     16    sally      28361 Jan 16 23:18 README.txt
-     27    sally          0 Jan 18 15:27 INSTALL
-     24    harry          0 Jan 18 11:27 examples/
+     16 sally         28361 Jan 16 23:18 README.txt
+     27 sally             0 Jan 18 15:27 INSTALL
+     24 harry               Jan 18 11:27 examples/
           </screen>
 
           <para>For further details, see <xref
@@ -3121,10 +3121,10 @@ Head revision:   981
 
           <screen>
 $ svn status --show-updates --verbose wc
- M           965       938      sally   wc/bar.c
-       *     965       922      harry   wc/foo.c
-A  +         965       687      harry   wc/qax.c
-             965       687      harry   wc/zig.c
+ M           965       938 sally        wc/bar.c
+       *     965       922 harry        wc/foo.c
+A  +         965       687 harry        wc/qax.c
+             965       687 harry        wc/zig.c
 Head revision:   981
           </screen>
 

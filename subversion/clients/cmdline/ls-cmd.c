@@ -56,7 +56,6 @@ print_dirents (apr_hash_t *dirents,
       const char *utf8_entryname, *stdout_entryname;
       svn_dirent_t *dirent;
       svn_item_t *item;
-      char timestr[20];
      
       item = &APR_ARRAY_IDX (array, i, svn_item_t);
 
@@ -73,6 +72,8 @@ print_dirents (apr_hash_t *dirents,
           apr_status_t apr_err;
           apr_size_t size;
           const char *stdout_author = NULL;
+          char timestr[20];
+          char size_buf[21]; /* Enough for 2^64 in base 10 plus '\0' */
           
           if (dirent->last_author)
             SVN_ERR (svn_cmdline_cstring_from_utf8 (&stdout_author,
@@ -99,11 +100,12 @@ print_dirents (apr_hash_t *dirents,
           if (apr_err)
             timestr[0] = '\0';
 
-          printf ("%7"SVN_REVNUM_T_FMT" %8.8s "
-                  "%10"SVN_FILESIZE_T_FMT" %12s %s%s\n",
+          sprintf (size_buf, "%" SVN_FILESIZE_T_FMT, dirent->size);
+
+          printf ("%7"SVN_REVNUM_T_FMT" %-8.8s %10s %12s %s%s\n",
                   dirent->created_rev,
-                  stdout_author ? stdout_author : "      ? ",
-                  dirent->size,
+                  stdout_author ? stdout_author : " ? ",
+                  (dirent->kind == svn_node_file) ? size_buf : "",
                   timestr,
                   stdout_entryname,
                   (dirent->kind == svn_node_dir) ? "/" : "");

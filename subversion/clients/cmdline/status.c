@@ -73,13 +73,13 @@ print_status (const char *path,
   if (detailed)
     {
       if (! status->entry)
-        working_rev = "      ";
+        working_rev = "";
       else if (! SVN_IS_VALID_REVNUM (status->entry->revision))
-        working_rev = "  ?   ";  /* ### Why the odd alignment? */
+        working_rev = " ? ";
       else if (status->copied)
-        working_rev = "     -";
+        working_rev = "-";
       else
-        sprintf (working_rev_buf, "%6" SVN_REVNUM_T_FMT,
+        sprintf (working_rev_buf, "%" SVN_REVNUM_T_FMT,
                  status->entry->revision);
 
       if (status->repos_text_status != svn_wc_status_none
@@ -91,12 +91,12 @@ print_status (const char *path,
       if (show_last_committed)
         {
           if (status->entry && SVN_IS_VALID_REVNUM (status->entry->cmt_rev))
-            sprintf(commit_rev_buf, "%6" SVN_REVNUM_T_FMT,
+            sprintf(commit_rev_buf, "%" SVN_REVNUM_T_FMT,
                     status->entry->cmt_rev);
           else if (status->entry)
-            commit_rev = "    ? ";
+            commit_rev = " ? ";
           else
-            commit_rev = "      ";
+            commit_rev = "";
 
           if (status->entry && status->entry->cmt_author)
             {
@@ -112,14 +112,14 @@ print_status (const char *path,
                 }
             }
           else if (status->entry)
-            commit_author = "      ? ";
+            commit_author = " ? ";
           else
-            commit_author = "        ";
+            commit_author = "";
         }
     }
 
   if (detailed && show_last_committed)
-    printf ("%c%c%c%c%c  %c   %6s   %6s   %8s   %s\n",
+    printf ("%c%c%c%c%c  %c   %6s   %6s %-12s %s\n",
             generate_status_code (status->text_status),
             generate_status_code (status->prop_status),
             status->locked ? 'L' : ' ',

@@ -1956,11 +1956,11 @@ trunk/
 
       <screen>
 $ svn list --verbose http://svn.collab.net/repos/svn
-   2755    harry       1331 Jul 28 02:07 README
-   2773    sally          0 Jul 29 15:07 branches/
-   2769    sally          0 Jul 29 12:07 clients/
-   2698    harry          0 Jul 24 18:07 tags/
-   2785    sally          0 Jul 29 19:07 trunk/
+   2755 harry          1331 Jul 28 02:07 README
+   2773 sally               Jul 29 15:07 branches/
+   2769 sally               Jul 29 12:07 clients/
+   2698 harry               Jul 24 18:07 tags/
+   2785 sally               Jul 29 19:07 trunk/
       </screen>
 
       <para>The columns tell you if a file has any properties
