@@ -520,10 +520,10 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    Head revision:   981\n"
     "\n"
     "    svn status --show-updates --verbose wc\n"
-    "     M           965       938     kfogel   wc/bar.c\n"
-    "           *     965       922    sussman   wc/foo.c\n"
-    "    A  +         965       687        joe   wc/qax.c\n"
-    "                 965       687        joe   wc/zig.c\n"
+    "     M           965       938 kfogel       wc/bar.c\n"
+    "           *     965       922 sussman      wc/foo.c\n"
+    "    A  +         965       687 joe          wc/qax.c\n"
+    "                 965       687 joe          wc/zig.c\n"
     "    Head revision:   981\n",
     { 'u', 'v', 'N', 'q', svn_cl__no_ignore_opt, SVN_CL__AUTH_OPTIONS, 
       svn_cl__config_dir_opt} },
