@@ -99,10 +99,8 @@ Next create the auth file using the command
 
    $ htpasswd -c /usr/local/apache2/conf/users jrandom
 
-and enter the password "rayjandom" when prompted.  Finally ensure that
-your ~/.subversion/config allows auth data to be cached, in particular
-do not set "store-password = no".  Now, (re)start Apache and run the
-tests over ra_dav.
+and enter the password "rayjandom" when prompted.  Now, (re)start Apache
+and run the tests over ra_dav.
 
 
 Directory Contents
