@@ -110,7 +110,10 @@ def externals_test_setup(sbox):
 
   # Create a working copy.
   out_lines, err_lines = svntest.main.run_svn \
-                         (None, 'checkout', repo_url, wc_init_dir)
+                         (None, 'checkout',
+                          '--username', svntest.main.wc_author,
+                          '--password', svntest.main.wc_passwd,
+                          repo_url, wc_init_dir)
   if err_lines: return 1
 
   # Make revisions 2 through 5, but don't bother with pre- and
@@ -234,7 +237,10 @@ def checkout_with_externals(sbox):
 
   # Create a working copy.
   out_lines, err_lines = svntest.main.run_svn \
-                         (None, 'checkout', repo_url, wc_dir)
+                         (None, 'checkout',
+                          '--username', svntest.main.wc_author,
+                          '--password', svntest.main.wc_passwd,
+                          repo_url, wc_dir)
   if err_lines: return 1
 
   # Probe the working copy a bit, see if it's as expected.
@@ -305,11 +311,17 @@ def update_receive_new_external(sbox):
 
   # Checkout two working copies.
   out_lines, err_lines = svntest.main.run_svn \
-                         (None, 'checkout', repo_url, wc_dir)
+                         (None, 'checkout',
+                          '--username', svntest.main.wc_author,
+                          '--password', svntest.main.wc_passwd,
+                          repo_url, wc_dir)
   if err_lines: return 1
 
   out_lines, err_lines = svntest.main.run_svn \
-                         (None, 'checkout', repo_url, other_wc_dir)
+                         (None, 'checkout',
+                          '--username', svntest.main.wc_author,
+                          '--password', svntest.main.wc_passwd,
+                          repo_url, other_wc_dir)
   if err_lines: return 1
 
   # Add one new external item to the property on A/D.  The new item is
@@ -357,11 +369,17 @@ def update_lose_external(sbox):
 
   # Checkout two working copies.
   out_lines, err_lines = svntest.main.run_svn \
-                         (None, 'checkout', repo_url, wc_dir)
+                         (None, 'checkout',
+                          '--username', svntest.main.wc_author,
+                          '--password', svntest.main.wc_passwd,
+                          repo_url, wc_dir)
   if err_lines: return 1
 
   out_lines, err_lines = svntest.main.run_svn \
-                         (None, 'checkout', repo_url, other_wc_dir)
+                         (None, 'checkout',
+                          '--username', svntest.main.wc_author,
+                          '--password', svntest.main.wc_passwd,
+                          repo_url, other_wc_dir)
   if err_lines: return 1
 
   # Lose one new external item from A/D.  The lost item is
@@ -450,11 +468,17 @@ def update_change_pristine_external(sbox):
 
   # Checkout two working copies.
   out_lines, err_lines = svntest.main.run_svn \
-                         (None, 'checkout', repo_url, wc_dir)
+                         (None, 'checkout',
+                          '--username', svntest.main.wc_author,
+                          '--password', svntest.main.wc_passwd,
+                          repo_url, wc_dir)
   if err_lines: return 1
 
   out_lines, err_lines = svntest.main.run_svn \
-                         (None, 'checkout', repo_url, other_wc_dir)
+                         (None, 'checkout',
+                          '--username', svntest.main.wc_author,
+                          '--password', svntest.main.wc_passwd,
+                          repo_url, other_wc_dir)
   if err_lines: return 1
 
   # Change the "x/y/z/blah" external on A/D to point to a different
@@ -506,11 +530,17 @@ def update_change_modified_external(sbox):
 
   # Checkout two working copies.
   out_lines, err_lines = svntest.main.run_svn \
-                         (None, 'checkout', repo_url, wc_dir)
+                         (None, 'checkout',
+                          '--username', svntest.main.wc_author,
+                          '--password', svntest.main.wc_passwd,
+                          repo_url, wc_dir)
   if err_lines: return 1
 
   out_lines, err_lines = svntest.main.run_svn \
-                         (None, 'checkout', repo_url, other_wc_dir)
+                         (None, 'checkout',
+                          '--username', svntest.main.wc_author,
+                          '--password', svntest.main.wc_passwd,
+                          repo_url, other_wc_dir)
   if err_lines: return 1
 
   # Make a couple of mods in the "x/y/z/blah/" external.
@@ -570,11 +600,17 @@ def update_receive_change_under_external(sbox):
 
   # Checkout two working copies.
   out_lines, err_lines = svntest.main.run_svn \
-                         (None, 'checkout', repo_url, wc_dir)
+                         (None, 'checkout',
+                          '--username', svntest.main.wc_author,
+                          '--password', svntest.main.wc_passwd,
+                          repo_url, wc_dir)
   if err_lines: return 1
 
   out_lines, err_lines = svntest.main.run_svn \
-                         (None, 'checkout', other_repo_url, other_wc_dir)
+                         (None, 'checkout',
+                          '--username', svntest.main.wc_author,
+                          '--password', svntest.main.wc_passwd,
+                          other_repo_url, other_wc_dir)
   if err_lines: return 1
 
   # Commit some modifications from the other_wc.
@@ -666,6 +702,10 @@ def modify_and_update_receive_new_external(sbox):
 
   # Checkout a working copy
   out_lines, err_lines = svntest.main.run_svn(None, 'checkout',
+                                              '--username',
+                                              svntest.main.wc_author,
+                                              '--password',
+                                              svntest.main.wc_passwd,
                                               repo_url, wc_dir)
   if err_lines: return 1
 

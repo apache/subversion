@@ -86,6 +86,25 @@ BASE_URL=URL can also be used when running individual tests:
    $ ./basic_tests.py 3 BASE_URL=http://localhost
 
 
+You can run the tests over ra_dav with authentication enabled.  First you
+need to enable authentication: modify the /repositories Location directive
+to include
+
+   AuthType Basic
+   AuthName "Subversion Repository"
+   AuthUserFile /usr/local/apache2/conf/users
+   Require valid-user
+
+Next create the auth file file using the command 
+
+   $ htpasswd -c /usr/local/apache2/conf/users jrandom
+
+and enter the password "rayjandom" when prompted.  Finally ensure that
+your ~/.subversion/config allows auth data to be cached, in particular
+do not set "store-password = no".  Now, (re)start Apache and run the
+tests over ra_dav.
+
+
 Directory Contents
 ==================
 

@@ -1981,14 +1981,19 @@ svn_wc_set_auth_file (svn_wc_adm_access_t *adm_access,
               && (strcmp (base_name, SVN_WC_ENTRY_THIS_DIR)))
             {              
               svn_wc_adm_access_t *child_access;
+              svn_node_kind_t kind;
               const char *childpath
                 = svn_path_join (svn_wc_adm_access_path (adm_access), base_name,
                                  pool);
 
-              SVN_ERR (svn_wc_adm_retrieve (&child_access, adm_access,
-                                            childpath, pool));
-              SVN_ERR (svn_wc_set_auth_file (child_access, TRUE,
-                                             filename, contents, pool));
+              SVN_ERR (svn_io_check_path (childpath, &kind, pool));
+              if (kind == svn_node_dir)
+                {
+                  SVN_ERR (svn_wc_adm_retrieve (&child_access, adm_access,
+                                                childpath, pool));
+                  SVN_ERR (svn_wc_set_auth_file (child_access, TRUE,
+                                                 filename, contents, pool));
+                }
             }
         }
     }

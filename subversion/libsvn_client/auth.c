@@ -302,10 +302,11 @@ store_auth_info (const char *filename,
 
   /* ### Fragile!  For a checkout we have no access baton before the checkout
      starts, so base_access is NULL.  However checkout closes its batons
-     before storing auth info so we can open a new baton here. */
+     before storing auth info so we can open a new baton here.  We don't
+     need a write-lock because storing auth data doesn't use log files. */
 
   if (! cb->base_access)
-    SVN_ERR (svn_wc_adm_open (&adm_access, NULL, cb->base_dir, TRUE, TRUE,
+    SVN_ERR (svn_wc_adm_open (&adm_access, NULL, cb->base_dir, FALSE, TRUE,
                               cb->pool));
   else
     adm_access = cb->base_access;

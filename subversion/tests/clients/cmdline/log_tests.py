@@ -403,7 +403,10 @@ def log_with_empty_repos(sbox):
   svntest.main.create_repos(sbox.repo_dir)
 
   stdout_lines, stderr_lines = svntest.main.run_svn\
-                               (None, "log", svntest.main.current_repo_url)
+                               (None, 'log',
+                                '--username', svntest.main.wc_author,
+                                '--password', svntest.main.wc_passwd,
+                                svntest.main.current_repo_url)
 
   if (len(stderr_lines) != 0):
     return 1

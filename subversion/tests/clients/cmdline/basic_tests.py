@@ -59,7 +59,11 @@ def basic_checkout(sbox):
   # Checkout of a different URL into a working copy fails
   A_url = os.path.join(svntest.main.current_repo_url, 'A')
   stdout_lines, stderr_lines = svntest.main.run_svn ("Obstructed update",
-                                                     'checkout', A_url,
+                                                     'co', A_url,
+                                                     '--username',
+                                                     svntest.main.wc_author,
+                                                     '--password',
+                                                     svntest.main.wc_passwd,
                                                      wc_dir)
   if not stderr_lines:
     return 1
@@ -91,7 +95,11 @@ def basic_checkout(sbox):
 
   # Repeat checkout of original URL into working copy with modifications
   url = svntest.main.current_repo_url
-  stdout_lines, stderr_lines = svntest.main.run_svn (None, 'checkout', url,
+  stdout_lines, stderr_lines = svntest.main.run_svn (None, 'co', url,
+                                                     '--username',
+                                                     svntest.main.wc_author,
+                                                     '--password',
+                                                     svntest.main.wc_passwd,
                                                      wc_dir)
   if len (stderr_lines) != 0:
     print "repeat checkout failed"
@@ -1135,6 +1143,10 @@ def basic_checkout_deleted(sbox):
                      svntest.main.current_repo_dir, 'A', 'D')
   wc2 = os.path.join (sbox.wc_dir, 'new_D')
   stdout_lines, stderr_lines = svntest.main.run_svn(None, 'co', '-r', '1',
+                                                    '--username',
+                                                    svntest.main.wc_author,
+                                                    '--password',
+                                                    svntest.main.wc_passwd,
                                                     url, wc2)
   if stderr_lines:
     print "error checking out r1 of A/D:"
@@ -1380,7 +1392,10 @@ def basic_cat(sbox):
 
   # Get repository text even if wc is modified
   svntest.main.file_append(mu_path, "some text")
-  output, errput = svntest.main.run_svn(None, 'cat', mu_path)
+  output, errput = svntest.main.run_svn(None, 'cat',
+                                        '--username', svntest.main.wc_author,
+                                        '--password', svntest.main.wc_passwd,
+                                        mu_path)
   if errput or output != ["This is the file 'mu'."]:
     print output
     return 1
@@ -1429,6 +1444,44 @@ def nonexistent_repository(sbox):
 
 
 #----------------------------------------------------------------------
+# Issue 1064. This test is only useful if running over ra_dav
+# with authentication enabled, otherwise it will pass trivially.
+def basic_auth_cache(sbox):
+  "basic auth caching"
+
+  if sbox.build():
+    return 1
+
+  wc_dir         = sbox.wc_dir
+  repo_dir       = sbox.repo_dir
+  repo_url       = os.path.join(svntest.main.test_area_url, repo_dir)
+
+  # Create a working copy without auth tokens
+  svntest.main.remove_wc(wc_dir)
+  output, errput = svntest.main.run_svn(None, 'checkout',
+                                        '--username', svntest.main.wc_author,
+                                        '--password', svntest.main.wc_passwd,
+                                        '--no-auth-cache',
+                                        repo_url, wc_dir)
+  if errput: return 1
+
+  # Failed with "not locked" error on missing directory
+  svntest.main.remove_wc(os.path.join(wc_dir, 'A', 'B', 'E'))
+  output, errput = svntest.main.run_svn(None, 'status', '-u',
+                                        '--username', svntest.main.wc_author,
+                                        '--password', svntest.main.wc_passwd,
+                                        os.path.join(wc_dir, 'A', 'B'))
+  if errput: return 1
+
+  # Failed with "already locked" error on new dir
+  output, errput = svntest.main.run_svn(None, 'copy',
+                                        '--username', svntest.main.wc_author,
+                                        '--password', svntest.main.wc_passwd,
+                                        repo_url + '/A/B/E',
+                                        os.path.join(wc_dir, 'A', 'D', 'G'))
+  if errput: return 1
+
+#----------------------------------------------------------------------
 
 ########################################################################
 # Run the tests
@@ -1453,6 +1506,7 @@ test_list = [ None,
               basic_cat,
               Skip(basic_import_executable, (os.name != 'posix')),
               nonexistent_repository,
+              basic_auth_cache,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.
