@@ -899,6 +899,69 @@ def binary_props(sbox):
   check_prop('prop_binx', mu_path_bak, [prop_binx])
   check_prop('prop_binx', A_path_bak, [prop_binx])
 
+#----------------------------------------------------------------------
+
+def recursive_base_wc_ops(sbox):
+  "recursive property operations in BASE and WC"
+
+  # Bootstrap
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Files with which to test, in alphabetical order
+  f_add = os.path.join('A', 'added')
+  f_del = os.path.join('A', 'mu')
+  f_keep= os.path.join('iota')
+  fp_add = os.path.join(wc_dir, f_add)
+  fp_del = os.path.join(wc_dir, f_del)
+  fp_keep= os.path.join(wc_dir, f_keep)
+
+  # Set up properties
+  svntest.main.run_svn(None, 'propset', 'p', 'old-del', fp_del)
+  svntest.main.run_svn(None, 'propset', 'p', 'old-keep',fp_keep)
+  svntest.main.run_svn(None, 'commit', '-m', '', wc_dir)
+  svntest.main.file_append(fp_add, 'blah')
+  svntest.main.run_svn(None, 'add', fp_add)
+  svntest.main.run_svn(None, 'propset', 'p', 'new-add', fp_add)
+  svntest.main.run_svn(None, 'propset', 'p', 'new-del', fp_del)
+  svntest.main.run_svn(None, 'propset', 'p', 'new-keep',fp_keep)
+  svntest.main.run_svn(None, 'del', '--force', fp_del)
+
+  # Ensure that each line of output contains the corresponding string of
+  # expected_out, and that errput is empty.
+  def verify_output(expected_out, output, errput):
+    if errput != []:
+      print 'Error: stderr:'
+      print errput
+      raise svntest.Failure
+    output.sort()
+    ln = 0
+    for line in output:
+      if ((line.find(expected_out[ln]) == -1) or
+          (line != '' and expected_out[ln] == '')):
+        print 'Error: expected keywords: ', expected_out
+        print '       actual full output:', output
+        raise svntest.Failure
+      ln = ln + 1
+
+  # Test recursive proplist
+  output, errput = svntest.main.run_svn(None, 'proplist', '-R', '-v', wc_dir,
+                                        '-rBASE') 
+  verify_output([ 'old-del', 'old-keep', 'Properties on ', 'Properties on ' ],
+                output, errput)
+  
+  output, errput = svntest.main.run_svn(None, 'proplist', '-R', '-v', wc_dir)
+  verify_output([ 'new-add', 'new-keep', 'Properties on ', 'Properties on ' ],
+                output, errput)
+  
+  # Test recursive propget
+  output, errput = svntest.main.run_svn(None, 'propget', '-R', 'p', wc_dir,
+                                        '-rBASE') 
+  verify_output([ 'old-del', 'old-keep' ], output, errput)
+  
+  output, errput = svntest.main.run_svn(None, 'propget', '-R', 'p', wc_dir)
+  verify_output([ 'new-add', 'new-keep' ], output, errput)
+
   
 ########################################################################
 # Run the tests
@@ -921,6 +984,7 @@ test_list = [ None,
               Skip(revprop_change, (os.name != 'posix')),
               prop_value_conversions,
               binary_props,
+              recursive_base_wc_ops,
              ]
 
 if __name__ == '__main__':
