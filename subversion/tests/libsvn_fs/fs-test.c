@@ -3554,11 +3554,6 @@ commit_date (const char **msg,
   SVN_ERR (svn_test__create_fs_and_repos 
            (&fs, "test-repo-commit-date", pool));
 
-
-  /* Prepare a filesystem. */
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-basic-commit", pool));
-
   before_commit = apr_time_now ();
 
   /* Commit a greek tree. */
@@ -3596,6 +3591,289 @@ commit_date (const char **msg,
 }
 
 
+static svn_error_t *
+check_old_revisions (const char **msg,
+                     apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t rev;
+
+  *msg = "check old revisions";
+
+  /* Prepare a filesystem. */
+  SVN_ERR (svn_test__create_fs_and_repos
+           (&fs, "test-repo-check-old-revisions", pool));
+
+  /* Commit a greek tree. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /* Modify and commit iota a few times, then test to see if we can
+     retrieve all the committed revisions. */
+  {
+    /* right-side numbers match revision numbers */
+    const char *iota_contents_1
+      = "This is the file 'iota'.\n";
+
+    /* Add a char to the front. */
+    const char *iota_contents_2
+      = "XThis is the file 'iota'.\n";
+
+    /* Add a char to the end. */
+    const char *iota_contents_3
+      = "XThis is the file 'iota'.\nX";
+
+    /* Add a couple of chars in the middle. */
+    const char *iota_contents_4
+      = "XThis is the X file 'iota'.\nX";
+
+    /* Randomly add and delete chars all over. */
+    const char *iota_contents_5
+      = "XTYhQis is ACK, PHHHT! no longer 'ioZZZZZta'.blarf\nbye";
+
+    /* Revert to the original contents. */
+    const char *iota_contents_6
+      = "This is the file 'iota'.\n";
+
+    /* Revision 2. */
+    SVN_ERR (svn_fs_begin_txn (&txn, fs, rev, pool));
+    SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+    SVN_ERR (svn_test__set_file_contents
+             (txn_root, "iota", iota_contents_2, pool));
+    SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn));
+    SVN_ERR (svn_fs_close_txn (txn));
+    
+    /* Revision 3. */
+    SVN_ERR (svn_fs_begin_txn (&txn, fs, rev, pool));
+    SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+    SVN_ERR (svn_test__set_file_contents
+             (txn_root, "iota", iota_contents_3, pool));
+    SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn));
+    SVN_ERR (svn_fs_close_txn (txn));
+    
+    /* Revision 4. */
+    SVN_ERR (svn_fs_begin_txn (&txn, fs, rev, pool));
+    SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+    SVN_ERR (svn_test__set_file_contents
+             (txn_root, "iota", iota_contents_4, pool));
+    SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn));
+    SVN_ERR (svn_fs_close_txn (txn));
+    
+    /* Revision 5. */
+    SVN_ERR (svn_fs_begin_txn (&txn, fs, rev, pool));
+    SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+    SVN_ERR (svn_test__set_file_contents
+             (txn_root, "iota", iota_contents_5, pool));
+    SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn));
+    SVN_ERR (svn_fs_close_txn (txn));
+    
+    /* Revision 6. */
+    SVN_ERR (svn_fs_begin_txn (&txn, fs, rev, pool));
+    SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+    SVN_ERR (svn_test__set_file_contents
+             (txn_root, "iota", iota_contents_6, pool));
+    SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn));
+    SVN_ERR (svn_fs_close_txn (txn));
+
+    /** Now check the full Greek Tree in all of those revisions,
+        adjusting `iota' for each one. ***/
+
+    /* Validate revision 1.  */
+    {
+      svn_fs_root_t *root;
+      svn_test__tree_entry_t expected_entries[] = {
+        /* path, contents (0 = dir) */
+        { "iota",        iota_contents_1 },
+        { "A",           0 },
+        { "A/mu",        "This is the file 'mu'.\n" },
+        { "A/B",         0 },
+        { "A/B/lambda",  "This is the file 'lambda'.\n" },
+        { "A/B/E",       0 },
+        { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+        { "A/B/E/beta",  "This is the file 'beta'.\n" },
+        { "A/B/F",       0 },
+        { "A/C",         0 },
+        { "A/D",         0 },
+        { "A/D/gamma",   "This is the file 'gamma'.\n" },
+        { "A/D/G",       0 },
+        { "A/D/G/pi",    "This is the file 'pi'.\n" },
+        { "A/D/G/rho",   "This is the file 'rho'.\n" },
+        { "A/D/G/tau",   "This is the file 'tau'.\n" },
+        { "A/D/H",       0 },
+        { "A/D/H/chi",   "This is the file 'chi'.\n" },
+        { "A/D/H/psi",   "This is the file 'psi'.\n" },
+        { "A/D/H/omega", "This is the file 'omega'.\n" }
+      };
+
+      SVN_ERR (svn_fs_revision_root (&root, fs, 1, pool));
+      SVN_ERR (svn_test__validate_tree (root, expected_entries, 20, pool));
+    }
+
+    /* Validate revision 2.  */
+    {
+      svn_fs_root_t *root;
+      svn_test__tree_entry_t expected_entries[] = {
+        /* path, contents (0 = dir) */
+        { "iota",        iota_contents_2 },
+        { "A",           0 },
+        { "A/mu",        "This is the file 'mu'.\n" },
+        { "A/B",         0 },
+        { "A/B/lambda",  "This is the file 'lambda'.\n" },
+        { "A/B/E",       0 },
+        { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+        { "A/B/E/beta",  "This is the file 'beta'.\n" },
+        { "A/B/F",       0 },
+        { "A/C",         0 },
+        { "A/D",         0 },
+        { "A/D/gamma",   "This is the file 'gamma'.\n" },
+        { "A/D/G",       0 },
+        { "A/D/G/pi",    "This is the file 'pi'.\n" },
+        { "A/D/G/rho",   "This is the file 'rho'.\n" },
+        { "A/D/G/tau",   "This is the file 'tau'.\n" },
+        { "A/D/H",       0 },
+        { "A/D/H/chi",   "This is the file 'chi'.\n" },
+        { "A/D/H/psi",   "This is the file 'psi'.\n" },
+        { "A/D/H/omega", "This is the file 'omega'.\n" }
+      };
+
+      SVN_ERR (svn_fs_revision_root (&root, fs, 2, pool));
+      SVN_ERR (svn_test__validate_tree (root, expected_entries, 20, pool));
+    }
+
+    /* Validate revision 3.  */
+    {
+      svn_fs_root_t *root;
+      svn_test__tree_entry_t expected_entries[] = {
+        /* path, contents (0 = dir) */
+        { "iota",        iota_contents_3 },
+        { "A",           0 },
+        { "A/mu",        "This is the file 'mu'.\n" },
+        { "A/B",         0 },
+        { "A/B/lambda",  "This is the file 'lambda'.\n" },
+        { "A/B/E",       0 },
+        { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+        { "A/B/E/beta",  "This is the file 'beta'.\n" },
+        { "A/B/F",       0 },
+        { "A/C",         0 },
+        { "A/D",         0 },
+        { "A/D/gamma",   "This is the file 'gamma'.\n" },
+        { "A/D/G",       0 },
+        { "A/D/G/pi",    "This is the file 'pi'.\n" },
+        { "A/D/G/rho",   "This is the file 'rho'.\n" },
+        { "A/D/G/tau",   "This is the file 'tau'.\n" },
+        { "A/D/H",       0 },
+        { "A/D/H/chi",   "This is the file 'chi'.\n" },
+        { "A/D/H/psi",   "This is the file 'psi'.\n" },
+        { "A/D/H/omega", "This is the file 'omega'.\n" }
+      };
+
+      SVN_ERR (svn_fs_revision_root (&root, fs, 3, pool));
+      SVN_ERR (svn_test__validate_tree (root, expected_entries, 20, pool));
+    }
+
+    /* Validate revision 4.  */
+    {
+      svn_fs_root_t *root;
+      svn_test__tree_entry_t expected_entries[] = {
+        /* path, contents (0 = dir) */
+        { "iota",        iota_contents_4 },
+        { "A",           0 },
+        { "A/mu",        "This is the file 'mu'.\n" },
+        { "A/B",         0 },
+        { "A/B/lambda",  "This is the file 'lambda'.\n" },
+        { "A/B/E",       0 },
+        { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+        { "A/B/E/beta",  "This is the file 'beta'.\n" },
+        { "A/B/F",       0 },
+        { "A/C",         0 },
+        { "A/D",         0 },
+        { "A/D/gamma",   "This is the file 'gamma'.\n" },
+        { "A/D/G",       0 },
+        { "A/D/G/pi",    "This is the file 'pi'.\n" },
+        { "A/D/G/rho",   "This is the file 'rho'.\n" },
+        { "A/D/G/tau",   "This is the file 'tau'.\n" },
+        { "A/D/H",       0 },
+        { "A/D/H/chi",   "This is the file 'chi'.\n" },
+        { "A/D/H/psi",   "This is the file 'psi'.\n" },
+        { "A/D/H/omega", "This is the file 'omega'.\n" }
+      };
+
+      SVN_ERR (svn_fs_revision_root (&root, fs, 4, pool));
+      SVN_ERR (svn_test__validate_tree (root, expected_entries, 20, pool));
+    }
+
+    /* Validate revision 5.  */
+    {
+      svn_fs_root_t *root;
+      svn_test__tree_entry_t expected_entries[] = {
+        /* path, contents (0 = dir) */
+        { "iota",        iota_contents_5 },
+        { "A",           0 },
+        { "A/mu",        "This is the file 'mu'.\n" },
+        { "A/B",         0 },
+        { "A/B/lambda",  "This is the file 'lambda'.\n" },
+        { "A/B/E",       0 },
+        { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+        { "A/B/E/beta",  "This is the file 'beta'.\n" },
+        { "A/B/F",       0 },
+        { "A/C",         0 },
+        { "A/D",         0 },
+        { "A/D/G",       0 },
+        { "A/D/gamma",   "This is the file 'gamma'.\n" },
+        { "A/D/G/pi",    "This is the file 'pi'.\n" },
+        { "A/D/G/rho",   "This is the file 'rho'.\n" },
+        { "A/D/G/tau",   "This is the file 'tau'.\n" },
+        { "A/D/H",       0 },
+        { "A/D/H/chi",   "This is the file 'chi'.\n" },
+        { "A/D/H/psi",   "This is the file 'psi'.\n" },
+        { "A/D/H/omega", "This is the file 'omega'.\n" }
+      };
+
+      SVN_ERR (svn_fs_revision_root (&root, fs, 5, pool));
+      SVN_ERR (svn_test__validate_tree (root, expected_entries, 20, pool));
+    }
+
+    /* Validate revision 6.  */
+    {
+      svn_fs_root_t *root;
+      svn_test__tree_entry_t expected_entries[] = {
+        /* path, contents (0 = dir) */
+        { "iota",        iota_contents_6 },
+        { "A",           0 },
+        { "A/mu",        "This is the file 'mu'.\n" },
+        { "A/B",         0 },
+        { "A/B/lambda",  "This is the file 'lambda'.\n" },
+        { "A/B/E",       0 },
+        { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+        { "A/B/E/beta",  "This is the file 'beta'.\n" },
+        { "A/B/F",       0 },
+        { "A/C",         0 },
+        { "A/D",         0 },
+        { "A/D/gamma",   "This is the file 'gamma'.\n" },
+        { "A/D/G",       0 },
+        { "A/D/G/pi",    "This is the file 'pi'.\n" },
+        { "A/D/G/rho",   "This is the file 'rho'.\n" },
+        { "A/D/G/tau",   "This is the file 'tau'.\n" },
+        { "A/D/H",       0 },
+        { "A/D/H/chi",   "This is the file 'chi'.\n" },
+        { "A/D/H/psi",   "This is the file 'psi'.\n" },
+        { "A/D/H/omega", "This is the file 'omega'.\n" }
+      };
+
+      SVN_ERR (svn_fs_revision_root (&root, fs, 6, pool));
+      SVN_ERR (svn_test__validate_tree (root, expected_entries, 20, pool));
+    }
+  }
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* The test table.  */
 
@@ -3627,6 +3905,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   copy_test,
   merging_commit,
   commit_date,
+  check_old_revisions,
   0
 };
 

@@ -36,48 +36,68 @@ rep_is_fulltext (skel_t *rep)
 }
 
 
-/* Return the string key pointed to by REP, allocated in POOL.
-   If REP is a fulltext rep, just return the string; if delta, return
-   the string key for the svndiff data, not the base.  */
-static const char *
-string_key (skel_t *rep, apr_pool_t *pool)
+/* Set *STRING_KEY_P to the string key pointed to by REP, allocating
+   the key in POOL.  If REP is a fulltext rep, use the obvious string
+   key; if it is a delta rep, use the the string key for the svndiff
+   data, not the base.  */
+static svn_error_t *
+string_key (const char **string_key_p, skel_t *rep, apr_pool_t *pool)
 {
   if (rep_is_fulltext (rep))
-    return apr_pstrndup (pool,
-                         rep->children->next->data,
-                         rep->children->next->len);
+    {
+      *string_key_p = apr_pstrndup (pool,
+                                    rep->children->next->data,
+                                    rep->children->next->len);
+    }
   else
     {
       skel_t *diff = rep->children->next->next;
 
       if (strncmp ("svndiff", diff->children->data, diff->children->len) != 0)
-        abort ();  /* unknown delta format rep */
+        return svn_error_create
+          (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
+           "string_key: delta rep uses unknown diff format (not svndiff)");
 
-      return apr_pstrndup (pool,
-                           diff->children->next->data,
-                           diff->children->next->len);
+      *string_key_p = apr_pstrndup (pool,
+                                    diff->children->next->data,
+                                    diff->children->next->len);
     }
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 
-svn_error_t *
-svn_fs__rep_contents (svn_string_t *str,
-                      svn_fs_t *fs,
-                      const char *rep,
-                      trail_t *trail)
+/* Copy into BUF *LEN bytes starting at OFFSET from the string
+   represented via REP_KEY in FS, as part of TRAIL.
+   The number of bytes actually copied is stored in *LEN.  */
+static svn_error_t *
+rep_read_range (svn_fs_t *fs,
+                const char *rep_key,
+                char *buf,
+                apr_size_t offset,
+                apr_size_t *len,
+                trail_t *trail)
 {
-  const char *strkey;
-  char *data;
-  skel_t *rep_skel;
+  skel_t *rep;
+        
+  SVN_ERR (svn_fs__read_rep (&rep, fs, rep_key, trail));
 
-  SVN_ERR (svn_fs__read_rep (&rep_skel, fs, rep, trail));
-  strkey = string_key (rep_skel, trail->pool);
-  SVN_ERR (svn_fs__string_size (&(str->len), fs, strkey, trail));
-  data = apr_palloc (trail->pool, str->len);
-  SVN_ERR (svn_fs__string_read (fs, strkey, data, 0, &(str->len), trail));
-  str->data = data;
+  if (rep_is_fulltext (rep))
+    {
+      const char *str_key;
+
+      SVN_ERR (string_key (&str_key, rep, trail->pool));
+      SVN_ERR (svn_fs__string_read (fs, str_key, buf, offset, len, trail));
+    }
+  else
+    {
+#ifdef ACTUALLY_DO_DELTIFICATION
+      this code does not exist yet;
+#else  /* ! ACTUALLY_DO_DELTIFICATION */
+      abort ();
+#endif /* ACTUALLY_DO_DELTIFICATION */
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -119,6 +139,27 @@ rep_set_mutable_flag (skel_t *rep, apr_pool_t *pool)
 }
 
 
+/* Make a mutable, fulltext rep skel with STR_KEY.  Allocate the
+   skel and its string key in POOL (i.e., STR_KEY will be copied
+   into new storage in POOL).
+   
+   Helper for svn_fs__get_mutable_rep().  */
+static skel_t *
+make_mutable_fulltext_rep_skel (const char *str_key, apr_pool_t *pool)
+{
+  skel_t *rep_skel = svn_fs__make_empty_list (pool);
+  skel_t *header = svn_fs__make_empty_list (pool);
+
+  svn_fs__prepend (svn_fs__str_atom ("mutable", pool), header);
+  svn_fs__prepend (svn_fs__str_atom ("fulltext", pool), header);
+
+  svn_fs__prepend (svn_fs__str_atom (str_key, pool), rep_skel);
+  svn_fs__prepend (header, rep_skel);
+  
+  return rep_skel;
+}
+
+
 svn_error_t *
 svn_fs__get_mutable_rep (const char **new_rep,
                          const char *rep,
@@ -129,58 +170,95 @@ svn_fs__get_mutable_rep (const char **new_rep,
 
   if (rep && (rep[0] != '\0'))
     {
+      /* We were passed an existing rep, so examine it. */
       SVN_ERR (svn_fs__read_rep (&rep_skel, fs, rep, trail));
-  
-      /* If REP is not mutable, we have to make a mutable copy.  It is
-         a deep copy -- the underlying string is copied too, and the
-         new rep refers to the new string.  */
-      if (! rep_is_mutable (rep_skel))
+
+      if (rep_is_mutable (rep_skel))  /* rep already mutable, so return it */
         {
+          *new_rep = rep;
+          return SVN_NO_ERROR;
+        }
+      else  /* rep not mutable, so copy it */
+        {
+          /* If REP is not mutable, we have to make a mutable copy.
+             It is a deep copy -- we copy the immutable rep's data.
+             Note that we copy it as fulltext, no matter how the
+             immutable rep represents the data.  */
+
           if (rep_is_fulltext (rep_skel))
             {
-              const char *str_key, *new_str_key;
-              
+              /* The easy case -- copy the fulltext string directly. */
+
+              const char *old_str, *new_str;
+
               /* Step 1:  Copy the string to which the rep refers. */
-              str_key = string_key (rep_skel, trail->pool);
-              SVN_ERR (svn_fs__string_copy (fs, &new_str_key,
-                                            str_key, trail));
-              
+              SVN_ERR (string_key (&old_str, rep_skel, trail->pool));
+              SVN_ERR (svn_fs__string_copy (fs, &new_str, old_str, trail));
+
               /* Step 2:  Make this rep mutable. */
               rep_set_mutable_flag (rep_skel, trail->pool);
-              
+
               /* Step 3:  Change the string key to which this rep points. */
-              rep_skel->children->next->data = new_str_key;
-              rep_skel->children->next->len = strlen (new_str_key);
-              
+              rep_skel->children->next->data = new_str;
+              rep_skel->children->next->len = strlen (new_str);
+
               /* Step 4: Write the mutable version of this rep to the
                  database, returning the newly created key to the
                  caller. */
               SVN_ERR (svn_fs__write_new_rep (new_rep, fs, rep_skel, trail));
             }
           else
-            abort (); /* Huh?  We only know about fulltext right now. */
+            {
+              /* This is a bit trickier.  The immutable rep is a
+                 delta, but we're still making a fulltext copy of it.
+                 So we do an undeltifying read loop, writing the
+                 fulltext out to the mutable rep.  The efficiency of
+                 this depends on the efficiency of rep_read_range();
+                 fortunately, this circumstance is probably rare, and
+                 especially unlikely to happen on large contents
+                 (i.e., it's more likely to happen on directories than
+                 on files, because directories don't have to be
+                 up-to-date to receive commits, whereas files do.  */
+
+              char buf[10000];
+              apr_size_t offset;
+              apr_size_t size;
+              const char *new_str = NULL;
+              apr_size_t amount;
+
+              SVN_ERR (svn_fs__rep_contents_size (&size, fs, rep, trail));
+
+              for (offset = 0; offset < size; offset += amount)
+                {
+                  if ((size - offset) > (sizeof (buf)))
+                    amount = sizeof (buf);
+                  else
+                    amount = size - offset;
+
+                  SVN_ERR (rep_read_range (fs, rep, buf, offset,
+                                           &amount, trail));
+
+                  SVN_ERR (svn_fs__string_append (fs,
+                                                  &new_str,
+                                                  amount,
+                                                  buf,
+                                                  trail));
+                }
+
+              rep_skel = make_mutable_fulltext_rep_skel (new_str, trail->pool);
+            }
         }
-      else
-        *new_rep = rep;
     }
   else    /* no key, so make a new, empty, mutable, fulltext rep */
     {
-      const char *new_str_key = NULL;
-      skel_t *header = svn_fs__make_empty_list (trail->pool);
-      rep_skel = svn_fs__make_empty_list (trail->pool);
-
-      svn_fs__prepend (svn_fs__str_atom ("mutable", trail->pool), header);
-      svn_fs__prepend (svn_fs__str_atom ("fulltext", trail->pool), header);
-
-      /* Create a new, empty string. */
-      SVN_ERR (svn_fs__string_append (fs, &new_str_key, 0, NULL, trail));
-      
-      svn_fs__prepend (svn_fs__str_atom (new_str_key, trail->pool), rep_skel);
-      svn_fs__prepend (header, rep_skel);
-      
-      SVN_ERR (svn_fs__write_new_rep (new_rep, fs, rep_skel, trail));
+      const char *new_str = NULL;
+      SVN_ERR (svn_fs__string_append (fs, &new_str, 0, NULL, trail));
+      rep_skel = make_mutable_fulltext_rep_skel (new_str, trail->pool);
     }
-      
+
+  /* If we made it here, there's a new rep to store in the fs. */
+  SVN_ERR (svn_fs__write_new_rep (new_rep, fs, rep_skel, trail));
+
   return SVN_NO_ERROR;
 }
 
@@ -229,7 +307,7 @@ svn_fs__delete_rep_if_mutable (svn_fs_t *fs,
   if (rep_is_mutable (rep_skel))
     {
       const char *str_key;
-      str_key = string_key (rep_skel, trail->pool);
+      SVN_ERR (string_key (&str_key, rep_skel, trail->pool));
       SVN_ERR (svn_fs__string_delete (fs, str_key, trail));
       SVN_ERR (svn_fs__delete_rep (fs, rep, trail));
     }
@@ -295,34 +373,6 @@ rep_read_get_baton (svn_fs_t *fs,
 }
 
 
-
-/* Copy into BUF *LEN bytes starting at OFFSET from the string
-   represented via REP_KEY in FS, as part of TRAIL.
-   The number of bytes actually copied is stored in *LEN.  */
-static svn_error_t *
-rep_read_range (svn_fs_t *fs,
-                const char *rep_key,
-                char *buf,
-                apr_size_t offset,
-                apr_size_t *len,
-                trail_t *trail)
-{
-  skel_t *rep;
-        
-  SVN_ERR (svn_fs__read_rep (&rep, fs, rep_key, trail));
-
-  if (rep_is_fulltext (rep))
-    {
-      const char *str_key = string_key (rep, trail->pool);
-      SVN_ERR (svn_fs__string_read (fs, str_key, buf, offset, len, trail));
-    }
-  else
-    abort ();  /* We don't do undeltification yet. */
-
-  return SVN_NO_ERROR;
-}
-
-
 
 /*** Retrieving data. ***/
 
@@ -333,11 +383,52 @@ svn_fs__rep_contents_size (apr_size_t *size,
                            trail_t *trail)
 {
   skel_t *rep_skel;
-  const char *str_key;
 
   SVN_ERR (svn_fs__read_rep (&rep_skel, fs, rep, trail));
-  str_key = string_key (rep_skel, trail->pool);
-  SVN_ERR (svn_fs__string_size (size, fs, str_key, trail));
+
+  if (rep_is_fulltext (rep_skel))
+    {
+      /* Get the size by asking Berkeley for the string's length. */
+
+      const char *str_key;
+      SVN_ERR (string_key (&str_key, rep_skel, trail->pool));
+      SVN_ERR (svn_fs__string_size (size, fs, str_key, trail));
+    }
+  else  /* rep is delta */
+    {
+      /* Get the size by reading it from the rep skel. */
+      char *size_str;
+      int isize;
+
+      size_str = apr_pstrndup (trail->pool,
+                               rep_skel->children->next->next->next->data,
+                               rep_skel->children->next->next->next->len);
+      isize = atoi (size_str);
+      *size = (apr_size_t) isize;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs__rep_contents (svn_string_t *str,
+                      svn_fs_t *fs,
+                      const char *rep,
+                      trail_t *trail)
+{
+  apr_size_t len;
+
+  SVN_ERR (svn_fs__rep_contents_size (&(str->len), fs, rep, trail));
+  str->data = apr_palloc (trail->pool, str->len);
+  len = str->len;
+  SVN_ERR (rep_read_range (fs, rep, (char *) str->data, 0, &len, trail));
+
+  /* Paranoia. */
+  if (len != str->len)
+    return svn_error_createf
+      (SVN_ERR_FS_CORRUPT, 0, NULL, trail->pool,
+       "svn_fs__rep_read_contents: failure reading ren \"%s\"", rep);
 
   return SVN_NO_ERROR;
 }
@@ -346,8 +437,8 @@ svn_fs__rep_contents_size (apr_size_t *size,
 struct read_rep_args
 {
   struct rep_read_baton *rb;   /* The data source.             */
-  char *buf;                      /* Where to put what we read.   */
-  apr_size_t *len;                /* How much to read / was read. */
+  char *buf;                   /* Where to put what we read.   */
+  apr_size_t *len;             /* How much to read / was read. */
 };
 
 
@@ -481,11 +572,19 @@ rep_write (svn_fs_t *fs,
 
   if (rep_is_fulltext (rep))
     {
-      const char *str_key = string_key (rep, trail->pool);
+      const char *str_key;
+      SVN_ERR (string_key (&str_key, rep, trail->pool));
       SVN_ERR (svn_fs__string_append (fs, &str_key, len, buf, trail));
     }
   else
-    abort ();  /* We don't do deltification yet. */
+    {
+      /* There should never be a case when we have a mutable
+         non-fulltext rep.  The only code that creates mutable reps is
+         in this file, and it creates them fulltext. */
+      return svn_error_createf
+        (SVN_ERR_FS_CORRUPT, 0, NULL, trail->pool,
+         "rep_write: rep \"%s\" both mutable and non-fulltext", rep_key);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -598,7 +697,7 @@ svn_fs__rep_contents_clear (svn_fs_t *fs,
       (SVN_ERR_FS_REP_NOT_MUTABLE, 0, NULL, trail->pool,
        "svn_fs__rep_contents_clear: rep \"%s\" is not mutable", rep);
 
-  str_key = string_key (rep_skel, trail->pool);
+  SVN_ERR (string_key (&str_key, rep_skel, trail->pool));
 
   /* If rep is already clear, just return success. */
   if ((str_key == NULL) || (str_key[0] == '\0'))
@@ -755,11 +854,14 @@ svn_fs__rep_deltify (svn_fs_t *fs,
        "svn_fs__rep_deltify: failed to calculate MD5 digest for %s",
        source);
 
-  /* Read the old rep to get the string key. */
+  /* Get the size of the target's original string data.  Note that we
+     don't use svn_fs__rep_contents_size() for this; that function
+     always returns the fulltext size, whereas we need to know the
+     actual amount of storage used by this representation.  */
   {
     skel_t *old_rep;
     SVN_ERR (svn_fs__read_rep (&old_rep, fs, target, trail));
-    orig_str_key = string_key (old_rep, trail->pool);
+    SVN_ERR (string_key (&orig_str_key, old_rep, trail->pool));
   }
     
   /* Check the size of the new string.  If it is larger than the old
@@ -784,9 +886,11 @@ svn_fs__rep_deltify (svn_fs_t *fs,
   /* Now `new_target_baton.key' has the key of the new string.  We
      should hook it into the representation. */
   {
-    skel_t *header = svn_fs__make_empty_list (trail->pool);
-    skel_t *diff = svn_fs__make_empty_list (trail->pool);
-    skel_t *rep = svn_fs__make_empty_list (trail->pool);
+    skel_t *header   = svn_fs__make_empty_list (trail->pool);
+    skel_t *diff     = svn_fs__make_empty_list (trail->pool);
+    skel_t *checksum = svn_fs__make_empty_list (trail->pool);
+    skel_t *rep      = svn_fs__make_empty_list (trail->pool);
+    const char *size_str;
 
     /* The header. */
     svn_fs__prepend (svn_fs__str_atom ("delta", trail->pool), header);
@@ -796,9 +900,21 @@ svn_fs__rep_deltify (svn_fs_t *fs,
                      diff);
     svn_fs__prepend (svn_fs__str_atom ("svndiff", trail->pool), diff);
 
-    /* The rep. */
+    /* The size. */
+    {
+      apr_size_t size;
+      SVN_ERR (svn_fs__rep_contents_size (&size, fs, target, trail));
+      size_str = apr_psprintf (trail->pool, "%ul", size);
+    }
+
+    /* The checksum. */
     svn_fs__prepend (svn_fs__mem_atom (digest, MD5_DIGESTSIZE, trail->pool), 
-                     rep);
+                     checksum);
+    svn_fs__prepend (svn_fs__str_atom ("md5", trail->pool), checksum);
+
+    /* The rep. */
+    svn_fs__prepend (checksum, rep);
+    svn_fs__prepend (svn_fs__str_atom (size_str, trail->pool), rep);
     svn_fs__prepend (diff, rep);
     svn_fs__prepend (svn_fs__str_atom (source, trail->pool), rep);
     svn_fs__prepend (header, rep);
