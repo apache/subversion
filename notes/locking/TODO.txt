@@ -14,12 +14,6 @@ MUST HAVE
 
 * lock-null support:
 
-    - finish issue 2161: PROPFIND depth 1 should show locked,
-      nonexistent paths (sussman)
-
-    - svn_fs_get_locks() should take a depth (=1) argument; change BDB
-      locking tables implementation to make this feasible (cmpilato)
-
     - 'svn lock/unlock/info lock-null-URL' should work over all 3 RA
       layers, but then disable this feature for 1.2 (sussman)
 
