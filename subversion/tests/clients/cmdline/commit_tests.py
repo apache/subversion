@@ -68,18 +68,22 @@ def get_standard_status_list(wc_dir):
   # New things
   status_list.append([os.path.join(wc_dir, 'Q'), None, {},
                       {'status' : 'A ',
+                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   status_list.append([os.path.join(wc_dir, 'Q', 'floo'), None, {},
                       {'status' : 'A ',
+                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   status_list.append([os.path.join(wc_dir, 'A', 'D', 'H', 'gloo'), None, {},
                       {'status' : 'A ',
+                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   status_list.append([os.path.join(wc_dir, 'A', 'B', 'E', 'bloo'), None, {},
                       {'status' : 'A ',
+                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
 
@@ -287,7 +291,10 @@ def nested_dir_replacements():
   sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H'))][3]['status'] = "R "
   sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H'))][3]['wc_rev'] = "0"  
   sl.append([os.path.join(wc_dir, 'A', 'D', 'bloo'), None, {},
-             {'status' : 'A ', 'wc_rev' : '0', 'repos_rev' : '1'}])
+             {'status' : 'A ',
+              'locked' : ' ',
+              'wc_rev' : '0',
+              'repos_rev' : '1'}])
 
   sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'G'))][3]['status'] = "D "
   sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'G', 'pi'))][3]['status'] = "D "
@@ -320,7 +327,10 @@ def nested_dir_replacements():
   sl[path_index(sl, os.path.join(wc_dir, 'A', 'D'))][3]['wc_rev'] = "2"  
   sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H'))][3]['wc_rev'] = "2"  
   sl.append([os.path.join(wc_dir, 'A', 'D', 'bloo'), None, {},
-             {'status' : '_ ', 'wc_rev' : '2', 'repos_rev' : '2'}])
+             {'status' : '_ ',
+              'locked' : ' ',
+              'wc_rev' : '2',
+              'repos_rev' : '2'}])
 
   sl.pop(path_index(sl, os.path.join(wc_dir, 'A', 'D', 'G')))
   sl.pop(path_index(sl, os.path.join(wc_dir, 'A', 'D', 'G', 'pi')))
