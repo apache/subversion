@@ -34,7 +34,7 @@
  *
  * The idea is that they are conventionally human-readable for the
  * first part, and then in parentheses comes everything else required
- * to completely fill in an apr_exploded_time_t: tm_yday, tm_isdst,
+ * to completely fill in an apr_time_exp_t: tm_yday, tm_isdst,
  * and tm_gmtoff.
  *
  * kff todo: what about portability problems resulting from the
