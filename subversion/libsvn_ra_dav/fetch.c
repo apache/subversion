@@ -46,7 +46,11 @@
 #include "ra_dav.h"
 
 
-#define CHKERR(e) if (1) { err = (e); if (err != NULL) goto error; } else
+#define CHKERR(e)               \
+do {                            \
+  if ((rb->err = (e)) != NULL)  \
+    return 1;                   \
+} while(0)
 
 typedef struct {
   /* the information for this subdir. if rsrc==NULL, then this is a sentinel
@@ -1219,7 +1223,6 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
   dir_item_t *parent_dir;
   void *new_dir_baton;
   svn_stringbuf_t *pathbuf;
-  svn_error_t *err;
 
   switch (elm->id)
     {
@@ -1238,8 +1241,8 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       if (rb->dirs->nelts == 0)
         {
           pathbuf = svn_stringbuf_create(".", rb->ras->pool);
-          err = (*rb->editor->open_root)(rb->edit_baton, base,
-                                         &new_dir_baton);
+          CHKERR( (*rb->editor->open_root)(rb->edit_baton, base,
+                                         &new_dir_baton) );
         }
       else
         {
@@ -1252,12 +1255,10 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
           pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, rb->ras->pool);
           svn_path_add_component(pathbuf, rb->namestr);
 
-          err = (*rb->editor->open_directory)(rb->namestr,
+          CHKERR( (*rb->editor->open_directory)(rb->namestr,
                                               parent_dir->baton, base,
-                                              &new_dir_baton);
+                                              &new_dir_baton) );
         }
-      if (err != NULL)
-        goto error;
 
       /* push the new baton onto the directory baton stack */
       push_dir(rb, new_dir_baton, pathbuf);
@@ -1408,12 +1409,6 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
     }
 
   return 0;
-
- error:
-  rb->err = err;
-
-  /* stop the parsing */
-  return 1;
 }
 
 
@@ -1470,7 +1465,6 @@ static int end_element(void *userdata,
                        const char *cdata)
 {
   report_baton_t *rb = userdata;
-  svn_error_t *err;
 
   switch (elm->id)
     {
@@ -1480,7 +1474,7 @@ static int end_element(void *userdata,
 
     case ELEM_open_directory:
       /* fetch node props as necessary. */
-      CHKERR (add_node_props (rb));
+      CHKERR( add_node_props (rb) );
 
       /* close the topmost directory, and pop it from the stack */
       CHKERR( (*rb->editor->close_directory)(TOP_DIR(rb).baton) );
@@ -1505,7 +1499,7 @@ static int end_element(void *userdata,
 
     case ELEM_open_file:
       /* fetch node props as necessary. */
-      CHKERR (add_node_props (rb));
+      CHKERR( add_node_props (rb) );
 
       /* close the file and mark that we are no longer operating on a file */
       CHKERR( (*rb->editor->close_file)(rb->file_baton) );
@@ -1552,7 +1546,7 @@ static int end_element(void *userdata,
           svn_stringbuf_create (elm->nspace, rb->ras->pool); 
         svn_stringbuf_appendcstr (tagname, elm->name);
 
-        CHKERR ( set_special_wc_prop (tagname->data, 
+        CHKERR( set_special_wc_prop (tagname->data, 
                                       cdata, 
                                       rb->file_baton ? 
                                         rb->editor->change_file_prop :
@@ -1569,12 +1563,6 @@ static int end_element(void *userdata,
     }
 
   return 0;
-
- error:
-  rb->err = err;
-
-  /* stop the parsing */
-  return 1;
 }
 
 
