@@ -563,10 +563,20 @@ svn_client_import (svn_client_commit_info_t **commit_info,
 
   /* Else we're importing to an RA layer. */
   else  
-    SVN_ERR (get_ra_editor (&ra_baton, &session, &ra_lib, 
-                            &editor, &edit_baton, auth_baton, url, path,
-                            log_msg, NULL, &committed_rev, &committed_date,
-                            &committed_author, FALSE, pool));
+    {
+      svn_node_kind_t kind;
+      const char *base_dir = path;
+
+      SVN_ERR (svn_io_check_path (path, &kind, pool));
+      if (kind == svn_node_file)
+        svn_path_split_nts (path, &base_dir, NULL, pool);
+      if (svn_path_is_empty_nts (base_dir))
+        base_dir = ".";
+      SVN_ERR (get_ra_editor (&ra_baton, &session, &ra_lib, 
+                              &editor, &edit_baton, auth_baton, url, base_dir,
+                              log_msg, NULL, &committed_rev, &committed_date,
+                              &committed_author, FALSE, pool));
+    }
 
   /* If an error occured during the commit, abort the edit and return
      the error.  We don't even care if the abort itself fails.  */
