@@ -629,7 +629,9 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
     
   /* It's possible that locally modified files were left behind during
      the removal.  That's okay;  just check for this special case. */
-  if (err && (err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD))
+  if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
+    svn_error_clear_all (err);
+  else if (err)
     return err;
 
   /* (## Perhaps someday have the client print a warning that "locally
@@ -1202,6 +1204,8 @@ svn_wc_cleanup (svn_stringbuf_t *path,
     {
       if (! APR_STATUS_IS_ENOENT(err->apr_err))
         return err;
+      else
+        svn_error_clear_all (err);
     }
   else if (kind == svn_node_file)
     SVN_ERR (svn_wc__run_log (path, pool));
@@ -1224,7 +1228,9 @@ svn_wc_cleanup (svn_stringbuf_t *path,
   if (svn_wc__adm_path_exists (path, 0, pool, NULL))
     {
       err = svn_wc__unlock (path, pool);
-      if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
+      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+        svn_error_clear_all (err);
+      else if (err)
         return err;
     }
 

@@ -114,9 +114,10 @@ svn_error_t *svn_error_quick_wrap (svn_error_t *child, const char *new_msg);
 void svn_error_compose (svn_error_t *chain, svn_error_t *new_err);
 
 
-/* Free ERROR by destroying its pool; note that the pool may be shared
-   with wrapped child errors inside this error. */
-void svn_error_free (svn_error_t *error);
+/* Clear ERROR's pool.  Note that this is likely the top-level error
+   pool shared with any other errors currently extant, though usually
+   only one error exists at a time, so this is not a problem. */
+void svn_error_clear_all (svn_error_t *error);
 
 
 /* Very basic default error handler: print out error stack, and quit

@@ -1084,7 +1084,10 @@ check_adm_exists (int *exists,
   if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
     return err;
   else if (err)
-    *exists = 0;
+    {
+      svn_error_clear_all (err);
+      *exists = 0;
+    }
   else
     *exists = 1;
 

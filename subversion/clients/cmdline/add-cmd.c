@@ -61,7 +61,10 @@ svn_cl__add (apr_getopt_t *os,
           if (err)
             {
               if (err->apr_err == SVN_ERR_ENTRY_EXISTS)
-                svn_handle_warning(err, err->message);
+                {
+                  svn_handle_warning (err, err->message);
+                  svn_error_clear_all (err);
+                }
               else
                 return err;
             }

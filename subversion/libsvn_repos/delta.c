@@ -272,6 +272,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
         {
           /* Caller thinks that target still exists, but it doesn't.
              So just delete the target and go home.  */
+          svn_error_clear_all (err);
           SVN_ERR (delete (&c, root_baton, src_entry, pool));
           goto cleanup;
         }
@@ -287,6 +288,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
         {
           /* The target has been deleted from our working copy. Add
              back a new one. */
+          svn_error_clear_all (err);
           SVN_ERR (add_file_or_dir (&c, root_baton,
                                     NULL,
                                     NULL,

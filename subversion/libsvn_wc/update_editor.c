@@ -1004,7 +1004,10 @@ apply_textdelta (void *file_baton,
           return err;
         }
       else if (err)
-        hb->source = NULL;  /* make sure */
+        {
+          svn_error_clear_all (err);
+          hb->source = NULL;  /* make sure */
+        }
     }
 
   /* Open the text base for writing (this will get us a temporary file).  */
@@ -2448,8 +2451,13 @@ svn_wc_is_wc_root (svn_boolean_t *wc_root,
   if (svn_path_is_empty (parent))
     svn_stringbuf_set (parent, ".");
   err = svn_wc_entry (&p_entry, parent, pool);
-  if (err || ! p_entry)
-    return SVN_NO_ERROR;
+  if (err || (! p_entry))
+    {
+      if (err)
+        svn_error_clear_all (err);
+
+      return SVN_NO_ERROR;
+    }
   
   /* If the parent directory has no url information, something is
      messed up.  Bail with an error. */
