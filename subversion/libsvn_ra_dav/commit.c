@@ -680,7 +680,7 @@ static svn_error_t * commit_add_dir(svn_stringbuf_t *name,
                        src_url->data,       /* source URI */
                        child->rsrc->wr_url); /* dest URI */
 
-      if (status != 201) /* "created" */
+      if (status != NE_OK)
         {
           return 
             svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL, pool,
@@ -817,7 +817,7 @@ static svn_error_t * commit_add_file(svn_stringbuf_t *name,
                        src_url->data,       /* source URI */
                        file->rsrc->wr_url); /* dest URI */
 
-      if (status != 201) /* "created" */
+      if (status != NE_OK)
         {
           return 
             svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL, pool,
