@@ -1366,8 +1366,7 @@ def commit_add_file_twice(sbox):
 def commit_from_long_dir(sbox):
   "commit from a dir with a longer name than the wc"
 
-  if sbox.build():
-    return 1
+  sbox.build()
 
   wc_dir = sbox.wc_dir
   was_dir = os.getcwd()
@@ -1386,20 +1385,20 @@ def commit_from_long_dir(sbox):
   # random behaviour, but still caused the test to fail
   extra_name = 'xx'
 
-  os.chdir(wc_dir)
-  os.mkdir(extra_name)
-  os.chdir(extra_name)
+  try:
+    os.chdir(wc_dir)
+    os.mkdir(extra_name)
+    os.chdir(extra_name)
 
-  if svntest.actions.run_and_verify_commit (abs_wc_dir,
-                                            expected_output,
-                                            None,
-                                            None,
-                                            None, None,
-                                            None, None,
-                                            abs_wc_dir):
+    svntest.actions.run_and_verify_commit (abs_wc_dir,
+                                           expected_output,
+                                           None,
+                                           None,
+                                           None, None,
+                                           None, None,
+                                           abs_wc_dir)
+  finally:
     os.chdir(was_dir)
-    return 1
-  os.chdir(was_dir)
   
 #----------------------------------------------------------------------
 
@@ -1456,35 +1455,33 @@ def commit_with_lock(sbox):
 def commit_current_dir(sbox):
   "commit the current directory"
 
-  if sbox.build():
-    return 1
+  sbox.build()
 
   wc_dir = sbox.wc_dir
   svntest.main.run_svn(None, 'propset', 'pname', 'pval', wc_dir)
 
   was_cwd = os.getcwd()
-  os.chdir(wc_dir)
+  try:
+    os.chdir(wc_dir)
 
-  expected_output = svntest.wc.State('.', {
-    '.' : Item(verb='Sending'),
-    })
-  if svntest.actions.run_and_verify_commit('.',
-                                           expected_output,
-                                           None,
-                                           None,
-                                           None, None,
-                                           None, None,
-                                           '.'):
+    expected_output = svntest.wc.State('.', {
+      '.' : Item(verb='Sending'),
+      })
+    svntest.actions.run_and_verify_commit('.',
+                                          expected_output,
+                                          None,
+                                          None,
+                                          None, None,
+                                          None, None,
+                                          '.')
+  finally:
     os.chdir(was_cwd)
-    return 1
-  os.chdir(was_cwd)
 
   # I can't get the status check to work as part of run_and_verify_commit.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(repos_rev=2)
   expected_status.tweak('', wc_rev=2, status='  ')
-  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
-    return 1
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
 
