@@ -183,11 +183,12 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
               value = "###error###";
               break;
             }
-          value = dav_svn_build_uri(resource->info->repos,
-                                    DAV_SVN_BUILD_URI_BASELINE,
-                                    revnum, NULL,
-                                    1 /* add_href */, p);
-                                    
+          s = dav_svn_build_uri(resource->info->repos,
+                                DAV_SVN_BUILD_URI_BASELINE,
+                                revnum, NULL,
+                                0 /* add_href */, p);
+          value = apr_psprintf(p, "<D:href>%s</D:href>", 
+                               apr_xml_quote_string(p, s, 1));
         }
       else if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
         {
@@ -211,10 +212,12 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
           stable_id = svn_fs_unparse_id(id, p);
           svn_stringbuf_appendcstr(stable_id, resource->info->repos_path);
 
-          value = dav_svn_build_uri(resource->info->repos,
-                                    DAV_SVN_BUILD_URI_VERSION,
-                                    SVN_INVALID_REVNUM, stable_id->data,
-                                    1 /* add_href */, p);
+          s = dav_svn_build_uri(resource->info->repos,
+                                DAV_SVN_BUILD_URI_VERSION,
+                                SVN_INVALID_REVNUM, stable_id->data,
+                                0 /* add_href */, p);
+          value = apr_psprintf(p, "<D:href>%s</D:href>", 
+                               apr_xml_quote_string(p, s, 1));
         }
       break;
 
@@ -265,7 +268,8 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
         return DAV_PROP_INSERT_NOTSUPP;
 
       /* drop the leading slash, so it is relative */
-      value = resource->info->repos_path + 1;
+      s = resource->info->repos_path + 1;
+      value = apr_xml_quote_string(p, s, 1);
       break;
 
     default:
