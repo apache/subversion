@@ -825,7 +825,8 @@ svn_fs_base__clean_logs(const char *live_path,
 
 /* ### There -must- be a more elegant way to do a compile-time check
        for BDB 4.2 or later.  We're doing this because apparently
-       env->get_flags() doesn't exist in earlier versions of BDB.  */
+       env->get_flags() and DB->get_pagesize() don't exist in earlier
+       versions of BDB.  */
 #ifdef DB_LOG_AUTOREMOVE
 
 /* Open the BDB environment at PATH and compare its configuration
@@ -859,7 +860,6 @@ check_env_flags (svn_boolean_t *match,
 
   return SVN_NO_ERROR;
 }
-#endif
 
 
 /* Set *PAGESIZE to the size of pages used to hold items in the
@@ -893,6 +893,8 @@ get_db_pagesize (u_int32_t *pagesize,
 
   return SVN_NO_ERROR;
 }
+#endif /* DB_LOG_AUTOREMOVE */
+
 
 /* Ensure compatibility with older APR 0.9.5 snapshots which don't
  * support the APR_LARGEFILE flag. */
@@ -1015,7 +1017,11 @@ base_hotcopy (const char *src_path,
   /* In order to copy the database files safely and atomically, we
      must copy them in chunks which are multiples of the page-size
      used by BDB.  See sleepycat docs for details, or svn issue #1818. */
+#ifdef DB_LOG_AUTOREMOVE
   SVN_ERR (get_db_pagesize (&pagesize, src_path, pool));
+#else
+  pagesize = 4096;
+#endif
 
   /* Copy the databases.  */
   SVN_ERR (copy_db_file_safely (src_path, dest_path,
