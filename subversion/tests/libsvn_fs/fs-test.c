@@ -4113,7 +4113,7 @@ check_all_revisions (const char **msg,
    to a file, calculate and return the MD5 digest for the contents of
    the file. */
 static svn_error_t *
-get_file_digest (unsigned char digest[MD5_DIGESTSIZE],
+get_file_digest (unsigned char digest[APR_MD5_DIGESTSIZE],
                  svn_fs_root_t *root,
                  const char *path,
                  apr_pool_t *pool)
@@ -4217,8 +4217,8 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_string_t contents;
   char *content_buffer;
-  unsigned char digest[MD5_DIGESTSIZE];
-  unsigned char digest_list[100][MD5_DIGESTSIZE];
+  unsigned char digest[APR_MD5_DIGESTSIZE];
+  unsigned char digest_list[100][APR_MD5_DIGESTSIZE];
   svn_txdelta_window_handler_t wh_func;
   void *wh_baton;
   svn_revnum_t j;
@@ -4256,7 +4256,7 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
   SVN_ERR (svn_txdelta_send_string (&contents, wh_func, wh_baton, subpool));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
   SVN_ERR (svn_fs_deltify_revision (fs, youngest_rev, subpool));
-  memcpy (digest_list[youngest_rev], digest, MD5_DIGESTSIZE);
+  memcpy (digest_list[youngest_rev], digest, APR_MD5_DIGESTSIZE);
   svn_pool_clear (subpool);
 
   /* Now, let's make some edits to the beginning of our file, and
@@ -4270,7 +4270,7 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
   SVN_ERR (svn_txdelta_send_string (&contents, wh_func, wh_baton, subpool));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
   SVN_ERR (svn_fs_deltify_revision (fs, youngest_rev, subpool));
-  memcpy (digest_list[youngest_rev], digest, MD5_DIGESTSIZE);
+  memcpy (digest_list[youngest_rev], digest, APR_MD5_DIGESTSIZE);
   svn_pool_clear (subpool);
 
   /* Now, let's make some edits to the end of our file. */
@@ -4283,7 +4283,7 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
   SVN_ERR (svn_txdelta_send_string (&contents, wh_func, wh_baton, subpool));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
   SVN_ERR (svn_fs_deltify_revision (fs, youngest_rev, subpool));
-  memcpy (digest_list[youngest_rev], digest, MD5_DIGESTSIZE);
+  memcpy (digest_list[youngest_rev], digest, APR_MD5_DIGESTSIZE);
   svn_pool_clear (subpool);
 
   /* How about some edits to both the beginning and the end of the
@@ -4298,7 +4298,7 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
   SVN_ERR (svn_txdelta_send_string (&contents, wh_func, wh_baton, subpool));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
   SVN_ERR (svn_fs_deltify_revision (fs, youngest_rev, subpool));
-  memcpy (digest_list[youngest_rev], digest, MD5_DIGESTSIZE);
+  memcpy (digest_list[youngest_rev], digest, APR_MD5_DIGESTSIZE);
   svn_pool_clear (subpool);
 
   /* Alright, now we're just going to go crazy.  Let's make many more
@@ -4316,7 +4316,7 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
                (&contents, wh_func, wh_baton, subpool));
       SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
       SVN_ERR (svn_fs_deltify_revision (fs, youngest_rev, subpool));
-      memcpy (digest_list[youngest_rev], digest, MD5_DIGESTSIZE);
+      memcpy (digest_list[youngest_rev], digest, APR_MD5_DIGESTSIZE);
       svn_pool_clear (subpool);
     }
 
@@ -4328,7 +4328,7 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
     {
       SVN_ERR (svn_fs_revision_root (&rev_root, fs, j, subpool));
       SVN_ERR (get_file_digest (digest, rev_root, "bigfile", subpool));
-      if (memcmp (digest, digest_list[j], MD5_DIGESTSIZE))
+      if (memcmp (digest, digest_list[j], APR_MD5_DIGESTSIZE))
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, NULL,
            "MD5 checksum failure, revision %" SVN_REVNUM_T_FMT, j);
@@ -4968,8 +4968,8 @@ verify_checksum (const char **msg,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
   svn_stringbuf_t *str;
-  unsigned char expected_digest[MD5_DIGESTSIZE];
-  unsigned char actual_digest[MD5_DIGESTSIZE];
+  unsigned char expected_digest[APR_MD5_DIGESTSIZE];
+  unsigned char actual_digest[APR_MD5_DIGESTSIZE];
 
   /* Write a file, compare the repository's idea of its checksum
      against our idea of its checksum.  They should be the same. */
@@ -4989,7 +4989,7 @@ verify_checksum (const char **msg,
   SVN_ERR (svn_test__set_file_contents (txn_root, "fact", str->data, pool));
   SVN_ERR (svn_fs_file_md5_checksum (actual_digest, txn_root, "fact", pool));
 
-  if (memcmp (expected_digest, actual_digest, MD5_DIGESTSIZE) != 0)
+  if (memcmp (expected_digest, actual_digest, APR_MD5_DIGESTSIZE) != 0)
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
        "verify-checksum: checksum mismatch:\n"
