@@ -18,10 +18,10 @@
         <link rel="stylesheet" type="text/css" href="/svnindex.css"/>
       </head>
       <body>
-        <div id="svn">
+        <div class="svn">
           <xsl:apply-templates/>
         </div>
-        <div id="footer">
+        <div class="footer">
           <xsl:text>Powered by </xsl:text>
           <xsl:element name="a">
             <xsl:attribute name="href">
@@ -37,7 +37,7 @@
   </xsl:template>
 
   <xsl:template match="index">
-    <div id="rev">
+    <div class="rev">
       <xsl:if test="string-length(@name) != 0">
         <xsl:value-of select="@name"/>
         <xsl:if test="string-length(@rev) != 0">
@@ -49,7 +49,7 @@
         <xsl:value-of select="@rev"/>
       </xsl:if>
     </div>
-    <div id="path">
+    <div class="path">
       <xsl:value-of select="@path"/>
     </div>
     <xsl:apply-templates select="updir"/>
@@ -58,7 +58,7 @@
   </xsl:template>
 
   <xsl:template match="updir">
-    <div id="updir">
+    <div class="updir">
       <xsl:text>[</xsl:text>
       <xsl:element name="a">
         <xsl:attribute name="href">..</xsl:attribute>
@@ -70,7 +70,7 @@
   </xsl:template>
 
   <xsl:template match="dir">
-    <div id="dir">
+    <div class="dir">
       <xsl:element name="a">
         <xsl:attribute name="href">
           <xsl:value-of select="@href"/>
@@ -83,7 +83,7 @@
   </xsl:template>
 
   <xsl:template match="file">
-    <div id="file">
+    <div class="file">
       <xsl:element name="a">
         <xsl:attribute name="href">
           <xsl:value-of select="@href"/>

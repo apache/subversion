@@ -7,7 +7,7 @@ a {
   color: navy;
 }
 
-#footer {
+.footer {
   margin-top: 8em;
   padding: 0.5em 1em 0.5em;
   border: 1px solid;
@@ -18,49 +18,49 @@ a {
   font-size: 80%;
 }
 
-#svn {
+.svn {
   margin: 3em;
 }
 
-#rev {
+.rev {
   margin-right: 3px;
   padding-left: 3px;
   text-align: left;
   font-size: 120%;
 }
 
-#dir a {
+.dir a {
   text-decoration: none;
   color: black;
 }
 
-#file a {
+.file a {
   text-decoration: none;
   color: black;
 }
 
-#path {
+.path {
   margin: 3px;
   padding: 3px;
   background: #FFCC66;
   font-size: 120%;
 }
 
-#updir {
+.updir {
   margin: 3px;
   padding: 3px;
   margin-left: 3em;
   background: #FFEEAA;
 }
 
-#file {
+.file {
   margin: 3px;
   padding: 3px;
   margin-left: 3em;
   background: rgb(95%,95%,95%);
 }
 
-#file:hover {
+.file:hover {
   margin: 3px;
   padding: 3px;
   margin-left: 3em;
@@ -68,14 +68,14 @@ a {
 /*  border: 1px black solid; */
 }
 
-#dir {
+.dir {
   margin: 3px;
   padding: 3px;
   margin-left: 3em;
   background: rgb(90%,90%,90%);
 }
 
-#dir:hover {
+.dir:hover {
   margin: 3px;
   padding: 3px;
   margin-left: 3em;
