@@ -44,12 +44,12 @@ enum svn_node_kind
    libsvn_subr/keysort.c needs structures like this to sort hashes. */
 
 typedef struct svn_item_t {
-    /** The key for the current table entry */
-    char *key; 
-    /** Size of the opaque block comprising the item's content. */
-    apr_size_t size;
-    /** A pointer to the content itself. */
-    void *data;
+  /** The key for the current table entry */
+  char *key; 
+  /** Size of the opaque block comprising the item's content. */
+  apr_size_t size;
+  /** A pointer to the content itself. */
+  void *data;
 } svn_item_t;
 
 
@@ -79,11 +79,15 @@ typedef int svn_boolean_t;
 
 /* Defines for reserved ("svn:") property names.  */
 
+/* All Subversion property names start with this. */
+#define SVN_PROP_PREFIX "svn:"
+
+
 /* The fs revision property that stores the commit-log. */
-#define SVN_PROP_REVISION_LOG "svn:log"
+#define SVN_PROP_REVISION_LOG  SVN_PROP_PREFIX ## "log"
+
 
 /* The propname *prefix* that makes a propname a "WC property". 
-   
    For example, ra_dav might store a versioned-resource url as a WC
    prop like this:
 
@@ -93,9 +97,8 @@ typedef int svn_boolean_t;
    The client will try to protect WC props by warning users against
    changing them.  The client will also send them back to the RA layer
    when committing.  (gstein:  does the client need to send them when
-   "reporting" wc state before an update, too?)
-*/
-#define SVN_PROP_WC_PREFIX "svn:wc:"
+   "reporting" wc state before an update, too?)  */
+#define SVN_PROP_WC_PREFIX     SVN_PROP_PREFIX ## "wc:"
 
 
 
