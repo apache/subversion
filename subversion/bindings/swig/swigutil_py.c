@@ -724,7 +724,6 @@ thunk_apply_textdelta(void *file_baton,
   item_baton *ib = file_baton;
   PyObject *result;
   svn_error_t *err;
-  handler_baton *hb;
 
   acquire_py_lock();
 
@@ -737,15 +736,28 @@ thunk_apply_textdelta(void *file_baton,
       goto finished;
     }
 
-  hb = apr_palloc(ib->pool, sizeof(*hb));
+  /* Interpret None to mean svn_delta_noop_window_handler. This is much
+     easier/faster than making code always have to write a NOOP handler
+     in Python.  */
+  if (result == Py_None)
+    {
+      Py_DECREF(result);
 
-  /* return the thunk for invoking the handler. the baton takes our
-     'result' reference. */
-  hb->handler = result;
-  hb->pool = ib->pool;
+      *handler = svn_delta_noop_window_handler;
+      *h_baton = NULL;
+    }
+  else
+    {
+      handler_baton *hb = apr_palloc(ib->pool, sizeof(*hb));
 
-  *handler = thunk_window_handler;
-  *h_baton = hb;
+      /* return the thunk for invoking the handler. the baton takes our
+         'result' reference. */
+      hb->handler = result;
+      hb->pool = ib->pool;
+
+      *handler = thunk_window_handler;
+      *h_baton = hb;
+    }
 
   err = SVN_NO_ERROR;
 
