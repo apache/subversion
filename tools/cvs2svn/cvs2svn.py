@@ -166,7 +166,6 @@ class CollectData(rcsparse.Sink):
       op = OP_CHANGE
 
     # store the rev_data as a list in case we have to jigger the timestamp
-    # print "KFF: revision %s of '%s'" % (revision, self.fname)
     self.rev_data[revision] = [int(timestamp), author, op, None]
 
     # record the previous revision for sanity checking later
@@ -224,10 +223,6 @@ class CollectData(rcsparse.Sink):
         return
 
   def set_revision_info(self, revision, log, text):
-    # kff fooo
-    # if revision == "1.1" and self.rev_data.has_key("1.1.1.1"):
-    #   return
-    # print "KFF: writing %s of '%s'" % (revision, self.fname)
     timestamp, author, op, old_ts = self.rev_data[revision]
     digest = sha.new(log + '\0' + author).hexdigest()
     if old_ts:
@@ -1053,6 +1048,29 @@ def format_date(date):
   return time.strftime("%Y-%m-%dT%H:%M:%S.000000Z", time.gmtime(date))
 
 
+def make_revision_props(symbolic_name, is_tag):
+  """Return a dictionary of revision properties for the manufactured
+  commit that finished SYMBOLIC_NAME.  If IS_TAG is true, write the
+  log message as though for a tag, else as though for a branch."""
+  if is_tag:
+    type = 'tag'
+  else:
+    type = 'branch'
+
+  # In Python 2.2.3, we could use textwrap.fill().  Oh well :-).
+  if len(symbolic_name) >= 13:
+    space_or_newline = '\n'
+  else:
+    space_or_newline = ' '
+
+  log = "This commit was manufactured by cvs2svn to create %s%s'%s'." \
+        % (type, space_or_newline, symbolic_name)
+  
+  return { 'svn:author' : 'unknown',
+           'svn:log' : log,
+           'svn:date' : format_date(time.time())}
+
+
 class SymbolicNameTracker:
   """Track the Subversion path/revision ranges of CVS symbolic names.
   This is done in a .db file, representing a tree in the usual way.
@@ -1239,8 +1257,6 @@ class SymbolicNameTracker:
 
     for name in names:
       components = [name] + string.split(svn_path, '/')
-      # print "KFF enrooting ('%s') " % name, components
-
       parent_key = self.root_key
       for component in components:
         self.bump_rev_count(parent_key, svn_rev, opening_key)
@@ -1370,13 +1386,26 @@ class SymbolicNameTracker:
 
   # Helper for fill_branch().
   def copy_descend(self, dumper, ctx, name, parent, entry_name,
-                   parent_rev, src_path, dst_path, is_tag):
+                   parent_rev, src_path, dst_path, is_tag, jit_new_rev=None):
     """Starting with ENTRY_NAME in directory object PARENT at
     PARENT_REV, use DUMPER and CTX to copy nodes in the Subversion
     repository, manufacturing the source paths with SRC_PATH and the
     destination paths with NAME and DST_PATH.
 
-    If IS_TAG is true, NAME is treated as a tag, else as a branch."""
+    If IS_TAG is true, NAME is treated as a tag, else as a branch.
+
+    If JIT_NEW_REV is not None, it is a list of one element.  If that
+    element is true, then if any copies are to be made, invoke
+    DUMPER.start_revision() before the first copy, then set
+    JIT_NEW_REV[0] to None, so no more new revisions are made for this
+    symbolic name anywhere in this descent.
+    
+    ('JIT' == 'Just In Time'.)"""
+    ### Hmmm, is passing [1] instead of 1 an idiomatic way of passing
+    ### a side-effectable boolean in Python?  That's how the
+    ### JIT_NEW_REV parameter works here and elsewhere, but maybe
+    ### there's a clearer way to do it?
+
     key = parent[entry_name]
     val = marshal.loads(self.db[key])
 
@@ -1394,12 +1423,15 @@ class SymbolicNameTracker:
       # and see if it differs from parent's best rev.
       scores = self.score_revisions(val.get(opening_key), val.get(closing_key))
       rev = self.best_rev(scores)
-      if (rev != parent_rev):
+      if (rev != SVN_INVALID_REVNUM) and (rev != parent_rev):
         parent_rev = rev
         if is_tag:
           copy_dst = make_path(ctx, dst_path, None, name)
         else:
           copy_dst = make_path(ctx, dst_path, name, None)
+        if jit_new_rev and jit_new_rev[0]:
+          dumper.start_revision(make_revision_props(name, is_tag))
+          jit_new_rev[0] = None
         dumper.copy_path(src_path, parent_rev, copy_dst, val)
         # Record that this copy is done:
         val[copyfrom_rev_key] = parent_rev
@@ -1420,13 +1452,19 @@ class SymbolicNameTracker:
         else:
           next_dst = ent
         self.copy_descend(dumper, ctx, name, val, ent, parent_rev,
-                          next_src, next_dst, is_tag)
+                          next_src, next_dst, is_tag, jit_new_rev)
 
-  def fill_name(self, dumper, ctx, name, is_tag):
+  def fill_name(self, dumper, ctx, name, is_tag, jit_new_rev=None):
     """Use DUMPER to create all currently available parts of symbolic
     name NAME that have not been created already.
 
-    If IS_TAG is true, NAME is treated as a tag, else as a branch."""
+    If IS_TAG is true, NAME is treated as a tag, else as a branch.
+
+    If JIT_NEW_REV is not None, it is a list of one element.  If that
+    element is true, then if any copies are to be made, invoke
+    DUMPER.start_revision() before the first copy.
+
+    ('JIT' == 'Just In Time'.)""" 
 
     # A source path looks like this in the symbolic name tree:
     #
@@ -1493,23 +1531,84 @@ class SymbolicNameTracker:
 
     if parent.has_key(ctx.trunk_base):
       self.copy_descend(dumper, ctx, name, parent, ctx.trunk_base,
-                        SVN_INVALID_REVNUM, ctx.trunk_base, "", is_tag)
-    ### FIXME: ctx.tags_base and ctx.branches_base are also possible
-    ### sources, so we should copy_descend() on them too.
+                        SVN_INVALID_REVNUM, ctx.trunk_base, "",
+                        is_tag, jit_new_rev)
+    if parent.has_key(ctx.branches_base):
+      branch_base_key = parent[ctx.branches_base]
+      branch_base = marshal.loads(self.db[branch_base_key])
+      for this_source in branch_base:
+        if this_source[0] != '/':
+          src_path = ctx.branches_base + '/' + this_source
+          self.copy_descend(dumper, ctx, name, branch_base, this_source,
+                            SVN_INVALID_REVNUM, src_path, "",
+                            is_tag, jit_new_rev)
+    if parent.has_key(ctx.tags_base):
+      tag_base_key = parent[ctx.tags_base]
+      tag_base = marshal.loads(self.db[tag_base_key])
+      for this_source in tag_base:
+        if this_source[0] != '/':
+          src_path = ctx.tags_base + '/' + this_source
+          self.copy_descend(dumper, ctx, name, tag_base, this_source,
+                            SVN_INVALID_REVNUM, src_path, "",
+                            is_tag, jit_new_rev)
 
-  def fill_tag(self, dumper, ctx, tag):
+  def fill_tag(self, dumper, ctx, tag, jit_new_rev=None):
     """Use DUMPER to create all currently available parts of TAG that
     have not been created already.  Use CTX.trunk_base, CTX.tags_base, 
     and CTX.branches_base to determine the source and destination
-    paths in the Subversion repository."""
-    self.fill_name(dumper, ctx, tag, 1)
+    paths in the Subversion repository.
 
-  def fill_branch(self, dumper, ctx, branch):
+    If JIT_NEW_REV is not None, it is a list of one element.  If that
+    element is true, then if any copies are to be made, invoke
+    DUMPER.start_revision() before the first copy.
+
+    ('JIT' == 'Just In Time'.)""" 
+    self.fill_name(dumper, ctx, tag, 1, jit_new_rev)
+
+  def fill_branch(self, dumper, ctx, branch, jit_new_rev=None):
     """Use DUMPER to create all currently available parts of BRANCH that
     haven't been created already.  Use CTX.trunk_base, CTX.tags_base,  
     and CTX.branches_base to determine the source and destination
-    paths in the Subversion repository."""
-    self.fill_name(dumper, ctx, branch, None)
+    paths in the Subversion repository.
+
+    If JIT_NEW_REV is not None, it is a list of one element.  If that
+    element is true, then if any copies are to be made, invoke
+    DUMPER.start_revision() before the first copy.
+
+    ('JIT' == 'Just In Time'.)""" 
+    self.fill_name(dumper, ctx, branch, None, jit_new_rev)
+
+  def finish(self, dumper, ctx):
+    """Use DUMPER to finish branches and tags that have either
+    not been created yet, or have been only partially created.
+    Use CTX.trunk_base, CTX.tags_base, and CTX.branches_base to
+    determine the source and destination paths in the Subversion
+    repository."""
+    parent_key = self.root_key
+    parent = marshal.loads(self.db[parent_key])
+    # Do all branches first, then all tags.  We don't bother to check
+    # here whether a given name is a branch or a tag, or is done
+    # already; the fill_foo() methods will just do nothing if there's
+    # nothing to do.
+    #
+    # We do one revision per branch or tag, for clarity to users, not
+    # for correctness.
+    #
+    ### FIXME: What we really need is a more formal inter-branch
+    ### dependency tracking, for branches or tags that are created
+    ### based on other branches.  That's not too hard, as long as
+    ### we're willing to punt on the bizarre and rare case of
+    ### mutually-interdependent branches, which I certainly am :-).
+    ###
+    ### In the meantime, doing all branches first, and then all tags,
+    ### and having (at least) one new revision between those stages,
+    ### takes care of tags that sprout from branches.
+    for name in parent:
+      if name[0] != '/':
+        self.fill_branch(dumper, ctx, name, [1])
+    for name in parent:
+      if name[0] != '/':
+        self.fill_tag(dumper, ctx, name, [1])
 
 
 class Commit:
@@ -1852,20 +1951,10 @@ def pass4(ctx):
     timestamp, id, op, rev, fname, branch_name, tags, branches = \
       parse_revs_line(line)
 
-    ### for now, only handle changes on the trunk until we get the tag
-    ### and branch processing to stop making so many copies
-    if not trunk_rev.match(rev):
+    if ctx.trunk_only and not trunk_rev.match(rev):
       ### note this could/should have caused a flush, but the next item
       ### will take care of that for us
-      ### 
-      ### TODO: working here.  Because of this condition, we're not
-      ### seeing tags and branches rooted in initial revisions (CVS's
-      ### infamous "1.1.1.1").
-      ###
-      ### See http://www.cs.uh.edu/~wjin/cvs/train/cvstrain-7.4.4.html
-      ### for excellent clarification of the vendor branch thang.
       continue
-      # pass
 
     # Each time we read a new line, we scan the commits we've
     # accumulated so far to see if any are ready for processing now.
@@ -1906,6 +1995,9 @@ def pass4(ctx):
     for t_max, c in process:
       c.commit(dumper, ctx, sym_tracker)
     count = count + len(process)
+
+  # Create (or complete) any branches and tags not already done.
+  sym_tracker.finish(dumper, ctx)
 
   dumper.close()
 
@@ -1962,9 +2054,13 @@ def usage(ctx):
   print '  --create         create a new SVN repository'
   print '  --dumpfile=PATH  name of intermediate svn dumpfile'
   print '  --svnadmin=PATH  path to the svnadmin program'
-  print '  --trunk=PATH     path for trunk (default: %s)' % ctx.trunk_base
-  # print '  --branches=PATH  path for branches (default: %s)' % ctx.branches_base
-  # print '  --tags=PATH      path for tags (default: %s)' % ctx.tags_base
+  print '  --trunk-only     convert only trunk commits, not tags nor branches'
+  print '  --trunk=PATH     path for trunk (default: %s)'    \
+        % ctx.trunk_base
+  print '  --branches=PATH  path for branches (default: %s)' \
+        % ctx.branches_base
+  print '  --tags=PATH      path for tags (default: %s)'     \
+        % ctx.tags_base
   print '  --no-prune       don\'t prune empty directories'
   print '  --dump-only      just produce a dumpfile, don\'t commit to a repos'
   print '  --encoding=ENC   encoding of log messages in CVS repos (default: %s)' % ctx.encoding
@@ -1983,6 +2079,7 @@ def main():
   ctx.prune = 1
   ctx.create_repos = 0
   ctx.dump_only = 0
+  ctx.trunk_only = 0
   ctx.trunk_base = "trunk"
   ctx.tags_base = "tags"
   ctx.branches_base = "branches"
@@ -1993,7 +2090,7 @@ def main():
     opts, args = getopt.getopt(sys.argv[1:], 'p:s:vn',
                                [ "create", "trunk=",
                                  "branches=", "tags=", "encoding=",
-                                 "no-prune", "dump-only"])
+                                 "trunk-only", "no-prune", "dump-only"])
   except getopt.GetoptError:
     usage(ctx)
   if len(args) != 1:
@@ -2021,6 +2118,8 @@ def main():
       ctx.dumpfile = value
     elif opt == '--svnadmin':
       ctx.svnadmin = value
+    elif opt == '--trunk-only':
+      ctx.trunk_only = 1
     elif opt == '--trunk':
       ctx.trunk_base = value
     elif opt == '--branches':

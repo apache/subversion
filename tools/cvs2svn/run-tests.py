@@ -235,9 +235,10 @@ def ensure_conversion(name, no_prune=None):
       erase(wc)
       
       if no_prune:
-        run_cvs2svn('--no-prune', '--create', '-s', svnrepos, cvsrepos)
+        run_cvs2svn('--trunk-only', '--no-prune', '--create', '-s',
+                    svnrepos, cvsrepos)
       else:
-        run_cvs2svn('--create', '-s', svnrepos, cvsrepos)
+        run_cvs2svn('--trunk-only', '--create', '-s', svnrepos, cvsrepos)
       run_svn('co', repos_to_url(svnrepos), wc)
       log_dict = parse_log(svnrepos)
     finally:
