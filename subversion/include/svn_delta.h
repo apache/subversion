@@ -136,11 +136,15 @@ typedef struct svn_delta_window_t {
   /* New data, for use by any `svn_delta_new' instructions.  */
   svn_string_t *new;
 
+  /* The sub-pool that this window is living in, needed for
+     svn_free_delta_window() */
+  apr_pool_t *my_pool;
+
 } svn_delta_window_t;
 
 
 
-/* Free the delta window WINDOW.  */
+/* Free the the entire sub-pool which contains delta window WINDOW.  */
 extern void svn_free_delta_window (svn_delta_window_t *window);
 
 
@@ -166,8 +170,26 @@ typedef svn_error_t *svn_delta_read_fn_t (void *baton,
 typedef svn_error_t *(svn_delta_handler_t) (svn_delta_window_t *window,
                                             void *baton);
 
-/* Ongoing state for a vcdiff parser.  */
-typedef struct svn_vcdiff_parser_t svn_vcdiff_parser_t;
+/* A vcdiff parser object.  */
+typedef struct svn_vcdiff_parser_t 
+{
+  /* Once the vcdiff parser has enough data buffered to create a
+     "window", it passes this window to the caller's consumer routine.  */
+  svn_delta_handler_t *consumer_func;
+  void *consumer_baton;
+
+  /* Pool to create subpools from; each developing window will be a
+     subpool */
+  apr_pool_t *pool;
+
+  /* The current subpool which contains our current window-buffer */
+  apr_pool_t *subpool;
+
+  /* The actual vcdiff data buffer, living within current_subpool. */
+  svn_string_t *buffer;
+
+} svn_vcdiff_parser_t;
+
 
 
 

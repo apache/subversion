@@ -1,6 +1,5 @@
 /* 
-   This file began as James Clark's simple demonstration of how to use
-   the expat library.  :)
+   A simple demo of how to use Subversion's XML parser interface. 
 */
 
 
@@ -9,6 +8,7 @@
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "apr_pools.h"
+#include "apr_file_io.h"
 
 
 
@@ -18,15 +18,18 @@
 apr_pool_t *globalpool;
 
 
-/* A dummy routine designed to consume windows of vcdiff data,
-   (of type svn_delta_handler_t).  */
-
+/* A dummy routine designed to consume windows of vcdiff data, (of
+   type svn_delta_handler_t).  This will be called by the vcdiff
+   parser everytime it has a window ready to go. */
 svn_error_t *
 my_vcdiff_windoweater (svn_delta_window_t *window, void *baton)
 {
-  printf ("...yum, got me a window of vcdiff data.\n");
+  printf ("Windoweater: yum, got me a window of vcdiff data!\n");
   
   /* TODO:  delve into the vcdiff window and print the data. */
+
+  /* This deallocates the whole subpool created to hold the window. */
+  svn_free_delta_window (window);
 
   return SVN_NO_ERROR;
 }
@@ -149,6 +152,9 @@ my_read_func (void *baton, char *buffer, apr_off_t *len)
 
   /* TODO: read *len bytes from the file into buffer, and set *len to
      the number actually read.  Return 0 if we got an EOF.  */
+
+  
+
 }
 
 
