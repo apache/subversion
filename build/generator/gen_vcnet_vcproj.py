@@ -21,8 +21,8 @@ class Generator(gen_win.WinGeneratorBase):
   def default_output(self, oname):
     return 'subversion_vcnet.sln'
 
-  def get_project_quote(self):
-    return '&quot;'
+  def quote(self, str):
+    return '&quot;%s&quot;' % str
 
   def write_project(self, target, fname, rootpath):
     "Write a Project (.vcproj)"
