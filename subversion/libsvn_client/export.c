@@ -277,6 +277,10 @@ struct file_baton
   const char *path;
   const char *tmppath;
 
+  /* We need to keep this around so we can explicitly close it in close_file, 
+     thus flushing it's output to disk so we can copy and translate it. */
+  apr_file_t *tmp_file;
+
   /* The MD5 digest of the file's fulltext.  This is all zeros until
      the last textdelta window handler call returns. */
   unsigned char text_digest[MD5_DIGESTSIZE];
@@ -481,19 +485,18 @@ apply_textdelta (void *file_baton,
 {
   struct file_baton *fb = file_baton;
   struct handler_baton *hb = apr_palloc (pool, sizeof (*hb));
-  apr_file_t *tmp_file; 
 
-  SVN_ERR (svn_io_open_unique_file (&tmp_file, &(fb->tmppath),
+  SVN_ERR (svn_io_open_unique_file (&fb->tmp_file, &(fb->tmppath),
                                     fb->path, ".tmp", FALSE, pool));
 
   hb->pool = pool;
   hb->tmppath = fb->tmppath;
 
   svn_txdelta_apply (svn_stream_empty (pool),
-                     svn_stream_from_aprfile (tmp_file, pool),
+                     svn_stream_from_aprfile (fb->tmp_file, pool),
                      fb->text_digest, NULL, pool,
                      &hb->apply_handler, &hb->apply_baton);
-  
+
   *handler_baton = hb;
   *handler = window_handler;
   return SVN_NO_ERROR;
@@ -546,6 +549,11 @@ close_file (void *file_baton,
   struct file_baton *fb = file_baton;
   struct dir_baton *db = fb->parent_dir_baton;
 
+  apr_status_t apr_err = apr_file_close (fb->tmp_file);
+  if (apr_err)
+    return svn_error_createf (apr_err, NULL, "error closing file `%s'",
+                              fb->tmppath);
+
   if (! fb->tmppath)
     /* No txdelta was ever sent. */
     return SVN_NO_ERROR;
@@ -575,19 +583,19 @@ close_file (void *file_baton,
     {
       svn_subst_eol_style_t style;
       const char *eol;
-      svn_subst_keywords_t *final_kw = apr_pcalloc (pool, sizeof(*final_kw));
+      svn_subst_keywords_t final_kw;
 
       if (fb->eol_style_val)
         svn_subst_eol_style_from_value (&style, &eol, fb->eol_style_val->data);
 
       if (fb->keywords_val)
-        build_final_keyword_struct (fb, final_kw, pool);
+        build_final_keyword_struct (fb, &final_kw, pool);
 
       SVN_ERR (svn_subst_copy_and_translate
                (fb->tmppath, fb->path,
                 fb->eol_style_val ? eol : NULL,
                 fb->eol_style_val ? TRUE : FALSE, /* repair */
-                fb->keywords_val ? final_kw : NULL,
+                fb->keywords_val ? &final_kw : NULL,
                 fb->keywords_val ? TRUE : FALSE, /* expand */
                 pool));
 
