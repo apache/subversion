@@ -26,6 +26,7 @@
 #include "svn_string.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
+#include "svn_props.h"
 
 
 
