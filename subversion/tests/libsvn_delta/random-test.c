@@ -83,19 +83,6 @@ copy_tempfile (FILE *fp)
 
 /* NOTE: Does no error-checking.  */
 static svn_error_t *
-read_from_file (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
-{
-  FILE *fp = baton;
-
-  if (!fp || feof (fp) || ferror (fp))
-    *len = 0;
-  else
-    *len = fread (buffer, 1, *len, fp);
-  return SVN_NO_ERROR;
-}
-
-/* NOTE: Does no error-checking.  */
-static svn_error_t *
 write_to_file (void *baton, const char *data, apr_size_t *len,
                apr_pool_t *pool)
 {
@@ -179,7 +166,7 @@ main (int argc, const char * const *argv)
       pool = svn_pool_create (NULL);
 
       /* Make stage 4: apply the text delta.  */
-      svn_txdelta_apply (read_from_file, source_copy,
+      svn_txdelta_apply (svn_stream_from_stdio (source_copy, pool),
                          write_to_file, target_regen, pool,
                          &handler, &handler_baton);
 
