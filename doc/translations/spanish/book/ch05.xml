@@ -174,56 +174,62 @@
           funcionamiento, simplicidad de su API, soporte de hilos, cursores,
           y más.</para> 
 	
-        <para>Berkeley DB provides real transaction
-          support&mdash;perhaps its most powerful feature.  Multiple
-          processes accessing your Subversion repositories don't have
-          to worry about accidentally clobbering each other's data.
-          The isolation provided by the transaction system is such
-          that for any given operation, the Subversion repository code
-          sees a static view of the database&mdash;not a database that
-          is constantly changing at the hand of some other
-          process&mdash;and can make decisions based on that view.  If
-          the decision made happens to conflict with what another
-          process is doing, the entire operation is rolled back as if
-          it never happened, and Subversion gracefully retries the
-          operation against a new, updated (and yet still static) view
-          of the database.</para>
+        <para>La base de datos Berkely tiene un soporte real de transacciones
+          &mdash;probablemente es su característica más poderosa.
+          Muchos procesos que accede a tus repositorios Subversion
+          not tienen que preocuparse por <!--TODO: ¿clobbering? --> los
+          datos de otros. El aislamiento provisto por el sistema de
+          transacciones es tal que por cada operación dada, el código
+          de repositorio Subversion tiene una vista estática de la base
+          de datos&mdash;no una base de datos que está constantemente
+          cambiando de la mano de algunos otros procesos&mdash;y puede
+          tomar decisiones basándose en esa vista. Si dicha decisión
+          está en conflicto con lo que otro proceso esté haciendo,
+          la operación completa <!--TODO: is rolled back --> como si nunca
+          hubiera sucedido, y Subversion <!--TODO:gratefully--> reintenta
+          la operación contra una nueva y actualizada ( y estática ) vista
+          de la base de datos.</para>
 
-        <para>Another great feature of Berkeley DB is <firstterm>hot
-          backups</firstterm>&mdash;the ability to backup the database
-          environment without taking it <quote>offline</quote>.  We'll
-          discuss how to backup your repository in <xref
-          linkend="svn-ch-5-sect-3.6"/>, but the benefits of being
-          able to make fully functional copies of your repositories
-          without any downtime should be obvious.</para>
+        <para>Otra gran característica de la base de datos Berkeley son las
+          <firstterm>copias de seguridad en caliente</firstterm>&mdash;
+          la habilidad para hacer una copia de seguridad del entorno
+          de la base de datos sin que tenga que estar <quote><!--TODO:offline--></quote>.
+          Hablaremos sobre cómo hacer copias de seguridad de tu repositorio
+          en <xref linend="svn-ch-5-sect-3.6" />, pero los beneficios
+          de ser capaz de hacer copias completas y funcionales de tus
+          repositorios sin <!--TODO:downtime--> debería ser obvia.</para>
 
-        <para>Berkeley DB is also a very reliable database system.
-          Subversion uses Berkeley DB's logging facilities, which
-          means that the database first writes to on-disk logfiles a
-          description of any modifications it is about to make, and
-          then makes the modification itself.  This is to ensure that
-          if anything goes wrong, the database system can back up to
-          a previous <firstterm>checkpoint</firstterm>&mdash;a
-          location in the logfiles known not to be corrupt&mdash;and
-          replay transactions until the data is restored to a usable
-          state.  See <xref linkend="svn-ch-5-sect-3.3"/> for more
-          about Berkeley DB logfiles.</para>
+        <para>La base de datos Berkely también es un sistema de bases de
+          datos de mucha confianza. Subversuion utiliza las utilidades
+          de registro de las BD Berkeley, lo que significa
+          que la base datos primero escribe una descripción de cualquier
+          modificación que vaya a hacer en ficheros de registros, para luego
+          hace la propia modificación. Esto es para asegurar que si
+          algo fuese mal, el sistema de base de datos pueda retroceder
+          a un <!--TODO:checkpoint--><firstterm>checkpoint</firstterm>&mdash;una
+          posición en los ficheros de registro que se sabe que no están
+          corruptas&mdash;y repetir transacciones hasta que los datos estén
+          en un estado usable. Ver <xref linkend="svn-ch-5-sect-3.3"/>
+          si quieres más información acerca de los ficheros de registro
+	  de las BD Berkeley.</para>
 
-        <para>But every rose has its thorn, and so we must note some
-          known limitations of Berkeley DB.  First, Berkeley DB
-          environments are not portable.  You cannot simply copy a
-          Subversion repository that was created on a Unix system onto
-          a Windows system and expect it to work.  While much of the
-          Berkeley DB database format is architecture independent,
-          there are other aspects of the environment that are not.
-          Secondly, Subversion uses Berkeley DB in a way that will not
-          operate on Windows 95/98 systems&mdash;if you need to house
-          a repository on a Windows machine, stick with Windows 2000
-          or Windows XP.  Finally, you should never keep a Subversion
-          repository on a network share.  While Berkeley DB promises
-          to behave correctly on network shares that meet a particular
-          set of specifications, almost no known shares actually meet
-          all those specifications.</para>
+        <para>Pero toda rosa tiene su espina, así que tenemos que
+          hablar sobre algunas conocidas limitaciones de la BD Berkeley.
+          Primero, los entornos de BD Berkeley no son portables. No puedes
+          copiar simplemente un repositorio Subversion que fue creado
+          en un sistema Unix a un sistema Windows y esperar que funcione.
+          Mientras mucho del formato de base de datos de la BD Berkeley
+          es independiente de la arquitectura, hay otros aspectos del
+	  entorno que no lo son.
+          Segundo, Subversion usa BD Berkeley de una manera que no puede
+          funcionar en sistemas Windows 95/98&mdash;si necesita almacenar
+          un repositorio en una máquina windows, <!--TODO stick-->utilice
+          Windows 2000 o Windows XP. Finalmente, no deberías mantener un
+          repositorio Subversion en una unidad compartida por red. Mientras
+          las BD Berkeley prometen un comportamiento correcto en unidades
+          compartidas por red que cumplan un grupo particular de especificaciones,
+          casi ningún sistema de compartición conocico cumple con todas
+          esas especificaciones.</para>
 
     </sect2>
   </sect1>
@@ -243,13 +249,13 @@
 $ svnadmin create /path/to/repos
 </screen>
           
-    <para>This creates a new repository in the directory
-      <filename>/path/to/repos</filename>.  This new repository begins
-      life at revision 0, which is defined to consist of nothing but
-      the top-level root (<filename>/</filename>) filesystem
-      directory.  Initially, revision 0 also has a single revision
-      property, <literal>svn:date</literal>, set to the time at which
-      the repository was created.</para>
+    <para>Crea un nuevo repositorio en el directorio
+      <filename>/path/to/repos</filename>. Dicho nuevo repositorio comienza
+      su vida en la revisión 0, que se define como nada excepto el directorio raíz
+      (<filename>/</filename>) del sistema de ficheros. Inicialmente,
+      la revisión 0 tiene también una única propiedad de revisión,
+      <literal>svn:date</literal>, que tiene la hora a la que el
+      el repositorio fue creado.</para>
 
     <warning>
       <para>Do not create your repository on a network share&mdash;it
