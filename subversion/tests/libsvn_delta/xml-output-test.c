@@ -92,6 +92,17 @@ int main(int argc, char **argv)
   bbb_string = svn_string_create ("bbb", pool);
   ccc_string = svn_string_create ("ccc", pool);
 
+  window.sview_offset = 0;
+  window.sview_len = 0;
+  window.tview_len = 10;
+  window.num_ops = 1;
+  window.ops_size = 1;
+  window.ops = apr_palloc (pool, sizeof (*window.ops));
+  window.ops[0].action_code = svn_txdelta_new;
+  window.ops[0].offset = 0;
+  window.ops[0].length = 10;
+  window.new = svn_string_create ("test delta", pool);
+
   svn_delta_get_xml_editor (write_to_file, stdout, &editor, &edit_baton, pool);
   editor->replace_root (edit_baton, &root_baton);
   editor->replace_directory (foo_string, root_baton, aaa_string, 2,
