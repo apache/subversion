@@ -953,13 +953,14 @@ $ svn status
         fusionar todos los cambios de su rama en el tronco para
         que otros puedan disfrutarlos. </para>
 
-      <para>So how do we use <command>svn merge</command> in this
-        scenario?  Remember that this command compares two trees, and
-        applies the differences to a working copy.  So to receive the
-        changes, you need to have a working copy of the trunk.  We'll
-        assume that either you still have your original one lying
-        around (fully updated), or that you recently checked out a
-        fresh working copy of <filename>/calc/trunk</filename>.</para>
+      <para>¿Cómo usamos <command>svn merge</command> en esta
+        situación? Recuerde que este comando compara dos árboles,
+        y aplica las diferencias en una copia local. Así que para
+        recivir los cambios, necesita tener una copia local del
+        tronco. Asumiremos que todavía tiene una copia original
+        del tronco por alguna parte (completamente actualizada),
+        o que recientemente ha obtenido una copia local fresca de
+        <filename>/calc/trunk</filename>.</para>
 
       <para>But which two trees should be compared?  At first glance,
         the answer may seem obvious: just compare the latest trunk
