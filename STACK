@@ -17,18 +17,6 @@ Ben & Karl todo:
 
 Ben todo:
 
-   - make a new mini-crawler (lots of shared code with adm_crawler.c)
-     which reports "version differences" to an editor.  this will be
-     used to communicate the working copy's state to the repository
-     *before* receiving an update.
-
-Karl wc todo:
-
-   - From Bill Tutt:
-     This is just more an FYI, as it isn't preventing me from doing
-     any work atm, but the paths returned from svn_wc_statuses are
-     looking like: "C:\SVN\subversion\subversion\client\tests\t1\/iota"
-
    - From Bill Tutt:
      > > * ${SVN_PROG} delete-force ${TEST_DIR_1}\A\D\H\omega
      > > 
@@ -61,6 +49,20 @@ Karl wc todo:
 
     I think that makes sense, I'll leave fixing up the delete stuff in
     someone else's more capable hands.
+
+   - make a new mini-crawler (lots of shared code with adm_crawler.c)
+     which reports "version differences" to an editor.  this will be
+     used to communicate the working copy's state to the repository
+     *before* receiving an update.
+
+Mike Pilato wc todo:
+
+   - From Bill Tutt:
+     This is just more an FYI, as it isn't preventing me from doing
+     any work atm, but the paths returned from svn_wc_statuses are
+     looking like: "C:\SVN\subversion\subversion\client\tests\t1\/iota"
+
+Karl wc todo:
 
    - Propagate changes down into libsvn_client.  Currently, the client
      usually takes a `targets' list and iterates over it, invoking
