@@ -86,10 +86,10 @@ Candidate changes:
     Fix access checking even if no user authentication is required.
     Justification: Will make a configuration more secure by default.
     Votes:
-      +1: striker, jerenkrantz
+      +1: striker, jerenkrantz, jszakmeister
 
   * r8892
     Finish Issue #1588 - mod_authz_svn should work with SVNParentPath.
     Notes: No API changes.
     Votes:
-      +1: striker, jerenkrantz
+      +1: striker, jerenkrantz, jszakmeister
