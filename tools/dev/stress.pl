@@ -93,6 +93,10 @@ sub init_repo
         $svnadmin_cmd .= " --fs-type fsfs" if $fsfs;
         $svnadmin_cmd .= " --bdb-txn-nosync" if $no_sync;
         system( $svnadmin_cmd) and die "$svnadmin_cmd: failed: $?\n";
+        open ( CONF, ">>$repo/conf/svnserve.conf")
+          or die "open svnserve.conf: $!\n";
+        print CONF "[general]\nanon-access = write\n";
+        close CONF or die "close svnserve.conf: $!\n";
       }
     else
       {
