@@ -58,4 +58,20 @@
  * we move to sliding window technique.
  */
 
+/* First we're implementing a standalone binary diff and patch.
+   Then we'll librarize. */
 
+main (int argc, char **argv)
+{
+ PSEUDOCODE:
+
+  read file1 into buf1;
+  read file2 into buf2;
+
+  slide along buf1 a char at a time, recording 4-byte strings in hash;
+  slide along buf2 a char at a time, checking for matches against buf1;
+     if no match, output an INSERT and record in hash
+     if match, extend it as far as can, then output a COPY and bump pos
+  
+               okay, time to sleep
+}
