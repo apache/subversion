@@ -140,28 +140,29 @@ import_dir (const svn_delta_edit_fns_t *editor,
             svn_stringbuf_t *path,
             apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_pool_t *subpool = svn_pool_create (pool);  /* iteration pool */
   apr_dir_t *dir;
   apr_finfo_t this_entry;
   apr_status_t apr_err;
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
 
-  apr_err = apr_dir_open (&dir, path->data, subpool);
+  apr_err = apr_dir_open (&dir, path->data, pool);
   if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL, subpool, 
+    return svn_error_createf (apr_err, 0, NULL, pool, 
                               "unable to open directory %s", path->data);
 
   for (apr_err = apr_dir_read (&this_entry, flags, dir);
        APR_STATUS_IS_SUCCESS (apr_err);
-       apr_err = apr_dir_read (&this_entry, flags, dir))
+       svn_pool_clear (subpool), apr_err = apr_dir_read (&this_entry,
+                                                         flags, dir))
     {
       svn_stringbuf_t *new_path = svn_stringbuf_dup (path, subpool);
-      svn_path_add_component (new_path,
-                              svn_stringbuf_create (this_entry.name, subpool));
+      svn_stringbuf_t *name = svn_stringbuf_create (this_entry.name, subpool);
+
+      svn_path_add_component (new_path, name);
 
       if (this_entry.filetype == APR_DIR)
         {
-          svn_stringbuf_t *name = svn_stringbuf_create (this_entry.name, subpool);
           void *this_dir_baton;
 
           /* Skip entries for this dir and its parent.  
@@ -194,11 +195,7 @@ import_dir (const svn_delta_edit_fns_t *editor,
         }
       else if (this_entry.filetype == APR_REG)
         {
-          SVN_ERR (import_file (editor,
-                                dir_baton,
-                                new_path,
-                                svn_stringbuf_create (this_entry.name, subpool),
-                                subpool));
+          SVN_ERR (import_file (editor, dir_baton, new_path, name, subpool));
         }
       else
         {
