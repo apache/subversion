@@ -81,8 +81,8 @@ $LastChangedDate$
 @end titlepage
 @c -----------------------------------------------------------------
 
-@c @summarycontents
-@c @contents
+@summarycontents
+@contents
 
 @node Top
 @top
