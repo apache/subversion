@@ -19,6 +19,7 @@
 <!ENTITY appb     SYSTEM "appb.xml">
 <!ENTITY appc     SYSTEM "appc.xml">
 <!ENTITY appd     SYSTEM "appd.xml">
+<!ENTITY appe     SYSTEM "appe.xml">
 <!ENTITY gloss    SYSTEM "glossary.xml">
 <!ENTITY license  SYSTEM "copyright.xml">
 <!ENTITY colo     SYSTEM "colo.xml">
@@ -97,6 +98,7 @@
   &appb;
   &appc;
   &appd;
+  &appe;
   &license;
   &colo;
 
