@@ -160,3 +160,10 @@ Candidate changes:
       junk.  If it does, we'll have to support it until 2.0.
     Votes:
       +1: sussman
+
+  * r10507,r10508,r10509
+    Perform checksum verification in FSFS (r10507) and verify file
+    contents in 'svnadmin verify' (r10508,r10509).
+    Justification: Must keeps the precious data nice and safe
+    Votes:
+     +1: ghudson
