@@ -59,7 +59,7 @@ create_stdio_stream (svn_stream_t **stream,
   apr_status_t apr_err = open_fn (&stdio_file, pool);
 
   if (apr_err)
-    return svn_error_wrap_apr (apr_err, "Can't open stdio file");
+    return svn_error_wrap_apr (apr_err, _("Can't open stdio file"));
 
   *stream = svn_stream_from_aprfile (stdio_file, pool);
   return SVN_NO_ERROR;
@@ -360,7 +360,7 @@ new_node_record (void **node_baton,
               ? pb->do_exclude : (! pb->do_exclude))
             return svn_error_createf 
               (SVN_ERR_INCOMPLETE_DATA, 0,
-               "Invalid copy source path '%s'", copyfrom_path);
+               _("Invalid copy source path '%s'"), copyfrom_path);
         }
     }
 
@@ -411,7 +411,7 @@ new_node_record (void **node_baton,
                   /* bail out with an error */
                   return svn_error_createf
                     (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                     "Node with dropped parent sneaked in");
+                     _("Node with dropped parent sneaked in"));
                 }
               SVN_ERR (svn_stream_printf
                        (header_stream, pool,
@@ -583,8 +583,8 @@ close_revision (void *revision_baton)
                     apr_hash_get (old_props, SVN_PROP_REVISION_DATE, 
                                   APR_HASH_KEY_STRING));
       apr_hash_set (rb->props, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
-                    svn_string_create ("This is an empty revision for "
-                                       "padding.", hash_pool));
+                    svn_string_create (_("This is an empty revision for "
+                                         "padding."), hash_pool));
     }
 
   /* Now, "rasterize" the props to a string, and append the property
@@ -696,21 +696,21 @@ enum
 static const apr_getopt_option_t options_table[] =
   {
     {"help",          'h', 0,
-     "show help on a subcommand"},
+     N_("show help on a subcommand")},
 
     {NULL,            '?', 0,
-     "show help on a subcommand"},
+     N_("show help on a subcommand")},
 
     {"version",            svndumpfilter__version, 0,
-     "show version information" },
+     N_("show version information") },
     {"quiet",              svndumpfilter__quiet, 0,
-     "Do not display filtering statistics." },
+     N_("Do not display filtering statistics.") },
     {"drop-empty-revs",    svndumpfilter__drop_empty_revs, 0,
-     "Remove revisions emptied by filtering."},
+     N_("Remove revisions emptied by filtering.")},
     {"renumber-revs",      svndumpfilter__renumber_revs, 0,
-     "Renumber revisions left after filtering." },
+     N_("Renumber revisions left after filtering.") },
     {"preserve-revprops",  svndumpfilter__preserve_revprops, 0,
-     "Don't filter revision properties." },
+     N_("Don't filter revision properties.") },
     {NULL}
   };
 
@@ -721,20 +721,20 @@ static const apr_getopt_option_t options_table[] =
 static const svn_opt_subcommand_desc_t cmd_table[] =
   {
     {"exclude", subcommand_exclude, {0},
-     "Filter out nodes with given prefixes from dumpstream.\n"
-     "usage: svndumpfilter exclude PATH_PREFIX...\n",
+     N_("Filter out nodes with given prefixes from dumpstream.\n"
+        "usage: svndumpfilter exclude PATH_PREFIX...\n"),
      {svndumpfilter__drop_empty_revs, svndumpfilter__renumber_revs,
       svndumpfilter__preserve_revprops, svndumpfilter__quiet} },
 
     {"include", subcommand_include, {0},
-     "Filter out nodes without given prefixes from dumpstream.\n"
-     "usage: svndumpfilter include PATH_PREFIX...\n",
+     N_("Filter out nodes without given prefixes from dumpstream.\n"
+        "usage: svndumpfilter include PATH_PREFIX...\n"),
      {svndumpfilter__drop_empty_revs, svndumpfilter__renumber_revs,
       svndumpfilter__preserve_revprops, svndumpfilter__quiet} },
 
     {"help", subcommand_help, {"?", "h"},
-     "Describe the usage of this program or its subcommands.\n"
-     "usage: svndumpfilter help [SUBCOMMAND...]\n",
+     N_("Describe the usage of this program or its subcommands.\n"
+        "usage: svndumpfilter help [SUBCOMMAND...]\n"),
      {svndumpfilter__version} },
 
     { NULL, NULL, {0}, NULL, {0} }
@@ -796,11 +796,11 @@ subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svndumpfilter_opt_state *opt_state = baton;
   const char *header =
-    "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
-    "Type \"svndumpfilter help <subcommand>\" for help on a "
-    "specific subcommand.\n"
-    "\n"
-    "Available subcommands:\n";
+    _("general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
+      "Type \"svndumpfilter help <subcommand>\" for help on a "
+      "specific subcommand.\n"
+      "\n"
+      "Available subcommands:\n");
 
   SVN_ERR (svn_opt_print_help (os, "svndumpfilter",
                                opt_state ? opt_state->version : FALSE,
@@ -849,11 +849,15 @@ do_filter (apr_getopt_t *os,
       apr_pool_t *subpool = svn_pool_create (pool);
 
       SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
-                                    "%s %sprefixes:\n",
-                                    do_exclude ? "Excluding" : "Including",
-                                    opt_state->drop_empty_revs 
-                                    ? "(and dropping empty revisions for) "
-                                    : ""));
+                                    do_exclude
+                                    ? opt_state->drop_empty_revs
+                                      ? _("Excluding (and dropping empty "
+                                          "revisions for) prefixes:\n")
+                                      : _("Excluding prefixes:\n")
+                                    : opt_state->drop_empty_revs
+                                      ? _("Including (and dropping empty "
+                                          "revisions for) prefixes:\n")
+                                      : _("Including prefixes:\n")));
 
       for (i = 0; i < opt_state->prefixes->nelts; i++)
         {
@@ -1096,7 +1100,7 @@ main (int argc, const char * const *argv)
       if (os->ind >= os->argc)
         {
           svn_error_clear (svn_cmdline_fprintf
-                           (stderr, pool, "subcommand argument required\n"));
+                           (stderr, pool, _("subcommand argument required\n")));
           subcommand_help (NULL, NULL, pool);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
@@ -1118,7 +1122,7 @@ main (int argc, const char * const *argv)
                 }
                 
               svn_error_clear (svn_cmdline_fprintf (stderr, pool,
-                                                    "unknown command: '%s'\n",
+                                                    _("unknown command: '%s'\n"),
                                                     first_arg_utf8));
               subcommand_help (NULL, NULL, pool);
               svn_pool_destroy (pool);
