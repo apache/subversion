@@ -74,7 +74,7 @@ svn_cl__generate_status_codes (char *str_status,
       text_statuschar = 'C';
       break;
     case svn_wc_status_obstructed:
-      text_statuschar = '>'; /* ### Come up with a better moniker */
+      text_statuschar = '~';
       break;
     case svn_wc_status_unversioned:
     default:

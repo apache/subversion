@@ -103,6 +103,7 @@ svn_ruby_init_error (void)
   define_error (SVN_ERR_INCOMPLETE_DATA, "IncompleteData");
   define_error (SVN_ERR_MALFORMED_XML, "MalformedXml");
   define_error (SVN_ERR_UNVERSIONED_RESOURCE, "UnversionedResource");
+  define_error (SVN_ERR_UNEXPECTED_NODE_KIND, "UnexpectedNodeKind");
   define_error (SVN_ERR_UNFRUITFUL_DESCENT, "UnfruitfulDescent");
   define_error (SVN_ERR_BAD_FILENAME, "BadFilename");
   define_error (SVN_ERR_BAD_URL, "BadURL");
@@ -130,7 +131,6 @@ svn_ruby_init_error (void)
   define_error (SVN_ERR_WC_NOT_FILE, "WcNotFile");
   define_error (SVN_ERR_WC_BAD_ADM_LOG, "WcBadAdmLog");
   define_error (SVN_ERR_WC_PATH_NOT_FOUND, "WcPathNotFound");
-  define_error (SVN_ERR_WC_UNEXPECTED_KIND, "WcUnexpectedKind");
   define_error (SVN_ERR_WC_NOT_UP_TO_DATE, "WcNotUpToDate");
   define_error (SVN_ERR_WC_LEFT_LOCAL_MOD, "WcLeftLocalMod");
   define_error (SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED, "IoUniqueNamesExhausted");

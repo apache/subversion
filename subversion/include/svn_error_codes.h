@@ -107,6 +107,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_UNVERSIONED_RESOURCE,
               "Tried a versioning operation on an unversioned resource")
 
+  SVN_ERRDEF (SVN_ERR_UNEXPECTED_NODE_KIND,
+              "Unexpected node kind found")
+
   SVN_ERRDEF (SVN_ERR_UNFRUITFUL_DESCENT,
               "WC descent came up empty")
 
@@ -220,9 +223,6 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_WC_PATH_NOT_FOUND,
               "Can't find a working copy path")
-
-  SVN_ERRDEF (SVN_ERR_WC_UNEXPECTED_KIND,
-              "Unexpected node kind found")
 
   SVN_ERRDEF (SVN_ERR_WC_NOT_UP_TO_DATE,
               "Working copy is not up-to-date")

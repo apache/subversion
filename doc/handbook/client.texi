@@ -254,6 +254,7 @@ M      ./bar.c               [the content in bar.c has local modifications]
 _M     ./baz.c               [baz.c has property but no content modifications]
 ?      ./foo.o               [svn doesn't manage foo.o]
 !      ./foo.c               [svn knows foo.c but a non-svn program deleted it]
+~      ./qux                 [versioned as dir, but is file, or vice versa]
 A  +   ./moved_dir           [added with history of where it came from]
 M  +   ./moved_dir/README    [added with history and has local modifications]
 D      ./stuff/fish.c        [this file is scheduled for deletion]
@@ -289,6 +290,12 @@ the working copy is missing.  This happens if the file or directory is
 removed using a non-Subversion command.  A quick @samp{svn up} or
 @samp{svn revert file_or_dir} will restore the missing file from its
 cached pristine copy.
+@item ~      @file{file_or_dir}
+The file or directory @file{file_or_dir} is under revision control as
+one kind of object, but what's actually on disk is some other kind.
+For example, Subversion might be expecting a file, but the user has
+removed the file and created a directory in its place, without
+using the @samp{svn rm} nor @samp{svn add} commands.
 @end table
 
 The second column tells the status of a file's or directory's
