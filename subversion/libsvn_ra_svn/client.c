@@ -253,6 +253,8 @@ static svn_error_t *find_tunnel_agent(const char *hostname, const char **agent,
   server_group = svn_config_find_group(cfg, hostname, "groups", pool);
   if (server_group)
     svn_config_get(cfg, agent, server_group, "svn-tunnel-agent", NULL);
+  else
+    *agent = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -295,7 +297,6 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              "Illegal svn repository URL %s", url);
 
-  tunnel_agent = NULL;
   SVN_ERR( find_tunnel_agent(hostname, &tunnel_agent, pool) );
   if (tunnel_agent)
     {
