@@ -427,12 +427,26 @@ unparse (const skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
 
 
 skel_t *
-svn_fs__make_atom (const char *str, apr_pool_t *pool)
+svn_fs__str_atom (const char *str, apr_pool_t *pool)
 {
   skel_t *skel = apr_palloc (pool, sizeof (*skel));
   skel->is_atom = 1;
   skel->data = str;
   skel->len = strlen (str);
+
+  return skel;
+}
+
+
+skel_t *
+svn_fs__mem_atom (const char *addr, 
+		  apr_size_t len,
+		  apr_pool_t *pool)
+{
+  skel_t *skel = apr_palloc (pool, sizeof (*skel));
+  skel->is_atom = 1;
+  skel->data = addr;
+  skel->len = len;
 
   return skel;
 }
