@@ -250,14 +250,6 @@ the section for unapproved changes.)
       -0: gstein, kfogel (seem to be doing fine with our current msgs so far)
 
 
-   * r8082
-     Fix for bindings build on Windows. Related to issue 1666.
-     Justification: Python bindings will not build otherwise. Low risk.
-     Votes:
-       +0: cmpilato
-       +1: brane, jerenkrantz, gstein
-
-
    * Issue #1668
      Rename 'svn_repos_authz_read_func_t' to 'svn_repos_authz_func_t'.
      Justification: API stability; and, old name was overly restrictive.
@@ -370,6 +362,26 @@ the section for unapproved changes.)
       -0: gstein
 
 
+Bindings changes that affect the build system:
+
+   * r8082
+     Fix for bindings build on Windows. Related to issue 1666.
+     Justification: Python bindings will not build otherwise. Low risk.
+     Votes:
+       +0: cmpilato
+       +1: brane, jerenkrantz, gstein
+
+
+   * r8106
+     Add --enable-swig-bindings option to select build targets
+     included in standard make.
+     Notes:  this is bindings change, but potentially higher risk,
+             because it touches the core build system.
+
+     Votes:
+      +1: clkao, epg
+
+
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
 
 These changes are to Subversion bindings.  Many are dependent on
@@ -421,14 +433,5 @@ that is, after Thursday, Jan. 8th 2004.
                     The bindings are not complete to be considered as
                     1.0, the maintainer wishes svn to include the
                     latest version in order to provide better supports.
-     Votes:
-      +1: clkao, epg
-
-   * r8106
-     Add --enable-swig-bindings option to select build targets
-     included in standard make.
-     Notes:  this is bindings change, but potentially higher risk,
-             because it touches the core build system.
-
      Votes:
       +1: clkao, epg
