@@ -396,9 +396,10 @@ svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
    revision containing the changes made in TXN, storing that new
    revision number in *NEW_REV, and return zero.
 
-   Iff CONFLICT_P is non-null, then a conflict error will cause
-   *CONFLICT_P to be set to the path of the conflict in TXN, and
-   success will cause *CONFLICT_P to be set to null.
+   If CONFLICT_P is non-zero, use it to provide details on any
+   conflicts encountered merging TXN with the most recent committed
+   revisions.  If a conflict occurs, set *CONFLICT_P to the path of
+   the conflict in TXN.  Otherwise, set *CONFLICT_P to null.
 
    If the commit succeeds, it frees TXN, and any temporary resources
    it holds.  Any root objects (see below) referring to the root
