@@ -133,7 +133,7 @@ signal_expat_bailout (svn_error_t *error, svn_delta_digger_t *digger)
 
   /* Once outside of XML_Parse(), the existence of this field will
      cause svn_delta_parse()'s main read-loop to return error. */
-  digger->validation_error = err;
+  digger->validation_error = error;
 }
 
 
@@ -145,13 +145,17 @@ XML_validation_error (apr_pool_t *pool,
                 const char *name,
                 svn_boolean_t destroy_p)
 {
+  char *msg;
+
   if (destroy_p)
-    char *msg = 
-      apr_psprintf (pool, "XML validation error: got unexpected </%s>", name);
+    msg = apr_psprintf (pool,
+                        "XML validation error: got unexpected </%s>",
+                        name);
 
   else
-    char *msg = 
-      apr_psprintf (pool, "XML validation error: got unexpected <%s>", name);
+    msg = apr_psprintf (pool,
+                        "XML validation error: got unexpected <%s>",
+                        name);
 
   return svn_create_error (SVN_ERR_MALFORMED_XML, 0, msg, NULL, pool);
 }
@@ -276,7 +280,7 @@ do_stack_remove (svn_delta_digger_t *digger, const char *tagname)
     return XML_validation_error (pool, tagname, TRUE);
 
   else if ((strcmp (tagname, "delete") == 0)
-           && (youngest_frame->tag != svn_XML_del))
+           && (youngest_frame->tag != svn_XML_delete))
     return XML_validation_error (pool, tagname, TRUE);
 
   else if ((strcmp (tagname, "replace") == 0)
@@ -316,26 +320,28 @@ do_stack_remove (svn_delta_digger_t *digger, const char *tagname)
 
 /* Utility:  set FRAME's tag field to an svn_XML_t, according to NAME */
 static svn_error_t *
-set_tag_type (svn_delta_stackframe_t *frame, char *name);
+set_tag_type (svn_delta_stackframe_t *frame,
+              const char *name,
+              svn_delta_digger_t *digger)
 {
   if (strcmp (name, "tree-delta") == 0)
-    new_frame->tag = svn_XML_treedelta;
+    frame->tag = svn_XML_treedelta;
   else if (strcmp (name, "new") == 0)
-    new_frame->tag = svn_XML_new;
+    frame->tag = svn_XML_new;
   else if (strcmp (name, "replace") == 0)
-    new_frame->tag = svn_XML_replace;
+    frame->tag = svn_XML_replace;
   else if (strcmp (name, "delete") == 0)
-    new_frame->tag = svn_XML_delete;
+    frame->tag = svn_XML_delete;
   else if (strcmp (name, "file") == 0)
-    new_frame->tag = svn_XML_file;
+    frame->tag = svn_XML_file;
   else if (strcmp (name, "dir") == 0)
-    new_frame->tag = svn_XML_dir;
+    frame->tag = svn_XML_dir;
   else if (strcmp (name, "text-delta") == 0)
-    new_frame->tag = svn_XML_textdelta;
+    frame->tag = svn_XML_textdelta;
   else if (strcmp (name, "prop-delta") == 0)
-    new_frame->tag = svn_XML_propdelta;
+    frame->tag = svn_XML_propdelta;
   else 
-    return XML_validation_error (my_digger->pool, name, TRUE);
+    return XML_validation_error (digger->pool, name, TRUE);
 
   return SVN_NO_ERROR;
 }
@@ -357,10 +363,11 @@ do_directory_callback (svn_delta_digger_t *digger,
   /* kff todo: should be (svn_string_t *) here?  I'm beginning to
      wonder if it's such a good idea to use svn_string_t in situations
      where (char *) is so much more natural, though... */
-  char *ancestor, *ver;
+  const char *ancestor, *ver;
   svn_pdelta_t *pdelta = NULL;
   svn_string_t *base_path = NULL;
   svn_version_t base_version = 0;
+  svn_string_t *dir_name = NULL;
 
   /* Only proceed if the walker callback exists. */
   if (replace_p && !(digger->walker->replace_directory))
@@ -369,12 +376,12 @@ do_directory_callback (svn_delta_digger_t *digger,
     return SVN_NO_ERROR;
 
   /* Retrieve the "name" field from the previous <new> or <replace> tag */
-  svn_string_t *dir_name = youngest_frame->previous->name;
+  dir_name = youngest_frame->previous->name;
   if (dir_name == NULL)
-    return 
+    return
       svn_create_error 
       (SVN_ERR_MALFORMED_XML, 0,
-       "do_directory_callback: <dir>'s parent tag has no 'name' field."
+       "do_directory_callback: <dir>'s parent tag has no 'name' field.",
        NULL, digger->pool);
                              
   /* Search through ATTS, looking for any "ancestor" or "ver"
@@ -422,17 +429,20 @@ static svn_error_t *
 do_delete_dirent (svn_delta_digger_t *digger, 
                   svn_delta_stackframe_t *youngest_frame)
 {
+  svn_string_t *dir_name = NULL;
+  svn_error_t *err;
+
   /* Only proceed if the walker callback exists. */
   if (! (digger->walker->delete))
     return SVN_NO_ERROR;
   
   /* Retrieve the "name" field from the current <delete> tag */
-  svn_string_t *dir_name = youngest_frame->previous->name;
+  dir_name = youngest_frame->previous->name;
   if (dir_name == NULL)
     return 
       svn_create_error 
       (SVN_ERR_MALFORMED_XML, 0,
-       "do_delete_dirent: <delete> tag has no 'name' field."
+       "do_delete_dirent: <delete> tag has no 'name' field.",
        NULL, digger->pool);
 
   /* Call our walker's callback */
@@ -455,15 +465,17 @@ do_delete_dirent (svn_delta_digger_t *digger,
 static svn_error_t *
 do_file_callback (svn_delta_digger_t *digger,
                   svn_delta_stackframe_t *youngest_frame,
+                  const char **atts,
                   svn_boolean_t replace_p)
 {
   svn_error_t *err;
-  char *ancestor, *ver;
+  const char *ancestor, *ver;
   svn_delta_handler_t *window_consumer;
   void *consumer_baton = NULL;
   svn_pdelta_t *pdelta = NULL;
   svn_string_t *base_path = NULL;
   svn_version_t base_version = 0;
+  svn_string_t *dir_name = NULL;
 
   /* Only proceed if the walker callback exists. */
   if (replace_p && !(digger->walker->replace_file))
@@ -472,12 +484,12 @@ do_file_callback (svn_delta_digger_t *digger,
     return SVN_NO_ERROR;
 
   /* Retrieve the "name" field from the previous <new> or <replace> tag */
-  svn_string_t *dir_name = youngest_frame->previous->name;
+  dir_name = youngest_frame->previous->name;
   if (dir_name == NULL)
     return 
       svn_create_error 
       (SVN_ERR_MALFORMED_XML, 0,
-       "do_file_callback: <file>'s parent tag has no 'name' field."
+       "do_file_callback: <file>'s parent tag has no 'name' field.",
        NULL, digger->pool);
                              
   /* Search through ATTS, looking for any "ancestor" or "ver"
@@ -559,7 +571,7 @@ do_finish_file (svn_delta_digger_t *digger)
   svn_error_t *err;
 
   /* Drop the current vcdiff parser! */
-  my_digger->vcdiff_parser = NULL;
+  digger->vcdiff_parser = NULL;
 
   /* Only proceed further if the walker callback exists. */
   if (! (digger->walker->finish_file))
@@ -592,17 +604,17 @@ static void
 xml_handle_start (void *userData, const char *name, const char **atts)
 {
   svn_error_t *err;
-  char *value;
+  const char *value;
 
   /* Resurrect our digger structure */
   svn_delta_digger_t *my_digger = (svn_delta_digger_t *) userData;
 
   /* Create new stackframe */
-  svn_delta_stackframe_t *new_frame 
+  svn_delta_stackframe_t *new_frame
     = apr_pcalloc (my_digger->pool, sizeof (svn_delta_stackframe_t));
 
   /* Set the tag field */
-  err = set_tag_type (new_frame, name);
+  err = set_tag_type (new_frame, name, my_digger);
   if (err)
     {
       /* Uh-oh, unrecognized tag, bail out. */
@@ -613,7 +625,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   /* Set "name" field in frame, if there's any such attribute in ATTS */
   value = get_attribute_value (atts, "name");
   if (value)
-    frame->name = svn_string_create (value, digger->pool);
+    new_frame->name = svn_string_create (value, my_digger->pool);
   
   /*  Append new frame to stack, validating in the process. 
       If successful, new frame will automatically inherit parent's baton. */
@@ -663,7 +675,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
     if ((new_frame->previous->tag == svn_XML_new) 
         && (new_frame->tag == svn_XML_file))
       {
-        err = do_file_callback (my_digger, new_frame, FALSE);
+        err = do_file_callback (my_digger, new_frame, atts, FALSE);
         if (err)
           signal_expat_bailout (err, my_digger);
         return;
@@ -674,7 +686,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
     if ((new_frame->previous->tag == svn_XML_replace) 
         && (new_frame->tag == svn_XML_file))
       {
-        do_file_callback (my_digger, new_frame, TRUE);
+        err = do_file_callback (my_digger, new_frame, atts, TRUE);
         if (err)
           signal_expat_bailout (err, my_digger);
         return;
@@ -683,8 +695,6 @@ xml_handle_start (void *userData, const char *name, const char **atts)
 
   /* This is a void expat callback, don't return anything. */
 }
-
-
 
 
 
@@ -721,7 +731,7 @@ xml_handle_end (void *userData, const char *name)
   /* EVENT: Are we finished processing a file?  Our uber-caller
      doesn't really care, but we should clear out any vcdiff parser
      that we were using on this file.  */
-  if (strcmp (name "file") == 0)
+  if (strcmp (name, "file") == 0)
     {
       err = do_finish_file (my_digger);
       if (err)
@@ -776,9 +786,10 @@ xml_handle_data (void *userData, const char *data, int len)
       err = svn_vcdiff_parse (digger->vcdiff_parser, data, &numbytes);
       if (err)
         {
-          signal_expat_bailout 
-            (svn_quick_wrap_error 
-             (err, "xml_handle_data: vcdiff parser choked."));
+          signal_expat_bailout
+            (svn_quick_wrap_error
+             (err, "xml_handle_data: vcdiff parser choked."),
+             digger);
           return;
         }                          
     }
@@ -845,13 +856,13 @@ svn_delta_parse (svn_delta_read_fn_t *source_fn,
                  apr_pool_t *pool)
 {
   char buf[BUFSIZ];
-  int len;
+  apr_off_t len;
   int done;
   svn_error_t *err;
   XML_Parser expat_parser;
 
   /* Create a digger structure */
-  svn_digger_t *digger = apr_pcalloc (pool, sizeof (svn_digger_t));
+  svn_delta_digger_t *digger = apr_pcalloc (pool, sizeof (svn_delta_digger_t));
 
   digger->pool             = pool;
   digger->stack            = NULL;
@@ -868,7 +879,7 @@ svn_delta_parse (svn_delta_read_fn_t *source_fn,
   /* Store the parser in the digger too, so that our expat callbacks
      can magically set themselves to NULL in the case of an error. */
 
-  digger->expat_parser = parser;
+  digger->expat_parser = expat_parser;
 
 
   /* Our main parse-loop */
@@ -894,8 +905,8 @@ svn_delta_parse (svn_delta_read_fn_t *source_fn,
         = svn_create_error
         (SVN_ERR_MALFORMED_XML, 0,
          apr_psprintf (pool, "%s at line %d",
-                       XML_ErrorString (XML_GetErrorCode (parsimonious)),
-                       XML_GetCurrentLineNumber (parsimonious)),
+                       XML_ErrorString (XML_GetErrorCode (expat_parser)),
+                       XML_GetCurrentLineNumber (expat_parser)),
          NULL, pool);
       XML_ParserFree (expat_parser);
       return err;
