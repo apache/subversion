@@ -2787,44 +2787,24 @@ static dav_error * dav_svn_move_resource(dav_resource *src,
 }
 
 
-/* Create a hash in POOL, and populate it with the subset of the LOCK
-   hash members which are immediate children of PATH.  These members
-   are *NOT* duped into POOL -- they will merely be referred to by
-   reference in the returned hash. */
-/* ### TODO:  remove items from LOCKS that are returned as children so
-   subsequent calls don't have to crawl them. */
-static apr_hash_t *get_immediate_children_locks(const char *path,
-                                                apr_hash_t *locks,
-                                                apr_pool_t *pool)
+
+/* Return TRUE IFF PATH2 in an immediate child of PATH1.  Use POOL for
+   temporary allocations. */
+static svn_boolean_t is_immediate_child(const char *path1, 
+                                        const char *path2, 
+                                        apr_pool_t *pool)
 {
-  apr_hash_t *child_locks = apr_hash_make(pool);
-  apr_pool_t *subpool = svn_pool_create(pool);
-  apr_hash_index_t *hi;
+  const char *rel_path = svn_path_is_child(path1, path2, pool);   
 
-  /* iterate over the children in this collection */
-  for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      apr_ssize_t klen;
-      void *val;
-      const char *rel_path;
+  /* is it at least a child? */
+  if (! rel_path)
+    return FALSE;
+  
+  /* and is it only a child (not a grandchild)? */
+  if (ap_strchr_c((char *)rel_path, '/'))
+    return FALSE;
 
-      svn_pool_clear(subpool);
-
-      /* fetch one of the children */
-      apr_hash_this(hi, &key, &klen, &val);
-
-      /* is it at least a child? */
-      if ((rel_path = svn_path_is_child(path, key, subpool)))
-        {
-          /* and is it only a child (not a grandchild)? */
-          if (! ap_strchr_c((char *)rel_path, '/'))
-            {
-              apr_hash_set(child_locks, key, klen, val);
-            }
-        }
-    }
-  return child_locks;
+  return TRUE;
 }
 
 
@@ -2839,7 +2819,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   apr_size_t uri_len;
   apr_size_t repos_len;
   apr_hash_t *children;
-  apr_hash_t *child_locks;
+  apr_pool_t *subpool;
 
   /* The current resource is a collection (possibly here thru recursion)
      and this is the invocation for the collection. Alternatively, this is
@@ -2900,10 +2880,6 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
                                "could not fetch collection members",
                                params->pool);
 
-  /* fetch the immediate locked children of this resource. */
-  child_locks = get_immediate_children_locks(ctx->info.repos_path,
-                                             ctx->locks, params->pool);
-
   /* iterate over the children in this collection */
   for (hi = apr_hash_first(params->pool, children); hi; hi = apr_hash_next(hi))
     {
@@ -2927,9 +2903,11 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
       svn_stringbuf_appendbytes(ctx->uri, key, klen);
       svn_stringbuf_appendbytes(ctx->repos_path, key, klen);
 
-      /* "forget" about the immediate locked children of this
-         resource that actually exist. */
-      apr_hash_set(child_locks, ctx->repos_path->data, 
+      /* remove any existing paths from the locks hash -- we only care
+         about non-existing-yet-locked paths.  by eliminating them as
+         we go, we reduce the time it takes to find the subset of
+         non-existing locked paths we actually care about.  */
+      apr_hash_set(ctx->locks, ctx->repos_path->data, 
                    ctx->repos_path->len, NULL);
 
       /* reset the pointers since the above may have changed them */
@@ -2967,7 +2945,8 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
     }
 
   /* any immediate child locks that don't exist, we'll cover here. */
-  for (hi = apr_hash_first(params->pool, child_locks); 
+  subpool = svn_pool_create(params->pool);
+  for (hi = apr_hash_first(params->pool, ctx->locks); 
        hi; 
        hi = apr_hash_next(hi))
     {
@@ -2977,21 +2956,32 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
       svn_fs_dirent_t *dirent;
       const char *lock_path;
 
+      svn_pool_clear(subpool);
+
       /* fetch one of the children */
       apr_hash_this(hi, &key, &klen, &val);
       lock_path = key;
       dirent = val;
+
+      /* if this path is one of our immediate kiddies, we care.
+         otherwise, we don't. */
+      if (! is_immediate_child(apr_pstrmemdup(subpool, 
+                                              ctx->repos_path->data, 
+                                              ctx->repos_path->len - 1),
+                               key, subpool))
+        continue;
 
       /* append this child to our buffers */
       svn_stringbuf_appendbytes(ctx->info.uri_path, lock_path + 1, klen - 1);
       svn_stringbuf_appendbytes(ctx->uri, lock_path + 1, klen - 1);
       svn_stringbuf_appendbytes(ctx->repos_path, lock_path + 1, klen - 1);
 
-      /* fill in the details of this LOCKNULL resource */
+      /* reset the pointers since the above may have changed them */
       ctx->res.uri = ctx->uri->data;
+      ctx->info.repos_path = ctx->repos_path->data;
       ctx->res.exists = FALSE;
 
-      /* tell our driver about this resource */
+      /* tell our driver about this LOCKNULL resource */
       err = (*params->func)(&ctx->wres, DAV_CALLTYPE_MEMBER);
       if (err != NULL)
         return err;
@@ -3004,6 +2994,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
       ctx->uri->len = uri_len;
       ctx->repos_path->len = repos_len;
     }
+  svn_pool_destroy(subpool);
 
   return NULL;
 }
