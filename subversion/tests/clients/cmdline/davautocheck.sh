@@ -71,12 +71,15 @@ function get_loadmodule_config() {
   return 1
 }
 
-pushd $SCRIPTDIR/../../../../ >/dev/null
-ABS_BUILDDIR=$(pwd)
-popd >/dev/null
-
-[ -x "$ABS_BUILDDIR/configure" ] \
-  || fail "Can't find the root of Subversion's tree"
+if [ -x svn-config ]; then
+  ABS_BUILDDIR=$(pwd)
+elif [ -x $SCRIPTDIR/../../../../svn-config ]; then
+  pushd $SCRIPTDIR/../../../../ >/dev/null
+  ABS_BUILDDIR=$(pwd)
+  popd >/dev/null
+else
+  fail "Run this script from the root of Subversion's build tree!"
+fi
 
 MOD_DAV_SVN="$ABS_BUILDDIR/subversion/mod_dav_svn/.libs/mod_dav_svn.so"
 
@@ -116,12 +119,15 @@ HTTPD_ROOT="$ABS_BUILDDIR/subversion/tests/clients/cmdline/httpd-$(date '+%Y%m%d
 HTTPD_CFG="$HTTPD_ROOT/cfg"
 HTTPD_PID="$HTTPD_ROOT/pid"
 HTTPD_LOG="$HTTPD_ROOT/log"
+HTTPD_MIME_TYPES="$HTTPD_ROOT/mime.types"
 BASE_URL="http://localhost:$HTTPD_PORT"
 
 mkdir "$HTTPD_ROOT" \
   || fail "couldn't create temporary directory '$HTTPD_ROOT'"
 
 say "Using directory '$HTTPD_ROOT'..."
+
+touch $HTTPD_MIME_TYPES
 
 cat > "$HTTPD_CFG" <<__EOF__
 User                $(whoami)
@@ -135,6 +141,7 @@ ServerRoot          "$HTTPD_ROOT"
 DocumentRoot        "$HTTPD_ROOT"
 ScoreBoardFile      "$HTTPD_ROOT/run"
 CoreDumpDirectory   "$HTTPD_ROOT"
+TypesConfig         "$HTTPD_MIME_TYPES"
 StartServers        4
 MaxRequestsPerChild 0
 <IfModule worker.c>
