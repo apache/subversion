@@ -79,28 +79,6 @@ my__realloc (char *data, const size_t oldsize, const size_t request,
 
 
 
-/* Create a new bytestring by copying CSTRING (null-terminated);
-   requires a POOL to allocate from.  */
-svn_string_t *
-svn_string_create (const char *cstring, apr_pool_t *pool)
-{
-  svn_string_t *new_string;
-  size_t l = strlen (cstring);
-
-  /* this alloc gives us memory filled with zeros, yum. */
-  new_string = (svn_string_t *) apr_palloc (pool, sizeof(svn_string_t)); 
-
-  /* +1 to account for null byte. */
-  new_string->data = (char *) apr_palloc (pool, l + 1);
-  new_string->len = l;
-  new_string->blocksize = l + 1;
-
-  strcpy (new_string->data, cstring);
-  
-  return new_string;
-}
-
-
 /* Create a new bytestring by copying SIZE bytes from; requires a
    memory POOL to allocate from. */
 svn_string_t *
@@ -109,9 +87,9 @@ svn_string_ncreate (const char *bytes, const size_t size,
 {
   svn_string_t *new_string;
 
-  /* this alloc gives us memory filled with zeros, yum. */
   new_string = (svn_string_t *) apr_palloc (pool, sizeof(svn_string_t)); 
 
+  /* +1 to account for null terminator. */
   new_string->data = (char *) apr_palloc (pool, size + 1);
   new_string->len = size;
   new_string->blocksize = size + 1;
@@ -124,6 +102,15 @@ svn_string_ncreate (const char *bytes, const size_t size,
   new_string->data[new_string->len] = '\0';
 
   return new_string;
+}
+
+
+/* Create a new bytestring by copying CSTRING (null-terminated);
+   requires a POOL to allocate from.  */
+svn_string_t *
+svn_string_create (const char *cstring, apr_pool_t *pool)
+{
+  return svn_string_ncreate (cstring, strlen (cstring), pool);
 }
 
 

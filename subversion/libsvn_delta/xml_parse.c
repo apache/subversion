@@ -191,60 +191,56 @@ do_stack_append (svn_delta_digger_t *digger,
 
   if (youngest_frame == NULL)
     {
-      /* The stack is empty, this is our first frame append. */
+      /* The stack is empty, this is our first frame. */
       digger->stack = new_frame;
-      return SVN_NO_ERROR;
+      /* kff todo: parent_baton cannot be side effected, so why do we
+         have it?  It will always be digger->dir_baton. */
+      new_frame->baton = digger->dir_baton;
     }
-  
-  /* Validity checks */
-
-  /* <tree-delta> must follow <dir> */
-  if ((new_frame->tag == svn_XML_treedelta)
-      && (youngest_frame->tag != svn_XML_dir))
-    return XML_validation_error (pool, tagname, FALSE);
-
-  /* <new>, <replace>, <delete> must all follow <tree-delta> */
-  else if ( ((new_frame->tag == svn_XML_new)
-             || (new_frame->tag == svn_XML_replace)
-             || (new_frame->tag == svn_XML_delete))
-            && (youngest_frame->tag != svn_XML_treedelta) )
+  else   /* We already have a context, so check validity. */
+    {
+      /* <tree-delta> must follow <dir> */
+      if ((new_frame->tag == svn_XML_treedelta)
+          && (youngest_frame->tag != svn_XML_dir))
+        return XML_validation_error (pool, tagname, FALSE);
+      
+      /* <new>, <replace>, <delete> must all follow <tree-delta> */
+      else if ( ((new_frame->tag == svn_XML_new)
+                 || (new_frame->tag == svn_XML_replace)
+                 || (new_frame->tag == svn_XML_delete))
+                && (youngest_frame->tag != svn_XML_treedelta) )
+        return XML_validation_error (pool, tagname, FALSE);
+      
+      /* <file>, <dir> must follow either <new> or <replace> */
+      else if ((new_frame->tag == svn_XML_file)
+               || (new_frame->tag == svn_XML_dir))
+        {
+          if ((youngest_frame->tag != svn_XML_new)
+              && (youngest_frame->tag != svn_XML_replace))
+            return XML_validation_error (digger->pool, tagname, FALSE);
+        }
+      
+      /* <prop-delta> must follow one of <new>, <replace> (if talking
+         about a directory entry's properties) or must follow one of
+         <file>, <dir> */
+      else if ((new_frame->tag == svn_XML_propdelta)
+               && (youngest_frame->tag != svn_XML_new)
+               && (youngest_frame->tag != svn_XML_replace)
+               && (youngest_frame->tag != svn_XML_file)
+               && (youngest_frame->tag != svn_XML_dir))
+        return XML_validation_error (pool, tagname, FALSE);
+      
+      /* <text-delta> must follow <file> */
+      else if ((new_frame->tag == svn_XML_textdelta)
+               && (youngest_frame->tag != svn_XML_file))
         return XML_validation_error (pool, tagname, FALSE);
 
-  /* <file>, <dir> must follow either <new> or <replace> */
-  else if ((new_frame->tag == svn_XML_file)
-           || (new_frame->tag == svn_XML_dir))
-    {
-      if ((youngest_frame->tag != svn_XML_new)
-          && (youngest_frame->tag != svn_XML_replace))
-        return XML_validation_error (digger->pool, tagname, FALSE);
+      /* The XML is valid.  Do the usual bookkeeping. */
+      youngest_frame->next = new_frame;
+      new_frame->baton = youngest_frame->baton; /* Inherit parent's baton. */
     }
-
-  /* <prop-delta> must follow one of <new>, <replace> (if talking
-     about a directory entry's properties) or must follow one of
-     <file>, <dir> */
-  else if ((new_frame->tag == svn_XML_propdelta)
-           && (youngest_frame->tag != svn_XML_new)
-           && (youngest_frame->tag != svn_XML_replace)
-           && (youngest_frame->tag != svn_XML_file)
-           && (youngest_frame->tag != svn_XML_dir))
-    return XML_validation_error (pool, tagname, FALSE);
-
-  /* <text-delta> must follow <file> */
-  else if ((new_frame->tag == svn_XML_textdelta)
-           && (youngest_frame->tag != svn_XML_file))
-    return XML_validation_error (pool, tagname, FALSE);
-
-
-  /* Validity passed, do the actual append. */
   
-  youngest_frame->next = new_frame;
   new_frame->previous = youngest_frame;
-
-  /* Child inherits parent's baton.  */
-  new_frame->baton = youngest_frame->baton;
-
-  /* Store this baton in the digger, too, for safekeeping. */
-  digger->dir_baton = youngest_frame->baton;
 
   return SVN_NO_ERROR;
 }
