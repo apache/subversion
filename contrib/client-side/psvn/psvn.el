@@ -175,6 +175,7 @@
 (defvar svn-status-default-author-width 9)
 (defvar svn-status-line-format " %c%c %4s %4s %-9s")
 (defvar svn-status-short-mod-flag-p t)
+(defvar svn-start-of-file-list-line-number 0)
 (defvar svn-status-files-to-commit nil)
 (defvar svn-status-pre-commit-window-configuration nil)
 (defvar svn-status-pre-propedit-window-configuration nil)
@@ -947,6 +948,7 @@ Symbolic links to directories count as directories (see `file-directory-p')."
        (format "%d Unmodified files are hidden - press _ to toggle hiding\n"
                unmodified-count)))
     (insert (format "%d files marked\n" marked-count))
+    (setq svn-start-of-file-list-line-number (+ (count-lines (point-min) (point)) 1))
     (if fname
         (progn
           (svn-status-goto-file-name fname)
@@ -1111,8 +1113,10 @@ Then move to that line."
          (line-info (svn-status-get-line-information))
          (file-name (svn-status-line-info->filename line-info))
          (newcursorpos-fname)
-         (i-fname))
+         (i-fname)
+         (current-line svn-start-of-file-list-line-number))
     (while st-info
+      (setq current-line (1+ current-line))
       (setq i-fname (svn-status-line-info->filename (car st-info)))
       (when (and (>= (length i-fname) (length file-name))
                  (string= file-name (substring i-fname 0 (length file-name))))
@@ -1122,9 +1126,15 @@ Then move to that line."
             (if set-mark
                 (message "marking: %s" i-fname)
               (message "unmarking: %s" i-fname))
-            (setcar (car st-info) set-mark))))
+            (setcar (car st-info) set-mark)
+            (save-excursion
+              (let ((buffer-read-only nil))
+                (goto-line current-line)
+                (delete-region (point-at-bol) (point-at-eol))
+                (svn-insert-line-in-status-buffer (car st-info))
+                (delete-char 1))))))
       (setq st-info (cdr st-info)))
-    (svn-status-update-buffer)
+    ;;(svn-status-update-buffer)
     (svn-status-goto-file-name newcursorpos-fname)))
 
 (defun svn-status-unset-all-usermarks ()
