@@ -1,9 +1,0 @@
-                          Post M3 tasks
-                          =============
-
-   - Get the page linked to from the Source navbar fixed.
-
-   - Make a repository backup system (see also issue #477).
-
-   - Fix dist.sh and write up release procedure.  lucas@collab.net has
-     volunteered to review it, among others.
