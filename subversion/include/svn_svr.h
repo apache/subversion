@@ -206,11 +206,12 @@ svn_delta_t * svn_svr_get_update (svn_string_t *repos,
 typedef enum svr_action {add, rm, mv, checkout, 
                          commit, import, update} svr_action_t;
 
-svn_string_t * svn_getuser (svn_string_t *repos,
-                            svn_string_t *authenticated_username,
-                            svn_string_t *authenticated_method,
-                            svr_action_t requested_action,
-                            svn_string_t *path);
+svn_string_t * svn_authorize (svn_string_t *repos,
+                              svn_string_t *authenticated_username,
+                              svn_string_t *authenticated_method,
+                              svn_string_t *authenticated_domain,
+                              svr_action_t requested_action,
+                              svn_string_t *path);
                             
 
 
