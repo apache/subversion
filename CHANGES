@@ -1,15 +1,24 @@
-Version 0.10.1
+Version 0.10.1 (released 17 Mar 2002, revision 1535)
 
  User-visible changes:
  * New --targets command-line option for some commands.
  * conflicts now create conflict-markers in files, and 3 fulltext backups.
- * conflicts on binary files create 2 fulltext backups.
  * new 'svn resolve' command removes conflicted state (by removing backups)
   
  Developer-visible changes:
  * no more dependency on 'patch'; only on GNU diff3 and some version of 'diff'
+ * complete rewrite of svn_wc_entry_t interface
+ * begin abstracting svn_fs API by hiding implementation details
+ * consolidate RA layer callbacks
+ * start work on commit-driver rewrite
+ * start work on ~/.subversion/ configuration directory, and proxy support
+ * move a lot of svn_wc.h into private wc.h
+ * small bugfixes relating to commits, network prop xfers, 'svn log', etc.
+ * major deletion bug fixed 
+   (see email WARNING: 
+    http://subversion.tigris.org/servlets/ReadMsg?msgId=64442&listName=dev)
 
-Version 0.10
+Version 0.10.0 (released 08 Mar 2002, revision 1467)
 
  User-visible changes:
  * fewer out-of-memory errors:  (see "memory consumption" below)
