@@ -248,6 +248,17 @@ svn_error_t *svn_io_file_affected_time (apr_time_t *apr_time,
                                         const char *path,
                                         apr_pool_t *pool);
 
+/** Set the timestamp of file @a path to @a apr_time.  @a path is
+ *  utf8-encoded.
+ *
+ * Note: this is the APR mtime which corresponds to the traditional mtime
+ * on Unix, and the last write time on Windows.
+ */
+svn_error_t *svn_io_set_file_affected_time (apr_time_t apr_time,
+                                            const char *path,
+                                            apr_pool_t *pool);
+
+
 
 /** Set @a *different_p to non-zero if @a file1 and @a file2 have different
  * sizes, else set to zero.  Both @a file1 and @a file2 are utf8-encoded.
