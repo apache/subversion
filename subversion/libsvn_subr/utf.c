@@ -725,6 +725,9 @@ svn_utf__cstring_from_utf8_fuzzy (const char *src,
     {
       if (! apr_isascii (*src_orig))
         {
+          /* ### This is the same format as svn_xml_fuzzy_escape()
+             ### uses.  The two should probably share code, even
+             ### though they escape different characters. */
           sprintf (new, "?\\%03u", (unsigned char) *src_orig);
           new += 5;
         }
