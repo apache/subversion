@@ -743,6 +743,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
                     const svn_opt_revision_t *peg_revision,
                     const svn_opt_revision_t *revision,
                     svn_boolean_t force, 
+                    svn_boolean_t ignore_externals,
                     const char *native_eol,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
@@ -799,26 +800,19 @@ svn_client_export3 (svn_revnum_t *result_rev,
 
           /* Step outside the editor-likeness for a moment, to actually talk
            * to the repository. */
-          SVN_ERR(svn_ra_get_file (ra_session, "", revnum,
-                                   svn_stream_from_aprfile (fb->tmp_file,
-                                                            pool),
-                                   NULL, &props, pool));
+          SVN_ERR (svn_ra_get_file (ra_session, "", revnum,
+                                    svn_stream_from_aprfile (fb->tmp_file,
+                                                             pool),
+                                    NULL, &props, pool));
 
           /* Push the props into change_file_prop(), to update the file_baton
            * with information. */
           for (hi = apr_hash_first (pool, props); hi; hi = apr_hash_next (hi))
             {
-              const char *propname;
-              svn_string_t *propval;
               const void *key;
               void *val;
-
               apr_hash_this (hi, &key, NULL, &val);
-
-              propname = key;
-              propval = val;
-
-              SVN_ERR (change_file_prop (fb, propname, propval, pool));
+              SVN_ERR (change_file_prop (fb, key, val, pool));
             }
           
           /* And now just use close_file() to do all the keyword and EOL
@@ -864,8 +858,8 @@ svn_client_export3 (svn_revnum_t *result_rev,
                                        TRUE, /* "help, my dir is empty!" */
                                        pool));
 
-          SVN_ERR (reporter->finish_report (report_baton, pool));               
-
+          SVN_ERR (reporter->finish_report (report_baton, pool));
+ 
           /* Special case: Due to our sly export/checkout method of
            * updating an empty directory, no target will have been created
            * if the exported item is itself an empty directory
@@ -881,8 +875,9 @@ svn_client_export3 (svn_revnum_t *result_rev,
             SVN_ERR (open_root_internal
                      (to, force, ctx->notify_func, ctx->notify_baton, pool));
 
-          SVN_ERR (svn_client__fetch_externals (eb->externals, TRUE, 
-                                                &use_sleep, ctx, pool));
+          if (! ignore_externals)
+            SVN_ERR (svn_client__fetch_externals (eb->externals, TRUE, 
+                                                  &use_sleep, ctx, pool));
         }
     }
   else
@@ -897,8 +892,8 @@ svn_client_export3 (svn_revnum_t *result_rev,
         }
       
       /* just copy the contents of the working copy into the target path. */
-      SVN_ERR (copy_versioned_files (from, to, &working_revision, force, native_eol,
-                                     ctx, pool));
+      SVN_ERR (copy_versioned_files (from, to, &working_revision, force, 
+                                     native_eol, ctx, pool));
     }
   
 
@@ -934,7 +929,7 @@ svn_client_export2 (svn_revnum_t *result_rev,
   peg_revision.kind = svn_opt_revision_unspecified;
 
   return svn_client_export3 (result_rev, from, to, &peg_revision,
-                             revision, force, native_eol, ctx, pool);
+                             revision, force, FALSE, native_eol, ctx, pool);
 }
 
   

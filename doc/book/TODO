@@ -27,7 +27,6 @@ To be fixed by someone:
     /usr/local/svn/ or /usr/local/repositories/ throughout the book.
     We ought to consistify.
 
-
 --------------------------------------------------------------
 
 To be fixed by fitz:
@@ -44,6 +43,9 @@ To be fixed by cmpilato:
      not overwritten by a tarball explode wouldn't be missing, they'd
      be untouched).
 
+  - document the --ignore-externals option (added 'update',
+    'checkout', 'export', and 'status').  Don't forget the reference
+    section.
 
 --------------------------------------------------------------
 
