@@ -46,7 +46,8 @@ typedef struct {
 
 
 
-static int validate_element(void *userdata, ne_xml_elmid parent, ne_xml_elmid child)
+static int validate_element(void *userdata, ne_xml_elmid parent,
+                            ne_xml_elmid child)
 {
   switch (parent)
     {

@@ -606,9 +606,10 @@ svn_ra_dav__open (void **session_baton,
   if (is_ssl_session)
     {
       const char *authorities_file;
-      authorities_file = svn_config_get_server_setting(cfg, server_group,
-                                                       SVN_CONFIG_OPTION_SSL_AUTHORITIES_FILE,
-                                                       NULL);
+      authorities_file = svn_config_get_server_setting(
+            cfg, server_group,
+            SVN_CONFIG_OPTION_SSL_AUTHORITIES_FILE,
+            NULL);
       
       if (authorities_file != NULL)
         {
