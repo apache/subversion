@@ -36,6 +36,9 @@
 /* Path separator for local filesystem */
 #define SVN_PATH_LOCAL_SEPARATOR '\\'
 
+/* Name of system's null device */
+#define SVN_NULL_DEVICE_NAME "nul"
+
 /* Link local repos access library to client */
 #define SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL
 
