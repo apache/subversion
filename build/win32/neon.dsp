@@ -32,20 +32,18 @@ CFG=neon - Win32 Debug
 # PROP BASE Use_Debug_Libraries 0
 # PROP BASE Output_Dir "..\..\neon\Release"
 # PROP BASE Intermediate_Dir "..\..\neon\Release"
-# PROP BASE Cmd_Line "..\build\win32\build_neon.bat release"
+# PROP BASE Cmd_Line "build_neon.bat release"
 # PROP BASE Rebuild_Opt "rebuild"
 # PROP BASE Target_File "..\..\neon\libneon.lib"
 # PROP BASE Bsc_Name ""
-# PROP BASE Target_Dir "..\..\neon"
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
 # PROP Output_Dir "..\..\neon\Release"
 # PROP Intermediate_Dir "..\..\neon\Release"
-# PROP Cmd_Line "cmd /c ..\build\win32\build_neon.bat release"
+# PROP Cmd_Line "cmd /c build_neon.bat release"
 # PROP Rebuild_Opt "rebuild"
 # PROP Target_File "..\..\neon\libneon.lib"
 # PROP Bsc_Name ""
-# PROP Target_Dir "..\..\neon"
 
 !ELSEIF  "$(CFG)" == "neon - Win32 Debug"
 
@@ -53,20 +51,18 @@ CFG=neon - Win32 Debug
 # PROP BASE Use_Debug_Libraries 1
 # PROP BASE Output_Dir "..\..\neon\Debug"
 # PROP BASE Intermediate_Dir "..\..\neon\Debug"
-# PROP BASE Cmd_Line "..\build\win32\build_neon.bat debug"
+# PROP BASE Cmd_Line "build_neon.bat debug"
 # PROP BASE Rebuild_Opt "rebuild"
 # PROP BASE Target_File "..\..\neon\libneonD.lib"
 # PROP BASE Bsc_Name ""
-# PROP BASE Target_Dir "..\..\neon"
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
 # PROP Output_Dir "..\..\neon\Debug"
 # PROP Intermediate_Dir "..\..\neon\Debug"
-# PROP Cmd_Line "cmd /c ..\build\win32\build_neon.bat debug"
+# PROP Cmd_Line "cmd /c build_neon.bat debug"
 # PROP Rebuild_Opt "rebuild"
 # PROP Target_File "..\..\neon\libneonD.lib"
 # PROP Bsc_Name ""
-# PROP Target_Dir "..\..\neon"
 
 !ENDIF 
 
