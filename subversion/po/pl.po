@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-01-22 13:04+0100\n"
-"PO-Revision-Date: 2005-01-22 13:58+0100\n"
+"PO-Revision-Date: 2005-01-24 23:39+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1845,9 +1845,9 @@ msgid "Try 'svn revert --recursive' instead?"
 msgstr "Zamiast tego spróbuj wykonać 'svn revert --recursive'."
 
 #: clients/cmdline/switch-cmd.c:58
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' to '%s' is not a valid relocation"
-msgstr "'%s' nie jest katalogiem"
+msgstr "'%s' do '%s' nie jest prawidłowym przeniesieniem"
 
 #: clients/cmdline/util.c:57
 #, c-format
@@ -3085,7 +3085,7 @@ msgstr "URL '%s' nie istnieje w tej wersji"
 #: libsvn_client/prop_commands.c:104
 #, c-format
 msgid "'%s' is a wcprop, thus not accessible to clients"
-msgstr ""
+msgstr "'%s' jest atryputem wcprop, tak więc nie jest dostępny dla klientów"
 
 #: libsvn_client/prop_commands.c:182
 #, c-format
@@ -3224,7 +3224,7 @@ msgstr "Nieoczekiwany rodzaj obiektu."
 #: libsvn_diff/diff_file.c:1169
 #, c-format
 msgid "Failed to delete mmap '%s'"
-msgstr ""
+msgstr "Nie powiodło się usunięcie mmap '%s'"
 
 #: libsvn_fs/fs-loader.c:99 libsvn_ra/ra_loader.c:147
 #: libsvn_ra/ra_loader.c:160
@@ -4226,7 +4226,7 @@ msgstr ""
 
 #: libsvn_repos/load.c:192
 msgid "Dumpstream data appears to be malformed"
-msgstr ""
+msgstr "Dane zrzutu prawdopodobnie jest uszkodzone"
 
 #: libsvn_repos/load.c:230
 #, fuzzy
@@ -4234,9 +4234,8 @@ msgid "Incomplete or unterminated property block"
 msgstr "Nieoczekiwany lub nieznany typ atrybutu"
 
 #: libsvn_repos/load.c:423
-#, fuzzy
 msgid "Unexpected EOF writing contents"
-msgstr "Nieoczekiwany koniec strumienia"
+msgstr "Nieoczekiwany koniec strumienia zapisu"
 
 #: libsvn_repos/load.c:452
 msgid "Malformed dumpfile header"
@@ -4248,9 +4247,8 @@ msgid "Unsupported dumpfile version: %d"
 msgstr "Wersja repozytorium: %d jest nieobsługiwana"
 
 #: libsvn_repos/load.c:598
-#, fuzzy
 msgid "Unrecognized record type in stream"
-msgstr "Nieznany sposób zapisywania końców wiersza"
+msgstr "Nieznany typ rekordu w strumieniu"
 
 #: libsvn_repos/load.c:710
 msgid "Sum of subblock sizes larger than total block content length"
@@ -4269,7 +4267,7 @@ msgstr ""
 
 #: libsvn_repos/load.c:983
 msgid "Malformed dumpstream: Revision 0 must not contain node records"
-msgstr ""
+msgstr "Uszkodzony zrzut: wersja 0 nie może zawierać węzła rekordów"
 
 #: libsvn_repos/load.c:1027
 #, fuzzy, c-format
@@ -4337,44 +4335,41 @@ msgid "'%s' exists and is non-empty"
 msgstr "'%s' istnieje i jest nie pusty"
 
 #: libsvn_repos/repos.c:172
+#, fuzzy
 msgid "Creating db logs lock file"
-msgstr ""
+msgstr "Tworzenie pliku blokad dla logów bazy danych"
 
 #: libsvn_repos/repos.c:197
-#, fuzzy
 msgid "Creating db lock file"
-msgstr "Błąd w trakcie otwierania lokalnego pliku"
+msgstr "Tworzenie pliku blokady bazy danych"
 
 #: libsvn_repos/repos.c:207
 msgid "Creating lock dir"
-msgstr ""
+msgstr "Tworzenie katalogu blokady"
 
 #: libsvn_repos/repos.c:237
 msgid "Creating hook directory"
 msgstr "Tworzenie katalogu skryptów hook"
 
 #: libsvn_repos/repos.c:341
-#, fuzzy
 msgid "Creating start-commit hook"
-msgstr "Błąd działania skryptu post-commit"
+msgstr "Tworzenie skryptu start-commit"
 
 #: libsvn_repos/repos.c:476
-#, fuzzy
 msgid "Creating pre-commit hook"
-msgstr "Błąd działania skryptu post-commit"
+msgstr "Tworzenie skryptu pre-commit"
 
 #: libsvn_repos/repos.c:606
 msgid "Creating pre-revprop-change hook"
-msgstr ""
+msgstr "Tworzenie skryptu pre-revprop-change"
 
 #: libsvn_repos/repos.c:705
-#, fuzzy
 msgid "Creating post-commit hook"
-msgstr "Błąd działania skryptu post-commit"
+msgstr "Tworzenie skryptu post-commit"
 
 #: libsvn_repos/repos.c:815
 msgid "Creating post-revprop-change hook"
-msgstr ""
+msgstr "Tworzenie skryptu post-revprop-change"
 
 #: libsvn_repos/repos.c:825
 msgid "Creating conf directory"
@@ -4395,7 +4390,7 @@ msgstr "Nie można stworzyć katalogu tymczasowego"
 
 #: libsvn_repos/repos.c:932
 msgid "Creating DAV sandbox dir"
-msgstr ""
+msgstr "Tworzenie katalogu roboczego DAV"
 
 #: libsvn_repos/repos.c:975
 msgid "Creating readme file"
@@ -4479,10 +4474,9 @@ msgstr "Nie można znaleźć pliku konfiguracyjnego '%s'"
 
 #: libsvn_subr/date.c:204
 msgid "Can't manipulate current date"
-msgstr ""
+msgstr "Nie można zmodyfikować bieżącej daty"
 
 #: libsvn_subr/date.c:274 libsvn_subr/date.c:282
-#, fuzzy
 msgid "Can't calculate requested date"
 msgstr "Nie można ustalić rozmiaru żądania"
 
@@ -4533,14 +4527,14 @@ msgid "Can't set permissions on '%s'"
 msgstr "Nie można przypisać praw dla '%s'"
 
 #: libsvn_subr/io.c:619
-#, fuzzy, c-format
+#, c-format
 msgid "Can't append '%s' to '%s'"
-msgstr "Nie można przenieść '%s' do '%s'"
+msgstr "Nie można dodać '%s' do '%s'"
 
 #: libsvn_subr/io.c:653
-#, fuzzy, c-format
+#, c-format
 msgid "Source '%s' is not a directory"
-msgstr "'%s' nie jest katalogiem"
+msgstr "Źródło '%s' nie jest katalogiem"
 
 #: libsvn_subr/io.c:659
 #, fuzzy, c-format
@@ -4904,7 +4898,7 @@ msgstr "Użyj '%s help' by otrzymać podstawowe instrukcje.\n"
 #: libsvn_subr/path.c:1070
 #, c-format
 msgid "Couldn't determine absolute path of '%s'"
-msgstr ""
+msgstr "Nie można ustalić absolutnej ścieżki '%s'"
 
 #: libsvn_subr/path.c:1109
 #, fuzzy, c-format
@@ -4913,7 +4907,7 @@ msgstr "'%s' nie jest plikiem ani katalogiem"
 
 #: libsvn_subr/path.c:1215
 msgid "Can't determine the native path encoding"
-msgstr ""
+msgstr "Nie można ustalić natywnego kodowania dla ścieżki"
 
 #: libsvn_subr/path.c:1269
 #, fuzzy, c-format
@@ -6473,14 +6467,14 @@ msgstr ""
 "--------   -------\n"
 
 #: svnlook/main.c:1464
-#, fuzzy, c-format
+#, c-format
 msgid "Property '%s' not found on revision %ld"
-msgstr "Ścieżka '%s' nie znaleziona w wersji '%ld'"
+msgstr "Atrybutu '%s' nie znaleziono w wersji '%ld'"
 
 #: svnlook/main.c:1468
-#, fuzzy, c-format
+#, c-format
 msgid "Property '%s' not found on path '%s' in revision %ld"
-msgstr "Atrybutu '%s' nie znaleziono w ścieżce '%s'"
+msgstr "Atrybutu '%s' nie znaleziono w ścieżce '%s' w wersji %ld"
 
 #: svnlook/main.c:1633 svnlook/main.c:1790
 msgid "Missing repository path argument"
@@ -6506,9 +6500,8 @@ msgstr ""
 "Dostępne polecenia:\n"
 
 #: svnlook/main.c:1764
-#, fuzzy
 msgid "Missing propname argument"
-msgstr "Brak parametru podającego ścieżkę w repozytorium"
+msgstr "Brak parametru podającego nazwę atrybutu"
 
 #: svnlook/main.c:1765
 msgid "Missing propname and repository path arguments"
