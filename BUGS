@@ -6,7 +6,7 @@
 This document tells how and where to report bugs.  It is not a list of
 all outstanding bugs -- we use an online issue tracker for that, see
 
-   http://subversion.tigris.org/servlets/ProjectIssues
+   http://subversion.tigris.org/project_issues.html
    http://subversion.tigris.org/project_tasks.html
 
 (the latter links to a fairly user-friendly list of all open bugs).
