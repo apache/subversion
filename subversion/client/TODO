@@ -4,6 +4,7 @@ Scratch space for client work.
 
 Fitz TODO:
 
+- Fix the ability to delete properties.
 - Once over cmds, check args against README and get cleaning
 - Document cmd structure
 - Dive into commit and checkout in libsvn_client
