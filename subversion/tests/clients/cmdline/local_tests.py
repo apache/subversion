@@ -21,6 +21,7 @@ import svn_tree
 
 import shutil         
 import string        
+import sys
 import os.path       
 
 ######################################################################
@@ -855,24 +856,15 @@ test_list = [ None,
 
 if __name__ == '__main__':  
   ## And run the main test routine on them:
-  svn_test_main.client_test(test_list)
+  err = svn_test_main.client_test(test_list)
   ## Remove all scratchwork: the 'pristine' repository, greek tree, etc.
   ## This ensures that an 'import' will happen the next time we run.
   if os.path.exists(temp_dir):
     shutil.rmtree(temp_dir)
-
+  ## Return whatever main() returned to the OS.
+  sys.exit(err)
 
 ### End of file.
 # local variables:
 # eval: (load-file "../../../svn-dev.el")
 # end:
-
-
-
-
-
-
-
-
-
-
