@@ -39,6 +39,61 @@ int test_argc;
 char **test_argv;
 
 
+/* Test option: Print more output */
+static int verbose_mode = 0;
+
+/* Test option: Remove test directories after success */
+static int cleanup_mode = 0;
+
+
+/* ================================================================= */
+/* Stuff for cleanup processing */
+
+/* When non-zero, don't remove test directories */
+static int skip_cleanup = 0;
+
+/* All cleanup actions are registered as cleanups on this pool. */
+static apr_pool_t *cleanup_pool = 0;
+
+static apr_status_t
+cleanup_rmtree (void *data)
+{
+  if (!skip_cleanup)
+    {
+      apr_pool_t *pool = svn_pool_create (NULL);
+      const char *path = data;
+
+      /* Ignore errors here. */
+      svn_error_t *err = svn_io_remove_dir (path, pool);
+      if (verbose_mode)
+        {
+          if (err)
+            printf ("FAILED CLEANUP: %s\n", path);
+          else
+            printf ("CLEANUP: %s\n", path);
+        }
+      svn_pool_destroy (pool);
+    }
+  return APR_SUCCESS;
+}
+
+
+void
+svn_test_add_dir_cleanup (const char *path)
+{
+  if (cleanup_mode)
+    {
+      const char *abspath;
+      svn_error_t *err = svn_path_get_absolute (&abspath, path, cleanup_pool);
+      if (!err)
+        apr_pool_cleanup_register (cleanup_pool, abspath, cleanup_rmtree,
+                                   apr_pool_cleanup_null);
+      else if (verbose_mode)
+        printf ("FAILED ABSPATH: %s\n", path);
+    }
+}
+
+
 /* ================================================================= */
 /* Quite a few tests use random numbers. */
 
@@ -86,7 +141,7 @@ do_test_num (const char *progname,
   if ((test_num > array_size) || (test_num <= 0))
     {
       printf ("FAIL: %s: THERE IS NO TEST NUMBER %2d\n", progname, test_num);
-      return 1;  /* BAIL, this test number doesn't exist. */
+      return (skip_cleanup = 1);  /* BAIL, this test number doesn't exist. */
     }
   else
     {
@@ -120,51 +175,8 @@ do_test_num (const char *progname,
     }
 
   /* Fail on unexpected result -- FAIL or XPASS. */
-  return (err != SVN_NO_ERROR) != (xfail != 0);
-}
-
-
-static int verbose_mode = 0;
-static int cleanup_mode = 0;
-static int skip_cleanup = 0;
-static apr_pool_t *cleanup_pool = 0;
-
-static apr_status_t
-cleanup_rmtree (void *data)
-{
-  if (!skip_cleanup)
-    {
-      apr_pool_t *pool = svn_pool_create (NULL);
-      const char *path = data;
-
-      /* Ignore errors here. */
-      svn_error_t *err = svn_io_remove_dir (path, pool);
-      if (verbose_mode)
-        {
-          if (err)
-            printf ("FAILED CLEANUP: %s\n", path);
-          else
-            printf ("CLEANUP: %s\n", path);
-        }
-      svn_pool_destroy (pool);
-    }
-  return APR_SUCCESS;
-}
-
-
-void
-svn_test_add_dir_cleanup (const char *path)
-{
-  if (cleanup_mode)
-    {
-      const char *abspath;
-      svn_error_t *err = svn_path_get_absolute (&abspath, path, cleanup_pool);
-      if (!err)
-        apr_pool_cleanup_register (cleanup_pool, abspath, cleanup_rmtree,
-                                   apr_pool_cleanup_null);
-      else if (verbose_mode)
-        printf ("FAILED ABSPATH: %s\n", path);
-    }
+  skip_cleanup = ((err != SVN_NO_ERROR) != (xfail != 0));
+  return skip_cleanup;
 }
 
 
@@ -237,12 +249,8 @@ main (int argc, char *argv[])
                  "------  -----  ----------------\n");
           for (i = 1; i <= array_size; i++)
             {
-              skip_cleanup = 0;
               if (do_test_num (prog_name, i, TRUE, test_pool))
-                {
-                  got_error = 1;
-                  skip_cleanup = 1;
-                }
+                got_error = 1;
 
               /* Clear the per-function pool */
               svn_pool_clear (test_pool);
@@ -257,12 +265,8 @@ main (int argc, char *argv[])
                 {
                   ran_a_test = 1;
                   test_num = atoi (argv[i]);
-                  skip_cleanup = 0;
                   if (do_test_num (prog_name, test_num, FALSE, test_pool))
-                    {
-                      got_error = 1;
-                      skip_cleanup = 1;
-                    }
+                    got_error = 1;
 
                   /* Clear the per-function pool */
                   svn_pool_clear (test_pool);
@@ -282,12 +286,8 @@ main (int argc, char *argv[])
       /* just run all tests */
       for (i = 1; i <= array_size; i++)
         {
-          skip_cleanup = 0;
           if (do_test_num (prog_name, i, FALSE, test_pool))
-            {
-              got_error = 1;
-              skip_cleanup = 1;
-            }
+            got_error = 1;
 
           /* Clear the per-function pool */
           svn_pool_clear (test_pool);
