@@ -14,8 +14,47 @@
 #ifndef SVN_LIBSVN_FS_REV_TABLE_H
 #define SVN_LIBSVN_FS_REV_TABLE_H
 
+#include <db.h>
 #include "svn_fs.h"
+#include "skel.h"
 #include "trail.h"
+
+
+/* Creating and opening the `nodes' table.  */
+
+/* Open a `revisions' table in ENV.  If CREATE is non-zero, create one
+   if it doesn't exist.  Set *REVS_P to the new table.  Return a
+   Berkeley DB error code.  */
+int svn_fs__open_revisions_table (DB **revisions_p,
+                                  DB_ENV *env,
+                                  int create);
+
+
+
+/* Storing and retrieving filesystem revisions.  */
+
+
+/* Set *SKEL_P to point to the REVISION skel for the filesystem
+   revision REV in FS, as part of the Berkeley DB transaction DB_TXN.
+   Allocate the skel and the data it points into in POOL.
+
+   This verifies that *SKEL_P is a well-formed REVISION skel.  */
+svn_error_t *svn_fs__get_rev (skel_t **skel_p,
+                              svn_fs_t *fs,
+                              svn_revnum_t rev,
+                              DB_TXN *db_txn,
+                              apr_pool_t *pool);
+
+/* Store SKEL as the REVISION skel in FS as part of the Berkeley DB
+   transaction DB_TXN, and return the new filesystem revision number
+   in *REV.  Do any necessary temporary allocation in POOL.
+
+   This verifies that SKEL is a well-formed REVISION skel.  */
+svn_error_t *svn_fs__put_rev (svn_revnum_t *rev,
+                              svn_fs_t *fs,
+                              skel_t *skel,
+                              DB_TXN *db_txn,
+                              apr_pool_t *pool);
 
 
 /* Set *ROOT_ID_P to the ID of the root directory of revision REV in FS,
@@ -27,3 +66,11 @@ svn_error_t *svn_fs__rev_get_root (svn_fs_id_t **root_id_p,
 
 
 #endif /* SVN_LIBSVN_FS_REV_TABLE_H */
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

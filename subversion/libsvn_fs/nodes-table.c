@@ -17,6 +17,7 @@
 #include "err.h"
 #include "dbt.h"
 #include "skel.h"
+#include "validate.h"
 #include "nodes-table.h"
 
 
@@ -148,27 +149,6 @@ svn_fs__open_nodes_table (DB **nodes_p,
 
 
 static int
-is_valid_proplist (skel_t *skel)
-{
-  int len = svn_fs__list_length (skel);
-
-  if (len >= 0
-      && (len & 1) == 0)
-    {
-      skel_t *elt;
-
-      for (elt = skel->children; elt; elt = elt->next)
-	if (! elt->is_atom)
-	  return 0;
-
-      return 1;
-    }
-
-  return 0;
-}
-
-
-static int
 is_valid_flag (skel_t *skel)
 {
   int len = svn_fs__list_length (skel);
@@ -189,7 +169,7 @@ is_valid_header (skel_t *skel, skel_t **kind_p)
   if (len >= 2)
     {
       if (skel->children->is_atom
-	  && is_valid_proplist (skel->children->next))
+	  && svn_fs__is_valid_proplist (skel->children->next))
 	{
 	  skel_t *flag;
 

@@ -17,6 +17,7 @@
 #include "svn_fs.h"
 #include "id.h"
 #include "convert-size.h"
+#include "validate.h"
 
 
 /* Finding the length of an ID.  */
@@ -184,31 +185,9 @@ svn_fs_parse_id (const char *data,
   int id_len;
   
   /* Count the number of components in the ID, and check its syntax.  */
-  {
-    int i;
-    int last_start;
-
-    id_len = 1;
-    last_start = 0;
-
-    for (i = 0; i < data_len; i++)
-      if (data[i] == '.')
-	{
-	  /* There must be at least one digit before and after each dot.  */
-	  if (i == last_start)
-	    return 0;
-	  last_start = i + 1;
-	  id_len++;
-	}
-      else if ('0' <= data[i] && data[i] <= '9')
-	;
-      else
-	return 0;
-
-    /* Make sure there was at least one digit in the last number.  */
-    if (i == last_start)
+  id_len = svn_fs__count_id_components (data, data_len);
+  if (id_len == 0)
       return 0;
-  }
 
   /* Allocate the ID array.  Note that if pool is zero, apr_palloc
      just calls malloc, which meets our promised interface.  */
