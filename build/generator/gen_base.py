@@ -137,7 +137,7 @@ class GeneratorBase:
         for lib in self._find_libs(parser.get(name, 'libs')):
           self.graph.add(DT_LINK, name, lib)
         for nonlib in self._find_libs(parser.get(name, 'nonlibs')):
-          self.graph.add(DT_LINK, name, nonlib)
+          self.graph.add(DT_NONLIB, name, nonlib)
          
 
     # collect various files
@@ -259,6 +259,7 @@ dep_types = [
   'DT_SWIG_C',   # a swig-generated .c file, depending upon .i filename(s)
   'DT_LINK',     # a libtool-linked filename, depending upon object fnames
   'DT_INCLUDE',  # filename includes (depends) on sources (all basenames)
+  'DT_NONLIB',   # filename depends on object fnames, but isn't linked to them
   ]
 
 # create some variables for these
@@ -738,7 +739,9 @@ def _sorted_files(graph, area):
   while targets:
     # find a target that has no dependencies in our current targets list.
     for t in targets:
-      for d in graph.get_sources(DT_LINK, t.name, Target):
+      s = graph.get_sources(DT_LINK, t.name, Target)
+      s += graph.get_sources(DT_NONLIB, t.name, Target)
+      for d in s:
         if d in targets:
           break
       else:
