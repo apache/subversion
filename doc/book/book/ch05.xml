@@ -442,7 +442,7 @@
           <para>Alternately, you can use the
             <literal>SVNParentPath</literal> directive to indicate a
             <quote>parent</quote> directory whose immediate
-            subdirectories are are assumed to be independent
+            subdirectories are assumed to be independent
             repositories:</para>
             
           <screen>
@@ -1092,7 +1092,7 @@ $ svnadmin load newrepos &lt; dumpfile
     <para>Voila, your revisions have been recommitted into the new
       repository.</para>
     
-    <para>And because <command>svnadmin</command> uses standand input
+    <para>And because <command>svnadmin</command> uses standard input
       and output streams for the repository dump and load process,
       people who are feeling saucy with Unix can try things like
       this:</para>

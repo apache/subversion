@@ -547,7 +547,7 @@ write/Makefile:6
       <para>This may sound like a lot to keep track of, but as you
         will learn in a later chapter, the <command>svn
         status</command> command will show you the state of any item
-        in your working copy.  <!-- ### xref the relevant section that
+        in your working copy.  <!-- ###TODO xref the relevant section that
         details 'status' -->
       </para>
      
@@ -591,5 +591,9 @@ write/Makefile:6
 
 </chapter>
 
-<!-- local variables: eval: (load-file "../tools/svnbook.el")
-sgml-parent-document: ("book.xml" "chapter") end: -->
+<!--
+local variables: 
+eval: (load-file "../tools/svnbook.el")
+sgml-parent-document: ("book.xml" "chapter")
+end:
+-->

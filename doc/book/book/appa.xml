@@ -30,7 +30,7 @@
     <para>In CVS, revision numbers are per-file.  This is because CVS
       uses RCS as a backend; each file has a corresponding RCS file in
       the repository, and the repository is roughly laid out according
-      to structure of your project tree.</para>
+      to the structure of your project tree.</para>
 
     <para>In Subversion, the repository looks like a single
       filesystem.  Each commit results in an entirely new filesystem

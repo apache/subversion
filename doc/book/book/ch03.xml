@@ -110,7 +110,7 @@
       line options to checkout, although one option is very
       common and worth mentioning: you can specify a directory
       after your repository url.  This places your working copy
-      into a new directory that you name.  For example:</para>
+      into the new directory that you name.  For example:</para>
     
     <screen>
       $ svn co http://svn.collab.net/repos/svn/trunk subv
@@ -314,7 +314,7 @@
               <filename>foo</filename> is a directory, only the
               directory itself will be scheduled for addition.  If you
               want to add its contents as well, pass the
-              <option>--recursive</option> switch.</para>
+              <option>--recursive</option> (<option>-r</option>) switch.</para>
           </listitem>
         </varlistentry>
 
@@ -339,7 +339,7 @@
               duplicate of <filename>foo</filename>.
               <filename>bar</filename> is automatically scheduled for
               addition.  When <filename>bar</filename> is added to the
-              repository on the next commit, it's copy-history is
+              repository on the next commit, its copy-history is
               recorded (as having originally come from
               <filename>foo</filename>.)</para>
           </listitem>
@@ -594,6 +594,12 @@
         same.  The second column shows the working-revision of the
         item.  The third and fourth column show the revision in which
         the item last changed, and who changed it.</para>
+
+      <para>All of the above invocations to <command>svn
+        status</command> do not contact the repository, they work only
+        locally by comparing the metadata in the
+        <filename>.svn</filename> directory with the working
+        area.</para>
            
       <para>Finally, there is a <option>--show-updates</option>
         (<option>-u</option>) switch, which contacts the
@@ -1256,7 +1262,7 @@ Checked out revision 3.
       <para>The resulting directory will not contain any
         <filename>.svn</filename> administrative areas, and all
         property metadata will be lost.  (Hint: don't use this
-        tecnique for backing up; it's probably better for rolling
+        technique for backing up; it's probably better for rolling
         source distributions.)</para>
 
     </sect2>
@@ -1289,7 +1295,7 @@ _    2698   rooneg        0 Jul 24 18:07 tags/
 _    2785    brane        0 Jul 29 19:07 trunk/
       </screen>
 
-      <para>The columns tell you if there file has any properties
+      <para>The columns tell you if a file has any properties
         (<quote>P</quote> if it does, <quote>_</quote> if it doesn't),
         the revision it was last updated at, the user who last updated
         it, it's size, the date it was last updated, and the
