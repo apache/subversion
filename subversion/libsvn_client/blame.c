@@ -258,30 +258,33 @@ log_message_receiver (void *baton,
   else
     {
       apr_hash_index_t *hi;
-      const void *key;
-      void *val;
-      int len;
+
       for (hi = apr_hash_first (pool, changed_paths); hi;
            hi = apr_hash_next (hi))
         {
-          const char *path;
-          apr_hash_this (hi, &key, NULL, &val);
-          path = key;
-          change = val;
-          len = strlen (path);
+          const void *key;
+          apr_ssize_t klen;
+          void *val;
 
-          if (strncmp (path, lmb->path, len) == 0 && lmb->path[len] == '/')
-            break;
+          apr_hash_this (hi, &key, &klen, &val);
+          change = val;
+
+          if ((strncmp (key, lmb->path, klen) == 0)
+              && (lmb->path[klen] == '/')
+              && (change->copyfrom_path))
+            {
+              lmb->path = svn_path_join (change->copyfrom_path, 
+                                         lmb->path + klen + 1,
+                                         lmb->pool);
+              break;
+            }
         }
 
-      if (! change || !change->copyfrom_path)
+      if (! change || ! change->copyfrom_path)
         return svn_error_createf (APR_EGENERAL, NULL,
                                   "Missing changed-path information for "
-                                  "revision %"SVN_REVNUM_T_FMT" of '%s'",
+                                  "revision %" SVN_REVNUM_T_FMT " of '%s'",
                                   rev->revision, rev->path);
-
-      lmb->path = svn_path_join (change->copyfrom_path, lmb->path + len + 1,
-                                 lmb->pool);
     }
 
   return SVN_NO_ERROR;
