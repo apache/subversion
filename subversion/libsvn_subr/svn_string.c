@@ -600,21 +600,3 @@ svn_boolean_t svn_cstring_match_glob_list (const char *str,
 
   return FALSE;
 }
-
-
-const char *
-svn_cstring_from_md5_digest (unsigned char digest[], apr_pool_t *pool)
-{
-  static const char *hex = "0123456789abcdef";
-  char *str = apr_palloc (pool, (MD5_DIGESTSIZE * 2) + 1);
-  int i;
-
-  for (i = 0; i < MD5_DIGESTSIZE; i++)
-    {
-      str[i*2]   = hex[digest[i] >> 4];
-      str[i*2+1] = hex[digest[i] & 0x0f];
-    }
-  str[i*2] = '\0';
-
-  return str;
-}
