@@ -89,6 +89,10 @@ class CollectData(rcsparse.Sink):
     self.cvsroot = cvsroot
     self.revs = open(log_fname_base + REVS_SUFFIX, 'w')
     self.resync = open(log_fname_base + RESYNC_SUFFIX, 'w')
+    self.default_branch = None
+
+  def set_default_branch(self, branch):
+    self.default_branch = branch
 
   def set_fname(self, fname):
     "Prepare to receive data for a new file."
@@ -254,6 +258,11 @@ class CollectData(rcsparse.Sink):
       self.resync.write('%08lx %s %08lx\n' % (old_ts, digest, timestamp))
 
     branch_name = self.get_branch_name(revision)
+
+    if self.default_branch:
+      default_branch_name = self.get_branch_name(self.default_branch)
+      # Name might be None, if it's an unlabeled branch.
+      # todo: kff fooo: issue #1510 working here
 
     write_revs_line(self.revs, timestamp, digest, op, revision, self.fname,
                     branch_name, self.get_tags(revision),
