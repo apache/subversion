@@ -23,6 +23,7 @@
 #include "svn_repos.h"
 #include "svn_fs.h"
 #include "svn_xml.h"
+#include "svn_path.h"
 
 #include "dav_svn.h"
 
@@ -32,6 +33,8 @@ typedef struct {
 
   /* the revision we are updating to. used to generated IDs. */
   svn_fs_root_t *rev_root;
+
+  const char *anchor;
 
   /* ### the two fields below will go away, when we switch to filters for
      ### report generation */
@@ -207,7 +210,7 @@ static svn_error_t * upd_replace_root(void *edit_baton,
 
   b->uc = uc;
   b->pool = pool;
-  b->path = "/";
+  b->path = uc->anchor;
 
   *root_baton = b;
 
@@ -404,6 +407,23 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
     }
 
   fs_base = svn_stringbuf_create(resource->info->repos_path, resource->pool);
+
+  /* ### temp hack until begin_report gets separate anchor/target params */
+  if (resource->collection)
+    {
+      uc.anchor = resource->info->repos_path;
+      svn_stringbuf_appendcstr(fs_base, "/.");
+    }
+  else
+    {
+      svn_stringbuf_t *anchor;
+      svn_stringbuf_t *target;
+
+      svn_path_split(fs_base, &anchor, &target, svn_path_repos_style,
+                     resource->pool);
+      uc.anchor = anchor->data;
+    }
+
   serr = svn_repos_begin_report(&rbaton, revnum, repos->username, repos->fs,
                                 fs_base, editor, &uc, resource->pool);
   if (serr != NULL)
