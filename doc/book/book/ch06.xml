@@ -1837,7 +1837,7 @@ $ cat /usr/local/bin/svn
 #!/bin/sh
 
 umask 002
-/usr/local/subversion/bin/svn
+/usr/local/subversion/bin/svn "$@"
 
 </screen>
 
