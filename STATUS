@@ -126,3 +126,11 @@ Candidate changes:
       Reduce memory leaks in Perl bindings.
     Votes:
       +1: clkao
+
+  * r11708
+    Fix a bug which caused certain unfinished switch operations to leave
+    the working copy in a busticated state if interrupted.
+    Justification:
+      Did you miss the part where I said "working copy ... busticated state"?
+    Votes:
+      +1: cmpilato
