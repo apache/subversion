@@ -148,21 +148,22 @@ struct search_groups_baton
  *
  * If no match, return true (to continue enumerating).
  */
-static svn_boolean_t
-search_groups (const char *name, const char *value, void *baton)
+static svn_boolean_t search_groups(const char *name,
+                                   const char *value,
+                                   void *baton)
 {
   struct search_groups_baton *b = baton;
-  apr_array_header_t *subvals = svn_cstring_split (value, ',', TRUE, b->pool);
+  apr_array_header_t *subvals = svn_cstring_split(value, ',', TRUE, b->pool);
   int j;
 
   for (j = 0; j < subvals->nelts; j++)
     {
-      const char *this_pattern = APR_ARRAY_IDX (subvals, j, char *);
-      apr_status_t apr_err = apr_fnmatch (this_pattern, b->requested_host, 0);
+      const char *this_pattern = APR_ARRAY_IDX(subvals, j, char *);
+      apr_status_t apr_err = apr_fnmatch(this_pattern, b->requested_host, 0);
 
-      if (APR_STATUS_IS_SUCCESS (apr_err))
+      if (APR_STATUS_IS_SUCCESS(apr_err))
         {
-          b->proxy_group = apr_pstrdup (b->pool, name);
+          b->proxy_group = apr_pstrdup(b->pool, name);
           return FALSE;
         }
     }
@@ -178,45 +179,44 @@ search_groups (const char *name, const char *value, void *baton)
  *
  * If return error, the effect on the return parameters is undefined.
  */
-static svn_error_t *
-get_proxy (const char **proxy_host,
-           int *proxy_port,
-           const char **proxy_username,
-           const char **proxy_password,
-           const char *requested_host,
-           apr_pool_t *pool)
+static svn_error_t *get_proxy(const char **proxy_host,
+                              int *proxy_port,
+                              const char **proxy_username,
+                              const char **proxy_password,
+                              const char *requested_host,
+                              apr_pool_t *pool)
 {
   struct search_groups_baton gb;
   svn_config_t *cfg;
   const char *port_str;
 
-  SVN_ERR (svn_config_read_proxies (&cfg, pool));
+  SVN_ERR( svn_config_read_proxies(&cfg, pool) );
 
   /* Start out with defaults. */
-  svn_config_get (cfg, proxy_host, "default", "host", NULL);
-  svn_config_get (cfg, &port_str, "default", "port", NULL);
-  svn_config_get (cfg, proxy_username, "default", "username", NULL);
-  svn_config_get (cfg, proxy_password, "default", "password", NULL);
+  svn_config_get(cfg, proxy_host, "default", "host", NULL);
+  svn_config_get(cfg, &port_str, "default", "port", NULL);
+  svn_config_get(cfg, proxy_username, "default", "username", NULL);
+  svn_config_get(cfg, proxy_password, "default", "password", NULL);
 
   /* Search for a proxy pattern specific to this host. */
   gb.requested_host = requested_host;
   gb.proxy_group = NULL;
   gb.pool = pool;
-  (void) svn_config_enumerate (cfg, "groups", search_groups, &gb);
+  (void) svn_config_enumerate(cfg, "groups", search_groups, &gb);
 
   if (gb.proxy_group)
     {
-      svn_config_get (cfg, proxy_host, gb.proxy_group, "host", *proxy_host);
-      svn_config_get (cfg, &port_str, gb.proxy_group, "port", port_str);
-      svn_config_get (cfg, proxy_username, gb.proxy_group, "username",
-                      *proxy_username);
-      svn_config_get (cfg, proxy_password, gb.proxy_group, "password",
-                      *proxy_password);
+      svn_config_get(cfg, proxy_host, gb.proxy_group, "host", *proxy_host);
+      svn_config_get(cfg, &port_str, gb.proxy_group, "port", port_str);
+      svn_config_get(cfg, proxy_username, gb.proxy_group, "username",
+                     *proxy_username);
+      svn_config_get(cfg, proxy_password, gb.proxy_group, "password",
+                     *proxy_password);
     }
 
   /* Special case: convert the port value, if any. */
   if (port_str)
-    *proxy_port = atoi (port_str);
+    *proxy_port = atoi(port_str);
   else
     *proxy_port = -1;
 
@@ -255,12 +255,11 @@ struct proxy_auth_baton
  * server, not on the Subversion repository server that is the real
  * destination.)  Do we have any need to support proxy realms?
  */
-static int
-proxy_auth (void *userdata,
-            const char *realm,
-            int attempt,
-            char *username,
-            char *password)
+static int proxy_auth(void *userdata,
+                      const char *realm,
+                      int attempt,
+                      char *username,
+                      char *password)
 {
   struct proxy_auth_baton *pab = userdata;
 
@@ -269,8 +268,8 @@ proxy_auth (void *userdata,
 
   /* Else. */
 
-  apr_cpystrn (username, pab->username, NE_ABUFSIZ);
-  apr_cpystrn (password, pab->password, NE_ABUFSIZ);
+  apr_cpystrn(username, pab->username, NE_ABUFSIZ);
+  apr_cpystrn(password, pab->password, NE_ABUFSIZ);
 
   return 0;
 }
@@ -357,32 +356,32 @@ svn_ra_dav__open (void **session_baton,
     const char *proxy_username;
     const char *proxy_password;
     
-    SVN_ERR (get_proxy (&proxy_host,
-                        &proxy_port,
-                        &proxy_username,
-                        &proxy_password,
-                        uri.host,
-                        pool));
+    SVN_ERR( get_proxy(&proxy_host,
+                       &proxy_port,
+                       &proxy_username,
+                       &proxy_password,
+                       uri.host,
+                       pool) );
 
     if (proxy_port == -1)
       proxy_port = 80;
 
     if (proxy_host)
       {
-        ne_session_proxy (sess, proxy_host, proxy_port);
-        ne_session_proxy (sess2, proxy_host, proxy_port);
+        ne_session_proxy(sess, proxy_host, proxy_port);
+        ne_session_proxy(sess2, proxy_host, proxy_port);
 
         if (proxy_username)
           {
             /* Allocate the baton in pool, not on stack, so it will
                last till whenever Neon needs it. */
-            struct proxy_auth_baton *pab = apr_palloc (pool, sizeof (*pab));
+            struct proxy_auth_baton *pab = apr_palloc(pool, sizeof (*pab));
 
             pab->username = proxy_username;
             pab->password = proxy_password ? proxy_password : "";
         
-            ne_set_proxy_auth (sess, proxy_auth, pab);
-            ne_set_proxy_auth (sess2, proxy_auth, pab);
+            ne_set_proxy_auth(sess, proxy_auth, pab);
+            ne_set_proxy_auth(sess2, proxy_auth, pab);
           }
       }
   }
