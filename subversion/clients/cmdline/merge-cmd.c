@@ -90,10 +90,7 @@ svn_cl__merge (apr_getopt_t *os,
 {
   apr_array_header_t *targets;
   svn_client_auth_baton_t *auth_baton;
-  const svn_delta_editor_t *trace_editor;
-  void *trace_edit_baton;
   svn_stringbuf_t *source1, *source2, *sourcepath1, *sourcepath2, *targetpath;
-  svn_stringbuf_t *parent_dir, *entry;
 
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
