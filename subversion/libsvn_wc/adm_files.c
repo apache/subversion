@@ -44,15 +44,6 @@
 
 /*** File names in the adm area. ***/
 
-static const char *
-adm_subdir (void)
-{
-  /* Functionized to make it easier for us to offer alternate
-     administrative area locations someday. */
-
-  return SVN_WC_ADM_DIR_NAME;
-}
-
 
 /* Return the path to something in PATH's administrative area.
  * 
@@ -77,7 +68,7 @@ v_extend_with_adm_name (const char *path,
   const char *this;
 
   /* Tack on the administrative subdirectory. */
-  path = svn_path_join (path, adm_subdir (), pool);
+  path = svn_path_join (path, SVN_WC_ADM_DIR_NAME, pool);
 
   /* If this is a tmp file, name it into the tmp area. */
   if (use_tmp)
@@ -1191,7 +1182,7 @@ init_adm (const char *path,
      After this exists, the dir is considered complete. */
   SVN_ERR (svn_io_write_version_file 
            (svn_path_join_many (pool, 
-                                path, adm_subdir (), SVN_WC__ADM_FORMAT, 
+                                path, SVN_WC_ADM_DIR_NAME, SVN_WC__ADM_FORMAT, 
                                 NULL),
             SVN_WC__VERSION, pool));
 
@@ -1227,7 +1218,7 @@ svn_wc__adm_destroy (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
   /* Well, the coast is clear for blowing away the administrative
      directory, which also removes the lock file */
   path = svn_path_join (svn_wc_adm_access_path(adm_access),
-                        adm_subdir (), pool);
+                        SVN_WC_ADM_DIR_NAME, pool);
   SVN_ERR (svn_io_remove_dir (path, pool));
   SVN_ERR (svn_wc_adm_close (adm_access));
 
