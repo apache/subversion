@@ -166,3 +166,42 @@ editor.
   if an explicit tag wasn't supplied; or reject a commit if there were
   merge conflicts; etc., etc. Then all of this boils down to putting
   examples into contrib/ (once we have it).
+
+* svn sync
+
+  Imagine an intelligent update that knows to add new files and remove
+  files that you've removed, and all recursively (without having to svn
+  add, svn rm, ad nauseam).
+
+  So, for example, you've got:
+  
+  $ ls -1
+    foo.c
+    bar.c
+  
+  $ touch qux
+  $ touch qux/fizzle
+  $ touch qux/smootch
+  
+  $svn up
+    ? qux
+    M foo.c
+  
+  $ rm bar.c
+  
+  *
+  
+  $ svn sync
+    A qux
+    A qux/fizzle
+    A qux/smootch
+    M foo.c
+    R bar.c
+    
+  $ svn ci -m "Boy have I been busy."
+    ...
+  
+  * Note, that if you were to do an update at this point, bar.c would be
+    pulled from the repository
+
+    -Fitz
