@@ -262,4 +262,4 @@ category of strings.  Here the same applies as does for the quotes: Adhere
 to them on all points for which there is no explicit policy set out by the
 translation team for your language.
 
-vim: set tw=72 ts=4 sw=4 sts=4 et fo-=w :
+vim: set tw=72 ts=2 sw=2 sts=2 et fo-=w fo+=n js :
