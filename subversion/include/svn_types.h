@@ -56,8 +56,18 @@
 #ifndef __SVN_TYPES_H__
 #define __SVN_TYPES_H__
 
-#include <svn_string.h>   /* defines svn_string_t */
 
+#include <stdlib.h>          /* defines size_t */
+
+
+/* a string of bytes  */
+
+typedef struct svn_string_t
+{
+  char *data;                /* pointer to the bytestring */
+  size_t len;                /* length of bytestring */
+  size_t blocksize;          /* total size of buffer allocated */
+} svn_string_t;
 
 
 /* a property is a pair of strings */
@@ -119,7 +129,7 @@ typedef struct svn_ver_t
 {
   unsigned long node_num;             /* the root node of a tree */
   svn_proplist_t *proplist;           /* version's properties */
-} svn_ver_t
+} svn_ver_t;
 
 
 /* These things aren't critical to define yet; I'll leave them to
@@ -135,8 +145,8 @@ typedef struct svn_ver_t
 /* This is totally wrong right now; these should be filesystem-level
    actions, not client-level actions.  */
 
-typedef enum svr_action {add, rm, mv, checkout, 
-                         commit, import, update} svn_svr_action_t;
+typedef enum {add, rm, mv, checkout, 
+              commit, import, update} svn_svr_action_t;
 
 
 
@@ -145,7 +155,7 @@ typedef enum svr_action {add, rm, mv, checkout,
    network layer when it performs initial authentication with some
    database.  */
 
-typdef struct svn_user_t
+typedef struct svn_user_t
 {
   /* The first three fields are filled in by the network layer */
 
@@ -167,9 +177,10 @@ typdef struct svn_user_t
 } svn_user_t;
 
 
+
 /* YABT:  Yet Another Boolean Type */
 
-typedef int                           svn_boolean_t
+typedef int svn_boolean_t;
 
 #ifndef TRUE
 #define TRUE 1
@@ -178,7 +189,6 @@ typedef int                           svn_boolean_t
 #ifndef FALSE
 #define FALSE 0
 #endif /* FALSE */
-
 
 
 /* temporary placeholders, till we write the real thing!  */

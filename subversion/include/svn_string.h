@@ -52,16 +52,7 @@
 #define __SVN_STRING_H__
 
 
-
-/* a string of bytes  */
-
-typedef struct svn_string_t
-{
-  char *data;                /* pointer to the bytestring */
-  size_t len;                /* length of bytestring */
-  size_t blocksize;          /* total size of buffer allocated */
-} svn_string_t;
-
+#include <svn_types.h>       /* defines svn_string_t and svn_boolean_t */
 
 
 
@@ -106,7 +97,7 @@ svn_boolean_t svn_string_compare (svn_string_t *str1, svn_string_t *str2);
 
 /* convenience routine */
 
-void svn_string_print (svn_string_t *str)
+void svn_string_print (svn_string_t *str);
 
 #endif  /* __SVN_STRING_H__ */
 
