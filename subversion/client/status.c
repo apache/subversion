@@ -144,11 +144,11 @@ svn_cl__print_status_list (apr_hash_t *statushash, apr_pool_t *pool)
   /* Loop over array, printing each name/status-structure */
   for (i = 0; i < statusarray->nelts; i++)
     {
-      apr_item_t *item;
+      svn_item_t *item;
       const char *path;
       svn_wc_status_t *status;
       
-      item = (((apr_item_t **)(statusarray)->elts)[i]);
+      item = (((svn_item_t **)(statusarray)->elts)[i]);
       path = (const char *) item->key;
       status = (svn_wc_status_t *) item->data;
 

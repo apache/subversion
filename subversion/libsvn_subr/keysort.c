@@ -44,24 +44,22 @@
    (void *)/length as keys.  We don't want to lose this information.
 
    Therefore, it makes sense to store pointers to {void *, size_t}
-   structures in our array.  No such apr object
-   exists... BUT... there's a type in apr_tables.h called `apr_item_t'
-   which contains {char *, size_t, void *}.  If store these objects in
-   our array (rather than define our own new type), then we get the
-   hash value *for free*.  When looping over the final array, we don't
-   need to call apr_hash_get().  Major bonus!
-
+   structures in our array.  No such apr object exists... BUT... if we
+   can use a new type svn_item_t which contains {char *, size_t, void
+   *}.  If store these objects in our array, we get the hash value
+   *for free*.  When looping over the final array, we don't need to
+   call apr_hash_get().  Major bonus!
  */
 
 
 int
 svn_sort_compare_as_paths (const void *obj1, const void *obj2)
 {
-  apr_item_t *item1, *item2;
+  svn_item_t *item1, *item2;
   svn_string_t str1, str2;
 
-  item1 = *((apr_item_t **) obj1);
-  item2 = *((apr_item_t **) obj2);
+  item1 = *((svn_item_t **) obj1);
+  item2 = *((svn_item_t **) obj2);
 
   str1.data = item1->key;
   str1.len = item1->size;
@@ -86,7 +84,7 @@ apr_hash_sorted_keys (apr_hash_t *ht,
   apr_array_header_t *ary;
 
   /* allocate an array with only one element to begin with. */
-  ary = apr_make_array (pool, 1, sizeof(apr_item_t *));
+  ary = apr_make_array (pool, 1, sizeof(svn_item_t *));
 
   /* loop over hash table and push all keys into the array */
   for (hi = apr_hash_first (ht); hi; hi = apr_hash_next (hi))
@@ -94,15 +92,15 @@ apr_hash_sorted_keys (apr_hash_t *ht,
       const void *key;
       apr_size_t klen;
       void *value;
-      apr_item_t **receiver;
-      apr_item_t *item = apr_pcalloc (pool, sizeof(*item));
+      svn_item_t **receiver;
+      svn_item_t *item = apr_pcalloc (pool, sizeof(*item));
 
       apr_hash_this (hi, &key, &klen, &value);
       item->key = (char *) key;
       item->size = klen;
       item->data = value;
       
-      receiver = (apr_item_t **)apr_push_array (ary);
+      receiver = (svn_item_t **)apr_push_array (ary);
       *receiver = item;
     }
   
