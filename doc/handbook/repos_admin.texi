@@ -202,7 +202,7 @@ $ svnadmin shell repos
   <  d.0.ds>  [   496]  0        9736    build.conf
   <  5.0.d9>  [   477]  1           0    ac-helpers/
   <   y.0.1>  [     1]  0        1805    subversion.dsp
-[...]
+@dots{}
 <500: />$ exit
 @end example
 
@@ -457,7 +457,7 @@ $ svnadmin lstxns myrepos
 $ svnadmin lstxns --long myrepos
 Transaction 319
 Created: 2002-07-14T12:57:22.748388Z
-[...]
+@dots{}
 $ svnadmin rmtxns myrepos 319 321
 @end example
 
@@ -675,7 +675,7 @@ $ svnadmin dump myrepos > dumpfile
 * Dumped revision 0.
 * Dumped revision 1.
 * Dumped revision 2.
-[...]
+@dots{}
 @end example
 
 This stream describes every revision in your repository as a list of
@@ -701,7 +701,7 @@ $ svnadmin load newrepos < dumpfile
 <<< Started new txn, based on original revision 1
      * adding path : A ... done.
      * adding path : A/B ... done.
-[...]
+@dots{}
 ------- Committed new rev 1 (loaded from original rev 1) >>>
 
 <<< Started new txn, based on original revision 2

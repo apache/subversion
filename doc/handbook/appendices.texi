@@ -89,7 +89,7 @@ This last subcommand is new; it will not only remove local mods, but
 it will un-schedule operations such as adds and deletes.  It's the
 preferred way to revert a file; running @samp{rm file; svn up} will
 still work, but it blurs the purpose of updating.  And, while we're on
-this subject...
+this subject@dots{}
 
 
 @node Distinction between status and update

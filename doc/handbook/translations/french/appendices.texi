@@ -94,7 +94,7 @@ modifications locales, mais elle déprogramme aussi des opérations comme
 l'ajout et la suppression. C'est la méthode préférée pour restaurer un
 fichier; néanmoins exécution de @samp{rm file; svn up} continue de fonctionner
 mais çà détourne le propos de la mise à jour.  Et, pendant que nous somme
-sur ce sujet...
+sur ce sujet@dots{}
 
 @node Distinction entre état et mise à jour
 @subsection Distinction entre état et mise à jour

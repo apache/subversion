@@ -47,7 +47,7 @@ A  trunk/svn_check.dsp
 A  trunk/COMMITTERS
 A  trunk/configure.in
 A  trunk/IDEAS
-...
+@dots{}
 Checked out revision 2499.
 @end example
 
@@ -93,7 +93,7 @@ A  subv/svn_check.dsp
 A  subv/COMMITTERS
 A  subv/configure.in
 A  subv/IDEAS
-...
+@dots{}
 Checked out revision 2499.
 @end example
 
@@ -242,7 +242,7 @@ pour plus de détails.)
 
 @subsection Examinez vos modifications (@samp{svn status}, @samp{svn diff}, @samp{svn revert})
 
-Donc maintenant que vous avez fini vos modification... vous vous dites:
+Donc maintenant que vous avez fini vos modification@dots{} vous vous dites:
 Quelle sont les modifications que j'ai fait ? Comment les consulter?
 
 Subversion a été optimisé pour vous aider dans cette tâche, et il est 
@@ -479,7 +479,7 @@ pas supprimer un fichier.
 Dernier point, ces trois commandes (@samp{svn status}, @samp{svn diff},
 @samp{svn revert}) peuvent être utilisées sans accès réseau (sauf
 @samp{svn status -u}).  Ceci facilite la gestion de vos modifications en
-cour lorsque vous voyagez en avion ...
+cour lorsque vous voyagez en avion@dots{}
 
 @subsection Fusionner les modifications des autres (résolution de conflit)
 
@@ -618,22 +618,22 @@ l'option @option{--revision} (@option{-r}).
 
 @example
 $ svn log -r 5:19
-[...] # Montre les descriptions de modification de 5 à 19 dans l'ordre
-      # chronologique.
+@dots{} # Montre les descriptions de modification de 5 à 19 dans l'ordre
+        # chronologique.
 $ svn log -r 19:5
-[...] # Montre les descriptions de modification de 5 à 19 dans l'ordre
-      # inversé.
+@dots{} # Montre les descriptions de modification de 5 à 19 dans l'ordre
+        # inversé.
 $ svn log -r 8
-[...]
+@dots{}
 @end example
 
 Vous pouvez aussi examiner l'historique des descriptions de modification
 pour un unique fichier ou répertoire en spécifiant le chemin:
 @example
 $ svn log foo.c
-[...]
+@dots{}
 $ svn log http://foo.com/svn/trunk/code/foo.c
-[...]
+@dots{}
 @end example
 
 les commandes affichent les descriptions de modification uniquement pour
@@ -723,7 +723,7 @@ modifications alors que vous n'avez pas de copie de travail disponible:
 
 @example
 $ svn diff -r 23:24 http://foo.com/some/project
-[...]
+@dots{}
 @end example
 
 
@@ -801,7 +801,7 @@ sens @emph{humain}.
 
 C'est pour cette raison qu'il est de la responsabilité de l'utilisateur
 (et de l'administrateur du dépôt Subversion) de choisir de bonnes rêgles
-de nommage pour distinguer les branches, étiquetages...
+de nommage pour distinguer les branches, étiquetages@dots{}
 Par exemple, voici une bonne organisation possible de votre dépôt:
 
 @example
@@ -896,7 +896,7 @@ de la révision 102 de la branche @file{mooIRC-beto}.
 @example
 $ svn diff -r 101:102 http://foo.com/repos/mooIRC-beta
 
-[...]   # diffs sent to screen
+@dots{}   # diffs sent to screen
 
 $ svn merge -r 101:102 http://foo.com/repos/mooIRC-beta mooIRC
 U   mooIRC/glorb.c
@@ -927,7 +927,7 @@ Transmitting file data ..
 Committed revision 10.
 $
 
-[...] # le développeur continu et réalise qu'il y a une erreur
+@dots{} # le développeur continu et réalise qu'il y a une erreur
 
 $ svn merge -r 10:9 .
 U ./bar.c
@@ -956,7 +956,7 @@ Transmitting file data ..
 Committed revision 12.
 $
 
-[...] # le développeur continu et réalise qu'il y a une erreur
+@dots{} # le développeur continu et réalise qu'il y a une erreur
 
 $ svn merge -r 13:12 baz/foo.c baz/foo.c
 U ./baz/foo.c
@@ -1073,8 +1073,8 @@ $ cd ~/foobar
 $ svn merge http://svnhost/repos/vendor/foobar/foobar-1.0 \
             http://svnhost/repos/vendor/foobar/foobar-1.1
 $
-[...] # résoudre tous les conflits entre leurs modifications et vos
-      # modification.
+@dots{} # résoudre tous les conflits entre leurs modifications et vos
+        # modification.
 $ svn commit -m `merging foobar 1.1 into trunk'
 
 @end example
@@ -1467,7 +1467,7 @@ A  projectdir/subdir1/foo/rho.txt
 A  projectdir/subdir1/foo/pi.txt
 A  projectdir/subdir1/foo/tau.doc
 Checked out revision 128.
-[...]
+@dots{}
 @end example
 
 En modifiant la valeur de la propriété de @samp{svn:externals}, la
