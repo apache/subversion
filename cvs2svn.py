@@ -137,8 +137,7 @@ class CollectData(rcsparse.Sink):
       # for this time and log message.
       self.resync.write('%08lx %s %08lx\n' % (old_ts, digest, timestamp))
 
-    self.revs.write('%08lx %s %s %s %s\n' % (timestamp, digest,
-                                             op, revision, self.fname))
+    write_revs_line(self.revs, timestamp, digest, op, revision, self.fname)
 
 def branch_path(ctx, branch_name = None):
   if branch_name:
@@ -493,15 +492,18 @@ def read_resync(fname):
   return resync
 
 def parse_revs_line(line):
-  timestamp = int(line[:8], 16)
-  id = line[9:DIGEST_END_IDX]
-  op = line[DIGEST_END_IDX + 1]
-  idx = string.find(line, ' ', DIGEST_END_IDX + 3)
-  rev = line[DIGEST_END_IDX+3:idx]
-  fname = line[idx+1:-1]
+  data = line.split(' ', 4)
+  timestamp = int(data[0], 16)
+  id = data[1]
+  op = data[2]
+  rev = data[3]
+  fname = data[4][:-1] # strip \n
 
   return timestamp, id, op, rev, fname
 
+def write_revs_line(output, timestamp, digest, op, revision, fname):
+  output.write('%08lx %s %s %s ' % (timestamp, digest, op, revision))
+  output.write('%s\n' % fname);
 
 def pass1(ctx):
   cd = CollectData(ctx.cvsroot, DATAFILE)
@@ -535,8 +537,7 @@ def pass2(ctx):
     for record in resync[digest]:
       if record[0] <= timestamp <= record[1]:
         # bingo! remap the time on this (record[2] is the new time).
-        output.write('%08lx %s %s %s %s\n'
-                     % (record[2], digest, op, rev, fname))
+        write_revs_line(output, record[2], digest, op, rev, fname)
 
         print 'RESYNC: %s (%s) : old time="%s" new time="%s"' \
               % (relative_name(ctx.cvsroot, fname),
