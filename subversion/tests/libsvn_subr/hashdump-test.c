@@ -125,7 +125,7 @@ main (void)
   
   if (err)
     {
-      svn_error_t *readerr = svn_create_error (err, NULL, 
+      svn_error_t *readerr = svn_create_error (err, 0, 
                                                "hash_read() failed.",
                                                NULL, pool);
       svn_handle_error (readerr, stderr);
