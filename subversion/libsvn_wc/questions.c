@@ -28,10 +28,11 @@
 
 
 
+/* kff todo: make this compare repository too?  Or do so in parallel code. */
 svn_error_t *
-svn_wc__check_wc (const svn_string_t *path,
-                  svn_boolean_t *is_wc,
-                  apr_pool_t *pool)
+svn_wc_check_wc (const svn_string_t *path,
+                 svn_boolean_t *is_wc,
+                 apr_pool_t *pool)
 {
   /* Nothing fancy, just check for an administrative subdir and a
      `README' file. */ 

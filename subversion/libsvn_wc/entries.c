@@ -492,7 +492,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
 
   if (kind == svn_node_dir)
     {
-      err = svn_wc__check_wc (path, &is_wc, pool);
+      err = svn_wc_check_wc (path, &is_wc, pool);
       if (err)
         return err;
       else if (! is_wc)
@@ -525,7 +525,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
       svn_string_t *dir, *basename;
       svn_path_split (path, &dir, &basename, svn_path_local_style, pool);
       
-      err = svn_wc__check_wc (dir, &is_wc, pool);
+      err = svn_wc_check_wc (dir, &is_wc, pool);
       if (err)
         return err;
       else if (! is_wc)

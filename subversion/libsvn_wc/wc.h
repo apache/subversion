@@ -29,17 +29,7 @@
 #define SVN_WC__PROP_REJ_EXT  ".prej"
 
 
-/*** Asking questions about a working copy. ***/
-
-/* Set *IS_WC to true iff PATH is a valid working copy directory, else
-   set it to false.  PATH must exist, either as a file or directory,
-   else an error will be returned.
-   (kff todo: make this compare repository too?) */
-svn_error_t *svn_wc__check_wc (const svn_string_t *path,
-                               svn_boolean_t *is_wc,
-                               apr_pool_t *pool);
-
-
+
 /** File comparisons **/
 
 /* Set *SAME to non-zero if file1 and file2 have the same contents,

@@ -39,6 +39,17 @@
 
 
 
+/*** Asking questions about a working copy. ***/
+
+/* Set *IS_WC to true iff PATH is a valid working copy directory, else
+   set it to false.  PATH must exist, either as a file or directory,
+   else an error will be returned. */
+svn_error_t *svn_wc_check_wc (const svn_string_t *path,
+                              svn_boolean_t *is_wc,
+                              apr_pool_t *pool);
+
+
+
 /*** Detecting modification. ***/
 
 /* Set *MODIFIED_P to non-zero if FILENAME's text is modified

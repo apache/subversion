@@ -776,8 +776,8 @@ add_or_replace_file (svn_string_t *name,
         
   /* Make sure we've got a working copy to put the file in. */
   /* kff todo: need stricter logic here */
-  err = svn_wc__check_wc (parent_dir_baton->path, &is_wc,
-                          parent_dir_baton->pool);
+  err = svn_wc_check_wc (parent_dir_baton->path, &is_wc,
+                         parent_dir_baton->pool);
   if (err)
     return err;
   else if (! is_wc)
