@@ -35,34 +35,39 @@
 static void 
 notify_added (void *baton, const char *path)
 {
-  apr_pool_t *pool = baton;
-  svn_stringbuf_t *spath = svn_stringbuf_create (path, pool);
+  /* the pool (BATON) is typically the global pool; don't keep filling it */
+  apr_pool_t *subpool = svn_pool_create (baton);
+
+  svn_stringbuf_t *spath = svn_stringbuf_create (path, subpool);
   svn_wc_entry_t *entry;
   svn_error_t *err;
   const char *type = "      ";  /* fill with "binary" if binary, etc */
 
-  err = svn_wc_entry (&entry, spath, pool);
+  /* ### this sucks. we have to open/parse the entries file to get this
+     ### information. when adding thousands of files, this blows... */
+  err = svn_wc_entry (&entry, spath, subpool);
   if (err)
     {
       printf ("WARNING: error fetching entry for %s\n", path);
-      return;
+      goto done;
     }
   else if (! entry)
     {
       printf ("WARNING: apparently failed to add %s\n", path);
-      return;
+      goto done;
     }
            
   if (entry->kind == svn_node_file)
     {
       const svn_string_t *value;
 
-      err = svn_wc_prop_get (&value, SVN_PROP_MIME_TYPE, path, pool);
+      /* ### and again: open/parse a properties file. urk... */
+      err = svn_wc_prop_get (&value, SVN_PROP_MIME_TYPE, path, subpool);
       if (err)
         {
           printf ("WARNING: error fetching %s property for %s\n",
                   SVN_PROP_MIME_TYPE, path);
-          return;
+          goto done;
         }
 
       /* If the property exists and it doesn't start with `text/', we'll
@@ -72,35 +77,10 @@ notify_added (void *baton, const char *path)
     }
 
   printf ("A  %s  %s\n", type, path);
+
+ done:
+  svn_pool_destroy (subpool);
 }
-
-
-static void 
-notify_deleted (void *baton, const char *path)
-{
-  printf ("D  %s\n", path);
-}
-
-
-static void 
-notify_restored (void *baton, const char *path)
-{
-  printf ("Restored %s\n", path);
-}
-
-
-static void 
-notify_reverted (void *baton, const char *path)
-{
-  printf ("Reverted %s\n", path);
-}
-
-
-static void
-notify_updated (void *baton, const char *path)
-{
-  printf ("U   %s\n", path);
-} 
 
 
 void svn_cl__notify_func (void *baton, 
@@ -114,19 +94,19 @@ void svn_cl__notify_func (void *baton,
       return;
 
     case svn_wc_notify_delete:
-      notify_deleted (baton, path);
+      printf ("D  %s\n", path);
       return;
 
     case svn_wc_notify_restore:
-      notify_restored (baton, path);
+      printf ("Restored %s\n", path);
       return;
 
     case svn_wc_notify_revert:
-      notify_reverted (baton, path);
+      printf ("Reverted %s\n", path);
       return;
 
     case svn_wc_notify_update:
-      notify_updated (baton, path);
+      printf ("U   %s\n", path);
       return;
 
     default:
