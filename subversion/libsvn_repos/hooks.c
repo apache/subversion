@@ -41,8 +41,12 @@
 /* NAME, CMD and ARGS are the name, path to and arguments for the hook
    program that is to be run.  If CHECK_EXITCODE is TRUE then the hook's
    exit status will be checked, and if an error occurred the hook's stderr
-   output will be added to the returned error.  If CHECK_EXITCODE is FALSE
-   the hook's exit status will be ignored. */
+   output will be added to the returned error.
+
+   If CHECK_EXITCODE is FALSE the hook's exit status will be ignored.
+
+   If STDIN_HANDLE is non-null, pass it as the hook's stdin, else pass
+   no stdin to the hook. */
 static svn_error_t *
 run_hook_cmd (const char *name,
               const char *cmd,
@@ -258,14 +262,11 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
   if ((hook = check_hook_cmd (hook, pool)))
     {
       const char *args[6];
-      apr_file_t *stdin_handle;
+      apr_file_t *stdin_handle = NULL;
 
       /* Pass the new value as stdin to hook */
       if (new_value)
         SVN_ERR (create_temp_file (&stdin_handle, new_value, pool));
-      else
-        SVN_ERR (create_temp_file (&stdin_handle, svn_string_create ("", pool),
-                                   pool));
 
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
@@ -277,7 +278,8 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
       SVN_ERR (run_hook_cmd ("pre-revprop-change", hook, args, TRUE,
                              stdin_handle, pool));
 
-      SVN_ERR (svn_io_file_close (stdin_handle, pool));
+      if (stdin_handle)
+        SVN_ERR (svn_io_file_close (stdin_handle, pool));
     }
   else
     {
@@ -309,14 +311,11 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
   if ((hook = check_hook_cmd (hook, pool)))
     {
       const char *args[6];
-      apr_file_t *stdin_handle;
+      apr_file_t *stdin_handle = NULL;
 
       /* Pass the new value as stdin to hook */
       if (old_value)
         SVN_ERR (create_temp_file (&stdin_handle, old_value, pool));
-      else
-        SVN_ERR (create_temp_file (&stdin_handle, svn_string_create ("", pool),
-                                   pool));
 
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
@@ -328,7 +327,8 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
       SVN_ERR (run_hook_cmd ("post-revprop-change", hook, args, FALSE,
                              stdin_handle, pool));
       
-      SVN_ERR (svn_io_file_close (stdin_handle, pool));
+      if (stdin_handle)
+        SVN_ERR (svn_io_file_close (stdin_handle, pool));
     }
 
   return SVN_NO_ERROR;
