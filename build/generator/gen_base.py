@@ -700,7 +700,7 @@ class TargetJavaClasses(TargetJava):
         # directory as the source files, the object path may need
         # adjustment.  To this effect, take "target_ob.classes" into
         # account.
-        dirs = string.split(objname, os.sep)
+        dirs = string.split(objname, '/')
         i = len(dirs) - 2  # Last element is the .class file name.
         while i >= 0:
           if dirs[i] in self.packages:
@@ -729,7 +729,7 @@ class TargetJavaClasses(TargetJava):
     graph.add(DT_LIST, LT_TARGET_DIRS, self.path)
     graph.add(DT_LIST, LT_TARGET_DIRS, self.classes)
     for pattern in string.split(self.sources):
-      idx = string.rfind(pattern, os.sep)
+      idx = string.rfind(pattern, '/')
       if idx != -1:
         ### hmm. probably shouldn't be os.path.join() right here
         ### (at this point in the control flow; defer to output)
