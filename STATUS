@@ -22,6 +22,12 @@ branch, the log message will include the names of all who voted for
 it, as well as the original author and the person making the commit.
 All of these people are considered equally answerable for bugs.
 
+Thursday, Jan. 8th, 2004 is the deadline for candidate changes to be
+voted on.  The sooner a change is listed, the more time people have to
+review and vote.  (Obviously, emergency bugs can be reported, fixed,
+and voted on at any time -- this deadline is for changes that we
+already know about.)
+
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
 
    * r8016, r8019, r8028
