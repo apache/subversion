@@ -40,7 +40,7 @@
  * @return java.util.Date
  */
 jobject 
-date__create(JNIEnv *env, jboolean *hasException, long time);
+date__create(JNIEnv *env, jboolean *hasException, jlong time);
 
 /**
  * creates a java.util.Date instance out of a apr_time_t values
