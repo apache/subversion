@@ -196,7 +196,7 @@ blame_delete_range (struct file_rev_baton *db, apr_off_t start,
   return SVN_NO_ERROR;
 }
 
-/* Insert a chunk of blame associated with DB->REV starting
+/* Insert a chunk of blame associated with DB->rev starting
    at token START and continuing for LENGTH tokens */
 static svn_error_t *
 blame_insert_range (struct file_rev_baton *db, apr_off_t start,
