@@ -212,46 +212,40 @@ svn_path_split_if_file(const char *path,
                        const char **pfile,
                        apr_pool_t *pool);
 
-/** Find the common prefix of the paths in @a targets, and remove
- * redundant paths if @a remove_redundancies is true.  The elements in
- * @a targets must be existing files or directories (as const char *).
+/** Return a condensed copy of the paths in @targets as an absolute
+ * path that is the common ancestor of each of those targets (in @a
+ * *pbasename) and an array of paths relative to that common directory
+ * (in @a *pcondensed_targets).  paths.  Remove redundancies as
+ * determined by the @a depth parameter, and remove duplicate paths.
  *
- * Each of the elements in @a targets must be a URL, or an existing file or 
- * directory (as const char *).
+ * Each of the elements in @a targets must be a URL, or a (preferably
+ * existing) file or directory (as const char *).
  *
- *   - Set @a *pbasename to the absolute path of the common parent
- *     directory of all of the targets (if the targets are
- *     files/directories), or the common URL prefix of the targets (if
- *     they are URLs).  If the targets have no common prefix, or are a 
- *     mix of URLs and local paths, set @a *pbasename to the empty string.
+ *   - If there is no common ancestor, set @a *pbasename to the empty
+ *     string.
  *
- *   - If @a pcondensed_targets is non-null, set @a *pcondensed_targets
- *     to an array of targets relative to @a *pbasename, and if 
- *     @a remove_redundancies is true, omit any paths/URLs that are
- *     descendants of another path/URL in @a targets.  If *pbasename
- *     is empty, @a *pcondensed_targets will contain full URLs and/or
- *     absolute paths; redundancies can still be removed (from both URLs 
- *     and paths).  If @a pcondensed_targets is null, leave it alone.  
+ *   - Determination of redundant targets depends on the value of @a
+ *     depth.  There are no redundancies for Depth 0.  For Depth 1, a
+ *     target is redundant if it is a file and an immediate child of
+ *     another target.  For Depth Infinity, any target that is the
+ *     child of another target is redundant.
  *
- * Else if there is exactly one directory target, then
+ *   - If @a pcondensed_targets is null, leave it alone.
  *
- *   - Set @a *pbasename to that directory, and
- *
- *   - If @a pcondensed_targets is non-null, set @a *pcondensed_targets
- *     to an array containing zero elements.  Else if
- *     @a pcondensed_targets is null, leave it alone.
- *
- * If there are no items in @a targets, set @a *pbasename and (if
- * applicable) @a *pcondensed_targets to @c NULL.
+ *   - If there are no items in @a targets, set @a *pbasename and (if
+ *     applicable) @a *pcondensed_targets to @c NULL.
  *
  * NOTE: There is no guarantee that @a *pbasename is within a working
  * copy.
- */
+ *
+ * ALSO NOTE: The function will not remove items whose redundancy
+ * can't be verified (for example, when the node kind of the path is
+ * important, and the path does not exist on disk). */
 svn_error_t *
 svn_path_condense_targets (const char **pbasename,
                            apr_array_header_t **pcondensed_targets,
                            const apr_array_header_t *targets,
-                           svn_boolean_t remove_redundancies,
+                           svn_depth_t depth,
                            apr_pool_t *pool);
 
 

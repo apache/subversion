@@ -138,7 +138,8 @@ svn_client_log (const apr_array_header_t *targets,
 
       /* Find the base URL and condensed targets relative to it. */
       SVN_ERR (svn_path_condense_targets (&base_url, &condensed_targets,
-                                          target_urls, TRUE, pool));
+                                          target_urls, svn_depth_infinity,
+                                          pool));
 
       if (condensed_targets->nelts == 0)
         (*((const char **)apr_array_push (condensed_targets))) = "";
@@ -154,7 +155,8 @@ svn_client_log (const apr_array_header_t *targets,
      purposes.  But we make sure to treat it as read-only, since when
      one operates on URLs, one doesn't expect it to change anything in
      the working copy. */
-  SVN_ERR (svn_path_condense_targets (&base_name, NULL, targets, TRUE, pool)); 
+  SVN_ERR (svn_path_condense_targets (&base_name, NULL, targets, 
+                                      svn_depth_infinity, pool)); 
   if (NULL != base_name)
     SVN_ERR (svn_client__open_ra_session (&session, ra_lib, base_url, 
                                           base_name, NULL, NULL, TRUE, TRUE, 

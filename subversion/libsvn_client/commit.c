@@ -731,7 +731,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
 
   /* Condense the target list. */
   SVN_ERR (svn_path_condense_targets (&base_dir, &rel_targets, targets,
-                                      nonrecursive ? FALSE : TRUE,
+                                      nonrecursive ? svn_depth_zero 
+                                                   : svn_depth_infinity,
                                       pool));
 
   /* No targets means nothing to commit, so just return. */
