@@ -7,6 +7,7 @@
 import os
 import sys
 import getopt
+import ConfigParser
 
 
 # for the generator modules
@@ -70,6 +71,8 @@ def _usage_exit():
   print "USAGE:  gen-make.py [options...] [conf-file]"
   print "  -s       skip dependency generation"
   print "  --debug  print lots of stuff only developers care about"
+  print "  --reload reuse all options from the previous invocation"
+  print "           of the script, except -s, -t, --debug and --reload"
   print "  -t TYPE  use the TYPE generator; can be one of:"
   items = gen_modules.items()
   items.sort()
@@ -155,7 +158,9 @@ class Options:
 if __name__ == '__main__':
   try:
     opts, args = getopt.getopt(sys.argv[1:], 'st:',
-                               ['with-apr=',
+                               ['debug',
+                                'reload',
+                                'with-apr=',
                                 'with-apr-util=',
                                 'with-apr-iconv=',
                                 'with-berkeley-db=',
@@ -171,7 +176,6 @@ if __name__ == '__main__':
                                 'enable-nls',
                                 'enable-bdb-in-apr-util',
                                 'vsnet-version=',
-                                'debug',
                                 ])
     if len(args) > 1:
       _usage_exit()
@@ -191,6 +195,13 @@ if __name__ == '__main__':
       skip = 1
     elif opt == '-t':
       gentype = val
+    elif opt == '--reload':
+      prev_conf = ConfigParser.ConfigParser()
+      prev_conf.read('gen-make.opts')
+      for opt, val in prev_conf.items('options'):
+        if opt != '--debug':
+          rest.add(opt, val)
+      del prev_conf
     else:
       rest.add(opt, val)
       if opt == '--with-httpd':
@@ -198,7 +209,7 @@ if __name__ == '__main__':
         rest.add('--with-apr-util', os.path.join(val, 'srclib', 'apr-util'))
         rest.add('--with-apr-iconv', os.path.join(val, 'srclib', 'apr-iconv'))
 
-  # Remember all options so other scripts can use them
+  # Remember all options so that --reload and other scripts can use them
   opt_conf = open('gen-make.opts', 'w')
   opt_conf.write('[options]\n')
   for opt, val in rest.list:
