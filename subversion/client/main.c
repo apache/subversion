@@ -275,7 +275,8 @@ read_from_file (svn_string_t **result, const char *filename, apr_pool_t *pool)
   /* ### this function must be fixed to do an apr_stat() for SIZE,
      ### alloc the buffer, then read the file into the buffer. Using
      ### an svn_string_t means quadratic memory usage: start with
-     ### BUFSIZE, allocate 2*BUFSIZE, then alloc 4*BUFSIZE, etc. */
+     ### BUFSIZE, allocate 2*BUFSIZE, then alloc 4*BUFSIZE, etc.
+     ### The pools keep each of those allocs around. */
 
   svn_string_t *res;
   apr_status_t apr_err;
