@@ -1170,11 +1170,11 @@ Committed revision 350.
         este changeset particular ya no se verá reflejado en la
         revisión <literal>HEAD</literal>.</para>
 
-      <para>Again, you may be thinking: well, that really didn't undo
-        the commit, did it?  The change still exists in revision 303.
-        If somebody checks out a version of the
-        <filename>calc</filename> project between revisions 303 and
-        349, they'll still see the bad change, right?</para>
+      <para>De nuevo puede estar preguntándose: vaya, eso no deshizo
+        el cambio anterior, ¿verdad? El cambio todavía existe en la
+        revisión 303. Si alguien obtiene una versión del proyecto
+        <filename>calc</filename> entre las revisiones 303 y 349,
+        seguirán viendo todavía el cambio malo, ¿verdad?</para>
 
       <para>Yes, that's true.  When we talk about
         <quote>removing</quote> a change, we're really talking about
