@@ -308,7 +308,7 @@
             linkend="svn-ch-3-sect-5.3.1"/>)</para>
           @ENGLISH }}} -->
           <para>Viser deg alle lokale forandringer du har gjort (se 
-            <xref linkend="svn-ch-3-sect-4.3.1"/>)</para>
+            <xref linkend="svn-ch-3-sect-5.3.1"/>)</para>
         </listitem>
       </varlistentry>
 
@@ -320,7 +320,7 @@
             linkend="svn-ch-3-sect-5.3.2"/>)</para>
           @ENGLISH }}} -->
           <para>Viser deg forandringene dine i detalj (se <xref 
-            linkend="svn-ch-3-sect-4.3.2"/>)</para>
+            linkend="svn-ch-3-sect-5.3.2"/>)</para>
         </listitem>
       </varlistentry>
 
@@ -332,7 +332,7 @@
             linkend="svn-ch-3-sect-5.3.3"/>)</para>
           @ENGLISH }}} -->
           <para>Tilbakestiller dine lokale forandringer (se <xref 
-            linkend="svn-ch-3-sect-4.3.3"/>)</para>
+            linkend="svn-ch-3-sect-5.3.3"/>)</para>
         </listitem>
       </varlistentry>
 
@@ -593,7 +593,7 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
       status</command>, see <xref linkend="svn-ch-3-sect-5.3.1" />.</para>
     @ENGLISH }}} -->
     <para>For en mer detaljert diskusjon om <command>svn 
-      status</command>, se <xref linkend="svn-ch-3-sect-4.3.1" 
+      status</command>, se <xref linkend="svn-ch-3-sect-5.3.1" 
       />.</para>
 
 
@@ -735,7 +735,7 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
       Den husker at en fil har en konflikt, og vil ikke tillate deg &#229; 
       legge inn forandringene dine f&#248;r du kj&#248;rer <command>svn 
       resolved</command>.
-      Se <xref linkend="svn-ch-3-sect-4.4"/> for flere detaljer.</para>
+      Se <xref linkend="svn-ch-3-sect-5.4"/> for flere detaljer.</para>
   </sect1>
 
   <!-- ================================================================= -->
