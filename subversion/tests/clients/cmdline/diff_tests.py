@@ -1571,6 +1571,40 @@ def diff_within_renamed_dir(sbox):
 
   os.chdir(was_cwd)
 
+#----------------------------------------------------------------------
+def diff_prop_on_named_dir(sbox):
+  "diff a prop change on a dir named explicitly"
+
+  # Diff of a property change or addition should contain a "+" line.
+  # Diff of a property change or deletion should contain a "-" line.
+  # On a diff between repository revisions (not WC) of a dir named
+  # explicitly, the "-" line was missing.  (For a file, and for a dir
+  # recursed into, the result was correct.)
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  current_dir = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  try:
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset', 'p', 'v', 'A')
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'ci', '-m', '')
+
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propdel', 'p', 'A')
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'ci', '-m', '')
+
+    diff_output, err_output = svntest.main.run_svn(None,
+                                                   'diff', '-r2:3', 'A')
+    # Check that the result contains a "-" line.
+    verify_expected_output(diff_output, "   - v")
+
+  finally:
+    os.chdir(current_dir)
+
 ########################################################################
 #Run the tests
 
@@ -1600,6 +1634,7 @@ test_list = [ None,
               check_for_omitted_prefix_in_path_component,
               diff_renamed_file,
               diff_within_renamed_dir,
+              XFail(diff_prop_on_named_dir),
               ]
 
 if __name__ == '__main__':
