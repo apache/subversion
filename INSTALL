@@ -316,6 +316,27 @@ I.    BUILD REQUIREMENTS
       libraries.
 
 
+      12. Building The Documentation
+  
+      The master source format for Subversion's documentation is
+      Texinfo.  The online documentation for texinfo is at
+
+         http://www.gnu.org/manual/texinfo-4.0/html_chapter/texinfo_toc.html
+
+      Depending on exactly which doc targets you make, you'll need one
+      or more of:
+
+         * the `makeinfo' program from the latest texinfo package in
+           ftp://ftp.gnu.org/pub/gnu/texinfo/
+
+         * the `texi2dvi' or `texi2html' programs
+
+         * the `dvipdf' script from Ghostscript (pipes dvi | ps | Ghostscript)
+
+      If `makeinfo' is not installed before `configure' is run, then
+      the documentation will not be created and installed.
+
+
 II.   INSTALLATION
       ============
 
