@@ -263,10 +263,9 @@ svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
 
   /* Otherwise, this must be an APR error code. */
   else
-    fprintf (stream, "\napr_error: #%d, src_err %d, canonical err %d : %s\n",
+    fprintf (stream, "\napr_error: #%d, src_err %d : %s\n",
              err->apr_err,
              err->src_err,
-             apr_canonical_error (err->apr_err),
              apr_strerror (err->apr_err, buf, sizeof(buf)));
 
   fprintf (stream, "  %s\n", err->message);

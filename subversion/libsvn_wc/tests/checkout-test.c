@@ -145,8 +145,7 @@ main (int argc, char **argv)
 
   if (apr_err)
     {
-      fprintf (stderr, "error opening %s: %d",
-               src_file, apr_canonical_error (apr_err));
+      fprintf (stderr, "error opening %s: %d", src_file, apr_err);
       exit (1);
     }
 
