@@ -73,24 +73,23 @@ directory like this:
 write/Makefile
       document.c
       search.c
-      SVN
+      SVN/
 @end example
 This working directory is a copy of the repository's @file{/trunk/write}
 directory, with one additional entry --- @file{SVN} --- which holds the
 extra information needed by Subversion, as mentioned above.
 
 Suppose you make changes to @file{search.c}.  Since the @file{SVN}
-remembers the file's modification date and a hash computed from its
-contents, Subversion can tell that you've changed the file.  However,
-Subversion does not make your changes public until you explicitly tell
-it to.
+directory remembers the file's modification date and original contents,
+Subversion can tell that you've changed the file.  However, Subversion
+does not make your changes public until you explicitly tell it to.
 
 To publish your changes, you can use Subversion's @samp{commit} command:
 @example
 $ pwd
 /home/jimb/write
 $ ls
-Makefile   SVN    document.c    search.c
+Makefile   SVN/    document.c    search.c
 $ svn commit search.c
 $
 @end example
@@ -113,7 +112,7 @@ he checked it out.
 $ pwd
 /home/felix/write
 $ ls
-Makefile    SVN   document.c    search.c
+Makefile    SVN/   document.c    search.c
 $ svn update
 U search.c
 $
@@ -133,10 +132,11 @@ the same file.
 @node Transactions and Version Numbers
 @section Transactions and Version Numbers
 
-A Subversion @samp{commit} operation can change any number of files and
-directories as a single atomic transaction.  In your working directory,
-you can change files' contents, create, delete, rename and copy files
-and directories, and then commit the completed set of changes as a unit.
+A Subversion @samp{commit} operation can publish changes to any number
+of files and directories as a single atomic transaction.  In your
+working directory, you can change files' contents, create, delete,
+rename and copy files and directories, and then commit the completed set
+of changes as a unit.
 
 In the repository, each commit is treated as an atomic transaction:
 either all the commit's changes take place, or none of them take place.
@@ -147,9 +147,9 @@ indivisible nature.
 
 Each time the repository accepts a transaction, this creates a new state
 of the tree, called a @dfn{version}.  Each version is assigned a unique
-natural number, one greater than the number of previous version.  The
-initial version of a freshly created repository is numbered zero, and
-consists of an empty root directory.
+natural number, one greater than the number of the previous version.
+The initial version of a freshly created repository is numbered zero,
+and consists of an empty root directory.
 
 Since each transaction creates a new version, with its own number, we
 can also use these numbers to refer to transactions; transaction @var{n}
@@ -163,8 +163,7 @@ entire tree.
 It's important to note that working directories do not always correspond
 to any single version in the repository; they may contain files from
 several different versions.  For example, suppose you check out a
-working directory from a repository whose most recent version is number
-4:
+working directory from a repository whose most recent version is 4:
 @example
 write/Makefile:4
       document.c:4
@@ -190,12 +189,12 @@ write/Makefile:6
       search.c:6
 @end example
 Felix's changes to @file{document.c} will appear in your working copy of
-that file, and your change will be present in @file{search.c}.  In this
-example, the text of @file{Makefile} is identical in versions 4, 5, and
-6, but Subversion will mark your working copy with version 6 to indicate
-that it is still current.  So, after you do a clean update at the root
-of your working directory, your working directory will generally
-correspond exactly to some version in the repository.
+that file, and your change will still be present in @file{search.c}.  In
+this example, the text of @file{Makefile} is identical in versions 4, 5,
+and 6, but Subversion will mark your working copy with version 6 to
+indicate that it is still current.  So, after you do a clean update at
+the root of your working directory, your working directory will
+generally correspond exactly to some version in the repository.
 
 
 @c -----------------------------------------------------------------------
@@ -208,10 +207,7 @@ pieces of information:
 @item
 what version of what repository file your working copy is based on (this is called the file's @dfn{base version}), and
 @item
-a hash of the file's contents, as of the last time it was
-updated.@footnote{Subversion uses the SHA hash function, which yields
-160-bit hash values, to fingerprint file contents, so it is very
-unlikely that Subversion will mistake a modified file as unmodified.}
+a timestamp recording when the local copy was last updated.
 @end itemize
 
 Given this information, by talking to the repository, Subversion can
@@ -232,7 +228,7 @@ working directory, but it has been changed in the repository.  The file
 should eventually be updated, to make it current with the public
 version.
 @item
-@b{Locally changeed, and out-of-date}.  The file has been changed both
+@b{Locally changed, and out-of-date}.  The file has been changed both
 in the working directory, and in the repository.  The file should be
 updated; Subversion will attempt to merge the public changes with the
 local changes.  If it can't complete the merge in a plausible way
@@ -277,9 +273,8 @@ from changing a file once one person has begun working on it.  In our
 experience, merging is preferable to locks, because:
 @itemize @bullet
 @item
-changes usually do not conflict, so Subversion's default behavior does
-the right thing by default, while locking interferes with legitimate
-work;
+changes usually do not conflict, so Subversion's behavior does the right
+thing by default, while locking can interfere with legitimate work;
 @item
 locking can prevent conflicts within a file, but not conflicts between
 files (say, between a C header file and another file that includes it),
@@ -293,1129 +288,317 @@ Of course, the merge process needs to be under the users' control.
 Patch is not appropriate for files with rigid formats, like images or
 executables.  Subversion allows users to customize its merging behavior
 on a per-file basis.  You can direct Subversion to refuse to merge
-changes to certain, and simply present you with the two original texts
-to choose from.  Or, you can direct Subversion to merge using a tool
-which respects the semantics of the file format.
+changes to certain files, and simply present you with the two original
+texts to choose from.  Or, you can direct Subversion to merge using a
+tool which respects the semantics of the file format.
+
+
+@c -----------------------------------------------------------------------
+@node Properties
+@section Properties
+
+Files generally have interesting attributes beyond their contents:
+owners and groups, access permissions, creation and modification times,
+and so on.  Subversion attempts to preserve these attributes, or at
+least record them, when doing so would be meaningful.  However,
+different operating systems support very different sets of file
+attributes: Windows NT supports access control lists, while Linux
+provides only the simpler traditional Unix permission bits.
+
+In order to interoperate well with clients on many different operating
+systems, Subversion supports @dfn{property lists}, a simple,
+general-purpose mechanism which clients can use to store arbitrary
+out-of-band information about files.
+
+A property list is a set of name / value pairs.  A property name is an
+arbitrary text string, expressed as a Unicode UTF-8 string, canonically
+decomposed and ordered.  A property value is an arbitrary string of
+bytes.  Property values may be of any size, but Subversion may not
+handle very large property values efficiently.  No two properties in a
+given a property list may have the same name.  Although the word `list'
+usually denotes an ordered sequence, there is no fixed order to the
+properties in a property list; the term `property list' is historical.
+
+Each version number, file, directory, and directory entry in the
+Subversion repository, has its own property list.  Subversion puts these
+property lists to several uses:
+@itemize @bullet
+@item
+Clients use properties to store file attributes, as described above.
+For example, the Unix Subversion client records the files' permission
+bits as the value of a property called
+@samp{svn-posix-access-permission}.  Operating systems which allow files
+to have more than one name, like Windows 95, can use directory entry
+property lists to record files' alternative names.
+@item
+The Subversion server uses properties to hold attributes of its own, and
+allow clients to read and modify them.  For example, the @samp{svn-acl}
+property holds an access control list which the Subversion server uses
+to regulate access to repository files.
+@item
+Users can invent properties of their own, to store arbitrary information
+for use by scripts, build environments, and so on.  Names of user
+properties should be URI's, to avoid conflicts between organizations.
+@end itemize
+
+Property lists are versioned, just like file contents.  You can change
+properties in your working directory, but those changes are not visible
+in the repository until you commit your local changes.  If you do commit
+a change to a property value, other users will see your change when they
+update their working directories.
 
 
 @c -----------------------------------------------------------------------
 @node Merging and Ancestry
 @section Merging and Ancestry
 
-(TODO: rewrite this a bit to emphasize that ancestor sets consist of
-*deltas*, not versions.  The notation below doesn't make this clear.)
-
 Subversion defines merges the same way CVS does: to merge means to take
-a set of previously committed changes and apply them as a patch to the
-working copy.
+a set of previously committed changes and apply them, as a patch, to a
+working copy.  This change can then be committed, like any other change.
+(In Subversion's case, the patch may include changes to directory trees,
+not just file contents.)
 
-In CVS, performing a merge is equivalent to hand-editing the working
-copy into the same state as it would have been after the merge.  But
-Once the merge is committed, CVS has no memory of the source of the
-changes; this can, and frequently does, lead to conflicts when users
-unintentionally merge in the same changes again.  (Experienced CVS users
-avoid this problem by using branch- and merge-point tags, but that
-itself involves a lot of unwieldy bookkeeping.)
+As defined thus far, merging is equivalent to hand-editing the working
+copy into the same state as would result from the patch application.  In
+fact, in CVS there @emph{is} no difference -- it is equivalent to just
+editing the files, and there is no record of which ancestors these
+particular changes came from.  Unfortunately, this leads to conflicts
+when users unintentionally merge the same changes again.  (Experienced
+CVS users avoid this problem by using branch- and merge-point tags, but
+that involves a lot of unwieldy bookkeeping.)
 
-In Subversion, merges are remembered by storing @dfn{ancestry}
-information.  Think of an ancestry as a set -- the set of all commits
-(diffs) that went into a particular version of a particular file.  (Ben
-sez: don't you mean "set of all changes to a tree"?) By keeping these
-sets up-to-date, and consulting them when doing merges, Subversion can
-avoid applying the same patch twice and spare the user the necessity of
-remembering what's been merged and what hasn't.
+In Subversion, merges are remembered by recording @dfn{ancestry sets}.
+A version's ancestry set is the set of all changes "accounted for" in
+that version.  By maintaining ancestry sets, and consulting them when
+doing merges, Subversion can detect when it would apply the same patch
+twice, and spare users much bookkeeping.  Ancestry sets are stored as
+properties.
 
-For example, in this history of the file A
+In the examples below, bear in mind that version numbers usually refer
+to changes, rather than the full contents of that version.  For example,
+"the change A:4" means "the delta that resulted in A:4", not "the full
+contents of A:4".
+
+The simplest ancestor sets are associated with linear histories.  For
+example, here's the history of a file A:
 
 @example
- _____        _____        _____        _____        _____ 
+@group
+
+ _____        _____        _____        _____        _____
 |     |      |     |      |     |      |     |      |     |
 | A:1 |----->| A:2 |----->| A:3 |----->| A:4 |----->| A:5 |
 |_____|      |_____|      |_____|      |_____|      |_____|
-             
+
+@end group
 @end example
 
-the ancestor set of A:5 is
+The ancestor set of A:5 is:
 
 @example
+@group
+
   @{ A:1, A:2, A:3, A:4, A:5 @}
+
+@end group
 @end example
 
-(If you're surprised to see A:5 itself in the ancestor set, try thinking
-of the set as "changes accounted for" in that version.  Naturally, the
-commit resulting in A:5 is accounted for in A:5, as is the commit
-resulting in A:4, and so on.)
-
-Now suppose there's a branch B rooted at A:2, and that we want to merge
-this branch with A:5 to produce A:6.
-
-But what does it mean to "merge this branch"?  Merging a branch is
-ambiguous; according to the definition of merging, we need to know
-exactly which commits (changes) are being merged.
-
-Thus, although a common shorthand merge diagram looks like this
+That is, it includes the change that brought A from nothing to A:1, the
+change from A:1 to A:2, and so on to A:5.  From now on, ranges like this
+will be represented with a more compact notation:
 
 @example
+@group
+
+  @{ A:1-5 @}
+
+@end group
+@end example
+
+Now assume there's a branch B based, or "rooted", at A:2.  (This
+postulates an entirely different version history, of course, and the
+global version numbers in the diagrams will change to reflect it.)
+Here's what the project looks like with the branch:
+
+@example
+@group
+
  _____        _____        _____        _____        _____        _____
 |     |      |     |      |     |      |     |      |     |      |     |
-| A:1 |----->| A:2 |----->| A:3 |----->| A:4 |----->| A:5 |----->| A:6 |
-|_____|      |_____|      |_____|      |_____|      |_____|  ^   |_____|
+| A:1 |----->| A:2 |----->| A:4 |----->| A:6 |----->| A:8 |----->| A:9 |
+|_____|      |_____|      |_____|      |_____|      |_____|      |_____|
+                \
+                 \
+                  \  _____        _____        _____
+                   \|     |      |     |      |     |
+                    | B:3 |----->| B:5 |----->| B:7 |
+                    |_____|      |_____|      |_____|
+
+@end group
+@end example
+
+If we produce A:9 by merging the B branch back into the trunk
+
+@example
+@group
+
+ _____        _____        _____        _____        _____        _____
+|     |      |     |      |     |      |     |      |     |      |     |
+| A:1 |----->| A:2 |----->| A:4 |----->| A:6 |----->| A:8 |---.->| A:9 |
+|_____|      |_____|      |_____|      |_____|      |_____|  /   |_____|
                 \                                            |
                  \                                           |
                   \  _____        _____        _____        /
                    \|     |      |     |      |     |      /
-                    | B:1 |----->| B:2 |----->| B:3 |--->-'
+                    | B:3 |----->| B:5 |----->| B:7 |--->-'
                     |_____|      |_____|      |_____|
+
+@end group
 @end example
 
-a more explicit diagram would be:
+then what will A:9's ancestor set be?
 
 @example
+@group
+
+  @{ A:1, A:2, A:4, A:6, A:8, A:9, B:3, B:5, B:7@}
+
+@end group
+@end example
+
+or more compactly:
+
+@example
+@group
+
+  @{ A:1-9, B:3-7 @}
+
+@end group
+@end example
+
+(It's all right that each file's ranges seem to include non-changes;
+this is just a notational convenience, and you can think of the
+non-changes as either not being included, or being included but being
+null deltas as far as that file is concerned).
+
+All changes along the B line are accounted for (changes B:3-7), and so
+are all changes along the A line, including both the merge and any
+non-merge-related edits made before the commit.
+
+Although this merge happened to include all the branch changes, that
+needn't be the case.  For example, the next time we merge the B line
+
+@example
+@group
+
+ _____     _____     _____     _____     _____      _____      _____
+|     |   |     |   |     |   |     |   |     |    |     |    |     |
+| A:1 |-->| A:2 |-->| A:4 |-->| A:6 |-->| A:8 |-.->| A:9 |-.->|A:11 |
+|_____|   |_____|   |_____|   |_____|   |_____| |  |_____| |  |_____|
+             \                                  /          |
+              \                                /           |
+               \  _____     _____     _____   / _____      |
+                \|     |   |     |   |     | / |     |    /
+                 | B:3 |-->| B:5 |-->| B:7 |-->|B:10 |->-'
+                 |_____|   |_____|   |_____|   |_____|
+
+@end group
+@end example
+
+Subversion will know that A's ancestry set already contains B:3-7, so
+only the difference between B:7 and B:10 will be applied.  A's new
+ancestry will be
+
+@example
+@group
+
+  @{ A:1-11, B:3-10 @}
+
+@end group
+@end example
+
+But why limit ourselves to contiguous ranges?  An ancestry set is truly
+a set -- it can be any subset of the changes available:
+
+@example
+@group
+
  _____        _____        _____        _____        _____        _____
 |     |      |     |      |     |      |     |      |     |      |     |
-| A:1 |----->| A:2 |----->| A:3 |----->| A:4 |----->| A:5 |----->| A:6 |
-|_____|      |_____|      |_____|      |_____|      |_____|  ^   |_____|
-                |                                            |
-                |                             _______________|
-                |               _____________/
-                |              /            /
-                \_____________/            /
-                 \           /            /
-                  \  _____   |    _____   |    _____ 
-                   \|     |  |   |     |  |   |     |
-                    | B:1 |----->| B:2 |----->| B:3 |
-                    |_____|      |_____|      |_____|
-@end example
-
-And A:6's ancestry set would look like this after the merge:
-
-@example
-  @{ A:1, A:2, A:3, A:4, A:5, B:1, B:2, B:3 @}
-@end example
-
-Although this merge happened to include all the changes on the branch,
-that needn't be the case for all merges.  For example:
-
-@example
- _____        _____        _____        _____        _____        _____
-|     |      |     |      |     |      |     |      |     |      |     |
-| A:1 |----->| A:2 |----->| A:3 |----->| A:4 |----->| A:5 |----->| A:6 |
-|_____|      |_____|      |_____|      |_____|      |_____|  ^   |_____|
-                |                                            |
-                |                           _________________|
-                |                          /
-                |                         /
-                \              __________/
-                 \            /          |
-                  \  _____   |    _____  |     _____        _____ 
-                   \|     |  |   |     | |    |     |      |     |
-                    | B:1 |----->| B:2 |----->| B:3 |----->| B:4 |----->
+| A:1 |----->| A:2 |----->| A:4 |----->| A:6 |----->| A:8 |--.-->|A:10 |
+|_____|      |_____|      |_____|      |_____|      |_____| /    |_____|
+                |                                          /
+                |                ______________________.__/
+                |               /                      |
+                |              /                       |
+                \           __/_                      _|__
+                 \         @{    @}                    @{    @}
+                  \  _____        _____        _____        _____
+                   \|     |      |     |      |     |      |     |
+                    | B:3 |----->| B:5 |----->| B:7 |----->| B:9 |----->
                     |_____|      |_____|      |_____|      |_____|
+
+@end group
 @end example
 
-which leaves A:6's ancestry set at
+In this diagram, the change from B:3-5 and the change from B:7-9 are
+merged into a working copy whose ancestry set (so far) is @w{@{ A:1-8
+@}} plus any local changes.  After committing, A:10's ancestry set is
 
 @example
-  @{ A:1-6, B:2-3 @}
+@group
+
+  @{ A:1-10, B:5, B:9 @}
+
+@end group
 @end example
 
-If a user now tells Subversion to "merge branch B into A", meaning merge
-all the "accounted for" in B:4 into A, then Subversion will
-automagically notice that B:2 and B:3 are already accounted for and
-apply only the patches for B:1 and B:4.  In the end, A:7's ancestry set
-would look like this:
+Clearly, saying "Let's merge branch B into A" is a little ambiguous.  It
+usually means "Merge all the changes accounted for in B's tip into A",
+but it @emph{might} mean "Merge the single change that resulted in B's
+tip into A".
+
+Any merge, when viewed in detail, is an application of a particular set
+of changes -- not necessarily adjacent ones -- to a working copy.  The
+user-level interface may allow some of these changes to be specified
+implicitly.  For example, many merges involve a single, contiguous range
+of changes, with one or both ends of the range easily deducible from
+context (i.e., branch root to branch tip).  These inference rules are
+not specified here, but it should be clear in most contexts how they
+work.
+
+Because each node knows its ancestors, Subversion never merges the same
+change twice (unless you force it to).  For example, if after the above
+merge, you tell Subversion to merge all B changes into A, Subversion
+will notice that two of them have already been merged, and so merge only
+the other two changes, resulting in a final ancestry set of:
 
 @example
-  @{ A:1-7, B:1-4 @}
+@group
+
+  @{ A:1-10, B:3-9 @}
+
+@end group
 @end example
 
-There is no requirement that the merge source be a contiguous range of
-revisions.  One might apply the change for B:1 and B:3, but omit B:2 and
-B:4 (for example, if you knew that 1 and 3 were stable bugfix changes,
-but 2 and 4 were experimental code not ready for the trunk yet).
-
-Although every merge comes from a @emph{set} of changes, the client
-interface to merges may allow one or both sides to be specified
-implicitly.  When this is done, the full merge information is derived
-via clearly understandable rules.
-
-The above describes how merging and ancestry work both within a
-repository and across repositories.  However, inter-repository merging
-will probably not be implemented until a future release of Subversion.
-
-(Note that the repository stores ancestry sets efficiently, collapsing
-into ranges wherever possible, etc.)
-
-@c -------------------------------------------------------------------
-@ignore
-
-** Repository
-
-*** The basic repository structure
-
-[This design is drawn from Jim Blandy's "Subversion" spec, but with
-some changes from Ben and Karl (i.e., Jim is not to be held
-responsible for everything you read below :-) ).]
-
-Suppose we have a new project, at version 1, looking like this (pardon
-the CVS syntax):
-
-   prompt$ svn checkout myproj
-   U myproj/
-   U myproj/B
-   U myproj/A
-   U myproj/A/subA
-   U myproj/A/subA/fish
-   U myproj/A/subA/fish/tuna
-   prompt$
-
-(Only the file `tuna' is a regular file, everything else in myproj is
-a directory so far).
-
-Let's see what this looks like as an abstract data structure in the
-repository, and how that structure works in various operations (such
-as update, commit, and branch).  This data structure is described as
-though it lives in permanent heap memory; how we will actually
-accomplish permanent storage is an implementation detail, (probably
-involving DBM files of some sort).
-
-In the diagrams that follow, straight horizontal lines with arrowheads
-represent backwards time-flow (the regression of versions), and any
-other kind of path represents a parent-to-child connection in a
-directory hierarchy.  Boxes are "nodes".  A node is either a file or a
-directory -- a letter in the upper left indicates which kind.
-
-Parent-child links go both ways (i.e., a child knows who all its
-parents are), but a node's name is stored *only* in its parent,
-because a node with multiple parents may have different names in
-different parents.
-
-A file node has a byte-string for its content, whereas directory nodes
-have a list of dir_entries, eaching pointing to another node.
-
-At the top of the repository is an array of version numbers,
-stretching off to infinity.  Since the project is at version 1, only
-index 1 points to anything; it points to the root node of version 1 of
-the project:
-
-
-      Figure 1: The `myproj' repository at version 1.
-
-
-                    ( myproj's version array )
-       ______________________________________________________
-      |___1_______2________3________4________5_________6_____...etc...
-          |
-          |
-       ___|_____
-      |D        |
-      |         |
-      |   A     |                 /* Two dir_entries, `A' and `B'. */
-      |    \    |
-      |   B \   | 
-      |__/___\__|
-        /     \
-       |       \
-       |        \
-    ___|____     \ ________
-   |D       |     |D       |
-   |        |     |        |
-   |        |     | subA   |      /* One dir_entry, `subA'. */
-   |________|     |___\____|
-                       \
-                        \
-                      ___\____
-                     |D       |
-                     |        |
-                     | fish   |   /* One dir_entry, `fish'. */
-                     |___\____|
-                          \
-                           \
-                         ___\____
-                        |D       |
-                        |        |
-                        | tuna   |  /* One dir_entry, `tuna'. */
-                        |___\____|
-                             \
-                              \
-                            ___\____
-                           |F       |
-                           |        |
-                           |        |   /* (Contents of tuna not shown.) */
-                           |________|
-
-
-What happens when we modify `tuna' and commit?  First, we make a new
-`tuna' node, containing the diff from version 2 of tuna to version 1.
-Let's use ":N" to express version relationships; so, this diff is the
-result of:
-
-   diff tuna:2 tuna:1
-
-Note the the order there: this is a reverse diff.  The idea is that
-tuna:2 will hold the full text of this new version, and tuna:1 will
-become a diff.  This is done to save space, it does not affect the
-semantics of the repository.  (Also note that we're assuming a diff
-program that can handle binary data!)
-
-The new node is not connected to anything yet, it's just hanging out
-there in space:
-                         ________
-                        |F       |
-                        |        |
-                        |        |
-                        |________|
-
-It doesn't even know what version it belongs to; we'll get to that in
-a moment.
-
-Next, link the new node into the tree, where the previous node was,
-and create a "back-link" (I forgot to tell you, nodes have a
-back-link field) from the new node to the old node.  Back-links are
-shown as parenthesized numbers with an arrow leading to the older
-node:
-
-      Figure 2: The `myproj' repository, in an intermediate state
-                during the commit of version 2 (a modification to
-                the file `tuna').
-
-       ______________________________________________________
-      |___1_______2________3________4________5_________6_____...etc...
-          |
-          |
-       ___|_____
-      |D        |
-      |         |
-      |   A     |
-      |    \    |
-      |   B \   | 
-      |__/___\__|
-        /     \
-       |       \
-       |        \
-    ___|____     \ ________
-   |D       |     |D       |
-   |        |     |        |                         
-   |        |     | subA   |                         
-   |________|     |___\____|                         
-                       \                             
-                        \                            
-                      ___\____                       
-                     |D       |                      
-                     |        |                      
-                     | fish   |                      
-                     |___\____|                      
-                          \                          
-                           \                         
-                         ___\____                    
-                        |D       |                   
-                        |        |                   
-                        | tuna   |                   
-                        |___\____|                   
-                             \                       
-                              \                      
-                            ___\____            ________
-                           |F       |          |F       |
-                           |        |          |        |
-                           |  (1)------------->|        |
-                           |        |          |        |
-                           | full   |          | diffy  |
-                           |contents|          |contents|
-                           |________|          |________|
-
-
-A back-link is a version number pointing into the past.  The version
-number tells you the version of the destination node, *not* the node
-holding the back-link.  So if you're looking for FILE:N, and when you
-get a node for that file you find a back-link pointing to a version N
-or higher, then you know you must follow that link farther back to get
-to a node in version N.
-
-But I digress.  Right now, we're learning how to commit tuna:2, and
-there's one more step needed to complete that commit -- register the
-new version at the top of the repository, thus making it externally
-visible.  That's done by making entry 2 in the version array point to
-something:
-
-      Figure 3: The `myproj' repository, after commit of version 2. 
-
-       ______________________________________________________
-      |___1_______2________3________4________5_________6_____...etc...
-          |       |
-          |      /
-       ___|_____/
-      |D        |
-      |         |
-      |   A     |
-      |    \    |
-      |   B \   | 
-      |__/___\__|
-        /     \
-       |       \
-       |        \
-    ___|____     \ ________
-   |D       |     |D       |
-   |        |     |        |
-   |        |     | subA   |
-   |________|     |___\____|
-                       \
-                        \
-                      ___\____
-                     |D       |
-                     |        |
-                     | fish   |
-                     |___\____|
-                          \ 
-                           \                         
-                         ___\____                    
-                        |D       |                   
-                        |        |                   
-                        | tuna   |                   
-                        |___\____|                   
-                             \                       
-                              \                      
-                            ___\____            ________
-                           |F       |          |F       |
-                           |        |          |        |
-                           |  (1)------------->|        |
-                           |        |          |        |
-                           | full   |          | diffy  |
-                           |contents|          |contents|
-                           |________|          |________|
-
-
-Version 2 points to exactly the same root node as version 1, because
-that directory hasn't changed at all.  Nor has its child, nor has
-anything until you get all the way down to tuna.
-
-That's why nodes don't store version numbers -- the exact same node
-may appear in many different versions.               
-
-So, the general recipe for retrieving `foo:N' is:
-
-   1. Go to the version table, find version N.       
-
-   2. Walk down the tree in the obvious way, starting from the root
-      node N points to.  As you walk, anytime you get to a node with a
-      back-link >=N, follow the link before continuing downward.
-      (Follow this rule even when you get to a node for `foo'.)
-
-   3. When you have nowhere else to go, this is the droid you're
-      looking for.                                   
-
-   (Note: this recipe will be slightly modified later to work
-   with locking, but the general idea here is accurate.)
-
-Now watch what happens when we add a new file `cod into `fish' (i.e.,
-cod will be a sibling of `tuna').  Here's the new tree, the
-intermediate steps not being shown:
-
-      Figure 4: The `myproj' repository, after commit of version 3
-                (the addition of a sibling to `fish/tuna').
-
-       ______________________________________________________
-      |___1_______2________3________4________5_________6_____...etc...
-          |       |       /                          
-          |      /       /                           
-       ___|_____/       /                            
-      |D        |______/                             
-      |         |                                    
-      |   A     |
-      |    \    |
-      |   B \   | 
-      |__/___\__|
-        /     \
-       |       \
-       |        \
-    ___|____     \ ________
-   |D       |     |D       |
-   |        |     |        |
-   |        |     | subA   |
-   |________|     |___\____|
-                       \
-                        \
-                      ___\____
-                     |D       |
-                     |        |
-                     | fish   |
-                     |___\____|
-                          \ 
-                           \
-                         ___\____        ________
-                        |D       |      |D       |
-                        |        |      |        |
-                        |  (2)--------->|        |
-                        |        |      |  tuna  |
-                        |        |      |___/____|
-                        |        |         /
-                        |        |        /
-                        | cod    |       /
-                        /        |      /
-                       /| tuna   |     /
-                      / |___\____|    /
-                     /       \       /
-                    /         \     /
-                   /         __\___/_            ________
-            ______/_        |F       |          |F       |
-           |F       |       |        |          |        |
-           |        |       |  (1)------------->|        |
-           |        |       |        |          |        |
-           |________|       | full   |          | diffy  |
-                            |contents|          |contents|
-                            |________|          |________|
-
-
-Trace various retrievals in the above structure, and you will see that
-
-   + fish:2 and fish:1 are the same node, as they should be.
-
-   + But fish:3 is different from them, which is also as it should be.
-
-   + tuna:3 and tuna:2 are the same node, as they should be.
-
-   + But tuna:1 is different from them, which is also as it should be.
-
-Thus, the traversal cost of retrieving foo:N is equal to foo's depth
-in the tree, plus the number of changes it or its ancestors have
-undergone.  Unchanged entities cost nothing.
-
-(Whether the directory fish:2 is stored as some sort of diff from
-fish:3 is an implementation detail.  We could do it that way, but it
-may not be necessary, since new directory nodes would only be created
-when a new file or directory is added to the project, or a name is
-changed.  Directory changes are relatively rare; most commits tend to
-be edits to existing files.)
-
-Just to drive the model mercilessly home, and to explore the
-theoretical limits of ASCII diagrams, here is myproj:4, in which a
-README was added to the project's top level directory:
-
-      Figure 5: The `myproj' repository, with new top-level README:
-
-       ______________________________________________________
-      |___1_______2________3________4________5_________6_____...etc...
-          |      /       /         /              
-          |     /       /         /               
-      ____|____/       /         /               _________
-     |D        |______/         /               |D        |
-     |         |               /                |         |
-     |   (3)------------------/---------------->|         |
-     |         |             /             _____|__ B     |
-     | README  |            /             /     |         |
-     |      |  |___________/             /      |   A     |
-     |   B  |  |            ____________/       |___|_____|
-     |  /   |__|_________  /                        |
-     | /  A    |         \/       _________         |
-     |_|___\___|         /\      |F        |        |
-       |    \________   /  \_____|         |        |
-       |             | /         |         |        |
-       |             |/          |         |        |
-       |             /           |_________|        |
-       |            /|                              |
-       |           / |                              |
-       |   _______/  |                              |
-       |  |          |                              |
-       |  |          |                              |
-    ___|__|_       __|_____                         |
-   |D       |     |D       |                        |
-   |        |     |        |________________________|
-   |        |     | subA   |
-   |________|     |___\____|
-                       \
-                        \
-                      ___\____
-                     |D       |
-                     |        |
-                     | fish   |
-                     |___\____|
-                          \
-                           \
-                         ___\____        ________
-                        |D       |      |D       |
-                        |        |      |        |
-                        |  (2)--------->|        |
-                        |        |      |  tuna  |
-                        |        |      |___/____|
-                        |        |         /
-                        |        |        /
-                        | cod    |       /
-                        /        |      /
-                       /| tuna   |     /
-                      / |___\____|    /
-                     /       \       /
-                    /         \     /
-                   /         __\___/_            ________
-            ______/_        |F       |          |F       |
-           |F       |       |        |          |        |
-           |        |       |  (1)------------->|        |
-           |        |       |        |          |        |
-           |________|       | full   |          | diffy  |
-                            |contents|          |contents|
-                            |________|          |________|
-     
-     
-There, wasn't that pretty?  I knew you would.          
-
-*** Crash-proof repository mutation and locking
-
-We want to make repository changes in a such way that the repository
-is in a "sane" (unambiguous and readable) state at every step.  
-
-At the same time, we want to keep locking to a minimum: no operation
-locks out readers, no read-only operation locks out anyone, and write
-operations lock out other writers for as little time as possible.
-
-These two issues are not directly related, but they must be
-synchronized with each other.  This is complex, so let's first run
-through an example without locking.  Here's how to commit a new
-version of tuna:
-
-  *** Step 1: Create the new node for tuna:2.
-
-            ________
-           |F       |
-           |        |
-           |        |
-           |________|
-
-  Nothing is attached to this new node, therefore the repository is in a
-  sane state.  If the server crashes at this moment, there will be no
-  problem (except that a cleanup thread might, at its leisure, delete
-  the unreachable node).
-
-  The new node has the full contents of tuna:2.
-
-  *** Step 2: Create the back-link from tuna:2 to tuna:1.
-
-            ________                ________
-           |F       |              |F       |
-           |  (1)----------------->|        |
-           |        |              |        |
-           |________|              |________|
-
-
-  Again, the repository doesn't yet know that the new node even
-  exists.  The back-link is a pointer from tuna:2 to tuna:1, not the
-  other way around, so tuna:1 isn't even aware of the link.
-
-  Both nodes have the full contents of their respective versions; no
-  diffs have been made yet.
-
-  *** Step 3: In each of tuna's parent nodes (which are listed in
-  tuna, remember), change the entry for tuna to point to point to the
-  new tuna:2 node: 
-
-              \
-            ___\____                    
-           |D       |                   
-           |        |                   
-           | tuna   |                   
-           |___\____|                   
-                \                       
-                 \                      
-               ___\____            ________
-              |F       |          |F       |
-              |        |          |        |
-              |  (1)------------->|        |
-              |        |          |        |
-              | full   |          | full   |
-              |contents|          |contents|
-              |________|          |________|
-
-  The repository is still in a mostly sane state.  If the machine
-  crashes now, there's this slightly weird situation in which a node
-  for tuna:2 is present in the tree, but the version `myproj:2' doesn't
-  exist yet.
-
-  However, if you follow the three-step algorithm for retrieving
-  FILE:N, you'll see that you still reach tuna:1 just fine -- it's as
-  though tuna:2 isn't there, because N can't be higher than 1 yet
-  anyway.  In other words, version 2 of the project does not exist
-  yet, therefore you can't ask for it; if you ask for the head
-  version, you'll get version 1. 
-
-  *** Step 3: Hook up version 2 to the root node.
-
-            ____________________________
-           |___1_______2________3_______...etc...
-               |       |
-               |      /
-            ___|_____/
-           |D        |
-           |         |
-           |   A     |
-           |    \    |
-           |   B \   | 
-           |__/___\__|
-             /     \
-            |       \
-
-And that's it!  (Except for locking, which we'll cover in a moment).
-
-Notice that nowhere in there was tuna:1 given diffy contents.  A
-separate thread gambols about the repository, taking care of such
-mundane tasks.  There's no reason to slow up commits with it.  (Of
-course, there's a "diff-bit" on each node, saying whether its contents
-are stored full-text or as a diff against the node that back-links to
-this one.)
-
-TODO: jimb points out that the diffs have to be made at a rate at
-least as fast as changes come in.  The implication of diffs *not*
-keeping up is that there are many thousands of active committers, in
-which case doing diffs at commit-time would increase lock contentions
-(because the amount of wait-time involved in a commit would go up),
-whereas if you don't try to guarantee that they keep up, your
-repository just gets bigger faster.  So it's a time/space tradeoff.  I
-do think it's important to keep commit wait-time to a minimum... A
-good solution might be for us to initially just trust that people
-aren't going to commit that fast (I mean, really), and then add some
-rapid-growth autodetection heuristics later on, that would flip the
-repository into diff-on-commit mode when things start coming in too
-fast.  But it's kind of a funny situation: if your repository is too
-large because it hasn't had a chance to diffify storage, then you
-basically have to do *something* to slow up the commit rate.  You can
-do this by increasing the amount of time each commit takes, or you can
-do it by unplugging the server's network cable until the repository is
-small enough. :-)
-
-Anyway, let's now generalize the above procedure, and add locking.
-
-When locking, we have to keep in mind that someone else may initiate a
-commit before or during our commit, and their commit might finish
-before or after ours.  We don't want their commit to wait
-unnecessarily, so our commit does not try to reserve any particular
-version number -- it just grabs the next available number at the time
-it finishes.
-
-Below, a lock is a single project-wide object, and we lock a node by
-adding a reference to that object to the node.  A lock's fields are
-`User:Num:Pending', where Num serves both as an identifier and a
-priority number, and Pending is a boolean that starts out true, and
-turns false once all the nodes involved in this commit have gotten
-locked.  Note that Num is different from any other lock's Num, even a
-lock for a different commit by the same user.
-
-Locks persist through server crashes.
-
-  1. Lock the nodes you're committing new versions for (though if
-     you're adding a new file, there's no node to lock).  These
-     primary locks will last throughout the commit.  
-
-     If you try to lock a node that's already locked, compare your Num
-     with the other lock's -- if that lock is still Pending and your
-     Num is lower, you get the lock (and the other commit immediately
-     fails and exits).  If the other lock is no longer Pending (i.e.,
-     it's managed to set all its locks), or its Num is lower, then you
-     immediately fail and exit, cleaning up after yourself of course.
-
-  2. Create the new, unattached nodes that will hold the new versions.
-     Fill them up with the new contents.  Create the back-links.
-
-  3. Lock all the parents of the nodes you're committing (call these
-     "secondary locks").  Use the same blocking scheme as in step 1.
-
-  4. Set dir_entries in the locked parents to point at the newly
-     created child nodes.  Although this cannot be atomic if there is
-     more than one parent node involved, it can be made effectively
-     atomic by amending the basic node-finding recipe to be
-     lock-aware, thusly:
-
-     If you arrive at a child via a locked parent, then check the
-     child for the same lock.  If present, then this child existed
-     before the commit currently taking place, so this child is safe
-     to use; but if that lock isn't here, then this child must be a
-     newly created node in a commit-in-progress, so follow the
-     backlink to a previous version of the child.
-
-  5. Now create the new version number; just take the next available
-     number and hook it up to the root node, but put a special
-     "negative lock" on the version number first.
-
-     This "negative lock" has the same id number as all the other
-     locks in this commit, but it is interpreted differently.  Its
-     point is to both reserve the version number and invalidate the
-     other locks while they're being removed -- the idea is that if
-     you would block on a lock, first check if there's a corresponding
-     negative lock on a version number somewhere.  If there is, then
-     you don't have to block on the original lock, because all the
-     important parts of its commit are complete, except for lock
-     removal.  (todo: this specification is not complete, though it
-     should be obvious what to do).
-
-Now, we could actually stop right there.  The commit is done; all the
-information is in the right place in the repository.  Removing the
-locks, and then removing the negative lock, *could* be done by a
-separate thread, just like diffication.  But it probably makes sense
-just to take care of lock removal right now, although we can still
-have a separate thread that looks for inoperative locks (to clean up
-after server crashes).  So:
-
-  6. Remove all the other locks.
-
-  7. Remove the negative lock from the version number.
-
-Voila.
-
-There's probably a variation whereby one *does* reserve the version
-number at the outset of the commit.  If there's any reason why getting
-the next available version number as of commit start is preferable to
-as of commit end, then we can do that.  But I don't see why it would
-be preferable -- and I like the mellow approach where you just grab
-whatever version happens to be in line when you're ready for it.
-Thoughts?
-
-*** How renames work, and what they imply
-
-Exactly how you think they do.
-
-To rename an entity, you make a new node for its parent directory.  In
-this new node, the entity's dir_entry has the new name, but still
-points to the same node as the old dir_entry.  That's why a name is
-stored in the parent, not in the thing being named.
-
-But a name alone is not enough -- we must be able to distinguish a
-rename from a replacement.  Is the file's name changing, or is it
-being replaced by a new, unrelated file (maybe even one with the same
-name, though that would be bizarre and rare)?
-
-To enable the repository to distinguish these two cases, each entity
-(where "entity" means roughly "a most-recent node and everything it
-backlinks to") has a unique internal identifier, separate from the
-entity's name.  These identifiers are stored alongside the name in the
-parent's dir_entry, and are unique within the project.
-
-Having both the human-visible name and an internal identifier allows
-Subversion to choose between following a history by name or by
-identity, which can result in two different retrieval scenarios.
-(Although such circumstances are unusual, we must support them.)
-
-These unique identitifiers, once assigned, are _never_ changed.  When
-an entity is renamed, only the name changes, not the id number.
-
-*** How removal works.
-
-Exactly how you think it does.
-
-You commit a new version of the parent node, which simply doesn't have
-an entry for the removed child.
-
-*** How resurrection works.
-
-Suppose you removed `foo' several versions ago and now you want it
-back.  When the user the working copy types
-
-       $ svn resurrect foo
-
-what happens?
-
-Well, in the repository, the server starts at the base version's node
-for the current directory (i.e., foo's parent directory).  Note that's
-"base" version, not "latest" version -- the base is the one on which
-the current working copy is based.
-
-Starting there, follow backlinks, asking at each step whether there's
-a dir_entry for `foo'.  If there is, follows that link -- that gets
-you the most recent `foo'.
-
-Of course, there could have been several different entities in the
-history named `foo' in this directory.  Which is the one the user
-wants?
-
-By default, the server assumes the user meant the most recent foo.
-But the user could ask for one at a specific version:
-
-   $ svn resurrect foo:5
-
-In that case, the server follows backlinks until it gets to the
-directory belonging to version 5, and then looks for an dir_entry
-pointing to foo.
-
-Or, the user might first need to know how many different entities have
-been named `foo' here, before choosing one to resurrect:
-
-   $ svn resurrect -l foo
-   /* created    removed       versions    entity_name    entity_id  */
-   2000-08-01   2000-10-14       1-5           foo           1729
-   2000-12-15   2001-05-29       7-12          foo           1952
-   2001-11-29   2002-03-20       20-103        foo           1729
-
-From this we see that an entity named `foo' was created in this
-directory, later removed, then another entirely different entity named
-foo was added, then later removed, then the first foo was resurrected
-and lasted for 83 versions before being removed (had it never been
-removed, the third "removed" date would be an empty field).
-
-The procedure by which the server generates this list should be
-obvious.
-
-Now the user decides to resurrect the middle foo.  Usually she would
-want it at its latest revision, in this case 12:
-
-   $ svn resurrect foo:12
-
-Please note: the examples here were meant only to illustrate various
-resurrection scenarios, and should not be taken as client
-user-interface specifications.
-
-*** How tags and branches work
-
-Branches and tags are both implemented in terms of "clones".  Cloning
-a project is constant-time and constant-space -- you just make a new
-name that points back to the original project.  All clones are
-automatically tags; and once you start committing on a clone, it
-becomes a branch as well.
-
-Branches *never* affect the original project -- the original data
-structure remains untouched, it does not even know there's a branch
-attached to it.  As will become clear below, this forces us to do a
-little more node duplication than some other schemes would, but it
-wins overall because it allows users to tag and branch projects to
-which they don't have write access.  (Try *that* with CVS!)
-
-Let's make a clone of myproj, called `xproj', based on myproj:5 (as it
-happens, 5 is the highest version in myproj, but that's not a
-requirement -- a branch might sprout off any version in myproj's
-history):
-
-            ______________________________________________________
-  myproj   |___1_______2________3________4________5_________6_____...etc...
-                                                 /
-                                                /
-                   .----(back to myproj)-----> +
-                  /
-                 /
-            ____/_________________________________________________
-  xproj    |___5_______6________7________8________9_________10____...etc...
-
-
-The xproj branch starts at version 5; if you ask for a version 5 or
-younger, you will get it, but it will be same as that version of
-myproj.  (The reasons for doing things this way will become clear
-later.)
-
-Right after xproj is created, it has no nodes of its own -- every
-request is referred to myproj's repository.
-
-When you commit a change to `tuna', here's what happens:
-
-In order to commit a new version of tuna, we'd have to change tuna's
-parent node to refer to the new tuna node.  But we can't -- we don't
-have write access to myproj!  So we have to make a local copy of
-tuna's parent.  But that leaves the parent's parent, over in myproj,
-still pointing at myproj's version of the parent...
-
-You can see where this is going, I'm sure.
-
-The problem bubbles right up to the top, requiring us to create a root
-node locally.  All its dir_entries that are not ancestors of tuna just
-refer back to nodes in myproj; those that are ancestors refer to new
-local copies of nodes along the line of ancestry, all the way down to
-tuna:
-
-            ______________________________________________________
-  myproj   |___1_______2________3________4________5_________6_____...etc...
-                                                 /
-                                                /
-                   .----(back to myproj)-----> +
-                  /
-                 /
-            ____/_________________________________________________
-  xproj    |___5_______6________7________8________9_________10____...etc...
-                       |
-                       |
-                    ___|_____
-                   |D        |
-                   |         |
-                   | README -------------.
-                   |         |            \
-                   |   A     |             \
-                   |    \    |              \
-                   |   B \   |               \        (points back
-                   |__/___\__|                \______  to a node
-                     /     \                           in myproj)
-                    /       \
-                   /         \
-                  /           \ ________
-           (points back        |D       |
-            to a node          |        |
-            in myproj)         | subA   |
-                               |___\____|
-                                    \
-                                     \
-                                   ___\____
-                                  |D       |
-                                  |        |
-                                  | fish   |
-                                  |___\____|
-                                       \
-                                        \
-                                      ___\____
-                                     |D       |
-                                     |        |
-                                     | tuna   |
-                                     |___\____|
-                                          \
-                                           \
-                                         ___\____
-                                        |F       |        (points back
-                                        |  (5)---------->  to a node
-                                        |        |         in myproj)
-                                        |________|
-
-
-This "line-of-ancestry copying" looks a lot more expensive than it
-really is.  Remember that our example project consists mostly of
-directories, whereas a real project is mostly files, whose nodes never
-need to be copied except when they change.  And directory nodes only
-need to be copied the first time one of their descendents changes --
-after that, the directory node is already there.
-
-Thus, a branch fills out over time, eventually holding a more-or-less
-complete skeleton of the project's directories, plus any changed or
-added files.
-
-The exact method by which local entries "point back" to the original
-project is not settled yet.  It might be some general URL-like syntax
-that we can use in all sorts of circumstances, like
-
-   user@@svn.hostname.domain:repositoryname:myproj:5:/A/subA/fish/tuna
-
-(This will come in handy later, when we need a way to get unique
-labels for atomic diff sets to support partial merging... but more
-about that when we get there. :-) )
-
-**** "Shallow" and "deep" clones (insurance against loss of trunk)
-
-The cheapest kind of clone is constant-time and -space.  Call it a
-"surface" clone, because it includes by reference wherever possible.
-
-For tags and branches being stored in the same repository as the
-original project, surface is the way to go.
-
-But if you're making the clone on another server, then you have to make
-a political judgement involving the importance of your clone, of the
-historical data antecedant to your clone, and of the original
-repository's stability.  What if you think that source repository
-might disappear on you?  Then you want something more than just a
-surface clone.  
-
-Subversion offers two more choices: "shallow" and "deep" clones.
-Shallow clones locally duplicate all the data for the version in which
-this clone is rooted, but they don't duplicate anything older than
-that.  Deep clones duplicate the *entire* project -- the whole node
-structure.  (A deep clone still remembers its ancestry, however).
-
-Here's a reference:
-
-   1. Surface clones
-        Refers to original project wherever possible.
-
-   2. Shallow clones
-        Duplicates the node structure of the source version that roots
-        this clone.  Older versions are included by reference, however.
-        Ancestry is remembered.
-
-   3. Deep clones
-        Duplicates the entire node structure of the source root
-        version, including back-links.  Ancestry is remembered.
-
-todo:
-[This is why clones start at the version number they're rooted
-at... (todo: explain this)]
-
-todo:
-Explain why remembering ancestry is important even for shallow and
-deep clones.
-
-**** Merging branches
-
-todo
-
-*** How meta-data is stored
-
-Each node has a property list (key->value, key->value).  Among the
-things we can store in the property list are file permissions, data
-type override (text, binary, whatever), whether or not to do
-platform-specific line-end conversions, etc.
-
-It might be good to have two plists, actually: `svn_props', and
-`user_props'.  Subversion only uses the ones in svn_props, and
-promises a "store-and-ignore" policy for user_props.  And users should
-never touch anything in svn_props, only Subversion does that.
-
-*** A closer look at the `node' data structure (and friends)
-
-These are for explanatory purposes only -- our header files might not
-end up looking like this at all:
-
-   typedef struct version
-   @{
-      unsigned int number;           /* Or maybe expressed by position? */
-      change_list *changes;          /* Change cache.  Tells us what
-                                        files changed in this commit.
-                                        Should probably be arranged
-                                        hierarchically or as a hash of
-                                        parent->changed_children, so
-                                        it's easy to get the changes
-                                        for just a particular
-                                        directory. */ 
-   @} version;
-
-
-   typedef struct lock
-   @{
-      bool pending;                  /* Tweak after this lock has
-                                        everyone it wants.  Once a
-                                        lock is no longer pending, it
-                                        can't be usurped, even by a
-                                        lock with otherwise dominant
-                                        priority num. */ 
-      int num;                       /* Identification and priority
-                                        number. */
-   @} lock;
-
-
-   typedef struct dir_entry
-   @{
-      char *name;                    /* Child's name, multi-lingual I hope */
-      node *child;                   /* The target node.  Given here
-                                        as a pointer, but it might be
-                                        a node_id in reality. */ 
-   @} dir_entry;
-
-
-   typedef struct node
-   @{
-      unsigned long int entity_id;   /* Unvarying unique id for this entity */
-      unsigned long int node_id;     /* Unique id for this node 
-                                        (See struct dir_entry above
-                                        about pointer vs node_id.) */
-      int type;                      /* File, directory, symlink, etc */
-      BOOL diffy;                    /* Holds full text or diff? */
-      plist *svn_props;              /* Properties managed by Subversion. */
-      plist *usr_props;              /* Properties ignored by Subversion. */
-
-      /* Need parent pointers to do multiple hard links correctly. */
-      struct node **parents;
-
-      /* See notes about locking above.  This may be stored as
-         "out-of-band" data outside the node. */
-      lock *lock;
-
-      /* I'm conjecturing that dir_entries will be stored as chains;
-         but it may turn out to be more sensible to store them as
-         text, just like regular contents. */
-      union contents @{
-        struct dir_entry **dir_entries;
-        char *data;
-      @}
-   @} node;
-
-None of this is set in stone, of course; the boolean `diffy' might
-instead be a string `diff_method', for which null means full contents
-at this node.  The contents might be a string even when this node
-represents a directory -- a special line-by-line texty format would
-list its dir entries, and that could make it easier for us to store
-directory changes in a diffy way.
-
-@end ignore
+@c Heh, what about this:
+@c
+@c    B:3 adds line 3, with the text "foo".
+@c    B:5 deletes line 3.
+@c    B:7 adds line 3, with the text "foo".
+@c    B:9 deletes line 3.
+@c
+@c The user first merges B:5 and B:9 into A.  If A had that line, it
+@c goes away now, nothing more.
+@c 
+@c Next, user merges B:3 and B:7 into A.  The second merge must
+@c conflict.
+@c
+@c I'm not sure we need to care about this, I just thought I'd note how
+@c even merges that seem like they ought to be easily composable can
+@c still suck. :-)
+
+This description of merging and ancestry applies to both intra- and
+inter-repository merges.  However, inter-repository merging will
+probably not be implemented until a future release of Subversion
+(@xref{Future}).
