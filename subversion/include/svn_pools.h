@@ -44,6 +44,13 @@ extern "C" {
 
 /* Wrappers around APR pools, so we get debugging. */
 
+/* The recommended maximum amount of memory (4MB) to keep in an APR
+ * allocator on the free list, conveniently defined here to share
+ * between all our applications.
+ */
+#define SVN_ALLOCATOR_RECOMMENDED_MAX_FREE (4096 * 1024)
+
+
 /** Wrapper around @c apr_pool_create_ex, with a simpler interface.
  * The return pool with have an abort function set, which will call
  * abort() on OOM.

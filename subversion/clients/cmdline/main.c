@@ -586,6 +586,8 @@ main (int argc, const char * const *argv)
   if (apr_allocator_create (&allocator))
     return EXIT_FAILURE;
 
+  apr_allocator_max_free_set (allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
+
   pool = svn_pool_create_ex (NULL, allocator);
   apr_allocator_set_owner (allocator, pool);
 
