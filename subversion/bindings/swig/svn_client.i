@@ -255,7 +255,7 @@
    SWIG will split the nested svn_client_revision_t structure, and we need
    the types declared *before* the split structure is encountered.  */
 
-%header %{
+%{
 #include "svn_client.h"
 
 #ifdef SWIGPYTHON

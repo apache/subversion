@@ -354,8 +354,7 @@
 /* ----------------------------------------------------------------------- */
 
 %include svn_types.h
-
-%header %{
+%{
 #include "svn_types.h"
 
 #ifdef SWIGPYTHON

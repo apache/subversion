@@ -157,8 +157,7 @@ apr_array_header_t **revs {
 
 
 %include svn_fs.h
-
-%header %{
+%{
 #include "svn_fs.h"
 
 #ifdef SWIGPYTHON
