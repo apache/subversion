@@ -848,6 +848,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
   src_is_url = svn_path_is_url (src_path);
   dst_is_url = svn_path_is_url (dst_path);
 
+
   if (is_move)
     {
       if (src_is_url == dst_is_url)
@@ -878,12 +879,26 @@ setup_copy (svn_client_commit_info_t **commit_info,
          happens to be the HEAD.  It's fair enough to punt then, IMHO,
          and just demand that the user not specify a revision at all;
          beats mucking up this function with RA calls and such. */ 
-      if ((src_revision->kind != svn_client_revision_unspecified)
-          || (src_revision->kind != svn_client_revision_unspecified))
+      if (src_revision->kind != svn_client_revision_unspecified)
         {
           return svn_error_create
             (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
              "cannot specify revisions with move operations");
+        }
+    }
+  else
+    {
+      if (!src_is_url)
+        {
+          if (src_revision->kind != svn_client_revision_unspecified)
+            {
+              /* We can convert the working copy path to a URL based on the
+                 entries file. */
+              svn_wc_entry_t *entry;
+              SVN_ERR (svn_wc_entry (&entry, src_path, FALSE, pool));
+              src_path = entry->url;
+              src_is_url = TRUE;
+            }
         }
     }
 
