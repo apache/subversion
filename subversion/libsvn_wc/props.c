@@ -1013,7 +1013,7 @@ svn_wc_prop_set (svn_stringbuf_t *name,
           svn_stringbuf_t *pdir, *basename;
 
           svn_path_split (path, &pdir, &basename, svn_path_local_style, pool);
-          SVN_ERR (svn_wc__entry_modify (path,
+          SVN_ERR (svn_wc__entry_modify (pdir,
                                          basename,
                                          0,
                                          SVN_INVALID_REVNUM,
