@@ -578,7 +578,7 @@ svn_cstring_split (const char *input,
         one_last_time = TRUE;
     }
 
-  return NULL;
+  return substrings;
 }
 
 
