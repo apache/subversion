@@ -457,6 +457,7 @@ mark_tree (const char *dir,
       if (schedule == svn_wc_schedule_delete && notify_func != NULL)
         (*notify_func) (notify_baton, fullpath, svn_wc_notify_delete,
                         svn_node_unknown,
+                        NULL,
                         svn_wc_notify_state_unknown,
                         svn_wc_notify_state_unknown,
                         SVN_INVALID_REVNUM);
@@ -657,6 +658,7 @@ svn_wc_delete (const char *path,
   if (notify_func != NULL)
     (*notify_func) (notify_baton, path, svn_wc_notify_delete,
                     svn_node_unknown,
+                    NULL,
                     svn_wc_notify_state_unknown,
                     svn_wc_notify_state_unknown,
                     SVN_INVALID_REVNUM);
@@ -701,6 +703,7 @@ svn_wc_add (const char *path,
   svn_boolean_t is_replace = FALSE;
   enum svn_node_kind kind;
   apr_uint32_t modify_flags = 0;
+  const char *mimetype = NULL;
   
   /* Make sure something's there. */
   SVN_ERR (svn_io_check_path (path, &kind, pool));
@@ -801,8 +804,6 @@ svn_wc_add (const char *path,
 
   if (kind == svn_node_file)
     {
-      const char *mimetype;
-
       /* Try to detect the mime-type of this new addition. */
       SVN_ERR (svn_io_detect_mimetype (&mimetype, path, pool));
       if (mimetype)
@@ -885,6 +886,7 @@ svn_wc_add (const char *path,
   if (notify_func != NULL)
     (*notify_func) (notify_baton, path, svn_wc_notify_add,
                     svn_node_unknown,
+                    mimetype,
                     svn_wc_notify_state_unknown,
                     svn_wc_notify_state_unknown,
                     SVN_INVALID_REVNUM);
@@ -1267,6 +1269,7 @@ svn_wc_revert (const char *path,
   if ((notify_func != NULL) && reverted)
     (*notify_func) (notify_baton, path, svn_wc_notify_revert,
                     svn_node_unknown,
+                    NULL,  /* ### any way to get the mime type? */
                     svn_wc_notify_state_unknown,
                     svn_wc_notify_state_unknown,
                     SVN_INVALID_REVNUM);
@@ -1570,9 +1573,11 @@ svn_wc_resolve_conflict (const char *path,
          the successful resolution.  */     
       SVN_ERR (svn_wc_conflicted_p (&text_conflict, &prop_conflict,
                                     conflict_dir, entry, pool));
-      if (!(resolve_text && text_conflict) && !(resolve_props && prop_conflict))
+      if ((! (resolve_text && text_conflict))
+          && (! (resolve_props && prop_conflict)))
         (*notify_func) (notify_baton, path, svn_wc_notify_resolve,
                         svn_node_unknown,
+                        NULL,
                         svn_wc_notify_state_unknown,
                         svn_wc_notify_state_unknown,
                         SVN_INVALID_REVNUM);

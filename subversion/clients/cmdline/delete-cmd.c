@@ -69,6 +69,11 @@ svn_cl__delete (apr_getopt_t *os,
   if (targets->nelts)
     {
       apr_pool_t *subpool = svn_pool_create (pool);
+      svn_wc_notify_func_t notify_func = NULL;
+      void *notify_baton = NULL;
+
+      if (! opt_state->quiet)
+        svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool);
 
       for (i = 0; i < targets->nelts; i++)
         {
@@ -80,9 +85,7 @@ svn_cl__delete (apr_getopt_t *os,
                     auth_baton, 
                     &svn_cl__get_log_message,
                     svn_cl__make_log_msg_baton (opt_state, NULL, subpool),
-                    SVN_CL_NOTIFY(opt_state), 
-                    svn_cl__make_notify_baton (subpool),
-                    subpool);
+                    notify_func, notify_baton, subpool);
           if (err)
             return svn_cl__may_need_force (err);
           if (commit_info)

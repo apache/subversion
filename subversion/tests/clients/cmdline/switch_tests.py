@@ -240,7 +240,7 @@ def commit_routine_switching(wc_dir, verify):
                                              wc_dir):
       return 1
   else:
-    svntest.main.run_svn(None, 'ci', '-m', 'foo', wc_dir)
+    svntest.main.run_svn(None, 'ci', '-m', 'log msg', wc_dir)
 
   return 0
 

@@ -40,11 +40,16 @@ svn_cl__revert (apr_getopt_t *os,
   apr_array_header_t *targets;
   int i;
   svn_boolean_t recursive = opt_state->recursive;
+  svn_wc_notify_func_t notify_func = NULL;
+  void *notify_baton = NULL;
 
   targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
 
   /* Revert has no implicit dot-target `.', so don't you put that code
      here! */
+
+  if (! opt_state->quiet)
+    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool); 
 
   if (targets->nelts)
     for (i = 0; i < targets->nelts; i++)
@@ -52,10 +57,7 @@ svn_cl__revert (apr_getopt_t *os,
         const char *target = ((const char **) (targets->elts))[i];
         
         SVN_ERR (svn_client_revert
-                 (target, recursive,
-                  SVN_CL_NOTIFY(opt_state), 
-                  svn_cl__make_notify_baton (pool),
-                  pool));
+                 (target, recursive, notify_func, notify_baton, pool));
       }
   else
     {

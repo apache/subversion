@@ -46,6 +46,8 @@ svn_cl__copy (apr_getopt_t *os,
   void *trace_edit_baton = NULL;
   svn_boolean_t src_is_url, dst_is_url;
   svn_client_commit_info_t *commit_info = NULL;
+  svn_wc_notify_func_t notify_func = NULL;
+  void *notify_baton = NULL;
 
   targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
   if (targets->nelts != 2)
@@ -108,6 +110,9 @@ svn_cl__copy (apr_getopt_t *os,
     /* URL->URL : No trace editor needed. */
     ;
 
+  if (! opt_state->quiet)
+    svn_cl__get_notifier (&notify_func, &notify_baton, TRUE, FALSE, pool);
+
   SVN_ERR (svn_client_copy 
            (&commit_info,
             src_path, &(opt_state->start_revision), dst_path, auth_baton, 
@@ -115,8 +120,7 @@ svn_cl__copy (apr_getopt_t *os,
             svn_cl__make_log_msg_baton (opt_state, NULL, pool),
             NULL, NULL,                   /* no before_editor */
             trace_editor, trace_edit_baton, /* one after_editor */
-            SVN_CL_NOTIFY(opt_state),
-            svn_cl__make_notify_baton (pool),
+            notify_func, notify_baton,
             pool));
 
   if (commit_info)

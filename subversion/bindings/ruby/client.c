@@ -505,6 +505,8 @@ cl_commit (int argc, VALUE *argv, VALUE self)
   else
     log_msg = NULL;
 
+  /* ### The svn_client_commit() interface has changed, but I'm not
+     sure how to update this code.  -kff */
   err = svn_client_commit (&commit_info,
                            before_editor, before_edit_baton,
                            after_editor, after_edit_baton,

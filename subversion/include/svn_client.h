@@ -222,8 +222,8 @@ typedef svn_error_t *
    If REVISION does not meet these requirements, return the error
    SVN_ERR_CLIENT_BAD_REVISION.
 
-   Invoke NOTIFY_FUNC with NOTIFY_BATON as the checkout progresses, if
-   NOTIFY_FUNC is non-null.
+   If NOTIFY_FUNC is non-null, invoke NOTIFY_FUNC with NOTIFY_BATON as
+   the checkout progresses.
 
    If XML_SRC is non-NULL, it is an xml file to check out from; in
    this case, the working copy will record the URL as artificial
@@ -254,25 +254,9 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
    If REVISION does not meet these requirements, return the error
    SVN_ERR_CLIENT_BAD_REVISION.
 
-   ### Begin temporary notification kluge. ###
-
-          TODO: Soon, the before and after editors will go away, 
-          and the notify system will be used for everything.
-          But for the moment, we're keeping the composition
-          editors, to avoid dealing with possible output changes,
-          and adding the notification callback for external items
-          only.
-
    If NOTIFY_FUNC is non-null, invoke NOTIFY_FUNC with NOTIFY_BATON
-   on files restored from text-base.  (Update does not yet handle
-   external modules, but when it does, it will call this notifier for
-   updates or checkouts of external items too.)
-
-   BEFORE_EDITOR, BEFORE_EDIT_BATON and AFTER_EDITOR, AFTER_EDIT_BATON
-   are pre- and post-update hook editors.  They are optional; pass
-   four NULLs if you don't need them.
-
-   ### End temporary notification kluge. ###
+   for each item handled by the update, and also for files restored
+   from text-base.
 
    If XML_SRC is non-NULL, it is an xml file to update from.  If
    REVISION is svn_client_revision_unspecified, then the revision
@@ -281,11 +265,7 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
    
    Use POOL for any temporary allocation. */
 svn_error_t *
-svn_client_update (const svn_delta_editor_t *before_editor,
-                   void *before_edit_baton,
-                   const svn_delta_editor_t *after_editor,
-                   void *after_edit_baton,
-                   svn_client_auth_baton_t *auth_baton,
+svn_client_update (svn_client_auth_baton_t *auth_baton,
                    const char *path,
                    const char *xml_src,
                    const svn_client_revision_t *revision,
@@ -307,23 +287,14 @@ svn_client_update (const svn_delta_editor_t *before_editor,
    svn_client_revision_head, or svn_client_revision_date; otherwise,
    return SVN_ERR_CLIENT_BAD_REVISION.
 
-   During a switch, files may be restored from the text-base if they
-   have been removed from the working copy. When this happens,
-   NOTIFY_FUNC will be called with NOTIFY_BATON and the (relative)
-   path of the file that has been restored. NOTIFY_FUNC may be NULL
-   if this information is not required.
-
-   BEFORE_EDITOR, BEFORE_EDIT_BATON and AFTER_EDITOR, AFTER_EDIT_BATON
-   are pre- and post-switch hook editors.  They are optional; pass
-   four NULLs if you don't need them.
+   If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON on paths
+   affected by the switch.  Also invoke it for files may be restored
+   from the text-base because they were removed from the working
+   copy.
 
    Use POOL for any temporary allocation. */
 svn_error_t *
-svn_client_switch (const svn_delta_editor_t *before_editor,
-                   void *before_edit_baton,
-                   const svn_delta_editor_t *after_editor,
-                   void *after_edit_baton,
-                   svn_client_auth_baton_t *auth_baton,
+svn_client_switch (svn_client_auth_baton_t *auth_baton,
                    const char *path,
                    const char *url,
                    const svn_client_revision_t *revision,
@@ -338,9 +309,9 @@ svn_client_switch (const svn_delta_editor_t *before_editor,
    not.  If RECURSIVE is set, then assuming PATH is a directory, all
    of its contents will be scheduled for addition as well.
 
-   For each item which is added, NOTIFY_FUNC will be called with
-   NOTIFY_BATON and the path of the added item. NOTIFY_FUNC may be
-   NULL if this information is not required.
+   If NOTIFY_FUNC is non-null, then for each added item, call
+   NOTIFY_FUNC with NOTIFY_BATON and the path of the added
+   item.
 
    Important:  this is a *scheduling* operation.  No changes will
    happen to the repository until a commit occurs.  This scheduling
@@ -365,11 +336,10 @@ svn_client_add (const char *path,
    function can use to query for a commit log message when one is
    needed.
 
-   When the directory has been created (successfully) in the working
-   copy, NOTIFY_FUNC will be called with NOTIFY_BATON and the path of
-   the new directory.  If this information is not required, then
-   NOTIFY_FUNC may be NULL. Note that this is only called for items
-   added to the working copy.
+   If NOTIFY_FUNC is non-null, when the directory has been created
+   (successfully) in the working copy, call NOTIFY_FUNC with
+   NOTIFY_BATON and the path of the new directory.  Note that this is
+   only called for items added to the working copy.
 */
 svn_error_t *
 svn_client_mkdir (svn_client_commit_info_t **commit_info,
@@ -401,9 +371,9 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
    function can use to query for a commit log message when one is
    needed.
 
-   For each item deleted, NOTIFY_FUNC will be called with NOTIFY_BATON
-   and the path of the deleted item. NOTIFY_FUNC may be NULL if this
-   information is not required.  */
+   If NOTIFY_FUNC is non-null, then for each item deleted, call
+   NOTIFY_FUNC with NOTIFY_BATON and the path of the deleted
+   item. */
 svn_error_t *
 svn_client_delete (svn_client_commit_info_t **commit_info,
                    const char *path,
@@ -483,24 +453,24 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
 
 
 /* Commit file or directory PATH into repository, authenticating with
-   AUTH_BATON, and using LOG_MSG as the log message.  Set *COMMIT_INFO
-   to the results of the commit, allocated in POOL.
+   AUTH_BATON, using LOG_MSG_FUNC/LOG_MSG_BATON to obtain the log
+   message.  Set *COMMIT_INFO to the results of the commit, allocated
+   in POOL.
 
-   TARGETS is an array of svn_stringbuf_t * paths to commit.  They need
-   not be canonicalized nor condensed; this function will take care of
+   TARGETS is an array of const char * paths to commit.  They need not
+   be canonicalized nor condensed; this function will take care of
    that.
 
    BEFORE_EDITOR, BEFORE_EDIT_BATON, and AFTER_EDITOR,
    AFTER_EDIT_BATON are pre- and post-commit hook editors.  They are
    optional; pass four NULLs here if you don't need them.
 
+   ### todo: this bit is vague, but will be fixed with the completion
+       of issue #662 anyway: ### 
+
    Additionally, NOTIFY_FUNC/BATON will be called as the commit
    progresses, as a way of describing actions to the application
    layer.
-
-   LOG_MSG_FUNC/LOG_MSG_BATON are a callback/baton combo that this
-   function can use to query for a commit log message when one is
-   needed.
 
    If XML_DST is NULL, then the commit will write to a repository, and
    the REVISION argument is ignored.
@@ -709,9 +679,8 @@ svn_client_cleanup (const char *dir,
    undoing any local mods.  If PATH is a directory, and RECURSIVE is
    TRUE, this will be a recursive operation.
 
-   For each item reverted, NOTIFY_FUNC will be called with NOTIFY_BATON
-   and the path of the reverted item. If this information is not required,
-   then NOTIFY_FUNC may be NULL.  */
+   If NOTIFY_FUNC is non-null, then for each item reverted, call
+   NOTIFY_FUNC with NOTIFY_BATON and the path of the reverted item. */
 svn_error_t *
 svn_client_revert (const char *path,
                    svn_boolean_t recursive,
@@ -725,8 +694,8 @@ svn_client_revert (const char *path,
    committed in the future.  The implementation details are opaque.
 
    If PATH is not in a state of conflict to begin with, do nothing.
-   If PATH's conflict state is removed, call NOTIFY_FUNC (with
-   NOTIFY_BATON) if the func is non-NULL. */
+   If PATH's conflict state is removed and NOTIFY_FUNC is non-null,
+   call NOTIFY_FUNC with NOTIFY_BATON and PATH. */
 svn_error_t *
 svn_client_resolve (const char *path,
                     svn_wc_notify_func_t notify_func,
@@ -822,10 +791,12 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
    function can use to query for a commit log message when one is
    needed.
 
-   For each item moved, NOTIFY_FUNC will be called with the
-   NOTIFY_BATON twice, once to indicate the deletion of the moved
-   thing, and once to indicate the addition of the new location of the
-   thing.  NOTIFY_FUNC can be NULL if this feedback is not required.  */
+   If NOTIFY_FUNC is non-null, then for each item moved, call
+   NOTIFY_FUNC with the NOTIFY_BATON twice, once to indicate the
+   deletion of the moved thing, and once to indicate the addition of
+   the new location of the thing. ### Is this really true?  What about
+                                      svn_wc_notify_commit_replaced? ### 
+*/ 
 svn_error_t *
 svn_client_move (svn_client_commit_info_t **commit_info,
                  const char *src_path,
@@ -891,6 +862,15 @@ svn_client_proplist (apr_array_header_t **props,
 
 
 /* Cancellation. */
+
+/* ### Plan is to get rid of tihs, and make svn_wc_notify_func_t
+   ### return boolean, where true indicates that the user requested
+   ### cancellation.  The caller of the notification func can then
+   ### take whatever action is appropriate (most editor functions will
+   ### probably return SVN_ERR_CANCELED, for example).
+   ###
+   ### See http://subversion.tigris.org/issues/show_bug.cgi?id=662.
+*/
 
 /* A function type for determining whether or not to cancel an operation.
  * Returns TRUE if should cancel, FALSE if should not.

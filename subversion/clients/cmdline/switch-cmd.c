@@ -46,6 +46,8 @@ svn_cl__switch (apr_getopt_t *os,
   const svn_delta_editor_t *trace_editor;
   void *trace_edit_baton;
   const char *parent_dir, *base_tgt;
+  svn_wc_notify_func_t notify_func = NULL;
+  void *notify_baton = NULL;
 
   /* This command should discover (or derive) exactly two cmdline
      arguments: a local path to update ("target"), and a new url to
@@ -96,17 +98,17 @@ svn_cl__switch (apr_getopt_t *os,
                                             FALSE,
                                             pool));
 
+  if (! opt_state->quiet)
+    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool);
+
   /* Do the 'switch' update. */
   SVN_ERR (svn_client_switch
-           (NULL, NULL, 
-            trace_editor, trace_edit_baton,
-            auth_baton,
+           (auth_baton,
             target,
             switch_url,
             &(opt_state->start_revision),
             opt_state->nonrecursive ? FALSE : TRUE,
-            SVN_CL_NOTIFY(opt_state), 
-            svn_cl__make_notify_baton (pool),
+            notify_func, notify_baton,
             pool));
 
   return SVN_NO_ERROR;
