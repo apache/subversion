@@ -50,7 +50,7 @@
       you should definitely pay attention to this chapter.</para>
 
     <para>Of course, one cannot administer a repository unless one has
-      a repository to administer, can one?</para>
+      a repository to administer.</para>
 
   </simplesect>
 
@@ -60,10 +60,10 @@
   <sect1 id="svn-ch-5-sect-1">
     <title>Repository Creation and Configuration</title>
 
-    <para>Creating a Subversion repository is incredibly simple.  The
-      <command>svnadmin</command> utility, provided with Subversion,
-      has a subcommand for doing just that.  To create a new
-      repository, just run:</para>
+    <para>Creating a Subversion repository is an incredibly simple
+      task.  The <command>svnadmin</command> utility, provided with
+      Subversion, has a subcommand for doing just that.  To create a
+      new repository, just run:</para>
           
     <screen>
 $ svnadmin create path/to/repos
@@ -221,8 +221,7 @@ pre-commit.tmpl           start-commit.tmpl
         <filename>.bat</filename> for batch files.</para>
           
       <para>Currently there are five true hooks implemented by the
-        Subversion repository.  The following is a brief description
-        of how each of those works:</para>
+        Subversion repository.</para>
 
       <variablelist>
         <varlistentry>
@@ -533,18 +532,27 @@ Type "svnlook help &lt;subcommand&gt;" for help on a specific subcommand.
 </screen>
 
         <para>Nearly every one of <command>svnlook</command>'s
-          subcommand can operate on either a revision or a
-          transacation tree, printing information about the tree
+          subcommands can operate on either a revision or a
+          transaction tree, printing information about the tree
           itself, or how it differs from the previous revision of the
           repository.  You use the <option>--revision</option> and
           <option>--transaction</option> options to specify which
           revision or transaction, respectively, to examine.  Note
           that while revision numbers appear as natural numbers,
-          transaction names are alphanumeric strings.  In the absence
-          of both of these options, <command>svnlook</command> will
-          examine the youngest (or <quote>HEAD</quote>) revision in
-          the repository.  So the following two commands do exactly
-          the same thing when 19 is the youngest revision in
+          transaction names are alphanumeric strings.  Keep in mind
+          that the filesystem only allows browsing of non-committed
+          transactions (transactions that have not resulted in a new
+          revision).  Most repositories will have no such
+          transactions, because transactions are usually either
+          committed (which disqualifies them from viewing) or aborted
+          and removed.</para>
+
+        <para>In the absence of both the <option>--revision</option>
+          and <option>--transaction</option> options,
+          <command>svnlook</command> will examine the youngest (or
+          <quote>HEAD</quote>) revision in the repository.  So the
+          following two commands do exactly the same thing when 19 is
+          the youngest revision in the repository located at
           <filename>/path/to/repos</filename>:</para>
 
         <screen>
@@ -554,7 +562,7 @@ $ svnlook info /path/to/repos --revision 19
 
         <para>The only exception to these rules about subcommands is
           the <command>svnlook youngest</command> subcommand, which
-          takes no options, and simply prints out that HEAD revision
+          takes no options, and simply prints out the HEAD revision
           number.</para>
 
         <screen>
@@ -601,12 +609,12 @@ Greek tree.
           output is also machine-parsable&mdash;because the log
           message can contain multiple lines and be unbounded in
           length, <command>svnlook</command> provides the length of
-          that message before the message itself so scripts and other
-          wrappers around this command can make intelligent decisions
-          about the log message, such as how much memory to allocate
-          for the message, or at least how many bytes to skip in the
-          event that this output is not the last bit of data in the
-          stream.</para>
+          that message before the message itself.  This allows scripts
+          and other wrappers around this command to make intelligent
+          decisions about the log message, such as how much memory to
+          allocate for the message, or at least how many bytes to skip
+          in the event that this output is not the last bit of data in
+          the stream.</para>
 
         <para>Another common use of <command>svnlook</command> is to
           actually view the contents of a revision or transaction
@@ -668,7 +676,7 @@ $ svnlook tree path/to/repos --show-ids
               <para>Print the tree's datestamp.</para>
             </listitem>
           </varlistentry>
-          
+
           <varlistentry>
             <term><literal>changed</literal></term>
             <listitem>
@@ -729,9 +737,9 @@ $ svnlook tree path/to/repos --show-ids
         <title>svnadmin</title>
 
         <para>The <command>svnadmin</command> program is the
-          repository administrator's friend.  Besides providing the
-          ability to create Subversion repositories, this program allows you
-          perform several maintainance operations on those
+          repository administrator's best friend.  Besides providing
+          the ability to create Subversion repositories, this program
+          allows you perform several maintainance operations on those
           repositories.  The syntax of <command>svnadmin</command> is
           similar to that of <command>svnlook</command>:</para>
 
@@ -798,7 +806,7 @@ Available subcommands:
           <varlistentry>
             <term><literal>lstxns</literal></term>
             <listitem>
-              <para>List the names of Subversion uncommitted
+              <para>List the names of uncommitted Subversion
                 transactions which currently exist in the repository.</para>
             </listitem>
           </varlistentry>
@@ -849,9 +857,117 @@ Available subcommands:
       <sect3 id="svn-ch-5-sect-2.1.4">
         <title>svnshell.py</title>
 
-        <!-- TODO: write this section, C-Mike  -->
-      </sect3>
+        <para>The Subversion source tree also comes with a shell-like
+          interface to the repository.  The
+          <command>svnshell.py</command> Python script (located in
+          <filename>tools/examples/</filename> in the source tree)
+          uses Subversion's language bindings (so you have to have
+          those properly compiled and installed in order for this
+          script to work) to connect to the repository and filesystem
+          libraries.</para>
 
+        <para>Once started, the program behaves similarly to a shell
+          program, allowing you to browse the various directories in
+          your repository.  Initially, you are
+          <quote>positioned</quote> in the root directory of the HEAD
+          revision of the repository, and presented with a command
+          prompt.  You can use the <literal>help</literal> command at
+          any time to display a list of available commands and what
+          they do.</para>
+
+        <screen>
+$ svnshell.py /path/to/repos
+&lt;rev: 2 /&gt;$
+ help
+Available commands:
+  cat FILE     : dump the contents of FILE
+  cd DIR       : change the current working directory to DIR
+  exit         : exit the shell
+  ls [PATH]    : list the contents of the current directory
+  lstxns       : list the transactions available for browsing
+  setrev REV   : set the current revision to browse
+  settxn TXN   : set the current transaction to browse
+  youngest     : list the youngest browsable revision number
+&lt;rev: 2 /&gt;$
+</screen>
+
+        <para>Navigating the directory structure of your repository is
+          done in the same way you would navigate a regular Unix or
+          Windows shell&mdash;using the <literal>cd</literal> command.
+          At all times, the command prompt will show you what revision
+          (prefixed by <literal>rev:</literal>) or transaction
+          (prefixed by <literal>txn:</literal>) you are currently
+          examining, and at what path location in that revision or
+          transaction.  You can change your current revision or
+          transaction with the <literal>setrev</literal> and
+          <literal>settxn</literal> commands, respectively.  As in a
+          Unix shell, you can use the <literal>ls</literal> command to
+          display the contents of the current directory, and you can
+          use the <literal>cat</literal> command to display the
+          contents of a file.</para>
+
+        <screen>
+&lt;rev: 2 /&gt;$ ls
+   REV   AUTHOR  NODE-REV-ID     SIZE         DATE NAME
+----------------------------------------------------------------------------
+     1          &lt;     2.0.1&gt;          Nov 15 11:50 A/
+     2 cmpilato &lt;     1.0.2&gt;       56 Nov 19 08:19 iota
+&lt;rev: 2 /&gt;$ cd A
+&lt;rev: 2 /A&gt;$ ls
+   REV   AUTHOR  NODE-REV-ID     SIZE         DATE NAME
+----------------------------------------------------------------------------
+     1          &lt;     4.0.1&gt;          Nov 15 11:50 B/
+     1          &lt;     a.0.1&gt;          Nov 15 11:50 C/
+     1          &lt;     b.0.1&gt;          Nov 15 11:50 D/
+     1          &lt;     3.0.1&gt;       23 Nov 15 11:50 mu
+&lt;rev: 2 /A&gt;$ cd D/G 
+&lt;rev: 2 /A/D/G&gt;$ ls
+   REV   AUTHOR  NODE-REV-ID     SIZE         DATE NAME
+----------------------------------------------------------------------------
+     1          &lt;     e.0.1&gt;       23 Nov 15 11:50 pi
+     1          &lt;     f.0.1&gt;       24 Nov 15 11:50 rho
+     1          &lt;     g.0.1&gt;       24 Nov 15 11:50 tau
+&lt;rev: 2 /A&gt;$ cd ../..
+&lt;rev: 2 /&gt;$ cat iota
+This is the file 'iota'.
+Added this text in revision 2.
+
+&lt;rev: 2 /&gt;$ setrev 1; cat iota
+This is the file 'iota'.
+
+&lt;rev: 1 /&gt;$ exit
+$
+</screen>
+
+        <para>As you can see the previous example, multiple commands
+          may be specified at a single command prompt, separated by a
+          semicolon.  Also, the shell understands the notions of
+          relative and absolute paths, and will properly handle the
+          special path components <literal>.</literal> and
+          <literal>..</literal>.</para>
+
+        <para>You can use the <literal>youngest</literal> command to
+          display the youngest revision.  This is useful for
+          determining the range of valid revisions you can use as
+          arguments to the <literal>setrev</literal> command&mdash;you
+          can browse all the revisions (recalling that they are named
+          with integers) between 0 and the youngest, inclusively.
+          Determining the valid browsable transactions isn't quite as
+          pretty.  Use the <command>lstxns</command> command to list
+          the transactions that you are able to browse.  The list of
+          browsable transactions is the same list that
+          <command>svnadmin lstxns</command> returns, and the same
+          list that is valid for use with <command>svnlook</command>'s
+          <option>--transaction</option> option.</para>
+
+        <para>Once you've finished using the shell, you can exit
+          cleanly by using the <command>exit</command> command.
+          Alternatively, you can supply an end-of-file
+          character&mdash;Control-D (though some Win32 Python
+          distributions use the Windows Control-Z convention
+          instead).</para>
+
+      </sect3>
     </sect2>
 
     <!-- ***************************************************************** -->
