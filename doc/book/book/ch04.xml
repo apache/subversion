@@ -82,7 +82,7 @@
     <para>For this chapter, we'll go back to the same example from
       Chapter 2.  Remember that you and your collaborator, Sally, are
       sharing a repository that contains two projects,
-      <filename>paint</filename> and <filename>write.</filename>
+      <filename>paint</filename> and <filename>calc.</filename>
       Notice, however, that this time somebody has created two new
       top-level directories in the repository, called
       <filename>trunk</filename> and <filename>branches</filename>.
@@ -95,11 +95,11 @@
       </figure>
 
     <para>As before, assume that you and Sally both have working
-      copies of the <filename>/trunk/write</filename> project.</para>
+      copies of the <filename>/trunk/calc</filename> project.</para>
 
     <para>Let's say that you've been given the task of performing a
       radical reorganization of the project.  It will take a long time
-      to write, and will affect all the files in the project.  The
+      to calc, and will affect all the files in the project.  The
       problem here is that you don't want to interfere with Sally, who
       is in the process of fixing small bugs here and there.  She's
       depending on the fact that the latest version of the project is
@@ -115,7 +115,7 @@
       repository frequently, should something bad accidentally happen
       to their working copy.  Second, it's not very flexible.  If you
       do your work on different computers (perhaps you have a working
-      copy of <filename>/trunk/write</filename> on two different
+      copy of <filename>/trunk/calc</filename> on two different
       machines), you'll need to manually copy your changes back and
       forth, or just do all the work on a single computer.  Finally,
       when you're finished, you might find it very difficult to commit
@@ -138,14 +138,14 @@
         copy</command> command.  Subversion is not only able to copy
         single files, but whole directories as well.  In this case,
         you want to make a copy of the
-        <filename>/trunk/write</filename> directory.  Where should the
+        <filename>/trunk/calc</filename> directory.  Where should the
         new copy live?  Whereever you wish -- it's a matter of project
         policy.  Let's say that your team has a policy of creating
-        branches in the <filename>/branches/write</filename> area of
+        branches in the <filename>/branches/calc</filename> area of
         the repository, and you want to name your branch
-        "my-write-branch".  You'll want to create a new directory,
-        <filename>/branches/write/my-write-branch</filename>, which
-        starts as a copy of <filename>/trunk/write</filename>. </para>
+        "my-calc-branch".  You'll want to create a new directory,
+        <filename>/branches/calc/my-calc-branch</filename>, which
+        starts as a copy of <filename>/trunk/calc</filename>. </para>
 
       <para>There are two different ways to make a copy.  We'll
         demonstrate the messy way first, just to make the concept
@@ -155,13 +155,13 @@
 <screen>
 $ svn checkout http://svn.example.com/repos bigwc
 A  bigwc/branches/
-A  bigwc/branches/write
+A  bigwc/branches/calc
 A  bigwc/branches/paint
 A  bigwc/trunk/
-A  bigwc/trunk/write
-A  bigwc/trunk/write/Makefile
-A  bigwc/trunk/write/document.c
-A  bigwc/trunk/write/search.c
+A  bigwc/trunk/calc
+A  bigwc/trunk/calc/Makefile
+A  bigwc/trunk/calc/integer.c
+A  bigwc/trunk/calc/button.c
 A  bigwc/trunk/paint
 A  bigwc/trunk/paint/Makefile
 A  bigwc/trunk/paint/canvas.c
@@ -175,29 +175,29 @@ Checked out revision 340.
 
 <screen>
 $ cd bigwc
-$ svn copy trunk/write branches/write/my-write-branch
+$ svn copy trunk/calc branches/calc/my-calc-branch
 $ svn status
-A  +   branches/write/my-write-branch
+A  +   branches/calc/my-calc-branch
 </screen>
 
       <para>In this case, the <command>svn copy</command> command
-        recursively copies the <filename>trunk/write</filename>
+        recursively copies the <filename>trunk/calc</filename>
         working directory to a new working directory,
-        <filename>branches/write/my-write-branch</filename>.  As you
+        <filename>branches/calc/my-calc-branch</filename>.  As you
         can see from the <command>svn status</command> command, the
         new directory is now scheduled for addition to the repository.
         But also notice the + sign next to the letter A.  This
         indicates that the scheduled addition is a
         <emphasis>copy</emphasis> of something, not something new.
         When you commit your changes, Subversion will create
-        <filename>/branches/write/my-write-branch</filename> in the
-        repository by copying <filename>/trunk/write</filename>,
+        <filename>/branches/calc/my-calc-branch</filename> in the
+        repository by copying <filename>/trunk/calc</filename>,
         rather than resending all of the working copy data over the
         network:</para>
 
 <screen>
-$ svn commit -m "Creating a private branch of /trunk/write."
-Adding      branches/write/my-write-branch
+$ svn commit -m "Creating a private branch of /trunk/calc."
+Adding      branches/calc/my-calc-branch
 Committed revision 341.
 </screen>
 
@@ -206,9 +206,9 @@ Committed revision 341.
         copy</command> is able to operate on two URLs.</para>
 
 <screen>
-$ svn copy http://svn.example.com/repos/trunk/write \
-           http://svn.example.com/repos/branches/write/my-write-branch \
-      -m "Creating a private branch of /trunk/write"
+$ svn copy http://svn.example.com/repos/trunk/calc \
+           http://svn.example.com/repos/branches/calc/my-calc-branch \
+      -m "Creating a private branch of /trunk/calc"
 
 Committed revision 341.
 </screen>
@@ -216,7 +216,7 @@ Committed revision 341.
       <para>There's really no difference between these two methods.
         Both procedures create a new directory in revision 341, and
         the new directory is a copy of
-        <filename>/trunk/write</filename>.  Notice that the second
+        <filename>/trunk/calc</filename>.  Notice that the second
         method, however, performs an <emphasis>immediate</emphasis>
         commit.  It's an easier procedure, because it doesn't require
         you to check out a large mirror of the repository.  In fact,
@@ -266,10 +266,10 @@ Committed revision 341.
         can check out a new working copy to start using it:</para>
 
 <screen>
-$ svn checkout http://svn.example.com/repos/branches/write/my-write-branch
-A  my-write-branch/Makefile
-A  my-write-branch/document.c
-A  my-write-branch/search.c
+$ svn checkout http://svn.example.com/repos/branches/calc/my-calc-branch
+A  my-calc-branch/Makefile
+A  my-calc-branch/integer.c
+A  my-calc-branch/button.c
 Checked out revision 341.
 </screen>
 
@@ -277,7 +277,7 @@ Checked out revision 341.
         mirrors a different location of the repository.  When you
         commit changes, however, Sally won't ever see them when she
         updates.  Her working copy is of
-        <filename>/trunk/write</filename>.</para>
+        <filename>/trunk/calc</filename>.</para>
 
       <para>Let's pretend that a week goes by, and the following
       commits happen:</para>
@@ -285,25 +285,25 @@ Checked out revision 341.
       <itemizedlist>
         <listitem><para>
           You make a change to
-          <filename>/branches/write/my-write-branch/search.c</filename>,
+          <filename>/branches/calc/my-calc-branch/button.c</filename>,
           which creates revision 342.</para>
         </listitem>
 
         <listitem><para>
           You make a change to
-          <filename>/branches/write/my-write-branch/document.c</filename>,
+          <filename>/branches/calc/my-calc-branch/integer.c</filename>,
           which creates revision 343.</para>
         </listitem>
 
         <listitem><para>
           Sally makes a change to
-          <filename>/trunk/write/document.c</filename>, which creates
+          <filename>/trunk/calc/integer.c</filename>, which creates
           revision 344.</para>
         </listitem>
       </itemizedlist>
 
       <para>There are now two independent lines of development
-        happening on <filename>document.c</filename>:</para>
+        happening on <filename>integer.c</filename>:</para>
 
       <figure id="svn-ch4-dia4">
         <title>The branching of one file's history</title>
@@ -312,56 +312,56 @@ Checked out revision 341.
 
       <para>Things get interesting when you look at the history of
         changes made to your copy of
-        <filename>document.c</filename>:</para>
+        <filename>integer.c</filename>:</para>
 
 <screen>
 $ pwd
-/home/user/my-write-branch
+/home/user/my-calc-branch
 
-$ svn log document.c
+$ svn log integer.c
 ------------------------------------------------------------------------
 rev 343:  user | 2002-11-07 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
 
-* document.c:  frozzled the wazjub.
+* integer.c:  frozzled the wazjub.
 
 ------------------------------------------------------------------------
 rev 303:  sally | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
 
-* document.c:  changed a docstring.
+* integer.c:  changed a docstring.
 
 ------------------------------------------------------------------------
 rev 98:  sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
 
-* document.c:  adding this file to the project.
+* integer.c:  adding this file to the project.
 
 ------------------------------------------------------------------------
 </screen>
 
       <para>Notice that Subversion is tracing the history of your
-      <filename>document.c</filename> all the way back through time,
+      <filename>integer.c</filename> all the way back through time,
       traversing the point where it was copied.  (Remember that your
       branch was created in revision 341.)  Now look what happens when
       Sally runs the same command on her copy of the file:</para>
 
 <screen>
 $ pwd
-/home/sally/write
+/home/sally/calc
 
-$ svn log document.c
+$ svn log integer.c
 ------------------------------------------------------------------------
 rev 344:  sally | 2002-11-07 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
 
-* document.c:  fix a bunch of spelling errors.
+* integer.c:  fix a bunch of spelling errors.
 
 ------------------------------------------------------------------------
 rev 303:  sally | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
 
-* document.c:  changed a docstring.
+* integer.c:  changed a docstring.
 
 ------------------------------------------------------------------------
 rev 98:  sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
 
-* document.c:  adding this file to the project.
+* integer.c:  adding this file to the project.
 
 ------------------------------------------------------------------------
 </screen>
@@ -426,7 +426,7 @@ rev 98:  sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
       changes between branches.</para>
 
     <para>In the previous section, we mentioned that both you and
-      Sally made changes to <filename>document.c</filename> on
+      Sally made changes to <filename>integer.c</filename> on
       different branches.  If you look at Sally's log message for
       revision 344, you can see that she fixed some spelling errors.
       No doubt, your copy of the same file still has the same spelling
@@ -446,12 +446,12 @@ rev 98:  sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
       change made by Sally in revision 344:</para>
 
 <screen>
-$ svn diff -r343:344 http://svn.example.com/repos/trunk/write
+$ svn diff -r343:344 http://svn.example.com/repos/trunk/calc
 
-Index: document.c
+Index: integer.c
 ===================================================================
---- document.c	(revision 343)
-+++ document.c	(revision 344)
+--- integer.c	(revision 343)
++++ integer.c	(revision 344)
 @@ -147,7 +147,7 @@
      case 6:  sprintf(info->operating_system, "HPFS (OS/2 or NT)"); break;
      case 7:  sprintf(info->operating_system, "Macintosh"); break;
@@ -496,22 +496,22 @@ Index: document.c
       modifications</emphasis>:</para>
     
 <screen>
-$ svn merge -r343:344 http://svn.example.com/repos/trunk/write
-U  document.c
+$ svn merge -r343:344 http://svn.example.com/repos/trunk/calc
+U  integer.c
 
 $ svn status
-M  document.c
+M  integer.c
 </screen>
 
     <para>The output of <command>svn merge</command> shows that your
-      copy of <filename>document.c</filename> was patched.  It now
+      copy of <filename>integer.c</filename> was patched.  It now
       contains Sally's change &mdash; it has been "copied" from her
       branch to your working copy, and now exists as a local
       modification.  At this point, it's up to you to review the local
       modification and make sure it works correctly.</para>
 
     <para>In another scenario, it's possible that things may not have
-      gone so well, and that <filename>document.c</filename> may have
+      gone so well, and that <filename>integer.c</filename> may have
       entered a conflicted state.  You might need to resolve the
       conflict using standard procedures (see Chapter 3), or if you
       decide that the merge was a bad idea altogether, simply give up
@@ -534,9 +534,9 @@ M  document.c
         For example:</para>
 
 <screen>
-$ svn diff -r343:344 http://svn.example.com/repos/trunk/write > patchfile
+$ svn diff -r343:344 http://svn.example.com/repos/trunk/calc > patchfile
 $ patch -p0  &lt; patchfile
-Patching file document.c using Plan A...
+Patching file integer.c using Plan A...
 Hunk #1 succeeded at 147.
 Hunk #2 succeeded at 164.
 Hunk #3 succeeded at 241.
@@ -578,8 +578,8 @@ done
       need to say so:</para>
 
 <screen>
-$ svn merge -r343:344 http://svn.example.com/repos/trunk/write my-write-branch
-U   my-write-branch/document.c
+$ svn merge -r343:344 http://svn.example.com/repos/trunk/calc my-calc-branch
+U   my-calc-branch/integer.c
 </screen>
 
       <!-- ### fix the damn left arrow quoting problem in both screen
@@ -633,7 +633,7 @@ U   my-write-branch/document.c
     <para>A common use for <command>svn merge</command> is to roll
       back a change that has already been committed.  Suppose you
       decide that the change made way back in revision 303, which
-      changed <filename>document.c</filename>, is completely wrong.
+      changed <filename>integer.c</filename>, is completely wrong.
       It never should have been committed.  You can use <command>svn
       merge</command> to "undo" the change in your working copy, and
       then commit the local modification to the repository.  All you
@@ -641,14 +641,14 @@ U   my-write-branch/document.c
       difference:</para>
 
 <screen>
-$ svn merge -r 303:302 http://svn.example.com/trunk/write
-U  document.c
+$ svn merge -r 303:302 http://svn.example.com/trunk/calc
+U  integer.c
 
 $ svn status
-M  document.c
+M  integer.c
 
 $ svn commit -m "Undoing change committed in r303."
-Sending    document.c
+Sending    integer.c
 Transmitting file data .
 Committed revision 350.
 </screen>
@@ -675,7 +675,7 @@ Committed revision 350.
     <para>Again, you may be thinking: well, that really didn't undo
       the commit, did it?  The change still exists in revision 303.
       If somebody checks out a version of the
-      <filename>write</filename> project between revisions 303 and
+      <filename>calc</filename> project between revisions 303 and
       349, they'll still see the bad change, right?</para>
 
     <para>Yes, that's true.  When we talk about "removing" a change,
@@ -714,23 +714,23 @@ Committed revision 350.
       after creating your private branch, you checked out a fresh
       working copy of the new repository directory.  Instead, you can
       simply ask Subversion to change your working copy of
-      <filename>/trunk/write</filename> to mirror the new branch
+      <filename>/trunk/calc</filename> to mirror the new branch
       location:</para>
 
 <screen>
-$ cd write
+$ cd calc
 
 $ svn info | grep Url
-Url: http://svn.example.com/trunk/write
+Url: http://svn.example.com/trunk/calc
 
-$ svn switch http://svn.example.com/branches/write/my-write-branch
-U   document.c
-U   search.c
+$ svn switch http://svn.example.com/branches/calc/my-calc-branch
+U   integer.c
+U   button.c
 U   Makefile
 Updated to revision 341.
 
 $ svn info | grep Url
-Url: http://svn.example.com/branches/write/my-write-branch
+Url: http://svn.example.com/branches/calc/my-calc-branch
 </screen>
 
     <para>After "switching" to the branch, your working copy is no
@@ -741,7 +741,7 @@ Url: http://svn.example.com/branches/write/my-write-branch
       make your working copy reflect the branch.</para>
 
     <para>Of course, most projects are more complicated than our
-      <filename>write</filename> example.  Users often create a branch
+      <filename>calc</filename> example.  Users often create a branch
       of a project's subdirectory, and then use <command>svn
       switch</command> to move that specific subdirectory in their
       working copy to the new branch.  Or sometimes users will only
@@ -781,13 +781,13 @@ Url: http://svn.example.com/branches/write/my-write-branch
         update command always compares two identical paths.</para>
       
        <para>That is, if your working copy is a mirror of
-        <filename>/trunk/write</filename>, then <command>svn
+        <filename>/trunk/calc</filename>, then <command>svn
         update</command> will automatically compare your working copy
-        of <filename>/trunk/write</filename> to
-        <filename>/trunk/write</filename> in the HEAD revision.  If
+        of <filename>/trunk/calc</filename> to
+        <filename>/trunk/calc</filename> in the HEAD revision.  If
         you're switching your working copy to a branch, then
         <command>svn switch</command> will compare your working copy
-        of <filename>/trunk/write</filename> to some
+        of <filename>/trunk/calc</filename> to some
         <emphasis>other</emphasis> branch-directory in the HEAD
         revision.</para>
 
@@ -822,19 +822,19 @@ Url: http://svn.example.com/branches/write/my-write-branch
 
       <para>Once again, <command>svn copy</command> comes to the
         rescue.  If you want to create a snapshot of
-        <filename>/trunk/write</filename> exactly as it looks in the
+        <filename>/trunk/calc</filename> exactly as it looks in the
         HEAD revision, then make a copy of it:</para>
 
 <screen>
-$ svn copy http://svn.example.com/repos/trunk/write \
-           http://svn.example.com/repos/tags/write/release-1.0 \
-      -m "Tagging the 1.0 release of the 'write' project."
+$ svn copy http://svn.example.com/repos/trunk/calc \
+           http://svn.example.com/repos/tags/calc/release-1.0 \
+      -m "Tagging the 1.0 release of the 'calc' project."
 
 Committed revision 351.
 </screen>
 
       <para>This example assumes that a
-        <filename>/tags/write</filename> directory already exists.
+        <filename>/tags/calc</filename> directory already exists.
         After the copy completes, the new
         <filename>release-1.0</filename> directory is forever a
         snapshot of how the project looked in the HEAD revision at the
@@ -842,7 +842,7 @@ Committed revision 351.
         precise about exactly which revision you copy, in case
         somebody else may have committed changes to the project when
         you weren't looking.  So if you know that revision 350 of
-        <filename>/trunk/write</filename> is exactly the snapshot you
+        <filename>/trunk/calc</filename> is exactly the snapshot you
         want, you can specify it by passing <option>-r350</option>
         to the <command>svn copy</command> command.</para>
 
@@ -881,7 +881,7 @@ Committed revision 351.
         revision.</para>
       
       <para>For example, pretend your project is much larger than our
-        <filename>write</filename> example: suppose it contains a
+        <filename>calc</filename> example: suppose it contains a
         number of subdirectories and many more files.  In the course
         of your work, you may decide that you need to create a working
         copy that is designed to have specific features and bugfixes.
@@ -906,13 +906,13 @@ Committed revision 351.
 $ ls
 ./    ../   my-working-copy/
 
-$ svn copy my-working-copy http://svn.example.com/repos/tags/write/newtag
+$ svn copy my-working-copy http://svn.example.com/repos/tags/calc/newtag
 
 Committed revision 352.
 </screen>
 
       <para>Now there is a new directory in the repository,
-        <filename>/tags/write/mytag</filename>, which is an exact
+        <filename>/tags/calc/mytag</filename>, which is an exact
         snapshot of your working copy &mdash; mixed revisions, urls,
         and all.</para>
 
@@ -967,11 +967,11 @@ Committed revision 352.
 
 <screen>
 /trunk/paint
-/trunk/write
+/trunk/calc
 /branches/paint
-/branches/write
+/branches/calc
 /tags/paint
-/tags/write
+/tags/calc
 </screen>
 
     <para>...or by project:</para>
@@ -980,9 +980,9 @@ Committed revision 352.
 /paint/trunk
 /paint/branches
 /paint/tags
-/write/trunk
-/write/branches
-/write/tags
+/calc/trunk
+/calc/branches
+/calc/tags
 </screen>
 
       <para>Of course, you're free to ignore these common layouts.  You
@@ -1005,14 +1005,14 @@ Committed revision 352.
         branches and tags can have finite lifetimes, just like any
         other versioned item.  For example, suppose you eventually
         finish all your work on your personal branch of the
-        <filename>write</filename> project.  After merging all of your
-        changes back into <filename>/trunk/write</filename>, there's
+        <filename>calc</filename> project.  After merging all of your
+        changes back into <filename>/trunk/calc</filename>, there's
         no need for your private branch directory to stick around
         anymore:</para>
 
 <screen>
-$ svn remove http://svn.example.com/repos/branches/write/my-write-branch \
-             -m "Removing obsolete branch of write project."
+$ svn remove http://svn.example.com/repos/branches/calc/my-calc-branch \
+             -m "Removing obsolete branch of calc project."
 
 Committed revision 375.
 </screen>
@@ -1032,8 +1032,8 @@ Committed revision 375.
         copy -r</command> to copy it from the old revision:</para>
 
 <screen>
-$ svn copy -r374 http://svn.example.com/repos/branches/write/my-write-branch \
-                 http://svn.example.com/repos/branches/write/my-write-branch
+$ svn copy -r374 http://svn.example.com/repos/branches/calc/my-calc-branch \
+                 http://svn.example.com/repos/branches/calc/my-calc-branch
 
 Committed revision 376.
 </screen>
@@ -1044,7 +1044,7 @@ Committed revision 376.
         branch.  In software development, though, it's also common to
         have two "main" branches running side-by-side for very long
         periods.  For example, suppose it's time to release a stable
-        <filename>write</filename> project to the public, and you know
+        <filename>calc</filename> project to the public, and you know
         it's going to take a couple of months to shake bugs out of the
         software.  You don't want people to add new features to the
         project, but you don't want to tell all developers to stop
@@ -1052,18 +1052,18 @@ Committed revision 376.
         of the software that won't change much:</para>
 
 <screen>
-$ svn cp http://svn.example.com/repos/trunk/write \
-         http://svn.example.com/branches/write/stable-1.0
-         -m "Creating stable branch of write project."
+$ svn cp http://svn.example.com/repos/trunk/calc \
+         http://svn.example.com/branches/calc/stable-1.0
+         -m "Creating stable branch of calc project."
 
 Committed revision 377.
 </screen>
 
       <para>And now developers are free to continue adding
         cutting-edge (or experimental) features to
-        <filename>/trunk/write</filename>, and you can declare a
+        <filename>/trunk/calc</filename>, and you can declare a
         project policy that only bugfixes are to be committed to
-        <filename>/branches/write/stable-1.0</filename>.  That is, as
+        <filename>/branches/calc/stable-1.0</filename>.  That is, as
         people continue to work on the trunk, a human selectively
         ports bugfixes over to the stable branch.  Even after the
         stable branch has shipped, you'll probably continue to

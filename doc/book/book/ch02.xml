@@ -280,34 +280,34 @@
       
       <para>In other words, the repository's root directory has two
         subdirectories: <filename>paint</filename> and
-        <filename>write</filename>.</para>
+        <filename>calc</filename>.</para>
 
       <para>To get a working copy, you must <firstterm>check
         out</firstterm> some subtree of the repository.  (The term
         "check out" may sound like it has something to do with locking
         or reserving resources, but it doesn't; it simply creates a
         private copy of the project for you.) For example, If you
-        check out <filename>/write</filename>, you will get a working
+        check out <filename>/calc</filename>, you will get a working
         copy like this: </para>
 
 <screen>
-$ svn checkout http://svn.example.com/repos/write
-A  write
-A  write/Makefile
-A  write/document.c
-A  write/search.c
+$ svn checkout http://svn.example.com/repos/calc
+A  calc
+A  calc/Makefile
+A  calc/integer.c
+A  calc/button.c
 
-$ ls -a write
-Makefile  document.c  search.c  .svn/
+$ ls -a calc
+Makefile  integer.c  button.c  .svn/
 </screen>
 
       <para>Your working copy is a personal copy of the repository's
-        <filename>/write</filename> directory, with one additional
+        <filename>/calc</filename> directory, with one additional
         entry&mdash;<filename>.svn</filename>&mdash;which holds the
         extra information needed by Subversion, as mentioned
         earlier.</para>
       
-      <para>Suppose you make changes to <filename>search.c</filename>.
+      <para>Suppose you make changes to <filename>button.c</filename>.
         Since the <filename>.svn</filename> directory remembers the
         file's modification date and original contents, Subversion can
         tell that you've changed the file.  However, Subversion does
@@ -320,21 +320,21 @@ Makefile  document.c  search.c  .svn/
         Subversion's <command>commit</command> command:</para>
 
 <screen>
-$ svn commit search.c
-Sending search.c
+$ svn commit button.c
+Sending button.c
 Transmitting file data..
 Committed revision 57.
 </screen>
 
-      <para>Now your changes to <filename>search.c</filename> have
+      <para>Now your changes to <filename>button.c</filename> have
         been committed to the repository; if another user checks out a
-        working copy of <filename>/write</filename>, they will see
+        working copy of <filename>/calc</filename>, they will see
         your changes in the latest version of the file.</para>
 
       <para>Suppose you have a collaborator, Sally, who checked out a
-        working copy of <filename>/write</filename> at the same time
+        working copy of <filename>/calc</filename> at the same time
         you did.  When you commit your change to
-        <filename>search.c</filename>, Sally's working copy is left
+        <filename>button.c</filename>, Sally's working copy is left
         unchanged; Subversion only modifies working directories at the
         user's request.</para>
 
@@ -347,18 +347,18 @@ Committed revision 57.
 
 <screen>
 $ pwd
-/home/sally/write
+/home/sally/calc
 
 $ ls -a 
-.svn/ Makefile document.c search.c
+.svn/ Makefile integer.c button.c
 
 $ svn update
-U search.c
+U button.c
 </screen>
 
       <para>The output from the <command>svn update</command> command
         indicates that Subversion updated the contents of
-        <filename>search.c</filename>.  Note that Sally didn't need to
+        <filename>button.c</filename>.  Note that Sally didn't need to
         specify which files to update; Subversion uses the information
         in the <filename>.svn</filename> directory, and further
         information in the repository, to decide which files need to
@@ -431,38 +431,38 @@ U search.c
         most recent revision is 4:</para>
 
 <screen>
-write/Makefile:4
-      document.c:4
-      search.c:4
+calc/Makefile:4
+     integer.c:4
+     button.c:4
 </screen>
 
       <para>At the moment, this working directory corresponds exactly
         to revision 4 in the repository.  However, suppose you make a
-        change to <filename>search.c</filename>, and commit that
+        change to <filename>button.c</filename>, and commit that
         change.  Assuming no other commits have taken place, your
         commit will create revision 5 of the repository, and your
         working copy will now look like this:</para>
 
 <screen>
-write/Makefile:4
-      document.c:4
-      search.c:5
+calc/Makefile:4
+     integer.c:4
+     button.c:5
 </screen>
 
       <para>Suppose that, at this point, Sally commits a change to
-        <filename>document.c</filename>, creating revision 6.  If you
+        <filename>integer.c</filename>, creating revision 6.  If you
         use <command>svn update</command> to bring your working copy
         up to date, then it will look like this:</para>
 
 <screen>
-write/Makefile:6
-      document.c:6
-      search.c:6
+calc/Makefile:6
+     integer.c:6
+     button.c:6
 </screen>
 
-      <para>Sally's changes to <filename>document.c</filename> will
+      <para>Sally's changes to <filename>integer.c</filename> will
         appear in your working copy, and your change will still be
-        present in <filename>search.c</filename>.  In this example,
+        present in <filename>button.c</filename>.  In this example,
         the text of <filename>Makefile</filename> is identical in
         revisions 4, 5, and 6, but Subversion will mark your working
         copy of <filename>Makefile</filename> with revision 6 to
