@@ -201,6 +201,29 @@ typedef struct svn_ra_callbacks_t
 /* ### will svn_ra_callbacks_t need its own baton?  probably .*/
 
 
+/* The callback invoked by svn_ra_plugin_t:get_log().
+ *
+ * This function is invoked on each log message, in the order
+ * specified by the call to get_log (which see).
+ *
+ * BATON, REVISION, AUTHOR, DATE, and MESSAGE are what you think they
+ * are.  If the DISCOVER_CHANGED_PATHS flag was passed to get_log,
+ * then CHANGED_PATHS contains as keys every path committed in
+ * REVISION; else, CHANGED_PATHS is null.
+ *
+ * On the final call to this function in a given invocation of
+ * get_log, LAST_CALL is set.
+ */
+typedef svn_error_t *(*svn_ra_log_entry_receiver_t)
+     (void *baton,
+      const apr_hash_t *changed_paths,
+      svn_revnum_t revision,
+      const char *author,
+      apr_time_t date,
+      const char *message,
+      svn_boolean_t last_call);
+
+
 /*----------------------------------------------------------------------*/
 
 /* The RA Library */
@@ -350,6 +373,68 @@ typedef struct svn_ra_plugin_t
                              svn_boolean_t recurse,
                              const svn_delta_edit_fns_t *status_editor,
                              void *status_baton);
+
+  /* Return the log messages for revisions START to END, by invoking
+   * RECEIVER with RECEIVER_BATON on each one.
+   *
+   *    - If START and END are the same, then just return the message
+   *      for that revision,
+   *    - Else if START is less than END, return messages in that
+   *      range (inclusive) from older to younger,
+   *    - Else if START is greater than END, do the same from younger
+   *      to older,
+   *    - Else if START is a valid revision number but END is
+   *      SVN_INVALID_REVNUM, then return all messages from START to
+   *      youngest,
+   *    - Else if START is SVN_INVALID_REVNUM but END is a valid
+   *      revision number, then return all messages from oldest to
+   *      END,
+   *    - Else if both are SVN_INVALID_REVNUM, then return all
+   *      messages, starting with youngest.
+   *
+   * If PATHS is non-null, then only show revisions in which at least
+   * one key of PATHS was changed (i.e., if file, text or props
+   * changed; if dir, props changed or an entry was added or
+   * deleted).  The keys are full paths in the repository, without
+   * leading slashes.
+   *
+   * If DISCOVER_CHANGED_PATHS, then each call to receiver passes a
+   * `const apr_hash_t *' for the receiver's CHANGED_PATHS argument;
+   * the hash's keys are all the paths committed in that revision.
+   * Otherwise, each call to receiver passes null for CHANGED_PATHS.
+   *
+   * The last call to receiver (i.e., for the last requested log
+   * message) passes the FINAL_CALL flag.
+   *
+   * See also the documentation for `svn_ra_log_entry_receiver_t'.
+   */
+  svn_error_t *(*get_log) (void *session_baton,
+                           apr_hash_t *paths,
+                           svn_revnum_t *start,
+                           svn_revnum_t *end,
+                           svn_boolean_t discover_changed_paths,
+                           svn_ra_log_entry_receiver_t receiver,
+                           void *receiver_baton);
+  
+  /* Yoshiki Hayashi <yoshiki@xemacs.org> points out that a more
+   * generic way to support the above would be to have these two
+   * functions:
+   *
+   *     svn_error_t *(*get_rev_prop) (void *session_baton,
+   *                                   svn_string_t **value,
+   *                                   svn_string_t *name,
+   *                                   svn_revnum_t revision);
+   *
+   *     svn_error_t *(get_changed_paths) (void *session_baton,
+   *                                       apr_array_header_t **changed_paths,
+   *                                       svn_revnum_t revision);
+   *
+   * Although log requests are common enough to deserve special
+   * support (to optimize network usage), these two more generic
+   * functions are still good ideas.  Don't want to implement them
+   * right now, as am concentrating on the log functionality, but
+   * we will probably want them eventually, hence this start block.
+   */
 
 } svn_ra_plugin_t;
 
