@@ -153,20 +153,6 @@ get_canonical_command (const char *cmd)
 }
 
 
-/* Get the command requested in OPT->argv[0]. */
-static const svn_cl__cmd_desc_t *
-get_command (apr_getopt_t *opt)
-{
-  const char *arg = opt->argv[0];
-
-  /* Account for no args */
-  if (opt->argc < 1)
-    return NULL;
-
-  return get_canonical_command (arg);
-}
-
-
 
 /*** Help. ***/
 
@@ -236,7 +222,7 @@ print_generic_help (apr_pool_t *pool)
 
 
 /* Print either generic help, or command-specific help for each
- * command in ARGV.
+ * command in ARGV.  OPT_STATE is unused and may be null.
  * 
  * Unlike all the other command routines, ``help'' has its own
  * option processing.  Of course, it does not accept any options :-),
@@ -344,19 +330,17 @@ main (int argc, char **argv)
 
   targets = apr_make_array (pool, 0, sizeof (svn_string_t *));
 
-  apr_initopt (&os, pool, argc - 1, argv + 1);
-  os->interleave = 1;
-
-  /* Get the subcommand. */
-  subcommand = get_command (os);
-
-  if (! subcommand)
+  /* No args?  Show usage. */
+  if (argc <= 1)
     {
-      fprintf (stderr, "unknown command: %s\n", os->argv[0]);
-      subcommand = get_canonical_command ("help");
+      svn_cl__help (NULL, targets, pool);
+      apr_destroy_pool (pool);
+      return EXIT_FAILURE;
     }
 
-  /* Parse options. */
+  /* Else, parse options. */
+  apr_initopt (&os, pool, argc, argv);
+  os->interleave = 1;
   while (1)
     {
       /* Parse the next option. */
@@ -364,7 +348,11 @@ main (int argc, char **argv)
       if (APR_STATUS_IS_EOF (apr_err))
         break;
       else if (! APR_STATUS_IS_SUCCESS (apr_err))
-        return EXIT_FAILURE;
+        {
+          svn_cl__help (NULL, targets, pool);
+          apr_destroy_pool (pool);
+          return EXIT_FAILURE;
+        }
 
       switch (opt_id) {
       case 'r':
@@ -396,29 +384,55 @@ main (int argc, char **argv)
       }
     }
 
+  /* Did user request help?  If so, deliver, no matter what other
+     options or arguments were specified. */
+  if (opt_state.help)
+    {
+      svn_cl__help (NULL, targets, pool);
+      apr_destroy_pool (pool);
+      return EXIT_SUCCESS;
+    }
+
+  /* Else, handle the subcommand and regular arguments. */
+  subcommand = NULL;
   for (; os->ind < os->argc; os->ind++)
     {
       const char *this_arg = os->argv[os->ind];
 
-      if ((subcommand->cmd_code == svn_cl__propset_command)
-          && (opt_state.name == NULL))
+      /* The first non-option we see is always the subcommand. */
+      if (subcommand == NULL)
         {
-          opt_state.name = svn_string_create (this_arg, pool);
+          subcommand = get_canonical_command (this_arg);
+          if (subcommand == NULL)
+            {
+              fprintf (stderr, "unknown command: %s\n", this_arg);
+              svn_cl__help (NULL, targets, pool);
+              apr_destroy_pool (pool);
+              return EXIT_FAILURE;
+            }
         }
-      else if ((subcommand->cmd_code == svn_cl__propset_command)
-               && (opt_state.value == NULL))
+      else
         {
-          opt_state.value = svn_string_create (this_arg, pool);
-        }
-      else if ((subcommand->cmd_code == svn_cl__propget_command)
-               && (opt_state.name == NULL))
-        {
-          opt_state.name = svn_string_create (this_arg, pool);
-        }
-      else  /* treat it as a regular file/dir arg */
-        {
-          (*((svn_string_t **) apr_push_array (targets)))
-            = svn_string_create (this_arg, pool);
+          if ((subcommand->cmd_code == svn_cl__propset_command)
+              && (opt_state.name == NULL))
+            {
+              opt_state.name = svn_string_create (this_arg, pool);
+            }
+          else if ((subcommand->cmd_code == svn_cl__propset_command)
+                   && (opt_state.value == NULL))
+            {
+              opt_state.value = svn_string_create (this_arg, pool);
+            }
+          else if ((subcommand->cmd_code == svn_cl__propget_command)
+                   && (opt_state.name == NULL))
+            {
+              opt_state.name = svn_string_create (this_arg, pool);
+            }
+          else  /* treat it as a regular file/dir arg */
+            {
+              (*((svn_string_t **) apr_push_array (targets)))
+                = svn_string_create (this_arg, pool);
+            }
         }
     }
 
@@ -446,7 +460,6 @@ main (int argc, char **argv)
     svn_handle_error (err, stdout, 0);
   
   apr_destroy_pool (pool);
-  
   return EXIT_SUCCESS;
 }
 
@@ -457,5 +470,3 @@ main (int argc, char **argv)
  * eval: (load-file "../svn-dev.el")
  * end: 
  */
-
-
