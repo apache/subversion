@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Testing merging and conflict resolution.  Second script in a series.
+# Testing merging and conflict resolution.
 
 SVN_PROG=../svn
 TEST_DIR_1=t1
@@ -15,6 +15,8 @@ check_status()
       echo Oops, problem: ${@-"(no further details)"}
       exit $res
     fi
+    # REMOVE ME;  for easy debugging step-throughs:
+    read foo
 }
 
 # Remove the testing tree
@@ -34,19 +36,19 @@ ${SVN_PROG} checkout                                      \
 
 check_status 1
 
-### Give t1/iota some properties via update.
+### Give t1/iota some file-properties via update.
 echo "Updating t1/iota with properties.  (up2.xml)"
 ${SVN_PROG} update --xml-file ../../tests-common/xml/up2.xml \
                    --revision 17 ${TEST_DIR_1}
 check_status 2
 
-### Give t1/A some properties via update.
+### Give t1/A some dir-properties via update.
 echo "Updating t1/A/ with properties.  (up5.xml)"
 ${SVN_PROG} update --xml-file ../../tests-common/xml/up5.xml \
                    --revision 18 ${TEST_DIR_1}
 check_status 3
 
-### Examine the properties using "proplist":
+### Examine the all the properties using "proplist":
 echo "Properties on t1/A:"
 ${SVN_PROG} proplist ${TEST_DIR_1}/A
 check_status 4
@@ -71,12 +73,13 @@ echo "new text for pi" >> ${TEST_DIR_1}/A/D/G/pi
 echo "z" > ${TEST_DIR_1}/A/D/G/rho
 check_status 7
 
-### Examine status; we should see local mods present.
+### Examine status; we should see local mods present in both text and
+### property columns.
 echo "Status of directory:"
 ${SVN_PROG} status ${TEST_DIR_1}
 check_status 8
 
-### Update again, this time so as to create conflicts.
+### Update again.  This update should create conflicting properties.
 echo "Updating with (conflicting) properties.  (up-props.xml)"
 ${SVN_PROG} update --xml-file ../../tests-common/xml/up-props.xml \
                    --revision 20 ${TEST_DIR_1}
@@ -93,8 +96,9 @@ ${SVN_PROG} commit --target-dir ${TEST_DIR_1} \
                    --xml-file ${COMMIT_RESULTFILE_NAME}-1.xml \
                    --revision 22
 # (no check_status here, because we *expect* the commit to fail!)
+rm *.xml
 
-### Clean up reject files.
+### Clean up property-reject files.
 echo "Removing all .prej files..."
 rm -f ${TEST_DIR_1}/*.prej
 rm -f ${TEST_DIR_1}/A/*.prej
@@ -106,7 +110,7 @@ ${SVN_PROG} status ${TEST_DIR_1}
 check_status 12
 
 ### Try to commit;  the conflict should now succeed.
-echo "Attempting to commit while conflicts are present:"
+echo "Attempting to commit again, with conflicts removed."
 ${SVN_PROG} commit --target-dir ${TEST_DIR_1} \
                    --xml-file ${COMMIT_RESULTFILE_NAME}-1.xml \
                    --revision 22
