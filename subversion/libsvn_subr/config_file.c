@@ -1182,6 +1182,12 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "# use-commit-times = yes"
         APR_EOL_STR
+        "### Set no-unlock to prevent 'svn commit' from automatically"
+        APR_EOL_STR
+        "### releasing locks on files."
+        APR_EOL_STR
+        "# no-unlock = yes"
+        APR_EOL_STR
         "### Set enable-auto-props to 'yes' to enable automatic properties"
         APR_EOL_STR
         "### for 'svn add' and 'svn import', it defaults to 'no'."

@@ -1269,6 +1269,11 @@ main (int argc, const char * const *argv)
         }
     }
 
+  /* Update the 'keep-locks' runtime option */
+  if (opt_state.no_unlock)
+    svn_config_set_bool (cfg, SVN_CONFIG_SECTION_MISCELLANY,
+                         SVN_CONFIG_OPTION_NO_UNLOCK, TRUE);
+
   /* Set the log message callback function.  Note that individual
      subcommands will populate the ctx->log_msg_baton */
   ctx->log_msg_func = svn_cl__get_log_message;
