@@ -52,7 +52,9 @@ restore_file (const char *file_path,
 {
   const char *text_base_path, *tmp_text_base_path;
   svn_wc_keywords_t *keywords;
+  enum svn_wc__eol_style eol_style;
   const char *eol;
+  svn_boolean_t toggled;
 
   text_base_path = svn_wc__text_base_path (file_path, FALSE, pool);
   tmp_text_base_path = svn_wc__text_base_path (file_path, TRUE, pool);
@@ -60,7 +62,8 @@ restore_file (const char *file_path,
   SVN_ERR (svn_io_copy_file (text_base_path, tmp_text_base_path,
                              FALSE, pool));
 
-  SVN_ERR (svn_wc__get_eol_style (NULL, &eol, file_path, pool));
+  SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol,
+                                  file_path, pool));
   SVN_ERR (svn_wc__get_keywords (&keywords,
                                  file_path, adm_access, NULL, pool));
   
@@ -78,7 +81,8 @@ restore_file (const char *file_path,
   SVN_ERR (svn_io_remove_file (tmp_text_base_path, pool));
 
   /* If necessary, tweak the new working file's executable bit. */
-  SVN_ERR (svn_wc__maybe_set_executable (NULL, file_path, pool));
+  SVN_ERR (svn_wc__maybe_toggle_working_executable_bit 
+           (&toggled, file_path, pool));
 
   /* Remove any text conflict */
   SVN_ERR (svn_wc_resolve_conflict (file_path, TRUE, FALSE, FALSE,

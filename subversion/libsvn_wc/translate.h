@@ -47,19 +47,19 @@ enum svn_wc__eol_style
 #define SVN_WC__DEFAULT_EOL_MARKER "\n"
 
 
-/* Query the SVN_PROP_EOL_STYLE property on file PATH.  If STYLE is
-   non-null, set *STYLE to PATH's eol style.  Set *EOL to
+/* Query the SVN_PROP_EOL_STYLE property on a file at PATH, and set
+   *STYLE to PATH's eol style (one of the three values: none, native,
+   or fixed), and set *EOL to
 
-      - NULL for svn_wc__eol_style_none, or
+      - NULL if *STYLE is svn_wc__eol_style_none, or
 
       - a null-terminated C string containing the native eol marker
-        for this platform, for svn_wc__eol_style_native, or
+        for this platform, if *STYLE is svn_wc__eol_style_native, or
 
       - a null-terminated C string containing the eol marker indicated
-        by the property value, for svn_wc__eol_style_fixed.
+        by the property value, if *STYLE is svn_wc__eol_style_fixed.
 
-   If STYLE is null on entry, ignore it.  If *EOL is non-null on exit,
-   it is a static string not allocated in POOL.
+   If non-null, *EOL is a static string, not allocated in POOL.
 
    Use POOL for temporary allocation.
 */
@@ -104,12 +104,12 @@ svn_error_t *svn_wc__get_keywords (svn_wc_keywords_t **keywords,
 
 
 /* If the SVN_PROP_EXECUTABLE property is present at all, then set
-   PATH executable.  If DID_SET is non-null, then set *DID_SET to
-   TRUE if did set PATH executable, or to FALSE if not. */
+   PATH executable.  Set *TOGGLED to TRUE if this happened, or FALSE
+   if not. */
 svn_error_t *
-svn_wc__maybe_set_executable (svn_boolean_t *did_set,
-                              const char *path,
-                              apr_pool_t *pool);
+svn_wc__maybe_toggle_working_executable_bit (svn_boolean_t *toggled,
+                                             const char *path,
+                                             apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

@@ -39,8 +39,9 @@ svn_wc_merge (const char *left,
   const char *tmp_target, *result_target, *tmp_left, *tmp_right;
   const char *mt_pt, *mt_bn;
   apr_file_t *tmp_f, *result_f;
-  svn_boolean_t is_binary;
+  svn_boolean_t is_binary, toggled;
   svn_wc_keywords_t *keywords;
+  enum svn_wc__eol_style eol_style;
   const char *eol;
   apr_status_t apr_err;
   int exit_code;
@@ -210,7 +211,9 @@ svn_wc_merge (const char *left,
              We use merge_target's current properties to do the translation. */
           SVN_ERR (svn_wc__get_keywords (&keywords, merge_target, adm_access,
                                          NULL, pool));
-          SVN_ERR (svn_wc__get_eol_style (NULL, &eol, merge_target, pool));
+          SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol,
+                                          merge_target,
+                                          pool));
           SVN_ERR (svn_wc_copy_and_translate (left, 
                                               left_copy,
                                               eol, FALSE, keywords,
@@ -249,7 +252,8 @@ svn_wc_merge (const char *left,
          expanding. */
       SVN_ERR (svn_wc__get_keywords (&keywords, merge_target, adm_access,
                                      NULL, pool));
-      SVN_ERR (svn_wc__get_eol_style (NULL, &eol, merge_target, pool));
+      SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol, merge_target,
+                                      pool));
       SVN_ERR (svn_wc_copy_and_translate (result_target,
                                           merge_target,
                                           eol, FALSE, keywords, TRUE, pool));
@@ -332,7 +336,8 @@ svn_wc_merge (const char *left,
 
   /* Merging is complete.  Regardless of text or binariness, we might
      need to tweak the executable bit on the new working file.  */
-  SVN_ERR (svn_wc__maybe_set_executable (NULL, merge_target, pool));
+  SVN_ERR (svn_wc__maybe_toggle_working_executable_bit (&toggled,
+                                                        merge_target, pool));
 
   /* The docstring promises we'll return a CONFLICT error if
      appropriate;  presumably callers will specifically look for this. */
