@@ -26,6 +26,8 @@
     import data into it?</a></li> 
 <li><a href="#configure-sed-error">When I run `<tt>configure</tt>', I
     get errors <tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>.  What's wrong?</a></li>
+<li><a href="#windows-msvc-build">I'm having trouble building
+    Subversion under Windows with MSVC++ 6.0.  What should I do?</a></li>
 <li><a href="#windows-repository">I'm running Subversion under windows
     and I can create a repository fine, but I get errors trying to
     import or check out from it.  What's wrong?</a></li>
@@ -237,6 +239,16 @@ You probably have old copies of
 <tt>/usr/local/bin/apu-config</tt> on your system.  Remove them, make
 sure the <tt>apr/</tt> and <tt>apr-util/</tt> that you're
 building with are completely up-to-date, and try again.
+</p>
+
+<!-- ----------------------------------------------------------- -->
+ 
+<h2>I'm having trouble building Subversion under Windows with MSVC++ 6.0.
+<a name="windows-msvc-build"> What should I do?</a></h2>
+
+<p>
+Probably you just need to get the latest platform SDK.  The one that
+ships with VC++ 6.0 is not recent enough.
 </p>
 
 <!-- ----------------------------------------------------------- -->
