@@ -345,10 +345,16 @@ def get_child(node, name):
   return None
 
 
-# Helper for compare_trees
-def default_singleton_handler(a, baton):
+# Helpers for compare_trees
+def default_singleton_handler_a(a, baton):
   "Printing SVNTreeNode A's name, then raise main.SVNTreeUnequal."
-  print "Got singleton", a.name
+  print "Got singleton from actual tree:", a.name
+  a.pprint()
+  raise main.SVNTreeUnequal
+
+def default_singleton_handler_b(b, baton):
+  "Printing SVNTreeNode B's name, then raise main.SVNTreeUnequal."
+  print "Got singleton from expected tree:", a.name
   a.pprint()
   raise main.SVNTreeUnequal
 
@@ -393,9 +399,9 @@ def compare_trees(a, b,
 
   # Setup singleton handlers
   if (singleton_handler_a is None):
-    singleton_handler_a = default_singleton_handler
+    singleton_handler_a = default_singleton_handler_a
   if (singleton_handler_b is None):
-    singleton_handler_b = default_singleton_handler
+    singleton_handler_b = default_singleton_handler_b
 
   try:
     # A and B are both files.
