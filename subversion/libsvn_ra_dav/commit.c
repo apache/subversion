@@ -134,20 +134,30 @@ static const ne_propname fetch_props[] =
 static const ne_propname log_message_prop = { SVN_PROP_PREFIX, "log" };
 
 
+static svn_stringbuf_t *escape_url(const char *url, apr_pool_t *pool)
+{
+  svn_string_t url_str;
+  url_str.data = url;
+  url_str.len = strlen(url);
+  return svn_path_uri_encode(&url_str, pool);
+}
+  
+
 static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
                                     const char *url, int *code)
 {
   ne_request *req;
+  svn_stringbuf_t *url_str = escape_url(url, ras->pool);
   int rv;
 
   /* create/prep the request */
-  req = ne_request_create(ras->sess, method, url);
+  req = ne_request_create(ras->sess, method, url_str->data);
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL,
                                ras->pool,
                                "Could not create a request (%s %s)",
-                               method, url);
+                               method, url_str->data);
     }
 
   /* run the request and get the resulting status code. */
@@ -162,7 +172,7 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
                                ras->pool,
                                "The server request failed (neon:%d http:%d) "
                                "(%s %s)",
-                               rv, *code, method, url);
+                               rv, *code, method, url_str->data);
     }
 
   return NULL;
@@ -333,6 +343,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
   const char *body;
   const char *locn = NULL;
   struct uri parse;
+  svn_stringbuf_t *url_str;
 
   if (res->wr_url != NULL)
     {
@@ -341,18 +352,19 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
     }
 
   /* assert: res->vsn_url != NULL */
+  url_str = escape_url(res->vsn_url, cc->ras->pool);
 
   /* ### send a CHECKOUT resource on res->vsn_url; include cc->activity_url;
      ### place result into res->wr_url and return it */
 
   /* create/prep the request */
-  req = ne_request_create(cc->ras->sess, "CHECKOUT", res->vsn_url);
+  req = ne_request_create(cc->ras->sess, "CHECKOUT", url_str->data);
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL,
                                cc->ras->pool,
                                "Could not create a CHECKOUT request (%s)",
-                               res->vsn_url);
+                               url_str->data);
     }
 
   /* ### store this into cc to avoid pool growth */
@@ -382,7 +394,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
       return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
                                cc->ras->pool,
                                "The CHECKOUT request failed (neon #%d) (%s)",
-                               rv, res->vsn_url);
+                               rv, url_str->data);
     }
 
   if (code != 201)
@@ -391,7 +403,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
       return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
                                cc->ras->pool,
                                "The CHECKOUT request failed (http #%d) (%s)",
-                               code, res->vsn_url);
+                               code, url_str->data);
     }
   if (locn == NULL)
     {
@@ -464,6 +476,7 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
   int rv;
   int code;
   ne_buffer *body; /* ### using an ne_buffer because it can realloc */
+  svn_stringbuf_t *url_str;
 
   /* just punt if there are no changes to make. */
   if ((rb->prop_changes == NULL || apr_is_empty_table(rb->prop_changes))
@@ -509,7 +522,8 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
 
   ne_buffer_zappend(body, "</D:propertyupdate>");
 
-  req = ne_request_create(ras->sess, "PROPPATCH", rsrc->wr_url);
+  url_str = escape_url(rsrc->wr_url, ras->pool);
+  req = ne_request_create(ras->sess, "PROPPATCH", url_str->data);
 
   ne_set_request_body_buffer(req, body->data, ne_buffer_size(body));
   ne_add_request_header(req, "Content-Type", "text/xml; charset=UTF-8");
@@ -524,7 +538,7 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
       return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
                                ras->pool,
                                "The PROPPATCH request failed (neon: %d) (%s)",
-                               rv, rsrc->wr_url);
+                               rv, url_str->data);
     }
 
   return NULL;
@@ -776,15 +790,16 @@ static svn_error_t * commit_stream_close(void *baton)
   int code;
   apr_status_t status;
   apr_off_t offset = 0;
+  svn_stringbuf_t *url_str = escape_url(rsrc->wr_url, cc->ras->pool);
 
   /* create/prep the request */
-  req = ne_request_create(cc->ras->sess, "PUT", rsrc->wr_url);
+  req = ne_request_create(cc->ras->sess, "PUT", url_str->data);
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL,
                                pb->pool,
                                "Could not create a PUT request (%s)",
-                               rsrc->wr_url);
+                               url_str->data);
     }
 
   /* ### use a symbolic name somewhere for this MIME type? */
@@ -829,7 +844,7 @@ static svn_error_t * commit_stream_close(void *baton)
       return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
                                cc->ras->pool,
                                "The PUT request failed (neon: %d) (%s)",
-                               rv, rsrc->wr_url);
+                               rv, url_str->data);
     }
 
   /* if it didn't returned 201 (Created) or 204 (No Content), then puke */
@@ -841,15 +856,16 @@ static svn_error_t * commit_stream_close(void *baton)
                                cc->ras->pool,
                                "The PUT request did not complete "
                                "properly (status: %d) (%s)",
-                               code, rsrc->wr_url);
+                               code, url_str->data);
     }
 
   return NULL;
 }
 
-static svn_error_t * commit_apply_txdelta(void *file_baton, 
-                                          svn_txdelta_window_handler_t *handler,
-                                          void **handler_baton)
+static svn_error_t * 
+commit_apply_txdelta(void *file_baton, 
+                     svn_txdelta_window_handler_t *handler,
+                     void **handler_baton)
 {
   resource_baton_t *file = file_baton;
   apr_pool_t *subpool;
