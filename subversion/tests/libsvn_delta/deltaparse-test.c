@@ -92,6 +92,74 @@ my_fileprop_handler (svn_propchange_t *propchange, void *baton)
 
 
 
+/* A routine which knows how to consume a propchange object for a directory */
+svn_error_t *
+my_dirprop_handler (svn_propchange_t *propchange, void *baton)
+{
+  char *propname = "<none>";
+  char *propvalue = "<none>";
+
+  if (propchange->name)
+    propname = propchange->name->data;
+
+  if (propchange->value)
+    propvalue = propchange->value->data;
+
+  printf ("GOT DIR-PROPCHANGE: name = %s, value = %s, ", propname, propvalue);
+  
+  switch (propchange->kind)
+    {
+    case svn_prop_set:
+      {
+        printf ("kind = svn_prop_set\n");
+        break;
+      }
+    case svn_prop_delete:
+      {
+        printf ("kind = svn_prop_delete\n");
+        break;
+      }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/* A routine which knows how to consume a propchange object for a dirent */
+svn_error_t *
+my_direntprop_handler (svn_propchange_t *propchange, void *baton)
+{
+  char *propname = "<none>";
+  char *propvalue = "<none>";
+
+  if (propchange->name)
+    propname = propchange->name->data;
+
+  if (propchange->value)
+    propvalue = propchange->value->data;
+
+  printf ("GOT DIRENT-PROPCHANGE: name = %s, value = %s, ",
+          propname, propvalue);
+  
+  switch (propchange->kind)
+    {
+    case svn_prop_set:
+      {
+        printf ("kind = svn_prop_set\n");
+        break;
+      }
+    case svn_prop_delete:
+      {
+        printf ("kind = svn_prop_delete\n");
+        break;
+      }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 
 
 
@@ -177,6 +245,10 @@ test_begin_propdelta (void *walk_baton, void *parent_baton,
 
   if (location == svn_prop_file)
     *handler      = my_fileprop_handler;
+  else if (location == svn_prop_dir)
+    *handler      = my_dirprop_handler;
+  else if (location == svn_prop_dirent)
+    *handler      = my_direntprop_handler;
   else
     *handler      = NULL;
 
