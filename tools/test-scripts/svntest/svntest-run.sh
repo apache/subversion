@@ -102,7 +102,7 @@ test $? = 0 || {
         >> $LOG_FILE 2>&1
 
     # Prepare the log file for the mailer
-    $CAT "tests.log" | $GZIP_C > "$TEST_ROOT/tests.$BUILD_TYPE.$RA_TYPE.log.gz"
+    $GZIP_C < "tests.log" > "$TEST_ROOT/tests.$BUILD_TYPE.$RA_TYPE.log.gz"
     FAIL kill_svnserve
 }
 PASS

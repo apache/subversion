@@ -52,7 +52,7 @@ GUESS="/usr/local/share/libtool/config.guess"
 SENDMAIL="/usr/lib/sendmail"
 
 # Other stuff
-BASE64_E="$BIN/base64 -e"
+BASE64_E="$BIN/base64 -e - -"
 CAT="$BIN/cat"
 CP="$BIN/cp"
 CP_F="$BIN/cp -f"
