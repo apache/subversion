@@ -186,7 +186,39 @@ svn_path_condense_targets (svn_string_t **pbasename,
    omitting any targets that are found earlier in the list, or whose
    ancestor is found earlier in the list.  Ordering of targets in the
    original list is preserved in the condensed list of targets.  Use
-   POOL for any allocations.  */
+   POOL for any allocations.  
+
+   How does this differ in functionality from svn_path_condense_targets?
+
+   Here's the short version:
+   
+   1.  Disclaimer: if you wish to debate the following, talk to Karl. :-)
+       Order matters for updates because a multi-arg update is not
+       atomic, and CVS users are used to, when doing 'cvs up targetA
+       targetB' seeing targetA get updated, then targetB.  I think the
+       idea is that if you're in a time-sensitive or flaky-network
+       situation, a user can say, "I really *need* to update
+       wc/A/D/G/tau, but I might as well update my whole working copy if
+       I can."  So that user will do 'svn up wc/A/D/G/tau wc', and if
+       something dies in the middles of the 'wc' update, at least the
+       user has 'tau' up-to-date.
+   
+   2.  Also, we have this notion of an anchor and a target for updates
+       (the anchor is where the update editor is rooted, the target is
+       the actual thing we want to update).  I needed a function that
+       would NOT screw with my input paths so that I could tell the
+       difference between someone being in A/D and saying 'svn up G' and
+       being in A/D/G and saying 'svn up .' -- believe it or not, these
+       two things don't mean the same thing.  svn_path_condense_targets
+       plays with absolute paths (which is fine, so does
+       svn_path_remove_redundancies), but the difference is that it
+       actually tweaks those targets to be relative to the "grandfather
+       path" common to all the targets.  Updates don't require a
+       "grandfather path" at all, and even if it did, the whole
+       conversion to an absolute path drops the crucial difference
+       between saying "i'm in foo, update bar" and "i'm in foo/bar,
+       update '.'"
+*/
 svn_error_t *
 svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
                               const apr_array_header_t *targets,
