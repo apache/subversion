@@ -19,6 +19,7 @@ to take something on.
    (libsvn_ra_dav, libsvn_ra_xml, or libsvn_ra_local) depending upon
    the desired operation.
 
+
 4. Macintosh/Windows GUI clients.
 
    Once libsvn_client API is finalized (which, for a sufficiently
