@@ -42,7 +42,8 @@
       repository and make it available to clients via WebDAV/DeltaV
       protocol, which is an extension of HTTP.  In the other corner is
       <command>svnserve</command>: a small, standalone server
-      program that speaks a custom protocol with clients.</para>
+      program that speaks a custom protocol with clients.  Table 6-1
+      presents a comparison of the two servers.</para>
 
     <para>Note that Subversion, as an open-source project, does not
       officially endorse any server as <quote>primary</quote> or
@@ -722,12 +723,13 @@ baz
         <literal>host.example.com</literal>, authenticating as user
         <literal>harry</literal>, then spawning a private
         <command>svnserve</command> process on the remote machine,
-        running as user 'harry'.  The <command>svnserve</command>
-        command is being invoked in tunnel mode (<option>-t</option>)
-        and all network protocol is being <quote>tunneled</quote> over
-        the encrypted connection by <command>ssh</command>, the
-        tunnel-agent.  <command>svnserve</command> is aware that it's
-        running as user 'harry', and if the client performs a commit,
+        running as user <literal>harry</literal>.  The
+        <command>svnserve</command> command is being invoked in tunnel
+        mode (<option>-t</option>) and all network protocol is being
+        <quote>tunneled</quote> over the encrypted connection by
+        <command>ssh</command>, the tunnel-agent.
+        <command>svnserve</command> is aware that it's running as user
+        <literal>harry</literal>, and if the client performs a commit,
         the authenticated username will be attributed as the author of
         the new revision.</para>
 
@@ -780,7 +782,7 @@ joessh = $JOESSH /opt/alternate/ssh -p 29934
         tunneling binary (the one located at
         <filename>/opt/alternate/ssh</filename>) with specific
         options.  In this case, accessing a
-        <literal>svn+ssh://</literal> URL would invoke the
+        <literal>svn+joessh://</literal> URL would invoke the
         particular SSH binary with <option>-p 29934</option> as
         arguments&mdash;useful if you want the tunnel program to
         connect to a non-standard port.</para>
