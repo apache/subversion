@@ -162,7 +162,7 @@ create_file (const char *fname, const char *eol_str, apr_pool_t *pool)
 {
   apr_status_t apr_err;
   apr_file_t *f;
-  int i, j;
+  apr_size_t i, j;
 
   apr_err = apr_file_open (&f, fname,
                            (APR_WRITE | APR_CREATE | APR_EXCL | APR_BINARY),
@@ -259,8 +259,8 @@ substitute_and_verify (const char *test_name,
   svn_error_t *err;
   svn_stringbuf_t *contents;
   svn_wc_keywords_t keywords;
-  int idx = 0;
-  int i;
+  apr_size_t idx = 0;
+  apr_size_t i;
   const char *expect[(sizeof (lines) / sizeof (*lines))];
   const char *src_fname = apr_pstrcat (pool, test_name, ".src", NULL);
   const char *dst_fname = apr_pstrcat (pool, test_name, ".dst", NULL);

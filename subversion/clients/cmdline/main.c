@@ -405,7 +405,7 @@ const apr_getopt_option_t *
 svn_cl__get_option_from_enum (int code,
                               const apr_getopt_option_t *option_table)
 {
-  int i;
+  apr_size_t i;
   const apr_getopt_option_t *opt = NULL;
 
   for (i = 0; i < SVN_CL__MAX_OPTS; i++)
@@ -427,7 +427,7 @@ static svn_boolean_t
 subcommand_takes_option (const svn_cl__cmd_desc_t *command,
                          int option_code)
 {
-  int i;
+  apr_size_t i;
   
   for (i = 0; i < SVN_CL__MAX_OPTS; i++)
     {          
@@ -449,7 +449,7 @@ print_command_info (const svn_cl__cmd_desc_t *cmd_desc,
   const svn_cl__cmd_desc_t *canonical_cmd
     = svn_cl__get_canonical_command (cmd_desc->name);
   svn_boolean_t first_time;
-  int i;
+  apr_size_t i;
 
   /* Print the canonical command name. */
   fputs (canonical_cmd->name, stream);
