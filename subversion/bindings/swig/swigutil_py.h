@@ -144,26 +144,26 @@ svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
                                              apr_pool_t *pool);
 
 /* thunked repos authz callback function */
-svn_error_t *svn_swig_py_thunk_repos_authz_func(svn_boolean_t *allowed,
-                                                svn_fs_root_t *root,
-                                                const char *path,
-                                                void *baton,
-                                                apr_pool_t *pool);
+svn_error_t *svn_swig_py_repos_authz_func(svn_boolean_t *allowed,
+                                          svn_fs_root_t *root,
+                                          const char *path,
+                                          void *baton,
+                                          apr_pool_t *pool);
 
-/* thunker history callback function */
+/* thunked history callback function */
 svn_error_t *svn_swig_py_repos_history_func(void *baton,
                                             const char *path,
                                             svn_revnum_t revision,
                                             apr_pool_t *pool);
 
 /* thunked log receiver function.  */
-svn_error_t * svn_swig_py_thunk_log_receiver(void *py_receiver,
-                                             apr_hash_t *changed_paths,
-                                             svn_revnum_t rev,
-                                             const char *author,
-                                             const char *date,
-                                             const char *msg,
-                                             apr_pool_t *pool);
+svn_error_t *svn_swig_py_log_receiver(void *py_receiver,
+                                      apr_hash_t *changed_paths,
+                                      svn_revnum_t rev,
+                                      const char *author,
+                                      const char *date,
+                                      const char *msg,
+                                      apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

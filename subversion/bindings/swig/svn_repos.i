@@ -97,7 +97,7 @@
 }
 
 %typemap(python, in) (svn_repos_authz_func_t authz_read_func, void *authz_read_baton) {
-  $1 = svn_swig_py_thunk_repos_authz_func;
+  $1 = svn_swig_py_repos_authz_func;
   $2 = $input; /* our function is the baton. */
 }
 
