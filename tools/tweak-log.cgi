@@ -212,6 +212,9 @@ sub doCommitLog
 
     # Now, make the mods
     `$gSvnadminCmd setlog $gReposPath $rev $tempfile`;
+    
+    # ...and remove the tempfile.  It is, after all, temporary.
+    unlink $tempfile;
 
     # Now, re-read that logfile
     $log = `$gSvnlookCmd $gReposPath rev $rev log`;
