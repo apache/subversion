@@ -12,8 +12,8 @@ programs.  No networking is required.
 
 Of course, for the initial release of Subversion, the ``server'' process
 will be Apache interacting with the Subversion server libraries.  The
-``server'' computer will be any machine running this Subversion-aware
-Apache process.  (@xref{Protocol}.)
+``server'' computer will be any machine running this special Apache
+process.  (@xref{Protocol}.)
 
 To build our concepts cleanly, we'll explore this set of Subversion
 server-libraries from the bottom up.  (For full diagram,
@@ -36,16 +36,15 @@ server-libraries from the bottom up.  (For full diagram,
 @end example
 
 @menu
-* Database Layer::            Putting the information on disk.
-* Filesystem Layer::          The low-level Subversion Filesystem.
-* Locking::                   How read/write locks work in the Filesystem.
+* Database::                  Putting the information on disk.
+* Filesystem::                The low-level Subversion Filesystem.
 * Main Library::              The highest-level server interface.
 @end menu
 
 @c ----------------------------------------------------------------
 
-@node Database Layer
-@section Database Layer
+@node Database
+@section Database
 
 @subsection Overview
 
@@ -166,13 +165,13 @@ a repository -- independent of the actual means of storage.
 
 Like any typical UNIX-like filesystem, files are stored in a tree.
 However, while CVS uses the actual UNIX filesystem to hold a repository,
-the svn_fs implements files and directories as database objects
-(@xref{Database Layer}.)  This not only gives us low-level transactions,
+svn_fs implements files and directories as database objects
+(@xref{Database}.)  This not only gives us low-level transactions,
 but allows us to store @dfn{properties} ( or ``meta-data'') with each
-file, directory, directory entry, and even version number.  (For example,
-some useful properties might be {author, creation date, modification
-date, Access Control List (ACL), file type (text, binary), file
-encoding, ...}.)
+file, directory, directory entry, and even version number.  (For
+example, some useful properties might be @{author, creation date,
+modification date, Access Control List (ACL), file type (text, binary),
+file encoding, ...@}.)
 
 @subsection Schema
 
@@ -290,7 +289,7 @@ A @dfn{user} is a username (presumed to be previously authenticated by
 the network layer) which is attempting to perform a filesystem action.
 
 A @dfn{path} refers to an absolute path in the Subversion filesystem,
-e.g. @example{/trunk/gdb/i386.c}
+e.g. @code{/trunk/gdb/i386.c}
 
 A @dfn{proplist} is a list of properties (key/value pairs).
 
@@ -315,7 +314,7 @@ number in a repository's history.
 A @dfn{diff} is a standard GNU diff, a textual context diff.
 
 A @dfn{delta} is a structure that describes a difference between two
-file trees.  For a detailed discussion, @xref{Deltas}.
+file trees.  For a detailed discussion, @xref{Protocol}.
 
 A @dfn{skelta} is a identical to a delta, but smaller.  It mentions only
 the files being changed, but does @emph{not} contain the actual diffs.
@@ -379,7 +378,7 @@ properties of a file, dirent, or dir.
 @end table
 
 
-@subsection Basic Writing
+@subsubsection Basic Writing
 
 If a program needs to modify a repository's filesystem in any way (even
 if just modifying properties), it must do three things:
@@ -407,10 +406,10 @@ if just modifying properties), it must do three things:
 @end table
 
 A more detailed description of Subversion's write-locking mechanism is
-explained in the next section (@xref{Locking}.)
+explained in the next section.
 
 
-@c-----------------
+@c -----------------
 @subsection Locking
 
 The Subversion Filesystem has a locking mechanism built into it.
@@ -442,9 +441,10 @@ stumble upon an unfinished tree.
 @subsubsection Write Locks
 
 Each Subversion filesystem has a process called a @dfn{lock manager}.
-The lock manager isn't always running;  when a server process wishes to
+The lock manager isn't always running; when a server process wishes to
 execute a @code{write()} on the filesystem, it must first determine if a
-lock manager is running.  If not, it starts one.
+lock manager is running.  If not, it starts one and speaks to it via
+IPC.
 
 @example
 
@@ -469,26 +469,25 @@ lock manager is running.  If not, it starts one.
 @end example
 
 After the lock manager is up, the server process first sends it a
-@code{submit()} call containing the delta it would like to write.
+@code{submit()} call containing the skelta it would like to write.
 
 The lock manager contains a pool of "approved changes".  This pool is a
 set of skeltas which have been okayed for concurrent application to the
-filesystem.  After receiving a delta from @code{submit()}, the lock
-manager determines if it is safe to apply the new delta at the same time
-as the other ones in progress.@footnote{This rule is actually quite
-simple:  a set of skeltas may be concurrently written @emph{if and only
-if} the order in which they are applied does not matter!}
+filesystem.  After receiving a new skelta from @code{submit()}, the lock
+manager determines if it is safe to apply it at the same time as the
+other ones in progress.@footnote{This rule is actually quite simple: a
+set of skeltas may be concurrently written @emph{if and only if} the
+order in which they are applied does not matter!}
 
-If the lock manager decides that the requested skelta conflicts with
-other deltas being applied at that moment, it returns a failure to the
-server, and the server must wait and try again with another
-@code{submit()} request.
+If the lock manager decides that the requested skelta conflicts it
+returns a failure to the server, and the server must wait and try again
+with another @code{submit()} request.
 
 If the lock manager decides that the requested skelta does not conflict,
 it returns a transaction token to the server.  The server then uses this
 token to execute a @code{write()} on the filesystem.
 
-After the @code{write()} is completed, the delta is removed from the
+After the @code{write()} is completed, the skelta is removed from the
 lock manager's concurrency pool, and the server closes its connection.
 
 When the lock manager has no more open server connections, it dies.
