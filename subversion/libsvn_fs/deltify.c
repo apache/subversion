@@ -87,6 +87,8 @@ txn_body_undeltify (void *baton, trail_t *trail)
 }
 
 
+/* Note:  it is acceptable for this function to call back into
+   public FS API interfaces because it does not itself use trails.  */
 svn_error_t *
 svn_fs_undeltify (svn_fs_root_t *root,
                   const char *path,

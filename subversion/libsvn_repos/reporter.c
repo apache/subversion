@@ -347,9 +347,11 @@ svn_repos_finish_report (void *report_baton)
                                 FALSE,
                                 rbaton->pool));
   
-  /* Still here?  Great!  Throw out the transaction. */
+  /* Still here?  Great!  Throw out the transactions. */
   SVN_ERR (svn_fs_abort_txn (rbaton->txn));
-
+  if (rbaton->txn2)
+    SVN_ERR (svn_fs_abort_txn (rbaton->txn2));
+    
   return SVN_NO_ERROR;
 }
 
