@@ -67,6 +67,9 @@ rep_lines_res = [
                  # "Subversion Client, version 0.10.2 (r1729)"
                  (re.compile(r'version \d+\.\d+\.\d+ \(.*\)'),
                   'version X.Y.Z '),
+                 # The copyright end date keeps changing; fix forever.
+                 (re.compile(r'Copyright \(C\) 2000-\d+ CollabNet\.'),
+                  'Copyright (C) YYYY-YYYY CollabNet'),
                  # In 'svn --version --quiet', we print only the version
                  # number in a single line.
                  (re.compile(r'^\d+\.\d+\.\d+\+?$'), 'X.Y.Z\n'),
