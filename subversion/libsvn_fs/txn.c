@@ -152,6 +152,39 @@ svn_fs__open_transactions (svn_fs_t *fs)
 
 
 
+/* Writing TRANSACTION skels to the database.  */
+
+/* Store the skel TXN_SKEL in the `transactions' table under the
+   transaction id ID.  If CREATE is non-zero, return an error if an
+   entry for ID already exists in `transactions'.
+
+   Do this as part of the Berkeley DB transaction DB_TXN; if DB_TXN is
+   zero, make the change outside of any Berkeley DB transaction.
+
+   Do any necessary temporary allocation in POOL.  */
+static svn_error_t *
+put_transaction_skel (svn_fs_t *fs, DB_TXN *db_txn,
+		      char *id,
+		      skel_t *txn_skel,
+		      int create,
+		      apr_pool_t *pool)
+{
+  DB *transactions = fs->transactions;
+  svn_string_t *unparsed_txn;
+  DBT key, value;
+
+  unparsed_txn = svn_fs__unparse_skel (txn_skel, pool);
+  svn_fs__set_dbt (&key, id, strlen (id));
+  svn_fs__set_dbt (&value, unparsed_txn->data, unparsed_txn->len);
+  SVN_ERR (DB_WRAP (fs, "storing transaction skel",
+		    transactions->put (transactions, db_txn, &key, &value, 
+				       create ? DB_NOOVERWRITE : 0)));
+
+  return 0;
+}
+
+
+
 /* Creating transactions.  */
 
 
@@ -187,9 +220,7 @@ create_txn_body (svn_fs_txn_t *svn_txn,
   /* Use that cursor to get the ID of the last entry in the table.
      We only need to know the key; don't actually read any of the value.  */
   svn_fs__result_dbt (&key);
-  svn_fs__clear_dbt (&value);
-  value.flags |= DB_DBT_PARTIAL | DB_DBT_USERMEM;
-  value.doff = value.dlen = 0;
+  svn_fs__nodata_dbt (&value);
   SVN_ERR (DB_WRAP (svn_txn->fs, "creating transaction (getting max id)",
 		    cursor->c_get (cursor, &key, &value, DB_LAST)));
 
@@ -212,20 +243,22 @@ create_txn_body (svn_fs_txn_t *svn_txn,
 
   /* Write an initial record for the new transaction to the database.  */
   {
+    /* An empty transaction skel, `(transaction 0 )', written out
+       as a series of initialized `skel_t' objects.  */
+    static skel_t new_txn_skel[] = {
+      { 0, "", 0, &new_txn_skel[1], 0 },
+      { 1, "transaction", 11, 0, &new_txn_skel[2] },
+      { 1, "", 0, 0, 0 }
+    };
     char id_text[200];
     int id_len = svn_fs__putsize (id_text, sizeof (id_text), id);
-    static char unparsed_new_txn_skel[] = "(transaction 0 )";
 
-    svn_fs__set_dbt (&key, id_text, id_len);
-    svn_fs__set_dbt (&value,
-		     unparsed_new_txn_skel,
-		     sizeof (unparsed_new_txn_skel) - 1);
-    SVN_ERR (DB_WRAP (svn_txn->fs, "creating transaction (writing txn record)",
-		      transactions->put (transactions, db_txn, &key, &value,
-					 DB_NOOVERWRITE)));
+    /* Store the transaction skel in the database, under this ID.  */
+    id_text[id_len] = 0;
+    SVN_ERR (put_transaction_skel (svn_txn->fs, db_txn, id_text,
+				   &new_txn_skel[0], 1, svn_txn->pool));
 
     /* Store the ID in the transaction object.  */
-    id_text[id_len] = 0;
     svn_txn->id = apr_pstrdup (svn_txn->pool, id_text);
   }
 
@@ -235,12 +268,15 @@ create_txn_body (svn_fs_txn_t *svn_txn,
 
 svn_error_t *
 svn_fs_begin_txn (svn_fs_txn_t **txn_p,
-		  svn_fs_t *fs,
-		  apr_pool_t *parent_pool)
+		  svn_fs_t *fs)
 {
-  apr_pool_t *pool = svn_pool_create (parent_pool ? parent_pool : fs->pool);
-  svn_fs_txn_t *txn = NEW (pool, svn_fs_txn_t);
+  apr_pool_t *pool;
+  svn_fs_txn_t *txn;
 
+  SVN_ERR (svn_fs__check_fs (fs));
+
+  pool = svn_pool_create (fs->pool);
+  txn = NEW (pool, svn_fs_txn_t);
   memset (txn, 0, sizeof (*txn));
   txn->fs = fs;
   txn->pool = pool;

@@ -211,6 +211,9 @@ svn_error_t *svn_fs_berkeley_recover (const char *path,
    Node version numbers start with 1.  Thus, N.1 is the first version
    of node N.
 
+   Node / branch numbers start with 1.  Thus, N.M.1 is the first
+   branch off of N.M.
+
    A directory entry identifies the file or subdirectory it refers to
    using a node version number --- not a node number.  This means that
    a change to a file far down in a directory hierarchy requires the
@@ -691,8 +694,7 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
    transaction will create a new version.  Set *TXN to a pointer to
    an object representing the new transaction.  */
 svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn,
-			       svn_fs_t *fs,
-                               apr_pool_t *parent_pool);
+			       svn_fs_t *fs);
 
 
 /* Commit the transaction TXN.  If the transaction conflicts with
