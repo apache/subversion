@@ -36,7 +36,8 @@ AC_ARG_ENABLE(subdir-config,
 
 if test "$enable_subdir_config" = "yes"; then
   RUN_SUBDIR_CONFIG_NOW(apr)
-  RUN_SUBDIR_CONFIG_NOW(neon, --with-expat=../expat-lite)
+  expat_absdir=`cd $srcdir/expat-lite ; pwd`
+  RUN_SUBDIR_CONFIG_NOW(neon, --with-expat=$expat_absdir)
 fi
 
 
