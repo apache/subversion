@@ -287,7 +287,7 @@ time.
 To build the client components, you'll need a copy of neon 0.17.0. The
 sources are available at
 
-    http://www.webdav.org/neon/neon-0.15.3.tar.gz
+    http://www.webdav.org/neon/neon-0.17.0.tar.gz
 
 Unpack the distribution into the root directory of the Subversion
 source tree and rename the directory neon-0.17.0 to neon.  The MSVC
@@ -298,7 +298,8 @@ available at
    http://www.xbc.nu/svn/libneon-0.17.0-svn-win32.zip
 
 Unpack the two files in this archive, libneon.lib and libneonD.lib,
-into the <SVN>/neon directory.
+into the <SVN>/neon directory. (<SVN> is the root of the source tree,
+the directory where you found the file you're reading.)
 
 IMPORTANT NOTE: These neon libraries should *only* be used when
      building Subversion. They were build to depend on the verson of
@@ -323,7 +324,7 @@ should be somewhere in your path.
 The workspace `subversion.dsw' at the top of the source tree includes
 all the necessary projects. Right now, only static libraries are
 built. The "__build__" project (active by default) builds all the
-libraries and programs.. The "__check__" project builds the test
+libraries and programs. The "__check__" project builds the test
 drivers.
 
 You will have to edit the file svn_private_config.hw to set the
