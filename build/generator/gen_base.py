@@ -682,7 +682,15 @@ class TargetJavaClasses(TargetJava):
     self.output_dir = self.classes
 
   def add_dependencies(self, graph, cfg, extmap):
-    sources = _collect_paths(self.sources, self.path)
+    ### FIXME: SWIG/Java's generated .java source directory and files
+    ### are created by the build process, and are not available when
+    ### this code is run.  This HACK supresses the GenError thrown by
+    ### the _collect_paths() function.
+    sources = None
+    try:
+      sources =_collect_paths(self.sources, self.path)
+    except GenError:
+      sources = ()
 
     for src, reldir in sources:
       if src[-5:] == '.java':
