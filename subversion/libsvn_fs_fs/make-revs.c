@@ -7,12 +7,15 @@
 #include <svn_hash.h>
 #include <svn_md5.h>
 #include <svn_repos.h>
+#include <svn_delta.h>
+#include "../libsvn_delta/delta.h"
 
 struct rep_pointer
 {
   svn_revnum_t rev;
   apr_off_t off;
-  apr_off_t len;       /* Serves for both the expanded and rep size */
+  apr_off_t len;
+  apr_off_t text_len;
   const char *digest;
 };
 
@@ -45,7 +48,10 @@ struct parse_baton
   apr_pool_t *rev_pool;
   apr_file_t *rev_file;
   svn_stream_t *rev_stream;
+  apr_off_t delta_start;
+  apr_off_t text_len;
   svn_stream_t *delta_stream;
+  apr_pool_t *delta_pool;
   apr_hash_t *deleted_paths;
   apr_hash_t *added_paths;
   apr_hash_t *modified_paths;
@@ -53,7 +59,27 @@ struct parse_baton
   apr_md5_ctx_t md5_ctx;
   int next_node_id;
   int next_copy_id;
-  svn_stream_t *empty_stream;
+  apr_pool_t *pool;
+};
+
+struct rep_state
+{
+  apr_file_t *file;
+  apr_off_t start;
+  apr_off_t off;
+  apr_off_t end;
+  int ver;          /* Unused for plaintext reps */
+  int chunk_index;  /* Unused for plaintext reps */
+};
+
+struct contents_baton
+{
+  apr_array_header_t *rs_list;
+  struct rep_state *src_state;
+  int chunk_index;
+  char *buf;
+  apr_size_t buf_pos;
+  apr_size_t buf_len;
   apr_pool_t *pool;
 };
 
@@ -108,6 +134,7 @@ init_rep(struct rep_pointer *rep)
   rep->rev = SVN_INVALID_REVNUM;
   rep->off = -1;
   rep->len = -1;
+  rep->text_len = -1;
   rep->digest = NULL;
 }
 
@@ -261,7 +288,8 @@ repstr(struct rep_pointer *rep, apr_pool_t *pool)
 {
   return apr_psprintf(pool, "%" SVN_REVNUM_T_FMT " %" APR_OFF_T_FMT
                       " %" APR_OFF_T_FMT " %" APR_OFF_T_FMT " %s",
-                      rep->rev, rep->off, rep->len, rep->len, rep->digest);
+                      rep->rev, rep->off, rep->len, rep->text_len,
+                      rep->digest);
 }
 
 static void
@@ -330,8 +358,9 @@ write_hash_rep(struct parse_baton *pb, apr_hash_t *hash,
   SVN_ERR(svn_io_file_write_full(pb->rev_file, buf->data, buf->len,
                                  NULL, pool));
 
-  /* Record the length of the props data. */
+  /* Record the length of the hash data. */
   rep->len = buf->len;
+  rep->text_len = buf->len;
 
   SVN_ERR(svn_stream_printf(pb->rev_stream, pool, "ENDREP\n"));
   return SVN_NO_ERROR;
@@ -749,6 +778,267 @@ dump_txn(struct parse_baton *pb, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+open_and_seek_rev (apr_file_t **file, svn_revnum_t rev, apr_off_t offset,
+                   apr_pool_t *pool)
+{
+  const char *revstr = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
+
+  SVN_ERR(svn_io_file_open(file, svn_path_join ("revs", revstr, pool),
+                           APR_READ, APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_io_file_seek(*file, APR_SET, &offset, pool));
+  return SVN_NO_ERROR;
+}
+
+static void
+parse_base_rep(struct rep_pointer *rep, const char *str)
+{
+  rep->rev = SVN_STR_TO_REV(str);
+  while (*str && *str != ' ')
+    str++;
+  rep->off = atol(++str);
+  while (*str && *str != ' ')
+    str++;
+  rep->len = atol(++str);
+  rep->text_len = -1;
+  rep->digest = NULL;
+}
+
+/* Build an array of rep_state structures giving the delta reps from
+   first_rep to a plain-text or self-compressed rep.  Set *src_state
+   to the plain-text rep we find at the end of the chain, or to NULL
+   if the final delta representation is self-compressed. */
+static svn_error_t *
+build_rep_list(apr_array_header_t **list, struct rep_state **src_state,
+               struct rep_pointer *first_rep, apr_pool_t *pool)
+{
+  struct rep_pointer rep;
+  struct rep_state *rs;
+  apr_file_t *file;
+  char header[128];
+  unsigned char buf[4];
+  apr_size_t len;
+
+  *list = apr_array_make(pool, 1, sizeof(struct rep_state *));
+  rep = *first_rep;
+  while (1)
+    {
+      SVN_ERR(open_and_seek_rev(&file, rep.rev, rep.off, pool));
+      len = sizeof(header);
+      SVN_ERR(svn_io_read_length_line(file, header, &len, pool));
+
+      rs = apr_palloc(pool, sizeof(*rs));
+      rs->file = file;
+      rs->start = rep.off + strlen(header) + 1;
+      rs->off = rs->start;
+      rs->end = rs->start + rep.len;
+
+      if (strcmp(header, "PLAIN") == 0)
+        {
+          *src_state = rs;
+          return SVN_NO_ERROR;
+        }
+
+      /* It must be a delta.  Read the svndiff header. */
+      SVN_ERR(svn_io_file_read_full(file, buf, 4, NULL, pool));
+      assert(buf[0] == 'S' && buf[1] == 'V' && buf[2] == 'N');
+      rs->ver = buf[3];
+      rs->chunk_index = 0;
+      rs->off += 4;
+
+      /* Push this rep onto the list.  If it's self-compressed, we're done. */
+      APR_ARRAY_PUSH(*list, struct rep_state *) = rs;
+      if (strcmp(header, "DELTA") == 0)
+        {
+          *src_state = NULL;
+          return SVN_NO_ERROR;
+        }
+
+      /* The header must be a delta against some base rep. */
+      if (strncmp(header, "DELTA ", 6) != 0)
+        abort();
+
+      parse_base_rep(&rep, header + 6);
+    }
+}
+
+static svn_error_t *
+get_combined_window(svn_txdelta_window_t **result, struct contents_baton *cb)
+{
+  apr_pool_t *pool, *new_pool;
+  int i, this_chunk;
+  svn_txdelta_window_t *window, *nwin;
+  svn_stream_t *stream;
+  struct rep_state *rs;
+
+  this_chunk = cb->chunk_index++;
+  pool = svn_pool_create(cb->pool);
+
+  /* Read the next window from the original rep. */
+  rs = APR_ARRAY_IDX(cb->rs_list, 0, struct rep_state *);
+  stream = svn_stream_from_aprfile(rs->file, pool);
+  SVN_ERR(svn_txdelta_read_svndiff_window(&window, stream, rs->ver, pool));
+  rs->chunk_index++;
+  rs->off = 0;
+  SVN_ERR(svn_io_file_seek(rs->file, APR_CUR, &rs->off, pool));
+  assert(rs->off <= rs->end);
+
+  /* Combine in the windows from the other delta reps, if needed. */
+  for (i = 1; i < cb->rs_list->nelts; i++)
+    {
+      svn_txdelta__compose_ctx_t context;
+
+      if (window->src_ops == 0)
+        break;
+
+      rs = APR_ARRAY_IDX(cb->rs_list, i, struct rep_state *);
+
+      /* Skip windows to reach the current chunk if we aren't there yet. */
+      while (rs->chunk_index < this_chunk)
+        {
+          SVN_ERR(svn_txdelta_skip_svndiff_window(rs->file, rs->ver, pool));
+          rs->chunk_index++;
+          rs->off = 0;
+          SVN_ERR(svn_io_file_seek(rs->file, APR_CUR, &rs->off, pool));
+          assert(rs->off < rs->end);
+        }
+
+      /* Read the next window. */
+      stream = svn_stream_from_aprfile(rs->file, pool);
+      SVN_ERR(svn_txdelta_read_svndiff_window(&nwin, stream, rs->ver, pool));
+      rs->chunk_index++;
+      rs->off = 0;
+      SVN_ERR(svn_io_file_seek(rs->file, APR_CUR, &rs->off, pool));
+      assert(rs->off <= rs->end);
+
+      /* Combine this window with the current one.  Cycles pools so that we
+         only need to hold three windows at a time. */
+      new_pool = svn_pool_create(cb->pool);
+      window = svn_txdelta__compose_windows(nwin, window, &context, new_pool);
+      svn_pool_destroy(pool);
+      pool = new_pool;
+    }
+
+  *result = window;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+contents_read(void *baton, char *buf, apr_size_t *len)
+{
+  struct contents_baton *cb = baton;
+  apr_size_t remaining = *len, copy_len;
+  char *cur = buf, *sbuf;
+  struct rep_state *rs;
+  svn_txdelta_window_t *window;
+
+  /* Special case for when there are no delta reps, only a plain text. */
+  if (cb->rs_list->nelts == 0)
+    {
+      copy_len = remaining;
+      rs = cb->src_state;
+      if (copy_len > rs->end - rs->off)
+        copy_len = rs->end - rs->off;
+      SVN_ERR(svn_io_file_read_full(rs->file, cur, copy_len, NULL, cb->pool));
+      rs->off += copy_len;
+      *len = copy_len;
+      return SVN_NO_ERROR;
+    }
+
+  while (remaining > 0)
+    {
+      /* If we have buffered data from a previous chunk, use that. */
+      if (cb->buf)
+        {
+          copy_len = cb->buf_len - cb->buf_pos;
+          if (copy_len > remaining)
+            copy_len = remaining;
+          memcpy(cur, cb->buf + cb->buf_pos, copy_len);
+          cb->buf_pos += copy_len;
+          cur += copy_len;
+          remaining -= copy_len;
+          if (cb->buf_pos == cb->buf_len)
+            {
+              svn_pool_clear(cb->pool);
+              cb->buf = NULL;
+            }
+        }
+
+      rs = APR_ARRAY_IDX(cb->rs_list, 0, struct rep_state *);
+      if (rs->off == rs->end)
+        break;
+
+      /* Get more buffered data by evaluating a chunk. */
+      SVN_ERR(get_combined_window(&window, cb));
+      if (window->src_ops > 0)
+        {
+          assert(cb->src_state);
+          rs = cb->src_state;
+          sbuf = apr_palloc(cb->pool, window->sview_len);
+          assert(rs->start + window->sview_offset < rs->end);
+          if (rs->start + window->sview_offset != rs->off)
+            {
+              rs->off = rs->start + window->sview_offset;
+              SVN_ERR(svn_io_file_seek(rs->file, APR_SET, &rs->off, cb->pool));
+            }
+          SVN_ERR(svn_io_file_read_full(rs->file, sbuf, window->sview_len,
+                                        NULL, cb->pool));
+          rs->off += window->sview_len;
+        }
+      else
+        sbuf = NULL;
+      cb->buf_len = window->tview_len;
+      cb->buf = apr_palloc(cb->pool, cb->buf_len);
+      svn_txdelta__apply_instructions(window, sbuf, cb->buf, &cb->buf_len);
+      assert(cb->buf_len == window->tview_len);
+      cb->buf_pos = 0;
+    }
+
+  *len = cur - buf;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+get_contents(svn_stream_t **contents, struct rep_pointer *rep,
+             apr_pool_t *pool)
+{
+  struct contents_baton *cb;
+  svn_stream_t *stream;
+
+  cb = apr_palloc(pool, sizeof(*cb));
+  SVN_ERR(build_rep_list(&cb->rs_list, &cb->src_state, rep, pool));
+  cb->chunk_index = 0;
+  cb->buf = NULL;
+  cb->pool = svn_pool_create(pool);
+
+  stream = svn_stream_create(cb, pool);
+  svn_stream_set_read(stream, contents_read);
+  *contents = stream;
+  return SVN_NO_ERROR;
+}
+
+static struct rep_pointer *
+choose_delta_base(struct entry *entry)
+{
+  int count, i;
+  struct entry *base;
+
+  if (!entry->pred_count)
+    return NULL;
+
+  count = entry->pred_count;
+  i = 0;
+  while ((count & (1 << i)) == 0)
+    i++;
+  count &= ~(1 << i);
+
+  base = entry;
+  while (count++ < entry->pred_count)
+    base = base->pred;
+
+  return &base->text_rep;
+}
+
 /* --- The parser functions --- */
 
 static svn_error_t *
@@ -940,6 +1230,7 @@ text_write(void *baton, const char *data, apr_size_t *len)
   struct parse_baton *pb = baton;
 
   apr_md5_update(&pb->md5_ctx, data, *len);
+  pb->text_len += *len;
   return svn_stream_write(pb->delta_stream, data, len);
 }
 
@@ -956,14 +1247,16 @@ text_close(void *baton)
   apr_md5_final(digest, &pb->md5_ctx);
   rep->digest = svn_md5_digest_to_cstring(digest, pb->pool);
 
-  /* Record the length of the data written (subtract for the header line). */
+  /* Record the length of the data written. */
   offset = 0;
-  SVN_ERR(svn_io_file_seek(pb->rev_file, APR_CUR, &offset, pb->pool));
-  rep->len = offset - rep->off - 6;
+  SVN_ERR(svn_io_file_seek(pb->rev_file, APR_CUR, &offset, pb->delta_pool));
+  rep->len = offset - pb->delta_start;
+  rep->text_len = pb->text_len;
 
   /* Write a representation trailer to the rev file. */
-  SVN_ERR(svn_stream_printf(pb->rev_stream, pb->pool, "ENDREP\n"));
+  SVN_ERR(svn_stream_printf(pb->rev_stream, pb->delta_pool, "ENDREP\n"));
 
+  svn_pool_destroy(pb->delta_pool);
   return SVN_NO_ERROR;
 }
 
@@ -972,28 +1265,49 @@ set_fulltext(svn_stream_t **stream, void *baton)
 {
   struct parse_baton *pb = baton;
   struct entry *entry = pb->current_node;
-  struct rep_pointer *rep = &entry->text_rep;
+  struct rep_pointer *rep = &entry->text_rep, *base;
   svn_txdelta_window_handler_t wh;
+  svn_stream_t *source;
   void *whb;
+  const char *header;
+  apr_pool_t *pool;
 
   /* Record the current offset of the rev file as the text rep location. */
   rep->rev = pb->current_rev;
   rep->off = 0;
   SVN_ERR(svn_io_file_seek(pb->rev_file, APR_CUR, &rep->off, pb->pool));
 
+  pb->delta_pool = svn_pool_create(pb->rev_pool);
+  pool = pb->delta_pool;
+
   /* Write a representation header to the rev file. */
-  SVN_ERR(svn_io_file_write_full(pb->rev_file, "DELTA\n", 6, NULL, pb->pool));
+  base = choose_delta_base(entry);
+  if (base)
+    {
+      SVN_ERR(get_contents(&source, base, pool));
+      header = apr_psprintf(pool, "DELTA %" SVN_REVNUM_T_FMT
+                            " %" APR_OFF_T_FMT " %" APR_OFF_T_FMT "\n",
+                            base->rev, base->off, base->len);
+    }
+  else
+    {
+      source = svn_stream_empty(pool);
+      header = "DELTA\n";
+    }
+  SVN_ERR(svn_io_file_write_full(pb->rev_file, header, strlen(header), NULL,
+                                 pool));
+  pb->delta_start = rep->off + strlen(header);
+  pb->text_len = 0;
 
   /* Prepare to write the svndiff data. */
-  svn_txdelta_to_svndiff(pb->rev_stream, pb->rev_pool, &wh, &whb);
-  pb->delta_stream = svn_txdelta_target_push(wh, whb, pb->empty_stream,
-                                             pb->rev_pool);
+  svn_txdelta_to_svndiff(pb->rev_stream, pool, &wh, &whb);
+  pb->delta_stream = svn_txdelta_target_push(wh, whb, source, pool);
 
   /* Get ready to compute the MD5 digest. */
   apr_md5_init(&pb->md5_ctx);
 
   /* Hand the caller a writable stream to write the data to. */
-  *stream = svn_stream_create(pb, pb->pool);
+  *stream = svn_stream_create(pb, pool);
   svn_stream_set_write(*stream, text_write);
   svn_stream_set_close(*stream, text_close);
   return SVN_NO_ERROR;
@@ -1087,7 +1401,6 @@ main(int argc, char **argv)
   pb.rev_stream = NULL;
   pb.next_node_id = 0;
   pb.next_copy_id = 0;
-  pb.empty_stream = svn_stream_empty(pool);
   pb.pool = pool;
   err = svn_repos_parse_dumpstream2(instream, &parser, &pb, NULL, NULL, pool);
   if (!err)
