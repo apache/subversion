@@ -1,0 +1,102 @@
+<html lang="en"><head>
+<title>Subversion pluggable-db</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name=description content="Subversion pluggable-db">
+</head><body>
+
+<body bgcolor="#FFFFFF" fgcolor="#000000">
+
+<p>
+<h1>Current View</h1>
+
+<p>Below is a simplified view of the existing Subversion FS layers and those
+layers directly affected by it.
+
+<br><p>
+<center>
+
+<img src="curFSSmplViewImg.jpg" alt="curFSSmplViewImg.jpg">
+
+</center>
+
+<br><p>
+<p>As noted, BDB dependencies are located at various levels in the system. 
+To ease implementation of new FS back ends, I feel more BDB isolation
+is required.
+
+<p>Please understand that I understand that all of this is open for debate or
+public flogging as needed?
+
+<p>
+<br>
+<h1>Summary of Changes</h1>
+
+<p>Below is a summary of out-of-repos changes made:
+
+<ol type=1 start=1>
+</p><li>All explicit references, to BDB structures in svn_fs_t have been removed and
+replaced with a void reference to "FS type specific data".
+
+<li>All functions containing Berkeley have been re-named.  Except for
+svn_fs_set_berkeley_errcall.
+
+<li>Added a vtable located in svn_fs_t, to provide mechanism for FS
+implementers to supplant implementations of most of the exposed
+functions at the API level.
+
+<li>Moved all BDB related code to BDB sub-dir.
+
+<li>Created a trail vtable so that different DB APIs can back the trail.c code. 
+This file and his companion include has been moved to the util sub-directory
+
+<li>Created a db access functions vtable for what I'm referring to as the baseline
+FS implementation.  This will allow for other DBs to be used to back the
+current FS as it exists today.  This may not be the best solution for a
+SQL DB long term but will provide a jumping off point for enhanced versions
+of a SQL FS.  The end result can be a hybrid or a completely new FS at the
+veneer level.
+
+<li>Renamed the BDB functions in the bdb directory with a new prefix: svn_fs__bdb
+
+<li>Added svn_config_t parameter to the create calls.  This will allow
+configuration parameters specific to the FS implementation to be passed in. 
+I will Explain this in a soon to come document on a SQL FS.
+
+</ol>
+
+<p>
+<br>
+<h1>Summary of Planned Changes</h1>
+
+<p>Below are plans for coming changes:
+
+<ol type=1 start=1>
+</p><li>Move tree.c, dag.c and their partners to baseline_impl directory.  Look for and
+move util candidates.
+
+<li>Commit some existing  config.c extensions.
+
+<li>Commit a reworked svn_sql_config container class that is more generic.
+
+<li>Build and commit a fs_loader module which utilizes the config container class.
+
+<li>Continue SQL work "On a branch hopefully?".
+</ol>
+
+<p>
+<br>
+<h1>Final View</h1>
+
+<p>
+<p>The end result should be more like this:
+
+<br><p>
+<center>
+
+<img src="finalFSSmplViewImg.jpg" alt="finalFSSmplViewImg.jpg">
+
+</center>
+
+<br><p>
+</body></html>
+
