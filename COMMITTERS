@@ -67,3 +67,4 @@ Commit access for specific areas:
     jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
       sergeyli   Sergey A. Lipnevich <sergey@optimaltec.com> (neon-0.24 port)
       lonestar   Martin MAURER <martin.maurer@email.de>      (svnshow)
+          maxb   Max Bowsher <maxb@ukf.net>                  (cvs2svn)
