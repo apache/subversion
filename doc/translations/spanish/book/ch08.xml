@@ -1325,38 +1325,43 @@ if __name__ == '__main__':
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-3.2">
-      <title>Pristine Copies and Property Files</title>
+      <title>Copias prístinas y propiedades de ficheros</title>
 
-      <para>As mentioned before, the <filename>.svn</filename>
-        directory also holds the pristine <quote>text-base</quote>
-        versions of files.  Those can be found in
-        <filename>.svn/text-base</filename>.  The benefits of these
-        pristine copies are multiple&mdash;network-free checks for
-        local modifications and difference reporting, network-free
-        reversion of modified or missing files, smaller transmission
-        of changes to the server&mdash;but comes at the cost of having
-        each versioned file stored at least twice on disk.  These
-        days, this seems to be a negligible penalty for most files.
-        However, the situation gets uglier as the size of your
-        versioned files grows.  Some attention is being given to
-        making the presence of the <quote>text-base</quote> an option.
-        Ironically though, it is as your versioned files' sizes get
-        larger that the existence of the <quote>text-base</quote>
-        becomes more crucial&mdash;who wants to transmit a huge file
-        across a network just because they want to commit a tiny
-        change to it?</para>
+      <para>Tal y como mencionamos anteriormente, el directorio
+        <filename>.svn</filename> también contiene
+        versiones <quote>text-base</quote> prístinas
+        de los ficheros.  Éstas pueden encontrarse en
+        <filename>.svn/text-base</filename>. Los beneficios de
+        estas copias son múltiples&mdash;evitan conexiones por
+        red cuando se quiere saber si hay modificaciones locales
+        y qué es lo que ha cambiado, permiten revertir ficheros
+        modificados o eliminados, los cambios que se transmiten al
+        servidor son menores&mdash;pero hay que pagar el precio de
+        almacenar cada fichero versionado dos veces en el disco.
+        Hoy en día, esto parece una desventaja despreciable para
+        la mayoría de los ficheros. No obstante, esta situación
+        se vuelve más delicada <!-- uglier != delicada --> a
+        medida que el tamaño de sus ficheros versionados crece.
+        Se está prestando atención para permitir que la presencia de
+        <quote>text-base</quote> sea una opción. Pero irónicamente,
+        es a medida que los tamaños de sus ficheros versionados
+        crecen cuando la existencia de <quote>text-base</quote>
+        se vuelve más crucial&mdash;¿quién quiere transmitir un
+        fichero enorme por red sólo porque quieren realizar una
+        pequeña modificación sobre el mismo?</para>
 
-      <para>Similar in purpose to the <quote>text-base</quote> files
-        are the property files and their pristine
-        <quote>prop-base</quote> copies, located in
-        <filename>.svn/props</filename> and
-        <filename>.svn/prop-base</filename> respectively.  Since
-        directories can have properties, too, there are also
-        <filename>.svn/dir-props</filename> and
-        <filename>.svn/dir-prop-base</filename> files.  Each of these
-        property files (<quote>working</quote> and <quote>base</quote>
-        versions) uses a simple <quote>hash-on-disk</quote> file
-        format for storing the property names and values.</para>
+      <para>Con un propósito similar a los ficheros
+        <quote>text-base</quote> existen los ficheros de
+        propiedades y sus copias <quote>prop-base</quote>
+        prístinas, encontradas en <filename>.svn/props</filename>
+        y <filename>.svn/prop-base</filename> respectivamente.  Dado
+        que los directorios también pueden tener propiedades, también
+        existen los ficheros <filename>.svn/dir-props</filename>
+        y <filename>.svn/dir-prop-base</filename>.  Cada uno de
+        estos ficheros de propiedades (versiones <quote>base</quote>
+        y <quote>en desarrollo</quote>) usan un simple fichero
+        de formato <quote>hash-on-disk</quote> para almacenar los
+        nombres de las propiedades y sus valores.</para>
 
     </sect2>
   </sect1>
