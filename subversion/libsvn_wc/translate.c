@@ -210,7 +210,7 @@ static svn_boolean_t
 translate_keyword (char *buf,
                    apr_size_t *len,
                    svn_boolean_t expand,
-                   svn_wc_keywords_t *keywords)
+                   const svn_wc_keywords_t *keywords)
 {
   const char *keyword;
   const svn_string_t *value;
@@ -349,8 +349,8 @@ translate_newline (const char *eol_str,
 /*** Public interfaces. ***/
 
 svn_boolean_t
-svn_wc_keywords_differ (svn_wc_keywords_t *a,
-                        svn_wc_keywords_t *b,
+svn_wc_keywords_differ (const svn_wc_keywords_t *a,
+                        const svn_wc_keywords_t *b,
                         svn_boolean_t compare_values)
 {
   if (((a == NULL) && (b == NULL)) /* no A or B */
@@ -419,7 +419,7 @@ svn_wc_copy_and_translate (const char *src,
                            const char *dst,
                            const char *eol_str,
                            svn_boolean_t repair,
-                           svn_wc_keywords_t *keywords,
+                           const svn_wc_keywords_t *keywords,
                            svn_boolean_t expand,
                            apr_pool_t *pool)
 {
@@ -959,13 +959,12 @@ svn_wc__get_keywords (svn_wc_keywords_t **keywords,
   const char *list;
   int offset = 0;
   svn_stringbuf_t *found_word;
-  svn_wc_keywords_t tmp_keywords;
+  svn_wc_keywords_t tmp_keywords = { 0 };
   svn_boolean_t got_one = FALSE;
   svn_wc_entry_t *entry = NULL;
 
   /* Start by assuming no keywords. */
   *keywords = NULL;
-  memset (&tmp_keywords, 0, sizeof (tmp_keywords));
 
   /* Choose a property list to parse:  either the one that came into
      this function, or the one attached to PATH. */
@@ -1031,8 +1030,7 @@ svn_wc__get_keywords (svn_wc_keywords_t **keywords,
 
   if (got_one)
     {
-      *keywords = apr_pcalloc (pool, sizeof (**keywords));
-      memcpy (*keywords, &tmp_keywords, sizeof (**keywords));
+      *keywords = apr_pmemdup (pool, &tmp_keywords, sizeof (tmp_keywords));
     }
       
   return SVN_NO_ERROR;
