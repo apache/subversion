@@ -669,6 +669,65 @@ def nonrecursive_switching(sbox):
     raise svntest.Failure
 
 
+#----------------------------------------------------------------------
+def failed_anchor_is_target(sbox):
+  "anchor=target that fails due to local mods"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  G_url = svntest.main.current_repo_url + '/A/D/G'
+  G_psi_url = G_url + '/psi'
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 2.\n'], [],
+                                     'mkdir', '-m', 'log msg', G_psi_url)
+
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  psi_path = os.path.join(H_path, 'psi')
+  svntest.main.file_append(psi_path, "more text")
+
+  # This switch will fail as it will not delete psi with local mods
+  out, err = svntest.main.run_svn(1, 'switch',
+                                  '--username', svntest.main.wc_author,
+                                  '--password', svntest.main.wc_passwd,
+                                  G_url, H_path)
+  if not err:
+    raise svntest.Failure
+
+  # Some items under H show up as switched because, while H itself was
+  # switched, the switch command failed before it reached all items
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/D/H', status='! ', switched='S', wc_rev=2)
+  expected_status.tweak('A/D/H/chi', 'A/D/H/omega', switched='S')
+  expected_status.tweak('A/D/H/psi', status='M ', switched='S')
+  expected_status.add({
+    'A/D/H/pi'      : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/H/tau'     : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/H/rho'     : Item(status='  ', wc_rev=2, repos_rev=2),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # At one stage the failed switch left the wrong URL in the target
+  # directory H.
+  out, err = svntest.actions.run_and_verify_svn(None, None, [], 'info', H_path)
+  for line in out:
+    if line.find('URL: ' + G_url) != -1:
+      break
+  else:
+    raise svntest.Failure
+
+  # Revert local mod and repeat the switch
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', psi_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     G_url, H_path)
+
+  expected_status.remove('A/D/H/chi', 'A/D/H/omega')
+  expected_status.tweak('A/D/H', status='  ') # remains switched
+  expected_status.tweak('A/D/H/psi', status='  ', switched=None, wc_rev=2)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -686,6 +745,7 @@ test_list = [ None,
               delete_subdir,
               XFail(file_dir_file),
               XFail(nonrecursive_switching),
+              failed_anchor_is_target,
              ]
 
 if __name__ == '__main__':

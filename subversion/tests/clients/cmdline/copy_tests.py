@@ -479,18 +479,6 @@ def no_copy_overwrites(sbox):
 # prop-base, so the destination cannot be a versioned file even if the
 # destination is scheduled for deletion.
 
-def expect_extra_files(node, extra_files):
-  "singleton handler for expected singletons"
-
-  for pattern in extra_files:
-    mo = re.match(pattern, node.name)
-    if mo:
-      extra_files.pop(extra_files.index(pattern))
-      break
-  else:
-    print "Found unexpected disk object:", node.name
-    raise svntest.main.SVNTreeUnequal
-
 def no_wc_copy_overwrites(sbox):
   "svn cp PATH PATH cannot overwrite destination"
 
@@ -508,12 +496,8 @@ def no_wc_copy_overwrites(sbox):
   # Status before attempting copies
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/G/rho', status='D ')
-  extra_files = [ 'tau' ]
-  svntest.actions.run_and_verify_status(wc_dir, expected_status,
-                                        None, None,
-                                        expect_extra_files, extra_files)
-  if (extra_files):
-    raise svntest.Failure
+  expected_status.tweak('A/D/G/tau', status='! ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # These copies should fail
   pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
@@ -526,12 +510,7 @@ def no_wc_copy_overwrites(sbox):
                                      'cp', pi_path, alpha_path)
 
   # Status after failed copies should not have changed
-  extra_files = [ 'tau' ]
-  svntest.actions.run_and_verify_status(wc_dir, expected_status,
-                                        None, None,
-                                        expect_extra_files, extra_files)
-  if (extra_files):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
 

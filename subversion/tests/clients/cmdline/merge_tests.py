@@ -1615,7 +1615,7 @@ def merge_skips_obstructions(sbox):
 
   expected_output = wc.State(wc_dir, { })
   expected_disk.remove('A/B/lambda')
-  expected_status.remove('A/B/lambda')
+  expected_status.tweak('A/B/lambda', status='! ')
   svntest.actions.run_and_verify_merge(wc_dir, '3', '4',
                                        svntest.main.current_repo_url,
                                        expected_output,
@@ -1694,9 +1694,11 @@ def merge_into_missing(sbox):
   expected_disk = wc.State('', {
     })
   expected_status = wc.State(F_path, {
-    ''     : Item(status='  '),
+    ''      : Item(status='  ', wc_rev=1),
+    'foo'   : Item(status='! ', wc_rev=2),
+    ### Why no 'Q'?
     })
-  expected_status.tweak(wc_rev=1, repos_rev=3)
+  expected_status.tweak(repos_rev=3)
   expected_skip = wc.State(F_path, {
     'Q'   : Item(),
     'foo' : Item(),
@@ -1732,6 +1734,10 @@ def merge_into_missing(sbox):
 
   # Check working copy is not locked.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/B/F/foo' : Item(status='! ', wc_rev=2),
+    ### Why no 'A/B/F/Q'?
+    })
   expected_status.tweak(repos_rev=3)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
