@@ -27,10 +27,9 @@ SEPARATOR = '=' * 78
 
 
 def main(pool, config_fname, repos_dir, rev):
-  cfg = Config(config_fname)
-  cfg.prep_groups(repos_dir)
-
   repos = Repository(repos_dir, rev, pool)
+
+  cfg = Config(config_fname, repos)
 
   editor = ChangeCollector(repos.root_prev)
 
@@ -136,6 +135,8 @@ class MailedOutput:
     ### so if the body doesn't change, then it can be sent N times
     ### rather than rebuilding it each time.
 
+    ### need an iteration pool
+
     for (group, param_tuple), params in groups.items():
       self.start(group, params)
       generate_content(self, self.cfg, self.repos, self.changelist, pool)
@@ -230,7 +231,7 @@ class PipeOutput(MailedOutput):
     # figure out the command for delivery
     self.cmd = string.split(cfg.general.mail_command)
 
-    # we want a handle to /dev/null for hooking up to the diffs' stdin
+    # we want a descriptor to /dev/null for hooking up to the diffs' stdin
     self.null = os.open('/dev/null', os.O_RDONLY)
 
   def start(self, group, params):
@@ -296,9 +297,7 @@ def generate_content(output, cfg, repos, changelist, pool):
   date = time.ctime(svn.util.secs_from_timestr(svndate, pool))
 
   output.write('Author: %s\nDate: %s\nNew Revision: %s\n\n'
-               % (repos.get_rev_prop(svn.util.SVN_PROP_REVISION_AUTHOR),
-                  date,
-                  repos.rev))
+               % (repos.author, date, repos.rev))
 
   # print summary sections
   generate_list(output, 'Added', changelist, _select_adds)
@@ -442,6 +441,8 @@ class Repository:
 
     self.root_prev = self.get_root(rev-1)
     self.root_this = self.get_root(rev)
+
+    self.author = self.get_rev_prop(svn.util.SVN_PROP_REVISION_AUTHOR)
 
   def get_rev_prop(self, propname):
     return svn.fs.revision_prop(self.fs_ptr, self.rev, propname, self.pool)
@@ -604,7 +605,7 @@ class Config:
   # set of groups.
   _predefined = ('general', 'defaults')
 
-  def __init__(self, fname):
+  def __init__(self, fname, repos):
     cp = ConfigParser.ConfigParser()
     cp.read(fname)
 
@@ -626,6 +627,13 @@ class Config:
 
     ### do some better splitting to enable quoting of spaces
     self._diff_cmd = string.split(self.general.diff)
+
+    # these params are always available, although they may be overridden
+    self._global_params = {
+      'author' : repos.author,
+      }
+
+    self._prep_groups(repos)
 
   def get_diff_cmd(self, args):
     cmd = [ ]
@@ -653,17 +661,19 @@ class Config:
         return getattr(sub, option) % params
     return getattr(self.defaults, option, '') % params
 
-  def prep_groups(self, repos_dir):
+  def _prep_groups(self, repos):
     self._group_re = [ ]
 
-    repos_dir = os.path.abspath(repos_dir)
+    repos_dir = os.path.abspath(repos.repos_dir)
 
-    # compute the default repository-based parameters
-    default_params = { }
+    # compute the default repository-based parameters. start with some
+    # basic parameters, then bring in the regex-based params.
+    default_params = self._global_params.copy()
+
     try:
       match = re.match(self.defaults.for_repos, repos_dir)
       if match:
-        default_params = match.groupdict()
+        default_params.update(match.groupdict())
     except AttributeError:
       # there is no self.defaults.for_repos
       pass
@@ -675,7 +685,8 @@ class Config:
         match = re.match(sub.for_repos, repos_dir)
         if not match:
           continue
-        params = match.groupdict()
+        params = self._global_params.copy()
+        params.update(match.groupdict())
       self._group_re.append((group, re.compile(sub.for_paths), params))
 
     # after all the groups are done, add in the default group
@@ -695,7 +706,7 @@ class Config:
         params = repos_params.copy()
         params.update(match.groupdict())
         return group, params
-    return None, { }
+    return None, self._global_params
 
 
 class _sub_section:
@@ -779,4 +790,5 @@ if __name__ == '__main__':
 #     o optional, non-mail log file
 #     o look up authors (username -> email; for the From: header) in a
 #       file(s) or DBM
+#   - put the commit author into the params dict  [DONE]
 #
