@@ -142,6 +142,8 @@ happened?</a></li>
     get errors <tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>.  What's wrong?</a></li>
 <li><a href="#linux-bdb42-build">I'm having trouble building
     Subversion under *NIX with BerkeleyDB 4.2 What should I do?</a></li>
+<li><a href="#windows-mod_dav_svn-build">I'm getting errors trying to build
+    Subversion 1.2 on Windows &mdash; mod_dav_svn won't build.</a></li>
 <li><a href="#windows-msvc-build">I'm having trouble building
     Subversion under Windows with MSVC++ 6.0.  What should I do?</a></li>
 <li><a href="#windows-drive-letter">How can I specify a Windows drive letter in
@@ -2006,6 +2008,24 @@ library with the following:
 <p>
 If you install your libraries in locations other than the defaults, you would
 need to adjust the paths at each step accordingly.</p>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="windows-mod_dav_svn-build">I'm getting errors trying to build
+    Subversion 1.2 on Windows &mdash; mod_dav_svn won't build.</a></h3>
+
+<p>It turns out that there's a small build-bug Apache httpd: not all
+of <tt>mod_dav</tt>'s public APIs were properly declared "exportable"
+on Windows.  And Subversion 1.2's <tt>mod_dav_svn</tt> is now using
+these APIs.  This means that out-of-the-box, Subversion 1.2 will not
+compile on Windows against any released httpd sourceball.</p>
+
+<p>This problem is already fixed on httpd's /trunk, and has been
+backported to the httpd 2.0.x branch.  If you're using a released
+httpd source tree, you're out of luck.  Until httpd-2.0.54 is
+released, you will need to manually apply <a
+href="httpd-win32.patch.txt">the same patch</a> to your httpd tree.
+(It's r155345 of httpd's trunk, for reference.)</p>
 
 
 <![CDATA[-----------------------------------------------------------]]>
