@@ -1682,8 +1682,9 @@ const char * dav_svn_getetag(const dav_resource *resource, apr_pool_t *pool)
       /* ### what to do? */
       return "";
     }
-  
-  return apr_psprintf(pool, "\"%" SVN_REVNUM_T_FMT "/%s\"",
+
+  return apr_psprintf(pool, "%s\"%" SVN_REVNUM_T_FMT "/%s\"",
+                      resource->collection ? "W/" : "",
                       created_rev,
                       apr_xml_quote_string(pool,
                                            resource->info->repos_path, 1));
