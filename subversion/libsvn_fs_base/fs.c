@@ -413,7 +413,12 @@ bdb_write_config  (svn_fs_t *fs)
     "#\n"
     "# http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgId=161960\n"
     "set_lg_bsize     262144\n"
-    "set_lg_max      1048576\n";
+    "set_lg_max      1048576\n"
+    "#\n"
+    "# If you see \"log region out of memory\" errors, bump lg_regionmax.\n"
+    "# See http://www.sleepycat.com/docs/ref/log/config.html and\n"
+    "# http://svn.haxx.se/users/archive-2004-10/1001.shtml for more.\n"
+    "set_lg_regionmax 131072\n";
 
   /* Run-time configurable options.
      Each option set consists of a minimum required BDB version, a
