@@ -88,6 +88,8 @@ parse_value (int *pch, parse_context_t *ctx)
   /* Read the first line of the value */
   svn_stringbuf_setempty (ctx->value);
   for (ch = getc (ctx->fd);   /* ### kff: huh, not gotten first char yet? */
+                              /* ### that's right, last char we saw was
+                                     ':' or '=' in parse_option. --xbc */
        ch != EOF && ch != '\n';
        ch = getc (ctx->fd))
     {
@@ -115,7 +117,6 @@ parse_value (int *pch, parse_context_t *ctx)
         {
           int count;
           ++ctx->line;
-          getc (ctx->fd);       /* Eat the eoln */
           ch = skip_whitespace (ctx->fd, &count);
 
           switch (ch)
