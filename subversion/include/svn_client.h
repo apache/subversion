@@ -374,8 +374,9 @@ svn_client_revert (svn_stringbuf_t *path,
 /* Copy SRC_PATH to DST_PATH, and schedule DST_PATH for addition to
    the repository, remembering the copy history.
 
-   SRC_PATH must be a path in a working copy, and DST_PATH must be a
-   location within the working copy.  
+   SRC_PATH must be a file or directory under version control, and
+   DST_PATH must be a file or dir within the same working copy --
+   existent or not.
 
    Important:  this is a variant of svn_client_add.  No changes will
    happen to the repository until a commit occurs.  This scheduling
