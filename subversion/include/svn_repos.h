@@ -72,6 +72,27 @@ typedef svn_error_t *(*svn_repos_authz_func_t) (svn_boolean_t *allowed,
                                                 void *baton,
                                                 apr_pool_t *pool);
 
+/** A callback function type for use in @c svn_repos_get_file_revs.
+ * @a baton is provided by the caller, @a path is the pathname of the file
+ * in revision @a rev and @a rev_props are the revision properties.
+ * If @a delta_handler and @a delta_baton are non-NULL, they may be set to a
+ * handler/baton which will be called with the delta between the previous
+ * revision and this one after the return of this callback.  They may be
+ * left as NULL/NULL.
+ * @a prop_diffs is an array of svn_prop_t elements indicating the property
+ * delta for this and the previous revision.
+ * @a pool may be used for temporary allocations, but you can't rely
+ * on objects allocated to live outside of this particular call and the
+ * immediately following calls to @a *delta_handler if any. */
+typedef svn_error_t *(*svn_repos_file_rev_handler_t)
+       (void *baton,
+        const char *path,
+        svn_revnum_t rev,
+        apr_hash_t *rev_props,
+        svn_txdelta_window_handler_t *delta_handler,
+        void **delta_baton,
+        apr_array_header_t *prop_diffs,
+        apr_pool_t *pool);
 
 
 /** The repository object. */
@@ -632,6 +653,33 @@ svn_repos_get_logs (svn_repos_t *repos,
                     svn_log_message_receiver_t receiver,
                     void *receiver_baton,
                     apr_pool_t *pool);
+
+
+/* ---------------------------------------------------------------*/
+
+/* Retreiving multiple revisions of a file. */
+
+/** Retrieve a subset of the interesting revisions of a file @a path in
+ * @a repos as seen in revision @a end.  Invoke @a handler with
+ * @a handler_baton as its first argument for each such revision.
+ * @a pool is used for all allocations.
+ *
+ * If there is an interesting revision of the file that is less than or
+ * equal to start, the iteration will start at that revision.  Else, the
+ * iteration will start at the first revision of the file in the repository,
+ * which has to be less than or equal to end.  Note that if the function
+ * succeeds, @a handler will have been called at least once.
+ *
+ * In a series of calls, the file contents for the first interesting revision
+ * will be provided as a text delta against the empty file.  In the following
+ * calls, the delta will be against the contents for the previous call. */
+svn_error_t *svn_repos_get_file_revs (svn_repos_t *repos,
+                                      const char *path,
+                                      svn_revnum_t start,
+                                      svn_revnum_t end,
+                                      svn_repos_file_rev_handler_t handler,
+                                      void *handler_baton,
+                                      apr_pool_t *pool);
 
 
 /* ---------------------------------------------------------------*/
