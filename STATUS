@@ -1,104 +1,12 @@
-This file tracks the status of releases in the 1.0.x line.
+This file tracks the status of releases in the 1.1.x line.
 
 See "Stabilizing and maintaining releases" in trunk/HACKING for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.0.6:
+Status of 1.1.0:
 ================
 
 Candidate changes:
 
-  * r8804
-    Stop unrelated errors being logged in the Apache error log.
-    Justification: Clarity; trivial fix.
-    Votes:
-      +1: dionisos
-
-
-  * r8867, r8868, r8902
-    Trivial performance fix for mod_authz_svn; cache the access file per
-    connection instead of reloading it per request.
-    Justification: Saves at least 2 loads of the access file per update, plus
-    an additional number of times equal to the number of entries in the REPORT
-    response.
-    Notes: Similar code has been present in mod_dav_svn to cache an open
-    filesystem per connection.
-    Votes:
-      +1: striker
-      -0: kfogel  (Reviewed the change; it's not *so* trivial, and I'm
-                   not sure an optimization like this belongs in a
-                   patch release.)
-
-  * r9861
-    fixes reentrancy problem for javahl binding. The pool for a call could be
-    destroyed before the end of the call. This could crash the jvm
-    Justification: javahl binding only fix to prevent a crash
-    Votes:
-      +1: pmayweg
-
-  * r9883, r9905
-    Fix for crash in javahl binding. If the first parameter of SVNClient.list
-    is null, the jvm will crash. r9905 is the result of a scan of the binding
-    code searching for this problem in all possible places.
-    Justification: javahl binding only fix to prevent a crash
-    Votes:
-      +1: pmayweg
-
-  * r9816
-    Fix a bug which prevents svnlook from creating its temporary directory
-    inside a symlinked TMPDIR.
-    Votes:
-      +1: cmpilato
-
-  * r8027
-    Passing a Revision.DateSpec in javahl failed with 
-    java.lang.NoSuchFieldError because java.util.Date.getTime() was 
-    searched as a field when it is a method. 
-    Justification: small change in javahl binding only
-    Votes:
-      +1: pmayweg
-
-  * r9338, r9340
-    Add various missing library dependencies to build.conf, for various
-    binding-related stuff.
-    Justification: Trivial change, correctness, needed to allow build of
-    bindings on platforms with stricter linking requirements.
-    Votes:
-      +1: maxb
-
-  * r10159
-    Require neon-0.24.7.  Fixes some nasty zlib bugs.
-    Justification:  fixes malformed XML errors from large
-                    ra_dav checkouts/updates/etc.  
-    Votes:
-      +1: sussman
-
-  * r10148
-    Fixes crash when deleting a revprop.
-    Justification:  it's a crash.  we shouldn't ever crash.
-    Votes:
-      +1: sussman
-
-  * r10132, r10136, 10138, 10139
-    Allow user to interrupt between auth prompts.
-    Justification:  not a critical bugfix, but something users have 
-                    repeatedly complained about.
-    Votes:
-      +0: sussman (not yet reviewed)
-      +1: breser
-
-  * r10144
-    Fix a crash caused by a race when getting status.
-    Justification: Don't ever crash.  Requested by the TSVN folks
-                   because the crash kills the whole Windows desktop.
-    Votes:
-      +1: bliss
-
-  * r10186
-    Allow COPY method on repositories with space in their name. (#1837)
-    Justification: Embarrassing bug;  a one-line fix to mod_auth_svn.
-                   (We weren't unescaping a URI).
-    Votes:
-      +1: sussman
 
