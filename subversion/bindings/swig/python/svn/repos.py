@@ -62,7 +62,7 @@ class ChangedPath:
 
 
 class ChangeCollector(svn.delta.Editor):
-  """
+  """Available Since: 1.2.0
   """
   
   # BATON FORMAT: [path, base_path, base_rev]
@@ -76,12 +76,6 @@ class ChangeCollector(svn.delta.Editor):
     self.props = { }
     self.fs_root = root
 
-    ### COMPATIBILITY CODE: If we get an Int or Long for the ROOT,
-    ### assume it is a revision number coming through the deprecated
-    ### RevisionChangeCollector interface.
-    if isinstance(root, IntType) or isinstance(root, LongType):
-      self.fs_root = svn.fs.revision_root(self.fs_ptr, root, pool)
-      
     # Figger out the base revision and root properties.
     subpool = svn.core.svn_pool_create(self.pool)
     if svn.fs.is_revision_root(self.fs_root):
@@ -240,8 +234,23 @@ class ChangeCollector(svn.delta.Editor):
     self._send_change(file_baton[0])
     
 
-### for compatibility 
-RevisionChangeCollector = ChangeCollector
+class RevisionChangeCollector(ChangeCollector):
+  """Deprecated: Use ChangeCollector.
+  This is a compatibility wrapper providing the interface of the
+  Subversion 1.1.x and earlier bindings.
+  
+  Important difference: base_path members have a leading '/' character in
+  this interface."""
+
+  def __init__(self, fs_ptr, root, pool, notify_cb=None):
+    root = svn.fs.revision_root(fs_ptr, root, pool)
+    ChangeCollector.__init__(self, fs_ptr, root, pool, notify_cb)
+
+  def _make_base_path(self, parent_path, path):
+    idx = string.rfind(path, '/')
+    if idx == -1:
+      return parent_path + '/' + path
+    return parent_path + path[idx:]
 
 
 # enable True/False in older vsns of Python
