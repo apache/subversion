@@ -29,6 +29,12 @@
 #define SVN_JNI_HASHTABLE__PUT_SIG \
 "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"
 
+/*
+ * Do you want to debug code in this file?
+ * Just uncomment the following define.
+ */
+//#define SVN_JNI__DEBUG_HASHTABLE
+
 /*** Code ***/
 jobject
 hashtable__create(JNIEnv *env, jboolean *hasException)
@@ -36,7 +42,7 @@ hashtable__create(JNIEnv *env, jboolean *hasException)
   jobject hashtable = NULL;
   jboolean _hasException = JNI_FALSE;
 
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI__DEBUG_HASHTABLE
   fprintf(stderr, ">>>hashtable__create\n");
 #endif
   
@@ -77,7 +83,7 @@ hashtable__create(JNIEnv *env, jboolean *hasException)
 	  _hasException = JNI_TRUE;
 	}
 
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI__DEBUG_HASHTABLE
       SVN_JNI__DEBUG_PTR(hashtableClass);
       SVN_JNI__DEBUG_PTR(hashtableConstructor);
       SVN_JNI__DEBUG_PTR(hashtable);
@@ -88,15 +94,15 @@ hashtable__create(JNIEnv *env, jboolean *hasException)
     }
 
 
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI__DEBUG_HASHTABLE
   SVN_JNI__DEBUG_BOOL(_hasException);
   fprintf(stderr, "\n<<<hashtable__create\n");
 #endif
               
   /* return wether an exception has occured */
-  if( hasException != NULL )
+  if( (hasException != NULL) && _hasException )
     {
-      (*hasException) = _hasException;
+      (*hasException) = JNI_TRUE;
     }
 
   return hashtable;
@@ -109,11 +115,12 @@ hashtable__put(JNIEnv *env, jobject hashtable, jobject key,
   jboolean _hasException = JNI_FALSE;
   jobject result = NULL;
 
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI__DEBUG_HASHTABLE
   fprintf(stderr, ">>>hashtable__put(");
   SVN_JNI__DEBUG_PTR(hashtable);
   SVN_JNI__DEBUG_PTR(key);
   SVN_JNI__DEBUG_PTR(value);
+  fprintf(stderr, ")\n");
 #endif
 
   /* enough space for two local references?
@@ -138,8 +145,8 @@ hashtable__put(JNIEnv *env, jobject hashtable, jobject key,
 
       if( !_hasException )
         {
-#ifdef SVN_JNI__VERBOSE
-          fprintf(stderr, "CallObjectMethod(");
+#ifdef SVN_JNI__DEBUG_HASHTABLE
+          fprintf(stderr, ">>>CallObjectMethod(");
           SVN_JNI__DEBUG_PTR(hashtable);
           SVN_JNI__DEBUG_PTR(hashtablePut);
           SVN_JNI__DEBUG_PTR(key);
@@ -150,20 +157,28 @@ hashtable__put(JNIEnv *env, jobject hashtable, jobject key,
 	  result = (*env)->CallObjectMethod(env, hashtable, hashtablePut,
                                             key, value);
 	  _hasException = (*env)->ExceptionCheck(env);
+#ifdef SVN_JNI__DEBUG_HASHTABLE
+          fprintf(stderr, "<<<CallObjectMethod(");
+          SVN_JNI__DEBUG_PTR(result);
+          SVN_JNI__DEBUG_BOOL(_hasException);
+          fprintf(stderr, ")\n");
+#endif
 	}
 
       /* pop local references */
       (*env)->PopLocalFrame(env, result);
     }
 
-#ifdef SVN_JNI__VERBOSE
-  fprintf(stderr, "\n<<<hashtable__put\n");
+#ifdef SVN_JNI__DEBUG_HASHTABLE
+  fprintf(stderr, "\n<<<hashtable__put(");
+  SVN_JNI__DEBUG_BOOL(_hasException);
+  fprintf(stderr, ")\n");
 #endif
 
   /* check wether an exception has occured */
-  if( hasException != NULL )
+  if( (hasException != NULL) && _hasException )
     {
-      (*hasException) = _hasException;
+      (*hasException) = JNI_TRUE;
     }
 
   return result;

@@ -23,7 +23,7 @@
 /*** Defines ***/
 //DO YOU WANT TO DEBUG THIS CODE?
 //JUST UNCOMMENT THE FOLLOWING LINE
-//#define SVN_JNI_J__DEBUG
+//#define SVN_JNI__DEBUG_J
 
 /*** Code ***/
 
@@ -34,7 +34,7 @@ j__get_class(JNIEnv *env, jboolean *hasException,
   jclass result = NULL;
   jboolean _hasException = JNI_FALSE;
 
-#ifdef SVN_JNI_J__DEBUG
+#ifdef SVN_JNI__DEBUG_J
   fprintf(stderr,">>>j__get_class(classname=%s)\n", className);
 #endif
 
@@ -44,13 +44,16 @@ j__get_class(JNIEnv *env, jboolean *hasException,
       _hasException = JNI_TRUE;
     }
 
-#ifdef SVN_JNI_J__DEBUG
-  fprintf(stderr,"\n<<<j__get_class\n");
+#ifdef SVN_JNI__DEBUG_J
+  fprintf(stderr, "\n<<<j__get_class(");
+  SVN_JNI__DEBUG_PTR(result);
+  SVN_JNI__DEBUG_BOOL(_hasException);
+  fprintf(stderr, "\n");
 #endif
 
-  if( hasException != NULL )
+  if( (hasException != NULL) && _hasException )
     {
-      *hasException = _hasException;
+      *hasException = JNI_TRUE;
     }
 
   return result;
@@ -64,7 +67,7 @@ j__get_method(JNIEnv *env, jboolean *hasException,
   jmethodID result = NULL;
   jboolean _hasException = JNI_FALSE;
 
-#ifdef SVN_JNI_J__DEBUG
+#ifdef SVN_JNI__DEBUG_J
   fprintf(stderr, ">>>j__get_method(");
   SVN_JNI__DEBUG_STR(methodName);
   SVN_JNI__DEBUG_STR(methodSignature);
@@ -80,15 +83,15 @@ j__get_method(JNIEnv *env, jboolean *hasException,
       _hasException = JNI_TRUE;
     }
   
-#ifdef SVN_JNI_J__DEBUG
+#ifdef SVN_JNI__DEBUG_J
   SVN_JNI__DEBUG_PTR(result);
   SVN_JNI__DEBUG_BOOL(_hasException);
   fprintf(stderr, "\n<<<j__get_method\n");
 #endif
 
-  if( hasException != NULL )
+  if( (hasException != NULL) && _hasException )
     {
-      *hasException = _hasException;
+      *hasException = JNI_TRUE;
     }
 
   return result;
@@ -102,7 +105,7 @@ void j__set_int(JNIEnv *env, jboolean *hasException,
   jmethodID methodID = NULL;
   jboolean _hasException = JNI_FALSE;
 
-#ifdef SVN_JNI_J__DEBUG
+#ifdef SVN_JNI__DEBUG_J
   fprintf(stderr, ">>>j__set_int(");
   SVN_JNI__DEBUG_STR(className);
   SVN_JNI__DEBUG_STR(methodName);
@@ -140,14 +143,14 @@ void j__set_int(JNIEnv *env, jboolean *hasException,
       (*env)->PopLocalFrame(env, NULL);
     }
 
-#ifdef SVN_JNI_J__DEBUG
+#ifdef SVN_JNI__DEBUG_J
   SVN_JNI__DEBUG_BOOL(_hasException);
   fprintf(stderr, "\n<<<j__set_int\n");
 #endif
 
-  if( hasException != NULL )
+  if( (hasException != NULL) && _hasException )
     {
-      *hasException = _hasException;
+      *hasException = JNI_TRUE;
     }
 }
 
@@ -159,7 +162,7 @@ void j__set_long(JNIEnv *env, jboolean *hasException,
   jmethodID methodID = NULL;
   jboolean _hasException = JNI_FALSE;
 
-#ifdef SVN_JNI_J__DEBUG
+#ifdef SVN_JNI__DEBUG_J
   fprintf(stderr, ">>>j__set_long(");
   SVN_JNI__DEBUG_STR(className);
   SVN_JNI__DEBUG_STR(methodName);
@@ -197,14 +200,14 @@ void j__set_long(JNIEnv *env, jboolean *hasException,
       (*env)->PopLocalFrame(env, NULL);
     }
 
-#ifdef SVN_JNI_J__DEBUG
+#ifdef SVN_JNI__DEBUG_J
   SVN_JNI__DEBUG_BOOL(_hasException);
   fprintf(stderr, "\n<<<j__set_long\n");
 #endif
 
-  if( hasException != NULL )
+  if( (hasException != NULL) && _hasException )
     {
-      *hasException = _hasException;
+      *hasException = JNI_TRUE;
     }
 }
 
@@ -216,7 +219,7 @@ void j__set_boolean(JNIEnv *env, jboolean *hasException,
   jmethodID methodID = NULL;
   jboolean _hasException = JNI_FALSE;
 
-#ifdef SVN_JNI_J__DEBUG
+#ifdef SVN_JNI__DEBUG_J
   fprintf(stderr, ">>>j__set_boolean(");
   SVN_JNI__DEBUG_STR(className);
   SVN_JNI__DEBUG_STR(methodName);
@@ -254,14 +257,14 @@ void j__set_boolean(JNIEnv *env, jboolean *hasException,
       (*env)->PopLocalFrame(env, NULL);
     }
 
-#ifdef SVN_JNI_J__DEBUG
+#ifdef SVN_JNI__DEBUG_J
   SVN_JNI__DEBUG_BOOL(_hasException);
   fprintf(stderr, "\n<<<j__set_boolean\n");
 #endif
 
-  if( hasException != NULL )
+  if( (hasException != NULL) && _hasException )
     {
-      *hasException = _hasException;
+      *hasException = JNI_TRUE;
     }
 }
 
@@ -274,7 +277,7 @@ void j__set_object(JNIEnv *env, jboolean *hasException,
   jmethodID methodID = NULL;
   jboolean _hasException = JNI_FALSE;
 
-#ifdef SVN_JNI_J__DEBUG
+#ifdef SVN_JNI__DEBUG_J
   fprintf(stderr, ">>>j__set_object(");
   SVN_JNI__DEBUG_STR(className);
   SVN_JNI__DEBUG_STR(methodName);
@@ -312,14 +315,14 @@ void j__set_object(JNIEnv *env, jboolean *hasException,
       (*env)->PopLocalFrame(env, NULL);
     }
 
-#ifdef SVN_JNI_J__DEBUG
+#ifdef SVN_JNI__DEBUG_J
   SVN_JNI__DEBUG_BOOL(_hasException);
   fprintf(stderr, "\n<<<j__set_object\n");
 #endif
 
-  if( hasException != NULL )
+  if( (hasException != NULL) && _hasException )
     {
-      *hasException = _hasException;
+      *hasException = JNI_TRUE;
     }
 }
 
