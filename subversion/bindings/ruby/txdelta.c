@@ -87,13 +87,23 @@ txdelta_new (VALUE class, VALUE source, VALUE target)
   svn_txdelta_apply (svn_ruby_stream (source), svn_ruby_stream (target),
                      delta->pool, &delta->handler, &delta->handler_baton);
   delta->closed = FALSE;
-  rb_iv_set (obj, "@source", source);
-  rb_iv_set (obj, "@target", target);
   argv[0] = source;
   argv[1] = target;
   rb_obj_call_init (obj, 2, argv);
 
   return obj;
+}
+
+static VALUE
+txdelta_init (int argc, VALUE *argv, VALUE self)
+{
+  VALUE source, target;
+
+  rb_scan_args (argc, argv, "02", &source, &target);
+  rb_iv_set (self, "@source", source);
+  rb_iv_set (self, "@target", target);
+
+  return self;
 }
 
 static svn_error_t *
@@ -356,6 +366,7 @@ svn_ruby_init_txdelta (void)
 {
   cSvnTextDelta = rb_define_class_under (svn_ruby_mSvn, "TextDelta", rb_cObject);
   rb_define_singleton_method (cSvnTextDelta, "new", txdelta_new, 2);
+  rb_define_method (cSvnTextDelta, "initialize", txdelta_init, -1);
   rb_define_method (cSvnTextDelta, "sendString", send_string, 1);
   rb_define_method (cSvnTextDelta, "apply", apply, 1);
   rb_define_method (cSvnTextDelta, "close", close, 0);
