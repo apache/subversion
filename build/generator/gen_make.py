@@ -12,7 +12,7 @@ import gen_base
 class Generator(gen_base.GeneratorBase):
 
   _extension_map = {
-    ('exe', 'target'): '',
+    ('exe', 'target'): '$(EXEEXT)',
     ('exe', 'object'): '.o',
     ('lib', 'target'): '.la',
     ('lib', 'object'): '.lo',
