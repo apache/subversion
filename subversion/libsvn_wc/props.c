@@ -1009,20 +1009,19 @@ svn_wc_prop_set (svn_stringbuf_t *name,
           /* If we changed the keywords or newlines, void the entry
              timestamp for this file, so svn_wc_text_modified_p() does
              a real (albeit slow) check later on. */
-
           svn_stringbuf_t *pdir, *basename;
 
           svn_path_split (path, &pdir, &basename, svn_path_local_style, pool);
           SVN_ERR (svn_wc__entry_modify (pdir,
                                          basename,
-                                         0,
+                                         SVN_WC__ENTRY_MODIFY_TEXT_TIME,
                                          SVN_INVALID_REVNUM,
                                          svn_node_file,
                                          svn_wc_schedule_normal,
                                          FALSE,
                                          FALSE,
-                                         0,
-                                         0,
+                                         0, /* text time */
+                                         0, /* prop time ... ignore */
                                          NULL,
                                          NULL,
                                          pool,
