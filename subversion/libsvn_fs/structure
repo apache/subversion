@@ -133,8 +133,13 @@ KIND must be one of the following:
 - "file", indicating that the node is a file (see FILE below).
 - "dir", indicating that the node is a directory (see DIR below).
 
-There are no FLAGS defined at the moment.  But if had any, that's
-where we'd put them.
+A FLAG has one of the following forms:
+
+  (mutable PARENT-ID)
+    This is a mutable node, part of an unfinished transaction.
+    Mutable nodes always form trees, not DAGs.  PARENT-ID is this
+    node's parent; if PARENT-ID is the empty string, this node is the
+    root directory.
 
 Note that a node cannot change its kind from one revision to the next.
 A directory node is always a directory; a file node is always a file;
@@ -551,7 +556,6 @@ reliable.  The files are arranged in order from low-level to
 high-level: each file depends only on services provided by the files
 before it.
 
-
 skel.c, id.c, dbt.c, convert-size.c
 
 		Low-level utility functions.
@@ -648,7 +652,8 @@ Node revisions:
 
                  HEADER ::= (KIND PROPLIST FLAG ...) ;
                    KIND ::= "file" | "dir" ;
-                   FLAG ::= skel ;
+                   FLAG ::= ("mutable" PARENT-ID) ;
+	      PARENT-ID ::= node.id ;
 
 
 
