@@ -1786,17 +1786,21 @@ read_change (svn_fs__change_t **change_p,
   char *str, *last_str;
   svn_error_t *err;
 
+  /* Default return value. */
+  *change_p = NULL;
+
   err = svn_io_read_length_line (file, buf, &len, pool);
 
   /* Check for a blank line. */
-  if (err)
+  if (err || (len == 0))
     {
-      if (APR_STATUS_IS_EOF (err->apr_err))
+      if (err && APR_STATUS_IS_EOF (err->apr_err))
         {
-          *change_p = NULL;
           svn_error_clear (err);
           return SVN_NO_ERROR;
         }
+      if ((len == 0) && (! err))
+        return SVN_NO_ERROR;
       return err;
     }
 

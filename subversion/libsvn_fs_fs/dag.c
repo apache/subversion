@@ -1044,7 +1044,7 @@ svn_fs__dag_copy (dag_node_t *to_node,
       to_noderev->created_path =
         svn_path_join (svn_fs__dag_get_created_path (to_node), entry,
                        pool);
-      to_noderev->copyfrom_path = svn_fs__dag_get_created_path (from_node);
+      to_noderev->copyfrom_path = apr_pstrdup (pool, from_path);
       to_noderev->copyfrom_rev = from_rev;
 
       /* Set the copyroot equal to our own id. */
