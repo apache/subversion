@@ -58,6 +58,26 @@ sinclude(ac-helpers/gnu-diff.m4)
 dnl Grab the libtool macros
 sinclude(ac-helpers/libtool.m4)
 
+
+dnl Create SVN_BINDIR for proper substitution
+if test "${bindir}" = '${exec_prefix}/bin'; then
+        if test "${exec_prefix}" = "NONE"; then
+                if test "${prefix}" = "NONE"; then
+                        SVN_BINDIR="${ac_default_prefix}/bin"
+                else
+                        SVN_BINDIR="${prefix}/bin"
+                fi
+        else
+                SVN_BINDIR="${exec_prefix}/bin"
+        fi
+else
+        SVN_BINDIR="${bindir}"
+fi
+
+eval  SVN_BINDIR=${SVN_BINDIR}
+AC_SUBST(SVN_BINDIR)
+
+
 dnl Generate config.nice early (before the args are munged)
 SVN_CONFIG_NICE(config.nice)
 
