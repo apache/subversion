@@ -904,35 +904,6 @@ main (int argc, const char * const *argv)
         }
     }
 
-  /* If the log message file is under revision control, that's
-     probably not what the user intended. */
-  if (log_under_version_control && (! opt_state.force))
-    {
-      svn_handle_error
-        (svn_error_create
-         (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE, 0, NULL, 
-          pool,
-          "Log message file is a versioned file; use `--force' to override."),
-         stderr,
-         FALSE);
-      svn_pool_destroy (pool);
-      return EXIT_FAILURE;
-    }
-
-  /* If the log message is just a pathname, then the user probably did
-     not intend that. */
-  if (log_is_pathname && !opt_state.force)
-    {
-      svn_handle_error (svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME,
-                                          0, NULL, pool,
-                                          "The log message is a pathname "
-                                          "(was -F intended?); use `--force' "
-                                          "to override."),
-                        stderr, FALSE);
-      svn_pool_destroy (pool);
-      return EXIT_FAILURE;
-    }
-
   /* If we made it this far, then we definitely have the subcommand,
      so call it.  But first check that it wasn't passed any
      inappropriate options. */
@@ -950,6 +921,38 @@ main (int argc, const char * const *argv)
         svn_pool_destroy(pool);
         return EXIT_FAILURE;
       }
+
+  if (subcommand->cmd_func == svn_cl__commit)
+    {
+      /* If the log message file is under revision control, that's
+         probably not what the user intended. */
+      if (log_under_version_control && (! opt_state.force))
+        {
+          svn_handle_error
+            (svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE,
+                               0, NULL, pool,
+                               "Log message file is a versioned file; "
+                               "use `--force' to override."),
+             stderr, FALSE);
+          svn_pool_destroy (pool);
+          return EXIT_FAILURE;
+        }
+
+      /* If the log message is just a pathname, then the user probably did
+         not intend that. */
+      if (log_is_pathname && !opt_state.force)
+        {
+          svn_handle_error
+            (svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME,
+                               0, NULL, pool,
+                               "The log message is a pathname "
+                               "(was -F intended?); use `--force' "
+                               "to override."),
+             stderr, FALSE);
+          svn_pool_destroy (pool);
+          return EXIT_FAILURE;
+        }
+    }
 
   err = (*subcommand->cmd_func) (os, &opt_state, pool);
   if (err)
