@@ -2541,6 +2541,7 @@ txn_body_commit (void *baton, trail_t *trail)
   struct commit_args *args = baton;
   apr_hash_t *changed_paths;
   apr_hash_index_t *hi;
+  apr_pool_t *subpool;
 
   svn_fs_txn_t *txn = args->txn;
   svn_fs_t *fs = txn->fs;
@@ -2581,42 +2582,61 @@ txn_body_commit (void *baton, trail_t *trail)
      discovered locks. */
   SVN_ERR (svn_fs_bdb__changes_fetch (&changed_paths, trail->fs, txn_name,
                                       trail, trail->pool));
+  subpool = svn_pool_create (trail->pool);
   for (hi = apr_hash_first (trail->pool, changed_paths);
        hi; hi = apr_hash_next (hi))
     {
       const void *key;
       void *val;
-      const char *path;
-      dag_node_t *node;
       svn_fs_path_change_t *change;
-      svn_node_kind_t kind;
-      
+
+      svn_pool_clear (subpool);
+
       apr_hash_this (hi, &key, NULL, &val);
-      path = key;
       change = val;
 
       /* ### Ugh.  Gotta figure out the node_kind of each changed-path.
          We REALLY REALLY need to put node-kind into the change skel!
-         Unfortunately, no schema changes allowed till svn 2.0. */
-      SVN_ERR (svn_fs_base__dag_get_node
-               (&node, trail->fs, change->node_rev_id, trail, trail->pool));
-      kind = svn_fs_base__dag_node_kind (node);
+         Unfortunately, no schema changes allowed till svn 2.0.
+         Worse, we currently have no reliable way to determine the
+         kind of a deleted path!!  
 
-      /* always do a non-recursive lock check on a file. */         
-      if (kind == svn_node_file)        
-        SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_file,
-                                                      0, trail, trail->pool));
+         So, here's the plan.  If a path is deleted, we'll look for
+         locks both as a file, and as a directory (recursively).
+         Otherwise, we'll do a more sane (single) check. */
+      if (change->change_kind != svn_fs_path_change_delete)
+        {
+          svn_node_kind_t kind;
+          svn_boolean_t recurse = TRUE;
+          dag_node_t *node;
 
-      /* if a directory wasn't added or deleted, then it must be
-         listed because of a propchange only;  do a non-recursive
-         lock-check.   otherwise, added/deleted dirs must be checked
-         recursively. */
+          SVN_ERR (svn_fs_base__dag_get_node
+                   (&node, trail->fs, change->node_rev_id, trail, subpool));
+          kind = svn_fs_base__dag_node_kind (node);
+
+          /* If a directory wasn't added or deleted, then it must be
+             listed because of a propchange only; do a non-recursive
+             lock-check.  And we always do non-recursive checks for
+             files.  Note that if we weren't able to determine the
+             node kind, we have to use a recursive check. */
+          if ((kind == svn_node_file)
+              || ((kind == svn_node_dir) 
+                  && (change->change_kind == svn_fs_path_change_modify)))
+            recurse = FALSE;
+
+          SVN_ERR (svn_fs_base__allow_locked_operation (key, kind, recurse,
+                                                        trail, subpool));
+        }
       else
-        SVN_ERR (svn_fs_base__allow_locked_operation 
-                 (path, svn_node_dir,                 
-                  (change->change_kind == svn_fs_path_change_modify) ? 0 : 1,
-                  trail, trail->pool));
+        {
+          /* Non-recursive check first. */
+          SVN_ERR (svn_fs_base__allow_locked_operation 
+                   (key, svn_node_file, FALSE, trail, subpool));
+          SVN_ERR (svn_fs_base__allow_locked_operation 
+                   (key, svn_node_dir, TRUE, trail, subpool));
+        }
     }
+  svn_pool_destroy (subpool);
 
   /* Else, commit the txn. */
   SVN_ERR (svn_fs_base__dag_commit_txn (&(args->new_rev), fs, txn_name,
