@@ -395,7 +395,7 @@ For error messages the following conventions apply:
 
    * Don't include the name of the function where the error occurs
      in the error message. If subversion is compiled using the
-     '--enable-maintainer-mode' configure-flag, if will provide this
+     '--enable-maintainer-mode' configure-flag, it will provide this
      information by itself.
 
    * When including path or filenames in the error string, be sure
