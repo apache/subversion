@@ -15,6 +15,7 @@
 #include <apr_general.h>
 #include <apr_pools.h>
 #include <apr_time.h>
+#include <apr_thread_proc.h>
 
 #define APR_WANT_STDIO
 #define APR_WANT_STRFUNC
@@ -28,7 +29,7 @@
 #include "svn_repos.h"
 #include "svn_time.h"
 #include "svnlook.h"
-
+#include "svn_private_config.h"         /* for SVN_CLIENT_DIFF */
 
 
 /*** Some convenience macros and types. ***/
@@ -288,46 +289,143 @@ print_changed_tree (repos_node_t *node,
 }
 
 
+/* Create a temporary file, returning its name as *NAME, and dump the
+   contents of PATH under ROOT into it before closing it.   If PATH is
+   NULL, the file will be left empty. */
+static svn_error_t *
+contents_to_tmp_file (svn_stringbuf_t **name,
+                      svn_fs_root_t *root,
+                      svn_stringbuf_t *path,
+                      apr_pool_t *pool)
+{
+  apr_file_t *fh;
+  svn_stream_t *stream;
+  apr_size_t len, len2;
+  char buffer[1024];
+  apr_status_t apr_err;
+  svn_stringbuf_t *prefix;
+  svn_stringbuf_t *d, *b;
+      
+  svn_path_split (path, &d, &b, svn_path_repos_style, pool);
+  prefix = svn_stringbuf_create 
+    (apr_psprintf (pool, "tmp.%s", b ? b->data : "null"), pool);
+
+  /* Open a unique file.  We'll be dumping the contents of the
+     current file there. */
+  SVN_ERR (svn_io_open_unique_file (&fh, name, prefix, "",  pool));
+
+  if (path)
+    {
+      /* Get a stream to the current file's contents. */
+      SVN_ERR (svn_fs_file_contents (&stream, root, path->data, pool));
+  
+      /* Now, route that data into our temporary file. */
+      while (1)
+        {
+          len = sizeof (buffer);
+          SVN_ERR (svn_stream_read (stream, buffer, &len));
+          len2 = len;
+          apr_err = apr_file_write (fh, buffer, &len2);
+          if ((apr_err) || (len2 != len))
+            return svn_error_createf 
+              (apr_err ? apr_err : SVN_ERR_INCOMPLETE_DATA, 0, NULL, pool,
+               "Error writing to temporary file '%s'", (*name)->data);
+          if (len != sizeof (buffer))
+            break;
+        }
+    }
+
+  /* And close the file. */
+  apr_file_close (fh);
+  return SVN_NO_ERROR;
+}
+
+
 /* Recursively print all nodes in the tree that have been modified
    (do not include directories affected only by "bubble-up"). */
-static void
+static svn_error_t *
 print_diff_tree (svn_fs_root_t *root,
+                 svn_fs_root_t *base_root,
                  repos_node_t *node, 
                  svn_stringbuf_t *path,
                  apr_pool_t *pool)
 {
   repos_node_t *tmp_node;
   svn_stringbuf_t *full_path;
+  svn_stringbuf_t *fname1 = NULL, *fname2 = NULL;
+  svn_stringbuf_t *cmd = svn_stringbuf_create (SVN_CLIENT_DIFF, pool);
 
   if (! node)
-    return;
+    return SVN_NO_ERROR;
 
   /* Print the node. */
   tmp_node = node;
 
-
   /* ### todo:  Need a plan for printing diffs here.  */
+  /* First, we'll just print file content diffs. */
+  if (tmp_node->kind == svn_node_file)
+    {
+      if ((tmp_node->action == 'R') && (tmp_node->text_mod))
+        {
+          SVN_ERR (contents_to_tmp_file (&fname1, root, path, pool));
+          SVN_ERR (contents_to_tmp_file (&fname2, base_root, path, pool));
+        }
+      if (tmp_node->action == 'A')
+        {
+          SVN_ERR (contents_to_tmp_file (&fname1, root, path, pool));
+          SVN_ERR (contents_to_tmp_file (&fname2, base_root, NULL, pool));
+        }
+      if (tmp_node->action == 'D')
+        {
+          SVN_ERR (contents_to_tmp_file (&fname1, root, NULL, pool));
+          SVN_ERR (contents_to_tmp_file (&fname2, base_root, path, pool));
+        }
+    }
 
+  if (fname1 && fname2)
+    {
+      /* At this point, we have two temporary files, FNAME1 and
+         FNAME2, which contain our current and base file contents,
+         respectively.  Let's run DIFF on them.  */
+      svn_stringbuf_appendcstr (cmd, apr_psprintf (pool,
+                                                   " -u %s %s",
+                                                   fname2->data,
+                                                   fname1->data));
+      printf ("Index: %s\n", path->data);
+      printf ("===============================================================\
+===============\n");
+      fflush (stdout);
+      system (cmd->data);
+      printf ("\n");
+    }
+  
+  /* Now, delete any temporary files.
+  if (fname1)
+    apr_file_remove (fname1->data, pool);
+  if (fname2)
+    apr_file_remove (fname2->data, pool);
+  */
+      
 
   /* Return here if the node has no children. */
   tmp_node = tmp_node->child;
   if (! tmp_node)
-    return;
+    return SVN_NO_ERROR;
 
   /* Recursively handle the node's children. */
   full_path = svn_stringbuf_dup (path, pool);
   svn_path_add_component_nts (full_path, tmp_node->name, svn_path_repos_style);
-  print_diff_tree (root, tmp_node, full_path, pool);
+  SVN_ERR (print_diff_tree (root, base_root, tmp_node, full_path, pool));
   while (tmp_node->sibling)
     {
       tmp_node = tmp_node->sibling;
       svn_stringbuf_set (full_path, path->data);
       svn_path_add_component_nts 
         (full_path, tmp_node->name, svn_path_repos_style);
-      print_diff_tree (root, tmp_node, full_path, pool);
+      SVN_ERR (print_diff_tree (root, base_root, tmp_node, full_path, pool));
     }
 
-  return;
+  return SVN_NO_ERROR;
 }
 
 
@@ -557,7 +655,7 @@ do_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
 static svn_error_t *
 do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
 {
-  svn_fs_root_t *root;
+  svn_fs_root_t *root, *base_root;
   svn_revnum_t base_rev_id;
   repos_node_t *tree;
 
@@ -575,8 +673,11 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
   
   SVN_ERR (generate_delta_tree (&tree, c->fs, root, base_rev_id, pool)); 
   if (tree)
-    print_diff_tree (root, tree, svn_stringbuf_create ("", pool), pool);
-
+    {
+      SVN_ERR (svn_fs_revision_root (&base_root, c->fs, base_rev_id, pool));
+      SVN_ERR (print_diff_tree 
+               (root, base_root, tree, svn_stringbuf_create ("", pool), pool));
+    }
   return SVN_NO_ERROR;
 }
 
