@@ -265,6 +265,15 @@ $ svn log --revision {2002-11-20}:{2002-11-29}
       <screen>
 $ svn log --revision {2002-11-20}:4040
       </screen>
+
+      <para>Users should be aware of a subtlety that can become quite
+        a stumblingblock when dealing with dates in Subversion.  Since
+        the timestamp of a revision is stored as a property of the
+        revision&mdash;an unversioned, modifiable
+        property&mdash;revision timestamps can be changed to represent
+        complete falsifications of true chronology, or even removed
+        altogether.  This will wreak havoc on the internal
+        date-to-revision conversion that Subversion performs.</para>
         
     </sect2>
       
@@ -760,12 +769,12 @@ Updated to revision 2.
           <title>CVS Users: Hold That Update!</title>
           
           <para>You're probably used to using <command>cvs
-              update</command> to see what changes you've made to your
-            working copy.  <command>svn status</command> will give
-            you all the information you need regarding what has
-            changed in your working copy&mdash;without accessing the
-            repository or potentially incorporating new changes
-            published by other users.</para>
+            update</command> to see what changes you've made to your
+            working copy.  <command>svn status</command> will give you
+            all the information you need regarding what has changed in
+            your working copy&mdash;without accessing the repository
+            or potentially incorporating new changes published by
+            other users.</para>
         
           <para>In Subversion, <command>update</command> does just
             that&mdash;it updates your working copy with any changes
@@ -776,13 +785,13 @@ Updated to revision 2.
 
         </sidebar>
         
-        <para> If you run <command>svn status</command> at the top of
+        <para>If you run <command>svn status</command> at the top of
           your working copy with no arguments, it will detect all file
           and tree changes you've made.  This example is designed to
           show all the different status codes that <command>svn
-          status</command> can return.  The text following
-          <literal>#</literal> is not printed by <command>svn
-          status</command>.</para>
+          status</command> can return.  (Note that the text following
+          <literal>#</literal> in the following example is not
+          actually printed by <command>svn status</command>.)</para>
       
         <screen>
 $ svn status
@@ -798,6 +807,7 @@ D      ./stuff/fish.c        # this file is scheduled for deletion
 A      ./stuff/loot/bloo.h   # this file is scheduled for addition
 C      ./stuff/loot/lump.c   # this file has conflicts from an update
     S  ./stuff/squawk        # this file or dir has been switched to a branch
+&hellip;
         </screen>
       
         <para>In this output format <command>svn status</command>
@@ -978,7 +988,7 @@ D               44        19    ira       ./stuff/fish.c
                 44        21    sally     ./stuff/things
 A                0         ?     ?        ./stuff/things/bloo.h
                 44        36    harry     ./stuff/things/gloo.c
-        </screen>
+</screen>
            
         <para>This is the <quote>long form</quote> output of
           <command>svn status</command>.  The first column remains
@@ -1002,7 +1012,8 @@ M               44        20    harry     ./bar.c
        *        44        35    harry     ./stuff/trout.c
 D               44        19    ira       ./stuff/fish.c
 A                0         ?     ?        ./stuff/things/bloo.h
-        </screen>
+Status against revision:   46
+</screen>
            
         <para>Notice the two asterisks: if you were to run
           <command>svn update</command> at this point, you would
@@ -1213,6 +1224,7 @@ $ svn update
 U  ./INSTALL
 G  ./README
 C  ./bar.c
+Updated to revision 46.
       </screen>
            
       <para>The <computeroutput>U</computeroutput> and
@@ -1757,17 +1769,18 @@ $ svn log -r 2
 $
         </screen>
 
-        <para>At first glance, this seems like an error, but you need
-          to remember that while revisions are repository-wide,
-          <command>svn log</command> operates on a path in the
-          repository.  If you supply no path, Subversion uses the
-          current working directory as the default target.  As a
-          result, if you're operating in a subdirectory of your
-          working copy and attempt to log a revision where nothing
-          beneath your current directory changed, Subversion will give
-          you an empty log.  If you want to see what changed in that
-          revision, try running the same command from the top
-          directory of your working copy.</para>
+        <para>At first glance, this seems like an error.  But recall
+          that while revisions are repository-wide, <command>svn
+          log</command> operates on a path in the repository.  If you
+          supply no path, Subversion uses the current working
+          directory as the default target.  As a result, if you're
+          operating in a subdirectory of your working copy and attempt
+          to log a revision in which neither that directory nor any of
+          its children was changed, Subversion will give you an empty
+          log.  If you want to see what changed in that revision, try
+          pointing <command>svn log</command> directly at the top-most
+          URL of your repository, as in <command>svn log -r 2
+          http://svn.collab.net/repos/svn</command>.</para>
 
       </sidebar>
            
@@ -2011,14 +2024,14 @@ $ svn update --revision 1729 # Updates an existing working copy to r1729
       <para>When Subversion modifies your working copy (or any
         information within <filename>.svn</filename>), it tries to do
         so as safely as possible.  Before changing anything, it writes
-        its intentions to a log file, executes the commands in the
-        log file, then removes the log file (this is similar in design
-        to a journaled filesystem).  If a Subversion operation is
-        interrupted (if you hit Control-C, or if the machine crashes,
-        for example), the log files remain on disk.  By re-executing
-        the log files, Subversion can complete the previously started
-        operation, and your working copy can get itself back into a
-        consistent state.</para>
+        its intentions to a log file, executes the commands in the log
+        file, then removes the log file (this is similar in design to
+        a journaled filesystem).  If a Subversion operation is
+        interrupted (if the process is killed, or if the machine
+        crashes, for example), the log files remain on disk.  By
+        re-executing the log files, Subversion can complete the
+        previously started operation, and your working copy can get
+        itself back into a consistent state.</para>
 
       <para>And this is exactly what <command>svn cleanup</command>
         does: it searches your working copy and runs any leftover

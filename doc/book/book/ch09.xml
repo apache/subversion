@@ -3311,7 +3311,7 @@ $ svn status --show-updates wc
  M           965    wc/bar.c
        *     965    wc/foo.c
 A  +         965    wc/qax.c
-Head revision:   981
+Status against revision:    981
           </screen>
 
           <warning>
@@ -3900,8 +3900,8 @@ Content-length: 101
             <literal>DB_LOGS_AUTOREMOVE</literal>, the log files
             accumulate, although most are no longer used and can be
             deleted to reclaim disk space. See <xref
-            linkend="svn-ch-5-sect-3.1.4"/> for more
-            information. </para>
+            linkend="svn-ch-5-sect-3.3"/> for more
+            information.</para>
           </refsect1>
 
       </refentry>
@@ -3926,8 +3926,8 @@ Content-length: 101
             <literal>DB_LOGS_AUTOREMOVE</literal>, the log files
             accumulate, although most are no longer used and can be
             deleted to reclaim disk space. See <xref
-            linkend="svn-ch-5-sect-3.1.4"/> for more
-            information. </para>
+            linkend="svn-ch-5-sect-3.3"/> for more
+            information.</para>
           </refsect1>
 
         <refsect1>

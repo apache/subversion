@@ -418,7 +418,11 @@ pre-commit.tmpl
               arguments to this program: the path to the repository,
               and the name of the transaction being committed.  If the
               program returns a non-zero exit value, the commit is
-              aborted and the transaction is removed.</para>
+              aborted and the transaction is removed.  Note that as a
+              precaution against losing unversioned property data,
+              Subversion clients will not be allowed to remotely
+              modify revision properties at all unless this hook is
+              implemented for your repository.</para>
 
             <para>The Subversion distribution includes some access
               control scripts (located in the
@@ -1773,7 +1777,12 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
             Server, too.</para>
         </listitem>
         <listitem> 
-          <para>Become the user who owns and manages the repository.</para>
+          <para>Become the user who owns and manages the repository.
+            This is important, as recovering a repository while
+            running as the wrong user can tweak the permissions of the
+            repository's files in such a way that your repository will
+            still be inaccessible even after it is 
+            <quote>unwedged</quote>.</para>
         </listitem>
         <listitem>
           <para>Run the command <command>svnadmin recover
