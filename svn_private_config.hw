@@ -36,8 +36,10 @@
 /* Paths to configuration files */
 /*#define SVN_CLIENT_GLOBAL_CONF "/etc/svn.conf"*/
 /*#define SVN_CLIENT_USER_CONF "~/.svnrc"*/
-#define SVN_CLIENT_GLOBAL_CONF "REG:/HKLM/Software/CollabNet/Subversion"
-#define SVN_CLIENT_USER_CONF "REG:/HKCU/Software/CollabNet/Subversion"
+#define SVN_CLIENT_GLOBAL_CONF \
+    "REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Config"
+#define SVN_CLIENT_USER_CONF \
+    "REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Config"
 
 
 /* FIXME: */
