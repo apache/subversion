@@ -125,6 +125,60 @@ display_prop_diffs (const apr_array_header_t *propchanges,
 }
 
 
+/* Return SVN_ERR_UNSUPPORTED_FEATURE if @a url's schema does not
+   match the schema of the url for @a adm_access's path; return
+   SVN_ERR_BAD_URL if no schema can be found for one or both urls;
+   otherwise return SVN_NO_ERROR.  Use @a adm_access's pool for
+   temporary allocation. */
+static svn_error_t *
+check_schema_match (svn_wc_adm_access_t *adm_access, const char *url)
+{
+  const char *path = svn_wc_adm_access_path (adm_access);
+  apr_pool_t *pool = svn_wc_adm_access_pool (adm_access);
+  const svn_wc_entry_t *ent;
+  const char *idx1, *idx2;
+  
+  SVN_ERR (svn_wc_entry (&ent, path, adm_access, TRUE, pool));
+  
+  idx1 = strchr (url, ':');
+  idx2 = strchr (ent->url, ':');
+
+  if ((idx1 == NULL) && (idx2 == NULL))
+    {
+      return svn_error_createf
+        (SVN_ERR_BAD_URL, NULL,
+         "URLs have no schemas:\n"
+         "   '%s'\n"
+         "   '%s'", url, ent->url);
+    }
+  else if (idx1 == NULL)
+    {
+      return svn_error_createf
+        (SVN_ERR_BAD_URL, NULL,
+         "URL has no schema: '%s'\n", url);
+    }
+  else if (idx2 == NULL)
+    {
+      return svn_error_createf
+        (SVN_ERR_BAD_URL, NULL,
+         "URL has no schema: '%s'\n", ent->url);
+    }
+  else if (((idx1 - url) != (idx2 - ent->url))
+           || (strncmp (url, ent->url, idx1 - url) != 0))
+    {
+      return svn_error_createf
+        (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+         "Access method (schema) mixtures not yet supported:\n"
+         "   '%s'\n"
+         "   '%s'\n"
+         "See http://subversion.tigris.org/issues/show_bug.cgi?id=1321 "
+         "for details.", url, ent->url);
+    }
+
+  /* else */
+
+  return SVN_NO_ERROR;
+}
 
 
 /*-----------------------------------------------------------------*/
@@ -712,6 +766,7 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
           child = svn_path_is_child(merge_b->target, mine, merge_b->pool);
           assert (child != NULL);
           copyfrom_url = svn_path_join (merge_b->url, child, merge_b->pool);
+          SVN_ERR (check_schema_match (adm_access, copyfrom_url));
 
           {
             /* Since 'mine' doesn't exist, and this is
@@ -835,6 +890,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
   child = svn_path_is_child (merge_b->target, path, subpool);
   assert (child != NULL);
   copyfrom_url = svn_path_join (merge_b->url, child, subpool);
+  SVN_ERR (check_schema_match (adm_access, copyfrom_url));
 
   SVN_ERR (svn_io_check_path (path, &kind, subpool));
   switch (kind)
