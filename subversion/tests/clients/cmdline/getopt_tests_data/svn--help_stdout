@@ -9,7 +9,7 @@ default.
 Available subcommands:
    add
    cat
-   checkout (co, get)
+   checkout (co)
    cleanup
    commit (ci)
    copy (cp)

@@ -148,7 +148,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "usage: cat TARGET [TARGET [TARGET ... ]]\n",
     {'r', SVN_CL__AUTH_OPTIONS} },
 
-  { "checkout", svn_cl__checkout, {"co", "get"},
+  { "checkout", svn_cl__checkout, {"co"},
     "Check out a working copy from a repository.\n"
     "usage: checkout URL [URL [URL ... ]] [PATH]\n"
     "  Note: If PATH is omitted, the basename of the URL will be used as\n"
