@@ -60,6 +60,10 @@ extern "C" {
     targets may come from different repositories.  */
 
 
+/**
+ * @since New in 1.1.
+ * (A prototype is being generated here, and the prototype is new in 1.1.)
+ */
 SVN_VER_GEN_PROTO(client);
 
 

@@ -839,7 +839,10 @@ svn_repos_node_t *svn_repos_node_from_baton (void *edit_baton);
 
 #define SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH       "Prop-content-length"
 #define SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH       "Text-content-length"
+
+/* @since New in 1.1. */
 #define SVN_REPOS_DUMPFILE_PROP_DELTA                "Prop-delta"
+/* @since New in 1.1. */
 #define SVN_REPOS_DUMPFILE_TEXT_DELTA                "Text-delta"
 
 /** The different "actions" attached to nodes in the dumpfile. */
@@ -859,7 +862,10 @@ enum svn_repos_load_uuid
   svn_repos_load_uuid_force
 };
 
-/** Dump the contents of the filesystem within already-open @a repos into
+/** 
+ * @since New in 1.1.
+ *
+ * Dump the contents of the filesystem within already-open @a repos into
  * writable @a dumpstream.  Begin at revision @a start_rev, and dump every
  * revision up through @a end_rev.  Use @a pool for all allocation.  If
  * non-@c NULL, send feedback to @a feedback_stream. @a dumpstream can be
@@ -951,7 +957,10 @@ svn_error_t *svn_repos_load_fs (svn_repos_t *repos,
                                 apr_pool_t *pool);
 
 
-/** A vtable that is driven by @c svn_repos_parse_dumpstream2. */
+/** 
+ * @since New in 1.1.
+ *
+ * A vtable that is driven by @c svn_repos_parse_dumpstream2. */
 typedef struct svn_repos_parse_fns2_t
 {
   /** The parser has discovered a new revision record within the
@@ -1040,7 +1049,10 @@ typedef struct svn_repos_parse_fns2_t
 
 
 
-/** Read and parse dumpfile-formatted @a stream, calling callbacks in
+/** 
+ * @since New in 1.1.
+ *
+ * Read and parse dumpfile-formatted @a stream, calling callbacks in
  * @a parse_fns/@a parse_baton, and using @a pool for allocations.
  *
  * If @a cancel_func is not @c NULL, it is called periodically with
@@ -1071,7 +1083,10 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
                              apr_pool_t *pool);
 
 
-/** Set @a *parser and @a *parse_baton to a vtable parser which commits new
+/** 
+ * @since New in 1.1.
+ *
+ * Set @a *parser and @a *parse_baton to a vtable parser which commits new
  * revisions to the fs in @a repos.  The constructed parser will treat
  * UUID records in a manner consistent with @a uuid_action.  Use @a pool
  * to operate on the fs.

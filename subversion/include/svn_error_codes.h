@@ -491,6 +491,7 @@ SVN_ERROR_START
               SVN_ERR_FS_CATEGORY_START + 32,
               "Transaction is not dead")
 
+  /* @since New in 1.1. */
   SVN_ERRDEF (SVN_ERR_FS_UNKNOWN_FS_TYPE,
               SVN_ERR_FS_CATEGORY_START + 33,
               "Unknown FS type")
@@ -759,6 +760,7 @@ SVN_ERROR_START
               SVN_ERR_CLIENT_CATEGORY_START + 11,
               "Bad property name")
 
+  /* @since New in 1.1. */
   SVN_ERRDEF (SVN_ERR_CLIENT_UNRELATED_RESOURCES,
               SVN_ERR_CLIENT_CATEGORY_START + 12,
               "Two versioned resources are unrelated.")
@@ -842,6 +844,7 @@ SVN_ERROR_START
               SVN_ERR_MISC_CATEGORY_START + 18,
               "No auth file path available")
 
+  /* @since New in 1.1. */
   SVN_ERRDEF (SVN_ERR_VERSION_MISMATCH,
               SVN_ERR_MISC_CATEGORY_START + 19,
               "Incompatible library version")

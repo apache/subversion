@@ -132,7 +132,10 @@ extern "C" {
 
 /* Querying the version number */
 
-/** Version information. */
+/**
+ * @since New in 1.1.
+ *
+ * Version information. */
 typedef struct svn_version_t
 {
   int major;
@@ -148,13 +151,18 @@ typedef struct svn_version_t
 
 
 /**
+ * @since New in 1.1.
+ *
  * Generate the prototype for a version-query function. Returns a
  * pointer to a statically allocated @t svn_version_t structure.
  */
 #define SVN_VER_GEN_PROTO(name) \
 const svn_version_t *svn_##name##_version (void)
 
-/** Generate the implementation of a version-query function. */
+/** 
+ * @since New in 1.1.
+ *
+ * Generate the implementation of a version-query function. */
 #define SVN_VER_GEN_IMPL(name) \
 const svn_version_t *svn_##name##_version (void) \
 { \
@@ -169,6 +177,8 @@ const svn_version_t *svn_##name##_version (void) \
 }
 
 /**
+ * @since New in 1.1.
+ *
  * Check version compatibility for calls to the library. Returns @t
  * TRUE if the version info in @a versioninfo is compatible with the
  * one in @a major, @a minor, @a micro and @tag.
@@ -178,6 +188,8 @@ svn_boolean_t svn_ver_compatible (const svn_version_t *versioninfo,
                                   const char *tag);
 
 /**
+ * @since New in 1.1.
+ *
  * Check version compatibility for callbacks from the library. Returns
  * @t TRUE if the version info in @a versioninfo is compatible with
  * the one in @a major, @a minor, @a micro and @tag.
@@ -186,20 +198,30 @@ svn_boolean_t svn_ver_callback_compatible (const svn_version_t *versioninfo,
                                            int major, int minor, int micro,
                                            const char *tag);
 
-/** Shorthand for calling @t svn_ver_compatible. */
+/** 
+ * @since New in 1.1.
+ *
+ * Shorthand for calling @t svn_ver_compatible. */
 #define SVN_VER_COMPATIBLE(name) \
   svn_ver_compatible(svn_##name##_version(), \
                      SVN_VER_MAJOR, SVN_VER_MINOR, SVN_VER_MICRO, \
                      SVN_VER_NUMTAG)
 
-/** Shorthand for calling @t svn_ver_callback_compatible. */
+/** 
+ * @since New in 1.1.
+ *
+ * Shorthand for calling @t svn_ver_callback_compatible. */
 #define SVN_VER_CALLBACK_COMPATIBLE(name) \
   svn_ver_callback_compatible(svn_##name##_version(), \
                               SVN_VER_MAJOR, SVN_VER_MINOR, SVN_VER_MICRO, \
                               SVN_VER_NUMTAG)
 
 
-/* libsvn_subr doesn't have an svn_subr header, so put the prototype here. */
+/**
+ * @since New in 1.1.
+ * (A prototype is being generated here, and the prototype is new in 1.1.)
+ *
+ * libsvn_subr doesn't have an svn_subr header, so put the prototype here. */
 SVN_VER_GEN_PROTO(subr);
 
 #ifdef __cplusplus

@@ -218,7 +218,10 @@ void svn_txdelta (svn_txdelta_stream_t **stream,
                   apr_pool_t *pool);
 
 
-/** Return a writable stream which, when fed target data, will send
+/** 
+ * @since New in 1.1.
+ *
+ * Return a writable stream which, when fed target data, will send
  * delta windows to @a handler/@a handler_baton which transform the
  * data in @a source to the target data.  As usual, the window handler
  * will receive a NULL window to signify the end of the window stream.
@@ -324,7 +327,10 @@ svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
                                          svn_boolean_t error_on_early_close,
                                          apr_pool_t *pool);
 
-/** Read and parse one delta window in svndiff format from the
+/**
+ * @since New in 1.1.
+ *
+ * Read and parse one delta window in svndiff format from the
  * readable stream @a stream and place it in @a *window, allocating
  * the result in @a pool.  The caller must take responsibility for
  * stripping off the four-byte 'SVN<ver>' header at the beginning of
@@ -336,7 +342,10 @@ svn_error_t *svn_txdelta_read_svndiff_window (svn_txdelta_window_t **window,
                                               int svndiff_version,
                                               apr_pool_t *pool);
 
-/** Skip one delta window in svndiff format in the file @a file.  and
+/**
+ * @since New in 1.1.
+ *
+ * Skip one delta window in svndiff format in the file @a file.  and
  * place it in @a *window, allocating the result in @a pool.  The
  * caller must take responsibility for stripping off the four-byte
  * 'SVN<ver>' header at the beginning of the svndiff document before

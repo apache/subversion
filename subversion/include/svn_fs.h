@@ -47,9 +47,12 @@ typedef struct svn_fs_t svn_fs_t;
 /** Filesystem configuration options. */
 #define SVN_FS_CONFIG_BDB_TXN_NOSYNC            "bdb-txn-nosync"
 #define SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE        "bdb-log-autoremove"
-#define SVN_FS_CONFIG_FS_TYPE                   "fs-type"
 
+/* @since New in 1.1. */
+#define SVN_FS_CONFIG_FS_TYPE                   "fs-type"
+/* @since New in 1.1. */
 #define SVN_FS_TYPE_BDB                         "bdb"
+/* @since New in 1.1. */
 #define SVN_FS_TYPE_FSFS                        "fsfs"
 
 
@@ -79,7 +82,10 @@ void svn_fs_set_warning_func (svn_fs_t *fs,
 
 
 
-/** Create a new, empty Subversion filesystem, stored in the directory
+/**
+ * @since New in 1.1.
+ *
+ * Create a new, empty Subversion filesystem, stored in the directory
  * @a path, and return a pointer to it in @a *fs_p.  @a path must not
  * currently exist, but its parent must exist.  If @a fs_config is not
  * @c NULL, the options it contains modify the behavior of the
@@ -105,7 +111,10 @@ void svn_fs_set_warning_func (svn_fs_t *fs,
 svn_error_t *svn_fs_create (svn_fs_t **fs_p, const char *path,
                             apr_hash_t *fs_config, apr_pool_t *pool);
 
-/** Open a Subversion filesystem located in the directory @a path, and
+/** 
+ * @since New in 1.1.
+ *
+ * Open a Subversion filesystem located in the directory @a path, and
  * return a pointer to it in @a *fs_p.  If @a fs_config is not @c
  * NULL, the options it contains modify the behavior of the
  * filesystem.  The interpretation of @a fs_config is specific to the
@@ -126,16 +135,25 @@ svn_error_t *svn_fs_create (svn_fs_t **fs_p, const char *path,
 svn_error_t *svn_fs_open (svn_fs_t **fs_p, const char *path,
                           apr_hash_t *config, apr_pool_t *pool);
 
-/** Return the path to @a fs's repository, allocated in @a pool.
+/** 
+ * @since New in 1.1.
+ *
+ * Return the path to @a fs's repository, allocated in @a pool.
  * Note: this is just what was passed to @c svn_fs_create() or
  * @a svn_fs_open() -- might be absolute, might not.
  */
 const char *svn_fs_path (svn_fs_t *fs, apr_pool_t *pool);
 
-/** Delete the filesystem at @a path. */
+/**
+ * @since New in 1.1.
+ *
+ * Delete the filesystem at @a path. */
 svn_error_t *svn_fs_delete_fs (const char *path, apr_pool_t *pool);
 
-/** Copy a possibly live Subversion filesystem from @a src_path to
+/** 
+ * @since New in 1.1.
+ *
+ * Copy a possibly live Subversion filesystem from @a src_path to
  * @a dest_path.  If @a clean is @c TRUE, perform cleanup on the
  * source filesystem as part of the copy operation; currently, this
  * means deleting copied, unused logfiles for a Berkeley DB source
