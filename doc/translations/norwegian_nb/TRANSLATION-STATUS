@@ -29,11 +29,13 @@ documentation.
       doc/book/book/images/ch02dia3.png
       doc/book/book/images/ch02dia4.png
       doc/book/book/images/ch02dia5.png
+      doc/book/book/images/ch04dia1.png
+      doc/book/book/images/ch04dia4.png
       doc/book/misc-docs/misc-docs.xml
 
     2.1.2. In progress
 
-      doc/book/book/ch04.xml (0%) -- sunny256
+      doc/book/book/ch04.xml (16%) -- sunny256
 
     2.1.3. Untranslated
 
@@ -52,8 +54,6 @@ documentation.
       doc/book/book/glossary.xml
       doc/book/book/images/VersioningModels.ppt
       doc/book/book/images/branches.ppt
-      doc/book/book/images/ch04dia1.png
-      doc/book/book/images/ch04dia4.png
       doc/book/misc-docs/best_practices.xml
       doc/book/misc-docs/directory_versioning.xml
       doc/book/misc-docs/quick_walkthrough.xml
