@@ -14,35 +14,12 @@ something stable to test.
 
 Candidate changes:
 
-  * r8550
-    Make failed direct-URL commits clean up their fs txns (issue #1726)
-    Justification:  users have noticed extra fs txns lying around.
-    Notes:  just add 3 calls to abort_edit() to cleanup the sloppiness.
-    Votes:
-      +1: sussman, dionisos
-      +0: dlr, gstein
-
   * r8431
     Bugfix to commits: allow deletions below schedule-add-with-history dirs.
     Justification:  reported by a user, an unnecessary restriction.
     Notes:  change just sets a flag differently for this case.  See #830.
     Votes:
       +1: sussman
-      +0: dlr, gstein
-
-  * r8577, r8584
-    Prevent a potential ra_dav commit race-condition.
-    Justification:  fixes a conflict between deltaV and svn semantics.
-    Notes:  this can be a problem under high commit concurrency.
-    Votes:
-      +1: sussman, gstein
-
-  * r8613, r8614
-    Fix 'svn merge --dry-run' bug on added-files with props. (issue #1738)
-    Justification:  severeal users have noticed this --dry-run bug already.
-    Notes:  a one-line logic fix, plus new regression test.
-    Votes:
-      +1: sussman, philip, dionisos
       +0: dlr, gstein
 
   * r8616
@@ -54,23 +31,10 @@ Candidate changes:
             mailing list thread "r8616: candidate for 1.0.1: Improved warnings
             from svnlook and svnadmin")
 
-  * r8672
-    Fix svn_io_dir_walk 'dot-first' ordering required by 'svnadmin hotcopy'
-    Justification: 'svnadmin hotcopy' can fail on ext3/Linux-2.6 (and XFS?)
-    Votes:
-      +1: philip
-      +0: gstein  (feels big; need more review)
-
   * r8708
     Use warnings pragma on perl hook-scripts.
     Justification: Perl correctness issue.
     Votes:
-
-  * r8802
-    Fix issue #1752 - 'svn propget url' doesn't work over ra_svn.
-    Justification: Simple one-line fix to a shallow bug.
-    Votes:
-      +1: bliss, rooneg, sussman, dionisos
 
   * r8794
     Fix memory corruption bug in mod_dav_svn.
@@ -80,25 +44,6 @@ Candidate changes:
       +1: sussman
       -1: cmpilato (this change is a fix followup to r8490, which is not
                     going to live in 1.0.x line since it changes an API)
-
-  * r8820
-    Remove hopelessly obsolete authentication provider examples.
-    Justification: Not needed and too obsolete/incorrect.
-    Votes:
-      +1: bliss, sussman, dionisos
-
-  * r8828
-    Fix issue #1759 -- merge fails if URL contains 'user@host'
-    Justification:  Really obvious bug that blocks functionality.
-    Notes:  a teeny-tiny fix.
-    Votes:
-      +1: cmpilato, sussman, dionisos
-
-  * Issue #1733, attachment 305
-    Backport r8551 to 1.0.X to cause blame to bail on binary files.
-    Justification:  Nicer behavior to the end user. 
-    Votes:
-      +1: sussman, cmpilato, dionisos
 
   * r8838
     Finish issue #1750 -- svn export [url] doesn't export any svn:externals
@@ -116,49 +61,14 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
-  * r8844, r8872
-    Make RPMs build again after cvs2svn was taken out.
-    Votes:
-      +1: david
-
   * r8846
     Add an example wrapper to help svn+ssh users using setgid svnserve.
     Votes:
       +1: epg
       +0: dionisos
 
-  * r8787, r8753
-    Upgrade Inno Setup to 4.1.6
-    Justification: potentially smaller distributions, better user experience
-    Votes:
-       +1: josander
-       +0: dionisos
-
-  * r8869
-    Bugfix: Handle "svn --version" without revision number.
-    Justification: Needed for automated setups and easing installer makes.
-    Votes:
-       +1: josander
-
   * r8856
     Fix compressed streams on LP64 arch.
     Justification: potential seg fault
     Votes:
        +1: kfogel, cmpilato
-
-Binding candidate changes:
-
-  * r8829, r8834
-    Fix bindings on Windows.
-    Votes:
-      +1: breser
-
-  * r8805, r8806
-    Fix perl bindings build on OS X.
-    Votes:
-      +1: breser
-
-  * r8864
-    Fix bug that rejects string revision numbers.
-    Votes:
-      +1: breser

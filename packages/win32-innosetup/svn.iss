@@ -15,7 +15,7 @@
 #include "paths_inno_src.iss"
 
 AppName=Subversion
-AppVerName=Subversion-{#= svn_version}-r{#= svn_release}
+AppVerName=Subversion-{#= svn_version}{#= svn_pretxtrevision}{#= svn_revision}
 AppPublisher=CollabNet
 AppPublisherURL=http://subversion.tigris.org/
 AppSupportURL=http://subversion.tigris.org/project_faq.html
@@ -24,24 +24,28 @@ DefaultDirName={pf}\Subversion
 DefaultGroupName=Subversion
 LicenseFile={#= path_setup_in}\subversion\SubversionLicense.txt
 OutputDir={#= path_setup_out}
-OutputBaseFilename=svn-setup
-Compression=none
+OutputBaseFilename=svn-{#= svn_version}-setup
+Compression=lzma/max
+InternalCompressLevel=max
+SolidCompression=true
 AppCopyright={#= svn_cpr}
 UninstallDisplayIcon={app}\svn.exe
-UninstallDisplayName=Subversion {#= svn_version}-r{#= svn_release} (Uninstall)
+UninstallDisplayName=Subversion {#= svn_version}{#= svn_pretxtrevision}{#= svn_revision} (Uninstall)
 AlwaysShowDirOnReadyPage=true
 AlwaysShowGroupOnReadyPage=true
 InfoAfterFile=Post.txt
 InfoBeforeFile=Pre.rtf
-DisableStartupPrompt=true
-UseSetupLdr=false
-InternalCompressLevel=0
-AppVersion={#= svn_version}-r{#= svn_release}
+DisableStartupPrompt=false
+UseSetupLdr=true
+AppVersion={#= svn_version}{#= svn_pretxtrevision}{#= svn_revision}
+VersionInfoVersion={#= svn_version}
+VersionInfoDescription=Subversion-{#= svn_version} Windows Setup
 WizardImageFile=images\wiz-164x314x24.bmp
 WizardSmallImageFile=images\wiz-55x55x24.bmp
 RestartIfNeededByRun=false
 ShowTasksTreeLines=true
 AllowNoIcons=true
+ShowLanguageDialog=no
 
 [Tasks]
 Name: desktopicon; Description: Create &desktop icon for the Subversion documentation; GroupDescription: Desktop icons:
@@ -76,7 +80,6 @@ Source: missing_shfolderdll.html; DestDir: {app}\doc; Check: ShFolderDllNotFound
 ; httpd modules
 Source: {#= path_davsvn}\mod_dav_svn.so; DestDir: {app}\httpd; Flags: ignoreversion
 Source: {#= path_authzsvn}\mod_authz_svn.so; DestDir: {app}\httpd; Flags: ignoreversion
-
 
 ;Helpers ---------------------------------------------------------------------
 Source: {#= path_svnpath}\svnpath.exe; DestDir: {app}\helpers; Flags: ignoreversion
@@ -131,13 +134,13 @@ Name: pdb; Description: Debug Symbol Files; Types: full custom
 Root: HKCU; Subkey: SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe; ValueType: string; ValueData: {app}\svn.exe; Flags: uninsdeletekeyifempty uninsdeletevalue
 Root: HKCU; Subkey: SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe; ValueType: string; ValueName: Path; ValueData: {app}; Flags: uninsdeletekeyifempty uninsdeletevalue
 Root: HKCU; SubKey: SOFTWARE\Tigris.org\Subversion; ValueType: string; ValueName: Version; ValueData: {#= svn_version}; Flags: uninsdeletekeyifempty uninsdeletevalue
-Root: HKCU; SubKey: SOFTWARE\Tigris.org\Subversion; ValueType: string; ValueName: Revision; ValueData: {#= svn_release}; Flags: uninsdeletekeyifempty uninsdeletevalue
+Root: HKCU; SubKey: SOFTWARE\Tigris.org\Subversion; ValueType: string; ValueName: Revision; ValueData: {#= svn_revision}; Flags: uninsdeletekeyifempty uninsdeletevalue
 Root: HKCU; Subkey: Environment; ValueType: string; ValueName: APR_ICONV_PATH; ValueData: {app}\iconv; Flags: uninsdeletevalue noerror
 
 Root: HKLM; Subkey: SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe; ValueType: string; ValueData: {app}\svn.exe; Flags: noerror uninsdeletekeyifempty uninsdeletevalue
 Root: HKLM; Subkey: SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe; ValueType: string; ValueName: Path; ValueData: {app}; Flags: uninsdeletekeyifempty uninsdeletevalue noerror
 Root: HKLM; SubKey: SOFTWARE\Tigris.org\Subversion; ValueType: string; ValueName: Version; ValueData: {#= svn_version}; Flags: noerror uninsdeletekey
-Root: HKLM; SubKey: SOFTWARE\Tigris.org\Subversion; ValueType: string; ValueName: Revision; ValueData: {#= svn_release}; Flags: uninsdeletevalue noerror uninsdeletekeyifempty
+Root: HKLM; SubKey: SOFTWARE\Tigris.org\Subversion; ValueType: string; ValueName: Revision; ValueData: {#= svn_revision}; Flags: uninsdeletevalue noerror uninsdeletekeyifempty
 Root: HKLM; Subkey: SYSTEM\CurrentControlSet\Control\Session Manager\Environment; ValueType: string; ValueName: APR_ICONV_PATH; ValueData: {app}\iconv; Flags: uninsdeletevalue noerror
 
 [Run]

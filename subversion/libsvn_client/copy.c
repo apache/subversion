@@ -460,8 +460,14 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   cb_baton.resurrection = resurrection;
 
   /* Call the path-based editor driver. */
-  SVN_ERR (svn_delta_path_driver (editor, edit_baton, youngest, paths,
-                                  path_driver_cb_func, &cb_baton, pool));
+  err = svn_delta_path_driver (editor, edit_baton, youngest, paths,
+                               path_driver_cb_func, &cb_baton, pool);
+  if (err)
+    {
+      /* At least try to abort the edit (and fs txn) before throwing err. */
+      svn_error_clear (editor->abort_edit (edit_baton, pool));
+      return err;
+    }
 
   /* Close the edit. */
   SVN_ERR (editor->close_edit (edit_baton, pool));

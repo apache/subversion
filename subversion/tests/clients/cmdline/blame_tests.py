@@ -52,13 +52,51 @@ def blame_space_in_name(sbox):
   svntest.main.run_svn(None, 'blame', file_path)
 
 
+def blame_binary(sbox):
+  "annotate a binary file"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # First, make a new revision of iota.
+  iota = os.path.join(wc_dir, 'iota')
+  svntest.main.file_append(iota, "New contents for iota\n")
+  svntest.main.run_svn(None, 'ci',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', '', iota)
+
+  # Then do it again, but this time we set the mimetype to binary.
+  iota = os.path.join(wc_dir, 'iota')
+  svntest.main.file_append(iota, "More new contents for iota\n")
+  svntest.main.run_svn(None, 'propset', 'svn:mime-type', 'image/jpeg', iota)
+  svntest.main.run_svn(None, 'ci',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', '', iota)
+
+  # Once more, but now let's remove that mimetype.
+  iota = os.path.join(wc_dir, 'iota')
+  svntest.main.file_append(iota, "Still more new contents for iota\n")
+  svntest.main.run_svn(None, 'propdel', 'svn:mime-type', iota)
+  svntest.main.run_svn(None, 'ci',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', '', iota)
+  
+  output, errput = svntest.main.run_svn(None, 'blame', iota)
+  if (len(output) != 1) or (output[0].find('Skipping') == -1):
+    raise svntest.Failure
+    
+  
+
 ########################################################################
 # Run the tests
 
 
 # list all tests here, starting with None:
 test_list = [ None,
-              blame_space_in_name
+              blame_space_in_name,
+              blame_binary,
              ]
 
 if __name__ == '__main__':

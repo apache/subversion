@@ -9,11 +9,11 @@ CONTENTS:
   * Directory structure
   * Programs used for the Subversion installer and instructions
     - Inno Setup
-    - 7-zip
     - Perl
     - Packages for converting XML documentation
     - MS HTML Help Workshop
   * Making a distro
+  * svn-x.xx.x-setup.exe's command line options
 
 
 Introduction
@@ -24,7 +24,7 @@ Introduction
   installer for Subversion.
   This instructions are for anyone who wants to roll out a Windows installer
   for Subversion.  
-  
+
   If you have trouble, make sure that you use the packages versions that are
   noted here (if noted) before asking for help.
 
@@ -35,15 +35,10 @@ Introduction
 
   Inno Setup
   ----------
-  Inno Setup QuickStart Pack 4.10. This package gives you Inno Setup (IS) 4.10
-  and "Inno Setup Pre Processor" (ISPP) wich works with your downloaded version
-  of IS:
+  Inno Setup QuickStart Pack 4.1.6. This package gives you Inno Setup (IS)
+  4.1.6 and "Inno Setup Pre Processor" (ISPP) which works with your downloaded
+  version of IS:
     http://www.jrsoftware.org/isdl.php
-
-  7-zip
-  -----
-  7-Zip 3.13:
-    http://www.7-zip.org/
 
   Perl
   ----
@@ -79,6 +74,7 @@ Introduction
   installer" below about the packages for notes and info on installing
   and using the downloaded packages.
 
+
 Directory structure
 ===================
 
@@ -88,11 +84,11 @@ Directory structure
   exists on your machine.
 
   The setup system gets its files (and have files) from two kinds of places:
-  * Static:  This files are allways somwhere in the reposistry.
+  * Static:  This files are always somewhere in the repository.
   * Dynamic: This files can be picked up anywhere from your computer (even from
              the repository). All the paths here are determined by the file
-             paths_inno_src.iss wich is variables that is proccessed by Inno
-             Setup Pre Proccessor (ISPP) during the compiling of the setup.
+             paths_inno_src.iss which is variables that is processed by Inno
+             Setup Pre Processor (ISPP) during the compiling of the setup.
              A template of this file can be found in the 
              packages\win32-innosetup\templates directory. Copy this file to
              the packages\win32-innosetup directory and edit it according to
@@ -119,8 +115,8 @@ Directory structure
   Dynamic paths (files from anywhere on your machine)
   ---------------------------------------------------
 
-  This paths are detemined by values in the file paths_inno_src.iss. The value
-  names of this path variabless is:
+  This paths are determined by values in the file paths_inno_src.iss. The value
+  names of this path variables is:
   
   Path variables:     Setup files:
   ---------------     ---------------------------------------------------------
@@ -145,20 +141,19 @@ Directory structure
   path_ssl            libeay32.dll, ssleay32.dll
 
 
-
 Programs used for the Subversion Windows installer
 ==================================================
 
   Inno Setup
   ----------
-  The installation program is the exellent Inno Setup made by Jordan Russell
+  The installation program is the excellent Inno Setup made by Jordan Russell
   (with a lot of additional code by Martijn Laan, mostly the scripting part).
   IS and friends are probably all you need for 99% of any Windows installer
-  needs made for the various flavors of Windows and has proven to be extremely
+  needs made for the various flavours of Windows and has proven to be extremely
   reliable and stable.
 
   The Inno Setup used by Subversion are extended with "Inno Setup Pre
-  Proccessor" made by Alex Yackimoff. "Inno Setup QuickStart Pack" includes
+  Processor" made by Alex Yackimoff. "Inno Setup QuickStart Pack" includes
   both IS and ISPP so all you need is "Inno Setup QuickStart Pack"
 
   Installation notes: None
@@ -169,22 +164,11 @@ Programs used for the Subversion Windows installer
   complicated and requires good script editing software.
   The program used for this is ISTool and it's syntax high-lightning makes it
   the perfect companion to IS and friends.
-  
+
   The author - Bjørnar Henden are doing a great job by updating his program
   each time Inno Setup are updated.
 
-  Installation notes: Can be retrived by "Inno Setup QuickStart Pack"
-
-  7-zip
-  -----
-  7-zip offers a very high compression ratio. Usually, one use the
-  compression Inno offers (gzip or bzip2) but 7-zip are compressing about 25%
-  better than bzip2!
-  In practice this means that the Inno Setup installation itself are
-  uncompressed and a 7-zip SFX archive are triggering the Inno Setup
-  installation after extracting the SFX.
-
-  Installation notes: None
+  Installation notes: Can be retrieved by "Inno Setup QuickStart Pack"
 
   svnpath
   -------
@@ -225,7 +209,8 @@ Programs used for the Subversion Windows installer
   Installation notes:
     If you don't want to use Active Perl, then it's trivial to compile Perl by
     yourself if you have MS VC5 (or better) or MinGW. Just remember to compile
-	the Perl modules included in libwin32 when Perl itself is done.
+    the Perl modules included in libwin32 when Perl itself is done.
+
 
 Making a distro
 ===============
@@ -244,12 +229,13 @@ Making a distro
 
   3. Copy the file svn_version.iss from packages\win32-innosetup\templates to
      packages\win32-innosetup and edit it according to the documentation
-	 inside it.
+	   inside it.
 
   4. Make sure that all the files to include in the setup are where they are
      supposed to be according to the paths_inno_src.iss file.
 
-  5. Now, you have two diffrent ways of making the documentation and the setup:
+  5. Now, you have two different ways of making the documentation and the
+     setup:
      A. Change directory (cd) to the packages\win32-innosetup\tools folder on
         your working Subversion repository and run the following command and
         follow the instructions:
@@ -259,8 +245,73 @@ Making a distro
         just run the packages\win32-innosetup\tools\mk_distro file:
             path\to\packages\win32-innosetup\tools\mk_distro -a
 
-  A shiny new svn-X.XX.X-rXXXX-setup.exe should now be in your path_setup_out
+  A shiny new svn-x.xx.x-setup.exe should now be in your path_setup_out
   folder if you have done everything right.
 
-Good luck!
+  Good luck!
 
+svn-x.xx.x-setup.exe's command line options
+===========================================
+
+  The text below are more or less copied directly from the Inno Setup Help file
+  and describes the parameters that the Subversion installer Setup file
+  accepts:
+
+  The Setup program accepts optional command line parameters. These can be
+  useful to system administrators, and to other programs calling the Setup
+  program.
+
+  /SP-
+    Disables the This will install... Do you wish to continue? prompt at the
+    beginning of Setup. Of course, this will have no effect if the
+    DisableStartupPrompt [Setup] section directive was set to yes.
+
+  /SILENT, /VERYSILENT
+    Instructs Setup to be silent or very silent. When Setup is silent the
+    wizard and the background window are not displayed but the installation
+    progress window is. When a setup is very silent this installation progress
+    window is not displayed. Everything else is normal so for example error
+    messages during installation are displayed and the startup prompt is (if
+    you haven't disabled it with DisableStartupPrompt or the '/SP-' command
+    line option explained above) 
+
+    If a restart is necessary and the '/NORESTART' command isn't used (see
+    below) and Setup is silent, it will display a Reboot now? message box. If
+    it's very silent it will reboot without asking. 
+
+  /NOCANCEL 
+    Prevents the user from cancelling during the installation process, by
+    disabling the Cancel button and ignoring clicks on the close button. Useful
+    along with /SILENT. 
+
+  /NORESTART 
+    Instructs Setup not to reboot even if it's necessary. 
+
+  /LOADINF="filename" 
+    Instructs Setup to load the settings from the specified file after having
+    checked the command line. This file can be prepared using the '/SAVEINF='
+    command as explained below. 
+
+    Don't forget to use quotes if the filename contains spaces. 
+
+  /SAVEINF="filename" 
+    Instructs Setup to save installation settings to the specified file. 
+
+	  Don't forget to use quotes if the filename contains spaces. 
+
+  /DIR="x:\dirname" 
+    Overrides the default directory name displayed on the Select Destination
+    Location wizard page. A fully qualified pathname must be specified. 
+
+   /GROUP="folder name" 
+    Overrides the default folder name displayed on the Select Start Menu Folder
+    wizard page. If the [Setup] section directive DisableProgramGroupPage was
+    set to yes, this command line parameter is ignored. 
+
+  /NOICONS 
+    Instructs Setup to initially check the Don't create any icons check box on
+    the Select Start Menu Folder wizard page. 
+
+  /COMPONENTS="comma separated list of component names" 
+    Overrides the default components settings. Using this command line
+    parameter causes Setup to automatically select a custom type.

@@ -6,4 +6,5 @@
 ; This file is ignored by the Subversion repository when it resides in
 ; "packages\win32-innosetup".
 #define svn_version "X.XX.X"
+#define svn_pretxtrelease "XX"
 #define svn_release "XXXX"

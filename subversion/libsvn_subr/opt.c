@@ -478,6 +478,10 @@ parse_path (svn_opt_revision_t *rev,
      screwed-up filenames that might *actually* contain @-signs.  :-) */
   for (i = (strlen (path) - 1); i >= 0; i--)
     {
+      /* If we hit a path separator, stop looking. */
+      if (path[i] == '/')
+        break;
+
       if (path[i] == '@')
         {
           const char *native_rev;

@@ -20,7 +20,10 @@ close TOPMAKE;
 
 my @modules = qw/client delta fs ra repos wc/;
 my @ldpaths = ('../.libs',
-               map {"../../../libsvn_$_/.libs"} (@modules, qw/diff subr/));
+               map {"../../../libsvn_$_/.libs"} (@modules, qw/diff subr
+                                                              ra_local
+                                                              ra_svn
+                                                              ra_dav/));
 my @ldmodules = map {"-lsvn_$_-1"} (@modules, qw/diff subr/);
 
 my $apr_config = $ENV{APR_CONFIG} || '/usr/local/lib/apache2/apr-config';
@@ -31,7 +34,7 @@ $apu_config = 'apu-config' unless -e $apu_config;
 my $apr_shlib_path_var = `$apr_config --shlib-path-var`;
 my $apr_cflags = `$apr_config --includes`;
 my $apu_cflags = `$apu_config --includes`;
-my $apr_ldflags = `$apr_config --cflags --link-ld --libs`
+my $apr_ldflags = `$apr_config --link-ld --libs`
    if $^O eq 'darwin';
 
 chomp $apr_shlib_path_var;
