@@ -1247,7 +1247,7 @@ svn_error_t *svn_io_file_flush_to_disk (apr_file_t *file,
       
       if (! FlushFileBuffers (filehand))
         return svn_error_wrap_apr
-          (apr_get_os_error (), _("Can't flush file to disk")));
+          (apr_get_os_error (), _("Can't flush file to disk"));
       
 #else
       int rv;
