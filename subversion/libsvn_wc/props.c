@@ -1543,13 +1543,8 @@ svn_wc_parse_externals_description2 (apr_array_header_t **externals_p,
       item->target_dir = svn_path_canonicalize
         (svn_path_internal_style (item->target_dir, pool), pool);
       {
-        int tgt_dir_len = strlen (item->target_dir);
-
         if (item->target_dir[0] == '\0' || item->target_dir[0] == '/'
-            || (strcmp (item->target_dir, "..") == 0)
-            || (strncmp (item->target_dir, "../", 3) == 0)
-            || (strstr (item->target_dir, "/../") != NULL)
-            || (strncmp ((item->target_dir + tgt_dir_len - 3), "/..", 3) == 0))
+            || svn_path_is_backpath_present (item->target_dir))
           return svn_error_createf
             (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
              _("Invalid %s property on '%s': "

@@ -321,6 +321,16 @@ apr_array_header_t *svn_path_decompose (const char *path,
 svn_boolean_t svn_path_is_single_path_component (const char *name);
 
 
+/**
+ * @since New in 1.1.
+ *
+ * Test to see if a backpath, i.e. '..', is present in @a path.
+ * If not, return @c FALSE.
+ * If so, return @c TRUE.
+ */
+svn_boolean_t svn_path_is_backpath_present (const char *path);
+
+
 /** Test if @a path2 is a child of @a path1.
  * If not, return @c NULL.
  * If so, return a copy of the remainder path, allocated in @a pool.

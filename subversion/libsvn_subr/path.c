@@ -642,6 +642,27 @@ svn_path_is_single_path_component (const char *name)
 }
 
 
+svn_boolean_t
+svn_path_is_backpath_present (const char *path)
+{
+  int len = strlen (path);
+  
+  if (! strcmp (path, ".."))
+    return TRUE;
+
+  if (! strncmp (path, "../", 3))
+    return TRUE;
+  
+  if (strstr (path, "/../") != NULL)
+    return TRUE;
+
+  if (len >= 3
+      && (! strncmp (path + len - 3, "/..", 3)))
+    return TRUE;
+
+  return FALSE;
+}
+
 
 /*** URI Stuff ***/
 
@@ -1029,32 +1050,6 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
       if (seglen == 0 || (seglen == 1 && src[0] == '.'))
         {
           /* Noop segment, so do nothing. */
-        }
-      else if (seglen == 2 && src[0] == '.' && src[1] == '.')
-        {
-          if ((! absolute_path) &&
-              (canon_segments == 0
-               || (canon_segments == 1
-                   && !memcmp (start_path, "../", 3))
-               || (canon_segments > 1
-                   && !memcmp (dst - 4, "/../", 4)))) {
-            /* Path is already backpathed or empty, append another backpath. */
-            memcpy (dst, "../", 3);
-            dst += 3;
-            canon_segments++;
-          } else if (canon_segments > 0)
-            {
-              /* Crop off the previous path. */
-              dst--;
-              do
-                {
-                  dst--;
-                }
-              while (*dst != '/' && (dst > start_path));
-              if (dst != start_path)
-                dst++;
-              canon_segments--;
-            }
         }
       else
         {
