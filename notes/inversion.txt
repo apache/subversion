@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.7 $ of this document.)
+              ($Revision: 1.8 $ of this document.)
 
 * Introduction
 
@@ -87,9 +87,22 @@ modify content.
 
 ** I18N/Multilingual support: non-ASCII encodings can be treated as text.
 
-Inversion does not assume that anything not 7-bit ASCII must therefore
-be opaque binary -- it tries very hard to treat things as UTF-* text,
-for purposes of diffing and annotation, whenever possible.
+*** User-visible messages
+
+Inversion can be localized so that its messages print out in a
+build-time-configured language.
+
+*** Text vs non-text data
+
+In situations where Inversion needs to make an educated guess as to
+whether a file is text or not, its takes into account the possibility
+of non-ASCII text.  Furthermore, any textual operations on file data
+(such as diffing, annotation, and keyword expansion) obey the
+conventions of whatever UTF-* encoding the file appears to be.
+
+The user will have a way of signalling to Inversion that a file is to
+be treated as a particular encoding, so that users are not dependent
+on Inversion's guessing capability.
 
 ** Branching and tagging are constant-time operations in Inversion.
 
