@@ -253,8 +253,7 @@ svn_client_revprop_set (const char *propname,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
-  void *ra_baton, *session;
-  svn_ra_plugin_t *ra_lib;
+  svn_ra_session_t *ra_session;
 
   if ((strcmp (propname, SVN_PROP_REVISION_AUTHOR) == 0)
       && propval 
@@ -269,20 +268,18 @@ svn_client_revprop_set (const char *propname,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
+  SVN_ERR (svn_client__open_ra_session (&ra_session, URL, NULL,
                                         NULL, NULL, FALSE, TRUE,
                                         ctx, pool));
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */
   SVN_ERR (svn_client__get_revision_number
-           (set_rev, ra_lib, session, revision, NULL, pool));
+           (set_rev, ra_session, revision, NULL, pool));
 
   /* The actual RA call. */
-  SVN_ERR (ra_lib->change_rev_prop (session, *set_rev, propname, propval,
-                                    pool));
+  SVN_ERR (svn_ra_change_rev_prop (ra_session, *set_rev, propname, propval,
+                                   pool));
 
   return SVN_NO_ERROR;
 }
@@ -464,8 +461,7 @@ remote_propget (apr_hash_t *props,
                 const char *target_relative,
                 svn_node_kind_t kind,
                 svn_revnum_t revnum,
-                svn_ra_plugin_t *ra_lib,
-                void *session,
+                svn_ra_session_t *ra_session,
                 svn_boolean_t recurse,
                 apr_pool_t *pool)
 {
@@ -474,14 +470,14 @@ remote_propget (apr_hash_t *props,
   
   if (kind == svn_node_dir)
     {
-      SVN_ERR (ra_lib->get_dir (session, target_relative, revnum,
-                                (recurse ? &dirents : NULL),
-                                NULL, &prop_hash, pool));
+      SVN_ERR (svn_ra_get_dir (ra_session, target_relative, revnum,
+                               (recurse ? &dirents : NULL),
+                               NULL, &prop_hash, pool));
     }
   else if (kind == svn_node_file)
     {
-      SVN_ERR (ra_lib->get_file (session, target_relative, revnum,
-                                 NULL, NULL, &prop_hash, pool));
+      SVN_ERR (svn_ra_get_file (ra_session, target_relative, revnum,
+                                NULL, NULL, &prop_hash, pool));
     }
   else
     {
@@ -524,8 +520,7 @@ remote_propget (apr_hash_t *props,
                                    new_target_relative,
                                    this_ent->kind,
                                    revnum,
-                                   ra_lib,
-                                   session,
+                                   ra_session,
                                    recurse,
                                    pool));
         }
@@ -562,19 +557,18 @@ svn_client_propget2 (apr_hash_t **props,
      requested property information is not available locally. */
   if (svn_path_is_url (utarget))
     {
-      void *session;
-      svn_ra_plugin_t *ra_lib;
+      svn_ra_session_t *ra_session;
       svn_node_kind_t kind;
 
       /* Get an RA plugin for this filesystem object. */
-      SVN_ERR (svn_client__ra_lib_from_path (&ra_lib, &session, &revnum,
-                                             &url, target, peg_revision,
-                                             revision, ctx, pool));
+      SVN_ERR (svn_client__ra_session_from_path (&ra_session, &revnum,
+                                                 &url, target, peg_revision,
+                                                 revision, ctx, pool));
 
-      SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
+      SVN_ERR (svn_ra_check_path (ra_session, "", revnum, &kind, pool));
 
       SVN_ERR (remote_propget (*props, propname, url, "",
-                               kind, revnum, ra_lib, session,
+                               kind, revnum, ra_session,
                                recurse, pool));
     }
   else  /* working copy path */
@@ -591,7 +585,7 @@ svn_client_propget2 (apr_hash_t **props,
            svn_path_local_style (target, pool));
       
       SVN_ERR (svn_client__get_revision_number
-               (&revnum, NULL, NULL, revision, target, pool));
+               (&revnum, NULL, revision, target, pool));
 
       if ((revision->kind == svn_opt_revision_committed)
           || (revision->kind == svn_opt_revision_base))
@@ -657,24 +651,21 @@ svn_client_revprop_get (const char *propname,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
-  void *ra_baton, *session;
-  svn_ra_plugin_t *ra_lib;
+  svn_ra_session_t *ra_session;
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
+  SVN_ERR (svn_client__open_ra_session (&ra_session, URL, NULL,
                                         NULL, NULL, FALSE, TRUE,
                                         ctx, pool));
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */
   SVN_ERR (svn_client__get_revision_number
-           (set_rev, ra_lib, session, revision, NULL, pool));
+           (set_rev, ra_session, revision, NULL, pool));
 
   /* The actual RA call. */
-  SVN_ERR (ra_lib->rev_prop (session, *set_rev, propname, propval, pool));
+  SVN_ERR (svn_ra_rev_prop (ra_session, *set_rev, propname, propval, pool));
 
   return SVN_NO_ERROR;
 }
@@ -727,8 +718,7 @@ remote_proplist (apr_array_header_t *proplist,
                  const char *target_relative,
                  svn_node_kind_t kind,
                  svn_revnum_t revnum,
-                 svn_ra_plugin_t *ra_lib,
-                 void *session,
+                 svn_ra_session_t *ra_session,
                  svn_boolean_t recurse,
                  apr_pool_t *pool,
                  apr_pool_t *scratchpool)
@@ -739,14 +729,14 @@ remote_proplist (apr_array_header_t *proplist,
  
   if (kind == svn_node_dir)
     {
-      SVN_ERR (ra_lib->get_dir (session, target_relative, revnum,
-                                (recurse ? &dirents : NULL),
-                                NULL, &prop_hash, scratchpool));
+      SVN_ERR (svn_ra_get_dir (ra_session, target_relative, revnum,
+                                   (recurse ? &dirents : NULL),
+                                   NULL, &prop_hash, scratchpool));
     }
   else if (kind == svn_node_file)
     {
-      SVN_ERR (ra_lib->get_file (session, target_relative, revnum,
-                                 NULL, NULL, &prop_hash, scratchpool));
+      SVN_ERR (svn_ra_get_file (ra_session, target_relative, revnum,
+                                NULL, NULL, &prop_hash, scratchpool));
     }
   else
     {
@@ -815,8 +805,7 @@ remote_proplist (apr_array_header_t *proplist,
                                     new_target_relative,
                                     this_ent->kind,
                                     revnum,
-                                    ra_lib,
-                                    session,
+                                    ra_session,
                                     recurse,
                                     pool,
                                     subpool));
@@ -920,19 +909,18 @@ svn_client_proplist2 (apr_array_header_t **props,
      requested property information is not available locally. */
   if (svn_path_is_url (utarget))
     {
-      void *session;
-      svn_ra_plugin_t *ra_lib;
+      svn_ra_session_t *ra_session;
       svn_node_kind_t kind;
 
-      /* Get an RA plugin for this filesystem object. */
-      SVN_ERR (svn_client__ra_lib_from_path (&ra_lib, &session, &revnum,
-                                             &url, target, peg_revision,
-                                             revision, ctx, pool));
+      /* Get an RA session for this URL. */
+      SVN_ERR (svn_client__ra_session_from_path (&ra_session, &revnum,
+                                                 &url, target, peg_revision,
+                                                 revision, ctx, pool));
       
-      SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
+      SVN_ERR (svn_ra_check_path (ra_session, "", revnum, &kind, pool));
 
       SVN_ERR (remote_proplist (*props, url, "",
-                                kind, revnum, ra_lib, session,
+                                kind, revnum, ra_session,
                                 recurse, pool, svn_pool_create (pool)));
     }
   else  /* working copy path */
@@ -949,7 +937,7 @@ svn_client_proplist2 (apr_array_header_t **props,
            svn_path_local_style (target, pool));
       
       SVN_ERR (svn_client__get_revision_number
-               (&revnum, NULL, NULL, revision, target, pool));
+               (&revnum, NULL, revision, target, pool));
 
       if ((revision->kind == svn_opt_revision_committed)
           || (revision->kind == svn_opt_revision_base))
@@ -1006,25 +994,22 @@ svn_client_revprop_list (apr_hash_t **props,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *pool)
 {
-  void *ra_baton, *session;
-  svn_ra_plugin_t *ra_lib;
+  svn_ra_session_t *ra_session;
   apr_hash_t *proplist;
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
+  SVN_ERR (svn_client__open_ra_session (&ra_session, URL, NULL,
                                         NULL, NULL, FALSE, TRUE,
                                         ctx, pool));
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */
   SVN_ERR (svn_client__get_revision_number
-           (set_rev, ra_lib, session, revision, NULL, pool));
+           (set_rev, ra_session, revision, NULL, pool));
 
   /* The actual RA call. */
-  SVN_ERR (ra_lib->rev_proplist (session, *set_rev, &proplist, pool));
+  SVN_ERR (svn_ra_rev_proplist (ra_session, *set_rev, &proplist, pool));
 
   *props = proplist;
   return SVN_NO_ERROR;

@@ -39,6 +39,7 @@
 #include "svn_delta.h"
 #include "svn_io.h"
 #include "svn_ra.h"
+#include "../libsvn_ra/ra_loader.h"
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "svn_dav.h"
@@ -1408,17 +1409,17 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
   return SVN_NO_ERROR;
 }
 
-svn_error_t * svn_ra_dav__get_commit_editor2(void *session_baton,
-                                             const svn_delta_editor_t **editor,
-                                             void **edit_baton,
-                                             const char *log_msg,
-                                             svn_commit_callback_t callback,
-                                             void *callback_baton,
-                                             apr_hash_t *lock_tokens,
-                                             svn_boolean_t keep_locks,
-                                             apr_pool_t *pool)
+svn_error_t * svn_ra_dav__get_commit_editor(svn_ra_session_t *session,
+                                            const svn_delta_editor_t **editor,
+                                            void **edit_baton,
+                                            const char *log_msg,
+                                            svn_commit_callback_t callback,
+                                            void *callback_baton,
+                                            apr_hash_t *lock_tokens,
+                                            svn_boolean_t keep_locks,
+                                            apr_pool_t *pool)
 {
-  svn_ra_dav__session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   svn_delta_editor_t *commit_editor;
   commit_ctx_t *cc;
   struct copy_baton *cb;
@@ -1495,17 +1496,4 @@ svn_error_t * svn_ra_dav__get_commit_editor2(void *session_baton,
   *editor = commit_editor;
   *edit_baton = cc;
   return SVN_NO_ERROR;
-}
-
-svn_error_t * svn_ra_dav__get_commit_editor(void *session_baton,
-                                            const svn_delta_editor_t **editor,
-                                            void **edit_baton,
-                                            const char *log_msg,
-                                            svn_commit_callback_t callback,
-                                            void *callback_baton,
-                                            apr_pool_t *pool)
-{
-  return svn_ra_dav__get_commit_editor2(session_baton, editor, edit_baton,
-                                        log_msg, callback, callback_baton,
-                                        NULL, TRUE, pool);
 }

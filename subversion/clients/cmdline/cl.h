@@ -192,15 +192,16 @@ extern const apr_getopt_option_t svn_cl__options[];
 
 
 /* Evaluate EXPR.  If it yields an SVN_ERR_UNVERSIONED_RESOURCE error,
- * handle the error as a warning and clear the error; if it yields any
- * other error, return that error from the current function.
- * Otherwise, continue.
+ * handle the error as a warning, clear the error, and set SUCCESS to
+ * FALSE.  If it yields any other error, don't touch SUCCESS, just
+ * return that error from the current function.  Otherwise, set
+ * SUCCESS to TRUE and continue.
  *
  * This macro is a helper for the many subcommands that merely warn
  * when invoked on an unversioned resource.  It is modeled on the
  * SVN_ERR() macro, see there for details.
  */
-#define SVN_CL__TRY(expr)                                                \
+#define SVN_CL__TRY(expr, success)                                       \
   do {                                                                   \
     svn_error_t *svn_cl__try__temp = (expr);                             \
     if (svn_cl__try__temp)                                               \
@@ -209,10 +210,13 @@ extern const apr_getopt_option_t svn_cl__options[];
           {                                                              \
             svn_handle_warning (stderr, svn_cl__try__temp);              \
             svn_error_clear (svn_cl__try__temp);                         \
+            (success) = FALSE;                                           \
           }                                                              \
         else                                                             \
           return svn_cl__try__temp;                                      \
       }                                                                  \
+    else                                                                 \
+        (success) = TRUE;                                                \
   } while (0)
 
 

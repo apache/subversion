@@ -370,9 +370,10 @@ class TargetExe(TargetLinked):
   def __init__(self, name, options, gen_obj):
     TargetLinked.__init__(self, name, options, gen_obj)
 
-    extmap = self.gen_obj._extension_map
-    self.objext = extmap['exe', 'object']
-    self.filename = build_path_join(self.path, name + extmap['exe', 'target'])
+    if not (self.external_lib or self.external_project):
+      extmap = self.gen_obj._extension_map
+      self.objext = extmap['exe', 'object']
+      self.filename = build_path_join(self.path, name + extmap['exe', 'target'])
 
     self.manpages = options.get('manpages', '')
     self.testing = options.get('testing')
@@ -404,12 +405,13 @@ class TargetLib(TargetLinked):
   def __init__(self, name, options, gen_obj):
     TargetLinked.__init__(self, name, options, gen_obj)
 
-    extmap = gen_obj._extension_map
-    self.objext = extmap['lib', 'object']
+    if not (self.external_lib or self.external_project):
+      extmap = gen_obj._extension_map
+      self.objext = extmap['lib', 'object']
 
-    # the target file is the name, version, and appropriate extension
-    tfile = '%s-%s%s' % (name, gen_obj.version, extmap['lib', 'target'])
-    self.filename = build_path_join(self.path, tfile)
+      # the target file is the name, version, and appropriate extension
+      tfile = '%s-%s%s' % (name, gen_obj.version, extmap['lib', 'target'])
+      self.filename = build_path_join(self.path, tfile)
 
     # Is a library referencing symbols which are undefined at link time.
     self.undefined_lib_symbols = options.get('undefined-lib-symbols') == 'yes'
@@ -575,7 +577,6 @@ class TargetProject(Target):
     self.cmd = options.get('cmd')
     self.release = options.get('release')
     self.debug = options.get('debug')
-    self.filename = name
 
   def add_dependencies(self):
     self.gen_obj.projects.append(self)

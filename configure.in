@@ -574,7 +574,7 @@ AC_DEFINE_UNQUOTED(SVN_NULL_DEVICE_NAME, "/dev/null",
 
 # For compatibility with Subversion 1.1.3 and earlier,
 # which recommended setting PYTHON2, not PYTHON.
-if test "${PYTHON2+set}" = set -a test "${PYTHON+set}" != set; then
+if test "${PYTHON2+set}" = set -a "${PYTHON+set}" != set; then
   PYTHON="$PYTHON2"
 fi
 

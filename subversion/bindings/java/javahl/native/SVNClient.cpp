@@ -2757,7 +2757,7 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
     }
 
     std::ostringstream value;
-    value << sb.min_rev;std::string;
+    value << sb.min_rev;
     if (sb.min_rev != sb.max_rev)
     {
         value << ":";

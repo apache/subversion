@@ -461,7 +461,7 @@ rep_read_range (svn_fs_t *fs,
           while (rep->kind == rep_kind_delta
                  && rep->contents.delta.chunks->nelts > cur_chunk);
 
-          /* Right. We've either just read the fulltext rep, a rep that's
+          /* Right. We've either just read the fulltext rep, or a rep that's
              too short, in which case we'll undeltify without source data.*/
           if (rep->kind != rep_kind_delta && rep->kind != rep_kind_fulltext)
             abort(); /* unknown kind */

@@ -305,7 +305,7 @@
           <listitem>
             <para>
               Send a custom <literal>REPORT</literal> request that
-              describes the mixed-revision (and mixed-url) state of
+              describes the mixed-revision (and mixed-URL) state of
               the working copy.  The server sends a custom response
               that describes which items need updating and includes
               binary deltas of file contents.  Parses the response.

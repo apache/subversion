@@ -146,7 +146,7 @@ svn_error_t *svn_io_create_unique_link (const char **unique_name_p,
 /**
  * @since New in 1.1.
  *
- * Set @a dest to the path that the symlink at @a path references.
+ * Set @a *dest to the path that the symlink at @a path references.
  * Allocate the string from @a pool.
  */
 svn_error_t *svn_io_read_link (svn_string_t **dest,
@@ -154,7 +154,7 @@ svn_error_t *svn_io_read_link (svn_string_t **dest,
                                apr_pool_t *pool);
 
 
-/** Set @a dir to a directory path (allocated in @a pool) deemed
+/** Set @a *dir to a directory path (allocated in @a pool) deemed
  * usable for the creation of temporary files and subdirectories.
  */
 svn_error_t *svn_io_temp_dir (const char **dir,
@@ -586,7 +586,7 @@ svn_error_t *svn_io_remove_dir (const char *path, apr_pool_t *pool);
 
 
 /** Read all of the disk entries in directory @a path, a utf8-encoded
- * path.  Return a @a dirents hash mapping dirent names (<tt>char *</tt>) to
+ * path.  Set @a *dirents to a hash mapping dirent names (<tt>char *</tt>) to
  * enumerated dirent filetypes (@c svn_node_kind_t *).
  *
  * Note:  the `.' and `..' directories normally returned by
@@ -725,7 +725,7 @@ svn_error_t *svn_io_run_diff3 (const char *dir,
 
 /** Examine utf8-encoded @a file to determine if it can be described by a
  * known (as in, known by this function) Multipurpose Internet Mail
- * Extension (MIME) type.  If so, set @a mimetype to a character string
+ * Extension (MIME) type.  If so, set @a *mimetype to a character string
  * describing the MIME type, else set it to @c NULL.  Use @a pool for any
  * necessary allocations.
  */

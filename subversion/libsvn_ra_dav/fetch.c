@@ -42,6 +42,7 @@
 #include "svn_md5.h"
 #include "svn_base64.h"
 #include "svn_ra.h"
+#include "../libsvn_ra/ra_loader.h"
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "svn_dav.h"
@@ -735,7 +736,7 @@ filter_props (apr_hash_t *props,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_dav__get_file(void *session_baton,
+svn_error_t *svn_ra_dav__get_file(svn_ra_session_t *session,
                                   const char *path,
                                   svn_revnum_t revision,
                                   svn_stream_t *stream,
@@ -745,7 +746,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
 {
   svn_ra_dav_resource_t *rsrc;
   const char *final_url;
-  svn_ra_dav__session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   const char *url = svn_path_url_add_component (ras->url, path, pool);
 
   /* If the revision is invalid (head), then we're done.  Just fetch
@@ -846,7 +847,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
 }
 
 
-svn_error_t *svn_ra_dav__get_dir(void *session_baton,
+svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
                                  const char *path,
                                  svn_revnum_t revision,
                                  apr_hash_t **dirents,
@@ -859,7 +860,7 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
   apr_hash_t *resources;
   const char *final_url;
   apr_size_t final_url_n_components;
-  svn_ra_dav__session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   const char *url = svn_path_url_add_component (ras->url, path, pool);
 
   /* If the revision is invalid (head), then we're done.  Just fetch
@@ -1000,11 +1001,11 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
 
 /* ------------------------------------------------------------------------- */
 
-svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
+svn_error_t *svn_ra_dav__get_latest_revnum(svn_ra_session_t *session,
                                            svn_revnum_t *latest_revnum,
                                            apr_pool_t *pool)
 {
-  svn_ra_dav__session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
 
   /* ### should we perform an OPTIONS to validate the server we're about
      ### to talk to? */
@@ -1060,12 +1061,12 @@ static int drev_end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
   return SVN_RA_DAV__XML_VALID;
 }
 
-svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
+svn_error_t *svn_ra_dav__get_dated_revision (svn_ra_session_t *session,
                                              svn_revnum_t *revision,
                                              apr_time_t timestamp,
                                              apr_pool_t *pool)
 {
-  svn_ra_dav__session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   const char *body;
   const char *vcc_url;
   svn_error_t *err;
@@ -1164,14 +1165,14 @@ static int gloc_start_element(void *userdata, int parent_state, const char *ns,
 }
 
 svn_error_t *
-svn_ra_dav__get_locations(void *session_baton,
+svn_ra_dav__get_locations(svn_ra_session_t *session,
                           apr_hash_t **locations,
                           const char *relative_path,
                           svn_revnum_t peg_revision,
                           apr_array_header_t *location_revisions,
                           apr_pool_t *pool)
 {
-  svn_ra_dav__session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   svn_stringbuf_t *request_body;
   svn_error_t *err;
   get_locations_baton_t request_baton;
@@ -1223,9 +1224,9 @@ svn_ra_dav__get_locations(void *session_baton,
      START and END revisions. */
   SVN_ERR( svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
                                          ras->sess, ras->url, peg_revision,
-                                         ras->pool) );
+                                         session->pool) );
   final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
-                                            ras->pool);
+                                            session->pool);
 
   err = svn_ra_dav__parsed_request(ras->sess, "REPORT", final_bc_url,
                                    request_body->data, NULL, NULL,
@@ -1242,13 +1243,13 @@ svn_ra_dav__get_locations(void *session_baton,
   return err;
 }
 
-svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
+svn_error_t *svn_ra_dav__change_rev_prop (svn_ra_session_t *session,
                                           svn_revnum_t rev,
                                           const char *name,
                                           const svn_string_t *value,
                                           apr_pool_t *pool)
 {
-  svn_ra_dav__session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   svn_ra_dav_resource_t *baseline;
   svn_error_t *err;
   apr_hash_t *prop_changes = NULL;
@@ -1312,12 +1313,12 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
 }
 
 
-svn_error_t *svn_ra_dav__rev_proplist (void *session_baton,
+svn_error_t *svn_ra_dav__rev_proplist (svn_ra_session_t *session,
                                        svn_revnum_t rev,
                                        apr_hash_t **props,
                                        apr_pool_t *pool)
 {
-  svn_ra_dav__session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   svn_ra_dav_resource_t *baseline;
 
   *props = apr_hash_make (pool);
@@ -1340,7 +1341,7 @@ svn_error_t *svn_ra_dav__rev_proplist (void *session_baton,
 }
 
 
-svn_error_t *svn_ra_dav__rev_prop (void *session_baton,
+svn_error_t *svn_ra_dav__rev_prop (svn_ra_session_t *session,
                                    svn_revnum_t rev,
                                    const char *name,
                                    svn_string_t **value,
@@ -1353,7 +1354,7 @@ svn_error_t *svn_ra_dav__rev_prop (void *session_baton,
    * if it has a colon in its name.  While more costly this allows DAV
    * clients to still gain access to all the allowed property names.
    * See Issue #1807 for more details. */
-  SVN_ERR (svn_ra_dav__rev_proplist (session_baton, rev, &props, pool));
+  SVN_ERR (svn_ra_dav__rev_proplist (session, rev, &props, pool));
 
   *value = apr_hash_get (props, name, APR_HASH_KEY_STRING);
 
@@ -2442,7 +2443,7 @@ static const svn_ra_reporter_t ra_dav_reporter = {
 /* Make a generic reporter/baton for reporting the state of the
    working copy during updates or status checks. */
 static svn_error_t *
-make_reporter (void *session_baton,
+make_reporter (svn_ra_session_t *session,
                const svn_ra_reporter_t **reporter,
                void **report_baton,
                svn_revnum_t revision,
@@ -2456,7 +2457,7 @@ make_reporter (void *session_baton,
                svn_boolean_t fetch_content,
                apr_pool_t *pool)
 {
-  svn_ra_dav__session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   report_baton_t *rb;
   const char *s;
 
@@ -2574,7 +2575,7 @@ make_reporter (void *session_baton,
 }                      
 
 
-svn_error_t * svn_ra_dav__do_update(void *session_baton,
+svn_error_t * svn_ra_dav__do_update(svn_ra_session_t *session,
                                     const svn_ra_reporter_t **reporter,
                                     void **report_baton,
                                     svn_revnum_t revision_to_update_to,
@@ -2584,7 +2585,7 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
                                     void *wc_update_baton,
                                     apr_pool_t *pool)
 {
-  return make_reporter (session_baton,
+  return make_reporter (session,
                         reporter,
                         report_baton,
                         revision_to_update_to,
@@ -2600,7 +2601,7 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
 }
 
 
-svn_error_t * svn_ra_dav__do_status(void *session_baton,
+svn_error_t * svn_ra_dav__do_status(svn_ra_session_t *session,
                                     const svn_ra_reporter_t **reporter,
                                     void **report_baton,
                                     const char *status_target,
@@ -2610,7 +2611,7 @@ svn_error_t * svn_ra_dav__do_status(void *session_baton,
                                     void *wc_status_baton,
                                     apr_pool_t *pool)
 {
-  return make_reporter (session_baton,
+  return make_reporter (session,
                         reporter,
                         report_baton,
                         revision,
@@ -2626,7 +2627,7 @@ svn_error_t * svn_ra_dav__do_status(void *session_baton,
 }
 
 
-svn_error_t * svn_ra_dav__do_switch(void *session_baton,
+svn_error_t * svn_ra_dav__do_switch(svn_ra_session_t *session,
                                     const svn_ra_reporter_t **reporter,
                                     void **report_baton,
                                     svn_revnum_t revision_to_update_to,
@@ -2637,7 +2638,7 @@ svn_error_t * svn_ra_dav__do_switch(void *session_baton,
                                     void *wc_update_baton,
                                     apr_pool_t *pool)
 {
-  return make_reporter (session_baton,
+  return make_reporter (session,
                         reporter,
                         report_baton,
                         revision_to_update_to,
@@ -2654,7 +2655,7 @@ svn_error_t * svn_ra_dav__do_switch(void *session_baton,
 }
 
 
-svn_error_t * svn_ra_dav__do_diff(void *session_baton,
+svn_error_t * svn_ra_dav__do_diff(svn_ra_session_t *session,
                                   const svn_ra_reporter_t **reporter,
                                   void **report_baton,
                                   svn_revnum_t revision,
@@ -2666,7 +2667,7 @@ svn_error_t * svn_ra_dav__do_diff(void *session_baton,
                                   void *wc_diff_baton,
                                   apr_pool_t *pool)
 {
-  return make_reporter (session_baton,
+  return make_reporter (session,
                         reporter,
                         report_baton,
                         revision,

@@ -810,54 +810,61 @@ The following repository access (RA) modules are available:
         área administrativa <filename>.svn</filename>, vea <xref
         linkend="svn-ch-8-sect-3"/>en este capítulo.</para>
 
-      <para>The Subversion client library, libsvn_client, has the
-        broadest responsibility; its job is to mingle the
-        functionality of the working copy library with that of the
-        Repository Access Layer, and then to provide the highest-level
-        API to any application that wishes to perform general revision
-        control actions.  For example, the function
-        <function>svn_client_checkout</function> takes a URL as an
-        argument.  It passes this URL to the RA layer and opens an
-        authenticated session with a particular repository.  It then
-        asks the repository for a certain tree, and sends this tree
-        into the working copy library, which then writes a full
-        working copy to disk (<filename>.svn</filename> directories
-        and all).</para>
+      <para>La libería cliente de Subversion, libsvn_client, tiene
+        la más amplia responsabilidad; su trabajo es reunir la
+        funcionalidad de la librería de copia local de trabajo y la
+        de la capa de acceso al repositorio, y entonces proporcionar
+        la API de mayor nivel para cualquier aplicación que desee
+        realizar acciones generales de control de revisiones. Por
+        ejemplo, la función <function>svn_client_checkout</function>
+        recibe una URL como parámetro. La función pasa la URL a la
+        capa RA y abre una sesión autenticada con un repositorio en
+        particular. Entonces le pregunta al repositorio por un árbol
+        concreto y envía este árbol a la librería de copia local de
+        trabajo, la cual escribe entonces una copia local de trabajo
+        completa en el disco (directorios <filename>.svn</filename>
+        y demás incluidos).</para>
 
-      <para>The client library is designed to be used by any
-        application.  While the Subversion source code includes a
-        standard command-line client, it should be very easy to write
-        any number of GUI clients on top of the client library.  New
-        GUIs (or any new client, really) for Subversion need not be
-        clunky wrappers around the included command-line
-        client&mdash;they have full access via the libsvn_client API
-        to same functionality, data, and callback mechanisms that the
-        command-line client uses.</para>
+      <para>La librería cliente está diseñada para que pueda ser
+        usada por cualquier aplicación. Aunque el código fuente de
+        Subversion incluye un cliente estándar de línea de comando,
+        debería ser muy sencillo escribir cualquier número de
+        clientes gráficos sobre esta librería cliente. Nuevas
+        interfaces gráficas (o realmente, cualquier cliente)
+        para Subversion no tienen que ser envoltorios precarios
+        sobre el cliente incluído de línea de comando&mdash;tienen
+        acceso completo vía la API de libsvn_client a la misma
+        funcionalidad, datos, y mecanismos de retrollamada usados
+        por el cliente de línea de comando.</para>
 
       <sidebar>
-        <title>Binding Directly&mdash;A Word About Correctness</title>
+        <title>Acceso directo&mdash;unas palabras sobre corrección</title>
 
-        <para>Why should your GUI program bind directly with a
-          libsvn_client instead of acting as a wrapper around a
-          command-line program?  Besides simply being more efficient,
-          this can address potential correctness issues as well.  A
-          command-line program (like the one supplied with Subversion)
-          that binds to the client library needs to effectively
-          translate feedback and requested data bits from C types to
-          some form of human-readable output.  This type of
-          translation can be lossy.  That is, the program may not
-          display all of the information harvested from the API, or
-          may combine bits of information for compact representation.</para>
+        <para>¿Por qué debería su programa de interfaz gráfica
+          acceder directamente a libsvn_client en lugar de
+          actuar como envoltorio sobre el programa de línea de
+          comando? Aparte de ser simplemente más eficiente, esto
+          puede solucionar potenciales problemas de corrección. Un
+          programa de línea de comando (como el que trae Subversion)
+          que accede a la librería cliente necesita traducir con
+          efectividad las respuestas y bits de datos solicitados
+          desde tipos de datos de C a alguna forma de salida legible
+          por un ser humano. Este tipo de traducción puede tener
+          pérdidas. Es decir, un programa puede que no muestre
+          toda la información cosechada a través de la API, o
+          puede combinar bits de información para compactar la
+          representación.</para>
 
-        <para>If you wrap such a command-line program with yet another
-          program, the second program has access only to
-          already-interpreted (and as we mentioned, likely incomplete)
-          information, which it must <emphasis>again</emphasis>
-          translate into <emphasis>its</emphasis> representation
-          format.  With each layer of wrapping, the integrity of the
-          original data is potentially tainted more and more, much
-          like the result of making a copy of a copy (of a copy &hellip;)
-          of a favorite audio or video cassette.</para>
+        <para>Si envuelve a un programa de línea de comando de este
+          tipo con otro programa, el segundo sólo tiene acceso a la
+          información ya interpretada (que como hemos mencionado, es
+          posiblemente incompleta), que <emphasis>de nuevo</emphasis>
+          debe ser traducida a <emphasis>su</emphasis> formato
+          de representación.  Con cada capa de envoltorio, la
+          integridad de los datos originales es potencialmente
+          corrompida más y más, igual que el resultado de hacer una
+          copia de una copia (de una copia &hellip;) de su cinta de
+          audio o vídeo favorita.</para>
 
       </sidebar>
 
@@ -868,82 +875,89 @@ The following repository access (RA) modules are available:
   <!-- *** SECTION 2:  USING THE APIS                                  *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-8-sect-2">
-    <title>Using the APIs</title>
+    <title>Usando las APIs</title>
 
-    <para>Developing applications against the Subversion library APIs
-      is fairly straightforward.  All of the public header files live
-      in the <filename>subversion/include</filename> directory of the
-      source tree.  These headers are copied into your system
-      locations when you build and install Subversion itself from
-      source.  These headers represent the entirety of the functions
-      and types meant to be accessible by users of the Subversion
-      libraries.</para>
+    <para>Desarrollar aplicaciones usando las APIs de las librerías
+      de Subversion es bastante sencillo. Todos los ficheros
+      de cabecera públicos se encuentran en el directorio
+      <filename>subversion/include</filename> del código fuente.
+      Estos ficheros de cabecera son copiados en su sistema cuando
+      compila e instala Subversion a partir del código fuente. Estos
+      ficheros de cabecera recogen por completo las funciones y
+      tipos de datos accesibles por los usuarios de las librerías
+      de Subversion.</para>
 
-    <para>The first thing you might notice is that Subversion's
-      datatypes and functions are namespace protected.  Every public
-      Subversion symbol name begins with <literal>svn_</literal>,
-      followed by a short code for the library in which the symbol is
-      defined (such as <literal>wc</literal>,
-      <literal>client</literal>, <literal>fs</literal>, etc.),
-      followed by a single underscore (<literal>_</literal>) and
-      then the rest of the symbol name.  Semi-public functions (used
-      among source files of a given library but not by code outside
-      that library, and found inside the library directories
-      themselves) differ from this naming scheme in that instead of a
-      single underscore after the library code, they use a double
-      underscore (<literal>__</literal>).  Functions that are private
-      to a given source file have no special prefixing, and are declared
-      <literal>static</literal>.  Of course, a compiler isn't
-      interested in these naming conventions, but they help to clarify
-      the scope of a given function or datatype.</para>
+    <para>La primera cosa que puede observar es que los tipos de
+      datos y funciones de Subversion están protegidos por un espacio
+      de nombrado <!-- TODO incluir NT sobre namespace? -->. Todo
+      símbolo público comienza con <literal>svn_</literal>,
+      seguido por un breve código que representa la librería
+      en la cual es definido (como <literal>wc</literal>,
+      <literal>client</literal>, <literal>fs</literal>,
+      etc.), seguido por un único carácter de subrayado
+      (<literal>_</literal>) y por último el resto del nombre
+      del símbolo. Las funciones semi públicas (usadas por varios
+      ficheros de código fuente de una librería pero no fuera de
+      ésta, y contenidas en los propios directorios de las librerías)
+      difieren de este esquema de nombres en el uso del carácter
+      de subrayado tras el código de librería, ya que usan doble
+      carácter de subrayado (<literal>__</literal>). Las funciones
+      que son privadas de un fichero particular no tienen prefijos
+      especiales, y son declaradas como <literal>static</literal>.
+      Por supuesto, el compilador no tiene interés alguno por estas
+      convenciones de nombrado, pero ayudan a clarificar el ámbito
+      de una función o tipo de datos.</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-2.1">
-      <title>The Apache Portable Runtime Library</title>
+      <title>La librería Apache Portable Runtime<!--TODO verificar si hay traducción --></title>
 
-      <para>Along with Subversion's own datatype, you will see many
-        references to datatypes that begin with
-        <literal>apr_</literal>&mdash;symbols from the Apache
-        Portable Runtime (APR) library.  APR is Apache's portability
-        library, originally carved out of its server code as an
-        attempt to separate the OS-specific bits from the
-        OS-independent portions of the code.  The result was a library
-        that provides a generic API for performing operations that
-        differ mildly&mdash;or wildly&mdash;from OS to OS.  While the
-        Apache HTTP Server was obviously the first user of the APR
-        library, the Subversion developers immediately recognized the
-        value of using APR as well.  This means that there are
-        practically no OS-specific code portions in Subversion itself.
-        Also, it means that the Subversion client compiles and runs
-        anywhere that the server does.  Currently this list includes
-        all flavors of Unix, Win32, BeOS, OS/2, and Mac OS X.</para>
+      <para>Junto con los tipos de datos de Subversion, verá muchas
+        referencias a tipos de datos que comienzan con
+        <literal>apr_</literal>&mdash;símbolos de la librería
+        Apache Portable Runtime (APR).  APR es la librería de
+        portabilidad de Apache, originada a partir del código fuente
+        del servidor en un intento de separar el código dependiente
+        del SO de las porciones de código independientes del SO. El
+        resultado es una librería que proporciona una API genérica
+        para realizar operaciones que difieren ligeramente &mdash;o
+        terriblemente&mdash; de SO a SO. Aunque el servidor HTTP
+        Apache fue obviamente el primer usuario de la librería
+        APR, los desarrolladores de Subversion reconocieron
+        inmediatamente el valor de usar también APR. Esto significa
+        que prácticamente no hay porciones de código dependiente
+        del SO en Subversion. También, significa que el cliente
+        Subversion se puede compilar y ejecutar dondequiera que lo
+        haga el servidor. Actualmente esta lista incluye todas las
+        variantes de Unix, Win32, BeOS, OS/2, y Mac OS X.</para>
 
-      <para>In addition to providing consistent implementations of
-        system calls that differ across operating systems,
+      <para>Además de proporcionar implemntaciones consistentes de
+        llamadas de sistema que difieren entre sistemas operativos,
         <footnote>
-          <para>Subversion uses ANSI system calls and datatypes as much
-            as possible.</para>
-        </footnote>
-        APR gives Subversion immediate access to many custom
-        datatypes, such as dynamic arrays and hash tables.  Subversion
-        uses these types extensively throughout the codebase.  But
-        perhaps the most pervasive APR datatype, found in nearly every
-        Subversion API prototype, is the
-        <literal>apr_pool_t</literal>&mdash;the APR memory pool.
-        Subversion uses pools internally for all its memory allocation
-        needs (unless an external library requires a different memory
-        management schema for data passed through its API),
-        <footnote>
-          <para>Neon and Berkeley DB are examples of such libraries.</para>
-        </footnote>
-        and while a person coding against the Subversion APIs is
-        not required to do the same, they are required to provide
-        pools to the API functions that need them.  This means that
-        users of the Subversion API must also link against APR, must
-        call <function>apr_initialize()</function> to initialize the
-        APR subsystem, and then must acquire a pool for use with
-        Subversion API calls.  See <xref linkend="svn-ch-8-sect-5"/>
-        for more information.</para>
+          <para>Subversion uses ANSI system calls and datatypes
+            as much as possible.</para>
+        </footnote> APR le da a Subversion acceso inmediato a muchos
+        tipos de datos, como arrays dinámicos o tablas hash<!--
+        TODO picadillo? -->.  Subversion usa en gran medida estos
+        tipos a lo largo del código fuente. Pero quizás el tipo de
+        datos APR más usado, encontrado en casi todo prototipo de la
+        API de Subversion, es <literal>apr_pool_t</literal>&mdash;el
+        grupo de memoria de APR.  Subversion usa internamente grupos
+        de memoria para todas las peticiones de reserva de memoria
+        que necesita (excepto cuando una librería externa requiere
+        un esquema de gestión de memoria diferente para los datos
+        que pasan por su API), <footnote>
+          <para>Neon y la base de datos de Berkeley son tales
+            librerías.</para>
+        </footnote> y aunque una persona que programa usando las
+        APIs de Subversion no está obligada a hacer lo mismo, tiene
+        que proporcionar grupos de memoria a las funciones de la API
+        que los necesitan. Esto significa que los usuarios de la API
+        de Subversion también tienen que enlazar con APR, y deben
+        llamar <function>apr_initialize()</function> para iniciar el
+        subsistema APR, y entonces adquirir un grupo de memoria para
+        usarlo con las llamadas de la API de Subversion. Vea <xref
+        linkend="svn-ch-8-sect-5"/> para más información.</para>
 
     </sect2>
 

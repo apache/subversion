@@ -33,6 +33,7 @@
 
 #include "svn_error.h"
 #include "svn_ra.h"
+#include "../libsvn_ra/ra_loader.h"
 #include "svn_config.h"
 #include "svn_delta.h"
 #include "svn_version.h"
@@ -534,13 +535,32 @@ static int proxy_auth(void *userdata,
   return 0;
 }
 
+#define RA_DAV_DESCRIPTION \
+  N_("Module for accessing a repository via WebDAV (DeltaV) protocol.")
+
+static const char *
+ra_dav_get_description(void)
+{
+  return _(RA_DAV_DESCRIPTION);
+}
+
+static const char * const *
+ra_dav_get_schemes (apr_pool_t *pool)
+{
+  static const char *schemes_no_ssl[] = { "http", NULL };
+  static const char *schemes_ssl[] = { "http", "https", NULL };
+
+  return ne_supports_ssl() ? schemes_ssl : schemes_no_ssl;
+}
+
+
 
 /* ### need an ne_session_dup to avoid the second gethostbyname
  * call and make this halfway sane. */
 
 
 static svn_error_t *
-svn_ra_dav__open (void **session_baton,
+svn_ra_dav__open (svn_ra_session_t *session,
                   const char *repos_URL,
                   const svn_ra_callbacks_t *callbacks,
                   void *callback_baton,
@@ -761,17 +781,17 @@ svn_ra_dav__open (void **session_baton,
         }
     }
 
-  *session_baton = ras;
+  session->priv = ras;
 
   return SVN_NO_ERROR;
 }
 
 
-static svn_error_t *svn_ra_dav__get_repos_root(void *session_baton,
+static svn_error_t *svn_ra_dav__get_repos_root(svn_ra_session_t *session,
                                                const char **url,
                                                apr_pool_t *pool)
 {
-  svn_ra_dav__session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
 
   if (! ras->repos_root)
     {
@@ -795,11 +815,11 @@ static svn_error_t *svn_ra_dav__get_repos_root(void *session_baton,
 }
 
 
-static svn_error_t *svn_ra_dav__do_get_uuid(void *session_baton,
+static svn_error_t *svn_ra_dav__do_get_uuid(svn_ra_session_t *session,
                                             const char **uuid,
                                             apr_pool_t *pool)
 {
-  svn_ra_dav__session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
 
   if (! ras->uuid)
     {
@@ -964,7 +984,7 @@ pre_send_hook(ne_request *req,
 
 
 static svn_error_t *
-svn_ra_dav__lock(void *session_baton,
+svn_ra_dav__lock(svn_ra_session_t *session,
                  svn_lock_t **lock,
                  const char *path,
                  const char *comment,
@@ -972,7 +992,7 @@ svn_ra_dav__lock(void *session_baton,
                  svn_revnum_t current_rev,
                  apr_pool_t *pool)
 {
-  svn_ra_dav__session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   int rv;
   const char *url;
   svn_string_t fs_path;
@@ -1054,13 +1074,13 @@ svn_ra_dav__lock(void *session_baton,
 
 
 static svn_error_t *
-svn_ra_dav__unlock(void *session_baton,
+svn_ra_dav__unlock(svn_ra_session_t *session,
                    const char *path,
                    const char *token,
                    svn_boolean_t force,
                    apr_pool_t *pool)
 {
-  svn_ra_dav__session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   int rv;
   const char *url;
   struct lock_request_baton *lrb;
@@ -1181,12 +1201,12 @@ lock_receiver(void *userdata,
 
 
 static svn_error_t *
-svn_ra_dav__get_lock(void *session_baton,
+svn_ra_dav__get_lock(svn_ra_session_t *session,
                      svn_lock_t **lock,
                      const char *path,
                      apr_pool_t *pool)
 {
-  svn_ra_dav__session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   int rv;
   const char *url;
   struct lock_request_baton *lrb;
@@ -1251,7 +1271,7 @@ svn_ra_dav__get_lock(void *session_baton,
 
 
 static svn_error_t *
-svn_ra_dav__get_locks(void *session_baton,
+svn_ra_dav__get_locks(svn_ra_session_t *session,
                       apr_hash_t **locks,
                       const char *path,
                       apr_pool_t *pool)
@@ -1268,9 +1288,10 @@ ra_dav_version (void)
   SVN_VERSION_BODY;
 }
 
-static const svn_ra_plugin_t dav_plugin = {
-  "ra_dav",
-  N_("Module for accessing a repository via WebDAV (DeltaV) protocol."),
+static const svn_ra__vtable_t dav_vtable = {
+  ra_dav_version,
+  ra_dav_get_description,
+  ra_dav_get_schemes,
   svn_ra_dav__open,
   svn_ra_dav__get_latest_revnum,
   svn_ra_dav__get_dated_revision,
@@ -1290,19 +1311,15 @@ static const svn_ra_plugin_t dav_plugin = {
   svn_ra_dav__get_repos_root,
   svn_ra_dav__get_locations,
   svn_ra_dav__get_file_revs,
-  ra_dav_version,
-  svn_ra_dav__get_log2,
   svn_ra_dav__lock,
   svn_ra_dav__unlock,
   svn_ra_dav__get_lock,
   svn_ra_dav__get_locks,
-  svn_ra_dav__get_commit_editor2
 };
 
-
-svn_error_t *svn_ra_dav_init(int abi_version,
-                             apr_pool_t *pconf,
-                             apr_hash_t *hash)
+svn_error_t *
+svn_ra_dav__init (const svn_version_t *loader_version,
+                  const svn_ra__vtable_t **vtable)
 {
   static const svn_version_checklist_t checklist[] =
     {
@@ -1311,20 +1328,25 @@ svn_error_t *svn_ra_dav_init(int abi_version,
       { NULL, NULL }
     };
 
-  if (abi_version < 1
-      || abi_version > SVN_RA_ABI_VERSION)
-    return svn_error_createf (SVN_ERR_RA_UNSUPPORTED_ABI_VERSION, NULL,
-                              _("Unsupported RA plugin ABI version (%d) "
-                                "for ra_dav"), abi_version);
   SVN_ERR(svn_ver_check_list(ra_dav_version(), checklist));
 
-  apr_hash_set (hash, "http", APR_HASH_KEY_STRING, &dav_plugin);
+  /* Simplified version check to make sure we can safely use the
+     VTABLE parameter. The RA loader does a more exhaustive check. */
+  if (loader_version->major != SVN_VER_MAJOR)
+    return svn_error_createf (SVN_ERR_VERSION_MISMATCH, NULL,
+                              _("Unsupported RA loader version (%d) for "
+                                "ra_dav"),
+                              loader_version->major);
 
-  if (ne_supports_ssl())
-    {
-      /* Only add this if neon is compiled with SSL support. */
-      apr_hash_set(hash, "https", APR_HASH_KEY_STRING, &dav_plugin);
-    }
+  *vtable = &dav_vtable;
 
   return SVN_NO_ERROR;
 }
+
+/* Compatibility wrapper for the 1.1 and before API. */
+#define NAME "ra_dav"
+#define DESCRIPTION RA_DAV_DESCRIPTION
+#define VTBL dav_vtable
+#define INITFUNC svn_ra_dav__init
+#define COMPAT_INITFUNC svn_ra_dav_init
+#include "../libsvn_ra/wrapper_template.h"

@@ -45,8 +45,7 @@ svn_client_cat2 (svn_stream_t *out,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
-  svn_ra_plugin_t *ra_lib;
-  void *session;
+  svn_ra_session_t *ra_session;
   svn_revnum_t rev;
   svn_node_kind_t url_kind;
   svn_string_t *eol_style;
@@ -55,19 +54,19 @@ svn_client_cat2 (svn_stream_t *out,
   const char *url;
 
   /* Get an RA plugin for this filesystem object. */
-  SVN_ERR (svn_client__ra_lib_from_path (&ra_lib, &session, &rev,
-                                         &url, path_or_url, peg_revision,
-                                         revision, ctx, pool));
+  SVN_ERR (svn_client__ra_session_from_path (&ra_session, &rev,
+                                             &url, path_or_url, peg_revision,
+                                             revision, ctx, pool));
 
   /* Make sure the object isn't a directory. */
-  SVN_ERR (ra_lib->check_path (session, "", rev, &url_kind, pool));
+  SVN_ERR (svn_ra_check_path (ra_session, "", rev, &url_kind, pool));
   if (url_kind == svn_node_dir)
     return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
                              _("URL '%s' refers to a directory"), url);
 
   /* Grab some properties we need to know in order to figure out if anything 
      special needs to be done with this file. */
-  SVN_ERR (ra_lib->get_file (session, "", rev, NULL, NULL, &props, pool));
+  SVN_ERR (svn_ra_get_file (ra_session, "", rev, NULL, NULL, &props, pool));
 
   eol_style = apr_hash_get (props, SVN_PROP_EOL_STYLE, APR_HASH_KEY_STRING);
   keywords = apr_hash_get (props, SVN_PROP_KEYWORDS, APR_HASH_KEY_STRING);
@@ -75,7 +74,7 @@ svn_client_cat2 (svn_stream_t *out,
   if (! eol_style && ! keywords)
     {
       /* It's a file with no special eol style or keywords. */
-      SVN_ERR (ra_lib->get_file (session, "", rev, out, NULL, NULL, pool));
+      SVN_ERR (svn_ra_get_file (ra_session, "", rev, out, NULL, NULL, pool));
     }
   else
     {
@@ -97,8 +96,8 @@ svn_client_cat2 (svn_stream_t *out,
 
       tmp_stream = svn_stream_from_aprfile (tmp_file, pool);
 
-      SVN_ERR (ra_lib->get_file (session, "", rev, tmp_stream, 
-                                 NULL, NULL, pool));
+      SVN_ERR (svn_ra_get_file (ra_session, "", rev, tmp_stream, 
+                                NULL, NULL, pool));
 
       /* rewind our stream. */
       apr_err = apr_file_seek (tmp_file, APR_SET, &off);

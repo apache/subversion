@@ -86,8 +86,7 @@ svn_client_lock (const svn_lock_t **lock_p, const char *path,
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
-  svn_ra_plugin_t *ra_lib;
-  void *ra_baton, *session;
+  svn_ra_session_t *ra_session;
   svn_lock_t *lock;
 
   if (svn_path_is_url (path))
@@ -107,16 +106,14 @@ svn_client_lock (const svn_lock_t **lock_p, const char *path,
                               svn_path_local_style (path, pool));
 
   /* Open an RA session. */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, entry->url, pool));
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, entry->url,
+  SVN_ERR (svn_client__open_ra_session (&ra_session, entry->url,
                                         svn_wc_adm_access_path (adm_access),
                                         adm_access, NULL, FALSE, FALSE,
                                         ctx, pool));
 
   /* Lock the path. */
-  SVN_ERR (ra_lib->lock (session, &lock, "", comment, force,
-                         entry->revision,  pool));
+  SVN_ERR (svn_ra_lock (ra_session, &lock, "", comment, force,
+                        entry->revision,  pool));
 
   /* Store the lock token in the entry and optionally make file writeable. */
   SVN_ERR (svn_wc_add_lock (path, lock, adm_access, pool));
@@ -134,8 +131,7 @@ svn_client_unlock (const char *path, svn_boolean_t force,
   const svn_wc_entry_t *entry;
   const char *lock_token;
   svn_lock_t *lock;
-  svn_ra_plugin_t *ra_lib;
-  void *ra_baton, *session;
+  svn_ra_session_t *ra_session;
 
   /* ### Support unlock on URL with --force? */
   if (svn_path_is_url (path))
@@ -163,9 +159,7 @@ svn_client_unlock (const char *path, svn_boolean_t force,
     }
 
   /* Open an RA session. */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, entry->url, pool));
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, entry->url,
+  SVN_ERR (svn_client__open_ra_session (&ra_session, entry->url,
                                         svn_wc_adm_access_path (adm_access),
                                         adm_access, NULL, FALSE, FALSE,
                                         ctx, pool));
@@ -173,7 +167,7 @@ svn_client_unlock (const char *path, svn_boolean_t force,
   /* If force, get the lock token from the repository. */
   if (force)
     {
-      SVN_ERR (ra_lib->get_lock (session, &lock, "", pool));
+      SVN_ERR (svn_ra_get_lock (ra_session, &lock, "", pool));
       if (lock)
         lock_token = lock->token;
       else
@@ -185,7 +179,7 @@ svn_client_unlock (const char *path, svn_boolean_t force,
   /* We don't have a lock token if force is specified, but the path wasn't
      locked in the repository. */
   if (lock_token)
-    SVN_ERR (ra_lib->unlock (session, "", lock_token, force, pool));
+    SVN_ERR (svn_ra_unlock (ra_session, "", lock_token, force, pool));
 
   /* Remove any lock token from the WC. */
   SVN_ERR (svn_wc_remove_lock (path, adm_access, pool));

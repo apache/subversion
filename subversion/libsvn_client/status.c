@@ -89,7 +89,6 @@ svn_client_status (svn_revnum_t *result_rev,
   const char *anchor, *target;
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  svn_ra_plugin_t *ra_lib;  
   const svn_wc_entry_t *entry;
   struct status_baton sb;
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
@@ -115,7 +114,8 @@ svn_client_status (svn_revnum_t *result_rev,
      edit.  :-) */ 
   if (update)
     {
-      void *ra_baton, *session, *report_baton;
+      void *report_baton;
+      svn_ra_session_t *ra_session;
       const svn_ra_reporter_t *reporter;
       const char *URL;
       svn_node_kind_t kind;
@@ -134,12 +134,8 @@ svn_client_status (svn_revnum_t *result_rev,
            svn_path_local_style (anchor, pool));
       URL = apr_pstrdup (pool, entry->url);
 
-      /* Get the RA library that handles URL. */
-      SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
-
       /* Open a repository session to the URL. */
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
+      SVN_ERR (svn_client__open_ra_session (&ra_session, URL, anchor,
                                             anchor_access, NULL, TRUE, TRUE, 
                                             ctx, pool));
 
@@ -147,8 +143,8 @@ svn_client_status (svn_revnum_t *result_rev,
          us a whole lot of hassle; if it does, the cost of this
          request should be minimal compared to the size of getting
          back the average amount of "out-of-date" information. */
-      SVN_ERR (ra_lib->check_path (session, "", SVN_INVALID_REVNUM,
-                                   &kind, pool));
+      SVN_ERR (svn_ra_check_path (ra_session, "", SVN_INVALID_REVNUM,
+                                  &kind, pool));
       if (kind == svn_node_none)
         {
           /* Our status target does not exist in HEAD of the
@@ -175,13 +171,13 @@ svn_client_status (svn_revnum_t *result_rev,
             {
               /* Get a revision number for our status operation. */
               SVN_ERR (svn_client__get_revision_number
-                       (&revnum, ra_lib, session, revision, target, pool));
+                       (&revnum, ra_session, revision, target, pool));
             }
 
           /* Do the deed.  Let the RA layer drive the status editor. */
-          SVN_ERR (ra_lib->do_status (session, &reporter, &report_baton,
-                                      target, revnum, descend, editor, 
-                                      edit_baton, pool));
+          SVN_ERR (svn_ra_do_status (ra_session, &reporter, &report_baton,
+                                     target, revnum, descend, editor, 
+                                     edit_baton, pool));
 
           /* Drive the reporter structure, describing the revisions
              within PATH.  When we call reporter->finish_report,

@@ -37,6 +37,7 @@
 #include "svn_xml.h"
 #include "svn_base64.h"
 #include "svn_props.h"
+#include "../libsvn_ra/ra_loader.h"
 #include "svn_private_config.h"
 
 #include "ra_dav.h"
@@ -290,7 +291,7 @@ cdata_handler (void *userdata, int state,
 #undef CHKERR
 
 svn_error_t *
-svn_ra_dav__get_file_revs (void *session_baton,
+svn_ra_dav__get_file_revs (svn_ra_session_t *session,
                            const char *path,
                            svn_revnum_t start,
                            svn_revnum_t end,
@@ -298,7 +299,7 @@ svn_ra_dav__get_file_revs (void *session_baton,
                            void *handler_baton,
                            apr_pool_t *pool)
 {
-  svn_ra_dav__session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   svn_stringbuf_t *request_body = svn_stringbuf_create ("", ras->pool);
   svn_string_t bc_url, bc_relative;
   const char *final_bc_url;

@@ -258,8 +258,7 @@ invalidate_wc_props (void *baton,
 
 
 svn_error_t * 
-svn_client__open_ra_session (void **session_baton,
-                             const svn_ra_plugin_t *ra_lib,
+svn_client__open_ra_session (svn_ra_session_t **ra_session,
                              const char *base_url,
                              const char *base_dir,
                              svn_wc_adm_access_t *base_access,
@@ -285,8 +284,7 @@ svn_client__open_ra_session (void **session_baton,
   cb->commit_items = commit_items;
   cb->config = ctx->config;
 
-  SVN_ERR (ra_lib->open (session_baton, base_url, cbtable, cb, ctx->config,
-                         pool));
+  SVN_ERR (svn_ra_open (ra_session, base_url, cbtable, cb, ctx->config, pool));
 
   return SVN_NO_ERROR;
 }
@@ -299,19 +297,16 @@ svn_client_uuid_from_url (const char **uuid,
                           svn_client_ctx_t *ctx,
                           apr_pool_t *pool)
 {
-  svn_ra_plugin_t *ra_lib;  
-  void *ra_baton, *session;
+  svn_ra_session_t *ra_session;
   apr_pool_t *subpool = svn_pool_create (pool);
 
   /* use subpool to create a temporary RA session */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, subpool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url, subpool));
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url,
+  SVN_ERR (svn_client__open_ra_session (&ra_session, url,
                                         NULL, /* no base dir */
                                         NULL, NULL, FALSE, TRUE, 
                                         ctx, subpool));
 
-  ra_lib->get_uuid (session, uuid, subpool);
+  SVN_ERR (svn_ra_get_uuid (ra_session, uuid, subpool));
 
   /* Copy the uuid in to the passed-in pool. */
   *uuid = apr_pstrdup (pool, *uuid);
@@ -567,7 +562,7 @@ slow_locations (const char **start_path, const char** end_path,
                 const char *abs_path, svn_revnum_t peg_revnum,
                 svn_revnum_t start_revnum, svn_revnum_t end_revnum,
                 const char *orig_path,
-                svn_ra_plugin_t *ra_lib, void *ra_session,
+                svn_ra_session_t *ra_session,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
@@ -577,7 +572,7 @@ slow_locations (const char **start_path, const char** end_path,
   svn_boolean_t pegrev_is_youngest = FALSE;
 
   /* Sanity check:  verify that the peg-object exists in repos. */
-  SVN_ERR (ra_lib->check_path (ra_session, "", peg_revnum, &(lrb.kind), pool));
+  SVN_ERR (svn_ra_check_path (ra_session, "", peg_revnum, &(lrb.kind), pool));
   if (lrb.kind == svn_node_none)
     return svn_error_createf
       (SVN_ERR_FS_NOT_FOUND, NULL,
@@ -635,7 +630,7 @@ slow_locations (const char **start_path, const char** end_path,
   /* Let the RA layer drive our log information handler, which will do
      the work of finding the actual locations for our resource.
      Notice that we always run on the youngest rev of the 3 inputs. */
-  SVN_ERR (ra_lib->get_log (ra_session, targets, youngest, 1,
+  SVN_ERR (svn_ra_get_log (ra_session, targets, youngest, 1, 0,
                             TRUE, FALSE, log_receiver, &lrb, pool));
 
   /* Check that we got the peg path. */
@@ -669,7 +664,6 @@ svn_client__repos_locations (const char **start_url,
                              const svn_opt_revision_t *revision,
                              const svn_opt_revision_t *start,
                              const svn_opt_revision_t *end,
-                             svn_ra_plugin_t *ra_lib,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool)
 {
@@ -681,7 +675,7 @@ svn_client__repos_locations (const char **start_url,
   svn_revnum_t start_revnum, end_revnum;
   apr_array_header_t *revs;
   apr_hash_t *rev_locs;
-  void *ra_session;
+  svn_ra_session_t *ra_session;
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_error_t *err;
 
@@ -729,32 +723,32 @@ svn_client__repos_locations (const char **start_url,
      don't need to do anything more here in that case. */
 
   /* Open a RA session to this URL. */
-  SVN_ERR (svn_client__open_ra_session (&ra_session, ra_lib, url, NULL,
+  SVN_ERR (svn_client__open_ra_session (&ra_session, url, NULL,
                                         NULL, NULL, FALSE, TRUE,
                                         ctx, subpool));
 
   /* Resolve the opt_revision_ts. */
   if (peg_revnum == SVN_INVALID_REVNUM)
-    SVN_ERR (svn_client__get_revision_number (&peg_revnum, ra_lib, 
+    SVN_ERR (svn_client__get_revision_number (&peg_revnum,
                                               ra_session, revision, path,
                                               pool));
   
-  SVN_ERR (svn_client__get_revision_number (&start_revnum, ra_lib, 
+  SVN_ERR (svn_client__get_revision_number (&start_revnum,
                                             ra_session, start, path, pool));
   if (end->kind == svn_opt_revision_unspecified)
     end_revnum = start_revnum;
   else
-    SVN_ERR (svn_client__get_revision_number (&end_revnum, ra_lib, 
+    SVN_ERR (svn_client__get_revision_number (&end_revnum,
                                               ra_session, end, path, pool));
 
-  SVN_ERR (ra_lib->get_repos_root (ra_session, &repos_url, subpool));
+  SVN_ERR (svn_ra_get_repos_root (ra_session, &repos_url, subpool));
 
   revs = apr_array_make (subpool, 2, sizeof (svn_revnum_t));
   APR_ARRAY_PUSH (revs, svn_revnum_t) = start_revnum;
   if (end_revnum != start_revnum)
     APR_ARRAY_PUSH (revs, svn_revnum_t) = end_revnum;
 
-  if (! (err = ra_lib->get_locations (ra_session, &rev_locs, "", peg_revnum,
+  if (! (err = svn_ra_get_locations (ra_session, &rev_locs, "", peg_revnum,
                                       revs, subpool)))
     {
       start_path = apr_hash_get (rev_locs, &start_revnum,
@@ -769,7 +763,7 @@ svn_client__repos_locations (const char **start_url,
                                svn_path_uri_decode (url + strlen (repos_url),
                                                     subpool),
                                peg_revnum, start_revnum, end_revnum,
-                               path, ra_lib, ra_session, ctx, subpool));
+                               path, ra_session, ctx, subpool));
     }
   else
     return err;
@@ -817,19 +811,17 @@ svn_client__repos_locations (const char **start_url,
 
 
 svn_error_t *
-svn_client__ra_lib_from_path (svn_ra_plugin_t **ra_lib_p,
-                              void **session_p,
-                              svn_revnum_t *rev_p,
-                              const char **url_p,
-                              const char *path_or_url,
-                              const svn_opt_revision_t *peg_revision_p,
-                              const svn_opt_revision_t *revision,
-                              svn_client_ctx_t *ctx,
-                              apr_pool_t *pool)
+svn_client__ra_session_from_path (svn_ra_session_t **ra_session_p,
+                                  svn_revnum_t *rev_p,
+                                  const char **url_p,
+                                  const char *path_or_url,
+                                  const svn_opt_revision_t *peg_revision_p,
+                                  const svn_opt_revision_t *revision,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *pool)
 {
+  svn_ra_session_t *ra_session;
   const char *initial_url, *url;
-  void *ra_baton, *session;
-  svn_ra_plugin_t *ra_lib;
   const svn_opt_revision_t *good_rev;
   svn_opt_revision_t peg_revision, start_rev;
   svn_opt_revision_t dead_end_rev;
@@ -837,14 +829,10 @@ svn_client__ra_lib_from_path (svn_ra_plugin_t **ra_lib_p,
   svn_revnum_t rev;
   const char *ignored_url;
   
-  /* Get an RA library for the incoming path. */
   SVN_ERR (svn_client_url_from_path (&initial_url, path_or_url, pool));
   if (! initial_url)
     return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
                               _("'%s' has no URL"), path_or_url);
-
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, initial_url, pool));
 
   /* If a peg revision was specified, but a desired revision was not,
      assume it is the same as the peg revision. */
@@ -891,21 +879,20 @@ svn_client__ra_lib_from_path (svn_ra_plugin_t **ra_lib_p,
                                         path_or_url, &peg_revision,
                                         /* search range: */
                                         &start_rev, &dead_end_rev,
-                                        ra_lib, ctx, pool));
+                                        ctx, pool));
   good_rev = new_rev;
 
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url,
+  SVN_ERR (svn_client__open_ra_session (&ra_session, url,
                                         NULL, NULL, NULL, FALSE, FALSE,
                                         ctx, pool));
 
   /* Resolve good_rev into a real revnum. */
-  SVN_ERR (svn_client__get_revision_number (&rev, ra_lib, session,
+  SVN_ERR (svn_client__get_revision_number (&rev, ra_session,
                                             good_rev, url, pool));
   if (! SVN_IS_VALID_REVNUM (rev))
-    SVN_ERR (ra_lib->get_latest_revnum (session, &rev, pool));
+    SVN_ERR (svn_ra_get_latest_revnum (ra_session, &rev, pool));
 
-  *ra_lib_p = ra_lib;
-  *session_p = session;
+  *ra_session_p = ra_session;
   *rev_p = rev;
   *url_p = url;
 

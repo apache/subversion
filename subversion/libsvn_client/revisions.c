@@ -33,8 +33,7 @@
 
 svn_error_t *
 svn_client__get_revision_number (svn_revnum_t *revnum,
-                                 svn_ra_plugin_t *ra_lib,
-                                 void *sess,
+                                 svn_ra_session_t *ra_session,
                                  const svn_opt_revision_t *revision,
                                  const char *path,
                                  apr_pool_t *pool)
@@ -49,7 +48,7 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
      doesn't seem worth it.  -kff */
 
   /* Sanity check. */
-  if (((ra_lib == NULL) || (sess == NULL))
+  if (ra_session == NULL
       && ((revision->kind == svn_opt_revision_date)
           || (revision->kind == svn_opt_revision_head)))
     {
@@ -60,10 +59,10 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
   if (revision->kind == svn_opt_revision_number)
     *revnum = revision->value.number;
   else if (revision->kind == svn_opt_revision_date)
-    SVN_ERR (ra_lib->get_dated_revision (sess, revnum, revision->value.date,
-                                         pool));
+    SVN_ERR (svn_ra_get_dated_revision (ra_session, revnum,
+                                        revision->value.date, pool));
   else if (revision->kind == svn_opt_revision_head)
-    SVN_ERR (ra_lib->get_latest_revnum (sess, revnum, pool));
+    SVN_ERR (svn_ra_get_latest_revnum (ra_session, revnum, pool));
   else if (revision->kind == svn_opt_revision_unspecified)
     *revnum = SVN_INVALID_REVNUM;
   else if ((revision->kind == svn_opt_revision_committed)

@@ -178,15 +178,17 @@ svn_cl__propset (apr_getopt_t *os,
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = ((const char **) (targets->elts))[i];
+          svn_boolean_t success;
 
           svn_pool_clear (subpool);
           SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
           SVN_CL__TRY (svn_client_propset2 (pname_utf8, propval, target,
                                             opt_state->recursive,
                                             opt_state->force,
-                                            subpool));
+                                            subpool),
+                       success);
 
-          if (! opt_state->quiet) 
+          if (success && (! opt_state->quiet))
             {
               SVN_ERR
                 (svn_cmdline_printf

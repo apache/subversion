@@ -757,16 +757,15 @@ svn_client_export3 (svn_revnum_t *result_rev,
          revision->kind == svn_opt_revision_unspecified))
     {
       svn_revnum_t revnum;
-      void *session;
-      svn_ra_plugin_t *ra_lib;
+      svn_ra_session_t *ra_session;
       svn_node_kind_t kind;
       struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
 
       /* Get the RA connection. */
-      SVN_ERR (svn_client__ra_lib_from_path (&ra_lib, &session, &revnum,
-                                             &url, from, peg_revision,
-                                             revision, ctx, pool));
-      
+      SVN_ERR (svn_client__ra_session_from_path (&ra_session, &revnum,
+                                                 &url, from, peg_revision,
+                                                 revision, ctx, pool));
+
       eb->root_path = to;
       eb->root_url = url;
       eb->force = force;
@@ -776,7 +775,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
       eb->externals = apr_hash_make (pool);
       eb->native_eol = native_eol; 
 
-      SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
+      SVN_ERR (svn_ra_check_path (ra_session, "", revnum, &kind, pool));
 
       if (kind == svn_node_file)
         {
@@ -800,10 +799,10 @@ svn_client_export3 (svn_revnum_t *result_rev,
 
           /* Step outside the editor-likeness for a moment, to actually talk
            * to the repository. */
-          SVN_ERR(ra_lib->get_file (session, "", revnum,
-                                    svn_stream_from_aprfile (fb->tmp_file,
-                                                             pool),
-                                    NULL, &props, pool));
+          SVN_ERR(svn_ra_get_file (ra_session, "", revnum,
+                                   svn_stream_from_aprfile (fb->tmp_file,
+                                                            pool),
+                                   NULL, &props, pool));
 
           /* Push the props into change_file_prop(), to update the file_baton
            * with information. */
@@ -854,7 +853,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
       
       
           /* Manufacture a basic 'report' to the update reporter. */
-          SVN_ERR (ra_lib->do_update (session,
+          SVN_ERR (svn_ra_do_update (ra_session,
                                       &reporter, &report_baton,
                                       revnum,
                                       "", /* no sub-target */

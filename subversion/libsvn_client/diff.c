@@ -1418,8 +1418,7 @@ do_merge (const char *initial_URL1,
           apr_pool_t *pool)
 {
   svn_revnum_t start_revnum, end_revnum;
-  void *ra_baton, *session, *session2;
-  svn_ra_plugin_t *ra_lib;
+  svn_ra_session_t *ra_session, *ra_session2;
   const svn_ra_reporter_t *reporter;
   void *report_baton;
   const svn_delta_editor_t *diff_editor;
@@ -1437,10 +1436,6 @@ do_merge (const char *initial_URL1,
          _("Not all required revisions are specified"));
     }
 
-  /* Establish first RA session to URL1. */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, initial_URL1, pool));
-
   /* If we are performing a pegged merge, we need to find out what our
      actual URLs will be. */
   if (peg_revision->kind != svn_opt_revision_unspecified)
@@ -1452,7 +1447,7 @@ do_merge (const char *initial_URL1,
                                             peg_revision,
                                             initial_revision1,
                                             initial_revision2,
-                                            ra_lib, ctx, pool));
+                                            ctx, pool));
 
       merge_b->url = URL2;
       path1 = NULL;
@@ -1471,14 +1466,15 @@ do_merge (const char *initial_URL1,
       *revision2 = *initial_revision2;
     }
   
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL1, NULL,
+  /* Establish first RA session to URL1. */
+  SVN_ERR (svn_client__open_ra_session (&ra_session, URL1, NULL,
                                         NULL, NULL, FALSE, TRUE, 
                                         ctx, pool));
   /* Resolve the revision numbers. */
   SVN_ERR (svn_client__get_revision_number
-           (&start_revnum, ra_lib, session, revision1, path1, pool));
+           (&start_revnum, ra_session, revision1, path1, pool));
   SVN_ERR (svn_client__get_revision_number
-           (&end_revnum, ra_lib, session, revision2, path2, pool));
+           (&end_revnum, ra_session, revision2, path2, pool));
 
   /* Open a second session used to request individual file
      contents. Although a session can be used for multiple requests, it
@@ -1486,7 +1482,7 @@ do_merge (const char *initial_URL1,
      the diff, is still being processed the first session cannot be
      reused. This applies to ra_dav, ra_local does not appears to have
      this limitation. */
-  SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL1, NULL,
+  SVN_ERR (svn_client__open_ra_session (&ra_session2, URL1, NULL,
                                         NULL, NULL, FALSE, TRUE,
                                         ctx, pool));
  
@@ -1496,7 +1492,7 @@ do_merge (const char *initial_URL1,
                                         callback_baton,
                                         recurse,
                                         dry_run,
-                                        ra_lib, session2,
+                                        ra_session2,
                                         start_revnum,
                                         ctx->notify_func,
                                         ctx->notify_baton,
@@ -1506,15 +1502,15 @@ do_merge (const char *initial_URL1,
                                         &diff_edit_baton,
                                         pool));
 
-  SVN_ERR (ra_lib->do_diff (session,
-                            &reporter, &report_baton,
-                            end_revnum,
-                            "",
-                            recurse,
-                            ignore_ancestry,
-                            URL2,
-                            diff_editor, diff_edit_baton, pool));
-  
+  SVN_ERR (svn_ra_do_diff (ra_session,
+                           &reporter, &report_baton,
+                           end_revnum,
+                           "",
+                           recurse,
+                           ignore_ancestry,
+                           URL2,
+                           diff_editor, diff_edit_baton, pool));
+
   SVN_ERR (reporter->set_path (report_baton, "", start_revnum, FALSE, pool));
   
   SVN_ERR (reporter->finish_report (report_baton, pool));
@@ -1535,26 +1531,23 @@ single_file_merge_get_file (const char **filename,
                             const char *url,
                             const char *path,
                             const svn_opt_revision_t *revision,
-                            void *ra_baton,
                             struct merge_cmd_baton *merge_b,
                             apr_pool_t *pool)
 {
-  svn_ra_plugin_t *ra_lib;
-  void *session;
+  svn_ra_session_t *ra_session;
   apr_file_t *fp;
 
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url, pool));
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, NULL,
+  SVN_ERR (svn_client__open_ra_session (&ra_session, url, NULL,
                                         NULL, NULL, FALSE, TRUE, 
                                         merge_b->ctx, pool));
-  SVN_ERR (svn_client__get_revision_number (rev, ra_lib, session, revision,
+  SVN_ERR (svn_client__get_revision_number (rev, ra_session, revision,
                                             path, pool));
   SVN_ERR (svn_io_open_unique_file (&fp, filename, 
                                     merge_b->target, ".tmp",
                                     FALSE, pool));
-  SVN_ERR (ra_lib->get_file (session, "", *rev,
-                             svn_stream_from_aprfile (fp, pool),
-                             NULL, props, pool));
+  SVN_ERR (svn_ra_get_file (ra_session, "", *rev,
+                            svn_stream_from_aprfile (fp, pool),
+                            NULL, props, pool));
   SVN_ERR (svn_io_file_close (fp, pool));
 
   return SVN_NO_ERROR;
@@ -1581,23 +1574,16 @@ do_single_file_merge (const char *initial_URL1,
   const char *mimetype1, *mimetype2;
   svn_string_t *pval;
   apr_array_header_t *propchanges;
-  void *ra_baton;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
   const char *URL1, *path1, *URL2, *path2;
   svn_opt_revision_t *revision1, *revision2;
   svn_error_t *err;
 
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-
   /* If we are performing a pegged merge, we need to find out what our
      actual URLs will be. */
   if (peg_revision->kind != svn_opt_revision_unspecified)
     {
-      svn_ra_plugin_t *ra_lib;
-
-      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, initial_URL2, pool));
-      
       SVN_ERR (svn_client__repos_locations (&URL1, &revision1,
                                             &URL2, &revision2,
                                             initial_path2 ? initial_path2
@@ -1605,7 +1591,7 @@ do_single_file_merge (const char *initial_URL1,
                                             peg_revision,
                                             initial_revision1,
                                             initial_revision2,
-                                            ra_lib, merge_b->ctx, pool));
+                                            merge_b->ctx, pool));
 
       merge_b->url = URL2;
       merge_b->path = NULL;
@@ -1628,11 +1614,11 @@ do_single_file_merge (const char *initial_URL1,
      *totally* different repositories here.  :-) */
   SVN_ERR (single_file_merge_get_file (&tmpfile1, &props1, &rev1,
                                        URL1, path1, revision1,
-                                       ra_baton, merge_b, pool));
+                                       merge_b, pool));
 
   SVN_ERR (single_file_merge_get_file (&tmpfile2, &props2, &rev2,
                                        URL2, path2, revision2, 
-                                       ra_baton, merge_b, pool));
+                                       merge_b, pool));
 
   /* Discover any svn:mime-type values in the proplists */
   pval = apr_hash_get (props1, SVN_PROP_MIME_TYPE, strlen(SVN_PROP_MIME_TYPE));
@@ -1764,7 +1750,7 @@ diff_wc_wc (const apr_array_header_t *options,
 
   /* Resolve named revisions to real numbers. */
   SVN_ERR (svn_client__get_revision_number
-           (&callback_baton->revnum1, NULL, NULL, revision1, path1, pool));
+           (&callback_baton->revnum1, NULL, revision1, path1, pool));
   callback_baton->revnum2 = SVN_INVALID_REVNUM;  /* WC */
 
   SVN_ERR (svn_wc_diff3 (adm_access, target, callbacks, callback_baton,
@@ -1801,8 +1787,7 @@ diff_repos_repos (const apr_array_header_t *options,
   const char *anchor1, *target1, *anchor2, *target2, *base_path;
   svn_node_kind_t kind1, kind2;
   svn_revnum_t rev1, rev2;
-  void *ra_baton, *session1, *session2;
-  svn_ra_plugin_t *ra_lib;
+  svn_ra_session_t *ra_session1, *ra_session2;
   const svn_ra_reporter_t *reporter;
   void *report_baton;
   const svn_delta_editor_t *diff_editor;
@@ -1824,10 +1809,6 @@ diff_repos_repos (const apr_array_header_t *options,
   if (url2 != path2)
     base_path = path2;
 
-  /* Setup our RA libraries. */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url1, pool));
-
   /* If we are performing a pegged diff, we need to find out what our
      actual URLs will be. */
   if (peg_revision->kind != svn_opt_revision_unspecified)
@@ -1839,27 +1820,27 @@ diff_repos_repos (const apr_array_header_t *options,
                                             path2,
                                             peg_revision,
                                             revision1, revision2,
-                                            ra_lib, ctx, pool));
+                                            ctx, pool));
 
       callback_baton->orig_path_1 = url1;
       callback_baton->orig_path_2 = url2;
     }
   
   /* Open temporary RA sessions to each URL. */
-  SVN_ERR (svn_client__open_ra_session (&session1, ra_lib, url1, NULL,
+  SVN_ERR (svn_client__open_ra_session (&ra_session1, url1, NULL,
                                         NULL, NULL, FALSE, TRUE, 
                                         ctx, temppool));
-  SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, url2, NULL,
+  SVN_ERR (svn_client__open_ra_session (&ra_session2, url2, NULL,
                                         NULL, NULL, FALSE, TRUE, 
                                         ctx, temppool));
 
   /* Resolve named revisions to real numbers. */
   SVN_ERR (svn_client__get_revision_number
-           (&rev1, ra_lib, session1, revision1, 
+           (&rev1, ra_session1, revision1, 
             (path1 == url1) ? NULL : path1, pool));
   callback_baton->revnum1 = rev1;
   SVN_ERR (svn_client__get_revision_number
-           (&rev2, ra_lib, session2, revision2,
+           (&rev2, ra_session2, revision2,
             (path2 == url2) ? NULL : path2, pool));
   callback_baton->revnum2 = rev2;
 
@@ -1869,8 +1850,8 @@ diff_repos_repos (const apr_array_header_t *options,
   anchor2 = url2;
   target1 = "";
   target2 = "";
-  SVN_ERR (ra_lib->check_path (session1, "", rev1, &kind1, temppool));
-  SVN_ERR (ra_lib->check_path (session2, "", rev2, &kind2, temppool));
+  SVN_ERR (svn_ra_check_path (ra_session1, "", rev1, &kind1, temppool));
+  SVN_ERR (svn_ra_check_path (ra_session2, "", rev2, &kind2, temppool));
   if (kind1 == svn_node_none)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FOUND, NULL,
@@ -1896,10 +1877,10 @@ diff_repos_repos (const apr_array_header_t *options,
 
   /* Now, we reopen two RA session to the correct anchor/target
      locations for our URLs. */
-  SVN_ERR (svn_client__open_ra_session (&session1, ra_lib, anchor1,
+  SVN_ERR (svn_client__open_ra_session (&ra_session1, anchor1,
                                         NULL, NULL, NULL, FALSE, TRUE, 
                                         ctx, pool));
-  SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, anchor1,
+  SVN_ERR (svn_client__open_ra_session (&ra_session2, anchor1,
                                         NULL, NULL, NULL, FALSE, TRUE,
                                         ctx, pool));      
 
@@ -1911,7 +1892,7 @@ diff_repos_repos (const apr_array_header_t *options,
                                         callback_baton,
                                         recurse,
                                         FALSE, /* doesn't matter for diff */
-                                        ra_lib, session2,
+                                        ra_session2,
                                         rev1,
                                         NULL, /* no notify_func */
                                         NULL, /* no notify_baton */
@@ -1922,15 +1903,15 @@ diff_repos_repos (const apr_array_header_t *options,
                                         pool));
   
   /* We want to switch our txn into URL2 */
-  SVN_ERR (ra_lib->do_diff (session1,
-                            &reporter, &report_baton,
-                            rev2,
-                            target1,
-                            recurse,
-                            ignore_ancestry,
-                            url2,
-                            diff_editor, diff_edit_baton, pool));
-  
+  SVN_ERR (svn_ra_do_diff (ra_session1,
+                           &reporter, &report_baton,
+                           rev2,
+                           target1,
+                           recurse,
+                           ignore_ancestry,
+                           url2,
+                           diff_editor, diff_edit_baton, pool));
+
   /* Drive the reporter; do the diff. */
   SVN_ERR (reporter->set_path (report_baton, "", rev1, FALSE, pool));
   SVN_ERR (reporter->finish_report (report_baton, pool));
@@ -1968,8 +1949,7 @@ diff_repos_wc (const apr_array_header_t *options,
   svn_wc_adm_access_t *adm_access, *dir_access;
   const svn_wc_entry_t *entry;
   svn_revnum_t rev;
-  void *ra_baton, *session;
-  svn_ra_plugin_t *ra_lib;
+  svn_ra_session_t *ra_session;
   const svn_ra_reporter_t *reporter;
   void *report_baton;
   const svn_delta_editor_t *diff_editor;
@@ -1998,10 +1978,6 @@ diff_repos_wc (const apr_array_header_t *options,
                               svn_path_local_style (anchor, pool));
   anchor_url = apr_pstrdup (pool, entry->url);
         
-  /* Establish RA session to path2's anchor */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, anchor_url, pool));
-
   /* If we are performing a pegged diff, we need to find out what our
      actual URLs will be. */
   if (peg_revision->kind != svn_opt_revision_unspecified)
@@ -2016,13 +1992,14 @@ diff_repos_wc (const apr_array_header_t *options,
                                             path1,
                                             peg_revision,
                                             revision1, &end,
-                                            ra_lib, ctx, pool));
+                                            ctx, pool));
 
       callback_baton->orig_path_1 = url1;
       callback_baton->orig_path_2 = svn_path_join (anchor_url, target, pool);
     }
   
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor_url,
+  /* Establish RA session to path2's anchor */
+  SVN_ERR (svn_client__open_ra_session (&ra_session, anchor_url,
                                         NULL, NULL, NULL, FALSE, TRUE,
                                         ctx, pool));
       
@@ -2038,17 +2015,17 @@ diff_repos_wc (const apr_array_header_t *options,
 
   /* Tell the RA layer we want a delta to change our txn to URL1 */
   SVN_ERR (svn_client__get_revision_number
-           (&rev, ra_lib, session, revision1, 
+           (&rev, ra_session, revision1, 
             (path1 == url1) ? NULL : path1, pool));
   callback_baton->revnum1 = rev;
-  SVN_ERR (ra_lib->do_diff (session,
-                            &reporter, &report_baton,
-                            rev,
-                            target ? svn_path_uri_decode (target, pool) : NULL,
-                            recurse,
-                            ignore_ancestry,
-                            url1,
-                            diff_editor, diff_edit_baton, pool));
+  SVN_ERR (svn_ra_do_diff (ra_session,
+                           &reporter, &report_baton,
+                           rev,
+                           target ? svn_path_uri_decode (target, pool) : NULL,
+                           recurse,
+                           ignore_ancestry,
+                           url1,
+                           diff_editor, diff_edit_baton, pool));
 
   /* Create a txn mirror of path2;  the diff editor will print
      diffs in reverse.  :-)  */

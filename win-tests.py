@@ -12,50 +12,20 @@ Usage: python win-tests.py [option] [test-path]
                            default is '-d,-r,<test-path-root>'
 """
 
-
-tests = ['subversion/tests/libsvn_subr/config-test.exe',
-         'subversion/tests/libsvn_subr/compat-test.exe',
-         'subversion/tests/libsvn_subr/hashdump-test.exe',
-         'subversion/tests/libsvn_subr/string-test.exe',
-         'subversion/tests/libsvn_subr/path-test.exe',
-         'subversion/tests/libsvn_subr/stream-test.exe',
-         'subversion/tests/libsvn_subr/time-test.exe',
-         'subversion/tests/libsvn_subr/utf-test.exe',
-         'subversion/tests/libsvn_wc/translate-test.exe',
-         'subversion/tests/libsvn_diff/diff-diff3-test.exe',
-         'subversion/tests/libsvn_delta/random-test.exe',
-         'subversion/tests/libsvn_subr/target-test.py']
-
-fs_tests = ['subversion/tests/libsvn_fs_base/run-fs-tests.py',
-            'subversion/tests/libsvn_repos/run-repos-tests.py']
-
-client_tests = ['subversion/tests/clients/cmdline/getopt_tests.py',
-                'subversion/tests/clients/cmdline/basic_tests.py',
-                'subversion/tests/clients/cmdline/commit_tests.py',
-                'subversion/tests/clients/cmdline/update_tests.py',
-                'subversion/tests/clients/cmdline/switch_tests.py',
-                'subversion/tests/clients/cmdline/prop_tests.py',
-                'subversion/tests/clients/cmdline/schedule_tests.py',
-                'subversion/tests/clients/cmdline/log_tests.py',
-                'subversion/tests/clients/cmdline/copy_tests.py',
-                'subversion/tests/clients/cmdline/diff_tests.py',
-                'subversion/tests/clients/cmdline/export_tests.py',
-                'subversion/tests/clients/cmdline/externals_tests.py',
-                'subversion/tests/clients/cmdline/merge_tests.py',
-                'subversion/tests/clients/cmdline/stat_tests.py',
-                'subversion/tests/clients/cmdline/trans_tests.py',
-                'subversion/tests/clients/cmdline/autoprop_tests.py',
-                'subversion/tests/clients/cmdline/revert_tests.py',
-                'subversion/tests/clients/cmdline/blame_tests.py',
-                'subversion/tests/clients/cmdline/utf8_tests.py',
-                'subversion/tests/clients/cmdline/svnadmin_tests.py',
-                'subversion/tests/clients/cmdline/svnlook_tests.py',
-                'subversion/tests/clients/cmdline/svnversion_tests.py']
-
-
 import os, sys, string, shutil, traceback
 import getopt
 import ConfigParser
+
+sys.path.insert(0, os.path.join('build', 'generator'))
+sys.path.insert(1, 'build')
+
+import gen_win
+version_header = os.path.join('subversion', 'include', 'svn_version.h')
+gen_obj = gen_win.GeneratorBase('build.conf', version_header, [])
+all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
+          + gen_obj.scripts + gen_obj.bdb_scripts
+client_tests = filter(lambda x: x.startswith('subversion/tests/clients/'),
+                      all_tests)
 
 opts, args = getopt.getopt(sys.argv[1:], 'rdvcu:f:sS:',
                            ['release', 'debug', 'verbose', 'cleanup', 'url=',
@@ -64,7 +34,6 @@ if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
 # Interpret the options and set parameters
-all_tests = tests + fs_tests + client_tests
 repo_loc = 'local repository.'
 base_url = None
 verbose = 0
