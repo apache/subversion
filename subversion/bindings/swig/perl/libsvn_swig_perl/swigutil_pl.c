@@ -1405,3 +1405,16 @@ apr_file_t *svn_swig_pl_make_file (SV *file, apr_pool_t *pool)
     }
     return apr_file;
 }
+
+static apr_status_t cleanup_refcnt (void *data)
+{
+    SV *sv = data;
+    SvREFCNT_dec (sv);
+    return APR_SUCCESS;
+}
+
+void svn_swig_pl_hold_ref_in_pool (apr_pool_t *pool, SV *sv)
+{
+    SvREFCNT_inc(sv);
+    apr_pool_cleanup_register (pool, sv, cleanup_refcnt, apr_pool_cleanup_null);
+}
