@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Copyright 2004 Ben Reser <ben@reser.org>
+# Licensed under the terms subversion ships under or GPLv2.
+
+# Useful for greping in a subversion working copy.  
+# Essentially it behaves the same way your grep command does (in fact it
+# ultimately calls the grep command on your path) with a few exceptions.
+# Ignores the subversion admin directories (.svn) and vi(m) backup files.
+# Recursive is always on with or without -r.
+# If no path is given the current working directory is searched not stdin.
+# Other than that it will take any parameter or pattern your standard grep
+# does.
+
+arg_count=$#
+for (( i=1; i <= $arg_count; i++ )); do
+    arg="$1"
+    shift 1
+    if [ -z "$pattern" ]; then
+        if [ "$arg" == "--" ]; then
+            grepargs="$grepargs $arg"
+            pattern="$1"
+            shift 1
+        elif [ "${arg:0:1}" != "-" ]; then
+            pattern="$arg"
+        else
+            grepargs="$grepargs $arg"
+        fi	  
+    else
+        pathargs="$pathargs $arg"
+    fi	  
+done
+
+find $pathargs -regex '.*~$\|.*/\.svn\(/\|$\)' -prune -o -type f -print0 | \
+    xargs -r0 grep $grepargs $pattern 
