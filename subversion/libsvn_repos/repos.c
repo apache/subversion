@@ -1268,7 +1268,7 @@ svn_error_t *svn_repos_db_logfiles (apr_array_header_t **logfiles,
                                     apr_pool_t *pool)
 {
   svn_repos_t *repos;
-  int log;
+  int i;
 
   SVN_ERR (get_repos (&repos, path,
                       APR_FLOCK_SHARED,
@@ -1286,9 +1286,9 @@ svn_error_t *svn_repos_db_logfiles (apr_array_header_t **logfiles,
     }
 
   /* Loop, printing log files. */
-  for (log = 0; log < (*logfiles)->nelts; log++)
+  for (i = 0; i < (*logfiles)->nelts; i++)
     {
-      const char ** log_file = &(APR_ARRAY_IDX (*logfiles, log, const char *));
+      const char ** log_file = &(APR_ARRAY_IDX (*logfiles, i, const char *));
       *log_file = svn_path_join(SVN_REPOS__DB_DIR, *log_file, pool);
     }
 
