@@ -1444,6 +1444,97 @@ def check_for_omitted_prefix_in_path_component(sbox):
           (src, good_src, dest, good_dest))
     raise svntest.Failure
 
+#----------------------------------------------------------------------
+def diff_renamed_file(sbox):
+  "diff a file that has been renamed"
+
+  sbox.build()
+
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  svntest.main.run_svn(None, 'mv', os.path.join('A', 'D', 'G', 'pi'),
+                                   os.path.join('A', 'D', 'G', 'pi2'))
+  svntest.main.file_append(os.path.join('A', 'D', 'G', 'pi2'), "new pi")
+
+  # Check doing a repos->wc diff.
+  diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                 os.path.join('A', 'D', 'G', 'pi2'))
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'G', 'pi2'),
+                       'M') :
+    raise svntest.Failure
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg')
+
+  # repos->wc diff after the rename.
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
+                                                 os.path.join('A', 'D', 'G', 'pi2'))
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'G', 'pi2'),
+                       'M') :
+    raise svntest.Failure
+
+  # repos->repos diff after the rename.
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2',
+                                                 os.path.join('A', 'D', 'G', 'pi2'))
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'G', 'pi'),
+                       'M') :
+    raise svntest.Failure
+
+  os.chdir(was_cwd)
+
+#----------------------------------------------------------------------
+def diff_within_renamed_dir(sbox):
+  "diff a file within a renamed directory"
+
+  sbox.build()
+
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  svntest.main.run_svn(None, 'mv', os.path.join('A', 'D', 'G'),
+                                   os.path.join('A', 'D', 'I'))
+  # svntest.main.run_svn(None, 'ci', '-m', 'log_msg')
+  svntest.main.file_append(os.path.join('A', 'D', 'I', 'pi'), "new pi")
+
+  # Check a repos->wc diff
+  diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                 os.path.join('A', 'D', 'I', 'pi'))
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'I', 'pi'),
+                       'M') :
+    raise svntest.Failure
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg')
+
+  # Check repos->wc after commit
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
+                                                 os.path.join('A', 'D', 'I', 'pi'))
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'I', 'pi'),
+                       'M') :
+    raise svntest.Failure
+
+  # Test the diff while within the moved directory
+  os.chdir(os.path.join('A','D','I'))
+
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1')
+
+  if check_diff_output(diff_output, 'pi', 'M') :
+    raise svntest.Failure
+
+  # Test a repos->repos diff while within the moved directory
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2')
+
+  if check_diff_output(diff_output, 'pi', 'M') :
+    raise svntest.Failure
+
+  os.chdir(was_cwd)
+
 ########################################################################
 #Run the tests
 
@@ -1471,6 +1562,8 @@ test_list = [ None,
               diff_file_urls,
               XFail(diff_prop_change_local_edit),
               check_for_omitted_prefix_in_path_component,
+              diff_renamed_file,
+              diff_within_renamed_dir,
               ]
 
 if __name__ == '__main__':
