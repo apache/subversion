@@ -820,17 +820,19 @@ $ svn status
       </sect3>
 
       <sidebar>
-        <title>Subversion and Changesets</title>
+        <title>Subversion y los changesets</title>
 
-        <para>Everyone seems to have a slightly different definition
-          of <quote>changeset</quote>, or a least a different
-          expectation of what it means for a version control system to
-          have <quote>changeset features</quote>.  For our purpose,
-          let's say that a changeset is just a collection of changes
-          with a unique name.  The changes might include textual edits
-          to file contents, modifications to tree structure, or tweaks
-          to metadata.  In more common speak, a changeset is just a
-          patch with a name you can refer to.</para>
+        <para>Todo el mundo parece tener una idea diferente de la
+          definición de <quote>changeset</quote>, o al
+          menos expectaciones diferentes sobre lo que
+          significa para un sistema de control de versiones
+          tener <quote>características de changeset</quote>.
+          Para nuestros propósitos, digamos que un changeset es una
+          colección de cambios con nombre único. Los cambios pueden
+          incluír ediciones textuales a los contenidos de un fichero,
+          modificaciones a la estructura de un directorio, o cambios
+          en los metadatos. En el habla habitual, un changeset es
+          un parche con un nombre al que se puede referir.</para>
 
         <para>In Subversion, a global revision number N names a tree
           in the repository: it's the way the repository looked after
