@@ -141,6 +141,12 @@ jobjectArray SVNClient::list(const char *url, Revision &revision, bool recurse)
 		return NULL;
 	}
 
+    if(url == NULL)
+    {
+        JNIUtil::throwNullPointerException("path or url");
+        return NULL;
+    }
+
 	apr_hash_t *dirents;
 	svn_error_t *Err = svn_client_ls (&dirents, url, (struct svn_opt_revision_t *)revision.revision (),
                               recurse, ctx, subPool.pool());
