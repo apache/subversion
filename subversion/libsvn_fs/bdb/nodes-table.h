@@ -40,10 +40,12 @@ int svn_fs__bdb_open_nodes_table (DB **nodes_p,
 
 /* Check FS's `nodes' table to find an unused node number, and set
    *ID_P to the ID of the first revision of an entirely new node in
-   FS, created in transaction TXN_ID, as part of TRAIL.  Allocate the
-   new ID, and do all temporary allocation, in TRAIL->pool.  */
+   FS, with copy_id COPY_ID, created in transaction TXN_ID, as part
+   of TRAIL.  Allocate the new ID, and do all temporary allocation,
+   in TRAIL->pool.  */
 svn_error_t *svn_fs__bdb_new_node_id (svn_fs_id_t **id_p,
                                       svn_fs_t *fs,
+                                      const char *copy_id,
                                       const char *txn_id,
                                       trail_t *trail);
 

@@ -33,6 +33,9 @@ extern "C" {
    NODE-REVISION is NODEREV, as part of TRAIL.  Set *ID_P to the new
    node revision's ID.  Use TRAIL->pool for any temporary allocation.
 
+   COPY_ID is the copy_id to use in the node revision ID returned in
+   *ID_P.
+
    TXN_ID is the Subversion transaction under which this occurs.
 
    After this call, the node table manager assumes that the new node's
@@ -40,6 +43,7 @@ extern "C" {
 svn_error_t *svn_fs__create_node (const svn_fs_id_t **id_p,
                                   svn_fs_t *fs,
                                   svn_fs__node_revision_t *noderev,
+                                  const char *copy_id,
                                   const char *txn_id,
                                   trail_t *trail);
 
