@@ -875,34 +875,38 @@ The following repository access (RA) modules are available:
   <!-- *** SECTION 2:  USING THE APIS                                  *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-8-sect-2">
-    <title>Using the APIs</title>
+    <title>Usando las APIs</title>
 
-    <para>Developing applications against the Subversion library APIs
-      is fairly straightforward.  All of the public header files live
-      in the <filename>subversion/include</filename> directory of the
-      source tree.  These headers are copied into your system
-      locations when you build and install Subversion itself from
-      source.  These headers represent the entirety of the functions
-      and types meant to be accessible by users of the Subversion
-      libraries.</para>
+    <para>Desarrollar aplicaciones usando las APIs de las librerías
+      de Subversion es bastante sencillo. Todos los ficheros
+      de cabecera públicos se encuentran en el directorio
+      <filename>subversion/include</filename> del código fuente.
+      Estos ficheros de cabecera son copiados en su sistema cuando
+      compila e instala Subversion a partir del código fuente. Estos
+      ficheros de cabecera recogen por completo las funciones y
+      tipos de datos accesibles por los usuarios de las librerías
+      de Subversion.</para>
 
-    <para>The first thing you might notice is that Subversion's
-      datatypes and functions are namespace protected.  Every public
-      Subversion symbol name begins with <literal>svn_</literal>,
-      followed by a short code for the library in which the symbol is
-      defined (such as <literal>wc</literal>,
-      <literal>client</literal>, <literal>fs</literal>, etc.),
-      followed by a single underscore (<literal>_</literal>) and
-      then the rest of the symbol name.  Semi-public functions (used
-      among source files of a given library but not by code outside
-      that library, and found inside the library directories
-      themselves) differ from this naming scheme in that instead of a
-      single underscore after the library code, they use a double
-      underscore (<literal>__</literal>).  Functions that are private
-      to a given source file have no special prefixing, and are declared
-      <literal>static</literal>.  Of course, a compiler isn't
-      interested in these naming conventions, but they help to clarify
-      the scope of a given function or datatype.</para>
+    <para>La primera cosa que puede observar es que los tipos de
+      datos y funciones de Subversion están protegidos por un espacio
+      de nombrado <!-- TODO incluir NT sobre namespace? -->. Todo
+      símbolo público comienza con <literal>svn_</literal>,
+      seguido por un breve código que representa la librería
+      en la cual es definido (como <literal>wc</literal>,
+      <literal>client</literal>, <literal>fs</literal>,
+      etc.), seguido por un único carácter de subrayado
+      (<literal>_</literal>) y por último el resto del nombre
+      del símbolo. Las funciones semi públicas (usadas por varios
+      ficheros de código fuente de una librería pero no fuera de
+      ésta, y contenidas en los propios directorios de las librerías)
+      difieren de este esquema de nombres en el uso del carácter
+      de subrayado tras el código de librería, ya que usan doble
+      carácter de subrayado (<literal>__</literal>). Las funciones
+      que son privadas de un fichero particular no tienen prefijos
+      especiales, y son declaradas como <literal>static</literal>.
+      Por supuesto, el compilador no tiene interés alguno por estas
+      convenciones de nombrado, pero ayudan a clarificar el ámbito
+      de una función o tipo de datos.</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-2.1">
