@@ -66,7 +66,7 @@ II. New Client Behaviors
          There must be a system in place that tells users when locking
          is necessary;  ideally, it would prevent a user from
          beginning work in the first place.  If a lock already exists,
-         a user should be able to who created it, when, and why.
+         a user should be able to see who created it, when, and why.
  
    C. Lock manipulation via client
 
