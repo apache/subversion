@@ -84,8 +84,7 @@ analogous to CVS/ sudirs:
        repository               /* Where this stuff came from. */
        versions                 /* Version numbers for this directory */
        properties               /* Properties for this directory */
-       tree-edits               /* Records changes to tree structure */
-       prop-edits               /* Records changes to properties */
+       changes                  /* Uncommitted prop and tree changes */
        lock                     /* Optional, tells others this dir is busy */
        doing/                   /* What this dir is doing right now */
           action                    /* Tells the action in progress */
@@ -106,7 +105,7 @@ analogous to CVS/ sudirs:
             foo.c
             bar.c                   /* Would store bar.c's dirent props */
 
-`wc_vn'
+`wc_fmt'
 
    Says what version of the working copy adm format this is (so future
    clients can be backwards compatible easily).
@@ -119,64 +118,114 @@ analogous to CVS/ sudirs:
 
    This file holds the version number of this directory and its
    children -- that is to say, the version number for the root of the
-   repository tree from which this directory/file is derived.  
+   repository tree from which this directory/file is derived.  It
+   contains a single XML expression:
 
-   The first line represents the current directory:
-
-      . VersionNumber ThisDirName
-
-   and succeeding lines record files not at that version:
-
-      OtherVersionNumber FileName
+      <svn-wc-versions xmlns="http://subversion.tigris.org/xmlns/blah">
+        <entry name="" version="5"/>     <!-- empty name means current dir -->
+        <entry name="foo.c" version="5"/>
+        <entry name="bar.c" version="5"/>
+        <entry name="baz.c" version="6"/>
+      </svn-wc-versions>
 
    (names escaped appropriately, of course).  The directory's own
    VersionNumber is implicit for every child of the directory, so only
-   the exceptions need to be recorded.  For example
+   the exceptions need to be recorded.  If an entry does not appear in
+   the versions file, but is present in the text-base/ tree,  then it
+   is assumed to have the same version as the parent directory.
 
-      . 15 blah       /* Current dir is at 15, and all its files too... */
-      17 foo.c        /* ... except foo.c, which is at 17, and... */
-      20 bar.c        /* ... bar.c, which is at 20, and...
-      12 baz.c        /* ... bar.c, whose 12 might be result of "update -r" */
-
-   The versions of child directories are not recorded, because they
-   would have their own `SVN/versions'.  
+   Child directories do not get entries, because they will have their
+   own `SVN/versions' files, and recording the same information in two
+   places is the first step on the road to madness.
 
    The `versions' file discusses only things that exist in the
-   repository.  For example, if the user does "svn rename foo.c
-   qux.c", the versions file will still claim that foo.c is at version
-   17 (the rename gets recorded in the `tree-changes' file, described
+   repository.  For example, if the user does
+
+      svn rename foo.c qux.c
+
+   the versions file will still claim that foo.c is at version 17 (the
+   local rename is recorded in the `tree-changes' file, described
    later).  Only after the rename is committed does the line for foo.c
-   change to:
+   change to something like:
 
-      21 qux.c
+      <entry name="qux.c" version="21"/>
 
-   (the version number might be something other than 21, of course).
-   
 `properties'
 
-   Properties for this directory, in standard hashdump format.
+   Properties for this directory.  
 
-`tree-edits'
+   For now, this file is in svn hashdump format, because it's
+   convenient and its performance is good enough for now.  May move to
+   Berkeley DB if properties ever get that demanding.
 
-   Records adds, renames, and deletes involving this directory.
+`changes'
 
-      Operation NameHere OrigVersion OrigNameAsAbsolutePath
+   Records adds, renames, and deletes involving this directory's
+   immediate children, using tree-delta syntax:
 
-`prop-edits'
+      <tree-delta>
+         <new name="qux.c">
+           <file ancestor="/full/path/to/foo.c" version="17"/>
+         <delete name="foo.c"/>
+      </tree-delta>
 
-   Records changes to properties on this directory and files in it.
+   Note that to edit this structure, the entire thing has to be read
+   into memory and the pending change checked against it for
+   consistency.  For example, imagine the following sequence of
+   operations:
 
-      Target Op PropName [PropValue]
+      svn rename foo.c qux.c
+      svn rename bar.c qux.c
 
-`read-lock'
+   After the first command, the tree-edits file might look like this:
 
-   Present iff some client is reading this SVN/ subdir.
-   Write locks block on this.
+      <tree-delta>
+         <new name="qux.c">
+           <file ancestor="/full/path/to/foo.c" version="17"/>
+         <delete name="foo.c"/>
+      </tree-delta>
 
-`write-lock'
+   But after the second command, it should *not* look like this:
+   
+      <tree-delta>
+         <new name="qux.c">
+           <file ancestor="/full/path/to/foo.c" version="17"/>
+         <new name="qux.c">
+           <file ancestor="/full/path/to/bar.c" version="17"/>
+         <delete name="foo.c"/>
+         <delete name="bar.c"/>
+      </tree-delta>
 
-   Present iff some client is making changes in this SVN/ subdir.
-   Both read and write locks block on this.
+   ...because that would leave two entries for qux.c, with conflicting
+   ancestry.  Instead, the old qux.c entry should be replaced with a
+   new one, leaving:
+
+      <tree-delta>
+         <new name="qux.c">
+           <file ancestor="/full/path/to/bar.c" version="17"/>
+         <delete name="foo.c"/>
+         <delete name="bar.c"/>
+      </tree-delta>
+
+   This means we're going to have to read the whole tree delta into
+   some structure, make changes to the structure, and write it back
+   out.  (With the usual tmp file indirection, of course.)
+
+   kff todo: there is no way in that <delete> tag to know that the
+   foo.c being deleted is based in version 17, not the parent
+   directory's version (which could be different).  Is this okay?  If
+   not, we should just add the tag -- there's no reason, other than
+   Occam's Razor, to make these tree deltas exactly like the ones
+   described in client.texi.  Or maybe client.texi should be updated
+   if we end up changing the wc adm internal tree delta format.
+
+   Another example of a new need: when a file or dir gets moved out of
+   here, it would be nice to include a `local-destination' attribute
+   in the <delete> tag, so the working copy can find it easily.
+
+`lock'
+
+   Present iff some client is using this SVN/ subdir for anything.
 
 `doing'
 
@@ -226,17 +275,6 @@ todo: some loose ends
 
    1. filename escaping in SVN/versions
    2. 
-
-
-------------------------
-todo: make a concrete example using Jim's starting tree:
-
-   /dir1/file1
-         file2
-         dir2/file3
-              file4
-         dir3/file5
-
 
 
 
