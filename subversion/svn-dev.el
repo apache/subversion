@@ -12,10 +12,30 @@
 
 
 
+;;; Subversion C conventions
 (c-add-style "svn" '("gnu" (c-offsets-alist . ((inextern-lang . 0)))))
 (c-set-style "svn")
 (setq indent-tabs-mode nil)
 (setq angry-mob-with-torches-and-pitchforks t)
+
+
+
+;; Subversion Python conventions, plus some harmless helpers for
+;; people who don't have python mode set up by default.
+(autoload 'python-mode "python-mode" nil t)
+(setq auto-mode-alist (cons (cons "\\.py\\'" 'python-mode) auto-mode-alist))
+
+(defun svn-python-mode-hook ()
+  "Set up the Subversion python conventions.  The effect of this is
+local to the current buffer, which is presumably visiting a file in
+the Subversion project.  Python setup in other buffers will not be
+affected."
+  (make-local-variable 'py-indent-offset)
+  (setq py-indent-offset 2)
+  (make-local-variable 'py-smart-indentation)
+  (setq py-smart-indentation nil))
+
+(add-hook 'python-mode-hook 'svn-python-mode-hook)
 
 
 

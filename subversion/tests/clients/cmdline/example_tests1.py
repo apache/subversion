@@ -50,3 +50,7 @@ test_list = [ None,
 ## And run the main test routine on them:
 svn_test_main.client_test(test_list)
 
+### End of file.
+# local variables:
+# eval: (load-file "../../../svn-dev.el")
+# end:
