@@ -457,8 +457,10 @@
                     ["work directory history" svn-status-use-history t]
                     ["mark" svn-status-set-user-mark t]
                     ["unmark" svn-status-unset-user-mark t]
-                    ["toggle hide unknown" svn-status-toggle-hide-unknown t]
-                    ["toggle hide unmodified" svn-status-toggle-hide-unmodified t]
+                    ["hide unknown" svn-status-toggle-hide-unknown
+                     :style toggle :selected svn-status-hide-unknown]
+                    ["hide unmodified" svn-status-toggle-hide-unmodified
+                     :style toggle :selected svn-status-hide-unmodified]
                     ))
 
 (defun svn-status-mode ()
