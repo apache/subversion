@@ -487,7 +487,7 @@ file_diff (struct dir_baton *dir_baton,
       /* Delete compares text-base against empty file, modifications to the
          working-copy version of the deleted file are not wanted. */
 
-      /* Get svn:mimetype from pristine props of PATH. */
+      /* Get svn:mime-type from pristine props of PATH. */
       SVN_ERR (get_local_mimetypes (&pristine_mimetype, NULL, NULL,
                                     adm_access, path, pool));
 
@@ -507,7 +507,7 @@ file_diff (struct dir_baton *dir_baton,
     case svn_wc_schedule_add:
       empty_file = svn_wc__empty_file_path (path, pool);
 
-      /* Get svn:mimetype from working props of PATH. */
+      /* Get svn:mime-type from working props of PATH. */
       SVN_ERR (get_local_mimetypes (NULL, &working_mimetype, NULL,
                                     adm_access, path, pool));
 
@@ -558,7 +558,7 @@ file_diff (struct dir_baton *dir_baton,
           SVN_ERR (svn_wc_translated_file (&translated, path, adm_access,
                                            TRUE, pool));
           
-          /* Get svn:mimetype for both pristine and working file. */
+          /* Get svn:mime-type for both pristine and working file. */
           SVN_ERR (get_local_mimetypes (&pristine_mimetype, &working_mimetype,
                                         NULL, adm_access, path, pool));
 
