@@ -525,7 +525,6 @@ const char *svn_config_find_group (svn_config_t *cfg, const char *key,
                                    const char *master_section,
                                    apr_pool_t *pool)
 {
-  const char *exception_list;
   struct search_groups_baton gb;
 
   gb.key = key;
