@@ -94,7 +94,8 @@ typedef struct svn_wc__status_t
     svn_wc_status_none = 1,
     svn_wc_status_added,
     svn_wc_status_deleted,
-    svn_wc_status_modified
+    svn_wc_status_modified,
+    svn_wc_status_conflicted
     
   }  flag;
 
