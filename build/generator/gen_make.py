@@ -90,8 +90,7 @@ class Generator(gen_base.GeneratorBase):
       self.ofile.write('%s: %s\n\n' % (itype, string.join(outputs)))
 
     cfiles = [ ]
-    ### switch to use GRAPH
-    for target in self.targets.values():
+    for target in self.graph.get_all_sources(gen_base.DT_INSTALL):
       # .la files are handled by the standard 'clean' rule; clean all the
       # other targets
       if not isinstance(target, gen_base.TargetScript) \
