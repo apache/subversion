@@ -534,6 +534,38 @@ def cat_keyword_expansion(sbox):
                                       'cat', '-r', 'HEAD', mu_path)
   
 
+#----------------------------------------------------------------------
+def copy_propset_commit(sbox):
+  "copy, propset svn:eol-style, commit"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu2_path = os.path.join(wc_dir, 'A', 'mu2')
+
+  # Copy and propset
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy', mu_path, mu2_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'svn:eol-style', 'native',
+                                     mu2_path)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/mu2' : Item(status='A ', wc_rev='-', repos_rev=1, copied='+')
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Commit, at one stage this dumped core
+  expected_output = wc.State(wc_dir, {
+    'A/mu2' : Item(verb='Adding'),
+    })
+  expected_status.tweak(repos_rev=2)
+  expected_status.tweak('A/mu2', status='  ', wc_rev=2, copied=None)
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output, expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+
+  
 ########################################################################
 # Run the tests
 
@@ -548,6 +580,7 @@ test_list = [ None,
               eol_change_is_text_mod,
               keyword_expanded_on_checkout,
               cat_keyword_expansion,
+              copy_propset_commit,
              ]
 
 if __name__ == '__main__':

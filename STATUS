@@ -45,14 +45,6 @@ Candidate changes:
        -1: brane [until someone explains to me why this should be a
                   Unix-only change]
 
-  * r10676
-    Fix segfault when committing renamed-file with changed svn:eol-style prop.
-    Justification:
-        Segfaults are bad.  One-line fix to prevent deref'ing NULL.
-    Votes:
-      +1: sussman, jpieper, breser
-      +0: (philip?  sussman is guessing here)
-
   * r10889 (Issue #1914)
     Make external diff3 work again.
     Justification:
