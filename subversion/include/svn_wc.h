@@ -795,6 +795,10 @@ svn_error_t *svn_wc_get_switch_editor (svn_stringbuf_t *anchor,
    props, not just 'regular' ones that the user sees.  (See 'enum
    svn_prop_kind').
 
+   If NEW_URL is non-NULL, then this URL will be attached to the file
+   in the 'entries' file.  Otherwise, the file will simply "inherit"
+   it's URL from the parent dir.
+
    POOL is used for all bookkeeping work during the installation.
  */
 svn_error_t *svn_wc_install_file (const char *file_path,
@@ -802,6 +806,7 @@ svn_error_t *svn_wc_install_file (const char *file_path,
                                   const char *new_text_path,
                                   const apr_array_header_t *props,
                                   svn_boolean_t is_full_proplist,
+                                  const char *new_URL,
                                   apr_pool_t *pool);
 
 

@@ -1245,6 +1245,7 @@ svn_wc_install_file (const char *file_path,
                      const char *new_text_path,
                      const apr_array_header_t *props,
                      svn_boolean_t is_full_proplist,
+                     const char *new_URL,
                      apr_pool_t *pool)
 {
   apr_file_t *log_fp = NULL;
@@ -2041,6 +2042,21 @@ svn_wc_install_file (const char *file_path,
                                NULL);
     }
 
+
+  /* Possibly install a *non*-inherited URL in the entry. */
+  if (new_URL)
+    {
+      svn_xml_make_open_tag (&entry_accum,
+                             pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_MODIFY_ENTRY,
+                             SVN_WC__LOG_ATTR_NAME,
+                             basename,
+                             SVN_WC_ENTRY_ATTR_URL,
+                             svn_stringbuf_create (new_URL, pool),
+                             NULL);
+    }
+
   /* Write our accumulation of log entries into a log file */
   apr_err = apr_file_write_full (log_fp, entry_accum->data, 
                                  entry_accum->len, NULL);
@@ -2100,6 +2116,7 @@ close_file (void *file_baton)
                                 new_text_path ? new_text_path->data : NULL,
                                 propchanges,
                                 FALSE, /* -not- a full proplist */
+                                NULL, /* inherit URL from parent dir. */
                                 fb->pool));
 
   /* Tell the parent directory it has one less thing to worry about. */
