@@ -120,6 +120,46 @@ svn_fs__putsize (char *data, apr_size_t len, apr_size_t value)
 
 /*** Keys for reps and strings. ***/
 
+void
+svn_fs__add_keys (const char *key1, const char *key2, char *result)
+{
+  int i1 = strlen (key1);
+  int i2 = strlen (key2);
+  int i3 = 0;
+  int val;
+  int carry = 0;
+  char buf[SVN_FS__MAX_KEY_SIZE + 2];
+
+  while ((i1 >= 0) || (i2 >= 0) || (carry > 0))
+    {
+      val = carry;
+      if (i1>=0)
+        val += (key1[i1] <= '9') ? (key1[i1] - '0') : (key1[i1] - 'a' + 10);
+
+      if (i2>=0)
+        val += (key2[i2] <= '9') ? (key2[i2] - '0') : (key2[i2] - 'a' + 10);
+
+      if (val > 35)
+        carry = val / 36;
+
+      val = val % 36;
+      
+      buf[i3++] = (val <= 9) ? (val + '0') : (val - 10 + 'a');
+
+      if (i1>=0)
+        i1--;
+      if (i2>=0)
+        i2--;
+    }
+
+  /* Now reverse the resulting string and NULL terminate it. */
+  for (i1 = 0; i1 < i3; i1++)
+    result[i1] = buf[i3 - i1 - 1];
+
+  result[i1 - 1] = '\0';
+}
+      
+
 const char svn_fs__next_key_key[] = "next-key";
 
 

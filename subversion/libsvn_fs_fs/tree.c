@@ -2190,7 +2190,7 @@ svn_fs_deltify_revision (svn_fs_t *fs,
                          svn_revnum_t revision,
                          apr_pool_t *pool)
 {
-  abort ();
+  /* Deltify is a no-op for fs_fs. */
 
   return SVN_NO_ERROR;
 }
