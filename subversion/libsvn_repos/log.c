@@ -143,6 +143,9 @@ svn_repos_get_logs (svn_fs_t *fs,
          `end'.  Premature optimization right now, however.
       */
 
+#ifndef SVN_REPOS_ALLOW_LOG_WITH_PATHS
+      discover_changed_paths = FALSE;
+      
       if ((this_rev > 0) && 
           (discover_changed_paths || (paths && paths->nelts > 0)))
         {
@@ -218,6 +221,7 @@ svn_repos_get_logs (svn_fs_t *fs,
           if (! val)
             continue;
         }
+#endif /* SVN_REPOS_ALLOW_LOG_WITH_PATHS */
 
       SVN_ERR ((*receiver) (receiver_baton,
                             (discover_changed_paths ? changed_paths : NULL),
