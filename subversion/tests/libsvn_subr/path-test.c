@@ -186,6 +186,60 @@ test_is_url (const char **msg,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+test_is_uri_safe (const char **msg,
+                  svn_boolean_t msg_only,
+                  apr_pool_t *pool)
+{
+  int i;
+
+  /* Paths to test. */
+  static const char * const paths[] = { 
+    "http://svn.collab.net/repos",
+    "http://svn.collab.net/repos%",
+    "http://svn.collab.net/repos%/svn",
+    "http://svn.collab.net/repos%2g",
+    "http://svn.collab.net/repos%2g/svn",
+    "http://svn.collab.net/repos%%",
+    "http://svn.collab.net/repos%%/svn",
+    "http://svn.collab.net/repos%2a",
+    "http://svn.collab.net/repos%2a/svn",
+  };
+
+  /* Expected results of the tests. */
+  static const svn_boolean_t retvals[] = {
+    TRUE,
+    FALSE,
+    FALSE,
+    FALSE,
+    FALSE,
+    TRUE,
+    TRUE,
+    TRUE,
+    TRUE };
+
+  *msg = "test svn_path_is_uri_safe";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = 0; i < (sizeof (paths) / sizeof (const char *)); i++)
+    {
+      svn_boolean_t retval;
+
+      retval = svn_path_is_uri_safe (paths[i]);
+      if (retvals[i] != retval)
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_path_is_uri_safe (%s) returned %s instead of %s",
+           paths[i], retval ? "TRUE" : "FALSE", retvals[i] ? "TRUE" : "FALSE");
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 test_uri_encode (const char **msg,
                  svn_boolean_t msg_only,
@@ -516,6 +570,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (test_path_is_child),
     SVN_TEST_PASS (test_path_split),
     SVN_TEST_PASS (test_is_url),
+    SVN_TEST_PASS (test_is_uri_safe),
     SVN_TEST_PASS (test_uri_encode),
     SVN_TEST_PASS (test_join),
     SVN_TEST_PASS (test_basename),
