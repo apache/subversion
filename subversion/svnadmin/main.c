@@ -493,12 +493,11 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
   svn_fs_t *fs;
-  svn_stringbuf_t *file_contents, *file_contents_utf8;
-  const char *file_contents_utf8_LF;
-  svn_string_t log_contents;
+  svn_stringbuf_t *file_contents;
   const char *filename_utf8;
   apr_array_header_t *args;
-  
+  svn_string_t *log_contents = svn_string_create ("", pool);
+
   if (opt_state->start_revision.kind != svn_opt_revision_number)
     return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
                               "missing revision");
@@ -516,18 +515,13 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                     APR_ARRAY_IDX (args, 0, const char *),
                                     NULL, pool));
   SVN_ERR (svn_stringbuf_from_file (&file_contents, filename_utf8, pool)); 
-  SVN_ERR (svn_utf_stringbuf_to_utf8 (&file_contents_utf8, file_contents,
-                                      pool));
-  SVN_ERR (svn_subst_translate_cstring (file_contents_utf8->data,
-                                        &file_contents_utf8_LF,
-                                        "\n",        /* the 'native' eol */
-                                        FALSE,       /* don't repair */
-                                        NULL,        /* no keywords */
-                                        FALSE,       /* no expansion */
-                                        pool));
-  log_contents.data = file_contents_utf8_LF;
-  log_contents.len = strlen(file_contents_utf8_LF);
-  
+
+  log_contents->data = file_contents->data;
+  log_contents->len = file_contents->len;
+
+  SVN_ERR (svn_subst_translate_string (&log_contents, log_contents,
+                                       NULL, pool));
+
   /* open the filesystem  */
   SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs (repos);
@@ -535,7 +529,7 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* set the revision property */
   SVN_ERR (svn_fs_change_rev_prop (fs, opt_state->start_revision.value.number,
                                    SVN_PROP_REVISION_LOG,
-                                   &log_contents, pool));
+                                   log_contents, pool));
 
   SVN_ERR (svn_repos_close (repos));
 

@@ -205,30 +205,10 @@ get_property (svn_string_t **prop_value,
     SVN_ERR (svn_fs_revision_prop (&raw_value, c->fs, c->rev_id,
                                    prop_name, pool));
 
-  if (! svn_prop_is_svn_prop (prop_name))
-    *prop_value = raw_value;
-  else
-    { 
-      svn_error_t *err;
-      const char *val_native_locale, *val_native_locale_eol;
-      err = svn_utf_cstring_from_utf8 (&val_native_locale,
-                                       raw_value->data, pool);
-      if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
-        val_native_locale = svn_utf_cstring_from_utf8_fuzzy (raw_value->data, 
-                                                             pool);
-      else if (err)
-        return err;
-      
-      SVN_ERR (svn_subst_translate_cstring (val_native_locale,
-                                            &val_native_locale_eol,
-                                            APR_EOL_STR, /* the 'native' eol */
-                                            FALSE,       /* no repair */
-                                            NULL,        /* no keywords */
-                                            FALSE,       /* no expansion */
-                                            pool));
+  if (svn_prop_needs_translation (prop_name))
+    SVN_ERR (svn_subst_detranslate_string (&raw_value, raw_value, pool));
 
-      *prop_value = svn_string_create (val_native_locale_eol, pool);
-    }
+  *prop_value = raw_value;
 
   return SVN_NO_ERROR;
 }
