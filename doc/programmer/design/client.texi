@@ -78,7 +78,7 @@ revision numbers and property lists, pristine revisions of all the files
 came, and any local changes (such as uncommitted adds, deletes, and
 renames) that affect @file{dir}.
 
-Although often it would often be possible to deduce certain information
+Although it would often be possible to deduce certain information
 (such as the origin repository) by examining parent directories, this is
 avoided in favor of making each directory be as much a self-contained
 unit as possible.
