@@ -69,6 +69,7 @@ Candidate changes:
     without GNU tar due to filename length.
     Votes:
       +1: jerenkrantz
+      +0: dlr
 
   * r8969
     Do not copy doc/book/book/images into sandbox.
