@@ -14,7 +14,7 @@ SVN_TOP_DIR := $(shell pwd)/../..
 
 NAME := $(shell grep '^Name:' < $(SPECFILE) | sed -e 's/^Name: //')
 VERSION := $(shell grep '^Version: ' < $(SPECFILE) | sed 's/^Version: //')
-RELEASE := $(RevisionNumber)
+RELEASE := $(shell svn st -u -v $(SPECFILE) | (read one two three; echo $$two))
 
 SOURCE_RPM_DIR := $(HOME)/$(RPMDIR)/sources/$(NAME)-$(VERSION)-$(RELEASE)
 
@@ -33,13 +33,21 @@ RPMDIRS := \
 	$(HOME)/$(RPMDIR)/srpms \
 	$(HOME)/$(RPMDIR)/tmp
 
-all :
-	@echo "Usage: Make rpm RevisionNumber=<Number>"
+all : rpm
 
-rpm : build_srpm_files build_rpm
+subversion rpm : check_release build_srpm_files build_rpm_files
+
+check_release :
+	@if [ "$(RELEASE)"x = "x" ]; \
+	   then \
+		echo "Please specifiy RELEASE"; \
+		exit 1 \
+	    else \
+		exit 0; \
+	fi
 	@echo "Making $(NAME)-$(VERSION)-$(RELEASE) (S)RPM..."
 
-build_rpm : build_srpm_files
+build_rpm_files : build_srpm_files
 	cd $(SOURCE_RPM_DIR); rpm -ba $(SPECFILE)
 
 build_srpm_files : $(HOME)/.rpmmacros $(HOME)/$(RPMDIR) subversion.spec
