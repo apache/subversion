@@ -182,6 +182,13 @@ svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
 /** The value to force the executable property to when set */
 #define SVN_PROP_EXECUTABLE_VALUE "*"
 
+/** Set to TRUE ('*') if we want a file to be set to read-only when
+ * not locked.  FALSE is indicated by deleting the property. */
+#define SVN_PROP_NEEDS_LOCK  SVN_PROP_PREFIX "needs-lock"
+
+/** The value to force the needs-lock property to when set */
+#define SVN_PROP_NEEDS_LOCK_VALUE "*"
+
 /** Set if the file should be treated as a special file. */
 #define SVN_PROP_SPECIAL  SVN_PROP_PREFIX "special"
 
