@@ -56,13 +56,13 @@ def externals_test_setup(sbox):
 
   The arrangement of the externals in the first repository is:
 
-     /A/C/     ==>  exdir_G       <schema>:///<other_repos>/A/D/G
-                    exdir_H  -r 1 <schema>:///<other_repos>/A/D/H
+     /A/C/     ==>  exdir_G       <scheme>:///<other_repos>/A/D/G
+                    exdir_H  -r 1 <scheme>:///<other_repos>/A/D/H
 
-     /A/D/     ==>  exdir_A          <schema>:///<other_repos>/A
-                    exdir_A/G        <schema>:///<other_repos>/A/D/G
-                    exdir_A/H  -r 3  <schema>:///<other_repos>/A/D/H
-                    x/y/z/blah       <schema>:///<other_repos>/A/B
+     /A/D/     ==>  exdir_A          <scheme>:///<other_repos>/A
+                    exdir_A/G        <scheme>:///<other_repos>/A/D/G
+                    exdir_A/H  -r 3  <scheme>:///<other_repos>/A/D/H
+                    x/y/z/blah       <scheme>:///<other_repos>/A/B
 
   NOTE: Before calling this, use externals_test_cleanup(SBOX) to
   remove a previous incarnation of the other repository.

@@ -80,11 +80,11 @@ class SVNRepositoryCopyFailure(Failure):
 # Windows specifics
 if sys.platform == 'win32':
   windows = 1
-  file_schema_prefix = 'file:///'
+  file_scheme_prefix = 'file:///'
   _exe = '.exe'
 else:
   windows = 0
-  file_schema_prefix = 'file://'
+  file_scheme_prefix = 'file://'
   _exe = ''
 
 # The locations of the svn, svnadmin and svnlook binaries, relative to
@@ -109,7 +109,7 @@ verbose_mode = 0
 cleanup_mode = 0
 
 # Global URL to testing area.  Default to ra_local, current working dir.
-test_area_url = file_schema_prefix + os.path.abspath(os.getcwd())
+test_area_url = file_scheme_prefix + os.path.abspath(os.getcwd())
 if windows == 1:
   test_area_url = string.replace(test_area_url, '\\', '/')
 
@@ -432,12 +432,12 @@ def set_repos_paths(repo_dir):
 
 
 def canonize_url(input):
-  "Canonize the url, if the schema is unknown, returns intact input"
+  "Canonize the url, if the scheme is unknown, returns intact input"
   
   m = re.match(r"^((file://)|((svn|svn\+ssh|http|https)(://)))", input)
   if m:
-    schema = m.group(1)
-    return schema + re.sub(r'//*', '/', input[len(schema):])
+    scheme = m.group(1)
+    return scheme + re.sub(r'//*', '/', input[len(scheme):])
   else:
     return input
 

@@ -688,7 +688,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "  2. Rewrite working copy URL metadata to reflect a syntactic change "
        "only.\n"
        "     This is used when repository's root URL changes (such as a "
-       "schema\n"
+       "scheme\n"
        "     or hostname change) but your working copy still reflects the "
        "same\n"
        "     directory within the same repository.\n"),

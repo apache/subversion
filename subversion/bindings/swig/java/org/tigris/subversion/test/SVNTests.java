@@ -34,7 +34,7 @@ public class SVNTests extends TestCase
     protected SVNAdmin admin;
     protected SVNClient client;
     */
-    protected String urlSchema = "file:///";
+    protected String urlScheme = "file:///";
     protected File rootDir = new File(System.getProperty("user.dir"));
     protected String testBaseName;
     protected static int testCounter;
@@ -165,7 +165,7 @@ public class SVNTests extends TestCase
 
     protected String makeReposURL(File file)
     {
-        return urlSchema + file.getAbsolutePath().replace(File.separatorChar,
+        return urlScheme + file.getAbsolutePath().replace(File.separatorChar,
                                                           '/');
     }
 

@@ -63,7 +63,7 @@ for opt,arg in opts:
       log = 'svn-tests.log'
       run_svnserve = 1
     else:
-      # Don't know this schema, but who're we to judge whether it's
+      # Don't know this scheme, but who're we to judge whether it's
       # correct or not?
       log = 'url-tests.log'
   elif opt == '--svnserve-args':
