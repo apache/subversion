@@ -494,9 +494,9 @@ fetch_file (svn_ra_session_t *ras,
   return err ? err : err2;
 }
 
-svn_error_t * svn_ra_dav__checkout (void *session_baton,
-                                    const svn_delta_edit_fns_t *editor,
-                                    void *edit_baton)
+svn_error_t * svn_ra_dav__do_checkout (void *session_baton,
+                                       const svn_delta_edit_fns_t *editor,
+                                       void *edit_baton)
 {
   svn_ra_session_t *ras = session_baton;
   int recurse = 1;      /* ### until it gets passed to us */
@@ -639,125 +639,46 @@ svn_error_t * svn_ra_dav__checkout (void *session_baton,
 ** ### docco...
 */
 
-#if 0
-static svn_error_t *
-update_delete_entry (svn_string_t *name,
-                     void *parent_baton)
+static svn_error_t * reporter_set_directory(void *report_baton,
+                                            svn_string_t *dir_path,
+                                            svn_revnum_t revision)
 {
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-update_add_dir (svn_string_t *name,
-                void *parent_baton,
-                svn_string_t *ancestor_path,
-                svn_revnum_t ancestor_revision,
-                void **child_baton)
+static svn_error_t * reporter_set_file(void *report_baton,
+                                       svn_string_t *file_path,
+                                       svn_revnum_t revision)
 {
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-update_rep_dir (svn_string_t *name,
-                void *parent_baton,
-                svn_string_t *ancestor_path,
-                svn_revnum_t ancestor_revision,
-                void **child_baton)
+static svn_error_t * reporter_finish_report(void *report_baton)
 {
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-update_change_dir_prop (void *dir_baton,
-                        svn_string_t *name,
-                        svn_string_t *value)
+static const svn_ra_reporter_t ra_dav_reporter = {
+  reporter_set_directory,
+  reporter_set_file,
+  reporter_finish_report
+};
+
+svn_error_t * svn_ra_dav__do_update(void *session_baton,
+                                    const svn_ra_reporter_t **reporter,
+                                    void **report_baton,
+                                    apr_array_header_t *targets,
+                                    const svn_delta_edit_fns_t *wc_update,
+                                    void *wc_update_baton)
 {
+  *reporter = &ra_dav_reporter;
+
+  /* ### need something here */
+  /* ### put the session and wc_* values into the baton */
+  *report_baton = NULL;
+
   return SVN_NO_ERROR;
 }
-
-static svn_error_t *
-update_close_dir (void *dir_baton)
-{
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-update_add_file (svn_string_t *name,
-                 void *parent_baton,
-                 svn_string_t *ancestor_path,
-                 svn_revnum_t ancestor_revision,
-                 void **file_baton)
-{
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-update_rep_file (svn_string_t *name,
-                 void *parent_baton,
-                 svn_string_t *ancestor_path,
-                 svn_revnum_t ancestor_revision,
-                 void **file_baton)
-{
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-update_apply_txdelta (void *file_baton, 
-                      svn_txdelta_window_handler_t **handler,
-                      void **handler_baton)
-{
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-update_change_file_prop (void *file_baton,
-                         svn_string_t *name,
-                         svn_string_t *value)
-{
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-update_close_file (void *file_baton)
-{
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_ra_dav__get_update_editor(void *session_baton,
-                              const svn_delta_edit_fns_t **editor,
-                              void **edit_baton,
-                              const svn_delta_edit_fns_t *wc_update,
-                              void *wc_update_baton,
-                              svn_string_t *URL)
-{
-  svn_pool_t *pool = Need to get a pool from somewhere;
-  svn_delta_edit_fns_t *update_editor = svn_delta_default_editor(pool);
-
-  /* Set up the editor.
-  ** This structure is used during the update process. An external caller
-  ** uses these callbacks to describe all the changes in the working copy.
-  ** These are communicated to the server, which then decides how to update
-  ** the client to a specific version/latest/label/etc.
-  */
-  update_editor->update_delete_entry = update_delete_entry;
-  update_editor->update_add_dir = update_add_dir;
-  update_editor->update_rep_dir = update_rep_dir;
-  update_editor->update_change_dir_prop = update_change_dir_prop;
-  update_editor->update_close_dir = update_close_dir;
-  update_editor->update_add_file = update_add_file;
-  update_editor->update_rep_file = update_rep_file;
-  update_editor->update_apply_txdelta = update_apply_txdelta;
-  update_editor->update_change_file_prop = update_change_file_prop;
-  update_editor->update_close_file = update_close_file;
-
-  /* shove the session and wc_* values into our baton */
-
-  *editor = update_editor;
-  *edit_baton = NULL;
-  return SVN_NO_ERROR;
-}
-#endif /* 0 */
 
 
 /* 
