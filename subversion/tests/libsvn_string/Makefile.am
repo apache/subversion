@@ -11,5 +11,8 @@ INCLUDES = -I../../include -I../../../apr/include
 stringtest_LDADD = ../libsvn_string.la ../../../apr/libapr.a
 
 
+## Automatic test scripts to run for `make check`
+
+TESTS = stringtest
 
 

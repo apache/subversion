@@ -7,3 +7,7 @@
 ##         libsvn_wc
 
 SUBDIRS = libsvn_string libsvn_subr
+
+## Include these extra files when building `dist' target
+
+EXTRA_DIST = LICENSE include/svn_types.h
