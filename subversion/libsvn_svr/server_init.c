@@ -79,14 +79,11 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
      lists */
 
   svn_svr_policies_t *my_policies = 
-    (svn_svr_policies_t *) ap_palloc (pool, sizeof(svn_svr_policies_t));
+    (svn_svr_policies_t *) ap_palloc (pool, sizeof(svn_svr_policies_t *));
 
   my_policies->repos_aliases = ap_make_hash (pool);
-
-  my_policies->global_restrictions = ap_make_array (pool, 0,
-                                                    sizeof(svn_string_t));
-
-  my_policies->plugins = ap_make_array (pool, 0, sizeof(svn_svr_plugin_t));
+  my_policies->global_restrictions = ap_make_hash (pool);
+  my_policies->plugins = ap_make_hash (pool);
 
   /* A policy structure has its own private memory pool, too, for
      miscellaneous useful things.  */
@@ -97,24 +94,34 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
     {
       /* Can't create a private memory pool for the policy structure?
          Then just use the one that was passed in instead.  */
-      svn_handle_error (svn_create_error (result, FALSE, pool));
+      svn_string_t *msg = 
+        svn_string_create 
+        ("svr_init(): warning: can't alloc pool for policy structure");
+      svn_handle_error (svn_create_error (result, FALSE, msg, pool));
 
       my_policies->pool = pool;
     }
 
 
-  /* Now walk through our configdata "uber-hash" and .... */
-
-  /* store any repository aliases, */
-
-  /* store any  general security policies, */
-
-  /* use apr's DSO routines to load all server plugins, 
-     and call pluginname_init (&my_policies) in each one;
-     (the result is a list of plugins inside my_policies)
-  */
+  /* Now walk through our Uberhash... */
+  {
+    ap_hash_index_t *hash_index;
+    void *key, *val;
+    size_t keylen;
 
 
+        
+    /* store any repository aliases, */
+    
+    /* store any  general security policies, */
+    
+    /* use apr's DSO routines to load each server plugin;
+       use dlsym to get a handle on the named init routine;
+       call init_routine (&my_policies, dso_filename, pool); */
+       
+   
+  }
+  
   return my_policies;
 }
 
@@ -125,12 +132,14 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
 
 void
 svn_svr_register_plugin (svn_svr_policies_t *policy,
+                         svn_string_t *dso_filename,
                          svn_svr_plugin_t *new_plugin)
 {
   /* just need to push the new plugin pointer onto the policy's
      array of plugin pointers.  */
 
-  *(svn_svr_plugin_t **) ap_push_array (policy->plugins) = new_plugin;
+  /* Store in policy->plugins hashtable : 
+     KEY = dso_filename, val = new_plugin */
 
 }
 
@@ -144,5 +153,4 @@ svn_svr_register_plugin (svn_svr_policies_t *policy,
 /* --------------------------------------------------------------
  * local variables:
  * eval: (load-file "../svn-dev.el")
- * end:
- */
+ * end: */
