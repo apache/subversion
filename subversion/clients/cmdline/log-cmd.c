@@ -279,7 +279,7 @@ log_message_receiver (void *baton,
           if (log_item->copyfrom_path 
               && SVN_IS_VALID_REVNUM (log_item->copyfrom_rev))
             {
-              SVN_ERR (svn_cmdline_path_local_style_from_utf8
+              SVN_ERR (svn_utf_cstring_from_utf8
                        (&path_stdout, log_item->copyfrom_path, pool));
               copy_data 
                 = apr_psprintf (pool, 
@@ -287,8 +287,7 @@ log_message_receiver (void *baton,
                                 path_stdout,
                                 log_item->copyfrom_rev);
             }
-          SVN_ERR (svn_cmdline_path_local_style_from_utf8
-                   (&path_stdout, path, pool));
+          SVN_ERR (svn_utf_cstring_from_utf8 (&path_stdout, path, pool));
           SVN_ERR (svn_stream_printf (lb->out, pool, "   %c %s%s" APR_EOL_STR,
                                       log_item->action, path_stdout,
                                       copy_data));
