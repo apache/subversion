@@ -117,6 +117,7 @@ log_message_receiver (void *baton,
 {
   struct log_message_receiver_baton *lb = baton;
   const char *author_native, *date_native, *msg_native;
+  svn_error_t *err;
 
   /* Number of lines in the msg. */
   int lines;
@@ -130,9 +131,51 @@ log_message_receiver (void *baton,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (&author_native, author, pool));
-  SVN_ERR (svn_utf_cstring_from_utf8 (&date_native, date, pool));
-  SVN_ERR (svn_utf_cstring_from_utf8 (&msg_native, msg, pool));
+  /* If log data has UTF-8 characters that cannot be converted to to
+     the local encoding, we shouldn't stop cold, so we just emit a
+     placeholder and move on.  (Subversion's logs actually have such
+     data, in revision 2600 for example.)
+
+     In general, Subversion's behavior on encountering unconvertible
+     data depends on context.  There may becircumstances where
+     conversion failure should be a fatal error, it's just that log
+     isn't one of them.  If a particular log message can't be
+     converted, that doesn't imply others will fail too.
+
+     A more sophisticated solution would be a fuzzy conversion
+     function that converts what it can and uses '?' for the bad
+     bytes, or perhaps ?\XXX to give the UTF escape code, or whatever.
+
+     But the first task is to unbreak "svn log" for most users; fancy
+     stuff can come later! */
+
+  err = svn_utf_cstring_from_utf8 (&author_native, author, pool);
+  if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
+    {
+      SVN_ERR (svn_utf_cstring_from_utf8
+               (&author_native, "[unconvertible author]", pool));
+    }
+  else if (err)
+    return err;
+
+  err = svn_utf_cstring_from_utf8 (&date_native, date, pool);
+  if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
+    {
+      SVN_ERR (svn_utf_cstring_from_utf8
+               (&date_native, "[unconvertible date]", pool));  /* unlikely! */
+    }
+  else if (err)
+    return err;
+
+  err = svn_utf_cstring_from_utf8 (&msg_native, msg, pool);
+  if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
+    {
+      SVN_ERR (svn_utf_cstring_from_utf8
+               (&msg_native, "[unconvertible log msg]", pool));
+    }
+  else if (err)
+    return err;
+
 
   {
     /* Convert date to a format for humans. */
