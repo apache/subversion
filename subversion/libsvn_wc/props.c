@@ -1026,6 +1026,68 @@ svn_wc__strip_entry_prefix (svn_stringbuf_t *name)
 
 
 
+svn_error_t *
+svn_wc__get_eol_style (enum svn_wc__eol_style *style,
+                       const char **eol,
+                       const char *path,
+                       apr_pool_t *pool)
+{
+  /* I hate stringbufs. */
+  svn_stringbuf_t *propval;
+  svn_stringbuf_t *propname = svn_stringbuf_create (SVN_PROP_EOL_STYLE, pool);
+
+  /* Get the property value. */
+  SVN_ERR (svn_wc_prop_get (&propval, propname,
+                            svn_stringbuf_create (path, pool), pool));
+
+  /* Convert it. */
+  svn_wc__eol_style_from_value (style, eol,
+                                propval ? propval->data : NULL);
+
+  return SVN_NO_ERROR;
+}
+
+
+void 
+svn_wc__eol_style_from_value (enum svn_wc__eol_style *style,
+                              const char **eol,
+                              const char *value)
+{
+  if (value == NULL)
+    {
+      /* property dosen't exist. */
+      *style = svn_wc__eol_style_none;
+      *eol = NULL;
+    }
+  else if (! strcmp ("native", value))
+    {
+      *style = svn_wc__eol_style_native;
+      *eol = APR_EOL_STR;       /* whee, a portability library! */
+    }
+  else if (! strcmp ("LF", value))
+    {
+      *style = svn_wc__eol_style_fixed;
+      *eol = "\n";
+    }
+  else if (! strcmp ("CR", value))
+    {
+      *style = svn_wc__eol_style_fixed;
+      *eol = "\r";
+    }
+  else if (! strcmp ("CRLF", value))
+    {
+      *style = svn_wc__eol_style_fixed;
+      *eol = "\r\n";
+    }
+  else
+    {
+      /* unrecognized value of property;  equivalent to non-existence. */
+      *style = svn_wc__eol_style_none;
+      *eol = NULL;
+    }
+}
+
+
 
 /*
  * local variables:

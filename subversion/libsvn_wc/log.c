@@ -54,12 +54,25 @@ enum svn_wc__xfer_action {
 
 
 /* Copy (or rename, if RENAME is non-zero) NAME to DEST, assuming that
-   PATH is the common parent of both locations. */
+   PATH is the common parent of both locations. 
+
+   If ACTION is 'cp', then do translation IFF any of EOL_STR,
+   REVISION, DATE, AUTHOR, or URL are non-NULL.  When doing
+   translation, setting REPAIR indicates that inconsistent line
+   endings in SRC are translated to EOL_STR; else error is returned.
+   (For more info, read the docstring of svn_io_copy_and_translate).
+*/
 static svn_error_t *
 file_xfer_under_path (svn_stringbuf_t *path,
                       const char *name,
                       const char *dest,
                       enum svn_wc__xfer_action action,
+                      const char *eol_str,
+                      svn_boolean_t repair,
+                      const char *revision,
+                      const char *date,
+                      const char *author,
+                      const char *url,                      
                       apr_pool_t *pool)
 {
   apr_status_t status;
@@ -72,19 +85,29 @@ file_xfer_under_path (svn_stringbuf_t *path,
   svn_path_add_component_nts (full_dest_path, dest, svn_path_local_style);
 
   switch (action)
-  {
-  case svn_wc__xfer_append:
-    return svn_io_append_file (full_from_path, full_dest_path, pool);
-  case svn_wc__xfer_cp:
-    return svn_io_copy_file (full_from_path, full_dest_path, pool);
-  case svn_wc__xfer_mv:
-    status = apr_file_rename (full_from_path->data,
+    {
+    case svn_wc__xfer_append:
+      return svn_io_append_file (full_from_path, full_dest_path, pool);
+      
+    case svn_wc__xfer_cp:
+      return svn_io_copy_and_translate (full_from_path->data,
+                                        full_dest_path->data,
+                                        eol_str,
+                                        repair,
+                                        revision,
+                                        date,
+                                        author,
+                                        url,
+                                        pool);
+
+    case svn_wc__xfer_mv:
+      status = apr_file_rename (full_from_path->data,
                               full_dest_path->data, pool);
-    if (status)
-      return svn_error_createf (status, 0, NULL, pool,
-                                "file_xfer_under_path: "
-                                "can't move %s to %s",
-                                name, dest);
+      if (status)
+        return svn_error_createf (status, 0, NULL, pool,
+                                  "file_xfer_under_path: "
+                                  "can't move %s to %s",
+                                  name, dest);
   }
 
   return SVN_NO_ERROR;
@@ -238,15 +261,29 @@ log_do_file_xfer (struct log_runner *loggy,
                   const XML_Char **atts)
 {
   svn_error_t *err;
-  const char *dest = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_DEST, atts);
+  svn_boolean_t repair = FALSE;
+  const char *dest = NULL, *eol_str = NULL, *revision = NULL;
+  const char *date = NULL, *author = NULL, *url = NULL;
 
+  /* We have the name (src), and the destination is absolutely required. */
+  dest = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_DEST, atts);
   if (! dest)
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
                               "missing dest attr in %s", loggy->path->data);
 
-  /* Else. */
+  /* Optional: try to get any other translation-related attributes. */
+  eol_str = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_EOL_STR, atts);
+  revision = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_REVISION, atts);
+  date = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_DATE, atts);
+  author = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_AUTHOR, atts);
+  url = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_URL, atts);
 
-  err = file_xfer_under_path (loggy->path, name, dest, action, loggy->pool);
+  if (svn_xml_get_attr_value (SVN_WC__LOG_ATTR_REPAIR, atts))
+    repair = TRUE;
+
+  err = file_xfer_under_path (loggy->path, name, dest, action, 
+                              eol_str, repair, revision, date, author, url,
+                              loggy->pool);
   if (err)
     signal_error (loggy, err);
 

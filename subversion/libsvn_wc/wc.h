@@ -425,6 +425,11 @@ svn_error_t *svn_wc__adm_destroy (svn_stringbuf_t *path,
 #define SVN_WC__LOG_ATTR_REVISION       "revision"
 #define SVN_WC__LOG_ATTR_TEXT_REJFILE   "text-rejfile"
 #define SVN_WC__LOG_ATTR_PROP_REJFILE   "prop-rejfile"
+#define SVN_WC__LOG_ATTR_EOL_STR        "eol-str"
+#define SVN_WC__LOG_ATTR_DATE           "date"
+#define SVN_WC__LOG_ATTR_AUTHOR         "author"
+#define SVN_WC__LOG_ATTR_URL            "url"
+#define SVN_WC__LOG_ATTR_REPAIR         "repair"
 /* The rest are for SVN_WC__LOG_RUN_CMD.  Extend as necessary. */
 #define SVN_WC__LOG_ATTR_INFILE         "infile"
 #define SVN_WC__LOG_ATTR_OUTFILE        "outfile"
@@ -725,6 +730,50 @@ svn_error_t *svn_wc__remove_wcprops (svn_stringbuf_t *path, apr_pool_t *pool);
    in-place.  If NAME is not an 'entry' property, then NAME is
    untouched. */
 void svn_wc__strip_entry_prefix (svn_stringbuf_t *name);
+
+
+
+/* Newline and keyword translation properties */
+
+/* Valid states for 'svn:eol-style' property.  
+   Property nonexistence is equivalent to 'none'. */
+enum svn_wc__eol_style
+{
+  svn_wc__eol_style_none,    /* EOL translation is "off" or ignored value */
+  svn_wc__eol_style_native,  /* Translation is set to client's native style */
+  svn_wc__eol_style_fixed,   /* Translation is set to one of LF, CR, CRLF */
+};
+
+/* Query the SVN_PROP_EOL_STYLE property on a file at PATH.  Set
+   *STYLE to one of the three values (none, native, or fixed), and set
+   *EOL to a line ending that the caller might need.  
+
+   Specifically:
+
+      - if the style is 'none', set *EOL to NULL.
+
+      - if the style is 'native', set *EOL to the native line-ending
+        convention of the client's platform.
+
+      - if the style is 'fixed', set *EOL to the EOL specified in the
+        property value.
+
+   If set, *EOL will point to a static string.  (No need to allocate
+   it in a pool.)
+*/
+svn_error_t *svn_wc__get_eol_style (enum svn_wc__eol_style *style,
+                                    const char **eol,
+                                    const char *path,
+                                    apr_pool_t *pool);
+
+
+/* Variant of previous routine, but without the path argument.  It
+   assumes that you already have the property VALUE.  This is for more
+   "abstract" callers that just want to know how values map to EOL
+   styles. */
+void svn_wc__eol_style_from_value (enum svn_wc__eol_style *style,
+                                   const char **eol,
+                                   const char *value);
 
 
 /* 
