@@ -216,7 +216,8 @@ client_ssl_callback(void *userdata, ne_session *sess,
 #else
           ne_ssl_client_cert *clicert =
             ne_ssl_clicert_read(client_creds->cert_file);
-          if (ne_ssl_clicert_encrypted(clicert))
+          if ((clicert != NULL) &&
+              (ne_ssl_clicert_encrypted(clicert)))
             {
               char pw[128];
               if (client_ssl_keypw_callback(userdata, pw, 128))
