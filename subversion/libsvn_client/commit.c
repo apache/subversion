@@ -303,6 +303,9 @@ import_dir (const svn_delta_editor_t *editor,
   else if ((apr_err = apr_dir_close (dir)))
     return svn_error_createf
       (apr_err, NULL, "error closing dir '%s'", path);
+
+  /* We're not going to use this error, so clear it. */
+  svn_error_clear (err);
       
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
