@@ -26,8 +26,9 @@ href="http://svnbook.red-bean.com">svnbook.red-bean.com</a> site.
 <h3>Overview</h3>
 
 <p>Subversion 1.2 can best be summarized as: (1) a new locking
-feature, (2) full DAV autoversioning, (3) faster 'svn blame', and (4)
-a large number of improved APIs.  Details are given below.</p>
+feature, (2) full WebDAV autoversioning, (3) faster binary
+decompression, and (4) a large number of improved APIs.  Details are
+given below.</p>
 
 <p>Subversion 1.2 is a superset of all previous Subversion releases.
 The 1.0.x and 1.1.x releases contain nothing but important bugfixes
@@ -83,8 +84,8 @@ as "reserved checkouts".  While Subversion is still primarily a <a
 href="http://svnbook.red-bean.com/en/1.1/ch02s02.html#svn-ch-2-sect-2.3">copy-modify-merge</a>
 system focused on parallel development, there is widespread
 acknowledgement that not all files are contextually mergeable &mdash;
-binary files in particular, such as audio, video, images, proprietary
-binary formats, or any other non-line-based data.</p>
+binary files in particular, such as artwork, compressed files,
+proprietary binary formats, or any other non-line-based data.</p>
 
 <p>The goal of the new locking feature is twofold.  First, provide a
 means to force serialized write-access to a file.  Second, provide a
@@ -97,7 +98,7 @@ user may commit a change to the file or delete it from the repository.
 The lock exists as a piece of metadata both managed and enforced by
 the repository.  The working copy caches a lock-token which represents
 the repository lock.  The lock-token is an authentication credential
-which (along with normal user authentication) gives the locker an
+which (along with normal user authentication) gives the user an
 exclusive right to commit changes to the file.  By default, the
 <tt>svn commit</tt> command releases any locks it discovers in the
 working copy, although this behavior can be customized.</p>
@@ -129,12 +130,12 @@ unmergable change &mdash; is accomplished via a new property,
 <tt>svn:needs-lock</tt>.  Users (or administrators) are encouraged to
 set this property on any file that is unmergeable.  When present, this
 property causes the file to be read-only <em>unless</em> the working
-copy holds a lock on the file, in which case the file is read-write.
-The theory is that the default read-only state will remind users to
-lock the file before attempting edits.  Note that while this system is
-effective, it's can never be perfect; there's nothing Subversion can
-do to prevent a rogue application from forcibly "hijacking" the file
-and changing the permissions to read-write.</p>
+copy holds a lock-token for the file, in which case the file is
+read-write.  The theory is that the default read-only state will
+remind users to lock the file before attempting edits.  Note that
+while this system is effective, it can never be perfect; there's
+nothing Subversion can do to prevent a rogue application from forcibly
+"hijacking" the file and changing the permissions to read-write.</p>
 
 <p>Until the Subversion book documents this feature more carefully,
 you can see more details in the original <a
@@ -142,6 +143,16 @@ href="http://svn.collab.net/repos/svn/trunk/notes/locking/locking-functional-spe
 specification</a> and <a
 href="http://svn.collab.net/repos/svn/trunk/notes/locking/locking-ui.txt">UI
 specification</a> documents.</p>
+
+<p><strong>Warning</strong>: if locks are in use in a repository, note
+than a pre-1.2 libsvn_fs library won't see or enforce them.  This is
+really only relevant to teams of users all accessing the repository
+via <tt>file:///</tt>.  For example, an svn 1.2 client might lock a
+file, but a statically linked svn 1.1 or 1.0 client (accessing via
+<tt>file:///</tt>) will unknowingly ignore the lock.  The workaround,
+of course, is to set up a real server process &mdash; thereby
+guaranteeing that only libsvn_fs 1.2 ever accesses the
+repository.</p>
 
 <p/>
 
@@ -177,33 +188,13 @@ Subversion repositories via Windows Webfolders, OS X Finder, Gnome
 Nautilus, KDE Konqueror, and other DAV clients.</p>
 
 <p>To activate autoversioning, simply set <tt>SVNAutoversioning
-on</tt> in your httpd.conf's Subversion <tt>Location</tt> block.</p>
+on</tt> in your httpd.conf's Subversion <tt>Location</tt> block.  Be
+warned, however, that making your repository writable by generic DAV
+clients may result in lots of small commits.  A DAV client may seem to
+be saving a file, but is in fact performing several write operations
+under the hood, each resulting in a separate commit.  Experiences may
+vary.</p>
 
-<p/>
-
-
-<h4>Improved 'svn blame' speed (<em>requires new client and
-server</em>)</h4>
-
-<p>The speed of 'svn blame' is now about five times faster.  However,
-to reach this nirvana, you must do three things:</p>
-
-<ul>
-<li>Use a 1.2 client.</li>
-<li>Use a 1.2 server.</li>
-<li>Dump and reload the repository.</li>
-</ul>
-
-<p>The 1.2 client and server are using a new technique to transmit
-file history over the network, but that's not enough to get the full
-speedup.  The dump and reload is necessary because the repository is
-now using a new binary-differencing algorithm (xdelta) to store
-compressed versions of files.  xdelta is much faster at reconstructing
-differences than the older vdelta algorithm.  By dumping and reloading
-the repository, you're forcing the repository to re-encode/re-compress
-all history using the xdelta algorithm.</p>
-
-</p>
 
 <p/>
 
@@ -212,29 +203,30 @@ all history using the xdelta algorithm.</p>
 
 <dl>
 
-<dt><h4>Faster xdelta binary compression (<em>new server
+<dt><h4>Faster xdelta binary (de)compression (<em>new server
 feature</em>)</h4></dt>
 
 <dd>
 
-<p>As mentioned above, the repository is now using the xdelta
-binary-differencing algorithm (instead of vdelta) to store compressed
-binary difference data.  When you upgrade to Subversion 1.2, existing
-repositories will continue to work fine; the history will simply be a
-mixture of both vdelta- and xdelta-encoded differences.</p>
+<p>The repository is now using the xdelta binary-differencing
+algorithm (instead of vdelta) to store compressed binary difference
+data.  When you upgrade to Subversion 1.2, existing repositories will
+continue to work fine; the history will simply be a mixture of both
+vdelta- and xdelta-encoded differences.</p>
 
 <p>The xdelta algorithm is much faster at reconstructing older files,
-and thus (as mentioned already) you might have incentive to dump and
-reload your existing repository.  This would cause all your history to
-be recompressed using xdelta.  As a result, not only will <tt>svn
-blame</tt> be much faster, but any other operation that depends on
-examining history or constructing differences: <tt>svn checkout</tt>,
-<tt>svn diff</tt>, <tt>svn merge</tt>, and so on.  Even dumping the
-repository will be faster.</p>
+and thus there's motivation to dump and reload your existing
+repository.  If you choose to do this, then you're forcibly
+re-compressing all repository history using the xdelta algorithm.  As
+a result, there is a noticeable speedup in any operation that asks the
+server to reconstruct older data:  <tt>svn blame</tt>, <tt>svn
+checkout</tt>, <tt>svn update</tt>, <tt>svn diff</tt>, <tt>svn
+merge</tt>, and so on.  Even dumping the repository will be
+faster.</p>
 
-<p>Note that there's a small tradeoff between speed and disk space.
-If you choose to re-deltify your whole repository using xdelta, its
-size will grow by roughly 10 to 15 percent.</p>
+<p><strong>Note:</strong> There's a small tradeoff between speed and
+disk space.  If you choose to re-deltify your whole repository using
+xdelta, its size will grow by roughly 10 to 15 percent.</p>
 
 <p/>
 
