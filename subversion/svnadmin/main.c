@@ -233,8 +233,10 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     {"deltify", subcommand_deltify, {0},
      "usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n\n"
      "Run over the requested revision range, performing predecessor deltifi-\n"
-     "cation on the paths changed in those revisions.  If no revisions are\n"
-     "specified, this will simply deltify the HEAD revision.\n",
+     "cation on the paths changed in those revisions.  Deltification in\n"
+     "essence compresses the repository by only storing the differences or\n"
+     "delta from the preceding revision.  If no revisions are specified,\n"
+     "this will simply deltify the HEAD revision.\n",
      {'r', 'q'} },
 
     {"dump", subcommand_dump, {0},
