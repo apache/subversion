@@ -117,7 +117,7 @@ main (int argc, char *argv[])
   int test_num;
   int i;
   int got_error = 0;
-  apr_pool_t *pool;
+  apr_pool_t *pool, *test_pool;
   int ran_a_test = 0;
 
   /* How many tests are there? */
@@ -159,14 +159,14 @@ main (int argc, char *argv[])
           ran_a_test = 1;
 
           /* run all tests with MSG_ONLY set to TRUE */
+          test_pool = svn_pool_create (pool);
           for (i = 1; i <= array_size; i++)
             {
-              if (do_test_num (prog_name, i, TRUE, pool))
+              if (do_test_num (prog_name, i, TRUE, test_pool))
                 got_error = 1;
-              
-              /* Clear the per-function pool */
-              svn_pool_clear (pool);
             }
+          /* Clear the per-function pool */
+          svn_pool_destroy (test_pool);
         }
       else
         {
@@ -176,11 +176,12 @@ main (int argc, char *argv[])
                 {
                   ran_a_test = 1;
                   test_num = atoi (argv[i]);
-                  if (do_test_num (prog_name, test_num, FALSE, pool))
+                  if (do_test_num (prog_name, test_num, FALSE,
+                                   test_pool = svn_pool_create (pool)))
                     got_error = 1;
-                  
+
                   /* Clear the per-function pool */
-                  svn_pool_clear (pool);
+                  svn_pool_destroy (test_pool);
                 }
               else if (argv[i][0] != '-')
                 {
@@ -196,11 +197,12 @@ main (int argc, char *argv[])
       /* just run all tests */
       for (i = 1; i <= array_size; i++)
         {
-          if (do_test_num (prog_name, i, FALSE, pool))
+          if (do_test_num (prog_name, i, FALSE,
+                           test_pool = svn_pool_create (pool)))
             got_error = 1;
 
           /* Clear the per-function pool */
-          svn_pool_clear (pool);
+          svn_pool_destroy (test_pool);
         }
     }
 
