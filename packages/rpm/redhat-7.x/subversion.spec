@@ -31,6 +31,7 @@ BuildPreReq: apache-libapr-devel >= %{apache_version}
 BuildPreReq: autoconf >= 2.53
 BuildPreReq: db4-devel >= 4.0.14
 BuildPreReq: docbook-style-xsl >= 1.58.1
+BuildPreReq: doxygen
 BuildPreReq: expat-devel
 BuildPreReq: gdbm-devel
 BuildPreReq: libtool >= 1.4.2-12
@@ -96,6 +97,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Mon Jun 16 2003 David Summers <david@summersoft.fay.ar.us> 0.24.1-6256
+- Added doxygen documentation.
+
 * Tue Jun 10 2003 David Summers <david@summersoft.fay.ar.us> 0.23.0-6188
 - Track changes for addition of mod_authz_svn httpd module.
 
@@ -371,6 +375,9 @@ cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
 cp -r doc/book/book/html-chunk book
 cp -r doc/book/book/images     book/images
 
+# Create doxygen documentation.
+doxygen doc/doxygen.conf
+
 %preun
 # Save current copy of svnadmin.static
 echo "Saving current svnadmin-%{version}-%{release}.static as svnadmin-%{version}-%{release}."
@@ -443,6 +450,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files devel
 %defattr(-,root,root)
+%doc doc/doxygen/html/*
 /usr/lib/libsvn*.a
 /usr/lib/libsvn*.la
 /usr/include/subversion-1
