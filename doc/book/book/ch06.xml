@@ -406,13 +406,14 @@ $ svnserve -i
         Subversion client via <emphasis>stdin</emphasis> and
         <emphasis>stdout</emphasis> using a custom protocol.  This is
         the standard behavior for a program being run via
-        <command>inetd</command>.  The IANA has reserved TCP port 3690
+        <command>inetd</command>.  The IANA has reserved port 3690
         for the Subversion protocol, so on a Unix-like system you can
         add a line to <literal>/etc/services</literal> like this (if
         it doesn't already exist):</para>
 
 <screen>
-svnserve      3690/tcp                        # Subversion protocol
+svn           3690/tcp   # Subversion
+svn           3690/udp   # Subversion
 </screen>
 
       <para>...and when a client connection comes into your server on
