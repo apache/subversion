@@ -187,7 +187,9 @@ enum svn_recurse_kind
 
 /* All the keywords Subversion recognizes.
  * 
- * Note that there is a better, more general proposal out there, see
+ * Note that there is a better, more general proposal out there, which
+ * would take care of both internationalization issues and custom
+ * keywords (e.g., $NetBSD$).  See
  * 
  *    http://subversion.tigris.org/servlets/ReadMsg?msgId=49180&listName=dev
  *    =====
@@ -227,9 +229,6 @@ enum svn_recurse_kind
 /* The URL for the head revision of this file. */
 #define SVN_KEYWORD_URL_LONG         "HeadURL"
 #define SVN_KEYWORD_URL_SHORT        "URL"
-
-
-
 
 
 
