@@ -449,40 +449,42 @@ X    Resource is external to this working copy (comes from another
       a traves <!--TODO:over the network...a traves o sobre la red?-->
       de la red.</para>
     
-    <para>CVS users have to mark binary files with
-      <option>-kb</option> flags, to prevent data from being garbled
-      (due to keyword expansion and line-ending translations).  They
-      sometimes forget to do this.</para>
+    <para>Los usuarios de CVS tienen que marcar los ficheros binarios con
+      los parámetros <option>-kb</option>, para evitar que los datos sean
+      mutilados (debido a la traducción de la expansión de la palabra
+      clave y del final de linea<!--TODO:due to keyword expansion and
+      line-ending translations-->. A veces se olvidan de hacerlo.</para>
 
-    <para>Subversion takes the more paranoid route: first, it never
-      performs any kind of keyword or line-ending translation unless
-      you explicitly ask it do so (see <xref
-      linkend="svn-ch-7-sect-2.3.4"/> and <xref
-      linkend="svn-ch-7-sect-2.3.5"/> for more details).  By default,
-      Subversion treats all file data as literal byte strings, and
-      files are always stored in the repository in an untranslated
-      state.</para>
+    <para>Subversion toma la ruta más paranoica: primero, nunca realiza
+      ningún tipo de traducción de la palabra clave  o del fin de linea
+      a menos que usted le diga explicitamente que lo haga (vea <xref
+      linkend="svn-ch-7-sect-2.3.4"/> y <xref
+      linkend="svn-ch-7-sect-2.3.5"/> para más detalles). Por defecto,
+      Subversion trata todos los datos del ficheros como una cadena
+      literal de bytes, y los ficheros son siempre guardados en el
+      repositorio en un estado sin traducir.</para>
 
-    <para>Second, Subversion maintains an internal notion of whether a
-      file is <quote>text</quote> or <quote>binary</quote> data, but
-      this notion is <emphasis>only</emphasis> extant in the working
-      copy.  During an <command>svn update</command>, Subversion will
-      perform contextual merges on locally modified text files, but
-      will not attempt to do so for binary files.</para>
+    <para>Segundo, Subversion mantiene una noción interna de si un
+      fichero es <quote>texto</quote> o datos <quote>binarios</quote>,
+      pero esta noción es <emphasis>solamente</emphasis> existente
+      en la copia de trabajo. Durante un <command>svn update</command>,
+      Subversion realizará fusiones contextuales<!--TODO:contextual
+      merges... fusiones de texto--> en ficheros de texto modificados
+      localmente, pero no intentará hacer eso para los ficheros
+      binarios.</para>
 
-    <para>To determine whether a contextual merge is possible,
-      Subversion examines the <literal>svn:mime-type</literal>
-      property.  If the file has no <literal>svn:mime-type</literal>
-      property, or has a mime-type that is textual (e.g.
-      <literal>text/*</literal>),
-      Subversion assumes it is text.  Otherwise, Subversion assumes
-      the file is binary.  Subversion also helps users by running a
-      binary-detection algorithm in the <command>svn import</command>
-      and <command>svn add</command> commands.  These commands will
-      make a good guess and then (possibly) set a binary
-      <literal>svn:mime-type</literal> property on the file being
-      added.  (If Subversion guesses wrong, the user can always remove
-      or hand-edit the property.)</para>
+    <para>Para determinar si es posible una fusión de contexto,
+      Subversion examina la propiedad <literal>svn:mime-type</literal>.
+      Si el fichero no tiene la propiedad <literal>svn:mime-type</literal>,
+      o tiene un mime-type que es textual (e.j. <literal>text/*</literal>),
+      Subversion asume que es texto. Si no, Subversion asume que el
+      fichero es binario. Subversion también ayuda a los usuarios
+      ejecutando un algoritmo de detección de binarios en los comandos
+      <command>svn import</command> y <command>svn add</command>. Estos
+      comandos harán una buena conjetura y despues (posiblemente) fije
+      una propiedad <literal>svn:mime-type</literal> binaria en el
+      fichero que es agregado. (Si Subversion supone mal, el usuario
+      siempre puede borrar o editar a mano la propiedad.)</para>
 
   </sect1>
 
