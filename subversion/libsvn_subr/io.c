@@ -1164,6 +1164,14 @@ svn_error_t *svn_io_file_lock (const char *lock_file,
                                svn_boolean_t exclusive,
                                apr_pool_t *pool)
 {
+  return svn_io_file_lock2(lock_file, exclusive, FALSE, pool);
+}
+
+svn_error_t *svn_io_file_lock2 (const char *lock_file,
+                                svn_boolean_t exclusive,
+                                svn_boolean_t nonblocking,
+                                apr_pool_t *pool)
+{
   int locktype = APR_FLOCK_SHARED;
   apr_file_t *lockfile_handle;
   apr_int32_t flags;
@@ -1175,6 +1183,9 @@ svn_error_t *svn_io_file_lock (const char *lock_file,
   flags = APR_READ;
   if (locktype == APR_FLOCK_EXCLUSIVE)
     flags |= APR_WRITE;
+
+  if (nonblocking == TRUE)
+    locktype |= APR_FLOCK_NONBLOCK;
 
   SVN_ERR (svn_io_file_open (&lockfile_handle, lock_file, flags,
                              APR_OS_DEFAULT,

@@ -163,7 +163,10 @@ svn_error_t * svn_repos_hotcopy (const char *src_path,
                                  svn_boolean_t clean_logs,
                                  apr_pool_t *pool);
 
-/** Run database recovery procedures on the repository at @a path,
+/**
+ * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ *
+ * Run database recovery procedures on the repository at @a path,
  * returning the database to a consistent state.  Use @a pool for all
  * allocation.
  *
@@ -173,6 +176,29 @@ svn_error_t * svn_repos_hotcopy (const char *src_path,
  */
 svn_error_t *svn_repos_recover (const char *path, apr_pool_t *pool);
 
+/**
+ * @since New in 1.1.
+ *
+ * Run database recovery procedures on the repository at @a path,
+ * returning the database to a consistent state.  Use @a pool for all
+ * allocation.
+ *
+ * Acquires an @a exclusive lock on the repository, recovers the
+ * database, and releases the lock.  If an exclusive lock can't be
+ * acquired, returns error.
+ *
+ * If @a nonblocking is TRUE, an error of type EWOULDBLOCK is
+ * returned if the lock is not immediately available.
+ *
+ * If @a start_callback is not NULL, it will be called with @a
+ * start_callback_baton as argument before the recovery starts, but
+ * after the exclusive lock has been acquired.
+ */
+svn_error_t *svn_repos_recover2 (const char *path,
+                                 svn_boolean_t nonblocking,
+                                 svn_error_t *(*start_callback) (void *baton),
+                                 void *start_callback_baton,
+                                 apr_pool_t *pool);
 
 /** This function is a wrapper around svn_fs_berkeley_logfiles(),
  * returning log file paths relative to the root of the repository.

@@ -471,7 +471,8 @@ jlong SVNAdmin::recover(const char *path)
     svn_revnum_t youngest_rev;
     svn_repos_t *repos;
 
-    svn_error_t *err = svn_repos_recover (path, requestPool.pool());
+    svn_error_t *err = svn_repos_recover2 (path, FALSE, NULL, NULL,
+                                           requestPool.pool());
     if(err != SVN_NO_ERROR)
     {
         JNIUtil::handleSVNError(err);
