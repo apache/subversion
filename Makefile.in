@@ -136,7 +136,7 @@ external-extraclean:
 	for i in $$list; do \
 	    if test "$$i" != "neon"; then \
 		echo "------ making extraclean in $$i"; \
-		(cd $$i && $(MAKE) $$target) || exit 1; \
+		(cd $$i && $(MAKE) extraclean) || exit 1; \
 		echo "------ completed extraclean in $$i"; \
 	    fi; \
 	done;
