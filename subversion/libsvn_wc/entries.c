@@ -490,7 +490,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
   /* kff todo: fooo working here:
      Make an innocent way to discover that a dir/path is or is not
      under version control, so that this function can be robust.  I
-     think svn_wc__entries_read() will return an error right now if,
+     think svn_wc_entries_read() will return an error right now if,
      for example, PATH represents a new dir that svn still thinks is a
      regular file under version control. */
 
@@ -505,7 +505,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
            "svn_wc_entry: %s is not a working copy directory", path->data);
 
 
-      err = svn_wc__entries_read (&entries, path, pool);
+      err = svn_wc_entries_read (&entries, path, pool);
       if (err)
         return err;
 
@@ -537,7 +537,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
            "svn_wc_entry: %s is not a working copy directory", path->data);
       
-      err = svn_wc__entries_read (&entries, dir, pool);
+      err = svn_wc_entries_read (&entries, dir, pool);
       if (err)
         return err;
       
@@ -549,9 +549,9 @@ svn_wc_entry (svn_wc_entry_t **entry,
 
 
 svn_error_t *
-svn_wc__entries_read (apr_hash_t **entries,
-                      svn_string_t *path,
-                      apr_pool_t *pool)
+svn_wc_entries_read (apr_hash_t **entries,
+                     svn_string_t *path,
+                     apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_hash_t *new_entries;
@@ -743,7 +743,7 @@ svn_wc__entry_merge_sync (svn_string_t *path,
   apr_hash_t *entries = NULL;
   va_list ap;
 
-  err = svn_wc__entries_read (&entries, path, pool);
+  err = svn_wc_entries_read (&entries, path, pool);
   if (err)
     return err;
   

@@ -633,7 +633,7 @@ report_local_mods (svn_string_t *path,
   apr_pool_t *subpool = svn_pool_create (top_pool);
 
   /* Retrieve _all_ the entries in this subdir into subpool. */
-  err = svn_wc__entries_read (&entries, path, subpool);
+  err = svn_wc_entries_read (&entries, path, subpool);
   if (err)
     return err;
 

@@ -345,7 +345,7 @@ svn_wc__get_existing_prop_reject_file (svn_string_t **reject_file,
   apr_hash_t *entries, *atts;
   svn_wc_entry_t *the_entry;
 
-  err = svn_wc__entries_read (&entries, path, pool);
+  err = svn_wc_entries_read (&entries, path, pool);
   if (err) return err;
 
   the_entry = 

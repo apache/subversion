@@ -400,14 +400,8 @@ svn_error_t *svn_wc__entries_init (svn_string_t *path,
                                    apr_pool_t *pool);
 
 
-/* Parse the `entries' file for PATH and return a hash ENTRIES, whose
-   keys are entry names and values are (svn_wc_entry_t *). */
-svn_error_t *svn_wc__entries_read (apr_hash_t **entries,
-                                   svn_string_t *path,
-                                   apr_pool_t *pool);
-
 /* Create or overwrite an `entries' file for PATH using the contents
-   of ENTRIES. */
+   of ENTRIES.  See also svn_wc_entries_read() in the public api. */
 svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
                                     svn_string_t *path,
                                     apr_pool_t *pool);
