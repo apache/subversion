@@ -123,7 +123,7 @@ svn_ruby_init_error (void)
   define_error (SVN_ERR_WC_ENTRY_NOT_FOUND, "WcEntryNotFound");
   define_error (SVN_ERR_WC_ENTRY_EXISTS, "WcEntryExists");
   define_error (SVN_ERR_WC_ENTRY_MISSING_REVISION, "WcEntryMissingRevision");
-  define_error (SVN_ERR_WC_ENTRY_MISSING_ANCESTRY, "WcEntryMissingAncestry");
+  define_error (SVN_ERR_WC_ENTRY_MISSING_URL, "WcEntryMissingURL");
   define_error (SVN_ERR_WC_ENTRY_ATTRIBUTE_INVALID, "WcEntryAttributeInvalid");
   define_error (SVN_ERR_WC_ENTRY_BOGUS_MERGE, "WcEntryBogusMerge");
   define_error (SVN_ERR_WC_NOT_UP_TO_DATE, "WcNotUpToDate");
