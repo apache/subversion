@@ -73,7 +73,7 @@
 
 #include <svn_types.h>   /* publically declared types */
 #include <svn_error.h>   /* private utility in svn_subr/  */
-
+#include <apr_dso.h>     /* defines ap_dso_handle_t */
 
 
 /******************************************
@@ -99,6 +99,7 @@ typedef struct svn_svr_plugin_t
   svn_string_t *description;  /* Plugin's documentation string 
                                  (short self-description) */
 
+  ap_dso_handle_t *my_dso;    /* handle on the actual library loaded */
 
   /* AUTHORIZATION HOOK: 
 
