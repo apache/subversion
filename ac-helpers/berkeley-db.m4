@@ -182,7 +182,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
           break
         fi
       done
-        test "found" != "not" && break
+        test "$found" != "not" && break
     done
 
     # Restore the original values of the flags we tweak.
