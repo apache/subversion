@@ -45,8 +45,8 @@ you expect, look in the documentation and mailing list archives for
 evidence that it should behave the way you expect.  Of course, if it's
 a common-sense thing, like Subversion just destroyed your data and
 caused smoke to pour out of your monitor, then you can trust your
-judgement.  But if you're not sure, go ahead and ask on the mailing
-list, currently dev@subversion.tigris.org.
+judgement.  But if you're not sure, go ahead and ask on the users
+mailing list first, users@subversion.tigris.org.
 
 Once you've established that it's a bug, the most important thing you
 can do is come up with a simple description and reproduction recipe.
