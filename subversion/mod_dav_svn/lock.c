@@ -794,11 +794,15 @@ dav_svn_append_locks(dav_lockdb *lockdb,
     return derr;
 
   /* Now use the svn_lock_t to actually perform the lock. */
-  serr = svn_repos_fs_attach_lock(resource->info->repos->repos,
-                                  slock,
-                                  info->lock_steal,
-                                  info->working_revnum,
-                                  resource->pool);
+  serr = svn_repos_fs_lock(&slock,
+                           resource->info->repos->repos,
+                           slock->path,
+                           slock->token,
+                           slock->comment,
+                           lock->timeout * APR_USEC_PER_SEC,
+                           info->working_revnum,
+                           info->lock_steal,
+                           resource->pool);
 
   if (serr && serr->apr_err == SVN_ERR_FS_NO_USER)
     return dav_new_error(resource->pool, HTTP_UNAUTHORIZED,
@@ -957,15 +961,16 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
                          DAV_ERR_LOCK_SAVE_LOCK,
                          "Lock refresh request doesn't match existing lock.");
 
-  /* Tweak the expiration_date to the new expiration time. */
-  slock->expiration_date = (apr_time_t)new_time * APR_USEC_PER_SEC;
-
   /* Now use the tweaked svn_lock_t to 'refresh' the existing lock. */
-  serr = svn_repos_fs_attach_lock(resource->info->repos->repos,
-                                  slock,
-                                  TRUE, /* forcibly steal existing lock */
-                                  SVN_INVALID_REVNUM,
-                                  resource->pool);
+  serr = svn_repos_fs_lock(&slock,
+                           resource->info->repos->repos,
+                           slock->path,
+                           slock->token,
+                           slock->comment,
+                           (apr_time_t)new_time * APR_USEC_PER_SEC,
+                           SVN_INVALID_REVNUM,
+                           TRUE, /* forcibly steal existing lock */
+                           resource->pool);
 
   if (serr && serr->apr_err == SVN_ERR_FS_NO_USER)
     return dav_new_error(resource->pool, HTTP_UNAUTHORIZED,

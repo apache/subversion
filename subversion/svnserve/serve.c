@@ -1392,9 +1392,9 @@ static svn_error_t *lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(must_have_write_access(conn, pool, b, TRUE));
 
-  SVN_CMD_ERR(svn_repos_fs_lock(&l, b->repos, full_path, comment, force,
+  SVN_CMD_ERR(svn_repos_fs_lock(&l, b->repos, full_path, NULL, comment,
                                 0, /* No expiration time. */
-                                current_rev, pool));
+                                current_rev,  force, pool));
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(!", "success"));
   SVN_ERR(write_lock(conn, pool, l));
