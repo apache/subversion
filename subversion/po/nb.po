@@ -38,7 +38,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-02-01 15:26+0100\n"
+"POT-Creation-Date: 2005-02-07 05:45+0100\n"
 "PO-Revision-Date: 2004-07-13 11:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -2985,7 +2985,7 @@ msgid "'%s' already exists"
 msgstr "«%s» finnes allerede"
 
 #: libsvn_client/export.c:679 libsvn_wc/update_editor.c:1592
-#: libsvn_wc/update_editor.c:2339
+#: libsvn_wc/update_editor.c:2338
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
 msgstr "Kontrollsum for «%s» er feil. Forventet: «%s», gjeldende: «%s»"
@@ -3325,7 +3325,7 @@ msgstr "Misformet copyroot-linje i node-rev"
 msgid "Malformed copyfrom line in node-rev"
 msgstr "Misformet copyfrom-linje i node-rev"
 
-#: libsvn_fs_fs/fs_fs.c:778 libsvn_fs_fs/fs_fs.c:3002
+#: libsvn_fs_fs/fs_fs.c:778 libsvn_fs_fs/fs_fs.c:3006
 msgid "Attempted to write to non-transaction"
 msgstr "Forsøk på å skrive til en ikke-transaksjon"
 
@@ -3426,28 +3426,28 @@ msgstr "Ugyldig prop-mod-merke i rev-file"
 msgid "Copying from transactions not allowed"
 msgstr "Kopiering fra transaksjoner er ikke tillatt"
 
-#: libsvn_fs_fs/fs_fs.c:2473 libsvn_fs_fs/fs_fs.c:2480
+#: libsvn_fs_fs/fs_fs.c:2476 libsvn_fs_fs/fs_fs.c:2483
 msgid "next-id file corrupt"
 msgstr "next-id-fil er korrupt"
 
-#: libsvn_fs_fs/fs_fs.c:2706
+#: libsvn_fs_fs/fs_fs.c:2709
 msgid "Invalid change type"
 msgstr "Ugyldig endringstype"
 
-#: libsvn_fs_fs/fs_fs.c:3021
+#: libsvn_fs_fs/fs_fs.c:3025
 msgid "Can't set text contents of a directory"
 msgstr "Kan ikke sette tekstinnholdet til en katalog"
 
-#: libsvn_fs_fs/fs_fs.c:3111 libsvn_fs_fs/fs_fs.c:3116
-#: libsvn_fs_fs/fs_fs.c:3123
+#: libsvn_fs_fs/fs_fs.c:3115 libsvn_fs_fs/fs_fs.c:3120
+#: libsvn_fs_fs/fs_fs.c:3127
 msgid "Corrupt current file"
 msgstr "Gjeldende fil er korrupt"
 
-#: libsvn_fs_fs/fs_fs.c:3491
+#: libsvn_fs_fs/fs_fs.c:3495
 msgid "Transaction out of date"
 msgstr "Transaksjonen er foreldet"
 
-#: libsvn_fs_fs/fs_fs.c:3731
+#: libsvn_fs_fs/fs_fs.c:3735
 msgid "No such transaction"
 msgstr "Ingen slik transaksjon"
 
@@ -4810,21 +4810,21 @@ msgstr ""
 msgid "Type '%s help' for usage.\n"
 msgstr "Skriv «%s help» for bruk.\n"
 
-#: libsvn_subr/path.c:1070
+#: libsvn_subr/path.c:1065
 #, c-format
 msgid "Couldn't determine absolute path of '%s'"
 msgstr "Klarte ikke anslå absolutt sti for «%s»"
 
-#: libsvn_subr/path.c:1109
+#: libsvn_subr/path.c:1104
 #, c-format
 msgid "'%s' is neither a file nor a directory name"
 msgstr "«%s» er verken et fil- eller katalognavn"
 
-#: libsvn_subr/path.c:1215
+#: libsvn_subr/path.c:1210
 msgid "Can't determine the native path encoding"
 msgstr "Kan ikke anslå den lokale sti-tegnsettkodingen"
 
-#: libsvn_subr/path.c:1269
+#: libsvn_subr/path.c:1264
 #, c-format
 msgid "Invalid control character '0x%02x' in path '%s'"
 msgstr "Ugyldig kontrolltegn «0x%02x» i sti «%s»"
@@ -4834,30 +4834,45 @@ msgstr "Ugyldig kontrolltegn «0x%02x» i sti «%s»"
 msgid "File '%s' has inconsistent newlines"
 msgstr "Filen «%s» har ikke ensartede linjeskift"
 
-#: libsvn_subr/utf.c:147
+#: libsvn_subr/utf.c:149
 msgid "Can't lock charset translation mutex"
 msgstr "Kan ikke låse mutex for tegnsettkonvertering"
 
-#: libsvn_subr/utf.c:165 libsvn_subr/utf.c:215
+#: libsvn_subr/utf.c:167 libsvn_subr/utf.c:226
 msgid "Can't unlock charset translation mutex"
 msgstr "Kan ikke låse opp mutex for tegnsettkonvertering"
 
-#: libsvn_subr/utf.c:228
+#: libsvn_subr/utf.c:242
 #, c-format
-msgid "Can't create a converter from '%s' to '%s'"
-msgstr "Kan ikke opprette konvertering fra «%s» til «%s»"
+msgid "Can't create a character converter from native encoding to '%s'"
+msgstr "Kan ikke opprette tegnkonvertering fra lokal koding til «%s»"
 
-#: libsvn_subr/utf.c:229 libsvn_subr/utf.c:230
-msgid "native"
-msgstr "lokal"
+#: libsvn_subr/utf.c:246
+#, c-format
+msgid "Can't create a character converter from '%s' to native encoding"
+msgstr "Kan ikke opprette tegnkonvertering fra «%s» til lokal koding"
 
-#. Can't use svn_error_wrap_apr here because it calls functions in
-#. this file, leading to infinite recursion.
-#: libsvn_subr/utf.c:361
-msgid "Can't recode string"
-msgstr "Kan ikke rekode streng"
+#: libsvn_subr/utf.c:250
+#, c-format
+msgid "Can't create a character converter from '%s' to '%s'"
+msgstr "Kan ikke opprette tegnkonvertering fra «%s» til «%s»"
 
-#: libsvn_subr/utf.c:401
+#: libsvn_subr/utf.c:441
+#, c-format
+msgid "Can't convert string from native encoding to '%s':"
+msgstr "Kan ikke konvertere streng fra lokal tegnsettkoding til «%s»:"
+
+#: libsvn_subr/utf.c:445
+#, c-format
+msgid "Can't convert string from '%s' to native encoding:"
+msgstr "Kan ikke konvertere streng fra «%s» til lokal tegnsettkoding:"
+
+#: libsvn_subr/utf.c:449
+#, c-format
+msgid "Can't convert string from '%s' to '%s':"
+msgstr "Kan ikke konvertere streng fra «%s» til «%s»:"
+
+#: libsvn_subr/utf.c:493
 #, c-format
 msgid ""
 "Safe data:\n"
@@ -4873,14 +4888,14 @@ msgstr ""
 "Ikke-ASCII-tegn funnet (se ovenfor), og klarer ikke å konvertere til/fra UTF-"
 "8"
 
-#: libsvn_subr/utf.c:413
+#: libsvn_subr/utf.c:505
 #, c-format
 msgid ""
 "Non-ASCII character (code %d) detected, and unable to convert to/from UTF-8"
 msgstr ""
 "Ikke-ASCII-tegn (kode %d) funnet, og klarer ikke å konvertere til/fra UTF-8"
 
-#: libsvn_subr/utf.c:455
+#: libsvn_subr/utf.c:547
 #, c-format
 msgid ""
 "Valid UTF-8 data\n"
@@ -4913,7 +4928,7 @@ msgstr "MIME-typen «%s» slutter med ikke-alfanumerisk tegn"
 msgid "Version mismatch in '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
 msgstr "Versjonsfeil i «%s»: Fant %d.%d.%d%s, forventet %d.%d.%d%s"
 
-#: libsvn_subr/xml.c:367
+#: libsvn_subr/xml.c:420
 #, c-format
 msgid "Malformed XML: %s at line %d"
 msgstr "Misdannet XML: %s i linje %d"
@@ -5448,7 +5463,7 @@ msgstr "Kan ikke skrive egenskapstabell til «%s»"
 msgid "Can't find entry '%s' in '%s'"
 msgstr "Finner ikke oppføringen «%s» i «%s»"
 
-#: libsvn_wc/props.c:318 libsvn_wc/update_editor.c:2275
+#: libsvn_wc/props.c:318 libsvn_wc/update_editor.c:2274
 #, c-format
 msgid "Error writing log for '%s'"
 msgstr "Feil under skriving av loggfil for «%s»"
@@ -5624,7 +5639,7 @@ msgstr "Feil kontrollsum for «%s». Lagret: «%s», gjeldende: «%s»"
 msgid "Move failed"
 msgstr "Flytting feilet"
 
-#: libsvn_wc/update_editor.c:2751
+#: libsvn_wc/update_editor.c:2750
 #, c-format
 msgid "'%s' has no ancestry information"
 msgstr "«%s» mangler informasjon om opprinnelse"
@@ -6623,12 +6638,3 @@ msgstr "eksportert%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "«%s» er verken versjonert eller eksportert\n"
-
-#~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
-#~ msgstr "Støtter ikke RA-programtilleggets ABI-versjon (%d) for ra_svn."
-
-#~ msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
-#~ msgstr "Mangler støtte for programtilleggets ABI-versjon (%d) for ra_dav"
-
-#~ msgid "No get_dir() available for URL schema"
-#~ msgstr "Ingen get_dir() tilgjengelig for URL-klasse"
