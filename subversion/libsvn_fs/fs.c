@@ -88,8 +88,7 @@ cleanup_fs_db (svn_fs_t *fs, DB **db_ptr, const char *name)
   if (*db_ptr)
     {
       DB *db = *db_ptr;
-      char *msg = alloca (strlen (name) + 50);
-      sprintf (msg, "closing `%s' database", name);
+      char *msg = apr_psprintf (fs->pool, "closing `%s' database", name);
 
       *db_ptr = 0;
       SVN_ERR (DB_WRAP (fs, msg, db->close (db, 0)));
