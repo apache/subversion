@@ -4,10 +4,11 @@
 
 all: html
 
-html: svn-design.html
+html: subversion.html subversion.txt
 
-svn-design.html: 
-	(cd ../src/doc/; make html; mv svn-design.html ../www/)
+subversion.html: subversion.txt
+	./outline2html.pl subversion.txt
+	mv -f subversion.html ../www/
 
 clean:
 	rm -f *~ subversion.html
