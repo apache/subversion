@@ -1097,10 +1097,7 @@ static svn_error_t *ra_svn_get_locations(void *session_baton,
 
   /* Read the hash items. */
   is_done = FALSE;
-
   *locations = apr_hash_make(pool);
-
-  /* ### Check for error and return not implemented. */
   while (!is_done)
     {
       SVN_ERR(svn_ra_svn_read_item(conn, pool, &item));
