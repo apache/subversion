@@ -111,11 +111,11 @@ svn_error_t *svn_swig_pl_thunk_history_func(void *baton,
                                             apr_pool_t *pool);
 
 /* thunked dir_delta authz read function. */
-svn_error_t *svn_swig_pl_thunk_authz_read_func (svn_boolean_t *allowed,
-						svn_fs_root_t *root,
-						const char *path,
-						void *baton,
-						apr_pool_t *pool);
+svn_error_t *svn_swig_pl_thunk_authz_func (svn_boolean_t *allowed,
+                                           svn_fs_root_t *root,
+                                           const char *path,
+                                           void *baton,
+                                           apr_pool_t *pool);
 
 /* ra callbacks. */
 svn_error_t *svn_ra_make_callbacks(svn_ra_callbacks_t **cb,
