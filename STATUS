@@ -117,7 +117,7 @@ Candidate changes:
   * r8617
     Fix improper cursor shutdown in libsvn_fs leading to wedgitude.
     Justification: severe lossage occurs if this bug is encountered.
-      +1: cmpilato
+      +1: cmpilato, dlr
 
   * r8616
     Improved warnings from svnlook and svnadmin.
