@@ -208,6 +208,7 @@ class StandardOutput(OutputBase):
     self.write = sys.stdout.write
 
   def start(self, group, params):
+    self.write("Group: " + (group or "defaults") + "\n")
     self.write("Subject: " + self.make_subject(group, params) + "\n\n")
 
   def finish(self):
@@ -283,7 +284,13 @@ class Commit(Messenger):
         # turn the params into a hashable object and stash it away
         param_list = params.items()
         param_list.sort()
-        self.groups[group, tuple(param_list)] = params
+        # collect the set of paths belonging to this group
+        if self.groups.has_key( (group, tuple(param_list)) ):
+          old_param, paths = self.groups[group, tuple(param_list)]
+        else:
+          paths = { }
+        paths[path] = None
+        self.groups[group, tuple(param_list)] = (params, paths)
 
     # figure out the changed directories
     dirs = { }
@@ -344,12 +351,12 @@ class Commit(Messenger):
 
     subpool = svn.core.svn_pool_create(self.pool)
 
-    for (group, param_tuple), params in self.groups.items():
+    for (group, param_tuple), (params, paths) in self.groups.items():
       self.output.start(group, params)
 
       # generate the content for this group and set of params
       generate_content(self.output, self.cfg, self.repos, self.changelist,
-                       group, params, subpool)
+                       group, params, paths, subpool)
 
       self.output.finish()
       svn.core.svn_pool_clear(subpool)
@@ -460,7 +467,8 @@ class DiffSelections:
         self.add = False
 
 
-def generate_content(output, cfg, repos, changelist, group, params, pool):
+def generate_content(output, cfg, repos, changelist, group, params, paths,
+                     pool):
 
   svndate = repos.get_rev_prop(svn.core.SVN_PROP_REVISION_DATE)
   ### pick a different date format?
@@ -471,32 +479,55 @@ def generate_content(output, cfg, repos, changelist, group, params, pool):
   output.write('Author: %s\nDate: %s\nNew Revision: %s\n\n'
                % (repos.author, date, repos.rev))
 
-  # print summary sections
-  generate_list(output, 'Added', changelist, _select_adds)
-  generate_list(output, 'Removed', changelist, _select_deletes)
-  generate_list(output, 'Modified', changelist, _select_modifies)
+  excluded_paths = cfg.get('excluded_paths', group, params) or 'show-all'
 
-  output.write('Log:\n%s\n'
+  # print summary sections
+  # first, those changes within the selected path-space
+  generate_list(output, 'A', changelist, paths, True)
+  generate_list(output, 'R', changelist, paths, True)
+  generate_list(output, 'M', changelist, paths, True)
+
+  # second, those outside, if any
+  if len(paths) != len(changelist):
+    if excluded_paths == 'hide':
+      output.write('and changes in other areas\n')
+    else:
+      output.write('\nChanges in other areas also in this revision:\n')
+      generate_list(output, 'A', changelist, paths, False)
+      generate_list(output, 'R', changelist, paths, False)
+      generate_list(output, 'M', changelist, paths, False)
+
+  output.write('\nLog:\n%s\n'
                % (repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG) or ''))
 
   # these are sorted by path already
   for path, change in changelist:
-    generate_diff(output, cfg, repos, date, change, group, params,
-                  diffsels, pool)
+    if paths.has_key(path):
+      generate_diff(output, cfg, repos, date, path, change, group, params,
+                    diffsels, pool)
+
+  if len(paths) != len(changelist) and excluded_paths == 'show-all':
+    output.write('\nDiffs of changes in other areas also in this revision:\n')
+    for path, change in changelist:
+      if not paths.has_key(path):
+        generate_diff(output, cfg, repos, date, path, change, group, params,
+                      diffsels, pool)
 
 
-def _select_adds(change):
-  return change.added
-def _select_deletes(change):
-  return change.path is None
-def _select_modifies(change):
-  return not change.added and change.path is not None
-
-
-def generate_list(output, header, changelist, selection):
+def generate_list(output, changekind, changelist, paths, in_paths):
   items = [ ]
+  if changekind == 'A':
+    header = 'Added'
+    selection = lambda change: change.added
+  elif changekind == 'R':
+    header = 'Removed'
+    selection = lambda change: change.path is None
+  elif changekind == 'M':
+    header = 'Modified'
+    selection = lambda change: not change.added and change.path is not None
+
   for path, change in changelist:
-    if selection(change):
+    if selection(change) and (paths.has_key(path) == in_paths):
       items.append((path, change))
   if items:
     output.write('%s:\n' % header)
