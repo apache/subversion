@@ -43,6 +43,8 @@
 
 /* The node structure.  */
 
+/* kff todo: just a question -- should we just use
+   svn_types.h:svn_node_kind instead of this enum, or... ? */
 typedef enum {
   kind_unset,
   kind_file,
@@ -79,7 +81,7 @@ typedef struct clone_path_t clone_path_t;
      transaction ("transaction nodes").  These are more complicated to
      handle, since nodes in a Subversion transaction can be cloned at
      any time, perhaps even by other processes.  We divide transaction
-     nodes into three subclasses:
+     nodes into two subclasses:
 
      - Nodes which haven't yet been cloned --- to the best of our
        knowledge.  Cloning could happen at any time.  ("uncloned
