@@ -596,7 +596,7 @@ svn_repos_history (svn_fs_t *fs,
  * @a location_revisions.
  *
  * @a location_revisions is an array of svn_revnum_t's and @a *locations
- * maps svn_revnum_t's to const char *.
+ * maps 'svn_revnum_t *' to 'const char *'.
  *
  * @a pool is used for all allocations.
  */
