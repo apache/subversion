@@ -681,10 +681,6 @@ SVN_ERROR_START
               SVN_ERR_CLIENT_CATEGORY_START + 8,
               "Revision range is not allowed")
 
-  SVN_ERRDEF (SVN_ERR_CLIENT_CTX_NOT_FOUND,
-              SVN_ERR_CLIENT_CATEGORY_START + 9,
-              "Requested item not found in context")
-
   /* misc errors */
 
   SVN_ERRDEF (SVN_ERR_BASE,

@@ -117,13 +117,9 @@ svn_client_ctx_set_auth_baton (svn_client_ctx_t *ctx,
                                svn_client_auth_baton_t *old_auth_baton,
                                svn_auth_baton_t *auth_baton);
 
-/** Set @a *auth_baton to the cached authentication baton in @a ctx, or if 
- * there is none set @a *auth_baton to @c NULL and return 
- * @c SVN_ERR_CLIENT_CTX_NOT_FOUND.
- */
-svn_error_t *
-svn_client_ctx_get_old_auth_baton (svn_client_ctx_t *ctx,
-                                   svn_client_auth_baton_t **auth_baton);
+/** Return the cached auth baton in @a ctx, or @c NULL if there is none. */
+svn_client_auth_baton_t *
+svn_client_ctx_get_old_auth_baton (svn_client_ctx_t *ctx);
 
 /** This is a structure which stores a filename and a hash of property
  * names and values.
