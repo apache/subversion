@@ -336,6 +336,19 @@ def visit_file(arg, dirname, files):
     stats[0] = stats[0] + 1
 
 
+def is_vendor_first_revision(cvs_rev):
+  """Return true if CVS_REV is the first revision on a vendor branch,
+  false otherwise.  If CVS_REV has an even number of components, and
+  last component is 1 and the component before that is odd, then it is
+  the first revision on a vendor branch."""
+  c = string.split(cvs_rev, '.')
+  n = len(c)
+  if ((n > 2) and (n % 2 == 0) and (c[-1] == '1') and (int(c[-2]) % 2 == 1)):
+    return 1
+  else:
+    return None
+
+
 class RevInfoParser(rcsparse.Sink):
   def __init__(self):
     self.authors = { }	# revision -> author
@@ -472,14 +485,21 @@ class RepositoryMirror:
 
   def change_path(self, path, tags, branches,
                   intermediate_dir_func=None,
-                  copyfrom_path=None, copyfrom_rev=None):
+                  copyfrom_path=None, copyfrom_rev=None,
+                  entries_after_copy=None):
     """Record a change to PATH.  PATH may not have a leading slash.
 
-    Return a tuple (op, (closed_names)), where op is 'A' if the
-    path was added or 'C' if it already existed, and (closed_names) is
-    a tuple of symbolic names closed off by this change -- that is,
-    tags or branches which could be rooted in the previous revision of
-    PATH, but not in this revision, because this rev changes PATH.
+    Return a tuple of two or three elements.  The first two are always
+    present, and the third is present only when ENTRIES_AFTER_COPY is
+    present:
+
+       op, (closed_names), [deleted_entries]
+
+    Op is 'A' if the path was added or 'C' if it already existed, and
+    (closed_names) is a tuple of symbolic names closed off by this
+    change -- that is, tags or branches which could be rooted in the
+    previous revision of PATH, but not in this revision, because this
+    rev changes PATH.  (See below for [deleted_entries].)
 
     TAGS are any tags that sprout from this revision of PATH, BRANCHES
     are any branches that sprout from this revision of PATH.
@@ -495,6 +515,16 @@ class RepositoryMirror:
     exists.  Reasonable -- but not what we do :-).  The most useful
     behavior for callers is instead to report that nothing was done,
     by returning '-' for OP, so that's what we do.
+
+    If there is copyfrom information, and ENTRIES_AFTER_COPY is not
+    None, then it is full set of entries expected to be in the copy
+    dst after the copy.  Any entries in the new dst but not in
+    ENTRIES_AFTER_COPY will be removed (ignoring keys beginning with
+    '/'), and those entries are returned in [deleted_entries].
+
+    No action is taken for keys in ENTRIES_AFTER_COPY but not in the
+    dst; it is assumed that the caller will compensate for these by
+    calling change_path again with other arguments.
 
     It is an error for only one copyfrom argument to be present."""
     if ((copyfrom_rev and not copyfrom_path) or
@@ -561,16 +591,22 @@ class RepositoryMirror:
       # The contract for copying over existing nodes is to do nothing
       # and return:
       if copyfrom_path:
-        return OP_NOOP, old_names
+        if entries_after_copy:
+          return OP_NOOP, old_names, []
+        else:
+          return OP_NOOP, old_names
       # else
       op = OP_CHANGE
 
-    if copyfrom_path:
-      copyfrom_val = self.probe_path(copyfrom_path, copyfrom_rev)
-
     leaf_key = gen_key()
+    deletions = []
     if copyfrom_path:
       new_val = self.probe_path(copyfrom_path, copyfrom_rev)
+      if entries_after_copy:
+        for ent in new_val.keys():
+          if (ent[0] != '/') and (not entries_after_copy.has_key(ent)):
+            del new_val[ent]
+            deletions.append(ent)
     else:
       new_val = { }
     parent[last_component] = leaf_key
@@ -579,7 +615,11 @@ class RepositoryMirror:
     new_val[self.mutable_flag] = 1
     s = marshal.dumps(new_val)
     self.nodes_db[leaf_key] = marshal.dumps(new_val)
-    return op, old_names
+
+    if entries_after_copy:
+      return op, old_names, deletions
+    else:
+      return op, old_names
 
   def delete_path(self, path, tags, branches, prune=None):
     """Delete PATH from the tree.  PATH may not have a leading slash.
@@ -849,12 +889,22 @@ class Dumper:
     else:
       return 1
 
-  def copy_path(self, svn_src_path, svn_src_rev, svn_dst_path):
-    op, ign = self.repos_mirror.change_path(svn_dst_path,
-                                            [], [],
-                                            self.add_dir,
-                                            svn_src_path,
-                                            svn_src_rev)
+  def copy_path(self, svn_src_path, svn_src_rev, svn_dst_path, entries=None):
+    """Emit a copy of SVN_SRC_PATH at SVN_SRC_REV to SVN_DST_PATH.
+    If ENTRIES is not None, it is a dictionary whose keys are the full
+    set of entries the new copy is expected to have -- and therefore
+    any entries in the new dst but not in ENTRIES will be removed.
+    (Keys in ENTRIES beginning with '/' are ignored.)
+
+    No action is taken for keys in ENTRIES but not in the dst; it is
+    assumed that the caller will compensate for these by calling
+    copy_path again with other arguments."""
+    op, ign, deletions = self.repos_mirror.change_path(svn_dst_path,
+                                                       [], [],
+                                                       self.add_dir,
+                                                       svn_src_path,
+                                                       svn_src_rev,
+                                                       entries)
     if op == 'A':
       # We don't need to include "Node-kind:" for copies; the loader
       # ignores it anyway and just uses the source kind instead.
@@ -864,6 +914,12 @@ class Dumper:
                           'Node-copyfrom-path: /%s\n'
                           '\n'
                           % (svn_dst_path, svn_src_rev, svn_src_path))
+
+      for ent in deletions:
+        self.dumpfile.write('Node-path: %s\n'
+                            'Node-action: delete\n'
+                            '\n' % (svn_dst_path + '/' + ent))
+        
 
   def add_or_change_path(self, cvs_path, svn_path, cvs_rev, rcs_file,
                          tags, branches):
@@ -1277,52 +1333,51 @@ class SymbolicNameTracker:
         rev = pair[0]
     return rev
 
+  # Helper for fill_branch().
+  def copy_descend(self, dumper, ctx, branch, parent, entry_name,
+                   parent_rev, src_path, dst_path):
+    """Starting with ENTRY_NAME in directory object PARENT at
+    PARENT_REV, use DUMPER and CTX to copy nodes in the Subversion
+    repository, manufacturing the source paths with SRC_PATH and the
+    destination paths with BRANCH and DST_PATH."""
+    key = parent[entry_name]
+    val = marshal.loads(self.db[key])
+
+    if not val.has_key(self.copyfrom_rev_key):
+      # If not already copied this subdir, calculate its "best rev"
+      # and see if it differs from parent's best rev.
+      scores = self.score_revisions(val.get(self.opening_revs_key),
+                                    val.get(self.closing_revs_key))
+      rev = self.best_rev(scores)
+      if (rev != parent_rev):
+        parent_rev = rev
+        copy_dst = make_path(ctx, dst_path, branch)
+        dumper.copy_path(src_path, parent_rev, copy_dst, val)
+        # Record that this copy is done:
+        val[self.copyfrom_rev_key] = parent_rev
+        if val.has_key(self.opening_revs_key):
+          del val[self.opening_revs_key]
+        if val.has_key(self.closing_revs_key):
+          del val[self.closing_revs_key]
+        self.db[key] = marshal.dumps(val)
+
+    for ent in val.keys():
+      if not ent[0] == '/':
+        if src_path:
+          next_src = src_path + '/' + ent
+        else:
+          next_src = ent
+        if dst_path:
+          next_dst = dst_path + '/' + ent
+        else:
+          next_dst = ent
+        self.copy_descend(dumper, ctx, branch, val, ent, parent_rev,
+                          next_src, next_dst)
+
   def fill_branch(self, dumper, ctx, branch, svn_rev, svn_path):
     """Use DUMPER to create all currently available parts of BRANCH
     that have not been created already, and make sure that SVN_REV of
     SVN_PATH is in the branch afterwards."""
-
-    # Helper.
-    def copy_descend(dumper, ctx, branch, parent, entry_name,
-                     parent_rev, src_path, dst_path):
-      """Starting with ENTRY_NAME in directory object PARENT at
-      PARENT_REV, use DUMPER and CTX to copy nodes in the Subversion
-      repository, manufacturing the destination paths with BRANCH and
-      PATH_SO_FAR fooo.  Copy only nodes not implicitly copied as part of a
-      subtree."""
-      key = parent[entry_name]
-      val = marshal.loads(self.db[key])
-
-      if not val.has_key(self.copyfrom_rev_key):
-        # If not already copied this subdir, calculate its "best rev"
-        # and see if it differs from parent's best rev.
-        scores = self.score_revisions(val.get(self.opening_revs_key),
-                                      val.get(self.closing_revs_key))
-        rev = self.best_rev(scores)
-        if (rev != parent_rev):
-          parent_rev = rev
-          copy_dst = make_path(ctx, dst_path, branch)
-          dumper.copy_path(src_path, parent_rev, copy_dst)
-          # Record that this copy is done:
-          val[self.copyfrom_rev_key] = parent_rev
-          if val.has_key(self.opening_revs_key):
-            del val[self.opening_revs_key]
-          if val.has_key(self.closing_revs_key):
-            del val[self.closing_revs_key]
-          self.db[key] = marshal.dumps(val)
-
-      for ent in val.keys():
-        if not ent[0] == '/':
-          if src_path:
-            next_src = src_path + '/' + ent
-          else:
-            next_src = ent
-          if dst_path:
-            next_dst = dst_path + '/' + ent
-          else:
-            next_dst = ent
-          copy_descend(dumper, ctx, branch, val, ent, parent_rev,
-                       next_src, next_dst)
 
     # A source path looks like this in the symbolic name tree:
     #
@@ -1351,9 +1406,6 @@ class SymbolicNameTracker:
       sys.stderr.write("No origin records for branch '%s'.\n" % branch)
       sys.exit(1)
 
-    # Now move down into the branch.  By the way, this has nothing to
-    # do with the directory we just emitted above -- that was for the
-    # svn repository, not the symbolic name tree.
     parent_key = parent[branch]
     parent = marshal.loads(self.db[parent_key])
 
@@ -1388,8 +1440,8 @@ class SymbolicNameTracker:
     # that what CVS would do if you checked out the branch?  <shrug>
 
     if parent.has_key(ctx.trunk_base):
-      copy_descend(dumper, ctx, branch, parent, ctx.trunk_base,
-                   SVN_INVALID_REVNUM, ctx.trunk_base, "")
+      self.copy_descend(dumper, ctx, branch, parent, ctx.trunk_base,
+                        SVN_INVALID_REVNUM, ctx.trunk_base, "")
 
 
 class Commit:
@@ -1503,7 +1555,6 @@ class Commit:
       # compute a repository path, dropping the ,v from the file name
       cvs_path = relative_name(ctx.cvsroot, rcs_file[:-2])
       svn_path = make_path(ctx, cvs_path, br)
-      print '    adding or changing %s : %s' % (cvs_rev, svn_path)
       if svn_rev == SVN_INVALID_REVNUM:
         svn_rev = dumper.start_revision(props)
       sym_tracker.enroot_names(svn_path, svn_rev, tags, branches)
@@ -1517,10 +1568,16 @@ class Commit:
         ### constant time query.
         if not dumper.probe_path(svn_path):
           sym_tracker.fill_branch(dumper, ctx, br, svn_rev, svn_path)
-      closed_names = dumper.add_or_change_path(cvs_path, svn_path,
-                                               cvs_rev, rcs_file,
-                                               tags, branches)
-      sym_tracker.close_names(svn_path, svn_rev, closed_names)
+      # The first revision on a vendor branch is always the same as
+      # the revision from which the branch sprouts, e.g., 1.1.1.1 is
+      # always the same as 1.1, so there's no need to further modify
+      # 1.1.1.1 from however it is in the copy from 1.1.
+      if not (br and is_vendor_first_revision(cvs_rev)):
+        print '    adding or changing %s : %s' % (cvs_rev, svn_path)
+        closed_names = dumper.add_or_change_path(cvs_path, svn_path,
+                                                 cvs_rev, rcs_file,
+                                                 tags, branches)
+        sym_tracker.close_names(svn_path, svn_rev, closed_names)
 
     for rcs_file, cvs_rev, br, tags, branches in self.deletes:
       # compute a repository path, dropping the ,v from the file name
