@@ -347,9 +347,6 @@ like subclipse which use java.
 %setup -q -n %{fullsrc}
 %patch0 -p1
 %patch1 -p1
-%if %{create_javahl}
-%patch2 -p1
-%endif
 %if %{not_just_docs}
 ./autogen.sh %{?release_mode} \
 	     %{?skip_deps}
