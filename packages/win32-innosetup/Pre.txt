@@ -6,11 +6,4 @@ Subversion are a compelling replacement for CVS running on many platforms.
 Subversion are using some external programs and libraries included in this package.
 The proper licenses are in the licenses folder in the application path created after this installation.
 
-
-NOTE: If you are using any previous version of Subversion:
-
-  You are recommended to uninstall any previous version of Subversion
-  before installing this version due to some major changes.
-
-
 Subversion Copyright © 2000-2003 CollabNet
