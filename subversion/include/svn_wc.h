@@ -367,15 +367,32 @@ svn_error_t *svn_wc_rename (svn_stringbuf_t *src,
 svn_error_t *svn_wc_delete (svn_stringbuf_t *path,
                             apr_pool_t *pool);
 
-/* Add an entry for DIR, and create an administrative directory for
-   it.  Does not check that DIR exists on disk; caller should take
-   care of that, if it cares. */
+/* Put DIR under version control.  Specifically, this means adding an
+   an administrative directory to DIR, adding an entry to its parent,
+   and then scheduling it for addition to the repository. This
+   function does not check that FILE exists on disk; caller should
+   take care of that, if it cares.
+
+   If ANCESTOR_PATH is non-null, it must refer to an existing
+   version-controlled file which will be considered the "ancestor" of
+   the new file.  This is used in copy operations, where one wants to
+   schedule DIR for addition, but having a particular history. */
 svn_error_t *svn_wc_add_directory (svn_stringbuf_t *dir,
+                                   svn_stringbuf_t *ancestor_path,
                                    apr_pool_t *pool);
 
-/* Add an entry for FILE.  Does not check that FILE exists on disk;
-   caller should take care of that, if it cares. */
+/* Put FILE under version control.  Specifically, this means adding an
+   entry for FILE in the parent directory, and then scheduling the
+   entry for addition to the repository. This function does not check
+   that FILE exists on disk; caller should take care of that, if it
+   cares.
+
+   If ANCESTOR_PATH is non-null, it must refer to an existing
+   version-controlled file which will be considered the "ancestor" of
+   the new file.  This is used in copy operations, where one wants to
+   schedule FILE for addition, but having a particular history. */
 svn_error_t *svn_wc_add_file (svn_stringbuf_t *file,
+                              svn_stringbuf_t *ancestor_path,
                               apr_pool_t *pool);
 
 
