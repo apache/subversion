@@ -85,7 +85,8 @@ def compare_line_lists(expected_lines, actual_lines, regexp):
       if not compare_lines(eline, aline, remachine):
         alist.remove(aline) # safe to delete aline, because...
         break # we're killing this aline loop, starting over with new eline.
-    return 1  # failure:  we examined all alines, found no match for eline.
+    else:
+      return 1  # failure:  we examined all alines, found no match for eline.
 
   # if we get here, then every eline had an aline match.
   # but what if alist has *extra* lines?
@@ -94,15 +95,6 @@ def compare_line_lists(expected_lines, actual_lines, regexp):
   else:
     return 0  # success: we got a 1-to-1 mapping between sets.
 
-
-# Temporary: testing this module
-
-el = ['A   /foo/bar', 'M  /foo/baz', 'D   blee']
-al = ['M  /foo/baz', 'D   blee', 'A   /foo/bar',]
-rm = re.compile(r"^(..)\s+(.+)")
-
-# Result should be 0 (sameness)...
-print "comparing sets, result is:", compare_line_lists(el, al, rm)
 
 
 
