@@ -20,6 +20,7 @@
 #include "err.h"
 #include "nodes-table.h"
 #include "node-rev.h"
+#include "reps-strings.h"
 
 
 
@@ -78,18 +79,36 @@ svn_fs__create_successor (svn_fs_id_t **new_id_p,
    as part of TRAIL.  If TARGET or SOURCE does not exist, simply
    return success having done nothing.  */
 static svn_error_t *
-deltify (svn_fs_id_t *target,
-         svn_fs_id_t *source,
+deltify (svn_fs_id_t *target_id,
+         svn_fs_id_t *source_id,
          svn_fs_t *fs,
          trail_t *trail)
 {
-#if 0
-  svn_stream_t *target_stream, *source_stream, *txdelta_stream;
-  skel_t *target_nr, *source_nr;
+  skel_t
+    *source_nr,           /* source node revision */
+    *target_nr;           /* target node revision */
+
+  const char
+    *target_pkey,         /* target property rep key  */
+    *target_dkey,         /* target data rep key      */
+    *source_pkey,         /* source property rep key  */
+    *source_dkey;         /* source data rep key      */
+
+  svn_stream_t
+    *source_stream,       /* stream to read the source     */
+    *target_stream;       /* stream to read the target     */
+  svn_txdelta_stream_t
+    *txdelta_stream;      /* stream to read delta windows  */
+
+  svn_fs__rep_read_baton_t
+    *source_rb,           /* stream reading baton for source */
+    *target_rb;           /* stream reading baton for target */
+
   svn_txdelta_window_t *window;
 
+
   SVN_ERR (svn_fs__get_node_revision (&target_nr, fs, target_id, trail));
-  SVN_ERR (svn_fs__get_node_revision (&target_nr, fs, target_id, trail));
+  SVN_ERR (svn_fs__get_node_revision (&source_nr, fs, source_id, trail));
 
   /* It is not an error to attempt to deltify something that does not
      exist, or against something that does not exist.  However, no
@@ -97,13 +116,73 @@ deltify (svn_fs_id_t *target,
   if ((target_nr == NULL) || (source_nr == NULL))
     return SVN_NO_ERROR;
 
+  /* Get all the keys. */
+  {
+    skel_t
+      *target_pkey_skel,
+      *target_dkey_skel,
+      *source_pkey_skel,
+      *source_dkey_skel;
 
-  /* ### todo: use the new rep reading code to read the reps, etc,
-     etc, blah blah blah... */
+    target_pkey_skel = SVN_FS__NR_PROP_KEY (target_nr);
+    if (target_pkey_skel->len != 0) {
+      target_pkey = apr_pstrndup (trail->pool,
+                                  target_pkey_skel->data,
+                                  target_pkey_skel->len);
+    }
+    else {
+      target_pkey = NULL;
+    }
 
-  source_stream = fooo;
-  target_stream = fooo;
+    target_dkey_skel = SVN_FS__NR_DATA_KEY (target_nr);
+    if (target_dkey_skel->len != 0) {
+      target_dkey = apr_pstrndup (trail->pool,
+                                  target_dkey_skel->data,
+                                  target_dkey_skel->len);
+    }
+    else {
+      target_dkey = NULL;
+    }
+    
 
+    if (source_pkey_skel->len != 0) {
+      source_pkey = apr_pstrndup (trail->pool,
+                                  source_pkey_skel->data,
+                                  source_pkey_skel->len);
+    }
+    else {
+      source_pkey = NULL;
+    }
+
+
+    if (source_dkey_skel->len != 0) {
+      source_dkey = apr_pstrndup (trail->pool,
+                                  source_dkey_skel->data,
+                                  source_dkey_skel->len);
+    }
+    else {
+      source_dkey = NULL;
+    }
+  }
+
+  /* Let's just do data deltification for now, no props. */
+  source_rb = svn_fs__rep_read_get_baton
+    (fs, source_dkey, 0, trail, trail->pool);
+  target_rb = svn_fs__rep_read_get_baton
+    (fs, target_dkey, 0, trail, trail->pool);
+
+  /* Right now, we just write the delta as a single svndiff string.
+     See the section "Random access to delta-encoded files" in the
+     top-level IDEAS file for leads on other things we could do here,
+     though... */
+
+  /* Create a stream object in trail->pool, and make it use our read
+     func and baton. */
+  source_stream = svn_stream_create (source_rb, trail->pool);
+  svn_stream_set_read (source_stream, svn_fs__rep_read_contents);
+
+  target_stream = svn_stream_create (target_rb, trail->pool);
+  svn_stream_set_read (target_stream, svn_fs__rep_read_contents);
 
   svn_txdelta (&txdelta_stream, source_stream, target_stream, trail->pool);
 
@@ -112,25 +191,16 @@ deltify (svn_fs_id_t *target,
       SVN_ERR (svn_txdelta_next_window (&window, txdelta_stream));
       if (window)
         {
-          fooo;
-        }
+          /* kff working here:
+             Okay, now we need a write stream for target, and we'll
+             have to do a fancy swaparoo to make the same string have
+             the new contents... */
 
-      if (window)
-        svn_txdelta_free_window (window);
+          /* printf ("*** Got window %p.\n", window); */
+          svn_txdelta_free_window (window);
+        }
     } while (window);
   
-
-  {
-    svn_stringbuf_t *targetstr, *sourcestr;
-    
-    targetstr = svn_fs_unparse_id (target, trail->pool);
-    sourcestr = svn_fs_unparse_id (source, trail->pool);
-    
-    printf ("*** Deltifying %s against %s\n",
-            targetstr->data, sourcestr->data);
-  }
-
-#endif /* 0 */
 
   return SVN_NO_ERROR;
 }

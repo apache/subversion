@@ -219,6 +219,61 @@ svn_fs__delete_rep_if_mutable (svn_fs_t *fs,
 }
 
 
+
+/*** Reading data via representations. ***/
+
+
+struct svn_fs__rep_read_baton_t
+{
+  /* The FS from which we're reading. */
+  svn_fs_t *fs;
+
+  /* The representation skel whose contents we want to read.  If this
+     is null, the rep has never had any contents, so all reads fetch 0
+     bytes.
+
+     Formerly, we cached the entire rep skel here, not just the key.
+     That way we didn't have to fetch the rep from the db every time
+     we want to read a little bit more of the file.  Unfortunately,
+     this has a problem: if, say, a file's representation changes
+     while we're reading (changes from fulltext to delta, for
+     example), we'll never know it.  So for correctness, we now
+     refetch the representation skel every time we want to read
+     another chunk.  */
+  const char *rep_key;
+  
+  /* How many bytes have been read already. */
+  apr_size_t offset;
+
+  /* If present, the read will be done as part of this trail, and the
+     trail's pool will be used.  Otherwise, see `pool' below.  */
+  trail_t *trail;
+
+  /* Used for temporary allocations, iff `trail' (above) is null.  */
+  apr_pool_t *pool;
+
+};
+
+
+svn_fs__rep_read_baton_t *
+svn_fs__rep_read_get_baton (svn_fs_t *fs,
+                            const char *rep_key,
+                            apr_size_t offset,
+                            trail_t *trail,
+                            apr_pool_t *pool)
+{
+  struct svn_fs__rep_read_baton_t *b;
+
+  b = apr_pcalloc (pool, sizeof (*b));
+  b->fs = fs;
+  b->trail = trail;
+  b->pool = pool;
+  b->rep_key = rep_key;
+  b->offset = offset;
+}
+
+
+
 /* Copy into BUF *LEN bytes starting at OFFSET from the string
    represented via REP_KEY in FS, as part of TRAIL.
    The number of bytes actually copied is stored in *LEN.  */

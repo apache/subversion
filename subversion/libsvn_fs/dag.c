@@ -1385,6 +1385,7 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
 { 
   skel_t *node_rev;
   svn_fs__rep_read_baton_t *baton;
+  const char *rep_key;
 
   /* Make sure our node is a file. */
   if (! svn_fs__dag_is_file (file))
@@ -1393,31 +1394,32 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
       (SVN_ERR_FS_NOT_FILE, 0, NULL, trail->pool,
        "Attempted to get textual contents of a *non*-file node.");
   
-  /* Build a read baton in trail->pool. */
-  baton = apr_pcalloc (trail->pool, sizeof (*baton));
-  baton->pool = trail->pool;
-  baton->fs = file->fs;
-  baton->offset = 0;
-
-  /* This function's job is to _return_ a stream on the file's
-     contents, so the stream has to be trail-independent.  Here, we
-     tell the stream that we're not providing it a trail that lives
-     across reads.  This means the stream will do each read in a
-     one-off, temporary trail.  */
-  baton->trail = NULL;
-
   /* Go get a fresh node-revision for FILE. */
   SVN_ERR (get_node_revision (&node_rev, file, trail));
 
   /* Get the rep key. */
   if ((SVN_FS__NR_DATA_KEY (node_rev))->len != 0)
     {
-      baton->rep_key = apr_pstrndup (trail->pool,
-                                     (SVN_FS__NR_DATA_KEY (node_rev))->data,
-                                     (SVN_FS__NR_DATA_KEY (node_rev))->len);
+      rep_key = apr_pstrndup (trail->pool,
+                              (SVN_FS__NR_DATA_KEY (node_rev))->data,
+                              (SVN_FS__NR_DATA_KEY (node_rev))->len);
     }
   else
-    baton->rep_key = NULL;
+    rep_key = NULL;
+
+  /* Our job is to _return_ a stream on the file's contents, so the
+     stream has to be trail-independent.  Here, we pass NULL to tell
+     the stream that we're not providing it a trail that lives across
+     reads.  This means the stream will do each read in a one-off,
+     temporary trail.  
+
+     ### kff todo: see my note in the doc string of
+     svn_fs.h:svn_fs_file_contents() for further investigation...  */
+  baton = svn_fs__rep_read_get_baton (file->fs,
+                                      rep_key,
+                                      0,
+                                      NULL,
+                                      trail->pool);
 
   /* Create a stream object in trail->pool, and make it use our read
      func and baton. */

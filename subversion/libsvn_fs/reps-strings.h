@@ -84,36 +84,25 @@ svn_error_t *svn_fs__delete_rep_if_mutable (svn_fs_t *fs,
 
 /*** Stream-based reading. ***/
 
-typedef struct svn_fs__rep_read_baton_t
-{
-  /* The FS from which we're reading. */
-  svn_fs_t *fs;
+/* A baton type for representation read streams.  */
+typedef struct svn_fs__rep_read_baton_t svn_fs__rep_read_baton_t;
 
-  /* The representation skel whose contents we want to read.  If this
-     is null, the rep has never had any contents, so all reads fetch 0
-     bytes.
 
-     Formerly, we cached the entire rep skel here, not just the key.
-     That way we didn't have to fetch the rep from the db every time
-     we want to read a little bit more of the file.  Unfortunately,
-     this has a problem: if, say, a file's representation changes
-     while we're reading (changes from fulltext to delta, for
-     example), we'll never know it.  So for correctness, we now
-     refetch the representation skel every time we want to read
-     another chunk.  */
-  const char *rep_key;
-  
-  /* How many bytes have been read already. */
-  apr_size_t offset;
+/* Return a rep reading baton to use with the svn stream reading
+   function svn_fs__rep_read_contents().  The baton is allocated in
+   POOL.
 
-  /* If present, the read will be done as part of this trail, and the
-     trail's pool will be used.  Otherwise, see `pool' below.  */
-  trail_t *trail;
+   The baton is for reading representation REP_KEY's data starting at
+   OFFSET in FS, doing temporary allocations in POOL.  If TRAIL is
+   non-null, do the stream's reads as part of TRAIL; otherwise, each
+   read happens in an internal, one-off trail. 
 
-  /* Used for temporary allocations, iff `trail' (above) is null.  */
-  apr_pool_t *pool;
-
-} svn_fs__rep_read_baton_t;
+   POOL may be TRAIL->pool.  */
+svn_fs__rep_read_baton_t *svn_fs__rep_read_get_baton (svn_fs_t *fs,
+                                                      const char *rep_key,
+                                                      apr_size_t offset,
+                                                      trail_t *trail,
+                                                      apr_pool_t *pool);
 
 
 /* Stream read func (matches the `svn_read_func_t' type);
