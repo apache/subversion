@@ -845,7 +845,6 @@ do_single_file_merge (const char *URL1,
   apr_file_t *fp1 = NULL, *fp2 = NULL;
   const char *tmpfile1, *tmpfile2;
   svn_stream_t *fstream1, *fstream2;
-  const char *oldrev_str, *newrev_str;
   svn_revnum_t rev1, rev2;
   apr_hash_t *props1, *props2;
   apr_array_header_t *propchanges;
@@ -853,7 +852,6 @@ do_single_file_merge (const char *URL1,
   svn_ra_plugin_t *ra_lib;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
-  enum svn_wc_merge_outcome_t merge_outcome;
   const char *auth_dir;
 
   props1 = apr_hash_make (pool);
