@@ -139,6 +139,10 @@ SOURCE=.\log.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\ls.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\prop_commands.c
 # End Source File
 # Begin Source File
