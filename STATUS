@@ -112,7 +112,7 @@ Candidate changes:
   * r8618
     Fix segfault in mod_dav_svn.
     Justification: it's a seg fault, and the fix is simple.
-      +1: cmpilato
+      +1: cmpilato, dlr
 
   * r8617
     Fix improper cursor shutdown in libsvn_fs leading to wedgitude.
@@ -122,4 +122,4 @@ Candidate changes:
   * r8616
     Improved warnings from svnlook and svnadmin.
     Justification: greatly increased admin-friendliness.
-      +1: cmpilato
+      +1: cmpilato, dlr
