@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 #
 #  main.py: a shared, automated test suite for Subversion
@@ -199,6 +198,20 @@ def run_command(command, error_expected, binary_mode=0, *varargs):
   """Run COMMAND with VARARGS; return stdout, stderr as lists of lines.
   If ERROR_EXPECTED is None, any stderr also will be printed."""
 
+  return run_command_stdin(command, error_expected, binary_mode, 
+                           None, *varargs)
+
+# Run any binary, supplying input text, logging the command line
+def run_command_stdin(command, error_expected, binary_mode=0, 
+                      stdin_lines=None, *varargs):
+  """Run COMMAND with VARARGS; input STDIN_LINES (a list of strings
+  which should include newline characters) to program via stdin - this
+  should not be very large, as if the program outputs more than the OS
+  is willing to buffer, this will deadlock, with both Python and
+  COMMAND waiting to write to each other for ever.
+  Return stdout, stderr as lists of lines.
+  If ERROR_EXPECTED is None, any stderr also will be printed."""
+
   args = ''
   for arg in varargs:                   # build the command string
     args = args + ' "' + str(arg) + '"'
@@ -215,11 +228,15 @@ def run_command(command, error_expected, binary_mode=0, *varargs):
   start = time.time()
   infile, outfile, errfile = os.popen3(command + args, mode)
 
+  if stdin_lines:
+    map(infile.write, stdin_lines)
+
+  infile.close()
+
   stdout_lines = outfile.readlines()
   stderr_lines = errfile.readlines()
 
   outfile.close()
-  infile.close()
   errfile.close()
 
   if verbose_mode:

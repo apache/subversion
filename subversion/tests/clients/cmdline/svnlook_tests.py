@@ -38,13 +38,27 @@ Item = svntest.wc.StateItem
 #                        Therefore, we can simply parse transaction headers.
 #
 ######################################################################
+
+# Convenience functions to make writing more tests easier
+
+def run_svnlook(*varargs):
+  output, dummy_errput = svntest.main.run_command(svntest.main.svnlook_binary,
+      0, 0, *varargs)
+  return output
+
+
+def expect(tag, expected, got):
+  if expected != got:
+    print "When testing: %s" % tag
+    print "Expected: %s" % expected
+    print "     Got: %s" % got
+    raise svntest.Failure
+
+
 # Tests
 
-
-#----------------------------------------------------------------------
-
-def test_youngest(sbox):
-  "test 'svnlook youngest' subcommand"
+def test_misc(sbox):
+  "test miscellaneous svnlook features"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -76,11 +90,50 @@ def test_youngest(sbox):
                                          None, None,
                                          wc_dir)
 
-  # Youngest revision should now be 2.  Let's verify that.
-  output, errput = svntest.main.run_svnlook("youngest", repo_dir)
+  # give the repo a new UUID
+  uuid = "01234567-89ab-cdef-89ab-cdef01234567"
+  svntest.main.run_command_stdin(svntest.main.svnadmin_binary, None, 0,
+                           ["SVN-fs-dump-format-version: 2\n",
+                            "\n",
+                            "UUID: ", uuid, "\n",
+                           ],
+                           'load', '--force-uuid', repo_dir)
 
-  if output[0] != "2\n":
-    raise svntest.Failure
+  expect('youngest', [ '2\n' ], run_svnlook('youngest', repo_dir))
+
+  expect('author', [ 'jrandom\n' ], run_svnlook('author', repo_dir))
+
+  expect('log', [ 'log msg\n' ], run_svnlook('log', repo_dir))
+
+  expect('uuid', [ uuid + '\n' ], run_svnlook('uuid', repo_dir))
+
+  expect('propget svn:author', [ 'jrandom' ],
+      run_svnlook('propget', '--revprop', repo_dir, 'svn:author'))
+
+  expect('propget svn:log', [ 'log msg' ],
+      run_svnlook('propget', '--revprop', repo_dir, 'svn:log'))
+
+
+  proplist = run_svnlook('proplist', '--revprop', repo_dir)
+  proplist = [prop.strip() for prop in proplist]
+  proplist.sort()
+
+  expected = [ 'svn:author', 'svn:log', 'svn:date' ]
+  expected.sort()
+
+  expect('proplist', expected, proplist)
+
+
+  output, errput = svntest.main.run_svnlook('propget', '--revprop', repo_dir,
+      'foo:bar-baz-quux')
+
+  rm = re.compile("Property.*not found")
+  for line in errput:
+    match = rm.search(line)
+    if match:
+      break
+  else:
+    raise svntest.main.SVNUnmatchedError
 
 
 #----------------------------------------------------------------------
@@ -177,7 +230,7 @@ def test_print_property_diffs(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              test_youngest,
+              test_misc,
               delete_file_in_moved_dir,
               test_print_property_diffs,
              ]
