@@ -1078,23 +1078,31 @@ main (int argc, const char * const *argv)
   /* If there's a second argument, it's probably the repository.
      Every subcommand except `help' requires one, so we parse it out
      here and store it in opt_state. */
-  if ((subcommand->cmd_func != subcommand_help) && (os->ind < os->argc))
+  if (subcommand->cmd_func != subcommand_help)
     {
-      opt_state.repository_path = os->argv[os->ind++];
+      const char *repos_path = NULL;
 
-      INT_ERR (svn_utf_cstring_to_utf8 (&(opt_state.repository_path),
-                                        opt_state.repository_path,
-                                        NULL, pool));
-      opt_state.repository_path
-        = svn_path_canonicalize_nts (opt_state.repository_path, pool);
+      if (os->ind < os->argc)
+        {
+          opt_state.repository_path = os->argv[os->ind++];
 
-      if (opt_state.repository_path == NULL)
+          INT_ERR (svn_utf_cstring_to_utf8 (&(opt_state.repository_path),
+                                            opt_state.repository_path,
+                                            NULL, pool));
+          repos_path 
+            = svn_path_canonicalize_nts (opt_state.repository_path, pool);
+        }
+
+      if (repos_path == NULL)
         {
           fprintf (stderr, "repository argument required\n");
           subcommand_help (NULL, NULL, pool);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }
+
+      /* Copy repos path into the OPT_STATE structure. */
+      opt_state.repository_path = repos_path;      
     }
 
   /* Check that the subcommand wasn't passed any inappropriate options. */
