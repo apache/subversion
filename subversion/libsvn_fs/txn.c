@@ -18,6 +18,7 @@
 #include "apr_pools.h"
 
 #include "svn_pools.h"
+#include "svn_time.h"
 #include "svn_fs.h"
 
 #include "fs.h"
@@ -117,6 +118,29 @@ svn_fs_begin_txn (svn_fs_txn_t **txn_p,
   SVN_ERR (svn_fs__retry_txn (fs, txn_body_begin_txn, &args, pool));
   
   *txn_p = txn;
+
+  /* Put a datestamp on the newly created txn, so we always know
+     exactly how old it is.  (This will help sysadmins identify
+     long-abandoned txns that may need to be manually removed.)  When
+     a txn is promoted to a revision, this property will be
+     automatically overwritten with a revision datestamp. */
+  {
+    svn_string_t propname, date;
+    svn_stringbuf_t *date_buf;
+
+    propname.data = SVN_PROP_REVISION_DATE;
+    propname.len  = strlen (SVN_PROP_REVISION_DATE);
+
+    /* ### kff todo: hmmm.  This is rather annoying.  Perhaps the
+       svn_time_* functions should just use svn_string_t, instead of
+       stringbuf?  Or even... gasp... const char *?  */
+    date_buf = svn_time_to_string (apr_time_now(), pool);
+    date.data = date_buf->data;
+    date.len = date_buf->len;
+
+    SVN_ERR (svn_fs_change_txn_prop (txn, &propname, &date, pool));
+  }
+
   return SVN_NO_ERROR;
 }
 

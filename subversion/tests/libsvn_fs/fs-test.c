@@ -743,11 +743,12 @@ transaction_props (const char **msg,
     { "auto", "Green 1997 Saturn SL1" }
     };
 
-  const char *final_props[4][2] = { 
+  const char *final_props[5][2] = { 
     { "color", "violet" },
     { "flower", "violet" },
     { "favorite saturday morning cartoon", "looney tunes" },
-    { "auto", "Red 2000 Chevrolet Blazer" }
+    { "auto", "Red 2000 Chevrolet Blazer" },
+    { SVN_PROP_REVISION_DATE, "<some datestamp value>" }
     };
 
   *msg = "set/get txn props, commit, validate new rev props";
@@ -793,14 +794,16 @@ transaction_props (const char **msg,
   {
     svn_stringbuf_t *prop_value;
 
-    if (apr_hash_count (proplist) != 4 )
+    /* All transactions get a datestamp property at their inception,
+       so we expect *5*, not 4 properties. */
+    if (apr_hash_count (proplist) != 5 )
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "unexpected number of transaction properties were found");
 
     /* Loop through our list of expected revision property name/value
        pairs. */
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < 5; i++)
       {
         /* For each expected property: */
 
@@ -817,10 +820,11 @@ transaction_props (const char **msg,
 
         /* Step 2.  Make sure the value associated with it is the same
            as what was expected, else return an error. */
-        if (strcmp (prop_value->data, final_props[i][1]))
-          return svn_error_createf
-            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-             "transaction property had an unexpected value");
+        if (strcmp (final_props[i][0], SVN_PROP_REVISION_DATE))
+          if (strcmp (prop_value->data, final_props[i][1]))
+            return svn_error_createf
+              (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+               "transaction property had an unexpected value");
       }
   }
   
@@ -840,14 +844,14 @@ transaction_props (const char **msg,
   {
     svn_stringbuf_t *prop_value;
 
-    if (apr_hash_count (proplist) < 4 )
+    if (apr_hash_count (proplist) < 5 )
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "unexpected number of revision properties were found");
 
     /* Loop through our list of expected revision property name/value
        pairs. */
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < 5; i++)
       {
         /* For each expected property: */
 
@@ -864,10 +868,11 @@ transaction_props (const char **msg,
 
         /* Step 2.  Make sure the value associated with it is the same
            as what was expected, else return an error. */
-        if (strcmp (prop_value->data, final_props[i][1]))
-          return svn_error_createf
-            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-             "revision property had an unexpected value");
+        if (strcmp (final_props[i][0], SVN_PROP_REVISION_DATE))
+          if (strcmp (prop_value->data, final_props[i][1]))
+            return svn_error_createf
+              (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+               "revision property had an unexpected value");
       }
   }
 
