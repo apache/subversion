@@ -2150,7 +2150,7 @@ $ svnserve -r /usr/local
           shorter (and much less revealing) URLs:</para>
 
         <screen>
-$ svn co svn://example.com/repos/projects
+$ svn checkout svn://example.com/repos/projects
 &hellip;
 </screen>
 
