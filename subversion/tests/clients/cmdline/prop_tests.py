@@ -982,6 +982,22 @@ def recursive_base_wc_ops(sbox):
   output, errput = svntest.main.run_svn(None, 'propget', '-R', 'p', wc_dir)
   verify_output([ 'new-add', 'new-keep' ], output, errput)
 
+  # Test recursive propset (issue 1794)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2)
+  expected_status.tweak('A/mu', status='D ', wc_rev=2)
+  expected_status.tweak('iota', status=' M', wc_rev=2)
+  expected_status.add({
+    'A/added'     : Item(status='A ', repos_rev=2, wc_rev=0),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 
+                                     'propset', '-R', 'svn:keywords', 'Date',
+                                     os.path.join(wc_dir, 'A', 'B'))
+  expected_status.tweak('A/B/lambda', 'A/B/E/alpha', 'A/B/E/beta', status=' M')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 #----------------------------------------------------------------------
 
 def url_props_ops(sbox):
