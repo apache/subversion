@@ -262,7 +262,6 @@ client_ssl_callback(void *userdata, ne_session *sess,
 {
   svn_ra_session_t *ras = userdata;
   void *creds;
-  svn_auth_cred_ssl_client_cert_t *client_creds;
   svn_auth_iterstate_t *state;
   apr_pool_t *pool;
   svn_error_t *error;
@@ -278,23 +277,22 @@ client_ssl_callback(void *userdata, ne_session *sess,
     }
   else
     {
-      client_creds = creds;
-      if (client_creds)
+      svn_auth_cred_ssl_client_cert_t *client_creds = creds;
+      ne_ssl_client_cert *clicert
+        = ne_ssl_clicert_read(client_creds->cert_file);
+      if (clicert != NULL)
         {
-          ne_ssl_client_cert *clicert =
-            ne_ssl_clicert_read(client_creds->cert_file);
-          if ((clicert != NULL) &&
-              (ne_ssl_clicert_encrypted(clicert)))
+          if (ne_ssl_clicert_encrypted(clicert))
             {
               char pw[128];
-              if (client_ssl_keypw_callback(userdata, pw, 128))
-                {
-                  return; /* no password given */
-                }
-              ne_ssl_clicert_decrypt(clicert, pw);
-              ne_ssl_set_clicert(sess, clicert);
+              if ((client_ssl_keypw_callback(userdata, pw, sizeof(pw)) == 0)
+                  && (ne_ssl_clicert_decrypt(clicert, pw) == 0))
+                /* Successfully decrypted */
+                ne_ssl_set_clicert(sess, clicert);
+
+              /* ### Notify user if decrypt fails? */
             }
-          else if (clicert != NULL)
+          else
             {
               /* Cert isn't encrypted, so just attach it. */
               ne_ssl_set_clicert(sess, clicert);
