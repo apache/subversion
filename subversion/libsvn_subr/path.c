@@ -29,6 +29,7 @@
 #include "svn_private_config.h"         /* for SVN_PATH_LOCAL_SEPARATOR */
 #include "svn_utf.h"
 #include "svn_io.h"                     /* for svn_io_stat() */
+#include "svn_ctype.h"
 
 
 /* The canonical empty path.  Can this be changed?  Well, change the empty
@@ -1247,4 +1248,24 @@ svn_path_cstring_to_utf8 (const char **path_utf8,
     }
   else
     return svn_utf_cstring_to_utf8 (path_utf8, path_apr, pool);
+}
+
+svn_error_t *
+svn_path_check_valid (const char *path, apr_pool_t *pool)
+{
+  const char *c;
+
+  for (c = path; *c; c++)
+    {
+      if (svn_ctype_iscntrl(*c))
+        {
+          return svn_error_createf (
+            SVN_ERR_FS_PATH_SYNTAX, NULL,
+            _("Invalid control character '0x%02x' in path '%s'"),
+            *c,
+            svn_path_local_style (path, pool));
+        }
+    }
+
+  return SVN_NO_ERROR;
 }
