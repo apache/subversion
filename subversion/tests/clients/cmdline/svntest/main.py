@@ -130,40 +130,13 @@ pristine_dir = os.path.join(temp_dir, "repos")
 greek_dump_dir = os.path.join(temp_dir, "greekfiles")
 
 
-
-# Our pristine greek-tree list of lists.
+#
+# Our pristine greek-tree state.
 #
 # If a test wishes to create an "expected" working-copy tree, it should
-# call main.copy_greek_tree().  That function will return a *mutable*
-# version of this list.  That list can then be edited, and finally
-# passed to tree.build_generic_tree().  The result will be a genuine
-# SVNTreeNode structure that looks like the standard "Greek Tree" (or
-# some variant thereof).
+# call main.greek_state.copy().  That method will return a copy of this
+# State object which can then be edited.
 #
-# Please read the documentation at the top of 'tree.py' to understand
-# the format of this list!
-
-greek_tree = ( ('iota', "This is the file 'iota'.", {}, {}),
-               ('A', None, {}, {}),
-               ('A/mu', "This is the file 'mu'.", {}, {}),
-               ('A/B', None, {}, {}),
-               ('A/B/lambda', "This is the file 'lambda'.", {}, {}),
-               ('A/B/E', None, {}, {}),
-               ('A/B/E/alpha', "This is the file 'alpha'.", {}, {}),
-               ('A/B/E/beta', "This is the file 'beta'.", {}, {}),
-               ('A/B/F', None, {}, {}),
-               ('A/C', None, {}, {}),
-               ('A/D', None, {}, {}),
-               ('A/D/gamma', "This is the file 'gamma'.", {}, {}),
-               ('A/D/G', None, {}, {}),
-               ('A/D/G/pi', "This is the file 'pi'.", {}, {}),
-               ('A/D/G/rho', "This is the file 'rho'.", {}, {}),
-               ('A/D/G/tau', "This is the file 'tau'.", {}, {}),
-               ('A/D/H', None, {}, {}),
-               ('A/D/H/chi', "This is the file 'chi'.", {}, {}),
-               ('A/D/H/psi', "This is the file 'psi'.", {}, {}),
-               ('A/D/H/omega', "This is the file 'omega'.", {}, {}) )
-
 _item = wc.StateItem
 greek_state = wc.State('', {
   'iota'        : _item("This is the file 'iota'."),
@@ -187,12 +160,6 @@ greek_state = wc.State('', {
   'A/D/H/psi'   : _item("This is the file 'psi'."),
   'A/D/H/omega' : _item("This is the file 'omega'."),
   })
-
-### ran this interactively to verify tree equality:
-###
-### t1 = svntest.main.greek_state.old_tree()
-### t2 = svntest.tree.build_generic_tree(svntest.main.greek_tree)
-### assert not svntest.tree.compare_trees(t1, t2)
 
 
 ######################################################################
@@ -304,38 +271,7 @@ def create_repos(path):
 
   # make the repos world-writeable, for mod_dav_svn's sake.
   chmod_tree(path, 0666, 0666)
-
-# Convert a list of lists of the form [ [path, contents], ...] into a
-# real tree on disk.
-def write_tree(path, lists):
-  "Create a dir PATH and populate it with files/dirs described in LISTS."
-
-  if not os.path.exists(path):
-    os.makedirs(path)
-
-  for item in lists:
-    fullpath = os.path.join(path, item[0])
-    if not item[1]:  # it's a dir
-      if not os.path.exists(fullpath):
-        os.makedirs(fullpath)
-    else: # it's a file
-      fp = open(fullpath, 'w')
-      fp.write(item[1])
-      fp.close()
       
-
-# For returning a *mutable* copy of greek_tree (a tuple of tuples).
-def copy_greek_tree():
-  "Return a mutable (list) copy of svntest.main.greek_tree."
-
-  templist = []
-  for x in greek_tree:
-    tempitem = []
-    for y in x:
-      tempitem.append(y)
-    templist.append(tempitem)
-
-  return copy.deepcopy(templist)
 
 ######################################################################
 # Sandbox handling
@@ -475,12 +411,6 @@ if os.path.exists(temp_dir):
 # the modules import each other, so we do this import very late, to ensure
 # that the definitions in "main" have been completed.
 import actions
-
-### It would be nice to print a graceful error if an older python
-### interpreter tries to load this file, instead of getting a cryptic
-### syntax error during initial byte-compilation.  Is there a way to
-### "require" a certain version of python?
-
 
 
 ### End of file.
