@@ -18,7 +18,8 @@ LIBTOOL = @LIBTOOL@ --silent
 
 ## List of directories in which Makefile.in's should be generated:
 
-SUBDIRS = libsvn_subr                \
+SUBDIRS = .                          \
+          libsvn_subr                \
           libsvn_delta               \
           libsvn_wc                  \
           libsvn_ra_dav              \
