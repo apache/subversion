@@ -1,7 +1,6 @@
 #!/usr/bin/perl -w
 
 #=======================================================================
-# $URL$
 # $Id$
 # Eat stdin, smack those @ENGLISH* markers around it and send it to 
 # stdout. After that, print all the XML elements with all the text 
