@@ -32,7 +32,6 @@ struct svn_stream_t {
   svn_read_fn_t *read_fn;
   svn_write_fn_t *write_fn;
   svn_close_fn_t *close_fn;
-  apr_pool_t *pool;
 };
 
 
@@ -383,7 +382,6 @@ svn_stream_create (void *baton, apr_pool_t *pool)
   stream->read_fn = NULL;
   stream->write_fn = NULL;
   stream->close_fn = NULL;
-  stream->pool = pool;
   return stream;
 }
 
