@@ -31,7 +31,7 @@ public class SVNClient implements SVNClientInterface
      */
     static
     {
-        System.loadLibrary("svnjavahl");
+        System.loadLibrary("svnjavahl-1");
     }
 
     /**

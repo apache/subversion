@@ -69,6 +69,10 @@ swig_pydir_extra = @libdir@/svn-python/svn
 swig_javadir = @libdir@/svn-java
 swig_pldir = @libdir@/svn-perl
 
+javahl_javadir = @libdir@/svn-javahl
+javahl_javahdir = @libdir@/svn-javahl/include
+javahl_libdir = @libdir@
+
 ### should search for these...
 MAKEINFO = @MAKEINFO@
 TEXI2DVI = texi2dvi
@@ -77,6 +81,7 @@ DVIPDF = dvipdf
 
 
 CC = @CC@
+CXX = @CXX@
 EXEEXT = @EXEEXT@
 
 SHELL = @SHELL@
@@ -123,6 +128,7 @@ CPPFLAGS = @CPPFLAGS@ $(EXTRA_CPPFLAGS)
 LDFLAGS = @LDFLAGS@ $(EXTRA_LDFLAGS)
 
 COMPILE = $(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES)
+COMPILE_CXX = $(CXX) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) $(INCLUDES)
 LT_COMPILE = $(LIBTOOL) $(LTFLAGS) --mode=compile $(COMPILE)
 
 # special compilation for files destined for mod_dav_svn
@@ -132,6 +138,11 @@ COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CF
 COMPILE_SWIG_PY = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) -DSWIGPYTHON $(CFLAGS) $(SWIG_PY_INCLUDES) $(INCLUDES) -o $@ -c
 COMPILE_SWIG_JAVA = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(SWIG_JAVA_INCLUDES) $(INCLUDES) -o $@ -c
 COMPILE_SWIG_PL = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(SWIG_PL_INCLUDES) $(INCLUDES) -o $@ -c
+
+# special compilation for files destined for javahl (i.e. C++)
+COMPILE_JAVAHL_CXX = $(LIBTOOL) $(LTFLAGS) --mode=compile $(COMPILE_CXX) $(SWIG_JAVA_INCLUDES) -o $@ -c
+COMPILE_JAVAHL_JAVAC = $(JAVAC)
+COMPILE_JAVAHL_JAVAH = $(JAVAH)
 
 LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(libdir)
 
@@ -154,6 +165,7 @@ LINK_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_PY_LINK) $(SWIG_LDFLA
 LINK_JAVA_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_JAVA_LINK) $(SWIG_LDFLAGS) -rpath $(swig_javadir) -avoid-version -module
 LINK_PL_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_PL_LINK) $(SWIG_LDFLAGS) -rpath $(swig_pldir) -avoid-version -module
 
+LINK_JAVAHL_CXX = $(LIBTOOL) $(LTFLAGS) --mode=link $(CXX) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(libdir)
 
 INSTALL = @INSTALL@
 INSTALL_LIB = $(LIBTOOL) --mode=install $(INSTALL)
@@ -174,6 +186,8 @@ INSTALL_SWIG_JAVA = $(INSTALL_LIB)
 INSTALL_SWIG_JAVA_LIB = $(INSTALL_LIB)
 INSTALL_SWIG_PL = $(INSTALL_LIB)
 INSTALL_SWIG_PL_LIB = $(INSTALL_LIB)
+
+INSTALL_JAVAHL_LIB = $(INSTALL_LIB)
 
 # additional installation rules for the SWIG wrappers
 INSTALL_EXTRA_SWIG_PY=\
@@ -206,12 +220,17 @@ INSTALL_EXTRA_SWIG_JAVA=\
 	$(JAR) cf $(SWIG_JAVA_DIR)/build/svn-api.jar -C $(SWIG_JAVA_DIR)/build org; \
 	$(INSTALL_DATA) $(SWIG_JAVA_DIR)/build/svn-api.jar $(DESTDIR)$(swig_javadir);
 
+INSTALL_EXTRA_JAVAHL_JAVA=\
+	$(JAR) cf subversion/bindings/java/javahl/svn-javahl.jar -C subversion/bindings/java/javahl/classes org; \
+	$(INSTALL_DATA) subversion/bindings/java/javahl/svn-javahl.jar $(DESTDIR)$(javahl_javadir);
+
 APXS = @APXS@ 
 
 PYTHON = @PYTHON@
 
 JDK = @JDK@
 JAVAC = @JAVAC@
+JAVAH = @JAVAH@
 JAR = @JAR@
 
 ECHO_C = @ECHO_C@

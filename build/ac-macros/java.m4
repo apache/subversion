@@ -50,12 +50,30 @@ AC_DEFUN(SVN_FIND_JDK,
   fi
   AC_MSG_RESULT([$JDK_SUITABLE])
 
-  JAVAC='$(JDK)/bin/javac'
+  JAVA_BIN='$(JDK)/bin'
+  if test -f "$JDK/include/jni.h"; then
+    JNI_INCLUDES="$JDK/include"
+  fi
+
+  dnl Correct for Darwin's odd JVM layout.  Ideally, we should use realpath,
+  dnl but Darwin doesn't have that utility.  /usr/bin/java is a symlink into
+  dnl /System/Library/Frameworks/JavaVM.framework/Versions/CurrentJDK/Commands
+  os_arch=`uname`
+  if test "$JDK_SUITABLE" = "yes" -a "$JDK" = "/usr" -a "$os_arch" = "Darwin" -a -d "/System/Library/Frameworks/JavaVM.framework/Versions/CurrentJDK"; then
+      JDK="/System/Library/Frameworks/JavaVM.framework/Versions/CurrentJDK"
+      JAVA_BIN='$(JDK)/Commands'
+      JNI_INCLUDES="$JDK/Headers"
+  fi
+
+  JAVAC="$JAVA_BIN/javac"
   # TODO: Test for Jikes, which should be preferred (for speed) if available
-  JAR='$(JDK)/bin/jar'
+  JAVAH="$JAVA_BIN/javah"
+  JAR="$JAVA_BIN/jar"
 
   dnl We use JDK in both the swig.m4 macros and the Makefile
   AC_SUBST(JDK)
   AC_SUBST(JAVAC)
+  AC_SUBST(JAVAH)
   AC_SUBST(JAR)
+  AC_SUBST(JNI_INCLUDES)
 ])

@@ -60,6 +60,9 @@ class Generator(gen_base.GeneratorBase):
         elif isinstance(source, gen_base.ObjectFile):
           # link in the object file
           objects.append(source.filename)
+        elif isinstance(source, gen_base.HeaderFile):
+          # skip the header files.
+          pass
         else:
           ### we don't know what this is, so we don't know what to do with it
           raise UnknownDependency
@@ -67,20 +70,41 @@ class Generator(gen_base.GeneratorBase):
       targ_varname = string.replace(target, '-', '_')
       objnames = string.join(gen_base._strip_path(path, objects))
 
-      self.ofile.write(
-        '%s_DEPS = %s %s\n'
-        '%s_OBJECTS = %s\n'
-        '%s: $(%s_DEPS)\n'
-        '\tcd %s && %s -o %s $(%s_OBJECTS) %s $(LIBS)\n\n'
-        % (targ_varname, target_ob.add_deps, string.join(objects + deps),
+      if isinstance(target_ob, gen_base.TargetJava):
+        self.ofile.write(
+          '%s_DEPS = %s %s\n'
+          '%s: $(%s_DEPS)\n'
+          '\t%s -d %s '
+          % (targ_varname, target_ob.add_deps, string.join(objects + deps),
 
-           targ_varname, objnames,
+             target_ob.name, targ_varname,
+             target_ob.link_cmd, target_ob.output_dir))
+        if isinstance(target_ob, gen_base.TargetJavaHeaders):
+          self.ofile.write('-classpath %s ' % target_ob.classes);
+        for dep in target_ob.deps:
+          if isinstance(dep, gen_base.SourceFile):
+            self.ofile.write('%s ' % os.path.join('$(abs_srcdir)', dep.filename))
+          elif isinstance(dep, gen_base.HeaderFile):
+            self.ofile.write('%s ' % dep.classname)
+          else:
+            print type(dep)
+            raise UnknownDependency
+        self.ofile.write('\n\n')
+      else:
+        self.ofile.write(
+          '%s_DEPS = %s %s\n'
+          '%s_OBJECTS = %s\n'
+          '%s: $(%s_DEPS)\n'
+          '\tcd %s && %s -o %s $(%s_OBJECTS) %s $(LIBS)\n\n'
+          % (targ_varname, target_ob.add_deps, string.join(objects + deps),
 
-           target_ob.filename, targ_varname,
+             targ_varname, objnames,
 
-           path, target_ob.link_cmd, os.path.basename(target_ob.filename),
-           targ_varname, string.join(gen_base.unique(libs)))
-        )
+             target_ob.filename, targ_varname,
+
+             path, target_ob.link_cmd, os.path.basename(target_ob.filename),
+             targ_varname, string.join(gen_base.unique(libs)))
+          )
 
     # for each install group, write a rule to install its outputs
     for itype, i_targets in self.graph.get_deps(gen_base.DT_INSTALL):
@@ -161,6 +185,8 @@ class Generator(gen_base.GeneratorBase):
                          '\t$(MKDIR) $(DESTDIR)$(%sdir)\n'
                          % (area, string.join(files), area_var))
         for file in files:
+          if file == '':
+            continue
           # cd to dirname before install to work around libtool 1.4.2 bug.
           dirname, fname = os.path.split(file)
           self.ofile.write('\tcd %s ; $(INSTALL_%s) %s $(DESTDIR)%s\n'
@@ -169,7 +195,8 @@ class Generator(gen_base.GeneratorBase):
                               fname,
                               os.path.join('$(%sdir)' % area_var, fname)))
         ### we should turn AREA into an object, then test it instead of this
-        if area[:5] == 'swig-' and area[-4:] != '-lib':
+        if area[:5] == 'swig-' and area[-4:] != '-lib' or \
+           area[:7] == 'javahl-':
           self.ofile.write('\t$(INSTALL_EXTRA_%s)\n' % upper_var)
         self.ofile.write('\n')
 
@@ -185,7 +212,8 @@ class Generator(gen_base.GeneratorBase):
 
     self.ofile.write('\n# handy shortcut targets\n')
     for target in self.graph.get_all_sources(gen_base.DT_INSTALL):
-      if not isinstance(target, gen_base.TargetScript):
+      if not isinstance(target, gen_base.TargetScript) and \
+         not isinstance(target, gen_base.TargetJava):
         self.ofile.write('%s: %s\n' % (target.name, target.filename))
     self.ofile.write('\n')
 

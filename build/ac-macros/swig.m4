@@ -152,8 +152,8 @@ AC_DEFUN(SVN_FIND_SWIG,
 #      SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-java-lib"
 #      SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-java-lib"
 
-      SWIG_JAVA_INCLUDES='-I$(JDK)/include'
-      list="`find "$JDK/include" -type d -print`"
+      SWIG_JAVA_INCLUDES="-I$JNI_INCLUDES"
+      list="`find "$JNI_INCLUDES" -type d -print`"
       for dir in $list; do
         SWIG_JAVA_INCLUDES="$SWIG_JAVA_INCLUDES -I$dir"
       done
