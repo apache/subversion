@@ -23,7 +23,10 @@ libmod_dav_svn_la_LIBADD = \
 ## we don't need the .so version stuff for an Apache module, so avoid them
 LDFLAGS = -avoid-version
 
-INCLUDES = @SVN_INCLUDES@ $(APACHE_INCLUDES) @SVN_APR_INCLUDES@
+## ### the SVN_EXPAT_INCLUDES is a bit horky since svn_xml.h includes an
+## ### expat header. we'll fix all this later...
+INCLUDES = @SVN_INCLUDES@ $(APACHE_INCLUDES) @SVN_APR_INCLUDES@ \
+		@SVN_EXPAT_INCLUDES@
 
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent
