@@ -49,6 +49,7 @@
 
 
 #ifndef SVN_XML_H
+#define SVN_XML_H
 
 
 /* Return the value associated with NAME in expat attribute array ATTS,
@@ -59,7 +60,7 @@
  * odd-numbers hold values.  If all is right, it should end on an
  * even-numbered index pointing to NULL.
  */
-const char *get_attribute_value (char *name, const char **atts);
+const char *svn_get_xml_attr_value (const char *name, const char **atts);
 
 
 #endif /* SVN_XML_H */
