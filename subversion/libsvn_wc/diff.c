@@ -468,6 +468,7 @@ file_diff (struct dir_baton *dir_baton,
   svn_boolean_t copied = entry->copied;
   svn_wc_adm_access_t *adm_access;
   const char *pristine_mimetype, *working_mimetype;
+  const char *translated;
 
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, dir_baton->edit_baton->anchor,
                                 dir_baton->path, pool));
@@ -527,14 +528,19 @@ file_diff (struct dir_baton *dir_baton,
                                     adm_access, path, pool));
 
       if (! eb->use_text_base)
-        SVN_ERR (dir_baton->edit_baton->callbacks->file_added
-                 (NULL, NULL, path,
-                  empty_file,
-                  path,
-                  0, entry->revision,
-                  NULL,
-                  working_mimetype,
-                  dir_baton->edit_baton->callback_baton));
+        {
+          SVN_ERR (svn_wc_translated_file (&translated, path, adm_access,
+                                           TRUE, pool));
+
+          SVN_ERR (dir_baton->edit_baton->callbacks->file_added
+                   (NULL, NULL, path,
+                    empty_file,
+                    translated,
+                    0, entry->revision,
+                    NULL,
+                    working_mimetype,
+                    dir_baton->edit_baton->callback_baton));
+        }
 
       SVN_ERR (svn_wc_props_modified_p (&modified, path, adm_access, pool));
       if (modified && (! eb->use_text_base))
@@ -560,7 +566,6 @@ file_diff (struct dir_baton *dir_baton,
                                        adm_access, pool));
       if (modified && (! eb->use_text_base))
         {
-          const char *translated;
           svn_error_t *err, *err2 = SVN_NO_ERROR;
 
           pristine_copy = svn_wc__text_base_path (path, FALSE, pool);   

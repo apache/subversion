@@ -55,6 +55,17 @@ def general_symlink(sbox):
     'linktarget' : Item(verb='Adding'),
     })
 
+  # Run a diff and verify that we get the correct output
+  stdout_lines, stderr_lines = svntest.main.run_svn(1, 'diff', wc_dir)
+  
+  regex = '^\+link linktarget'
+  for line in stdout_lines:
+    if re.match(regex, line):
+      break
+  else:
+    raise svntest.Failure
+  
+  # Commit and make sure everything is good
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
