@@ -139,7 +139,7 @@ check: $(TEST_DEPS) @FS_TEST_DEPS@
 
 mkdir-init:
 	@list='$(BUILD_DIRS) $(DOC_DIRS)'; for i in $$list doc; do \
-	    echo "$(MKDIR) $$i" ; \
+	    echo "mkdir $$i" ; \
 	    $(MKDIR) $$i ; \
 	done
 
