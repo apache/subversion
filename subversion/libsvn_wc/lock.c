@@ -511,6 +511,46 @@ svn_wc_adm_probe_retrieve (svn_wc_adm_access_t **adm_access,
 }
 
 
+svn_error_t *
+svn_wc_adm_probe_try (svn_wc_adm_access_t **adm_access,
+                      svn_wc_adm_access_t *associated,
+                      const char *path,
+                      svn_boolean_t write_lock,
+                      svn_boolean_t tree_lock,
+                      apr_pool_t *pool)
+{
+  svn_error_t *err;
+
+  err = svn_wc_adm_probe_retrieve (adm_access, associated, path, pool);
+
+  /* SVN_ERR_WC_NOT_LOCKED would mean there was no access baton for
+     path in associated, in which case we want to open an access
+     baton and add it to associated. */
+  if (err && (err->apr_err == SVN_ERR_WC_NOT_LOCKED))
+    {
+      svn_error_clear (err);
+      err = svn_wc_adm_probe_open (adm_access, associated,
+                                   path, write_lock, tree_lock,
+                                   svn_wc_adm_access_pool (associated));
+
+      /* If the path is not a versioned directory, we just return a
+         null access baton with no error.  Note that of the errors we
+         do report, the most important (and probably most likely) is
+         SVN_ERR_WC_LOCKED.  That error would mean that someone else
+         has this area locked, and we definitely want to bail in that
+         case. */
+      if (err && (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY))
+        {
+          svn_error_clear (err);
+          *adm_access = NULL;
+          err = NULL;
+        }
+    }
+
+  return err;
+}
+
+
 /* Does the work of closing the access baton ADM_ACCESS.  Any physical
    locks are removed from the working copy if PRESERVE_LOCK is FALSE, or
    are left if PRESERVE_LOCK is TRUE.  Any associated access batons that

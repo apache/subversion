@@ -702,7 +702,6 @@ svn_wc_delete (const char *path,
                void *notify_baton,
                apr_pool_t *pool)
 {
-  svn_error_t *err;
   svn_wc_adm_access_t *dir_access;
   const svn_wc_entry_t *entry;
   const char *parent, *base_name;
@@ -710,23 +709,12 @@ svn_wc_delete (const char *path,
   svn_node_kind_t was_kind;
   svn_boolean_t was_deleted = FALSE; /* Silence a gcc uninitialized warning */
 
-  err = svn_wc_adm_probe_retrieve (&dir_access, adm_access, path, pool);
-  if (err)
-    {
-      svn_error_clear (err);
-      err = svn_wc_adm_probe_open (&dir_access, adm_access,
-                                   path, TRUE, TRUE,
-                                   svn_wc_adm_access_pool (adm_access));
-    }
-
-  if (err)
-    {
-      svn_error_clear (err);
-      dir_access = NULL;
-      entry = NULL;
-    }
-  else
+  SVN_ERR (svn_wc_adm_probe_try (&dir_access, adm_access, path,
+                                 TRUE, TRUE, pool));
+  if (dir_access)
     SVN_ERR (svn_wc_entry (&entry, path, dir_access, FALSE, pool));
+  else
+    entry = NULL;
 
   if (!entry)
     return erase_unversioned_from_wc (path, cancel_func, cancel_baton, pool);
@@ -868,7 +856,6 @@ svn_wc_add (const char *path,
   apr_uint32_t modify_flags = 0;
   const char *mimetype = NULL;
   svn_boolean_t executable = FALSE;
-  svn_error_t *err;
   svn_wc_adm_access_t *adm_access;
   
   /* Make sure something's there. */
@@ -886,23 +873,12 @@ svn_wc_add (const char *path,
      Note that this is one of the few functions that is allowed to see
     'deleted' entries;  it's totally fine to have an entry that is
      scheduled for addition and still previously 'deleted'.  */
-  err = svn_wc_adm_probe_retrieve (&adm_access, parent_access, path, pool);
-  if (err)
-    {
-      svn_error_clear (err);
-      err = svn_wc_adm_probe_open (&adm_access, parent_access,
-                                   path, TRUE, copyfrom_url != NULL,
-                                   svn_wc_adm_access_pool (parent_access));
-    }
-
-  if (err)
-    {
-      svn_error_clear (err);
-      adm_access = NULL;
-      orig_entry = NULL;
-    }
-  else
+  SVN_ERR (svn_wc_adm_probe_try (&adm_access, parent_access, path,
+                                 TRUE, copyfrom_url != NULL, pool));
+  if (adm_access)
     SVN_ERR (svn_wc_entry (&orig_entry, path, adm_access, TRUE, pool));
+  else
+    orig_entry = NULL;
 
   /* You can only add something that is not in revision control, or
      that is slated for deletion from revision control, or has been
