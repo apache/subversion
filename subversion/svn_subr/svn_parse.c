@@ -163,7 +163,7 @@ strip__whitespace (svn_string_t *str)
     }
   
   /* Mmm, waste some more RAM */
-  str->len -= i;
+  str->len = i + 1;
 }
 
 
@@ -251,10 +251,10 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
   ap_hash_t *uberhash;      /* our hash of hashes */
   ap_hash_t *current_hash;  /* the hash we're currently storing vals in */
 
-  ap_file_t *FILE;
   ap_pool_t *scratchpool;
   svn_string_t *currentline;
   ap_status_t result;     
+  ap_file_t *FILE = NULL;
 
   
   /* Create our uberhash */
