@@ -1753,14 +1753,15 @@ subcommand_lock (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (lock)
     {
       const char *cr_date, *exp_date = "";
-      int comment_lines;
+      int comment_lines = 0;
 
       cr_date = svn_time_to_human_cstring (lock->creation_date, pool);
 
       if (lock->expiration_date)
         exp_date = svn_time_to_human_cstring (lock->expiration_date, pool);
 
-      comment_lines = svn_cstring_count_newlines (lock->comment) + 1;
+      if (lock->comment)
+        comment_lines = svn_cstring_count_newlines (lock->comment) + 1;
 
       SVN_ERR (svn_cmdline_printf (pool, _("UUID Token: %s\n"), lock->token));
       SVN_ERR (svn_cmdline_printf (pool, _("Owner: %s\n"), lock->owner));
