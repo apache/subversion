@@ -68,7 +68,7 @@
           <row>
             <entry>Authentication options</entry>
             
-            <entry>HTTP basic auth, X.509 certificates, LDAP, NTLM, or
+            <entry>HTTP(S) basic auth, X.509 certificates, LDAP, NTLM, or
               any other mechanism available to Apache httpd</entry>
             
             <entry>CRAM-MD5 or SSH</entry>
@@ -370,27 +370,170 @@ END
     
     <title>svnserve, a custom server</title>
 
-    <para>blah</para>
+    <para>The <command>svnserve</command> program is a lightweight
+      server, capable of speaking to clients over TCP/IP using a
+      custom, stateful protocol.  Clients contact an
+      <command>svnserve</command> server by using URLs that begin with
+      the <literal>svn://</literal> or <literal>svn+ssh://</literal>
+      schema.  This section will explain the different ways of running
+      <command>svnserve</command>, how clients authenticate themselves
+      to the server, and how to configure appropriate access control
+      on your repositories.</para>
 
     <sect2 id="svn-ch-6-sect-3.1">
-      <title>Modes of Operation</title>
+      <title>Invoking the Server</title>
 
-      <para>start at cmdline; daemon (-d) mode; starting via inetd
-      (sample inetd entry); setting a root (-r); tunnel mode
-      (-t)</para>
+      <para>When executed directly on the commandline, the
+      <command>svnserve</command> program attempts to speak with a
+      Subversion client via <emphasis>stdin</emphasis> and
+      <emphasis>stdout</emphasis> using a custom protocol:</para>
 
+
+<screen>
+$ svnserve
+( success ( 1 2 ( ANONYMOUS ) ( edit-pipeline ) ) )
+</screen>
+      
+      <para>This sort of invocation isn't particularly useful unless
+        you happen to be trying to debug the program.  This is,
+        however, the standard behavior for a program run via
+        <command>inetd</command>.  The IANA has reserved TCP port 3690
+        for the svnserve protocol, so on a Unix-like system you can
+        add a line to <literal>/etc/services</literal> like
+        this:</para>
+
+<screen>
+svnserve      3690/tcp                        # SVN client/server operations
+</screen>
+
+      <para>...and when a client connection comes into your server on
+        port 3690, <command>inetd</command> will spawn an
+        <command>svnserve</command> process to service it.</para>
+
+      <para>A second option is to run <command>svnserve</command> as a
+        standalone "daemon" process.  Use the <option>-d</option>
+        option for this:</para>
+
+        <screen>
+$ svnserve -d
+$               # svnserve is now running, listening on port 3690
+</screen>
+
+      <para>When running <command>svnserve</command> in daemon mode,
+        you can use the <option>--listen-port=</option> and
+        <option>--listen-host=</option> options to customize the exact
+        port and hostname to "bind" to.</para>
+
+      <sidebar id="svn-ch-6-sidebar-1">
+        <title>Servers and Permissions:  A Word of Warning</title>        
+
+        <para>First, remember that a Subversion repository is a
+          collection of BerkeleyDB database files; any process which
+          accesses the repository directly needs to have proper read
+          and write permissions on the entire repository.  If you're
+          not careful, this can lead to a number of headaches.  Be
+          sure to read <xref linkend="svn-ch-6-sect-5"/>.</para>
+
+      <para>Secondly, when configuring <command>svnserve</command>, Apache
+          <command>httpd</command>, or any other server process, keep in
+          mind that you might not want to launch the server process as
+          the user <literal>root</literal> (or as any other user with
+          unlimited permissions).  Depending on the ownership and
+          permissions of the repositories you're exporting, it's often
+          prudent to use a different&mdash;perhaps custom&mdash;user.
+          For example, many administrators create a new user named
+          <literal>svn</literal>, grant that user exclusive ownership
+          and rights to the exported Subversion repositories, and only
+          run their server processes as that user.</para>
+      </sidebar>
+
+      <para>There's still a third way to invoke
+        <command>svnserve</command>, and that's in "tunnel mode", with
+        the <option>-t</option> option.  This mode assumes that a
+        remote-service program such as <command>RSH</command> or
+        <command>SSH</command> has successfully authenticated a user
+        and is now invoking a private <command>svnserve</command>
+        process as that user.  The <command>svnserve</command> program
+        behaves normally (communicating via <emphasis>stdin</emphasis>
+        and <emphasis>stdout</emphasis>), and assumes that the traffic
+        is being automatically redirected over some sort of tunnel
+        back to the client.  When <command>svnserve</command> is
+        invoked by a tunnel agent like this, be sure that the
+        authenticated user has full read and write access to the
+        repository database files. (See <xref
+        linkend="svn-ch-6-sidebar-1"/>.)  It's essentially the same as
+        a local user accessing the repository via
+        <literal>file:///</literal> URLs. </para>
+
+      <para>Once the <command>svnserve</command> program is running,
+        it makes every repository on your system available to the
+        network.  A client needs to specify an
+        <emphasis>absolute</emphasis> path in the repository URL.  For
+        example, if a repository is located at
+        <filename>/usr/local/repositories/project1</filename>, then a
+        client would reach it via <systemitem
+        class="url">svn://example.com/usr/local/repositories/project1
+        </systemitem>.  To increase security, you can pass the
+        <option>-r</option> option to <command>svnserve</command>,
+        which restricts it to exporting only repositories below that
+        path:</para>
+      
+<screen>
+$ svnserve -d -r /usr/local/repositories
+&hellip;
+</screen>
+
+      <para>Using the <option>-r</option> option effectively
+        modifies the location that the program treats as the root of
+        the remote filesystem space.  Clients then use URLs that
+        have that path portion removed from them, leaving much
+        shorter (and much less revealing) URLs:</para>
+      
+<screen>
+$ svn checkout svn://example.com/project1
+&hellip;
+</screen>
+ 
     </sect2>
 
     <sect2 id="svn-ch-6-sect-3.2">
       <title>Built-in authentication and authorization</title>
 
-      <para>creating the users file;  document the svnserve.conf file.</para>
+      <para>When a client connects to an <command>svnserve</command>
+        process, the following things happen:</para>
 
-      <para>Explanation of CRAM-MD5 authentication:  server sends a
-      bit of data to the client, client uses its password to encrypt
-      the data with the MD5 hash algorithm and sends it back;  server
-      performs same computation with stored password, and verifies
-      that the result is identical.  Footnote:  see RFC 2195.</para>
+      <itemizedlist>
+        <listitem><para>The client selects a specific
+        repository.</para></listitem>
+
+        <listitem><para>The server processes the repository's
+        <filename>conf/svnserve.conf</filename> file.  The server now
+        begins to enforce any authentication and authorization
+        policies defined in that file.</para></listitem>
+
+        <listitem><para>If the server allows anonymous access at all,
+        the client remains "anonymous" (unauthenticated) until it
+        makes a request which requires authentication; at that moment,
+        the server issues a new authentication challenge.  If the
+        server disallows anonymous access, the authentication
+        challenge is made right at the start.</para></listitem>
+      </itemizedlist>
+
+      <para>At the time of writing, the only supported authentication
+        method is CRAM-MD5 <footnote><para>See RFC
+        2195.</para></footnote>.  In essence, the server sends a bit
+        of data to the client.  The client uses its password to
+        encrypt the data with the MD5 hash algorithm, and sends it
+        back.  The server performs the same computation with the
+        stored password to verify that the result is identical.  At no
+        point does the actual password travel over the network.</para>
+
+      <para>A repository's <filename>svnserve.conf</filename> file is
+        the central mechanism for controlling authentication and
+        authorization policies.  The first and most important part of
+        the file is ... </para>
+
+
 
     </sect2>
     
