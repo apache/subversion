@@ -389,11 +389,11 @@ svn_hash_print (apr_hash_t *hash, FILE *stream)
 
       /* Print them out nicely */
       fprintf (stream, "Key: `");
-      svn_string_print (&keystring, stream, FALSE, FALSE);
+      /* TODO:      svn_string_print (&keystring, stream, FALSE, FALSE); */
       fprintf (stream, "', ");
 
       fprintf (stream, "Val: `");
-      svn_string_print (valstring, stream, FALSE, FALSE);
+      /* TODO: svn_string_print (valstring, stream, FALSE, FALSE); */
       fprintf (stream, "'\n");
     }
   
@@ -436,7 +436,7 @@ svn_uberhash_print (apr_hash_t *uberhash, FILE *stream)
 
       /* Print them out nicely */
       fprintf (stream, "---> Hashname: `");
-      svn_string_print (&keystring, stream, FALSE, FALSE);
+      /* TODO: svn_string_print (&keystring, stream, FALSE, FALSE); */
       fprintf (stream, "'\n");
 
       svn_hash_print (valhash, stream);

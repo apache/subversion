@@ -57,7 +57,6 @@
 /* Our own realloc, since APR doesn't have one.  Note: this is a
    generic realloc for memory pools, *not* for strings.  append()
    calls this on the svn_string_t's *data field.  */
-
 static void *
 my__realloc (char *data, const size_t oldsize, const size_t request, 
              apr_pool_t *pool)
@@ -78,9 +77,8 @@ my__realloc (char *data, const size_t oldsize, const size_t request,
 
 
 
-/* create a new bytestring containing a C string (null-terminated);
-   requires a memory pool to allocate from.  */
-
+/* Create a new bytestring by copying CSTRING (null-terminated);
+   requires a POOL to allocate from.  */
 svn_string_t *
 svn_string_create (const char *cstring, apr_pool_t *pool)
 {
@@ -101,9 +99,8 @@ svn_string_create (const char *cstring, apr_pool_t *pool)
 }
 
 
-/* create a new bytestring containing a specific array of bytes
-   (NOT null-terminated!);  requires a memory pool to allocate from */
-
+/* Create a new bytestring by copying SIZE bytes from; requires a
+   memory POOL to allocate from. */
 svn_string_t *
 svn_string_ncreate (const char *bytes, const size_t size, 
                     apr_pool_t *pool)
@@ -132,8 +129,7 @@ svn_string_ncreate (const char *bytes, const size_t size,
 
 
 
-/* overwrite bytestring with a character */
-
+/* Overwrite bytestring STR with a character C. */
 void 
 svn_string_fillchar (svn_string_t *str, const unsigned char c)
 {
@@ -142,8 +138,7 @@ svn_string_fillchar (svn_string_t *str, const unsigned char c)
 
 
 
-/* set a bytestring to empty */
-
+/* Set a bytestring STR to empty (0 length). */
 void
 svn_string_setempty (svn_string_t *str)
 {
@@ -155,7 +150,6 @@ svn_string_setempty (svn_string_t *str)
 
 
 /* Chop NBYTES bytes off end of STR, but not more than STR->len. */
-
 void
 svn_string_chop (svn_string_t *str, size_t nbytes)
 {
@@ -169,8 +163,7 @@ svn_string_chop (svn_string_t *str, size_t nbytes)
 }
 
 
-/* Ask if a bytestring is empty */
-
+/* Ask if a bytestring STR is empty (0 length) */
 svn_boolean_t
 svn_string_isempty (const svn_string_t *str)
 {
@@ -178,8 +171,7 @@ svn_string_isempty (const svn_string_t *str)
 }
 
 
-/* append a number of bytes onto a bytestring */
-
+/* Copy COUNT bytes from BYTES onto the end of bytestring STR. */
 void
 svn_string_appendbytes (svn_string_t *str, const char *bytes, 
                         const size_t count, apr_pool_t *pool)
@@ -213,8 +205,7 @@ svn_string_appendbytes (svn_string_t *str, const char *bytes,
 }
 
 
-/* append one bytestring type onto another */
-
+/* Append APPENDSTR onto TARGETSTR. */
 void
 svn_string_appendstr (svn_string_t *targetstr, const svn_string_t *appendstr,
                       apr_pool_t *pool)
@@ -225,8 +216,7 @@ svn_string_appendstr (svn_string_t *targetstr, const svn_string_t *appendstr,
 
 
 
-/* duplicate a bytestring */
-
+/* Return a duplicate of ORIGNAL_STRING. */
 svn_string_t *
 svn_string_dup (const svn_string_t *original_string, apr_pool_t *pool)
 {
@@ -236,9 +226,7 @@ svn_string_dup (const svn_string_t *original_string, apr_pool_t *pool)
 
 
 
-/* compare if two bytestrings' data fields are identical,
-   byte-for-byte */
-
+/* Return true if STR1 and STR2 have identical length and data. */
 svn_boolean_t
 svn_string_compare (const svn_string_t *str1, const svn_string_t *str2)
 {
@@ -255,22 +243,9 @@ svn_string_compare (const svn_string_t *str1, const svn_string_t *str2)
 }
 
 
-/* compare a bytestring with a traditional null-terminated C string */
 
 
-/* 
-   Handy routine.
-
-   Input:  a bytestring
-
-   Returns: offset of first non-whitespace character 
-
-      (if bytestring is ALL whitespace, then it returns the size of
-      the bytestring.  Be careful not to use this value as an array
-      offset!)
-
-*/
-
+/* Return offset of first non-whitespace character in STR, or -1 if none.  */
 size_t
 svn_string_first_non_whitespace (const svn_string_t *str)
 {
@@ -285,20 +260,12 @@ svn_string_first_non_whitespace (const svn_string_t *str)
     }
 
   /* if we get here, then the string must be entirely whitespace */
-  return (str->len);  
+  return (-1);  
 }
 
 
 
-/* 
-   Another handy utility.
-
-   Input:  a bytestring
-
-   Output:  same bytestring, stripped of whitespace on both sides
-            (input bytestring is modified IN PLACE)
-*/
-
+/* Strips whitespace from both sides of STR (modified in place). */
 void
 svn_string_strip_whitespace (svn_string_t *str)
 {
@@ -328,33 +295,6 @@ svn_string_strip_whitespace (svn_string_t *str)
 
 
 
-
-/* Utility: print bytestring to stdout, assuming that the string
-   contains ASCII.  */
-
-void
-svn_string_print (const svn_string_t *str, 
-                  FILE *stream, 
-                  svn_boolean_t show_all_fields,
-                  svn_boolean_t add_newline)
-{
-  if (str->len >= 0) 
-    {
-
-      fwrite (str->data, 1, str->len, stream);
-
-      if (show_all_fields)
-        {
-          fprintf (stream, " (blocksize: %d, length: %d)", 
-                   str->blocksize, str->len);
-        }
-
-      if (add_newline)
-        {
-          fprintf (stream, "\n");
-        }
-    }
-}
 
 
 
