@@ -127,6 +127,10 @@ SOURCE=.\skel.c
 # End Source File
 # Begin Source File
 
+SOURCE=".\strings-table.c"
+# End Source File
+# Begin Source File
+
 SOURCE=.\trail.c
 # End Source File
 # Begin Source File
@@ -196,6 +200,10 @@ SOURCE=.\revision.h
 # Begin Source File
 
 SOURCE=.\skel.h
+# End Source File
+# Begin Source File
+
+SOURCE=".\strings-table.h"
 # End Source File
 # Begin Source File
 
