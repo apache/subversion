@@ -30,3 +30,9 @@ Candidate changes:
                    not sure an optimization like this belongs in a
                    patch release.)
 
+  * r9861
+    fixes reentrancy problem for javahl binding. The pool for a call could be
+    destroyed before the end of the call. This could crash the jvm
+    Justifcation: javahl binding only fix to prevent a crash
+    Votes:
+      +1: pmayweg
