@@ -98,6 +98,9 @@ struct dir_baton {
   /* A cache of any property changes (svn_prop_t) received for this dir. */
   apr_array_header_t *propchanges;
 
+  /* The pristine-property list attached to this directory. */
+  apr_hash_t *pristine_props;
+
   /* The pool passed in by add_dir, open_dir, or open_root.
      Also, the pool this dir baton is allocated in. */
   apr_pool_t *pool;
@@ -292,6 +295,23 @@ get_file_from_ra (struct file_baton *b)
   return SVN_NO_ERROR;
 }
 
+/* Get the props attached to a directory in the repository. */
+static svn_error_t *
+get_dirprops_from_ra (struct dir_baton *b)
+{
+  apr_hash_t *dirents; /* ### silly, we're ignoring the list of
+                          svn_dirent_t's returned to us.  */
+
+  SVN_ERR (b->edit_baton->ra_lib->get_dir (b->edit_baton->ra_session,
+                                           b->path,
+                                           b->edit_baton->revision,
+                                           &dirents, NULL,
+                                           &(b->pristine_props)));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Create an empty file, the path to the file is returned in EMPTY_FILE
  */
 static svn_error_t *
@@ -482,6 +502,8 @@ open_directory (const char *path,
   b = make_dir_baton (path, pb, FALSE, pool);
   *child_baton = b;
 
+  SVN_ERR (get_dirprops_from_ra (b));
+
   return SVN_NO_ERROR;
 }
 
@@ -664,13 +686,10 @@ close_directory (void *dir_baton)
 
   if (b->propchanges->nelts > 0)
     {
-      /* ### HACK.  We have no way of finding the original proplist
-         that these property diffs are *against*.  We need an
-         RA->get_dir() or something!  */
       SVN_ERR (eb->diff_callbacks->props_changed
                (&prop_state,
                 b->wcpath,
-                b->propchanges, apr_hash_make(b->pool),
+                b->propchanges, b->pristine_props,
                 b->edit_baton->diff_cmd_baton));
     }
 
