@@ -42,22 +42,20 @@ svn_cl__propget (svn_cl__opt_state_t *opt_state,
   /* Add "." if user passed 0 file arguments */
   push_implicit_dot_target(targets, pool);
 
-  /* FIXME: reformat block to remove extra spaces */
+  for (i = 0; i < targets->nelts; i++)
+    {
+      svn_string_t *value;
+      svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
+      err = svn_wc_prop_get (&value, name, target, pool);
+      if (err)
+        return err;
 
-    for (i = 0; i < targets->nelts; i++)
-      {
-        svn_string_t *value;
-        svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
-        err = svn_wc_prop_get (&value, name, target, pool);
-        if (err)
-          return err;
+      /* kff todo: this seems like an odd way to do this... */
 
-        /* kff todo: this seems like an odd way to do this... */
-
-        apr_hash_set (prop_hash, name->data, name->len,
-                      value);
-        svn_cl__print_prop_hash (prop_hash, pool);
-      }
+      apr_hash_set (prop_hash, name->data, name->len,
+                    value);
+      svn_cl__print_prop_hash (prop_hash, pool);
+    }
 
   return SVN_NO_ERROR;
 }

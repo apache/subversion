@@ -40,29 +40,27 @@ svn_cl__update (svn_cl__opt_state_t *opt_state,
   /* Add "." if user passed 0 arguments */
   push_implicit_dot_target(targets, pool);
 
-  /* FIXME: reformat block to remove extra spaces */
+  for (i = 0; i < targets->nelts; i++)
+    {
+      svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
+      const svn_delta_edit_fns_t *trace_editor;
+      void *trace_edit_baton;
 
-    for (i = 0; i < targets->nelts; i++)
-      {
-        svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
-        const svn_delta_edit_fns_t *trace_editor;
-        void *trace_edit_baton;
+      err = svn_cl__get_trace_update_editor (&trace_editor,
+                                             &trace_edit_baton,
+                                             target, pool);
+      if (err)
+        return err;
 
-        err = svn_cl__get_trace_update_editor (&trace_editor,
-                                               &trace_edit_baton,
-                                               target, pool);
-        if (err)
-          return err;
-
-        err = svn_client_update (NULL, NULL,
-                                 trace_editor, trace_edit_baton,
-                                 target,
-                                 opt_state->xml_file,
-                                 opt_state->revision,
-                                 pool);
-        if (err)
-          return err;
-      }
+      err = svn_client_update (NULL, NULL,
+                               trace_editor, trace_edit_baton,
+                               target,
+                               opt_state->xml_file,
+                               opt_state->revision,
+                               pool);
+      if (err)
+        return err;
+    }
 
   return SVN_NO_ERROR;
 }

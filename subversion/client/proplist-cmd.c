@@ -40,19 +40,17 @@ svn_cl__proplist (svn_cl__opt_state_t *opt_state,
   /* Add "." if user passed 0 arguments */
   push_implicit_dot_target(targets, pool);
 
-  /* FIXME: reformat block to remove extra spaces */
+  for (i = 0; i < targets->nelts; i++)
+    {
+      svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
+      apr_hash_t *prop_hash = apr_hash_make (pool);
 
-    for (i = 0; i < targets->nelts; i++)
-      {
-        svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
-        apr_hash_t *prop_hash = apr_hash_make (pool);
+      err = svn_wc_prop_list (&prop_hash, target, pool);
+      if (err)
+        return err;
 
-        err = svn_wc_prop_list (&prop_hash, target, pool);
-        if (err)
-          return err;
-
-        svn_cl__print_prop_hash (prop_hash, pool);
-      }
+      svn_cl__print_prop_hash (prop_hash, pool);
+    }
 
   return SVN_NO_ERROR;
 }

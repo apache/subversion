@@ -40,15 +40,13 @@ svn_cl__diff (svn_cl__opt_state_t *opt_state,
   /* Add "." if user passed 0 arguments */
   push_implicit_dot_target(targets, pool);
 
-  /* FIXME: reformat block to remove extra spaces */
+  for (i = 0; i < targets->nelts; i++)
+    {
+      svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
 
-    for (i = 0; i < targets->nelts; i++)
-      {
-        svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
-
-        err = svn_cl__print_file_diff (target, pool);
-        if (err) return err;
-      }
+      err = svn_cl__print_file_diff (target, pool);
+      if (err) return err;
+    }
 
   return SVN_NO_ERROR;
 }
