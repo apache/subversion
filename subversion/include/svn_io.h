@@ -62,11 +62,12 @@ svn_error_t *svn_io_check_path (const char *path,
 /**
  * @since New in 1.1.
  *
- * Like svn_io_check_path(), but return the actual node type for any
- * special files.
+ * Like svn_io_check_path(), but also set *is_special to @c TRUE if
+ * the path is not a normal file.
  */
 svn_error_t *svn_io_check_special_path (const char *path,
                                         svn_node_kind_t *kind,
+                                        svn_boolean_t *is_special,
                                         apr_pool_t *pool);
 
 /** Like svn_io_check_path(), but resolve symlinks.  This returns the

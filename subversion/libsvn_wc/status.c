@@ -212,8 +212,9 @@ assemble_status (svn_wc_status_t **status,
   svn_boolean_t prop_modified_p = FALSE;
   svn_boolean_t locked_p = FALSE;
   svn_boolean_t switched_p = FALSE;
-  svn_boolean_t special;
-  svn_node_kind_t special_kind;
+  svn_boolean_t wc_special;
+  svn_boolean_t node_special;
+  svn_node_kind_t kind;
 
   /* Defaults for two main variables. */
   enum svn_wc_status_kind final_text_status = svn_wc_status_normal;
@@ -222,7 +223,7 @@ assemble_status (svn_wc_status_t **status,
   /* Check the path kind for PATH. */
   if (path_kind == svn_node_unknown)
     SVN_ERR (svn_io_check_path (path, &path_kind, pool));
-  SVN_ERR (svn_io_check_special_path (path, &special_kind, pool));
+  SVN_ERR (svn_io_check_special_path (path, &kind, &node_special, pool));
   
   if (! entry)
     {
@@ -304,11 +305,10 @@ assemble_status (svn_wc_status_t **status,
       SVN_ERR (svn_wc_props_modified_p (&prop_modified_p, path, adm_access,
                                         pool));
 
-      SVN_ERR (svn_wc__get_special (&special, path, adm_access, pool));
+      SVN_ERR (svn_wc__get_special (&wc_special, path, adm_access, pool));
 
       /* If the entry is a file, check for textual modifications */
-      if ((entry->kind == svn_node_file) &&
-          ((special ? svn_node_special : svn_node_file) == special_kind))
+      if ((entry->kind == svn_node_file) && (wc_special == node_special))
         SVN_ERR (svn_wc_text_modified_p (&text_modified_p, path, FALSE,
                                          adm_access, pool));
 
@@ -388,8 +388,8 @@ assemble_status (svn_wc_status_t **status,
         }
       else if (path_kind != entry->kind)
         final_text_status = svn_wc_status_obstructed;
-      else if ((special && (special_kind != svn_node_special))
-               || ((! special) && (special_kind == svn_node_special)))
+      else if ((wc_special && (! node_special))
+               || ((! wc_special) && (node_special)))
         final_text_status = svn_wc_status_obstructed;
 
       if (path_kind == svn_node_dir && entry->kind == svn_node_dir)
