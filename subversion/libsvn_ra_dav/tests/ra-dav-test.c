@@ -57,82 +57,8 @@
 
 #include "svn_delta.h"
 #include "svn_ra.h"
+#include "svn_wc.h"
 
-
-static svn_error_t *
-change_txdelta_handler (svn_txdelta_window_t *window, void *file_baton)
-{
-  printf("  ... writing %lu bytes\n", (unsigned long)window->ops->length);
-  return NULL;
-}
-
-static svn_error_t *
-change_add_dir (svn_string_t *name,
-                void *walk_baton,
-                void *parent_baton,
-                svn_string_t *ancestor_path,
-                svn_vernum_t ancestor_version,
-                void **child_baton)
-{
-  printf("change_add_dir: %s\n", name->data);
-  *child_baton = name->data;
-  return NULL;
-}
-
-static svn_error_t *
-change_finish_dir (void *dir_baton)
-{
-  printf("change_finish_dir: %s\n", dir_baton);
-  return NULL;
-}
-
-static svn_error_t *
-change_add_file (svn_string_t *name,
-                 void *walk_baton,
-                 void *parent_baton,
-                 svn_string_t *ancestor_path,
-                 svn_vernum_t ancestor_version,
-                 void **file_baton)
-{
-  printf("change_add_file: %s/%s\n", parent_baton, name->data);
-  *file_baton = name->data;
-  return NULL;
-}
-
-static svn_error_t *
-change_apply_txdelta (void *walk_baton,
-                      void *parent_baton,
-                      void *file_baton, 
-                      svn_txdelta_window_handler_t **handler,
-                      void **handler_baton)
-{
-  printf("change_apply_txdelta: %s/%s\n", parent_baton, file_baton);
-  *handler = change_txdelta_handler;
-  *handler_baton = file_baton;
- return NULL;
-}
-
-static svn_error_t *
-change_finish_file (void *file_baton)
-{
-  printf("change_finish_file: %s\n", file_baton);
-  return NULL;
-}
-
-/* ### hack. we really want to call svn_wc_get_change_walker() */
-static const svn_delta_walk_t change_walker = {
-  NULL,
-  change_add_dir,
-  NULL,
-  NULL,
-  NULL,
-  change_finish_dir,
-  change_add_file,
-  NULL,
-  change_apply_txdelta,
-  NULL,
-  change_finish_file
-};
 
 int
 main (int argc, char **argv)
@@ -141,6 +67,10 @@ main (int argc, char **argv)
   svn_error_t *err;
   svn_ra_session_t *ras;
   const char *url;
+  const svn_delta_walk_t *walker;
+  void *walk_baton;
+  void *dir_baton;
+  svn_string_t *repos;
 
   apr_initialize ();
   apr_create_pool (&pool, NULL);
@@ -157,7 +87,13 @@ main (int argc, char **argv)
   if (err)
     svn_handle_error (err, stdout);
 
-  err = svn_ra_checkout(ras, "", 1, &change_walker, NULL, NULL, pool);
+  repos = svn_string_create(url, pool);
+  err = svn_wc_get_change_walker(NULL, repos, 1,
+                                 &walker, &walk_baton, &dir_baton, pool);
+  if (err)
+    svn_handle_error (err, stdout);
+
+  err = svn_ra_checkout(ras, "", 1, walker, walk_baton, dir_baton, pool);
 
   svn_ra_close(ras);
 
