@@ -325,7 +325,7 @@ static dav_error *dav_svn_db_store(dav_db *db, const dav_prop_name *name,
                                    const apr_xml_elem *elem,
                                    dav_namespace_map *mapping)
 {
-  svn_string_t *propval = apr_pcalloc(db->p, sizeof(*propval));
+  svn_string_t *propval;
   apr_pool_t *pool = db->p;
   apr_xml_attr *attr = elem->attr;
 
@@ -335,8 +335,8 @@ static dav_error *dav_svn_db_store(dav_db *db, const dav_prop_name *name,
      dav_xml_get_cdata() will figure it all out for us, but (normally) it
      should be awfully fast and not need to copy any data. */
 
-  propval->data = dav_xml_get_cdata(elem, pool, 0 /* strip_white */);
-  propval->len = strlen(propval->data);
+  propval = svn_string_create
+    (dav_xml_get_cdata(elem, pool, 0 /* strip_white */), pool);
   
   /* Check for special encodings of the property value. */
   while (attr)

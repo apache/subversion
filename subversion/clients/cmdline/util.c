@@ -453,10 +453,7 @@ svn_cl__get_log_message (const char **log_msg,
   *tmp_file = NULL;
   if (lmb->message)
     {
-      svn_string_t *log_msg_string = svn_string_create ("", pool);
-
-      log_msg_string->data = lmb->message;
-      log_msg_string->len = strlen (lmb->message);
+      svn_string_t *log_msg_string = svn_string_create (lmb->message, pool);
 
       SVN_ERR (svn_subst_translate_string (&log_msg_string, log_msg_string,
                                            lmb->message_encoding, pool));
