@@ -88,7 +88,7 @@ file_xfer_under_path (svn_stringbuf_t *path,
       
     case svn_wc__xfer_cp:
       return svn_io_copy_file (full_from_path->data,
-                               full_dest_path->data, NULL, pool);
+                               full_dest_path->data, FALSE, pool);
 
     case svn_wc__xfer_cp_and_translate:
       {
