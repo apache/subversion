@@ -212,9 +212,21 @@ svn_error_t *svn_fs_berkeley_recover (const char *path,
 typedef struct svn_fs_id_t svn_fs_id_t;
 
 
-/* Return non-zero IFF node revision ids ID1 and ID2 are related. */
-int svn_fs_check_related (const svn_fs_id_t *id1,
-                          const svn_fs_id_t *id2);
+/* Return the distance between node revisions A and B.  Return -1 if
+   they are completely unrelated.  */
+int svn_fs_id_distance (const svn_fs_id_t *a, const svn_fs_id_t *b);
+
+
+
+/* Perform an exhaustive traversal through node-id and copy-from
+   history to determine if the nodes associated with ID1 and ID2, and
+   found in filesystem FS, are related.  If so, set *RELATED to 1,
+   else to 0.  Use POOL for allocations.  */
+svn_error_t *svn_fs_check_related (int *related, 
+                                   svn_fs_t *fs,
+                                   const svn_fs_id_t *id1,
+                                   const svn_fs_id_t *id2,
+                                   apr_pool_t *pool);
 
 
 /* Parse the LEN bytes at DATA as a node or node revision ID.  Return

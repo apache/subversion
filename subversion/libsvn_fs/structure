@@ -112,7 +112,7 @@ on what kind of node this is --- file, directory, etc.
 
 HEADER has the form:
 
-    (KIND PREDECESSOR-ID)
+    (KIND PREDECESSOR)
 
 where:
 
@@ -433,19 +433,22 @@ The Berkeley DB `transactions' table records both unfinished and
 committed transactions.  Every key in this table is a transaction ID.
 Unfinished transactions have values that are skels of the form:
 
-   ("transaction" ROOT-ID BASE-ROOT-ID PROPLIST)
+   ("transaction" ROOT-ID BASE-ID PROPLIST COPIES)
 
 where:
 
    * ROOT-ID is the node revision ID of the transaction's root
      directory.
 
-   * BASE-ROOT-ID is present only in unfinished transactions (and can
-     therefore be used a flag to indicate the status of a
-     transaction), and is the node revision ID of the root of the
-     transaction's base revision.
+   * BASE-ID is the node revision ID of the root of the transaction's
+     base revision.
 
    * PROPLIST is the transaction's property list.
+
+   * COPIES contains a list of keys into the `copies' table,
+     referencing all the filesystem copies created
+     inside of this transaction.  If the transaction is aborted, these
+     copies get removed from the `copies' table.
 
 Committed transaction, however, have values that are skels of the form:
 
@@ -649,8 +652,8 @@ Syntactic elements
 Table keys:
 
                      ID ::= NODE-REV-ID ;
-                    TXN ::= number ;
-                    CPY ::= number ;
+                    TXN ::= number-36 ;
+                    CPY ::= number-36 ;
                     STR ::= number-36 ;
                     REP ::= number-36 ;
 
@@ -668,16 +671,18 @@ Filesystem revisions:
 Transactions:
 
             TRANSACTION ::= UNFINISHED-TXN | COMMITTED-TXN
-         UNFINISHED-TXN ::= ("transaction" ROOT-ID BASE-ROOT-ID PROPLIST) ;
+         UNFINISHED-TXN ::= ("transaction" ROOT-ID BASE-ID PROPLIST COPIES) ;
           COMMITTED-TXN ::= ("committed" REV) ;
                 ROOT-ID ::= NODE-REV-ID ;
-           BASE-ROOT-ID ::= NODE-REV-ID ;
+                BASE-ID ::= NODE-REV-ID ;
+                 COPIES ::= (CPY ...) ;
                     REV ::= number ;
 
 
 Copies:
 
-                   COPY ::= ("copy" DST-NODE-ID)
+                   COPY ::= ("copy" SRC-PATH SRC-REV DST-NODE-ID)
+               SRC-PATH ::= 
             DST-NODE-ID ::= NODE-REV-ID ;
 
 

@@ -234,17 +234,6 @@ svn_fs__err_no_such_txn (svn_fs_t *fs, const char *txn)
 
 
 svn_error_t *
-svn_fs__err_txn_not_mutable (svn_fs_t *fs, const char *txn)
-{
-  return
-    svn_error_createf
-    (SVN_ERR_FS_TRANSACTION_NOT_MUTABLE, 0, 0, fs->pool,
-     "cannot modify transaction named `%s' in filesystem `%s'",
-     txn, fs->path);
-}
-
-
-svn_error_t *
 svn_fs__err_no_such_copy (svn_fs_t *fs, const char *copy_id)
 {
   return

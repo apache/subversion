@@ -141,10 +141,6 @@ svn_error_t *svn_fs__err_path_syntax (svn_fs_t *fs, const char *path);
 /* SVN_ERR_FS_NO_SUCH_TRANSACTION: there is no transaction named TXN in FS.  */
 svn_error_t *svn_fs__err_no_such_txn (svn_fs_t *fs, const char *txn);
 
-/* SVN_ERR_FS_TRANSACTION_NOT_MUTABLE: trying to change the
-   unchangeable transaction named TXN in FS.  */
-svn_error_t *svn_fs__err_txn_not_mutable (svn_fs_t *fs, const char *txn);
-
 /* SVN_ERR_FS_NO_SUCH_COPY: there is no copy with id COPY_ID in FS.  */
 svn_error_t *svn_fs__err_no_such_copy (svn_fs_t *fs, const char *copy_id);
 

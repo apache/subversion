@@ -335,6 +335,26 @@ svn_fs_undeltify (svn_fs_root_t *root,
 }
 
 
+
+svn_error_t *
+svn_fs__stable_node (svn_fs_t *fs,
+                     svn_fs_id_t *id,
+                     trail_t *trail)
+{
+  svn_fs_id_t *predecessor_id = svn_fs__id_predecessor (id, trail->pool);
+  int is_dir = 0;
+  dag_node_t *node;
+
+  SVN_ERR (svn_fs__dag_get_node (&node, fs, id, trail));
+  is_dir = svn_fs__dag_is_directory (node);
+
+  if (predecessor_id->digits[0] != -1)
+    SVN_ERR (deltify (predecessor_id, id, fs, is_dir ? 1 : 0, trail));
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* 
  * local variables:

@@ -78,22 +78,11 @@ struct svn_fs_t
 };
 
 
-/* Typedefs for some of the IDs used in the filesystem. */
-typedef apr_uint32_t svn_fs__id_key_t;
-
-/* In printf()-style functions, format the above type using this. */
-#define SVN_FS__ID_KEY_T_FMT "ld"
-
-
 /*** Filesystem Revision ***/
 typedef struct
 {
-  /* node revsion id of the root node. */
+  /* id of the root node. */
   const svn_fs_id_t *id;
-
-  /* id of the transaction that was committed to create this
-     revision. */
-  svn_fs__id_key_t txn;
 
   /* property list (const char * name, svn_string_t * value) 
      may be NULL if there are no properies.  */
@@ -105,20 +94,14 @@ typedef struct
 /*** Filesystem Transaction ***/
 typedef struct
 {
-  /* revision which this transaction was committed to create, or an
-     invalid revision number to indicate that this is a transaction
-     still in-progress (unfinished). */
-  svn_revnum_t revision;
-
-  /* node revision id of the root node (unfinished only) */
+  /* id of the root node */
   const svn_fs_id_t *root_id;
 
-  /* node revision id of the node which is the root of the revision
-     upon which this txn is base (unfinished only) */
+  /* id of the revision root node upon which this txn is base */
   const svn_fs_id_t *base_root_id;
 
   /* property list (const char * name, svn_string_t * value).
-     may be NULL if there are no properties.  (unfinished only) */
+     may be NULL if there are no properties.  */
   apr_hash_t *proplist;
 
 } svn_fs__transaction_t;
@@ -130,9 +113,13 @@ typedef struct
   /* node kind */
   svn_node_kind_t kind;
 
-  /* predecessor node revision id, or NULL if there is no predecessor
-     for this node revision */
-  svn_fs_id_t *predecessor_id;
+  /* revision in which this node was committed (< 1 here means this node
+     is mutable -- not yet committed */
+  svn_revnum_t revision;
+
+  /* ancestor path/revision */
+  const char *ancestor_path;
+  svn_revnum_t ancestor_rev;
 
   /* representation key for this node's properties.  may be NULL if
      there are no properties.  */
@@ -217,7 +204,7 @@ typedef struct
 /*** Copy ***/
 typedef struct
 {
-  /* node revision id of copy destination. */
+  /* Node-revision of copy destination. */
   svn_fs_id_t *dst_noderev_id;
 
 } svn_fs__copy_t;
