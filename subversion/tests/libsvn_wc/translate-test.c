@@ -93,7 +93,7 @@ const char *lines[] =
     "Line 43: fairly boring subst test data... blah blah.",
     "Line 44: fairly boring subst test data... blah blah.",
     "Line 45: Invalid $LastChangedRevisionWithSuffix$, started unexpanded.",
-    "Line 46: Invalid $Rev:$ is missing a space.",
+    "Line 46: Valid $Rev:$ is missing a space.",
     "Line 47: fairly boring subst test data... blah blah.",
     "Line 48: Two keywords back to back: $Author$$Rev$.",
     "Line 49: One keyword, one not, back to back: $Author$Rev$.",
@@ -476,6 +476,17 @@ substitute_and_verify (const char *test_name,
           expect[42 - 1] =
             "Line 42: Valid $URL$, started expanded.";
         }
+    }
+
+  if (rev)
+    {
+      if (expand)
+        {
+          expect[46 - 1] =
+            apr_pstrcat (pool, "Line 46: ", "Valid $Rev: ", rev,
+                         " $ is missing a space.", NULL);
+        }
+      /* Else Line 46 remains unchanged. */
     }
 
   /* Handle lines 48, 49, and 70 specially, as they contains two valid
