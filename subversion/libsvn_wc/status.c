@@ -356,7 +356,7 @@ svn_wc_statuses (apr_hash_t *statushash,
             }
           else
             {
-              if (kind == svn_node_dir)
+              if (kind == svn_node_dir && descend)
                 {
                   /* Directory entries are incomplete.  We must get
                      their full entry from their own THIS_DIR entry.
@@ -366,12 +366,8 @@ svn_wc_statuses (apr_hash_t *statushash,
                   SVN_ERR (svn_wc_entry (&subdir, fullpath, subpool));
                   SVN_ERR (add_status_structure (statushash, fullpath,
                                                  subdir, get_all, pool));
-                  if (descend)
-                    {
-                      /* If ask to descent, we do not contend. */
-                      SVN_ERR (svn_wc_statuses (statushash, fullpath,
-                                                descend, get_all, pool)); 
-                    }
+                  SVN_ERR (svn_wc_statuses (statushash, fullpath,
+                                            descend, get_all, pool)); 
                 }
               else if ((kind == svn_node_file) || (kind == svn_node_none))
                 {

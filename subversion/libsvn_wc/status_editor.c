@@ -80,7 +80,6 @@ tweak_statushash (void *edit_baton,
                   enum svn_wc_status_kind repos_prop_status)
 {
   svn_wc_status_t *statstruct;
-  svn_stringbuf_t *remainder;
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
   apr_hash_t *statushash = eb->statushash;
   apr_pool_t *pool = eb->hashpool;
@@ -108,29 +107,6 @@ tweak_statushash (void *edit_baton,
      }
   */
   
-  
-  /* Recursion check: if PATH is a child of the root path, we should
-     ignore it.  This is how we implement the '--nonrecursive' feature
-     right now.
-
-     ### It seems it would be nice if dir_delta() could be told not to
-     recurse, but that's a future feature, I guess.  For now, we just
-     ignore any extra recursive info it hands us. */
-  if (! eb->descend)
-    {
-      if (svn_stringbuf_isempty (eb->path))
-        remainder = svn_stringbuf_create (path, pool);
-      else
-        remainder = svn_path_is_child (eb->path,
-                                       svn_stringbuf_create (path, pool),
-                                       svn_path_local_style, eb->pool);
-
-      /* See if remainder contains a dirsep: */
-      if (! svn_path_is_single_path_component (remainder,
-                                               svn_path_local_style))
-        return SVN_NO_ERROR;  /* no-op */
-    }
-    
   /* Is PATH already a hash-key? */
   statstruct = (svn_wc_status_t *) apr_hash_get (statushash, path,
                                                  APR_HASH_KEY_STRING);
