@@ -25,6 +25,7 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 
+#include "db.h"
 
 
 /*** Tree printing. ***/
@@ -372,13 +373,14 @@ main (int argc, const char * const *argv)
          usual locking behavior. */
       fs = svn_fs_new (pool);
       err = svn_fs_open_berkeley (fs, path);
-      if (err) goto error;
+      if (err && (err->src_err != DB_RUNRECOVERY))
+        goto error;
 
       /* Exclusively lock the repository.  This blocks on other locks,
          including shared locks. */
       lockfile_path = svn_fs_db_lockfile (fs, pool);
       apr_err = apr_file_open (&lockfile_handle, lockfile_path,
-                               APR_READ, APR_OS_DEFAULT, pool);
+                               (APR_WRITE | APR_APPEND), APR_OS_DEFAULT, pool);
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         {
           err = svn_error_createf
@@ -399,6 +401,10 @@ main (int argc, const char * const *argv)
       /* Run recovery on the Berkeley environment, using FS to get the
          path to said environment. */ 
       env_path = svn_fs_db_env (fs, pool);
+      /* ### todo: this usually seems to get an error -- namely, that
+         the DB needs recovery!  Why would that be, when we just
+         recovered it?  Is it an error to recover a DB that doesn't
+         need recovery, perhaps?  See issue #430. */
       err = svn_fs_berkeley_recover (env_path, pool);
       if (err) goto error;
 
