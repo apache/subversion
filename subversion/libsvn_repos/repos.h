@@ -91,6 +91,9 @@ struct svn_repos_t
 
   /* The path to the Berkeley DB filesystem environment. */
   char *db_path;
+
+  /* The format number of this repository. */
+  int format;
 };
 
 
