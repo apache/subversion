@@ -191,7 +191,7 @@ Summary:
 NOTE: For now, the option descriptions are mostly not included in the
       statements for each subcommand. Once this document becomes a bit
       less fluid, we should document them for each subcommand as the
-      subcommand specific behavior warrents.
+      subcommand specific behavior warrants.
 
   checkout
   ========
@@ -248,7 +248,7 @@ NOTE: For now, the option descriptions are mostly not included in the
  
   e.g. svn rename foo.c bar.c 
 
-  Note that this command behaves in the way that unix `mv' does:
+  Note that this command behaves in the way that Unix `mv' does:
 
   $ ls
     foo.c bar/
@@ -271,8 +271,8 @@ NOTE: For now, the option descriptions are mostly not included in the
   will be marked as deleted in the repository and deleted from your
   working copy. TODO SURVEY
 
-  "I for one abhor cvs's current behavior for cvs rm" -Fitz
-  "I for two abhor cvs's current behavior for cvs rm" -Karl
+  "I for one abhor CVS's current behavior for cvs rm" -Fitz
+  "I for two abhor CVS's current behavior for cvs rm" -Karl
   "I merely think CVS is utterly insufferable in this regard" -Bruce
 
   copy
@@ -283,7 +283,7 @@ NOTE: For now, the option descriptions are mostly not included in the
   Where SOURCE and DESTINATION can be directories or files. `copy' is
   used where you want to make a copy of SOURCE so that DESTINATION
   will share ancestry of SOURCE. Unless DESTINATION is a directory,
-  DESTINATION must not exist (In the spirit of unix cp, SOURCE will be
+  DESTINATION must not exist (In the spirit of Unix cp, SOURCE will be
   placed inside of DESTINATION if DESTINATION is a directory).
 
   e.g. If you do this (MAINTAIN ANCESTRY)
@@ -377,7 +377,7 @@ NOTE: For now, the option descriptions are mostly not included in the
   propset
   =======
 
-  TODO Talk to ben about this
+  TODO Talk to Ben about this
 
    TODO
    deal with keyword substitution and end-of-line conversion. We can
@@ -391,13 +391,13 @@ NOTE: For now, the option descriptions are mostly not included in the
   propget
   =======
 
-  TODO talk to ben about this
+  TODO talk to Ben about this
 
 
   merge
   =====
 
-  Merge is identifies some set of diffs (likely from a branch) and
+  Merge identifies some set of diffs (likely from a branch) and
   applies them to your current working copy. merge ONLY changes your
   working copy, not the repository. The repository is changed when you
   commit.
