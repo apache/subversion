@@ -38,17 +38,17 @@ public class MiscTests extends TestCase
 	    try
 	    {
 		NativeWrapper.miscThrowExceptionByName(name, message);
-		
-		// code isnt supposed to reach this point...
-		assertTrue(false);
+
+		fail("didnt throw an exception!");
 	    }
 	    catch( Exception e )
 	    {
 		// is this the exception we wanted?
-		assertTrue( e.getClass().getName().equals( name ) );
+		assertEquals( "org.tigris.subversion.SubversionException",
+			      e.getClass().getName() );
 
 		// does the message fit the one we stated?
-		assertTrue( e.getMessage().equals( message ) );
+		assertEquals( message, e.getMessage() );
 	    }
 	}
 }
