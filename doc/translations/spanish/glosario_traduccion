@@ -156,3 +156,12 @@ plugins -> módulos
     El término fue extraído del glosario de ORCA.
 
 repository layout -> estructura de repositorio
+
+backup -> copia de seguridad
+    Obtenido del glosario ORCA.
+
+back-end -> ???
+    Se refiere al término opuesto de front-end. En el octavo
+    capítulo se usa al menos tres veces para referirse al "motor"
+    que hay detrás de la capa de base de datos. Hmmm... pero motor
+    suena raro...
