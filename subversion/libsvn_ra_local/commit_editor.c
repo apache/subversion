@@ -249,7 +249,7 @@ add_directory (const char *path,
       /* No ancestry given, just make a new directory.  We don't
          bother with an out-of-dateness check here because
          svn_fs_make_dir will error out if PATH already exists.  */      
-      SVN_ERR (svn_fs_make_dir (eb->txn_root, full_path, pool));
+      SVN_ERR (svn_fs_make_dir (eb->txn_root, full_path, subpool));
     }
 
   /* Cleanup our temporary subpool. */
