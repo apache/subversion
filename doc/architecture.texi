@@ -43,7 +43,7 @@ each particular interface lies.
  |                                         |                            
  |          Subversion Filesystem          |                            
  |                                         |                            
- +-+--------------+--------+---------+-----+                            
+ +-+--------------+--------+---------+-----+ <===== Database interface  
    | Berkeley DBM |        |   SQL   |                                  
    +--------------+        +---------+      
                
