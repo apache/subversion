@@ -402,7 +402,6 @@ class Sandbox:
     return path
 
   def cleanup_test_paths(self):
-    global verbose_mode
     for path in self.test_paths:
       if verbose_mode:
         print "CLEANUP: " + path
