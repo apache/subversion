@@ -16,7 +16,7 @@ RM=rm
 all: libexpat.a
 
 clean:
-	rm *.o *.so *.a
+	rm -f *.o *.so *.a
 
 libexpat.a: $(OBJS)
 	$(RM) -f $@
