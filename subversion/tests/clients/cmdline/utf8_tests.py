@@ -99,18 +99,27 @@ try:
     locale.setlocale(locale.LC_ALL, '.1252')
   else:
     locale.setlocale(locale.LC_ALL, 'en_US.ISO8859-1')
+
+    if os.putenv:
+      # propagate to the svn* executables, so they do the correct translation
+      # the line below works for Linux systems if they have the particular
+      # locale installed
+      os.environ['LC_ALL'] = "en_US.ISO8859-1"
 except:
   pass
 
 # Check to see if the locale uses ISO-8859-1 encoding.  The regex is necessary
 # because some systems ommit the first hyphen or use lowercase letters for ISO.
+#
+# We should actually check to see if the locale (LC_ALL, LC_CTYPE or LANG)
+# either already *is* iso-8859-1 or the above putenv was successful
 localeenc = locale.getlocale()[1]
 if localeenc:
   localeregex = re.compile('^ISO-?8859-1$', re.I)
   localematch = localeregex.search(localeenc)
 else:
   localematch = None
-  
+
 # list all tests here, starting with None:
 test_list = [ None,
               Skip(basic_utf8_conversion, localematch is None)
