@@ -87,21 +87,23 @@ add_ignore_patterns (const char *dirpath,
    Else, ENTRY's pool must not be shorter-lived than STATUS's, since
    ENTRY will be stored directly, not copied.
 
+   PATH_KIND is the node kind of PATH as determined by the caller.
+   NOTE: this may be svn_node_unknown if the caller has made no such
+   determination.
+
    If GET_ALL is zero, and ENTRY is not locally modified, then *STATUS
    will be set to NULL.  If GET_ALL is non-zero, then *STATUS will be
    allocated and returned no matter what.
-
 */
 static svn_error_t *
 assemble_status (svn_wc_status_t **status,
                  const char *path,
                  svn_wc_entry_t *entry,
+                 svn_node_kind_t path_kind,
                  svn_boolean_t get_all,
-                 svn_boolean_t strict,
                  apr_pool_t *pool)
 {
   svn_wc_status_t *stat;
-  enum svn_node_kind path_kind;
   svn_boolean_t has_props;
   svn_boolean_t text_modified_p = FALSE;
   svn_boolean_t prop_modified_p = FALSE;
@@ -112,8 +114,9 @@ assemble_status (svn_wc_status_t **status,
   enum svn_wc_status_kind final_prop_status = svn_wc_status_none;
 
   /* Check the path kind for PATH. */
-  SVN_ERR( svn_io_check_path (path, &path_kind, pool));
-
+  if (path_kind == svn_node_unknown)
+    SVN_ERR (svn_io_check_path (path, &path_kind, pool));
+  
   if (! entry)
     {
       /* return a blank structure. */
@@ -146,16 +149,7 @@ assemble_status (svn_wc_status_t **status,
 
       SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
       if (! is_wc)
-        {
-          final_text_status = svn_wc_status_obstructed;
-
-          if (strict)
-            return svn_error_createf (
-                     SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, pool,
-                     "assemble_status: "
-                     "'%s' is obstructing a versioned resource",
-                     path);
-        }
+        final_text_status = svn_wc_status_obstructed;
     }
 
   if (final_text_status != svn_wc_status_obstructed)
@@ -193,9 +187,7 @@ assemble_status (svn_wc_status_t **status,
           if (entry->kind == svn_node_dir)
             parent_dir = path;
           else  /* non-directory, that's all we need to know */
-            {
-              parent_dir = svn_path_remove_component_nts (path, pool);
-            }
+            parent_dir = svn_path_remove_component_nts (path, pool);
 
           SVN_ERR (svn_wc_conflicted_p (&text_conflict_p, &prop_conflict_p,
                                         parent_dir, entry, pool));
@@ -239,40 +231,17 @@ assemble_status (svn_wc_status_t **status,
 
             b. check to see if the file or dir is present in the
                file system as the same kind it was versioned as.
-      */
+
+         4. Check for locked directory (only for directories). */
 
       if (path_kind == svn_node_none)
         {
           if (final_text_status != svn_wc_status_deleted)
-            {
-              final_text_status = svn_wc_status_absent;
-
-              if (strict)
-                return svn_error_createf (APR_ENOENT, 0, NULL, pool,
-                                          "assemble_status: "
-                                          "%s: No such file or directory",
-                                          path);
-            }
+            final_text_status = svn_wc_status_absent;
         }
-      else
-        {
-          if (path_kind != entry->kind)
-            {
-              final_text_status = svn_wc_status_obstructed;
-
-              if (strict)
-                return svn_error_createf (
-                         SVN_ERR_NODE_UNEXPECTED_KIND, 0, NULL, pool,
-                         "assemble_status: "
-                         "'%s' is obstructing a versioned resource",
-                         path);
-            }
-        }
-
-
-      /* 4. Check for locked directory. */
-
-      if (entry->kind == svn_node_dir)
+      else if (path_kind != entry->kind)
+        final_text_status = svn_wc_status_obstructed;
+      else if (entry->kind == svn_node_dir)
         SVN_ERR (svn_wc_locked (&locked_p, path, pool));
     }
 
@@ -314,14 +283,14 @@ static svn_error_t *
 add_status_structure (apr_hash_t *statushash,
                       const char *path,
                       svn_wc_entry_t *entry,
+                      svn_node_kind_t path_kind,
                       svn_boolean_t get_all,
-                      svn_boolean_t strict,
                       apr_pool_t *pool)
 {
   svn_wc_status_t *statstruct;
   
-  SVN_ERR (assemble_status (&statstruct, path, entry, 
-                            get_all, strict, pool));
+  SVN_ERR (assemble_status (&statstruct, path, entry, path_kind, 
+                            get_all, pool));
   if (statstruct)
     apr_hash_set (statushash, path, APR_HASH_KEY_STRING, statstruct);
   
@@ -366,9 +335,11 @@ add_unversioned_items (const char *path,
       int i;
       int ignore_me;
       const char *printable_path;
+      svn_node_kind_t *path_kind;
 
       apr_hash_this (hi, &key, &klen, &val);
       keystring = key;
+      path_kind = val;
         
       /* If the dirent isn't in `.svn/entries'... */
       if (apr_hash_get (entries, key, klen))        
@@ -404,7 +375,7 @@ add_unversioned_items (const char *path,
           SVN_ERR (add_status_structure (statushash,
                                          printable_path,
                                          NULL, /* no entry */
-                                         FALSE,
+                                         *path_kind,
                                          FALSE,
                                          pool));
         }
@@ -424,16 +395,14 @@ svn_wc_status (svn_wc_status_t **status,
   svn_wc_status_t *s;
   svn_wc_entry_t *entry = NULL;
 
-  /* Don't check for error;  PATH may be unversioned, or nonexistent
+  /* Don't check for error; PATH may be unversioned, or nonexistent
      (in the case of 'svn st -u' being told about as-yet-unknnown
      paths), and either condition will cause svn_wc_entry to return an
      error.  If this routine returns error, then a NULL entry will be
-     passed to assemble_status() below, which is fine -- a blank
-     status structure will be returned with either 'unversioned' or
-     'absent' status filled in. */
+     passed to assemble_status() below. */
   svn_wc_entry (&entry, path, FALSE, pool);
 
-  SVN_ERR (assemble_status (&s, path, entry, TRUE, FALSE, pool));
+  SVN_ERR (assemble_status (&s, path, entry, svn_node_unknown, TRUE, pool));
   *status = s;
   return SVN_NO_ERROR;
 }
@@ -445,7 +414,6 @@ svn_wc_statuses (apr_hash_t *statushash,
                  const char *path,
                  svn_boolean_t descend,
                  svn_boolean_t get_all,
-                 svn_boolean_t strict,
                  svn_boolean_t no_ignore,
                  apr_pool_t *pool)
 {
@@ -455,13 +423,6 @@ svn_wc_statuses (apr_hash_t *statushash,
   /* Is PATH a directory or file? */
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   
-  /* kff todo: this has to deal with the case of a type-changing edit,
-     i.e., someone removed a file under vc and replaced it with a dir,
-     or vice versa.  In such a case, when you ask for the status, you
-     should get mostly information about the now-vanished entity, plus
-     some information about what happened to it.  The same situation
-     is handled in entries.c:svn_wc_entry. */
-
   /* Read the appropriate entries file */
   
   /* If path points to just one file, or at least to just one
@@ -478,8 +439,8 @@ svn_wc_statuses (apr_hash_t *statushash,
          ### Notice that because we're getting one specific file,
          we're ignoring the GET_ALL flag and unconditionally fetching
          the status structure. */
-      SVN_ERR (add_status_structure (statushash, path, entry, 
-                                     TRUE, strict, pool));
+      SVN_ERR (add_status_structure (statushash, path, entry, kind, 
+                                     TRUE, pool));
     }
 
 
@@ -525,33 +486,27 @@ svn_wc_statuses (apr_hash_t *statushash,
 
           entry = (svn_wc_entry_t *) val;
 
-          SVN_ERR (svn_io_check_path (fullpath, &kind, pool));
-
-          /* In deciding whether or not to descend, we use the actual
-             kind of the entity, not the kind claimed by the entries
-             file.  The two are usually the same, but where they are
-             not, its usually because some directory got moved, and
-             one would still want a status report on its contents.
-             kff todo: However, must handle mixed working copies.
-             What if the subdir is not under revision control, or is
-             from another repository? */
+          /* ### todo: What if the subdir is from another repository? */
           
           /* Do *not* store THIS_DIR in the statushash, unless this
              path has never been seen before.  We don't want to add
              the path key twice. */
-          if (! strcmp (base_name, SVN_WC_ENTRY_THIS_DIR))
+          if (strcmp (base_name, SVN_WC_ENTRY_THIS_DIR) == 0)
             {
-              svn_wc_status_t *s = apr_hash_get (statushash,
-                                                 fullpath,
-                                                 APR_HASH_KEY_STRING);
-              if (! s)
+              svn_wc_status_t *status 
+                = apr_hash_get (statushash, fullpath, APR_HASH_KEY_STRING);
+              if (! status)
                 SVN_ERR (add_status_structure (statushash, fullpath,
-                                               entry, get_all,
-                                               strict, pool));
+                                               entry, kind, get_all, pool));
             }
           else
             {
-              if (kind == svn_node_dir)
+              svn_node_kind_t fullpath_kind;
+
+              /* Get the entry's kind on disk. */
+              SVN_ERR (svn_io_check_path (fullpath, &fullpath_kind, pool));
+
+              if (fullpath_kind == svn_node_dir)
                 {
                   /* Directory entries are incomplete.  We must get
                      their full entry from their own THIS_DIR entry.
@@ -562,41 +517,51 @@ svn_wc_statuses (apr_hash_t *statushash,
                      copy) directory.  Instead pass the incomplete
                      entry to add_status_structure, since that contains
                      enough information to determine the actual state
-                     of this entry.  */
+                     of this entry.  
 
-                  svn_wc_entry_t *subdir = NULL;
+                     Of course, if there has been a kind-changing
+                     replacement (for example, there is an entry for a
+                     file 'foo', but 'foo' exists as a *directory* on
+                     disk), we don't want to reach down into that
+                     subdir to try to flesh out a "complete entry".  */
+
+                  svn_wc_entry_t *fullpath_entry = entry;
                   svn_error_t *svn_err;
 
-                  svn_err = svn_wc_entry (&subdir, fullpath, FALSE, pool);
-                  if (svn_err)
+                  if (entry->kind == fullpath_kind)
                     {
-                      if (svn_err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
-                        return svn_err;
-
-                      svn_error_clear_all (svn_err);
-                      subdir = entry;
+                      svn_err = svn_wc_entry (&fullpath_entry, fullpath, 
+                                              FALSE, pool);
+                      if (svn_err)
+                        {
+                          if (svn_err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
+                            return svn_err;
+                          
+                          svn_error_clear_all (svn_err);
+                          fullpath_entry = entry;
+                        }
                     }
 
-                  SVN_ERR (add_status_structure (statushash, fullpath,
-                                                 subdir, get_all, 
-                                                 strict, pool));
+                  SVN_ERR (add_status_structure 
+                           (statushash, fullpath, fullpath_entry, 
+                            fullpath_kind, get_all, pool));
 
                   /* Descend only if the subdirectory is a working copy
                      directory (and DESCEND is non-zero ofcourse)  */
 
-                  if (descend && subdir != entry)
+                  if (descend && fullpath_entry != entry)
                     {
                       SVN_ERR (svn_wc_statuses (statushash, fullpath, descend,
-                                                get_all, strict, no_ignore,
-                                                pool));
+                                                get_all, no_ignore, pool));
                     }
                 }
-              else if ((kind == svn_node_file) || (kind == svn_node_none))
+              else if ((fullpath_kind == svn_node_file) 
+                       || (fullpath_kind == svn_node_none))
                 {
                   /* File entries are ... just fine! */
-                  SVN_ERR (add_status_structure (statushash, fullpath,
-                                                 entry, get_all, 
-                                                 strict, pool));
+                  SVN_ERR (add_status_structure 
+                           (statushash, fullpath, entry, fullpath_kind,
+                            get_all, pool));
                 }
             }
         }
