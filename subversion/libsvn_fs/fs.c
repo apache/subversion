@@ -635,6 +635,7 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
  * Delete all unused log files from DBD enviroment at @a live_path that exist 
  * in @a backup_path.
  */
+static
 svn_error_t *
 svn_fs__clean_logs(const char *live_path, 
                    const char *backup_path, 
