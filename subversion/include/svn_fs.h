@@ -691,7 +691,8 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
    transaction will create a new version.  Set *TXN to a pointer to
    an object representing the new transaction.  */
 svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn,
-			       svn_fs_t *fs);
+			       svn_fs_t *fs,
+                               apr_pool_t *parent_pool);
 
 
 /* Commit the transaction TXN.  If the transaction conflicts with
