@@ -141,6 +141,9 @@ struct edit_baton {
      recursive. */
   svn_boolean_t recurse;
 
+  /* Should this diff ignore node ancestry. */
+  svn_boolean_t ignore_ancestry;
+
   /* Possibly diff repos against text-bases instead of working files. */
   svn_boolean_t use_text_base;
 
@@ -219,9 +222,10 @@ struct file_baton {
 /* Create a new edit baton. TARGET/ANCHOR are working copy paths that
  * describe the root of the comparison. CALLBACKS/CALLBACK_BATON
  * define the callbacks to compare files. RECURSE defines whether to
- * descend into subdirectories.  USE_TEXT_BASE defines whether to
- * compare against working files or text-bases.  REVERSE_ORDER defines
- * which direction to perform the diff.
+ * descend into subdirectories.  IGNORE_ANCESTRY defines whether to
+ * utilize node ancestry when calculating diffs.  USE_TEXT_BASE
+ * defines whether to compare against working files or text-bases.
+ * REVERSE_ORDER defines which direction to perform the diff.
  */
 static struct edit_baton *
 make_editor_baton (svn_wc_adm_access_t *anchor,
@@ -229,6 +233,7 @@ make_editor_baton (svn_wc_adm_access_t *anchor,
                    const svn_wc_diff_callbacks_t *callbacks,
                    void *callback_baton,
                    svn_boolean_t recurse,
+                   svn_boolean_t ignore_ancestry,
                    svn_boolean_t use_text_base,
                    svn_boolean_t reverse_order,
                    apr_pool_t *pool)
@@ -241,6 +246,7 @@ make_editor_baton (svn_wc_adm_access_t *anchor,
   eb->callbacks = callbacks;
   eb->callback_baton = callback_baton;
   eb->recurse = recurse;
+  eb->ignore_ancestry = ignore_ancestry;
   eb->use_text_base = use_text_base;
   eb->reverse_order = reverse_order;
   eb->pool = pool;
@@ -471,6 +477,11 @@ file_diff (struct dir_baton *dir_baton,
      see a comparison to the empty file;  we want the usual working
      vs. text-base comparision. */
   if (copied)
+    schedule = svn_wc_schedule_normal;
+
+  /* If this was scheduled replace and we are ignoring ancestry,
+     report it as a normal file modification. */
+  if (eb->ignore_ancestry && (schedule == svn_wc_schedule_replace))
     schedule = svn_wc_schedule_normal;
 
   /* Prep these two paths early. */
@@ -1300,24 +1311,26 @@ close_edit (void *edit_baton,
 
 /* Create a diff editor and baton. */
 svn_error_t *
-svn_wc_get_diff_editor (svn_wc_adm_access_t *anchor,
-                        const char *target,
-                        const svn_wc_diff_callbacks_t *callbacks,
-                        void *callback_baton,
-                        svn_boolean_t recurse,
-                        svn_boolean_t use_text_base,
-                        svn_boolean_t reverse_order,
-                        svn_cancel_func_t cancel_func,
-                        void *cancel_baton,
-                        const svn_delta_editor_t **editor,
-                        void **edit_baton,
-                        apr_pool_t *pool)
+svn_wc_get_diff_editor2 (svn_wc_adm_access_t *anchor,
+                         const char *target,
+                         const svn_wc_diff_callbacks_t *callbacks,
+                         void *callback_baton,
+                         svn_boolean_t recurse,
+                         svn_boolean_t ignore_ancestry,
+                         svn_boolean_t use_text_base,
+                         svn_boolean_t reverse_order,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         const svn_delta_editor_t **editor,
+                         void **edit_baton,
+                         apr_pool_t *pool)
 {
   struct edit_baton *eb;
   svn_delta_editor_t *tree_editor;
 
   eb = make_editor_baton (anchor, target, callbacks, callback_baton,
-                          recurse, use_text_base, reverse_order, pool);
+                          recurse, ignore_ancestry, use_text_base,
+                          reverse_order, pool);
   tree_editor = svn_delta_default_editor (eb->pool);
 
   tree_editor->set_target_revision = set_target_revision;
@@ -1345,14 +1358,36 @@ svn_wc_get_diff_editor (svn_wc_adm_access_t *anchor,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_get_diff_editor (svn_wc_adm_access_t *anchor,
+                        const char *target,
+                        const svn_wc_diff_callbacks_t *callbacks,
+                        void *callback_baton,
+                        svn_boolean_t recurse,
+                        svn_boolean_t use_text_base,
+                        svn_boolean_t reverse_order,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        const svn_delta_editor_t **editor,
+                        void **edit_baton,
+                        apr_pool_t *pool)
+{
+  return svn_wc_get_diff_editor2 (anchor, target, callbacks, callback_baton,
+                                  recurse, FALSE, use_text_base, reverse_order,
+                                  cancel_func, cancel_baton,
+                                  editor, edit_baton, pool);
+}
+
+
 /* Compare working copy against the text-base. */
 svn_error_t *
-svn_wc_diff (svn_wc_adm_access_t *anchor,
-             const char *target,
-             const svn_wc_diff_callbacks_t *callbacks,
-             void *callback_baton,
-             svn_boolean_t recurse,
-             apr_pool_t *pool)
+svn_wc_diff2 (svn_wc_adm_access_t *anchor,
+              const char *target,
+              const svn_wc_diff_callbacks_t *callbacks,
+              void *callback_baton,
+              svn_boolean_t recurse,
+              svn_boolean_t ignore_ancestry,
+              apr_pool_t *pool)
 {
   struct edit_baton *eb;
   struct dir_baton *b;
@@ -1361,7 +1396,7 @@ svn_wc_diff (svn_wc_adm_access_t *anchor,
   svn_wc_adm_access_t *adm_access;
 
   eb = make_editor_baton (anchor, target, callbacks, callback_baton,
-                          recurse, FALSE, FALSE, pool);
+                          recurse, ignore_ancestry, FALSE, FALSE, pool);
 
   target_path = svn_path_join (svn_wc_adm_access_path (anchor), target,
                                eb->pool);
@@ -1378,4 +1413,17 @@ svn_wc_diff (svn_wc_adm_access_t *anchor,
   SVN_ERR (directory_elements_diff (b, FALSE));
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_diff (svn_wc_adm_access_t *anchor,
+             const char *target,
+             const svn_wc_diff_callbacks_t *callbacks,
+             void *callback_baton,
+             svn_boolean_t recurse,
+             apr_pool_t *pool)
+{
+  return svn_wc_diff2 (anchor, target, callbacks, callback_baton,
+                       recurse, FALSE, pool);
 }

@@ -1480,6 +1480,7 @@ diff_wc_wc (const apr_array_header_t *options,
             const char *path2,
             const svn_opt_revision_t *revision2,
             svn_boolean_t recurse,
+            svn_boolean_t ignore_ancestry,
             const svn_wc_diff_callbacks_t *callbacks,
             struct diff_cmd_baton *callback_baton,
             svn_client_ctx_t *ctx,
@@ -1526,8 +1527,8 @@ diff_wc_wc (const apr_array_header_t *options,
            (&callback_baton->revnum1, NULL, NULL, revision1, path1, pool));
   callback_baton->revnum2 = SVN_INVALID_REVNUM;  /* WC */
 
-  SVN_ERR (svn_wc_diff (adm_access, target, callbacks, callback_baton,
-                        recurse, pool));
+  SVN_ERR (svn_wc_diff2 (adm_access, target, callbacks, callback_baton,
+                         recurse, ignore_ancestry, pool));
   SVN_ERR (svn_wc_adm_close (adm_access));
   return SVN_NO_ERROR;
 }
@@ -1698,8 +1699,9 @@ diff_repos_wc (const apr_array_header_t *options,
                svn_client_ctx_t *ctx,
                apr_pool_t *pool)
 {
-  const char *url1;
-  const char *anchor1, *target1, *anchor2, *target2;
+  const char *url1, *url2;
+  const char *anchor2, *target2;
+  const char *remote_anchor2, *remote_target2;
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access, *dir_access;
   svn_revnum_t rev;
@@ -1714,26 +1716,27 @@ diff_repos_wc (const apr_array_header_t *options,
   /* Assert that we have valid input. */
   assert (! svn_path_is_url (path2));
 
-  /* Figure out URL1. */
+  /* Figure out URLs. */
   SVN_ERR (convert_to_url (&url1, path1, pool));
+  SVN_ERR (convert_to_url (&url2, path2, pool));
 
   /* Possibly split up PATH2 into anchor/target.  If we do so, then we
-     must split URL1 as well. */
-  anchor1 = url1;
+     must split URL2 as well. */
   anchor2 = path2;
-  target1 = "";
+  remote_anchor2 = url2;
   target2 = "";
+  remote_target2 = "";
   SVN_ERR (svn_io_check_path (path2, &kind, pool));
   if (kind == svn_node_file)
     {
       svn_path_split (path2, &anchor2, &target2, pool);
-      svn_path_split (url1, &anchor1, &target1, pool);
+      svn_path_split (url2, &remote_anchor2, &remote_target2, pool);
     }
 
   /* Establish RA session to URL1's anchor */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, anchor1, pool));
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor1,
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, remote_anchor2, pool));
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, remote_anchor2,
                                         NULL, NULL, NULL, FALSE, TRUE,
                                         ctx, pool));
       
@@ -1752,27 +1755,31 @@ diff_repos_wc (const apr_array_header_t *options,
                                  FALSE, recurse ? -1 : 0, pool));
     }
 
-  SVN_ERR (svn_wc_get_diff_editor (adm_access, target2,
-                                   callbacks, callback_baton,
-                                   recurse,
-                                   rev2_is_base,
-                                   reverse,
-                                   ctx->cancel_func, ctx->cancel_baton,
-                                   &diff_editor, &diff_edit_baton,
-                                   pool));
+  SVN_ERR (svn_wc_get_diff_editor2 (adm_access, target2,
+                                    callbacks, callback_baton,
+                                    recurse,
+                                    ignore_ancestry,
+                                    rev2_is_base,
+                                    reverse,
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    &diff_editor, &diff_edit_baton,
+                                    pool));
 
   /* Tell the RA layer we want a delta to change our txn to URL1 */
   SVN_ERR (svn_client__get_revision_number
            (&rev, ra_lib, session, revision1, 
             (path1 == url1) ? NULL : path1, pool));
   callback_baton->revnum1 = rev;
-  SVN_ERR (ra_lib->do_update (session,
-                              &reporter, &report_baton,
-                              rev,
-                              (target1 ?
-                               svn_path_uri_decode (target1, pool) : NULL),
-                              recurse, 
-                              diff_editor, diff_edit_baton, pool));
+  SVN_ERR (ra_lib->do_diff (session,
+                            &reporter, &report_baton,
+                            rev,
+                            (remote_target2 ?
+                             svn_path_uri_decode (remote_target2, pool)
+                             : NULL),
+                            recurse,
+                            ignore_ancestry,
+                            url1,
+                            diff_editor, diff_edit_baton, pool));
 
   if (kind == svn_node_dir)
     SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, path2, pool));
@@ -1863,7 +1870,8 @@ do_diff (const apr_array_header_t *options,
       else /* path2 is a working copy path */
         {
           SVN_ERR (diff_wc_wc (options, path1, revision1, path2, revision2,
-                               recurse, callbacks, callback_baton, ctx, pool));
+                               recurse, ignore_ancestry, callbacks,
+                               callback_baton, ctx, pool));
         }
     }
 
