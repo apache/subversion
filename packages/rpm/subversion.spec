@@ -1,6 +1,6 @@
 %define apache_version 2.0.31
 %define neon_version 0.18.2
-%define apr_version 0.2002.01.19
+%define apr_version 0.2002.01.19-2
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -39,6 +39,10 @@ if you don't have root access on your machine but would like to use this
 package.
 
 %changelog
+* Fri Feb 01 2002 David Summers <david@summersoft.fay.ar.us> 0.8.0-1129
+- Added requirement for APR 0.2002.01.19 rev 2 where the /usr/bin/apr-config
+  program was added.
+
 * Sun Oct 28 2001 David Summers <david@summersoft.fay.ar.us>
 - Release M5-r340: Added the subversion-server package.
 
