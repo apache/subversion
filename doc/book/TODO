@@ -38,6 +38,8 @@ To be fixed by cmpilato:
   - ch07:  'global-ignores' affects 'svn import', but book only
     mentions the effect on 'status' and 'add'
 
+  - appendix A:  explain that we don't support $Log$, and why.
+
 --------------------------------------------------------------
 
 To be fixed by fitz:
@@ -53,9 +55,6 @@ To be fixed by fitz:
 --------------------------------------------------------------
 
 To be fixed by sussman:
-
-
-  - rewrite whole chapter 4 example to use project-root layout???
 
   - add architecture diagram to ch01 or ch02, now that's been updated
     and deemed inappropriate for ch07.
