@@ -312,7 +312,39 @@ organize_lock_targets (const char **common_parent,
   return SVN_NO_ERROR;
 }
 
+/* Fetch lock tokens from the repository for the paths in PATH_TOKENS,
+   setting the values to the fetched tokens, allocated in pool. */
+static svn_error_t *
+fetch_tokens (svn_ra_session_t *ra_session, apr_hash_t *path_tokens,
+              apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create (pool);
 
+  for (hi = apr_hash_first (pool, path_tokens); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      const char *path;
+      svn_lock_t *lock;
+
+      svn_pool_clear (iterpool);
+      apr_hash_this (hi, &key, NULL, NULL);
+      path = key;
+
+      svn_ra_get_lock (ra_session, &lock, path, iterpool);
+
+      if (! lock)
+        return svn_error_createf 
+          (SVN_ERR_CLIENT_MISSING_LOCK_TOKEN, NULL,
+           _("'%s' is not locked"), path);
+
+      apr_hash_set (path_tokens, path, APR_HASH_KEY_STRING,
+                    apr_pstrdup (pool, lock->token));
+    }
+
+  svn_pool_destroy (iterpool);
+  return SVN_NO_ERROR;
+}
 
 
 svn_error_t *
@@ -396,28 +428,30 @@ svn_client_unlock (apr_array_header_t *targets,
   svn_ra_session_t *ra_session;
   apr_hash_t *path_tokens;
   struct lock_baton cb;
+  svn_boolean_t is_url;
 
   SVN_ERR (organize_lock_targets (&common_parent, &entry, &adm_access,
                                   &path_tokens, targets, FALSE, force, ctx,
                                   pool));
 
-  if (svn_path_is_url (common_parent))
-    {
-      url = common_parent;
-      /* Unlocking a URL is pointless with the 'force' flag anyway, so
-         just set it if we're operating on URLs. */
-      force = TRUE;
-    }
+  is_url = svn_path_is_url (common_parent);
+
+  if (is_url)
+    url = common_parent;
   else
-    {
-      url = entry->url;
-    }
+    url = entry->url;
 
   /* Open an RA session. */
   SVN_ERR (svn_client__open_ra_session
            (&ra_session, url,
             svn_path_is_url (common_parent) ? NULL : common_parent,
             adm_access, NULL, FALSE, FALSE, ctx, pool));
+
+  /* If force is not set, lock tokens are required.  Ensure that we provide
+     lock tokens, so the repository will only check that the user
+     owns the locks. */
+  if (is_url && !force)
+    SVN_ERR (fetch_tokens (ra_session, path_tokens, pool));
 
   cb.pool = pool;
   cb.nested_callback = unlock_func;
