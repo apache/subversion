@@ -209,13 +209,14 @@ Reglas mínimas para traductores
   problema --> dentro del propio texto. Así luego se puede hacer
   "grep TODO *" para ver qué falta.
 
-- Estar apuntado a la lista de correo de commits de Subversion:
-  svn@subversion.tigris.org. Las instrucciones para apuntarse están
-  en http://subversion.tigris.org/servlets/ProjectMailingListList.
+- Estar apuntado a la lista de correo de cambios realizados en el
+  repositorio principal de Subversion: svn@subversion.tigris.org.
+  Las instrucciones para apuntarse están en
+  http://subversion.tigris.org/servlets/ProjectMailingListList.
   Esta lista de correo incluye los cambios realizados en todo el
   árbol del repositorio. Si la carga es excesiva, contactar con
   Grzegorz. Puede crear una regla de reenvío de los mensajes
-  de commit siempre y cuando el título contenga la cadena
+  de cambios siempre y cuando el título contenga la cadena
   "trunk/doc/translations/spanish". Así sólo se recibirán esos
   emails.
 
