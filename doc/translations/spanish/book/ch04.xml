@@ -1232,23 +1232,25 @@ Committed revision 350.
         existen, aunque creo que no son nada populares. ¿Quizás
         deberíamos hacer lo mismo? --></para>
         
-      <para>Subversion has no <filename>Attic</filename> directory
-        like CVS does,
-        <footnote><para>Because CVS doesn't version trees, it creates
-          an <filename>Attic</filename> area within each repository
-          directory as a way of remembering deleted
-          files.</para>
+      <para>Subversion no tiene un directorio
+        <filename>Attic</filename> como CVS,
+        <footnote><para>Dado que CVS no hace versionado de árboles,
+          crea un área <filename>Attic</filename> dentro de cada
+          directorio del repositorio para poder recordar los ficheros
+          borrados.</para>
         </footnote>
-        so you need to use <command>svn
-        log</command> to discover the exact coordinate pair you wish
-        to resurrect.  A good strategy is to run <command>svn log
-        --verbose</command> in a directory which used to contain your
-        deleted item.  The <option>--verbose</option> option shows a
-        list of all changed items in each revision; all you need to do
-        is find the revision in which you deleted the file or
-        directory.  You can do this visually, or by using another tool
-        to examine the log output (via <command>grep</command>, or
-        perhaps via an incremental search in an editor.)</para>
+        por lo que necesita usar el comando <command>svn
+        log</command> para descubrir la pareja de coordenadas
+        exactas que quiere resucitar. Una buena estrategia
+        es ejecutar <command>svn log --verbose</command> en un
+        directorio que solía contener el elemento borrado. La opción
+        <option>--verbose</option> muestra una lista de todos
+        los elementos modificados en cada revisión; todo lo que
+        necesita hacer es encontrar la revisión en la cual borró
+        el fichero o directorio. Puede hacer esto visualmente, o
+        usando otra herramienta para examinar el informe de cambios
+        (via <command>grep</command>, o quizás con una búsqueda
+        incremental en un editor.)</para>
 
       <screen>
 $ cd parent-dir
