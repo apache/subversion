@@ -47,6 +47,15 @@ greek_dump_dir = os.path.join(temp_dir, "greekfiles")
 
 
 ######################################################################
+# Initialization
+
+# Cleanup: if a previous run crashed or interrupted the python
+# interpreter, then `temp_dir' was never removed.  This can cause wonkiness.
+
+if os.path.exists(temp_dir):
+  shutil.rmtree(temp_dir)
+
+######################################################################
 # Utilities shared by these tests
 
 
