@@ -539,6 +539,8 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
         if (path_s->len == len)          
             /* whoa, infinite loop, get out. */
           return err;
+
+        svn_error_clear (err);
       }
 
     if (svn_path_is_empty (path_s))
@@ -855,6 +857,7 @@ svn_ra_dav__do_check_path(svn_node_kind_t *kind,
        * be more descriptive about the error.  Greg, thoughts?
        */
 
+      svn_error_clear (err);
       *kind = svn_node_none;
       return SVN_NO_ERROR;
     }

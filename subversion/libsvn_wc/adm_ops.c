@@ -211,6 +211,7 @@ svn_wc_process_committed (const char *path,
     {
       /* PATH must be some sort of file */
       const char *tmp_text_base;
+      svn_error_t *err;
 
       /* We know that the new text base is sitting in the adm tmp area
          by now, because the commit succeeded. */
@@ -226,7 +227,9 @@ svn_wc_process_committed (const char *path,
          unexpected and hard-to-maintain dependencies.  Ick.
 
          So instead we just do the checksum from scratch.  Ick. */
-      svn_io_file_checksum (&checksum, tmp_text_base, pool);
+      err = svn_io_file_checksum (&checksum, tmp_text_base, pool);
+      if (err)
+         svn_error_clear (err); 
 
       /* Oh, and recursing at this point isn't really sensible. */
       recurse = FALSE;
@@ -1632,7 +1635,10 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
           err = svn_io_dir_remove_nonrecursive
             (svn_wc_adm_access_path (adm_access), subpool);
           if (err)
-            left_something = TRUE;
+            {
+              left_something = TRUE;
+              svn_error_clear (err);
+            }
         }
     }  /* end of directory case */
 
@@ -1820,7 +1826,7 @@ svn_wc_resolve_conflict (const char *path,
   if (! recursive)
     {
       const svn_wc_entry_t *entry;
-      svn_wc_entry (&entry, path, adm_access, FALSE, pool);
+      SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
       if (! entry)
         return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
                                   "Not under version control: '%s'", path);

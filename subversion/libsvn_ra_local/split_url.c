@@ -29,7 +29,7 @@ svn_ra_local__split_URL (svn_repos_t **repos,
                          const char *URL,
                          apr_pool_t *pool)
 {
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
   const char *candidate_url;
   const char *hostname, *path;
 
@@ -134,6 +134,8 @@ svn_ra_local__split_URL (svn_repos_t **repos,
          hacked this path down to a bare nub yet, so we'll chop off
          the last component of this path. */
       candidate_url = svn_path_remove_component_nts (candidate_url, pool);
+      if (err)
+        svn_error_clear (err);
     }
 
   /* If we are still sitting in an error-ful state, we must not have

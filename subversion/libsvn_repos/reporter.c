@@ -302,8 +302,12 @@ svn_repos_delete_path (void *report_baton,
   err = svn_fs_delete_tree (rbaton->txn_root, delete_path, rbaton->pool);
 
   /* If the delete is a no-op, don't throw an error;  just ignore. */
-  if (err && (err->apr_err != SVN_ERR_FS_NOT_FOUND))
-    return err;
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_FS_NOT_FOUND)
+        return err;
+      svn_error_clear (err);
+    }
 
   return SVN_NO_ERROR;
 }

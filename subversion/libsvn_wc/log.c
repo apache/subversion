@@ -375,7 +375,7 @@ log_do_run_cmd (struct log_runner *loggy,
                         name, args, NULL, NULL, FALSE,
                         infile, outfile, errfile, loggy->pool);
   if (err)
-     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL,
+     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err,
                                "error running %s in %s",
                                name,
                                svn_wc_adm_access_path (loggy->adm_access));
@@ -526,13 +526,13 @@ log_do_modify_entry (struct log_runner *loggy,
       err = svn_io_check_path (tfile, &tfile_kind, loggy->pool);
       if (err)
         return svn_error_createf
-          (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL,
+          (SVN_ERR_WC_BAD_ADM_LOG, 0, err,
            "error checking path `%s'", tfile);
           
       err = svn_io_file_affected_time (&text_time, tfile, loggy->pool);
       if (err)
         return svn_error_createf
-          (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL,
+          (SVN_ERR_WC_BAD_ADM_LOG, 0, err,
            "error getting file affected time on `%s'", tfile);
 
       entry->text_time = text_time;
@@ -556,7 +556,7 @@ log_do_modify_entry (struct log_runner *loggy,
       err = svn_io_check_path (pfile, &pfile_kind, loggy->pool);
       if (err)
         return svn_error_createf
-          (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL,
+          (SVN_ERR_WC_BAD_ADM_LOG, 0, err,
            "error checking path `%s'", pfile);
       
       err = svn_io_file_affected_time (&prop_time, pfile, loggy->pool);

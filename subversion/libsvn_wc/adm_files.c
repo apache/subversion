@@ -140,13 +140,16 @@ svn_wc__adm_path_exists (const char *path,
                          ...)
 {
   svn_node_kind_t kind;
+  svn_error_t *err;
   va_list ap;
 
   va_start (ap, pool);
   path = v_extend_with_adm_name (path, NULL, tmp, pool, ap);
   va_end (ap);
 
-  svn_io_check_path (path, &kind, pool);
+  err = svn_io_check_path (path, &kind, pool);
+  if (err)
+    svn_error_clear (err);
   if (kind == svn_node_none)
     return FALSE;
   else
@@ -184,22 +187,19 @@ svn_wc__make_adm_thing (svn_wc_adm_access_t *adm_access,
 
   if (type == svn_node_file)
     {
-      err = svn_io_file_open (&f, path,
-                              (APR_WRITE | APR_CREATE | APR_EXCL),
-                              perms,
-                              pool);
+      SVN_ERR (svn_io_file_open (&f, path,
+                                 (APR_WRITE | APR_CREATE | APR_EXCL),
+                                 perms,
+                                 pool));
 
-      if (!err)
-        {
-          /* Creation succeeded, so close immediately. */
-          apr_err = apr_file_close (f);
-          if (apr_err)
-            err = svn_error_create (apr_err, 0, NULL, path);
-        }
+      /* Creation succeeded, so close immediately. */
+      apr_err = apr_file_close (f);
+      if (apr_err)
+        err = svn_error_create (apr_err, 0, NULL, path);
     }
   else if (type == svn_node_dir)
     {
-      err = svn_io_dir_make (path, perms, pool);
+      SVN_ERR (svn_io_dir_make (path, perms, pool));
     }
   else   /* unknown type argument, wrongness */
     {
@@ -220,14 +220,11 @@ static svn_error_t *
 maybe_copy_file (const char *src, const char *dst, apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  svn_error_t *err;
   apr_status_t apr_err;
 
   /* First test if SRC exists. */
-  err = svn_io_check_path (src, &kind, pool);
-  if (err)
-    return err;
-  else if (kind == svn_node_none)
+  SVN_ERR (svn_io_check_path (src, &kind, pool));
+  if (kind == svn_node_none)
     {
       /* SRC doesn't exist, create DST empty. */
       apr_file_t *f = NULL;
@@ -244,9 +241,7 @@ maybe_copy_file (const char *src, const char *dst, apr_pool_t *pool)
     }
   else /* SRC exists, so copy it to DST. */
     {    
-      err = svn_io_copy_file (src, dst, FALSE, pool);
-      if (err)
-        return err;
+      SVN_ERR (svn_io_copy_file (src, dst, FALSE, pool));
     }
 
   return SVN_NO_ERROR;
@@ -329,14 +324,11 @@ prop_path_internal (const char **prop_path,
                     svn_boolean_t tmp,
                     apr_pool_t *pool)
 {
-  svn_error_t *err;
   svn_node_kind_t kind;
   int wc_format_version;
   const char *entry_name;
 
-  err = svn_io_check_path (path, &kind, pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
 
   /* kff todo: some factorization can be done on most callers of
      svn_wc_check_wc()? */
@@ -345,9 +337,7 @@ prop_path_internal (const char **prop_path,
   entry_name = NULL;
   if (kind == svn_node_dir)
     {
-      err = svn_wc_check_wc (path, &wc_format_version, pool);
-      if (err)
-        return err;
+      SVN_ERR (svn_wc_check_wc (path, &wc_format_version, pool));
     }
   
   if (wc_format_version)  /* It's not only a dir, it's a working copy dir */
@@ -364,10 +354,8 @@ prop_path_internal (const char **prop_path,
     {
       svn_path_split_nts (path, prop_path, &entry_name, pool);
 
-      err = svn_wc_check_wc (*prop_path, &wc_format_version, pool);
-      if (err)
-        return err;
-      else if (wc_format_version == 0)
+      SVN_ERR (svn_wc_check_wc (*prop_path, &wc_format_version, pool));
+      if (wc_format_version == 0)
         return svn_error_createf
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL,
            "prop_path_internal: %s is not a working copy directory",
@@ -409,14 +397,11 @@ svn_wc__wcprop_path (const char **wcprop_path,
                      svn_boolean_t tmp,
                      apr_pool_t *pool)
 {
-  svn_error_t *err;
   svn_node_kind_t kind;
   int is_wc;
   const char *entry_name;
 
-  err = svn_io_check_path (path, &kind, pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
 
   /* kff todo: some factorization can be done on most callers of
      svn_wc_check_wc()? */
@@ -425,9 +410,7 @@ svn_wc__wcprop_path (const char **wcprop_path,
   entry_name = NULL;
   if (kind == svn_node_dir)
     {
-      err = svn_wc_check_wc (path, &is_wc, pool);
-      if (err)
-        return err;
+      SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
     }
 
   if (is_wc)  /* It's not only a dir, it's a working copy dir */
@@ -443,10 +426,8 @@ svn_wc__wcprop_path (const char **wcprop_path,
     {
       svn_path_split_nts (path, wcprop_path, &entry_name, pool);
  
-      err = svn_wc_check_wc (*wcprop_path, &is_wc, pool);
-      if (err)
-        return err;
-      else if (! is_wc)
+      SVN_ERR (svn_wc_check_wc (*wcprop_path, &is_wc, pool));
+      if (! is_wc)
         return svn_error_createf
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL,
            "wcprop_path: %s is not a working copy directory", *wcprop_path);
@@ -528,9 +509,7 @@ open_adm_file (apr_file_t **handle,
           va_end (ap);
 
           /* Copy the original thing to the tmp location. */
-          err = maybe_copy_file (opath, tmp_path, pool);
-          if (err)
-            return err;
+          SVN_ERR (maybe_copy_file (opath, tmp_path, pool));
         }
 
       /* Extend with tmp name. */
@@ -744,7 +723,6 @@ svn_wc__open_props (apr_file_t **handle,
   const char *parent_dir, *base_name;
   svn_node_kind_t kind;
   int wc_format_version;
-  svn_error_t *err;
 
   /* Check if path is a file or a dir. */
   SVN_ERR (svn_io_check_path (path, &kind, pool));
@@ -765,10 +743,8 @@ svn_wc__open_props (apr_file_t **handle,
   
   /* At this point, we know we need to open a file in the admin area
      of parent_dir.  First check that parent_dir is a working copy: */
-  err = svn_wc_check_wc (parent_dir, &wc_format_version, pool);
-  if (err)
-    return err;
-  else if (wc_format_version == 0)
+  SVN_ERR (svn_wc_check_wc (parent_dir, &wc_format_version, pool));
+  if (wc_format_version == 0)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL,
        "svn_wc__open_props: %s is not a working copy directory", parent_dir);
@@ -832,7 +808,6 @@ svn_wc__close_props (apr_file_t *fp,
   const char *parent_dir, *base_name;
   svn_node_kind_t kind;
   int wc_format_version;
-  svn_error_t *err;
 
   /* Check if path is a file or a dir. */
   SVN_ERR (svn_io_check_path (path, &kind, pool));
@@ -845,10 +820,8 @@ svn_wc__close_props (apr_file_t *fp,
   
   /* At this point, we know we need to open a file in the admin area
      of parent_dir.  First check that parent_dir is a working copy: */
-  err = svn_wc_check_wc (parent_dir, &wc_format_version, pool);
-  if (err)
-    return err;
-  else if (wc_format_version == 0)
+  SVN_ERR (svn_wc_check_wc (parent_dir, &wc_format_version, pool));
+  if (wc_format_version == 0)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL,
        "svn_wc__close_props: %s is not a working copy directory", parent_dir);
@@ -982,30 +955,25 @@ check_adm_exists (svn_boolean_t *exists,
 
   tmp_path = extend_with_adm_name (path, NULL, 0, pool, NULL);
 
-  err = svn_io_check_path (tmp_path, &kind, pool);
-  if (!err)
+  SVN_ERR (svn_io_check_path (tmp_path, &kind, pool));
+  if (kind != svn_node_none && kind != svn_node_dir)
     {
-      if (kind != svn_node_none && kind != svn_node_dir)
-        {
-          /* If got an error other than dir non-existence, then
-             something's weird and we should return a genuine error. */
-          err = svn_error_create (APR_ENOTDIR, 0, NULL, tmp_path);
-        }
-      else if (kind == svn_node_none)
-        {
-          dir_exists = FALSE;
-        }
-      else                      /* must be a dir. */
-        {
-          assert (kind == svn_node_dir);
-          dir_exists = TRUE;
-        }
+      /* If got an error other than dir non-existence, then
+         something's weird and we should return a genuine error. */
+      return svn_error_create (APR_ENOTDIR, 0, NULL, tmp_path);
+    }
+  else if (kind == svn_node_none)
+    {
+      dir_exists = FALSE;
+    }
+  else                      /* must be a dir. */
+    {
+      assert (kind == svn_node_dir);
+      dir_exists = TRUE;
     }
 
   /** Step 1.  If no adm directory, then we're done. */
-  if (err)
-    return err;
-  else if (! dir_exists)
+  if (! dir_exists)
     {
       *exists = FALSE;
       return SVN_NO_ERROR;
@@ -1095,19 +1063,16 @@ init_adm_file (const char *path,
                const char *contents,
                apr_pool_t *pool)
 {
-  svn_error_t *err;
+  svn_error_t *err = NULL;
   apr_status_t apr_err;
   apr_file_t *f = NULL;
 
-  err = svn_wc__open_adm_file (&f, path, thing, APR_WRITE | APR_CREATE, pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_wc__open_adm_file (&f, path, thing, APR_WRITE | APR_CREATE,
+                                  pool));
 
   apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
 
-  err = svn_wc__close_adm_file (f, path, thing, 1, pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_wc__close_adm_file (f, path, thing, 1, pool));
   
   if (apr_err)
     err = svn_error_create (apr_err, 0, NULL, path);

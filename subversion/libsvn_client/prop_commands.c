@@ -83,8 +83,12 @@ recursive_propset (const char *propname,
               err = svn_wc_prop_set (propname, propval,
                                      full_entry_path->data, adm_access, pool);
             }
-          if (err && err->apr_err != SVN_ERR_ILLEGAL_TARGET)
-            return err;
+          if (err)
+            {
+              if (err->apr_err != SVN_ERR_ILLEGAL_TARGET)
+                return err;
+              svn_error_clear (err);
+            }
         }
     }
   return SVN_NO_ERROR;
