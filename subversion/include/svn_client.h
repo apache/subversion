@@ -1769,6 +1769,9 @@ typedef struct svn_info_t
   /* The author of the last_changed_rev. */
   const char *last_changed_author;
 
+  /* Whether or not to ignore the next 10 wc-specific fields. */
+  svn_boolean_t has_wc_info;
+
   /* The following things only apply to a working-copy path.  See
      svn_wc_entry_t explanations. */
   svn_wc_schedule_t schedule;
