@@ -660,6 +660,7 @@ svn_fs_fs__dag_delete (dag_node_t *parent,
   apr_hash_t *entries;
   svn_fs_t *fs = parent->fs;
   svn_fs_dirent_t *dirent;
+  svn_fs_id_t *id;
   dag_node_t *node;
 
   /* Make sure parent is a directory. */
@@ -696,14 +697,17 @@ svn_fs_fs__dag_delete (dag_node_t *parent,
     return svn_error_createf
       (SVN_ERR_FS_NO_SUCH_ENTRY, NULL,
        "Delete failed--directory has no entry '%s'", name);
+
+  /* Stash a copy of the ID, since dirent will become invalid during
+     svn_fs_fs__dag_delete_if_mutable. */
+  id = svn_fs_fs__id_copy (dirent->id, pool);
   
-  /* Use the ID of this ENTRY to get the entry's node.  */
-  SVN_ERR (svn_fs_fs__dag_get_node (&node, svn_fs_fs__dag_get_fs (parent),
-                                    dirent->id, pool));
+  /* Use the ID to get the entry's node.  */
+  SVN_ERR (svn_fs_fs__dag_get_node (&node, svn_fs_fs__dag_get_fs (parent), id,
+                                    pool));
 
   /* If mutable, remove it and any mutable children from db. */
-  SVN_ERR (svn_fs_fs__dag_delete_if_mutable (parent->fs, dirent->id, txn_id,
-                                             pool));
+  SVN_ERR (svn_fs_fs__dag_delete_if_mutable (parent->fs, id, txn_id, pool));
 
   /* Remove this entry from its parent's entries list. */
   SVN_ERR (svn_fs_fs__set_entry (parent->fs, txn_id, parent_noderev, name,
