@@ -31,7 +31,7 @@ svn_ra_local__split_URL (svn_stringbuf_t **repos_path,
   svn_stringbuf_t *url;
   char *hostname, *url_data, *path;
   apr_pool_t *subpool = svn_pool_create (pool);
-  svn_fs_t *test_fs = svn_fs_new (subpool);
+  svn_repos_t *repos;
 
   /* Verify that the URL is well-formed (loosely) */
   url_data = URL->data;
@@ -63,39 +63,39 @@ svn_ra_local__split_URL (svn_stringbuf_t **repos_path,
   /* Duplicate the URL, starting at the top of the path */
   url = svn_stringbuf_create ((const char *)path, subpool);
 
-  /* Loop, trying to open a FS at URL.  If this fails, remove the last
-     component from the URL, then try again. */
+  /* Loop, trying to open a repository at URL.  If this fails, remove
+     the last component from the URL, then try again. */
   while (1)
     {
-      /* Attempt to open FS */
-      err = svn_fs_open_berkeley (test_fs, url->data);
+      /* Attempt to open a repository at URL.  */
+      err = svn_repos_open (&repos, url->data, subpool);
 
       /* Hey, cool, we were successfully.  Stop loopin'. */
       if (err == SVN_NO_ERROR)
         break;
 
       /* If we're down to an empty path here, and we still haven't
-         found the filesystem, we're just out of luck.  Time to bail
+         found the repository, we're just out of luck.  Time to bail
          and face the music. */
       if (svn_path_is_empty (url, svn_path_url_style))
         break;
 
-      /* We didn't successfully open the filesystem, and we haven't
+      /* We didn't successfully open the repository, and we haven't
          hacked this path down to a bare nub yet, so we'll chop off
          the last component of this path. */
       svn_path_remove_component (url, svn_path_url_style);
     }
 
   /* If we are still sitting in an error-ful state, we must not have
-     found the filesystem.  We give up. */
+     found the repository.  We give up. */
   if (err)
     return svn_error_create 
       (SVN_ERR_RA_NOT_VERSIONED_RESOURCE, 0, NULL, pool, 
        ("svn_ra_local__split_URL: Unable to find valid repository"));
   
-  /* We apparently found a filesystem.  Let's close it since we aren't
+  /* We apparently found a repository.  Let's close it since we aren't
      really going to do anything with it. */
-  SVN_ERR (svn_fs_close_fs (test_fs));
+  SVN_ERR (svn_repos_close (repos));
 
   /* What remains of URL after being hacked at in the previous step is
      REPOS_PATH.  FS_PATH is what we've hacked off in the process.  We

@@ -24,7 +24,6 @@
 #include "svn_error.h"
 #include "svn_time.h"
 #include "svn_fs.h"
-#include "svn_repos.h"
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_test.h"
@@ -59,8 +58,7 @@ create_berkeley_filesystem (const char **msg,
     return SVN_NO_ERROR;
 
   /* Create and close a repository. */
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-create-berkeley", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-create-berkeley", pool));
   SVN_ERR (svn_fs_close_fs (fs));
   
   return SVN_NO_ERROR;
@@ -163,8 +161,7 @@ open_berkeley_filesystem (const char **msg,
     return SVN_NO_ERROR;
 
   /* Create and close a repository (using fs). */
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-open-berkeley", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-open-berkeley", pool));
   SVN_ERR (svn_fs_close_fs (fs));
 
   /* Create a different fs object, and use it to re-open the
@@ -196,8 +193,7 @@ trivial_transaction (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-trivial-txn", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-trivial-txn", pool));
 
   /* Begin a new transaction that is based on revision 0.  */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
@@ -233,8 +229,7 @@ reopen_trivial_transaction (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-reopen-trivial-txn", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-reopen-trivial-txn", pool));
 
   /* Begin a new transaction that is based on revision 0.  */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
@@ -270,8 +265,7 @@ create_file_transaction (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-create-file-txn", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-create-file-txn", pool));
 
   /* Begin a new transaction that is based on revision 0.  */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
@@ -393,8 +387,7 @@ verify_txn_list (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-verify-txn-list", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-verify-txn-list", pool));
 
   /* Begin a new transaction, get its name, close it.  */
   SVN_ERR (svn_fs_begin_txn (&txn1, fs, 0, pool));
@@ -458,8 +451,7 @@ write_and_read_file (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-read-and-write-file", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-read-and-write-file", pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   
@@ -503,8 +495,7 @@ create_mini_tree_transaction (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-create-mini-tree-txn", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-create-mini-tree-txn", pool));
 
   /* Begin a new transaction that is based on revision 0.  */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
@@ -545,8 +536,7 @@ create_greek_tree_transaction (const char **msg,
     return SVN_NO_ERROR;
 
   /* Prepare a txn to receive the greek tree. */
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-create-greek-tree-txn", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-create-greek-tree-txn", pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
@@ -613,8 +603,7 @@ list_directory (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-list-dir", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-list-dir", pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   
@@ -698,8 +687,7 @@ revision_props (const char **msg,
     return SVN_NO_ERROR;
 
   /* Open the fs */
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-rev-props", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-rev-props", pool));
 
   /* Set some properties on the revision. */
   for (i = 0; i < 4; i++)
@@ -803,8 +791,7 @@ transaction_props (const char **msg,
     return SVN_NO_ERROR;
 
   /* Open the fs */
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-txn-props", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-txn-props", pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
 
   /* Set some properties on the revision. */
@@ -959,8 +946,7 @@ node_props (const char **msg,
     return SVN_NO_ERROR;
 
   /* Open the fs and transaction */
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-node-props", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-node-props", pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
@@ -1215,8 +1201,7 @@ abort_txn (const char **msg,
     return SVN_NO_ERROR;
 
   /* Prepare two txns to receive the Greek tree. */
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-abort-txn", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-abort-txn", pool));
   SVN_ERR (svn_fs_begin_txn (&txn1, fs, 0, pool));
   SVN_ERR (svn_fs_begin_txn (&txn2, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn1_root, txn1, pool));
@@ -1428,15 +1413,13 @@ fetch_youngest_rev (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-youngest-rev", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-youngest-rev", pool));
 
   /* Get youngest revision of brand spankin' new filesystem. */
   SVN_ERR (svn_fs_youngest_rev (&youngest_rev, fs, pool));
 
   /* Prepare a txn to receive the greek tree. */
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-commit-txn", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-commit-txn", pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
@@ -1484,8 +1467,7 @@ basic_commit (const char **msg,
     return SVN_NO_ERROR;
 
   /* Prepare a filesystem. */
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-basic-commit", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-basic-commit", pool));
 
   /* Save the current youngest revision. */
   SVN_ERR (svn_fs_youngest_rev (&before_rev, fs, pool));
@@ -1547,8 +1529,7 @@ test_tree_node_validation (const char **msg,
     return SVN_NO_ERROR;
 
   /* Prepare a filesystem. */
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-validate-tree-entries", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-validate-tree-entries", pool));
 
   /* In a txn, create the greek tree. */
   {
@@ -1672,7 +1653,7 @@ fetch_by_id (const char **msg,
     return SVN_NO_ERROR;
 
   /* Commit a Greek Tree as the first revision. */
-  SVN_ERR (svn_test__create_fs_and_repos (&fs, "test-repo-fetch-by-id", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-fetch-by-id", pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
@@ -1860,8 +1841,7 @@ merge_re_id (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-merge-re-id", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-merge-re-id", pool));
 
   /* Check in a greek tree to start off with. */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
@@ -2055,8 +2035,7 @@ merging_commit (const char **msg,
   revision_count = 0;
 
   /* Prepare a filesystem. */
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-merging-commit", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-merging-commit", pool));
   revisions[revision_count++] = 0; /* the brand spankin' new revision */
 
   /***********************************************************************/
@@ -2827,7 +2806,7 @@ copy_test (const char **msg,
     return SVN_NO_ERROR;
 
   /* Prepare a filesystem. */
-  SVN_ERR (svn_test__create_fs_and_repos (&fs, "test-repo-copy-test", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-copy-test", pool));
 
   /* In first txn, create and commit the greek tree. */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
@@ -3126,7 +3105,7 @@ link_test (const char **msg,
     return SVN_NO_ERROR;
 
   /* Prepare a filesystem. */
-  SVN_ERR (svn_test__create_fs_and_repos (&fs, "test-repo-link-test", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-link-test", pool));
 
   /* In first txn, create and commit the greek tree. */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
@@ -3289,8 +3268,7 @@ delete_mutables (const char **msg,
     return SVN_NO_ERROR;
 
   /* Prepare a txn to receive the greek tree. */
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-del-from-dir", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-del-from-dir", pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   
@@ -3541,8 +3519,7 @@ delete (const char **msg,
    */
 
   /* Prepare a txn to receive the greek tree. */
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-del-tree", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-del-tree", pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
@@ -4021,8 +3998,7 @@ commit_date (const char **msg,
     return SVN_NO_ERROR;
 
   /* Prepare a filesystem. */
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-commit-date", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-commit-date", pool));
 
   before_commit = apr_time_now ();
 
@@ -4076,8 +4052,7 @@ check_old_revisions (const char **msg,
     return SVN_NO_ERROR;
 
   /* Prepare a filesystem. */
-  SVN_ERR (svn_test__create_fs_and_repos
-           (&fs, "test-repo-check-old-revisions", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-check-old-revisions", pool));
 
   /* Commit a greek tree. */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
@@ -4447,8 +4422,7 @@ check_all_revisions (const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a filesystem and repository. */
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-check-all-revisions", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-check-all-revisions", pool));
 
   /***********************************************************************/
   /* REVISION 0 */
@@ -4763,8 +4737,7 @@ file_integrity_helper (apr_size_t filesize, apr_pool_t *pool)
   int j;
 
   /* Create a filesystem and repository. */
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-large-file-integrity", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-large-file-integrity", pool));
 
   /* Set up our file contents string buffer. */
   contents.data = apr_palloc (pool, filesize);
@@ -4948,8 +4921,7 @@ check_root_revision (const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a filesystem and repository. */
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-check-root-revision", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-check-root-revision", pool));
 
   /* Initialize this once for all time. */
   args.fs = fs;
@@ -5035,8 +5007,7 @@ undeltify_deltify (const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a filesystem and repository. */
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-undeltify-deltify", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-undeltify-deltify", pool));
 
   /* Make 10 revisions. */
   subpool = svn_pool_create (pool);
@@ -5217,8 +5188,7 @@ test_node_created_rev (const char **msg,
     path_revs[i].path = greek_paths[i];
 
   /* Create a filesystem and repository. */
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-node-created-rev", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-node-created-rev", pool));
 
   /* Created the greek tree in revision 1. */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));

@@ -36,19 +36,71 @@ extern "C" {
 /* ---------------------------------------------------------------*/
 
 
-/* Opening a filesystem. */
+/* The repository object. */
+typedef struct svn_repos_t svn_repos_t;
 
-/* Set *FS_P to an opened filesystem object for the repository at
-   PATH.  Allocate *FS_P in POOL.
+/* Opening and creating repositories. */
+
+
+/* Set *REPOS_P to a repository object for the repository at
+   PATH.  Allocate *REPOS_P in POOL.
 
    Acquires a shared lock on the repository, and attaches a cleanup
    function to POOL to remove the lock.  If no lock can be acquired,
-   returns error, with undefined effect on *FS_P.  If an exclusive
+   returns error, with undefined effect on *REPOS_P.  If an exclusive
    lock is present, this blocks until it's gone.  */
-svn_error_t *svn_repos_open (svn_fs_t **fs_p,
+svn_error_t *svn_repos_open (svn_repos_t **repos_p,
                              const char *path,
                              apr_pool_t *pool);
 
+/* Create a new Subversion repository at PATH, building the necessary
+   directory structure, creating the Berkeley DB filesystem
+   environment, and so on.  Return the repository object in *REPOS_P,
+   allocated in POOL. */
+svn_error_t *svn_repos_create (svn_repos_t **repos_p, 
+                               const char *path, 
+                               apr_pool_t *pool);
+
+/* Close the Subversion repository object REPOS. */
+svn_error_t *svn_repos_close (svn_repos_t *repos);
+
+/* Destroy the Subversion repository found at PATH.  Use POOL for any
+   necessary allocations. */
+svn_error_t *svn_repos_delete (const char *path, apr_pool_t *pool);
+
+/* Return the filesystem associated with repository object REPOS. */
+svn_fs_t *svn_repos_fs (svn_repos_t *repos);
+
+
+/* Repository Paths */
+
+/* Return the top-level repository path allocated in POOL. */
+const char *svn_repos_path (svn_repos_t *repos, apr_pool_t *pool);
+
+/* Return the path to REPOS's Berkeley DB environment, allocated in
+   POOL. */
+const char *svn_repos_db_env (svn_repos_t *repos, apr_pool_t *pool);
+
+/* Return the path to REPOS's configuration directory, allocated in
+   POOL. */
+const char *svn_repos_conf_dir (svn_repos_t *repos, apr_pool_t *pool);
+
+/* Return path to REPOS's lock directory or db lockfile, respectively,
+   allocated in POOL. */
+const char *svn_repos_lock_dir (svn_repos_t *repos, apr_pool_t *pool);
+const char *svn_repos_db_lockfile (svn_repos_t *repos, apr_pool_t *pool);
+
+/* Return the path to REPOS's hook directory, allocated in POOL. */
+const char *svn_repos_hook_dir (svn_repos_t *repos, apr_pool_t *pool);
+
+/* Return the path to REPOS's start-commit hook, pre-commit hook,
+   post-commit hook, read sentinel, and write sentinel programs,
+   respectively, allocated in POOL. */
+const char *svn_repos_start_commit_hook (svn_repos_t *repos, apr_pool_t *pool);
+const char *svn_repos_pre_commit_hook (svn_repos_t *repos, apr_pool_t *pool);
+const char *svn_repos_post_commit_hook (svn_repos_t *repos, apr_pool_t *pool);
+const char *svn_repos_read_sentinel_hook (svn_repos_t *repos, apr_pool_t *pool);
+const char *svn_repos_write_sentinel_hook (svn_repos_t *repos, apr_pool_t *pool);
 
 
 
@@ -61,7 +113,7 @@ svn_error_t *svn_repos_open (svn_fs_t **fs_p,
    collecting working copy revision state. When the collection of
    state is completed, then the EDITOR will be driven to
    describe how to change the working copy into revision REVNUM of
-   filesystem FS. 
+   REPOS's filesystem. 
 
    The description of the working copy state will be relative to
    FS_BASE in the filesystem.  USERNAME will be recorded as the
@@ -78,7 +130,7 @@ svn_error_t *
 svn_repos_begin_report (void **report_baton,
                         svn_revnum_t revnum,
                         const char *username,
-                        svn_fs_t *fs,
+                        svn_repos_t *repos,
                         svn_stringbuf_t *fs_base,
                         svn_stringbuf_t *target,
                         svn_boolean_t text_deltas,
@@ -177,11 +229,11 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
 
 /*** Finding particular revisions. */
 
-/* Set *REVISION to the revision number in FS that was youngest at
-   time TM. */
+/* Set *REVISION to the revision number in REPOS's filesystem that was
+   youngest at time TM. */
 svn_error_t *
 svn_repos_dated_revision (svn_revnum_t *revision,
-                          svn_fs_t *fs,
+                          svn_repos_t *repos,
                           apr_time_t tm,
                           apr_pool_t *pool);
                           
@@ -202,9 +254,9 @@ svn_repos_dated_revision (svn_revnum_t *revision,
 
 
 /* Invoke RECEIVER with RECEIVER_BATON on each log message from START
- * to END in FS.  START may be greater or less than END; this just
- * controls whether the log messages are processed in descending or
- * ascending revision number order.
+ * to END in REPOS's fileystem.  START may be greater or less than
+ * END; this just controls whether the log messages are processed in
+ * descending or ascending revision number order.
  *
  * If START or END is SVN_INVALID_REVNUM, it defaults to youngest.
  *
@@ -224,10 +276,9 @@ svn_repos_dated_revision (svn_revnum_t *revision,
  *
  * See also the documentation for `svn_log_message_receiver_t'.
  *
- * Use POOL for temporary allocations.
- */
+ * Use POOL for temporary allocations.  */
 svn_error_t *
-svn_repos_get_logs (svn_fs_t *fs,
+svn_repos_get_logs (svn_repos_t *repos,
                     const apr_array_header_t *paths,
                     svn_revnum_t start,
                     svn_revnum_t end,
@@ -242,29 +293,29 @@ svn_repos_get_logs (svn_fs_t *fs,
 /*** Hook-sensitive wrappers for libsvn_fs routines. ***/
 
 
-/* Like svn_fs_commit_txn(), but invoke the repository's pre- and
+/* Like svn_fs_commit_txn(), but invoke the REPOS's pre- and
  * post-commit hooks around the commit.  Use TXN's pool for temporary
  * allocations.
  *
- * CONFLICT_P, NEW_REV, and TXN are as in svn_fs_commit_txn().
- */
+ * CONFLICT_P, NEW_REV, and TXN are as in svn_fs_commit_txn().  */
 svn_error_t *svn_repos_fs_commit_txn (const char **conflict_p,
+                                      svn_repos_t *repos,
                                       svn_revnum_t *new_rev,
                                       svn_fs_txn_t *txn);
 
 /* Like svn_fs_begin_txn(), but use AUTHOR and LOG_MSG to set the
- * corresponding properties on transaction *TXN_P.  FS, REV, *TXN_P,
- * and POOL are as in svn_fs_begin_txn().
+ * corresponding properties on transaction *TXN_P.  REPOS is the
+ * repository object which contains the filesystem.  REV, *TXN_P, and
+ * POOL are as in svn_fs_begin_txn().
  *
  * Before a txn is created, the repository's start-commit hooks are
  * run; if any of them fail, no txn is created, *TXN_P is
  * unaffected, and SVN_ERR_REPOS_HOOK_FAILURE is returned.
  *
  * LOG_MSG may be NULL to indicate the message is not (yet) available.
- * The caller will need to attach it to the transaction at a later time.
- */
+ * The caller will need to attach it to the transaction at a later time.  */
 svn_error_t *svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
-                                                svn_fs_t *fs,
+                                                svn_repos_t *repos,
                                                 svn_revnum_t rev,
                                                 const char *author,
                                                 svn_string_t *log_msg,
@@ -272,13 +323,14 @@ svn_error_t *svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
 
 
 /* Like svn_fs_begin_txn(), but use AUTHOR to set the corresponding
- * property on transaction *TXN_P.  FS, REV, *TXN_P, and POOL are as
- * in svn_fs_begin_txn().
+ * property on transaction *TXN_P.  REPOS is the repository object
+ * which contains the filesystem.  REV, *TXN_P, and POOL are as in
+ * svn_fs_begin_txn().
  *
  * ### Someday: before a txn is created, some kind of read-hook could
  *              be called here. */
 svn_error_t *svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
-                                                svn_fs_t *fs,
+                                                svn_repos_t *repos,
                                                 svn_revnum_t rev,
                                                 const char *author,
                                                 apr_pool_t *pool);
@@ -329,7 +381,7 @@ typedef struct svn_repos_node_t
 
 /* Set *EDITOR and *EDIT_BATON to an editor that, when driven by
    svn_repos_dir_delta(), builds an `svn_repos_node_t *' tree
-   representing the delta from BASE_ROOT to ROOT in FS.
+   representing the delta from BASE_ROOT to ROOT in REPOS's filesystem.
    
    Invoke svn_repos_node_from_baton() on EDIT_BATON to obtain the root
    node afterwards.
@@ -341,7 +393,7 @@ typedef struct svn_repos_node_t
    allocation in POOL.  */
 svn_error_t *svn_repos_node_editor (const svn_delta_edit_fns_t **editor,
                                     void **edit_baton,
-                                    svn_fs_t *fs,
+                                    svn_repos_t *repos,
                                     svn_fs_root_t *base_root,
                                     svn_fs_root_t *root,
                                     apr_pool_t *node_pool,

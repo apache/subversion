@@ -30,7 +30,7 @@ except SyntaxError:
 
 # Quick macro for auto-generating sandbox names
 def sandbox(x):
-  return "commit_tests-" + `test_list.index(x)`
+  return "copy_tests-" + `test_list.index(x)`
 
 # (abbreviation)
 path_index = svntest.actions.path_index

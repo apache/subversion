@@ -64,9 +64,9 @@ svn_test__fs_new (svn_fs_t **fs_p, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_test__create_fs_and_repos (svn_fs_t **fs_p,
-                               const char *name, 
-                               apr_pool_t *pool)
+svn_test__create_fs (svn_fs_t **fs_p,
+                     const char *name, 
+                     apr_pool_t *pool)
 {
   apr_finfo_t finfo;
 
@@ -89,6 +89,37 @@ svn_test__create_fs_and_repos (svn_fs_t **fs_p,
   
   /* Provide a handler for Berkeley DB error messages.  */
   SVN_ERR (svn_fs_set_berkeley_errcall (*fs_p, berkeley_error_handler));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_test__create_repos (svn_repos_t **repos_p,
+                        const char *name, 
+                        apr_pool_t *pool)
+{
+  apr_finfo_t finfo;
+
+  /* If there's already a repository named NAME, delete it.  Doing
+     things this way means that repositories stick around after a
+     failure for postmortem analysis, but also that tests can be
+     re-run without cleaning out the repositories created by prior
+     runs.  */
+  if (apr_stat (&finfo, name, APR_FINFO_TYPE, pool) == APR_SUCCESS)
+    {
+      if (finfo.filetype == APR_DIR)
+        SVN_ERR (svn_repos_delete (name, pool));
+      else
+        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                                  "there is already a file named `%s'", name);
+    }
+
+  SVN_ERR (svn_repos_create (repos_p, name, pool));
+  
+  /* Provide a handler for Berkeley DB error messages.  */
+  SVN_ERR (svn_fs_set_berkeley_errcall (svn_repos_fs (*repos_p), 
+                                        berkeley_error_handler));
 
   return SVN_NO_ERROR;
 }

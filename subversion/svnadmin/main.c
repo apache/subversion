@@ -112,11 +112,14 @@ usage (const char *progname, int exit_code)
      "      If just LOWER_REV is given, that revision tree is printed.\n"
      "      If two revisions are given, that range is printed, inclusive.\n"
      "\n"
+#if 0 
+/* see TODO below at next `#if 0' */
      "   recover   REPOS_PATH\n"
      "      Run the Berkeley DB recovery procedure on a repository.  Do\n"
      "      this if you've been getting errors indicating that recovery\n"
      "      ought to be run.\n"
      "\n"
+#endif /* 0 */
      "   rmtxns    REPOS_PATH TXN_NAME [...]\n"
      "      Delete the transaction(s) named TXN_NAME.\n"
      "\n"
@@ -151,6 +154,7 @@ int
 main (int argc, const char * const *argv)
 {
   apr_pool_t *pool;
+  svn_repos_t *repos;
   svn_fs_t *fs;
   svn_error_t *err;
   int               /* commands */
@@ -201,17 +205,17 @@ main (int argc, const char * const *argv)
 
   if (is_create)
     {
-      fs = svn_fs_new(pool);
-      err = svn_fs_create_berkeley(fs, path);
+      err = svn_repos_create (&repos, path, pool);
       if (err) goto error;
     }
   else if (is_youngest)
     {
       svn_revnum_t youngest_rev;
 
-      err = svn_repos_open (&fs, path, pool);
+      err = svn_repos_open (&repos, path, pool);
       if (err) goto error;
 
+      fs = svn_repos_fs (repos);
       svn_fs_youngest_rev (&youngest_rev, fs, pool);
       printf ("%ld\n", (long int) youngest_rev);
     }
@@ -220,9 +224,10 @@ main (int argc, const char * const *argv)
       char **txns;
       char *txn_name;
 
-      err = svn_repos_open (&fs, path, pool);
+      err = svn_repos_open (&repos, path, pool);
       if (err) goto error;
 
+      fs = svn_repos_fs (repos);
       err = svn_fs_list_transactions(&txns, fs, pool);
       if (err) goto error;
 
@@ -276,8 +281,10 @@ main (int argc, const char * const *argv)
         upper = SVN_INVALID_REVNUM,
         this;
 
-      err = svn_repos_open (&fs, path, pool);
+      err = svn_repos_open (&repos, path, pool);
       if (err) goto error;
+
+      fs = svn_repos_fs (repos);
 
       /* Do the args tell us what revisions to inspect? */
       if (argv[3])
@@ -348,8 +355,10 @@ main (int argc, const char * const *argv)
           return EXIT_FAILURE;
         }
 
-      err = svn_repos_open (&fs, path, pool);
+      err = svn_repos_open (&repos, path, pool);
       if (err) goto error;
+
+      fs = svn_repos_fs (repos);
 
       /* All the rest of the arguments are transaction names. */
       for (i = 3; i < argc; i++)
@@ -371,8 +380,10 @@ main (int argc, const char * const *argv)
           return EXIT_FAILURE;
         }
 
-      err = svn_repos_open (&fs, path, pool);
+      err = svn_repos_open (&repos, path, pool);
       if (err) goto error;
+
+      fs = svn_repos_fs (repos);
 
       err = svn_fs_begin_txn (&txn, fs, (svn_revnum_t) atoi(argv[3]), pool);
       if (err) goto error;
@@ -401,8 +412,10 @@ main (int argc, const char * const *argv)
       log_contents.len = file_contents->len;
 
       /* open the filesystem  */
-      err = svn_repos_open (&fs, path, pool);
+      err = svn_repos_open (&repos, path, pool);
       if (err) goto error;
+
+      fs = svn_repos_fs (repos);
 
       /* set the revision property */
       err = svn_fs_change_rev_prop (fs, the_rev, SVN_PROP_REVISION_LOG,
@@ -428,9 +441,11 @@ main (int argc, const char * const *argv)
       node = argv[4];
 
       /* open the filesystem */
-      err = svn_repos_open (&fs, path, pool);
+      err = svn_repos_open (&repos, path, pool);
       if (err) goto error;
       
+      fs = svn_repos_fs (repos);
+
       /* open the revision root */
       err = svn_fs_revision_root (&rev_root, fs, the_rev, pool);
       if (err) goto error;
@@ -448,6 +463,11 @@ main (int argc, const char * const *argv)
         
       if (err) goto error;
     }
+#if 0
+  /* ### TODO: Get this working with new libsvn_repos API.  We need
+     the repos API to access the lockfile paths and such, but we
+     apparently don't want the locking that comes along with the repos
+     API. */
   else if (is_recover)
     {
       apr_status_t apr_err;
@@ -512,16 +532,19 @@ main (int argc, const char * const *argv)
           goto error;
         }
     }
+#endif /* 0 */
   else if (is_shell)
     {
-      err = svn_repos_open (&fs, path, pool);
+      err = svn_repos_open (&repos, path, pool);
       if (err) goto error;
+
+      fs = svn_repos_fs (repos);
 
       err = svnadmin_run_shell (fs, pool);
       if (err) goto error;
     }
 
-  err = svn_fs_close_fs(fs);
+  err = svn_repos_close (repos);
   if (err) goto error;
 
   svn_pool_destroy (pool);

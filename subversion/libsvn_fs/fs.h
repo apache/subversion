@@ -23,30 +23,6 @@
 #include "apr_hash.h"
 #include "svn_fs.h"
 
-
-/*** Repository layout. ***/
-
-/* The top-level repository dir contains a README and various
-   subdirectories.  */
-#define SVN_FS__REPOS_README      "README"  /* Explanation for trespassers. */
-#define SVN_FS__REPOS_DB_DIR      "db"      /* Where Berkeley lives. */
-#define SVN_FS__REPOS_DAV_DIR     "dav"     /* DAV sandbox. */
-#define SVN_FS__REPOS_LOCK_DIR    "locks"   /* Lock files live here. */
-#define SVN_FS__REPOS_HOOK_DIR    "hooks"   /* Hook programs. */
-#define SVN_FS__REPOS_CONF_DIR    "conf"    /* Configuration files. */
-
-/* Things for which we keep lockfiles. */
-#define SVN_FS__REPOS_DB_LOCKFILE "db.lock"   /* The Berkeley database. */
-
-/* In the repository hooks directory, look for these files. */
-#define SVN_FS__REPOS_HOOK_START_COMMIT    "start-commit"
-#define SVN_FS__REPOS_HOOK_PRE_COMMIT      "pre-commit"
-#define SVN_FS__REPOS_HOOK_POST_COMMIT     "post-commit"
-#define SVN_FS__REPOS_HOOK_READ_SENTINEL   "read-sentinels"
-#define SVN_FS__REPOS_HOOK_WRITE_SENTINEL  "write-sentinels"
-
-/* The extension added to the names of example hook scripts. */
-#define SVN_FS__REPOS_HOOK_DESC_EXT        ".tmpl"
 
 
 /*** The filesystem structure.  ***/
@@ -60,21 +36,6 @@ struct svn_fs_t {
 
   /* The path to the repository's top-level directory. */
   char *path;
-
-  /* The path to the repository's dav directory. */
-  char *dav_path;
-
-  /* The path to the repository's conf directory. */
-  char *conf_path;
-
-  /* The path to the repository's hooks directory. */
-  char *hook_path;
-
-  /* The path to the repository's locks directory. */
-  char *lock_path;
-
-  /* The path to the Berkeley DB environment. */
-  char *env_path;
 
   /* A Berkeley DB environment for all the filesystem's databases.
      This establishes the scope of the filesystem's transactions.  */

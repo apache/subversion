@@ -339,7 +339,7 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
       return svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
                                 "initial revision number is not `0'"
                                 " in filesystem `%s'",
-                                fs->env_path);
+                                fs->path);
   }
 
   /* Set a date on revision 0. */

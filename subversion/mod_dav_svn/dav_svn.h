@@ -27,7 +27,7 @@
 
 #include "svn_error.h"
 #include "svn_fs.h"
-
+#include "svn_repos.h"
 
 #define DAV_SVN_DEFAULT_VCC_NAME        "default"
 
@@ -73,6 +73,9 @@ typedef struct {
   const char *fs_path;
 
   /* the open repository */
+  svn_repos_t *repos;
+
+  /* a cached copy of REPOS->fs above. */
   svn_fs_t *fs;
 
   /* the user operating against this repository */

@@ -201,7 +201,7 @@ svn_fs__youngest_rev (svn_revnum_t *youngest_p,
           svn_error_createf
           (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
            "revision 0 missing from `revisions' table, in filesystem `%s'",
-           fs->env_path);
+           fs->path);
       
       SVN_ERR (DB_WRAP (fs, "getting youngest revision (finding last entry)",
                         db_err));

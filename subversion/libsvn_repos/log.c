@@ -26,6 +26,8 @@
 #include "svn_repos.h"
 #include "svn_string.h"
 #include "svn_time.h"
+#include "repos.h"
+
 
 
 
@@ -94,7 +96,7 @@ detect_changed (apr_hash_t *changed,
 
 
 svn_error_t *
-svn_repos_get_logs (svn_fs_t *fs,
+svn_repos_get_logs (svn_repos_t *repos,
                     const apr_array_header_t *paths,
                     svn_revnum_t start,
                     svn_revnum_t end,
@@ -106,6 +108,7 @@ svn_repos_get_logs (svn_fs_t *fs,
   svn_revnum_t this_rev;
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *changed_paths = NULL;
+  svn_fs_t *fs = repos->fs;
 
   if (start == SVN_INVALID_REVNUM)
     SVN_ERR (svn_fs_youngest_rev (&start, fs, pool));

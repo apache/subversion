@@ -1132,6 +1132,45 @@ svn_io_fd_from_file (int *fd_p, apr_file_t *file)
 }
 
 
+apr_status_t
+apr_check_dir_empty (const char *path, 
+                     apr_pool_t *pool)
+{
+  apr_status_t apr_err, retval;
+  apr_dir_t *dir;
+  apr_finfo_t finfo;
+  
+  apr_err = apr_dir_open (&dir, path, pool);
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    return apr_err;
+      
+  /* All systems return "." and ".." as the first two files, so read
+     past them unconditionally. */
+  apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir);
+  if (! APR_STATUS_IS_SUCCESS (apr_err)) return apr_err;
+  apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir);
+  if (! APR_STATUS_IS_SUCCESS (apr_err)) return apr_err;
+
+  /* Now, there should be nothing left.  If there is something left,
+     return EGENERAL. */
+  apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir);
+  if (APR_STATUS_IS_ENOENT (apr_err))
+    retval = APR_SUCCESS;
+  else if (APR_STATUS_IS_SUCCESS (apr_err))
+    retval = APR_EGENERAL;
+  else
+    retval = apr_err;
+
+  apr_err = apr_dir_close (dir);
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    return apr_err;
+
+  return retval;
+}
+
+
+
+
 
 /* 
  * local variables:

@@ -23,10 +23,10 @@
 #include "svn_repos.h"
 #include "svn_string.h"
 #include "svn_time.h"
+#include "repos.h"
+
 
 
-
-
 /* Note:  this binary search assumes that the datestamp properties on
    each revision are in chronological order.  That is if revision A >
    revision B, then A's datestamp is younger then B's datestamp.
@@ -65,12 +65,13 @@ get_time (apr_time_t *tm,
 
 svn_error_t *
 svn_repos_dated_revision (svn_revnum_t *revision,
-                          svn_fs_t *fs,
+                          svn_repos_t *repos,
                           apr_time_t tm,
                           apr_pool_t *pool)
 {
   svn_revnum_t rev_mid, rev_top, rev_bot, rev_latest;
   apr_time_t this_time;
+  svn_fs_t *fs = repos->fs;
 
   /* Initialize top and bottom values of binary search. */
   SVN_ERR (svn_fs_youngest_rev (&rev_latest, fs, pool));

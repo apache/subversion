@@ -273,7 +273,7 @@ svn_fs__new_node_id (svn_fs_id_t **id_p,
           svn_error_createf
           (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
            "root directory missing from `nodes' table, in filesystem `%s'",
-           fs->env_path);
+           fs->path);
       
       return DB_WRAP (fs, "choosing new node ID (finding last entry)", db_err);
     }

@@ -123,6 +123,12 @@ svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
                                           apr_pool_t *pool);
 
 
+/* Return APR_SUCCESS if directory PATH is an empty directory,
+   APR_EGENERAL if it is not empty, or the associated apr error if
+   there was any trouble finding out whether or not it's empty.  */
+apr_status_t apr_check_dir_empty (const char *path, apr_pool_t *pool);
+
+
 /* Append SRC to DST.  DST will be appended to if it exists, else it
    will be created. */
 svn_error_t *svn_io_append_file (svn_stringbuf_t *src,

@@ -199,7 +199,7 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
            "xmlns:D=\"DAV:\">" DEBUG_CR);
 
   /* Send zero or more log items. */
-  serr = svn_repos_get_logs(repos->fs,
+  serr = svn_repos_get_logs(repos->repos,
                             paths,
                             start,
                             end,

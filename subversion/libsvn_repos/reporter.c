@@ -16,10 +16,10 @@
  * ====================================================================
  */
 
-#include "svn_repos.h"
-#include "svn_fs.h"
 #include "svn_path.h"
-
+#include "svn_fs.h"
+#include "svn_repos.h"
+#include "repos.h"
 
 /* A structure used by the routines within the `reporter' vtable,
    driven by the client as it describes its working copy revisions. */
@@ -27,7 +27,7 @@ typedef struct svn_repos_report_baton_t
 {
   /* The transaction being built in the repository, a mirror of the
      working copy. */
-  svn_fs_t *fs;
+  svn_repos_t *repos;
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
 
@@ -83,7 +83,7 @@ svn_repos_set_path (void *report_baton,
 
       /* Start a transaction based on REVISION. */
       SVN_ERR (svn_repos_fs_begin_txn_for_update (&(rbaton->txn),
-                                                  rbaton->fs,
+                                                  rbaton->repos,
                                                   revision,
                                                   rbaton->username,
                                                   rbaton->pool));
@@ -99,7 +99,7 @@ svn_repos_set_path (void *report_baton,
   else  /* this is not the first call to set_path. */ 
     {
       /* Create the "from" root and path. */
-      SVN_ERR (svn_fs_revision_root (&from_root, rbaton->fs,
+      SVN_ERR (svn_fs_revision_root (&from_root, rbaton->repos->fs,
                                      revision, rbaton->pool));
 
       /* The path we are dealing with is the anchor (where the
@@ -172,7 +172,7 @@ svn_repos_finish_report (void *report_baton)
     svn_path_add_component (rev_path, rbaton->target, svn_path_repos_style);
 
   /* Get the root of the revision we want to update to. */
-  SVN_ERR (svn_fs_revision_root (&rev_root, rbaton->fs,
+  SVN_ERR (svn_fs_revision_root (&rev_root, rbaton->repos->fs,
                                  rbaton->revnum_to_update_to,
                                  rbaton->pool));
 
@@ -214,7 +214,7 @@ svn_error_t *
 svn_repos_begin_report (void **report_baton,
                         svn_revnum_t revnum,
                         const char *username,
-                        svn_fs_t *fs,
+                        svn_repos_t *repos,
                         svn_stringbuf_t *fs_base,
                         svn_stringbuf_t *target,
                         svn_boolean_t text_deltas,
@@ -231,7 +231,7 @@ svn_repos_begin_report (void **report_baton,
   rbaton->update_editor = editor;
   rbaton->update_edit_baton = edit_baton;
   rbaton->path_rev_hash = apr_hash_make (pool);
-  rbaton->fs = fs;
+  rbaton->repos = repos;
   rbaton->username = username;
   rbaton->base_path = fs_base;
   rbaton->target = target;

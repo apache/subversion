@@ -53,7 +53,11 @@ struct edit_baton
   svn_ra_local__commit_hook_t *hook;
   void *hook_baton;
 
-  /* The already-open svn filesystem to commit to. */
+  /* The already-open svn repository to commit to. */
+  svn_repos_t *repos;
+
+  /* The filesystem associated with the REPOS above (here for
+     convenience). */
   svn_fs_t *fs;
 
   /* Location in fs where where the edit will begin. */
@@ -146,7 +150,7 @@ open_root (void *edit_baton,
   /* Begin a subversion transaction, cache its name, and get its
      root object. */
   SVN_ERR (svn_repos_fs_begin_txn_for_commit (&(eb->txn), 
-                                              eb->fs, 
+                                              eb->repos, 
                                               base_revision, 
                                               eb->user, 
                                               &(eb->log_msg),
@@ -543,7 +547,7 @@ close_edit (void *edit_baton)
   const char *conflict;
 
   /* Commit. */
-  err = svn_repos_fs_commit_txn (&conflict, &new_revision, eb->txn);
+  err = svn_repos_fs_commit_txn (&conflict, eb->repos, &new_revision, eb->txn);
 
   if (err)
     {
@@ -629,7 +633,8 @@ svn_ra_local__get_editor (svn_delta_edit_fns_t **editor,
   eb->hook_baton = hook_baton;
   eb->base_path = svn_stringbuf_dup (session->fs_path, subpool);
   eb->session = session;
-  eb->fs = session->fs;
+  eb->repos = session->repos;
+  eb->fs = svn_repos_fs (session->repos);
   eb->txn = NULL;
 
   *edit_baton = eb;

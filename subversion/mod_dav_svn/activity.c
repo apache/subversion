@@ -122,7 +122,7 @@ dav_error *dav_svn_create_activity(const dav_svn_repos *repos,
                                  "could not determine youngest revision");
     }
 
-  serr = svn_repos_fs_begin_txn_for_commit(&txn, repos->fs, rev,
+  serr = svn_repos_fs_begin_txn_for_commit(&txn, repos->repos, rev,
                                            repos->username, NULL, pool);
   if (serr != NULL)
     {
