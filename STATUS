@@ -97,6 +97,12 @@ section for approved changes.)
       Votes:
        +1: cmpilato
 
+    * r8139
+      Fix authentication bugs. 
+      Justification: Bugs that happen when prompt providers aren't
+        turned on.  Which includes the command line client when
+        --non-interactive is used.
+      Votes:
 
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
