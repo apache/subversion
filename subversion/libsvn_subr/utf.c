@@ -370,7 +370,7 @@ svn_utf_string_to_utf8 (const svn_string_t *src,
                         const svn_string_t **dest,
                         apr_pool_t *pool)
 {
-  SVN_ERR (check_non_ascii (src, strlen (src), pool));
+  SVN_ERR (check_non_ascii (src->data, src->len, pool));
   *dest = svn_string_dup (src, pool);
   return SVN_NO_ERROR;
 }
