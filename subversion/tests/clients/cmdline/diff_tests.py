@@ -1801,7 +1801,7 @@ test_list = [ None,
               check_for_omitted_prefix_in_path_component,
               diff_renamed_file,
               diff_within_renamed_dir,
-              XFail(diff_prop_on_named_dir),
+              diff_prop_on_named_dir,
               diff_keywords,
               diff_force
               ]

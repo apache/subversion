@@ -162,26 +162,26 @@ struct temp_file_cleanup_s {
 
 /* Create a new directory baton for PATH in POOL.  ADDED is set if
  * this directory is being added rather than replaced. PARENT_BATON is
- * the baton of the parent directory, it will be null if this is the
- * root of the comparison hierarchy. The directory and its parent may
- * or may not exist in the working copy. EDIT_BATON is the overall
- * crawler editor baton.
+ * the baton of the parent directory (or NULL if this is the root of
+ * the comparison hierarchy). The directory and its parent may or may
+ * not exist in the working copy.  EDIT_BATON is the overall crawler
+ * editor baton.
  */
 static struct dir_baton *
 make_dir_baton (const char *path,
                 struct dir_baton *parent_baton,
+                struct edit_baton *edit_baton,
                 svn_boolean_t added,
                 apr_pool_t *pool)
 {
   struct dir_baton *dir_baton = apr_pcalloc (pool, sizeof (*dir_baton));
 
   dir_baton->dir_baton = parent_baton;
-  dir_baton->edit_baton = parent_baton->edit_baton;
+  dir_baton->edit_baton = edit_baton;
   dir_baton->added = added;
   dir_baton->pool = pool;
   dir_baton->path = apr_pstrdup (pool, path);
-  dir_baton->wcpath = svn_path_join (parent_baton->edit_baton->target,
-                                     path, pool);
+  dir_baton->wcpath = svn_path_join (edit_baton->target, path, pool);
   dir_baton->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
 
   return dir_baton;
@@ -479,18 +479,17 @@ open_root (void *edit_baton,
            void **root_baton)
 {
   struct edit_baton *eb = edit_baton;
-  struct dir_baton *dir_baton = apr_pcalloc (pool, sizeof (*dir_baton));
+  struct dir_baton *b = make_dir_baton ("", NULL, eb, FALSE, pool);
 
-  dir_baton->dir_baton = NULL;
-  dir_baton->edit_baton = eb;
-  dir_baton->added = FALSE;
-  dir_baton->pool = pool;
-  dir_baton->path = "";
-  dir_baton->wcpath = eb->target ? apr_pstrdup (pool, eb->target) : "";
-  dir_baton->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
+  /* Override the wcpath in our baton. */
+  b->wcpath = eb->target ? apr_pstrdup (pool, eb->target) : "";
 
-  *root_baton = dir_baton;
+  /* If there is no target, we care about this directory's properties,
+     too. */
+  if (! eb->target)
+    SVN_ERR (get_dirprops_from_ra (b));
 
+  *root_baton = b;
   return SVN_NO_ERROR;
 }
 
@@ -589,7 +588,7 @@ add_directory (const char *path,
 
   /* ### TODO: support copyfrom? */
 
-  b = make_dir_baton (path, pb, TRUE, pool);
+  b = make_dir_baton (path, pb, pb->edit_baton, TRUE, pool);
   *child_baton = b;
 
   SVN_ERR (get_path_access (&adm_access,
@@ -630,7 +629,7 @@ open_directory (const char *path,
   struct dir_baton *pb = parent_baton;
   struct dir_baton *b;
 
-  b = make_dir_baton (path, pb, FALSE, pool);
+  b = make_dir_baton (path, pb, pb->edit_baton, FALSE, pool);
   *child_baton = b;
 
   SVN_ERR (get_dirprops_from_ra (b));
