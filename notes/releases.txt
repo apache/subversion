@@ -55,6 +55,11 @@
 
          * fixed: Java bindings compilation.
 
+      Differentiate between client-side and server-side changes by,
+      say, putting them in separate sections.  (We don't currently
+      have an example of this, but we intend to do it for future
+      CHANGES entries.)
+
       Note: CHANGES is maintained on the trunk because future releases should
       have past releases CHANGES entries.  It will be merged onto the branch
       just before a release.
