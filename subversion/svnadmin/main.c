@@ -69,7 +69,6 @@ static svn_opt_subcommand_t
   subcommand_recover,
   subcommand_rmtxns,
   subcommand_setlog,
-  subcommand_shell,
   subcommand_undeltify;
 
 
@@ -190,11 +189,6 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "(Note that revision properties are not historied, so this command\n"
      "will permanently overwrite the previous log message.)\n",
      {'r'} },
-
-    {"shell", subcommand_shell, {0},
-     "usage: svnadmin shell REPOS_PATH\n\n"
-     "Enter interactive shell for exploring the repository.\n",
-     {0} },
 
     {"undeltify", subcommand_undeltify, {0},
      "usage: svnadmin undeltify REPOS_PATH -rREVISION PATH\n\n"
@@ -532,25 +526,6 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_fs_change_rev_prop (fs, opt_state->start_revision.value.number,
                                    SVN_PROP_REVISION_LOG,
                                    &log_contents, pool));
-
-  SVN_ERR (svn_repos_close (repos));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* This implements `svn_opt_subcommand_t'. */
-static svn_error_t *
-subcommand_shell (apr_getopt_t *os, void *baton, apr_pool_t *pool)
-{
-  struct svnadmin_opt_state *opt_state = baton;
-  svn_repos_t *repos;
-  svn_fs_t *fs;
-
-  SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
-  fs = svn_repos_fs (repos);
-
-  SVN_ERR (svnadmin_run_shell (fs, pool));
 
   SVN_ERR (svn_repos_close (repos));
 

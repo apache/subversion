@@ -100,22 +100,6 @@ The history of revision properties is not saved.  This command will
 .B permanently
 overwrite the previous log message.
 .TP
-.BI shell " repos-path"
-Enter interactive shell for exploring the repository.  The shell understands
-the following commands:
-.RS
-.IP help
-Print simple help text.
-.IP cd
-Change directory.
-.IP cr
-Change revision.
-.IP ls
-List entries in the current directory.
-.IP exit
-Leave the shell.
-.RE
-.TP
 .BI undeltify " repos-path \-rrev path"
 Undeltify (ensure full text storage for) 
 .IR path 
@@ -126,35 +110,5 @@ starting at path.  Normally files are stored as a sequences of diffs
 representing past changes to the file.  Undeltification is an optimization that
 speeds some repository operations.  One might, for example, undelitfy all
 releases to speed checkout of those releases.
-.TP
-.SH NOTES
-.PP
-When \fBsvnadmin\fP displays a directory entry it is of the form:
-.RS
-.PP
- <NODE.COPY.TXN>   [  REV ] PROPS     SIZE    NAME
-.RE
-.PP
-Some of the information here will likely only be interesting to Subversion
-developers or those interested in learning more about the internals of
-Subversion.  The fields above are:
-.RS
-.IP NODE
-Base 36 node identifier.  Each node in the filesystem has a unique node
-identifier.  Copies of files share a node identifier and have a unique
-copy identifier.
-.IP COPY
-The copy identifier indicates that the file is the a copy.  
-.IP TXN
-The transaction identifier that created the file.
-.IP PROPS
-Has properties, or has no properties.
-.IP REV
-The revision the file belongs to.
-.IP SIZE
-Size of the file in bytes.
-.IP NAME
-Filename.
-.RE
 .SH "SEE ALSO"
 .BR svn (1)
