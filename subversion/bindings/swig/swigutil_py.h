@@ -113,11 +113,17 @@ void svn_swig_py_notify_func(void *baton,
 svn_error_t *svn_swig_py_cancel_func(void *cancel_baton);
 
 /* thunked commit log fetcher */
-svn_error_t *svn_swig_py_get_commit_log_func (const char **log_msg,
-                                              const char **tmp_file,
-                                              apr_array_header_t *commit_items,
-                                              void *baton,
-                                              apr_pool_t *pool);
+svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
+                                             const char **tmp_file,
+                                             apr_array_header_t *commit_items,
+                                             void *baton,
+                                             apr_pool_t *pool);
+
+/* thunker history callback function */
+svn_error_t *svn_swig_py_repos_history_func(void *baton,
+                                            const char *path,
+                                            svn_revnum_t revision,
+                                            apr_pool_t *pool);
 
 /* thunked log receiver function.  */
 svn_error_t * svn_swig_py_thunk_log_receiver(void *py_receiver,

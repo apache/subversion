@@ -869,6 +869,11 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
   *edit_baton = make_baton(pool, py_editor, NULL);
 }
 
+
+
+/*** Other Wrappers for SVN Functions ***/
+
+
 /* This is very hacky and gross.  */
 apr_file_t *svn_swig_py_make_file (PyObject *py_file,
                                    apr_pool_t *pool)
@@ -906,6 +911,8 @@ apr_file_t *svn_swig_py_make_file (PyObject *py_file,
   return apr_file;
 }
 
+
+/* Thunked version of svn_wc_notify_func_t callback type. */
 void svn_swig_py_notify_func(void *baton,
                              const char *path,
                              svn_wc_notify_action_t action,
@@ -934,8 +941,9 @@ void svn_swig_py_notify_func(void *baton,
   release_py_lock();
 }
 
-svn_error_t *
-svn_swig_py_cancel_func(void *cancel_baton)
+
+/* Thunked version of svn_wc_cancel_func_t callback type. */
+svn_error_t *svn_swig_py_cancel_func(void *cancel_baton)
 {
   PyObject *function = cancel_baton;
   PyObject *result;
@@ -959,12 +967,12 @@ svn_swig_py_cancel_func(void *cancel_baton)
 }
 
 
-svn_error_t *
-svn_swig_py_get_commit_log_func(const char **log_msg,
-                                const char **tmp_file,
-                                apr_array_header_t *commit_items,
-                                void *baton,
-                                apr_pool_t *pool)
+/* Thunked version of svn_client_get_commit_log_t callback type. */
+svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
+                                             const char **tmp_file,
+                                             apr_array_header_t *commit_items,
+                                             void *baton,
+                                             apr_pool_t *pool)
 {
   PyObject *function = baton;
   PyObject *result;
@@ -1029,9 +1037,36 @@ svn_swig_py_get_commit_log_func(const char **log_msg,
 }
 
 
-
-/*** Other Wrappers for SVN Functions ***/
+/* Thunked version of svn_repos_history_func_t callback type. */
+svn_error_t *svn_swig_py_repos_history_func(void *baton,
+                                            const char *path,
+                                            svn_revnum_t revision,
+                                            apr_pool_t *pool)
+{
+  PyObject *function = baton;
+  PyObject *result;
+  svn_error_t *err;
 
+  if (function == NULL || function == Py_None)
+    return SVN_NO_ERROR;
+
+  acquire_py_lock();
+  if ((result = PyObject_CallFunction(function, 
+                                      (char *)"siO&", 
+                                      path, revision, pool)) != NULL)
+    {
+      err = convert_python_error();
+      goto finished;
+    }
+  Py_DECREF(result);
+
+ finished:
+  release_py_lock();
+  return err;
+}
+
+
+/* Thunked version of svn_log_message_receiver_t callback type. */
 svn_error_t * svn_swig_py_thunk_log_receiver(void *baton,
                                              apr_hash_t *changed_paths,
                                              svn_revnum_t rev,
