@@ -162,7 +162,7 @@ sub AUTOLOAD {
 
     confess $@ if $@;
 
-    return $#ret == 0 ? $ret[0] : [@ret];
+    return @ret ? $#ret == 0 ? $ret[0] : [@ret] : undef;
 }
 
 =head1 BUGS
