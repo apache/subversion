@@ -45,6 +45,7 @@ def main(pool, config_fname, repos_dir, rev):
                                 1,  # recurse
                                 0,  # entry_props
                                 1,  # use_copy_history
+                                0,  # ignore_ancestry
                                 pool)
 
   # get all the changes and sort by path

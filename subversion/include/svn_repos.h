@@ -194,6 +194,9 @@ const char *svn_repos_post_revprop_change_hook (svn_repos_t *repos,
  * @a recurse instructs the driver of the @a editor to send a recursive
  * delta (or not.)
  *
+ * @a ignore_ancestry instructs the driver to ignore node ancestry
+ * when determining how to transmit differences.
+ *
  * All allocation for the context and collected state will occur in
  * @a pool.
  */
@@ -207,6 +210,7 @@ svn_repos_begin_report (void **report_baton,
                         const char *tgt_path,
                         svn_boolean_t text_deltas,
                         svn_boolean_t recurse,
+                        svn_boolean_t ignore_ancestry,
                         const svn_delta_editor_t *editor,
                         void *edit_baton,
                         apr_pool_t *pool);
@@ -315,6 +319,9 @@ svn_error_t *svn_repos_abort_report (void *report_baton);
  * reported as adds, and text deltas are sent against the empty
  * string).
  *
+ * @a ignore_ancestry instructs the function to ignore node ancestry
+ * when determining how to transmit differences.
+ *
  * Before completing successfully, this function calls @a editor's
  * @c close_edit(), so the caller should expect its @a edit_baton to be
  * invalid after its use with this function.
@@ -336,6 +343,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                      svn_boolean_t recurse,
                      svn_boolean_t entry_props,
                      svn_boolean_t use_copy_history,
+                     svn_boolean_t ignore_ancestry,
                      apr_pool_t *pool);
 
 

@@ -609,6 +609,12 @@ typedef struct svn_ra_plugin_t
    * in revision @a revision, or as it is in head if @a revision is
    * @c SVN_INVALID_REVNUM.
    *
+   * Use @a ignore_ancestry to control whether or not items being
+   * diffed will be checked for relatedness first.  Unrelated items
+   * are typically transmitted to the editor as a deletion of one thing
+   * and the addition of another, but if this flag is @c TRUE,
+   * unrelated items will be diffed as if they were related.
+   *
    * Use @a pool for memory allocation.
    */
   svn_error_t *(*do_diff) (void *session_baton,
@@ -617,6 +623,7 @@ typedef struct svn_ra_plugin_t
                            svn_revnum_t revision,
                            const char *diff_target,
                            svn_boolean_t recurse,
+                           svn_boolean_t ignore_ancestry,
                            const char *versus_url,
                            const svn_delta_editor_t *diff_editor,
                            void *diff_baton,

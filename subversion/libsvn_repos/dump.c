@@ -919,6 +919,7 @@ svn_repos_dump_fs (svn_repos_t *repos,
                                     TRUE, /* recurse */
                                     FALSE, /* don't send entry props */
                                     TRUE, /* send copyfrom args */
+                                    FALSE, /* don't ignore ancestry */
                                     subpool));
 
     loop_end:

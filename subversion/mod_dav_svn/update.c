@@ -646,7 +646,9 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   const char *dst_path = NULL;
   const dav_svn_repos *repos = resource->info->repos;
   const char *target = NULL;
-  svn_boolean_t recurse = TRUE, resource_walk = FALSE;
+  svn_boolean_t recurse = TRUE;
+  svn_boolean_t resource_walk = FALSE;
+  svn_boolean_t ignore_ancestry = FALSE;
 
   if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
     {
@@ -726,6 +728,18 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           if (strcmp(child->first_cdata.first->text, "no") == 0)
             recurse = FALSE;
         }
+      if (child->ns == ns && strcmp(child->name, "ignore-ancestry") == 0)
+        {
+          if (! child->first_cdata.first)
+            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+              "The request's `ignore-ancestry' element contains empty cdata; "
+              "there is a problem with the client.");
+
+          /* ### assume no white space, no child elems, etc */
+          ignore_ancestry = TRUE;
+          if (strcmp(child->first_cdata.first->text, "no") == 0)
+            ignore_ancestry = FALSE;
+        }
       if (child->ns == ns && strcmp(child->name, "resource-walk") == 0)
         {
           if (! child->first_cdata.first)
@@ -800,6 +814,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      dst_path,
                                      FALSE, /* don't send text-deltas */
                                      recurse,
+                                     ignore_ancestry,
                                      editor, &uc, resource->pool)))
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -941,6 +956,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      recurse,
                                      TRUE, /* send entryprops */
                                      FALSE, /* no copy history */
+                                     FALSE, /* don't ignore ancestry */
                                      resource->pool);
 
           send_xml(&uc, "</S:resource-walk>" DEBUG_CR);

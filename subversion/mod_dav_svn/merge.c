@@ -437,6 +437,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
                                  TRUE, /* Do recurse into subdirectories */
                                  FALSE, /* Do not allow entry props */
                                  FALSE, /* Do not allow copyfrom args */
+                                 FALSE, /* Do not ignore ancestry */
                                  pool);
       if (serr != NULL)
         {

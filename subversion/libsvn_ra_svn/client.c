@@ -725,7 +725,9 @@ static svn_error_t *ra_svn_diff(void *sess,
                                 const svn_ra_reporter_t **reporter,
                                 void **report_baton,
                                 svn_revnum_t rev, const char *target,
-                                svn_boolean_t recurse, const char *versus_url,
+                                svn_boolean_t recurse,
+                                svn_boolean_t ignore_ancestry,
+                                const char *versus_url,
                                 const svn_delta_editor_t *diff_editor,
                                 void *diff_baton, apr_pool_t *pool)
 {
@@ -735,8 +737,8 @@ static svn_error_t *ra_svn_diff(void *sess,
     target = "";
 
   /* Tell the server we want to start a diff. */
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "diff", "(?r)cbc", rev, target,
-                               recurse, versus_url));
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "diff", "(?r)cbbc", rev, target,
+                               recurse, ignore_ancestry, versus_url));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive

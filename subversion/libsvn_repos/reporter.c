@@ -63,6 +63,9 @@ typedef struct svn_repos_report_baton_t
   /* Whether or not to recurse into the directories */
   svn_boolean_t recurse;
 
+  /* Whether or not to ignore ancestry in dir_delta */
+  svn_boolean_t ignore_ancestry;
+
   /* the editor to drive */
   const svn_delta_editor_t *update_editor;
   void *update_edit_baton; 
@@ -364,6 +367,7 @@ svn_repos_finish_report (void *report_baton)
                                 rbaton->recurse,
                                 TRUE,
                                 FALSE,
+                                rbaton->ignore_ancestry,
                                 rbaton->pool));
   
   /* Still here?  Great!  Throw out the transactions. */
@@ -404,6 +408,7 @@ svn_repos_begin_report (void **report_baton,
                         const char *tgt_path,
                         svn_boolean_t text_deltas,
                         svn_boolean_t recurse,
+                        svn_boolean_t ignore_ancestry,
                         const svn_delta_editor_t *editor,
                         void *edit_baton,
                         apr_pool_t *pool)
@@ -418,6 +423,7 @@ svn_repos_begin_report (void **report_baton,
   rbaton->repos = repos;
   rbaton->text_deltas = text_deltas;
   rbaton->recurse = recurse;
+  rbaton->ignore_ancestry = ignore_ancestry;
   rbaton->pool = pool;
 
   /* Copy these since we're keeping them past the end of this function call.
