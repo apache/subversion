@@ -40,7 +40,7 @@ static const char base64tab[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 struct encode_baton {
   svn_stream_t *output;
-  char buf[3];                  /* Bytes waiting to be encoded */
+  unsigned char buf[3];         /* Bytes waiting to be encoded */
   int buflen;                   /* Number of bytes waiting */
   int linelen;                  /* Bytes output so far on this line */
   apr_pool_t *pool;
@@ -99,8 +99,8 @@ encode_bytes (svn_stringbuf_t *str, const char *data, apr_size_t len,
 /* Encode leftover data, if any, and possibly a final newline,
    appending to STR.  LEN must be in the range 0..2.  */
 static void
-encode_partial_group (svn_stringbuf_t *str, const char *extra, int len,
-                      int linelen)
+encode_partial_group (svn_stringbuf_t *str, const unsigned char *extra,
+                      int len, int linelen)
 {
   unsigned char ingroup[3];
   char outgroup[4];
@@ -184,7 +184,7 @@ svn_stringbuf_t *
 svn_base64_encode_string (svn_stringbuf_t *str, apr_pool_t *pool)
 {
   svn_stringbuf_t *encoded = svn_stringbuf_create ("", pool);
-  char ingroup[3];
+  unsigned char ingroup[3];
   int ingrouplen = 0, linelen = 0;
 
   encode_bytes (encoded, str->data, str->len, ingroup, &ingrouplen, &linelen);
@@ -333,10 +333,17 @@ svn_stringbuf_t *
 svn_base64_from_md5 (unsigned char digest[], apr_pool_t *pool)
 {
   svn_stringbuf_t *md5str;
+  unsigned char ingroup[3];
+  int ingrouplen = 0, linelen = 0;
+  md5str = svn_stringbuf_create ("", pool);
 
-  md5str = svn_stringbuf_ncreate (digest, MD5_DIGESTSIZE, pool);
-  md5str = svn_base64_encode_string (md5str, pool);
-  
+  /* This cast is safe because we know encode_bytes does a memcpy and
+   * does an implicit unsigned char * cast.
+   */
+  encode_bytes (md5str, (char*)digest, MD5_DIGESTSIZE, ingroup, &ingrouplen,
+                &linelen);
+  encode_partial_group (md5str, ingroup, ingrouplen, linelen);
+
   /* Our base64-encoding routines append a final newline if any data
      was created at all, so let's hack that off. */
   if ((md5str)->len)

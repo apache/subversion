@@ -538,24 +538,16 @@ svn_path_is_child (const char *path1,
         return NULL;
     }
 
-  /* Now run through the possibilities. */
+  /* The only possibility for it being child here is when path1 is now blank,
+   * and path 2 is the beginning of a directory.
+   */
 
-  if (path1[i] && (! path2[i]))
+  if (path1[i] == '\0' && path2[i] == '/')
     {
-      return NULL;
-    }
-  else if ((! path1[i]) && path2[i])
-    {
-      if (path2[i] == '/')
-        return apr_pstrdup (pool, path2 + i + 1);
-      else
-        return NULL;
-    }
-  else  /* both ended */
-    {
-      return NULL;
+      return apr_pstrdup (pool, path2 + i + 1);
     }
 
+  /* Otherwise, path2 isn't a child. */
   return NULL;
 }
 

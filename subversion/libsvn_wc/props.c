@@ -202,12 +202,9 @@ svn_wc__conflicting_propchanges_p (const svn_string_t **description,
          local->name, local->value->data, update->value->data);
       return TRUE;  /* conflict */
     }
-  else
-    /* values are the same, so another implicit merge. */
-    return FALSE;  /* no conflict */
 
-  /* Default (will anyone ever reach this line?) */
-  return FALSE;  /* no conflict found */
+  /* values are the same, so another implicit merge. */
+  return FALSE;  /* no conflict */
 }
 
 
