@@ -792,19 +792,11 @@ svn_client_status (svn_revnum_t *result_rev,
  *
  * Use @a pool for any temporary allocation.
  *
- * Special case for repositories at revision 0:
- *
- * If @a start->kind is @c svn_opt_revision_head, and @a end->kind is
- * @c svn_opt_revision_number && @a end->number is @c 1, then handle an
- * empty (no revisions) repository specially: instead of erroring
- * because requested revision 1 when the highest revision is 0, just
- * invoke @a receiver on revision 0, passing @c NULL for changed paths and
- * empty strings for the author and date.  This is because that
- * particular combination of @a start and @a end usually indicates the
- * common case of log invocation -- the user wants to see all log
- * messages from youngest to oldest, where the oldest commit is
- * revision 1.  That works fine, except when there are no commits in
- * the repository, hence this special case.
+ * IMPORTANT: A special case for the revision range HEAD:1, which was present
+ * in svn_client_log(), has been removed from svn_client_log2().  Instead. it
+ * is expected that callers will specify the range HEAD:0, to avoid a 
+ * SVN_ERR_FS_NO_SUCH_REVISION error when invoked against an empty repository
+ * (i.e. one not containing a revision 1).
  *
  * If @a ctx->notify_func is non-null, then call @a ctx->notify_func/baton
  * with a 'skip' signal on any unversioned targets.
@@ -825,7 +817,22 @@ svn_client_log2 (const apr_array_header_t *targets,
 /**
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_client_log2, but with the @a limit parameter set to 0.
+ * Similar to svn_client_log2, but with the @a limit parameter set to 0,
+ * and the following special case:
+ *
+ * Special case for repositories at revision 0:
+ *
+ * If @a start->kind is @c svn_opt_revision_head, and @a end->kind is
+ * @c svn_opt_revision_number && @a end->number is @c 1, then handle an
+ * empty (no revisions) repository specially: instead of erroring
+ * because requested revision 1 when the highest revision is 0, just
+ * invoke @a receiver on revision 0, passing @c NULL for changed paths and
+ * empty strings for the author and date.  This is because that
+ * particular combination of @a start and @a end usually indicates the
+ * common case of log invocation -- the user wants to see all log
+ * messages from youngest to oldest, where the oldest commit is
+ * revision 1.  That works fine, except when there are no commits in
+ * the repository, hence this special case.
  */
 svn_error_t *
 svn_client_log (const apr_array_header_t *targets,
