@@ -405,7 +405,30 @@ def interleaved_commits():
   if logs[14].msg.find('Initial revision') != 0:
     raise svntest.Failure
     
-  def check_letters(rev):
+  ### According to my (possibly wrong) understanding of Python scoping
+  ### rules, we shouldn't have to pass 'logs' as a parameter below,
+  ### because it's already in-scope for these two inner functions.  But
+  ### although that seems to be true in Python 2.2.2, we get warnings
+  ### and errors in 2.1.2:
+  ###
+  ###    ./run-tests.py:383: SyntaxWarning: local name 'logs' in  \
+  ###       'interleaved_commits' shadows use of 'logs' as global \
+  ###       in nested scope 'check_letters'
+  ###    [...]
+  ###    UNEXPECTED EXCEPTION:
+  ###    Traceback (most recent call last):
+  ###      File ".../clients/cmdline/svntest/testcase.py", line 87, in run
+  ###        rc = apply(self.pred.func, args)
+  ###      File "./run-tests.py", line 439, in interleaved_commits
+  ###        if not ((check_letters(15) and check_numbers(16))
+  ###      File "./run-tests.py", line 415, in check_letters
+  ###        if not (logs[rev].changed_paths.has_key(path)
+  ###    NameError: global name 'logs' is not defined
+  ###
+  ### Don't know which version is correct and which buggy, but we
+  ### might as well be portable to 2.1.2, so they take 'logs' params.
+
+  def check_letters(rev, logs):
     'Return 1 if REV is the rev where only letters were committed, else None.'
     for path in ('/interleaved/trunk/a',
                  '/interleaved/trunk/b',
@@ -419,7 +442,7 @@ def interleaved_commits():
       return None
     return 1
 
-  def check_numbers(rev):
+  def check_numbers(rev, logs):
     'Return 1 if REV is the rev where only numbers were committed, else None.'
     for path in ('/interleaved/trunk/1',
                  '/interleaved/trunk/2',
@@ -436,8 +459,8 @@ def interleaved_commits():
   # One of the commits was letters only, the other was numbers only.
   # But they happened "simultaneously", so we don't assume anything
   # about which commit appeared first, we just try both ways.
-  if not ((check_letters(15) and check_numbers(16))
-          or (check_numbers(15) and check_letters(16))):
+  if not ((check_letters(15, logs) and check_numbers(16, logs))
+          or (check_numbers(15, logs) and check_letters(16, logs))):
     raise svntest.Failure
 
 
