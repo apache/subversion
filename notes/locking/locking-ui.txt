@@ -304,22 +304,25 @@ II. New Client Behaviors
 
                   $ svn status -u
                   M                   foo.c
-                  M    K  K           bar.c
+                  M    K              bar.c
                   A      *            baz.c
                          *            file1
-                          K           file2
-                  M    K  B           file3
-                   M   K  S
+                       O              file2
+                  M    B             file3
+                   M   S             file42
 
-               As with "svn st", the sixth column will be used to
-               indicate a lock token in the working copy.  Column nine
-               will indicate "out-of-dateness" information regarding
-               locks in the repository.  K means there is a lock held
-               on this path in the repository, B means the lock in the
-               current WC was broken (could be indicated with just a
-               space, but B is more vissible), and S means that the
-               lock was stolen from this WC.
-
+               As with "svn status", the sixth column indicates lock
+               state.  The letters have the following meanings:
+               ' ': No lock in either WC or repository.
+               'K': Locked in the WC and lock token valid in
+                    repository.
+               'O': No lock in WC, lock in repository. (Locked in
+                    Other WC.)
+               'B': Lock in WC, but no lock in repository. (Lock
+                    Broken.)
+               'S': Locked in WC, but locked with another token in
+                    repository.  (Lock was STolen.)
+            
             3.  'svn info', describes the attributes of a lock-token,
                 if attached to a working object.  If invoked on a URL,
                 it displays information about any remote lock
@@ -337,11 +340,14 @@ II. New Client Behaviors
                  
 
                    $ svn info http://host/repos/file2
-                   file2 is locked:
-                       - by user 'sally'
-                       - at time 2004-07-21 22:53:27 -0400
-                       - lock comment:  "working on report."
-
+                   Path: /file2
+                   Name: file2
+                   URL: http://..../
+                   [...]
+                   Lock Token: 465610b1-33eb-0310-8a02-cae41507c13b
+                   Lock Owner: fitz
+                   Lock Comment: Don't touch my file!
+                   Lock Creation Date: 2004-12-25 14:49:36 +0100 (Tue, 14 Dec 2004)
 
             4. 'svn update' changes
 
@@ -356,11 +362,12 @@ II. New Client Behaviors
                 svn up
                 U     path1
                  U    path2
-                  K   path3
-                C K   path4
+                  B   path3
+                C B   path4
 
                 In the above example, lock tokens for path3 and path4
-                were removed.  path4 also had a conflict.
+                were removed.  Note that 'B' is used even if there is
+                a new lock in the repository.
 
 III. New Server Behaviors
 
