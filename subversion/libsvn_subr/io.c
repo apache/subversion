@@ -211,6 +211,14 @@ svn_io_copy_file (const char *src,
   const char *src_native, *dst_native;
   const char *dst_tmp;
 
+#ifdef SVN_WIN32
+  /* ### FIXME: apr_file_copy with perms, or anything that expects
+     that apr_file_info_get with APR_FILE_PROT will never return
+     APR_INCOMPLETE, may fail on Win32.  We need a platform-specific
+     implementation to get the permissions right. */
+  copy_perms = FALSE;
+#endif
+
   SVN_ERR (svn_utf_cstring_from_utf8 (&src_native, src, pool));
   SVN_ERR (svn_utf_cstring_from_utf8 (&dst_native, dst, pool));
 
