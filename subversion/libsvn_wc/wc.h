@@ -53,6 +53,9 @@ svn_error_t *svn_wc__files_contents_same_p (svn_boolean_t *same,
 #define SVN_WC_TIMESTAMP_WC   "working"
 
 
+/* The name of the '.svnignore' file */
+#define SVN_WC_SVNIGNORE      ".svnignore"
+
 
 
 /*** Locking. ***/
