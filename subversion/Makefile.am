@@ -8,6 +8,7 @@ SUBDIRS = tests-common               \
           libsvn_subr                \
           libsvn_delta               \
           libsvn_wc                  \
+          libsvn_ra_dav              \
           libsvn_fs
 
 ## Include these extra files when building `dist' target
