@@ -69,10 +69,9 @@ def svnversion_test(sbox):
   if errput or output != [ "1:2\n" ]:
     raise svntest.Failure
 
-  output, errput = svntest.main.run_svn(None, 'propset', 'blue', 'azul',
-                                        os.path.join(wc_dir, 'A', 'mu'))
-  if errput:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'blue', 'azul',
+                                     os.path.join(wc_dir, 'A', 'mu'))
 
   # Prop modified, mixed
   output, errput = svntest.main.run_svnversion(wc_dir, repo_url)

@@ -21,6 +21,7 @@ import string, sys, re, os, shutil
 
 # Our testing module
 import svntest
+from svntest import SVNAnyOutput
 
 
 ######################################################################
@@ -67,7 +68,6 @@ def guarantee_repos_and_wc(sbox):
   global max_revision
 
   sbox.build()
-
   wc_path = sbox.wc_dir
 
   # Now we have a repos and wc at revision 1.
@@ -315,23 +315,18 @@ def plain_log(sbox):
 
   guarantee_repos_and_wc(sbox)
 
-  result = 0
-
   was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  output, errput = svntest.main.run_svn (None, 'log')
+  try:
+    output, err = svntest.actions.run_and_verify_svn ("", None, [], 'log')
 
-  if errput:
+    log_chain = parse_log_output (output)
+    if check_log_chain (log_chain, range(max_revision, 1 - 1, -1)):
+      raise svntest.Failure
+    
+  finally:
     os.chdir (was_cwd)
-    raise svntest.Failure
-
-  log_chain = parse_log_output (output)
-  if check_log_chain (log_chain, range(max_revision, 1 - 1, -1)):
-    os.chdir (was_cwd)
-    raise svntest.Failure
-
-  os.chdir (was_cwd)
 
 
 #----------------------------------------------------------------------
@@ -343,48 +338,35 @@ def versioned_log_message(sbox):
   was_cwd = os.getcwd ()
   os.chdir (sbox.wc_dir)
 
-  iota_path = os.path.join ('iota')
-  mu_path = os.path.join ('A', 'mu')
-  log_path = os.path.join ('A', 'D', 'H', 'omega')
+  try:
+    iota_path = os.path.join ('iota')
+    mu_path = os.path.join ('A', 'mu')
+    log_path = os.path.join ('A', 'D', 'H', 'omega')
+    
+    svntest.main.file_append (iota_path, "2")
+    
+    # try to check in a change using a versioned file as your log entry.
+    svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
+                                       'ci', '-F', log_path)
 
-  svntest.main.file_append (iota_path, "2")
+    # force it.  should not produce any errors.
+    svntest.actions.run_and_verify_svn ("", None, [],
+                                        'ci', '-F', log_path, '--force-log')
 
-  # try to check in a change using a versioned file as your log entry.
-  stdout_lines, stderr_lines = svntest.main.run_svn (1, 'ci', '-F', log_path)
+    svntest.main.file_append (mu_path, "2")
 
-  # make sure we failed.
-  if (len(stderr_lines) <= 0):
+    # try the same thing, but specifying the file to commit explicitly.
+    svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
+                                       'ci', '-F', log_path, mu_path)
+
+    # force it...  should succeed.
+    svntest.actions.run_and_verify_svn ("", None, [],
+                                        'ci',
+                                        '-F', log_path,
+                                        '--force-log', mu_path)
+
+  finally:
     os.chdir (was_cwd)
-    raise svntest.Failure
-
-  # force it.  should not produce any errors.
-  stdout_lines, stderr_lines = \
-    svntest.main.run_svn (None, 'ci', '-F', log_path, '--force-log')
-
-  if (len(stderr_lines) != 0):
-    os.chdir (was_cwd)
-    raise svntest.Failure
-
-  svntest.main.file_append (mu_path, "2")
-
-  # try the same thing, but specifying the file to commit explicitly.
-  stdout_lines, stderr_lines = \
-    svntest.main.run_svn (1, 'ci', '-F', log_path, mu_path)
-
-  # make sure it failed.
-  if (len(stderr_lines) <= 0):
-    os.chdir (was_cwd)
-    raise svntest.Failure
-
-  # force it...  should succeed.
-  stdout_lines, stderr_lines = \
-    svntest.main.run_svn (None, 'ci', '-F', log_path, '--force-log', mu_path)
-
-  if (len(stderr_lines) != 0):
-    os.chdir (was_cwd)
-    raise svntest.Failure
-
-  os.chdir (was_cwd)
 
 
 #----------------------------------------------------------------------
@@ -397,15 +379,11 @@ def log_with_empty_repos(sbox):
   svntest.main.create_repos(sbox.repo_dir)
   svntest.main.set_repos_paths(sbox.repo_dir)
 
-  stdout_lines, stderr_lines = svntest.main.run_svn\
-                               (None, 'log',
-                                '--username', svntest.main.wc_author,
-                                '--password', svntest.main.wc_passwd,
-                                svntest.main.current_repo_url)
-
-  if (len(stderr_lines) != 0):
-    raise svntest.Failure
-
+  svntest.actions.run_and_verify_svn ("", None, [],
+                                      'log',
+                                      '--username', svntest.main.wc_author,
+                                      '--password', svntest.main.wc_passwd,
+                                      svntest.main.current_repo_url)
 
 #----------------------------------------------------------------------
 def log_where_nothing_changed(sbox):
@@ -438,11 +416,10 @@ def log_to_revision_zero(sbox):
   sbox.build()
 
   # This used to the segfault the server.
-  stdout_lines, stderr_lines = svntest.main.run_svn(0, 'log', '-v',
-                                                    '-r', '1:0', sbox.wc_dir)
-  if stderr_lines:
-    raise svntest.Failure
-
+  
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'log', '-v',
+                                     '-r', '1:0', sbox.wc_dir)
 
 #----------------------------------------------------------------------
 def log_with_path_args(sbox):
@@ -450,25 +427,20 @@ def log_with_path_args(sbox):
 
   guarantee_repos_and_wc(sbox)
 
-  result = 0
-
   was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  output, errput = svntest.main.run_svn (None, 'log',
-                                         svntest.main.current_repo_url,
-                                         'A/D/G', 'A/D/H')
+  try:
+    output, err = svntest.actions.run_and_verify_svn(
+      None, None, [],
+      'log', svntest.main.current_repo_url, 'A/D/G', 'A/D/H')
 
-  if errput:
+    log_chain = parse_log_output (output)
+    if check_log_chain (log_chain, [8, 6, 5, 3, 1]):
+      raise svntest.Failure
+
+  finally:
     os.chdir (was_cwd)
-    raise svntest.Failure
-
-  log_chain = parse_log_output (output)
-  if check_log_chain (log_chain, [8, 6, 5, 3, 1]):
-    os.chdir (was_cwd)
-    raise svntest.Failure
-
-  os.chdir (was_cwd)
 
 #----------------------------------------------------------------------
 def url_missing_in_head(sbox):
@@ -476,14 +448,10 @@ def url_missing_in_head(sbox):
 
   guarantee_repos_and_wc(sbox)
 
-  result = 0
-
   my_url = svntest.main.current_repo_url + "/A/B/E/alpha"
-  output, errput = svntest.main.run_svn (None, 'log', '-r', '8', my_url)
-
-  if errput:
-    os.chdir (was_cwd)
-    raise svntest.Failure
+  
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'log', '-r', '8', my_url)
 
 #----------------------------------------------------------------------
 def log_through_copyfrom_history(sbox):
@@ -516,44 +484,38 @@ def log_through_copyfrom_history(sbox):
   svntest.actions.run_and_verify_svn (None, None, [], 'up', wc_dir)
 
   # The full log for mu2 is relatively unsurprising
-  output, errput = svntest.main.run_svn (None, 'log', mu2_path)
-  if errput:
-    raise svntest.Failure
+  output, err = svntest.actions.run_and_verify_svn (None, None, [],
+                                                    'log', mu2_path)
   log_chain = parse_log_output (output)
   if check_log_chain (log_chain, [6, 5, 2, 1]):
     raise svntest.Failure
 
-  output, errput = svntest.main.run_svn (None, 'log', mu2_URL)
-  if errput:
-    raise svntest.Failure
+  output, err = svntest.actions.run_and_verify_svn (None, None, [],
+                                                    'log', mu2_URL)
   log_chain = parse_log_output (output)
   if check_log_chain (log_chain, [6, 5, 2, 1]):
     raise svntest.Failure
 
   # First "oddity", the full log for mu2 doesn't include r3, but the -r3
   # log works!
-  output, errput = svntest.main.run_svn (None, 'log', '-r', '3', mu2_path)
-  if errput:
-    raise svntest.Failure
+  output, err = svntest.actions.run_and_verify_svn (None, None, [],
+                                                    'log', '-r', '3', mu2_path)
   log_chain = parse_log_output (output)
   if check_log_chain (log_chain, [3]):
     raise svntest.Failure
 
-  output, errput = svntest.main.run_svn (None, 'log', '-r', '3', mu2_URL)
-  if errput:
-    raise svntest.Failure
+  output, err = svntest.actions.run_and_verify_svn (None, None, [],
+                                                    'log', '-r', '3', mu2_URL)
   log_chain = parse_log_output (output)
   if check_log_chain (log_chain, [3]):
     raise svntest.Failure
 
   # Second "oddity", the full log for mu2 includes r2, but the -r2 log
   # fails!
-  output, errput = svntest.main.run_svn (1, 'log', '-r', '2', mu2_path)
-  if not errput or output:
-    raise svntest.Failure
-  output, errput = svntest.main.run_svn (1, 'log', '-r', '2', mu2_URL)
-  if not errput or output:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn (None, [], SVNAnyOutput,
+                                      'log', '-r', '2', mu2_path)
+  svntest.actions.run_and_verify_svn (None, [], SVNAnyOutput,
+                                      'log', '-r', '2', mu2_URL)
   
 ########################################################################
 # Run the tests

@@ -21,7 +21,7 @@ import stat, string, sys, os, shutil, re
 
 # Our testing module
 import svntest
-
+from svntest import SVNAnyOutput
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -112,7 +112,6 @@ def basic_copy_and_move_files(sbox):
   "basic copy and move commands -- on files only"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
@@ -256,7 +255,6 @@ def mv_unversioned_file(sbox):
   # -- Lars
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   unver_path = os.path.join(wc_dir, 'A', 'unversioned')
@@ -281,7 +279,6 @@ def receive_copy_in_update(sbox):
   "receive a copied directory during update"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   # Make a backup copy of the working copy.
@@ -376,7 +373,6 @@ def resurrect_deleted_dir(sbox):
   "resurrect a deleted directory"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   # Delete directory A/D/G, commit that as r2.
@@ -454,16 +450,14 @@ def no_copy_overwrites(sbox):
   dirURL2  =  svntest.main.current_repo_url + "/A/D/H"
 
   # Expect out-of-date failure if 'svn cp URL URL' tries to overwrite a file  
-  outlines, errlines = svntest.main.run_svn(1,
-                                            'cp', fileURL1, fileURL2,
-                                            '--username',
-                                            svntest.main.wc_author,
-                                            '--password',
-                                            svntest.main.wc_passwd,
-                                            '-m', 'fooogle')
-  if not errlines:
-    print "Whoa, I was able to overwrite a file!"
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn("Whoa, I was able to overwrite a file!",
+                                     None, SVNAnyOutput,
+                                     'cp', fileURL1, fileURL2,
+                                     '--username',
+                                     svntest.main.wc_author,
+                                     '--password',
+                                     svntest.main.wc_passwd,
+                                     '-m', 'fooogle')
 
   # Create A/D/H/G by running 'svn cp ...A/D/G .../A/D/H'
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -473,16 +467,13 @@ def no_copy_overwrites(sbox):
                                      '-m', 'fooogle')
 
   # Repeat the last command.  It should *fail* because A/D/H/G already exists.
-  outlines, errlines = svntest.main.run_svn(1,
-                                            'cp', dirURL1, dirURL2,
-                                            '--username',
-                                            svntest.main.wc_author,
-                                            '--password',
-                                            svntest.main.wc_passwd,
-                                            '-m', 'fooogle')
-  if not errlines:
-    print "Whoa, I was able to overwrite a directory!"
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(
+    "Whoa, I was able to overwrite a directory!",
+    None, SVNAnyOutput,
+    'cp', dirURL1, dirURL2,
+    '--username', svntest.main.wc_author,
+    '--password', svntest.main.wc_passwd,
+    '-m', 'fooogle')
 
 #----------------------------------------------------------------------
 
@@ -528,15 +519,12 @@ def no_wc_copy_overwrites(sbox):
   # These copies should fail
   pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
-  outlines, errlines = svntest.main.run_svn(1, 'cp', pi_path, rho_path)
-  if not errlines:
-    raise svntest.Failure
-  outlines, errlines = svntest.main.run_svn(1, 'cp', pi_path, tau_path)
-  if not errlines:
-    raise svntest.Failure
-  outlines, errlines = svntest.main.run_svn(1, 'cp', pi_path, alpha_path)
-  if not errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
+                                     'cp', pi_path, rho_path)
+  svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
+                                     'cp', pi_path, tau_path)
+  svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
+                                     'cp', pi_path, alpha_path)
 
   # Status after failed copies should not have changed
   extra_files = [ 'tau' ]
@@ -554,8 +542,8 @@ def copy_modify_commit(sbox):
   "copy and tree and modify before commit"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
+  
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
                                      wc_dir + '/A/B', wc_dir + '/A/B2',
                                      '-m', 'fooogle')
@@ -661,7 +649,6 @@ def copy_delete_commit(sbox):
   "copy a tree and delete part of it before commit"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   # copy a tree
@@ -714,7 +701,6 @@ def mv_and_revert_directory(sbox):
   "move and revert a directory"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   # Issue 931: move failed to lock the directory being deleted
@@ -745,7 +731,6 @@ def copy_preserve_executable_bit(sbox):
 
   # Bootstrap
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   # Create two paths
@@ -790,7 +775,6 @@ def wc_to_repos(sbox):
   "working-copy to repository copy"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   beta_path = os.path.join(wc_dir, "A", "B", "E", "beta")
@@ -861,7 +845,6 @@ def repos_to_wc(sbox):
   "repository to working-copy copy"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
   # We have a standard repository and working copy.  Now we create a
@@ -925,9 +908,8 @@ def repos_to_wc(sbox):
   pi_url = other_repo_url + "/A/D/G/pi"
 
   # Expect an error in the directory case
-  output, errput = svntest.main.run_svn(1, 'copy', E_url, wc_dir)  
-  if not errput:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
+                                     'copy', E_url, wc_dir)  
 
   # But file case should work fine.
   svntest.actions.run_and_verify_svn(None, None, [], 'copy', pi_url, wc_dir)
@@ -962,6 +944,7 @@ def url_copy_parent_into_child(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  
   B_url = svntest.main.current_repo_url + "/A/B"
   F_url = svntest.main.current_repo_url + "/A/B/F"
 
@@ -1012,6 +995,7 @@ def wc_copy_parent_into_child(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  
   B_url = svntest.main.current_repo_url + "/A/B"
   F_B_url = svntest.main.current_repo_url + "/A/B/F/B"
 
@@ -1093,9 +1077,8 @@ def resurrect_deleted_file(sbox):
 
   # Delete a file in the repository via immediate commit
   rho_url = svntest.main.current_repo_url + '/A/D/G/rho'
-  outlines,errlines = svntest.main.run_svn(None, 'rm', rho_url, '-m', 'rev 2')
-  if errlines:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', rho_url, '-m', 'rev 2')
 
   # Update the wc to HEAD (r2)
   expected_output = svntest.wc.State(wc_dir, {
@@ -1111,13 +1094,8 @@ def resurrect_deleted_file(sbox):
                                         expected_status)
 
   # repos->wc copy, to resurrect deleted file.
-  outlines,errlines = svntest.main.run_svn(None, 'cp', '-r', '1',
-                                           rho_url, wc_dir)
-  if errlines:
-    print "Copy Error:"
-    for line in errlines:
-      print line
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn("Copy error:", None, [],
+                                     'cp', '-r', '1', rho_url, wc_dir)
 
   # status should now show the file scheduled for addition-with-history
   expected_status.add({

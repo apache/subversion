@@ -29,6 +29,7 @@ XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
 
+
 ######################################################################
 # Tests
 #
@@ -39,9 +40,7 @@ Item = svntest.wc.StateItem
 def status_unversioned_file_in_current_dir(sbox):
   "status on unversioned file in current directory"
 
-  if sbox.build():
-    return 1
-
+  sbox.build()
   wc_dir = sbox.wc_dir
 
   was_cwd = os.getcwd()
@@ -50,15 +49,9 @@ def status_unversioned_file_in_current_dir(sbox):
 
     svntest.main.file_append('foo', 'a new file')
 
-    stat_output, err_output = svntest.main.run_svn(None, 'stat', 'foo')
+    svntest.actions.run_and_verify_svn(None, [ "?      foo\n" ], [],
+                                       'stat', 'foo')
 
-    if len(stat_output) != 1: 
-      return 1
-
-    if len(err_output) != 0:
-      return 1
-
-    return 0
   finally:
     os.chdir(was_cwd)
 
@@ -68,9 +61,7 @@ def status_unversioned_file_in_current_dir(sbox):
 def status_update_with_nested_adds(sbox):
   "run 'status -u' when nested additions are pending"
 
-  if sbox.build():
-    return 1
-
+  sbox.build()
   wc_dir = sbox.wc_dir
 
   # Make a backup copy of the working copy
@@ -103,10 +94,9 @@ def status_update_with_nested_adds(sbox):
     })
 
   # Commit.
-  if svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                            expected_status, None,
-                                            None, None, None, None, wc_dir):
-    return 1
+  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
+                                         expected_status, None,
+                                         None, None, None, None, wc_dir)
 
   # Now we go to the backup working copy, still at revision 1.
   # We will run 'svn st -u', and make sure that newdir/newfile is reported
@@ -124,35 +114,30 @@ def status_update_with_nested_adds(sbox):
   # an error happens, we'll catch it here.  So that's a good enough
   # regression test for now.  Someday, though, it would be nice to
   # positively match the mostly-empty lines.
-  return svntest.actions.run_and_verify_unquiet_status(wc_backup,
-                                                       expected_status)
-
+  svntest.actions.run_and_verify_unquiet_status(wc_backup,
+                                                expected_status)
+  
 #----------------------------------------------------------------------
 
 # svn status -vN should include all entries in a directory
 def status_shows_all_in_current_dir(sbox):
   "status -vN shows all items in current directory"
 
-  if sbox.build():
-    return 1
-
+  sbox.build()
   wc_dir = sbox.wc_dir
   was_cwd = os.getcwd()
 
   os.chdir(wc_dir)
+  try:
 
-  stat_output, err_output = svntest.main.run_svn(None, 'stat', '-vN')
-  if err_output:
-    return 1
+    output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'stat', '-vN')
 
-  entries_in_wc = len(os.listdir("."))
+    if (len(output) != len(os.listdir("."))):
+      raise svntest.Failure
 
-  os.chdir(was_cwd)
-
-  if (len(stat_output) != entries_in_wc):
-    return 1
-
-  return 0
+  finally:
+    os.chdir(was_cwd)
 
 
 #----------------------------------------------------------------------
@@ -160,37 +145,31 @@ def status_shows_all_in_current_dir(sbox):
 def status_missing_file(sbox):
   "status with a versioned file missing"
 
-  if sbox.build():
-    return 1
-
+  sbox.build()
   wc_dir = sbox.wc_dir
-  was_cwd = os.getcwd()
-
-  os.chdir(wc_dir)
-
-  os.remove('iota')
-
-  stat_output, err_output = svntest.main.run_svn(None, 'status')
-  if err_output:
-    return 1
-  for line in stat_output:
-    if not re.match("! +iota", line):
-      return 1
   
-  os.chdir(was_cwd)
+  was_cwd = os.getcwd()
+  
+  os.chdir(wc_dir)
+  try:
 
-  return 0
+    os.remove('iota')
 
+    output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
+    for line in output:
+      if not re.match("! +iota", line):
+        raise svntest.Failure
+  finally:
+    os.chdir(was_cwd)
 
 #----------------------------------------------------------------------
 
 def status_type_change(sbox):
   "status on versioned items whose type has changed"
 
-  if sbox.build():
-    return 1
-
+  sbox.build()
   wc_dir = sbox.wc_dir
+
   was_cwd = os.getcwd()
 
   os.chdir(wc_dir)
@@ -202,51 +181,48 @@ def status_type_change(sbox):
     os.rename('A', 'iota')
     os.rename('was_iota', 'A')
 
-    stat_output, err_output = svntest.main.run_svn(None, 'status')
-    if err_output or len(stat_output) != 2:
-      return 1
-    for line in stat_output:
+    output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
+    if len(output) != 2:
+      raise svntest.Failure
+    for line in output:
       if not re.match("~ +(iota|A)", line):
-        return 1
+        raise svntest.Failure
 
     # Now change the file that is obstructing the versioned dir into an
     # unversioned dir.
     os.remove('A')
     os.mkdir('A')
 
-    stat_output, err_output = svntest.main.run_svn(None, 'status')
-    if err_output or len(stat_output) != 2:
-      return 1
-    for line in stat_output:
+    output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
+    if len(output) != 2:
+      raise svntest.Failure
+    for line in output:
       if not re.match("~ +(iota|A)", line):
-        return 1
+        raise svntest.Failure
 
     # Now change the versioned dir that is obstructing the file into an
     # unversioned dir.
     svntest.main.safe_rmtree('iota')
     os.mkdir('iota')
 
-    stat_output, err_output = svntest.main.run_svn(None, 'status')
-    if err_output or len(stat_output) != 2:
-      return 1
-    for line in stat_output:
+    output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
+    if len(output) != 2:
+      raise svntest.Failure
+    for line in output:
       if not re.match("~ +(iota|A)", line):
-        return 1
+        raise svntest.Failure
 
   finally:
     os.chdir(was_cwd)
-
-  return 0
 
 #----------------------------------------------------------------------
 
 def status_type_change_to_symlink(sbox):
   "status on versioned items replaced by symlinks"
 
-  if sbox.build():
-    return 1
-
+  sbox.build()
   wc_dir = sbox.wc_dir
+  
   was_cwd = os.getcwd()
 
   os.chdir(wc_dir)
@@ -258,12 +234,12 @@ def status_type_change_to_symlink(sbox):
     svntest.main.safe_rmtree('A/D')
     os.symlink('bar', 'A/D')
 
-    stat_output, err_output = svntest.main.run_svn(None, 'status')
-    if err_output or len(stat_output) != 2:
-      return 1
-    for line in stat_output:
+    output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
+    if len(output) != 2:
+      raise svntest.Failure
+    for line in output:
       if not re.match("~ +(iota|A/D)", line):
-        return 1
+        raise svntest.Failure
 
     # "valid" symlinks
     os.remove('iota')
@@ -271,18 +247,15 @@ def status_type_change_to_symlink(sbox):
     os.symlink('A/mu', 'iota')
     os.symlink('C', 'A/D')
 
-    stat_output, err_output = svntest.main.run_svn(None, 'status')
-    if err_output or len(stat_output) != 2:
-      return 1
-    for line in stat_output:
+    output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
+    if len(output) != 2:
+      raise svntest.Failure
+    for line in output:
       if not re.match("~ +(iota|A/D)", line):
-        return 1
+        raise svntest.Failure
 
   finally:
     os.chdir(was_cwd)
-
-  return 0
-
 
 #----------------------------------------------------------------------
 # Regression test for revision 3686.
@@ -290,40 +263,36 @@ def status_type_change_to_symlink(sbox):
 def status_with_new_files_pending(sbox):
   "status -u with new files in the repository"
 
-  if sbox.build():
-    return 1
-
+  sbox.build()
   wc_dir = sbox.wc_dir
+  
   was_cwd = os.getcwd()
 
   os.chdir(wc_dir)
+  try:
+    svntest.main.file_append('newfile', 'this is a new file')
+    svntest.main.run_svn(None, 'add', 'newfile')
+    svntest.main.run_svn(None, 'ci', '-m', 'logmsg')
+    svntest.main.run_svn(None, 'up', '-r', '1')
 
-  svntest.main.file_append('newfile', 'this is a new file')
-  svntest.main.run_svn(None, 'add', 'newfile')
-  svntest.main.run_svn(None, 'ci', '-m', 'logmsg')
-  svntest.main.run_svn(None, 'up', '-r', '1')
+    output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'status', '-u')
 
-  stat_output, err_output = svntest.main.run_svn(None, 'status', '-u')
-  if err_output:
-    return 1
+    # The bug fixed in revision 3686 was a seg fault.  We don't have a
+    # reliable way to detect a seg fault here, since we haven't dealt
+    # with the popen2{Popen3,Popen4} mess in Python yet (the latter two
+    # are classes within the first, which is a module, and the Popen3
+    # class is not the same as os.popen3().  Got that?)  See the Python
+    # docs for details; in the meantime, no output means there was a
+    # problem.
+    for line in output:
+      if line.find('newfile') != -1:
+        break;
+    else:
+      raise svntest.Failure
 
-  # The bug fixed in revision 3686 was a seg fault.  We don't have a
-  # reliable way to detect a seg fault here, since we haven't dealt
-  # with the popen2{Popen3,Popen4} mess in Python yet (the latter two
-  # are classes within the first, which is a module, and the Popen3
-  # class is not the same as os.popen3().  Got that?)  See the Python
-  # docs for details; in the meantime, no output means there was a
-  # problem.
-  for line in stat_output:
-    if line.find('newfile') != -1:
-      break;
-  else:
-    return 1
-
-  os.chdir(was_cwd)
-
-  return 0
-
+  finally:
+    os.chdir(was_cwd)
 
 #----------------------------------------------------------------------
 
@@ -331,12 +300,11 @@ def status_for_unignored_file(sbox):
   "status for unignored file and directory"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
+  
   was_cwd = os.getcwd()
 
   os.chdir(wc_dir)
-
   try:
     svntest.main.file_append('newfile', 'this is a new file')
     os.makedirs('newdir')
@@ -374,13 +342,12 @@ def status_for_nonexistent_file(sbox):
   os.chdir(wc_dir)
 
   try:
-    stat_output, err_output = svntest.main.run_svn(None, 'status', 
-                                                   'nonexistent-file')
-    if err_output:
-      raise svntest.Failure
+    output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'status',
+                                                     'nonexistent-file')
 
     # there should *not* be a status line printed for the nonexistent file 
-    for line in stat_output:
+    for line in output:
       if re.match(" +nonexistent-file", line):
         raise svntest.Failure
   
@@ -417,10 +384,9 @@ def status_file_needs_update(sbox):
   # any issue for this bug, so this comment and the thread are your
   # audit trail :-).
 
-  if sbox.build():
-    return 1
-
+  sbox.build()
   wc_dir = sbox.wc_dir
+  
   other_wc = sbox.add_wc_path('other')
 
   svntest.actions.duplicate_dir(wc_dir, other_wc)
@@ -431,7 +397,6 @@ def status_file_needs_update(sbox):
   svntest.main.file_append('crontab.root', 'New file crontab.root.\n')
   svntest.main.run_svn(None, 'add', 'crontab.root')
   svntest.main.run_svn(None, 'ci', '-m', 'log msg')
-
   os.chdir(was_cwd)
   os.chdir(other_wc)
   svntest.main.run_svn(None, 'up')
@@ -445,17 +410,14 @@ def status_file_needs_update(sbox):
   # the -v flag, which we don't want, as this bug never appeared when
   # -v was passed.  So we run status by hand:
   os.chdir(was_cwd)
-  out, err = svntest.main.run_svn(None, 'status', '-u', other_wc)
-  if err:
-    return 1
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                'status', '-u', other_wc)
 
-  saw_it = 0
   for line in out:
     if re.match("\\s+\\*.*crontab\\.root$", line):
-      saw_it = 1
-
-  return not saw_it
-
+      break
+  else:
+    raise svntest.Failure
 
 #----------------------------------------------------------------------
 
@@ -485,10 +447,9 @@ def status_uninvited_parent_directory(sbox):
   # reverted because it caused other status problems (see the test
   # status_file_needs_update(), which fails when 4181 is present).
 
-  if sbox.build():
-    return 1
-
+  sbox.build()
   wc_dir = sbox.wc_dir
+  
   other_wc = sbox.add_wc_path('other')
 
   svntest.actions.duplicate_dir(wc_dir, other_wc)
@@ -510,27 +471,21 @@ def status_uninvited_parent_directory(sbox):
   # We don't want a full status tree here, just one line (or two, if
   # the bug is present).  So run status by hand:
   os.chdir(was_cwd)
-  out, err = svntest.main.run_svn(None, 'status', '-u',
-                                  os.path.join(other_wc, 'newfile'))
-  if err:
-    return 1
+  out, err = svntest.actions.run_and_verify_svn(
+    None, None, [],
+    'status', '-u', os.path.join(other_wc, 'newfile'))
 
-  saw_uninvited_parent_dir = 0
   for line in out:
     # The "/?" is just to allow for an optional trailing slash.
     if re.match("\\s+\\*.*\.other/?$", line):
-      saw_uninvited_parent_dir = 1
-
-  return saw_uninvited_parent_dir
-
+      raise svntest.Failure
 
 def status_on_forward_deletion(sbox):
   "status -u on working copy deleted in HEAD"
   # See issue #1289.
-  if sbox.build():
-    return 1
-
+  sbox.build()
   wc_dir = sbox.wc_dir
+  
   top_url = svntest.main.current_repo_url
   A_url = top_url + '/A'
 
@@ -548,9 +503,7 @@ def status_on_forward_deletion(sbox):
     #    svn: Working copy not locked
     #    svn: directory '' not locked
     #
-    out, err = svntest.main.run_svn(None, 'st', '-u', 'wc')
-    if err:
-      raise svntest.Failure
+    svntest.actions.run_and_verify_svn(None, None, [], 'st', '-u', 'wc')
 
     # Try again another way; the error would look like this:
     #
@@ -564,9 +517,7 @@ def status_on_forward_deletion(sbox):
     #
     svntest.main.safe_rmtree('wc')
     svntest.main.run_svn(None, 'co', '-r1', A_url, 'wc')
-    out, err = svntest.main.run_svn(None, 'st', '-u', 'wc')
-    if err:
-      raise svntest.Failure
+    svntest.actions.run_and_verify_svn(None, None, [], 'st', '-u', 'wc')
     
   finally:
     os.chdir(saved_cwd)

@@ -40,13 +40,13 @@ Item = svntest.wc.StateItem
 def export_empty_directory(sbox):
   "export an empty directory"
   sbox.build()
+  
   svntest.main.safe_rmtree(sbox.wc_dir)
   export_target = sbox.wc_dir
   empty_dir_url = svntest.main.current_repo_url + '/A/C'
   svntest.main.run_svn(None, 'export', empty_dir_url, export_target)
   if not os.path.exists(export_target):
     raise svntest.Failure
-  return 0
 
 
 ########################################################################

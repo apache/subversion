@@ -50,9 +50,7 @@ i18n_logmsg = 'drie\xc3\xabntwintig keer was \xc3\xa9\xc3\xa9n keer teveel'
 def basic_utf8_conversion(sbox):
   "conversion of paths and logs to/from utf8"
 
-  if sbox.build():
-    return 1
-
+  sbox.build()
   wc_dir = sbox.wc_dir
 
   # Make sure the test runs in an ISO-8859-1 environment.  Otherwise,
@@ -70,23 +68,13 @@ def basic_utf8_conversion(sbox):
 
   # Create the new i18n file and schedule it for addition
   svntest.main.file_append(os.path.join(wc_dir, i18n_filename), "hi")
-  outlines, errlines = svntest.main.run_svn(None,
-                                            'add',
-                                            os.path.join(wc_dir,
-                                                         i18n_filename))
-  if errlines:
-    print "Failed to schedule i18n filename for addition"
-    return 1
+  svntest.actions.run_and_verify_svn(
+    "Failed to schedule i18n filename for addition", None, [],
+    'add', os.path.join(wc_dir, i18n_filename))
 
-  outlines, inlines = svntest.main.run_svn(None, # no error expected
-                                           'commit', '-m', i18n_logmsg,
-                                           wc_dir)
-  if errlines:
-    print "Failed to commit i18n filename"
-    return 1
-
-
-  return 0
+  svntest.actions.run_and_verify_svn(
+    "Failed to commit i18n filename", None, [],
+    'commit', '-m', i18n_logmsg, wc_dir)
 
 # Here's how the test should really work:
 

@@ -47,7 +47,6 @@ def test_youngest(sbox):
   "test 'svnlook youngest' subcommand"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
 
@@ -69,14 +68,13 @@ def test_youngest(sbox):
   expected_status.tweak(wc_rev=1)
   expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
 
-  if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output,
-                                            expected_status,
-                                            None,
-                                            None, None,
-                                            None, None,
-                                            wc_dir):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None,
+                                         None, None,
+                                         None, None,
+                                         wc_dir)
 
   # Youngest revision should now be 2.  Let's verify that.
   output, errput = svntest.main.run_svnlook("youngest", repo_dir)
@@ -97,11 +95,9 @@ def delete_file_in_moved_dir(sbox):
   # move E to E2 and delete E2/alpha
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   E2_path = os.path.join(wc_dir, 'A', 'B', 'E2')
-  output, errput = svntest.main.run_svn(None, 'mv', E_path, E2_path)
-  if errput: raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', E_path, E2_path)
   alpha_path = os.path.join(E2_path, 'alpha')
-  output, errput = svntest.main.run_svn(None, 'rm', alpha_path)
-  if errput: raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', alpha_path)
 
   # commit
   expected_output = svntest.wc.State(wc_dir, {
@@ -116,14 +112,13 @@ def delete_file_in_moved_dir(sbox):
     'A/B/E2'      : Item(status='  ', wc_rev=2, repos_rev=2),
     'A/B/E2/beta' : Item(status='  ', wc_rev=2, repos_rev=2),
     })
-  if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output,
-                                            expected_status,
-                                            None,
-                                            None, None,
-                                            None, None,
-                                            wc_dir):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None,
+                                         None, None,
+                                         None, None,
+                                         wc_dir)
 
   output, errput = svntest.main.run_svnlook("dirs-changed", repo_dir)
   if errput:
@@ -148,18 +143,18 @@ def test_print_property_diffs(sbox):
 
   # Add a bogus property to iota
   iota_path = os.path.join(wc_dir, 'iota')
-  output, errput = svntest.main.run_svn(None, 'propset',
-                                        'bogus_prop', 'bogus_val', iota_path)
-  if errput: raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     'bogus_prop', 'bogus_val', iota_path)
 
   # commit the change
-  output, errput = svntest.main.run_svn(None, 'ci', '-m', 'log msg', iota_path)
-  if errput: raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg', iota_path)
 
   # Grab the diff
-  expected_output, errput = svntest.main.run_svn(None, 'diff', '-r',
-                                                 'PREV', iota_path)
-  if errput: raise svntest.Failure
+  expected_output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                            'diff',
+                                                            '-r', 'PREV',
+                                                            iota_path)
 
   output, errput = svntest.main.run_svnlook("diff", repo_dir)
   if errput:
