@@ -220,9 +220,9 @@ typedef enum perl_func_invoker {
 static svn_error_t *perl_callback_thunk (perl_func_invoker_t caller_func,
 					 void *func,
 					 SV **result,
-					 char *fmt, ...)
+					 const char *fmt, ...)
 {
-    char *fp = fmt;
+    const char *fp = fmt;
     va_list ap;
     int count;
 
