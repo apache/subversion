@@ -47,14 +47,13 @@ read_header_block (svn_stream_t *stream,
                    apr_hash_t **headers,
                    apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create (pool);
   *headers = apr_hash_make (pool);  
 
   while (1)
     {
       svn_stringbuf_t *header_str;
       const char *name, *value; 
-      apr_size_t old_i = 0, i = 0;
+      apr_size_t i = 0;
 
       if (first_header != NULL)
         {
@@ -63,8 +62,8 @@ read_header_block (svn_stream_t *stream,
         }
 
       else
-        /* Read the next line into a stringbuf in subpool. */
-        SVN_ERR (svn_stream_readline (stream, &header_str, subpool));
+        /* Read the next line into a stringbuf. */
+        SVN_ERR (svn_stream_readline (stream, &header_str, pool));
       
       if ((header_str == NULL) || (svn_stringbuf_isempty (header_str)))
         break;    /* end of header block */
@@ -79,25 +78,25 @@ read_header_block (svn_stream_t *stream,
                                      "in dumpfile stream.");
           i++;
         }
-      /* Allocate the header name in the original pool. */
-      name = apr_pstrmemdup (pool, header_str->data, i);
+      /* Create a 'name' string and point to it. */
+      header_str->data[i] = '\0';
+      name = header_str->data;
 
-      /* Skip over the colon and the space following it.  */
+      /* Skip over the NULL byte and the space following it.  */
       i += 2;
-      old_i = i;
+      if (i > header_str->len)
+        return svn_error_create (SVN_ERR_MALFORMED_STREAM_DATA,
+                                 0, NULL, pool,
+                                 "Found malformed header block "
+                                 "in dumpfile stream.");
 
-      /* Find the end of the stringbuf. */
-      while (header_str->data[i] != '\0')
-        i++;
-      /* Allocate the header value in the original pool. */
-      value = apr_pstrmemdup (pool, header_str->data + old_i, (i - old_i));
+      /* Point to the 'value' string. */
+      value = header_str->data + i;
       
+      /* Store name/value in hash. */
       apr_hash_set (*headers, name, APR_HASH_KEY_STRING, value);
-
-      svn_pool_clear (subpool); /* free the stringbuf */
     }
 
-  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
@@ -543,7 +542,7 @@ make_revision_baton (apr_hash_t *headers,
 
   if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER,
                            APR_HASH_KEY_STRING)))
-    rb->rev = (svn_revnum_t) atoi (val);
+    rb->rev = SVN_STR_TO_REV(val);
 
   return rb;
 }
