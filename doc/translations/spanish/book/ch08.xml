@@ -327,7 +327,7 @@
         de ficheros de Subversion.</para>
 
       <figure id="svn-ch-8-dia-2">
-        <title>Versioning time&mdash;the third dimension!</title>
+        <title>Versionando el tiempo&mdash;¡la tercera dimensión!</title>
         <graphic fileref="images/ch08dia2.png"/>
       </figure>
 
@@ -336,29 +336,31 @@
            pleasures as cheap copies.  If "bubble-up" isn't covered
            twelve other times in the book, maybe give it a go here. -->
 
-      <para>As we mentioned earlier, the libsvn_fs API looks and feels
-        like any other filesystem, except that it has this wonderful
-        versioning capability.  It was designed to be usable by any
-        program interested in a versioning filesystem.  Not
-        coincidentally, Subversion itself is interested in that
-        functionality.  But while the filesystem API should be
-        sufficient for basic file and directory versioning support,
-        Subversion wants more&mdash;and that is where libsvn_repos
-        comes in.</para>
-
-      <para>The Subversion repository library (libsvn_repos) is
-        basically a wrapper library around the filesystem
-        functionality.  This library is responsible for creating the
-        repository layout, making sure that the underlying filesystem
-        is initialized, and so on.  Libsvn_repos also implements a set
-        of hooks&mdash;scripts that are executed by the repository
-        code when certain actions take place.  These scripts are
-        useful for notification, authorization, or whatever purposes
-        the repository administrator desires.  This type of
-        functionality, and other utility provided by the repository
-        library, is not strictly related to implementing a versioning
-        filesystem, which is why it was placed into its own
-        library.</para>
+      <para>Tal y como mencionamos anteriormente, la API de libsvn_fs
+        tiene el aspecto de cualquier otro sistema de ficheros,
+        excepto por el hecho de tener la maravillosa capacidad
+        de versionado. Fue diseñada para ser usada por cualquier
+        programa interesado en un sistema de ficheros versionado. A
+        su vez, Subversion está interesado en esa funcionalidad. Pero
+        mientras que la API del sistema de ficheros debería ser
+        suficiente para tener soporte básico de versionado de
+        ficheros y directorios, Subversion quiere más&mdash;y es
+        ahí donde entra en juego libsvn_repos.</para>
+        
+      <para>La librería de repositorio de Subversion (libsvn_repos)
+        es básicamente una librería envoltorio sobre la funcionalidad
+        del sistema de ficheros. Esta librería es responsable de
+        crear la estructura del repositorio, asegurarse de que
+        el sistema de ficheros subyacente está inicializado,
+        etc. Libsvn_repos también implementa un conjunto de
+        ganchos&mdash;scripts que son ejecutados por el código
+        de repositorio cuando se realizan ciertas tareas. Estos
+        scripts son útiles para notificar, autorizar, o cualquier
+        cosa deseada por el administrador del repositorio. Este tipo
+        de funcionalidad, y otras utilidades proporcionadas por la
+        librería de repositorio, no están estrictamente relacionadas
+        con la implementación de un sistema de ficheros versionados,
+        razón por la cual fue colocada en su propia librería.</para>
       
       <para>Developers who wish to use the libsvn_repos API will find
         that it is not a complete wrapper around the filesystem
