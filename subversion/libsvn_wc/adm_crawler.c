@@ -670,7 +670,7 @@ svn_wc_transmit_text_deltas (const char *path,
                   return svn_error_createf
                     (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
                      "Checksum mismatch for '%s': "
-		     "expected '%s', actual: '%s'",
+                     "expected '%s', actual: '%s'",
                      tb, ent->checksum, base_digest_hex);
                 }
             }
