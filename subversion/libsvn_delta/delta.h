@@ -23,6 +23,7 @@
 #include <apr_hash.h>
 
 #include "svn_xml.h"
+#include "svn_delta.h"
 
 #ifndef SVN_LIBSVN_DELTA_H
 #define SVN_LIBSVN_DELTA_H
@@ -61,7 +62,7 @@ typedef struct svn_txdelta__compose_ctx_t
    data and OFFSET is ignored.  Otherwise NEW_DATA is ignored. All
    allocations are performed in POOL. */
 void svn_txdelta__insert_op (svn_txdelta__ops_baton_t *build_baton,
-                             int opcode,
+                             enum svn_delta_action opcode,
                              apr_size_t offset,
                              apr_size_t length,
                              const char *new_data,
