@@ -1,3 +1,8 @@
+Version 0.14.2 [Alpha Interim 2] (released ?? ?????? 2002, revision ????)
+
+ Developer-visible changes:
+ * upgrade to neon 0.22.0
+
 Version 0.14.1 [Alpha Interim 1] (released 9 August 2002, revision 2927)
 
  User-visible changes:
