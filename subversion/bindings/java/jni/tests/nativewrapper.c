@@ -47,6 +47,13 @@ Java_NativeWrapper_dateCreate
 }
 
 JNIEXPORT jobject JNICALL 
+Java_NativeWrapper_dateCreateFromAprTimeT
+(JNIEnv *env, jclass clazz, jlong time)
+{
+  return date__create_from_apr_time_t(env, NULL, time);
+}
+
+JNIEXPORT jobject JNICALL 
 Java_NativeWrapper_entryCreate
 (JNIEnv *env, jclass clazz)
 {

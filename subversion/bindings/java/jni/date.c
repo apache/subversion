@@ -21,6 +21,7 @@
 #include <jni.h>
 #include "j.h"
 #include "global.h"
+#include "date.h"
 
 /*** Defines ***/
 #define SVN_JNI_DATE__CLASS "java/util/Date"
@@ -103,6 +104,19 @@ date__create(JNIEnv *env, jboolean *hasException, long time)
     }
 
   return result;
+}
+
+jobject
+date__create_from_apr_time_t(JNIEnv *env, jboolean *hasException, 
+                             apr_time_t time)
+{
+  /*
+   * convert from microseconds since 1970-01-01 00:00:00 GMT
+   * to milliseconds since 1970-01-01 00:00:00 GMT
+   * which is a simple integer division
+   */
+  long milliseconds = time / 1000;
+  return date__create(env, hasException, milliseconds);
 }
 
 /* 

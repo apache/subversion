@@ -22,10 +22,37 @@
 
 /* includes */
 #include <jni.h>
+#include <apr_time.h>
 
 /* functions */
+
+/**
+ * creates a java.util.Date instance. Do not pass an apr_time_t
+ * value because this is a different format (number of MICROSECONDS)
+ * since 1970-01-01 00:00:00 GMT
+ *
+ * @see date__create_from_apr_time_t
+ *
+ * @param env JNI Environment
+ * @param hasException
+ * @param time intial value for the new instance - milliseconds
+ *        since 1970-01-01 00:00:00 GMT
+ * @return java.util.Date
+ */
 jobject 
 date__create(JNIEnv *env, jboolean *hasException, long time);
+
+/**
+ * creates a java.util.Date instance out of a apr_time_t values
+ *
+ * @param env JNI Environment
+ * @param hasException
+ * @param time - microseconds since 1970-01-01 00:00:00 GMT
+ * @return java.util.Date
+ */
+jobject
+date__create_from_apr_time_t(JNIEnv *env, jboolean *hasException, 
+                             apr_time_t time);
 
 #endif
 /* 
