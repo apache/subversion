@@ -101,6 +101,7 @@ analogous to CVS/ sudirs:
             ./                     /* Adm files are written directly here. */
             text-base/             /* tmp area for base files */
             prop-base/             /* tmp area for base props */
+            props/                 /* tmp area for props */
 
 `README'
 
@@ -324,6 +325,25 @@ analogous to CVS/ sudirs:
 
    The non-pristine (working copy) of each file's properties.  These
    are where local modifications to properties live.
+
+   Notice that right now, Subversion's ability to handle metadata
+   (properties) is a bit limited:
+
+   1. Properties are not "streamy" the same way a file's text is.
+      Properties are held entirely in memory.
+
+   2. Property *lists* are also held entirely in memory.  Property
+      lists move back and forth between hashtables and our disk-based
+      `hashdump' format.  Anytime a user wishes to read or write an
+      individual property, the *entire* property list is loaded from
+      disk into memory, and written back out again.  Not exactly a
+      paradigm of efficiency!
+
+   In other words, for Subversion 1.0, properties will work
+   sufficiently, but shouldn't be abused.  They'll work fine for
+   storing information like ACLs, permissions, ownership, and notes;
+   but users shouldn't be trying to store 30 meg PNG files.  :)
+
 
 ------------------------
 todo: some loose ends
