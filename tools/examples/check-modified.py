@@ -8,7 +8,7 @@
 import sys
 import os
 import os.path
-import svn.util
+import svn.core
 import svn.client
 import svn.wc
 
@@ -20,8 +20,8 @@ def usage():
 
 def run(files):
 
-  svn.util.apr_initialize()
-  pool = svn.util.svn_pool_create(None)
+  svn.core.apr_initialize()
+  pool = svn.core.svn_pool_create(None)
 
   for f in files:
     dirpath = fullpath = os.path.abspath(f)
@@ -43,8 +43,8 @@ def run(files):
 
     svn.wc.adm_close(adm_baton)
 
-  svn.util.svn_pool_destroy(pool)
-  svn.util.apr_terminate()        
+  svn.core.svn_pool_destroy(pool)
+  svn.core.apr_terminate()        
 
 if __name__ == '__main__':
   run(sys.argv[1:])
