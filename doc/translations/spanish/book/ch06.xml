@@ -1,24 +1,39 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
 <!-- originated from English revision 10817 -->
 <chapter id="svn-ch-6">
-  <title>Server Configuration</title>
-  
+  <!--REMOVE:<title>Server Configuration</title>-->
+  <title>Configuración del servidor</title>
   <simplesect>
     
-    <para>A Subversion repository can be accessed simultaneously by
+    <para>Un repositorio Subversion puede ser accedido simultáneamente
+      por clientes que son ejecutados en la misma máquina en la que reside
+      el repositorio usando el método <literal>file:///</literal>. Pero una
+      típica configuración de Subversion implica a un servidor al que acceden
+      clientes desde sus computadoras en el entorno de una oficina&mdash; o
+      quizás, alrededor del mundo.</para>
+    
+    <!--REMOVE:<para>A Subversion repository can be accessed simultaneously by
       clients running on the same machine on which the repository
       resides using the <literal>file:///</literal> method.  But the
       typical Subversion setup involves a single server machine being
       accessed from clients on computers all over the office&mdash;or,
-      perhaps, all over the world.</para>
+      perhaps, all over the world.</para>-->
 
-    
-    <para>This section describes how to get your Subversion repository
+    <para>Esta sección describe como publicar su repositorio Subversion
+      para ser accedido por clientes remotos.<!--TODO: Es correcta la simplifación del término "...outside its host machine for use by remote clients"--> Cubrirermos los tipos
+      de mecanismos de servidor disponibles actualmente <!--TODO: Es correcto? "...currently available server mechanisms"-->, debatiendo la configuración
+      y uso de cada uno de éstos. Después de que haya leído está sección,
+      usted debería estar capacitado para decidir que tipo de configuración
+      de red es la apropiada para sus necesidades, y comprender como realizar
+      la instalación en su computadora.</para>
+      
+    <!--REMOVE:<para>This section describes how to get your Subversion repository
       exposed outside its host machine for use by remote clients.  We
       will cover Subversion's currently available server mechanisms,
       discussing the configuration and use of each.  After reading
       this section, you should be able to decide which networking
       setup is right for your needs, and understand how to enable such
-      a setup on your host computer.</para>
+      a setup on your host computer.</para>-->
     
   </simplesect>
   
@@ -27,26 +42,56 @@
   <!-- ================================================================= -->
   <sect1 id="svn-ch-6-sect-1">
     
-    <title>Overview</title>
+    <title>Introducción <!--TODO: Introducción-Visión general--></title>
+    <!--REMOVE:<title>Overview</title>-->
     
-    <para>Subversion was designed with an abstract network layer.
+    <para>Subversion cuenta con un diseño de la capa de red abstracto.<!--TODO: Subversion was designed with an abstract network layer.-->
+      Esto significa que el repositorio puede ser accesido por cualquier
+      clase de proceso de servidor y el API<footnote><para>N.T.: <quote>Interfaz de programación de aplicaciones</quote>. Este acrónimo se considera reconocido internacionalmente motivo por el cuál no será traducido.</para></footnote> de <quote>acceso al repositorio</quote> cliente
+      permite a los programadores escribir componentes que se comuniquen<!--TODO: "...and the client <quote>repository access</quote> API"-->
+      a través de su protocolo de red pertinente. En teoría, Subversion puede
+      lucir <!--TODO: sports = lucir?--> una infinidad de implementaciones de red. En la
+      práctica, sólo existen dos tipos de servidores al momento de escribirse
+      este documento.</para>
+      
+    <!--REMOVE:<para>Subversion was designed with an abstract network layer.
       This means that a repository can be programmatically accessed by
       any sort of server process, and the client <quote>repository
       access</quote> API allows programmers to write plugins that
       speak relevant network protocols.  In theory, Subversion can
       sport an infinite number of network implementations.  In
       practice, there are only two servers at the time of
-      writing.</para>
+      writing.</para>-->
     
-    <para>Apache is an extremely popular webserver; using the
+    <para>Apache es un servidor web extremadamente <!--TODO: altamente-sumamente-extremdamente--> popular; utilizando
+     el módulo <command>mod_dav_svn</command>, Apache puede acceder a
+     un repositorio y hacerlo disponible a los clientes a través del
+     protocolo WebDAV/DeltaV, el cuál es una extensión del HTTP. En la
+     otra esquina se encuentra <command>svnserve</command>: un pequeño programa
+     servidor independiente que se comunica a través de un <!--TODO: Sería mejor si custom = propietario? --> protocolo personalizado con los clientes.
+     La Tabla 6-1 presenta una comparación de ambos tipos de servidores.</para>
+     
+    <!--REMOVE:<para>Apache is an extremely popular webserver; using the
       <command>mod_dav_svn</command> module, Apache can access a
       repository and make it available to clients via the WebDAV/DeltaV
       protocol, which is an extension of HTTP.  In the other corner is
       <command>svnserve</command>: a small, standalone server
       program that speaks a custom protocol with clients.  Table 6-1
-      presents a comparison of the two servers.</para>
+      presents a comparison of the two servers.</para>-->
 
-    <para>Note that Subversion, as an open-source project, does not
+    <para>Observe que Subversion, siendo un proyecto de código abierto, no
+      apoya oficialmente a ningún servidor como opción <quote>primaria</quote>
+      u <quote>oficial</quote>. Ninguna de las implementaciones de red es
+      considerada como un ciudadano de segunda clase; <!--TODO: traducir second-class citizen-->cada servidor
+      posee ventajas y desventajas distintivas. De hecho, es posible ejecutar
+      los diferentes servidores en paralelo, cada uno accediendo a sus
+      repositorios a su modo y sin obstaculizar al otro (ver
+      <xref linkend="svn-ch-6-sect-5"/>). A continuación una breve
+      visión general y comparación de los servidores Subversion
+      disponibles&mdash;es tiempo de que elija la instalación que sea
+      mejor para usted y sus usuarios.</para>
+      
+    <!--REMOVE:<para>Note that Subversion, as an open-source project, does not
       officially endorse any server as <quote>primary</quote> or
       <quote>official</quote>.  Neither network implementation is
       treated as a second-class citizen; each server has distinct
@@ -56,10 +101,92 @@
       other (see <xref linkend="svn-ch-6-sect-5"/>).  Here's a brief
       overview and comparison of the two available Subversion
       servers&mdash;as an administrator, it's up to you to choose
-      whatever works best for you and your users.</para>
+      whatever works best for you and your users.</para>-->
       
-
     <table id="svn-ch-6-table-1">
+      <title>Comparación de tipos de servidores de red</title>
+      <tgroup cols="3">
+        <thead>
+          <row>
+            <entry>Característica</entry>
+            <entry>Apache + mod_dav_svn</entry>
+            <entry>svnserve</entry>
+          </row>
+        </thead>
+        <tbody>
+          <row>
+            <entry>Opciones de autenticación</entry>
+            
+            <entry>Autorización básica HTTP(S), Certificados X.509, LDAP, NTLM, o
+              cualquier otro mecanismo disponible por Apache httpd</entry>
+            
+            <entry>CRAM-MD5 o SSH</entry>
+          </row>
+          
+          <row>
+            <entry>Opciones de cuenta de usuario</entry>
+            
+            <entry>archivo privadado de usuarios 'users'</entry>
+            
+            <entry>archivo privadado de usuarios 'users', o cuentas (SSH)
+              existentes en el sistema</entry>
+          </row>
+          
+          <row>
+            <entry>Opciones de autorización</entry>
+            
+            <entry>acceso general de lectura/escritura,<!--TODO: blanket read/write access--> o control de acceso
+              por directorios</entry>
+            
+            <entry>acceso general de lectura/escritura</entry>
+          </row>
+          
+          <row>
+            <entry>Encriptación</entry>
+            
+            <entry>a través de SSL (opcional)</entry>
+
+            <entry>a través de un túnel SSH (opcional)</entry>
+          </row>
+
+          <row>
+            <entry>Interoperabilidad</entry>
+            
+            <entry>disponible parcialmente por otros clientes WebDAV</entry>
+
+            <entry>no posee interoperabilidad</entry>
+          </row>
+
+          <row>
+            <entry>Ver a través de la web<!--TODO:Web viewing--></entry>
+            
+            <entry>soporte integrado limitado, o a través de herramientas de terceras
+            partes tales como ViewCVS</entry>
+
+            <entry>a través de herramientas de terceras partes tales como ViewCVS</entry>
+          </row>
+
+          <row>
+            <entry>Velocidad</entry>
+            
+            <entry>algo lento</entry>
+
+            <entry>algo rápido</entry>
+          </row>
+
+          <row>
+            <entry>Configuración inicial</entry>
+            
+            <entry>algo compleja</entry>
+
+            <entry>bastante simple</entry>
+          </row>
+
+        </tbody>
+      </tgroup>      
+    </table>
+
+    <!--REMOVE:<table id="svn-ch-6-table-1">
       <title>Network Server Comparison</title>
       <tgroup cols="3">
         <thead>
@@ -140,7 +267,7 @@
 
         </tbody>
       </tgroup>      
-    </table>
+    </table>-->
     
   </sect1>
 
@@ -149,19 +276,38 @@
   <!-- ================================================================= -->
   <sect1 id="svn-ch-6-sect-2">
 
-    <title>Network Model</title>
+    <title>Modelo de red</title>
+    <!--REMOVE:<title>Network Model</title>-->
 
-    <para>This section is a general discussion of how a Subversion
+    <para>En esta sección se debate en términos generales como interactúan
+      el cliente y servidor Subversión entre sí, independientemente de la
+      implementación de red que esté utilizando. A sú término, usted
+      comprenderá como se comporta un servidor y las diferentes
+      formas en que un cliente puede ser configurado para responder.</para>
+    
+    <!--REMOVE:<para>This section is a general discussion of how a Subversion
       client and server interact with one another, regardless of the
       network implementation you're using.  After reading, you'll have
       a good understanding of how a server can behave and the
       different ways in which a client can be configured to
-      respond.</para>
+      respond.</para>-->
 
     <sect2 id="svn-ch-6-sect-2.1">
-      <title>Requests and Responses</title>
+      <title>Solicitudes y Respuestas</title>
+      <!--REMOVE:<title>Requests and Responses</title>-->
 
-      <para>The Subversion client spends most of its time managing
+      <para>El cliente Subversion insume la mayor parte de su tiempo
+        manejando copias de trabajo. No obstante, cuando necesita
+        informacion del repositorio efectúa una solicitud a través de
+        la red, y el servidor responde apropiadamente. Los detalles del
+        protocolo de red son ocultados por el usuario; el cliente<!--TODO: "The details of the network protocol are hidden from the user" son ocultados por el usuario o son ocultados al usuario?-->
+        intenta acceder a una URL, y dependiendo del esquema URL,
+        utiliza un protocolo particular para contactar al servidor
+        (ver <xref linkend="svn-ch-2-sidebar-1"/>). Los usuarios pueden
+        ejecutar <command>svn --version</command> para ver que esquemas
+        URL y protocolos que comprende el cliente.</para>
+        
+      <!--REMOVE:<para>The Subversion client spends most of its time managing
         working copies.  When it needs information from a repository,
         however, it makes a network request, and the server responds
         with an appropriate answer.  The details of the network
@@ -169,10 +315,27 @@
         access a URL, and depending on the URL schema, a particular
         protocol is used to contact the server (see <xref
         linkend="svn-ch-2-sidebar-1"/>).  Users can run <command>svn
-        --version</command> to see which URL schemas and protocols the
-        client knows how to use.</para>
+        -version</command> to see which URL schemas and protocols the
+        client knows how to use.</para>-->
 
-      <para>When the server process receives a client request, it
+      <para>Cuando el proceso del servidor recibe una solicitud
+        del cliente, típicamente demanda que el cliente se
+        identifique. Este solicita la autenticación al cliente <!--TODO: "It issues an authentication challenge to the cliente"-->,
+        y el cliente responde proporcionando las <firstterm>credenciales</firstterm> al servidor.
+        Una vez completado ésto,<!--TODO: "Once authentication is complete"--> el servidor responde con
+        la información que el cliente solicitó originalmente. Observe
+        que este método se diferencia de sistemas como CVS, dónde el
+        cliente por cuenta propia <!--TODO: apropiada? "pre-emptively" no sé que significa?-->ofrece las
+        credenciales (<quote>de acceso al sistema</quote>), antes de realizar 
+        una solicitud. En Subversion, el servidor <quote>exige tomar</quote><!-- TODO: pulls? --> las credenciales
+        a través de la negociación con el cliente en el momento apropiado,
+        en lugar de que el cliente las <quote>impulse</quote><!--TODO: pushing?-->.
+        Esto asegura<!--TODO: "This makes certain"--> operaciones más elegantes. Por ejemplo,
+        si se configura un servidor para que permita acceso de lectura
+        al repositorio a todo el mundo, nunca demandará a un cliente
+        que se autentique cuando intente realizar un <command>svn checkout</command>.</para>
+        
+      <!--REMOVE:<para>When the server process receives a client request, it
         typically demands that the client identify itself.  It issues
         an authentication challenge to the client, and the client
         responds by providing <firstterm>credentials</firstterm> back
@@ -188,9 +351,21 @@
         configured to allow anyone in the world to read a repository,
         then the server will never issue an authentication challenge
         when a client attempts to <command>svn
-        checkout</command>.</para>
+        checkout</command>.</para>-->
 
-      <para>If the client's network request writes new data to the
+      <para>Si la solicitud de red del cliente escribe datos nuevos
+        en el repositorio (ej: <command>svn commit</command>), un nuevo
+        árbol de revisión es creado. Si la solicitud del cliente fue
+        autenticada, el nombre de usuario es guardado como valor de la
+        propiedad <literal>svn:author</literal> en la nueva revisión
+        (ver <xref linkend="svn-ch-5-sect-1.2"/>). Si el cliente no
+        fue autenticado (en otras palabras, si el servidor nunca
+        promulgó la autenticación), la propiedad <literal>svn:author</literal>
+        de la revisión está en blanco.<footnote><para>Este problema es actualmente
+        una FAQ, está asociado a la mala configuración de la
+        instalación.</para></footnote></para>
+    
+      <!--REMOVE:<para>If the client's network request writes new data to the
         repository (e.g. <command>svn commit</command>), then a new
         revision tree is created.  If the client's request was
         authenticated, then the authenticated user's name is stored as
@@ -200,16 +375,21 @@
         never issued an authentication challenge), then the revision's
         <literal>svn:author</literal> property is empty.
         <footnote><para>This problem is actually a FAQ, resulting from
-        a misconfigured server setup.</para></footnote></para>
+        a misconfigured server setup.</para></footnote></para>-->
 
     </sect2>
 
     <sect2 id="svn-ch-6-sect-2.2">
       <title>Client Credentials Caching</title>
 
-      <para>Many servers are configured to require authentication on
+      <para>Muchos servidores son configurados para requerir
+        autenticación por cada solicitud que reciban. Esto puede
+        convertirse en una gran molestia para los usuarios, quienes son
+        forzados a escribir sus claves una y otra vez.</para>
+        
+      <!--REMOVE:<para>Many servers are configured to require authentication on
         every request.  This can become a big annoyance to users, who
-        are forced to type their passwords over and over again.</para>
+        are forced to type their passwords over and over again.</para>-->
 
       <para>Happily, the Subversion client has a remedy for this: a
         built-in system for caching authentication credentials on
@@ -271,14 +451,25 @@ Username:  joe
 store-auth-creds = no
 </screen>
 
-      <para>Sometimes users will want to remove specific credentials
+      <para>Algunas veces los usuario desearán eliminar credenciales
+        específicas del "caché" de disco.<!--TODO: disk cache?--> Para hacer esto, necesitará
+        navegar dentro del área <filename>auth/</filename> y eliminar manualmente
+        el archivo de "caché" apropiado<!--TODO: cache?-->. Las crendenciales
+        son almacenadas en el área de "caché" en archivos individuales; si
+        usted mira dentro de cada archivo, verá claves y valores. La clave
+        <literal>svn:realmstreng</literal> describe el "realm"<!--TODO: realm?--> servidor
+        particular que el archivo es asociado mediante:<!--TODO: "...key describes
+        the particular server realm that the file is associated
+        with:"--></para>
+        
+      <!--REMOVE:<para>Sometimes users will want to remove specific credentials
         from the disk cache.  To do this, you need to navigate into
         the <filename>auth/</filename> area and manually delete the
         appropriate cache file.  Credentials are cached in individual
         files;  if you look inside each file, you will see keys and
         values.  The <literal>svn:realmstring</literal> key describes
         the particular server realm that the file is associated
-        with:</para>
+        with:</para>-->
 
 <screen>
 $ ls ~/.subversion/auth/svn.simple/
