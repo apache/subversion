@@ -318,6 +318,35 @@ def export_native_eol_option(sbox):
                                         None, None, None, None,
                                         '--native-eol','CR')
 
+def export_nonexistant_file(sbox):
+  "export nonexistant file"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  kappa_path = os.path.join(wc_dir, 'kappa')
+
+  export_target = sbox.add_wc_path('export')
+
+  svntest.actions.run_and_verify_svn("No error where one is expected",
+                                     None, svntest.SVNAnyOutput,
+                                     'export', kappa_path, export_target)
+
+def export_unversioned_file(sbox):
+  "export unversioned file"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  kappa_path = os.path.join(wc_dir, 'kappa')
+  svntest.main.file_append(kappa_path, "This is the file 'kappa'.")
+
+  export_target = sbox.add_wc_path('export')
+
+  svntest.actions.run_and_verify_svn("No error where one is expected",
+                                     None, svntest.SVNAnyOutput,
+                                     'export', kappa_path, export_target)
+
 ########################################################################
 # Run the tests
 
@@ -334,7 +363,9 @@ test_list = [ None,
               export_working_copy_with_keyword_translation,
               export_working_copy_with_property_mods,
               export_working_copy_at_base_revision,
-              export_native_eol_option
+              export_native_eol_option,
+              export_nonexistant_file,
+              export_unversioned_file
              ]
 
 if __name__ == '__main__':
