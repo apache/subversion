@@ -34,6 +34,12 @@
 
 /*** Code. ***/
 
+/* Attempt to revert PATH, recursively if RECURSIVE is true and PATH
+   is a directory, else non-recursively.  Consult CTX to determine
+   whether or not to revert timestamp to the time of last commit
+   ('use-commit-times = yes').  Use POOL for temporary allocation.
+
+   If PATH is unversioned, return SVN_ERR_UNVERSIONED_RESOURCE. */
 static svn_error_t *
 revert (const char *path,
         svn_boolean_t recursive,
@@ -44,6 +50,7 @@ revert (const char *path,
   svn_boolean_t use_commit_times;
   const char *target;
   svn_config_t *cfg;
+  svn_error_t *err;
 
   cfg = ctx->config ? apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,  
                                     APR_HASH_KEY_STRING) : NULL;
@@ -56,14 +63,22 @@ revert (const char *path,
   SVN_ERR (svn_wc_adm_open_anchor (&adm_access, &target_access, &target, path,
                                    TRUE, recursive ? -1 : 0, pool));
 
-  SVN_ERR (svn_wc_revert (path, adm_access, recursive, use_commit_times,
-                          ctx->cancel_func, ctx->cancel_baton,
-                          ctx->notify_func, ctx->notify_baton,
-                          pool));
+  err = svn_wc_revert (path, adm_access, recursive, use_commit_times,
+                       ctx->cancel_func, ctx->cancel_baton,
+                       ctx->notify_func, ctx->notify_baton,
+                       pool);
+
+  /* If no error, or SVN_ERR_UNVERSIONED_RESOURCE error, then we want
+     to close up before returning.  For any other kind of error, we
+     want to leave things exactly as they were when the error
+     occurred. */
+
+  if (err && err->apr_err != SVN_ERR_UNVERSIONED_RESOURCE)
+    return err;
 
   SVN_ERR (svn_wc_adm_close (adm_access));
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 
@@ -91,7 +106,8 @@ svn_client_revert (const apr_array_header_t *paths,
         {
           /* If one of the targets isn't versioned, just send a 'skip'
              notification and move on. */
-          if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+          if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND
+              || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
             {
               if (ctx->notify_func)
                 (*ctx->notify_func) (ctx->notify_baton, path,

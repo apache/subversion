@@ -2304,6 +2304,9 @@ svn_wc_relocate (const char *path,
  * For each item reverted, @a notify_func will be called with @a notify_baton
  * and the path of the reverted item. @a notify_func may be @c NULL if this
  * notification is not needed.
+ *
+ * If @a path is not under version control, return the error
+ * SVN_ERR_UNVERSIONED_RESOURCE.
  */
 svn_error_t *
 svn_wc_revert (const char *path, 
