@@ -624,6 +624,42 @@ def build_tree_from_status(lines):
 
   root = SVNTreeNode(root_node_name)
     
+  # 'status -v' output looks like this:
+  #
+  #      "%c%c%c%c%c%c %c   %6s   %6s %-12s %s\n"
+  #
+  # (Taken from 'print_status' in subversion/clients/cmdline/status.c.)
+  #
+  # Here are the parameters.  The middle number in parens is the
+  # match.group(), followed by a brief description of the field:
+  #
+  #    - text status           (1)  (single letter)
+  #    - prop status           (1)  (single letter)
+  #    - wc-lockedness flag    (2)  (single letter: "L" or " ")
+  #    - copied flag           (3)  (single letter: "+" or " ")
+  #    - switched flag         (4)  (single letter: "S" or " ")
+  #    - repos lock status     (5)  (single letter: "K", "O", "B", "T", " ")
+  #
+  #    [one space]
+  #
+  #    - out-of-date flag      (-)  (single letter: "*" or " ")
+  #
+  #    [three spaces]
+  #
+  #    - working revision      (6)  (either digits or "-")
+  #
+  #    [one space]
+  #
+  #    - last-changed revision (7)  (either digits or "?")
+  #
+  #    [one space]
+  #
+  #    - last author           (7)  (string of non-whitespace characters)
+  #
+  #    [one space]
+  #
+  #    - path                  (8)  (string of characters until newline)
+
   # Try http://www.wordsmith.org/anagram/anagram.cgi?anagram=ACDRMGU
   rm = re.compile ('^([!MACDRUG_ ][MACDRUG_ ])(.)(.)(.)([KOBT ]) .   [^0-9-]+(\d+|-)( +\S+ +\S+ +)(.+)')
   for line in lines:
