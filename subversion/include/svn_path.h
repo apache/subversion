@@ -31,6 +31,8 @@ extern "C" {
 
 
 /*** Notes:
+ *
+ * All incoming and outgoing paths are in UTF-8.
  * 
  * No result path ever ends with a separator, no matter whether the
  * path is a file or directory, because we always canonicalize() it.
