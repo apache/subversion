@@ -1193,7 +1193,7 @@ svn_io_run_diff (const char *dir,
 
   assert (i == nargs);
 
-  SVN_ERR (svn_io_run_cmd (dir, diff_utf8, args, pexitcode, NULL, FALSE, 
+  SVN_ERR (svn_io_run_cmd (dir, diff_utf8, args, pexitcode, NULL, TRUE, 
                            NULL, outfile, errfile, subpool));
 
   /* The man page for (GNU) diff describes the return value as:
