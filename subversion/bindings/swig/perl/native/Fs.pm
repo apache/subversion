@@ -12,7 +12,7 @@ SVN::Fs - Subversion filesystem functions
 
 SVN::Fs wraps the functions in svn_fs.h.
 
-=head2 METHODS
+=head1 METHODS
 
 Please consult the svn_fs.h section in the Subversion API.
 
