@@ -52,7 +52,7 @@ get_creds (const char **username,
            apr_pool_t *pool)
 {
   svn_error_t *err1 = NULL, *err2 = NULL;
-  svn_stringbuf_t *susername, *spassword;
+  svn_stringbuf_t *susername = NULL, *spassword = NULL;
   const char *def_username = apr_hash_get (parameters, 
                                            SVN_AUTH_PARAM_DEFAULT_USERNAME,
                                            APR_HASH_KEY_STRING);
