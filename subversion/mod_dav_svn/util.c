@@ -13,6 +13,7 @@
  */
 
 #include <apr_xml.h>
+#include <apr_uri.h>
 #include <mod_dav.h>
 
 #include "svn_error.h"
@@ -86,14 +87,14 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
                                       const char *uri,
                                       apr_pool_t *pool)
 {
-  uri_components comp;
+  apr_uri_components comp;
   char *path;
   apr_size_t len1;
   apr_size_t len2;
   const char *slash;
 
   /* parse the input URI, in case it is more than just a path */
-  if (ap_parse_uri_components(pool, uri, &comp) != HTTP_OK)
+  if (apr_uri_parse_components(pool, uri, &comp) != HTTP_OK)
     goto malformed_uri;
 
   /* ### ignore all URI parts but the path (for now) */
