@@ -129,10 +129,12 @@ VERSION := $(PRE)$(SVN_VERSION_MAJOR).$(SVN_VERSION_MINOR).$(SVN_VERSION_MICRO)
 # The relase depends on whether this is a blessed copy or not
 # If this is a blessed copy, the release is what's defined
 # If this is not a blessed copy, the release is what's found
+# If subversion is not installed, RELEASE can be specified on
+# the command line
 ifneq ($(BLESSED),)
 RELEASE := $(BLESSED)
 else
-RELEASE := $(if $(SVNEXEC),$(shell $(SVNEXEC) st -v $(SPECFILE) | cut -b 10- | ( read one two ; echo $$one ) ),1)
+RELEASE := $(if $(SVNEXEC),$(shell $(SVNEXEC) st -v $(SPECFILE) | cut -b 10- | ( read one two ; echo $$one ) ),)
 endif
 
 # Default values
@@ -307,6 +309,12 @@ all_silent :
 subversion rpm : check_release build_sources build_rpm_files
 
 check_release : $(RPMBITS)
+	@if [ "$(RELEASE)"x = "x" ] ; then \
+	  echo "Subversion not installed or this is not a blessed version." ; \
+	  echo "Try 'make RELEASE=XXXX' instead"; exit 1 ; \
+	else  \
+	  exit 0 ;  \
+	fi
 	@echo "Making $(SHORTNAME)mdk (S)RPM..."
 
 build_rpm_files : build_sources $(BUILDROOT)
