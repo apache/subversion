@@ -91,6 +91,9 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_DEFAULT_GLOBAL_IGNORES \
    "*.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#* .DS_Store"
 
+#define SVN_CONFIG_TRUE  "true"
+#define SVN_CONFIG_FALSE "false"
+
 
 /** Read configuration information from the standard sources and merge it
  * into the hash @a *cfg_hash.  If @a config_dir is not NULL it specifies a
@@ -157,6 +160,24 @@ void svn_config_get (svn_config_t *cfg, const char **valuep,
 void svn_config_set (svn_config_t *cfg,
                      const char *section, const char *option,
                      const char *value);
+
+/** Like @t svn_config_get, but for boolean values.
+ *
+ * Parses the option as a boolean value. The recoginzed representations
+ * are 'true'/'false', 'yes'/'no', 'on'/'off'; case does not matter.
+ * Returns an error ### if the option doesn't contain a known string.
+ */
+svn_error_t *svn_config_get_bool (svn_config_t *cfg, svn_boolean_t *valuep,
+                                  const char *section, const char *option,
+                                  svn_boolean_t default_value);
+
+/** Like @t svn_config_set, but for boolean values.
+ *
+ * Sets the option to 'true'/'false', depending on @a value.
+ */
+void svn_config_set_bool (svn_config_t *cfg,
+                          const char *section, const char *option,
+                          svn_boolean_t value);
 
 
 /** A callback function used in enumerating config options.
