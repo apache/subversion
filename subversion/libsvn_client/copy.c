@@ -23,6 +23,7 @@
 /*** Includes. ***/
 
 #include <string.h>
+#include <assert.h>
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
@@ -37,6 +38,7 @@
 /*
  * if (not exist src_path)
  *   return ERR_BAD_SRC error
+ *
  * if (exist dst_path)
  *   {
  *     if (dst_path is directory)
@@ -45,12 +47,8 @@
  *       return ERR_OBSTRUCTION error
  *   }
  * else
- *   {
- *     if (not exist parent_of_dst_path)
- *       return ERR_BAD_DST error
- *     else
- *       copy src_path into parent_of_dst_path as basename (dst_path)
- *   }
+ *   copy src_path into parent_of_dst_path as basename (dst_path)
+ *
  * if (this is a move)
  *   delete src_path
  */
@@ -110,10 +108,9 @@ repos_to_repos_copy (svn_stringbuf_t *src_url,
                      svn_boolean_t is_move,
                      apr_pool_t *pool)
 {
-#if 0
   void *root_baton;
-  svn_stringbuf_t *final_parent, *final_basename;
-
+  svn_revnum_t youngest;
+  svn_stringbuf_t *basename, *unused;
   svn_stringbuf_t *top_url, *src_rel, *dst_rel;
   void *ra_baton, *sess, *cb_baton;
   svn_ra_plugin_t *ra_lib;
@@ -121,6 +118,11 @@ repos_to_repos_copy (svn_stringbuf_t *src_url,
   svn_node_kind_t src_kind, dst_kind;
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
+  apr_array_header_t *src_pieces, *dst_pieces;
+  svn_stringbuf_t *piece;
+  int i = 0;
+  void **batons;
+  void *baton;
 
   /* We have to open our session to the longest path common to both
      SRC_URL and DST_URL in the repository so we can do existence
@@ -128,8 +130,39 @@ repos_to_repos_copy (svn_stringbuf_t *src_url,
      case of a move. */
   top_url = svn_path_get_longest_ancestor (src_url, dst_url,
                                            svn_path_url_style, pool);
+
+  /* Get the portions of the SRC and DST URLs that are relative to
+     TOP_URL. */
   src_rel = svn_path_is_child (top_url, src_url, svn_path_local_style, pool);
+  if (src_rel)
+    {
+      src_pieces = svn_path_decompose (src_rel, svn_path_url_style, pool);
+      if ((! src_pieces) || (! src_pieces->nelts))
+        return svn_error_createf 
+          (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
+           "error decomposing relative path `%s'", src_rel->data);
+    }
+
   dst_rel = svn_path_is_child (top_url, dst_url, svn_path_local_style, pool);
+  if (dst_rel)
+    {
+      dst_pieces = svn_path_decompose (dst_rel, svn_path_url_style, pool);
+      if ((! dst_pieces) || (! dst_pieces->nelts))
+        return svn_error_createf 
+          (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
+           "error decomposing relative path `%s'", dst_rel->data);
+    }
+
+  /* Allocate room for the root baton, the pieces of the
+     source's or destination's path, and the destination itself. */
+  {
+    int num, num2;
+    num = src_pieces ? src_pieces->nelts : 0;
+    if (((num2 = (dst_pieces ? dst_pieces->nelts : 0))) > num)
+      num = num2;
+
+    batons = apr_palloc (pool, sizeof (void *) * (num + 2));
+  }
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -139,35 +172,110 @@ repos_to_repos_copy (svn_stringbuf_t *src_url,
   SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton, auth_baton, 
                                          top_url, TRUE, TRUE, pool));
   SVN_ERR (ra_lib->open (&sess, top_url, ra_callbacks, cb_baton, pool));
-      
+  SVN_ERR (ra_lib->get_latest_revnum (sess, &youngest));
+
+  /* Use YOUNGEST for copyfrom args if not provided. */
+  if (! SVN_IS_VALID_REVNUM (src_rev))
+    src_rev = youngest;
+
   /* Verify that SRC_URL exists in the repository. */
-  SVN_ERR (ra_lib->check_path (&src_kind, sess, src_rel, src_rev));
-  if ((src_kind != svn_node_dir) && (src_kind != svn_node_file))
+  SVN_ERR (ra_lib->check_path (&src_kind, sess, src_rel->data, src_rev));
+  if (src_kind == svn_node_none)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
        "path `%s' does not exist in revision `%ld'", src_url->data, src_rev);
 
-  /* Make sure that DST_URL doesn't already exist as a file in
-     the repository. */
-  SVN_ERR (ra_lib->check_path (&dst_kind, sess, dst_rel, SVN_INVALID_REVNUM));
-  if (dst_kind == svn_node_file)
+  /* Figure out the basename that will result from this operation. */
+  SVN_ERR (ra_lib->check_path (&dst_kind, sess, dst_rel->data, youngest));
+  if (dst_kind == svn_node_none)
+    {
+      svn_path_split (dst_url, &unused, &basename, svn_path_local_style, pool);
+      dst_pieces->nelts--; /* hack - where's apr_array_pop()? */
+    }
+  else if (dst_kind == svn_node_dir)
+    svn_path_split (src_url, &unused, &basename, svn_path_local_style, pool);
+  else
     return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL, pool,
                               "file `%s' already exists.", dst_url->data);
 
-  /* ### todo:  What should happen below here?
+  /* Fetch RA commit editor, giving it svn_wc_set_revision(). */
+  SVN_ERR (ra_lib->get_commit_editor
+           (sess, &editor, &edit_baton, message, NULL, NULL, NULL, NULL));
 
-     1.  Get a commit editor, anchored above SRC and DST
-     2.  open-dir() down DST (inclusive, if DST is a directory)
-     3.  add-file/dir(copyfrom=src,rev) either
-         - basename(DST) if DST doesn't exist, or 
-         - basename(SRC) if DST does exist as a dir
-     4.  close up all those batons and stuffs
-     5.  if this is a move, open-dir() back down to SRC's parent,
-         then delete_entry(basename(SRC)), and close up batons again.
-  */
+  /* Drive that editor, baby! */
+  SVN_ERR (editor->open_root (edit_baton, youngest, &root_baton));
 
-#endif  /* 0 */
-  abort();
+  /* Stuff the root baton here for convenience. */
+  batons[i] = root_baton;
+
+  /* Open directories down to the place where we need to make our
+     copy. */
+  if (dst_pieces && dst_pieces->nelts)
+    {
+      /* open_directory() all the way down to DST's parent. */
+      while (i < dst_pieces->nelts)
+        {
+          piece = (((svn_stringbuf_t **)(dst_pieces)->elts)[i]);
+          SVN_ERR (editor->open_directory (piece, batons[i], 
+                                           youngest, &(batons[i + 1])));
+          i++;
+        }
+    }
+  /* Add our file/dir with copyfrom history. */
+  if (src_kind == svn_node_dir)
+    {
+      SVN_ERR (editor->add_directory (basename, batons[i], src_url,
+                                      src_rev, &baton));
+      SVN_ERR (editor->close_directory (baton));
+    }
+  else
+    {
+      SVN_ERR (editor->add_file (basename, batons[i], src_url,
+                                 src_rev, &baton));
+      SVN_ERR (editor->close_file (baton));
+    }
+
+  /* Now, close up all those batons (except the root
+     baton). */
+  while (i)
+    {
+      SVN_ERR (editor->close_directory (batons[i]));
+      batons[i--] = NULL;
+    }
+
+  /* If this was a move, we need to remove the SRC_URL. */
+  if (is_move)
+    {
+      /* If SRC_PIECES is NULL, we're trying to move a directory into
+         itself (or one of its chidren...we should have caught that by
+         now). */
+      assert (src_pieces != NULL);
+
+      /* open_directory() all the way down to SRC's parent. */
+      while (i < (src_pieces->nelts - 1))
+        {
+          piece = (((svn_stringbuf_t **)(src_pieces)->elts)[i]);
+          SVN_ERR (editor->open_directory (piece, batons[i],
+                                           youngest, &(batons[i + 1])));
+          i++;
+        }
+          
+      /* Delete SRC. */
+      piece = (((svn_stringbuf_t **)(src_pieces)->elts)[i]);
+      SVN_ERR (editor->delete_entry (piece, batons[i]));
+
+      /* Now, close up all those batons (except the root
+         baton). */
+      while (i)
+        {
+          SVN_ERR (editor->close_directory (batons[i--]));
+        }
+    }
+
+  /* Turn off the lights, close up the shop, and go home. */
+  SVN_ERR (editor->close_directory (batons[0]));
+  SVN_ERR (editor->close_edit (edit_baton));
+
   return SVN_NO_ERROR;
 }
 
@@ -240,24 +348,53 @@ setup_copy (svn_stringbuf_t *src_path,
   dst_is_url = svn_path_is_url (&path_str);
 
   /* Disallow moves between the working copy and the repository. */
-  if (is_move && (src_is_url != dst_is_url))
-    return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
-                             "no support for repos <--> working copy moves");
+  if (is_move)
+    {
+      if (SVN_IS_VALID_REVNUM (src_rev))
+        return svn_error_create 
+          (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+           "move operations are only allowed on the HEAD revision");
+
+      if (src_is_url == dst_is_url)
+        {
+          if (svn_path_is_child (dst_path, src_path, svn_path_url_style, pool))
+            return svn_error_createf
+              (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+               "cannot move path '%s' into its own child '%s'",
+               src_path->data, dst_path->data);
+        }
+      else
+        {
+          return svn_error_create 
+            (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+             "no support for repos <--> working copy moves");
+        }
+    }
+
+  /* Make sure our log_msg is non-NULL. */
+  if (! message)
+    message = svn_stringbuf_create ("", pool);
 
   /* Now, call the right handler for the operation. */
   if ((! src_is_url) && (! dst_is_url))
-    SVN_ERR (wc_to_wc_copy (src_path, dst_path, is_move, pool));
-
+    {
+      SVN_ERR (wc_to_wc_copy (src_path, dst_path, is_move, pool));
+    }
   else if ((! src_is_url) && (dst_is_url))
-    SVN_ERR (wc_to_repos_copy (src_path, dst_path, auth_baton, message, pool));
-
+    {
+      SVN_ERR (wc_to_repos_copy (src_path, dst_path, 
+                                 auth_baton, message, pool));
+    }
   else if ((src_is_url) && (! dst_is_url))
-    SVN_ERR (repos_to_wc_copy (src_path, src_rev, dst_path, auth_baton,
-                               message, pool));
-
+    {
+      SVN_ERR (repos_to_wc_copy (src_path, src_rev, dst_path, auth_baton,
+                                 message, pool));
+    }
   else
-    SVN_ERR (repos_to_repos_copy (src_path, src_rev, dst_path, auth_baton,
-                                  message, is_move, pool));
+    {
+      SVN_ERR (repos_to_repos_copy (src_path, src_rev, dst_path, auth_baton,
+                                    message, is_move, pool));
+    }
 
   return SVN_NO_ERROR;
 }
