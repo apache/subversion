@@ -72,14 +72,26 @@ typedef apr_int32_t time_t;
    to handle that.
 */
 
-%apply long long { apr_time_t };
+#if APR_INT64_T_FMT == "lld"
+
+    %apply long long { apr_time_t };
+
+    %typemap(python,argout,fragment="t_output_helper") apr_time_t *
+        "$result = t_output_helper($result, PyLong_FromLongLong(*$1));";
+
+#elif APR_INT64_T_FMT = "ld"
+
+    %apply long { apr_time_t };
+
+    %typemap(python,argout,fragment="t_output_helper") apr_time_t *
+        "$result = t_output_helper($result, PyLong_FromLong(*$1));";
+
+#endif
 
 /* 'apr_time_t *' will always be an OUTPUT parameter */
 %typemap(in,numinputs=0) apr_time_t * (apr_time_t temp)
     "$1 = &temp;";
 
-%typemap(python,argout,fragment="t_output_helper") apr_time_t *
-    "$result = t_output_helper($result, PyLong_FromLongLong(*$1));";
 
 %typemap(java,argout) apr_time_t * {
 	/* FIXME: What goes here? */
