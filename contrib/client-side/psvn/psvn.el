@@ -275,9 +275,11 @@ See `svn-status--line-info->directory-p' for what counts as a directory."
     ;; put (require 'cl) at the top but let's try to manage without.
     (add-text-properties 0 (length str)
                          `(face ,face
-                           ,@(when keymap
-                               `(mouse-face highlight
-                                 local-map ,keymap)))
+                                mouse-face highlight)
+;; 18.10.2004: the keymap parameter is not used (yet) in psvn.el
+;;                           ,@(when keymap
+;;                               `(mouse-face highlight
+;;                                 local-map ,keymap)))
                          str))
   str)
 
