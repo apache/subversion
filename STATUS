@@ -90,13 +90,6 @@ Candidate changes:
     Votes:
       +1: sussman
 
-  * r8539, r8540
-    Fix shebang line in three Perl scripts in tools.
-    Justification:  They won't run at all!
-    Notes: 
-    Votes:
-      +1: sussman, blair, dlr
-
   * r8564
     Adjust contrib/client-side/search-svnlog.pl for new 'svn log' output.
     Justification: script is broken without this obvious fix
