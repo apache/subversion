@@ -208,11 +208,12 @@ diff_props_changed (const char *path,
                                  &entry_props, &wc_props, &regular_props,
                                  subpool));
 
-  SVN_ERR (display_prop_diffs (regular_props,
-                               original_props,
-                               path,
-                               diff_cmd_baton->outfile,
-                               subpool));
+  if (regular_props->nelts > 0)
+    SVN_ERR (display_prop_diffs (regular_props,
+                                 original_props,
+                                 path,
+                                 diff_cmd_baton->outfile,
+                                 subpool));
 
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
