@@ -44,7 +44,7 @@ int main(int argc, char **argv)
 
   /* Call the function */
   err = svn_path_condense_targets(&common_path, &condensed_targets,
-                                  targets, pool);
+                                  targets, svn_path_local_style, pool);
   if (err != SVN_NO_ERROR)
     svn_handle_error(err, stderr, 1);
 
@@ -62,7 +62,8 @@ int main(int argc, char **argv)
   printf ("\n");
 
   /* Now ensure it works without the pbasename */
-  err = svn_path_condense_targets(&common_path2, NULL, targets, pool);
+  err = svn_path_condense_targets(&common_path2, NULL, targets,
+                                  svn_path_local_style, pool);
   if (err != SVN_NO_ERROR)
     svn_handle_error(err, stderr, 1);
 

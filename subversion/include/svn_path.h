@@ -124,6 +124,7 @@ int svn_path_compare_paths (const svn_string_t *path1,
    there's no common ancestor, return NULL.  */
 svn_string_t *svn_path_get_longest_ancestor (const svn_string_t *path1,
                                              const svn_string_t *path2,
+                                             enum svn_path_style style,
                                              apr_pool_t *pool);
 
 /* Convert RELATIVE path to an absolute path and return the results in
@@ -179,6 +180,7 @@ svn_error_t *
 svn_path_condense_targets (svn_string_t **pbasename,
                            apr_array_header_t **pcondensed_targets,
                            const apr_array_header_t *targets,
+                           enum svn_path_style style,
                            apr_pool_t *pool);
 
 
@@ -222,6 +224,7 @@ svn_path_condense_targets (svn_string_t **pbasename,
 svn_error_t *
 svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
                               const apr_array_header_t *targets,
+                              enum svn_path_style style,
                               apr_pool_t *pool);
 
 
@@ -241,6 +244,7 @@ apr_array_header_t *svn_path_decompose (const svn_string_t *path,
    appended to PATH1, yields PATH2 -- minus the dirseparator. ) */
 svn_string_t * svn_path_is_child (const svn_string_t *path1,
                                   const svn_string_t *path2,
+                                  enum svn_path_style style,
                                   apr_pool_t *pool);
 
 

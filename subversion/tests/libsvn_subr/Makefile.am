@@ -1,9 +1,10 @@
 ## Makefile.in is generated from this by automake.
 
-noinst_PROGRAMS = hashdump-test stringtest target-test
+noinst_PROGRAMS = hashdump-test stringtest target-test path-test
 hashdump_test_SOURCES = hashdump-test.c
 stringtest_SOURCES = stringtest.c
 target_test_SOURCES = target-test.c
+path_test_SOURCES = path-test.c
 
 ## Flags needed when compiling:
 INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@
@@ -35,13 +36,18 @@ endif
 
 target_test_LDADD = @SVN_LIBSVN_SUBR_LIBS@ @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
 
+path_test_LDADD = @SVN_TESTS_MAIN_LIBS@ \
+                  @SVN_LIBSVN_SUBR_LIBS@ \
+                  @SVN_APR_LIBS@ \
+                  @SVN_EXPAT_LIBS@
+
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent
 
 ## Automatic tests run by `make check` -----------------------------
 
 ## A list of test-programs to run.  (Each program contains sub-tests.)
-SVN_TESTS = stringtest hashdump-test $(srcdir)/target-test.sh
+SVN_TESTS = stringtest hashdump-test $(srcdir)/target-test.sh path-test
 
 ## Give the shell script along with the distribution
 EXTRA_DIST = target-test.sh

@@ -132,7 +132,8 @@ main (int argc, char *argv[])
     apr_array_header_t *condensed_targets;
     
     err = svn_path_condense_targets (&rootdir, &condensed_targets,
-                                     targets, globalpool);
+                                     targets, svn_path_local_style,
+                                     globalpool);
     if (err)
       goto handle_error;
 

@@ -232,25 +232,43 @@ svn_path_compare_paths (const svn_string_t *path1,
 svn_string_t *
 svn_path_get_longest_ancestor (const svn_string_t *path1,
                                const svn_string_t *path2,
+                               enum svn_path_style style,
                                apr_pool_t *pool)
 {
   svn_string_t *common_path;
+  char dirsep = get_separator_from_style (style);
   int i = 0;
+  int last_dirsep = 0;
 
+  /* If either string is NULL or empty, we must go no further. */
+  
   if ((! path1) || (! path2)
       || (svn_string_isempty (path1)) || (svn_string_isempty (path2)))
     return NULL;
   
   while (path1->data[i] == path2->data[i])
     {
+      /* Keep track of the last directory separator we hit. */
+      if (path1->data[i] == dirsep)
+        last_dirsep = i;
+
+      i++;
+
+      /* If we get to the end of either path, break out. */
       if ((i == path1->len) || (i == path2->len))
         break;
-      i++;
     }
 
-  /* i is now the offset of the first _non_-matching byte. */
-  common_path = svn_string_ncreate (path1->data, i, pool);  
-
+  /* last_dirsep is now the offset of the last directory separator we
+     crossed before reaching a non-matching byte.  i is the offset of
+     that non-matching byte. */
+  if (((i == path1->len) && (path2->data[i] == dirsep)) 
+      || ((i == path2->len) && (path1->data[i] == dirsep))
+      || ((i == path1->len) && (i == path2->len)))
+    common_path = svn_string_ncreate (path1->data, i, pool);
+  else
+    common_path = svn_string_ncreate (path1->data, last_dirsep, pool);
+    
   svn_path_canonicalize (common_path, svn_path_local_style);
 
   return common_path;
@@ -265,10 +283,12 @@ svn_path_get_longest_ancestor (const svn_string_t *path1,
 svn_string_t *
 svn_path_is_child (const svn_string_t *path1,
                    const svn_string_t *path2,
+                   enum svn_path_style style,
                    apr_pool_t *pool)
 {
+  char dirsep = get_separator_from_style (style);
   int i = 0;
-
+      
   /* If either path is empty, return NULL. */
   if ((! path1) || (! path2)
       || (svn_string_isempty (path1)) || (svn_string_isempty (path2)))
@@ -278,15 +298,33 @@ svn_path_is_child (const svn_string_t *path1,
   if (path2->len <= path1->len)
     return NULL;
 
-  while (path1->data[i] == path2->data[i])
+  /* Run through path1, and if it ever differs from path2, return
+     NULL. */
+  while (i < path1->len)
     {
-      if ((i == path1->len))
-        break;
+      if (path1->data[i] != path2->data[i])
+        return NULL;
+
       i++;
     }
-  
-  i++;
-  return svn_string_ncreate (path2->data + i, (path2->len - i), pool);
+
+  /* If we get all the way to the end of path1 with the contents the
+     same as in path2, and either path1 ends in a directory separator,
+     or path2's next character is a directory separator followed by
+     more pathy stuff, then path2 is a child of path1. */
+  if (i == path1->len)
+    {
+      if (path1->data[i - 1] == dirsep)
+        return svn_string_ncreate (path2->data + i, 
+                                   path2->len - i, 
+                                   pool);
+      else if (path2->data[i] == dirsep)
+        return svn_string_ncreate (path2->data + i + 1,
+                                   path2->len - i - 1,
+                                   pool);
+    }
+
+  return NULL;
 }
 
 
@@ -351,3 +389,5 @@ svn_path_decompose (const svn_string_t *path,
  * eval: (load-file "../svn-dev.el")
  * end:
  */
+
+

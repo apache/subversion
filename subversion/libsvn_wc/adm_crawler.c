@@ -1249,7 +1249,9 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
           /* Examine top of stack and target, and get a nearer common
              'subparent'. */
           subparent = svn_path_get_longest_ancestor (target,
-                                                     stack->path, pool);
+                                                     stack->path, 
+                                                     svn_path_local_style,
+                                                     pool);
           
           /* If the current stack path is NOT equal to the subparent,
              it must logically be a child of the subparent.  So... */
@@ -1264,7 +1266,9 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
              subparent. */
           svn_path_split (target, &ptarget, NULL,
                           svn_path_local_style, pool);
-          remainder_path = svn_path_is_child (stack->path, ptarget, pool);
+          remainder_path = svn_path_is_child (stack->path, ptarget, 
+                                              svn_path_local_style,
+                                              pool);
           
           if (remainder_path)  /* is ptarget "below" the stack-path? */
             {

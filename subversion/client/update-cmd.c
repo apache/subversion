@@ -41,11 +41,12 @@ svn_cl__update (apr_getopt_t *os,
   targets = svn_cl__args_to_target_array (os, pool);
 
   /* Add "." if user passed 0 arguments */
-  svn_cl__push_implicit_dot_target(targets, pool);
+  svn_cl__push_implicit_dot_target (targets, pool);
 
   /* Remove redundancies from the target list while preserving order. */
   SVN_ERR (svn_path_remove_redundancies (&condensed_targets,
                                          targets,
+                                         svn_path_local_style,
                                          pool));
 
   for (i = 0; i < condensed_targets->nelts; i++)
