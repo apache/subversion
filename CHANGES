@@ -4,6 +4,7 @@ http://svn.collab.net/repos/svn/tags/0.37.0
 
  User-visible changes:
  * bugfix: buffer overflow for AIX client
+ * 'svn merge' now notices ancestry by default. (r8390)
 
  Developer-visible changes:
  * apichange: Rewrite of date parser (r8327, r8328, r8329) (issue #408)
