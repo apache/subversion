@@ -171,11 +171,11 @@ write_digest_file (apr_hash_t *children,
                    const char *digest_path,
                    apr_pool_t *pool)
 {
+  svn_error_t *err = SVN_NO_ERROR;
   apr_file_t *fd;
   apr_hash_index_t *hi;
   apr_hash_t *hash = apr_hash_make (pool);
   const char *tmp_path;
-  svn_stream_t *stream;
 
   SVN_ERR (ensure_dir_exists (svn_path_join (fs->path, LOCK_ROOT_DIR, pool), 
                               fs, pool));
@@ -220,10 +220,17 @@ write_digest_file (apr_hash_t *children,
                   children_list->data, children_list->len, pool);
     } 
 
-  stream = svn_stream_from_aprfile (fd, pool);
-  SVN_ERR_W (svn_hash_write2 (hash, stream, SVN_HASH_TERMINATOR, pool),
-             apr_psprintf (pool, _("Cannot write lock/entries hashfile '%s'"),
-                           svn_path_local_style (tmp_path, pool)));
+  if ((err = svn_hash_write2 (hash, 
+                              svn_stream_from_aprfile (fd, pool),
+                              SVN_HASH_TERMINATOR, pool)))
+    {
+      (void) svn_io_file_close (fd, pool); /* error is relatively unexciting */
+      return svn_error_createf (err->apr_err,
+                                err,
+                                _("Cannot write lock/entries hashfile '%s'"),
+                                svn_path_local_style (tmp_path, pool));
+    }
+
   SVN_ERR (svn_io_file_close (fd, pool));
   SVN_ERR (svn_io_file_rename (tmp_path, digest_path, pool));
   SVN_ERR (svn_fs_fs__dup_perms 
@@ -244,10 +251,9 @@ read_digest_file (apr_hash_t **children_p,
                   const char *digest_path,
                   apr_pool_t *pool)
 {
+  svn_error_t *err = SVN_NO_ERROR;
   svn_lock_t *lock;
   apr_hash_t *hash;
-  svn_stream_t *stream;
-  svn_error_t *err;
   apr_file_t *fd;
   const char *val;
 
@@ -267,14 +273,19 @@ read_digest_file (apr_hash_t **children_p,
   /* If our caller doesn't care about anything but the presence of the
      file... whatever. */
   if (! (lock_p || children_p))
-    return SVN_NO_ERROR;
+    return svn_io_file_close (fd, pool);
 
   hash = apr_hash_make (pool);
-  stream = svn_stream_from_aprfile (fd, pool);
-  SVN_ERR_W (svn_hash_read2 (hash, stream, SVN_HASH_TERMINATOR, pool),
-             apr_psprintf (pool, _("Can't parse lock/entries hashfile '%s'"), 
-                           digest_path));
-
+  if ((err = svn_hash_read2 (hash, 
+                             svn_stream_from_aprfile (fd, pool),
+                             SVN_HASH_TERMINATOR, pool)))
+    {
+      (void) svn_io_file_close (fd, pool); /* error is relatively unexciting */
+      return svn_error_createf (err->apr_err,
+                                err,
+                                _("Can't parse lock/entries hashfile '%s'"),
+                                svn_path_local_style (digest_path, pool));
+    }
   SVN_ERR (svn_io_file_close (fd, pool));
 
   /* If our caller cares, see if we have a lock path in our hash. If
