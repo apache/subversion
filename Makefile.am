@@ -16,7 +16,7 @@ SUBDIRS = apr expat-lite neon subversion doc
 ChangeLog: changelog
 
 changelog:
-	cvs2cl.pl -r -S -U ./AUTHORS subversion doc www \
+	cvs2cl.pl --fsf -r -S -U ./AUTHORS subversion doc www \
                                      `find . -type f -maxdepth 1`
 
 
