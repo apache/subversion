@@ -121,7 +121,11 @@ harvest_committables (apr_hash_t *committables,
   apr_hash_t *entries = NULL;
   svn_boolean_t text_mod = FALSE, prop_mod = FALSE;
   apr_byte_t state_flags = 0;
-  svn_stringbuf_t *p_path = NULL;
+  svn_stringbuf_t *p_path = svn_stringbuf_dup (path, pool);
+  svn_boolean_t tconflict, pconflict;
+
+  /* Make P_PATH the parent dir. */
+  svn_path_remove_component (p_path);
 
   assert (entry);
   assert (url);
@@ -147,6 +151,14 @@ harvest_committables (apr_hash_t *committables,
       if (e) 
         entry = e;
     }
+
+  /* Test for a state of conflict, returning an error if an unresolved
+     conflict exists for this item. */
+  SVN_ERR (svn_wc_conflicted_p (&tconflict, &pconflict, p_path, entry, pool));
+  if (tconflict || pconflict)
+    return svn_error_createf (SVN_ERR_WC_FOUND_CONFLICT, 0, NULL, pool,
+                              "Aborting commit: '%s' remains in conflict.",
+                              path->data);
 
   /* If we have our own URL, it wins over the telescoping one. */
   if (entry->url)
@@ -190,8 +202,6 @@ harvest_committables (apr_hash_t *committables,
            "Did not expect `%s' to be a working copy root", path->data);
 
       /* If this is NOT a WC root, check out its parent's revision. */
-      p_path = svn_stringbuf_dup (path, subpool);
-      svn_path_remove_component (p_path);
       SVN_ERR (svn_wc_entry (&p_entry, p_path, subpool));
       if (entry->revision != p_entry->revision)
         {
@@ -200,20 +210,6 @@ harvest_committables (apr_hash_t *committables,
           adds_only = TRUE;
         }
     }
-
-#if 0 /* unfinished */
-  /* Test for a state of conflict, returning an error if an unresolved
-     conflict exists for this item. */
-  {
-    svn_boolean_t *text_conflict_p, *prop_conflict_p;
-    SVN_ERR (svn_wc_conflicted_p (&text_conflict_p, &prop_conflict_p,
-                                  parent_dir, entry, pool));
-    if (text_conflict_p || prop_conflict_p)
-      return svn_error_createf (SVN_ERR_WC_FOUND_CONFLICT, 0, NULL, pool,
-                                "Aborting commit: '%s' remains in conflict.",
-                                full_path->data);
-  }
-#endif
 
   /* If an add is scheduled to occur, dig around for some more
      information about it. */
@@ -251,21 +247,11 @@ harvest_committables (apr_hash_t *committables,
   /* Now, if this is something to commit, add it to our list. */
   if (state_flags)
     {
-      /* If the commit item is a directory, lock it. */
+      /* If the commit item is a directory, lock it, else lock its parent. */
       if (entry->kind == svn_node_dir)
         lock_dir (locked_dirs, path, pool);
-
-      /* Else, try to lock its parent directory (calculating it if we
-         haven't done so already. */
       else
-        {
-          if (! p_path)
-            {
-              p_path = svn_stringbuf_dup (path, pool);
-              svn_path_remove_component (p_path);
-            }
-          lock_dir (locked_dirs, p_path, pool);
-        }
+        lock_dir (locked_dirs, p_path, pool);
 
       /* Finally, add the committable item. */
       add_committable (committables, path, url, entry, state_flags);
