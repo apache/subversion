@@ -111,11 +111,12 @@ svn_cl__checkout (apr_getopt_t *os,
         local_dir = opt_state->target;
       
       {
-        svn_wc_notify_func_t notify_func;
-        void *notify_baton;
+        svn_wc_notify_func_t notify_func = NULL;
+        void *notify_baton = NULL;
 
-        svn_cl__get_checkout_notifier (&notify_func, &notify_baton,
-                                       TRUE, FALSE, pool); 
+        if (! opt_state->quiet)
+          svn_cl__get_checkout_notifier (&notify_func, &notify_baton,
+                                         TRUE, FALSE, pool); 
 
         SVN_ERR (svn_client_checkout (notify_func,
                                       notify_baton,
