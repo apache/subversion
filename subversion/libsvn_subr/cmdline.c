@@ -18,6 +18,7 @@
 
 
 #include <stdlib.h>             /* for atexit() */
+#include <locale.h>             /* for setlocale() */
 
 #include <apr_errno.h>          /* for apr_strerror */
 #include <apr_general.h>        /* for apr_initialize/apr_terminate */
