@@ -5038,15 +5038,16 @@ undeltify_deltify (const char **msg,
            (&fs, "test-repo-undeltify-deltify", pool));
 
   /* Make 10 revisions. */
+  subpool = svn_pool_create (pool);
   while (youngest_rev < 10)
     {
       /* Start the next transaction */
-      SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
-      SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+      SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+      SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
 
       /* The first time through, create the Greek tree. */
       if (youngest_rev == 0)
-        SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
+        SVN_ERR (svn_test__create_greek_tree (txn_root, subpool));
       
       /* Modify each file.  */
       for (i = 0; i < 12; i++)
@@ -5059,18 +5060,20 @@ undeltify_deltify (const char **msg,
                    (txn_root, 
                     greek_files[i][0], 
                     greek_files[i][youngest_rev + 1], 
-                    pool));
+                    subpool));
         }
 
       /* Commit the mods. */
       SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
       SVN_ERR (svn_fs_close_txn (txn));
+
+      /* Clear out the per-file pool. */
+      svn_pool_clear (subpool);
     }
   
   /* Now, undeltify each file, in each revision (starting with the
      youngest, and going backward to revision 0), verifying that its
      contents are as expected. */
-  subpool = svn_pool_create (pool);
   while (youngest_rev)
     {
       svn_fs_root_t *rev_root;
