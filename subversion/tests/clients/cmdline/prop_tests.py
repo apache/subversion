@@ -714,6 +714,30 @@ def copy_should_use_copied_executable_and_mime_type_values(sbox):
   return status
 
 
+def revprop_change(sbox):
+  "set and get a revprop change"
+
+  if sbox.build():
+    return 1
+
+  hook = os.path.join(svntest.main.current_repo_dir,
+                      'hooks', 'pre-revprop-change')
+  svntest.main.file_append(hook, "#!/bin/sh\n\nexit 0\n")
+  os.chmod(hook, 0755)
+
+  out, err = svntest.main.run_svn(None, 'propset', '--revprop', '-r', '0',
+                                  'cash-sound', 'cha-ching!', sbox.wc_dir)
+  if err:
+    return 1
+
+  out, err = svntest.main.run_svn(None, 'propget', '--revprop', '-r', '0',
+                                  'cash-sound', sbox.wc_dir)
+  if err:
+    return 1
+
+  return 0
+
+
 ########################################################################
 # Run the tests
 
@@ -730,6 +754,9 @@ test_list = [ None,
               revert_replacement_props,
               inappropriate_props,
               copy_should_use_copied_executable_and_mime_type_values,
+              # If we learn how to write a pre-revprop-change hook for
+              # non-Posix platforms, we won't have to skip here:
+              Skip(revprop_change, (os.name != 'posix')),
              ]
 
 if __name__ == '__main__':
