@@ -503,6 +503,9 @@ svn_error_t *svn_wc_prop_set (svn_string_t *name,
                               svn_string_t *path,
                               apr_pool_t *pool);
 
+/* Return TRUE iff NAME is a 'wc' property name. */
+svn_boolean_t svn_wc_is_wc_prop (svn_string_t *name);
+
 
 
 /*** Diffs ***/
