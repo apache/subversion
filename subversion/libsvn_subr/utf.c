@@ -131,41 +131,58 @@ convert_to_stringbuf (apr_xlate_t *convset,
                       svn_stringbuf_t **dest,
                       apr_pool_t *pool)
 {
-  /* 2 bytes per character will be enough in most cases.
-     If not, we'll make a larger buffer and try again.   */
-  apr_size_t buflen = src_length * 2;
-
+  apr_size_t buflen = src_length;
   apr_status_t apr_err;
-  apr_size_t srclen, destlen;
+  apr_size_t srclen = src_length;
+  apr_size_t destlen = 0;
+  char *destbuf;
 
+  /* Initialize *DEST to an empty stringbuf. */
   *dest = svn_stringbuf_create ("", pool);
-  
-  do {
-    /* Set up state variables for xlate */
-    srclen = src_length;
-    destlen = buflen;
-    
-    svn_stringbuf_ensure (*dest, buflen+1);
-    
-    /* Attempt the conversion */
-    apr_err = apr_xlate_conv_buffer (convset, src_data, &srclen,
-                                     (*dest)->data, &destlen);
-    
-    /* Conversion succeeded, trim result */
-    if (apr_err == APR_SUCCESS && !srclen)
-      (*dest)->data[(*dest)->len = buflen - destlen] = '\0';
-    
-    /* In case we got here because the buffer was too small,
-       double the size for the next iteration...              */
-    buflen *= 2;
-    
-  } while (apr_err == APR_SUCCESS && srclen);
+  destbuf = (*dest)->data;
 
+  do 
+    {
+      /* A 1:2 ratio of input characters to output characters should
+         be enough for most translations, and conveniently enough, if
+         it isn't, we'll grow the buffer size by 2 again. */
+      if (destlen == 0)
+        buflen *= 2;
+
+      /* Ensure that *DEST has sufficient storage for the translated
+         result. */
+      svn_stringbuf_ensure (*dest, buflen + 1);
+
+      /* Update the destination buffer pointer to the first character
+         after already-converted output. */
+      destbuf = (*dest)->data + (*dest)->len;
+
+      /* Set up state variables for xlate. */
+      destlen = buflen - (*dest)->len;
+
+      /* Attempt the conversion. */
+      apr_err = apr_xlate_conv_buffer (convset, 
+                                       src_data + (src_length - srclen), 
+                                       &srclen,
+                                       destbuf, 
+                                       &destlen);
+
+      /* Now, updated the *DEST->len to track the amount of output data
+         churned out so far from this loop. */
+      (*dest)->len += ((buflen - (*dest)->len) - destlen);
+
+    } while ((! apr_err) && srclen);
+
+  /* If we exited the loop with an error, return the error. */
   if (apr_err)
     return svn_error_create (apr_err, 0, NULL, pool,
                              "failure during string recoding");
-  else
-    return SVN_NO_ERROR;
+  
+  /* Else, exited do to success.  Trim the result buffer down to the
+     right length. */
+  (*dest)->data[(*dest)->len] = '\0';
+
+  return SVN_NO_ERROR;
 }
 
 
