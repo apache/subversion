@@ -109,6 +109,16 @@ struct dir_baton
 };
 
 
+struct handler_baton
+{
+  apr_file_t *source;
+  apr_file_t *dest;
+  svn_txdelta_applicator_t *appl;
+  apr_pool_t *pool;
+  struct file_baton *fb;
+};
+
+
 /* kff todo debugging */
 static void
 debug_dir_baton (struct dir_baton *d, const char *msg)
@@ -295,65 +305,77 @@ free_file_baton (struct file_baton *fb)
 /*** Helpers for the editor callbacks. ***/
 
 static svn_error_t *
+read_from_file (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
+{
+  apr_file_t *fp = (apr_file_t *) baton;
+  apr_status_t status;
+
+  status = apr_full_read(fp, buffer, *len, len);
+  if (status)
+    return svn_error_create (status, 0, NULL, pool, "Can't read base file");
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+write_to_file (void *baton, const char *data, apr_size_t *len,
+               apr_pool_t *pool)
+{
+  apr_file_t *fp = (apr_file_t *) baton;
+  apr_status_t status;
+
+  status = apr_full_write(fp, data, *len, len);
+  if (status)
+    return svn_error_create (status, 0, NULL, pool,
+                             "Can't write new base file");
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 window_handler (svn_txdelta_window_t *window, void *baton)
 {
-  int i;
-  struct file_baton *fb = (struct file_baton *) baton;
-  apr_file_t *dest = NULL;  /* always init to null for APR */
-  svn_error_t *err = NULL;
+  struct handler_baton *hb = (struct handler_baton *) baton;
+  struct file_baton *fb = hb->fb;
+  svn_error_t *err = NULL, *err2 = NULL;
 
-  /* kff todo: get more sophisticated when we can handle more ops. */
-  err = svn_wc__open_text_base (&dest,
-                                fb->path,
-                                (APR_WRITE | APR_APPEND | APR_CREATE),
-                                window->pool);
-  if (err)
-    return err;
-  
-  /* else */
-
-  for (i = 0; i < window->num_ops; i++)
+  if (window != NULL)
     {
-      svn_txdelta_op_t this_op = (window->ops)[i];
-      switch (this_op.action_code)
-        {
-        case svn_txdelta_source:
-          /* todo */
-          break;
-
-        case svn_txdelta_target:
-          /* todo */
-          break;
-
-        case svn_txdelta_new:
-          {
-            apr_status_t apr_err;
-            apr_size_t written;
-            const char *data = ((svn_string_t *) (window->new))->data;
-
-            apr_err = apr_full_write (dest, (data + this_op.offset),
-                                      this_op.length, &written);
-            if (apr_err)
-              return svn_error_create (apr_err, 0, NULL,
-                                       window->pool, fb->path->data);
-
-            break;
-          }
-        }
+      /* Apply this window.  Continue on if there is an error, since
+         the cleanup is very similar to the case when we're finished.  */
+      err = svn_txdelta_apply_window (window, hb->appl);
+      if (err == SVN_NO_ERROR)
+        return SVN_NO_ERROR;
     }
 
-  /* Close the file after each window, but pass 0 so it stays in the
-     tmp area.  When close_file() is called it will take care of
-     syncing it back into the real location. */
-  err = svn_wc__close_text_base (dest, fb->path, 0, window->pool);
-  if (err)
-    return err;
+  /* Either we're done (window is NULL) or we had an error.  In either
+     case, clean up the handler.  */
+  err2 = svn_wc__close_text_base (hb->source, fb->path, 0, window->pool);
+  if (err2 != SVN_NO_ERROR && err == SVN_NO_ERROR)
+    err = err2;
+  err2 = svn_wc__close_text_base (hb->dest, fb->path, 0, window->pool);
+  if (err2 != SVN_NO_ERROR && err == SVN_NO_ERROR)
+    err = err2;
+  svn_txdelta_applicator_free (hb->appl);
+  apr_destroy_pool (hb->pool);
 
-  /* Leave a note in the baton indicating that there's new text to
-     sync up. */
-  fb->text_changed = 1;
-  
-  return SVN_NO_ERROR;
+  if (err != SVN_NO_ERROR)
+    {
+      /* We failed to apply the patch; clean up the temporary file.  */
+      apr_pool_t *pool = svn_pool_create (fb->pool, NULL);
+      svn_string_t *tmppath = svn_wc__text_base_path (fb->path, TRUE, pool);
+
+      apr_remove_file (tmppath->data, pool);
+      apr_destroy_pool (pool);
+    }
+  else
+    {
+      /* Leave a note in the baton indicating that there's new text to
+         sync up.  */
+      fb->text_changed = 1;
+    }
+
+  return err;
 }
 
 
@@ -605,10 +627,47 @@ apply_textdelta (void *file_baton,
                  svn_txdelta_window_handler_t **handler,
                  void **handler_baton)
 {
-  *handler_baton = file_baton;
+  struct file_baton *fb = (struct file_baton *) file_baton;
+  apr_pool_t *subpool = svn_pool_create (fb->pool, NULL);
+  struct handler_baton *hb = apr_palloc (subpool, sizeof (*hb));
+  svn_error_t *err;
+
+  /* Open the text base for reading.  */
+  hb->source = NULL;
+  hb->dest = NULL;
+  err = svn_wc__open_text_base (&hb->source, fb->path, APR_READ, subpool);
+  if (err != SVN_NO_ERROR)
+    goto error;
+
+  /* Open the text base for writing (this will get us a temporary file).  */
+  hb->dest = NULL;
+  err = svn_wc__open_text_base (&hb->dest, fb->path,
+                                (APR_WRITE | APR_TRUNCATE | APR_CREATE),
+                                subpool);
+  if (err != SVN_NO_ERROR)
+    goto error;
+
+  /* Create the delta applicator.  */
+  err = svn_txdelta_applicator_create (&hb->appl, read_from_file, hb->source,
+                                       write_to_file, hb->dest, subpool);
+  if (err != SVN_NO_ERROR)
+    goto error;
+
+  hb->pool = subpool;
+  hb->fb = fb;
+
+  /* We're all set.  */
+  *handler_baton = hb;
   *handler = window_handler;
-  
   return SVN_NO_ERROR;
+
+ error:
+  if (hb->source)
+    svn_wc__close_text_base (hb->source, fb->path, 0, subpool);
+  if (hb->dest)
+    svn_wc__close_text_base (hb->dest, fb->path, 0, subpool);
+  apr_destroy_pool (subpool);
+  return err;
 }
 
 
