@@ -208,9 +208,8 @@ typedef svn_error_t *
    with AUTH_BATON.
 
    REVISION must be of kind svn_client_revision_number,
-   svn_client_revision_head, or svn_client_revision_date.  In the xml
-   case (see below) svn_client_revision_unspecified is also allowed.
-   If REVISION does not meet these requirements, return the error
+   svn_client_revision_head, or svn_client_revision_date.  If REVISION 
+   does not meet these requirements, return the error
    SVN_ERR_CLIENT_BAD_REVISION.
 
    If NOTIFY_FUNC is non-null, invoke NOTIFY_FUNC with NOTIFY_BATON as
@@ -232,9 +231,8 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
    AUTH_BATON.
 
    REVISION must be of kind svn_client_revision_number,
-   svn_client_revision_head, or svn_client_revision_date.  In the xml
-   case (see below) svn_client_revision_unspecified is also allowed.
-   If REVISION does not meet these requirements, return the error
+   svn_client_revision_head, or svn_client_revision_date.  If REVISION 
+   does not meet these requirements, return the error
    SVN_ERR_CLIENT_BAD_REVISION.
 
    If NOTIFY_FUNC is non-null, invoke NOTIFY_FUNC with NOTIFY_BATON
