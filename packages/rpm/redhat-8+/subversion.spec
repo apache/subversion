@@ -98,6 +98,10 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Thu Dec 25 2003 David Summers <david@summersoft.fay.ar.us> 0.35.1-8085
+- Patch by Ben Reser <ben@reser.org> to get documentation to build again.
+- svnserve.conf and svnserve manual pages added.
+
 * Fri Dec 19 2003 David Summers <david@summersoft.fay.ar.us> 0.35.0-8054
 - Require httpd-2.0.48.  *** Note: I don't yet have packages for httpd-2.0.48.
 - Require apr-0.9.5.
@@ -408,6 +412,10 @@ rm -rf $RPM_BUILD_ROOT/usr/lib/subversion/tools/cvs2svn
 # Set up book generation and installation
 (cd doc/book;
 rm -f book/version.xml
+# Start patch by Ben Reser <ben@reser.org> to get documentation to build.
+%{__perl} -pi -e 's#href="xsl/(html/docbook.xsl)"#href="%{_datadir}/sgml/docbook/xsl-stylesheets/$1"#;' tools/html-stylesheet.xsl
+%{__perl} -pi -e 's#href="xsl/(html/chunk.xsl)"#href="%{_datadir}/sgml/docbook/xsl-stylesheets/$1"#;' tools/chunk-stylesheet.xsl
+# End patch by Ben Reser <ben@reser.org> to get documentation to build.
 make SVNVERSION=%{release} XSL_DIR=/usr/share/sgml/docbook/xsl-stylesheets all-html)
 cp -r doc/book/book/html-chunk book
 cp -r doc/book/book/images     book/images
@@ -462,6 +470,8 @@ rm -rf $RPM_BUILD_ROOT
 /usr/lib/libsvn_wc*so*
 /usr/lib/python2.2/site-packages/rcsparse
 /usr/share/man/man1/*
+/usr/share/man/man5/*
+/usr/share/man/man8/*
 
 %files devel
 %defattr(-,root,root)
