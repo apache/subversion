@@ -103,6 +103,7 @@ install-book-html: $(BOOK_HTML_TARGET)
 install-book-html-chunk: $(BOOK_HTML_CHUNK_DIR)/index.html
 	$(INSTALL) -d $(BOOK_INSTALL_DIR)/images
 	$(INSTALL) $(BOOK_HTML_CHUNK_DIR)/*.html $(BOOK_INSTALL_DIR)
+	$(INSTALL) $(BOOK_DIR)/styles.css $(BOOK_INSTALL_DIR)
 	$(INSTALL) $(BOOK_DIR)/images/*.png $(BOOK_INSTALL_DIR)/images
 
 install-book-pdf: $(BOOK_PDF_TARGET) $(BOOK_INSTALL_DIR)
