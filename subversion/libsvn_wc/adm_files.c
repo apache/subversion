@@ -430,19 +430,13 @@ open_adm_file (apr_file_t **handle,
     {
       if (flags & APR_APPEND)
         {
-          const char *opath, *tmp_path;
-
-          va_start (ap, pool);
-          opath = v_extend_with_adm_name (path, extension, 0, pool, ap);
-          va_end (ap);
-
-          va_start (ap, pool);
-          tmp_path = v_extend_with_adm_name (path, extension, 1, pool, ap);
-          va_end (ap);
-
-          /* Copy the original thing to the tmp location. */
-          SVN_ERR (maybe_copy_file (opath, tmp_path, pool));
+          /* We don't handle append.  To do so we would need to copy the
+             contents into the apr_file_t once it has been opened. */
+          assert (FALSE);
         }
+
+      /* Need to own the temporary file, so don't reuse an existing one. */
+      flags |= APR_EXCL | APR_CREATE;
 
       /* Extend with tmp name. */
       va_start (ap, pool);
@@ -458,6 +452,14 @@ open_adm_file (apr_file_t **handle,
     }
 
   err = svn_io_file_open (handle, path, flags, protection, pool);
+  if ((flags & APR_WRITE) && err && APR_STATUS_IS_EEXIST(err->apr_err))
+    {
+      /* Exclusive open failed, delete and retry */
+      svn_error_clear (err);
+      SVN_ERR (svn_io_remove_file (path, pool));
+      err = svn_io_file_open (handle, path, flags, protection, pool);
+    }
+
   if (err)
     {
       /* Oddly enough, APR will set *HANDLE even if the open failed.
