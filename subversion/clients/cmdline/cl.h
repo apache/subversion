@@ -64,7 +64,7 @@ typedef struct svn_cl__opt_state_t
 
   /* These should default to 0. */
   apr_time_t start_date;  /* X in "svn blah -D X" or "svn blah -D X:Y" */
-  apr_time_t end_date;    /* Y in "svn blah -r X:Y" */
+  apr_time_t end_date;    /* Y in "svn blah -D X:Y" */
 
   svn_stringbuf_t *message;  /* log message */
 
@@ -99,9 +99,11 @@ typedef struct svn_cl__opt_state_t
 } svn_cl__opt_state_t;
 
 
-/* All client command procedures conform to this prototype.
- * OPT_STATE likewise should hold the result of processing the options.
- * TARGETS is an apr array of filenames and directories, a-la CVS.
+/* All client command procedures conform to this prototype.  OPT_STATE
+ * likewise should hold the result of processing the options.  OS is a
+ * list of filenames and directories, a-la CVS (which really only
+ * becomes useful if you pass it into svn_cl__args_to_target_array()
+ * to convert OS to an APR arra of svn_stringbuf_t * targets).
  *
  * TARGETS is normalized by main before being passed to any command
  * (with the exception of svn_cl__help, which will oftentime be passed
@@ -174,9 +176,9 @@ apr_array_header_t*
 svn_cl__args_to_target_array (apr_getopt_t *os,
                               apr_pool_t *pool);
 
-/* Separates a list of whitespace separated values into an apr_array_header_t */
+/* Splits a list of whitespace-separated values into an apr_array_header_t */
 apr_array_header_t*
-svn_cl__stringlist_to_array(svn_stringbuf_t *buffer, apr_pool_t *pool);
+svn_cl__stringlist_to_array (svn_stringbuf_t *buffer, apr_pool_t *pool);
 
 void svn_cl__push_implicit_dot_target (apr_array_header_t *targets,
                                        apr_pool_t *pool);
