@@ -1578,19 +1578,43 @@ previous release, for example:
    $ svn cp http://svn.collab.net/repos/svn/tags/A.(B-1).C \
             http://svn.collab.net/repos/svn/branches/A.B.x
 
-The main difference between "stabilization" and "maintenance" is that
-the stabilization involves a four week soak period before the first
-release of the new line (A.B.0).  The soak period is to make sure that
-no surprise showstopper bugs are lurking.  A "showstopper" means a
-non-edge-case crash, a data corruption problem, a major security hole,
-or something equally serious.  In the unlikely event that the full
-committers cannot agree on whether a bug is showstopper, they vote.
+The stabilization period for a new A.B.0 release normally lasts four
+weeks, and allows us to make conservative bugfixes and discover
+showstopper issues.  The stabilization period begins with a release
+candidate tarball with the version A.B.0-rc1.  Further release
+candidate tarballs may be made as blocking bugs are fixed; for
+example, if a set of language bindings is found to be broken, it is
+prudent to make a new release candidate when they are fixed so that
+those language bindings may be tested.
 
-A major or minor release soak starts with A.B.0-rc1.  There will only
-be an A.B.0-rc2 and higher if necessary, as each such release restarts
-the soak period.  Once A.B.0 is out, subsequent releases in that line
-do not require a four week soak, because only conservative changes go
-into the line.
+At the beginning of the final week of the stabilization period, a new
+release candidate tarball should be made if there are any changes
+pending since the last one.  The final week of the stabilization
+period is reserved for critical bugfixes; fixes for minor bugs should
+be deferred to the A.B.1 release.  A critical bug is a non-edge-case
+crash, a data corruption problem, a major security hole, or something
+equally serious.
+
+Under some circumstances, the stabilization period will be extended:
+
+   * If a potentially destabilizing change must be made in order to
+     fix a bug, the entire four-week stabilization period is
+     restarted.  A potentially destabilizing change is one which could
+     affect many parts of Subversion in unpredictable ways, or which
+     involves adding a substantial amount of new code.
+
+   * If a critical bugfix is made during the final week of the
+     stabilization period, the final week is restarted.  The final
+     A.B.0 release is always identical to the release candidate made
+     one week before (with the exceptions discussed below).
+
+If there are disagreements over whether a change is potentially
+destabilizing or over whether a bug is critical, they may be settled
+with a committer vote.
+
+After the A.B.0 release is out, patch releases (A.B.1, A.B.2, etc.)
+follow when bugfixes warrant them.  Patch releases do not require a
+four week soak, because only conservative changes go into the line.
 
 Certain kinds of commits can into A.B.0 without restarting the soak
 period, or into a later release without affecting the testing schedule
