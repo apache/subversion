@@ -1847,6 +1847,10 @@ svn_client_unlock (const apr_array_header_t *targets,
  *
  * A structure which describes various system-generated metadata about
  * a working-copy path or URL.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, users shouldn't allocate structures of this
+ * type, to preserve binary compatibility.
  */
 typedef struct svn_info_t
 {
