@@ -499,6 +499,20 @@ make_clone (svn_fs_node_t *node,
 
 
 
+/* Argument checking.  */
+
+
+static svn_error_t *
+check_node_mutable (svn_fs_node_t *node)
+{
+  if (! node->txn)
+    return svn_fs__err_not_mutable (node->fs,
+				    svn_fs__dag_get_id (node->dag_node));
+
+  return 0;
+}
+
+
 /* Generic node operations.  */
 
 
@@ -729,6 +743,17 @@ traverse_path (svn_fs_node_t **node_p,
 #endif
 
 
+static svn_error_t *
+traverse_to_parent (svn_fs_node_t **parent_p,
+		    const char **entry_name,
+		    svn_fs_node_t *root,
+		    const char *path,
+		    trail_t *trail)
+{
+  abort ();
+}
+
+
 svn_error_t *
 svn_fs_open_node (svn_fs_node_t **child_p,
 		  svn_fs_node_t *parent,
@@ -757,10 +782,61 @@ svn_fs_make_dir (svn_fs_node_t *parent,
 }
 			      
 
+struct delete_args
+{
+  svn_fs_node_t *parent;
+  const char *path;
+};
+
+
+static svn_error_t *
+txn_body_delete (void *baton,
+		 trail_t *trail)
+{
+  struct delete_args *args = baton;
+  const char *entry_name;
+  svn_fs_node_t *immediate_parent;
+
+  SVN_ERR (traverse_to_parent (&immediate_parent, &entry_name, args->parent,
+			       args->path, trail));
+
+  /* Make sure the entry actually exists before we clone everything.  */
+  {
+    dag_node_t *child;
+
+    SVN_ERR (svn_fs__dag_open (&child, immediate_parent->dag_node, entry_name,
+			       trail));
+    svn_fs__dag_close (child);
+  }
+
+  /* We have a bug here: we'll happily delete non-empty directories,
+     if they're shared with the base revision.  */
+  SVN_ERR (make_clone (immediate_parent, trail));
+  SVN_ERR (svn_fs__dag_delete (immediate_parent->dag_node, entry_name, trail));
+
+  return 0;
+}
+
+
 svn_error_t *
 svn_fs_delete (svn_fs_node_t *parent,
 	       const char *path,
 	       apr_pool_t *pool)
+{
+  struct delete_args args;
+
+  SVN_ERR (check_node_mutable (parent));
+
+  args.parent = parent;
+  args.path   = path;
+  return svn_fs__retry_txn (parent->fs, txn_body_delete, &args, pool);
+}
+
+
+svn_error_t *
+svn_fs_delete_tree (svn_fs_node_t *parent,
+		    const char *path,
+		    apr_pool_t *pool)
 {
   abort ();
 }

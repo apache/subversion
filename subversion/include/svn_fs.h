@@ -48,7 +48,7 @@ svn_error_t *svn_fs_close_fs (svn_fs_t *fs);
    in the call to `svn_fs_set_warning_func'; the filesystem passes it through
    to the callback.  FMT is a printf-style format string, which tells us
    how to interpret any successive arguments.  */
-typedef void (svn_fs_warning_callback_t) (void *baton, char *fmt, ...);
+typedef void (svn_fs_warning_callback_t) (void *baton, const char *fmt, ...);
 
 
 /* Provide a callback function, WARNING, that FS should use to report
@@ -255,9 +255,9 @@ svn_fs_id_t *svn_fs_copy_id (const svn_fs_id_t *id, apr_pool_t *pool);
 
        [0-9]+(\.[0-9]+)*
 
-   Allocate the parsed ID in POOL.  As a special case for the Berkeley
-   DB comparison function, if POOL is zero, malloc the ID.  It's
-   generally better to use a pool if you can.  */
+   Allocate the parsed ID in POOL.  If POOL is zero, malloc the ID; we
+   need this in certain cases where we can't pass in a pool, but it's
+   generally best to use a pool whenever possible.  */
 svn_fs_id_t *svn_fs_parse_id (const char *data, apr_size_t len,
                               apr_pool_t *pool);
 
@@ -458,9 +458,10 @@ svn_error_t *svn_fs_make_dir (svn_fs_node_t *parent,
 			      apr_pool_t *pool);
 			      
 
-/* Delete the node named PATH relative to directory PARENT.  PARENT
-   must have been reached via the root directory of some transaction,
-   not of a revision.
+/* Delete the node named PATH relative to directory PARENT.  If the
+   node being deleted is a directory, it must be empty.  PARENT must
+   have been reached via the root directory of some transaction, not
+   of a revision.
 
    This creates new mutable clones of any immutable parent directories
    of the directory being changed.  If you have any other node objects
@@ -472,6 +473,23 @@ svn_error_t *svn_fs_make_dir (svn_fs_node_t *parent,
 svn_error_t *svn_fs_delete (svn_fs_node_t *parent,
 			    const char *path,
 			    apr_pool_t *pool);
+
+
+/* Delete the node named PATH relative to directory PARENT.  If the
+   node being deleted is a directory, its contents will be deleted
+   recursively.  PARENT must have been reached via the root directory
+   of some transaction, not of a revision.
+
+   This creates new mutable clones of any immutable parent directories
+   of the directory being changed.  If you have any other node objects
+   that refer to the cloned directories, that reached them via the
+   same transaction root as PARENT, this function updates those node
+   objects to refer to the new clones.
+
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_delete_tree (svn_fs_node_t *parent,
+				 const char *path,
+				 apr_pool_t *pool);
 
 
 /* Move the node named OLDPATH relative to OLDPARENT to NEWPATH
