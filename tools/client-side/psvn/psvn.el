@@ -1250,6 +1250,7 @@ Note: use C-q C-j to send a line termination character"
   (define-key svn-prop-edit-mode-map [(control ?c) (control ?c)] 'svn-prop-edit-done)
   (define-key svn-prop-edit-mode-map [(control ?c) (control ?d)] 'svn-prop-edit-svn-diff)
   (define-key svn-prop-edit-mode-map [(control ?c) (control ?s)] 'svn-prop-edit-svn-status)
+  (define-key svn-prop-edit-mode-map [(control ?c) (control ?l)] 'svn-prop-edit-svn-log)
   (define-key svn-prop-edit-mode-map [(control ?c) (control ?q)] 'svn-prop-edit-abort))
 
 (easy-menu-define svn-prop-edit-mode-menu svn-prop-edit-mode-map
@@ -1258,9 +1259,14 @@ Note: use C-q C-j to send a line termination character"
                     ["Commit" svn-prop-edit-done t]
                     ["Show Diff" svn-prop-edit-svn-diff t]
                     ["Show Status" svn-prop-edit-svn-status t]
+                    ["Show Log" svn-prop-edit-svn-log t]
                     ["Abort" svn-prop-edit-abort t]))
 
 (defun svn-prop-edit-mode ()
+  "Major Mode to edit file properties of files under svn control.
+Commands:
+\\{svn-prop-edit-mode-map}
+"
   (interactive)
   (kill-all-local-variables)
   (use-local-map svn-prop-edit-mode-map)
@@ -1297,6 +1303,11 @@ Note: use C-q C-j to send a line termination character"
   (set-buffer "*svn-status*")
   (svn-status-show-svn-diff))
 
+(defun svn-prop-edit-svn-log ()
+  (interactive)
+  (set-buffer "*svn-status*")
+  (svn-status-show-svn-log))
+
 (defun svn-prop-edit-svn-status ()
   (interactive)
   (pop-to-buffer "*svn-status*")
@@ -1313,6 +1324,7 @@ Note: use C-q C-j to send a line termination character"
   (define-key svn-log-edit-mode-map [(control ?c) (control ?c)] 'svn-log-edit-done)
   (define-key svn-log-edit-mode-map [(control ?c) (control ?d)] 'svn-log-edit-svn-diff)
   (define-key svn-log-edit-mode-map [(control ?c) (control ?s)] 'svn-log-edit-svn-status)
+  (define-key svn-log-edit-mode-map [(control ?c) (control ?l)] 'svn-log-edit-svn-log)
   (define-key svn-log-edit-mode-map [(control ?c) (control ?q)] 'svn-log-edit-abort))
 
 (easy-menu-define svn-log-edit-mode-menu svn-log-edit-mode-map
@@ -1321,9 +1333,14 @@ Note: use C-q C-j to send a line termination character"
                     ["Commit" svn-log-edit-done t]
                     ["Show Diff" svn-log-edit-svn-diff t]
                     ["Show Status" svn-log-edit-svn-status t]
+                    ["Show Log" svn-log-edit-svn-log t]
                     ["Abort" svn-log-edit-abort t]))
 
 (defun svn-log-edit-mode ()
+  "Major Mode to edit svn log messages.
+Commands:
+\\{svn-log-edit-mode-map}
+"
   (interactive)
   (kill-all-local-variables)
   (use-local-map svn-log-edit-mode-map)
@@ -1356,6 +1373,11 @@ Note: use C-q C-j to send a line termination character"
   (interactive)
   (set-buffer "*svn-status*")
   (svn-status-show-svn-diff))
+
+(defun svn-log-edit-svn-log ()
+  (interactive)
+  (set-buffer "*svn-status*")
+  (svn-status-show-svn-log))
 
 (defun svn-log-edit-svn-status ()
   (interactive)
