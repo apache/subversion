@@ -221,6 +221,10 @@ SVN_ERROR_START
               SVN_ERR_ENTRY_CATEGORY_START + 0,
               "Can't find an entry")
 
+  SVN_ERRDEF (SVN_ERR_ENTRY_UNUSED_1,
+              SVN_ERR_ENTRY_CATEGORY_START + 1,
+              "Unused error code -- feel free to redefine me")
+
   SVN_ERRDEF (SVN_ERR_ENTRY_EXISTS,
               SVN_ERR_ENTRY_CATEGORY_START + 2,
               "Entry already exists")
