@@ -271,7 +271,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
             break;
           }
 
-        value = apr_psprintf(p, "%ld", (long int) len);
+        value = apr_psprintf(p, "%" APR_OFF_T_FMT, len);
         break;
       }
 
