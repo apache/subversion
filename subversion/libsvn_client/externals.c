@@ -103,7 +103,7 @@ relegate_external (const char *path,
   svn_error_t *err;
   svn_wc_adm_access_t *adm_access;
 
-  SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, path, TRUE, 0, pool));
+  SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, path, TRUE, -1, pool));
   err = svn_wc_remove_from_revision_control (adm_access,
                                              SVN_WC_ENTRY_THIS_DIR,
                                              TRUE, FALSE,
