@@ -1549,6 +1549,7 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
   
   static const struct ne_xml_elm log_report_elements[] =
     {
+      { SVN_XML_NAMESPACE, "log-report", ELEM_log_report, 0 },
       { SVN_XML_NAMESPACE, "log-item", ELEM_log_item, 0 },
       { SVN_XML_NAMESPACE, "date", ELEM_log_date, NE_XML_CDATA },
       { "DAV:", "version-name", ELEM_version_name, NE_XML_CDATA },
@@ -1562,10 +1563,10 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
   /* Construct the request body. */
   svn_stringbuf_appendcstr(request_body, log_request_head);
   svn_stringbuf_appendcstr(request_body,
-                           apr_psprintf(ras->pool, "<S:start-revision>%lu"
+                           apr_psprintf(ras->pool, "<S:start-revision>%ld"
                                         "</S:start-revision>", start));
   svn_stringbuf_appendcstr(request_body,
-                           apr_psprintf(ras->pool, "<S:end-revision>%lu"
+                           apr_psprintf(ras->pool, "<S:end-revision>%ld"
                                         "</S:end-revision>", end));
   if (discover_changed_paths)
     {
