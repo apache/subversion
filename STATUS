@@ -120,14 +120,6 @@ the section for unapproved changes.)
        +1: epg, ghudson, philip
 
 
-    * r8299
-      Fix a small bug in ra_dav's get_repos_root() implementation that caused
-      it to return an incomplete root URL, if the session URL was already the
-      root URL.
-      Votes:
-       +1: jszakmeister, ghudson, brane
-
-
     * r8341, r8352
       Fix some more 'access denied' errors on Windows.
       Votes:
