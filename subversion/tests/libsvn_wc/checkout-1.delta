@@ -1,4 +1,9 @@
 <tree-delta>
+  <new name="iota">
+    <file ancestor="/iota">
+      <text-delta>This is the file 'iota'.</text-delta>
+    </file>
+  </new>
   <new name="A">
     <dir ancestor="/A" ver="1">
       <tree-delta>
