@@ -149,6 +149,19 @@ typedef struct {
 
   const char *current_wcprop_path;
   svn_boolean_t is_switch;
+
+  /* Named target, or NULL if none.  For example, in 'svn up wc/foo',
+     this is "wc/foo", but in 'svn up' it is NULL.  
+
+     The target helps us determine whether a response received from
+     the server should be acted on.  Take 'svn up wc/foo': the server
+     may send back a new vsn-rsrc-url wcprop for 'wc' (because the
+     report had to be anchored there just in case the update deletes
+     wc/foo).  While this is correct behavior for the server, the
+     client should ignore the new wcprop, because the client knows
+     it's not really updating the top level directory. */
+  const char *target;
+
   svn_error_t *err;
 
 } report_baton_t;
@@ -2084,8 +2097,11 @@ static int end_element(void *userdata,
 
     case ELEM_add_directory:
     case ELEM_open_directory:
-      /* fetch node props as necessary. */
-      CHKERR( add_node_props(rb, TOP_DIR(rb).pool));
+
+      /* fetch node props, unless this is the top dir and the real
+         target of the operation is not the top dir. */
+      if (! ((rb->dirs->nelts == 1) && rb->target))
+        CHKERR( add_node_props(rb, TOP_DIR(rb).pool));
 
       /* Close the directory on top of the stack, and pop it.  Also,
          destroy the subpool used exclusive by this directory and its
@@ -2178,15 +2194,22 @@ static int end_element(void *userdata,
       /* else we're setting a wcprop in the context of an editor drive. */
       else if (rb->file_baton == NULL)
         {
-          CHKERR( simple_store_vsn_url(rb->href->data, TOP_DIR(rb).baton,
-                                       rb->editor->change_dir_prop,
-                                       TOP_DIR(rb).pool) );
-
-          /* save away the URL in case a fetch-props arrives after all of
-             the subdir processing. we will need this copy of the URL to
-             fetch the properties (i.e. rb->href will be toast by then). */
-          TOP_DIR(rb).vsn_url = apr_pmemdup(TOP_DIR(rb).pool,
-                                            rb->href->data, rb->href->len + 1);
+          /* Update the wcprop here, unless this is the top directory
+             and the real target of this operation is something other
+             than the top directory. */
+          if (! ((rb->dirs->nelts == 1) && rb->target))
+            {
+              CHKERR( simple_store_vsn_url(rb->href->data, TOP_DIR(rb).baton,
+                                           rb->editor->change_dir_prop,
+                                           TOP_DIR(rb).pool) );
+              
+              /* save away the URL in case a fetch-props arrives after all of
+                 the subdir processing. we will need this copy of the URL to
+                 fetch the properties (i.e. rb->href will be toast by then). */
+              TOP_DIR(rb).vsn_url = apr_pmemdup(TOP_DIR(rb).pool,
+                                                rb->href->data,
+                                                rb->href->len + 1);
+            }
         }
       else
         {
@@ -2418,6 +2441,7 @@ make_reporter (void *session_baton,
   rb->edit_baton = edit_baton;
   rb->fetch_content = fetch_content;
   rb->is_switch = dst_path ? TRUE : FALSE;
+  rb->target = target;
 
   /* Neon "pulls" request body content from the caller. The reporter is
      organized where data is "pushed" into self. To match these up, we use
