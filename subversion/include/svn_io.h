@@ -211,7 +211,9 @@ void svn_stream_set_close (svn_stream_t *stream, svn_close_fn_t close_fn);
 
 
 /* Convenience functions for creating streams which operate on APR
-   files or on stdio files. */
+   files or on stdio files.  For convenience, FILE or FP can be NULL
+   as long as the stream is not used for writing; in this case, the
+   stream acts as if it is operating on an empty file. */
 
 svn_stream_t *svn_stream_from_aprfile (apr_file_t *file, apr_pool_t *pool);
 
