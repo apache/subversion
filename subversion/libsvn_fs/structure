@@ -11,6 +11,33 @@ transactions and recoverability, making it well-suited for Subversion.
 
 
 
+Nodes and Node Versions
+
+In a Subversion filesystem, a `node' corresponds roughly to an
+`inode' in a Unix filesystem:
+- A node is either a file or a directory.
+- A node's contents change over time.
+- When you change a node's contents, it's still the same node; it's
+  just been changed.  So a node's identity isn't bound to a specific
+  set of contents.
+- If you rename a node, it's still the same node, just under a
+  different name.  So a node's identity isn't bound to a particular
+  filename.
+
+A `node version' refers to a node's contents at a specific point in
+time.  Changing a node's contents always creates a new version of that
+node.  Once created, a node version's contents never change.
+
+When we create a node, its initial contents are the initial version of
+the node.  As users make changes to the node over time, we create new
+versions of that same node.  When a user commits a change that deletes
+a file from the filesystem, we don't delete the node, or any version
+of it --- those stick around to allow us to recreate prior versions of
+the filesystem.  Instead, we just remove the reference to the node
+from the directory.
+
+
+
 ID's
 
 Within the database, we refer to nodes and node versions using strings
@@ -49,38 +76,145 @@ version id's, we can tell that the difference from 100.10.3.11 to
 100.12 is the difference from 100.10.3.11 to 100.10, plus the
 difference from 100.10 to 100.12.
 
-
-How nodes are represented in the database.
+When we need to treat a node or node version ID as a string of bytes,
+we use the forms shown here --- a series of unsigned ASCII decimal
+numbers, separated by dots.
 
-[[This is a crummy explanation.  Rewrite.]]
+
+NODE-VERSION: how we represent a node version
+
+We represent a given version of a file or directory node using a list
+skel (see skel.h for an explanation of skels).  The first element of a
+node version skel is always an atom indicating what kind of node this
+is.  The second element is always the node's property list.  Any
+remaining elements carry the contents of the node, in a form
+that depends on the node's kind.
+
+A node version skel has one of the following forms:
+
+("file" PROPLIST DATA)
+    This node version is a file.  DATA is an atom giving the full
+    contents of the file.
+
+("directory" PROPLIST (ENTRY ...))
+    This node version is a directory.  The list (ENTRY ...) gives the
+    directory entries.  Each ENTRY has the form:
+
+        (NAME ID PROPLIST)
+
+    where:
+    - NAME is the name of the directory entry, in UTF-8
+    - ID is the ID of the nv to which this entry refers, and
+    - PROPLIST is a property list for this directory entry.
+
+Note that a node cannot change its kind from one version to the next.
+A directory node is always a directory; a file node is always a file;
+etc.  The fact that the node's kind is stored in each node version,
+rather than in some version-independent place, might suggest that it's
+possible for a node change kinds from version to version --- 10.3
+could be a directory, while 10.4 could be a file --- but Subversion
+does not allow this.
+
+We store the node kind in the node version for simplicity.  This way,
+we can store *everything* about a node in the node versions --- we
+don't need the complexity of a separate per-node structure, or the
+overhead of looking in two places.
+
+
+PROPLIST: property lists for nodes and directory entries
+
+A property list is a list skel of the form:
+
+    (NAME1 VALUE1 NAME2 VALUE2 ...)
+
+where each NAMEi is the name of a property, and VALUEi is the value of
+the property named NAMEi.  Every valid property list has an even
+number of elements.
+
+
+
+REPRESENTATION: how Subversion stores many similar node versions efficiently
+
+It would be correct, but not efficient, to store Subversion filesystem
+nodes simply as a table mapping node version ID's onto NODE-VERSION
+skels, as described above.  However, in this application we know that
+successive versions of files and directories will often be very
+similar to each other, so compression can be very effective.
+
+Instead of storing straight NODE-VERSION skels, we store
+REPRESENTATION skels, whose job is to provide enough information to
+construct a complete NODE-VERSION skel.  At the moment, there are only
+two forms of REPRESENTATION skels:
+
+("fulltext" NODE-VERSION)
+    We store the complete text of the node version, NODE-VERSION.
+
+("younger" DELTA CHECKSUM)
+    We store a delta that transforms the next younger version of the
+    node into this version.  To find the contents of this version:
+
+    - We find the unparsed form of the NODE-VERSION skel for the next
+      younger version.
+
+    - We apply DELTA to that string, yielding the unparsed form of the
+      NODE-VERSION skel for this version.
+
+    To be sure that we've reconstructed the node version correctly, we
+    store a checksum of the unparsed form of this version's
+    NODE-VERSION skel.  We compare this against the checksum of the
+    result from applying the DELTA.
+
+At present, Subversion stores the youngest version of every node and
+branch in "fulltext" form, and stores all other versions in "younger"
+form.  However, there's nothing magic about that particular
+arrangement.  Other interesting alternatives:
+
+- We could store the N most recently accessed node versions as
+  fulltext, letting access patterns determine the most appropriate
+  representation for each version.
+
+- We could occasionally store deltas against the N'th younger version,
+  storing larger jumps with a frequency inverse to the distance
+  covered, yielding a tree-structured history.
+
+Since the filesystem interface doesn't expose these details, we can
+change the representation pretty much as we please to optimize
+whatever parameter we care about --- storage size, speed, robustness,
+etc.
+
+
+DELTA: how we represent text deltas
+
+The job of a DELTA form is to describe how to turn one byte string
+(the `source' string) into another (the `target' string).  The context
+of the DELTA form needs specify exactly what the source and target
+strings are.
+
+At the moment, there is only one form of DELTA allowed:
+
+("vcdiff" DATA)
+    DATA is an atom whose contents are a VCDIFF-form diff.
+
+
+CHECKSUM: how we represent checksums
+
+The job of a CHECKSUM form is to provide a constant-size distinctive
+value, computed entirely from a given string.  If two strings have
+different checksums, then we know those two strings must be different.
+Assuming we use a good checksum algorithm, if two strings have the
+same checksum, it is likely that the strings are equal.
+
+There is only one form of CHECKSUM skel at the moment:
+
+("md5" BYTES)
+    BYTES is the 128-bit MD5 hash value of the string.
+
+
+
+How we store all this in Berkeley DB.
 
 The database contains a table called "nodes", which is a btree indexed
-by node version (`nv') ID's, mapping them onto a description of their
-contents.  Each nv specifies whether it's a directory or a
-file, and whether it's full-text or a delta vs. the next nv.
-
-Every nv record has one of the following forms:
-
-("fulltext" OBJECT HASH)
-    This nv is represented in full in this record; OBJECT is the
-    fulltext representation of the node's contents.  See below for
-    possible forms for OBJECT.
-
-("younger" DELTA HASH)
-    This nv is represented as a delta against the next younger nv.
-
-    DELTA specifies how to compute some target string from some source
-    string.  In this case, the source string is the fulltext form of
-    the next younger nv, and the target string is the fulltext form of
-    this nv.  By "fulltext form", we mean the concrete form of the
-    OBJECT skel.
-
-    For example, if the record of nv 10.3 is ("younger" DELTA), then
-    you should retrieve the fulltext of nv 10.4 --- the unparsed form
-    of OBJECT --- and then apply DELTA to that byte string.  This
-    should give you a new byte string which is the unparsed form of
-    OBJECT for nv 10.3.
-
+by node version ID's, mapping them onto REPRESENTATION skels.
 
 Since the "nodes" table is a btree, it's efficent to walk over the
 entries in order of increasing or decreasing node ID's.  In fact,
@@ -99,42 +233,35 @@ Here's the sort order we use:
 - All branches off any version of a node come immediately after that
   node, ordered by increasing version number.
 
-
-OBJECT forms
+For example, the "nodes" table might have the following sequence of
+keys:
 
-OBJECT must have one of the following forms:
+13.1     ; the original node, with four versions
+13.2
+13.3
+13.4
+13.head
+13.2.1.1   ; a branch from the second version of 13, with three versions
+13.2.1.2
+13.2.1.3
+13.2.1.head
+13.2.2.1   ; another branch off the same version of 13, with four versions
+13.2.2.2
+13.2.2.3
+13.2.2.4
+13.2.2.head
+13.4.1.1   ; another branch off a later version of 13, with two versions
+13.4.1.2
+13.4.1.head
+14.1     ; another node
+14.2
+14.3
+14.head
 
-("file" PROPLIST CONTENTS)
-    PROPLIST is a property list; see below.  CONTENTS is an atom
-    giving the full contents of the file.
-
-("directory" PROPLIST (ENTRY ...))
-    PROPLIST is a property list; see below.  Each ENTRY has the form:
-
-        (NAME ID PROPLIST)
-
-    where NAME is the name of the directory entry, in UTF-8, ID is the
-    ID of the nv to which this entry refers, and PROPLIST is a
-    property list for this directory entry.
-
-A property list has the form:
-
-    (NAME1 VALUE1 NAME2 VALUE2 ...)
-
-where each NAMEi is the name of a property, and VALUEi is the value of
-the property named NAMEi.
-
-
-DELTA forms 
-
-The job of a DELTA form is to describe how to turn one string (the
-`source' string) into another (the `target' string).  The context of
-the DELTA form must specify exactly what the source and target are.
-
-At the moment, there is only one form of DELTA allowed:
-
-(vcdiff DATA)
-    DATA is an atom whose contents are a VCDIFF-form diff.
+Assuming that we store the most recent version on every branch as
+fulltext, and all other versions as deltas, we can retrieve any node
+version NODE.VERSION by searching for NODE.head, and then walking
+backwards to NODE.VERSION, applying deltas as we go.
 
 
 Transactions
