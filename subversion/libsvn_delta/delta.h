@@ -91,7 +91,7 @@ svn_error_t * svn_vcdiff_send_window (svn_vcdiff_parser_t *parser,
 typedef enum svn_delta__XML_t
 {
   svn_delta__XML_treedelta,
-  svn_delta__XML_new,
+  svn_delta__XML_add,
   svn_delta__XML_delete,
   svn_delta__XML_replace,
   svn_delta__XML_file,
