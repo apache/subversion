@@ -883,6 +883,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
       err = svn_repos_open(repos, candidate, pool);
       if (err == SVN_NO_ERROR)
         break;
+      svn_error_clear(err);
       if (!*candidate || strcmp(candidate, "/") == 0)
         return svn_error_createf(SVN_ERR_RA_SVN_REPOS_NOT_FOUND, NULL,
                                  "No repository found in '%s'", url);
