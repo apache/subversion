@@ -48,7 +48,8 @@ by a cosmetic trailer "ENDREP\n".
 
 If the a representation is for the text contents of a directory node,
 the expanded contents are in the form of a dumped hash map (a la
-svn_hash_write) mapping entry names to node IDs.
+svn_hash_write) mapping entry names to "<type> <id>" pairs, where
+<type> is "file" or "dir" and <id> gives the ID of the child node-rev.
 
 If a representation is for a property list, the expanded contents are
 in the form of a dumped hash map mapping property names to property
@@ -90,9 +91,10 @@ A node-revision with no properties may omit the "props" field.
 
 [Don't know how changed-path data is represented yet.]
 
-At the very end of a rev file is a line "<root-offset> <cp-offset>\n",
-where <root-offset> is the offset of the root directory node revision
-and <cp-offset> is the offset of the changed-path data.
+At the very end of a rev file is a pair of lines containing
+"\noffsets: <root-offset> <cp-offset>\n", where <root-offset> is the
+offset of the root directory node revision and <cp-offset> is the
+offset of the changed-path data.
 
 All numbers in the rev file format are unsigned and are represented as
 ASCII decimal.
