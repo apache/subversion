@@ -279,17 +279,7 @@ static svn_error_t *
 free_file_baton (struct file_baton *fb)
 {
   struct dir_baton *parent = fb->dir_baton;
-
-  /* kff todo: working here.
-     If we comment out the apr_destroy_pool() below, then the Corrupt
-     Parent Path bug does not manifest itself.  If we do destroy the
-     file_baton's pool, then the parent dir's path gets corrupted in a
-     way that suggests pool bleed. 
-
-     Changing svn_error.c:svn_pool_create() to use apr_make_sub_pool()
-     instead of apr_create_pool() has not solved this. */
   apr_destroy_pool (fb->pool);
-
   return decrement_ref_count (parent);
 }
 
