@@ -26,23 +26,23 @@
 #include "svn_types.h"
 
 
-typedef struct svn_diff_node_t svn_diff_node_t;
-typedef struct svn_diff_tree_t svn_diff_tree_t;
-typedef struct svn_diff_position_t svn_diff_position_t;
-typedef struct svn_diff_lcs_t svn_diff_lcs_t;
+typedef struct svn_diff__node_t svn_diff__node_t;
+typedef struct svn_diff__tree_t svn_diff__tree_t;
+typedef struct svn_diff__position_t svn_diff__position_t;
+typedef struct svn_diff__lcs_t svn_diff__lcs_t;
 
-typedef enum svn_diff_type_e
+typedef enum svn_diff__type_e
 {
-  svn_diff_type_common,
-  svn_diff_type_diff_workingcopy,
-  svn_diff_type_diff_repository,
-  svn_diff_type_diff_common,
-  svn_diff_type_conflict
-} svn_diff_type_e;
+  svn_diff__type_common,
+  svn_diff__type_diff_workingcopy,
+  svn_diff__type_diff_repository,
+  svn_diff__type_diff_common,
+  svn_diff__type_conflict
+} svn_diff__type_e;
 
 struct svn_diff_t {
   svn_diff_t *next;
-  svn_diff_type_e type;
+  svn_diff__type_e type;
   apr_off_t baseline_start;
   apr_off_t baseline_length;
   apr_off_t workingcopy_start;
@@ -51,34 +51,34 @@ struct svn_diff_t {
   apr_off_t repository_length;
 };
 
-struct svn_diff_node_t
+struct svn_diff__node_t
 {
-  svn_diff_node_t     *parent;
-  svn_diff_node_t     *left;
-  svn_diff_node_t     *right;
+  svn_diff__node_t     *parent;
+  svn_diff__node_t     *left;
+  svn_diff__node_t     *right;
 
   void                *token;
-  svn_diff_position_t *position[3];
+  svn_diff__position_t *position[3];
 };
 
-struct svn_diff_tree_t
+struct svn_diff__tree_t
 {
-  svn_diff_node_t     *root;
+  svn_diff__node_t     *root;
   apr_pool_t          *pool;
 };
 
-struct svn_diff_position_t
+struct svn_diff__position_t
 {
-  svn_diff_position_t *next;
-  svn_diff_position_t *next_in_node;
-  svn_diff_node_t     *node;
+  svn_diff__position_t *next;
+  svn_diff__position_t *next_in_node;
+  svn_diff__node_t     *node;
   apr_off_t            offset;
 };
 
-struct svn_diff_lcs_t
+struct svn_diff__lcs_t
 {
-  svn_diff_lcs_t *next;
-  svn_diff_position_t *position[2];
+  svn_diff__lcs_t *next;
+  svn_diff__position_t *position[2];
   int refcount;
 };
 
@@ -89,13 +89,13 @@ struct svn_diff_lcs_t
 
 static
 apr_status_t
-svn_diff__tree_create(svn_diff_tree_t **tree, apr_pool_t *pool)
+svn_diff__tree_create(svn_diff__tree_t **tree, apr_pool_t *pool)
 {
-  svn_diff_tree_t *newtree;
+  svn_diff__tree_t *newtree;
 
   *tree = NULL;
 
-  newtree = apr_palloc(pool, sizeof(svn_diff_tree_t));
+  newtree = apr_palloc(pool, sizeof(svn_diff__tree_t));
   newtree->pool = pool;
   newtree->root = NULL;
 
@@ -105,19 +105,19 @@ svn_diff__tree_create(svn_diff_tree_t **tree, apr_pool_t *pool)
 }
 
 static
-svn_diff_position_t *
-svn_diff__tree_insert_token(svn_diff_tree_t *tree,
+svn_diff__position_t *
+svn_diff__tree_insert_token(svn_diff__tree_t *tree,
                             void *diff_baton,
                             svn_diff_fns_t *vtable,
                             void *token,
                             apr_off_t offset,
                             int idx)
 {
-  svn_diff_node_t *node;
-  svn_diff_node_t **node_ref;
-  svn_diff_node_t *parent;
-  svn_diff_position_t *position;
-  svn_diff_position_t **position_ref;
+  svn_diff__node_t *node;
+  svn_diff__node_t **node_ref;
+  svn_diff__node_t *parent;
+  svn_diff__position_t *position;
+  svn_diff__position_t **position_ref;
   int rv;
 
   parent = NULL;
@@ -150,7 +150,7 @@ svn_diff__tree_insert_token(svn_diff_tree_t *tree,
             }
 
           /* Create a new position */
-          position = apr_palloc(tree->pool, sizeof(svn_diff_position_t));
+          position = apr_palloc(tree->pool, sizeof(svn_diff__position_t));
           position->next = NULL;
           position->next_in_node = *position_ref;
           position->node = parent;
@@ -181,7 +181,7 @@ svn_diff__tree_insert_token(svn_diff_tree_t *tree,
   *node_ref = node;
 
   /* Create a new position */
-  position = apr_palloc(tree->pool, sizeof(svn_diff_position_t));
+  position = apr_palloc(tree->pool, sizeof(svn_diff__position_t));
   position->next = NULL;
   position->next_in_node = NULL;
   position->node = node;
@@ -194,11 +194,11 @@ svn_diff__tree_insert_token(svn_diff_tree_t *tree,
 
 static
 int
-svn_diff__tree_compare_common_token_count(svn_diff_node_t *node,
+svn_diff__tree_compare_common_token_count(svn_diff__node_t *node,
                                           int idx1, int idx2)
 {
   int count = 0;
-  svn_diff_position_t *position;
+  svn_diff__position_t *position;
 
   if (node->position[idx1] != NULL && node->position[idx2] != NULL)
     {
@@ -232,7 +232,7 @@ svn_diff__tree_compare_common_token_count(svn_diff_node_t *node,
 
 static
 int
-svn_diff__tree_largest_common_alphabet_user(svn_diff_tree_t *tree, int idx1, int idx2)
+svn_diff__tree_largest_common_alphabet_user(svn_diff__tree_t *tree, int idx1, int idx2)
 {
   if (tree->root == NULL)
     return -1;
@@ -246,11 +246,11 @@ svn_diff__tree_largest_common_alphabet_user(svn_diff_tree_t *tree, int idx1, int
  */
 
 static
-svn_diff_lcs_t *
-svn_diff__lcs_reverse(svn_diff_lcs_t *lcs)
+svn_diff__lcs_t *
+svn_diff__lcs_reverse(svn_diff__lcs_t *lcs)
 {
-  svn_diff_lcs_t *next;
-  svn_diff_lcs_t *prev;
+  svn_diff__lcs_t *next;
+  svn_diff__lcs_t *prev;
 
   next = NULL;
   while (lcs != NULL)
@@ -269,24 +269,24 @@ svn_diff__lcs_reverse(svn_diff_lcs_t *lcs)
  * Support structure to implement 'large arrays'.
  */
 
-typedef struct svn_diff_hat_t svn_diff_hat_t;
+typedef struct svn_diff__hat_t svn_diff__hat_t;
 
-struct svn_diff_hat_t
+struct svn_diff__hat_t
 {
-  svn_diff_hat_t   *next;
+  svn_diff__hat_t   *next;
   apr_pool_t       *pool;
-  svn_diff_lcs_t *links[1];
+  svn_diff__lcs_t *links[1];
 };
 
 static
 apr_status_t
-svn_diff__hat_create(svn_diff_hat_t **hat, apr_pool_t *pool)
+svn_diff__hat_create(svn_diff__hat_t **hat, apr_pool_t *pool)
 {
-    svn_diff_hat_t *newhat;
+    svn_diff__hat_t *newhat;
 
     *hat = NULL;
 
-    newhat = apr_pcalloc(pool, sizeof(svn_diff_hat_t) + 4095 * sizeof(svn_diff_lcs_t *));
+    newhat = apr_pcalloc(pool, sizeof(svn_diff__hat_t) + 4095 * sizeof(svn_diff__lcs_t *));
     newhat->pool = pool;
 
     *hat = newhat;
@@ -296,10 +296,10 @@ svn_diff__hat_create(svn_diff_hat_t **hat, apr_pool_t *pool)
 
 static
 void
-svn_diff__hat_set(svn_diff_hat_t *hat, apr_size_t idx, svn_diff_lcs_t *link)
+svn_diff__hat_set(svn_diff__hat_t *hat, apr_size_t idx, svn_diff__lcs_t *link)
 {
   apr_size_t size;
-  svn_diff_hat_t *newhat;
+  svn_diff__hat_t *newhat;
 
   size = 4096;
   while (idx > size
@@ -313,8 +313,8 @@ svn_diff__hat_set(svn_diff_hat_t *hat, apr_size_t idx, svn_diff_lcs_t *link)
   while (idx > size)
     {
       newhat = apr_pcalloc(hat->pool,
-                           sizeof(svn_diff_hat_t)
-                           + (size - 1) * sizeof(svn_diff_lcs_t *));
+                           sizeof(svn_diff__hat_t)
+                           + (size - 1) * sizeof(svn_diff__lcs_t *));
       newhat->pool = hat->pool;
 
       hat->next = newhat;
@@ -328,8 +328,8 @@ svn_diff__hat_set(svn_diff_hat_t *hat, apr_size_t idx, svn_diff_lcs_t *link)
 }
 
 static
-svn_diff_lcs_t *
-svn_diff__hat_get(svn_diff_hat_t *hat, apr_size_t idx)
+svn_diff__lcs_t *
+svn_diff__hat_get(svn_diff__hat_t *hat, apr_size_t idx)
 {
   apr_size_t size;
 
@@ -357,15 +357,15 @@ svn_diff__hat_get(svn_diff_hat_t *hat, apr_size_t idx)
 
 static
 apr_status_t
-svn_diff__get_tokens(svn_diff_position_t **position_list,
-                     svn_diff_tree_t *tree,
+svn_diff__get_tokens(svn_diff__position_t **position_list,
+                     svn_diff__tree_t *tree,
                      void *diff_baton,
                      svn_diff_fns_t *vtable,
                      svn_diff_datasource_e datasource,
                      int position_idx)
 {
-  svn_diff_position_t *position;
-  svn_diff_position_t **position_ref;
+  svn_diff__position_t *position;
+  svn_diff__position_t **position_ref;
   void *token;
   apr_off_t offset;
   apr_status_t rv;
@@ -400,24 +400,24 @@ svn_diff__get_tokens(svn_diff_position_t **position_list,
 }
 
 static
-svn_diff_lcs_t *
-svn_diff__lcs(svn_diff_tree_t *tree,
-              svn_diff_position_t *position_list1,
-              svn_diff_position_t *position_list2,
+svn_diff__lcs_t *
+svn_diff__lcs(svn_diff__tree_t *tree,
+              svn_diff__position_t *position_list1,
+              svn_diff__position_t *position_list2,
               int idx1, int idx2,
               apr_pool_t *pool)
 {
-  svn_diff_node_t *node;
-  svn_diff_position_t *position[2];
-  svn_diff_position_t *position_list[2];
-  svn_diff_lcs_t *link;
-  svn_diff_hat_t *hat;
+  svn_diff__node_t *node;
+  svn_diff__position_t *position[2];
+  svn_diff__position_t *position_list[2];
+  svn_diff__lcs_t *link;
+  svn_diff__hat_t *hat;
   int idx;
   apr_size_t k, t;
   apr_size_t middle, range, offset;
-  svn_diff_lcs_t **ref, *freelist;
-  svn_diff_lcs_t sentinel_link;
-  svn_diff_position_t sentinel_position[2];
+  svn_diff__lcs_t **ref, *freelist;
+  svn_diff__lcs_t sentinel_link;
+  svn_diff__position_t sentinel_position[2];
 
   position_list[0] = position_list1;
   position_list[1] = position_list2;
@@ -555,11 +555,11 @@ svn_diff(svn_diff_t **diff,
          svn_diff_fns_t *vtable,
          apr_pool_t *pool)
 {
-  svn_diff_tree_t *tree;
-  svn_diff_position_t *position_list[2];
+  svn_diff__tree_t *tree;
+  svn_diff__position_t *position_list[2];
   apr_pool_t *subpool;
   apr_status_t rv;
-  svn_diff_lcs_t *lcs;
+  svn_diff__lcs_t *lcs;
 
   *diff = NULL;
 
@@ -616,7 +616,7 @@ svn_diff(svn_diff_t **diff,
 
     svn_diff_t **diff_ref = diff;
     
-    svn_diff_position_t *position[2];
+    svn_diff__position_t *position[2];
 
     position[0] = position_list[0];
     position[1] = position_list[1];
@@ -645,7 +645,7 @@ svn_diff(svn_diff_t **diff,
           {
             (*diff_ref) = apr_palloc(pool, sizeof(**diff_ref));
 
-            (*diff_ref)->type = svn_diff_type_common;
+            (*diff_ref)->type = svn_diff__type_common;
             (*diff_ref)->baseline_start = baseline_start;
             (*diff_ref)->baseline_length = common_length;
             (*diff_ref)->workingcopy_start = workingcopy_start;
@@ -681,7 +681,7 @@ svn_diff(svn_diff_t **diff,
           {
             (*diff_ref) = apr_palloc(pool, sizeof(**diff_ref));
 
-            (*diff_ref)->type = svn_diff_type_diff_workingcopy;
+            (*diff_ref)->type = svn_diff__type_diff_workingcopy;
             (*diff_ref)->baseline_start = baseline_start;
             (*diff_ref)->baseline_length = baseline_length;
             (*diff_ref)->workingcopy_start = workingcopy_start;
@@ -714,10 +714,10 @@ svn_diff3(svn_diff_t **diff,
           apr_pool_t *pool)
 {
   apr_pool_t *subpool;
-  svn_diff_tree_t *tree;
-  svn_diff_position_t *position_list[3];
-  svn_diff_lcs_t *lcs_bw;
-  svn_diff_lcs_t *lcs_br;
+  svn_diff__tree_t *tree;
+  svn_diff__position_t *position_list[3];
+  svn_diff__lcs_t *lcs_bw;
+  svn_diff__lcs_t *lcs_br;
   apr_status_t rv;
 
   *diff = NULL;
@@ -780,18 +780,18 @@ svn_diff3(svn_diff_t **diff,
     apr_off_t repository_length;
     apr_off_t common_length;
 
-    svn_diff_lcs_t *sync_lcs_bw;
-    svn_diff_lcs_t *sync_lcs_br;
+    svn_diff__lcs_t *sync_lcs_bw;
+    svn_diff__lcs_t *sync_lcs_br;
 
-    svn_diff_position_t *position[3];
-    svn_diff_position_t *sync_position[3];
+    svn_diff__position_t *position[3];
+    svn_diff__position_t *sync_position[3];
 
     svn_boolean_t diff_workingcopy;
     svn_boolean_t diff_repository;
 
     svn_diff_t **diff_ref = diff;
 
-    svn_diff_type_e type;
+    svn_diff__type_e type;
 
     position[0] = position_list[0];
     position[1] = position_list[1];
@@ -826,7 +826,7 @@ svn_diff3(svn_diff_t **diff,
           {
             (*diff_ref) = apr_palloc(pool, sizeof(**diff_ref));
 
-            (*diff_ref)->type = svn_diff_type_common;
+            (*diff_ref)->type = svn_diff__type_common;
             (*diff_ref)->baseline_start = baseline_start;
             (*diff_ref)->baseline_length = common_length;
             (*diff_ref)->workingcopy_start = workingcopy_start;
@@ -973,20 +973,20 @@ svn_diff3(svn_diff_t **diff,
           {
             if (diff_workingcopy && !diff_repository)
               {
-                type = svn_diff_type_diff_workingcopy;
+                type = svn_diff__type_diff_workingcopy;
               }
             else if (!diff_workingcopy && diff_repository)
               {
-                type = svn_diff_type_diff_repository;
+                type = svn_diff__type_diff_repository;
               }
             else
               {
                 /* We can detect common/conflict here */
-                type = svn_diff_type_diff_common;
+                type = svn_diff__type_diff_common;
 
                 if (workingcopy_length != repository_length)
                   {
-                    type = svn_diff_type_conflict;
+                    type = svn_diff__type_conflict;
                   }
                 else
                   {
@@ -995,7 +995,7 @@ svn_diff3(svn_diff_t **diff,
                       {
                         if (sync_position[1]->node != sync_position[2]->node)
                           {
-                            type = svn_diff_type_conflict;
+                            type = svn_diff__type_conflict;
                             break;
                           }
 
@@ -1057,7 +1057,7 @@ svn_diff_output(svn_diff_t *diff,
     {
       switch (diff->type)
         {
-          case svn_diff_type_common:
+          case svn_diff__type_common:
             if (vtable->output_common != NULL)
               {
                 vtable->output_common(output_baton,
@@ -1070,7 +1070,7 @@ svn_diff_output(svn_diff_t *diff,
               }
             break;
 
-        case svn_diff_type_diff_common:
+        case svn_diff__type_diff_common:
             if (vtable->output_diff_common != NULL)
               {
                 vtable->output_diff_common(output_baton,
@@ -1083,7 +1083,7 @@ svn_diff_output(svn_diff_t *diff,
               }
             break;
 
-        case svn_diff_type_diff_workingcopy:
+        case svn_diff__type_diff_workingcopy:
             if (vtable->output_diff_workingcopy != NULL)
               {
                 vtable->output_diff_workingcopy(output_baton,
@@ -1096,7 +1096,7 @@ svn_diff_output(svn_diff_t *diff,
               }
             break;
 
-        case svn_diff_type_diff_repository:
+        case svn_diff__type_diff_repository:
             if (vtable->output_diff_repository != NULL)
               {
                 vtable->output_diff_repository(output_baton,
@@ -1109,7 +1109,7 @@ svn_diff_output(svn_diff_t *diff,
               }
             break;
 
-        case svn_diff_type_conflict:
+        case svn_diff__type_conflict:
             if (vtable->output_conflict != NULL)
               {
                 vtable->output_conflict(output_baton,
