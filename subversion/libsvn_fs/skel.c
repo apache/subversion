@@ -465,6 +465,11 @@ svn_fs__make_empty_list (apr_pool_t *pool)
 void
 svn_fs__prepend (skel_t *skel, skel_t *list_skel)
 {
+  /* If list_skel isn't even a list, somebody's not using this
+     function properly. */
+  if (list_skel->is_atom)
+    abort();
+
   skel->next = list_skel->children;
   list_skel->children = skel;
 }
@@ -473,6 +478,11 @@ svn_fs__prepend (skel_t *skel, skel_t *list_skel)
 void
 svn_fs__append (skel_t *skel, skel_t *list_skel)
 {
+  /* If list_skel isn't even a list, somebody's not using this
+     function properly. */
+  if (list_skel->is_atom)
+    abort();
+
   /* No kids?  Let's make one. */
   if (! list_skel->children)
     {
