@@ -84,6 +84,14 @@ section for approved changes.)
       Votes:
        +1: david
 
+    * r8463  (fix for issue #1709)
+      Make mod_dav_svn stop spewing huge responses at dead sockets.
+      Justification:  serious DoS attack potential!
+      Notes: looks like a big change, but it's mainly adding
+             error-checking code to mod_dav_svn.
+      Votes:
+       +1: cmpilato
+
 
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
