@@ -45,6 +45,7 @@ DUMPFILE = 'cvs2svn-dump'  # The "dumpfile" we create to load into the repos
 # Skeleton version of an svn filesystem.
 SVN_REVISIONS_DB = 'cvs2svn-revisions.db'
 NODES_DB = 'cvs2svn-nodes.db'
+SYMBOLIC_NAME_ROOTS_DB = 'cvs2svn-symroots.db'
 
 # See class SymbolicNameTracker for details.
 SYMBOLIC_NAMES_DB = "cvs2svn-sym-names.db"
@@ -375,14 +376,26 @@ def gen_key():
 
 class RepositoryMirror:
   def __init__(self):
+    # This corresponds to the 'revisions' table in a Subversion fs.
     self.revs_db_file = SVN_REVISIONS_DB
     self.revs_db = anydbm.open(self.revs_db_file, 'n')
+
+    # This corresponds to the 'nodes' table in a Subversion fs.  (We
+    # don't need a 'representations' or 'strings' table because we
+    # only track metadata, not file contents.
     self.nodes_db_file = NODES_DB
     self.nodes_db = anydbm.open(self.nodes_db_file, 'n')
 
+    # This tracks which symbolic names the current "head" of a given
+    # filepath could be the origin node for.  When the next commit on
+    # that path comes along, we can tell which symbolic names
+    # originated in the previous version, and signal back to the
+    # caller that the file can no longer be the origin for those names.
+    self.symroots_db_file = SYMBOLIC_NAME_ROOTS_DB
+    self.symroots_db = anydbm.open(self.symroots_db_file, 'n')
+
     # These keys could never be real directory entries.
     self.mutable_flag = "/mutable"
-    self.symbolic_names = "/sym_names"
     # This could represent a new mutable directory or file.
     self.empty_mutable_thang = { self.mutable_flag : 1 }
 
@@ -493,11 +506,6 @@ class RepositoryMirror:
     components = string.split(path, '/')
     path_so_far = None
 
-    # print "KFF change_path: '%s'" % path
-    # print "    revision:  '%d'" % self.youngest
-    # print "    tags:      ", tags
-    # print "    branches:  ", branches
-
     parent_key = self.revs_db[str(self.youngest)]
     parent = marshal.loads(self.nodes_db[parent_key])
     if not parent.has_key(self.mutable_flag):
@@ -544,24 +552,31 @@ class RepositoryMirror:
     # Now change the last node, the versioned file.  Just like at the
     # top of the above loop, parent is already mutable.
     op = OP_ADD
-    old_names = ()
+    if self.symroots_db.has_key(path):
+      old_names = marshal.loads(self.symroots_db[path])
+    else:
+      old_names = ()
     last_component = components[-1]
     if parent.has_key(last_component):
-      child = marshal.loads(self.nodes_db[parent[last_component]])
-      op = OP_CHANGE
-      if child.has_key(self.symbolic_names):
-        old_names = child[self.symbolic_names]
       # The contract for copying over existing nodes is to do nothing
       # and return:
       if copyfrom_path:
         return OP_NOOP, old_names
+      # else
+      op = OP_CHANGE
+
+    if copyfrom_path:
+      copyfrom_val = self.probe_path(copyfrom_path, copyfrom_rev)
 
     leaf_key = gen_key()
+    if copyfrom_path:
+      new_val = self.probe_path(copyfrom_path, copyfrom_rev)
+    else:
+      new_val = { }
     parent[last_component] = leaf_key
     self.nodes_db[parent_key] = marshal.dumps(parent)
-    new_names = tuple(tags + branches)
-    new_val = { self.symbolic_names : new_names,
-                self.mutable_flag   : 1 }
+    self.symroots_db[path] = marshal.dumps(tuple(tags + branches))
+    new_val[self.mutable_flag] = 1
     s = marshal.dumps(new_val)
     self.nodes_db[leaf_key] = marshal.dumps(new_val)
     return op, old_names
@@ -593,11 +608,6 @@ class RepositoryMirror:
 
     components = string.split(path, '/')
     path_so_far = None
-
-    # print "KFF change_path: '%s'" % path
-    # print "    revision:  '%d'" % self.youngest
-    # print "    tags:      ", tags
-    # print "    branches:  ", branches
 
     # Start out assuming that we will delete it.  The for-loop may
     # change this to None, if it turns out we can't even reach the
@@ -664,9 +674,9 @@ class RepositoryMirror:
     old_names = ()
     if not parent.has_key(last_component):
       return None, ()
-    else:
-      child = marshal.loads(self.nodes_db[parent[last_component]])
-      old_names = child[self.symbolic_names]
+    elif self.symroots_db.has_key(path):
+      old_names = marshal.loads(self.symroots_db[path])
+      del self.symroots_db[path]
 
     # The target is present, so remove it and bubble up, making a new
     # mutable path and/or pruning as necessary.
@@ -1292,7 +1302,7 @@ class SymbolicNameTracker:
         if (rev != parent_rev):
           parent_rev = rev
           copy_dst = make_path(ctx, dst_path, branch)
-          dumper.copy_path(src_path, parent_rev, copy_path)
+          dumper.copy_path(src_path, parent_rev, copy_dst)
           # Record that this copy is done:
           val[self.copyfrom_rev_key] = parent_rev
           if val.has_key(self.opening_revs_key):
