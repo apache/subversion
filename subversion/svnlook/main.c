@@ -217,7 +217,7 @@ do_author (svnlook_ctxt_t *c, apr_pool_t *pool)
 /*** Tree Printing Routines ***/
 
 /* Recursively print only directory nodes that either a) have property
-   mods, or b) contains files that have changes. */
+   mods, or b) contains files that have changed. */
 static void
 print_dirs_changed_tree (repos_node_t *root, 
                          svn_stringbuf_t *path,
@@ -292,7 +292,8 @@ print_dirs_changed_tree (repos_node_t *root,
 }
 
 
-/* Recursively print all nodes in the tree. */
+/* Recursively print all nodes in the tree that have been modified
+   (do not include directories affected only by "bubble-up"). */
 static void
 print_changed_tree (repos_node_t *root, 
                     svn_stringbuf_t *path,
@@ -301,6 +302,7 @@ print_changed_tree (repos_node_t *root,
   repos_node_t *tmp_node;
   svn_stringbuf_t *full_path;
   char status[3] = "_ ";
+  int print_me = 1;
 
   if (! root)
     return;
@@ -313,16 +315,22 @@ print_changed_tree (repos_node_t *root,
     status[0] = 'D';
   else if (tmp_node->action == 'R')
     {
+      if ((! tmp_node->text_mod) && (! tmp_node->prop_mod))
+        print_me = 0;
       if (tmp_node->text_mod)
         status[0] = 'U';
       if (tmp_node->prop_mod)
         status[1] = 'U';
     }
-  
-  printf ("%s  %s%s\n",
-          status,
-          path->data,
-          tmp_node->kind == svn_node_dir ? "/" : "");
+  else
+    print_me = 0;
+
+  /* Print this node unless told to skip it. */
+  if (print_me)
+    printf ("%s  %s%s\n",
+            status,
+            path->data,
+            tmp_node->kind == svn_node_dir ? "/" : "");
   
   /* Return here if the node has no children. */
   tmp_node = tmp_node->child;
@@ -346,7 +354,8 @@ print_changed_tree (repos_node_t *root,
 }
 
 
-/* Recursively print all nodes in the tree. */
+/* Recursively print all nodes in the tree.  If SHOW_IDS is non-zero,
+   print the id of each node next to its name. */
 static void
 print_tree (repos_node_t *root, 
             svn_boolean_t show_ids,
