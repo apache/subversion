@@ -161,13 +161,13 @@ END
 # by replaying commits 1-299 into some temporary repository.
 
 # Where this node was created, and its kind.
-Revision: 1422
-Path:  foo/bar/baz/bop
+Node-revision: 1422
+Node-path:  foo/bar/baz/bop
 Node-kind: file | dir
 
 # No need for 'changed' verb:  that was only for distinguishing
 # between bubble-up dirs and dirs with changed props.
-Action:  deleted | added
+Node-action:  deleted | added
 
 # Was this node copied from another revision and path?
 Copied-from: [revision, path]
@@ -185,7 +185,7 @@ on
 END
 
 # If the node is a file, then we store its fulltext like so:
-Text-checksum: [md5 checksum on fulltext]
+Node-checksum: [md5 checksum on fulltext]
 Content-length:  N
 [N bytes of data follow]
 
@@ -199,3 +199,84 @@ Revision-properties:
 ...
 ...
 END
+
+
+------------------------------------------------------------------------
+Refinement of proposal #2:  (after discussion with gstein)
+=========================
+
+Start with all RFC822-style headers at the top.  The final header will
+be a 'Content-length:', followed by the content.  Thus our record
+boundaries can be inferred.
+
+The content section will have two implicit parts: a property hash, and
+the fulltext.  The division between these two sections will be implied
+by the "END" tag at the end of the prophash.  In the case of a
+directory node or a revision, only the prophash will be present in the
+content.
+
+Here's an example of revision 1422, whereby I added a new directory
+"baz", added a new file "bop" inside it, and modified the file "foo.c":
+
+---------------------------
+
+Revision-number: 1422
+Content-length: 74
+
+K 6
+author
+V 7
+sussman
+K 3
+log
+V 17
+Added two files, changed a third.
+END
+
+Node-path: /bar/baz
+Node-revision: 1422
+Node-kind: dir
+Node-action: added
+Content-checksum:  oj3eu729
+Content-length: 29
+
+K 10
+svn:ignore
+V 4
+TAGS
+END
+
+Node-path: /bar/baz/bop
+Node-revision: 1422
+Node-kind: file
+Node-action: added
+Content-checksum:  bzz35te7
+Content-length: 124
+
+K 12
+svn:keywords
+V 15
+LastChangedDate
+K 14
+svn:executable
+V 2
+on
+END
+Here is the text of the newly added 'bop' file.
+Whee.
+
+Node-path: /bar/foo.c
+Node-revision: 1422
+Node-kind: file
+Node-action: added
+Content-checksum:  Ae73te7et
+Content-length: 105
+
+END
+Here is the fulltext of my change to an existing /bar/foo.c.
+Notice that this file has no properties.
+
+
+
+
+
