@@ -36,15 +36,31 @@ ch05:
      fails, STDERR is marshalled back to the client.  (not true of
      post-commit, see issue 443).
 
+ch07:
+
+   - explain additional limitations of svn:externals:
+         - '..'-type paths don't work
+         - URLs can only point to dirs, not files.
 
 --------------------------------------------------------------
 
 To be fixed by sussman:
 
+ch04:
+
+   - 'mixed tag' section.  explain how 'svn cp URL' works, that it's
+     not just a literal 'cp -R' to the repository.  mixed-rev
+     directories can create a repos tree different than you expect.
+     the mixed-tag example assumes you start with a WC all at one
+     revision, then only back/fore-date *files*, not dirs.
+
+
 ch06:  mod_authz_svn:  clarify that the most specific match wins:
  
          * [repos:/foo] overrides [/foo]
          * "harry = " overrides "* = r"
+
+       put in FAQ about ssh-agent usage.
 
 
 appC:
