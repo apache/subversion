@@ -31,7 +31,6 @@ main (int argc, char **argv)
   FILE *source_file;
   FILE *target_file;
   svn_txdelta_stream_t *txdelta_stream;
-  svn_txdelta_window_t *window;
   svn_txdelta_window_handler_t svndiff_handler;
   svn_stream_t *encoder;
   void *svndiff_baton;
@@ -49,11 +48,10 @@ main (int argc, char **argv)
   encoder = svn_base64_encode (svn_stream_from_stdio (stdout, NULL), NULL);
 #endif
   svn_txdelta_to_svndiff (encoder, NULL, &svndiff_handler, &svndiff_baton);
-  do {
-    svn_txdelta_next_window (&window, txdelta_stream);
-    svndiff_handler (window, svndiff_baton);
-    svn_txdelta_free_window (window);
-  } while (window != NULL);
+  svn_txdelta_send_txstream (txdelta_stream,
+                             svndiff_handler,
+                             svndiff_baton,
+                             NULL);
 
   svn_txdelta_free (txdelta_stream);
   fclose (source_file);

@@ -513,6 +513,48 @@ svn_txdelta_send_string (svn_stringbuf_t *string,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *svn_txdelta_send_stream (svn_stream_t *stream,
+                                      svn_txdelta_window_handler_t handler,
+                                      void *handler_baton,
+                                      apr_pool_t *pool)
+{
+  svn_txdelta_stream_t *txstream;
+
+  /* ### this is a hack. we should simply read from the stream, construct
+     ### some windows, and pass those to the handler. there isn't any reason
+     ### to crank up a full "diff" algorithm just to copy a stream.
+     ###
+     ### will fix RSN. */
+
+  /* Create a delta stream which converts an *empty* bytestream into the
+     target bytestream. */
+  svn_txdelta (&txstream, svn_stream_empty (pool), stream, pool);
+  return svn_txdelta_send_txstream (txstream, handler, handler_baton, pool);
+}
+
+svn_error_t *svn_txdelta_send_txstream (svn_txdelta_stream_t *txstream,
+                                        svn_txdelta_window_handler_t handler,
+                                        void *handler_baton,
+                                        apr_pool_t *pool)
+{
+  svn_txdelta_window_t *window;
+
+  do
+    {
+      /* read in a single delta window */
+      SVN_ERR( svn_txdelta_next_window (&window, txstream));
+
+      /* shove it at the handler */
+      SVN_ERR( (*handler)(window, handler_baton));
+
+      /* free the window (if any) */
+      svn_txdelta_free_window (window);
+    }
+  while (window != NULL);
+
+  return SVN_NO_ERROR;
+}
+
 
 
 

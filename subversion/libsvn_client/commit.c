@@ -52,8 +52,6 @@ send_file_contents (svn_stringbuf_t *path,
   svn_stream_t *contents;
   svn_txdelta_window_handler_t handler;
   void *handler_baton;
-  svn_txdelta_stream_t *delta_stream;
-  svn_txdelta_window_t *window;
   apr_file_t *f = NULL;
   apr_status_t apr_err;
 
@@ -72,21 +70,12 @@ send_file_contents (svn_stringbuf_t *path,
   /* Get a readable stream of the file's contents. */
   contents = svn_stream_from_aprfile (f, subpool);
 
-  /* Create a delta stream which converts an *empty* bytestream into the
-     file's contents bytestream. */
-  svn_txdelta (&delta_stream, svn_stream_empty (subpool), contents, subpool);
-
   /* Get an editor func that wants to consume the delta stream. */
   SVN_ERR (editor->apply_textdelta (file_baton, &handler, &handler_baton));
 
-  /* Pull windows from the delta stream and feed to the consumer. */
-  do 
-    {
-      SVN_ERR (svn_txdelta_next_window (&window, delta_stream));
-      SVN_ERR ((*handler) (window, handler_baton));
-      if (window)
-        svn_txdelta_free_window (window);
-    } while (window);
+  /* Send the file's contents to the delta-window handler. */
+  SVN_ERR (svn_txdelta_send_stream (contents, handler, handler_baton,
+                                    subpool));
 
   /* Close the file. */
   apr_err = apr_file_close (f);

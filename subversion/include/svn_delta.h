@@ -192,13 +192,38 @@ void svn_txdelta (svn_txdelta_stream_t **stream,
                   apr_pool_t *pool);
 
 
-/* Send the contents of STRING to window-handler HANDLER.  */
+/* Send the contents of STRING to window-handler HANDLER/BATON. This is
+   effectively a 'copy' operation, resulting in delta windows that make
+   the target equivalent to the value of STRING.
+
+   All temporary allocation is performed in POOL.
+*/
 svn_error_t *svn_txdelta_send_string (svn_stringbuf_t *string,
                                       svn_txdelta_window_handler_t handler,
                                       void *handler_baton,
                                       apr_pool_t *pool);
-  
-  
+
+/* Send the contents of STREAM to window-handler HANDLER/BATON. This is
+   effectively a 'copy' operation, resulting in delta windows that make
+   the target equivalent to the stream.
+
+   All temporary allocation is performed in POOL.
+*/
+svn_error_t *svn_txdelta_send_stream (svn_stream_t *stream,
+                                      svn_txdelta_window_handler_t handler,
+                                      void *handler_baton,
+                                      apr_pool_t *pool);
+
+/* Send the contents of TXSTREAM to window-handler HANDLER/BATON. Windows
+   will be extracted from the stream and delivered to the handler.
+
+   All temporary allocation is performed in POOL.
+*/
+svn_error_t *svn_txdelta_send_txstream (svn_txdelta_stream_t *txstream,
+                                        svn_txdelta_window_handler_t handler,
+                                        void *handler_baton,
+                                        apr_pool_t *pool);
+
 /* Free the delta stream STREAM.  */
 void svn_txdelta_free (svn_txdelta_stream_t *stream);
 

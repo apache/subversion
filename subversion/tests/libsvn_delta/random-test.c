@@ -184,7 +184,6 @@ random_test (const char **msg,
       FILE *target_regen = tmpfile ();
 
       svn_txdelta_stream_t *txdelta_stream;
-      svn_txdelta_window_t *window;
       svn_txdelta_window_handler_t handler;
       svn_stream_t *stream;
       void *handler_baton;
@@ -214,14 +213,10 @@ random_test (const char **msg,
                    svn_stream_from_stdio (target, delta_pool),
                    delta_pool);
 
-      for (;;)
-        {
-          SVN_ERR (svn_txdelta_next_window (&window, txdelta_stream));
-          SVN_ERR (handler (window, handler_baton));
-          if (window == NULL)
-            break;
-          svn_txdelta_free_window (window);
-        }
+      SVN_ERR (svn_txdelta_send_txstream (txdelta_stream,
+                                          handler,
+                                          handler_baton,
+                                          delta_pool));
 
       svn_txdelta_free (txdelta_stream);
       svn_pool_destroy (delta_pool);

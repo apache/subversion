@@ -539,7 +539,6 @@ send_text_delta (struct context *c,
                  apr_pool_t *pool)
 {
   svn_txdelta_window_handler_t delta_handler;
-  svn_txdelta_window_t *window;
   void *delta_handler_baton;
 
   /* Get a handler that will apply the delta to the file.  */
@@ -549,15 +548,11 @@ send_text_delta (struct context *c,
   
   if (c->text_deltas)
     {
-      /* Read windows from the delta stream, and apply them to the file.  */
-      do
-        {
-          SVN_ERR (svn_txdelta_next_window (&window, delta_stream));
-          SVN_ERR (delta_handler (window, delta_handler_baton));
-          if (window)
-            svn_txdelta_free_window (window);
-        }
-      while (window);
+      /* Deliver the delta stream to the file.  */
+      SVN_ERR (svn_txdelta_send_txstream (delta_stream,
+                                          delta_handler,
+                                          delta_handler_baton,
+                                          pool));
     }
   else
     {
@@ -587,6 +582,9 @@ delta_files (struct context *c, void *file_baton,
   /* Compare the files' property lists.  */
   SVN_ERR (delta_proplists (c, source_path, target_path,
                             change_file_prop, file_baton, subpool));
+
+  /* ### this is too much work if !c->text_deltas. there is no reason to
+     ### ask the FS for a delta stream if we aren't going to use it. */
 
   if (source_path)
     {
