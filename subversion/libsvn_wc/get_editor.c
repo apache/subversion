@@ -98,6 +98,10 @@ struct dir_baton
      guide us when syncing adm files later. */
   svn_boolean_t prop_changed;
 
+  /* Gets set iff this is a new directory that is not yet versioned and not
+     yet in the parent's list of entries */
+  svn_boolean_t added;
+
   /* An array of (svn_prop_t *)'s, representing all the property
      changes to be applied to this file. */
   apr_array_header_t *propchanges;
@@ -128,6 +132,7 @@ static struct dir_baton *
 make_dir_baton (svn_stringbuf_t *name,
                 struct edit_baton *edit_baton,
                 struct dir_baton *parent_baton,
+                svn_boolean_t added,
                 apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
@@ -159,6 +164,7 @@ make_dir_baton (svn_stringbuf_t *name,
   d->ref_count    = 1;
   d->pool         = subpool;
   d->propchanges  = apr_array_make (subpool, 1, sizeof(svn_prop_t *));
+  d->added        = added;
 
   if (parent_baton)
     parent_baton->ref_count++;
@@ -196,6 +202,26 @@ free_dir_baton (struct dir_baton *dir_baton)
                 NULL,
                 dir_baton->pool,
                 NULL));
+    }
+
+  /* If this directory is newly added it doesn't have an entry in the
+     parent's list of entries. The directory is now complete, and can be
+     added. */
+  if (dir_baton->added && parent)
+    {
+      SVN_ERR (svn_wc__entry_modify (parent->path,
+                                     dir_baton->name,
+                                     SVN_WC__ENTRY_MODIFY_KIND,
+                                     SVN_INVALID_REVNUM,
+                                     svn_node_dir,
+                                     svn_wc_schedule_normal,
+                                     FALSE, FALSE,
+                                     0,
+                                     0,
+                                     NULL,
+                                     NULL,
+                                     parent->pool,
+                                     NULL));
     }
 
   /* After we destroy DIR_BATON->pool, DIR_BATON itself is lost. */
@@ -331,6 +357,9 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   struct handler_baton *hb = baton;
   struct file_baton *fb = hb->fb;
   svn_error_t *err = NULL, *err2 = NULL;
+  int fixme = 0;
+  if (fixme)
+    return svn_error_createf (1, 0, NULL, hb->pool, "forced error");
 
   /* Apply this window.  We may be done at that point.  */
   err = hb->apply_handler (window, hb->apply_baton);
@@ -436,7 +465,7 @@ open_root (void *edit_baton,
   svn_stringbuf_t *ancestor_url;
   svn_revnum_t ancestor_revision;
 
-  *dir_baton = d = make_dir_baton (NULL, eb, NULL, eb->pool);
+  *dir_baton = d = make_dir_baton (NULL, eb, NULL, FALSE, eb->pool);
 
   if (eb->is_checkout)
     {
@@ -516,6 +545,7 @@ add_directory (svn_stringbuf_t *name,
     = make_dir_baton (name,
                       parent_dir_baton->edit_baton,
                       parent_dir_baton,
+                      TRUE,
                       parent_dir_baton->pool);
 
   /* Semantic check.  Either both "copyfrom" args are valid, or they're
@@ -577,24 +607,6 @@ add_directory (svn_stringbuf_t *name,
   if (err)
     return (err);
 
-  /* Notify the parent that this child dir exists.  This can happen
-     right away, there is no need to wait until the child is done. */
-  err = svn_wc__entry_modify (parent_dir_baton->path,
-                              this_dir_baton->name,
-                              SVN_WC__ENTRY_MODIFY_KIND,
-                              SVN_INVALID_REVNUM,
-                              svn_node_dir,
-                              svn_wc_schedule_normal,
-                              FALSE, FALSE,
-                              0,
-                              0,
-                              NULL, NULL,
-                              parent_dir_baton->pool,
-                              NULL);
-  if (err)
-    return err;
-
-
   *child_baton = this_dir_baton;
 
   return SVN_NO_ERROR;
@@ -617,6 +629,7 @@ open_directory (svn_stringbuf_t *name,
     = make_dir_baton (name,
                       parent_dir_baton->edit_baton,
                       parent_dir_baton,
+                      FALSE,
                       parent_dir_baton->pool);
 
   *child_baton = this_dir_baton;
@@ -710,13 +723,6 @@ close_directory (void *dir_baton)
 {
   struct dir_baton *db = dir_baton;
   svn_error_t *err = NULL;
-
-  /* kff todo: now that the child is finished, we should make an entry
-     in the parent's base-tree (although frankly I'm beginning to
-     wonder if child directories should be recorded anywhere but in
-     themselves; perhaps that would be best, and just let the parent
-     deduce their existence.  We can still tell when an update of the
-     parent is complete, by refcounting.) */
 
   /* If this directory has property changes stored up, now is the time
      to deal with them. */
