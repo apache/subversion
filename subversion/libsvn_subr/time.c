@@ -38,7 +38,7 @@
  * the comment in svn_wc__time_to_string()).
  */
 static const char *timestamp_format =
-"%s %d %s %d %02d:%02d:%02d.%03d (day %03d, dst %d, gmt_off %06d)";
+"%s %d %s %d %02d:%02d:%02d.%06d (day %03d, dst %d, gmt_off %06d)";
 
 
 svn_stringbuf_t *

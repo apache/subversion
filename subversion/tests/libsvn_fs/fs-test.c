@@ -3577,41 +3577,6 @@ commit_date (const char **msg,
 
   at_commit = svn_time_from_string (datestamp);
 
-#if 0
-  /* ### todo:
-
-     Ideally, we'd test that the commit happened between a point right
-     before it and a point right after.  Unfortunately, I can't get
-     this to pass right now because there's a bug in either the
-     Subversion time library or the APR time library.  I've tried the
-     following four combinations in libsvn_subr/time.c:
-
-        1. svn_time_to_string using apr_explode_localtime() with
-           svn_time_from_string using apr_implode_time()
-
-        2. svn_time_to_string using apr_explode_localtime() with
-           svn_time_from_string using apr_implode_gmt()
-
-        3. svn_time_to_string using apr_explode_gmt() with
-           svn_time_from_string using apr_implode_time()
-
-        4. svn_time_to_string using apr_explode_gmt() with
-           svn_time_from_string using apr_implode_gmt()
-
-     and none of them seem to work.  So I left them as they were,
-     which is that they don't match -- while the former uses
-     apr_explode_localtime(), while the latter is using
-     apr_implode_gmt().  This is the result of Branko's recent change
-     to svn_time_from_string (which at the time was called
-     svn_wc__string_to_time).  I don't know whether Branko's change is
-     right, wrong, or neutral; don't even know if it fixes issue #404
-     as it was intended to.
-
-     Until we can get this all sorted out, the extra checks below are
-     disabled, since they fail, or rather, the first one fails.
-
-  */
-
   if (at_commit < before_commit)
     return svn_error_create
       (SVN_ERR_FS_GENERAL, 0, NULL, pool,
@@ -3621,7 +3586,6 @@ commit_date (const char **msg,
     return svn_error_create
       (SVN_ERR_FS_GENERAL, 0, NULL, pool,
        "datestamp too late");
-#endif /* 0 */
 
   return SVN_NO_ERROR;
 }
