@@ -883,18 +883,19 @@ $ svn status
           completamente diferentes en el repositorio. No comparten
           historial o <quote>ascendencia</quote>.</para>
 
-        <para>The reason for bringing this up is to point out an
-          important difference between <command>svn diff</command> and
-          <command>svn merge</command>.  The former command ignores
-          ancestry, while the latter command is quite sensitive to it.
-          For example, if you asked <command>svn diff</command> to
-          compare revisions 99 and 102 of <filename>foo.c</filename>,
-          you would see line-based diffs; the diff command is blindly
-          comparing two paths.  But if you asked <command>svn
-          merge</command> to compare the same two objects, it would
-          notice that they're unrelated and first attempt to delete
-          the old file, then add the new file;  you would see a
-          <literal>D  foo.c</literal> followed by a <literal>A
+        <para>La razón de mencionar esto ahora es para señalar
+          una diferencia importante entre <command>svn diff</command>
+          y <command>svn merge</command>. El primer comando
+          ignora la ascendencia, mientras que el segundo es muy
+          sensitivo a ella.  Por ejemplo, si usase <command>svn
+          diff</command> para comparar las revisiones 99 y 102 de
+          <filename>foo.c</filename>, vería ficheros diferenciales
+          basados en líneas; el comando diff esta comparando
+          a ciegas ambas rutas. Pero si usase <command>svn
+          merge</command> para comparar ambos objetos, se daría
+          cuenta de que no están relacionados y primero intentaría
+          borrar el fichero antiguo, y entonces añadir el nuevo;
+          vería <literal>D foo.c</literal> seguido por <literal>A
           foo.c</literal>.</para>
 
         <para>Most merges involve comparing trees that are ancestrally
