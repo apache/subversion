@@ -1618,7 +1618,45 @@ svn_client_cat (svn_stream_t *out,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool);
 
+
+/** Locking commands
+ *
+ * @defgroup svn_client_locking_funcs
+ * @{
+ */
 
+/** @since New in 1.2.
+ *
+ * Lock @a path in the repository.  Return an error if @a path is already
+ * locked, unless @a force is true, in which case the lock is stolen.
+ * @a comment, if non-null, is stored with the lock in the repository.  The
+ * acquired lock will be stored in the working copy.
+ *
+ * Return the acquired lock in @a *lock, allocated in @a pool.
+ */
+svn_error_t *
+svn_client_lock (const svn_lock_t **lock_p, const char *path,
+                 const char *comment, svn_boolean_t force,
+                 svn_client_ctx_t *ctx, apr_pool_t *pool);
+
+/** @since New in 1.2.
+ *
+ * Unlock @a path in the repository.
+ *
+ * If @a force is false, the working copy must contain a lock for @a path.
+ * If this is not the case, or the working copy lock doesn't match the
+ * lock token in the repository, an error will be returned.
+ *
+ * If @a force is true, the lock will be broken in the repository.  In
+ * both cases, the lock, if any, will be removed from the working copy.
+ *
+ * Use @a pool for temporary allocations.
+ */
+svn_error_t *
+svn_client_unlock (const char *path, svn_boolean_t force,
+                   svn_client_ctx_t *ctx, apr_pool_t *pool);
+
+/** @} */
 
 /* Converting paths to URLs. */
 

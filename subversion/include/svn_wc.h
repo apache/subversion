@@ -979,6 +979,16 @@ typedef struct svn_wc_entry_t
   /** last commit author of this item */
   const char *cmt_author;
 
+  /** lock token or NULL if path not locked in this WC */
+  const char *lock_token;
+  /** lock owner, or NULL if not locked in this WC */
+  const char *lock_owner;
+  /** lock comment or NULL if not locked in this WC or no comment */
+  const char *lock_comment;
+  /** Lock creation date or 0 if not locked in this WC */
+  apr_time_t lock_crt_date;
+  /** lock expiration or 0 if not locked or no expiration date */
+  apr_time_t lock_exp_date;
   /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup to see
      if you need to extend that as well. */
 } svn_wc_entry_t;
@@ -2453,6 +2463,22 @@ svn_error_t *svn_wc_get_default_ignores (apr_array_header_t **patterns,
                                          apr_hash_t *config,
                                          apr_pool_t *pool);
 
+
+/** Add @a lock to the working copy for @a path.  @a adm_access must contain
+ * a write lock for @a path.  If @a path is read-only, due to locking
+ * properties, make it writable.  Perform temporary allocations in @a
+ * pool. */
+svn_error_t *svn_wc_add_lock (const char *path, const svn_lock_t *lock,
+                              svn_wc_adm_access_t *adm_access,
+                              apr_pool_t *pool);
+
+/** Remove any lock from @a path.  @a adm_access must contain a
+ * write-lock for @a path.  If @a path has a lock and the locking
+ * so specifies, make the file read-only.  Don't return an error if @a
+ * path didn't have a lock.  Perform temporary allocations in @a pool. */
+svn_error_t *svn_wc_remove_lock (const char *path,
+                                 svn_wc_adm_access_t *adm_access,
+                                 apr_pool_t *pool);
 
 
 #ifdef __cplusplus

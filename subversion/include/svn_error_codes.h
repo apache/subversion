@@ -824,6 +824,9 @@ SVN_ERROR_START
               SVN_ERR_CLIENT_CATEGORY_START + 12,
               "Two versioned resources are unrelated")
 
+  SVN_ERRDEF (SVN_ERR_CLIENT_MISSING_LOCK_TOKEN,
+              SVN_ERR_CLIENT_CATEGORY_START + 13,
+              "Path has no lock token")
 
   /* misc errors */
 

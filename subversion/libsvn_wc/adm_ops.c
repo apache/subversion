@@ -2117,4 +2117,48 @@ svn_wc_resolved_conflict (const char *path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *svn_wc_add_lock(const char *path, const svn_lock_t *lock,
+                             svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
+{
+  const svn_wc_entry_t *entry;
+  svn_wc_entry_t newentry;
 
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
+
+  if (! entry)
+    return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                              _("'%s' is not udner version control"), path);
+
+  newentry.lock_token = lock->token;
+  newentry.lock_owner = lock->owner;
+  newentry.lock_comment = lock->comment;
+  newentry.lock_crt_date = lock->creation_date;
+  newentry.lock_exp_date = lock->expiration_date;
+
+  SVN_ERR (svn_wc__entry_modify (adm_access, entry->name, &newentry,
+                                 SVN_WC__ENTRY_MODIFY_LOCK, TRUE, pool));
+
+  /* ### Make file writable if desired. */
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_wc_remove_lock(const char *path,
+                             svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
+{
+  const svn_wc_entry_t *entry;
+  svn_wc_entry_t newentry;
+
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
+
+  if (! entry)
+    return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                              _("'%s' is not udner version control"), path);
+
+  newentry.lock_token = newentry.lock_owner = newentry.lock_comment = NULL;
+  newentry.lock_crt_date = newentry.lock_exp_date = 0;
+  SVN_ERR (svn_wc__entry_modify (adm_access, entry->name, &newentry,
+                                 SVN_WC__ENTRY_MODIFY_LOCK, TRUE, pool));
+
+  /* ### Make file read-only if desired. */
+  return SVN_NO_ERROR;
+}

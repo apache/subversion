@@ -368,6 +368,14 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "    Date and time of the last commit\n"),
     {'r', 'v', 'R', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
   
+  { "lock", svn_cl__lock, {0},
+    N_("Lock working copy path(s) in the repository, so that no other user\n"
+       "can commit changes to them.\n"
+       "usage: lock PATH...\n"
+       "\n"
+       "  Use --force to steal the lock from another user or working copy.\n"),
+    { svn_cl__targets_opt, SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS,
+      svn_cl__config_dir_opt, svn_cl__force_opt } },
   { "log", svn_cl__log, {0},
     N_("Show the log messages for a set of revision(s) and/or file(s).\n"
        "usage: 1. log [PATH]\n"
@@ -663,6 +671,14 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     { 'r', 'N', 'q', svn_cl__merge_cmd_opt, svn_cl__relocate_opt,
       SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
  
+  { "unlock", svn_cl__unlock, {0},
+    N_("Unlock working copy path(s)\n"
+       "usage: unlock PATH...\n"
+       "\n"
+       "  Use --force to break the lock.\n"),
+    { svn_cl__targets_opt, SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS,
+      svn_cl__config_dir_opt, svn_cl__force_opt } },
+
   { "update", svn_cl__update, {"up"}, 
     N_("Bring changes from the repository into the working copy.\n"
        "usage: update [PATH...]\n"

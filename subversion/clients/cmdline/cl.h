@@ -160,6 +160,7 @@ svn_opt_subcommand_t
   svn_cl__help,
   svn_cl__import,
   svn_cl__info,
+  svn_cl__lock,
   svn_cl__log,
   svn_cl__ls,
   svn_cl__merge,
@@ -174,6 +175,7 @@ svn_opt_subcommand_t
   svn_cl__resolved,
   svn_cl__status,
   svn_cl__switch,
+  svn_cl__unlock,
   svn_cl__update,
   svn_cl__version;
 
