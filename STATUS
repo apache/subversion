@@ -9,21 +9,3 @@ Status of 1.0.9:
 
 Candidate changes:
 
-  * r11211, r11232, r11285
-    Fix performance regression for ls/RA->get_dir over ra_rav.
-    Justification:
-      Positively huge performance regression.
-    Notes:
-      To apply the patch:
-      1. replace svn_repos__fs_revision_prop with svn_repos_fs_revision_prop
-         and fix the indentation in subversion/mod_dav_svn/liveprops.c
-      2. Run "svn merge -r11210:11211 http://svn.collab.net/repos/svn/trunk ."
-      3. Run "svn merge -r11231:11232 http://svn.collab.net/repos/svn/trunk ."
-      4. Run "svn merge -r11284:11285 http://svn.collab.net/repos/svn/trunk ."
-      5. Fix the simple conflict by the last merge.
-      6. replace svn_repos_fs_revision_prop with svn_repos__fs_revision_prop
-         and fix the indentation in subversion/mod_dav_svn/liveprops.c
-      ...or use the patch attached to this email:
-         http://www.contactor.se/~dast/svn/archive-2004-10/0365.shtml
-    Votes:
-      +1: bliss, lundblad, ghudson
