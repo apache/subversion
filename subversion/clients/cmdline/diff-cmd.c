@@ -2,7 +2,7 @@
  * diff-cmd.c -- Display context diff of a file
  *
  * ====================================================================
- * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -34,11 +34,11 @@
 
 /*** Code. ***/
 
-/* Compare working copy against a given repository version. */
-static svn_error_t *
-wc_repository_diff (apr_getopt_t *os,
-                    svn_cl__opt_state_t *opt_state,
-                    apr_pool_t *pool)
+/* An svn_cl__cmd_proc_t to handle the 'diff' command. */
+svn_error_t *
+svn_cl__diff (apr_getopt_t *os,
+              svn_cl__opt_state_t *opt_state,
+              apr_pool_t *pool)
 {
   apr_array_header_t *options;
   apr_array_header_t *targets;
@@ -75,72 +75,6 @@ wc_repository_diff (apr_getopt_t *os,
 
   return SVN_NO_ERROR;
 }
-
-/* An svn_cl__cmd_proc_t to handle the 'diff' command. */
-svn_error_t *
-svn_cl__diff (apr_getopt_t *os,
-              svn_cl__opt_state_t *opt_state,
-              apr_pool_t *pool)
-{
-  svn_error_t *err = NULL;
-  apr_array_header_t *targets;
-  apr_array_header_t *options;
-  svn_boolean_t recurse = TRUE;
-  int i;
-
-  /* If a revision has been specified then compare against the repository.
-     ### TODO: This won't catch 'svn diff -rHEAD:1' since that doesn't
-     change the options from their default value. */
-  if (opt_state->start_revision != SVN_INVALID_REVNUM
-      || opt_state->end_revision != 1)
-    {
-      return wc_repository_diff (os, opt_state, pool);
-    }
-
-  options = svn_cl__stringlist_to_array(opt_state->extensions, pool);
-  targets = svn_cl__args_to_target_array(os, pool);
-
-  /* Add "." if user passed 0 arguments */
-  svn_cl__push_implicit_dot_target(targets, pool);
-
-  /* Check whether the user specified no recursion. */
-  if (opt_state->nonrecursive)
-    {
-      recurse = FALSE;
-    }
-
-  for (i = 0; i < targets->nelts; i++)
-    {
-      svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
-      enum svn_node_kind kind;
-
-      SVN_ERR (svn_io_check_path (target, &kind, pool));
-
-      switch (kind) 
-        {
-        case svn_node_file:
-          err = svn_cl__print_file_diff (target, options, pool);
-          break;
-        case svn_node_dir:
-          err = svn_cl__print_dir_diff (target, options, recurse, pool);
-          break;
-        case svn_node_unknown:
-          err = svn_error_createf (0, 0, NULL, pool,
-                                  "File type unrecognized for target `%s'.",
-                                  target->data);
-          break;                                  
-        case svn_node_none:
-          err = svn_error_createf (APR_ENOENT, 0, NULL, pool,
-                                   "Target `%s' not found.", target->data);
-          break;
-        }
-
-      if (err) return err;
-    }
-  
-  return SVN_NO_ERROR;
-}
-
 
 
 /* 

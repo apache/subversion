@@ -2,7 +2,7 @@
  * diff.c: Compare working copy with text-base or repository.
  *
  * ====================================================================
- * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -135,33 +135,14 @@ svn_client__diff_cmd (svn_stringbuf_t *path1,
 
 /*** Public Interface. ***/
 
-svn_error_t *
-svn_client_file_diff (svn_stringbuf_t *path,
-                      svn_stringbuf_t **pristine_copy_path,
-                      apr_pool_t *pool)
-{
-  svn_error_t *err;
-
-  /* Ask the WC layer to make a tmp copy of the pristine text-base and
-     return the path to us.  */
-  err = svn_wc_get_pristine_copy_path (path, pristine_copy_path, pool);
-  
-  /* If the WC fails, or doesn't have a text-base, then ask the RA
-     layer to deposit a copy somewhere!  */
-  if (err)
-    /* TODO:  someday when we have RA working, use it here! */
-    return err;
-  
-  return SVN_NO_ERROR;
-}
-
 /* Display context diffs
 
-     There are four cases:
+     There are five cases:
         1. path is not an URL and start_revision != end_revision
         2. path is not an URL and start_revision == end_revision
         3. path is an URL and start_revision != end_revision
         4. path is an URL and start_revision == end_revision
+        5. path is not an URL and no revisions given
 
      With only one distinct revision the working copy provides the other.
      When path is an URL there is no working copy. Thus
@@ -170,6 +151,7 @@ svn_client_file_diff (svn_stringbuf_t *path,
        2: compare working copy against repository version
        3: compare repository versions for URL
        4: nothing to do.
+       5: compare working copy against text-base
 
      Case 4 is not as stupid as it looks, for example it may occur if the
      user specifies two dates that resolve to the same revision.
@@ -234,6 +216,20 @@ svn_client_diff (svn_stringbuf_t *path,
       SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
       SVN_ERR (svn_wc_entry (&entry, anchor, pool));
       URL = svn_stringbuf_create (entry->url->data, pool);
+    }
+
+  /* ### TODO: awful revision handling */
+  if (!path_is_url
+      && !SVN_IS_VALID_REVNUM(start_revision) && end_revision == 1
+      && !start_date && !end_date)
+    {
+      /* Not an url and no revisions, this is the 'quick' diff that does
+         not contact the repository and simply uses the text base */
+      return svn_wc_diff (anchor,
+                          target,
+                          svn_client__diff_cmd, &diff_cmd_baton,
+                          recurse,
+                          pool);
     }
 
   /* Establish the RA session */

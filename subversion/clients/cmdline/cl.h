@@ -2,7 +2,7 @@
  * cl.h:  shared stuff in the command line program
  *
  * ====================================================================
- * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -221,18 +221,6 @@ void svn_cl__print_status_list (apr_hash_t *statushash,
 /* Print a hash that maps property names (char *) to property values
    (svn_stringbuf_t *). */
 void svn_cl__print_prop_hash (apr_hash_t *prop_hash, apr_pool_t *pool);
-
-/* Print a context diff showing local changes made to PATH */
-svn_error_t *svn_cl__print_file_diff (svn_stringbuf_t *path,
-                                      apr_array_header_t *options,
-                                      apr_pool_t *pool);
-
-/* Print diffs showing all local changes within the directory PATH, if 
- * RECURSE is TRUE, then recurse into subdirectories. */
-svn_error_t *svn_cl__print_dir_diff (svn_stringbuf_t *path,
-                                     apr_array_header_t *options,
-                                     svn_boolean_t recurse,
-                                     apr_pool_t *pool);
 
 /* Returns an editor that prints out events in an update or checkout. */
 svn_error_t *
