@@ -62,7 +62,6 @@ svn_cl__proplist (apr_getopt_t *os,
     {
       svn_revnum_t rev;
       const char *URL, *target;
-      svn_boolean_t is_url;
       svn_client_auth_baton_t *auth_baton;
       apr_hash_t *proplist;
 
@@ -74,22 +73,12 @@ svn_cl__proplist (apr_getopt_t *os,
         return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL, pool,
                                 "No URL target available.");
       target = ((const char **) (targets->elts))[0];
-      is_url = svn_path_is_url (target);
-      if (is_url)
-        {
-          URL = target;
-        }
-      else
-        {
-          svn_wc_adm_access_t *adm_access;          
-          const svn_wc_entry_t *entry;
-          SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target,
-                                          FALSE, FALSE, pool));
-          SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
-          SVN_ERR (svn_wc_adm_close (adm_access));
-          URL = entry->url;
-        }
-
+      SVN_ERR (svn_cl__get_url_from_target (&URL, target, pool));
+      if (URL == NULL)
+        return svn_error_create(SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL,
+                                pool,
+                                "Either a URL or versioned item is required.");
+  
       /* Let libsvn_client do the real work. */
       SVN_ERR (svn_client_revprop_list (&proplist, 
                                         URL, &(opt_state->start_revision),

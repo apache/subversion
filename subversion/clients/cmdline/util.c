@@ -438,7 +438,32 @@ svn_cl__get_log_message (const char **log_msg,
   return SVN_NO_ERROR;
 }
 
-#undef EDITOR_PREFIX_TXT
+
+svn_error_t *
+svn_cl__get_url_from_target (const char **URL,
+                             const char *target,
+                             apr_pool_t *pool)
+{
+  svn_wc_adm_access_t *adm_access;          
+  const svn_wc_entry_t *entry;  
+  svn_boolean_t is_url = svn_path_is_url (target);
+  
+  if (is_url)
+    *URL = target;
+
+  else
+    {
+      SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target,
+                                      FALSE, FALSE, pool));
+      SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
+      SVN_ERR (svn_wc_adm_close (adm_access));
+      
+      *URL = entry ? entry->url : NULL;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 
 
