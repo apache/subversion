@@ -90,7 +90,7 @@ DIST_SANDBOX=.dist_sandbox
 DISTPATH="$DIST_SANDBOX/$DISTNAME"
 
 echo "Distribution will be named: $DISTNAME"
-echo "  relase branch's revision: $REVISION"
+echo " release branch's revision: $REVISION"
 echo "     executable's revision: $REVISION_SVN"
 echo "     constructed from path: /$REPOS_PATH"
 
