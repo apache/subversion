@@ -162,7 +162,6 @@ typedef struct svn_ra_plugin_t
      The client initially provides an UPDATE_EDITOR/BATON to the RA
      layer; this editor contains knowledge of where the change will
      begin in the working copy (when replace_root() is called).
-     BASE_REVISION is the revision of this working-copy starting place.
 
      In return, the client receives a REPORTER/REPORT_BATON. The
      client then describes its working-copy revision numbers by making
@@ -177,7 +176,6 @@ typedef struct svn_ra_plugin_t
   svn_error_t *(*do_update) (void *session_baton,
                              const svn_ra_reporter_t **reporter,
                              void **report_baton,
-                             svn_revnum_t base_revision,
                              svn_revnum_t revision_to_update_to,
                              const svn_delta_edit_fns_t *update_editor,
                              void *update_baton);

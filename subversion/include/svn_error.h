@@ -227,12 +227,17 @@ typedef enum svn_errno_t {
     /* could not delete a resource on the server */
     SVN_ERR_RA_DELETE_FAILED,
 
+  /* End of ra_dav errors */
+
   /* These RA errors are specific to ra_local */
   
     /* the given URL does not seem to point to a versioned resource */
     SVN_ERR_RA_NOT_VERSIONED_RESOURCE,
 
-  /* End of ra_dav errors */
+    /* the update reporter was given a bogus first path. */
+    SVN_ERR_RA_BAD_REVISION_REPORT, 
+ 
+  /* End of ra_local errors */
 
   /* an unsuitable container-pool was passed to svn_make_pool() */
   SVN_ERR_BAD_CONTAINING_POOL,

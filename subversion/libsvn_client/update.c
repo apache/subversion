@@ -63,15 +63,13 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
   void *report_baton;
   svn_wc_entry_t *entry;
   const char *URL;
-  svn_revnum_t base_rev;
 
   /* Sanity check.  Without this, the update is meaningless. */
   assert (path != NULL);
 
-  /* Construct full URL and base_revision from PATH. */
+  /* Get full URL from PATH. */
   SVN_ERR (svn_wc_entry (&entry, path, pool));
   URL = entry->ancestor->data;
-  base_rev = entry->revision;
 
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      either the RA or XML driver will call editor->set_target_revision
@@ -105,7 +103,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
          invalid revnum, that means RA will use the latest revision.  */
       SVN_ERR (ra_lib->do_update (session,
                                   &reporter, &report_baton,
-                                  base_rev, revision,
+                                  revision,
                                   update_editor, update_edit_baton));
 
       /* Drive the reporter structure, describing the revisions within
