@@ -49,6 +49,9 @@ typedef struct {
   svn_ra_callbacks_t *callbacks;  /* callbacks to get auth data */
   void *callback_baton;
 
+  int number_of_tries;    /* how many times neon has attempted to
+                             fetch authentication info */
+
 } svn_ra_session_t;
 
 

@@ -56,10 +56,6 @@ static int request_auth(void *userdata, const char *realm,
   svn_ra_simple_password_authenticator_t *authenticator = NULL;
   svn_ra_session_t *ras = userdata;
 
-  /* if set, then this is at least the 2nd time neon has called this
-     callback, meaning that previous authentication failed. */
-  static int retry = 0;
-
   /* ### my only worry is that we're not catching any svn_errors from
      get_authenticator, get_username, get_password... */
 
@@ -70,9 +66,8 @@ static int request_auth(void *userdata, const char *realm,
   authenticator = (svn_ra_simple_password_authenticator_t *) a;      
   authenticator->get_user_and_pass (&uname, &pword,
                                     auth_baton, 
-                                    retry, /* possibly tell this
-                                              function to force a
-                                              prompt */
+                                    /* possibly force a user-prompt: */
+                                    ras->number_of_tries ? TRUE : FALSE,
                                     ras->pool);
   ras->username = uname;
   ras->password = pword;
@@ -87,8 +82,9 @@ static int request_auth(void *userdata, const char *realm,
   *password = malloc(l);
   memcpy(*password, ras->password, l);
 
-  retry = 1;  /* if this callback is called a second time, this flag
-                 will be noticed */
+  /* remember that we made another attempt to get auth info */
+  ras->number_of_tries++;
+  
   return 0;
 }
 
