@@ -92,7 +92,6 @@ get_next_child_subdir (svn_string_t **name,
   apr_status_t status;
   char *entryname;
   apr_filetype_e entrytype;
-  int done = 0;
 
   do {
     /* Read the next entry from dirhandle, get its name and type, too. */
