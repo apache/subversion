@@ -54,6 +54,12 @@
 /* Defined to be the path to the installed binaries */
 #define SVN_BINARY_DIR "/usr/local/bin"
 
+
+
+/* The default FS back-end type */
+#define DEFAULT_FS_TYPE "bdb"
+
+
 /* Define to the Python/C API format character suitable for apr_int64_t */
 /*
  * FIXME: The Windows Python bindings build is currently broken.
