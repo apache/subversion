@@ -1,7 +1,7 @@
 /* svn_repos.h :  tools built on top of the filesystem.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -486,6 +486,30 @@ svn_error_t *svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
 svn_error_t *svn_repos_fs_change_rev_prop (svn_repos_t *repos,
                                            svn_revnum_t rev,
                                            const char *author,
+                                           const char *name,
+                                           const svn_string_t *value,
+                                           apr_pool_t *pool);
+
+
+/* ---------------------------------------------------------------*/
+
+/*** Prop-changing wrappers for libsvn_fs routines. ***/
+
+/* NOTE: svn_repos_fs_change_rev_prop() also exists, but is located
+   above with the hook-related functions. */
+
+
+/* Validating wrapper for svn_fs_change_node_prop() (which see for
+   argument descriptions).  */
+svn_error_t *svn_repos_fs_change_node_prop (svn_fs_root_t *root,
+                                            const char *path,
+                                            const char *name,
+                                            const svn_string_t *value,
+                                            apr_pool_t *pool);
+
+/* Validating wrapper for svn_fs_change_txn_prop() (which see for
+   argument descriptions).  */
+svn_error_t *svn_repos_fs_change_txn_prop (svn_fs_txn_t *txn,
                                            const char *name,
                                            const svn_string_t *value,
                                            apr_pool_t *pool);

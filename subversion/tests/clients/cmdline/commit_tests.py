@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2001 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2003 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -1462,8 +1462,12 @@ def commit_multiple_wc(sbox):
   # Checkout a second working copy
   wc2_dir = os.path.join(wc_dir, 'A', 'wc2')
   url = svntest.main.current_repo_url
-  stdout_lines, stderr_lines = svntest.main.run_svn (None, 'checkout', url,
-                                                     wc2_dir)
+  stdout_lines, stderr_lines = svntest.main.run_svn (None, 'checkout',
+                                                     '--username',
+                                                     svntest.main.wc_author,
+                                                     '--password',
+                                                     svntest.main.wc_passwd,
+                                                     url, wc2_dir)
   if len (stderr_lines) != 0:
     return 1
 

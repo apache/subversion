@@ -1,7 +1,7 @@
 /* repos.h : interface to Subversion repository, private to libsvn_repos
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -91,6 +91,66 @@ struct svn_repos_t
      slide. */
   apr_pool_t *pool;
 };
+
+
+/*** Hook-running Functions ***/
+
+/* Run the start-commit hook for REPOS.  Use POOL for any temporary
+   allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
+
+   USER is the authenticated name of the user starting the commit.  */
+svn_error_t *
+svn_repos__hooks_start_commit (svn_repos_t *repos,
+                               const char *user,
+                               apr_pool_t *pool);
+
+/* Run the pre-commit hook for REPOS.  Use POOL for any temporary
+   allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  
+
+   TXN_NAME is the name of the transaction that is being committed.  */
+svn_error_t *
+svn_repos__hooks_pre_commit (svn_repos_t *repos,
+                             const char *txn_name,
+                             apr_pool_t *pool);
+
+/* Run the post-commit hook for REPOS.  Use POOL for any temporary
+   allocations.  If the hook fails, run SVN_ERR_REPOS_HOOK_FAILURE.
+
+   REV is the revision that was created as a result of the commit.  */
+svn_error_t *
+svn_repos__hooks_post_commit (svn_repos_t *repos,
+                              svn_revnum_t rev,
+                              apr_pool_t *pool);
+
+/* Run the pre-revprop-change hook for REPOS.  Use POOL for any
+   temporary allocations.  If the hook fails, return
+   SVN_ERR_REPOS_HOOK_FAILURE.  
+
+   REV is the revision whose property is being changed.
+   AUTHOR is the authenticated name of the user changing the prop.
+   NAME is the name of the property being changed.  
+   VALUE is the current (unchanged) value of the property.  */
+svn_error_t *
+svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
+                                     svn_revnum_t rev,
+                                     const char *author,
+                                     const char *name,
+                                     const svn_string_t *value,
+                                     apr_pool_t *pool);
+
+/* Run the pre-revprop-change hook for REPOS.  Use POOL for any
+   temporary allocations.  If the hook fails, return
+   SVN_ERR_REPOS_HOOK_FAILURE. 
+
+   REV is the revision whose property was changed.
+   AUTHOR is the authenticated name of the user who changed the prop.
+   NAME is the name of the property that was changed.  */
+svn_error_t *
+svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
+                                      svn_revnum_t rev,
+                                      const char *author,
+                                      const char *name,
+                                      apr_pool_t *pool);
 
 
 #ifdef __cplusplus

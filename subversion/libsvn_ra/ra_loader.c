@@ -2,7 +2,7 @@
  * ra_loader.c:  logic for loading different RA library implementations
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -121,7 +121,7 @@ load_ra_module (svn_ra_init_func_t *func,
     status = apr_dso_sym (&symbol, dso, funcname);
     if (status)
       {
-        return svn_error_createf (status, 0, NULL,
+        return svn_error_createf (status, NULL,
                                   "%s does not define %s()",
                                   libname, funcname);
       }
@@ -205,7 +205,7 @@ svn_ra_get_ra_library (svn_ra_plugin_t **library,
     
   /* Couldn't find a match... */
   *library = NULL;
-  return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, 0, NULL,
+  return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
                             "Unrecognized URL scheme: %s", URL);
 }
 

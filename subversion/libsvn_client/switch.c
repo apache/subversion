@@ -2,7 +2,7 @@
  * switch.c:  implement 'switch' feature via wc & ra interfaces.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -65,7 +65,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   svn_revnum_t revnum;
-  svn_error_t *err = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
   svn_wc_adm_access_t *adm_access;
 
   /* Sanity check.  Without these, the switch is meaningless. */
@@ -84,12 +84,12 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
   
   if (! entry)
     return svn_error_createf
-      (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL,
+      (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
        "svn_client_switch: %s is not under revision control", path);
 
   if (! entry->url)
     return svn_error_createf
-      (SVN_ERR_ENTRY_MISSING_URL, 0, NULL,
+      (SVN_ERR_ENTRY_MISSING_URL, NULL,
        "svn_client_switch: entry '%s' has no URL", path);
 
   if (entry->kind == svn_node_file)
@@ -100,12 +100,12 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
       SVN_ERR (svn_wc_entry (&session_entry, anchor, adm_access, FALSE, pool));
       if (! session_entry)
         return svn_error_createf
-          (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL,
+          (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
            "svn_client_switch: %s is not under revision control", anchor);
 
       if (! session_entry->url)
         return svn_error_createf
-          (SVN_ERR_ENTRY_MISSING_URL, 0, NULL,
+          (SVN_ERR_ENTRY_MISSING_URL, NULL,
            "svn_client_switch: directory '%s' has no URL", anchor);
     }
   else if (entry->kind == svn_node_dir)
@@ -208,6 +208,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
       const char *new_text_path;
       svn_stream_t *file_stream;
       svn_revnum_t fetched_rev = 1; /* this will be set by get_file() */
+      apr_status_t apr_err;
 
       /* Create a unique file */
       SVN_ERR (svn_io_open_unique_file (&fp, &new_text_path,
@@ -239,6 +240,10 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
       SVN_ERR (ra_lib->get_file (session, "", revnum, file_stream,
                                  &fetched_rev, &prophash));
       SVN_ERR (svn_stream_close (file_stream));
+      apr_err = apr_file_close (fp); 
+      if (apr_err)
+        return svn_error_createf (apr_err, NULL,
+                                  "closing temporary file '%s'", new_text_path);
 
       /* Convert the prophash into an array, which is what
          svn_wc_install_file (and its helpers) want.  */
@@ -280,7 +285,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
     }
   
   /* Sleep for one second to ensure timestamp integrity. */
-  apr_sleep (APR_USEC_PER_SEC * 1);
+  apr_sleep (apr_time_from_sec(1));
 
   if (err)
     return err;

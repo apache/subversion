@@ -1,7 +1,7 @@
 /* changes-table.c : operations on the `changes' table
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -27,6 +27,7 @@
 #include "../err.h"
 #include "../trail.h"
 #include "../util/fs_skels.h"
+#include "bdb-err.h"
 #include "dbt.h"
 #include "changes-table.h"
 
@@ -35,21 +36,21 @@
 /*** Creating and opening the changes table. ***/
 
 int
-svn_fs__open_changes_table (DB **changes_p,
-                            DB_ENV *env,
-                            int create)
+svn_fs__bdb_open_changes_table (DB **changes_p,
+                                DB_ENV *env,
+                                int create)
 {
   const u_int32_t open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
   DB *changes;
 
-  DB_ERR (svn_bdb__check_version());
-  DB_ERR (db_create (&changes, env, 0));
+  BDB_ERR (svn_fs__bdb_check_version());
+  BDB_ERR (db_create (&changes, env, 0));
 
   /* Enable duplicate keys. This allows us to store the changes
      one-per-row.  Note: this must occur before ->open().  */
-  DB_ERR (changes->set_flags (changes, DB_DUP));
+  BDB_ERR (changes->set_flags (changes, DB_DUP));
 
-  DB_ERR (changes->open (SVN_BDB_OPEN_PARAMS(changes, NULL),
+  BDB_ERR (changes->open (SVN_BDB_OPEN_PARAMS(changes, NULL),
                          "changes", 0, DB_BTREE,
                          open_flags | SVN_BDB_AUTO_COMMIT,
                          0666));
@@ -63,10 +64,10 @@ svn_fs__open_changes_table (DB **changes_p,
 /*** Storing and retrieving changes.  ***/
 
 svn_error_t *
-svn_fs__changes_add (svn_fs_t *fs,
-                     const char *key,
-                     svn_fs__change_t *change,
-                     trail_t *trail)
+svn_fs__bdb_changes_add (svn_fs_t *fs,
+                         const char *key,
+                         svn_fs__change_t *change,
+                         trail_t *trail)
 {
   DBT query, value;
   skel_t *skel;
@@ -77,7 +78,7 @@ svn_fs__changes_add (svn_fs_t *fs,
   /* Store a new record into the database. */
   svn_fs__str_to_dbt (&query, (char *) key);
   svn_fs__skel_to_dbt (&value, skel, trail->pool);
-  SVN_ERR (DB_WRAP (fs, "creating change", 
+  SVN_ERR (BDB_WRAP (fs, "creating change", 
                     fs->changes->put (fs->changes, trail->db_txn,
                                       &query, &value, 0)));
 
@@ -86,9 +87,9 @@ svn_fs__changes_add (svn_fs_t *fs,
 
 
 svn_error_t *
-svn_fs__changes_delete (svn_fs_t *fs,
-                        const char *key,
-                        trail_t *trail)
+svn_fs__bdb_changes_delete (svn_fs_t *fs,
+                            const char *key,
+                            trail_t *trail)
 {
   int db_err;
   DBT query;
@@ -100,7 +101,7 @@ svn_fs__changes_delete (svn_fs_t *fs,
      error should be propogated to the caller, though.  */
   if ((db_err) && (db_err != DB_NOTFOUND))
     {
-      SVN_ERR (DB_WRAP (fs, "deleting changes", db_err));
+      SVN_ERR (BDB_WRAP (fs, "deleting changes", db_err));
     }
 
   return SVN_NO_ERROR;
@@ -146,7 +147,7 @@ fold_change (apr_hash_t *changes,
          `reset' case. */
       if ((! change->noderev_id) && (change->kind != svn_fs_path_change_reset))
         return svn_error_create 
-          (SVN_ERR_FS_CORRUPT, 0, NULL,
+          (SVN_ERR_FS_CORRUPT, NULL,
            "Invalid change: missing required node revision ID");
         
       /* Sanity check:  we should be talking about the same node
@@ -156,7 +157,7 @@ fold_change (apr_hash_t *changes,
           && (! svn_fs__id_eq (old_change->node_rev_id, change->noderev_id))
           && (old_change->change_kind != svn_fs_path_change_delete))
         return svn_error_create 
-          (SVN_ERR_FS_CORRUPT, 0, NULL,
+          (SVN_ERR_FS_CORRUPT, NULL,
            "Invalid change ordering: new node revision ID without delete");
 
       /* Sanity check: an add, replacement, or reset must be the first
@@ -166,7 +167,7 @@ fold_change (apr_hash_t *changes,
                  || (change->kind == svn_fs_path_change_reset)
                  || (change->kind == svn_fs_path_change_add))))
         return svn_error_create 
-          (SVN_ERR_FS_CORRUPT, 0, NULL,
+          (SVN_ERR_FS_CORRUPT, NULL,
            "Invalid change ordering: non-add change on deleted path");
 
       /* Now, merge that change in. */
@@ -235,10 +236,10 @@ fold_change (apr_hash_t *changes,
 
 
 svn_error_t *
-svn_fs__changes_fetch (apr_hash_t **changes_p,
-                       svn_fs_t *fs,
-                       const char *key,
-                       trail_t *trail)
+svn_fs__bdb_changes_fetch (apr_hash_t **changes_p,
+                           svn_fs_t *fs,
+                           const char *key,
+                           trail_t *trail)
 {
   DBC *cursor;
   DBT query, result;
@@ -249,7 +250,7 @@ svn_fs__changes_fetch (apr_hash_t **changes_p,
 
   /* Get a cursor on the first record matching KEY, and then loop over
      the records, adding them to the return array. */
-  SVN_ERR (DB_WRAP (fs, "creating cursor for reading changes",
+  SVN_ERR (BDB_WRAP (fs, "creating cursor for reading changes",
                     fs->changes->cursor (fs->changes, trail->db_txn,
                                          &cursor, 0)));
 
@@ -270,7 +271,7 @@ svn_fs__changes_fetch (apr_hash_t **changes_p,
       result_skel = svn_fs__parse_skel (result.data, result.size, subpool);
       if (! result_skel)
         {
-          err = svn_error_createf (SVN_ERR_FS_CORRUPT, 0, NULL,
+          err = svn_error_createf (SVN_ERR_FS_CORRUPT, NULL,
                                    "error reading changes for key `%s'", key);
           goto cleanup;
         }
@@ -299,7 +300,7 @@ svn_fs__changes_fetch (apr_hash_t **changes_p,
      finished.  Just return the (possibly empty) array.  Any other
      error, however, needs to get handled appropriately.  */
   if (db_err && (db_err != DB_NOTFOUND))
-    err = DB_WRAP (fs, "fetching changes", db_err);
+    err = BDB_WRAP (fs, "fetching changes", db_err);
 
  cleanup:
   /* Close the cursor. */
@@ -312,7 +313,7 @@ svn_fs__changes_fetch (apr_hash_t **changes_p,
   /* If our only error thus far was when we closed the cursor, return
      that error. */
   if (db_c_err)
-    SVN_ERR (DB_WRAP (fs, "closing changes cursor", db_c_err));
+    SVN_ERR (BDB_WRAP (fs, "closing changes cursor", db_c_err));
 
   /* Finally, set our return variable and get outta here. */
   *changes_p = changes;
@@ -321,10 +322,10 @@ svn_fs__changes_fetch (apr_hash_t **changes_p,
 
 
 svn_error_t *
-svn_fs__changes_fetch_raw (apr_array_header_t **changes_p,
-                           svn_fs_t *fs,
-                           const char *key,
-                           trail_t *trail)
+svn_fs__bdb_changes_fetch_raw (apr_array_header_t **changes_p,
+                               svn_fs_t *fs,
+                               const char *key,
+                               trail_t *trail)
 {
   DBC *cursor;
   DBT query, result;
@@ -336,7 +337,7 @@ svn_fs__changes_fetch_raw (apr_array_header_t **changes_p,
 
   /* Get a cursor on the first record matching KEY, and then loop over
      the records, adding them to the return array. */
-  SVN_ERR (DB_WRAP (fs, "creating cursor for reading changes",
+  SVN_ERR (BDB_WRAP (fs, "creating cursor for reading changes",
                     fs->changes->cursor (fs->changes, trail->db_txn,
                                          &cursor, 0)));
 
@@ -356,7 +357,7 @@ svn_fs__changes_fetch_raw (apr_array_header_t **changes_p,
       result_skel = svn_fs__parse_skel (result.data, result.size, trail->pool);
       if (! result_skel)
         {
-          err = svn_error_createf (SVN_ERR_FS_CORRUPT, 0, NULL,
+          err = svn_error_createf (SVN_ERR_FS_CORRUPT, NULL,
                                    "error reading changes for key `%s'", key);
           goto cleanup;
         }
@@ -379,7 +380,7 @@ svn_fs__changes_fetch_raw (apr_array_header_t **changes_p,
      finished.  Just return the (possibly empty) array.  Any other
      error, however, needs to get handled appropriately.  */
   if (db_err && (db_err != DB_NOTFOUND))
-    err = DB_WRAP (fs, "fetching changes", db_err);
+    err = BDB_WRAP (fs, "fetching changes", db_err);
 
  cleanup:
   /* Close the cursor. */
@@ -392,7 +393,7 @@ svn_fs__changes_fetch_raw (apr_array_header_t **changes_p,
   /* If our only error thus far was when we closed the cursor, return
      that error. */
   if (db_c_err)
-    SVN_ERR (DB_WRAP (fs, "closing changes cursor", db_c_err));
+    SVN_ERR (BDB_WRAP (fs, "closing changes cursor", db_c_err));
 
   /* Finally, set our return variable and get outta here. */
   *changes_p = changes;

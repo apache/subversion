@@ -2,7 +2,7 @@
  * main.c:  Subversion command line client.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -96,6 +96,8 @@ const apr_getopt_option_t svn_cl__options[] =
                       "do no interactive prompting"},
     {"dry-run",       svn_cl__dry_run_opt, 0,
                       "try operation but make no changes"},
+    {"no-diff-deleted", svn_cl__no_diff_deleted, 0,
+                       "do not print differences for deleted files"},
 
     /* ### Perhaps the option should be named "--rev-prop" instead?
            Generally, we do include the hyphen; the only reason not to
@@ -206,7 +208,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "     a value of HEAD is assumed.\n",
     {'r', 'x', 'N',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt} },
+     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
+     svn_cl__no_diff_deleted} },
 
   { "export", svn_cl__export, {0},
     "export stuff.\n"
@@ -262,7 +265,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  Print the log messages for local PATHs, or for PATHs under\n"
     "  URL, if URL is given.  If URL is given by itself, then print log\n"
     "  messages for everything under it.  With -v, also print all affected\n"
-    "  paths with each log message.\n"
+    "  paths with each log message.  With -q, don't print the log message\n"
+    "  body itself (note that this is compatible with -v).\n"
     "\n"
     "  Each log message is printed just once, even if more than one of the\n"
     "  affected paths for that revision were explicitly requested.  Logs\n"
@@ -273,7 +277,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    svn log foo.c\n"
     "    svn log http://www.example.com/repo/project/foo.c\n"
     "    svn log http://www.example.com/repo/project foo.c bar.c\n",
-    {'r', 'v', svn_cl__targets_opt, svn_cl__auth_username_opt,
+    {'r', 'q', 'v', svn_cl__targets_opt, svn_cl__auth_username_opt,
      svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
      svn_cl__non_interactive_opt, svn_cl__strict_opt,
      svn_cl__incremental_opt, svn_cl__xml_opt} },
@@ -591,8 +595,7 @@ main (int argc, const char * const *argv)
         if (opt_state.start_revision.kind != svn_opt_revision_unspecified)
           {
             svn_handle_error (svn_error_create
-                              (SVN_ERR_CL_ARG_PARSING_ERROR,
-                               0, NULL,
+                              (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                "Multiple revision arguments encountered; "
                                "try '-r M:N' instead of '-r M -r N'"),
                               stderr, FALSE);
@@ -608,8 +611,7 @@ main (int argc, const char * const *argv)
               svn_handle_error (err, stderr, FALSE);
             else
               svn_handle_error (svn_error_createf
-                                (SVN_ERR_CL_ARG_PARSING_ERROR,
-                                 0, NULL,
+                                (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                  "Syntax error in revision argument \"%s\"",
                                  utf8_opt_arg),
                                 stderr, FALSE);
@@ -740,6 +742,9 @@ main (int argc, const char * const *argv)
       case svn_cl__non_interactive_opt:
         opt_state.non_interactive = TRUE;
         break;
+      case svn_cl__no_diff_deleted:
+        opt_state.no_diff_deleted = TRUE;
+        break;
       case 'x':
         err = svn_utf_cstring_to_utf8 (&opt_state.extensions, opt_arg,
                                        NULL, pool);
@@ -847,8 +852,7 @@ main (int argc, const char * const *argv)
       if (log_under_version_control && (! opt_state.force))
         {
           svn_handle_error
-            (svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE,
-                               0, NULL,
+            (svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE, NULL,
                                "Log message file is a versioned file; "
                                "use `--force' to override."),
              stderr, FALSE);
@@ -861,8 +865,7 @@ main (int argc, const char * const *argv)
       if (log_is_pathname && !opt_state.force)
         {
           svn_handle_error
-            (svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME,
-                               0, NULL,
+            (svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME, NULL,
                                "The log message is a pathname "
                                "(was -F intended?); use `--force' "
                                "to override."),

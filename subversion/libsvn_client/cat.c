@@ -2,7 +2,7 @@
  * cat.c:  implementation of the 'cat' command
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -46,13 +46,16 @@ svn_client_cat (svn_stream_t* out,
   svn_string_t *mime_type;
   svn_string_t *eol_style;
   apr_hash_t *props;
+  const char *auth_dir;
 
   /* Get the RA library that handles URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url, pool));
 
+  SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
+
   /* Open a repository session to the URL. */
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, NULL, NULL,
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, auth_dir, NULL,
                                         NULL, FALSE, FALSE, FALSE,
                                         auth_baton, pool));
 
@@ -66,7 +69,7 @@ svn_client_cat (svn_stream_t* out,
   SVN_ERR (ra_lib->check_path (&url_kind, session, "", rev));
 
   if (url_kind == svn_node_dir)
-    return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, 0, NULL,
+    return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
                              "URL \"%s\" refers to directory", url);
 
   /* Grab some properties we need to know in order to figure out if anything 
@@ -108,7 +111,7 @@ svn_client_cat (svn_stream_t* out,
       /* rewind our stream. */
       apr_err = apr_file_seek (tmp_file, APR_SET, &off);
       if (apr_err)
-        return svn_error_createf (apr_err, 0, NULL, "seek failed on '%s'.",
+        return svn_error_createf (apr_err, NULL, "seek failed on '%s'.",
                                   tmp_filename);
 
       /* FIXME: set the kw to the appropriate value as found in the keywords 

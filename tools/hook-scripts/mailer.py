@@ -12,9 +12,14 @@ import os
 import sys
 import string
 import ConfigParser
+import time
 
-from svn import fs, util, delta, _repos
+import svn.fs
+import svn.util
+import svn.delta
+import svn.repos
 
+SEPARATOR = '=' * 78
 
 def main(pool, config_fname, repos_dir, rev):
   cfg = Config(config_fname)
@@ -23,65 +28,62 @@ def main(pool, config_fname, repos_dir, rev):
 
   editor = ChangeCollector(repos.root_prev)
 
-  e_ptr, e_baton = delta.make_editor(editor, pool)
-  wrap_editor, wrap_baton = delta.svn_delta_compat_wrap(e_ptr, e_baton, pool)
-
-  _repos.svn_repos_dir_delta(repos.root_prev, '', None, repos.root_this, '',
-                             wrap_editor, wrap_baton,
-                             0,  # text_deltas
-                             1,  # recurse
-                             0,  # entry_props
-                             1,  # use_copy_history
-                             pool)
+  e_ptr, e_baton = svn.delta.make_editor(editor, pool)
+  svn.repos.svn_repos_dir_delta(repos.root_prev, '', None, repos.root_this, '',
+                                e_ptr, e_baton,
+                                0,  # text_deltas
+                                1,  # recurse
+                                0,  # entry_props
+                                1,  # use_copy_history
+                                pool)
 
   ### pipe it to sendmail rather than stdout
-  generate_content(sys.stdout, repos, editor, pool)
+  generate_content(sys.stdout, cfg, repos, editor, pool)
 
 
-def generate_content(output, repos, editor, pool):
+def generate_content(output, cfg, repos, editor, pool):
 
-  date = repos.get_rev_prop(util.SVN_PROP_REVISION_DATE)
-  ### reformat the date
+  svndate = repos.get_rev_prop(svn.util.SVN_PROP_REVISION_DATE)
+  ### pick a different date format?
+  date = time.ctime(svn.util.secs_from_timestr(svndate, pool))
 
   output.write('Author: %s\nDate: %s\nNew Revision: %s\n\n'
-               % (repos.get_rev_prop(util.SVN_PROP_REVISION_AUTHOR),
+               % (repos.get_rev_prop(svn.util.SVN_PROP_REVISION_AUTHOR),
                   date,
                   repos.rev))
 
-  generate_list(output, 'Added', editor.adds)
-  generate_list(output, 'Removed', editor.deletes)
-  generate_list(output, 'Modified', editor.changes)
+  # get all the changes and sort by path
+  changes = editor.changes.items()
+  changes.sort()
+
+  # print summary sections
+  generate_list(output, 'Added', changes, _select_adds)
+  generate_list(output, 'Removed', changes, _select_deletes)
+  generate_list(output, 'Modified', changes, _select_modifies)
 
   output.write('Log:\n%s\n'
-               % (repos.get_rev_prop(util.SVN_PROP_REVISION_LOG) or ''))
+               % (repos.get_rev_prop(svn.util.SVN_PROP_REVISION_LOG) or ''))
 
-  # build a complete list of affected dirs/files
-  paths = editor.adds.keys() + editor.deletes.keys() + editor.changes.keys()
-  paths.sort()
-
-  for path in paths:
-    if editor.adds.has_key(path):
-      src = None
-      dst = path
-      change = editor.adds[path]
-    elif editor.deletes.has_key(path):
-      src = path
-      dst = None
-      change = editor.deletes[path]
-    else:
-      src = dst = path
-      change = editor.changes[path]
-
-    generate_diff(output, repos, src, dst, change, pool)
+  # these are sorted by path already
+  for path, change in changes:
+    generate_diff(output, cfg, repos, date, change, pool)
 
   ### print diffs. watch for binary files.
 
+def _select_adds(change):
+  return change.added
+def _select_deletes(change):
+  return not change.path
+def _select_modifies(change):
+  return not change.added and change.path
 
-def generate_list(output, header, fnames):
-  if fnames:
+def generate_list(output, header, changes, selection):
+  items = [ ]
+  for path, change in changes:
+    if selection(change):
+      items.append((path, change))
+  if items:
     output.write('%s:\n' % header)
-    items = fnames.items()
-    items.sort()
     for fname, change in items:
       ### should print prop_changes?, copy_info, and binary? here
       ### hmm. don't have binary right now.
@@ -91,34 +93,64 @@ def generate_list(output, header, fnames):
         output.write('   %s\n' % fname)
 
 
-def generate_diff(output, repos, src, dst, change, pool):
-  if 0 and copy_info and copy_info[0]:
-    assert (not src) and dst  # it was ADDED
+def generate_diff(output, cfg, repos, date, change, pool):
 
-    copyfrom_path = copy_info[0]
-    if copyfrom_path[0] == '/':
-      # remove the leading slash for consistency with other paths
-      copyfrom_path = copyfrom_path[1:]
-
-    output.write('Copied: %s (from rev %d, %s)\n'
-                 % (dst, copy_info[1], copy_info[0]))
-
-  if not dst:
-    output.write('deleted: %s\n' % src)
+  if change.item_type == ChangeCollector.DIR:
+    if change.path and change.base_path:
+      output.write('\nCopied: %s (from rev %d, %s)\n'
+                   % (change.path, change.base_rev, change.base_path[1:]))
+    ### do we want to display anything for a directory? probably... if
+    ### the thing has properties, then heck ya.
     return
-  if not src:
+
+  if not change.path:
+    output.write('Deleted: %s\n' % change.base_path)
+    diff = svn.fs.FileDiff(repos.root_prev, change.base_path, None, None, pool)
+
+    label1 = '%s\t%s' % (change.base_path, date)
+    label2 = '(empty file)'
+  elif change.added:
     if change.base_path:
       # this was copied. note that we strip the leading slash from the
       # base (copyfrom) path.
       output.write('Copied: %s (from rev %d, %s)\n'
-                   % (dst, change.base_rev, change.base_path[1:]))
+                   % (change.path, change.base_rev, change.base_path[1:]))
+      diff = svn.fs.FileDiff(repos.get_root(change.base_rev),
+                             change.base_path[1:],
+                             repos.root_this, change.path,
+                             pool)
+      label1 = change.base_path[1:] + '\t(original)'
+      label2 = '%s\t%s' % (change.path, date)
     else:
-      output.write('Added: %s\n' % dst)
-    return
+      output.write('Added: %s\n' % change.path)
+      diff = svn.fs.FileDiff(None, None, repos.root_this, change.path, pool)
+      label1 = '(empty file)'
+      label2 = '%s\t%s' % (change.path, date)
+  else:
+    output.write('\nModified: %s\n' % change.path)
+    diff = svn.fs.FileDiff(repos.get_root(change.base_rev), change.base_path[1:],
+                           repos.root_this, change.path,
+                           pool)
+    label1 = change.base_path[1:] + '\t(original)'
+    label2 = '%s\t%s' % (change.path, date)
 
-  output.write('diff: %s@%d <- %s@%d  (%s; propmod=%d)\n'
-               % (src, repos.rev, change.base_path[1:], change.base_rev,
-                  change.item_type, change.prop_changes))
+  output.write(SEPARATOR + '\n')
+
+  ### do something with change.prop_changes
+
+  src_fname, dst_fname = diff.get_files()
+
+  pipe = os.popen(cfg.general.diff % {
+    'label_from' : label1,
+    'label_to' : label2,
+    'from' : src_fname,
+    'to' : dst_fname,
+    })
+  while 1:
+    chunk = pipe.read(100000)
+    if not chunk:
+      break
+    output.write(chunk)
 
 
 class Repository:
@@ -133,8 +165,8 @@ class Repository:
     if not os.path.exists(db_path):
       db_path = repos_dir
 
-    self.fs_ptr = fs.new(pool)
-    fs.open_berkeley(self.fs_ptr, db_path)
+    self.fs_ptr = svn.fs.new(pool)
+    svn.fs.open_berkeley(self.fs_ptr, db_path)
 
     self.roots = { }
 
@@ -142,47 +174,53 @@ class Repository:
     self.root_this = self.get_root(rev)
 
   def get_rev_prop(self, propname):
-    return fs.revision_prop(self.fs_ptr, self.rev, propname, self.pool)
+    return svn.fs.revision_prop(self.fs_ptr, self.rev, propname, self.pool)
 
   def get_root(self, rev):
     try:
       return self.roots[rev]
     except KeyError:
       pass
-    root = self.roots[rev] = fs.revision_root(self.fs_ptr, rev, self.pool)
+    root = self.roots[rev] = svn.fs.revision_root(self.fs_ptr, rev, self.pool)
     return root
 
 
-class ChangeCollector(delta.Editor):
+class ChangeCollector(svn.delta.Editor):
   DIR = 'DIR'
   FILE = 'FILE'
 
   def __init__(self, root_prev):
     self.root_prev = root_prev
 
-    # path -> [ item-type, prop-changes?, (copyfrom_path, rev) ]
-    self.adds = { }
+    # path -> _change()
     self.changes = { }
-    self.deletes = { }
 
   def open_root(self, base_revision, dir_pool):
     return ('', '', base_revision)  # dir_baton
 
   def delete_entry(self, path, revision, parent_baton, pool):
-    if fs.is_dir(self.root_prev, '/' + path, pool):
+    if svn.fs.is_dir(self.root_prev, '/' + path, pool):
       item_type = ChangeCollector.DIR
     else:
       item_type = ChangeCollector.FILE
     # base_path is the specified path. revision is the parent's.
-    self.deletes[path] = _change(item_type, False, path, parent_baton[2])
+    self.changes[path] = _change(item_type,
+                                 False,
+                                 path,            # base_path
+                                 parent_baton[2], # base_rev
+                                 None,            # (new) path
+                                 False,           # added
+                                 )
 
   def add_directory(self, path, parent_baton,
                     copyfrom_path, copyfrom_revision, dir_pool):
-    self.adds[path] = _change(ChangeCollector.DIR,
-                              False,
-                              copyfrom_path,
-                              copyfrom_revision,
-                              )
+    self.changes[path] = _change(ChangeCollector.DIR,
+                                 False,
+                                 copyfrom_path,     # base_path
+                                 copyfrom_revision, # base_rev
+                                 path,              # path
+                                 True,              # added
+                                 )
 
     return (path, copyfrom_path, copyfrom_revision)  # dir_baton
 
@@ -196,23 +234,25 @@ class ChangeCollector(delta.Editor):
     dir_path = dir_baton[0]
     if self.changes.has_key(dir_path):
       self.changes[dir_path].prop_changes = True
-    elif self.adds.has_key(dir_path):
-      self.adds[dir_path].prop_changes = True
     else:
       # can't be added or deleted, so this must be CHANGED
-      self.changes[dir_baton] = _change(ChangeCollector.DIR,
-                                        True,
-                                        dir_baton[1], # base_path
-                                        dir_baton[2], # base_rev
-                                        )
+      self.changes[dir_path] = _change(ChangeCollector.DIR,
+                                       True,
+                                       dir_baton[1], # base_path
+                                       dir_baton[2], # base_rev
+                                       dir_path,     # path
+                                       False,        # added
+                                       )
 
   def add_file(self, path, parent_baton,
                copyfrom_path, copyfrom_revision, file_pool):
-    self.adds[path] = _change(ChangeCollector.FILE,
-                              False,
-                              copyfrom_path,
-                              copyfrom_revision,
-                              )
+    self.changes[path] = _change(ChangeCollector.FILE,
+                                 False,
+                                 copyfrom_path,     # base_path
+                                 copyfrom_revision, # base_rev
+                                 path,              # path
+                                 True,              # added
+                                 )
 
     return (path, copyfrom_path, copyfrom_revision)  # file_baton
 
@@ -224,13 +264,15 @@ class ChangeCollector(delta.Editor):
 
   def apply_textdelta(self, file_baton):
     file_path = file_baton[0]
-    if not self.changes.has_key(file_path) \
-       and not self.adds.has_key(file_path):
-      # it wasn't added, and it can't be deleted, so this must be CHANGED
+    if not self.changes.has_key(file_path):
+      # an add would have inserted a change record already, and it can't
+      # be a delete with a text delta, so this must be a normal change.
       self.changes[file_path] = _change(ChangeCollector.FILE,
                                         False,
                                         file_baton[1], # base_path
                                         file_baton[2], # base_rev
+                                        file_path,     # path
+                                        False,         # added
                                         )
 
     # no handler
@@ -240,26 +282,40 @@ class ChangeCollector(delta.Editor):
     file_path = file_baton[0]
     if self.changes.has_key(file_path):
       self.changes[file_path].prop_changes = True
-    elif self.adds.has_key(file_path):
-      self.adds[file_path].prop_changes = True
     else:
-      # it wasn't added, and it can't be deleted, so this must be CHANGED
+      # an add would have inserted a change record already, and it can't
+      # be a delete with a prop change, so this must be a normal change.
       self.changes[file_path] = _change(ChangeCollector.FILE,
                                         True,
                                         file_baton[1], # base_path
                                         file_baton[2], # base_rev
+                                        file_path,     # path
+                                        False,         # added
                                         )
 
 
 class _change:
   __slots__ = [ 'item_type', 'prop_changes',
-                'base_path', 'base_rev',
+                'base_path', 'base_rev', 'path',
+                'added',
                 ]
-  def __init__(self, item_type, prop_changes, base_path, base_rev):
+  def __init__(self,
+               item_type, prop_changes, base_path, base_rev, path, added):
     self.item_type = item_type
     self.prop_changes = prop_changes
     self.base_path = base_path
     self.base_rev = base_rev
+    self.path = path
+
+    ### it would be nice to avoid this flag. however, without it, it would
+    ### be quite difficult to distinguish between a change to the previous
+    ### revision (which has a base_path/base_rev) and a copy from some
+    ### other path/rev. a change in path is obviously add-with-history,
+    ### but the same path could be a change to the previous rev or a restore
+    ### of an older version. when it is "change to previous", I'm not sure
+    ### if the rev is always repos.rev - 1, or whether it represents the
+    ### created or time-of-checkou rev. so... we use a flag (for now)
+    self.added = added
 
 
 class Config:
@@ -332,4 +388,24 @@ if __name__ == '__main__':
     raise MissingConfig(config_fname)
 
   ### run some validation on these params
-  util.run_app(main, config_fname, repos_dir, revision)
+  svn.util.run_app(main, config_fname, repos_dir, revision)
+
+
+# ------------------------------------------------------------------------
+# TODO
+#
+# * pipe output into a mail program (and avoid os.popen)
+# * add configuration options
+#   - default options
+#   - per-group overrides
+#   - group selection based on repos and on path
+#   - each group defines:
+#     o how to construct From:
+#     o how to construct To:
+#     o whether to set Reply-To and/or Mail-Followup-To
+#       (btw: it is legal do set Reply-To since this is the originator of the
+#        mail; i.e. different from MLMs that munge it)
+#     o max size of diff before trimming
+#     o how to construct a ViewCVS URL for the diff
+#     o optional, non-mail log file
+#

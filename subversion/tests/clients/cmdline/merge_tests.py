@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2001 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2003 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -635,6 +635,8 @@ def simple_property_merges(sbox):
   B2_url = os.path.join(svntest.main.current_repo_url, 'A', 'B2')
 
   outlines,errlines = svntest.main.run_svn(None, 'copy', '-m', 'fumble',
+                                           '--username', svntest.main.wc_author,
+                                           '--password', svntest.main.wc_passwd,
                                            B_url, B2_url)
   if errlines:
     return 1

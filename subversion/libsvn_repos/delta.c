@@ -2,7 +2,7 @@
  * delta.c:   an editor driver for svn_repos_dir_delta
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -145,7 +145,7 @@ not_a_dir_error (const char *role,
                  const char *path)
 {
   return svn_error_createf 
-    (SVN_ERR_FS_NOT_DIRECTORY, 0, 0,
+    (SVN_ERR_FS_NOT_DIRECTORY, 0,
      "not_a_dir_error: invalid %s directory '%s'",
      role, path ? path : "(null)");
 }
@@ -196,7 +196,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
 
   /* TGT_PATH must be valid. */
   if (! tgt_path)
-    return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, 0, 0,
+    return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, 0,
                              "svn_repos_dir_delta: invalid target path");
   
   /* Ensure absolute filesystem paths (for the sake of consistency,

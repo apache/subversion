@@ -2,7 +2,7 @@
  * auth.c:  routines that drive "authenticator" objects received from RA.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -39,7 +39,60 @@
 
 /*-----------------------------------------------------------------------*/
 
-/* Callback routines that RA libraries use to pull or store auth info. */
+
+svn_error_t *
+svn_client__dir_if_wc (const char **dir_p,
+                       const char *dir,
+                       apr_pool_t *pool)
+{
+  int wc_format;
+  
+  SVN_ERR (svn_wc_check_wc (dir, &wc_format, pool));
+  
+  if (wc_format == 0)
+    *dir_p = NULL;
+  else
+    *dir_p = dir;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client__default_auth_dir (const char **auth_dir_p,
+                              const char *path,
+                              apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  if (kind == svn_node_dir)
+    {
+      SVN_ERR (svn_client__dir_if_wc (auth_dir_p, path, pool));
+
+      /* Handle unversioned dir in a versioned parent. */
+      if (! *auth_dir_p)
+        goto try_parent;
+    }
+  else if ((kind == svn_node_file) || (kind == svn_node_none))
+    {
+    try_parent:
+      svn_path_split (path, auth_dir_p, NULL, pool);
+      SVN_ERR (svn_client__dir_if_wc (auth_dir_p, *auth_dir_p, pool));
+    }
+  else
+    {
+      return svn_error_createf
+        (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+         "unknown node kind for `%s'", path);
+    }
+  
+  return SVN_NO_ERROR;
+}
+
+
+
+/** Callback routines that RA libraries use to pull or store auth info. **/
 
 
 /* Set *USERNAME to the username to use for authentication.  
@@ -106,12 +159,12 @@ get_username (char **username,
           status = apr_current_userid (&uid, &gid, pool);
           if (status)
             return 
-              svn_error_create(status, 0, NULL,
+              svn_error_create(status, NULL,
                                "Error getting UID of process.");
           
           status = apr_get_username (&un, uid, pool);
           if (status)
-            return svn_error_create(status, 0, NULL,
+            return svn_error_create(status, NULL,
                                     "Error in UID->username.");
 
           /* ### Be nice to avoid this cast... */
@@ -248,11 +301,12 @@ store_auth_info (const char *filename,
     }
 
   /* ### Fragile!  For a checkout we have no access baton before the checkout
-     starts, so base_access is NULL.  However checkout closes it's batons
-     before storing auth info so we can open a new baton here. */
+     starts, so base_access is NULL.  However checkout closes its batons
+     before storing auth info so we can open a new baton here.  We don't
+     need a write-lock because storing auth data doesn't use log files. */
 
   if (! cb->base_access)
-    SVN_ERR (svn_wc_adm_open (&adm_access, NULL, cb->base_dir, TRUE, TRUE,
+    SVN_ERR (svn_wc_adm_open (&adm_access, NULL, cb->base_dir, FALSE, TRUE,
                               cb->pool));
   else
     adm_access = cb->base_access;
@@ -368,7 +422,7 @@ svn_error_t * svn_client__get_authenticator (void **authenticator,
 
     default:
       {
-        return svn_error_create (SVN_ERR_RA_UNKNOWN_AUTH, 0, NULL, "Unknown authenticator requested.");
+        return svn_error_create (SVN_ERR_RA_UNKNOWN_AUTH, NULL, "Unknown authenticator requested.");
       }
     }
   

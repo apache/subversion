@@ -28,18 +28,17 @@ class GeneratorBase:
   #
 
   def __init__(self, fname, verfname):
-    self.parser = ConfigParser.ConfigParser(_cfg_defaults)
-    self.parser.read(fname)
+    parser = ConfigParser.ConfigParser(_cfg_defaults)
+    parser.read(fname)
 
     self.cfg = Config()
-    self.cfg.swig_lang = string.split(self.parser.get('options',
-                                                      'swig-languages'))
+    self.cfg.swig_lang = string.split(parser.get('options', 'swig-languages'))
 
     # Version comes from a header file since it is used in the code.
     try:
-      parser = getversion.Parser()
-      parser.search('SVN_VER_LIBRARY', 'libver')
-      self.cfg.version = parser.parse(verfname).libver
+      vsn_parser = getversion.Parser()
+      vsn_parser.search('SVN_VER_LIBRARY', 'libver')
+      self.cfg.version = vsn_parser.parse(verfname).libver
     except:
       raise GenError('Unable to extract version.')
 
@@ -55,48 +54,59 @@ class GeneratorBase:
     self.graph = DependencyGraph()
 
     # PASS 1: collect the targets and some basic info
-    self.target_names = _filter_targets(self.parser.sections())
-    for target in self.target_names:
-      install = self.parser.get(target, 'install')
-      type = self.parser.get(target, 'type')
+    for target in _filter_targets(parser.sections()):
+      install = parser.get(target, 'install')
+      type = parser.get(target, 'type')
 
       target_class = _build_types.get(type)
       if not target_class:
         raise GenError('ERROR: unknown build type: ' + type)
 
       target_ob = target_class(target,
-                               self.parser.get(target, 'path'),
+                               parser.get(target, 'path'),
                                install,
-                               self.parser.get(target, 'custom'), ### bogus
+                               parser.get(target, 'custom'), ### bogus
                                self.cfg,
                                self._extension_map)
 
       self.targets[target] = target_ob
 
+      ### I don't feel like passing these to the constructor right now,
+      ### and I'm not sure how to really pass this stuff along. we
+      ### certainly don't want the targets looking at the parser...
+      target_ob.add_deps = parser.get(target, 'add-deps')
+
       # find all the sources involved in building this target
-      target_ob.find_sources(self.parser.get(target, 'sources'))
+      target_ob.find_sources(parser.get(target, 'sources'))
+
+      ### another hack for now. tell a SWIG target what libraries should
+      ### be linked into each wrapper. this also depends on the fact that
+      ### the swig libraries occur *after* the other targets in build.conf
+      ### cuz of the test for "is this in self.targets?"
+      if type == 'swig':
+        target_ob.libs = self._find_libs(parser.get(target, 'libs'))
 
       # the target should add all relevant dependencies
       target_ob.add_dependencies(self.graph)
 
-      self.manpages.extend(string.split(self.parser.get(target, 'manpages')))
-      self.infopages.extend(string.split(self.parser.get(target, 'infopages')))
+      self.manpages.extend(string.split(parser.get(target, 'manpages')))
+      self.infopages.extend(string.split(parser.get(target, 'infopages')))
 
       if type != 'script':
         # collect test programs
         if type == 'exe':
           if install == 'test':
             self.test_deps.append(target_ob.output)
-            if self.parser.get(target, 'testing') != 'skip':
+            if parser.get(target, 'testing') != 'skip':
               self.test_progs.append(target_ob.output)
           if install == 'fs-test':
             self.fs_test_deps.append(target_ob.output)
-            if self.parser.get(target, 'testing') != 'skip':
+            if parser.get(target, 'testing') != 'skip':
               self.fs_test_progs.append(target_ob.output)
 
         # collect all the paths where stuff might get built
         self.target_dirs[target_ob.path] = None
-        for pattern in string.split(self.parser.get(target, 'sources')):
+        for pattern in string.split(parser.get(target, 'sources')):
           if string.find(pattern, os.sep) != -1:
             self.target_dirs[os.path.join(target_ob.path,
                                           os.path.dirname(pattern))] = None
@@ -104,19 +114,16 @@ class GeneratorBase:
     # compute intra-library dependencies
     for name, target in self.targets.items():
       if isinstance(target, TargetLinked):
-        for libname in string.split(self.parser.get(name, 'libs')):
-          if self.targets.has_key(libname):
-            self.graph.add(DT_LINK, name, self.targets[libname])
+        for lib in self._find_libs(parser.get(name, 'libs')):
+          self.graph.add(DT_LINK, name, lib)
 
     # collect various files
-    self.includes = _collect_paths(self.parser.get('options', 'includes'))
-    self.apache_files = _collect_paths(self.parser.get('static-apache',
-                                                       'paths'))
+    self.includes = _collect_paths(parser.get('options', 'includes'))
+    self.apache_files = _collect_paths(parser.get('static-apache', 'paths'))
 
     # collect all the test scripts
-    self.scripts = _collect_paths(self.parser.get('test-scripts', 'paths'))
-    self.fs_scripts = _collect_paths(self.parser.get('fs-test-scripts',
-                                                     'paths'))
+    self.scripts = _collect_paths(parser.get('test-scripts', 'paths'))
+    self.fs_scripts = _collect_paths(parser.get('fs-test-scripts', 'paths'))
 
     # get all the test scripts' directories
     script_dirs = map(os.path.dirname, self.scripts + self.fs_scripts)
@@ -126,6 +133,15 @@ class GeneratorBase:
     for d in script_dirs:
       build_dirs[d] = None
     self.build_dirs = build_dirs.keys()
+
+  def _find_libs(self, libs_option):
+    libs = [ ]
+    for libname in string.split(libs_option):
+      if self.targets.has_key(libname):
+        libs.append(self.targets[libname])
+      else:
+        libs.append(ExternalLibrary(libname))
+    return libs
 
   def compute_hdr_deps(self):
     #
@@ -258,22 +274,51 @@ class DependencyNode:
 class ObjectFile(DependencyNode):
   pass
 class ApacheObject(ObjectFile):
-  pass
+  ### hmm. this is Makefile-specific
+  build_cmd = '$(COMPILE_APACHE_MOD)'
 class SWIGObject(ObjectFile):
   def __init__(self, fname, lang):
     ObjectFile.__init__(self, fname)
     self.lang = lang
     self.lang_abbrev = lang_abbrev[lang]
+    ### hmm. this is Makefile-specific
+    self.build_cmd = '$(COMPILE_%s_WRAPPER)' % string.upper(self.lang_abbrev)
+
+# the SWIG utility libraries
+class SWIGUtilPython(ObjectFile):
+  ### hmm. this is Makefile-specific
+  build_cmd = '$(COMPILE_SWIG_PY)'
+class SWIGUtilJava(ObjectFile):
+  ### hmm. this is Makefile-specific
+  build_cmd = '$(COMPILE_SWIG_JAVA)'
+
+_custom_build = {
+  'apache-mod' : ApacheObject,
+  'swig-py' : SWIGUtilPython,
+  'swig-java' : SWIGUtilJava,
+  }
 
 class SWIGLibrary(DependencyNode):
+  ### stupid Target vs DependencyNode
+  add_deps = ''
+
   def __init__(self, fname, lang):
     DependencyNode.__init__(self, fname)
     self.lang = lang
     self.lang_abbrev = lang_abbrev[lang]
 
+    self.path = os.path.dirname(fname)
+
+    self.name = lang + os.path.splitext(os.path.basename(fname))[0]
+
     ### maybe tweak to avoid these duplicate attrs
     self.output = fname
-    self.name = fname
+
+    ### hmm. this is Makefile-specific
+    self.link_cmd = '$(LINK_%s_WRAPPER)' % string.upper(self.lang_abbrev)
+
+class ExternalLibrary(DependencyNode):
+  pass
 
 lang_abbrev = {
   'python' : 'py',
@@ -285,14 +330,16 @@ lang_abbrev = {
   }
 
 
+### we should turn these targets into DependencyNode subclasses...
 class Target:
   def __init__(self, name, path, install, custom, cfg, extmap):
     self.name = name
     self.path = path
     self.cfg = cfg
 
-    ### should choose a Target class instead of this
-    self.custom = custom
+    ### this should be a class attr and we should use different Target
+    ### classes based on the "custom" value.
+    self.object_cls = _custom_build.get(custom, ObjectFile)
 
     if not install:
       try:
@@ -323,14 +370,13 @@ class Target:
       if src[-2:] == '.c':
         objname = src[:-2] + self.objext
 
+        ofile = self.object_cls(objname)
+
         # object depends upon source
-        if self.custom == 'apache-mod':
-          graph.add(DT_OBJECT, ApacheObject(objname), src)
-        else:
-          graph.add(DT_OBJECT, objname, src)
+        graph.add(DT_OBJECT, ofile, src)
 
         # target (a linked item) depends upon object
-        graph.add(DT_LINK, self.name, objname)
+        graph.add(DT_LINK, self.name, ofile)
       else:
         raise GenError('ERROR: unknown file extension on ' + src)
 
@@ -366,7 +412,10 @@ class Target:
     return cmp(self.name, ob)
 
 class TargetLinked(Target):
-  pass
+  "The target is linked (by libtool) against other libraries."
+
+  ### hmm. this is Makefile-specific
+  link_cmd = '$(LINK)'
 
 class TargetExe(TargetLinked):
   default_install = 'bin'
@@ -407,7 +456,17 @@ class TargetLib(TargetLinked):
       tfile = '%s-%s%s' % (name, cfg.version, extmap['lib', 'target'])
     else:
       tfile = name + extmap['lib', 'target']
+
+      # we have a custom linking rule
+      ### hmm. this is Makefile-specific
+      ### kind of hacky anyways. we should use a different Target subclass
+      self.link_cmd = '$(LINK_APACHE_MOD)'
+
     self.output = os.path.join(path, tfile)
+
+    ### eek. this is pretty ugly. we should have a new Target subclass.
+    if custom == 'ra-module':
+      self.is_ra_module = 1
 
 class TargetDoc(Target):
   # no default_install
@@ -441,20 +500,34 @@ class TargetSWIG(Target):
       libname = '_' + iname[:-2] + self.libext
 
     for lang in self.cfg.swig_lang:
+      abbrev = lang_abbrev[lang]
+
       # the .c file depends upon the .i file
       cfile = os.path.join(dir, lang, cname)
-      graph.add(DT_SWIG_C, cfile, ifile)
+      graph.add(DT_SWIG_C, SWIGObject(cfile, lang), ifile)
 
       # the object depends upon the .c file
-      ofile = os.path.join(dir, lang, oname)
-      graph.add(DT_OBJECT, SWIGObject(ofile, lang), cfile)
+      ofile = SWIGObject(os.path.join(dir, lang, oname), lang)
+      graph.add(DT_OBJECT, ofile, cfile)
 
       # the library depends upon the object
       library = SWIGLibrary(os.path.join(dir, lang, libname), lang)
       graph.add(DT_LINK, library, ofile)
 
+      # add some more libraries
+      for lib in self.libs:
+        graph.add(DT_LINK, library, lib)
+
+      # add some language-specific libraries
+      ### fix this. get these from the .conf file
+      graph.add(DT_LINK, library, ExternalLibrary('-lswig' + abbrev))
+      ### fix this, too. find the right Target swigutil lib. we know there
+      ### will be only one.
+      util = graph.get_sources(DT_INSTALL, 'swig-%s-lib' % abbrev)[0]
+      graph.add(DT_LINK, library, util)
+
       # the specified install area depends upon the library
-      graph.add(DT_INSTALL, self.install + '-' + lang_abbrev[lang], library)
+      graph.add(DT_INSTALL, self.install + '-' + abbrev, library)
 
 _build_types = {
   'exe' : TargetExe,
@@ -474,7 +547,6 @@ class GenError(Exception):
 
 _cfg_defaults = {
   'sources' : '',
-  'link-flags' : '',
   'libs' : '',
   'manpages' : '',
   'infopages' : '',

@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -37,7 +37,7 @@ svn_error_t *
 svn_ruby_error (const char *msg, apr_pool_t *pool)
 {
   svn_error_t *err;
-  err = svn_error_createf (SVN_RUBY_ERR_PROTECTED, 0, 0,
+  err = svn_error_createf (SVN_RUBY_ERR_PROTECTED, 0,
 			    "%s", msg);
   apr_pool_userdata_set ((void *) ruby_errinfo, SVN_RUBY_ERR_OBJECT,
 			 apr_pool_cleanup_null, err->pool);

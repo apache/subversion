@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -27,11 +27,13 @@
 
 static svn_error_t *
 cl_log_message_func (const char **log_msg,
+                     const char **tmp_file,
                      apr_array_header_t *commit_items,
                      void *baton,
                      apr_pool_t *pool)
 {
   *log_msg = apr_pstrdup (pool, baton);
+  *tmp_file = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -55,7 +57,7 @@ cl_prompt (char **info,
 
   if (self == Qnil)
     svn_error_createf
-      (APR_EGENERAL, 0, 0,
+      (APR_EGENERAL, 0,
        "Authentication is required but no block is given to get user data");
 
   obj = rb_protect (svn_ruby_protect_call2, (VALUE) args, &error);
@@ -64,7 +66,7 @@ cl_prompt (char **info,
     return svn_ruby_error ("authenticator", pool);
 
   if (BUILTIN_TYPE (obj) != T_STRING)
-    return svn_error_create (APR_EGENERAL, 0, 0,
+    return svn_error_create (APR_EGENERAL, 0,
                              "auth block must return string object");
 
   *info = apr_pstrdup (pool, StringValuePtr (obj));
@@ -83,7 +85,7 @@ parse_revision (VALUE revOrDate)
       sec = NUM2LONG (rb_funcall (revOrDate, rb_intern ("tv_sec"), 0));
       usec = NUM2LONG (rb_funcall (revOrDate, rb_intern ("tv_usec"), 0));
       revision.kind = svn_opt_revision_date;
-      revision.value.date = sec * APR_USEC_PER_SEC + usec;
+      revision.value.date = apr_time_make(sec, usec);
     }
   else if (revOrDate == Qnil)
     revision.kind = svn_opt_revision_unspecified;
@@ -555,6 +557,8 @@ static VALUE
 cl_propget (VALUE class, VALUE name, VALUE aTarget, VALUE recurse)
 {
   apr_hash_t *props;
+  svn_opt_revision_t *revision = NULL;
+  svn_client_auth_baton_t *auth_baton = NULL;
   apr_pool_t *pool;
   VALUE obj;
 
@@ -564,7 +568,9 @@ cl_propget (VALUE class, VALUE name, VALUE aTarget, VALUE recurse)
   pool = svn_pool_create (NULL);
 
   SVN_RB_ERR (svn_client_propget (&props, StringValuePtr (name),
-                                  StringValuePtr (aTarget), RTEST (recurse),
+                                  StringValuePtr (aTarget),
+                                  revision, auth_baton,
+                                  RTEST (recurse),
                                   pool),
               pool);
 
@@ -577,6 +583,8 @@ static VALUE
 cl_proplist (VALUE class, VALUE aTarget, VALUE recurse)
 {
   apr_array_header_t *props;
+  svn_opt_revision_t *revision = NULL;
+  svn_client_auth_baton_t *auth_baton = NULL;
   apr_pool_t *pool;
 
   Check_Type (aTarget, T_STRING);
@@ -584,6 +592,7 @@ cl_proplist (VALUE class, VALUE aTarget, VALUE recurse)
   pool = svn_pool_create (NULL);
 
   SVN_RB_ERR (svn_client_proplist (&props, StringValuePtr (aTarget),
+                                   revision, auth_baton,
                                    RTEST (recurse), pool),
               pool);
 

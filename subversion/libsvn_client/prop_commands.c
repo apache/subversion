@@ -2,7 +2,7 @@
  * prop_commands.c:  Implementation of propset, propget, and proplist.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -104,10 +104,20 @@ svn_client_propset (const char *propname,
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *node;
 
+  if (svn_path_is_url (target))
+    {
+      /* ### Note that this function will need to take an auth baton
+         if it's ever to support setting properties remotely. */
+      return svn_error_createf
+        (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+         "Setting property on non-local target '%s' not yet supported.",
+         target);
+    }
+
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target, TRUE, TRUE, pool));
   SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
   if (!node)
-    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
+    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
                               "'%s' -- not a versioned resource", 
                               target);
 
@@ -137,12 +147,15 @@ svn_client_revprop_set (const char *propname,
 {
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
+  const char *auth_dir;
 
   /* Open an RA session for the URL. Note that we don't have a local
-     directory, nor a place to put temp files or store the auth data. */
+     directory, nor a place to put temp files or store the auth data,
+     although we'll try to fetch auth data from the current directory. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
+  SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, auth_dir,
                                         NULL, NULL, FALSE, FALSE, TRUE,
                                         auth_baton, pool));
 
@@ -320,7 +333,7 @@ maybe_convert_to_url (const char **new_target,
       SVN_ERR (svn_wc_adm_open (&adm_access, NULL, pdir, FALSE, FALSE, pool));
       SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
       if (! entry)
-        return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
+        return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
                                   "'%s' is not a versioned resource", 
                                   target);
       *new_target = entry->url;
@@ -374,7 +387,7 @@ remote_propget (apr_hash_t *props,
   else
     {
       return svn_error_createf
-        (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL,
+        (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
          "unknown node kind for \"%s\"",
          svn_path_join (target_prefix, target_relative, pool));
     }
@@ -437,6 +450,7 @@ svn_client_propget (apr_hash_t **props,
   const char *utarget;  /* target, or the url for target */
   svn_node_kind_t kind;
   svn_revnum_t revnum;
+  const char *auth_dir;
 
   SVN_ERR (maybe_convert_to_url (&utarget, target, revision, pool));
 
@@ -450,8 +464,9 @@ svn_client_propget (apr_hash_t **props,
 
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, utarget, pool));
+      SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, utarget,
-                                            NULL, NULL, NULL, TRUE,
+                                            auth_dir, NULL, NULL, TRUE,
                                             FALSE, FALSE, auth_baton, pool));
 
       *props = apr_hash_make (pool);
@@ -482,7 +497,7 @@ svn_client_propget (apr_hash_t **props,
           if (svn_path_is_url (target))
             {
               return svn_error_createf
-                (SVN_ERR_ILLEGAL_TARGET, 0, NULL,
+                (SVN_ERR_ILLEGAL_TARGET, NULL,
                  "\"%s\" is a url, but revision kind requires a working copy",
                  target);
             }
@@ -501,7 +516,7 @@ svn_client_propget (apr_hash_t **props,
       else
         {
           return svn_error_create
-            (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL, "unknown revision kind");
+            (SVN_ERR_CLIENT_BAD_REVISION, NULL, "unknown revision kind");
         }
 
       /* Close the RA session. */
@@ -520,7 +535,7 @@ svn_client_propget (apr_hash_t **props,
       SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
       if (! node)
         return svn_error_createf
-          (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
+          (SVN_ERR_ENTRY_NOT_FOUND, NULL,
            "'%s' -- not a versioned resource", target);
       
       SVN_ERR (svn_client__get_revision_number
@@ -572,12 +587,14 @@ svn_client_revprop_get (const char *propname,
 {
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
+  const char *auth_dir;
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files or store the auth data. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
+  SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, auth_dir,
                                         NULL, NULL, FALSE, FALSE, TRUE,
                                         auth_baton, pool));
 
@@ -663,7 +680,7 @@ remote_proplist (apr_array_header_t *proplist,
   else
     {
       return svn_error_createf
-        (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL,
+        (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
          "unknown node kind for \"%s\"",
          svn_path_join (target_prefix, target_relative, pool));
     }
@@ -865,7 +882,7 @@ svn_client_proplist (apr_array_header_t **props,
           if (svn_path_is_url (target))
             {
               return svn_error_createf
-                (SVN_ERR_ILLEGAL_TARGET, 0, NULL,
+                (SVN_ERR_ILLEGAL_TARGET, NULL,
                  "\"%s\" is a url, but revision kind requires a working copy",
                  target);
             }
@@ -884,7 +901,7 @@ svn_client_proplist (apr_array_header_t **props,
       else
         {
           return svn_error_create
-            (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL, "unknown revision kind");
+            (SVN_ERR_CLIENT_BAD_REVISION, NULL, "unknown revision kind");
         }
 
       /* Close the RA session. */
@@ -898,7 +915,7 @@ svn_client_proplist (apr_array_header_t **props,
                                       pool));
       SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
       if (! entry)
-        return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
+        return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
                                   "'%s' -- not a versioned resource", 
                                   target);
       

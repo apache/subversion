@@ -1,7 +1,7 @@
 /* fs.h : interface to Subversion filesystem, private to libsvn_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -218,9 +218,9 @@ typedef struct
      regardless of how the rep stores the data under the hood.  It is
      independent of the storage (fulltext, delta, whatever). 
 
-     If NULL, then for compatibility behave as though the absent
-     checksum matches the expected checksum. */
-  const char *checksum;
+     If all the bytes are 0, then for compatibility behave as though
+     this checksum matches the expected checksum. */
+  unsigned char checksum[MD5_DIGESTSIZE];
 
   /* kind-specific stuff */
   union 

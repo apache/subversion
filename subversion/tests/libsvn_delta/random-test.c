@@ -2,7 +2,7 @@
  * random-test.c:  Test delta generation and application using random data.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -235,13 +235,13 @@ compare_files (apr_file_t *f1, apr_file_t *f2, int dump_files)
            ++c1, ++c2, ++pos)
         {
           if (*c1 != *c2)
-            return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+            return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                                       "mismatch at position %"APR_OFF_T_FMT,
                                       pos);
         }
 
       if (len1 != len2)
-        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+        return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                                   "unequal file sizes at position"
                                   " %"APR_OFF_T_FMT, pos);
     }
@@ -472,7 +472,7 @@ do_random_combine_test (const char **msg,
             if (composite
                 && composite->sview_len == 0 && composite->src_ops > 0)
               return svn_error_create
-                (SVN_ERR_FS_GENERAL, 0, NULL,
+                (SVN_ERR_FS_GENERAL, NULL,
                  "combined delta window is inconsistent");
 
             SVN_ERR (handler (composite, handler_baton));

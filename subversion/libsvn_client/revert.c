@@ -2,7 +2,7 @@
  * revert.c:  wrapper around wc revert functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -82,7 +82,7 @@ svn_client_revert (const char *path,
   SVN_ERR (svn_wc_adm_close (adm_access));
 
   /* Sleep for one second to ensure timestamp integrity. */
-  apr_sleep (APR_USEC_PER_SEC * 1);
+  apr_sleep (apr_time_from_sec(1));
 
   return err;
 }

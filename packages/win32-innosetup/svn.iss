@@ -2,7 +2,7 @@
 
 #define svn_version "0.15.0"
 #define svn_release "3687"
-#define svn_cpr "Copyright ©2000-2002 CollabNet"
+#define svn_cpr "Copyright ©2000-2003 CollabNet"
 
 AppName=Subversion
 AppVerName=Subversion-{#= svn_version}-r{#= svn_release}

@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2001 Collabnet.  All rights reserved.
+# Copyright (c) 2000-2003 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -362,7 +362,10 @@ def run_and_verify_switch(wc_dir_name,
     status_tree = status_tree.old_tree()
 
   # Update and make a tree of the output.
-  output, errput = main.run_svn (None, 'switch', switch_url, wc_target)
+  output, errput = main.run_svn (None, 'switch',
+                                 '--username', main.wc_author,
+                                 '--password', main.wc_passwd,
+                                 switch_url, wc_target)
   mytree = tree.build_tree_from_checkout (output)
 
   return verify_update (mytree, wc_dir_name,

@@ -2,7 +2,7 @@
  * add.c:  wrappers around wc add/mkdir functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -100,7 +100,7 @@ add_dir_recursive (const char *dirname,
   if (! (APR_STATUS_IS_ENOENT (err->apr_err)))
     {
       return svn_error_createf
-        (err->apr_err, err->src_err, err,
+        (err->apr_err, err,
          "error during recursive add of `%s'", dirname);
     }
   else  /* Yes, it exited cleanly, so close the dir. */
@@ -108,7 +108,7 @@ add_dir_recursive (const char *dirname,
       apr_status_t apr_err = apr_dir_close (dir);
       if (apr_err)
         return svn_error_createf
-          (apr_err, 0, NULL, "error closing dir `%s'", dirname);
+          (apr_err, NULL, "error closing dir `%s'", dirname);
     }
 
   /* Opened by svn_wc_add */

@@ -2,7 +2,7 @@
  * liveprops.c: mod_dav_svn live property provider functions for Subversion
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -98,6 +98,7 @@ static const dav_liveprop_spec dav_svn_props[] =
                    version-controlled-configuration),
   SVN_RO_DAV_PROP2(version_name, version-name),
   SVN_RO_DAV_PROP2(creator_displayname, creator-displayname),
+  SVN_RO_DAV_PROP2(auto_version, auto-version),
 
   /* SVN properties */
   SVN_RO_SVN_PROP(baseline_relative_path, baseline-relative-path),
@@ -358,6 +359,16 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
 
     case DAV_PROPID_getetag:
       value = dav_svn_getetag(resource);
+      break;
+
+    case DAV_PROPID_auto_version:
+      /* we only support one autoversioning behavior, and thus only
+         return this one static value; someday when we support
+         locking, there are other possible values/behaviors for this. */
+      if (resource->info->repos->autoversioning)
+        value = "DAV:checkout-checkin";
+      else
+        return DAV_PROP_INSERT_NOTDEF;
       break;
 
     case DAV_PROPID_baseline_collection:

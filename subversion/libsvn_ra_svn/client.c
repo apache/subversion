@@ -2,7 +2,7 @@
  * client.c :  Functions for repository access via the Subversion protocol
  *
  * ====================================================================
- * Copyright (c) 2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -102,16 +102,16 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
   /* Resolve the hostname. */
   status = apr_sockaddr_info_get(&sa, hostname, APR_INET, port, 0, pool);
   if (status)
-    return svn_error_createf(status, 0, NULL, "Unknown hostname %s", hostname);
+    return svn_error_createf(status, NULL, "Unknown hostname %s", hostname);
 
   /* Create the socket. */
   status = apr_socket_create(sock, APR_INET, SOCK_STREAM, pool);
   if (status)
-    return svn_error_create(status, 0, NULL, "Can't create socket");
+    return svn_error_create(status, NULL, "Can't create socket");
 
   status = apr_connect(*sock, sa);
   if (status)
-    return svn_error_createf(status, 0, NULL, "Can't connect to host %s",
+    return svn_error_createf(status, NULL, "Can't connect to host %s",
                              hostname);
 
   return SVN_NO_ERROR;
@@ -131,7 +131,7 @@ static svn_error_t *parse_proplist(apr_array_header_t *list, apr_pool_t *pool,
     {
       elt = &((svn_ra_svn_item_t *) list->elts)[i];
       if (elt->kind != SVN_RA_SVN_LIST)
-        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Proplist element not a list");
       SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cs", &name, &value));
       apr_hash_set(*props, name, APR_HASH_KEY_STRING, value);
@@ -151,7 +151,7 @@ static svn_error_t *interpret_kind(const char *str, apr_pool_t *pool,
   else if (strcmp(str, "unknown") == 0)
     *kind = svn_node_unknown;
   else
-    return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
+    return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                              "Unrecognized node kind '%s' from server", str);
   return SVN_NO_ERROR;
 }
@@ -200,6 +200,7 @@ static svn_error_t *ra_svn_finish_report(void *baton)
   SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, ""));
   SVN_ERR(svn_ra_svn_drive_editor(b->conn, pool, b->editor, b->edit_baton,
                                   TRUE, NULL));
+  SVN_ERR(svn_ra_svn_flush(b->conn, pool));
   return SVN_NO_ERROR;
 }
 
@@ -273,6 +274,12 @@ static svn_boolean_t find_mech(apr_array_header_t *mechlist, const char *mech)
   return FALSE;
 }
 
+/* A pool cleanup handler to close a file. */
+static apr_status_t cleanup_file(void *arg)
+{
+  return apr_file_close(arg);
+}
+
 static svn_error_t *ra_svn_open(void **sess, const char *url,
                                 const svn_ra_callbacks_t *callbacks,
                                 void *callback_baton,
@@ -284,17 +291,17 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
   unsigned short port;
   apr_uint64_t minver, maxver;
   apr_array_header_t *mechlist, *caplist, *status_param;
-      apr_procattr_t *attr;
-      apr_proc_t *proc;
+  apr_procattr_t *attr;
+  apr_proc_t *proc;
 
   if (parse_url(url, &user, &port, &hostname, pool) != 0)
-    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, 0, NULL,
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              "Illegal svn repository URL %s", url);
 
   tunnel_agent = find_tunnel_agent(hostname, pool);
   if (tunnel_agent)
     {
-      /* ### It should be nice if tunnel_agent could contain flags. */
+      /* ### It would be nice if tunnel_agent could contain flags. */
       args[0] = tunnel_agent;
       args[1] = hostname;
       args[2] = "svnserve";
@@ -307,6 +314,18 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
       apr_proc_create(proc, tunnel_agent, args, NULL, attr, pool);
       conn = svn_ra_svn_create_conn(NULL, proc->out, proc->in, pool);
       conn->proc = proc;
+
+      /* APR pipe objects don't have a child cleanup handler.  Set one
+       * up so child processes don't hold open the tunnel agent's
+       * input and output.  Unfortunately, the child cleanup handler
+       * will flush the child process's write buffer (APR gives no way
+       * to avoid that); this means we have to be careful not to leave
+       * stuff lying around in the write buffer between ra_lib
+       * calls. */
+      apr_pool_cleanup_register(pool, proc->in, apr_pool_cleanup_null,
+                                cleanup_file);
+      apr_pool_cleanup_register(pool, proc->out, apr_pool_cleanup_null,
+                                cleanup_file);
     }
   else
     {
@@ -319,7 +338,7 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
                                 &mechlist, &caplist));
   /* We only support protocol version 1. */
   if (minver > 1)
-    return svn_error_createf(SVN_ERR_RA_SVN_BAD_VERSION, 0, NULL,
+    return svn_error_createf(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
                              "Server requires minimum version %d",
                              (int) minver);
   if (tunnel_agent && find_mech(mechlist, "EXTERNAL"))
@@ -335,7 +354,7 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
                                      "ANONYMOUS", ""));
     }
   else
-    return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, 0, NULL,
+    return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                             "Cannot negotiate authentication mechanism");
 
   /* Write client response to greeting, picking version 1 and the
@@ -346,7 +365,7 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
    * notification with no parameter. */
   SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "wl", &status, &status_param));
   if (strcmp(status, "success") != 0)
-    return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, 0, NULL,
+    return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                             "Unexpected server response to authentication");
 
   /* This is where the security layer would go into effect if we
@@ -507,7 +526,7 @@ static svn_error_t *ra_svn_get_file(void *sess, const char *path,
     {
       SVN_ERR(svn_ra_svn_read_item(conn, pool, &item));
       if (item->kind != SVN_RA_SVN_STRING)
-        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Non-string as part of file contents");
       if (item->u.string->len == 0)
         break;
@@ -555,7 +574,7 @@ static svn_error_t *ra_svn_get_dir(void *sess, const char *path,
     {
       elt = &((svn_ra_svn_item_t *) dirlist->elts)[i];
       if (elt->kind != SVN_RA_SVN_LIST)
-        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Dirlist element not a list");
       SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cwnbr[c][c]",
                                      &name, &kind, &size, &has_props,
@@ -587,6 +606,7 @@ static svn_error_t *ra_svn_checkout(void *sess, svn_revnum_t rev,
 
   /* Let the server drive the checkout editor. */
   SVN_ERR(svn_ra_svn_drive_editor(conn, pool, editor, edit_baton, TRUE, NULL));
+  SVN_ERR(svn_ra_svn_flush(conn, pool));
   return SVN_NO_ERROR;
 }
 
@@ -753,7 +773,7 @@ static svn_error_t *ra_svn_log(void *sess, const apr_array_header_t *paths,
       if (item->kind == SVN_RA_SVN_WORD && strcmp(item->u.word, "done") == 0)
         break;
       if (item->kind != SVN_RA_SVN_LIST)
-        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Log entry not a list");
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool, "lr[c][c][c]",
                                      &cplist, &rev, &author, &date,
@@ -766,7 +786,7 @@ static svn_error_t *ra_svn_log(void *sess, const apr_array_header_t *paths,
             {
               elt = &((svn_ra_svn_item_t *) cplist->elts)[i];
               if (elt->kind != SVN_RA_SVN_LIST)
-                return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
+                return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                         "Changed-path entry not a list");
               SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, subpool, "cw[cr]",
                                              &cpath, &action, &copy_path,

@@ -2,7 +2,7 @@
  * externals.c:  handle the svn:externals property
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -158,7 +158,7 @@ parse_externals_description (apr_hash_t **externals_p,
         {
         parse_error:
           return svn_error_createf
-            (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, 0, NULL,
+            (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
              "error parsing " SVN_PROP_EXTERNALS " property on '%s':\n"
              "Invalid line: '%s'", parent_directory, line);
         }

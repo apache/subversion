@@ -1,7 +1,7 @@
 /* log.c --- retrieving log messages
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -139,11 +139,11 @@ svn_repos_get_logs (svn_repos_t *repos,
   /* Check that revisions are sane before ever invoking receiver. */
   if (start > head)
     return svn_error_createf
-      (SVN_ERR_FS_NO_SUCH_REVISION, 0, 0,
+      (SVN_ERR_FS_NO_SUCH_REVISION, 0,
        "svn_repos_get_logs: No such revision `%" SVN_REVNUM_T_FMT "'", start);
   if (end > head)
     return svn_error_createf
-      (SVN_ERR_FS_NO_SUCH_REVISION, 0, 0,
+      (SVN_ERR_FS_NO_SUCH_REVISION, 0,
        "svn_repos_get_logs: No such revision `%" SVN_REVNUM_T_FMT "'", end);
 
   /* If paths were specified, then we only really care about revisions

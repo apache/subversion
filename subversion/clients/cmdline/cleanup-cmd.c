@@ -2,7 +2,7 @@
  * cleanup-cmd.c -- Subversion cleanup command
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -56,7 +56,7 @@ svn_cl__cleanup (apr_getopt_t *os,
   /* At this point, we should never have an empty TARGETS array, but
      check it just in case. */
   if (! targets->nelts)
-    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, "");
+    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");
 
   subpool = svn_pool_create (pool);
   for (i = 0; i < targets->nelts; i++)

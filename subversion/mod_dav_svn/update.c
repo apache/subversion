@@ -2,7 +2,7 @@
  * update.c: handle the update-report request and response
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -570,8 +570,18 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   
   for (child = doc->root->first_child; child != NULL; child = child->next)
     {
+      /* Note that child->name might not match any of the cases below.
+         Thus, the check for non-empty cdata in each of these cases
+         cannot be moved to the top of the loop, because then it would
+         wrongly catch other elements that do allow empty cdata. */ 
+
       if (child->ns == ns && strcmp(child->name, "target-revision") == 0)
         {
+          if (! child->first_cdata.first)
+            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+              "The request's `target-revision' element contains empty cdata; "
+              "there is a problem with the client.");
+
           /* ### assume no white space, no child elems, etc */
           revnum = SVN_STR_TO_REV(child->first_cdata.first->text);
         }
@@ -579,6 +589,12 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
         {
           /* ### assume no white space, no child elems, etc */
           dav_svn_uri_info this_info;
+
+          if (! child->first_cdata.first)
+            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+              "The request's `dst-path' element contains empty cdata; "
+              "there is a problem with the client.  See "
+              "http://subversion.tigris.org/issues/show_bug.cgi?id=1055");
 
           /* split up the 2nd public URL. */
           serr = dav_svn_simple_parse_uri(&this_info, resource,
@@ -594,17 +610,32 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
 
       if (child->ns == ns && strcmp(child->name, "update-target") == 0)
         {
+          if (! child->first_cdata.first)
+            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+              "The request's `update-target' element contains empty cdata; "
+              "there is a problem with the client.");
+
           /* ### assume no white space, no child elems, etc */
           target = child->first_cdata.first->text;
         }
       if (child->ns == ns && strcmp(child->name, "recursive") == 0)
         {
+          if (! child->first_cdata.first)
+            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+              "The request's `recursive' element contains empty cdata; "
+              "there is a problem with the client.");
+
           /* ### assume no white space, no child elems, etc */
           if (strcmp(child->first_cdata.first->text, "no") == 0)
             recurse = FALSE;
         }
       if (child->ns == ns && strcmp(child->name, "resource-walk") == 0)
         {
+          if (! child->first_cdata.first)
+            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+              "The request's `resource-walk' element contains empty cdata; "
+              "there is a problem with the client.");
+
           /* ### assume no white space, no child elems, etc */
           if (strcmp(child->first_cdata.first->text, "no") != 0)
             resource_walk = TRUE;
@@ -705,7 +736,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
               {
                 /* ### This removes the fs txn.  todo: check error. */
                 svn_repos_abort_report(rbaton);
-                serr = svn_error_create (SVN_ERR_XML_ATTRIB_NOT_FOUND, 0, 
+                serr = svn_error_create (SVN_ERR_XML_ATTRIB_NOT_FOUND, 
                                          NULL, "rev");
                 return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                            "A failure occurred while "

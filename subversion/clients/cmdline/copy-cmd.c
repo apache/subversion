@@ -2,7 +2,7 @@
  * copy-cmd.c -- Subversion copy command
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -56,7 +56,7 @@ svn_cl__copy (apr_getopt_t *os,
                                          &(opt_state->end_revision),
                                          FALSE, pool));
   if (targets->nelts != 2)
-    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, "");
+    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");
 
   /* Build an authentication object to give to libsvn_client. */
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);

@@ -1,7 +1,7 @@
 /* skel-test.c --- tests for the skeleton functions
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -43,7 +43,7 @@ fail (apr_pool_t *pool, const char *fmt, ...)
   msg = apr_pvsprintf (pool, fmt, ap);
   va_end (ap);
 
-  return svn_error_create (SVN_ERR_TEST_FAILED, 0, 0, msg);
+  return svn_error_create (SVN_ERR_TEST_FAILED, 0, msg);
 }
 
 

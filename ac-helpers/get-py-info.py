@@ -21,7 +21,22 @@ if len(sys.argv) != 2:
   usage()
 
 if sys.argv[1] == '--includes':
-  print sysconfig.get_python_inc()
+  inc = sysconfig.get_python_inc()
+  plat = sysconfig.get_python_inc(plat_specific=1)
+  if inc == plat:
+    print "-I" + inc
+  else:
+    print "-I%s -I%s" % (inc, plat)
+  sys.exit(0)
+
+if sys.argv[1] == '--compile':
+  cc, opt, ccshared = sysconfig.get_config_vars('CC', 'OPT', 'CCSHARED')
+  print cc, opt, ccshared
+  sys.exit(0)
+
+if sys.argv[1] == '--link':
+  ### why the hell is this a list?!
+  print sysconfig.get_config_vars('LDSHARED')[0]
   sys.exit(0)
 
 usage()

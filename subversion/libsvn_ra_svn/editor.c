@@ -2,7 +2,7 @@
  * editor.c :  Driving and consuming an editor across an svn connection
  *
  * ====================================================================
- * Copyright (c) 2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -357,7 +357,7 @@ static svn_error_t *lookup_token(ra_svn_driver_state_t *ds, const char *token,
 {
   *entry = apr_hash_get(ds->tokens, token, APR_HASH_KEY_STRING);
   if (!*entry)
-    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
+    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             "Invalid file or dir token during edit");
   return SVN_NO_ERROR;
 }
@@ -574,7 +574,7 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
     {
       SVN_ERR(svn_ra_svn_read_item(conn, subpool, &item));
       if (item->kind != SVN_RA_SVN_STRING)
-	return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
+	return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
 				"Non-string as part of text delta");
       if (item->u.string->len == 0)
         break;

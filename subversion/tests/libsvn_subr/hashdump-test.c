@@ -2,7 +2,7 @@
  * hashdump-test.c :  testing the reading/writing of hashes
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -35,7 +35,7 @@ static svn_error_t *
 check (apr_status_t status)
 {
   if (status != APR_SUCCESS)
-    return svn_error_create (status, 0, 0, "");
+    return svn_error_create (status, 0, "");
   else
     return SVN_NO_ERROR;
 }
@@ -188,7 +188,7 @@ test3 (const char **msg,
 
 
   if (found_discrepancy)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, 0, 0,
+    return svn_error_createf (SVN_ERR_TEST_FAILED, 0,
                               "found discrepancy reading back hash table");
 
   return SVN_NO_ERROR;

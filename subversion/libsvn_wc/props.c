@@ -2,7 +2,7 @@
  * props.c :  routines dealing with properties in the working copy
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -246,13 +246,13 @@ svn_wc__load_prop_file (const char *propfile_path,
 
       status = svn_hash_read (hash, propfile, pool);
       if (status)
-        return svn_error_createf (status, 0, NULL,
+        return svn_error_createf (status, NULL,
                                   "load_prop_file:  can't parse `%s'",
                                   propfile_path);
 
       status = apr_file_close (propfile);
       if (status)
-        return svn_error_createf (status, 0, NULL,
+        return svn_error_createf (status, NULL,
                                   "load_prop_file: can't close `%s'",
                                   propfile_path);
     }
@@ -273,19 +273,20 @@ svn_wc__save_prop_file (const char *propfile_path,
   apr_file_t *prop_tmp;
 
   SVN_ERR_W (svn_io_file_open (&prop_tmp, propfile_path,
-                               (APR_WRITE | APR_CREATE | APR_TRUNCATE),
+                               (APR_WRITE | APR_CREATE | APR_TRUNCATE
+                                | APR_BUFFERED),
                                APR_OS_DEFAULT, pool),
              "save_prop_file: can't open propfile");
 
   apr_err = svn_hash_write (hash, prop_tmp, pool);
   if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL,
+    return svn_error_createf (apr_err, NULL,
                               "save_prop_file: can't write prop hash to `%s'",
                               propfile_path);
 
   apr_err = apr_file_close (prop_tmp);
   if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL,
+    return svn_error_createf (apr_err, NULL,
                               "save_prop_file: can't close `%s'",
                               propfile_path);
 
@@ -317,7 +318,7 @@ append_prop_conflict (apr_file_t *fp,
   status = apr_file_write_full (fp, conflict_description_native->data,
                                 conflict_description_native->len, &written);
   if (status)
-    return svn_error_create (status, 0, NULL,
+    return svn_error_create (status, NULL,
                              "append_prop_conflict: "
                              "apr_file_write_full failed.");
   return SVN_NO_ERROR;
@@ -339,7 +340,7 @@ svn_wc__get_existing_prop_reject_file (const char **reject_file,
 
   if (! the_entry)
     return svn_error_createf
-      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
+      (SVN_ERR_ENTRY_NOT_FOUND, NULL,
        "get_existing_reject_prop_reject_file: can't find entry '%s' in '%s'",
        name, svn_wc_adm_access_path (adm_access));
 
@@ -373,7 +374,7 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
 
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
   if (entry == NULL)
-    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
+    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
                               "Can't merge props into '%s':"
                               "it's not under revision control.", path);
 
@@ -420,7 +421,7 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
       if (apr_err)
         {
           apr_file_close (log_fp);
-          return svn_error_createf (apr_err, 0, NULL,
+          return svn_error_createf (apr_err, NULL,
                                     "svn_wc_merge_prop_diffs:"
                                     "error writing log for %s", path);
         }
@@ -447,14 +448,16 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
 {
   int i;
   svn_boolean_t is_dir;
-  const char * str;
-  apr_size_t len;
   
   /* Zillions of pathnames to compute!  yeargh!  */
   const char *base_propfile_path, *local_propfile_path;
   const char *base_prop_tmp_path, *local_prop_tmp_path;
   const char *tmp_prop_base, *real_prop_base;
   const char *tmp_props, *real_props;
+
+  const char *access_path = svn_wc_adm_access_path (adm_access);
+  int access_len = strlen (access_path);
+  int slash = access_len ? 1 : 0;   /* "foo/.svn/..." versus ".svn/..." */
 
   const char *entryname;
   const char *full_path;
@@ -477,15 +480,14 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
     {
       /* We must be merging props on the directory PATH  */
       entryname = SVN_WC_ENTRY_THIS_DIR;
-      full_path = svn_wc_adm_access_path (adm_access);
+      full_path = access_path;
       is_dir = TRUE;
     }
   else
     {
       /* We must be merging props on the file PATH/NAME */
       entryname = name;
-      full_path = svn_path_join (svn_wc_adm_access_path (adm_access), name,
-                                 pool);
+      full_path = svn_path_join (access_path, name, pool);
       is_dir = FALSE;
     }
 
@@ -683,13 +685,8 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
   /* Compute pathnames for the "mv" log entries.  Notice that these
      paths are RELATIVE pathnames (each beginning with ".svn/"), so
      that each .svn subdir remains separable when executing run_log().  */
-  str = strstr (local_prop_tmp_path, SVN_WC_ADM_DIR_NAME);
-  len = local_prop_tmp_path + strlen (local_prop_tmp_path) - str;
-  tmp_props = apr_pstrndup (pool, str, len);
-
-  str = strstr (local_propfile_path, SVN_WC_ADM_DIR_NAME);
-  len = local_propfile_path + strlen (local_propfile_path) - str;
-  real_props = apr_pstrndup (pool, str, len);
+  tmp_props = apr_pstrdup (pool, local_prop_tmp_path + access_len + slash);
+  real_props = apr_pstrdup (pool, local_propfile_path + access_len + slash);
   
   /* Write log entry to move working tmp copy to real working area. */
   svn_xml_make_open_tag (entry_accum,
@@ -717,13 +714,12 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
       SVN_ERR (svn_wc__prop_base_path (&base_prop_tmp_path, full_path, 1,
                                        pool));
       SVN_ERR (svn_wc__save_prop_file (base_prop_tmp_path, basehash, pool));
-      str = strstr (base_prop_tmp_path, SVN_WC_ADM_DIR_NAME);
-      len = (apr_size_t)(base_prop_tmp_path - str)
-        + strlen (base_prop_tmp_path);
-      tmp_prop_base = apr_pstrndup (pool, str, len);
-      str = strstr (base_propfile_path, SVN_WC_ADM_DIR_NAME);
-      len = base_propfile_path + strlen (base_propfile_path) - str;
-      real_prop_base = apr_pstrndup (pool, str, len);
+
+      tmp_prop_base = apr_pstrdup (pool,
+                                   base_prop_tmp_path + access_len + slash);
+      real_prop_base = apr_pstrdup (pool,
+                                    base_propfile_path + access_len + slash);
+
       svn_xml_make_open_tag (entry_accum,
                              pool,
                              svn_xml_self_closing,
@@ -753,7 +749,7 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
       apr_status_t status;
       status = apr_file_close (reject_tmp_fp);
       if (status)
-        return svn_error_createf (status, 0, NULL,
+        return svn_error_createf (status, NULL,
                                   "do_property_merge: can't close '%s'",
                                   reject_tmp_path);
                                   
@@ -772,7 +768,7 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
           const char *full_reject_path;
 
           full_reject_path
-            = svn_path_join (svn_wc_adm_access_path (adm_access),
+            = svn_path_join (access_path,
                              is_dir ? SVN_WC__THIS_DIR_PREJ : name,
                              pool);
 
@@ -785,7 +781,7 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
 
           status = apr_file_close (reject_fp);
           if (status)
-            return svn_error_createf (status, 0, NULL,
+            return svn_error_createf (status, NULL,
                                       "do_property_merge: can't close '%s'",
                                       full_reject_path);
           
@@ -863,12 +859,12 @@ wcprop_list (apr_hash_t **props,
   
 #if 0
   if (kind == svn_node_none)
-    return svn_error_createf (SVN_ERR_BAD_FILENAME, 0, NULL,
+    return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
                               "wcprop_list: non-existent path '%s'.",
                               path);
   
   if (kind == svn_node_unknown)
-    return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL,
+    return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                               "wcprop_list: unknown node kind: '%s'.",
                               path);
 #endif
@@ -935,14 +931,14 @@ svn_wc__wcprop_set (const char *name,
   /* Open the propfile for writing. */
   SVN_ERR (svn_wc__open_props (&fp, 
                                path, /* open in PATH */
-                               (APR_WRITE | APR_CREATE),
+                               (APR_WRITE | APR_CREATE | APR_BUFFERED),
                                0, /* not base props */
                                1, /* we DO want wcprops */
                                pool));
   /* Write. */
   apr_err = svn_hash_write (prophash, fp, pool);
   if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL,
+    return svn_error_createf (apr_err, NULL,
                               "can't write prop hash for %s", path);
   
   /* Close file, and doing an atomic "move". */
@@ -1010,7 +1006,7 @@ svn_wc_prop_get (const svn_string_t **value,
   if (kind == svn_prop_entry_kind)
     {
       return svn_error_createf   /* we don't do entry properties here */
-        (SVN_ERR_BAD_PROP_KIND, 0, NULL,
+        (SVN_ERR_BAD_PROP_KIND, NULL,
          "property '%s' is an entry property", name);
     }
   else  /* regular prop */
@@ -1060,13 +1056,13 @@ validate_prop_against_node_kind (const char *name,
       node_kind_text = "file";
       break;
     default:
-      return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, 0, NULL,
+      return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                                 "%s is not a file or directory", path);
     }
 
   while (*node_kind_prohibit)
     if (strcmp (name, *node_kind_prohibit++) == 0)
-      return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, 0, NULL,
+      return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, NULL,
                                 "Cannot set %s on a %s (%s)",
                                 name, node_kind_text, path);
 
@@ -1086,7 +1082,7 @@ validate_eol_prop_against_file (const char *path,
   /* See if this file has been determined to be binary. */
   SVN_ERR (svn_wc_prop_get (&mime_type, SVN_PROP_MIME_TYPE, path, pool));
   if (mime_type && svn_mime_type_is_binary (mime_type->data))
-    return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, 0, NULL,
+    return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, NULL,
                               "File '%s' has binary mimetype property", path);
 
   /* Open PATH. */
@@ -1107,7 +1103,7 @@ validate_eol_prop_against_file (const char *path,
   err = svn_subst_translate_stream (read_stream, write_stream, 
                                     "", FALSE, NULL, FALSE);
   if (err && err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
-    return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, 0, err,
+    return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, err,
                               "File '%s' has inconsistent newlines", path);
   return err;
 }
@@ -1134,7 +1130,7 @@ svn_wc_prop_set (const char *name,
     return svn_wc__wcprop_set (name, value, path, pool);
   else if (prop_kind == svn_prop_entry_kind)
     return svn_error_createf   /* we don't do entry properties here */
-      (SVN_ERR_BAD_PROP_KIND, 0, NULL,
+      (SVN_ERR_BAD_PROP_KIND, NULL,
        "property '%s' is an entry property", name);
 
   /* Else, handle a regular property: */
@@ -1189,14 +1185,14 @@ svn_wc_prop_set (const char *name,
   /* Open the propfile for writing. */
   SVN_ERR (svn_wc__open_props (&fp, 
                                path, /* open in PATH */
-                               (APR_WRITE | APR_CREATE),
+                               (APR_WRITE | APR_CREATE | APR_BUFFERED),
                                0, /* not base props */
                                0, /* not wcprops */
                                pool));
   /* Write. */
   apr_err = svn_hash_write (prophash, fp, pool);
   if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL,
+    return svn_error_createf (apr_err, NULL,
                               "can't write prop hash for %s", path);
   
   /* Close file, and doing an atomic "move". */

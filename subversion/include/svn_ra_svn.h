@@ -2,7 +2,7 @@
  * svn_ra_svn.h :  libsvn_ra_svn functions used by the server
  *
  * ====================================================================
- * Copyright (c) 2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -43,7 +43,7 @@ extern "C" {
   do {                                                        \
     svn_error_t *svn_err__temp = (expr);                      \
     if (svn_err__temp)                                        \
-      return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, 0,      \
+      return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR,         \
 			      svn_err__temp, NULL);           \
   } while (0)
 

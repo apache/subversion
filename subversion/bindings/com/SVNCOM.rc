@@ -74,7 +74,7 @@ BEGIN
             VALUE "FileDescription", "COM Module\0"
             VALUE "FileVersion", "1, 0, 0, 1\0"
             VALUE "InternalName", "COM\0"
-            VALUE "LegalCopyright", "Copyright 2000\0"
+            VALUE "LegalCopyright", "Copyright 2000-2003\0"
             VALUE "OriginalFilename", "COM.DLL\0"
             VALUE "ProductName", "COM Module\0"
             VALUE "ProductVersion", "1, 0, 0, 1\0"

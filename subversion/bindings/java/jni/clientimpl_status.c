@@ -3,7 +3,7 @@
  * the Java class org.tigris.subversion.lib.ClientImpl
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -64,7 +64,7 @@ Java_org_tigris_subversion_lib_ClientImpl_status
   svn_boolean_t update = jupdate == JNI_TRUE;
   apr_hash_t *statushash = NULL;
   svn_client_auth_baton_t *auth_baton = NULL;
-  svn_error_t *error = NULL;
+  svn_error_t *error = SVN_NO_ERROR;
   apr_pool_t *pool = NULL;
   svn_revnum_t youngest;
 

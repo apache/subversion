@@ -2,7 +2,7 @@
  * revisions.c:  discovering revisions
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -55,7 +55,7 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
           || (revision->kind == svn_opt_revision_head)))
     {
       return svn_error_create
-        (SVN_ERR_CLIENT_RA_ACCESS_REQUIRED, 0, NULL,
+        (SVN_ERR_CLIENT_RA_ACCESS_REQUIRED, NULL,
          "svn_client__get_revision_number: "
          "need ra_lib and session for date or head revisions.");
     }
@@ -79,7 +79,7 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
       /* Sanity check. */
       if (path == NULL)
         return svn_error_create
-          (SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED, 0, NULL,
+          (SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED, NULL,
            "svn_client__get_revision_number: "
            "need a version-controlled path to fetch local revision info.");
 
@@ -90,7 +90,7 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
 
       if (! ent)
         return svn_error_createf
-        (SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL,
+        (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
          "svn_client__get_revision: '%s' not under revision control", path);
       
       if ((revision->kind == svn_opt_revision_base)
@@ -105,7 +105,7 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
     }
   else
     return svn_error_createf
-      (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL,
+      (SVN_ERR_CLIENT_BAD_REVISION, NULL,
        "svn_client__get_revision_number: "
        "unrecognized revision type requested for '%s'", path);
   
@@ -126,4 +126,17 @@ svn_client__compare_revisions (svn_opt_revision_t *revision1,
 
   /* Else. */
   return TRUE;
+}
+
+
+svn_boolean_t
+svn_client__revision_is_local (const svn_opt_revision_t *revision)
+{
+  if ((revision->kind == svn_opt_revision_unspecified)
+      || (revision->kind == svn_opt_revision_head)
+      || (revision->kind == svn_opt_revision_number)
+      || (revision->kind == svn_opt_revision_date))
+    return FALSE;
+  else
+    return TRUE;
 }

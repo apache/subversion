@@ -1,7 +1,7 @@
 @node License
 @chapter License
 
-Copyright @copyright{} 2000-2002 Collab.Net.  All rights reserved.
+Copyright @copyright{} 2000-2003 Collab.Net.  All rights reserved.
 
 This software is licensed as described in the file COPYING, which you
 should have received as part of this distribution.  The terms are

@@ -1,7 +1,7 @@
 /* commit.c --- editor for commiting changes to a filesystem.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -109,7 +109,7 @@ struct file_baton
 static svn_error_t *
 out_of_date (const char *path, const char *txn_name)
 {
-  return svn_error_createf (SVN_ERR_FS_TXN_OUT_OF_DATE, 0, NULL,
+  return svn_error_createf (SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
                             "out of date: `%s' in txn `%s'", path, txn_name);
 }
 
@@ -210,7 +210,7 @@ add_directory (const char *path,
   /* Sanity check. */  
   if (copy_path && (! SVN_IS_VALID_REVNUM (copy_revision)))
     return svn_error_createf 
-      (SVN_ERR_FS_GENERAL, 0, NULL,
+      (SVN_ERR_FS_GENERAL, NULL,
        "add_dir `%s': got copy_path, but no copy_rev", full_path);
 
   if (copy_path)
@@ -234,7 +234,7 @@ add_directory (const char *path,
       repos_url_len = strlen (eb->repos_url);
       if (strncmp (copy_path, eb->repos_url, repos_url_len) != 0)
         return svn_error_createf 
-          (SVN_ERR_FS_GENERAL, 0, NULL,
+          (SVN_ERR_FS_GENERAL, NULL,
            "add_dir `%s': copy_url is from different repo", full_path);
 
       fs_path = apr_pstrdup (subpool, copy_path + repos_url_len);
@@ -336,7 +336,7 @@ add_file (const char *path,
   /* Sanity check. */  
   if (copy_path && (! SVN_IS_VALID_REVNUM (copy_revision)))
     return svn_error_createf 
-      (SVN_ERR_FS_GENERAL, 0, NULL,
+      (SVN_ERR_FS_GENERAL, NULL,
        "add_file `%s': got copy_path, but no copy_rev", full_path);
 
   if (copy_path)
@@ -360,7 +360,7 @@ add_file (const char *path,
       repos_url_len = strlen (eb->repos_url);
       if (strncmp (copy_path, eb->repos_url, repos_url_len) != 0)
             return svn_error_createf 
-              (SVN_ERR_FS_GENERAL, 0, NULL,
+              (SVN_ERR_FS_GENERAL, NULL,
                "add_file `%s': copy_url is from different repo", full_path);
       
       fs_path = apr_pstrdup (subpool, copy_path + repos_url_len);
@@ -438,7 +438,8 @@ change_file_prop (void *file_baton,
 {
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->edit_baton;
-  return svn_fs_change_node_prop (eb->txn_root, fb->path, name, value, pool);
+  return svn_repos_fs_change_node_prop (eb->txn_root, fb->path, 
+                                        name, value, pool);
 }
 
 
@@ -450,7 +451,8 @@ change_dir_prop (void *dir_baton,
 {
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->edit_baton;
-  return svn_fs_change_node_prop (eb->txn_root, db->path, name, value, pool);
+  return svn_repos_fs_change_node_prop (eb->txn_root, db->path, 
+                                        name, value, pool);
 }
 
 

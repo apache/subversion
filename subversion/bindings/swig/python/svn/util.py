@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2003 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -66,3 +66,11 @@ class Stream:
   def write(self, buf):
     ### what to do with the amount written? (the result value)
     svn_stream_write(self._stream, buf)
+
+def secs_from_timestr(svn_datetime, pool):
+  aprtime = svn_time_from_cstring(svn_datetime, pool)
+
+  # ### convert to a time_t; this requires intimate knowledge of
+  # ### the apr_time_t type
+  # ### aprtime is microseconds; turn it into seconds
+  return aprtime / 1000000

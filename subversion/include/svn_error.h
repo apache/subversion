@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -67,7 +67,6 @@ char *svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize);
 /** Create a nested exception structure.
  *
  * Input:  an APR or SVN custom error code,
- *         the original errno,
  *         a "child" error to wrap,
  *         a descriptive message,
  *
@@ -82,7 +81,6 @@ char *svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize);
  *        the child argument.
  */
 svn_error_t *svn_error_create (apr_status_t apr_err,
-                               int src_err,
                                svn_error_t *child,
                                const char *message);
 
@@ -90,16 +88,15 @@ svn_error_t *svn_error_create (apr_status_t apr_err,
 #define svn_error_create \
   (svn_error__locate(__FILE__,__LINE__), (svn_error_create))
 
-/** Create an error structure with the given @a apr_err, @a src_err, and
- * @a child, with a printf-style error message produced by passing @a fmt,
- * using @c apr_psprintf.
+/** Create an error structure with the given @a apr_err and @a child,
+ * with a printf-style error message produced by passing @a fmt, using
+ * @c apr_psprintf.
  */
 svn_error_t *svn_error_createf (apr_status_t apr_err,
-                                int src_err,
                                 svn_error_t *child,
                                 const char *fmt, 
                                 ...)
-       __attribute__ ((format (printf, 4, 5)));
+       __attribute__ ((format (printf, 3, 4)));
 
 /** Wrapper macro to collect file and line information */
 #define svn_error_createf \
@@ -190,6 +187,20 @@ void svn_handle_warning (apr_pool_t *pool, void *data, const char *fmt, ...);
     svn_error_t *svn_err__temp = (expr);                    \
     if (svn_err__temp)                                      \
       return svn_error_quick_wrap(svn_err__temp, wrap_msg); \
+  } while (0)
+
+
+/** A statement macro, similar to @c SVN_ERR, but returns an integer.
+ *
+ * Evaluate @a expr. If it yields an error, handle that error and
+ * return @c EXIT_FAILURE.
+ */
+#define SVN_INT_ERR(expr)                                   \
+  do {                                                      \
+    svn_error_t *svn_err__temp = (expr);                    \
+    if (svn_err__temp) {                                    \
+      svn_handle_error (svn_err__temp, stderr, FALSE);      \
+      return EXIT_FAILURE; }                                \
   } while (0)
 
 /** @} */

@@ -2,7 +2,7 @@
  * update.c:  wrappers around wc update functionality
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -67,11 +67,11 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
   SVN_ERR (svn_wc_entry (&entry, anchor, adm_access, FALSE, pool));
   if (! entry)
     return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL,
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        "svn_client_update: %s is not under revision control", anchor);
   if (! entry->url)
     return svn_error_createf
-      (SVN_ERR_ENTRY_MISSING_URL, 0, NULL,
+      (SVN_ERR_ENTRY_MISSING_URL, NULL,
        "svn_client_update: entry '%s' has no URL", anchor);
   URL = apr_pstrdup (pool, entry->url);
 
@@ -138,7 +138,7 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
                                     traversal_info, pool);
       
       /* Sleep for one second to ensure timestamp integrity. */
-      apr_sleep (APR_USEC_PER_SEC * 1);
+      apr_sleep (apr_time_from_sec(1));
 
       if (err)
         return err;

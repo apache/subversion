@@ -23,10 +23,10 @@
 
       <screen>
 $ svn --version
-Subversion Client, version N
-compiled Jan 26 2002, 16:43:58
+svn, version 0.16.0
+   compiled Jan  3 2003, 16:43:58
 
-Copyright (C) 2000-2002 CollabNet.
+Copyright (C) 2000-2003 CollabNet.
 Subversion is open source software, see @uref{http://subversion.tigris.org/}
 
 The following repository access (RA) modules are available:

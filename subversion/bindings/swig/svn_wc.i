@@ -2,7 +2,7 @@
  * svn_wc.i :  SWIG interface file for svn_wc.h
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -39,12 +39,24 @@
 %apply SWIGTYPE **OUTPARAM {
     svn_wc_entry_t **,
     svn_wc_adm_access_t **,
-    svn_boolean_t *
+    svn_wc_status_t **
 };
+
+/* we can't use the OUTPARAM cuz that is only for pointers. use the
+   standard OUTPARAM definition for 'int' instead. */
+%apply int *OUTPUT { svn_boolean_t * };
 
 /* ----------------------------------------------------------------------- */
 
 %include svn_wc.h
 %{
 #include "svn_wc.h"
+
+#ifdef SWIGPYTHON
+#include "swigutil_py.h"
+#endif
+
+#ifdef SWIGJAVA
+#include "swigutil_java.h"
+#endif
 %}

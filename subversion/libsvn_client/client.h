@@ -2,7 +2,7 @@
  * client.h :  shared stuff internal to the client library.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -75,6 +75,17 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
 svn_boolean_t
 svn_client__compare_revisions (svn_opt_revision_t *revision1,
                                svn_opt_revision_t *revision2);
+
+
+/* Return true if the revision number for REVISION can be determined
+ * from just the working copy, or false if it can be determined from
+ * just the repository.
+ *
+ * Note: No other kinds of revisions should be possible; but if one
+ * day there are, this will return true for those kinds.
+ */ 
+svn_boolean_t
+svn_client__revision_is_local (const svn_opt_revision_t *revision);
 
 
 /* ---------------------------------------------------------------- */
@@ -161,6 +172,34 @@ svn_error_t * svn_client__get_authenticator (void **authenticator,
                                              enum svn_ra_auth_method method,
                                              void *callback_baton,
                                              apr_pool_t *pool);
+
+/* Set *DIR_P to DIR if DIR is a working copy directory, else set to NULL.
+ * DIR may not be a file.  Use POOL only for temporary allocation.
+ *
+ * Purpose: Helper for callers of svn_client__open_ra_session(),
+ * who if not passed a working copy path as an argument, will often
+ * wish to try the current directory for auth information, but only if
+ * it is a working copy.
+ */
+svn_error_t *svn_client__dir_if_wc (const char **dir_p,
+                                    const char *dir,
+                                    apr_pool_t *pool);
+
+
+/* Set *AUTH_DIR_P to PATH if PATH is a working copy directory, else
+ * to PATH's parent if the parent is a working copy directory, else to
+ * null.
+ *
+ * If set *AUTH_DIR_P to PATH's parent, allocate *AUTH_DIR_P in POOL;
+ * otherwise, use POOL only for temporary allocation.
+ *
+ * Purpose: similar to svn_client__dir_if_wc().
+ */
+svn_error_t *svn_client__default_auth_dir (const char **auth_dir_p,
+                                           const char *path,
+                                           apr_pool_t *pool);
+
+
 
 /* ---------------------------------------------------------------- */
 

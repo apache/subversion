@@ -2,7 +2,7 @@
  * repos_diff.c -- The diff editor for comparing two repository versions
  *
  * ====================================================================
- * Copyright (c) 2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -291,7 +291,7 @@ get_file_from_ra (struct file_baton *b)
 
   status = apr_file_close (file);
   if (status)
-    return svn_error_createf (status, 0, NULL, "failed to close file '%s'",
+    return svn_error_createf (status, NULL, "failed to close file '%s'",
                               b->path_start_revision);
 
   return SVN_NO_ERROR;
@@ -329,7 +329,7 @@ create_empty_file (const char **empty_file,
 
   status = apr_file_close (file);
   if (status)
-    return svn_error_createf (status, 0, NULL,
+    return svn_error_createf (status, NULL,
                               "failed to create empty file '%s'", *empty_file);
   return SVN_NO_ERROR;
 }
@@ -619,13 +619,13 @@ window_handler (svn_txdelta_window_t *window,
 
       status = apr_file_close (b->file_start_revision);
       if (status)
-        return svn_error_createf (status, 0, NULL,
+        return svn_error_createf (status, NULL,
                                   "failed to close file '%s'",
                                   b->path_start_revision);
 
       status = apr_file_close (b->file_end_revision);
       if (status)
-        return svn_error_createf (status, 0, NULL,
+        return svn_error_createf (status, NULL,
                                   "failed to close file '%s'",
                                   b->path_end_revision);
     }

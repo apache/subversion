@@ -1,9 +1,14 @@
 #! /bin/sh
 
-echo "buildcheck: checking installation..."
-
 # Initialize parameters
-NEON_CHECK_CONTROL="$1"
+VERSION_CHECK="$1"
+NEON_CHECK_CONTROL="$2"
+
+if test "$VERSION_CHECK" != "--release"; then
+  echo "buildcheck: checking installation..."
+else
+  echo "buildcheck: checking installation for a source release..."
+fi
 
 #--------------------------------------------------------------------------
 # autoconf 2.50 or newer
@@ -52,6 +57,25 @@ echo "buildcheck: autoheader version $ah_version (ok)"
 #--------------------------------------------------------------------------
 # libtool 1.4 or newer
 #
+LIBTOOL_WANTED_MAJOR=1
+LIBTOOL_WANTED_MINOR=4
+LIBTOOL_WANTED_PATCH=
+LIBTOOL_WANTED_VERSION=1.4
+
+# The minimum version for source releases is 1.4.3,
+# because it's required by (at least) Solaris.
+if test "$VERSION_CHECK" = "--release"; then
+  LIBTOOL_WANTED_PATCH=3
+  LIBTOOL_WANTED_VERSION=1.4.3
+else
+  case `uname -sr` in
+    SunOS\ 5.*)
+      LIBTOOL_WANTED_PATCH=3
+      LIBTOOL_WANTED_VERSION=1.4.3
+      ;;
+  esac
+fi
+
 libtool=`which glibtool 2>/dev/null`
 if test ! -x "$libtool"; then
   libtool=`which libtool`
@@ -59,20 +83,24 @@ fi
 lt_pversion=`$libtool --version 2>/dev/null|sed -e 's/^[^0-9]*//' -e 's/[- ].*//'`
 if test -z "$lt_pversion"; then
   echo "buildcheck: libtool not found."
-  echo "            You need libtool version 1.4 or newer installed"
+  echo "            You need libtool version $LIBTOOL_WANTED_VERSION or newer installed"
   exit 1
 fi
 lt_version=`echo $lt_pversion|sed -e 's/\([a-z]*\)$/.\1/'`
 IFS=.; set $lt_version; IFS=' '
 lt_status="good"
-if test "$1" = "1"; then
-   if test "$2" -lt "4"; then
+if test "$1" = "$LIBTOOL_WANTED_MAJOR"; then
+   if test "$2" -lt "$LIBTOOL_WANTED_MINOR"; then
       lt_status="bad"
+   elif test ! -z "$LIBTOOL_WANTED_PATCH"; then
+       if test "$3" -lt "$LIBTOOL_WANTED_PATCH"; then
+           lt_status="bad"
+       fi
    fi
 fi
 if test $lt_status != "good"; then
   echo "buildcheck: libtool version $lt_pversion found."
-  echo "            You need libtool version 1.4 or newer installed"
+  echo "            You need libtool version $LIBTOOL_WANTED_VERSION or newer installed"
   exit 1
 fi
 

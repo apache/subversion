@@ -2,7 +2,7 @@
  * config_file.c :  parsing configuration files
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -191,8 +191,7 @@ parse_option (int *pch, parse_context_t *ctx)
   if (ch != ':' && ch != '=')
     {
       ch = EOF;
-      err = svn_error_createf (SVN_ERR_MALFORMED_FILE,
-                               0, NULL,
+      err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
                                "%s:%d: Option must end with ':' or '='",
                                ctx->file, ctx->line);
     }
@@ -234,8 +233,7 @@ parse_section_name (int *pch, parse_context_t *ctx)
   if (ch != ']')
     {
       ch = EOF;
-      err = svn_error_createf (SVN_ERR_MALFORMED_FILE,
-                               0, NULL,
+      err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
                                "%s:%d: Section header must end with ']'",
                                ctx->file, ctx->line);
     }
@@ -266,13 +264,9 @@ svn_config__sys_config_path (const char **path_p,
 
 #ifdef SVN_WIN32
   {
-    char folder[MAX_PATH];
-    HRESULT res = svn_config__win_config_path (folder, TRUE);
-    if (res != S_OK)
-      return SVN_NO_ERROR;
-
-    *path_p = svn_path_join_many (pool,
-                                  svn_path_canonicalize (folder, pool),
+    const char *folder;
+    SVN_ERR (svn_config__win_config_path (&folder, TRUE, pool));
+    *path_p = svn_path_join_many (pool, folder,
                                   SVN_CONFIG__SUBDIRECTORY, fname, NULL);
   }
 
@@ -300,13 +294,9 @@ svn_config__user_config_path (const char **path_p,
 
 #ifdef SVN_WIN32
   {
-    char folder[MAX_PATH];
-    HRESULT res = svn_config__win_config_path (folder, FALSE);
-    if (res != S_OK)
-      return SVN_NO_ERROR;
-
-    *path_p = svn_path_join_many (pool,
-                                  svn_path_canonicalize (folder, pool),
+    const char *folder;
+    SVN_ERR (svn_config__win_config_path (&folder, FALSE, pool));
+    *path_p = svn_path_join_many (pool, folder,
                                   SVN_CONFIG__SUBDIRECTORY, fname, NULL);
   }
 
@@ -361,12 +351,10 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
   if (fd == NULL)
     {
       if (errno != ENOENT)
-        return svn_error_createf (SVN_ERR_BAD_FILENAME,
-                                  errno, NULL,
+        return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
                                   "Can't open config file \"%s\"", file);
       else if (must_exist && errno == ENOENT)
-        return svn_error_createf (SVN_ERR_BAD_FILENAME,
-                                  errno, NULL,
+        return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
                                   "Can't find config file \"%s\"", file);
       else
         return SVN_NO_ERROR;
@@ -392,8 +380,7 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
           else
             {
               ch = EOF;
-              err = svn_error_createf (SVN_ERR_MALFORMED_FILE,
-                                       0, NULL,
+              err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
                                        "%s:%d: Section header"
                                        " must start in the first column",
                                        file, ctx.line);
@@ -406,8 +393,7 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
           else
             {
               ch = EOF;
-              err = svn_error_createf (SVN_ERR_MALFORMED_FILE,
-                                       0, NULL,
+              err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
                                        "%s:%d: Comment"
                                        " must start in the first column",
                                        file, ctx.line);
@@ -425,16 +411,14 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
           if (svn_stringbuf_isempty (ctx.section))
             {
               ch = EOF;
-              err = svn_error_createf (SVN_ERR_MALFORMED_FILE,
-                                       0, NULL,
+              err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
                                        "%s:%d: Section header expected",
                                        file, ctx.line);
             }
           else if (count != 0)
             {
               ch = EOF;
-              err = svn_error_createf (SVN_ERR_MALFORMED_FILE,
-                                       0, NULL,
+              err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
                                        "%s:%d: Option expected",
                                        file, ctx.line);
             }
@@ -448,7 +432,7 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
   if (ferror (fd))
     {
       err = svn_error_createf (-1, /* FIXME: Wrong error code. */
-                               errno, NULL,
+                               NULL,
                                "%s:%d: Read error", file, ctx.line);
     }
 
@@ -620,12 +604,12 @@ svn_config_ensure (apr_pool_t *pool)
         {
           apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
           if (apr_err)
-            return svn_error_createf (apr_err, 0, NULL, 
+            return svn_error_createf (apr_err, NULL, 
                                       "writing config file `%s'", path);
           
           apr_err = apr_file_close (f);
           if (apr_err)
-            return svn_error_createf (apr_err, 0, NULL, 
+            return svn_error_createf (apr_err, NULL, 
                                       "closing config file `%s'", path);
         }
     }
@@ -722,12 +706,12 @@ svn_config_ensure (apr_pool_t *pool)
         {
           apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
           if (apr_err)
-            return svn_error_createf (apr_err, 0, NULL, 
+            return svn_error_createf (apr_err, NULL, 
                                       "writing config file `%s'", path);
           
           apr_err = apr_file_close (f);
           if (apr_err)
-            return svn_error_createf (apr_err, 0, NULL, 
+            return svn_error_createf (apr_err, NULL, 
                                       "closing config file `%s'", path);
         }
     }
@@ -802,12 +786,12 @@ svn_config_ensure (apr_pool_t *pool)
         {
           apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
           if (apr_err)
-            return svn_error_createf (apr_err, 0, NULL, 
+            return svn_error_createf (apr_err, NULL, 
                                       "writing config file `%s'", path);
           
           apr_err = apr_file_close (f);
           if (apr_err)
-            return svn_error_createf (apr_err, 0, NULL, 
+            return svn_error_createf (apr_err, NULL, 
                                       "closing config file `%s'", path);
         }
     }

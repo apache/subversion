@@ -1,7 +1,7 @@
 /* hooks.c : running repository hooks and sentinels
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -59,7 +59,7 @@ run_hook_cmd (const char *name,
   apr_err = apr_file_pipe_create(&read_errhandle, &write_errhandle, pool);
   if (apr_err)
     return svn_error_createf
-      (apr_err, 0, NULL, "can't create pipe for %s hook", cmd);
+      (apr_err, NULL, "can't create pipe for %s hook", cmd);
 
   err = svn_io_run_cmd (".", cmd, args, &exitcode, &exitwhy, FALSE,
                         NULL, NULL, write_errhandle, pool);
@@ -70,13 +70,13 @@ run_hook_cmd (const char *name,
   apr_err = apr_file_close (write_errhandle);
   if (!err && apr_err)
     return svn_error_create
-      (apr_err, 0, NULL, "can't close write end of stderr pipe");
+      (apr_err, NULL, "can't close write end of stderr pipe");
 
   /* Function failed. */
   if (err)
     {
       err = svn_error_createf
-        (SVN_ERR_REPOS_HOOK_FAILURE, 0, err, "failed to run %s hook", cmd);
+        (SVN_ERR_REPOS_HOOK_FAILURE, err, "failed to run %s hook", cmd);
     }
 
   if (!err && check_exitcode)
@@ -90,7 +90,7 @@ run_hook_cmd (const char *name,
           SVN_ERR (svn_stringbuf_from_aprfile (&error, read_errhandle, pool));
 
           err = svn_error_createf
-              (SVN_ERR_REPOS_HOOK_FAILURE, 0, err,
+              (SVN_ERR_REPOS_HOOK_FAILURE, err,
                "%s hook failed with error output:\n%s",
                name, error->data);
         }
@@ -101,7 +101,7 @@ run_hook_cmd (const char *name,
   apr_err = apr_file_close (read_errhandle);
   if (!err && apr_err)
     return svn_error_create
-      (apr_err, 0, NULL, "can't close read end of stdout pipe");
+      (apr_err, NULL, "can't close read end of stdout pipe");
 
   return err;
 }
@@ -109,10 +109,10 @@ run_hook_cmd (const char *name,
 
 /* Run the start-commit hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  */
-static svn_error_t *
-run_start_commit_hook (svn_repos_t *repos,
-                       const char *user,
-                       apr_pool_t *pool)
+svn_error_t *
+svn_repos__hooks_start_commit (svn_repos_t *repos,
+                               const char *user,
+                               apr_pool_t *pool)
 {
   svn_node_kind_t kind;
   const char *hook = svn_repos_start_commit_hook (repos, pool);
@@ -136,10 +136,10 @@ run_start_commit_hook (svn_repos_t *repos,
 
 /* Run the pre-commit hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  */
-static svn_error_t  *
-run_pre_commit_hook (svn_repos_t *repos,
-                     const char *txn_name,
-                     apr_pool_t *pool)
+svn_error_t  *
+svn_repos__hooks_pre_commit (svn_repos_t *repos,
+                             const char *txn_name,
+                             apr_pool_t *pool)
 {
   svn_node_kind_t kind;
   const char *hook = svn_repos_pre_commit_hook (repos, pool);
@@ -163,10 +163,10 @@ run_pre_commit_hook (svn_repos_t *repos,
 
 /* Run the post-commit hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, run SVN_ERR_REPOS_HOOK_FAILURE.  */
-static svn_error_t  *
-run_post_commit_hook (svn_repos_t *repos,
-                      svn_revnum_t rev,
-                      apr_pool_t *pool)
+svn_error_t  *
+svn_repos__hooks_post_commit (svn_repos_t *repos,
+                              svn_revnum_t rev,
+                              apr_pool_t *pool)
 {
   svn_node_kind_t kind;
   const char *hook = svn_repos_post_commit_hook (repos, pool);
@@ -191,16 +191,16 @@ run_post_commit_hook (svn_repos_t *repos,
 /* Run the pre-revprop-change hook for REPOS.  Use POOL for any
    temporary allocations.  If the hook fails, return
    SVN_ERR_REPOS_HOOK_FAILURE.  */
-static svn_error_t  *
-run_pre_revprop_change_hook (svn_repos_t *repos,
-                             svn_revnum_t rev,
-                             const char *author,
-                             const char *name,
-                             const svn_string_t *value,
-                             apr_pool_t *pool)
+svn_error_t  *
+svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
+                                     svn_revnum_t rev,
+                                     const char *author,
+                                     const char *name,
+                                     const svn_string_t *value,
+                                     apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  const char *hook = svn_repos_pre_revprop_change_hook(repos, pool);
+  const char *hook = svn_repos_pre_revprop_change_hook (repos, pool);
 
   if ((! svn_io_check_path (hook, &kind, pool)) 
       && (kind == svn_node_file))
@@ -226,7 +226,7 @@ run_pre_revprop_change_hook (svn_repos_t *repos,
          *deliberately* created the pre-hook, disallow all changes. */
       return 
         svn_error_create 
-        (SVN_ERR_REPOS_DISABLED_FEATURE, 0, NULL,
+        (SVN_ERR_REPOS_DISABLED_FEATURE, NULL,
          "Repository has not been enabled to accept revision propchanges;\n"
          "ask the administrator to create a pre-revprop-change hook.");
     }
@@ -238,15 +238,15 @@ run_pre_revprop_change_hook (svn_repos_t *repos,
 /* Run the pre-revprop-change hook for REPOS.  Use POOL for any
    temporary allocations.  If the hook fails, return
    SVN_ERR_REPOS_HOOK_FAILURE.  */
-static svn_error_t  *
-run_post_revprop_change_hook (svn_repos_t *repos,
-                              svn_revnum_t rev,
-                              const char *author,
-                              const char *name,
-                              apr_pool_t *pool)
+svn_error_t  *
+svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
+                                      svn_revnum_t rev,
+                                      const char *author,
+                                      const char *name,
+                                      apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  const char *hook = svn_repos_post_revprop_change_hook(repos, pool);
+  const char *hook = svn_repos_post_revprop_change_hook (repos, pool);
   
   if ((! svn_io_check_path (hook, &kind, pool)) 
       && (kind == svn_node_file))
@@ -265,152 +265,6 @@ run_post_revprop_change_hook (svn_repos_t *repos,
 
   return SVN_NO_ERROR;
 }
-
-
-
-
-
-/*** Public interface. ***/
-
-svn_error_t *
-svn_repos_fs_commit_txn (const char **conflict_p,
-                         svn_repos_t *repos,
-                         svn_revnum_t *new_rev,
-                         svn_fs_txn_t *txn)
-{
-  svn_fs_t *fs = repos->fs;
-  apr_pool_t *pool = svn_fs_txn_pool (txn);
-
-  if (fs != svn_fs_txn_fs (txn))
-    return svn_error_createf 
-      (SVN_ERR_FS_GENERAL, 0, NULL,
-       "Transaction does not belong to given repository's filesystem");
-
-  /* Run pre-commit hooks. */
-  {
-    const char *txn_name;
-
-    SVN_ERR (svn_fs_txn_name (&txn_name, txn, pool));
-    SVN_ERR (run_pre_commit_hook (repos, txn_name, pool));
-  }
-
-  /* Commit. */
-  SVN_ERR (svn_fs_commit_txn (conflict_p, new_rev, txn));
-
-  /* Run post-commit hooks. */
-  SVN_ERR (run_post_commit_hook (repos, *new_rev, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_repos_fs_change_rev_prop (svn_repos_t *repos,
-                              svn_revnum_t rev,
-                              const char *author,
-                              const char *name,
-                              const svn_string_t *value,
-                              apr_pool_t *pool)
-{
-  svn_fs_t *fs = repos->fs;
-
-  /* Run pre-revprop-change hook */
-  SVN_ERR (run_pre_revprop_change_hook (repos, rev, author, name, 
-                                        value, pool));
-
-  /* Change the revision prop. */
-  SVN_ERR (svn_fs_change_rev_prop (fs, rev, name, value, pool));
-
-  /* Run post-revprop-change hook */
-  SVN_ERR (run_post_revprop_change_hook (repos, rev, author, name, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-
-svn_error_t *
-svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
-                                   svn_repos_t *repos,
-                                   svn_revnum_t rev,
-                                   const char *author,
-                                   const char *log_msg,
-                                   apr_pool_t *pool)
-{
-  /* Run start-commit hooks. */
-  SVN_ERR (run_start_commit_hook (repos, author, pool));
-
-  /* Begin the transaction. */
-  SVN_ERR (svn_fs_begin_txn (txn_p, repos->fs, rev, pool));
-
-  /* We pass the author and log message to the filesystem by adding
-     them as properties on the txn.  Later, when we commit the txn,
-     these properties will be copied into the newly created revision. */
-  {
-    /* User (author). */
-    {
-      svn_string_t val;
-      val.data = author;
-      val.len = strlen (author);
-      
-      SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_AUTHOR,
-                                       &val, pool));
-    }
-    
-    /* Log message. */
-    if (log_msg != NULL)
-      {
-        /* Heh heh -- this is unexpected fallout from changing most
-           code to use plain strings instead of svn_stringbuf_t and
-           svn_string_t.  The log_msg is passed in as const char *
-           data, but svn_fs_change_txn_prop() is a generic propset
-           function that must accept arbitrary data as values.  So we
-           create an svn_string_t as wrapper here. */
-
-        svn_string_t l;
-        l.data = log_msg;
-        l.len = strlen (log_msg);
-
-        SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_LOG,
-                                         &l, pool));
-      }
-  }
-
-  return SVN_NO_ERROR;
-}
-
-
-
-
-svn_error_t *
-svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
-                                   svn_repos_t *repos,
-                                   svn_revnum_t rev,
-                                   const char *author,
-                                   apr_pool_t *pool)
-{
-  /* ### someday, we might run a read-hook here. */
-
-  /* Begin the transaction. */
-  SVN_ERR (svn_fs_begin_txn (txn_p, repos->fs, rev, pool));
-
-  /* We pass the author to the filesystem by adding it as a property
-     on the txn. */
-  {
-    /* User (author). */
-    {
-      svn_string_t val;
-      val.data = author;
-      val.len = strlen (author);
-      
-      SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_AUTHOR,
-                                       &val, pool));
-    }    
-  }
-
-  return SVN_NO_ERROR;
-}
-
 
 
 

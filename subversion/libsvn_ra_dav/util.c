@@ -2,7 +2,7 @@
  * util.c :  utility functions for the RA/DAV library
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -78,7 +78,7 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
       break;
     }
 
-  return svn_error_createf (errcode, 0, NULL, "%s: %s", context, msg);
+  return svn_error_createf (errcode, NULL, "%s: %s", context, msg);
   
 }
 
@@ -149,7 +149,7 @@ static int start_err_element(void *userdata, const struct ne_xml_elm *elm,
         /* allocate the svn_error_t.  Hopefully the value will be
            overwritten by the <human-readable> tag, or even someday by
            a <D:failed-precondition/> tag. */
-        *err = svn_error_create(APR_EGENERAL, 0, NULL,
+        *err = svn_error_create(APR_EGENERAL, NULL,
                                 "General svn error from server");
         break;
       }
@@ -317,22 +317,14 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
   code = ne_get_status(req)->code;
   ne_request_destroy(req);
 
-  if (rv != NE_OK)
+  if (err) /* If the error parser had a problem */
+    goto error;
+
+  if (code != 200
+      || rv != NE_OK)
     {
       msg = apr_psprintf(pool, "%s of %s", method, url);
       err = svn_ra_dav__convert_error(ras->sess, msg, rv);
-    }
-
-  if (err) /* Either from error-parser or from just above */
-    goto error;
-
-  if (code != 200)
-    {
-      /* Bad status, but error-parser didn't build an error.  Return a
-         generic error instead.*/
-      err = svn_error_createf(APR_EGENERAL, 0, NULL,
-                              "The %s status was %d, but expected 200.",
-                              method, code);
       goto error;
     }
 
@@ -340,7 +332,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
   msg = ne_xml_get_error(success_parser);
   if (msg != NULL && *msg != '\0')
     {
-      err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, 0, NULL,
+      err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                               "The %s request returned invalid XML "
                               "in the response: %s. (%s)",
                               method, msg, url);
@@ -355,7 +347,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
  error:
   ne_xml_destroy(success_parser);
   ne_xml_destroy(error_parser);
-  return svn_error_createf(err->apr_err, err->src_err, err,
+  return svn_error_createf(err->apr_err, err,
                            "%s request failed on %s", method, url );
 }
 
@@ -396,6 +388,7 @@ svn_ra_dav__request_dispatch(int *code,
   int rv;
   const ne_status *statstruct;
   const char *code_desc;
+  const char *msg;
   svn_error_t *err = SVN_NO_ERROR;
 
   /* attach a standard <D:error> body parser to the request */
@@ -415,25 +408,17 @@ svn_ra_dav__request_dispatch(int *code,
   ne_request_destroy(request);
   ne_xml_destroy(error_parser);
 
-  /* first, check to see if neon itself got an error */
-  if (rv != NE_OK)
-    {
-      const char *msg = apr_psprintf(pool, "%s of %s", method, url);
-      return svn_ra_dav__convert_error(session, msg, rv);
-    }
-
   /* If the status code was one of the two that we expected, then go
      ahead and return now. IGNORE any marshalled error. */
-  if (*code == okay_1 || *code == okay_2)
+  if (rv == NE_OK && (*code == okay_1 || *code == okay_2))
     return SVN_NO_ERROR;
 
   /* next, check to see if a <D:error> was discovered */
   if (err)
     return err;
 
-  /* Bad http status, but error-parser didn't build an svn_error_t
-     for some reason.  Return a generic error instead. */
-  return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, 0, NULL,
-                           "%s of %s returned status code %d (%s)",
-                           method, url, *code, code_desc);
+  /* We either have a neon error, or some other error
+     that we didn't expect. */
+  msg = apr_psprintf(pool, "%s of %s", method, url);
+  return svn_ra_dav__convert_error(session, msg, rv);
 }

@@ -2,7 +2,7 @@
  * main.c :  Main control function for svnserve
  *
  * ====================================================================
- * Copyright (c) 2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -33,6 +33,8 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_ra_svn.h"
+#include "svn_utf.h"
+#include "svn_path.h"
 
 #include "server.h"
 
@@ -94,7 +96,8 @@ int main(int argc, const char *const *argv)
           break;
 
         case 'r':
-          root = arg;
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&root, arg, NULL, pool));
+          SVN_INT_ERR(svn_path_get_absolute(&root, root, pool));
           break;
         }
     }

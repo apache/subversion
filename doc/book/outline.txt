@@ -5,15 +5,22 @@ appendix, and have our side-boxes simply point to relevant sections.
 That's what I'm assuming for now, because I think we all liked that
 better.
 
+0. Preface
+
+   A.  Version control
+   B.  Target audience
+   C.  How the Book is Organized
+   D.  Typographic conventions
+   E.  Comments/Questions/Obtaining the Free Book
+   F.  Acknowledgements
+
 I. Introduction
 
-   A.  Explanation of revision control (and what svn can do for you)
-   B.  Target audience
-   C.  History of svn
-   D.  Feature list (why svn is so nice)
-   E.  How to get svn binaries
-   F.  How to get this book and send patches for it.
-
+   A.  What is Subversion?
+   B.  History of Subversion
+   C.  Subversion's Features
+   D.  The components  (a table listing svn, svnadmin, svnlook, etc.)
+   E.  How to get binaries
 
 II. Basic Concepts
 
@@ -75,6 +82,7 @@ V.  Repository Administration
       1. examining a repository (svnlook, shell)
       2. maintaining a repository (svnadmin, svnadmin recover, backup options)
       3. migrating a repository (dump/load)
+      4. repository backup (tools and philosophy)
 
    C.  Networking your repository (apache setup, auth options)
 

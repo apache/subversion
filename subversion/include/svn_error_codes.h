@@ -1,7 +1,7 @@
 /* svn_error_codes.h:  define error codes specific to Subversion.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -448,6 +448,10 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_FS_BERKELEY_DB,
               SVN_ERR_FS_CATEGORY_START + 29,
               "Berkeley DB error")
+
+  SVN_ERRDEF (SVN_ERR_FS_BERKELEY_DB_DEADLOCK,
+              SVN_ERR_FS_CATEGORY_START + 30,
+              "Berkeley DB deadlock error")
 
   /* repos errors */
 

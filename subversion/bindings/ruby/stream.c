@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -170,7 +170,7 @@ file_new (VALUE class, VALUE aPath, VALUE flag)
                           NUM2LONG (flag), APR_OS_DEFAULT,
                           pool);
   if (status)
-    svn_ruby_raise (svn_error_createf (status, 0, 0,
+    svn_ruby_raise (svn_error_createf (status, 0,
                                        "Failed to open file %s",
                                        path));
 

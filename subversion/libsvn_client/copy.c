@@ -2,7 +2,7 @@
  * copy.c:  copy/move wrappers around wc 'copy' functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -81,7 +81,7 @@ wc_to_wc_copy (const char *src_path,
   /* Verify that SRC_PATH exists. */
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
   if (src_kind == svn_node_none)
-    return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL,
+    return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                               "path `%s' does not exist.", src_path);
 
   /* If DST_PATH does not exist, then its basename will become a new
@@ -100,7 +100,7 @@ wc_to_wc_copy (const char *src_path,
       dst_parent = dst_path;
     }
   else
-    return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL,
+    return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
                               "file `%s' already exists.", dst_path);
 
   if (is_move)
@@ -191,6 +191,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   const char *committed_author = NULL;
   svn_revnum_t src_revnum;
   const char *piece, *telepath;
+  const char *auth_dir;
 
   /* ### TODO:  Currently, this function will violate the depth-first
      rule of editors when doing a move of something up into one of its
@@ -224,7 +225,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
       src_pieces = svn_path_decompose (src_rel, pool);
       if ((! src_pieces) || (! src_pieces->nelts))
         return svn_error_createf 
-          (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL,
+          (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
            "error decomposing relative path `%s'", src_rel);
     }
 
@@ -235,7 +236,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
       dst_pieces = svn_path_decompose (dst_rel, pool);
       if ((! dst_pieces) || (! dst_pieces->nelts))
         return svn_error_createf 
-          (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL,
+          (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
            "error decomposing relative path `%s'", dst_rel);
     }
 
@@ -254,10 +255,13 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, top_url, pool));
 
+  SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
+
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files or store the auth data. */
-  SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, top_url, NULL, NULL,
-                                        NULL, FALSE, FALSE, TRUE, 
+  SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, top_url,
+                                        auth_dir,
+                                        NULL, NULL, FALSE, FALSE, TRUE, 
                                         auth_baton, pool));
 
   /* Pass null for the path, to ensure error if trying to get a
@@ -275,7 +279,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   SVN_ERR (ra_lib->check_path (&src_kind, sess, src_rel, src_revnum));
   if (src_kind == svn_node_none)
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_FOUND, 0, NULL,
+      (SVN_ERR_FS_NOT_FOUND, NULL,
        "path `%s' does not exist in revision `%" SVN_REVNUM_T_FMT "'",
        src_url, src_revnum);
 
@@ -303,13 +307,13 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
       SVN_ERR (ra_lib->check_path (&some_kind, sess,
                                    hypothetical_repos_path, youngest));
       if (some_kind != svn_node_none)
-        return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL,
+        return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, NULL,
                                   "fs path `%s' already exists.",
                                   hypothetical_repos_path);
     }
   else
     {
-      return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL,
+      return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                                 "unrecognized node kind of %s.", dst_url);
     }
 
@@ -473,7 +477,7 @@ reconcile_errors (svn_error_t *commit_err,
   /* Else, create a new "general" error that will lead off the errors
      that follow. */
   else
-    err = svn_error_create (SVN_ERR_BASE, 0, NULL,
+    err = svn_error_create (SVN_ERR_BASE, NULL,
                             "Commit succeeded, but other errors follow:");
 
   /* If there was an unlock error... */
@@ -525,10 +529,13 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   apr_hash_t *committables, *tempfiles = NULL;
   svn_wc_adm_access_t *adm_access, *dir_access;
   apr_array_header_t *commit_items;
-  svn_error_t *cmt_err = NULL, *unlock_err = NULL, *cleanup_err = NULL;
+  svn_error_t *cmt_err = SVN_NO_ERROR;
+  svn_error_t *unlock_err = SVN_NO_ERROR;
+  svn_error_t *cleanup_err = SVN_NO_ERROR;
   svn_boolean_t commit_in_progress = FALSE;
   const char *base_path;
   const char *base_url;
+  const char *auth_dir;
 
   /* The commit process uses absolute paths, so we need to open the access
      baton using absolute paths, and so we really need to use absolute
@@ -577,14 +584,14 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
     {
       /* DST_URL is an existing file, which can't be overwritten or
          used as a container, so error out. */
-      return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL,
+      return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, NULL,
                                 "file `%s' already exists.", dst_url);
     }
 
   /* Crawl the working copy for commit items. */
   SVN_ERR (svn_io_check_path (base_path, &src_kind, pool));
   if (src_kind == svn_node_dir)
-    SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, base_path, pool));
+     SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, base_path, pool));
   else
     dir_access = adm_access;
   if ((cmt_err = svn_client__get_copy_committables (&committables, 
@@ -611,9 +618,11 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
     goto cleanup;
 
   /* Open an RA session to BASE_URL. */
-  if ((cmt_err = svn_client__open_ra_session (&session, ra_lib, base_url, NULL,
-                                              NULL, commit_items, FALSE, FALSE,
-                                              FALSE, auth_baton, pool)))
+  SVN_ERR (svn_client__default_auth_dir (&auth_dir, base_path, pool));
+  if ((cmt_err = svn_client__open_ra_session (&session, ra_lib, base_url,
+                                              auth_dir, NULL, commit_items,
+                                              FALSE, FALSE, FALSE,
+                                              auth_baton, pool)))
     goto cleanup;
 
   /* Fetch RA commit editor. */
@@ -635,7 +644,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   commit_in_progress = FALSE;
 
   /* Sleep for one second to ensure timestamp integrity. */
-  apr_sleep (APR_USEC_PER_SEC * 1);
+  apr_sleep (apr_time_from_sec(1));
 
  cleanup:
   /* Abort the commit if it is still in progress. */
@@ -684,17 +693,20 @@ repos_to_wc_copy (const char *src_url,
   svn_wc_adm_access_t *adm_access;
   apr_hash_t *props = NULL;
   apr_hash_index_t *hi;
+  const char *auth_dir;
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, src_url, pool));
 
+  SVN_ERR (svn_client__default_auth_dir (&auth_dir, dst_path, pool));
+
   /* Open a repository session to the given URL. We do not (yet) have a
      working copy, so we don't have a corresponding path and tempfiles
      cannot go into the admin area. We do want to store the resulting
      auth data, though, once the WC is built. */
-  SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, src_url, NULL, NULL,
-                                        NULL, TRUE, FALSE, TRUE, 
+  SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, src_url, auth_dir,
+                                        NULL, NULL, TRUE, FALSE, TRUE, 
                                         auth_baton, pool));
       
   /* Pass null for the path, to ensure error if trying to get a
@@ -708,12 +720,12 @@ repos_to_wc_copy (const char *src_url,
     {
       if (SVN_IS_VALID_REVNUM (src_revnum))
         return svn_error_createf
-          (SVN_ERR_FS_NOT_FOUND, 0, NULL,
+          (SVN_ERR_FS_NOT_FOUND, NULL,
            "path `%s' not found in revision `%" SVN_REVNUM_T_FMT "'",
            src_url, src_revnum);
       else
         return svn_error_createf
-          (SVN_ERR_FS_NOT_FOUND, 0, NULL,
+          (SVN_ERR_FS_NOT_FOUND, NULL,
            "path `%s' not found in head revision", src_url);
     }
 
@@ -750,7 +762,7 @@ repos_to_wc_copy (const char *src_url,
     }
   else if (dst_kind != svn_node_none)  /* must be a file */
     {
-      return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL,
+      return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
                                 "file `%s' already exists.", dst_path);
     }
 
@@ -758,7 +770,7 @@ repos_to_wc_copy (const char *src_url,
      nothing in the way of the upcoming checkout. */
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
   if (dst_kind != svn_node_none)
-    return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL,
+    return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                               "`%s' is in the way", dst_path);
 
   if (! optional_adm_access)
@@ -836,7 +848,7 @@ repos_to_wc_copy (const char *src_url,
       /* Close the file. */
       status = apr_file_close (fp);
       if (status)
-        return svn_error_createf (status, 0, NULL,
+        return svn_error_createf (status, NULL,
                                   "failed to close file '%s'.",
                                   dst_path);   
      
@@ -918,7 +930,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
 
   if (svn_path_is_child (src_path, dst_path, pool))
     return svn_error_createf
-      (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        "cannot copy path '%s' into its own child '%s'",
        src_path, dst_path);
 
@@ -928,7 +940,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
         {
           if (strcmp (src_path, dst_path) == 0)
             return svn_error_createf
-              (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+              (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                "cannot move path '%s' into itself",
                src_path);
         }
@@ -936,7 +948,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
         {
           /* Disallow moves between the working copy and the repository. */
           return svn_error_create 
-            (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+            (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
              "no support for repos <--> working copy moves");
         }
 
@@ -951,7 +963,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
           && src_revision->kind != svn_opt_revision_head)
         {
           return svn_error_create
-            (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+            (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
              "cannot specify revisions with move operations");
         }
     }

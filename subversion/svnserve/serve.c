@@ -2,7 +2,7 @@
  * serve.c :  Functions for serving the Subversion protocol
  *
  * ====================================================================
- * Copyright (c) 2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -25,6 +25,7 @@
 #include <apr_strings.h>
 #include <apr_network_io.h>
 #include <apr_user.h>
+#include <apr_file_info.h>
 
 #include <svn_types.h>
 #include <svn_string.h>
@@ -35,6 +36,7 @@
 #include <svn_repos.h>
 #include <svn_path.h>
 #include <svn_time.h>
+#include <svn_utf.h>
 
 #include "server.h"
 
@@ -104,12 +106,12 @@ static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   len = strlen(b->repos_url);
   if (strncmp(url, b->repos_url, len) != 0)
     {
-      err = svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, 0, NULL,
+      err = svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
                                "'%s'\n"
                                "is not the same repository as\n"
                                "'%s'", url, b->repos_url);
       /* Wrap error so that it gets reported back to the client. */
-      return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, 0, err, NULL);
+      return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, err, NULL);
     }
   SVN_CMD_ERR(svn_repos_link_path(b->report_baton, path, url + len, rev));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
@@ -594,12 +596,12 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   len = strlen(b->repos_url);
   if (strncmp(switch_url, b->repos_url, len) != 0)
     {
-      err = svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, 0, NULL,
+      err = svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
                                "'%s'\n"
                                "is not the same repository as\n"
                                "'%s'", switch_url, b->repos_url);
       /* Wrap error so that it gets reported back to the client. */
-      return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, 0, err, NULL);
+      return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, err, NULL);
     }
   switch_path = switch_url + len;
 
@@ -675,12 +677,12 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   len = strlen(b->repos_url);
   if (strncmp(versus_url, b->repos_url, len) != 0)
     {
-      err = svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, 0, NULL,
+      err = svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
                                "'%s'\n"
                                "is not the same repository as\n"
                                "'%s'", versus_url, b->repos_url);
       /* Wrap error so that it gets reported back to the client. */
-      return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, 0, err, NULL);
+      return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, err, NULL);
     }
   versus_path = versus_url + len;
 
@@ -779,7 +781,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     {
       elt = &((svn_ra_svn_item_t *) paths->elts)[i];
       if (elt->kind != SVN_RA_SVN_STRING)
-        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Log path entry not a string");
       full_path = svn_path_join(b->fs_path, elt->u.string->data, pool);
       *((const char **) apr_array_push(full_paths)) = full_path;
@@ -841,24 +843,42 @@ static svn_error_t *find_repos(const char *url, const char *root,
                                const char **fs_path, apr_pool_t *pool)
 {
   svn_error_t *err;
+  apr_status_t apr_err;
   const char *client_path, *full_path, *candidate;
+  const char *client_path_native, *root_native;
+  char *buffer;
 
   /* Decode any escaped characters in the URL. */
   url = svn_path_uri_decode(url, pool);
 
   /* Verify the scheme part. */
   if (strncmp(url, "svn://", 6) != 0)
-    return svn_error_createf(SVN_ERR_BAD_URL, 0, NULL,
+    return svn_error_createf(SVN_ERR_BAD_URL, NULL,
                              "Non-svn URL passed to svn server: %s", url);
 
   /* Skip past the authority part. */
   client_path = strchr(url + 6, '/');
   client_path = (client_path == NULL) ? "" : client_path + 1;
 
+  SVN_ERR(svn_utf_cstring_from_utf8(&client_path_native,
+                                    svn_path_canonicalize(client_path, pool),
+                                    pool));
+
+  SVN_ERR(svn_utf_cstring_from_utf8(&root_native,
+                                    svn_path_canonicalize(root, pool),
+                                    pool));
+
   /* Join the server-configured root with the client path. */
-  full_path = svn_path_join(svn_path_canonicalize(root, pool),
-                            svn_path_canonicalize(client_path, pool),
-                            pool);
+  apr_err = apr_filepath_merge(&buffer, root_native, client_path_native,
+                               APR_FILEPATH_SECUREROOT, pool);
+
+  if(apr_err)
+    return svn_error_create(SVN_ERR_BAD_FILENAME, NULL,
+                            "Couldn't determine repository path.");
+  
+  SVN_ERR(svn_utf_cstring_to_utf8(&full_path,
+                                  svn_path_canonicalize (buffer, pool),
+                                  NULL, pool));
 
   /* Search for a repository in the full path. */
   candidate = full_path;
@@ -868,7 +888,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
       if (err == SVN_NO_ERROR)
         break;
       if (!*candidate || strcmp(candidate, "/") == 0)
-        return svn_error_createf(SVN_ERR_RA_SVN_REPOS_NOT_FOUND, 0, NULL,
+        return svn_error_createf(SVN_ERR_RA_SVN_REPOS_NOT_FOUND, NULL,
                                  "No repository found in %s", url);
       candidate = svn_path_dirname(candidate, pool);
     }

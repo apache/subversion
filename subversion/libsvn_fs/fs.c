@@ -1,7 +1,7 @@
 /* fs.c --- creating, opening and closing filesystems
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -34,6 +34,7 @@
 #include "dag.h"
 #include "svn_private_config.h"
 
+#include "bdb/bdb-err.h"
 #include "bdb/bdb_compat.h"
 #include "bdb/nodes-table.h"
 #include "bdb/rev-table.h"
@@ -60,7 +61,7 @@ check_bdb_version (apr_pool_t *pool)
       || (major == SVN_FS_WANT_DB_MAJOR && minor < SVN_FS_WANT_DB_MINOR)
       || (major == SVN_FS_WANT_DB_MAJOR && minor == SVN_FS_WANT_DB_MINOR
           && patch < SVN_FS_WANT_DB_PATCH))
-    return svn_error_createf (SVN_ERR_FS_GENERAL, 0, 0,
+    return svn_error_createf (SVN_ERR_FS_GENERAL, 0,
                               "bad database version: got %d.%d.%d,"
                               " should be at least %d.%d.%d",
                               major, minor, patch,
@@ -71,7 +72,7 @@ check_bdb_version (apr_pool_t *pool)
   /* Now, check that the version we're running against is the same as
      the one we compiled with. */
   if (major != DB_VERSION_MAJOR || minor != DB_VERSION_MINOR)
-    return svn_error_createf (SVN_ERR_FS_GENERAL, 0, 0,
+    return svn_error_createf (SVN_ERR_FS_GENERAL, 0,
                               "bad database version:"
                               " compiled with %d.%d.%d,"
                               " running against %d.%d.%d",
@@ -89,7 +90,7 @@ static svn_error_t *
 check_already_open (svn_fs_t *fs)
 {
   if (fs->env)
-    return svn_error_create (SVN_ERR_FS_ALREADY_OPEN, 0, 0,
+    return svn_error_create (SVN_ERR_FS_ALREADY_OPEN, 0,
                              "filesystem object already open");
   else
     return SVN_NO_ERROR;
@@ -136,7 +137,7 @@ cleanup_fs_db (svn_fs_t *fs, DB **db_ptr, const char *name)
         db_err = 0;
 #endif /* SVN_BDB_HAS_DB_INCOMPLETE */
 
-      SVN_ERR (DB_WRAP (fs, msg, db_err));
+      SVN_ERR (BDB_WRAP (fs, msg, db_err));
     }
 
   return SVN_NO_ERROR;
@@ -167,7 +168,7 @@ cleanup_fs (svn_fs_t *fs)
 #if SVN_BDB_HAS_DB_INCOMPLETE
     while (db_err == DB_INCOMPLETE)
       {
-        apr_sleep (APR_USEC_PER_SEC * 1);
+        apr_sleep (apr_time_from_sec(1));
         db_err = env->txn_checkpoint (env, 0, 0, 0);
       }
 #endif /* SVN_BDB_HAS_DB_INCOMPLETE */
@@ -183,13 +184,13 @@ cleanup_fs (svn_fs_t *fs)
     */
     if (db_err != 0 && db_err != EINVAL)
       {
-        SVN_ERR (DB_WRAP (fs, "checkpointing environment", db_err));
+        SVN_ERR (BDB_WRAP (fs, "checkpointing environment", db_err));
       }
   }
       
   /* Finally, close the environment.  */
   fs->env = 0;
-  SVN_ERR (DB_WRAP (fs, "closing environment",
+  SVN_ERR (BDB_WRAP (fs, "closing environment",
                     env->close (env, 0)));
 
   return SVN_NO_ERROR;
@@ -379,12 +380,12 @@ static svn_error_t *
 allocate_env (svn_fs_t *fs)
 {
   /* Allocate a Berkeley DB environment object.  */
-  SVN_ERR (DB_WRAP (fs, "allocating environment object",
+  SVN_ERR (BDB_WRAP (fs, "allocating environment object",
                     db_env_create (&fs->env, 0)));
 
   /* If we detect a deadlock, select a transaction to abort at random
      from those participating in the deadlock.  */
-  SVN_ERR (DB_WRAP (fs, "setting deadlock detection policy",
+  SVN_ERR (BDB_WRAP (fs, "setting deadlock detection policy",
                     fs->env->set_lk_detect (fs->env, DB_LOCK_RANDOM)));
 
   return SVN_NO_ERROR;
@@ -418,7 +419,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   /* Create the directory for the new Berkeley DB environment.  */
   apr_err = apr_dir_make (path_native, APR_OS_DEFAULT, fs->pool);
   if (apr_err != APR_SUCCESS)
-    return svn_error_createf (apr_err, 0, 0,
+    return svn_error_createf (apr_err, 0,
                               "creating Berkeley DB environment dir `%s'",
                               fs->path);
 
@@ -474,12 +475,12 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
     apr_err = apr_file_write_full (dbconfig_file, dbconfig_contents,
                                    sizeof (dbconfig_contents) - 1, NULL);
     if (apr_err != APR_SUCCESS)
-      return svn_error_createf (apr_err, 0, 0,
+      return svn_error_createf (apr_err, 0,
                                 "writing to `%s'", dbconfig_file_name);
 
     apr_err = apr_file_close (dbconfig_file);
     if (apr_err != APR_SUCCESS)
-      return svn_error_createf (apr_err, 0, 0,
+      return svn_error_createf (apr_err, 0,
                                 "closing `%s'", dbconfig_file_name);
   }
 
@@ -487,7 +488,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   if (svn_err) goto error;
 
   /* Create the Berkeley DB environment.  */
-  svn_err = DB_WRAP (fs, "creating environment",
+  svn_err = BDB_WRAP (fs, "creating environment",
                      fs->env->open (fs->env, path_native,
                                     (DB_CREATE
                                      | DB_INIT_LOCK 
@@ -498,32 +499,32 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   if (svn_err) goto error;
 
   /* Create the databases in the environment.  */
-  svn_err = DB_WRAP (fs, "creating `nodes' table",
-                     svn_fs__open_nodes_table (&fs->nodes, fs->env, 1));
+  svn_err = BDB_WRAP (fs, "creating `nodes' table",
+                     svn_fs__bdb_open_nodes_table (&fs->nodes, fs->env, 1));
   if (svn_err) goto error;
-  svn_err = DB_WRAP (fs, "creating `revisions' table",
-                     svn_fs__open_revisions_table (&fs->revisions,
-                                                   fs->env, 1));
+  svn_err = BDB_WRAP (fs, "creating `revisions' table",
+                     svn_fs__bdb_open_revisions_table (&fs->revisions,
+                                                       fs->env, 1));
   if (svn_err) goto error;
-  svn_err = DB_WRAP (fs, "creating `transactions' table",
-                     svn_fs__open_transactions_table (&fs->transactions,
-                                                      fs->env, 1));
+  svn_err = BDB_WRAP (fs, "creating `transactions' table",
+                     svn_fs__bdb_open_transactions_table (&fs->transactions,
+                                                          fs->env, 1));
   if (svn_err) goto error;
-  svn_err = DB_WRAP (fs, "creating `copies' table",
-                     svn_fs__open_copies_table (&fs->copies,
-                                                fs->env, 1));
+  svn_err = BDB_WRAP (fs, "creating `copies' table",
+                     svn_fs__bdb_open_copies_table (&fs->copies,
+                                                    fs->env, 1));
   if (svn_err) goto error;
-  svn_err = DB_WRAP (fs, "creating `changes' table",
-                     svn_fs__open_changes_table (&fs->changes,
-                                                 fs->env, 1));
+  svn_err = BDB_WRAP (fs, "creating `changes' table",
+                     svn_fs__bdb_open_changes_table (&fs->changes,
+                                                     fs->env, 1));
   if (svn_err) goto error;
-  svn_err = DB_WRAP (fs, "creating `representations' table",
-                     svn_fs__open_reps_table (&fs->representations,
-                                              fs->env, 1));
+  svn_err = BDB_WRAP (fs, "creating `representations' table",
+                     svn_fs__bdb_open_reps_table (&fs->representations,
+                                                  fs->env, 1));
   if (svn_err) goto error;
-  svn_err = DB_WRAP (fs, "creating `strings' table",
-                     svn_fs__open_strings_table (&fs->strings,
-                                                 fs->env, 1));
+  svn_err = BDB_WRAP (fs, "creating `strings' table",
+                     svn_fs__bdb_open_strings_table (&fs->strings,
+                                                     fs->env, 1));
   if (svn_err) goto error;
 
   /* Initialize the DAG subsystem. */
@@ -558,7 +559,7 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
   if (svn_err) goto error;
 
   /* Open the Berkeley DB environment.  */
-  svn_err = DB_WRAP (fs, "opening environment",
+  svn_err = BDB_WRAP (fs, "opening environment",
                      fs->env->open (fs->env, path_native,
                                     (DB_CREATE
                                      | DB_INIT_LOCK
@@ -569,32 +570,32 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
   if (svn_err) goto error;
 
   /* Open the various databases.  */
-  svn_err = DB_WRAP (fs, "opening `nodes' table",
-                     svn_fs__open_nodes_table (&fs->nodes, fs->env, 0));
+  svn_err = BDB_WRAP (fs, "opening `nodes' table",
+                     svn_fs__bdb_open_nodes_table (&fs->nodes, fs->env, 0));
   if (svn_err) goto error;
-  svn_err = DB_WRAP (fs, "opening `revisions' table",
-                     svn_fs__open_revisions_table (&fs->revisions,
-                                                   fs->env, 0));
+  svn_err = BDB_WRAP (fs, "opening `revisions' table",
+                     svn_fs__bdb_open_revisions_table (&fs->revisions,
+                                                       fs->env, 0));
   if (svn_err) goto error;
-  svn_err = DB_WRAP (fs, "opening `transactions' table",
-                     svn_fs__open_transactions_table (&fs->transactions,
-                                                      fs->env, 0));
+  svn_err = BDB_WRAP (fs, "opening `transactions' table",
+                     svn_fs__bdb_open_transactions_table (&fs->transactions,
+                                                          fs->env, 0));
   if (svn_err) goto error;
-  svn_err = DB_WRAP (fs, "opening `copies' table",
-                     svn_fs__open_copies_table (&fs->copies,
-                                                fs->env, 0));
+  svn_err = BDB_WRAP (fs, "opening `copies' table",
+                     svn_fs__bdb_open_copies_table (&fs->copies,
+                                                    fs->env, 0));
   if (svn_err) goto error;
-  svn_err = DB_WRAP (fs, "opening `changes' table",
-                     svn_fs__open_changes_table (&fs->changes,
-                                                 fs->env, 0));
+  svn_err = BDB_WRAP (fs, "opening `changes' table",
+                     svn_fs__bdb_open_changes_table (&fs->changes,
+                                                     fs->env, 0));
   if (svn_err) goto error;
-  svn_err = DB_WRAP (fs, "creating `representations' table",
-                     svn_fs__open_reps_table (&fs->representations,
-                                              fs->env, 0));
+  svn_err = BDB_WRAP (fs, "creating `representations' table",
+                     svn_fs__bdb_open_reps_table (&fs->representations,
+                                                  fs->env, 0));
   if (svn_err) goto error;
-  svn_err = DB_WRAP (fs, "creating `strings' table",
-                     svn_fs__open_strings_table (&fs->strings,
-                                                 fs->env, 0));
+  svn_err = BDB_WRAP (fs, "creating `strings' table",
+                     svn_fs__bdb_open_strings_table (&fs->strings,
+                                                     fs->env, 0));
   if (svn_err) goto error;
 
   return SVN_NO_ERROR;
@@ -621,7 +622,7 @@ svn_fs_berkeley_recover (const char *path,
 
   db_err = db_env_create (&env, 0);
   if (db_err)
-    return svn_fs__dberr (db_err);
+    return svn_fs__bdb_dberr (db_err);
 
   /* Here's the comment copied from db_recover.c:
    
@@ -639,11 +640,11 @@ svn_fs_berkeley_recover (const char *path,
                                          | DB_PRIVATE),
                       0666);
   if (db_err)
-    return svn_fs__dberr (db_err);
+    return svn_fs__bdb_dberr (db_err);
 
   db_err = env->close (env, 0);
   if (db_err)
-    return svn_fs__dberr (db_err);
+    return svn_fs__bdb_dberr (db_err);
 
   return SVN_NO_ERROR;
 }
@@ -667,10 +668,10 @@ svn_fs_delete_berkeley (const char *path,
      memory segments.  */
   db_err = db_env_create (&env, 0);
   if (db_err)
-    return svn_fs__dberr (db_err);
+    return svn_fs__bdb_dberr (db_err);
   db_err = env->remove (env, path_native, DB_FORCE);
   if (db_err)
-    return svn_fs__dberr (db_err);
+    return svn_fs__bdb_dberr (db_err);
 
   /* Remove the environment directory. */
   SVN_ERR (svn_io_remove_dir (path, pool));

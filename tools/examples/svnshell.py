@@ -5,7 +5,7 @@
 #
 ######################################################################
 #
-# Copyright (c) 2000-2001 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2003 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -47,6 +47,7 @@ class SVNShell:
     print "  exit         : exit the shell"
     print "  ls [PATH]    : list the contents of the current directory"
     print "  lstxns       : list the transactions available for browsing"
+    print "  pcat [PATH]  : list the properties of PATH"
     print "  setrev REV   : set the current revision to browse"
     print "  settxn TXN   : set the current transaction to browse"
     print "  youngest     : list the youngest browsable revision number"
@@ -160,6 +161,26 @@ class SVNShell:
         counter = 0
     print ""
     util.svn_pool_clear(self.taskpool)
+    
+  def cmd_pcat(self, *args):
+    """list the properties of a path"""
+    args = args[0]
+    catpath = self.path
+    if args:
+      catpath = self._parse_path(args[0])
+    kind = fs.check_path(self.root, catpath, self.taskpool)
+    if kind == util.svn_node_none:
+      print "Path '%s' does not exist." % catpath
+      return
+    plist = fs.node_proplist(self.root, catpath, self.taskpool)
+    if not plist:
+      return
+    for pkey, pval in plist.items():
+      print 'K ' + str(len(pkey))
+      print pkey
+      print 'P ' + str(len(pval))
+      print pval
+    print 'PROPS-END'
     
   def cmd_setrev(self, *args):
     """set the current revision to view"""

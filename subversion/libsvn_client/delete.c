@@ -2,7 +2,7 @@
  * delete.c:  wrappers around wc delete functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -67,8 +67,7 @@ svn_client__can_delete (const char *path,
 
       if (statstruct->text_status == svn_wc_status_obstructed)
         {
-          return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND,
-                                    0, NULL,
+          return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                                     "'%s' is in the way of the resource "
                                     "actually under revision control.",
                                     name);
@@ -76,8 +75,7 @@ svn_client__can_delete (const char *path,
 
       if (!statstruct->entry)
         {
-          return svn_error_createf (SVN_ERR_CLIENT_UNVERSIONED,
-                                    0, NULL,
+          return svn_error_createf (SVN_ERR_CLIENT_UNVERSIONED, NULL,
                                     "'%s' is not under revision control",
                                     name);
         }
@@ -89,8 +87,7 @@ svn_client__can_delete (const char *path,
           (statstruct->prop_status != svn_wc_status_none
            && statstruct->prop_status != svn_wc_status_normal))
         {
-          return svn_error_createf (SVN_ERR_CLIENT_MODIFIED,
-                                    0, NULL,
+          return svn_error_createf (SVN_ERR_CLIENT_MODIFIED, NULL,
                                     "'%s' has local modifications",
                                     name);
         }
@@ -127,6 +124,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       const char *committed_author = NULL;
       const char *log_msg;
       svn_node_kind_t kind;
+      const char *auth_dir;
 
       /* Create a new commit item and add it to the array. */
       if (log_msg_func)
@@ -158,8 +156,11 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, anchor, pool));
 
       /* Open an RA session for the URL. Note that we don't have a local
-         directory, nor a place to put temp files or store the auth data. */
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, NULL,
+         directory, nor a place to put temp files or store the auth
+         data, although we'll try to retrieve auth data from the
+         current directory. */
+      SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, auth_dir,
                                             NULL, NULL, FALSE, FALSE, TRUE,
                                             auth_baton, pool));
 
@@ -167,7 +168,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       SVN_ERR (ra_lib->check_path (&kind, session, target, 
                                    SVN_INVALID_REVNUM));
       if (kind == svn_node_none)
-        return svn_error_createf (SVN_ERR_FS_NOT_FOUND, 0, NULL,
+        return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
                                   "URL `%s' does not exist", path);
 
       /* Fetch RA commit editor */

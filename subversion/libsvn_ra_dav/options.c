@@ -2,7 +2,7 @@
  * options.c :  routines for performing OPTIONS server requests
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -123,8 +123,7 @@ svn_error_t * svn_ra_dav__get_activity_collection(
   if (oc.activity_coll == NULL)
     {
       /* ### error */
-      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED,
-                              0, NULL,
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                               "The OPTIONS response did not include the "
                               "requested activity-collection-set.\n"
                               "(Check the URL again;  this often means that "

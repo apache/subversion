@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,6 +23,7 @@
 #ifndef SVN_HASH_H
 #define SVN_HASH_H
 
+#include "svn_error.h"
 #include <apr_pools.h>
 #include <apr_tables.h>         /* for apr_array_header_t */
 #include <apr_hash.h>

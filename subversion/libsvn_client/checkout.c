@@ -2,7 +2,7 @@
  * checkout.c:  wrappers around wc checkout functionality
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -111,7 +111,7 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
                                  checkout_editor,
                                  checkout_edit_baton);
       /* Sleep for one second to ensure timestamp integrity. */
-      apr_sleep (APR_USEC_PER_SEC * 1);
+      apr_sleep (apr_time_from_sec(1));
       
       if (err)
         return err;

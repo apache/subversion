@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -75,7 +75,8 @@ svn_error_t *svn_io_check_path (const char *path,
  * encoded @a path, in the same directory as @a path.  The file handle is
  * returned in @a *f, and the name, which ends with @a suffix, is returned
  * in @a *unique_name, also utf8-encoded.  If @a delete_on_close is set,
- * then the @c APR_DELONCLOSE flag will be used when opening the file.
+ * then the @c APR_DELONCLOSE flag will be used when opening the file. The
+ * @c APR_BUFFERED flag will always be used.
  *
  * The name will include as much of @a path as possible, then a dot,
  * then a random portion, then another dot, then an iterated attempt

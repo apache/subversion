@@ -1,7 +1,7 @@
 /* bdb_compat.c --- Compatibility wrapper for different BDB versions.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -18,7 +18,7 @@
 #include "bdb_compat.h"
 
 int
-svn_bdb__check_version (void)
+svn_fs__bdb_check_version (void)
 {
   int major, minor;
 

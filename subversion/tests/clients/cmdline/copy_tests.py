@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2001 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2003 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -408,7 +408,12 @@ def resurrect_deleted_dir(sbox):
   # the two URLs are identical.  This used to trigger a failure.  
   url = svntest.main.test_area_url + '/' \
         + svntest.main.current_repo_dir + '/A/D/G'
-  outlines, errlines = svntest.main.run_svn(None, 'cp', '-r', '1', url, url,
+  outlines, errlines = svntest.main.run_svn(None, 'cp',
+                                            '--username',
+                                            svntest.main.wc_author,
+                                            '--password',
+                                            svntest.main.wc_passwd,
+                                            '-r', '1', url, url,
                                             '-m', 'logmsg')
   if errlines:
     return 1
@@ -458,6 +463,10 @@ def no_copy_overwrites(sbox):
   # Expect out-of-date failure if 'svn cp URL URL' tries to overwrite a file  
   outlines, errlines = svntest.main.run_svn(1,
                                             'cp', fileURL1, fileURL2,
+                                            '--username',
+                                            svntest.main.wc_author,
+                                            '--password',
+                                            svntest.main.wc_passwd,
                                             '-m', 'fooogle')
   if not errlines:
     print "Whoa, I was able to overwrite a file!"
@@ -466,6 +475,10 @@ def no_copy_overwrites(sbox):
   # Create A/D/H/G by running 'svn cp ...A/D/G .../A/D/H'
   outlines, errlines = svntest.main.run_svn(None,
                                             'cp', dirURL1, dirURL2,
+                                            '--username',
+                                            svntest.main.wc_author,
+                                            '--password',
+                                            svntest.main.wc_passwd,
                                             '-m', 'fooogle')
   if errlines:
     print "Whoa, couldn't create A/D/H/G."
@@ -474,6 +487,10 @@ def no_copy_overwrites(sbox):
   # Repeat the last command.  It should *fail* because A/D/H/G already exists.
   outlines, errlines = svntest.main.run_svn(1,
                                             'cp', dirURL1, dirURL2,
+                                            '--username',
+                                            svntest.main.wc_author,
+                                            '--password',
+                                            svntest.main.wc_passwd,
                                             '-m', 'fooogle')
   if not errlines:
     print "Whoa, I was able to overwrite a directory!"

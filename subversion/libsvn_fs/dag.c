@@ -1,7 +1,7 @@
 /* dag.c : DAG-like interface filesystem, private to libsvn_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -208,8 +208,8 @@ get_node_revision (svn_fs__node_revision_t **noderev_p,
   if (! node->node_revision)
     {
       /* Read it in, and cache it.  */
-      SVN_ERR (svn_fs__get_node_revision (&noderev, node->fs, 
-                                          node->id, trail));
+      SVN_ERR (svn_fs__bdb_get_node_revision (&noderev, node->fs, 
+                                              node->id, trail));
       cache_node_revision (node, noderev, trail);
     }
           
@@ -227,7 +227,7 @@ set_node_revision (dag_node_t *node,
                    trail_t *trail)
 {
   /* Write it out.  */
-  SVN_ERR (svn_fs__put_node_revision (node->fs, node->id, noderev, trail));
+  SVN_ERR (svn_fs__bdb_put_node_revision (node->fs, node->id, noderev, trail));
 
   /* Since the write succeeded, update the cache.  */
   cache_node_revision (node, noderev, trail);
@@ -281,7 +281,7 @@ svn_fs__dag_get_revision (svn_revnum_t *rev,
   const char *txn_id = svn_fs__id_txn_id (svn_fs__dag_get_id (node));
   
   /* Use the txn ID to look up the transaction.  */
-  SVN_ERR (svn_fs__get_txn (&txn, svn_fs__dag_get_fs (node), txn_id, trail));
+  SVN_ERR (svn_fs__bdb_get_txn (&txn, svn_fs__dag_get_fs (node), txn_id, trail));
 
   /* If the transaction has been committed, we can return the revision
      number, else we return the invalid revision number. */
@@ -379,28 +379,28 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
   memset (&noderev, 0, sizeof (noderev));
   noderev.kind = svn_node_dir;
   noderev.committed_path = "";
-  SVN_ERR (svn_fs__put_node_revision (fs, root_id, &noderev, trail));
+  SVN_ERR (svn_fs__bdb_put_node_revision (fs, root_id, &noderev, trail));
 
   /* Create a new transaction (better have an id of "0") */
-  SVN_ERR (svn_fs__create_txn (&txn_id, fs, root_id, trail));
+  SVN_ERR (svn_fs__bdb_create_txn (&txn_id, fs, root_id, trail));
   if (strcmp (txn_id, "0"))
     return svn_error_createf 
-      (SVN_ERR_FS_CORRUPT, 0, 0,
+      (SVN_ERR_FS_CORRUPT, 0,
        "initial transaction id not `0' in filesystem `%s'", fs->path);
 
   /* Create a default copy (better have an id of "0") */
-  SVN_ERR (svn_fs__reserve_copy_id (&copy_id, fs, trail));
+  SVN_ERR (svn_fs__bdb_reserve_copy_id (&copy_id, fs, trail));
   if (strcmp (copy_id, "0"))
     return svn_error_createf 
-      (SVN_ERR_FS_CORRUPT, 0, 0,
+      (SVN_ERR_FS_CORRUPT, 0,
        "initial copy id not `0' in filesystem `%s'", fs->path);
-  SVN_ERR (svn_fs__create_copy (copy_id, fs, NULL, NULL, root_id, trail));
+  SVN_ERR (svn_fs__bdb_create_copy (copy_id, fs, NULL, NULL, root_id, trail));
 
   /* Link it into filesystem revision 0. */
   revision.txn_id = txn_id;
-  SVN_ERR (svn_fs__put_rev (&rev, fs, &revision, trail));
+  SVN_ERR (svn_fs__bdb_put_rev (&rev, fs, &revision, trail));
   if (rev != 0)
-    return svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0,
+    return svn_error_createf (SVN_ERR_FS_CORRUPT, 0,
                               "initial revision number is not `0'"
                               " in filesystem `%s'", fs->path);
 
@@ -444,7 +444,7 @@ get_dir_entries (apr_hash_t **entries_p,
   /* Error if this is not a directory. */
   if (noderev->kind != svn_node_dir)
     return svn_error_create
-      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL,
+      (SVN_ERR_FS_NOT_DIRECTORY, NULL,
        "Attempted to create entry in non-directory parent");
 
   /* If there's a DATA-KEY, there might be entries to fetch. */
@@ -560,8 +560,7 @@ set_entry (dag_node_t *parent,
      list for it.  Else, go read its existing entries list. */
   if (rep_key)
     {
-      SVN_ERR (svn_fs__rep_contents (&raw_entries, fs, 
-                                     mutable_rep_key, trail));
+      SVN_ERR (svn_fs__rep_contents (&raw_entries, fs, rep_key, trail));
       entries_skel = svn_fs__parse_skel (raw_entries.data, raw_entries.len,
                                          trail->pool);
       if (entries_skel)
@@ -579,11 +578,12 @@ set_entry (dag_node_t *parent,
   /* Finally, replace the old entries list with the new one. */
   SVN_ERR (svn_fs__unparse_entries_skel (&entries_skel, entries, trail->pool));
   raw_entries_buf = svn_fs__unparse_skel (entries_skel, trail->pool);
-  SVN_ERR (svn_fs__rep_contents_clear (fs, mutable_rep_key, txn_id, trail));
-  wstream = svn_fs__rep_contents_write_stream (fs, mutable_rep_key, txn_id, 
-                                               trail, trail->pool);
+  SVN_ERR (svn_fs__rep_contents_write_stream (&wstream, fs, mutable_rep_key,
+                                              txn_id, TRUE, trail, 
+                                              trail->pool));
   len = raw_entries_buf->len;
-  svn_stream_write (wstream, raw_entries_buf->data, &len);
+  SVN_ERR (svn_stream_write (wstream, raw_entries_buf->data, &len));
+  SVN_ERR (svn_stream_close (wstream));
   return SVN_NO_ERROR;
 }
 
@@ -608,26 +608,26 @@ make_entry (dag_node_t **child_p,
   /* Make sure that NAME is a single path component. */
   if (! svn_path_is_single_path_component (name))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL,
+      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, NULL,
        "Attempted to create a node with an illegal name `%s'", name);
 
   /* Make sure that parent is a directory */
   if (! svn_fs__dag_is_directory (parent))
     return svn_error_create
-      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL,
+      (SVN_ERR_FS_NOT_DIRECTORY, NULL,
        "Attempted to create entry in non-directory parent");
     
   /* Check that the parent is mutable. */
   if (! svn_fs__dag_check_mutable (parent, txn_id))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL,
+      (SVN_ERR_FS_NOT_MUTABLE, NULL,
        "Attempted to clone child of non-mutable node");
 
   /* Check that parent does not already have an entry named NAME. */
   SVN_ERR (dir_entry_id_from_node (&new_node_id, parent, name, trail));
   if (new_node_id)
     return svn_error_createf 
-      (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL,
+      (SVN_ERR_FS_ALREADY_EXISTS, NULL,
        "Attempted to create entry that already exists");
 
   /* Create the new node's NODE-REVISION */
@@ -674,13 +674,13 @@ svn_fs__dag_set_entry (dag_node_t *node,
   /* Check it's a directory. */
   if (! svn_fs__dag_is_directory (node))
     return svn_error_create
-      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL,
+      (SVN_ERR_FS_NOT_DIRECTORY, NULL,
        "Attempted to set entry in non-directory node.");
   
   /* Check it's mutable. */
   if (! svn_fs__dag_check_mutable (node, txn_id))
     return svn_error_create
-      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL,
+      (SVN_ERR_FS_NOT_DIRECTORY, NULL,
        "Attempted to set entry in immutable node.");
 
   return set_entry (node, entry_name, id, txn_id, trail);
@@ -740,7 +740,7 @@ svn_fs__dag_set_proplist (dag_node_t *node,
     {
       svn_string_t *idstr = svn_fs_unparse_id (node->id, node->pool);
       return svn_error_createf 
-        (SVN_ERR_FS_NOT_MUTABLE, 0, NULL,
+        (SVN_ERR_FS_NOT_MUTABLE, NULL,
          "Can't set_proplist on *immutable* node-revision %s", idstr->data);
     }
 
@@ -755,7 +755,7 @@ svn_fs__dag_set_proplist (dag_node_t *node,
   if (! svn_fs__same_keys (mutable_rep_key, rep_key))
     {
       noderev->prop_key = mutable_rep_key;
-      SVN_ERR (svn_fs__put_node_revision (fs, node->id, noderev, trail));
+      SVN_ERR (svn_fs__bdb_put_node_revision (fs, node->id, noderev, trail));
     }
 
   /* Replace the old property list with the new one. */
@@ -768,11 +768,12 @@ svn_fs__dag_set_proplist (dag_node_t *node,
     SVN_ERR (svn_fs__unparse_proplist_skel (&proplist_skel, proplist, 
                                             trail->pool));
     raw_proplist_buf = svn_fs__unparse_skel (proplist_skel, trail->pool);
-    wstream = svn_fs__rep_contents_write_stream (fs, mutable_rep_key, txn_id,
-                                                 trail, trail->pool);
-    SVN_ERR (svn_fs__rep_contents_clear (fs, mutable_rep_key, txn_id, trail));
+    SVN_ERR (svn_fs__rep_contents_write_stream (&wstream, fs, mutable_rep_key,
+                                                txn_id, TRUE, trail, 
+                                                trail->pool));
     len = raw_proplist_buf->len;
     SVN_ERR (svn_stream_write (wstream, raw_proplist_buf->data, &len));
+    SVN_ERR (svn_stream_close (wstream));
   }
 
   return SVN_NO_ERROR;
@@ -837,13 +838,13 @@ svn_fs__dag_clone_child (dag_node_t **child_p,
   /* First check that the parent is mutable. */
   if (! svn_fs__dag_check_mutable (parent, txn_id))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL,
+      (SVN_ERR_FS_NOT_MUTABLE, NULL,
        "Attempted to clone child of non-mutable node");
 
   /* Make sure that NAME is a single path component. */
   if (! svn_path_is_single_path_component (name))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL,
+      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, NULL,
        "Attempted to make a child clone with an illegal name `%s'", name);
 
   /* Find the node named NAME in PARENT's entries list if it exists. */
@@ -904,7 +905,7 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
       /* Of my own flesh and bone...
          (Get the NODE-REVISION for the base node, and then write
          it back out as the clone.) */
-      SVN_ERR (svn_fs__get_node_revision (&noderev, fs, base_root_id, trail));
+      SVN_ERR (svn_fs__bdb_get_node_revision (&noderev, fs, base_root_id, trail));
 
       /* Store it. */
       /* ### todo: Does it even makes sense to have a different copy id for
@@ -963,19 +964,19 @@ delete_entry (dag_node_t *parent,
   /* Make sure parent is a directory. */
   if (! svn_fs__dag_is_directory (parent))
     return svn_error_createf
-      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL,
+      (SVN_ERR_FS_NOT_DIRECTORY, NULL,
        "Attempted to delete entry `%s' from *non*-directory node.", name);    
 
   /* Make sure parent is mutable. */
   if (! svn_fs__dag_check_mutable (parent, txn_id))
     return svn_error_createf
-      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL,
+      (SVN_ERR_FS_NOT_MUTABLE, NULL,
        "Attempted to delete entry `%s' from immutable directory node.", name);
 
   /* Make sure that NAME is a single path component. */
   if (! svn_path_is_single_path_component (name))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL,
+      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, NULL,
        "Attempted to delete a node with an illegal name `%s'", name);
 
   /* Get a fresh NODE-REVISION for the parent node. */
@@ -989,7 +990,7 @@ delete_entry (dag_node_t *parent,
      delete! */
   if (! rep_key)
     return svn_error_createf 
-      (SVN_ERR_FS_NO_SUCH_ENTRY, 0, NULL,
+      (SVN_ERR_FS_NO_SUCH_ENTRY, NULL,
        "Delete failed--directory has no entry `%s'", name);
 
   /* Ensure we have a key to a mutable representation of the entries
@@ -1008,7 +1009,8 @@ delete_entry (dag_node_t *parent,
   /* Read the representation, then use it to get the string that holds
      the entries list.  Parse that list into a skel, and parse *that*
      into a hash. */
-  SVN_ERR (svn_fs__rep_contents (&str, fs, mutable_rep_key, trail));
+  
+  SVN_ERR (svn_fs__rep_contents (&str, fs, rep_key, trail));
   entries_skel = svn_fs__parse_skel (str.data, str.len, trail->pool);
   if (entries_skel)
     SVN_ERR (svn_fs__parse_entries_skel (&entries, entries_skel, trail->pool));
@@ -1022,7 +1024,7 @@ delete_entry (dag_node_t *parent,
      ... it doesn't matter), return an error.  */
   if (! id)
     return svn_error_createf 
-      (SVN_ERR_FS_NO_SUCH_ENTRY, 0, NULL,
+      (SVN_ERR_FS_NO_SUCH_ENTRY, NULL,
        "Delete failed--directory has no entry `%s'", name);
 
   /* Use the ID of this ENTRY to get the entry's node.  If the node we
@@ -1036,7 +1038,7 @@ delete_entry (dag_node_t *parent,
       SVN_ERR (svn_fs__dag_dir_entries (&entries_here, node, trail));
       if (require_empty && entries_here && apr_hash_count (entries_here))
         return svn_error_createf
-          (SVN_ERR_DIR_NOT_EMPTY, 0, NULL,
+          (SVN_ERR_DIR_NOT_EMPTY, NULL,
            "Attempt to delete non-empty directory `%s'.", name);
     }
 
@@ -1055,11 +1057,12 @@ delete_entry (dag_node_t *parent,
     SVN_ERR (svn_fs__unparse_entries_skel (&entries_skel, entries, 
                                            trail->pool));
     unparsed_entries = svn_fs__unparse_skel (entries_skel, trail->pool);
-    SVN_ERR (svn_fs__rep_contents_clear (fs, mutable_rep_key, txn_id, trail));
-    ws = svn_fs__rep_contents_write_stream (fs, mutable_rep_key, txn_id,
-                                            trail, trail->pool);
+    SVN_ERR (svn_fs__rep_contents_write_stream (&ws, fs, mutable_rep_key,
+                                                txn_id, TRUE, trail,
+                                                trail->pool));
     len = unparsed_entries->len;
     SVN_ERR (svn_stream_write (ws, unparsed_entries->data, &len));
+    SVN_ERR (svn_stream_close (ws));
   }
     
   return SVN_NO_ERROR;
@@ -1131,7 +1134,7 @@ svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
      representations and strings it points to. */
 
   /* Get a fresh node-revision. */
-  SVN_ERR (svn_fs__get_node_revision (&noderev, fs, id, trail));
+  SVN_ERR (svn_fs__bdb_get_node_revision (&noderev, fs, id, trail));
 
   /* Delete any mutable property representation. */
   if (noderev->prop_key)
@@ -1196,32 +1199,32 @@ svn_fs__dag_link (dag_node_t *parent,
   /* Make sure that parent is a directory */
   if (! svn_fs__dag_is_directory (parent))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL,
+      (SVN_ERR_FS_NOT_DIRECTORY, NULL,
        "Attempted to create entry in non-directory parent");
     
   /* Make sure parent is mutable */
   if (! svn_fs__dag_check_mutable (parent, txn_id))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL,
+      (SVN_ERR_FS_NOT_MUTABLE, NULL,
        "Can't add a link from an immutable parent");
 
   /* Make sure child is IMmutable */
   if (svn_fs__dag_check_mutable (child, txn_id))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL,
+      (SVN_ERR_FS_NOT_MUTABLE, NULL,
        "Can't add a link to a mutable child");
 
   /* Make sure that NAME is a single path component. */
   if (! svn_path_is_single_path_component (name))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL,
+      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, NULL,
        "Attempted to link to a node with an illegal name `%s'", name);
 
   /* Verify that this parent node does not already have an entry named NAME. */
   SVN_ERR (dir_entry_id_from_node (&entry_id, parent, name, trail));
   if (entry_id)
     return svn_error_createf 
-      (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL,
+      (SVN_ERR_FS_ALREADY_EXISTS, NULL,
        "Attempted to create entry that already exists");
 
   /* We can safely call set_entry because we already know that PARENT
@@ -1243,7 +1246,7 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
   /* Make sure our node is a file. */
   if (! svn_fs__dag_is_file (file))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_FILE, 0, NULL,
+      (SVN_ERR_FS_NOT_FILE, NULL,
        "Attempted to get textual contents of a *non*-file node.");
   
   /* Go get a fresh node-revision for FILE. */
@@ -1255,7 +1258,7 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
      reads.  This means the stream will do each read in a one-off,
      temporary trail.  */
   *contents = svn_fs__rep_contents_read_stream (file->fs, noderev->data_key,
-                                                0, NULL, pool);
+                                                FALSE, trail, pool);
 
   /* Note that we're not registering any `close' func, because there's
      nothing to cleanup outside of our trail.  When the trail is
@@ -1275,7 +1278,7 @@ svn_fs__dag_file_length (apr_size_t *length,
   /* Make sure our node is a file. */
   if (! svn_fs__dag_is_file (file))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_FILE, 0, NULL,
+      (SVN_ERR_FS_NOT_FILE, NULL,
        "Attempted to get length of a *non*-file node.");
 
   /* Go get a fresh node-revision for FILE, and . */
@@ -1307,13 +1310,13 @@ svn_fs__dag_get_edit_stream (svn_stream_t **contents,
   /* Make sure our node is a file. */
   if (! svn_fs__dag_is_file (file))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_FILE, 0, NULL,
+      (SVN_ERR_FS_NOT_FILE, NULL,
        "Attempted to set textual contents of a *non*-file node.");
   
   /* Make sure our node is mutable. */
   if (! svn_fs__dag_check_mutable (file, txn_id))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL,
+      (SVN_ERR_FS_NOT_MUTABLE, NULL,
        "Attempted to set textual contents of an immutable node.");
 
   /* Get the node revision. */
@@ -1332,11 +1335,11 @@ svn_fs__dag_get_edit_stream (svn_stream_t **contents,
   
   /* We made a new rep, so update the node revision. */
   noderev->edit_key = mutable_rep_key;
-  SVN_ERR (svn_fs__put_node_revision (fs, file->id, noderev, trail));
+  SVN_ERR (svn_fs__bdb_put_node_revision (fs, file->id, noderev, trail));
 
   /* Return a writable stream with which to set new contents. */
-  ws = svn_fs__rep_contents_write_stream (fs, mutable_rep_key, txn_id,
-                                          NULL, pool);
+  SVN_ERR (svn_fs__rep_contents_write_stream (&ws, fs, mutable_rep_key,
+                                              txn_id, FALSE, trail, pool));
   *contents = ws;
 
   return SVN_NO_ERROR;
@@ -1356,13 +1359,13 @@ svn_fs__dag_finalize_edits (dag_node_t *file,
   /* Make sure our node is a file. */
   if (! svn_fs__dag_is_file (file))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_FILE, 0, NULL,
+      (SVN_ERR_FS_NOT_FILE, NULL,
        "Attempted to set textual contents of a *non*-file node.");
   
   /* Make sure our node is mutable. */
   if (! svn_fs__dag_check_mutable (file, txn_id))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL,
+      (SVN_ERR_FS_NOT_MUTABLE, NULL,
        "Attempted to set textual contents of an immutable node.");
 
   /* Get the node revision. */
@@ -1379,7 +1382,7 @@ svn_fs__dag_finalize_edits (dag_node_t *file,
   old_data_key = noderev->data_key;
   noderev->data_key = noderev->edit_key;
   noderev->edit_key = NULL;
-  SVN_ERR (svn_fs__put_node_revision (fs, file->id, noderev, trail));
+  SVN_ERR (svn_fs__bdb_put_node_revision (fs, file->id, noderev, trail));
   
   /* Only *now* can we safely destroy the old representation (if it
      even existed in the first place). */
@@ -1422,13 +1425,13 @@ svn_fs__dag_open (dag_node_t **child_p,
   SVN_ERR (dir_entry_id_from_node (&node_id, parent, name, trail));
   if (! node_id)
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_FOUND, 0, NULL,
+      (SVN_ERR_FS_NOT_FOUND, NULL,
        "Attempted to open non-existant child node \"%s\"", name);
   
   /* Make sure that NAME is a single path component. */
   if (! svn_path_is_single_path_component (name))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL,
+      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, NULL,
        "Attempted to open node with an illegal name `%s'", name);
 
   /* Now get the node that was requested. */
@@ -1463,7 +1466,7 @@ svn_fs__dag_copy (dag_node_t *to_node,
       to_noderev = copy_node_revision (from_noderev, to_path, trail->pool);
       
       /* Reserve a copy ID for this new copy. */
-      SVN_ERR (svn_fs__reserve_copy_id (&copy_id, fs, trail));
+      SVN_ERR (svn_fs__bdb_reserve_copy_id (&copy_id, fs, trail));
 
       /* Create a successor with its predecessor pointing at the copy
          source. */
@@ -1479,7 +1482,7 @@ svn_fs__dag_copy (dag_node_t *to_node,
       /* Now that we've done the copy, we need to add the information
          about the copy to the `copies' table, using the COPY_ID we
          reserved above.  */
-      SVN_ERR (svn_fs__create_copy 
+      SVN_ERR (svn_fs__bdb_create_copy 
                (copy_id, fs, 
                 svn_fs__canonicalize_abspath (from_path, trail->pool), 
                 from_txn_id, id, trail));
@@ -1527,16 +1530,16 @@ svn_fs__dag_copied_from (svn_revnum_t *rev_p,
              a copied subtree item.  We examine the actual copy record
              to determine which is the case.  */
           svn_fs__copy_t *copy;
-          SVN_ERR (svn_fs__get_copy (&copy, svn_fs__dag_get_fs (node),
-                                     id_copy_id, trail));
+          SVN_ERR (svn_fs__bdb_get_copy (&copy, svn_fs__dag_get_fs (node),
+                                         id_copy_id, trail));
           if (svn_fs__id_eq (copy->dst_noderev_id, id))
             {
               /* We need to translate the COPY's transaction ID into a
                  revision.  So we lookup the transaction, and pull the
                  revision from it.  It's really not that complicated.  */
               svn_fs__transaction_t *txn;
-              SVN_ERR (svn_fs__get_txn (&txn, svn_fs__dag_get_fs (node),
-                                        copy->src_txn_id, trail));
+              SVN_ERR (svn_fs__bdb_get_txn (&txn, svn_fs__dag_get_fs (node),
+                                            copy->src_txn_id, trail));
               *rev_p = txn->revision;
               *path_p = copy->src_path;
             }
@@ -1604,11 +1607,11 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
 
   /* Add new revision entry to `revisions' table, copying the
      transaction's property list.  */
-  SVN_ERR (svn_fs__get_txn (&transaction, fs, txn_id, trail));
+  SVN_ERR (svn_fs__bdb_get_txn (&transaction, fs, txn_id, trail));
   revision.txn_id = txn_id;
   if (new_rev)
     *new_rev = SVN_INVALID_REVNUM;
-  SVN_ERR (svn_fs__put_rev (new_rev, fs, &revision, trail));
+  SVN_ERR (svn_fs__bdb_put_rev (new_rev, fs, &revision, trail));
 
   /* Promote the unfinished transaction to a committed one. */
   SVN_ERR (svn_fs__txn_make_committed (fs, txn_id, *new_rev, trail));

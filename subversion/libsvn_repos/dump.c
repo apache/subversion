@@ -1,7 +1,7 @@
 /* dump.c --- writing filesystem contents into a portable 'dumpfile' format.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -447,7 +447,7 @@ dump_node (struct edit_baton *eb,
                  error was returned.  According to the docstring, this
                  should never happen. */
               return 
-                svn_error_createf (SVN_ERR_STREAM_UNEXPECTED_EOF, 0, NULL,
+                svn_error_createf (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
                                    "Error dumping textual contents of %s.",
                                    path);
             }
@@ -831,11 +831,11 @@ svn_repos_dump_fs (svn_repos_t *repos,
 
   /* Validate the revisions. */
   if (start_rev > end_rev)
-    return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, 0, NULL,
+    return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, NULL,
                               "start_rev %ld is greater than end_rev %ld",
                               start_rev, end_rev);
   if (end_rev > youngest)
-    return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, 0, NULL,
+    return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, NULL,
                               "end_rev %ld is invalid (youngest rev is %ld)",
                               end_rev, youngest);
   if ((start_rev == 0) && incremental)

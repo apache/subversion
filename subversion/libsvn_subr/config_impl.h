@@ -2,7 +2,7 @@
  * config_impl.h :  private header for the config file implementation.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -64,7 +64,9 @@ svn_error_t *svn_config__parse_file (svn_config_t *cfg,
 
 #ifdef SVN_WIN32
 /* Get the common or user-specific AppData folder */
-HRESULT svn_config__win_config_path (char *folder, int system_path);
+svn_error_t *svn_config__win_config_path (const char **folder,
+                                          int system_path,
+                                          apr_pool_t *pool);
 
 /* Read sections and options from the Windows Registry. */
 svn_error_t *svn_config__parse_registry (svn_config_t *cfg,

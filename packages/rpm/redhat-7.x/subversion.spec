@@ -4,8 +4,6 @@
 # If you don't have 360+ MB of free disk space or don't want to run checks then
 # set make_check to 0.
 %define make_check 1
-# If you don't want to try to build cvs2svn then change build_cvs2svn to 0
-%define build_cvs2svn 1
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -20,17 +18,15 @@ Patch0: install.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: apache-libapr >= %{apache_version}
-Requires: apache-libapr-utils >= %{apache_version}
-Requires: db >= 4.0.14
+Requires: db4 >= 4.0.14
 Requires: expat
 Requires: neon >= %{neon_version}
 #Requires: /sbin/install-info
 BuildPreReq: apache >= %{apache_version}
 BuildPreReq: apache-devel >= %{apache_version}
 BuildPreReq: apache-libapr-devel >= %{apache_version}
-BuildPreReq: apache-libapr-utils-devel >= %{apache_version}
 BuildPreReq: autoconf253 >= 2.53
-BuildPreReq: db-devel >= 4.0.14
+BuildPreReq: db4-devel >= 4.0.14
 BuildPreReq: expat-devel
 BuildPreReq: gdbm-devel
 BuildPreReq: libtool >= 1.4.2
@@ -38,9 +34,7 @@ BuildPreReq: neon-devel >= %{neon_version}
 BuildPreReq: openssl-devel
 BuildPreReq: python2
 BuildPreReq: python2-devel
-%if %{build_cvs2svn}
 BuildPreReq: swig >= 1.3.16
-%endif
 BuildPreReq: texinfo
 BuildPreReq: zlib-devel
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
@@ -73,15 +67,14 @@ for developers interacting with the subversion package.
 %package server
 Group: Utilities/System
 Summary: Apache server module for Subversion server.
+Requires: apache >= %{apache_version}
 Requires: apache-libapr >= 0.%{apache_version}
-Requires: apache-libapr-utils >= 0.%{apache_version}
 Requires: subversion = %{version}-%{release}
 BuildPreReq: apache-devel >= %{apache_version}
 %description server
 The subversion-server package adds the Subversion server Apache module to
 the Apache directories and configuration.
 
-%if %{build_cvs2svn}
 %package cvs2svn
 Group: Utilities/System
 Summary: Converts CVS repositories to Subversion repositories.
@@ -91,9 +84,17 @@ Converts CVS repositories to Subversion repositories.
 
 See /usr/share/doc/subversion*/tools/cvs2svn directory for more information.
 
-%endif
-
 %changelog
+* Tue Dec 31 2002 David Summers <david@summersoft.fay.ar.us> 0.16.0-4218
+- Create a svnadmin.static which is copied to svnadmin-version-release
+  when the package is erased, so users can still dump/load their repositories
+  even after they have upgraded the RPM package.
+
+* Sun Dec 29 2002 David Summers <david@summersoft.fay.ar.us> 0.16.0-4206
+- Switched to new db4 package to be more like RedHat 8.0.
+- Switched to new version of apache that combines APR and APRUTILS into one
+  package.
+
 * Sat Dec 14 2002 David Summers <david@summersoft.fay.ar.us> 0.16.0-4128
 - SWIG now builds so we can use cvs2svn.
 
@@ -188,6 +189,20 @@ if [ -f /usr/bin/autoconf-2.53 ]; then
 fi
 sh autogen.sh
 
+
+# Fix up mod_dav_svn installation.
+%patch0 -p1
+
+# Brand release number into the displayed version number.
+RELEASE_NAME="r%{release}"
+export RELEASE_NAME
+vsn_file="subversion/include/svn_version.h"
+sed -e \
+ "/#define *SVN_VER_TAG/s/dev build/${RELEASE_NAME}/" \
+  < "$vsn_file" > "${vsn_file}.tmp"
+mv "${vsn_file}.tmp" "$vsn_file"
+
+%build
 LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
 	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_delta/.libs \
 	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_fs/.libs \
@@ -197,21 +212,37 @@ LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
 	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_local/.libs \
 	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_svn/.libs \
 	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_subr/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_wc/.libs \
-	" ./configure \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_wc/.libs"
+
+# Configure static.
+LDFLAGS="${LDFLAGS}" ./configure \
+	--without-berkeley-db \
+	--disable-shared \
+	--enable-all-static \
 	--prefix=/usr \
-%if %{build_cvs2svn}
 	--with-swig \
 	--with-python=/usr/bin/python2.2 \
-%endif
 	--with-apxs=%{apache_dir}/bin/apxs \
 	--with-apr=%{apache_dir}/bin/apr-config \
 	--with-apr-util=%{apache_dir}/bin/apu-config
 
-# Fix up mod_dav_svn installation.
-%patch0 -p1
+# Make svnadmin static.
+make subversion/svnadmin/svnadmin
 
-%build
+# Move static svnadmin to safe place.
+cp subversion/svnadmin/svnadmin svnadmin.static
+
+# Configure shared.
+LDFLAGS="${LDFLAGS}" ./configure \
+	--prefix=/usr \
+	--with-swig \
+	--with-python=/usr/bin/python2.2 \
+	--with-apxs=%{apache_dir}/bin/apxs \
+	--with-apr=%{apache_dir}/bin/apr-config \
+	--with-apr-util=%{apache_dir}/bin/apu-config
+
+# Make everything shared.
+make clean
 make
 
 make swig-py-ext
@@ -220,11 +251,8 @@ make swig-py-ext
 make check
 %endif
 
-%if %{build_cvs2svn}
 # Build cvs2svn python bindings
-cd subversion/bindings/swig/python
-/usr/bin/python2 setup.py build
-%endif
+make swig-py-ext
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -238,21 +266,17 @@ make install \
 	infodir=$RPM_BUILD_ROOT/usr/share/info \
 	libexecdir=$RPM_BUILD_ROOT/%{apache_dir}/lib
 
-%if %{build_cvs2svn}
-make install-swig-py-ext DISTUTIL_PARAM=--prefix=$RPM_BUILD_ROOT/usr
-%endif
-
 # Add subversion.conf configuration file into httpd.conf directory.
 cp %{SOURCE1} $RPM_BUILD_ROOT/%{apache_dir}/conf
 
-%if %{build_cvs2svn}
 # Install cvs2svn and supporting files
-cd subversion/bindings/swig/python
-/usr/bin/python2 setup.py install --prefix $RPM_BUILD_ROOT/usr
+make install-swig-py-ext DESTDIR=$RPM_BUILD_ROOT DISTUTIL_PARAM=--prefix=$RPM_BUILD_ROOT
 sed -e 's;#!/usr/bin/env python;#!/usr/bin/env python2;' < $RPM_BUILD_DIR/%{name}-%{version}/tools/cvs2svn/cvs2svn.py > $RPM_BUILD_ROOT/usr/bin/cvs2svn
 chmod a+x $RPM_BUILD_ROOT/usr/bin/cvs2svn
 cp %{SOURCE2} $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
-%endif
+
+# Copy svnadmin.static to destination
+cp svnadmin.static $RPM_BUILD_ROOT/usr/bin/svnadmin-%{version}-%{release}.static
 
 %post
 # Only add to INFO directory if this is the only instance installed.
@@ -265,6 +289,12 @@ if [ "$1"x = "1"x ]; then
 fi
 
 %preun
+# Save current copy of svnadmin.static
+echo "Saving current svnadmin-%{version}-%{release}.static as svnadmin-%{version}-%{release}"
+echo "Erase this program only after you make sure you won't need to dump/reload"
+echo "any of your repositories to upgrade to a new version of the database."
+cp /usr/bin/svnadmin-%{version}-%{release}.static /usr/bin/svnadmin-%{version}-%{release}
+
 # Only delete from INFO directory if this is the last instance being deleted.
 if [ "$1"x = "0"x ]; then
    if [ -x /sbin/install-info ]; then
@@ -319,6 +349,7 @@ rm -rf $RPM_BUILD_ROOT
 %doc tools subversion/LICENSE
 /usr/bin/svn
 /usr/bin/svnadmin
+/usr/bin/svnadmin-%{version}-%{release}.static
 /usr/bin/svnlook
 /usr/bin/svnserve
 /usr/lib/libsvn_auth*so*
@@ -345,11 +376,9 @@ rm -rf $RPM_BUILD_ROOT
 %{apache_dir}/modules/mod_dav_svn.la
 %{apache_dir}/modules/mod_dav_svn.so
 
-%if %{build_cvs2svn}
 %files cvs2svn
 %defattr(-,root,root)
 /usr/bin/cvs2svn
 /usr/lib/python2.2/site-packages/svn
 /usr/lib/python2.2/site-packages/rcsparse.py
 /usr/lib/libsvn_swig_py*so*
-%endif

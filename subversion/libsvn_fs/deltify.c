@@ -1,7 +1,7 @@
 /* deltify.c --- deltification and undeltification of nodes.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -42,7 +42,7 @@ svn_fs_deltify (svn_fs_root_t *root,
 {
   /* ### todo: make this work [currently, deltify_undeltify() does
      nothing in the deltify case].  */
-  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                            "svn_fs_deltify: currently not implemented");
 }
 
@@ -68,7 +68,7 @@ txn_body_undeltify (void *baton, trail_t *trail)
   struct undeltify_args *args = baton;
 
   /* Turn ID into a skel so we can get the rep keys. */
-  SVN_ERR (svn_fs__get_node_revision (&noderev, args->fs, args->id, trail));
+  SVN_ERR (svn_fs__bdb_get_node_revision (&noderev, args->fs, args->id, trail));
   
   /* Check that target exists.  If not, no big deal -- just do
      nothing. */

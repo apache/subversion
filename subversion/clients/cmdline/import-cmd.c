@@ -2,7 +2,7 @@
  * import-cmd.c -- Import a file or tree into the repository.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -92,7 +92,7 @@ svn_cl__import (apr_getopt_t *os,
   /* Get a repository url. */
   if (targets->nelts < 1)
     return svn_error_create
-      (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
+      (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
        "repository url required when importing");
   else
     url = ((const char **) (targets->elts))[0];
@@ -111,7 +111,7 @@ svn_cl__import (apr_getopt_t *os,
     new_entry = ((const char **) (targets->elts))[2];
   else
     return svn_error_create
-      (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
+      (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
        "too many arguments to import command");
   
   if (! opt_state->quiet)

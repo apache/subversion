@@ -2,7 +2,7 @@
  * activity.c: DeltaV activity handling
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -87,7 +87,7 @@ dav_error *dav_svn_store_activity(const dav_svn_repos *repos,
   if (status != APR_SUCCESS)
     {
       svn_error_t *serr = 
-        svn_error_create(status, 0, NULL,
+        svn_error_create(status, NULL,
                          "failed to open activity db;  check repos perms.");
 
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -103,7 +103,7 @@ dav_error *dav_svn_store_activity(const dav_svn_repos *repos,
   if (status != APR_SUCCESS)
     {
       svn_error_t *serr = 
-        svn_error_create(status, 0, NULL,
+        svn_error_create(status, NULL,
                          "failed to close activity db; check repos perms.");
 
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

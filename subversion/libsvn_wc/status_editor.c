@@ -3,7 +3,7 @@
  *                    and tweaks status structures accordingly.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -123,7 +123,8 @@ tweak_statushash (void *edit_baton,
       if (repos_text_status == svn_wc_status_added)
         adm_access = NULL;
       else if (is_dir)
-        SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, path, pool));
+        SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
+                                      path, pool));
       else
         SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
                                       svn_path_dirname (path, pool),

@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -46,9 +46,6 @@ typedef struct svn_error
 {
   /** APR error value, possibly SVN_ custom err */
   apr_status_t apr_err;
-
-  /** native error code (e.g. @c errno, @c h_errno...) */
-  int src_err;
 
   /** details from producer of error */
   const char *message;

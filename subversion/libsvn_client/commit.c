@@ -2,7 +2,7 @@
  * commit.c:  wrappers around wc commit functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -80,7 +80,7 @@ send_file_contents (const char *path,
   apr_err = apr_file_close (f);
   if (apr_err)
     return svn_error_createf
-      (apr_err, 0, NULL, "error closing `%s'", path);
+      (apr_err, NULL, "error closing `%s'", path);
 
   return SVN_NO_ERROR;
 }
@@ -291,13 +291,13 @@ import_dir (apr_hash_t *files,
   /* Check that the loop exited cleanly. */
   if (! (APR_STATUS_IS_ENOENT (err->apr_err)))
     return svn_error_createf
-      (err->apr_err, err->src_err, err,
+      (err->apr_err, err,
        "error during import of `%s'", path);
 
   /* Yes, it exited cleanly, so close the dir. */
   else if ((apr_err = apr_dir_close (dir)))
     return svn_error_createf
-      (apr_err, 0, NULL, "error closing dir `%s'", path);
+      (apr_err, NULL, "error closing dir `%s'", path);
       
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
@@ -366,7 +366,7 @@ import (const char *path,
     {
       if (! new_entry)
         return svn_error_create
-          (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL,
+          (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
            "new entry name required when importing a file");
 
       SVN_ERR (import_file (files,
@@ -430,7 +430,7 @@ import (const char *path,
   else if (kind == svn_node_none)
     {
       return svn_error_createf
-        (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL,
+        (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
          "'%s' does not exist.", path);  
     }
 
@@ -543,13 +543,13 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   /* Sanity check: NEW_ENTRY can be null or non-empty, but it can't be
      empty. */
   if (new_entry && (strcmp (new_entry, "") == 0))
-    return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, 0, NULL,
+    return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, NULL,
                              "empty string is an invalid entry name");
 
   /* The repository doesn't know about the reserved. */
   if (new_entry && strcmp (new_entry, SVN_WC_ADM_DIR_NAME) == 0)
     return svn_error_createf
-      (SVN_ERR_CL_ADM_DIR_RESERVED, 0, NULL,
+      (SVN_ERR_CL_ADM_DIR_RESERVED, NULL,
        "the name \"%s\" is reserved and cannot be imported",
        SVN_WC_ADM_DIR_NAME);
 
@@ -674,7 +674,7 @@ reconcile_errors (svn_error_t *commit_err,
   /* Else, create a new "general" error that will lead off the errors
      that follow. */
   else
-    err = svn_error_create (SVN_ERR_BASE, 0, NULL,
+    err = svn_error_create (SVN_ERR_BASE, NULL,
                             "Commit succeeded, but other errors follow:");
 
   /* If there was an unlock error... */
@@ -758,8 +758,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   apr_hash_t *committables, *tempfiles = NULL;
   svn_wc_adm_access_t *base_dir_access;
   apr_array_header_t *commit_items;
-  svn_error_t *cmt_err = NULL, *unlock_err = NULL;
-  svn_error_t *bump_err = NULL, *cleanup_err = NULL;
+  svn_error_t *cmt_err = SVN_NO_ERROR, *unlock_err = SVN_NO_ERROR;
+  svn_error_t *bump_err = SVN_NO_ERROR, *cleanup_err = SVN_NO_ERROR;
   svn_boolean_t commit_in_progress = FALSE;
   const char *display_dir = "";
   int i;
@@ -885,7 +885,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
           if (item->revision != head)
             {
               cmt_err = svn_error_createf 
-                (SVN_ERR_WC_NOT_UP_TO_DATE, 0, NULL,
+                (SVN_ERR_WC_NOT_UP_TO_DATE, NULL,
                  "Cannot commit propchanges for directory '%s'",
                  item->path);
               goto cleanup;
@@ -999,7 +999,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
     goto cleanup;
 
   /* Sleep for one second to ensure timestamp integrity. */
-  apr_sleep (APR_USEC_PER_SEC * 1);
+  apr_sleep (apr_time_from_sec(1));
 
  cleanup:
   /* Abort the commit if it is still in progress. */

@@ -2,7 +2,7 @@
  * xml.c:  xml helper code shared among the Subversion libraries.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -276,7 +276,7 @@ svn_xml_parse (svn_xml_parser_t *svn_parser,
   if (! success)
     {
       err = svn_error_createf
-        (SVN_ERR_XML_MALFORMED, 0, NULL, 
+        (SVN_ERR_XML_MALFORMED, NULL, 
          "%s at line %d",
          XML_ErrorString (XML_GetErrorCode (svn_parser->parser)),
          XML_GetCurrentLineNumber (svn_parser->parser));

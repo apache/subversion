@@ -107,11 +107,22 @@ AC_DEFUN(SVN_FIND_SWIG,
       AC_CACHE_CHECK([for Python includes], [ac_cv_python_includes],[
         ac_cv_python_includes="`$PYTHON ${abs_srcdir}/ac-helpers/get-py-info.py --includes`"
       ])
-      SWIG_PY_INCLUDES="-I$ac_cv_python_includes"
+      SWIG_PY_INCLUDES="$ac_cv_python_includes"
+
+      AC_CACHE_CHECK([for compiling Python extensions], [ac_cv_python_compile],[
+        ac_cv_python_compile="`$PYTHON ${abs_srcdir}/ac-helpers/get-py-info.py --compile`"
+      ])
+      SWIG_PY_COMPILE="$ac_cv_python_compile"
+
+      AC_CACHE_CHECK([for linking Python extensions], [ac_cv_python_link],[
+        ac_cv_python_link="`$PYTHON ${abs_srcdir}/ac-helpers/get-py-info.py --link`"
+      ])
+      SWIG_PY_LINK="$ac_cv_python_link"
     fi
 
     if test "$JDK" != "none" -a "$SWIG_SUITABLE" = "yes"; then
-      for dir in `find "$JDK/include" -type d -print`; do
+      list="`find "$JDK/include" -type d -print`"
+      for dir in $list; do
         SWIG_JAVA_INCLUDES="$SWIG_JAVA_INCLUDES -I$dir"
       done
     fi
@@ -119,6 +130,8 @@ AC_DEFUN(SVN_FIND_SWIG,
   AC_SUBST(SWIG_BUILD_RULES)
   AC_SUBST(SWIG_INSTALL_RULES)
   AC_SUBST(SWIG_PY_INCLUDES)
+  AC_SUBST(SWIG_PY_COMPILE)
+  AC_SUBST(SWIG_PY_LINK)
   AC_SUBST(SWIG_PY_SETUP_LDFLAGS)
   AC_SUBST(SWIG_JAVA_INCLUDES)
   AC_SUBST(SWIG_LIBSWIG_DIR)

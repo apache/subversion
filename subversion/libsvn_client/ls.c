@@ -2,7 +2,7 @@
  * ls.c:  list local and remote directory entries.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -41,7 +41,7 @@ get_dir_contents (apr_hash_t *dirents,
   if (ra_lib->get_dir)
     SVN_ERR (ra_lib->get_dir (session, dir, rev, &tmpdirents, NULL, NULL));
   else
-    return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, 0, NULL,
+    return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
                              "No get_dir() available for url schema.");
 
   for (hi = apr_hash_first (pool, tmpdirents);
@@ -80,14 +80,18 @@ svn_client_ls (apr_hash_t **dirents,
   void *ra_baton, *session;
   svn_revnum_t rev;
   svn_node_kind_t url_kind;
+  const char *auth_dir;
 
   /* Get the RA library that handles URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url, pool));
 
+  SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
+
   /* Open a repository session to the URL. */
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, NULL, NULL,
-                                        NULL, FALSE, FALSE, TRUE, 
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url,
+                                        auth_dir,
+                                        NULL, NULL, FALSE, FALSE, TRUE, 
                                         auth_baton, pool));
 
   /* Resolve REVISION into a real revnum. */
@@ -117,7 +121,8 @@ svn_client_ls (apr_hash_t **dirents,
       /* Re-open the session to the file's parent instead. */
       svn_path_split (url, &parent_url, &base_name, pool);
       SVN_ERR (ra_lib->close (session));
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, parent_url, NULL,
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, parent_url,
+                                            auth_dir,
                                             NULL, NULL, FALSE, FALSE, TRUE, 
                                             auth_baton, pool));
 
@@ -125,7 +130,7 @@ svn_client_ls (apr_hash_t **dirents,
       if (ra_lib->get_dir)
         SVN_ERR (ra_lib->get_dir (session, "", rev, &parent_ents, NULL, NULL));
       else
-        return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, 0, NULL,
+        return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
                                  "No get_dir() available for url schema.");
 
       SVN_ERR (ra_lib->close (session));
@@ -134,13 +139,13 @@ svn_client_ls (apr_hash_t **dirents,
       *dirents = apr_hash_make (pool);
       the_ent = apr_hash_get (parent_ents, base_name, APR_HASH_KEY_STRING);
       if (the_ent == NULL)
-        return svn_error_create (SVN_ERR_FS_NOT_FOUND, 0, NULL,
+        return svn_error_create (SVN_ERR_FS_NOT_FOUND, NULL,
                                  "URL non-existent in that revision.");
         
       apr_hash_set (*dirents, base_name, APR_HASH_KEY_STRING, the_ent);
     }
   else
-    return svn_error_create (SVN_ERR_FS_NOT_FOUND, 0, NULL,
+    return svn_error_create (SVN_ERR_FS_NOT_FOUND, NULL,
                              "URL non-existent in that revision.");
 
   return SVN_NO_ERROR;

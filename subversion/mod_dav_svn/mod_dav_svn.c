@@ -3,7 +3,7 @@
  *                repository.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,6 +23,7 @@
 #include <httpd.h>
 #include <http_config.h>
 #include <mod_dav.h>
+#include <ap_provider.h>
 
 #include <apr_strings.h>
 
@@ -48,6 +49,7 @@ typedef struct {
   const char *repo_name;        /* repository name */
   const char *xslt_uri;         /* XSL transform URI */
   const char *fs_parent_path;   /* path to parent of of SVN FS'es  */
+  svn_boolean_t autoversioning; /* whether autoversioning is active */
 } dav_svn_dir_conf;
 
 #define INHERIT_VALUE(parent, child, field) \
@@ -103,6 +105,7 @@ static void *dav_svn_merge_dir_config(apr_pool_t *p,
     newconf->repo_name = INHERIT_VALUE(parent, child, repo_name);
     newconf->xslt_uri = INHERIT_VALUE(parent, child, xslt_uri);
     newconf->fs_parent_path = INHERIT_VALUE(parent, child, fs_parent_path);
+    newconf->autoversioning = INHERIT_VALUE(parent, child, autoversioning);
 
     return newconf;
 }
@@ -123,6 +126,19 @@ static const char *dav_svn_xslt_uri(cmd_parms *cmd, void *config,
   dav_svn_dir_conf *conf = config;
 
   conf->xslt_uri = apr_pstrdup(cmd->pool, arg1);
+
+  return NULL;
+}
+
+static const char *dav_svn_autoversioning_cmd(cmd_parms *cmd, void *config,
+                                              int arg)
+{
+  dav_svn_dir_conf *conf = config;
+
+  if (arg)
+    conf->autoversioning = TRUE;
+  else
+    conf->autoversioning = FALSE;
 
   return NULL;
 }
@@ -232,6 +248,14 @@ const char *dav_svn_get_special_uri(request_rec *r)
     return conf->special_uri ? conf->special_uri : SVN_DEFAULT_SPECIAL_URI;
 }
 
+svn_boolean_t dav_svn_get_autoversioning_flag(request_rec *r)
+{
+    dav_svn_dir_conf *conf;
+
+    conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+    return conf->autoversioning;
+}
+
 
 /** Module framework stuff **/
 
@@ -261,11 +285,14 @@ static const command_rec dav_svn_cmds[] =
                 "specifies the location in the filesystem whose "
                 "subdirectories are assumed to be Subversion repositories."),
 
+  /* per directory/location */
+  AP_INIT_FLAG("SVNAutoversioning", dav_svn_autoversioning_cmd, NULL,
+               ACCESS_CONF|RSRC_CONF, "turn on deltaV autoversioning."),
 
   { NULL }
 };
 
-static const dav_provider dav_svn_provider =
+static dav_provider dav_svn_provider =
 {
     &dav_svn_hooks_repos,
     &dav_svn_hooks_propdb,
@@ -277,7 +304,15 @@ static const dav_provider dav_svn_provider =
 
 static void register_hooks(apr_pool_t *pconf)
 {
+    dav_hooks_locks *optional_locks;
+
     ap_hook_post_config(dav_svn_init, NULL, NULL, APR_HOOK_MIDDLE);
+
+    optional_locks = ap_lookup_provider("dav-lock", "generic", "0");
+
+    if (optional_locks) {
+        dav_svn_provider.locks = optional_locks;
+    }
 
     /* our provider */
     dav_register_provider(pconf, "svn", &dav_svn_provider);

@@ -2,7 +2,7 @@
  * node_tree.c:  an editor for tracking repository deltas changes
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -162,7 +162,7 @@ delete_entry (const char *path,
   /* Was this a dir or file (we have to check the base root for this one) */
   kind = svn_fs_check_path (eb->base_root, path, pool);
   if (kind == svn_node_none)
-    return svn_error_create (SVN_ERR_FS_NOT_FOUND, 0, NULL, path);
+    return svn_error_create (SVN_ERR_FS_NOT_FOUND, NULL, path);
                               
   /* Get (or create) the change node and update it. */
   name = svn_path_basename (path, pool);

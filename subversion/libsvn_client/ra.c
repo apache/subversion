@@ -2,7 +2,7 @@
  * ra.c :  routines for interacting with the RA layer
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -120,7 +120,7 @@ push_wc_prop (void *baton,
      match for this relative URL. */
   if (! cb->commit_items)
     return svn_error_createf
-      (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        "Attempt to set wc property '%s' on '%s' in a non-commit operation",
        name, relpath);
 

@@ -2,7 +2,7 @@
  * main.c: Subversion server inspection tool.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -68,7 +68,7 @@ static svn_opt_subcommand_t
 enum 
   { 
     svnlook__show_ids = SVN_OPT_FIRST_LONGOPT_ID,
-    svnlook__no_diff_on_delete
+    svnlook__no_diff_deleted
   };
 
 /*
@@ -94,8 +94,8 @@ static const apr_getopt_option_t options_table[] =
     {"show-ids",      svnlook__show_ids, 0,
      "show node revision ids for each path"},
 
-    {"no-diff-on-delete", svnlook__no_diff_on_delete, 0,
-     "do not run diff on deleted files"},
+    {"no-diff-deleted", svnlook__no_diff_deleted, 0,
+     "do not print differences for deleted files"},
 
     {0,               0, 0, 0}
   };
@@ -124,7 +124,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     {"diff", subcommand_diff, {0},
      "usage: svnlook diff REPOS_PATH\n\n"
      "Print GNU-style diffs of changed files and properties.\n",
-     {'r', 't', svnlook__no_diff_on_delete} },
+     {'r', 't', svnlook__no_diff_deleted} },
 
     {"dirs-changed", subcommand_dirschanged, {0},
      "usage: svnlook dirs-changed REPOS_PATH\n\n"
@@ -169,7 +169,7 @@ struct svnlook_opt_state
   const char *txn;
   svn_boolean_t show_ids;
   svn_boolean_t help;
-  svn_boolean_t no_diff_on_delete;
+  svn_boolean_t no_diff_deleted;
 };
 
 
@@ -179,7 +179,7 @@ typedef struct svnlook_ctxt_t
   svn_fs_t *fs;
   svn_boolean_t is_revision;
   svn_boolean_t show_ids;
-  svn_boolean_t no_diff_on_delete;
+  svn_boolean_t no_diff_deleted;
   svn_revnum_t rev_id;
   svn_fs_txn_t *txn;
   const char *txn_name /* UTF-8! */;
@@ -438,7 +438,7 @@ open_writable_binary_file (apr_file_t **fh,
   /* If the file path has no parent, then we've already tried to open
      it as best as we care to try above. */
   if (svn_path_is_empty (dir))
-    return svn_error_createf (err->apr_err, err->src_err, err,
+    return svn_error_createf (err->apr_err, err,
                               "Error opening writable file %s", path);
 
   path_pieces = svn_path_decompose (dir, pool);
@@ -461,7 +461,7 @@ open_writable_binary_file (apr_file_t **fh,
       else if (kind != svn_node_dir)
         {
           if (err)
-            return svn_error_createf (err->apr_err, err->src_err, err,
+            return svn_error_createf (err->apr_err, err,
                                       "Error creating dir %s (path exists)", 
                                       full_path);
         }
@@ -473,7 +473,7 @@ open_writable_binary_file (apr_file_t **fh,
                           APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BINARY,
                           APR_OS_DEFAULT, pool);
   if (err)
-    return svn_error_createf (err->apr_err, err->src_err, err,
+    return svn_error_createf (err->apr_err, err,
                               "Error opening writable file %s", path);
     
   return SVN_NO_ERROR;
@@ -503,7 +503,7 @@ dump_contents (apr_file_t *fh,
       apr_err = apr_file_write (fh, buffer, &len2);
       if ((apr_err) || (len2 != len))
         return svn_error_createf 
-          (apr_err ? apr_err : SVN_ERR_INCOMPLETE_DATA, 0, NULL,
+          (apr_err ? apr_err : SVN_ERR_INCOMPLETE_DATA, NULL,
            "Error writing contents of %s", path);
       if (len != sizeof (buffer))
         break;
@@ -523,7 +523,7 @@ print_diff_tree (svn_fs_root_t *root,
                  svn_repos_node_t *node, 
                  const char *path /* UTF-8! */,
                  const char *base_path /* UTF-8! */,
-                 svn_boolean_t no_diff_on_delete,
+                 svn_boolean_t no_diff_deleted,
                  apr_pool_t *pool)
 {
   const char *orig_path = NULL, *new_path = NULL;
@@ -643,7 +643,7 @@ print_diff_tree (svn_fs_root_t *root,
                   path_native);
         }
 
-      if ((! no_diff_on_delete) || (node->action != 'D'))
+      if ((! no_diff_deleted) || (node->action != 'D'))
         {
           printf ("===========================================================\
 ===================\n");
@@ -654,7 +654,7 @@ print_diff_tree (svn_fs_root_t *root,
           apr_err = apr_file_open_stdout (&outhandle, pool);
           if (apr_err)
             return svn_error_create 
-              (apr_err, 0, NULL,
+              (apr_err, NULL,
                "print_diff_tree: can't open handle to stdout");
 
           label = apr_psprintf (pool, "%s\t(original)", base_path);
@@ -694,7 +694,7 @@ print_diff_tree (svn_fs_root_t *root,
              (root, base_root, node,
               svn_path_join (path, node->name, subpool),
               svn_path_join (base_path, node->name, subpool),
-              no_diff_on_delete,
+              no_diff_deleted,
               subpool));
 
     /* Recurse across siblings. */
@@ -706,7 +706,7 @@ print_diff_tree (svn_fs_root_t *root,
                  (root, base_root, node,
                   svn_path_join (path, node->name, subpool),
                   svn_path_join (base_path, node->name, subpool),
-                  no_diff_on_delete,
+                  no_diff_deleted,
                   pool));
       }
     
@@ -874,7 +874,7 @@ do_dirs_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
 
   if (! SVN_IS_VALID_REVNUM (base_rev_id))
     return svn_error_createf 
-      (SVN_ERR_FS_NO_SUCH_REVISION, 0, NULL,
+      (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
        "Transaction '%s' is not based on a revision.  How odd.",
        c->txn_name);
   
@@ -904,7 +904,7 @@ do_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
 
   if (! SVN_IS_VALID_REVNUM (base_rev_id))
     return svn_error_createf 
-      (SVN_ERR_FS_NO_SUCH_REVISION, 0, NULL,
+      (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
        "Transaction '%s' is not based on a revision.  How odd.",
        c->txn_name);
   
@@ -933,7 +933,7 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
 
   if (! SVN_IS_VALID_REVNUM (base_rev_id))
     return svn_error_createf 
-      (SVN_ERR_FS_NO_SUCH_REVISION, 0, NULL,
+      (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
        "Transaction '%s' is not based on a revision.  How odd.",
        c->txn_name);
   
@@ -944,7 +944,7 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
       svn_node_kind_t kind;
       SVN_ERR (svn_fs_revision_root (&base_root, c->fs, base_rev_id, pool));
       SVN_ERR (print_diff_tree (root, base_root, tree, "", "",
-                                c->no_diff_on_delete, pool));
+                                c->no_diff_deleted, pool));
       SVN_ERR (svn_io_check_path (SVNLOOK_TMPDIR, &kind, pool));
       if (kind == svn_node_dir)
         SVN_ERR (svn_io_remove_dir (SVNLOOK_TMPDIR, pool));
@@ -978,7 +978,7 @@ get_ctxt_baton (svnlook_ctxt_t **baton_p,
   SVN_ERR (svn_repos_open (&(baton->repos), opt_state->repos_path, pool));
   baton->fs = svn_repos_fs (baton->repos);
   baton->show_ids = opt_state->show_ids;
-  baton->no_diff_on_delete = opt_state->no_diff_on_delete;
+  baton->no_diff_deleted = opt_state->no_diff_deleted;
   baton->is_revision = opt_state->txn ? FALSE : TRUE;
   baton->rev_id = opt_state->rev;
   baton->txn_name = apr_pstrdup (pool, opt_state->txn);
@@ -1125,15 +1125,6 @@ subcommand_youngest (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
 /*** Main. ***/
 
-#define INT_ERR(expr)                                       \
-  do {                                                      \
-    svn_error_t *svnlook_err__temp = (expr);                \
-    if (svnlook_err__temp) {                                \
-      svn_handle_error (svnlook_err__temp, stderr, FALSE);  \
-      return EXIT_FAILURE; }                                \
-  } while (0)
-
-
 int
 main (int argc, const char * const *argv)
 {
@@ -1204,8 +1195,9 @@ main (int argc, const char * const *argv)
         case 'r':
           opt_state.rev = atoi (opt_arg);
           if (! SVN_IS_VALID_REVNUM (opt_state.rev))
-            INT_ERR (svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
-                                       "Invalid revision number supplied."));
+            SVN_INT_ERR (svn_error_create
+                         (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                          "Invalid revision number supplied."));
           break;
 
         case 't':
@@ -1221,8 +1213,8 @@ main (int argc, const char * const *argv)
           opt_state.show_ids = TRUE;
           break;
 
-        case svnlook__no_diff_on_delete:
-          opt_state.no_diff_on_delete = TRUE;
+        case svnlook__no_diff_deleted:
+          opt_state.no_diff_deleted = TRUE;
           break;
 
         default:
@@ -1235,10 +1227,10 @@ main (int argc, const char * const *argv)
 
   /* The --transaction and --revision options may not co-exist. */
   if ((opt_state.rev != SVN_INVALID_REVNUM) && opt_state.txn)
-    INT_ERR (svn_error_create 
-             (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, 0, NULL,
-              "The '--transaction' (-t) and '--revision' (-r) arguments "
-              "may no co-exist."));
+    SVN_INT_ERR (svn_error_create 
+                 (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                  "The '--transaction' (-t) and '--revision' (-r) arguments "
+                  "may no co-exist."));
 
   /* If the user asked for help, then the rest of the arguments are
      the names of subcommands to get help on (if any), or else they're
@@ -1281,8 +1273,9 @@ main (int argc, const char * const *argv)
 
       if (os->ind < os->argc)
         {
-          INT_ERR (svn_utf_cstring_to_utf8 (&repos_path, os->argv[os->ind++],
-                                            NULL, pool));
+          SVN_INT_ERR (svn_utf_cstring_to_utf8 (&repos_path,
+                                                os->argv[os->ind++],
+                                                NULL, pool));
           repos_path = svn_path_canonicalize (repos_path, pool);
         }
 
@@ -1290,6 +1283,14 @@ main (int argc, const char * const *argv)
         {
           fprintf (stderr, "repository argument required\n");
           subcommand_help (NULL, NULL, pool);
+          svn_pool_destroy (pool);
+          return EXIT_FAILURE;
+        }
+      else if (svn_path_is_url (repos_path))
+        {
+          fprintf (stderr,
+                   "'%s' is a url when it should be a path\n",
+                   repos_path);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }

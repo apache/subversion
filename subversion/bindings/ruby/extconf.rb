@@ -29,6 +29,7 @@ $objs = [
 $CFLAGS << ' -I. '
 
 $LDFLAGS << `apr-config --ldflags`.chop
+$LDFLAGS << `apr-config --link-ld`.chop
 $LOCAL_LIBS << `apr-config --libs`.chop
 $CFLAGS << `apr-config --cflags`.chop
 $CFLAGS << `apr-config --includes`.chop

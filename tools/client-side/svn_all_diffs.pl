@@ -7,6 +7,16 @@
 
 use strict;
 use Carp;
+use Getopt::Long 2.25;
+
+# Process the command line options.
+
+# Print the log message along with the modifications made in a
+# particular revision.
+my $opt_print_log_message;
+
+GetOptions('log' => \$opt_print_log_message)
+  or &usage;
 
 &usage("$0: too few arguments") if @ARGV < 1;
 &usage("$0: too many arguments") if @ARGV > 1;
@@ -18,17 +28,61 @@ unless (-e $file_or_dir)
     die "$0: file or directory `$file_or_dir' does not exist.\n";
   }
 
-# Get all the revisions that this file or directory changed.  This
-# gets the revisions in latest to oldest order.
-my @revs = map { m/^rev (\d+)/ } read_from_process('svn', 'log', $file_or_dir);
+# Get the entire log for this file or directory.  Parse the log into
+# two separate lists.  The first is a list of the revision numbers
+# when this file or directory was modified.  The second is a hash of
+# log messages for each revision.
+my @revisions;
+my %log_messages;
+{
+  my $current_revision;
+  foreach my $log_line (read_from_process('svn', 'log', $file_or_dir))
+    {
+      # Ignore any of the lines containing only -'s.
+      next if $log_line =~ /^-+$/;
+
+      if (my ($r) = $log_line =~ /^rev (\d+)/)
+        {
+          $current_revision                = $r;
+          $log_messages{$current_revision} = "";
+          push(@revisions, $r);
+        }
+
+      if (defined $current_revision)
+        {
+          $log_messages{$current_revision} .= "$log_line\n";
+        }
+    }
+}
 
 # Run all the diffs.
-while (@revs > 1) {
-  my $new_rev = shift @revs;
-  my $old_rev = $revs[0];
-  print join("\n", read_from_process('svn', 'diff',
-                                     "-r$old_rev:$new_rev", $file_or_dir),
-                   "\n");  
+while (@revisions > 1)
+  {
+    my $new_rev = shift @revisions;
+    my $old_rev = $revisions[0];
+
+    &print_revision($new_rev);
+
+    my @diff = read_from_process('svn', 'diff',
+                                 "-r$old_rev:$new_rev", $file_or_dir);
+
+    if ($opt_print_log_message)
+      {
+        print $log_messages{$new_rev};
+      }
+    print join("\n", @diff, "\n");
+  }
+
+# Print the log message for the last revision.  There is no diff for
+# this revision, because according to svn log, the file or directory
+# did not exist previously.
+{
+  my $last_revision = shift @revisions;
+  if ($opt_print_log_message)
+    {
+      &print_revision($last_revision);
+      print $log_messages{$last_revision};
+    }
 }
 
 exit 0;
@@ -37,6 +91,13 @@ sub usage
 {
   warn "@_\n" if @_;
   die "usage: $0 file_or_dir\n";
+}
+
+sub print_revision
+{
+  my $revision = shift;
+
+  print "\n\n\nRevision $revision\n";
 }
 
 # Start a child process safely without using /bin/sh.

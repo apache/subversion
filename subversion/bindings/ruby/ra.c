@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -304,7 +304,7 @@ get_user_and_pass (char **username,
 
   if (CLASS_OF (obj) != rb_cArray
       || RARRAY (obj)->len != 2)
-    return svn_error_create (APR_EGENERAL, 0, 0,
+    return svn_error_create (APR_EGENERAL, 0,
                              "GetUserAndPass returned wrong object");
   {
     VALUE user, pass;
@@ -349,7 +349,7 @@ get_authenticator (void **authenticator,
       *auth_baton = (void *)cb->callback;
     }
   else
-    return svn_error_create (SVN_ERR_RA_UNKNOWN_AUTH, 0, 0,
+    return svn_error_create (SVN_ERR_RA_UNKNOWN_AUTH, 0,
                              "Unknown authorization method");
   return SVN_NO_ERROR;
 }
@@ -481,7 +481,7 @@ ra_get_dated_revision (VALUE self, VALUE aDate)
     sec = NUM2LONG (rb_funcall (aDate, rb_intern ("tv_sec"), 0));
     usec = NUM2LONG (rb_funcall (aDate, rb_intern ("tv_usec"), 0));
     err = ra->plugin->get_dated_revision (ra->session_baton, &revision,
-                                          sec * APR_USEC_PER_SEC + usec);
+                                          apr_time_make(sec, usec));
   }
 
   if (err)

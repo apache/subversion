@@ -168,7 +168,8 @@ SVN_FIND_APACHE(20020903)
 
 dnl Check for libraries --------------------
 
-dnl AC_CHECK_LIB() calls go here, if we ever need any
+# Berkeley DB on SCO OpenServer needs -lsocket
+AC_CHECK_LIB(socket, socket)
 
 # Build the filesystem library (and repository administration tool)
 # only if we have an appropriate version of Berkeley DB.

@@ -2,7 +2,7 @@
  * cleanup.c:  wrapper around wc cleanup functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -42,7 +42,7 @@ svn_client_cleanup (const char *dir,
 
   SVN_ERR (svn_io_check_path (dir, &kind, pool));
   if (kind != svn_node_dir)
-    return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL,
+    return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
                               "Cannot cleanup '%s' -- not a directory", 
                               dir);
 

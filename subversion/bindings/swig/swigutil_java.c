@@ -2,7 +2,7 @@
  * swigutil_java.c: utility functions for the SWIG Java bindings
  *
  * ====================================================================
- * Copyright (c) 2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -217,7 +217,7 @@ static svn_error_t * convert_java_error(JNIEnv *jenv, apr_pool_t *pool)
 {
   /* ### need to fetch the Python error and map it to an svn_error_t */
 
-  return svn_error_create(APR_EGENERAL, 0, NULL, pool,
+  return svn_error_create(APR_EGENERAL, NULL, pool,
                           "the Python callback raised an exception");
 }
 

@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2001 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2003 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -118,7 +118,10 @@ def do_routine_switching(wc_dir, verify):
                                              expected_status):
       return 1
   else:
-    svntest.main.run_svn(None, 'switch', gamma_url, iota_path)
+    svntest.main.run_svn(None, 'switch',
+                         '--username', svntest.main.wc_author,
+                         '--password', svntest.main.wc_passwd,
+                         gamma_url, iota_path)
   
   ### Switch the directory `A/B' to `A/D/G'.
 

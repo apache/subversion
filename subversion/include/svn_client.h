@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -635,6 +635,9 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
  *
  * If @a recurse is true (and the @a paths are directories) this will be a
  * recursive operation.
+ *
+ * If @a no_diff_deleted is true, then no diff output will be
+ * generated on deleted files.
  * 
  * @a diff_options (an array of <tt>const char *</tt>) is used to pass 
  * additional command line options to the diff processes invoked to compare
@@ -649,6 +652,7 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
                               const char *path2,
                               const svn_opt_revision_t *revision2,
                               svn_boolean_t recurse,
+                              svn_boolean_t no_diff_deleted,
                               apr_file_t *outfile,
                               apr_file_t *errfile,
                               apr_pool_t *pool);

@@ -63,9 +63,6 @@ Security
 There is no way to disable anonymous authentication.  Fixing that
 will probably wait for a server configuration file.
 
-The now the client URL can escape from the logical root area using
-".." path elements.  The server should check for that.
-
 Port number
 -----------
 

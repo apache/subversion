@@ -66,6 +66,15 @@ I.    BUILD REQUIREMENTS
       to stay compatible with the versions bundled within the latest
       httpd-2.0 release.
 
+ -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
+ NOTE: This release of Subversion requires an httpd, APR, and APRUTIL
+ more advanced than the latest public releases.  Please use
+ http://subversion.tigris.org/files/documents/15/2609/httpd-2.0.44-dev.tar.gz
+ and the APR/APRUTIL bundled inside it.  This is a temporary situation; we
+ expect Subversion to be building against official releases, or at least
+ snapshots, of Apache and APR/APRUTIL releases again soon.
+ -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
+
       If you already have the APR libraries compiled and do not wish to
       regenerate them from source code, then Subversion needs to be
       able to find them.
@@ -96,10 +105,7 @@ I.    BUILD REQUIREMENTS
       source code into the "./apr" and "./apr-util" directories. The
       Subversion tarball comes with copies of the libraries' source
       code stored in these subdirectories which you could copy or link
-      to.  At any given moment, Subversion tries to be compatible with
-      the latest released versions of APR and APRUTIL, in particular,
-      the ones that come bundled within the latest released version of
-      Apache httpd.
+      to.
 
       If you need the latest CVS versions, however, you can use the
       following two commands. If you run them from the directory where
@@ -133,6 +139,9 @@ I.    BUILD REQUIREMENTS
 
       This is required only if you plan to build from the latest source
       (See section II.B), which you probably want to do. See above.
+
+      Note: Some systems (Solaris, for example) require libtool 1.4.3 or
+      newer. The autogen.sh script knows about that.
 
 
       4.  bison or yacc (Unix only)
@@ -212,7 +221,7 @@ I.    BUILD REQUIREMENTS
           http://subversion.tigris.org/servlets/ProjectDownloadList
 
 
-      7.  Apache Web Server 2.0.42 or newer
+      7.  Apache Web Server 2.0.44-dev or newer
 
       The Apache HTTP server is required if you wish to offer your
       Subversion repository over the Internet. Building Subversion, the
@@ -220,6 +229,12 @@ I.    BUILD REQUIREMENTS
       with Subversion are complicated enough that there is a whole
       section at the end of this document that describes how it is
       done. See section III for details.
+
+ -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
+                              NOTE: please use
+ http://subversion.tigris.org/files/documents/15/2609/httpd-2.0.44-dev.tar.gz
+                        with this release of Subversion.
+ -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
 
 
       8.  Python 2.0
@@ -921,7 +936,7 @@ III.  BUILDING A SUBVERSION SERVER
   E. Alternative:  'svnserve' and ra_svn
      -----------------------------------
 
-      As of svn 0.16, we have new repository-access implementation,
+      As of svn 0.16, we have a new repository-access implementation,
       libsvn_ra_svn (on the client side) and the 'svnserve' process on
       the server.  This is a simple network layer that speaks a custom
       protocol over plain TCP (documented in libsvn_ra_svn/protocol):
