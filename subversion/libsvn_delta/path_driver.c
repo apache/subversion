@@ -217,11 +217,12 @@ svn_delta_path_driver (const svn_delta_editor_t *editor,
       svn_path_split (path, &pdir, &bname, iterpool);
       if (strlen (pdir) > common_len)
         {
-          const char *rel = pdir;
           const char *piece = pdir + common_len + 1;
 
           while (1)
             {
+              const char *rel = pdir;
+
               /* Find the first separator. */
               piece = strchr (piece, '/');
 
