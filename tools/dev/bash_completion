@@ -59,8 +59,11 @@ _svn()
 	# possible options for the command
 	cmdOpts=
 	case ${COMP_WORDS[1]} in
+	--version)
+		cmdOpts="$qOpts"
+		;;
 	add)
-		cmdOpts="--targets -R --recursive"
+		cmdOpts="--targets -R --recursive $qOpts"
 		;;
 	checkout|co)
 		cmdOpts="$nOpts $rOpts $pOpts $qOpts"
@@ -71,10 +74,10 @@ _svn()
 		cmdOpts="$mOpts $qOpts $nOpts --targets --force $pOpts"
 		;;
 	copy|cp)
-		cmdOpts="$mOpts $rOpts $pOpts"
+		cmdOpts="$mOpts $rOpts $pOpts $qOpts"
 		;;
 	delete|del|remove|rm)
-		cmdOpts="--force $mOpts --targets $pOpts"
+		cmdOpts="--force $mOpts --targets $pOpts $qOpts"
 		;;
 	diff|di)
 		cmdOpts="$nOpts $rOpts $pOpts -x --extensions"
@@ -89,25 +92,24 @@ _svn()
 		cmdOpts="--targets -R --recursive"
 		;;
 	list|ls)
-		cmdOpts="$rOpts"
+		cmdOpts="$rOpts -v --verbose $pOpts -R --recursive"
 		;;
 	log)
 		cmdOpts="$rOpts -v --verbose --strict --targets --xml $pOpts"
 		;;
 	merge)
-		cmdOpts="$rOpts --force $nOpts $pOpts"
+		cmdOpts="$rOpts --force $nOpts $pOpts $qOpts"
 		;;
 	mkdir)
-		cmdOpts="$mOpts $pOpts"
+		cmdOpts="$mOpts $pOpts $qOpts"
 		;;
 	move|mv|rename|ren)
-		cmdOpts="$mOpts $rOpts $pOpts --force"
+		cmdOpts="$mOpts $rOpts $pOpts --force $qOpts"
 		;;
 	propdel|pdel)
 		cmdOpts="$qOpts -R --recursive"
 		;;
-	propedit|pedit)
-		cmdOpts="$qOpts -R --recursive"
+	propedit|pedit|pe)
 		;;
 	propget|pget|pg)
 		cmdOpts="-R --recursive"
@@ -116,22 +118,23 @@ _svn()
 		cmdOpts="-v --verbose -R --recursive"
 		;;
 	propset|pset|ps)
-		cmdOpts="$mOpts --targets -R --recursive"
+		cmdOpts="-F --file --targets -R --recursive $qOpts"
 		;;
 	revert)
-		cmdOpts="--targets -R --recursive"
+		cmdOpts="--targets -R --recursive $qOpts"
 		;;
 	resolve)
-		cmdOpts="--targets -R --recursive"
+		cmdOpts="--targets -R --recursive $qOpts"
 		;;
 	status|stat|st)
-		cmdOpts="-u --show-updates -v --verbose $nOpts $qOpts $pOpts"
+		cmdOpts="-u --show-updates -v --verbose $nOpts $qOpts $pOpts \
+                         --no-ignore"
 		;;
 	switch|sw)
-		cmdOpts="$rOpts $nOpts $pOpts"
+		cmdOpts="$rOpts $nOpts $pOpts $qOpts"
 		;;
 	update|up)
-		cmdOpts="$rOpts $nOpts $pOpts"
+		cmdOpts="$rOpts $nOpts $pOpts $qOpts"
 		;;
 	*)
 		;;
