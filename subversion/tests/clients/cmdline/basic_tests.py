@@ -722,9 +722,37 @@ def basic_revert(sbox):
   if svntest.actions.run_and_verify_status (wc_dir, expected_status):
     return 1
   svntest.main.remove_wc(X_path)
-  outlines, errlines = svntest.main.run_svn(None, 'revert', beta_path)
+  outlines, errlines = svntest.main.run_svn(None, 'revert', X_path)
+  if errlines:
+    return 1
   expected_status.remove('X')
   if svntest.actions.run_and_verify_status (wc_dir, expected_status):
+    return 1
+
+  # Check that a directory scheduled for deletion, but physically
+  # removed, can be reverted.
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  outlines, errlines = svntest.main.run_svn(None, 'rm', E_path)
+  if errlines:
+    return 1
+  svntest.main.remove_wc(E_path)
+  expected_status.tweak('A/B/E', status='D ')
+  extra_files = ['E']
+  if (svntest.actions.run_and_verify_status (wc_dir, expected_status,
+                                             None, None,
+                                             expect_extra_files, extra_files)
+      or len(extra_files) != 0):
+    return 1
+  outlines, errlines = svntest.main.run_svn(None, 'revert', E_path)
+  if errlines:
+    return 1
+  expected_status.tweak('A/B/E', status='  ')
+  extra_files = ['E']
+  if (svntest.actions.run_and_verify_status (wc_dir, expected_status,
+                                             None, None,
+                                             expect_extra_files, extra_files)
+      or len(extra_files) != 0):
     return 1
     
 
