@@ -30,11 +30,13 @@
 
 /* Private interface for text deltas. */
 
+struct build_ops_baton_t;
+
 /* Insert a delta op into the delta window being built via BUILD_BATON. If
    OPCODE is svn_delta_new, bytes from NEW_DATA are copied into the window
    data and OFFSET is ignored.  Otherwise NEW_DATA is ignored. All
    allocations are performed in POOL. */
-void svn_txdelta__insert_op (void *build_baton,
+void svn_txdelta__insert_op (struct build_ops_baton_t *build_baton,
                              int opcode,
                              apr_off_t offset,
                              apr_off_t length,
@@ -42,7 +44,7 @@ void svn_txdelta__insert_op (void *build_baton,
                              apr_pool_t *pool);
 
 /* Create a vdelta window. Allocate temporary data from `pool'. */
-void svn_txdelta__vdelta (void *build_baton,
+void svn_txdelta__vdelta (struct build_ops_baton_t *build_baton,
                           const char *start,
                           apr_size_t source_len,
                           apr_size_t target_len,

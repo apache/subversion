@@ -217,9 +217,6 @@ svn_error_t *svn_txdelta_send_txstream (svn_txdelta_stream_t *txstream,
                                         void *handler_baton,
                                         apr_pool_t *pool);
 
-/* Free the delta stream STREAM.  */
-void svn_txdelta_free (svn_txdelta_stream_t *stream);
-
 
 /* Prepare to apply a text delta.  SOURCE is a readable generic stream
    yielding the source data, TARGET is a writable generic stream to

@@ -53,7 +53,6 @@ main (int argc, char **argv)
                              svndiff_baton,
                              NULL);
 
-  svn_txdelta_free (txdelta_stream);
   fclose (source_file);
   fclose (target_file);
 
