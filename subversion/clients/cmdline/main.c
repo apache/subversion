@@ -187,7 +187,19 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "      ommitted, value of HEAD is assumed.\n",
     {'r', 'D', 'x', 'n',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
-  
+
+  { "export", svn_cl__export, {0},
+    "export stuff.\n"
+    "usage: 1. svn export [-r REV] URL PATH\n"
+    "       2. svn export PATH1 PATH2\n\n"
+    "   1. exports a clean directory tree from the repository specified by\n"
+    "      URL, at revision REV if it is given, otherwise at HEAD, into \n"
+    "      PATH\n\n"
+    "   2. exports a clean directory tree from the working copy specified by\n"
+    "      PATH1 into PATH2.  all local changes will be preserved, but files\n"
+    "      not under revision control will not be copied.\n",
+    {'r', 'q', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
+
   { "help", svn_cl__help, {"?", "h"},
     "Display this usage message.\n"
     "usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n",

@@ -14,6 +14,7 @@ Available subcommands:
    copy (cp)
    delete (del, remove, rm)
    diff (di)
+   export
    help (?, h)
    import
    info
