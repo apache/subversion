@@ -181,6 +181,7 @@ scripts, including `cvs2svn', a CVS repository converter for subversion.
 ################################
 %prep
 %setup -q
+./autogen.sh
 LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
 	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_delta/.libs \
 	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_fs/.libs \
@@ -244,17 +245,75 @@ cp %{SOURCE2} $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages/svn
 %clean
 rm -rf $RPM_BUILD_ROOT
 
-%post -p /sbin/ldconfig
-%postun -p /sbin/ldconfig
+##################################
+###### Post and Pre Scripts ###### 
+##################################
+%post base
+/sbin/ldconfig
+# only add info stuff if this is a first time install
+if [ "$1"x = "1"x ]; then
+   if [ -x /sbin/install-info ]; then
+      /sbin/install-info /usr/share/info/svn-design.info.bz2 \
+         /usr/share/info/dir \
+         --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
+
+      /sbin/install-info /usr/share/info/svn-handbook.info.bz2 \
+         /usr/share/info/dir \
+         --entry='* Subversion: (svn-handbook).          Subversion Versioning System Manual'
+
+      /sbin/install-info /usr/share/info/svn-handbook-french.info.bz2 \
+         /usr/share/info/dir \
+         --entry='* Subversion-french: (svn-handbook-french).          Guide du gestionnaire de version Subversion'
+   fi
+fi
+
+%postun base
+/sbin/ldconfig
+# only delete info entries if this is a remove (not an upgrade)
+if [ "$1"x = "0"x ]; then
+   if [ -x /sbin/install-info ]; then
+      /sbin/install-info --delete /usr/share/info/svn-design.info.gz \
+         /usr/share/info/dir \
+         --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
+
+      /sbin/install-info --delete /usr/share/info/svn-handbook.info.gz \
+         /usr/share/info/dir \
+         --entry='* Subversion: (svn-handbook).          Subversion Versioning System Manual'
+
+      /sbin/install-info --delete /usr/share/info/svn-handbook-french.info.gz \
+         /usr/share/info/dir \
+         --entry='* Subversion-french: (svn-handbook-french).          Guide du gestionnaire de version Subversion'
+   fi
+fi
+
 %post devel -p /sbin/ldconfig
 %postun devel -p /sbin/ldconfig
+
+%post client-common -p /sbin/ldconfig
+%postun client-common -p /sbin/ldconfig
+
+%post client-local -p /sbin/ldconfig
+%postun client-local -p /sbin/ldconfig
+
+%post client-dav -p /sbin/ldconfig
+%postun client-dav -p /sbin/ldconfig
+
+%post repos -p /sbin/ldconfig
+%postun repos -p /sbin/ldconfig
+
+%post python -p /sbin/ldconfig
+%postun python -p /sbin/ldconfig
 
 ############################
 ######## Change Log ######## 
 ############################
 %changelog
+* Sun Oct 20 2002 Michael Ballbach <ballbach@rten.net> 0.14.3-3421.1mdk
+- added some more ldconfig's and some install-info like the redhat spec
+  file does.
+
 * Fri Oct 18 2002 Michael Ballbach <ballbach@rten.net> 0.14.3-3399.1mdk
-- 3399, updated to 3399, and changed how I do the version numbers.
+- updated to 3399, and changed how I do the version numbers.
   I want the repository version in there, but we certainly need the
   'program' version number in there too. So, this accomidates RPMs
   during development and post development.
