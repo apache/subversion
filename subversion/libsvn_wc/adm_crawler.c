@@ -557,7 +557,7 @@ do_prop_deltas (svn_stringbuf_t *path,
   SVN_ERR (svn_wc__load_prop_file (prop_base_path->data, baseprops, pool));
   
   /* Get an array of local changes by comparing the hashes. */
-  SVN_ERR (svn_wc__get_local_propchanges 
+  SVN_ERR (svn_wc_get_local_propchanges 
            (&local_propchanges, localprops, baseprops, pool));
 
   /* create some reusable buffers for the prop name and value */
@@ -2127,8 +2127,8 @@ svn_wc_transmit_prop_deltas (svn_stringbuf_t *path,
   SVN_ERR (svn_wc__load_prop_file (props_base->data, baseprops, pool));
   
   /* Get an array of local changes by comparing the hashes. */
-  SVN_ERR (svn_wc__get_local_propchanges (&propmods, localprops, 
-                                          baseprops, pool));
+  SVN_ERR (svn_wc_get_local_propchanges (&propmods, localprops, 
+                                         baseprops, pool));
 
   /* Apply each local change to the baton */
   for (i = 0; i < propmods->nelts; i++)

@@ -54,12 +54,12 @@
 
 /*** Deducing local changes to properties ***/
 
-/* Given two property hashes (working copy and `base'), deduce what
-   propchanges the user has made since the last update.  Return these
-   changes as a series of svn_prop_t structures stored in
-   LOCAL_PROPCHANGES, allocated from POOL.  */
-
-/* For note, here's a quick little table describing the logic of this
+/* Given two property hashes, deduce the differences between them
+   (from BASEPROPS -> LOCALPROPS).  Return these changes as a series
+   of svn_prop_t structures stored in LOCAL_PROPCHANGES, allocated
+   from POOL.
+   
+   For note, here's a quick little table describing the logic of this
    routine:
 
    basehash        localhash         event
@@ -68,12 +68,11 @@
    value = foo     value = bar       Set occurred (modification)
    value = NULL    value = baz       Set occurred (creation)
 */
-
 svn_error_t *
-svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
-                               apr_hash_t *localprops,
-                               apr_hash_t *baseprops,
-                               apr_pool_t *pool)
+svn_wc_get_local_propchanges (apr_array_header_t **local_propchanges,
+                              apr_hash_t *localprops,
+                              apr_hash_t *baseprops,
+                              apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   apr_array_header_t *ary = apr_array_make (pool, 1, sizeof(svn_prop_t));
@@ -510,8 +509,8 @@ svn_wc__merge_prop_diffs (const char *path,
   
   /* Deduce any local propchanges the user has made since the last
      update.  */
-  SVN_ERR (svn_wc__get_local_propchanges (&local_propchanges,
-                                          localhash, basehash, pool));
+  SVN_ERR (svn_wc_get_local_propchanges (&local_propchanges,
+                                         localhash, basehash, pool));
   
   /* Looping over the array of `update' propchanges we want to apply: */
   for (i = 0; i < propchanges->nelts; i++)
@@ -1326,7 +1325,7 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
      guarantees about ordering.)
 
      Therefore, rather than use contents_identical_p(), we use
-     svn_wc__get_local_propchanges(). */
+     svn_wc_get_local_propchanges(). */
   {
     apr_array_header_t *local_propchanges;
     apr_hash_t *localprops = apr_hash_make (subpool);
@@ -1336,10 +1335,10 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
     SVN_ERR (svn_wc__load_prop_file (prop_base_path->data,
                                      baseprops,
                                      subpool));
-    SVN_ERR (svn_wc__get_local_propchanges (&local_propchanges,
-                                            localprops,
-                                            baseprops,
-                                            subpool));
+    SVN_ERR (svn_wc_get_local_propchanges (&local_propchanges,
+                                           localprops,
+                                           baseprops,
+                                           subpool));
                                          
     if (local_propchanges->nelts > 0)
       *modified_p = TRUE;
@@ -1377,10 +1376,10 @@ svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
   /* At this point, if either of the propfiles are non-existent, then
      the corresponding hash is simply empty. */
 
-  SVN_ERR (svn_wc__get_local_propchanges (&local_propchanges,
-                                          localprops,
-                                          baseprops,
-                                          pool));
+  SVN_ERR (svn_wc_get_local_propchanges (&local_propchanges,
+                                         localprops,
+                                         baseprops,
+                                         pool));
 
   if (original_props != NULL)
     *original_props = baseprops;

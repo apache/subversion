@@ -426,8 +426,9 @@ merge_callbacks =
 /** The logic behind 'svn diff' and 'svn merge'.  */
 
 
-/* Hi!  I'm a soon-to-be-out-of-date comment regarding a
-   soon-to-be-rewritten diff_or_merge() function!
+/* Hi!  This is a comment left behind by Karl, and Ben is too afraid
+   to erase it at this time, because he's not fully confident that all
+   this knowledge has been grokked yet.
 
    There are five cases:
       1. path is not an URL and start_revision != end_revision
@@ -450,6 +451,42 @@ merge_callbacks =
 
 
 
+
+/* Helper function: given a working-copy PATH, return its associated
+   url in *URL, allocated in POOL.  If PATH is *already* a URL, that's
+   fine, just set *URL = PATH. */
+static svn_error_t *
+convert_to_url (svn_stringbuf_t **url,
+                svn_stringbuf_t *path,
+                apr_pool_t *pool)
+{
+  svn_string_t path_str;
+  svn_boolean_t path_is_url;
+
+  path_str.data = path->data;
+  path_str.len = path->len;
+
+  path_is_url = svn_path_is_url (&path_str);
+
+  if (path_is_url)
+    *url = path;
+  else
+    {
+      svn_wc_entry_t *entry;      
+      SVN_ERR (svn_wc_entry (&entry, path, pool));
+      if (entry)
+        *url = svn_stringbuf_dup (entry->url, pool);
+      else
+        return svn_error_createf 
+          (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+           "convert_to_url: %s is not versioned", path->data);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* PATH1, PATH2, and TARGET_WCPATH all better be directories.   For
    the single file case, the caller do the merging manually. */
 static svn_error_t *
@@ -467,9 +504,6 @@ do_merge (const svn_delta_editor_t *after_editor,
           apr_pool_t *pool)
 {
   svn_revnum_t start_revnum, end_revnum;
-  svn_string_t path_str1, path_str2;
-  svn_boolean_t path1_is_url, path2_is_url;
-  svn_wc_entry_t *entry1, *entry2;
   svn_stringbuf_t *URL1, *URL2;
   void *ra_baton, *session, *session2;
   svn_ra_plugin_t *ra_lib;
@@ -489,33 +523,8 @@ do_merge (const svn_delta_editor_t *after_editor,
     }
 
   /* Make sure we have two URLs ready to go.*/
-  URL1 = path1;
-  path_str1.data = path1->data;
-  path_str1.len = path1->len;
-  if (! ((path1_is_url = svn_path_is_url (&path_str1))))
-    {
-      SVN_ERR (svn_wc_entry (&entry1, path1, pool));
-      if (entry1)
-        URL1 = svn_stringbuf_create (entry1->url->data, pool);
-      else
-        return svn_error_createf 
-          (SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED, 0, NULL, pool,
-           "do_merge: %s is not a versioned entity", path1->data);
-    }
-
-  URL2 = path2;
-  path_str2.data = path2->data;
-  path_str2.len = path2->len;
-  if (! ((path2_is_url = svn_path_is_url (&path_str2))))
-    {
-      SVN_ERR (svn_wc_entry (&entry2, path2, pool));
-      if (entry2)
-        URL2 = svn_stringbuf_create (entry2->url->data, pool);
-      else
-        return svn_error_createf
-          (SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED, 0, NULL, pool,
-           "do_merge: %s is not a versioned entity", path2->data);
-    }
+  SVN_ERR (convert_to_url (&URL1, path1, pool));
+  SVN_ERR (convert_to_url (&URL2, path2, pool));
 
   /* Establish first RA session to URL1. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -585,6 +594,144 @@ do_merge (const svn_delta_editor_t *after_editor,
 }
 
 
+
+/* The single-file, simplified version of do_merge. */
+static svn_error_t *
+do_single_file_merge (const svn_delta_editor_t *after_editor,
+                      void *after_edit_baton,
+                      svn_client_auth_baton_t *auth_baton,
+                      svn_stringbuf_t *path1,
+                      const svn_client_revision_t *revision1,
+                      svn_stringbuf_t *path2,
+                      const svn_client_revision_t *revision2,
+                      svn_stringbuf_t *target_wcpath,
+                      apr_pool_t *pool)
+{
+  apr_status_t status;
+  svn_error_t *err;
+  apr_file_t *fp1 = NULL, *fp2 = NULL;
+  svn_stringbuf_t *tmpfile1, *tmpfile2, *URL1, *URL2;
+  svn_stream_t *fstream1, *fstream2;
+  const char *oldrev_str, *newrev_str;
+  svn_revnum_t rev1, rev2;
+  apr_hash_t *props1, *props2;
+  apr_array_header_t *propchanges;
+  void *ra_baton, *session1, *session2;
+  svn_ra_plugin_t *ra_lib;
+  
+  props1 = apr_hash_make (pool);
+  props2 = apr_hash_make (pool);
+  
+  /* Create two temporary files that contain the fulltexts of
+     PATH1@REV1 and PATH2@REV2. */
+  SVN_ERR (svn_io_open_unique_file (&fp1, &tmpfile1, 
+                                    target_wcpath->data, ".tmp",
+                                    FALSE, pool));
+  SVN_ERR (svn_io_open_unique_file (&fp2, &tmpfile2, 
+                                    target_wcpath->data, ".tmp",
+                                    FALSE, pool));
+  fstream1 = svn_stream_from_aprfile (fp1, pool);
+  fstream2 = svn_stream_from_aprfile (fp2, pool);
+  
+  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+
+  SVN_ERR (convert_to_url (&URL1, path1, pool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL1->data, pool));
+  SVN_ERR (svn_client__open_ra_session (&session1, ra_lib, URL1, NULL,
+                                        NULL, FALSE, FALSE, TRUE, 
+                                        auth_baton, pool));
+  SVN_ERR (svn_client__get_revision_number
+           (&rev1, ra_lib, session1, revision1, path1->data, pool));
+  SVN_ERR (ra_lib->get_file (session1, "", rev1, fstream1, NULL, &props1));
+  SVN_ERR (ra_lib->close (session1));
+
+  /* ### heh, funny.  we could be fetching two fulltexts from two
+     *totally* different repositories here.  :-) */
+
+  SVN_ERR (convert_to_url (&URL2, path2, pool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL2->data, pool));
+  SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL2, NULL,
+                                        NULL, FALSE, FALSE, TRUE, 
+                                        auth_baton, pool));
+  SVN_ERR (svn_client__get_revision_number
+           (&rev2, ra_lib, session2, revision2, path2->data, pool));
+  SVN_ERR (ra_lib->get_file (session2, "", rev2, fstream2, NULL, &props2));
+  SVN_ERR (ra_lib->close (session2));
+
+  status = apr_file_close (fp1);
+  if (status)
+    return svn_error_createf (status, 0, NULL, pool, "failed to close '%s'.",
+                              tmpfile1->data);
+  status = apr_file_close (fp2);
+  if (status)
+    return svn_error_createf (status, 0, NULL, pool, "failed to close '%s'.",
+                              tmpfile2->data);   
+  
+  /* Perform a 3-way merge between the temporary fulltexts and the
+     current working file. */
+  oldrev_str = apr_psprintf (pool, ".r%ld", rev1);
+  newrev_str = apr_psprintf (pool, ".r%ld", rev2); 
+  err = svn_wc_merge (tmpfile1->data, tmpfile2->data,
+                      target_wcpath->data,
+                      oldrev_str, newrev_str, ".working", pool);
+  if (err && (err->apr_err != SVN_ERR_WC_CONFLICT))
+    return err;  
+             
+  SVN_ERR (svn_io_remove_file (tmpfile1->data, pool));
+  SVN_ERR (svn_io_remove_file (tmpfile2->data, pool));
+  
+  /* Deduce property diffs, and merge those too. */
+  SVN_ERR (svn_wc_get_local_propchanges (&propchanges,
+                                         props1, props2, pool));
+  SVN_ERR (svn_wc_merge_prop_diffs (target_wcpath->data,
+                                    propchanges, pool));
+
+  /* Let's be nice and give feedback via the 'after' editor, just like
+     the recursive-directory do_merge() routine would do, by virtue of
+     being driven by dir_delta().  ### someday we'll use only the
+     notification vtable for this, instead of a trace editor. */
+  if (after_editor)
+    {
+      void *root_baton, *file_baton, *handler_baton;
+      svn_stringbuf_t *parent, *basename;
+      svn_txdelta_window_handler_t handler;
+      svn_path_split (target_wcpath, &parent, &basename, pool);
+
+      SVN_ERR (after_editor->open_root (after_edit_baton,
+                                        SVN_INVALID_REVNUM, pool,
+                                        &root_baton));
+      SVN_ERR (after_editor->open_file (basename->data, root_baton,
+                                        SVN_INVALID_REVNUM, pool,
+                                        &file_baton));
+      SVN_ERR (after_editor->apply_textdelta (file_baton, 
+                                              &handler, &handler_baton));
+      if (propchanges->nelts > 0)
+        {
+          apr_array_header_t *entry_props, *wc_props, *regular_props;
+          SVN_ERR (svn_categorize_props (propchanges,
+                                         &entry_props, 
+                                         &wc_props, 
+                                         &regular_props,
+                                         pool));
+
+          /* ### this is so silly; we just want the trace-update editor
+             to print a UU or _U here.... it ignores the prop. */
+          if (regular_props->nelts > 0)
+            SVN_ERR (after_editor->change_file_prop 
+                     (file_baton, 
+                      "foo", 
+                      svn_string_create ("foo", pool), pool));         
+        }
+      SVN_ERR (after_editor->close_file (file_baton));
+      SVN_ERR (after_editor->close_edit (after_edit_baton));
+    }
+
+  return SVN_NO_ERROR;
+}
+     
+
+
+/* This function handles single-files and directories both. */
 static svn_error_t *
 do_diff (const apr_array_header_t *options,
          svn_client_auth_baton_t *auth_baton,
@@ -841,33 +988,49 @@ svn_client_merge (const svn_delta_editor_t *after_editor,
                   svn_boolean_t recurse,
                   apr_pool_t *pool)
 {
-  struct merge_cmd_baton merge_cmd_baton;
-
-  merge_cmd_baton.pool = pool;
+  svn_wc_entry_t *entry;
   
-  /* ### TODO:  when PATH1 and PATH2 represent -files- instead of
-     directories, we can fetch fulltexts manually and run
-     svn_wc_merge() by itself.
+  SVN_ERR (svn_wc_entry (&entry, target_wcpath, pool));
+  if (entry == NULL)
+    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+                              "Can't merge changes into '%s':"
+                              "it's not under revision control.", 
+                              target_wcpath->data);
 
-     What about properties?  How do we "merge" those?  Isn't there an
-     existing svn_wc API for that, given a list of changes to merge?
+  /* If our target_wcpath is a single file, assume that PATH1 and
+     PATH2 are files as well, and do a single-file merge. */
+  if (entry->kind == svn_node_file)
+    {
+      SVN_ERR (do_single_file_merge (after_editor, after_edit_baton, 
+                                     auth_baton,
+                                     path1, revision1,
+                                     path2, revision2,
+                                     target_wcpath,
+                                     pool));
+    }
 
-     In PATH1 and PATH2 are directories, then we do the fancy
-     diff-editor thing:*/
+  /* Otherwise, this must be a directory merge.  Do the fancy
+     recursive diff-editor thing. */
+  else if (entry->kind == svn_node_dir)
+    {
+      struct merge_cmd_baton merge_cmd_baton;
+      merge_cmd_baton.pool = pool;
 
-  return do_merge (after_editor, after_edit_baton,
-                   auth_baton,
-                   path1,
-                   revision1,
-                   path2,
-                   revision2,
-                   target_wcpath,
-                   recurse,
-                   &merge_callbacks,
-                   &merge_cmd_baton,
-                   pool);
+      SVN_ERR (do_merge (after_editor, after_edit_baton,
+                         auth_baton,
+                         path1,
+                         revision1,
+                         path2,
+                         revision2,
+                         target_wcpath,
+                         recurse,
+                         &merge_callbacks,
+                         &merge_cmd_baton,
+                         pool));
+    }
+
+  return SVN_NO_ERROR;
 }
-
 
 
 /* --------------------------------------------------------------
