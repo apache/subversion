@@ -68,6 +68,7 @@ svn_cl__propedit (apr_getopt_t *os,
       const char *URL, *target;
       svn_string_t *propval;
       const char *new_propval;
+      const char *temp_dir;
 
       /* All property commands insist on a specific revision when
          operating on a revprop. */
@@ -98,10 +99,11 @@ svn_cl__propedit (apr_getopt_t *os,
       if (! propval)
         propval = svn_string_create ("", pool);
       
-      /* Run the editor on a temporary file in '.' which contains the
+      /* Run the editor on a temporary file which contains the
          original property value... */
+      SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
       SVN_ERR (svn_cl__edit_externally (&new_propval, NULL,
-                                        opt_state->editor_cmd, ".",
+                                        opt_state->editor_cmd, temp_dir,
                                         propval->data, "svn-prop",
                                         ctx->config, pool));
       

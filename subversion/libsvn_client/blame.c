@@ -437,9 +437,13 @@ svn_client_blame (const char *target,
   for (rev = lmb.eldest; rev; rev = rev->next)
     {
       const char *tmp;
+      const char *temp_dir;
+      
       apr_pool_clear (iterpool);
-      SVN_ERR (svn_io_open_unique_file (&file, &tmp, "", ".tmp",
-                                        FALSE, pool));
+      SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
+      SVN_ERR (svn_io_open_unique_file (&file, &tmp,
+                 svn_path_join (temp_dir, "tmp", pool), ".tmp",
+                 FALSE, pool));
       stream = svn_stream_from_aprfile (file, iterpool);
       SVN_ERR (ra_lib->get_file (session, rev->path + 1, rev->revision,
                                  stream, NULL, NULL, iterpool));

@@ -120,6 +120,13 @@ svn_error_t *svn_io_open_unique_file (apr_file_t **f,
                                       apr_pool_t *pool);
 
 
+/** Set @a dir to a directory path (allocated in @a pool) deemed
+ * usable for the creation of temporary files and subdirectories.
+ */
+svn_error_t *svn_io_temp_dir (const char **dir,
+                              apr_pool_t *pool);
+
+
 /** Copy @a src to @a dst atomically.  Overwrite @a dst if it exists, else
  * create it.  Both @a src and @a dst are utf8-encoded filenames.  If
  * @a copy_perms is true, set @a dst's permissions to match those of @a src.
