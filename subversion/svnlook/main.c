@@ -191,7 +191,7 @@ typedef struct svnlook_ctxt_t
 
 /*** Helper functions. ***/
 static svn_error_t *
-get_property (svn_string_t **prop_value,
+get_property (svn_string_t **prop_value /* native */,
               svnlook_ctxt_t *c, 
               const char *prop_name /* UTF-8! */,
               apr_pool_t *pool)
@@ -798,7 +798,6 @@ static svn_error_t *
 do_log (svnlook_ctxt_t *c, svn_boolean_t print_size, apr_pool_t *pool)
 {
   svn_string_t *prop_value;
-  const char *log_native;
 
   SVN_ERR (get_property (&prop_value, c, SVN_PROP_REVISION_LOG, pool));
   if (! (prop_value && prop_value->data))
@@ -810,8 +809,7 @@ do_log (svnlook_ctxt_t *c, svn_boolean_t print_size, apr_pool_t *pool)
   if (print_size)
     printf ("%" APR_SIZE_T_FMT "\n", prop_value->len);
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (&log_native, prop_value->data, pool));
-  printf ("%s\n", log_native);
+  printf ("%s\n", prop_value->data);
   return SVN_NO_ERROR;
 }
 
@@ -847,11 +845,7 @@ do_author (svnlook_ctxt_t *c, apr_pool_t *pool)
 
   SVN_ERR (get_property (&prop_value, c, SVN_PROP_REVISION_AUTHOR, pool));
   if (prop_value && prop_value->data) 
-    {
-      const char *native;
-      SVN_ERR (svn_utf_cstring_from_utf8 (&native, prop_value->data, pool));
-      printf ("%s", native);
-    }
+    printf ("%s", prop_value->data);
   
   printf ("\n");
   return SVN_NO_ERROR;
