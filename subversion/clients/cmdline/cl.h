@@ -228,7 +228,7 @@ svn_cl__make_auth_obj (svn_cl__opt_state_t *opt_state,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../svn-dev.el")
  * end: 
  */
 
