@@ -178,27 +178,17 @@ svn_cl__propset (apr_getopt_t *os,
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = ((const char **) (targets->elts))[i];
-          svn_error_t *err;
+          svn_boolean_t success;
 
           svn_pool_clear (subpool);
           SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
-          err = svn_client_propset2 (pname_utf8, propval, target,
-                                     opt_state->recursive,
-                                     opt_state->force,
-                                     subpool);
-          if (err)
-            {
-              if (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
-                {
-                  svn_handle_warning (stderr, err);
-                  svn_error_clear (err);
-                }
-              else
-                {
-                  return err;
-                }
-            }
-          else if (! opt_state->quiet) 
+          SVN_CL__TRY (svn_client_propset2 (pname_utf8, propval, target,
+                                            opt_state->recursive,
+                                            opt_state->force,
+                                            subpool),
+                       success);
+
+          if (success && (! opt_state->quiet))
             {
               SVN_ERR
                 (svn_cmdline_printf
