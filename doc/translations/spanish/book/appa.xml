@@ -546,36 +546,46 @@ X    Resource is external to this working copy (comes from another
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-11">
 
-    <title>Converting a Repository from CVS to Subversion</title>
+    <title>Convirtiendo un repositorio de CVS a Subversion</title>
 
-    <para>Perhaps the most important way to familiarize CVS users with
-      Subversion is to let them continue to work on their projects
-      using the new system.  And while that can be somewhat
-      accomplished using a flat import into a Subversion repository of
-      an exported CVS repository, the more thorough solution involves
-      transferring not just the latest snapshot of their data, but all
-      the history behind it as well, from one system to another.  This
-      is an extremely difficult problem to solve that involves
-      deducing changesets in the absence of atomicity, and translating
-      between the systems' completely orthogonal branching policies,
-      among other complications.  Still, there are a handful of tools
-      claiming to at least partially support the ability to convert
-      existing CVS repositories into Subversion ones.</para>
+    <para>Quizá la manera más importante de familiarizar a usuarios de
+      CVS con Subversion es dejarles continuar trabajando en sus
+      proyectos usando el nuevo sistema. Y mientras que eso se puede
+      lograr usando una importación plana<!--TODO:flat import into a
+      Subversion repository--> a un repositorio de Subversion de un
+      repositorio exportado de CVS, la solución más cuidadosa implica
+      el transferir no solo la última foto<!--TODO:snapshot--> de sus
+      datos, sino toda la historia detras de esta también, a partir
+      de un sistema al otro. Éste es un problema extremadamente dificil
+      a solucionar que implica<!--TODO:that deducing changesets in the
+      absence of atomicity--> la deducción de cambios en ausencia de
+      atomicidad, y traducción entre las politicas de ramificación
+      <!--TODO:between the system' completely orthogonal branching
+      policies-->totalmente ortogonal de los sistemas, entre otras
+      complicaciones. No obstante, hay un puñado de herramientas que
+      que demandan apoyar por lo menos parcialmente la capacidad de
+      convertir los repositorios existentes de CVS en unos de
+      Subversion<!--TODO:to convert existing CVS repositories into
+      Subversion ones-->.</para>
 
-    <para>One such tool is cvs2svn (<systemitem
-      class="url">http://cvs2svn.tigris.org/</systemitem>), a Python
-      script originally created by members of Subversion's own
-      development community.  Others include Chia-liang Kao's
-      Subversion converter plugin to the VCP tool (<systemitem
+    <para>Una herramienta<!--TODO:one such tool--> de estas es
+      cvs2svn (<systemitem
+      class="url">http://cvs2svn.tigris.org/</systemitem>), un script de
+      Python creado originalmente por miembros miembros de la propia
+      comunidad de desarrollo de Subversion. Otros incluidos el módulo
+      conversor para<!--TODO:converter plugin to the VCP tool--> la
+      herramienta VCP de Chia-liang Kao (<systemitem
       class="url">http://svn.clkao.org/revml/branches/svn-perl/</systemitem>)
-      and Lev Serebryakov's RefineCVS (<systemitem
+      y el RefineCVS de Lev Serebryakov's (<systemitem
       class="url">http://lev.serebryakov.spb.ru/refinecvs/</systemitem>).
-      These tools have various levels of completeness, and may make
-      entirely different decisions about how to handle your CVS
-      repository history.  Whichever tool you decide to use, be sure
-      to perform as much verification as you can stand on the
-      conversion results&mdash;after all, you've worked hard to build
-      that history!</para>
+      Estas herramientas tienen varios niveles en estado completo<!--
+      TODO:levels of completeness-->, y pueden tomar decisiones enteramente
+      diferentes sobre cómo manejar la historia de su repositorio de CVS.
+      Cualquier herramienta que decida usar, asegurese de realizar tantas
+      verificaciones como pueda basandose en el resultado de conversión<!--
+      TODO:perform as much verification as you can stand on the
+      conversion results-->&mdash;¡después de todo, usted ha trabajado
+      duro para construir esa historia!</para>
 
     <para>For an updated collection of links to known converter tools,
       visit the Links page of the Subversion website (<systemitem
