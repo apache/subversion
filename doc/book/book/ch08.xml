@@ -933,7 +933,7 @@ The following repository access (RA) modules are available:
         by these languages are often better at handling information
         that comes from users.  As you know, only a human can botch up
         the input to a program as well as they do, and the
-        scripting-type language simply handle that misinformation more
+        scripting-type language simply handles that misinformation more
         gracefully.  Of course, often that flexibility comes at the
         cost of performance.  That is why using a tightly-optimized,
         C-based interface and library suite, combined with a powerful,

@@ -33,7 +33,7 @@
     </para>
 
     <para>This book is written to document version 1.0.1 of the
-      Subversion version control system.  We have made attempt to be
+      Subversion version control system.  We have made every attempt to be
       thorough in our coverage.  However, Subversion has a thriving
       and energetic development community, so there are already a
       number of features and improvements planned for future versions
@@ -51,7 +51,7 @@
 
     <title>Audience</title>
     
-    <para>This book is written for computer literate folk who want to
+    <para>This book is written for computer-literate folk who want to
       use Subversion to manage their data.  While Subversion runs on a
       number of different operating systems, its primary user
       interface is command-line based.  It is that command-line tool
