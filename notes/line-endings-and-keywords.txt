@@ -251,14 +251,14 @@ the svn:keywords property.  Here are all the keywords:
 
    "LastChangedBy"       "Author"    ---> either one expands author
    "LastChangedDate"     "Date"      ---> either one expands date
-   "LastChangedRev"      "Rev"       ---> either one expands rev
-   "HeadUrl"             "URL"       ---> either one expands url
+   "LastChangedRevision" "Rev"       ---> either one expands rev
+   "HeadURL"             "URL"       ---> either one expands url
 
 Here are some example values of the property:
 
    "Rev LastChangedDate HeadURL"
 
-   "Author\nDate  \n  LastChangedRev       URL"
+   "Author\nDate  \n  LastChangedRevision       URL"
 
 Unrecognized words are ignored; absence of the property is the same as
 an empty value or a value with no valid keywords in it.
