@@ -65,6 +65,7 @@ How to Run the Scripts
 Directory Contents
 ==================
 
+* getopt_tests.py:       tests: command line option processing.
 
 * basic_tests.py:        tests: general client subcommands.
 

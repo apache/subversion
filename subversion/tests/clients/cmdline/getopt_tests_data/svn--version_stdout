@@ -1,0 +1,14 @@
+Subversion Client, version 0.10.2 (dev build)
+   compiled Apr  5 2002, 10:08:45
+
+Copyright (C) 2000-2002 CollabNet.
+Subversion is open source software, see http://subversion.tigris.org/
+
+The following repository access (RA) modules are available:
+
+* ra_dav : Module for accessing a repository via WebDAV (DeltaV) protocol.
+  - handles 'http' schema
+  - handles 'https' schema
+* ra_local : Module for accessing a repository on local disk.
+  - handles 'file' schema
+

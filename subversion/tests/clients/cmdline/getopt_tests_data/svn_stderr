@@ -1,0 +1,36 @@
+usage: svn <subcommand> [options] [args]
+Type "svn help <subcommand>" for help on a specific subcommand.
+
+Most subcommands take file and/or directory arguments, recursing
+on the directories.  If no arguments are supplied to such a
+command, it will recurse on the current directory (inclusive) by
+default.
+
+Available subcommands:
+   add
+   checkout (co)
+   cleanup
+   commit (ci)
+   copy (cp)
+   delete (del, remove, rm)
+   diff (di)
+   help (?, h)
+   import
+   log
+   merge
+   mkdir
+   move (mv, rename, ren)
+   propdel (pdel)
+   propedit (pedit, pe)
+   propget (pget, pg)
+   proplist (plist, pl)
+   propset (pset, ps)
+   revert
+   resolve
+   status (stat, st)
+   switch (sw)
+   update (up)
+
+Subversion is a tool for revision control.
+For additional information, see http://subversion.tigris.org
+
