@@ -755,14 +755,23 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
   switch (kind)
     {
     case svn_node_none:
-      if (! merge_b->dry_run)
-        {
-          child = svn_path_is_child(merge_b->target, mine, merge_b->pool);
-          assert (child != NULL);
-          copyfrom_url = svn_path_join (merge_b->url, child, merge_b->pool);
-          SVN_ERR (check_schema_match (adm_access, copyfrom_url));
-
+      {
+        const svn_wc_entry_t *entry;
+        SVN_ERR (svn_wc_entry (&entry, mine, adm_access, FALSE, subpool));
+        if (entry && entry->schedule != svn_wc_schedule_delete)
           {
+            /* It's versioned but missing. */
+            if (state)
+              *state = svn_wc_notify_state_obstructed;
+            return SVN_NO_ERROR;
+          }
+        if (! merge_b->dry_run)
+          {
+            child = svn_path_is_child(merge_b->target, mine, merge_b->pool);
+            assert (child != NULL);
+            copyfrom_url = svn_path_join (merge_b->url, child, merge_b->pool);
+            SVN_ERR (check_schema_match (adm_access, copyfrom_url));
+
             /* Since 'mine' doesn't exist, and this is
                'merge_file_added', I hope it's safe to assume that
                'older' is empty, and 'yours' is the full file.  Merely
@@ -776,11 +785,10 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
                                             copyfrom_url,
                                             rev2,
                                             merge_b->pool));
-
-            if (state)
-              *state = svn_wc_notify_state_changed;
           }
-        }
+        if (state)
+          *state = svn_wc_notify_state_changed;
+      }
       break;
     case svn_node_dir:
       {
@@ -814,6 +822,8 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
         break;      
       }
     default:
+      if (state)
+        *state = svn_wc_notify_state_unknown;
       break;
     }
 
@@ -886,6 +896,8 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
         *state = svn_wc_notify_state_missing;
       break;
     default:
+      if (state)
+        *state = svn_wc_notify_state_unknown;
       break;
     }
     
@@ -926,6 +938,14 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
   switch (kind)
     {
     case svn_node_none:
+      SVN_ERR (svn_wc_entry (&entry, path, adm_access, TRUE, subpool));
+      if (entry && entry->schedule != svn_wc_schedule_delete)
+        {
+          /* Versioned but missing */
+          if (state)
+            *state = svn_wc_notify_state_obstructed;
+          return SVN_NO_ERROR;
+        }
       if (! merge_b->dry_run)
         {
           SVN_ERR (svn_io_make_dir_recursively (path, subpool));
@@ -936,25 +956,30 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
                                NULL, NULL, /* don't pass notification func! */
                                merge_b->pool));
 
-          if (state)
-              *state = svn_wc_notify_state_changed;
         }
+      if (state)
+        *state = svn_wc_notify_state_changed;
       break;
     case svn_node_dir:
       /* Adding an unversioned directory doesn't destroy data */
       SVN_ERR (svn_wc_entry (&entry, path, adm_access, TRUE, subpool));
-      if (!merge_b->dry_run
-          && (! entry || (entry && entry->schedule == svn_wc_schedule_delete)))
+      if (! entry || (entry && entry->schedule == svn_wc_schedule_delete))
         {
-          SVN_ERR (svn_wc_add (path, adm_access,
-                               copyfrom_url,
-                               merge_b->revision->value.number,
-                               merge_b->ctx->cancel_func,
-                               merge_b->ctx->cancel_baton,
-                               NULL, NULL, /* don't pass notification func! */
-                               merge_b->pool));
+          if (!merge_b->dry_run)
+            SVN_ERR (svn_wc_add (path, adm_access,
+                                 copyfrom_url,
+                                 merge_b->revision->value.number,
+                                 merge_b->ctx->cancel_func,
+                                 merge_b->ctx->cancel_baton,
+                                 NULL, NULL, /* no notification func! */
+                                 merge_b->pool));
           if (state)
-              *state = svn_wc_notify_state_changed;
+            *state = svn_wc_notify_state_changed;
+        }
+      else
+        {
+          if (state)
+            *state = svn_wc_notify_state_obstructed;
         }
       break;
     case svn_node_file:
@@ -962,6 +987,8 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
         *state = svn_wc_notify_state_obstructed;
       break;
     default:
+      if (state)
+        *state = svn_wc_notify_state_unknown;
       break;
     }
 
@@ -1022,6 +1049,8 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
         *state = svn_wc_notify_state_missing;
       break;
     default:
+      if (state)
+        *state = svn_wc_notify_state_unknown;
       break;
     }
 
