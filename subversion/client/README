@@ -39,7 +39,7 @@ having separate global versus command-local namespaces for options, is
 confusing.  So Subversion has one option namespace, and all options
 come after the command.
 
-   svn [command] [options] [arguments]
+   svn [<command>] [<option|argument> ...]
 
 (The command is marked as optional because there are a few cases where
 Subversion can do something meaningful without the command -- for
@@ -61,10 +61,12 @@ Here are some options:
   -l               Local dir only, do not recurse.
   -d               Target directory (like "cvs checkout -d DIR")
   -f               Force (probably useful for a few commands)
+  --               End of option processing (this is the standard, right?)
   -R REPOSITORY    Use REPOSITORY.
-                     /* Issue: Perhaps -R is unnecessary, if arguments
+                     /* Issue: -R may be unnecessary, if arguments
                         are URLs anyway.  See thoughts from Greg
-                        Stein. */
+                        Stein.  That would be nice, it would free up
+                        another option letter. */
 
 And the commands will look a lot like CVS's, though there are some
 newcomers:
