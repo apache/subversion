@@ -299,7 +299,7 @@ svn_error_t *svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
  * differences between two trees to be described using an editor.
  *
  * By using the specific editor found below in conjunction with
- * svn_repos_dir_dlta(), the description of how to transform one tree
+ * svn_repos_dir_delta(), the description of how to transform one tree
  * into another can be used to build an in-memory linked-list tree,
  * which each node representing a repository node that was changed as a
  * result of having svn_repos_dir_delta() drive that editor.

@@ -1478,64 +1478,68 @@ log_end_element(void *userdata,
 {
   struct log_baton *lb = userdata;
 
-  /* ### I'd love to switch on elm->id here, but some of our element
-     names are in the DAV namespace and therefore their element enums
-     are not defined here.  I guess those enums are defined in mod_dav
-     or something, but of course, the client can't (right now) refer
-     to them...  So am strcmp()'ing the name instead.  Greg, does this
-     problem have anything to do with that new header file you
-     proposed? */
-
-  /* ### The start_element and end_element handlers for update and
-     status don't bother to check namespaces, so this code doesn't
-     either.  Is that kosher?  */
-
-  if (strcmp(elm->name, "version-name") == 0)
-    lb->revision = atol (cdata);
-  else if (strcmp(elm->name, "creator-displayname") == 0)
-    lb->author = apr_pstrdup (lb->subpool, cdata);
-  else if (strcmp(elm->name, "date") == 0)
-    lb->date = apr_pstrdup (lb->subpool, cdata);
-  else if (strcmp(elm->name, "changed-path") == 0)
+  switch (elm->id)
     {
-      char *path = apr_pstrdup (lb->subpool, cdata);
+    case ELEM_version_name:
+      lb->revision = atol (cdata);
+      break;
+    case ELEM_creator_displayname:
+      lb->author = apr_pstrdup (lb->subpool, cdata);
+      break;
+    case ELEM_log_date:
+      lb->date = apr_pstrdup (lb->subpool, cdata);
+      break;
+    case ELEM_changed_path:
+      {
+        char *path = apr_pstrdup (lb->subpool, cdata);
+        
+        if (lb->changed_paths == NULL)
+          lb->changed_paths = apr_hash_make(lb->subpool);
+        
+        apr_hash_set(lb->changed_paths, path, APR_HASH_KEY_STRING, (void *) 1);
+      }
+      break;
+    case ELEM_comment:
+      lb->msg = apr_pstrdup (lb->subpool, cdata);
+      break;
+    case ELEM_log_item:
+      {
+        /* ### Naive call for now.  We still need to arrange things so
+           that last_call gets passed properly, which will
+           be... interesting.  Well, not so bad, just need to put an
+           attribute on the end element of the last item.  This is a
+           change to mod_dav_svn too. */
+        
+        svn_error_t *err = (*(lb->receiver))(lb->receiver_baton,
+                                             lb->changed_paths,
+                                             lb->revision,
+                                             lb->author,
+                                             lb->date,
+                                             lb->msg,
+                                             0);
+        
+        reset_log_item (lb);
+        
+        if (err)
+          {
+            lb->err = err;         /* ### Wrap an existing error, if any? */
+            return NE_XML_INVALID; /* ### Any other way to express an err? */
+          }
+      }
+      break;
+    case ELEM_log_report:
+      {
+        /* ### todo: what to do here?  We're (hopefully) going to handle
+           the whole last_call thing another way, so maybe the end of
+           the report means nothing... */
 
-      if (lb->changed_paths == NULL)
-        lb->changed_paths = apr_hash_make(lb->subpool);
-
-      apr_hash_set(lb->changed_paths, path, APR_HASH_KEY_STRING, (void *) 1);
-    }
-  else if (strcmp(elm->name, "comment") == 0)
-    lb->msg = apr_pstrdup (lb->subpool, cdata);
-  else if (strcmp(elm->name, "log-item") == 0)
-    {
-      /* ### Naive call for now.  We still need to arrange things so
-         that last_call gets passed properly, which will
-         be... interesting.  Well, not so bad, just need to put an
-         attribute on the end element of the last item.  This is a
-         change to mod_dav_svn too. */
-    
-      svn_error_t *err = (*(lb->receiver))(lb->receiver_baton,
-                                           lb->changed_paths,
-                                           lb->revision,
-                                           lb->author,
-                                           lb->date,
-                                           lb->msg,
-                                           0);
-      
-      reset_log_item (lb);
-      
-      if (err)
-        {
-          lb->err = err;         /* ### Wrap an existing error, if any? */
-          return NE_XML_INVALID; /* ### Any other way to express an err? */
-        }
-    }
-  else if (strcmp(elm->name, "log-report") == 0)
-    {
-      /* ### todo: what to do here?  We're (hopefully) going to handle
-         the whole last_call thing another way, so maybe the end of
-         the report means nothing... */
+        /* Yo --  we're going to take Greg's suggestion of treating
+           log_receivers the way we treat delta windows -- last call
+           is indicated by a special call with NULL (or, in this case,
+           SVN_INVALID_REVNUM), instead of combining the last_call
+           indicator with the previous, contentful call. */
+      }
+      break;
     }
 
   return NE_XML_VALID;
@@ -1572,17 +1576,17 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
      Maybe Greg can explain?  Meanwhile, I'm tentatively using
      "request_*" for my local vars below. */
 
-  const char log_request_head[]
+  static const char log_request_head[]
     = "<S:log-report xmlns:S=\"" SVN_XML_NAMESPACE "\">" DEBUG_CR;
 
-  const char log_request_tail[] = "</S:log-report>" DEBUG_CR;
+  static const char log_request_tail[] = "</S:log-report>" DEBUG_CR;
   
   static const struct ne_xml_elm log_report_elements[] =
     {
       { SVN_XML_NAMESPACE, "log-report", ELEM_log_report, 0 },
       { SVN_XML_NAMESPACE, "log-item", ELEM_log_item, 0 },
       { SVN_XML_NAMESPACE, "date", ELEM_log_date, NE_XML_CDATA },
-      { SVN_XML_NAMESPACE, "changed-path", ELEM_log_date, NE_XML_CDATA },
+      { SVN_XML_NAMESPACE, "changed-path", ELEM_changed_path, NE_XML_CDATA },
       { "DAV:", "version-name", ELEM_version_name, NE_XML_CDATA },
       { "DAV:", "creator-displayname", ELEM_creator_displayname,
         NE_XML_CDATA },

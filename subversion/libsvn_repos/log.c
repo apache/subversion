@@ -21,6 +21,7 @@
 
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_path.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_string.h"
@@ -64,49 +65,75 @@ svn_repos_get_logs (svn_fs_t *fs,
       SVN_ERR (svn_fs_revision_prop
                (&message, fs, this_rev, SVN_PROP_REVISION_LOG, subpool));
 
-      if (discover_changed_paths)
+      if (discover_changed_paths && (this_rev > 0))
         {
+          const svn_delta_edit_fns_t *editor;
+          svn_fs_root_t *base_root, *this_root;
+          void *edit_baton;
+          svn_repos_node_t *i, *j;
+          svn_stringbuf_t *this_path = svn_stringbuf_create ("", subpool);
+
+          /* ### dir_delta wants these as non-const stringbufs; does
+             it actually need them to be that?  It might telescope
+             them... */
+          svn_stringbuf_t *base_top = svn_stringbuf_create ("", subpool);
+          svn_stringbuf_t *this_top = svn_stringbuf_create ("", subpool);
+
           changed_paths = apr_hash_make (subpool);
           
-#if 0
-          svn_delta_edit_fns_t *editor;
-          void *edit_baton;
+          SVN_ERR (svn_fs_revision_root (&base_root, fs, this_rev - 1, pool));
+          SVN_ERR (svn_fs_revision_root (&this_root, fs, this_rev, pool));
 
           /* ### todo: not sure this needs an editor and dir_deltas.
-             Might be easier to just walk around looking at
-             created-rev fields... */
+             Might be easier to just walk the one revision tree,
+             looking at created-rev fields... */
 
           SVN_ERR (svn_repos_node_editor (&editor, &edit_baton,
-                                          svn_fs_t *fs,
-                                          svn_fs_root_t *base_root,
-                                          svn_fs_root_t *root,
-                                          apr_pool_t *node_pool,
-                                          apr_pool_t *pool));
-          
-          
-          /* ### todo: everything we need for showing changed paths
-             with "svn log -v" is done... except for the actual
-             detection of the changed paths. :-)  Here, run
-             dir_deltas() using the editor obtained above, traverse
-             the node tree, calling apr_hash_set() when
-             appropriate.
+                                          fs,
+                                          base_root,
+                                          this_root,
+                                          subpool,
+                                          subpool));
 
-             But for now, just hardcode a bunch of paths.  If you
-             don't want to see this, don't run "svn log -v". :-) */
+          SVN_ERR (svn_repos_dir_delta (base_root,
+                                        base_top,
+                                        NULL,
+                                        NULL,
+                                        this_root,
+                                        this_top,
+                                        editor,
+                                        edit_baton,
+                                        0,
+                                        1,
+                                        subpool));
 
-#else /* 0/1 */
+          for (i = svn_repos_node_from_baton (edit_baton); i; i = i->child)
+            {
+              for (j = i; j; j = j->sibling)
+                {
+                  svn_path_add_component_nts (this_path,
+                                              i->name,
+                                              svn_path_repos_style);
 
-          apr_hash_set (changed_paths, "/not/implemented/yet",
-                        APR_HASH_KEY_STRING, (void *) 1);
-          apr_hash_set (changed_paths, "/not/implemented",
-                        APR_HASH_KEY_STRING, (void *) 1);
-          apr_hash_set (changed_paths, "/not/implemented/yet/i/really/mean/it",
-                        APR_HASH_KEY_STRING, (void *) 1);
-          apr_hash_set (changed_paths, "/this/is/just/a/placeholder",
-                        APR_HASH_KEY_STRING, (void *) 1);
-          apr_hash_set (changed_paths, "/blah",
-                        APR_HASH_KEY_STRING, (void *) 1);
-#endif /* 0 */
+                  /* We register all differences except for
+                     directories without prop mods, because those must
+                     result from bubble-up and don't belong in a
+                     change list. */
+                  if (! ((j->kind == svn_node_dir) && (! j->prop_mod)))
+                    {
+                      /* ### this is kind of bogus, we're assuming we
+                         know something about the path style.  But the
+                         path library doesn't like a lone slash. */
+                      char *p = apr_pstrcat (subpool,
+                                             "/", this_path->data, NULL);
+                      
+                      apr_hash_set (changed_paths, p,
+                                    this_path->len + 1, (void *) 1);
+                    }
+
+                  svn_path_remove_component (this_path, svn_path_repos_style);
+                }
+            }
         }
 
       SVN_ERR ((*receiver) (receiver_baton,
