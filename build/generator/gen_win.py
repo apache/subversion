@@ -470,8 +470,12 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         self.httpd_path + "/include"
         ])
     elif isinstance(target, gen_base.TargetSWIG):
+      util_includes = "subversion/bindings/swig/%s/libsvn_swig_%s" \
+                      % (target.lang,
+                         gen_base.lang_utillib_suffix[target.lang])
       fakeincludes = self.map_rootpath(["subversion/bindings/swig",
                                         "subversion/include",
+                                        util_includes,
                                         self.apr_path + "/include",
                                         self.apr_util_path + "/include"],
                                        rootpath)

@@ -308,6 +308,15 @@ lang_full_name = {
   ### what others?
   }
 
+lang_utillib_suffix = {
+  'python' : 'py',
+  'java' : 'java',
+  'perl' : 'perl',
+  'ruby' : 'ruby',
+  'tcl' : 'tcl',
+  ### what others?
+  }
+  
 class Target(DependencyNode):
   "A build target is a node in our dependency graph."
 
