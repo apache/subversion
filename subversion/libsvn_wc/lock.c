@@ -74,8 +74,7 @@ struct svn_wc_adm_access_t
 
 
 static svn_error_t *
-do_close (svn_wc_adm_access_t *adm_access, svn_boolean_t preserve_lock,
-          apr_pool_t *pool);
+do_close (svn_wc_adm_access_t *adm_access, svn_boolean_t preserve_lock);
 
 /* Create a physical lock file in the admin directory for ADM_ACCESS. Wait
    up to WAIT_FOR seconds if the lock already exists retrying every
@@ -133,11 +132,10 @@ pool_cleanup (void *p)
   svn_wc_adm_access_t *lock = p;
   svn_boolean_t cleanup;
   svn_error_t *err;
-  apr_pool_t *pool = apr_pool_parent_get (lock->pool);
 
-  err = svn_wc__adm_is_cleanup_required (&cleanup, lock, pool);
+  err = svn_wc__adm_is_cleanup_required (&cleanup, lock, lock->pool);
   if (!err)
-    err = do_close (lock, cleanup, pool);
+    err = do_close (lock, cleanup);
 
   /* ### Is this the correct way to handle the error? */
   if (err)
@@ -177,8 +175,6 @@ adm_access_alloc (enum svn_wc__adm_access_type type,
   lock->path = apr_pstrdup (pool, path);
   lock->pool = pool;
 
-  apr_pool_cleanup_register (lock->pool, lock, pool_cleanup,
-                             pool_cleanup_child);
   return lock;
 }
 
@@ -370,6 +366,14 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
       apr_hash_set (lock->set, lock->path, APR_HASH_KEY_STRING, lock);
     }
 
+  /* It's important that the cleanup handler is registered *after* at least
+     one UTF8 conversion has been done, since such a conversion may create
+     the apr_xlate_t object in the pool, and that object must be around
+     when the cleanup handler runs.  If the apr_xlate_t cleanup handler
+     were to run *before* the access baton cleanup handler, then the access
+     baton's handler won't work. */
+  apr_pool_cleanup_register (lock->pool, lock, pool_cleanup,
+                             pool_cleanup_child);
   *adm_access = lock;
   return SVN_NO_ERROR;
 }
@@ -439,8 +443,7 @@ svn_wc_adm_probe_retrieve (svn_wc_adm_access_t **adm_access,
  */
 static svn_error_t *
 do_close (svn_wc_adm_access_t *adm_access,
-          svn_boolean_t preserve_lock,
-          apr_pool_t *pool)
+          svn_boolean_t preserve_lock)
 {
   apr_hash_index_t *hi;
 
@@ -456,10 +459,10 @@ do_close (svn_wc_adm_access_t *adm_access,
          it is allowed but unpredictable!  So, first loop to identify and
          copy direct descendents, second loop to close them. */
       int i;
-      apr_array_header_t *children = apr_array_make (pool, 1,
+      apr_array_header_t *children = apr_array_make (adm_access->pool, 1,
                                                      sizeof (adm_access));
 
-      for (hi = apr_hash_first (pool, adm_access->set);
+      for (hi = apr_hash_first (adm_access->pool, adm_access->set);
            hi;
            hi = apr_hash_next (hi))
         {
@@ -469,7 +472,7 @@ do_close (svn_wc_adm_access_t *adm_access,
           apr_hash_this (hi, NULL, NULL, &val);
           associated = val;
           name = svn_path_is_child (adm_access->path, associated->path,
-                                    pool);
+                                    adm_access->pool);
           if (name && svn_path_is_single_path_component (name))
             {
               *(svn_wc_adm_access_t**)apr_array_push (children) = associated;
@@ -482,7 +485,7 @@ do_close (svn_wc_adm_access_t *adm_access,
         {
           svn_wc_adm_access_t *child = APR_ARRAY_IDX(children, i,
                                                      svn_wc_adm_access_t*);
-          SVN_ERR (do_close (child, preserve_lock, pool));
+          SVN_ERR (do_close (child, preserve_lock));
         }
     }
 
@@ -491,7 +494,7 @@ do_close (svn_wc_adm_access_t *adm_access,
     {
       if (adm_access->lock_exists && ! preserve_lock)
         {
-          SVN_ERR (remove_lock (adm_access->path, pool));
+          SVN_ERR (remove_lock (adm_access->path, adm_access->pool));
           adm_access->lock_exists = FALSE;
         }
       /* Reset to prevent further use of the write lock. */
@@ -513,7 +516,7 @@ do_close (svn_wc_adm_access_t *adm_access,
 svn_error_t *
 svn_wc_adm_close (svn_wc_adm_access_t *adm_access)
 {
-  return do_close (adm_access, FALSE, adm_access->pool);
+  return do_close (adm_access, FALSE);
 }
 
 svn_error_t *
