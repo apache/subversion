@@ -50,11 +50,12 @@
 
 #include <assert.h>
 #include "svn_delta.h"
+#include "svn_io.h"
 #include "delta.h"
 
 
 
-/* Text delta stream descriotor. */
+/* Text delta stream descriptor. */
 
 struct svn_txdelta_stream_t {
   /* These are copied from parameters passed to svn_txdelta. */
@@ -66,6 +67,7 @@ struct svn_txdelta_stream_t {
   /* Private data */
   apr_pool_t* pool;             /* Pool to allocate stream data from. */
   svn_boolean_t more;           /* TRUE if there are more data in the pool. */
+  apr_off_t pos;                /* Position in source file. */
 };
 
 
@@ -80,6 +82,9 @@ svn_txdelta__init_window (svn_txdelta_window_t **window,
   assert (pool != NULL);
 
   (*window) = apr_palloc (pool, sizeof (**window));
+  (*window)->sview_offset = 0;
+  (*window)->sview_len = 0;
+  (*window)->tview_len = 0;
   (*window)->num_ops = 0;
   (*window)->ops_size = 0;
   (*window)->ops = NULL;
@@ -165,6 +170,7 @@ svn_txdelta (svn_txdelta_stream_t **stream,
   (*stream)->target_baton = target_baton;
   (*stream)->pool = subpool;
   (*stream)->more = TRUE;
+  (*stream)->pos = 0;
   return SVN_NO_ERROR;
 }
 
@@ -191,6 +197,7 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
   else
     {
       svn_error_t *err = SVN_NO_ERROR;
+      apr_off_t source_offset = stream->pos;
       apr_size_t source_len = svn_txdelta__window_size;
       apr_size_t target_len = svn_txdelta__window_size;
       apr_pool_t *temp_pool = svn_pool_create (stream->pool, NULL);
@@ -201,6 +208,7 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
                          &source_len, NULL/*FIXME:*/);
       stream->target_fn (stream->target_baton, buffer + source_len,
                          &target_len, NULL/*FIXME:*/);
+      stream->pos += source_len;
 
       /* Forget everything if there's no target data. */
       *window = NULL;
@@ -214,9 +222,14 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
       /* Create the delta window */
       err = svn_txdelta__init_window (window, stream);
       if (err == SVN_NO_ERROR)
-        err = svn_txdelta__vdelta (*window, buffer,
-                                   source_len, target_len,
-                                   temp_pool);
+        {
+          (*window)->sview_offset = source_offset;
+          (*window)->sview_len = source_len;
+          (*window)->tview_len = target_len;
+          err = svn_txdelta__vdelta (*window, buffer,
+                                     source_len, target_len,
+                                     temp_pool);
+        }
 
       /* That's it. */
       apr_destroy_pool (temp_pool);
@@ -235,6 +248,156 @@ svn_txdelta_free_window (svn_txdelta_window_t *window)
 {
   if (window)
     apr_destroy_pool (window->pool);
+}
+
+
+
+/* Reallocate a */
+static APR_INLINE void
+size_buffer (char **buf, apr_size_t *buf_size,
+             apr_off_t view_len, apr_pool_t *pool)
+{
+  if (view_len > *buf_size)
+    {
+      *buf_size *= 2;
+      if (*buf_size < view_len)
+        *buf_size = view_len;
+      *buf = apr_palloc (pool, *buf_size);
+    }
+}
+
+/* Apply WINDOW to a source view SBUF to produce a target view TBUF.
+ * SBUF is assumed to have window->sview_len bytes of data and TBUF is
+ * assumed to have room for window->tview_len bytes of output.  This
+ * is purely a memory operation; nothing can go wrong as long as we
+ * have a valid window.  */
+
+static void
+apply_window (svn_txdelta_window_t *window, const char *sbuf, char *tbuf)
+{
+  svn_txdelta_op_t *op;
+  apr_off_t i, tpos = 0;
+
+  for (op = window->ops; op < window->ops + window->num_ops; op++)
+    {
+      /* Check some invariants common to all instructions.  */
+      assert (op->offset >= 0 && op->length >= 0);
+      assert (tpos + op->length <= window->tview_len);
+
+      switch (op->action_code)
+        {
+        case svn_txdelta_source:
+          /* Copy from source area.  */
+          assert (op->offset + op->length <= window->sview_len);
+          memcpy (tbuf + tpos, sbuf + op->offset, op->length);
+          tpos += op->length;
+          break;
+
+        case svn_txdelta_target:
+          /* Copy from target area.  Don't use memcpy() since its
+             semantics aren't guaranteed for overlapping memory areas,
+             and target copies are allowed to overlap to generate
+             repeated data.  */
+          assert (op->offset < tpos);
+          for (i = op->offset; i < op->offset + op->length; i++)
+            tbuf[tpos++] = tbuf[i];
+          break;
+
+        case svn_txdelta_new:
+          /* Copy from window new area.  */
+          assert (op->offset + op->length <= window->new->len);
+          memcpy (tbuf + tpos, window->new->data + op->offset, op->length);
+          tpos += op->length;
+          break;
+
+        default:
+          assert ("Invalid delta instruction code" == NULL);
+        }
+    }
+
+  /* Check that we produced the right amount of data.  */
+  assert (tpos == window->tview_len);
+}
+
+
+/* Apply a text delta to an input stream.  */
+
+svn_error_t *
+svn_txdelta_apply (svn_txdelta_stream_t *delta,
+                   svn_read_fn_t *source_fn,
+                   void *source_baton,
+                   svn_write_fn_t *target_fn,
+                   void *target_baton)
+{
+  apr_pool_t *temp_pool = svn_pool_create (delta->pool, NULL);
+  char *sbuf = NULL, *tbuf = NULL;
+  apr_size_t sbuf_size = 0, tbuf_size = 0, len;
+  apr_off_t sbuf_offset = 0, sbuf_len = 0;
+  svn_error_t *err;
+  svn_txdelta_window_t *window = NULL, *oldwin;
+
+  while (1)
+    {
+      /* Get a new window.  */
+      oldwin = window;
+      err = svn_txdelta_next_window (&window, delta);
+      if (err != SVN_NO_ERROR || window == NULL)
+        break;
+
+      /* Make sure the source view didn't slide backwards.  */
+      assert (window->sview_offset >= sbuf_offset
+              && (window->sview_offset + window->sview_len
+                  >= sbuf_offset + sbuf_len));
+
+      /* Make sure there's enough room in the target buffer.  */
+      size_buffer (&tbuf, &tbuf_size, window->tview_len, temp_pool);
+
+      /* Prepare the source buffer for reading from the input stream.  */
+      if (window->sview_offset != sbuf_offset || window->sview_len > sbuf_size)
+        {
+          char *old_sbuf = sbuf;
+
+          /* Make sure there's enough room.  */
+          size_buffer (&sbuf, &sbuf_size, window->sview_len, temp_pool);
+
+          /* If the existing view overlaps with the new view, copy the
+           * overlap to the beginning of the new buffer.  */
+          if (sbuf_offset + sbuf_len > window->sview_offset)
+            {
+              apr_size_t start = window->sview_offset - sbuf_offset;
+              memmove (sbuf, old_sbuf + start, sbuf_len - start);
+              sbuf_len -= start;
+            }
+          else
+            sbuf_len = 0;
+          sbuf_offset = window->sview_offset;
+        }
+
+      /* Read the remainder of the source view into the buffer.  */
+      if (sbuf_len < window->sview_len)
+        {
+          len = window->sview_len - sbuf_len;
+          err = source_fn (source_baton, sbuf + sbuf_len, &len, temp_pool);
+          if (err == SVN_NO_ERROR && len != window->sview_len - sbuf_len)
+            err = svn_error_create (SVN_ERR_INCOMPLETE_DATA, 0,
+                                    NULL, delta->pool,
+                                    "Delta source ended unexpectedly");
+          sbuf_len = window->sview_len;
+        }
+
+      /* Apply the window instructions to the source view to generate
+         the target view.  */
+      apply_window (window, sbuf, tbuf);
+
+      /* Write out the output. */
+      len = window->tview_len;
+      err = target_fn (target_baton, tbuf, &len, temp_pool);
+      if (err != SVN_NO_ERROR)
+          break;
+    }
+
+  apr_destroy_pool (temp_pool);
+  return err;
 }
 
 

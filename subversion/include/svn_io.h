@@ -73,10 +73,24 @@
    BUFFER is a buffer to hold the data, and *LEN indicates how many
    bytes to read.  Upon return, the function should set *LEN to the
    number of bytes actually read, or zero at the end of the data
-   stream.  */
+   stream.  *LEN should only change when there is a read error or the
+   input stream ends before the full count of bytes can be read; the
+   generic read function is obligated to perform a full read when
+   possible.
+
+   Any necessary temporary allocation should be done in a sub-pool of
+   POOL.  (If the read function needs to perform allocations which
+   last beyond the lifetime of the function, it must use a different
+   pool, e.g. one referenced through BATON.)  */
 typedef svn_error_t *svn_read_fn_t (void *baton,
                                     char *buffer,
                                     apr_size_t *len,
                                     apr_pool_t *pool);
+
+/* Similar to svn_read_fn_t, but for writing.  */
+typedef svn_error_t *svn_write_fn_t (void *baton,
+				     const char *data,
+				     apr_size_t *len,
+				     apr_pool_t *pool);
 
 #endif /* SVN_IO_H */
