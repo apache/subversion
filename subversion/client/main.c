@@ -58,9 +58,9 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "ad",         TRUE, NULL, 0, NULL },
   { "new",        TRUE, NULL, 0, NULL },
 
-  { "checkout",   FALSE, svn_cl__checkout, 0,
+  { "checkout",   FALSE, svn_cl__checkout, -1,
     "Check out a working directory from a repository.\n"
-    "usage: checkout REPOSPATH\n" },
+    "usage: checkout REPOSPATH1 [REPOSPATH2 REPOSPATH3...]\n" },
   { "co",         TRUE, NULL, 0, NULL },
 
   { "commit",     FALSE, svn_cl__commit, 0,
@@ -194,12 +194,11 @@ main (int argc, const char * const *argv)
 
   static const apr_getopt_option_t options[] =
   {
-    {"ancestor-path", svn_cl__ancestor_path_opt, 1}, /* !doc'ed in README */
+    {"destination",   'd', 1}, 
     {"force",         svn_cl__force_opt, 0},
     {"help",          'h', 0},
     {"message",       'm', 1},
     {"revision",      'r', 1},
-    {"target-dir",    svn_cl__target_dir_opt, 1}, /* README: --destination */
     {"valfile",       svn_cl__valfile_opt, 1},       /* !doc'ed in README */
     {"xml-file",      svn_cl__xml_file_opt, 1},
     {0,               0, 0}
@@ -250,11 +249,8 @@ main (int argc, const char * const *argv)
       case svn_cl__xml_file_opt:
         opt_state.xml_file = svn_string_create (optarg, pool);
         break;
-      case svn_cl__target_dir_opt:
+      case 'd':
         opt_state.target = svn_string_create (optarg, pool);
-        break;
-      case svn_cl__ancestor_path_opt:
-        opt_state.ancestor_path = svn_string_create (optarg, pool);
         break;
       case svn_cl__valfile_opt:
         /* TODO This needs a little thought before being implemented
@@ -343,6 +339,14 @@ main (int argc, const char * const *argv)
   }
   /* greedily suck up all args if num_args is a negative number. */
   else if (subcommand->num_args == -1) {
+    if (os->ind >= os->argc) {
+      fprintf (stderr, "ERROR: The %s command requires at least one argument\n",
+               subcommand->name);
+      fprintf (stderr, "Help for %s:\n%s", subcommand->name, subcommand->help);
+      apr_pool_destroy (pool);
+      return EXIT_FAILURE;
+    }
+
     while (os->ind < os->argc) {
       const char *this_arg = os->argv[os->ind++];
       (*((svn_string_t **) apr_array_push (opt_state.args)))
