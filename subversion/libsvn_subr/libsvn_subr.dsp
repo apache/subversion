@@ -107,6 +107,10 @@ SOURCE=.\path.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\quoprint.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\svn_error.c
 # End Source File
 # Begin Source File
