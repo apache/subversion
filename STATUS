@@ -100,9 +100,12 @@ Candidate changes:
       +1: lundblad, kfogel
       +0: nori
 
-  * r11783
-    Reset locale back to "C" in svnserve.
+  * r11797
+    Reset messages locale back to "C" in svnserve.
     Justification:
       We shouldn't send translated errors over the svn protocol.
+    Note:
+      This conflicts, since r11783 is not going to be merged.  I'd say
+      it's too trivial to create a branch forit.
     Votes:
       +1: lundblad
