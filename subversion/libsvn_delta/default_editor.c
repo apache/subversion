@@ -27,7 +27,9 @@
 
 
 static svn_error_t *
-set_target_revision (void *edit_baton, svn_revnum_t target_revision)
+set_target_revision (void *edit_baton, 
+                     svn_revnum_t target_revision,
+                     apr_pool_t *pool)
 {
   return SVN_NO_ERROR;
 }
@@ -47,7 +49,8 @@ add_item (const char *path,
 
 
 static svn_error_t *
-single_baton_func (void *baton)
+single_baton_func (void *baton,
+                   apr_pool_t *pool)
 {
   return SVN_NO_ERROR;
 }
@@ -94,6 +97,7 @@ change_prop (void *file_baton,
 
 static svn_error_t *
 apply_textdelta (void *file_baton,
+                 apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {

@@ -42,7 +42,8 @@ send_file_contents (svn_fs_root_t *root,
   SVN_ERR (svn_fs_file_contents (&contents, root, path, pool));  
 
   /* Get an editor func that wants to consume the delta stream. */
-  SVN_ERR (editor->apply_textdelta (file_baton, &handler, &handler_baton));
+  SVN_ERR (editor->apply_textdelta (file_baton, pool,
+                                    &handler, &handler_baton));
 
   /* Send the file's contents to the delta-window handler. */
   SVN_ERR (svn_txdelta_send_stream (contents, handler, handler_baton, pool));
@@ -210,7 +211,7 @@ walk_tree (svn_fs_root_t *root,
                                   editor, 0, subpool));
           SVN_ERR (send_file_contents (root, dirent_path, file_baton,
                                        editor, subpool));
-          SVN_ERR (editor->close_file (file_baton));
+          SVN_ERR (editor->close_file (file_baton, subpool));
         }
 
       else
@@ -224,7 +225,7 @@ walk_tree (svn_fs_root_t *root,
     }
 
   /* Close the dir and remove the subpool we used at this level. */
-  SVN_ERR (editor->close_directory (dir_baton));
+  SVN_ERR (editor->close_directory (dir_baton, subpool));
 
   /* Destory our subpool. */
   svn_pool_destroy (subpool);
@@ -252,7 +253,7 @@ svn_ra_local__checkout (svn_fs_t *fs,
   SVN_ERR (svn_fs_revision_root (&root, fs, revnum, pool));
 
   /* Call some initial editor functions. */
-  SVN_ERR (editor->set_target_revision (edit_baton, revnum));
+  SVN_ERR (editor->set_target_revision (edit_baton, revnum, pool));
   SVN_ERR (editor->open_root (edit_baton, SVN_INVALID_REVNUM, pool, &baton));
   SVN_ERR (set_any_props (root, fs_path, baton, editor, 1, pool));
 
@@ -261,7 +262,7 @@ svn_ra_local__checkout (svn_fs_t *fs,
                       URL, recurse, pool));
 
   /* Finalize the edit drive. */
-  SVN_ERR (editor->close_edit (edit_baton));
+  SVN_ERR (editor->close_edit (edit_baton, pool));
 
   return SVN_NO_ERROR;
 }

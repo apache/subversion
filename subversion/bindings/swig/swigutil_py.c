@@ -362,7 +362,8 @@ static svn_error_t * close_baton(void *baton, const char *method)
 }
 
 static svn_error_t * thunk_set_target_revision(void *edit_baton,
-                                               svn_revnum_t target_revision)
+                                               svn_revnum_t target_revision,
+                                               apr_pool_t *pool)
 {
   item_baton *ib = edit_baton;
   PyObject *result;
@@ -496,7 +497,8 @@ static svn_error_t * thunk_change_dir_prop(void *dir_baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t * thunk_close_directory(void *dir_baton)
+static svn_error_t * thunk_close_directory(void *dir_baton,
+                                           apr_pool_t *pool)
 {
   return close_baton(dir_baton, "close_directory");
 }
@@ -584,10 +586,11 @@ static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t * thunk_apply_textdelta(
-    void *file_baton, 
-    svn_txdelta_window_handler_t *handler,
-    void **h_baton)
+static svn_error_t *
+thunk_apply_textdelta(void *file_baton, 
+                      apr_pool_t *pool,
+                      svn_txdelta_window_handler_t *handler,
+                      void **h_baton)
 {
   item_baton *ib = file_baton;
   PyObject *result;
@@ -644,17 +647,20 @@ static svn_error_t * thunk_change_file_prop(void *file_baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t * thunk_close_file(void *file_baton)
+static svn_error_t * thunk_close_file(void *file_baton,
+                                      apr_pool_t *pool)
 {
   return close_baton(file_baton, "close_file");
 }
 
-static svn_error_t * thunk_close_edit(void *edit_baton)
+static svn_error_t * thunk_close_edit(void *edit_baton,
+                                      apr_pool_t *pool)
 {
   return close_baton(edit_baton, "close_edit");
 }
 
-static svn_error_t * thunk_abort_edit(void *edit_baton)
+static svn_error_t * thunk_abort_edit(void *edit_baton,
+                                      apr_pool_t *pool)
 {
   return close_baton(edit_baton, "abort_edit");
 }

@@ -567,12 +567,12 @@ open_directory (const char *path,
 
 
 static svn_error_t *
-close_directory (void *dir_baton)
+close_directory (void *dir_baton,
+                 apr_pool_t *pool)
 {
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->edit_baton;
   apr_hash_index_t *hi;
-  apr_pool_t *pool = db->pool;
   apr_pool_t *subpool = svn_pool_create (pool);
   
   for (hi = apr_hash_first (pool, db->deleted_entries);

@@ -306,6 +306,7 @@ open_directory (const char *path,
 
 static svn_error_t *
 apply_textdelta (void *file_baton,
+                 apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {
@@ -454,7 +455,8 @@ change_dir_prop (void *dir_baton,
 
 
 static svn_error_t *
-close_edit (void *edit_baton)
+close_edit (void *edit_baton,
+            apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
   svn_revnum_t new_revision = SVN_INVALID_REVNUM;
@@ -510,7 +512,8 @@ close_edit (void *edit_baton)
 
 
 static svn_error_t *
-abort_edit (void *edit_baton)
+abort_edit (void *edit_baton,
+            apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
   return (eb->txn ? svn_fs_abort_txn (eb->txn) : SVN_NO_ERROR);

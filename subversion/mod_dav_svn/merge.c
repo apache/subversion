@@ -230,7 +230,8 @@ static svn_error_t *mr_change_dir_prop(void *dir_baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *mr_close_directory(void *dir_baton)
+static svn_error_t *mr_close_directory(void *dir_baton,
+                                       apr_pool_t *pool)
 {
   mr_baton *dir = dir_baton;
 
@@ -238,7 +239,7 @@ static svn_error_t *mr_close_directory(void *dir_baton)
      for it. */
   if (dir->seen_change)
     {
-      SVN_ERR( send_response(dir, TRUE /* is_dir */, dir->pool) );
+      SVN_ERR( send_response(dir, TRUE /* is_dir */, pool) );
     }
 
   return SVN_NO_ERROR;
@@ -279,12 +280,11 @@ static svn_error_t *mr_open_file(const char *path,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *mr_close_file(void *file_baton)
+static svn_error_t *mr_close_file(void *file_baton,
+                                  apr_pool_t *pool)
 {
-  mr_baton *fb = file_baton;
-
   /* nothing to do except for sending the response. */
-  return send_response(file_baton, FALSE /* is_dir */, fb->pool);
+  return send_response(file_baton, FALSE /* is_dir */, pool);
 }
 
 

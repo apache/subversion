@@ -685,6 +685,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
   file_read_ctx_t frc = { 0 };
 
   SVN_ERR_W( (*editor->apply_textdelta)(file_baton,
+                                        pool,
                                         &frc.handler,
                                         &frc.handler_baton),
              "could not save file");
@@ -747,7 +748,7 @@ static svn_error_t *fetch_file(ne_session *sess,
   err = store_vsn_url(rsrc, file_baton, editor->change_file_prop, pool);
 
  error:
-  err2 = (*editor->close_file)(file_baton);
+  err2 = (*editor->close_file)(file_baton, pool);
   return err ? err : err2;
 }
 
@@ -1212,7 +1213,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
                           &bc_root) );
 
   /* all the files we checkout will have TARGET_REV for the revision */
-  SVN_ERR( (*editor->set_target_revision)(edit_baton, target_rev) );
+  SVN_ERR( (*editor->set_target_revision)(edit_baton, target_rev, ras->pool) );
 
   /* In the checkout case, we don't really have a base revision, so
      pass SVN_IGNORED_REVNUM. */
@@ -1253,14 +1254,14 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
             }
           /* sentinel reached. close the dir. possibly done! */
           svn_path_remove_component(edit_path);
-          err = (*editor->close_directory) (parent_baton);
+          err = (*editor->close_directory) (parent_baton, subpool);
           if (err)
             return svn_error_quick_wrap(err, "could not finish directory");
 
           if (subdirs->nelts == 0)
             {
               /* Finish the edit */
-              SVN_ERR( ((*editor->close_edit) (edit_baton)) );
+              SVN_ERR( ((*editor->close_edit) (edit_baton, subpool)) );
 
               /* Store auth info if necessary */
               SVN_ERR( (svn_ra_dav__maybe_store_auth_info (ras)) );
@@ -1342,7 +1343,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
   /* ### should never reach??? */
 
   /* Finish the edit */
-  SVN_ERR( ((*editor->close_edit) (edit_baton)) );
+  SVN_ERR( ((*editor->close_edit) (edit_baton, ras->pool)) );
 
   /* Store auth info if necessary */
   SVN_ERR( (svn_ra_dav__maybe_store_auth_info (ras)) );
@@ -1768,7 +1769,8 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       /* ### verify we got it. punt on error. */
 
       CHKERR( (*rb->editor->set_target_revision)(rb->edit_baton,
-                                                 SVN_STR_TO_REV(att)) );
+                                                 SVN_STR_TO_REV(att),
+                                                 rb->ras->pool) );
       break;
 
     case ELEM_resource:
@@ -2046,7 +2048,8 @@ static int end_element(void *userdata,
       CHKERR( add_node_props (rb) );
 
       /* close the topmost directory, and pop it from the stack */
-      CHKERR( (*rb->editor->close_directory)(TOP_DIR(rb).baton) );
+      CHKERR( (*rb->editor->close_directory)(TOP_DIR(rb).baton,
+                                             rb->ras->pool) );
       apr_array_pop(rb->dirs);
       break;
 
@@ -2072,7 +2075,7 @@ static int end_element(void *userdata,
       CHKERR( add_node_props (rb) );
 
       /* close the file and mark that we are no longer operating on a file */
-      CHKERR( (*rb->editor->close_file)(rb->file_baton) );
+      CHKERR( (*rb->editor->close_file)(rb->file_baton, rb->ras->pool) );
       rb->file_baton = NULL;
 
       /* Yank this file out of the directory's path buffer. */
@@ -2329,7 +2332,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
 
   /* we got the whole HTTP response thing done. now wrap up the update
      process with a close_edit call. */
-  SVN_ERR( (*rb->editor->close_edit)(rb->edit_baton) );
+  SVN_ERR( (*rb->editor->close_edit)(rb->edit_baton, rb->ras->pool) );
 
   /* store auth info if we can. */
   SVN_ERR( svn_ra_dav__maybe_store_auth_info (rb->ras) );

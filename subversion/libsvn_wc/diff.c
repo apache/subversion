@@ -582,7 +582,9 @@ directory_elements_diff (struct dir_baton *dir_baton,
 
 /* An editor function. */
 static svn_error_t *
-set_target_revision (void *edit_baton, svn_revnum_t target_revision)
+set_target_revision (void *edit_baton, 
+                     svn_revnum_t target_revision,
+                     apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
   eb->revnum = target_revision;
@@ -698,7 +700,8 @@ open_directory (const char *path,
  * diff'd. However there may be other elements in the working copy
  * that have not yet been considered.  */
 static svn_error_t *
-close_directory (void *dir_baton)
+close_directory (void *dir_baton,
+                 apr_pool_t *pool)
 {
   struct dir_baton *b = dir_baton;
 
@@ -844,6 +847,7 @@ window_handler (svn_txdelta_window_t *window,
 /* An editor function. */
 static svn_error_t *
 apply_textdelta (void *file_baton,
+                 apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {
@@ -889,7 +893,8 @@ apply_textdelta (void *file_baton,
  * file containing a pristine version of the repository file. This can
  * be compared against the working copy.  */
 static svn_error_t *
-close_file (void *file_baton)
+close_file (void *file_baton,
+            apr_pool_t *pool)
 {
   struct file_baton *b = file_baton;
   svn_wc_adm_access_t *adm_access;
@@ -1019,7 +1024,8 @@ change_dir_prop (void *dir_baton,
 
 /* An editor function. */
 static svn_error_t *
-close_edit (void *edit_baton)
+close_edit (void *edit_baton,
+            apr_pool_t *pool)
 {
   /* ### TODO: If the root has not been replaced, then we need to do this
      to pick up local changes. Can this happen? Well, at the moment, it

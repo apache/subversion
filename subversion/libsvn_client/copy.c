@@ -352,20 +352,20 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
     {
       SVN_ERR (editor->add_directory (telepath, batons[i], src_url,
                                       src_revnum, pool, &baton));
-      SVN_ERR (editor->close_directory (baton));
+      SVN_ERR (editor->close_directory (baton, pool));
     }
   else
     {
       SVN_ERR (editor->add_file (telepath, batons[i], src_url,
                                  src_revnum, pool, &baton));
-      SVN_ERR (editor->close_file (baton));
+      SVN_ERR (editor->close_file (baton, pool));
     }
 
   /* Now, close up all those batons (except the root
      baton). */
   while (i)
     {
-      SVN_ERR (editor->close_directory (batons[i]));
+      SVN_ERR (editor->close_directory (batons[i], pool));
       batons[i--] = NULL;
     }
 
@@ -398,13 +398,13 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
          baton). */
       while (i)
         {
-          SVN_ERR (editor->close_directory (batons[i--]));
+          SVN_ERR (editor->close_directory (batons[i--], pool));
         }
     }
 
   /* Turn off the lights, close up the shop, and go home. */
-  SVN_ERR (editor->close_directory (batons[0]));
-  SVN_ERR (editor->close_edit (edit_baton));
+  SVN_ERR (editor->close_directory (batons[0], pool));
+  SVN_ERR (editor->close_edit (edit_baton, pool));
 
   /* Fill in the commit_info structure. */
   *commit_info = svn_client__make_commit_info (committed_rev,
@@ -637,7 +637,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
  cleanup:
   /* Abort the commit if it is still in progress. */
   if (commit_in_progress)
-    editor->abort_edit (edit_baton); /* ignore return value */
+    editor->abort_edit (edit_baton, pool); /* ignore return value */
 
   /* We were committing to RA, so close the session. */
   if (session)

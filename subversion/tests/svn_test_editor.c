@@ -181,12 +181,13 @@ test_delete_entry (const char *path,
 
 static svn_error_t *
 test_set_target_revision (void *edit_baton,
-                          svn_revnum_t target_revision)
+                          svn_revnum_t target_revision,
+                          apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
   svn_stringbuf_t *str;
 
-  str = svn_stringbuf_createf (eb->pool,
+  str = svn_stringbuf_createf (pool,
                                "[%s] set_target_revision (%"
                                SVN_REVNUM_T_FMT
                                ")\n",
@@ -296,13 +297,14 @@ add_or_open (const char *path,
 
 static svn_error_t *
 close_file_or_dir (void *baton,
-                   svn_boolean_t is_dir)
+                   svn_boolean_t is_dir,
+                   apr_pool_t *pool)
 {
   struct node_baton *nb = baton;
   struct edit_baton *eb = nb->edit_baton;
   svn_stringbuf_t *str;
 
-  str = svn_stringbuf_createf (eb->pool,
+  str = svn_stringbuf_createf (pool,
                                "[%s] close_%s (%s)\n",
                                eb->editor_name, 
                                is_dir ? "directory" : "file",
@@ -366,26 +368,29 @@ test_open_file (const char *path,
 
 
 static svn_error_t *
-test_close_directory (void *dir_baton)
+test_close_directory (void *dir_baton,
+                      apr_pool_t *pool)
 {
-  return close_file_or_dir (dir_baton, TRUE);
+  return close_file_or_dir (dir_baton, TRUE, pool);
 }
 
 
 static svn_error_t *
-test_close_file (void *file_baton)
+test_close_file (void *file_baton,
+                 apr_pool_t *pool)
 {
-  return close_file_or_dir (file_baton, FALSE);
+  return close_file_or_dir (file_baton, FALSE, pool);
 }
 
 
 static svn_error_t *
-test_close_edit (void *edit_baton)
+test_close_edit (void *edit_baton,
+                 apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
   svn_stringbuf_t *str;
 
-  str = svn_stringbuf_createf (eb->pool, "[%s] close_edit\n", eb->editor_name);
+  str = svn_stringbuf_createf (pool, "[%s] close_edit\n", eb->editor_name);
   SVN_ERR (print (eb, 0, str));
 
   if (eb->verbose)
@@ -394,9 +399,26 @@ test_close_edit (void *edit_baton)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_abort_edit (void *edit_baton,
+                 apr_pool_t *pool)
+{
+  struct edit_baton *eb = edit_baton;
+  svn_stringbuf_t *str;
+
+  str = svn_stringbuf_createf (pool, "[%s] ***ABORT_EDIT***\n", 
+                               eb->editor_name);
+  SVN_ERR (print (eb, 0, str));
+
+  if (eb->verbose)
+    SVN_ERR (newline (eb));
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 test_apply_textdelta (void *file_baton,
+                      apr_pool_t *pool,
                       svn_txdelta_window_handler_t *handler,
                       void **handler_baton)
 {
@@ -408,7 +430,7 @@ test_apply_textdelta (void *file_baton,
   *handler        = my_vcdiff_windoweater;
   *handler_baton  = nb;
 
-  str = svn_stringbuf_createf (eb->pool, "[%s] apply_textdelta (%s)\n",
+  str = svn_stringbuf_createf (pool, "[%s] apply_textdelta (%s)\n",
                                eb->editor_name, nb->path);
   SVN_ERR (print (eb, nb->indent_level + 1, str));
 
@@ -505,6 +527,7 @@ svn_test_get_editor (const svn_delta_editor_t **editor,
   my_editor->change_file_prop    = test_change_file_prop;
   my_editor->change_dir_prop     = test_change_dir_prop;
   my_editor->close_edit          = test_close_edit;
+  my_editor->abort_edit          = test_abort_edit;
 
   /* Set up the edit baton. */
   my_edit_baton = apr_pcalloc (pool, sizeof (*my_edit_baton));

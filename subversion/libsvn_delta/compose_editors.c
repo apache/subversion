@@ -51,15 +51,17 @@ struct file_baton
 
 
 static svn_error_t *
-set_target_revision (void *edit_baton, svn_revnum_t target_revision)
+set_target_revision (void *edit_baton, 
+                     svn_revnum_t target_revision,
+                     apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
 
   SVN_ERR ((* (eb->editor_1->set_target_revision)) (eb->edit_baton_1,
-                                                    target_revision));
+                                                    target_revision, pool));
   
   SVN_ERR ((* (eb->editor_2->set_target_revision)) (eb->edit_baton_2,
-                                                    target_revision));
+                                                    target_revision, pool));
 
   return SVN_NO_ERROR;
 }
@@ -174,54 +176,60 @@ open_directory (const char *path,
 
 
 static svn_error_t *
-close_directory (void *dir_baton)
+close_directory (void *dir_baton,
+                 apr_pool_t *pool)
 {
   struct dir_baton *d = dir_baton;
 
-  SVN_ERR ((* (d->edit_baton->editor_1->close_directory)) (d->dir_baton_1));
+  SVN_ERR ((* (d->edit_baton->editor_1->close_directory)) (d->dir_baton_1,
+                                                           pool));
   
-  SVN_ERR ((* (d->edit_baton->editor_2->close_directory)) (d->dir_baton_2));
+  SVN_ERR ((* (d->edit_baton->editor_2->close_directory)) (d->dir_baton_2,
+                                                           pool));
 
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-close_file (void *file_baton)
+close_file (void *file_baton,
+            apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
 
-  SVN_ERR ((* (fb->edit_baton->editor_1->close_file))
-           (fb->file_baton_1));
+  SVN_ERR ((* (fb->edit_baton->editor_1->close_file)) (fb->file_baton_1, 
+                                                       pool));
   
-  SVN_ERR ((* (fb->edit_baton->editor_2->close_file))
-           (fb->file_baton_2));
+  SVN_ERR ((* (fb->edit_baton->editor_2->close_file)) (fb->file_baton_2, 
+                                                       pool));
 
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-close_edit (void *edit_baton)
+close_edit (void *edit_baton,
+            apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
 
-  SVN_ERR ((* (eb->editor_1->close_edit)) (eb->edit_baton_1));
+  SVN_ERR ((* (eb->editor_1->close_edit)) (eb->edit_baton_1, pool));
   
-  SVN_ERR ((* (eb->editor_2->close_edit)) (eb->edit_baton_2));
+  SVN_ERR ((* (eb->editor_2->close_edit)) (eb->edit_baton_2, pool));
 
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-abort_edit (void *edit_baton)
+abort_edit (void *edit_baton,
+            apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
 
-  SVN_ERR ((* (eb->editor_1->abort_edit)) (eb->edit_baton_1));
+  SVN_ERR ((* (eb->editor_1->abort_edit)) (eb->edit_baton_1, pool));
   
-  SVN_ERR ((* (eb->editor_2->abort_edit)) (eb->edit_baton_2));
+  SVN_ERR ((* (eb->editor_2->abort_edit)) (eb->edit_baton_2, pool));
 
   return SVN_NO_ERROR;
 }
@@ -254,6 +262,7 @@ window_handler (svn_txdelta_window_t *window, void *handler_pair)
 
 static svn_error_t *
 apply_textdelta (void *file_baton,
+                 apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {
@@ -264,10 +273,12 @@ apply_textdelta (void *file_baton,
   void *hb2;
   
   SVN_ERR ((* (fb->edit_baton->editor_1->apply_textdelta)) (fb->file_baton_1,
+                                                            pool,
                                                             &h1,
                                                             &hb1));
 
   SVN_ERR ((* (fb->edit_baton->editor_2->apply_textdelta)) (fb->file_baton_2,
+                                                            pool,
                                                             &h2,
                                                             &hb2));
 

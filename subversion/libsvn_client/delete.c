@@ -180,8 +180,8 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
                                   &root_baton));
       SVN_ERR (editor->delete_entry (target, SVN_INVALID_REVNUM, 
                                      root_baton, pool));
-      SVN_ERR (editor->close_directory (root_baton));
-      SVN_ERR (editor->close_edit (edit_baton));
+      SVN_ERR (editor->close_directory (root_baton, pool));
+      SVN_ERR (editor->close_edit (edit_baton, pool));
 
       /* Fill in the commit_info structure. */
       *commit_info = svn_client__make_commit_info (committed_rev,

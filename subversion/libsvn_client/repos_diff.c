@@ -386,7 +386,9 @@ get_empty_file (struct edit_baton *b,
 
 /* An editor function. The root of the comparison hierarchy */
 static svn_error_t *
-set_target_revision (void *edit_baton, svn_revnum_t target_revision)
+set_target_revision (void *edit_baton, 
+                     svn_revnum_t target_revision,
+                     apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
   
@@ -610,6 +612,7 @@ window_handler (svn_txdelta_window_t *window,
 /* An editor function.  */
 static svn_error_t *
 apply_textdelta (void *file_baton,
+                 apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {
@@ -642,7 +645,8 @@ apply_textdelta (void *file_baton,
  * file containing a pristine version of the repository file. This can
  * be compared against the working copy.  */
 static svn_error_t *
-close_file (void *file_baton)
+close_file (void *file_baton,
+            apr_pool_t *pool)
 {
   struct file_baton *b = file_baton;
   struct edit_baton *eb = b->edit_baton;
@@ -651,7 +655,8 @@ close_file (void *file_baton)
     content_state = svn_wc_notify_state_unknown,
     prop_state = svn_wc_notify_state_unknown;
 
-  SVN_ERR (get_parent_access (&adm_access, eb->adm_access, b->wcpath, b->pool));
+  SVN_ERR (get_parent_access (&adm_access, eb->adm_access, 
+                              b->wcpath, b->pool));
   if (b->path_end_revision)
     {
       if (b->added)
@@ -702,7 +707,8 @@ close_file (void *file_baton)
 
 /* An editor function.  */
 static svn_error_t *
-close_directory (void *dir_baton)
+close_directory (void *dir_baton,
+                 apr_pool_t *pool)
 {
   struct dir_baton *b = dir_baton;
   struct edit_baton *eb = b->edit_baton;
@@ -771,7 +777,8 @@ change_dir_prop (void *dir_baton,
 
 /* An editor function.  */
 static svn_error_t *
-close_edit (void *edit_baton)
+close_edit (void *edit_baton,
+            apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
 
