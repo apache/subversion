@@ -33,10 +33,3 @@ Candidate changes:
       +1: blair, dlr
     Votes: (9439, 9808):
       +1: breser
-
-  * r9814
-    Fix off-by-one error in working copy code.
-    Justification: Can't check out to root path.
-    Votes:
-      +1: breser, sussman, cmpilato
-
