@@ -892,6 +892,15 @@ Available subcommands:
                 new value.</para>
             </listitem>
           </varlistentry>
+
+          <varlistentry>
+            <term><literal>verify</literal></term>
+            <listitem>
+              <para>Verify the contents of the repository.  This includes,
+                among other things, checksum comparisons of the
+                versioned data stored in the repository.</para>
+            </listitem>
+          </varlistentry>
         </variablelist>
 
       </sect3>
