@@ -858,7 +858,7 @@ svn_fs__unparse_transaction_skel (skel_t **skel_p,
   if (transaction->copies && transaction->copies->nelts) 
     {
       int i;
-      for (i = transaction->copies->nelts - 1; i > 0; i--)
+      for (i = transaction->copies->nelts - 1; i >= 0; i--)
         {
           const char *copy_id = APR_ARRAY_IDX (transaction->copies, i, 
                                                const char *);
