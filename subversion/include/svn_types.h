@@ -186,6 +186,16 @@ typedef svn_error_t *(*svn_log_message_receiver_t)
 
 
 
+/* The maximum amount we (ideally) hold in memory at a time when
+ * processing a stream of data.  For example, when copying data from
+ * one stream to another, do it in blocks of this size; also, the
+ * standard size of one svndiff window; etc.
+ */
+#define SVN_STREAM_CHUNK_SIZE 102400
+
+
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

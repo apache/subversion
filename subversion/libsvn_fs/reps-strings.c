@@ -1398,7 +1398,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
   {
     apr_size_t size;
     SVN_ERR (svn_fs__rep_contents_size (&size, fs, target, trail));
-    if (size > svn_txdelta_window_size)
+    if (size > SVN_STREAM_CHUNK_SIZE)
       return SVN_NO_ERROR;
   }
 
