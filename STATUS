@@ -107,3 +107,11 @@ Candidate changes:
     Votes:
       +1: lundblad
       +0: nori
+
+  * r11936
+    Handle missing subdirs in directories reported by the status editor.
+    Justification:
+      Fixes 'working copy not locked' error
+    Votes:
+      Nominated by: Chris AtLee <catlee@sidefx.com>
+
