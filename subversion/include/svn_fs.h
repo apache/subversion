@@ -580,7 +580,8 @@ svn_error_t *svn_fs_dir_delta (svn_fs_dir_t *source_dir,
 
 
 /* Set *STREAM to a pointer to a delta stream that will turn the
-   contents of SOURCE_FILE into the contents of TARGET_FILE.
+   contents of SOURCE_FILE into the contents of TARGET_FILE.  If
+   SOURCE_FILE is zero, treat it as a file with zero length.
 
    This function does not compare the two files' properties.
    
