@@ -19,7 +19,9 @@ AC_ARG_WITH(apache,
 		AC_MSG_ERROR(You need to specify a directory with --with-apache)
 	fi
 
-        if test -r $withval/modules/dav/main/mod_dav.h; then
+	if test "$withval" = "no"; then
+		BINNAME=""
+	elif test -r $withval/modules/dav/main/mod_dav.h; then
 		APACHE_INCLUDES="$APACHE_INCLUDES -I$withval/include -I$withval/os/unix -I$withval/modules/dav/main -I$withval/srclib/apr/include -I$withval/srclib/apr-util/include"
 		APACHE_TARGET=$withval/modules/dav/svn
 		INSTALL_APACHE_RULE=install-mods-static
@@ -64,7 +66,7 @@ if test "$BINNAME" = "" -a "$APXS" = ""; then
   done
 fi
 
-if test -n "$APXS"; then
+if test -n "$APXS" -a "$APXS" != "no"; then
     APXS_INCLUDE="`$APXS -q INCLUDEDIR`"
     if test -r $APXS_INCLUDE/mod_dav.h; then
         AC_MSG_RESULT(found at $APXS)
@@ -79,7 +81,7 @@ else
     AC_MSG_RESULT(no)
 fi
 
-if test -n "$APXS"; then
+if test -n "$APXS" -a "$APXS" != "no"; then
     BINNAME=mod_dav_svn.so
     INSTALL_IT="\$(APXS) -i -a -n dav_svn $BINNAME"
 
@@ -110,7 +112,7 @@ AC_SUBST(BUILD_APACHE_RULE)
 AC_SUBST(INSTALL_APACHE_RULE)
 
 # there aren't any flags that interest us ...
-#if test -n "$APXS"; then
+#if test -n "$APXS" -a "$APXS" != "no"; then
 #  CFLAGS="$CFLAGS `$APXS -q CFLAGS CFLAGS_SHLIB`"
 #fi
 
