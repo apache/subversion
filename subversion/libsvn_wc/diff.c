@@ -688,7 +688,9 @@ open_directory (const char *path,
   struct dir_baton *b;
   const char *full_path;
 
-  full_path = svn_path_join (pb->edit_baton->anchor_path, path, dir_pool);
+  /* Allocate path from the parent pool since the memory is used in the
+     parent's compared hash */
+  full_path = svn_path_join (pb->edit_baton->anchor_path, path, pb->pool);
   b = make_dir_baton (full_path, pb, pb->edit_baton, FALSE, dir_pool);
   *child_baton = b;
 
