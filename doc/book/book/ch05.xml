@@ -164,7 +164,7 @@
         to store data.</para>
 
       <para>When a repository is created, an administrator must decide
-        whether it will use BerkeleyDB or FSFS.  There are advantages
+        whether it will use Berkeley DB or FSFS.  There are advantages
         and disadvantages to each, which we'll describe in a bit.
         Neither back-end is more <quote>official</quote> than another,
         and programs which access the repository are insulated from
@@ -173,7 +173,7 @@
         transaction trees through the repository API.</para>
 
       <para>Here is a table that gives an comparative overview of
-        BerkeleyDB and FSFS repositories.  The next sections go into
+        Berkeley DB and FSFS repositories.  The next sections go into
         detail.</para>
 
       <table id="svn-ch-5-table-1">
@@ -182,7 +182,7 @@
           <thead>
             <row>
               <entry>Feature</entry>
-              <entry>BerkeleyDB</entry>
+              <entry>Berkeley DB</entry>
               <entry>FSFS</entry>
             </row>
           </thead>
@@ -273,17 +273,6 @@
             </row>
 
             <row>
-              <entry>Backup strategy</entry>
-              
-              <entry>use <command>svnadmin</command> commands to perform
-                full and incremental backups</entry>
-              
-              <entry>can also use standard backup software for full and
-                incremental backups;  able to split repository over
-                multiple spools</entry>
-            </row>
-
-            <row>
               <entry>Code maturity</entry>
               
               <entry>in use since 2001</entry>
@@ -299,9 +288,7 @@
       <sect3 id="svn-ch-5-sect-1.3">
         <title>Berkeley DB</title>
         
-        <para>The data housed within Subversion repositories actually
-          lives inside a database, specifically, a Berkeley DB Data
-          Store.  When the initial design phase of Subversion was in
+        <para>When the initial design phase of Subversion was in
           progress, the developers decided to use Berkeley DB for a
           variety of reasons, including its open-source license,
           transaction support, reliability, performance, API
@@ -353,19 +340,103 @@
           Secondly, Subversion uses Berkeley DB in a way that will not
           operate on Windows 95/98 systems&mdash;if you need to house
           a repository on a Windows machine, stick with Windows 2000
-          or Windows XP.  Finally, you should never keep a Subversion
+          or Windows XP.  Also, you should never keep a Berkeley DB
           repository on a network share.  While Berkeley DB promises
           to behave correctly on network shares that meet a particular
           set of specifications, almost no known shares actually meet
           all those specifications.</para>
+
+        <para>Finally, because Berkeley DB is a library linked
+          directly into Subversion, it's more sensitive to
+          interruptions than a typical relational database system.
+          Most SQL systems, for example, have a dedicated server
+          process that mediates all access to tables.  If a program
+          accessing the database crashes for some reason, the database
+          daemon notices the lost connection and clean up any mess
+          left behind.  And because the database daemon is the only
+          process accessing the tables, applications don't need to
+          worry about permission conflicts.  These things are not the
+          case with Berkeley DB, however.  Subversion (and programs
+          using Subversion libraries) access the database tables
+          directly, which means that a program crash can leave the
+          database in a temporarily inconsistent, inaccessible state.
+          When this happens, an administrator needs to ask Berkeley DB
+          to restore to a checkpoint, which is a bit of an annoyance.
+          Other things can cause a repository to <quote>wedge</quote>
+          besides crashed processes, such as programs conflicting over
+          ownership and permissions on the database files.  So while a
+          BerkeleyDB repository is quite fast and scalable, it's best
+          used by a single server process running as one
+          user&mdash;such as Apache's <command>httpd</command> or
+          <command>svnserve</command> (see <xref
+          linkend="svn-ch-6"/>)&mdash; rather than accessing it as
+          many different users via <literal>file:///</literal> or
+          <literal>svn+ssh://</literal> URLs.  If using a Berkeley DB
+          repository directly as multiple users, be sure to read <xref
+          linkend="svn-ch-6-sect-5"/>.</para>
 
       </sect3>
       
     <!-- ***************************************************************** -->
       <sect3 id="svn-ch-5-sect-1.4">
         <title>FSFS</title>
-      
-        <para>blah</para>
+
+        <para>In mid-2004, a second type of repository storage system
+          came into being: one which doesn't use a database at all.
+          An FSFS repository stores a revision tree in a single file,
+          and so all of a repository's revisions can be found in a
+          single subdirectory full of numbered files.  Transactions
+          are created in separate subdirectories.  When complete, a
+          single transaction file is created and moved to the
+          revisions directory, thus guaranteeing that commits are
+          atomic.  And because a revision file is permanent and
+          unchanging, the repository also can be backed up while
+          <quote>hot</quote>, just like a Berkeley DB repository.</para>
+
+        <para>The revision-file format represents a revision's
+          directory structure, file contents, and deltas against files
+          in other revision trees.  Unlike a Berkeley DB database,
+          this storage format is portable across different operating
+          systems and isn't sensitive to CPU architecture.  Because
+          there's no journaling or shared-memory files being used, the
+          repository can be safely accessed over a network filesystem
+          and examined in a read-only environment.  The lack of
+          database overhead also means that the overall repository
+          size is a bit smaller.</para>
+
+        <para>FSFS has different performance characteristics too.
+          When committing a directory with huge numbers a files, FSFS
+          uses a O(N) algorithm to append entries, while Berkeley DB
+          uses an O(N^2) algoritm to rewrite the whole directory.  On
+          the other hand, FSFS writes the latest version of a file as
+          a delta against the next oldest version (modulo some
+          tricks), which means that checking out the latest tree is a
+          bit slower than fetching the fulltexts stored in a Berkeley
+          DB HEAD revision.  FSFS also has a much longer delay when
+          finalizing a commit, which might cause clients to time-out
+          when waiting for a response.  This might also lead to
+          scalability problems when a large number of commits are
+          happening simultaneously.  Commit processes may line up
+          waiting for a write lock, rather than doing work in parallel
+          database transactions.</para>
+
+        <para>The most important distinction, however, is FSFS's
+          inability to be <quote>wedged</quote> when something goes
+          wrong.  If a process using a Berkeley DB database runs into
+          a permissions problem or suddenly crashes, the database is
+          left unusable until a administrator recovers it.  If the
+          same scenarios happen to a process using an FSFS repository,
+          the repository isn't affected at all.  At worst, some
+          transaction data is left behind.</para>
+
+        <para>The only real argument against an FSFS is its relative
+          immaturity compared to Berkeley DB.  It hasn't been used or
+          stress-tested nearly as much, and so a lot of these
+          assertions about speed and scalability are just that:
+          assertions, based on good guesses.  In theory, it promises a
+          lower barrier to entry for new administrators and is less
+          susceptible to problems.  In practice, only time will
+          tell.</para>
 
       </sect3>
     </sect2>
@@ -394,25 +465,38 @@ $ svnadmin create /path/to/repos
       property, <literal>svn:date</literal>, set to the time at which
       the repository was created.</para>
 
+    <para>In Subversion 1.1, a repository is created with a Berkeley
+      DB back-end by default.  This behavior may change in future
+      releases.  Regardless, the type can be explicitly chosen with
+      the <option>--fs-type</option> argument:</para>
+
+    <screen>
+$ svnadmin create --fs-type fsfs /path/to/repos
+$ svnadmin create --fs-type bdb /path/to/other/repos
+</screen>
+
+
     <warning>
-      <para>Do not create your repository on a network share&mdash;it
-        <emphasis>cannot</emphasis> exist on a remote filesystem such
-        as NFS, AFS, or Windows SMB.  Berkeley DB requires that the
-        underlying filesystem implement strict POSIX locking
-        semantics, and more importantly, the ability to map files
-        directly into process memory.  Almost no network filesystems
-        provide these features.  If you attempt to use Berkeley DB on
-        a network share, the results are unpredictable&mdash;you may see
-        mysterious errors right away, or it may be months before you
-        discover that your repository database is subtly
-        corrupted.</para>
+      <para>Do not create a Berkeley DB repository on a network
+        share&mdash;it <emphasis>cannot</emphasis> exist on a remote
+        filesystem such as NFS, AFS, or Windows SMB.  Berkeley DB
+        requires that the underlying filesystem implement strict POSIX
+        locking semantics, and more importantly, the ability to map
+        files directly into process memory.  Almost no network
+        filesystems provide these features.  If you attempt to use
+        Berkeley DB on a network share, the results are
+        unpredictable&mdash;you may see mysterious errors right away,
+        or it may be months before you discover that your repository
+        database is subtly corrupted.</para>
 
       <para>If you need multiple computers to access the repository,
-        you should set up a server process (such as Apache or
-        <command>svnserve</command>), store the repository on a local
-        filesystem which the server can access, and make the
-        repository available over a network.  <xref
-        linkend="svn-ch-6"/> covers this process in detail.</para>
+        you create an FSFS repository on the network share, not a
+        Berkeley DB repository.  Or better yet, set up a real server
+        process (such as Apache or <command>svnserve</command>), store
+        the repository on a local filesystem which the server can
+        access, and make the repository available over a network.
+        <xref linkend="svn-ch-6"/> covers this process in
+        detail.</para>
     </warning>
           
     <para>You may have noticed that the path argument to
@@ -462,9 +546,10 @@ conf/  dav/  db/  format  hooks/  locks/  README.txt
      <varlistentry>
         <term>db</term>
         <listitem>
-          <para>The main Berkeley DB environment, full of DB tables
-            that comprise the data store for Subversion's filesystem
-            (where all of your versioned data resides).</para>
+          <para>Where all of your versioned data resides.  This
+            directory is either a Berkeley DB environment (full of DB
+            tables and other things), or is an FSFS environment
+            containing revision files.</para>
         </listitem>
       </varlistentry>
      <varlistentry>
@@ -1133,22 +1218,24 @@ Available subcommands:
           <varlistentry>
             <term><literal>list-dblogs</literal></term>
             <listitem>
-              <para>List the paths of Berkeley DB log files
-                associated with the repository.  This list includes
-                all log files&mdash;those still in use by Subversion, as
-                well as those no longer in use.</para>
+              <para>(Berkeley DB repositories only.)  List the paths
+                of Berkeley DB log files associated with the
+                repository.  This list includes all log
+                files&mdash;those still in use by Subversion, as well
+                as those no longer in use.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>list-unused-dblogs</literal></term>
             <listitem>
-              <para>List the paths of Berkeley DB log files
-                associated with, but no longer used by, the
-                repository.  You may safely remove these log files from
-                the repository layout, possibly archiving them for use
-                in the event that you ever need to perform a
-                catastrophic recovery of the repository.</para>
+              <para>(Berkeley DB repositories only.)  List the paths
+                of Berkeley DB log files associated with, but no
+                longer used by, the repository.  You may safely remove
+                these log files from the repository layout, possibly
+                archiving them for use in the event that you ever need
+                to perform a catastrophic recovery of the
+                repository.</para>
             </listitem>
           </varlistentry>
 
@@ -1613,13 +1700,14 @@ $
       <sect3 id="svn-ch-5-sect-3.1.5">
         <title>Berkeley DB Utilities</title>
 
-        <para>All of your versioned filesystem's structure and data
-          live in a set of Berkeley DB database tables within the
-          <filename>db</filename> subdirectory of your repository.
-          This subdirectory is a regular Berkeley DB environment
-          directory, and can therefore be used in conjunction with any
-          of the Berkeley database tools (you can see the documentation
-          for these tools at SleepyCat's website, <systemitem
+        <para>If you're using a Berkeley DB repository, then all of
+          your versioned filesystem's structure and data live in a set
+          of database tables within the <filename>db</filename>
+          subdirectory of your repository.  This subdirectory is a
+          regular Berkeley DB environment directory, and can therefore
+          be used in conjunction with any of the Berkeley database
+          tools (you can see the documentation for these tools at
+          SleepyCat's website, <systemitem
           class="url">http://www.sleepycat.com/</systemitem>).</para>
 
         <para>For day-to-day Subversion use, these tools are
@@ -1862,11 +1950,13 @@ $
           administrators seeking to version large amounts of data.
           Every additional byte consumed by the live repository is a
           byte that needs to be backed up offsite, perhaps multiple
-          times as part of rotating backup schedules.  Since the
-          primary storage mechanism of a Subversion repository is a
+          times as part of rotating backup schedules.  If using a
+          Berkeley DB repository, the primary storage mechanism is a
           complex database system, it is useful to know what pieces of
           data need to remain on the live site, which need to be
-          backed up, and which can be safely removed.</para>
+          backed up, and which can be safely removed.  This section is
+          specific to Berkeley DB;  FSFS repositories have no extra
+          data that be cleaned up or reclaimed.</para>
 
         <para>Until recently, the largest offender of disk space usage
           with respect to Subversion repositories was the logfiles to
@@ -1958,18 +2048,24 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
     <sect2 id="svn-ch-5-sect-3.4">
       <title>Repository Recovery</title>
 
-      <para>In order to protect the data in your repository, the
-        database back-end uses a locking mechanism.  This mechanism
-        ensures that portions of the database are not simultaneously
-        modified by multiple database accessors, and that each process
-        sees the data in the correct state when that data is being
-        read from the database.  When a process needs to change
-        something in the database, it first checks for the existence
-        of a lock on the target data.  If the data is not locked, the
-        process locks the data, makes the change it wants to make, and
-        then unlocks the data.  Other processes are forced to wait
-        until that lock is removed before they are permitted to
-        continue accessing that section of the database.</para>
+      <para>As mentioned in <xref linkend="svn-ch-5-sect-1.3"/>, a
+        Berkeley DB repository can sometimes be left in frozen state
+        if not closed properly.  When this happens, an administrator
+        needs to rewind the database back into a consistent
+        state.</para>
+
+      <para>In order to protect the data in your repository, Berkeley
+        DB uses a locking mechanism.  This mechanism ensures that
+        portions of the database are not simultaneously modified by
+        multiple database accessors, and that each process sees the
+        data in the correct state when that data is being read from
+        the database.  When a process needs to change something in the
+        database, it first checks for the existence of a lock on the
+        target data.  If the data is not locked, the process locks the
+        data, makes the change it wants to make, and then unlocks the
+        data.  Other processes are forced to wait until that lock is
+        removed before they are permitted to continue accessing that
+        section of the database.</para>
 
       <para>In the course of using your Subversion repository, fatal
         errors (such as running out of disk space or available memory)
@@ -1981,7 +2077,7 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
         go away&mdash;which isn't going to happen).</para>
 
       <para>First, if this happens to your repository, don't panic.
-        Subversion's filesystem takes advantage of database
+        The Berkeley DB filesystem takes advantage of database
         transactions and checkpoints and pre-write journaling to
         ensure that only the most catastrophic of events
         <footnote>
@@ -2069,10 +2165,11 @@ The latest repos revision is 19.
         repository is due to changes in Subversion itself.  As
         Subversion matures, there are times when certain changes made
         to the back-end database schema cause Subversion to be
-        incompatible with previous versions of the repository.  The
-        recommended course of action when you are upgrading across one
-        of those compatibility boundaries is a relatively simple
-        process:</para>
+        incompatible with previous versions of the repository.  Other
+        reasons for dumping and loading might be to migrate a Berkeley
+        DB repository to a new OS or CPU architecture, or to switch
+        between Berkeley DB and FSFS back-ends.  The recommended
+        course of action is relatively simple:</para>
   
       <orderedlist>
         <listitem>
@@ -2348,17 +2445,18 @@ $
 
       <para>A full backup of the repository is quite literally a
         duplication of the entire repository directory (which includes
-        the Berkeley database environment).  Now, unless you
-        temporarily disable all other access to your repository,
+        either Berkeley database or FSFS environment).  Now, unless
+        you temporarily disable all other access to your repository,
         simply doing a recursive directory copy runs the risk of
         generating a faulty backup, since someone might be currently
         writing to the database.</para>
 
-      <para>Fortunately, Sleepycat's Berkeley DB documents describe a
+      <para>In the case of Berkeley DB, Sleepycat documents describe a
         certain order in which database files can be copied that will
-        guarantee a valid backup copy.  And better still, you don't
-        have to implement that algorithm yourself, because the
-        Subversion development team has already done so.  The
+        guarantee a valid backup copy.  And a similar ordering exists
+        for FSFS data.  Better still, you don't have to implement
+        these algorithms yourself, because the Subversion development
+        team has already done so.  The
         <command>hot-backup.py</command> script is found in the
         <filename>tools/backup/</filename> directory of the Subversion
         source distribution.  Given a repository path and a backup
