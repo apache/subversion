@@ -62,6 +62,7 @@ svn_cl__print_commit_info (svn_client_commit_info_t *commit_info)
 
 svn_error_t *
 svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
+                         const char **tmpfile_left /* UTF-8! */,
                          const char *base_dir /* UTF-8! */,
                          const char *contents /* UTF-8! */,
                          const char *prefix,
@@ -78,6 +79,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
   svn_error_t *err = SVN_NO_ERROR, *err2;
   char *old_cwd;
   int sys_err;
+  svn_boolean_t remove_file = TRUE;
   struct svn_config_t *cfg;
 
   /* Try to find an editor in the environment. */
@@ -195,7 +197,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
     {
       svn_stringbuf_t *edited_contents_s;
       err = svn_stringbuf_from_file (&edited_contents_s, tmpfile_name, pool);
-      if (!err)
+      if (! err)
         err = svn_utf_cstring_to_utf8 (edited_contents,
                                        edited_contents_s->data, NULL, pool);
       if (err)
@@ -207,16 +209,26 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
       *edited_contents = NULL;
     }
 
+  /* If the caller wants us to leave the file around, return the path
+     of the file we used, and make a note not to destroy it.  */
+  if (tmpfile_left)
+    {
+      *tmpfile_left = svn_path_join (base_dir, tmpfile_name, pool);
+      remove_file = FALSE;
+    }
+  
  cleanup:
+  if (remove_file)
+    {
+      /* Remove the file from disk.  */
+      err2 = svn_io_remove_file (tmpfile_name, pool);
 
-  err2 = svn_io_remove_file (tmpfile_name, pool);
-
-  /* Only report remove error if there was no previous error. */
-  if (! err && err2)
-    err = err2;
+      /* Only report remove error if there was no previous error. */
+      if (! err && err2)
+        err = err2;
+    }
 
  cleanup2:
-
   /* If we against all probability can't cd back, all further relative
      file references would be screwed up, so we have to abort. */
   apr_err = apr_filepath_set (old_cwd, pool);
@@ -234,9 +246,11 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
 
 struct log_msg_baton
 {
-  const char *message;
+  const char *message;  /* the message. */
   const char *message_encoding; /* the locale/encoding of the message. */
-  const char *base_dir; /* UTF-8! */
+  const char *base_dir; /* the base directory for an external edit. UTF-8! */
+  const char *tmpfile_left; /* the tmpfile left by an external edit. UTF-8! */
+  apr_pool_t *pool; /* a pool. */
 };
 
 
@@ -251,14 +265,44 @@ svn_cl__make_log_msg_baton (svn_cl__opt_state_t *opt_state,
     baton->message = opt_state->filedata->data;
   else
     baton->message = opt_state->message;
-
   baton->message_encoding = opt_state->filedata_encoding;
-
-  baton->base_dir = base_dir ? base_dir : ".";
-
+  baton->base_dir = base_dir ? base_dir : "";
+  baton->tmpfile_left = NULL;
+  baton->pool = pool;
   return baton;
 }
 
+
+svn_error_t *
+svn_cl__cleanup_log_msg (void *log_msg_baton,
+                         svn_error_t *commit_err)
+{
+  struct log_msg_baton *lmb = log_msg_baton;
+  const char *native;
+  svn_error_t *conv_err;
+
+  /* If there was no tmpfile left, or there is no log message baton,
+     return COMMIT_ERR. */
+  if ((! lmb) || (! lmb->tmpfile_left))
+    return commit_err;
+
+  /* If there was no commit error, cleanup the tmpfile and return. */
+  if (! commit_err)
+    return svn_io_remove_file (lmb->tmpfile_left, lmb->pool);
+
+  /* There was a commit error; there is a tmpfile.  Leave the tmpfile
+     around, and add message about its presence to the commit error
+     chain.  Then return COMMIT_ERR.  If the conversion from UTF-8 to
+     native encoding fails, we have to compose that error with the
+     commit error chain, too. */
+  conv_err = svn_utf_cstring_from_utf8 (&native, lmb->tmpfile_left, lmb->pool);
+  svn_error_compose (commit_err, svn_error_createf 
+                     (commit_err->apr_err, 0, conv_err, lmb->pool,
+                      "Your commit message was left in a temporary file:\n"
+                      "   %s", 
+                      conv_err ? "(see the following error)" : native));
+  return commit_err;
+}
 
 /* Remove line-starting PREFIX and everything after it from BUFFER. */
 static svn_stringbuf_t *
@@ -370,9 +414,15 @@ svn_cl__get_log_message (const char **log_msg,
           svn_stringbuf_appendcstr (tmp_message, "\n");
         }
 
-      err = svn_cl__edit_externally (&msg2, lmb->base_dir, tmp_message->data, 
+      /* Use the external edit to get a log message. */
+      err = svn_cl__edit_externally (&msg2, &lmb->tmpfile_left,
+                                     lmb->base_dir, tmp_message->data, 
                                      "svn-commit", pool);
-      
+
+      /* Dup the tmpfile path into its baton's pool. */
+      lmb->tmpfile_left = apr_pstrdup (lmb->pool, lmb->tmpfile_left);
+
+      /* If the edit returned an error, handle it. */
       if (err)
         {
           if (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR)
@@ -419,15 +469,25 @@ svn_cl__get_log_message (const char **log_msg,
             {
               char letter = apr_tolower (reply[0]);
 
-              /* If the user chooses to abort, we exit the loop with a
-                 NULL message. */
+              /* If the user chooses to abort, we cleanup the
+                 temporary file and exit the loop with a NULL
+                 message. */
               if ('a' == letter)
-                break;
+                {
+                  SVN_ERR (svn_io_remove_file (lmb->tmpfile_left, pool));
+                  lmb->tmpfile_left = NULL;
+                  break;
+                }
 
               /* If the user chooses to continue, we make an empty
-                 message, which will cause us to exit the loop. */
+                 message, which will cause us to exit the loop.  We
+                 also cleanup the temporary file. */
               if ('c' == letter) 
-                message = svn_stringbuf_create ("", pool);
+                {
+                  SVN_ERR (svn_io_remove_file (lmb->tmpfile_left, pool));
+                  lmb->tmpfile_left = NULL;
+                  message = svn_stringbuf_create ("", pool);
+                }
 
               /* If the user chooses anything else, the loop will
                  continue on the NULL message. */
