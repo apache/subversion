@@ -1395,9 +1395,6 @@ svn_wc__entry_modify (svn_stringbuf_t *path,
 
   /* ENTRY is rather necessary, and ENTRY->kind is required to be valid! */
   assert (entry);
-  /*
-  assert ((entry->kind == svn_node_dir) || (entry->kind == svn_node_file));
-  */
 
   /* Load PATH's whole entries file. */
   SVN_ERR (svn_wc_entries_read (&entries, path, pool));

@@ -743,11 +743,22 @@ svn_wc_add (svn_stringbuf_t *path,
       if (orig_entry->schedule == svn_wc_schedule_delete)
         is_replace = TRUE;
     }
-    
+
   /* Split off the basename from the parent directory. */
   svn_path_split (path, &parent_dir, &basename, pool);
   if (svn_path_is_empty (parent_dir))
     parent_dir = svn_stringbuf_create (".", pool);
+  SVN_ERR (svn_wc_entry (&parent_entry, parent_dir, pool));
+  if (! parent_entry)
+    return svn_error_createf 
+      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+       "Could not find parent directory's entry while trying to add '%s'",
+       path->data);
+  if (parent_entry->schedule == svn_wc_schedule_delete)
+    return svn_error_createf 
+      (SVN_ERR_WC_SCHEDULE_CONFLICT, 0, NULL, pool,
+       "Can not add '%s' to a parent directory scheduled for deletion",
+       path->data);
 
   /* Init the modify flags. */
   modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_KIND;;
@@ -840,7 +851,6 @@ svn_wc_add (svn_stringbuf_t *path,
 
           /* Figure out what the new url should be. */
           svn_stringbuf_t *url;
-          SVN_ERR (svn_wc_entry (&parent_entry, parent_dir, pool));
           url = svn_stringbuf_dup (parent_entry->url, pool);
           svn_path_add_component (url, basename);
 

@@ -135,6 +135,7 @@ harvest_committables (apr_hash_t *committables,
                       svn_stringbuf_t *url,
                       svn_stringbuf_t *copyfrom_url,
                       svn_wc_entry_t *entry,
+                      svn_wc_entry_t *parent_entry,
                       svn_boolean_t adds_only,
                       svn_boolean_t copy_mode,
                       svn_boolean_t nonrecursive,
@@ -223,8 +224,6 @@ harvest_committables (apr_hash_t *committables,
   if ((entry->copied || copy_mode) 
       && (entry->schedule == svn_wc_schedule_normal))
     {
-#if 0 /* ### todo: Find a better way to do this that doesn't require
-         reading the parent's entry. */
       svn_revnum_t p_rev = entry->revision - 1; /* arbitrary non-equal value */
       svn_boolean_t wc_root = FALSE;
 
@@ -233,9 +232,8 @@ harvest_committables (apr_hash_t *committables,
       SVN_ERR (svn_wc_is_wc_root (&wc_root, path, subpool));
       if (! wc_root)
         {
-          svn_wc_entry_t *p_entry;
-          SVN_ERR (svn_wc_entry (&p_entry, p_path, subpool));
-          p_rev = p_entry->revision;
+          if (parent_entry)
+            p_rev = parent_entry->revision;
         }
       else if (! copy_mode)
         return svn_error_createf 
@@ -243,7 +241,6 @@ harvest_committables (apr_hash_t *committables,
            "Did not expect `%s' to be a working copy root", path->data);
 
       if (entry->revision != p_rev)
-#endif /* 0 */
         {
           state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
           state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
@@ -371,6 +368,7 @@ harvest_committables (apr_hash_t *committables,
                     used_url ? used_url : this_entry->url,
                     this_cf_url,
                     (svn_wc_entry_t *)val, 
+                    entry,
                     adds_only,
                     copy_mode,
                     FALSE,
@@ -490,7 +488,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
 
       /* Handle our TARGET. */
       SVN_ERR (harvest_committables (*committables, *locked_dirs, target, 
-                                     url, NULL, entry, FALSE, FALSE, 
+                                     url, NULL, entry, NULL, FALSE, FALSE, 
                                      nonrecursive, pool));
 
       /* Reset our base path for the next iteration, and increment our
@@ -527,7 +525,7 @@ svn_client__get_copy_committables (apr_hash_t **committables,
       
   /* Handle our TARGET. */
   SVN_ERR (harvest_committables (*committables, *locked_dirs, target, 
-                                 new_url, entry->url, entry, 
+                                 new_url, entry->url, entry, NULL,
                                  FALSE, TRUE, FALSE, pool));
 
   return SVN_NO_ERROR;
