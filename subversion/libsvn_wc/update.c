@@ -105,6 +105,8 @@ check_existence (svn_string_t *path,
 /* kff todo: this will want to be somewhere else, and get decided at
    configure time too probably.  For now let's just get checkout
    working. */
+/* ben sez:  aha!  then this belongs in our "config.h" file! */
+
 #define SVN_DIR_SEPARATOR '/'
 
 
@@ -179,6 +181,13 @@ update_dir_handler (svn_delta_digger_t *diggy, svn_delta_stackframe_t *frame)
  * kff todo: instead of apr_file_t *SRC, use a generic streamer like
  * JimB made for the text delta interface.
  */
+
+/* TODO: abstractify the whole process of creating an expat parser
+object and calling XML_Parse().  The caller should be doing nothing
+but passing some stream data to a routine, and this routine is in
+charge of creating/using whatever parser object is necessary to do the
+job. */
+
 svn_error_t *
 update (apr_file_t *src, svn_string_t *dst, apr_pool_t *pool)
 {
@@ -212,7 +221,7 @@ update (apr_file_t *src, svn_string_t *dst, apr_pool_t *pool)
     }
 
 
-  /* Else nothing in the way, so contine. */
+  /* Else nothing in the way, so continue. */
 
   do {
     /* Grab some stream. */
