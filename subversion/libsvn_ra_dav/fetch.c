@@ -2299,6 +2299,14 @@ static svn_error_t * reporter_finish_report(void *report_baton)
                                    start_element, end_element, rb,
                                    rb->ras->pool);
 
+  /* we're done with the file */
+  (void) apr_file_close(rb->tmpfile);
+
+  if (err != NULL)
+    return err;
+  if (rb->err != NULL)
+    return rb->err;
+
   /* We got the whole HTTP response thing done.  *Whew*.  Our edit
      baton should have been closed by now, so return a failure if it
      hasn't been. */
@@ -2308,14 +2316,6 @@ static svn_error_t * reporter_finish_report(void *report_baton)
         (SVN_ERR_RA_DAV_REQUEST_FAILED, 0, NULL,
          "REPORT response handling failed to complete the editor drive");
     }
-
-  /* we're done with the file */
-  (void) apr_file_close(rb->tmpfile);
-
-  if (err != NULL)
-    return err;
-  if (rb->err != NULL)
-    return rb->err;
 
   /* store auth info if we can. */
   SVN_ERR( svn_ra_dav__maybe_store_auth_info (rb->ras) );
