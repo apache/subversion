@@ -37,6 +37,7 @@ Here is a list of all the things that the Subversion Book DOESN'T yet cover.
     config file on the *server*, rather than the client.  oof, clarify.
 
   - document new svn+ssh:// syntax.  also explain 'svnserve -t' flag.
+    and the new SVN_SSH environment variable.
 
   - ch06:  .cvsignore files aren't recursive.  neither is svn:ignore prop.
 
@@ -46,10 +47,26 @@ Here is a list of all the things that the Subversion Book DOESN'T yet cover.
     application *have* to set up in the cxt_t in order to call an
     svn_client_foo() function?
 
-  - document how to use 'svn up' to restart an interrupted checkout.
+  - document how to use 'svn co' to restart an interrupted checkout.
 
   - document new 'svn st' symbol for incomplete directories
 
   - new 'svn diff' UI (when it's done) -- affects ch03, ch08, and
     maybe other chapters.
 
+  - svn merge --dry-run   (different than 'svn diff')
+
+  - mention that killing $EDITOR without saving changes gives the
+    option to abort a commit.
+
+  - (perhaps) suggest the use of environment variables to represent
+    long repository URLs.  useful for lots of branching/tagging commands.
+
+  - 'svn rm URL URL URL [...]' is now a single commit.  Same with 'svn
+    mkdir dir1 dir2 dir3 [...]'
+
+  - clarify that 'svn copy/move' *only* works within a single
+    repository.  cross-repository copying is a post-1.0 feature.
+
+
+  
