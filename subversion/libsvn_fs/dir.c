@@ -424,10 +424,22 @@ svn_fs_open_node (svn_fs_node_t **child,
       || name->data[0] == '/')
     return path_syntax (fs, name);
 
-  /* Walk down from PARENT_DIR to the desired node, traversing NAME one path
-     component at a time.  */
   dir = parent_dir;
   scan = name->data;
+
+  /* Pretend we re-opened the top directory ourselves.  As we walk
+     down the directory tree, we close each directory object after
+     we've traversed it, but we don't want to close PARENT_DIR ---
+     that's the caller's object.  Bumping the open count has the same
+     effect as re-opening the directory ourselves, so we have the
+     right to close it.
+
+     Perhaps it would be a good idea to have a "reopen" call in the
+     public interface, and just use that.  */
+  dir->node.open_count++;
+
+  /* Walk down from PARENT_DIR to the desired node, traversing NAME one path
+     component at a time.  */
   for (;;)
     {
       char *start;
@@ -450,7 +462,7 @@ svn_fs_open_node (svn_fs_node_t **child,
       if (! is_valid_dirent_name (start, scan - start))
 	return path_syntax (fs, name);
 
-      /* Try to find a matching entry in node.  */
+      /* Try to find a matching entry in dir.  */
       for (entry = dir->entries; *entry; entry++)
 	if ((*entry)->name->len == scan - start
 	    && ! memcmp ((*entry)->name->data, start, scan - start))
@@ -467,18 +479,17 @@ svn_fs_open_node (svn_fs_node_t **child,
       if (scan >= name_end)
 	break;
 
-      /* That node had better be a directory.  */
-      if (node->kind != kind_dir)
-	return not_a_directory (fs, name->data, scan - name->data);
+      /* Close the old directory.  */ 
+      svn_fs_close_dir (dir);
 
-      /* Close the old directory, if we opened it.  */
-      if (dir != parent_dir)
-	svn_fs_close_dir (dir);
-
-      /* The new node is now our current directory.  */
+      /* The new node is now our current directory...  */
       dir = svn_fs_node_to_dir (node);
 
-      /* Skip however many slashes we've got.  */
+      /* ... so it had better actually be a directory.  */
+      if (! dir)
+	return not_a_directory (fs, name->data, scan - name->data);
+
+      /* Skip however many slashes we're looking at.  */
       while (scan < name_end && *scan == '/')
 	scan++;
 
