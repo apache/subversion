@@ -140,3 +140,10 @@ Candidate changes:
     Votes:
       +1: lundblad, kfogel
       +0: nori
+
+  * r11783
+    Reset locale back to "C" in svnserve.
+    Justification:
+      We shouldn't send translated errors over the svn protocol.
+    Votes:
+      +1: lundblad
