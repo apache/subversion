@@ -360,7 +360,6 @@ print_diff_tree (svn_fs_root_t *root,
   repos_node_t *tmp_node;
   svn_stringbuf_t *full_path;
   svn_stringbuf_t *fname1 = NULL, *fname2 = NULL;
-  svn_stringbuf_t *cmd = svn_stringbuf_create (SVN_CLIENT_DIFF, pool);
 
   if (! node)
     return SVN_NO_ERROR;
@@ -391,13 +390,10 @@ print_diff_tree (svn_fs_root_t *root,
 
   if (fname1 && fname2)
     {
-      /* At this point, we have two temporary files, FNAME1 and
-         FNAME2, which contain our current and base file contents,
-         respectively.  Let's run DIFF on them.  */
-      svn_stringbuf_appendcstr (cmd, apr_psprintf (pool,
-                                                   " -u %s %s",
-                                                   fname2->data,
-                                                   fname1->data));
+      const char *args[5];
+      apr_file_t *outhandle;
+      apr_status_t apr_err;
+
       printf ("%s: %s\n", 
               ((tmp_node->action == 'A') ? "Added" : 
                ((tmp_node->action == 'D') ? "Deleted" :
@@ -406,8 +402,25 @@ print_diff_tree (svn_fs_root_t *root,
       printf ("===============================================================\
 ===============\n");
       fflush (stdout);
-      system (cmd->data);
+
+      args[0] = SVN_CLIENT_DIFF;
+      args[1] = "-c";
+      args[2] = fname2->data;
+      args[3] = fname1->data;
+      args[4] = NULL;
+
+      /* Get an apr_file_t representing stdout, which is where we'll have
+         the diff program print to. */
+      apr_err = apr_file_open_stdout (&outhandle, pool);
+      if (apr_err)
+        return svn_error_create 
+          (apr_err, 0, NULL, pool,
+           "print_diff_tree: can't open handle to stdout");
+
+      SVN_ERR (svn_io_run_cmd (".", SVN_CLIENT_DIFF, args, 
+                               NULL, outhandle, NULL, pool));
       printf ("\n");
+      fflush (stdout);
     }
   
   /* Now, delete any temporary files. */
