@@ -71,13 +71,6 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
-  * r12286
-    Fix README references to cvs2svn.
-    Justification:
-      Tell our users the correct information. Doc change only.
-    Votes:
-      +1: maxb, jerenkrantz
-
   * r12327
     Fix race condition in dump loader computing the next revision.
     Justification:
@@ -87,6 +80,13 @@ Candidate changes:
 
 
 Approved changes (further review is welcome, but not required):
+
+  * r12286
+    Fix README references to cvs2svn.
+    Justification:
+      Tell our users the correct information. Doc change only.
+    Votes:
+      +1: maxb, jerenkrantz
 
   * r12102
     Fix a slight ABI/API incompatability between 1.0.x and 1.1.x
