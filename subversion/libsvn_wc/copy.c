@@ -32,6 +32,7 @@
 #include "wc.h"
 #include "adm_files.h"
 #include "props.h"
+#include "translate.h"
 
 #include "svn_private_config.h"
 
@@ -135,6 +136,7 @@ copy_file_administratively (const char *src_path,
 {
   svn_node_kind_t dst_kind;
   const svn_wc_entry_t *src_entry, *dst_entry;
+  svn_boolean_t special;
 
   /* The 'dst_path' is simply dst_parent/dst_basename */
   const char *dst_path
@@ -183,9 +185,20 @@ copy_file_administratively (const char *src_path,
          "try committing first"),
        src_path);
 
-  /* Now, make an actual copy of the working file. */
-  SVN_ERR (svn_io_copy_file (src_path, dst_path, TRUE, pool));
-
+  /* Now, make an actual copy of the working file.  If this is a
+     special file, we can't copy it directly, but should instead
+     use the translation routines to create the new file. */
+  SVN_ERR (svn_wc__get_special (&special, src_path, src_access, pool));
+  if (! special)
+    SVN_ERR (svn_io_copy_file (src_path, dst_path, TRUE, pool));
+  else
+    SVN_ERR (svn_subst_copy_and_translate2 (src_path,
+                                            dst_path, NULL, FALSE,
+                                            NULL,
+                                            TRUE, /* expand */
+                                            TRUE, /* special */
+                                            pool));
+  
   /* Copy the pristine text-base over.  Why?  Because it's the *only*
      way we can detect any upcoming local mods on the copy.
 
