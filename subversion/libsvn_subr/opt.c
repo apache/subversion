@@ -175,7 +175,9 @@ svn_opt_print_generic_help (const char *header,
 {
   int i = 0;
 
-  fprintf (stream, "%s", header);
+  if (header)
+    fprintf (stream, "%s", header);
+  
   while (cmd_table[i].name) 
     {
       fprintf (stream, "   ");
@@ -185,8 +187,9 @@ svn_opt_print_generic_help (const char *header,
     }
 
   fprintf (stream, "\n");
-  fprintf (stream, "%s\n", footer);
-
+  
+  if (footer)
+    fprintf (stream, "%s", footer);
 }
 
 

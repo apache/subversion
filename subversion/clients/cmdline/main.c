@@ -53,7 +53,7 @@
  * This must not have more than SVN_OPT_MAX_OPTIONS entries; if you
  * need more, increase that limit first. 
  *
- * The entire list must be terminated with a entry of nulls.
+ * The entire list must be terminated with an entry of nulls.
  */
 const apr_getopt_option_t svn_cl__options[] =
   {
@@ -94,7 +94,7 @@ const apr_getopt_option_t svn_cl__options[] =
 
 /* Our array of available subcommands.
  *
- * The entire list must be terminated with a entry of nulls.
+ * The entire list must be terminated with an entry of nulls.
  */
 const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
 {

@@ -110,8 +110,10 @@ svn_opt_subcommand_takes_option (const svn_opt_subcommand_desc_t *command,
 /* Print a generic (not command-specific) usage message to STREAM.
  * (### todo: why is STREAM a stdio file instead of an svn stream?)
  *
- * Print HEADER, then loop over CMD_TABLE printing the usage for each
- * command (getting option usages from OPT_TABLE), then print FOOTER.
+ * If HEADER is non-null, print HEADER followed by a newline.  Then
+ * loop over CMD_TABLE printing the usage for each command (getting
+ * option usages from OPT_TABLE).  Then if FOOTER is non-null, print
+ * FOOTER followed by a newline.
  *
  * Use POOL for temporary allocation.
  */
