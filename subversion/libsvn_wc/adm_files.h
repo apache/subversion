@@ -182,27 +182,6 @@ svn_error_t *svn_wc__close_text_base (apr_file_t *fp,
                                       int sync,
                                       apr_pool_t *pool);
 
-
-/* Open FILE in the authentication area of PATH's administratve area.
- * FILE is a single file's name, i.e. a basename.
- * Behaves like svn_wc__open_adm_file(), which see.
- */
-svn_error_t *svn_wc__open_auth_file (apr_file_t **handle,
-                                     const char *path,
-                                     const char *auth_filename,
-                                     apr_int32_t flags,
-                                     apr_pool_t *pool);
-
-/* Close the authentication FILE in PATH's administrative area.
- * FP was obtained from svn_wc__open_auth_file().
- * Behaves like svn_wc__close_adm_file(), which see.
- */
-svn_error_t *svn_wc__close_auth_file (apr_file_t *handle,
-                                      const char *path,
-                                      const char *file,
-                                      int sync,
-                                      apr_pool_t *pool);
-
 /* Open the property file for PATH.
  * PATH can be any kind of path, either file or dir.
  *

@@ -22,10 +22,14 @@
 #include <apr_want.h>
 
 #include <apr_lib.h>
+#include <apr_md5.h>
 #include "config_impl.h"
 #include "svn_io.h"
 #include "svn_types.h"
 #include "svn_path.h"
+#include "svn_auth.h"
+#include "svn_md5.h"
+#include "svn_hash.h"
 #include "svn_private_config.h"
 
 
@@ -445,6 +449,49 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
 }
 
 
+/* Helper for svn_config_ensure:  see if ~/.subversion/auth/ and its
+   subdirs exist, try to create them, but don't throw errors on
+   failure.  PATH is assumed to be a path to the user's private config
+   directory. */
+static void
+ensure_auth_dirs (const char *path,
+                  apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+  apr_status_t apr_err;
+  const char *auth_dir, *auth_subdir;
+
+  /* Ensure ~/.subversion/auth/ */
+  auth_dir = svn_path_join_many (pool, path, SVN_CONFIG__AUTH_SUBDIR, NULL);
+  svn_io_check_path (auth_dir, &kind, pool);
+  if (kind == svn_node_none)
+    {
+      /* 'chmod 700' permissions: */
+      apr_err = apr_dir_make (auth_dir,
+                              (APR_UREAD | APR_UWRITE | APR_UEXECUTE),
+                              pool);
+      if (apr_err)
+        return;
+    }
+
+  /* If a provider exists that wants to store credentials in
+     ~/.subversion, a subdirectory for the cred_kind must exist. */
+
+  auth_subdir = svn_path_join_many (pool, auth_dir,
+                                    SVN_AUTH_CRED_SIMPLE, NULL);
+  svn_io_check_path (auth_subdir, &kind, pool);
+  if (kind == svn_node_none)
+    apr_err = apr_dir_make (auth_subdir, APR_OS_DEFAULT, pool);
+
+  auth_subdir = svn_path_join_many (pool, auth_dir,
+                                    SVN_AUTH_CRED_USERNAME, NULL);
+  svn_io_check_path (auth_subdir, &kind, pool);
+  if (kind == svn_node_none)
+    apr_err = apr_dir_make (auth_subdir, APR_OS_DEFAULT, pool);
+
+}
+
+
 svn_error_t *
 svn_config_ensure (apr_pool_t *pool)
 {
@@ -467,13 +514,23 @@ svn_config_ensure (apr_pool_t *pool)
         return SVN_NO_ERROR;
     }
   else
-    return SVN_NO_ERROR;
+    {
+      /* ### config directory already exists, but for the sake of
+         smooth upgrades, try to ensure that the auth/ subdirs exist
+         as well.  we can remove this check someday in the future. */
+      ensure_auth_dirs (path, pool);
+
+      return SVN_NO_ERROR;
+    }
 
   /* Else, there's a configuration directory. */
 
   /* If we get errors trying to do things below, just stop and return
      success.  There's no _need_ to init a config directory if
      something's preventing it. */
+
+  /** If non-existent, try to create a number of auth/ subdirectories. */
+  ensure_auth_dirs (path, pool);
 
   /** Ensure that the `README' file exists. **/
   SVN_ERR (svn_config__user_config_path
@@ -826,6 +883,104 @@ svn_config_ensure (apr_pool_t *pool)
                                       "closing config file `%s'", path);
         }
     }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Helper for svn_config_{read|write}_auth_data.  Return a path to a
+   file within ~/.subversion/auth/ that holds CRED_KIND credentials
+   within REALMSTRING.  */
+static const char *
+auth_file_path (const char *cred_kind,
+                const char *realmstring,
+                apr_pool_t *pool)
+{
+  const char *authdir_path, *hexname;
+  unsigned char digest[MD5_DIGESTSIZE];
+      
+  /* Construct the path to the directory containing the creds files,
+     e.g. "~/.subversion/auth/svn:simple".  The last component is
+     simply the cred_kind.  */
+  svn_config__user_config_path (&authdir_path,
+                                SVN_CONFIG__AUTH_SUBDIR, pool);
+  authdir_path = svn_path_join (authdir_path, cred_kind, pool);
+
+  /* Construct the basename of the creds file.  It's just the
+     realmstring converted into an md5 hex string.  */
+  apr_md5 (digest, realmstring, strlen(realmstring));
+  hexname = svn_md5_digest_to_cstring (digest, pool);
+
+  return svn_path_join (authdir_path, hexname, pool);
+}
+
+
+svn_error_t *
+svn_config_read_auth_data (apr_hash_t **hash,
+                           const char *cred_kind,
+                           const char *realmstring,
+                           apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+  const char *auth_path = auth_file_path (cred_kind, realmstring, pool);
+
+  SVN_ERR (svn_io_check_path (auth_path, &kind, pool));
+  if (kind == svn_node_file)
+    {
+      apr_status_t status;
+      apr_file_t *authfile = NULL;
+
+      SVN_ERR_W (svn_io_file_open (&authfile, auth_path,
+                                   APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
+                                   pool),
+                 "unable to open auth file for reading");
+      
+      *hash = apr_hash_make (pool);
+
+      status = svn_hash_read (*hash, authfile, pool);
+      if (status)
+        return svn_error_createf (status, NULL,
+                                  "error parsing `%s'", auth_path);
+      
+      status = apr_file_close (authfile);
+      if (status)
+        return svn_error_createf (status, NULL,
+                                  "can't close `%s'", auth_path);
+    }
+  else
+    {
+      *hash = NULL;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_config_write_auth_data (apr_hash_t *hash,
+                            const char *cred_kind,
+                            const char *realmstring,
+                            apr_pool_t *pool)
+{
+  apr_status_t status;
+  apr_file_t *authfile = NULL;
+  const char *auth_path = auth_file_path (cred_kind, realmstring, pool);
+
+  SVN_ERR_W (svn_io_file_open (&authfile, auth_path,
+                               (APR_WRITE | APR_CREATE | APR_TRUNCATE
+                                | APR_BUFFERED),
+                               APR_OS_DEFAULT, pool),
+             "unable to open auth file for writing");
+  
+  status = svn_hash_write (hash, authfile, pool);
+  if (status)
+    return svn_error_createf (status, NULL,
+                              "error writing hash to `%s'", auth_path);
+
+  status = apr_file_close (authfile);
+  if (status)
+    return svn_error_createf (status, NULL,
+                              "can't close `%s'", auth_path);
 
   return SVN_NO_ERROR;
 }

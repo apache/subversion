@@ -237,6 +237,34 @@ svn_error_t *svn_config_get_server_setting_int(svn_config_t *cfg,
 svn_error_t *svn_config_ensure (apr_pool_t *pool);
 
 
+
+
+/** Use @a cred_kind and @a realmstring to locate a file within the
+ * ~/.subversion/auth/ area.  If the file exists, initialize @a *hash
+ * and load the file contents into the hash, using @a pool.  If the
+ * file doesn't exist, set @a *hash to NULL.
+ *
+ * The hashtable will contain <tt>const char *</tt>keys and
+ * <tt>svn_string_t *</tt> values.
+ */
+svn_error_t * svn_config_read_auth_data (apr_hash_t **hash,
+                                         const char *cred_kind,
+                                         const char *realmstring,
+                                         apr_pool_t *pool);
+
+/** Use @a cred_kind and @a realmstring to create or overwrite a file
+ * within the ~/.subversion/auth/ area.  Write the contents of @a hash
+ * into the file.
+ *
+ * The hashtable must contain <tt>const char *</tt>keys and
+ * <tt>svn_string_t *</tt> values.
+ */
+svn_error_t * svn_config_write_auth_data (apr_hash_t *hash,
+                                          const char *cred_kind,
+                                          const char *realmstring,
+                                          apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

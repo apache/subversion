@@ -256,17 +256,6 @@ svn_client__open_ra_session (void **session_baton,
   cb->commit_items = commit_items;
   cb->config = ctx->config;
 
-  /* If we have a base_dir, then we need to let the wc-auth-provider
-     know about it.  It needs it as a runtime parameter. */
-  if (base_dir)
-    {
-      svn_auth_set_parameter(ctx->auth_baton,
-                             SVN_AUTH_PARAM_SIMPLE_WC_WCDIR, base_dir);
-      if (base_access)
-        svn_auth_set_parameter(ctx->auth_baton,
-                               SVN_AUTH_PARAM_SIMPLE_WC_ACCESS, base_access);
-    }
-
   /* Decide if the user passed new auth info into the system by
      examining the auth_baton's runtime params. */
   {

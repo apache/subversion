@@ -630,29 +630,6 @@ svn_wc__close_text_base (apr_file_t *fp,
 
 
 svn_error_t *
-svn_wc__open_auth_file (apr_file_t **handle,
-                        const char *path,
-                        const char *auth_filename,
-                        apr_int32_t flags,
-                        apr_pool_t *pool)
-{
-  return open_adm_file (handle, path, NULL, APR_UREAD, flags, pool,
-                        SVN_WC__ADM_AUTH_DIR, auth_filename, NULL);
-}
-
-
-svn_error_t *
-svn_wc__close_auth_file (apr_file_t *handle,
-                         const char *path,
-                         const char *file,
-                         int sync,
-                         apr_pool_t *pool)
-{
-  return close_adm_file (handle, path, NULL, sync, pool,
-                         SVN_WC__ADM_AUTH_DIR, file, NULL);
-}
-
-svn_error_t *
 svn_wc__open_props (apr_file_t **handle,
                     const char *path,
                     apr_int32_t flags,
@@ -1034,12 +1011,6 @@ init_adm_tmp_area (svn_wc_adm_access_t *adm_access,
   SVN_ERR (svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_WCPROPS,
                                    svn_node_dir, perms, 1, pool));
 
-  /* SVN_WC__ADM_TMP/SVN_WC__ADM_AUTH_DIR */
-  SVN_ERR (svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_AUTH_DIR,
-                                   svn_node_dir,
-                                   (APR_UREAD | APR_UWRITE | APR_UEXECUTE),
-                                   1, pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -1086,12 +1057,6 @@ init_adm (const char *path,
   /* SVN_WC__ADM_WCPROPS */
   SVN_ERR (svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_WCPROPS,
                                    svn_node_dir, perms, 0, pool));
-
-  /* SVN_WC__ADM_AUTH_DIR */
-  SVN_ERR (svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_AUTH_DIR,
-                                   svn_node_dir, 
-                                   (APR_UREAD | APR_UWRITE | APR_UEXECUTE),
-                                   0, pool));
 
   /** Init the tmp area. ***/
   SVN_ERR (init_adm_tmp_area (adm_access, pool));

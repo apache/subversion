@@ -959,12 +959,13 @@ main (int argc, const char * const *argv)
 
     /* The main disk-caching auth providers, for both
        'username/password' creds and 'username' creds.  */
-    svn_wc_get_simple_provider (&(simple_wc_provider->vtable),
-                                &(simple_wc_provider->provider_baton), pool);
+    svn_client_get_simple_provider (&(simple_wc_provider->vtable),
+                                    &(simple_wc_provider->provider_baton),
+                                    pool);
     *(svn_auth_provider_object_t **)apr_array_push (providers) 
       = simple_wc_provider;
 
-    svn_wc_get_username_provider 
+    svn_client_get_username_provider 
       (&(username_wc_provider->vtable),
        &(username_wc_provider->provider_baton), pool);
     *(svn_auth_provider_object_t **)apr_array_push (providers) 

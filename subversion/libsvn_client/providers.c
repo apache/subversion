@@ -1,6 +1,6 @@
 /*
  * simple_wc_provider.c:  an authentication provider which gets/sets
- *                        username/password from the wc auth cache.
+ *                        username/password from the config-dir auth cache.
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
@@ -20,19 +20,22 @@
 
 #include "svn_wc.h"
 #include "svn_auth.h"
+#include "svn_config.h"
+#include "svn_client.h"
 
 
-/* Since this provider is solely responsible for reading/writing the
-   files in .svn/auth/, then it gets to name the files as well.  */
-#define SVN_WC__AUTHFILE_USERNAME            "username"
-#define SVN_WC__AUTHFILE_PASSWORD            "password"
+/* The keys that will be stored on disk */
+#define SVN_CLIENT__AUTHFILE_USERNAME_KEY            "username"
+#define SVN_CLIENT__AUTHFILE_PASSWORD_KEY            "password"
 
 
 typedef struct
 {
-  /* the wc directory and access baton we're attempting to read/write from */
-  const char *base_dir;
-  svn_wc_adm_access_t *base_access;
+  /* the cred_kind being fetched (see svn_auth.h)*/
+  const char *cred_kind;
+
+  /* cache:  realmstring which identifies the credentials file */
+  const char *realmstring;
 
   /* values retrieved from cache. */
   const char *username;
@@ -66,7 +69,8 @@ get_creds (const char **username,
            apr_hash_t *parameters,
            apr_pool_t *pool)
 {
-  svn_stringbuf_t *susername = NULL, *spassword = NULL;
+  apr_hash_t *creds_hash = NULL;
+  svn_string_t *susername = NULL, *spassword = NULL;
   const char *def_username = apr_hash_get (parameters, 
                                            SVN_AUTH_PARAM_DEFAULT_USERNAME,
                                            APR_HASH_KEY_STRING);
@@ -74,42 +78,33 @@ get_creds (const char **username,
                                            SVN_AUTH_PARAM_DEFAULT_PASSWORD,
                                            APR_HASH_KEY_STRING);
 
-  pb->base_dir = apr_hash_get (parameters, SVN_AUTH_PARAM_SIMPLE_WC_WCDIR,
-                               APR_HASH_KEY_STRING);
-  pb->base_access = apr_hash_get (parameters,
-                                  SVN_AUTH_PARAM_SIMPLE_WC_ACCESS,
-                                  APR_HASH_KEY_STRING);
-
   /* Set the default return values. */
   *got_creds = FALSE;
   *username = NULL;
   if (password)
     *password = NULL;
-
-  if (pb->base_dir)
-    {
-      svn_error_t *err1 = NULL, *err2 = NULL;
-
-      /* Try to read the cache file data. */
-      if (! def_username)
-        err1 = svn_wc_get_auth_file (pb->base_dir, 
-                                     SVN_WC__AUTHFILE_USERNAME,
-                                     &susername, pool);
-      if (! def_password)
-        err2 = svn_wc_get_auth_file (pb->base_dir, 
-                                     SVN_WC__AUTHFILE_PASSWORD,
-                                     &spassword, pool);      
-      if (err1 || err2)
-        {
-          /* for now, let's not try to distinguish "real" errors from
-             situations where the files may simply not be present.  what
-             really matters is that we failed to get the creds, so allow
-             libsvn_auth to try the next provider.  */
-          return SVN_NO_ERROR;
-        }
-    }
   
-  /* If we read values from the cache, we want to remember those, so
+  /* Try to load simple credentials from a file on disk, based on the
+     realmstring.  Don't throw an error, though:  if something went
+     wrong reading the file, no big deal.  What really matters is that
+     we failed to get the creds, so allow libsvn_auth to try the next
+     provider. */
+  svn_config_read_auth_data (&creds_hash, pb->cred_kind,
+                             pb->realmstring, pool);
+  if (creds_hash != NULL)
+    {
+      if (! def_username)
+        susername = apr_hash_get (creds_hash,
+                                  SVN_CLIENT__AUTHFILE_USERNAME_KEY,
+                                  APR_HASH_KEY_STRING);
+
+      if (! def_password)
+        spassword = apr_hash_get (creds_hash,
+                                  SVN_CLIENT__AUTHFILE_PASSWORD_KEY,
+                                  APR_HASH_KEY_STRING);
+    }
+
+    /* If we read values from disk, we want to remember those, so
      we can avoid writing unchanged values back out again (not a
      correctness point, just about efficiency). */
   if (susername && susername->data)
@@ -139,60 +134,56 @@ save_creds (svn_boolean_t *saved,
             const char *password,
             apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access;
+  const char *auth_file;
   svn_error_t *err;
-  int wc_format;
+  apr_hash_t *creds_hash = NULL;
 
   *saved = FALSE;
 
-  /* Repository queries (at the moment HEAD to number, but in future date
-     to number and maybe others) prior to a checkout will attempt to store
-     auth info before the working copy exists.  */
-  err = svn_wc_check_wc (pb->base_dir, &wc_format, pool);
-  if (err || ! wc_format)
+  /* Find the correct credentials file to open or create. */
+  auth_file = "booga"; /* ### a path based on cred_kind and realmstring */
+  
+  if (strcmp (pb->cred_kind, SVN_AUTH_CRED_SIMPLE) == 0)
     {
-      if (err && err->apr_err == APR_ENOENT)
+      /* If the creds are different from our baton cache, store in hash */
+      if ((pb->username && (strcmp (username, pb->username) != 0))
+          || (! pb->username)
+          || (pb->password && (strcmp (password, pb->password) != 0))
+          || (! pb->password))
         {
-          svn_error_clear (err);
-          err = SVN_NO_ERROR;
+          creds_hash = apr_hash_make (pool);
+          apr_hash_set (creds_hash, SVN_CLIENT__AUTHFILE_USERNAME_KEY,
+                        APR_HASH_KEY_STRING,
+                        svn_string_create (username, pool));
+          apr_hash_set (creds_hash, SVN_CLIENT__AUTHFILE_PASSWORD_KEY,
+                        APR_HASH_KEY_STRING,
+                        svn_string_create (password, pool));
+
+          /* ...and write to disk. */
+          err = svn_config_write_auth_data (creds_hash, pb->cred_kind,
+                                            pb->realmstring, pool);
+          *saved = err ? FALSE : TRUE;
         }
-      return err;
     }
 
-  /* ### Fragile!  For a checkout we have no access baton before the checkout
-     starts, so base_access is NULL.  However checkout closes its batons
-     before storing auth info so we can open a new baton here.  We don't
-     need a write-lock because storing auth data doesn't use log files. */
+  else if (strcmp (pb->cred_kind, SVN_AUTH_CRED_USERNAME) == 0)
+    {
+      /* If the creds are different from our baton cache, store in hash */
+      if ((pb->username && (strcmp (username, pb->username) != 0))
+          || (! pb->username))
+        {
+          creds_hash = apr_hash_make (pool);
+          apr_hash_set (creds_hash, SVN_CLIENT__AUTHFILE_USERNAME_KEY,
+                        APR_HASH_KEY_STRING,                        
+                        svn_string_create (username, pool));
 
-  if (! pb->base_access)
-    SVN_ERR (svn_wc_adm_open (&adm_access, NULL, pb->base_dir, 
-                              FALSE, TRUE, pool));
-  else
-    adm_access = pb->base_access;
+          /* ...and write to disk. */
+          err = svn_config_write_auth_data (creds_hash, pb->cred_kind,
+                                            pb->realmstring, pool);
+          *saved = err ? FALSE : TRUE;
+        }
+    }
 
-  /* Do a recursive store of username and password if the new values
-     are different than what we read from the cache, or if we read
-     nothing from the cache at all. */
-  if (username && 
-      ((pb->username && (strcmp (username, pb->username) != 0))
-       || (! pb->username)))
-    SVN_ERR (svn_wc_set_auth_file (adm_access, TRUE,
-                                   SVN_WC__AUTHFILE_USERNAME, 
-                                   svn_stringbuf_create (username, pool),
-                                   pool));
-  if (password && 
-      ((pb->password && (strcmp (password, pb->password) != 0))
-       || (! pb->password)))
-    SVN_ERR (svn_wc_set_auth_file (adm_access, TRUE,
-                                   SVN_WC__AUTHFILE_PASSWORD,
-                                   svn_stringbuf_create (password, pool),
-                                   pool));
-
-  *saved = TRUE;
-
-  if (! pb->base_access)
-    SVN_ERR (svn_wc_adm_close (adm_access));
-  
   return SVN_NO_ERROR;
 }
 
@@ -211,6 +202,9 @@ simple_first_creds (void **credentials,
   provider_baton_t *pb = provider_baton;
   const char *username, *password;
   svn_boolean_t got_creds;
+
+  if (realmstring)
+    pb->realmstring = apr_pstrdup (pool, realmstring);
 
   SVN_ERR (get_creds (&username, &password, &got_creds, pb, parameters, pool));
 
@@ -247,10 +241,10 @@ simple_save_creds (svn_boolean_t *saved,
   no_auth_cache = apr_hash_get (parameters, 
                                 SVN_AUTH_PARAM_NO_AUTH_CACHE,
                                 APR_HASH_KEY_STRING);
-
-  if (pb->base_dir
-      && (no_auth_cache == NULL))
+  
+  if (no_auth_cache == NULL)
     SVN_ERR (save_creds (saved, pb, creds->username, creds->password, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -265,12 +259,15 @@ static const svn_auth_provider_t simple_provider = {
 
 /* Public API */
 void
-svn_wc_get_simple_provider (const svn_auth_provider_t **provider,
-                            void **provider_baton,
-                            apr_pool_t *pool)
+svn_client_get_simple_provider (const svn_auth_provider_t **provider,
+                                void **provider_baton,
+                                apr_pool_t *pool)
 {
+  provider_baton_t *pb = apr_pcalloc (pool, sizeof(*pb));
+  pb->cred_kind = SVN_AUTH_CRED_SIMPLE;
+
   *provider = &simple_provider;
-  *provider_baton = apr_pcalloc (pool, sizeof (**provider));;
+  *provider_baton = pb;
 }
 
 
@@ -286,6 +283,9 @@ username_first_creds (void **credentials,
   provider_baton_t *pb = provider_baton;
   const char *username;
   svn_boolean_t got_creds;
+
+  if (realmstring)
+    pb->realmstring = apr_pstrdup (pool, realmstring);
 
   SVN_ERR (get_creds (&username, NULL, &got_creds, pb, parameters, pool));
 
@@ -321,10 +321,10 @@ username_save_creds (svn_boolean_t *saved,
   no_auth_cache = apr_hash_get (parameters, 
                                 SVN_AUTH_PARAM_NO_AUTH_CACHE,
                                 APR_HASH_KEY_STRING);
-
-  if (pb->base_dir
-      && (no_auth_cache == NULL))
+  
+  if (no_auth_cache == NULL)
     SVN_ERR (save_creds (saved, pb, creds->username, NULL, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -339,10 +339,13 @@ static const svn_auth_provider_t username_provider = {
 
 /* Public API */
 void
-svn_wc_get_username_provider (const svn_auth_provider_t **provider,
-                              void **provider_baton,
-                              apr_pool_t *pool)
+svn_client_get_username_provider (const svn_auth_provider_t **provider,
+                                  void **provider_baton,
+                                  apr_pool_t *pool)
 {
+  provider_baton_t *pb = apr_pcalloc (pool, sizeof(*pb));
+  pb->cred_kind = SVN_AUTH_CRED_USERNAME;
+
   *provider = &username_provider;
-  *provider_baton = apr_pcalloc (pool, sizeof (**provider));;
+  *provider_baton = pb;
 }
