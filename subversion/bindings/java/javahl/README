@@ -6,6 +6,8 @@ library for Unix or win32, respectively) and svnjavahl.jar (platform
 independent archive of Java bytecode).
 
 
+On Linux it needs automake 1.6. Earlier version do not work.
+
 Unix build tools:
 
 $ ./autogen.sh
