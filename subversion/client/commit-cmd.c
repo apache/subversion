@@ -36,8 +36,15 @@ svn_cl__commit (apr_getopt_t *os,
 {
   svn_error_t *err;
   apr_array_header_t *targets;
+  svn_string_t *message;
   int i;
 
+  /* Take our message from ARGV or a FILE */
+  if (opt_state->filedata) 
+    message = opt_state->filedata;
+  else
+    message = opt_state->message;
+  
   targets = svn_cl__args_to_target_array (os, pool);
 
   /* Add "." if user passed 0 arguments */
@@ -57,7 +64,7 @@ svn_cl__commit (apr_getopt_t *os,
       err = svn_client_commit (NULL, NULL,
                                trace_editor, trace_edit_baton,
                                target,
-                               opt_state->message,
+                               message,
                                opt_state->xml_file,
                                opt_state->revision,
                                pool);
