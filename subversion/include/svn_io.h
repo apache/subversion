@@ -441,9 +441,9 @@ svn_error_t *svn_io_run_cmd (const char *path,
    Diff runs in utf8-encoded DIR, and its exit status is stored in
    EXITCODE, if it is not NULL.  
 
-   If LABEL is given, it will be passed in as the argument to the "-L"
-   option.  LABEL is also in utf8, and will be converted to native
-   charset along with the other args.
+   If LABEL1 and/or LABEL2 are not null they will be passed to the diff
+   process as the arguments of "-L" options.  LABEL1 and LABEL2 are also in
+   utf8, and will be converted to native charset along with the other args.
 
    FROM is the first file passed to diff, and TO is the second.  The
    stdout of diff will be sent to OUTFILE, and the stderr to ERRFILE.
@@ -452,7 +452,8 @@ svn_error_t *svn_io_run_cmd (const char *path,
 svn_error_t *svn_io_run_diff (const char *dir,
                               const char *const *user_args,
                               const int num_user_args,
-                              const char *label,
+                              const char *label1,
+                              const char *label2,
                               const char *from,
                               const char *to,
                               int *exitcode,

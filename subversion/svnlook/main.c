@@ -535,7 +535,7 @@ print_diff_tree (svn_fs_root_t *root,
 
       label = apr_psprintf (pool, "%s\t(original)", base_path);
       SVN_ERR (svn_path_get_absolute (&abs_path, orig_path, pool));
-      SVN_ERR (svn_io_run_diff (SVNLOOK_TMPDIR, NULL, 0, label,
+      SVN_ERR (svn_io_run_diff (SVNLOOK_TMPDIR, NULL, 0, label, NULL,
                                 abs_path, path, 
                                 &exitcode, outhandle, NULL, pool));
 
