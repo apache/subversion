@@ -75,7 +75,8 @@ Commit access for specific areas:
       lonestar   Martin Maurer <martin.maurer@email.de>      (svnshow)
        shlomif   Shlomi Fish <shlomif@vipe.technion.ac.il>   (svn-push)
        niqueco   Nicolás Lichtmaier <nick@reloco.com.ar>     (.po files)
-       luebbe    Lübbe Onken <l.onken@rac.de>                (.po files)
+        luebbe   Lübbe Onken <l.onken@rac.de>               (.po files)
+       mthelen   Michael W Thelen <thelenm@cs.utah.edu>     (doc)
 
 Committers who have asked to be listed as dormant:
 
