@@ -31,13 +31,6 @@ Candidate changes:
       -0 breser (I'm still not sure this belongs in 1.1.0, but I don't see
                  anything technically wrong with it).
 
-  * r10440
-    Fix pool usage for SVN::Ra in the Perl bindings.
-    Justification:
-      Bindings only, important fixes for long-life ra sessions.
-    Votes:
-      +1: clkao, breser
-
   * r10353, r10375
     Fix encoding of get_repos_url result.
     Justification: Also fixes a bug in svnserve with encoded
