@@ -167,7 +167,26 @@ svn_wc_set_revision (void *baton,
                                       (APR_WRITE|APR_APPEND|APR_CREATE),
                                       pool));
     }
-  
+  else
+    {
+      /* PATH must be a dir, so we have to modify the entry in its
+       *parent* dir, updating the revision and removing ADD flag
+       *attributes. */
+      svn_string_t *pdir, *bname;
+      svn_string_t *parentdir = svn_string_dup (log_parent, pool);
+      svn_path_split (parentdir, &pdir, &bname,
+                      svn_path_local_style, pool);
+
+      SVN_ERR (svn_wc__entry_fold_sync (pdir, bname, new_revnum,
+                                        svn_node_none, 
+                                        (SVN_WC_ENTRY_CLEAR_NAMED |
+                                         SVN_WC_ENTRY_ADDED),
+                                        0, 0, pool, NULL, NULL));
+    }
+
+  /* Regardless of whether it's a file or dir, the "main" logfile
+     contains a command to bump the revision attribute (and
+     timestamp.)  */
   logtag = svn_string_create ("", pool);
   svn_xml_make_open_tag (&logtag, pool, svn_xml_self_closing,
                          SVN_WC__LOG_COMMITTED,
