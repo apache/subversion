@@ -99,6 +99,9 @@ committed.  How can I make 'svn commit' ignore the file?</a></li>
 <li><a href="#ssh-auth-cache">When I access a repository using
 svn+ssh, my password is not cached in ~/.subversion/auth/.  How do
 I avoid having to type it so often?</a></li>
+<li><a href="#auto-props">How can I set certain properties on
+everything in the repository?  Also, how can I make sure that every
+new file coming into the repository has these properties?</a></li>
 </ul>
 
 <h4>Troubleshooting:</h4>
@@ -1357,6 +1360,52 @@ if you're <i>really</i> impatient, try one of these:</p>
    <a href="http://kimmo.suominen.com/docs/ssh/"
            >http://kimmo.suominen.com/docs/ssh/</a>
 </pre>
+
+
+<![CDATA[=========================================================]]>
+
+<h3><a name="auto-props">How can I set certain properties on
+everything in the repository?  Also, how can I make sure that every
+new file coming into the repository has these properties?</a></h3>
+
+<p>Subversion will not change a file's contents by default; you have
+to deliberately set the <tt>svn:eol-style</tt> or
+<tt>svn:keywords</tt> property on a file for that to happen.  That
+makes Subversion a lot safer than CVS's default behavior, but with
+that safety comes some inconvenience.</p>
+
+<p>Answering the first question: to set properties on all files
+already in the repository, you'll need to do it the hard way.  All you
+can do is run <tt>svn propset</tt> on every file (in a working copy),
+and then <tt>svn commit</tt>.  Scripting can probably help you with
+this.</p>
+
+<p>But what about future files?  Unfortunately, there's no server
+mechanism to automatically set properties on files being committed.
+This means that all of your users need to remember to set certain
+properties whenever they <tt>svn add</tt> a file.  Fortunately,
+there's a client-side tool to help with this.  Read about the <a
+href="http://svnbook.red-bean.com/svnbook-1.1/ch07s02.html#svn-ch-7-sect-2.4">
+auto-props</a> feature in the book.  You need to make sure all your
+users configure their clients' auto-props settings appropriately.</p>
+
+<p>If you're particularly paranoid, you can also write a pre-commit
+hook script that rejects any commit which forgets to add properties to
+new files.  However, this approach is usually overkill.  If somebody
+occasionally forgets to set <tt>svn:eol-style</tt>, for example, it's
+easily noticable.  (The minute somebody opens the file on a different
+OS, it will be noticed!)  And the problem is easily fixable (just set
+the property and commit).  It's not something to lose sleep over.</p>
+
+<p>Note: many users have asked for a feature whereby the server
+automatically "broadcasts" run-time settings to clients, such as
+auto-props settings.  There's already a feature request filed for this
+(<a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=1974">issue
+1974</a>), though this feature is still being debated by developers,
+and isn't being worked on yet.</p>
+
+
 
 <![CDATA[=========================================================]]>
 
