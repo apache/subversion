@@ -89,15 +89,24 @@ svn_error_t *svn_fs__fs_file_length (svn_filesize_t *length,
                                      svn_fs__node_revision_t *noderev,
                                      apr_pool_t *pool);
 
-/* Return TRUE if the property keys in A and B both point to the same
-   property representation, else return FALSE. */
-svn_boolean_t svn_fs__fs_noderev_same_prop_key (svn_fs__node_revision_t *a,
-                                                svn_fs__node_revision_t *b);
+/* Return TRUE if the representation keys in A and B both point to the
+   same representation, else return FALSE. */
+svn_boolean_t svn_fs__fs_noderev_same_rep_key (svn_fs__representation_t *a,
+                                               svn_fs__representation_t *b);
 
-/* Return TRUE if the data keys in A and B both point to the same
-   property representation, else return FALSE. */
-svn_boolean_t svn_fs__fs_noderev_same_data_key (svn_fs__node_revision_t *a,
-                                                svn_fs__node_revision_t *b);
+
+/* Return a copy of the representation REP allocated from POOL. */
+svn_fs__representation_t *svn_fs__fs_rep_copy (svn_fs__representation_t *rep,
+                                               apr_pool_t *pool);
+
+
+/* Return the record MD5 checksum of the text representation of NODREV
+   into DIGEST, allocating from POOL.  If no stored checksum is
+   available, put all 0's into DIGEST. */
+svn_error_t *svn_fs__fs_file_checksum (unsigned char digest[],
+                                       svn_fs__node_revision_t *noderev,
+                                       apr_pool_t *pool);
+                                       
 
 /* Following are defines that specify the textual elements of the
    native filesystem directories and revision files. */

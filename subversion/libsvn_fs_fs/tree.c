@@ -1500,7 +1500,7 @@ merge (svn_stringbuf_t *conflict_p,
        it doesn't do a brute-force comparison on textual contents, so
        it won't do that here either.  Checking to see if the propkey
        atoms are `equal' is enough. */
-    if (! svn_fs__fs_noderev_same_prop_key (tgt_nr, anc_nr))
+    if (! svn_fs__fs_noderev_same_rep_key (tgt_nr->prop_rep, anc_nr->prop_rep))
       {
         return conflict_err (conflict_p, target_path);
       }
@@ -3204,6 +3204,8 @@ svn_fs_contents_changed (svn_boolean_t *changed_p,
                          const char *path2,
                          apr_pool_t *pool)
 {
+  dag_node_t *node1, *node2;
+  
   /* Check that roots are in the same fs. */
   if ((svn_fs_root_fs (root1)) != (svn_fs_root_fs (root2)))
     return svn_error_create
@@ -3225,7 +3227,9 @@ svn_fs_contents_changed (svn_boolean_t *changed_p,
         (SVN_ERR_FS_GENERAL, NULL, "'%s' is not a file", path2);
   }
 
-  abort ();
+  SVN_ERR (get_dag (&node1, root1, path1, pool));
+  SVN_ERR (get_dag (&node2, root2, path2, pool));
+  SVN_ERR (svn_fs__things_different (NULL, changed_p, node1, node2, pool));
   
   return SVN_NO_ERROR;
 }

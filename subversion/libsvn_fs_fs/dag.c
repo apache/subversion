@@ -116,16 +116,14 @@ copy_node_revision (svn_fs__node_revision_t *noderev,
   if (noderev->predecessor_id)
     nr->predecessor_id = svn_fs__id_copy (noderev->predecessor_id, pool);
   nr->predecessor_count = noderev->predecessor_count;
-  if (noderev->copyfrom)
-    nr->copyfrom = svn_fs__id_copy (noderev->copyfrom, pool);
+  if (noderev->copyfrom_path)
+    nr->copyfrom_path = apr_pstrdup (pool, noderev->copyfrom_path);
+  nr->copyfrom_rev = noderev->copyfrom_rev;
   if (noderev->copyroot)
     nr->copyroot = svn_fs__id_copy (noderev->copyroot, pool);
   nr->predecessor_count = noderev->predecessor_count;
-  nr->prop_offset = noderev->prop_offset;
-  nr->prop_revision = noderev->prop_revision;
-  nr->data_offset = noderev->data_offset;
-  nr->data_size = noderev->data_size;
-  nr->data_revision = noderev->data_revision;
+  nr->data_rep = svn_fs__fs_rep_copy (noderev->data_rep, pool);
+  nr->prop_rep = svn_fs__fs_rep_copy (noderev->prop_rep, pool);
   
   if (noderev->edit_key)
     nr->edit_key = apr_pstrdup (pool, noderev->edit_key);
@@ -732,7 +730,7 @@ svn_fs__dag_file_checksum (unsigned char digest[],
 
   SVN_ERR (get_node_revision (&noderev, file, pool));
 
-  abort ();
+  SVN_ERR (svn_fs__fs_file_checksum (digest, noderev, pool));
 
   return SVN_NO_ERROR;
 }
@@ -945,13 +943,13 @@ svn_fs__things_different (svn_boolean_t *props_changed,
 
   /* Compare property keys. */
   if (props_changed != NULL)
-    *props_changed = (! svn_fs__fs_noderev_same_prop_key (noderev1,
-                                                          noderev2));
+    *props_changed = (! svn_fs__fs_noderev_same_rep_key (noderev1->prop_rep,
+                                                         noderev2->prop_rep));
 
   /* Compare contents keys. */
   if (contents_changed != NULL)
-    *contents_changed = (! svn_fs__fs_noderev_same_data_key (noderev1,
-                                                             noderev2));
+    *contents_changed = (! svn_fs__fs_noderev_same_rep_key (noderev1->data_rep,
+                                                            noderev2->data_rep));
   
   return SVN_NO_ERROR;
 }
