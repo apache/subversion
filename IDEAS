@@ -115,3 +115,32 @@ Some ideas for the future.
   That way, Subversion can have its own options (-r instead of -R)
   and not have to worry about the CVS cruft like '-d' meaning one
   thing as a global option and another thing as a command option.
+
+* need to add "hooks" for updating and committing
+  
+  Currently, the `svn' binary calls routines in libsvn_client that
+hide all internal activity.  For example, if the client calls
+svn_client_update(), how can it print out all the cute little symbols
+like CVS does?
+
+       U foo.c
+       U bar.c
+       P baz.c
+       C glorb.c
+
+  We need to allow "hook" routines that will be automatically called
+when driving an editor.
+
+  Here's a neat, possible way to do it: write a new editor
+implementation which is nothing more than a wrapper for a *real*
+editor.
+
+  Simply define editor->foo() to be
+
+     {
+       foo_hook();
+       real_editor->foo();
+     }
+
+
+
