@@ -62,7 +62,7 @@ svn_path_condense_targets (const char **pcommon,
   if (targets->nelts == 1)
     {
       if (pcondensed_targets)
-        *pcondensed_targets = apr_array_make (pool, 1, sizeof (const char *));
+        *pcondensed_targets = apr_array_make (pool, 0, sizeof (const char *));
       return SVN_NO_ERROR;
     }
 
