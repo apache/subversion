@@ -18,7 +18,6 @@
 
 
 #include <apr_pools.h>
-#include <assert.h>
 #include <apr_strings.h>
 
 #include "svn_types.h"
@@ -109,46 +108,6 @@ apply_textdelta (void *file_baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-apply_text (void *file_baton, 
-            const char *base_checksum,
-            const char *result_checksum,
-            svn_stream_t *base,
-            svn_stream_t *target,
-            const svn_delta_editor_t *editor, /* ### temporary (issue #510) */
-            apr_pool_t *pool)
-{
-  svn_txdelta_window_handler_t handler;
-  void *handler_baton;
-
-  assert (editor);
-
-  SVN_ERR (editor->apply_textdelta (file_baton,
-                                    base_checksum, result_checksum,
-                                    pool,
-                                    &handler, &handler_baton));
-
-  if (! handler)
-    {
-      return SVN_NO_ERROR;
-    }
-  else if (! target)
-    {
-      return ((*handler) (NULL, handler_baton));  /* send the null window */
-    }
-  else if (! base)
-    {
-      return svn_txdelta_send_stream (target, handler, handler_baton, pool);
-    }
-  else
-    {
-      svn_txdelta_stream_t *txdelta_stream;
-      svn_txdelta (&txdelta_stream, base, target, pool);
-      return svn_txdelta_send_txstream
-        (txdelta_stream, handler, handler_baton, pool);
-    }
-}
-
 
 static const svn_delta_editor_t default_editor =
 {
@@ -162,7 +121,6 @@ static const svn_delta_editor_t default_editor =
   add_item,
   open_item,
   apply_textdelta,
-  apply_text,
   change_prop,
   single_baton_func,
   single_baton_func,

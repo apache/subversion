@@ -826,7 +826,6 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
   thunk_editor->add_file = thunk_add_file;
   thunk_editor->open_file = thunk_open_file;
   thunk_editor->apply_textdelta = thunk_apply_textdelta;
-  /* ### todo#510: thunk_editor->apply_text = thunk_apply_text; */ 
   thunk_editor->change_file_prop = thunk_change_file_prop;
   thunk_editor->close_file = thunk_close_file;
   thunk_editor->close_edit = thunk_close_edit;

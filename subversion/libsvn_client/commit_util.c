@@ -1416,30 +1416,11 @@ apply_textdelta (void *file_baton,
                  void **handler_baton)
 {
   struct item_baton *fb = file_baton;
-  printf ("      Transmitting text delta...\n");
+  printf ("      Transmitting text...\n");
   return (*fb->eb->real_editor->apply_textdelta) (fb->real_baton,
                                                   base_checksum,
                                                   result_checksum, pool,
                                                   handler, handler_baton);
-}
-
-static svn_error_t *
-apply_text (void *file_baton,
-            const char *base_checksum,
-            const char *result_checksum,
-            svn_stream_t *base,
-            svn_stream_t *target,
-            const svn_delta_editor_t *editor,
-            apr_pool_t *pool)
-{
-  struct item_baton *fb = file_baton;
-  printf ("      Transmitting text...\n");
-  return (*fb->eb->real_editor->apply_text) (fb->real_baton,
-                                             base_checksum,
-                                             result_checksum,
-                                             base, target,
-                                             *fb->eb->real_editor,
-                                             pool);
 }
 
 static svn_error_t *
@@ -1545,7 +1526,6 @@ get_test_editor (const svn_delta_editor_t **editor,
   ed->close_file = close_file;
   ed->delete_entry = delete_entry;
   ed->apply_textdelta = apply_textdelta;
-  ed->apply_text = apply_text;
   ed->change_dir_prop = change_dir_prop;
   ed->change_file_prop = change_file_prop;
   ed->close_edit = close_edit;

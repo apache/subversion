@@ -37,10 +37,18 @@ send_file_contents (svn_fs_root_t *root,
                     apr_pool_t *pool)
 {
   svn_stream_t *contents;
+  svn_txdelta_window_handler_t handler;
+  void *handler_baton;
   
+  /* Get a readable stream of the file's contents. */
   SVN_ERR (svn_fs_file_contents (&contents, root, path, pool));  
-  SVN_ERR (editor->apply_text (file_baton, NULL, NULL, NULL, contents,
-                               editor, pool));
+
+  /* Get an editor func that wants to consume the delta stream. */
+  SVN_ERR (editor->apply_textdelta (file_baton, NULL, NULL, pool,
+                                    &handler, &handler_baton));
+
+  /* Send the file's contents to the delta-window handler. */
+  SVN_ERR (svn_txdelta_send_stream (contents, handler, handler_baton, pool));
 
   return SVN_NO_ERROR;
 }
