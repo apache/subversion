@@ -41,3 +41,10 @@ Candidate changes:
     Votes:
       +1: maxb
 
+  * r10704
+    Fix problem with javahl throwing IllegalArgumentException, with no error
+    off the caller.
+    Justification:
+      Small javahl binding only patch.
+    Votes:
+      +1: pmayweg
