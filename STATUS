@@ -41,12 +41,6 @@ Candidate changes:
     Justification: Fix svnlook.py example.
     Votes:
 
-  * r8272, r8295
-    Drop most svn_io_* functions from SWIG bindings.
-    Justification: Script languages provide equivalents, don't want to support.
-    Votes:
-      +1: breser, clkao
-
   * r8684
     Fix "problem" in svnserve man page.
     Justification: Shut up esr's script.
