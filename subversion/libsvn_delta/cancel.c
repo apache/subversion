@@ -17,7 +17,6 @@
  */
 
 #include <svn_pools.h>
-#include <svn_cancel.h>
 #include <svn_delta.h>
 
 struct edit_baton

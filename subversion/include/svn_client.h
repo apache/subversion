@@ -39,7 +39,6 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_opt.h"
-#include "svn_cancel.h"
 
 
 #ifdef __cplusplus
