@@ -420,7 +420,7 @@ svn_error_t *svn_fs_abort_txn (svn_fs_txn_t *txn);
 
 /* Set *NAME_P to the name of the transaction TXN, as a
    null-terminated string.  Allocate the name in POOL.  */
-svn_error_t *svn_fs_txn_name (char **name_p,
+svn_error_t *svn_fs_txn_name (const char **name_p,
                               svn_fs_txn_t *txn,
                               apr_pool_t *pool);
 
