@@ -58,6 +58,14 @@ out of order! -- but anyway it's different from the old txnID, and the
 same new txnID is used for all other changes in that commit.  A txnID
 is just a unique string; in fact, we may use base36 or base62.
 
+-- Greg very much disagrees. All of these IDs should be simple
+   integers. That is how we allocate/construct them, and that is how
+   we should continue to work with them. And preferably, their
+   persistent storage format should represent human-readable
+   integers. Using anything besides base-10 is basic obfuscation of
+   the values, their origination, and how they are used internal to
+   the FS.
+
 After a commit, the txn record in the transactions table does not go
 away; instead, it is updated so it now maps the txnID to the new
 revision.  This allows us to determine the revision a node was
