@@ -6,53 +6,6 @@ Subversion Inconveniences
 
 <p>
 
-Subversion is in pre-Alpha state, and there are plenty of known bugs
-(see the <a
-href="http://subversion.tigris.org/servlets/ProjectIssues">Issues</a>
-page for a complete list).  Frankly, you should probably read over all
-the open issues.  But since you're probably not going to do that, we
-list below some of the ones most likely to annoy you.
-
-</p>
-
-<ol>
-   <li><b>Bug in nested wc deletions.</b><br>
-   <p>Ah, the joys and pains of versioning directories.  If you delete a
-   directory, please commit the whole directory, not just one of the
-   (deleted) subtrees.  Your working copy will thank you.</p>
-
-   <p>See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=387">
-   Issue #387</a> for more details.</p>
-   </li>
-
-   <li><b>Incomplete error messages</b><br>
-   <p>When you do see an error, it won't always be clear what the real
-   problem is.  Subversion has a system for throwing and catching
-   errors, but as errors are thrown up the callstack, not every
-   routine attaches a coherent error message.  The error messages will
-   improve over time.</p>
-   </li>
- 
-   <li><b>Property changes to directories require updating first</b><br>
-   <p>If you're going to commit a property change made to a directory,
-   you'll need to update that directory first, to bring it to the
-   youngest (head) revision, otherwise Subversion will reject the
-   commit.  This rejection is a temporary workaround for a larger
-   issues <a
-   href="http://subversion.tigris.org/issues/show_bug.cgi?id=463">Issue
-   #463</a> and <a
-   href="http://subversion.tigris.org/issues/show_bug.cgi?id=530">Issue
-   #530</a>.</p>
-   </li>
-
-   <li><b>Repeatedly adding/deleting multiple files in same dir needs update</b><br>
-   <p>If you want to add or delete entries in a dir -- in a repeated
-   series of commits -- you must update between the commits, or the server
-   will reject your second commit.  This is also part of issues <a
-   href="http://subversion.tigris.org/issues/show_bug.cgi?id=463">Issue
-   #463</a> and <a
-   href="http://subversion.tigris.org/issues/show_bug.cgi?id=530">Issue
-   #530</a>.</p>
-   </li>
-
-</ol>
+<i>
+No serious inconveniences are known at this time.
+</i>
