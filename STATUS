@@ -26,6 +26,7 @@ Candidate changes:
       User complaint.  Simple fix in javahl binding only.
     Votes:
       +1: pmayweg
+      +0: breser
 
   * r11490, r11501, r11514, r11545, r11547 (Issue #2011)
     Fix UNC paths on Windows 
