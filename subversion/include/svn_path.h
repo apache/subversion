@@ -1,4 +1,4 @@
-/*  svn_paths.h: a path manipulation library
+/*  svn_path.h: a path manipulation library
  *
  * ====================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
