@@ -689,20 +689,9 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
 
 /* Begin a new transaction on the filesystem FS; when committed, this
    transaction will create a new version.  Set *TXN to a pointer to
-   an object representing the new transaction.
-
-   If POOL is non-zero, allocate *TXN there; you must make sure that
-   TXN is freed before FS is closed.  If POOL is zero, allocate TXN in
-   a subpool of the filesystem's pool.  */
+   an object representing the new transaction.  */
 svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn,
-			       svn_fs_t *fs,
-			       apr_pool_t *pool);
-
-
-/* Create a new subpool of the pool used by the transaction TXN.  This
-   pool will be freed whenever TXN is committed or aborted, but could
-   also be freed earlier, if you like.  */
-apr_pool_t *svn_fs_txn_subpool (svn_fs_txn_t *txn);
+			       svn_fs_t *fs);
 
 
 /* Commit the transaction TXN.  If the transaction conflicts with
@@ -710,10 +699,10 @@ apr_pool_t *svn_fs_txn_subpool (svn_fs_txn_t *txn);
    SVN_ERR_FS_CONFLICT error.  Otherwise, create a new filesystem
    version containing the changes made in TXN, and return zero.
 
-   This call frees TXN, and any temporary resources it holds.
-
-   Would it be useful to have transactions live on if the commit
-   fails?  You could tweak things and try again.  */
+   If the commit succeeds, it frees TXN, and any temporary resources
+   it holds.  If the commit fails, TXN is still valid; you can make
+   more operations to resolve the conflict, or call `svn_fs_abort_txn'
+   to abort the transaction.  */
 svn_error_t *svn_fs_commit_txn (svn_fs_txn_t *txn);
 
 
@@ -722,6 +711,33 @@ svn_error_t *svn_fs_commit_txn (svn_fs_txn_t *txn);
 
    This frees TXN, and any temporary resources it holds.  */
 svn_error_t *svn_fs_abort_txn (svn_fs_txn_t *txn);
+
+
+/* Close the transaction TXN.  This is neither an abort nor a commit;
+   the state of the transaction so far is stored in the filesystem, to
+   be resumed later.  See the section below, titled "Transactions are
+   persistent," for an explanation of how to resume work on a transaction.  */
+svn_error_t *svn_fs_close_txn (svn_fs_txn_t *txn);
+
+
+/* Arrange for TXN to be closed when POOL is freed.
+
+   This registers a cleanup function with POOL that calls
+   `svn_fs_close_txn' on TXN when POOL is freed.  If you later close
+   TXN explicitly, you should call `svn_fs_kill_cleanup_txn', to
+   cancel the cleanup request; otherwise, the cleanup function will
+   still run when POOL is freed, and try to close TXN again.  */
+void svn_fs_cleanup_txn (apr_pool_t *pool, svn_fs_txn_t *txn);
+
+
+/* Cancel the request to close TXN when POOL is freed.  */
+void svn_fs_kill_cleanup_txn (apr_pool_t *pool, svn_fs_txn_t *txn);
+
+
+/* Close TXN, and remove the request to clean it up from POOL.  This
+   is the equivalent of calling `apr_run_cleanup' on the transaction
+   cleanup function in POOL.  */
+void svn_fs_run_cleanup_txn (apr_pool_t *pool, svn_fs_txn_t *txn);
 
 
 /* Select the root directory of version VERSION as the base root
