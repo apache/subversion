@@ -84,7 +84,7 @@ Theory and documentation
 
 
    2. WEBDAV
-      Greg Stein has written an introduction Subversion's network
+      Greg Stein has written an introduction to Subversion's network
       protocol, which is an extended dialect of HTTP.  The document is
       'www/webdav-usage.html', and is also posted on the website.
 
@@ -365,7 +365,7 @@ In addition to the GNU standards, Subversion uses these conventions:
 
          /*
           * local variables:
-          * eval: (load-file "../svn-dev.el")
+          * eval: (load-file "../../tools/dev/svn-dev.el")
           * end:
           */
 
