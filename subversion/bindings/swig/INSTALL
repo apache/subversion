@@ -90,14 +90,6 @@ Step 3:  Install Specific Language Bindings
    is the same one that you configured SWIG to run against during the
    SWIG configure (see above).
 
-   By default now Perl bindings will be built and installed by the normal:
-       ./configure && make && make install 
-   process of installing Subversion.  If you'd like to make sure the Perl
-   bindings are not built or installed, be sure to pass 
-   --disable-swig-bindings to the configure script or 
-   --enable-swig-bindings=python,java (leaving perl out). However, if you want
-   to rebuild or reinstall you may want to follow the instructions below.
-
    1.  Run `make swig-pl' from the top of the Subversion source tree.
 
    2.  Run `make check-swig-pl' from the top of the Subversion source
