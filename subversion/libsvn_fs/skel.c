@@ -271,6 +271,7 @@ svn_fs__unparse_skel (skel_t *skel, apr_pool_t *pool)
   
   /* Allocate a string to hold the data.  */
   str = apr_palloc (pool, sizeof (*str));
+  str->pool = pool;
   str->blocksize = estimate_unparsed_size (skel) + 200;
   str->data = apr_palloc (pool, str->blocksize);
   str->len = 0;
