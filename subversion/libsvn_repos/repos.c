@@ -802,15 +802,25 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# auth-access = write"
       APR_EOL_STR
-      "### This option controls the location of the password database.  This"
+      "### The password-db option controls the location of the password"
       APR_EOL_STR
-      "### path may be relative to the conf directory.  There is no default."
+      "### database file.  Unless you specify a path starting with a /,"
       APR_EOL_STR
-      "### The format of the password database is:"
+      "### the file's location is relative to the conf directory."
       APR_EOL_STR
-      "### [users]"
+      "### The format of the password database is similar to this file."
       APR_EOL_STR
-      "### USERNAME = PASSWORD"
+      "### It contains one section labelled [users]. The name and"
+      APR_EOL_STR
+      "### password for each user follow, one account per line. The"
+      APR_EOL_STR
+      "### format is"
+      APR_EOL_STR
+      "###    USERNAME = PASSWORD"
+      APR_EOL_STR
+      "### Please note that both the user name and password are case"
+      APR_EOL_STR
+      "### sensitive. There is no default for the password file."
       APR_EOL_STR
       "# password-db = passwd"
       APR_EOL_STR
