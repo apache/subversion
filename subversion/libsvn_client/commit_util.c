@@ -1,5 +1,5 @@
 /*
- * commit-drive.c:  Driver for the WC commit process.
+ * commit_util.c:  Driver for the WC commit process.
  *
  * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
@@ -917,7 +917,7 @@ svn_client__do_commit (const char *base_url,
     {
       const char *item_url, *item_dir, *item_name;
       const char *common = NULL;
-      int common_len;
+      size_t common_len;
       svn_client_commit_item_t *item
         = ((svn_client_commit_item_t **) commit_items->elts)[i];
       
