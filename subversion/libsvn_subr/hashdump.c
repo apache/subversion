@@ -97,9 +97,12 @@
  *
  */
 
+#define SVN_KEYLINE_MAXLEN 100     /* The longest a "key" line can be */
+
 
 
 /* svn_unpack_bytestring():  for use as helper with hash_write().
+ *                           (Subversion-specific)
  *
  *  Input:  a hash value which points to an svn_string_t
  *
@@ -117,6 +120,25 @@ svn_unpack_bytestring (char **returndata, void *value)
 
   return (size_t) valstring->len;
 }
+
+
+/* svn_pack_bytestring():  for use as helper with hash_read().
+ *                           (Subversion-specific)
+ *
+ *  Input:  some bytes, a length, a pool
+ *
+ *  Returns:  an svn_string_t to store as a hash value
+ *
+ */
+
+void *
+svn_pack_bytestring (size_t len, const char *val, ap_pool_t *pool)
+{
+  svn_string_t *valstring = svn_string_ncreate (val, len, pool);
+
+  return valstring;
+}
+
 
 
 
@@ -138,7 +160,7 @@ hash_write (ap_hash_t *hash,
 {
   ap_hash_index_t *this;      /* current hash entry */
   ap_status_t err;
-  char buf[100];
+  char buf[SVN_KEYLINE_MAXLEN];
 
   for (this = ap_hash_first (hash); this; this = ap_hash_next (this))
     {
@@ -210,21 +232,24 @@ read_length_line (ap_file_t *file, char *buf, size_t *limit)
 {
   int i;
   ap_status_t err;
+  char c;
 
   for (i = 0; i < *limit; i++)
   {
-    int num_bytes = 1;
-    err = ap_read (file, buf + i, &num_bytes);
-
+    err = ap_getc (&c, file); 
     if (err)
-      return err;
-    else if (num_bytes < 1)
-      return SVN_WARNING;  /* todo: not sure what to do here */
-    else if (buf[i] == '\n')
+      return err;   /* Note: this status code could be APR_EOF, which
+                       is totally fine.  The caller should be aware of
+                       this. */
+    if (c == '\n')
       {
         buf[i] = '\0';
         *limit = i;
         return SVN_NO_ERROR;
+      }
+    else
+      {
+        buf[i] = c;
       }
   }
 
@@ -233,117 +258,100 @@ read_length_line (ap_file_t *file, char *buf, size_t *limit)
 }
 
 
-/* Read a hash table from a file. */
+
+
+/* hash_read():  read a hash table from a file.
+ * 
+ *  Input:  a hash, a "pack" function, an opened file pointer, a pool
+ * 
+ *  Returns:  error status
+ *
+ *     The "pack" routine should take a specific-length bytestring and
+ *     return a pointer to something meant to be stored in the hash.
+ *
+ *     The hash should be ready to receive key/val pairs.
+ */
+
 ap_status_t
-hash_read (ap_hash_t **h, 
-           void *(*pack_value) (size_t len, const char *val),
-           ap_file_t *src,
+hash_read (ap_hash_t **hash, 
+           void *(*pack_func) (size_t len, const char *val, ap_pool_t *pool),
+           ap_file_t *srcfile,
            ap_pool_t *pool)
 {
   ap_status_t err;
-  char buf[100];
+  char buf[SVN_KEYLINE_MAXLEN];
+  ap_size_t num_read;
+  char c;
+  void *package;
 
   while (1)
     {
-      int len = 100;
+      int len = SVN_KEYLINE_MAXLEN;
 
-      /* Read a key length followed by a key.  Might be END, though.*/
-      err = read_length_line (src, buf, &len);
+      /* Read a key length line.  Might be END, though. */
+      err = read_length_line (srcfile, buf, &len);
       if (err) return err;
 
-      if (len < 3)
-        {
-          return SVN_WARNING;      /* todo: what kind of error here? */
-        }
       if ((len == 3)
           && (buf[0] == 'E')       /* We've reached the end of the  */
           && (buf[1] == 'N')       /* dumped hash table, so leave.  */
           && (buf[2] == 'D'))
         {
-          break;
+          return SVN_NO_ERROR;
         }
-      else if ((buf[0] == 'K') && (buf[0] == ' '))
+      else if ((buf[0] == 'K') && (buf[1] == ' '))
         {
-          len = atoi (buf + 2);
-          /* fooo working here: now read the key */
-          /* Read a val length followed by a val. */
-          /* in progress */
+          /* Get the length of the key */
+          size_t keylen = (size_t) atoi (buf + 2);
+
+          /* Now read that many bytes into a buffer */
+          void *keybuf = ap_palloc (pool, keylen);
+          err = ap_full_read (srcfile, keybuf, keylen, &num_read);
+          if (err) return err;
+
+          /* Suck up extra newline after key data */
+          err = ap_getc (&c, srcfile);
+          if (err) return err;
+          if (c != '\n') return SVN_ERR_MALFORMED_FILE;
+
+          /* Read a val length line */
+          err = read_length_line (srcfile, buf, &len);
+          if (err) return err;
+
+          if ((buf[0] == 'V') && (buf[1] == ' '))
+            {
+              /* Get the length of the value */
+              size_t vallen = (size_t) atoi (buf + 2);
+
+              /* Now read that many bytes into a buffer */
+              void *valbuf = ap_palloc (pool, vallen);
+              err = ap_full_read (srcfile, valbuf, vallen, &num_read);
+              if (err) return err;
+
+              /* Suck up extra newline after val data */
+              err = ap_getc (&c, srcfile);
+              if (err) return err;
+              if (c != '\n') return SVN_ERR_MALFORMED_FILE;
+              
+              /* Send the val data for packaging... */
+              package = (void *) (*pack_func) (vallen, valbuf, pool);
+
+              /* The Grand Moment:  add a new hash entry! */
+              ap_hash_set (*hash, keybuf, keylen, valbuf);
+            }
+          else
+            {
+              return SVN_ERR_MALFORMED_FILE;
+            }
         }
       else
         {
-          /* some random error, deal with best as can */
+          return SVN_ERR_MALFORMED_FILE;
         }
-    }
+    } /* while (1) */
 
-  return SVN_NO_ERROR;
 }
 
 
-
-#ifdef SVN_TEST
 
-int
-main (void)
-{
-  ap_pool_t *pool = NULL;
-  ap_hash_t *proplist;
-  svn_string_t *key;
-  ap_file_t *f = NULL;     /* init to NULL very important! */
-
-  /* Our longest piece of test data. */
-  char *review =
-    "A forthright entrance, yet coquettish on the tongue, its deceptively\n"
-    "fruity exterior hides the warm mahagony undercurrent that is the\n"
-    "hallmark of Chateau Fraisant-Pitre.  Connoisseurs of the region will\n"
-    "be pleased to note the familiar, subtle hints of mulberries and\n"
-    "carburator fluid.  Its confident finish is marred only by a barely\n"
-    "detectable suggestion of rancid squid ink.";
-
-  ap_initialize ();
-  ap_create_pool (&pool, NULL);
-
-  proplist = ap_make_hash (pool);
-  
-  /* Fill it in with test data. */
-
-  key = svn_string_create ("color", pool);
-  ap_hash_set (proplist, key->data, key->len,
-               svn_string_create ("red", pool));
-  
-  key = svn_string_create ("wine review", pool);
-  ap_hash_set (proplist, key->data, key->len,
-               svn_string_create (review, pool));
-  
-  key = svn_string_create ("price", pool);
-  ap_hash_set (proplist, key->data, key->len,
-               svn_string_create ("US $6.50", pool));
-
-  /* Test overwriting: same key both times, but different values. */
-  key = svn_string_create ("twice-used property name", pool);
-  ap_hash_set (proplist, key->data, key->len,
-               svn_string_create ("This is the FIRST value.", pool));
-  ap_hash_set (proplist, key->data, key->len,
-               svn_string_create ("This is the SECOND value.", pool));
-
-
-  /* Dump it. */
-  ap_open (&f, "hashdump.out", (APR_WRITE | APR_CREATE), APR_OS_DEFAULT, pool);
-  hash_write (proplist, svn_unpack_bytestring, f);
-  ap_close (f);
-  ap_destroy_pool (pool);
-
-  return 0;
-}
-
-#endif /* SVN_TEST */
-
-
-
-
-
-/* -----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../svn-dev.el")
- * end:
- */
 
