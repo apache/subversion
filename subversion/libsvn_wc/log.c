@@ -1044,8 +1044,12 @@ log_do_committed (struct log_runner *loggy,
                                     | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
                                     | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK
                                     | SVN_WC__ENTRY_MODIFY_PREJFILE
-                                    | SVN_WC__ENTRY_MODIFY_TEXT_TIME
-                                    | SVN_WC__ENTRY_MODIFY_PROP_TIME
+                                    | (text_time
+                                       ? SVN_WC__ENTRY_MODIFY_TEXT_TIME
+                                       : 0)
+                                    | (prop_time
+                                       ? SVN_WC__ENTRY_MODIFY_PROP_TIME
+                                       : 0)
                                     | SVN_WC__ENTRY_MODIFY_FORCE),
                                    FALSE, pool)))
     return svn_error_createf
