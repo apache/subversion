@@ -39,14 +39,19 @@ href="mailto:dev@subversion.tigris.org">dev@subversion.tigris.org</a>.</p>
 
 <a name="line-length"></a>
 <li>
-<p>Try not to use lines longer than 72 columns.  This only applies to
-the prose part of your message, of course.  If you're <a
-href="#patches">including a patch</a> or other specially formatted
-text, those lines should be left at their original lengths.  Watch
-out: some mailers do a kind of automatic line-wrapping, whereby when
-you're writing your mail the display shows line breaks that aren't
-actually there.  There's usually a setting you can tweak to make it
-stop doing that.<p>
+<p>Please don't use lines longer than 72 columns.  Many people use
+80-column terminals to read their email.  By writing your text in 72
+columns, you leave room for quoting characters to be added in future
+replies without forcing a rewrapping of the text.  The 72-column limit
+only applies to the prose part of your message, of course.  If you're
+posting a patch, see <a href="#patches">the section on
+patches</a>.</p>
+
+<p>Some mailers do a kind of automatic line-wrapping, whereby when
+you're writing your mail, the display shows line breaks that aren't
+actually there.  When the mail reaches the list, it won't have the
+line breaks you thought it had.  If your mail editor does this, look
+for a setting you can tweak to make it show true line breaks.</p>
 </li>
 
 <a name="capitalization"></a>
@@ -177,13 +182,25 @@ number as well: "<tt>[PATCH]&nbsp;issue&nbsp;#1729: ...</tt>".
 Developers who are interested in that particular issue will know to
 read the mail.</p>
 
-<p>It is unfortunately common for some mailreaders to munge patch text
-that is included inline in the message body, for example by inserting
-line breaks in the middle of long lines.  If you think your mailreader
-might do this, then send the patch as an attachment instead of putting
-it directly in the message body.  But if your mailreader doesn't
-munge message bodies, then put the patch inline, because it's a bit
-easier for people to see that way.</p>
+<p>If you can, send your patch as an attachment, using a mime-type of
+text/x-diff, text/x-patch, or text/plain.  Most people's mailreaders
+can display those inline, and having it as an attachment allows them
+to extract the patch from the message conveniently.  Never send
+patches in archived or compressed form (e.g., tar, gzip, zip, bzip2),
+because that prevents people from reviewing the patch directly in
+their mailreaders.</p>
+
+<p>If you can't attach the patch with a reasonable mime-type, or if
+the patch is very short, then it's okay to include it directly in the
+body of your message.  But watch out: some mail editors can munge
+inline patches by inserting unasked-for line breaks in the middle of
+long lines.  If you think your mail software might do this, then the
+patch must be sent as as an attachment.</p>
+
+<p>Please include a log message with your patch.  See <a
+href="http://svn.collab.net/repos/svn/trunk/HACKING" >HACKING</a> for
+guidelines on writing log messages.</p>
+
 </li>
 
 </ul>
