@@ -241,8 +241,7 @@ svn_diff__file_token_discard(void *baton,
   file_baton->reuse_token = file_baton->token == token;
 }
 
-static
-svn_diff_fns_t svn_diff__file_vtable =
+static const svn_diff_fns_t svn_diff__file_vtable =
 {
   svn_diff__file_datasource_open,
   svn_diff__file_datasource_close,
