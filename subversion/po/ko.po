@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion\n"
 "POT-Creation-Date: 2004-09-30 16:40+0900\n"
-"PO-Revision-Date: 2004-10-18 00:59+0900\n"
+"PO-Revision-Date: 2004-10-22 00:17+0900\n"
 "Last-Translator: Hojin Choi <pynoos@users.kldp.net>\n"
 "Language-Team: Korean <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3519,54 +3519,54 @@ msgstr ""
 
 #: libsvn_ra_dav/session.c:820
 msgid "Please upgrade the server to 0.19 or later"
-msgstr ""
+msgstr "서버를 0.19 버전 이상으로 업그레이드 하세요."
 
 #: libsvn_ra_dav/session.c:836
 msgid "Module for accessing a repository via WebDAV (DeltaV) protocol."
-msgstr ""
+msgstr "WebDAV (DeltaV) 프로토콜을 통해 저장소에 접근하는 모듈"
 
 #: libsvn_ra_dav/session.c:875
 #, c-format
 msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
-msgstr ""
+msgstr "ra_dav에 대한 지원하지 않는 RA 플러그인 ABI 버전 (%d)"
 
 #: libsvn_ra_dav/util.c:273
 msgid "authorization failed"
-msgstr ""
+msgstr "인증 실패"
 
 #: libsvn_ra_dav/util.c:277
 msgid "could not connect to server"
-msgstr ""
+msgstr "서버에 접속할 수 없습니다."
 
 #: libsvn_ra_dav/util.c:281
 msgid "timed out waiting for server"
-msgstr ""
+msgstr "서버 응답시간 초과"
 
 #: libsvn_ra_dav/util.c:455
 msgid "Can't calculate the request body size"
-msgstr ""
+msgstr "요청 내용의 크기를 계산할 수 없습니다."
 
 #: libsvn_ra_dav/util.c:641
 #, c-format
 msgid "'%s' path not found"
-msgstr ""
+msgstr "'%s' 경로 발견할 수 없음"
 
 #. We either have a neon error, or some other error
 #: libsvn_ra_dav/util.c:646
 #: libsvn_ra_dav/util.c:789
 #, c-format
 msgid "%s of '%s'"
-msgstr ""
+msgstr "%s of '%s'"
 
 #: libsvn_ra_dav/util.c:657
 #, c-format
 msgid "The %s request returned invalid XML in the response: %s (%s)"
-msgstr ""
+msgstr "%s 요청의 응답으로 잘못된 XML을 반환하였습니다. : %s (%s)"
 
 #: libsvn_ra_dav/util.c:671
 #, c-format
 msgid "%s request failed on '%s'"
-msgstr ""
+msgstr "%s 요청이 '%s'에 대해 실패하였습니다."
 
 #: libsvn_ra_local/ra_plugin.c:98
 #: libsvn_ra_local/ra_plugin.c:467
@@ -3576,240 +3576,243 @@ msgid ""
 "is not the same repository as\n"
 "'%s'"
 msgstr ""
+"'%s'\n"
+"서로 동일하지 않은 저장소 입니다.\n"
+"'%s'"
 
 #: libsvn_ra_local/ra_plugin.c:226
 msgid "Unable to open an ra_local session to URL"
-msgstr ""
+msgstr "URL에 대해 ra_local 세션을 열수 없습니다."
 
 #: libsvn_ra_local/ra_plugin.c:957
 msgid "Module for accessing a repository on local disk."
-msgstr ""
+msgstr "로컬 디스크에 있는 저장소를 접근하기 위한 모듈"
 
 #: libsvn_ra_local/ra_plugin.c:1003
 #, c-format
 msgid "Unsupported RA plugin ABI version (%d) for ra_local"
-msgstr ""
+msgstr "ra_local에 대한 지원하지 않는 RA 플러그인 ABI 버전 (%d)"
 
 #: libsvn_ra_local/split_url.c:44
 #, c-format
 msgid "Local URL '%s' does not contain 'file://' prefix"
-msgstr ""
+msgstr "로컬 URL '%s' 은/는 'file://' 로 시작하지 않습니다."
 
 #: libsvn_ra_local/split_url.c:55
 #, c-format
 msgid "Local URL '%s' contains only a hostname, no path"
-msgstr ""
+msgstr "로컬 URL '%s' 은/는 호스트 이름만 있으며 경로가 없습니다."
 
 #: libsvn_ra_local/split_url.c:66
 #, c-format
 msgid "Local URL '%s' contains unsupported hostname"
-msgstr ""
+msgstr "로컬 URL '%s' 에 지원하지 않는 호스트이름이 있습니다."
 
 #: libsvn_ra_local/split_url.c:108
 #: libsvn_ra_local/split_url.c:115
 #, c-format
 msgid "Unable to open repository '%s'"
-msgstr ""
+msgstr "저장소 '%s' 을/를 열 수 없습니다."
 
 #: libsvn_ra_svn/client.c:137
 #, c-format
 msgid "Unknown hostname '%s'"
-msgstr ""
+msgstr "알 수 없는 호스트: '%s'"
 
 #: libsvn_ra_svn/client.c:148
 msgid "Can't create socket"
-msgstr ""
+msgstr "소켓을 열 수 없습니다."
 
 #: libsvn_ra_svn/client.c:152
 #, c-format
 msgid "Can't connect to host '%s'"
-msgstr ""
+msgstr "호스트 '%s'에 접속할 수 없습니다."
 
 #: libsvn_ra_svn/client.c:173
 msgid "Proplist element not a list"
-msgstr ""
+msgstr "Proplist 요소가 리스트 구조체가 아닙니다."
 
 #: libsvn_ra_svn/client.c:197
 msgid "Prop diffs element not a list"
-msgstr ""
+msgstr "Prop diff 요소가 리스트 구조체가 아닙니다."
 
 #: libsvn_ra_svn/client.c:218
 #, c-format
 msgid "Unrecognized node kind '%s' from server"
-msgstr ""
+msgstr "서버로부터 확인 불가능한 노드 종류 '%s'"
 
 #: libsvn_ra_svn/client.c:263
 #: libsvn_ra_svn/client.c:317
 #, c-format
 msgid "Authentication error from server: %s"
-msgstr ""
+msgstr "서버 인증 오류 : %s"
 
 #: libsvn_ra_svn/client.c:266
 #: libsvn_ra_svn/cram.c:196
 #: libsvn_ra_svn/cram.c:214
 msgid "Unexpected server response to authentication"
-msgstr ""
+msgstr "인증시도중 예상치 못한 서버 응답"
 
 #: libsvn_ra_svn/client.c:324
 msgid "Cannot negotiate authentication mechanism"
-msgstr ""
+msgstr "인증 방법 협상 불가능"
 
 #: libsvn_ra_svn/client.c:451
 #, c-format
 msgid "Undefined tunnel scheme '%s'"
-msgstr ""
+msgstr "정의되지 않은 터널 스킴 '%s'"
 
 #: libsvn_ra_svn/client.c:468
 #, c-format
 msgid "Tunnel scheme %s requires environment variable %s to be defined"
-msgstr ""
+msgstr "터널 스킴 %s 는 %s라는 환경 변수의 정의를 필요로 합니다."
 
 #: libsvn_ra_svn/client.c:479
 #, c-format
 msgid "Can't tokenize command '%s'"
-msgstr ""
+msgstr "토큰 분리할 수 없는 명령 '%s'"
 
 #: libsvn_ra_svn/client.c:508
 #, c-format
 msgid "Error in child process: %s"
-msgstr ""
+msgstr "자식 프로세스 오류: %s"
 
 #: libsvn_ra_svn/client.c:531
 msgid "Can't create tunnel"
-msgstr ""
+msgstr "터널 생성 불가능"
 
 #: libsvn_ra_svn/client.c:575
 #, c-format
 msgid "Illegal svn repository URL '%s'"
-msgstr ""
+msgstr "잘못된 svn 저장소 URL '%s'"
 
 #: libsvn_ra_svn/client.c:594
 #, c-format
 msgid "Server requires minimum version %d"
-msgstr ""
+msgstr "서버는 적어도 버전 %d 을/를 요구합니다"
 
 #: libsvn_ra_svn/client.c:641
 msgid "impossibly long repository root from server"
-msgstr ""
+msgstr "너무 긴 저장소 루트"
 
 #: libsvn_ra_svn/client.c:705
 msgid "Server did not send repository root"
-msgstr ""
+msgstr "서버가 저장소 루트를 전송하지 않았습니다."
 
 #: libsvn_ra_svn/client.c:826
 msgid "Non-string as part of file contents"
-msgstr ""
+msgstr "파일 내용이 부분적으로 문자열이 아닙니다."
 
 #: libsvn_ra_svn/client.c:895
 msgid "Dirlist element not a list"
-msgstr ""
+msgstr "Dirlist 요소가 리스트 구조체가 아닙니다."
 
 #: libsvn_ra_svn/client.c:1050
 msgid "Log entry not a list"
-msgstr ""
+msgstr "로그 엔트리가 리스트 구조체가 아닙니다."
 
 #: libsvn_ra_svn/client.c:1063
 msgid "Changed-path entry not a list"
-msgstr ""
+msgstr "바뀐 경로 엔트리가 리스트 구조체가 아닙니다."
 
 #: libsvn_ra_svn/client.c:1156
 msgid "get-locations not implemented"
-msgstr ""
+msgstr "get-locations는 구현되지 않았습니다"
 
 #: libsvn_ra_svn/client.c:1169
 msgid "Location entry not a list"
-msgstr ""
+msgstr "Location 엔트리가 리스트 구조체가 아닙니다"
 
 #: libsvn_ra_svn/client.c:1221
 msgid "get-file-revs not implemented"
-msgstr ""
+msgstr "get-file-revs는 구현되지 않았습니다."
 
 #: libsvn_ra_svn/client.c:1235
 msgid "Revision entry not a list"
-msgstr ""
+msgstr "리비전 엔트리가 리스트 구조체가 아닙니다."
 
 #: libsvn_ra_svn/client.c:1247
 #: libsvn_ra_svn/client.c:1272
 msgid "Text delta chunk not a string"
-msgstr ""
+msgstr "문서의 차이 조각(text delta chunk)이 문자열이 아닙니다."
 
 #: libsvn_ra_svn/client.c:1284
 msgid "The get-file-revs command didn't return any revisions"
-msgstr ""
+msgstr "get-file-revs 명령이 어떠한 리비전도 반환하지 않았습니다."
 
 #: libsvn_ra_svn/client.c:1296
 msgid "Module for accessing a repository using the svn network protocol."
-msgstr ""
+msgstr "svn 네트워크 프로토콜을 사용하여 저장소에 접근하는 모듈"
 
 #: libsvn_ra_svn/client.c:1333
 #, c-format
 msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
-msgstr ""
+msgstr "ra_svn에 대한 지원하지 않는 RA 플러그인 ABI 버전 (%d)"
 
 #: libsvn_ra_svn/editor.c:384
 #: libsvn_ra_svn/editorp.c:419
 msgid "Invalid file or dir token during edit"
-msgstr ""
+msgstr "편집 명령안에 잘못된 파일, 디렉토리 토큰이 있습니다."
 
 #: libsvn_ra_svn/editor.c:608
 msgid "Non-string as part of text delta"
-msgstr ""
+msgstr "텍스트 조각의 일부가 문자열이 아닙니다."
 
 #: libsvn_ra_svn/editorp.c:129
 msgid "Successful edit status returned too soon"
-msgstr ""
+msgstr "성공했다는 편집 상태가 너무 빨리 반환 되었습니다."
 
 #: libsvn_ra_svn/editorp.c:601
 msgid "Apply-textdelta already active"
-msgstr ""
+msgstr "Apply-textdelta 는 이미 활성화 되어있습니다."
 
 #: libsvn_ra_svn/editorp.c:623
 #: libsvn_ra_svn/editorp.c:641
 msgid "Apply-textdelta not active"
-msgstr ""
+msgstr "Apply-textdelta 는 활성화 상태가 아닙니다."
 
 #: libsvn_ra_svn/editorp.c:789
 #: libsvn_ra_svn/marshal.c:812
 #, c-format
 msgid "Unknown command '%s'"
-msgstr ""
+msgstr "알 수 없는 명령 '%s'"
 
 #: libsvn_ra_svn/marshal.c:78
 msgid "Capability entry is not a word"
-msgstr ""
+msgstr "Capability 엔트리는 한 단어가 아닙니다."
 
 #: libsvn_ra_svn/marshal.c:160
 msgid "Can't write to connection"
-msgstr ""
+msgstr "소켓에 쓸 수 없습니다."
 
 #: libsvn_ra_svn/marshal.c:250
 msgid "Can't read from connection"
-msgstr ""
+msgstr "소켓으로부터 읽을 수 없습니다."
 
 #: libsvn_ra_svn/marshal.c:253
 msgid "Connection closed unexpectedly"
-msgstr ""
+msgstr "예상치 못하게 접속이 종료되었습니다."
 
 #: libsvn_ra_svn/marshal.c:497
 msgid "String length larger than maximum"
-msgstr ""
+msgstr "문자열 길이가 최대값을 넘었습니다."
 
 #: libsvn_ra_svn/marshal.c:545
 msgid "Number is larger than maximum"
-msgstr ""
+msgstr "숫자가 최대값을 넘었습니다."
 
 #: libsvn_ra_svn/marshal.c:761
 msgid "Empty error list"
-msgstr ""
+msgstr "비어 있는 오류 리스트"
 
 #: libsvn_ra_svn/marshal.c:768
 msgid "Malformed error list"
-msgstr ""
+msgstr "잘못된 형식의 오류 리스트"
 
 #: libsvn_ra_svn/marshal.c:783
 #, c-format
 msgid "Unknown status '%s' in command response"
-msgstr ""
+msgstr "명령의 응답안에 알 수 없는 상태 값 '%s'"
 
 #: libsvn_repos/dump.c:416
 #, c-format
@@ -3818,31 +3821,34 @@ msgid ""
 "WARNING: dumped revision (%ld).  Loading this dump into an empty repository\n"
 "WARNING: will fail.\n"
 msgstr ""
+"경고: 리비전 %ld 안에 있는 데이터를 참조하는 중입니다. 이것은 덤프된 버전\n"
+"경고: (%ld)보다 더 오래된 것입니다. 이 덤프를 비어 있는 저장소안에 적재하는 것은\n"
+"경고: 실패할 것입니다.\n"
 
 #: libsvn_repos/dump.c:934
 #, c-format
 msgid "Start revision %ld is greater than end revision %ld"
-msgstr ""
+msgstr "시작 리비전(%ld)이 끝 리비전(%ld) 보다 더 큰 값입니다."
 
 #: libsvn_repos/dump.c:939
 #, c-format
 msgid "End revision %ld is invalid (youngest revision is %ld)"
-msgstr ""
+msgstr "끝 리비전 %ld 는 잘못되었습니다. (가장 최신 리비전은 %ld 입니다)"
 
 #: libsvn_repos/dump.c:1044
 #, c-format
 msgid "* %s revision %ld.\n"
-msgstr ""
+msgstr "* %s 리비전 %ld.\n"
 
 #: libsvn_repos/load.c:800
 #, c-format
 msgid "<<< Started new transaction, based on original revision %ld\n"
-msgstr ""
+msgstr "<<< 새로운 트랜잭션 시작, 리비전 %ld에 기반함.\n"
 
 #: libsvn_repos/load.c:845
 #, c-format
 msgid "Relative source revision %ld is not available in current repository"
-msgstr ""
+msgstr "상대 소스 리비전 %ld 는 현재 저장소안에서 유효하지 않습니다."
 
 #: libsvn_repos/load.c:1117
 #, c-format
@@ -3851,6 +3857,9 @@ msgid ""
 "------- Committed revision %ld >>>\n"
 "\n"
 msgstr ""
+"\n"
+"------- 커밋한 리비전 %ld >>>\n"
+"\n"
 
 #: libsvn_repos/load.c:1123
 #, c-format
@@ -3859,6 +3868,9 @@ msgid ""
 "------- Committed new rev %ld (loaded from original rev %ld) >>>\n"
 "\n"
 msgstr ""
+"\n"
+"------- 커밋한 새 리비전 %ld (원본 리비전 %ld에서 적재됨) >>>\n"
+"\n"
 
 #: libsvn_repos/rev_hunt.c:64
 #, c-format
@@ -3868,145 +3880,145 @@ msgstr ""
 #: libsvn_repos/rev_hunt.c:219
 #, c-format
 msgid "Invalid start revision %ld"
-msgstr ""
+msgstr "잘못된 시작 리비전 %ld"
 
 #: libsvn_repos/rev_hunt.c:223
 #, c-format
 msgid "Invalid end revision %ld"
-msgstr ""
+msgstr "잘못된 끝 리비전 %ld"
 
 #: libsvn_repos/rev_hunt.c:315
 msgid "Unreadable path encountered; access denied."
-msgstr ""
+msgstr "읽을 수 없는 경로 발생: 접근 거부됨."
 
 #: libsvn_subr/error.c:294
 msgid "Can't recode error string from APR"
-msgstr ""
+msgstr "APR로부터 문자열을 재조합할 수 없습니다."
 
 #: libsvn_subr/io.c:127
 #, c-format
 msgid "Can't check path '%s'"
-msgstr ""
+msgstr "경로를 확인할 수 없습니다. '%s'"
 
 #: libsvn_subr/io.c:245
 #: libsvn_subr/io.c:330
 #, c-format
 msgid "Can't open '%s'"
-msgstr ""
+msgstr "열 수 없습니다. '%s'"
 
 #: libsvn_subr/io.c:259
 #: libsvn_subr/io.c:343
 #, c-format
 msgid "Unable to make name for '%s'"
-msgstr ""
+msgstr "이름을 만들 수 없습니다. '%s'"
 
 #: libsvn_subr/io.c:346
 #: libsvn_subr/io.c:373
 #: libsvn_subr/io.c:401
 msgid "Symbolic links are not supported on this platform"
-msgstr ""
+msgstr "이 플랫폼에서는 심볼릭 링크가 지원되지 않습니다."
 
 #: libsvn_subr/io.c:366
 msgid "Can't read contents of link"
-msgstr ""
+msgstr "링크의 내용을 읽을 수 없습니다."
 
 #: libsvn_subr/io.c:1204
 #, c-format
 msgid "Can't get shared lock on file '%s'"
-msgstr ""
+msgstr "파일 '%s' 에 대한 공유 잠금기능을 걸 수 없습니다."
 
 #: libsvn_subr/io.c:1207
 #, c-format
 msgid "Can't get exclusive lock on file '%s'"
-msgstr ""
+msgstr "파일 '%s'에 대해 배타적 잠금기능을 걸 수 없습니다."
 
 #: libsvn_subr/io.c:1237
 #, c-format
 msgid "Can't flush file '%s'"
-msgstr ""
+msgstr "파일을 플러시할 수 없습니다. '%s'"
 
 #: libsvn_subr/io.c:1238
 msgid "Can't flush stream"
-msgstr ""
+msgstr "스트림을 플러시 할 수 없습니다."
 
 #: libsvn_subr/io.c:1250
 #: libsvn_subr/io.c:1267
 msgid "Can't flush file to disk"
-msgstr ""
+msgstr "디스크에 파일을 플러시할 수 없습니다."
 
 #: libsvn_subr/io.c:1288
 msgid "Reading from stdin is currently broken, so disabled"
-msgstr ""
+msgstr "표준 입력으로부터 읽는 것은 현재 지원하지 않습니다."
 
 #: libsvn_subr/io.c:1309
 msgid "Can't get file name"
-msgstr ""
+msgstr "파일 이름을 얻을 수 없습니다."
 
 #: libsvn_subr/io.c:1377
 #, c-format
 msgid "Can't remove file '%s'"
-msgstr ""
+msgstr "파일을 제거할 수 없습니다. '%s'"
 
 #: libsvn_subr/io.c:1405
 #, c-format
 msgid "Can't rewind directory '%s'"
-msgstr ""
+msgstr "디렉토리를 되감을 수 없습니다. '%s'"
 
 #: libsvn_subr/io.c:1440
 #: libsvn_subr/io.c:2277
 #: libsvn_subr/io.c:2364
 #, c-format
 msgid "Can't open directory '%s'"
-msgstr ""
+msgstr "디렉토리를 열 수 없습니다. '%s'"
 
 #: libsvn_subr/io.c:1476
 #: libsvn_subr/io.c:1493
 #, c-format
 msgid "Can't remove '%s'"
-msgstr ""
+msgstr "제거할 수 없습니다. '%s'"
 
 #: libsvn_subr/io.c:1484
 #: libsvn_subr/io.c:1552
 #, c-format
 msgid "Can't read directory '%s'"
-msgstr ""
+msgstr "디렉토리를 읽을 수 없습니다 '%s'"
 
 #: libsvn_subr/io.c:1488
 #: libsvn_subr/io.c:1556
 #: libsvn_subr/io.c:2424
 #, c-format
 msgid "Error closing directory '%s'"
-msgstr ""
+msgstr "디렉토리를 닫을 수 없습니다. '%s'"
 
 #: libsvn_subr/io.c:1586
 #, c-format
 msgid "Can't create process '%s' attributes"
-msgstr ""
+msgstr "프로세스 속성을 생성할 수 없습니다. %s'"
 
 #: libsvn_subr/io.c:1592
 #, c-format
 msgid "Can't set process '%s' cmdtype"
-msgstr ""
+msgstr "'%s' cmdtype을 처리할 수 없습니다."
 
 #: libsvn_subr/io.c:1604
 #, c-format
 msgid "Can't set process '%s' directory"
-msgstr ""
+msgstr "프로세스에 디렉토리를 설정할 수 없습니다. '%s'"
 
 #: libsvn_subr/io.c:1617
 #, c-format
 msgid "Can't set process '%s' child input"
-msgstr ""
+msgstr "자식 프로세스의 입력파일 경로를 설정할 수 없습니다. '%s'"
 
 #: libsvn_subr/io.c:1624
 #, c-format
 msgid "Can't set process '%s' child outfile"
-msgstr ""
+msgstr "자식 프로세스의 출력파일 경로를 설정할 수 없습니다. '%s'"
 
 #: libsvn_subr/io.c:1631
 #, c-format
 msgid "Can't set process '%s' child errfile"
-msgstr ""
+msgstr "자식 프로세스의 오류파일 경로를 설정할 수 없습니다. '%s'"
 
 #: libsvn_subr/io.c:1655
 #, c-format
@@ -4727,17 +4739,17 @@ msgstr "임시 파일을 삭제 할 수 없습니다"
 #: libsvn_wc/props.c:103
 #, c-format
 msgid "Property '%s' locally changed to '%s', but update deletes it\n"
-msgstr ""
+msgstr "속성 '%s'는 '%s'로 수정되었으나 업데이트하면서 삭제합니다.\n"
 
 #: libsvn_wc/props.c:112
 #, c-format
 msgid "Property '%s' locally deleted, but update sets it to '%s'\n"
-msgstr ""
+msgstr "속성 '%s'는 삭제하였으나, 업데이트하면서 '%s'로 설정됩니다.\n"
 
 #: libsvn_wc/props.c:128
 #, c-format
 msgid "Property '%s' locally changed to '%s', but update sets it to '%s'\n"
-msgstr ""
+msgstr "속성 '%s'는 '%s'로 수정되었으나, 업데이트하면서, '%s'로 설정됩니다.\n"
 
 #: libsvn_wc/props.c:171
 #, c-format
@@ -4822,7 +4834,7 @@ msgstr "'%s'의 작업 사본 포맷은 너무 오래되었습니다(%d); 작업
 #: libsvn_wc/questions.c:112
 #, c-format
 msgid "This client is too old to work with working copy '%s'; please get a newer Subversion client"
-msgstr ""
+msgstr "이 클라이언트는 너무 오래되어 작업사본 '%s'에 대해 작업을 수행할 수 없습니다. subversion 을 업그레이드하십시오."
 
 #: libsvn_wc/questions.c:351
 #, c-format
@@ -4831,41 +4843,44 @@ msgid ""
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
+"체크섬이 다르다는 것은 손상된 텍스트 베이스를 뜻합니다.: '%s'\n"
+"   기대값:  %s\n"
+"   실제값:  %s\n"
 
 #: libsvn_wc/translate.c:131
 #, c-format
 msgid "'%s' has unknown value for svn:eol-style property"
-msgstr ""
+msgstr "'%s'은/는 알 수 없는 svn:eol-style 속성값을 가지고 있습니다."
 
 #: libsvn_wc/update_editor.c:385
 #, c-format
 msgid "No '.' entry in: '%s'"
-msgstr ""
+msgstr "'.' 이 등록되어 있지 않습니다: '%s'"
 
 #: libsvn_wc/update_editor.c:833
 #, c-format
 msgid "Won't delete locally modified directory '%s'"
-msgstr ""
+msgstr "수정한 디렉토리는 지우지 않을 것입니다. '%s'"
 
 #: libsvn_wc/update_editor.c:1021
 #, c-format
 msgid "Failed to add directory '%s': object of the same name already exists"
-msgstr ""
+msgstr "디렉토리 추가 실패 '%s': 같은 이름의 개체가 이미 존재합니다."
 
 #: libsvn_wc/update_editor.c:1028
 #, c-format
 msgid "Failed to add directory '%s': object of the same name as the administrative directory"
-msgstr ""
+msgstr "디렉토리 추가 실패 '%s': 같은 이름의 개체가 관리용도로 사용됩니다."
 
 #: libsvn_wc/update_editor.c:1041
 #, c-format
 msgid "Failed to add directory '%s': copyfrom arguments not yet supported"
-msgstr ""
+msgstr "디렉토리 추가 실패 '%s': copyfrom 인자는 아직 지원되지 않습니다."
 
 #: libsvn_wc/update_editor.c:1061
 #, c-format
 msgid "Failed to add directory '%s': object of the same name is already scheduled for addition"
-msgstr ""
+msgstr "디렉토리 추가 실패 '%s': 같은 이름의 개체를 이미 추가 요청을 하였습니다."
 
 #: libsvn_wc/update_editor.c:1269
 msgid "Couldn't do property merge"
