@@ -1211,10 +1211,15 @@ crawl_dir (svn_stringbuf_t *path,
 
   /* If the `.' entry is marked with ADD, then we *only* want to
      notice child entries that are also added.  It makes no sense to
-     look for deletes or local mods in an added directory. */
+     look for deletes or local mods in an added directory.
+
+     Unless, of course, the add has copyfrom history. */
   if ((this_dir_entry->schedule == svn_wc_schedule_add)
       || (this_dir_entry->schedule == svn_wc_schedule_replace))
-    adds_only = TRUE;
+    if ((apr_hash_get (this_dir_entry->attributes,
+                       SVN_WC_ENTRY_ATTR_COPYFROM_URL,
+                       APR_HASH_KEY_STRING)) == NULL)
+      adds_only = TRUE;
 
   /* Push the current {path, baton, this_dir} to the top of the stack */
   push_stack (stack, path, dir_baton, this_dir_entry, top_pool);
