@@ -1,0 +1,23 @@
+The client for milestone 1 is somewhat limited: it can checkout and
+update from XML files, and commit to XML files.  The changes it can
+make in a working copy are file mods and file adds.
+
+So:
+
+   svn checkout -d TARGETDIR --xml-file FILE.XML
+
+   svn update --xml-file FILE.XML
+
+   svn commit --xml-file FILE.XML --version 38 [FILE1 [FILE2...]]
+
+(The --version flag is necessary for commits because we're not
+actually talking to the repository yet.  So the user has to know what
+new version number the repository would hand back, were it actually
+being contacted.)
+
+If you check out into TARGETDIR, that directory must exist and be
+either empty, or be an appropriate working copy (but this latter
+condition may be an error in milestone 1).
+
+The code here uses `svn_cl_' as a namespace prefix -- it stands for
+"command line".

@@ -469,7 +469,7 @@ main (int argc, char *argv[])
   
   if (err)
     {
-      svn_handle_error (err, stderr);
+      svn_handle_error (err, stderr, 0);
       apr_destroy_pool (globalpool);
       exit (err->apr_err);
     }

@@ -167,6 +167,7 @@ AC_OUTPUT([Makefile                                           \
            subversion/libsvn_wc/Makefile                      \
            subversion/libsvn_wc/tests/Makefile                \
            subversion/libsvn_client/Makefile                  \
+           subversion/client/Makefile                         \
            subversion/libsvn_fs/Makefile                      \
            subversion/libsvn_fs/tests/Makefile                \
            subversion/libsvn_ra_dav/Makefile                  \
