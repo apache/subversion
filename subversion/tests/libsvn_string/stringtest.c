@@ -1,5 +1,5 @@
 /*
- * stringtest.c:  test libsvn_string
+ * stringtest.c:  a collection of libsvn_string tests
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
@@ -53,19 +53,78 @@
 #include "svn_string.h"   /* This includes <apr_*.h> */
 
 
+/* Some global variables, for simplicity.  Yes, simplicity. */
+
+apr_pool_t *pool;
+svn_string_t *a = NULL, *b = NULL, *c = NULL;
+const char *phrase_1 = "hello, ";
+const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
+
+
+
+
+
+
 static void
-print_dots (int num_dots)
+print_dots(int foo)
 {
-  int i;
-  for (i = 0; i < num_dots; i++)
-    printf (".");
 }
+
+
+/* Test 1 */
+static int
+make_svn_string_from_cstring ()
+{
+  a = svn_string_create (phrase_1, pool);
+  
+  /* Test that length, data, and null-termination are correct. */
+  if ((a->len == strlen (phrase_1)) && ((strcmp (a->data, phrase_1)) == 0))
+    return 0; /* PASS */
+  else
+    return 1; /* FAIL */
+}
+
+
+/* Test 2 */
+static int
+make_svn_string_from_substring_of_cstring ()
+{
+    b = svn_string_ncreate (phrase_2, 16, pool);
+
+    /* Test that length, data, and null-termination are correct. */
+    if ((b->len == 16) && ((strncmp (b->data, phrase_2, 16)) == 0))
+      return 0;  /* PASS */
+    else
+      return 1;  /* FAIL */
+}
+
+
+/* Test 3 */
+static int
+append_svn_string_to_svn_string ()
+{
+  char *tmp;
+  size_t old_len;
+  
+  tmp = apr_palloc (pool, (a->len + b->len + 1));
+  strcpy (tmp, a->data);
+  strcat (tmp, b->data);
+  old_len = a->len;
+  svn_string_appendstr (a, b, pool);
+  
+  /* Test that length, data, and null-termination are correct. */
+  if ((a->len == (old_len + b->len)) && ((strcmp (a->data, tmp)) == 0))
+    return 0;  /* PASS */
+  else
+    return 1;  /* FAIL */
+}
+
 
 
 static int
 do_tests (apr_pool_t *pool)
 {
-  svn_string_t *a = NULL, *b = NULL, *c = NULL;
+
   const char *phrase_1 = "hello, ";
   const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
   char *msg;
@@ -75,74 +134,7 @@ do_tests (apr_pool_t *pool)
   int max_pad = 60;
   int i;
 
-  printf ("Testing libsvn_string...\n");
 
-  {
-    printf ("    %2d. Make svn_string from cstring %n",
-            test_number, &written);
-    a = svn_string_create (phrase_1, pool);
-
-    /* Test that length, data, and null-termination are correct. */
-    if ((a->len == strlen (phrase_1)) && ((strcmp (a->data, phrase_1)) == 0))
-      {
-        print_dots (max_pad - written);
-        printf (" OK\n");
-      }
-    else
-      {
-        print_dots (max_pad - written);
-        printf (" FAILED\n");
-      }
-
-    test_number++;
-  }
-
-  {
-    printf ("    %2d. Make svn_string from substring of cstring %n",
-            test_number, &written);
-    b = svn_string_ncreate (phrase_2, 16, pool);
-
-    /* Test that length, data, and null-termination are correct. */
-    if ((b->len == 16) && ((strncmp (b->data, phrase_2, 16)) == 0))
-      {
-        print_dots (max_pad - written);
-        printf (" OK\n");
-      }
-    else
-      {
-        print_dots (max_pad - written);
-        printf (" FAILED\n");
-      }
-
-    test_number++;
-  }
-
-  {
-    char *tmp;
-    size_t old_len;
-
-    printf ("    %2d. Appending svn_string to svn_string %n",
-            test_number, &written);
-    tmp = apr_palloc (pool, (a->len + b->len + 1));
-    strcpy (tmp, a->data);
-    strcat (tmp, b->data);
-    old_len = a->len;
-    svn_string_appendstr (a, b, pool);
-
-    /* Test that length, data, and null-termination are correct. */
-    if ((a->len == (old_len + b->len)) && ((strcmp (a->data, tmp)) == 0))
-      {
-        print_dots (max_pad - written);
-        printf (" OK\n");
-      }
-    else
-      {
-        print_dots (max_pad - written);
-        printf (" FAILED\n");
-      }
-
-    test_number++;
-  }
 
   {
     printf ("    %2d. Append bytes, then compare two strings %n",
@@ -347,27 +339,94 @@ do_tests (apr_pool_t *pool)
 }
 
 
-int
-main ()
+/* ------------------------------------------------------------------
+   If you add a new test, make sure to update these two arrays,
+   and then add the test-number to the TESTS variable in Makefile.am 
+
+*/
+
+/* An array of all test functions */
+int (*test_funcs[])() = 
 {
-  apr_pool_t *pglobal;
+  NULL,
+  make_svn_string_from_cstring,
+  make_svn_string_from_substring_of_cstring,
+  append_svn_string_to_svn_string  
+};
+
+/* Descriptions of each test we can run */
+static char *descriptions[] = 
+{
+  NULL,
+  "make svn_string_t from cstring",
+  "make svn_string_t from substring of cstring",
+  "append svn_string_t to svn_string_t",
+};
+
+/* ----------------------------------------------------------------- */
+
+
+
+/* Execute a test number TEST_NUM.  Print result according to our
+   test-suite spec, and return its result code. */
+static int
+do_test_num (int test_num)
+{
+  int (*func)();
+  int array_size = sizeof(test_funcs)/sizeof(int (*)()) - 1;
+
+  if ((test_num > array_size) 
+      || (test_num <= 0))
+    {
+      printf ("stringtest test %d: NO SUCH TEST ...", test_num);
+      return 1;  /* FAIL, this test number doesn't exist! */
+    }
+
+  func = test_funcs[test_num];
+
+  printf ("stringtest test %d: %s ... ", test_num, descriptions[test_num]);
+
+  return (*func)();
+}
+
+
+
+int
+main (int argc, char *argv[])
+{
+  int test_num;
   int retval;
 
+  /* Get command-line argument */
+  if (argc < 2) {
+    printf ("\nUsage: %s [N], where N is a test number to run.\n\n",
+            argv[0]);
+    exit (1);
+  }
+  
+  test_num = atoi (argv[1]);
+  
+  
   /* Initialize APR (Apache pools) */
   if (apr_initialize () != APR_SUCCESS)
     {
       printf ("apr_initialize() failed.\n");
       exit (1);
     }
-  if (apr_create_pool (&pglobal, NULL) != APR_SUCCESS)
+  if (apr_create_pool (&pool, NULL) != APR_SUCCESS)
     {
       printf ("apr_create_pool() failed.\n");
       exit (1);
     }
 
-  retval = do_tests (pglobal);
+  retval = do_test_num (test_num);
+  if (! retval)
+    printf ("PASS\n");
+  else
+    printf ("FAIL\n");
+  
 
-  apr_destroy_pool (pglobal);
+  apr_destroy_pool (pool);
   apr_terminate();
 
   return retval;
