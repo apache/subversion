@@ -144,6 +144,7 @@ svn_error_t * svn_ra_dav__get_activity_url(svn_string_t **activity_url,
 enum {
   /* DAV elements */
   ELEM_activity_coll_set = DAV_ELM_207_UNUSED,
+  ELEM_baseline,
   ELEM_baseline_coll,
   ELEM_checked_in,
   ELEM_collection,
@@ -161,10 +162,14 @@ enum {
 };
 
 /* ### docco */
-svn_error_t * svn_ra_dav__merge_activity(svn_ra_session_t *ras,
-                                         const char *repos_url,
-                                         const char *activity_url,
-                                         apr_pool_t *pool);
+svn_error_t * svn_ra_dav__merge_activity(
+    svn_ra_session_t *ras,
+    const char *repos_url,
+    const char *activity_url,
+    svn_ra_set_wc_prop_func_t set_prop,
+    svn_ra_close_commit_func_t close_commit,
+    void *close_baton,
+    apr_pool_t *pool);
 
 #endif  /* RA_DAV_H */
 
