@@ -5,7 +5,30 @@ Subversion Inconveniences
 </center>
 
 <p>
+Subversion is Alpha software, and there are plenty of known bugs
+(see the <a href="http://subversion.tigris.org/project_tasks.html"
+>Tasks</a> page for a detailed list).  Below are some of the problems
+most likely to annoy new users.
+</p>
 
-<i>
-No serious inconveniences are known at this time.
-</i>
+
+<ol>
+   <li><b>Interrupted checkouts.</b><br>
+   <p>If you interrupt a checkout in progress, you'll need to toss the
+      working copy and start over.</p>
+   <p>See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=730"
+      >Issue #730</a> for more details.</p>
+   </li>
+
+   <li><b>Repository deadlocks</b><br>
+   <p>If an svn client is directly accessing a repository via a
+      file:/// url and is interrupted, or crashes, (or if httpd
+      crashes), the repository is likely to be left in a 'wedged'
+      state.  You'll need to run Berkeley DB's 
+      '<tt>db_recover&nbsp;-ve&nbsp;-h&nbsp;repos/db</tt>' to
+      unwedge the repository.  Make sure you shut down httpd before
+      doing this.</p>
+   <p>See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=739"
+      >Issue #739</a> for more details.</p>
+   </li>
+</ol>
