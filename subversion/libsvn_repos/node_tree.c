@@ -18,7 +18,8 @@
 
 
 #include <stdio.h>
-#include <string.h>
+#define APR_WANT_STRFUNC
+#include <apr_want.h>
 #include "apr_pools.h"
 #include "svn_types.h"
 #include "svn_error.h"
