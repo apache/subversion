@@ -1,5 +1,11 @@
 Get rid of proplists; just give the user an APR hash table instead.
 
+Produce helpful error messages when filename paths contain null
+characters.
+
+All calls to svn_pool_create are bogus, since they don't address the
+issue of the abort function.  We require pools with abort functions.
+
 The delta algorithm walks the whole tree using a single pool, so the
 memory used is proportional to the size of the target tree.  Instead,
 it should use a separate subpool every time it recurses into a new

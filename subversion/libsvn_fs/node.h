@@ -57,9 +57,25 @@
    Multiple opens of the same ID return the same object.  If we
    already have a node object for that node, increment that object's
    open count and, return a pointer to it.  */
-svn_error_t *svn_fs__open_id (svn_fs_node_t **node,
-			      svn_fs_t *fs,
-			      svn_fs_id_t *id);
+svn_error_t *svn_fs__open_node_by_id (svn_fs_node_t **node,
+				      svn_fs_t *fs,
+				      svn_fs_id_t *id);
+
+
+/* Allocate a node, and initialize the svn_fs_node_t portion of it.
+   SIZE should be the overall size of the object (e.g., svn_fs_file_t,
+   svn_fs_dir_t).  ID should be the node's version id in the
+   filesystem FS.  KIND indicates what kind of node this is.
+
+   The new node lives in its own subpool of FS.
+
+   The new node is not yet added to FS's node cache, and its open
+   count is zero.  */
+svn_fs_node_t *
+svn_fs__init_node (apr_size_t size,
+		   svn_fs_t *fs,
+		   svn_fs_id_t *id,
+		   kind_t kind);
 
 
 #endif /* SVN_LIBSVN_FS_NODE_H */

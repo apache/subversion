@@ -62,7 +62,9 @@
 
 struct svn_fs_t {
 
-  /* A pool for allocations for this filesystem.  */
+  /* A pool managing this filesystem.  Freeing this pool must
+     completely clean up the filesystem, including any database
+     or system resources it holds.  */
   apr_pool_t *pool;
 
   /* The filename of the Berkeley DB environment, for use in error
@@ -136,47 +138,20 @@ struct svn_fs_proplist_t {
 /* Nodes.  */
 
 
+/* The different kinds of filesystem nodes.  */
+typedef enum {
+  kind_file,
+  kind_dir
+} kind_t;
+
+
 /* The private structure underlying the public svn_fs_node_t typedef.
 
    All the more specific node structures --- files, directories,
    etc. --- include one of these as their first member.  ANSI
    guarantees the right behavior when you cast a pointer to a
    structure to a pointer to its first member, and back.  So this is
-   effectively the superclass for files and directories.
-
-   NODE ALLOCATION:
-
-   Nodes are not allocated the way you might assume.  Every node is
-   allocated in its own subpool, which is a subpool of the
-   filesystem's pool.  Note well: the node's pool is *never* a subpool
-   of the pool you may have passed in to the `open' function.
-
-   This is because the filesystem caches nodes.  Two separate `open'
-   calls may return the same node object.  If those two `open' calls
-   each specified a different pool, then that node object needs to
-   live for as long as *either* of those two pools are around.  It's
-   wrong to put the node in either pool (or a subpool of either pool),
-   since the other one might get freed last.
-
-   What actually happens is this: every node has an `open count',
-   indicating how many times it has been opened, minus the number of
-   times it has been closed.  When a node's open count reaches zero,
-   we know there are no more references to the node, so we can decide
-   arbitrarily to keep it around (in case someone opens it again) or
-   throw it away (to save memory), without annoying any users.
-
-   When someone passes their own pool to an `open' function, all we do
-   is register a cleanup function in that pool that closes the node.
-   That way, you can open the same node object in twenty different pools,
-
-
-   Thus, when the pool is freed, the node's open count is decreased.
-   If nobody else is using it, the open count will become zero, and we
-   will free the node when our caching policy tells is to.  If other
-   people are still using it, the open count will be greater than
-   zero, and the node will stick around.  */
-
-
+   effectively the superclass for files and directories.  */
 
 struct svn_fs_node_t {
   
@@ -189,18 +164,17 @@ struct svn_fs_node_t {
   /* The filesystem to which we belong.  */
   svn_fs_t *fs;
 
-  /* The pool in which we do our allocation.  Possibly the same as
-     fs->pool.  */
+  /* This node's private pool, a subpool of fs->pool.
+     Freeing this must completely clean up the node, and release any
+     database or system resources it holds.  It must also remove the
+     node from the filesystem's node cache.  */
   apr_pool_t *pool;
 
   /* The node version ID of this node.  */
   svn_fs_id_t *id;
 
   /* What kind of node this is, more specifically.  */
-  enum {
-    svn_fs_kind_file,
-    svn_fs_kind_dir
-  } kind;
+  kind_t kind;
 
   /* The node's property list.  */
   svn_fs_proplist_t *proplist;
@@ -216,8 +190,33 @@ struct svn_fs_node_t {
 struct svn_fs_file_t {
   
   /* The node structure carries information common to all nodes.  */
-  struct svn_fs_node_t node;
+  svn_fs_node_t node;
 
+  /* The contents of the file.  In the future, we should replace this
+     with a reference to some database record we can read as needed.  */
+  svn_string_t *contents;
+
+};
+
+
+
+/* Directories.  */
+
+/* The private structure underlying the public svn_fs_dir_t typedef.  */
+
+struct svn_fs_dir_t {
+
+  /* The node structure carries information common to all nodes.  */
+  svn_fs_node_t node;
+
+  /* An array of pointers to the entries of this directory, terminated
+     by a null pointer.  */
+  svn_fs_dirent_t **entries;
+
+  /* The number of directory entries here, and the number of elements
+     allocated to the entries array.  */
+  int num_entries;
+  int entries_size;
 };
 
 

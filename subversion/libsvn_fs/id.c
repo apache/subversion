@@ -273,3 +273,18 @@ svn_fs__unparse_id (svn_fs_id_t *id,
 
   return unparsed;
 }
+
+
+
+/* Copying ID's.  */
+
+svn_fs_id_t *
+svn_fs_copy_id (svn_fs_id_t *id, apr_pool_t *pool)
+{
+  apr_size_t id_size = (svn_fs_id_length (id) + 1) * sizeof (id[0]);
+  svn_fs_id_t *copy = apr_pcalloc (pool, id_size);
+  memcpy (copy, id, id_size);
+  
+  return copy;
+}
+
