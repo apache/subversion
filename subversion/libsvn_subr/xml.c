@@ -74,7 +74,8 @@ escape_string (svn_string_t *string, apr_pool_t *pool)
          quoted if it follows "]]", but it's easier to quote it all
          the time.  */
       q = p;
-      while (q < end && *q != '&' && *q != '<' && *q != '>')
+      while (q < end && *q != '&' && *q != '<' && *q != '>'
+             && *q != '"' && *q != '\'')
         q++;
       svn_string_appendbytes (newstr, p, q - p, pool);
 
@@ -89,6 +90,10 @@ escape_string (svn_string_t *string, apr_pool_t *pool)
         svn_string_appendcstr (newstr, "&lt;", pool);
       else if (*q == '>')
         svn_string_appendcstr (newstr, "&gt;", pool);
+      else if (*q == '"')
+        svn_string_appendcstr (newstr, "&quot;", pool);
+      else if (*q == '\'')
+        svn_string_appendcstr (newstr, "&apos;", pool);
 
       p = q + 1;
     }
