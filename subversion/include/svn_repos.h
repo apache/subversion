@@ -108,6 +108,17 @@ svn_fs_t *svn_repos_fs (svn_repos_t *repos);
 svn_error_t *svn_repos_recover (const char *path, apr_pool_t *pool);
 
 
+/** This function is a wrapper around svn_fs_berkeley_logfiles(),
+ * returning log file paths relative to the root of the repository.
+ *
+ * @copydoc svn_fs_berkeley_logfiles()
+ */
+svn_error_t *svn_repos_db_logfiles (apr_array_header_t **logfiles,
+                                    const char *path,
+                                    svn_boolean_t only_unused,
+                                    apr_pool_t *pool);
+
+
 
 /* Repository Paths */
 
