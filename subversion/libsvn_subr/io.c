@@ -160,56 +160,6 @@ svn_io_open_unique_file (apr_file_t **f,
 }
 
 
-svn_error_t *
-svn_io_file_reader (void *filehandle,
-                    char *buffer,
-                    apr_size_t *len,
-                    apr_pool_t *pool)
-{
-  apr_status_t stat;
-
-  /* Recover our filehandle */
-  apr_file_t *the_file = (apr_file_t *) filehandle;
-
-  if (the_file == NULL)
-    *len = 0;
-  else
-    {
-      stat = apr_full_read (the_file, buffer,
-                            (apr_size_t) *len,
-                            (apr_size_t *) len);
-      
-      if (stat && !APR_STATUS_IS_EOF(stat))
-        return
-          svn_error_create (stat, 0, NULL, pool,
-                            "adm_crawler.c (posix_file_reader): "
-                            "file read error");
-    }
-
-  return SVN_NO_ERROR;  
-}
-
-
-svn_error_t *
-svn_io_file_writer (void *filehandle,
-                    const char *buffer,
-                    apr_size_t *len,
-                    apr_pool_t *pool)
-{
-  apr_file_t *dst = (apr_file_t *) filehandle;
-  apr_status_t stat;
-  
-  stat = apr_full_write (dst, buffer, (apr_size_t) *len, (apr_size_t *) len);
-  
-  if (stat && !APR_STATUS_IS_EOF(stat))
-    return
-      svn_error_create (stat, 0, NULL, pool,
-                        "error writing xml delta");
-  else 
-    return 0;  
-}
-
-
 
 /*** Copying and appending files. ***/
 
