@@ -450,16 +450,16 @@ principles:
       destroy that pool.
 
    2. When iterating an unbounded number of times, create a subpool
-      before the iteration, use it inside the iteration and clear it
-      after each iteration, then destroy it after the loop is done,
-      like so:
+      before entering the iteration, use it inside the loop and clear 
+      it at the start of each iteration, then destroy it after the loop 
+      is done, like so:
 
          subpool = svn_pool_create(pool);
 
          for (i = 0; i < n; ++i)
          {
-           do_operation(..., subpool);
            svn_pool_clear(subpool);
+           do_operation(..., subpool);
          }
 
          svn_pool_destroy(subpool);
