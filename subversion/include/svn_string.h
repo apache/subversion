@@ -1,5 +1,5 @@
 /*
- * svn_string.h :  byte-string routines for Subversion
+ * svn_string.h :  counted_length strings for Subversion
  *                 (using apr's memory pools)
  *
  * ================================================================
@@ -55,6 +55,18 @@
 #include <apr_pools.h>       /* APR memory pools for everyone. */
 #include "svn_types.h"
 
+
+
+/* The svn_string_t data type.  Pretty much what you expected. */
+typedef struct svn_string_t
+{
+  char *data;                /* pointer to the bytestring */
+  size_t len;                /* length of bytestring */
+  size_t blocksize;          /* total size of buffer allocated */
+} svn_string_t;
+
+
+
 /* Create a new bytestring containing a C string (null-terminated), or
    containing a generic string of bytes (NON-null-terminated) */
 

@@ -63,17 +63,6 @@
 
 
 
-/* Counted-length strings. */
-
-typedef struct svn_string_t
-{
-  char *data;                /* pointer to the bytestring */
-  size_t len;                /* length of bytestring */
-  size_t blocksize;          /* total size of buffer allocated */
-} svn_string_t;
-
-
-
 /* useful macro, suggested by Greg Stein */
 #define APR_ARRAY_GET_ITEM(ary,i,type) (((type *)(ary)->elts)[i])
 
@@ -82,17 +71,17 @@ typedef struct svn_string_t
 /* a file is a proplist and a string */
 typedef struct svn_file_t
 {
-  apr_hash_t *proplist;  /* the file's properties */
-  svn_string_t *text;        /* the file's main content */
+  apr_hash_t *proplist;          /* the file's properties */
+  struct svn_string_t *text;     /* the file's main content */
 } svn_file_t;
 
 
 /* a directory entry points to a node */
 typedef struct svn_dirent_t
 {
-  unsigned long node_num;    /* a node pointed to */
-  svn_string_t *name;        /* name of the node pointed to */
-  apr_hash_t *proplist;  /* entry's properties */
+  unsigned long node_num;     /* a node pointed to */
+  struct svn_string_t *name;  /* name of the node pointed to */
+  apr_hash_t *proplist;       /* entry's properties */
 } svn_dirent_t;
 
 
@@ -175,20 +164,20 @@ typedef struct svn_user_t
   /* The first three fields are filled in by the network layer,
      and possibly used by the server for informational or matching purposes */
 
-  svn_string_t auth_username;       /* the authenticated username */
-  svn_string_t auth_method;         /* the authentication system used */
-  svn_string_t auth_domain;         /* where the user comes from */
+  struct svn_string_t *auth_username;  /* the authenticated username */
+  struct svn_string_t *auth_method;    /* the authentication system used */
+  struct svn_string_t *auth_domain;    /* where the user comes from */
 
 
   /* This field is used by all of the server's "wrappered" fs calls */
 
-  svn_string_t svn_username;        /* the username which will
-                                       >actually< be used when making
-                                       filesystem calls */
+  struct svn_string_t *svn_username;   /* the username which will
+                                          >actually< be used when making
+                                          filesystem calls */
 
-  void *username_data;              /* if a security plugin needs to
-                                       store extra data, such as a
-                                       WinNT SID */
+  void *username_data;                 /* if a security plugin needs to
+                                          store extra data, such as a
+                                          WinNT SID */
 
 } svn_user_t;
 
