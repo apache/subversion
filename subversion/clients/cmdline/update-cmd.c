@@ -41,12 +41,12 @@ svn_cl__update (apr_getopt_t *os,
   apr_array_header_t *targets;
   apr_array_header_t *condensed_targets;
   int i;
-  svn_client_auth_t *auth_obj;
+  svn_client_auth_baton_t *auth_baton;
 
   targets = svn_cl__args_to_target_array (os, pool);
 
-  /* Build an authentication object to give to libsvn_client. */
-  auth_obj = svn_cl__make_auth_obj (opt_state, pool);
+  /* Build an authentication baton to give to libsvn_client. */
+  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
   /* Add "." if user passed 0 arguments */
   svn_cl__push_implicit_dot_target (targets, pool);
@@ -76,7 +76,7 @@ svn_cl__update (apr_getopt_t *os,
 
       SVN_ERR (svn_client_update (NULL, NULL,
                                   trace_editor, trace_edit_baton,
-                                  auth_obj,
+                                  auth_baton,
                                   target,
                                   opt_state->xml_file,
                                   opt_state->revision,

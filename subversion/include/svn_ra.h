@@ -95,67 +95,106 @@ typedef struct svn_ra_reporter_t
 
 /*----------------------------------------------------------------------*/
 
-/* Authentication Methods */
+/*** Authentication ***/
 
-/* Different RA implementations are free to implement whatever
-   authentication protocols they choose.  They must define them here,
-   however, so that all clients are aware of their existence.  Client
-   may choose to support them or not.
-
-   Each protocol requires the definition of an "authenticator" vtable
-   here.  This vtable has routines for getting/setting information;
-   the client is assumed to know the protocol and the proper use of
-   these routines.
-
-   Once information has been exchanged, the client calls
-   authenticate().  Every authenticator has a final authenticate()
-   routine that is defined to return either a session_baton (a
-   repository handle) or another authenticator object (only for those
-   protocols that use multi-phase challenges.) */
+/* This is the 2nd draft of client-side authentication; in the first
+   draft, the client presumed to be in control of selecting auth
+   methods and then "pushing" data at the RA layer.  In this draft,
+   the RA layer is presumed to be in control; as server challenges are
+   made, it "pulls" data from the client via callbacks. */
 
 
 /* List all known authenticator objects (protocols) here. */
 #define SVN_RA_AUTH_USERNAME                       0x0001
 #define SVN_RA_AUTH_SIMPLE_PASSWORD                0x0002
+/* ### someday add other protocols here: PRIVATE_KEY, CERT, etc. */
+  
+
+/* Authenticators: these are small "protocol" vtables that are
+   implemented by libsvn_client, but are driven by the RA layer.  
+
+   (Because they're related to authentication, we define them here in
+   svn_ra.h)
+
+   The RA layer is challenged by the server, and then fetches one of
+   these vtables in order to retrieve the necessary authentication
+   info from the client.  */
 
 
-
-
-/* A protocol which only needs a username.  (like ra_local) */
+/* A protocol which only needs a username.  (used by ra_local)
+   (matches type SVN_RA_AUTH_USERNAME above.)  */
 typedef struct svn_ra_username_authenticator_t
 {
-  /* Set the username to USERNAME. */
-  svn_error_t *(*set_username) (const char *username, void *auth_baton);
+  /* Get a username from the client. */
+  svn_error_t *(*get_username) (char **username,
+                                void *auth_baton,
+                                apr_pool_t *pool);
 
-  /* Authenticate the set username, passing the AUTH_BATON returned with
-     this authenticator structure. If successful, return a valid session
-     handle in *SESSION_BATON. If authentication fails,
-     SVN_ERR_RA_NOT_AUTHORIZED is returned. */
-  svn_error_t *(*authenticate) (void **session_baton, void *auth_baton);
+  /* If authentication was successful, tell the client to store the
+     USERNAME. */
+  svn_error_t *(*store_username) (const char *username,
+                                  void *auth_baton);
 
 } svn_ra_username_authenticator_t;
 
 
 
-
-/* A protocol which only needs a name and password.  (like ra_dav) */
+/* A protocol which needs a username and password (used by ra_dav)
+   (matches type SVN_RA_AUTH_SIMPLE_PASSWORD above.)  */
 typedef struct svn_ra_simple_password_authenticator_t
 {
-  /* Set the username to USERNAME. */
-  svn_error_t *(*set_username) (const char *username, void *auth_baton);
-  
-  /* Set the password to PASSWORD. */
-  svn_error_t *(*set_password) (const char *password, void *auth_baton);
+  /* Get a username and password from the client. */
+  svn_error_t *(*get_user_and_pass) (char **username,
+                                     char **password,
+                                     void *auth_baton,
+                                     apr_pool_t *pool);
 
-  /* Authenticate the set username & password, passing the AUTH_BATON
-     returned with this authenticator structure. If successful, return a
-     valid session handle in *SESSION_BATON.  If authentication fails,
-     SVN_ERR_RA_NOT_AUTHORIZED is returned. */
-  svn_error_t *(*authenticate) (void **session_baton, void *auth_baton);
+  /* If authentication was successful, tell the client to store the
+     USERNAME or PASSWORD.  If these routines are NULL, that means the
+     client is unable (or unwilling) to store auth data. */
+  svn_error_t *(*store_user_and_pass) (const char *username,
+                                       const char *password,
+                                       void *auth_baton);
 
 } svn_ra_simple_password_authenticator_t;
 
 
+
+/* A collection of callbacks implemented by libsvn_client which allows
+   an RA layer to "pull" information from the client application, or
+   possibly store information.  libsvn_client passes this vtable to
+   RA->open().  
+
+   Each routine takes a CALLBACK_BATON originally provided with the
+   vtable. */
+typedef struct svn_ra_callbacks_t
+{
+  /* Open a temporary file FILENAME in the working copy. 
+     Arguments are identical to apr_file_open(), except that FILENAME
+     is presumed to be a basename (instead of a whole path.) */
+  svn_error_t *(*open_tmp_file) (apr_file_t **fp,
+                                 const char *filename,
+                                 apr_int32_t flag,
+                                 apr_fileperms_t perm,
+                                 void *callback_baton,
+                                 apr_pool_t *pool);
+  
+  /* Close (and delete!) the temporary file previously created. */
+  svn_error_t *(*close_tmp_file) (apr_file_t *fp,
+                                  void *callback_baton);
+
+  
+  /* Retrieve an AUTHENTICATOR/AUTH_BATON pair from the client,
+     which represents the protocol METHOD.  */
+  svn_error_t *(*get_authenticator) (void **authenticator,
+                                     void **auth_baton,
+                                     apr_uint64_t method,
+                                     void *callback_baton,
+                                     apr_pool_t *pool);
+
+} svn_ra_callbacks_t;
+
+/* ### will svn_ra_callbacks_t need its own baton?  probably .*/
 
 
 /*----------------------------------------------------------------------*/
@@ -180,25 +219,21 @@ typedef struct svn_ra_plugin_t
   /* Short doc string printed out by `svn -v` */
   const char *description;
 
-  /* Flags that describe all supported authentication methods */
-  apr_uint64_t auth_methods;
-
   /* The vtable hooks */
   
-  /* Begin an RA session to REPOS_URL, using authentication method
-     METHOD.  Return a vtable structure in *AUTHENTICATOR that handles
-     the method; its corresponding baton is returned in *AUTH_BATON. If
-     authenticator object is driven successfully, the reward will be a
-     session_baton. (See previous auth section.)
+  /* Open a repository session to REPOS_URL.  Return an opaque object
+     representing this session in *SESSION_BATON, allocated in POOL.
 
-     POOL will be the place where the authenticator, auth_baton and
-     session_baton are allocated, as well as the storage area used by
-     further calls to RA routines. */
-  svn_error_t *(*get_authenticator) (const void **authenticator,
-                                     void **auth_baton,
-                                     svn_stringbuf_t *repos_URL,
-                                     apr_uint64_t method,
-                                     apr_pool_t *pool);
+     CALLBACKS/CALLBACK_BATON is a table of callbacks provided by the
+     client; see svn_ra_callbacks_t above.
+
+     All RA requests require a session_baton; they will continue to
+     use POOL for memory allocation. */
+  svn_error_t *(*open) (void **session_baton,
+                        svn_stringbuf_t *repos_URL,
+                        svn_ra_callbacks_t *callbacks,
+                        void *callback_baton,
+                        apr_pool_t *pool);
 
   /* Close a repository session.  This frees any memory used by the
      session baton.  (To free the session baton itself, simply free

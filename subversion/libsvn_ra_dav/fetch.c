@@ -673,6 +673,8 @@ svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
 
   *latest_revnum = atol(vsn_name->data);
 
+  SVN_ERR( svn_ra_dav__maybe_store_auth_info(ras) );
+
   return NULL;
 }
 
@@ -1114,7 +1116,12 @@ static svn_error_t * reporter_finish_report(void *report_baton)
 
   /* we got the whole HTTP response thing done. now wrap up the update
      process with a close_edit call. */
-  return (*rb->editor->close_edit)(rb->edit_baton);
+  SVN_ERR( (*rb->editor->close_edit)(rb->edit_baton) );
+
+  /* store auth info if we can. */
+  SVN_ERR( svn_ra_dav__maybe_store_auth_info (rb->ras) );
+
+  return SVN_NO_ERROR;
 }
 
 static const svn_ra_reporter_t ra_dav_reporter = {

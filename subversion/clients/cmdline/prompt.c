@@ -36,15 +36,16 @@
 
 /*** Build an authentication object from commandline args. ***/
 
-svn_client_auth_t *
-svn_cl__make_auth_obj (svn_cl__opt_state_t *opt_state,
-                       apr_pool_t *pool)
+svn_client_auth_baton_t *
+svn_cl__make_auth_baton (svn_cl__opt_state_t *opt_state,
+                         apr_pool_t *pool)
 {
-  svn_client_auth_t *auth_obj;
+  svn_client_auth_baton_t *auth_obj;
   auth_obj = apr_pcalloc (pool, sizeof(*auth_obj));
 
   auth_obj->prompt_callback = svn_cl__prompt_user;
   auth_obj->prompt_baton = NULL;
+  auth_obj->pool = pool;
 
   if (opt_state->auth_username)
     auth_obj->username = opt_state->auth_username->data;

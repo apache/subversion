@@ -906,6 +906,8 @@ static svn_error_t * commit_close_edit(void *edit_baton)
                                       cc->deleted,
                                       cc->ras->pool) );
 
+  SVN_ERR( svn_ra_dav__maybe_store_auth_info(cc->ras) );
+
   return NULL;
 }
 

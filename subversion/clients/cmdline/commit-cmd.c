@@ -47,7 +47,7 @@ svn_cl__commit (apr_getopt_t *os,
   svn_stringbuf_t *trace_dir;
   const svn_delta_edit_fns_t *trace_editor;
   void *trace_edit_baton;
-  svn_client_auth_t *auth_obj;
+  svn_client_auth_baton_t *auth_baton;
 
   /* Take our message from ARGV or a FILE */
   if (opt_state->filedata) 
@@ -58,7 +58,7 @@ svn_cl__commit (apr_getopt_t *os,
   targets = svn_cl__args_to_target_array (os, pool);
 
   /* Build an authentication object to give to libsvn_client. */
-  auth_obj = svn_cl__make_auth_obj (opt_state, pool);
+  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
   /* Add "." if user passed 0 arguments */
   svn_cl__push_implicit_dot_target (targets, pool);
@@ -107,7 +107,7 @@ svn_cl__commit (apr_getopt_t *os,
   SVN_ERR (svn_client_commit (NULL, NULL,
                               opt_state->quiet ? NULL : trace_editor, 
                               opt_state->quiet ? NULL : trace_edit_baton,
-                              auth_obj,
+                              auth_baton,
                               targets,
                               message,
                               opt_state->xml_file,

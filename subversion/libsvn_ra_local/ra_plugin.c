@@ -74,77 +74,58 @@ static const svn_ra_reporter_t ra_local_reporter =
 
 /** The RA plugin routines **/
 
-/* Lives with in the authenticator */
+
 static svn_error_t *
-authenticate (void **sbaton, void *pbaton)
+open (void **session_baton,
+      svn_stringbuf_t *repos_URL,
+      svn_ra_callbacks_t *callbacks,
+      void *callback_baton,
+      apr_pool_t *pool)
 {
-  svn_ra_local__session_baton_t *session_baton =
-    (svn_ra_local__session_baton_t *) pbaton;
+  svn_ra_local__session_baton_t *session;
+  void *a, *auth_baton;
+  svn_ra_username_authenticator_t *authenticator;
+
+  /* Allocate and stash the session_baton args we have already. */
+  session = apr_pcalloc (pool, sizeof(*session));
+  session->pool = pool;
+  session->repository_URL = repos_URL;
+  
+  /* Get the username by "pulling" it from the callbacks. */
+  SVN_ERR (callbacks->get_authenticator (&a,
+                                         &auth_baton, 
+                                         SVN_RA_AUTH_USERNAME, 
+                                         callback_baton, pool));
+
+  authenticator = (svn_ra_username_authenticator_t *) a;
+
+  SVN_ERR (authenticator->get_username (&(session->username),
+                                        auth_baton, pool));
 
   /* Look through the URL, figure out which part points to the
      repository, and which part is the path *within* the
      repository. */
-  SVN_ERR (svn_ra_local__split_URL (&(session_baton->repos_path),
-                                    &(session_baton->fs_path),
-                                    session_baton->repository_URL,
-                                    session_baton->pool));
+  SVN_ERR (svn_ra_local__split_URL (&(session->repos_path),
+                                    &(session->fs_path),
+                                    session->repository_URL,
+                                    session->pool));
 
   /* Open the filesystem at located at environment `repos_path' */
-  SVN_ERR (svn_repos_open (&(session_baton->fs),
-                           session_baton->repos_path->data,
-                           session_baton->pool));
+  SVN_ERR (svn_repos_open (&(session->fs),
+                           session->repos_path->data,
+                           session->pool));
 
-  /* Return the session baton, heh, even though the caller unknowingly
-     already has it as 'pbaton'.  :-) */
-  *sbaton = session_baton;
-  return SVN_NO_ERROR;
-}
+  /* ### ra_local is not going to bother to store the username in the
+     working copy.  This means that the username will always be
+     fetched from getuid() or from a commandline arg, which is fine.
 
+     The reason for this decision is that in ra_local, authentication
+     and authorization are blurred; we'd have to use authorization as
+     a *test* to decide if the authentication was valid.  And we
+     certainly don't want to track every subsequent svn_fs_* call's
+     error, just to decide if it's legitmate to store a username! */
 
-/* Lives within the authenticator. */
-static svn_error_t *
-set_username (const char *username, void *pbaton)
-{
-  svn_ra_local__session_baton_t *session_baton =
-    (svn_ra_local__session_baton_t *) pbaton;
-
-  /* copy the username for safety. */
-  session_baton->username = apr_pstrdup (session_baton->pool,
-                                         username);
-
-  return SVN_NO_ERROR;
-}
-
-static const svn_ra_username_authenticator_t username_authenticator =
-{
-  set_username,
-  authenticate
-};
-
-/* Return the authenticator vtable for username-only auth. */
-static svn_error_t *
-get_authenticator (const void **authenticator,
-                   void **auth_baton,
-                   svn_stringbuf_t *repos_URL,
-                   apr_uint64_t method,
-                   apr_pool_t *pool)
-{
-  svn_ra_local__session_baton_t *session_baton;
-
-  /* Sanity check -- this RA library only supports one method. */
-  if (method != SVN_RA_AUTH_USERNAME)
-    return 
-      svn_error_create (SVN_ERR_RA_UNKNOWN_AUTH, 0, NULL, pool,
-                        "ra_local only supports the AUTH_USERNAME method.");
-
-  /* Allocate and stash the session_baton args we have already. */
-  session_baton = apr_pcalloc (pool, sizeof(*session_baton));
-  session_baton->pool = pool;
-  session_baton->repository_URL = repos_URL;
-  
-  *authenticator = &username_authenticator;
-  *auth_baton = session_baton;
-  
+  *session_baton = session;
   return SVN_NO_ERROR;
 }
 
@@ -327,8 +308,7 @@ static const svn_ra_plugin_t ra_local_plugin =
 {
   "ra_local",
   "Module for accessing a repository on local disk.",
-  SVN_RA_AUTH_USERNAME,
-  get_authenticator,
+  open,
   close,
   get_latest_revnum,
   get_dated_revision,

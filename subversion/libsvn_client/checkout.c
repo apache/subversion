@@ -36,40 +36,13 @@
 
 /*** Public Interfaces. ***/
 
-/* ben sez: this is a single, readable routine now -- not sliced into
-   a million onion layers anymore.  I maintain that it no longer makes
-   sense to share code with svn_client_update();  other than fetching
-   the same wc editor, the logic of these routines has started
-   diverging (remember that `update' needs to report state to the RA
-   layer.) */
-
-/* Perform a checkout from URL, providing pre- and post-checkout hook
-   editors and batons (BEFORE_EDITOR, BEFORE_EDIT_BATON /
-   AFTER_EDITOR, AFTER_EDIT_BATON).
-
-   PATH will be the root directory of your checked out working copy.
-
-   If XML_SRC is NULL, then the checkout will come from the repository
-   and subdir specified by URL.  An invalid REVISION will cause the
-   "latest" tree to be fetched, while a valid REVISION will fetch a
-   specific tree.  Alternatively, a time TM can be used to implicitly
-   select a revision.  TM cannot be used at the same time as REVISION.
-
-   If XML_SRC is non-NULL, it is an xml file to check out from; in
-   this case, the working copy will record the URL as artificial
-   ancestry information.  An invalid REVISION implies that the
-   revision *must* be present in the <delta-pkg> tag, while a valid
-   REVISION will be simply be stored in the wc. (Note:  a <delta-pkg>
-   revision will *always* override the one passed in.)
-
-   This operation will use the provided memory POOL. */
 
 svn_error_t *
 svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                      void *before_edit_baton,
                      const svn_delta_edit_fns_t *after_editor,
                      void *after_edit_baton,
-                     svn_client_auth_t *auth_obj,
+                     svn_client_auth_baton_t *auth_baton,
                      svn_stringbuf_t *URL,
                      svn_stringbuf_t *path,
                      svn_revnum_t revision,
@@ -106,16 +79,19 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
   /* if using an RA layer */
   if (! xml_src)
     {
-      void *ra_baton, *session;
+      void *ra_baton, *session, *cb_baton;
       svn_ra_plugin_t *ra_lib;
+      svn_ra_callbacks_t *ra_callbacks;
 
       /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
 
-      /* Open an RA session to URL */
-      SVN_ERR (svn_client_authenticate (&session, ra_lib, URL, path,
-                                        auth_obj, pool));
+      /* Open an RA session to URL. */
+      SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton,
+                                             auth_baton, path, TRUE, pool));
+      SVN_ERR (ra_lib->open (&session, URL,
+                             ra_callbacks, cb_baton, pool));
 
       /* Decide which revision to get: */
 
@@ -139,10 +115,6 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
 
       /* Close the RA session. */
       SVN_ERR (ra_lib->close (session));
-
-      /* Possibly store any authentication info from the RA session. */
-      if (auth_obj->storage_callback)
-        SVN_ERR (auth_obj->storage_callback (auth_obj->storage_baton));
     }      
   
   /* else we're checking out from xml */
