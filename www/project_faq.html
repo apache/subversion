@@ -102,6 +102,10 @@ a <tt>file:</tt> URL?</a></li>
     errors on Windows.  They seem to happen at random.  Why?</a></li>
 <li><a href="#freebsd-hang">On FreeBSD, certain operations (especially
     svnadmin create) sometimes hang.  Why?</a></li>
+<li><a href="#301-error">I can see my repository in a web browser, but
+    'svn checkout' gives me an error about "301 Moved Permanently".
+    What's wrong?</a></li>
+
 
 <p>
 <strong>Developer questions:</strong>
@@ -1291,6 +1295,30 @@ You probably need to configure the system to gather entropy from
 sources such as hard-disk and network interrupts.  Consult your system
 manpages, specifically random(4) and rndcontrol(8) on how to effect
 this change.</p>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="301-error">I can see my repository in a web browser, but
+    'svn checkout' gives me an error about "301 Moved Permanently".
+    What's wrong?</a></h3>
+
+<p>It means your httpd.conf is misconfigured.  Usually this error happens
+when you've defined the Subversion virtual "location" to exist within
+two different scopes at the same time.</p>
+
+<p>For example, if you've exported a repository as <tt>&lt;Location
+/www/foo&gt;</tt>, but you've also set your <tt>DocumentRoot</tt> to
+be <tt>/www</tt>, then you're in trouble.  When the request comes in
+for <tt>/www/foo/bar</tt>, apache doesn't know whether to find a
+<i>real</i> file named <tt>/foo/bar</tt> within your
+<tt>DocumentRoot</tt>, or whether to ask mod_dav_svn to fetch a file
+<tt>/bar</tt> from the <tt>/www/foo</tt> repository.  Usually the
+former case wins, and hence the "Moved Permanently" error.</p>
+
+<p>The solution is to make sure your repository
+<tt>&lt;Location&gt;</tt> does <b>not</b> overlap or live within any
+areas already exported as normal web shares.</p>
+
 
 <![CDATA[=========================================================]]>
 
