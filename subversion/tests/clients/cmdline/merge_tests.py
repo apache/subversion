@@ -939,9 +939,7 @@ def merge_similar_unrelated_trees(sbox):
 
 #----------------------------------------------------------------------
 def merge_one_file(sbox):
-  "merge one file, receive a specific error"
-
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=1150. ##
+  "merge one file (issue #1150)"
 
   sbox.build()
 
@@ -990,15 +988,8 @@ def merge_one_file(sbox):
   if err:
     raise svntest.Failure
 
-  ### Okay, this is the part that issue #1150 is about.  This fails on
-  ### all RA layers right now, though I think for different reasons in
-  ### each one.  In ra_local it seems to have something to do with
-  ### delta_dirs; in ra_dav and ra_svn, something different may be
-  ### going on.
-
   # Cd into the directory and run merge with no targets.
-  # Ideally, it would still merge into rho, since the diff applies
-  # only to rho... ### But it's broken right now :-).
+  # It should still merge into rho.
   saved_cwd = os.getcwd()
   try:
     os.chdir(G_path)
@@ -1013,71 +1004,6 @@ def merge_one_file(sbox):
       raise svntest.Failure
   finally:
     os.chdir(saved_cwd)
-
-  # At one time (see revision 4622), the error over ra_dav looked like
-  # this:
-  #
-  #    $ cd subversion/tests/clients/cmdline/working_copies/merge_tests-5
-  #    $ svn merge -r1:2 http://localhost/repositories/merge_tests-5/A/D/G/rho
-  #    subversion/libsvn_ra_dav/util.c:350: (apr_err=175002)
-  #    svn: RA layer request failed
-  #    svn: REPORT request failed on /repositories/merge_tests-5/A/D/G/rho
-  #    subversion/libsvn_ra_dav/util.c:335: (apr_err=175002)
-  #    svn: The REPORT request returned invalid XML in the response: \
-  #    Unknown XML element `error (in DAV:)'. \
-  #    (/repositories/merge_tests-5/A/D/G/rho)
-  #    $
-  #
-  # For debugging, I suggest starting httpd -X, then ^C, then set a
-  # breakpoint in ap_process_request().  Here's the code from
-  # httpd-2.0.44/modules/http/http_request.c, minus a few comments
-  # that would only be distracting here:
-  # 
-  #    void ap_process_request(request_rec *r)
-  #    {
-  #        int access_status;
-  #    
-  #        /* (Long-ish comment omitted) */
-  #        access_status = ap_run_quick_handler(r, 0);
-  #        if (access_status == DECLINED) {
-  #            access_status = ap_process_request_internal(r);
-  #            if (access_status == OK) {
-  #                access_status = ap_invoke_handler(r);
-  #            }
-  #        }
-  #    
-  #        if (access_status == DONE) {
-  #            /* e.g., something not in storage like TRACE */
-  #            access_status = OK;
-  #        }
-  #    
-  #        if (access_status == OK) {
-  #            ap_finalize_request_protocol(r);
-  #        }
-  #        else {
-  #            ap_die(access_status, r);
-  #        }
-  #
-  #      ...
-  #   }
-  #
-  # Step through from the top.  Every time access_status is set or
-  # compared, print out its value before and after the assignment or
-  # comparison.  I mean *every time*, even if you think it couldn't
-  # possibly have been affected :-).  You'll see some pretty weird
-  # stuff -- looks like there's a stack smasher somewhere that's
-  # affecting this variable.  But even that doesn't fully explain what
-  # Ben and I were seeing.  Will have to take a look again with fresh
-  # eyes.
-  #
-  # Anyway, the result is that access_status has the wrong value
-  # coming out, so the client receives a 200 OK response when it
-  # should have received an error.  Thus svn_ra_dav__parsed_request()
-  # in libsvn_ra_dav/util.c thinks it got a successful response, but
-  # when it goes to parse that response, the response body XML is that
-  # of an error.  The success-expecting parser is not prepared for
-  # that, and that's why we see that "Unknown XML element" error from
-  # the client.
 
 
 #----------------------------------------------------------------------
@@ -1338,7 +1264,7 @@ test_list = [ None,
               merge_similar_unrelated_trees,
               merge_with_prev,
               merge_binary_file,
-              # merge_one_file,          # See issue #1150.
+              merge_one_file,
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.
