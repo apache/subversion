@@ -39,7 +39,7 @@ Candidate changes:
       -1: ghudson
           (http://www.contactor.se/~dast/svn/archive-2004-08/0754.shtml)
 
-  * r10467, r10472, r10485, r10734, r10759, r10789, r10812, rXXXXX
+  * r10467, r10472, r10485, r10734, r10759, r10789, r10812, r10835
     Detect and report lock-contention at recovery time, add a new "--wait"
     option to svnadmin recover.
     Justification:
@@ -50,6 +50,9 @@ Candidate changes:
       are approved, then a new trunk revision, marked rXXXXX above, should
       also be applied to reflect that the changes were actually included
       in 1.1.0.
+      UPDATE: r10835 is that trunk revision. Since the notional rXXXXX has been
+      here throughout the voting process, adding in the real revision does not
+      invalidate the votes.
     Note: See discussion in
      http://www.contactor.se/~dast/svn/archive-2004-08/0804.shtml
     Votes:
