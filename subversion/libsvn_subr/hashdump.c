@@ -244,7 +244,7 @@ svn_hash_read (apr_hash_t *hash,
 
           /* Now read that much into a buffer, + 1 byte for null terminator */
           void *keybuf = apr_palloc (pool, keylen + 1);
-          err = apr_file_read_file (srcfile, keybuf, keylen, &num_read);
+          err = apr_file_read_full (srcfile, keybuf, keylen, &num_read);
           if (err) return err;
           ((char *) keybuf)[keylen] = '\0';
 
@@ -265,7 +265,7 @@ svn_hash_read (apr_hash_t *hash,
 
               /* Again, 1 extra byte for the null termination. */
               void *valbuf = apr_palloc (pool, vallen + 1);
-              err = apr_file_read_file (srcfile, valbuf, vallen, &num_read);
+              err = apr_file_read_full (srcfile, valbuf, vallen, &num_read);
               if (err) return err;
               ((char *) valbuf)[vallen] = '\0';
 

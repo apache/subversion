@@ -259,17 +259,17 @@ contents_identical_p (svn_boolean_t *identical_p,
   *identical_p = TRUE;  /* assume TRUE, until disproved below */
   while (!APR_STATUS_IS_EOF(status))
     {
-      status = apr_file_read_file (file1_h, buf1, sizeof(buf1), &bytes_read1);
+      status = apr_file_read_full (file1_h, buf1, sizeof(buf1), &bytes_read1);
       if (status && !APR_STATUS_IS_EOF(status))
         return svn_error_createf
           (status, 0, NULL, pool,
-           "contents_identical_p: apr_file_read_file() failed on %s.", file1->data);
+           "contents_identical_p: apr_file_read_full() failed on %s.", file1->data);
 
-      status = apr_file_read_file (file2_h, buf2, sizeof(buf2), &bytes_read2);
+      status = apr_file_read_full (file2_h, buf2, sizeof(buf2), &bytes_read2);
       if (status && !APR_STATUS_IS_EOF(status))
         return svn_error_createf
           (status, 0, NULL, pool,
-           "contents_identical_p: apr_file_read_file() failed on %s.", file2->data);
+           "contents_identical_p: apr_file_read_full() failed on %s.", file2->data);
       
       if ((bytes_read1 != bytes_read2)
           || (memcmp (buf1, buf2, bytes_read1)))

@@ -468,7 +468,7 @@ read_handler_apr (void *baton, char *buffer, apr_size_t *len)
   struct baton_apr *btn = baton;
   apr_status_t status;
 
-  status = apr_file_read_file (btn->file, buffer, *len, len);
+  status = apr_file_read_full (btn->file, buffer, *len, len);
   if (!APR_STATUS_IS_SUCCESS(status) && !APR_STATUS_IS_EOF(status))
     return svn_error_create (status, 0, NULL, btn->pool, "reading file");
   else
