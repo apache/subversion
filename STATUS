@@ -58,10 +58,22 @@ These changes are to the "core" of Subversion:
    * r8016, r8019, r8028
      Copyright notice fixes.
      Justification: Why have copyright notices at all unless legally proper?
+     Notes: This goes with r8127, but the others here haven't reviewed
+            that change, so it needs to be listed separately for now.
      Votes:
       +0: cmpilato
       +1 (concept): jerenkrantz
       +1: rooneg, ghudson, dionisos
+
+
+   * r8127
+     Copyright notice fixes, like the {r8016, r8019, r8028} change.
+     Justification: Same as for above-referenced change.
+     Notes: The patch to trunk/subversion/bindings/com/SVNCOM.rc looks
+            like it modifies the whole file, because it fixed the line
+            endings in the repository.  See r8127 log msg for details.
+     Votes:
+      +1: kfogel
 
 
    * r8053, r8054
