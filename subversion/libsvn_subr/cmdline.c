@@ -304,3 +304,32 @@ svn_cmdline_fflush (FILE *stream)
 
   return SVN_NO_ERROR;
 }
+
+
+/***   Stream to recode output to the current locale (from UTF-8) */
+struct baton_recode {
+  apr_xlate_t *xlate_handle;
+  apr_pool_t *pool;
+  svn_stream_t *forwarding_stream;
+}
+
+svn_error_t *
+write_recoded (void *baton, const char *data, apr_size_t *len)
+{
+  struct baton_recode *btn = baton;
+
+  // recode here
+
+}
+
+svn_stream_t *
+svn_cmdline_create_stream_from_utf8 (pool, svn_stream_t* forward_to)
+{
+  struct baton_recode *baton = apr_palloc (pool, sizeof(*baton));
+  svn_stream_t * = svn_stream_create (pool, baton);
+
+  baton->pool = pool;
+  baton->forwarding_stream = forward_to;
+
+  svn_stream_set_write (stream, write_recoded);
+}
