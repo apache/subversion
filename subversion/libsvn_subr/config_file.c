@@ -269,10 +269,13 @@ svn_config__sys_config_path (const char **path_p,
 
 #ifdef SVN_WIN32
  {
+   HRESULT res;
    char folder[MAX_PATH] = { };
    
-   SHGetFolderPath (NULL, CSIDL_COMMON_APPDATA, NULL, SHGFP_TYPE_CURRENT,
-                    (LPTSTR) folder);
+   res = SHGetFolderPath (NULL, CSIDL_COMMON_APPDATA, NULL, SHGFP_TYPE_CURRENT,
+                          (LPTSTR) folder);
+   if (res != S_OK)
+     return SVN_NO_ERROR;
    
    *path_p = svn_path_join_many (pool, folder,
                                  SVN_CONFIG__SUBDIRECTORY, fname, NULL);
@@ -302,13 +305,16 @@ svn_config__user_config_path (const char **path_p,
 
 #ifdef SVN_WIN32
   {
+    HRESULT res;
     char sp_folder[MAX_PATH] = { };
     
     /* Or we could do:
        SHGetSpecialFolderPath (NULL, (LPTSTR) sp_folder, CSIDL_APPDATA, TRUE);
     */
-    SHGetFolderPath (NULL, CSIDL_APPDATA, NULL, SHGFP_TYPE_CURRENT,
-                     (LPTSTR) sp_folder);
+    res = SHGetFolderPath (NULL, CSIDL_APPDATA, NULL, SHGFP_TYPE_CURRENT,
+                           (LPTSTR) sp_folder);
+    if (res != S_OK)
+      return SVN_NO_ERROR;
 
     if (*sp_folder)
       *path_p = svn_path_join_many (pool, sp_folder,
