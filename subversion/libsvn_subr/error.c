@@ -410,7 +410,8 @@ svn_handle_warning (FILE *stream, svn_error_t *err)
 void
 svn_handle_warning2 (FILE *stream, svn_error_t *err, const char *prefix)
 {
-  svn_error_clear (svn_cmdline_fprintf (stream, err->pool, "%swarning: %s\n",
+  svn_error_clear (svn_cmdline_fprintf (stream, err->pool,
+                                        _("%swarning: %s\n"),
                                         prefix, err->message));
   fflush (stream);
 }
