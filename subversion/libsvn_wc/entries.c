@@ -277,11 +277,11 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
            these attributes at all when they have values of "true", so
            let's not go overboard on the paranoia here. */
         if (addstr)
-          entry->flags |= SVN_WC_ENTRY_ADD;
+          entry->state |= SVN_WC_ENTRY_ADDED;
         if (delstr)
-          entry->flags |= SVN_WC_ENTRY_DELETE;
+          entry->state |= SVN_WC_ENTRY_DELETED;
         if (conflictstr)
-          entry->flags |= SVN_WC_ENTRY_CONFLICT;
+          entry->state |= SVN_WC_ENTRY_CONFLICTED;
       }
     }
 }
@@ -391,30 +391,30 @@ sync_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
                   SVN_WC_ENTRY_ATTR_KIND, APR_HASH_KEY_STRING,
                   NULL);
   
-  /* Flags. */
+  /* State. */
   {
-    svn_boolean_t clearall = (entry->flags & SVN_WC_ENTRY_CLEAR_ALL);
+    svn_boolean_t clearall = (entry->state & SVN_WC_ENTRY_CLEAR_ALL);
     svn_string_t *val;
     
     /* Are we clearing or setting the affected bits? */
-    if (clearall || (entry->flags & SVN_WC_ENTRY_CLEAR_NAMED))
+    if (clearall || (entry->state & SVN_WC_ENTRY_CLEAR_NAMED))
       val = NULL;
     else
       val = svn_string_create ("true", pool);
     
-    if (clearall || (entry->flags & SVN_WC_ENTRY_ADD))
+    if (clearall || (entry->state & SVN_WC_ENTRY_ADDED))
       apr_hash_set (entry->attributes,
                     SVN_WC_ENTRY_ATTR_ADD, APR_HASH_KEY_STRING, val);
 
-    if (clearall || (entry->flags & SVN_WC_ENTRY_DELETE))
+    if (clearall || (entry->state & SVN_WC_ENTRY_DELETED))
       apr_hash_set (entry->attributes,
                     SVN_WC_ENTRY_ATTR_DELETE, APR_HASH_KEY_STRING, val);
 
-    if (clearall || (entry->flags & SVN_WC_ENTRY_MERGED))
+    if (clearall || (entry->state & SVN_WC_ENTRY_MERGED))
       apr_hash_set (entry->attributes,
                     SVN_WC_ENTRY_ATTR_MERGED, APR_HASH_KEY_STRING, val);
 
-    if (clearall || (entry->flags & SVN_WC_ENTRY_CONFLICT))
+    if (clearall || (entry->state & SVN_WC_ENTRY_CONFLICTED))
       apr_hash_set (entry->attributes,
                     SVN_WC_ENTRY_ATTR_CONFLICT, APR_HASH_KEY_STRING, val);
   }
@@ -669,7 +669,7 @@ stuff_entry (apr_hash_t *entries,
              svn_string_t *name,
              svn_revnum_t revision,
              enum svn_node_kind kind,
-             int flags,
+             int state,
              apr_time_t text_time,
              apr_time_t prop_time,
              apr_pool_t *pool,
@@ -694,7 +694,7 @@ stuff_entry (apr_hash_t *entries,
     entry->text_time = text_time;
   if (prop_time)
     entry->prop_time = prop_time;
-  entry->flags |= flags;
+  entry->state |= state;
 
   /* Do any other attributes. */
   if (atts)
@@ -761,7 +761,7 @@ svn_wc__entry_merge_sync (svn_string_t *path,
                           svn_string_t *name,
                           svn_revnum_t revision,
                           enum svn_node_kind kind,
-                          int flags,
+                          int state,
                           apr_time_t text_time,
                           apr_time_t prop_time,
                           apr_pool_t *pool,
@@ -780,7 +780,7 @@ svn_wc__entry_merge_sync (svn_string_t *path,
     name = svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
 
   va_start (ap, atts);
-  stuff_entry (entries, name, revision, kind, flags, text_time,
+  stuff_entry (entries, name, revision, kind, state, text_time,
                prop_time, pool, atts, ap);
   va_end (ap);
   
@@ -801,7 +801,7 @@ svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
   dupentry->revision   = entry->revision;
   dupentry->ancestor   = svn_string_dup (entry->ancestor, pool);
   dupentry->kind       = entry->kind;
-  dupentry->flags      = entry->flags;
+  dupentry->state      = entry->state;
   dupentry->text_time  = entry->text_time;
   dupentry->prop_time  = entry->prop_time;
 

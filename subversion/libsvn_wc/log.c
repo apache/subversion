@@ -498,7 +498,7 @@ log_do_modify_entry (struct log_runner *loggy,
                                        APR_HASH_KEY_STRING);
   svn_revnum_t new_revision = (revstr ? atoi (revstr->data)
                                : SVN_INVALID_REVNUM);
-  int flags = 0;
+  int state = 0;
           
   enum svn_node_kind kind = svn_node_unknown;
   svn_string_t *kindstr = apr_hash_get (ah,
@@ -528,19 +528,19 @@ log_do_modify_entry (struct log_runner *loggy,
   else
     kind = svn_node_none;
           
-          /* Stuff state into flags. */
+  /* Stuff state flags. */
   if (apr_hash_get (ah, SVN_WC_ENTRY_ATTR_ADD,
                     APR_HASH_KEY_STRING))
-    flags |= SVN_WC_ENTRY_ADD;
+    state |= SVN_WC_ENTRY_ADDED;
   if (apr_hash_get (ah, SVN_WC_ENTRY_ATTR_DELETE,
                     APR_HASH_KEY_STRING))
-    flags |= SVN_WC_ENTRY_DELETE;
+    state |= SVN_WC_ENTRY_DELETED;
   if (apr_hash_get (ah, SVN_WC_ENTRY_ATTR_MERGED,
                     APR_HASH_KEY_STRING))
-    flags |= SVN_WC_ENTRY_MERGED;
+    state |= SVN_WC_ENTRY_MERGED;
   if (apr_hash_get (ah, SVN_WC_ENTRY_ATTR_CONFLICT,
                     APR_HASH_KEY_STRING))
-    flags |= SVN_WC_ENTRY_CONFLICT;
+    state |= SVN_WC_ENTRY_CONFLICTED;
 
           /* Did the log command give us any timestamps?  There are three
              possible scenarios here.  We must check both text_time
@@ -634,7 +634,7 @@ log_do_modify_entry (struct log_runner *loggy,
                                   sname,
                                   new_revision,
                                   kind,
-                                  flags,
+                                  state,
                                   text_time,
                                   prop_time,
                                   loggy->pool,
@@ -725,7 +725,7 @@ conflict_if_rejfile (svn_string_t *parent_dir,
              svn_string_create (entry, pool),
              SVN_INVALID_REVNUM,
              svn_node_none,
-             (SVN_WC_ENTRY_CLEAR_NAMED | SVN_WC_ENTRY_CONFLICT),
+             (SVN_WC_ENTRY_CLEAR_NAMED | SVN_WC_ENTRY_CONFLICTED),
              0,
              0,
              pool,
@@ -748,7 +748,7 @@ conflict_if_rejfile (svn_string_t *parent_dir,
              svn_string_create (entry, pool),
              SVN_INVALID_REVNUM,
              svn_node_none,
-             SVN_WC_ENTRY_CONFLICT,
+             SVN_WC_ENTRY_CONFLICTED,
              0,
              0,
              pool,
@@ -821,7 +821,7 @@ log_do_committed (struct log_runner *loggy,
         return err;
           
       entry = apr_hash_get (entries, sname->data, sname->len);
-      if (entry && (entry->flags & SVN_WC_ENTRY_DELETE))
+      if (entry && (entry->state & SVN_WC_ENTRY_DELETED))
         {
           err = remove_from_revision_control (loggy, sname);
           if (err)

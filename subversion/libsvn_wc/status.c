@@ -89,7 +89,7 @@ assemble_status (svn_wc_status_t *status,
       enum svn_node_kind prop_kind;
       svn_boolean_t prop_exists = FALSE;
       
-      /* Before examining the entry's flags, determine if a property
+      /* Before examining the entry's state, determine if a property
          component exists. */
       err = svn_wc__prop_path (&prop_path, path, 0, pool);
       if (err) return err;      
@@ -131,7 +131,7 @@ assemble_status (svn_wc_status_t *status,
       if (prop_modified_p)
         status->prop_status = svn_wc_status_modified;      
       
-      if (entry->flags & SVN_WC_ENTRY_ADD)
+      if (entry->state & SVN_WC_ENTRY_ADDED)
         {
           /* If an entry has been marked for future addition to the
              repository, we *know* it has a textual component: */
@@ -143,7 +143,7 @@ assemble_status (svn_wc_status_t *status,
             status->prop_status = svn_wc_status_added;
         }
 
-      else if (entry->flags & SVN_WC_ENTRY_DELETE)
+      else if (entry->state & SVN_WC_ENTRY_DELETED)
         {
           status->text_status = svn_wc_status_deleted;
           
@@ -151,7 +151,7 @@ assemble_status (svn_wc_status_t *status,
             status->prop_status = svn_wc_status_deleted;
         }
 
-      if (entry->flags & SVN_WC_ENTRY_CONFLICT)
+      if (entry->state & SVN_WC_ENTRY_CONFLICTED)
         {
           /* We must decide if either component is "conflicted", based
              on whether reject files are mentioned and/or continue to

@@ -108,7 +108,7 @@ typedef struct svn_wc_entry_t
   svn_string_t *ancestor;      /* Base path.  (Required) */
   enum svn_node_kind kind;     /* Is it a file, a dir, or... ? (Required) */
 
-  int flags;                   /* Marks an entry with A, D, C, etc. */
+  int state;                   /* Bitmasks.  Entry modified?  conflicted?.. */
 
   apr_time_t text_time;        /* When the file's text was last
                                   up-to-date.  (Zero means not
@@ -139,13 +139,13 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_ATTR_PREJFILE  "prop-reject-file"
 
 
-/* Bitmasks for svn_wc_entry_t.flags. 
+/* Bitmasks for `svn_wc_entry_t.state'.
    REMINDER: if you add a new mask here, make sure to update
    sync_entry() in entries.c. */
-#define SVN_WC_ENTRY_ADD           1  /* entry marked for addition */
-#define SVN_WC_ENTRY_DELETE        2  /* entry marked for deletion */
+#define SVN_WC_ENTRY_ADDED         1  /* entry marked for addition */
+#define SVN_WC_ENTRY_DELETED       2  /* entry marked for deletion */
 #define SVN_WC_ENTRY_MERGED        4  /* wfile merged as of timestamp */
-#define SVN_WC_ENTRY_CONFLICT      8  /* wfile conflicted as of timestamp */
+#define SVN_WC_ENTRY_CONFLICTED    8  /* wfile conflicted as of timestamp */
 #define SVN_WC_ENTRY_CLEAR_NAMED  16  /* action: clear mentioned flags */
 #define SVN_WC_ENTRY_CLEAR_ALL    32  /* action: clear all flags */
 
