@@ -49,7 +49,7 @@ detect_changed (apr_hash_t *changed,
                 const char *path,
                 apr_pool_t *pool)
 {
-  const char *down_path = path;
+  const char *down_path = "";
 
   /* Recurse sideways first. */
   if (node->sibling)
@@ -74,11 +74,10 @@ detect_changed (apr_hash_t *changed,
   if (! ((node->kind == svn_node_dir)
          && (node->action == 'R')
          && (! node->prop_mod)))
-    {
-      apr_hash_set (changed,
-                    apr_pstrdup (pool, path), APR_HASH_KEY_STRING,
+    apr_hash_set (changed, down_path, APR_HASH_KEY_STRING,
                     (void *) ((int) node->action));
-    }
+
+  return;
 }
 
 
@@ -171,11 +170,7 @@ svn_repos_get_logs (svn_repos_t *repos,
          them (i.e., "svn log -v" means `discover_changed_paths' will
          be non-zero here).  */
 
-#ifndef SVN_REPOS_ALLOW_LOG_WITH_PATHS
-      discover_changed_paths = FALSE;
-#else      
-      if ((this_rev > 0) && 
-          (discover_changed_paths || (paths && paths->nelts > 0)))
+      if ((this_rev > 0) && discover_changed_paths)
         {
           const svn_delta_edit_fns_t *editor;
           svn_fs_root_t *oldroot, *newroot;
@@ -185,28 +180,19 @@ svn_repos_get_logs (svn_repos_t *repos,
           
           /* Use a dir_deltas run with the node editor between the
              current revision and its immediate predecessor to see
-             what changed in this revision.
-
-             ### todo: not sure this needs an editor and dir_deltas.
-             Might be easier to just walk the one revision tree,
-             looking at created-rev fields... */
+             what changed in this revision.  */
           SVN_ERR (svn_fs_revision_root (&oldroot, fs, this_rev - 1, subpool));
           SVN_ERR (svn_fs_revision_root (&newroot, fs, this_rev, subpool));
-          SVN_ERR (svn_repos_node_editor (&editor, &edit_baton, fs,
+          SVN_ERR (svn_repos_node_editor (&editor, &edit_baton, repos,
                                           oldroot, newroot, subpool, subpool));
-          SVN_ERR (svn_repos_dir_delta (oldroot, "", NULL, NULL,
+          SVN_ERR (svn_repos_dir_delta (oldroot, "", NULL,
                                         newroot, "",
                                         editor, edit_baton,
-                                        FALSE, TRUE, FALSE, FALSE, subpool));
-          detect_changed (changed_paths,
+                                        FALSE, TRUE, FALSE, TRUE, subpool));
+          detect_changed (changed_paths, 
                           svn_repos_node_from_baton (edit_baton),
                           "/", subpool);
-
-          /* ### Feels slightly bogus to assume "/" as the right start
-             for repository style. */
         }
-
-#endif /* SVN_REPOS_ALLOW_LOG_WITH_PATHS */
 
       SVN_ERR ((*receiver) (receiver_baton,
                             (discover_changed_paths ? changed_paths : NULL),

@@ -523,7 +523,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
       /* entire URL was bogus;  not a single part of it exists in
          the repository!  */
       return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, 0, NULL, pool,
-                               "No part of path '%s' was found in"
+                               "No part of path '%s' was found in "
                                "repository HEAD.", parsed_url.path);
   }
 

@@ -32,6 +32,7 @@
 #include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_pools.h"
+#include "svn_sorts.h"
 #include "svn_xml.h"
 #include "cl.h"
 
@@ -181,10 +182,16 @@ log_message_receiver (void *baton,
   lines = num_lines (msg);
   printf ("rev %" SVN_REVNUM_T_FMT ":  %s | %s | %d line%s\n",
           rev, author, dbuf, lines, (lines > 1) ? "s" : "");
+
   if (changed_paths)
     {
-      apr_hash_index_t *hi;
-      char *path;
+      apr_array_header_t *sorted_paths;
+      int i;
+
+      /* Get an array of sorted hash keys. */
+      sorted_paths = apr_hash_sorted_keys (changed_paths,
+                                           svn_sort_compare_items_as_paths, 
+                                           pool);
 
       /* Note: This is the only place we need a pool, and therefore
          one might think we could just get it via
@@ -198,15 +205,12 @@ log_message_receiver (void *baton,
          it doesn't become an issue later. */
 
       printf ("Changed paths:\n");
-      for (hi = apr_hash_first(pool, changed_paths);
-           hi != NULL;
-           hi = apr_hash_next(hi))
+      for (i = 0; i < sorted_paths->nelts; i++)
         {
-          void *val;
-          char action;
-
-          apr_hash_this(hi, (void *) &path, NULL, &val);
-          action = (char) ((int) val);
+          svn_item_t *item = &(APR_ARRAY_IDX (sorted_paths, i, svn_item_t));
+          const char *path = item->key;
+          char action = (char) ((int) apr_hash_get (changed_paths, 
+                                                    item->key, item->klen));
           printf ("   %c %s\n", (action == 'R' ? 'U' : action), path);
         }
     }
