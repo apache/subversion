@@ -1391,6 +1391,46 @@ svn_fs_make_file (svn_fs_root_t *root,
 }
 
 
+
+struct file_length_args
+{
+  svn_fs_root_t *root;
+  const char *path;
+
+  apr_off_t length;     /* OUT parameter */
+};
+
+static svn_error_t *
+txn_body_file_length (void *baton,
+                      trail_t *trail)
+{
+  struct file_length_args *args = baton;
+  dag_node_t *file;
+  
+  /* First create a dag_node_t from the root/path pair. */
+  SVN_ERR (get_dag (&file, args->root, args->path, trail));
+
+  /* Now fetch its length */
+  return svn_fs__dag_file_length(&args->length, file, trail);
+}
+
+svn_error_t *
+svn_fs_file_length (apr_off_t *length_p,
+                    svn_fs_root_t *root,
+                    const char *path,
+                    apr_pool_t *pool)
+{
+  struct file_length_args args;
+
+  args.root = root;
+  args.path = path;
+  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_file_length, &args, pool));
+
+  *length_p = args.length;
+  return SVN_NO_ERROR;
+}
+
+
 /* --- Machinery for svn_fs_file_contents() ---  */
 
 

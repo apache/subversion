@@ -339,6 +339,12 @@ svn_error_t *svn_fs__dag_set_contents (dag_node_t *file,
                                        trail_t *trail);
 
 
+/* Set *LENGTH to the length of the contents of FILE, as part of TRAIL. */
+svn_error_t *svn_fs__dag_file_length (apr_off_t *length,
+                                      dag_node_t *file,
+                                      trail_t *trail);
+
+
 /* Create a new mutable file named NAME in PARENT, as part of TRAIL.
    Set *CHILD_P to a reference to the new node, allocated in
    TRAIL->pool.  The new file's contents are the empty string, and it
