@@ -1,27 +1,30 @@
+### short little test/play program. will move to tests/bindings/ one day
+### or maybe even turn it into a real too and move to trunk/tools/
+
 import sys
 sys.path.insert(0, './build/lib.linux-i686-2.2')
-from svn import _fs, _util
+from svn import fs, _util
 
 def run(db_path):
   _util.apr_initialize()
 
   pool = _util.svn_pool_create(None)
 
-  fs = _fs.svn_fs_new(pool)
-  _fs.svn_fs_open_berkeley(fs, db_path)
+  fsob = fs.new(pool)
+  fs.open_berkeley(fsob, db_path)
 
-  rev = _fs.svn_fs_youngest_rev(fs, pool)
+  rev = fs.youngest_rev(fsob, pool)
   print 'Head revision:', rev
 
-  root = _fs.svn_fs_revision_root(fs, rev, pool)
+  root = fs.revision_root(fsob, rev, pool)
 
   print '/'
-  dump_tree(fs, root, pool, '', 2)
+  dump_tree(fsob, root, pool, '', 2)
 
-def dump_tree(fs, root, pool, path, indent=0):
+def dump_tree(fsob, root, pool, path, indent=0):
   path = path + '/'
 
-  entries = _fs.svn_fs_dir_entries(root, path, pool)
+  entries = fs.dir_entries(root, path, pool)
 
   names = entries.keys()
   names.sort()
@@ -32,14 +35,14 @@ def dump_tree(fs, root, pool, path, indent=0):
     child = path + name
     line = ' '*indent + name
 
-    id = _fs.svn_fs_dirent_t_id_get(entries[name])
-    is_dir = _fs.svn_fs_is_dir(root, child, subpool)
+    id = fs.dirent_t_id_get(entries[name])
+    is_dir = fs.is_dir(root, child, subpool)
     if is_dir:
       print line + '/'
-      dump_tree(fs, root, subpool, child, indent+2)
+      dump_tree(fsob, root, subpool, child, indent+2)
     else:
-      rev = _fs.svn_fs_node_created_rev(root, child, subpool)
-      author = _fs.svn_fs_revision_prop(fs, rev, 'svn:author', pool)
+      rev = fs.node_created_rev(root, child, subpool)
+      author = fs.revision_prop(fsob, rev, 'svn:author', pool)
       print line, author, rev
 
     _util.svn_pool_clear(subpool)
