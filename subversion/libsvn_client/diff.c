@@ -243,6 +243,7 @@ diff_callbacks =
 
 
 struct merge_cmd_baton {
+  svn_boolean_t force;
   apr_pool_t *pool;
 };
 
@@ -361,7 +362,7 @@ merge_file_deleted (const char *mine,
     case svn_node_file:
       SVN_ERR (svn_client_delete (NULL, 
                                   svn_stringbuf_create (mine, subpool),
-                                  FALSE, /* don't force */
+                                  merge_b->force,
                                   NULL, NULL, NULL, NULL, NULL, subpool));
       break;
     case svn_node_dir:
@@ -397,7 +398,6 @@ merge_dir_added (const char *path,
     case svn_node_none:
       SVN_ERR (svn_client_mkdir (NULL, path_s, NULL, NULL, NULL,
                                  NULL, NULL, subpool));
-      SVN_ERR (svn_client_add (path_s, FALSE, NULL, NULL, subpool));
       break;
     case svn_node_dir:
       /* dir already exists.  make sure it's under version control. */
@@ -434,7 +434,7 @@ merge_dir_deleted (const char *path,
     case svn_node_dir:
       SVN_ERR (svn_client_delete (NULL, 
                                   svn_stringbuf_create (path, subpool),
-                                  FALSE, /* don't force */
+                                  merge_b->force,
                                   NULL, NULL, NULL, NULL, NULL, subpool));
       break;
     case svn_node_file:
@@ -1188,6 +1188,7 @@ svn_client_merge (const svn_delta_editor_t *after_editor,
                   const svn_client_revision_t *revision2,
                   svn_stringbuf_t *target_wcpath,
                   svn_boolean_t recurse,
+                  svn_boolean_t force,
                   apr_pool_t *pool)
 {
   svn_wc_entry_t *entry;
@@ -1216,6 +1217,7 @@ svn_client_merge (const svn_delta_editor_t *after_editor,
   else if (entry->kind == svn_node_dir)
     {
       struct merge_cmd_baton merge_cmd_baton;
+      merge_cmd_baton.force = force;
       merge_cmd_baton.pool = pool;
 
       SVN_ERR (do_merge (after_editor, after_edit_baton,

@@ -376,6 +376,9 @@ svn_error_t *svn_cl__get_log_message (svn_stringbuf_t **log_msg,
                                       void *baton,
                                       apr_pool_t *pool);
 
+/* Add a message about --force if appropriate */
+svn_error_t *svn_cl__may_need_force (svn_error_t *err);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

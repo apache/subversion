@@ -380,12 +380,15 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
    the commit succeeds, allocate (in POOL) and populate *COMMIT_INFO.
   
    Else, schedule a working copy PATH for removal from the repository.
-   PATH's parent must be under revision control.  If FORCE is set,
-   then PATH itself will be recursively removed as well; otherwise
-   PATH simply stops being tracked by the working copy.  This is just
-   a *scheduling* operation.  No changes will happen to the repository
-   until a commit occurs.  This scheduling can be removed with
-   svn_client_revert.
+   PATH's parent must be under revision control. This is just a
+   *scheduling* operation.  No changes will happen to the repository until
+   a commit occurs.  This scheduling can be removed with
+   svn_client_revert. If PATH is a file it is immediately removed from the
+   working copy. If PATH is a directory it will remain in the working copy
+   but all the files, and all unversioned items, it contains will be
+   removed. If FORCE is not set then this operation will fail if PATH
+   contains locally modified and/or unversioned items. If FORCE is set such
+   items will be deleted.
 
    LOG_MSG_FUNC/LOG_MSG_BATON are a callback/baton combo that this
    function can use to query for a commit log message when one is
@@ -662,6 +665,10 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
    If RECURSE is true (and the PATHs are directories), apply changes
    recursively; otherwise, only apply changes in the current
    directory.
+
+   If FORCE is not set and the merge involves deleting locally modified or
+   unversioned items the operation will fail.  If FORCE is set such items
+   will be deleted.
   
    AFTER_EDITOR/BATON are optional.  If non-NULL, they represent some
    sort of "trace" editor to be used during the merging.
@@ -677,6 +684,7 @@ svn_client_merge (const svn_delta_editor_t *after_editor,
                   const svn_client_revision_t *revision2,
                   svn_stringbuf_t *target_wcpath,
                   svn_boolean_t recurse,
+                  svn_boolean_t force,
                   apr_pool_t *pool);
 
 
@@ -790,8 +798,15 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
      - SRC_REVISION, AUTH and MESSAGE are ignored.
 
      - This is a scheduling operation.  No changes will happen to the
-       repository until a commit occurs.  This scheduling can be
-       removed with svn_client_revert.
+       repository until a commit occurs.  This scheduling can be removed
+       with svn_client_revert.  If SRC_PATH is a file it is removed from
+       the working copy immediately.  If SRC_PATH is a directory it will
+       remain n the working copy but all the files, and unversioned items,
+       it contains will be removed.
+
+     - If SRC_PATH contains locally modified and/or unversioned items and
+       FORCE is not set, the copy will fail. If FORCE is set such items
+       will be removed.
 
    LOG_MSG_FUNC/LOG_MSG_BATON are a callback/baton combo that this
    function can use to query for a commit log message when one is

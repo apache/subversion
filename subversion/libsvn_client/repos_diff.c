@@ -360,9 +360,6 @@ delete_entry (const char *path,
   svn_node_kind_t kind;
 
   /* We need to know if this is a directory or a file */
-  /* ### over ra_dav, this breaks if PATH doesn't exist in HEAD; see
-       issue #581.  Obviously, this kind of misses the point of
-       passing in a revision.  :-)  */
   SVN_ERR (pb->edit_baton->ra_lib->check_path (&kind,
                                                pb->edit_baton->ra_session,
                                                path,
@@ -390,7 +387,7 @@ delete_entry (const char *path,
     case svn_node_dir:
       {
         SVN_ERR (pb->edit_baton->diff_callbacks->dir_deleted 
-                 (pb->path,
+                 (path,
                   pb->edit_baton->diff_cmd_baton));
         break;
       }

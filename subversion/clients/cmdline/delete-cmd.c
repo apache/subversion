@@ -36,6 +36,22 @@
 /*** Code. ***/
 
 svn_error_t *
+svn_cl__may_need_force (svn_error_t *err)
+{
+  if (err
+      && (err->apr_err == SVN_ERR_CLIENT_UNVERSIONED ||
+          err->apr_err == SVN_ERR_CLIENT_MODIFIED))
+    {
+      /* Should this svn_error_compose a new error number? Probably not,
+         the error hasn't changed. */
+      err = svn_error_quick_wrap (err,
+                                  "Use --force to override this restriction" );
+    }
+
+  return err;
+}
+
+svn_error_t *
 svn_cl__delete (apr_getopt_t *os,
                 svn_cl__opt_state_t *opt_state,
                 apr_pool_t *pool)
@@ -56,16 +72,19 @@ svn_cl__delete (apr_getopt_t *os,
 
       for (i = 0; i < targets->nelts; i++)
         {
+          svn_error_t *err;
           svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
           commit_info = NULL;
-          SVN_ERR (svn_client_delete
+          err = svn_client_delete
                    (&commit_info, target, opt_state->force, 
                     auth_baton, 
                     &svn_cl__get_log_message,
                     svn_cl__make_log_msg_baton (opt_state, NULL, subpool),
                     SVN_CL_NOTIFY(opt_state), 
                     svn_cl__make_notify_baton (subpool),
-                    subpool));
+                    subpool);
+          if (err)
+            return svn_cl__may_need_force (err);
           if (commit_info)
             svn_cl__print_commit_info (commit_info);
 

@@ -169,8 +169,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
   if (!force)
     {
       /* Verify that there are no "awkward" files */
-      SVN_ERR_W (svn_client__can_delete (path, pool),
-                 "Pass --force to override this restriction");
+      SVN_ERR (svn_client__can_delete (path, pool));
     }
 
   /* Mark the entry for commit deletion and perform wc deletion */
