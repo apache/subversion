@@ -103,6 +103,7 @@ svn_cl__cmd_proc_t
   svn_cl__unadd,
   svn_cl__commit,
   svn_cl__checkout,
+  svn_cl__cleanup,
   svn_cl__delete,
   svn_cl__undelete,
   svn_cl__help,
