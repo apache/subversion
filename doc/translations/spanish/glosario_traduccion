@@ -111,3 +111,9 @@ log, log message -> informe de cambios, mensaje del informe de cambios
     de "log message" es muy larga, pero únicamente porque no se
     tiene contexto alguno. Con contexto suele ser posible omitir
     la palabra informe si se considera apropiado.
+
+schedule -> programa o planifica
+    Parece más correcta la opción programa, en el sentido de pensar en
+    hacer algo.
+    schedule foo to be added -> programa la adición de foo
+    
