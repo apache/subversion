@@ -68,6 +68,12 @@ struct dav_resource_private {
 
   /* Path from the SVN repository root to this resource. */
   const char *path;
+
+  /* Remember the root URI of this repository */
+  const char *root_dir;
+
+  /* resource-type-specific data */
+  const char *object_name;
 };
 
 struct dav_stream {
@@ -81,6 +87,66 @@ typedef struct {
 } dav_resource_combined;
 
 
+static int dav_svn_setup_activity(dav_resource_combined *comb,
+                                  const char *path)
+{
+  DBG1("ACTIVITY: %s", path);
+  comb->res.type = DAV_RESOURCE_TYPE_ACTIVITY;
+
+  /* ### parse path */
+  comb->priv.object_name = path;
+
+  return FALSE;
+}
+
+static int dav_svn_setup_version(dav_resource_combined *comb,
+                                  const char *path)
+{
+  comb->res.type = DAV_RESOURCE_TYPE_VERSION;
+
+  /* ### parse path */
+  comb->priv.object_name = path;
+
+  return FALSE;
+}
+
+static int dav_svn_setup_history(dav_resource_combined *comb,
+                                 const char *path)
+{
+  comb->res.type = DAV_RESOURCE_TYPE_HISTORY;
+
+  /* ### parse path */
+  comb->priv.object_name = path;
+
+  return FALSE;
+}
+
+static int dav_svn_setup_working(dav_resource_combined *comb,
+                                 const char *path)
+{
+  comb->res.type = DAV_RESOURCE_TYPE_WORKING;
+  comb->res.working = TRUE;
+
+  /* ### parse path */
+  comb->priv.object_name = path;
+
+  return FALSE;
+}
+
+static const struct special_defn
+{
+  const char *name;
+  int (*func)(dav_resource_combined *comb, const char *path);
+
+} special_subdirs[] =
+{
+  { "act", dav_svn_setup_activity },
+  { "ver", dav_svn_setup_version },
+  { "his", dav_svn_setup_history },
+  { "wrk", dav_svn_setup_working },
+  { NULL }
+};
+
 static dav_resource * dav_svn_get_resource(request_rec *r,
                                            const char *root_dir,
                                            const char *workspace,
@@ -88,17 +154,17 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
                                            int is_label)
 {
   dav_resource_combined *comb;
-  apr_size_t len;
+  apr_size_t len1;
+  apr_size_t len2;
   char *uri;
   const char *relative;
+  const char *special_uri;
+  char ch;
 
   comb = apr_pcalloc(r->pool, sizeof(*comb));
   comb->res.info = &comb->priv;
   comb->res.hooks = &dav_svn_hooks_repos;
   comb->priv.pool = r->pool;
-
-  comb->res.type = DAV_RESOURCE_TYPE_REGULAR;
-  comb->res.exists = TRUE;
 
   /* make a copy so that we can do some work on it */
   uri = apr_pstrdup(r->pool, r->uri);
@@ -107,9 +173,9 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
   ap_no2slash(uri);
 
   /* make sure the URI does not have a trailing "/" */
-  len = strlen(uri);
-  if (len > 1 && uri[len - 1] == '/')
-    uri[len - 1] = '\0';
+  len1 = strlen(uri);
+  if (len1 > 1 && uri[len1 - 1] == '/')
+    uri[len1 - 1] = '\0';
 
   comb->res.uri = uri;
 
@@ -121,7 +187,7 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
 
   /* It is possible that some yin-yang used a trailing slash in their
      Location directive (which was then removed as part of the
-     "prefix".  Back up a step if we don't have a leading slash. */
+     "prefix").  Back up a step if we don't have a leading slash. */
   if (*relative != '/')
       --relative;
 
@@ -129,12 +195,102 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
      lifetime to store here. */
   comb->priv.path = relative;
 
-#if 0
-  DBG1("uri: %s", uri);
-  DBG2("root_dir=\"%s\"  path=\"%s\"", root_dir, relative);
+  /* We are assuming the root_dir will live at least as long as this
+     resource. Considering that it typically comes from the per-dir
+     config in mod_dav, this is valid for now. */
+  comb->priv.root_dir = root_dir;
+
+  /* Figure out the type of the resource */
+
+  special_uri = dav_svn_get_special_uri(r);
+
+  /* "relative" will have a leading "/" while the special URI does
+     not. Take particular care in this comparison. */
+  len1 = strlen(relative);
+  len2 = strlen(special_uri);
+  DBG3("len1=%d  len2=%d  rel=\"%s\"", len1, len2, relative);
+  if (len1 > len2
+      && memcmp(relative + 1, special_uri, len2) == 0
+      && ((ch = relative[1 + len2]) == '/' || ch == '\0'))
+    {
+      if (ch == '\0')
+        {
+          /* URI was "/root/$svn". It exists, but has restricted usage. */
+          comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
+        }
+      else
+        {
+          const char *skip = relative + 1 + len2 + 1;
+          apr_size_t skiplen = len1 - 1 - len2 - 1;
+          const struct special_defn *defn = special_subdirs;
+
+          for ( ; defn->name != NULL; ++defn)
+            {
+              apr_size_t len3 = strlen(defn->name);
+
+              if (skiplen >= len3 && memcmp(skip, defn->name, len3) == 0)
+                {
+                  if (skip[len3] == '\0')
+                    {
+                      /* URI was "/root/$svn/XXX". The location exists, but
+                         has restricted usage. */
+                      comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
+                    }
+                  else if (skip[len3] == '/')
+                    {
+                      if ((*defn->func)(comb, skip + len3 + 1))
+                        goto malformed_URI;
+                    }
+                  else
+                    goto malformed_URI;
+
+                  break;
+                }
+            }
+
+          /* if completed the loop, then it is an unrecognized subdir */
+          if (defn->name == NULL)
+            goto malformed_URI;
+        }
+    }
+  else
+    {
+      /* ### look up the resource in the SVN repository */
+      comb->res.type = DAV_RESOURCE_TYPE_REGULAR;
+
+      /* ### set comb->res.collection */
+    }
+
+#ifdef SVN_DEBUG
+  if (comb->res.type == DAV_RESOURCE_TYPE_UNKNOWN)
+    {
+      DBG0("DESIGN FAILURE: should not be UNKNOWN at this point");
+      goto unknown_URI;
+    }
 #endif
 
+  /* if we are here, then the resource exists */
+  comb->res.exists = TRUE;
+
+  /* everything in this URL namespace is versioned */
+  comb->res.versioned = TRUE;
+
   return &comb->res;
+
+ malformed_URI:
+  /* A malformed URI error occurs when a URI indicates the "special" area,
+     yet it has an improper construction. Generally, this is because some
+     doofus typed it in manually or has a buggy client. */
+  ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO, 0, r,
+                "The URI indicated a resource within Subversion's special "
+                "resource area, but does not exist. This is generally "
+                "caused by a problem in the client software.");
+
+  /* FALLTHROUGH */
+
+ unknown_URI:
+  /* Unknown URI. Return NULL to indicate "no resource" */
+  return NULL;
 }
 
 static dav_resource * dav_svn_get_parent_resource(const dav_resource *resource)
