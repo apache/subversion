@@ -173,8 +173,9 @@ And then, in `consume_count' in `cplus-dem.c':
 This is why a new function, for example, needs only a log entry saying
 "New Function" --- all the details should be in the source.
 
-These guidelines were excerpted from Jim Blandy's excellent essay
+These guidelines are paraphrased from Jim Blandy's excellent essay
 "Maintaining the ChangeLog".  It is in `doc/WritingChangeLogs.txt'.
+
 
 Generating ChangeLogs
 ---------------------
@@ -189,11 +190,12 @@ data.  You can do so with the script `cvs2cl.pl', from:
 If you've never used it before, try invoking it like this:
 
    cd subversion/subversion
-   cvs2cl.pl -S -r      /* produces `ChangeLog' in the current directory */
+   cvs2cl.pl -S --fsf -r
 
-That will produce a readable general-purpose ChangeLog; the "-r" flag
-means to include revision numbers.  Run "cvs2cl.pl --help" to see more
-about how to use it.
+That will produce a ChangeLog in the current directory (the "-r" flag
+means to include revision numbers).
+
+Run "cvs2cl.pl --help" for more information.
 
 
 
