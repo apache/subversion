@@ -22,7 +22,7 @@ rm -f $glom
 
 youngest="`svnlook youngest $1`"
 for rev in `python -c "import string; print string.join(map(str, range(1,$youngest+1)))"`; do
-  $2 $1 $rev >> $glom
+  $2 commit $1 $rev >> $glom
 done
 
 echo "current mailer.py output in: $glom"

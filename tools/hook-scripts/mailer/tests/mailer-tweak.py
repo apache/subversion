@@ -24,7 +24,7 @@ def tweak_dates(pool, home='.'):
   if not os.path.exists(db_path):
     db_path = home
 
-  fsob = fs.new(pool)
+  fsob = fs.new(None, pool)
   fs.open_berkeley(fsob, db_path)
 
   for i in range(fs.youngest_rev(fsob, pool)):
