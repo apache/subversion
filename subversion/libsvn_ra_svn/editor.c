@@ -398,7 +398,7 @@ static svn_error_t *ra_svn_handle_open_root(svn_ra_svn_conn_t *conn,
   void *root_baton;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)", &rev));
-  subpool = svn_pool_create(conn->pool);
+  subpool = svn_pool_create(ds->pool);
   SVN_CMD_ERR(ds->editor->open_root(ds->edit_baton, rev, subpool,
                                     &root_baton));
   token = make_token(ds, root_baton, 'd', subpool);

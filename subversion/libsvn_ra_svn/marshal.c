@@ -54,7 +54,6 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
   conn->read_ptr = conn->read_buf;
   conn->read_end = conn->read_buf;
   conn->write_pos = 0;
-  conn->pool = pool;
   return conn;
 }
 
