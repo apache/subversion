@@ -236,7 +236,9 @@ main (int argc, const char * const *argv)
           if (err) goto error;
           err = svn_fs_txn_prop (&author, txn, &auth_prop, this_pool);
           if (err) goto error;
-          if (! author)
+          if ((! datestamp) || (! datestamp->data))
+            datestamp = svn_stringbuf_create ("", this_pool);
+          if ((! author) || (! author->data))
             author = svn_stringbuf_create ("", this_pool);
           err = svn_fs_txn_prop (&log, txn, &log_prop, this_pool);
           if (err) goto error;
