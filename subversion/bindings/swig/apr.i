@@ -23,7 +23,22 @@
    Actually, core.i wraps a few, key functions.
 */
 
+#ifdef SWIGRUBY
+#pragma SWIG nowarn=801
+#endif
+
 %include typemaps.i
+
+/* for SWIG bug */
+%typemap(ruby, argout, fragment="output_helper") long long *OUTPUT, long long &OUTPUT
+{
+  $result = output_helper($result, LL2NUM(*$1));
+}
+%typemap(ruby, argout, fragment="output_helper") unsigned long long *OUTPUT, unsigned long long &OUTPUT
+{
+  $result = output_helper($result, ULL2NUM(*$1));
+}
+
 
 /* -----------------------------------------------------------------------
    This is default in SWIG 1.3.17 and is a really good idea
@@ -75,6 +90,9 @@ typedef apr_int32_t time_t;
 %typemap(perl5,in,numinputs=0) apr_hash_t **OUTPUT (apr_hash_t *temp)
     "$1 = &temp;";
 
+%typemap(ruby,in,numinputs=0) apr_hash_t **OUTPUT (apr_hash_t *temp)
+    "$1 = &temp;";
+
 /* -----------------------------------------------------------------------
    create an OUTPUT argument defn for an apr_hash_t ** which is storing
    property values
@@ -93,6 +111,11 @@ typedef apr_int32_t time_t;
     argvi++;
 }
 
+%typemap(ruby,in,numinputs=0) apr_hash_t **PROPHASH = apr_hash_t **OUTPUT;
+%typemap(ruby,argout) apr_hash_t **PROPHASH {
+    $result = svn_swig_rb_apr_hash_to_hash_svn_string(*$1);
+}
+
 /* -----------------------------------------------------------------------
    apr_array_header_t ** <const char *>
 */
@@ -108,6 +131,11 @@ apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
 %typemap(perl5, argout) apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
     $result = svn_swig_pl_array_to_list(*$1);
     ++argvi;
+}
+%typemap(ruby, argout, fragment="output_helper")
+     apr_array_header_t **OUTPUT_OF_CONST_CHAR_P
+{
+  $result = output_helper($result, svn_swig_rb_apr_array_to_array_string(*$1));
 }
 
 /* -----------------------------------------------------------------------
@@ -168,6 +196,10 @@ apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
   $1 = svn_swig_pl_make_file($input, _global_pool);
 }
 
+%typemap(ruby, in) apr_file_t * {
+  $1 = svn_swig_rb_make_file($input, _global_pool);
+}
+
 /* -----------------------------------------------------------------------
    apr_file_t ** is always an OUT param
 */
@@ -183,6 +215,11 @@ apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
 %typemap(perl5, argout) apr_file_t ** {
     ST(argvi) = sv_newmortal();
     SWIG_MakePtr(ST(argvi++), (void *)*$1, $*1_descriptor,0);
+}
+
+%typemap(ruby, argout, fragment="output_helper") apr_file_t ** {
+    $result = output_helper($result,
+                            SWIG_NewPointerObj((void *)*$1, $*1_descriptor, 1));
 }
 
 /* ----------------------------------------------------------------------- */

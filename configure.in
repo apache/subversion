@@ -554,6 +554,19 @@ SVN_CHECK_JDK
 
 AC_PATH_PROG(PERL, perl, none)
 
+AC_PATH_PROG(RUBY, ruby, none)
+if test "$RUBY" != "none"; then
+  if "$RUBY" -r mkmf -e 'exit(have_func("rb_hash_foreach") ? 0 : 1)'; then
+    :
+  else
+    RUBY="none"
+    AC_MSG_WARN([The detected Ruby is too old for Subversion to use])
+    AC_MSG_WARN([A Ruby which has rb_hash_foreach is required to use the])
+    AC_MSG_WARN([Subversion Ruby bindings])
+    AC_MSG_WARN([Upgrade to the official 1.8.2 release, or later])
+  fi
+fi
+
 SVN_CHECK_SWIG
 
 dnl try to find the "makeinfo" program

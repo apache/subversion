@@ -499,17 +499,20 @@ class TargetSWIG(TargetLib):
     cname = iname[:-2] + '.c'
     oname = iname[:-2] + self.gen_obj._extension_map['lib', 'object']
 
-    ### we should really extract the %module line
-    libname = iname[:4] != 'svn_' and ('_' + iname[:-2]) or iname[3:-2]
-    libfile = libname + self.gen_obj._extension_map['lib', 'target']
+    # Extract SWIG module name from .i file name
+    module_name = iname[:4] != 'svn_' and iname[:-2] or iname[4:-2]
 
-    self.name = self.lang + libname
-    self.path = build_path_join(self.path, self.lang)
-    if self.lang == "perl":
-      self.filename = build_path_join(self.path, libfile[0]
-                                      + string.capitalize(libfile[1:]))
+    lib_extension = self.gen_obj._extension_map['lib', 'target']
+    if self.lang == "ruby":
+      lib_filename = module_name + lib_extension
+    elif self.lang == "perl":
+      lib_filename = '_' + string.capitalize(module_name) + lib_extension
     else:
-      self.filename = build_path_join(self.path, libfile)
+      lib_filename = '_' + module_name + lib_extension
+
+    self.name = self.lang + '_' + module_name
+    self.path = build_path_join(self.path, self.lang)
+    self.filename = build_path_join(self.path, lib_filename)
 
     ifile = SWIGSource(ipath)
     cfile = SWIGObject(build_path_join(self.path, cname), self.lang)

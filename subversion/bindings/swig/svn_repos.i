@@ -16,8 +16,10 @@
  * ====================================================================
  */
 
-#ifdef SWIGPERL
+#if defined(SWIGPERL)
 %module "SVN::_Repos"
+#elif defined(SWIGRUBY)
+%module "svn::ext::repos"
 #else
 %module repos
 #endif
@@ -48,7 +50,9 @@ typedef void * svn_repos_file_rev_handler_t;
 };
 
 %apply const char *MAY_BE_NULL {
-    const char *src_entry
+    const char *src_entry,
+    const char *unused_1,
+    const char *unused_2
 };
 
 /* svn_repos_db_logfiles() */
@@ -118,6 +122,11 @@ typedef void * svn_repos_file_rev_handler_t;
 %typemap(python, in) (svn_repos_authz_func_t authz_read_func, void *authz_read_baton) {
   $1 = svn_swig_py_repos_authz_func;
   $2 = $input; /* our function is the baton. */
+}
+
+%typemap(ruby, in) (svn_repos_authz_func_t authz_read_func, void *authz_read_baton) {
+  $1 = svn_swig_rb_repos_authz_func;
+  $2 = (void *)$input;
 }
 
 /* -----------------------------------------------------------------------

@@ -33,6 +33,10 @@
 %typemap(perl5, in, numinputs=0) SWIGTYPE **OUTPARAM ($*1_type temp) {
     $1 = ($1_ltype)&temp;
 }
+%typemap(ruby, in, numinputs=0) SWIGTYPE **OUTPARAM ($*1_type temp) {
+  temp = NULL;
+  $1 = ($1_ltype)&temp;
+}
 
 %typemap(python, argout, fragment="t_output_helper") SWIGTYPE **OUTPARAM {
     $result = t_output_helper($result,
@@ -41,6 +45,9 @@
 %typemap(perl5, argout) SWIGTYPE **OUTPARAM {
     ST(argvi) = sv_newmortal();
     SWIG_MakePtr(ST(argvi++), (void *)*$1, $*1_descriptor,0);
+}
+%typemap(ruby, argout, fragment="output_helper") SWIGTYPE **OUTPARAM {
+  $result = output_helper($result, SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
 }
 
 %typemap(java, in) SWIGTYPE **OUTPARAM ($*1_type temp) {
@@ -68,6 +75,24 @@
 #ifdef SWIGPERL
 %apply const char * { const char *MAY_BE_NULL };
 #endif
+
+%typemap(ruby, in) const char* MAY_BE_NULL
+{
+  if (NIL_P($input)) {
+    $1 = NULL;
+  } else {
+    $1 = StringValuePtr($input);
+  }
+}
+
+%typemap(ruby, out) const char *
+{
+  if ($1) {
+    $result = rb_str_new2($1);
+  } else {
+    $result = Qnil;
+  }
+}
 
 %typemap(java, in) const char *MAY_BE_NULL { 
   /* ### WHEN IS THIS USED? */
@@ -126,6 +151,29 @@
     }
 }
 
+%typemap(ruby, out) svn_error_t *
+{
+  if ($1) {
+    svn_error_t *error = $1;
+    VALUE message;
+
+    message = rb_str_new2(error->message ? error->message : "");
+    
+    while (error->child) {
+      error = error->child;
+      if (error->message) {
+        rb_str_concat(message, rb_str_new2("\n"));
+        rb_str_concat(message, rb_str_new2(error->message));
+      }
+    }
+    svn_error_clear(error);
+    
+    rb_exc_raise(svn_swig_rb_svn_error_new(INT2NUM(error->apr_err),
+                                           message));
+  }
+  $result = Qnil;
+}
+
 %typemap(java, out) svn_error_t * %{
     $result = ($1 != NULL) ? svn_swig_java_convert_error(jenv, $1) : NULL;
 %}
@@ -148,6 +196,9 @@
     "$1 = &temp;";
 
 %typemap(perl5,in,numinputs=0) svn_filesize_t * (svn_filesize_t temp)
+    "$1 = &temp;";
+
+%typemap(ruby,in,numinputs=0) svn_filesize_t * (svn_filesize_t temp)
     "$1 = &temp;";
 
 /* We have to use APR_INT64_T_FMT because SWIG won't convert the
@@ -173,6 +224,8 @@
     sv_setpv((SV*)ST(argvi++), temp);
 };
 
+%typemap(ruby,argout,fragment="output_helper") svn_filesize_t *
+    "$result = output_helper($result, LL2NUM((apr_int64_t) (*$1)));";
 #endif 
 
 /* -----------------------------------------------------------------------
@@ -253,6 +306,18 @@
 %typemap(perl5, default) apr_pool_t *pool(apr_pool_t *_global_pool) {
     _global_pool = $1 = svn_swig_pl_make_pool (ST(items-1));
 }
+%typemap(ruby, arginit) apr_pool_t *pool (apr_pool_t *_global_pool) {
+  if (argc == 0) {
+    /* wrong # of arguments: we need at least a pool. */
+  } else if (argc <= $argnum) {
+    if (NIL_P(argv[argc - 1])) {
+      rb_raise(rb_eArgError, "pool must be not nil");
+    }
+    /* Assume that the pool here is the last argument in the list */
+    SWIG_ConvertPtr(argv[argc - 1], (void **)&$1, $1_descriptor, 1);
+    _global_pool = $1;
+  }
+}
 
 #ifdef SWIGPERL
 %apply apr_pool_t *pool {
@@ -283,6 +348,12 @@
 %typemap(perl5, in) (svn_log_message_receiver_t receiver, 
                      void *receiver_baton) {
     $1 = svn_swig_pl_thunk_log_receiver;
+    $2 = (void *)$input;
+}
+
+%typemap(ruby, in) (svn_log_message_receiver_t receiver, 
+                    void *receiver_baton) {
+    $1 = svn_swig_rb_log_receiver;
     $2 = (void *)$input;
 }
 
@@ -354,6 +425,10 @@
 %typemap(perl5, argout) svn_stream_t ** {
     $result = svn_swig_pl_from_stream (*$1);
     argvi++;
+}
+
+%typemap(ruby, in) svn_stream_t * {
+    $1 = svn_swig_rb_make_stream($input, _global_pool);
 }
 
 %typemap(java, in) svn_stream_t *out %{
@@ -432,6 +507,11 @@
         SWIG_croak("unknown opt_revision_t type");
 }
 
+%typemap(ruby, in) svn_opt_revision_t * (svn_opt_revision_t rev) {
+  $1 = &rev;
+  svn_swig_rb_set_revision(&rev, $input);
+}
+
 /* -----------------------------------------------------------------------
    apr_hash_t **dirents
    svn_client_ls()
@@ -465,6 +545,19 @@
     $result = $1 ? JNI_TRUE : JNI_FALSE;
 %}
 
+%typemap(ruby, in) svn_boolean_t "$1 = RTEST($input);";
+%typemap(ruby, out) svn_boolean_t "$result = $1 ? Qtrue : Qfalse;";
+
+%typemap(ruby, in, numinputs=0) svn_boolean_t * (svn_boolean_t temp)
+{
+  $1 = &temp;
+}
+
+%typemap(ruby, argout) svn_boolean_t *
+{
+  $result = *$1 ? Qtrue : Qfalse;
+}
+
 /* -----------------------------------------------------------------------
    Handle python thread locking.
 
@@ -481,6 +574,43 @@
     svn_swig_py_acquire_py_lock();
 #endif
 }
+
+
+/* -----------------------------------------------------------------------
+   handle config and fs_config in svn_{fs,repos}_create
+*/
+
+
+%typemap(ruby, in) apr_hash_t *config (apr_hash_t *temp)
+{
+  if (NIL_P($input)) {
+    $1 = NULL;
+  } else {
+    $1 = svn_swig_rb_hash_to_apr_hash_swig_type($input, "svn_config_t *", _global_pool);
+  }
+}
+%typemap(ruby, in) apr_hash_t *fs_config
+{
+  if (NIL_P($input)) {
+    $1 = NULL;
+  } else {
+    $1 = svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
+  }
+}
+
+/* -----------------------------------------------------------------------
+   remove destructor for apr_pool and Ruby's GC.
+*/
+#ifdef SWIGRUBY
+#define REMOVE_DESTRUCTOR(type)                 \
+%extend type                                    \
+{                                               \
+  ~type(type *obj)                              \
+    {                                           \
+      /* do nothing */                          \
+    }                                           \
+}
+#endif
 
 /* ----------------------------------------------------------------------- */
 

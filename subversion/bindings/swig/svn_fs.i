@@ -16,8 +16,10 @@
  * ====================================================================
  */
 
-#ifdef SWIGPERL
+#if defined(SWIGPERL)
 %module "SVN::_Fs"
+#elif defined(SWIGRUBY)
+%module "svn::ext::fs"
 #else
 %module fs
 #endif
@@ -92,6 +94,10 @@
 %typemap(perl5,in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
 %typemap(perl5,argout) apr_hash_t **entries_p {
     ST(argvi++) = svn_swig_pl_convert_hash(*$1, SWIGTYPE_p_svn_fs_dirent_t);
+}
+%typemap(ruby,in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
+%typemap(ruby,argout) apr_hash_t **entries_p {
+  $result = svn_swig_rb_apr_hash_to_hash_swig_type(*$1, "svn_fs_dirent_t *");
 }
 
 /* -----------------------------------------------------------------------

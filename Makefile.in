@@ -67,12 +67,14 @@ localedir = @localedir@
 swig_py_libdir = @libdir@
 swig_java_libdir = @libdir@
 swig_pl_libdir = @libdir@
+swig_rb_libdir = @libdir@
 
 ### these possibly need further discussion
 swig_pydir = @libdir@/svn-python/libsvn
 swig_pydir_extra = @libdir@/svn-python/svn
 swig_javadir = @libdir@/svn-java
 swig_pldir = @libdir@/svn-perl
+swig_rbdir = $(SWIG_RB_SITE_ARCH_DIR)/svn/ext
 
 javahl_javadir = @libdir@/svn-javahl
 javahl_javahdir = @libdir@/svn-javahl/include
@@ -129,6 +131,11 @@ SWIG_JAVA_INCLUDES = @SWIG_JAVA_INCLUDES@ -I$(SWIG_SRC_DIR)/java/libsvn_swig_jav
 SWIG_JAVA_COMPILE = @SWIG_JAVA_COMPILE@
 SWIG_JAVA_LINK = @SWIG_JAVA_LINK@
 SWIG_PL_INCLUDES = @SWIG_PL_INCLUDES@
+SWIG_RB_INCLUDES = @SWIG_RB_INCLUDES@ -I$(SWIG_SRC_DIR)/ruby/libsvn_swig_ruby
+SWIG_RB_COMPILE = @SWIG_RB_COMPILE@
+SWIG_RB_LINK = @SWIG_RB_LINK@
+SWIG_RB_SITE_LIB_DIR = @SWIG_RB_SITE_LIB_DIR@
+SWIG_RB_SITE_ARCH_DIR = @SWIG_RB_SITE_ARCH_DIR@
 LSWIGPL = @LSWIGPL@
 LSWIGPY = @LSWIGPY@
 
@@ -157,6 +164,7 @@ COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CF
 COMPILE_SWIG_PY = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) -DSWIGPYTHON $(CFLAGS) $(SWIG_PY_INCLUDES) $(INCLUDES) -o $@ -c
 COMPILE_SWIG_JAVA = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(SWIG_JAVA_INCLUDES) $(INCLUDES) -o $@ -c
 COMPILE_SWIG_PL = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(SWIG_PL_INCLUDES) $(INCLUDES) -o $@ -c
+COMPILE_SWIG_RB = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(SWIG_RB_INCLUDES) $(INCLUDES) -o $@ -c
 
 # special compilation for files destined for javahl (i.e. C++)
 COMPILE_JAVAHL_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=compile $(COMPILE_CXX) $(JAVAHL_INCLUDES) -o $@ -c
@@ -174,15 +182,18 @@ LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS
 # these commands run SWIG to generate wrapper source files (*.c)
 ### should we protect against swig not being available?
 RUN_SWIG_PY = $(SWIG) $(SWIG_NORUNTIME_FLAG) -python $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -o $@
+RUN_SWIG_RB = $(SWIG) -ruby $(SWIG_INCLUDES) $(SWIG_RB_INCLUDES) -o $@
 RUN_SWIG_JAVA = cd ${SWIG_BUILD_DIR}/java/org/tigris/subversion/swig && $(SWIG) $(SWIG_NORUNTIME_FLAG) -java -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o ${abs_builddir}/$@
 
 # Compilation of SWIG-generated C source code
 COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(CPPFLAGS) $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@
 COMPILE_JAVA_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_JAVA_COMPILE) -DSWIGJAVA $(SWIG_INCLUDES) $(SWIG_JAVA_INCLUDES) -prefer-pic -c -o $@
+COMPILE_RB_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_RB_COMPILE) $(CPPFLAGS) $(SWIG_INCLUDES) $(SWIG_RB_INCLUDES) -prefer-pic -c -o $@
 
 # these commands link the wrapper objects into an extension library/module
 LINK_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_PY_LINK) $(SWIG_LDFLAGS) -rpath $(swig_pydir) -avoid-version -module
 LINK_JAVA_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_JAVA_LINK) $(SWIG_LDFLAGS) -rpath $(swig_javadir) -avoid-version -module
+LINK_RB_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_RB_LINK) $(SWIG_LDFLAGS) -rpath $(swig_rbdir) -avoid-version -module
 
 LINK_JAVAHL_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=link $(CXX) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) $(LT_CXX_LIBADD) -rpath $(libdir)
 
@@ -205,6 +216,8 @@ INSTALL_SWIG_PY_LIB = $(INSTALL_LIB)
 INSTALL_SWIG_JAVA = $(INSTALL_LIB)
 INSTALL_SWIG_JAVA_LIB = $(INSTALL_LIB)
 INSTALL_SWIG_PL_LIB = $(INSTALL_LIB)
+INSTALL_SWIG_RB = $(INSTALL_LIB)
+INSTALL_SWIG_RB_LIB = $(INSTALL_LIB)
 
 INSTALL_JAVAHL_LIB = $(INSTALL_LIB)
 
@@ -220,6 +233,7 @@ INSTALL_EXTRA_SWIG_PY=\
 # bindings.
 SWIG_PL_DIR = $(abs_builddir)/subversion/bindings/swig/perl
 SWIG_JAVA_DIR = $(abs_builddir)/subversion/bindings/swig/java
+SWIG_RB_DIR = $(abs_builddir)/subversion/bindings/swig/ruby
 
 ### Enhance using Makefile generator to support JAR installation.
 INSTALL_EXTRA_SWIG_JAVA=\
@@ -232,6 +246,9 @@ INSTALL_EXTRA_JAVAHL_JAVA=\
 	$(INSTALL_DATA) subversion/bindings/java/javahl/svn-javahl.jar $(DESTDIR)$(javahl_javadir);
 
 INSTALL_EXTRA_JAVAHL_LIB=@INSTALL_EXTRA_JAVAHL_LIB@
+
+INSTALL_EXTRA_SWIG_RB=\
+  $(INSTALL_DATA) $(abs_srcdir)/subversion/bindings/swig/ruby/svn/*.rb $(DESTDIR)$(SWIG_RB_SITE_LIB_DIR)
 
 APXS = @APXS@ 
 
@@ -251,6 +268,8 @@ javahl_tests_CLASSPATH=$(JAVA_CLASSPATH)
 swig_java_api_CLASSPATH=$(JAVA_CLASSPATH)
 swig_java_java_CLASSPATH=$(SWIG_JAVA_DIR)/build:$(JAVA_CLASSPATH)
 swig_java_tests_CLASSPATH=$(SWIG_JAVA_DIR)/build:$(JAVA_CLASSPATH)
+
+RUBY = @RUBY@
 
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
@@ -601,3 +620,13 @@ install-swig-pl: swig-pl install-swig-pl-lib
 
 clean-swig-pl: $(SWIG_PL_DIR)/native/Makefile
 	cd $(SWIG_PL_DIR)/native; $(MAKE) clean
+
+check-swig-rb: swig-rb
+	cd $(SWIG_RB_DIR); $(RUBY) test/run-test.rb
+
+clean-swig-rb:
+	for d in $(SWIG_RB_DIR) $(SWIG_RB_DIR)/libsvn_swig_ruby; \
+	do \
+	  cd $$d; \
+	  rm -rf svn_*.c _*.c core.c *.lo *.la *.o .libs; \
+	done

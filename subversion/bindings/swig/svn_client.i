@@ -16,8 +16,10 @@
  * ====================================================================
  */
 
-#ifdef SWIGPERL
+#if defined(SWIGPERL)
 %module "SVN::_Client"
+#elif defined(SWIGRUBY)
+%module "svn::ext::client"
 #else
 %module client
 #endif
@@ -126,6 +128,15 @@
   $2 = $input; /* our function is the baton. */
 }
 
+%typemap(ruby,in) (svn_client_get_commit_log_t log_msg_func) 
+{
+  if (arg1) {
+    $1 = svn_swig_rb_get_commit_log_func;
+    arg1->log_msg_baton = (void *)$input;
+    rb_ivar_set(self, rb_intern("log_msg_batton"), $input);
+  }
+}
+
 %typemap(java,in) (svn_client_get_commit_log_t log_msg_func, 
                    void *log_msg_baton) {
 
@@ -158,6 +169,14 @@
   $2 = $input; /* our function is the baton. */
 }
 
+/*
+%typemap(ruby, in) (svn_client_blame_receiver_t receiver,
+                    void *receiver_baton) {
+  $1 = svn_swig_rb_client_blame_receiver_func;
+  $2 = (void *)$input;
+}
+*/
+
 /* -----------------------------------------------------------------------
    We use 'svn_wc_status_t *' in some custom code, but it isn't in the
    API anywhere. Thus, SWIG doesn't generate a typemap entry for it. by
@@ -186,6 +205,11 @@
     $1 = svn_swig_py_auth_simple_prompt_func;
     $2 = $input;
 }
+%typemap(ruby, in) (svn_auth_simple_prompt_func_t prompt_func,
+                    void *prompt_baton) {
+    $1 = svn_swig_rb_auth_simple_prompt_func;
+    $2 = (void *) $input;
+}
 
 %typemap(perl5, in) (svn_auth_username_prompt_func_t prompt_func,
                      void *prompt_baton) {
@@ -197,6 +221,11 @@
                       void *prompt_baton) {
     $1 = svn_swig_py_auth_username_prompt_func;
     $2 = $input;
+}
+%typemap(ruby, in) (svn_auth_username_prompt_func_t prompt_func,
+                      void *prompt_baton) {
+    $1 = svn_swig_rb_auth_username_prompt_func;
+    $2 = (void *) $input;
 }
 
 %typemap(perl5, in) (svn_auth_ssl_server_trust_prompt_func_t prompt_func,
@@ -210,6 +239,11 @@
     $1 = svn_swig_py_auth_ssl_server_trust_prompt_func;
     $2 = $input;
 }
+%typemap(ruby, in) (svn_auth_ssl_server_trust_prompt_func_t prompt_func,
+                     void *prompt_baton) {
+    $1 = svn_swig_rb_auth_ssl_server_trust_prompt_func;
+    $2 = (void *) $input;
+}
 
 %typemap(perl5, in) (svn_auth_ssl_client_cert_prompt_func_t prompt_func,
                       void *prompt_baton) {
@@ -222,6 +256,11 @@
     $1 = svn_swig_py_auth_ssl_client_cert_prompt_func;
     $2 = $input;
 }
+%typemap(ruby, in) (svn_auth_ssl_client_cert_prompt_func_t prompt_func,
+                      void *prompt_baton) {
+    $1 = svn_swig_rb_auth_ssl_client_cert_prompt_func;
+    $2 = (void *) $input;
+}
 
 %typemap(perl5, in) (svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
                       void *prompt_baton) {
@@ -233,6 +272,11 @@
                       void *prompt_baton) {
     $1 = svn_swig_py_auth_ssl_client_cert_pw_prompt_func;
     $2 = $input;
+}
+%typemap(ruby, in) (svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
+                      void *prompt_baton) {
+    $1 = svn_swig_rb_auth_ssl_client_cert_pw_prompt_func;
+    $2 = (void *) $input;
 }
 
 /* -----------------------------------------------------------------------
@@ -278,6 +322,47 @@
 %typemap(perl5, out) apr_hash_t *config {
   $result = svn_swig_pl_convert_hash($1, SWIG_TypeQuery("svn_config_t *"));
   argvi++;
+}
+
+#ifdef SWIGRUBY
+%runtime %{
+  #include <apr.h>
+  #include <apr_pools.h>
+
+  static apr_pool_t *
+  _svn_client_pool(void) 
+  {
+    static apr_pool_t *__svn_client_pool = NULL;
+    if (!__svn_client_pool) {
+      apr_pool_create(&__svn_client_pool, NULL);
+    }
+    return __svn_client_pool;
+  }
+
+  static apr_pool_t *
+  _svn_client_config_pool(void) 
+  {
+    static apr_pool_t *__svn_client_config_pool = NULL;
+    if (!__svn_client_config_pool) {
+      apr_pool_create(&__svn_client_config_pool, _svn_client_pool());
+    }
+    return __svn_client_config_pool;
+  }
+%}
+#endif
+
+%typemap(ruby, argout) apr_hash_t *config {
+  if ($1)
+    apr_pool_clear(_svn_client_config_pool());
+}
+
+%typemap(ruby, in) apr_hash_t *config {
+  $1 = svn_swig_rb_hash_to_apr_hash_swig_type($input, "svn_config_t *",
+                                              _svn_client_config_pool());
+}
+
+%typemap(ruby, out) apr_hash_t *config {
+  $result = svn_swig_rb_apr_hash_to_hash_swig_type($1, "svn_config_t *");
 }
 
 /* -----------------------------------------------------------------------
@@ -331,6 +416,16 @@
   argvi++;
 }  
 
+/* svn_client_update2 */
+%typemap(ruby, in, numinputs=0) apr_array_header_t **result_revs (apr_array_header_t *temp) {
+  $1 = &temp;
+}
+
+%typemap(ruby, argout, fragment="output_helper") apr_array_header_t **result_revs
+{
+  $result = output_helper($result, svn_swig_rb_apr_array_to_array_svn_rev(*$1));
+}
+
 /* ----------------------------------------------------------------------- */
 
 %{
@@ -355,3 +450,9 @@
 %}
 
 %include svn_client.h
+
+#ifdef SWIGRUBY
+REMOVE_DESTRUCTOR(svn_client_commit_info_t)
+REMOVE_DESTRUCTOR(svn_client_commit_item_t)
+REMOVE_DESTRUCTOR(svn_client_proplist_item_t)
+#endif
