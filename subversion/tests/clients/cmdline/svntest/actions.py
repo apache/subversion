@@ -22,9 +22,7 @@ import main, tree  # general svntest routines in this module.
 
 
 ######################################################################
-# RA_LOCAL Utility:   creating local repositories
-#
-# Used by every RA_LOCAL test, so that they can run independently of
+# Used by every test, so that they can run independently of
 # one another.  The first time it's run, it executes 'svnadmin' to
 # create a repository and then 'svn imports' the greek tree.
 # Thereafter, every time this routine is called, it recursively copies
@@ -47,13 +45,7 @@ def guarantee_greek_repository(path):
                     [[x[0], x[1]] for x in main.greek_tree])
 
     # build a URL for doing an import.
-    url = main.test_area_url + main.pristine_dir
-
-    # this is the first test in the run, so create an empty .htaccess file
-    if os.path.exists(main.htaccess_file):
-      os.unlink(main.htaccess_file)
-      fp = open(main.htaccess_file, 'w')
-      fp.close()
+    url = main.test_area_url + '/' + main.pristine_dir
 
     # import the greek tree.
     output, errput = main.run_svn("import", url, main.greek_dump_dir)
@@ -90,7 +82,10 @@ def guarantee_greek_repository(path):
   if not os.path.exists(os.path.dirname(path)):
     os.makedirs(os.path.dirname(path))
   shutil.copytree(main.pristine_dir, path)
-
+  if os.path.exists(main.current_repo_dir):
+    os.unlink(main.current_repo_dir)                              
+  os.symlink(os.path.basename(path), main.current_repo_dir)
+  
 
 ######################################################################
 # Subversion Actions
@@ -297,18 +292,7 @@ def make_repo_and_wc(test_name):
   guarantee_greek_repository(repo_dir)
 
   # make url for checkout
-  url = main.test_area_url + repo_dir
-
-  # extract location from test_area_url.
-  match_obj = re.match("https{0,1}://[^/](.*)/*", main.test_area_url)
-  if match_obj:
-    loc = match_obj.group(1)  
-    # append the new repository to the .htaccess file.
-    location  = "<Location " + loc + "/" + test_name + ">\n"
-    location += "   DAV svn\n"
-    location += "   SVNPath " + os.path.abspath(repo_dir) + "\n"
-    location += "</Location>\n\n"
-    main.file_append(main.htaccess_file, location)
+  url = main.test_area_url + '/' + main.current_repo_dir
 
   # Generate the expected output tree.
   output_list = []
