@@ -194,7 +194,7 @@ static svn_error_t * handle_resource(merge_ctx_t *mc)
          to commit the resources. */
       if (mc->hold != NULL)
         {
-          apr_hash_index_t *hi = apr_hash_first(mc->hold);
+          apr_hash_index_t *hi = apr_hash_first(mc->pool, mc->hold);
 
           for (; hi != NULL; hi = apr_hash_next(hi))
             {

@@ -297,7 +297,7 @@ svn_xml_make_open_tag_hash (svn_stringbuf_t **str,
   svn_stringbuf_appendcstr (*str, "<");
   svn_stringbuf_appendcstr (*str, tagname);
 
-  for (hi = apr_hash_first (attributes); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, attributes); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       void *val;

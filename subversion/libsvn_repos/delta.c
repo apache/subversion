@@ -405,7 +405,7 @@ delta_proplists (struct context *c,
              (&t_props, c->target_root, target_path->data,
               subpool));
 
-  for (hi = apr_hash_first (t_props); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (subpool, t_props); hi; hi = apr_hash_next (hi))
     {
       svn_stringbuf_t *s_value, *t_value, *t_name;
       const void *key;
@@ -442,7 +442,7 @@ delta_proplists (struct context *c,
      in the target, and so must be deleted. */
   if (s_props)
     {
-      for (hi = apr_hash_first (s_props); hi; hi = apr_hash_next (hi))
+      for (hi = apr_hash_first (subpool, s_props); hi; hi = apr_hash_next (hi))
         {
           svn_stringbuf_t *s_value, *s_name;
           const void *key;
@@ -772,7 +772,7 @@ find_nearest_entry (svn_fs_dirent_t **s_entry,
      implementation, we only search SOURCE for possible ancestors.
      This will need to improve, so we can find the best ancestor, no
      matter where it's hidden away in the source tree.  */
-  for (hi = apr_hash_first (s_entries); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (subpool, s_entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       void *val;
@@ -881,7 +881,7 @@ delta_dirs (struct context *c,
      still remaining the source entries hash represent entries that no
      longer exist in target.  Use editor calls to delete those entries
      from the target tree. */
-  for (hi = apr_hash_first (t_entries); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, t_entries); hi; hi = apr_hash_next (hi))
     {
       svn_fs_dirent_t *s_entry, *t_entry;
       const void *key;
@@ -1007,7 +1007,7 @@ delta_dirs (struct context *c,
      to be deleted.  Delete them.  */
   if (s_entries)
     {
-      for (hi = apr_hash_first (s_entries); hi; hi = apr_hash_next (hi))
+      for (hi = apr_hash_first (pool, s_entries); hi; hi = apr_hash_next (hi))
         {
           svn_fs_dirent_t *s_entry;
           const void *key;

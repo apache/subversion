@@ -890,7 +890,9 @@ log_do_committed (struct log_runner *loggy,
               SVN_ERR (svn_wc_entries_read (&entries, loggy->path,
                                             loggy->pool));
               
-              for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+              for (hi = apr_hash_first (loggy->pool, entries); 
+                   hi; 
+                   hi = apr_hash_next (hi))
                 {
                   const void *key;
                   const char *keystring;
@@ -1296,7 +1298,7 @@ svn_wc_cleanup (svn_stringbuf_t *path,
   /* Recurse on versioned subdirs first, oddly enough. */
   SVN_ERR (svn_wc_entries_read (&entries, path, pool));
 
-  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       apr_size_t keylen;

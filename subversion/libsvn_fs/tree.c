@@ -1170,7 +1170,9 @@ merge (const char **conflict_p,
       SVN_ERR (svn_fs__dag_dir_entries_hash (&a_entries, ancestor, trail));
 
       /* for each entry E in a_entries... */
-      for (hi = apr_hash_first (a_entries); hi; hi = apr_hash_next (hi))
+      for (hi = apr_hash_first (trail->pool, a_entries); 
+           hi; 
+           hi = apr_hash_next (hi))
         {
           svn_fs_dirent_t *s_entry, *t_entry, *a_entry;
 
@@ -1421,7 +1423,9 @@ merge (const char **conflict_p,
         }
       
       /* For each entry E in source but not in ancestor */
-      for (hi = apr_hash_first (s_entries); hi; hi = apr_hash_next (hi))
+      for (hi = apr_hash_first (trail->pool, s_entries); 
+           hi; 
+           hi = apr_hash_next (hi))
         {
           svn_fs_dirent_t *s_entry, *t_entry;
           const void *key;

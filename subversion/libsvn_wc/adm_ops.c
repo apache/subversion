@@ -86,7 +86,7 @@ svn_wc__ensure_uniform_revision (svn_stringbuf_t *dir_path,
   SVN_ERR (svn_wc_entries_read (&entries, dir_path, subpool));
 
   /* Loop over this directory's entries: */
-  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       const char *keystring;
@@ -365,7 +365,7 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
   SVN_ERR (svn_wc_entries_read (&entries, dir, pool));
 
   /* Mark each entry in the entries file. */
-  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       apr_size_t klen;
@@ -867,7 +867,8 @@ svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
       /* Recurse on each file and dir entry. */
       SVN_ERR (svn_wc_entries_read (&entries, path, subpool));
       
-      for (hi = apr_hash_first (entries); hi;
+      for (hi = apr_hash_first (subpool, entries); 
+           hi;
            hi = apr_hash_next (hi))
         {
           const void *key;
@@ -881,7 +882,8 @@ svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
           if (! strcmp ((const char *)key, SVN_WC_ENTRY_THIS_DIR))
             current_entry_name = NULL;
           else
-            current_entry_name = svn_stringbuf_create((const char *)key, subpool);
+            current_entry_name = svn_stringbuf_create((const char *)key, 
+                                                      subpool);
 
           if (current_entry->kind == svn_node_file)
             {

@@ -182,7 +182,7 @@ static dav_error *dav_svn_db_firstkey(dav_db *db, dav_datum *pkey)
     }
 
   /* begin the iteration over the hash */
-  db->hi = apr_hash_first(db->props);
+  db->hi = apr_hash_first(db->p, db->props);
 
   /* fetch the first key */
   get_key(db->hi, pkey);

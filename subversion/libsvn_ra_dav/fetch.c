@@ -222,7 +222,7 @@ static void add_props(const svn_ra_dav_resource_t *r,
 {
   apr_hash_index_t *hi;
   
-  for (hi = apr_hash_first(r->propset); hi != NULL; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, r->propset); hi; hi = apr_hash_next(hi))
     {
       const char *key;
       char *val;
@@ -264,7 +264,7 @@ static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
 
   uri_parse(url, &parsed_url, NULL);
 
-  for (hi = apr_hash_first(dirents); hi != NULL; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
     {
       void *val;
       svn_ra_dav_resource_t *r;

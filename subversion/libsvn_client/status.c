@@ -95,7 +95,7 @@ svn_client_status (apr_hash_t **statushash,
           SVN_ERR (ra_lib->close (session));
 
           /* Write the latest revnum into each status structure. */
-          for (hi = apr_hash_first (hash); hi; hi = apr_hash_next (hi))
+          for (hi = apr_hash_first (pool, hash); hi; hi = apr_hash_next (hi))
             {
               const void *key;
               void *val;

@@ -42,7 +42,7 @@ print_tree (svn_fs_root_t *root,
   
   SVN_ERR (svn_fs_dir_entries (&entries, root, path, pool));
 
-  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       apr_size_t keylen;

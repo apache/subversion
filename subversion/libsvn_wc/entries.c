@@ -430,7 +430,7 @@ resolve_to_defaults (svn_stringbuf_t *path,
   
     
   /* Then use it to fill in missing information in other entries. */
-  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       apr_size_t keylen;
@@ -767,7 +767,7 @@ check_entries (apr_hash_t *entries,
          path->data);
     }
   
-  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       const char *name;
@@ -966,7 +966,7 @@ svn_wc__entries_write (apr_hash_t *entries,
   SVN_ERR (write_entry (&bigstr, this_dir, SVN_WC_ENTRY_THIS_DIR, 
                         this_dir, pool));
 
-  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       apr_size_t keylen;
@@ -1070,7 +1070,7 @@ fold_entry (apr_hash_t *entries,
   /* Attributes */
   if (atts)
     {
-      for (hi = apr_hash_first (atts); hi; hi = apr_hash_next (hi))
+      for (hi = apr_hash_first (pool, atts); hi; hi = apr_hash_next (hi))
         {
           const void *k;
           apr_size_t klen;
@@ -1472,7 +1472,9 @@ svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
 
   /* Now the hard part:  copying one hash to another! */
 
-  for (hi = apr_hash_first (entry->attributes); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, entry->attributes); 
+       hi; 
+       hi = apr_hash_next (hi))
     {
       const void *k;
       apr_size_t klen;
@@ -1594,7 +1596,7 @@ svn_wc__compose_paths (apr_hash_t *paths, apr_pool_t *pool)
   apr_hash_index_t *hi;
 
   /* First, iterate over the hash canonicalizing paths. */
-  for (hi = apr_hash_first (paths); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, paths); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       apr_size_t keylen;
@@ -1610,7 +1612,7 @@ svn_wc__compose_paths (apr_hash_t *paths, apr_pool_t *pool)
     }
 
   /* Now, iterate over the hash removing redundancies. */
-  for (hi = apr_hash_first (paths); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, paths); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       apr_size_t keylen;
