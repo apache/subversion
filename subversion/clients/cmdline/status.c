@@ -119,13 +119,13 @@ svn_cl__print_status (svn_stringbuf_t *path, svn_wc_status_t *status)
   /* Use it. */
   if ((entry_rev == SVN_INVALID_REVNUM)
       && (status->repos_rev == SVN_INVALID_REVNUM))
-    printf ("%s  none     ( none )   %s\n",
+    printf ("%s   ?       (  ?   )   %s\n",
             str_status, path->data);
   else if (entry_rev == SVN_INVALID_REVNUM)
-    printf ("%s  none     (%6ld)   %s\n",
+    printf ("%s   ?       (%6ld)   %s\n",
             str_status, status->repos_rev, path->data);
   else if (status->repos_rev == SVN_INVALID_REVNUM)
-    printf ("%s  %-6ld  ( none )  %s\n",
+    printf ("%s  %-6ld  (  ?   )  %s\n",
             str_status, entry_rev, path->data);
   else
     printf ("%s  %-6ld  (%6ld)  %s\n",
