@@ -45,7 +45,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-09-09 21:29+0200\n"
-"PO-Revision-Date: 2004-09-09 21:45+0200\n"
+"PO-Revision-Date: 2004-09-12 15:58+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -2659,9 +2659,9 @@ msgid "Unknown entry kind for '%s'"
 msgstr "Okänd posttyp för \"%s\""
 
 #: libsvn_client/commit_util.c:237
-#, fuzzy, c-format
+#, c-format
 msgid "Entry '%s' has unexpectedly changed special status"
-msgstr "Posten \"%s\" har ersatts med en specialfil"
+msgstr "På posten \"%s\" har specialstatus ändrats oväntat"
 
 #: libsvn_client/commit_util.c:287
 #, c-format
