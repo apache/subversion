@@ -1057,7 +1057,54 @@ def basic_delete(sbox):
     print "Forced delete 8 failed"
     return 1
 
+#----------------------------------------------------------------------
 
+def basic_checkout_deleted(sbox):
+  "checkout a path no longer in HEAD"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Delete A/D and commit.
+  D_path = os.path.join(wc_dir, 'A', 'D')
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', '--force',
+                                                    D_path)
+  if stderr_lines:
+    print "error scheduling A/D for deletion"
+    print stderr_lines
+    return 1
+  
+  expected_output = wc.State(wc_dir, {
+    'A/D' : Item(verb='Deleting'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.remove('A/D', 'A/D/G', 'A/D/G/rho', 'A/D/G/pi', 'A/D/G/tau',
+                         'A/D/H', 'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega',
+                         'A/D/gamma')
+
+  if svntest.actions.run_and_verify_commit(wc_dir,
+                                           expected_output, expected_status,
+                                           None, None, None, None, None,
+                                           wc_dir):
+    return 1
+
+  # Now try to checkout revision 1 of A/D.
+  url = os.path.join(svntest.main.test_area_url,
+                     svntest.main.current_repo_dir, 'A', 'D')
+  wc2 = os.path.join (sbox.wc_dir, 'new_D')
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'co', '-r1',
+                                                    url, wc2)
+  if stderr_lines:
+    print "error checking out r1 of A/D:"
+    print stderr_lines
+    return 1
+
+  return 0
+  
 #----------------------------------------------------------------------
 
 ########################################################################
@@ -1077,6 +1124,7 @@ test_list = [ None,
               basic_revert,
               basic_switch,
               basic_delete,
+              basic_checkout_deleted,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.

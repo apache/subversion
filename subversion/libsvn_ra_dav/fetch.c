@@ -770,11 +770,6 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
   /* ### if REVISION means "get latest", then we can use an expand-property
      ### REPORT rather than two PROPFINDs to reach the baseline-collection */
 
-  /* Fetch the activity-collection-set from the server. */
-  /* ### also need to fetch/validate the DAV capabilities */
-  SVN_ERR( svn_ra_dav__get_activity_collection(activity_coll, ras,
-                                               ras->root.path, pool) );
-
   SVN_ERR( svn_ra_dav__get_baseline_info(&is_dir, &bc_url, &bc_relative,
                                          target_rev, ras->sess,
                                          ras->root.path, revision, pool) );
@@ -790,6 +785,20 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
   /* The root for the checkout is the Baseline Collection root, plus the
      relative location of the public URL to its repository root. */
   *bc_root = svn_path_url_add_component(bc_url.data, bc_relative.data, pool);
+
+  /* Fetch the activity-collection-set from the server, by running an
+     OPTIONS request against the bc_url, which we know is guaranteed
+     to exist in HEAD.  */
+  /* ### also need to fetch/validate the DAV capabilities */
+  SVN_ERR( svn_ra_dav__get_activity_collection(activity_coll, ras,
+                                               bc_url.data, pool) );
+  
+  /* ### ben sez: whoa, this is majorly in violation of the deltaV
+     rfc.  Our ra_dav module assumes that the activity url is *global*
+     to the server, and happily caches it in every single working copy
+     directory.  But rfc 3253 (section 13.7) states that OPTIONS
+     requests on different resources may return *different* activity
+     urls -- heck, they might be urls to complete different hosts! */
 
   return NULL;
 }
