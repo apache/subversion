@@ -343,6 +343,27 @@ svn_error_t *svn_io_run_cmd (const char *path,
                              apr_file_t *errfile,
                              apr_pool_t *pool);
 
+/* Invoke SVN_CLIENT_DIFF, with USER_ARGS (which is an array of NUM_USER_ARGS 
+   arguments), if they are specified, or "-u" if they are not.  
+
+   Diff runs in DIR, and it's exit status is stored in EXITCODE, if it is not 
+   NULL.  
+
+   If LABEL is given, it will be passed in as the argument to the "-L" option.
+
+   FROM is the first file passed to diff, and TO is the second.  The stdout of 
+   diff will be sent to OUTFILE, and the stderr to ERRFILE.  All memory will be 
+   allocated using POOL.  */
+svn_error_t *svn_io_run_diff (const char *dir,
+                              const char *const *user_args,
+                              const int num_user_args,
+                              const char *label,
+                              const char *from,
+                              const char *to,
+                              int *exitcode,
+                              apr_file_t *outfile,
+                              apr_file_t *errfile,
+                              apr_pool_t *pool);
 
 /* Examine FILE to determine if it can be described by a known (as in,
    known by this function) Multipurpose Internet Mail Extension (MIME)

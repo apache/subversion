@@ -1320,9 +1320,7 @@ close_file (void *file_baton)
                      create a temporary patch.  Note that we -always-
                      create the patchfile by diffing two LF versions
                      of our old and new textbases.   */
-                  apr_proc_t diff_proc;
-                  apr_procattr_t *diffproc_attr;
-                  const char *diff_args[6];                  
+                  const char *diff_args[2];                  
                   apr_file_t *received_diff_file;
                   apr_file_t *tr_txtb_fp, *tr_tmp_txtb_fp;
                   svn_stringbuf_t *tr_txtb, *tr_tmp_txtb;
@@ -1371,67 +1369,13 @@ close_file (void *file_baton)
                                                       TRUE, /* ### expand? */
                                                       fb->pool));
 
-                  /* Create the diff process attributes. */
-                  apr_err = apr_procattr_create (&diffproc_attr, fb->pool); 
-                  if (! APR_STATUS_IS_SUCCESS (apr_err))
-                    return svn_error_create 
-                      (apr_err, 0, NULL, fb->pool,
-                       "close_file: error creating diff process attributes");
-                  
-                  /* Make sure we invoke diff directly, not thru a shell. */
-                  apr_err = 
-                    apr_procattr_cmdtype_set (diffproc_attr, APR_PROGRAM);
-                  if (! APR_STATUS_IS_SUCCESS (apr_err))
-                    return svn_error_create 
-                      (apr_err, 0, NULL, fb->pool,
-                       "close_file: error setting diff process cmdtype");
-                  
-                  /* Set io style. */
-                  apr_err = 
-                    apr_procattr_io_set (diffproc_attr, 0, 
-                                         APR_CHILD_BLOCK, APR_CHILD_BLOCK);
-                  if (! APR_STATUS_IS_SUCCESS (apr_err))
-                    return svn_error_create
-                      (apr_err, 0, NULL, fb->pool,
-                       "close_file: error setting diff process io attributes");
-                  
-                  /* Tell it to send output to the diff file. */
-                  apr_err = apr_procattr_child_out_set (diffproc_attr,
-                                                        received_diff_file,
-                                                        NULL);
-                  if (! APR_STATUS_IS_SUCCESS (apr_err))
-                    return svn_error_create 
-                      (apr_err, 0, NULL, fb->pool,
-                       "close_file: error setting diff process child output");
-                  
                   /* Build the diff command. */
-                  diff_args[0] = "diff";
-                  diff_args[1] = "-c";
-                  diff_args[2] = "--";
-                  diff_args[3] = tr_txtb->data;
-                  diff_args[4] = tr_tmp_txtb->data;
-                  diff_args[5] = NULL;
-                  
-                  /* Start the diff command.  kff todo: path to diff program
-                     should be determined through various levels of fallback,
-                     of course, not hardcoded. */ 
-                  apr_err = apr_proc_create (&diff_proc,
-                                             SVN_CLIENT_DIFF,
-                                             diff_args,
-                                             NULL,
-                                             diffproc_attr,
-                                             fb->pool);
-                  if (! APR_STATUS_IS_SUCCESS (apr_err))
-                    return svn_error_createf 
-                      (apr_err, 0, NULL, fb->pool,
-                       "close_file: error starting diff process");
-                  
-                  /* Wait for the diff command to finish. */
-                  apr_err = apr_proc_wait (&diff_proc, NULL, NULL, APR_WAIT);
-                  if (APR_STATUS_IS_CHILD_NOTDONE (apr_err))
-                    return svn_error_createf
-                      (apr_err, 0, NULL, fb->pool,
-                       "close_file: error waiting for diff process");
+                  diff_args[0] = "-c";
+                  diff_args[1] = "--";
+
+                  SVN_ERR(svn_io_run_diff
+                    (".", diff_args, 2, NULL, tr_txtb->data, tr_tmp_txtb->data, 
+                     NULL, received_diff_file, NULL, fb->pool));
 
                   /* Write log commands to remove the two tmp text-bases. */
                   
