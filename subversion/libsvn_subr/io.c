@@ -158,7 +158,7 @@ svn_io_open_unique_file (apr_file_t **f,
   const char *unique_name;
   const char *unique_name_native;
 
-  for (i = 0; i <= 99999; i++)
+  for (i = 1; i <= 99999; i++)
     {
       apr_status_t apr_err;
       apr_int32_t flag = (APR_READ | APR_WRITE | APR_CREATE | APR_EXCL
@@ -170,9 +170,15 @@ svn_io_open_unique_file (apr_file_t **f,
       /* Special case the first attempt -- if we can avoid having a
          generated numeric portion at all, that's best.  So first we
          try with just the suffix; then future tries add a number
-         before the suffix.  (A do-while loop could avoid the
-         repeated conditional, but doesn't seem worth the clarity loss.) */
-      if (i == 0)
+         before the suffix.  (A do-while loop could avoid the repeated
+         conditional, but it's not worth the clarity loss.)
+
+         If the first attempt fails, the first number will be "2".
+         This is good, since "1" would misleadingly imply that that
+         the second attempt was actually the first... and if someone's
+         got conflicts on their conflicts, we probably don't want to
+         add to their confusion :-). */
+      if (i == 1)
         unique_name = apr_psprintf (pool, "%s%s", path, suffix);
       else
         unique_name = apr_psprintf (pool, "%s.%u%s", path, i, suffix);
