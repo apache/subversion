@@ -1,18 +1,24 @@
 ;;;; Emacs Lisp help for writing Subversion code. ;;;;
 
 ;;; In C files, put something like this to load this file automatically:
-;;;
-;;; 
-;;;
-;;;
+;;
+;;   /* -----------------------------------------------------------------
+;;    * local variables:
+;;    * eval: (load-file "../svn-dev.el")
+;;    * end:
+;;    */
+;;
+;; (note: make sure to get the path right in the argument to load-file).
 
 
+
 (c-set-style "gnu")
 (setq indent-tabs-mode nil)
 
 (progn (message "loaded") (sit-for 1))
 
 
+
 ;; Much of the APR documentation is embedded perldoc format.  The
 ;; perldoc program itself sucks, however.  If you're the author of
 ;; perldoc, I'm sorry, but what were you thinking?  Don't you know
@@ -138,5 +144,6 @@ Same for the ANSI bold and normal escape sequences."
       (re-search-forward "[^ \i\n]")
       (beginning-of-line)
       (delete-region (point-min) (point)))
+    (setenv "PAGER" savepg)
     (display-buffer outbuf)))
 
