@@ -211,24 +211,24 @@
       <para>Además, el registro de Windows no soporta el concepto
         de que algo esté <quote>comentado</quote>. No obstante,
         Subversion ignorará cualquier opción cuyo nombre comience
-        con el carácter sostenido o cruz doble <!-- TODO buscar
-        nombre real del carácter--> (<literal>#</literal>). Esto le
+        con el carácter almohadilla (<literal>#</literal>). Esto le
         permite comentar de forma efectiva una opción de Subversion
         sin tener que borrar la clave completa del registro,
         obviamente simplificando el proceso de recuperación de
         esta opción.</para>
 
-      <para>The <command>svn</command> command-line client never
-        attempts to write to the Windows Registry, and will not
-        attempt to create a default configuration area there.  You can
-        create the keys you need using the <command>REGEDIT</command>
-        program.  Alternatively, you can create a
-        <filename>.reg</filename> file, and then double-click on that
-        file from the Explorer shell, which will cause the data to be
-        merged into your registry.</para>
+      <para>El cliente de línea de comando <command>svn</command>
+        nunca intenta modificar el registro de Windows, así que
+        no intentará crear ahí ningun área de configuración por
+        defecto. Puede crear las claves que necesita usando el
+        programa <command>REGEDIT</command>. Alternativamente,
+        puede crear un fichero <filename>.reg</filename>, y entonces
+        hacer doble click sobre ese fichero desde una ventana de
+        explorador, lo cual hará que los datos sean fusionados en
+        su registro.</para>
 
       <example id="svn-ch-7-sect-1.2-ex-1">
-        <title>Sample Registration Entries (.reg) File.</title>
+        <title>Fichero ejemplo de registro (.reg).</title>
 
         <programlisting>
 REGEDIT4
@@ -271,16 +271,17 @@ REGEDIT4
 </programlisting>
       </example>
 
-      <para>The previous example shows the contents of a
-        <filename>.reg</filename> file which contains some of the most
-        commonly used configuration options and their default values.
-        Note the presence of both system-wide (for network
-        proxy-related options) and per-user settings (editor programs
-        and password storage, among others).  Also note that all the
-        options are effectively commented out.  You need only to
-        remove the hash (<literal>#</literal>) character from the
-        beginning of the option names, and set the values as you
-        desire.</para>
+      <para>El ejemplo anterior muestra el contenido de un fichero
+        <filename>.reg</filename> que contiene algunas de las
+        opciones de configuración más usadas y sus valores por
+        defecto. Tenga en cuenta la presencia tanto de opciones
+        globales de sistema (para opciones relacionadas con proxys)
+        como opciones de cada usuario (programas de edición y
+        almacenamiento de claves, entre otras). Fíjese también
+        que todas las opciones están comentadas. Sólo tiene que
+        eliminar el carácter almohadilla (<literal>#</literal>)
+        del comienzo de cada nombre de opción, y poner los valores
+        que desee.</para>
 
     </sect2>
 
