@@ -106,6 +106,14 @@ SOURCE=".\delete-cmd.c"
 # End Source File
 # Begin Source File
 
+SOURCE=".\diff-cmd.c"
+# End Source File
+# Begin Source File
+
+SOURCE=.\diff.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\main.c
 # End Source File
 # Begin Source File

@@ -107,15 +107,19 @@ SOURCE=.\delete.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\diff.c
+# End Source File#
+# Begin Source File
+
+SOURCE=.\ra_loader.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\status.c
 # End Source File
 # Begin Source File
 
 SOURCE=.\update.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\ra_loader.c
 # End Source File
 # End Group
 # Begin Group "Header Files"
