@@ -482,24 +482,32 @@ static svn_error_t *ra_svn_get_file(void *sess, const char *path,
   svn_ra_svn_item_t *item;
   apr_array_header_t *proplist;
 
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-file", "c[r]", path, rev));
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-file", "c[r][w][w]", path,
+                               rev, (props) ? "want-props" : NULL,
+                               (stream) ? "want-contents" : NULL));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "rl", &rev, &proplist));
 
   if (!SVN_IS_VALID_REVNUM(rev) && fetched_rev)
     *fetched_rev = rev;
-  SVN_ERR(parse_proplist(proplist, pool, props));
+  if (props)
+    SVN_ERR(parse_proplist(proplist, pool, props));
+
+  /* We're done if the contents weren't wanted. */
+  if (!stream)
+    return SVN_NO_ERROR;
 
   /* Read the file's contents. */
   while (1)
     {
       SVN_ERR(svn_ra_svn_read_item(conn, pool, &item));
       if (item->kind != STRING)
-	return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
-				"Non-string as part of file contents");
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
+                                "Non-string as part of file contents");
       if (item->u.string->len == 0)
         break;
-      SVN_ERR(svn_stream_write(stream, item->u.string->data,
-                               &item->u.string->len));
+      if (stream)
+        SVN_ERR(svn_stream_write(stream, item->u.string->data,
+                                 &item->u.string->len));
     }
   SVN_ERR(svn_stream_close(stream));
   return SVN_NO_ERROR;
@@ -517,35 +525,42 @@ static svn_error_t *ra_svn_get_dir(void *sess, const char *path,
   int i;
   svn_ra_svn_item_t *elt;
   const char *name, *kind, *has_props = NULL, *cdate = NULL, *cauthor = NULL;
-  apr_array_header_t *opt1, *opt2, *opt3;
+  apr_array_header_t *opt_has_props, *opt_cdate, *opt_cauthor;
   apr_uint64_t size;
   svn_dirent_t *dirent;
 
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-dir", "c[r]", path, rev));
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-dir", "c[r][w][w]", path,
+                               rev, (props) ? "want-props" : NULL,
+                               (dirents) ? "want-contents" : NULL));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "rll", &rev, &proplist,
                                        &dirlist));
 
   if (!SVN_IS_VALID_REVNUM(rev) && fetched_rev)
     *fetched_rev = rev;
-  SVN_ERR(parse_proplist(proplist, pool, props));
+  if (props)
+    SVN_ERR(parse_proplist(proplist, pool, props));
+
+  /* We're done if dirents aren't wanted. */
+  if (!dirents)
+    return SVN_NO_ERROR;
 
   /* Interpret the directory list. */
   *dirents = apr_hash_make(pool);
-  for (i = 0; i < proplist->nelts; i++)
+  for (i = 0; i < dirlist->nelts; i++)
     {
-      elt = &((svn_ra_svn_item_t *) proplist->elts)[i];
+      elt = &((svn_ra_svn_item_t *) dirlist->elts)[i];
       if (elt->kind != LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
                                 "Dirlist element not a list");
       SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cwnlrll",
-                                     &name, &kind, &size, &opt1, &crev,
-                                     &opt2));
-      if (opt1->nelts > 0)
-        SVN_ERR(svn_ra_svn_parse_tuple(opt1, pool, "w", &has_props));
-      if (opt2->nelts > 0)
-        SVN_ERR(svn_ra_svn_parse_tuple(opt2, pool, "c", &cdate));
-      if (opt3->nelts > 0)
-        SVN_ERR(svn_ra_svn_parse_tuple(opt3, pool, "c", &cauthor));
+                                     &name, &kind, &size, &opt_has_props,
+                                     &crev, &opt_cdate, &opt_cauthor));
+      if (opt_has_props->nelts > 0)
+        SVN_ERR(svn_ra_svn_parse_tuple(opt_has_props, pool, "w", &has_props));
+      if (opt_cdate->nelts > 0)
+        SVN_ERR(svn_ra_svn_parse_tuple(opt_cdate, pool, "c", &cdate));
+      if (opt_cauthor->nelts > 0)
+        SVN_ERR(svn_ra_svn_parse_tuple(opt_cauthor, pool, "c", &cauthor));
       dirent = apr_palloc(pool, sizeof(*dirent));
       SVN_ERR(interpret_kind(kind, pool, &dirent->kind));
       dirent->size = size;
