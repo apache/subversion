@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-04-02 14:28+0200\n"
-"PO-Revision-Date: 2005-04-02 16:04+0200\n"
+"PO-Revision-Date: 2005-04-06 00:07+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -4138,7 +4138,7 @@ msgstr ""
 #: libsvn_fs_base/tree.c:3946 libsvn_fs_base/tree.c:3951
 #: libsvn_fs_fs/tree.c:2598 libsvn_fs_fs/tree.c:2603
 #: libsvn_repos/rev_hunt.c:540
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a file"
 msgstr "'%s' nie jest plikiem"
 
@@ -5877,7 +5877,6 @@ msgstr ""
 "\n"
 
 #: libsvn_subr/opt.c:720
-#, fuzzy
 msgid ""
 "Copyright (C) 2000-2005 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
@@ -5885,10 +5884,9 @@ msgid ""
 "Net/).\n"
 "\n"
 msgstr ""
-"Copyright (C) 2000-2004 CollabNet.\n"
+"Copyright (C) 2000-2005 CollabNet.\n"
 "Subversion jest wolnym oprogramowaniem, patrz http://subversion.tigris.org/\n"
-"Ten produkt zawiera oprogramowanie autorstwa CollabNet (http://www.Collab."
-"Net/).\n"
+"Ten produkt zawiera oprogramowanie autorstwa CollabNet (http://www.Collab.Net/).\n"
 "\n"
 
 #: libsvn_subr/opt.c:773
@@ -5954,9 +5952,9 @@ msgid "Can't convert string from '%s' to native encoding:"
 msgstr "Nie można ustalić natywnego kodowania dla ścieżki"
 
 #: libsvn_subr/utf.c:449
-#, fuzzy, c-format
+#, c-format
 msgid "Can't convert string from '%s' to '%s':"
-msgstr "Nie można stworzyć konwertera z '%s' do '%s'"
+msgstr "Nie można dokonać konwersji z '%s' do '%s'"
 
 #: libsvn_subr/utf.c:493
 #, fuzzy, c-format
