@@ -78,14 +78,34 @@ static int dav_svn_parse_version_uri(dav_resource_combined *comb,
   comb->res.type = DAV_RESOURCE_TYPE_VERSION;
   comb->res.versioned = TRUE;
 
-  if ((slash = ap_strchr_c(path, '/')) == NULL)
-    return TRUE;
+  slash = ap_strchr_c(path, '/');
+  if (slash == NULL)
+    {
+      /* http://host.name/repos/$svn/ver/1.2.3.4
 
-  comb->priv.node_id = svn_fs_parse_id(path, slash - path, comb->res.pool);
+         This URL form refers to the root path of the repository.
+      */
+      comb->priv.node_id = svn_fs_parse_id(path, strlen(path), comb->res.pool);
+      comb->priv.repos_path = "/";
+    }
+  else if (slash == path)
+    {
+      /* the NODE_ID was missing(?)
+
+         ### not sure this can happen, though, because it would imply two
+         ### slashes, yet those are cleaned out within get_resource
+      */
+      return TRUE;
+    }
+  else
+    {
+      comb->priv.node_id = svn_fs_parse_id(path, slash - path, comb->res.pool);
+      comb->priv.repos_path = slash;
+    }
+
+  /* if the NODE_ID parsing blew, then propagate it. */
   if (comb->priv.node_id == NULL)
     return TRUE;
-
-  comb->priv.repos_path = slash;
 
   return FALSE;
 }
