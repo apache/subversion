@@ -23,6 +23,7 @@ Valid options:
   --username arg           : specify a username ARG
   --password arg           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
+  --non-interactive        : do no interactive prompting
   --strict                 : use strict semantics
   --incremental            : give output suitable for concatenation
   --xml                    : output in xml
@@ -40,4 +41,5 @@ Valid options:
   --username arg           : specify a username ARG
   --password arg           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
+  --non-interactive        : do no interactive prompting
 

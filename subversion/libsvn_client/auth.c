@@ -42,6 +42,16 @@
 /* Callback routines that RA libraries use to pull or store auth info. */
 
 
+/* Set *USERNAME to the username to use for authentication.  
+ * BATON is of type `svn_client__callback_baton_t'.
+ *
+ * If FORCE_PROMPT is true, then prompt the user unless
+ * BATON->auth_baton->prompt_callback is null.  Otherwise, try to
+ * obtain the information from the working copy, otherwise prompt (but
+ * again, don't prompt if BATON->auth_baton->prompt_callback is null.)
+ *
+ * Allocate *USERNAME in POOL.
+ */
 static svn_error_t *
 get_username (char **username,
               void *baton,
@@ -52,7 +62,7 @@ get_username (char **username,
   svn_client__callback_baton_t *cb = baton;
   svn_client_auth_baton_t *ab = cb->auth_baton;
 
-  if (force_prompt)
+  if (force_prompt && ab->prompt_callback)
     {
       char *prompt = apr_psprintf (pool, "username: ");
       SVN_ERR (ab->prompt_callback (username, prompt,
@@ -117,7 +127,16 @@ get_username (char **username,
 }
 
 
-
+/* Set *PASSWORD to the authentication password for USERNAME.
+ * BATON is of type `svn_client__callback_baton_t'.
+ *
+ * If FORCE_PROMPT is true, then prompt the user unless
+ * BATON->auth_baton->prompt_callback is null.  Otherwise, try to
+ * obtain the information from the working copy, otherwise prompt (but
+ * again, don't prompt if BATON->auth_baton->prompt_callback is null.)
+ *
+ * Allocate *PASSWORD in POOL.
+ */
 static svn_error_t *
 get_password (char **password,
               char *username,
@@ -135,7 +154,7 @@ get_password (char **password,
   else
     prompt = apr_psprintf (pool, "password: ");
   
-  if (force_prompt)
+  if (force_prompt && ab->prompt_callback)
     {
       SVN_ERR (ab->prompt_callback (password, prompt,
                                     TRUE, /* don't echo to the screen */
@@ -167,7 +186,7 @@ get_password (char **password,
                                       &pword, pool)))
         *password = pword->data;
       
-      else
+      else if (ab->prompt_callback)
         {
           /* No file cache?  Then prompt the user. */
           SVN_ERR (ab->prompt_callback (password, prompt,
@@ -176,9 +195,11 @@ get_password (char **password,
 
           ab->got_new_auth_info = TRUE;
         }
+      else
+        *password = apr_pstrdup (pool, "");
       
       /* Store a copy of the password in the auth_baton too. */
-      ab->password = apr_pstrdup (pool, *password);
+      ab->password = password;
     }
   
   return SVN_NO_ERROR;
@@ -186,6 +207,8 @@ get_password (char **password,
 
 
 
+/* This matches the get_user_and_pass() prototype in
+   `svn_ra_simple_password_authenticator_t'. */
 static svn_error_t *
 get_user_and_pass (char **username,
                    char **password,
@@ -266,6 +289,8 @@ maybe_store_password (const char *password, void *baton)
 }
 
 
+/* This matches the store_user_and_pass() prototype in
+   `svn_ra_simple_password_authenticator_t'. */
 static svn_error_t *
 store_user_and_pass (void *baton)
 {

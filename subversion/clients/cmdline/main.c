@@ -87,6 +87,8 @@ const apr_getopt_option_t svn_cl__options[] =
                       "disregard default and svn:ignore property ignores"},
     {"no-auth-cache", svn_cl__no_auth_cache_opt, 0,
                       "do not cache authentication tokens"},
+    {"non-interactive", svn_cl__non_interactive_opt, 0,
+                      "do no interactive prompting"},
     {0,               0, 0, 0}
   };
 
@@ -115,7 +117,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  sub-directory being the basename of the URL.\n",
     {'r', 'D', 'q', 'N',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt, svn_cl__xml_file_opt }  },
+     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
+     svn_cl__xml_file_opt }  },
 
   { "cleanup", svn_cl__cleanup, {0},
     "Recursively clean up the working copy, removing locks, resuming\n"
@@ -130,8 +133,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  the -r switch is only for use with --xml-file.\n",
     {'m', 'F', 'q', 'N', svn_cl__targets_opt,
      svn_cl__force_opt, svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt, svn_cl__xml_file_opt, 'r',
-     svn_cl__msg_encoding_opt} },
+     svn_cl__no_auth_cache_opt,  svn_cl__non_interactive_opt,
+     svn_cl__xml_file_opt, 'r', svn_cl__msg_encoding_opt} },
   
   { "copy", svn_cl__copy, {"cp"},
     "Duplicate something in working copy or repos, remembering history.\n"
@@ -143,7 +146,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    URL -> URL:  complete server-side copy;  used to branch & tag\n",
     {'m', 'F', 'r', 'D', 'q',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt, svn_cl__msg_encoding_opt} },
+     svn_cl__no_auth_cache_opt,  svn_cl__non_interactive_opt,
+     svn_cl__msg_encoding_opt} },
   
   { "delete", svn_cl__delete, {"del", "remove", "rm"},
     "Remove files and directories from version control.\n"
@@ -158,7 +162,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    immediate commit.\n",
     {svn_cl__force_opt, 'm', 'F', 'q', svn_cl__targets_opt,
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt, svn_cl__msg_encoding_opt} },
+     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
+     svn_cl__msg_encoding_opt} },
   
   { "diff", svn_cl__diff, {"di"},
     "display the differences between two paths.\n"
@@ -176,7 +181,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "      ommitted, value of HEAD is assumed.\n",
     {'r', 'D', 'x', 'N',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt} },
+     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt} },
 
   { "export", svn_cl__export, {0},
     "export stuff.\n"
@@ -191,7 +196,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "      NOTE: If PATH is omitted, the last component of the URL is used\n"
     "      for the local directory name.\n",
     {'r', 'D', 'q', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt} },
+     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt} },
 
   { "help", svn_cl__help, {"?", "h"},
     "Display this usage message.\n"
@@ -210,8 +215,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    directly.  Otherwise, create NEW_ENTRY underneath REPOS_URL and\n"
     "    begin copy there.  (-r is only needed if importing to --xml-file)\n",
     {'F', 'm', 'q', 'N', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt, svn_cl__xml_file_opt, 'r',
-     svn_cl__msg_encoding_opt} },
+     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
+     svn_cl__xml_file_opt, 'r', svn_cl__msg_encoding_opt} },
  
   { "info", svn_cl__info, {0},
     "Display info about a resource.\n"
@@ -224,7 +229,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "usage: svn list URL1 [URL2 ...]\n\n"
     "    If URL is a file, just file entry will be displayed.\n",
     {'r', 'D', 'v', 'R', svn_cl__auth_username_opt, 
-     svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt} },
+     svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
+     svn_cl__non_interactive_opt} },
   
   { "log", svn_cl__log, {0},
     "Show the log messages for a set of revision(s) and/or file(s).\n"
@@ -245,7 +251,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "       svn log http://www.example.com/repo/project foo.c bar.c\n",
     {'r', 'D', 'v', svn_cl__targets_opt, svn_cl__auth_username_opt,
      svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
-     svn_cl__strict_opt, svn_cl__incremental_opt, svn_cl__xml_opt} },
+     svn_cl__non_interactive_opt, svn_cl__strict_opt,
+     svn_cl__incremental_opt, svn_cl__xml_opt} },
 
   { "merge", svn_cl__merge, {0},
     "apply the differences between two paths to a working copy path.\n"
@@ -258,7 +265,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    If omitted, a default value of '.' is assumed.\n\n",
     {'r', 'D', 'N', 'q', svn_cl__force_opt,
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt} },
+     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt} },
   
   { "mkdir", svn_cl__mkdir, {0},
     "Create a new directory under revision control.\n"
@@ -266,7 +273,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    Either create NEW_DIR in working copy scheduled for addition,\n"
     "    or create REPOS_URL via immediate commit.\n",
     {'m', 'F', 'q', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt, svn_cl__msg_encoding_opt} },
+     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
+     svn_cl__msg_encoding_opt} },
 
   { "move", svn_cl__move, {"mv", "rename", "ren"},
     "Move/rename something in working copy or repository.\n"
@@ -276,7 +284,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    WC  -> WC:   move and schedule for addition (with history)\n"
     "    URL -> URL:  complete server-side rename.\n",    
     {'m', 'F', 'r', 'D', 'q', svn_cl__auth_username_opt,
-     svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt, svn_cl__force_opt,
+     svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt, 
+     svn_cl__non_interactive_opt, svn_cl__force_opt,
      svn_cl__msg_encoding_opt} },
   
   { "propdel", svn_cl__propdel, {"pdel"},
@@ -382,14 +391,16 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    M                    965       687        joe      ./buildcheck.sh\n",
     { 'u', 'v', 'N', 'q',
       svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-      svn_cl__no_auth_cache_opt, svn_cl__no_ignore_opt } },
+      svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
+      svn_cl__no_ignore_opt } },
   
   { "switch", svn_cl__switch, {"sw"},
     "Update working copy to mirror a new URL\n"
     "usage: switch REPOS_URL [TARGET]\n\n"
     "   Note:  this is the way to move a working copy to a new branch.\n",
     { 'r', 'D', 'N', 'q', svn_cl__auth_username_opt,
-      svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt} },
+      svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
+      svn_cl__non_interactive_opt } },
  
   { "update", svn_cl__update, {"up"}, 
     "Bring changes from the repository into the working copy.\n"
@@ -407,7 +418,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    G  Merged\n",
     {'r', 'D', 'N', 'q', svn_cl__auth_username_opt,
      svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
-     svn_cl__xml_file_opt} },
+     svn_cl__non_interactive_opt, svn_cl__xml_file_opt} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -677,6 +688,9 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__no_auth_cache_opt:
         opt_state.no_auth_cache = TRUE;
+        break;
+      case svn_cl__non_interactive_opt:
+        opt_state.non_interactive = TRUE;
         break;
       case 'x':
         err = svn_utf_cstring_to_utf8 (&opt_state.extensions, opt_arg,
