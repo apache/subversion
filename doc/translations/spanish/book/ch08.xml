@@ -1394,19 +1394,19 @@ if __name__ == '__main__':
       que los navegadores Nautilus y Konqueror (bajo GNOME y KDE,
       respectivamente).</para>
 
-    <para>How does all of this apply to Subversion?  The mod_dav_svn
-      Apache module uses HTTP, extended by WebDAV and DeltaV, as one
-      of its network protocols.  Subversion uses mod_dav_svn to map
-      between Subversion's versioning concepts and those of RFCs 2518
-      and 3253.
+    <para>¿Cómo afecta todo esto a Subversion? El módulo mod_dav_svn
+      de Apache usa HTTP, extendido por WebDAV y DeltaV, como uno
+      de sus protocolos de red. Subversion usa mod_dav_svn para
+      relacionar los conceptos de versionado de Subversion con los
+      de los RFCs 2518 y 3253.
     </para>
 
-    <para>For a more thorough discussion of WebDAV, how it works, and
-      how Subversion uses it, see <xref linkend="svn-ap-c"/>.  Among
-      other things, that appendix discusses the degree to which
-      Subversion adheres to the generic WebDAV specification, and how
-      that affects interoperability with generic WebDAV
-      clients.</para>
+    <para>Puede encontrar una descripción más detallada de WebDAV,
+      cómo funciona, y cómo es usado por Subversion en <xref
+      linkend="svn-ap-c"/>.  Entre otras cosas, ese apéndice discute
+      el grado con el que Subversion se adhiere a la especificación
+      WebDAV genérica, y cómo eso afecta la interoperabilidad con
+      clientes WebDAV genéricos.</para>
   </sect1>
 
   <!-- ******************************************************************* -->
