@@ -69,12 +69,14 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
        e.g. file descriptor 2 would be reused when opening a file, a
        write to stderr would write to that file and most likely
        corrupt it. */
-    if (fstat (0, &st) == -1)
-      open ("/dev/null", O_RDONLY);
-    if (fstat (1, &st) == -1)
-      open ("/dev/null", O_WRONLY);
-    if (fstat (2, &st) == -1)
-      open ("/dev/null", O_WRONLY);
+    if ((fstat (0, &st) == -1 && open ("/dev/null", O_RDONLY) == -1) ||
+        (fstat (1, &st) == -1 && open ("/dev/null", O_WRONLY) == -1) ||
+        (fstat (2, &st) == -1 && open ("/dev/null", O_WRONLY) == -1))
+      {
+        fprintf(error_stream, "%s: error: cannot open '/dev/null'\n",
+                progname);
+        return EXIT_FAILURE;
+      }
   }
 #endif
 
