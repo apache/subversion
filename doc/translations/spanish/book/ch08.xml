@@ -1797,42 +1797,46 @@ A  build.conf
 
       <!-- ### TODO: Describe building and testing on Windows. -->
 
-      <para>In the best-case scenario, you will have actually added
-        appropriate tests to that test suite which verify that your
-        proposed changes work as expected.  In fact,
-        sometimes the best contribution a person can make is solely
-        the addition of new tests.  You can write regression tests for
-        functionality that currently works in Subversion as a way to
-        protect against future changes that might trigger failure in
-        those areas.  Also, you can write new tests that demonstrate
-        known failures.  For this purpose, the Subversion test suite
-        allows you to specify that a given test is expected to fail
-        (called an <literal>XFAIL</literal>), and so long as
-        Subversion fails in the way that was expected, a test result
-        of <literal>XFAIL</literal> itself is considered a success.
-        Ultimately, the better the test suite, the less time wasted on
-        diagnosing potentially obscure regression bugs.</para>
+      <para>En el mejor de los casos, usted habrá añadido nuevos
+        tests a la suite de tests, los cuales verifican que sus
+        cambios propuestos funcionan como espera. De hecho, a
+        veces la mejor contribución que puede hacer una persona es
+        añadir nuevos tests. Puede escribir tests de regresión para
+        funcionalidades que actualmente funcionan en Subversion
+        a modo de protección contra cambios futuros que puedan
+        provocar un fallo en esas áreas. Además, puede escribir
+        nuevos tests que demuestran fallos conocidos.  Para este
+        propósito, la suite de tests de Subversion le permite
+        especificar que un test específico tiene como objetivo
+        fallar (llamado <literal>XFAIL</literal>), así que mientras
+        Subversion falle del modo que usted espera, el resultado
+        del test <literal>XFAIL</literal> es considerado un éxito.
+        En última instancia, cuanto mejor sea la suite de tests,
+        menos tiempo se perderá diagnosticando potenciales fallos
+        de regresión esquivos.</para>
 
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-6.5">
-      <title>Donate Your Changes</title>
+      <title>Donar sus cambios</title>
       
-      <para>After making your modifications to the source code,
-        compose a clear and concise log message to describe those
-        changes and the reasons for them.  Then, send an email to the
-        developers list containing your log message and the output of
-        <command>svn diff</command> (from the top of your Subversion
-        working copy).  If the community members consider your changes
-        acceptable, someone who has commit privileges (permission to
-        make new revisions in the Subversion source repository) will
-        add your changes to the public source code tree.  Recall that
-        permission to directly commit changes to the repository is
-        granted on merit&mdash;if you demonstrate comprehension of
-        Subversion, programming competency, and a <quote>team
-        spirit</quote>, you will likely be awarded that
-        permission.</para>
+      <para>Tras realizar sus modificaciones al código fuente,
+        componga un mensaje de cambios claro y conciso que los
+        describa y la razón de éstos. Entonces, envíe un email
+        a la lista de desarrolladores con su mensaje de cambios
+        y la salida del comando <command>svn diff</command>
+        (realizado desde el directorio raíz de su copia local de
+        Subversion).  Si los miembros de la comunidad consideran
+        aceptables sus cambios, alguien con privilegios de escritura
+        (permiso para crear nuevas revisiones en el repositorio
+        de código fuente de Subversion) añadirá sus cambios al
+        árbol público de código fuente. Recuerde que el permiso
+        para realizar cambios directamente en el repositorio se
+        obtiene por méritos&mdash;si demuestra comprensión de
+        Subversion, competencia programando, y un <quote>espíritu
+        de equipo</quote>, es probable que se le recompense con
+        este permiso.</para>
 
     </sect2>
   </sect1>
