@@ -70,7 +70,7 @@
 ;; The latest version of psvn.el can be found at:
 ;;   http://xsteve.nit.at/prg/emacs/psvn.el
 ;; Or you can check it out from the subversion repository:
-;;   svn co http://svn.collab.net/repos/svn/trunk/tools/client-side/psvn psvn
+;;   svn co http://svn.collab.net/repos/svn/trunk/contrib/client-side/psvn psvn
 
 ;; TODO:
 ;; * shortcut for svn propset svn:keywords "Date" psvn.el
@@ -121,8 +121,8 @@
 ;;; Code:
 
 ; user setable variables
-(defvar svn-status-hide-unknown nil "Hide unknown files in *cvs-status* buffer.")
-(defvar svn-status-hide-unmodified nil "Hide unmodified files in *cvs-status* buffer.")
+(defvar svn-status-hide-unknown nil "Hide unknown files in *svn-status* buffer.")
+(defvar svn-status-hide-unmodified nil "Hide unmodified files in *svn-status* buffer.")
 (defvar svn-status-directory-history nil "List of visited svn working directories.")
 
 (defvar svn-status-wash-control-M-in-process-buffers
@@ -173,6 +173,22 @@
     (t (:weight bold)))
   "Face to highlight the externaly modified phrase in svn status buffers")
 
+;based on cvs-filename-face
+(defface svn-status-directory-face
+  '((((type tty) (class color)) (:foreground "lightblue" :weight light))
+    (((class color) (background light)) (:foreground "blue4"))
+    (t (:weight bold)))
+  "Face for directories in svn status buffers.
+See `svn-status--line-info->directory-p' for what counts as a directory.")
+
+;based on font-lock-comment-face
+(defface svn-status-filename-face
+  '((((class color)
+      (background light))
+     (:foreground "chocolate")))
+  "Face for non-directories in svn status buffers.
+See `svn-status--line-info->directory-p' for what counts as a directory.")
+
 (defvar svn-highlight t)
 ;; stolen from PCL-CVS
 (defun svn-add-face (str face &optional keymap)
@@ -187,6 +203,19 @@
                          str))
   str)
 
+(defun svn-status-maybe-add-face (condition text face)
+  "If CONDITION then add FACE to TEXT.
+Else return TEXT unchanged."
+  (if condition
+      (svn-add-face text face)
+    text))
+
+(defun svn-status-choose-face-to-add (condition text face1 face2)
+  "If CONDITION then add FACE1 to TEXT, else add FACE2 to TEXT."
+  (if condition
+      (svn-add-face text face1)
+    (svn-add-face text face2)))
+
 ; compatibility
 ; emacs 20
 (unless (fboundp 'point-at-eol) (defalias 'point-at-eol 'line-end-position))
@@ -194,26 +223,34 @@
 
 ;;;###autoload
 (defun svn-status (dir &optional arg)
+  "Examine the status of Subversion working copy in directory DIR.
+If ARG then pass the -u argument to `svn status'."
   (interactive (list (read-file-name "SVN status directory: "
                                      nil default-directory nil)))
   (unless (file-directory-p dir)
     (error "%s is not a directory" dir))
-  (setq dir (file-name-as-directory dir))
-  (setq svn-status-directory-history (delete dir svn-status-directory-history))
-  (add-to-list 'svn-status-directory-history dir)
-  (unless (string= (buffer-name) "*svn-status*")
-    (message "psvn: Saving initial window configuration")
-    (setq svn-status-initial-window-configuration (current-window-configuration)))
-  (let* ((status-buf (get-buffer-create "*svn-status*"))
-         (proc-buf (get-buffer-create "*svn-process*")))
-    (save-excursion
-      (set-buffer status-buf)
-      (setq default-directory dir)
-      (set-buffer proc-buf)
-      (setq default-directory dir)
-      (if arg
-          (svn-run-svn t t 'status "status" "-vu")
-        (svn-run-svn t t 'status "status" "-v")))))
+    (if (not (file-exists-p (concat dir "/.svn/")))
+        (when (y-or-n-p
+               (concat dir
+                       " does not seem to be a Subversion working copy (no .svn directory).  "
+                       "Run dired instead? "))
+          (dired dir))
+      (setq dir (file-name-as-directory dir))
+      (setq svn-status-directory-history (delete dir svn-status-directory-history))
+      (add-to-list 'svn-status-directory-history dir)
+      (unless (string= (buffer-name) "*svn-status*")
+        (message "psvn: Saving initial window configuration")
+        (setq svn-status-initial-window-configuration (current-window-configuration)))
+      (let* ((status-buf (get-buffer-create "*svn-status*"))
+             (proc-buf (get-buffer-create "*svn-process*")))
+        (save-excursion
+          (set-buffer status-buf)
+          (setq default-directory dir)
+          (set-buffer proc-buf)
+          (setq default-directory dir)
+          (if arg
+              (svn-run-svn t t 'status "status" "-vu")
+            (svn-run-svn t t 'status "status" "-v"))))))
 
 (defun svn-status-use-history ()
   (interactive)
@@ -462,7 +499,8 @@
 (when (not svn-status-mode-map)
   (setq svn-status-mode-map (make-sparse-keymap))
   (suppress-keymap svn-status-mode-map)
-  (define-key svn-status-mode-map [return] 'svn-status-select-line)
+  (define-key svn-status-mode-map (kbd "<return>") 'svn-status-find-file-or-examine-directory)
+  (define-key svn-status-mode-map (kbd "^") 'svn-status-examine-parent)
   (define-key svn-status-mode-map [?s] 'svn-status-show-process-buffer)
   (define-key svn-status-mode-map [?f] 'svn-status-find-file)
   (define-key svn-status-mode-map [?o] 'svn-status-find-file-other-window)
@@ -618,6 +656,20 @@
   (find-file-other-window (svn-status-line-info->filename
                            (svn-status-get-line-information))))
 
+(defun svn-status-find-file-or-examine-directory ()
+  "If point is on a directory, run `svn-status' on that directory.
+Otherwise run `find-file'."
+  (interactive)
+  (let ((line-info (svn-status-get-line-information)))
+    (if (svn-status-line-info->directory-p line-info)
+        (svn-status (svn-status-line-info->full-path line-info))
+      (find-file (svn-status-line-info->filename line-info)))))
+
+(defun svn-status-examine-parent ()
+  "Run `svn-status' on the parent of the current directory."
+  (interactive)
+  (svn-status (expand-file-name "../")))
+
 (defun svn-status-line-info->has-usermark (line-info) (nth 0 line-info))
 (defun svn-status-line-info->filemark (line-info) (nth 1 line-info))
 (defun svn-status-line-info->propmark (line-info) (nth 2 line-info))
@@ -653,25 +705,58 @@
                 (eq (svn-status-line-info->propmark line-info) ? )
                 (eq (svn-status-line-info->propmark line-info) nil)))))
 
+(defun svn-status-line-info->directory-p (line-info)
+  "Return t if LINE-INFO refers to a directory, nil otherwise.
+Symbolic links to directories count as directories (see `file-directory-p')."
+  (file-directory-p (svn-status-line-info->filename line-info)))
+
+(defun svn-status-line-info->full-path (line-info)
+  "Return the full path of the file represented by line-info"
+  (expand-file-name
+   (svn-status-line-info->filename line-info)))
+
+;;Not convinced that this is the fastest way, but...
+(defun svn-status-count-/ (string)
+  "Return number of \"/\"'s in STRING."
+  (let ((n 0)
+        (last 0))
+    (while (setq last (string-match "/" string (1+ last)))
+      (setq n (1+ n)))
+    n))
 
 (defun svn-insert-line-in-status-buffer (line-info)
-  (let ((s "*"))
-    (let ((usermark (if (svn-status-line-info->has-usermark line-info)
-                        (svn-add-face "*" 'svn-status-marked-face)
-                      " "))
-          (external (if (svn-status-line-info->modified-external line-info)
-                        (svn-add-face " (modified external)" 'svn-status-modified-external-face)
-                      "")))
-      (insert (concat usermark
-                      (format " %c%c %3s %3s %-9s %s"
-                              (svn-status-line-info->filemark line-info)
-                              (or (svn-status-line-info->propmark line-info) ? )
-                              (or (svn-status-line-info->localrev line-info) "")
-                              (or (svn-status-line-info->lastchangerev line-info) "")
-                              (svn-status-line-info->author line-info)
-                              (svn-status-line-info->filename line-info))
-                      external
-                      "\n")))))
+  "Format line-info and insert the result in the current buffer."
+  (let ((usermark (if (svn-status-line-info->has-usermark line-info) "*" " "))
+        (external (if (svn-status-line-info->modified-external line-info)
+                      (svn-add-face " (modified external)" 'svn-status-modified-external-face)
+                    ""))
+        ;; To add indentation based on the
+        ;; directory that the file is in, we just insert 2*(number of "/" in
+        ;; filename) spaces, which is rather hacky (but works)!
+        (filename (svn-status-choose-face-to-add
+                   (svn-status-line-info->directory-p line-info)
+                   (concat (make-string
+                            (* 2 (svn-status-count-/
+                                  (svn-status-line-info->filename line-info)))
+                            32)
+                           (if svn-status-hide-unmodified
+                               (svn-status-line-info->filename line-info)
+                             (svn-status-line-info->filename-nondirectory line-info)))
+                   'svn-status-directory-face
+                   'svn-status-filename-face)))
+    (insert (svn-status-maybe-add-face
+             (svn-status-line-info->has-usermark line-info)
+             (concat usermark
+                     (format " %c%c %3s %3s %-9s"
+                             (svn-status-line-info->filemark line-info)
+                             (or (svn-status-line-info->propmark line-info) ? )
+                             (or (svn-status-line-info->localrev line-info) "")
+                             (or (svn-status-line-info->lastchangerev line-info) "")
+                             (svn-status-line-info->author line-info))
+                     filename
+                     external
+                     "\n")
+             'svn-status-marked-face))))
 
 (defun svn-status-update-buffer ()
   (interactive)
@@ -963,9 +1048,19 @@ Then move to that line."
   (svn-run-svn t t 'add "add" "--targets" svn-status-temp-arg-file))
 
 (defun svn-status-make-directory (dir)
+  "Run `svn add DIR'."
   ;; TODO: Allow entering a URI interactively.
   ;; Currently, `read-file-name' corrupts it.
-  (interactive (list (read-file-name "Make directory: ")))
+  (interactive (list (read-file-name
+                      "Make directory: "
+                      ;;the `or' below is because s-s-g-l-i returns `nil' if
+                      ;;point was outside the file list, but we need
+                      ;;s-s-l-i->f to return a string to add to `default-directory'.
+                      (concat default-directory
+                              (file-name-directory
+                               (svn-status-line-info->filename
+                                (or (svn-status-get-line-information)
+                                    '(nil nil nil ""))))))))
   (unless (string-match "^[^:/]+://" dir) ; Is it a URI?
     (setq dir (file-relative-name dir)))
   (svn-run-svn t t 'mkdir "mkdir" "--" dir))
