@@ -381,7 +381,7 @@ struct merge_cmd_baton {
   const char *target;                 /* Working copy target of merge */
   const char *url;                    /* The second URL in the merge */
   const svn_opt_revision_t *revision; /* Revision of second URL in the merge */
-  svn_client_auth_baton_t *auth_baton;
+  svn_client_ctx_t *ctx;
   apr_pool_t *pool;
 };
 
@@ -471,7 +471,7 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
              parameter can be removed from the function. */
           SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, mine,
                                     adm_access,
-                                    merge_b->auth_baton, NULL, NULL, NULL, NULL,
+                                    NULL, NULL, NULL, NULL, merge_b->ctx,
                                     merge_b->pool));
         }
       break;
@@ -572,7 +572,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
         /* ### FIXME: This will get the directory tree again! */
         SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, path,
                                   adm_access,
-                                  merge_b->auth_baton, NULL, NULL, NULL, NULL,
+                                  NULL, NULL, NULL, NULL, merge_b->ctx,
                                   subpool));
       break;
     case svn_node_dir:
@@ -583,7 +583,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
         /* ### FIXME: This will get the directory tree again! */
         SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, path,
                                   adm_access,
-                                  merge_b->auth_baton, NULL, NULL, NULL, NULL,
+                                  NULL, NULL, NULL, NULL, merge_b->ctx,
                                   subpool));
       break;
     case svn_node_file:
@@ -745,7 +745,6 @@ convert_to_url (const char **url,
 static svn_error_t *
 do_merge (svn_wc_notify_func_t notify_func,
           void *notify_baton,
-          svn_client_auth_baton_t *auth_baton,
           const char *URL1,
           const svn_opt_revision_t *revision1,
           const char *URL2,
@@ -756,6 +755,7 @@ do_merge (svn_wc_notify_func_t notify_func,
           svn_boolean_t dry_run,
           const svn_wc_diff_callbacks_t *callbacks,
           void *callback_baton,
+          svn_client_ctx_t *ctx,
           apr_pool_t *pool)
 {
   svn_revnum_t start_revnum, end_revnum;
@@ -766,6 +766,7 @@ do_merge (svn_wc_notify_func_t notify_func,
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
   const char *auth_dir;
+  svn_client_auth_baton_t *auth_baton;
 
   /* Sanity check -- ensure that we have valid revisions to look at. */
   if ((revision1->kind == svn_opt_revision_unspecified)
@@ -777,6 +778,8 @@ do_merge (svn_wc_notify_func_t notify_func,
     }
 
   SVN_ERR (svn_client__default_auth_dir (&auth_dir, target_wcpath, pool));
+
+  SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
 
   /* Establish first RA session to URL1. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -839,7 +842,6 @@ do_merge (svn_wc_notify_func_t notify_func,
 static svn_error_t *
 do_single_file_merge (svn_wc_notify_func_t notify_func,
                       void *notify_baton,
-                      svn_client_auth_baton_t *auth_baton,
                       const char *URL1,
                       const svn_opt_revision_t *revision1,
                       const char *URL2,
@@ -847,6 +849,7 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
                       const char *target_wcpath,
                       svn_wc_adm_access_t *adm_access,
                       svn_boolean_t dry_run,
+                      svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
   apr_status_t status;
@@ -863,7 +866,8 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
   svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
   enum svn_wc_merge_outcome_t merge_outcome;
   const char *auth_dir;
-  
+  svn_client_auth_baton_t *auth_baton;
+
   props1 = apr_hash_make (pool);
   props2 = apr_hash_make (pool);
   
@@ -883,6 +887,9 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
 
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL1, pool));
+
+  SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
+
   SVN_ERR (svn_client__open_ra_session (&session1, ra_lib, URL1, auth_dir,
                                         NULL, NULL, FALSE, FALSE, TRUE, 
                                         auth_baton, pool));
@@ -999,7 +1006,6 @@ polite_error (svn_error_t *child_err,
 
 static svn_error_t *
 do_diff (const apr_array_header_t *options,
-         svn_client_auth_baton_t *auth_baton,
          const char *path1,
          const svn_opt_revision_t *revision1,
          const char *path2,
@@ -1007,6 +1013,7 @@ do_diff (const apr_array_header_t *options,
          svn_boolean_t recurse,
          const svn_wc_diff_callbacks_t *callbacks,
          struct diff_cmd_baton *callback_baton,
+         svn_client_ctx_t *ctx,
          apr_pool_t *pool)
 {
   svn_revnum_t start_revnum, end_revnum;
@@ -1059,6 +1066,7 @@ do_diff (const apr_array_header_t *options,
       const char *url_anchor, *url_target;
       svn_wc_adm_access_t *adm_access, *dir_access;
       svn_node_kind_t kind;
+      svn_client_auth_baton_t *auth_baton;
 
       /* Sanity check -- path2 better be a working-copy path. */
       if (svn_path_is_url (path2))
@@ -1090,6 +1098,8 @@ do_diff (const apr_array_header_t *options,
                                       url_anchor, pool));
 
       SVN_ERR (svn_client__default_auth_dir (&auth_dir, path2, pool));
+
+      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
 
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url_anchor,
                                             auth_dir,
@@ -1146,6 +1156,7 @@ do_diff (const apr_array_header_t *options,
       svn_boolean_t path1_is_url, path2_is_url;
       svn_node_kind_t path2_kind;
       void *session2;
+      svn_client_auth_baton_t *auth_baton;
 
       /* The paths could be *either* wcpaths or urls... */
       SVN_ERR (convert_to_url (&URL1, path1, pool));
@@ -1158,6 +1169,7 @@ do_diff (const apr_array_header_t *options,
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL1, pool));
       SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
+      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL1, auth_dir,
                                             NULL, NULL, FALSE, FALSE, TRUE, 
                                             auth_baton, pool));
@@ -1340,7 +1352,6 @@ do_diff (const apr_array_header_t *options,
 */
 svn_error_t *
 svn_client_diff (const apr_array_header_t *options,
-                 svn_client_auth_baton_t *auth_baton,
                  const char *path1,
                  const svn_opt_revision_t *revision1,
                  const char *path2,
@@ -1349,6 +1360,7 @@ svn_client_diff (const apr_array_header_t *options,
                  svn_boolean_t no_diff_deleted,
                  apr_file_t *outfile,
                  apr_file_t *errfile,
+                 svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
   struct diff_cmd_baton diff_cmd_baton;
@@ -1380,11 +1392,11 @@ svn_client_diff (const apr_array_header_t *options,
        "     for more details.");
 
   return do_diff (options,
-                  auth_baton,
                   path1, revision1,
                   path2, revision2,
                   recurse,
                   &diff_callbacks, &diff_cmd_baton,
+                  ctx,
                   pool);
 }
 
@@ -1392,7 +1404,6 @@ svn_client_diff (const apr_array_header_t *options,
 svn_error_t *
 svn_client_merge (svn_wc_notify_func_t notify_func,
                   void *notify_baton,
-                  svn_client_auth_baton_t *auth_baton,
                   const char *URL1,
                   const svn_opt_revision_t *revision1,
                   const char *URL2,
@@ -1401,6 +1412,7 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
                   svn_boolean_t recurse,
                   svn_boolean_t force,
                   svn_boolean_t dry_run,
+                  svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
@@ -1422,12 +1434,12 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
     {
       SVN_ERR (do_single_file_merge (notify_func,
                                      notify_baton,
-                                     auth_baton,
                                      URL1, revision1,
                                      URL2, revision2,
                                      target_wcpath,
                                      adm_access,
                                      dry_run,
+                                     ctx,
                                      pool));
     }
 
@@ -1441,12 +1453,11 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
       merge_cmd_baton.target = target_wcpath;
       merge_cmd_baton.url = URL2;
       merge_cmd_baton.revision = revision2;
-      merge_cmd_baton.auth_baton = auth_baton;
+      merge_cmd_baton.ctx = ctx;
       merge_cmd_baton.pool = pool;
 
       SVN_ERR (do_merge (notify_func,
                          notify_baton,
-                         auth_baton,
                          URL1,
                          revision1,
                          URL2,
@@ -1457,6 +1468,7 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
                          dry_run,
                          &merge_callbacks,
                          &merge_cmd_baton,
+                         ctx,
                          pool));
     }
 

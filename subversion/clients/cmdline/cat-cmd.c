@@ -39,7 +39,7 @@ svn_cl__cat (apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = baton;
   apr_array_header_t *targets;
   int i;
-  svn_client_auth_baton_t *auth_baton;
+  svn_client_ctx_t *ctx = svn_client_ctx_create (pool);
   apr_file_t *std_out;
   apr_status_t status;
 
@@ -58,7 +58,8 @@ svn_cl__cat (apr_getopt_t *os,
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");
 
   /* Build an authentication baton to give to libsvn_client. */
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
+  svn_client_ctx_set_auth_baton (ctx,
+                                 svn_cl__make_auth_baton (opt_state, pool));
 
   status = apr_file_open_stdout (&std_out, pool);
   if (!APR_STATUS_IS_SUCCESS (status))
@@ -76,7 +77,7 @@ svn_cl__cat (apr_getopt_t *os,
                                   "'%s' has no URL", target);
 
       SVN_ERR (svn_client_cat (out, URL, &(opt_state->start_revision),
-                               auth_baton, pool));
+                               ctx, pool));
     }
 
   return SVN_NO_ERROR;

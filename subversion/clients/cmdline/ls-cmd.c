@@ -119,10 +119,11 @@ svn_cl__ls (apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = baton;
   apr_array_header_t *targets;
   int i;
-  svn_client_auth_baton_t *auth_baton;
-  apr_pool_t *subpool = svn_pool_create (pool);
+  svn_client_ctx_t *ctx = svn_client_ctx_create (pool);
+  apr_pool_t *subpool = svn_pool_create (pool); 
 
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
+  svn_client_ctx_set_auth_baton (ctx,
+                                 svn_cl__make_auth_baton (opt_state, pool));
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -150,7 +151,7 @@ svn_cl__ls (apr_getopt_t *os,
         }
       
       SVN_ERR (svn_client_ls (&dirents, target, &(opt_state->start_revision),
-                              auth_baton, opt_state->recursive, subpool));
+                              opt_state->recursive, ctx, subpool));
 
       SVN_ERR (print_dirents (dirents, opt_state->verbose, subpool));
 

@@ -49,13 +49,13 @@
 
 
 svn_error_t *
-svn_client_switch (svn_client_auth_baton_t *auth_baton,
-                   const char *path,
+svn_client_switch (const char *path,
                    const char *switch_url,
                    const svn_opt_revision_t *revision,
                    svn_boolean_t recurse,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
+                   svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   const svn_ra_reporter_t *reporter;
@@ -67,6 +67,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
   svn_revnum_t revnum;
   svn_error_t *err = SVN_NO_ERROR;
   svn_wc_adm_access_t *adm_access;
+  svn_client_auth_baton_t *auth_baton;
 
   /* Sanity check.  Without these, the switch is meaningless. */
   assert (path);
@@ -133,7 +134,9 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
   /* Get the RA vtable that matches working copy's current URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
-    
+
+  SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
+
   if (entry->kind == svn_node_dir)
     {
       const svn_delta_editor_t *switch_editor;
@@ -190,8 +193,8 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
          delay the primary operation.  */
       SVN_ERR (svn_client__handle_externals (traversal_info,
                                              notify_func, notify_baton,
-                                             auth_baton,
                                              FALSE,
+                                             ctx,
                                              pool));
     }
   

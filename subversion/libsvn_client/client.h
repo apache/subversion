@@ -485,8 +485,8 @@ svn_error_t *svn_client__handle_externals
    (svn_wc_traversal_info_t *traversal_info,
     svn_wc_notify_func_t notify_func,
     void *notify_baton,
-    svn_client_auth_baton_t *auth_baton,
     svn_boolean_t update_unchanged,
+    svn_client_ctx_t *ctx,
     apr_pool_t *pool);
 
 

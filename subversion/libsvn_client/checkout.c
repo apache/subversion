@@ -44,11 +44,11 @@
 svn_error_t *
 svn_client_checkout (svn_wc_notify_func_t notify_func,
                      void *notify_baton,
-                     svn_client_auth_baton_t *auth_baton,
                      const char *URL,
                      const char *path,
                      const svn_opt_revision_t *revision,
                      svn_boolean_t recurse,
+                     svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
   const svn_delta_editor_t *checkout_editor;
@@ -86,12 +86,15 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
                                        pool));
 
     {
+      svn_client_auth_baton_t *auth_baton;
       void *ra_baton, *session;
       svn_ra_plugin_t *ra_lib;
 
       /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
+
+      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
 
       /* Open an RA session to URL. Note that we do not have an admin area
          for storing temp files.  We do, however, want to store auth data
@@ -126,8 +129,7 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
   SVN_ERR (svn_client__handle_externals
            (traversal_info,
             notify_func, notify_baton,
-            auth_baton,
-            FALSE,
+            FALSE, ctx,
             pool));
 
   return SVN_NO_ERROR;

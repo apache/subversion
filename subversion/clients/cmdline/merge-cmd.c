@@ -43,14 +43,15 @@ svn_cl__merge (apr_getopt_t *os,
 {
   svn_cl__opt_state_t *opt_state = baton;
   apr_array_header_t *targets;
-  svn_client_auth_baton_t *auth_baton;
+  svn_client_ctx_t *ctx = svn_client_ctx_create (pool);
   const char *sourcepath1, *sourcepath2, *targetpath;
   svn_boolean_t using_alternate_syntax = FALSE;
   svn_error_t *err;
   svn_wc_notify_func_t notify_func = NULL;
   void *notify_baton;
 
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
+  svn_client_ctx_set_auth_baton (ctx,
+                                 svn_cl__make_auth_baton (opt_state, pool));
 
   /* If the first opt_state revision is filled in at this point, then
      we know the user must have used the '-r' switch. */
@@ -152,7 +153,6 @@ svn_cl__merge (apr_getopt_t *os,
 			  pool);
 
   err = svn_client_merge (notify_func, notify_baton,
-                          auth_baton,
                           sourcepath1,
                           &(opt_state->start_revision),
                           sourcepath2,
@@ -161,6 +161,7 @@ svn_cl__merge (apr_getopt_t *os,
                           opt_state->nonrecursive ? FALSE : TRUE,
                           opt_state->force,
                           opt_state->dry_run,
+                          ctx,
                           pool); 
   if (err)
      return svn_cl__may_need_force (err);

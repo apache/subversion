@@ -65,7 +65,7 @@ svn_cl__checkout (apr_getopt_t *os,
 {
   svn_cl__opt_state_t *opt_state = baton;
   apr_pool_t *subpool;
-  svn_client_auth_baton_t *auth_baton;
+  svn_client_ctx_t *ctx = svn_client_ctx_create (pool);
   apr_array_header_t *targets;
   const char *local_dir;
   const char *repos_url;
@@ -128,15 +128,17 @@ svn_cl__checkout (apr_getopt_t *os,
          ### auth_baton appears to allocate username and password from the
          ### subpool, so when the subpool is cleared nasty things
          ### happen. */
-      auth_baton = svn_cl__make_auth_baton (opt_state, subpool);
+      svn_client_ctx_set_auth_baton (ctx, 
+                                     svn_cl__make_auth_baton (opt_state,
+                                                              subpool));
 
       SVN_ERR (svn_client_checkout (notify_func,
                                     notify_baton,
-                                    auth_baton,
                                     repos_url,
                                     target_dir,
                                     &(opt_state->start_revision),
                                     opt_state->nonrecursive ? FALSE : TRUE,
+                                    ctx,
                                     subpool));
       svn_pool_clear (subpool);
     }
