@@ -86,7 +86,7 @@ svn_svr_load_plugin (svn_svr_policies_t *policy,
       char *msg =
         apr_psprintf (policy->pool,
                      "svn_svr_load_plugin(): can't load DSO %s", path->data); 
-      return svn_create_error (result, NULL, msg, NULL, policy->pool);
+      return svn_create_error (result, NULL, NULL, policy->pool, msg);
     }
   
 
@@ -100,7 +100,7 @@ svn_svr_load_plugin (svn_svr_policies_t *policy,
         apr_psprintf (policy->pool,
                      "svn_svr_load_plugin(): can't find symbol %s",
                       init_routine->data); 
-      return svn_create_error (result, NULL, msg, NULL, policy->pool);
+      return svn_create_error (result, NULL, NULL, policy->pool, msg);
     }
 
   /* Call the plugin's initialization routine.  
@@ -144,7 +144,7 @@ svn__svr_load_all_plugins (apr_hash_t *plugins, svn_svr_policies_t *policy)
   if (result != APR_SUCCESS)
     {
       char *msg = "svr__load_plugins(): fatal: can't apr_dso_init() ";
-      return (svn_create_error (result, NULL, msg, NULL, policy->pool));
+      return (svn_create_error (result, NULL, NULL, policy->pool, msg));
     }
 
   /* Loop through the hash of plugins from configdata */
@@ -215,7 +215,7 @@ svn_svr_init (svn_svr_policies_t **policy,
   if (result != APR_SUCCESS)
     {
       char *msg = "svr_init(): can't create sub-pool within policy struct";
-      return (svn_create_error (result, NULL, msg, NULL, pool));
+      return (svn_create_error (result, NULL, NULL, pool, msg));
     }
 
   return SVN_NO_ERROR;

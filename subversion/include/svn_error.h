@@ -133,12 +133,12 @@ typedef enum svn_errno_t {
 
 typedef struct svn_error
 {
-  apr_status_t apr_err;       /* APR error value, possibly SVN_ custom err */
+  apr_status_t apr_err;      /* APR error value, possibly SVN_ custom err */
   int src_err;               /* native error code (e.g. errno, h_errno...) */
   const char *message;       /* details from producer of error */
   struct svn_error *child;   /* ptr to the error we "wrap" */
-  apr_pool_t *pool;           /* place to generate message strings from */
-
+  apr_pool_t *pool;          /* The pool holding this error and any
+                                child errors it wraps */
 } svn_error_t;
 
 
@@ -149,22 +149,27 @@ typedef struct svn_error
 
   Input:  an APR or SVN custom error code,
           the original errno,
-          a descriptive message,
           a "child" error to wrap,
-          a pool for alloc'ing
+          a pool
+          a descriptive message,
 
   Returns:  a new error structure (containing the old one).
 
-     ** If creating the "bottommost" error in a chain,
-        pass NULL as the fourth (child) argument.
+  Notes: If POOL is present, the error will always be allocated in a
+         new subpool of POOL.  If POOL is null but CHILD is present,
+         then it will be allocated in a CHILD's pool (thus
+         guaranteeing that the new error has the same lifetime as the
+         error it wraps).  At least one of POOL or CHILD must be
+         present.
 
+         If creating the "bottommost" error in a chain, pass NULL for
+         the child argument.
  */
-
 svn_error_t *svn_create_error (apr_status_t apr_err,
                                int src_err,
-                               const char *message,
                                svn_error_t *child,
-                               apr_pool_t *pool);
+                               apr_pool_t *pool,
+                               const char *message);
 
 /* Create an error structure with the given APR_ERR, SRC_ERR, CHILD,
    and POOL, with a printf-style error message produced by passing
@@ -173,14 +178,20 @@ extern svn_error_t *svn_create_errorf (apr_status_t apr_err,
                                        int src_err,
                                        svn_error_t *child,
                                        apr_pool_t *pool,
-                                       const char *fmt, ...);
+                                       const char *fmt, 
+                                       ...);
 
 
 /* A quick n' easy way to create a wrappered exception with your own
    message, before throwing it up the stack.  (It uses all of the
    child's fields.)  */
 
-svn_error_t * svn_quick_wrap_error (svn_error_t *child, const char *new_msg);
+svn_error_t *svn_quick_wrap_error (svn_error_t *child, const char *new_msg);
+
+
+/* Free ERROR by destroying its pool; note that the pool may be shared
+   with wrapped child errors inside this error. */
+void svn_free_error (svn_error_t *error);
 
 
 /* Very dumb "default" error handler that anyone can use if they wish. */

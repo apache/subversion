@@ -74,8 +74,8 @@ test_read_fn (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
 
   if (stat && (stat != APR_EOF))
     return
-      svn_create_error (stat, 0, "error reading incoming delta stream",
-                        NULL, pool);
+      svn_create_error (stat, 0, NULL, pool,
+                        "error reading incoming delta stream");
   
   else 
     return 0;  

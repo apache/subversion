@@ -102,17 +102,17 @@ get_next_child_subdir (svn_string_t **name,
         return SVN_NO_ERROR;
       }
     else if (status)
-      return svn_create_error (status, 0, "apr_readdir choked.", NULL, pool);
+      return svn_create_error (status, 0, NULL, pool, "apr_readdir choked.");
 
     status = apr_get_dir_filename (&entryname, dirhandle);
     if (status)
-      return svn_create_error (status, 0, "apr_get_dir_filename choked.",
-                               NULL, pool);
+      return svn_create_error (status, 0, NULL, pool,
+                               "apr_get_dir_filename choked.");
 
     status = apr_dir_entry_ftype (&entrytype, dirhandle);
     if (status)
-      return svn_create_error (status, 0, "apr_dir_entry_ftype choked.",
-                               NULL, pool);
+      return svn_create_error (status, 0, NULL, pool,
+                               "apr_dir_entry_ftype choked.");
 
     /* Exit the loop if the entry is a subdir AND isn't "." or ".." */
     if ( (entrytype == APR_DIR)
@@ -159,8 +159,8 @@ get_delta_here_contents (svn_string_t **str,
     {
       status = apr_full_read (filehandle, buf, BUFSIZ, &bytes_read);
       if (status && (status != APR_EOF))
-        return svn_create_error (status, 0, "apr_full_read choked", 
-                                 NULL, pool);
+        return svn_create_error (status, 0, NULL, pool,
+                                 "apr_full_read choked");
       svn_string_appendbytes (localmod_buffer, buf, bytes_read, pool);
     }
   err = svn_wc__close_adm_file (filehandle, dir,
@@ -216,7 +216,7 @@ do_crawl (svn_string_t *current_dir,
   /* Open the current directory */
   status = apr_opendir (&thisdir, current_dir->data, pool);
   if (status)
-    return svn_create_error (status, 0, "apr_opendir choked.", NULL, pool);
+    return svn_create_error (status, 0, NULL, pool, "apr_opendir choked.");
 
   /* Get the first subdir child */
   err = get_next_child_subdir (&child, thisdir, pool);
@@ -264,11 +264,9 @@ do_crawl (svn_string_t *current_dir,
     }
 
   else
-    return svn_create_error (SVN_ERR_UNFRUITFUL_DESCENT,
-                             0,
-                             "kff todo: Ben, what string do you want here?",
-                             NULL,
-                             pool);
+    return svn_create_error
+      (SVN_ERR_UNFRUITFUL_DESCENT, 0, NULL, pool,
+       "kff todo: Ben, what string do you want here?");
 }
 
 

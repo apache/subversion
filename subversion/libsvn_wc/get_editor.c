@@ -268,7 +268,8 @@ window_handler (svn_txdelta_window_t *window, void *baton)
             apr_err = apr_full_write (dest, (data + this_op.offset),
                                       this_op.length, &written);
             if (apr_err)
-              return svn_create_error (apr_err, 0, NULL, NULL, window->pool);
+              return svn_create_error (apr_err, 0, NULL,
+                                       window->pool, fb->path->data);
 
             break;
           }

@@ -53,6 +53,66 @@
 #include "svn_error.h"
 
 
+
+/*** helpers for creating errors ***/
+
+static svn_error_t *
+make_error_internal (apr_status_t apr_err,
+                     int src_err,
+                     svn_error_t *child,
+                     apr_pool_t *pool,
+                     const char *message,
+                     va_list ap)
+{
+  svn_error_t *new_error;
+  apr_pool_t *newpool;
+  char *permanent_msg;
+
+  /* kff todo: okay, this is where we could implement Greg Stein's
+     idea.  Instead of making a new subpool of POOL, we'd discover a
+     `global' error pool as an attribute of POOL, and make a subpool
+     under that.  (It's important to still make a subpool, so that
+     callers can free individual errors).  Before we make such a
+     change, we need to ensure that all subpool creation in Subversion
+     happens in an inherity way, i.e., through apr_create_pool(), not
+     apr_make_sub_pool(). */
+
+  /* Make a new subpool, or maybe use child's pool. */
+  if (pool)
+    {
+      apr_status_t apr_stat;
+      apr_stat = apr_create_pool (&newpool, pool);
+      if (apr_stat) /* Can't even allocate?  Get out of town. */
+        exit (1);   /* kff todo: is this a good reaction? */
+    }
+  else if (child)
+    newpool = child->pool;
+  else         /* can't happen */
+    exit (1);  /* kff todo: is this a good reaction? */
+
+  /* Create the new error structure */
+  new_error = (svn_error_t *) apr_palloc (newpool, sizeof(svn_error_t));
+
+  /* Copy the message to permanent storage. */
+  if (ap)
+    permanent_msg = apr_pvsprintf (newpool, message, ap);
+  else
+    {
+      permanent_msg = apr_palloc (newpool, (strlen (message) + 1));
+      strcpy (permanent_msg, message);
+    }
+
+  /* Fill 'er up. */
+  new_error->apr_err = apr_err;
+  new_error->src_err = src_err;
+  new_error->message = permanent_msg;
+  new_error->child   = child;
+  new_error->pool    = newpool;  
+
+  return new_error;
+}
+
+
 /*
   svn_create_error() : for creating nested exception structures.
 
@@ -69,23 +129,11 @@
 svn_error_t *
 svn_create_error (apr_status_t apr_err,
                   int src_err,
-                  const char *message,
                   svn_error_t *child,
-                  apr_pool_t *pool)
+                  apr_pool_t *pool,
+                  const char *message)
 {
-  /* Create the new error structure */
-  svn_error_t *new_error = (svn_error_t *) apr_palloc (pool,
-                                                       sizeof(svn_error_t));
-
-  char *msg_storage = apr_palloc (pool, (strlen (message) + 1));
-
-  new_error->apr_err = apr_err;
-  new_error->src_err = src_err;
-  new_error->message = strcpy (msg_storage, message);
-  new_error->child = child;
-  new_error->pool = pool;  
-
-  return new_error;
+  return make_error_internal (apr_err, src_err, child, pool, message, NULL);
 }
 
 
@@ -94,16 +142,14 @@ svn_create_errorf (apr_status_t apr_err,
                    int src_err,
                    svn_error_t *child,
                    apr_pool_t *pool,
-                   const char *fmt, ...)
+                   const char *fmt,
+                   ...)
 {
   svn_error_t *err;
 
   va_list ap;
   va_start (ap, fmt);
-  err = svn_create_error (apr_err, src_err,
-                          apr_pvsprintf (pool, fmt, ap),
-                          child,
-                          pool);
+  err = make_error_internal (apr_err, src_err, child, pool, fmt, ap);
   va_end (ap);
 
   return err;
@@ -117,12 +163,19 @@ svn_create_errorf (apr_status_t apr_err,
 svn_error_t *
 svn_quick_wrap_error (svn_error_t *child, const char *new_msg)
 {
-  return (svn_create_error (child->apr_err, child->src_err, new_msg,
-                            child, child->pool));
+  return svn_create_error (child->apr_err,
+                           child->src_err,
+                           child,
+                           NULL,   /* allocate directly in child's pool */
+                           new_msg);
 }
-                
 
 
+void
+svn_free_error (svn_error_t *err)
+{
+  apr_destroy_pool (err->pool);
+}
 
 
 /* Very dumb "default" error handler: Just prints out error stack
@@ -164,7 +217,6 @@ svn_handle_error (svn_error_t *err, FILE *stream)
 
 
 
-
 /* Very dumb "default" warning handler -- used by all policies, unless
    svn_svr_warning_callback() is used to set the warning handler
    differently.  */
@@ -189,4 +241,5 @@ svn_handle_warning (void *data, char *fmt, ...)
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
- * end: */
+ * end: 
+ */

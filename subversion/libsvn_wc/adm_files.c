@@ -191,20 +191,20 @@ svn_wc__make_adm_thing (svn_string_t *path,
                           pool);
 
       if (apr_err)
-        err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+        err = svn_create_error (apr_err, 0, NULL, pool, path->data);
       else
         {
           /* Creation succeeded, so close immediately. */
           apr_err = apr_close (f);
           if (apr_err)
-            err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+            err = svn_create_error (apr_err, 0, NULL, pool, path->data);
         }
     }
   else if (type == svn_dir_kind)
     {
       apr_err = apr_make_dir (path->data, APR_OS_DEFAULT, pool);
       if (apr_err)
-        err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+        err = svn_create_error (apr_err, 0, NULL, pool, path->data);
     }
   else   /* unknown type argument, wrongness */
     {
@@ -212,7 +212,7 @@ svn_wc__make_adm_thing (svn_string_t *path,
          segfault or other obvious indicator that something went
          wrong.  Even so, not sure if it's appropriate.  Thoughts? */
       err = svn_create_error 
-        (0, 0, "svn_wc__make_admin_thing: bad type indicator", NULL, pool);
+        (0, 0, NULL, pool, "svn_wc__make_admin_thing: bad type indicator");
     }
 
   /* Restore path to its original state no matter what. */
@@ -335,12 +335,12 @@ maybe_copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
                           APR_OS_DEFAULT,
                           pool);
       if (apr_err)
-        return svn_create_error (apr_err, 0, dst->data, NULL, pool);
+        return svn_create_error (apr_err, 0, NULL, pool, dst->data);
       else
         {
           apr_err = apr_close (f);
           if (apr_err)
-            return svn_create_error (apr_err, 0, dst->data, NULL, pool);
+            return svn_create_error (apr_err, 0, NULL, pool, dst->data);
           else
             return SVN_NO_ERROR;
         }
@@ -351,7 +351,7 @@ maybe_copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
   /* close... */ 
   apr_err = apr_close (f);
   if (apr_err)
-    return svn_create_error (apr_err, 0, dst->data, NULL, pool);
+    return svn_create_error (apr_err, 0, NULL, pool, dst->data);
 
   /* ...then copy */
   apr_err = apr_copy_file (src->data, dst->data, pool);
@@ -359,7 +359,7 @@ maybe_copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
     {
       const char *msg
         = apr_psprintf (pool, "copying %s to %s", src->data, dst->data);
-      return svn_create_error (apr_err, 0, msg, NULL, pool);
+      return svn_create_error (apr_err, 0, NULL, pool, msg);
     }
 
   return SVN_NO_ERROR;
@@ -403,7 +403,7 @@ sync_adm_file (svn_string_t *path,
     {
       const char *msg = apr_psprintf (pool, "error renaming %s to %s",
                                       tmp_path->data, path->data);
-      return svn_create_error (apr_err, 0, msg, NULL, pool);
+      return svn_create_error (apr_err, 0, NULL, pool, msg);
     }
   else
     return SVN_NO_ERROR;
@@ -481,7 +481,7 @@ open_adm_file (apr_file_t **handle,
 
   apr_err = apr_open (handle, path->data, flags, APR_OS_DEFAULT, pool);
   if (apr_err)
-    err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+    err = svn_create_error (apr_err, 0, NULL, pool, path->data);
 
   /* Restore path to its original state no matter what. */
   chop_admin_name (path, components_added);
@@ -515,7 +515,7 @@ close_adm_file (apr_file_t *fp,
   chop_admin_name (path, components_added);
 
   if (apr_err)
-    return svn_create_error (apr_err, 0, tmp_path->data, NULL, pool);
+    return svn_create_error (apr_err, 0, NULL, pool, tmp_path->data);
 
   /* If we were writing, then it was to a tmp file, which will have to
      be renamed after closing. */
@@ -551,7 +551,7 @@ close_adm_file (apr_file_t *fp,
         {
           const char *msg = apr_psprintf (pool, "error renaming %s to %s",
                                           tmp_path->data, path->data);
-          return svn_create_error (apr_err, 0, msg, NULL, pool);
+          return svn_create_error (apr_err, 0, NULL, pool, msg);
         }
       else
         return SVN_NO_ERROR;
@@ -695,7 +695,7 @@ svn_wc__remove_adm_thing (svn_string_t *path,
 
   apr_err = apr_remove_file (path->data, pool);
   if (apr_err)
-    err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+    err = svn_create_error (apr_err, 0, NULL, pool, path->data);
 
   /* Restore path to its original state no matter what. */
   chop_admin_name (path, components_added);
@@ -776,11 +776,8 @@ v_write_adm_entry (apr_file_t *fp,
   return SVN_NO_ERROR;
 
  error:
-  return svn_create_error (apr_err,
-                           0,
-                           "writing adm area log entry",
-                           NULL,
-                           pool);
+  return svn_create_error (apr_err, 0, NULL, pool,
+                           "writing adm area log entry");
 }
 
 
@@ -829,7 +826,7 @@ check_adm_exists (int *exists,
     {
       /* If got an error other than dir non-existence, then
          something's weird and we should return a genuine error. */
-      err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+      err = svn_create_error (apr_err, 0, NULL, pool, path->data);
     }
   else if (apr_err)   /* APR_ENOENT */
     {
@@ -843,7 +840,7 @@ check_adm_exists (int *exists,
     }
 
   if (apr_err)
-    err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+    err = svn_create_error (apr_err, 0, NULL, pool, path->data);
 
   /* Restore path to its original state. */
   chop_admin_name (path, components_added);
@@ -890,7 +887,7 @@ make_empty_adm (svn_string_t *path, apr_pool_t *pool)
 
   apr_err = apr_make_dir (path->data, APR_OS_DEFAULT, pool);
   if (apr_err)
-    err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+    err = svn_create_error (apr_err, 0, NULL, pool, path->data);
     
   chop_admin_name (path, components_added);
 
@@ -922,7 +919,7 @@ init_adm_file (svn_string_t *path,
     return err;
   
   if (apr_err)
-    err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+    err = svn_create_error (apr_err, 0, NULL, pool, path->data);
 
   return err;
 }

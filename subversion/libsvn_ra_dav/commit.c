@@ -222,6 +222,7 @@ commit_close_file (void *edit_baton, void *file_baton)
 ** that must be committed to the server.
 */
 static const svn_delta_edit_fns_t commit_editor = {
+  NULL,  /* commit_replace_root, someday */
   commit_delete,
   commit_add_dir,
   commit_rep_dir,
@@ -232,7 +233,8 @@ static const svn_delta_edit_fns_t commit_editor = {
   commit_rep_file,
   commit_apply_txdelta,
   commit_change_file_prop,
-  commit_close_file
+  commit_close_file,
+  NULL   /* commit_close_edit, someday */
 };
 
 svn_error_t *
