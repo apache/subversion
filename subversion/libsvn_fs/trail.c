@@ -46,7 +46,7 @@ svn_fs__trail_debug (trail_t *trail, const char *table, const char *op)
   trail->trail_debug = trail_debug;
 }
 
-void
+static void
 print_trail_debug (trail_t *trail)
 {
   struct trail_debug_t *trail_debug;
@@ -60,7 +60,7 @@ print_trail_debug (trail_t *trail)
   fprintf (stderr, "\n");
 }
 #else
-#define print_trail_debug(trail)
+#define print_trail_debug (trail)
 #endif /* defined(SVN_FS__TRAIL_DEBUG) */
 
 
