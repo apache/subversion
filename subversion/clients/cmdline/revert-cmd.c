@@ -51,9 +51,10 @@ svn_cl__revert (apr_getopt_t *os,
       {
         svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
         
-        SVN_ERR (svn_client_revert (target, recursive,
-                                    SVN_CL_NOTIFY(reverted, opt_state), NULL,
-                                    pool));
+        SVN_ERR (svn_client_revert
+                 (target, recursive,
+                  (opt_state->quiet ? NULL : svn_cl__notify_reverted), NULL,
+                  pool));
       }
   else
     {

@@ -273,11 +273,11 @@ svn_cl__generate_status_codes (char *str_status,
 
 /*** Notification functions to display results on the terminal. */
 
-void svn_cl__notify_unversioned_item (void *baton, const char *path);
-void svn_cl__notify_added_item (void *baton, const char *path);
-void svn_cl__notify_deleted_item (void *baton, const char *path);
-void svn_cl__notify_restored_item (void *baton, const char *path);
-void svn_cl__notify_reverted_item (void *baton, const char *path);
+void svn_cl__notify_unversioned (void *baton, const char *path);
+void svn_cl__notify_added (void *baton, const char *path);
+void svn_cl__notify_deleted (void *baton, const char *path);
+void svn_cl__notify_restored (void *baton, const char *path);
+void svn_cl__notify_reverted (void *baton, const char *path);
 
 /* This macro is used to specify a notification function, or NULL if the
    user has requested "quiet" mode. */
