@@ -80,10 +80,6 @@ svn_error_t * svn_ra_get_commit_editor(svn_ra_session_t *ras,
                                        const svn_delta_edit_fns_t **editor,
                                        void **edit_baton);
 
-svn_error_t * svn_ra_get_commit_editor(const svn_delta_edit_fns_t **editor,
-                                       void **edit_baton,
-                                       ... /* more params */);
-
 svn_error_t * svn_ra_get_update_editor(const svn_delta_edit_fns_t **editor,
                                        void **edit_baton,
                                        ... /* more params */);
