@@ -1293,7 +1293,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                 goto cleanup;
               }
 
-            /* get cdata, stipping whitespace */
+            /* get cdata, stripping whitespace */
             path = dav_xml_get_cdata(child, subpool, 1);
             
             if (! linkpath)
@@ -1326,7 +1326,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           }
         else if (strcmp(child->name, "missing") == 0)
           {
-            /* get cdata, stipping whitespace */
+            /* get cdata, stripping whitespace */
             const char *path = dav_xml_get_cdata(child, subpool, 1);
             serr = svn_repos_delete_path(rbaton, path, subpool);
             if (serr != NULL)

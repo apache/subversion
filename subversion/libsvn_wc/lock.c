@@ -441,7 +441,7 @@ do_open (svn_wc_adm_access_t **adm_access,
                   return err;
                 }
 
-              /* It's a missing, or obstructed, so store a placeholder */
+              /* It's missing or obstructed, so store a placeholder */
               svn_error_clear (err);
               adm_ensure_set (lock);
               apr_hash_set (lock->set, apr_pstrdup (lock->pool, entry_path),

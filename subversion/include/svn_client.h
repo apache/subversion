@@ -1121,7 +1121,7 @@ svn_client_propget (apr_hash_t **props,
  * Note that unlike its cousin @c svn_client_propget, this routine
  * doesn't affect the working copy at all; it's a pure network
  * operation that queries an *unversioned* property attached to a
- * revision.  This can be query log messages, dates, authors, and the
+ * revision.  This can query log messages, dates, authors, and the
  * like.
  */
 svn_error_t *

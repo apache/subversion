@@ -34,7 +34,7 @@
  *    "2002-05-07Thh:mm:ss.uuuuuuZ"
  *
  * The format is conformant with ISO-8601 and the date format required
- * by RFC2518 for creationdate. It is a direct converision between
+ * by RFC2518 for creationdate. It is a direct conversion between
  * apr_time_t and a string, so converting to string and back retains
  * the exact value.
  */
