@@ -784,8 +784,8 @@ svn_repos_create (svn_repos_t **repos_p,
       svn_config_t *cfg = config ? apr_hash_get (config, 
                                                  SVN_CONFIG_CATEGORY_CONFIG, 
                                                  APR_HASH_KEY_STRING) : NULL;
-      svn_config_get (cfg, &template_root, "miscellany", "template_root",
-                      SVN_TEMPLATE_ROOT_DIR);
+      svn_config_get (cfg, &template_root, SVN_CONFIG_SECTION_MISCELLANY, 
+                      SVN_CONFIG_OPTION_TEMPLATE_ROOT, SVN_TEMPLATE_ROOT_DIR);
 
       template_path = svn_path_join_many (pool,
                                           template_root,

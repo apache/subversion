@@ -109,7 +109,8 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
      config option exists). */
   cfg = config ? apr_hash_get (config, SVN_CONFIG_CATEGORY_CONFIG, 
                                APR_HASH_KEY_STRING) : NULL;
-  svn_config_get (cfg, &editor, "helpers", "editor-cmd", editor);
+  svn_config_get (cfg, &editor, SVN_CONFIG_SECTION_HELPERS, 
+                  SVN_CONFIG_OPTION_EDITOR_CMD, editor);
 
   /* Abort if there is no editor specified */
   if (! editor)

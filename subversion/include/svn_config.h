@@ -47,11 +47,34 @@ extern "C" {
 /** Opaque structure describing a set of configuration options. */
 typedef struct svn_config_t svn_config_t;
 
-/** Config category corresponding to the ~/.subversion/config file. */
-#define SVN_CONFIG_CATEGORY_CONFIG "config"
+
+/*** Configuration Defines ***/
 
-/** Config category corresponding to the ~/.subversion/servers file. */
-#define SVN_CONFIG_CATEGORY_SERVERS "servers"
+#define SVN_CONFIG_CATEGORY_SERVERS        "servers"
+#define SVN_CONFIG_SECTION_GROUPS               "groups"
+#define SVN_CONFIG_SECTION_DEFAULT              "default"
+#define SVN_CONFIG_OPTION_HTTP_PROXY_HOST           "http-proxy-host"
+#define SVN_CONFIG_OPTION_HTTP_PROXY_PORT           "http-proxy-port"
+#define SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME       "http-proxy-username"
+#define SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD       "http-proxy-password"
+#define SVN_CONFIG_OPTION_HTTP_PROXY_EXCEPTIONS     "http-proxy-exceptions"
+#define SVN_CONFIG_OPTION_HTTP_TIMEOUT              "http-timeout"
+#define SVN_CONFIG_OPTION_HTTP_COMPRESSION          "http-compression"
+#define SVN_CONFIG_OPTION_NEON_DEBUG_MASK           "neon-debug-mask"
+#define SVN_CONFIG_OPTION_SVN_TUNNEL_AGENT          "svn-tunnel-agent"
+
+#define SVN_CONFIG_CATEGORY_CONFIG          "config"
+#define SVN_CONFIG_SECTION_AUTH                 "auth"
+#define SVN_CONFIG_OPTION_STORE_PASSWORD            "store-password"
+#define SVN_CONFIG_SECTION_HELPERS              "helpers"
+#define SVN_CONFIG_OPTION_EDITOR_CMD                "editor-cmd"
+#define SVN_CONFIG_OPTION_DIFF_CMD                  "diff-cmd"
+#define SVN_CONFIG_OPTION_DIFF3_CMD                 "diff3-cmd"
+#define SVN_CONFIG_OPTION_DIFF3_HAS_PROGRAM_ARG     "diff3-has-program-arg"
+#define SVN_CONFIG_SECTION_MISCELLANY           "miscellany"
+#define SVN_CONFIG_OPTION_GLOBAL_IGNORES            "global-ignores"
+#define SVN_CONFIG_OPTION_TEMPLATE_ROOT             "template-root"
+
 
 /** Read configuration information from the standard sources and
  * return it in the hash @a *cfg_hash.

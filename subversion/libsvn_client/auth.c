@@ -351,7 +351,8 @@ maybe_store_password (const char *password, void *baton)
                                    APR_HASH_KEY_STRING) : NULL;
       const char *val;
 
-      svn_config_get (cfg, &val, "auth", "store-password", "yes");
+      svn_config_get (cfg, &val, SVN_CONFIG_SECTION_AUTH, 
+                      SVN_CONFIG_OPTION_STORE_PASSWORD, "yes");
       
       /* ### Oh, are we really case-sensitive? */
       if (strcmp (val, "yes") == 0)

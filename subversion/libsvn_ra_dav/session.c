@@ -151,7 +151,8 @@ static svn_error_t *get_server_settings(const char **proxy_host,
 
   /* If there are defaults, use them, but only if the requested host
      is not one of the exceptions to the defaults. */
-  svn_config_get(cfg, &exceptions, "default", "http-proxy-exceptions", NULL);
+  svn_config_get(cfg, &exceptions, SVN_CONFIG_SECTION_DEFAULT, 
+                 SVN_CONFIG_OPTION_HTTP_PROXY_EXCEPTIONS, NULL);
   if (exceptions)
     {
       apr_array_header_t *l = svn_cstring_split (exceptions, ",", TRUE, pool);
@@ -159,33 +160,40 @@ static svn_error_t *get_server_settings(const char **proxy_host,
     }
   if (! is_exception)
     {
-      svn_config_get(cfg, proxy_host, "default", "http-proxy-host", NULL);
-      svn_config_get(cfg, &port_str, "default", "http-proxy-port", NULL);
-      svn_config_get(cfg, proxy_username, "default", "http-proxy-username",
-                     NULL);
-      svn_config_get(cfg, proxy_password, "default", "http-proxy-password",
-                     NULL);
-      svn_config_get(cfg, &timeout_str, "default", "http-timeout", NULL);
-      svn_config_get(cfg, &debug_str, "default", "neon-debug-mask", NULL);
+      svn_config_get(cfg, proxy_host, SVN_CONFIG_SECTION_DEFAULT, 
+                     SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
+      svn_config_get(cfg, &port_str, SVN_CONFIG_SECTION_DEFAULT, 
+                     SVN_CONFIG_OPTION_HTTP_PROXY_PORT, NULL);
+      svn_config_get(cfg, proxy_username, SVN_CONFIG_SECTION_DEFAULT, 
+                     SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
+      svn_config_get(cfg, proxy_password, SVN_CONFIG_SECTION_DEFAULT, 
+                     SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
+      svn_config_get(cfg, &timeout_str, SVN_CONFIG_SECTION_DEFAULT, 
+                     SVN_CONFIG_OPTION_HTTP_TIMEOUT, NULL);
+      svn_config_get(cfg, &compress_str, SVN_CONFIG_SECTION_DEFAULT, 
+                     SVN_CONFIG_OPTION_HTTP_COMPRESSION, NULL);
+      svn_config_get(cfg, &debug_str, SVN_CONFIG_SECTION_DEFAULT, 
+                     SVN_CONFIG_OPTION_NEON_DEBUG_MASK, NULL);
     }
 
-  server_group = svn_config_find_group(cfg, requested_host, "groups", pool);
+  server_group = svn_config_find_group(cfg, requested_host, 
+                                       SVN_CONFIG_SECTION_GROUPS, pool);
   if (server_group)
     {
-      svn_config_get(cfg, proxy_host, server_group, "http-proxy-host",
-                     *proxy_host);
-      svn_config_get(cfg, &port_str, server_group, "http-proxy-port",
-                     port_str);
-      svn_config_get(cfg, proxy_username, server_group, "http-proxy-username",
-                     *proxy_username);
-      svn_config_get(cfg, proxy_password, server_group, "http-proxy-password",
-                     *proxy_password);
-      svn_config_get(cfg, &timeout_str, server_group, "http-timeout",
-                     timeout_str);
-      svn_config_get(cfg, &debug_str, server_group, "http-compression",
-                     compress_str);
-      svn_config_get(cfg, &debug_str, server_group, "neon-debug-mask",
-                     debug_str);
+      svn_config_get(cfg, proxy_host, server_group, 
+                     SVN_CONFIG_OPTION_HTTP_PROXY_HOST, *proxy_host);
+      svn_config_get(cfg, &port_str, server_group, 
+                     SVN_CONFIG_OPTION_HTTP_PROXY_PORT, port_str);
+      svn_config_get(cfg, proxy_username, server_group, 
+                     SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, *proxy_username);
+      svn_config_get(cfg, proxy_password, server_group, 
+                     SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, *proxy_password);
+      svn_config_get(cfg, &timeout_str, server_group, 
+                     SVN_CONFIG_OPTION_HTTP_TIMEOUT, timeout_str);
+      svn_config_get(cfg, &compress_str, server_group, 
+                     SVN_CONFIG_OPTION_HTTP_COMPRESSION, compress_str);
+      svn_config_get(cfg, &debug_str, server_group, 
+                     SVN_CONFIG_OPTION_NEON_DEBUG_MASK, debug_str);
     }
 
   /* Special case: convert the port value, if any. */
