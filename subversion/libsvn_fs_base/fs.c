@@ -894,6 +894,11 @@ get_db_pagesize (u_int32_t *pagesize,
   return SVN_NO_ERROR;
 }
 
+/* Ensure compatibility with older APR 0.9.5 snapshots which don't
+ * support the APR_LARGEFILE flag. */
+#ifndef APR_LARGEFILE
+#define APR_LARGEFILE (0)
+#endif
 
 /* Copy FILENAME from SRC_DIR to DST_DIR in byte increments of size
    CHUNKSIZE.  The read/write buffer of size CHUNKSIZE will be
@@ -912,15 +917,17 @@ copy_db_file_safely (const char *src_dir,
   char *buf;
 
   /* Open source file. */
-  status = apr_file_open(&s, file_src_path, APR_READ, APR_OS_DEFAULT, pool);
+  status = apr_file_open (&s, file_src_path, (APR_READ | APR_LARGEFILE),
+                          APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf (status, NULL,
                               "Can't open file '%s' for reading.",
                               file_src_path);
 
   /* Open destination file. */
-  status = apr_file_open(&d, file_dst_path, (APR_WRITE | APR_CREATE),
-                         APR_OS_DEFAULT, pool);
+  status = apr_file_open (&d, file_dst_path, 
+                          (APR_WRITE | APR_CREATE | APR_LARGEFILE),
+                          APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf (status, NULL,
                               "Can't open file '%s' for writing.",
