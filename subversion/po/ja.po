@@ -5209,6 +5209,11 @@ msgstr ""
 "サブコマンド '%s' にはオプション '%s' をつけられません。\n"
 "使用方法を知りたいときは 'svnadmin help %s' と打ってください。\n"
 
+#: svndumpfilter/main.c:638
+msgid "Delta property block detected - not supported by svndumpfilter"
+msgstr ""
+"delta 属性ブロックが検出されました - svndumpfilter ではサポートされません"
+
 #: svndumpfilter/main.c:641
 #, c-format
 msgid "Revision %ld committed as %ld.\n"
