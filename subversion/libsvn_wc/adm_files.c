@@ -55,9 +55,10 @@ svn_wc__adm_subdir (apr_pool_t *pool)
 /* Extend PATH to the name of something in PATH's administrative area.
  * Returns the number of path components added to PATH.
  * 
- * First, the adm subdir is appended to PATH as a component, then each
- * of the varargs in AP (char *'s) is appended as a path component.
- * The list must be terminated with a NULL argument.
+ * First, the adm subdir is appended to PATH as a component, then the
+ * "tmp" directory is added iff USE_TMP is set, then each of the
+ * varargs in AP (char *'s) is appended as a path component.  The list
+ * must be terminated with a NULL argument.
  *
  * Adding an empty component results in no effect (i.e., the separator
  * char is not doubled).
@@ -69,8 +70,7 @@ svn_wc__adm_subdir (apr_pool_t *pool)
  *
  * So, the safest recipe is for callers of extend_with_adm_name() to
  * always have exactly one return statement, occurring *after* an
- * unconditional call to chop_admin_name().
- */
+ * unconditional call to chop_admin_name().  */
 static int
 v_extend_with_adm_name (svn_stringbuf_t *path,
                         svn_boolean_t use_tmp,
@@ -728,6 +728,28 @@ svn_wc__close_text_base (apr_file_t *fp,
 }
 
 
+svn_error_t *
+svn_wc__open_auth_file (apr_file_t **handle,
+                        svn_stringbuf_t *path,
+                        svn_stringbuf_t *auth_filename,
+                        apr_int32_t flags,
+                        apr_pool_t *pool)
+{
+  return open_adm_file (handle, path, flags, pool,
+                        SVN_WC__ADM_AUTH_DIR, auth_filename->data, NULL);
+}
+
+
+svn_error_t *
+svn_wc__close_auth_file (apr_file_t *handle,
+                         svn_stringbuf_t *path,
+                         svn_stringbuf_t *file,
+                         int sync,
+                         apr_pool_t *pool)
+{
+  return close_adm_file (handle, path, sync, pool,
+                         SVN_WC__ADM_AUTH_DIR, file->data, NULL);
+}
 
 svn_error_t *
 svn_wc__open_props (apr_file_t **handle,

@@ -41,7 +41,8 @@ enum svn_path_style {
   svn_path_url_style         /* parse path using URL conventions */
 };
 
-/* Add a COMPONENT (a null-terminated C-string) to PATH.
+/* Add a COMPONENT (a null-terminated C-string) to PATH.  COMPONENT is
+   allowed to contain directory separators.
 
    If PATH is non-empty, append the appropriate directory separator
    character, and then COMPONENT.  If PATH is empty, simply set it to
