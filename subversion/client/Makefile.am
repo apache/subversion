@@ -13,6 +13,7 @@ INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_EXPAT_INCLUDES@
 
 ## Libraries this binary depends upon:
 svn_LDADD = @SVN_LIBSVN_CLIENT_LIBS@ \
+	    @SVN_TESTS_MAIN_LIBS@ \
             @SVN_LIBSVN_WC_LIBS@ \
             @SVN_LIBSVN_RA_LIBS@ \
             @LIBSVN_CLIENT_DEPS@ \
