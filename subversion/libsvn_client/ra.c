@@ -20,7 +20,10 @@
 
 #include <apr_pools.h>
 
+#include "svn_error.h"
+#include "svn_string.h"
 #include "svn_ra.h"
+#include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_path.h"
 
@@ -31,10 +34,9 @@ static svn_error_t *
 open_admin_tmp_file (apr_file_t **fp,
                      void *callback_baton)
 {
-  svn_client_auth_baton_t *cb = 
-    (svn_client_auth_baton_t *) callback_baton;
+  svn_client__callback_baton_t *cb = callback_baton;
   
-  SVN_ERR (svn_wc_create_tmp_file (fp, cb->path, cb->pool));
+  SVN_ERR (svn_wc_create_tmp_file (fp, cb->base_dir, cb->pool));
 
   return SVN_NO_ERROR;
 }
@@ -44,8 +46,8 @@ static svn_error_t *
 open_tmp_file (apr_file_t **fp,
                void *callback_baton)
 {
-  svn_client_auth_baton_t *cb = (svn_client_auth_baton_t *) callback_baton;
-  svn_stringbuf_t *truepath = svn_stringbuf_dup (cb->path, cb->pool);
+  svn_client__callback_baton_t *cb = callback_baton;
+  svn_stringbuf_t *truepath = svn_stringbuf_dup (cb->base_dir, cb->pool);
   svn_stringbuf_t *ignored_filename;
 
   /* Tack on a made-up filename. */
@@ -59,55 +61,6 @@ open_tmp_file (apr_file_t **fp,
 }
 
 
-/* Fetch a vtable of CALLBACKS/CALLBACK_BATON suitable for passing
-   to RA->open().  AUTH_BATON is originally provided by the calling
-   application.  Do allocation in POOL.
-
-   The calling libsvn_client routine customizes these callbacks, based
-   on what it's about to do with the RA session:
-
-      - PATH customizes the callbacks to operate on a specific path in
-        the working copy.  
-
-      - DO_STORE indicates whether the RA layer should attempt to
-        store authentication info.
-
-      - USE_ADMIN indicates that the RA layer should create tempfiles
-        in the administrative area instead of in the working copy itself.
-
-*/
-static svn_error_t *
-get_ra_callbacks (svn_ra_callbacks_t **callbacks,
-                  void **callback_baton,
-                  svn_client_auth_baton_t *auth_baton,
-                  svn_stringbuf_t *path,
-                  svn_boolean_t do_store,
-                  svn_boolean_t use_admin,
-                  apr_pool_t *pool)
-{
-  svn_ra_callbacks_t *cbtable = 
-    (svn_ra_callbacks_t *) apr_pcalloc (pool, sizeof(*cbtable));
-  
-  cbtable->open_tmp_file = use_admin ? open_admin_tmp_file : open_tmp_file;
-  cbtable->get_authenticator = svn_client__get_authenticator;
-
-  /* Just copy the PATH and DO_STORE into the baton, so callbacks can
-     see them later. */
-  auth_baton->path = path;
-  auth_baton->do_store = do_store;
-  
-  /* This is humorous; at present, we use the application-provided
-     auth_baton as the baton for whole the callbacks-vtable!  This
-     might not always be so.  For now, it's just easier that
-     svn_client_auth_baton_t be shared by the application and client
-     both, rather than wrapping one baton in another. */
-  *callback_baton = auth_baton;
-
-  *callbacks = cbtable;
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t * svn_client__open_ra_session (void **session_baton,
                                            const svn_ra_plugin_t *ra_lib,
                                            svn_stringbuf_t *repos_URL,
@@ -117,17 +70,18 @@ svn_error_t * svn_client__open_ra_session (void **session_baton,
                                            void *auth_baton,
                                            apr_pool_t *pool)
 {
-  svn_ra_callbacks_t *ra_callbacks;
-  void *cb_baton;
+  svn_ra_callbacks_t *cbtable = apr_pcalloc (pool, sizeof(*cbtable));
+  svn_client__callback_baton_t *cb = apr_pcalloc (pool, sizeof(*cb));
 
-  SVN_ERR (get_ra_callbacks (&ra_callbacks, &cb_baton,
-                             auth_baton, base_dir,
-                             do_store, use_admin,
-                             pool));
+  cbtable->open_tmp_file = use_admin ? open_admin_tmp_file : open_tmp_file;
+  cbtable->get_authenticator = svn_client__get_authenticator;
 
-  SVN_ERR (ra_lib->open (session_baton, repos_URL,
-                         ra_callbacks, cb_baton,
-                         pool));
+  cb->auth_baton = auth_baton;
+  cb->base_dir = base_dir;
+  cb->do_store = do_store;
+  cb->pool = pool;
+
+  SVN_ERR (ra_lib->open (session_baton, repos_URL, cbtable, cb, pool));
 
   return SVN_NO_ERROR;
 }

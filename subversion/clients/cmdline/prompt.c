@@ -45,7 +45,6 @@ svn_cl__make_auth_baton (svn_cl__opt_state_t *opt_state,
 
   auth_obj->prompt_callback = svn_cl__prompt_user;
   auth_obj->prompt_baton = NULL;
-  auth_obj->pool = pool;
 
   if (opt_state->auth_username)
     {
