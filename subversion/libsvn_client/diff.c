@@ -1012,7 +1012,7 @@ do_diff (const apr_array_header_t *options,
               break;
             default:
               return svn_error_createf (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
-                                        "'%s' at rev %d wasn't found "
+                                        "'%s' at rev %ld wasn't found "
                                         "in repository.", path2->data,
                                         end_revnum);
             }                   
