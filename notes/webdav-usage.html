@@ -19,6 +19,14 @@
       <a href="http://www.apache.org/httpd">Apache 2.0</a> module,
       operating as a back-end for its mod_dav functionality.
     </p>
+    <p>
+      This document heavily refers to the
+      <a href="http://subversion.tigris.org/svn-design.html">Subversion
+	design document</a> and the
+      <a href="http://www.webdav.org/deltav/">latest Delta-V protocol
+	draft</a>. Details of those documents will <em>not</em> be
+      replicated here.
+    </p>
 
     <h2>Basic Concepts</h2>
     <p>
@@ -65,15 +73,105 @@
       <code>LABEL</code> and <code>COPY</code> methods as appropriate.
     </p>
 
+    <h2>Subversion Projects as URLs</h2>
+    <p>
+      The very first concept to define is how a project is exposed to
+      the client. Subversion will expose all projects as URLs on a
+      server. The files and subdirectories under this project will be
+      exposed through the URL namespace.
+    </p>
+    <p>
+      For example, let us assume that we have a project named
+      "example". And let us say that this project will be exposed at
+      the URL: <code>http://subversion.tigris.org/example/</code>.
+    </p>
+    <p>
+      This mapping will be set up through a set of configuration
+      parameters for the Apache HTTPD server (which is hosting the
+      Subversion code and the particular project in question). The
+      configuration might look like:
+    </p>
+    <blockquote>
+<pre>&lt;Location /example&gt;
+    DAV subversion
+    SVNPath /home/svn-projects/example
+&lt;/Location&gt;</pre>
+    </blockquote>
+    <p>
+      Files and directories within the project will be directly mapped
+      to the URL namespace. For example, if the project contains a
+      file "file.c" in a subdirectory "sub", then the URL for that
+      file will be
+      <code>http://subversion.tigris.org/example/sub/file.c</code>.
+    </p>
+
     <h2>Committing a Change Set</h2>
     <p>
       Change sets are modelled using the "activity" concept from
       WebDAV. An activity can be viewed as a transaction for a set of
       resources.
     </p>
+    <h3>Creating the activity</h3>
     <p>
-      ...
+      At the start of a commit, the client will issue a
+      <code>REPORT</code> method for a
+      <code>DAV:repository-report</code> to determine where the
+      activity should be created. Next, the client will generate a
+      UUID (a unique value) to use for the activity's
+      location. Finally, the client will issue a
+      <code>MKACTIVITY</code> method request, where the URL is
+      composed from the URL returned by the
+      <code>repository-report</code> and the UUID. The request will
+      construct an activity to hold all of the changes for the commit.
     </p>
+    <p>Abbreviated summary:</p>
+    <dl>
+      <dt>Request: REPORT, DAV:repository-report</dt>
+      <dd>Response: http://www.example.com/$svn/act/</dd>
+      <dt>Request: MKACTIVITY,
+	http://www.example.com/$svn/act/01234567-89ab-cdef-0123-456789abcdef</dt>
+      <dd>Response: 201, created</dd>
+    </dl>
+    
+    <h3>Mapping changes to WebDAV</h3>
+    <p>
+      A change set in Subversion is specified with a "tree delta". The
+      tree delta will be unravelled into a set of requests. These
+      requests will be one of the following forms:
+    </p>
+    <dl>
+      <dt>Delete file/directory</dt>
+      <dd>
+	This will be mapped to a <code>DELETE</code> operation. The
+	target will be checked out using <code>CHECKOUT</code>, then
+	the working resource will be deleted using
+	<code>DELETE</code>.
+	<p>
+	  Note that the versioning protocol draft states the result of
+	  deleting a working resource is undefined. Subversion will
+	  define this as "the version selector corresponding to the
+	  working resource will be deleted upon <code>CHECKIN</code>
+	  (or <code>MERGE</code>)."
+	</p>
+      </dd>
+
+      <dt>New file</dt>
+      <dd>This is simply modelled with a <code>PUT</code> or
+      <code>MKCOL</code> operation.</dd>
+
+      <dt>New file/directory, previous ancestory</dt>
+      <dd>
+	A tree delta can specify that a file/directory originates as a
+	copy of another file/dir. Further, this copy may be modified
+	by additional elements the tree delta.
+
+	<p>
+	  This change will be modeled by a <code>PUT</code> or
+	  <code>MKCOL</code>. If a copy is made, followed by specific
+	  changes, then ...###...
+	</p>
+      </dd>
+    </dl>
 
     <h2>URL Layout</h2>
     <p>
@@ -90,11 +188,19 @@
 
     <h2>Tags and Branches</h2>
 
+    <h2>Server Requirements</h2>
+    <p>
+      <code>DAV:repository-report</code>
+      <br>
+      Retain activity information. Activities have user-specified
+      names, mapping to the server-side records.
+    </p>
+
     <hr>
     <address><a href="mailto:gstein@lyra.org">Greg Stein</a></address>
 <!-- Created: Thu Aug 10 19:14:20 PDT 2000 -->
 <!-- hhmts start -->
-Last modified: Fri Aug 11 04:22:24 PDT 2000
+Last modified: Mon Aug 14 04:03:56 Pacific Daylight Time 2000
 <!-- hhmts end -->
   </body>
 </html>
