@@ -195,7 +195,10 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
   output = svn_test_main.run_svn ('ci', *args)
 
   # Remove the final output line, and verify that 'Commit succeeded'.
-  lastline = string.strip(output.pop())
+  lastline = ""
+  if len(output):
+    lastline = string.strip(output.pop())
+
   if lastline != 'Commit succeeded.':
     print "ERROR:  commit did not 'succeed'."
     print "The final line from 'svn ci' was:"
