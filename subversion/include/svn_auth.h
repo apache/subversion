@@ -74,12 +74,11 @@ typedef struct
      understands. */
   const char *cred_kind;
   
-  /* Set *CREDENTIALS to a set of valid credentials.  If no
-     credentials are available, return an error describing why (in
-     which case *CREDENTIALS are undefined.)  Set *ITER_BATON to
-     context that allows a subsequent call to next_credentials(), in
-     case the first credentials fail to authenticate.  PROVIDER_BATON
-     is general context for the vtable. */
+  /* Set *CREDENTIALS to a set of valid credentials, or NULL if no
+     credentials are available.  Set *ITER_BATON to context that
+     allows a subsequent call to next_credentials(), in case the first
+     credentials fail to authenticate.  PROVIDER_BATON is general
+     context for the vtable. */
   svn_error_t * (*first_credentials) (void **credentials,
                                       void **iter_baton,
                                       void *provider_baton,
@@ -88,14 +87,17 @@ typedef struct
   /* Set *CREDENTIALS to another set of valid credentials, (using
      ITER_BATON as the context from previous call to first_credentials
      or next_credentials).  If no more credentials are available,
-     return an error describing why. */
+     set *CREDENITALS to NULL. */
   svn_error_t * (*next_credentials) (void **credentials,
                                      void *iter_baton,
                                      apr_pool_t *pool);
   
   /* Store CREDENTIALS for future use.  PROVIDER_BATON is general
-     context for the vtable.  Return error if unable to save. */
-  svn_error_t * (*save_credentials) (void *credentials,
+     context for the vtable.  Set *SAVED to true if the save happened,
+     or false if not.  (The provider is not required to save;  if it
+     refuses or is unable to save, return false.) */
+  svn_error_t * (*save_credentials) (svn_boolean_t *saved,
+                                     void *credentials,
                                      void *provider_baton,
                                      apr_pool_t *pool);
   
@@ -140,11 +142,10 @@ svn_error_t * svn_auth_register_provider(svn_auth_baton_t *auth_baton,
                                          apr_pool_t *pool);
 
 /* Ask AUTH_BATON to set *CREDENTIALS to a set of credentials defined
-   by CRED_KIND.  If no credentials are available, return error(s)
-   explaining why (in which case *CREDENTIALS are undefined.)
-   Otherwise, return an iteration state in *STATE, so that the caller
-   can call svn_auth_next_credentials(), in case the first set of
-   credentials fails to authenticate.
+   by CRED_KIND, or NULL if no credentials are available.  Otherwise,
+   return an iteration state in *STATE, so that the caller can call
+   svn_auth_next_credentials(), in case the first set of credentials
+   fails to authenticate.
 
    Use POOL to allocate *STATE, and for temporary allocation.  Note
    that there is no guarantee about where *CREDENTIALS will be
@@ -159,9 +160,8 @@ svn_error_t * svn_auth_first_credentials(void **credentials,
                                          apr_pool_t *pool);
 
 /* Use STATE to fetch a different set of *CREDENTIALS, as a follow-up
-   to svn_auth_first_credentials().  If no more credentials are
-   available, return error(s) explaining why (in which case
-   *CREDENTIALS are undefined.)
+   to svn_auth_first_credentials() or svn_auth_next_credentials().
+   If no more credentials are available, set *CREDENTIALS to NULL.
 
    Use POOL for temporary allocation.  Note that there is no guarantee
    about where *CREDENTIALS will be allocated: it might be in POOL, or
@@ -175,7 +175,8 @@ svn_error_t * svn_auth_next_credentials(void **credentials,
 
 /* Ask AUTH_BATON to store CREDENTIALS (of type CRED_KIND) for future
    use.  Presumably these credentials authenticated successfully.  Use
-   POOL for temporary allocation. */
+   POOL for temporary allocation.  If no provider is able to store the
+   credentials, return error. */
 svn_error_t * svn_auth_save_credentials(const char *cred_kind,
                                         void *credentials,
                                         svn_auth_baton_t *auth_baton,
