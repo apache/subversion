@@ -46,11 +46,11 @@ $ svn import file:///var/svn . new_proj
 .in -1i
 .SP
 .TP
-.BI createtxn " repos-path base_rev"
+.BI createtxn " repos-path \-rbase_rev"
 Create a new transaction based on
 .IR base_rev .
 .TP
-.BI dump " repos-path"  " \fR[\fI lower-rev \fR[\fI upper-rev \fR]] \fR[\fI--incremental\fR]\fI"
+.BI dump " repos-path"  " \fR[\fI \-rlower-rev\fR[\fI:upper-rev\fR] ] \fR[\fI--incremental\fR]\fI"
 Dump the contents of filesystem to stdout in a 'dumpfile'
 portable format, sending feedback to stderr.  Dump revisions
 .IR lower-rev
@@ -60,7 +60,10 @@ If no revisions are given, all revision trees are dumped.
 If just
 .IR lower-rev 
 is given, that one revision tree is dumped.  A 'dumpfile' is used to 
-convert between incompatible repository formats.
+convert between incompatible repository formats. If
+.BI --incremental
+is passed, then the first revision dumped will be a diff against the
+previous revision, instead of the usual fulltext.
 .TP
 .BI load " repos-path"
 Read a 'dumpfile'-formatted stream from stdin, committing
@@ -73,9 +76,9 @@ Print, one-per-line and youngest-to-eldest, the revisions in which
 was modified.  Use the --copies flag to allow this operation 
 to cross copy history while searching for revisions.
 (For directories, this is, for now, almost guaranteed to be
-uninteresting.  Also, path must exist in the HEAD of the repository.
+uninteresting.  Also, path must exist in the HEAD of the repository.)
 .TP
-.BI lsrevs " repos-path"  " \fR[\fI lower-rev \fR[\fI upper-rev \fR]]"
+.BI lsrevs " repos-path"  " \fR[\fI -rlower-rev\fR[\fI:upper-rev\fR] ]"
 If no revision is given, all revision trees are printed.  If just 
 .IR lower-rev
 is given, that revision tree is printed.
@@ -86,11 +89,16 @@ Print all txn names and, if
 .BI --long
 is specified, their metadata and trees.
 .TP
+.BI recover " repos_path"
+Run the Berkeley DB recovery procedure on a repository.
+WARNING: only run this when you are SURE you're the only process
+accessing the repository.  Requires exclusive access.
+.TP
 .BI rmtxns " repos-path txn-name \fR[\fI ... \fR]\fI"
- Delete the transaction(s) named 
+Delete the transaction(s) named 
 .BI txn-name.
 .TP
-.BI setlog " repos-path rev file"
+.BI setlog " repos-path \-rrev file"
 Set the log-message on revision 
 .IR rev 
 to the contents of 
@@ -116,7 +124,7 @@ List entries in the current directory.
 Leave the shell.
 .RE
 .TP
-.BI undeltify " repos-path rev path"
+.BI undeltify " repos-path \-rrev path"
 Undeltify (ensure full text storage for) 
 .IR path 
 in
