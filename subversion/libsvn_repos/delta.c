@@ -205,18 +205,16 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
   svn_stringbuf_set (tempbuf, src_parent_dir);
   if (! svn_path_is_empty (tempbuf))
     {
-      int s_dir, t_dir;
+      int s_dir;
       SVN_ERR (svn_fs_is_dir (&s_dir, src_root, src_parent_dir, pool));
-      SVN_ERR (svn_fs_is_dir (&t_dir, tgt_root, tgt_parent_dir->data, pool));
-      if ((! s_dir) || (! t_dir))
+      if (! s_dir)
         return not_a_dir_error ("source parent", src_parent_dir, pool);
     }
   if (! svn_path_is_empty (tgt_parent_dir))
     {
-      int s_dir, t_dir;
-      SVN_ERR (svn_fs_is_dir (&s_dir, src_root, tgt_parent_dir->data, pool));
+      int t_dir;
       SVN_ERR (svn_fs_is_dir (&t_dir, tgt_root, tgt_parent_dir->data, pool));
-      if ((! s_dir) || (! t_dir))
+      if (! t_dir)
         return not_a_dir_error ("target parent", tgt_parent_dir->data, pool);
     }
   
