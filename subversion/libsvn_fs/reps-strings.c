@@ -163,8 +163,9 @@ struct window_handler_baton_t
   /* Trail in which to do everything. */
   trail_t *trail;
 
-  /* Pool in which to do any temporary or error allocations.  Can be
-     the same as trail->pool. */
+  /* Pool in which to do temporary allocations.  This may be cleared
+     by the window handler, so you probably don't want it to be the
+     same as trail->pool. */
   apr_pool_t *pool;
 };
 
@@ -177,7 +178,7 @@ struct window_handler_baton_t
 
    If WINDOW is relevant, reconstruct some portion of BATON->buf, as
    part of BATON->trail; any temporary allocation happens in
-   BATON->pool (which may be the same as BATON->trail->pool.  If
+   BATON->pool, which may be cleared before the handler exits.  If
    WINDOW is irrelevant, ignore it and return.
 
    Q: When is WINDOW irrelevant?
@@ -245,19 +246,11 @@ window_handler (svn_txdelta_window_t *window, void *baton)
      slow. :-)  And anyway, we're going to do things differently. */
 
   {
-    apr_pool_t *subpool;  /* over-optimization?  not sure.  Note that
-                             if store this in wb, then can use
-                             apr_pool_clear() below.  Doesn't seem
-                             worth it for code that should go away
-                             soon anyway, though. */
-
     char *sbuf;       /* Reconstructed source data. */
     apr_size_t slen;  /* Length of source data. */
 
-    subpool = svn_pool_create (wb->pool);
-
     slen = window->sview_len;
-    sbuf = apr_palloc (subpool, slen);
+    sbuf = apr_palloc (wb->pool, slen);
 
     /* ### todo: this is the core of the naive algorithm, and is what
        has to go when we have a true delta combiner. */
@@ -316,7 +309,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
         }
     }
 
-    apr_pool_destroy (subpool);
+    svn_pool_clear (wb->pool);
   }
 
   /* If this window looks past relevant data, then we're done. */
@@ -373,7 +366,7 @@ rep_read_range (svn_fs_t *fs,
       wb.len_read      = 0;
       wb.done          = FALSE;
       wb.trail         = trail;
-      wb.pool          = trail->pool;
+      wb.pool          = svn_pool_create (trail->pool);
 
       /* Set up a window handling stream for the svndiff data. */
       wstream = svn_txdelta_parse_svndiff (window_handler, &wb, trail->pool);
