@@ -103,13 +103,13 @@ get_username (char **username,
           status = apr_current_userid (&uid, &gid, pool);
           if (status)
             return 
-              svn_error_createf(status, 0, NULL, pool,
-                                "Error getting UID of process.");
+              svn_error_create(status, 0, NULL, pool,
+                               "Error getting UID of process.");
           
           status = apr_get_username (&un, uid, pool);
           if (status)
-            return svn_error_createf(status, 0, NULL, pool,
-                                     "Error in UID->username.");
+            return svn_error_create(status, 0, NULL, pool,
+                                    "Error in UID->username.");
           *username = un;                       
         }
 
