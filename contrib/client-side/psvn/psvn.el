@@ -2728,6 +2728,7 @@ If ARG then show diff between some other version of the selected files."
 
 (when (not svn-log-view-mode-map)
   (setq svn-log-view-mode-map (make-sparse-keymap))
+  (suppress-keymap svn-log-view-mode-map)
   (define-key svn-log-view-mode-map (kbd "p") 'svn-log-view-prev)
   (define-key svn-log-view-mode-map (kbd "n") 'svn-log-view-next)
   (define-key svn-log-view-mode-map (kbd "=") 'svn-log-view-diff)
