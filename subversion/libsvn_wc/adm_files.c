@@ -1,7 +1,9 @@
 /*
  * adm_files.c: helper routines for handling files & dirs in the
  *              working copy administrative area (creating,
- *              deleting, opening, and closing).
+ *              deleting, opening, and closing).  This is the only
+ *              code that actually knows where administrative
+ *              information is kept.  
  *
  * ================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
@@ -100,19 +102,24 @@ extend_with_admin_name (svn_string_t *path,
                         char *adm_file,
                         apr_pool_t *pool)
 {
-  svn_path_add_component     (path, adm_subdir (pool), 
-                              SVN_PATH_LOCAL_STYLE, pool);
-  svn_path_add_component_nts (path, adm_file, 
-                              SVN_PATH_LOCAL_STYLE, pool);
+  svn_path_add_component (path, adm_subdir (pool), SVN_PATH_LOCAL_STYLE, pool);
+
+  if (adm_file && (adm_file[0] != '\0'))    
+    svn_path_add_component_nts (path, adm_file, SVN_PATH_LOCAL_STYLE, pool);
 }
 
 
-/* Restore PATH to what it was before an adm filename was appended to it. */
+/* Restore PATH to what it was before a call to extend_with_admin_name(). 
+   If SECOND_COMPONENT is non-zero, then PATH had been extended with
+   not only the adm_subdir name, but a file beyond that, so chop
+   both; otherwise, just chop one component. */
 static void
-chop_admin_thing (svn_string_t *path)
+chop_admin_thing (svn_string_t *path, int second_component)
 {
   svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
-  svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
+
+  if (second_component)
+    svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
 }
 
 
@@ -146,7 +153,7 @@ svn_wc__make_adm_thing (svn_string_t *path,
             err = svn_create_error (apr_err, 0, path->data, NULL, pool);
         }
     }
-  else if (type == svn_directory_kind)
+  else if (type == svn_dir_kind)
     {
       apr_err = apr_make_dir (path->data, APR_OS_DEFAULT, pool);
       if (apr_err)
@@ -159,10 +166,10 @@ svn_wc__make_adm_thing (svn_string_t *path,
     }
 
   /* Restore path to its original state no matter what. */
-  if (strlen (thing) == 0) /* special case for making "SVN" dir */
-    svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
-  else
-    chop_admin_thing (path);
+  chop_admin_thing (path, strlen (thing));   /* todo: thing[0] would
+                                                involve no funcall,
+                                                but stylistically
+                                                questionable? */
 
   return err;
 }
@@ -186,7 +193,7 @@ svn_wc__open_adm_file (apr_file_t **handle,
     err = svn_create_error (apr_err, 0, path->data, NULL, pool);
 
   /* Restore path to its original state no matter what. */
-  chop_admin_thing (path);
+  chop_admin_thing (path, 1);
 
   return err;
 }
@@ -209,7 +216,7 @@ svn_wc__close_adm_file (apr_file_t *fp,
     err = svn_create_error (apr_err, 0, path->data, NULL, pool);
 
   /* Restore path to its original state no matter what. */
-  chop_admin_thing (path);
+  chop_admin_thing (path, 1);
 
   return err;
 }
@@ -231,9 +238,295 @@ svn_wc__remove_adm_thing (svn_string_t *path,
     err = svn_create_error (apr_err, 0, path->data, NULL, pool);
 
   /* Restore path to its original state no matter what. */
-  chop_admin_thing (path);
+  chop_admin_thing (path, 1);
 
   return err;
+}
+
+
+
+/*** Checking for and creating administrative subdirs. ***/
+
+/* Set *EXISTS to non-zero iff there's an adm area for PATH.
+   If an error occurs, just return error and don't touch *EXISTS. */
+static svn_error_t *
+check_adm_exists (int *exists, svn_string_t *path, apr_pool_t *pool)
+{
+  svn_error_t *err = NULL;
+  apr_status_t apr_err;
+  apr_dir_t *ignore_me = NULL;
+  int dir_exists = 0;
+  apr_file_t *f = NULL;
+
+  /** Step 1: check that the directory exists. **/
+
+  extend_with_admin_name (path, NULL, pool);
+  apr_err = apr_opendir (&ignore_me, path->data, pool);
+
+  if (apr_err && (apr_err != APR_ENOENT))
+    {
+      /* If got an error other than dir non-existence, then
+         something's weird and we should return a genuine error. */
+      err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+    }
+  else if (apr_err)   /* APR_ENOENT */
+    {
+      dir_exists = 0;
+      apr_err = 0;
+    }
+  else                /* dir opened, so it must exist */
+    {
+      dir_exists = 1;
+      apr_err = apr_closedir (ignore_me);
+    }
+
+  if (apr_err)
+    err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+
+  /* Restore path to its original state. */
+  chop_admin_thing (path, 0);
+
+  /* Okay, first stopping point; see how we're doing. */
+  if (err)
+    return err;
+  else if (! dir_exists)
+    {
+      *exists = 0;
+      return SVN_NO_ERROR;
+    }
+
+  /** The directory exists, but is it a valid working copy yet?
+      Try step 2: checking that SVN_WC__ADM_README exists. **/
+
+  err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_README, APR_READ, pool);
+  if (err && (err->apr_err != APR_EEXIST))
+    return err;
+  else if (err)
+    *exists = 0;
+  else
+    *exists = 1;
+
+  err = svn_wc__close_adm_file (f, path, SVN_WC__ADM_README, pool);
+  if (err)
+    return err;
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+make_empty_adm (svn_string_t *path, apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_status_t apr_err;
+
+  extend_with_admin_name (path, NULL, pool);
+
+  apr_err = apr_make_dir (path->data, APR_OS_DEFAULT, pool);
+  if (apr_err)
+    err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+    
+  chop_admin_thing (path, 0);
+
+  return err;
+}
+
+
+/* This doesn't have to do the usual tmpfile/rename routine, because
+   we're initializing the files and the adm area isn't valid until
+   we're done anyway. */
+static svn_error_t *
+init_contents_thing (svn_string_t *path,
+                     char *thing,
+                     svn_string_t *contents,
+                     apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_status_t apr_err;
+  apr_file_t *f = NULL;
+  apr_size_t written = 0;
+
+  err = svn_wc__open_adm_file (&f, path, thing, APR_WRITE, pool);
+  if (err)
+    return err;
+
+  apr_err = apr_full_write (f, contents->data, contents->len, &written);
+
+  err = svn_wc__close_adm_file (f, path, thing, pool);
+  if (err)
+    return err;
+  
+  if (apr_err)
+    err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+
+  return err;
+}
+
+
+/** kff todo: I think everything below here is ignorant of actual adm
+    locations, and could be moved to adm_ops.c or some other place.
+    But wait on that for a bit. **/
+
+/* Set up a new adm area, with appropriate ancestry. */
+static svn_error_t *
+init_adm (svn_string_t *path,
+          svn_string_t *repository,
+          apr_pool_t *pool)
+{
+  /* Initial contents for certain adm files. */
+  const char *format_contents = "1\n";
+  const char *readme_contents =
+    "This is a Subversion working copy administrative directory.\n"
+    "Visit http://www.subversion.tigris.org/ for more information.\n";
+  /* kff todo: func-ize this, & pass in real version soon. */
+  const char *versions_contents =
+    "<wc-versions xmlns=\"http://subversion.tigris.org/xmlns/\">\n"
+    "</wc-versions>";
+
+  svn_error_t *err;
+
+  /* First, make an empty administrative area. */
+  err = make_empty_adm (path, pool);
+
+  /* Lock it immediately.  Theoretically, no compliant wc library
+     would ever consider this an adm area until a README file were
+     present... but locking it is still appropriately paranoid. */
+  err = svn_wc__lock (path, 0, pool);
+  if (err)
+    return err;
+
+
+  /** Now initialize each of the administrative files. */
+
+
+  /* SVN_WC__ADM_FORMAT */
+  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_FORMAT,
+                                svn_file_kind, pool);
+  if (err)
+    return err;
+  err = init_contents_thing (path, SVN_WC__ADM_FORMAT,
+                             svn_string_create (format_contents, pool), pool);
+  if (err)
+    return err;
+
+
+  /* SVN_WC__ADM_REPOSITORY */
+  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_REPOSITORY,
+                                svn_file_kind, pool);
+  if (err)
+    return err;
+  err = init_contents_thing (path, SVN_WC__ADM_REPOSITORY,
+                             repository, pool);
+  if (err)
+    return err;
+
+
+  /* SVN_WC__ADM_VERSIONS */
+  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_VERSIONS,
+                                svn_file_kind, pool);
+  if (err)
+    return err;
+  err = init_contents_thing (path, SVN_WC__ADM_VERSIONS,
+                             svn_string_create (versions_contents, pool),
+                             pool);
+  if (err)
+    return err;
+
+
+  /* SVN_WC__ADM_DELTA_HERE */
+  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_DELTA_HERE,
+                                svn_file_kind, pool);
+  if (err)
+    return err;
+  
+
+  /* SVN_WC__ADM_PROPERTIES */
+  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_PROPERTIES,
+                                svn_file_kind, pool);
+  if (err)
+    return err;
+
+
+  /* SVN_WC__ADM_TEXT_BASE */
+  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_TEXT_BASE,
+                                svn_dir_kind, pool);
+  if (err)
+    return err;
+
+
+  /* SVN_WC__ADM_PROP_BASE */
+  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_PROP_BASE,
+                                svn_dir_kind, pool);
+  if (err)
+    return err;
+
+
+  /* SVN_WC__ADM_DPROP_BASE */
+  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_DPROP_BASE,
+                                svn_dir_kind, pool);
+  if (err)
+    return err;
+
+
+  /* SVN_WC__ADM_TMP */
+  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_TMP,
+                                svn_dir_kind, pool);
+  if (err)
+    return err;
+  
+
+  /* SVN_WC__ADM_DOING */
+  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_DOING,
+                                svn_dir_kind, pool);
+  if (err)
+    return err;
+
+
+  /* THIS FILE MUST BE CREATED LAST: 
+     After this exists, the dir is considered complete. */
+  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_README,
+                                svn_file_kind, pool);
+  if (err)
+    return err;
+  err = init_contents_thing (path, SVN_WC__ADM_README,
+                             svn_string_create (readme_contents, pool),
+                             pool);
+  if (err)
+    return err;
+
+
+  /* Unlock -- the dir is now complete. */
+  err = svn_wc__unlock (path, pool);
+  if (err)
+    return err;
+
+
+  /* Else no problems, we're outta here. */
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__ensure_adm (svn_string_t *path,
+                    svn_string_t *repository,
+                    apr_pool_t *pool)
+{
+  svn_error_t *err;
+  int exists = 0;
+
+  err = check_adm_exists (&exists, path, pool);
+  if (err)
+    return err;
+
+  if (! exists)
+    {
+      /* kff todo: modify chain above to pass ancestry/version down. */
+      err = init_adm (path, repository, pool);
+      if (err)
+        return err;
+    }
+        
+  return SVN_NO_ERROR;
 }
 
 

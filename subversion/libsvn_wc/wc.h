@@ -69,6 +69,8 @@ svn_error_t *svn_wc__working_copy_p (int *answer,
 
 
 
+/*** Various things to do with administrative files. ***/
+
 /* Lock the working copy administrative area.
    Wait for WAIT seconds if encounter another lock, trying again every
    second, then return 0 if success or an SVN_ERR_ENCOUNTERED_LOCK
@@ -88,20 +90,24 @@ svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
 
 
 
+/*** Names and file/dir operations in the administrative area. ***/
+
 /* kff todo: these #defines have to be protected as though they're in
    the global namespace, right?  Because they'd silently override any
    other #define with the same name. */
 
 /* The files within the administrative subdir. */
+#define SVN_WC__ADM_FORMAT              "format"
+#define SVN_WC__ADM_README              "README"
 #define SVN_WC__ADM_REPOSITORY          "repository"
 #define SVN_WC__ADM_VERSIONS            "versions"
 #define SVN_WC__ADM_PROPERTIES          "properties"
-#define SVN_WC__ADM_TREE_EDITS          "tree-edits"
-#define SVN_WC__ADM_PROP_EDITS          "prop-edits"
+#define SVN_WC__ADM_DELTA_HERE          "delta-here"
 #define SVN_WC__ADM_LOCK                "lock"
 #define SVN_WC__ADM_TMP                 "tmp"
 #define SVN_WC__ADM_TEXT_BASE           "text-base"
 #define SVN_WC__ADM_PROP_BASE           "prop-base"
+#define SVN_WC__ADM_DPROP_BASE          "dprop-base"
 
 /* The directory that does bookkeeping during an operation. */
 #define SVN_WC__ADM_DOING               "doing"
@@ -142,6 +148,23 @@ svn_error_t *svn_wc__close_adm_file (apr_file_t *fp,
 svn_error_t *svn_wc__remove_adm_thing (svn_string_t *path,
                                        char *thing,
                                        apr_pool_t *pool);
+
+
+/* Ensure that PATH is a working copy directory. 
+   (In practice, this means creating an adm area.) */
+svn_error_t *svn_wc__ensure_wc_prepared (svn_string_t *path,
+                                         svn_string_t *repository,
+                                         apr_pool_t *pool);
+
+
+/* Ensure that an administrative area exists for PATH. 
+   Does not ensure existence of PATH itself; if PATH does not exist,
+   an error will result. */
+svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
+                                 svn_string_t *repository,
+                                 apr_pool_t *pool);
+
+
 
 
 
