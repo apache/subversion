@@ -184,7 +184,7 @@ e.g. @code{/trunk/gdb/i386.c}
 
 A @dfn{proplist} is a list of properties (key/value pairs).
 
-A @dfn{propname} is particular property key.
+A @dfn{propname} is a particular property key.
 
 A @dfn{propnamelist} is a list of all the keys in a proplist.
 
@@ -197,7 +197,7 @@ A @dfn{directory entry} (@dfn{dirent}) points to a file or directory.
 A @dfn{directory} (@dfn{dir}) is a list of directory entries.
 
 A @dfn{filesystem object} (@dfn{fs_obj}) contains either a file or
-directory. 
+a directory. 
 
 A @dfn{version} (abbreviated @dfn{ver}) refers to a global version
 number in a repository's history.
@@ -309,7 +309,7 @@ The locking system was designed to have these features:
 
 @enumerate
 @item
-    There can any number of concurrent filesystem @dfn{readers}, and a
+    There can be any number of concurrent filesystem @dfn{readers}, and a
     reader never has to wait for any other process.
 @item
     There can any number of concurrent filesystem @dfn{writers},
