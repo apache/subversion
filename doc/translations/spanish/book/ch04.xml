@@ -1422,18 +1422,19 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
       sus cambios locales seguirán siendo aplicados como un cambio
       atómico único al repositorio.</para>
 
-    <para>Note that while it's okay for your working copy to reflect a
-      mixture of repository locations, these locations must all be
-      within the <emphasis>same</emphasis> repository.  Subversion
-      repositories aren't yet able to communicate with one another;
-      that's a feature planned beyond Subversion
-      1.0.<footnote><para>You <emphasis>can</emphasis>, however, use
-      <command>svn switch</command> with the
-      <option>--relocate</option> switch if the URL of your server
-      changes and you don't want to abandon an existing working copy.
-      See the <command>svn switch</command> section in <xref
-      linkend="svn-ch-9"/> for more information and an example.</para>
-      </footnote></para>
+    <para>Tenga en cuenta que a pesar de que su copia local
+      de trabajo puede reflejar una mezcla de lugares de
+      repositorio, todos estos lugares deben estar dentro del
+      <emphasis>mismo</emphasis> repositorio.  Los repositorios de
+      Subversion todavía no son capaces de comunicarse unos con
+      otros; esta característica está planeada para una versión
+      de Subversion posterior a la 1.0.<footnote><para>Usted
+      <emphasis>puede</emphasis>, no obstante, usar <command>svn
+      switch</command> con el parámetro <option>--relocate</option>
+      si la URL de su servidor cambia y no desea abandonar su
+      copia de trabajo existente. Vea la sección <command>svn
+      switch</command> en <xref linkend="svn-ch-9"/> para obtener
+      más información y un ejemplo.</para> </footnote></para>
     
     <sidebar>
       <title>Switches and Updates</title>
