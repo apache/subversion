@@ -114,13 +114,6 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: breser, philip, maxb
 
-  * r13218, r13465, r13468
-    Fix runaway memory usage in svnadmin hotcopy (fsfs).
-    Justification:
-      consuming all memory is bad
-    Votes:
-      +1: epg, ghudson, maxb
-
   * r13487
     Fix Python bindings bug that manifested only with SWIG 1.3.24
     and threaded APR. Anything using a log_receiver callback would fail.
