@@ -47,8 +47,7 @@ To be fixed by cmpilato:
 
 To be fixed by fitz:
   - Check svnadmin and svnlook commands for flags in ch09
-
-  - document formats accepted by the new dateparser.
+    [[ In progress ]]
 
   - new 'svn diff' UI (when it's done) -- affects ch03, ch09, and
     maybe other chapters.
