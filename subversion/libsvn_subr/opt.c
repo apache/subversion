@@ -234,7 +234,7 @@ svn_opt_format_option (const char **string,
     opts = apr_psprintf (pool, "--%s", opt->name);
 
   if (opt->has_arg)
-    opts = apr_pstrcat (pool, opts, " arg", NULL);
+    opts = apr_pstrcat (pool, opts, _(" arg"), NULL);
 
   if (doc)
     opts = apr_psprintf (pool, "%-24s : %s", opts,
