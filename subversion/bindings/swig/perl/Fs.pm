@@ -41,4 +41,10 @@ use SVN::Base qw/Fs svn_fs_txn_/;
 package _p_svn_fs_dirent_t;
 use SVN::Base qw(Fs svn_fs_dirent_t_);
 
+package _p_svn_fs_path_change_t;
+use SVN::Base qw(Fs svn_fs_path_change_t_);
+
+package SVN::Fs::PathChange;
+use SVN::Base qw(Fs svn_fs_path_change_);
+
 1;
