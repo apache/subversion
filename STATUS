@@ -28,15 +28,6 @@ Candidate changes:
       +1: pmayweg
       +0: breser
 
-  * r11490, r11501, r11514, r11545, r11547 (Issue #2011)
-    Fix UNC paths on Windows 
-    Justification:
-      It used to work.  It should work now.
-    Notes:
-      r11490 is just cleanups.  But makes it merge cleanly.
-    Votes:
-      +1: breser, lundblad, jszakmeister
-
   * r11483 (Issue #2091)
     Unitialized variable on Win98.
     Justification:
