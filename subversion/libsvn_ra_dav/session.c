@@ -1109,7 +1109,7 @@ svn_ra_dav__lock(svn_ra_session_t *session,
       err = shim_svn_ra_dav__lock(session, &lock, path, comment, 
                                   force, *revnum, iterpool);
 
-      if (err && !svn_error_is_lock_error (err))
+      if (err && !SVN_ERR_IS_LOCK_ERROR (err))
         return err;
 
       if (lock_func)
@@ -1246,7 +1246,7 @@ svn_ra_dav__unlock(svn_ra_session_t *session,
 
       err = shim_svn_ra_dav__unlock (session, path, token, force, iterpool);
 
-      if (err && !svn_error_is_unlock_error (err))
+      if (err && !SVN_ERR_IS_UNLOCK_ERROR (err))
         return err;
 
       if (lock_func)

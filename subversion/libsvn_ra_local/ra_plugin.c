@@ -1088,7 +1088,7 @@ svn_ra_local__lock (svn_ra_session_t *session,
       err = svn_repos_fs_lock (&lock, sess->repos, abs_path, comment, force,
                                0 /* no timeout */, *revnum, iterpool);
 
-      if (err && !svn_error_is_lock_error (err))
+      if (err && !SVN_ERR_IS_LOCK_ERROR (err))
         return err;
 
       if (lock_func)
@@ -1145,7 +1145,7 @@ svn_ra_local__unlock (svn_ra_session_t *session,
       err = svn_repos_fs_unlock (sess->repos, abs_path, token, force,
                                  iterpool);
 
-      if (err && !svn_error_is_unlock_error (err))
+      if (err && !SVN_ERR_IS_UNLOCK_ERROR (err))
         return err;
 
       if (lock_func)
