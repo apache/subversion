@@ -590,7 +590,7 @@ svn_fs_fs__get_node_revision (node_revision_t **noderev_p,
   if ((value == NULL) ||
       (strcmp (value, KIND_FILE) != 0 && strcmp (value, KIND_DIR)))
     return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                             _("Missing kind field in node-rev."));
+                             _("Missing kind field in node-rev"));
 
   noderev->kind = (strcmp (value, KIND_FILE) == 0) ? svn_node_file
     : svn_node_dir;
@@ -776,7 +776,7 @@ svn_fs_fs__put_node_revision (svn_fs_t *fs,
 
   if (! txn_id)
     return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                             _("Attempted to write to non-transaction."));
+                             _("Attempted to write to non-transaction"));
 
   SVN_ERR (svn_io_file_open (&noderev_file, path_txn_node_rev (fs, id, pool),
                              APR_WRITE | APR_CREATE | APR_TRUNCATE,
@@ -860,7 +860,7 @@ read_rep_line (struct rep_args **rep_args_p,
 
  err:
   return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                           _("Malformed representation header."));
+                           _("Malformed representation header"));
 }
 
 /* Given a revision file REV_FILE, find the Node-ID of the header
@@ -935,7 +935,7 @@ get_root_changes_offset (apr_off_t *root_offset,
   if (buf[num_bytes - 1] != '\n')
     {
       return svn_error_createf (SVN_ERR_FS_CORRUPT, NULL,
-                                _("Revision file lacks trailing newline."));
+                                _("Revision file lacks trailing newline"));
     }
 
   /* Look for the next previous newline. */
@@ -948,7 +948,7 @@ get_root_changes_offset (apr_off_t *root_offset,
     {
       return svn_error_createf (SVN_ERR_FS_CORRUPT, NULL,
                                 _("Final line in revision file longer than 64 "
-                                  "characters."));
+                                  "characters"));
     }
 
   if (root_offset)
@@ -1359,7 +1359,7 @@ rep_read_contents (void *baton,
                                            &rb->buf_len);
           if (rb->buf_len != window->tview_len)
             return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                     _("svndiff window length is corrupt."));
+                                     _("svndiff window length is corrupt"));
           rb->buf_pos = 0;
         }
     }
@@ -2095,7 +2095,7 @@ create_new_txn_noderev_from_rev (svn_fs_t *fs,
 
   if (svn_fs_fs__id_txn_id (noderev->id))
     return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                             _("Copying from transactions not allowed."));
+                             _("Copying from transactions not allowed"));
 
   noderev->predecessor_id = noderev->id;
   noderev->predecessor_count++;
@@ -3404,7 +3404,7 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
     {
       svn_pool_destroy (subpool);
       return svn_error_create (SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
-                               _("Transaction out of date."));
+                               _("Transaction out of date"));
     }
 
   /* Get the next node_id and copy_id to use. */
@@ -3643,7 +3643,7 @@ svn_fs_fs__open_txn (svn_fs_txn_t **txn_p,
   /* Did we find it? */
   if (kind != svn_node_dir)
     return svn_error_create (SVN_ERR_FS_NO_SUCH_TRANSACTION, NULL,
-                             _("No such transaction."));
+                             _("No such transaction"));
       
   txn = apr_pcalloc (pool, sizeof (*txn));
 

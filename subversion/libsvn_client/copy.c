@@ -394,7 +394,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
     {
       /* We disallow the overwriting of files. */
       return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                _("Path '%s' already exists."), dst_rel);
+                                _("Path '%s' already exists"), dst_rel);
     }
   else if (dst_kind == svn_node_dir)
     {

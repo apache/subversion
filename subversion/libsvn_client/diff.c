@@ -2044,7 +2044,7 @@ do_diff_peg (const apr_array_header_t *options,
   if (is_local_rev1 && is_local_rev2)
     return svn_error_create (SVN_ERR_CLIENT_BAD_REVISION, NULL,
                              _("At least one revision must be non-local for "
-                               "a pegged diff."));
+                               "a pegged diff"));
 
   if (! is_local_rev1) /* path1 is (effectively) a URL */
     {
