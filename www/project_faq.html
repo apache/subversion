@@ -29,6 +29,7 @@
 <li><a href="#globalrev">Why does the entire repository share the 
     same revision number? I want each of my projects to have their
     own revision numbers.  </a></li>
+<li><a href="#changesets">Does Subversion have changesets?</li>
 <li><a href="#release">When's the next release?</a></li>
 <li><a href="#more-information">I have other questions.  Where can I
     get more information?</a></li>  
@@ -314,6 +315,55 @@ nearly useful enough to be an accurate indication of the real rate of
 change of a given code base.  There are other more complicated ways to
 get a much better picture of a code-base's rate of change.
 </p>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="changesets">Does Subversion have Changesets?</a></h3>
+
+<p>The question is a bit loaded, because everyone seems to have a
+slightly different definition of "changeset", or a least a slightly
+different expectation of what it means for a version control system to
+have "changeset features".</p>
+
+<p>For the purposes of this discussion, here's a simple definition of
+changeset: it's a collection of changes with a unique name.  The
+changes might include textual edits to file contents, modifications to
+tree structure, or tweaks to metadata.  In more common speak, a
+changeset is just a patch with a name you can refer to.</p>
+
+<p>Subversion mananges versioned trees as first order objects (the
+repository is an array of trees), and the changesets are things that
+are derived (by comparing adjacent trees.)  Systems like Arch or
+Bitkeeper are built the other way around: they're designed to manage
+changesets as first order objects (the repository is a bag of
+patches), and trees are derived by composing sets of patches
+together.</p>
+
+<p>Neither philosophy is better in absolute terms: the debate goes
+back at least 30 years.  The two designs are better or worse for
+different types of software development.  We're not going to discuss
+that here.  Instead, here's an explanation of what you can do with
+Subversion.</p>
+
+<p>In Subversion, a global revision number 'N' names a tree in the
+repository: it's the way the repository looked after the Nth commit.
+It's also the name of an implicit changeset: if you compare tree N
+with tree N-1, you can derive the exact patch that was committed.</p>
+
+<p>For this reason, it's easy to think of "revision N" as not just a
+tree, but a changeset as well.  If you use an issue tracker to manage
+bugs, you can use the revision numbers to refer to particular patches
+that fix bugs -- for example, "this issue was fixed by revision 9238."
+Somebody can then run 'svn log -r9238' to read about the exact
+changeset which fixed the bug, and run 'svn diff -r9237:9238' to see
+the patch itself.  And svn's merge command also uses revision numbers.
+You can merge specific changesets from one branch to another by naming
+them in the merge arguments: 'svn merge -r9237:9238 branchURL' would
+merge changeset #9238 into your working copy.</p>
+
+<p>This is nowhere near as complicated as a system built around
+changesets as primary objects, but it's still a vast convenience over
+CVS.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
