@@ -1464,10 +1464,11 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  * svn_fs_access_t).
  *
  * When a lock is created, a 'lock-token' is returned.  The lock-token
- * is a unique string that represents the lock, and is required to
- * make further use of the lock (including removal of the lock.)  A
- * lock-token can also be queried to return a svn_lock_t structure
- * that describes the details of the lock.  
+ * is a unique URI that represents the lock (treated as an opaque
+ * string by the client), and is required to make further use of the
+ * lock (including removal of the lock.)  A lock-token can also be
+ * queried to return a svn_lock_t structure that describes the details
+ * of the lock.
  *
  * Locks are not secret; anyone can view existing locks in a
  * filesystem.  Locks are not omnipotent: they can broken and stolen

@@ -206,16 +206,8 @@ dav_svn_parse_locktoken(apr_pool_t *pool,
                         dav_locktoken **locktoken_p)
 {
   dav_locktoken *token = apr_pcalloc(pool, sizeof(*token));
-  
-  /* Imitating mod_dav_fs again.  Hilariously, it also defines a
-     locktoken just to be an apr uuid string!  */
 
-  if (ap_strstr_c(char_token, "opaquelocktoken:") != char_token) 
-    return dav_new_error(pool, HTTP_BAD_REQUEST,
-                         DAV_ERR_LOCK_UNK_STATE_TOKEN,
-                         "Client supplied lock token in unknown format.");
-
-  char_token += 16;
+  /* libsvn_fs already produces a valid locktoken URI. */
   token->uuid_str = apr_pstrdup(pool, char_token);
   
   *locktoken_p = token;
@@ -233,10 +225,8 @@ static const char *
 dav_svn_format_locktoken(apr_pool_t *p,
                          const dav_locktoken *locktoken)
 {
-  /* Imitating mod_dav_fs again.  Hilariously, it also defines a
-     locktoken just to be an apr uuid string!  */
-
-  return apr_pstrcat(p, "opaquelocktoken:", locktoken->uuid_str, NULL);
+  /* libsvn_fs already produces a valid locktoken URI. */
+  return apr_pstrdup(p, locktoken->uuid_str);
 }
 
 

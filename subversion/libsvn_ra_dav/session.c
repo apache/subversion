@@ -953,7 +953,7 @@ svn_ra_dav__lock(void *session_baton,
   const char *url;
   svn_string_t fs_path;
   struct lock_request_baton *lrb;
-  struct ne_lock nlock = {{ 0 }};
+  struct ne_lock *nlock;
   svn_lock_t *slock;
 
   /* To begin, we convert the incoming path into an absolute fs-path. */
@@ -969,14 +969,15 @@ svn_ra_dav__lock(void *session_baton,
   ne_hook_create_request(ras->sess, create_request_hook, lrb);
   ne_hook_pre_send(ras->sess, pre_send_hook, lrb);
 
-  /* Fill the neon lock structure. */
-  nlock.owner = ne_strdup(comment);
-  if ((rv = ne_uri_parse(url, &(nlock.uri))))
+  /* Make a neon lock structure. */
+  nlock = ne_lock_create();
+  nlock->owner = ne_strdup(comment);
+  if ((rv = ne_uri_parse(url, &(nlock->uri))))
     return svn_ra_dav__convert_error(ras->sess, "Failed to parse URI",
                                      rv, pool);
 
   /* Issue LOCK request. */
-  rv = ne_lock(ras->sess, &nlock);
+  rv = ne_lock(ras->sess, nlock);
   if (rv)
     return svn_ra_dav__convert_error(ras->sess,
                                      "Lock request failed", rv, pool);
@@ -984,20 +985,22 @@ svn_ra_dav__lock(void *session_baton,
   /* Build an svn_lock_t based on the returned ne_lock. */
   slock = apr_pcalloc(pool, sizeof(*slock));
   slock->path = fs_path.data;
-  slock->token = apr_pstrdup(pool, nlock.token);
-  if (nlock.owner)
-    slock->comment = apr_pstrdup(pool, nlock.owner);
+  slock->token = apr_pstrdup(pool, nlock->token);
+  if (nlock->owner)
+    slock->comment = apr_pstrdup(pool, nlock->owner);
   if (ras->auth_username)
     slock->owner = apr_pstrdup(pool, ras->auth_username);
   if (lrb->creation_date)
     slock->creation_date = lrb->creation_date;
 
-  if (nlock.timeout == NE_TIMEOUT_INFINITE)
+  if (nlock->timeout == NE_TIMEOUT_INFINITE)
     slock->expiration_date = 0;
-  else if (nlock.timeout > 0)
+  else if (nlock->timeout > 0)
     slock->expiration_date = slock->creation_date + 
-                             apr_time_from_sec(nlock.timeout);
+                             apr_time_from_sec(nlock->timeout);
   
+  ne_lock_destroy(nlock);
+
   *lock = slock;
   return SVN_NO_ERROR;
 }

@@ -630,16 +630,17 @@ svn_fs_fs__generate_token (const char **token,
                            svn_fs_t *fs,
                            apr_pool_t *pool)
 {
+  /* ### Notice that 'fs' is currently unused.  But perhaps someday,
+     we'll want to use the fs UUID + some incremented number?  */
   apr_uuid_t uuid;
   char *uuid_str = apr_pcalloc (pool, APR_UUID_FORMATTED_LENGTH + 1);
 
   apr_uuid_get (&uuid);
   apr_uuid_format (uuid_str, &uuid);
 
-  /* ### Notice that 'fs' is currently unused.  But perhaps someday,
-     we'll want to use the fs UUID + some incremented number?  */
-
-  *token = uuid_str;
+  /* For now, we generate a URI that matches the DAV RFC.  We could
+     change this to some other URI schema someday, if we wish. */
+  *token = apr_pstrcat (pool, "opaquelocktoken:", uuid_str, NULL);
   return SVN_NO_ERROR;
 }
 
