@@ -162,12 +162,21 @@ changes grouped by logical commit.
 Pass 4:
 =======
 
-This is where stuff actually gets committed to Subversion.
+Output the commits to a Subversion dumpfile, that is, a file intended
+for 'svnadmin load'.  The dumpfile is the data's last static stage:
+last chance to check over the data, run it through svndumpfilter, or
+move the dumpfile to another machine.
 
 It's pretty self-explanatory code, and is probably where most flux is
 about to happen (particularly with regards to tags and branches), so I
 won't bother to describe it here.  But if you understand how passes
 1-3 work, you should have no trouble understanding the code of pass 4.
+
+
+Pass 5:
+=======
+
+Load the dumpfile into Subversion.  Voilà.
 
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
