@@ -172,12 +172,8 @@ svn_cl__print_status_list (apr_hash_t *statushash,
              set, it will have no effect; and if for whatever reason
              it is set, then we clearly ought to count the file as
              modified. */
-          if ((status->text_status == svn_wc_status_modified)
-              || (status->prop_status == svn_wc_status_modified)
-              || (status->text_status == svn_wc_status_merged)
-              || (status->prop_status == svn_wc_status_merged)
-              || (status->text_status == svn_wc_status_conflicted)
-              || (status->prop_status == svn_wc_status_conflicted))
+          if ((status->text_status != svn_wc_status_none)
+              || (status->prop_status != svn_wc_status_none))
             svn_cl__print_status (svn_stringbuf_create (path, pool), status);
         }
       else
