@@ -41,7 +41,7 @@ Candidate changes:
     Notes:
      Not worth a resoak on its own.
     Votes:
-      +1: ghudson, kfogel, maxb
+      +1: ghudson, kfogel, maxb, breser
 
 
   * r10560
@@ -51,7 +51,7 @@ Candidate changes:
     Notes:
      Not worth a resoak on its own.
     Votes:
-      +1: ghudson, maxb
+      +1: ghudson, maxb, breser
    
   * r10773
     Fix typo in test case of javahl binding.  
@@ -60,7 +60,7 @@ Candidate changes:
     Notes:
       Not worth a resoak on its own.
     Votes:
-      +1: pmayweg, ghudson, kfogel
+      +1: pmayweg, ghudson, kfogel, breser
 
   * r10978
     Install and configure Apache modules, install Berkeley DB DLL in Apache's
