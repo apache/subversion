@@ -342,10 +342,10 @@ is_valid_change_skel (skel_t *skel, svn_fs_path_change_kind_t *kind)
             *kind = svn_fs_path_change_modify;
           return 1;
         }
-      if (svn_fs__matches_atom (kind_skel, "moved"))
+      if (svn_fs__matches_atom (kind_skel, "rename"))
         {
           if (kind)
-            *kind = svn_fs_path_change_moved;
+            *kind = svn_fs_path_change_rename;
           return 1;
         }
     }
@@ -1259,8 +1259,8 @@ svn_fs__unparse_change_skel (skel_t **skel_p,
     case svn_fs_path_change_replace:
       svn_fs__prepend (svn_fs__str_atom ("replace", pool), skel);
       break;
-    case svn_fs_path_change_moved:
-      svn_fs__prepend (svn_fs__str_atom ("moved", pool), skel);
+    case svn_fs_path_change_rename:
+      svn_fs__prepend (svn_fs__str_atom ("rename", pool), skel);
       break;
     case svn_fs_path_change_modify:
     default:

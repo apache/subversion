@@ -2999,7 +2999,7 @@ txn_body_rename (void *baton,
                            svn_fs_path_change_delete, 0, 0, to_path, trail));
     }
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
-                       from_id, svn_fs_path_change_moved, 0, 0,
+                       from_id, svn_fs_path_change_rename, 0, 0,
                        from_path, trail));
 
   return SVN_NO_ERROR;

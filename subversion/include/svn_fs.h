@@ -665,7 +665,7 @@ typedef enum
   svn_fs_path_change_reset,
 
   /** moved from path to ID.COMMIT-PATH (internal-use only for now) */
-  svn_fs_path_change_moved
+  svn_fs_path_change_rename
   
 } svn_fs_path_change_kind_t;
 
