@@ -1552,12 +1552,12 @@ Resolved conflicted state of 'sandwich.txt'
           falling off a bike.....ein???-->.</para>
 
         <para>Aquí tiene un ejemplo. Debido a una falta de comunicación,
-          <!--TODO:miscommunication--> usted y Sally, su colaboradora,
-          editan el fichero <filename>sandwich.txt</filename> en el mismo
-          momento. Sally envía sus cambios, y cuando usted va a actualizar
-          su copia de trabajo, obtiene un conflicto y vamos a tener que
-          editar <filename>sandwich.txt</filename> para resolver los
-          conflictos. Primero, hechemos una hojeada al fichero:</para>
+          usted y Sally, su colaboradora, editan el fichero
+          <filename>sandwich.txt</filename> en el mismo momento. Sally
+          envía sus cambios, y cuando usted va a actualizar su copia
+          de trabajo, obtiene un conflicto y vamos a tener que editar
+          <filename>sandwich.txt</filename> para resolver los conflictos.
+          Primero, hechemos una hojeada al fichero:</para>
 
         <screen>
 $ cat sandwich.txt
@@ -1593,8 +1593,8 @@ Prosciutto
 =======
 </screen>
 
-        <para>The text between the second and third sets of conflict
-        markers is the text from Sally's commit:</para>
+        <para>El texto entre el segundo y tercer set de marcas de conflicto
+          es el texto del envio de Sally:</para>
 
         <screen>
 =======
@@ -1603,16 +1603,18 @@ Grilled Chicken
 &gt;&gt;&gt;&gt;&gt;&gt;&gt; .r2
 </screen>
 
-        <para>Usually you won't want to just delete the conflict
-          markers and Sally's changes&mdash;she's going to be awfully
-          surprised when the sandwich arrives and it's not what she
-          wanted.  So this is where you pick up the phone or walk
-          across the office and explain to Sally that you can't get
-          sauerkraut from an Italian deli.<footnote><para>And if you
-          ask them for it, they may very well ride you out of town on
-          a rail.</para></footnote> Once you've agreed on the changes
-          you will check in, edit your file and remove the conflict
-          markers.</para>
+        <para>Generalmente usted no deseará borrar las marcas de conflicto
+          y los cambios de Sally&mdash;ella se sorprenderá terriblemente
+          cuando llegue el sandwich y no sea lo que ella quería. Aquí es
+          donde usted coge el telefono o anda a través de la oficina y le
+          explica a Sally que no puede tomar sauerkraut de un deli
+          Italiano.<!--TODO:that you can't get sauerkraut from an Italian
+          deli...vaya metafora--><footnote><para>Y si les pregunta por
+          esto, pueden echarle de la ciudad en un carril<!--TODO: they may
+          very well ride you out of town on a rail...ein?
+          -->.</para></footnote>Una vez usted esté de acuerdo con los
+          cambios deberá comprobarlos, editar su fichero y borrar las
+          marcas de conflicto</para>
 
         <screen>
 Top piece of bread
@@ -1627,30 +1629,31 @@ Creole Mustard
 Bottom piece of bread
 </screen>
 
-        <para>Now run <command>svn resolved</command>, and you're
-          ready to commit your changes:</para>
+        <para>Ahora ejecute <command>svn resolved</command>, y está listo
+          para enviar sus cambios:</para>
 
         <screen>
 $ svn resolved sandwich.txt
 $ svn commit -m "Go ahead and use my sandwich, discarding Sally's edits."
 </screen>
 
-        <para>Remember, if you ever get confused while editing the
-          conflicted file, you can always consult the three files that
-          Subversion creates for you in your working
-          copy&mdash;including your file as it was before you updated.
-          You can even use a third-party interactive merging tool to
-          examine those three files.</para>
+        <para>Recuerde, si algúna vez está confuso mientras edita el
+          fichero conflictivo, siempre puede consultar los tres ficheros
+          que Subversion crea para usted en su copia de
+          trabajo&mdash;incluyendo su fichero como estaba antes de que
+          usted actualizara. Incluso puede usar una herramienta interactiva
+          de fusión de una third-party<!--TODO:cómo traducir third-party?-->
+          para examinar esos tres fichero.</para>
 
       </sect3>
 
       <sect3 id="svn-ch-3-sect-4.4.2">
-        <title>Copying a File Onto Your Working File</title>
+        <title>Copiando un Fichero en su Fichero de Trabajo</title>
 
-        <para>If you get a conflict and decide that you want to throw
-          out your changes, you can merely copy one of the temporary
-          files created by Subversion over the file in your working
-          copy:</para>
+        <para>Si obtiene un conflicto y decide que quiere rechazar sus
+          cambios, simplemente usted puede copiar uno de los ficheros
+          temporales creados por Subversion sobre el fichero en su copia
+          de trabajo:</para>
 
         <screen>
 $ svn update
@@ -1665,11 +1668,12 @@ $ svn resolved sandwich.txt
       </sect3>
 
       <sect3 id="svn-ch-3-sect-4.4.3">
-        <title>Punting: Using <command>svn revert</command></title>
+        <title>Punting: Usando <command>svn revert</command></title>
+          <!--TODO:Punting... rechazando? excluyendo?-->
 
-        <para>If you get a conflict, and upon examination decide that
-        you want to throw out your changes and start your edits again,
-        just revert your changes:</para>
+        <para>Si obtiene un conflicto, y sobre la examinación decide
+          que quiere rechazar sus cambios y empezar su edición de nuevo,
+          simplemente invierta sus cambios:</para>
 
         <screen>
 $ svn revert sandwich.txt
@@ -1678,28 +1682,30 @@ $ ls sandwich.*
 sandwich.txt
 </screen>
 
-        <para>Note that when you revert a conflicted file, you don't
-        have to run <command>svn resolved</command>.</para>
+        <para>Observe que cuando usted invierte un fichero conflictivo,
+          no tiene que ejecutar <command>svn resolved</command>.</para>
 
       </sect3>
 
-      <para>Now you're ready to check in your changes.  Note that
-        <command>svn resolved</command>, unlike most of the other
-        commands we've dealt with in this chapter, requires an
-        argument.  In any case, you want to be careful and only run
-        <command>svn resolved</command> when you're certain that you've
-        fixed the conflict in your file&mdash;once the temporary files
-        are removed, Subversion will let you commit the file even if
-        it still contains conflict markers.</para>
+      <para>Ahora usted está listo para enviar sus cambios. Observe que
+        <command>svn resolved</command>, al contrario de la mayoría de
+        los otros comandos<!--TODO: unlike most of the other
+        commands we've dealt with in this chapter--> que nos hemos ocupado
+        en este capitulo, requiere un argumento. En cualquier caso, debe
+        tener cuidado y solo ejecutar <command>svn resolved</command>
+        cuando esté seguro que ha arreglado el conflicto en su
+        fichero&mdash;una vez los ficheros temporales son borrados,
+        Subversion le dejará enviar el fichero incluso si todavía tiene
+        marcas de conflicto.</para>
       
     </sect2>
     
     <sect2 id="svn-ch-3-sect-4.5">
-      <title>Commit Your Changes</title>
+      <title>Enviar Sus Cambios</title>
       
-      <para>Finally!  Your edits are finished, you've merged all
-        changes from the server, and you're ready to commit your
-        changes to the repository.</para>
+      <para>¡Finalmente! Su edición está terminada, ha fusionado todos
+        los cambios del servidor, y está listo para enviar sus cambios
+        al repositorio.</para>
       
       <para>The <command>svn commit</command> command sends all of
            your changes to the repository.  When you commit a change,
@@ -2239,9 +2245,9 @@ Adding         mytree/subdir/quux.h
 Committed revision 1.
 </screen>
 
-      <para>The previous example copied the contents of directory
-        <filename>mytree</filename> under the directory
-        <filename>some/project</filename> in the repository:</para>
+      <para>El ejemplo anterior copia el contenido del directorio
+        <filename>mytree</filename> debajo del directorio
+        <filename>some/project</filename> en el repositorio:</para>
 
       <screen>
 $ svn ls file:///usr/local/svn/newrepos/some/project
