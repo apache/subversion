@@ -179,14 +179,14 @@ not_found (svn_fs_root_t *root, const char *path)
     return
       svn_error_createf
       (SVN_ERR_FS_NOT_FOUND, 0, 0, fs->pool,
-       "file not found: filesystem `%s', transaction `%s', path `%s'",
-       fs->path, root->txn, path);
+       "file not found: transaction `%s', path `%s'",
+       root->txn, path);
   else if (root->kind == revision_root)
     return
       svn_error_createf
       (SVN_ERR_FS_NOT_FOUND, 0, 0, fs->pool,
-       "file not found: filesystem `%s', revision `%ld', path `%s'",
-       fs->path, root->rev, path);
+       "file not found: revision `%ld', path `%s'",
+       root->rev, path);
   else
     abort ();
 }
