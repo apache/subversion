@@ -20,9 +20,10 @@
 ;;; To do here:
 ;;; Provide more of the optional VC backend functions: 
 ;;; - dir-state
-;;; - mode-line-string, to show newly added files, modified props?
-;;;   see vc-cvs-mode-line-string
 ;;; - merge across arbitrary revisions
+;;;
+;;; Maybe we want more info in mode-line-string.  Status of props?  Status 
+;;; compared to what's in the repository (svn st -u) ? 
 ;;;
 ;;; VC passes the vc-svn-register function a COMMENT argument, which
 ;;; is like the file description in CVS and RCS.  Could we store the
@@ -409,5 +410,22 @@ This function returns a status of either 0 (no differences found), or
 (defun vc-svn-find-version (file rev buffer)
   (vc-do-command buffer 0 vc-svn-program-name file 
          "cat" "-r" rev))
+
+(defun vc-svn-mode-line-string (file)
+  "Returns a string for placement in the modeline for FILE.
+Compared to the default implementation, this does two things:
+Handle the case of a file which has been added, but not committed, 
+and show the user when their local copy has been modified."
+  (let* ((state   (vc-state file))
+	 (rev     (vc-workfile-version file)))
+    (cond ((string= rev "0")
+           ;; A file that is added but not yet committed.
+	   "SVN:A")
+          ((eq state 'edited)
+           ;; A file we've edited locally
+	   (concat "SVN:" rev "M"))
+          (t
+           ;; A fallback for all other states.
+           (concat "SVN:" rev)))))
 
 (provide 'vc-svn)
