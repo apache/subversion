@@ -468,7 +468,7 @@ server_ssl_file_first_credentials (void **credentials,
     }
 
   temp_setting = svn_config_get_server_setting (cfg, server_group, 
-                                                SVN_COFNIG_OPTION_SSL_IGNORE_HOST_MISMATCH,
+                                                SVN_CONFIG_OPTION_SSL_IGNORE_HOST_MISMATCH,
                                                 "false");
   if (strcasecmp (temp_setting, "true") == 0)
     {
