@@ -402,9 +402,10 @@ svn_diff__file_output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
   apr_size_t hunk_len;
   apr_status_t rv;
   int i;
-  
+
   if (svn_stringbuf_isempty(baton->hunk))
     {
+      /* Nothing to flush */
       return NULL;
     }
 
@@ -479,10 +480,14 @@ svn_diff__file_output_unified_diff_modified(void *baton,
                    ? original_start - SVN_DIFF__UNIFIED_CONTEXT_SIZE : 0;
   target_line[1] = modified_start;
 
-  /* If the changed ranges are far enough apart (no overlapping context),
-     flush the current hunk. */
-  if (output_baton->hunk_start[0] + output_baton->hunk_length[0] 
-      + SVN_DIFF__UNIFIED_CONTEXT_SIZE < target_line[0])
+  /* If the changed ranges are far enough apart (no overlapping or connecting
+     context), flush the current hunk, initialize the next hunk and skip the
+     lines not in context.  Also do this when this is the first hunk.
+   */
+  if (output_baton->current_line[0] < target_line[0]
+      && (output_baton->hunk_start[0] + output_baton->hunk_length[0]
+          + SVN_DIFF__UNIFIED_CONTEXT_SIZE < target_line[0]
+          || output_baton->hunk_length[0] == 0))
     {
       SVN_ERR(svn_diff__file_output_unified_flush_hunk(output_baton));
 
