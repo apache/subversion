@@ -98,7 +98,6 @@ add_component_internal (svn_string_t *path,
 }
 
 
-/* See ../include/svn_path.h for details. */
 void
 svn_path_add_component_nts (svn_string_t *path, 
                             const char *component,
@@ -108,7 +107,6 @@ svn_path_add_component_nts (svn_string_t *path,
 }
 
 
-/* See ../include/svn_path.h for details. */
 void
 svn_path_add_component (svn_string_t *path, 
                         const svn_string_t *component,
@@ -118,7 +116,6 @@ svn_path_add_component (svn_string_t *path,
 }
 
 
-/* See ../include/svn_path.h for details. */
 void
 svn_path_remove_component (svn_string_t *path, enum svn_path_style style)
 {
@@ -131,7 +128,6 @@ svn_path_remove_component (svn_string_t *path, enum svn_path_style style)
 }
 
 
-/* See ../include/svn_path.h for details. */
 svn_string_t *
 svn_path_last_component (svn_string_t *path,
                          enum svn_path_style style,
@@ -161,7 +157,6 @@ svn_path_last_component (svn_string_t *path,
 }
 
 
-/* See ../include/svn_path.h for details. */
 void
 svn_path_split (const svn_string_t *path, 
                 svn_string_t **dirpath,
@@ -175,7 +170,6 @@ svn_path_split (const svn_string_t *path,
 }
 
 
-/* See ../include/svn_path.h for details. */
 int
 svn_path_isempty (const svn_string_t *path, enum svn_path_style style)
 {

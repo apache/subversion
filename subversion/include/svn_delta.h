@@ -634,18 +634,20 @@ void svn_delta_free_xml_parser (svn_delta_xml_parser_t *parser);
 /* Push LEN bytes of xml data in BUFFER at SVN_XML_PARSER.  As xml is
    parsed, EDITOR callbacks will be executed (using context variables
    and batons that were used to create the parser.)  If this is the
-   final parser "push", ISFINAL must be set to true.  */
+   final parser "push", ISFINAL must be set to true (so that both
+   expat and local cleanup can occur). */
 svn_error_t *
 svn_delta_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal, 
                           svn_delta_xml_parser_t *svn_xml_parser);
 
 
-/* Create a internal parser that consumes XML data from SOURCE_FN and
-   SOURCE_BATON, and invokes the callback functions in EDITOR as
-   appropriate.  EDIT_BATON is a data passthrough for the entire
-   traversal.  DIR_BATON is a data passthrough for the root directory;
-   the callbacks can establish new DIR_BATON values for
-   subdirectories.  Use POOL for allocations.  */
+/* Reads an XML stream from SOURCE_FN using expat internally,
+   validating the XML as it goes (according to Subversion's own
+   tree-delta DTD).  Whenever an interesting event happens, it calls a
+   caller-specified callback routine from EDITOR.  
+   
+   Once called, it retains control and "pulls" data from SOURCE_FN
+   until either the stream runs out or an error occurs. */
 svn_error_t *svn_delta_xml_auto_parse (svn_read_fn_t *source_fn,
                                        void *source_baton,
                                        const svn_delta_edit_fns_t *editor,

@@ -102,15 +102,7 @@
 
 
 
-/* svn_unpack_bytestring():  for use as helper with hash_write().
- *                           (Subversion-specific)
- *
- *  Input:  a hash value which points to an svn_string_t
- *
- *  Returns:  the size of the svn_string_t,
- *            and (by indirection) the string data itself
- *
- */
+/*** Code. ***/
 
 apr_size_t 
 svn_unpack_bytestring (char **returndata, void *value)
@@ -122,18 +114,6 @@ svn_unpack_bytestring (char **returndata, void *value)
   return (size_t) valstring->len;
 }
 
-
-/* svn_pack_bytestring():  for use as helper with hash_read().
- *                           (Subversion-specific)
- *
- *  Input:  some bytes, a length, a pool
- *
- *  Returns:  an svn_string_t containing them, to store as a hash
- *            value.
- *
- *  Just copies the pointer, does not duplicate the data!
- *
- */
 
 void *
 svn_pack_bytestring (size_t len, const char *val, apr_pool_t *pool)
@@ -147,19 +127,6 @@ svn_pack_bytestring (size_t len, const char *val, apr_pool_t *pool)
   return valstring;
 }
 
-
-
-
-/* svn_hash_write():  dump a hash table to a file.
- * 
- *  Input:  a hash, an "unpack" function (see above), an opened file pointer
- * 
- *  Returns:  error status
- *
- *     The "unpack" routine knows how to convert a hash value into a
- *     printable bytestring of a certain length.
- *
- */
 
 apr_status_t
 svn_hash_write (apr_hash_t *hash, 
@@ -265,20 +232,6 @@ read_length_line (apr_file_t *file, char *buf, size_t *limit)
   return SVN_WARNING;
 }
 
-
-
-
-/* hash_read():  read a hash table from a file.
- * 
- *  Input:  a hash, a "pack" function, an opened file pointer, a pool
- * 
- *  Returns:  error status
- *
- *     The "pack" routine should take a specific-length bytestring and
- *     return a pointer to something meant to be stored in the hash.
- *
- *     The hash should be ready to receive key/val pairs.
- */
 
 apr_status_t
 svn_hash_read (apr_hash_t *hash, 

@@ -59,7 +59,6 @@
 
 /*** XML escaping. ***/
 
-/* Return an xml-safe version of STRING. */
 void
 svn_xml_escape_string (svn_string_t **outstr,
                        svn_string_t *string,
@@ -149,8 +148,6 @@ svn_xml_free_parser (svn_xml_parser_t *svn_parser)
 
 
 
-/* Push LEN bytes of xml data in BUF at SVN_PARSER.  If this is the
-   final push, IS_FINAL must be set.  */
 svn_error_t *
 svn_xml_parse (svn_xml_parser_t *svn_parser,
                const char *buf,
@@ -190,8 +187,6 @@ svn_xml_parse (svn_xml_parser_t *svn_parser,
 
 
 
-/* The way to officially bail out of xml parsing.
-   Store ERROR in SVN_PARSER and set all expat callbacks to NULL. */
 void svn_xml_signal_bailout (svn_error_t *error,
                              svn_xml_parser_t *svn_parser)
 {
@@ -213,7 +208,6 @@ void svn_xml_signal_bailout (svn_error_t *error,
 
 /*** Attribute walking. ***/
 
-/* See svn_xml.h for details. */
 const char *
 svn_xml_get_attr_value (const char *name, const char **atts)
 {

@@ -111,9 +111,7 @@ svn_sort_compare_as_paths (const void *obj1, const void *obj2)
 
 #ifndef apr_hash_sort_keys
 
-/* Grab the keys (and values) in apr_hash HT and return them in an a
-   sorted apr_array_header_t ARRAY allocated from POOL.  The array
-   will contain pointers of type (apr_item_t *).  */
+/* see svn_hash.h for documentation */
 apr_array_header_t *
 apr_hash_sorted_keys (apr_hash_t *ht,
                       int (*comparison_func) (const void *, const void *),

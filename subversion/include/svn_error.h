@@ -307,12 +307,11 @@ typedef struct svn_error
 
   Returns:  a new error structure (containing the old one).
 
-  Notes: If POOL is present, the error will always be allocated in a
-         new subpool of POOL.  If POOL is null but CHILD is present,
-         then it will be allocated in a CHILD's pool (thus
-         guaranteeing that the new error has the same lifetime as the
-         error it wraps).  At least one of POOL or CHILD must be
-         present.
+  Notes: Errors are always allocated in a special top-level error
+         pool, obtained from POOL's attributes.  If POOL is null, then
+         the error pool is obtained from CHILD's pool's attributes.
+         A pool has this attribute if it was allocated using
+         svn_pool_create().
 
          If creating the "bottommost" error in a chain, pass NULL for
          the child argument.
@@ -341,7 +340,6 @@ svn_error_t *svn_error_createf (apr_status_t apr_err,
 /* A quick n' easy way to create a wrappered exception with your own
    message, before throwing it up the stack.  (It uses all of the
    child's fields.)  */
-
 svn_error_t *svn_error_quick_wrap (svn_error_t *child, const char *new_msg);
 
 
@@ -350,7 +348,8 @@ svn_error_t *svn_error_quick_wrap (svn_error_t *child, const char *new_msg);
 void svn_error_free (svn_error_t *error);
 
 
-/* Very basic default error handler. */
+/* Very basic default error handler: print out error stack, and quit
+   iff the FATAL flag is set. */
 void svn_handle_error (svn_error_t *error,
                        FILE *stream,
                        svn_boolean_t fatal);

@@ -181,19 +181,6 @@ svn_pool_create (apr_pool_t *parent_pool)
 
 /*** Creating and destroying errors. ***/
 
-/*
-  svn_error_create() : for creating nested exception structures.
-
-  Input:  an apr_status_t error code,
-          the "original" system error code, if applicable,
-          a descriptive message,
-          a "child" exception,
-          a pool for alloc'ing
-
-  Returns:  a new error structure (containing the old one).
-
- */
-
 svn_error_t *
 svn_error_create (apr_status_t apr_err,
                   int src_err,
@@ -224,10 +211,6 @@ svn_error_createf (apr_status_t apr_err,
 }
 
 
-/* A quick n' easy way to create a wrappered exception with your own
-   message, before throwing it up the stack.  (It uses all of the
-   child's fields by default.)  */
-
 svn_error_t *
 svn_error_quick_wrap (svn_error_t *child, const char *new_msg)
 {
@@ -246,8 +229,6 @@ svn_error_free (svn_error_t *err)
 }
 
 
-/* Very dumb "default" error handler: Just prints out error stack
-   (recursively), and quits if the fatal flag is set.  */
 void
 svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
 {
