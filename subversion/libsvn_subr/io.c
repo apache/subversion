@@ -163,7 +163,7 @@ svn_io_open_unique_file (apr_file_t **f,
           *unique_name_p = NULL;
           return svn_error_createf
             (apr_err, NULL,
-             "svn_io_open_unique_file: error openning '%s'", unique_name);
+             "svn_io_open_unique_file: error opening '%s'", unique_name);
         }
       else
         {
