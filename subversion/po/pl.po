@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-07-26 21:06+0200\n"
-"PO-Revision-Date: 2004-08-16 22:13+0200\n"
+"PO-Revision-Date: 2004-08-16 22:25+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3684,7 +3684,7 @@ msgstr "Nieobsługiwana wersja interfejsu modułu RA (%d) dla ra_local"
 #: libsvn_ra_local/split_url.c:44
 #, c-format
 msgid "Local URL '%s' does not contain 'file://' prefix"
-msgstr "Lokalny URL nie zawiera przedrostka 'file://'"
+msgstr "Lokalny URL '%s' nie zawiera przedrostka 'file://'"
 
 #: libsvn_ra_local/split_url.c:55
 #, c-format
