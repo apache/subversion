@@ -126,7 +126,7 @@ svn_xml_make_parser (void *userData,
 
   subpool = svn_pool_create (pool);
 
-  svn_parser = apr_pcalloc (subpool, sizeof (svn_xml_parser_t));
+  svn_parser = apr_pcalloc (subpool, sizeof (*svn_parser));
 
   svn_parser->parser = parser;
   svn_parser->pool   = subpool;
