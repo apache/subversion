@@ -648,10 +648,11 @@ change_file_prop (void *file_baton,
     fb->revision = apr_pstrdup (fb->pool, value->data);
 
   else if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
+  {
     /* do not overwrite timestamp */
     if (!fb->date_is_mtime)
       SVN_ERR (svn_time_from_cstring (&fb->date, value->data, fb->pool));
-
+  }
   else if (strcmp (name, SVN_PROP_ENTRY_LAST_AUTHOR) == 0)
     fb->author = apr_pstrdup (fb->pool, value->data);
 
