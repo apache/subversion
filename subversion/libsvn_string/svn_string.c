@@ -47,13 +47,15 @@
  * individuals on behalf of Collab.Net.
  */
 
+
+
 #include <string.h>      /* for memcpy(), memcmp(), strlen() */
 #include <stdio.h>       /* for putch() and printf() */
 #include <ctype.h>       /* for isspace() */
 #include "svn_string.h"  /* loads "svn_types.h" and <apr_pools.h> */
 
 
-
+
 /* Our own realloc, since APR doesn't have one.  Note: this is a
    generic realloc for memory pools, *not* for strings.  append()
    calls this on the svn_string_t's *data field.  */
@@ -123,9 +125,6 @@ svn_string_ncreate (const char *bytes, const size_t size,
 
   return new_string;
 }
-
-
-
 
 
 
@@ -244,7 +243,6 @@ svn_string_compare (const svn_string_t *str1, const svn_string_t *str2)
 
 
 
-
 /* Return offset of first non-whitespace character in STR, or -1 if none.  */
 size_t
 svn_string_first_non_whitespace (const svn_string_t *str)
@@ -262,7 +260,6 @@ svn_string_first_non_whitespace (const svn_string_t *str)
   /* if we get here, then the string must be entirely whitespace */
   return (-1);  
 }
-
 
 
 /* Strips whitespace from both sides of STR (modified in place). */
@@ -294,10 +291,7 @@ svn_string_strip_whitespace (svn_string_t *str)
 }
 
 
-
-
-
-
+
 /* --------------------------------------------------------------
  * local variables:
  * eval: (load-file "../svn-dev.el")
