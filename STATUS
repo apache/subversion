@@ -55,11 +55,6 @@ Candidate changes:
     Votes:
       +1 lundblad
 
-  * r10412:
-    Last tweaks to make Swedish translation complete.
-    Votes:
-      +1: lundblad
-
   * r10431
     Disable wait_for_input on Windows.
     Justification: Fix prompting on Windows so it actually works right.
@@ -73,7 +68,7 @@ Candidate changes:
     Votes:
       +1: clkao
 
-  * r10353
+  * r10353, r10375
     Fix encoding of get_repos_url result.
     Justification: Also fixes a bug in svnserve with encoded
      characters in paths.  See
@@ -86,4 +81,5 @@ Candidate changes:
      restart the 1.1 soak anyway.  But don't merge until we've come to
      a decision on whether to restart the 1.1 soak.
     Votes:
-      +1: ghudson
+      +1: ghudson (r10363 only)
+      +1: lundblad
