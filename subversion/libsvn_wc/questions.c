@@ -111,7 +111,7 @@ timestamps_equal_p (svn_boolean_t *equal_p,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
-  apr_time_t wfile_time, entry_time;
+  apr_time_t wfile_time;
   svn_string_t *dirpath, *entryname;
   apr_hash_t *entries = NULL;
   struct svn_wc__entry_t *entry;
@@ -143,7 +143,7 @@ timestamps_equal_p (svn_boolean_t *equal_p,
     wfile_time = svn_wc__string_to_time (tstr);
   }
 
-  if (wfile_time == entry_time)
+  if (wfile_time == entry->timestamp)
     *equal_p = TRUE;
   else
     *equal_p = FALSE;
