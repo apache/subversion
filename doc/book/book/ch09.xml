@@ -3643,6 +3643,13 @@ Updated to revision 30.
           </listitem>
         </varlistentry>
 
+        <varlistentry>
+          <term><option>--clean-logs</option></term>
+          <listitem>
+            <para>Removes unused Berkeley DB logs.</para>
+          </listitem>
+        </varlistentry>
+
         <!-- TODO config-dir? Is it really used? -->
 
         <varlistentry>
@@ -3834,6 +3841,40 @@ Content-length: 101
         <refsect1>
           <title>Alternate Names</title>
           <para>?, h</para>
+        </refsect1>
+
+      </refentry>
+
+      <!-- ================================================================= -->
+      <refentry>
+        <refnamediv>
+          <refname>svnadmin hotcopy</refname>
+          <refpurpose>Makes a hot copy of a repository.</refpurpose>
+        </refnamediv>
+        <refsect1>
+          <title>Synopsis</title>
+          <programlisting>svnadmin help OLD_REPOS_PATH NEW_REPOS_PATH</programlisting>
+        </refsect1>
+
+        <refsect1>
+          <title>Description</title>
+
+          <para>This subcommand makes a full <quote>hot</quote> backup
+          of your repository, including all hooks, configuration
+          files, and, of course, database files.  If you pass the
+          <literal>--clean-logs</literal> switch,
+          <command>svnadmin</command> will perform a hotcopy of your
+          repository, and then remove unused Berkeley DB logs from the
+          original repository.</para>
+
+        </refsect1>
+
+        <refsect1>
+          <title>Switches</title>
+          
+          <screen>
+--clean-logs
+          </screen>
         </refsect1>
 
       </refentry>
