@@ -32,12 +32,13 @@ struct dag_node_t
   /* The filesystem this dag node came from. */
   svn_fs_t *fs;
 
-  /* The identifier for this dag node in FS (i.e., the DB key, parsed
-     into an svn_fs_id_t). */
+  /* The node revision ID for this dag node.  */
   svn_fs_id_t *id;
 
-  /* The contents of the node (i.e., the DB value, parsed into a
-     skel). */
+  /* The node's NODE-REVISION skel.  
+     jimb todo: the contents of mutable nodes could be changed by
+     other processes, so we should fetch them afresh within each
+     trail.  */
   skel_t *contents;
 
   /* The transaction trail pool in which this dag_node_t was
@@ -48,26 +49,27 @@ struct dag_node_t
 
 /* Trail body for svn_fs__dag_init_fs. */
 static svn_error_t *
-dag_init_fs (void *fs_baton, trail_t *trail)
+txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
 {
   svn_fs_t *fs = fs_baton;
 
   /* Create empty root directory with node revision 0.0:
      "nodes" : "0.0" -> "(fulltext [(dir ()) ()])" */
   {
-    static char rep_skel[] = "(fulltext ((dir ()) ()))";
-    SVN_ERR (svn_fs__put_rep (fs,
-                              svn_fs_parse_id ("0.0", 3, trail->pool),
-                              svn_fs__parse_skel (rep_skel,
-                                                  sizeof (rep_skel) - 1,
-                                                  trail->pool),
-                              trail));
+    static char unparsed_node_rev[] = "((dir ()) ())";
+    skel_t *node_rev = svn_fs__parse_skel (unparsed_node_rev,
+                                           sizeof (unparsed_node_rev) - 1,
+                                           trail->pool);
+    svn_fs_id_t *root_id = svn_fs_parse_id ("0.0", 3, trail->pool);
+
+    SVN_ERR (svn_fs__put_node_revision (fs, root_id, node_rev, trail));
+    SVN_ERR (svn_fs__stable_node (fs, root_id, trail));
   } 
 
   /* Link it into filesystem revision 0:
-     "revisions" : 0 -> "(revision  3 0.0  ())" */
+     "revisions" : 0 -> "(revision 3 0.0 ())" */
   {
-    static char rev_skel[] = "(revision  3 0.0  ())";
+    static char rev_skel[] = "(revision 3 0.0 ())";
     svn_revnum_t rev = 0;
     SVN_ERR (svn_fs__put_rev (&rev, fs,
                               svn_fs__parse_skel (rev_skel,
@@ -90,7 +92,7 @@ dag_init_fs (void *fs_baton, trail_t *trail)
 svn_error_t *
 svn_fs__dag_init_fs (svn_fs_t *fs)
 {
-  return svn_fs__retry_txn (fs, dag_init_fs, fs, fs->pool);
+  return svn_fs__retry_txn (fs, txn_body_dag_init_fs, fs, fs->pool);
 }
 
 
