@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.23 $ of this document.)
+              ($Revision: 1.24 $ of this document.)
 
 * Introduction
 
@@ -751,7 +751,8 @@ Step 6:  Instantiate version 2 in the version array.
 yours and version 2 already exists, then instantiate the next
 available version.  But what root node do you point to, if the interim
 commit created a new root node?  This is the naive-vs-right locking
-question, must figure this out...)
+question, must figure this out... Oh.  Okay, it may not be as bad as
+all that... must think.)
 
 Step 7:  Remove your lock, the commit is complete.
 
