@@ -105,7 +105,7 @@ section for approved changes.)
       Unnecessary NULL guarantees in some string/uri APIs.
       Justification: Tiny change, avoid unnecessary interface guarantees.
       Votes:
-       +1: kfogel
+       +1: kfogel, ghudson
       
 
 Core changes that already have three +1 votes and no vetos.  (If you
