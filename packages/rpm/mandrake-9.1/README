@@ -1,6 +1,42 @@
-Last Update: Mon Jun 30 10:01:59 PDT 2003
+Last Update: Mon Sep 20 02:01:59 EDT 2003
 
-Noet: When I built the new RPMs - after some time having not built any -
+There is a new Makefile in place with additional support files.
+
+These files make things much simpler and smoother for maintaining and
+building a Subversion RPM.
+
+You will find a slew of configuration elements that allow you to preset
+any and all necessary items for your particular machine prior to build.
+
+Such as the name of the available packages (Neon, swig, etc).
+
+After that, you should be able to just make on a stock Mandrake system.
+
+If you had previously created .rpmrc or .rpmmacros as per MandrakeSoft
+instructions, they will be picked up for the most part as per standard.
+
+However, you are no longer required to create these files as safe defaults
+will be used if you supply nothing.
+
+Also, it is possible to build multiple revisions of subversion simultaneously
+without collision as long as the revision number (including release) is 
+different or if it's a blessed build.
+
+Blessed builds do not indicate their release number as the release is
+defined. Unblessed development builds always append the tree revision number
+and as such, collisions will be rare.
+
+Compiling from the trunk also creates the next minor revision greater, and 
+will prepend a "pre" in front of the revision number, a la Linux Kernels.
+
+Development builds on --version parameters report complete machine details.
+
+Blessed builds do not.
+
+Shamim Islam
+BA BS
+-----------------------------------------------------------------------
+Note: When I built the new RPMs - after some time having not built any -
 the svn binary that was produced was linked to libsvn_auth. That library
 is deprecated, and I can only imagine that because I had an old version
 sitting in /usr/lib it was picked up by some kind of errant build script.
