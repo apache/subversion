@@ -970,7 +970,13 @@ interpret_changes (apr_hash_t *entries,
 
   if (new_addonly)
     {
-      if (current_addonly || current_both)
+      if (current_addonly || current_neither)
+        {
+          return svn_error_createf(SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool, 
+                                   "%s is already under version control",
+                                   name->data);
+        }
+      else if (current_both)
         {
           /* TODO: generate a friendly warning here someday */
         }
