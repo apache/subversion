@@ -1,6 +1,10 @@
 /*
- * adm_ops.c:  routines for doing things in the administrative
- *             subdirectory.
+ * adm_ops.c: routines for affecting working copy administrative
+ *            information.  NOTE: this code doesn't know where the adm
+ *            info is actually stored.  Instead, generic handles to
+ *            adm data are requested via a reference to some PATH
+ *            (PATH being a regular, non-administrative directory or
+ *            file in the working copy).
  *
  * ================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
@@ -45,8 +49,7 @@
  * ====================================================================
  * 
  * This software consists of voluntary contributions made by many
- * individuals on behalf of CollabNet.
- */
+ * individuals on behalf of CollabNet.  */
 
 
 
@@ -64,106 +67,20 @@
 
 
 
-/* Make the working copy administrative directory. */
-static svn_error_t *
-create_empty_adm_subdir (svn_string_t *path, apr_pool_t *pool)
-{
-  return svn_wc__make_adm_thing (path, "", svn_directory_kind, pool);
-}
-
-
-
-/* Initialize the `versions' file in the administrative subdir. */
-static svn_error_t *
-adm_init_versions (svn_string_t *path,
-                   svn_string_t *ancestor_path,
-                   svn_vernum_t ancestor_version,
-                   apr_pool_t *pool)
+svn_error_t *
+svn_wc__ensure_wc_prepared (svn_string_t *path,
+                            svn_string_t *repository,
+                            apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
-  apr_file_t *v = NULL;
 
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_VERSIONS,
-                                svn_file_kind, pool);
+  err = svn_wc__ensure_adm (path, repository, pool);
   if (err)
     return err;
 
-  err = svn_wc__open_adm_file (&v, path, SVN_WC__ADM_VERSIONS,
-                               APR_WRITE, pool);
-  if (err)
-    return err;
-
-  apr_fprintf (v, ". %ld %s\n", ancestor_version, ancestor_path->data);
-
-  err = svn_wc__close_adm_file (v, path, SVN_WC__ADM_VERSIONS, pool);
-  if (err)
-    return err;
-
-  return SVN_NO_ERROR;
+  return err;
 }
 
-
-/* Set up working copy directory PATH with appropriate ancestry.
-   Leaves the directory in a locked state. */
-svn_error_t *
-svn_wc__set_up_new_dir (svn_string_t *path, 
-                        svn_string_t *ancestor_path,
-                        svn_vernum_t ancestor_version,
-                        apr_pool_t *pool)
-{
-  apr_status_t apr_err;
-  svn_error_t *err;
-
-  /* Make the directory. */
-  apr_err = apr_make_dir (path->data, APR_OS_DEFAULT, pool);
-  if (apr_err)
-    return svn_create_error (apr_err, 0, path->data, NULL, pool);
-
-  /* Make `SVN/'. */
-  err = create_empty_adm_subdir (path, pool);
-  if (err)
-    return err;
-
-  /* And lock it immediately! */
-  err = svn_wc__lock (path, 0, pool);
-  if (err)
-    return err;
-
-#if 0   /* kff todo: rewrite to use the new action bookkeeping mech. */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_DOING_CHECKOUT,
-                                svn_file_kind, pool);
-  if (err)
-    return err;
-#endif /* 0 */
-
-
-  /* Make `SVN/versions'. */
-  err = adm_init_versions (path, ancestor_path, ancestor_version, pool);
-  if (err)
-    return err;
-
-  /* Make `SVN/text-base/'. */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_TEXT_BASE,
-                                svn_directory_kind, pool);
-  if (err)
-    return err;
-
-  /* Make `SVN/prop-base/' */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_PROP_BASE,
-                                svn_directory_kind, pool);
-  if (err)
-    return err;
-
-  /* Make `SVN/tmp/' */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_TMP,
-                                svn_directory_kind, pool);
-  if (err)
-    return err;
-  
-  /* kff todo: to be continued. */
-
-  return SVN_NO_ERROR;
-}
 
 
 

@@ -80,7 +80,8 @@ Structure of the Working Copy
 Working copy meta-information is stored in SVN/ subdirectories,
 analogous to CVS/ sudirs:
 
-   SVN/wc_fmt                   /* Contains wc adm format version. */
+   SVN/README                   /* No, it's not this file.  Details below. */
+       format                   /* Contains wc adm format version. */
        repository               /* Where this stuff came from. */
        versions                 /* Version numbers for this directory */
        properties               /* Properties for this directory */
@@ -105,7 +106,18 @@ analogous to CVS/ sudirs:
             foo.c
             bar.c                   /* Would store bar.c's dirent props */
 
-`wc_fmt'
+`README'
+
+   If someone doesn't know what a Subversion working copy is, this
+   will tell them how to find out more about Subversion.
+
+   Also, the presence of this file means that the entire process of
+   creating the adm area was completed, because this is always the
+   last file created.  Of course, that's no guarantee that someone
+   didn't muck things up afterwards, but it's good enough for
+   existence-checking.
+
+`format'
 
    Says what version of the working copy adm format this is (so future
    clients can be backwards compatible easily).
@@ -121,12 +133,12 @@ analogous to CVS/ sudirs:
    repository tree from which this directory/file is derived.  It
    contains a single XML expression:
 
-      <svn-wc-versions xmlns="http://subversion.tigris.org/xmlns/blah">
+      <wc-versions xmlns="http://subversion.tigris.org/xmlns/blah">
         <entry name="" version="5"/>     <!-- empty name means current dir -->
         <entry name="foo.c" version="5"/>
         <entry name="bar.c" version="5"/>
         <entry name="baz.c" version="6"/>
-      </svn-wc-versions>
+      </wc-versions>
 
    The directory's own VersionNumber is implicit for every child of
    the directory, so only the exceptions need to be recorded.  If an
@@ -244,6 +256,14 @@ analogous to CVS/ sudirs:
 
    Use this instead of /tmp, for debuggability, recovery, easy
    avoidance of filename collisions.
+
+   When one of the administrative files is being worked on, it's
+   always SVN/tmp/SVN/filename, which is renamed to SVN/filename
+   when the change is complete.
+
+   When a regular file is being worked on, it's always
+   SVN/tmp/filename, which is then moved to the appropriate place
+   (usually one of SVN/*-base) when the change is complete.
 
 `text-base/'
 
