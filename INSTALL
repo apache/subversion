@@ -784,7 +784,7 @@ III.  BUILDING A SUBVERSION SERVER
       /usr/local/apache2/modules/.
 
 
-      Section II.E explains how to build the server on Windows..
+      Section II.E explains how to build the server on Windows.
 
 
   C.  Configuring Apache for Subversion
