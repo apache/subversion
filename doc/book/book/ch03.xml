@@ -2100,7 +2100,7 @@ Committed revision 1.
         <filename>some/project</filename> in the repository:</para>
 
       <screen>
-$ svn ls file:///usr/local/svn/newrepos/some/project
+$ svn list file:///usr/local/svn/newrepos/some/project
 bar.c
 foo.c
 subdir/

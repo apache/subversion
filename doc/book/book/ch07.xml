@@ -2028,7 +2028,7 @@ $ svn copy http://svn.example.com/repos/vendor/libcomplex/1.0  \
         libcomplex&mdash;we run <command>svn add</command> on those to
         get them under version control.  The missing files are files
         that were in 1.0 but not in 1.1, and on those paths we run
-        <command>svn remove</command>.  Finally, once our
+        <command>svn delete</command>.  Finally, once our
         <filename>current</filename> working copy contains only the
         libcomplex 1.1 code, we commit the changes we made to get it
         looking that way.</para>
