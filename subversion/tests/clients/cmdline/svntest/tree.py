@@ -561,6 +561,8 @@ def build_tree_from_commit(lines):
 #   Tree nodes will contain no contents, and these atts:
 #
 #          'status', 'wc_rev', 'repos_rev'
+#             ... and possibly 'locked', 'copied', IFF columns non-empty.
+# 
 
 def build_tree_from_status(lines):
   "Return a tree derived by parsing the output LINES from 'st'."
@@ -574,16 +576,20 @@ def build_tree_from_status(lines):
   else:
     repos_rev = '?'
     
-  rm = re.compile ('^(..)(.)([^0-9]+)(\d+|-)\s+(.+)')
+  rm = re.compile ('^(..)(.)(.)([^0-9]+)(\d+|-)\s+(.+)')
   for line in lines:
     match = rm.search(line)
     if match and match.groups():
-      if match.group(4) != '-': # ignore items that only exist on repos
-        new_branch = create_from_path(match.group(5), None, {},
-                                      {'status' : match.group(1),
-                                       'locked' : match.group(2),
-                                       'wc_rev' : match.group(4),
-                                       'repos_rev' : repos_rev})
+      if match.group(5) != '-': # ignore items that only exist on repos
+        atthash = {'status' : match.group(1),
+                   'wc_rev' : match.group(5),
+                   'repos_rev' : repos_rev}
+        if match.group(2) != ' ':
+          atthash['locked'] = match.group(2)
+        if match.group(3) != ' ':
+          atthash['copied'] = match.group(3)
+        new_branch = create_from_path(match.group(6), None, {}, atthash)
+
       root.add_child(new_branch)
 
   return root

@@ -73,17 +73,14 @@ def add_files_core(sbox, wc_dir):
   status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
   status_list.append([delta_path, None, {},
                       {'status' : 'A ',
-                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   status_list.append([zeta_path, None, {},
                       {'status' : 'A ',
-                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   status_list.append([epsilon_path, None, {},
                       {'status' : 'A ',
-                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   expected_output_tree = svntest.tree.build_generic_tree(status_list)
@@ -113,17 +110,14 @@ def add_directories_core(sbox, wc_dir):
   status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
   status_list.append([X_path, None, {},
                       {'status' : 'A ',
-                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   status_list.append([Y_path, None, {},
                       {'status' : 'A ',
-                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   status_list.append([Z_path, None, {},
                       {'status' : 'A ',
-                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   expected_output_tree = svntest.tree.build_generic_tree(status_list)
@@ -174,52 +168,42 @@ def nested_adds_core(sbox, wc_dir):
   status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
   status_list.append([X_path, None, {},
                       {'status' : 'A ',
-                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   status_list.append([Y_path, None, {},
                       {'status' : 'A ',
-                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   status_list.append([Z_path, None, {},
                       {'status' : 'A ',
-                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   status_list.append([P_path, None, {},
                       {'status' : 'A ',
-                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   status_list.append([Q_path, None, {},
                       {'status' : 'A ',
-                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   status_list.append([R_path, None, {},
                       {'status' : 'A ',
-                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   status_list.append([delta_path, None, {},
                       {'status' : 'A ',
-                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   status_list.append([epsilon_path, None, {},
                       {'status' : 'A ',
-                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   status_list.append([upsilon_path, None, {},
                       {'status' : 'A ',
-                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   status_list.append([zeta_path, None, {},
                       {'status' : 'A ',
-                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   expected_output_tree = svntest.tree.build_generic_tree(status_list)

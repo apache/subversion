@@ -272,7 +272,13 @@ typedef struct svn_wc_status_t
      component.  */
   enum svn_wc_status_kind text_status;
   enum svn_wc_status_kind prop_status;
+
+  /* Booleans: a directory can be 'locked' if a working copy update
+     was interrupted, and a file or directory can be 'copied' if it's
+     scheduled for addition-with-history (or part of a subtree that
+     is scheduled as such.) */
   svn_boolean_t locked;
+  svn_boolean_t copied;
 
   /* Fields that describe the status of the entry in the repository;
      in other words, these fields indicate whether text or props would

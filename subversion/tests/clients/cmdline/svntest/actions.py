@@ -337,15 +337,12 @@ def duplicate_dir(wc_name, wc_copy_name):
 # Returns a list of the form:
 #
 #   [ ['wc_dir', None, {}, {'status':'_ ',
-#                           'locked':' ',
 #                           'wc_rev':'1',
 #                           'repos_rev':'1'}],
 #     ['wc_dir/A', None, {}, {'status':'_ ',
-#                             'locked':' ',
 #                             'wc_rev':'1',
 #                             'repos_rev':'1'}],
 #     ['wc_dir/A/mu', None, {}, {'status':'_ ',
-#                                'locked':' ',
 #                                'wc_rev':'1',
 #                                'repos_rev':'1'}],
 #     ... ]
@@ -362,14 +359,12 @@ def get_virginal_status_list(wc_dir, rev):
 
   output_list = [[wc_dir, None, {},
                   {'status' : '_ ',
-                   'locked' : ' ',
                    'wc_rev' : rev,
                    'repos_rev' : rev}]]
   path_list = [x[0] for x in main.greek_tree]
   for path in path_list:
     item = [os.path.join(wc_dir, path), None, {},
             {'status' : '_ ',
-             'locked' : ' ',
              'wc_rev' : rev,
              'repos_rev' : rev}]
     output_list.append(item)

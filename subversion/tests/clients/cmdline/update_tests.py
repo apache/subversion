@@ -108,7 +108,6 @@ def update_binary_file():
     item[3]['wc_rev'] = '1'
   status_list.append([theta_path, None, {},
                       {'status' : '__',
-                       'locked' : ' ',
                        'wc_rev' : '2',
                        'repos_rev' : '2'}])
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
@@ -138,7 +137,6 @@ def update_binary_file():
     item[3]['wc_rev'] = '1'
   status_list.append([theta_path, None, {},
                       {'status' : '__',
-                       'locked' : ' ',
                        'wc_rev' : '3',
                        'repos_rev' : '3'}])
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
@@ -171,7 +169,6 @@ def update_binary_file():
   status_list = svntest.actions.get_virginal_status_list(wc_backup, '3')
   status_list.append([theta_backup_path, None, {},
                       {'status' : '__',
-                       'locked' : ' ',
                        'wc_rev' : '3',
                        'repos_rev' : '3'}])  
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
@@ -253,12 +250,10 @@ def update_binary_file_2():
     item[3]['wc_rev'] = '1'
   status_list.append([theta_path, None, {},
                       {'status' : '__',
-                       'locked' : ' ',
                        'wc_rev' : '2',
                        'repos_rev' : '2'}])
   status_list.append([zeta_path, None, {},
                       {'status' : '__',
-                       'locked' : ' ',
                        'wc_rev' : '2',
                        'repos_rev' : '2'}])
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
@@ -286,12 +281,10 @@ def update_binary_file_2():
     item[3]['wc_rev'] = '1'
   status_list.append([theta_path, None, {},
                       {'status' : '__',
-                       'locked' : ' ',
                        'wc_rev' : '3',
                        'repos_rev' : '3'}])
   status_list.append([zeta_path, None, {},
                       {'status' : '__',
-                       'locked' : ' ',
                        'wc_rev' : '3',
                        'repos_rev' : '3'}])
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
@@ -324,12 +317,10 @@ def update_binary_file_2():
     item[3]['wc_rev'] = '2'
   status_list.append([theta_path, None, {},
                       {'status' : '__',
-                       'locked' : ' ',
                        'wc_rev' : '2',
                        'repos_rev' : '3'}])  
   status_list.append([zeta_path, None, {},
                       {'status' : '__',
-                       'locked' : ' ',
                        'wc_rev' : '2',
                        'repos_rev' : '3'}])  
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
@@ -427,7 +418,6 @@ def update_ignores_added():
   status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
   status_list.append([zeta_path, None, {},
                       {'status' : 'A ',
-                       'locked' : ' ',
                        'wc_rev' : '0',
                        'repos_rev' : '1'}])
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
