@@ -1601,7 +1601,10 @@ Under some circumstances, the stabilization period will be extended:
      fix a bug, the entire four-week stabilization period is
      restarted.  A potentially destabilizing change is one which could
      affect many parts of Subversion in unpredictable ways, or which
-     involves adding a substantial amount of new code.
+     involves adding a substantial amount of new code.  Any
+     incompatible API change (only allowable in the first place if the
+     new release is an A.0.0 release) should be considered a
+     potentially destabilizing change.
 
    * If a critical bugfix is made during the final week of the
      stabilization period, the final week is restarted.  The final
