@@ -60,7 +60,7 @@
 
 
 svn_error_t *
-svn_io_check_path (svn_string_t *path,
+svn_io_check_path (const svn_string_t *path,
                    enum svn_node_kind *kind,
                    apr_pool_t *pool)
 {
@@ -94,11 +94,11 @@ svn_io_check_path (svn_string_t *path,
 
 
 svn_error_t *
-svn_io_tmp_file (apr_file_t **f,
-                 svn_string_t **tmp_name,
-                 const svn_string_t *path,
-                 const char *suffix,
-                 apr_pool_t *pool)
+svn_io_open_unique_file (apr_file_t **f,
+                         svn_string_t **unique_name,
+                         const svn_string_t *path,
+                         const char *suffix,
+                         apr_pool_t *pool)
 {
   char number_buf[6];
   int i;
@@ -114,25 +114,25 @@ svn_io_tmp_file (apr_file_t **f,
      as an unsigned short int has more or less this effect. */
   int random_portion_width;
   char *random_portion = apr_psprintf (pool, "%hu%n",
-                                       tmp_name,
+                                       unique_name,
                                        &random_portion_width);
 
-  *tmp_name = svn_string_dup (path, pool);
+  *unique_name = svn_string_dup (path, pool);
 
   /* Not sure of a portable PATH_MAX constant to use here, so just
      guessing at 255. */
-  if ((*tmp_name)->len >= 255)
+  if ((*unique_name)->len >= 255)
     {
-      int chop_amt = ((*tmp_name)->len - 255)
+      int chop_amt = ((*unique_name)->len - 255)
                       + random_portion_width
                       + 3  /* 2 dots */
                       + 5  /* 5 digits of iteration portion */
                       + strlen (suffix);
-      svn_string_chop (*tmp_name, chop_amt);
+      svn_string_chop (*unique_name, chop_amt);
     }
 
-  iterating_portion_idx = (*tmp_name)->len + random_portion_width + 2;
-  svn_string_appendcstr (*tmp_name,
+  iterating_portion_idx = (*unique_name)->len + random_portion_width + 2;
+  svn_string_appendcstr (*unique_name,
                          apr_psprintf (pool, ".%s.00000%s",
                                        random_portion, suffix));
 
@@ -142,13 +142,13 @@ svn_io_tmp_file (apr_file_t **f,
 
       /* Tweak last attempted name to get the next one. */
       sprintf (number_buf, "%05d", i);
-      (*tmp_name)->data[iterating_portion_idx + 0] = number_buf[0];
-      (*tmp_name)->data[iterating_portion_idx + 1] = number_buf[1];
-      (*tmp_name)->data[iterating_portion_idx + 2] = number_buf[2];
-      (*tmp_name)->data[iterating_portion_idx + 3] = number_buf[3];
-      (*tmp_name)->data[iterating_portion_idx + 4] = number_buf[4];
+      (*unique_name)->data[iterating_portion_idx + 0] = number_buf[0];
+      (*unique_name)->data[iterating_portion_idx + 1] = number_buf[1];
+      (*unique_name)->data[iterating_portion_idx + 2] = number_buf[2];
+      (*unique_name)->data[iterating_portion_idx + 3] = number_buf[3];
+      (*unique_name)->data[iterating_portion_idx + 4] = number_buf[4];
 
-      apr_err = apr_open (f, (*tmp_name)->data,
+      apr_err = apr_open (f, (*unique_name)->data,
                           (APR_WRITE | APR_CREATE | APR_EXCL),
                           APR_OS_DEFAULT, pool);
 
@@ -157,25 +157,26 @@ svn_io_tmp_file (apr_file_t **f,
       else if (apr_err)
         {
           *f = NULL;
-          *tmp_name = NULL;
+          *unique_name = NULL;
           return svn_error_createf (apr_err,
                                     0,
                                     NULL,
                                     pool,
-                                    "svn_io_tmp_name: "
-                                    "error attempting %s", (*tmp_name)->data);
+                                    "svn_io_open_unique_file: "
+                                    "error attempting %s",
+                                    (*unique_name)->data);
         }
       else
         return SVN_NO_ERROR;
     }
 
   *f = NULL;
-  *tmp_name = NULL;
-  return svn_error_createf (SVN_ERR_IO_TMP_NAMES_EXHAUSTED,
+  *unique_name = NULL;
+  return svn_error_createf (SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
                             0,
                             NULL,
                             pool,
-                            "svn_io_tmp_name: unable to make a tmp name for "
+                            "svn_io_unique_name: unable to make name for "
                             "%s", path->data);
 }
 

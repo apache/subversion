@@ -61,14 +61,14 @@
 
 /* If PATH exists, set *KIND to the appropriate kind, else set it to
    svn_unknown_kind. */
-svn_error_t *svn_io_check_path (svn_string_t *path,
+svn_error_t *svn_io_check_path (const svn_string_t *path,
                                 enum svn_node_kind *kind,
                                 apr_pool_t *pool);
 
 
 /* Open a new file (for writing) with a unique name based on PATH, in the
- * same directory as PATH.  The file handle is returned in *TMP_FILE,
- * and the name is returned in *TMP_NAME.
+ * same directory as PATH.  The file handle is returned in *F, and the
+ * name is returned in *UNIQUE_NAME.
  *
  * The name will include as much of PATH as possible, then a dot,
  * then a random portion, then another dot, then an iterated attempt
@@ -77,7 +77,7 @@ svn_error_t *svn_io_check_path (svn_string_t *path,
  *
  *    tests/t1/A/D/G/pi
  *
- * then svn_io_tmp_file(&f, &tmpname, PATH, ".tmp", pool) might pick
+ * then svn_io_open_unique_file(&f, &uniqe_name, PATH, ".tmp", pool) might pick
  *
  *    tests/t1/A/D/G/pi.3221223676.00001.tmp
  *
@@ -85,17 +85,17 @@ svn_error_t *svn_io_check_path (svn_string_t *path,
  *
  *    tests/t1/A/D/G/pi.3221223676.00002.tmp
  *
- * if called again while the first tmp file still exists.
+ * if called again while the first unique file still exists.
  *
- * It doesn't matter if PATH is a file or directory, the tmp name will
+ * It doesn't matter if PATH is a file or directory, the unique name will
  * be in PATH's parent either way.
  *
- * *TMP_NAME will never be exactly the same as PATH, even if PATH does
+ * *UNIQUE_NAME will never be exactly the same as PATH, even if PATH does
  * not exist.
  * 
- * *TMP_FILE and *TMP_NAME are allocated in POOL.
+ * *F and *UNIQUE_NAME are allocated in POOL.
  *
- * If no unique name can be found, SVN_ERR_IO_TMP_NAMES_EXHAUSTED is
+ * If no unique name can be found, SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED is
  * the error returned.
  *
  * Claim of Historical Inevitability: this function was written
@@ -110,11 +110,11 @@ svn_error_t *svn_io_check_path (svn_string_t *path,
  * database's holding area).  The random portion is a safeguard
  * against that case.
  */
-svn_error_t *svn_io_tmp_file (apr_file_t **f,
-                              svn_string_t **tmp_name,
-                              const svn_string_t *path,
-                              const char *suffix,
-                              apr_pool_t *pool);
+svn_error_t *svn_io_open_unique_file (apr_file_t **f,
+                                      svn_string_t **unique_name,
+                                      const svn_string_t *path,
+                                      const char *suffix,
+                                      apr_pool_t *pool);
 
 
 
