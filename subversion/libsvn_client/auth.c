@@ -51,8 +51,14 @@ get_username (char **username,
   /* Does auth_baton already have the value, received from
      the application (probably from argv[])? */
   if (ab->username)
-    *username = apr_pstrdup (pool, ab->username);
-  
+    {
+      *username = apr_pstrdup (pool, ab->username);
+
+      /* Since we got new totally new info, it's okay to overwrite
+         any cached info in the working copy (later on). */
+      ab->overwrite = TRUE;
+    }
+
   else  /* else get it from file cached in working copy. */
     {
       err = svn_wc_get_auth_file (ab->path, 
@@ -102,8 +108,14 @@ get_password (char **password,
   /* Does auth_baton already have the value, received from
      the application (probably from argv[])? */
   if (ab->password)
-    *password = apr_pstrdup (pool, ab->password);
-  
+    {
+      *password = apr_pstrdup (pool, ab->password);
+      
+      /* Since we got new totally new info, it's okay to overwrite
+         any cached info in the working copy (later on). */
+      ab->overwrite = TRUE;
+    }
+
   else  /* else get it from file cached in working copy. */
     {
       err = svn_wc_get_auth_file (ab->path, 
@@ -119,6 +131,10 @@ get_password (char **password,
                                         "password: ",
                                         TRUE, /* don't echo to the screen */
                                         ab->prompt_baton, pool));
+
+          /* Since we got new totally new info, it's okay to overwrite
+             any cached info in the working copy (later on). */
+          ab->overwrite = TRUE;
         }
     }
   
@@ -169,8 +185,14 @@ store_username (const char *username,
   svn_client_auth_baton_t *ab = 
     (svn_client_auth_baton_t *) auth_baton;
   
-  return store_auth_info (SVN_CLIENT_AUTH_USERNAME, username,
-                          ab->path, ab->pool);
+  /* Sanity check:  only store auth info if the `overwrite' flag is
+     set.  This flag is set if the user was either prompted or
+     specified new info on the commandline. */
+  if (ab->overwrite)
+    return store_auth_info (SVN_CLIENT_AUTH_USERNAME, username,
+                            ab->path, ab->pool);
+  else
+    return SVN_NO_ERROR;
 }
 
 
@@ -181,8 +203,14 @@ store_password (const char *password,
   svn_client_auth_baton_t *ab = 
     (svn_client_auth_baton_t *) auth_baton;
   
-  return store_auth_info (SVN_CLIENT_AUTH_PASSWORD, password,
-                          ab->path, ab->pool);
+  /* Sanity check:  only store auth info if the `overwrite' flag is
+     set.  This flag is set if the user was either prompted or
+     specified new info on the commandline. */
+  if (ab->overwrite)
+    return store_auth_info (SVN_CLIENT_AUTH_PASSWORD, password,
+                            ab->path, ab->pool);
+  else
+    return SVN_NO_ERROR;
 }
 
 
