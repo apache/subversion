@@ -30,29 +30,29 @@ typedef struct svn_string_t svn_string_t;
 */
 
 %typemap(python,in) svn_stringbuf_t * {
-    if (!PyString_Check($source)) {
+    if (!PyString_Check($input)) {
         PyErr_SetString(PyExc_TypeError, "not a string");
         return NULL;
     }
 %#error need pool argument from somewhere
-    $target = svn_string_ncreate(PyString_AS_STRING($source),
-                                 PyString_GET_SIZE($source),
+    $1 = svn_string_ncreate(PyString_AS_STRING($input),
+                                 PyString_GET_SIZE($input),
                                  /* ### gah... what pool to use? */
                                  pool);
 }
 
 %typemap(python,out) svn_stringbuf_t * {
-    $target = PyString_FromStringAndSize($source->data, $source->len);
+    $result = PyString_FromStringAndSize($1->data, $1->len);
 }
 
 /* svn_stringbuf_t ** is always an output parameter */
 %typemap(ignore) svn_stringbuf_t ** (svn_stringbuf_t *temp) {
-    $target = &temp;
+    $1 = &temp;
 }
 %typemap(python, argout) svn_stringbuf_t ** {
-    $target = t_output_helper($target,
-                              PyString_FromStringAndSize((*$source)->data,
-							 (*$source)->len));
+    $result = t_output_helper($result,
+                              PyString_FromStringAndSize((*$1)->data,
+							 (*$1)->len));
 }
 
 
@@ -62,30 +62,30 @@ typedef struct svn_string_t svn_string_t;
 
 /* const svn_string_t * is always an input parameter */
 %typemap(python,in) const svn_string_t * (svn_string_t value) {
-    if (!PyString_Check($source)) {
+    if (!PyString_Check($input)) {
         PyErr_SetString(PyExc_TypeError, "not a string");
         return NULL;
     }
-    value.data = PyString_AS_STRING($source);
-    value.len = PyString_GET_SIZE($source);
-    $target = &value;
+    value.data = PyString_AS_STRING($input);
+    value.len = PyString_GET_SIZE($input);
+    $1 = &value;
 }
 %typemap(default) const svn_string_t * {
-    $target = NULL;
+    $1 = NULL;
 }
 
 //%typemap(python,out) svn_string_t * {
-//    $target = PyBuffer_FromMemory($source->data, $source->len);
+//    $result = PyBuffer_FromMemory($1->data, $1->len);
 //}
 
 /* svn_string_t ** is always an output parameter */
 %typemap(ignore) svn_string_t ** (svn_string_t *temp) {
-    $target = &temp;
+    $1 = &temp;
 }
 %typemap(python,argout) svn_string_t ** {
-    $target = t_output_helper($target,
-                              PyString_FromStringAndSize((*$source)->data,
-							 (*$source)->len));
+    $result = t_output_helper($result,
+                              PyString_FromStringAndSize((*$1)->data,
+							 (*$1)->len));
 }
 
 /* -----------------------------------------------------------------------
@@ -94,20 +94,20 @@ typedef struct svn_string_t svn_string_t;
 
 /* ### note that SWIG drops the const in the arg decl, so we must cast */
 %typemap(ignore) const char **OUTPUT (const char *temp) {
-    $target = (char **)&temp;
+    $1 = (char **)&temp;
 }
 %typemap(python,argout) const char **OUTPUT {
     PyObject *s;
-    if (*$source == NULL) {
+    if (*$1 == NULL) {
         Py_INCREF(Py_None);
         s = Py_None;
     }
     else {
-        s = PyString_FromString(*$source);
+        s = PyString_FromString(*$1);
         if (s == NULL)
             return NULL;
     }
-    $target = t_output_helper($target, s);
+    $result = t_output_helper($result, s);
 }
 
 /* -----------------------------------------------------------------------
@@ -116,8 +116,8 @@ typedef struct svn_string_t svn_string_t;
 
 %typemap(python,in) const apr_array_header_t *STRINGLIST {
 %#error need pool argument from somewhere
-    $target = svn_swig_strings_to_array($source, NULL);
-    if ($target == NULL)
+    $1 = svn_swig_strings_to_array($input, NULL);
+    if ($1 == NULL)
         return NULL;
 }
 

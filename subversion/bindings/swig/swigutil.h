@@ -39,36 +39,8 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-
-/* This macro can be placed into a wrapper file for ensuring that a
-   pointer type will be registered with SWIG. */
-#define MAKE_TYPE_IMPL(type) \
-	struct type; \
-	static void _ignore_##type(struct type *arg) { }
-
-/* This macro can be placed into a wrapper file for ensuring that a
-   pointer type will be registered with SWIG. This doesn't declare the
-   type for the cases where something already includes the type (but it
-   just didn't get seen by SWIG). */
-#define MAKE_TYPE_IMPL_NO_DECL(type) \
-	static void _ignore_##type(struct type *arg) { }
-
-/* This macro can be placed into a wrapper file for ensuring that a
-   type will be registered with SWIG. */
-#define MAKE_PLAIN_TYPE_IMPL(type) \
-	struct foo *type; \
-	static void _ignore_##type(type arg) { }
-
-/* This macro can be placed into a wrapper file for ensuring that a
-   type will be registered with SWIG. This doesn't declare the type
-   for the cases where something already includes the type (but it
-   just didn't get seen by SWIG). */
-#define MAKE_PLAIN_TYPE_IMPL_NO_DECL(type) \
-	static void _ignore_##type(type arg) { }
-
-
-/* This file is being included outside of a wrapper file. We need to stub
-   out some of the SWIG types. */
+/* If this file is being included outside of a wrapper file, then need to
+   create stubs for some of the SWIG types. */
 
 /* if SWIGEXPORT is defined, then we're in a wrapper. otherwise, we need
    the prototypes and type definitions. */
@@ -79,7 +51,7 @@ extern "C" {
 #ifdef SVN_NEED_SWIG_TYPES
 
 typedef struct _unnamed swig_type_info;
-PyObject *SWIG_NewPointerObj(void *, swig_type_info *);
+PyObject *SWIG_NewPointerObj(void *, swig_type_info *, int own);
 
 #endif /* SVN_NEED_SWIG_TYPES */
 

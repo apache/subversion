@@ -42,19 +42,19 @@
 %ignore apr_check_dir_empty;
 %ignore apr_dir_remove_recursively;
 
+/* ### probably want to keep this one. disabling for now cuz of the
+   ### input stringbuf and its "which pool?" problem. */
+%ignore svn_io_open_unique_file;
+
 /* -----------------------------------------------------------------------
    apr_size_t * is always an IN/OUT parameter in svn_io.h
 */
-
-%typemap(in) apr_size_t * = apr_size_t *INOUT;
-%typemap(argout) apr_size_t * = apr_size_t *INOUT;
+%apply apr_size_t *INOUT { apr_size_t * };
 
 /* -----------------------------------------------------------------------
    handle the MIME type return value of svn_io_detect_mimetype()
 */
-
-%typemap(ignore) const char ** = const char **OUTPUT;
-%typemap(argout) const char ** = const char **OUTPUT;
+%apply const char **OUTPUT { const char ** };
 
 /* -----------------------------------------------------------------------
    wrap some specific APR functionality

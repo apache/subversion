@@ -32,7 +32,9 @@
 /* -----------------------------------------------------------------------
    these types (as 'type **') will always be an OUT param
 */
-OUT_PARAM(svn_repos_t);
+%apply SWIGTYPE **OUTPARAM {
+    svn_repos_t **
+};
 
 /* -----------------------------------------------------------------------
    handle the 'paths' parameter appropriately
@@ -40,17 +42,10 @@ OUT_PARAM(svn_repos_t);
 %typemap(in) const apr_array_header_t *paths =
     const apr_array_header_t *STRINGLIST;
 
-/* -----------------------------------------------------------------------
-   force this type into the wrapper
-*/
-MAKE_TYPE(svn_delta_edit_fns_t);
-
 /* ----------------------------------------------------------------------- */
 
 %include svn_repos.h
 %{
 #include "svn_repos.h"
 #include "swigutil.h"
-
-MAKE_TYPE_IMPL_NO_DECL(svn_delta_edit_fns_t)
 %}
