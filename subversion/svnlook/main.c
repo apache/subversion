@@ -275,11 +275,13 @@ check_lib_versions (void)
 }
 
 
+/* Get revision or transaction property PROP_NAME for the revision or
+   transaction specified in C, allocating in in POOL and placing it in
+   *PROP_VALUE. */
 static svn_error_t *
-get_property (svn_string_t **prop_value /* native */,
-              svn_boolean_t need_translation,
+get_property (svn_string_t **prop_value,
               svnlook_ctxt_t *c, 
-              const char *prop_name /* UTF-8! */,
+              const char *prop_name,
               apr_pool_t *pool)
 {
   svn_string_t *raw_value;
@@ -292,9 +294,6 @@ get_property (svn_string_t **prop_value /* native */,
   else
     SVN_ERR (svn_fs_revision_prop (&raw_value, c->fs, c->rev_id,
                                    prop_name, pool));
-
-  if (need_translation && svn_prop_needs_translation (prop_name))
-    SVN_ERR (svn_subst_detranslate_string (&raw_value, raw_value, TRUE, pool));
 
   *prop_value = raw_value;
 
@@ -1074,8 +1073,9 @@ static svn_error_t *
 do_log (svnlook_ctxt_t *c, svn_boolean_t print_size, apr_pool_t *pool)
 {
   svn_string_t *prop_value;
+  svn_string_t *prop_value_native;
 
-  SVN_ERR (get_property (&prop_value, TRUE, c, SVN_PROP_REVISION_LOG, pool));
+  SVN_ERR (get_property (&prop_value, c, SVN_PROP_REVISION_LOG, pool));
   if (! (prop_value && prop_value->data))
     {
       SVN_ERR (svn_cmdline_printf (pool, "%s\n", print_size ? "0" : ""));
@@ -1083,8 +1083,14 @@ do_log (svnlook_ctxt_t *c, svn_boolean_t print_size, apr_pool_t *pool)
     }
   
   if (print_size)
-    SVN_ERR (svn_cmdline_printf (pool, "%" APR_SIZE_T_FMT "\n",
-                                 prop_value->len));
+    {
+      /* svn_cmdline_printf will convert to the native locale and eol-style
+         for us, but we need the size of the converted message. */
+      SVN_ERR (svn_subst_detranslate_string (&prop_value_native, prop_value,
+                                             TRUE, pool));
+      SVN_ERR (svn_cmdline_printf (pool, "%" APR_SIZE_T_FMT "\n",
+                                   prop_value_native->len));
+    }
 
   SVN_ERR (svn_cmdline_printf (pool, "%s\n", prop_value->data));
   return SVN_NO_ERROR;
@@ -1099,7 +1105,7 @@ do_date (svnlook_ctxt_t *c, apr_pool_t *pool)
 {
   svn_string_t *prop_value;
 
-  SVN_ERR (get_property (&prop_value, FALSE, c, SVN_PROP_REVISION_DATE, pool));
+  SVN_ERR (get_property (&prop_value, c, SVN_PROP_REVISION_DATE, pool));
   if (prop_value && prop_value->data)
     {
       /* Convert the date for humans. */
@@ -1124,7 +1130,7 @@ do_author (svnlook_ctxt_t *c, apr_pool_t *pool)
 {
   svn_string_t *prop_value;
 
-  SVN_ERR (get_property (&prop_value, TRUE, c,
+  SVN_ERR (get_property (&prop_value, c,
                          SVN_PROP_REVISION_AUTHOR, pool));
   if (prop_value && prop_value->data) 
     SVN_ERR (svn_cmdline_printf (pool, "%s", prop_value->data));
