@@ -536,7 +536,8 @@ svn_repos_get_file_revs (svn_repos_t *repos,
      the callback before reporting an uglier error below. */
   SVN_ERR (svn_fs_check_path (&kind, root, path, pool));
   if (kind != svn_node_file)
-    return svn_error_create (SVN_ERR_FS_NOT_FILE, NULL, NULL);
+    return svn_error_createf
+      (SVN_ERR_FS_NOT_FILE, NULL, _("'%s' is not a file"), path);
 
   /* Open a history object. */
   SVN_ERR (svn_fs_node_history (&history, root, path, last_pool));

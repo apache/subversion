@@ -89,6 +89,37 @@ def blame_binary(sbox):
     
   
 
+# Issue #2154 - annotating a directory should fail 
+# (change needed if the desired behavior is to 
+#  run blame recursively on all the files in it) 
+#
+def blame_directory(sbox):
+  "annotating a directory not allowed"
+
+  # Issue 2154 - blame on directory fails without error message
+
+  import re
+
+  # Setup
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  dir = os.path.join(wc_dir, 'A')
+
+  # Run blame against directory 'A'.  The repository error will
+  # probably include a leading slash on the path, but we'll tolerate
+  # it either way, since either way it would still be a clean error.
+  expected_error  = ".*'[/]{0,1}A' is not a file"
+  outlines, errlines = svntest.main.run_svn(1, 'blame', dir)
+
+  # Verify expected error message is output
+  for line in errlines:
+    if re.match (expected_error, line):
+      break
+  else:
+    raise svntest.Failure ('Failed to find %s in %s' %
+      (expected_error, str(errlines)))
+  
+
 ########################################################################
 # Run the tests
 
@@ -97,6 +128,7 @@ def blame_binary(sbox):
 test_list = [ None,
               blame_space_in_name,
               blame_binary,
+              blame_directory,
              ]
 
 if __name__ == '__main__':
