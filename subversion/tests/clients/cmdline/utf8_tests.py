@@ -110,13 +110,17 @@ except:
 
 # Check to see if the locale uses ISO-8859-1 encoding.  The regex is necessary
 # because some systems ommit the first hyphen or use lowercase letters for ISO.
-#
-# We should actually check to see if the locale (LC_ALL, LC_CTYPE or LANG)
-# either already *is* iso-8859-1 or the above putenv was successful
 localeenc = locale.getlocale()[1]
 if localeenc:
   localeregex = re.compile('^ISO-?8859-1$', re.I)
   localematch = localeregex.search(localeenc)
+  try:
+    svntest.actions.run_and_verify_svn("",svntest.SVNAnyOutput, None,"help")
+  except:
+    # We won't be able to run the client; this might be because the
+    # system does not support the iso-8859-1 locale. Anyhow, it makes
+    # no sense to run the test.
+    localematch = None
 else:
   localematch = None
 
