@@ -814,6 +814,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 {
   const char *fs_path;
   const char *repo_name;
+  const char *xslt_uri;
   dav_resource_combined *comb;
   dav_svn_repos *repos;
   apr_size_t len1;
@@ -838,6 +839,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
     }
 
   repo_name = dav_svn_get_repo_name(r);
+  xslt_uri = dav_svn_get_xslt_uri(r);
 
   comb = apr_pcalloc(r->pool, sizeof(*comb));
   comb->res.info = &comb->priv;
@@ -932,6 +934,9 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 
   /* A name for the repository */
   repos->repo_name = repo_name;
+
+  /* An XSL transformation */
+  repos->xslt_uri = xslt_uri;
 
   /* Remember various bits for later URL construction */
   repos->base_url = ap_construct_url(r->pool, "", r);
@@ -1457,11 +1462,45 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
   }
 
   if (resource->collection) {
+    const int gen_html = !resource->info->repos->xslt_uri;
     apr_hash_t *entries;
     apr_pool_t *entry_pool;
-    const char *title;
     apr_array_header_t *sorted;
     int i;
+
+    /* XML schema for the directory index if xslt_uri is set:
+
+       <?xml version="1.0"?>
+       <?xml-stylesheet type="text/xsl" href="[info->repos->xslt_uri]"?> */
+    static const char xml_index_dtd[] =
+      "<!DOCTYPE svn [\n"
+      "  <!ELEMENT svn   (index)>\n"
+      "  <!ATTLIST svn   version CDATA #REQUIRED\n"
+      "                  href    CDATA #REQUIRED>\n"
+      "  <!ELEMENT index (updir?, (file | dir)*)>\n"
+      "  <!ATTLIST index name    CDATA #OPTIONAL\n"
+      "                  path    CDATA #OPTIONAL\n"
+      "                  rev     CDATA #OPTIONAL>\n"
+      "  <!ELEMENT updir EMPTY>\n"
+      "  <!ELEMENT file  (prop)*>\n"
+      "  <!ATTLIST file  name    CDATA #REQUIRED>\n"
+      "  <!ELEMENT dir   (prop)*>\n"
+      "  <!ATTLIST dir   name    CDATA #REQUIRED>\n"
+      "  <!ELEMENT prop  (#PCDATA)>\n"
+      "  <!ATTLIST prop  name    CDATA #REQUIRED>\n"
+      "]>\n";
+
+    /* <svn version="0.13.1 (dev-build)"
+            href="http://subversion.tigris.org">
+         <index name="[info->repos->repo_name]"
+                path="[info->repos_path]"
+                rev="[info->root.rev]">
+           <file name="foo">
+             <prop name="mime-type">image/png</prop>
+           </file>
+           <dir name="bar"/>
+         </index>
+       </svn> */
 
     serr = svn_fs_dir_entries(&entries, resource->info->root.root,
                               resource->info->repos_path, resource->pool);
@@ -1469,27 +1508,61 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "could not fetch directory entries");
 
-    if (resource->info->repos_path == NULL)
-      title = "unknown location";
-    else
-      title = ap_escape_html(resource->pool, resource->info->repos_path);
-
-    if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
-      title = apr_psprintf(resource->pool,
-                           "Revision %" SVN_REVNUM_T_FMT ": %s",
-                           resource->info->root.rev, title);
-
-    if (resource->info->repos->repo_name)
-      title = apr_psprintf(resource->pool, "%s - %s",
-                          resource->info->repos->repo_name,
-                          title);
-
     bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
-    ap_fprintf(output, bb, "<html><head><title>%s</title></head>\n"
-	       "<body>\n <h2>%s</h2>\n <ul>\n", title, title);
+
+    if (gen_html)
+      {
+        const char *title;
+        if (resource->info->repos_path == NULL)
+          title = "unknown location";
+        else
+          title = ap_escape_uri(resource->pool, resource->info->repos_path);
+
+        if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
+          title = apr_psprintf(resource->pool,
+                               "Revision %" SVN_REVNUM_T_FMT ": %s",
+                               resource->info->root.rev, title);
+
+        if (resource->info->repos->repo_name)
+          title = apr_psprintf(resource->pool, "%s - %s",
+                               resource->info->repos->repo_name,
+                               title);
+
+        ap_fprintf(output, bb, "<html><head><title>%s</title></head>\n"
+                   "<body>\n <h2>%s</h2>\n <ul>\n", title, title);
+      }
+    else
+      {
+        ap_fputs(output, bb, "<?xml version=\"1.0\"?>\n");
+        ap_fprintf(output, bb,
+                   "<?xml-stylesheet type=\"text/xsl\" href=\"%s\"?>\n",
+                   resource->info->repos->xslt_uri);
+        ap_fputs(output, bb, xml_index_dtd);
+        ap_fputs(output, bb,
+                 "<svn version=\"" SVN_VERSION "\"\n"
+                 "     href=\"http://subversion.tigris.org/\">\n");
+
+        ap_fputs(output, bb, "  <index");
+        if (resource->info->repos->repo_name)
+            ap_fprintf(output, bb, " name=\"%s\"",
+                       resource->info->repos->repo_name);
+        if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
+          ap_fprintf(output, bb, " rev=\"%" SVN_REVNUM_T_FMT "\"",
+                     resource->info->root.rev);
+        if (resource->info->repos_path)
+          ap_fprintf(output, bb, " path=\"%s\"",
+                     ap_escape_uri(resource->pool,
+                                   resource->info->repos_path));
+        ap_fputs(output, bb, ">\n");
+      }
 
     if (resource->info->repos_path && resource->info->repos_path[1] != '\0')
-      ap_fprintf(output, bb, "  <li><a href=\"../\">..</a></li>\n");
+      {
+        if (gen_html)
+          ap_fprintf(output, bb, "  <li><a href=\"../\">..</a></li>\n");
+        else
+          ap_fprintf(output, bb, "    <updir />\n");
+      }
 
     /* get a sorted list of the entries */
     sorted = apr_hash_sorted_keys(entries, svn_sort_compare_items_as_paths,
@@ -1514,7 +1587,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         (void) svn_fs_is_dir(&is_dir, resource->info->root.root,
                              entry_path, entry_pool);
 
-        name = ap_escape_html(entry_pool, item->key);
+        name = ap_escape_uri(entry_pool, item->key);
 
         /* append a trailing slash onto the name for directories. we NEED
            this for the href portion so that the relative reference will
@@ -1522,20 +1595,29 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         if (is_dir)
           name = apr_pstrcat(entry_pool, name, "/", NULL);
 
-        ap_fprintf(output, bb,
-                   "  <li><a href=\"%s\">%s</a></li>\n",
-                   name, name);
+        if (gen_html)
+          ap_fprintf(output, bb,
+                     "  <li><a href=\"%s\">%s</a></li>\n",
+                     name, name);
+        else
+          /* ### This is where the we could search for props */
+          ap_fprintf(output, bb, "    <%s name=\"%s\"></%s>\n",
+                     (is_dir ? "dir" : "file"), name,
+                     (is_dir ? "dir" : "file"));
 
         svn_pool_clear(entry_pool);
       }
 
     svn_pool_destroy(entry_pool);
 
-    ap_fputs(output, bb,
-             " </ul>\n <hr noshade><em>Powered by "
-             "<a href=\"http://subversion.tigris.org/\">Subversion</a> "
-             "version " SVN_VERSION "."
-             "</em>\n</body></html>");
+    if (gen_html)
+      ap_fputs(output, bb,
+               " </ul>\n <hr noshade><em>Powered by "
+               "<a href=\"http://subversion.tigris.org/\">Subversion</a> "
+               "version " SVN_VERSION "."
+               "</em>\n</body></html>");
+    else
+      ap_fputs(output, bb, "  </index>\n</svn>\n");
 
     bkt = apr_bucket_eos_create(output->c->bucket_alloc);
     APR_BRIGADE_INSERT_TAIL(bb, bkt);

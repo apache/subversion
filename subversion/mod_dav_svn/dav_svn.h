@@ -80,6 +80,9 @@ typedef struct {
   /* The name of this repository */
   const char *repo_name;
 
+  /* The URI of the XSL transform for directory indexes */
+  const char *xslt_uri;
+
   /* the open repository */
   svn_repos_t *repos;
 
@@ -257,6 +260,9 @@ const char *dav_svn_get_special_uri(request_rec *r);
 
 /* Return a descriptive name for the repository */
 const char *dav_svn_get_repo_name(request_rec *r);
+
+/* Return the URI of an XSL transform stylesheet */
+const char *dav_svn_get_xslt_uri(request_rec *r);
 
 /* convert an svn_error_t into a dav_error, possibly pushing a message. use
    the provided HTTP status for the DAV errors */
