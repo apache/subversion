@@ -3,7 +3,7 @@
   <tree-delta>
     <replace name="iota">
       <file>
-        <text-delta-ref id="iota">
+        <text-delta-ref id="iota"/>
       </file>
     </replace>
     <replace name="A">
@@ -11,7 +11,7 @@
         <tree-delta>
           <replace name="mu">
             <file>
-              <text-delta-ref id="mu">
+              <text-delta-ref id="mu"/>
             </file>
           </replace>
           <replace name="B">
@@ -22,12 +22,12 @@
                     <tree-delta>
                       <replace name="beta">
                         <file>
-                          <text-delta-ref id="beta">
+                          <text-delta-ref id="beta"/>
                         </file>
                       </replace>
                       <add name="sigma">
                         <file>
-                          <text-delta-ref id="sigma">
+                          <text-delta-ref id="sigma"/>
                         </file>
                       </add>
                     </tree-delta>
@@ -44,7 +44,7 @@
                     <tree-delta>
                       <replace name="rho">
                         <file>
-                          <text-delta-ref id="rho">
+                          <text-delta-ref id="rho"/>
                         </file>
                       </replace>
                     </tree-delta>
