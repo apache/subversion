@@ -40,8 +40,17 @@ SVNADMIN = 'svnadmin'      # Location of the svnadmin binary.
 DATAFILE = 'cvs2svn-data'
 DUMPFILE = 'cvs2svn-dump'  # The "dumpfile" we create to load into the repos
 HEAD_MIRROR_DB = 'cvs2svn-head-mirror.db'  # Mirror the head tree
-TAGS_DIR = "cvs2svn-tags"
-BRANCHES_DIR = "cvs2svn-branches"
+
+# Tag and branch roots live here when their start revision is known
+# but not yet their end revision.
+OPEN_TAGS_DB = "cvs2svn-open-tags.db"
+OPEN_BRANCHES_DB = "cvs2svn-open-branches.db"
+
+# Tag and branch roots live here when both their start and end
+# revisions are known.
+BOUND_TAGS_DB = "cvs2svn-tags.db"
+BOUND_BRANCHES_DB = "cvs2svn-branches.db"
+
 REVS_SUFFIX = '.revs'
 CLEAN_REVS_SUFFIX = '.c-revs'
 SORTED_REVS_SUFFIX = '.s-revs'
@@ -649,28 +658,61 @@ class SymbolicNameTracker:
   range recorded here is that in which the given symbolic name could
   be rooted, *not* the path/rev on which commits to that symbolic name
   took place (which could only happen w/ branches anyway, of course)."""
-  def __init__(self, dir):
-    self.dir = dir
-    if not os.path.isdir(dir):
-      os.mkdir(dir)
+
+  # Keys in both DB files are of the form:
+  #
+  #    SYMBOLIC_NAME/SVN_PATH
+  #
+  # (This is safe because CVS symbolic names never contain '/'.)
+  #
+  # In the open_db, the value is a single svn revision (the earliest
+  # revision from which that tag or branch could be copied).
+  #
+  # In the bound_db, the value is a tuple (start_rev, end_rev), giving
+  # the range of Subversion revisions from which that tag or branch
+  # could be copied.  The start_rev is always the same as the single
+  # revision from the open_db; once the end revision is known, the
+  # entry is removed from the open_db and a new entry is created in
+  # the bound_db.
+
+  def __init__(self, open_db_file, bound_db_file):
+    self.open_db_file = open_db_file
+    self.bound_db_file = bound_db_file
+    self.open_db = anydbm.open(open_db_file, 'n')
+    self.bound_db = anydbm.open(bound_db_file, 'n')
+
+  def close(self):
+    self.open_db.close()
+    self.bound_db.close()
+    os.remove(self.open_db_file)
+    os.remove(self.bound_db_file)
 
   def track_names(self, svn_path, svn_rev, names):
-    """### In progress ###
-    At SVN_REV, start tracking the symbolic names rooted in SVN_PATH."""
+    """Track that the the symbolic names in NAMES can earliest be
+    copied from SVN_REV of SVN_PATH (which does not start with '/')."""
     if not names: return  # early out
-    # ### todo: working here
-    # print "KFF: '%s' (%d):" % (svn_path, svn_rev)
-    # print "   KFF: rooted here:", names
-    
+    for name in names:
+      key = name + '/' + svn_path
+      if self.open_db.has_key(key):
+        found_root_rev = self.open_db[key]
+        sys.stderr.write(
+          "track_names: '%s' already claims '%s' is rooted at revision %d."
+          % (svn_path, name, svn_rev))
+        sys.exit(1)
+      else:
+        # TODO: working here, among other places
+        # print "KFF: %2d ==> %s" % (svn_rev, key)
+        pass
+
 
 class TagTracker(SymbolicNameTracker):
   def __init__(self):
-    SymbolicNameTracker.__init__(self, TAGS_DIR)
+    SymbolicNameTracker.__init__(self, OPEN_TAGS_DB, BOUND_TAGS_DB)
 
 
 class BranchTracker(SymbolicNameTracker):
   def __init__(self):
-    SymbolicNameTracker.__init__(self, BRANCHES_DIR)
+    SymbolicNameTracker.__init__(self, OPEN_BRANCHES_DB, BOUND_BRANCHES_DB)
 
 
 class Commit:
@@ -678,8 +720,6 @@ class Commit:
     self.files = { }
     self.changes = [ ]
     self.deletes = [ ]
-    self.tag_tracker = TagTracker()
-    self.branch_tracker = BranchTracker()
     self.t_min = 1<<30
     self.t_max = 0
 
@@ -790,8 +830,8 @@ class Commit:
       print '    adding or changing %s : %s' % (cvs_rev, svn_path)
       if svn_rev == SVN_INVALID_REVNUM:
         svn_rev = dump.start_revision(props)
-      self.tag_tracker.track_names(svn_path, svn_rev, tags)
-      self.branch_tracker.track_names(svn_path, svn_rev, branches)
+      ctx.tag_tracker.track_names(svn_path, svn_rev, tags)
+      ctx.branch_tracker.track_names(svn_path, svn_rev, branches)
       dump.add_or_change_path(cvs_path, svn_path, cvs_rev, rcs_file)
 
     for rcs_file, cvs_rev, br, tags, branches in self.deletes:
@@ -814,8 +854,8 @@ class Commit:
         ### won't show up 'svn log' output, even when invoked on the
         ### root -- because no paths changed!  That needs to be fixed,
         ### regardless of whether cvs2svn creates such revisions.
-        self.tag_tracker.track_names(svn_path, svn_rev, tags)
-        self.branch_tracker.track_names(svn_path, svn_rev, branches)
+        ctx.tag_tracker.track_names(svn_path, svn_rev, tags)
+        ctx.branch_tracker.track_names(svn_path, svn_rev, branches)
         dump.delete_path(svn_path, ctx.prune)
 
     if svn_rev != SVN_INVALID_REVNUM:
@@ -1108,6 +1148,10 @@ def pass4(ctx):
     if not trunk_rev.match(rev):
       ### note this could/should have caused a flush, but the next item
       ### will take care of that for us
+      ### 
+      ### TODO: working here.  Because of this condition, we're not
+      ### seeing tags and branches rooted in initial revisions (CVS's
+      ### infamous "1.1.1.1").
       continue
 
     # Each time we read a new line, we scan the commits we've
@@ -1218,6 +1262,8 @@ def main():
   ctx.dry_run = 0
   ctx.prune = 1
   ctx.create_repos = 0
+  ctx.tag_tracker = TagTracker()
+  ctx.branch_tracker = BranchTracker()
   ctx.trunk_base = "trunk"
   ctx.tags_base = "tags"
   ctx.branches_base = "branches"
@@ -1267,6 +1313,8 @@ def main():
       ctx.encoding = value
 
   convert(ctx, start_pass=start_pass)
+  ctx.tag_tracker.close()
+  ctx.branch_tracker.close()
 
 if __name__ == '__main__':
   main()
