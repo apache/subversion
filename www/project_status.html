@@ -58,9 +58,9 @@ Last updated:  Friday 16 March 2001
     <td align="left">Client Libraries</td>
     <td>
         <table cellspacing="0" cellpadding="0" border=0><tr>
-          <td width=260 bgcolor="0000FF" align=right>
-          <font color=FFFFFF>65%</font></td>
-          <td width=140 bgcolor="FF0000">&nbsp;</td>
+          <td width=280 bgcolor="0000FF" align=right>
+          <font color=FFFFFF>70%</font></td>
+          <td width=120 bgcolor="FF0000">&nbsp;</td>
         </tr></table>
     </td>
   </tr>
@@ -96,22 +96,24 @@ Last updated:  Friday 16 March 2001
 <h3>Last Week's Activities</h3>
 
 <p>
-
-Checkouts and commits are working now.  The client can connect to the
-repository layer (via the <tt>ra_local</tt> library, not the network),
-check out a tree, and commit changes, including: file modifications,
-file adds, file deletes, dir adds, and dir deletes.  Copies work on
-the repository side, but still need further tweaks in the client.
-
-<p>
-
-Next week, we'll parallelize: Greg Stein will make the above happen
-over the network, while the client/filesystem team works on updates.
-Updates are a matter of getting the client to report its "working copy
-state" to the server, and having the server send back an appropriate
-delta to bring that working copy up-to-date.
+It looks like we have checkouts, commits <i>and</i> updates working
+now, when talking with a local repository (ra_local).  (The `status'
+command works too, in a simple way.)  Yes, there are a few little bugs
+still.  But for the most part, the general internal machinery appears
+to be working.  This is great news.
 
 <p>
+Next week's agenda:
+<p>
+<ul>
+<li> throw ra_dav into the action
+<p>
+<li> start expanding the interfaces so that commits and updates can
+     take multiple targets.
+</ul>
+<p>
+M2 is a week from Sunday, and we're cruising right towards it.
+
 
 
 <!----------------------------------------------------------------->
