@@ -1,11 +1,12 @@
 @node Client
 @chapter Client
 
-The Subversion client is built on three libraries.  The first two are
-low-level: one for local working copy management, the other for
-communicating with the server.  The third library provides high-level
-wrappers around these low-level operations, to implement basic client
-operations such as @code{commit} and @code{update}.
+The Subversion client is built on three libraries.  One operates
+strictly on the working copy and does not talk to the repository.
+Another talks to the repository but never changes the working copy.  The
+last library uses the first two to provide user-level operations such as
+@code{commit} and @code{update}, that both talk to the repository and
+change the working copy.
 
 The initial client is a Unix-style command-line tool (like standard
 CVS), but there is no reason why that has to be the only client.  The
@@ -20,7 +21,7 @@ copies.
 * Terminology
 * The working copy management library
 * The repository access library
-* The high-level client operation library
+* The client operation library
 * The layout of working copies
 @end menu
 
@@ -267,6 +268,27 @@ Return all property keys for a version.
 @end table
 
 @c -----------------------------------------------------------------------
+@node The client operation library
+@subsection The client operation library
+
+fooo working here:
+
+   add
+   annotate
+   checkout
+   commit
+   diff
+   import
+   log
+   rename
+   remove
+   branch
+   tag
+   status
+   update
+
+
+@c -----------------------------------------------------------------------
 @node The layout of working copies
 @subsection The layout of working copies
 
@@ -325,17 +347,14 @@ Specifically, the SVN subdir holds:
 @itemize @bullet
 
 @item
-A @dfn{base tree}, containing the pristine repository versions of the
-files and subdirectories there.  Note that subdirectories are stored
-shallowly, solely to record permission information.  The actual base
-versions of a subdir's files are stored in "SVN/base/" for that subdir.
+A @dfn{base} directory, containing the pristine repository versions of
+the files here.
 
 @item
 A @file{versions} file, the first entry of which records the version
 number of this directory (and, by implication, the version number of any
-files not otherwise mentioned in the file).  The remaining entries
-record version information for files here which are at some version
-other than the default.
+files not otherwise mentioned).  The remaining entries are for files at
+other versions.
 
 It may help to think of this file as the functional equivalent of the
 CVS/Entries file.
