@@ -45,7 +45,7 @@ const char svn_cl__help_header[] =
 
 const char svn_cl__help_footer[] =
     "Subversion is a tool for revision control.\n"
-    "For additional information, see http://subversion.tigris.org\n"
+    "For additional information, see http://subversion.tigris.org/\n"
     "\n";
 
 

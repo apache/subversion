@@ -349,7 +349,7 @@ static int end_element(void *userdata,
           for (; hi; hi = apr_hash_next(hi))
             {
               const void *key;
-              apr_size_t klen;
+              apr_ssize_t klen;
               void *val;
               apr_hash_this(hi, &key, &klen, &val);
               if (pc->status == 200)
