@@ -22,9 +22,12 @@
  *   Make sure that MinGW/bin is in your path and type:
  *     windres.exe -i svnpath.rc -I rc -o svnpath.res -O coff 
  *     gcc -s -Os -Wall -mwindows -march=i386 -o svnpath.exe svnpath.res main.c
- * Compiling with MS Visual C:
+ * Compiling with MS Visual C (use VC 5.x.):
  *   Make a new Win32 Console Application project with the name svnpath
  *   and add this file to your project.
+ *   NOTE: Do not even think about using something newer than VC 5.x. This is
+ *         an installation program and the required runtime files are newer
+ *         than some of the targed OS's (Win 2000 and older). 
  * Compiling with the free Borland compiler bcc55:
  *   Make sure that the bcc bin directory is in your path and type:
  *     bcc32.exe -WC -O1 -fp -esvnpath main.c
@@ -89,24 +92,23 @@ main (int argc, char *argv[])
             lstrcpy ( cMsg, "Missing arguments.");
             svn_error_msg(cMsg);
             iRetVal = 65;
+            iCmdArgError=0;
             break;
         case 2: /* help */
-            if (! strcmp(argv[2], "--help") || ! strcmp(argv[2], "-h"))
+            if (! strcmp(argv[1], "--help") || ! strcmp(argv[1], "-h"))
               {
                 iRetVal=svn_print_help();
                 iCmdArgError=0;
               }
             break;
         case 3: /* add|remove path */
-            if (! strcmp(argv[2], "add") || ! strcmp(argv[2], "remove"))
+            if (! strcmp(argv[1], "add") || ! strcmp(argv[1], "remove"))
               {
-                iRetVal=svn_run_cmd(argv[2], argv[3]);
+                iRetVal=svn_run_cmd(argv[1], argv[2]);
                 iCmdArgError=0;
               }
             break;
         default:
-              lstrcpy ( cMsg, "To many arguments.");
-              svn_error_msg(cMsg);
               iRetVal = 1;
       }
 
@@ -125,7 +127,7 @@ main (int argc, char *argv[])
             lstrcat ( cMsg, "'");
           }
 
-        if (! strcmp(argv[1], "add") || ! strcmp(argv[1], "remove"))
+        if ((!strcmp(argv[1], "add") || !strcmp(argv[1], "remove")) && (argc > 3))
           {
             iRetVal=svn_run_cmd(argv[1], argv[2]);
             iCmdArgError=0;              
@@ -240,8 +242,16 @@ svn_addnt (char cPathSvn[255])
         lRet = svn_read_regval(HKEY_CURRENT_USER, "Path",
                                "Environment", &*pcPathCur, &lpType);
 
-        lstrcpy(cPathNew, cPathCur);
-        lstrcat(cPathNew, ";");
+        /* Current Path may be empty */
+        cPathNew[0] = 0;
+        if (strlen(cPathCur))
+        {
+          lstrcpy(cPathNew, cPathCur);
+          lstrcat(cPathNew, ";");
+        }
+        else
+          lpType = REG_EXPAND_SZ;
+
         lstrcat(cPathNew, cPathSvn);
 
         /* Reopen the key for writing */
@@ -386,7 +396,7 @@ svn_read_regval (HKEY hKey, char cValue[10], char cKey[BUFSIZE],
     dwBufLen=BUFSIZE;
 
     /* Get the key value and put in pcPathCur */
-    lRet = RegOpenKeyExA(HKEY_LOCAL_MACHINE, cKey,
+    lRet = RegOpenKeyExA(hKey, cKey,
                          0, KEY_READ, &hKey );
 
     lRet = RegQueryValueExA(hKey, cValue, NULL, &*lpType,
