@@ -446,7 +446,7 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
   relpath = *info->path;
   ++relpath.data;
   --relpath.len;
-  err = svn_fs_open_node(&node, fsdir, &relpath);
+  err = svn_fs_open_node(&node, fsdir, &relpath, info->pool);
   if (err != NULL)
     {
       return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
