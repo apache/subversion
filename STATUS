@@ -45,13 +45,6 @@ Candidate changes:
        -1: brane [until someone explains to me why this should be a
                   Unix-only change]
 
-  * r10890
-    Run external diff3 with full environment.
-    Justification:
-      X11 diff3 utilities won't work without it.  One-liner.
-    Votes:
-      +1: bliss, breser, ghudson
-
   * r10868, r10884
     Improve handling of path to SWIG in configure.
     Justification:
