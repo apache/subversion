@@ -156,7 +156,7 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
                                       apr_pool_t *pool)
 {
   apr_uri_t comp;
-  char *path;
+  const char *path;
   apr_size_t len1;
   apr_size_t len2;
   const char *slash;
@@ -168,11 +168,15 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
 
   /* ### ignore all URI parts but the path (for now) */
 
-  path = comp.path;
-
   /* clean up the URI */
-  ap_getparents(path);
-  ap_no2slash(path);
+  if (comp.path == NULL)
+    path = "/";
+  else
+    {
+      ap_getparents(comp.path);
+      ap_no2slash(comp.path);
+      path = comp.path;
+    }
 
   /*
    * Does the URI path specify the same repository? It does not if one of:
