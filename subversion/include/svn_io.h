@@ -68,7 +68,7 @@ svn_error_t *svn_io_check_path (const svn_string_t *path,
 
 /* Open a new file (for writing) with a unique name based on PATH, in the
  * same directory as PATH.  The file handle is returned in *F, and the
- * name is returned in *UNIQUE_NAME.
+ * name, which ends with SUFFIX, is returned in *UNIQUE_NAME.
  *
  * The name will include as much of PATH as possible, then a dot,
  * then a random portion, then another dot, then an iterated attempt
