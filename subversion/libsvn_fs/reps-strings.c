@@ -12,6 +12,8 @@
  */
 
 #include <string.h>
+#include <apr_md5.h>
+
 #include "db.h"
 #include "svn_fs.h"
 #include "fs.h"
@@ -22,6 +24,8 @@
 #include "strings-table.h"
 #include "reps-strings.h"
 
+/* Define this to enable deltification.  */
+#undef ACTUALLY_DO_DELTIFICATION
 
 
 /* Helper function.  Is representation a `fulltext' type?  */
@@ -686,11 +690,9 @@ svn_fs__rep_deltify (svn_fs_t *fs,
                      const char *source,
                      trail_t *trail)
 {
-  svn_stream_t
-    *source_stream,       /* stream to read the source */
-    *target_stream;       /* stream to read the target */
-  svn_txdelta_stream_t
-    *txdelta_stream;      /* stream to read delta windows  */
+  svn_stream_t *source_stream; /* stream to read the source */
+  svn_stream_t *target_stream; /* stream to read the target */
+  svn_txdelta_stream_t *txdelta_stream; /* stream to read delta windows  */
   
   /* stream to write new (deltified) target data */
   svn_stream_t *new_target_stream;
@@ -704,7 +706,13 @@ svn_fs__rep_deltify (svn_fs_t *fs,
   
   /* yes, we do windows */
   svn_txdelta_window_t *window;
+
+  /* TARGET's original string key */
+  const char *orig_str_key;
   
+  /* MD5 digest */
+  const unsigned char *digest; 
+
   new_target_baton.fs = fs;
   new_target_baton.trail = trail;
   new_target_baton.key = NULL;
@@ -738,8 +746,69 @@ svn_fs__rep_deltify (svn_fs_t *fs,
       
     } while (window);
   
-  /* todo: Now `new_target_baton.key' has the key of the new string.
-     We should hook it into the representation. */
+  /* Having processed all the windows, we can query the MD5 digest
+     from the stream.  */
+  digest = svn_txdelta_md5_digest (txdelta_stream);
+  if (! digest)
+    return svn_error_createf
+      (SVN_ERR_DELTA_MD5_CHECKSUM_ABSENT, 0, NULL, trail->pool,
+       "svn_fs__rep_deltify: failed to calculate MD5 digest for %s",
+       source);
+
+  /* Read the old rep to get the string key. */
+  {
+    skel_t *old_rep;
+    SVN_ERR (svn_fs__read_rep (&old_rep, fs, target, trail));
+    orig_str_key = string_key (old_rep, trail->pool);
+  }
+    
+  /* Check the size of the new string.  If it is larger than the old
+     one, this whole deltafication might not be such a bright
+     idea. */
+  {
+    apr_size_t old_size, new_size;
+
+    /* Now, get the sizes of the old and new strings. */
+    SVN_ERR (svn_fs__string_size (&old_size, fs, orig_str_key, trail));
+    SVN_ERR (svn_fs__string_size (&new_size, fs, new_target_baton.key, trail));
+    
+    /* If this is not such a bright idea, stop thinking it!  Remove
+       the string we just created. */
+    if (new_size >= old_size)
+      {
+        SVN_ERR (svn_fs__string_delete (fs, new_target_baton.key, trail));
+        return SVN_NO_ERROR;
+      }
+  }
+
+  /* Now `new_target_baton.key' has the key of the new string.  We
+     should hook it into the representation. */
+  {
+    skel_t *header = svn_fs__make_empty_list (trail->pool);
+    skel_t *diff = svn_fs__make_empty_list (trail->pool);
+    skel_t *rep = svn_fs__make_empty_list (trail->pool);
+
+    /* The header. */
+    svn_fs__prepend (svn_fs__str_atom ("delta", trail->pool), header);
+    
+    /* The diff. */
+    svn_fs__prepend (svn_fs__str_atom (new_target_baton.key, trail->pool), 
+                     diff);
+    svn_fs__prepend (svn_fs__str_atom ("svndiff", trail->pool), diff);
+
+    /* The rep. */
+    svn_fs__prepend (svn_fs__mem_atom (digest, MD5_DIGESTSIZE, trail->pool), 
+                     rep);
+    svn_fs__prepend (diff, rep);
+    svn_fs__prepend (svn_fs__str_atom (source, trail->pool), rep);
+    svn_fs__prepend (header, rep);
+
+#ifdef ACTUALLY_DO_DELTIFICATION
+    /* Write out the new representation. */
+    SVN_ERR (svn_fs__write_rep (target, fs, rep, trail));
+    SVN_ERR (svn_fs__string_delete (fs, orig_str_key, trail));
+#endif
+  }
 
   return SVN_NO_ERROR;
 }
