@@ -763,18 +763,32 @@ along with a logfile describing unfinished business.  Any other
 process that attempts to access the database will just hang, waiting
 for the lockfile to disappear.  To awaken your repository, you need to
 ask Berkeley DB to either finish the work, or rewind the database to a
-previous state that is known to be consistent.  Simply run:</p>
+previous state that is known to be consistent.</p>
+
+<p><b><font color="red">WARNING:</font> you can seriously corrupt your
+repository if you run recover and another process accesses the repository.
+</b></p>
+
+<p>Make absolutely sure you disable all access to the repository before
+doing this (by shutting down Apache, removing executable permissions from
+'svn').  Make sure you run this command as the user that owns and manages
+the database, and not as root, else it will leave root-owned files in the
+db directory which cannot be opened by the non-root user that manages the
+database, which is typically either you or your Apache process.  Also be
+sure to have the correct umask set when you run recover, since failing to
+do so will lock out users that are in the group allowed to access the
+repository.</p>
+
+<p>
+Simply run:</p>
 
 <pre>
 svnadmin recover /path/to/repos
 </pre>
 
-<p>Make sure you disable all access to the repository before doing
-this (by shutting down Apache).  Make sure you run this command as the
-user that owns and manages the database, and not as root, else it will
-leave root-owned files in the db directory which cannot be opened by
-the non-root user that manages the database, which is typically either
-you or your Apache process.</p>
+<p>Once the command has completed, check the permissions in the
+<code>db</code> directory of the repository.</p>
+
 <![CDATA[-----------------------------------------------------------]]>
 
 <h3>What the heck! Every time I try to run a svn command, it says my
