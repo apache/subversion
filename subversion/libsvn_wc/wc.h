@@ -99,7 +99,7 @@ struct svn_wc_traversal_info_t
 
 /** The files within the administrative subdir. **/
 #define SVN_WC__ADM_FORMAT              "format"
-#define SVN_WC__ADM_README              "README"
+#define SVN_WC__ADM_README              "README.txt"
 #define SVN_WC__ADM_ENTRIES             "entries"
 #define SVN_WC__ADM_LOCK                "lock"
 #define SVN_WC__ADM_TMP                 "tmp"

@@ -1029,8 +1029,10 @@ init_adm (const char *path,
 
   /* Initial contents for certain adm files. */
   const char *readme_contents =
-    "This is a Subversion working copy administrative directory.\n"
-    "Visit http://subversion.tigris.org/ for more information.\n";
+    "This is a Subversion working copy administrative directory."
+    APR_EOL_STR
+    "Visit http://subversion.tigris.org/ for more information."
+    APR_EOL_STR;
 
   /* First, make an empty administrative area. */
   make_empty_adm (path, pool);
