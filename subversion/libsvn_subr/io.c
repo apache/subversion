@@ -902,6 +902,13 @@ apr_dir_remove_recursively (const char *path, apr_pool_t *pool)
         }
       else if (this_entry.filetype == APR_REG)
         {
+          status = apr_file_attrs_set (fullpath,
+                                       0,
+                                       APR_FILE_ATTR_READONLY,
+                                       subpool);
+          if (status && status != APR_ENOTIMPL)
+            return status;
+
           status = apr_file_remove (fullpath, subpool);
           if (! (APR_STATUS_IS_SUCCESS (status))) return status;
         }
