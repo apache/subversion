@@ -143,3 +143,13 @@ Candidate changes:
     Votes:
       +1: pmayweg (without r10493)
       +0: breser (with r10493)
+
+  * r10502
+    Fix issue 1986:  'svn cp dir1 dir2' when dir1 contains versioned symlink.
+    Justification:
+      Simple fix: changes the internal implementation of
+      svn_io_copy_dirs_recursively() function to notice/copy symlinks. 
+      And this is a bug in one of the new svn 1.1 features.
+    Votes:
+      +1: sussman
+
