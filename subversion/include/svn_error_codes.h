@@ -252,6 +252,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_TXN_OUT_OF_DATE,
               "Transaction is out of date")
 
+  SVN_ERRDEF (SVN_ERR_REPOS_LOCKED,
+              "The repository is locked, perhaps for db recovery.")
+
   SVN_ERRDEF (SVN_ERR_REPOS_HOOK_FAILURE,
               "A repository hook failed.")
 

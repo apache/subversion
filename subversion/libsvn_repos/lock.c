@@ -66,14 +66,17 @@ svn_repos_open (svn_fs_t **fs_p,
   SVN_ERR (svn_fs_open_berkeley (fs, path));
 
   /* Get shared lock. */
-
-  if ((status = apr_file_lock(db->dirf, type)) == APR_SUCCESS) 
-    ...;
+  apr_err = apr_file_lock (db->dirf, APR_FLOCK_SHARED);
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    return svn_error_createf (SVN_ERR_REPOS_LOCKED, 0, err, pool,
+             "svn_repos_open: repository `%s' locked", path);
 
   /* Register an unlock function for the shared lock. */
   apr_pool_cleanup_register (pool, dbt->data,
                              unlock_repository,
                              apr_pool_cleanup_null);
+
+  *fs_p = fs;
 #endif /* 0 */
 
   return SVN_NO_ERROR;
