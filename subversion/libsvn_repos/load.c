@@ -179,7 +179,7 @@ parse_content_block (svn_stream_t *stream,
               svn_string_t propstring;
 
               /* Get the length of the value */
-              int vallen = atoi (buf + 2);
+              apr_size_t vallen = atoi (buf + 2);
 
               /* Again, 1 extra byte for the null termination. */
               char *valbuf = apr_palloc (subpool, vallen + 1);

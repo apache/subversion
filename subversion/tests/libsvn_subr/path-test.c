@@ -381,7 +381,7 @@ test_decompose (const char **msg,
     "foo/bar", "foo", "bar", NULL,
     NULL,
   };
-  apr_size_t i = 0;
+  int i = 0;
 
   *msg = "test svn_path_decompose";
   if (msg_only)
@@ -394,7 +394,7 @@ test_decompose (const char **msg,
       else
         {
           apr_array_header_t *components = svn_path_decompose(paths[i], pool);
-          apr_size_t j;
+          int j;
           for (j = 0; j < components->nelts; ++j)
             {
               const char *component = APR_ARRAY_IDX(components, j, const char*);

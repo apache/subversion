@@ -556,7 +556,7 @@ svn_path_get_longest_ancestor (const char *path1,
                                apr_pool_t *pool)
 {
   const char *common_path;
-  int path1_len, path2_len;
+  apr_size_t path1_len, path2_len;
   apr_size_t i = 0;
   apr_size_t last_dirsep = 0;
   
@@ -696,7 +696,7 @@ svn_boolean_t
 svn_path_is_url (const char *path)
 {
   apr_size_t j;
-  int len = strlen (path);
+  apr_size_t len = strlen (path);
 
   /* ### Taking strlen() initially is inefficient.  It's a holdover
      from svn_stringbuf_t days. */
