@@ -77,7 +77,7 @@ section for approved changes.)
        +1: ghudson
        -1: bliss (The current patch [#2] has bugs. See the issue tracker!)
 
-    * r8394, r8467
+    * r8368, r8394, r8467
       Add capability to build Subversion Perl bindings RPM.
       Justification: Additional capability.
       Notes:
