@@ -605,7 +605,7 @@ svn_error_t * svn_ra_dav__merge_activity(
                       "<D:source><D:href>%s</D:href></D:source>"
                       "<D:no-auto-merge/><D:no-checkout/>"
                       "<D:prop>"
-                      "<D:checked-in/>version-name/><D:resourcetype/>"
+                      "<D:checked-in/><D:version-name/><D:resourcetype/>"
                       "<D:creationdate/><D:creator-displayname/>"
                       "</D:prop>"
                       "</D:merge>", activity_url);
@@ -633,14 +633,23 @@ svn_error_t * svn_ra_dav__merge_activity(
                                  mc.rev, NULL, NULL) );
     }
 
-  /* Report the revision back, but not date and author, since we don't
-     have them. */
+
   if (new_rev)
     *new_rev = mc.rev;
   if (committed_date)
-    *committed_date = NULL;
+    {
+      if (mc.committed_date->len > 0)
+        *committed_date = apr_pstrdup(ras->pool, mc.committed_date->data);
+      else
+        *committed_date = NULL;
+    }
   if (committed_author)
-    *committed_author = NULL;
+    {
+      if (mc.last_author->len > 0)
+        *committed_author = apr_pstrdup(ras->pool, mc.last_author->data);
+      else
+        *committed_author = NULL;
+    }
 
   return NULL;
 }
