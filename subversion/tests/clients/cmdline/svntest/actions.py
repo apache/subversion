@@ -18,7 +18,7 @@
 
 import os.path, shutil, string, re, sys
 
-import main, tree  # general svntest routines in this module.
+import main, tree, wc  # general svntest routines in this module.
 
 
 ######################################################################
@@ -131,6 +131,11 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   tree.compare_trees - see that function's doc string for more details.
   Return 0 if successful."""
 
+  if isinstance(output_tree, wc.State):
+    output_tree = output_tree.old_tree()
+  if isinstance(disk_tree, wc.State):
+    disk_tree = disk_tree.old_tree()
+
   # Remove dir if it's already there.
   main.remove_wc(wc_dir_name)
 
@@ -228,6 +233,13 @@ def run_and_verify_update(wc_dir_name,
   If CHECK_PROPS is set, then disk comparison will examine props.
   Return 0 if successful."""
 
+  if isinstance(output_tree, wc.State):
+    output_tree = output_tree.old_tree()
+  if isinstance(disk_tree, wc.State):
+    disk_tree = disk_tree.old_tree()
+  if isinstance(status_tree, wc.State):
+    status_tree = status_tree.old_tree()
+
   # Update and make a tree of the output.
   if len(args):
     output, errput = main.run_svn (error_re_string, 'up', *args)
@@ -271,6 +283,13 @@ def run_and_verify_switch(wc_dir_name,
   If CHECK_PROPS is set, then disk comparison will examine props.
   Return 0 if successful."""
 
+  if isinstance(output_tree, wc.State):
+    output_tree = output_tree.old_tree()
+  if isinstance(disk_tree, wc.State):
+    disk_tree = disk_tree.old_tree()
+  if isinstance(status_tree, wc.State):
+    status_tree = status_tree.old_tree()
+
   # Update and make a tree of the output.
   output, errput = main.run_svn (None, 'switch', wc_target, switch_url)
   mytree = tree.build_tree_from_checkout (output)
@@ -304,6 +323,11 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
   SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
   tree.compare_trees - see that function's doc string for more
   details.  Return 0 if successful."""
+
+  if isinstance(output_tree, wc.State):
+    output_tree = output_tree.old_tree()
+  if isinstance(status_output_tree, wc.State):
+    status_output_tree = status_output_tree.old_tree()
 
   # Commit.
   output, errput = main.run_svn(error_re_string, 'ci', '-m', 'log msg', *args)
@@ -373,6 +397,9 @@ def run_and_verify_status(wc_dir_name, output_tree,
   more details.
   Return 0 on success."""
 
+  if isinstance(output_tree, wc.State):
+    output_tree = output_tree.old_tree()
+
   output, errput = main.run_svn (None, 'status', '-v', '-u', '-q', wc_dir_name)
 
   mytree = tree.build_tree_from_status (output)
@@ -402,6 +429,9 @@ def run_and_verify_unquiet_status(wc_dir_name, output_tree,
   be passed to tree.compare_trees - see that function's doc string for
   more details.
   Return 0 on success."""
+
+  if isinstance(output_tree, wc.State):
+    output_tree = output_tree.old_tree()
 
   output, errput = main.run_svn (None, 'status', '-v', '-u', wc_dir_name)
 
@@ -509,6 +539,20 @@ def get_virginal_status_list(wc_dir, rev):
 
   return output_list
 
+def get_virginal_state(wc_dir, rev):
+  "Return a virginal greek tree state for a WC and repos at revision REV."
+
+  rev = str(rev) ### maybe switch rev to an integer?
+
+  # copy the greek tree, shift it to the new wc_dir, insert a root elem,
+  # then tweak all values
+  state = main.greek_state.copy()
+  state.wc_dir = wc_dir
+  state.desc[''] = wc.StateItem()
+  state.tweak(contents=None, status='_ ', wc_rev=rev, repos_rev=rev)
+
+  return state
+
 
 # Ben sez: this is -proof- that we really want a hash of SVNTreeNodes
 # when we do a future rewrite.  :-)
@@ -532,5 +576,5 @@ def lock_admin_dir(wc_dir):
 
 ### End of file.
 # local variables:
-# eval: (load-file "../../../../tools/dev/svn-dev.el")
+# eval: (load-file "../../../../../tools/dev/svn-dev.el")
 # end:
