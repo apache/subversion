@@ -6,6 +6,15 @@ TEST_DIR_2=t2
 COMMIT_RESULTFILE_NAME=commit
 ANCESTOR_PATH=anni       # See if Greg Stein notices. :-) 
 
+function check_status ()
+{
+    res=$?
+    if [ $res -ne 0 ]; then
+      echo Oops, problem: ${@-"(no further details)"}
+      exit $res
+    fi
+}
+
 # Remove the testing tree
 rm -rf ${TEST_DIR_1} ${TEST_DIR_2} ${COMMIT_RESULTFILE_NAME}*
 
@@ -21,11 +30,7 @@ ${SVN_PROG} checkout                                      \
       --revision 1                                        \
       --ancestor-path ${ANCESTOR_PATH}
 
-res=$?
-[ $res -ne 0 ] && {
-  echo Oops 1 - exit code $res
-  exit $res
-}
+check_status 1
 
 ### Copy the pristine checked-out tree, so we can test updates later.
 cp -R -p ${TEST_DIR_1} ${TEST_DIR_2}
@@ -43,32 +48,20 @@ touch ${TEST_DIR_1}/newfile1
 echo "This is added file newfile1."
 ${SVN_PROG} add ${TEST_DIR_1}/newfile1
 
-res=$?
-[ $res -ne 0 ] && {
-  echo Oops 2 - exit code $res
-  exit $res
-}
+check_status 2
 
 echo "Adding ${TEST_DIR_1}/A/B/E/newfile2."
 touch ${TEST_DIR_1}/A/B/E/newfile2
 echo "This is added file newfile2."
 ${SVN_PROG} add ${TEST_DIR_1}/A/B/E/newfile2
 
-res=$?
-[ $res -ne 0 ] && {
-  echo Oops 3 - exit code $res
-  exit $res
-}
+check_status 3
 
 ### Delete.
 echo "Deleting versioned file A/D/H/omega, with --force."
 ${SVN_PROG} delete --force ${TEST_DIR_1}/A/D/H/omega
 
-res=$?
-[ $res -ne 0 ] && {
-  echo Oops 4 - exit code $res
-  exit $res
-}
+check_status 4
 
 # echo "Deleting added files A/B/E/newfile2, without --force."
 # ${SVN_PROG} delete ${TEST_DIR_1}/A/B/E/newfile2
@@ -80,11 +73,7 @@ echo "Committing changes in ${TEST_DIR_1}."
                 --revision 2;                                        \
  )
 
-res=$?
-[ $res -ne 0 ] && {
-  echo Oops 5 - exit code $res
-  exit $res
-}
+check_status 5
 
 
 ### Update.
@@ -94,11 +83,7 @@ echo "Updating ${TEST_DIR_2} from changes in ${TEST_DIR_1}."
                 --revision 2;                                         \
  )
 
-res=$?
-[ $res -ne 0 ] && {
-  echo Oops 6 - exit code $res
-  exit $res
-}
+check_status 6
 
 ### Modify some more files.
 echo "Modifying ${TEST_DIR_2}/A/D/G/pi."
@@ -128,11 +113,7 @@ echo "Committing changes, this time in ${TEST_DIR_2}."
                 --revision 3;                                        \
  )
 
-res=$?
-[ $res -ne 0 ] && {
-  echo Oops 7 - exit code $res
-  exit $res
-}
+check_status 7
 
 
 ### Update.
@@ -142,11 +123,7 @@ echo "Updating ${TEST_DIR_1} from changes in ${TEST_DIR_2}."
                 --revision 3;                                        \
  )
 
-res=$?
-[ $res -ne 0 ] && {
-  echo Oops 8 - exit code $res
-  exit $res
-}
+check_status 8
 
 
 ### Diff the two trees.  The only differences should be in timestamps
@@ -186,11 +163,7 @@ echo "Committing changes for merge, from ${TEST_DIR_1}."
                 --revision 4;                                        \
  )
 
-res=$?
-[ $res -ne 0 ] && {
-  echo Oops 9 - exit code $res
-  exit $res
-}
+check_status 9
 
 
 ### Update.
@@ -200,10 +173,6 @@ echo "Updating ${TEST_DIR_2}, merging changes from ${TEST_DIR_1}."
                 --revision 4;                                        \
  )
 
-res=$?
-[ $res -ne 0 ] && {
-  echo Oops 11 - exit code $res
-  exit $res
-}
+check_status 10
 
 exit 0
