@@ -145,7 +145,7 @@ II.   Configuration
         # referring to.  If no matching repository qualified section is found,
         # the general unqualified section is tried.
         #
-        # NOTE: This will work in the case of using SVNPath aswell, only the
+        # NOTE: This will work in the case of using SVNPath as well, only the
         # repository name (the last element of the url) will always be the
         # same.
         [dark:/]

@@ -64,7 +64,7 @@ $ svn status -v myfile
             <replaceable>DIR</replaceable></term>
           <listitem>
             <para>Instructs Subversion to read configuration
-            information from the specified specified directory instead
+            information from the specified directory instead
             of the default location (<filename>.subversion</filename>
             in the user's home directory).</para>
           </listitem>
