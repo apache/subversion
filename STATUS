@@ -21,15 +21,6 @@ Candidate changes:
           1.1?)
       +1: cmpilato
 
-  * r10800 (Issue #2031)
-    Add -lstdc++ to javahl binding DSO at link-time.
-    Justification:
-      The javahl shared library does not link correctly on certain platforms.
-      (This is really a libtool bug.)
-      (Well, more that we use libtool 1.4, which has no C++ support.)
-    Votes:
-     +1: jerenkrantz, breser, ghudson
-
   * r10819, r10855
     Avoid repository corruption if executed with closed std{in,out,err}
     Justification:
