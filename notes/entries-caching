@@ -66,6 +66,11 @@ cache, thus allowing the access baton to track changes made.  However
 initially I do not think this will be required, if the current code
 gets a hash from svn_wc_entries_read and expects it to remain valid
 then that expectation should still apply when caching is implemented.
+PROBLEM: I have identified one place in mark_tree where the hash is
+retrieved, one entry is extracted and modified.  I can work around
+this case, but it shows that we really need a more robust interface.
+Perhaps svn_wc_entries_read in its current form should be removed, and
+replaced by some functions returning const svn_wc_entry_t pointers.
 
 At present access batons have a fairly strict interface, they must be
 passed directory names, and the code always "knows" whether it is
@@ -91,7 +96,7 @@ and entries_write and has already been converted to take an access
 baton.
 
 
-2. Caching Mechanism
+2. Access Baton Sets
    -----------------
 
 Each access baton represents a directory.  Access batons can associate
@@ -100,14 +105,7 @@ retrieve any other access baton in the set.  When an access baton in a
 set is closed, all other access batons in the set that represent
 subdirectories are also closed.  The set is implemented as a hash
 table "owned" by the one baton in any set, but shared by all batons in
-the set.  Caching will be similar.
-
-The cache hash tables will be "owned" by one baton in the set, but
-shared by all batons.  Caching will be lazy, the cache will not be
-populated until required (need to see how the TREE_LOCK behaviour in
-svn_wc_adm_open interacts here).  Only entries covered by an access
-baton will be available in the cache, when an access baton is closed
-its entries will be removed from the cache.
+the set.
 
 At present in the code, access batons are opened in a parent->child
 order.  This works well with the shared hash being owned by the first
@@ -117,8 +115,26 @@ doesn't currently trigger.  If it turns out that this needs to be
 supported it should be possible to transfer the hash information to
 another baton.
 
+3. Caching Mechanism
+   -----------------
 
-3. Access Baton Conversion
+Each access baton will cache the two possible hashes returned by
+svn_wc_entries_read, so that subsequent calls will not need to parse
+the entries file.  If the full hash, the one containing deleted
+entries, is available when a request for the truncated hash is made,
+then the truncated hash will be constructed from the full hash.
+
+The function svn_wc__entries_write will cause the full hash cache to
+be filled and the truncated hash cache to be cleared.
+
+PROBLEM: memory use is going to be a problem, if we simply repeatedly
+allocate from the access baton pool as happens at present.  As the
+entries get updated we need to find a way to reuse the cache memory,
+otherwise memory usage for checkout is going to be proportional to the
+number of entries in a directory.
+
+
+4. Access Baton Conversion
    -----------------------
 
 Given a function
@@ -149,7 +165,7 @@ information in the path and baton, but since it involves fewer changes
 in the calling code it makes a reasonable intermediate step.
 
 
-4. Logging
+5. Logging
    -------
 
 As well as caching the other problem that needs to be addressed is the
@@ -163,16 +179,9 @@ whether a log file is being run and we may be able to automatically
 identify those places that are failing to use the log file mechanism.
 
 
-5. Status
+6. Status
    ------
 
-Now: I'm currently working on a patch to pass the access baton to
-svn_wc_entries_read, only one regression test failure at present!
-I've cheated a bit, because svn_wc_entry is currently passing NULL to
-svn_wc_entries_read, I really need to do svn_wc_entry to complete the
-patch.
-
-Next: svn_wc__entries_write should be simple once svn_wc_entries_read
-is done.
-
-Then: After the above is complete, the caching stuff might start.
+The access baton is now in place in the majority of places required to
+implement caching.  There is also a partial caching implementation in
+place.
