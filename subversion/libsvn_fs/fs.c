@@ -209,7 +209,7 @@ cleanup_fs_apr (void *data)
            (Feel free to replace this with some more sensible
            behavior.  I just don't want to throw any information into
            the bit bucket.)  */
-        (*fs->warning) (fs->warning_baton, "%s", svn_err->message);
+        (*fs->warning) (fs->pool, fs->warning_baton, "%s", svn_err->message);
       
       return SVN_ERR_FS_CLEANUP;
     }

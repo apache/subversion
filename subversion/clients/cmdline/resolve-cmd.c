@@ -21,6 +21,8 @@
 
 
 /*** Includes. ***/
+#define APR_WANT_STDIO
+#include <apr_want.h>
 
 #include "svn_wc.h"
 #include "svn_client.h"
@@ -65,7 +67,7 @@ svn_cl__resolve (apr_getopt_t *os,
                                 subpool);
       if (err)
         {
-          svn_handle_warning (err, err->message);
+          svn_handle_warning (err->pool, stderr, err->message);
           svn_error_clear_all (err);
         }
       

@@ -57,7 +57,7 @@ svn_test__fs_new (svn_fs_t **fs_p, apr_pool_t *pool)
                              "Couldn't alloc a new fs object.");
 
   /* Provide a warning function that just dumps the message to stderr.  */
-  svn_fs_set_warning_func (*fs_p, svn_handle_warning, 0);
+  svn_fs_set_warning_func (*fs_p, svn_handle_warning, stderr);
 
   return SVN_NO_ERROR;
 }
