@@ -9,6 +9,7 @@ libsvn_fs_la_SOURCES =				\
                         dag.h                   \
 			dbt.c			\
                         dbt.h                   \
+                        delta.c                 \
                         editor.c                \
 			err.c			\
                         err.h                   \
@@ -34,10 +35,6 @@ libsvn_fs_la_SOURCES =				\
 			txn-table.h		\
 			validate.c              \
 			validate.h
-
-# Set aside for the moment:
-#		       delta.c			\
-
 
 INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_EXPAT_INCLUDES@
 
