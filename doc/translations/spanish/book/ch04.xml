@@ -860,14 +860,14 @@ $ svn status
       </sidebar>
       
       <sect3 id="svn-ch-4-sect-3.2.3">
-        <title>Noticing or Ignoring Ancestry</title>
+        <title>Teniendo en cuenta o ignorando ascendencia</title>
 
-        <para>When conversing with a Subversion developer, you might
-          very likely hear reference to the term
-          <firstterm>ancestry</firstterm>.  This word is used to
-          describe the relationship between two objects in a
-          repository: if they're related to each other, than one
-          object is said to be an ancestor of the other.</para>
+        <para>Cuando hable con un desarrollador de Subversion, es
+          muy posible que oiga alguna referencia al término
+          <firstterm>ascendencia</firstterm>.  Esta palabra es
+          usada para describir la relación entre dos objetos en un
+          repositorio: si ambos están relacionados, entonces se dice
+          que un objeto es el ancestro del otro.</para>
 
         <para>For example, suppose you commit revision 100, which
           includes a change to a file <filename>foo.c</filename>.
