@@ -75,3 +75,10 @@ Candidate changes:
       Positively huge performance regression.
     Votes:
       +1: bliss
+
+  * r11224 (Issue 2070)
+    Exporting symlinks with use-commit times set fails.
+    Justification:
+      Showstopper when using symlinks.  One-liner.
+    Votes:
+      +1: bliss
