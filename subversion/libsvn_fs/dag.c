@@ -35,19 +35,19 @@
 
 
 /* Access the header of a node revision skel. */
-#define NR_HEADER(node_rev) (node_rev->children)
+#define NR_HEADER(node_rev) ((node_rev)->children)
 
 /* Access the property rep key of a node revision skel. */
-#define NR_PROP_KEY(node_rev) (node_rev->children->next)
+#define NR_PROP_KEY(node_rev) ((node_rev)->children->next)
 
 /* Access the data rep key of a node revision skel. */
-#define NR_DATA_KEY(node_rev) (node_rev->children->next->next)
+#define NR_DATA_KEY(node_rev) ((node_rev)->children->next->next)
 
 /* Access the kind skel of a node revision header. */
-#define HDR_KIND(header) (header->children)
+#define HDR_KIND(header) ((header)->children)
 
 /* Access the revision skel of a node revision header. */
-#define HDR_REV(header) (header->children->next)
+#define HDR_REV(header) ((header)->children->next)
 
 
 
