@@ -198,14 +198,26 @@ def run_test(n, test_list):
 
 
 # Main func
+# Three Modes, dependent on sys.argv:
+# 1) No arguments: all tests are run
+# 2) Number 'n' as arg: only test n is run
+# 3) String "list" as arg: test description is displayed with number
 def client_test(test_list):
   "Main routine to run all tests in TEST_LIST."
 
   testnum = 0
-  # Parse commandline arg, run one test
+  # Parse commandline arg, list tests or run one test
   if (len(sys.argv) > 1):
-    testnum = int(sys.argv[1])
-    return run_test(testnum, test_list)
+    if (sys.argv[1] == 'list'):
+      print "Test #     Test Description"
+      print "------     ----------------"
+      n = 1
+      for x in test_list[1:]:
+        print " ", n, "      ", x.__doc__
+        n = n+1
+    else:
+      testnum = int(sys.argv[1])
+      return run_test(testnum, test_list)
 
   # or run all the tests if no arg.
   else:
