@@ -15,8 +15,8 @@ my @svnlooklines = ();
 
 # open a pipe to 'mail'
 my $userlist = join (' ', @users); 
-open (MAILER, "| mail -s 'Commit' $userlist") 
-    or die ("Error opening a pipe to your stupid mailer");
+open (MAILER, "| mail -s 'Commit - Revision $rev' $userlist") 
+    or die ("Error opening a pipe to your mailer");
 
 # get the auther, date, and log from svnlook
 open (INPUT, "svnlook $repos rev $rev info |") 
