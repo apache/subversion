@@ -46,15 +46,8 @@ DUMPFILE = 'cvs2svn-dump'  # The "dumpfile" we create to load into the repos
 SVN_REVISIONS_DB = 'cvs2svn-revisions.db'
 NODES_DB = 'cvs2svn-nodes.db'
 
-# Tag and branch roots live here when their start revision is known
-# but not yet their end revision.
-OPEN_TAGS_DB = "cvs2svn-open-tags.db"
-OPEN_BRANCHES_DB = "cvs2svn-open-branches.db"
-
-# Tag and branch roots live here when both their start and end
-# revisions are known.
-BOUND_TAGS_DB = "cvs2svn-tags.db"
-BOUND_BRANCHES_DB = "cvs2svn-branches.db"
+# See class SymbolicNameTracker for details.
+SYMBOLIC_NAMES_DB = "cvs2svn-sym-names.db"
 
 REVS_SUFFIX = '.revs'
 CLEAN_REVS_SUFFIX = '.c-revs'
@@ -548,16 +541,18 @@ class RepositoryMirror:
     parent_chain = [ ]
     parent_chain.insert(0, (None, parent_dir_key))
 
-    def is_prunable(dir):
-      """Return true if DIR (a dictionary representing a directory)
-      has only one entry, false otherwise.  This is more complex than
-      just checking len(DIR) > 1, since DIR might have a mutable flag.""" 
+    def is_prunable(dir, mutable_flag):
+      """Return true if DIR, a dictionary representing a directory,
+      has just zero or one entry other than MUTABLE_FLAG, else return
+      false.  (In a pure world, we'd just ask len(DIR) > 1; it's only
+      because the directory might have a mutable flag that we need
+      this function at all.)"""
       num_items = len(dir)
       if num_items > 2:
         return None
       if num_items == 2:
-        if dir.has_key(self.mutable_flag): return 1
-        else:                              return None
+        if dir.has_key(mutable_flag): return 1
+        else:                         return None
       else:
         return 1
 
@@ -594,7 +589,7 @@ class RepositoryMirror:
       parent_key = parent_item[1]
       parent_val = marshal.loads(self.nodes_db[parent_key])
       if prune:
-        if (new_key == None) and is_prunable(parent_val):
+        if (new_key == None) and is_prunable(parent_val, self.mutable_flag):
           pruned_count = pruned_count + 1
           pass
           # Do nothing more.  All the action takes place when we hit a
@@ -885,19 +880,18 @@ class SymbolicNameTracker:
   # entry is removed from the open_db and a new entry is created in
   # the bound_db.
 
-  def __init__(self, open_db_file, bound_db_file):
-    self.open_db_file = open_db_file
-    self.bound_db_file = bound_db_file
-    self.open_db = anydbm.open(open_db_file, 'n')
-    self.bound_db = anydbm.open(bound_db_file, 'n')
+  def __init__(self):
+    self.db_file = SYMBOLIC_NAMES_DB
+    self.db = anydbm.open(self.db_file, 'n')
 
-  def track_names(self, svn_path, svn_rev, names):
-    """Track that the the symbolic names in NAMES can earliest be
-    copied from SVN_REV of SVN_PATH (which does not start with '/')."""
-    if not names: return  # early out
-    for name in names:
+  def track_names(self, svn_path, svn_rev, tags, branches):
+    """Track that the the symbolic names in TAGS and BRANCHES can
+    earliest be copied from SVN_REV of SVN_PATH.  SVN_PATH does not
+    start with '/'."""
+    if not (tags or branches): return  # early out
+    for name in tags + branches:
       key = name + '/' + svn_path
-      if self.open_db.has_key(key):
+      if self.db.has_key(key):
         found_root_rev = self.open_db[key]
         sys.stderr.write(
           "track_names: '%s' already claims '%s' is rooted at revision %d."
@@ -907,16 +901,6 @@ class SymbolicNameTracker:
         # TODO: working here, among other places
         # print "KFF: key: %2d ==> %s" % (svn_rev, key)
         pass
-
-
-class TagTracker(SymbolicNameTracker):
-  def __init__(self):
-    SymbolicNameTracker.__init__(self, OPEN_TAGS_DB, BOUND_TAGS_DB)
-
-
-class BranchTracker(SymbolicNameTracker):
-  def __init__(self):
-    SymbolicNameTracker.__init__(self, OPEN_BRANCHES_DB, BOUND_BRANCHES_DB)
 
 
 class Commit:
@@ -972,7 +956,7 @@ class Commit:
     return author, log, date
 
 
-  def commit(self, dump, ctx, tag_tracker, branch_tracker):
+  def commit(self, dump, ctx, sym_tracker):
     # commit this transaction
     seconds = self.t_max - self.t_min
     print 'committing: %s, over %d seconds' % (time.ctime(self.t_min), seconds)
@@ -1034,8 +1018,7 @@ class Commit:
       print '    adding or changing %s : %s' % (cvs_rev, svn_path)
       if svn_rev == SVN_INVALID_REVNUM:
         svn_rev = dump.start_revision(props)
-      tag_tracker.track_names(svn_path, svn_rev, tags)
-      branch_tracker.track_names(svn_path, svn_rev, branches)
+      sym_tracker.track_names(svn_path, svn_rev, tags, branches)
       dump.add_or_change_path(cvs_path, svn_path, cvs_rev, rcs_file,
                               tags, branches)
 
@@ -1059,8 +1042,7 @@ class Commit:
         ### won't show up 'svn log' output, even when invoked on the
         ### root -- because no paths changed!  That needs to be fixed,
         ### regardless of whether cvs2svn creates such revisions.
-        tag_tracker.track_names(svn_path, svn_rev, tags)
-        branch_tracker.track_names(svn_path, svn_rev, branches)
+        sym_tracker.track_names(svn_path, svn_rev, tags, branches)
         dump.delete_path(svn_path, tags, branches, ctx.prune)
 
     if svn_rev != SVN_INVALID_REVNUM:
@@ -1324,8 +1306,7 @@ def pass4(ctx):
   else:
     t_fs = t_repos = None
 
-  tag_tracker = TagTracker()
-  branch_tracker = BranchTracker()
+  sym_tracker = SymbolicNameTracker()
 
   # A dictionary of Commit objects, keyed by digest.  Each object
   # represents one logical commit, which may involve multiple files.
@@ -1386,7 +1367,7 @@ def pass4(ctx):
     # part of any of them.  Sort them into time-order, then commit 'em.
     process.sort()
     for t_max, c in process:
-      c.commit(dump, ctx, tag_tracker, branch_tracker)
+      c.commit(dump, ctx, sym_tracker)
     count = count + len(process)
 
     # Add this item into the set of still-available commits.
@@ -1403,7 +1384,7 @@ def pass4(ctx):
       process.append((c.t_max, c))
     process.sort()
     for t_max, c in process:
-      c.commit(dump, ctx, tag_tracker, branch_tracker)
+      c.commit(dump, ctx, sym_tracker)
     count = count + len(process)
 
   dump.close()
