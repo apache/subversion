@@ -1,7 +1,7 @@
 ;;; psvn.el --- Subversion interface for emacs
 ;; Copyright (C) 2002-2004 by Stefan Reichoer
 
-;; Author: Stefan Reichoer, <reichoer@web.de>
+;; Author: Stefan Reichoer, <xsteve@nit.at>
 ;; $Id$
 
 ;; psvn.el is free software; you can redistribute it and/or modify
