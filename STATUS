@@ -82,4 +82,16 @@ Candidate changes:
       API contract violation.
     Votes:
       +1: breser
-     
+
+  * r10467, r10734, rXXXXX
+    Detect and report lock-contention at recovery time.
+    Justification:
+      Improved user interface, low risk.
+    Note:
+      HEAD as of r10734 shows the new functions as "since 1.2.0" and the
+      deprecated functions as "preserving the 1.1.0" API.  If these candidates
+      are approved, then a new trunk revision, marked rXXXXX above, should
+      also be applied to reflect that the changes were actually included
+      in 1.1.0.
+    Votes:
+      +1: mbk
