@@ -84,21 +84,20 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
        "svn_client_update: entry '%s' has no URL", anchor->data);
   URL = svn_stringbuf_create (entry->ancestor->data, pool);
 
+  /* Do RA interaction here to figure out what is out of date with
+     respect to the repository.  All RA errors are non-fatal!! */
 
   /* Get the RA library that handles URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  err = svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool);
-  
-  if (err && (err->apr_err != SVN_ERR_RA_ILLEGAL_URL))
-    return err;
-  else if (err)
+  if ((err = svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool)))
     return SVN_NO_ERROR;
 
   /* Open a repository session to the URL. */
   SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton,
                                          auth_baton, anchor, TRUE,
                                          TRUE, pool));
-  SVN_ERR (ra_lib->open (&session, URL, ra_callbacks, cb_baton, pool));
+  if ((err = ra_lib->open (&session, URL, ra_callbacks, cb_baton, pool)))
+    return SVN_NO_ERROR;
 
 
   /* Tell RA to drive a status-editor;  this will fill in the
@@ -107,10 +106,11 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   SVN_ERR (svn_wc_get_status_editor (&status_editor, &edit_baton,
                                      anchor, target,
                                      statushash, pool));
-  SVN_ERR (ra_lib->do_status (session,
-                              &reporter, &report_baton,
-                              target,
-                              status_editor, edit_baton));
+  if (ra_lib->do_status (session,
+                         &reporter, &report_baton,
+                         target,
+                         status_editor, edit_baton))
+    goto close;
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
@@ -119,8 +119,9 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
                                    FALSE, /* don't notice unversioned stuff */
                                    pool));
 
+ close:
   /* We're done with the RA session. */
-  SVN_ERR (ra_lib->close (session));
+  err = ra_lib->close (session);
 
   return SVN_NO_ERROR;
 }
