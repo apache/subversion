@@ -610,14 +610,11 @@ svn_wc_transmit_text_deltas (const char *path,
                      investigate.  Other commands could be affected,
                      too, such as `svn diff'.  */
               
-                  svn_error_t *err = svn_io_remove_file (tmp_base, pool);
-                  
                   /* Deliberately ignore error; the error about the
                      checksum mismatch is more important to return.
                      And wrapping the above error into the checksum
                      error would be weird, as they're unrelated. */
-                  if (err)
-                    svn_error_clear (err);
+                  svn_error_clear (svn_io_remove_file (tmp_base, pool));
 
                   if (tempfile)
                     *tempfile = NULL;
