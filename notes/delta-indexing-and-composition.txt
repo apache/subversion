@@ -217,6 +217,6 @@ some related correspondence.
    aesthetic reasons.  So:
 
            DELTA ::= (("delta" FLAG ...) (OFFSET WINDOW) ...) ;
-          WINDOW ::= (DIFF SIZE CHECKSUM [REP-KEY REP-OFFSET]) ;
+          WINDOW ::= (DIFF SIZE CHECKSUM [REP-KEY [REP-OFFSET]]) ;
           OFFSET ::= number ;
       REP-OFFSET ::= number;
