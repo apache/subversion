@@ -250,6 +250,25 @@ svn_client__open_ra_session (void **session_baton,
   cbtable->invalidate_wc_props = read_only_wc ? NULL : invalidate_wc_props;
   cbtable->auth_baton = svn_client_ctx_get_auth_baton (ctx); /* new-style */
 
+  if (base_dir)
+    {
+      const svn_auth_provider_t *wc_provider;
+      void *wc_prov_baton;
+      svn_auth_cred_simple_t *default_simple_creds 
+        = svn_client_ctx_get_default_simple_creds (ctx);
+
+      svn_wc_get_simple_wc_provider (&wc_provider, &wc_prov_baton,
+                                     base_dir, base_access,
+                                     default_simple_creds ?
+                                       default_simple_creds->username : NULL,
+                                     default_simple_creds ?
+                                       default_simple_creds->password : NULL,
+                                     pool);
+      
+      svn_auth_register_provider (cbtable->auth_baton, TRUE /* PREPEND */,
+                                  wc_provider, wc_prov_baton, pool);
+    }
+
   cb->auth_baton = svn_client_ctx_get_old_auth_baton (ctx); /* old-style */
   cb->base_dir = base_dir;
   cb->base_access = base_access;

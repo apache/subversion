@@ -93,7 +93,7 @@ svn_cl__create_auth_baton (svn_cl__opt_state_t *opt_state,
                                        opt_state->auth_password,
                                        pool);
   
-  svn_auth_register_provider (ab, 0 /* ignored */,
+  svn_auth_register_provider (ab, FALSE /* append */,
                               prompt_provider, prompt_prov_baton, pool);
 
   return ab;

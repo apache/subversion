@@ -139,10 +139,10 @@ main (int argc, const char * const *argv)
                                        pool);
   
   /* Register the providers */
-  svn_auth_register_provider (auth_baton, 0 /* ignored */,
+  svn_auth_register_provider (auth_baton, FALSE /* append */,
                               wc_provider, wc_prov_baton, pool);
 
-  svn_auth_register_provider (auth_baton, 0 /* ignored */,
+  svn_auth_register_provider (auth_baton, FALSE /* append */,
                               prompt_provider, prompt_prov_baton, pool);
 
   

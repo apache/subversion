@@ -882,11 +882,14 @@ main (int argc, const char * const *argv)
   command_baton.ctx = svn_client_ctx_create (pool);
   
   /* Place any default --username or --password credentials into the cxt. */
-  default_creds = apr_pcalloc (pool, sizeof(*default_creds));
-  default_creds->username = opt_state.auth_username;
-  default_creds->password = opt_state.auth_password;
-  svn_client_ctx_set_default_simple_creds (command_baton.ctx,
-                                           default_creds);
+  if (opt_state.auth_username || opt_state.auth_password)
+    {
+      default_creds = apr_pcalloc (pool, sizeof(*default_creds));
+      default_creds->username = opt_state.auth_username;
+      default_creds->password = opt_state.auth_password;
+      svn_client_ctx_set_default_simple_creds (command_baton.ctx,
+                                               default_creds);
+    }
 
   err = (*subcommand->cmd_func) (os, &command_baton, pool);
   if (err)
