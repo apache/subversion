@@ -106,7 +106,7 @@ svn_client__default_auth_dir (const char **auth_dir_p,
  * Allocate *USERNAME in POOL.
  */
 static svn_error_t *
-get_username (char **username,
+get_username (const char **username,
               void *baton,
               svn_boolean_t force_prompt,
               apr_pool_t *pool)
@@ -191,8 +191,8 @@ get_username (char **username,
  * Allocate *PASSWORD in POOL.
  */
 static svn_error_t *
-get_password (char **password,
-              char *username,
+get_password (const char **password,
+              const char *username,
               void *baton,
               svn_boolean_t force_prompt,
               apr_pool_t *pool)
@@ -263,8 +263,8 @@ get_password (char **password,
 /* This matches the get_user_and_pass() prototype in
    `svn_ra_simple_password_authenticator_t'. */
 static svn_error_t *
-get_user_and_pass (char **username,
-                   char **password,
+get_user_and_pass (const char **username,
+                   const char **password,
                    void *baton,
                    svn_boolean_t force_prompt,
                    apr_pool_t *pool)

@@ -53,7 +53,7 @@ static int request_auth(void *userdata, const char *realm, int attempt,
                         char *username, char *password)
 {
   void *a, *auth_baton;
-  char *uname, *pword;
+  const char *uname, *pword;
   svn_ra_simple_password_authenticator_t *authenticator = NULL;
   svn_ra_session_t *ras = userdata;
 

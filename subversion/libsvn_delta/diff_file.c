@@ -650,7 +650,7 @@ typedef struct svn_diff3__file_output_baton_t
 typedef enum svn_diff3__file_output_type_e
 {
   svn_diff3__file_output_skip,
-  svn_diff3__file_output_normal,
+  svn_diff3__file_output_normal
 } svn_diff3__file_output_type_e;
 
 
