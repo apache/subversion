@@ -15,12 +15,32 @@ done
 
 
 # Run tests to ensure that our build requirements are met
+VERSION_CHECK=""
 NEON_CHECK_CONTROL=""
-if test "$1" = "--disable-neon-version-check"; then
-    NEON_CHECK_CONTROL="$1"
-    shift
-fi
-./build/buildcheck.sh $NEON_CHECK_CONTROL || exit 1
+while test $# != 0; do
+  case "$1" in
+    --release)
+      VERSION_CHECK="$1"
+      shift
+      ;;
+    --disable-neon-version-check)
+      NEON_CHECK_CONTROL="$1"
+      shift
+      ;;
+    --)         # end of option parsing
+      break
+      ;;
+    *)
+      echo "invalid parameter: '$1'"
+      exit 1
+      ;;
+  esac
+done
+# ### The order of parameters is important; buildcheck.sh depends on it and
+# ### we don't want to copy the fancy option parsing loop there. For the
+# ### same reason, all parameters should be quoted, so that buildcheck.sh
+# ### sees an empty arg rather than missing one.
+./build/buildcheck.sh "$VERSION_CHECK" "$NEON_CHECK_CONTROL" || exit 1
 
 ### temporary cleanup during transition to libtool 1.4
 (cd ac-helpers ; rm -f ltconfig ltmain.sh libtool.m4)
