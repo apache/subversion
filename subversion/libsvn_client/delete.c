@@ -42,7 +42,7 @@ svn_client__can_delete (const char *path,
   apr_hash_t *hash = apr_hash_make (pool);
   apr_hash_index_t *hi;
 
-  SVN_ERR (svn_wc_statuses (hash, path, TRUE, FALSE, TRUE, FALSE, pool));
+  SVN_ERR (svn_wc_statuses (hash, path, TRUE, FALSE, FALSE, FALSE, pool));
   for (hi = apr_hash_first (pool, hash); hi; hi = apr_hash_next (hi))
     {
       const void *key;
@@ -53,6 +53,17 @@ svn_client__can_delete (const char *path,
       apr_hash_this (hi, &key, NULL, &val);
       name = key;
       statstruct = val;
+
+
+      if (statstruct->text_status == svn_wc_status_obstructed)
+        {
+          /* ### Do we need to invent a new error code for this case?  */
+          return svn_error_createf (SVN_ERR_CLIENT_UNVERSIONED,
+                                    0, NULL, pool,
+                                    "'%s' is in the way of the resource "
+                                    "actually under revision control.",
+                                    name);
+        }
 
       if (!statstruct->entry)
         {

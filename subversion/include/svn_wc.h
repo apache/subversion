@@ -571,7 +571,9 @@ enum svn_wc_status_kind
     svn_wc_status_replaced,    /* was deleted and then re-added */
     svn_wc_status_modified,    /* text or props have been modified */
     svn_wc_status_merged,      /* local mods received repos mods */
-    svn_wc_status_conflicted   /* local mods received conflicting repos mods */
+    svn_wc_status_conflicted,  /* local mods received conflicting repos mods */
+    svn_wc_status_obstructed   /* an unversioned resource is in the way of
+                                  the versioned resource */
 };
 
 /* Structure for holding the "status" of a working copy item. 
@@ -641,11 +643,11 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  * a directory; its status will simply be stored in STATUSHASH like
  * any other.
  *
- * If STRICT is non-zero, then if we encounter a path that is not in
- * the wc, we'll return an error. STRICT should be zero if we're
- * updating, as the update will catch any non wc path errors (and
- * properly deal with files that are in the repository but missing
- * from the wc for whatever reason).
+ * If STRICT is non-zero, then if we encounter a path that is missing
+ * from the wc, or is obstructing a resource in the wc, we'll return an
+ * error. STRICT should be zero if we're updating, as the update will
+ * catch any non wc path errors (and properly deal with files that are
+ * in the repository but missing from the wc for whatever reason).
  *
  * Assuming PATH is a directory, then:
  * 
@@ -653,8 +655,7 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  * returned.  If non-zero, then all entries will be returned.
  *
  * If DESCEND is zero, statushash will contain paths for PATH and
- * its non-directory entries (subdirectories should be subjects of
- * separate status calls).  
+ * its entries.
  *
  * If DESCEND is non-zero, statushash will contain statuses for PATH
  * and everything below it, including subdirectories.  In other

@@ -73,6 +73,9 @@ svn_cl__generate_status_codes (char *str_status,
     case svn_wc_status_conflicted:
       text_statuschar = 'C';
       break;
+    case svn_wc_status_obstructed:
+      text_statuschar = '>'; /* ### Come up with a better moniker */
+      break;
     case svn_wc_status_unversioned:
     default:
       text_statuschar = '?';

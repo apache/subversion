@@ -131,103 +131,152 @@ assemble_status (svn_wc_status_t **status,
       if (path_kind != svn_node_none)
         stat->text_status = svn_wc_status_unversioned;
 
-      /* If we're in strict mode and we encounter a path that doesn't
-         exist in the wc, then we return an error*/
-      if (strict && (path_kind == svn_node_none))
-        return svn_error_createf (APR_ENOENT, 0, NULL, pool,
-                                  "assemble_status: "
-                                  "%s: No such file or directory",
-                                  path);
-
       *status = stat;
       return SVN_NO_ERROR;
     }
 
-  /* Implement predecence rules: */
-
-  /* 1. Set the two main variables to "discovered" values first (M, C). 
-        Together, these two stati are of lowest precedence, and C has
-        precedence over M. */
-
-  /* Does the entry have props? */
-  SVN_ERR (svn_wc__has_props (&has_props, path, pool));
-  if (has_props)
-    final_prop_status = svn_wc_status_normal;
-
-  /* If the entry has a property file, see if it has local changes. */
-  SVN_ERR (svn_wc_props_modified_p (&prop_modified_p, path, pool));
-  
-  /* If the entry is a file, check for textual modifications */
-  if (entry->kind == svn_node_file)
-    SVN_ERR (svn_wc_text_modified_p (&text_modified_p, path, pool));
-  
-  if (text_modified_p)
-    final_text_status = svn_wc_status_modified;
-  
-  if (prop_modified_p)
-    final_prop_status = svn_wc_status_modified;      
-  
-  if (entry->prejfile || entry->conflict_old || 
-      entry->conflict_new || entry->conflict_wrk)
+  /* Someone either deleted the administrative directory in the versioned
+     subdir, or deleted the directory altogether and created a new one.
+     In any case, what is currently there is in the way.
+   */
+  if (entry->kind == svn_node_dir
+      && path_kind == svn_node_dir)
     {
-      svn_boolean_t text_conflict_p, prop_conflict_p;
-      const char *parent_dir;
-      
-      if (entry->kind == svn_node_dir)
-        parent_dir = path;
-      else  /* non-directory, that's all we need to know */
+      svn_boolean_t is_wc;
+
+      SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
+      if (! is_wc)
         {
-          parent_dir = svn_path_remove_component_nts (path, pool);
+          final_text_status = svn_wc_status_obstructed;
+
+          if (strict)
+            /* ### Not sure if this is the correct error code to use */
+            return svn_error_createf (
+                     SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, pool,
+                     "assemble_status: "
+                     "'%s' is obstructing a versioned resource",
+                     path);
         }
-      
-      SVN_ERR (svn_wc_conflicted_p (&text_conflict_p, &prop_conflict_p,
-                                    parent_dir, entry, pool));
-      
-      if (text_conflict_p)
-        final_text_status = svn_wc_status_conflicted;
-      if (prop_conflict_p)
-        final_prop_status = svn_wc_status_conflicted;
     }
-   
-  /* 2. Possibly overwrite the text_status variable with "scheduled"
-        states from the entry (A, D, R).  As a group, these states are
-        of medium precedence.  They also override any C or M that may
-        be in the prop_status field at this point.*/
 
-  if (entry->schedule == svn_wc_schedule_add)
+  if (final_text_status != svn_wc_status_obstructed)
     {
-      final_text_status = svn_wc_status_added;
-      final_prop_status = svn_wc_status_none;
+      /* Implement predecence rules: */
+
+      /* 1. Set the two main variables to "discovered" values first (M, C).
+            Together, these two stati are of lowest precedence, and C has
+            precedence over M. */
+
+      /* Does the entry have props? */
+      SVN_ERR (svn_wc__has_props (&has_props, path, pool));
+      if (has_props)
+        final_prop_status = svn_wc_status_normal;
+
+      /* If the entry has a property file, see if it has local changes. */
+      SVN_ERR (svn_wc_props_modified_p (&prop_modified_p, path, pool));
+
+      /* If the entry is a file, check for textual modifications */
+      if (entry->kind == svn_node_file)
+        SVN_ERR (svn_wc_text_modified_p (&text_modified_p, path, pool));
+
+      if (text_modified_p)
+        final_text_status = svn_wc_status_modified;
+
+      if (prop_modified_p)
+        final_prop_status = svn_wc_status_modified;
+
+      if (entry->prejfile || entry->conflict_old ||
+          entry->conflict_new || entry->conflict_wrk)
+        {
+          svn_boolean_t text_conflict_p, prop_conflict_p;
+          const char *parent_dir;
+
+          if (entry->kind == svn_node_dir)
+            parent_dir = path;
+          else  /* non-directory, that's all we need to know */
+            {
+              parent_dir = svn_path_remove_component_nts (path, pool);
+            }
+
+          SVN_ERR (svn_wc_conflicted_p (&text_conflict_p, &prop_conflict_p,
+                                        parent_dir, entry, pool));
+
+          if (text_conflict_p)
+            final_text_status = svn_wc_status_conflicted;
+          if (prop_conflict_p)
+            final_prop_status = svn_wc_status_conflicted;
+        }
+
+      /* 2. Possibly overwrite the text_status variable with "scheduled"
+            states from the entry (A, D, R).  As a group, these states are
+            of medium precedence.  They also override any C or M that may
+            be in the prop_status field at this point.*/
+
+      if (entry->schedule == svn_wc_schedule_add)
+        {
+          final_text_status = svn_wc_status_added;
+          final_prop_status = svn_wc_status_none;
+        }
+
+      else if (entry->schedule == svn_wc_schedule_replace)
+        {
+          final_text_status = svn_wc_status_replaced;
+          final_prop_status = svn_wc_status_none;
+        }
+
+      else if (entry->schedule == svn_wc_schedule_delete)
+        {
+          final_text_status = svn_wc_status_deleted;
+          final_prop_status = svn_wc_status_none;
+        }
+
+
+      /* 3. Highest precedence:
+
+            a. check to see if file or dir is just missing.  This
+               overrides every possible state *except* deletion.
+               (If something is deleted or scheduled for it, we
+               don't care if the working file exists.)
+
+            b. check to see if the file or dir is present in the
+               file system as the same kind it was versioned as.
+      */
+
+      if (path_kind == svn_node_none)
+        {
+          if (final_text_status != svn_wc_status_deleted)
+            {
+              final_text_status = svn_wc_status_absent;
+
+              if (strict)
+                return svn_error_createf (APR_ENOENT, 0, NULL, pool,
+                                          "assemble_status: "
+                                          "%s: No such file or directory",
+                                          path);
+            }
+        }
+      else
+        {
+          if (path_kind != entry->kind)
+            {
+              final_text_status = svn_wc_status_obstructed;
+
+              if (strict)
+                /* ### Not sure if this is the correct error code to use */
+                return svn_error_createf (
+                         SVN_ERR_WC_UNEXPECTED_KIND, 0, NULL, pool,
+                         "assemble_status: "
+                         "'%s' is obstructing a versioned resource",
+                         path);
+            }
+        }
+
+
+      /* 4. Check for locked directory. */
+
+      if (entry->kind == svn_node_dir)
+        SVN_ERR (svn_wc_locked (&locked_p, path, pool));
     }
-      
-  else if (entry->schedule == svn_wc_schedule_replace)
-    {
-      final_text_status = svn_wc_status_replaced;
-      final_prop_status = svn_wc_status_none;
-    }
-    
-  else if (entry->schedule == svn_wc_schedule_delete)
-    {
-      final_text_status = svn_wc_status_deleted;
-      final_prop_status = svn_wc_status_none;
-    }
-
-
-  /* 3. Highest precedence: check to see if file or dir is just
-        missing.  This overrides every possible state *except*
-        deletion.  (If something is deleted or scheduled for it, we
-        don't care if the working file exists.)  */
-
-  if ((path_kind == svn_node_none)
-      && (final_text_status != svn_wc_status_deleted))
-    final_text_status = svn_wc_status_absent;
-
-
-  /* 4. Check for locked directory. */
-
-  if (entry->kind == svn_node_dir)
-    SVN_ERR (svn_wc_locked (&locked_p, path, pool));
-
 
   /* 5. Easy out:  unless we're fetching -every- entry, don't bother
      to allocate a struct for an uninteresting entry. */
@@ -508,14 +557,36 @@ svn_wc_statuses (apr_hash_t *statushash,
                 {
                   /* Directory entries are incomplete.  We must get
                      their full entry from their own THIS_DIR entry.
-                     svn_wc_entry does this for us if it can.  */
-                  svn_wc_entry_t *subdir;
+                     svn_wc_entry does this for us if it can.
 
-                  SVN_ERR (svn_wc_entry (&subdir, fullpath, FALSE, pool));
+                     Don't error out if svn_wc_entry can't get the
+                     entry for us because the path is not a (working
+                     copy) directory.  Instead pass the incomplete
+                     entry to add_status_structure, since that contains
+                     enough information to determine the actual state
+                     of this entry.  */
+
+                  svn_wc_entry_t *subdir = NULL;
+                  svn_error_t *svn_err;
+
+                  svn_err = svn_wc_entry (&subdir, fullpath, FALSE, pool);
+                  if (svn_err)
+                    {
+                      if (svn_err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
+                        return svn_err;
+
+                      svn_error_clear_all (svn_err);
+                      subdir = entry;
+                    }
+
                   SVN_ERR (add_status_structure (statushash, fullpath,
                                                  subdir, get_all, 
                                                  strict, pool));
-                  if (descend)
+
+                  /* Descend only if the subdirectory is a working copy
+                     directory (and DESCEND is non-zero ofcourse)  */
+
+                  if (descend && subdir != entry)
                     {
                       SVN_ERR (svn_wc_statuses (statushash, fullpath, descend,
                                                 get_all, strict, no_ignore,
