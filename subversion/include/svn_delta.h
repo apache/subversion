@@ -29,6 +29,7 @@
 #include <apr.h>
 #include <apr_pools.h>
 #include <apr_tables.h>
+#include <apr_md5.h>
 
 #include "svn_types.h"
 #include "svn_string.h"
@@ -278,11 +279,9 @@ svn_error_t *svn_txdelta_send_txstream (svn_txdelta_stream_t *txstream,
  * @a *handler_baton is set to the value to pass as the @a baton argument to
  * @a *handler.
  *
- * If @a result_checksum is non-null, it is the hex MD5 digest for the
- * result written to @a target.  If this does not match the checksum
- * of the final fulltext resulting from this delta application, the
- * call to @a *handler that determined this will return the error
- * SVN_ERR_CHECKSUM_MISMATCH.
+ * If @a result_digest is non-null, it points to MD5_DIGESTSIZE bytes
+ * of storage, and the final call to @a handler populates it with the
+ * MD5 digest of the resulting fulltext.
  *
  * If @a error_info is non-null, it is inserted parenthetically into
  * the error string for any error returned by svn_txdelta_apply() or
@@ -290,12 +289,12 @@ svn_error_t *svn_txdelta_send_txstream (svn_txdelta_stream_t *txstream,
  * since there's nothing else in the delta application's context to
  * supply a path for error messages.)
  *
- * Note: To avoid lifetime issues, @a result_checksum and 
- * @a error_info are copied into @a pool or a subpool thereof. 
+ * Note: To avoid lifetime issues, @a error_info is copied into 
+ * @a pool or a subpool thereof.
  */
 void svn_txdelta_apply (svn_stream_t *source,
                         svn_stream_t *target,
-                        const char *result_checksum,
+                        unsigned char *result_digest,
                         const char *error_info,
                         apr_pool_t *pool,
                         svn_txdelta_window_handler_t *handler,
@@ -717,12 +716,6 @@ typedef struct
    * still be an error if @a base_checksum is neither null nor the hex
    * MD5 checksum of the empty string).
    *
-   * @a result_checksum is the hex MD5 digest for the fulltext that
-   * results from this delta application.  It is ignored if null, but
-   * if not null, it must match the checksum of the result; if it
-   * does not, then the @a *handler call which detects the mismatch
-   * will return the error SVN_ERR_CHECKSUM_MISMATCH.
-   *
    * If @a *handler is set to @c NULL, then the editor is indicating to 
    * the driver that it is not interested in receiving information about
    * the changes in this file. The driver can use this information to
@@ -730,9 +723,8 @@ typedef struct
    * has occurred (by virtue of this function being invoked), but is
    * simply indicating that it doesn't want the details.
    */
-  svn_error_t *(*apply_textdelta) (void *file_baton, 
+  svn_error_t *(*apply_textdelta) (void *file_baton,
                                    const char *base_checksum,
-                                   const char *result_checksum,
                                    apr_pool_t *pool,
                                    svn_txdelta_window_handler_t *handler,
                                    void **handler_baton);
@@ -757,8 +749,16 @@ typedef struct
    * We are done processing a file, whose baton is @a file_baton (set by
    * @c add_file or @c open_file).  We won't be using the baton any
    * more, so whatever resources it refers to may now be freed.
+   *
+   * @a text_checksum is the hex MD5 digest for the fulltext that
+   * resulted from a delta application, see @c apply_textdelta.  The
+   * checksum is ignored if null.  If not null, it is compared to the
+   * checksum of the new fulltext, and the error
+   * SVN_ERR_CHECKSUM_MISMATCH is returned if they do not match.  If
+   * there is no new fulltext, @a text_checksum is ignored.
    */
   svn_error_t *(*close_file) (void *file_baton,
+                              const char *text_checksum,
                               apr_pool_t *pool);
 
   /** Finish an edit.

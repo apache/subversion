@@ -20,6 +20,7 @@
 
 #include <apr_pools.h>
 #include <apr_file_io.h>
+#include <apr_md5.h>
 
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -27,6 +28,7 @@
 #include "svn_delta.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
+#include "svn_md5.h"
 
 
 
@@ -311,7 +313,6 @@ open_directory (const char *path,
 static svn_error_t *
 apply_textdelta (void *file_baton,
                  const char *base_checksum,
-                 const char *result_checksum,
                  apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
@@ -321,7 +322,7 @@ apply_textdelta (void *file_baton,
                                  fb->edit_baton->txn_root, 
                                  fb->path,
                                  base_checksum,
-                                 result_checksum,
+                                 NULL,
                                  fb->pool);
 }
 
@@ -453,6 +454,38 @@ change_file_prop (void *file_baton,
 
 
 static svn_error_t *
+close_file (void *file_baton,
+            const char *text_checksum,
+            apr_pool_t *pool)
+{
+  struct file_baton *fb = file_baton;
+
+  if (text_checksum)
+    {
+      unsigned char digest[MD5_DIGESTSIZE];
+      const char *hex_digest;
+
+      SVN_ERR (svn_fs_file_md5_checksum
+               (digest, fb->edit_baton->txn_root, fb->path, fb->pool));
+      hex_digest = svn_md5_digest_to_cstring (digest, fb->pool);
+      
+      if (strcmp (text_checksum, hex_digest) != 0)
+        {
+          return svn_error_createf
+            (SVN_ERR_CHECKSUM_MISMATCH, NULL,
+             "close_file: checksum mismatch for resulting fulltext\n"
+             "(%s):\n"
+             "   expected checksum:  %s\n"
+             "   actual checksum:    %s\n",
+             fb->path, text_checksum, hex_digest);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 change_dir_prop (void *dir_baton,
                  const char *name,
                  const svn_string_t *value,
@@ -574,6 +607,7 @@ svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
   e->change_dir_prop   = change_dir_prop;
   e->add_file          = add_file;
   e->open_file         = open_file;
+  e->close_file        = close_file;
   e->apply_textdelta   = apply_textdelta;
   e->change_file_prop  = change_file_prop;
   e->close_edit        = close_edit;

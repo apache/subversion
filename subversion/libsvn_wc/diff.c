@@ -1001,7 +1001,6 @@ window_handler (svn_txdelta_window_t *window,
 static svn_error_t *
 apply_textdelta (void *file_baton,
                  const char *base_checksum,
-                 const char *result_checksum,
                  apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
@@ -1053,9 +1052,13 @@ apply_textdelta (void *file_baton,
 
 /* An editor function.  When the file is closed we have a temporary
  * file containing a pristine version of the repository file. This can
- * be compared against the working copy.  */
+ * be compared against the working copy.
+ *
+ * Ignore TEXT_CHECKSUM.
+ */
 static svn_error_t *
 close_file (void *file_baton,
+            const char *text_checksum,
             apr_pool_t *pool)
 {
   struct file_baton *b = file_baton;

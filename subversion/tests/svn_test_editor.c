@@ -377,6 +377,7 @@ test_close_directory (void *dir_baton,
 
 static svn_error_t *
 test_close_file (void *file_baton,
+                 const char *text_checksum,
                  apr_pool_t *pool)
 {
   return close_file_or_dir (file_baton, FALSE, pool);
@@ -419,7 +420,6 @@ test_abort_edit (void *edit_baton,
 static svn_error_t *
 test_apply_textdelta (void *file_baton,
                       const char *base_checksum,
-                      const char *result_checksum,
                       apr_pool_t *pool,
                       svn_txdelta_window_handler_t *handler,
                       void **handler_baton)

@@ -385,7 +385,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
     {
       SVN_ERR (editor->add_file (telepath, batons[i], src_url,
                                  src_revnum, pool, &baton));
-      SVN_ERR (editor->close_file (baton, pool));
+      SVN_ERR (editor->close_file (baton, NULL, pool));
     }
 
   /* Now, close up all those batons (except the root

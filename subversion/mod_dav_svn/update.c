@@ -75,7 +75,11 @@ typedef struct {
   const char *path2;   /* a telescoping extension of uc->dst_path */
   const char *path3;   /* a telescoping extension of uc->dst_path
                             without dst_path as prefix. */
-  svn_boolean_t added;
+
+  const char *base_checksum;   /* base_checksum (from apply_textdelta) */
+
+  svn_boolean_t text_changed;        /* Did the file's contents change? */
+  svn_boolean_t added;               /* File added? (Implies text_changed.) */
   apr_array_header_t *changed_props; /* array of const char * prop names */
   apr_array_header_t *removed_props; /* array of const char * prop names */
 
@@ -593,33 +597,37 @@ static svn_error_t * upd_open_file(const char *path,
 
 static svn_error_t * upd_apply_textdelta(void *file_baton, 
                                          const char *base_checksum,
-                                         const char *result_checksum,
                                          apr_pool_t *pool,
                                          svn_txdelta_window_handler_t *handler,
                                          void **handler_baton)
 {
   item_baton_t *file = file_baton;
 
-  /* if we added the file, then no need to tell the client to fetch it */
-  if (! file->added)
-    {
-      const char *elt = insert_checksum_attributes("<S:fetch-file",
-                                                   base_checksum,
-                                                   result_checksum,
-                                                   "/>",
-                                                   pool);
-      send_xml(file->uc, "%s" DEBUG_CR, elt);
-    }
-
+  file->base_checksum = apr_pstrdup (file->pool, base_checksum);
+  file->text_changed = TRUE;
   *handler = NULL;
 
   return SVN_NO_ERROR;
 }
 
 static svn_error_t * upd_close_file(void *file_baton,
+                                    const char *text_checksum,
                                     apr_pool_t *pool)
 {
-  close_helper(FALSE /* is_dir */, file_baton);
+  item_baton_t *file = file_baton;
+
+  /* if we added the file, then no need to tell the client to fetch it */
+  if ((! file->added) && file->text_changed)
+    {
+      const char *elt = insert_checksum_attributes("<S:fetch-file",
+                                                   file->base_checksum,
+                                                   text_checksum,
+                                                   "/>",
+                                                   pool);
+      send_xml(file->uc, "%s" DEBUG_CR, elt);
+    }
+
+  close_helper(FALSE /* is_dir */, file);
   return SVN_NO_ERROR;
 }
 

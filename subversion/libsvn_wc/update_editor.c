@@ -380,6 +380,12 @@ struct file_baton
 
   /* Bump information for the directory this file lives in */
   struct bump_dir_info *bump_info;
+
+  /* This is initialized to all zeroes when the baton is created, then
+     populated with the MD5 digest of the resultant fulltext after the
+     last window is handled by the handler returned from
+     apply_textdelta(). */ 
+  unsigned char digest[MD5_DIGESTSIZE];
 };
 
 
@@ -417,6 +423,8 @@ make_file_baton (struct dir_baton *pb,
   f->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
   f->bump_info    = pb->bump_info;
   f->added        = adding;
+
+  /* No need to initialize f->digest, since we used pcalloc(). */
 
   /* the directory's bump info has one more referer now */
   ++f->bump_info->ref_count;
@@ -1152,7 +1160,6 @@ open_file (const char *name,
 static svn_error_t *
 apply_textdelta (void *file_baton, 
                  const char *base_checksum,
-                 const char *result_checksum,
                  apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
@@ -1284,7 +1291,7 @@ apply_textdelta (void *file_baton,
     apr_file_name_get (&tmp_path, hb->dest);
     svn_txdelta_apply (svn_stream_from_aprfile (hb->source, subpool),
                        svn_stream_from_aprfile (hb->dest, subpool),
-                       result_checksum, tmp_path, subpool,
+                       fb->digest, tmp_path, subpool,
                        &hb->apply_handler, &hb->apply_baton);
   }
   
@@ -1814,6 +1821,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
 /* Mostly a wrapper around svn_wc_install_file. */
 static svn_error_t *
 close_file (void *file_baton,
+            const char *text_checksum,
             apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
@@ -1824,7 +1832,23 @@ close_file (void *file_baton,
 
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
   if (fb->text_changed)
-    new_text_path = svn_wc__text_base_path (fb->path, TRUE, fb->pool);
+    {
+      new_text_path = svn_wc__text_base_path (fb->path, TRUE, fb->pool);
+
+      if (text_checksum)
+        {
+          const char *real_sum = svn_md5_digest_to_cstring (fb->digest, pool);
+          
+          if (real_sum && (strcmp (text_checksum, real_sum) != 0))
+            return svn_error_createf
+              (SVN_ERR_CHECKSUM_MISMATCH, NULL,
+               "close_file: expected and actual checksums do not match:\n"
+               "(%s):\n"
+               "   expected checksum:  %s\n"
+               "   actual checksum:    %s\n",
+               fb->path, text_checksum, real_sum);
+        }
+    }
 
   if (fb->prop_changed)
     propchanges = fb->propchanges;

@@ -110,21 +110,20 @@ typedef struct
 
 typedef struct
 {
+  apr_file_t *tmpfile;
+  svn_stringbuf_t *fname;
+  const char *base_checksum;    /* hex md5 of base text; may be null */
+} put_baton_t;
+
+typedef struct
+{
   commit_ctx_t *cc;
   resource_t *rsrc;
   apr_hash_t *prop_changes; /* name/values pairs of new/changed properties. */
   apr_array_header_t *prop_deletes; /* names of properties to delete. */
   svn_boolean_t created; /* set if this is an add rather than an update */
+  put_baton_t *put_baton;  /* baton for this file's PUT request */
 } resource_baton_t;
-
-typedef struct
-{
-  apr_file_t *tmpfile;
-  svn_stringbuf_t *fname;
-  const char *base_checksum;    /* hex md5 of base text; may be null */
-  const char *result_checksum;  /* hex md5 of resulting text; may be null */
-  resource_baton_t *file;
-} put_baton_t;
 
 /* this property will be fetched from the server when we don't find it
    cached in the WC property store. */
@@ -972,62 +971,9 @@ static svn_error_t * commit_stream_write(void *baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t * commit_stream_close(void *baton)
-{
-  put_baton_t *pb = baton;
-  commit_ctx_t *cc = pb->file->cc;
-  const char *url = pb->file->rsrc->wr_url;
-  ne_request *req;
-  int code;
-  svn_error_t *err;
-
-  /* create/prep the request */
-  req = ne_request_create(cc->ras->sess, "PUT", url);
-  if (req == NULL)
-    {
-      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                               "Could not create a PUT request (%s)",
-                               url);
-    }
-
-  ne_add_request_header(req, "Content-Type", SVN_SVNDIFF_MIME_TYPE);
-
-  if (pb->base_checksum)
-    ne_add_request_header
-      (req, SVN_DAV_BASE_FULLTEXT_MD5_HEADER, pb->base_checksum);
-
-  if (pb->result_checksum)
-    ne_add_request_header
-      (req, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER, pb->result_checksum);
-
-  /* Give the file to neon. The provider will rewind the file. */
-  err = svn_ra_dav__set_neon_body_provider(req, pb->tmpfile);
-  if (err)
-    {
-      apr_file_close(pb->tmpfile);
-      return err;
-    }
-
-  /* run the request and get the resulting status code (and svn_error_t) */
-  err = svn_ra_dav__request_dispatch(&code, req, cc->ras->sess,
-                                     "PUT", url,
-                                     201 /* Created */,
-                                     204 /* No Content */,
-                                     cc->ras->pool);
-
-  /* we're done with the file.  this should delete it. */
-  (void) apr_file_close(pb->tmpfile);
-
-  if (err)
-    return err;
-
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t * 
 commit_apply_txdelta(void *file_baton, 
                      const char *base_checksum,
-                     const char *result_checksum,
                      apr_pool_t *pool,
                      svn_txdelta_window_handler_t *handler,
                      void **handler_baton)
@@ -1036,18 +982,13 @@ commit_apply_txdelta(void *file_baton,
   put_baton_t *baton;
   svn_stream_t *stream;
 
-  baton = apr_pcalloc(pool, sizeof(*baton));
-  baton->file = file;
+  baton = apr_pcalloc(file->cc->ras->pool, sizeof(*baton));
+  file->put_baton = baton;
 
   if (base_checksum)
-    baton->base_checksum = apr_pstrdup (pool, base_checksum);
+    baton->base_checksum = apr_pstrdup (file->cc->ras->pool, base_checksum);
   else
     baton->base_checksum = NULL;
-
-  if (result_checksum)
-    baton->result_checksum = apr_pstrdup (pool, result_checksum);
-  else
-    baton->result_checksum = NULL;
 
   /* ### oh, hell. Neon's request body support is either text (a C string),
      ### or a FILE*. since we are getting binary data, we must use a FILE*
@@ -1064,7 +1005,6 @@ commit_apply_txdelta(void *file_baton,
 
   stream = svn_stream_create(baton, pool);
   svn_stream_set_write(stream, commit_stream_write);
-  svn_stream_set_close(stream, commit_stream_close);
 
   svn_txdelta_to_svndiff(stream, pool, handler, handler_baton);
 
@@ -1095,9 +1035,60 @@ static svn_error_t * commit_change_file_prop(void *file_baton,
 }
 
 static svn_error_t * commit_close_file(void *file_baton,
+                                       const char *text_checksum,
                                        apr_pool_t *pool)
 {
   resource_baton_t *file = file_baton;
+  commit_ctx_t *cc = file->cc;
+  const char *url = file->rsrc->wr_url;
+  ne_request *req;
+  int code;
+  svn_error_t *err;
+
+  if (file->put_baton)
+    {
+      put_baton_t *pb = file->put_baton;
+
+      /* create/prep the request */
+      req = ne_request_create(cc->ras->sess, "PUT", url);
+      if (req == NULL)
+        {
+          return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
+                                   "Could not create a PUT request (%s)",
+                                   url);
+        }
+      
+      ne_add_request_header(req, "Content-Type", SVN_SVNDIFF_MIME_TYPE);
+      
+      if (pb->base_checksum)
+        ne_add_request_header
+          (req, SVN_DAV_BASE_FULLTEXT_MD5_HEADER, pb->base_checksum);
+      
+      if (text_checksum)
+        ne_add_request_header
+          (req, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER, text_checksum);
+      
+      /* Give the file to neon. The provider will rewind the file. */
+      err = svn_ra_dav__set_neon_body_provider(req, pb->tmpfile);
+      if (err)
+        {
+          apr_file_close(pb->tmpfile);
+          return err;
+        }
+      
+      /* run the request and get the resulting status code (and svn_error_t) */
+      err = svn_ra_dav__request_dispatch(&code, req, cc->ras->sess,
+                                         "PUT", url,
+                                         201 /* Created */,
+                                         204 /* No Content */,
+                                         cc->ras->pool);
+      
+      /* we're done with the file.  this should delete it. */
+      (void) apr_file_close(pb->tmpfile);
+      
+      if (err)
+        return err;
+    }
 
   /* Perform all of the property changes on the file. Note that we
      checked out the file when the first prop change was noted. */

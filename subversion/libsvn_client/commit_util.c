@@ -1161,7 +1161,7 @@ do_item_commit (const char *url,
      "has local mods" conditional above. */
   else if (file_baton)
     {
-      SVN_ERR (editor->close_file (file_baton, file_pool));
+      SVN_ERR (editor->close_file (file_baton, NULL, file_pool));
       svn_pool_destroy (file_pool);
     }
 
@@ -1500,11 +1500,12 @@ open_file (const char *path,
 }
 
 static svn_error_t *
-close_file (void *baton, apr_pool_t *pool)
+close_file (void *baton, const char *text_checksum, apr_pool_t *pool)
 {
   struct item_baton *fb = baton;
   printf ("   Closing : %s\n", fb->path);
-  return (*fb->eb->real_editor->close_file) (fb->real_baton, pool);
+  return (*fb->eb->real_editor->close_file) (fb->real_baton,
+                                             text_checksum, pool);
 }
 
 
@@ -1523,7 +1524,6 @@ change_file_prop (void *file_baton,
 static svn_error_t *
 apply_textdelta (void *file_baton,
                  const char *base_checksum,
-                 const char *result_checksum,
                  apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
@@ -1531,8 +1531,7 @@ apply_textdelta (void *file_baton,
   struct item_baton *fb = file_baton;
   printf ("      Transmitting text...\n");
   return (*fb->eb->real_editor->apply_textdelta) (fb->real_baton,
-                                                  base_checksum,
-                                                  result_checksum, pool,
+                                                  base_checksum, pool,
                                                   handler, handler_baton);
 }
 

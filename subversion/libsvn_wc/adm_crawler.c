@@ -598,32 +598,18 @@ svn_wc_transmit_text_deltas (const char *path,
       SVN_ERR (svn_wc__open_text_base (&basefile, path, APR_READ, pool));
     }
 
-  /* ### This is a pity.  tmp_base was created with svn_io_copy_file()
-     above, which uses apr_file_copy(), which probably called
-     apr_file_transfer_contents(), which ran over every byte of the
-     file and therefore could have computed a checksum effortlessly.
-     But we're not about to change the interface of apr_file_copy(),
-     so we'll have to run over the bytes again... */
-  SVN_ERR (svn_io_file_checksum (digest, tmp_base, pool));
-
   /* Tell the editor that we're about to apply a textdelta to the
      file baton; the editor returns to us a window consumer routine
      and baton.  If there is no handler provided, just close the file
      and get outta here.  */
   SVN_ERR (editor->apply_textdelta
            (file_baton,
-            base_digest_hex, svn_md5_digest_to_cstring (digest, pool),
-            pool, &handler, &wh_baton));
+            base_digest_hex, pool, &handler, &wh_baton));
 
-  /* ### If no handler, then we sure did waste a bunch of effort
-     above, copying files and computing checksums and whatnot.
-     Perhaps it would be better for the result_checksum to be passed
-     to the handler at the same time as the null windows?  What an
-     ugly interface.  But more efficient... Hmmm. */
   if (! handler)
     {
       SVN_ERR (svn_io_remove_file (tmp_base, pool));
-      return editor->close_file (file_baton, pool);
+      return editor->close_file (file_baton, NULL, pool);
     }
 
   /* Alert the caller that we have created a temporary file that might
@@ -655,8 +641,17 @@ svn_wc_transmit_text_deltas (const char *path,
   if (basefile)
     SVN_ERR (svn_wc__close_text_base (basefile, path, 0, pool));
 
+  /* ### This is a pity.  tmp_base was created with svn_io_copy_file()
+     above, which uses apr_file_copy(), which probably called
+     apr_file_transfer_contents(), which ran over every byte of the
+     file and therefore could have computed a checksum effortlessly.
+     But we're not about to change the interface of apr_file_copy(),
+     so we'll have to run over the bytes again... */
+  SVN_ERR (svn_io_file_checksum (digest, tmp_base, pool));
+
   /* Close the file baton, and get outta here. */
-  return editor->close_file (file_baton, pool);
+  return editor->close_file
+    (file_baton, svn_md5_digest_to_cstring (digest, pool), pool);
 }
 
 

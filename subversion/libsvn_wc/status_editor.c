@@ -474,7 +474,6 @@ open_file (const char *path,
 static svn_error_t *
 apply_textdelta (void *file_baton, 
                  const char *base_checksum,
-                 const char *result_checksum,
                  apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
@@ -507,6 +506,7 @@ change_file_prop (void *file_baton,
 
 static svn_error_t *
 close_file (void *file_baton,
+            const char *text_checksum,
             apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;

@@ -717,7 +717,6 @@ static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
 static svn_error_t *
 thunk_apply_textdelta(void *file_baton, 
                       const char *base_checksum,
-                      const char *result_checksum,
                       apr_pool_t *pool,
                       svn_txdelta_window_handler_t *handler,
                       void **h_baton)
@@ -730,8 +729,8 @@ thunk_apply_textdelta(void *file_baton,
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"apply_textdelta",
-                                    (char *)"(Oss)", ib->baton,
-                                    base_checksum, result_checksum)) == NULL)
+                                    (char *)"(Os)", ib->baton,
+                                    base_checksum)) == NULL)
     {
       err = convert_python_error();
       goto finished;
@@ -794,9 +793,42 @@ static svn_error_t * thunk_change_file_prop(void *file_baton,
 }
 
 static svn_error_t * thunk_close_file(void *file_baton,
+                                      const char *text_checksum,
                                       apr_pool_t *pool)
 {
-  return close_baton(file_baton, "close_file");
+  item_baton *ib = file_baton;
+  PyObject *result;
+  svn_error_t *err;
+
+  acquire_py_lock();
+
+  /* ### python doesn't have 'const' on the method name and format */
+  if ((result = PyObject_CallMethod(ib->editor, (char *)"close_file",
+                                    (char *)"(Os)", ib->baton,
+                                    text_checksum)) == NULL)
+    {
+      err = convert_python_error();
+      goto finished;
+    }
+
+  /* there is no return value, so just toss this object (probably Py_None) */
+  Py_DECREF(result);
+
+  /* We're now done with the baton. Since there isn't really a free, all
+     we need to do is note that its objects are no longer referenced by
+     the baton.  */
+  Py_DECREF(ib->editor);
+  Py_XDECREF(ib->baton);
+
+#ifdef SVN_DEBUG
+  ib->editor = ib->baton = NULL;
+#endif
+
+  err = SVN_NO_ERROR;
+
+ finished:
+  release_py_lock();
+  return err;
 }
 
 static svn_error_t * thunk_close_edit(void *edit_baton,
