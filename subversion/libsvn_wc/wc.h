@@ -751,10 +751,16 @@ void svn_wc__strip_entry_prefix (svn_stringbuf_t *name);
    Property nonexistence is equivalent to 'none'. */
 enum svn_wc__eol_style
 {
+  svn_wc__eol_style_unknown, /* An unrecognized fooo */
   svn_wc__eol_style_none,    /* EOL translation is "off" or ignored value */
   svn_wc__eol_style_native,  /* Translation is set to client's native style */
-  svn_wc__eol_style_fixed,   /* Translation is set to one of LF, CR, CRLF */
+  svn_wc__eol_style_fixed    /* Translation is set to one of LF, CR, CRLF */
 };
+
+/* The text-base eol style for files using svn_wc__eol_style_native
+   style.  */
+#define SVN_WC__DEFAULT_EOL_MARKER "\n"
+
 
 /* Query the SVN_PROP_EOL_STYLE property on a file at PATH, and set
    *STYLE to PATH's eol style (one of the three values: none, native,
@@ -778,10 +784,10 @@ svn_error_t *svn_wc__get_eol_style (enum svn_wc__eol_style *style,
                                     apr_pool_t *pool);
 
 
-/* Variant of previous routine, but without the path argument.  It
-   assumes that you already have the property VALUE.  This is for more
-   "abstract" callers that just want to know how values map to EOL
-   styles. */
+/* Variant of svn_wc__get_eol_style, but without the path argument.
+   It assumes that you already have the property VALUE.  This is for
+   more "abstract" callers that just want to know how values map to
+   EOL styles. */
 void svn_wc__eol_style_from_value (enum svn_wc__eol_style *style,
                                    const char **eol,
                                    const char *value);

@@ -119,7 +119,10 @@ SVN_ERROR_START
               "Unrecognized binary data encoding; can't decode")
 
   SVN_ERRDEF (SVN_ERR_IO_INCONSISTENT_EOL,
-              "Inconsistent newline format")
+              "Inconsistent line ending style")
+
+  SVN_ERRDEF (SVN_ERR_IO_UNKNOWN_EOL,
+              "Unrecognized line ending style")
 
   SVN_ERRDEF (SVN_ERR_IO_CORRUPT_EOL,
               "Line endings other than expected")

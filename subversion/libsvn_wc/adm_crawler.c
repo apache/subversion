@@ -522,18 +522,42 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
       SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol_str,
                                       entrypath->data, pool));
 
-      if ((eol_style == svn_wc__eol_style_native)
-          || (eol_style == svn_wc__eol_style_fixed))
-        /* Copy the file with either the native or fixed eol, since
-           that's what text-base has. */
-        SVN_ERR (svn_io_copy_and_translate (entrypath->data,
-                                            local_tmp_path->data,
-                                            eol_str, TRUE /* repair! */,
-                                            NULL, NULL, NULL, NULL, FALSE,
-                                            pool));
-      else
-        /* eol-style 'none', or unknown.  Just copy the file unchanged. */
-        SVN_ERR (svn_io_copy_file (entrypath, local_tmp_path, pool));
+      if (eol_style == svn_wc__eol_style_native)
+        {
+          /* Copy the file with the fixed eol, since that's what
+             text-base has. */
+          SVN_ERR (svn_io_copy_and_translate (entrypath->data,
+                                              local_tmp_path->data,
+                                              eol_str,
+                                              FALSE,  /* don't repair */
+                                              NULL, NULL, NULL, NULL,
+                                              FALSE,
+                                              pool));
+        }
+      else if (eol_style == svn_wc__eol_style_fixed)
+        {
+          /* Copy the file with the default eol, since that's what
+             text-base has. */
+          SVN_ERR (svn_io_copy_and_translate (entrypath->data,
+                                              local_tmp_path->data,
+                                              SVN_WC__DEFAULT_EOL_MARKER,
+                                              TRUE,  /* repair */
+                                              NULL, NULL, NULL, NULL,
+                                              FALSE,
+                                              pool));
+        }
+      else if (eol_style == svn_wc__eol_style_none)
+        {
+          /* Just copy the file unchanged. */
+          SVN_ERR (svn_io_copy_file (entrypath, local_tmp_path, pool));
+        }
+      else  /* unknown eol style */
+        {
+          return svn_error_createf
+            (SVN_ERR_IO_INCONSISTENT_EOL, 0, NULL, pool,
+             "do_postfix_text_deltas: %s has unknown eol style property",
+             entrypath->data);
+        }
 
       /* If there's a local mod, send a text-delta. */
       if (tb->text_modified_p)

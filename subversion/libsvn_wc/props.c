@@ -1096,8 +1096,7 @@ svn_wc__eol_style_from_value (enum svn_wc__eol_style *style,
     }
   else
     {
-      /* unrecognized value of property;  equivalent to non-existence. */
-      *style = svn_wc__eol_style_none;
+      *style = svn_wc__eol_style_unknown;
       *eol = NULL;
     }
 }
