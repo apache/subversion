@@ -6,7 +6,7 @@
 for execfile in gen-make.py \
                 dist.sh \
                 build/buildcheck.sh \
-		build/PrintPath \
+                build/PrintPath \
                 ac-helpers/get-neon-ver.sh \
                 ac-helpers/gnu-diff.sh \
                 ac-helpers/gnu-patch.sh \
@@ -15,7 +15,7 @@ for execfile in gen-make.py \
 done
 
 
-# Run a quick test to ensure that our autoconf and libtool verison are ok
+# Run tests to ensure that our build requirements are met
 ./build/buildcheck.sh || exit 1
 
 ### temporary cleanup during transition to libtool 1.4
@@ -28,8 +28,6 @@ done
 # ### APR's libtool. deferring to a second round of change...
 #
 
-# Under Solaris 8, `which' prints "no blah in path1 path2..." if it
-# can't find the target.  The grep -v is to filter that out.
 libtoolize="`./build/PrintPath glibtoolize libtoolize`"
 
 if [ "x$libtoolize" = "x" ]; then
