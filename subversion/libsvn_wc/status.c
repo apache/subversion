@@ -94,7 +94,7 @@ add_ignore_patterns (const char *dirpath,
 */
 static svn_error_t *
 assemble_status (svn_wc_status_t **status,
-                 svn_stringbuf_t *path,
+                 const char *path,
                  svn_wc_entry_t *entry,
                  svn_boolean_t get_all,
                  svn_boolean_t strict,
@@ -112,7 +112,7 @@ assemble_status (svn_wc_status_t **status,
   enum svn_wc_status_kind final_prop_status = svn_wc_status_none;
 
   /* Check the path kind for PATH. */
-  SVN_ERR( svn_io_check_path (path->data, &path_kind, pool));
+  SVN_ERR( svn_io_check_path (path, &path_kind, pool));
 
   if (! entry)
     {
@@ -137,7 +137,7 @@ assemble_status (svn_wc_status_t **status,
         return svn_error_createf (APR_ENOENT, 0, NULL, pool,
                                   "assemble_status: "
                                   "%s: No such file or directory",
-                                  path->data);
+                                  path);
 
       *status = stat;
       return SVN_NO_ERROR;
@@ -171,14 +171,13 @@ assemble_status (svn_wc_status_t **status,
       entry->conflict_new || entry->conflict_wrk)
     {
       svn_boolean_t text_conflict_p, prop_conflict_p;
-      svn_stringbuf_t *parent_dir;
+      const char *parent_dir;
       
       if (entry->kind == svn_node_dir)
         parent_dir = path;
       else  /* non-directory, that's all we need to know */
         {
-          parent_dir = svn_stringbuf_dup (path, pool);
-          svn_path_remove_component (parent_dir);
+          parent_dir = svn_path_remove_component_nts (path, pool);
         }
       
       SVN_ERR (svn_wc_conflicted_p (&text_conflict_p, &prop_conflict_p,
@@ -266,7 +265,7 @@ assemble_status (svn_wc_status_t **status,
    and store it in STATUSHASH.  */
 static svn_error_t *
 add_status_structure (apr_hash_t *statushash,
-                      svn_stringbuf_t *path,
+                      const char *path,
                       svn_wc_entry_t *entry,
                       svn_boolean_t get_all,
                       svn_boolean_t strict,
@@ -277,7 +276,7 @@ add_status_structure (apr_hash_t *statushash,
   SVN_ERR (assemble_status (&statstruct, path, entry, 
                             get_all, strict, pool));
   if (statstruct)
-    apr_hash_set (statushash, path->data, path->len, statstruct);
+    apr_hash_set (statushash, path, APR_HASH_KEY_STRING, statstruct);
   
   return SVN_NO_ERROR;
 }
@@ -287,7 +286,7 @@ add_status_structure (apr_hash_t *statushash,
    versioned things) to the STATUSHASH as unversioned items,
    allocating everything in POOL. */
 static svn_error_t *
-add_unversioned_items (svn_stringbuf_t *path, 
+add_unversioned_items (const char *path, 
                        apr_hash_t *entries,
                        apr_hash_t *statushash,
                        apr_pool_t *pool)
@@ -303,7 +302,7 @@ add_unversioned_items (svn_stringbuf_t *path,
   /* Try to load any '.svnignore' file that may be present. */
   patterns = apr_array_make (subpool, 1, sizeof(const char *));
   add_default_ignores (patterns);
-  SVN_ERR (add_ignore_patterns (path->data, patterns, subpool));
+  SVN_ERR (add_ignore_patterns (path, patterns, subpool));
 
   /* Add empty status structures for each of the unversioned things. */
   for (hi = apr_hash_first (subpool, dirents); hi; hi = apr_hash_next (hi))
@@ -314,7 +313,7 @@ add_unversioned_items (svn_stringbuf_t *path,
       const char *keystring;
       int i;
       int ignore_me;
-      svn_stringbuf_t *printable_path;
+      const char *printable_path;
 
       apr_hash_this (hi, &key, &klen, &val);
       keystring = (const char *) key;
@@ -347,10 +346,7 @@ add_unversioned_items (svn_stringbuf_t *path,
          dirent. */
       if (! ignore_me)
         {
-          /* Reset our base string... */
-          printable_path = svn_stringbuf_dup (path, pool);
-          /* ...and append the current entry. */
-          svn_path_add_component_nts (printable_path, keystring);
+          printable_path = svn_path_join (path, keystring, pool);
           
           /* Add this item to the status hash. */
           SVN_ERR (add_status_structure (statushash,
@@ -370,7 +366,7 @@ add_unversioned_items (svn_stringbuf_t *path,
 
 svn_error_t *
 svn_wc_status (svn_wc_status_t **status,
-               svn_stringbuf_t *path,
+               const char *path,
                apr_pool_t *pool)
 {
   svn_wc_status_t *s;
@@ -394,7 +390,7 @@ svn_wc_status (svn_wc_status_t **status,
 
 svn_error_t *
 svn_wc_statuses (apr_hash_t *statushash,
-                 svn_stringbuf_t *path,
+                 const char *path,
                  svn_boolean_t descend,
                  svn_boolean_t get_all,
                  svn_boolean_t strict,
@@ -404,7 +400,7 @@ svn_wc_statuses (apr_hash_t *statushash,
   svn_wc_entry_t *entry;
 
   /* Is PATH a directory or file? */
-  SVN_ERR (svn_io_check_path (path->data, &kind, pool));
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
   
   /* kff todo: this has to deal with the case of a type-changing edit,
      i.e., someone removed a file under vc and replaced it with a dir,
@@ -452,23 +448,20 @@ svn_wc_statuses (apr_hash_t *statushash,
           const void *key;
           void *val;
           const char *base_name;
-          apr_ssize_t keylen;
 
           /* Put fullpath into the request pool since it becomes a key
              in the output statushash hash table. */
-          svn_stringbuf_t *fullpath = svn_stringbuf_dup (path, pool);
+          const char *fullpath = apr_pstrdup (pool, path);
 
           /* Get the next dirent */
-          apr_hash_this (hi, &key, &keylen, &val);
+          apr_hash_this (hi, &key, NULL, &val);
           base_name = (const char *) key;
           if (strcmp (base_name, SVN_WC_ENTRY_THIS_DIR) != 0)
-            {
-              svn_path_add_component_nts (fullpath, base_name);
-            }
+            fullpath = svn_path_join (fullpath, base_name, pool);
 
           entry = (svn_wc_entry_t *) val;
 
-          SVN_ERR (svn_io_check_path (fullpath->data, &kind, pool));
+          SVN_ERR (svn_io_check_path (fullpath, &kind, pool));
 
           /* In deciding whether or not to descend, we use the actual
              kind of the entity, not the kind claimed by the entries
@@ -485,11 +478,11 @@ svn_wc_statuses (apr_hash_t *statushash,
           if (! strcmp (base_name, SVN_WC_ENTRY_THIS_DIR))
             {
               svn_wc_status_t *s = apr_hash_get (statushash,
-                                                 fullpath->data,
-                                                 fullpath->len);
+                                                 fullpath,
+                                                 APR_HASH_KEY_STRING);
               if (! s)
                 SVN_ERR (add_status_structure (statushash, fullpath,
-                                               entry, get_all, 
+                                               entry, get_all,
                                                strict, pool));
             }
           else

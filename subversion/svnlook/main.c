@@ -291,67 +291,67 @@ print_changed_tree (svn_repos_node_t *node,
 
 static svn_error_t *
 open_writable_binary_file (apr_file_t **fh, 
-                           svn_stringbuf_t *path, 
+                           const char *path, 
                            apr_pool_t *pool)
 {
   apr_array_header_t *path_pieces;
   apr_status_t apr_err;
   int i;
-  svn_stringbuf_t *full_path, *dir, *base_name;
+  const char *full_path, *dir;
   
   /* Try the easy way to open the file. */
-  apr_err = apr_file_open (fh, path->data, 
+  apr_err = apr_file_open (fh, path, 
                            APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BINARY,
                            APR_OS_DEFAULT, pool);
   if (! apr_err)
     return SVN_NO_ERROR;
 
-  svn_path_split (path, &dir, &base_name, pool);
+  svn_path_split_nts (path, &dir, NULL, pool);
 
   /* If the file path has no parent, then we've already tried to open
      it as best as we care to try above. */
-  if (svn_path_is_empty (dir))
+  if (svn_path_is_empty_nts (dir))
     return svn_error_createf (apr_err, 0, NULL, pool,
-                              "Error opening writable file %s", path->data);
+                              "Error opening writable file %s", path);
 
   path_pieces = svn_path_decompose (dir, pool);
   if (! path_pieces->nelts)
     return APR_SUCCESS;
 
-  full_path = svn_stringbuf_create ("", pool);
+  full_path = "";
   for (i = 0; i < path_pieces->nelts; i++)
     {
       enum svn_node_kind kind;
-      svn_stringbuf_t *piece = ((svn_stringbuf_t **) (path_pieces->elts))[i];
-      svn_path_add_component (full_path, piece);
-      SVN_ERR (svn_io_check_path (full_path->data, &kind, pool));
+      const char *piece = ((const char **) (path_pieces->elts))[i];
+      full_path = svn_path_join (full_path, piece, pool);
+      SVN_ERR (svn_io_check_path (full_path, &kind, pool));
 
       /* Does this path component exist at all? */
       if (kind == svn_node_none)
         {
-          apr_err = apr_dir_make (full_path->data, APR_OS_DEFAULT, pool);
+          apr_err = apr_dir_make (full_path, APR_OS_DEFAULT, pool);
           if (apr_err)
             return svn_error_createf (apr_err, 0, NULL, pool,
                                       "Error creating dir %s", 
-                                      full_path->data);
+                                      full_path);
         }
       else if (kind != svn_node_dir)
         {
           if (apr_err)
             return svn_error_createf (apr_err, 0, NULL, pool,
                                       "Error creating dir %s (path exists)", 
-                                      full_path->data);
+                                      full_path);
         }
     }
 
   /* Now that we are ensured that the parent path for this file
      exists, try once more to open it. */
-  apr_err = apr_file_open (fh, path->data, 
+  apr_err = apr_file_open (fh, path, 
                            APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BINARY,
                            APR_OS_DEFAULT, pool);
   if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, pool,
-                              "Error opening writable file %s", path->data);
+                              "Error opening writable file %s", path);
     
   return SVN_NO_ERROR;
 }
@@ -360,7 +360,7 @@ open_writable_binary_file (apr_file_t **fh,
 static svn_error_t *
 dump_contents (apr_file_t *fh,
                svn_fs_root_t *root,
-               svn_stringbuf_t *path,
+               const char *path,
                apr_pool_t *pool)
 {
   apr_status_t apr_err;
@@ -369,7 +369,7 @@ dump_contents (apr_file_t *fh,
   unsigned char buffer[1024];
 
   /* Get a stream to the current file's contents. */
-  SVN_ERR (svn_fs_file_contents (&stream, root, path->data, pool));
+  SVN_ERR (svn_fs_file_contents (&stream, root, path, pool));
   
   /* Now, route that data into our temporary file. */
   while (1)
@@ -381,7 +381,7 @@ dump_contents (apr_file_t *fh,
       if ((apr_err) || (len2 != len))
         return svn_error_createf 
           (apr_err ? apr_err : SVN_ERR_INCOMPLETE_DATA, 0, NULL, pool,
-               "Error writing contents of %s", path->data);
+               "Error writing contents of %s", path);
       if (len != sizeof (buffer))
         break;
     }
@@ -398,12 +398,12 @@ static svn_error_t *
 print_diff_tree (svn_fs_root_t *root,
                  svn_fs_root_t *base_root,
                  svn_repos_node_t *node, 
-                 svn_stringbuf_t *path,
-                 svn_stringbuf_t *base_path,
+                 const char *path,
+                 const char *base_path,
                  apr_pool_t *pool)
 {
   svn_repos_node_t *tmp_node;
-  svn_stringbuf_t *orig_path = NULL, *new_path = NULL;
+  const char *orig_path = NULL, *new_path = NULL;
   apr_file_t *fh1, *fh2;
   svn_boolean_t is_copy = FALSE;
 
@@ -425,12 +425,12 @@ print_diff_tree (svn_fs_root_t *root,
          ### Yes, it would be *much* better for something in the path
              library to be taking care of this! */
       if (tmp_node->copyfrom_path[0] == '/')
-        base_path = svn_stringbuf_create (tmp_node->copyfrom_path + 1, pool);
+        base_path = apr_pstrdup (pool, tmp_node->copyfrom_path + 1);
       else
-        base_path = svn_stringbuf_create (tmp_node->copyfrom_path, pool);
+        base_path = apr_pstrdup (pool, tmp_node->copyfrom_path);
 
       printf ("Copied: %s (from rev %" SVN_REVNUM_T_FMT ", %s)\n",
-              tmp_node->name, tmp_node->copyfrom_rev, base_path->data);
+              tmp_node->name, tmp_node->copyfrom_rev, base_path);
 
       SVN_ERR (svn_fs_revision_root (&base_root,
                                      svn_fs_root_fs (base_root),
@@ -463,13 +463,12 @@ print_diff_tree (svn_fs_root_t *root,
            handling has been finished).  */
       if ((tmp_node->action == 'R') && (tmp_node->text_mod))
         {
-          new_path = svn_stringbuf_create (SVNLOOK_TMPDIR, pool);
-          svn_path_add_component (new_path, path);
+          new_path = svn_path_join (SVNLOOK_TMPDIR, path, pool);
           SVN_ERR (open_writable_binary_file (&fh1, new_path, pool));
           SVN_ERR (dump_contents (fh1, root, path, pool));
           apr_file_close (fh1);
 
-          SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path->data,
+          SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path,
                                             NULL, FALSE, pool));
           SVN_ERR (dump_contents
                    (fh2, base_root, base_path, pool));
@@ -477,25 +476,23 @@ print_diff_tree (svn_fs_root_t *root,
         }
       if ((tmp_node->action == 'A') && (tmp_node->text_mod))
         {
-          new_path = svn_stringbuf_create (SVNLOOK_TMPDIR, pool);
-          svn_path_add_component (new_path, path);
+          new_path = svn_path_join (SVNLOOK_TMPDIR, path, pool);
           SVN_ERR (open_writable_binary_file (&fh1, new_path, pool));
           SVN_ERR (dump_contents (fh1, root, path, pool));
           apr_file_close (fh1);
 
           /* Create an empty file. */
-          SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path->data,
+          SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path,
                                             NULL, FALSE, pool));
           apr_file_close (fh2);
         }
       if (tmp_node->action == 'D')
         {
-          new_path = svn_stringbuf_create (SVNLOOK_TMPDIR, pool);
-          svn_path_add_component (new_path, path);
+          new_path = svn_path_join (SVNLOOK_TMPDIR, path, pool);
           SVN_ERR (open_writable_binary_file (&fh1, new_path, pool));
           apr_file_close (fh1);
 
-          SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path->data,
+          SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path,
                                             NULL, FALSE, pool));
           SVN_ERR (dump_contents
                    (fh2, base_root, base_path, pool));
@@ -508,7 +505,7 @@ print_diff_tree (svn_fs_root_t *root,
       apr_file_t *outhandle;
       apr_status_t apr_err;
       const char *label;
-      svn_stringbuf_t *abs_path;
+      char *abs_path;
       int exitcode;
 
       if (! is_copy)
@@ -517,7 +514,7 @@ print_diff_tree (svn_fs_root_t *root,
                   ((tmp_node->action == 'A') ? "Added" : 
                    ((tmp_node->action == 'D') ? "Deleted" :
                     ((tmp_node->action == 'R') ? "Modified" : "Index"))),
-                path->data);
+                path);
         }
       printf ("===============================================================\
 ===============\n");
@@ -531,10 +528,10 @@ print_diff_tree (svn_fs_root_t *root,
           (apr_err, 0, NULL, pool,
            "print_diff_tree: can't open handle to stdout");
 
-      label = apr_psprintf (pool, "%s\t(original)", base_path->data);
+      label = apr_psprintf (pool, "%s\t(original)", base_path);
       SVN_ERR (svn_path_get_absolute (&abs_path, orig_path, pool));
       SVN_ERR (svn_io_run_diff (SVNLOOK_TMPDIR, NULL, 0, label,
-                                abs_path->data, path->data, 
+                                abs_path, path, 
                                 &exitcode, outhandle, NULL, pool));
 
       /* TODO: Handle exit code == 2 (i.e. diff error) here. */
@@ -549,32 +546,40 @@ print_diff_tree (svn_fs_root_t *root,
     
   /* Now, delete any temporary files. */
   if (orig_path)
-    apr_file_remove (orig_path->data, pool);
+    apr_file_remove (orig_path, pool);
   if (new_path)
-    apr_file_remove (new_path->data, pool);
+    apr_file_remove (new_path, pool);
 
   /* Return here if the node has no children. */
   tmp_node = tmp_node->child;
   if (! tmp_node)
     return SVN_NO_ERROR;
 
-  /* Recursively handle the node's children. */
-  svn_path_add_component_nts (path, tmp_node->name);
-  svn_path_add_component_nts (base_path, tmp_node->name);
-  SVN_ERR (print_diff_tree (root, base_root, tmp_node, path, base_path, pool));
-  svn_path_remove_component (path);
-  svn_path_remove_component (base_path);
+  /* Handle children and siblings. */
+  {
+    apr_pool_t *subpool = svn_pool_create (pool);
 
-  while (tmp_node->sibling)
-    {
-      tmp_node = tmp_node->sibling;
-      svn_path_add_component_nts (path, tmp_node->name);
-      svn_path_add_component_nts (base_path, tmp_node->name);
-      SVN_ERR (print_diff_tree (root, base_root, tmp_node, path,
-                                base_path, pool));
-      svn_path_remove_component (path);
-      svn_path_remove_component (base_path);
-    }
+    /* Recurse down into children. */
+    SVN_ERR (print_diff_tree
+             (root, base_root, tmp_node,
+              svn_path_join (path, tmp_node->name, subpool),
+              svn_path_join (base_path, tmp_node->name, subpool),
+              subpool));
+
+    /* Recurse across siblings. */
+    while (tmp_node->sibling)
+      {
+        tmp_node = tmp_node->sibling;
+       
+        SVN_ERR (print_diff_tree
+                 (root, base_root, tmp_node,
+                  svn_path_join (path, tmp_node->name, subpool),
+                  svn_path_join (base_path, tmp_node->name, subpool),
+                  pool));
+      }
+    
+    apr_pool_destroy (subpool);
+  }
 
   return SVN_NO_ERROR;
 }
@@ -859,9 +864,7 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
   if (tree)
     {
       SVN_ERR (svn_fs_revision_root (&base_root, c->fs, base_rev_id, pool));
-      SVN_ERR (print_diff_tree
-               (root, base_root, tree, svn_stringbuf_create ("", pool),
-                svn_stringbuf_create ("", pool), pool));
+      SVN_ERR (print_diff_tree (root, base_root, tree, "", "", pool));
       SVN_ERR (svn_io_remove_dir (SVNLOOK_TMPDIR, pool));
     }
   return SVN_NO_ERROR;

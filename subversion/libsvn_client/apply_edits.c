@@ -41,8 +41,8 @@ apply_delta (const svn_delta_editor_t *before_editor,
              const svn_delta_editor_t *after_editor,
              void *after_edit_baton,
              svn_stream_t *delta,
-             svn_stringbuf_t *dest,
-             svn_stringbuf_t *ancestor_path,    /* ignored if update */
+             const char *dest,
+             const char *ancestor_path,    /* ignored if update */
              svn_revnum_t ancestor_revision,  /* ignored if update */
              svn_boolean_t recurse,
              apr_pool_t *pool,
@@ -59,11 +59,11 @@ apply_delta (const svn_delta_editor_t *before_editor,
   /* If not given an ancestor path, we will (for the time being)
      simply create an empty one. */
   if (! ancestor_path)
-    ancestor_path = svn_stringbuf_create ("", pool);
+    ancestor_path = "";
       
   if (is_update)
     {
-      svn_stringbuf_t *anchor, *target;
+      const char *anchor, *target;
 
       SVN_ERR (svn_wc_get_actual_target (dest, &anchor, &target, pool));
       err = svn_wc_get_update_editor (anchor,
@@ -105,7 +105,7 @@ apply_delta (const svn_delta_editor_t *before_editor,
   return svn_delta_xml_auto_parse (delta,
                                    wrapped_old_editor,
                                    wrapped_old_edit_baton,
-                                   ancestor_path->data,
+                                   ancestor_path,
                                    ancestor_revision,
                                    pool);
 }
@@ -117,9 +117,9 @@ do_edits (const svn_delta_editor_t *before_editor,
           void *before_edit_baton,
           const svn_delta_editor_t *after_editor,
           void *after_edit_baton,
-          svn_stringbuf_t *path,
-          svn_stringbuf_t *xml_src,
-          svn_stringbuf_t *URL,      /* ignored if update */
+          const char *path,
+          const char *xml_src,
+          const char *URL,        /* ignored if update */
           svn_revnum_t revision,  /* ignored if update */
           svn_boolean_t recurse,
           apr_pool_t *pool,
@@ -133,13 +133,13 @@ do_edits (const svn_delta_editor_t *before_editor,
   assert (xml_src != NULL);
 
   /* Open the XML source file. */
-  apr_err = apr_file_open (&in, xml_src->data,
+  apr_err = apr_file_open (&in, xml_src,
                       (APR_READ | APR_CREATE),
                       APR_OS_DEFAULT,
                       pool);
   if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, pool,
-                              "unable to open %s", xml_src->data);
+                              "unable to open %s", xml_src);
 
   /* Check out the delta. */
   err = apply_delta (before_editor,
@@ -173,9 +173,9 @@ svn_client__checkout_internal (const svn_delta_editor_t *before_editor,
                                void *before_edit_baton,
                                const svn_delta_editor_t *after_editor,
                                void *after_edit_baton,
-                               svn_stringbuf_t *path,
-                               svn_stringbuf_t *xml_src,
-                               svn_stringbuf_t *URL,
+                               const char *path,
+                               const char *xml_src,
+                               const char *URL,
                                svn_revnum_t revision,
                                svn_boolean_t recurse,
                                apr_pool_t *pool)
@@ -192,8 +192,8 @@ svn_client__update_internal (const svn_delta_editor_t *before_editor,
                              void *before_edit_baton,
                              const svn_delta_editor_t *after_editor,
                              void *after_edit_baton,
-                             svn_stringbuf_t *path,
-                             svn_stringbuf_t *xml_src,
+                             const char *path,
+                             const char *xml_src,
                              svn_revnum_t ancestor_revision,
                              svn_boolean_t recurse,
                              apr_pool_t *pool)

@@ -49,9 +49,9 @@ extern "C" {
    or replacement.)  Likewise, if BASE_URL is non-null, then rewrite
    all urls to be "telescoping" children of the base_url.
 */
-svn_error_t *svn_wc__do_update_cleanup (svn_stringbuf_t *path,
+svn_error_t *svn_wc__do_update_cleanup (const char *path,
                                         const svn_boolean_t recursive,
-                                        const svn_stringbuf_t *base_url,
+                                        const char *base_url,
                                         const svn_revnum_t new_revision,
                                         apr_pool_t *pool);
 

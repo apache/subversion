@@ -58,8 +58,8 @@ struct edit_baton
      directory at which the edit is rooted) plus the TARGET (the
      actual thing we wish to update).  For checkouts, ANCHOR holds the
      whole path, and TARGET is unused. */
-  svn_stringbuf_t *anchor;
-  svn_stringbuf_t *target;
+  const char *anchor;
+  const char *target;
 
   /* The revision we're targeting...or something like that. */
   svn_revnum_t target_revision;
@@ -69,11 +69,10 @@ struct edit_baton
 
   /* These used only in checkouts. */
   svn_boolean_t is_checkout;
-  svn_stringbuf_t *ancestor_url;
+  const char *ancestor_url;
 
-  /* Only used by 'switch' operations. */
-  svn_boolean_t is_switch;
-  svn_stringbuf_t *switch_url;
+  /* Non-null if this is a 'switch' operation. */
+  const char *switch_url;
 
   apr_pool_t *pool;
 };
@@ -82,13 +81,13 @@ struct edit_baton
 struct dir_baton
 {
   /* The path to this directory. */
-  svn_stringbuf_t *path;
+  const char *path;
 
   /* Basename of this directory. */
-  svn_stringbuf_t *name;
+  const char *name;
 
   /* The repository URL this directory corresponds to. */
-  svn_stringbuf_t *URL;
+  const char *URL;
 
   /* Gets set iff this directory has a "disjoint url", i.e. its URL is
      not its [parent's URL + name].
@@ -172,7 +171,7 @@ make_dir_baton (const char *path,
                 apr_pool_t *pool)
 {
   struct dir_baton *d = apr_pcalloc (pool, sizeof (*d));
-  svn_stringbuf_t *URL;
+  const char *URL;
   svn_error_t *err;
   svn_wc_entry_t *entry;
   svn_boolean_t disjoint_url = FALSE;
@@ -183,11 +182,11 @@ make_dir_baton (const char *path,
     abort();
 
   /* Construct the PATH and baseNAME of this directory. */
-  d->path = svn_stringbuf_dup (eb->anchor, pool);
+  d->path = apr_pstrdup (pool, eb->anchor);
   if (path)
     {
-      svn_path_add_component_nts (d->path, path);
-      d->name = svn_stringbuf_create (svn_path_basename (path, pool), pool);
+      d->path = svn_path_join (d->path, path, pool);
+      d->name = svn_path_basename (path, pool);
     }
   else
     d->name = NULL;
@@ -198,19 +197,16 @@ make_dir_baton (const char *path,
       /* for checkouts, telescope the URL normally.  no such thing as
          disjoint urls.   */
       if (pb)
-        {
-          URL = svn_stringbuf_dup (pb->URL, pool);
-          svn_path_add_component (URL, d->name);
-        }
+        URL = svn_path_join (pb->URL, d->name, pool);
       else
-        URL = svn_stringbuf_dup (eb->ancestor_url, pool);
+        URL = apr_pstrdup (pool, eb->ancestor_url);
     }
   else 
     {
       /* For updates, look in the 'entries' file */
       err = svn_wc_entry (&entry, d->path, FALSE, pool);
       if (err || (! entry) || (! entry->url))
-        URL = svn_stringbuf_create ("", pool);
+        URL = "";
       else
         URL = entry->url;
 
@@ -220,10 +216,9 @@ make_dir_baton (const char *path,
          *inherited* from a parent baton.  */
       if (pb) 
         {
-          svn_stringbuf_t *parent_URL;
-          parent_URL = svn_stringbuf_dup (pb->URL, pool);
-          svn_path_add_component (parent_URL, d->name);
-          if (pb->disjoint_url || (! svn_stringbuf_compare (parent_URL, URL)))
+          const char *parent_URL;
+          parent_URL = svn_path_join (pb->URL, d->name, pool);
+          if (pb->disjoint_url || (strcmp (parent_URL, URL) != 0))
             disjoint_url = TRUE;
         }
     }
@@ -232,7 +227,7 @@ make_dir_baton (const char *path,
   bdi = apr_palloc (eb->pool, sizeof (*bdi));
   bdi->parent = pb ? pb->bump_info : NULL;
   bdi->ref_count = 1;   /* we refer to it */
-  bdi->path = apr_pstrdup (eb->pool, d->path->data);    /* full path */
+  bdi->path = apr_pstrdup (eb->pool, d->path);    /* full path */
   bdi->added = added;
 
   /* the parent's bump info has one more referer */
@@ -266,8 +261,6 @@ maybe_bump_dir_revision (struct edit_baton *eb,
                          struct bump_dir_info *bdi,
                          apr_pool_t *pool)
 {
-  svn_stringbuf_t *pathbuf = svn_stringbuf_create ("", pool);
-
   /* Keep moving up the tree of directories until we run out of parents,
      or a directory is not yet "done".  */
   for ( ; bdi != NULL; bdi = bdi->parent)
@@ -286,8 +279,7 @@ maybe_bump_dir_revision (struct edit_baton *eb,
          checkout. */
       if (eb->is_checkout || bdi->parent)
         {
-          svn_stringbuf_set (pathbuf, bdi->path);
-          SVN_ERR (svn_wc__entry_modify (pathbuf, NULL, &tmp_entry,
+          SVN_ERR (svn_wc__entry_modify (bdi->path, NULL, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_REVISION, pool));
         }
 
@@ -296,11 +288,8 @@ maybe_bump_dir_revision (struct edit_baton *eb,
          added. */
       if (bdi->added && bdi->parent)
         {
-          svn_stringbuf_t *namebuf;
-          svn_stringbuf_set (pathbuf, bdi->parent->path);
-          namebuf = svn_stringbuf_create (svn_path_basename (bdi->path, pool),
-                                          pool);
-          SVN_ERR (svn_wc__entry_modify (pathbuf, namebuf, &tmp_entry,
+          const char *name = svn_path_basename (bdi->path, pool);
+          SVN_ERR (svn_wc__entry_modify (bdi->parent->path, name, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_KIND, pool));
         }
     }
@@ -320,13 +309,13 @@ struct file_baton
   apr_pool_t *pool;
 
   /* Name of this file (its entry in the directory). */
-  const svn_stringbuf_t *name;
+  const char *name;
 
   /* Path to this file, either abs or relative to the change-root. */
-  svn_stringbuf_t *path;
+  const char *path;
 
   /* The repository URL this directory corresponds to. */
-  svn_stringbuf_t *URL;
+  const char *URL;
 
   /* Gets set iff this directory has a "disjoint url", i.e. its URL is
      not its [parent's URL + name].
@@ -362,7 +351,7 @@ make_file_baton (struct dir_baton *pb,
                  apr_pool_t *pool)
 {
   struct file_baton *f = apr_pcalloc (pool, sizeof (*f));
-  svn_stringbuf_t *URL;
+  const char *URL;
   svn_error_t *err;
   svn_wc_entry_t *entry;
   svn_boolean_t disjoint_url = FALSE;
@@ -372,26 +361,24 @@ make_file_baton (struct dir_baton *pb,
     abort();
 
   /* Make the file's on-disk name. */
-  f->path = svn_stringbuf_dup (pb->edit_baton->anchor, pool);
-  svn_path_add_component_nts (f->path, path);
-  f->name = svn_stringbuf_create (svn_path_basename (path, pool), pool);
+  f->path = svn_path_join (pb->edit_baton->anchor, path, pool);
+  f->name = svn_path_basename (path, pool);
 
   /* Figure out the URL for this file. */
   if (pb->edit_baton->is_checkout)
     {
       /* for checkouts, telescope the URL normally.  no such thing as
          disjoint urls.   */
-      URL = svn_stringbuf_dup (pb->URL, pool);
-      svn_path_add_component (URL, f->name);
+      URL = svn_path_join (pb->URL, f->name, pool);
     }
   else 
     {
-      svn_stringbuf_t *parent_URL;
+      const char *parent_URL;
 
       /* For updates, look in the 'entries' file */
       err = svn_wc_entry (&entry, f->path, FALSE, pool);
       if (err || (! entry) || (! entry->url))
-        URL = svn_stringbuf_create ("", pool);
+        URL = "";
       else
         URL = entry->url;
 
@@ -399,9 +386,8 @@ make_file_baton (struct dir_baton *pb,
          define disjointedness not just in terms of having an
          unexpected URL, but also as a condition that is automatically
          *inherited* from a parent baton.  */
-      parent_URL = svn_stringbuf_dup (pb->URL, pool);
-      svn_path_add_component (parent_URL, f->name);
-      if (pb->disjoint_url || (! svn_stringbuf_compare (parent_URL, URL)))
+      parent_URL = svn_path_join (pb->URL, f->name, pool);
+      if (pb->disjoint_url || (strcmp (parent_URL, URL) != 0))
         disjoint_url = TRUE;
     }
 
@@ -450,10 +436,8 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   if (err != SVN_NO_ERROR)
     {
       /* We failed to apply the patch; clean up the temporary file.  */
-      svn_stringbuf_t *tmppath = svn_wc__text_base_path (fb->path,
-                                                         TRUE,
-                                                         fb->pool);
-      apr_file_remove (tmppath->data, fb->pool);
+      const char *tmppath = svn_wc__text_base_path (fb->path, TRUE, fb->pool);
+      apr_file_remove (tmppath, fb->pool);
     }
   else
     {
@@ -475,8 +459,8 @@ window_handler (svn_txdelta_window_t *window, void *baton)
  * ANCESTOR_URL and ANCESTOR_REVISION, then an error will be returned. 
  */
 static svn_error_t *
-prep_directory (svn_stringbuf_t *path,
-                svn_stringbuf_t *ancestor_url,
+prep_directory (const char *path,
+                const char *ancestor_url,
                 svn_revnum_t ancestor_revision,
                 svn_boolean_t force,
                 apr_pool_t *pool)
@@ -553,7 +537,7 @@ delete_entry (const char *path,
                          svn_xml_self_closing,
                          SVN_WC__LOG_DELETE_ENTRY,
                          SVN_WC__LOG_ATTR_NAME,
-                         svn_stringbuf_create (base_name, pool),
+                         base_name,
                          NULL);
 
   apr_err = apr_file_write_full (log_fp, log_item->data, log_item->len, NULL);
@@ -562,7 +546,7 @@ delete_entry (const char *path,
       apr_file_close (log_fp);
       return svn_error_createf (apr_err, 0, NULL, pool,
                                 "delete error writing %s's log file",
-                                pb->path->data);
+                                pb->path);
     }
 
   SVN_ERR (svn_wc__close_adm_file (log_fp,
@@ -588,7 +572,6 @@ add_directory (const char *path,
   struct dir_baton *pb = parent_baton;
   struct dir_baton *db = make_dir_baton (path, pb->edit_baton, pb, TRUE, pool);
   svn_node_kind_t kind;
-  svn_stringbuf_t *cfpath;
 
   /* Semantic check.  Either both "copyfrom" args are valid, or they're
      NULL and SVN_INVALID_REVNUM.  A mixture is illegal semantics. */
@@ -596,18 +579,15 @@ add_directory (const char *path,
       || ((! copyfrom_path) && (SVN_IS_VALID_REVNUM (copyfrom_revision))))
     abort();
 
-  /* Convert copyfrom_path into a stringbuf. */
-  cfpath = copyfrom_path ? svn_stringbuf_create (copyfrom_path, pool) : NULL;
-      
   /* Check that a non-directory object by this name doesn't already exist. */
-  SVN_ERR (svn_io_check_path (db->path->data, &kind, db->pool));
+  SVN_ERR (svn_io_check_path (db->path, &kind, db->pool));
   if (kind != svn_node_none && kind != svn_node_dir)
     return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
                               "failed to add dir`%s': object already exists",
-                              db->path->data);
+                              db->path);
 
   /* Either we got real copyfrom args... */
-  if (cfpath || SVN_IS_VALID_REVNUM (copyfrom_revision))
+  if (copyfrom_path || SVN_IS_VALID_REVNUM (copyfrom_revision))
     {
       /* ### todo: for now, this editor doesn't know how to deal with
          copyfrom args.  Someday it will interpet them as an update
@@ -617,26 +597,26 @@ add_directory (const char *path,
       return svn_error_createf
         (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
          "failed to add dir`%s': copyfrom args not yet supported",
-         pb->path->data);
+         pb->path);
     }
   else  /* ...or we got invalid copyfrom args. */
     {
       /* If the copyfrom args are both invalid, inherit the URL from the
          parent, and make the revision equal to the global target
          revision. */
-      svn_stringbuf_t *new_URL;
+      const char *new_URL;
       svn_wc_entry_t *parent_entry;
 
       SVN_ERR (svn_wc_entry (&parent_entry, pb->path, FALSE, db->pool));
-      new_URL = svn_stringbuf_dup (parent_entry->url, db->pool);
-      svn_path_add_component (new_URL, db->name);
-      cfpath = new_URL;
+      new_URL = svn_path_join (parent_entry->url, db->name, db->pool);
+      copyfrom_path = new_URL;
       copyfrom_revision = pb->edit_baton->target_revision;      
     }
 
   /* Create dir (if it doesn't yet exist), make sure it's formatted
      with an administrative subdir.   */
-  SVN_ERR (prep_directory (db->path, cfpath, copyfrom_revision, 1, db->pool));
+  SVN_ERR (prep_directory (db->path, copyfrom_path, copyfrom_revision,
+                           1, db->pool));
 
   *child_baton = db;
 
@@ -682,7 +662,7 @@ change_dir_prop (void *dir_baton,
   /* If this is a 'wc' prop, store it in the administrative area and
      get on with life.  It's not a regular versioned property. */
   if (svn_wc_is_wc_prop (name))
-    return svn_wc__wcprop_set (name, value, db->path->data, pool);
+    return svn_wc__wcprop_set (name, value, db->path, pool);
   
   /* If this is an 'entry' prop, store it in the entries file and get
      on with life.  It's not a regular user property. */
@@ -708,7 +688,7 @@ change_dir_prop (void *dir_baton,
         }
       else if ((! strcmp (name, SVN_PROP_ENTRY_LAST_AUTHOR)) && value)
         {
-          entry.cmt_author = svn_stringbuf_create_from_string (value, pool);
+          entry.cmt_author = apr_pstrdup (pool, value->data);
           modify_flags = SVN_WC__ENTRY_MODIFY_CMT_AUTHOR;
         }
 
@@ -765,7 +745,7 @@ close_directory (void *dir_baton)
 
       /* Merge pending properties into temporary files and detect
          conflicts. */
-      SVN_ERR_W (svn_wc__merge_prop_diffs (db->path->data, NULL,
+      SVN_ERR_W (svn_wc__merge_prop_diffs (db->path, NULL,
                                            db->propchanges, db->pool,
                                            &entry_accum, &conflicts),
                  "close_dir: couldn't do prop merge.");
@@ -781,10 +761,9 @@ close_directory (void *dir_baton)
                              svn_xml_self_closing,
                              SVN_WC__LOG_MODIFY_ENTRY,
                              SVN_WC__LOG_ATTR_NAME,
-                             svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR,
-                                                   db->pool),
+                             SVN_WC_ENTRY_THIS_DIR,
                              SVN_WC__ENTRY_ATTR_REVISION,
-                             svn_stringbuf_create (revision_str, db->pool),
+                             revision_str,
                              NULL);
 
 
@@ -801,12 +780,10 @@ close_directory (void *dir_baton)
                                svn_xml_self_closing,
                                SVN_WC__LOG_MODIFY_ENTRY,
                                SVN_WC__LOG_ATTR_NAME,
-                               svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR,
-                                                     db->pool),
+                               SVN_WC_ENTRY_THIS_DIR,
                                SVN_WC__ENTRY_ATTR_PROP_TIME,
                                /* use wfile time */
-                               svn_stringbuf_create (SVN_WC_TIMESTAMP_WC,
-                                                     db->pool),
+                               SVN_WC_TIMESTAMP_WC,
                                NULL);
 
       
@@ -818,7 +795,7 @@ close_directory (void *dir_baton)
           apr_file_close (log_fp);
           return svn_error_createf (apr_err, 0, NULL, db->pool,
                                     "close_dir: error writing %s's log file",
-                                    db->path->data);
+                                    db->path);
         }
       
       /* The log is ready to run, close it. */
@@ -896,7 +873,7 @@ add_or_open_file (const char *path,
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, subpool,
        "Can't add '%s':\n object of same name already exists in '%s'",
-       fb->name->data, pb->path->data);
+       fb->name, pb->path);
 
   /* sussman sez: If we're trying to add a file that's already in
      `entries' (but not on disk), that's okay.  It's probably because
@@ -913,7 +890,7 @@ add_or_open_file (const char *path,
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, subpool,
                               "trying to open non-versioned file "
                               "%s in directory %s",
-                              fb->name->data, pb->path->data);
+                              fb->name, pb->path);
   
         
   /* Make sure we've got a working copy to put the file in. */
@@ -923,7 +900,7 @@ add_or_open_file (const char *path,
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, subpool,
        "add_or_open_file: %s is not a working copy directory",
-       pb->path->data);
+       pb->path);
 
   /* ### todo:  right now the incoming copyfrom* args are being
      completely ignored!  Someday the editor-driver may expect us to
@@ -1007,19 +984,19 @@ apply_textdelta (void *file_baton,
         if (ent && ent->checksum)
           {
             svn_stringbuf_t *checksum;
-            svn_stringbuf_t *tb;
+            const char *tb;
 
             tb = svn_wc__text_base_path (fb->path, FALSE, subpool);
-            SVN_ERR (svn_io_file_checksum (&checksum, tb->data, subpool));
+            SVN_ERR (svn_io_file_checksum (&checksum, tb, subpool));
             
-            if (! svn_stringbuf_compare (checksum, ent->checksum))
+            if (strcmp (checksum->data, ent->checksum) != 0)
               {
                 return svn_error_createf
                   (SVN_ERR_WC_CORRUPT_TEXT_BASE, 0, NULL, subpool,
                    "apply_textdelta: checksum mismatch for '%s':\n"
                    "   recorded checksum: %s\n"
                    "   actual checksum:   %s\n",
-                   tb->data, ent->checksum->data, checksum->data);
+                   tb, ent->checksum, checksum->data);
                 
               }
           }
@@ -1110,8 +1087,9 @@ svn_wc_install_file (const char *file_path,
   apr_file_t *log_fp = NULL;
   apr_status_t apr_err;
   char *revision_str = NULL;
-  svn_stringbuf_t *file_path_str, *parent_dir, *base_name;
-  svn_stringbuf_t *log_accum, *txtb, *tmp_txtb;
+  const char *parent_dir, *base_name;
+  const char *txtb, *tmp_txtb;
+  svn_stringbuf_t *log_accum;
   svn_boolean_t is_locally_modified;
   svn_boolean_t magic_props_changed = FALSE, magic_props_caused_tweak = FALSE;
   apr_hash_t *prop_conflicts;
@@ -1119,8 +1097,7 @@ svn_wc_install_file (const char *file_path,
     *entry_props = NULL;
 
   /* Start by splitting FILE_PATH. */
-  file_path_str = svn_stringbuf_create (file_path, pool);
-  svn_path_split (file_path_str, &parent_dir, &base_name, pool);
+  svn_path_split_nts (file_path, &parent_dir, &base_name, pool);
 
   /* Lock the parent directory while we change things.  If for some
      reason the parent isn't under version control, this function will
@@ -1169,22 +1146,22 @@ svn_wc_install_file (const char *file_path,
      -- that's where the rest of this code wants it to be anyway. */
   if (new_text_path)
     {
-      svn_stringbuf_t *final_location =
-        svn_wc__text_base_path (file_path_str, 1, pool);
+      const char *final_location =
+        svn_wc__text_base_path (file_path, 1, pool);
       
       /* Only do the 'move' if NEW_TEXT_PATH isn't -already-
          pointing to parent_dir/.svn/tmp/text-base/basename.  */
-      if (strcmp (final_location->data, new_text_path))
+      if (strcmp (final_location, new_text_path))
         {
-          apr_err = apr_file_rename (new_text_path, final_location->data,
+          apr_err = apr_file_rename (new_text_path, final_location,
                                      pool);
           if (apr_err)
             return svn_error_createf (apr_err, 0, NULL, pool,
                                       "svn_wc_install_file: "
                                       "can't move %s to %s",
-                                      new_text_path, final_location->data);
+                                      new_text_path, final_location);
 
-          new_text_path = final_location->data;
+          new_text_path = final_location;
         }
     }
   
@@ -1205,15 +1182,15 @@ svn_wc_install_file (const char *file_path,
           /* If the caller passed a definitive list that represents all
              of the file's properties, we need to compare it to the
              current 'pristine' list and deduce the differences. */
-          svn_stringbuf_t *pristine_prop_path;
+          const char *pristine_prop_path;
           int i;
           old_pristine_props = apr_hash_make (pool);
           new_pristine_props = apr_hash_make (pool);
           
           /* Get the current pristine props. */
           SVN_ERR (svn_wc__prop_base_path (&pristine_prop_path,
-                                           file_path_str, 0, pool));
-          SVN_ERR (svn_wc__load_prop_file (pristine_prop_path->data,
+                                           file_path, 0, pool));
+          SVN_ERR (svn_wc__load_prop_file (pristine_prop_path,
                                            old_pristine_props, pool));
           
           /* Convert the given array into hash of 'new' pristine props. */
@@ -1260,7 +1237,7 @@ svn_wc_install_file (const char *file_path,
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged
          props.  */
-      SVN_ERR (svn_wc__merge_prop_diffs (parent_dir->data, base_name->data,
+      SVN_ERR (svn_wc__merge_prop_diffs (parent_dir, base_name,
                                          propchanges, pool,
                                          &log_accum, &prop_conflicts));
     }
@@ -1281,7 +1258,7 @@ svn_wc_install_file (const char *file_path,
       for (i = 0; i < entry_props->nelts; i++)
         {
           const svn_prop_t *prop;
-          svn_stringbuf_t *propval;
+          const char *propval;
           enum svn_prop_kind kind;
           const char *entry_field = NULL;
           int prefix_len;
@@ -1307,9 +1284,9 @@ svn_wc_install_file (const char *file_path,
             continue;
 
           if (prop->value)
-            propval = svn_stringbuf_create_from_string (prop->value, pool);
+            propval = prop->value->data;
           else
-            propval = svn_stringbuf_create ("", pool);
+            propval = "";
           
           /* append a command to the log which will write the
              property as a entry attribute on the file. */
@@ -1342,7 +1319,7 @@ svn_wc_install_file (const char *file_path,
 
   /* Has the user made local mods to the working file?  */
   SVN_ERR (svn_wc_text_modified_p (&is_locally_modified,
-                                   file_path_str, pool));
+                                   file_path, pool));
 
   if (new_text_path)   /* is there a new text-base to install? */
     {
@@ -1371,7 +1348,7 @@ svn_wc_install_file (const char *file_path,
         {
           enum svn_node_kind wfile_kind = svn_node_unknown;
           
-          SVN_ERR (svn_io_check_path (file_path_str->data, &wfile_kind, pool));
+          SVN_ERR (svn_io_check_path (file_path, &wfile_kind, pool));
           if (wfile_kind == svn_node_none) /* working file is missing?! */
             {
               /* Just copy the new text-base to the file. */
@@ -1391,20 +1368,15 @@ svn_wc_install_file (const char *file_path,
                  textual changes into the working file. */
               const char *oldrev_str, *newrev_str;
               svn_wc_entry_t *e;
-              svn_stringbuf_t *oldrev_strbuf, *newrev_strbuf, *mine_strbuf;
               
               /* Create strings representing the revisions of the
                  old and new text-bases. */
-              SVN_ERR (svn_wc_entry (&e, file_path_str, FALSE, pool));
+              SVN_ERR (svn_wc_entry (&e, file_path, FALSE, pool));
               assert (e != NULL);
               oldrev_str = apr_psprintf (pool, ".r%" SVN_REVNUM_T_FMT,
                                          e->revision);
               newrev_str = apr_psprintf (pool, ".r%" SVN_REVNUM_T_FMT,
                                          new_revision);
-              /* !?@*!#*!* bloody stringbufs */
-              oldrev_strbuf = svn_stringbuf_create (oldrev_str, pool);
-              newrev_strbuf = svn_stringbuf_create (newrev_str, pool);
-              mine_strbuf = svn_stringbuf_create (".mine", pool);
               
               /* Merge the changes from the old-textbase (TXTB) to
                  new-textbase (TMP_TXTB) into the file we're
@@ -1421,9 +1393,9 @@ svn_wc_install_file (const char *file_path,
                                      SVN_WC__LOG_ATTR_NAME, base_name,
                                      SVN_WC__LOG_ATTR_ARG_1, txtb,
                                      SVN_WC__LOG_ATTR_ARG_2, tmp_txtb,
-                                     SVN_WC__LOG_ATTR_ARG_3, oldrev_strbuf,
-                                     SVN_WC__LOG_ATTR_ARG_4, newrev_strbuf,
-                                     SVN_WC__LOG_ATTR_ARG_5, mine_strbuf,
+                                     SVN_WC__LOG_ATTR_ARG_3, oldrev_str,
+                                     SVN_WC__LOG_ATTR_ARG_4, newrev_str,
+                                     SVN_WC__LOG_ATTR_ARG_5, ".mine",
                                      NULL);
               
               /* If a conflict happens, then the entry will be
@@ -1440,8 +1412,7 @@ svn_wc_install_file (const char *file_path,
      a retranslation of the working file. */
   if ((! new_text_path) && magic_props_changed)
     {
-      svn_stringbuf_t *tmptext = 
-        svn_wc__text_base_path (base_name, 1, pool);
+      const char *tmptext = svn_wc__text_base_path (base_name, 1, pool);
 
       /* A log command which copies and DEtranslates the working file
          to a tmp-text-base. */
@@ -1471,10 +1442,9 @@ svn_wc_install_file (const char *file_path,
                          SVN_WC__LOG_ATTR_NAME,
                          base_name,
                          SVN_WC__ENTRY_ATTR_KIND,
-                         svn_stringbuf_create (SVN_WC__ENTRIES_ATTR_FILE_STR, 
-                                               pool),
+                         SVN_WC__ENTRIES_ATTR_FILE_STR,
                          SVN_WC__ENTRY_ATTR_REVISION,
-                         svn_stringbuf_create (revision_str, pool),
+                         revision_str,
                          NULL);
 
 
@@ -1494,8 +1464,7 @@ svn_wc_install_file (const char *file_path,
                                base_name,
                                SVN_WC__ENTRY_ATTR_TEXT_TIME,
                                /* use wfile time */
-                               svn_stringbuf_create (SVN_WC_TIMESTAMP_WC,
-                                                     pool),
+                               SVN_WC_TIMESTAMP_WC,
                                NULL);
     }
 
@@ -1505,7 +1474,7 @@ svn_wc_install_file (const char *file_path,
 
       /* Are the working file's props locally modified? */
       SVN_ERR (svn_wc_props_modified_p (&prop_modified,
-                                        file_path_str,
+                                        file_path,
                                         pool));
 
       /* Log entry which sets a new property timestamp, but only if
@@ -1519,8 +1488,7 @@ svn_wc_install_file (const char *file_path,
                                base_name,
                                SVN_WC__ENTRY_ATTR_PROP_TIME,
                                /* use wfile time */
-                               svn_stringbuf_create (SVN_WC_TIMESTAMP_WC,
-                                                     pool),
+                               SVN_WC_TIMESTAMP_WC,
                                NULL);
     }
 
@@ -1535,7 +1503,7 @@ svn_wc_install_file (const char *file_path,
                              SVN_WC__LOG_ATTR_NAME,
                              base_name,
                              SVN_WC__ENTRY_ATTR_URL,
-                             svn_stringbuf_create (new_URL, pool),
+                             new_URL,
                              NULL);
     }
 
@@ -1572,7 +1540,7 @@ svn_wc_install_file (const char *file_path,
                                SVN_WC__LOG_ATTR_NAME,
                                base_name,
                                SVN_WC__ENTRY_ATTR_CHECKSUM,
-                               checksum,
+                               checksum->data,
                                NULL);
       }
     }
@@ -1622,7 +1590,7 @@ static svn_error_t *
 close_file (void *file_baton)
 {
   struct file_baton *fb = file_baton;
-  svn_stringbuf_t *new_text_path = NULL;
+  const char *new_text_path = NULL;
   apr_array_header_t *propchanges = NULL;
 
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
@@ -1632,9 +1600,9 @@ close_file (void *file_baton)
   if (fb->prop_changed)
     propchanges = fb->propchanges;
 
-  SVN_ERR (svn_wc_install_file (fb->path->data,
+  SVN_ERR (svn_wc_install_file (fb->path,
                                 fb->edit_baton->target_revision,
-                                new_text_path ? new_text_path->data : NULL,
+                                new_text_path,
                                 propchanges,
                                 FALSE, /* -not- a full proplist */
                                 NULL, /* inherit URL from parent dir. */
@@ -1668,23 +1636,22 @@ close_edit (void *edit_baton)
 
   else  /* must be an update or switch */
     {
-      svn_stringbuf_t *full_path = NULL, *url = NULL;
+      const char *full_path;
       
-      full_path = svn_stringbuf_dup (eb->anchor, eb->pool);
       if (eb->target)
-        svn_path_add_component (full_path, eb->target);
-      
-      if (eb->is_switch)
-        url = svn_stringbuf_dup (eb->switch_url, eb->pool);
+        full_path = svn_path_join (eb->anchor, eb->target, eb->pool);
+      else
+        full_path = apr_pstrdup (eb->pool, eb->anchor);
 
       /* Make sure our update target now has the new working revision.
          Also, if this was an 'svn switch', then rewrite the target's
          url.  All of this tweaking might happen recursively! */
-      SVN_ERR (svn_wc__do_update_cleanup (full_path,
-                                          eb->recurse,
-                                          url,
-                                          eb->target_revision,
-                                          eb->pool));
+      SVN_ERR (svn_wc__do_update_cleanup
+               (full_path,
+                eb->recurse,
+                eb->switch_url,
+                eb->target_revision,
+                eb->pool));
     }
 
   /* The edit is over, free its pool. */
@@ -1698,13 +1665,12 @@ close_edit (void *edit_baton)
 
 /* Helper for the two public editor-supplying functions. */
 static svn_error_t *
-make_editor (svn_stringbuf_t *anchor,
-             svn_stringbuf_t *target,
+make_editor (const char *anchor,
+             const char *target,
              svn_revnum_t target_revision,
              svn_boolean_t is_checkout,
-             svn_stringbuf_t *ancestor_url,
-             svn_boolean_t is_switch,
-             svn_stringbuf_t *switch_url,
+             const char *ancestor_url,
+             const char *switch_url,
              svn_boolean_t recurse,
              const svn_delta_editor_t **editor,
              void **edit_baton,
@@ -1722,11 +1688,10 @@ make_editor (svn_stringbuf_t *anchor,
   eb->pool            = subpool;
   eb->is_checkout     = is_checkout;
   eb->target_revision = target_revision;
-  eb->ancestor_url    = ancestor_url;
-  eb->is_switch       = is_switch;
-  eb->switch_url      = switch_url;
-  eb->anchor          = anchor;
-  eb->target          = target;
+  eb->ancestor_url    = ancestor_url;  /* ### Why not copied? */
+  eb->switch_url      = switch_url;    /* ### Why not copied? */
+  eb->anchor          = anchor;        /* ### Why not copied? */
+  eb->target          = target;        /* ### Why not copied? */
   eb->recurse         = recurse;
 
   /* Construct an editor. */
@@ -1752,8 +1717,8 @@ make_editor (svn_stringbuf_t *anchor,
 
 
 svn_error_t *
-svn_wc_get_update_editor (svn_stringbuf_t *anchor,
-                          svn_stringbuf_t *target,
+svn_wc_get_update_editor (const char *anchor,
+                          const char *target,
                           svn_revnum_t target_revision,
                           svn_boolean_t recurse,
                           const svn_delta_editor_t **editor,
@@ -1761,15 +1726,14 @@ svn_wc_get_update_editor (svn_stringbuf_t *anchor,
                           apr_pool_t *pool)
 {
   return make_editor (anchor, target, target_revision, 
-                      FALSE, NULL,
-                      FALSE, NULL,
+                      FALSE, NULL, NULL,
                       recurse, editor, edit_baton, pool);
 }
 
 
 svn_error_t *
-svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
-                            svn_stringbuf_t *ancestor_url,
+svn_wc_get_checkout_editor (const char *dest,
+                            const char *ancestor_url,
                             svn_revnum_t target_revision,
                             svn_boolean_t recurse,
                             const svn_delta_editor_t **editor,
@@ -1777,25 +1741,25 @@ svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
                             apr_pool_t *pool)
 {
   return make_editor (dest, NULL, target_revision, 
-                      TRUE, ancestor_url, 
-                      FALSE, NULL,
+                      TRUE, ancestor_url, NULL,
                       recurse, editor, edit_baton, pool);
 }
 
 
 svn_error_t *
-svn_wc_get_switch_editor (svn_stringbuf_t *anchor,
-                          svn_stringbuf_t *target,
+svn_wc_get_switch_editor (const char *anchor,
+                          const char *target,
                           svn_revnum_t target_revision,
-                          svn_stringbuf_t *switch_url,
+                          const char *switch_url,
                           svn_boolean_t recurse,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
                           apr_pool_t *pool)
 {
+  assert (switch_url);
+
   return make_editor (anchor, target, target_revision,
-                      FALSE, NULL,
-                      TRUE, switch_url,
+                      FALSE, NULL, switch_url,
                       recurse, editor, edit_baton, pool);
 }
 
@@ -1903,10 +1867,10 @@ svn_wc_get_switch_editor (svn_stringbuf_t *anchor,
 
 svn_error_t *
 svn_wc_is_wc_root (svn_boolean_t *wc_root,
-                   svn_stringbuf_t *path,
+                   const char *path,
                    apr_pool_t *pool)
 {
-  svn_stringbuf_t *parent, *base_name, *expected_url;
+  const char *parent, *base_name, *expected_url;
   svn_wc_entry_t *p_entry, *entry;
   svn_error_t *err;
 
@@ -1919,17 +1883,17 @@ svn_wc_is_wc_root (svn_boolean_t *wc_root,
   if (! entry)
     return svn_error_createf 
       (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
-       "svn_wc_is_wc_root: %s is not a versioned resource", path->data);
+       "svn_wc_is_wc_root: %s is not a versioned resource", path);
 
   /* If PATH is the current working directory, we have no choice but
      to consider it a WC root (we can't examine its parent at all) */
-  if (svn_path_is_empty (path))
+  if (svn_path_is_empty_nts (path))
     return SVN_NO_ERROR;
 
   /* If we cannot get an entry for PATH's parent, PATH is a WC root. */
-  svn_path_split (path, &parent, &base_name, pool);
-  if (svn_path_is_empty (parent))
-    svn_stringbuf_set (parent, ".");
+  svn_path_split_nts (path, &parent, &base_name, pool);
+  if (svn_path_is_empty_nts (parent))
+    parent = ".";
   err = svn_wc_entry (&p_entry, parent, FALSE, pool);
   if (err || (! p_entry))
     {
@@ -1945,13 +1909,12 @@ svn_wc_is_wc_root (svn_boolean_t *wc_root,
     return svn_error_createf 
       (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool,
        "svn_wc_is_wc_root: %s has no ancestry information.", 
-       parent->data);
+       parent);
 
   /* If PATH's parent in the WC is not its parent in the repository,
      PATH is a WC root. */
-  expected_url = svn_stringbuf_dup (p_entry->url, pool);
-  svn_path_add_component (expected_url, base_name);
-  if (entry->url && (! svn_stringbuf_compare (expected_url, entry->url)))
+  expected_url = svn_path_join (p_entry->url, base_name, pool);
+  if (entry->url && (strcmp (expected_url, entry->url) != 0))
     return SVN_NO_ERROR;
 
   /* If we have not determined that PATH is a WC root by now, it must
@@ -1962,25 +1925,25 @@ svn_wc_is_wc_root (svn_boolean_t *wc_root,
 
 
 svn_error_t *
-svn_wc_get_actual_target (svn_stringbuf_t *path,
-                          svn_stringbuf_t **anchor,
-                          svn_stringbuf_t **target,
+svn_wc_get_actual_target (const char *path,
+                          const char **anchor,
+                          const char **target,
                           apr_pool_t *pool)
 {
-  svn_boolean_t wc_root;
+  svn_boolean_t is_wc_root;
 
   /* If PATH is a WC root, do not lop off a basename. */
-  SVN_ERR (svn_wc_is_wc_root (&wc_root, path, pool));
-  if (wc_root)
+  SVN_ERR (svn_wc_is_wc_root (&is_wc_root, path, pool));
+  if (is_wc_root)
     {
-      *anchor = svn_stringbuf_dup (path, pool);
+      *anchor = apr_pstrdup (pool, path);
       *target = NULL;
     }
   else
     {
-      svn_path_split (path, anchor, target, pool);
-      if (svn_path_is_empty (*anchor))
-        svn_stringbuf_set (*anchor, ".");
+      svn_path_split_nts (path, anchor, target, pool);
+      if ((*anchor)[0] == '\0')
+        *anchor = ".";
     }
 
   return SVN_NO_ERROR;

@@ -96,8 +96,8 @@ struct file_baton
 
 
 /* Convenience macro. */
-#define STR_BUF_REV(p,rev) \
-   (svn_stringbuf_createf ((p), "%" SVN_REVNUM_T_FMT, (rev)))
+#define STR_REV(p,rev) \
+   (apr_psprintf ((p), "%" SVN_REVNUM_T_FMT, (rev)))
 
 
 static struct dir_baton *
@@ -182,9 +182,9 @@ get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
       fb = eb->curfile;
       if (fb->txdelta_id == 0)
         {
-          svn_stringbuf_t *idstr;
+          const char *idstr;
           fb->txdelta_id = eb->txdelta_id_counter++;
-          idstr = svn_stringbuf_createf (pool, "%d", fb->txdelta_id);
+          idstr = apr_psprintf (pool, "%d", fb->txdelta_id);
           svn_xml_make_open_tag (&str, pool, svn_xml_self_closing,
                                  SVN_DELTA__XML_TAG_TEXT_DELTA_REF,
                                  SVN_DELTA__XML_ATTR_ID, idstr, NULL);
@@ -255,8 +255,7 @@ output_addopen (struct edit_baton *eb,
   const char *innertag = ((dirfile == elem_dir) 
                           ? SVN_DELTA__XML_TAG_DIR 
                           : SVN_DELTA__XML_TAG_FILE);
-  svn_stringbuf_t *name = 
-    svn_stringbuf_create (svn_path_basename (path, pool), pool);
+  const char *name = svn_path_basename (path, pool);
 
   str = get_to_elem (eb, elem_tree_delta, pool);
   svn_xml_make_open_tag (&str, pool, svn_xml_normal, outertag,
@@ -265,17 +264,17 @@ output_addopen (struct edit_baton *eb,
   att = apr_hash_make (pool);
   if ((addopen == elem_add) && (base_path != NULL))
     apr_hash_set (att, SVN_DELTA__XML_ATTR_COPYFROM_PATH, 
-                  strlen (SVN_DELTA__XML_ATTR_COPYFROM_PATH), base_path);
+                  APR_HASH_KEY_STRING, base_path);
 
   if (SVN_IS_VALID_REVNUM (base_revision))
     {
-      svn_stringbuf_t *buf = STR_BUF_REV (pool, base_revision);
+      const char *buf = STR_REV (pool, base_revision);
       if (addopen == elem_add)
         apr_hash_set (att, SVN_DELTA__XML_ATTR_COPYFROM_REV, 
-                      strlen (SVN_DELTA__XML_ATTR_COPYFROM_REV), buf);
+                      APR_HASH_KEY_STRING, buf);
       else
         apr_hash_set (att, SVN_DELTA__XML_ATTR_BASE_REV, 
-                      strlen (SVN_DELTA__XML_ATTR_BASE_REV), buf);
+                      APR_HASH_KEY_STRING, buf);
     }
   svn_xml_make_open_tag_hash (&str, pool, svn_xml_normal, innertag, att);
 
@@ -298,25 +297,21 @@ output_propset (struct edit_baton *eb,
 {
   svn_stringbuf_t *str;
   apr_size_t len;
-  svn_stringbuf_t *name_str = svn_stringbuf_create (name, pool);
-  svn_stringbuf_t *val_str = ((value == NULL)
-                              ? NULL
-                              : svn_stringbuf_create_from_string (value, pool));
 
   str = get_to_elem (eb, elem, pool);
-  if (val_str)
+  if (value)
     {
       svn_xml_make_open_tag (&str, pool, svn_xml_protect_pcdata, 
                              SVN_DELTA__XML_TAG_SET,
                              SVN_DELTA__XML_ATTR_NAME, 
-                             name_str, NULL);
-      svn_xml_escape_stringbuf (&str, val_str, pool);
+                             name, NULL);
+      svn_xml_escape_string (&str, value, pool);
       svn_xml_make_close_tag (&str, pool, SVN_DELTA__XML_TAG_SET);
     }
   else
     svn_xml_make_open_tag (&str, pool, svn_xml_self_closing, 
                            SVN_DELTA__XML_TAG_DELETE,
-                           SVN_DELTA__XML_ATTR_NAME, name_str, NULL);
+                           SVN_DELTA__XML_ATTR_NAME, name, NULL);
 
   len = str->len;
   return svn_stream_write (eb->output, str->data, &len);
@@ -352,12 +347,10 @@ open_root (void *edit_baton,
   att = apr_hash_make (pool);
   if (SVN_IS_VALID_REVNUM (base_revision))
     apr_hash_set (att, SVN_DELTA__XML_ATTR_BASE_REV, 
-                  strlen (SVN_DELTA__XML_ATTR_BASE_REV), 
-                  STR_BUF_REV (pool, base_revision));
+                  APR_HASH_KEY_STRING, STR_REV (pool, base_revision));
   if (SVN_IS_VALID_REVNUM (eb->target_revision))
     apr_hash_set (att, SVN_DELTA__XML_ATTR_TARGET_REV, 
-                  strlen (SVN_DELTA__XML_ATTR_TARGET_REV), 
-                  STR_BUF_REV (pool, eb->target_revision));
+                  APR_HASH_KEY_STRING, STR_REV (pool, eb->target_revision));
 
   svn_xml_make_open_tag_hash (&str, pool, svn_xml_normal, 
                               SVN_DELTA__XML_TAG_DELTA_PKG, att);
@@ -381,18 +374,16 @@ delete_entry (const char *path,
   svn_stringbuf_t *str;
   apr_hash_t *att;
   apr_size_t len;
-  svn_stringbuf_t *name = 
-    svn_stringbuf_create (svn_path_basename (path, pool), pool);
+  const char *name = svn_path_basename (path, pool);
 
   str = get_to_elem (eb, elem_tree_delta, pool);
   att = apr_hash_make (pool);
 
   apr_hash_set (att, SVN_DELTA__XML_ATTR_NAME, 
-                strlen (SVN_DELTA__XML_ATTR_NAME), name);
+                APR_HASH_KEY_STRING, name);
   if (SVN_IS_VALID_REVNUM (revision))
     apr_hash_set (att, SVN_DELTA__XML_ATTR_BASE_REV, 
-                  strlen (SVN_DELTA__XML_ATTR_BASE_REV), 
-                  STR_BUF_REV (pool, revision));
+                  APR_HASH_KEY_STRING, STR_REV (pool, revision));
 
   svn_xml_make_open_tag_hash (&str, pool, svn_xml_self_closing, 
                               SVN_DELTA__XML_TAG_DELETE, att);
@@ -569,16 +560,13 @@ apply_textdelta (void *file_baton,
       /* We should be at the end of the delta (after the root
          directory has been closed) and are outputting a deferred
          text-delta.  */
-      char buf[128];
-      sprintf(buf, "%d", fb->txdelta_id);
       apr_hash_set (att, SVN_DELTA__XML_ATTR_ID, 
-                    strlen(SVN_DELTA__XML_ATTR_ID), 
-                    svn_stringbuf_create (buf, pool));
+                    APR_HASH_KEY_STRING,
+                    apr_psprintf(pool, "%d", fb->txdelta_id));
     }
 #ifdef QUOPRINT_SVNDIFFS
   apr_hash_set (att, SVN_DELTA__XML_ATTR_ENCODING, 
-                strlen(SVN_DELTA__XML_ATTR_ENCODING),
-                svn_stringbuf_create ("quoted-printable", pool));
+                APR_HASH_KEY_STRING, "quoted-printable");
 #endif
   svn_xml_make_open_tag_hash (&str, pool, svn_xml_protect_pcdata,
                               SVN_DELTA__XML_TAG_TEXT_DELTA, att);

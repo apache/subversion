@@ -40,13 +40,12 @@ svn_cl__switch (apr_getopt_t *os,
                 apr_pool_t *pool)
 {
   apr_array_header_t *targets;
-  svn_stringbuf_t *target = NULL, *switch_url = NULL;
-  svn_string_t str;
+  const char *target = NULL, *switch_url = NULL;
   svn_wc_entry_t *entry;
   svn_client_auth_baton_t *auth_baton;
   const svn_delta_editor_t *trace_editor;
   void *trace_edit_baton;
-  svn_stringbuf_t *parent_dir, *base_tgt;
+  const char *parent_dir, *base_tgt;
 
   /* This command should discover (or derive) exactly two cmdline
      arguments: a local path to update ("target"), and a new url to
@@ -59,29 +58,27 @@ svn_cl__switch (apr_getopt_t *os,
     }
   if (targets->nelts == 1)
     {
-      switch_url = ((svn_stringbuf_t **) (targets->elts))[0];
-      target = svn_stringbuf_create (".", pool);
+      switch_url = ((const char **) (targets->elts))[0];
+      target = ".";
     }
   else
     {
-      target = ((svn_stringbuf_t **) (targets->elts))[0];
-      switch_url = ((svn_stringbuf_t **) (targets->elts))[1];
+      target = ((const char **) (targets->elts))[0];
+      switch_url = ((const char **) (targets->elts))[1];
     }
 
   /* Validate the switch_url */
-  str.data = switch_url->data;
-  str.len = switch_url->len;
-  if (! svn_path_is_url (&str))
+  if (! svn_path_is_url (switch_url))
     return svn_error_createf 
       (SVN_ERR_BAD_URL, 0, NULL, pool, 
-       "`%s' does not appear to be a URL", switch_url->data);
+       "`%s' does not appear to be a URL", switch_url);
 
   /* Validate the target */
   SVN_ERR (svn_wc_entry (&entry, target, FALSE, pool));
   if (! entry)
     return svn_error_createf 
       (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool, 
-       "`%s' does not appear to be a working copy path", target->data);
+       "`%s' does not appear to be a working copy path", target);
   
   /* Build an authentication baton to give to libsvn_client. */
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);

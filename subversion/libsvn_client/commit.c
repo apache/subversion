@@ -51,7 +51,7 @@ struct imported_file
 /* Apply PATH's contents (as a delta against the empty string) to
    FILE_BATON in EDITOR.  Use POOL for any temporary allocation.  */
 static svn_error_t *
-send_file_contents (svn_stringbuf_t *path,
+send_file_contents (const char *path,
                     void *file_baton,
                     const svn_delta_editor_t *editor,
                     apr_pool_t *pool)
@@ -63,10 +63,10 @@ send_file_contents (svn_stringbuf_t *path,
   apr_status_t apr_err;
 
   /* Get an apr file for PATH. */
-  apr_err = apr_file_open (&f, path->data, APR_READ, APR_OS_DEFAULT, pool);
+  apr_err = apr_file_open (&f, path, APR_READ, APR_OS_DEFAULT, pool);
   if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, pool, 
-                              "error opening `%s' for reading", path->data);
+                              "error opening `%s' for reading", path);
   
   /* Get a readable stream of the file's contents. */
   contents = svn_stream_from_aprfile (f, pool);
@@ -81,7 +81,7 @@ send_file_contents (svn_stringbuf_t *path,
   apr_err = apr_file_close (f);
   if (apr_err)
     return svn_error_createf
-      (apr_err, 0, NULL, pool, "error closing `%s'", path->data);
+      (apr_err, 0, NULL, pool, "error closing `%s'", path);
 
   return SVN_NO_ERROR;
 }
@@ -95,7 +95,7 @@ static svn_error_t *
 import_file (apr_hash_t *files,
              const svn_delta_editor_t *editor,
              void *dir_baton,
-             const svn_stringbuf_t *path,
+             const char *path,
              const char *edit_path,
              apr_pool_t *pool)
 {
@@ -103,7 +103,7 @@ import_file (apr_hash_t *files,
   const char *mimetype;
   apr_pool_t *hash_pool = apr_hash_pool_get (files);
   apr_pool_t *subpool = svn_pool_create (hash_pool);
-  svn_stringbuf_t *filepath = svn_stringbuf_dup (path, hash_pool);
+  const char *filepath = apr_pstrdup (hash_pool, path);
   struct imported_file *value = apr_palloc (hash_pool, sizeof (*value));
 
   /* Add the file, using the pool from the FILES hash. */
@@ -112,7 +112,7 @@ import_file (apr_hash_t *files,
 
   /* If the file has a discernable mimetype, add that as a property to
      the file. */
-  SVN_ERR (svn_io_detect_mimetype (&mimetype, path->data, pool));
+  SVN_ERR (svn_io_detect_mimetype (&mimetype, path, pool));
   if (mimetype)
     SVN_ERR (editor->change_file_prop (file_baton, SVN_PROP_MIME_TYPE,
                                        svn_string_create (mimetype, pool), 
@@ -121,7 +121,7 @@ import_file (apr_hash_t *files,
   /* Finally, add the file's path and baton to the FILES hash. */
   value->subpool = subpool;
   value->file_baton = file_baton;
-  apr_hash_set (files, filepath->data, filepath->len, (void *)value);
+  apr_hash_set (files, filepath, APR_HASH_KEY_STRING, (void *)value);
 
   return SVN_NO_ERROR;
 }
@@ -136,8 +136,8 @@ static svn_error_t *
 import_dir (apr_hash_t *files,
             const svn_delta_editor_t *editor, 
             void *dir_baton,
-            const svn_stringbuf_t *path,
-            const svn_stringbuf_t *edit_path,
+            const char *path,
+            const char *edit_path,
             svn_boolean_t nonrecursive,
             apr_pool_t *pool)
 {
@@ -146,20 +146,16 @@ import_dir (apr_hash_t *files,
   apr_finfo_t finfo;
   apr_status_t apr_err;
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
-  svn_stringbuf_t *this_path, *this_edit_path;
 
-  if ((apr_err = apr_dir_open (&dir, path->data, pool)))
+  if ((apr_err = apr_dir_open (&dir, path, pool)))
     return svn_error_createf (apr_err, 0, NULL, pool, 
-                              "unable to open directory %s", path->data);
-
-  this_path = svn_stringbuf_dup (path, pool);
-  this_edit_path = svn_stringbuf_dup (edit_path, pool);
+                              "unable to open directory %s", path);
 
   for (apr_err = apr_dir_read (&finfo, flags, dir);
        apr_err == APR_SUCCESS;
        svn_pool_clear (subpool), apr_err = apr_dir_read (&finfo, flags, dir))
     {
-      svn_stringbuf_t *name;
+      const char *this_path, *this_edit_path;
 
       if (finfo.filetype == APR_DIR)
         {
@@ -178,14 +174,13 @@ import_dir (apr_hash_t *files,
             return svn_error_createf
               (SVN_ERR_CL_ADM_DIR_RESERVED, 0, NULL, subpool,
                "cannot import directory named \"%s\" (in `%s')",
-               finfo.name, path->data);
+               finfo.name, path);
         }
 
       /* Make a stringbuf version of the entry name, and append it as
          a path component to THIS_PATH and THIS_EDIT_PATH. */
-      name = svn_stringbuf_create (finfo.name, subpool);
-      svn_path_add_component (this_path, name);
-      svn_path_add_component (this_edit_path, name);
+      this_path = svn_path_join (path, finfo.name, subpool);
+      this_edit_path = svn_path_join (edit_path, finfo.name, subpool);
 
       /* We only import subdirectories when we're doing a regular
          recursive import. */
@@ -195,7 +190,7 @@ import_dir (apr_hash_t *files,
 
           /* Add the new subdirectory, getting a descent baton from
              the editor. */
-          SVN_ERR (editor->add_directory (this_edit_path->data, dir_baton, 
+          SVN_ERR (editor->add_directory (this_edit_path, dir_baton, 
                                           NULL, SVN_INVALID_REVNUM, subpool,
                                           &this_dir_baton));
 
@@ -211,28 +206,22 @@ import_dir (apr_hash_t *files,
         {
           /* Import a file. */
           SVN_ERR (import_file (files, editor, dir_baton, 
-                                this_path, this_edit_path->data, subpool));
+                                this_path, this_edit_path, subpool));
         }
       /* ### We're silently ignoring things that aren't files or
          directories.  If we stop doing that, here is the place to
          change your world.  */
-      
-      /* Hack THIS_PATH and THIS_EDIT_PATH back to their original sizes. */
-      svn_stringbuf_chop (this_path, 
-                          (path->len ? name->len + 1 : name->len));
-      svn_stringbuf_chop (this_edit_path, 
-                          (edit_path->len ? name->len + 1 : name->len));
     }
 
   /* Check that the loop exited cleanly. */
   if (! (APR_STATUS_IS_ENOENT (apr_err)))
     return svn_error_createf
-      (apr_err, 0, NULL, subpool, "error during import of `%s'", path->data);
+      (apr_err, 0, NULL, subpool, "error during import of `%s'", path);
 
   /* Yes, it exited cleanly, so close the dir. */
   else if ((apr_err = apr_dir_close (dir)))
     return svn_error_createf
-      (apr_err, 0, NULL, subpool, "error closing dir `%s'", path->data);
+      (apr_err, 0, NULL, subpool, "error closing dir `%s'", path);
       
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
@@ -262,8 +251,8 @@ import_dir (apr_hash_t *files,
  * not necessarily the root.)
  */
 static svn_error_t *
-import (const svn_stringbuf_t *path,
-        const svn_stringbuf_t *new_entry,
+import (const char *path,
+        const char *new_entry,
         const svn_delta_editor_t *editor,
         void *edit_baton,
         svn_boolean_t nonrecursive,
@@ -281,7 +270,7 @@ import (const svn_stringbuf_t *path,
                               pool, &root_baton));
 
   /* Import a file or a directory tree. */
-  SVN_ERR (svn_io_check_path (path->data, &kind, pool));
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
 
   /* Note that there is no need to check whether PATH's basename is
      the same name that we reserve for our admistritave
@@ -298,7 +287,7 @@ import (const svn_stringbuf_t *path,
            "new entry name required when importing a file");
 
       SVN_ERR (import_file (files, editor, root_baton, 
-                            path, new_entry->data, pool));
+                            path, new_entry, pool));
     }
   else if (kind == svn_node_dir)
     {
@@ -306,14 +295,13 @@ import (const svn_stringbuf_t *path,
 
       /* Grab a new baton, making two we'll have to close. */
       if (new_entry)
-        SVN_ERR (editor->add_directory (new_entry->data, root_baton,
+        SVN_ERR (editor->add_directory (new_entry, root_baton,
                                         NULL, SVN_INVALID_REVNUM,
                                         pool, &new_dir_baton));
       
       SVN_ERR (import_dir 
                (files, editor, new_dir_baton ? new_dir_baton : root_baton, 
-                path, new_entry ? new_entry : svn_stringbuf_create ("", pool), 
-                nonrecursive, pool));
+                path, new_entry ? new_entry : "", nonrecursive, pool));
 
       /* Close one baton or two. */
       if (new_dir_baton)
@@ -323,7 +311,7 @@ import (const svn_stringbuf_t *path,
     {
       return svn_error_createf
         (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
-         "'%s' does not exist.", path->data);  
+         "'%s' does not exist.", path);  
     }
 
   SVN_ERR (editor->close_directory (root_baton));
@@ -335,11 +323,11 @@ import (const svn_stringbuf_t *path,
       apr_ssize_t keylen;
       void *val;
       struct imported_file *value;
-      svn_stringbuf_t *full_path;
+      const char *full_path;
       
       apr_hash_this (hi, &key, &keylen, &val);
       value = val;
-      full_path = svn_stringbuf_create (key, value->subpool);
+      full_path = key;
       SVN_ERR (send_file_contents (full_path, value->file_baton, 
                                    editor, value->subpool));
       SVN_ERR (editor->close_file (value->file_baton));
@@ -380,9 +368,9 @@ get_ra_editor (void **ra_baton,
                const svn_delta_editor_t **editor,
                void **edit_baton,
                svn_client_auth_baton_t *auth_baton,
-               svn_stringbuf_t *base_url,
-               svn_stringbuf_t *base_dir,
-               svn_stringbuf_t *log_msg,
+               const char *base_url,
+               const char *base_dir,
+               const char *log_msg,
                apr_array_header_t *commit_items,
                svn_revnum_t *committed_rev,
                const char **committed_date,
@@ -393,7 +381,7 @@ get_ra_editor (void **ra_baton,
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (ra_lib, *ra_baton, 
-                                  base_url->data, pool));
+                                  base_url, pool));
   
   /* Open an RA session to URL. */
   SVN_ERR (svn_client__open_ra_session (session, *ra_lib,
@@ -418,19 +406,19 @@ svn_client_import (svn_client_commit_info_t **commit_info,
                    const svn_delta_editor_t *after_editor,
                    void *after_edit_baton,
                    svn_client_auth_baton_t *auth_baton,
-                   svn_stringbuf_t *path,
-                   svn_stringbuf_t *url,
-                   svn_stringbuf_t *new_entry,
+                   const char *path,
+                   const char *url,
+                   const char *new_entry,
                    svn_client_get_commit_log_t log_msg_func,
                    void *log_msg_baton,
-                   svn_stringbuf_t *xml_dst,
+                   const char *xml_dst,
                    svn_revnum_t revision,
                    svn_boolean_t nonrecursive,
                    apr_pool_t *pool)
 {
   apr_status_t apr_err;
   svn_error_t *err;
-  svn_stringbuf_t *log_msg;
+  const char *log_msg;
   const svn_delta_editor_t *editor;
   void *edit_baton;
   void *ra_baton, *session;
@@ -439,16 +427,15 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   const char *committed_date = NULL;
   const char *committed_author = NULL;
   apr_file_t *xml_hnd;
-  svn_boolean_t use_xml = (xml_dst && xml_dst->data) ? TRUE : FALSE;
 
   /* Sanity check: NEW_ENTRY can be null or non-empty, but it can't be
      empty. */
-  if (new_entry && (strcmp (new_entry->data, "") == 0))
+  if (new_entry && (strcmp (new_entry, "") == 0))
     return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, 0, NULL, pool,
                              "empty string is an invalid entry name");
 
   /* The repository doesn't know about the reserved. */
-  if (new_entry && strcmp (new_entry->data, SVN_WC_ADM_DIR_NAME) == 0)
+  if (new_entry && strcmp (new_entry, SVN_WC_ADM_DIR_NAME) == 0)
     return svn_error_createf
       (SVN_ERR_CL_ADM_DIR_RESERVED, 0, NULL, pool,
        "the name \"%s\" is reserved and cannot be imported",
@@ -462,7 +449,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
         = apr_array_make (pool, 1, sizeof (item));
       
       item = apr_pcalloc (pool, sizeof (*item));
-      item->path = svn_stringbuf_dup (path, pool);
+      item->path = apr_pstrdup (pool, path);
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
       (*((svn_client_commit_item_t **) apr_array_push (commit_items))) 
         = item;
@@ -472,12 +459,12 @@ svn_client_import (svn_client_commit_info_t **commit_info,
         return SVN_NO_ERROR;
     }
   else
-    log_msg = svn_stringbuf_create ("", pool);
+    log_msg = "";
 
   /* If we're importing to XML ... */
-  if (use_xml)
+  if (xml_dst)
     SVN_ERR (get_xml_editor (&xml_hnd, &editor, &edit_baton, 
-                             xml_dst->data, pool));
+                             xml_dst, pool));
 
   /* Else we're importing to an RA layer. */
   else  
@@ -501,12 +488,12 @@ svn_client_import (svn_client_commit_info_t **commit_info,
     }
 
   /* Finish the import. */
-  if (use_xml)
+  if (xml_dst)
     {
       /* If we were committing into XML, close the xml file. */      
       if ((apr_err = apr_file_close (xml_hnd)))
         return svn_error_createf (apr_err, 0, NULL, pool,
-                                  "error closing %s", xml_dst->data);
+                                  "error closing %s", xml_dst);
       
       /* Use REVISION for COMMITTED_REV. */
       committed_rev = revision;
@@ -540,13 +527,9 @@ unlock_dirs (apr_hash_t *locked_dirs,
   for (hi = apr_hash_first (pool, locked_dirs); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_ssize_t keylen;
-      void *val;
-      svn_stringbuf_t *strkey;
 
-      apr_hash_this (hi, &key, &keylen, &val);
-      strkey = svn_stringbuf_ncreate ((const char *)key, keylen, pool);
-      SVN_ERR (svn_wc_unlock (strkey, pool));
+      apr_hash_this (hi, &key, NULL, NULL);
+      SVN_ERR (svn_wc_unlock (key, pool));
     }
 
   return SVN_NO_ERROR;
@@ -659,7 +642,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                    const apr_array_header_t *targets,
                    svn_client_get_commit_log_t log_msg_func,
                    void *log_msg_baton,
-                   svn_stringbuf_t *xml_dst,
+                   const char *xml_dst,
                    svn_revnum_t revision,
                    svn_boolean_t nonrecursive,
                    apr_pool_t *pool)
@@ -667,12 +650,13 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   const svn_delta_editor_t *editor;
   void *edit_baton;
   void *ra_baton, *session;
-  svn_stringbuf_t *log_msg;
+  const char *log_msg;
   svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
   const char *committed_date = NULL;
   const char *committed_author = NULL;
   svn_ra_plugin_t *ra_lib;
-  svn_stringbuf_t *base_dir, *base_url;
+  const char *base_dir;
+  char *base_url;
   apr_array_header_t *rel_targets;
   apr_hash_t *committables, *locked_dirs, *tempfiles = NULL;
   apr_array_header_t *commit_items;
@@ -680,9 +664,9 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   apr_file_t *xml_hnd = NULL;
   svn_error_t *cmt_err = NULL, *unlock_err = NULL;
   svn_error_t *bump_err = NULL, *cleanup_err = NULL;
-  svn_boolean_t use_xml = (xml_dst && xml_dst->data) ? TRUE : FALSE;
+  svn_boolean_t use_xml = (xml_dst && xml_dst[0]) ? TRUE : FALSE;
   svn_boolean_t commit_in_progress = FALSE;
-  svn_stringbuf_t *display_dir = svn_stringbuf_create (".", pool);
+  const char *display_dir = ".";
   int notify_path_offset;
   int i;
 
@@ -696,14 +680,14 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
      directory. */
   if ((! rel_targets) || (! rel_targets->nelts))
     {
-      svn_stringbuf_t *parent_dir, *name;
+      const char *parent_dir, *name;
 
       SVN_ERR (svn_wc_get_actual_target (base_dir, &parent_dir, &name, pool));
       if (name)
         {
           /* Our new "grandfather directory" is the parent directory
              of the former one. */
-          svn_stringbuf_set (base_dir, parent_dir->data);
+          base_dir = apr_pstrdup (pool, parent_dir);
 
           /* Make the array if it wasn't already created. */
           if (! rel_targets)
@@ -711,7 +695,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
 
           /* Now, push this name as a relative path to our new
              base directory. */
-          (*((svn_stringbuf_t **)apr_array_push (rel_targets))) = name;
+          (*((const char **)apr_array_push (rel_targets))) = name;
         }
     }
 
@@ -729,7 +713,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
      canonical repository URLs.  Then, the hacked name can go away
      and be replaced with a canonical repos URL, and from there we
      are poised to started handling nested working copies. */
-  if (! ((commit_items = apr_hash_get (committables, 
+  if (! ((commit_items = apr_hash_get (committables,
                                        SVN_CLIENT__SINGLE_REPOS_NAME, 
                                        APR_HASH_KEY_STRING))))
     goto cleanup;
@@ -743,11 +727,11 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
         goto cleanup;
     }
   else
-    log_msg = svn_stringbuf_create ("", pool);
+    log_msg = "";
 
   /* Sort and condense our COMMIT_ITEMS. */
-  if ((cmt_err = svn_client__condense_commit_items (&base_url, 
-                                                    commit_items, 
+  if ((cmt_err = svn_client__condense_commit_items (&base_url,
+                                                    commit_items,
                                                     pool)))
     goto cleanup;
 
@@ -755,7 +739,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   if (use_xml)
     {
       if ((cmt_err = get_xml_editor (&xml_hnd, &editor, &edit_baton, 
-                                     xml_dst->data, pool)))
+                                     xml_dst, pool)))
         goto cleanup;
 
       /* Make a note that we have a commit-in-progress. */
@@ -801,7 +785,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                   cmt_err = svn_error_createf 
                     (SVN_ERR_WC_NOT_UP_TO_DATE, 0, NULL, pool,
                      "Cannot commit propchanges for directory '%s'",
-                     item->path->data);
+                     item->path);
                   goto cleanup;
                 }
             }
@@ -816,10 +800,12 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
 
 
   /* Determine prefix to strip from the commit notify messages */
-  if ((cmt_err = svn_path_get_absolute (&display_dir, display_dir, pool)))
+  /* ### this cast is a kluge */
+  if ((cmt_err = svn_path_get_absolute ((char **) &display_dir,
+                                        display_dir, pool)))
     goto cleanup;
   display_dir = svn_path_get_longest_ancestor (display_dir, base_dir, pool);
-  notify_path_offset = display_dir->len ? display_dir->len + 1 : 0;
+  notify_path_offset = display_dir ? (strlen (display_dir) + 1): 0;
 
   /* Perform the commit. */
   cmt_err = svn_client__do_commit (base_url, commit_items, editor, edit_baton, 
@@ -876,7 +862,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
       if ((apr_err = apr_file_close (xml_hnd)))
         {
           cleanup_err = svn_error_createf (apr_err, 0, NULL, pool,
-                                           "error closing %s", xml_dst->data);
+                                           "error closing %s", xml_dst);
           goto cleanup;
         }
 

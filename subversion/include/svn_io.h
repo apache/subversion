@@ -101,7 +101,7 @@ svn_error_t *svn_io_check_path (const char *path,
  * against that case.
  */
 svn_error_t *svn_io_open_unique_file (apr_file_t **f,
-                                      svn_stringbuf_t **unique_name,
+                                      const char **unique_name,
                                       const char *path,
                                       const char *suffix,
                                       svn_boolean_t delete_on_close,
@@ -120,9 +120,9 @@ svn_error_t *svn_io_copy_file (const char *src,
    DST_BASENAME.  If DST_BASENAME already exists in DST_PARENT, return
    error. COPY_PERMS will be passed through to svn_io_copy_file when any
    files are copied. */
-svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
-                                          svn_stringbuf_t *dst_parent,
-                                          svn_stringbuf_t *dst_basename,
+svn_error_t *svn_io_copy_dir_recursively (const char *src,
+                                          const char *dst_parent,
+                                          const char *dst_basename,
                                           svn_boolean_t copy_perms,
                                           apr_pool_t *pool);
 
@@ -135,8 +135,8 @@ apr_status_t apr_check_dir_empty (const char *path, apr_pool_t *pool);
 
 /* Append SRC to DST.  DST will be appended to if it exists, else it
    will be created. */
-svn_error_t *svn_io_append_file (svn_stringbuf_t *src,
-                                 svn_stringbuf_t *dst,
+svn_error_t *svn_io_append_file (const char *src,
+                                 const char *dst,
                                  apr_pool_t *pool);
 
 /* Make a file as read-only as the operating system allows.
@@ -190,7 +190,7 @@ svn_io_read_length_line (apr_file_t *file, char *buf, apr_size_t *limit);
  * values, even on OS's that do things differently. (?)
  */
 svn_error_t *svn_io_file_affected_time (apr_time_t *apr_time,
-                                        svn_stringbuf_t *path,
+                                        const char *path,
                                         apr_pool_t *pool);
 
 
@@ -360,7 +360,7 @@ svn_error_t *svn_io_remove_dir (const char *path, apr_pool_t *pool);
    Note:  the `.' and `..' directories normally returned by
    apr_dir_read will NOT be returned in the hash. */
 svn_error_t *svn_io_get_dirents (apr_hash_t **dirents,
-                                 svn_stringbuf_t *path,
+                                 const char *path,
                                  apr_pool_t *pool);
 
 

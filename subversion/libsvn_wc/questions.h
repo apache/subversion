@@ -46,7 +46,7 @@ enum svn_wc__timestamp_kind
  */
 svn_error_t *
 svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
-                            svn_stringbuf_t *path,
+                            const char *path,
                             const enum svn_wc__timestamp_kind timestamp_kind,
                             apr_pool_t *pool);
 
@@ -59,8 +59,8 @@ svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
    routines.  Moving it to svn_io would not be impossible, merely
    non-trivial.  So far, it hasn't been worth it. */
 svn_error_t *svn_wc__files_contents_same_p (svn_boolean_t *same,
-                                            svn_stringbuf_t *file1,
-                                            svn_stringbuf_t *file2,
+                                            const char *file1,
+                                            const char *file2,
                                             apr_pool_t *pool);
 
 
@@ -76,8 +76,8 @@ svn_error_t *svn_wc__files_contents_same_p (svn_boolean_t *same,
  * Use POOL for temporary allocation.
  */
 svn_error_t *svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
-                                              svn_stringbuf_t *versioned_file,
-                                              svn_stringbuf_t *base_file,
+                                              const char *versioned_file,
+                                              const char *base_file,
                                               apr_pool_t *pool);
 
 

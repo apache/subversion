@@ -35,16 +35,16 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client_cleanup (svn_stringbuf_t *dir,
+svn_client_cleanup (const char *dir,
                     apr_pool_t *pool)
 {
   enum svn_node_kind kind;
 
-  SVN_ERR (svn_io_check_path (dir->data, &kind, pool));
+  SVN_ERR (svn_io_check_path (dir, &kind, pool));
   if (kind != svn_node_dir)
     return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, pool,
                               "Cannot cleanup '%s' -- not a directory", 
-                              dir->data);
+                              dir);
 
   return svn_wc_cleanup (dir, pool);
 }

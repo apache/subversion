@@ -35,7 +35,7 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client_revert (svn_stringbuf_t *path,
+svn_client_revert (const char *path,
                    svn_boolean_t recursive,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,

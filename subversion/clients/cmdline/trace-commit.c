@@ -85,7 +85,7 @@ static const int svn_cl__item_replaced_binary = 0;
 
 struct edit_baton
 {
-  svn_stringbuf_t *path;
+  const char *path;
   apr_pool_t *pool;
   svn_boolean_t started_sending_txdeltas;
 };
@@ -95,7 +95,7 @@ struct dir_baton
 {
   struct edit_baton *edit_baton;
   struct dir_baton *parent_dir_baton;
-  svn_stringbuf_t *path;
+  const char *path;
   svn_boolean_t prop_changed;
   apr_hash_t *entrymods;
   apr_pool_t *pool;
@@ -106,7 +106,7 @@ struct file_baton
 {
   struct edit_baton *edit_baton;
   struct dir_baton *parent_dir_baton;
-  svn_stringbuf_t *path;
+  const char *path;
 };
 
 
@@ -120,7 +120,7 @@ make_dir_baton (const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = edit_baton;
   struct dir_baton *new_db = apr_pcalloc (pool, sizeof (*new_db));
-  svn_stringbuf_t *full_path = svn_stringbuf_dup (eb->path, pool);
+  const char *full_path;
   
   /* Don't give me a path without a parent baton! */
   if (path && (! pb))
@@ -128,7 +128,9 @@ make_dir_baton (const char *path,
 
   /* Construct the "full" path of this node. */
   if (pb)
-    svn_path_add_component_nts (full_path, path);
+    full_path = svn_path_join (eb->path, path, pool);
+  else
+    full_path = apr_pstrdup (pool, eb->path);
 
   /* Finish populating the baton. */
   new_db->path = full_path;
@@ -149,10 +151,7 @@ make_file_baton (const char *path,
   struct file_baton *new_fb = apr_pcalloc (pool, sizeof (*new_fb));
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = edit_baton;
-  svn_stringbuf_t *full_path = svn_stringbuf_dup (eb->path, pool);
-
-  /* Constuct the "full" path to this node. */
-  svn_path_add_component_nts (full_path, path);
+  const char *full_path = svn_path_join (eb->path, path, pool);
 
   /* Finish populating the baton. */
   new_fb->path = full_path;
@@ -186,17 +185,16 @@ delete_entry (const char *path,
 
   /* Construct the "full" path of this node in the parent directory's
      pool (the same pool that contains the hash). */
-  svn_stringbuf_t *full_path = svn_stringbuf_dup (eb->path, pb->pool);
-  svn_path_add_component_nts (full_path, path);
+  const char *full_path = svn_path_join (eb->path, path, pb->pool);
 
   /* Let the parent directory know that one of its entries has been
      deleted.  If this thing was just added, this is really a noop. */
-  vp = apr_hash_get (pb->entrymods, full_path->data, full_path->len);
+  vp = apr_hash_get (pb->entrymods, full_path, APR_HASH_KEY_STRING);
   if (vp == NULL)
     vp = (void *)ITEM_DELETED;
   if ((vp == ITEM_ADDED) || (vp == ITEM_ADDED_BINARY))
     vp = NULL;
-  apr_hash_set (pb->entrymods, full_path->data, full_path->len, vp);
+  apr_hash_set (pb->entrymods, full_path, APR_HASH_KEY_STRING, vp);
 
   return SVN_NO_ERROR;
 }
@@ -213,21 +211,21 @@ add_directory (const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *new_db = make_dir_baton (path, pb, eb, pool);
-  svn_stringbuf_t *full_path;
+  const char *full_path;
   void *vp;
   
   /* Copy the path into the parent directorie's pool (where its hash
      lives) and let the parent know that this was added (or replaced) */
-  full_path = svn_stringbuf_dup (new_db->path, pb->pool);
+  full_path = apr_pstrdup (pb->pool, new_db->path);
 
   /* Let the parent directory know that one of its entries has been
      deleted.  If this thing was just added, this is really a noop. */
-  vp = apr_hash_get (pb->entrymods, full_path->data, full_path->len);
+  vp = apr_hash_get (pb->entrymods, full_path, APR_HASH_KEY_STRING);
   if (vp == NULL)
     vp = (void *)ITEM_ADDED;
   if (vp == ITEM_DELETED)
     vp = (void *)ITEM_REPLACED;
-  apr_hash_set (pb->entrymods, full_path->data, full_path->len, vp);
+  apr_hash_set (pb->entrymods, full_path, APR_HASH_KEY_STRING, vp);
 
   *child_baton = new_db;
   return SVN_NO_ERROR;
@@ -259,19 +257,19 @@ close_directory (void *dir_baton)
   /* See if there is an entry in the parent's hash for this
      directory. */
   if (pb)
-    vp = apr_hash_get (pb->entrymods, db->path->data, db->path->len);
+    vp = apr_hash_get (pb->entrymods, db->path, APR_HASH_KEY_STRING);
 
   /* If this item was added to its parent's hash, print such.  Else,
      if it has propchanges, print that.  Otherwise, it should have
      just been 'open'ed, and that's not interesting enough to print.  */
   if (vp == ITEM_ADDED)
-    printf ("Adding          %s\n", db->path->data);
+    printf ("Adding          %s\n", db->path);
   else if (db->prop_changed)
-    printf ("Sending         %s\n", db->path->data); 
+    printf ("Sending         %s\n", db->path); 
 
   /* Now remove this from the parent's hash. */
   if (vp)
-    apr_hash_set (pb->entrymods, db->path->data, db->path->len, NULL);
+    apr_hash_set (pb->entrymods, db->path, APR_HASH_KEY_STRING, NULL);
 
   /* For each modified entry of this directory, print out a
      description of those mods. */
@@ -342,16 +340,16 @@ add_file (const char *path,
   void *vp;
 
   /* Copy the path into the parent's pool (where its hash lives). */
-  svn_stringbuf_t *full_path = svn_stringbuf_dup (new_fb->path, pb->pool);
+  const char *full_path = apr_pstrdup (pb->pool, new_fb->path);
   
   /* Tell the parent directory that one of its children has been
      added (or replaced). */
-  vp = apr_hash_get (pb->entrymods, full_path->data, full_path->len);
+  vp = apr_hash_get (pb->entrymods, full_path, APR_HASH_KEY_STRING);
   if (vp == NULL)
     vp = (void *)ITEM_ADDED;
   if (vp == ITEM_DELETED)
     vp = (void *)ITEM_REPLACED;
-  apr_hash_set (pb->entrymods, full_path->data, full_path->len, vp);
+  apr_hash_set (pb->entrymods, full_path, APR_HASH_KEY_STRING, vp);
 
   *file_baton = new_fb;
   return SVN_NO_ERROR;
@@ -370,11 +368,11 @@ open_file (const char *path,
   struct file_baton *new_fb = make_file_baton (path, pb, eb, pool);
 
   /* Copy the path into the parent's pool (where its hash lives). */
-  svn_stringbuf_t *path_copy = svn_stringbuf_dup (new_fb->path, pb->pool);
+  const char *path_copy = apr_pstrdup (pb->pool, new_fb->path);
 
   /* Tell the parent directory that one of its children has been
      added. */
-  apr_hash_set (pb->entrymods, path_copy->data, path_copy->len, ITEM_MODIFIED);
+  apr_hash_set (pb->entrymods, path_copy, APR_HASH_KEY_STRING, ITEM_MODIFIED);
 
   *file_baton = new_fb;
   return SVN_NO_ERROR;
@@ -395,14 +393,14 @@ change_file_prop (void *file_baton,
   if ((! strcmp (name, SVN_PROP_MIME_TYPE))
       && value && (strncmp (value->data, "text/", 5)))
     {
-      void *vp = apr_hash_get (pb->entrymods, fb->path->data, fb->path->len);
+      void *vp = apr_hash_get (pb->entrymods, fb->path, APR_HASH_KEY_STRING);
       if (vp == ITEM_ADDED)
         vp = (void *)ITEM_ADDED_BINARY;
       else if (vp == ITEM_MODIFIED)
         ; /* do nothing. */
       else
         abort(); /* this shouldn't happen. */
-      apr_hash_set (pb->entrymods, fb->path->data, fb->path->len, vp);
+      apr_hash_set (pb->entrymods, fb->path, APR_HASH_KEY_STRING, vp);
     }
   return SVN_NO_ERROR;
 }
@@ -441,7 +439,7 @@ close_edit (void *edit_baton)
 svn_error_t *
 svn_cl__get_trace_commit_editor (const svn_delta_editor_t **editor,
                                  void **edit_baton,
-                                 svn_stringbuf_t *initial_path,
+                                 const char *initial_path,
                                  apr_pool_t *pool)
 {
   /* Allocate an edit baton to be stored in every directory baton. */
@@ -452,10 +450,10 @@ svn_cl__get_trace_commit_editor (const svn_delta_editor_t **editor,
   /* Set up the edit context. */
   eb->pool = subpool;
   eb->started_sending_txdeltas = FALSE;
-  if (initial_path && (! svn_path_is_empty (initial_path)))
-    eb->path = svn_stringbuf_dup (initial_path, subpool);
+  if (initial_path && initial_path[0])
+    eb->path = apr_pstrdup (subpool, initial_path);
   else
-    eb->path = svn_stringbuf_create (".", subpool);
+    eb->path = ".";
 
   /* Set up the editor. */
   trace_editor->open_root = open_root;

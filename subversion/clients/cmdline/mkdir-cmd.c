@@ -52,7 +52,7 @@ svn_cl__mkdir (apr_getopt_t *os,
   if (targets->nelts)
     for (i = 0; i < targets->nelts; i++)
       {
-        svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
+        const char *target = ((const char **) (targets->elts))[i];
         commit_info = NULL;
         SVN_ERR (svn_client_mkdir
                  (&commit_info, target, auth_baton, 

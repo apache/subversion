@@ -73,9 +73,6 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
            || (revision->kind == svn_client_revision_base)
            || (revision->kind == svn_client_revision_previous))
     {
-      /* Darn it, I am not going to propagate the stringbuf madness
-         through to this function's interface. */
-      svn_stringbuf_t *path_strbuf;
       svn_wc_entry_t *ent;
 
       /* Sanity check. */
@@ -85,8 +82,7 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
            "svn_client__get_revision_number: "
            "need a version-controlled path to fetch local revision info.");
 
-      path_strbuf = svn_stringbuf_create (path, pool);
-      SVN_ERR (svn_wc_entry (&ent, path_strbuf, FALSE, pool));
+      SVN_ERR (svn_wc_entry (&ent, path, FALSE, pool));
 
       if (! ent)
         return svn_error_createf

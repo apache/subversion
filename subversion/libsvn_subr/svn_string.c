@@ -543,8 +543,16 @@ svn_cstring_split_append (apr_array_header_t *array,
                           apr_pool_t *pool)
 {
   char *last;
-  char *pats = apr_pstrdup (pool, input);  /* strtok wants non-const data */
-  char *p = apr_strtok (pats, sep_chars, &last);
+  char *pats;
+  char *p;
+
+  if (! input)
+    return;
+
+  /* Else proceed. */
+
+  pats = apr_pstrdup (pool, input);  /* strtok wants non-const data */
+  p = apr_strtok (pats, sep_chars, &last);
   
   while (p)
     {

@@ -40,7 +40,7 @@
 struct edit_baton {
   /* TARGET is a working-copy directory which corresponds to the base
      URL open in RA_SESSION below. */
-  svn_stringbuf_t *target;
+  const char *target;
 
   /* The callback and calback argument that implement the file comparison
      function */
@@ -65,7 +65,7 @@ struct edit_baton {
 
   /* A temporary empty file. Used for add/delete differences. This is
      cached here so that it can be reused, all empty files are the same. */
-  svn_stringbuf_t *empty_file;
+  const char *empty_file;
 
   apr_pool_t *pool;
 };
@@ -106,7 +106,7 @@ struct file_baton {
   /* The path and APR file handle to the temporary file that contains the
      first repository version.  Also, the pristine-property list of
      this file. */
-  svn_stringbuf_t *path_start_revision;
+  const char *path_start_revision;
   apr_file_t *file_start_revision;
   apr_hash_t *pristine_props;
 
@@ -114,7 +114,7 @@ struct file_baton {
      second repository version.  These fields are set when processing
      textdelta and file deletion, and will be NULL if there's no
      textual difference between the two revisions. */
-  svn_stringbuf_t *path_end_revision;
+  const char *path_end_revision;
   apr_file_t *file_end_revision;
 
   /* APPLY_HANDLER/APPLY_BATON represent the delta applcation baton. */
@@ -135,7 +135,7 @@ struct file_baton {
 /* Data used by the apr pool temp file cleanup handler */
 struct temp_file_cleanup_s {
   /* The path to the file to be deleted */
-  svn_stringbuf_t *path;
+  const char *path;
   /* The pool to which the deletion of the file is linked. */
   apr_pool_t *pool;
 };
@@ -194,7 +194,7 @@ temp_file_plain_cleanup_handler (void *arg)
 {
   struct temp_file_cleanup_s *s = arg;
 
-  return apr_file_remove (s->path->data, s->pool);
+  return apr_file_remove (s->path, s->pool);
 }
 
 /* An apr pool cleanup handler, this removes a cleanup handler.
@@ -211,6 +211,9 @@ temp_file_child_cleanup_handler (void *arg)
 
 /* Register a pool cleanup to delete PATH when POOL is destroyed.
  *
+ * PATH is not copied; caller should probably ensure that it is
+ * allocated in a pool at least as long-lived as POOL.
+ *
  * The main "gotcha" is that if the process forks a child by calling
  * apr_proc_create, then the child's copy of the cleanup handler will run
  * and delete the file while the parent still expects it to be around. To
@@ -220,7 +223,7 @@ temp_file_child_cleanup_handler (void *arg)
  * ### TODO: This a candidate to be a general utility function.
  */
 static svn_error_t *
-temp_file_cleanup_register (svn_stringbuf_t *path,
+temp_file_cleanup_register (const char *path,
                             apr_pool_t *pool)
 {
   struct temp_file_cleanup_s *s = apr_palloc (pool, sizeof (*s));
@@ -248,7 +251,7 @@ get_file_from_ra (struct file_baton *b)
   svn_stream_t *fstream;
 
   /* ### TODO: Need some apr temp file support */
-  SVN_ERR (svn_io_open_unique_file (&file, &b->path_start_revision,
+  SVN_ERR (svn_io_open_unique_file (&file, &(b->path_start_revision),
                                     "tmp", "", FALSE, b->pool));
 
   /* Install a pool cleanup handler to delete the file */
@@ -265,7 +268,7 @@ get_file_from_ra (struct file_baton *b)
   if (status)
     return svn_error_createf (status, 0, NULL, b->pool,
                               "failed to close file '%s'",
-                              b->path_start_revision->data);
+                              b->path_start_revision);
 
   return SVN_NO_ERROR;
 }
@@ -273,7 +276,7 @@ get_file_from_ra (struct file_baton *b)
 /* Create an empty file, the path to the file is returned in EMPTY_FILE
  */
 static svn_error_t *
-create_empty_file (svn_stringbuf_t **empty_file,
+create_empty_file (const char **empty_file,
                    apr_pool_t *pool)
 {
   apr_status_t status;
@@ -286,8 +289,7 @@ create_empty_file (svn_stringbuf_t **empty_file,
   status = apr_file_close (file);
   if (status)
     return svn_error_createf (status, 0, NULL, pool,
-                              "failed to create empty file '%s'",
-                              (*empty_file)->data);
+                              "failed to create empty file '%s'", *empty_file);
   return SVN_NO_ERROR;
 }
 
@@ -296,12 +298,12 @@ create_empty_file (svn_stringbuf_t **empty_file,
  */
 static svn_error_t *
 get_empty_file (struct edit_baton *b,
-                svn_stringbuf_t **empty_file)
+                const char **empty_file)
 {
   /* Create the file if it does not exist */
   if (!b->empty_file)
     {
-      SVN_ERR (create_empty_file (&b->empty_file, b->pool));
+      SVN_ERR (create_empty_file (&(b->empty_file), b->pool));
 
       /* Install a pool cleanup handler to delete the file */
       SVN_ERR (temp_file_cleanup_register (b->empty_file, b->pool));
@@ -340,7 +342,7 @@ open_root (void *edit_baton,
   dir_baton->edit_baton = eb;
   dir_baton->added = FALSE;
   dir_baton->pool = pool;
-  dir_baton->path = eb->target ? apr_pstrdup (pool, eb->target->data) : "";
+  dir_baton->path = eb->target ? apr_pstrdup (pool, eb->target) : "";
   dir_baton->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
 
   *root_baton = dir_baton;
@@ -375,12 +377,12 @@ delete_entry (const char *path,
                                                 pb->edit_baton,
                                                 pool);
         SVN_ERR (get_file_from_ra (b));
-        SVN_ERR (get_empty_file(b->edit_baton, &b->path_end_revision));
+        SVN_ERR (get_empty_file(b->edit_baton, &(b->path_end_revision)));
         
         SVN_ERR (pb->edit_baton->diff_callbacks->file_deleted 
                  (b->path,
-                  b->path_start_revision->data,
-                  b->path_end_revision->data,
+                  b->path_start_revision,
+                  b->path_end_revision,
                   b->edit_baton->diff_cmd_baton));
         break;
       }
@@ -460,7 +462,7 @@ add_file (const char *path,
   b = make_file_baton (path, TRUE, pb->edit_baton, pool);
   *file_baton = b;
 
-  SVN_ERR (get_empty_file (b->edit_baton, &b->path_start_revision));
+  SVN_ERR (get_empty_file (b->edit_baton, &(b->path_start_revision)));
 
   return SVN_NO_ERROR;
 }
@@ -504,13 +506,13 @@ window_handler (svn_txdelta_window_t *window,
       if (status)
         return svn_error_createf (status, 0, NULL, b->pool,
                                   "failed to close file '%s'",
-                                  b->path_start_revision->data);
+                                  b->path_start_revision);
 
       status = apr_file_close (b->file_end_revision);
       if (status)
         return svn_error_createf (status, 0, NULL, b->pool,
                                   "failed to close file '%s'",
-                                  b->path_end_revision->data);
+                                  b->path_end_revision);
     }
 
   return SVN_NO_ERROR;
@@ -527,28 +529,29 @@ apply_textdelta (void *file_baton,
   apr_status_t status;
 
   /* Open the file to be used as the base for second revision */
-  status = apr_file_open (&b->file_start_revision, b->path_start_revision->data,
+  status = apr_file_open (&(b->file_start_revision),
+                          b->path_start_revision,
                           APR_READ, APR_OS_DEFAULT, b->pool);
   if (status)
     return svn_error_createf (status, 0, NULL, b->pool,
                               "failed to open file '%s'",
-                              b->path_start_revision->data);
+                              b->path_start_revision);
 
   /* Open the file that will become the second revision after applying the
      text delta, it starts empty */
-  SVN_ERR (create_empty_file (&b->path_end_revision, b->pool));
+  SVN_ERR (create_empty_file (&(b->path_end_revision), b->pool));
   SVN_ERR (temp_file_cleanup_register (b->path_end_revision, b->pool));
-  status = apr_file_open (&b->file_end_revision, b->path_end_revision->data,
+  status = apr_file_open (&(b->file_end_revision), b->path_end_revision,
                           APR_WRITE, APR_OS_DEFAULT, b->pool);
   if (status)
     return svn_error_createf (status, 0, NULL, b->pool,
                               "failed to open file '%s'",
-                              b->path_end_revision->data);
+                              b->path_end_revision);
 
   svn_txdelta_apply (svn_stream_from_aprfile (b->file_start_revision, b->pool),
                      svn_stream_from_aprfile (b->file_end_revision, b->pool),
                      b->pool,
-                     &b->apply_handler, &b->apply_baton);
+                     &(b->apply_handler), &(b->apply_baton));
 
   *handler = window_handler;
   *handler_baton = file_baton;
@@ -571,14 +574,14 @@ close_file (void *file_baton)
       if (b->added)
         SVN_ERR (eb->diff_callbacks->file_added
                  (b->path,
-                  b->path_start_revision->data,
-                  b->path_end_revision->data,
+                  b->path_start_revision,
+                  b->path_end_revision,
                   b->edit_baton->diff_cmd_baton));
       else
         SVN_ERR (eb->diff_callbacks->file_changed
                  (b->path,
-                  b->path_start_revision->data,
-                  b->path_end_revision->data,
+                  b->path_start_revision,
+                  b->path_end_revision,
                   b->edit_baton->revision,
                   b->edit_baton->target_revision,
                   b->edit_baton->diff_cmd_baton));
@@ -670,7 +673,7 @@ close_edit (void *edit_baton)
 /* Create a repository diff editor and baton.
  */
 svn_error_t *
-svn_client__get_diff_editor (svn_stringbuf_t *target,
+svn_client__get_diff_editor (const char *target,
                              const svn_diff_callbacks_t *diff_callbacks,
                              void *diff_cmd_baton,
                              svn_boolean_t recurse,

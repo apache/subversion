@@ -218,13 +218,13 @@ get_user_and_pass (char **username,
 static svn_error_t *
 store_auth_info (const char *filename,
                  const char *data,
-                 svn_stringbuf_t *wc_path,
+                 const char *wc_path,
                  apr_pool_t *pool)
 {
   enum svn_node_kind kind;
 
   /* Sanity check -- store only in a directory. */
-  SVN_ERR (svn_io_check_path (wc_path->data, &kind, pool));
+  SVN_ERR (svn_io_check_path (wc_path, &kind, pool));
   if (kind != svn_node_dir)
     return SVN_NO_ERROR;  /* ### is this really not an error? */
 

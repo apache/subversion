@@ -53,7 +53,7 @@ svn_cl__add (apr_getopt_t *os,
 
       for (i = 0; i < targets->nelts; i++)
         {
-          svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
+          const char *target = ((const char **) (targets->elts))[i];
           err = svn_client_add (target, recursive,
                                 SVN_CL_NOTIFY(opt_state),
                                 svn_cl__make_notify_baton (subpool),

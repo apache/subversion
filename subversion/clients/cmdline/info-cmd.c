@@ -63,11 +63,11 @@ svn_cl__info (apr_getopt_t *os,
 
   for (i = 0; i < targets->nelts; i++)
     {
-      svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
+      const char *target = ((const char **) (targets->elts))[i];
       svn_wc_entry_t *entry;
       svn_boolean_t text_conflict = FALSE, props_conflict = FALSE;
 
-      printf ("Path: %s\n", target->data);
+      printf ("Path: %s\n", target);
 
       SVN_ERR (svn_wc_entry (&entry, target, FALSE, pool));
       if (! entry)
@@ -82,14 +82,14 @@ svn_cl__info (apr_getopt_t *os,
          aren't in the entries file. */
 
       if ((entry->name) 
-          && strcmp (entry->name->data, SVN_WC_ENTRY_THIS_DIR))
-        printf ("Name: %s\n", entry->name->data);
+          && strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR))
+        printf ("Name: %s\n", entry->name);
       
       if (entry->url)
-        printf ("Url: %s\n", entry->url->data);
+        printf ("Url: %s\n", entry->url);
           
       if (entry->repos)
-        printf ("Repository: %s\n", entry->repos->data);
+        printf ("Repository: %s\n", entry->repos);
 
       if (SVN_IS_VALID_REVNUM (entry->revision))
         printf ("Revision: %" SVN_REVNUM_T_FMT "\n", entry->revision);
@@ -99,8 +99,8 @@ svn_cl__info (apr_getopt_t *os,
         case svn_node_file:
           printf ("Node Kind: file\n");
           {
-            svn_stringbuf_t *dir_name;
-            svn_path_split (target, &dir_name, NULL, pool);
+            const char *dir_name;
+            svn_path_split_nts (target, &dir_name, NULL, pool);
             SVN_ERR (svn_wc_conflicted_p (&text_conflict, &props_conflict,
                                           dir_name, entry, pool));
           }
@@ -147,7 +147,7 @@ svn_cl__info (apr_getopt_t *os,
       if (entry->copied)
         {
           if (entry->copyfrom_url)
-            printf ("Copied From Url: %s\n", entry->copyfrom_url->data);
+            printf ("Copied From Url: %s\n", entry->copyfrom_url);
 
           if (SVN_IS_VALID_REVNUM (entry->copyfrom_rev))
             printf ("Copied From Rev: %" SVN_REVNUM_T_FMT "\n",
@@ -155,7 +155,7 @@ svn_cl__info (apr_getopt_t *os,
         }
 
       if (entry->cmt_author)
-        printf ("Last Changed Author: %s\n", entry->cmt_author->data);
+        printf ("Last Changed Author: %s\n", entry->cmt_author);
 
       if (SVN_IS_VALID_REVNUM (entry->cmt_rev))
         printf ("Last Changed Rev: %" SVN_REVNUM_T_FMT "\n", entry->cmt_rev);
@@ -170,20 +170,20 @@ svn_cl__info (apr_getopt_t *os,
         svn_cl__info_print_time (entry->prop_time, "Properties Last Updated");
 
       if (entry->checksum)
-        printf ("Checksum: %s\n", entry->checksum->data);
+        printf ("Checksum: %s\n", entry->checksum);
 
       if (text_conflict && entry->conflict_old)
-        printf ("Conflict Previous Base File: %s\n", entry->conflict_old->data);
+        printf ("Conflict Previous Base File: %s\n", entry->conflict_old);
 
       if (text_conflict && entry->conflict_wrk)
         printf ("Conflict Previous Working File: %s\n",
-                entry->conflict_wrk->data);
+                entry->conflict_wrk);
 
       if (text_conflict && entry->conflict_new)
-        printf ("Conflict Current Base File: %s\n", entry->conflict_new->data);
+        printf ("Conflict Current Base File: %s\n", entry->conflict_new);
 
       if (props_conflict && entry->prejfile)
-        printf ("Conflict Properties File: %s\n", entry->prejfile->data);
+        printf ("Conflict Properties File: %s\n", entry->prejfile);
 
       /* Print extra newline separator. */
       printf ("\n");

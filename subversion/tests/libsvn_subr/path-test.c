@@ -55,21 +55,18 @@ test_path_is_child (const char **msg,
     {
       for (j = 0; j < 5; j++)
         {
-          svn_stringbuf_t *path1 = svn_stringbuf_create (paths[i], pool);
-          svn_stringbuf_t *path2 = svn_stringbuf_create (paths[j], pool);
-          svn_stringbuf_t *remainder;
+          const char *remainder;
 
-          remainder = svn_path_is_child (path1, path2, pool);
+          remainder = svn_path_is_child (paths[i], paths[j], pool);
 
           if (((remainder) && (! remainders[i][j]))
               || ((! remainder) && (remainders[i][j]))
-              || (remainder && strcmp (remainder->data,
-                                       remainders[i][j])))
+              || (remainder && strcmp (remainder, remainders[i][j])))
             return svn_error_createf
               (SVN_ERR_TEST_FAILED, 0, NULL, pool,
                "svn_path_is_child (%s, %s) returned '%s' instead of '%s'",
-               path1->data, path2->data, 
-               remainder ? remainder->data : "(null)",
+               paths[i], paths[j], 
+               remainder ? remainder : "(null)",
                remainders[i][j] ? remainders[i][j] : "(null)" );
         }
     }
@@ -156,11 +153,8 @@ test_is_url (const char **msg,
   for (i = 0; i < 5; i++)
     {
       svn_boolean_t retval;
-      svn_string_t str;
 
-      str.data = paths[i];
-      str.len  = strlen (str.data);
-      retval = svn_path_is_url (&str);
+      retval = svn_path_is_url (paths[i]);
       if (retvals[i] != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, 0, NULL, pool,
@@ -198,35 +192,26 @@ test_uri_encode (const char **msg,
 
   for (i = 0; i < 5; i++)
     {
-      svn_string_t path;
-      svn_stringbuf_t *en_path, *de_path;
-
-      /* Make a path. */
-      path.data = paths[i][0];
-      path.len = strlen (paths[i][0]);
+      const char *en_path, *de_path;
 
       /* URI-encode the path, and verify the results. */
-      en_path = svn_path_uri_encode (&path, pool);
-      if (strcmp (en_path->data, paths[i][1]))
+      en_path = svn_path_uri_encode (paths[i][0], pool);
+      if (strcmp (en_path, paths[i][1]))
         {
           return svn_error_createf
             (SVN_ERR_TEST_FAILED, 0, NULL, pool,
              "svn_path_uri_encode ('%s') returned '%s' instead of '%s'",
-             path.data, en_path->data, paths[i][1]);
+             paths[i][0], en_path, paths[i][1]);
         }
  
-      /* Make a string from our stringbuf. */
-      path.data = en_path->data;
-      path.len = en_path->len;
-
       /* URI-decode the path, and make sure we're back where we started. */
-      de_path = svn_path_uri_decode (&path, pool);
-      if (strcmp (de_path->data, paths[i][0]))
+      de_path = svn_path_uri_decode (en_path, pool);
+      if (strcmp (de_path, paths[i][0]))
         {
           return svn_error_createf
             (SVN_ERR_TEST_FAILED, 0, NULL, pool,
              "svn_path_uri_decode ('%s') returned '%s' instead of '%s'",
-             path.data, de_path->data, paths[i][0]);
+             paths[i][1], de_path, paths[i][0]);
         }
     }
   return SVN_NO_ERROR;

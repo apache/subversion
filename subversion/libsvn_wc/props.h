@@ -33,7 +33,7 @@ extern "C" {
 
 /* If the working item at PATH has properties attached, set HAS_PROPS. */
 svn_error_t *svn_wc__has_props (svn_boolean_t *has_props,
-                                svn_stringbuf_t *path,
+                                const char *path,
                                 apr_pool_t *pool);
 
 
@@ -65,7 +65,7 @@ svn_wc__conflicting_propchanges_p (const svn_string_t **description,
    return the name of the file in REJECT_FILE.  If no such file exists,
    return (REJECT_FILE = NULL). */
 svn_error_t *
-svn_wc__get_existing_prop_reject_file (const svn_string_t **reject_file,
+svn_wc__get_existing_prop_reject_file (const char **reject_file,
                                        const char *path,
                                        const char *name,
                                        apr_pool_t *pool);
@@ -128,13 +128,7 @@ svn_error_t *svn_wc__wcprop_set (const char *name,
 /* Remove all wc properties under PATH, recursively.  Do any temporary
    allocation in POOL.  If PATH is not a directory, return the error
    SVN_ERR_WC_NOT_DIRECTORY. */
-svn_error_t *svn_wc__remove_wcprops (svn_stringbuf_t *path, apr_pool_t *pool);
-
-
-/* Strip SVN_PROP_ENTRY_PREFIX off the front of NAME.  Modifies NAME
-   in-place.  If NAME is not an 'entry' property, then NAME is
-   untouched. */
-void svn_wc__strip_entry_prefix (svn_stringbuf_t *name);
+svn_error_t *svn_wc__remove_wcprops (const char *path, apr_pool_t *pool);
 
 
 #ifdef __cplusplus

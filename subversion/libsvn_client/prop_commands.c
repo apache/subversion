@@ -42,10 +42,7 @@ svn_client_propset (const char *propname,
 {
   svn_wc_entry_t *node;
 
-  /* ### be nice to avoid this */
-  svn_stringbuf_t *target_buf = svn_stringbuf_create (target, pool);
-
-  SVN_ERR (svn_wc_entry (&node, target_buf, FALSE, pool));
+  SVN_ERR (svn_wc_entry (&node, target, FALSE, pool));
   if (!node)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
                               "'%s' -- not a versioned resource", 
@@ -55,7 +52,7 @@ svn_client_propset (const char *propname,
     {
       apr_hash_t *entries;
       apr_hash_index_t *hi;
-      SVN_ERR (svn_wc_entries_read (&entries, target_buf, FALSE, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, target, FALSE, pool));
 
       for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
         {
@@ -109,7 +106,7 @@ svn_client_propset (const char *propname,
 static svn_error_t *
 recursive_propget (apr_hash_t *props,
                    const char *propname,
-                   svn_stringbuf_t *target,
+                   const char *target,
                    apr_pool_t *pool)
 {
   apr_hash_t *entries;
@@ -120,13 +117,12 @@ recursive_propget (apr_hash_t *props,
     {
       const void *key;
       const char *keystring;
-      apr_ssize_t klen;
       void * val;
       const char *current_entry_name;
-      svn_stringbuf_t *full_entry_path = svn_stringbuf_dup (target, pool);
+      const char *full_entry_path;
       svn_wc_entry_t *current_entry;
 
-      apr_hash_this (hi, &key, &klen, &val);
+      apr_hash_this (hi, &key, NULL, &val);
       keystring = key;
       current_entry = val;
     
@@ -137,7 +133,9 @@ recursive_propget (apr_hash_t *props,
 
       /* Compute the complete path of the entry */
       if (current_entry_name)
-        svn_path_add_component_nts (full_entry_path, current_entry_name);
+        full_entry_path = svn_path_join (target, current_entry_name, pool);
+      else
+        full_entry_path = apr_pstrdup (pool, target);
 
       if (current_entry->schedule != svn_wc_schedule_delete)
         {
@@ -149,15 +147,11 @@ recursive_propget (apr_hash_t *props,
           else
             {
               const svn_string_t *propval;
-              SVN_ERR (svn_wc_prop_get (&propval,
-                                        propname,
-                                        full_entry_path->data,
-                                        pool));
+              SVN_ERR (svn_wc_prop_get (&propval, propname,
+                                        full_entry_path, pool));
               if (propval)
-                apr_hash_set (props,
-                              full_entry_path->data, 
-                              full_entry_path->len,
-                              propval);
+                apr_hash_set (props, full_entry_path,
+                              APR_HASH_KEY_STRING, propval);
             }
         }
     }
@@ -174,17 +168,14 @@ svn_client_propget (apr_hash_t **props,
   apr_hash_t *prop_hash = apr_hash_make (pool);
   svn_wc_entry_t *node;
 
-  /* ### be nice to avoid this */
-  svn_stringbuf_t *target_buf = svn_stringbuf_create (target, pool);
-
-  SVN_ERR (svn_wc_entry (&node, target_buf, FALSE, pool));
+  SVN_ERR (svn_wc_entry (&node, target, FALSE, pool));
   if (!node)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
                               "'%s' -- not a versioned resource", target);
 
   if (recurse && node->kind == svn_node_dir)
     {
-      SVN_ERR (recursive_propget (prop_hash, propname, target_buf, pool));
+      SVN_ERR (recursive_propget (prop_hash, propname, target, pool));
     }
   else
     {
@@ -224,7 +215,7 @@ add_to_proplist (apr_array_header_t *prop_list,
 /* Helper for svn_client_proplist. */
 static svn_error_t *
 recursive_proplist (apr_array_header_t *props,
-                    svn_stringbuf_t *target,
+                    const char *target,
                     apr_pool_t *pool)
 {
   apr_hash_t *entries;
@@ -239,7 +230,7 @@ recursive_proplist (apr_array_header_t *props,
       apr_ssize_t klen;
       void * val;
       const char *current_entry_name;
-      svn_stringbuf_t *full_entry_path = svn_stringbuf_dup (target, pool);
+      const char *full_entry_path;
       svn_wc_entry_t *current_entry;
 
       apr_hash_this (hi, &key, &klen, &val);
@@ -253,14 +244,16 @@ recursive_proplist (apr_array_header_t *props,
 
       /* Compute the complete path of the entry */
       if (current_entry_name)
-        svn_path_add_component_nts (full_entry_path, current_entry_name);
+        full_entry_path = svn_path_join (target, current_entry_name, pool);
+      else
+        full_entry_path = apr_pstrdup (pool, target);
 
       if (current_entry->schedule != svn_wc_schedule_delete)
         {
           if (current_entry->kind == svn_node_dir && current_entry_name)
               SVN_ERR (recursive_proplist (props, full_entry_path, pool));
           else
-              SVN_ERR (add_to_proplist (props, full_entry_path->data, pool));
+              SVN_ERR (add_to_proplist (props, full_entry_path, pool));
         }
     }
   return SVN_NO_ERROR;
@@ -276,10 +269,7 @@ svn_client_proplist (apr_array_header_t **props,
       = apr_array_make (pool, 5, sizeof (svn_client_proplist_item_t *));
   svn_wc_entry_t *entry;
 
-  /* ### be nice to avoid this */
-  svn_stringbuf_t *target_buf = svn_stringbuf_create (target, pool);
-
-  SVN_ERR (svn_wc_entry (&entry, target_buf, FALSE, pool));
+  SVN_ERR (svn_wc_entry (&entry, target, FALSE, pool));
   if (! entry)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
                               "'%s' -- not a versioned resource", 
@@ -287,7 +277,7 @@ svn_client_proplist (apr_array_header_t **props,
 
 
   if (recurse && entry->kind == svn_node_dir)
-      SVN_ERR (recursive_proplist (prop_list, target_buf, pool));
+      SVN_ERR (recursive_proplist (prop_list, target, pool));
   else 
       SVN_ERR (add_to_proplist (prop_list, target, pool));
 

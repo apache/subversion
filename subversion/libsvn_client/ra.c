@@ -47,21 +47,21 @@ open_tmp_file (apr_file_t **fp,
                void *callback_baton)
 {
   svn_client__callback_baton_t *cb = callback_baton;
-  svn_stringbuf_t *truepath;
-  svn_stringbuf_t *ignored_filename;
+  const char *truepath;
+  const char *ignored_filename;
 
   if (cb->base_dir)
-    truepath = svn_stringbuf_dup (cb->base_dir, cb->pool);
+    truepath = apr_pstrdup (cb->pool, cb->base_dir);
   else
     /* ### TODO: need better tempfile support */
-    truepath = svn_stringbuf_create (".", cb->pool);
+    truepath = ".";
 
   /* Tack on a made-up filename. */
-  svn_path_add_component_nts (truepath, "tempfile");
+  truepath = svn_path_join (truepath, "tempfile", cb->pool);
 
   /* Open a unique file;  use APR_DELONCLOSE. */  
   SVN_ERR (svn_io_open_unique_file (fp, &ignored_filename,
-                                    truepath->data, ".tmp", TRUE, cb->pool));
+                                    truepath, ".tmp", TRUE, cb->pool));
 
   return SVN_NO_ERROR;
 }
@@ -87,8 +87,8 @@ get_wc_prop (void *baton,
         {
           svn_client_commit_item_t *item
             = ((svn_client_commit_item_t **) cb->commit_items->elts)[i];
-          if (! strcmp (relpath, item->url->data))
-            return svn_wc_get_wc_prop (item->path->data, name, value, pool);
+          if (! strcmp (relpath, item->url))
+            return svn_wc_get_wc_prop (item->path, name, value, pool);
         }
 
       return SVN_NO_ERROR;
@@ -98,7 +98,7 @@ get_wc_prop (void *baton,
   else if (cb->base_dir == NULL)
     return SVN_NO_ERROR;
 
-  return svn_wc_get_wc_prop (svn_path_join (cb->base_dir->data, relpath, pool),
+  return svn_wc_get_wc_prop (svn_path_join (cb->base_dir, relpath, pool),
                              name, value, pool);
 }
 
@@ -120,8 +120,8 @@ set_wc_prop (void *baton,
         {
           svn_client_commit_item_t *item
             = ((svn_client_commit_item_t **) cb->commit_items->elts)[i];
-          if (! strcmp (relpath, item->url->data))
-            return svn_wc_set_wc_prop (item->path->data, name, value, pool);
+          if (! strcmp (relpath, item->url))
+            return svn_wc_set_wc_prop (item->path, name, value, pool);
         }
 
       return SVN_NO_ERROR;
@@ -129,7 +129,7 @@ set_wc_prop (void *baton,
 
   /* If we don't have a base directory, that's bad news. */
   assert (cb->base_dir);
-  return svn_wc_set_wc_prop (svn_path_join (cb->base_dir->data, relpath, pool),
+  return svn_wc_set_wc_prop (svn_path_join (cb->base_dir, relpath, pool),
                              name, value, pool);
 }
 
@@ -137,8 +137,8 @@ set_wc_prop (void *baton,
 svn_error_t * 
 svn_client__open_ra_session (void **session_baton,
                              const svn_ra_plugin_t *ra_lib,
-                             svn_stringbuf_t *base_url,
-                             svn_stringbuf_t *base_dir,
+                             const char *base_url,
+                             const char *base_dir,
                              apr_array_header_t *commit_items,
                              svn_boolean_t do_store,
                              svn_boolean_t use_admin,

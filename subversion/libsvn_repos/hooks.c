@@ -211,7 +211,7 @@ svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
                                    svn_repos_t *repos,
                                    svn_revnum_t rev,
                                    const char *author,
-                                   svn_string_t *log_msg,
+                                   const char *log_msg,
                                    apr_pool_t *pool)
 {
   /* Run start-commit hooks. */
@@ -236,8 +236,21 @@ svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
     
     /* Log message. */
     if (log_msg != NULL)
-      SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_LOG,
-                                       log_msg, pool));
+      {
+        /* Heh heh -- this is unexpected fallout from changing most
+           code to use plain strings instead of svn_stringbuf_t and
+           svn_string_t.  The log_msg is passed in as const char *
+           data, but svn_fs_change_txn_prop() is a generic propset
+           function that must accept arbitrary data as values.  So we
+           create an svn_string_t as wrapper here. */
+
+        svn_string_t l;
+        l.data = log_msg;
+        l.len = strlen (log_msg);
+
+        SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_LOG,
+                                         &l, pool));
+      }
   }
 
   return SVN_NO_ERROR;

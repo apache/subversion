@@ -309,12 +309,11 @@ static int proxy_auth(void *userdata,
 
 static svn_error_t *
 svn_ra_dav__open (void **session_baton,
-                  svn_stringbuf_t *repos_URL,
+                  const char *repos_URL,
                   const svn_ra_callbacks_t *callbacks,
                   void *callback_baton,
                   apr_pool_t *pool)
 {
-  const char *repository = repos_URL->data;
   apr_size_t len;
   ne_session *sess, *sess2;
   struct uri uri = { 0 };
@@ -322,7 +321,7 @@ svn_ra_dav__open (void **session_baton,
   int is_ssl_session;
 
   /* Sanity check the URI */
-  if (uri_parse(repository, &uri, NULL) 
+  if (uri_parse(repos_URL, &uri, NULL) 
       || uri.host == NULL || uri.path == NULL)
     {
       uri_free(&uri);
@@ -451,7 +450,7 @@ svn_ra_dav__open (void **session_baton,
   /* Create and fill a session_baton. */
   ras = apr_pcalloc(pool, sizeof(*ras));
   ras->pool = pool;
-  ras->url = apr_pstrdup (pool, repos_URL->data);
+  ras->url = apr_pstrdup (pool, repos_URL);
   ras->root = uri; /* copies uri pointer members, they get free'd in __close. */
   ras->sess = sess;
   ras->sess2 = sess2;  

@@ -39,9 +39,9 @@ svn_cl__import (apr_getopt_t *os,
                 apr_pool_t *pool)
 {
   apr_array_header_t *targets;
-  svn_stringbuf_t *path;
-  svn_stringbuf_t *url;
-  svn_stringbuf_t *new_entry;
+  const char *path;
+  const char *url;
+  const char *new_entry;
   const svn_delta_editor_t *trace_editor;
   void *trace_edit_baton;
   svn_client_auth_baton_t *auth_baton;
@@ -89,20 +89,20 @@ svn_cl__import (apr_getopt_t *os,
       (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
        "repository url required when importing");
   else
-    url = ((svn_stringbuf_t **) (targets->elts))[0];
+    url = ((const char **) (targets->elts))[0];
 
   /* Get a local path. */
   if (targets->nelts < 2)
-    path = svn_stringbuf_create (".", pool);
+    path = ".";
   else
-    path = ((svn_stringbuf_t **) (targets->elts))[1];
+    path = ((const char **) (targets->elts))[1];
 
   /* Optionally get the dest entry name. */
   if (targets->nelts < 3)
     new_entry = NULL;  /* tells import() to create many entries at top
                           level. */
   else if (targets->nelts == 3)
-    new_entry = ((svn_stringbuf_t **) (targets->elts))[2];
+    new_entry = ((const char **) (targets->elts))[2];
   else
     return svn_error_create
       (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,

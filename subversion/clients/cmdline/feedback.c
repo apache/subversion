@@ -46,15 +46,13 @@ notify_added (void *baton, const char *path)
 
   /* the pool (BATON) is typically the global pool; don't keep filling it */
   apr_pool_t *subpool = svn_pool_create (nb->pool);
-
-  svn_stringbuf_t *spath = svn_stringbuf_create (path, subpool);
   svn_wc_entry_t *entry;
   svn_error_t *err;
   const char *type = "      ";  /* fill with "binary" if binary, etc */
 
   /* ### this sucks. we have to open/parse the entries file to get this
      ### information. when adding thousands of files, this blows... */
-  err = svn_wc_entry (&entry, spath, FALSE, subpool);
+  err = svn_wc_entry (&entry, path, FALSE, subpool);
   if (err)
     {
       printf ("WARNING: error fetching entry for %s\n", path);

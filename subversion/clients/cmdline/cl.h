@@ -67,13 +67,13 @@ typedef struct svn_cl__opt_state_t
      end_revision remains `svn_client_revision_unspecified'. */
   svn_client_revision_t start_revision, end_revision;
 
-  svn_stringbuf_t *message;  /* log message */
+  const char *message;  /* log message */
 
-  svn_stringbuf_t *xml_file;  /* F in "svn blah --xml-file F" */
+  const char *xml_file;  /* F in "svn blah --xml-file F" */
 
-  svn_stringbuf_t *target;  /* Target dir, T in "svn co -d T" */
+  const char *target;  /* Target dir, T in "svn co -d T" */
 
-  svn_stringbuf_t *ancestor_path;  /* ### todo: who sets this? */
+  const char *ancestor_path;  /* ### todo: who sets this? */
 
   svn_boolean_t force;  /* Be more forceful, as in "svn rm -f ..." */
 
@@ -91,9 +91,9 @@ typedef struct svn_cl__opt_state_t
   apr_array_header_t *args;
   svn_stringbuf_t *filedata;
   svn_boolean_t help;
-  svn_stringbuf_t *auth_username;
-  svn_stringbuf_t *auth_password;
-  svn_stringbuf_t *extensions;   /* for extension args to subprocesses */
+  const char *auth_username;
+  const char *auth_password;
+  const char *extensions;        /* for extension args to subprocesses */
   apr_array_header_t *targets;   /* when target list supplied from file */
   svn_boolean_t xml;             /* output in xml, e.g., "svn log --xml" */
 } svn_cl__opt_state_t;
@@ -184,14 +184,6 @@ svn_cl__args_to_target_array (apr_getopt_t *os,
                               svn_boolean_t extract_revisions,
                               apr_pool_t *pool);
 
-/* Splits a list of whitespace-separated values into an apr_array_header_t */
-apr_array_header_t*
-svn_cl__stringlist_to_array (svn_stringbuf_t *buffer, apr_pool_t *pool);
-
-/* Splits a list of newline seperated values into an apr_array_header_t */
-apr_array_header_t*
-svn_cl__newlinelist_to_array (svn_stringbuf_t *buffer, apr_pool_t *pool);
-
 void svn_cl__push_implicit_dot_target (apr_array_header_t *targets,
                                        apr_pool_t *pool);
 
@@ -277,7 +269,7 @@ void svn_cl__print_prop_names (apr_hash_t *prop_hash, apr_pool_t *pool);
 svn_error_t *
 svn_cl__get_trace_update_editor (const svn_delta_editor_t **editor,
                                  void **edit_baton,
-                                 svn_stringbuf_t *initial_path,
+                                 const char *initial_path,
                                  svn_boolean_t is_checkout,
                                  svn_boolean_t suppress_final_line,
                                  apr_pool_t *pool);
@@ -286,7 +278,7 @@ svn_cl__get_trace_update_editor (const svn_delta_editor_t **editor,
 svn_error_t *
 svn_cl__get_trace_commit_editor (const svn_delta_editor_t **editor,
                                  void **edit_baton,
-                                 svn_stringbuf_t *initial_path,
+                                 const char *initial_path,
                                  apr_pool_t *pool);
 
 
@@ -296,9 +288,9 @@ svn_cl__get_trace_commit_editor (const svn_delta_editor_t **editor,
    or set EDITED_CONTENTS to NULL if no edit was performed.  Use POOL
    for all allocations. */
 svn_error_t *
-svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
-                         svn_stringbuf_t *base_dir,
-                         const svn_string_t *contents,
+svn_cl__edit_externally (const char **edited_contents,
+                         const char *base_dir,
+                         const char *contents,
                          apr_pool_t *pool);
 
 
@@ -367,11 +359,11 @@ void *svn_cl__make_notify_baton (apr_pool_t *pool);
    NOTE: While the baton itself will be allocated from POOL, the items
    add to it are added by reference, not duped into POOL!*/
 void *svn_cl__make_log_msg_baton (svn_cl__opt_state_t *opt_state,
-                                  svn_stringbuf_t *base_dir,
+                                  const char *base_dir,
                                   apr_pool_t *pool);
 
 /* A function of type svn_client_get_commit_log_t. */
-svn_error_t *svn_cl__get_log_message (svn_stringbuf_t **log_msg,
+svn_error_t *svn_cl__get_log_message (const char **log_msg,
                                       apr_array_header_t *commit_items,
                                       void *baton,
                                       apr_pool_t *pool);

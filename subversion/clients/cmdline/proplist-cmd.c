@@ -48,11 +48,11 @@ svn_cl__proplist (apr_getopt_t *os,
 
   for (i = 0; i < targets->nelts; i++)
     {
-      svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
+      const char *target = ((const char **) (targets->elts))[i];
       apr_array_header_t *props;
       int j;
 
-      SVN_ERR (svn_client_proplist(&props, target->data, opt_state->recursive,
+      SVN_ERR (svn_client_proplist(&props, target, opt_state->recursive,
                                    pool));
 
       for (j = 0; j < props->nelts; ++j)

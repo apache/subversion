@@ -92,7 +92,7 @@ typedef void (*svn_wc_notify_func_t) (void *baton,
 /* Set *IS_WC to true iff PATH is a valid working copy directory, else
    set it to false.  PATH must exist, either as a file or directory,
    else an error will be returned. */
-svn_error_t *svn_wc_check_wc (const svn_stringbuf_t *path,
+svn_error_t *svn_wc_check_wc (const char *path,
                               svn_boolean_t *is_wc,
                               apr_pool_t *pool);
 
@@ -100,7 +100,7 @@ svn_error_t *svn_wc_check_wc (const svn_stringbuf_t *path,
 /* Set *HAS_BINARY_PROP to TRUE iff PATH has been marked with a
    property indicating that it is non-text (i.e. binary.) */
 svn_error_t *svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
-                                     const svn_stringbuf_t *path,
+                                     const char *path,
                                      apr_pool_t *pool);
 
 
@@ -115,14 +115,14 @@ svn_error_t *svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
    addition), return the error SVN_ERR_ENTRY_NOT_FOUND.
 */
 svn_error_t *svn_wc_text_modified_p (svn_boolean_t *modified_p,
-                                     svn_stringbuf_t *filename,
+                                     const char *filename,
                                      apr_pool_t *pool);
 
 
 /* Set *MODIFIED_P to non-zero if PATH's properties are modified
    w.r.t. the base revision, else set MODIFIED_P to zero. */
 svn_error_t *svn_wc_props_modified_p (svn_boolean_t *modified_p,
-                                      svn_stringbuf_t *path,
+                                      const char *path,
                                       apr_pool_t *pool);
 
 
@@ -157,37 +157,35 @@ typedef enum svn_wc_schedule_t
 typedef struct svn_wc_entry_t
 {
   /* General Attributes */
-  svn_stringbuf_t *name;         /* entry's name */
+  const char *name;              /* entry's name */
   svn_revnum_t revision;         /* base revision */
-  svn_stringbuf_t *url;          /* url in repository */
-  svn_stringbuf_t *repos;        /* canonical repository url */
+  const char *url;               /* url in repository */
+  const char *repos;             /* canonical repository url */
   svn_node_kind_t kind;          /* node kind (file, dir, ...) */
 
   /* State information */
   svn_wc_schedule_t schedule;    /* scheduling (add, delete, replace ...) */
   svn_boolean_t copied;          /* in a copied state */
   svn_boolean_t deleted;         /* deleted, but parent rev lags behind */
-  svn_stringbuf_t *copyfrom_url; /* copyfrom location */
+  const char *copyfrom_url;      /* copyfrom location */
   svn_revnum_t copyfrom_rev;     /* copyfrom revision */
-  svn_stringbuf_t *conflict_old; /* old version of conflicted file */
-  svn_stringbuf_t *conflict_new; /* new version of conflicted file */
-  svn_stringbuf_t *conflict_wrk; /* wroking version of conflicted file */
-  svn_stringbuf_t *prejfile;     /* property reject file */
+  const char *conflict_old;      /* old version of conflicted file */
+  const char *conflict_new;      /* new version of conflicted file */
+  const char *conflict_wrk;      /* wroking version of conflicted file */
+  const char *prejfile;          /* property reject file */
 
   /* Timestamps (0 means no information available) */
   apr_time_t text_time;          /* last up-to-date time for text contents */
   apr_time_t prop_time;          /* last up-to-date time for properties */
 
   /* Checksum.  Optional; can be NULL for backwards compatibility. */
-  svn_stringbuf_t *checksum;     /* base64-encoded checksum for the
+  const char *checksum;          /* base64-encoded checksum for the
                                     untranslated text base file. */
 
   /* "Entry props" */
   svn_revnum_t cmt_rev;          /* last revision this was changed */
   apr_time_t cmt_date;           /* last date this was changed */
-  svn_stringbuf_t *cmt_author;   /* last commit author of this item 
-                                    ### should this be svn_string_t or
-                                    ### perhaps just a const char * ? */
+  const char *cmt_author;        /* last commit author of this item */
   
 } svn_wc_entry_t;
 
@@ -207,7 +205,7 @@ typedef struct svn_wc_entry_t
  * be present, but not under revision control.
  */
 svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
-                           svn_stringbuf_t *path,
+                           const char *path,
                            svn_boolean_t show_deleted,
                            apr_pool_t *pool);
 
@@ -226,7 +224,7 @@ svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
    routine to open its PATH and read the SVN_WC_ENTRY_THIS_DIR
    structure, or call svn_wc_get_entry on its PATH. */
 svn_error_t *svn_wc_entries_read (apr_hash_t **entries,
-                                  svn_stringbuf_t *path,
+                                  const char *path,
                                   svn_boolean_t show_deleted,
                                   apr_pool_t *pool);
 
@@ -244,15 +242,15 @@ svn_wc_entry_t *svn_wc_entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool);
    both removed, assume the conflict has been resolved by the user.)  */
 svn_error_t *svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
                                   svn_boolean_t *prop_conflicted_p,
-                                  svn_stringbuf_t *dir_path,
+                                  const char *dir_path,
                                   svn_wc_entry_t *entry,
                                   apr_pool_t *pool);
 
 /* Set *URL and *REV to the ancestor url and revision for PATH,
    allocating in POOL. */
-svn_error_t *svn_wc_get_ancestry (svn_stringbuf_t **url,
+svn_error_t *svn_wc_get_ancestry (char **url,
                                   svn_revnum_t *rev,
-                                  svn_stringbuf_t *path,
+                                  const char *path,
                                   apr_pool_t *pool);
 
 
@@ -354,7 +352,7 @@ typedef struct svn_wc_status_t
    straightforward in their meanings.  See the comments on the
    svn_wc_status_kind structure above for some hints.  */
 svn_error_t *svn_wc_status (svn_wc_status_t **status, 
-                            svn_stringbuf_t *path, 
+                            const char *path, 
                             apr_pool_t *pool);
 
 
@@ -386,7 +384,7 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  * and everything below it, including subdirectories.  In other
  * words, a full recursion.  */
 svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
-                              svn_stringbuf_t *path,
+                              const char *path,
                               svn_boolean_t descend,
                               svn_boolean_t get_all,
                               svn_boolean_t strict,
@@ -407,7 +405,7 @@ svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
    allocations in a subpool of POOL.  */
 svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                                        void **edit_baton,
-                                       svn_stringbuf_t *path,
+                                       const char *path,
                                        svn_boolean_t descend,
                                        apr_hash_t *statushash,
                                        svn_revnum_t *youngest,
@@ -415,16 +413,6 @@ svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
 
 
 
-/* Where you see an argument like
- * 
- *   apr_array_header_t *paths
- *
- * it means an array of (svn_stringbuf_t *) types, each one of which is
- * a file or directory path.  This is so we can do atomic operations
- * on any random set of files and directories.
- */
-
-
 /* Copy SRC to DST_BASENAME in DST_PARENT, and schedule DST_BASENAME
    for addition to the repository, remembering the copy history.
 
@@ -440,9 +428,9 @@ svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
    Important: this is a variant of svn_wc_add.  No changes will happen
    to the repository until a commit occurs.  This scheduling can be
    removed with svn_client_revert.  */
-svn_error_t *svn_wc_copy (svn_stringbuf_t *src,
-                          svn_stringbuf_t *dst_parent,
-                          svn_stringbuf_t *dst_basename,
+svn_error_t *svn_wc_copy (const char *src,
+                          const char *dst_parent,
+                          const char *dst_basename,
                           svn_wc_notify_func_t notify_func,
                           void *notify_baton,
                           apr_pool_t *pool);
@@ -461,7 +449,7 @@ svn_error_t *svn_wc_copy (svn_stringbuf_t *src,
    For each path marked for deletion, NOTIFY_FUNC will be called with
    the NOTIFY_BATON and that path. The NOTIFY_FUNC callback may be
    NULL if notification is not needed.  */
-svn_error_t *svn_wc_delete (svn_stringbuf_t *path,
+svn_error_t *svn_wc_delete (const char *path,
                             svn_wc_notify_func_t notify_func,
                             void *notify_baton,
                             apr_pool_t *pool);
@@ -506,8 +494,8 @@ svn_error_t *svn_wc_delete (svn_stringbuf_t *path,
    ### I think possibly the "switchover" functionality should be
    ### broken out into a separate function, but its all intertwined in
    ### the code right now.  Ben, thoughts?  Hard?  Easy?  Mauve? */
-svn_error_t *svn_wc_add (svn_stringbuf_t *path,
-                         svn_stringbuf_t *copyfrom_url,
+svn_error_t *svn_wc_add (const char *path,
+                         const char *copyfrom_url,
                          svn_revnum_t copyfrom_rev,
                          svn_wc_notify_func_t notify_func,
                          void *notify_baton,
@@ -532,8 +520,8 @@ svn_error_t *svn_wc_add (svn_stringbuf_t *path,
    WARNING:  This routine is exported for careful, measured use by
    libsvn_client.  Do *not* call this routine unless you really
    understand what the heck you're doing.  */
-svn_error_t *svn_wc_remove_from_revision_control (svn_stringbuf_t *path, 
-                                                  svn_stringbuf_t *name,
+svn_error_t *svn_wc_remove_from_revision_control (const char *path, 
+                                                  const char *name,
                                                   svn_boolean_t destroy_wf,
                                                   apr_pool_t *pool);
 
@@ -561,7 +549,7 @@ svn_error_t *svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
    conflict resolution was requested, and it was successful, then success
    gets reported.
  */
-svn_error_t *svn_wc_resolve_conflict (svn_stringbuf_t *path,
+svn_error_t *svn_wc_resolve_conflict (const char *path,
                                       svn_boolean_t resolve_text,
                                       svn_boolean_t resolve_props,
                                       svn_wc_notify_func_t notify_func,
@@ -578,7 +566,7 @@ svn_error_t *svn_wc_resolve_conflict (svn_stringbuf_t *path,
    If RECURSE is set and PATH is a directory, then bump every
    versioned object at or under PATH.  This is usually done for
    copied trees.  */
-svn_error_t *svn_wc_process_committed (svn_stringbuf_t *path,
+svn_error_t *svn_wc_process_committed (const char *path,
                                        svn_boolean_t recurse,
                                        svn_revnum_t new_revnum,
                                        const char *rev_date,
@@ -655,7 +643,7 @@ svn_error_t *svn_wc_set_wc_prop (const char *path,
    NOTIFY_BATON and the path of the restored file. NOTIFY_FUNC may
    be NULL if this notification is not required. */
 svn_error_t *
-svn_wc_crawl_revisions (svn_stringbuf_t *path,
+svn_wc_crawl_revisions (const char *path,
                         const svn_ra_reporter_t *reporter,
                         void *report_baton,
                         svn_boolean_t restore_files,
@@ -675,7 +663,7 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
  * a PATH of `.' to this function will always return TRUE.
  */
 svn_error_t *svn_wc_is_wc_root (svn_boolean_t *wc_root,
-                                svn_stringbuf_t *path,
+                                const char *path,
                                 apr_pool_t *pool);
 
 
@@ -689,11 +677,11 @@ svn_error_t *svn_wc_is_wc_root (svn_boolean_t *wc_root,
  * TARGET is the actual subject (relative to the ANCHOR) of the
  * update/commit, or NULL if the ANCHOR itself is the subject.
  *
- * Do all necessary allocations in POOL.  
+ * Allocate ANCHOR and TARGET in POOL.  
  */
-svn_error_t *svn_wc_get_actual_target (svn_stringbuf_t *path,
-                                       svn_stringbuf_t **anchor,
-                                       svn_stringbuf_t **target,
+svn_error_t *svn_wc_get_actual_target (const char *path,
+                                       const char **anchor,
+                                       const char **target,
                                        apr_pool_t *pool);
 
 
@@ -707,8 +695,8 @@ svn_error_t *svn_wc_get_actual_target (svn_stringbuf_t *path,
  * TARGET_REVISION is the repository revision that results from this set
  * of changes.
  */
-svn_error_t *svn_wc_get_update_editor (svn_stringbuf_t *anchor,
-                                       svn_stringbuf_t *target,
+svn_error_t *svn_wc_get_update_editor (const char *anchor,
+                                       const char *target,
                                        svn_revnum_t target_revision,
                                        svn_boolean_t recurse,
                                        const svn_delta_editor_t **editor,
@@ -731,8 +719,8 @@ svn_error_t *svn_wc_get_update_editor (svn_stringbuf_t *anchor,
  * ANCESTOR_URL is the repository string to be recorded in this
  * working copy.
  */
-svn_error_t *svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
-                                         svn_stringbuf_t *ancestor_url,
+svn_error_t *svn_wc_get_checkout_editor (const char *dest,
+                                         const char *ancestor_url,
                                          svn_revnum_t target_revision,
                                          svn_boolean_t recurse,
                                          const svn_delta_editor_t **editor,
@@ -745,7 +733,7 @@ svn_error_t *svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
  * Set *EDITOR and *EDIT_BATON to an editor and baton for "switching"
  * a working copy to a new SWITCH_URL.  (Right now, this URL must be
  * within the same repository that the working copy already comes
- * from.)
+ * from.)  SWITCH_URL must not be NULL.
  * 
  * ANCHOR is the local path to the working copy which will be used as
  * the root of our editor.  TARGET is the entry in ANCHOR that will
@@ -754,10 +742,10 @@ svn_error_t *svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
  * TARGET_REVISION is the repository revision that results from this set
  * of changes.
  */
-svn_error_t *svn_wc_get_switch_editor (svn_stringbuf_t *anchor,
-                                       svn_stringbuf_t *target,
+svn_error_t *svn_wc_get_switch_editor (const char *anchor,
+                                       const char *target,
                                        svn_revnum_t target_revision,
-                                       svn_stringbuf_t *switch_url,
+                                       const char *switch_url,
                                        svn_boolean_t recurse,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
@@ -849,10 +837,7 @@ svn_error_t *svn_wc_prop_get (const svn_string_t **value,
                               apr_pool_t *pool);
 
 /* Set wc property NAME to VALUE for PATH.  Do any temporary
-   allocation in POOL.
-
-   ### todo (issue #406): name could be const char *, value
-   svn_string_t instead of svn_stringbuf_t.  */
+   allocation in POOL. */
 svn_error_t *svn_wc_prop_set (const char *name,
                               const svn_string_t *value,
                               const char *path,
@@ -892,16 +877,16 @@ svn_boolean_t svn_wc_is_entry_prop (const char *name);
  *
  * ANCHOR/TARGET represent the base of the hierarchy to be compared.
  *
- * DIFF_CALLBACKS/DIFF_CMD_BATON is the callback table to use when two
+ * CALLBACKS/CALLBACK_BATON is the callback table to use when two
  * files are to be compared.
  *
  * RECURSE determines whether to descend into subdirectories when TARGET
  * is a directory.
  */
-svn_error_t *svn_wc_get_diff_editor (svn_stringbuf_t *anchor,
-                                     svn_stringbuf_t *target,
-                                     const svn_diff_callbacks_t *diff_callbacks,
-                                     void *diff_cmd_baton,
+svn_error_t *svn_wc_get_diff_editor (const char *anchor,
+                                     const char *target,
+                                     const svn_diff_callbacks_t *callbacks,
+                                     void *callback_baton,
                                      svn_boolean_t recurse,
                                      const svn_delta_edit_fns_t **editor,
                                      void **edit_baton,
@@ -912,16 +897,16 @@ svn_error_t *svn_wc_get_diff_editor (svn_stringbuf_t *anchor,
  *
  * ANCHOR/TARGET represent the base of the hierarchy to be compared.
  *
- * DIFF_CALLBACKS/DIFF_CMD_BATON is the callback table to use when two
+ * CALLBACKS/CALLBACK_BATON is the callback table to use when two
  * files are to be compared.
  *
  * RECURSE determines whether to descend into subdirectories when TARGET
  * is a directory.
  */
-svn_error_t *svn_wc_diff (svn_stringbuf_t *anchor,
-                          svn_stringbuf_t *target,
-                          const svn_diff_callbacks_t *diff_callbacks,
-                          void *diff_cmd_baton,
+svn_error_t *svn_wc_diff (const char *anchor,
+                          const char *target,
+                          const svn_diff_callbacks_t *callbacks,
+                          void *callback_baton,
                           svn_boolean_t recurse,
                           apr_pool_t *pool);
 
@@ -1039,15 +1024,15 @@ svn_wc_merge_prop_diffs (const char *path,
    pristine version of the file.  This is needed so clients can do
    diffs.  If the WC has no text-base, return a NULL instead of a
    path. */
-svn_error_t *svn_wc_get_pristine_copy_path (svn_stringbuf_t *path,
-                                            svn_stringbuf_t **pristine_path,
+svn_error_t *svn_wc_get_pristine_copy_path (const char *path,
+                                            const char **pristine_path,
                                             apr_pool_t *pool);
 
 
 /* Recurse from PATH, cleaning up unfinished log business.  Perform
    necessary allocations in POOL.  */
 svn_error_t *
-svn_wc_cleanup (svn_stringbuf_t *path, apr_pool_t *pool);
+svn_wc_cleanup (const char *path, apr_pool_t *pool);
 
 
 /* Revert changes to PATH (perhaps in a RECURSIVE fashion).  Perform
@@ -1057,7 +1042,7 @@ svn_wc_cleanup (svn_stringbuf_t *path, apr_pool_t *pool);
    and the path of the reverted item. NOTIFY_FUNC may be NULL if this
    notification is not needed.  */
 svn_error_t *
-svn_wc_revert (svn_stringbuf_t *path, 
+svn_wc_revert (const char *path, 
                svn_boolean_t recursive, 
                svn_wc_notify_func_t notify_func,
                void *notify_baton,
@@ -1070,9 +1055,13 @@ svn_wc_revert (svn_stringbuf_t *path,
 /* Get the *CONTENTS of FILENAME in the authentcation area of PATH's
    administrative directory, allocated in POOL.  PATH must be a
    working copy directory. If file does not exist,
-   SVN_ERR_WC_PATH_NOT_FOUND is returned. */
+   SVN_ERR_WC_PATH_NOT_FOUND is returned.
+
+   Note: CONTENTS is a stringbuf because maybe we'll need to fetch
+   binary contents from an auth file.  If that's unlikely, then we
+   should change it to const char *.  */
 svn_error_t *
-svn_wc_get_auth_file (svn_stringbuf_t *path,
+svn_wc_get_auth_file (const char *path,
                       const char *filename,
                       svn_stringbuf_t **contents,
                       apr_pool_t *pool);
@@ -1083,9 +1072,13 @@ svn_wc_get_auth_file (svn_stringbuf_t *path,
    copy directory.  If no such file exists, it will be created.  If
    the file exists already, it will be completely overwritten with the
    new contents.  If RECURSE is set, this file will be stored in every
-   administrative area below PATH as well. */
+   administrative area below PATH as well. 
+
+   Note: CONTENTS is a stringbuf because maybe we'll need to store
+   binary contents in an auth file.  If that's unlikely, then we
+   should change it to const char *.  */
 svn_error_t *
-svn_wc_set_auth_file (svn_stringbuf_t *path,
+svn_wc_set_auth_file (const char *path,
                       svn_boolean_t recurse,
                       const char *filename,
                       svn_stringbuf_t *contents,
@@ -1104,7 +1097,7 @@ svn_wc_set_auth_file (svn_stringbuf_t *path,
    This means that as soon as FP is closed, the tmp file will vanish.  */
 svn_error_t *
 svn_wc_create_tmp_file (apr_file_t **fp,
-                        svn_stringbuf_t *path,
+                        const char *path,
                         svn_boolean_t delete_on_close,
                         apr_pool_t *pool);
 
@@ -1204,8 +1197,8 @@ svn_error_t *svn_wc_copy_and_translate (const char *src,
  *
  * If an error is returned, the effect on *XLATED_P is undefined.
  */
-svn_error_t *svn_wc_translated_file (svn_stringbuf_t **xlated_p,
-                                     svn_stringbuf_t *vfile,
+svn_error_t *svn_wc_translated_file (const char **xlated_p,
+                                     const char *vfile,
                                      apr_pool_t *pool);
 
 
@@ -1216,17 +1209,17 @@ svn_error_t *svn_wc_translated_file (svn_stringbuf_t **xlated_p,
    Wait for WAIT_FOR seconds if encounter another lock, trying again every
    second, then return 0 if success or an SVN_ERR_WC_LOCKED error if
    failed to obtain the lock. */
-svn_error_t *svn_wc_lock (svn_stringbuf_t *path, 
+svn_error_t *svn_wc_lock (const char *path, 
                           int wait_for, 
                           apr_pool_t *pool);
 
 /* Unlock PATH, or error if can't. */
-svn_error_t *svn_wc_unlock (svn_stringbuf_t *path, 
+svn_error_t *svn_wc_unlock (const char *path, 
                             apr_pool_t *pool);
 
 /* Set *LOCKED to non-zero if PATH is locked, else set it to zero. */
 svn_error_t *svn_wc_locked (svn_boolean_t *locked, 
-                            svn_stringbuf_t *path,
+                            const char *path,
                             apr_pool_t *pool);
 
 
@@ -1256,11 +1249,11 @@ svn_error_t *svn_wc_locked (svn_boolean_t *locked,
    Note: this is intended for use with both infix and postfix
    text-delta styled editor drivers.
 */
-svn_error_t *svn_wc_transmit_text_deltas (svn_stringbuf_t *path,
+svn_error_t *svn_wc_transmit_text_deltas (const char *path,
                                           svn_boolean_t fulltext,
                                           const svn_delta_editor_t *editor,
                                           void *file_baton,
-                                          svn_stringbuf_t **tempfile,
+                                          const char **tempfile,
                                           apr_pool_t *pool);
 
 
@@ -1271,11 +1264,11 @@ svn_error_t *svn_wc_transmit_text_deltas (svn_stringbuf_t *path,
    If a temporary file remains after this function is finished, the
    path to that file is returned in *TEMPFILE (so the caller can clean
    this up if it wishes to do so).  */
-svn_error_t *svn_wc_transmit_prop_deltas (svn_stringbuf_t *path,
+svn_error_t *svn_wc_transmit_prop_deltas (const char *path,
                                           svn_node_kind_t kind,
                                           const svn_delta_editor_t *editor,
                                           void *baton,
-                                          svn_stringbuf_t **tempfile,
+                                          const char **tempfile,
                                           apr_pool_t *pool);
 
 

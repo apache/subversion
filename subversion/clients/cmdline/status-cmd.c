@@ -54,7 +54,7 @@ svn_cl__status (apr_getopt_t *os,
 
   for (i = 0; i < targets->nelts; i++)
     {
-      svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
+      const char *target = ((const char **) (targets->elts))[i];
 
       /* Retrieve a hash of status structures with the information
          requested by the user.

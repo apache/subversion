@@ -174,9 +174,9 @@ print_long_format (const char *path,
     {
       char revbuf[20];
       const char *revstr = revbuf;
-      svn_stringbuf_t *s_author;
+      const char *author;
       
-      s_author = status->entry->cmt_author;
+      author = status->entry->cmt_author;
       if (SVN_IS_VALID_REVNUM (status->entry->cmt_rev))
         sprintf(revbuf, "%" SVN_REVNUM_T_FMT, status->entry->cmt_rev);
       else
@@ -187,7 +187,7 @@ print_long_format (const char *path,
          ### which means a pool, ...  */
       sprintf (last_committed, "%6.6s   %8.8s   ",
                revstr,
-               s_author ? s_author->data : "      ? ");
+               author ? author : "      ? ");
     }
   else
     strcpy (last_committed, "                    ");

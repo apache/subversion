@@ -152,24 +152,32 @@ svn_repos_dated_revision (svn_revnum_t *revision,
  */
 svn_error_t *
 svn_repos_get_committed_info (svn_revnum_t *committed_rev,
-                              svn_string_t **committed_date,
-                              svn_string_t **last_author,
+                              const char **committed_date,
+                              const char **last_author,
                               svn_fs_root_t *root,
-                              const svn_string_t *path,
+                              const char *path,
                               apr_pool_t *pool)
 {
   svn_fs_t *fs = svn_fs_root_fs (root);
+
+  /* ### It might be simpler just to declare that revision
+     properties have char * (i.e., UTF-8) values, not arbitrary
+     binary values, hmmm. */
+  svn_string_t *committed_date_s, *last_author_s;
   
   /* Get the CR field out of the node's skel. */
-  SVN_ERR (svn_fs_node_created_rev (committed_rev, root, path->data, pool));
+  SVN_ERR (svn_fs_node_created_rev (committed_rev, root, path, pool));
 
   /* Get the date property of this revision. */
-  SVN_ERR (svn_fs_revision_prop (committed_date, fs, *committed_rev,
+  SVN_ERR (svn_fs_revision_prop (&committed_date_s, fs, *committed_rev,
                                  SVN_PROP_REVISION_DATE, pool));
 
   /* Get the author property of this revision. */
-  SVN_ERR (svn_fs_revision_prop (last_author, fs, *committed_rev,
+  SVN_ERR (svn_fs_revision_prop (&last_author_s, fs, *committed_rev,
                                  SVN_PROP_REVISION_AUTHOR, pool));
+
+  *committed_date = committed_date_s->data;
+  *last_author = last_author_s->data;
   
   return SVN_NO_ERROR;
 }

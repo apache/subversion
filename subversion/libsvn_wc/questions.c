@@ -40,7 +40,7 @@
 
 /* kff todo: make this compare repository too?  Or do so in parallel code. */
 svn_error_t *
-svn_wc_check_wc (const svn_stringbuf_t *path,
+svn_wc_check_wc (const char *path,
                  svn_boolean_t *is_wc,
                  apr_pool_t *pool)
 {
@@ -51,7 +51,7 @@ svn_wc_check_wc (const svn_stringbuf_t *path,
   svn_error_t *err = NULL;
   enum svn_node_kind kind;
 
-  err = svn_io_check_path (path->data, &kind, pool);
+  err = svn_io_check_path (path, &kind, pool);
   if (err)
     return err;
   
@@ -59,7 +59,7 @@ svn_wc_check_wc (const svn_stringbuf_t *path,
     {
       return svn_error_createf
         (APR_ENOENT, 0, NULL, pool,
-         "svn_wc_check_wc: %s does not exist", path->data);
+         "svn_wc_check_wc: %s does not exist", path);
     }
   else if (kind != svn_node_dir)
     *is_wc = FALSE;
@@ -125,34 +125,34 @@ svn_wc_check_wc (const svn_stringbuf_t *path,
    should be one of the enumerated type above. */
 svn_error_t *
 svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
-                            svn_stringbuf_t *path,
+                            const char *path,
                             const enum svn_wc__timestamp_kind timestamp_kind,
                             apr_pool_t *pool)
 {
   apr_time_t wfile_time, entrytime = 0;
-  svn_stringbuf_t *dirpath, *entryname;
+  const char *dirpath, *entryname;
   apr_hash_t *entries = NULL;
   struct svn_wc_entry_t *entry;
   enum svn_node_kind kind;
 
-  SVN_ERR (svn_io_check_path (path->data, &kind, pool));
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
   if (kind == svn_node_dir)
     {
       dirpath = path;
-      entryname = svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool);
+      entryname = SVN_WC_ENTRY_THIS_DIR;
     }
   else
-    svn_path_split (path, &dirpath, &entryname, pool);
+    svn_path_split_nts (path, &dirpath, &entryname, pool);
 
   /* Get the timestamp from the entries file */
   SVN_ERR (svn_wc_entries_read (&entries, dirpath, FALSE, pool));
-  entry = apr_hash_get (entries, entryname->data, entryname->len);
+  entry = apr_hash_get (entries, entryname, APR_HASH_KEY_STRING);
 
   /* Can't compare timestamps for an unversioned file. */
   if (entry == NULL)
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
-       "timestamps_equal_p: `%s' not under revision control", entryname->data);
+       "timestamps_equal_p: `%s' not under revision control", entryname);
 
   /* Get the timestamp from the working file and the entry */
   if (timestamp_kind == svn_wc__text_time)
@@ -163,7 +163,7 @@ svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
   
   else if (timestamp_kind == svn_wc__prop_time)
     {
-      svn_stringbuf_t *prop_path;
+      const char *prop_path;
 
       SVN_ERR (svn_wc__prop_path (&prop_path, path, 0, pool));
       SVN_ERR (svn_io_file_affected_time (&wfile_time, prop_path, pool));
@@ -266,14 +266,14 @@ contents_identical_p (svn_boolean_t *identical_p,
 
 svn_error_t *
 svn_wc__files_contents_same_p (svn_boolean_t *same,
-                               svn_stringbuf_t *file1,
-                               svn_stringbuf_t *file2,
+                               const char *file1,
+                               const char *file2,
                                apr_pool_t *pool)
 {
   svn_error_t *err;
   svn_boolean_t q;
 
-  err = svn_io_filesizes_different_p (&q, file1->data, file2->data, pool);
+  err = svn_io_filesizes_different_p (&q, file1, file2, pool);
   if (err)
     return err;
 
@@ -283,7 +283,7 @@ svn_wc__files_contents_same_p (svn_boolean_t *same,
       return SVN_NO_ERROR;
     }
   
-  err = contents_identical_p (&q, file1->data, file2->data, pool);
+  err = contents_identical_p (&q, file1, file2, pool);
   if (err)
     return err;
 
@@ -298,12 +298,12 @@ svn_wc__files_contents_same_p (svn_boolean_t *same,
 
 svn_error_t *
 svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
-                                 svn_stringbuf_t *versioned_file,
-                                 svn_stringbuf_t *base_file,
+                                 const char *versioned_file,
+                                 const char *base_file,
                                  apr_pool_t *pool)
 {
   svn_boolean_t same;
-  svn_stringbuf_t *tmp_vfile;
+  const char *tmp_vfile;
   svn_error_t *err = SVN_NO_ERROR;
 
   SVN_ERR (svn_wc_translated_file (&tmp_vfile, versioned_file, pool));
@@ -312,7 +312,7 @@ svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
   *modified_p = (! same);
   
   if (tmp_vfile != versioned_file)
-    SVN_ERR (svn_io_remove_file (tmp_vfile->data, pool));
+    SVN_ERR (svn_io_remove_file (tmp_vfile, pool));
   
   return err;
 }
@@ -320,16 +320,16 @@ svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
 
 svn_error_t *
 svn_wc_text_modified_p (svn_boolean_t *modified_p,
-                        svn_stringbuf_t *filename,
+                        const char *filename,
                         apr_pool_t *pool)
 {
-  svn_stringbuf_t *textbase_filename;
+  const char *textbase_filename;
   svn_boolean_t equal_timestamps;
   apr_pool_t *subpool = svn_pool_create (pool);
   enum svn_node_kind kind;
 
   /* Sanity check:  if the path doesn't exist, return FALSE. */
-  SVN_ERR (svn_io_check_path (filename->data, &kind, subpool));
+  SVN_ERR (svn_io_check_path (filename, &kind, subpool));
   if (kind != svn_node_file)
     {
       *modified_p = FALSE;
@@ -353,7 +353,7 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
      is modified.  For example, a file scheduled for addition but not
      yet committed. */
   textbase_filename = svn_wc__text_base_path (filename, 0, subpool);
-  SVN_ERR (svn_io_check_path (textbase_filename->data, &kind, subpool));
+  SVN_ERR (svn_io_check_path (textbase_filename, &kind, subpool));
   if (kind != svn_node_file)
     {
       *modified_p = TRUE;
@@ -378,13 +378,13 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
 svn_error_t *
 svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
                      svn_boolean_t *prop_conflicted_p,
-                     svn_stringbuf_t *dir_path,
+                     const char *dir_path,
                      svn_wc_entry_t *entry,
                      apr_pool_t *pool)
 {
-  svn_stringbuf_t *path;
+  const char *path;
   enum svn_node_kind kind;
-  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_pool_t *subpool = svn_pool_create (pool);  /* ### Why? */
 
   *text_conflicted_p = FALSE;
   *prop_conflicted_p = FALSE;
@@ -397,27 +397,24 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
      conflict file still exists on disk.  */
   if (entry->conflict_old)
     {
-      path = svn_stringbuf_dup (dir_path, subpool);
-      svn_path_add_component (path, entry->conflict_old);
-      SVN_ERR (svn_io_check_path (path->data, &kind, subpool));
+      path = svn_path_join (dir_path, entry->conflict_old, subpool);
+      SVN_ERR (svn_io_check_path (path, &kind, subpool));
       if (kind == svn_node_file)
         *text_conflicted_p = TRUE;
     }
 
   if ((! *text_conflicted_p) && (entry->conflict_new))
     {
-      path = svn_stringbuf_dup (dir_path, subpool);
-      svn_path_add_component (path, entry->conflict_new);
-      SVN_ERR (svn_io_check_path (path->data, &kind, subpool));
+      path = svn_path_join (dir_path, entry->conflict_new, subpool);
+      SVN_ERR (svn_io_check_path (path, &kind, subpool));
       if (kind == svn_node_file)
         *text_conflicted_p = TRUE;
     }
 
   if ((! *text_conflicted_p) && (entry->conflict_wrk))
     {
-      path = svn_stringbuf_dup (dir_path, subpool);
-      svn_path_add_component (path, entry->conflict_wrk);
-      SVN_ERR (svn_io_check_path (path->data, &kind, subpool));
+      path = svn_path_join (dir_path, entry->conflict_wrk, subpool);
+      SVN_ERR (svn_io_check_path (path, &kind, subpool));
       if (kind == svn_node_file)
         *text_conflicted_p = TRUE;
     }
@@ -425,9 +422,8 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
   /* What about prop conflicts? */
   if (entry->prejfile)
     {
-      path = svn_stringbuf_dup (dir_path, subpool);
-      svn_path_add_component (path, entry->prejfile);
-      SVN_ERR (svn_io_check_path (path->data, &kind, subpool));
+      path = svn_path_join (dir_path, entry->prejfile, subpool);
+      SVN_ERR (svn_io_check_path (path, &kind, subpool));
       if (kind == svn_node_file)
         *prop_conflicted_p = TRUE;
     }
@@ -442,7 +438,7 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
 
 svn_error_t *
 svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
-                        const svn_stringbuf_t *path,
+                        const char *path,
                         apr_pool_t *pool)
 {
   const svn_string_t *value;
@@ -452,7 +448,7 @@ svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
      has the `svn:mime-type' property and its value does *not* start
      with `text/'. */
 
-  SVN_ERR (svn_wc_prop_get (&value, SVN_PROP_MIME_TYPE, path->data, subpool));
+  SVN_ERR (svn_wc_prop_get (&value, SVN_PROP_MIME_TYPE, path, subpool));
  
   if (value
       && (value->len > 5) 

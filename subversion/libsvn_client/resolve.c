@@ -35,7 +35,7 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client_resolve (svn_stringbuf_t *path,
+svn_client_resolve (const char *path,
                     svn_wc_notify_func_t notify_func,
                     void *notify_baton,
                     apr_pool_t *pool)

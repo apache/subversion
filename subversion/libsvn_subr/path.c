@@ -100,6 +100,27 @@ svn_path_canonicalize (svn_stringbuf_t *path)
     }
 }
 
+
+const char *
+svn_path_canonicalize_nts (const char *path, apr_pool_t *pool)
+{
+  /* At some point this could eliminate redundant components.
+     For now, it just makes sure there is no trailing slash. */
+
+  apr_size_t len = strlen (path);
+  apr_size_t orig_len = len;
+
+  /* Remove trailing separators from the end of the path. */
+  while ((len > 0) && (path[len - 1] == SVN_PATH_SEPARATOR))
+     len--;
+
+  if (len != orig_len)
+    return apr_pstrndup (pool, path, len);
+  else
+    return path;
+}
+
+
 
 char *svn_path_join (const char *base,
                      const char *component,
@@ -322,6 +343,26 @@ svn_path_remove_component (svn_stringbuf_t *path)
 
 
 char *
+svn_path_remove_component_nts (const char *path, apr_pool_t *pool)
+{
+  /* ### If svn_path_canonicalize_nts() didn't return const, we could
+     chop away at the return value directly here.  Not sure that
+     slight efficiency improvement is worth it, though. */
+
+  const char *newpath = svn_path_canonicalize_nts (path, pool);
+  int i;
+
+  for (i = (strlen(newpath) - 1); i >= 0; i--)
+    {
+      if (path[i] == SVN_PATH_SEPARATOR)
+        break;
+    }
+
+  return apr_pstrndup (pool, path, (i < 0) ? 0 : i);
+}
+
+
+char *
 svn_path_basename (const char *path, apr_pool_t *pool)
 {
   apr_size_t len = strlen (path);
@@ -388,6 +429,22 @@ svn_path_split (const svn_stringbuf_t *path,
 
 
 
+void
+svn_path_split_nts (const char *path,
+                    const char **dirpath,
+                    const char **base_name,
+                    apr_pool_t *pool)
+{
+  assert (dirpath != base_name);
+
+  if (dirpath)
+    *dirpath = svn_path_remove_component_nts (path, pool);
+
+  if (base_name)
+    *base_name = svn_path_basename (path, pool);
+}
+
+
 int
 svn_path_is_empty (const svn_stringbuf_t *path)
 {
@@ -399,6 +456,22 @@ svn_path_is_empty (const svn_stringbuf_t *path)
 
   if ((path->len == 2) && (path->data[0] == '.')
       && path->data[1] == SVN_PATH_SEPARATOR)
+    return 1;
+
+  return 0;
+}
+
+
+int
+svn_path_is_empty_nts (const char *path)
+{
+  if (path == NULL)
+    return 1;
+
+  if ((path[0] == '\0')
+      || ((path[0] == '.') && ((path[1] == '\0')
+                               || ((path[1] == SVN_PATH_SEPARATOR)
+                                   && (path[2] == '\0')))))
     return 1;
 
   return 0;
@@ -437,146 +510,171 @@ svn_path_compare_paths (const svn_stringbuf_t *path1,
 }
 
 
+int
+svn_path_compare_paths_nts (const char *path1,
+                            const char *path2)
+{
+  /* ### This code is inherited from the svn_stringbuf_t version of
+     the function and is inefficient on plain strings, because it does
+     strlen() on both strings up front.  Recode and/or abstract to
+     share with svn_path_compare_paths (if that other function stays
+     around). */
 
-svn_stringbuf_t *
-svn_path_get_longest_ancestor (const svn_stringbuf_t *path1,
-                               const svn_stringbuf_t *path2,
+  int path1_len = strlen (path1);
+  int path2_len = strlen (path2);
+
+  apr_size_t min_len = ((path1_len < path2_len) ? path1_len : path2_len);
+  apr_size_t i = 0;
+  
+  /* Skip past common prefix. */
+  while (i < min_len && path1[i] == path2[i])
+    ++i;
+
+  /* Are the paths exactly the same? */
+  if ((path1_len == path2_len) && (i >= min_len))
+    return 0;    
+
+  /* Children of paths are greater than their parents, but less than
+     greater siblings of their parents. */
+  if ((path1[i] == SVN_PATH_SEPARATOR) && (path2[i] == 0))
+    return 1;
+  if ((path2[i] == SVN_PATH_SEPARATOR) && (path1[i] == 0))
+    return -1;
+  if (path1[i] == SVN_PATH_SEPARATOR)
+    return -1;
+  if (path2[i] == SVN_PATH_SEPARATOR)
+    return 1;
+
+  /* Common prefix was skipped above, next character is compared to
+     determine order */
+  return path1[i] < path2[i] ? -1 : 1;
+}
+
+
+char *
+svn_path_get_longest_ancestor (const char *path1,
+                               const char *path2,
                                apr_pool_t *pool)
 {
-  svn_stringbuf_t *common_path;
+  const char *common_path;
+  int path1_len, path2_len;
   apr_size_t i = 0;
   apr_size_t last_dirsep = 0;
-
-  /* If either string is NULL or empty, we must go no further. */
   
-  if ((! path1) || (! path2)
-      || (svn_stringbuf_isempty (path1)) || (svn_stringbuf_isempty (path2)))
+  /* If either string is NULL or empty, we need go no further. */
+  if ((! path1) || (! path2) || (path1[0] == '\0') || (path2[0] == '\0'))
     return NULL;
   
-  while (path1->data[i] == path2->data[i])
+  path1_len = strlen (path1);
+  path2_len = strlen (path2);
+
+  while (path1[i] == path2[i])
     {
       /* Keep track of the last directory separator we hit. */
-      if (path1->data[i] == SVN_PATH_SEPARATOR)
+      if (path1[i] == SVN_PATH_SEPARATOR)
         last_dirsep = i;
 
       i++;
 
       /* If we get to the end of either path, break out. */
-      if ((i == path1->len) || (i == path2->len))
+      if ((i == path1_len) || (i == path2_len))
         break;
     }
 
   /* last_dirsep is now the offset of the last directory separator we
      crossed before reaching a non-matching byte.  i is the offset of
      that non-matching byte. */
-  if (((i == path1->len) && (path2->data[i] == SVN_PATH_SEPARATOR))
-      || ((i == path2->len) && (path1->data[i] == SVN_PATH_SEPARATOR))
-      || ((i == path1->len) && (i == path2->len)))
-    common_path = svn_stringbuf_ncreate (path1->data, i, pool);
+  if (((i == path1_len) && (path2[i] == SVN_PATH_SEPARATOR))
+      || ((i == path2_len) && (path1[i] == SVN_PATH_SEPARATOR))
+      || ((i == path1_len) && (i == path2_len)))
+    common_path = apr_pstrndup (pool, path1, i);
   else
-    common_path = svn_stringbuf_ncreate (path1->data, last_dirsep, pool);
+    common_path = apr_pstrndup (pool, path1, last_dirsep);
     
-  svn_path_canonicalize (common_path);
-
-  return common_path;
+  /* ### If svn_path_canonicalize_nts() didn't return const, we could
+     lose this pitiful double allocation.  But that's a bit tricky,
+     so leaving the pity for now. */
+  return apr_pstrdup (pool, svn_path_canonicalize_nts (common_path, pool));
 }
 
 
-/* Test if PATH2 is a child of PATH1.
-
-   If not, return NULL.
-   If so, return the "remainder" path.  (The substring which, when
-   appended to PATH1, yields PATH2.) */
-svn_stringbuf_t *
-svn_path_is_child (const svn_stringbuf_t *path1,
-                   const svn_stringbuf_t *path2,
+const char *
+svn_path_is_child (const char *path1,
+                   const char *path2,
                    apr_pool_t *pool)
 {
-  apr_size_t i = 0;
-      
+  apr_size_t i;
+
   /* If either path is empty, return NULL. */
-  if ((! path1) || (! path2)
-      || (svn_stringbuf_isempty (path1)) || (svn_stringbuf_isempty (path2)))
-    return NULL;
-  
-  /* If path2 isn't longer than path1, return NULL.  */
-  if (path2->len <= path1->len)
+  if ((! path1) || (! path2) || (path1[0] == '\0') || (path2[0] == '\0'))
     return NULL;
 
-  /* Run through path1, and if it ever differs from path2, return
-     NULL. */
-  while (i < path1->len)
+  /* Reach the end of at least one of the paths. */
+  for (i = 0; path1[i] && path2[i]; i++)
     {
-      if (path1->data[i] != path2->data[i])
+      if (path1[i] != path2[i])
         return NULL;
-
-      i++;
     }
 
-  /* If we get all the way to the end of path1 with the contents the
-     same as in path2, and either path1 ends in a directory separator,
-     or path2's next character is a directory separator followed by
-     more pathy stuff, then path2 is a child of path1. */
-  if (i == path1->len)
+  /* Now run through the possibilities. */
+
+  if (path1[i] && (! path2[i]))
     {
-      if (path1->data[i - 1] == SVN_PATH_SEPARATOR)
-        return svn_stringbuf_ncreate (path2->data + i,
-                                      path2->len - i,
-                                      pool);
-      else if (path2->data[i] == SVN_PATH_SEPARATOR)
-        return svn_stringbuf_ncreate (path2->data + i + 1,
-                                      path2->len - i - 1,
-                                      pool);
+      return NULL;
+    }
+  else if ((! path1[i]) && path2[i])
+    {
+      /* ### Since we "know" path2 is in canonical form, the second
+         and third clauses are technically unnecessary.  But I'd like
+         to inspect callers before getting rid of this... */
+      if ((path2[i] == SVN_PATH_SEPARATOR)
+          && (path2[i + 1] != SVN_PATH_SEPARATOR)
+          && (path2[i + 1] != '\0'))
+        return apr_pstrdup (pool, path2 + i + 1);
+      else
+        return NULL;
+    }
+  else  /* both ended */
+    {
+      return NULL;
     }
 
   return NULL;
 }
 
 
-/* helper for svn_path_decompose, because apr arrays are so darn ugly. */
-static void
-store_component (apr_array_header_t *array,
-                 const char *bytes,
-                 apr_size_t len,
-                 apr_pool_t *pool)
-{
-  svn_stringbuf_t **receiver;
-  
-  svn_stringbuf_t *component = svn_stringbuf_ncreate (bytes, len, pool);
-
-  receiver = (svn_stringbuf_t **) apr_array_push (array);
-  *receiver = component;
-}
-
-
 apr_array_header_t *
-svn_path_decompose (const svn_stringbuf_t *path,
+svn_path_decompose (const char *path,
                     apr_pool_t *pool)
 {
   apr_size_t i, oldi;
 
   apr_array_header_t *components = 
-    apr_array_make (pool, 1, sizeof(svn_stringbuf_t *));
+    apr_array_make (pool, 1, sizeof(const char *));
 
-  i = oldi = 0;
-
-  if (svn_path_is_empty (path))
+  if (svn_path_is_empty_nts (path))
     return components;
 
   /* If PATH is absolute, store the '/' as the first component. */
-  if (path->data[i] == SVN_PATH_SEPARATOR)
+  i = oldi = 0;
+  if (path[i] == SVN_PATH_SEPARATOR)
     {
       char dirsep = SVN_PATH_SEPARATOR;
-      store_component (components, &dirsep, sizeof (dirsep), pool);
+
+      *((const char **) apr_array_push (components))
+        = apr_pstrndup (pool, &dirsep, sizeof (dirsep));
+
       i++;
       oldi++;
     }
 
-  while (i <= path->len)
+  while (path[i])
     {
-      if ((path->data[i] == SVN_PATH_SEPARATOR) || (path->data[i] == '\0'))
+      if ((path[i] == SVN_PATH_SEPARATOR) || (path[i] == '\0'))
         {
-          store_component (components, path->data + oldi, i - oldi, pool);
+          *((const char **) apr_array_push (components))
+            = apr_pstrndup (pool, path + oldi, i - oldi);
+
           i++;
           oldi = i;  /* skipping past the dirsep */
           continue;
@@ -593,9 +691,13 @@ svn_path_decompose (const svn_stringbuf_t *path,
 
 
 svn_boolean_t 
-svn_path_is_url (const svn_string_t *path)
+svn_path_is_url (const char *path)
 {
   apr_size_t j;
+  int len = strlen (path);
+
+  /* ### Taking strlen() initially is inefficient.  It's a holdover
+     from svn_stringbuf_t days. */
 
   /* ### This function is reaaaaaaaaaaaaaally stupid right now.
      We're just going to look for:
@@ -608,18 +710,18 @@ svn_path_is_url (const svn_string_t *path)
   */
 
   /* Make sure we have enough characters to even compare. */
-  if (path->len < 5)
+  if (len < 5)
     return FALSE;
 
   /* Look for the sequence '://' */
-  for (j = 0; j < path->len - 3; j++)
+  for (j = 0; j < len - 3; j++)
     {
       /* We hit a '/' before finding the sequence. */
-      if (path->data[j] == '/')
+      if (path[j] == '/')
         return FALSE;
 
       /* Skip stuff up to the first ':'. */
-      if (path->data[j] != ':')
+      if (path[j] != ':')
         continue;
 
       /* Current character is a ':' now.  It better not be the first
@@ -629,9 +731,9 @@ svn_path_is_url (const svn_string_t *path)
 
       /* Expecting the next two chars to be '/', and somewhere
          thereafter another '/'. */
-      if ((path->data[j + 1] == '/')
-          && (path->data[j + 2] == '/')
-          && (strchr (path->data + j + 3, '/') != NULL))
+      if ((path[j + 1] == '/')
+          && (path[j + 2] == '/')
+          && (strchr (path + j + 3, '/') != NULL))
         return TRUE;
       
       return FALSE;
@@ -674,33 +776,33 @@ char_is_uri_safe (char c)
 
 
 svn_boolean_t 
-svn_path_is_uri_safe (const svn_string_t *path)
+svn_path_is_uri_safe (const char *path)
 {
   apr_size_t i;
 
-  for (i = 0; i < path->len; i++)
-    if (! char_is_uri_safe (path->data[i]))
+  for (i = 0; path[i]; i++)
+    if (! char_is_uri_safe (path[i]))
       return FALSE;
 
   return TRUE;
 }
   
 
-svn_stringbuf_t *
-svn_path_uri_encode (const svn_string_t *path, apr_pool_t *pool)
+const char *
+svn_path_uri_encode (const char *path, apr_pool_t *pool)
 {
   svn_stringbuf_t *retstr;
   apr_size_t i;
   int copied = 0;
   char c;
 
-  if ((! path) || (! path->data))
+  if (! path)
     return NULL;
 
   retstr = svn_stringbuf_create ("", pool);
-  for (i = 0; i < path->len; i++)
+  for (i = 0; path[i]; i++)
     {
-      c = path->data[i];
+      c = path[i];
       if (char_is_uri_safe (c))
         continue;
 
@@ -711,7 +813,7 @@ svn_path_uri_encode (const svn_string_t *path, apr_pool_t *pool)
       /* First things first, copy all the good stuff that we haven't
          yet copied into our output buffer. */
       if (i - copied)
-        svn_stringbuf_appendbytes (retstr, path->data + copied, 
+        svn_stringbuf_appendbytes (retstr, path + copied, 
                                    i - copied);
       
       /* Now, sprintf() in our escaped character, making sure our
@@ -726,32 +828,35 @@ svn_path_uri_encode (const svn_string_t *path, apr_pool_t *pool)
 
   /* Anything left to copy? */
   if (i - copied)
-    svn_stringbuf_appendbytes (retstr, path->data + copied, i - copied);
+    svn_stringbuf_appendbytes (retstr, path + copied, i - copied);
 
   /* Null-terminate this bad-boy. */
   svn_stringbuf_ensure (retstr, retstr->len + 1);
   retstr->data[retstr->len] = 0;
 
-  return retstr;
+  return retstr->data;
 }
 
 
-svn_stringbuf_t *
-svn_path_uri_decode (const svn_string_t *path, apr_pool_t *pool)
+const char *
+svn_path_uri_decode (const char *path, apr_pool_t *pool)
 {
   svn_stringbuf_t *retstr;
   apr_size_t i;
   int query_start = 0;
 
-  if ((! path) || (! path->data))
+  if (! path)
     return NULL;
 
   retstr = svn_stringbuf_create ("", pool);
-  svn_stringbuf_ensure (retstr, path->len + 1);
+
+  /* avoid repeated realloc */
+  svn_stringbuf_ensure (retstr, strlen (path) + 1); 
+
   retstr->len = 0;
-  for (i = 0; i < path->len; i++)
+  for (i = 0; path[i]; i++)
     {
-      char c = path->data[i];
+      char c = path[i];
 
       if (c == '?')
         {
@@ -767,8 +872,8 @@ svn_path_uri_decode (const svn_string_t *path, apr_pool_t *pool)
       else if (c == '%')
         {
           char digitz[3];
-          digitz[0] = path->data[++i];
-          digitz[1] = path->data[++i];
+          digitz[0] = path[++i];
+          digitz[1] = path[++i];
           digitz[2] = '\0';
           c = (char)(strtol (digitz, NULL, 16));
         }
@@ -779,7 +884,7 @@ svn_path_uri_decode (const svn_string_t *path, apr_pool_t *pool)
   /* Null-terminate this bad-boy. */
   retstr->data[retstr->len] = 0;
 
-  return retstr;
+  return retstr->data;
 }
 
 

@@ -38,8 +38,8 @@
 
 static svn_error_t *
 apply_delta (svn_stream_t *delta,
-             svn_stringbuf_t *dest,
-             svn_stringbuf_t *repos,
+             const char *dest,
+             const char *repos,
              svn_revnum_t revision,
              apr_pool_t *pool)
 {
@@ -50,7 +50,7 @@ apply_delta (svn_stream_t *delta,
 
   /* Get the editor and friends... */
   SVN_ERR (svn_wc_get_checkout_editor (dest, /* Assume checkout of root */
-                                       svn_stringbuf_create ("", pool),
+                                       "",
                                        revision,
                                        TRUE, /* Recurse */
                                        &editor,
@@ -79,8 +79,8 @@ main (int argc, char **argv)
   apr_status_t apr_err = 0;
   apr_file_t *src = NULL;     /* init to NULL very important! */
   svn_error_t *err = NULL;
-  svn_stringbuf_t *target = NULL;  /* init to NULL also important here,
-                                   because NULL implies delta's top dir */
+  const char *target = NULL;  /* init to NULL also important here,
+                                 because NULL implies delta's top dir */
   char *src_file = NULL;
 
   apr_initialize ();
@@ -106,12 +106,12 @@ main (int argc, char **argv)
     }
 
   if (argc == 3)
-    target = svn_stringbuf_create (argv[2], pool);
+    target = argv[2];
 
   err = apply_delta
     (svn_stream_from_aprfile (src, pool),
      target,
-     svn_stringbuf_create (":ssh:jrandom@svn.tigris.org/repos", pool),
+     ":ssh:jrandom@svn.tigris.org/repos",
      1,  /* kff todo: revision must be passed in, right? */
      pool);
   

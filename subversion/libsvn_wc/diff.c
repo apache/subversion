@@ -120,13 +120,13 @@ reverse_propchanges (apr_hash_t *baseprops,
  */
 struct edit_baton {
   /* ANCHOR/TARGET represent the base of the hierarchy to be compared. */
-  svn_stringbuf_t *anchor;
-  svn_stringbuf_t *target;
+  const char *anchor;
+  const char *target;
 
   /* The callbacks and callback argument that implement the file comparison
      functions */
-  const svn_diff_callbacks_t *diff_callbacks;
-  void *diff_cmd_baton;
+  const svn_diff_callbacks_t *callbacks;
+  void *callback_baton;
 
   /* Flags whether to diff recursively or not. If set the diff is
      recursive. */
@@ -143,7 +143,7 @@ struct dir_baton {
 
   /* The "correct" path of the directory, but it may not exist in the
      working copy. */
-  svn_stringbuf_t *path;
+  const char *path;
 
  /* Identifies those directory elements that get compared while running the
     crawler. These elements should not be compared again when recursively
@@ -174,8 +174,8 @@ struct file_baton {
   /* PATH is the "correct" path of the file, but it may not exist in the
      working copy. WC_PATH is the ancestor path in the working copy that
      does exist. */
-  svn_stringbuf_t *path;
-  svn_stringbuf_t *wc_path;
+  const char *path;
+  const char *wc_path;
 
  /* When constructing the requested repository version of the file,
     ORIGINAL_FILE is version of the file in the working copy. TEMP_FILE is
@@ -204,25 +204,25 @@ struct file_baton {
 
 
 /* Create a new edit baton. TARGET/ANCHOR are working copy paths that
- * describe the root of the comparison. DIFF_CALLBACKS/DIFF_CMD_BATON
+ * describe the root of the comparison. CALLBACKS/CALLBACK_BATON
  * define the callbacks to compare files. RECURSE defines whether to
  * descend into subdirectories.
  */
 static struct edit_baton *
-make_editor_baton (svn_stringbuf_t *anchor,
-                   svn_stringbuf_t *target,
-                   const svn_diff_callbacks_t *diff_callbacks,
-                   void *diff_cmd_baton,
+make_editor_baton (const char *anchor,
+                   const char *target,
+                   const svn_diff_callbacks_t *callbacks,
+                   void *callback_baton,
                    svn_boolean_t recurse,
                    apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   struct edit_baton *eb = apr_palloc (subpool, sizeof (*eb));
 
-  eb->anchor = anchor;
-  eb->target = target;
-  eb->diff_callbacks = diff_callbacks;
-  eb->diff_cmd_baton = diff_cmd_baton;
+  eb->anchor = anchor;  /* ### Why is this not copied? */
+  eb->target = target;  /* ### Why is this not copied? */
+  eb->callbacks = callbacks;
+  eb->callback_baton = callback_baton;
   eb->recurse = recurse;
   eb->pool = subpool;
 
@@ -238,7 +238,7 @@ make_editor_baton (svn_stringbuf_t *anchor,
  * overall crawler editor baton.
  */
 static struct dir_baton *
-make_dir_baton (const svn_stringbuf_t *name,
+make_dir_baton (const char *name,
                 struct dir_baton *parent_baton,
                 struct edit_baton *edit_baton,
                 svn_boolean_t added,
@@ -261,16 +261,20 @@ make_dir_baton (const svn_stringbuf_t *name,
       /* The path is allocated in the parent's pool since it will be put
          into the parent's list of already diff'd entries, and must
          continue to exist after we have finished with this directory. */
-      dir_baton->path = svn_stringbuf_dup (parent_baton->path,
-                                           parent_baton->pool);
+      if (name)
+        dir_baton->path = svn_path_join (parent_baton->path, name,
+                                         parent_baton->pool);
+      else
+        dir_baton->path = apr_pstrdup (parent_baton->pool, parent_baton->path);
     }
   else
     {
-      dir_baton->path = svn_stringbuf_dup (edit_baton->anchor, dir_baton->pool);
+      if (name)
+        dir_baton->path = svn_path_join (edit_baton->anchor, name,
+                                         dir_baton->pool);
+      else
+        dir_baton->path = apr_pstrdup (dir_baton->pool, edit_baton->anchor);
     }
-
-  if (name)
-    svn_path_add_component (dir_baton->path, name);
 
   return dir_baton;
 }
@@ -281,7 +285,7 @@ make_dir_baton (const svn_stringbuf_t *name,
  * may not exist in the working copy.
  */
 static struct file_baton *
-make_file_baton (const svn_stringbuf_t *name,
+make_file_baton (const char *name,
                  svn_boolean_t added,
                  struct dir_baton *parent_baton)
 {
@@ -298,8 +302,8 @@ make_file_baton (const svn_stringbuf_t *name,
   /* The path is allocated in the directory's pool since it will be put
      into the directory's list of already diff'd entries, and must continue
      to exist after we have finished with this file. */
-  file_baton->path = svn_stringbuf_dup (parent_baton->path, parent_baton->pool);
-  svn_path_add_component (file_baton->path, name);
+  file_baton->path = svn_path_join (parent_baton->path, name,
+                                    parent_baton->pool);
 
   /* If the parent directory is added rather than replaced it does not
      exist in the working copy. Determine a working copy path that does
@@ -314,9 +318,15 @@ make_file_baton (const svn_stringbuf_t *name,
       while (wc_dir_baton->added)
         wc_dir_baton = wc_dir_baton->dir_baton;
 
-      file_baton->wc_path = svn_stringbuf_dup (wc_dir_baton->path,
-                                               file_baton->pool);
-      svn_path_add_component (file_baton->wc_path, name);
+      /* ### I do not understand this code.  We ascend to some
+         directory that's not being added, and then set fb->wc_path to
+         that directory plus this file's entry name!  How can that be
+         right?  We're appending this file's name onto some random
+         directory above it, possibly many levels above it.  Someone
+         hit me over the head with the Clue Stick, please.  -kff */
+
+      file_baton->wc_path = svn_path_join (wc_dir_baton->path, name,
+                                           file_baton->pool);
     }
   else
     {
@@ -339,11 +349,11 @@ make_file_baton (const svn_stringbuf_t *name,
  */
 static svn_error_t *
 file_diff (struct dir_baton *dir_baton,
-           svn_stringbuf_t *path,
+           const char *path,
            svn_wc_entry_t *entry,
            svn_boolean_t added)
 {
-  svn_stringbuf_t *pristine_copy, *empty_file;
+  const char *pristine_copy, *empty_file;
   svn_boolean_t modified;
   enum svn_wc_schedule_t schedule = entry->schedule;
 
@@ -364,11 +374,11 @@ file_diff (struct dir_baton *dir_baton,
       pristine_copy = svn_wc__text_base_path (path, FALSE, dir_baton->pool);
       empty_file = svn_wc__empty_file_path (path, dir_baton->pool);
 
-      SVN_ERR (dir_baton->edit_baton->diff_callbacks->file_deleted
-               (path->data, 
-                pristine_copy->data, 
-                empty_file->data,
-                dir_baton->edit_baton->diff_cmd_baton));
+      SVN_ERR (dir_baton->edit_baton->callbacks->file_deleted
+               (path, 
+                pristine_copy, 
+                empty_file,
+                dir_baton->edit_baton->callback_baton));
 
       /* Replace will fallthrough! */
       if (schedule == svn_wc_schedule_delete)
@@ -377,11 +387,11 @@ file_diff (struct dir_baton *dir_baton,
     case svn_wc_schedule_add:
       empty_file = svn_wc__empty_file_path (path, dir_baton->pool);
 
-      SVN_ERR (dir_baton->edit_baton->diff_callbacks->file_added
-               (path->data,
-                empty_file->data,
-                path->data,
-                dir_baton->edit_baton->diff_cmd_baton));
+      SVN_ERR (dir_baton->edit_baton->callbacks->file_added
+               (path,
+                empty_file,
+                path,
+                dir_baton->edit_baton->callback_baton));
 
       SVN_ERR (svn_wc_props_modified_p (&modified, path, dir_baton->pool));
       if (modified)
@@ -389,13 +399,13 @@ file_diff (struct dir_baton *dir_baton,
           apr_array_header_t *propchanges;
           apr_hash_t *baseprops;
 
-          SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops, path->data,
+          SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops, path,
                                           dir_baton->pool));
 
-          SVN_ERR (dir_baton->edit_baton->diff_callbacks->props_changed
-                   (path->data,
+          SVN_ERR (dir_baton->edit_baton->callbacks->props_changed
+                   (path,
                     propchanges, baseprops,
-                    dir_baton->edit_baton->diff_cmd_baton));
+                    dir_baton->edit_baton->callback_baton));
         }
       break;
 
@@ -403,7 +413,7 @@ file_diff (struct dir_baton *dir_baton,
       SVN_ERR (svn_wc_text_modified_p (&modified, path, dir_baton->pool));
       if (modified)
         {
-          svn_stringbuf_t *translated;
+          const char *translated;
           svn_error_t *err;
 
           pristine_copy = svn_wc__text_base_path (path, FALSE,
@@ -417,16 +427,16 @@ file_diff (struct dir_baton *dir_baton,
           SVN_ERR (svn_wc_translated_file (&translated, path,
                                            dir_baton->pool));
           
-          err = dir_baton->edit_baton->diff_callbacks->file_changed
-            (path->data,
-             pristine_copy->data, 
-             translated->data,
+          err = dir_baton->edit_baton->callbacks->file_changed
+            (path,
+             pristine_copy, 
+             translated,
              entry->revision,
              entry->revision,
-             dir_baton->edit_baton->diff_cmd_baton);
+             dir_baton->edit_baton->callback_baton);
           
           if (translated != path)
-            SVN_ERR (svn_io_remove_file (translated->data, dir_baton->pool));
+            SVN_ERR (svn_io_remove_file (translated, dir_baton->pool));
 
           if (err)
             return err;
@@ -438,13 +448,13 @@ file_diff (struct dir_baton *dir_baton,
           apr_array_header_t *propchanges;
           apr_hash_t *baseprops;
 
-          SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops, path->data,
+          SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops, path,
                                           dir_baton->pool));
 
-          SVN_ERR (dir_baton->edit_baton->diff_callbacks->props_changed
-                   (path->data,
+          SVN_ERR (dir_baton->edit_baton->callbacks->props_changed
+                   (path,
                     propchanges, baseprops,
-                    dir_baton->edit_baton->diff_cmd_baton));
+                    dir_baton->edit_baton->callback_baton));
         }
     }
 
@@ -480,8 +490,8 @@ directory_elements_diff (struct dir_baton *dir_baton,
      skipped. */
   in_anchor_not_target =
     (dir_baton->edit_baton->target
-     && !svn_path_compare_paths (dir_baton->path,
-                                 dir_baton->edit_baton->anchor));
+     && (! svn_path_compare_paths_nts (dir_baton->path,
+                                       dir_baton->edit_baton->anchor)));
 
   /* Check for property mods on this directory. */
   if (!in_anchor_not_target)
@@ -496,13 +506,13 @@ directory_elements_diff (struct dir_baton *dir_baton,
           apr_hash_t *baseprops;
 
           SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops,
-                                          dir_baton->path->data,
+                                          dir_baton->path,
                                           dir_baton->pool));
               
-          SVN_ERR (dir_baton->edit_baton->diff_callbacks->props_changed
-                   (dir_baton->path->data,
+          SVN_ERR (dir_baton->edit_baton->callbacks->props_changed
+                   (dir_baton->path,
                     propchanges, baseprops,
-                    dir_baton->edit_baton->diff_cmd_baton));
+                    dir_baton->edit_baton->callback_baton));
         }
     }
 
@@ -515,7 +525,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
       const void *key;
       void *val;
       svn_wc_entry_t *entry;
-      svn_stringbuf_t *path;
+      const char *path;
       struct dir_baton *subdir_baton;
       const char *name;
 
@@ -532,14 +542,13 @@ directory_elements_diff (struct dir_baton *dir_baton,
          on one file in a directory should not diff other files in that
          directory. */
       if (in_anchor_not_target
-          && strcmp (dir_baton->edit_baton->target->data, name))
+          && strcmp (dir_baton->edit_baton->target, name))
         continue;
 
-      path = svn_stringbuf_dup (dir_baton->path, dir_baton->pool);
-      svn_path_add_component_nts (path, name);
+      path = svn_path_join (dir_baton->path, name, dir_baton->pool);
 
       /* Skip entry if it is in the list of entries already diff'd. */
-      if (apr_hash_get (dir_baton->compared, path->data, path->len))
+      if (apr_hash_get (dir_baton->compared, path, APR_HASH_KEY_STRING))
         continue;
 
       switch (entry->kind)
@@ -563,9 +572,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
              if recursive */
           if (in_anchor_not_target || dir_baton->edit_baton->recurse)
             {
-              svn_stringbuf_t* dir_name
-                = svn_stringbuf_create (name, dir_baton->pool);
-              subdir_baton = make_dir_baton (dir_name, dir_baton,
+              subdir_baton = make_dir_baton (name, dir_baton,
                                              dir_baton->edit_baton,
                                              FALSE,
                                              dir_baton->pool);
@@ -612,17 +619,17 @@ open_root (void *edit_baton,
 /* An svn_delta_edit_fns_t editor function.
  */
 static svn_error_t *
-delete_entry (svn_stringbuf_t *name,
+delete_entry (svn_stringbuf_t *name_s,
               svn_revnum_t base_revision,
               void *parent_baton)
 {
+  const char *name = name_s->data;  /* ### shim for old editor interface */
   struct dir_baton *pb = parent_baton;
   apr_pool_t *pool = svn_pool_create (pb->pool);
-  svn_stringbuf_t *path = svn_stringbuf_dup (pb->path, pool);
   svn_wc_entry_t *entry;
   struct dir_baton *b;
+  const char *path = svn_path_join (pb->path, name, pool);
 
-  svn_path_add_component (path, name);
   SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
   switch (entry->kind)
     {
@@ -630,11 +637,11 @@ delete_entry (svn_stringbuf_t *name,
       /* A delete is required to change working-copy into requested
          revision, so diff should show this as and add. Thus compare the
          empty file against the current working copy. */
-      SVN_ERR (pb->edit_baton->diff_callbacks->file_added
-               (path->data,
-                (svn_wc__empty_file_path (path, pool))->data,
-                path->data,
-                pb->edit_baton->diff_cmd_baton));
+      SVN_ERR (pb->edit_baton->callbacks->file_added
+               (path,
+                svn_wc__empty_file_path (path, pool),
+                path,
+                pb->edit_baton->callback_baton));
       break;
 
     case svn_node_dir:
@@ -657,12 +664,13 @@ delete_entry (svn_stringbuf_t *name,
 /* An svn_delta_edit_fns_t editor function.
  */
 static svn_error_t *
-add_directory (svn_stringbuf_t *name,
+add_directory (svn_stringbuf_t *name_s,
                void *parent_baton,
-               svn_stringbuf_t *copyfrom_path,
+               svn_stringbuf_t *copyfrom_path_s,
                svn_revnum_t copyfrom_revision,
                void **child_baton)
 {
+  const char *name = name_s->data;  /* ### shim for old editor interface */
   struct dir_baton *pb = parent_baton;
   struct dir_baton *b;
 
@@ -677,11 +685,12 @@ add_directory (svn_stringbuf_t *name,
 /* An svn_delta_edit_fns_t editor function.
  */
 static svn_error_t *
-open_directory (svn_stringbuf_t *name,
+open_directory (svn_stringbuf_t *name_s,
                 void *parent_baton,
                 svn_revnum_t base_revision,
                 void **child_baton)
 {
+  const char *name = name_s->data;  /* ### shim for old editor interface */
   struct dir_baton *pb = parent_baton;
   struct dir_baton *b;
 
@@ -709,18 +718,18 @@ close_directory (void *dir_baton)
   /* Mark this directory as compared in the parent directory's baton. */
   if (b->dir_baton)
     {
-      apr_hash_set (b->dir_baton->compared, b->path->data, b->path->len,
+      apr_hash_set (b->dir_baton->compared, b->path, APR_HASH_KEY_STRING,
                     (void*)TRUE);
     }
 
   if (b->propchanges->nelts > 0)
     {
       reverse_propchanges (b->baseprops, b->propchanges, b->pool);
-      SVN_ERR (b->edit_baton->diff_callbacks->props_changed
-               (b->path->data,
+      SVN_ERR (b->edit_baton->callbacks->props_changed
+               (b->path,
                 b->propchanges,
                 b->baseprops,
-                b->edit_baton->diff_cmd_baton));
+                b->edit_baton->callback_baton));
     }
 
   svn_pool_destroy (b->pool);
@@ -731,12 +740,13 @@ close_directory (void *dir_baton)
 /* An svn_delta_edit_fns_t editor function.
  */
 static svn_error_t *
-add_file (svn_stringbuf_t *name,
+add_file (svn_stringbuf_t *name_s,
           void *parent_baton,
-          svn_stringbuf_t *copyfrom_path,
+          svn_stringbuf_t *copyfrom_path_s,
           svn_revnum_t copyfrom_revision,
           void **file_baton)
 {
+  const char *name = name_s->data;  /* ### shim for old editor interface */
   struct dir_baton *pb = parent_baton;
   struct file_baton *b;
 
@@ -751,11 +761,13 @@ add_file (svn_stringbuf_t *name,
 /* An svn_delta_edit_fns_t editor function.
  */
 static svn_error_t *
-open_file (svn_stringbuf_t *name,
+open_file (svn_stringbuf_t *name_s,
            void *parent_baton,
            svn_revnum_t base_revision,
            void **file_baton)
 {
+  const char *name = name_s->data;  /* ### shim for old editor interface */
+
   struct dir_baton *pb = parent_baton;
   struct file_baton *b;
 
@@ -779,10 +791,10 @@ temp_file_cleanup_handler (void *arg)
   struct file_baton *b = arg;
 
   /* The path to the temporary copy of the pristine repository version. */
-  svn_stringbuf_t *temp_file_path
+  const char *temp_file_path
     = svn_wc__text_base_path (b->wc_path, TRUE, b->pool);
 
-  return apr_file_remove (temp_file_path->data, b->pool);
+  return apr_file_remove (temp_file_path, b->pool);
 }
 
 /* This removes the temp_file_cleanup_handler in the child process before
@@ -882,7 +894,7 @@ close_file (void *file_baton)
   svn_wc_entry_t *entry;
 
   /* The path to the temporary copy of the pristine repository version. */
-  svn_stringbuf_t *temp_file_path
+  const char *temp_file_path
     = svn_wc__text_base_path (b->wc_path, TRUE, b->pool);
   SVN_ERR (svn_wc_entry (&entry, b->wc_path, FALSE, b->pool));
 
@@ -891,31 +903,31 @@ close_file (void *file_baton)
       /* Add is required to change working-copy into requested revision, so
          diff should show this as and delete. Thus compare the current
          working copy against the empty file. */
-      SVN_ERR (b->edit_baton->diff_callbacks->file_deleted
-               (b->path->data,
-                temp_file_path->data,
-                (svn_wc__empty_file_path (b->wc_path, b->pool))->data,
-                b->edit_baton->diff_cmd_baton));
+      SVN_ERR (b->edit_baton->callbacks->file_deleted
+               (b->path,
+                temp_file_path,
+                svn_wc__empty_file_path (b->wc_path, b->pool),
+                b->edit_baton->callback_baton));
     }
   else
     {
       /* Be careful with errors to ensure that the temporary translated
          file is deleted. */
       svn_error_t *err1, *err2 = SVN_NO_ERROR;
-      svn_stringbuf_t *translated;
+      const char *translated;
       
       SVN_ERR (svn_wc_translated_file (&translated, b->path, b->pool));
 
-      err1 = b->edit_baton->diff_callbacks->file_changed
-        (b->path->data,
-         temp_file_path->data,
-         translated->data,
+      err1 = b->edit_baton->callbacks->file_changed
+        (b->path,
+         temp_file_path,
+         translated,
          0,       /* non-existent revision */
          entry ? entry->revision : SVN_INVALID_REVNUM,
-         b->edit_baton->diff_cmd_baton);
+         b->edit_baton->callback_baton);
       
       if (translated != b->path)
-        err2 = svn_io_remove_file (translated->data, b->pool);
+        err2 = svn_io_remove_file (translated, b->pool);
 
       if (err1 || err2)
         return err1 ? err1 : err2;
@@ -923,17 +935,17 @@ close_file (void *file_baton)
       if (b->propchanges->nelts > 0)
         {
           reverse_propchanges (b->baseprops, b->propchanges, b->pool);
-          SVN_ERR (b->edit_baton->diff_callbacks->props_changed
-                   (b->path->data,
+          SVN_ERR (b->edit_baton->callbacks->props_changed
+                   (b->path,
                     b->propchanges,
                     b->baseprops,
-                    b->edit_baton->diff_cmd_baton));
+                    b->edit_baton->callback_baton));
         }
     }
 
   /* Add this file to the parent directory's list of elements that have
      been compared. */
-  apr_hash_set (b->dir_baton->compared, b->path->data, b->path->len,
+  apr_hash_set (b->dir_baton->compared, b->path, APR_HASH_KEY_STRING,
                 (void*)TRUE);
 
   svn_pool_destroy (b->pool);
@@ -964,7 +976,7 @@ change_file_prop (void *file_baton,
       /* also notice we're ignoring error here;  there's a chance that
          this path might not exist in the working copy, in which case
          the baseprops remains an empty hash. */
-      svn_wc_prop_list (&(b->baseprops), b->path->data, b->pool);
+      svn_wc_prop_list (&(b->baseprops), b->path, b->pool);
       b->fetched_baseprops = TRUE;
     }
 
@@ -996,7 +1008,7 @@ change_dir_prop (void *dir_baton,
       /* also notice we're ignoring error here;  there's a chance that
          this path might not exist in the working copy, in which case
          the baseprops remains an empty hash. */
-      svn_wc_prop_list (&(db->baseprops), db->path->data, db->pool);
+      svn_wc_prop_list (&(db->baseprops), db->path, db->pool);
       db->fetched_baseprops = TRUE;
     }
 
@@ -1035,10 +1047,10 @@ close_edit (void *edit_baton)
 
 /* Create a diff editor and baton. */
 svn_error_t *
-svn_wc_get_diff_editor (svn_stringbuf_t *anchor,
-                        svn_stringbuf_t *target,
-                        const svn_diff_callbacks_t *diff_callbacks,
-                        void *diff_cmd_baton,
+svn_wc_get_diff_editor (const char *anchor,
+                        const char *target,
+                        const svn_diff_callbacks_t *callbacks,
+                        void *callback_baton,
                         svn_boolean_t recurse,
                         const svn_delta_edit_fns_t **editor,
                         void **edit_baton,
@@ -1047,7 +1059,7 @@ svn_wc_get_diff_editor (svn_stringbuf_t *anchor,
   struct edit_baton *eb;
   svn_delta_edit_fns_t *tree_editor;
 
-  eb = make_editor_baton (anchor, target, diff_callbacks, diff_cmd_baton,
+  eb = make_editor_baton (anchor, target, callbacks, callback_baton,
                           recurse, pool);
   tree_editor = svn_delta_old_default_editor (eb->pool);
 
@@ -1073,24 +1085,25 @@ svn_wc_get_diff_editor (svn_stringbuf_t *anchor,
 
 /* Compare working copy against the text-base. */
 svn_error_t *
-svn_wc_diff (svn_stringbuf_t *anchor,
-             svn_stringbuf_t *target,
-             const svn_diff_callbacks_t *diff_callbacks,
-             void *diff_cmd_baton,
+svn_wc_diff (const char *anchor,
+             const char *target,
+             const svn_diff_callbacks_t *callbacks,
+             void *callback_baton,
              svn_boolean_t recurse,
              apr_pool_t *pool)
 {
   struct edit_baton *eb;
   struct dir_baton *b;
   svn_wc_entry_t *entry;
-  svn_stringbuf_t *target_path;
+  const char *target_path;
 
-  eb = make_editor_baton (anchor, target, diff_callbacks, diff_cmd_baton,
+  eb = make_editor_baton (anchor, target, callbacks, callback_baton,
                           recurse, pool);
 
-  target_path = svn_stringbuf_dup (anchor, eb->pool);
   if (target)
-    svn_path_add_component (target_path, target);
+    target_path = svn_path_join (anchor, target, eb->pool);
+  else
+    target_path = apr_pstrdup (eb->pool, anchor);
 
   SVN_ERR (svn_wc_entry (&entry, target_path, FALSE, eb->pool));
 

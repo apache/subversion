@@ -98,7 +98,7 @@ svn_error_t *svn_wc__set_up_new_dir (svn_stringbuf_t *path,
 /*** General utilities that may get moved upstairs at some point. */
 
 /* Ensure that DIR exists. */
-svn_error_t *svn_wc__ensure_directory (svn_stringbuf_t *path, apr_pool_t *pool);
+svn_error_t *svn_wc__ensure_directory (const char *path, apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

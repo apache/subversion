@@ -22,53 +22,55 @@
 #include "svn_pools.h"
 
 svn_error_t *
-svn_ra_local__split_URL (const svn_string_t **repos_path,
-                         const svn_string_t **fs_path,
-                         svn_stringbuf_t *URL,
+svn_ra_local__split_URL (const char **repos_path,
+                         const char **fs_path,
+                         const char *URL,
                          apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_stringbuf_t *url;
-  char *hostname, *url_data, *path;
+  const char *candidate_url;
+  const char *hostname, *path;
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_repos_t *repos;
 
   /* Verify that the URL is well-formed (loosely) */
-  url_data = URL->data;
 
   /* First, check for the "file://" prefix. */
-  if (memcmp ("file://", url_data, 7))
-    return svn_error_create 
+  if (strncmp (URL, "file://", 7) != 0)
+    return svn_error_createf 
       (SVN_ERR_RA_ILLEGAL_URL, 0, NULL, pool, 
-       ("svn_ra_local__split_URL: URL does not contain `file://' prefix"));
+       "svn_ra_local__split_URL: URL does not contain `file://' prefix\n"
+       "   (%s)", URL);
   
   /* Then, skip what's between the "file://" prefix and the next
      occurance of '/' -- this is the hostname, and we are considering
      everything from that '/' until the end of the URL to be the
      absolute path portion of the URL. */
-  hostname = url_data + 7;
+  hostname = URL + 7;
   path = strchr (hostname, '/');
   if (! path)
-    return svn_error_create 
+    return svn_error_createf 
       (SVN_ERR_RA_ILLEGAL_URL, 0, NULL, pool, 
-       ("svn_ra_local__split_URL: URL contains only a hostname, no path"));
+       "svn_ra_local__split_URL: URL contains only a hostname, no path\n"
+       "   (%s)", URL);
 
   /* Currently, the only hostnames we are allowing are the empty
      string and 'localhost' */
-  if ((hostname != path) && (memcmp (hostname, "localhost", 9)))
-    return svn_error_create 
+  if ((hostname != path) && (strncmp (hostname, "localhost", 9) != 0))
+    return svn_error_createf
       (SVN_ERR_RA_ILLEGAL_URL, 0, NULL, pool, 
-       ("svn_ra_local__split_URL: URL contains unsupported hostname"));
+       "svn_ra_local__split_URL: URL contains unsupported hostname\n"
+       "   (%s)", URL);
 
   /* Duplicate the URL, starting at the top of the path */
-  url = svn_stringbuf_create ((const char *)path, subpool);
+  candidate_url = apr_pstrdup (subpool, path);
 
   /* Loop, trying to open a repository at URL.  If this fails, remove
      the last component from the URL, then try again. */
   while (1)
     {
       /* Attempt to open a repository at URL. */
-      err = svn_repos_open (&repos, url->data, subpool);
+      err = svn_repos_open (&repos, candidate_url, subpool);
 
       /* Hey, cool, we were successfully.  Stop loopin'. */
       if (err == SVN_NO_ERROR)
@@ -77,22 +79,23 @@ svn_ra_local__split_URL (const svn_string_t **repos_path,
       /* If we're down to an empty path here, and we still haven't
          found the repository, we're just out of luck.  Time to bail
          and face the music. */
-      if (svn_path_is_empty (url))
+      if (svn_path_is_empty_nts (candidate_url))
         break;
 
       /* We didn't successfully open the repository, and we haven't
          hacked this path down to a bare nub yet, so we'll chop off
          the last component of this path. */
-      svn_path_remove_component (url);
+      candidate_url = svn_path_remove_component_nts (candidate_url, subpool);
     }
 
   /* If we are still sitting in an error-ful state, we must not have
      found the repository.  We give up. */
   if (err)
-    return svn_error_create 
+    return svn_error_createf 
       (SVN_ERR_RA_REPOSITORY_NOT_FOUND, 0, NULL, pool, 
-       ("svn_ra_local__split_URL: Unable to find valid repository"));
-  
+       "svn_ra_local__split_URL: Unable to find valid repository\n"
+       "   (%s)", URL);
+
   /* We apparently found a repository.  Let's close it since we aren't
      really going to do anything with it. */
   SVN_ERR (svn_repos_close (repos));
@@ -100,8 +103,8 @@ svn_ra_local__split_URL (const svn_string_t **repos_path,
   /* What remains of URL after being hacked at in the previous step is
      REPOS_PATH.  FS_PATH is what we've hacked off in the process.  We
      need to make sure these are allocated in the -original- pool. */
-  *repos_path = svn_string_create_from_buf (url, pool);
-  *fs_path = svn_string_create (path + url->len, pool);
+  *repos_path = apr_pstrdup (pool, candidate_url);
+  *fs_path = apr_pstrdup (pool, path + strlen (candidate_url));
 
   /* Destroy our temporary memory pool. */
   svn_pool_destroy (subpool);

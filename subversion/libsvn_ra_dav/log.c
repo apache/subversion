@@ -311,7 +311,7 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
     
   for (i = 0; i < paths->nelts; i++)
     {
-      const char *this_path = (((svn_stringbuf_t **)paths->elts)[i])->data;
+      const char *this_path = ((const char **)paths->elts)[i];
       /* ### todo: want to xml-escape the path, but can't use
          apr_xml_quote_string() here because we don't use apr_util
          yet.  Should use svn_xml_escape_blah() instead? */

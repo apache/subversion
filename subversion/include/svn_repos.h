@@ -282,10 +282,10 @@ svn_repos_dated_revision (svn_revnum_t *revision,
  */
 svn_error_t *
 svn_repos_get_committed_info (svn_revnum_t *committed_rev,
-                              svn_string_t **committed_date,
-                              svn_string_t **last_author,
+                              const char **committed_date,
+                              const char **last_author,
                               svn_fs_root_t *root,
-                              const svn_string_t *path,
+                              const char *path,
                               apr_pool_t *pool);
 
 /* ### other queries we can do someday --
@@ -312,8 +312,8 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
  * If PATHS is non-null and has one or more elements, then only show
  * revisions in which at least one of PATHS was changed (i.e., if
  * file, text or props changed; if dir, props changed or an entry was
- * added or deleted).  Each path is an (svn_stringbuf_t *)
- * representing an absolute path in the repository.
+ * added or deleted).  Each path is an (const char *) representing an
+ * absolute path in the repository.
  *
  * ### todo: need to consider whether the above directory behavior is
  * most useful, or if we should actually treat _any_ node change in a
@@ -384,7 +384,7 @@ svn_error_t *svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
                                                 svn_repos_t *repos,
                                                 svn_revnum_t rev,
                                                 const char *author,
-                                                svn_string_t *log_msg,
+                                                const char *log_msg,
                                                 apr_pool_t *pool);
 
 

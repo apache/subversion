@@ -32,7 +32,7 @@
 
 struct edit_baton
 {
-  svn_stringbuf_t *path;
+  const char *path;
   apr_pool_t *pool;
   svn_revnum_t target_revision;
   svn_boolean_t is_checkout;
@@ -45,7 +45,7 @@ struct dir_baton
 {
   struct edit_baton *edit_baton;
   struct dir_baton *parent_dir_baton;
-  svn_stringbuf_t *path;
+  const char *path;
   svn_boolean_t prop_changed;
 };
 
@@ -54,7 +54,7 @@ struct file_baton
 {
   struct edit_baton *edit_baton;
   struct dir_baton *parent_dir_baton;
-  svn_stringbuf_t *path;
+  const char *path;
   svn_boolean_t added;
   svn_boolean_t text_changed;
   svn_boolean_t prop_changed;
@@ -70,7 +70,7 @@ make_dir_baton (const char *path,
   struct edit_baton *eb = edit_baton;
   struct dir_baton *pb = parent_dir_baton;
   struct dir_baton *new_db = apr_pcalloc (pool, sizeof (*new_db));
-  svn_stringbuf_t *full_path = svn_stringbuf_dup (eb->path, pool);
+  const char *full_path;
 
   /* A path relative to nothing?  I don't think so. */
   if (path && (! pb))
@@ -78,7 +78,9 @@ make_dir_baton (const char *path,
 
   /* Construct the full path of this node. */
   if (pb)
-    svn_path_add_component_nts (full_path, path);
+    full_path = svn_path_join (eb->path, path, pool);
+  else
+    full_path = apr_pstrdup (pool, eb->path);
 
   new_db->edit_baton = eb;
   new_db->parent_dir_baton = pb;
@@ -98,10 +100,7 @@ make_file_baton (const char *path,
   struct dir_baton *pb = parent_dir_baton;
   struct edit_baton *eb = pb->edit_baton;
   struct file_baton *new_fb = apr_pcalloc (pool, sizeof (*new_fb));
-  svn_stringbuf_t *full_path = svn_stringbuf_dup (eb->path, pool);
-
-  /* Construct the full path of this node. */
-  svn_path_add_component_nts (full_path, path);
+  const char *full_path = svn_path_join (eb->path, path, pool);
 
   new_fb->edit_baton = eb;
   new_fb->parent_dir_baton = pb;
@@ -143,7 +142,7 @@ delete_entry (const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   eb->received_some_change = TRUE;
-  printf ("D  %s\n", svn_path_join (eb->path->data, path, pool));
+  printf ("D  %s\n", svn_path_join (eb->path, path, pool));
   return SVN_NO_ERROR;
 }
 
@@ -161,7 +160,7 @@ add_directory (const char *path,
   struct dir_baton *new_db = make_dir_baton (path, eb, pb, pool);
 
   eb->received_some_change = TRUE;
-  printf ("A  %s\n", new_db->path->data);
+  printf ("A  %s\n", new_db->path);
   *child_baton = new_db;
   return SVN_NO_ERROR;
 }
@@ -212,7 +211,7 @@ close_directory (void *dir_baton)
       else
         statchar_buf[1] = 'U';
 
-      printf ("%s %s\n", statchar_buf, db->path->data);
+      printf ("%s %s\n", statchar_buf, db->path);
 
       /* Destroy the subpool. */
       svn_pool_destroy (subpool);
@@ -240,8 +239,8 @@ close_file (void *file_baton)
     svn_wc_entry_t *entry;
     svn_boolean_t merged, tc, pc;
     apr_pool_t *subpool = svn_pool_create (eb->pool);
-    svn_stringbuf_t *pdir = svn_stringbuf_dup (fb->path, subpool);
-    svn_path_remove_component (pdir);
+    const char *pdir = svn_path_remove_component_nts (fb->path, subpool);
+    
 
     SVN_ERR (svn_wc_entry (&entry, fb->path, FALSE, subpool));
     if (entry)
@@ -277,7 +276,7 @@ close_file (void *file_baton)
     svn_pool_destroy (subpool);
   }
 
-  printf ("%s %s\n", statchar_buf, fb->path->data);
+  printf ("%s %s\n", statchar_buf, fb->path);
 
   return SVN_NO_ERROR;
 }
@@ -391,7 +390,7 @@ close_edit (void *edit_baton)
 svn_error_t *
 svn_cl__get_trace_update_editor (const svn_delta_editor_t **editor,
                                  void **edit_baton,
-                                 svn_stringbuf_t *initial_path,
+                                 const char *initial_path,
                                  svn_boolean_t is_checkout,
                                  svn_boolean_t suppress_final_line,
                                  apr_pool_t *pool)
@@ -405,7 +404,7 @@ svn_cl__get_trace_update_editor (const svn_delta_editor_t **editor,
 
   /* Set up the edit context. */
   eb->pool = subpool;
-  eb->path = svn_stringbuf_dup (initial_path, eb->pool);
+  eb->path = apr_pstrdup (eb->pool, initial_path);
   eb->target_revision = SVN_INVALID_REVNUM;
   eb->is_checkout = is_checkout;
   eb->suppress_final_line = suppress_final_line;

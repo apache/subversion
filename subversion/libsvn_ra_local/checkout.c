@@ -29,7 +29,7 @@
    legos that all perfectly fit together. :) */
 static svn_error_t *
 send_file_contents (svn_fs_root_t *root,
-                    svn_stringbuf_t *path,
+                    const char *path,
                     void *file_baton,
                     const svn_delta_editor_t *editor,
                     apr_pool_t *pool)
@@ -39,7 +39,7 @@ send_file_contents (svn_fs_root_t *root,
   void *handler_baton;
   
   /* Get a readable stream of the file's contents. */
-  SVN_ERR (svn_fs_file_contents (&contents, root, path->data, pool));  
+  SVN_ERR (svn_fs_file_contents (&contents, root, path, pool));  
 
   /* Get an editor func that wants to consume the delta stream. */
   SVN_ERR (editor->apply_textdelta (file_baton, &handler, &handler_baton));
@@ -56,7 +56,7 @@ send_file_contents (svn_fs_root_t *root,
    using OBJECT_BATON.  IS_DIR indicates which editor func to call. */
 static svn_error_t *
 set_any_props (svn_fs_root_t *root,
-               const svn_string_t *path,
+               const char *path,
                void *object_baton,
                const svn_delta_editor_t *editor,
                int is_dir,
@@ -64,12 +64,11 @@ set_any_props (svn_fs_root_t *root,
 {
   apr_hash_index_t *hi;
   svn_revnum_t committed_rev;
-  svn_string_t *last_author, *committed_date;
-  char *revision_str = NULL;
+  const char *last_author, *committed_date, *revision_str;
   apr_hash_t *props = NULL;
 
   /* Get all user properties attached to PATH. */
-  SVN_ERR (svn_fs_node_proplist (&props, root, path->data, pool));
+  SVN_ERR (svn_fs_node_proplist (&props, root, path, pool));
 
   /* Query the fs for three 'entry' props:  specifically, the
      last-changed-rev of the file or dir ("created rev"), and the
@@ -88,13 +87,15 @@ set_any_props (svn_fs_root_t *root,
   revision_str = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, committed_rev);
   apr_hash_set (props, SVN_PROP_ENTRY_COMMITTED_REV, 
                 strlen(SVN_PROP_ENTRY_COMMITTED_REV),
-                svn_stringbuf_create (revision_str, pool));
+                svn_string_create (revision_str, pool));
     
   apr_hash_set (props, SVN_PROP_ENTRY_COMMITTED_DATE, 
-                strlen(SVN_PROP_ENTRY_COMMITTED_DATE), committed_date);
+                strlen(SVN_PROP_ENTRY_COMMITTED_DATE),
+                svn_string_create (committed_date, pool));
     
   apr_hash_set (props, SVN_PROP_ENTRY_LAST_AUTHOR, 
-                strlen(SVN_PROP_ENTRY_LAST_AUTHOR), last_author);
+                strlen(SVN_PROP_ENTRY_LAST_AUTHOR),
+                svn_string_create (last_author, pool));
   
   
   /* Loop over properties, send them through the editor. */
@@ -139,53 +140,46 @@ set_any_props (svn_fs_root_t *root,
    however.  :) */
 static svn_error_t *
 walk_tree (svn_fs_root_t *root,
-           const svn_string_t *dir_path,
-           svn_stringbuf_t *edit_path,
+           const char *dir_path,
+           const char *edit_path,
            void *dir_baton,
            const svn_delta_editor_t *editor, 
            void *edit_baton,
-           svn_stringbuf_t *URL,
+           const char *URL,
            svn_boolean_t recurse,
            apr_pool_t *pool)
 {
   apr_hash_t *dirents;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create (pool);
-  svn_stringbuf_t *URL_path = svn_stringbuf_dup (URL, pool);
-  svn_stringbuf_t *dirent_path = 
-    svn_stringbuf_create_from_string (dir_path, pool);
 
   if (! edit_path)
-    edit_path = svn_stringbuf_create ("", pool);
+    edit_path = "";
 
-  SVN_ERR (svn_fs_dir_entries (&dirents, root, dir_path->data, pool));
+  SVN_ERR (svn_fs_dir_entries (&dirents, root, dir_path, pool));
 
   /* Loop over this directory's dirents: */
   for (hi = apr_hash_first (pool, dirents); hi; hi = apr_hash_next (hi))
     {
       int is_dir, is_file;
-      const void *key;
       void *val;
-      apr_ssize_t klen;
       svn_fs_dirent_t *dirent;
-      svn_stringbuf_t *dirent_name;
-      svn_string_t dirent_str;
+      const char *URL_path, *dirent_path, *this_edit_path;
 
-      apr_hash_this (hi, &key, &klen, &val);
+      /* Hmmm, we could get the name from the key (NULL below), or
+         from dirent->name.  No point getting both, though.  */
+
+      apr_hash_this (hi, NULL, NULL, &val);
       dirent = (svn_fs_dirent_t *) val;
-      dirent_name = svn_stringbuf_create (dirent->name, subpool);
 
-      /* Extend our various paths by DIRENT_NAME. */
-      svn_path_add_component (dirent_path, dirent_name);
-      svn_path_add_component (URL_path, dirent_name);
-      svn_path_add_component (edit_path, dirent_name);
+      /* Extend our various paths by DIRENT->name. */
+      URL_path = svn_path_join (URL, dirent->name, subpool);
+      dirent_path = svn_path_join (dir_path, dirent->name, subpool);
+      this_edit_path = svn_path_join (edit_path, dirent->name, subpool);
 
       /* What is dirent? */
-      SVN_ERR (svn_fs_is_dir (&is_dir, root, dirent_path->data, subpool));
-      SVN_ERR (svn_fs_is_file (&is_file, root, dirent_path->data, subpool));
-
-      dirent_str.data = dirent_path->data;
-      dirent_str.len = dirent_path->len;
+      SVN_ERR (svn_fs_is_dir (&is_dir, root, dirent_path, subpool));
+      SVN_ERR (svn_fs_is_file (&is_file, root, dirent_path, subpool));
 
       if (is_dir && recurse)
         {
@@ -195,13 +189,13 @@ walk_tree (svn_fs_root_t *root,
              to infer them via inheritance.  We do *not* pass real
              args, since we're not referencing any existing working
              copy paths.  We don't want the editor to "copy" anything. */
-          SVN_ERR (editor->add_directory (edit_path->data, dir_baton,
+          SVN_ERR (editor->add_directory (this_edit_path, dir_baton,
                                           NULL, SVN_INVALID_REVNUM, 
                                           subpool, &new_dir_baton));
-          SVN_ERR (set_any_props (root, &dirent_str, new_dir_baton,
+          SVN_ERR (set_any_props (root, dirent_path, new_dir_baton,
                                   editor, 1, subpool));
           /* Recurse */
-          SVN_ERR (walk_tree (root, &dirent_str, edit_path,
+          SVN_ERR (walk_tree (root, dirent_path, this_edit_path,
                               new_dir_baton, editor, edit_baton, 
                               URL_path, recurse, subpool));
         }
@@ -210,10 +204,10 @@ walk_tree (svn_fs_root_t *root,
         {
           void *file_baton;
 
-          SVN_ERR (editor->add_file (edit_path->data, dir_baton,
-                                     URL_path->data, SVN_INVALID_REVNUM, 
+          SVN_ERR (editor->add_file (this_edit_path, dir_baton,
+                                     URL_path, SVN_INVALID_REVNUM, 
                                      subpool, &file_baton));          
-          SVN_ERR (set_any_props (root, &dirent_str, file_baton,
+          SVN_ERR (set_any_props (root, dirent_path, file_baton,
                                   editor, 0, subpool));
           SVN_ERR (send_file_contents (root, dirent_path, file_baton,
                                        editor, subpool));
@@ -225,12 +219,6 @@ walk_tree (svn_fs_root_t *root,
           /* It's not a file or dir.  What the heck?  Instead of
              returning an error, let's just ignore the thing. */ 
         }
-
-      /* Restore EDIT_PATH. URL_PATH, and DIRENT_PATH to their
-         original selves. */
-      svn_stringbuf_chop (edit_path, dirent_name->len + 1);
-      svn_stringbuf_chop (URL_path, dirent_name->len + 1);
-      svn_stringbuf_chop (dirent_path, dirent_name->len + 1);
 
       /* Clear out our per-iteration pool. */
       svn_pool_clear (subpool);
@@ -252,8 +240,8 @@ svn_error_t *
 svn_ra_local__checkout (svn_fs_t *fs, 
                         svn_revnum_t revnum, 
                         svn_boolean_t recurse,
-                        svn_stringbuf_t *URL,
-                        const svn_string_t *fs_path,
+                        const char *URL,
+                        const char *fs_path,
                         const svn_delta_editor_t *editor, 
                         void *edit_baton,
                         apr_pool_t *pool)

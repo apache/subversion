@@ -73,7 +73,7 @@ svn_cl__delete (apr_getopt_t *os,
       for (i = 0; i < targets->nelts; i++)
         {
           svn_error_t *err;
-          svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
+          const char *target = ((const char **) (targets->elts))[i];
           commit_info = NULL;
           err = svn_client_delete
                    (&commit_info, target, opt_state->force, 
