@@ -48,6 +48,7 @@
 <p>
 <strong>Troubleshooting:</strong>
 </p>
+<li><a href="#diff3-diff">I get exitcode 2 from diff3 on Windows</a></li>
 <li><a href="#wedged-repos">What the heck!  Every time I try to access
     my repository, the process just hangs.  Is my repository
     corrupt?</a></li>
@@ -588,6 +589,32 @@ understood it <em>before</em> actually hacking the code, right? :)
 <h2>Troubleshooting:</h2>
 <p>
 
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3>I get exitcode 2 from diff3 on Windows <a name="diff3-diff"></a></h3>
+
+<p>
+This happens when your diff utilities are not installed on the
+default location, which on Windows is <samp>C:\Cygwin\bin</samp>.
+This is caused by a bug in Subversion's config file processing,
+which was fixed in revision 4578 (version 0.17.1+).</p>
+<p>
+The workaround is to add a non-standard option to your configuration
+file. For example, if your diff utilities are installed in
+<samp>D:\Cygwin\bin</samp>, your config file probably containts:</p>
+
+<pre>
+[helpers]
+diff-cmd = D:\Cygwin\bin\diff.exe
+diff3-cmd = D:\Cygwin\bin\diff3.exe
+</pre>
+
+<p>Adding the following line to the <samp>[helpers]</samp> section
+should fix this problem:</p>
+
+<pre>
+diff_cmd = D:\Cygwin\bin\diff.exe
+</pre>
 <![CDATA[-----------------------------------------------------------]]>
 
 <h3>What the heck! Every time I try to access my repository, the
