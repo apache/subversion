@@ -2180,7 +2180,8 @@ svn_fs_fs__create_txn (svn_fs_txn_t **txn_p,
   /* Create a temporary file so that we have a unique txn_id, then
      make a directory based on this name.  They will both be removed
      when the transaction is aborted or removed. */
-  if (apr_file_mktemp (&txn_file, txn_filename, 0, pool) != APR_SUCCESS)
+  if (apr_file_mktemp (&txn_file, txn_filename, APR_CREATE | APR_EXCL, pool)
+      != APR_SUCCESS)
     return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                              "Unable to create new transaction.");
 
@@ -2459,19 +2460,37 @@ svn_fs_fs__purge_txn (svn_fs_t *fs,
                       const char *txn_id,
                       apr_pool_t *pool)
 {
-  const char *txn_dir;
+  const char *txn_name;
   svn_error_t *err;
   
-  txn_dir = svn_path_join_many (pool, fs->path, SVN_FS_FS__TXNS_DIR,
-                                apr_pstrcat (pool, txn_id,
-                                             SVN_FS_FS__TXNS_EXT, NULL), NULL);
+  txn_name = svn_path_join_many (pool, fs->path, SVN_FS_FS__TXNS_DIR, txn_id,
+                                 NULL);
+
+  /* First remove the temporary directory associated with this
+     transaction.  If this fails, we need to keep going and try and
+     remove the file too, just in case one of them got deleted without
+     the other.  Removing the directory first is necessary to prevent
+     race conditions when creating new transactions. */
+
+  err = svn_io_remove_dir (apr_pstrcat (pool, txn_name, SVN_FS_FS__TXNS_EXT,
+                                        NULL),
+                           pool);
+
+  if (err)
+    {
+      if (! APR_STATUS_IS_ENOENT (err->apr_err))
+        return err;
+      svn_error_clear (err);
+    }
+
+  /* Now try to remove the temporary file. */
+
+  err = svn_io_remove_file (txn_name, pool);
 
   /* Umm, we really have no way to determine the difference between a
      transaction not existing, and a transaction not being mutable.
      We'll just always return not-mutable and hope no one passes us
      bogus transaction IDs. */
-  err = svn_io_remove_dir (txn_dir, pool);
-
   if (err && APR_STATUS_IS_ENOENT (err->apr_err))
     {
       svn_error_clear (err);
