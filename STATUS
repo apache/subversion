@@ -46,6 +46,11 @@ Candidate changes:
     Justification: Shut up esr's script.
     Votes:
 
+  * r8708
+    Use warnings pragma on perl hook-scripts.
+    Justification: Perl correctness issue.
+    Votes:
+
 Status of 1.0.1:
 ================
 
