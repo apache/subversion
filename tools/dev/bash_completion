@@ -9,7 +9,7 @@
 
 _svn()
 {
-	local cur cmds cmdOpts pOpts mOpts rOpts qOpts nOpts optsParam opt ds fs
+	local cur cmds cmdOpts pOpts mOpts rOpts qOpts nOpts optsParam opt
 
 	COMPREPLY=()
 	cur=${COMP_WORDS[COMP_CWORD]}
@@ -29,8 +29,10 @@ _svn()
 	optsParam="-r|--revision|-D|--date|--username|--password|--targets|\
 	           |-d|--destination|-x|--extensions|-m|--message|-F|--file"
 
-	# if previous option required a parameter provide no options this time
-	if [[ ${COMP_WORDS[COMP_CWORD-1]} == @($optsParam) ]] ; then
+	# if not typing an option, or if the previous option required a
+	# parameter, then fallback on ordinary filename expansion
+	if [[ "$cur" != -* ]] || \
+	   [[ ${COMP_WORDS[COMP_CWORD-1]} == @($optsParam) ]] ; then
 		return 0
 	fi
 
