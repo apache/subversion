@@ -142,13 +142,11 @@ typedef apr_int32_t time_t;
     "$result = t_output_helper(
         $result,
         SWIG_NewPointerObj(*$1, $*1_descriptor, 0));";
-
-%typemap(java,argout) apr_file_t ** {
+%typemap(java,argout,fragment="t_output_helper") apr_file_t ** {
     /* HELP: Is there a JNI equivalent of SWIG_NewPointerObj, or is
        this actually a cross-language typemap? */
-    $result = t_output_helper(
+    "$result = t_output_helper(
         $result,
-        SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
-}
+        SWIG_NewPointerObj(*$1, $*1_descriptor, 0));";
 
 /* ----------------------------------------------------------------------- */
