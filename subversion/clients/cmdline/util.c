@@ -315,7 +315,20 @@ svn_cl__make_log_msg_baton (void **baton,
     }
 
   lmb->editor_cmd = opt_state->editor_cmd;
-  lmb->message_encoding = opt_state->encoding;
+  if (opt_state->encoding)
+    {
+      lmb->message_encoding = opt_state->encoding;
+    }
+  else if (config)
+    {
+      svn_config_t *cfg = apr_hash_get (config, SVN_CONFIG_CATEGORY_CONFIG, 
+                                        APR_HASH_KEY_STRING);
+      svn_config_get (cfg, &(lmb->message_encoding),
+                      SVN_CONFIG_SECTION_MISCELLANY,
+                      SVN_CONFIG_OPTION_LOG_ENCODING,
+                      NULL);
+    }
+
   lmb->base_dir = base_dir ? base_dir : "";
   lmb->tmpfile_left = NULL;
   lmb->config = config;
