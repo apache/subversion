@@ -135,7 +135,8 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_ATTR_MERGED    "merged"
 #define SVN_WC_ENTRY_ATTR_CONFLICT  "conflict"
 #define SVN_WC_ENTRY_ATTR_ANCESTOR  "ancestor"
-#define SVN_WC_ENTRY_ATTR_REJFILE   "reject-file"
+#define SVN_WC_ENTRY_ATTR_REJFILE   "text-reject-file"
+#define SVN_WC_ENTRY_ATTR_PREJFILE  "prop-reject-file"
 
 
 /* Bitmasks stored in the `flags' field above.  */
