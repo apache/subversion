@@ -396,8 +396,7 @@ get_log (void *session_baton,
                             author ? author->data : "",
                             date ? date->data : "",
                             message ? message->data : "",
-                            ((start >= end) ?
-                             (this_rev == end) : (this_rev == start))));
+                            (this_rev == end)));
       
       svn_pool_clear (subpool);
     }

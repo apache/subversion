@@ -39,25 +39,50 @@
 static svn_error_t *
 log_message_receiver (void *baton,
                       const apr_hash_t *changed_paths,
-                      svn_revnum_t revision,
+                      svn_revnum_t rev,
                       const char *author,
                       const char *date,
-                      const char *message,
+                      const char *msg,
                       svn_boolean_t last_call)
 {
   /* ### todo: we ignore changed_paths for now; the repository isn't
      calculating it anyway, currently. */
 
+  /* As much date as we ever want to see. */
+  char dbuf[38];
+
+  /* The result of svn_time_to_string() looks something like this:
+   *
+   *  "Sat 2 Mar 2002 20:41:01.695108 (day 061, dst 0, gmt_off -21600)"
+   *
+   * You might think the part before the dot would be constant length,
+   * but apparently it's not; so we grab it the hard way.
+   */
+  {
+    const char *p = strchr (date, '.');
+
+    if (p && ((p - date) < (sizeof (dbuf))))
+      {
+        strncpy (dbuf, date, (p - date));
+        dbuf[p - date] = '\0';
+      }
+    else  /* hmmm, not the format we expected, so use as much as can */
+      {
+        strncpy (dbuf, date, ((sizeof (dbuf)) - 1));
+        dbuf[(sizeof (dbuf)) - 1] = '\0';
+      }
+  }
+
   printf ("--------------------------------------------------------\n");
-  printf ("Revision %lu\n", revision);
-  printf ("%s\n", author);
-  printf ("%s\n", date);
-  printf ("%d\n", strlen (message));  /* auto-parsebility useful here? */
-  printf ("%s\n", message);
+  printf ("rev %lu: %s   %s, %d bytes\n", rev, author, dbuf, strlen (msg));
+  printf ("\n");
+  printf ("%s\n", msg);
+
+  if (last_call)
+    printf ("--------------------------------------------------------\n");
 
   /* ### todo We don't use baton at all, since we can do everything
-     with printf's, and we also ignore last_call.  If the latter
-     continues to be ignored, maybe the parameter should be nixed. */
+     with printf's. */
 
   return SVN_NO_ERROR;
 }
