@@ -18,6 +18,7 @@
 #include <assert.h>
 
 #include "fs.h"
+#include "fs_fs.h"
 #include "err.h"
 
 
@@ -28,7 +29,7 @@ svn_fs_get_uuid (svn_fs_t *fs,
 {
   SVN_ERR (svn_fs__check_fs (fs));
 
-  *uuid = apr_pstrdup (pool, fs->uuid);
+  SVN_ERR (svn_fs__fs_get_uuid (uuid, fs, pool));
 
   return SVN_NO_ERROR;
 }
@@ -38,7 +39,7 @@ svn_fs_set_uuid (svn_fs_t *fs,
                  const char *uuid,
                  apr_pool_t *pool)
 {
-  abort ();
+  SVN_ERR (svn_fs__fs_set_uuid (fs, uuid, pool));
   
   return SVN_NO_ERROR;
 }

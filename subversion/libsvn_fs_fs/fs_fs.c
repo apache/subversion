@@ -202,29 +202,19 @@ hash_write (apr_hash_t *hash, svn_stream_t *stream, apr_pool_t *pool)
 svn_error_t *
 svn_fs__fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
-  apr_file_t *uuid_file;
-  apr_size_t uuid_size;
-  char buffer[APR_UUID_FORMATTED_LENGTH + 1];
+  apr_file_t *current_file;
 
-  /* Attempt to open the UUID file, which will tell us the UUID of
-          this repository, otherwise there isn't much need for specific
-          state associated with an open fs_fs repository. */
+  /* Attempt to open the 'current' file of this repository.  There
+     isn't much need for specific state associated with an open fs_fs
+     repository. */
 
   fs->fs_path = apr_pstrdup (pool, path);
 
-  SVN_ERR (svn_io_file_open (&uuid_file,
-                             svn_path_join (path, SVN_FS_FS__UUID, pool),
+  SVN_ERR (svn_io_file_open (&current_file,
+                             svn_path_join (path, SVN_FS_FS__CURRENT, pool),
                              APR_READ, APR_OS_DEFAULT, pool));
 
-  /* Read in the uuid. */
-  uuid_size = APR_UUID_FORMATTED_LENGTH;
-  SVN_ERR (svn_io_file_read (uuid_file, buffer, &uuid_size, pool));
-
-  buffer[APR_UUID_FORMATTED_LENGTH] = 0;
-
-  fs->uuid = apr_pstrdup (pool, buffer);
-
-  SVN_ERR (svn_io_file_close (uuid_file, pool));
+  SVN_ERR (svn_io_file_close (current_file, pool));
   
   return SVN_NO_ERROR;
 }
@@ -985,6 +975,33 @@ svn_fs__fs_rev_get_root (svn_fs_id_t **root_id_p,
 }
 
 svn_error_t *
+svn_fs__fs_set_revision_proplist (svn_fs_t *fs,
+                                  svn_revnum_t rev,
+                                  apr_hash_t *proplist,
+                                  apr_pool_t *pool)
+{
+  char *revprop_filename;
+  apr_file_t *revprop_file;
+
+  revprop_filename = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
+
+  SVN_ERR (svn_io_file_open (&revprop_file,
+                             svn_path_join_many (pool,
+                                                 fs->fs_path,
+                                                 SVN_FS_FS__REVPROPS_DIR, 
+                                                 revprop_filename,
+                                                 NULL),
+                             APR_WRITE | APR_TRUNCATE | APR_CREATE,
+                             APR_OS_DEFAULT, pool));
+  
+  SVN_ERR (svn_hash_write (proplist, revprop_file, pool));
+
+  SVN_ERR (svn_io_file_close (revprop_file, pool));
+  
+  return SVN_NO_ERROR;
+}  
+
+svn_error_t *
 svn_fs__fs_revision_proplist (apr_hash_t **proplist_p,
                               svn_fs_t *fs,
                               svn_revnum_t rev,
@@ -1002,7 +1019,7 @@ svn_fs__fs_revision_proplist (apr_hash_t **proplist_p,
                                                  SVN_FS_FS__REVPROPS_DIR, 
                                                  revprop_filename,
                                                  NULL),
-                             APR_READ, APR_OS_DEFAULT, pool));
+                             APR_READ | APR_CREATE, APR_OS_DEFAULT, pool));
 
   proplist = apr_hash_make (pool);
 
@@ -1814,6 +1831,11 @@ svn_error_t *svn_fs__fs_begin_txn (svn_fs_txn_t **txn_p,
   SVN_ERR (svn_fs__fs_rev_get_root (&root_id, fs, rev, pool));
   SVN_ERR (create_new_txn_noderev_from_rev (fs, txn->id, root_id, pool));
 
+  /* Create an empty rev file. */
+  SVN_ERR (svn_io_file_create (svn_path_join (txn_dirname, SVN_FS_FS__REV,
+                                              pool),
+                               "", pool));
+  
   /* Write the next-ids file. */
   SVN_ERR (svn_io_file_open (&next_ids_file,
                              svn_path_join (txn_dirname, SVN_FS_FS__NEXT_IDS,
@@ -2928,5 +2950,131 @@ svn_fs__fs_commit (svn_revnum_t *new_rev_p,
 
   *new_rev_p = new_rev;
   
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__fs_reserve_copy_id (const char **copy_id_p,
+                            svn_fs_t *fs,
+                            const char *txn_id,
+                            apr_pool_t *pool)
+{
+  const char *cur_node_id, *cur_copy_id;
+  char *copy_id;
+  apr_size_t len;
+
+  /* First read in the current next-ids file. */
+  SVN_ERR (read_next_ids (&cur_node_id, &cur_copy_id, fs, txn_id, pool));
+
+  copy_id = apr_pcalloc (pool, strlen (cur_copy_id) + 2);
+
+  len = strlen(cur_copy_id);
+  svn_fs__next_key (cur_copy_id, &len, copy_id);
+
+  SVN_ERR (write_next_ids (fs, txn_id, cur_node_id, copy_id, pool));
+
+  *copy_id_p = apr_pstrcat (pool, "_", cur_copy_id, NULL);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__fs_create (svn_fs_t *fs,
+                   const char *path,
+                   apr_pool_t *pool)
+{
+  char buffer [APR_UUID_FORMATTED_LENGTH + 1];
+  apr_uuid_t uuid;
+  
+  SVN_ERR (svn_io_make_dir_recursively (svn_path_join (path,
+                                                       SVN_FS_FS__REVS_DIR,
+                                                       pool),
+                                        pool));
+  SVN_ERR (svn_io_make_dir_recursively (svn_path_join (path,
+                                                       SVN_FS_FS__REVPROPS_DIR,
+                                                       pool),
+                                        pool));
+
+  SVN_ERR (svn_io_make_dir_recursively (svn_path_join (path,
+                                                       SVN_FS_FS__TXNS_DIR,
+                                                       pool),
+                                        pool));
+
+  SVN_ERR (svn_io_file_create (svn_path_join (path,
+                                              SVN_FS_FS__CURRENT, pool),
+                               "0 1 0\n", pool));
+
+  fs->fs_path = apr_pstrdup (pool, path);
+
+  apr_uuid_get (&uuid);
+  apr_uuid_format (buffer, &uuid);
+  svn_fs__fs_set_uuid (fs, buffer, pool);
+  
+  SVN_ERR (svn_fs__dag_init_fs (fs));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_fs__fs_get_uuid (const char **uuid_p,
+                                  svn_fs_t *fs,
+                                  apr_pool_t *pool)
+{
+  apr_file_t *uuid_file;
+  char buf [APR_UUID_FORMATTED_LENGTH + 2];
+  apr_size_t limit;
+
+  SVN_ERR (svn_io_file_open (&uuid_file,
+                             svn_path_join (fs->fs_path, SVN_FS_FS__UUID,
+                                            pool),
+                             APR_READ, APR_OS_DEFAULT, pool));
+
+  limit = sizeof (buf);
+  SVN_ERR (svn_io_read_length_line (uuid_file, buf, &limit, pool));
+  *uuid_p = apr_pstrdup (pool, buf);
+  
+  SVN_ERR (svn_io_file_close (uuid_file, pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_fs__fs_set_uuid (svn_fs_t *fs,
+                                  const char *uuid,
+                                  apr_pool_t *pool)
+{
+  apr_file_t *uuid_file;
+
+  SVN_ERR (svn_io_file_open (&uuid_file,
+                             svn_path_join (fs->fs_path, SVN_FS_FS__UUID,
+                                            pool),
+                             APR_WRITE | APR_CREATE | APR_TRUNCATE,
+                             APR_OS_DEFAULT, pool));
+
+  SVN_ERR (svn_io_file_write_full (uuid_file, uuid, strlen (uuid), NULL,
+                                   pool));
+  SVN_ERR (svn_io_file_write_full (uuid_file, "\n", 1, NULL, pool));
+
+  SVN_ERR (svn_io_file_close (uuid_file, pool));
+  
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_fs__fs_write_revision_zero (svn_fs_t *fs)
+{
+  apr_pool_t *pool = fs->pool;
+  const char *rev_filename;
+
+  /* Create the revision 0 rev-file. */
+  rev_filename = svn_path_join_many (pool, fs->fs_path, SVN_FS_FS__REVS_DIR,
+                                     "0", NULL);
+
+  SVN_ERR (svn_io_file_create (rev_filename, "PLAIN\nEND\nENDREP\n"
+                               "id: 0.0.r0/17\n"
+                               "type: dir\n"
+                               "count: 0\n"
+                               "text: 0 0 4 4 "
+                               "2d2977d1c96f487abe4a1e202dd03b4e\n"
+                               "cpath: \n"
+                               "\n\n17 106\n", pool));
+
   return SVN_NO_ERROR;
 }
