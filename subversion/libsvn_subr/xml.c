@@ -444,9 +444,7 @@ struct file_baton
 };
 
 static svn_error_t *
-replace_root (svn_string_t *ancestor_path,
-              svn_vernum_t ancestor_version,
-              void *edit_baton,
+replace_root (void *edit_baton,
               void **dir_baton)
 {
 #if 0

@@ -148,6 +148,21 @@ svn_wc__entries_init (svn_string_t *path, apr_pool_t *pool)
 
 /*--------------------------------------------------------------- */
 
+/*** ancestry ***/
+svn_error_t *svn_wc__get_entry_ancestry (svn_string_t *path,
+                                         svn_string_t *entry,
+                                         svn_string_t **ancestor_path,
+                                         svn_vernum_t *ancestor_ver,
+                                         apr_pool_t *pool)
+{
+  /* FIXME: to be completed (Ben) */
+  return SVN_NO_ERROR;
+}
+
+
+
+/*--------------------------------------------------------------- */
+
 /*** xml callbacks ***/
 
 /* For a given ENTRYNAME in PATH's entries file, set the entry's
