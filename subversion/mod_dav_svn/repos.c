@@ -36,7 +36,8 @@ struct dav_stream {
   /* for reading from the FS */
   svn_stream_t *rstream;
 
-  /* for writing to the FS */
+  /* for writing to the FS. we use wstream OR the handler/baton. */
+  svn_stream_t *wstream;
   svn_txdelta_window_handler_t delta_handler;
   void *delta_baton;
 };
@@ -769,6 +770,16 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   comb->res.hooks = &dav_svn_hooks_repos;
   comb->res.pool = r->pool;
 
+  /* ### ugly hack to carry over Content-Type data to the open_stream, which
+     ### does not have access to the request headers. */
+  {
+    const char *ct = apr_table_get(r->headers_in, "content-type");
+
+    comb->priv.is_svndiff =
+      ct != NULL
+      && strcmp(ct, "application/vnd.svn-svndiff") == 0;
+  }
+
   /* make a copy so that we can do some work on it */
   uri = apr_pstrdup(r->pool, r->uri);
 
@@ -1065,6 +1076,22 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                      "Could not prepare to write the file");
         }
+
+      /* if the incoming data is an SVNDIFF, then create a stream that
+         will process the data into windows and invoke the FS window handler
+         when a window is ready. */
+      /* ### we need a better way to check the content-type! this is bogus
+         ### because we're effectively looking at the request_rec. doubly
+         ### bogus because this means you cannot open arbitrary streams and
+         ### feed them content (the type is always tied to a request_rec).
+         ### probably ought to pass the type to open_stream */
+      if (resource->info->is_svndiff)
+        {
+          (*stream)->wstream =
+            svn_txdelta_parse_svndiff((*stream)->delta_handler,
+                                      (*stream)->delta_baton,
+                                      resource->pool);
+        }
     }
 
   return NULL;
@@ -1075,7 +1102,11 @@ static dav_error * dav_svn_close_stream(dav_stream *stream, int commit)
   if (stream->rstream != NULL)
     svn_stream_close(stream->rstream);
 
-  if (stream->delta_handler != NULL)
+  /* if we have a write-stream, then closing it also takes care of the
+     handler (so make sure not to send a NULL to it, too) */
+  if (stream->wstream != NULL)
+    svn_stream_close(stream->wstream);
+  else if (stream->delta_handler != NULL)
     (*stream->delta_handler)(NULL, stream->delta_baton);
 
   return NULL;
@@ -1099,28 +1130,37 @@ static dav_error * dav_svn_read_stream(dav_stream *stream, void *buf,
 static dav_error * dav_svn_write_stream(dav_stream *stream, const void *buf,
                                         apr_size_t bufsize)
 {
-  svn_txdelta_window_t window = { 0 };
-  svn_txdelta_op_t op;
-  svn_string_t data = { (char *)buf, bufsize, bufsize, NULL };
   svn_error_t *serr;
 
-  op.action_code = svn_txdelta_new;
-  op.offset = 0;
-  op.length = bufsize;
+  if (stream->wstream != NULL)
+    {
+      serr = svn_stream_write(stream->wstream, buf, &bufsize);
+      /* ### would the returned bufsize ever not match the requested amt? */
+    }
+  else
+    {
+      svn_txdelta_window_t window = { 0 };
+      svn_txdelta_op_t op;
+      svn_string_t data = { (char *)buf, bufsize, bufsize, NULL };
 
-  window.tview_len = bufsize;   /* result will be this long */
-  window.num_ops = 1;
-  window.ops_size = 1;          /* ### why is this here? */
-  window.ops = &op;
-  window.new_data = &data;
+      op.action_code = svn_txdelta_new;
+      op.offset = 0;
+      op.length = bufsize;
 
-  serr = (*stream->delta_handler)(&window, stream->delta_baton);
+      window.tview_len = bufsize;   /* result will be this long */
+      window.num_ops = 1;
+      window.ops_size = 1;          /* ### why is this here? */
+      window.ops = &op;
+      window.new_data = &data;
+
+      serr = (*stream->delta_handler)(&window, stream->delta_baton);
+    }
+
   if (serr)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "could not write the file contents");
     }
-
   return NULL;
 }
 
