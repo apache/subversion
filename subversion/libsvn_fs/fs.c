@@ -184,10 +184,10 @@ static void print_fs_stats(svn_fs_t *fs)
              db_strerror (db_err));
   else
     {
-      printf ("*** DB txn stats, right before closing env:\n");
-      printf ("   Number of txns currently active: %d\n",
+      printf ("*** DB transaction stats, right before closing env:\n");
+      printf ("   Number of transactions currently active: %d\n",
               t->st_nactive);
-      printf ("   Max number of active txns at any one time: %d\n",
+      printf ("   Max number of active transactions at any one time: %d\n",
               t->st_maxnactive);
       printf ("   Number of transactions that have begun: %d\n",
               t->st_nbegins);
@@ -199,7 +199,7 @@ static void print_fs_stats(svn_fs_t *fs)
               t->st_region_wait);
       printf ("   Number of times a thread didn't need to wait: %d\n",
               t->st_region_nowait);
-      printf ("*** End DB txn stats.\n\n");
+      printf ("*** End DB transaction stats.\n\n");
     }
 
   /* Print transaction statistics for this DB env. */

@@ -1,4 +1,4 @@
-/* reps-strings.h : interpreting representations w.r.t. strings
+/* reps-strings.h : interpreting representations with respect to strings
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.

@@ -112,7 +112,8 @@ static svn_error_t *
 out_of_date (const char *path, const char *txn_name)
 {
   return svn_error_createf (SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
-                            "out of date: '%s' in txn '%s'", path, txn_name);
+                            "out of date: '%s' in transaction '%s'",
+                            path, txn_name);
 }
 
 

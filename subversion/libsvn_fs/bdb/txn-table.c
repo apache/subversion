@@ -112,7 +112,7 @@ allocate_txn_id (const char **id_p,
 
   /* Get the current value associated with the `next-key' key in the table.  */
   svn_fs__trail_debug (trail, "transactions", "get");
-  SVN_ERR (BDB_WRAP (fs, "allocating new txn ID (getting 'next-key')",
+  SVN_ERR (BDB_WRAP (fs, "allocating new transaction ID (getting 'next-key')",
                     fs->transactions->get (fs->transactions, trail->db_txn,
                                            &query, 
                                            svn_fs__result_dbt (&result), 
@@ -131,7 +131,7 @@ allocate_txn_id (const char **id_p,
   db_err = fs->transactions->put (fs->transactions, trail->db_txn,
                                   &query, &result, 0);
 
-  SVN_ERR (BDB_WRAP (fs, "bumping next txn key", db_err));
+  SVN_ERR (BDB_WRAP (fs, "bumping next transaction key", db_err));
   return SVN_NO_ERROR;
 }
 
