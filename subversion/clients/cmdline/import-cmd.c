@@ -137,6 +137,7 @@ svn_cl__import (apr_getopt_t *os,
             svn_cl__make_log_msg_baton (opt_state, NULL, pool),
             opt_state->xml_file,
             revnum,
+            opt_state->nonrecursive,
             pool));
 
   if (commit_info)
