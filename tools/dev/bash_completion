@@ -50,9 +50,9 @@ _svn()
 		return 0
 	fi
 
-	pOpts="--username --password"
+	pOpts="--username --password --no-auth-cache --non-interactive"
 	mOpts="-m --message -F --file --message-encoding"
-	rOpts="-r --revision -D --date"
+	rOpts="-r --revision"
 	qOpts="-q --quiet"
 	nOpts="-N --nonrecursive"
 
