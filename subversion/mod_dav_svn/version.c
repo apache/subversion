@@ -19,6 +19,7 @@
 
 
 #include <httpd.h>
+#include <http_log.h>
 #include <mod_dav.h>
 #include <apr_tables.h>
 #include <apr_uuid.h>
@@ -587,6 +588,90 @@ static dav_error *dav_svn_uncheckout(dav_resource *resource)
   return dav_svn_working_to_regular_resource(resource);
 }
 
+
+/* Closure object for cleanup_deltify. */
+struct cleanup_deltify_baton
+{
+  /* The repository in which to deltify.  We use a path instead of an
+     object, because it's difficult to obtain a repos or fs object
+     with the right lifetime guarantees. */
+  const char *repos_path;
+
+  /* The revision number against which to deltify. */
+  svn_revnum_t revision;
+
+  /* The pool to use for all temporary allocation while working.  This
+     may or may not be the same as the pool on which the cleanup is
+     registered, but obviously it must have a lifetime at least as
+     long as that pool. */
+  apr_pool_t *pool;
+};
+
+
+/* APR pool cleanup function to deltify against a just-committed
+   revision.  DATA is a 'struct cleanup_deltify_baton *'.
+
+   If any errors occur, log them in the httpd server error log, but
+   return APR_SUCCESS no matter what, as this is a pool cleanup
+   function and deltification is not a matter of correctness
+   anyway. */
+static apr_status_t cleanup_deltify(void *data)
+{
+  struct cleanup_deltify_baton *cdb = data;
+  svn_repos_t *repos;
+  svn_error_t *err;
+
+  /* Yes, opening a repository registers a cleanup on the pool from
+     which we are already running as a cleanup.  But these days that's
+     safe.  A big +smooch+ to Sander Striker -- I'm not sure it was
+     he who implemented this, but he told me about it anyway :-). */
+  err = svn_repos_open(&repos, cdb->repos_path, cdb->pool);
+  if (err)
+    {
+      ap_log_perror(APLOG_MARK, APLOG_ERR, err->apr_err, cdb->pool,
+                    "cleanup_deltify: error opening repository '%s'",
+                    cdb->repos_path);
+      svn_error_clear(err);
+      return APR_SUCCESS;
+    }
+
+  err = svn_fs_deltify_revision(svn_repos_fs(repos),
+                                cdb->revision, cdb->pool);
+  if (err)
+    {
+      ap_log_perror(APLOG_MARK, APLOG_ERR, err->apr_err, cdb->pool,
+                    "cleanup_deltify: error deltifying against revision %"
+                    SVN_REVNUM_T_FMT " in repository '%s'",
+                    cdb->revision, cdb->repos_path);
+      svn_error_clear(err);
+    }
+
+  return APR_SUCCESS;
+}
+
+
+/* Register the cleanup_deltify function on POOL, which should be the
+   connection pool for the request.  This way the time needed for
+   deltification won't delay the response to the client.
+
+   REPOS is the repository in which deltify, and REVISION is the
+   revision against which to deltify.  POOL is both the pool on which
+   to register the cleanup function and the pool that will be used for
+   temporary allocations while deltifying. */
+static void register_deltification_cleanup(svn_repos_t *repos,
+                                           svn_revnum_t revision,
+                                           apr_pool_t *pool)
+{
+  struct cleanup_deltify_baton *cdb = apr_palloc(pool, sizeof(*cdb));
+  
+  cdb->repos_path = svn_repos_path(repos, pool);
+  cdb->revision = revision;
+  cdb->pool = pool;
+  
+  apr_pool_cleanup_register(pool, cdb, cleanup_deltify, apr_pool_cleanup_null);
+}
+
+
 dav_error *dav_svn_checkin(dav_resource *resource,
                            int keep_checked_out,
                            dav_resource **version_resource)
@@ -654,7 +739,10 @@ dav_error *dav_svn_checkin(dav_resource *resource,
               return dav_svn_convert_err(serr, HTTP_CONFLICT, msg);
             }
 
-          /* Commit was successful. */
+          /* Commit was successful, so schedule deltification. */
+          register_deltification_cleanup(resource->info->repos->repos,
+                                         new_rev,
+                                         resource->info->r->connection->pool);
 
           /* If caller wants it, return the new VR that was created by
              the checkin. */
@@ -900,6 +988,10 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
 
       return dav_svn_convert_err(serr, HTTP_CONFLICT, msg);
     }
+
+  /* Commit was successful, so schedule deltification. */
+  register_deltification_cleanup(source->info->repos->repos, new_rev,
+                                 source->info->r->connection->pool);
 
   /* Check the dav_resource->info area for information about the
      special X-SVN-Options: header that may have come in the http
