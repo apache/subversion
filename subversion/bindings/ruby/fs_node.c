@@ -205,12 +205,12 @@ dir_delta (VALUE self,
 {
   svn_ruby_fs_node *node;
   svn_fs_root_t *src_root, *tgt_root;
-  svn_stringbuf_t *src_parent_dir, *src_entry, *tgt_path;
   apr_hash_t *src_revs;
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
   apr_pool_t *pool;
   svn_error_t *err;
+  const char *src_entry;
 
   VALUE srcRevsArray;
   int i;
@@ -232,11 +232,10 @@ dir_delta (VALUE self,
   svn_ruby_delta_editor (&editor, &edit_baton, aEditor);
   src_root = svn_ruby_fs_root (node->fs_root);
   pool = svn_pool_create (node->pool);
-  src_parent_dir = svn_stringbuf_create (StringValuePtr (node->path), pool);
   if (srcEntry == Qnil)
     src_entry = NULL;
   else
-    src_entry = svn_stringbuf_create (StringValuePtr (srcEntry), pool);
+    src_entry = StringValuePtr (srcEntry);
 
   {
     svn_revnum_t *rev_ptr = apr_palloc (pool, sizeof (*rev_ptr));
@@ -253,10 +252,11 @@ dir_delta (VALUE self,
       }
   }
   tgt_root = svn_ruby_fs_root (tgtRoot);
-  tgt_path = svn_stringbuf_create (StringValuePtr (tgtPath), pool);
 
-  err = svn_repos_dir_delta (src_root, src_parent_dir, src_entry, src_revs,
-                             tgt_root, tgt_path,
+  err = svn_repos_dir_delta (src_root,
+                             StringValuePtr (node->path),
+                             src_entry, src_revs,
+                             tgt_root, StringValuePtr (tgtPath),
                              editor, edit_baton,
                              RTEST (text_deltas), RTEST (recurse),
                              pool);

@@ -258,8 +258,8 @@ add_directory (svn_stringbuf_t *name,
 
   if (copyfrom_path)
     {
-      svn_stringbuf_t *repos_path; 
-      svn_stringbuf_t *fs_path;
+      const svn_string_t *repos_path;
+      const svn_string_t *fs_path;
       svn_fs_root_t *copyfrom_root;
       svn_node_kind_t kind;
 
@@ -275,7 +275,7 @@ add_directory (svn_stringbuf_t *name,
 
       /* For now, require that the url come from the same repository
          that this commit is operating on. */
-      if (! svn_stringbuf_compare (eb->session->repos_path, repos_path))
+      if (strcmp(eb->session->repos_path->data, repos_path->data) != 0)
             return 
               svn_error_createf 
               (SVN_ERR_FS_GENERAL, 0, NULL, eb->pool,
@@ -423,8 +423,8 @@ add_file (svn_stringbuf_t *name,
 
   if (copy_path)
     {      
-      svn_stringbuf_t *repos_path; 
-      svn_stringbuf_t *fs_path;
+      const svn_string_t *repos_path; 
+      const svn_string_t *fs_path;
       svn_fs_root_t *copy_root;
       svn_node_kind_t kind;
 
@@ -440,7 +440,7 @@ add_file (svn_stringbuf_t *name,
 
       /* For now, require that the url come from the same repository
          that this commit is operating on. */
-      if (! svn_stringbuf_compare (eb->session->repos_path, repos_path))
+      if (strcmp(eb->session->repos_path->data, repos_path->data) != 0)
             return 
               svn_error_createf 
               (SVN_ERR_FS_GENERAL, 0, NULL, eb->pool,
@@ -659,7 +659,7 @@ svn_ra_local__get_editor (svn_delta_edit_fns_t **editor,
   eb->log_msg.len = log_msg->len;
   eb->hook = hook;
   eb->hook_baton = hook_baton;
-  eb->base_path = svn_stringbuf_dup (session->fs_path, subpool);
+  eb->base_path = svn_stringbuf_create_from_string (session->fs_path, subpool);
   eb->session = session;
   eb->repos = session->repos;
   eb->fs = svn_repos_fs (session->repos);

@@ -45,8 +45,8 @@ typedef struct svn_ra_local__session_baton_t
   char *username;
 
   /* The URL above, split into two components. */
-  svn_stringbuf_t *repos_path;
-  svn_stringbuf_t *fs_path;
+  const svn_string_t *repos_path;
+  const svn_string_t *fs_path;
 
   /* A repository object. */
   svn_repos_t *repos;
@@ -94,8 +94,8 @@ typedef svn_error_t *svn_ra_local__commit_hook_t (svn_revnum_t new_revision,
    this case, is expected to be the empty string.  Also, the path
    which follows the */
 svn_error_t *
-svn_ra_local__split_URL (svn_stringbuf_t **repos_path,
-                         svn_stringbuf_t **fs_path,
+svn_ra_local__split_URL (const svn_string_t **repos_path,
+                         const svn_string_t **fs_path,
                          svn_stringbuf_t *URL,
                          apr_pool_t *pool);
 
@@ -110,7 +110,7 @@ svn_ra_local__checkout (svn_fs_t *fs,
                         svn_revnum_t revnum, 
                         svn_boolean_t recurse,
                         svn_stringbuf_t *URL,
-                        svn_stringbuf_t *fs_path,
+                        const svn_string_t *fs_path,
                         const svn_delta_edit_fns_t *editor, 
                         void *edit_baton,
                         apr_pool_t *pool);

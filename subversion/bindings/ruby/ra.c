@@ -143,9 +143,7 @@ static VALUE
 ra_reporter_set_path (VALUE self, VALUE aPath, VALUE aRevision)
 {
   svn_ruby_ra_reporter_t *reporter;
-  svn_stringbuf_t *path;
   svn_revnum_t revision;
-  apr_pool_t *pool;
   svn_error_t *err;
 
   Data_Get_Struct (self, svn_ruby_ra_reporter_t, reporter);
@@ -153,12 +151,10 @@ ra_reporter_set_path (VALUE self, VALUE aPath, VALUE aRevision)
     rb_raise (rb_eRuntimeError, "Closed");
   Check_Type (aPath, T_STRING);
   revision = NUM2LONG (aRevision);
-  pool = svn_pool_create (NULL);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  err = reporter->reporter->set_path (reporter->report_baton, path, revision);
 
-  apr_pool_destroy (pool);
-
+  err = reporter->reporter->set_path (reporter->report_baton,
+                                      StringValuePtr (aPath),
+                                      revision);
   if (err)
     svn_ruby_raise (err);
 
@@ -170,20 +166,15 @@ static VALUE
 ra_reporter_delete_path (VALUE self, VALUE aPath)
 {
   svn_ruby_ra_reporter_t *reporter;
-  svn_stringbuf_t *path;
-  apr_pool_t *pool;
   svn_error_t *err;
 
   Data_Get_Struct (self, svn_ruby_ra_reporter_t, reporter);
   if (reporter->closed)
     rb_raise (rb_eRuntimeError, "Closed");
   Check_Type (aPath, T_STRING);
-  pool = svn_pool_create (NULL);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  err = reporter->reporter->delete_path (reporter->report_baton, path);
 
-  apr_pool_destroy (pool);
-
+  err = reporter->reporter->delete_path (reporter->report_baton,
+                                         StringValuePtr (aPath));
   if (err)
     svn_ruby_raise (err);
 

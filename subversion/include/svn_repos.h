@@ -131,8 +131,8 @@ svn_repos_begin_report (void **report_baton,
                         svn_revnum_t revnum,
                         const char *username,
                         svn_repos_t *repos,
-                        svn_stringbuf_t *fs_base,
-                        svn_stringbuf_t *target,
+                        const char *fs_base,
+                        const char *target,
                         svn_boolean_t text_deltas,
                         svn_boolean_t recurse,
                         const svn_delta_edit_fns_t *editor,
@@ -150,7 +150,7 @@ svn_repos_begin_report (void **report_baton,
    (useful when creating a txn, for example).  */
 svn_error_t *
 svn_repos_set_path (void *report_baton,
-                    svn_stringbuf_t *path,
+                    const char *path,
                     svn_revnum_t revision);
 
 
@@ -160,7 +160,7 @@ svn_repos_set_path (void *report_baton,
    (This allows the reporter's driver to describe missing pieces of a
    working copy, so that 'svn up' can recreate them.) */   
 svn_error_t *svn_repos_delete_path (void *report_baton,
-                                    svn_stringbuf_t *path);
+                                    const char *path);
 
 /* Make the filesystem compare the transaction to a revision and have
    it drive an update editor (using svn_repos_delta_dirs()).  Then
@@ -213,11 +213,11 @@ svn_error_t *svn_repos_abort_report (void *report_baton);
 */
 svn_error_t *
 svn_repos_dir_delta (svn_fs_root_t *src_root,
-                     svn_stringbuf_t *src_parent_dir,
-                     svn_stringbuf_t *src_entry,
+                     const char *src_parent_dir,
+                     const char *src_entry,
                      apr_hash_t *src_revs,
                      svn_fs_root_t *tgt_root,
-                     svn_stringbuf_t *tgt_path,
+                     const char *tgt_path,
                      const svn_delta_edit_fns_t *editor,
                      void *edit_baton,
                      svn_boolean_t text_deltas,
@@ -254,7 +254,7 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
                               svn_string_t **committed_date,
                               svn_string_t **last_author,
                               svn_fs_root_t *root,
-                              svn_stringbuf_t *path,
+                              const svn_string_t *path,
                               apr_pool_t *pool);
 
 /* ### other queries we can do someday --

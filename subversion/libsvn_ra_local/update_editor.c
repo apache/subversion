@@ -70,7 +70,7 @@ typedef svn_error_t * (*prop_setter_t) (void *baton,
    via change_file_prop() or change_dir_prop().  */
 static svn_error_t *
 send_entry_props (svn_fs_root_t *root,
-                  svn_stringbuf_t *path,
+                  const svn_string_t *path,
                   const svn_delta_edit_fns_t *real_editor,
                   void *real_baton,
                   svn_boolean_t is_dir,
@@ -166,11 +166,11 @@ open_root (void *edit_baton,
 
 
   /* set the pipe_dir_baton's void pointer to a path. */
-  d->my_baton = svn_stringbuf_dup (my_eb->base_path, my_eb->pool);
+  d->my_baton = svn_string_create_from_buf (my_eb->base_path, my_eb->pool);
 
   /* fetch & send entry props for this path. */
   SVN_ERR (send_entry_props (my_eb->root,
-                             (svn_stringbuf_t *) d->my_baton, /* path */
+                             d->my_baton, /* path */
                              eb->real_editor, d->real_dir_baton,
                              TRUE, /* is_dir */
                              my_eb->pool));
@@ -194,6 +194,9 @@ open_directory (svn_stringbuf_t *name,
     apr_pcalloc (d->edit_baton->pool, sizeof (*child));
   struct edit_baton *my_eb = (struct edit_baton *) d->edit_baton->my_baton;
 
+  /* ### can toss when svn_path has more svn_string_t ops. */
+  svn_stringbuf_t *pathbuf;
+
   child->edit_baton = d->edit_baton;
   child->parent_dir_baton = d;
 
@@ -201,16 +204,17 @@ open_directory (svn_stringbuf_t *name,
   SVN_ERR ((* (d->edit_baton->real_editor->open_directory))
            (name, d->real_dir_baton, base_revision, &(child->real_dir_baton)));
 
-
   /* set the pipe_dir_baton's void pointer to a path. */
-  child->my_baton = 
-    svn_stringbuf_dup ((svn_stringbuf_t *) child->parent_dir_baton->my_baton,
-                       my_eb->pool);
-  svn_path_add_component ((svn_stringbuf_t *) child->my_baton, name);
+  pathbuf =
+    svn_stringbuf_create_from_string (child->parent_dir_baton->my_baton,
+                                      my_eb->pool);
+  svn_path_add_component (pathbuf, name);
+  
+  child->my_baton = svn_string_create_from_buf (pathbuf, my_eb->pool);
 
   /* fetch & send entry props for this path. */
   SVN_ERR (send_entry_props (my_eb->root,
-                             (svn_stringbuf_t *) child->my_baton, /* path */
+                             child->my_baton, /* path */
                              d->edit_baton->real_editor, child->real_dir_baton,
                              TRUE, /* is_dir */
                              my_eb->pool));
@@ -234,6 +238,9 @@ add_directory (svn_stringbuf_t *name,
     apr_pcalloc (d->edit_baton->pool, sizeof (*child));
   struct edit_baton *my_eb = (struct edit_baton *) d->edit_baton->my_baton;
 
+  /* ### can toss when svn_path has more svn_string_t ops. */
+  svn_stringbuf_t *pathbuf;
+
   child->edit_baton = d->edit_baton;
   child->parent_dir_baton = d;
 
@@ -243,14 +250,16 @@ add_directory (svn_stringbuf_t *name,
             &(child->real_dir_baton)));
 
   /* set the pipe_dir_baton's void pointer to a path. */
-  child->my_baton = 
-    svn_stringbuf_dup ((svn_stringbuf_t *) child->parent_dir_baton->my_baton,
-                       my_eb->pool);
-  svn_path_add_component ((svn_stringbuf_t *) child->my_baton, name);
+  pathbuf =
+    svn_stringbuf_create_from_string (child->parent_dir_baton->my_baton,
+                                      my_eb->pool);
+  svn_path_add_component (pathbuf, name);
+  
+  child->my_baton = svn_string_create_from_buf (pathbuf, my_eb->pool);
 
   /* fetch & send entry props for this path. */
   SVN_ERR (send_entry_props (my_eb->root,
-                             (svn_stringbuf_t *) child->my_baton, /* path */
+                             child->my_baton, /* path */
                              d->edit_baton->real_editor, child->real_dir_baton,
                              TRUE, /* is_dir */
                              my_eb->pool));
@@ -275,6 +284,9 @@ add_file (svn_stringbuf_t *name,
     = apr_pcalloc (d->edit_baton->pool, sizeof (*fb));
   struct edit_baton *my_eb = (struct edit_baton *) d->edit_baton->my_baton;
 
+  /* ### can toss when svn_path has more svn_string_t ops. */
+  svn_stringbuf_t *pathbuf;
+
   fb->dir_baton = d;
 
   /* Call the "real" add_file. */
@@ -283,18 +295,17 @@ add_file (svn_stringbuf_t *name,
             copyfrom_revision, &(fb->real_file_baton)));
 
   /* set the pipe_file_baton's void pointer to a path. */
-  fb->my_baton = 
-    svn_stringbuf_dup ((svn_stringbuf_t *) fb->dir_baton->my_baton,
-                       my_eb->pool);
-  svn_path_add_component ((svn_stringbuf_t *) fb->my_baton, name);
+  pathbuf = svn_stringbuf_create_from_string (fb->dir_baton->my_baton,
+                                              my_eb->pool);
+  svn_path_add_component (pathbuf, name);
+  fb->my_baton = svn_string_create_from_buf (pathbuf, my_eb->pool);
 
   /* fetch & send entry props for this path. */
   SVN_ERR (send_entry_props (my_eb->root,
-                             (svn_stringbuf_t *) fb->my_baton, /* path */
+                             fb->my_baton, /* path */
                              d->edit_baton->real_editor, fb->real_file_baton,
                              FALSE, /* is_dir */
                              my_eb->pool));
-
 
   *file_baton = fb;
   return SVN_NO_ERROR;
@@ -314,6 +325,9 @@ open_file (svn_stringbuf_t *name,
     = apr_pcalloc (d->edit_baton->pool, sizeof (*fb));
   struct edit_baton *my_eb = (struct edit_baton *) d->edit_baton->my_baton;
 
+  /* ### can toss when svn_path has more svn_string_t ops. */
+  svn_stringbuf_t *pathbuf;
+
   fb->dir_baton = d;
 
   /* Call the "real" open_file. */
@@ -321,18 +335,17 @@ open_file (svn_stringbuf_t *name,
            (name, d->real_dir_baton, base_revision, &(fb->real_file_baton)));
 
   /* set the pipe_file_baton's void pointer to a path. */
-  fb->my_baton = 
-    svn_stringbuf_dup ((svn_stringbuf_t *) fb->dir_baton->my_baton,
-                       my_eb->pool);
-  svn_path_add_component ((svn_stringbuf_t *) fb->my_baton, name);
+  pathbuf = svn_stringbuf_create_from_string (fb->dir_baton->my_baton,
+                                              my_eb->pool);
+  svn_path_add_component (pathbuf, name);
+  fb->my_baton = svn_string_create_from_buf (pathbuf, my_eb->pool);
 
   /* fetch & send entry props for this path. */
   SVN_ERR (send_entry_props (my_eb->root,
-                             (svn_stringbuf_t *) fb->my_baton, /* path */
+                             fb->my_baton, /* path */
                              d->edit_baton->real_editor, fb->real_file_baton,
                              FALSE, /* is_dir */
                              my_eb->pool));
-
 
   *file_baton = fb;
   return SVN_NO_ERROR;
@@ -372,7 +385,7 @@ svn_ra_local__get_update_pipe_editor (svn_delta_edit_fns_t **editor,
   /* Set up our -private- edit baton. */
   my_eb = apr_pcalloc (pool, sizeof(*my_eb));
   my_eb->pool = pool;
-  my_eb->base_path = svn_stringbuf_dup (session->fs_path, pool);
+  my_eb->base_path = svn_stringbuf_create_from_string (session->fs_path, pool);
   my_eb->session = session;
 
   /* Insert our private edit baton into the public one. */

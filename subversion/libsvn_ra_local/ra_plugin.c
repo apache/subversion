@@ -374,6 +374,9 @@ do_update (void *session_baton,
   struct svn_pipe_edit_baton *pipe_edit_baton;
   svn_revnum_t revnum_to_update_to;
   svn_ra_local__session_baton_t *sbaton = session_baton;
+
+  /* ### fix the update_target param at some point */
+  const char *target;
   
   if (! SVN_IS_VALID_REVNUM(update_revision))
     SVN_ERR (get_latest_revnum (sbaton, &revnum_to_update_to));
@@ -393,12 +396,14 @@ do_update (void *session_baton,
   /* Pass back our reporter */
   *reporter = &ra_local_reporter;
 
+  target = update_target ? update_target->data : NULL;
+
   /* Build a reporter baton. */
   return svn_repos_begin_report (report_baton,
                                  revnum_to_update_to,
                                  sbaton->username,
-                                 sbaton->repos, sbaton->fs_path,
-                                 update_target, TRUE,
+                                 sbaton->repos, sbaton->fs_path->data,
+                                 target, TRUE,
                                  recurse,
                                  pipe_editor, pipe_edit_baton,
                                  sbaton->pool);
@@ -416,18 +421,23 @@ do_status (void *session_baton,
 {
   svn_revnum_t revnum_to_update_to;
   svn_ra_local__session_baton_t *sbaton = session_baton;
+
+  /* ### fix the status_target param at some point */
+  const char *target;
   
   SVN_ERR (get_latest_revnum (sbaton, &revnum_to_update_to));
 
   /* Pass back our reporter */
   *reporter = &ra_local_reporter;
 
+  target = status_target ? status_target->data : NULL;
+
   /* Build a reporter baton. */
   return svn_repos_begin_report (report_baton,
                                  revnum_to_update_to,
                                  sbaton->username,
-                                 sbaton->repos, sbaton->fs_path,
-                                 status_target, FALSE,
+                                 sbaton->repos, sbaton->fs_path->data,
+                                 target, FALSE,
                                  recurse,
                                  status_editor, status_baton,
                                  sbaton->pool);
@@ -454,7 +464,7 @@ get_log (void *session_baton,
         = (((svn_stringbuf_t **)(paths)->elts)[i]);
 
       svn_stringbuf_t *abs_path
-        = svn_stringbuf_dup (sbaton->fs_path, sbaton->pool);
+        = svn_stringbuf_create_from_string (sbaton->fs_path, sbaton->pool);
 
       /* ### Not sure if this counts as a workaround or not.  The
          session baton uses the empty string to mean root, and not
@@ -489,7 +499,7 @@ do_check_path (svn_node_kind_t *kind,
   svn_ra_local__session_baton_t *sbaton = session_baton;
   svn_fs_root_t *root;
   svn_stringbuf_t *abs_path 
-    = svn_stringbuf_dup (sbaton->fs_path, sbaton->pool);
+    = svn_stringbuf_create_from_string (sbaton->fs_path, sbaton->pool);
 
   /* ### Not sure if this counts as a workaround or not.  The
      session baton uses the empty string to mean root, and not
@@ -530,7 +540,7 @@ get_file (void *session_baton,
   svn_ra_local__session_baton_t *sbaton = session_baton;
 
   svn_stringbuf_t *abs_path 
-    = svn_stringbuf_dup (sbaton->fs_path, sbaton->pool);
+    = svn_stringbuf_create_from_string (sbaton->fs_path, sbaton->pool);
 
   /* ### Not sure if this counts as a workaround or not.  The
      session baton uses the empty string to mean root, and not
