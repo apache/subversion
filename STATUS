@@ -66,18 +66,6 @@ Core changes that don't have three +1's yet, or have a veto.  (If you
 make the threshold vote on one of these items, please move it to the
 section for approved changes.)
 
-   * Issue #1682
-     'svn blame' should adjust to max username width
-     Justification: Improved blame display, API change, low risk.
-     Notes: bindings would need updating
-     Votes:
-      +1: mbk
-      -0: gstein
-      -1: kfogel. see:
-           http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=54039
-           Message-Id:  <200401082033.i08KXMv45357@newton.ch.collab.net>
-
-
     * r8292 (fix for Issue #1695)
       Fix a nasty bug in the 'changes' table reading code that caused
       in invalid set of changes to be returned.  This bug *probably*
