@@ -1216,7 +1216,9 @@ svn_wc__ensure_adm (svn_string_t *path,
 svn_error_t *
 svn_wc__adm_destroy (svn_string_t *path, apr_pool_t *pool)
 {
-#if 0
+  /* cmpilato todo:  make this not suck.  */
+
+#if 0 
   /* Try to lock the admin directory, hoping that this function will
      eject an error if we're already locked (which is fine, cause if
      it is already locked, we certainly don't want to blow it away. */
@@ -1239,8 +1241,14 @@ svn_wc__adm_destroy (svn_string_t *path, apr_pool_t *pool)
            "error removing administrative directory for %s",
            path->data);
     }
-#endif /* 0 */
+
   return SVN_NO_ERROR;
+#endif /* 0 */
+
+  /* We don't have an easy way to remove an entire non-empty
+     directory, so until we do, let's just remove the README file from
+     the administrative directory. */
+  return svn_wc__remove_adm_file (path, pool, SVN_WC__ADM_README, NULL);
 }
 
 

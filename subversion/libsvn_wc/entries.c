@@ -257,8 +257,7 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
 
 
 /* Use entry SRC to fill in blank portions of entry DST.  SRC itself
-   may not have any blanks, of course, and it may not be the current
-   dir entry itself (i.e., ".").
+   may not have any blanks, of course.
    Typically, SRC is a parent directory's own entry, and DST is some
    child in that directory. */
 static void
@@ -898,6 +897,7 @@ interpret_changes (apr_hash_t *entries,
 {
   int current_state, new_state;
   struct svn_wc_entry_t *entry;
+  struct svn_wc_entry_t *this_dir_entry;
 
   char current_addonly, current_delonly, current_both, current_neither;
   char new_addonly, new_delonly;
@@ -909,6 +909,27 @@ interpret_changes (apr_hash_t *entries,
 
   /* Get the entry */
   entry = apr_hash_get (entries, name->data, name->len);
+
+  /* Get the default entry */
+  this_dir_entry = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, 
+                                 APR_HASH_KEY_STRING);
+
+
+  if ((*state & SVN_WC_ENTRY_ADDED)
+      && (this_dir_entry)
+      && (entry != this_dir_entry)
+      && (this_dir_entry->state & SVN_WC_ENTRY_DELETED))
+    {
+      /* If there is a default entry in this entries list, and
+         this is not it, and that default entry is marked for
+         deletion, we cannot marking anything for addition in
+         this directory. */
+      return 
+        svn_error_createf 
+        (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
+         "error: cannot add entry `%s' to deleted directory",
+         name->data);
+    }
 
   /* What if the entry doesn't yet exist?  That's ok.  Presumably the
      fold_entry() routines are being asked to create it. */

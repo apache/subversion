@@ -66,7 +66,6 @@ struct dir_baton
 
   apr_pool_t *subpool; /* my personal subpool, in which I am allocated. */
   int ref_count;       /* how many still-open batons depend on my pool. */
-                  
 };
 
 
@@ -152,12 +151,14 @@ delete_entry (svn_string_t *name,
 {
   struct dir_baton *parent = parent_baton;
   struct edit_baton *eb = parent->edit_baton;
-
   svn_string_t *path_to_kill = svn_string_dup (parent->path, parent->subpool);
   svn_path_add_component (path_to_kill, name, svn_path_repos_style);
 
-  /* This routine is a mindless wrapper. */
-  SVN_ERR (svn_fs_delete (eb->txn_root, path_to_kill->data, parent->subpool));
+  /* This routine is a mindless wrapper.  We call svn_fs_delete_tree
+     because that will delete files and recursively delete
+     directories.  */
+  SVN_ERR (svn_fs_delete_tree (eb->txn_root, path_to_kill->data,
+                               parent->subpool));
 
   return SVN_NO_ERROR;
 }
