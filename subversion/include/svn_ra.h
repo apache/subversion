@@ -384,7 +384,8 @@ typedef struct svn_ra_plugin_t
                            void *receiver_baton);
 
   /* Set *KIND to node kind associated with PATH at REVISION.  If PATH
-   * does not exist under REVISION, set *KIND to svn_node_none. 
+   * does not exist under REVISION, set *KIND to svn_node_none.  PATH
+   * is relative to the session's parent URL.
    */
   svn_error_t *(*check_path) (svn_node_kind_t *kind,
                               void *session_baton,

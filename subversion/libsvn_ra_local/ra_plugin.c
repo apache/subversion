@@ -416,7 +416,10 @@ do_check_path (svn_node_kind_t *kind,
   if (abs_path->len == 0)
     svn_stringbuf_appendcstr (abs_path, "/");
 
-  svn_path_add_component_nts (abs_path, path, svn_path_repos_style);
+  /* If we were given a relative path to append, append it. */
+  if (path)
+    svn_path_add_component_nts (abs_path, path, svn_path_repos_style);
+
   if (! SVN_IS_VALID_REVNUM (revision))
     SVN_ERR (svn_fs_youngest_rev (&revision, sbaton->fs, sbaton->pool));
   SVN_ERR (svn_fs_revision_root (&root, sbaton->fs, revision, sbaton->pool));
