@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <apr_pools.h>
 #include "svn_error.h"
+#include "svn_fs.h"
 #include "fs.h"
 #include "rev-table.h"
 #include "trail.c"
@@ -108,6 +109,38 @@ open_berkeley_filesystem (const char **msg)
 }
 
 
+static int
+begin_then_close_transaction (const char **msg)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+
+  *msg = "begin a transaction, then immediately close it";
+
+  /* Open the FS. */
+  fs = svn_fs_new (pool);
+  if (fs == NULL)
+    return fail();
+
+  if (SVN_NO_ERROR != svn_fs_open_berkeley (fs, repository))
+    return fail();
+
+  /* Begin a transaction. */
+  if (SVN_NO_ERROR != svn_fs_begin_txn (&txn, fs, 0, pool))
+    return fail();
+
+  /* Close it. */
+  if (SVN_NO_ERROR != svn_fs_close_txn (txn))
+    return fail();
+
+  /* Close the FS. */
+  if (SVN_NO_ERROR != svn_fs_close_fs (fs))
+    return fail();
+
+  return 0;
+}
+
+
 
 /* The test table.  */
 
@@ -115,6 +148,7 @@ int (*test_funcs[]) (const char **msg) = {
   0,
   create_berkeley_filesystem,
   open_berkeley_filesystem,
+  begin_then_close_transaction,
   0
 };
 
