@@ -476,11 +476,15 @@ delete_lock (svn_fs_t *fs,
 }
 
 
-/* Set *LOCK_P to the lock for PATH in FS.  Use POOL for allocations. */
+/* Set *LOCK_P to the lock for PATH in FS.  HAVE_WRITE_LOCK should be
+   TRUE if the caller (or one of its callers) has taken out the
+   repository-wide write lock, FALSE otherwise.  Use POOL for
+   allocations. */
 static svn_error_t *
 get_lock (svn_lock_t **lock_p,
           svn_fs_t *fs,
           const char *path,
+          svn_boolean_t have_write_lock,
           apr_pool_t *pool)
 {
   svn_lock_t *lock;
@@ -493,11 +497,24 @@ get_lock (svn_lock_t **lock_p,
   /* Possibly auto-expire the lock. */
   if (lock->expiration_date && (apr_time_now() > lock->expiration_date))
     {
-      /* ### TODO:  We need the write lock here, but some callers
-         ### already has it.  Also, we need to reread the lock to
-         ### avoid a race.  We don't want the write lock grabbed just
-         ### to get a lock. */
-      SVN_ERR (delete_lock (fs, lock, pool));
+      if (have_write_lock)
+        SVN_ERR (delete_lock (fs, lock, pool));
+      else
+        {
+          /* Grab the fs write lock. */
+          apr_pool_t *subpool = svn_pool_create (pool);
+          SVN_ERR (svn_fs_fs__get_write_lock (fs, subpool));
+          
+          /* Reread the lock to avoid a race. */
+          SVN_ERR (read_digest_file (NULL, &lock, fs, digest_path, pool));
+          if (! lock)
+            return svn_fs_fs__err_no_such_lock (fs, path);
+          
+          SVN_ERR (delete_lock (fs, lock, pool));
+          
+          /* Destroy our subpool and release the fs write lock. */
+          svn_pool_destroy (subpool);
+        }
       *lock_p = NULL;
       return svn_fs_fs__err_lock_expired (fs, lock->token); 
     }
@@ -507,17 +524,21 @@ get_lock (svn_lock_t **lock_p,
 }
 
 
-/* Set *LOCK_P to the lock for PATH in FS.  Use POOL for allocations. */
+/* Set *LOCK_P to the lock for PATH in FS.  HAVE_WRITE_LOCK should be
+   TRUE if the caller (or one of its callers) has taken out the
+   repository-wide write lock, FALSE otherwise.  Use POOL for
+   allocations. */
 static svn_error_t *
 get_lock_helper (svn_fs_t *fs,
                  svn_lock_t **lock_p,
                  const char *path,
+                 svn_boolean_t have_write_lock,
                  apr_pool_t *pool)
 {
   svn_lock_t *lock;
   svn_error_t *err;
   
-  err = get_lock (&lock, fs, path, pool);
+  err = get_lock (&lock, fs, path, have_write_lock, pool);
 
   /* We've deliberately decided that this function doesn't tell the
      caller *why* the lock is unavailable.  */
@@ -636,7 +657,7 @@ svn_fs_fs__allow_locked_operation (const char *path,
     {
       /* Discover and verify any lock attached to the path. */
       svn_lock_t *lock;
-      SVN_ERR (get_lock_helper (fs, &lock, path, pool));
+      SVN_ERR (get_lock_helper (fs, &lock, path, FALSE, pool));
       if (lock)
         SVN_ERR (verify_lock (fs, lock, pool));
     }
@@ -732,7 +753,7 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
      acceptable to ignore; it means that the path is now free and
      clear for locking, because the fsfs funcs just cleared out both
      of the tables for us.   */
-  SVN_ERR (get_lock_helper (fs, &existing_lock, path, pool));
+  SVN_ERR (get_lock_helper (fs, &existing_lock, path, TRUE, pool));
   if (existing_lock)
     {
       if (! force)
@@ -809,7 +830,7 @@ svn_fs_fs__unlock (svn_fs_t *fs,
   SVN_ERR (svn_fs_fs__get_write_lock (fs, subpool));
 
   /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN or SVN_ERR_FS_LOCK_EXPIRED. */
-  SVN_ERR (get_lock (&lock, fs, path, pool));
+  SVN_ERR (get_lock (&lock, fs, path, TRUE, pool));
   
   /* Unless breaking the lock, we do some checks. */
   if (! force)
@@ -847,7 +868,7 @@ svn_fs_fs__get_lock (svn_lock_t **lock_p,
 {
   SVN_ERR (svn_fs_fs__check_fs (fs));
   path = svn_fs_fs__canonicalize_abspath (path, pool);
-  return get_lock_helper (fs, lock_p, path, pool);
+  return get_lock_helper (fs, lock_p, path, FALSE, pool);
 }
 
 
