@@ -38,7 +38,7 @@ Candidate changes:
     Justification: 
       Fixes run-time error seen by Subclipse users with RedHat Fedora.
     Votes:
-      +1: jerenkrantz
+      +1: jerenkrantz, maxb
 
   * r12630
     Dataloss bug in svndumpfilter - copyfrom information lost for files
@@ -120,7 +120,7 @@ Candidate changes:
     Justification:
       Better chance of client survival in the toxic environment of Win32.
     Votes:
-      +1: brane, cmpilato
+      +1: brane, cmpilato, maxb
 
   * r12551, r12717, r12722
     SWIG 1.3.24 compatibility
