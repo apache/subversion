@@ -670,7 +670,7 @@ log_do_committed (struct log_runner *loggy,
       svn_revnum_t new_rev = SVN_STR_TO_REV(rev);
 
       /* If we are suppose to delete "this dir", drop a 'killme' file
-         into my own adminstrative dir as a signal for svn_wc__run_log() 
+         into my own administrative dir as a signal for svn_wc__run_log() 
          to blow away the administrative area after it is finished
          processing this logfile.  */
       if (is_this_dir)

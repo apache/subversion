@@ -776,7 +776,7 @@ svn_wc_delete (const char *path,
       if (was_schedule_add && !was_deleted)
         {
           /* Deleting a directory that has been added but not yet
-             committed is easy, just remove the adminstrative dir. */
+             committed is easy, just remove the administrative dir. */
 
           if (dir_access != adm_access)
             {

@@ -602,7 +602,7 @@ svn_wc_transmit_text_deltas (const char *path,
   unsigned char digest[MD5_DIGESTSIZE];
   
   /* Make an untranslated copy of the working file in the
-     adminstrative tmp area because a) we want this to work even if
+     administrative tmp area because a) we want this to work even if
      someone changes the working file while we're generating the
      txdelta, b) we need to detranslate eol and keywords anyway, and
      c) after the commit, we're going to copy the tmp file to become
