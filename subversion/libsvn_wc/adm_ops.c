@@ -1531,8 +1531,11 @@ svn_wc_remove_from_revision_control (const char *path,
 }
 
 
+
+/*** Resolving a conflict automatically ***/
 
-/* Helper for svn_wc_resolve_conflict */
+
+/* Helper for resolve_conflict_on_entry */
 static svn_error_t *
 attempt_deletion (const char *parent_dir,
                   const char *base_name,
@@ -1543,30 +1546,20 @@ attempt_deletion (const char *parent_dir,
 }
 
 
-svn_error_t *
-svn_wc_resolve_conflict (const char *path,
-                         svn_boolean_t resolve_text,
-                         svn_boolean_t resolve_props,
-                         svn_wc_notify_func_t notify_func,
-                         void *notify_baton,
-                         apr_pool_t *pool)
+/* Does the main resolution work: */
+static svn_error_t *
+resolve_conflict_on_entry (const char *path,
+                           svn_wc_entry_t *entry,
+                           const char *conflict_dir,
+                           const char *base_name,
+                           svn_boolean_t resolve_text,
+                           svn_boolean_t resolve_props,
+                           svn_wc_notify_func_t notify_func,
+                           void *notify_baton,
+                           apr_pool_t *pool)
 {
-  const char *conflict_dir, *base_name;
   svn_boolean_t text_conflict, prop_conflict;
-  svn_wc_entry_t *entry = NULL;
   apr_uint32_t modify_flags = 0;
-
-  /* Feh, ignoring the return value here.  We just want to know
-     whether we got the entry or not. */
-  svn_wc_entry (&entry, path, FALSE, pool);
-  if (! entry)
-    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
-                              "Not under version control: '%s'", path);
-
-  if (entry->kind == svn_node_dir)
-    conflict_dir = path;
-  else
-    svn_path_split_nts (path, &conflict_dir, &base_name, pool);
 
   /* Sanity check: see if libsvn_wc thinks this item is in a state of
      conflict that we have asked to resolve.   If not, just go home.*/
@@ -1630,7 +1623,90 @@ svn_wc_resolve_conflict (const char *path,
   return SVN_NO_ERROR;
 }
 
+/* Machinery for an automated entries walk... */
 
+struct resolve_callback_baton
+{
+  svn_boolean_t resolve_text;
+  svn_boolean_t resolve_props;
+  svn_wc_notify_func_t notify_func;
+  void *notify_baton;
+  apr_pool_t *pool;
+};
+
+static svn_error_t *
+resolve_found_entry_callback (const char *path,
+                              svn_wc_entry_t *entry,
+                              void *walk_baton)
+{
+  struct resolve_callback_baton *baton = walk_baton;
+  const char *conflict_dir, *base_name = NULL;
+
+  /* We're going to receive dirents twice;  we want to ignore the
+     first one (where it's a child of a parent dir), and only print
+     the second one (where we're looking at THIS_DIR.)  */
+  if ((entry->kind == svn_node_dir) 
+      && (strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR)))
+    return SVN_NO_ERROR;
+
+  /* Figger out the directory in which the conflict resides. */
+  if (entry->kind == svn_node_dir)
+    conflict_dir = path;
+  else
+    svn_path_split_nts (path, &conflict_dir, &base_name, baton->pool);
+
+  return resolve_conflict_on_entry (path, entry, conflict_dir, base_name,
+                                    baton->resolve_text, baton->resolve_props,
+                                    baton->notify_func, baton->notify_baton,
+                                    baton->pool);
+}
+
+static const svn_wc_entry_callbacks_t 
+resolve_walk_callbacks =
+  {
+    resolve_found_entry_callback
+  };
+
+
+/* The public function */
+svn_error_t *
+svn_wc_resolve_conflict (const char *path,
+                         svn_boolean_t resolve_text,
+                         svn_boolean_t resolve_props,
+                         svn_boolean_t recursive,
+                         svn_wc_notify_func_t notify_func,
+                         void *notify_baton,                         
+                         apr_pool_t *pool)
+{
+  struct resolve_callback_baton *baton = apr_pcalloc (pool, sizeof(*baton));
+
+  baton->resolve_text = resolve_text;
+  baton->resolve_props = resolve_props;
+  baton->notify_func = notify_func;
+  baton->notify_baton = notify_baton;
+  baton->pool = pool;
+
+  if (! recursive)
+    {
+      svn_wc_entry_t *entry;
+      svn_wc_entry (&entry, path, FALSE, pool);
+      if (! entry)
+        return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+                                  "Not under version control: '%s'", path);
+
+      SVN_ERR (resolve_found_entry_callback (path, entry, baton));
+    }
+  else
+    {
+      SVN_ERR (svn_wc_walk_entries (path,
+                                    &resolve_walk_callbacks, baton,
+                                    FALSE, pool));
+    }
+  return SVN_NO_ERROR;
+}
+
+
+
 
 svn_error_t *
 svn_wc_get_auth_file (const char *path,

@@ -38,10 +38,11 @@ svn_error_t *
 svn_client_resolve (const char *path,
                     svn_wc_notify_func_t notify_func,
                     void *notify_baton,
+                    svn_boolean_t recursive,
                     apr_pool_t *pool)
 {
-  return svn_wc_resolve_conflict (path, TRUE, TRUE, notify_func, notify_baton,
-                                  pool);
+  return svn_wc_resolve_conflict (path, TRUE, TRUE, recursive,
+                                  notify_func, notify_baton, pool);
 }
 
 

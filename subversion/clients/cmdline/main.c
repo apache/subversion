@@ -315,7 +315,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    Note:  this routine does not semantically resolve conflict markers;\n"
     "    it merely removes conflict-related artifact files and allows TARGET\n"
     "    to be committed again.\n",
-    {svn_cl__targets_opt} },
+    {svn_cl__targets_opt, svn_cl__recursive_opt} },
  
   { "status", svn_cl__status, {"stat", "st"},
     "Print the status of working copy files and directories.\n"

@@ -702,7 +702,8 @@ svn_error_t *svn_wc_remove_from_revision_control (const char *path,
 /* Assuming PATH is under version control and in a state of conflict, then
    take PATH *out* of this state.  If RESOLVE_TEXT is set then any text
    conflict is resolved, if RESOLVE_PROPS is set then any property
-   conflicts are resolved.
+   conflicts are resolved.  If RECURSIVE is set, then search
+   recursively for conflicts to resolve.
 
    Needless to say, this function doesn't touch conflict markers or
    anything of that sort -- only a human can semantically resolve a
@@ -725,6 +726,7 @@ svn_error_t *svn_wc_remove_from_revision_control (const char *path,
 svn_error_t *svn_wc_resolve_conflict (const char *path,
                                       svn_boolean_t resolve_text,
                                       svn_boolean_t resolve_props,
+                                      svn_boolean_t recursive,
                                       svn_wc_notify_func_t notify_func,
                                       void *notify_baton,
                                       apr_pool_t *pool);
