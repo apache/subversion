@@ -2113,6 +2113,7 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
             this:</para>
               
           <screen>
+Repository lock acquired.
 Please wait; recovering the repository may take some time...
 
 Recovery completed.
@@ -2285,6 +2286,21 @@ $ svnadmin load newrepos &lt; dumpfile
 $ svnadmin create newrepos
 $ svnadmin dump myrepos | svnadmin load newrepos
 </screen>
+
+      <para>By default, the dumpfile will be quite large&mdash;much
+        larger than the repository itself.  That's because every
+        version of every file is expressed as a full text in the
+        dumpfile.  This is the fastest and simplest behavior, and nice
+        if you're piping the dump data directly into some other
+        process (such as a compression program, filtering program, or
+        into a loading process).  But if you're creating dumpfile for
+        longer-term storage, you'll likely want to save disk space by
+        using the <option>--deltas</option> switch.  With this option,
+        successive revisions of files will be output as compressed,
+        binary differences&mdash;just as file revisions are stored in
+        a repository.  This option is slower, but results in a
+        dumpfile much closer in size to the original
+        repository.</para>
 
       <para>We mentioned previously that <command>svnadmin
         dump</command> outputs a range of revisions.  Use the

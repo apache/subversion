@@ -56,49 +56,19 @@ ch06:
 -----------------------------------------------
 
 
-List of 1.1 features/changes
+List of 1.1 features/changes (that still need to be documented)
 ============================
 
   * www/svn_1.1_relasenotes.html really needs to be converted into a
     new section in the book's preface, complete with <xref> links to
     the new 1.1 features.
 
-  * FSFS TODO:  update 'svnadmin create' in reference section.
-                expand Omnigraffle picture.
-                scan other chapters for BDB-specific stuff.
+  * Need whole new section to explain "peg objects" and history
+    tracing.  Lots of examples involving different subcommands.
+    (Which chapter should this section go in?)
 
-  * symlink versioning
+  * Need whole new section explaining activating l10n and IRI autoescaping.
+    (What chapter should this section go in?)
 
-  * slightly tweaked 'svn diff' syntax allows things like
-    'svn diff -rX:Y URL@Z'.   Probably need to explain 'peg' objects,
-    so folks can understand how/when renames are followed by certain
-    commands.
-
-       --> really, we need a whole new section full of examples that
-           demonstrate syntaxes that follow history, vs. those that
-           don't.
-
-  * do we need to tell people how to activate localized client
-    output?  or is that just widespread knowledge?
-
-  * remove SVN_REVNUM_T_FMT from any example code.
-
-  * document new 'svnadmin dump --deltas' in ch05 and ch09.
-
-  * svn export --native-eol
-
-  * In the section on "Supporting Multiple Repository Access Methods",
-    the chmod g+s command is no longer necessary for repositories
-    created with svn 1.1, since we take care of that now.
-
-  * document svn:special property, and how symlinks can be put under
-    version control.   and what (doesn't) happen on win32.
-
-  * Add a note somewhere clarifying that the command line client auto-escapes
-    URIs and supports "IRI" syntax.
-
-  * New $Revision$ alias
-
-  * New non-blocking 'svnadmin recover' lock behavior, with --wait option
-
-  * New 'SVNPathAuthz Off' directive
+  * New 'SVNPathAuthz Off' directive, to disable path-based authz in
+    apache (and increase speed.)

@@ -436,20 +436,30 @@ collabnet = svn.collab.net
 
         <variablelist>
           <varlistentry>
-            <term><literal>store-auth-creds</literal></term>
+            <term><literal>store-passwords</literal></term>
             <listitem>
               <para>This instructs Subversion to cache, or not to
-                cache, authentication credentials that are supplied by
-                the user in response to server authentication
-                challenges.  The default value is
-                <literal>yes</literal>.  Set this to
-                <literal>no</literal> to disable this on-disk
-                credential caching.  You can override this option for
-                a single instance of the <command>svn</command>
-                command using the <option>--no-auth-cache</option>
-                command-line parameter (for those subcommands that
-                support it).  For more information, see <xref
+                cache, passwords that are supplied by the user in
+                response to server authentication challenges.  The
+                default value is <literal>yes</literal>.  Set this to
+                <literal>no</literal> to disable this on-disk password
+                caching.  You can override this option for a single
+                instance of the <command>svn</command> command using
+                the <option>--no-auth-cache</option> command-line
+                parameter (for those subcommands that support it).
+                For more information, see <xref
                 linkend="svn-ch-6-sect-2.2"/>.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>store-auth-creds</literal></term>
+            <listitem>
+              <para>This setting is the same as
+              <literal>store-passwords</literal>, except that enables
+              or disables disk-caching of <emphasis>all</emphasis>
+              authentication information: usernames, passwords, server
+              certificates, and any other types of cacheable
+              credentials.</para>
             </listitem>
           </varlistentry>
         </variablelist>
@@ -1628,6 +1638,31 @@ Cumulus clouds are appearing more frequently as summer approaches.
           its use, see <xref linkend="svn-ch-7-sect-3"/>.</para>
 
       </sect3>
+
+      <sect3 id="svn-ch-7-sect-2.3.7">
+        <title><literal>svn:special</literal></title>
+
+        <para>The <literal>svn:special</literal> property is the only
+          <literal>svn:</literal> property that isn't meant to be
+          directly set or modified by users.  Subversion automatically
+          sets this property whenever a <quote>special</quote> object
+          is scheduled for addition, such as a symbolic link.  The
+          repository stores a <literal>svn:special</literal> object as
+          an ordinary file.  However, when a client sees this property
+          during checkouts or updates, it interprets the contents of
+          the file and translates the item back into the special type
+          of object.  In Subversion 1.1, only versioned symbolic links
+          have this property attached, but in future versions of
+          Subversion other special types of nodes will probably use
+          this property as well.</para>
+
+        <para>Note: Windows clients don't have symbolic links, and
+          thus ignore any <literal>svn:special</literal> files coming
+          from a repository that claim to be symbolic links.  On
+          Windows, the user ends up with an ordinary versioned file in
+          the working copy.</para>
+      </sect3>
+
     </sect2>
 
     <!-- ***************************************************************** -->

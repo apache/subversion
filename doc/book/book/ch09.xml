@@ -484,7 +484,7 @@ $ svn log -r 1729:{2002-02-17}
       <refentry id="svn-ch-9-sect-1.2-re-add">
         <refnamediv>
           <refname>svn add</refname>
-          <refpurpose>Add files and directories.</refpurpose>
+          <refpurpose>Add files, directories, or symbolic links.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title> 
@@ -493,12 +493,12 @@ $ svn log -r 1729:{2002-02-17}
         <refsect1>
           <title>Description</title>
           
-          <para>Add files and directories to your working copy and
-            schedule them for addition to the repository.  They
-            will be uploaded and added to the repository on your
-            next commit.  If you add something and change your mind
-            before committing, you can unschedule the addition using
-            <command>svn revert</command>.</para>
+          <para>Add files, directories, or symbolic links to your
+            working copy and schedule them for addition to the
+            repository.  They will be uploaded and added to the
+            repository on your next commit.  If you add something and
+            change your mind before committing, you can unschedule the
+            addition using <command>svn revert</command>.</para>
         </refsect1>
         
         <refsect1>
@@ -1610,6 +1610,7 @@ Index: COMMITTERS
 --no-auth-cache
 --non-interactive
 --config-dir DIR
+--native-eol EOL
 </screen>
         </refsect1>
 
@@ -1635,10 +1636,29 @@ A  my-export/quiz
 Exported revision 15.
 </screen>
 
+          <para>When rolling operating-system-specific release
+            packages, it can be useful to export a tree which uses a
+            specific EOL character for line endings.  The
+            <option>--native-eol</option> option will do this, but it
+            only affects files that have <literal>svn:eol-style =
+            native</literal> properties attached to them.  For
+            example, to export a tree with all CRLF line endings
+            (possibly for a Windows .zip file distribution):</para>
+
+          <screen>
+$ svn export file://tmp/repos my-export --native-eol CRLF
+A  my-export/test
+A  my-export/quiz
+&hellip;
+Exported revision 15.
+</screen>
+
         </refsect1>
       </refentry>
 
       <!-- ================================================================= -->
+
+
       <refentry id="svn-ch-9-sect-1.2-re-help">
         <refnamediv>
           <refname>svn help</refname>
@@ -3870,6 +3890,8 @@ Updated to revision 30.
           <screen>
 --bdb-txn-nosync
 --bdb-log-keep
+--config-dir DIR
+--fs-type TYPE
 </screen>
         </refsect1>
 
@@ -3882,6 +3904,15 @@ Updated to revision 30.
 $ svnadmin create /usr/local/svn/repos
 </screen>
           
+          <para>In Subversion 1.0, a Berkeley DB repository is always
+          created.  In Subversion 1.1, a Berkeley DB repository is the
+          default repository type, but an FSFS repository can be
+          created using the <option>--fs-type</option> option:</para>
+
+          <screen>
+$ svnadmin create /usr/local/svn/repos --fs-type fsfs
+</screen>
+
         </refsect1>
       </refentry>
 
@@ -3951,6 +3982,7 @@ $ svnadmin create /usr/local/svn/repos
 --revision (-r)
 --incremental
 --quiet
+--deltas
 </screen>
         </refsect1>
         
@@ -4211,7 +4243,8 @@ $ svnadmin lstxns /usr/local/svn/repos/
       <refentry id="svn-ch-9-sect-2.2-re-recover">
         <refnamediv>
           <refname>svnadmin recover</refname>
-          <refpurpose>Recover any lost state in a repository.</refpurpose>
+          <refpurpose>Bring a repository database back into a
+          consistent state.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -4223,7 +4256,12 @@ $ svnadmin lstxns /usr/local/svn/repos/
           <para>Run this command if you get an error indicating that
             your repository needs to be recovered.</para>
         </refsect1>
-
+        <refsect1>
+          <title>Switches</title>
+          <screen>
+--wait
+</screen>
+        </refsect1>
         <refsect1>
           <title>Examples</title>
           
@@ -4231,8 +4269,37 @@ $ svnadmin lstxns /usr/local/svn/repos/
 
           <screen>
 $ svnadmin recover /usr/local/svn/repos/ 
-Acquiring exclusive lock on repository db.
-Recovery is running, please stand by...
+Repository lock acquired.
+Please wait; recovering the repository may take some time...
+
+Recovery completed.
+The latest repos revision is 34.
+</screen>
+
+          <para>Recovering the database requires an exclusive lock on
+          the repository.  If another process is accessing the
+          repository, then <command>svnadmin recover</command> will error:</para>
+          <screen>
+$ svnadmin recover /usr/local/svn/repos
+svn: Failed to get exclusive repository access; perhaps another process
+such as httpd, svnserve or svn has it open?
+
+$
+</screen>
+
+          <para>The <option>--wait</option> option, however, will
+          cause <command>svnadmin recover</command> to wait
+          indefinitely for other processes to disconnect:</para>
+
+          <screen>
+$ svnadmin recover /usr/local/svn/repos --wait
+Waiting on repository lock; perhaps another process has it open?
+
+### time goes by...
+
+Repository lock acquired.
+Please wait; recovering the repository may take some time...
+
 Recovery completed.
 The latest repos revision is 34.
 </screen>
