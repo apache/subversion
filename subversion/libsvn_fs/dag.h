@@ -325,7 +325,7 @@ svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
 
    NOTE: If ID represents a directory, and that directory has mutable
    children, you risk orphaning those children by leaving them
-   danging, disconnected from all DAG trees.  It is assumed that
+   dangling, disconnected from all DAG trees.  It is assumed that
    callers of this interface know what in the world they are doing.  */
 svn_error_t *svn_fs__dag_remove_node (svn_fs_t *fs,
                                       const svn_fs_id_t *id,
