@@ -13,7 +13,7 @@ Candidate changes:
     Fix bug in the changes table change-folding code.
     Justification: Historical correctness issue.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, dlr
 
   * r8708
     Use warnings pragma on perl hook-scripts.
