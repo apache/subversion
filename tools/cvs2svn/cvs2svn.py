@@ -489,7 +489,7 @@ class Dump:
 
 def format_date(date):
   """Return an svn-compatible date string for DATE (seconds since epoch)."""
-  ### A Subversion date looks like "2002-09-29T14:44:59.000000Z"
+  # A Subversion date looks like "2002-09-29T14:44:59.000000Z"
   return time.strftime("%Y-%m-%dT%H:%M:%S.000000Z", time.gmtime(date))
 
 
