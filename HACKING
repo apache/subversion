@@ -449,9 +449,14 @@ how others have been writing their log entries.)
 Patch submission guidelines
 ===========================
 
-Patches should be mailed to `dev@subversion.tigris.org'.  A patch
-should contain one logical change; please don't mix N unrelated
-changes in one submission -- send N separate emails instead.
+Mail patches to `dev@subversion.tigris.org', with a subject line
+that contains the word "PATCH" in all uppercase, for example
+
+   Subject: [PATCH] fix for rev printing bug in svn status
+
+A patch submission should contain one logical change; please don't mix
+N unrelated changes in one submission -- send N separate emails
+instead.
 
 The patch should be in unified diff format, inserted directly into the
 body of your mail message (i.e., not MIME-attached, uuencoded, or
