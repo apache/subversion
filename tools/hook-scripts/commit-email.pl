@@ -61,7 +61,7 @@ open (INPUT, "svnlook $repos rev $rev diff |")
 my @difflines = <INPUT>;
 close (INPUT);
 
-print MAILER "Author: $author\nDate: $date\n\n";
+print MAILER "Author: $author\nDate: $date\nNew Revision: $rev\n\n";
 if (scalar @adds)
 {
     @adds = sort @adds;
@@ -84,3 +84,6 @@ print MAILER "Log:\n", @log, "\n";
 print MAILER @difflines;
 
 close (MAILER);
+
+
+
