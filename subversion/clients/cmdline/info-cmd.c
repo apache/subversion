@@ -76,6 +76,11 @@ print_entry (const char *target,
       printf ("Repository: %s\n", native);
     }
  
+  if (entry->uuid) 
+    {
+      printf ("Repository UUID: %s\n", entry->uuid);
+    }
+ 
   if (SVN_IS_VALID_REVNUM (entry->revision))
     printf ("Revision: %" SVN_REVNUM_T_FMT "\n", entry->revision);
 
