@@ -38,7 +38,8 @@
 /* Overall crawler editor baton.
  */
 struct edit_baton {
-  /* TARGET represent the base of the hierarchy to be compared. */
+  /* TARGET is a working-copy directory which corresponds to the base
+     URL open in RA_SESSION below. */
   svn_stringbuf_t *target;
 
   /* The callback and calback argument that implement the file comparison
@@ -328,7 +329,7 @@ open_root (void *edit_baton,
   dir_baton->edit_baton = eb;
   dir_baton->added = FALSE;
   dir_baton->pool = pool;
-  dir_baton->path = "";
+  dir_baton->path = eb->target ? apr_pstrdup (pool, eb->target->data) : "";
 
   *root_baton = dir_baton;
 
