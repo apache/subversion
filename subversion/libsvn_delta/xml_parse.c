@@ -974,16 +974,38 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   if (value)
     new_frame->name = svn_string_create (value, my_digger->pool);
 
-  /* Set ancestor path in frame, if there's any such attribute in ATTS */
-  value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_PATH, atts);
-  if (value)
-    new_frame->ancestor_path = svn_string_create (value, my_digger->pool);
-  
-  /* Set ancestor revision in frame, if there's any such attribute in
-     ATTS */
-  value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_REV, atts);
-  if (value)
-    new_frame->ancestor_revision = atoi (value);
+  /* If this is an add tag, it might contain copyfrom_path and
+     copyfrom_revision attributes.  Otherwise, it might just have the
+     logical equivalents of these, named base_path and
+     base_revision. */
+  if (new_frame->tag == svn_delta__XML_add)
+    {
+      /* Set copyfrom path in frame, if there's any such attribute in
+         ATTS */
+      value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_COPYFROM_PATH, atts);
+      if (value)
+        new_frame->ancestor_path = svn_string_create (value, my_digger->pool);
+
+      /* Set copyfrom revision in frame, if there's any such attribute
+         in ATTS */
+      value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_COPYFROM_REV, atts);
+      if (value)
+        new_frame->ancestor_revision = atoi (value);
+    }
+  else
+    {
+      /* Set ancestor path in frame, if there's any such attribute in
+         ATTS */
+      value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_PATH, atts);
+      if (value)
+        new_frame->ancestor_path = svn_string_create (value, my_digger->pool);
+
+      /* Set ancestor revision in frame, if there's any such attribute
+         in ATTS */
+      value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_REV, atts);
+      if (value)
+        new_frame->ancestor_revision = atoi (value);
+    }  
   
   /* Set "id" in frame, if there's any such attribute in ATTS */
   value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_ID, atts);

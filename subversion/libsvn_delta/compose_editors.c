@@ -134,8 +134,8 @@ delete_entry (svn_string_t *name, void *parent_baton)
 static svn_error_t *
 add_directory (svn_string_t *name,
                void *parent_baton,
-               svn_string_t *base_path,
-               long int base_revision,
+               svn_string_t *copyfrom_path,
+               svn_revnum_t copyfrom_revision,
                void **child_baton)
 {
   struct dir_baton *d = parent_baton;
@@ -148,7 +148,7 @@ add_directory (svn_string_t *name,
   if (d->edit_baton->editor_1->add_directory)
     {
       err = (* (d->edit_baton->editor_1->add_directory))
-        (name, d->dir_baton_1, base_path, base_revision,
+        (name, d->dir_baton_1, copyfrom_path, copyfrom_revision,
          &(child->dir_baton_1));
       if (err)
         return err;
@@ -157,7 +157,7 @@ add_directory (svn_string_t *name,
   if (d->edit_baton->editor_2->add_directory)
     {
       err = (* (d->edit_baton->editor_2->add_directory))
-        (name, d->dir_baton_2, base_path, base_revision,
+        (name, d->dir_baton_2, copyfrom_path, copyfrom_revision,
          &(child->dir_baton_2));
       if (err)
         return err;
@@ -172,7 +172,7 @@ add_directory (svn_string_t *name,
 static svn_error_t *
 replace_directory (svn_string_t *name,
                    void *parent_baton,
-                   long int base_revision,
+                   svn_revnum_t base_revision,
                    void **child_baton)
 {
   struct dir_baton *d = parent_baton;
@@ -350,8 +350,8 @@ apply_textdelta (void *file_baton,
 static svn_error_t *
 add_file (svn_string_t *name,
           void *parent_baton,
-          svn_string_t *base_path,
-          long int base_revision,
+          svn_string_t *copyfrom_path,
+          svn_revnum_t copyfrom_revision,
           void **file_baton)
 {
   struct dir_baton *d = parent_baton;
@@ -363,7 +363,8 @@ add_file (svn_string_t *name,
   if (d->edit_baton->editor_1->add_file)
     {
       err = (* (d->edit_baton->editor_1->add_file))
-        (name, d->dir_baton_1, base_path, base_revision, &(fb->file_baton_1));
+        (name, d->dir_baton_1, copyfrom_path, 
+         copyfrom_revision, &(fb->file_baton_1));
       if (err)
         return err;
     }
@@ -371,7 +372,8 @@ add_file (svn_string_t *name,
   if (d->edit_baton->editor_2->add_file)
     {
       err = (* (d->edit_baton->editor_2->add_file))
-        (name, d->dir_baton_2, base_path, base_revision, &(fb->file_baton_2));
+        (name, d->dir_baton_2, copyfrom_path, 
+         copyfrom_revision, &(fb->file_baton_2));
       if (err)
         return err;
     }
@@ -384,7 +386,7 @@ add_file (svn_string_t *name,
 static svn_error_t *
 replace_file (svn_string_t *name,
               void *parent_baton,
-              long int base_revision,
+              svn_revnum_t base_revision,
               void **file_baton)
 {
   struct dir_baton *d = parent_baton;

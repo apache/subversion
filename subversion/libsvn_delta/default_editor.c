@@ -44,8 +44,8 @@ delete_entry (svn_string_t *name, void *parent_baton)
 static svn_error_t *
 add_directory (svn_string_t *name,
                void *parent_baton,
-               svn_string_t *base_path,
-               long int base_revision,
+               svn_string_t *copyfrom_path,
+               svn_revnum_t copyfrom_revision,
                void **child_baton)
 {
   *child_baton = parent_baton;
@@ -56,7 +56,7 @@ add_directory (svn_string_t *name,
 static svn_error_t *
 replace_directory (svn_string_t *name,
                    void *parent_baton,
-                   long int base_revision,
+                   svn_revnum_t base_revision,
                    void **child_baton)
 {
   *child_baton = parent_baton;
@@ -99,8 +99,8 @@ apply_textdelta (void *file_baton,
 static svn_error_t *
 add_file (svn_string_t *name,
           void *parent_baton,
-          svn_string_t *base_path,
-          long int base_revision,
+          svn_string_t *copyfrom_path,
+          svn_revnum_t copyfrom_revision,
           void **file_baton)
 {
   *file_baton = parent_baton;
@@ -111,7 +111,7 @@ add_file (svn_string_t *name,
 static svn_error_t *
 replace_file (svn_string_t *name,
               void *parent_baton,
-              long int base_revision,
+              svn_revnum_t base_revision,
               void **file_baton)
 {
   *file_baton = parent_baton;

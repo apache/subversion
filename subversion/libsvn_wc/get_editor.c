@@ -474,8 +474,8 @@ delete_entry (svn_string_t *name, void *parent_baton)
 static svn_error_t *
 add_directory (svn_string_t *name,
                void *parent_baton,
-               svn_string_t *base_path,
-               svn_revnum_t base_revision,
+               svn_string_t *copyfrom_path,
+               svn_revnum_t copyfrom_revision,
                void **child_baton)
 {
   svn_error_t *err;
@@ -505,8 +505,8 @@ add_directory (svn_string_t *name,
 
   err = prep_directory (this_dir_baton->path,
                         this_dir_baton->edit_baton->repository,
-                        base_path,
-                        base_revision,
+                        copyfrom_path,
+                        copyfrom_revision,
                         1, /* force */
                         this_dir_baton->pool);
   if (err)
@@ -777,12 +777,12 @@ add_or_replace_file (svn_string_t *name,
 static svn_error_t *
 add_file (svn_string_t *name,
           void *parent_baton,
-          svn_string_t *base_path,
-          svn_revnum_t base_revision,
+          svn_string_t *copyfrom_path,
+          svn_revnum_t copyfrom_revision,
           void **file_baton)
 {
   return add_or_replace_file
-    (name, parent_baton, base_path, base_revision, file_baton, 1);
+    (name, parent_baton, copyfrom_path, copyfrom_revision, file_baton, 1);
 }
 
 
@@ -1282,7 +1282,8 @@ close_file (void *file_baton)
     }
 
   /* Write our accumulation of log entries into a log file */
-  apr_err = apr_file_write_full (log_fp, entry_accum->data, entry_accum->len, NULL);
+  apr_err = apr_file_write_full (log_fp, entry_accum->data, 
+                                 entry_accum->len, NULL);
   if (apr_err)
     {
       apr_file_close (log_fp);

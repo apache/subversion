@@ -186,7 +186,7 @@ static svn_error_t *
 add_or_replace_dir (svn_string_t *name,
                     void *parent_baton,
                     svn_string_t *base_path,
-                    long int base_revision,
+                    svn_revnum_t base_revision,
                     void **child_baton,
                     const char *pivot_string)
 {
@@ -217,14 +217,14 @@ add_or_replace_dir (svn_string_t *name,
 static svn_error_t *
 test_add_directory (svn_string_t *name,
                     void *parent_baton,
-                    svn_string_t *base_path,
-                    long int base_revision,
+                    svn_string_t *copyfrom_path,
+                    svn_revnum_t copyfrom_revision,
                     void **child_baton)
 {
   return add_or_replace_dir (name,
                              parent_baton,
-                             base_path,
-                             base_revision,
+                             copyfrom_path,
+                             copyfrom_revision,
                              child_baton,
                              "ADD_DIR");
 }
@@ -233,7 +233,7 @@ test_add_directory (svn_string_t *name,
 static svn_error_t *
 test_replace_directory (svn_string_t *name,
                         void *parent_baton,
-                        long int base_revision,
+                        svn_revnum_t base_revision,
                         void **child_baton)
 {
   return add_or_replace_dir (name,
@@ -309,7 +309,7 @@ static svn_error_t *
 add_or_replace_file (svn_string_t *name,
                      void *parent_baton,
                      svn_string_t *base_path,
-                     long int base_revision,
+                     svn_revnum_t base_revision,
                      void **file_baton,
                      const char *pivot_string)
 {
@@ -336,14 +336,14 @@ add_or_replace_file (svn_string_t *name,
 static svn_error_t *
 test_add_file (svn_string_t *name,
                void *parent_baton,
-               svn_string_t *base_path,
-               long int base_revision,
+               svn_string_t *copyfrom_path,
+               svn_revnum_t copyfrom_revision,
                void **file_baton)
 {
   return add_or_replace_file (name,
                               parent_baton,
-                              base_path,
-                              base_revision,
+                              copyfrom_path,
+                              copyfrom_revision,
                               file_baton,
                               "ADD_FILE");
 }
@@ -352,7 +352,7 @@ test_add_file (svn_string_t *name,
 static svn_error_t *
 test_replace_file (svn_string_t *name,
                    void *parent_baton,
-                   long int base_revision,
+                   svn_revnum_t base_revision,
                    void **file_baton)
 {
   return add_or_replace_file (name,
