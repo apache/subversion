@@ -63,10 +63,10 @@ Security
 There is no way to disable anonymous authentication.  Fixing that
 will probably wait for a server configuration file.
 
-Hook Scripts
-------------
+Tunnel Mode Channel Corruption
+------------------------------
 
-Hook scripts which output to stdout confuse svnserve in tunnel mode,
+Hook scripts which output to stdout confuse ra_svn in tunnel mode,
 resulting in a cryptic "malformed network data" error on the client
 (as well as a confused working directory, if it's a commit hook).
 svnserve should probably protect against this.  On Unix, I would:
@@ -76,3 +76,8 @@ svnserve should probably protect against this.  On Unix, I would:
   * Close stdout and reopen it pointed at /dev/null
 
 But all that would need to be translated into apr-ese.
+
+Another source of channel corruption in tunnel mode is the user's
+dotfiles on the server.  Tunnel mode could be made more robust if the
+client would watch for a magic string from the server before it starts
+processing input.
