@@ -4,9 +4,6 @@
 ### 
 ### Usage: "htmlize.pl [FILENAME.txt]" to produce FILENAME.html
 ###     (FILENAME defaults to stdin.)
-###
-### Note that this is not a general purpose htmlizer, it is tuned for
-### inversion.txt. 
 
 use strict;
 
@@ -22,7 +19,7 @@ my $source = shift || "-";
 
 my ($base) = split (/\./, $source);
 my $dest;
-if ((! defined ($base)) or ($base eq "")) {
+if ((! defined ($base)) or ($base eq "-")) {
   $dest = "-"; # default to stdout
 }
 else {
