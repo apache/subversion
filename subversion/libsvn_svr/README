@@ -18,21 +18,34 @@ The public API is defined in `svn_svr.h'.
 
 ---------------------------------
 
-How to use the library:
+How to write an application that implements a "Subversion Server":
+
+(Assumptions: you already have a Subversion repository on disk
+somewhere.)
 
 
-    * create a svn_user_t structure.  you're responsible for making
-      sure the represented user is authenticated;  the subversion
-      filesystem just assumes so.
+    1. #include <svn_svr.h> and <svn_parse.h>.  Initialize an
+        apr_pool_t to use.
 
-    * call svn_svr_init ("/etc/svn.conf"), returns a policy context
-      structure.  pass this structure to all future routines.
+    2. Create a svn_user_t structure.  Your app is *soley* responsible
+       for making sure the user is authenticated; the Subversion
+       Filesystem just assumes so.  (Optional: fill in
+       svn_user_t->svn_username with the name you want to use for
+       doing filesystem operations, otherwise
+       svn_user_t->auth_username will be used.)
 
-    * call any number of wrappered filesystem calls, passing in the
-      user structure and the policy structure.  if you care about
-      authorization, use the basic 'plugin_security' plugin in
-      `svn.conf', else write your own authorization plugin.
+    3. Create (or use a preexisting) `svn.conf' file that contains
+       general server config options.  For example, you can use the
+       simple 'plugin_security' for basic ACL authorizations.  (Or you
+       can write your own authorization plugin.)
 
+    4. Parse the configfile with svn_parse(), and pass the resulting
+       hashtable to svn_svr_init().  You'll get back a svn_policies_t
+       structure, which you must then pass to all future server
+       routines.
+
+    5. Call any number of wrappered filesystem calls, passing in the
+       user structure and the policy structure.  
 
 
 ---------------------------------

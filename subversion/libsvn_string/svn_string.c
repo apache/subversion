@@ -49,6 +49,7 @@
 
 #include <string.h>      /* for memcpy(), memcmp(), strlen() */
 #include <stdio.h>       /* for putch() and printf() */
+#include <ctype.h>       /* for isspace() */
 #include <svn_string.h>  /* loads <svn_types.h> and <apr_pools.h> */
 
 
@@ -252,6 +253,76 @@ svn_string_2cstring (const svn_string_t *str, ap_pool_t *pool)
 
   return cstring;
 }
+
+
+/* 
+   Handy routine.
+
+   Input:  a bytestring
+
+   Returns: offset of first non-whitespace character 
+
+      (if bytestring is ALL whitespace, then it returns the size of
+      the bytestring.  Be careful not to use this value as an array
+      offset!)
+
+*/
+
+size_t
+svn_string_first_non_whitespace (const svn_string_t *str)
+{
+  size_t i;
+
+  for (i = 0; i < str->len; i++)
+    {
+      if (! isspace (str->data[i]))
+        {
+          return i;
+        }
+    }
+
+  /* if we get here, then the string must be entirely whitespace */
+  return (str->len);  
+}
+
+
+
+/* 
+   Another handy utility.
+
+   Input:  a bytestring
+
+   Output:  same bytestring, stripped of whitespace on both sides
+            (input bytestring is modified IN PLACE)
+*/
+
+void
+svn_string_strip_whitespace (svn_string_t *str)
+{
+  size_t i;
+
+  /* Find first non-whitespace character */
+  size_t offset = svn_string_first_non_whitespace (str);
+
+  /* Go ahead!  Waste some RAM, we've got pools! :)  */
+  str->data += offset;
+  str->len -= offset;
+
+  /* Now that we've chomped whitespace off the front, search backwards
+     from the end for the first non-whitespace. */
+
+  for (i = (str->len - 1); i >= 0; i--)
+    {
+      if (! isspace (str->data[i]))
+        {
+          break;
+        }
+    }
+  
+  /* Mmm, waste some more RAM */
+  str->len = i + 1;
+}
+
 
 
 /* Utility: print bytestring to stdout, assuming that the string

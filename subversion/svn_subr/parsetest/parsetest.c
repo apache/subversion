@@ -9,7 +9,6 @@ main ()
 {
   ap_hash_t *configdata;
   ap_pool_t *pool;
-  svn_string_t *myfile;
 
   /* Initialize APR (Apache pools) */
   if (ap_initialize () != APR_SUCCESS)
@@ -23,10 +22,25 @@ main ()
       exit (1);
     }
 
-  myfile = svn_string_create ("configfile", pool);
 
-  configdata = svn_parse (myfile, pool);
+  /* Parse the file "./configfile" */
 
+  configdata = svn_parse (svn_string_create ("configfile", pool), pool);
+
+
+  /* Print out our configdata uber-hash */
+
+
+
+
+  /* If we were an application using libsvn_svr, we would now pass
+     this uber-hash to svn_init() to get a `svn_policies_t' structure.
+     We would then use this structure for all our wrappered filesystem
+     calls.  */
+
+  /* Clean up our memory pool and apr */
+  ap_destroy_pool (pool);
+  ap_terminate ();
 
   printf ("Test complete, exiting cleanly.\n\n");
   return 0;
