@@ -29,6 +29,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_io.h"
+#include "svn_utf.h"
 
 /* Key for the error pool itself. */
 static const char SVN_ERROR_POOL[] = "svn-error-pool";
@@ -314,14 +315,16 @@ svn_error_clear_all (svn_error_t *err)
 void
 svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
 {
-  char buf[200];
+  char buf[200], buf2[2000];
 
   /* Pretty-print the error */
   /* Note: we can also log errors here someday. */
 
 #ifdef SVN_DEBUG
   if (err->file)
-    fprintf (stream, "\n%s:%ld\n", err->file, err->line);
+    fprintf (stream, "\n%s:%ld\n",
+             svn_utf_utf8_to_native (err->file, buf2, sizeof (buf2)),
+             err->line);
   else
     fprintf (stream, "\n%s\n", SVN_FILE_LINE_UNDEFINED);
 #else
@@ -332,7 +335,10 @@ svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
   if ((err->apr_err > APR_OS_START_USEERR) 
       && (err->apr_err <= APR_OS_START_CANONERR))
     fprintf (stream, "svn_error: #%d : <%s>\n", err->apr_err,
-             svn_strerror (err->apr_err, buf, sizeof (buf)));
+             svn_utf_utf8_to_native
+             (svn_strerror (err->apr_err, buf, sizeof (buf)),
+              buf2, sizeof(buf2)));
+
 
   /* Otherwise, this must be an APR error code. */
   else
@@ -342,7 +348,9 @@ svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
              apr_strerror (err->apr_err, buf, sizeof(buf)));
 
   if (err->message)
-    fprintf (stream, "  %s", err->message);
+    fprintf (stream, "  %s",
+             svn_utf_utf8_to_native (err->message, buf2, sizeof(buf2)));
+
 
   fputc ('\n', stream);
   fflush (stream);
@@ -360,13 +368,24 @@ void
 svn_handle_warning (void *data, const char *fmt, ...)
 {
   va_list ap;
+  svn_stringbuf_t *msg, *msg_utf8;
+  svn_error_t *err;
+  apr_pool_t *pool = svn_pool_create (NULL);  /* ### Ick? */
 
   va_start (ap, fmt);
-  vfprintf (stderr, fmt, ap);
+  msg_utf8 = svn_stringbuf_create (apr_pvsprintf (pool, fmt, ap), pool);
   va_end (ap);
 
-  fprintf (stderr, "\n");
+  err = svn_utf_stringbuf_from_utf8 (msg_utf8, &msg, pool);
+
+  if (err)
+    svn_handle_error (err, stderr, FALSE);
+  else
+    fprintf (stderr, "%s\n", msg->data);
+
   fflush (stderr);
+
+  svn_pool_destroy (pool);
 }
 
 

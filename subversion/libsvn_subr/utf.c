@@ -366,7 +366,7 @@ svn_utf_cstring_to_utf8 (const char *src,
                          apr_pool_t *pool)
 {
   SVN_ERR (check_non_ascii (src, strlen (src), pool));
-  *dest = src;
+  *dest = apr_pstrdup (pool, src);
   return SVN_NO_ERROR;
 }
 
@@ -388,7 +388,7 @@ svn_utf_string_from_utf8 (const svn_string_t *src,
                           apr_pool_t *pool)
 {
   SVN_ERR (check_non_ascii (src->data, src->len, pool));
-  *dest = src;
+  *dest = svn_string_dup (src, pool);
   return SVN_NO_ERROR;
 }
 
@@ -399,7 +399,7 @@ svn_utf_cstring_from_utf8 (const char *src,
                            apr_pool_t *pool)
 {
   SVN_ERR (check_non_ascii (src, strlen (src), pool));
-  *dest = src;
+  *dest = apr_pstrdup (pool, src);
   return SVN_NO_ERROR;
 }
 
@@ -410,7 +410,7 @@ svn_utf_cstring_from_utf8_stringbuf (const svn_stringbuf_t *src,
                                      apr_pool_t *pool)
 {
   SVN_ERR (check_non_ascii (src->data, src->len, pool));
-  *dest = src->data;
+  *dest = apr_pstrndup (pool, src->data, src->len);
   return SVN_NO_ERROR;
 }
 
@@ -421,7 +421,7 @@ svn_utf_cstring_from_utf8_string (const svn_string_t *src,
                                   apr_pool_t *pool)
 {
   SVN_ERR (check_non_ascii (src->data, src->len, pool));
-  *dest = src->data;
+  *dest = apr_pstrndup (pool, src->data, src->len);
   return SVN_NO_ERROR;
 }
 

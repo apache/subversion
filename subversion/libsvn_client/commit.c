@@ -175,10 +175,10 @@ import_dir (apr_hash_t *files,
 
   SVN_ERR (svn_io_dir_open (&dir, path, pool));
 
-  for (err = svn_io_dir_read (&finfo, flags, dir, pool);
+  for (err = svn_io_dir_read (&finfo, flags, dir, subpool);
        err == SVN_NO_ERROR;
        svn_pool_clear (subpool),
-         err = svn_io_dir_read (&finfo, flags, dir, pool))
+         err = svn_io_dir_read (&finfo, flags, dir, subpool))
     {
       const char *this_path, *this_edit_path;
 
@@ -742,7 +742,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   const char *committed_author = NULL;
   svn_ra_plugin_t *ra_lib;
   const char *base_dir;
-  char *base_url;
+  const char *base_url;
   apr_array_header_t *rel_targets;
   apr_hash_t *committables, *locked_dirs, *tempfiles = NULL;
   apr_array_header_t *commit_items;

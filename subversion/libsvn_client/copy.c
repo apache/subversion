@@ -491,7 +491,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   svn_error_t *cmt_err = NULL, *unlock_err = NULL, *cleanup_err = NULL;
   svn_boolean_t commit_in_progress = FALSE;
   const char *base_path;
-  char *base_url;
+  const char *base_url;
 
   /* Check the SRC_PATH. */
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
