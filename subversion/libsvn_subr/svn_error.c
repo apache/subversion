@@ -91,6 +91,7 @@ static int
 abort_on_pool_failure (int retcode)
 {
   abort ();
+  return -1; /* prevent compiler warnings */
 }
 
 
