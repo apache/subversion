@@ -299,6 +299,74 @@ attach_lock (const char **msg,
 
 
 
+static svn_error_t *
+check_hash(apr_hash_t **hash,
+           const char *path)
+{
+  svn_lock_t *lock;
+
+  lock = apr_hash_get (*hash, path, APR_HASH_KEY_STRING);
+  if (!lock)
+    {
+      return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
+                                "Failed to retrieve a lock for path '%s'",
+                                path);
+    }
+  return SVN_NO_ERROR;
+}
+
+
+/* Test that we can get all locks under a directory. */
+static svn_error_t *
+get_locks (const char **msg,
+            svn_boolean_t msg_only,
+            svn_test_opts_t *opts,
+            apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  const char *conflict;
+  svn_revnum_t newrev;
+  svn_fs_access_t *access;
+  svn_lock_t *mylock;
+  apr_hash_t *hash = apr_hash_make (pool);
+  
+  *msg = "get locks";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Prepare a filesystem and a new txn. */
+  SVN_ERR (svn_test__create_any_fs (&fs, "test-repo-basic-commit", 
+                                    opts->fs_type, pool));
+  SVN_ERR (svn_fs_begin_txn2 (&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+
+  /* Create the greek tree and commit it. */
+  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
+  SVN_ERR (svn_fs_commit_txn (&conflict, &newrev, txn, pool));
+
+  /* We are now 'bubba'. */
+  SVN_ERR (svn_fs_create_access (&access, "bubba", pool));
+  SVN_ERR (svn_fs_set_access (fs, access));
+
+  /* Lock all paths under /A/D/G. */
+  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/pi", "", 0, 0, pool));
+
+  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", "", 0, 0, pool));
+
+  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/tau", "", 0, 0, pool));
+
+  svn_fs_get_locks(&hash, fs, "/A/D/G", pool);
+
+  if (apr_hash_count(hash) != 3)
+    return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
+                             "Failed to retrieve all 3 locks under '/A/D/G/'");
+
+  return SVN_NO_ERROR;
+}
+
 /* Test that we can create, fetch, and destroy a lock.  It exercises
    each of the five public fs locking functions.  */
 static svn_error_t *
@@ -783,6 +851,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (lookup_nonexistent_token),
     SVN_TEST_PASS (lookup_lock_by_path),
     SVN_TEST_PASS (attach_lock),
+    SVN_TEST_PASS (get_locks),
     SVN_TEST_PASS (basic_lock),
     SVN_TEST_PASS (lock_credentials),
     SVN_TEST_PASS (final_lock_check),

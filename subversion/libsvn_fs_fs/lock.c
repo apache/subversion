@@ -81,6 +81,16 @@ abs_path_to_lock_file (char **abs_path,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+base_path_to_lock_file (char **base_path,
+                        svn_fs_t *fs,
+                        apr_pool_t *pool)
+{
+  SVN_ERR (merge_paths (base_path, fs->path, LOCK_ROOT_DIR, pool));
+  SVN_ERR (merge_paths (base_path, *base_path, LOCK_LOCK_DIR, pool));
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 abs_path_to_lock_token_file (char **abs_path,
@@ -636,6 +646,42 @@ svn_fs_fs__get_lock_from_token (svn_lock_t **lock_p,
   return SVN_NO_ERROR;
 }
 
+struct dir_walker_baton
+{
+  svn_fs_t *fs;
+  apr_hash_t *locks;
+};
+
+
+static svn_error_t *
+locks_dir_walker (void *baton,
+                  const char *path,
+                  const apr_finfo_t *finfo,
+                  apr_pool_t *pool)
+{
+  char *base_path;
+  const char *rel_path;
+  svn_lock_t *lock;
+  struct dir_walker_baton *dir_baton;
+  dir_baton = (struct dir_walker_baton *)baton;
+  
+  /* Skip directories. */
+  if (finfo->filetype == APR_DIR)
+    return SVN_NO_ERROR;
+
+  /* Get the repository-relative path for the lock. */
+  SVN_ERR (base_path_to_lock_file (&base_path, dir_baton->fs, pool));
+  rel_path = path + strlen(base_path);
+
+  /* Get lock */
+  SVN_ERR (svn_fs_fs__get_lock_from_path (&lock, dir_baton->fs, 
+                                          rel_path, pool));
+
+  /* Stuff lock in hash, keyed on lock->path */
+  apr_hash_set (dir_baton->locks, lock->path, APR_HASH_KEY_STRING, lock);
+
+  return SVN_NO_ERROR;
+}
 
 
 svn_error_t *
@@ -644,6 +690,16 @@ svn_fs_fs__get_locks (apr_hash_t **locks,
                       const char *path,
                       apr_pool_t *pool)
 {
-  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
-                           "Function not yet implemented.");
+  char *abs_path;
+  struct dir_walker_baton baton;
+  baton.fs = fs;
+  baton.locks = *locks;
+
+  /* Compose the absolute/rel path to PATH */
+  SVN_ERR (abs_path_to_lock_file(&abs_path, fs, path, pool));
+
+  SVN_ERR (svn_io_dir_walk (abs_path, APR_FINFO_TYPE, locks_dir_walker,
+                            (void *)&baton, pool));
+
+  return SVN_NO_ERROR;
 }
