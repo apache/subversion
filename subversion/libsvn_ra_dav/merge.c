@@ -209,7 +209,7 @@ static svn_error_t *bump_resource(merge_ctx_t *mc,
     char revnum_str[1024];  /* I dunno, hard to imagine needing more... */
     int printed;
 
-    printed = snprintf(revnum_str, 1024, "%" SVN_REVNUM_T_FMT, mc->rev);
+    printed = apr_snprintf(revnum_str, 1024, "%" SVN_REVNUM_T_FMT, mc->rev);
     if (printed == -1)
       {
         /* Something's very wrong here; snprintf claims there was not
