@@ -53,6 +53,18 @@ svn_path_condense_targets (const char **pcommon,
       return SVN_NO_ERROR;
     }
 
+  /* Get the absolute path of the first target. */
+  SVN_ERR (svn_path_get_absolute (pcommon,
+                                  APR_ARRAY_IDX (targets, 0, const char *),
+                                  pool));
+
+  /* Early exit when there's only one path to work on. */
+  if (targets->nelts == 1)
+    {
+      if (pcondensed_targets)
+        *pcondensed_targets = apr_array_make (pool, 1, sizeof (const char *));
+      return SVN_NO_ERROR;
+    }
 
   /* Copy the targets array, but with absolute paths instead of
      relative.  Also, find the pcommon argument by finding what is
@@ -65,10 +77,6 @@ svn_path_condense_targets (const char **pcommon,
   
   removed = apr_pcalloc (pool, (targets->nelts * sizeof (svn_boolean_t)));
   abs_targets = apr_array_make (pool, targets->nelts, sizeof (const char *));
-  
-  SVN_ERR (svn_path_get_absolute (pcommon,
-                                  ((const char **) targets->elts)[0],
-                                  pool));
   
   (*((const char **)apr_array_push (abs_targets))) = *pcommon;
   
