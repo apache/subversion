@@ -121,14 +121,9 @@ svn_wc__string_to_time (svn_stringbuf_t *tstr)
   exploded_time.tm_wday = find_matching_string (wday, apr_day_snames);
   exploded_time.tm_mon = find_matching_string (month, apr_month_snames);
 
-  apr_implode_time (&when, &exploded_time);
+  apr_implode_gmt (&when, &exploded_time);
 
-  /* FIXME:  (see issue 404)
-     apr_implode_time does not take the GMT offsett into account.
-     I believe this is a bug in APR, but until that's resolved,
-     we'll just have to adjust the time ourselves. */
-
-  return when - (apr_time_t) exploded_time.tm_gmtoff * APR_USEC_PER_SEC;
+  return when;
 }
 
 
