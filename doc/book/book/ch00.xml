@@ -32,7 +32,7 @@
       powerful, very usable, and very flexible.
     </para>
 
-    <para>This book is written to document version 1.0.1 of the
+    <para>This book is written to document the 1.0 series of the
       Subversion version control system.  We have made every attempt to be
       thorough in our coverage.  However, Subversion has a thriving
       and energetic development community, so there are already a
@@ -242,7 +242,7 @@
           <listitem>
             <para>Covers the history of Subversion as well as its
               features, architecture, components, and install
-              methods.</para>
+              methods.  Also includes a quick-start guide.</para>
           </listitem>
         </varlistentry>
 
