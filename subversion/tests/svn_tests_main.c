@@ -207,13 +207,13 @@ main (int argc, char *argv[])
   apr_pool_t *pool, *test_pool;
   int ran_a_test = 0;
   char **arg;
+  /* How many tests are there? */
+  int array_size = get_array_size();
+  
   svn_test_opts_t opts = { NULL };
 
   opts.fs_type = DEFAULT_FS_TYPE;
 
-  /* How many tests are there? */
-  int array_size = get_array_size();
-  
   /* Initialize APR (Apache pools) */
   if (apr_initialize () != APR_SUCCESS)
     {

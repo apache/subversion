@@ -39,9 +39,9 @@ extern "C" {
     test functions  */
 typedef struct svn_test_opts_t
 {
-    /* Description of the fs backend that should be used for testing. */
-    char *fs_type;
-    /* Add future "arguments" here. */
+  /* Description of the fs backend that should be used for testing. */
+  const char *fs_type;
+  /* Add future "arguments" here. */
 } svn_test_opts_t;
 
 /** Prototype for test driver functions. */
