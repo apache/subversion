@@ -170,7 +170,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
                   apr_pool_t *pool)
 {
   svn_error_t *err;
-
+  
   /* If this is a URL, we want to drive a commit editor to create this
      directory. */
   if (svn_path_is_url (path))
@@ -188,6 +188,14 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
       const char *message;
 
       *commit_info = NULL;
+
+      /* Split the new directory name from its parent URL. */
+      svn_path_split (path, &anchor, &target, pool);
+      target = svn_path_uri_decode (target, pool);
+      if (strcmp (target, SVN_WC_ADM_DIR_NAME) == 0)
+        return svn_error_createf 
+          (SVN_ERR_RA_ILLEGAL_URL, NULL, 
+           "The directory `%s' is reserved for administrative use.", target);
 
       /* Create a new commit item and add it to the array. */
       if (ctx->log_msg_func)
@@ -210,10 +218,6 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
         }
       else
         message = "";
-
-      /* Split the new directory name from its parent URL. */
-      svn_path_split (path, &anchor, &target, pool);
-      target = svn_path_uri_decode (target, pool);
 
       /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
