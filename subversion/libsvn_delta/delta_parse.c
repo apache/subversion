@@ -163,7 +163,13 @@ twiddle_edit_content_flags (svn_delta_stackframe_t *d,
 
 
 
-/* If we get malformed XML, return an informative error saying so. */
+/* If we get malformed XML, store an informative error in DIGGER and set all
+   expat callbacks to NULL.  This should allow us to break out of
+   XML_Parse() rather quickly and return the validation error. 
+
+   Set DESTROY_P to indicate an unexpected </close> tag.
+*/
+
 static svn_error_t *
 XML_type_error (svn_delta_digger_t *digger,
                 const char *name,
@@ -185,6 +191,8 @@ XML_type_error (svn_delta_digger_t *digger,
   digger->validation_error = err;
 
   /* And also NULL out our callbacks */
+  XML_SetElementHandler (digger->parser, NULL, NULL);
+  XML_SetCharacterDataHandler (digger->parser, NULL);
 
   return err;
 }
