@@ -748,27 +748,8 @@ svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
                                  trail_t *trail)
 {
   /* cmpilato todo:  Make this not suck. */
-  skel_t *node_rev, *new_dirent_list, *old_entry, *entry;
+  skel_t *node_rev, *new_dirent_list, *prev_entry, *entry;
   int deleted = FALSE;
-
-  /* kff todo: fooo working here:
-   * 
-   * 1. Rewrite to use svn_fs__dag_dir_entries().
-   * 
-   * 2. Consider semantics of Yoshiki's patch to this function (see
-   *    mail entitled "[PATCH] svn_fs_abort_txn and bug fixes"), in
-   *    which: If the entry points to a mutable node, then the node is
-   *    removed from the nodes table, as well as its dir entry here
-   *    being removed.  I'm not sure this is valid, though.  The node
-   *    may be mutable, but some other entries somewhere (presumably
-   *    in this txn) might still point to it.  I'm not sure what such
-   *    a scenario would be, but anyway, it seems weird to me that the
-   *    needs of svn_fs_abort_txn would bleed over into the behavior
-   *    of svn_fs__dag_delete.  Will sleep on this.
-   *
-   * 3. But before sleeping, will eat dinner with Fitz. :-)
-   *
-   */
 
   /* Make sure we're looking at a directory node. */
   if (! svn_fs__dag_is_directory (parent))
@@ -778,6 +759,7 @@ svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
        "Attempted to delete entry `%s' from *non*-directory node.",
        name);    
 
+  /* Make sure the directory is mutable. */
   {
     svn_boolean_t is_mutable;
 
@@ -800,66 +782,74 @@ svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
       (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
        "Attempted to delete a node with an illegal name `%s'", name);
 
-  /* Go get a fresh NODE-REVISION for this node. */
+  /* Get a fresh NODE-REVISION for this node. */
   SVN_ERR (get_node_revision (&node_rev, parent, trail));
 
-  /* Dup the parent's dirent list in trail->pool.  Then we can safely
-     munge it all we want. */
-  new_dirent_list = svn_fs__copy_skel (node_rev->children->next, 
-                                       trail->pool);
+  /* We don't use svn_fs__dag_dir_entries here -- to keep things
+   * simple, we're going to dup the entire directory node-revision
+   * skel anyway, since we're changing it.  Given that, we might as
+   * well just find copy's entries list by hand and modify it
+   * in-place.  But note that if we wanted to avoid dup'ing the whole
+   * noderev skel, we could, we'd just need to put an undo func/baton
+   * pair in TRAIL, to undelete the entry in case the Berkeley txn
+   * fails.  The space savings doesn't seem worth the extra
+   * complexity, however.
+   */
 
-  entry = new_dirent_list->children;
-  old_entry = NULL;
+  node_rev = svn_fs__copy_skel (node_rev, trail->pool);
+  new_dirent_list = node_rev->children->next;
 
-  while (entry)
+  /* new_dirent_list looks like "((NAME ID) (NAME ID) (NAME ID) ...)" */
+  for (prev_entry = NULL, entry = new_dirent_list->children;
+       entry != NULL;
+       prev_entry = entry, entry = entry->next)
     {
+      /* entry looks like "(NAME ID)" */
       if (svn_fs__matches_atom (entry->children, name))
         {
           /* Aha!  We want to remove this entry from the list. */
 
           /* We actually have to *retrieve* this entry, however, and
              make sure that we're not trying to remove a non-empty
-             dir.  (This is part of this routine's promise.) */
-          skel_t *entry_content;
-          skel_t *id_skel = entry->children->next;
-          svn_fs_id_t *id = svn_fs_parse_id (id_skel->data, id_skel->len,
+             mutable dir.  (This is part of this routine's promise.) */
+          skel_t *id_atom = entry->children->next;
+          dag_node_t *node; 
+          svn_fs_id_t *id = svn_fs_parse_id (id_atom->data, id_atom->len,
                                              trail->pool);
-          SVN_ERR (svn_fs__get_node_revision (&entry_content,
-                                              parent->fs,
-                                              id,
-                                              trail));
 
-          if (svn_fs__matches_atom (entry_content->children->children,
-                                    "dir"))
+          SVN_ERR (svn_fs__dag_get_node (&node, parent->fs, id, trail));
+          
+          if (svn_fs__dag_is_directory (node))
             {
-              if (has_mutable_flag (entry_content))
+              skel_t *content;
+              SVN_ERR (svn_fs__get_node_revision (&content,
+                                                  parent->fs,
+                                                  id,
+                                                  trail));
+              
+              if (has_mutable_flag (content))
                 {
-                  int len = 
-                    svn_fs__list_length (entry_content->children->next);
+                  int len = svn_fs__list_length (content->children->next);
                   if (len != 0)
                     return 
                       svn_error_createf
                       (SVN_ERR_FS_DIR_NOT_EMPTY, 0, NULL, parent->pool,
-                       "Attempted to delete *non-empty* directory `%s'.",
+                       "Attempted to delete non-empty mutable directory `%s'.",
                        name);                        
                 }
             }
 
           /* Just "lose" this entry by setting the *previous* entry's
              next ptr to the current entry's next ptr. */          
-          if (! old_entry)
-            /* Base case:  the very *first* entry matched. */
+          if (! prev_entry)
+            /* Base case: the first entry (the head of the list) matched. */
             new_dirent_list->children = entry->next;
           else
-            old_entry->next = entry->next;
+            prev_entry->next = entry->next;
 
           deleted = TRUE;
           break;
         }
-
-      /* No match, move to next entry. */
-      old_entry = entry;
-      entry = entry->next;
     }
     
   if (! deleted)
