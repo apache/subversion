@@ -256,7 +256,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
                                       switch_url, /* new url */
                                       pool));     
         if (notify_func != NULL)
-          (*notify_func) (notify_baton, path, svn_wc_notify_update,
+          (*notify_func) (notify_baton, path, svn_wc_notify_update_update,
                           svn_node_file,
                           NULL,
                           content_state,

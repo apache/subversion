@@ -68,7 +68,7 @@ def externals_test_setup(sbox):
 
   The arrangement of the externals in the first repository is:
 
-     /A/B/     ==>  exdir_D       <schema>:///<other_repos>/A/D/G
+     /A/B/     ==>  exdir_G       <schema>:///<other_repos>/A/D/G
                     exdir_H  -r1  <schema>:///<other_repos>/A/D/H
 
      /A/D/     ==>  exdir_A          <schema>:///<other_repos>/A
@@ -144,7 +144,7 @@ def externals_test_setup(sbox):
 
   # Set up the externals properties on A/B/ and A/D/.
   externals_desc = \
-           "exdir_D       " + os.path.join(other_repo_url, "A/D/G") + "\n" + \
+           "exdir_G       " + os.path.join(other_repo_url, "A/D/G") + "\n" + \
            "exdir_H  -r1  " + os.path.join(other_repo_url, "A/D/H") + "\n"
 
   tmp_f = os.tempnam(wc_init_dir, 'tmp')
@@ -235,8 +235,8 @@ def checkout_with_externals(sbox):
   if err_lines: return 1
 
   # Probe the working copy a bit, see if it's as expected.
-  exdir_D_path    = os.path.join(wc_dir, "A/B/exdir_D")
-  exdir_D_pi_path = os.path.join(exdir_D_path, "pi")
+  exdir_G_path    = os.path.join(wc_dir, "A/B/exdir_G")
+  exdir_G_pi_path = os.path.join(exdir_G_path, "pi")
   exdir_H_path       = os.path.join(wc_dir, "A/B/exdir_H")
   exdir_H_omega_path = os.path.join(exdir_H_path, "omega")
   x_path     = os.path.join(wc_dir, "A/D/x")
@@ -246,11 +246,11 @@ def checkout_with_externals(sbox):
   alpha_path = os.path.join(blah_path, "alpha")
   beta_path  = os.path.join(blah_path, "beta")
 
-  if (not os.path.exists(exdir_D_path)):
-    print "Probing for", exdir_D_path, "failed."
+  if (not os.path.exists(exdir_G_path)):
+    print "Probing for", exdir_G_path, "failed."
     return 1
-  if (not os.path.exists(exdir_D_pi_path)):
-    print "Probing for", exdir_D_pi_path, "failed."
+  if (not os.path.exists(exdir_G_pi_path)):
+    print "Probing for", exdir_G_pi_path, "failed."
     return 1
   if (not os.path.exists(exdir_H_path)):
     print "Probing for", exdir_H_path, "failed."

@@ -73,8 +73,13 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_restore,
   svn_wc_notify_revert,
   svn_wc_notify_resolve,
-  svn_wc_notify_update,
+  svn_wc_notify_update_delete,     /* Got a delete in an update. */
+  svn_wc_notify_update_add,        /* Got an add in an update. */
+  svn_wc_notify_update_update,     /* Got any other action in an update. */
   svn_wc_notify_update_completed,  /* The last notification in an update */
+  svn_wc_notify_update_external,   /* About to update an external module;
+                                      use for checkouts and switches too,
+                                      end with svn_wc_update_completed. */
   svn_wc_notify_commit_modified,
   svn_wc_notify_commit_added,
   svn_wc_notify_commit_deleted,
