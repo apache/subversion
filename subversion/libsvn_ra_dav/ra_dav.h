@@ -406,6 +406,9 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
  * EXTRA_HEADERS is a hash of (const char *) key/value pairs to be
  * inserted as extra headers in the request.  Can be NULL.
  *
+ * STATUS_CODE is an optional 'out' parameter; if non-NULL, then set
+ * *STATUS_CODE to the http status code returned by the server.
+ *
  * Use POOL for any temporary allocation.
  */
 svn_error_t *
@@ -422,6 +425,7 @@ svn_ra_dav__parsed_request(ne_session *sess,
                            ne_xml_endelm_cb endelm_cb,
                            void *baton,
                            apr_hash_t *extra_headers,
+                           int *status_code,
                            apr_pool_t *pool);
   
 

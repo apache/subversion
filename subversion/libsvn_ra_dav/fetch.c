@@ -1049,7 +1049,7 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
                                    drev_report_elements,
                                    drev_validate_element,
                                    drev_start_element, drev_end_element,
-                                   revision, NULL, pool);
+                                   revision, NULL, NULL, pool);
   if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
     return svn_error_quick_wrap(err, "Server does not support date-based "
                                 "operations.");
@@ -2028,6 +2028,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   apr_status_t status;
   svn_error_t *err;
   const char *vcc;
+  int http_status;
 
   status = apr_file_write_full(rb->tmpfile,
                                report_tail, sizeof(report_tail) - 1, NULL);
@@ -2056,9 +2057,9 @@ static svn_error_t * reporter_finish_report(void *report_baton)
                                    NULL, rb->tmpfile, NULL,
                                    report_elements, validate_element,
                                    start_element, end_element, rb,
-                                   NULL, rb->ras->pool);
+                                   NULL, &http_status, rb->ras->pool);
 
-  if (err)
+  if (err && (http_status == 409))
     {
       /* If running the update-report on the VCC failed, it's probably
          an older server.  Fall back to the old-style, by requesting
@@ -2074,8 +2075,10 @@ static svn_error_t * reporter_finish_report(void *report_baton)
                                        NULL, rb->tmpfile, NULL,
                                        report_elements, validate_element,
                                        start_element, end_element, rb,
-                                       NULL, rb->ras->pool);
+                                       NULL, NULL, rb->ras->pool);
     }
+  else if (err)
+    return err;
 
   /* we're done with the file */
   (void) apr_file_close(rb->tmpfile);
