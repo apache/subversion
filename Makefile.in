@@ -192,9 +192,14 @@ external-all external-clean external-distclean external-install:
 
 ### temporary hack. Neon does not have an "extraclean" and neither does db
 ### If we don't have extraclean -- do the next best thing.
+### second hack. apr-util relies on generated files in apr, so reverse the
+### list so that it is extracleaned before apr.
 external-extraclean:
 	@list='$(EXTERNAL_PROJECT_DIRS)';                                \
         for i in $$list; do                                              \
+            revlist="$$i $$revlist";                                     \
+        done;                                                            \
+        for i in $$revlist; do                                           \
             if test "$$i" = "neon" || test "$$i" = "db/dist"; then       \
                 echo "------ making distclean(no extraclean) in $$i";    \
                 (cd $$i && $(MAKE) distclean) || exit 1;                 \
