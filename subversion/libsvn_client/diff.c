@@ -1171,6 +1171,7 @@ do_diff (const apr_array_header_t *options,
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
   const char *auth_dir;
+  svn_node_kind_t kind;
 
   /* Sanity check -- ensure that we have valid revisions to look at. */
   if ((revision1->kind == svn_opt_revision_unspecified)
@@ -1196,8 +1197,23 @@ do_diff (const apr_array_header_t *options,
                              pool);
 
       SVN_ERR (svn_wc_get_actual_target (path1, &anchor, &target, pool));
-      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, anchor, FALSE, recurse,
+      SVN_ERR (svn_io_check_path (path1, &kind, pool));
+      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, anchor, FALSE,
+                                (recurse && (! target)),
                                 pool));
+
+      if (target && (kind == svn_node_dir))
+        {
+          /* Associate a potentially tree-locked access baton for the
+             target with the anchor's access baton. */ 
+          svn_wc_adm_access_t *target_access;
+          SVN_ERR (svn_wc_adm_open (&target_access, adm_access, path1,
+                                    FALSE, recurse, pool));
+          /* We don't actually use target_access here; it just floats
+             around in adm_access's set of associated batons, where
+             the diff editor can find it. */
+        }
+
       SVN_ERR (svn_wc_diff (adm_access, target, callbacks, callback_baton,
                             recurse, pool));
       SVN_ERR (svn_wc_adm_close (adm_access));
@@ -1211,7 +1227,6 @@ do_diff (const apr_array_header_t *options,
       const char *URL1;
       const char *url_anchor, *url_target;
       svn_wc_adm_access_t *adm_access, *dir_access;
-      svn_node_kind_t kind;
 
       /* Sanity check -- path2 better be a working-copy path. */
       if (svn_path_is_url (path2))
@@ -1250,7 +1265,23 @@ do_diff (const apr_array_header_t *options,
                                             ctx, pool));
       
       /* Set up diff editor according to path2's anchor/target. */
-      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, anchor, FALSE, TRUE, pool));
+      SVN_ERR (svn_io_check_path (path2, &kind, pool));
+      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, anchor, FALSE,
+                                (recurse && (! target)),
+                                pool));
+
+      if (target && (kind == svn_node_dir))
+        {
+          /* Associate a potentially tree-locked access baton for the
+             target with the anchor's access baton. */ 
+          svn_wc_adm_access_t *target_access;
+          SVN_ERR (svn_wc_adm_open (&target_access, adm_access, path2,
+                                    FALSE, recurse, pool));
+          /* We don't actually use target_access here; it just floats
+             around in adm_access's set of associated batons, where
+             the diff editor can find it. */
+        }
+
       SVN_ERR (svn_wc_get_diff_editor (adm_access, target,
                                        callbacks, callback_baton,
                                        recurse,
@@ -1269,7 +1300,6 @@ do_diff (const apr_array_header_t *options,
                                   recurse,                                  
                                   diff_editor, diff_edit_baton, pool));
 
-      SVN_ERR (svn_io_check_path (path2, &kind, pool));
       if (kind == svn_node_dir)
         SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, path2, pool));
       else

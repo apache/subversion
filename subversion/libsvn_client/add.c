@@ -165,7 +165,7 @@ svn_client_add (const char *path,
   const char *parent_path = svn_path_dirname (path, pool);
 
   SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path,
-                            TRUE, TRUE, pool));
+                            TRUE, FALSE, pool));
 
   err = svn_client__add (path, recursive, adm_access, ctx, pool);
   

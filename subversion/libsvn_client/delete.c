@@ -48,9 +48,20 @@ svn_client__can_delete (const char *path,
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   if (kind == svn_node_dir)
-    SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, path, pool));
+    {
+      svn_error_t *err = svn_wc_adm_retrieve (&dir_access, adm_access, path,
+                                              pool);
+      if (err)
+        {
+          svn_error_clear (err);
+          SVN_ERR (svn_wc_adm_open (&dir_access, adm_access,
+                                    path, TRUE, TRUE, pool));
+        }
+    }
   else
-    dir_access = adm_access;
+    {
+      dir_access = adm_access;
+    }
 
   SVN_ERR (svn_wc_statuses (hash, path, dir_access, TRUE, FALSE, FALSE,
                             NULL, NULL, ctx->cancel_func, ctx->cancel_baton,
@@ -222,7 +233,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
     {
       const char *parent_path = svn_path_dirname (path, pool);
 
-      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, TRUE,
+      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, FALSE,
                                 pool));
     }
 

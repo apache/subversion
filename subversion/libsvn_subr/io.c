@@ -796,9 +796,6 @@ svn_io_remove_file (const char *path, apr_pool_t *pool)
   apr_status_t apr_err;
   const char *path_apr;
 
-  /* Remove read-only flag on terminated file. */
-  SVN_ERR (svn_io_set_file_read_write (path, TRUE, pool));
-
   SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, path, pool));
 
   apr_err = apr_file_remove (path_apr, pool);
