@@ -188,7 +188,9 @@ svn_string_strip_whitespace (svn_string_t *str)
   /* Go ahead!  Waste some RAM, we've got pools! :)  */
   str->data += offset;
   str->len -= offset;
-  str->blocksize -= offset;
+  /* Can't adjust `blocksize' here, because svn_string_t does not
+     record a blocksize independent of len, thus can't be
+     realloc'd. */
 
   /* Now that we've chomped whitespace off the front, search backwards
      from the end for the first non-whitespace. */
