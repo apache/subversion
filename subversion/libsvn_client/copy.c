@@ -200,7 +200,7 @@ path_driver_cb_func (void **dir_baton,
                      apr_pool_t *pool)
 {
   struct path_driver_cb_baton *cb_baton = callback_baton;
-  svn_boolean_t do_delete = TRUE, do_add = FALSE;
+  svn_boolean_t do_delete = FALSE, do_add = FALSE;
 
   /* Initialize return value. */
   *dir_baton = NULL;
