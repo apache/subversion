@@ -395,9 +395,27 @@ resolve_to_defaults (svn_string_t *path,
              this_entry should already have. */
           this_entry->revision = child_entry->revision;
           this_entry->ancestor = child_entry->ancestor;
-          this_entry->text_time = child_entry->text_time;
-          this_entry->prop_time = child_entry->prop_time;
-          this_entry->attributes = child_entry->attributes;
+
+
+          /* TODO: Commenting out this line fixes the case whereby
+             modifying the entries file for A/B ends up putting an
+             extra prop-timestamp in the "E" subdir entry. 
+
+             The REAL issue here is that this whole routine needs to
+             stop digging into subdirs to find information.  We've
+             made a philosophical decision that svn_wc_get_entries()
+             will *only* return information in the particular entries
+             file;  it won't delve down or up to get info.  If a
+             caller wants full info about a subdir, it must open the
+             subdir's own entries file and look at THIS_DIR.
+
+             This is a big change to make; it means changing the
+             assumptions of *all* the callers of
+             svn_wc_get_entries(). */
+
+          /* this_entry->text_time = child_entry->text_time; */
+          /* this_entry->prop_time = child_entry->prop_time; */
+          /* this_entry->attributes = child_entry->attributes; */
 
           /* and make sure the entry retains its name;  else it would
              always be "". */
