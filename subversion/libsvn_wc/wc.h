@@ -256,12 +256,14 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
  * do it again without ill effect.
  */
 
-/* Ops and attributes in the log file. */
+/* Log actions. */
 #define SVN_WC__LOG_MERGE_TEXT          "merge-text"
 #define SVN_WC__LOG_REPLACE_TEXT_BASE   "replace-text-base"
 #define SVN_WC__LOG_MERGE_PROPS         "merge-props"
 #define SVN_WC__LOG_REPLACE_PROP_BASE   "replace-prop-base"
 #define SVN_WC__LOG_SET_ENTRY           "set-entry"
+#define SVN_WC__LOG_COMMITTED           "committed"
+/* Log attributes. */
 #define SVN_WC__LOG_ATTR_NAME           "name"
 #define SVN_WC__LOG_ATTR_VERSION        "version"
 #define SVN_WC__LOG_ATTR_SAVED_MODS     "saved-mods"
