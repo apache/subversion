@@ -26,7 +26,8 @@ B. Who is going to write the cvs2svn converter (using cvs2cl's code)?
 C. Who is going to write a gui design/whitepaper?  Who will write
    them?
 
-D. svn import?  annotate?  log?  other commands that are still missing?
+D. svn import?  annotate?  log?  other commands that are still missing
+   that are part of CVS?
 
 E. How will we present branches and tags to the user?  Show them as
    subdirs, or hide them under a cvs-compatible command interface?
@@ -51,8 +52,12 @@ L. Copy nodes (or props).  we need better history tracking when making
 
 M. All client commands need to accept multiple targets.
 
-N. svn mv, svn cp   (trivial to write).
-
+N. Commands that make us *better* than CVS:
+     
+     svn mv, svn cp 
+     svn revert 
+     svn unadd, svn undel
+     
 O. 90% solution to the "repeated merge" problem?  genetic merging?
    how much changeset metadata should we be tracking?
 
