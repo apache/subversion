@@ -828,8 +828,7 @@ C      stuff/loot/lump.c   # this file has conflicts from an update
             <listitem>
               <para>The file, directory, or symbolic link
                 <filename>item</filename> has been scheduled for
-                addition into the repository.
-              </para>
+                addition into the repository.</para>
             </listitem>
           </varlistentry>
 
@@ -1330,8 +1329,7 @@ Updated to revision 46.
           <para>Here <literal>OLDREV</literal> is the revision number
             of the file in your <filename>.svn</filename> directory
             and <literal>NEWREV</literal> is the revision number of
-            the repository <literal>HEAD</literal>.
-          </para>
+            the repository <literal>HEAD</literal>.</para>
         </listitem>
         
       </itemizedlist>
@@ -1992,7 +1990,7 @@ trunk/
 
       <para>If you want a more detailed listing, pass the
         <option>--verbose</option> (<option>-v</option>) flag to get
-        output like this.</para>
+        output like this:</para>
 
       <screen>
 $ svn list --verbose http://svn.collab.net/repos/svn
