@@ -26,7 +26,8 @@
  *
  * All paths passed to the @c svn_path_xxx functions, with the exceptions of
  * the @c svn_path_canonicalize and @c svn_path_internal_style functions, must
- * be in canonical form.
+ * be in canonical form.  There is one exception -- svn_path_is_canonical() --
+ * (for the obvious reasons).
  *
  * todo: this library really needs a test suite!
  */
@@ -45,6 +46,15 @@
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
+
+
+/**
+ * @since New in 1.2.
+ *
+ * Return @c TRUE iff @a path is canonical. */
+svn_boolean_t svn_path_is_canonical (const char *path);
+
 
 
 
