@@ -773,9 +773,10 @@ typedef svn_error_t *(*svn_ra_init_func_t) (int abi_version,
  * VSN  DATE        REASON FOR CHANGE
  * ---  ----------  ------------------------------------------------
  *   1  2001-02-17  Initial revision.
+ *   2  2004-06-29  Preparing for svn 1.1, which adds new RA vtable funcs.
  * </pre>
  */
-#define SVN_RA_ABI_VERSION      1
+#define SVN_RA_ABI_VERSION      2
 
 
 /* Public RA implementations: ADD MORE HERE as necessary. */

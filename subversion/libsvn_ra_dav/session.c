@@ -861,7 +861,8 @@ svn_error_t *svn_ra_dav_init(int abi_version,
                              apr_pool_t *pconf,
                              apr_hash_t *hash)
 {
-  if (abi_version != 1)
+  if (abi_version < 1
+      || abi_version > SVN_RA_ABI_VERSION)
     return svn_error_createf (SVN_ERR_RA_UNSUPPORTED_ABI_VERSION, NULL,
                               _("Unsupported RA plugin ABI version (%d) "
                                 "for ra_dav."), abi_version);
