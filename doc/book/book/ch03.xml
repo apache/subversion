@@ -799,6 +799,7 @@ $ svn status
   L    abc.c               # svn has a lock in its .svn directory for abc.c
 M      bar.c               # the content in bar.c has local modifications
  M     baz.c               # baz.c has property but no content modifications
+X      3rd_party           # this dir is part of an externals definition
 ?      foo.o               # svn doesn't manage foo.o
 !      some_dir            # svn manages this, but it's either missing or incomplete
 ~      qux                 # versioned as dir, but is file, or vice versa

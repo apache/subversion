@@ -3187,6 +3187,13 @@ $ svn status
             </varlistentry>
 
             <varlistentry>
+              <term>'X'</term>
+              <listitem>
+                <para>Item is related to an externals definition.</para>
+              </listitem>
+            </varlistentry>
+
+            <varlistentry>
               <term>'I'</term>
               <listitem>
                 <para>Item is being ignored (e.g. with the 
