@@ -27,6 +27,7 @@
 #include <apr_tables.h>
 #include <apr_file_io.h>
 #include <apr_strings.h>
+#include <apr_lib.h>
 #include "svn_types.h"
 #include "svn_delta.h"
 #include "svn_string.h"
@@ -1100,6 +1101,173 @@ svn_wc__eol_style_from_value (enum svn_wc__eol_style *style,
       *eol = NULL;
     }
 }
+
+
+/* Helper for svn_wc__get_keywords().
+   
+   Given a file at PATH, look up KEYWORD (or a mapping thereof) in its
+   entry.  If the entry attribute is present, duplicate the attribute
+   value in one of *REVISION, *DATE, *AUTHOR, or *URL, allocated in
+   POOL.  If the attribute is not present, then don't touch any pointers.
+*/
+static svn_error_t *
+expand_keyword (char **revision,
+                char **date,
+                char **author,
+                char **url,
+                const char *keyword,
+                const char *path,
+                apr_pool_t *pool)
+{
+  svn_wc_entry_t *entry;
+
+  SVN_ERR (svn_wc_entry (&entry, svn_stringbuf_create (path, pool), pool));
+  
+  if ((! strcmp (keyword, SVN_KEYWORD_REVISION_LONG))
+      || (! strcmp (keyword, SVN_KEYWORD_REVISION_SHORT)))
+    {
+      svn_stringbuf_t *value = (svn_stringbuf_t *)
+        apr_hash_get (entry->attributes, 
+                      SVN_ENTRY_ATTR_COMMITTED_REV,
+                      strlen(SVN_ENTRY_ATTR_COMMITTED_REV));
+
+      if (! value)
+        /* We found a recognized keyword, so it needs to be expanded
+           no matter what.  If the expansion value isn't available,
+           we at least send back an empty string.  */
+        *revision = apr_pstrdup (pool, "");
+      else
+        *revision = apr_pstrdup (pool, value->data);
+    }
+  else if ((! strcmp (keyword, SVN_KEYWORD_DATE_LONG))
+           || (! strcmp (keyword, SVN_KEYWORD_DATE_SHORT)))
+    {
+      svn_stringbuf_t *value = (svn_stringbuf_t *)
+        apr_hash_get (entry->attributes, 
+                      SVN_ENTRY_ATTR_COMMITTED_DATE,
+                      strlen(SVN_ENTRY_ATTR_COMMITTED_DATE));
+      
+      if (! value)
+        *date = apr_pstrdup (pool, "");
+      else
+        *date = apr_pstrdup (pool, value->data);
+    }
+  else if ((! strcmp (keyword, SVN_KEYWORD_AUTHOR_LONG))
+           || (! strcmp (keyword, SVN_KEYWORD_AUTHOR_SHORT)))
+    {
+      svn_stringbuf_t *value = (svn_stringbuf_t *)
+        apr_hash_get (entry->attributes, 
+                      SVN_ENTRY_ATTR_LAST_AUTHOR,
+                      strlen(SVN_ENTRY_ATTR_LAST_AUTHOR));
+      
+      if (! value)
+        *author = apr_pstrdup (pool, "");
+      else
+        *author = apr_pstrdup (pool, value->data);
+    }
+  else if ((! strcmp (keyword, SVN_KEYWORD_URL_LONG))
+           || (! strcmp (keyword, SVN_KEYWORD_URL_SHORT)))
+    {
+      svn_stringbuf_t *value = (svn_stringbuf_t *)
+        apr_hash_get (entry->attributes, 
+                      SVN_WC_ENTRY_ATTR_URL,
+                      strlen(SVN_WC_ENTRY_ATTR_URL));
+      
+      if (! value)
+        *url = apr_pstrdup (pool, "");
+      else
+        *url = apr_pstrdup (pool, value->data);
+    }
+
+  /* else, do nothing.  it's an unrecognized keyword. */
+  
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__get_keywords (char **revision,
+                      char **date,
+                      char **author,
+                      char **url,
+                      char *path,
+                      char *optional_value,
+                      apr_pool_t *pool)
+{
+  svn_stringbuf_t *propval;
+  const char *value;
+  int offset = 0;
+  svn_stringbuf_t *discovered_word;
+
+  /* Choose a property value to parse:  either the one that came into
+     this function, or the one attached to PATH. */
+  if (optional_value == NULL)
+    {
+      svn_stringbuf_t *propname =
+        svn_stringbuf_create (SVN_PROP_KEYWORDS, pool);
+      
+      SVN_ERR (svn_wc_prop_get (&propval, propname,
+                                svn_stringbuf_create (path, pool), pool));
+      
+      value = propval ? propval->data : NULL;
+    }
+  else
+    value = optional_value;
+
+  /* Now parse the value for words.  For now, this parser assumes that
+     the value will contain keywords separated by whitespaces.  This
+     can be made more complex later if somebody cares. */
+
+  /* Start off assuming that no keywords are present. */
+  *revision = *date = *author = *url = NULL;
+      
+  /* The easy answer. */
+  if (value == NULL)
+    return SVN_NO_ERROR;
+ 
+  do {
+    /* Find the start of a word by skipping past whitespace. */
+    while ((value[offset] != NULL) && (apr_isspace (value[offset])))
+      offset++;
+    
+    /* Hit either a non-whitespace or NULL char. */
+
+    if (value[offset] != NULL) /* found non-whitespace char */
+      {
+        int word_start, word_end;
+
+        word_start = offset;
+        
+        /* Find the end of the word by skipping non-whitespace chars */
+        while ((value[offset] != NULL) && (! apr_isspace (value[offset])))
+          offset++;
+        
+        /* Hit either a whitespace or NULL char.  Either way, it's the
+           end of the word. */
+        word_end = offset;
+        
+        /* Make a temporary copy of the word */
+        discovered_word = svn_stringbuf_ncreate (value + word_start,
+                                                 (word_end - word_start),
+                                                 pool);
+        
+        /* If this word is an officially recognized keyword, then
+           this routine will find its expansion (if available) and
+           possibly fill in one of the char ** pointers.  */
+        SVN_ERR (expand_keyword (revision, date, author, url,
+                                 discovered_word->data,
+                                 path, pool));
+      }
+
+  } while (value[offset] != NULL);
+
+      
+  return SVN_NO_ERROR;
+}
+
+
+
+
 
 
 
