@@ -828,6 +828,98 @@ Keep in mind that rolling back a change like this is just like any other
 to be in, and then use @command{svn commit} to send the final version to 
 the repository.
 
+@subsection Tracking an externally maintained project on a vendor branch
+
+Sometimes you want to manage modified third-party source code inside your 
+Subversion repository, while still tracking upstream releases.  In CVS 
+this would have been called a ``vendor branch''.  Subversion doesn't have 
+a formal ``vendor branch'', but it is sufficiently flexible that you can 
+still do much the same thing.
+
+The general procedure goes like like this.  You create a top level 
+directory (we'll use ``/vendor'') to hold the vendor branches.  Then you 
+import the third party code into a subdirectory of /vendor, and copy it 
+into /trunk where you make your local changes.  With each new release of 
+the code you are tracking you bring it into the vendor branch and merge 
+the changes into /trunk, resolving whatever conflicts occur between your 
+local changes and the upstream changes.
+
+Let's try and make this a bit clearer with an example.
+
+First, the initial import.
+
+@example
+$ svn mkdir http://svnhost/repos/vendor/foobar
+$ svn import http://svnhost/repos/vendor/foobar ~/foobar-1.0 current
+@end example
+
+Now we've got the current version of the foobar project in 
+/vendor/foobar/current.  We make another copy of it so we can always refer 
+to that version, and then copy it into the trunk so you can work on it.
+
+@example
+$ svn copy http://svnhost/repos/vendor/foobar/current    \
+           http://svnhost/repos/vendor/foobar/foobar-1.0 \
+           -m `tagging foobar-1.0'
+$ svn copy http://svnhost/repos/vendor/foobar/foobar-1.0 \
+           http://svnhost/repos/trunk/foobar             \
+           -m `bringing foobar-1.0 into trunk'
+@end example
+
+Now you just check out a copy of /trunk/foobar and get to work!
+
+Later on, the developers at FooBar Widgets, Inc release a new version of 
+their code, so you want to update the version of the code you're using.  
+First, you check out the /vendor/foobar/current directory, then copy the 
+new release over that working copy, handle any renames, additions or 
+removals manually, and then commit.
+
+@example
+$ cd ~/foobar-1.1
+$ svn co http://svnhost/repos/vendor/foobar/current ~/current
+$ tar -cf - . | (cd ~/current ; tar -xf -)
+$ cd ~/current
+$ mv foobar.c main.c
+$ svn mv main.c foobar.c
+$ svn rm dead.c
+$ svn add doc
+$ svn add doc/*
+$ svn commit -m `importing foobar 1.1 on vendor branch'
+@end example
+
+Whoa, that was complicated. Don't worry, most cases are far simpler. 
+What happened? foobar 1.0 had a file called main.c.  This file was renamed 
+to foobar.c in 1.1.  So your working-copy had the old main.c which svn knew 
+about, and the new foobar.c which svn did not know about.  You rename 
+foobar.c to main.c and svn mv it back to the new name.  This way, svn will 
+know that foobar.c is a descendant of main.c.  dead.c has vanished in 1.1, 
+and they have finally written some documentation, so you add that.
+
+Next you copy /vendor/foobar/current to /vendor/foobar/foobar-1.1 so you can 
+always refer back to version 1.1, like this.
+
+@example
+$ svn copy http://svnhost/repos/vendor/foobar/current    \
+           http://svnhost/repos/vendor/foobar/foobar-1.1 \
+           -m `tagging foobar-1.1'
+@end example
+
+Now that you have a pristine copy of foobar 1.1 in /vendor, you just have 
+to merge their changes into /trunk and you're done.  That looks like this.
+
+@example
+$ svn co http://svnhost/repos/trunk/foobar ~/foobar
+$ cd ~/foobar
+$ svn merge http://svnhost/repos/vendor/foobar/foobar-1.0 \
+            http://svnhost/repos/vendor/foobar/foobar-1.1
+$
+[...] # resolve all the conflicts between their changes and your changes
+$ svn commit -m `merging foobar 1.1 into trunk'
+@end example
+
+There, you're done.  You now have a copy of foobar 1.1 with all your local 
+changes merged into it in your tree.
+
 @subsection Removing a branch or tag with @command{svn rm}
 
 The @command{svn rm} command can operate on URLs.  A file or directory
