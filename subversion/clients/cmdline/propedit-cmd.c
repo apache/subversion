@@ -112,8 +112,14 @@ svn_cl__propedit (apr_getopt_t *os,
           /* Possibly clean up the new propval before giving it to
              svn_client_revprop_set. */
           if (svn_cl__prop_needs_translation (pname_utf8))
-            SVN_ERR (svn_cl__translate_string (&propval, propval, pool));
-
+            SVN_ERR (svn_cl__translate_string (&propval, propval,
+                                               opt_state->encoding, pool));
+          else 
+            if (opt_state->encoding)
+              return svn_error_create 
+                (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+                 "Bad encoding option: prop's value isn't stored as UTF8.");
+          
           SVN_ERR (svn_client_revprop_set (pname_utf8, propval,
                                            URL, &(opt_state->start_revision),
                                            auth_baton, &rev, pool));
@@ -209,8 +215,13 @@ svn_cl__propedit (apr_getopt_t *os,
                  svn_client_propset. */
               if (svn_cl__prop_needs_translation (pname_utf8))
                 SVN_ERR (svn_cl__translate_string (&propval, propval,
-                                                   pool));
-
+                                                   opt_state->encoding, pool));
+              else 
+                if (opt_state->encoding)
+                  return svn_error_create 
+                    (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+                     "Bad encoding option: prop's value isn't stored as UTF8.");
+              
               SVN_ERR (svn_client_propset (pname_utf8, propval, target, 
                                            FALSE, pool));
               printf ("Set new value for property `%s' on `%s'\n",

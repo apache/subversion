@@ -272,7 +272,7 @@ svn_cl__make_log_msg_baton (svn_cl__opt_state_t *opt_state,
     baton->message = opt_state->filedata->data;
   else
     baton->message = opt_state->message;
-  baton->message_encoding = opt_state->filedata_encoding;
+  baton->message_encoding = opt_state->encoding;
   baton->base_dir = base_dir ? base_dir : "";
   baton->tmpfile_left = NULL;
   baton->pool = pool;
@@ -470,7 +470,8 @@ svn_cl__get_log_message (const char **log_msg,
       if (msg2)
         {
           svn_string_t *new_logval = svn_string_create (msg2, pool);
-          SVN_ERR (svn_cl__translate_string (&new_logval, new_logval, pool));
+          SVN_ERR (svn_cl__translate_string (&new_logval, new_logval,
+                                             NULL,pool));
           msg2 = new_logval->data;
         }        
 
@@ -597,10 +598,12 @@ svn_cl__prop_needs_translation (const char *propname)
 svn_error_t *
 svn_cl__translate_string (svn_string_t **new_value,
                           const svn_string_t *value,
+                          const char *encoding,
                           apr_pool_t *pool)
 {
   const char *val_utf8;
   const char *val_utf8_lf;
+  apr_xlate_t *xlator = NULL;
 
   if (value == NULL)
     {
@@ -608,7 +611,16 @@ svn_cl__translate_string (svn_string_t **new_value,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR (svn_utf_cstring_to_utf8 (&val_utf8, value->data, NULL, pool));
+  if (encoding)
+    {
+      apr_status_t apr_err =  
+        apr_xlate_open (&xlator, "UTF-8", encoding, pool);
+      if (apr_err != APR_SUCCESS)
+        return svn_error_create (apr_err, 0, NULL,
+                                 "failed to create a converter to UTF-8");
+    }
+
+  SVN_ERR (svn_utf_cstring_to_utf8 (&val_utf8, value->data, xlator, pool));
   SVN_ERR (svn_subst_translate_cstring (val_utf8,
                                         &val_utf8_lf,
                                         "\n",  /* translate to LF */
