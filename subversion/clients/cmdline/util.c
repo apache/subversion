@@ -44,6 +44,7 @@
 #include "svn_utf.h"
 #include "svn_subst.h"
 #include "svn_config.h"
+#include "svn_private_config.h"
 #include "cl.h"
 
 
@@ -96,7 +97,14 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
     editor = getenv ("VISUAL");
   if (! editor)
     editor = getenv ("EDITOR");
-  
+
+#ifdef SVN_CLIENT_EDITOR
+  if (! editor)
+    {
+      editor = SVN_CLIENT_EDITOR;
+    }
+#endif
+
   /* Now, override this editor choice with a selection from our config
      file (using what we have found thus far as the default in case no
      config option exists). */
