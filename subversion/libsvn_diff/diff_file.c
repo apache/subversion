@@ -114,7 +114,7 @@ read_chunk(apr_file_t *file, const char *path,
   if (apr_err != APR_SUCCESS)
     {
       return svn_error_createf(apr_err, NULL,
-               "Failed to set filepointer in file '%s'.",
+               "Failed to set filepointer in file '%s'",
                path);
     }
 
@@ -122,7 +122,7 @@ read_chunk(apr_file_t *file, const char *path,
   if (apr_err != APR_SUCCESS)
     {
       return svn_error_createf(apr_err, NULL,
-               "Failed to read file '%s'.",
+               "Failed to read file '%s'",
                path);
     }
 
@@ -160,7 +160,7 @@ map_or_read_file(apr_file_t **file,
   rv = apr_file_info_get(&finfo, APR_FINFO_SIZE, *file);
   if (rv != APR_SUCCESS)
     {
-      return svn_error_createf(rv, NULL, "Failed to get file info '%s'.",
+      return svn_error_createf(rv, NULL, "Failed to get file info '%s'",
                                path);
     }
 
@@ -186,7 +186,7 @@ map_or_read_file(apr_file_t **file,
       rv = apr_file_read_full(*file, *buffer, finfo.size, NULL);
       if (rv != APR_SUCCESS)
         {
-          return svn_error_createf(rv, NULL, "Failed to read file '%s'.",
+          return svn_error_createf(rv, NULL, "Failed to read file '%s'",
                                    path);
         }
 
@@ -226,7 +226,7 @@ svn_diff__file_datasource_open(void *baton,
   if (apr_err != APR_SUCCESS)
     {
       return svn_error_createf(apr_err, NULL,
-               "Failed to get file info '%s'.",
+               "Failed to get file info '%s'",
                file_baton->path[idx]);
     }
 
@@ -670,7 +670,7 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
 
   if (rv != APR_SUCCESS && ! APR_STATUS_IS_EOF(rv))
     {
-      return svn_error_createf(rv, NULL, "Error reading from '%s'.",
+      return svn_error_createf(rv, NULL, "Error reading from '%s'",
                                baton->path[idx]);
     }
 
@@ -751,8 +751,7 @@ svn_diff__file_output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
                            baton->hunk->data, hunk_len, NULL);
   if (rv != APR_SUCCESS)
     {
-      return svn_error_create(rv, NULL,
-               "svn_diff_file_output_unified: error writing hunk.");
+      return svn_error_create(rv, NULL, "Error writing hunk");
     }
 
   /* Prepare for the next hunk */
@@ -988,8 +987,7 @@ svn_diff3__file_output_line(svn_diff3__file_output_baton_t *baton,
       rv = apr_file_write_full(baton->output_file, curp, len, NULL);
       if (rv != APR_SUCCESS)
         {
-          return svn_error_create(rv, NULL,
-            "svn_diff3_file_output: error writing file.");
+          return svn_error_create(rv, NULL, "Error writing file.");
         }
     }
 
@@ -1094,8 +1092,7 @@ svn_diff3__file_output_conflict(void *baton,
   rv = apr_file_puts(file_baton->conflict_modified, file_baton->output_file);
   if (rv != APR_SUCCESS)
     {
-      return svn_error_create(rv, NULL,
-        "svn_diff3_file_output: error writing file.");
+      return svn_error_create(rv, NULL, "Error writing file.");
     }
 
   apr_file_puts(APR_EOL_STR, file_baton->output_file);
@@ -1108,8 +1105,7 @@ svn_diff3__file_output_conflict(void *baton,
       rv = apr_file_puts(file_baton->conflict_original, file_baton->output_file);
       if (rv != APR_SUCCESS)
         {
-          return svn_error_create(rv, NULL,
-            "svn_diff3_file_output: error writing file.");
+          return svn_error_create(rv, NULL, "Error writing file.");
         }
 
       apr_file_puts(APR_EOL_STR, file_baton->output_file);
@@ -1121,8 +1117,7 @@ svn_diff3__file_output_conflict(void *baton,
   rv = apr_file_puts(file_baton->conflict_separator, file_baton->output_file);
   if (rv != APR_SUCCESS)
     {
-      return svn_error_create(rv, NULL,
-        "svn_diff3_file_output: error writing file.");
+      return svn_error_create(rv, NULL, "Error writing file.");
     }
 
   apr_file_puts(APR_EOL_STR, file_baton->output_file);
@@ -1133,8 +1128,7 @@ svn_diff3__file_output_conflict(void *baton,
   rv = apr_file_puts(file_baton->conflict_latest, file_baton->output_file);
   if (rv != APR_SUCCESS)
     {
-      return svn_error_create(rv, NULL,
-        "svn_diff3_file_output: error writing file.");
+      return svn_error_create(rv, NULL, "Error writing file.");
     }
 
   apr_file_puts(APR_EOL_STR, file_baton->output_file);
@@ -1208,7 +1202,7 @@ svn_diff_file_output_merge(apr_file_t *output_file,
           apr_status_t rv = apr_mmap_delete(mm[idx]);
           if (rv != APR_SUCCESS)
             {
-              return svn_error_createf(rv, NULL, "Failed to delete mmap '%s'.",
+              return svn_error_createf(rv, NULL, "Failed to delete mmap '%s'",
                                        baton.path[idx]);
             }
         }
