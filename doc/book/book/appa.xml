@@ -256,7 +256,7 @@ M     ./foo.c
 M     ./bar/baz.c
     </screen>
 
-    <para>If you specify the <option>--update</option>
+    <para>If you specify the <option>--show-updates</option>
       (<option>-u</option>) switch, a longer output format is
       used:</para>
 
@@ -409,7 +409,7 @@ X    eXternal
       Subversion examines the <literal>svn:mime-type</literal>
       property.  If the file has no <literal>svn:mime-type</literal>
       property, or has a mime-type that is textual (e.g. text/*),
-      Subversion assumes it is text.  Otherwise, Subversion it assumes
+      Subversion assumes it is text.  Otherwise, Subversion assumes
       the file is binary.  Subversion also helps users by running a
       binary-detection algorithm in the <command>svn import</command>
       and <command>svn add</command> commands.  These commands will
