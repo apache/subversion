@@ -293,6 +293,10 @@ svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);
 #define SVN_WC__ENTRIES_ATTR_DELETE    "delete"
 #define SVN_WC__ENTRIES_ATTR_ANCESTOR  "ancestor"
 
+/* TODO:  remove this later, once apr allows us to store NULL as a
+   hash key.  */
+#define SVN_WC__ENTRIES_THIS_DIR       "."
+
 /* Initialize contents of `entries' for a new adm area. */
 svn_error_t *svn_wc__entries_init (svn_string_t *path,
                                    svn_string_t *ancestor_path,
