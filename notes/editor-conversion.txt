@@ -13,6 +13,7 @@ DONE    libsvn_ra_dav/commit.c
 DONE    libsvn_ra_local/commit_editor.c
 DONE    libsvn_repos/node_tree.c
 DONE    libsvn_wc/diff.c
+        libsvn_wc/repos_diff.c
 DONE    libsvn_wc/status_editor.c
 DONE    libsvn_wc/update_editor.c
         mod_dav_svn/merge.c
