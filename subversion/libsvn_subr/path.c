@@ -57,7 +57,7 @@
 /*** A path manipulation library. ***/
 
 static void
-canonicalize (svn_string_t *path, int style)
+canonicalize (svn_string_t *path, enum svn_path_style style)
 {
   /* kff todo: `style' ignored presently. */
 
@@ -80,7 +80,7 @@ static void
 add_component_internal (svn_string_t *path,
                         const char *component,
                         size_t len,
-                        int style,
+                        enum svn_path_style style,
                         apr_pool_t *pool)
 {
   /* kff todo: `style' ignored presently. */
@@ -99,7 +99,7 @@ add_component_internal (svn_string_t *path,
 void
 svn_path_add_component_nts (svn_string_t *path, 
                             const char *component,
-                            int style,
+                            enum svn_path_style style,
                             apr_pool_t *pool)
 {
   add_component_internal (path, component, strlen (component), style, pool);
@@ -110,7 +110,7 @@ svn_path_add_component_nts (svn_string_t *path,
 void
 svn_path_add_component (svn_string_t *path, 
                         const svn_string_t *component,
-                        int style,
+                        enum svn_path_style style,
                         apr_pool_t *pool)
 {
   add_component_internal (path, component->data, component->len, style, pool);
@@ -119,7 +119,7 @@ svn_path_add_component (svn_string_t *path,
 
 /* See ../include/svn_path.h for details. */
 void
-svn_path_remove_component (svn_string_t *path, int style)
+svn_path_remove_component (svn_string_t *path, enum svn_path_style style)
 {
   /* kff todo: `style' ignored presently. */
 
@@ -132,7 +132,9 @@ svn_path_remove_component (svn_string_t *path, int style)
 
 /* See ../include/svn_path.h for details. */
 svn_string_t *
-svn_path_last_component (svn_string_t *path, int style, apr_pool_t *pool)
+svn_path_last_component (svn_string_t *path,
+                         enum svn_path_style style,
+                         apr_pool_t *pool)
 {
   /* kff todo: `style' ignored presently. */
 
@@ -159,8 +161,22 @@ svn_path_last_component (svn_string_t *path, int style, apr_pool_t *pool)
 
 
 /* See ../include/svn_path.h for details. */
+void
+svn_path_split (svn_string_t *path, 
+                svn_string_t **dirpath,
+                svn_string_t **basename,
+                enum svn_path_style style,
+                apr_pool_t *pool)
+{
+  *dirpath = svn_string_dup (path, pool);
+  *basename = svn_path_last_component (*dirpath, style, pool);
+  svn_path_remove_component (*dirpath, style);
+}
+
+
+/* See ../include/svn_path.h for details. */
 int
-svn_path_isempty (const svn_string_t *path, int style)
+svn_path_isempty (const svn_string_t *path, enum svn_path_style style)
 {
   /* kff todo: `style' ignored presently. */
 
@@ -173,3 +189,5 @@ svn_path_isempty (const svn_string_t *path, int style)
           || (svn_string_isempty (path))
           || (strcmp (path->data, buf) == 0));
 }
+
+

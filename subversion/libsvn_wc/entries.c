@@ -190,7 +190,7 @@ svn_wc__entry_get_ancestry (svn_string_t *path,
           ancestor = default_ancestor;
           svn_path_add_component (ancestor,
                                   entry,
-                                  SVN_PATH_REPOS_STYLE,
+                                  svn_path_repos_style,
                                   pool);
         }
       

@@ -469,7 +469,7 @@ replace_related (struct context *c, void *dir_baton,
   /* Compute the full name of the ancestor.  */
   ancestor_path = svn_string_dup (ancestor_dir_path, c->pool);
   svn_path_add_component (ancestor_path, ancestor_name,
-			  SVN_PATH_REPOS_STYLE, c->pool);
+			  svn_path_repos_style, c->pool);
 
   SVN_ERR (svn_fs_type (&kind, target, target_name));
 
