@@ -116,6 +116,14 @@ struct file_baton {
   apr_pool_t *pool;
 };
 
+/* Data used by the apr pool temp file cleanup handler */
+struct temp_file_cleanup_s {
+  /* The path to the file to be deleted */
+  svn_stringbuf_t *path;
+  /* The pool to which the deletion of the file is linked. */
+  apr_pool_t *pool;
+};
+
 /* Create a new directory baton. NAME is the directory name sans
  * path. ADDED is set if this directory is being added rather than
  * replaced. PARENT_BATON is the baton of the parent directory, it will be
@@ -180,32 +188,47 @@ make_file_baton (const svn_stringbuf_t *name,
 /* An apr pool cleanup handler, this deletes one of the temporary files.
  */
 static apr_status_t
-start_revision_cleanup_handler (void *arg)
+temp_file_plain_cleanup_handler (void *arg)
 {
-  struct file_baton *b = arg;
+  struct temp_file_cleanup_s *s = arg;
 
-  return apr_file_remove (b->path_start_revision->data, b->pool);
+  return apr_file_remove (s->path->data, s->pool);
 }
 
-/* An apr pool cleanup handler, this deletes one of the temporary files.
+/* An apr pool cleanup handler, this removes a cleanup handler.
  */
 static apr_status_t
-end_revision_cleanup_handler (void *arg)
+temp_file_child_cleanup_handler (void *arg)
 {
-  struct file_baton *b = arg;
+  struct temp_file_cleanup_s *s = arg;
 
-  return apr_file_remove (b->path_end_revision->data, b->pool);
+  apr_pool_cleanup_kill (s->pool, s, temp_file_plain_cleanup_handler);
+
+  return APR_SUCCESS;
 }
 
-/* An apr pool cleanup handler, this deletes the empty file.
+/* Register a pool cleanup to delete PATH when POOL is destroyed.
+ *
+ * The main "gotcha" is that if the process forks a child by calling
+ * apr_proc_create, then the child's copy of the cleanup handler will run
+ * and delete the file while the parent still expects it to be around. To
+ * avoid this a child cleanup handler is also installed to kill the plain
+ * cleanup handler in the child.
+ *
+ * ### TODO: This a candidate to be a general utility function.
  */
-static apr_status_t
-empty_file_cleanup_handler (void *arg)
+static svn_error_t *
+temp_file_cleanup_register (svn_stringbuf_t *path,
+                            apr_pool_t *pool)
 {
-  struct edit_baton *b = arg;
-
-  return apr_file_remove (b->empty_file->data, b->pool);
+  struct temp_file_cleanup_s *s = apr_palloc (pool, sizeof (*s));
+  s->path = path;
+  s->pool = pool;
+  apr_pool_cleanup_register (s->pool, s, temp_file_plain_cleanup_handler,
+                             temp_file_child_cleanup_handler);
+  return SVN_NO_ERROR;
 }
+
 
 /* Get the repository version of a file. This makes an RA request to
  * retrieve the file contents. A pool cleanup handler is installed to
@@ -225,7 +248,7 @@ get_file_from_ra (struct file_baton *b)
                                     tmp_name, "", FALSE, b->pool));
 
   /* Install a pool cleanup handler to delete the file */
-  apr_pool_cleanup_register (b->pool, b, start_revision_cleanup_handler, NULL);
+  SVN_ERR (temp_file_cleanup_register (b->path_start_revision, b->pool));
 
   fstream = svn_stream_from_aprfile (file, b->pool);
   SVN_ERR (b->edit_baton->ra_lib->get_file (b->edit_baton->ra_session,
@@ -278,7 +301,7 @@ get_empty_file (struct edit_baton *b,
       SVN_ERR (create_empty_file (&b->empty_file, b->pool));
 
       /* Install a pool cleanup handler to delete the file */
-      apr_pool_cleanup_register (b->pool, b, empty_file_cleanup_handler, NULL);
+      SVN_ERR (temp_file_cleanup_register (b->empty_file, b->pool));
     }
 
   *empty_file = b->empty_file;
@@ -287,46 +310,17 @@ get_empty_file (struct edit_baton *b,
 }
 
 /* Runs the diff callback to display the difference for a single file. At
- * this stage both versions of the file exist as temporary files. A slight
- * complication is that the pool cleanup handlers will delete the files
- * if/when the diff callback forks a separate process to run an external
- * diff command. Thus the handlers need to be removed and replaced before
- * and after running the callback.
+ * this stage both versions of the file exist as temporary files. 
  */
 static svn_error_t *
 run_diff_cmd (struct file_baton *b)
 {
   svn_wc_diff_cmd_t diff_cmd = b->edit_baton->diff_cmd;
-  svn_error_t *err = SVN_NO_ERROR;
 
-  /* The two temporary files have handlers for the file baton pool
-     only if they are not the empty file */
-  if (b->path_start_revision != b->edit_baton->empty_file)
-    apr_pool_cleanup_kill (b->pool, b, start_revision_cleanup_handler);
-  if (b->path_end_revision != b->edit_baton->empty_file)
-    apr_pool_cleanup_kill (b->pool, b, end_revision_cleanup_handler);
+  SVN_ERR (diff_cmd (b->path_start_revision, b->path_end_revision, b->path,
+                     b->edit_baton->diff_cmd_baton));
 
-  /* The empty file has a handler for the edit baton pool */
-  if (b->edit_baton->empty_file)
-    apr_pool_cleanup_kill (b->edit_baton->pool, b->edit_baton,
-                           empty_file_cleanup_handler);
-
-  /* Now run the callback */
-  err = diff_cmd (b->path_start_revision, b->path_end_revision, b->path,
-                  b->edit_baton->diff_cmd_baton);
-
-  /* Replace the empty file handler */
-  if (b->edit_baton->empty_file)
-    apr_pool_cleanup_register (b->edit_baton->pool, b->edit_baton,
-                               empty_file_cleanup_handler, NULL);
-
-  /* Replace the temporary file handlers if they are not the empty file */
-  if (b->path_start_revision != b->edit_baton->empty_file)
-    apr_file_remove (b->path_start_revision->data, b->pool);
-  if (b->path_end_revision != b->edit_baton->empty_file)
-    apr_file_remove (b->path_end_revision->data, b->pool);
-
-  return err;
+  return SVN_NO_ERROR;
 }
 
 /* An svn_delta_edit_fns_t editor function. The root of the comparison
@@ -536,7 +530,7 @@ apply_textdelta (void *file_baton,
 
   /* The second revision starts empty */
   SVN_ERR (create_empty_file (&b->path_end_revision, b->pool));
-  apr_pool_cleanup_register (b->pool, b, end_revision_cleanup_handler, NULL);
+  SVN_ERR (temp_file_cleanup_register (b->path_end_revision, b->pool));
 
   /* Open first revision to be used as the base for new second revision */
   status = apr_file_open (&b->file_start_revision, b->path_start_revision->data,
