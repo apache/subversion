@@ -45,7 +45,7 @@ Candidate changes:
     Drop most svn_io_* functions from SWIG bindings.
     Justification: Script languages provide equivalents, don't want to support.
     Votes:
-      +1: breser
+      +1: breser, clkao
 
 Status of 1.0.1:
 ================
