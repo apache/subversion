@@ -382,6 +382,29 @@ struct svn_fs_access_t
 };
 
 
+/* Utility function for fs back-ends.
+
+   Check to see if LOCK has been pushed into the access context of FS,
+   and also if the context's username matches the owner of the lock.
+   If so, set *MAY_USE_LOCK to true, else set it to false.
+ */
+svn_error_t *svn_fs__verify_lock (svn_boolean_t *may_use_lock,
+                                  svn_fs_t *fs,
+                                  svn_lock_t *lock,
+                                  apr_pool_t *pool);
+
+/* Utility function for fs back-ends.
+
+   Check to see if LOCKS have been pushed into the access context of FS,
+   and also if the context's username matches the owner of the every lock.
+   If so, set *MAY_USE_LOCKS to true, else set it to false.
+ */
+svn_error_t *svn_fs__verify_locks (svn_boolean_t *may_use_locks,
+                                   svn_fs_t *fs,
+                                   apr_hash_t *locks,
+                                   apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

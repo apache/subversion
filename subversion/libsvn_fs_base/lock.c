@@ -98,6 +98,8 @@ svn_fs_base__unlock (svn_fs_t *fs,
 {
   struct unlock_args args;
 
+  SVN_ERR (svn_fs_base__check_fs (fs));
+
   args.token = token;
   args.force = force;
   return svn_fs_base__retry_txn (fs, txn_body_unlock, &args, pool);
@@ -133,7 +135,7 @@ txn_body_get_lock_from_path (void *baton, trail_t *trail)
                                  lock_token, trail));
 
   err = check_lock_expired (*args->lock_p, trail);
-  if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_LOCK)
+  if (err && err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
     {
       svn_error_clear (err);
       *args->lock_p = NULL;
@@ -260,3 +262,6 @@ svn_fs_base__get_locks (apr_hash_t **locks,
   args.path = path;
   return svn_fs_base__retry_txn (fs, txn_body_get_locks, &args, pool);
 }
+
+
+
