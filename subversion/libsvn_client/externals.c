@@ -114,6 +114,8 @@ parse_externals_description (apr_hash_t **externals_p,
       apr_hash_set (externals, target_dir, APR_HASH_KEY_STRING, item);
     }
 
+  *externals_p = externals;
+
   return SVN_NO_ERROR;
 }
 
@@ -170,11 +172,20 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
   /* Don't bother to check status, since we'll get that for free by
      attempting to retrieve the hash values anyway.  */
 
-  old_item = apr_hash_get (ib->old_desc, key, klen);
-  new_item = apr_hash_get (ib->new_desc, key, klen);
+  if (ib->old_desc)
+    old_item = apr_hash_get (ib->old_desc, key, klen);
+  else
+    old_item = NULL;
+
+  if (ib->new_desc)
+    new_item = apr_hash_get (ib->new_desc, key, klen);
+  else
+    new_item = NULL;
 
   /* We couldn't possibly be here if both values were null, right? */
   assert (old_item || new_item);
+
+  /* ### todo: Protect against recursive externals? :-) */
 
   /* There's one potential ugliness.  If a target subdir changed, but
      its URL did not, then we only want to rename the subdir, and not
@@ -192,6 +203,17 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
 
   if (! old_item)
     {
+      const char *checkout_path
+        = svn_path_join (ib->parent_dir, new_item->target_dir, ib->pool);
+
+      /* The target dir might have multiple components.  Guarantee
+         the path leading down to the last component. */
+      {
+        const char *checkout_parent;
+        svn_path_split_nts (checkout_path, &checkout_parent, NULL, ib->pool);
+        SVN_ERR (svn_io_make_dir_recursively (checkout_parent, ib->pool));
+      }
+
       /* ### todo: before checking out a new subdir, see if this is
          really just a rename of an old one.  This can work in tandem
          with the next case -- this case would do nothing, knowing
@@ -205,7 +227,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                 ib->after_edit_baton,
                 ib->auth_baton,
                 new_item->url,
-                svn_path_join (ib->parent_dir, new_item->target_dir, ib->pool),
+                checkout_path,
                 &(new_item->revision),
                 TRUE, /* recurse */
                 NULL,
@@ -224,6 +246,10 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
 
       if (err && (err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD))
         return err;
+
+      /* ### If there were multiple path components leading down to
+         that wc, they'll need to be removed to, iff there's nothing
+         else in them. */
     }
   else if (! compare_external_items (new_item, old_item))
     {
@@ -330,6 +356,7 @@ svn_client__handle_externals_changes (svn_wc_traversal_info_t *traversal_info,
   cb.after_editor      = after_editor;
   cb.after_edit_baton  = after_edit_baton;
   cb.auth_baton        = auth_baton;
+  cb.pool              = pool;
 
   SVN_ERR (svn_hash_diff (externals_old, externals_new,
                           handle_externals_desc_change, &cb, pool));

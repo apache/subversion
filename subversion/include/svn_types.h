@@ -181,13 +181,15 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
  *
  * The format is a series of lines, such as:
  *
- *   localdir1   http://url.for.external.source/etc/
- *   localdir2   http://another.url/blah/blah/blah
- *   localdir3   http://and.so.on/and/so/forth
+ *   localdir1           http://url.for.external.source/etc/
+ *   localdir1/foo       http://url.for.external.source/foo
+ *   localdir1/bar       http://blah.blah.blah/repositories/theirproj
+ *   localdir1/bar/baz   http://blorg.blorg.blorg/basement/code
+ *   localdir2           http://another.url/blah/blah/blah
+ *   localdir3           http://and.so.on/and/so/forth
  *
- * The directory names on the left side are single path components
- * (they are interpreted relative to the directory on which this
- * property is set).
+ * The subdir names on the left side are relative to the directory on
+ * which this property is set.
  */
 #define SVN_PROP_EXTERNALS  SVN_PROP_PREFIX "externals"
 

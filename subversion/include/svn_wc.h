@@ -771,7 +771,7 @@ svn_error_t *svn_wc_get_switch_editor (const char *anchor,
                                        apr_pool_t *pool);
 
 
-/* Set *EXTERNALS_NEW and *EXTERNALS_OLD to hash tables representing
+/* Set *EXTERNALS_OLD and *EXTERNALS_NEW to hash tables representing
  * changes to values of the svn:externals property on directories
  * traversed by TRAVERSAL_INFO.
  *
@@ -788,8 +788,8 @@ svn_error_t *svn_wc_get_switch_editor (const char *anchor,
  *
  * The hashes, keys, and values have the same lifetime as TRAVERSAL_INFO.
  */
-void svn_wc_edited_externals (apr_hash_t **externals_new,
-                              apr_hash_t **externals_old,
+void svn_wc_edited_externals (apr_hash_t **externals_old,
+                              apr_hash_t **externals_new,
                               svn_wc_traversal_info_t *traversal_info);
 
 

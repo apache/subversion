@@ -1863,12 +1863,12 @@ svn_wc_get_switch_editor (const char *anchor,
 
 
 void
-svn_wc_edited_externals (apr_hash_t **externals_new,
-                         apr_hash_t **externals_old,
+svn_wc_edited_externals (apr_hash_t **externals_old,
+                         apr_hash_t **externals_new,
                          svn_wc_traversal_info_t *traversal_info)
 {
-  *externals_new = traversal_info->externals_new;
   *externals_old = traversal_info->externals_old;
+  *externals_new = traversal_info->externals_new;
 }
 
 
