@@ -36,6 +36,7 @@ Init_svn (void)
   svn_ruby_init_fs_root ();
   svn_ruby_init_fs_node ();
   svn_ruby_init_fs_txn ();
+  svn_ruby_init_repos ();
 
   svn_ruby_init_ra ();
   svn_ruby_init_wc ();
