@@ -143,6 +143,10 @@ SOURCE=.\time.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\utf.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\xml.c
 # End Source File
 # End Group
