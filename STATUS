@@ -49,7 +49,7 @@ Candidate changes:
     Fix a bug which prevents svnlook from creating its temporary directory
     inside a symlinked TMPDIR.
     Votes:
-      +1: cmpilato, breser
+      +1: cmpilato, breser, sussman
 
   * r8027
     Passing a Revision.DateSpec in javahl failed with 
@@ -125,4 +125,4 @@ Candidate changes:
     over DAV.
     Justification: If you can set it you should be able to read it.
     Votes:
-      +1: breser
+      +1: breser, sussman
