@@ -149,10 +149,10 @@ analogous to CVS/ sudirs:
       2. `revision' defaults to the directory's revision (in the
          directory's own entry, the revision may not be omitted).
 
-      3. `timestamp' is required anytime the `revision' attribute is
+      3. `timestamp' is required whenever the `revision' attribute is
          changed.  They are inseparable concepts; the timestamp
-         represents the last time the file was known to be updated by
-         a repository.
+         represents the last time the working file was known to be
+         exactly equal to the revision it claims to be.
 
       4. `ancestor' defaults to the directory's ancestor, prepended
          (according to the repository's path conventions) to the entry
