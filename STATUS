@@ -78,6 +78,15 @@ section for approved changes.)
            Message-Id:  <200401082033.i08KXMv45357@newton.ch.collab.net>
 
 
+    * r8292 (Fix for Issue #1695)
+      Fix a nasty bug in the 'changes' table reading code that caused
+      in invalid set of changes to be returned.  This bug *probably*
+      only gets triggered by cvs2svn during directory pruning, but
+      cvs2svn is only gonna get more popular as time goes on...
+      Votes:
+       +1: cmpilato
+
+
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
 the section for unapproved changes.)
