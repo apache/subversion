@@ -5,7 +5,6 @@
 ;; $Id$
 
 ;; psvn.el is free software; you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
 ;; the Free Software Foundation; either version 2, or (at your option)
 ;; any later version.
 
@@ -98,6 +97,9 @@
 ;;   unfortunately `read-directory-name' doesn't exist in Emacs 21.3
 ;; * Add repository browser
 ;; * Improve support for svn blame
+;; * Support for editing the log file entries, e.g.:
+;;   svn propedit --revprop -r9821 svn:log
+;; * Better logview mode (allow to show the changeset for a given entry)
 
 ;; Overview over the implemented/not (yet) implemented svn sub-commands:
 ;; * add                       implemented
@@ -1158,6 +1160,8 @@ Then move to that line."
   (let* ((st-info svn-status-info)
          (line-info (svn-status-get-line-information))
          (file-name (svn-status-line-info->filename line-info))
+	 (sub-file-regexp (concat "^" (regexp-quote
+				       (file-name-as-directory file-name))))
          (newcursorpos-fname)
          (i-fname)
          (current-line svn-start-of-file-list-line-number))
@@ -1165,8 +1169,8 @@ Then move to that line."
       (when (svn-status-line-info->is-visiblep (car st-info))
         (setq current-line (1+ current-line)))
       (setq i-fname (svn-status-line-info->filename (car st-info)))
-      (when (and (>= (length i-fname) (length file-name))
-                 (string= file-name (substring i-fname 0 (length file-name))))
+      (when (or (string= file-name i-fname)
+		(string-match sub-file-regexp i-fname))
         (when (svn-status-line-info->is-visiblep (car st-info))
           (when (or (not only-this-line) (string= file-name i-fname))
             (setq newcursorpos-fname i-fname)
