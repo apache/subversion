@@ -1516,9 +1516,6 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  * path (or if @a path doesn't exist in HEAD), return @c
  * SVN_ERR_FS_OUT_OF_DATE.
  *
- * If @a path is non-existent, that's fine.  The path is reserved, and
- * a lock-token is returned.
- *
  * Note:  at this time, only files can be locked.
  */
 svn_error_t *svn_fs_lock (svn_lock_t **lock,
