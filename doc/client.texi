@@ -4,9 +4,9 @@
 The Subversion client is built on three libraries.  One operates
 strictly on the working copy and does not talk to the repository.
 Another talks to the repository but never changes the working copy.  The
-last library uses the first two to provide operations such as
-@code{commit} and @code{update}, that both talk to the repository and
-change the working copy.
+third library uses the first two to provide operations such as
+@code{commit} and @code{update} -- operations which need to both talk to
+the repository and change the working copy.
 
 The initial client is a Unix-style command-line tool (like standard
 CVS), but it should be easy to write a GUI client as well, based on the
@@ -54,7 +54,7 @@ unless some other meaning is clear from context.
 * Text Deltas::                 
 * Property Deltas::             
 * Tree Deltas::                 
-* Skeltas::                     
+* Postfix Text Deltas::                     
 @end menu
 
 
@@ -82,19 +82,19 @@ the old text with new text; again, this is easy for humans to read, but
 it is more expensive to compute and less compact than some alternatives.
 @end itemize
 
-Instead, Subversion uses the VDelta format, as described in @cite{Hunt,
-J. J., Vo, K.-P., and Tichy, W. F.  An empirical study of delta
-algorithms.  Lecture Notes in Computer Science 1167 (July 1996), 49-66.}
-David Korn and Kiem-Phong Vo have submitted an Internet Draft, titled
-``The VCDIFF Generic Differencing and Compression Data Format,''
-describing an improvement to VDelta which we may adopt.
+Instead, Subversion uses the VDelta binary-diffing algorithm, as
+described in @cite{Hunt, J. J., Vo, K.-P., and Tichy, W. F.  An
+empirical study of delta algorithms.  Lecture Notes in Computer Science
+1167 (July 1996), 49-66.}  Currently, the output of this algorithm is
+stored in a custom data format called @dfn{svndiff}, invented by Greg
+Hudson <@email{ghudson@@mit.edu}> (a Subversion developer).
 
 The concrete form of a text delta, used for transmitting such deltas
 over the net, is a well-formed XML element, having the following form:
 @example
 <text-delta>@var{data}</text-delta>
 @end example
-Here, @var{data} is the raw VDelta data, encoded in the MIME Base64
+Here, @var{data} is the raw svndiff data, encoded in the MIME Base64
 format.
 
 @c -----------------------------------------------------------------------
@@ -459,23 +459,44 @@ Move @file{dir2} into @file{dir3}, and move @file{dir3} into @file{/}.
 @end itemize
 
 
-@node Skeltas
-@subsection Skeltas
+@node Postfix Text Deltas
+@subsection Postfix Text Deltas
 
-It is sometimes useful to represent a set of changes to a tree, just as
-a tree delta does, without providing any text deltas.  Text deltas are
+It is sometimes useful to represent a set of changes to a tree without
+providing text deltas in the middle of the stream.  Text deltas are
 often large and expensive to compute, and tree deltas can be useful
 without them.  For example, one can detect whether two changes conflict
 --- whether they change the same file, for example --- without knowing
 exactly how the conflicting files changed.
 
-A @dfn{Skelta} is a simply tree delta in which all text deltas are
-omitted --- it is a ``skeleton delta''.  The @code{svn commit} command
-uses skeltas to provide early notice of conflicts: first, the client
-transmits a skelta to the server, which can check for textual conflicts
-and reject the user's commit, before the client takes the time to
-transmit the (possibly large) textual changes.
+For this reason, our XML representation of a tree delta allows the text
+deltas to come @emph{after} the </tree-delta> closure.  This allows the
+client to receive early notice of conflicts:  during a @code{svn commit}
+command, the client sends a tree-delta to the server, which can check
+for skeletal conflicts and reject the commit, before the client takes the
+time to transmit the (possibly large) textual changes.  This potentially
+saves quite a bit of network traffic.
 
+In terms of XML, postfix text deltas are split into two parts.  The
+first part appears "in-line" and contains a reference ID.  The second
+part appears after the tree delta is complete.  Here's an example:
+
+@example
+ <tree-delta>
+   <replace name="foo.c">
+      <file>
+        <text-delta-ref id="123">
+      </file>
+   </replace>
+   <add name="bar.c">
+      <file>
+        <text-delta-ref id="456">
+      </file>
+    </add>
+ </tree-delta>
+ <text-delta id="123">@emph{data}</text-delta>
+ <text-delta id="456">@emph{data}</text-delta>
+@end example
 
 
 @c -----------------------------------------------------------------------
@@ -551,14 +572,26 @@ The SVN subdir contains:
 @itemize @bullet
 
 @item
-A @file{base} directory, containing the pristine repository versions of
-the files in the corresponding working directory, and their properties.
+A @file{format} file, which indicates which version of the working copy
+adm format this is (so future clients can be backwards compatible
+easily).
 
 @item
-A @file{versions} file, the first entry of which records the version
-number of this directory (and, by implication, the version number of any
-files not otherwise mentioned).  The remaining entries are for files at
-other versions.
+A @file{repository} file, stating where the directory came from (syntax
+TBD).
+
+@item
+A @file{text-base} directory, containing the pristine repository
+versions of the files in the corresponding working directory
+
+@item 
+A @file{prop-base} directory, containing property names and values for
+each file in the working directory.
+
+@item
+An @file{entries} file, which holds version numbers and other
+information for this directory and its files, and records the presence
+of subdirs.
 
 It may help to think of this file as the functional equivalent of the
 CVS/Entries file.
@@ -567,19 +600,23 @@ CVS/Entries file.
 A @file{properties} file, recording properties for this directory.
 
 @item
-A @file{changes} file, recording uncommitted changes to and from this
-directory (adds, removes, renames).
-
-@item
 A @file{lock} file, whose presence implies that some client is currently
 operating on the adminstrative area.
 
 @item
-A @file{tmp} directory.
+A @file{tmp} directory, for holding scratch-work and helping make
+working copy operations more crash-proof.
+
+@item
+A @file{log} file.  If present, indicates a list of actions that need to
+be taken to complete a working-copy-operation that is still "in
+progress".
 
 @end itemize
 
-The formats of these files are not specified yet.
+You can read much more about these files in the file
+@file{subversion/libsvn_wc/README}.
+
 
 @c -----------------------------------------------------------------------
 @node The working copy management library
@@ -602,108 +639,13 @@ The formats of these files are not specified yet.
   @end itemize
 @end itemize
 
-This library performs "offline" operations on the working copy.
+This library performs "offline" operations on the working copy, and
+lives in @file{subversion/libsvn_wc/}.
 
-Note that the interface as given here is incomplete.  This section
-concentrates on functions meant to be used in conjunction with the
-repository access library, such as routines to produce deltas and make
-committable changes.  But functions used most often @emph{within} the
-working copy library itself, and only rarely outside it, are left
-unspecified here.  For example, there is a @w{@code{ver_t
-wc_base_version (path)}} function, and a @w{@code{ver_t wc_lock (path)}}
-function, but they are not part of the conceptual interface this section
-describes.
+The API for @var{libsvn_wc} is always evolving;  please read the header
+file for a detailed description:  @file{subversion/include/svn_wc.h}.
 
-In the function names and descriptions below, the term @dfn{node} refers
-to any kind of object in a Subversion tree.  At the moment, Subversion
-trees can only contain files and directories, but we will eventually add
-symlinks and other interesting creatures; these are all nodes.
 
-@table @code
-
-@item skelta_t wc_make_skelta (pathlist)
-Returns a skelta -- a delta object describing the changes to
-@emph{paths} but not including the actual content of the changes (i.e.,
-the vdeltas).  In other words, this is how you get a list of all local
-modifications.
-
-A @emph{pathlist} contains directories or files; directories may be
-entered recursively.  Multiple paths must be support because of
-scenarios like the following:
-
-@example
-   $ ls
-   src/  foo/  other/  bar/  baz/  README  Makefile
-   $ svn commit foo/ bar/ baz/qux.c
-@end example
-
-The commit is atomic, and covers some but not all of the subdirectories
-available.  Therefore, it must be possible to request a delta for any
-subset of the working tree.  Although some files and directories outside
-that subset might also have been modified, the delta will not include
-those changes.
-
-@item delta_t wc_fill_skelta (skelta)
-
-Turns @emph{skelta} into a delta by generating the appropriate vdiffs
-and pdiffs, and placing them into the skelta.
-
-@item delta_t wc_make_delta (pathlist)
-Equivalent to 
-
-@example
-   wc_fill_skelta (make_skelta (pathlist))
-@end example
-
-@item bool wc_apply_delta (delta)
-
-Applies @emph{delta} to the working copy.
-
-@item bool wc_add (path)
-
-Add the file @emph{path} (i.e., tweak the administrative files
-appropriately).
-
-@item bool wc_delete (path)
-
-Remove this file.
-
-@item bool wc_rename (old_path, new_path)
-
-Move/rename this file (within the working copy, of course).
-
-@item bool wc_copy (src_path, dest_path)
-
-Copy this file (within the working copy).
-
-@item str_t wc_get_node_prop (path, propname)
-
-Return local value of @emph{propname} for the file or directory
-@emph{path}.
-
-@item str_t wc_get_dirent_prop (path, propname)
-
-Return local value of @emph{propname} for the directory entry @emph{path}.
-
-@item proplist_t wc_get_node_proplist (path)
-
-Return all properties (names and values) of file or directory
-@emph{path}, in a hash table.
-
-@item proplist_t wc_get_dirent_proplist (path)
-
-Return all properties (names and values) of directory entry @emph{path},
-in a hash table.
-
-@item proplist_t wc_get_node_propnames (path)
-
-Return all property names for file or directory @emph{path}.
-
-@item proplist_t wc_get_dirent_propnames (path)
-
-Return all property names for a directory entry.
-
-@end table
 
 @c -----------------------------------------------------------------------
 @node The repository access library
@@ -727,76 +669,15 @@ Return all property names for a directory entry.
 This library performs operations involving communication with the
 repository.
 
-@subsection Reading History
+The interface defined in @file{subversion/include/svn_ra.h} provides a
+uniform interface to both local and remote repository access.
 
-@table @code
-@item ver_t ra_latest (repos, user)
- Report the latest version number for @emph{repos}.
-@item prop_t ra_get_ver_prop (repos, user, ver, propname)
- Return the value of @emph{propname} on @emph{ver}.
-@item proplist_t ra_get_ver_proplist (repos, user, ver)
- Return all properties (names and values) of @emph{ver}.
-@item proplist_t ra_get_ver_propnames (repos, user, ver)
- Return all property keys for a @emph{ver}.
-@end table
+Specifically, @var{libsvn_ra_dav} will provide this interface and speak
+to repositories using DAV requests.  At some future point, another
+library @var{libsvn_ra_local} will provide the same interface -- but
+will link directly to the filesystem library for accessing local disk
+repositories.
 
-@subsection Reading Nodes
-
-@table @code
-@item node_t ra_read (repos, user, ver, path)
- Return a node from the repository.
- If @emph{path} is a file, returns full contents of the file.
- If @emph{path} is a directory, returns a list of dir_entries.
- @c todo: explain nodes, explain lazy reading
-@item str_t ra_get_node_prop (repos, user, ver, path, propname)
- Return value of @emph{propname} for @emph{path} in @emph{repos}.
-@item str_t ra_get_dirent_prop (repos, user, ver, path, propname)
- Return value of @emph{propname} for the directory entry @emph{path} in
- @emph{repos}.
-@item proplist_t ra_get_node_proplist (repos, ver, path)
- Return all properties (names and values) of @emph{path} in @emph{repos}.
-@item proplist_t ra_get_dirent_proplist (repos, user, ver, path)
- Return all properties (names and values) of directory entry @emph{path}
- in @emph{repos}.
-@item proplist_t ra_get_node_propnames (repos, user, ver, path)
- Return all property names for @emph{path} in @emph{repos}.
-@item proplist_t ra_get_dirent_propnames (repos, user, ver, path)
- Return all property names for directory entry @emph{path} in @emph{repos}
-@end table
-
-@subsection Difference Queries
-
-@table @code
-@item skelta_t ra_get_status (repos, user, skelta)
- Return status (up-to-date or not) for the files mentioned in @emph{skelta}.
-@item delta_t ra_get_update (repos, user, skelta)
- Return changes for files mentioned in @emph{skelta}.  Like
- @code{ra_get_status}, but returns filled delta instead of a skelta.
-@item delta_t ra_get_delta (repos, user, ver1, path1, ver2, path2)
- Return delta between two trees in @emph{repos}.@*
-@item diff_t ra_get_diff (repos, user, ver1, path1, ver2, path2)
- @c todo: skelta vs file diff list problem, talk w/ Jim
- Return a text diff between versions in @emph{repos}.
- (This must be done server side, the client doesn't have enough
- information to make the diff.)
-@end table
-
-@subsection Writing
-
-@table @code
-@item token_t ra_submit (repos, user, skelta)
- Submit @emph{skelta} for approval (see @pxref{Locking}).
-@item ver_t ra_write (repos, user, delta, token)
- Write previously-approved @emph{delta} into the repository.@*
- Returns the @emph{repos}'s new version number.@*
- This @emph{delta} and @emph{token} must correspond to the @emph{skelta}
- and @emph{token} of a previous @code{submit()} call.
-@item bool ra_abandon (repos, user, token)
- Abandon the commit identified by token.  For example, a user might
- interrupt the client between calls to @code{submit()} and
- @code{write()}, and the server would want to know the commit has been
- abandoned so it can clear out its pool of approved changes.
-@end table
 
 @c -----------------------------------------------------------------------
 @node The client operation library
@@ -809,7 +690,7 @@ repository.
   @item
     the working copy management library
   @item
-    the repository access library
+    a repository access library
   @end itemize
 @item
   @b{Provides:}
@@ -819,58 +700,11 @@ repository.
   @end itemize
 @end itemize
 
-These functions correspond to user-level client commands.  
+These functions correspond to user-level client commands.  In theory,
+any client interface (command-line, GUI, emacs, Python, etc.) should be
+able to link to @var{libsvn_client} and have the ability to act as a
+full-featured Subversion client.
 
-They are listed here to show how it is possible to implement them using
-the libraries given above, not to explain what they do.  Their behavior
-corresponds to the CVS operations of the same names.
+Again, the detailed API can be found in
+@file{subversion/include/svn_client.h}. 
 
-@table @code
-@item bool add (path)
- Passes @emph{path} to @code{wc_add()}.
-@item bool checkout (repos, ver, path)
- todo: discuss serialized delta vs lazy reading
-@item bool commit (pathlist, log_msg)
- Make a skelta with @code{wc_make_skelta()}, @code{ra_submit()} it to
- the repository for approval.  If an approval token is forthcoming, use
- @code{wc_fill_skelta()} to produce a delta, along with the
- @emph{log_msg} as a property change on the version, and send it and the
- token back to the repository via @code{ra_write()}.  Else if no
- approval, then @code{abandon()} the commit.
-@item bool diff (pathlist)
- A Subversion diff, like a CVS diff, can involve information available
- only to the server, or client, or both:
- @enumerate
- @item @w{@b{diff locally modified file against its base version}}@*
-   Just run diff locally.
- @item @w{@b{diff local file against a repository-only version}}@*
-   Call @code{ra_get_delta()}, then @code{wc_apply_delta()} to the
-   pristine base version to get the new file (result probably stored in
-   @file{SVN/tmp/}, of course), then run diff on the local file and the
-   new file.
- @item @w{@b{diff two repository-only versions}}@*
-   Call @code{ra_get_diff()}.
- @end enumerate
-@item bool import (pathlist)
- A special case of @code{add()}, which see.
-@item bool log (ver)
- Call @code{ra_get_ver_prop()} with the appropriate property name.
-@item bool rename (old_path, new_path)
- Pass through to @code{wc_rename()}.
-@item bool remove (pathlist)
- Pass through to @code{wc_delete()}.
-@item bool branch (branchname, pathlist)
- Uses @code{wc_copy()} (see @pxref{Model}).
-@item bool tag (tagname, pathlist)
- Same as @code{branch()}, and may also set properties marking this as a
- read-only clone, so it behaves like a CVS tag.
-@item bool status (pathlist)
- Call @code{ra_get_status()}.
-@item bool update (pathlist)
- Call @code{ra_get_update()}, passing result to
- @code{wc_apply_delta()}.  (There may be streamy variants of these so
- the application of a delta doesn't need to wait for the entire delta to
- have arrived.)
-@end table
-
-@c todo: can't wait to add `annotate' to this list!
