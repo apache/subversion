@@ -93,7 +93,7 @@ svn_path_split_if_file(svn_stringbuf_t *path,
 
 svn_error_t *
 svn_path_condense_targets (svn_stringbuf_t **pbasedir,
-                           apr_array_header_t ** pcondensed_targets,
+                           apr_array_header_t **pcondensed_targets,
                            const apr_array_header_t *targets,
                            apr_pool_t *pool)
 {
@@ -221,13 +221,15 @@ svn_path_condense_targets (svn_stringbuf_t **pbasedir,
         }
       
       /* Finally check if pbasedir is a dir or a file. */
-      SVN_ERR (svn_path_split_if_file (*pbasedir, pbasedir, &file, pool));
-      if ((pcondensed_targets != NULL)
-          && (! svn_path_is_empty (file)))
+      if (! svn_path_split_if_file (*pbasedir, pbasedir, &file, pool))
         {
-          /* If there was just one target, and it was a file, then
-             return it as the sole condensed target. */
-          (*((svn_stringbuf_t**)apr_array_push (*pcondensed_targets))) = file;
+          if ((pcondensed_targets != NULL)
+              && (! svn_path_is_empty (file)))
+            {
+              /* If there was just one target, and it was a file, then
+                 return it as the sole condensed target. */
+              (*((svn_stringbuf_t**)apr_array_push (*pcondensed_targets))) = file;
+            }
         }
     }
   
