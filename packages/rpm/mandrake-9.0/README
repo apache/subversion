@@ -1,0 +1,152 @@
+Last Update: Fri Oct 18 14:56:29 MDT 2002
+
+-----------------
+Mandrake SVN RPM:
+-----------------
+
+These are the files required to build a mandrake 9.0 RPM for subversion.
+At the moment, mandrake does not package DB4.0, it also does not package
+Neon, and it has an older version of SWIG. So, you might want to go to:
+
+http://www.rten.net/mdk-svn.html
+
+To acquire the related packages before building your own mandrake RPM.
+Also, a note on Apache2. There is a version of apache2 in cooker, but it
+is insufficient because it is not built against DB4.0. You can either get
+apache2 rpms built against DB4.0 at the above URL, or get the apache2
+SRPM and modify the spec file to build against DB4.0. A simple patch is
+included at the end of this file.
+
+When building this RPM with the neon RPM provided at the above URL, you
+may find that no libneon.so file exists in your /usr/lib. This may cause
+problems when subversion tries to build. Just create the link and it
+should work okay.
+
+The way the version number works right now is:
+
+project_ver-repos_ver.rpm_ver == 0.14.3-3399.1mdk
+
+So when you make RPMs, you'll want to update the versions tat the top of the
+spec file. I like having the repository version in here, especially for
+incremental development builds.
+
+Now notes on the RPMs this spec file produces:
+
+subversion-base:
+----------------
+This is the base set of common libraries required by subversion
+components. All further packages depend on this one. This package
+requires the apache portability runtime libraries and the apr-util
+libraries.
+
+subversion-client-common:
+-------------------------
+Subversion is written so that any number of RA modules can be built to
+access repositories. This package includes the basic `svn' executable and
+man page, and other client parts required to run it, but it does not
+include any of the RA modules. This is a prerequisite for any of the
+other subversion-client-something RPMs.
+
+subversion-client-dav:
+----------------------
+This RPM includes the RA module for WebDAV repositories. In other words,
+if you are going to access remote repositories, you want to install this
+one. This package depends on subversion-client-common. This package also
+depends on the NEON libraries.
+
+subversion-client-local:
+------------------------
+This RPM includes the RA module for local repositories. This is so you
+can access repositories stored in DB files on the local mounts. This
+package requires the common client package, subversion-repos, and DB4.0.
+
+subversion-devel:
+-----------------
+This RPM includes the static libraries, header files, and linker scripts
+for subversion.
+
+subversion-python:
+------------------
+This RPM includes the python SWIG bindings for subversion. This package
+requires SWIG, the base subversion package, and any client packages one
+might want depending on what the python scripts you're writing will do.
+
+subversion-repos:
+-----------------
+This RPM includes the libraries required to access local repositories.
+This is a required package for client-local, and the server RPM.
+
+subversion-server:
+------------------
+This package will install the mod_dav_svn.so apache DSO, and a
+configuration file called 46_mod_dav_svn.conf in /etc/httpd/conf.d. The
+later file being the one you should modify to include your subversion
+directory roots. Setting up the repositories and adding any users or
+groups for the process is left to the user.
+
+So, many combinations of packages are available depending on the type of
+installation you want to do. The apr, apr-util, and subversion-base
+packages are always required, but then you could just simply install
+neon, client-common, and client-dav to get a subversion setup for network
+repositories. Add client-local, repos, and DB4.0 for local repositories,
+or add repos and server to setup a subversion server.
+
+--------
+Contact:
+--------
+
+Please let me know if you have problems or additions to the spec file. My
+email address is: ballbach@rten.net. Thanks.
+
+--------------------------
+Apache2 DB4.0 Specs Patch:
+--------------------------
+
+This patch also adds --enable-maintainer-mode. The specs file for the
+mandrake RPMS for subversion also uses this tag. This is because
+subversion isn't done yet, so enabling the debug information will
+hopefully allow users to submit better traces and such.
+
+This patch is verbatim from the modified SPEC file I use, except I
+removed the Packager: portion, and my changelog entry.
+
+--- /home/ballbach/rpm/SPECS/apache2.spec.orig	2002-10-10 14:23:34.000000000 -0600
++++ /home/ballbach/rpm/SPECS/apache2.spec	2002-10-10 20:29:12.000000000 -0600
+@@ -37,14 +38,14 @@
+ Patch4:			mod_logio-2.0.43.patch.bz2
+ 
+ BuildRequires:		ADVX-build
+-BuildRequires:		perl >= 0:5.600 libgdbm2-devel libdb3.3-devel byacc glibc-devel libtool
++BuildRequires:		perl >= 0:5.600 libgdbm2-devel db4.0-devel byacc glibc-devel libtool
+ BuildRequires:		openssl-devel libexpat0-devel zlib-devel
+ #BuildRequires:		libldap2-devel libsasl7-devel
+ Prereq:			%{ap_name}-conf 
+ Prereq:			%{ap_name}-common
+ Prereq: 		%{ap_name}-modules = %{ap_version}
+ Prereq:			%{apr_name} = %{ap_version}
+-Requires:		libgdbm2 libdb3.3 glibc libexpat0 libtool
++Requires:		libgdbm2 db4.0 glibc libexpat0 libtool
+ #Requires:		libldap2 libsasl7
+ BuildRoot:		%{_tmppath}/%{ap_name}-%{version}-buildroot
+ Provides:		webserver 
+@@ -230,7 +231,7 @@
+ Group: System/Servers
+ Summary: The %{ap_name} Source
+ #No use to install it if you don't have libgdbm.so and libpthread.so!
+-Requires: libdb3.3-devel, db1-devel
++Requires: db4.0-devel, db1-devel
+ Requires: libgdbm2-devel, glibc-devel
+ Obsoletes: apache-source
+ Provides: apache-source
+@@ -376,7 +377,9 @@
+ APVARS="--build=%_target_platform \
+     --host=%_target_platform \
+     --target=%_target_platform \
+-    --with-dbm=db3 \
++    --with-dbm=db4 \
++    --with-berkeley-db=/usr/BerkeleyDB.4.0 \
++    --enable-maintainer-mode \
+     --with-installbuilddir=%{ap_installbuilddir} \
+     --with-expat=%{_prefix} \
+     --with-pcre=%{_prefix} \
+

@@ -1,0 +1,11 @@
+--- subversion/subversion/bindings/swig/python/setup.py	2002-10-18 14:50:26.000000000 -0600
++++ subversion/subversion/bindings/swig/python/setup.py~	2002-10-18 15:21:54.000000000 -0600
+@@ -37,7 +37,7 @@
+   sys.exit(0)
+ 
+ # Default option values
+-include_dirs = []
++include_dirs = [ "..", "../../../include", "/usr/include/apache" ]
+ library_dirs = []
+ source_dir = '..'
+ swig_location = None
