@@ -11,12 +11,14 @@ Patch0: expat.patch
 Patch1: install.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
-Requires: apr >= 2001.10.24
+Requires: apr >= 0.2001.12.18
 Requires: db3 >= 3.3.11
 Requires: expat
 Requires: neon = %{neon_version}
 Requires: /sbin/install-info
-BuildPreReq: apr-devel >= 2001.10.24
+BuildPreReq: apache >= 2.0.16
+BuildPreReq: apache-devel >= 2.0.16
+BuildPreReq: apr-devel >= 0.2001.12.18
 BuildPreReq: autoconf >= 2.52
 BuildPreReq: db3-devel >= 3.3.11
 BuildPreReq: expat-devel
@@ -95,6 +97,14 @@ mv $RPM_BUILD_ROOT/usr/man $RPM_BUILD_ROOT/usr/share/man
 
 # Install INFO pages in correct place.
 mv $RPM_BUILD_ROOT/usr/info $RPM_BUILD_ROOT/usr/share/info
+
+# Install bolixed shared libraries (won't install correctly).
+cp subversion/libsvn_ra_local/.libs/libsvn_ra_local.so.0.0.0 $RPM_BUILD_ROOT/usr/lib/libsvn_ra_local.so.0.0.0
+(cd $RPM_BUILD_ROOT/usr/lib; ln -s libsvn_ra_local.so.0.0.0 libsvn_ra_local.so;
+ln -s libsvn_ra_local.so.0.0.0 libsvn_ra_local.so.0)
+
+cp subversion/libsvn_ra/.libs/libsvn_ra.so.0.0.0 $RPM_BUILD_ROOT/usr/lib/libsvn_ra.so.0.0.0
+(cd $RPM_BUILD_ROOT/usr/lib; ln -s libsvn_ra.so.0.0.0 libsvn_ra.so; ln -s libsvn_ra.so.0.0.0 libsvn_ra.so.0)
 
 %post
 /sbin/install-info /usr/share/info/svn-design.info.gz /usr/share/info/dir --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
