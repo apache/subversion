@@ -69,7 +69,7 @@ svn_cl__import (apr_getopt_t *os,
    *
    * If the third arg is present, it is the name of the new entry in
    * the repository target dir (the latter may or may not be the root
-   * dir).  If it is absent, then the import happens directory in the
+   * dir).  If it is absent, then the import happens directly in the
    * repository target dir, creating however many new entries are
    * necessary.
    *
