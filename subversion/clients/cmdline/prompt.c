@@ -185,11 +185,11 @@ svn_cl__auth_ssl_server_trust_prompt (
   svn_auth_cred_ssl_server_trust_t **cred_p,
   void *baton,
   const char *realm,
-  int failures,
+  apr_uint32_t failures,
   const svn_auth_ssl_server_cert_info_t *cert_info,
   apr_pool_t *pool)
 {
-  int allow_perm_accept = ! (failures & SVN_AUTH_SSL_OTHER);
+  apr_uint32_t allow_perm_accept = ! (failures & SVN_AUTH_SSL_OTHER);
   const char *choice;
   svn_stringbuf_t *msg;
   svn_stringbuf_t *buf = svn_stringbuf_createf

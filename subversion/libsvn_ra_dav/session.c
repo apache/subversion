@@ -109,7 +109,7 @@ static int request_auth(void *userdata, const char *realm, int attempt,
 }
 
 
-static const int neon_failure_map[][2] =
+static const apr_uint32_t neon_failure_map[][2] =
 {
   { NE_SSL_NOTYETVALID,        SVN_AUTH_SSL_NOTYETVALID },
   { NE_SSL_EXPIRED,            SVN_AUTH_SSL_EXPIRED },
@@ -118,11 +118,11 @@ static const int neon_failure_map[][2] =
 };
 
 /* Convert neon's SSL failure mask to our own failure mask. */
-static int
+static apr_uint32_t
 convert_neon_failures(int neon_failures)
 {
+  apr_uint32_t svn_failures = 0;
   apr_size_t i;
-  int svn_failures = 0;
 
   for (i = 0; i < sizeof(neon_failure_map) / (2 * sizeof(int)); ++i)
     {
@@ -162,14 +162,16 @@ server_ssl_callback(void *userdata,
   char valid_from[NE_SSL_VDATELEN], valid_until[NE_SSL_VDATELEN];
   const char *portstring = apr_psprintf (ras->pool, "%d", ras->root.port);
   const char *realmstring;
+  apr_uint32_t *svn_failures = apr_palloc (ras->pool, sizeof(*svn_failures));
 
   /* Construct the realmstring, e.g. https://svn.collab.net:80 */
   realmstring = apr_pstrcat(ras->pool, ras->root.scheme, "://",
                             ras->root.host, ":", portstring, NULL);
 
+  *svn_failures = convert_neon_failures(failures);
   svn_auth_set_parameter(ras->callbacks->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
-                         (void*)convert_neon_failures(failures));
+                         svn_failures);
 
   /* Extract the info from the certificate */
   cert_info.hostname = ne_ssl_cert_identity(cert);
@@ -217,7 +219,7 @@ server_ssl_callback(void *userdata,
   free(ascii_cert);
   svn_auth_set_parameter(ras->callbacks->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO, NULL);
-  
+
   apr_pool_destroy(pool);
   return !server_creds;
 }
