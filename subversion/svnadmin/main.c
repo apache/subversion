@@ -190,7 +190,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "cation on the paths changed in those revisions.  If no revisions are\n"
      "specified, this will simply deltify the HEAD revision.\n",
      {'r', 'q'} },
-     
+
     {"dump", subcommand_dump, {0},
      "usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n\n"
      "Dump the contents of filesystem to stdout in a 'dumpfile'\n"
@@ -211,15 +211,6 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "Makes a hot copy of a repository.\n\n",
      {svnadmin__clean_logs} },
 
-    {"load", subcommand_load, {0},
-     "usage: svnadmin load REPOS_PATH\n\n"
-     "Read a 'dumpfile'-formatted stream from stdin, committing\n"
-     "new revisions into the repository's filesystem.  If the repository\n"
-     "was previously empty, its UUID will, by default, be changed to the\n"
-     "one specified in the stream.  Progress feedback is sent to stdout.\n",
-     {'q', svnadmin__ignore_uuid, svnadmin__force_uuid, 
-      svnadmin__parent_dir} },
-
     {"list-dblogs", subcommand_list_dblogs, {0},
      "usage: svnadmin list-dblogs REPOS_PATH\n\n"
      "List all Berkeley DB log files.\n\n"
@@ -231,6 +222,15 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "usage: svnadmin list-unused-dblogs REPOS_PATH\n\n"
      "List unused Berkeley DB log files.\n\n",
      {0} },
+
+    {"load", subcommand_load, {0},
+     "usage: svnadmin load REPOS_PATH\n\n"
+     "Read a 'dumpfile'-formatted stream from stdin, committing\n"
+     "new revisions into the repository's filesystem.  If the repository\n"
+     "was previously empty, its UUID will, by default, be changed to the\n"
+     "one specified in the stream.  Progress feedback is sent to stdout.\n",
+     {'q', svnadmin__ignore_uuid, svnadmin__force_uuid, 
+      svnadmin__parent_dir} },
 
     {"lstxns", subcommand_lstxns, {0},
      "usage: svnadmin lstxns REPOS_PATH\n\n"
