@@ -845,9 +845,11 @@ svn_path_is_uri_safe (const char *path)
   return TRUE;
 }
   
-
-const char *
-svn_path_uri_encode (const char *path, apr_pool_t *pool)
+/* URI-encode each character c in PATH for which TABLE[c] is 0.
+   If no encoding was needed, return PATH, else return a new string allocated
+   in POOL. */
+static const char *
+uri_escape (const char *path, const int table[], apr_pool_t *pool)
 {
   svn_stringbuf_t *retstr;
   apr_size_t i, copied = 0;
@@ -857,7 +859,7 @@ svn_path_uri_encode (const char *path, apr_pool_t *pool)
   for (i = 0; path[i]; i++)
     {
       c = (unsigned char)path[i];
-      if (uri_char_validity[c])
+      if (table[c])
         continue;
 
       /* If we got here, we're looking at a character that isn't
@@ -884,17 +886,91 @@ svn_path_uri_encode (const char *path, apr_pool_t *pool)
       copied = i + 1;
     }
 
+  /* If we didn't encode anything, we don't need to duplicate the string. */
+  if (retstr->len == 0)
+    return path;
+
   /* Anything left to copy? */
   if (i - copied)
     svn_stringbuf_appendbytes (retstr, path + copied, i - copied);
 
-  /* Null-terminate this bad-boy. */
-  svn_stringbuf_ensure (retstr, retstr->len + 1);
-  retstr->data[retstr->len] = 0;
+  /* retstr is null-terminated either by sprintf or the svn_stringbuf
+     functions. */
 
   return retstr->data;
 }
 
+const char *
+svn_path_uri_encode (const char *path, apr_pool_t *pool)
+{
+  const char *ret;
+
+  ret = uri_escape (path, uri_char_validity, pool);
+
+  /* Our interface guarantees a copy. */
+  if (ret == path)
+    return apr_pstrdup (pool, path);
+  else
+    return ret;
+}
+
+static const int iri_escape_chars[256] = {
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+
+  /* 128 */
+  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0
+};
+
+const char *
+svn_path_uri_from_iri (const char *iri, apr_pool_t *pool)
+{
+  return uri_escape (iri, iri_escape_chars, pool);
+}
+
+const int uri_autoescape_chars[256] = {
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  0, 1, 0, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 0, 1, 0, 1,
+
+  /* 64 */
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 0, 1, 0, 1,
+  0, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 0, 0, 0, 1, 1,
+
+  /* 128 */
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+
+  /* 192 */
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+};
+
+const char *
+svn_path_uri_autoescape (const char *uri, apr_pool_t *pool)
+{
+  return uri_escape (uri, uri_autoescape_chars, pool);
+}
 
 const char *
 svn_path_uri_decode (const char *path, apr_pool_t *pool)
@@ -954,7 +1030,6 @@ svn_path_url_add_component (const char *url,
 
   return svn_path_join (url, svn_path_uri_encode (component, pool), pool);
 }
-
 
 svn_error_t *
 svn_path_get_absolute(const char **pabsolute,
