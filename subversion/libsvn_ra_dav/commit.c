@@ -806,55 +806,57 @@ static svn_error_t * commit_delete_entry(const char *path,
                || (serr->apr_err == SVN_ERR_FS_NO_LOCK_TOKEN)
                || (serr->apr_err == SVN_ERR_FS_LOCK_OWNER_MISMATCH)
                || (serr->apr_err == SVN_ERR_FS_PATH_LOCKED)))
-  {
-    /* Re-attempt the DELETE request as if the path were a directory.
-       Discover all lock-tokens within the directory, and send them in
-       the body of the request (which is normally empty).  Of course,
-       if we don't *find* any additional lock-tokens, don't bother to
-       retry (it ain't gonna do any good).
-
-       Note that we're not sending the locks in the If: header, for
-       the same reason we're not sending in MERGE's headers: httpd has
+    {
+      /* Re-attempt the DELETE request as if the path were a directory.
+         Discover all lock-tokens within the directory, and send them in
+         the body of the request (which is normally empty).  Of course,
+         if we don't *find* any additional lock-tokens, don't bother to
+         retry (it ain't gonna do any good).
+         
+         Note that we're not sending the locks in the If: header, for
+         the same reason we're not sending in MERGE's headers: httpd has
        limits on the amount of data it's willing to receive in headers. */
-
-    apr_hash_t *child_tokens;
-    ne_request *req;
-    const char *body;
-    const char *token;
-    svn_stringbuf_t *locks_list;
-
-    child_tokens = get_child_tokens(parent->cc->tokens, path, pool);
-
-    /* No kiddos?  Return the original error.  Else, clear it so it
-       doesn't get leaked.  */
-    if (! apr_hash_count(child_tokens))
-      return serr;
-    else
-      svn_error_clear(serr);
-
-    /* In preparation of directory locks, go ahead and add the actual
-       target's lock token to those of its children. */
-    if ((token = apr_hash_get(parent->cc->tokens, path, APR_HASH_KEY_STRING)))
-      apr_hash_set(child_tokens, path, APR_HASH_KEY_STRING, token);
-
-    SVN_ERR (svn_ra_dav__assemble_locktoken_body(&locks_list,
-                                                 child_tokens, pool));
-
-    req = ne_request_create(parent->cc->ras->sess, "DELETE", child);
-    if (req == NULL)
-      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                               _("Could not create a DELETE request (%s)"),
-                               child);
-    
-    body = apr_psprintf(pool, "<?xml version=\"1.0\" encoding=\"utf-8\"?> %s",
-                        locks_list->data);
-    ne_set_request_body_buffer(req, body, strlen(body));
-
-    SVN_ERR (svn_ra_dav__request_dispatch(&code, req, parent->cc->ras->sess,
-                                          "DELETE", child,
-                                          204 /* Created */,
-                                          404 /* Not Found */, pool));
-  }
+      
+      apr_hash_t *child_tokens;
+      ne_request *req;
+      const char *body;
+      const char *token;
+      svn_stringbuf_t *locks_list;
+      
+      child_tokens = get_child_tokens(parent->cc->tokens, path, pool);
+      
+      /* No kiddos?  Return the original error.  Else, clear it so it
+         doesn't get leaked.  */
+      if (! apr_hash_count(child_tokens))
+        return serr;
+      else
+        svn_error_clear(serr);
+      
+      /* In preparation of directory locks, go ahead and add the actual
+         target's lock token to those of its children. */
+      if ((token = apr_hash_get(parent->cc->tokens, path, 
+                                APR_HASH_KEY_STRING)))
+        apr_hash_set(child_tokens, path, APR_HASH_KEY_STRING, token);
+      
+      SVN_ERR (svn_ra_dav__assemble_locktoken_body(&locks_list,
+                                                   child_tokens, pool));
+      
+      req = ne_request_create(parent->cc->ras->sess, "DELETE", child);
+      if (req == NULL)
+        return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
+                                 _("Could not create a DELETE request (%s)"),
+                                 child);
+      
+      body = apr_psprintf(pool, 
+                          "<?xml version=\"1.0\" encoding=\"utf-8\"?> %s",
+                          locks_list->data);
+      ne_set_request_body_buffer(req, body, strlen(body));
+      
+      SVN_ERR (svn_ra_dav__request_dispatch(&code, req, parent->cc->ras->sess,
+                                            "DELETE", child,
+                                            204 /* Created */,
+                                            404 /* Not Found */, pool));
+    }
   else if (serr)
     return serr;
 
