@@ -112,7 +112,7 @@ prompt (const char **result,
             return svn_error_wrap_apr (status, _("Can't read stdin"));
              
           status = apr_file_getc (&c, fp);
-          if (status && ! APR_STATUS_IS_EOF(status))
+          if (status)
             return svn_error_wrap_apr (status, _("Can't read stdin"));
 
           if (saw_first_half_of_eol)
