@@ -1132,8 +1132,8 @@ report_revisions (svn_stringbuf_t *wc_path,
                   void *report_baton,
                   apr_pool_t *pool)
 {
-  apr_hash_t *entries, *dirents, *xdirents;
-  apr_hash_index_t *hi, *hi2;
+  apr_hash_t *entries, *dirents;
+  apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create (pool);
 
   /* Construct the actual 'fullpath' = wc_path + dir_path */
@@ -1142,25 +1142,11 @@ report_revisions (svn_stringbuf_t *wc_path,
 
   /* Get both the SVN Entries and the actual on-disk entries. */
   SVN_ERR (svn_wc_entries_read (&entries, full_path, subpool));
-  SVN_ERR (svn_io_get_dirents (&xdirents, full_path, subpool));
+  SVN_ERR (svn_io_get_dirents (&dirents, full_path, subpool));
 
   /* Phase 1:  Print out every unrecognized (unversioned) object. */
 
-  /* step 1.  shrink xdirents. */
-  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      apr_size_t klen;
-      void *val;
-      apr_hash_this (hi, &key, &klen, &val);
-
-      /* if we find a match in dirents, remove it from dirents. */
-      if (apr_hash_get (xdirents, key, klen))
-        apr_hash_set (xdirents, key, klen, NULL);          
-    }
-  
-  /* step 2. Now print all the 'leftovers' in dirents */
-  for (hi = apr_hash_first (xdirents); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (dirents); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       apr_size_t klen;
@@ -1171,22 +1157,24 @@ report_revisions (svn_stringbuf_t *wc_path,
 
       apr_hash_this (hi, &key, &klen, &val);
       keystring = (const char *) key;
-      current_entry_name = svn_string_create (keystring, subpool);
-      printable_path = svn_string_dup (full_path, subpool);
-      svn_path_add_component (printable_path, current_entry_name,
-                              svn_path_local_style);
 
-      /* Ignore the administrative subdir, of course. */
-      if (strcmp (keystring, SVN_WC_ADM_DIR_NAME))
-        /* ### REMOVE THIS:  We should write to a feedback stream! */
-        printf("?    %s\n", printable_path->data);
+      /* If the dirent isn't in `SVN/entries'... */
+      if (! apr_hash_get (entries, key, klen))        
+        /* and we're not looking at SVN... */
+        if (strcmp (keystring, SVN_WC_ADM_DIR_NAME))
+          {
+            current_entry_name = svn_string_create (keystring, subpool);
+            printable_path = svn_string_dup (full_path, subpool);
+            svn_path_add_component (printable_path, current_entry_name,
+                                    svn_path_local_style);
+            
+            /* ### REMOVE THIS:  We should write to a feedback stream! */
+            printf("?  %s\n", printable_path->data);
+          }
     }
 
 
   /* Phase 2:  Do the real reporting and recursing. */
-
-  /* Get the dirents again. */
-  SVN_ERR (svn_io_get_dirents (&dirents, full_path, subpool));  
 
   /* Looping over current directory's SVN entries: */
   for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
