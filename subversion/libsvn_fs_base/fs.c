@@ -53,6 +53,7 @@
 #include "bdb/reps-table.h"
 #include "bdb/strings-table.h"
 #include "bdb/uuids-table.h"
+#include "bdb/locks-table.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -162,6 +163,7 @@ cleanup_fs (svn_fs_t *fs)
   SVN_ERR (cleanup_fs_db (fs, &bfd->representations, "representations"));
   SVN_ERR (cleanup_fs_db (fs, &bfd->strings, "strings"));
   SVN_ERR (cleanup_fs_db (fs, &bfd->uuids, "uuids"));
+  SVN_ERR (cleanup_fs_db (fs, &bfd->locks, "locks"));
 
   /* Finally, close the environment.  */
   bfd->env = 0;
@@ -599,6 +601,10 @@ base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
                       svn_fs_bdb__open_uuids_table (&bfd->uuids,
                                                     bfd->env, TRUE));
   if (svn_err) goto error;
+  svn_err = BDB_WRAP (fs, "creating 'locks' table",
+                      svn_fs_bdb__open_locks_table (&bfd->locks,
+                                                    bfd->env, TRUE));
+  if (svn_err) goto error;
 
   /* Initialize the DAG subsystem. */
   svn_err = svn_fs_base__dag_init_fs (fs);
@@ -680,6 +686,10 @@ base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   if (svn_err) goto error;
   svn_err = BDB_WRAP (fs, "opening 'uuids' table",
                       svn_fs_bdb__open_uuids_table (&bfd->uuids,
+                                                    bfd->env, FALSE));
+  if (svn_err) goto error;
+  svn_err = BDB_WRAP (fs, "opening 'locks' table",
+                      svn_fs_bdb__open_uuids_table (&bfd->locks,
                                                     bfd->env, FALSE));
   if (svn_err) goto error;
 
@@ -1090,6 +1100,8 @@ base_hotcopy (const char *src_path,
                                 "strings", pagesize, pool));
   SVN_ERR (copy_db_file_safely (src_path, dest_path,
                                 "uuids", pagesize, pool));
+  SVN_ERR (copy_db_file_safely (src_path, dest_path,
+                                "locks", pagesize, pool));
 
   {
     apr_array_header_t *logfiles;

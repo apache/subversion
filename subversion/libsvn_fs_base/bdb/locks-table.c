@@ -45,7 +45,7 @@ svn_fs_bdb__open_locks_table (DB **locks_p,
   BDB_ERR (svn_fs_bdb__check_version());
   BDB_ERR (db_create (&locks, env, 0));
   BDB_ERR (locks->open (SVN_BDB_OPEN_PARAMS(locks, NULL),
-                        "transactions", 0, DB_BTREE,
+                        "locks", 0, DB_BTREE,
                         open_flags | SVN_BDB_AUTO_COMMIT,
                         0666));
 
