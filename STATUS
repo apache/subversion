@@ -67,3 +67,10 @@ Candidate changes:
       develop the patch on branches/1.1.x-build.
     Votes:
       +1: brane
+
+  * r11557
+    Fix #1905. URI-encode path in copyfrom URL in merge.
+    Justification:
+      Nasty bug with simple fix.
+    Votes:
+      +1: lundblad
