@@ -74,27 +74,88 @@ assemble_status (svn_wc_status_t *status,
 {
   svn_error_t *err;
 
+  svn_boolean_t text_modified_p = FALSE;
+  svn_boolean_t prop_modified_p = FALSE;
+
   /* Copy info from entry struct to status struct */
   status->entry = entry;
   status->repos_rev = SVN_INVALID_REVNUM;  /* caller fills in */
-  status->text_status = svn_wc_status_none;       /* default to no
-                                                     status. */
+  status->text_status = svn_wc_status_none;       /* default to no status. */
   status->prop_status = svn_wc_status_none;       /* default to no status. */
 
   if (status->entry)
     {
+      svn_string_t *prop_path;
+      enum svn_node_kind prop_kind;
+      svn_boolean_t prop_exists = FALSE;
+      
+      /* Before examining the entry's flags, determine if a property
+         component exists. */
+      err = svn_wc__prop_path (&prop_path, path, 0, pool);
+      if (err) return err;      
+      err = svn_io_check_path (prop_path, &prop_kind, pool);
+      if (err) return err;
+
+      if (prop_kind == svn_node_file)
+        prop_exists = TRUE;
+
+      /* Look for local mods, independent of other tests. */
+      
+      /* If the entry has a property file, see if it has local
+         changes. */
+      if (prop_exists)
+        {
+          err = svn_wc_props_modified_p (&prop_modified_p, path, pool);
+          if (err) return err;
+        }
+      
+      /* If the entry is a file, check for textual modifications */
+      if (entry->kind == svn_node_file)
+        {
+          err = svn_wc_text_modified_p (&text_modified_p, path, pool);
+          if (err) return err;
+        }
+      
+      /* TODO (philosophical).  Does it make sense to talk about a
+         directory having "textual" modifications?  I mean, if you
+         `svn add' a file to a directory, does the parent dir now
+         have local modifications?  Are these modifications
+         "textual" in the sense that the "text" of a directory is
+         a list of entries, which has now been changed?  And would
+         we then show that `M' in the first column?  Ponder,
+         ponder.  */
+      
+      /* Mark `M' in status structure based on tests above. */
+      if (text_modified_p)
+        status->text_status = svn_wc_status_modified;
+      if (prop_modified_p)
+        status->prop_status = svn_wc_status_modified;      
+      
       if (entry->flags & SVN_WC_ENTRY_ADD)
         {
+          /* If an entry has been marked for future addition to the
+             repository, we *know* it has a textual component: */
           status->text_status = svn_wc_status_added;
+
+          /* However, it may or may not have a property component.  If
+             it does, report that portion as "added" too. */
+          if (prop_exists)
+            status->prop_status = svn_wc_status_added;
         }
+
       else if (entry->flags & SVN_WC_ENTRY_DELETE)
-        status->text_status = svn_wc_status_deleted;
-      else if (entry->flags & SVN_WC_ENTRY_CONFLICT)
         {
-          /* We must decide to mark 0, 1, or 2 status flags as
-             "conflicted", based on whether reject files are mentioned
-             and/or continue to exist.  Luckily, we have a function to do
-             this.  :)  */          
+          status->text_status = svn_wc_status_deleted;
+          
+          if (prop_exists)
+            status->prop_status = svn_wc_status_deleted;
+        }
+
+      if (entry->flags & SVN_WC_ENTRY_CONFLICT)
+        {
+          /* We must decide if either component is "conflicted", based
+             on whether reject files are mentioned and/or continue to
+             exist.  Luckily, we have a function to do this.  :) */
           svn_boolean_t text_conflict_p, prop_conflict_p;
           svn_string_t *parent_dir;
           
@@ -106,30 +167,19 @@ assemble_status (svn_wc_status_t *status,
           else if (entry->kind == svn_node_dir)
             parent_dir = path;
 
-          /*          svn_boolean_t conflicted_p; */
-          /* See if the user has resolved the conflict before we
-             report the entry's status. */
-          /*          err = svn_wc__conflicted_p (&conflicted_p, path,
-                                      entry, pool);
+          err = svn_wc__conflicted_p (&text_conflict_p,
+                                      &prop_conflict_p,
+                                      parent_dir,
+                                      entry,
+                                      pool);
           if (err) return err;
           
-          if (conflicted_p)*/
+          if (text_conflict_p)
             status->text_status = svn_wc_status_conflicted;
+          if (prop_conflict_p)
             status->prop_status = svn_wc_status_conflicted;
         }
-      else 
-        {
-          if (entry->kind == svn_node_file)
-            {
-              svn_boolean_t modified_p;
-              
-              err = svn_wc_text_modified_p (&modified_p, path, pool);
-              if (err) return err;
-              
-              if (modified_p)
-                status->text_status = svn_wc_status_modified;
-            }
-        }
+
     }
 
   return SVN_NO_ERROR;

@@ -60,36 +60,117 @@
 #include "cl.h"
 
 
+
+/* Edit the three-byte string STR_STATUS, based on the contents of
+   TEXT_STATUS and PROP_STATUS. 
+   
+   If VERBOSE is set, STR_STATUS will show the status of both text and
+   prop. 
+
+   If VERBOSE is not set, STR_STATUS will contain only one simplified
+   status code, based on a logical combination of the two.  */
+static void
+generate_status_codes (char *str_status,
+                       enum svn_wc_status_kind text_status,
+                       enum svn_wc_status_kind prop_status,
+                       int verbose)
+{
+  char text_statuschar, prop_statuschar;
+
+  switch (text_status)
+    {
+    case svn_wc_status_none:
+      text_statuschar = '-';
+      break;
+    case svn_wc_status_added:
+      text_statuschar = 'A';
+      break;
+    case svn_wc_status_deleted:
+      text_statuschar = 'D';
+      break;
+    case svn_wc_status_modified:
+      text_statuschar = 'M';
+      break;
+    case svn_wc_status_merged:
+      text_statuschar = 'G';
+      break;
+    case svn_wc_status_conflicted:
+      text_statuschar = 'C';
+      break;
+    default:
+      text_statuschar = '?';
+      break;
+    }
+
+  switch (prop_status)
+    {
+    case svn_wc_status_none:
+      prop_statuschar = '-';
+      break;
+    case svn_wc_status_added:
+      prop_statuschar = 'A';
+      break;
+    case svn_wc_status_deleted:
+      prop_statuschar = 'D';
+      break;
+    case svn_wc_status_modified:
+      prop_statuschar = 'M';
+      break;
+    case svn_wc_status_merged:
+      prop_statuschar = 'G';
+      break;
+    case svn_wc_status_conflicted:
+      prop_statuschar = 'C';
+      break;
+    default:
+      prop_statuschar = '?';
+      break;
+    }
+
+  if (verbose)
+    sprintf (str_status, "%c%c", text_statuschar, prop_statuschar);
+
+  else
+    {
+      char one_char;
+
+      /* Guys, go to town on this section.  Here are some quick rules
+         I made up.  Feel free to rewrite them however you want.  :) */
+
+      if ((text_statuschar == '-') && (prop_statuschar == '-'))
+        one_char = '-';
+          
+      else if ((text_statuschar == 'A') || (prop_statuschar == 'A'))
+        one_char = 'A';
+
+      if ((text_statuschar == 'D') || (prop_statuschar == 'D'))
+        one_char = 'D';
+
+      if ((text_statuschar == 'M') || (prop_statuschar == 'M'))
+        one_char = 'M';
+
+      if ((text_statuschar == 'C') || (prop_statuschar == 'C'))
+        one_char = 'C';
+      
+      sprintf (str_status, "%c ", one_char);
+    }
+
+  return;
+}
+
+
 void
 svn_cl__print_status (svn_string_t *path, svn_wc_status_t *status)
 {
-  char statuschar;
   svn_revnum_t entry_rev;
+  char str_status[3];
 
-  switch (status->text_status)
-    {
-    case svn_wc_status_none:
-      statuschar = '-';
-      break;
-    case svn_wc_status_added:
-      statuschar = 'A';
-      break;
-    case svn_wc_status_deleted:
-      statuschar = 'D';
-      break;
-    case svn_wc_status_modified:
-      statuschar = 'M';
-      break;
-    case svn_wc_status_merged:
-      statuschar = 'G';
-      break;
-    case svn_wc_status_conflicted:
-      statuschar = 'C';
-      break;
-    default:
-      statuschar = '?';
-      break;
-    }
+  /* Create either a one or two character status code */
+  generate_status_codes (str_status,
+                         status->text_status,
+                         status->prop_status,
+                         1 /* be verbose */);  
+  /* TODO: use the verbose switch from a command line option */
   
   /* Grab the entry revision once, safely. */
   if (status->entry)
@@ -100,17 +181,17 @@ svn_cl__print_status (svn_string_t *path, svn_wc_status_t *status)
   /* Use it. */
   if ((entry_rev == SVN_INVALID_REVNUM)
       && (status->repos_rev == SVN_INVALID_REVNUM))
-    printf ("%c  none     ( none )   %s\n",
-            statuschar, path->data);
+    printf ("%s  none     ( none )   %s\n",
+            str_status, path->data);
   else if (entry_rev == SVN_INVALID_REVNUM)
-    printf ("%c  none     (%6ld)   %s\n",
-            statuschar, status->repos_rev, path->data);
+    printf ("%s  none     (%6ld)   %s\n",
+            str_status, status->repos_rev, path->data);
   else if (status->repos_rev == SVN_INVALID_REVNUM)
-    printf ("%c  %-6ld  ( none )  %s\n",
-            statuschar, entry_rev, path->data);
+    printf ("%s  %-6ld  ( none )  %s\n",
+            str_status, entry_rev, path->data);
   else
-    printf ("%c  %-6ld  (%6ld)  %s\n",
-            statuschar, entry_rev, status->repos_rev, path->data);
+    printf ("%s  %-6ld  (%6ld)  %s\n",
+            str_status, entry_rev, status->repos_rev, path->data);
 }
 
 
