@@ -208,8 +208,8 @@ wc_prop_set (VALUE class, VALUE aName, VALUE aValue, VALUE aPath)
   Check_Type (aPath, T_STRING);
 
   pool = svn_pool_create (NULL);
-  value = svn_stringf_ncreate (StringValuePtr (aValue),
-                               RSTRING (aValue)->len, pool);
+  value = svn_stringuf_ncreate (StringValuePtr (aValue),
+                                RSTRING (aValue)->len, pool);
   err = svn_wc_prop_set (StringValuePtr (aName), value,
                          StringValuePtr (aPath), pool);
 
@@ -228,7 +228,7 @@ is_wc_prop (VALUE class, VALUE aPath)
   svn_boolean_t wc_p;
 
   Check_Type (aPath, T_STRING);
-  wc_p = svn_wc_is_wc_prop (StringValePtr (aPath));
+  wc_p = svn_wc_is_wc_prop (StringValuePtr (aPath));
 
   if (wc_p)
     return Qtrue;
