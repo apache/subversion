@@ -98,16 +98,12 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
 
     case svn_wc__xfer_cp_and_translate:
       {
-        /* This action is currently only used by svn_wc_install_file,
-           when loggily translating some text-base (NAME) to a working
-           file (DEST). */
-
-        /* Get eol-style and keywords from the current properties of DEST. */
         svn_wc_keywords_t *keywords;
         const char *eol_str;
         enum svn_wc__eol_style style;
         svn_boolean_t toggled;
 
+        /* Note that this action takes properties from dest, not source. */
         SVN_ERR (svn_wc__get_keywords (&keywords, full_dest_path, adm_access,
                                        NULL, pool));
         SVN_ERR (svn_wc__get_eol_style (&style, &eol_str,
@@ -130,16 +126,23 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
 
     case svn_wc__xfer_cp_and_detranslate:
       {
-        /* I don't think this has any callers yet, but my conscience
-           says that this option should be here anyway. :-) */
         svn_wc_keywords_t *keywords;
+        const char *eol_str;
+        enum svn_wc__eol_style style;
+
+        /* Note that this action takes properties from source, not dest. */
         SVN_ERR (svn_wc__get_keywords (&keywords, full_from_path, adm_access,
                                        NULL, pool));
-        
+        SVN_ERR (svn_wc__get_eol_style (&style, &eol_str,
+                                        full_from_path, pool));
+
+        /* If any specific eol style is indicated, then detranslate
+           back to repository normal form ("\n"), repairingly.  But if
+           no style indicated, don't touch line endings at all. */
         return svn_wc_copy_and_translate (full_from_path,
                                           full_dest_path,
-                                          "\n", /* repository-normal EOL */
-                                          TRUE,  
+                                          (eol_str ? "\n" : NULL),
+                                          (eol_str ? TRUE : FALSE),  
                                           keywords,
                                           FALSE, /* contract keywords */
                                           pool);
