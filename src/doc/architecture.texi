@@ -1,7 +1,6 @@
 @node Architecture
 @chapter Architecture
 
-@c Ben is hacking on this chapter.
 
 Subversion is conceptually divided into a number of seperable layers.
 
@@ -12,43 +11,48 @@ new servers, and new database back-ends are possible.
 The following diagram illustrates the "layered" architecture, and where
 each particular interface lies.
 
+@c Should we bother to maintain the "dia"/postscript version of this
+@c diagram?  It would look much nicer when printed.  But maybe it's just
+@c not worth it.
+
 @example
 
-               +--------------------+  
-               | commandline or GUI |
-               |    client app      |           
-   +---------------------+-------------------+ <====== Client interface
-   |    Working Copy     |  Network Access   |                         
-   |   Management Lib    |       Lib         |                         
-   +---------------------+---------+---------+ <====== Network interface
-                         | libneon | libwww  |                          
-                         +---------+---------+   
-                        ^              ^        
-                       /              / 
-                 DAV  /              /  HTTP
-                     /              /       
-                    v              v        
-            +---------+    +---------+      
-            |         |    |         |        
-            | Apache  |    | Apache  |        
-            |         |    |         |      
-            +---------+    +---------+      
-            | mod_DAV |    |         |      
-          +-------------+  | mod_SVN |
-          | mod_DAV_SVN |  |         |
-   +------+-------------+--+---------+-------+ <===== Server interface
-   |                                         |                        
-   |            Main SVN Library             |                        
-   |                                         |                        
-   +-----------------------------------------+ <===== Filesystem interface
-   |                                         |                            
-   |          Subversion Filesystem          |                            
-   |                                         |                            
-   +-+--------------+--------+---------+-----+                            
-     | Berkeley DBM |        |   SQL   |                                  
-     +--------------+        +---------+      
+             +--------------------+  
+             | commandline or GUI |
+             |    client app      |           
+ +---------------------+-------------------+ <====== Client interface
+ |    Working Copy     |  Network Access   |                         
+ |   Management Lib    |       Lib         |                         
+ +---------------------+---------+---------+ <====== Network interface
+                       |      libneon      |                          
+                       +---------+---------+   
+                      ^              ^        
+                     /              / 
+               DAV  /              /  HTTP
+                   /              /       
+                  v              v        
+          +---------+    +---------+      
+          |         |    |         |        
+          | Apache  |    | Apache  |        
+          |         |    |         |      
+          +---------+    +---------+      
+          | mod_DAV |    |         |      
+        +-------------+  | mod_SVN |
+        | mod_DAV_SVN |  |         |
+ +------+-------------+--+---------+-------+ <===== Server interface
+ |                                         |                        
+ |            Main SVN Library             |                        
+ |                                         |                        
+ +-----------------------------------------+ <===== Filesystem interface
+ |                                         |                            
+ |          Subversion Filesystem          |                            
+ |                                         |                            
+ +-+--------------+--------+---------+-----+                            
+   | Berkeley DBM |        |   SQL   |                                  
+   +--------------+        +---------+      
                
 @end example
+@c Let's just say that emacs' "picture" mode is an excellent thing!
 
 
 @menu
@@ -69,7 +73,7 @@ version control.  This includes:
 @itemize *
 @item
       the ability to discuss differences between repository and working
-      copy (by sending and receiving "delta" objects)
+      copy (by exchanging "delta" objects)
 @item
       the ability to read or write a file's text or properties
 @item
@@ -99,8 +103,8 @@ connection to a server via a protocol of choice.  However, most of the
 API represents operations defined by the "main" Subversion library.
 (@xref{Semantics}.)
 
-For full details, examine the header files @dfn{svn-client-wc.h} and
-@dfn{svn-client-net.h}.
+For interface details, examine the header files @dfn{svn-client-wc.h}
+and @dfn{svn-client-net.h}.
         
 @c ------------------------------------------------------------------
 @node Network Layer
@@ -110,7 +114,8 @@ The network layer's job is to move Subversion's semantics over a wire.
 
 On the client side, a network library translates these ideas into a set
 of either HTTP 1.1 or WebDAV method extensions.  (HTTP 1.1 allows one to
-define new methods.)
+define new methods.)  For interface specifics, see the header files for
+@dfn{libneon}.
 
 The information is sent over TCP/IP to an Apache server.  Apache is used
 for the following reasons:
@@ -150,11 +155,13 @@ Subversion library and the Subversion Filesystem.
 
 The @dfn{Main Subversion library} provides an API representing general
 version-control services that the client requires (@xref{Semantics}.)
+Interface details are visible in @dfn{svn-main.h}.
 
 These high-level routines make calls directly into the @dfn{Subversion
 Filesystem library}.  The Subversion Filesystem defines a simple,
 abstract UNIX-like filesystem with a twist: write () calls are versioned
-and atomic, and no data is ever deleted!  (@xref{Filesystem}.)
+and atomic, and no data is ever deleted!  (@xref{Filesystem}.)  Details
+are in @dfn{svn-fs.h}.
 
 These filesystem calls then talk to disk, either through a set of
 Berkeley DBM files, or a more powerful SQL database.  (Although any
