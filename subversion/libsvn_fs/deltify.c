@@ -29,47 +29,9 @@
 #include "dag.h"
 #include "id.h"
 
+
 
-/* Stable nodes and deltification.  */
-
-/* In FS, change TARGET's representation to be a delta against SOURCE,
-   as part of TRAIL.  If TARGET or SOURCE does not exist, do nothing
-   and return success.  */
-static svn_error_t *
-deltify (svn_fs_id_t *target_id,
-         svn_fs_id_t *source_id,
-         svn_fs_t *fs,
-         int props_only,
-         trail_t *trail)
-{
-  svn_fs__node_revision_t *source_nr, *target_nr;
-
-  /* Turn those IDs into skels, so we can get the rep keys. */
-  SVN_ERR (svn_fs__get_node_revision (&target_nr, fs, target_id, trail));
-  SVN_ERR (svn_fs__get_node_revision (&source_nr, fs, source_id, trail));
-
-  /* Check that target and source exist.  It is not an error to
-     attempt to deltify something that does not exist, or deltify
-     against a non-existent base.  However, nothing happens. */
-  if ((target_nr == NULL) || (source_nr == NULL))
-    return SVN_NO_ERROR;
-
-  /* If there are props to deltify, deltify them. */
-  if ((target_nr->prop_key && source_nr->prop_key)
-      && (strcmp (target_nr->prop_key, source_nr->prop_key)))
-    SVN_ERR (svn_fs__rep_deltify (fs, target_nr->prop_key, 
-                                  source_nr->prop_key, trail));
-
-  /* If there are contents to deltify (and we're not only looking at
-     props), deltify them. */
-  if ((target_nr->data_key && source_nr->data_key) && (! props_only)
-      && (strcmp (target_nr->data_key, source_nr->data_key)))     
-   SVN_ERR (svn_fs__rep_deltify (fs, target_nr->data_key, 
-                                 source_nr->data_key, trail));
-
-  return SVN_NO_ERROR;
-}
-
+/* Deltification.  */
 
 /* In FS, change ID's representation to be a fulltext representation
    as part of TRAIL.  If ID does not exist, do nothing and return
@@ -101,65 +63,6 @@ undeltify (svn_fs_id_t *id,
   return SVN_NO_ERROR;
 }
 
-
-
-/* Deltify TARGET_ID in FS against its immediately successor if that
-   successor exists in FS and is immutable.  Pass IS_DIR through to
-   deltify(), and do all of this stuff as part of TRAIL.  */
-static svn_error_t *
-deltify_by_id (svn_fs_t *fs,
-               svn_fs_id_t *target_id,
-               int is_dir,
-               trail_t *trail)
-{
-#if 0 /* ### Oh, come back to this later. */
-  svn_fs_id_t *source_id = NULL, *tmp_id;
-  apr_size_t len = svn_fs__id_length (target_id);
-  dag_node_t *node;
-  int is_mutable = 0;
-
-  /* Increment TMP_ID as a regular successor of TARGET_ID, and see if
-     it exists in FS. */
-  tmp_id = svn_fs__id_copy (target_id, trail->pool);
-  tmp_id->digits[len - 1]++;
-  if (SVN_NO_ERROR == svn_fs__dag_get_node (&node, fs, tmp_id, trail))
-    {
-      /* If TMP_ID is *immutable*, we'll use that our deltification
-         baseline. */
-      SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, node, trail));
-      if (! is_mutable)
-        source_id = tmp_id;
-    }
-  else
-    {
-      /* If that doesn't exist, we'll branch TARGET_ID, and see if
-         that exists.  */
-      tmp_id = apr_palloc (trail->pool, sizeof (*tmp_id));
-      tmp_id->digits = apr_palloc (trail->pool, 
-                                   (len + 3) * sizeof (target_id->digits[0]));
-      memcpy (tmp_id->digits, target_id->digits,
-              len * sizeof (target_id->digits[0]));
-      tmp_id->digits[len] = 1;
-      tmp_id->digits[len + 1] = 1;
-      tmp_id->digits[len + 2] = -1;
-      
-      if (SVN_NO_ERROR == svn_fs__dag_get_node (&node, fs, tmp_id, trail))
-        {
-          /* If TMP_ID is *immutable*, we'll use that our deltification
-             baseline. */
-          SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, node, trail));
-          if (! is_mutable)
-            source_id = tmp_id;
-        }
-    }
-
-  /* If we found a valid source ID, perform the deltification step. */
-  if (source_id)
-    SVN_ERR (deltify (target_id, source_id, fs, is_dir, trail));
-#endif /* 0 */
-
-  return SVN_NO_ERROR;
-}
 
 
 /* Deltify or undeltify a directory PATH under ROOT in FS (whose
@@ -220,7 +123,7 @@ deltify_undeltify (svn_fs_t *fs,
   if (do_deltify)
     {
       /* ... deltification. */
-      SVN_ERR (deltify_by_id (fs, id, is_dir, trail));
+      /* ### todo:  actually do this */
     }
   else
     {

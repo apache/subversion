@@ -441,6 +441,24 @@ svn_error_t *svn_fs__dag_copied_from (svn_revnum_t *rev_p,
                                       dag_node_t *node,
                                       trail_t *trail);
 
+
+
+/* Deltification */
+
+/* Change TARGET's representation to be a delta against SOURCE, as
+   part of TRAIL.  If TARGET or SOURCE does not exist, do nothing and
+   return success.  If PROPS_ONLY is non-zero, only the node property
+   portion of TARGET will be deltified.  
+
+   WARNING WARNING WARNING: Do *NOT* call this with a mutable SOURCE
+   node.  Things will go *very* sour if you deltify TARGET against a
+   node that might just disappear from the filesystem in the (near)
+   future.  */
+svn_error_t *svn_fs__dag_deltify (dag_node_t *target,
+                                  dag_node_t *source,
+                                  int props_only,
+                                  trail_t *trail);
+
 
 /* Comparison */
 

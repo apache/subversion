@@ -129,7 +129,7 @@ typedef struct
 
   /* predecessor node revision id, or NULL if there is no predecessor
      for this node revision */
-  svn_fs_id_t *predecessor_id;
+  const svn_fs_id_t *predecessor_id;
 
   /* representation key for this node's properties.  may be NULL if
      there are no properties.  */
@@ -221,7 +221,7 @@ typedef struct
   svn_revnum_t src_revision;
 
   /* Node-revision of copy destination. */
-  svn_fs_id_t *dst_noderev_id;
+  const svn_fs_id_t *dst_noderev_id;
 
 } svn_fs__copy_t;
 

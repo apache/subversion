@@ -48,8 +48,7 @@ This from Bill Tutt:
    
    Otherwise there is no possible successor.
 
-Need to actually solve this problem (at least enough to get the
-per-commit deltification working again).
+Need to actually solve this problem for the `svnadmin deltify' case.
 
 While it's perfectly fine to deltify a thing against its immediate
 successor, it could be more beneficial if deltified against the

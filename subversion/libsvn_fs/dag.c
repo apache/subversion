@@ -1465,17 +1465,17 @@ svn_fs__dag_copied_from (svn_revnum_t *rev_p,
 {
   svn_fs__node_revision_t *noderev;
   const svn_fs_id_t *id = svn_fs__dag_get_id (node), *pred_id;
-
+  
   /* Initialize the return values to mean "not a copy". */
   *rev_p = SVN_INVALID_REVNUM;
   *path_p = NULL;
-
+  
   SVN_ERR (get_node_revision (&noderev, node, trail));
   if ((pred_id = noderev->predecessor_id))
     {
       const char *id_copy_id = svn_fs__id_copy_id (id);
       const char *pred_copy_id = svn_fs__id_copy_id (pred_id);
-
+      
       /* If NODE's copy id differs from that of its predecessor... */
       if (strcmp (id_copy_id, pred_copy_id))
         {
@@ -1492,9 +1492,48 @@ svn_fs__dag_copied_from (svn_revnum_t *rev_p,
             }
         }
     }
+  
+  return SVN_NO_ERROR;
+}
+
+
+
+/*** Deltification ***/
+
+svn_error_t *
+svn_fs__dag_deltify (dag_node_t *target,
+                     dag_node_t *source,
+                     int props_only,
+                     trail_t *trail)
+{
+  svn_fs__node_revision_t *source_nr, *target_nr;
+  svn_fs_t *fs = svn_fs__dag_get_fs (target);
+
+  /* Get node revisions for the two nodes.  */
+  SVN_ERR (get_node_revision (&target_nr, target, trail));
+  SVN_ERR (get_node_revision (&source_nr, source, trail));
+
+  /* If TARGET and SOURCE both have properties, and are not sharing a
+     property key, deltify TARGET's properties.  */
+  if (target_nr->prop_key 
+      && source_nr->prop_key
+      && (strcmp (target_nr->prop_key, source_nr->prop_key)))
+    SVN_ERR (svn_fs__rep_deltify (fs, target_nr->prop_key, 
+                                  source_nr->prop_key, trail));
+
+  /* If we are not only attending to properties, and if TARGET and
+     SOURCE both have data, and are not sharing a data key, deltify
+     TARGET's data.  */
+  if ((! props_only)
+      && target_nr->data_key 
+      && source_nr->data_key 
+      && (strcmp (target_nr->data_key, source_nr->data_key)))     
+   SVN_ERR (svn_fs__rep_deltify (fs, target_nr->data_key, 
+                                 source_nr->data_key, trail));
 
   return SVN_NO_ERROR;
 }
+
 
 
 

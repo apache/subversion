@@ -535,7 +535,7 @@ open_path (parent_path_t **parent_path_p,
 
           /* Get the ID and copy ID for CHILD.  */
           this_id = svn_fs__dag_get_id (child);
-          this_copy_id = svn_fs__id_copy_id (id);
+          this_copy_id = svn_fs__id_copy_id (this_id);
 
           /* Compare the copy IDs of CHILD and its parent.
 
@@ -550,7 +550,7 @@ open_path (parent_path_t **parent_path_p,
              then CHILD is an un-edited sub-item of a copy operation
              that occured on PARENT, and should use the value of
              COPY_ID should it need to be made mutable.  */
-          if (svn_fs__key_compare (copy_id, this_copy_id) > 0)
+          if (svn_fs__key_compare (this_copy_id, copy_id) > 0)
             copy_id = this_copy_id;
 
           /* Now, make a parent_path item for CHILD. */
@@ -1089,6 +1089,94 @@ svn_fs_props_changed (int *changed_p,
 
 /* Merges and commits. */
 
+
+struct deltify_committed_args
+{
+  svn_fs_t *fs; /* the filesystem */
+  svn_revnum_t rev; /* revision just committed */
+  const char *txn_id; /* transaction just committed */
+};
+
+
+/* Deltify ID's predecessor iff ID is mutable under TXN_ID in FS.  If
+   ID is a mutable directory, recurse.  Do this as part of TRAIL. */
+static svn_error_t *
+deltify_if_mutable_under_txn_id (svn_fs_t *fs,
+                                 const svn_fs_id_t *id,
+                                 const char *txn_id,
+                                 trail_t *trail)
+{
+  svn_fs__node_revision_t *noderev;
+  dag_node_t *node;
+  apr_hash_t *entries;
+  int is_dir;
+  const svn_fs_id_t *pred_id;
+
+  /* Not mutable?  Go no further.  This is safe to do because for
+     items in the tree to be mutable, their parent dirs must also be
+     mutable.  Therefore, if a directory is not mutable under TXN_ID,
+     its children cannot be.  */
+  if (strcmp (svn_fs__id_txn_id (id), txn_id))
+    return SVN_NO_ERROR;
+
+  /* Get the NODE and node revision for ID. */
+  SVN_ERR (svn_fs__dag_get_node (&node, fs, id, trail));
+  SVN_ERR (svn_fs__get_node_revision (&noderev, fs, id, trail));
+
+  /* If this is a directory, recurse on its entries. */
+  if ((is_dir = svn_fs__dag_is_directory (node)))
+    {
+      SVN_ERR (svn_fs__dag_dir_entries (&entries, node, trail));
+      if (entries)
+        {
+          apr_hash_index_t *hi;
+
+          for (hi = apr_hash_first (trail->pool, entries); 
+               hi; 
+               hi = apr_hash_next (hi))
+            {
+              const svn_fs_dirent_t *dirent;
+              void *val;
+              
+              /* KEY will be the entry name (about which we really
+                 don't care), VAL the dirent */
+              apr_hash_this (hi, NULL, NULL, &val);
+              dirent = val;
+
+              SVN_ERR (deltify_if_mutable_under_txn_id (fs, dirent->id,
+                                                        txn_id, trail));
+            }
+        }
+    }
+
+  /* If we have have a predecessor, deltify it against the current
+     node revision. */
+  if ((pred_id = noderev->predecessor_id))
+    {
+      dag_node_t *pred_node;
+      SVN_ERR (svn_fs__dag_get_node (&pred_node, fs, pred_id, trail));
+      SVN_ERR (svn_fs__dag_deltify (pred_node, node, is_dir, trail));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+txn_body_deltify_committed (void *baton, trail_t *trail)
+{
+  struct deltify_committed_args *args = baton;
+  const svn_fs_id_t *id;
+  dag_node_t *root_dir;
+
+  /* Get the ID of the root dir of the revision. */
+  SVN_ERR (svn_fs__dag_revision_root (&root_dir, args->fs, args->rev, trail));
+  id = svn_fs__dag_get_id (root_dir);
+
+  /* Now...deltify! */
+  return deltify_if_mutable_under_txn_id (args->fs, id, args->txn_id, trail);
+}
+
 struct get_root_args
 {
   svn_fs_root_t *root;
@@ -1496,7 +1584,9 @@ merge (svn_stringbuf_t *conflict_p,
       else if ((t_entry = apr_hash_get (t_entries, key, klen))
                && (! apr_hash_get (s_entries, key, klen)))
         {
-          if (svn_fs__id_eq (t_entry->id, a_entry->id))
+          int distance = svn_fs_id_distance (t_entry->id, a_entry->id);
+          
+          if (distance == 0)
             {
               /* If E is same in target as ancestor, then it has not
                  changed, and the deletion in source should be
@@ -1515,7 +1605,7 @@ merge (svn_stringbuf_t *conflict_p,
                  the state of the target at all times. */
               apr_hash_set (t_entries, key, klen, NULL);
             }
-          else if (svn_fs_id_distance (t_entry->id, a_entry->id) != -1)
+          else if (distance != -1)
             {
               /* E is an attempt to modify ancestor, so it's a
                  conflict with the deletion of E in source.  If E
@@ -1814,9 +1904,13 @@ svn_fs_commit_txn (const char **conflict_p,
   svn_error_t *err;
   svn_fs_t *fs = svn_fs__txn_fs (txn);
   apr_pool_t *pool = svn_fs__txn_pool (txn);
+  const char *txn_id;
 
   /* Initialize returned revision number to an invalid value. */
   *new_rev = SVN_INVALID_REVNUM;
+
+  /* Get the transaction's name.  We'll need it later. */
+  SVN_ERR (svn_fs_txn_name (&txn_id, txn, pool));
 
   while (1729)
     {
@@ -1885,21 +1979,22 @@ svn_fs_commit_txn (const char **conflict_p,
         return err;
       else
         {
-          svn_fs_root_t *root;
-          svn_error_t *err2;
+          struct deltify_committed_args dc_args;
 
+          /* Set the return value, the new revision. */
           *new_rev = commit_args.new_rev;
 
           /* Final step: after a successful commit of the transaction,
              deltify the new revision. */
-          if (! ((err2 = svn_fs_revision_root (&root, fs, 
-                                               *new_rev - 1, pool))))
-            err2 = svn_fs_deltify (root, "/", TRUE, pool);
-          
-          return (err2 
-                  ? svn_error_quick_wrap 
-                      (err2, "Commit succeeded, deltification failed")
-                  : SVN_NO_ERROR);
+          dc_args.fs = fs;
+          dc_args.rev = *new_rev;
+          dc_args.txn_id = txn_id;
+
+          SVN_ERR_W (svn_fs__retry_txn (fs, txn_body_deltify_committed, 
+                                        &dc_args, pool),
+                     "Commit succeeded, deltification failed");
+
+          return SVN_NO_ERROR;
         }
     }
 

@@ -259,7 +259,7 @@ SVN_ERROR_START
               "Filesystem has no such file")
 
   SVN_ERRDEF (SVN_ERR_FS_NOT_FOUND,
-              "Filesystem has no such file")
+              "Filesystem has no item")
 
   SVN_ERRDEF (SVN_ERR_FS_ID_NOT_FOUND,
               "Filesystem has no such node-rev-id")
