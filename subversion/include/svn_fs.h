@@ -753,10 +753,10 @@ svn_error_t *svn_fs_revision_prop (svn_string_t **value_p,
    filesystem FS, as an APR hash table allocated in POOL.  The
    resulting table maps property names to pointers to svn_string_t
    objects containing the property value.  */
-svn_error_t *svn_fs_get_rev_proplist (apr_hash_t **table_p,
-                                      svn_fs_t *fs,
-                                      svn_revnum_t rev,
-                                      apr_pool_t *pool);
+svn_error_t *svn_fs_revision_proplist (apr_hash_t **table_p,
+                                       svn_fs_t *fs,
+                                       svn_revnum_t rev,
+                                       apr_pool_t *pool);
 
 
 /* Change a revision's property's value, or add/delete a property.
