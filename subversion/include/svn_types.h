@@ -84,7 +84,7 @@ typedef int svn_boolean_t;
 
 
 /* The fs revision property that stores the commit-log. */
-#define SVN_PROP_REVISION_LOG  SVN_PROP_PREFIX ## "log"
+#define SVN_PROP_REVISION_LOG  SVN_PROP_PREFIX "log"
 
 
 /* The propname *prefix* that makes a propname a "WC property". 
@@ -98,7 +98,7 @@ typedef int svn_boolean_t;
    changing them.  The client will also send them back to the RA layer
    when committing.  (gstein:  does the client need to send them when
    "reporting" wc state before an update, too?)  */
-#define SVN_PROP_WC_PREFIX     SVN_PROP_PREFIX ## "wc:"
+#define SVN_PROP_WC_PREFIX     SVN_PROP_PREFIX "wc:"
 
 
 
