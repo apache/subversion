@@ -428,7 +428,7 @@ $ svn log -r 1729:{2/17/02}
         </refnamediv>
         <refsect1>
           <title>Synopsis</title> 
-          <programlisting>svn add PATH [PATH [PATH ... ]]</programlisting>
+          <programlisting>svn add PATH...</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
@@ -501,7 +501,7 @@ A         otherdir
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn cat TARGET [TARGET [TARGET ... ]]</programlisting>
+          <programlisting>svn cat TARGET...</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
@@ -575,7 +575,7 @@ Latest revision fresh from the repository!
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn checkout URL [URL [URL ... ]] [PATH]</programlisting>
+          <programlisting>svn checkout URL... [PATH]</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
@@ -674,7 +674,7 @@ working-copies
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn cleanup [PATH [PATH ... ]]</programlisting>
+          <programlisting>svn cleanup [PATH...]</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
@@ -732,7 +732,7 @@ $ svn cleanup /path/to/working-copy
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn commit [PATH [PATH ... ]]</programlisting>
+          <programlisting>svn commit [PATH...]</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
@@ -1001,7 +1001,7 @@ Committed revision 13.
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn delete [TARGET [TARGET ... ]]</programlisting>
+          <programlisting>svn delete [TARGET...]</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
@@ -1104,7 +1104,7 @@ D         over-there
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn diff [-r N[:M]] [TARGET [TARGET ... ]]</programlisting>
+          <programlisting>svn diff [-r N[:M]] [TARGET...]</programlisting>
           <programlisting>svn diff URL1[@N] URL2[@M]</programlisting>
         </refsect1>
         <refsect1>
@@ -1348,7 +1348,7 @@ Exported revision 15.
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn help [SUBCOMMAND [SUBCOMMAND ... ]]</programlisting>
+          <programlisting>svn help [SUBCOMMAND...]</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
@@ -1472,7 +1472,7 @@ Committed revision 19.
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn info [PATH [PATH ... ]]</programlisting>
+          <programlisting>svn info [PATH...]</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
@@ -1567,7 +1567,7 @@ Last Changed Date: 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003)
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn list URL [URL ... ]</programlisting>
+          <programlisting>svn list URL...</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
@@ -1647,7 +1647,7 @@ _      24     harry       0 Jan 18 11:27 examples/
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn log [URL] [PATH [PATH ... ]]</programlisting>
+          <programlisting>svn log [URL] [PATH...]</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
@@ -1761,8 +1761,8 @@ rev 28:  sally | 2003-01-07 21:48:33 -0600 (Tue, 07 Jan 2003) | 3 lines
           </screen>
 
           <para>If you want several distinct paths underneath the
-            same URL, you can use the <literal>URL [PATH [PATH
-            ...]]</literal> syntax.</para>
+            same URL, you can use the <literal>URL [PATH...]</literal>
+            syntax.</para>
 
           <screen>
 $ svn log http://svn.red-bean.com/repos/test/ foo.c bar.c
@@ -1892,7 +1892,7 @@ Made a change.
         <refsect1>
           <title>Synopsis</title>
           <programlisting>svn merge sourceURL1[@N] sourceURL2[@M] [WCPATH]</programlisting>
-          <programlisting>merge -r N:M SOURCE [PATH]</programlisting>
+          <programlisting>svn merge -r N:M SOURCE [PATH]</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
@@ -1987,7 +1987,7 @@ U  thhgttg.txt
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn mkdir TARGET [TARGET [TARGET ... ]]</programlisting>
+          <programlisting>svn mkdir TARGET...</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
@@ -2161,12 +2161,288 @@ Committed revision 27.
       <!-- ================================================================= -->
       <refentry>
         <refnamediv>
+          <refname>svn propdel</refname>
+          <refpurpose>Remove a property from an item.</refpurpose>
+        </refnamediv>
+        <refsect1>
+          <title>Synopsis</title>
+          <programlisting>svn propdel PROPNAME [PATH...]</programlisting>
+          <programlisting>svn propdel PROPNAME --revprop -r REV [URL]</programlisting>
+        </refsect1>
+        <refsect1>
+          <title>Description</title>
+
+          <para>This removes properties from files, directories, or
+            revisions.  The first form removes versioned properties
+            in working copy, while the second removes unversioned
+            remote properties on a repository revision.</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Alternate Names</title>
+          <para>pdel</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Changes</title>
+          <para>Working copy, repository only if operating on a URL</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Accesses Repository</title>
+          <para>Only if operating on a URL</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Switches</title>
+
+          <screen>
+--quiet (-q)
+--recursive (-R)
+--revision (-r) REV
+--revprop
+          </screen>
+        </refsect1>
+
+        <refsect1>
+          <title>Examples</title>
+
+          <para>Delete a property from a file in your working
+            copy</para>
+
+          <screen>
+$ svn propdel svn:mime-type  some-script
+property `svn:mime-type' deleted from 'some-script'.
+          </screen>
+
+          <para>Delete a revision property:</para>
+
+          <screen>
+$ svn propdel --revprop -r 26 release-date 
+property `release-date' deleted from repository revision '26'
+          </screen>
+
+        </refsect1>
+      </refentry>
+
+      <!-- ================================================================= -->
+      <refentry>
+        <refnamediv>
+          <refname>svn propedit</refname>
+          <refpurpose>Edit the property of one or more items under version control.</refpurpose>
+        </refnamediv>
+        <refsect1>
+          <title>Synopsis</title>
+          <programlisting>svn propedit PROPNAME PATH...</programlisting>
+          <programlisting>svn propedit PROPNAME --revprop -r REV [URL]</programlisting>
+        </refsect1>
+        <refsect1>
+          <title>Description</title>
+
+          <para>Edits one or more properties using your favorite
+            editor. The first form edits versioned properties in
+            your working copy, while the second edits unversioned
+            remote properties on a repository revision.</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Alternate Names</title>
+          <para>pedit, pe</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Changes</title>
+          <para>Working copy, repository only if operating on a URL</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Accesses Repository</title>
+          <para>Only if operating on a URL</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Switches</title>
+
+          <screen>
+--revision (-r) REV
+--revprop
+--encoding ENC
+          </screen>
+        </refsect1>
+
+        <refsect1>
+          <title>Examples</title>
+
+          <para><command>svn propedit</command> makes it easy to
+            modify properties that have multiple values:</para>
+
+          <screen>
+$ svn propedit svn:keywords  foo.c 
+    &lt;svn will launch your favorite editor here, with a buffer open
+    containing the current contents of the svn:keywords property.  You
+    can add multiple values to a property easily here by entering one
+    value per line.&gt;
+Set new value for property `svn:keywords' on `foo.c'
+          </screen>
+
+        </refsect1>
+      </refentry>
+
+      <!-- ================================================================= -->
+      <refentry>
+        <refnamediv>
+          <refname>svn propget</refname>
+          <refpurpose>Prints the value of a property.</refpurpose>
+        </refnamediv>
+        <refsect1>
+          <title>Synopsis</title>
+          <programlisting>svn propget PROPNAME [PATH...]</programlisting>
+          <programlisting>svn propget PROPNAME --revprop -r REV [URL]</programlisting>
+        </refsect1>
+        <refsect1>
+          <title>Description</title>
+
+          <para>Prints the value of a property on files,
+            directories, or revisions.  The first form prints the
+            versioned property of an item or items in your working
+            copy, while the second prints unversioned remote
+            property on a repository revision.  See <xref
+            linkend="svn-ch-6-sect-2"/> for more information on
+            properties.</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Alternate Names</title>
+          <para>pget, pg</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Changes</title>
+          <para>Working copy, repository only if operating on a URL</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Accesses Repository</title>
+          <para>Only if operating on a URL</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Switches</title>
+
+          <screen>
+--recursive (-R)
+--revision (-r) REV
+--revprop
+          </screen>
+        </refsect1>
+
+        <refsect1>
+          <title>Examples</title>
+
+          <para>Examine a property of a file in your working
+            copy:</para>
+          
+          <screen>
+$ svn propget svn:keywords foo.c
+Author
+Date
+Rev
+          </screen>
+
+          <para>The same goes for a revision property:</para>
+
+          <screen>
+$ svn propget svn:log --revprop -r 20 
+Began journal.
+          </screen>
+          
+        </refsect1>
+      </refentry>
+
+      <!-- ================================================================= -->
+      <refentry>
+        <refnamediv>
+          <refname>svn proplist</refname>
+          <refpurpose>Lists all properties.</refpurpose>
+        </refnamediv>
+        <refsect1>
+          <title>Synopsis</title>
+          <programlisting>svn proplist [PATH...]</programlisting>
+          <programlisting>svn proplist --revprop -r REV [URL]</programlisting>
+        </refsect1>
+        <refsect1>
+          <title>Description</title>
+
+          <para>Lists all properties on files, directories, or
+            revisions.  The first form lists versioned properties in
+            working copy, while the second lists unversioned remote
+            properties on a repository revision.</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Alternate Names</title>
+          <para>plist, pl</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Changes</title>
+          <para>Working copy, repository only if operating on a URL</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Accesses Repository</title>
+          <para>Only if operating on a URL</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Switches</title>
+
+          <screen>
+--verbose (-v)
+--recursive (-R)
+--revision (-r) REV
+--revprop
+          </screen>
+        </refsect1>
+        
+        <refsect1>
+          <title>Examples</title>
+
+          <para>You can use proplist to see the properties on an
+            item in your working copy:</para>
+
+          <screen>
+$ svn proplist foo.c
+Properties on 'foo.c':
+  svn:mime-type
+  svn:keywords
+  owner
+          </screen>
+
+          <para>But with the <option>--verbose</option> flag, svn
+            proplist is extremely handy as it also shows you the
+            values for the properties:</para>
+
+          <screen>
+$ svn proplist --verbose foo.c
+Properties on 'foo.c':
+  svn:mime-type : text/plain
+  svn:keywords : Author Date Rev
+  owner : sally
+          </screen>
+          
+        </refsect1>
+      </refentry>
+
+      <!-- ================================================================= -->
+      <refentry>
+        <refnamediv>
           <refname>svn propset</refname>
           <refpurpose>Set PROPNAME to PROPVAL on files, directories, or revisions.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn propset PROPNAME [PROPVAL | -F VALFILE] PATH [PATH [PATH ... ]]</programlisting>
+          <programlisting>svn propset PROPNAME [PROPVAL | -F VALFILE] PATH...</programlisting>
           <programlisting>svn propset PROPNAME --revprop -r REV [PROPVAL | -F VALFILE] [URL]</programlisting>
         </refsect1>
 
@@ -2284,276 +2560,83 @@ property `owner-pic' set on 'moo.c'
       <!-- ================================================================= -->
       <refentry>
         <refnamediv>
-          <refname>svn propdel</refname>
-          <refpurpose>Remove a property from an item.</refpurpose>
+          <refname>svn resolved</refname>
+          <refpurpose>Remove <quote>conflicted</quote> state on
+            working copy files or directories.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn propdel PROPNAME [PATH [PATH ... ]]</programlisting>
-          <programlisting>svn propdel PROPNAME --revprop -r REV [URL]</programlisting>
+          <programlisting>svn resolved PATH...</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
 
-          <para>This removes properties from files, directories, or
-            revisions.  The first form removes versioned properties
-            in working copy, while the second removes unversioned
-            remote properties on a repository revision.</para>
+          <para>Remove <quote>conflicted</quote> state on working
+            copy files or directories. This routine does not
+            semantically resolve conflict markers; it merely removes
+            conflict-related artifact files and allows PATH to be
+            committed again; that is, it tells Subversion that the
+            conflicts have been "resolved".  See <xref
+            linkend="svn-ch-3-sect-4.4"/> for an in-depth look at
+            resolving conflicts.</para>
         </refsect1>
 
         <refsect1>
           <title>Alternate Names</title>
-          <para>pdel</para>
+          <para>None</para>
         </refsect1>
 
         <refsect1>
           <title>Changes</title>
-          <para>Working copy, repository only if operating on a URL</para>
+          <para>Working copy</para>
         </refsect1>
 
         <refsect1>
           <title>Accesses Repository</title>
-          <para>Only if operating on a URL</para>
+          <para>No</para>
         </refsect1>
 
         <refsect1>
           <title>Switches</title>
 
           <screen>
+--targets FILENAME
+--recursive (-R)
 --quiet (-q)
---recursive (-R)
---revision (-r) REV
---revprop
-          </screen>
-        </refsect1>
-
-        <refsect1>
-          <title>Examples</title>
-
-          <para>Delete a property from a file in your working
-            copy</para>
-
-          <screen>
-$ svn propdel svn:mime-type  some-script
-property `svn:mime-type' deleted from 'some-script'.
-          </screen>
-
-          <para>Delete a revision property:</para>
-
-          <screen>
-$ svn propdel --revprop -r 26 release-date 
-property `release-date' deleted from repository revision '26'
-          </screen>
-
-        </refsect1>
-      </refentry>
-
-      <!-- ================================================================= -->
-      <refentry>
-        <refnamediv>
-          <refname>svn propedit</refname>
-          <refpurpose>Edit the property of one or more items under version control.</refpurpose>
-        </refnamediv>
-        <refsect1>
-          <title>Synopsis</title>
-          <programlisting>svn propedit PROPNAME PATH [PATH [PATH ... ]]</programlisting>
-          <programlisting>svn propedit PROPNAME --revprop -r REV [URL]</programlisting>
-        </refsect1>
-        <refsect1>
-          <title>Description</title>
-
-          <para>Edits one or more properties using your favorite
-            editor. The first form edits versioned properties in
-            your working copy, while the second edits unversioned
-            remote properties on a repository revision.</para>
-        </refsect1>
-
-        <refsect1>
-          <title>Alternate Names</title>
-          <para>pedit, pe</para>
-        </refsect1>
-
-        <refsect1>
-          <title>Changes</title>
-          <para>Working copy, repository only if operating on a URL</para>
-        </refsect1>
-
-        <refsect1>
-          <title>Accesses Repository</title>
-          <para>Only if operating on a URL</para>
-        </refsect1>
-
-        <refsect1>
-          <title>Switches</title>
-
-          <screen>
---revision (-r) REV
---revprop
---encoding ENC
-          </screen>
-        </refsect1>
-
-        <refsect1>
-          <title>Examples</title>
-
-          <para><command>svn propedit</command> makes it easy to
-            modify properties that have multiple values:</para>
-
-          <screen>
-$ svn propedit svn:keywords  foo.c 
-    &lt;svn will launch your favorite editor here, with a buffer open
-    containing the current contents of the svn:keywords property.  You
-    can add multiple values to a property easily here by entering one
-    value per line.&gt;
-Set new value for property `svn:keywords' on `foo.c'
-          </screen>
-
-        </refsect1>
-      </refentry>
-
-      <!-- ================================================================= -->
-      <refentry>
-        <refnamediv>
-          <refname>svn propget</refname>
-          <refpurpose>Prints the value of a property.</refpurpose>
-        </refnamediv>
-        <refsect1>
-          <title>Synopsis</title>
-          <programlisting>svn propget PROPNAME [PATH [PATH ... ]]</programlisting>
-          <programlisting>svn propget PROPNAME --revprop -r REV [URL]</programlisting>
-        </refsect1>
-        <refsect1>
-          <title>Description</title>
-
-          <para>Prints the value of a property on files,
-            directories, or revisions.  The first form prints the
-            versioned property of an item or items in your working
-            copy, while the second prints unversioned remote
-            property on a repository revision.  See <xref
-            linkend="svn-ch-6-sect-2"/> for more information on
-            properties.</para>
-        </refsect1>
-
-        <refsect1>
-          <title>Alternate Names</title>
-          <para>pget, pg</para>
-        </refsect1>
-
-        <refsect1>
-          <title>Changes</title>
-          <para>Working copy, repository only if operating on a URL</para>
-        </refsect1>
-
-        <refsect1>
-          <title>Accesses Repository</title>
-          <para>Only if operating on a URL</para>
-        </refsect1>
-
-        <refsect1>
-          <title>Switches</title>
-
-          <screen>
---recursive (-R)
---revision (-r) REV
---revprop
-          </screen>
-        </refsect1>
-
-        <refsect1>
-          <title>Examples</title>
-
-          <para>Examine a property of a file in your working
-            copy:</para>
-          
-          <screen>
-$ svn propget svn:keywords foo.c
-Author
-Date
-Rev
-          </screen>
-
-          <para>The same goes for a revision property:</para>
-
-          <screen>
-$ svn propget svn:log --revprop -r 20 
-Began journal.
-          </screen>
-          
-        </refsect1>
-      </refentry>
-
-      <!-- ================================================================= -->
-      <refentry>
-        <refnamediv>
-          <refname>svn proplist</refname>
-          <refpurpose>Lists all properties.</refpurpose>
-        </refnamediv>
-        <refsect1>
-          <title>Synopsis</title>
-          <programlisting>svn proplist [PATH [PATH ... ]]</programlisting>
-          <programlisting>svn proplist --revprop -r REV [URL]</programlisting>
-        </refsect1>
-        <refsect1>
-          <title>Description</title>
-
-          <para>Lists all properties on files, directories, or
-            revisions.  The first form lists versioned properties in
-            working copy, while the second lists unversioned remote
-            properties on a repository revision.</para>
-        </refsect1>
-
-        <refsect1>
-          <title>Alternate Names</title>
-          <para>plist, pl</para>
-        </refsect1>
-
-        <refsect1>
-          <title>Changes</title>
-          <para>Working copy, repository only if operating on a URL</para>
-        </refsect1>
-
-        <refsect1>
-          <title>Accesses Repository</title>
-          <para>Only if operating on a URL</para>
-        </refsect1>
-
-        <refsect1>
-          <title>Switches</title>
-
-          <screen>
---verbose (-v)
---recursive (-R)
---revision (-r) REV
---revprop
           </screen>
         </refsect1>
         
         <refsect1>
           <title>Examples</title>
-
-          <para>You can use proplist to see the properties on an
-            item in your working copy:</para>
-
-          <screen>
-$ svn proplist foo.c
-Properties on 'foo.c':
-  svn:mime-type
-  svn:keywords
-  owner
-          </screen>
-
-          <para>But with the <option>--verbose</option> flag, svn
-            proplist is extremely handy as it also shows you the
-            values for the properties:</para>
-
-          <screen>
-$ svn proplist --verbose foo.c
-Properties on 'foo.c':
-  svn:mime-type : text/plain
-  svn:keywords : Author Date Rev
-  owner : sally
-          </screen>
           
+          <para>If you get a conflict on an update, your working
+            copy will sprout three new files:</para>
+
+          <screen>
+$ svn update
+C  foo.c
+Updated to revision 31.
+$ ls
+foo.c
+foo.c.mine
+foo.c.r30
+foo.c.r31
+          </screen>
+
+          <para>Once you've resolved the conflict and
+            <filename>foo.c</filename> is ready to be committed, run
+            <command>svn resolved</command> to let your working copy
+            know you've taken care of everything.</para>
+
+          <warning>
+            <para>You <emphasis>can</emphasis> just remove the
+              conflict files and commit, but <command>svn
+              resolved</command> fixes up some bookkeeping data
+              in the working copy administrative area in addition
+              to removing the conflict files, so we recommend that
+              you use this command.</para>
+          </warning>
+
         </refsect1>
       </refentry>
 
@@ -2565,7 +2648,7 @@ Properties on 'foo.c':
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn revert PATH [PATH [PATH ... ]]</programlisting>
+          <programlisting>svn revert PATH...</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
@@ -2657,95 +2740,12 @@ $ svn status
       <!-- ================================================================= -->
       <refentry>
         <refnamediv>
-          <refname>svn resolved</refname>
-          <refpurpose>Remove <quote>conflicted</quote> state on
-            working copy files or directories.</refpurpose>
-        </refnamediv>
-        <refsect1>
-          <title>Synopsis</title>
-          <programlisting>svn resolved PATH [PATH [PATH ... ]]</programlisting>
-        </refsect1>
-        <refsect1>
-          <title>Description</title>
-
-          <para>Remove <quote>conflicted</quote> state on working
-            copy files or directories. This routine does not
-            semantically resolve conflict markers; it merely removes
-            conflict-related artifact files and allows PATH to be
-            committed again; that is, it tells Subversion that the
-            conflicts have been "resolved".  See <xref
-            linkend="svn-ch-3-sect-4.4"/> for an in-depth look at
-            resolving conflicts.</para>
-        </refsect1>
-
-        <refsect1>
-          <title>Alternate Names</title>
-          <para>None</para>
-        </refsect1>
-
-        <refsect1>
-          <title>Changes</title>
-          <para>Working copy</para>
-        </refsect1>
-
-        <refsect1>
-          <title>Accesses Repository</title>
-          <para>No</para>
-        </refsect1>
-
-        <refsect1>
-          <title>Switches</title>
-
-          <screen>
---targets FILENAME
---recursive (-R)
---quiet (-q)
-          </screen>
-        </refsect1>
-        
-        <refsect1>
-          <title>Examples</title>
-          
-          <para>If you get a conflict on an update, your working
-            copy will sprout three new files:</para>
-
-          <screen>
-$ svn update
-C  foo.c
-Updated to revision 31.
-$ ls
-foo.c
-foo.c.mine
-foo.c.r30
-foo.c.r31
-          </screen>
-
-          <para>Once you've resolved the conflict and
-            <filename>foo.c</filename> is ready to be committed, run
-            <command>svn resolved</command> to let your working copy
-            know you've taken care of everything.</para>
-
-          <warning>
-            <para>You <emphasis>can</emphasis> just remove the
-              conflict files and commit, but <command>svn
-              resolved</command> fixes up some bookkeeping data
-              in the working copy administrative area in addition
-              to removing the conflict files, so we recommend that
-              you use this command.</para>
-          </warning>
-
-        </refsect1>
-      </refentry>
-
-      <!-- ================================================================= -->
-      <refentry>
-        <refnamediv>
           <refname>svn status</refname>
           <refpurpose>Print the status of working copy files and directories.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn status [PATH [PATH ... ]]</programlisting>
+          <programlisting>svn status [PATH...]</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
@@ -3145,7 +3145,7 @@ Updated to revision 31.
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn update [PATH [PATH ... ]]</programlisting>
+          <programlisting>svn update [PATH...]</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
@@ -3287,12 +3287,9 @@ Updated to revision 30.
       detailed information, see <xref
         linkend="svn-ch-5-sect-3.1.2"/></para>
 
-    <warning>
-      <para>Unlike <command>svn</command>,
-      <command>svnadmin</command> (as well as other repository
-      administration tools) operates on <emphasis>paths</emphasis>
-      not <emphasis>URLs</emphasis>.</para>
-    </warning>
+    <para>Since <command>svnadmin</command> works via direct repository access
+      (and thus can only be used on the machine that holds the
+      repository), it refers to the repository with a path, not a URL.</para>
       
     <sect2 id="svn-ch-8-sect-2.1">
       <title><command>svnadmin</command> Switches</title> 
@@ -3536,7 +3533,7 @@ Content-length: 101
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]</programlisting>
+          <programlisting>svnadmin help [SUBCOMMAND...]</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
@@ -3735,7 +3732,7 @@ The latest repos revision is 34.
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svnadmin rmtxns REPOS_PATH TXN_NAME [TXN_NAME2 ...]</programlisting>
+          <programlisting>svnadmin rmtxns REPOS_PATH TXN_NAME...</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
@@ -3831,17 +3828,17 @@ $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
   <sect1 id="svn-ch-8-sect-3">
     <title><command>svnlook</command></title>
     
-    <para><command>svnlook</command> is a command line utility for
+    <para><command>svnlook</command> is a command-line utility for
       examining different aspects of a Subversion repository.  It
       does not make any changes to the repository&mdash;it's just
-      used for <quote>peeking</quote>.</para>
-
-    <para><command>svnlook</command> is typically used by the
+      used for <quote>peeking</quote>.
+      <command>svnlook</command> is typically used by the
       repository hooks, but a repository administrator might find it
-      useful for diagnostic purposes.  Since
-      <command>svnlook</command> works via direct repository access
+      useful for diagnostic purposes.</para>
+
+    <para>Since <command>svnlook</command> works via direct repository access
       (and thus can only be used on the machine that holds the
-      repository), it takes paths as targets and not URLs.</para>
+      repository), it refers to the repository with a path, not a URL.</para>
 
     <para>If no revision or transaction is specified,
       <command>svnlook</command> defaults to the youngest (most
@@ -3951,7 +3948,7 @@ sally
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svnlook cat REPOS_PATH FILE_PATH</programlisting>
+          <programlisting>svnlook cat REPOS_PATH PATH_IN_REPOS</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
@@ -4291,8 +4288,7 @@ Rearrange lunch.
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svnlook proplist REPOS_PATH 
-            PATH_IN_REPOS</programlisting>
+          <programlisting>svnlook proplist REPOS_PATH PATH_IN_REPOS</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>

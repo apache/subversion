@@ -250,63 +250,78 @@
       Here's a quick overview of what you get.
     </para>
 
-    <variablelist>
+    <sect2 id="svn-ch-1-sect-5.1">
 
-      <varlistentry>
-        <term>svn</term>
-        <listitem>
-          <para>The command-line client program.  This is the main
-           tool used to manage data, and its use is covered in
-           Chapters 2, 3, 4, and 6.</para>
-        </listitem>
-      </varlistentry>
+      <title>Client Components (for the User)</title>
 
-      <varlistentry>
-        <term>svnlook</term>
-        <listitem>
-          <para>A tool for inspecting a Subversion repository,
-          discussed in Chapter 5.</para>
-        </listitem>
-      </varlistentry>
+      <variablelist>
 
-      <varlistentry>
-        <term>svnadmin</term>
-        <listitem>
-          <para>A tool for tweaking or repairing a Subversion
-            repository, used mainly by system administrators, also
-            discussed in Chapter 5.</para>
-        </listitem>
-      </varlistentry>
+        <varlistentry>
+          <term>svn</term>
+          <listitem>
+            <para>The command-line client program.  This is the main
+             tool used to manage data, and its use is covered in
+             Chapters 2, 3, 4, and 6.</para>
+          </listitem>
+        </varlistentry>
 
-      <varlistentry>
-        <term>mod_dav_svn</term>
-        <listitem>
-          <para>A plug-in module for the Apache-2.X web server; used
-          to make your repository available to others over a
-          network.  Discussed in Chapter 5.</para>
-        </listitem>
-      </varlistentry>
+        <varlistentry>
+          <term>svnversion</term>
+          <listitem>
+            <para>A program for reporting the mixed-revision state of a
+            working copy.  (See <xref linkend="svn-ch-2" /> to understand
+            mixed-revision working copies.)</para>
+          </listitem>
+        </varlistentry>
 
-      <varlistentry>
-        <term>svnserve</term>
-        <listitem>
-          <para>A standalone server program, runnable as a daemon
-            process or invokable by SSH; another way to make your
-            repository available to others over a network.  Discussed
-            in Chapter 5.</para>
-        </listitem>
-      </varlistentry>
+      </variablelist>
 
-      <varlistentry>
-        <term>svnversion</term>
-        <listitem>
-          <para>A program for reporting the mixed-revision state of a
-          working copy.  (See Chapter 2 to understand mixed-revision
-          working copies.)</para>
-        </listitem>
-      </varlistentry>
+    </sect2>
 
-    </variablelist>
+    <sect2 id="svn-ch-1-sect-5.2">
+
+      <title>Server Components (for the Administrator)</title>
+
+      <para>These are all discussed in <xref linkend="svn-ch-5" />.</para>
+
+      <variablelist>
+
+        <varlistentry>
+          <term>svnlook</term>
+          <listitem>
+            <para>A tool for inspecting a Subversion repository.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>svnadmin</term>
+          <listitem>
+            <para>A tool for creating, tweaking or repairing a Subversion
+              repository.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>mod_dav_svn</term>
+          <listitem>
+            <para>A plug-in module for the Apache-2.X web server; used
+            to make your repository available to others over a
+            network.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>svnserve</term>
+          <listitem>
+            <para>A standalone server program, runnable as a daemon
+              process or invokable by SSH; another way to make your
+              repository available to others over a network.</para>
+          </listitem>
+        </varlistentry>
+
+      </variablelist>
+
+    </sect2>
 
     <para>Assuming you have Subversion installed correctly, you should
       be ready to start.  The next two chapters will walk you through
