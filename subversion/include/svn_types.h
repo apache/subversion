@@ -61,18 +61,6 @@ typedef enum svn_node_kind
   svn_node_unknown      /* something's here, but we don't know what */
 } svn_node_kind_t;
 
-/* This type exists because apr_item_t was removed from apr, and
-   libsvn_subr/keysort.c needs structures like this to sort hashes. */
-
-typedef struct svn_item_t {
-  /** The key for the current table entry */
-  char *key; 
-  /** Size of the opaque block comprising the item's content. */
-  apr_size_t size;
-  /** A pointer to the content itself. */
-  void *data;
-} svn_item_t;
-
 
 typedef long int svn_revnum_t;
 

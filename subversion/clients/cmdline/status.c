@@ -243,20 +243,18 @@ svn_cl__print_status_list (apr_hash_t *statushash,
   /* Loop over array, printing each name/status-structure */
   for (i = 0; i < statusarray->nelts; i++)
     {
-      svn_item_t *item;
-      const char *path;
-      
-      item = (((svn_item_t **)(statusarray)->elts)[i]);
-      path = item->key;
-      status = item->data;
+      const svn_item_t *item;
+
+      item = &APR_ARRAY_IDX(statusarray, i, const svn_item_t);
+      status = item->value;
 
       if ((skip_unrecognized) && (! status->entry))
         continue;
 
       if (detailed)
-        print_long_format (path, show_last_committed, status);
+        print_long_format (item->key, show_last_committed, status);
       else
-        print_short_format (path, status);
+        print_short_format (item->key, status);
     }
 
   /* If printing in detailed format, we might have a head revision to
