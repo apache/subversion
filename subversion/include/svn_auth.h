@@ -1,7 +1,5 @@
 /**
  * @copyright
- * svn_auth.h: authentication support for Subversion
- *
  * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
