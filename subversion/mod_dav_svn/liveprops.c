@@ -158,7 +158,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       /* ### whoops. also defined for a VCC. deal with it later. */
       if (resource->type != DAV_RESOURCE_TYPE_VERSION || !resource->baselined)
         return DAV_PROP_INSERT_NOTSUPP;
-      value = dav_svn_build_uri(resource, DAV_SVN_BUILD_URI_BC,
+      value = dav_svn_build_uri(resource->info->repos, DAV_SVN_BUILD_URI_BC,
                                 resource->info->root.rev, NULL,
                                 1 /* add_href */, p);
       break;
@@ -179,7 +179,8 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
               value = "###error###";
               break;
             }
-          value = dav_svn_build_uri(resource, DAV_SVN_BUILD_URI_BASELINE,
+          value = dav_svn_build_uri(resource->info->repos,
+                                    DAV_SVN_BUILD_URI_BASELINE,
                                     revnum, NULL,
                                     1 /* add_href */, p);
                                     
@@ -206,7 +207,8 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
           stable_id = svn_fs_unparse_id(id, p);
           svn_string_appendcstr(stable_id, resource->info->repos_path);
 
-          value = dav_svn_build_uri(resource, DAV_SVN_BUILD_URI_VERSION,
+          value = dav_svn_build_uri(resource->info->repos,
+                                    DAV_SVN_BUILD_URI_VERSION,
                                     SVN_INVALID_REVNUM, stable_id->data,
                                     1 /* add_href */, p);
         }
@@ -218,7 +220,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       /* ### note that a VCC (a special VCR) is defined as _PRIVATE for now */
       if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
         return DAV_PROP_INSERT_NOTSUPP;
-      value = dav_svn_build_uri(resource, DAV_SVN_BUILD_URI_VCC,
+      value = dav_svn_build_uri(resource->info->repos, DAV_SVN_BUILD_URI_VCC,
                                 SVN_IGNORED_REVNUM, NULL,
                                 1 /* add_href */, p);
       break;
