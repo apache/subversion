@@ -549,6 +549,7 @@ get_locks_callback (void *baton,
 {
   struct get_locks_baton_t *b = baton;
   svn_boolean_t readable = TRUE;
+  apr_pool_t *hash_pool = apr_hash_pool_get (b->locks);
 
   /* If there's auth to deal with, deal with it. */
   if (b->authz_read_func)
@@ -559,8 +560,8 @@ get_locks_callback (void *baton,
 
   /* If we can read this lock path, add the lock to the return hash. */
   if (readable)
-    apr_hash_set (b->locks, lock->path, APR_HASH_KEY_STRING, 
-                  svn_lock_dup (lock, apr_hash_pool_get (b->locks)));
+    apr_hash_set (b->locks, apr_pstrdup(hash_pool, lock->path), 
+                  APR_HASH_KEY_STRING, svn_lock_dup (lock, hash_pool));
 
   return SVN_NO_ERROR;
 }
