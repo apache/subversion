@@ -27,8 +27,8 @@
       about your setup and your problem is directly proportional to
       the likelihood of getting an answer from the mailing list.
       You're encouraged to include everything short of what you had
-      for breakfast and your mother's maiden name.  </para>
-      </footnote> </para>
+      for breakfast and your mother's maiden name.</para>
+      </footnote></para>
       
   
     <sect2 id="svn-ap-b-sect-1.2">
@@ -242,14 +242,14 @@ svn_error: &hellip; The specified activity does not exist.
           ra_local allows access to a local repository, ra_dav
           allows access to a repository via WebDAV, and ra_svn allows
           local or remote access via the svnserve server.  When you
-          attempt to perform an operation in subversion, the program
+          attempt to perform an operation in Subversion, the program
           tries to dynamically load a plugin based on the URL scheme.
           A <literal>file://</literal> URL will try to load ra_local,
           and an <literal>http://</literal> URL will try to load ra_dav.</para>
 
         <para>The error you are seeing means that the dynamic
           linker/loader can't find the plugins to load.  This normally
-          happens when you build subversion with shared libraries,
+          happens when you build Subversion with shared libraries,
           then attempt to run it without first running 'make install'.
           Another possible cause is that you ran make install, but the
           libraries were installed in a location that the dynamic
@@ -420,7 +420,7 @@ rev 24:&nbsp; (no author) | 2003-07-29 19:28:35 +0200 (Tue, 29 Jul 2003)
             also set your <literal>DocumentRoot</literal> to be
             <filename>/www</filename>, then you're in trouble.  When
             the request comes in for
-            <filename>/www/foo/bar</filename>, apache doesn't know
+            <filename>/www/foo/bar</filename>, Apache doesn't know
             whether to find a <emphasis>real</emphasis> file named
             <filename>/foo/bar</filename> within your
             <literal>DocumentRoot</literal>, or whether to ask

@@ -432,7 +432,7 @@ svn stream tcp nowait svnowner /usr/local/bin/svnserve svnserve -i
         appropriate permissions to access your repositories.  Now, when
         a client connection comes into your server on port 3690,
         <command>inetd</command> will spawn an
-        <command>svnserve</command> process to service it.  </para>
+        <command>svnserve</command> process to service it.</para>
 
       <para>A second option is to run <command>svnserve</command> as a
         standalone <quote>daemon</quote> process.  Use the
@@ -465,7 +465,7 @@ $               # svnserve is now running, listening on port 3690
         repository database files. (See <xref
         linkend="svn-ch-6-sidebar-1"/>.)  It's essentially the same as
         a local user accessing the repository via
-        <literal>file:///</literal> URLs. </para>
+        <literal>file:///</literal> URLs.</para>
 
       <sidebar id="svn-ch-6-sidebar-1">
         <title>Servers and Permissions:  A Word of Warning</title>        
@@ -582,7 +582,7 @@ $ svn checkout svn://host.example.com/project1
         (<literal>#</literal>), and each section contains
         specific variables that can be set (<literal>variable =
         value</literal>).  Let's walk through this file and learn how
-        to use them.  </para>
+        to use them.</para>
 
       <sect3 id="svn-ch-6-sect-3.2.1">
         <title>Create a 'users' file and realm</title>
@@ -1079,7 +1079,7 @@ ServerName svn.example.com
         appropriately, that allows Apache to work with those files.
         Apache, when used as a Subversion server, will also need the
         correct permissions to read and write to your Subversion
-        repository.  (See <xref linkend="svn-ch-6-sidebar-1"/>.) </para>
+        repository.  (See <xref linkend="svn-ch-6-sidebar-1"/>.)</para>
     
       <para>You will need to determine a permission system setup that
         satisfies Subversion's requirements without messing up any
@@ -1526,7 +1526,7 @@ LoadModule authz_svn_module   modules/mod_authz_svn.so
           choose one of these basic configuration patterns.  (The
           examples below are very simple; look at Apache's own
           documentation for much more detail on Apache authentication
-          and authorization options.) </para>
+          and authorization options.)</para>
 
         <para>The simplest block is to allow open access to everyone.
           In this scenario, Apache never sends authentication
