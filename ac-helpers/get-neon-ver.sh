@@ -4,12 +4,13 @@
 #
 
 conf=$1/macros/neon.m4
+oldconf=$1/configure.in
 
 major=`sed -n '/NEON_VERSION_MAJOR=/s/.*=//p' $conf`
 
 # older versions of Neon
 if test "$major" = ""; then
-  vsn=`sed -n '/NEON_VERSION=/s/.*=//p' $conf`
+  vsn=`sed -n '/NEON_VERSION=/s/.*=//p' $oldconf`
   echo $vsn
   exit 0
 fi
