@@ -15,6 +15,7 @@
 
 
 #include <string.h>
+#include <assert.h>
 #include "svn_string.h"
 #include "svn_path.h"
 
@@ -94,23 +95,14 @@ svn_path_remove_component (svn_string_t *path, enum svn_path_style style)
 
 
 svn_string_t *
-svn_path_last_component (svn_string_t *path,
+svn_path_last_component (const svn_string_t *path,
                          enum svn_path_style style,
                          apr_pool_t *pool)
 {
   /* kff todo: `style' ignored presently. */
 
-  apr_size_t i;
-
-  /* kff todo: is canonicalizing the source path lame?  This function
-     forces its argument into canonical form, for local convenience.
-     But maybe it shouldn't have any effect on its argument.  Can be
-     fixed without involving too much allocation, by skipping
-     backwards past separators & building the returned component more
-     carefully. */
-  svn_path_canonicalize (path, style);
-
-  i = svn_string_find_char_backward (path, SVN_PATH__REPOS_SEPARATOR);
+  apr_size_t i
+    = svn_string_find_char_backward (path, SVN_PATH__REPOS_SEPARATOR);
 
   if (i < path->len)
     {
@@ -122,6 +114,7 @@ svn_path_last_component (svn_string_t *path,
 }
 
 
+
 void
 svn_path_split (const svn_string_t *path, 
                 svn_string_t **dirpath,
@@ -129,9 +122,24 @@ svn_path_split (const svn_string_t *path,
                 enum svn_path_style style,
                 apr_pool_t *pool)
 {
-  *dirpath = svn_string_dup (path, pool);
-  *basename = svn_path_last_component (*dirpath, style, pool);
-  svn_path_remove_component (*dirpath, style);
+  svn_string_t *n_dirpath, *n_basename;
+
+  assert (dirpath != basename);
+
+  if (dirpath)
+    {
+      n_dirpath = svn_string_dup (path, pool);
+      svn_path_remove_component (n_dirpath, style);
+    }
+
+  if (basename)
+    n_basename = svn_path_last_component (path, style, pool);
+
+  if (dirpath)
+    *dirpath = n_dirpath;
+
+  if (basename)
+    *basename = n_basename;
 }
 
 

@@ -275,7 +275,7 @@ svn_string_strip_whitespace (svn_string_t *str)
 
 
 apr_size_t
-svn_string_find_char_backward (svn_string_t *str, char ch)
+svn_string_find_char_backward (const svn_string_t *str, char ch)
 {
   apr_size_t i;
 
