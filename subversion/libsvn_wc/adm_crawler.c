@@ -293,7 +293,7 @@ do_dir_replaces (void **newest_baton,
   *newest_baton = stackptr->baton;
 
   /* Lock this youngest directory */
-  err = do_lock (stackptr->path, locks, top_pool);
+  err = do_lock (svn_string_dup (stackptr->path, top_pool), locks, top_pool);
   if (err) return err;
   
   return SVN_NO_ERROR;
