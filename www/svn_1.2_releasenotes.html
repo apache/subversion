@@ -148,7 +148,7 @@ specification</a> documents.</p>
 then a pre-1.2 libsvn_fs library won't see or enforce them.  This is
 really only relevant to teams of users all accessing the repository
 via <tt>file://</tt>.  For example, an svn 1.2 client might lock a
-file, but a statically linked svn 1.1 or 1.0 client (accessing via
+file, but a statically-linked svn 1.1 or 1.0 client (accessing via
 <tt>file://</tt>) will unknowingly ignore the lock.  The workaround,
 of course, is to set up a real server process &mdash; thereby
 guaranteeing that only libsvn_fs 1.2 ever accesses the
@@ -171,7 +171,7 @@ interoperability with generic DAV clients.  <a
 href="http://svnbook.red-bean.com/en/1.1/apc.html">Appendix C</a> in
 the Subversion 1.1 book documented the trials and tribulations of this
 exercise.  At most, one could use a DAV client to drag files into a
-mounted repository, but the files couldn't edited directly from the
+mounted repository, but the files couldn't be edited directly from the
 network share.  Some clients even refused to mount the Subversion
 repository.</p>
 
@@ -236,7 +236,7 @@ feature</em>)</h4></dt>
 <dd>
 
 <p>After the tremendous success of FSFS repositories since the 1.1
-release, we've changed the <tt>svnadmin create</tt> command now to
+release, we've changed the <tt>svnadmin create</tt> command to
 create FSFS repositories by default.  Everyone agrees that this will
 provide a much friendlier "out of box" experience for new users.</p>
 
