@@ -46,13 +46,16 @@ svn_client_cat (svn_stream_t* out,
   svn_string_t *mime_type;
   svn_string_t *eol_style;
   apr_hash_t *props;
+  const char *auth_dir;
 
   /* Get the RA library that handles URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url, pool));
 
+  SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
+
   /* Open a repository session to the URL. */
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, NULL, NULL,
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, auth_dir, NULL,
                                         NULL, FALSE, FALSE, FALSE,
                                         auth_baton, pool));
 

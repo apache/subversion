@@ -137,12 +137,15 @@ svn_client_revprop_set (const char *propname,
 {
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
+  const char *auth_dir;
 
   /* Open an RA session for the URL. Note that we don't have a local
-     directory, nor a place to put temp files or store the auth data. */
+     directory, nor a place to put temp files or store the auth data,
+     although we'll try to fetch auth data from the current directory. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
+  SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, auth_dir,
                                         NULL, NULL, FALSE, FALSE, TRUE,
                                         auth_baton, pool));
 
@@ -437,6 +440,7 @@ svn_client_propget (apr_hash_t **props,
   const char *utarget;  /* target, or the url for target */
   svn_node_kind_t kind;
   svn_revnum_t revnum;
+  const char *auth_dir;
 
   SVN_ERR (maybe_convert_to_url (&utarget, target, revision, pool));
 
@@ -450,8 +454,9 @@ svn_client_propget (apr_hash_t **props,
 
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, utarget, pool));
+      SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, utarget,
-                                            NULL, NULL, NULL, TRUE,
+                                            auth_dir, NULL, NULL, TRUE,
                                             FALSE, FALSE, auth_baton, pool));
 
       *props = apr_hash_make (pool);
@@ -572,12 +577,14 @@ svn_client_revprop_get (const char *propname,
 {
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
+  const char *auth_dir;
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files or store the auth data. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
+  SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, auth_dir,
                                         NULL, NULL, FALSE, FALSE, TRUE,
                                         auth_baton, pool));
 
