@@ -538,242 +538,256 @@ svn_handle_warning (void *data, const char *fmt, ...)
 /* svn_strerror() and helpers */
 
 
+/* Helper for initialize_svn_error_descriptions */
+static void
+set_error_hash (apr_hash_t *ht, 
+                apr_pool_t *pool,
+                apr_status_t err,
+                const char *description)
+{
+  apr_status_t *e = apr_pcalloc (pool, sizeof(*e));
+  
+  *e = err;
+  apr_hash_set (ht, e, sizeof(*e), description);
+}
+
+
 /* Return a hash which maps svn-specific errorcodes (apr_status_t) to
    their english descriptions (const char *). */
 
 static apr_hash_t *
 initialize_svn_error_descriptions (apr_pool_t *pool)
 {
-  apr_status_t e;
-  apr_size_t es = sizeof(e);
+  apr_status_t *e;
+  apr_size_t es = sizeof(apr_status_t);
   apr_hash_t *ht = apr_hash_make (pool);
 
   /* Here we go. */
 
-  e = SVN_WARNING;
-  apr_hash_set (ht, &e, es, "Warning");
+  set_error_hash (ht, pool, SVN_WARNING,
+                  "Warning");
   
-  e =  SVN_ERR_NOT_AUTHORIZED;
-  apr_hash_set (ht, &e, es, "Not authorized");
+  set_error_hash (ht, pool, SVN_ERR_NOT_AUTHORIZED,
+                  "Not authorized");
   
-  e =  SVN_ERR_PLUGIN_LOAD_FAILURE;
-  apr_hash_set (ht, &e, es, "Failure loading plugin");
+  set_error_hash (ht, pool, SVN_ERR_PLUGIN_LOAD_FAILURE,
+                  "Failure loading plugin");
   
-  e =  SVN_ERR_UNKNOWN_FS_ACTION;
-  apr_hash_set (ht, &e, es, "Unknown fs action");
+  set_error_hash (ht, pool, SVN_ERR_UNKNOWN_FS_ACTION,
+                  "Unknown fs action");
 
-  e =  SVN_ERR_UNEXPECTED_EOF;
-  apr_hash_set (ht, &e, es, "Unexpected end of file");
+  set_error_hash (ht, pool, SVN_ERR_UNEXPECTED_EOF,
+                  "Unexpected end of file");
 
-  e =  SVN_ERR_MALFORMED_FILE;
-  apr_hash_set (ht, &e, es, "Malformed file");
+  set_error_hash (ht, pool, SVN_ERR_MALFORMED_FILE,
+                  "Malformed file");
 
-  e =  SVN_ERR_INCOMPLETE_DATA;
-  apr_hash_set (ht, &e, es, "Incomplete data");
+  set_error_hash (ht, pool, SVN_ERR_INCOMPLETE_DATA,
+                  "Incomplete data");
 
-  e =  SVN_ERR_MALFORMED_XML;
-  apr_hash_set (ht, &e, es, "XML data was not well-formed");
+  set_error_hash (ht, pool, SVN_ERR_MALFORMED_XML,
+                  "XML data was not well-formed");
 
-  e =  SVN_ERR_UNFRUITFUL_DESCENT;
-  apr_hash_set (ht, &e, es, "WC descent came up empty");
+  set_error_hash (ht, pool, SVN_ERR_UNFRUITFUL_DESCENT,
+                  "WC descent came up empty");
 
-  e =  SVN_ERR_BAD_FILENAME;
-  apr_hash_set (ht, &e, es, "Bogus filename");
+  set_error_hash (ht, pool, SVN_ERR_BAD_FILENAME,
+                  "Bogus filename");
 
-  e =  SVN_ERR_UNSUPPORTED_FEATURE;
-  apr_hash_set (ht, &e, es, "Trying to use unsupported feature");
+  set_error_hash (ht, pool, SVN_ERR_UNSUPPORTED_FEATURE,
+                  "Trying to use unsupported feature");
 
-  e =  SVN_ERR_XML_ATTRIB_NOT_FOUND;
-  apr_hash_set (ht, &e, es, "No such XML tag attribute");
+  set_error_hash (ht, pool, SVN_ERR_XML_ATTRIB_NOT_FOUND,
+                  "No such XML tag attribute");
 
-  e =  SVN_ERR_XML_MISSING_ANCESTRY;
-  apr_hash_set (ht, &e, es, "<delta-pkg> is missing ancestry");
+  set_error_hash (ht, pool, SVN_ERR_XML_MISSING_ANCESTRY,
+                  "<delta-pkg> is missing ancestry");
 
-  e =  SVN_ERR_XML_UNKNOWN_ENCODING;
-  apr_hash_set (ht, &e, es, "Unrecognized binary data encoding; can't decode");
+  set_error_hash (ht, pool, SVN_ERR_XML_UNKNOWN_ENCODING,
+                  "Unrecognized binary data encoding; can't decode");
 
-  e =  SVN_ERR_UNKNOWN_NODE_KIND;
-  apr_hash_set (ht, &e, es, "Unknown svn_node_kind");
+  set_error_hash (ht, pool, SVN_ERR_UNKNOWN_NODE_KIND,
+                  "Unknown svn_node_kind");
 
-  e =  SVN_ERR_WC_OBSTRUCTED_UPDATE;
-  apr_hash_set (ht, &e, es, "Obstructed update; unversioned item in the way");
+  set_error_hash (ht, pool, SVN_ERR_WC_OBSTRUCTED_UPDATE,
+                  "Obstructed update; unversioned item in the way");
 
-  e =  SVN_ERR_WC_UNWIND_MISMATCH;
-  apr_hash_set (ht, &e, es, "Mismatch popping the wc unwind stack");
+  set_error_hash (ht, pool, SVN_ERR_WC_UNWIND_MISMATCH,
+                  "Mismatch popping the wc unwind stack");
  
-  e =  SVN_ERR_WC_UNWIND_EMPTY;
-  apr_hash_set (ht, &e, es, "Attempt to pop empty wc unwind stack");
+  set_error_hash (ht, pool, SVN_ERR_WC_UNWIND_EMPTY,
+                  "Attempt to pop empty wc unwind stack");
 
-  e =  SVN_ERR_WC_UNWIND_NOT_EMPTY;
-  apr_hash_set (ht, &e, es, "Attempt to unlock with non-empty unwind stack");
+  set_error_hash (ht, pool, SVN_ERR_WC_UNWIND_NOT_EMPTY,
+                  "Attempt to unlock with non-empty unwind stack");
 
-  e =  SVN_ERR_WC_LOCKED;
-  apr_hash_set (ht, &e, es, "Attempted to lock an already-locked dir");
+  set_error_hash (ht, pool, SVN_ERR_WC_LOCKED,
+                  "Attempted to lock an already-locked dir");
 
-  e =  SVN_ERR_WC_BAD_ADM_LOG;
-  apr_hash_set (ht, &e, es, "Logfile is corrupted");
+  set_error_hash (ht, pool, SVN_ERR_WC_BAD_ADM_LOG,
+                  "Logfile is corrupted");
 
-  e =  SVN_ERR_WC_PATH_NOT_FOUND;
-  apr_hash_set (ht, &e, es, "Can't find a working copy path");
+  set_error_hash (ht, pool, SVN_ERR_WC_PATH_NOT_FOUND,
+                  "Can't find a working copy path");
 
-  e =  SVN_ERR_WC_ENTRY_NOT_FOUND;
-  apr_hash_set (ht, &e, es, "Can't find an entry");
+  set_error_hash (ht, pool, SVN_ERR_WC_ENTRY_NOT_FOUND,
+                  "Can't find an entry");
 
-  e =  SVN_ERR_WC_ENTRY_EXISTS;
-  apr_hash_set (ht, &e, es, "Entry already exists");
+  set_error_hash (ht, pool, SVN_ERR_WC_ENTRY_EXISTS,
+                  "Entry already exists");
  
-  e =  SVN_ERR_WC_ENTRY_MISSING_REVISION;
-  apr_hash_set (ht, &e, es, "Entry has no revision");
+  set_error_hash (ht, pool, SVN_ERR_WC_ENTRY_MISSING_REVISION,
+                  "Entry has no revision");
 
-  e =  SVN_ERR_WC_ENTRY_MISSING_ANCESTRY;
-  apr_hash_set (ht, &e, es, "Entry no has no ancestor");
+  set_error_hash (ht, pool, SVN_ERR_WC_ENTRY_MISSING_ANCESTRY,
+                  "Entry no has no ancestor");
 
-  e =  SVN_ERR_WC_ENTRY_ATTRIBUTE_INVALID;
-  apr_hash_set (ht, &e, es, "Entry has an invalid attribute");
+  set_error_hash (ht, pool, SVN_ERR_WC_ENTRY_ATTRIBUTE_INVALID,
+                  "Entry has an invalid attribute");
 
-  e =  SVN_ERR_WC_ENTRY_BOGUS_MERGE;
-  apr_hash_set (ht, &e, es, "Bogus entry attributes during entry merge");
+  set_error_hash (ht, pool, SVN_ERR_WC_ENTRY_BOGUS_MERGE,
+                  "Bogus entry attributes during entry merge");
 
-  e =  SVN_ERR_WC_NOT_UP_TO_DATE;
-  apr_hash_set (ht, &e, es, "Working copy is not up-to-date");
+  set_error_hash (ht, pool, SVN_ERR_WC_NOT_UP_TO_DATE,
+                  "Working copy is not up-to-date");
 
-  e =  SVN_ERR_WC_LEFT_LOCAL_MOD;
-  apr_hash_set (ht, &e, es, "Left locally modified or unversioned files");
+  set_error_hash (ht, pool, SVN_ERR_WC_LEFT_LOCAL_MOD,
+                  "Left locally modified or unversioned files");
 
-  e =  SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED;
-  apr_hash_set (ht, &e, es, "Ran out of unique names");
+  set_error_hash (ht, pool, SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
+                  "Ran out of unique names");
 
-  e =  SVN_ERR_WC_FOUND_CONFLICT;
-  apr_hash_set (ht, &e, es, "Found a conflict in working copy");
+  set_error_hash (ht, pool, SVN_ERR_WC_FOUND_CONFLICT,
+                  "Found a conflict in working copy");
 
-  e =  SVN_ERR_WC_CORRUPT;
-  apr_hash_set (ht, &e, es, "Working copy is corrupt");
+  set_error_hash (ht, pool, SVN_ERR_WC_CORRUPT,
+                  "Working copy is corrupt");
 
-  e =  SVN_ERR_FS_GENERAL;
-  apr_hash_set (ht, &e, es, "General filesystem error");
+  set_error_hash (ht, pool, SVN_ERR_FS_GENERAL,
+                  "General filesystem error");
 
-  e =  SVN_ERR_FS_CLEANUP;
-  apr_hash_set (ht, &e, es, "Error closing filesystem");
+  set_error_hash (ht, pool, SVN_ERR_FS_CLEANUP,
+                  "Error closing filesystem");
 
-  e =  SVN_ERR_FS_ALREADY_OPEN;
-  apr_hash_set (ht, &e, es, "Filesystem is already open");
+  set_error_hash (ht, pool, SVN_ERR_FS_ALREADY_OPEN,
+                  "Filesystem is already open");
 
-  e =  SVN_ERR_FS_NOT_OPEN;
-  apr_hash_set (ht, &e, es, "Filesystem is not open");
+  set_error_hash (ht, pool, SVN_ERR_FS_NOT_OPEN,
+                  "Filesystem is not open");
 
-  e =  SVN_ERR_FS_CORRUPT;
-  apr_hash_set (ht, &e, es, "Filesystem is corrupt");
+  set_error_hash (ht, pool, SVN_ERR_FS_CORRUPT,
+                  "Filesystem is corrupt");
 
-  e =  SVN_ERR_FS_PATH_SYNTAX;
-  apr_hash_set (ht, &e, es, "Invalid filesystem path syntax");
+  set_error_hash (ht, pool, SVN_ERR_FS_PATH_SYNTAX,
+                  "Invalid filesystem path syntax");
 
-  e =  SVN_ERR_FS_NO_SUCH_REVISION;
-  apr_hash_set (ht, &e, es, "Invalid filesytem revision number");
+  set_error_hash (ht, pool, SVN_ERR_FS_NO_SUCH_REVISION,
+                  "Invalid filesytem revision number");
 
-  e =  SVN_ERR_FS_NO_SUCH_TRANSACTION;
-  apr_hash_set (ht, &e, es, "Invalid filesystem transaction name");
+  set_error_hash (ht, pool, SVN_ERR_FS_NO_SUCH_TRANSACTION,
+                  "Invalid filesystem transaction name");
 
-  e =  SVN_ERR_FS_NO_SUCH_ENTRY;
-  apr_hash_set (ht, &e, es, "Filesystem dir has no such entry");
+  set_error_hash (ht, pool, SVN_ERR_FS_NO_SUCH_ENTRY,
+                  "Filesystem dir has no such entry");
 
-  e =  SVN_ERR_FS_NO_SUCH_REPRESENTATION;
-  apr_hash_set (ht, &e, es, "Filesystem has no such representation");
+  set_error_hash (ht, pool, SVN_ERR_FS_NO_SUCH_REPRESENTATION,
+                  "Filesystem has no such representation");
 
-  e =  SVN_ERR_FS_NO_SUCH_STRING;
-  apr_hash_set (ht, &e, es, "Filesystem has no such string");
+  set_error_hash (ht, pool, SVN_ERR_FS_NO_SUCH_STRING,
+                  "Filesystem has no such string");
 
-  e =  SVN_ERR_FS_NOT_FOUND;
-  apr_hash_set (ht, &e, es, "Filesystem has no such file");
+  set_error_hash (ht, pool, SVN_ERR_FS_NOT_FOUND,
+                  "Filesystem has no such file");
 
-  e =  SVN_ERR_FS_ID_NOT_FOUND;
-  apr_hash_set (ht, &e, es, "Filesystem has no such node-rev-id");
+  set_error_hash (ht, pool, SVN_ERR_FS_ID_NOT_FOUND,
+                  "Filesystem has no such node-rev-id");
 
-  e =  SVN_ERR_FS_NOT_ID;
-  apr_hash_set (ht, &e, es, "String does not represent a node or node-rev-id");
+  set_error_hash (ht, pool, SVN_ERR_FS_NOT_ID,
+                  "String does not represent a node or node-rev-id");
 
-  e =  SVN_ERR_FS_NOT_DIRECTORY;
-  apr_hash_set (ht, &e, es, "Name does not refer to an filesystem directory");
+  set_error_hash (ht, pool, SVN_ERR_FS_NOT_DIRECTORY,
+                  "Name does not refer to an filesystem directory");
  
-  e =  SVN_ERR_FS_NOT_FILE;
-  apr_hash_set (ht, &e, es, "Name does not refer to an filesystem file");
+  set_error_hash (ht, pool, SVN_ERR_FS_NOT_FILE,
+                  "Name does not refer to an filesystem file");
  
-  e =  SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT;
-  apr_hash_set (ht, &e, es, "Name is not a single path component");
+  set_error_hash (ht, pool, SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT,
+                  "Name is not a single path component");
 
-  e =  SVN_ERR_FS_NOT_MUTABLE;
-  apr_hash_set (ht, &e, es, "Attempt to change immutable filesystem node");
+  set_error_hash (ht, pool, SVN_ERR_FS_NOT_MUTABLE,
+                  "Attempt to change immutable filesystem node");
 
-  e =  SVN_ERR_FS_ALREADY_EXISTS;
-  apr_hash_set (ht, &e, es, "File already exists in revision.");
+  set_error_hash (ht, pool, SVN_ERR_FS_ALREADY_EXISTS,
+                  "File already exists in revision.");
 
-  e =  SVN_ERR_FS_DIR_NOT_EMPTY;
-  apr_hash_set (ht, &e, es, "Attempt to remove non-empty filesytem directory");
+  set_error_hash (ht, pool, SVN_ERR_FS_DIR_NOT_EMPTY,
+                  "Attempt to remove non-empty filesytem directory");
 
-  e =  SVN_ERR_FS_ROOT_DIR;
-  apr_hash_set (ht, &e, es, "Attempt to remove or recreate fs root dir");
+  set_error_hash (ht, pool, SVN_ERR_FS_ROOT_DIR,
+                  "Attempt to remove or recreate fs root dir");
 
-  e =  SVN_ERR_FS_NOT_TXN_ROOT;
-  apr_hash_set (ht, &e, es, "Object is not a transaction root");
+  set_error_hash (ht, pool, SVN_ERR_FS_NOT_TXN_ROOT,
+                  "Object is not a transaction root");
 
-  e =  SVN_ERR_FS_NOT_REVISION_ROOT;
-  apr_hash_set (ht, &e, es, "Object is not a revision root");
+  set_error_hash (ht, pool, SVN_ERR_FS_NOT_REVISION_ROOT,
+                  "Object is not a revision root");
 
-  e =  SVN_ERR_FS_CONFLICT;
-  apr_hash_set (ht, &e, es, "Merge conflict during commit");
+  set_error_hash (ht, pool, SVN_ERR_FS_CONFLICT,
+                  "Merge conflict during commit");
 
-  e =  SVN_ERR_TXN_OUT_OF_DATE;
-  apr_hash_set (ht, &e, es, "Transaction is out of date");
+  set_error_hash (ht, pool, SVN_ERR_TXN_OUT_OF_DATE,
+                  "Transaction is out of date");
 
-  e =  SVN_ERR_BERKELEY_DB;
-  apr_hash_set (ht, &e, es, "Berkeley DB error");
+  set_error_hash (ht, pool, SVN_ERR_BERKELEY_DB,
+                  "Berkeley DB error");
 
-  e =  SVN_ERR_RA_ILLEGAL_URL;
-  apr_hash_set (ht, &e, es, "Bad URL passed to RA layer");
+  set_error_hash (ht, pool, SVN_ERR_RA_ILLEGAL_URL,
+                  "Bad URL passed to RA layer");
 
-  e =  SVN_ERR_RA_SOCK_INIT;
-  apr_hash_set (ht, &e, es, "RA layer failed to init socket layer");
+  set_error_hash (ht, pool, SVN_ERR_RA_SOCK_INIT,
+                  "RA layer failed to init socket layer");
 
-  e =  SVN_ERR_RA_HOSTNAME_LOOKUP;
-  apr_hash_set (ht, &e, es, "RA layer failed hostname lookup");
+  set_error_hash (ht, pool, SVN_ERR_RA_HOSTNAME_LOOKUP,
+                  "RA layer failed hostname lookup");
 
-  e =  SVN_ERR_RA_CREATING_REQUEST;
-  apr_hash_set (ht, &e, es, "RA layer failed to create HTTP request");
+  set_error_hash (ht, pool, SVN_ERR_RA_CREATING_REQUEST,
+                  "RA layer failed to create HTTP request");
 
-  e =  SVN_ERR_RA_REQUEST_FAILED;
-  apr_hash_set (ht, &e, es, "RA layer's server request failed");
+  set_error_hash (ht, pool, SVN_ERR_RA_REQUEST_FAILED,
+                  "RA layer's server request failed");
 
-  e =  SVN_ERR_RA_MKACTIVITY_FAILED;
-  apr_hash_set (ht, &e, es, "RA layer failed to make activity for commit");
+  set_error_hash (ht, pool, SVN_ERR_RA_MKACTIVITY_FAILED,
+                  "RA layer failed to make activity for commit");
  
-  e =  SVN_ERR_RA_DELETE_FAILED;
-  apr_hash_set (ht, &e, es, "RA layer failed to delete server resource");
+  set_error_hash (ht, pool, SVN_ERR_RA_DELETE_FAILED,
+                  "RA layer failed to delete server resource");
 
-  e =  SVN_ERR_RA_NOT_VERSIONED_RESOURCE;
-  apr_hash_set (ht, &e, es, "URL is not a versioned resource");
+  set_error_hash (ht, pool, SVN_ERR_RA_NOT_VERSIONED_RESOURCE,
+                  "URL is not a versioned resource");
 
-  e =  SVN_ERR_RA_BAD_REVISION_REPORT;
-  apr_hash_set (ht, &e, es, "Bogus revision report");
+  set_error_hash (ht, pool, SVN_ERR_RA_BAD_REVISION_REPORT,
+                  "Bogus revision report");
  
-  e =  SVN_ERR_BAD_CONTAINING_POOL;
-  apr_hash_set (ht, &e, es, "Bad parent pool passed to svn_make_pool");
+  set_error_hash (ht, pool, SVN_ERR_BAD_CONTAINING_POOL,
+                  "Bad parent pool passed to svn_make_pool");
 
-  e =  SVN_ERR_APMOD_MISSING_PATH_TO_FS;
-  apr_hash_set (ht, &e, es, "Apache has no path to an SVN filesystem");
+  set_error_hash (ht, pool, SVN_ERR_APMOD_MISSING_PATH_TO_FS,
+                  "Apache has no path to an SVN filesystem");
 
-  e =  SVN_ERR_APMOD_MALFORMED_URI;
-  apr_hash_set (ht, &e, es, "Apache got a malformed URI");
+  set_error_hash (ht, pool, SVN_ERR_APMOD_MALFORMED_URI,
+                  "Apache got a malformed URI");
 
-  e =  SVN_ERR_TEST_FAILED;
-  apr_hash_set (ht, &e, es, "Test failed");
+  set_error_hash (ht, pool, SVN_ERR_TEST_FAILED,
+                  "Test failed");
 
-  e =  SVN_ERR_CL_ARG_PARSING_ERROR;
-  apr_hash_set (ht, &e, es, "Client error in parsing arguments");
+  set_error_hash (ht, pool, SVN_ERR_CL_ARG_PARSING_ERROR,
+                  "Client error in parsing arguments");
 
-  e =  SVN_ERR_CL_ADM_DIR_RESERVED;
-  apr_hash_set (ht, &e, es, "Attempted command in administrative dir");
+  set_error_hash (ht, pool, SVN_ERR_CL_ADM_DIR_RESERVED,
+                  "Attempted command in administrative dir");
 
-  e =  SVN_ERR_LAST;
-  apr_hash_set (ht, &e, es, "The final error");
+  set_error_hash (ht, pool, SVN_ERR_LAST,
+                  "The final error");
 
   return ht;
 }
