@@ -474,9 +474,10 @@ write_handler (void *baton,
 				 "svndiff contains corrupt window header");
 
       /* Check for source windows which slide backwards.  */
-      if (sview_offset < db->last_sview_offset
-	  || (sview_offset + sview_len
-	      < db->last_sview_offset + db->last_sview_len))
+      if (sview_len > 0
+          && (sview_offset < db->last_sview_offset
+              || (sview_offset + sview_len
+                  < db->last_sview_offset + db->last_sview_len)))
 	return svn_error_create (SVN_ERR_SVNDIFF_BACKWARD_VIEW, 0, NULL, 
 				 db->pool,
 				 "svndiff has backwards-sliding source views");

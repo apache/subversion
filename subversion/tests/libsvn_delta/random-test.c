@@ -371,10 +371,11 @@ do_random_combine_test (const char **msg,
         svn_txdelta_window_t *window_B;
         svn_txdelta_window_t *composite;
         apr_pool_t *wpool = svn_pool_create (delta_pool);
-        svn_txdelta__compose_ctx_t context = { 0 };
 
         do
           {
+            svn_txdelta__compose_ctx_t context = { 0 };
+
             SVN_ERR (svn_txdelta_next_window (&window_A, txdelta_stream_A,
                                               wpool));
             if (print_windows)
@@ -385,6 +386,12 @@ do_random_combine_test (const char **msg,
               delta_window_print (window_B, "B ", stdout);
             composite = svn_txdelta__compose_windows (window_A, window_B,
                                                       &context, wpool);
+            if (!composite && context.use_second)
+              {
+                composite = window_B;
+                composite->sview_offset = context.sview_offset;
+                composite->sview_len = context.sview_len;
+              }
             if (print_windows)
               delta_window_print (composite, "AB", stdout);
 

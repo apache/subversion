@@ -38,6 +38,7 @@ extern "C" {
 
 typedef struct svn_txdelta__ops_baton_t {
   int num_ops;                  /* current number of ops */
+  int src_ops;                  /* current number of source copy ope */
   int ops_size;                 /* number of ops allocated */
   svn_txdelta_op_t *ops;        /* the operations */
 
@@ -48,8 +49,9 @@ typedef struct svn_txdelta__ops_baton_t {
 /* Context for composing windows. */
 typedef struct svn_txdelta__compose_ctx_t
 {
-  apr_off_t sview_offset;       /* Last source view offset */
-  svn_boolean_t trivial;        /* TRUE if the composition is trivial */
+  apr_off_t sview_offset;       /* Source view offset in the combined window */
+  apr_size_t sview_len;         /* Source view length in the combined window */
+  svn_boolean_t use_second;     /* TRUE if window_B is the composite. */
 } svn_txdelta__compose_ctx_t;
 
 

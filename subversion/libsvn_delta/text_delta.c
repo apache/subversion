@@ -85,6 +85,7 @@ svn_txdelta__make_window (svn_txdelta__ops_baton_t *build_baton,
   window->tview_len = 0;
 
   window->num_ops = build_baton->num_ops;
+  window->src_ops = build_baton->src_ops;
   window->ops = build_baton->ops;
 
   /* just copy the fields over, rather than alloc/copying into a whole new
@@ -152,6 +153,8 @@ svn_txdelta__insert_op (svn_txdelta__ops_baton_t *build_baton,
   switch (opcode)
     {
     case svn_txdelta_source:
+      ++build_baton->src_ops;
+      /*** FALLTHRU ***/
     case svn_txdelta_target:
       op->action_code = opcode;
       op->offset = offset;
@@ -395,9 +398,10 @@ apply_window (svn_txdelta_window_t *window, void *baton)
     }
 
   /* Make sure the source view didn't slide backwards.  */
-  assert (window->sview_offset >= ab->sbuf_offset
-          && (window->sview_offset + window->sview_len
-              >= ab->sbuf_offset + ab->sbuf_len));
+  assert (window->sview_len == 0
+          || (window->sview_offset >= ab->sbuf_offset
+              && (window->sview_offset + window->sview_len
+                  >= ab->sbuf_offset + ab->sbuf_len)));
 
   /* Make sure there's enough room in the target buffer.  */
   size_buffer (&ab->tbuf, &ab->tbuf_size, window->tview_len, ab->pool);

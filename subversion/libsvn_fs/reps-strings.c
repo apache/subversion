@@ -249,8 +249,8 @@ rep_undeltify_range (svn_fs_t *fs,
       apr_pool_t *wpool_B;
       int cur_rep;
 
-      apr_size_t source_len, target_len;
       char *source_buf, *target_buf;
+      apr_size_t target_len;
 
       rep = APR_ARRAY_IDX (deltas, 0, svn_fs__representation_t*);
       SVN_ERR (get_one_window
@@ -260,8 +260,11 @@ rep_undeltify_range (svn_fs_t *fs,
           /* That's it, no more source data is available. */
           break;
 
-      context.trivial = FALSE;
-      for (cur_rep = 1; cur_rep < deltas->nelts; ++cur_rep)
+      for (cur_rep = 1;
+           cur_rep < deltas->nelts
+             && window_B->src_ops > 0
+             && window_B->sview_len > 0;
+           ++cur_rep)
         {
           svn_txdelta_window_t *window_A, *composite;
           apr_pool_t *wpool_A, *wpool_composite;
@@ -275,20 +278,25 @@ rep_undeltify_range (svn_fs_t *fs,
             (window_A, window_B, &context, wpool_composite);
 
           svn_pool_destroy (wpool_A);
-          svn_pool_destroy (wpool_B);
-          window_B = composite;
-          wpool_B = wpool_composite;
-
-          if (context.trivial || window_B->sview_len == 0)
-            /* We'll undeltify without source data now. */
-            break;
+          if (composite)
+            {
+              svn_pool_destroy (wpool_B);
+              window_B = composite;
+              wpool_B = wpool_composite;
+            }
+          else if (context.use_second)
+            {
+              svn_pool_destroy (wpool_composite);
+              window_B->sview_offset = context.sview_offset;
+              window_B->sview_len = context.sview_len;
+            }
         }
 
       /* window_B is the combined delta window. Read the source text
          into a buffer. */
-      source_len = window_B->sview_len;
-      if (fulltext && source_len > 0 && !context.trivial)
+      if (fulltext && window_B->sview_len > 0 && window_B->src_ops)
         {
+          apr_size_t source_len = window_B->sview_len;
           source_buf = apr_palloc (wpool_B, source_len);
           SVN_ERR (svn_fs__string_read
                    (fs, fulltext->contents.fulltext.string_key,
