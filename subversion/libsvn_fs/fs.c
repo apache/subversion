@@ -362,19 +362,6 @@ allocate_env (svn_fs_t *fs)
   SVN_ERR (DB_WRAP (fs, "setting deadlock detection policy",
                     fs->env->set_lk_detect (fs->env, DB_LOCK_RANDOM)));
 
-  /* Berkeley defaults to a 32k log buffer, which is too small for our
-     purposes; see this post from Daniel Berlin <dan@dberlin.org>:
-
-     http://subversion.tigris.org/servlets/ReadMsg?msgId=56325&listName=dev
-
-     for details.  Below, we increase it to 256k for better
-     throughput.  Note that the size of a logfile must be at least 4
-     times this amount; they default to 10 megs, so we're still fine,
-     but if you increase the 256 drastically, you'll want to look at
-     DB_ENV->set_lg_max(). */
-  SVN_ERR (DB_WRAP (fs, "setting in-memory log buffer size",
-		    fs->env->set_lg_bsize (fs->env, 256 * 1024)));
-  
   return SVN_NO_ERROR;
 }
 
@@ -439,19 +426,25 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
       "#   http://www.sleepycat.com/docs/ref/log/limits.html\n"
       "#\n"
       "# Increase the size of the in-memory log buffer from the default\n"
-      "# of 32 Kbytes to 128 Kbytes.  Decrease the log file size from\n"
+      "# of 32 Kbytes to 256 Kbytes.  Decrease the log file size from\n"
       "# 10 Mbytes to 1 Mbyte.  This will help reduce the amount of disk\n"
       "# space required for hot backups.  The size of the log file must be\n"
       "# at least four times the size of the in-memory log buffer.\n"
-      "set_lg_bsize  131072\n"
-      "set_lg_max   1048576\n";
+      "#\n"
+      "# Note: Decreasing the in-memory buffer size below 256 Kbytes\n"
+      "# will hurt commit performance. For details, see this post from\n"
+      "# Daniel Berlin <dan@dberlin.org>:\n"
+      "#\n"
+      "# http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgId=161960\n"
+      "set_lg_bsize     262144\n"
+      "set_lg_max      1048576\n";
 
     SVN_ERR (svn_io_file_open (&dbconfig_file, dbconfig_file_name,
                                APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
                                fs->pool));
 
     apr_err = apr_file_write_full (dbconfig_file, dbconfig_contents,
-                                   strlen (dbconfig_contents), NULL);
+                                   sizeof (dbconfig_contents) - 1, NULL);
     if (apr_err != APR_SUCCESS)
       return svn_error_createf (apr_err, 0, 0, fs->pool,
                                 "writing to `%s'", dbconfig_file_name);
@@ -538,7 +531,8 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
   /* Open the Berkeley DB environment.  */
   svn_err = DB_WRAP (fs, "opening environment",
                      fs->env->open (fs->env, path_native,
-                                    (DB_INIT_LOCK
+                                    (DB_CREATE
+                                     | DB_INIT_LOCK
                                      | DB_INIT_LOG
                                      | DB_INIT_MPOOL
                                      | DB_INIT_TXN),
