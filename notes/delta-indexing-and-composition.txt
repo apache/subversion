@@ -205,3 +205,18 @@ some related correspondence.
 
    Yes, it's an optimization only. What's more, it can be done entirely 
    off-line.
+
+=========================================================================
+                          Commentary:
+=========================================================================
+
+   We're going to just ignore REP-OFFSET for now, we can do everything
+   without it.  Maybe it will be used in a true delta-combiner later.
+
+   Also, yes, we'll wrap WINDOW in an extra pair of parens, purely for
+   aesthetic reasons.  So:
+
+           DELTA ::= (("delta" FLAG ...) (OFFSET WINDOW) ...) ;
+          WINDOW ::= (DIFF SIZE CHECKSUM [REP-KEY REP-OFFSET]) ;
+          OFFSET ::= number ;
+      REP-OFFSET ::= number;
