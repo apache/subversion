@@ -221,15 +221,14 @@ install-static: @INSTALL_STATIC_RULES@
 
 check: $(TEST_DEPS) @FS_TEST_DEPS@
 	@$(PYTHON) $(top_srcdir)/build/pycheck.py;                         \
-	base_url=""; cleanup=""; verbose="--verbose";                      \
-	if test "$(BASE_URL)" != ""; then                                  \
-	  base_url="--url $(BASE_URL)";                                    \
-	fi;                                                                \
+	flags="--verbose";                                                 \
 	if test "$(CLEANUP)" != ""; then                                   \
-	  cleanup="--cleanup";                                             \
+	  flags="--cleanup $$flags";                                       \
 	fi;                                                                \
-	$(PYTHON) $(top_srcdir)/build/run_tests.py                         \
-		  $$base_url $$cleanup $$verbose                           \
+	if test "$(BASE_URL)" != ""; then                                  \
+	  flags="--url $(BASE_URL) $$flags";                               \
+	fi;                                                                \
+	$(PYTHON) $(top_srcdir)/build/run_tests.py $$flags                 \
 		  '$(abs_srcdir)' '$(abs_builddir)' '$(PYTHON)' '$(SHELL)' \
 		  $(TEST_PROGRAMS) @FS_TEST_PROGRAMS@
 
