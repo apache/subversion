@@ -1287,6 +1287,7 @@ merge (const char **conflict_p,
               else if (! svn_fs_id_is_ancestor (s_entry->id, t_entry->id))
                 {
                   dag_node_t *s_ent_node, *t_ent_node, *a_ent_node;
+                  const char *new_tpath;
                       
                   SVN_ERR (svn_fs__dag_get_node (&s_ent_node, fs,
                                                  s_entry->id, trail));
@@ -1309,9 +1310,8 @@ merge (const char **conflict_p,
                     }
 
                   /* ... just recurse. */
-                  const char *new_tpath = path_append (target_path,
-                                                       t_entry->name,
-                                                       trail->pool);
+                  new_tpath = path_append (target_path, t_entry->name,
+                                           trail->pool);
                   SVN_ERR (merge (conflict_p, target_root, new_tpath,
                                   s_ent_node, a_ent_node, trail));
                   /* ### kff todo: 
