@@ -111,42 +111,39 @@ timestamps_equal_p (svn_boolean_t *equal_p,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
-  apr_time_t filename_time, entry_time;  /* Two big numbers
-                                            representing timestamps */
+  apr_time_t wfile_time, entry_time;
   svn_string_t *dirpath, *entryname;
-  apr_hash_t *atthash;
-  svn_string_t *timestr;
+  apr_hash_t *entries = NULL;
+  struct svn_wc__entry_t *entry;
 
-  /* Split FILENAME into a parent path and entryname. */
   svn_path_split (filename, &dirpath, &entryname, svn_path_local_style, pool);
 
-  /* Lookup this entryname in the `entries' file, and specifically
-     retrieve the value of its timestamp. */
-  err = svn_wc__entry_get (dirpath, entryname, NULL, NULL, pool, &atthash);
-  if (err) return err;
+  err = svn_wc__entries_read (&entries, dirpath, pool);
+  if (err)
+    return err;
+  entry = apr_hash_get (entries, entryname->data, entryname->len);
 
-  timestr = (svn_string_t *) 
-    apr_hash_get (atthash,
-                  SVN_WC__ENTRIES_ATTR_TIMESTAMP, APR_HASH_KEY_STRING);
-
-  if (! timestr)
+  if (! entry->timestamp)
     {
       /* This entry has no timestamp, so the only the safe thing to do
-         is return FALSE, i.e. "different" timestamps.  This will
-         force our caller to do a brute-force file comparison. */
+         is return FALSE, i.e. "different" timestamps. */
       *equal_p = FALSE;
       return SVN_NO_ERROR;
     }
 
-  /* Convert the timestamp string back into a big number */
-  entry_time = svn_wc__string_to_time (timestr);
+  /* Get the timestamp from the working file */
+  err = svn_wc__file_affected_time (&wfile_time, filename, pool);
+  if (err)
+    return err;
 
-  /* Now get the timestamp from the actual file */
-  err = svn_wc__file_affected_time (&filename_time, filename, pool);
-  if (err) return err;
+  {
+    /* Put the disk timestamp through a string conversion, so it's
+       at the same resolution as entry timestamps. */
+    svn_string_t *tstr = svn_wc__time_to_string (wfile_time, pool);
+    wfile_time = svn_wc__string_to_time (tstr);
+  }
 
-  /* Do the comparison */
-  if (filename_time == entry_time)
+  if (wfile_time == entry_time)
     *equal_p = TRUE;
   else
     *equal_p = FALSE;

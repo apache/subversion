@@ -136,7 +136,6 @@ set_entry (svn_string_t *path,
 {
   svn_string_t *sname = svn_string_create (name, pool);
   apr_time_t t;
-  svn_string_t *timestamp;
   svn_string_t *local_file;
   svn_error_t *err;
 
@@ -146,13 +145,17 @@ set_entry (svn_string_t *path,
   err = svn_wc__file_affected_time (&t, local_file, pool);
   if (err)
     return err;
-  timestamp = svn_wc__time_to_string (t, pool);
 
   /* This operation is idempotent, so just do it without worrying
      whether it's been done before. */
-  return svn_wc__entry_merge (path, sname, version, svn_file_kind, pool,
-                              SVN_WC__ENTRIES_ATTR_TIMESTAMP, timestamp,
-                              NULL);
+  return svn_wc__entry_merge_sync (path,
+                                   sname,
+                                   version,
+                                   svn_file_kind,
+                                   0,
+                                   t,
+                                   pool,
+                                   NULL);
 }
 
 

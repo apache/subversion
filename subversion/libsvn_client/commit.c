@@ -132,7 +132,6 @@ svn_client_commit (svn_string_t *path,
   err = svn_wc_crawl_local_mods (path,
                                  editor,
                                  edit_baton,
-                                 tok,
                                  pool);
   if (err)
     return err;

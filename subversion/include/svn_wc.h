@@ -133,7 +133,6 @@ svn_error_t *
 svn_wc_crawl_local_mods (svn_string_t *root_directory,
                          svn_delta_edit_fns_t *edit_fns,
                          void *edit_baton,
-                         svn_string_t *tok,
                          apr_pool_t *pool);
 
 
