@@ -60,7 +60,18 @@
 
 
 /* If PATH exists, set *KIND to the appropriate kind, else set it to
-   svn_unknown_kind. */
+ * svn_node_unknown. 
+ *
+ * If PATH is a file, *KIND is set to svn_node_file.
+ *
+ * If PATH is a directory, *KIND is set to svn_node_dir.
+ *
+ * If PATH does not exist in its final component, *KIND is set to
+ * svn_node_none.  
+ *
+ * If intermediate directories on the way to PATH don't exist, an
+ * error is returned, and *KIND's value is undefined.
+ */
 svn_error_t *svn_io_check_path (const svn_string_t *path,
                                 enum svn_node_kind *kind,
                                 apr_pool_t *pool);
