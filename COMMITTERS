@@ -28,12 +28,12 @@ Blanket commit access:
           rooneg   Garrett Rooney <rooneg@electricjellyfish.net>
         bcollins   Ben Collins <bcollins@debian.org>
            blair   Blair Zajac <blair@orcaware.com>
+         striker   Sander Striker <striker@apache.org>
 
 Commit access for specific areas:
 
       XelaRellum   Alexander Mueller <alex@littleblue.de>      (Java bindings)
          yoshiki   Yoshiki Hayashi <yoshiki@xemacs.org>        (Ruby bindings)
            david   David Summers <david@summersoft.fay.ar.us>  (RPMs)
-         striker   Sander Striker <striker@apache.org>         (website, docs)
         rassilon   Bill Tutt <rassilon@lyra.org>               (Win32 / COM)
         kbohling   Kirby C. Bohling <kbohling@birddog.com>     (tools/dev)
