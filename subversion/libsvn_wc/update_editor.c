@@ -241,12 +241,30 @@ make_dir_baton (const char *path,
   /* Figure out the new_URL for this directory. */
   if (eb->switch_url)
     {
-      /* switches are the same way as checkouts, except we're
-         telescoping off the switch URL. */
-      if (pb)
-        d->new_URL = svn_path_url_add_component (pb->new_URL, d->name, pool);
+      /* Switches are, shall we say, complex.  If this directory is
+         the root directory (it has no parent), then it either gets
+         the SWITCH_URL for its own (if it is both anchor and target)
+         or the parent of the SWITCH_URL (if it is anchor, but there's
+         another target). */
+      if (! pb)
+        {
+          if (eb->target) /* the anchor is also the target */
+            d->new_URL = apr_pstrdup (pool, eb->switch_url);
+          else
+            d->new_URL = svn_path_dirname (eb->switch_url, pool);
+        }
+      /* If this directory is *not* the root (has a parent), but it is
+         the target (has no grandparent), then it gets the SWITCH_URL
+         for its own.  Otherwise, it gets a child of its parent's
+         URL. */
       else
-        d->new_URL = apr_pstrdup (pool, eb->switch_url);
+        {
+          if (! pb->parent_baton)
+            d->new_URL = apr_pstrdup (pool, eb->switch_url);
+          else
+            d->new_URL = svn_path_url_add_component (pb->new_URL, 
+                                                     d->name, pool);
+        }
     }
   else  /* must be an update */
     {
