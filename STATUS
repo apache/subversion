@@ -106,3 +106,10 @@ Candidate changes:
       before 1.0.0 in 1.1.x.
     Votes:
       +1: maxb
+
+  * r10775
+    Wrap svn_config_enumerator_t for Perl bindings.
+    Justification:
+      Perl bindings only; completeness.
+    Votes:
+      +1: clkao
