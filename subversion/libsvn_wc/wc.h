@@ -589,17 +589,6 @@ svn_error_t *svn_wc__ensure_uniform_revision (svn_stringbuf_t *path,
                                               apr_pool_t *pool);
 
 
-
-/* Convert WHEN to an svn string representation, which can be
-   converted back by svn_wc__string_to_time(). */
-svn_stringbuf_t *svn_wc__time_to_string (apr_time_t when, apr_pool_t *pool);
-
-
-/* Convert TIMESTR to an apr_time_t.  TIMESTR should be of the form
-   returned by svn_wc__time_to_string(). */
-apr_time_t svn_wc__string_to_time (svn_stringbuf_t *timestr);
-
-
 
 /*** Routines that deal with properties ***/
 

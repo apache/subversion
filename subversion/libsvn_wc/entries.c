@@ -20,6 +20,7 @@
 #include "svn_xml.h"
 #include "svn_error.h"
 #include "svn_types.h"
+#include "svn_time.h"
 
 
 /*------------------------------------------------------------------*/
@@ -299,7 +300,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                it.  */
           }
         else
-          entry->text_time = svn_wc__string_to_time (text_timestr);
+          entry->text_time = svn_time_from_string (text_timestr);
         
         *modify_flags |= SVN_WC__ENTRY_MODIFY_TEXT_TIME;
       }
@@ -317,7 +318,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                it.  */
           }
         else
-          entry->prop_time = svn_wc__string_to_time (prop_timestr);
+          entry->prop_time = svn_time_from_string (prop_timestr);
         
         *modify_flags |= SVN_WC__ENTRY_MODIFY_PROP_TIME;
       }
@@ -564,13 +565,13 @@ normalize_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
     {
       apr_hash_set (entry->attributes,
                     SVN_WC_ENTRY_ATTR_TEXT_TIME, APR_HASH_KEY_STRING,
-                    svn_wc__time_to_string (entry->text_time, pool));
+                    svn_time_to_string (entry->text_time, pool));
     }
   if (entry->prop_time)
     {
       apr_hash_set (entry->attributes,
                     SVN_WC_ENTRY_ATTR_PROP_TIME, APR_HASH_KEY_STRING,
-                    svn_wc__time_to_string (entry->prop_time, pool));
+                    svn_time_to_string (entry->prop_time, pool));
     }
 }
 

@@ -70,6 +70,16 @@ svn_error_t *svn_fs__youngest_rev (svn_revnum_t *youngest_p,
                                    trail_t *trail);
 
 
+/* Set property NAME to VALUE on REV in FS, as part of TRAIL.
+
+   ### todo (issue #406): name could be const char *, value_p
+   svn_string_t instead of svn_stringbuf_t.  */
+svn_error_t *svn_fs__set_rev_prop (svn_fs_t *fs,
+                                   svn_revnum_t rev,
+                                   const svn_string_t *name,
+                                   const svn_string_t *value,
+                                   trail_t *trail);
+
 
 #endif /* SVN_LIBSVN_FS_REV_TABLE_H */
 

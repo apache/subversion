@@ -23,6 +23,7 @@
 #include "svn_error.h"
 #include "svn_hash.h"
 #include "svn_path.h"
+#include "svn_time.h"
 #include "svn_wc.h"
 #include "wc.h"
 
@@ -171,8 +172,8 @@ timestamps_equal_p (svn_boolean_t *equal_p,
   {
     /* Put the disk timestamp through a string conversion, so it's
        at the same resolution as entry timestamps. */
-    svn_stringbuf_t *tstr = svn_wc__time_to_string (wfile_time, pool);
-    wfile_time = svn_wc__string_to_time (tstr);
+    svn_stringbuf_t *tstr = svn_time_to_string (wfile_time, pool);
+    wfile_time = svn_time_from_string (tstr);
   }
   
   if (wfile_time == entrytime)
