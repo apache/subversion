@@ -29,7 +29,7 @@ extern "C" {
 
 svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
                    svn_boolean_t tunnel, svn_boolean_t read_only,
-                   apr_pool_t *pool);
+                   svn_boolean_t believe_username, apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

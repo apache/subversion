@@ -370,13 +370,16 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
 {
   svn_ra_svn_conn_t *conn;
   apr_socket_t *sock;
-  const char *hostname, *user, *status, *tunnel, **args;
+  const char *hostname, *user, *status, *tunnel, *realmstring, **args;
   unsigned short port;
   apr_uint64_t minver, maxver;
   apr_array_header_t *mechlist, *caplist, *status_param;
   apr_procattr_t *attr;
   apr_proc_t *proc;
   apr_status_t apr_status;
+  svn_auth_iterstate_t *iterstate;
+  svn_error_t *err;
+  void *creds;
 
   if (parse_url(url, &tunnel, &user, &port, &hostname, pool) != 0)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
@@ -446,8 +449,24 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
     }
   else if (find_mech(mechlist, "ANONYMOUS"))
     {
+      if (!user)
+        {
+          realmstring = apr_psprintf(pool, "<svn://%s:%d>", hostname, port);
+
+          err = svn_auth_first_credentials(&creds, &iterstate, 
+                                           SVN_AUTH_CRED_USERNAME, realmstring, 
+                                           callbacks->auth_baton, pool);
+          if (err)
+            svn_error_clear(err);
+          else
+            user = ((svn_auth_cred_username_t *) creds)->username;
+        }
+
+      /* We send along whatever username we've got as the mechanism argument, 
+       * and if the server wants, it can make use of that when committing 
+       * changes. */
       SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "nw(c)()", (apr_uint64_t) 1,
-                                     "ANONYMOUS", ""));
+                                     "ANONYMOUS", user ? user : ""));
     }
   else
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
