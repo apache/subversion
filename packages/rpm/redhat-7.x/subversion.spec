@@ -1,5 +1,5 @@
 %define apache_version 2.0.47-0.1
-%define neon_version 0.24.2
+%define neon_version 0.24.3
 %define apache_dir /usr/local/apache2
 # If you don't have 360+ MB of free disk space or don't want to run checks then
 # set make_*_check to 0.
@@ -93,6 +93,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Tue Oct  7 2003 Blair Zajac <blair@orcaware.com> 0.30.0-7342
+- Require neon 0.24.3.
+
 * Sat Jul 19 2003 David Summers <david@summersoft.fay.ar.us> 0.25.0-6515
 - Added cvs2svn regression tests.
 
