@@ -784,11 +784,8 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
 
       if (! apr_err)
         {
-          apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
-          if (apr_err)
-            return svn_error_wrap_apr (apr_err,
-                                       "Can't write config file '%s'", path);
-          
+          SVN_ERR (svn_io_file_write_full (f, contents, 
+                                           strlen (contents), NULL, pool));
           SVN_ERR (svn_io_file_close (f, pool));
         }
     }
@@ -891,11 +888,8 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
 
       if (! apr_err)
         {
-          apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
-          if (apr_err)
-            return svn_error_wrap_apr (apr_err,
-                                       "Can't write config file '%s'", path);
-          
+          SVN_ERR (svn_io_file_write_full (f, contents, 
+                                           strlen (contents), NULL, pool));
           SVN_ERR (svn_io_file_close (f, pool));
         }
     }
@@ -1019,11 +1013,8 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
 
       if (! apr_err)
         {
-          apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
-          if (apr_err)
-            return svn_error_wrap_apr (apr_err,
-                                       "Can't write config file '%s'", path);
-          
+          SVN_ERR (svn_io_file_write_full (f, contents, 
+                                           strlen (contents), NULL, pool));
           SVN_ERR (svn_io_file_close (f, pool));
         }
     }
