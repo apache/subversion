@@ -2196,6 +2196,8 @@ def main():
   ctx.username = "unknown"
   ctx.print_help = 0
 
+  start_pass = 1
+
   try:
     opts, args = getopt.getopt(sys.argv[1:], 'p:s:vnh',
                                [ "help", "create", "trunk=",
@@ -2283,7 +2285,6 @@ def main():
     sys.exit(1)
 
   ctx.cvsroot = args[0]
-  start_pass = 1
 
   convert(ctx, start_pass=start_pass)
 
