@@ -1344,17 +1344,17 @@ Committed revision 1390.
   <!-- ======================== SECTION 5 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-5">
-    <title>Switching a Working Copy</title>
+    <title>Cambiando la copia local de trabajo</title>
 
-    <para> The <command>svn switch</command> command transforms an
-      existing working copy into a different branch.  While this
-      command isn't strictly necessary for working with branches, it
-      provides a nice shortcut to users.  In our earlier example,
-      after creating your private branch, you checked out a fresh
-      working copy of the new repository directory.  Instead, you can
-      simply ask Subversion to change your working copy of
-      <filename>/calc/trunk</filename> to mirror the new branch
-      location:</para>
+    <para>El comando <command>svn switch</command> transforma una
+      copia local de trabajo existente en una rama diferente. Aunque
+      este comando no es estrictamente necesario para trabajar con
+      ramas, representa un buen atajo para los usuarios. En nuestro
+      ejemplo anterior, tras crear su rama privada, obtuvo una
+      nueva copia local del nuevo directorio del repositorio. En
+      su lugar, puede pedirle a Subversion que cambie su copia
+      local de <filename>/calc/trunk</filename> para que refleje
+      la localización de la nueva rama</para>
 
 <screen>
 $ cd calc
