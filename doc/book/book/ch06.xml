@@ -164,7 +164,7 @@
           <para>The per-user INI files</para>
         </listitem>
         <listitem>
-          <para>The pre-user Registry values</para>
+          <para>The per-user Registry values</para>
         </listitem>
         <listitem>
           <para>The system-wide INI files</para>
@@ -1730,7 +1730,7 @@ $ svn copy http://svn.example.com/repos/vendor/libcomplex/1.0  \
 $ cd working-copies/calc
 $ svn merge http://svn.example.com/repos/vendor/libcomplex/1.0      \
             http://svn.example.com/repos/vendor/libcomplex/current  \
-            http://svn.example.com/repos/calc/libcomplex
+            libcomplex
 &hellip; # resolve all the conflicts between their changes and our changes
 $ svn commit -m 'merging libcomplex-1.1 into the main branch'
 &hellip;
