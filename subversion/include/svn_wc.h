@@ -360,25 +360,27 @@ svn_error_t *svn_wc_make_delta (void *delta_src,
  * difference.
  */
 
-/* kff todo: does nothing and returns SVN_NO_ERROR, currently. */
-/* Return local value of PROPNAME for the file or directory PATH. */
-svn_error_t *svn_wc_get_path_prop (svn_string_t **value,
-                                   svn_string_t *propname,
-                                   svn_string_t *path);
-
-/* kff todo: does nothing and returns SVN_NO_ERROR, currently. */
-/* Return local value of PROPNAME for the directory entry PATH. */
-svn_error_t *svn_wc_get_dirent_prop (svn_string_t **value,
-                                     svn_string_t *propname,
-                                     svn_string_t *path);
-
-
 /* Given a PATH to a node in the working copy, return all of its
    properties in PROPS.  (If the node has no properties, an empty hash
    is returned.) */
 svn_error_t *svn_wc_prop_find (apr_hash_t **props,
                                svn_string_t *path,
                                apr_pool_t *pool);
+
+
+/* Return local VALUE of property NAME for the file or directory PATH.
+   If property name doesn't exist, VALUE is returned as NULL.  */
+svn_error_t *svn_wc_prop_get (svn_string_t **value,
+                              svn_string_t *name,
+                              svn_string_t *path,
+                              apr_pool_t *pool);
+
+/* Set a local value of property NAME to VALUE for the file or
+   directory PATH. */
+svn_error_t *svn_wc_prop_patch (svn_string_t *name,
+                                svn_string_t *value,
+                                svn_string_t *path,
+                                apr_pool_t *pool);
 
 
 #endif  /* SVN_WC_H */

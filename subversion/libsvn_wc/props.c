@@ -832,6 +832,91 @@ svn_wc_prop_find (apr_hash_t **props,
 
 
 
+
+
+svn_error_t *
+svn_wc_prop_get (svn_string_t **value,
+                 svn_string_t *name,
+                 svn_string_t *path,
+                 apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_hash_t *prophash;
+
+  /* Boy, this is an easy routine! */
+  err = svn_wc_prop_find (&prophash, path, pool);
+  if (err)
+    return
+      svn_error_quick_wrap
+      (err, "svn_wc_prop_get: failed to load props from disk.");
+
+  *value = apr_hash_get (prophash, name->data, name->len);
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
+svn_error_t *
+svn_wc_prop_patch (svn_string_t *name,
+                   svn_string_t *value,
+                   svn_string_t *path,
+                   apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_hash_t *prophash;
+  svn_string_t *prop_path, *base_path, *base_name;
+  enum svn_node_kind kind;
+
+  err = svn_wc_prop_find (&prophash, path, pool);
+  if (err)
+    return
+      svn_error_quick_wrap
+      (err, "svn_wc_prop_get: failed to load props from disk.");
+
+  /* Now we have all the properties in our hash.  Simply merge the new
+     property into it. */
+  apr_hash_set (prophash, name->data, name->len, value);
+  
+  /* TODO:  factorize this code somehow;  svn_wc_prop_find already
+     went through these shenanigans! */
+
+  /* Construct a path to the relevant property file */
+  err = svn_io_check_path (path, &kind, pool);
+  if (err) return err;
+
+  if (kind == svn_node_file)
+    {
+      svn_path_split (path, &base_path, &base_name,
+                      svn_path_local_style, pool);
+      prop_path = svn_wc__adm_path (base_path,
+                                    0, /* not tmp */
+                                    pool,
+                                    SVN_WC__ADM_PROPS,
+                                    base_name->data,
+                                    NULL);
+    }
+
+  else if (kind == svn_node_dir)
+    prop_path = svn_wc__adm_path (path,
+                                  0, /* not tmp */
+                                  pool,
+                                  SVN_WC__ADM_DIR_PROPS,
+                                  NULL);
+
+  /* end TODO */
+
+  /* Write the properties back out to disk. */
+  err = svn_wc__save_prop_file (prop_path, prophash, pool);
+  if (err) return err;
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
 
 /*
  * local variables:
