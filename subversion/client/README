@@ -155,28 +155,28 @@ newcomers:
 
 Summary: 
 
-   checkout | co
-   update   | up
-   commit   | ci
    add      | ad | new
-   rename   | mv
-   delete   | rm | del
-   copy     | cp
-   branch  /* implemented via copy, though may want to be its own command */
-   tag     /* implemented via copy, though may want to be its own command */
-   status   | st | stat
-   diff     | di | dif
-   rdiff
    annotate | an | ann
+   apply    | ap
+   branch  /* implemented via copy, though may want to be its own command */
+   checkout | co
+   commit   | ci
+   convert  | cv
+   copy     | cp
+   delete   | rm | del
+   diff     | di | dif
    import   | im | imp
    log      | lo
-   propset  | ps | pset
-   propget  | pg | pget
-   apply    | ap
    merge    | me
-   convert  | cv
-   sync     | sy
+   propget  | pg | pget
+   propset  | ps | pset
+   rdiff
+   rename   | mv
    repo
+   status   | st | stat
+   sync     | sy
+   tag     /* implemented via copy, though may want to be its own command */
+   update   | up
 
 NOTE: For now, I am not including Common Options in the usage
       statements for each subcommand -Fitz
