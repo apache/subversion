@@ -1205,6 +1205,52 @@ start_handler (void *userData, const char *eltname, const char **atts)
   return;
 }
 
+/* Process the "KILLME" file in ADM_ACCESS
+ */
+static svn_error_t *
+handle_killme (svn_wc_adm_access_t *adm_access,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               apr_pool_t *pool)
+{
+  const svn_wc_entry_t *thisdir_entry, *parent_entry;
+  svn_wc_entry_t tmp_entry;
+  SVN_ERR (svn_wc_entry (&thisdir_entry,
+                         svn_wc_adm_access_path (adm_access), adm_access,
+                         FALSE, pool));
+
+  /* Blow away the entire directory, and all those below it too. */
+  SVN_ERR (svn_wc_remove_from_revision_control (adm_access,
+                                                SVN_WC_ENTRY_THIS_DIR,
+                                                TRUE, /* destroy */
+                                                FALSE, /* no instant err */
+                                                cancel_func, cancel_baton,
+                                                pool));
+
+  /* If revnum of this dir is greater than parent's revnum, then
+     recreate 'deleted' entry in parent. */
+  {
+    const char *parent, *bname;
+    svn_wc_adm_access_t *parent_access;
+
+    svn_path_split (svn_wc_adm_access_path (adm_access), &parent, &bname, pool);
+    SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent, pool));
+    SVN_ERR (svn_wc_entry (&parent_entry, parent, parent_access, FALSE, pool));
+        
+    if (thisdir_entry->revision > parent_entry->revision)
+      {
+        tmp_entry.kind = svn_node_dir;
+        tmp_entry.deleted = TRUE;
+        tmp_entry.revision = thisdir_entry->revision;
+        SVN_ERR (svn_wc__entry_modify (parent_access, bname, &tmp_entry,
+                                       SVN_WC__ENTRY_MODIFY_REVISION
+                                       | SVN_WC__ENTRY_MODIFY_KIND
+                                       | SVN_WC__ENTRY_MODIFY_DELETED,
+                                       TRUE, pool));            
+      }
+  }
+  return SVN_NO_ERROR;
+}
 
 
 /*** Using the parser to run the log file. ***/
@@ -1277,46 +1323,7 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
   if (svn_wc__adm_path_exists (svn_wc_adm_access_path (adm_access), 0, pool,
                                SVN_WC__ADM_KILLME, NULL))
     {
-      const svn_wc_entry_t *thisdir_entry, *parent_entry;
-      svn_wc_entry_t tmp_entry;
-      SVN_ERR (svn_wc_entry (&thisdir_entry,
-                             svn_wc_adm_access_path (adm_access), adm_access,
-                             FALSE, pool));
-
-      /* Blow away the entire directory, and all those below it too. 
-         ### We pass NULL, NULL for cancel_func and cancel_baton below.
-         ### If they were available, it would be nice to use them. */
-      SVN_ERR (svn_wc_remove_from_revision_control (adm_access,
-                                                    SVN_WC_ENTRY_THIS_DIR,
-                                                    TRUE, /* destroy */
-                                                    FALSE, /* no instant err */
-                                                    NULL, NULL, pool));
-
-      /* If revnum of this dir is greater than parent's revnum, then
-         recreate 'deleted' entry in parent. */
-      {
-        const char *parent, *bname;
-        svn_wc_adm_access_t *parent_access;
-
-        svn_path_split (svn_wc_adm_access_path (adm_access), &parent,
-                        &bname, pool);
-        SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent,
-                                      pool));
-        SVN_ERR (svn_wc_entry (&parent_entry, parent, parent_access, FALSE,
-                               pool));
-        
-        if (thisdir_entry->revision > parent_entry->revision)
-          {
-            tmp_entry.kind = svn_node_dir;
-            tmp_entry.deleted = TRUE;
-            tmp_entry.revision = thisdir_entry->revision;
-            SVN_ERR (svn_wc__entry_modify (parent_access, bname, &tmp_entry,
-                                           SVN_WC__ENTRY_MODIFY_REVISION
-                                           | SVN_WC__ENTRY_MODIFY_KIND
-                                           | SVN_WC__ENTRY_MODIFY_DELETED,
-                                           TRUE, pool));            
-          }
-      }
+      SVN_ERR (handle_killme (adm_access, NULL, NULL, pool));
     }
   else
     {
@@ -1342,8 +1349,6 @@ svn_wc_cleanup (const char *path,
 {
   apr_hash_t *entries = NULL;
   apr_hash_index_t *hi;
-  const char *log_path = svn_wc__adm_path (path, 0, pool,
-                                           SVN_WC__ADM_LOG, NULL);
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t cleanup;
@@ -1389,25 +1394,20 @@ svn_wc_cleanup (const char *path,
         }
     }
 
-  /* As an attempt to maintain consitency between the decisions made in
-     this function, and those made in the access baton lock-removal code,
-     we use the same test as the lock-removal code even though it is,
-     strictly speaking, redundant. */
-  SVN_ERR (svn_wc__adm_is_cleanup_required (&cleanup, adm_access, pool));
-  if (cleanup)
+  if (svn_wc__adm_path_exists (svn_wc_adm_access_path (adm_access), 0, pool,
+                               SVN_WC__ADM_KILLME, NULL))
     {
-      /* Is there a log?  If so, run it. */
-      SVN_ERR (svn_io_check_path (log_path, &kind, pool));
-      if (kind == svn_node_file)
-        {
-          SVN_ERR (svn_wc__run_log (adm_access, diff3_cmd, pool));
-        }
-      else
-        {
-          return svn_error_createf
-            (SVN_ERR_WC_BAD_ADM_LOG, NULL,
-             "'%s' should be a file, but is not", log_path);
-        }
+      /* A KILLME indicates that the log has already been run */
+      SVN_ERR (handle_killme (adm_access, cancel_func, cancel_baton, pool));
+    }
+  else
+    {
+      /* In an attempt to maintain consitency between the decisions made in
+         this function, and those made in the access baton lock-removal code,
+         we use the same test as the lock-removal code. */
+      SVN_ERR (svn_wc__adm_is_cleanup_required (&cleanup, adm_access, pool));
+      if (cleanup)
+        SVN_ERR (svn_wc__run_log (adm_access, diff3_cmd, pool));
     }
 
   /* Cleanup the tmp area of the admin subdir, if running the log has not
