@@ -1,37 +1,205 @@
 @node Client
 @chapter Client
 
-The Subversion client is built on two libraries: one handles working
-copy management, the other communicates with the server.  The initial
-client is a Unix-style command-line tool (like standard CVS), but there
-is no reason why that has to be the only client.  The libraries are
-there to separate Subversion-specific functionality from user-interface
-decisions; a GUI client can use the libraries as easily as a
-command-line client can.
+The Subversion client is built on two libraries: one handles local
+working copy management, the other communicates with the server.  The
+initial client is a Unix-style command-line tool (like standard CVS),
+but there is no reason why that has to be the only client.  The
+libraries are there to separate Subversion-specific functionality from
+user-interface decisions; a GUI client can use the libraries as easily
+as a command-line client can.
 
 This chapter describes the two libraries, and the layout of working
 copies.
 
 @menu
-* What working copies look like
 * The working copy management library
-* The network access library
+* The repository access library
+* How working copies are arranged
 @end menu
-
-@c -----------------------------------------------------------------------
-@node What working copies look like
-@subsection What working copies look like
-
-fish
 
 @c -----------------------------------------------------------------------
 @node The working copy management library
 @subsection The working copy management library
 
-fish
+This library performs "offline" operations on the working copy.
+
+@itemize @bullet
+
+@item
+@code{find_locally_modified (path1, ...)}
+
+Returns a list of all locally modified files.  (It might be best just to
+call this skeleton_delta() and just have it return a content-free delta
+object).
+
+The PATHs are directories or files (usually the former), from which to
+start looking for modifications.  Why the vararg list?  To match the
+delta() function.  And why does delta() take multiple arguments?  Well,
+see the answer there.
+
+@item
+@code{delta(path1, ...)}
+
+Return a delta object representing modifications in the PATHs.  Takes
+multiple paths because you might want to do something like this:
+
+@example
+   $ svn commit foo/ bar/ baz/qux.c
+@end example
+
+The commit is atomic, and covers some but not necessarily all of the
+subdirectories available here.  Therefore, it should be possible to
+request a delta about any subset of the working tree.  Files outside
+that subset might also have been modified, but the delta will not
+include those changes.
+
+@item
+@code{add (path)}
+Add this file (i.e., tweak the administrative files appropriately).
+
+@item
+@code{remove (path)}
+Remove this file.
+
+@item
+@code{rename (old_path, new_path)}
+Etc.
+
+@item
+@code{read_prop (path)}
+Etc.
+
+@item
+@code{write_prop (path)}
+Etc.
+
+@end itemize
 
 @c -----------------------------------------------------------------------
-@node The network access library
-@section The network access library
+@node The repository access library
+@section The repository access library
 
-fish
+This library performs operations involving communication with the
+repository.
+
+@itemize @bullet
+
+@item
+@code{latest (path)}
+Report the latest version in the repository for PATH.
+
+@item
+@code{approve_delta (delta)}
+
+@item
+@code{commit_delta (delta)}
+
+@item
+@code{changes_between (path1, version1, version2}
+TODO: Unclear whether path relative to ver1 or ver2, and should we be
+using an entity number instead?  No, that hasn't been standard
+practice.  Think about the general question of client-visibility of
+those numbers...
+
+@item
+@code{log_message (version)}
+
+TODO: yes, but how does it know the repository?  Just using the current
+working directory seems kind of lame... :-)
+
+@item
+@code{find_repository_modified (path1, ...)}
+
+@item
+@code{}
+TODO: go through the cvs ops now...
+
+@item
+@code{update (path1, ...)}
+
+TODO: update() is complex because not everything has the same base
+revision; this interface is hiding a lot of complexity -- the client has
+to get a delta from the server that's appropriate for the particular set
+of versions the client has.  Look over server section, see what the
+server's interface is...
+
+@end itemize
+
+TODO: mention the combo ops from the yellow sheet...
+
+@c -----------------------------------------------------------------------
+@node How working copies are arranged
+@subsection How working copies are arranged
+
+As with CVS, Subversion working copies are simply directory trees with
+special administrative subdirectories, in this case named "SVN" instead
+of "CVS":
+
+@example
+
+                             myproj
+                             / | \
+               _____________/  |  \______________
+              /                |                 \
+            SVN               src                doc
+        ___/ | \___           /|\             ___/ \___
+       |     |     |         / | \           |         |
+      base  ...   ...       /  |  \     myproj.texi   SVN
+     / |                   /   |   \              ___/ | \___
+    /  |              ____/    |    \____        |     |     |
+  src doc            |         |         |      base  ...   ...
+                    SVN      foo.c     bar.c     |
+                ___/ | \___                      |
+               |     |     |                     |
+             base   ...   ...               myproj.texi
+          ___/ \___
+         |         |
+       foo.c     bar.c
+
+@end example
+
+Although often it would often be possible to deduce certain information
+by examining parent directories, this is avoided in favor of making each
+directory be as much a self-contained unit as possible (this will make
+it easier to mix subtrees of different projects later on).
+
+For example, immediately after a checkout the administrative information
+for the entire working tree @emph{could} be stored in one top-level
+file.  But the subdirectories also keep track of their own version and
+repository information; this would be necessary anyway once the user
+starts committing new versions of particular files, but Subversion does
+it right from the beginning, for consistency.
+
+The SVN subdir stores:
+
+@itemize @bullet
+
+@item
+A @dfn{base tree}, containing the pristine repository versions of the
+files and subdirectories there.  Note that subdirectories are stored
+shallowly, solely to record permission information.  The actual base
+versions of a subdir's files are stored in "SVN/base/" for that subdir.
+
+@item
+A @file{versions} file, the first entry of which records the version
+number of this directory (and, by implication, the version number of any
+files not otherwise mentioned in the file).  The remaining entries
+record version information for files here which are at some version
+other than the default.
+
+It may help to think of this file as the functional equivalent of the
+CVS/Entries file.  Like Entries, it also holds file metadata that can't
+always be stored in the filesystem (properties).
+
+@item
+A @file{changes} file, recording uncommitted changes to and from this
+directory (adds, removes, renames).
+
+@item
+A @file{lock} file, whose presence implies that a CVS client is
+currently operating on the adminstrative area.
+
+@item
+
+@end itemize
