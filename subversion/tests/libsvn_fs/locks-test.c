@@ -53,6 +53,50 @@
 
 /** The actual lock-tests called by `make check` **/
 
+
+
+/* Test that we can create a lock--nothing more.  */
+static svn_error_t *
+lock_only (const char **msg,
+            svn_boolean_t msg_only,
+            svn_test_opts_t *opts,
+            apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  const char *conflict;
+  svn_revnum_t newrev;
+  svn_fs_access_t *access;
+  svn_lock_t *mylock;
+  
+  *msg = "lock only";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Prepare a filesystem and a new txn. */
+  SVN_ERR (svn_test__create_any_fs (&fs, "test-repo-lock-only", 
+                                    opts->fs_type, pool));
+  SVN_ERR (svn_fs_begin_txn2 (&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+
+  /* Create the greek tree and commit it. */
+  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
+  SVN_ERR (svn_fs_commit_txn (&conflict, &newrev, txn, pool));
+
+  /* We are now 'bubba'. */
+  SVN_ERR (svn_fs_create_access (&access, "bubba", pool));
+  SVN_ERR (svn_fs_set_access (fs, access));
+
+  /* Lock /A/D/G/rho. */
+  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", "", 0, 0, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* Test that we can create, fetch, and destroy a lock.  It exercises
    each of the five public fs locking functions.  */
 static svn_error_t *
@@ -532,6 +576,7 @@ lock_break_steal_refresh (const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
+    SVN_TEST_PASS (lock_only),
     SVN_TEST_PASS (basic_lock),
     SVN_TEST_PASS (lock_credentials),
     SVN_TEST_PASS (final_lock_check),

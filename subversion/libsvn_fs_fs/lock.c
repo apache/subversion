@@ -25,6 +25,7 @@
 
 #include "apr_uuid.h"
 #include "apr_file_io.h"
+#include "apr_file_info.h"
 
 #include "lock.h"
 #include "tree.h"
@@ -47,27 +48,50 @@
 #define COMMENT_KEY "comment"
 
 
-static char *
-abs_path_to_lock_file (svn_fs_t *fs,
+
+static svn_error_t *
+merge_paths (char **result,
+             char *p1,
+             char *p2,
+             apr_pool_t *pool)
+{
+  apr_status_t status;
+  char *p2_rel = p2;
+  if (*p2 == '/')
+    p2_rel = p2 + 1;
+
+  status = apr_filepath_merge (result, p1, p2_rel, APR_FILEPATH_NATIVE, pool);
+  if (status)
+    return svn_error_wrap_apr (status, _("Can't merge paths '%s' and '%s'"),
+                               p1, p2);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+abs_path_to_lock_file (char **abs_path,
+                       svn_fs_t *fs,
                        const char *rel_path,
                        apr_pool_t *pool)
 {
-  char *abs_path;
-  abs_path = svn_path_join_many (pool, fs->path, LOCK_ROOT_DIR, 
-                                 LOCK_LOCK_DIR, rel_path, NULL);
-  return abs_path;
+  SVN_ERR (merge_paths (abs_path, fs->path, LOCK_ROOT_DIR, pool));
+  SVN_ERR (merge_paths (abs_path, *abs_path, LOCK_LOCK_DIR, pool));
+  SVN_ERR (merge_paths (abs_path, *abs_path, (char *)rel_path, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
-static char *
-abs_path_to_lock_token_file (svn_fs_t *fs,
+static svn_error_t *
+abs_path_to_lock_token_file (char **abs_path,
+                             svn_fs_t *fs,
                              const char *token,
                              apr_pool_t *pool)
 {
-  char *abs_path;
-  abs_path = svn_path_join_many (pool, fs->path, LOCK_ROOT_DIR, 
-                                 LOCK_TOKEN_DIR, token, NULL);
-  return abs_path;
+  SVN_ERR (merge_paths (abs_path, fs->path, LOCK_ROOT_DIR, pool));
+  SVN_ERR (merge_paths (abs_path, *abs_path, LOCK_TOKEN_DIR, pool));
+  SVN_ERR (merge_paths (abs_path, *abs_path, (char *)token, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -117,7 +141,7 @@ write_lock_to_file (svn_fs_t *fs,
   char *dir;
   /* ###file and pathnames will be limited by the native filesystem's
      encoding--could that pose a problem? */
-  abs_path = abs_path_to_lock_file (fs, lock->path, pool);
+  SVN_ERR (abs_path_to_lock_file (&abs_path, fs, lock->path, pool));
 
   /* Make sure that the directory exists before we create the lock file. */
   dir = svn_path_dirname (abs_path, pool);
@@ -169,7 +193,7 @@ write_lock_token_to_file (svn_fs_t *fs,
   apr_file_t *fd;
   char *abs_path, *dir;
 
-  abs_path = abs_path_to_lock_token_file (fs, lock->path, pool);
+  SVN_ERR (abs_path_to_lock_token_file (&abs_path, fs, lock->path, pool));
 
   /* Make sure that the directory exists before we create the lock file. */
   dir = svn_path_dirname (abs_path, pool);
@@ -216,7 +240,7 @@ delete_lock (svn_fs_t *fs,
   char *abs_path;
 
   /* Delete lock from locks area */
-  abs_path = abs_path_to_lock_file (fs, lock->path, pool);
+  SVN_ERR (abs_path_to_lock_file (&abs_path, fs, lock->path, pool));
   SVN_ERR (svn_io_remove_file (abs_path, pool));
 
   /* Prune directories on the way back */
@@ -229,7 +253,7 @@ delete_lock (svn_fs_t *fs,
     }
 
   /* Delete lock from tokens area */
-  abs_path = abs_path_to_lock_token_file (fs, lock->path, pool);
+  SVN_ERR (abs_path_to_lock_token_file (&abs_path, fs, lock->path, pool));
   SVN_ERR (svn_io_remove_file (abs_path, pool));
 
   return SVN_NO_ERROR;
@@ -281,7 +305,7 @@ read_lock_from_file (svn_lock_t **lock_p,
   const char *val;
   apr_finfo_t finfo;
 
-  abs_path = abs_path_to_lock_file(fs, path, pool);
+  SVN_ERR (abs_path_to_lock_file(&abs_path, fs, path, pool));
 
   status = apr_stat (&finfo, abs_path, APR_FINFO_TYPE, pool);
   /* If file doesn't exist, then there's no lock, so return immediately. */
