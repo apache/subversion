@@ -583,13 +583,13 @@ def build_tree_from_status(lines):
   else:
     repos_rev = '?'
     
-  rm = re.compile ('^(..)(.)(.)([^0-9]+)(\d+|-)\s+(.+)')
+  rm = re.compile ('^(..)(.)(.)   .   [^0-9]+(\d+|-)(.{23})(.+)')
   for line in lines:
     match = rm.search(line)
     if match and match.groups():
       if match.group(5) != '-': # ignore items that only exist on repos
         atthash = {'status' : match.group(1),
-                   'wc_rev' : match.group(5),
+                   'wc_rev' : match.group(4),
                    'repos_rev' : repos_rev}
         if match.group(2) != ' ':
           atthash['locked'] = match.group(2)
