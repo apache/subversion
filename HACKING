@@ -209,3 +209,12 @@ In addition to the GNU standards, Subversion uses these conventions:
 
      (This assumes the C file is located in subversion/subversion/,
      where svn-dev.el is.)
+
+
+
+Automated Tests:
+================
+
+For a description of how to use and add tests to Subversion's
+automated test framework, please read subversion/tests-common/README.
+
