@@ -125,26 +125,20 @@ directory, etc.
 
 HEADER has the form:
 
-    (KIND FLAG ...)
+    (KIND REV)
 
 where:
    - KIND indicates what sort of node this is,
-   - FLAG ... is a sequence of zero or more flags.
+   - REV indicates the revision in which this node first appeared.  An
+     empty string here means this node was created in a transaction that
+     is yet to be committed.  Once committed, REV is updated with the
+     new revision number.
 
 KIND must be one of the following:
    - "file", indicating that the node is a file (see FILE below).
    - "dir", indicating that the node is a directory (see DIR below).
    - "copy", indicating that the node is a copy of another node (see
      COPY below).
-
-A FLAG has one of the following forms:
-
-  (mutable PARENT-ID)
-    This is a mutable node, part of an unfinished transaction.
-    Mutable nodes always form trees, not DAGs.  PARENT-ID is this
-    node's parent; if PARENT-ID is the empty string, this node is the
-    root directory.  The filesystem uses the PARENT-ID to detect
-    attempts to create cyclic directory structures.
 
 Note that a node cannot change its kind from one revision to the next.
 A directory node is always a directory; a file node is always a file;
@@ -153,42 +147,6 @@ rather than in some revision-independent place, might suggest that it's
 possible for a node change kinds from revision to revision --- 10.3
 could be a directory, while 10.4 could be a file --- but Subversion
 does not allow this.
-
-   /* ### kff todo: might it be awfully swell to have a REV field in
-    * HEADER, recording the revision this node appeared in?  This
-    * would make it a lot easier to trace an individual resource's
-    * history.  Getting REV could be tricky, though, since we don't
-    * know the revision number until after the transaction is
-    * finalized... But that could be gotten around various ways, for
-    * example, indirection: record a key into some table somewhere,
-    * then after the transaction is complete, set the value at that
-    * key to the new revision number.  Or maybe there's a better way?
-    */
-
-    /* Oh, wait, I know.  Yes, we'll store REV in HEADER, as in
-     * 
-     *   (KIND REV FLAG ...)
-     * 
-     * and while a transaction is being created, new nodes have an
-     * empty-string atom for REV.  When the transaction is ready to be
-     * committed, we get a lock on the new revision number.  Once we
-     * have it, our goal is to take as little time as possible to
-     * finish the commit, to avoid interfering with other committers.
-     * (In fact, until now, this stage has been essentially constant
-     * time; we're going to have to give up that, but we can still
-     * keep the locking to an acceptable minimum.)
-     * 
-     * The new plan is, once we *have* the new revision number, we do
-     * a walk down the transaction's nodes, setting the REV fields in
-     * the HEADERs.  This walk is proportional to the size of the
-     * change -- it touches the same number of nodes as a comparison
-     * between the transaction and the preceding revision would, since
-     * whenever we see a REV field that's already set, we don't have
-     * to descend there.
-     *
-     * However, _first_ we're going to get the strings/representations
-     * change done, _then_ make this change.  One thing at a time.
-     */
 
 PROP-KEY is a key into the `representations' table (which see), whose
 value is a representation pointing to a string (see `strings' table)
@@ -261,7 +219,7 @@ source in this revision. The copy source may not be a mutable node.
 REPRESENTATIONS: where and how Subversion stores your data.
 
 Some parts of a node revision are essentially constant-length: for
-example, the KIND field and the FLAGS.  Other parts can have
+example, the KIND field and the REV.  Other parts can have
 arbitrarily varying length: property lists, file contents, and
 directory entry lists.  This variable-length data is often similar
 from one revision to the next, so Subversion stores just the deltas
@@ -319,9 +277,8 @@ where HEADER is
    (KIND FLAG ...)
 
 The KIND is "fulltext" or "delta", and currently the only FLAG is
-mutability, just as with node revisions.  KIND-SPECIFIC varies
-considerably depending on the kind of representation.  Here are the
-two forms currently recognized:
+"mutable".  KIND-SPECIFIC varies considerably depending on the kind of
+representation.  Here are the two forms currently recognized:
 
    (("fulltext" ...) KEY)
        The data is at KEY in the `strings' table.
@@ -341,7 +298,7 @@ perhaps in an ordinary Unix file.
 
 Let's work through an example node revision:
 
-   ((("file") FLAGS ...) PROP-KEY "2345")
+   (("file" REV) PROP-KEY "2345")
 
 The entry for key "2345" in `representations' is:
 
@@ -754,14 +711,14 @@ Node revisions:
           NODE-REVISION ::= FILE | DIR | COPY ;
                    FILE ::= (HEADER PROP-KEY DATA-KEY) ;
                     DIR ::= (HEADER PROP-KEY ENTRIES-KEY) ;
-                   COPY ::= (HEADER SOURCE-REVISION (NAME ...)) ;
+        (???)      COPY ::= (HEADER SOURCE-REVISION (NAME ...)) ;
                   ENTRY ::= (NAME ID) ;
                    NAME ::= atom ;
 
-                 HEADER ::= (KIND FLAG ...) ;
+                 HEADER ::= (KIND REV) ;
                    KIND ::= "file" | "dir" | "copy" ;
-                   FLAG ::= ("mutable" PARENT-ID) ;
-              PARENT-ID ::= "" | node.revision-id ;
+                    REV ::= "" | number ;
+
         SOURCE-REVISION ::= number ;
 
                PROP-KEY ::= atom ;
