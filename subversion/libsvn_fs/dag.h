@@ -236,7 +236,7 @@ svn_error_t *svn_fs__dag_dir_entries_hash (apr_hash_t **entries_p,
    created.  */
 svn_error_t *svn_fs__dag_set_entry (dag_node_t *node,
                                     const char *entry_name,
-                                    svn_fs_id_t *id,
+                                    const svn_fs_id_t *id,
                                     trail_t *trail);
 
 

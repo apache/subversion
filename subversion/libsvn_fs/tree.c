@@ -1054,6 +1054,14 @@ merge (const char **conflict_p,
    *
    * if (all 3 are directories)
    *   {
+   *     // Property changes may only be made to up-to-date
+   *     // directories, because once the client commits the prop
+   *     // change, it bumps the directory's revision, and therefore
+   *     // must be able to depend on there being no other changes to
+   *     // that directory in the repository.
+   *     if (source's property list differs from ancestor's)
+   *        conflict;
+   *
    *     for (each entry E in ancestor)
    *       {
    *         if (E exists in target and source)
@@ -1118,6 +1126,12 @@ merge (const char **conflict_p,
       apr_hash_t *s_entries, *t_entries, *a_entries;
       apr_hash_index_t *hi;
       
+#if 0
+      /* Ben, here ya go. */
+      if (source's property list differs from ancestor's)
+        conflict;
+#endif /* 0 */
+
       SVN_ERR (svn_fs__dag_dir_entries_hash (&s_entries, source, trail));
       SVN_ERR (svn_fs__dag_dir_entries_hash (&t_entries, target, trail));
       SVN_ERR (svn_fs__dag_dir_entries_hash (&a_entries, ancestor, trail));
@@ -1965,7 +1979,7 @@ txn_body_copy (void *baton,
       SVN_ERR (svn_fs__dag_set_entry 
                (to_parent_path->parent->node,
                 to_parent_path->entry,
-                (svn_fs_id_t *)svn_fs__dag_get_id (from_parent_path->node),
+                svn_fs__dag_get_id (from_parent_path->node),
                 trail));
     }
   else
@@ -1979,6 +1993,8 @@ txn_body_copy (void *baton,
          since the interface reports that this only works from
          immutable trees, but JimB has stated that this requirement
          need not be necessary in the future. */
+
+      abort ();
     }
 
   return SVN_NO_ERROR;
