@@ -717,11 +717,11 @@ def status_on_partially_nonrecursive_wc(sbox):
   svntest.main.run_svn(None, 'ci', '-m', 'log msg', rho)
 
   # Make the working copy weird in the right way, then try status -u.
-  svntest.main.safe_rmtree(wc_dir)
-  svntest.main.run_svn(None, 'co', '-r1', '-N', D_url, 'D')
+  D_wc = sbox.add_wc_path('D')
+  svntest.main.run_svn(None, 'co', '-r1', '-N', D_url, D_wc)
   saved_cwd = os.getcwd()
-  os.chdir('D')
   try:
+    os.chdir(D_wc)
     svntest.main.run_svn(None, 'up', '-r1', 'H')
     svntest.main.run_svn(None, 'st', '-u')
   finally:
