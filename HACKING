@@ -343,9 +343,15 @@ goes above the function definition in the .c file.
 For structure types, document each individual member of the structure
 as well as the structure itself.
 
-Read over the Subversion code to get an overview of how this
-documentation looks in practice; in particular, use the .h files in
-subversion/include/ as examples.
+Use the doxygen (www.doxygen.org) format for interface documentation.
+There is still some legacy documentation in Subversion that uses a
+different style, from before we adopted doxygen, but it will
+eventually be converted.  New documentation should start out in
+doxygen format.
+
+Read over the Subversion code to get an overview of how documentation
+looks in practice; in particular, see subversion/include/*.h for
+doxygen examples.
 
 
 
