@@ -123,3 +123,9 @@ already know about.)
      Justification: Python bindings will not build otherwise. Low risk.
      Votes:
        +1 brane
+
+
+   * Issue #1668
+     Rename 'svn_repos_authz_read_func_t' to 'svn_repos_authz_func_t'.
+     Justification: API stability; and, old name was overly restrictive.
+     Votes:
