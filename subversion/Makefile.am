@@ -13,6 +13,18 @@ SUBDIRS = libsvn_subr                \
           @APACHE_MODULES@           \
           tests
 
+DIST_SUBDIRS = client                           \
+	       libsvn_client                    \
+	       libsvn_delta                     \
+	       libsvn_fs                        \
+	       libsvn_ra_dav                    \
+	       libsvn_ra_local                  \
+	       libsvn_subr                      \
+	       libsvn_wc                        \
+	       mod_dav_svn                      \
+	       svnadmin                         \
+               tests
+
 ## Include these extra files when building `dist' target
 
 EXTRA_DIST = LICENSE                   \
