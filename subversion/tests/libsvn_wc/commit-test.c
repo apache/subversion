@@ -65,16 +65,6 @@ main (int argc, char *argv[])
       exit (1);
     }
 
-  /* Close the edit */
-  err = my_editor->close_edit (my_edit_baton);
-
-  if (err)
-    {
-      svn_handle_error (err, stderr, 0);
-      apr_destroy_pool (globalpool);
-      exit (1);
-    }
-
   apr_destroy_pool (globalpool);
   exit (0);
 }

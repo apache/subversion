@@ -123,9 +123,6 @@ pop_stack (struct stack_object **stack)
       new_top->next = NULL;
       *stack = new_top;
     }
-
-  else
-    *stack = NULL;  /* remove the last stackframe */
 }
 
 
@@ -384,7 +381,7 @@ do_postfix_text_deltas (apr_hash_t *filehash,
 static svn_error_t *
 process_subdirectory (svn_string_t *path, void *dir_baton,
                       svn_delta_edit_fns_t *editor, void *edit_baton,
-                      struct stack_object *stack,
+                      struct stack_object **stack,
                       apr_hash_t *filehash,
                       apr_pool_t *top_pool,
                       apr_pool_t *pool)                      
@@ -416,7 +413,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
                          "Can't find `.' entry in %s", path->data);
                               
   /* Push the current {path, baton, this_dir} to the top of the stack */
-  push_stack (&stack, path, dir_baton, this_dir, subpool);
+  push_stack (stack, path, dir_baton, this_dir, subpool);
 
 
   /**                           **/
@@ -461,7 +458,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
           if (! dir_baton)
             {
               err = do_dir_replaces (&dir_baton,
-                                     stack, editor, edit_baton, subpool);
+                                     *stack, editor, edit_baton, subpool);
               if (err) return err;
             }
           
@@ -528,7 +525,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
           if (! dir_baton)
             {
               err = do_dir_replaces (&dir_baton,
-                                     stack, editor, edit_baton, subpool);
+                                     *stack, editor, edit_baton, subpool);
               if (err) return err;
             }
           
@@ -551,7 +548,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
               if (! dir_baton)
                 {
                   err = do_dir_replaces (&dir_baton,
-                                         stack, editor, edit_baton, subpool);
+                                         *stack, editor, edit_baton, subpool);
                   if (err) return err;
                 }
               
@@ -586,7 +583,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
               if (! dir_baton)
                 {
                   err = do_dir_replaces (&dir_baton,
-                                         stack, editor, edit_baton, subpool);
+                                         *stack, editor, edit_baton, subpool);
                   if (err) return err;
                 }
               
@@ -630,7 +627,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
               if (! dir_baton)
                 {
                   err = do_dir_replaces (&dir_baton,
-                                         stack, editor, edit_baton, subpool);
+                                         *stack, editor, edit_baton, subpool);
                   if (err) return err;
                 }
           
@@ -679,14 +676,21 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
   
   /* If the current dir (or any of its children) reported changes to
      the editor, then we must remember to close the current dir baton. */
-  if (stack->baton)
+  if ((*stack)->baton)
     {
-      err = editor->close_directory (stack->baton);
+      err = editor->close_directory ((*stack)->baton);
       if (err) return err;
     }
 
+  /* If stack has no previous pointer, then we'd be removing the final
+     stackframe.  We don't want to do this, however;
+     svn_wc_crawl_local_mods() needs to examine it to determine if any
+     changes were ever made. */
+  if (! (*stack)->previous)
+    return SVN_NO_ERROR;
+
   /* Discard top of stack */
-  pop_stack (&stack);
+  pop_stack (stack);
 
   /* Free all memory used when processing this subdir. */
   apr_destroy_pool (subpool);
@@ -702,6 +706,15 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
 /*------------------------------------------------------------------*/
 /*** Public Interface:  svn_wc_crawl_local_mods() ***/
 
+/* Traverse a working copy beginning at ROOT_DIRECTORY, looking for
+   added, deleted, or modified files.  Communicate all local changes
+   to EDIT_FNS as they are discovered.
+
+   TOK represents an unique identifier for the commit-in-progress.
+   Each time a directory entry is committed, it is marked in an
+   `entries' file with this token.  If the commit succeeds, then the
+   client library is able to go back and bump version numbers on the
+   marked entries. */
 
 svn_error_t *
 svn_wc_crawl_local_mods (svn_string_t *root_directory,
@@ -720,7 +733,7 @@ svn_wc_crawl_local_mods (svn_string_t *root_directory,
      object onto the stack with PATH="root_directory" and BATON=NULL.  */
   err = process_subdirectory (root_directory, NULL,
                               edit_fns, edit_baton,
-                              stack, filehash, pool, pool);
+                              &stack, filehash, pool, pool);
   if (err) return err;
 
   /* The crawler has returned, so filehash potentially has some
@@ -730,7 +743,16 @@ svn_wc_crawl_local_mods (svn_string_t *root_directory,
      may be needed. */
   err = do_postfix_text_deltas (filehash, edit_fns, pool);
   if (err) return err;
-  
+
+  /* Have any edits been made at all?  We can tell by looking at the
+     top-level stackframe left over from the crawl; it might still
+     contain the root-dir baton.  If so, close the editor. */
+  if (stack->baton)
+    {
+      err = edit_fns->close_edit (edit_baton);
+      if (err) return err;
+    }
+
   return SVN_NO_ERROR;
 }
 
