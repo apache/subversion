@@ -465,6 +465,7 @@ def basic_cleanup(sbox):
 
   return svntest.actions.run_and_verify_status (wc_dir, expected_output_tree)
   
+
 #----------------------------------------------------------------------
 
 def basic_revert(sbox):
@@ -641,9 +642,221 @@ def basic_switch(sbox):
                                                expected_status_tree)
 
 
-  
 #----------------------------------------------------------------------
 
+def can_open_file(path):
+  try: open(path, 'r')
+  except IOError: return 0
+  return 1
+
+def can_cd_to_dir(path):
+  current_dir = os.getcwd();
+  try: os.chdir(path)
+  except OSError: return 0
+  os.chdir(current_dir)
+  return 1
+  
+def basic_delete(sbox):
+  "basic delete command"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # modify text of chi
+  chi_parent_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  chi_path = os.path.join(chi_parent_path, 'chi')
+  svntest.main.file_append(chi_path, 'added to chi')
+
+  # modify props of rho (file)
+  rho_parent_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  rho_path = os.path.join(rho_parent_path, 'rho')
+  svntest.main.run_svn(None, 'ps', 'abc', 'def', rho_path)
+
+  # modify props of F (dir)
+  F_parent_path = os.path.join(wc_dir, 'A', 'B')
+  F_path = os.path.join(F_parent_path, 'F')
+  svntest.main.run_svn(None, 'ps', 'abc', 'def', F_path)
+
+  # unversioned file
+  sigma_parent_path = os.path.join(wc_dir, 'A', 'C')
+  sigma_path = os.path.join(sigma_parent_path, 'sigma')
+  svntest.main.file_append(sigma_path, 'unversioned sigma')
+  
+  # unversioned directory
+  Q_parent_path = sigma_parent_path
+  Q_path = os.path.join(Q_parent_path, 'Q')
+  os.mkdir(Q_path)
+
+  # added directory hierarchy
+  X_parent_path =  os.path.join(wc_dir, 'A', 'B')
+  X_path = os.path.join(X_parent_path, 'X')
+  svntest.main.run_svn(None, 'mkdir', X_path)
+  X_child_path = os.path.join(X_path, 'xi')
+  svntest.main.file_append(X_child_path, 'added xi')
+  svntest.main.run_svn(None, 'add', X_child_path)
+
+  # check status
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  for item in status_list:
+    if item[0] == chi_path:
+      item[3]['status'] = 'M '
+    if item[0] == rho_path or item[0] == F_path:
+      item[3]['status'] = '_M'
+    if item[0] == sigma_path:
+      item[3]['status'] = '? '
+  status_list.append([X_path, None, {},
+                      {'status' : 'A ', 'wc_rev' : '0', 'repos_rev' : '1'}])
+  status_list.append([X_child_path, None, {},
+                      {'status' : 'A ', 'wc_rev' : '0', 'repos_rev' : '1'}])
+  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+  if svntest.actions.run_and_verify_status (wc_dir, expected_output_tree):
+    print "Status check 1 failed"
+    return 1
+
+  # 'svn rm' that should fail
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', chi_path)
+  if len (stderr_lines) == 0:
+    print "Delete should have failed due to text changes"
+    return 1
+
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', chi_parent_path)
+  if len (stderr_lines) == 0:
+    print "Delete should have failed due to child text changes"
+    return 1
+
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', rho_path)
+  if len (stderr_lines) == 0:
+    print "Delete should have failed due to file prop changes"
+    return 1
+
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', rho_parent_path)
+  if len (stderr_lines) == 0:
+    print "Delete should have failed due to child file prop changes"
+    return 1
+
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', F_path)
+  if len (stderr_lines) == 0:
+    print "Delete should have failed due to dir prop changes"
+    return 1
+
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', F_parent_path)
+  if len (stderr_lines) == 0:
+    print "Delete should have failed due to child dir prop changes"
+    return 1
+  
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', sigma_path)
+  if len (stderr_lines) == 0:
+    print "Delete should have failed due to unversioned file"
+    return 1
+
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm',
+                                                    sigma_parent_path)
+  if len (stderr_lines) == 0:
+    print "Delete should have failed due to unversioned child"
+    return 1
+
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', X_path)
+  if len (stderr_lines) == 0:
+    print "Delete should have failed due to added hierarchy"
+    return 1
+
+  # check status has not changed
+  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+  if svntest.actions.run_and_verify_status (wc_dir, expected_output_tree):
+    print "Status check 2 failed"
+    return 1
+
+  # 'svn rm' that should work
+  E_path =  os.path.join(wc_dir, 'A', 'B', 'E')
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', E_path)
+  if len (stderr_lines) != 0:
+    print "Delete failed"
+    return 1
+  
+  # 'svn rm --force' that should work
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', '--force',
+                                                    chi_parent_path)
+  if len (stderr_lines) != 0:
+    print "Forced delete 1 failed"
+    return 1
+
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', '--force',
+                                                    rho_parent_path)
+  if len (stderr_lines) != 0:
+    print "Forced delete 2 failed"
+    return 1
+
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', '--force',
+                                                    F_path)
+  if len (stderr_lines) != 0:
+    print "Forced delete 3 failed"
+    return 1
+
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', '--force',
+                                                    sigma_parent_path)
+  if len (stderr_lines) != 0:
+    print "Forced delete 4 failed"
+    return 1
+
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', '--force',
+                                                    X_path)
+  if len (stderr_lines) != 0:
+    print "Forced delete 5 failed"
+    return 1
+
+  # check status
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  for item in status_list:
+    if (item[0] == chi_parent_path
+        or item[0] == chi_path
+        or item[0] == os.path.join(chi_parent_path, 'omega')
+        or item[0] == os.path.join(chi_parent_path, 'psi')
+        or item[0] == rho_parent_path
+        or item[0] == rho_path
+        or item[0] == os.path.join(rho_parent_path, 'pi')
+        or item[0] == os.path.join(rho_parent_path, 'tau')
+        or item[0] == E_path
+        or item[0] == os.path.join(E_path, 'alpha')
+        or item[0] == os.path.join(E_path, 'beta')
+        or item[0] == F_path
+        or item[0] == sigma_parent_path):
+      item[3]['status'] = 'D '
+  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+  if svntest.actions.run_and_verify_status (wc_dir, expected_output_tree):
+    print "Status check 3 failed"
+    return 1
+
+  # check files have been removed
+  if can_open_file(rho_path):
+    print "Failed to remove text modified file"
+    return 1
+  if can_open_file(chi_path):
+    print "Failed to remove prop modified file"
+    return 1
+  if can_open_file(sigma_path):
+    print "Failed to remove unversioned file"
+    return 1
+  if can_open_file(os.path.join(E_path, 'alpha')):
+    print "Failed to remove unmodified file"
+    return 1
+
+  # check versioned dir is not removed
+  if not can_cd_to_dir(F_path):
+    print "Removed versioned dir"
+    return 1
+  
+  # check unversioned and added dirs has been removed
+  if can_cd_to_dir(Q_path):
+    print "Failed to remove unversioned dir"
+    return 1
+  if can_cd_to_dir(X_path):
+    print "Failed to remove added dir"
+    return 1
+
+
+#----------------------------------------------------------------------
 
 ########################################################################
 # Run the tests
@@ -660,6 +873,7 @@ test_list = [ None,
               basic_cleanup,
               basic_revert,
               basic_switch,
+              basic_delete,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.

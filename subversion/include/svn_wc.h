@@ -438,11 +438,15 @@ svn_error_t *svn_wc_copy (svn_stringbuf_t *src,
                           apr_pool_t *pool);
 
 
-/* Schedule PATH for deletion.  This does not actually delete PATH
-   from disk nor from the repository.  It is deleted from the
-   repository on commit.
+/* Schedule PATH for deletion, it will be deleted from the repository on
+   the next commit.  If PATH refers to a directory, then a recursive
+   deletion will occur.
 
-   If PATH refers to a directory, then a recursive deletion will occur.
+   This function immediately deletes all files, modified and unmodified,
+   versioned and unversioned from the working copy. It also immediately
+   deletes unversioned directories and directories that are scheduled to be
+   added.  Only versioned directories will remain in the working copy,
+   these get deleted by the update following the commit.
 
    For each path marked for deletion, NOTIFY_FUNC will be called with
    the NOTIFY_BATON and that path. The NOTIFY_FUNC callback may be

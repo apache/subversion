@@ -393,7 +393,7 @@ def update_ignores_added(sbox):
   # Schedule another file, say, 'gamma', for replacement.
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   svntest.main.run_svn(None, 'delete', gamma_path)
-  svntest.main.file_append(gamma_path, "\nThis is a new 'gamma' now.")
+  svntest.main.file_append(gamma_path, "This is a new 'gamma' now.")
   svntest.main.run_svn(None, 'add', gamma_path)
   
   # Now update.  "zeta at revision 0" should *not* be reported at all,
@@ -410,7 +410,7 @@ def update_ignores_added(sbox):
   my_greek_tree.append(['A/B/zeta', "This is the file 'zeta'.", {}, {}])
   for item in my_greek_tree:
     if item[0] == 'A/D/gamma':
-      item[1] = "This is the file 'gamma'.\nThis is a new 'gamma' now."
+      item[1] = "This is a new 'gamma' now."
     if item[0] == 'A/D/G/rho':
       item[1] = "This is the file 'rho'.\nMore stuff in rho."
   expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)

@@ -413,6 +413,12 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_CLIENT_DUPLICATE_COMMIT_URL,
               "Attempting to commit to a URL more than once")
 
+  SVN_ERRDEF (SVN_ERR_CLIENT_UNVERSIONED,
+              "Attempting restricted operation for unversioned resource")
+
+  SVN_ERRDEF (SVN_ERR_CLIENT_MODIFIED,
+              "Attempting restricted operation for modified resource")
+
   /* END libsvn_client errors */
 
 

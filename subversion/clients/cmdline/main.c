@@ -157,10 +157,14 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "delete", svn_cl__delete, {"del", "remove", "rm"},
     "Remove files and directories from version control.\n"
     "usage: svn delete [TARGET | URL]\n\n"
-    "    If run on a working-copy TARGET, item is scheduled for deletion\n"
-    "    upon next commit.  (The working item itself will only be removed\n"
-    "    if --force is passed.)  If run on URL, item is deleted from\n"
-    "    repository via an immediate commit.\n",
+    "  * If run on a working-copy TARGET, item is scheduled for deletion\n"
+    "    upon the next commit. Files, and directories that have not been\n"
+    "    committed, are immediately removed from the working copy. The\n"
+    "    command will not remove TARGETs that are, or contain, unversioned\n"
+    "    or modified items; use the --force option to override this\n"
+    "    behaviour.\n"
+    "  * If run on an URL, item is deleted from the repository via an\n"
+    "    immediate commit.\n",
     {svn_cl__force_opt, 'm', 'F', svn_cl__targets_opt,
      svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
   
@@ -244,7 +248,8 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "  SRC and DST can both be working copy (WC) paths or URLs:\n"
     "    WC  -> WC:   move and schedule for addition (with history)\n"
     "    URL -> URL:  complete server-side rename.\n",    
-    {'m', 'F', 'r', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
+    {'m', 'F', 'r', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
+     svn_cl__force_opt} },
   
   { "propdel", svn_cl__propdel, {"pdel"},
     "Remove property PROPNAME on files and directories.\n"
