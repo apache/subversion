@@ -1216,12 +1216,12 @@ make_xml_parser (svn_delta__digger_t *diggy)
 */
 
 svn_error_t *
-svn_delta_parse (svn_delta_read_fn_t *source_fn,
-                 void *source_baton,
-                 const svn_delta_walk_t *walker,
-                 void *walk_baton,
-                 void *dir_baton,
-                 apr_pool_t *pool)
+svn_XML_parse (svn_delta_read_fn_t *source_fn,
+               void *source_baton,
+               const svn_delta_walk_t *walker,
+               void *walk_baton,
+               void *dir_baton,
+               apr_pool_t *pool)
 {
   char buf[BUFSIZ];
   apr_off_t len;
