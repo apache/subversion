@@ -17,7 +17,17 @@ AC_DEFUN(SVN_CONFIG_NICE,[
 
 EOF
 
-  echo "exec \"[$]0\" \\" >> $1
+  case $host in
+    *-*-cygwin*)
+      dnl exec closes config.nice before configure attempts to rewrite it
+      EXEC_HACK="exec "
+      ;;
+    *)
+      EXEC_HACK=
+      ;;
+  esac
+
+  echo "$EXEC_HACK\"[$]0\" \\" >> $1
   for arg in "[$]@"; do
     case $arg in
       --no-create) ;;
