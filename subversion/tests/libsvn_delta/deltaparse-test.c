@@ -74,6 +74,13 @@ my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
   struct file_baton *fb = (struct file_baton *) baton;
   int i;
 
+  if (! window)
+    {
+      print_spaces (fb->dir_baton->edit_baton->indentation);
+      printf ("-- end of windows --\n");
+      return SVN_NO_ERROR;
+    }
+
   /* Delve into the vcdiff window and print the data. */
   for (i = 0; i < window->num_ops; i++)
     {
