@@ -94,8 +94,6 @@ BuildRequires:	%{db4_rpm}-devel >= %{db4_ver}
 BuildRequires:	texinfo
 BuildRequires:	zlib-devel
 BuildRequires:	autoconf2.5 >= 2.50
-BuildRequires:	bison
-BuildRequires:	flex
 BuildRequires:	libldap2-devel
 BuildRequires:	libsasl2-devel
 BuildRequires:  krb5-devel

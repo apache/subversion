@@ -52,27 +52,6 @@
 	</Configurations>
 	<Files>
 		<File
-			RelativePath="..\..\subversion\libsvn_subr\getdate.cw">
-			<FileConfiguration
-				Name="Debug|Win32">
-				<Tool
-					Name="VCCustomBuildTool"
-					Description="Creating getdate.c from getdate.cw."
-					CommandLine="copy ..\..\subversion\libsvn_subr\getdate.cw ..\..\subversion\libsvn_subr\getdate.c &gt; nul
-"
-					Outputs="..\..\subversion\libsvn_subr\getdate.c"/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32">
-				<Tool
-					Name="VCCustomBuildTool"
-					Description="Creating subversion\libsvn_subr\getdate.c from subversion\libsvn_subr\getdate.cw."
-					CommandLine="copy ..\..\subversion\libsvn_subr\getdate.cw ..\..\subversion\libsvn_subr\getdate.c &gt; nul
-"
-					Outputs="..\..\subversion\libsvn_subr\getdate.c"/>
-			</FileConfiguration>
-		</File>
-		<File
 			RelativePath="..\..\svn_private_config.h">
 			<FileConfiguration
 				Name="Debug|Win32"

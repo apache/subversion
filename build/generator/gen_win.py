@@ -83,8 +83,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     """
     Do some Windows specific setup
 
-    Copy getdate.c from getdate.cw
-
     To avoid some compiler issues,
     move mod_dav_svn/log.c to mod_dav_svn/davlog.c &
     move mod_dav_svn/repos.c to mod_dav_svn/davrepos.c
@@ -168,19 +166,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
             'openssl_path': self.openssl_path}
     self.write_with_template(os.path.join('build', 'win32', 'build_neon.bat'),
                              'build_neon.ezt', data)
-
-    # gstein wrote:
-    # > we don't want to munge the working copy since we might be
-    # > generating the Windows build files on a Unix box prior to
-    # > release. this copy already occurs in svn_config.dsp. (is that
-    # > broken or something?)
-    # No, but if getdate.c doesn't exist, it won't get pulled into the
-    # libsvn_subr.dsp (or .vcproj or whatever), so it won't get built.
-    getdate_c = os.path.join('subversion', 'libsvn_subr', 'getdate.c')
-    if not os.path.exists(getdate_c):
-      getdate_cw = getdate_c + 'w'
-      print 'Copied', getdate_cw, 'to', getdate_c
-      self.copyfile(getdate_c, getdate_cw)
 
     #Initialize parent
     gen_base.GeneratorBase.__init__(self, fname, verfname)

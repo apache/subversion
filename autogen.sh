@@ -70,23 +70,6 @@ cp $ltfile ac-helpers/libtool.m4
 # any old aclocal.m4 left over from prior build so it doesn't cause errors.
 rm -f aclocal.m4
 
-# Produce getdate.c from getdate.y.
-# Again, this means that "developers" who run autogen.sh need either
-# yacc or bison -- but not people who compile sourceballs, since `make
-# dist` will include getdate.c.
-echo "Creating getdate.c..."
-bison -o subversion/libsvn_subr/getdate.c subversion/libsvn_subr/getdate.y
-if [ $? -ne 0 ]; then
-    yacc -o subversion/libsvn_subr/getdate.c subversion/libsvn_subr/getdate.y
-    if [ $? -ne 0 ]; then
-        echo
-        echo "   Error:  can't find either bison or yacc."
-        echo "   One of these is needed to generate the date parser."
-        echo
-        exit 1
-    fi
-fi
-
 # Create the file detailing all of the build outputs for SVN.
 #
 # Note: this dependency on Python is fine: only SVN developers use autogen.sh

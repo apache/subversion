@@ -50,17 +50,17 @@ svn_error_t *svn_time_from_cstring (apr_time_t *when, const char *data,
 const char *svn_time_to_human_cstring (apr_time_t when, apr_pool_t *pool);
 
 
-/** Needed by @c getdate.y parser. */
-struct getdate_time {
-  time_t time;
-  short timezone;
-};
-
-/** The one interface in our @c getdate.y parser; convert
- * human-readable date @a text into a standard C @c time_t.  The 2nd
- * argument is unused; we always pass @c NULL.
+/** Convert a human-readable date @a text into an @c apr_time_t, using
+ * @a now as the current time and storing the result in @a result.
+ * The local time zone will be used to compute the appropriate GMT
+ * offset if @a text contains a local time specification.  Set @a
+ * matched to indicate whether or not @a text was parsed successfully.
+ * Perform any allocation in @a pool.  Return an error iff an internal
+ * error (rather than a simple parse error) occurs.
  */
-time_t svn_parse_date (char *text, struct getdate_time *now);
+svn_error_t *
+svn_parse_date (svn_boolean_t *matched, apr_time_t *result, const char *text,
+                apr_time_t now, apr_pool_t *pool);
 
 
 /** Sleep until the next second, to ensure that any files modified

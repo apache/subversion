@@ -251,18 +251,6 @@
 }
 
 /* -----------------------------------------------------------------------
-   the second argument to svn_parse_date is unused: always pass NULL
-*/
-
-%typemap(python,in,numinputs=0) struct getdate_time *now {
-    $1 = NULL;
-}
-
-/* ignore the related structure */
-/* ### hmm... this structure isn't namespace protected?! */
-%ignore getdate_time;
-
-/* -----------------------------------------------------------------------
    wrap some specific APR functionality
 */
 

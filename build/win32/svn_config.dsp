@@ -61,34 +61,6 @@ MTL=midl.exe
 # Name "__CONFIG__ - Win32 Debug"
 # Begin Source File
 
-SOURCE=..\..\subversion\libsvn_subr\getdate.cw
-
-!IF  "$(CFG)" == "__CONFIG__ - Win32 Release"
-
-# PROP Ignore_Default_Tool 1
-# Begin Custom Build - Creating subversion\libsvn_subr\getdate.c from subversion\libsvn_subr\getdate.cw.
-InputPath=..\..\subversion\libsvn_subr\getdate.cw
-
-"..\..\subversion\libsvn_subr\getdate.c" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	copy ..\..\subversion\libsvn_subr\getdate.cw ..\..\subversion\libsvn_subr\getdate.c > nul
-
-# End Custom Build
-
-!ELSEIF  "$(CFG)" == "__CONFIG__ - Win32 Debug"
-
-# Begin Custom Build - Creating getdate.c from getdate.cw.
-InputPath=..\..\subversion\libsvn_subr\getdate.cw
-
-"..\..\subversion\libsvn_subr\getdate.c" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	copy ..\..\subversion\libsvn_subr\getdate.cw ..\..\subversion\libsvn_subr\getdate.c > nul
-
-# End Custom Build
-
-!ENDIF 
-
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\svn_private_config.h
 # PROP Exclude_From_Build 1
 # End Source File
