@@ -409,8 +409,8 @@ end;
 
 // ****************************************************************************
 // Name:    ShFolderDllNotFound
-// Purpose: Checks if FILE_SHFOLDERDLL don't excists.
-//          Returns True if Yes and False if No
+// Purpose: Checks if FILE_SHFOLDERDLL does not exist.
+//          Returns True if missing and False if present.
 function ShFolderDllNotFound(): Boolean;
 var
     sSysDir: String;
@@ -466,8 +466,8 @@ end;
 
 // ****************************************************************************
 // Name:    VCRuntimeNotFound
-// Purpose: Checks if FILE_MSVCPDLL don't excists.
-//          Returns True if Yes and False if No
+// Purpose: Checks if FILE_MSVCPDLL does not exist.
+//          Returns True if missing and False if present.
 function VCRuntimeNotFound(): Boolean;
 var
     sSysDir: String;
