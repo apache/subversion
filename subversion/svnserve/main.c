@@ -106,26 +106,6 @@ static apr_status_t redirect_stdout(void *arg)
   return apr_file_dup2(out_file, err_file, pool);
 }
 
-/* "Arguments" passed from the main thread to the connection thread */
-struct serve_thread_t {
-  const char *root;
-  svn_ra_svn_conn_t *conn;
-  svn_boolean_t read_only;
-  apr_pool_t *pool;
-};
-
-#if APR_HAS_THREADS
-static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
-{
-  struct serve_thread_t *d = data;
-
-  svn_error_clear(serve(d->conn, d->root, FALSE, d->read_only, d->pool));
-  svn_pool_destroy(d->pool);
-
-  return NULL;
-}
-#endif
-
 int main(int argc, const char *const *argv)
 {
   svn_boolean_t listen_once = FALSE, daemon_mode = FALSE, tunnel_mode = FALSE;
@@ -142,11 +122,6 @@ int main(int argc, const char *const *argv)
   apr_status_t status;
   svn_ra_svn_conn_t *conn;
   apr_proc_t proc;
-#if APR_HAS_THREADS
-  apr_threadattr_t *tattr;
-  apr_thread_t *tid;
-  struct serve_thread_t *thread_data;
-#endif
   enum connection_handling_mode handling_mode = CONNECTION_DEFAULT;
 
   /* Initialize the app. */
@@ -207,6 +182,11 @@ int main(int argc, const char *const *argv)
       svn_error_clear(serve(conn, root, tunnel_mode, read_only, pool));
       exit(0);
     }
+
+#if APR_HAS_THREADS
+  /* Initialize the threaded server */
+  init_threads(pool);
+#endif
 
   status = apr_socket_create(&sock, APR_INET, SOCK_STREAM, pool);
   if (status)
@@ -306,37 +286,9 @@ int main(int argc, const char *const *argv)
           break;
 
         case connection_mode_thread:
-          /* Create a detached thread for each connection.  That's not a
-             particularly sophisticated strategy for a threaded server, it's
-             little different from forking one process per connection. */
+          /* Pass the request off to a worker thread. */
 #if APR_HAS_THREADS
-          status = apr_threadattr_create(&tattr, connection_pool);
-          if (status)
-            {
-              fprintf(stderr, "Can't create threadattr: %s\n",
-                      apr_strerror(status, errbuf, sizeof(errbuf)));
-              exit(1);
-            }
-          status = apr_threadattr_detach_set(tattr, 1);
-          if (status)
-            {
-              fprintf(stderr, "Can't set detached state: %s\n",
-                      apr_strerror(status, errbuf, sizeof(errbuf)));
-              exit(1);
-            }
-          thread_data = apr_palloc(connection_pool, sizeof(*thread_data));
-          thread_data->conn = conn;
-          thread_data->root = root;
-          thread_data->read_only = read_only;
-          thread_data->pool = connection_pool;
-          status = apr_thread_create(&tid, tattr, serve_thread, thread_data,
-                                     connection_pool);
-          if (status)
-            {
-              fprintf(stderr, "Can't create thread: %s\n",
-                      apr_strerror(status, errbuf, sizeof(errbuf)));
-              exit(1);
-            }
+          serve_thread(conn, root, read_only, pool, connection_pool);
 #endif
           break;
 
