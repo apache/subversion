@@ -1429,65 +1429,111 @@ updating the ra_svn code:
      keywords would be too hard to manage.
 
 
-Stabilizing a release branch
-============================
+Stabilizing and maintaining releases
+====================================
 
-[For clarity, this section is written specifically for the 1.0
-release.  The same principles apply to future releases; it may be
-appropriate to generalize this section after 1.0 is out.]
+Minor and major number releases go through a stabilization period
+before release, and remain in maintenance (bugfix) mode after release.
+To start the release process, we create a "A.B.x" branch based on the
+previous release, for example:
 
-First, we create a "1.0-stabilization" branch based on the last
-interim release:
+   $ svn cp http://svn.collab.net/repos/svn/tags/A.(B-1).C \
+            http://svn.collab.net/repos/svn/branches/A.B.x
 
-   $ svn cp http://svn.collab.net/repos/svn/tags/0.35.0 \
-            http://svn.collab.net/repos/svn/branches/1.0-stabilization
+The main difference between "stabilization" and "maintenance" is that
+the stabilization involves a four week soak period before the first
+release of the new line (A.B.0).  The soak period is to make sure that
+no surprise showstopper bugs are lurking.  A "showstopper" means a
+non-edge-case crash, a data corruption problem, a major security hole,
+or something equally serious.  In the unlikely event that the full
+committers cannot agree on whether a bug is showstopper, they vote.
 
-Trunk development can continue normally, since changes on trunk do not
-affect the 1.0 release unless explicitly merged in.  However, we try
-to avoid major new initiatives on trunk while we're stabilizing 1.0.
-As developers must still review trunk commits, the more we can reduce
-that distraction, the more attention we can devote to the release
-line.
+After the first release, subsequent releases usually do not require a
+four week soak, because only conservative changes go into the line.
 
-Certain trunk changes are desirable: those that are meant to be merged
-into the 1.0-stabilization branch.  The preferred way to get a change
-into the release is to make the change on trunk, then port it over.
-This is partly to ensure that the change will be in future Subversions
-as well as in the upcoming release; but also, it gives the developers
-something concrete to vote on for inclusion in the release line.
+[TBD: We may want some sort of pretest tarball arrangement, however,
+and may also want to say more about API stabilization and setting
+release dates.  Those should be dev list threads first; I'm just
+mentioning them here so they're not conspicuous by their absence.]
 
-A change needs three +1 votes from full committers, and no vetoes, to
-go into the 1.0-stabilization branch.  We use the STATUS file in the
-top level of the release branch for recording votes.  Each item is a
-short identifying string (a revision number, an issue number, etc), a
-brief description of the change, an at-most-one-line justification of
-why it should be in 1.0, ending with the votes themselves.  For
-example:
+Certain kinds of commits can into A.B.0 without restarting the soak
+period, or into a later release without affecting the testing schedule
+or release date:
+
+   Without voting:
+     - Changes to the STATUS file.
+     - Documentation file changes, including to the book, README,
+       INSTALL, HACKING, www/, etc. 
+     - Changes that are a normal part of release bookkeeping, for
+       example, the steps listed in notes/releases.txt.
+     - Changes to dist.sh by, or approved by, the release manager.
+   With voting:
+     - Anything affecting only tools/, packages/, or bindings/.
+     - Doc fixes in core code header or source files.
+
+Core code changes, of course, require voting, and restart the soak or
+test period, since otherwise the change could be undertested.
+
+The voting system works like this:
+
+A change to the A.B.x line must be first proposed in the A.B.x/STATUS
+file.  Each proposal consists of a short identifying block (e.g., the
+revision number of a trunk or related-line commit, or perhaps an issue
+number), a brief description of the change, an at-most-one-line
+justification of why it should be in A.B.x, perhaps some
+notes/concerns, and finally the votes.  The notes and concerns are
+meant to be brief summaries to help a reader get oriented; please
+don't use the STATUS file for actual discussion, use dev@ instead.
+
+Here's an example, probably as complex as an entry would ever get:
 
    * r98765 (issue #56789)
-     Use an opaque type for svn_ra_get_ansible(), instead of void *.
-     Justification: API stability
-     See mailing list thread http://...
+     Make commit editor take a closure object for future mindreading.
+     Justification: API stability, as prep for future enhancement.
+     Notes: There was consensus on the desirability of this feature in
+       the near future; see thread at http://... (Message-Id: blahblah).
+     Concerns: Vetoed by jerenkrantz due to privacy concerns with the
+       implementation; see thread at http://... (Message-Id: blahblah)
+     Votes:
+       +1: ghudson, bliss
+       +0: cmpilato
+       -0: gstein
+       -1: jerenkrantz
 
-     Votes for merging into 1.0:
-       +1 ghudson
-       +1 bliss
+A change needs three +1 votes from full committers (or partial
+committers for the involved areas), and no vetoes, to go into A.B.x.
 
-We don't use the issue tracker for voting, for various reasons.  A
-file is more browseable than the issue tracker, it allows the votes to
-be grouped together for easy counting, it automatically limits the
-vote to committers, and it versions the votes in case people change
-their minds.  Also, it separates the question of whether something
-should be fixed from whether that fix should go into 1.0.  An issue is
-about recording the existence of a bug, feature request, whatever, and
-getting the change into the main development line.  The STATUS file is
-about whether that change should go into the release line as well --
-which is why the STATUS file for a release lives on its branch, not on
-the trunk.
+If you cast a veto (i.e. -1), please state the reason in the concerns
+field, and include a url / message-id for the list discussion if any.
+You can go back and add the link later if the thread isn't available
+at the time you commit the veto.
 
-Changes that are a normal part of release bookkeeping (for example,
-the steps listed in notes/releases.txt) don't need to be listed in
-STATUS nor voted on, of course.
+Voting +1 on a change doesn't just mean you approve of it in principle.
+It means you have thoroughly reviewed the change, and find it correct
+and as nondisruptive as possible.  When it is committed to the release
+branch, the log message will include the names of all who voted for
+it, as well as the original author and the person making the commit.
+All of these people are considered equally answerable for bugs.
 
-The STATUS file is not the place for discussion; use the dev mailing
-list for that, and have the file point to the thread.
+If you've reviewed a patch, and like it but have some reservations,
+you can write "+1 (concept)" and then ask questions on the list about
+your concerns.  You can write "+0" if you like the general idea but
+haven't reviewed the patch carefully.  Neither of these votes counts
+toward the total, but they can be useful for tracking down people who
+are following the change and might be willing to spend more time on
+it.
+
+There is a somewhat looser voting system for the tools/, packages/,
+and bindings/ areas, because they are not core code, and because there
+are usually fewer experts available to review changes there.  A change
+in these areas can go in with a +1 from a full committer or a partial
+committer for that area, at least one +0 or "concept +1" from any
+other committer, and no vetoes.  (If a change affects the build
+system, however, it is considered a core change, and needs three
++1's.)  Use your judgment and don't review changes unless you have
+some competence to do so, of course.  The goal is to get at least two
+pairs of eyes on the change, without demanding that every reviewer
+have the same amount of expertise as the area maintainer.  This way
+one can review for general sanity, accurate comments, obvious
+mistakes, etc, without being forced to assert "Yes, I understand these
+changes in every detail and have tested them."
