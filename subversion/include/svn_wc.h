@@ -132,7 +132,7 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_THIS_DIR  ""
 
 
-/* Fill in *ENTRY according to PATH. */
+/* Get the ENTRY structure for PATH, allocating from POOL. */
 svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
                            svn_string_t *path,
                            apr_pool_t *pool);
