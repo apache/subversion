@@ -14,10 +14,6 @@
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  * @endcopyright
- *
- * @file svn_ra.h
- * @brief structures related to repository access, private to libsvn_ra and the
- * RA implementation libraries.
  */
 
 /* This file is a template for a compatibility wrapper for an RA library.
