@@ -52,10 +52,6 @@
         </thead>
         <tbody>
           <row>
-            <entry>libsvn_auth</entry> 
-            <entry>Authentication functionality</entry>
-          </row>
-          <row>
             <entry>libsvn_client</entry> 
             <entry>Primary interface for client programs</entry>
           </row>
