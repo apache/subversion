@@ -40,18 +40,18 @@ build_info_from_dirent (svn_info_t **info,
                         const char *repos_root,
                         apr_pool_t *pool)
 {
-  svn_info_t *i = apr_pcalloc (pool, sizeof(*i));
+  svn_info_t *tmpinfo = apr_pcalloc (pool, sizeof(*tmpinfo));
 
-  i->URL                  = URL;
-  i->rev                  = revision;
-  i->kind                 = dirent->kind;
-  i->repos_UUID           = repos_UUID;
-  i->repos_root_URL       = repos_root;
-  i->last_changed_rev     = dirent->created_rev;
-  i->last_changed_date    = dirent->time;
-  i->last_changed_author  = dirent->last_author;;
-  
-  *info = i;
+  tmpinfo->URL                  = URL;
+  tmpinfo->rev                  = revision;
+  tmpinfo->kind                 = dirent->kind;
+  tmpinfo->repos_UUID           = repos_UUID;
+  tmpinfo->repos_root_URL       = repos_root;
+  tmpinfo->last_changed_rev     = dirent->created_rev;
+  tmpinfo->last_changed_date    = dirent->time;
+  tmpinfo->last_changed_author  = dirent->last_author;;
+
+  *info = tmpinfo;
   return SVN_NO_ERROR;
 }
 
@@ -63,30 +63,30 @@ build_info_from_entry (svn_info_t **info,
                        const svn_wc_entry_t *entry,
                        apr_pool_t *pool)
 {
-  svn_info_t *i = apr_pcalloc (pool, sizeof(*i));
+  svn_info_t *tmpinfo = apr_pcalloc (pool, sizeof(*tmpinfo));
 
-  i->URL                  = entry->url;
-  i->rev                  = entry->revision;
-  i->kind                 = entry->kind;
-  i->repos_UUID           = entry->uuid;
-  i->last_changed_rev     = entry->cmt_rev;
-  i->last_changed_date    = entry->cmt_date;
-  i->last_changed_author  = entry->cmt_author;
-  
+  tmpinfo->URL                  = entry->url;
+  tmpinfo->rev                  = entry->revision;
+  tmpinfo->kind                 = entry->kind;
+  tmpinfo->repos_UUID           = entry->uuid;
+  tmpinfo->last_changed_rev     = entry->cmt_rev;
+  tmpinfo->last_changed_date    = entry->cmt_date;
+  tmpinfo->last_changed_author  = entry->cmt_author;
+
   /* entry-specific stuff */
-  i->has_wc_info          = TRUE;
-  i->schedule             = entry->schedule;
-  i->copyfrom_url         = entry->copyfrom_url;
-  i->copyfrom_rev         = entry->copyfrom_rev;
-  i->text_time            = entry->text_time;
-  i->prop_time            = entry->prop_time;
-  i->checksum             = entry->checksum;
-  i->conflict_old         = entry->conflict_old;
-  i->conflict_new         = entry->conflict_new;
-  i->conflict_wrk         = entry->conflict_wrk;
-  i->prejfile             = entry->prejfile;
+  tmpinfo->has_wc_info          = TRUE;
+  tmpinfo->schedule             = entry->schedule;
+  tmpinfo->copyfrom_url         = entry->copyfrom_url;
+  tmpinfo->copyfrom_rev         = entry->copyfrom_rev;
+  tmpinfo->text_time            = entry->text_time;
+  tmpinfo->prop_time            = entry->prop_time;
+  tmpinfo->checksum             = entry->checksum;
+  tmpinfo->conflict_old         = entry->conflict_old;
+  tmpinfo->conflict_new         = entry->conflict_new;
+  tmpinfo->conflict_wrk         = entry->conflict_wrk;
+  tmpinfo->prejfile             = entry->prejfile;
 
-  *info = i;
+  *info = tmpinfo;
   return SVN_NO_ERROR;
 }
 
