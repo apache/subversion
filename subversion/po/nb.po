@@ -5,7 +5,7 @@
 # Dictionary:
 #
 # '' - «»
-# ancestor - stamfar
+# ancestor - opprinnelse
 # checkout - hente ut, uthenting
 # client - klient
 # commit - sende inn, innsending
@@ -3595,13 +3595,13 @@ msgstr "Konflikt i «%s»"
 #: libsvn_fs_fs/tree.c:1243 libsvn_fs_fs/tree.c:1732
 msgid "Bad merge; ancestor, source, and target not all in same fs"
 msgstr ""
-"Feilaktig fletting; stamfar, kilde og mål er ikke alle i det samme "
+"Feilaktig fletting; opprinnelse, kilde og mål er ikke alle i det samme "
 "filsystemet"
 
 #: libsvn_fs_base/tree.c:1926 libsvn_fs_fs/tree.c:1259
 #, c-format
 msgid "Bad merge; target '%s' has id '%s', same as ancestor"
-msgstr "Feilaktig fletting; målet «%s» har ID «%s», samme som stamfar"
+msgstr "Feilaktig fletting; målet «%s» har ID «%s», samme som opprinnelse"
 
 #: libsvn_fs_base/tree.c:2546
 #, c-format
