@@ -135,8 +135,9 @@ svn_error_t *svn_client__prev_log_path (const char **prev_path_p,
  *
  * @a ctx is the client context baton.
  *
- * @a ra_lib and @a ra_session are required; they represent an
- * already-open RA session to @a path's url.
+ * @a ra_lib is required; it represents an already-open RA library.  A
+ * temporary RA session is created and destroyed for the purpose of
+ * this function.
  *
  * Use @a pool for all allocations.
  */
@@ -150,7 +151,6 @@ svn_client__repos_locations (const char **start_url,
                              const svn_opt_revision_t *start,
                              const svn_opt_revision_t *end,
                              svn_ra_plugin_t *ra_lib,
-                             void *ra_session,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
