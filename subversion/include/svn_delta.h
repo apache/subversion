@@ -218,6 +218,19 @@ void svn_txdelta (svn_txdelta_stream_t **stream,
                   apr_pool_t *pool);
 
 
+/** Return a writable stream which, when fed target data, will send
+ * delta windows to @a handler/@a handler_baton which transform the
+ * data in @a source to the target data.  As usual, the window handler
+ * will receive a NULL window to signify the end of the window stream.
+ * The stream handler functions will read data from @a source as
+ * necessary.
+ */
+svn_stream_t *svn_txdelta_target_push (svn_txdelta_window_handler_t handler,
+                                       void *handler_baton,
+                                       svn_stream_t *source,
+                                       apr_pool_t *pool);
+
+
 /** Send the contents of @a string to window-handler @a handler/@a baton. 
  * This is effectively a 'copy' operation, resulting in delta windows that 
  * make the target equivalent to the value of @a string.
