@@ -102,17 +102,13 @@ svn_client_commit (svn_string_t *path,
   apr_file_t *dst = NULL; /* old habits die hard */
   svn_delta_edit_fns_t *editor;
   void *edit_baton;
-
-  /* Step 1: make a unique ID for this commit. */
-#if 0  /* APR's uuid support isn't quite done yet. */
   apr_uuid_t uuid;
   char uuid_buf[APR_UUID_FORMATTED_LENGTH + 1];
+
+  /* Step 1: make a unique ID for this commit. */
   apr_get_uuid (&uuid);
   apr_format_uuid (uuid_buf, &uuid);
   tok = svn_string_create (uuid_buf, pool);
-#else
-  tok = svn_string_create (apr_psprintf (pool, "%ld", apr_now()), pool);
-#endif /* 0 */
 
   /* Step 2: look for local mods and send 'em out. */
   apr_err = apr_open (&dst, xml_dst->data,
