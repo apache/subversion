@@ -70,7 +70,8 @@ delta_window_print (const svn_txdelta_window_t *window,
 
   fprintf (stream, "%s: (WINDOW %" APR_OFF_T_FMT, tag, len);
   fprintf (stream,
-           " (%" APR_OFF_T_FMT " %" APR_SIZE_T_FMT " %" APR_SIZE_T_FMT ")",
+           " (%" SVN_FILESIZE_T_FMT
+           " %" APR_SIZE_T_FMT " %" APR_SIZE_T_FMT ")",
            window->sview_offset, window->sview_len, window->tview_len);
   for (i = 0; i < window->num_ops; ++i)
     {
