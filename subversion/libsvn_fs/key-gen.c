@@ -1,4 +1,4 @@
-/* convert-size.c --- implementation of size/string conversion functions
+/* key-gen.c --- manufacturing sequential keys for some db tables
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -12,7 +12,7 @@
  */
 
 #include "apr.h"
-#include "convert-size.h"
+#include "key-gen.h"
 
 
 /* Converting text to numbers.  */
@@ -105,6 +105,74 @@ svn_fs__putsize (char *data, apr_size_t len, apr_size_t value)
 
   return i;
 }
+
+
+
+/*** Keys for reps and strings. ***/
+
+static const char next_key_key[] = "next-key";
+
+
+void
+svn_fs__next_key (const char *this, apr_size_t *len, char *next)
+{
+  apr_size_t olen = *len;     /* remember the first length */
+  int i = olen - 1;           /* initial index; we work backwards */
+  char c;                     /* current char */
+  int carry = 1;              /* boolean: do we have a carry or not?
+                                 We start with a carry, because we're
+                                 incrementing the number, after all. */
+  
+  /* Leading zeros are not allowed, except for the string "0". */
+  if ((*len > 1) && (this[0] == '0'))
+    {
+      *len = 0;
+      return;
+    }
+  
+  for (i = (olen - 1); i >= 0; i--)
+    {
+      c = this[i];
+
+      /* Validate as we go. */
+      if (! (((c >= '0') && (c <= '9')) || ((c >= 'a') && (c <= 'z'))))
+        {
+          *len = 0;
+          return;
+        }
+
+      if (carry)
+        {
+          if (c == 'z')
+            next[i] = '0';
+          else
+            {
+              carry = 0;
+              
+              if (c == '9')
+                next[i] = 'a';
+              else
+                next[i] = c + 1;
+            }
+        }
+      else
+        next[i] = c;
+    }
+
+  /* Do all possible null terminations in advance... */
+  next[olen] = '\0';
+  next[olen + 1] = '\0';
+
+  /* ... then handle any leftover carry. */
+  if (carry)
+    {
+      for (i = (olen - 1); i > 0; i--)
+        next[i + 1] = next[i];
+      next[0] = '1';
+      *len = olen + 1;
+    }
+}
+
 
 
 

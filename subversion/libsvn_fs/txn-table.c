@@ -14,7 +14,7 @@
 #include "db.h"
 #include "fs.h"
 #include "err.h"
-#include "convert-size.h"
+#include "key-gen.h"
 #include "dbt.h"
 #include "proplist.h"
 #include "skel.h"
