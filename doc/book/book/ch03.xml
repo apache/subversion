@@ -140,7 +140,7 @@ Committed revision 3.
           <term>COMMITTED</term>
           <listitem>
             <para>The last revision in which an item changed before (or
-              at) BASE.</para>
+              at) <literal>BASE</literal>.</para>
           </listitem>
         </varlistentry>
         
@@ -149,7 +149,7 @@ Committed revision 3.
           <listitem>
             <para>The revision just <emphasis>before</emphasis> the last
               revision in which an item changed.  (Technically,
-              COMMITTED - 1.)</para>
+              <literal>COMMITTED</literal> - 1.)</para>
           </listitem>
         </varlistentry>
         
@@ -654,11 +654,11 @@ Updated to revision 2.
               you commit your changes, <filename>foo</filename> will
               be removed from your working copy and the repository.
               <footnote><para>Of course, nothing is ever totally
-              deleted from the repository&mdash;just from the HEAD of
-              the repository.  You can get back anything you delete by
-              checking out (or updating your working copy) a revision
-              earlier than the one in which you deleted it.</para>
-              </footnote></para>
+              deleted from the repository&mdash;just from the
+              <literal>HEAD</literal> of the repository.  You can get
+              back anything you delete by checking out (or updating
+              your working copy) a revision earlier than the one in
+              which you deleted it.</para> </footnote></para>
           </listitem>
         </varlistentry>
 
@@ -1280,10 +1280,11 @@ Updated to revision 46.
             <varlistentry>
               <term><filename>filename.rOLDREV</filename></term>
               <listitem>
-                <para>This is the file that was the BASE revision
-                  before you updated your working copy.  That is, the
-                  file that you checked out before you made your
-                  latest edits.</para>
+                <para>This is the file that was the
+                  <literal>BASE</literal> revision before you updated
+                  your working copy.  That is, the file that you
+                  checked out before you made your latest
+                  edits.</para>
               </listitem>
             </varlistentry>
 
@@ -1292,8 +1293,9 @@ Updated to revision 46.
               <listitem>
                 <para>This is the file that your Subversion client
                   just received from the server when you updated your
-                  working copy.  This file corresponds to the HEAD
-                  revision of the repository.</para>
+                  working copy.  This file corresponds to the
+                  <literal>HEAD</literal> revision of the
+                  repository.</para>
               </listitem>
             </varlistentry>
 
@@ -1302,7 +1304,7 @@ Updated to revision 46.
           <para>Here <literal>OLDREV</literal> is the revision number
             of the file in your <filename>.svn</filename> directory
             and <literal>NEWREV</literal> is the revision number of
-            the repository HEAD.
+            the repository <literal>HEAD</literal>.
           </para>
         </listitem>
         

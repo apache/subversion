@@ -858,9 +858,10 @@ $ svn status
         final state.  Using <command>svn log</command> on your branch,
         you can see that your branch was created in revision 341.  And
         the final state of your branch is simply a matter of using the
-        HEAD revision.  That means you want to compare revisions 341
-        and HEAD of your branch directory, and apply those differences
-        to a working copy of the trunk.</para>
+        <literal>HEAD</literal> revision.  That means you want to
+        compare revisions 341 and <literal>HEAD</literal> of your
+        branch directory, and apply those differences to a working
+        copy of the trunk.</para>
 
       <para>Here's the final merging procedure, then:</para>
 
@@ -896,13 +897,14 @@ Committed revision 406.
 
       <para>For example, suppose you decide to keep working on your
         branch for another week, in order to complete an enhancement
-        to your original feature or bugfix.  The repository's HEAD
-        revision is now 480, and you're ready to do another merge from
-        your private branch to the trunk.  But as discussed in <xref
-        linkend="svn-ch-4-sect-3.2"/>, you don't want to merge the
-        changes you've already merged before; you only want to merge
-        everything <quote>new</quote> on your branch since the last
-        time you merged.  The trick is to figure out what's new.</para>
+        to your original feature or bugfix.  The repository's
+        <literal>HEAD</literal> revision is now 480, and you're ready
+        to do another merge from your private branch to the trunk.
+        But as discussed in <xref linkend="svn-ch-4-sect-3.2"/>, you
+        don't want to merge the changes you've already merged before;
+        you only want to merge everything <quote>new</quote> on your
+        branch since the last time you merged.  The trick is to figure
+        out what's new.</para>
 
       <para>The first step is to run <command>svn log</command> on the
         trunk, and look for a log message about the last time you
@@ -924,7 +926,7 @@ Merged my-calc-branch changes r341:405 into the trunk.
       <para>Aha!  Since all branch-changes that happened between
         revisions 341 and 405 were previously merged to the trunk, you
         now know that you want to merge only the branch changes after
-        that: revisions 406 through HEAD.</para>
+        that: revisions 406 through <literal>HEAD</literal>.</para>
 
 <screen>
 $ cd calc/trunk
@@ -1003,7 +1005,7 @@ Committed revision 350.
         want it to be in, and then use <command>svn commit</command>
         to send the final version to the repository.  After
         committing, this particular changeset is no longer reflected
-        in the HEAD revision.</para>
+        in the <literal>HEAD</literal> revision.</para>
 
       <para>Again, you may be thinking: well, that really didn't undo
         the commit, did it?  The change still exists in revision 303.
@@ -1013,19 +1015,19 @@ Committed revision 350.
 
       <para>Yes, that's true.  When we talk about
         <quote>removing</quote> a change, we're really talking about
-        <quote>removing it from HEAD</quote>.  The original change
+        removing it from <literal>HEAD</literal>.  The original change
         still exists in the repository's history.  For most
         situations, this is good enough.  Most people are only
-        interested in tracking the HEAD of a project anyway.  There
-        are special cases, however, where you really might want to
-        destroy all evidence of the commit.  (Perhaps somebody
-        accidentally committed a confidential document.)  This isn't
-        so easy, it turns out, because Subversion was deliberately
-        designed to never lose information.  Revisions are immutable
-        trees which build upon one another.  Removing a revision from
-        history would cause a domino effect, creating chaos in all
-        subsequent revisions and possibly invalidating all working
-        copies.
+        interested in tracking the <literal>HEAD</literal> of a
+        project anyway.  There are special cases, however, where you
+        really might want to destroy all evidence of the commit.
+        (Perhaps somebody accidentally committed a confidential
+        document.)  This isn't so easy, it turns out, because
+        Subversion was deliberately designed to never lose
+        information.  Revisions are immutable trees which build upon
+        one another.  Removing a revision from history would cause a
+        domino effect, creating chaos in all subsequent revisions and
+        possibly invalidating all working copies.
         <footnote>
           <para>The Subversion project has plans, however, to someday
             implement an <command>svnadmin obliterate</command>
@@ -1043,10 +1045,10 @@ Committed revision 350.
 
       <para>The great thing about version control systems is that
         information is never lost.  Even when you delete a file or
-        directory, it may be gone from the HEAD revision, but the
-        object still exists in earlier revisions.  One of the most
-        common questions new users ask is, <quote>How do I get my old
-        file or directory back?</quote></para>
+        directory, it may be gone from the <literal>HEAD</literal>
+        revision, but the object still exists in earlier revisions.
+        One of the most common questions new users ask is, <quote>How
+        do I get my old file or directory back?</quote></para>
 
       <para>The first step is to define exactly <emphasis
         role="bold">which</emphasis> item you're trying to resurrect.
@@ -1107,7 +1109,7 @@ Changed paths:
         linkend="svn-ch-4-sect-4.2"/>.)  This would have the affect of
         re-adding <filename>real.c</filename> as a local modification.
         The file would be scheduled for addition, and after a commit,
-        the file would again exist in HEAD.</para>
+        the file would again exist in <literal>HEAD</literal>.</para>
 
       <para>In this particular example, however, this is probably not
         the best strategy.  Reverse-applying revision 808 would not
@@ -1268,12 +1270,13 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
         <filename>/calc/trunk</filename>, then <command>svn
         update</command> will automatically compare your working copy
         of <filename>/calc/trunk</filename> to
-        <filename>/calc/trunk</filename> in the HEAD revision.  If
-        you're switching your working copy to a branch, then
-        <command>svn switch</command> will compare your working copy
-        of <filename>/calc/trunk</filename> to some
-        <emphasis>other</emphasis> branch-directory in the HEAD
-        revision.</para>
+        <filename>/calc/trunk</filename> in the
+        <literal>HEAD</literal> revision.  If you're switching your
+        working copy to a branch, then <command>svn switch</command>
+        will compare your working copy of
+        <filename>/calc/trunk</filename> to some
+        <emphasis>other</emphasis> branch-directory in the
+        <literal>HEAD</literal> revision.</para>
 
       <para>In other words, an update moves your working copy through
         time.  A switch moves your working copy through time
@@ -1323,7 +1326,7 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
       <para>Once again, <command>svn copy</command> comes to the
         rescue.  If you want to create a snapshot of
         <filename>/calc/trunk</filename> exactly as it looks in the
-        HEAD revision, then make a copy of it:</para>
+        <literal>HEAD</literal> revision, then make a copy of it:</para>
 
 <screen>
 $ svn copy http://svn.example.com/repos/calc/trunk \
@@ -1337,14 +1340,15 @@ Committed revision 351.
         <filename>/calc/tags</filename> directory already exists.
         After the copy completes, the new
         <filename>release-1.0</filename> directory is forever a
-        snapshot of how the project looked in the HEAD revision at the
-        time you made the copy.  Of course you might want to be more
-        precise about exactly which revision you copy, in case
-        somebody else may have committed changes to the project when
-        you weren't looking.  So if you know that revision 350 of
+        snapshot of how the project looked in the
+        <literal>HEAD</literal> revision at the time you made the
+        copy.  Of course you might want to be more precise about
+        exactly which revision you copy, in case somebody else may
+        have committed changes to the project when you weren't
+        looking.  So if you know that revision 350 of
         <filename>/calc/trunk</filename> is exactly the snapshot you
-        want, you can specify it by passing <option>-r 350</option>
-        to the <command>svn copy</command> command.</para>
+        want, you can specify it by passing <option>-r 350</option> to
+        the <command>svn copy</command> command.</para>
 
       <para>But wait a moment: isn't this tag-creation procedure the
         same procedure we used to create a branch?  Yes, in fact, it
@@ -1522,18 +1526,19 @@ Committed revision 375.
 </screen>
 
       <para>And now your branch is gone.  Of course it's not really
-        gone: the directory is simply missing from the HEAD revision,
-        no longer distracting anyone.  If you look at an earlier
-        revision (by means of <command>svn checkout -r</command>,
-        <command>svn switch -r</command>, or <command>svn list
-        -r</command>), you'll still be able to see your old
-        branch.</para>
+        gone: the directory is simply missing from the
+        <literal>HEAD</literal> revision, no longer distracting
+        anyone.  If you look at an earlier revision (by means of
+        <command>svn checkout -r</command>, <command>svn switch
+        -r</command>, or <command>svn list -r</command>), you'll still
+        be able to see your old branch.</para>
 
       <para>If browsing your deleted directory isn't enough, you can
         always bring it back.  Resurrecting data is very easy in
         Subversion.  If there's a deleted directory (or file) that
-        you'd like to bring back into HEAD, simply use <command>svn
-        copy -r</command> to copy it from the old revision:</para>
+        you'd like to bring back into <literal>HEAD</literal>, simply
+        use <command>svn copy -r</command> to copy it from the old
+        revision:</para>
 
 <screen>
 $ svn copy -r 374 http://svn.example.com/repos/calc/branches/my-calc-branch \

@@ -653,8 +653,8 @@ $ svnlook info /path/to/repos --revision 19
 
         <para>The only exception to these rules about subcommands is
           the <command>svnlook youngest</command> subcommand, which
-          takes no options, and simply prints out the HEAD revision
-          number.</para>
+          takes no options, and simply prints out the
+          <literal>HEAD</literal> revision number.</para>
 
         <screen>
 $ svnlook youngest /path/to/repos
@@ -913,7 +913,8 @@ Available subcommands:
               <para>Run over a specified revision range, performing
                 predecessor deltification on the paths changed in
                 those revisions.  If no revisions are specified, this
-                command will simply deltify the HEAD revision.</para>
+                command will simply deltify the
+                <literal>HEAD</literal> revision.</para>
             </listitem>
           </varlistentry>
 
@@ -1312,11 +1313,11 @@ Node-path: spreadsheet/Makefile
         <para>Once started, the program behaves similarly to a shell
           program, allowing you to browse the various directories in
           your repository.  Initially, you are
-          <quote>positioned</quote> in the root directory of the HEAD
-          revision of the repository, and presented with a command
-          prompt.  You can use the <literal>help</literal> command at
-          any time to display a list of available commands and what
-          they do.</para>
+          <quote>positioned</quote> in the root directory of the
+          <literal>HEAD</literal> revision of the repository, and
+          presented with a command prompt.  You can use the
+          <literal>help</literal> command at any time to display a
+          list of available commands and what they do.</para>
 
         <screen>
 $ svnshell.py /path/to/repos
