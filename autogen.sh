@@ -5,13 +5,13 @@
 # Ensure some permissions for executables used by this script
 for execfile in gen-make.py \
                 dist.sh \
+                buildcheck.sh \
                 ac-helpers/get-neon-ver.sh \
                 ac-helpers/gnu-diff.sh \
                 ac-helpers/gnu-patch.sh \
                 ac-helpers/install.sh; do
   chmod +x $execfile                
 done
-
 
 # Make sure the APR directory is present
 if [ ! -d apr ]; then
@@ -65,11 +65,11 @@ if [ "${PREREQ_FAILED}" = "yes" ]; then
 fi
 
 
-# Run a quick test to ensure APR is kosher.
-(cd apr && build/buildcheck.sh) || exit 1
+# Run a quick test to ensure that our autoconf and libtool verison are ok
+./buildcheck.sh || exit 1
 
-
-
+### temporary cleanup during transition to libtool 1.4
+(cd ac-helpers ; rm -f ltconfig ltmain.sh libtool.m4)
 
 #
 # Handle some libtool helper files
@@ -95,7 +95,6 @@ if [ ! -f $ltfile ]; then
     exit 1
 fi
 
-rm -f ac-helpers/libtool.m4
 cp $ltfile ac-helpers/libtool.m4
 
 # This is just temporary until people's workspaces are cleared -- remove

@@ -4,6 +4,10 @@ dnl Autoconfiscation for Subversion
 
 dnl General Setup -----------------------
 
+dnl Ensure that subversion is configured with autoconf 2.50 or newer
+dnl Don't even think about removing this check!
+AC_PREREQ(2.50)
+
 dnl First line is *required*;  sanity-checks that the our src dir exists.
 AC_INIT(subversion/include/svn_types.h)
 AC_CONFIG_AUX_DIR(ac-helpers)
@@ -120,6 +124,10 @@ if test "$enable_subdir_config" = "yes"; then
   else
      args="--disable-shared"
   fi
+
+  # neon uses an old autoconf which does not understand the -C and
+  # --config-cache arguments. strip them from the args passed down.
+  ac_configure_args="`echo $ac_configure_args | sed 's/-C//' | sed 's/--config-cache//'`"
   APR_SUBDIR_CONFIG(neon, $args --with-expat="$abs_srcdir/expat-lite/libexpat.la")
 
   AC_MSG_CHECKING([for any extra libraries neon needs])
@@ -136,7 +144,10 @@ dnl find Apache
 SVN_FIND_APACHE
 
 dnl ### should we ever bother with the system install?
-INSTALL="\$(top_srcdir)/apr/build/install.sh -c"
+dnl use abs_srcdir. sometimes during installation, libtool will relink the
+dnl library. when it does this, it does a "cd", so a relative use of
+dnl install.sh will not work.
+INSTALL="\$(abs_srcdir)/apr/build/install.sh -c"
 AC_SUBST(INSTALL)
 
 dnl use APR's mkdir to enable creating intervening directories
@@ -279,14 +290,20 @@ if test "$enable_shared" = "no"; then
   AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_DAV, 1,
         [Defined if libsvn_client should link against libsvn_ra_dav])
   SVN_RA_LIB_DEPS="subversion/libsvn_ra_dav/libsvn_ra_dav.la"
-  SVN_RA_LIB_LINK="-L\$(abs_builddir)/subversion/libsvn_ra_dav/.libs -lsvn_ra_dav \
-	-L\$(abs_builddir)/neon/src/.libs -lneon $NEON_LIBS"
+  SVN_RA_LIB_LINK="\$(abs_builddir)/subversion/libsvn_ra_dav/libsvn_ra_dav.la \
+	\$(abs_builddir)/neon/src/libneon.la $NEON_LIBS"
 
   if test "$svn_lib_berkeley_db" = "yes"; then
     AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL, 1,
         [Defined if libsvn_client should link against libsvn_ra_local])
-    SVN_RA_LIB_DEPS="$SVN_RA_LIB_DEPS subversion/libsvn_ra_local/libsvn_ra_local.la subversion/libsvn_repos/libsvn_repos.la subversion/libsvn_fs/libsvn_fs.la"
-    SVN_RA_LIB_LINK="$SVN_RA_LIB_LINK -L\$(abs_builddir)/subversion/libsvn_ra_local/.libs -lsvn_ra_local -L\$(abs_builddir)/subversion/libsvn_repos/.libs -lsvn_repos -L\$(abs_builddir)/subversion/libsvn_fs/.libs -lsvn_fs \$(SVN_DB_LIBS)"
+    SVN_RA_LIB_DEPS="$SVN_RA_LIB_DEPS \
+	subversion/libsvn_ra_local/libsvn_ra_local.la \
+	subversion/libsvn_repos/libsvn_repos.la \
+	subversion/libsvn_fs/libsvn_fs.la"
+    SVN_RA_LIB_LINK="$SVN_RA_LIB_LINK \
+	\$(abs_builddir)/subversion/libsvn_ra_local/libsvn_ra_local.la \
+	\$(abs_builddir)/subversion/libsvn_repos/libsvn_repos.la \
+	\$(abs_builddir)/subversion/libsvn_fs/libsvn_fs.la \$(SVN_DB_LIBS)"
   fi
 
 fi
