@@ -95,24 +95,93 @@ is_valid_transaction_skel (skel_t *skel)
 }
 
 
+static int
+is_valid_rep_delta_chunk_skel (skel_t *skel)
+{
+  int len;
+  skel_t *window;
+  skel_t *checksum;
+  skel_t *diff;
+
+  /* check the delta skel. */
+  if ((svn_fs__list_length (skel) != 2)
+      || (! skel->children->is_atom))
+    return 0;
+  
+  /* check the window. */
+  window = skel->children->next;
+  len = svn_fs__list_length (window);
+  if ((len < 4) || (len > 5))
+    return 0;
+  if (! ((! window->children->is_atom)
+         && (window->children->next->is_atom)
+         && (svn_fs__list_length (window->children->next->next) == 2)
+         && (window->children->next->next->next->is_atom)))
+    return 0;
+  if ((len == 5) 
+      && (! window->children->next->next->next->next->is_atom))
+    return 0;
+  
+  /* check the checksum list. */
+  checksum = window->children->next->next;
+  if (! ((svn_fs__matches_atom (checksum->children, "md5")
+          && (checksum->children->next->is_atom))))
+    return 0;
+  
+  /* check the diff. ### currently we support only svndiff version
+     0 delta data. */
+  diff = window->children;
+  if ((svn_fs__list_length (diff) == 3)
+      && (svn_fs__matches_atom (diff->children, "svndiff"))
+      && (svn_fs__matches_atom (diff->children->next, "0"))
+      && (diff->children->next->next->is_atom))
+    return 1;
+
+  return 0;
+}
+
+
 static int 
 is_valid_representation_skel (skel_t *skel)
 {
   int len = svn_fs__list_length (skel);
+  skel_t *header;
 
+  /* the rep has at least two items in it, a HEADER list, and at least
+     one piece of kind-specific data. */
+  if (len < 2)
+    return 0;
+
+  /* check the header.  it must have two pieces, both of which are
+     atoms.  */
+  header = skel->children;
+  if (! ((svn_fs__list_length (header) == 2)
+         && (header->children->next->is_atom)
+         && (header->children->next->is_atom)))
+    return 0;
+
+  /* check for fulltext rep. */
+  if ((len == 2)
+      && (svn_fs__matches_atom (header->children, "fulltext")))
+    return 1;
+
+  /* check for delta rep. */
   if ((len >= 2)
-      && (! skel->children->is_atom)
-      && (svn_fs__list_length (skel->children) == 2)
-      && (skel->children->children->next->is_atom))
+      && (svn_fs__matches_atom (header->children, "delta")))
     {
-      if (svn_fs__matches_atom (skel->children->children, "fulltext"))
+      /* it's a delta rep.  check the validity.  */
+      skel_t *chunk = skel->children->next;
+      
+      /* loop over chunks, checking each one. */
+      while (chunk)
         {
-          return 1;
+          if (! is_valid_rep_delta_chunk_skel (chunk))
+            return 0;
+          chunk = chunk->next;
         }
-      if (svn_fs__matches_atom (skel->children->children, "delta"))
-        {
-          return 1;
-        }
+
+      /* all good on this delta rep. */
+      return 1;
     }
 
   return 0;
@@ -382,9 +451,15 @@ svn_fs__parse_representation_skel (svn_fs__representation_t **rep_p,
           chunk = apr_palloc (pool, sizeof (*chunk));
 
           /* Populate the window */
-          chunk->string_key = apr_pstrmemdup (pool,
-                                              diff_skel->children->next->data,
-                                              diff_skel->children->next->len);
+          chunk->version 
+            = (apr_byte_t) atoi (apr_pstrmemdup 
+                                 (pool,
+                                  diff_skel->children->next->data,
+                                  diff_skel->children->next->len));
+          chunk->string_key 
+            = apr_pstrmemdup (pool,
+                              diff_skel->children->next->next->data,
+                              diff_skel->children->next->next->len);
           chunk->size = atoi (apr_pstrmemdup (pool,
                                               diff_skel->next->data,
                                               diff_skel->next->len));
@@ -747,8 +822,7 @@ svn_fs__unparse_representation_skel (skel_t **skel_p,
           skel_t *chunk_skel = svn_fs__make_empty_list (pool);
           skel_t *diff_skel = svn_fs__make_empty_list (pool);
           skel_t *checksum_skel = svn_fs__make_empty_list (pool);
-          const char *size_str;
-          const char *offset_str;
+          const char *size_str, *offset_str, *version_str;
           svn_fs__rep_delta_chunk_t *chunk = 
             (((svn_fs__rep_delta_chunk_t **) chunks->elts)[i - 1]);
 
@@ -757,8 +831,10 @@ svn_fs__unparse_representation_skel (skel_t **skel_p,
                                      chunk->offset);
 
           /* SIZE */
-          size_str = apr_psprintf (pool, "%" APR_SIZE_T_FMT, 
-                                   chunk->size);
+          size_str = apr_psprintf (pool, "%" APR_SIZE_T_FMT, chunk->size);
+
+          /* VERSION */
+          version_str = apr_psprintf (pool, "%d", chunk->version);
 
           /* DIFF */
           if ((! chunk->string_key) || (! *chunk->string_key))
@@ -766,6 +842,7 @@ svn_fs__unparse_representation_skel (skel_t **skel_p,
           else
             svn_fs__prepend (svn_fs__str_atom (chunk->string_key,
                                                pool), diff_skel);
+          svn_fs__prepend (svn_fs__str_atom (version_str, pool), diff_skel);
           svn_fs__prepend (svn_fs__str_atom ("svndiff", pool), diff_skel);
         
           /* CHECKSUM */

@@ -159,6 +159,10 @@ typedef enum
 /*** "Delta" Offset/Window Chunk ***/
 typedef struct 
 {
+  /* diff format version number ### at this point, "svndiff" is the
+     only format used. */
+  apr_byte_t version;
+
   /* starting offset of the data represented by this chunk */
   apr_size_t offset;
 

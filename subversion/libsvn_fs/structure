@@ -730,7 +730,8 @@ Representations:
                FULLTEXT ::= (HEADER STRING-KEY) ;
                   DELTA ::= (HEADER (OFFSET WINDOW) ...) ;
                  WINDOW ::= (DIFF SIZE CHECKSUM REP-KEY [REP-OFFSET]) ;
-                   DIFF ::= ("svndiff" STRING-KEY) ;
+                   DIFF ::= ("svndiff" VERSION STRING-KEY) ;
+                VERSION ::= number ;
                 REP-KEY ::= atom ;
              STRING-KEY ::= atom ;
                  OFFSET ::= number ;
