@@ -1,5 +1,5 @@
 /*
- * target-test.c -- test the target condensing function
+ * path-test.c -- test the path functions
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
