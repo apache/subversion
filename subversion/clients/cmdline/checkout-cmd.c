@@ -84,7 +84,7 @@ svn_cl__checkout (apr_getopt_t *os,
                              "" /* message is unused */);
 
   /* Add a path if the user only specified URLs */
-  local_dir = ((const char **) (targets->elts))[targets->nelts-1];
+  local_dir = ((const char **) (targets->elts))[targets->nelts - 1];
   if (svn_path_is_url (local_dir))
     {
       if (targets->nelts == 1)
@@ -98,6 +98,13 @@ svn_cl__checkout (apr_getopt_t *os,
           local_dir = "";
         }
       (*((const char **) apr_array_push (targets))) = local_dir;
+    }
+  else
+    {
+      /* What?  They gave us one target, and it wasn't a URL. */
+      if (targets->nelts == 1)
+        return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0,
+                                 "" /* message is unused */);
     }
 
   if (! opt_state->quiet)
