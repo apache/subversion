@@ -237,10 +237,6 @@ svn_cl__get_trace_commit_editor (const svn_delta_edit_fns_t **editor,
                                  apr_pool_t *pool);
 
 
-/* Initialize the top-pool's feedback vtable to contain functions
-   specific to the command-line client. */
-void svn_cl__init_feedback_vtable (apr_pool_t *top_pool);
-
 
 /* Our implementation of the 'auth info callback' routine, 
    as defined in svn_client.h.   This callback is passed to any
@@ -273,6 +269,20 @@ svn_cl__generate_status_codes (char *str_status,
                                enum svn_wc_status_kind prop_status,
                                svn_boolean_t locked,
                                svn_boolean_t copied);
+
+
+/*** Notification functions to display results on the terminal. */
+
+void svn_cl__notify_unversioned_item (void *baton, const char *path);
+void svn_cl__notify_added_item (void *baton, const char *path);
+void svn_cl__notify_deleted_item (void *baton, const char *path);
+void svn_cl__notify_restored_item (void *baton, const char *path);
+void svn_cl__notify_reverted_item (void *baton, const char *path);
+
+/* This macro is used to specify a notification function, or NULL if the
+   user has requested "quiet" mode. */
+#define SVN_CL_NOTIFY(which, opt_state) \
+		((opt_state)->quiet ? NULL : svn_cl__notify_##which##_item)
 
 
 

@@ -68,7 +68,10 @@ svn_cl__move (apr_getopt_t *os,
   SVN_ERR (svn_client_move 
            (&commit_info, 
             src_path, opt_state->start_revision, dst_path, auth_baton, 
-            message ? message : svn_stringbuf_create ("", pool), pool));
+            message ? message : svn_stringbuf_create ("", pool),
+            SVN_CL_NOTIFY(added, opt_state), pool /* notify_add_baton */,
+            SVN_CL_NOTIFY(deleted, opt_state), NULL,
+            pool));
 
   if (commit_info)
     svn_cl__print_commit_info (commit_info);

@@ -253,7 +253,9 @@ svn_client_diff (svn_stringbuf_t *path,
                                   diff_editor, diff_edit_baton));
 
       SVN_ERR (svn_wc_crawl_revisions (path, reporter, report_baton,
-                                       FALSE, recurse, pool));
+                                       FALSE, recurse,
+                                       NULL, NULL, /* notification is N/A */
+                                       pool));
     }
   else
     {

@@ -289,7 +289,7 @@ wc_revert (VALUE class, VALUE aPath, VALUE recursive)
   Check_Type (aPath, T_STRING);
   pool = svn_pool_create (NULL);
   path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  err = svn_wc_revert (path, RTEST (recursive), pool);
+  err = svn_wc_revert (path, RTEST (recursive), NULL, NULL, pool);
   apr_pool_destroy (pool);
 
   if (err)

@@ -118,6 +118,8 @@ static svn_error_t *
 copy_file_administratively (svn_stringbuf_t *src_path, 
                             svn_stringbuf_t *dst_parent,
                             svn_stringbuf_t *dst_basename,
+                            svn_wc_notify_func_t notify_copied,
+                            void *notify_baton,
                             apr_pool_t *pool)
 {
   enum svn_node_kind dst_kind;
@@ -207,7 +209,8 @@ copy_file_administratively (svn_stringbuf_t *src_path,
     SVN_ERR (svn_wc_get_ancestry (&copyfrom_url, &copyfrom_rev,
                                   src_path, pool));
     
-    SVN_ERR (svn_wc_add (dst_path, copyfrom_url, copyfrom_rev, pool));
+    SVN_ERR (svn_wc_add (dst_path, copyfrom_url, copyfrom_rev,
+                         notify_copied, notify_baton, pool));
   }
 
   return SVN_NO_ERROR;
@@ -231,6 +234,8 @@ static svn_error_t *
 copy_dir_administratively (svn_stringbuf_t *src_path, 
                            svn_stringbuf_t *dst_parent,
                            svn_stringbuf_t *dst_basename,
+                           svn_wc_notify_func_t notify_copied,
+                           void *notify_baton,
                            apr_pool_t *pool)
 {
   svn_wc_entry_t *src_entry;
@@ -273,7 +278,8 @@ copy_dir_administratively (svn_stringbuf_t *src_path,
     SVN_ERR (svn_wc_get_ancestry (&copyfrom_url, &copyfrom_rev,
                                   src_path, pool));
     
-    SVN_ERR (svn_wc_add (dst_path, copyfrom_url, copyfrom_rev, pool));
+    SVN_ERR (svn_wc_add (dst_path, copyfrom_url, copyfrom_rev,
+                         notify_copied, notify_baton, pool));
   }
  
   return SVN_NO_ERROR;
@@ -287,6 +293,8 @@ svn_error_t *
 svn_wc_copy (svn_stringbuf_t *src_path,
              svn_stringbuf_t *dst_parent,
              svn_stringbuf_t *dst_basename,
+             svn_wc_notify_func_t notify_copied,
+             void *notify_baton,
              apr_pool_t *pool)
 {
   enum svn_node_kind src_kind;
@@ -294,13 +302,13 @@ svn_wc_copy (svn_stringbuf_t *src_path,
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
   
   if (src_kind == svn_node_file)
-    SVN_ERR (copy_file_administratively (src_path, dst_parent,
-                                         dst_basename, pool));
+    SVN_ERR (copy_file_administratively (src_path, dst_parent, dst_basename,
+                                         notify_copied, notify_baton, pool));
 
   else if (src_kind == svn_node_dir)
 
-    SVN_ERR (copy_dir_administratively (src_path, dst_parent,
-                                        dst_basename, pool));
+    SVN_ERR (copy_dir_administratively (src_path, dst_parent, dst_basename,
+                                        notify_copied, notify_baton, pool));
 
 
   return SVN_NO_ERROR;

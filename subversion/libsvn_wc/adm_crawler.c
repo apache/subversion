@@ -1800,16 +1800,17 @@ restore_file (svn_stringbuf_t *file_path,
    DIR_REV.  If so, report this fact to REPORTER.  If an entry is
    missing from disk, report its absence to REPORTER.  
 
-   If PRINT_UNRECOGNIZED is set, then unversioned objects will be
-   reported via FBTABLE.   If RESTORE_FILES is set, then unexpectedly
-   missing working files will be restored from text-base. */
+   If RESTORE_FILES is set, then unexpectedly missing working files
+   will be restored from text-base and NOTIFY_RESTORE/NOTIFY_BATON
+   will be called to report the restoration. */
 static svn_error_t *
 report_revisions (svn_stringbuf_t *wc_path,
                   svn_stringbuf_t *dir_path,
                   svn_revnum_t dir_rev,
                   const svn_ra_reporter_t *reporter,
                   void *report_baton,
-                  svn_pool_feedback_t *fbtable,
+                  svn_wc_notify_func_t notify_restore,
+                  void *notify_baton,
                   svn_boolean_t restore_files,
                   svn_boolean_t recurse,
                   apr_pool_t *pool)
@@ -1890,8 +1891,9 @@ report_revisions (svn_stringbuf_t *wc_path,
                   /* Recreate file from text-base. */
                   SVN_ERR (restore_file (long_file_path, pool));
 
-                  /* Tell feedback table. */
-                  fbtable->report_restoration (long_file_path->data, pool);
+                  /* Report the restoration to the caller. */
+                  if (notify_restore != NULL)
+                    (*notify_restore) (notify_baton, long_file_path->data);
                 }
 
               /* Possibly report a differing revision. */
@@ -1941,9 +1943,9 @@ report_revisions (svn_stringbuf_t *wc_path,
                 SVN_ERR (report_revisions (wc_path,
                                            full_entry_path,
                                            subdir_entry->revision,
-                                           reporter, report_baton, fbtable,
-                                           restore_files,
-                                           recurse,
+                                           reporter, report_baton,
+                                           notify_restore, notify_baton,
+                                           restore_files, recurse,
                                            subpool));
               }
             } /* end directory case */
@@ -2217,12 +2219,13 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
                         void *report_baton,
                         svn_boolean_t restore_files,
                         svn_boolean_t recurse,
+                        svn_wc_notify_func_t notify_restore,
+                        void *notify_baton,
                         apr_pool_t *pool)
 {
   svn_error_t *err;
   svn_wc_entry_t *entry;
   svn_revnum_t base_rev = SVN_INVALID_REVNUM;
-  svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
   svn_boolean_t missing = FALSE;
 
   /* The first thing we do is get the base_rev from the working copy's
@@ -2279,7 +2282,8 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
           err = report_revisions (path,
                                   svn_stringbuf_create ("", pool),
                                   base_rev,
-                                  reporter, report_baton, fbtable, 
+                                  reporter, report_baton,
+                                  notify_restore, notify_baton,
                                   restore_files, recurse, pool);
           if (err)
             {
@@ -2300,9 +2304,10 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
         {
           /* Recreate file from text-base. */
           SVN_ERR (restore_file (path, pool));
-          
-          /* Tell feedback table. */
-          fbtable->report_restoration (path->data, pool);
+
+          /* Report the restoration to the caller. */
+          if (notify_restore != NULL)
+            (*notify_restore) (notify_baton, path->data);
         }
 
       if (entry->revision != base_rev)

@@ -233,7 +233,7 @@ cl_update (int argc, VALUE *argv, VALUE self)
                            after_editor, after_edit_baton,
                            auth_baton, path, xml_src,
                            revision, tm, RTEST (recurse),
-                           pool);
+                           NULL, NULL, pool);
   if (err)
     {
       apr_pool_destroy (pool);
@@ -254,7 +254,7 @@ cl_add (VALUE class, VALUE aPath, VALUE recursive)
   pool = svn_pool_create (NULL);
   path = svn_stringbuf_create (StringValuePtr (aPath), pool);
 
-  err = svn_client_add (path, RTEST (recursive), pool);
+  err = svn_client_add (path, RTEST (recursive), NULL, NULL, pool);
 
   apr_pool_destroy (pool);
 
@@ -287,7 +287,8 @@ cl_mkdir (int argc, VALUE *argv, VALUE self)
     message = svn_stringbuf_ncreate (StringValuePtr (aMessage),
                                      RSTRING (aMessage)->len, pool);
 
-  err = svn_client_mkdir (&commit_info, path, auth_baton, message, pool);
+  err = svn_client_mkdir (&commit_info, path, auth_baton, message,
+                          NULL, NULL, pool);
 
   if (err)
     {
@@ -325,7 +326,7 @@ cl_delete (int argc, VALUE *argv, VALUE self)
     message = svn_stringbuf_create (StringValuePtr (aMessage), pool);
 
   err = svn_client_delete (&commit_info, path, RTEST (force), auth_baton,
-                           message, pool);
+                           message, NULL, NULL, pool);
 
   if (err)
     {
@@ -595,7 +596,7 @@ cl_revert (VALUE class, VALUE aPath, VALUE recursive)
 
   pool = svn_pool_create (NULL);
   path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  err = svn_client_revert (path, RTEST (recursive), pool);
+  err = svn_client_revert (path, RTEST (recursive), NULL, NULL, pool);
 
   apr_pool_destroy (pool);
   if (err)
@@ -644,7 +645,7 @@ cl_copy (int argc, VALUE *argv, VALUE self)
   err = svn_client_copy (&commit_info, src_path, src_rev, dst_path,
 			 auth_baton, message,
 			 before_editor, before_edit_baton,
-			 after_editor, after_edit_baton, pool);
+			 after_editor, after_edit_baton, NULL, NULL, pool);
 
   if (err)
     {

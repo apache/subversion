@@ -106,10 +106,8 @@ extern "C" {
  * within a given pool.
  *
  * This function will construct the error pool (for all errors to live
- * within), and hang it off of the given pool.  It will also create a
- * feedback stream (for the transmission of messages in a
- * non-terminating fashion).  When subpools are created with
- * svn_pool_create(), they will inherit these two things.
+ * within), and hang it off of the given pool.  When subpools are created
+ * with svn_pool_create(), they will inherit the error pool.
  *
  * Note: we return an apr_status_t since a catch-22 means we cannot allocate
  * an svn_error_t.
@@ -119,59 +117,13 @@ extern "C" {
 apr_status_t svn_error_init_pool (apr_pool_t *top_pool);
 
 
-/* SWIG doesn't like the declarations in the feedback table, and we don't
-   need to export them for now. */
-#ifndef SWIG
-
-/* The convention here is that the recipient of the feedback has the
-   option of returning an APR error value that indicates whether or
-   not the calling code should treat the feedback condition as a fatal
-   situation. */
-typedef struct svn_pool_feedback_t
-{
-  /* Report items present in the working copy that are apparently not
-     under revision control, a'la CVS's "? foobar.c" */
-  apr_status_t (*report_unversioned_item) (const char *path);
-
-  /* Report items just scheduled for addition to revision control. */
-  apr_status_t (*report_added_item) (const char *path, apr_pool_t *pool);
-
-  /* Report items just scheduled for removal to revision control. */
-  apr_status_t (*report_deleted_item) (const char *path, apr_pool_t *pool);
-
-  /* Report items just reverted ('svn revert'). */
-  apr_status_t (*report_reversion) (const char *path, apr_pool_t *pool);
-
-  /* Report items just restored ('svn up'). */
-  apr_status_t (*report_restoration) (const char *path, apr_pool_t *pool);
-  
-  /* Generic human-readable we-think-it's-non-fatal warning.  This
-     function can parse STATUS and decide whether a "real" error
-     should be returned. */
-  apr_status_t (*report_warning) (apr_status_t status, const char *warning);
-
-  /* Progress indication, yielding what PERCENTAGE (from 0-100) of a
-     given ACTION has been completed. */
-  apr_status_t (*report_progress) (const char *action,
-                                   int percentage);
-
-} svn_pool_feedback_t;
-
-/* Retrieve a pointer to the global feedback vtable structure, which
-   lives in top-level Subversion pools. */
-svn_pool_feedback_t *svn_pool_get_feedback_vtable (apr_pool_t *p);
-
-#endif /* SWIG */
-
-
 #ifndef SVN_POOL_DEBUG
 /* Return a new pool.  If PARENT_POOL is non-null, then the new
  * pool will be a subpool of it, and will inherit the containing
- * pool's dedicated error subpool and feedback stream.
+ * pool's dedicated error subpool.
  *
  * If PARENT_POOL is NULL, then the returned pool will be a new
- * "global" pool (with no parent), and an error pool and feedback
- * stream will be created.
+ * "global" pool (with no parent), and an error pool will be created.
  *
  * If anything goes wrong with the pool creation, then an abort function
  * will be called, which will exit the program. If future allocations from
@@ -193,8 +145,8 @@ apr_pool_t *svn_pool_create_debug (apr_pool_t *parent_pool,
  *
  * The reason we need this wrapper to apr_pool_clear, is because
  * apr_pool_clear removes the association with the appropriate error
- * pool and feedback stream. This wrapper calls apr_pool_clear, and
- * then reattaches or recreates the error pool and feedback stream.
+ * pool. This wrapper calls apr_pool_clear, and then reattaches or
+ * recreates the error pool.
  *
  * If anything goes wrong, an abort function will be called.  */
 void svn_pool_clear (apr_pool_t *p);

@@ -37,6 +37,8 @@
 
 static svn_error_t *
 add_dir_recursive (const char *dirname,
+                   svn_wc_notify_func_t notify_added,
+                   void *notify_baton,
                    apr_pool_t *pool)
 {
   apr_dir_t *dir;
@@ -47,7 +49,8 @@ add_dir_recursive (const char *dirname,
 
   /* Add this directory to revision control. */
   SVN_ERR (svn_wc_add (svn_stringbuf_create (dirname, pool),
-                       NULL, SVN_INVALID_REVNUM, pool));
+                       NULL, SVN_INVALID_REVNUM,
+                       notify_added, notify_baton, pool));
 
   /* Create a subpool for iterative memory control. */
   subpool = svn_pool_create (pool);
@@ -78,10 +81,13 @@ add_dir_recursive (const char *dirname,
 
       if (this_entry.filetype == APR_DIR)
         /* Recurse. */
-        SVN_ERR (add_dir_recursive (fullpath->data, subpool));
+        SVN_ERR (add_dir_recursive (fullpath->data,
+                                    notify_added, notify_baton,
+                                    subpool));
 
       else if (this_entry.filetype == APR_REG)
-        SVN_ERR (svn_wc_add (fullpath, NULL, SVN_INVALID_REVNUM, subpool));
+        SVN_ERR (svn_wc_add (fullpath, NULL, SVN_INVALID_REVNUM,
+                             notify_added, notify_baton, subpool));
 
       /* Clean out the per-iteration pool. */
       svn_pool_clear (subpool);
@@ -111,6 +117,8 @@ add_dir_recursive (const char *dirname,
 svn_error_t *
 svn_client_add (svn_stringbuf_t *path, 
                 svn_boolean_t recursive,
+                svn_wc_notify_func_t notify_added,
+                void *notify_baton,
                 apr_pool_t *pool)
 {
   enum svn_node_kind kind;
@@ -118,9 +126,10 @@ svn_client_add (svn_stringbuf_t *path,
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   if ((kind == svn_node_dir) && (recursive))
-    err = add_dir_recursive (path->data, pool);
+    err = add_dir_recursive (path->data, notify_added, notify_baton, pool);
   else
-    err = svn_wc_add (path, NULL, SVN_INVALID_REVNUM, pool);
+    err = svn_wc_add (path, NULL, SVN_INVALID_REVNUM,
+                      notify_added, notify_baton, pool);
 
   if (err && (err->apr_err == SVN_ERR_WC_ENTRY_EXISTS))
     return svn_error_quick_wrap 
@@ -134,6 +143,8 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
                   svn_stringbuf_t *path,
                   svn_client_auth_baton_t *auth_baton,
                   svn_stringbuf_t *log_msg,
+                  svn_wc_notify_func_t notify_added,
+                  void *notify_baton,
                   apr_pool_t *pool)
 {
   svn_string_t path_str;
@@ -203,7 +214,8 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
   if (apr_err)
     return svn_error_create (apr_err, 0, NULL, pool, path->data);
   
-  return svn_wc_add (path, NULL, SVN_INVALID_REVNUM, pool);
+  return svn_wc_add (path, NULL, SVN_INVALID_REVNUM,
+                     notify_added, notify_baton, pool);
 }
 
 

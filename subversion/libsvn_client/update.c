@@ -64,6 +64,8 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    svn_revnum_t revision,
                    apr_time_t tm,
                    svn_boolean_t recurse,
+                   svn_wc_notify_func_t notify_restore,
+                   void *notify_baton,
                    apr_pool_t *pool)
 {
   const svn_delta_edit_fns_t *update_editor;
@@ -149,7 +151,8 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
          PATH.  When we call reporter->finish_report, the
          update_editor will be driven by svn_repos_dir_delta. */
       err = svn_wc_crawl_revisions (path, reporter, report_baton,
-                                    TRUE, recurse, pool);
+                                    TRUE, recurse,
+                                    notify_restore, notify_baton, pool);
       
       /* Sleep for one second to ensure timestamp integrity. */
       apr_sleep (APR_USEC_PER_SEC * 1);

@@ -400,13 +400,14 @@ mark_tree (svn_stringbuf_t *dir,
            apr_uint16_t modify_flags,
            enum svn_wc_schedule_t schedule,
            svn_boolean_t copied,
+           svn_wc_notify_func_t notify_delete,
+           void *notify_baton,
            apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   svn_stringbuf_t *fullpath = svn_stringbuf_dup (dir, pool);
-  svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
 
   /* Read the entries file for this directory. */
   SVN_ERR (svn_wc_entries_read (&entries, dir, pool));
@@ -434,7 +435,9 @@ mark_tree (svn_stringbuf_t *dir,
       /* If this is a directory, recurse. */
       if (entry->kind == svn_node_dir)
         SVN_ERR (mark_tree (fullpath, modify_flags,
-                            schedule, copied, subpool));
+                            schedule, copied,
+                            notify_delete, notify_baton,
+                            subpool));
 
       /* Mark this entry. */
       SVN_ERR (svn_wc__entry_modify
@@ -444,16 +447,8 @@ mark_tree (svn_stringbuf_t *dir,
                 schedule,
                 FALSE, TRUE, 0, 0, NULL, NULL, subpool, NULL));
 
-      if (fbtable && (schedule == svn_wc_schedule_delete))
-        {
-          apr_status_t apr_err;
-          
-          apr_err = fbtable->report_deleted_item (fullpath->data, pool);
-          if (apr_err)
-            return svn_error_createf 
-              (apr_err, 0, NULL, pool,
-               "Error reporting deleted item `%s'", fullpath->data);
-        }
+      if (schedule == svn_wc_schedule_delete && notify_delete != NULL)
+        (*notify_delete) (notify_baton, fullpath->data);
 
       /* Reset FULLPATH to just hold this dir's name. */
       svn_stringbuf_set (fullpath, dir->data);
@@ -479,7 +474,10 @@ mark_tree (svn_stringbuf_t *dir,
 
 
 svn_error_t *
-svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
+svn_wc_delete (svn_stringbuf_t *path,
+               svn_wc_notify_func_t notify_delete,
+               void *notify_baton,
+               apr_pool_t *pool)
 {
   svn_stringbuf_t *dir, *basename;
   svn_wc_entry_t *entry;
@@ -500,7 +498,9 @@ svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
       else
         /* Recursively mark a whole tree for deletion. */
         SVN_ERR (mark_tree (path, SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                            svn_wc_schedule_delete, FALSE, pool));
+                            svn_wc_schedule_delete, FALSE,
+                            notify_delete, notify_baton,
+                            pool));
     }
 
   /* Deleting a directory that has been added but not yet
@@ -530,20 +530,9 @@ svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
                 FALSE, FALSE, 0, 0, NULL, NULL, pool, NULL));
     }
 
-  /* Now, call our client feedback function. */
-  {
-    svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
-    if (fbtable)
-      {
-        apr_status_t apr_err;
-
-        apr_err = fbtable->report_deleted_item (path->data, pool);
-        if (apr_err)
-          return svn_error_createf 
-            (apr_err, 0, NULL, pool,
-             "Error reporting deleted item `%s'", path->data);
-      }
-  }
+  /* Report the deletion to the caller. */
+  if (notify_delete != NULL)
+    (*notify_delete) (notify_baton, path->data);
 
   return SVN_NO_ERROR;
 }
@@ -569,13 +558,13 @@ svn_error_t *
 svn_wc_add (svn_stringbuf_t *path,
             svn_stringbuf_t *copyfrom_url,
             svn_revnum_t copyfrom_rev,
+            svn_wc_notify_func_t notify_added,
+            void *notify_baton,
             apr_pool_t *pool)
 {
   svn_stringbuf_t *parent_dir, *basename;
   svn_wc_entry_t *orig_entry, *parent_entry;
-  svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
   svn_boolean_t is_replace = FALSE;
-  apr_status_t apr_err;
   apr_hash_t *atts = apr_hash_make (pool);
   enum svn_node_kind kind;
 
@@ -741,22 +730,18 @@ svn_wc_add (svn_stringbuf_t *path,
 
           /* Recursively add the 'copied' existence flag as well!  */
           SVN_ERR (mark_tree (path, SVN_WC__ENTRY_MODIFY_COPIED,
-                              svn_wc_schedule_normal, TRUE, pool));
+                              svn_wc_schedule_normal, TRUE,
+                              NULL, NULL, /* N/A cuz we aren't deleting */
+                              pool));
 
           /* Clean out the now-obsolete wcprops. */
           SVN_ERR (svn_wc__remove_wcprops (path, pool));
         }
     }
-  
-  /* Now, call our client feedback function. */
-  if (fbtable)
-    {
-      apr_err = fbtable->report_added_item (path->data, pool);
-      if (apr_err)
-        return svn_error_createf 
-          (apr_err, 0, NULL, pool,
-           "Error reporting added item `%s'", path->data);
-    }
+
+  /* Report the addition to the caller. */
+  if (notify_added != NULL)
+    (*notify_added) (notify_baton, path->data);
 
   return SVN_NO_ERROR;
 }
@@ -955,6 +940,8 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
 svn_error_t *
 svn_wc_revert (svn_stringbuf_t *path,
                svn_boolean_t recursive,
+               svn_wc_notify_func_t notify_revert,
+               void *notify_baton,
                apr_pool_t *pool)
 {
   enum svn_node_kind kind;
@@ -962,7 +949,6 @@ svn_wc_revert (svn_stringbuf_t *path,
   svn_wc_entry_t *entry;
   svn_boolean_t wc_root, reverted = FALSE;
   apr_uint64_t modify_flags = 0;
-  svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
 
   /* Safeguard 1:  is this a versioned resource? */
   SVN_ERR (svn_wc_entry (&entry, path, pool));
@@ -1118,14 +1104,8 @@ svn_wc_revert (svn_stringbuf_t *path,
     }
 
   /* If PATH was reverted, tell our client that. */
-  if ((fbtable) && (reverted))
-    {
-      apr_status_t apr_err = fbtable->report_reversion (path->data, pool);
-      if (apr_err)
-        return svn_error_createf 
-          (apr_err, 0, NULL, pool,
-           "Error reporting reversion of `%s'", path->data);
-    }
+  if (notify_revert != NULL && reverted)
+    (*notify_revert) (notify_baton, path->data);
 
   /* Finally, recurse if requested. */
   if (recursive && (entry->kind == svn_node_dir))
@@ -1154,7 +1134,8 @@ svn_wc_revert (svn_stringbuf_t *path,
           svn_path_add_component_nts (full_entry_path, keystring);
 
           /* Revert the entry. */
-          SVN_ERR (svn_wc_revert (full_entry_path, TRUE, pool));
+          SVN_ERR (svn_wc_revert (full_entry_path, TRUE,
+                                  notify_revert, notify_baton, pool));
 
           /* Return FULL_ENTRY_PATH to its pre-appended state. */
           svn_stringbuf_set (full_entry_path, path->data);
