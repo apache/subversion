@@ -110,33 +110,58 @@ def secs_from_timestr(svn_datetime, pool):
   # ### aprtime is microseconds; turn it into seconds
   return aprtime / 1000000
 
-def argv_to_command_string(argv):
-  """Flatten a list of command line arguments into a command string.
 
-  The resulting command string is expected to be passed to the system
-  shell which os functions like popen() and system() invoke internally.
-  """
 
-  _re_slashquote = re.compile(r'(\\+)(\"|$)')
+# ============================================================================
+# Reusable code segment. This code is duplicated in the several locations.
+# THIS IS THE MASTER COPY.
+#
+# Duplicates are located at:
+# - subversion/build/generator/gen_win.py
+# - cvs2svn/cvs2svn
+#  
+# Please keep all copies in sync, and the list above up-to-date.
+#
+if sys.platform == "win32":
+  _escape_shell_arg_re = re.compile(r'(\\+)(\"|$)')
 
-  def _escape_arg(arg):
+  def escape_shell_arg(arg):
     # The (very strange) parsing rules used by the C runtime library are
     # described at:
     # http://msdn.microsoft.com/library/en-us/vclang/html/_pluslang_Parsing_C.2b2b_.Command.2d.Line_Arguments.asp
 
     # double up slashes, but only if they are followed by a quote character
-    arg = re.sub(_re_slashquote, r'\1\1\2', arg)
+    arg = re.sub(_escape_shell_arg_re, r'\1\1\2', arg)
 
     # surround by quotes and escape quotes inside
     arg = '"' + string.replace(arg, '"', '"^""') + '"'
     return arg
 
-  if sys.platform == "win32":
+
+  def argv_to_command_string(argv):
+    """Flatten a list of command line arguments into a command string.
+
+    The resulting command string is expected to be passed to the system
+    shell which os functions like popen() and system() invoke internally.
+    """
+
     # According cmd's usage notes (cmd /?), it parses the command line by
     # "seeing if the first character is a quote character and if so, stripping
     # the leading character and removing the last quote character."
     # So to prevent the argument string from being changed we add an extra set
     # of quotes around it here.
-    return '"' + string.join(map(_escape_arg, argv), " ") + '"'
-  else:
-    return string.join(argv, " ")
+    return '"' + string.join(map(escape_shell_arg, argv), " ") + '"'
+
+else:
+  def escape_shell_arg(str):
+    return "'" + string.replace(str, "'", "'\\''") + "'"
+
+  def argv_to_command_string(argv):
+    """Flatten a list of command line arguments into a command string.
+
+    The resulting command string is expected to be passed to the system
+    shell which os functions like popen() and system() invoke internally.
+    """
+
+    return string.join(map(escape_shell_arg, argv), " ")
+# ============================================================================
