@@ -81,14 +81,22 @@ Candidate changes:
       2 simple fixes in javahl binding only to prevent crash of jvm. Reported
       by users.
     Votes:
-       +1: pmayweg, jerenkrantz
+      +1: pmayweg, jerenkrantz
 
   * r11871
     Support BDB 4.3.
     Justification:
       System will startup with BDB 4.3, but die at run-time without this.
     Votes:
-       +1: jerenkrantz
+      +1: jerenkrantz
+
+  * r12286
+    Fix README references to cvs2svn.
+    Justification:
+      Tell our users the correct information. Doc change only.
+    Votes:
+      +1: maxb
+
 
 Approved changes (further review is welcome, but not required):
 
