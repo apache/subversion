@@ -2042,9 +2042,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   const char *vcc;
   int http_status;
 
-  SVN_ERR (svn_ra_dav__get_vcc
-           (&vcc, rb->ras->sess, rb->ras->url, rb->ras->pool));
-
+  /* write the final closing gunk to our request body. */
   status = apr_file_write_full(rb->tmpfile,
                                report_tail, sizeof(report_tail) - 1, NULL);
   if (status)
@@ -2061,6 +2059,16 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   rb->cpathstr = MAKE_BUFFER(rb->ras->pool);
   rb->href = MAKE_BUFFER(rb->ras->pool);
 
+  /* get the VCC.  if this doesn't work out for us, don't forget to
+     remove the tmpfile before returning the error. */
+  if ((err = svn_ra_dav__get_vcc(&vcc, rb->ras->sess, 
+                                 rb->ras->url, rb->ras->pool)))
+    {
+      (void) apr_file_close(rb->tmpfile);
+      return err;
+    }
+
+  /* dispatch the REPORT. */
   err = svn_ra_dav__parsed_request(rb->ras->sess, "REPORT", vcc,
                                    NULL, rb->tmpfile, NULL,
                                    report_elements, validate_element,
