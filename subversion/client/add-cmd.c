@@ -61,40 +61,35 @@
 #include "svn_error.h"
 #include "cl.h"
 
-static const char *get_help[] = {
-  "svn", "help", "add", NULL
-};
 
 
 /*** Code. ***/
 
 svn_error_t *
-svn_cl__add (int argc, const char **argv, 
-             svn_cl__opt_state_t *p_opt_state,
+svn_cl__add (svn_cl__opt_state_t *opt_state,
+             apr_array_header_t *targets,
              apr_pool_t *pool)
 {
-  svn_error_t *err = NULL;
-  svn_string_t *target = GET_OPT_STATE(p_opt_state, target);
+  svn_error_t *err;
+  int i;
 
-  if (target != NULL)
-    err = svn_client_add (target, pool);
-  else if (argc > 0)
-    {
-      while (--argc >= 0)
-        {
-          target = svn_string_create (*(argv++), pool);
-          err = svn_client_add (target, pool);
-          /* free (target); */
-          if (err != SVN_NO_ERROR)
-            break;
-        }
-    }
+  if (targets->nelts)
+    for (i = 0; i < targets->nelts; i++)
+      {
+        svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
+        err = svn_client_add (target, pool);
+        if (err)
+          return err;
+      }
   else
     {
-      fputs ("svn add: object-to-add required\n", stderr);
-      err = svn_cl__help (3, get_help, p_opt_state, pool);
+      fprintf (stderr, "svn add: arguments required\n");
+      err = svn_cl__help (opt_state, targets, pool);
+      if (err)
+        return err;
     }
-  return err;
+
+  return SVN_NO_ERROR;
 }
 
 

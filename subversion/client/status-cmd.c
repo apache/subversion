@@ -65,19 +65,35 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_cl__status (int argc, const char **argv, 
-                svn_cl__opt_state_t *p_opt_state,
+svn_cl__status (svn_cl__opt_state_t *opt_state,
+                apr_array_header_t *targets,
                 apr_pool_t *pool)
 {
-  svn_error_t *err = NULL;
+  svn_error_t *err;
   apr_hash_t *statushash;
-  err = svn_client_status (&statushash,
-                           GET_OPT_STATE(p_opt_state,target),
-                           pool);
-  if (! err) 
-    svn_cl__print_status_list (statushash, pool);
+  int i;
 
-  return err;
+  if (targets->nelts)
+    for (i = 0; i < targets->nelts; i++)
+      {
+        svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
+
+        err = svn_client_status (&statushash, target, pool);
+        if (err)
+          return err;
+
+        svn_cl__print_status_list (statushash, pool);
+      }
+  else
+    {
+      fprintf (stderr, "svn status: arguments required\n");
+      err = svn_cl__help (opt_state, targets, pool);
+      if (err)
+        return err;
+    }
+
+
+  return SVN_NO_ERROR;
 }
 
 

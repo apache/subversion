@@ -65,28 +65,38 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_cl__propget (int argc, const char **argv, 
-                 svn_cl__opt_state_t *p_opt_state,
+svn_cl__propget (svn_cl__opt_state_t *opt_state,
+                 apr_array_header_t *targets,
                  apr_pool_t *pool)
 {
-  svn_error_t *err = NULL;
-  svn_string_t *name, *value;
+  svn_error_t *err;
   apr_hash_t *prop_hash = apr_make_hash (pool);
+  int i;
 
-  name = GET_OPT_STATE(p_opt_state, name);
+  if (targets->nelts)
+    for (i = 0; i < targets->nelts; i++)
+      {
+        svn_string_t *value;
+        svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
+        err = svn_wc_prop_get (&value, opt_state->name, target, pool);
+        if (err)
+          return err;
 
-  err = svn_wc_prop_get (&value,
-                         name,
-                         GET_OPT_STATE(p_opt_state, target),
-                         pool);
+        /* kff todo: this seems like an odd way to do this... */
 
-  if (! err) 
+        apr_hash_set (prop_hash, opt_state->name->data, opt_state->name->len,
+                      value);
+        svn_cl__print_prop_hash (prop_hash, pool);
+      }
+  else
     {
-      apr_hash_set (prop_hash, name->data, name->len, value); 
-      svn_cl__print_prop_hash (prop_hash, pool);
-    }      
+      fprintf (stderr, "svn propget: arguments required\n");
+      err = svn_cl__help (opt_state, targets, pool);
+      if (err)
+        return err;
+    }
 
-  return err;
+  return SVN_NO_ERROR;
 }
 
 

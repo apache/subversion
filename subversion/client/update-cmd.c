@@ -65,25 +65,44 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_cl__update (int argc, const char **argv, 
-                svn_cl__opt_state_t *p_opt_state,
+svn_cl__update (svn_cl__opt_state_t *opt_state,
+                apr_array_header_t *targets,
                 apr_pool_t *pool)
 {
-  const svn_delta_edit_fns_t *trace_editor;
-  void *trace_edit_baton;
-  svn_error_t *err = NULL;
-  err = svn_cl__get_trace_editor (&trace_editor,
-				  &trace_edit_baton,
-				  GET_OPT_STATE(p_opt_state, target),
-				  pool);
-  if (err == NULL)
-    err = svn_client_update (NULL, NULL,
-			     trace_editor, trace_edit_baton,
-			     GET_OPT_STATE(p_opt_state, target),
-                             GET_OPT_STATE(p_opt_state, xml_file),
-                             GET_OPT_STATE(p_opt_state, revision),
-                             pool);
-  return err;
+  svn_error_t *err;
+  int i;
+
+  if (targets->nelts)
+    for (i = 0; i < targets->nelts; i++)
+      {
+        svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
+        const svn_delta_edit_fns_t *trace_editor;
+        void *trace_edit_baton;
+
+        err = svn_cl__get_trace_editor (&trace_editor,
+                                        &trace_edit_baton,
+                                        target, pool);
+        if (err)
+          return err;
+
+        err = svn_client_update (NULL, NULL,
+                                 trace_editor, trace_edit_baton,
+                                 target,
+                                 opt_state->xml_file,
+                                 opt_state->revision,
+                                 pool);
+        if (err)
+          return err;
+      }
+  else
+    {
+      fprintf (stderr, "svn update: arguments required\n");
+      err = svn_cl__help (opt_state, targets, pool);
+      if (err)
+        return err;
+    }
+
+  return SVN_NO_ERROR;
 }
 
 

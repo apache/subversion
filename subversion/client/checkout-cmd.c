@@ -65,29 +65,36 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_cl__checkout (int argc, const char **argv, 
-                  svn_cl__opt_state_t *p_opt_state,
+svn_cl__checkout (svn_cl__opt_state_t *opt_state,
+                  apr_array_header_t *targets,
                   apr_pool_t *pool)
 {
   const svn_delta_edit_fns_t *trace_editor;
   void *trace_edit_baton;
-  svn_error_t *err = NULL;
+  svn_error_t *err;
 
   err = svn_cl__get_trace_editor (&trace_editor,
 				  &trace_edit_baton,
-				  GET_OPT_STATE(p_opt_state, target),
+				  opt_state->target,
 				  pool);
-  if (err == NULL)
-    err = svn_client_checkout (NULL, NULL,
-			       trace_editor,
-			       trace_edit_baton,
-			       GET_OPT_STATE(p_opt_state, target),
-                               GET_OPT_STATE(p_opt_state, xml_file),
-			       GET_OPT_STATE(p_opt_state, ancestor_path),
-                               GET_OPT_STATE(p_opt_state, revision),
-                               pool);
-  return err;
+  if (err)
+    return err;
+
+
+  err = svn_client_checkout (NULL, NULL,
+                             trace_editor,
+                             trace_edit_baton,
+                             opt_state->target,
+                             opt_state->xml_file,
+                             opt_state->ancestor_path,
+                             opt_state->revision,
+                             pool);
+  if (err)
+    return err;
+
+  return SVN_NO_ERROR;
 }
+
 
 
 /* 
