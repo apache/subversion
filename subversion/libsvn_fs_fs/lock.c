@@ -290,11 +290,13 @@ fix_path_perms (const char *path,
 
 
 /* If ABS_PATH exists, add DIGEST_STR to it iff it's not already in
-   it.  Else, create ABS_PATH with DIGEST_STR as its only member. */
+   it.  Else, create ABS_PATH with DIGEST_STR as its only member.  If
+   a new file is created, CREATED_NEW_FILE is set to TRUE. */
 static svn_error_t *
 add_hash_to_entries_file (const char *abs_path,
                           svn_fs_t *fs,
                           const char *digest_str,
+                          svn_boolean_t *created_new_file,
                           apr_pool_t *pool)
 {
   apr_hash_t *entries;
@@ -313,6 +315,7 @@ add_hash_to_entries_file (const char *abs_path,
                         APR_HASH_KEY_STRING, &(digest_str)[0]);
           write_entries_file (entries, (char *)abs_path, pool);
         }
+      created_new_file = FALSE;
     }
   else /* Entries file DOES NOT exist. */
     {
@@ -326,6 +329,7 @@ add_hash_to_entries_file (const char *abs_path,
                                        NULL, pool));
       SVN_ERR (svn_io_file_close (fd, pool));
       SVN_ERR (fix_path_perms (abs_path, fs, pool));
+      *created_new_file = TRUE;
     }
 
   return SVN_NO_ERROR;
@@ -359,6 +363,26 @@ make_dir (const char *path,
 }
 
 
+/* Join all items in COMPONENTS with directory separators to create
+   PATH. */
+static svn_error_t *
+merge_array_components (const char **path,
+                        apr_array_header_t *components,
+                        apr_pool_t *pool)
+{
+  int i;
+  *path = "/";
+
+  for (i = 0; i < components->nelts; i++)
+    {
+      char *component;
+      component = APR_ARRAY_IDX (components, i, char *);
+      SVN_ERR (merge_paths (path, *path, component, pool));
+    }
+  return SVN_NO_ERROR;
+}
+
+
 /* Store the lock in the OS level filesystem under
    repos/db/locks/locks in a file named by composing the MD5 hash of
    lock->path. */
@@ -371,9 +395,8 @@ write_lock_to_file (svn_fs_t *fs,
   apr_file_t *fd;
   svn_stream_t *stream;
   apr_array_header_t *nodes;
-  char const *abs_path, *node_name;
-  const char *digest_str, *path, *path_so_far = "/";
-  int i;
+  const char *abs_path, *node_name;
+  const char *digest_str, *path, *parent_path, *child_path;
 
   /* Make sure that the base dir exists. */
   SVN_ERR (base_path_to_lock_file (&abs_path, fs, pool));
@@ -383,28 +406,33 @@ write_lock_to_file (svn_fs_t *fs,
   path = repository_abs_path (lock->path, pool);
   nodes = svn_path_decompose (path, pool);
 
-  /* Make sure that each parent directory, starting with "/", has an
-     entries file on disk, and that the entries file contains an entry
-     for its child. */
-  for (i = 0; i < (nodes->nelts - 1); i++)
+  /* Make sure that each parent directory has an entries file on disk,
+     and that the entries file contains an entry for its child. */
+
+  do  /* Iterate in reverse. */ 
     {
-      const char *child_path = "/";
+      svn_boolean_t created_new_file = FALSE;
 
-      node_name = APR_ARRAY_IDX (nodes, i, char *);
-
-      SVN_ERR (merge_paths (&path_so_far, path_so_far, node_name, pool));
-
-      SVN_ERR (merge_paths (&child_path, 
-                            path_so_far,
-                            APR_ARRAY_IDX (nodes, i + 1, char *),
-                            pool));
-
+      SVN_ERR (merge_array_components (&child_path, nodes, pool));
       digest_str = make_digest (child_path, pool);
 
-      SVN_ERR (abs_path_to_lock_file (&abs_path, fs, path_so_far, pool));
+      /* Compose the path to the parent entries file. */
+      node_name = apr_array_pop (nodes);
+      SVN_ERR (merge_array_components (&parent_path, nodes, pool));
 
-      SVN_ERR (add_hash_to_entries_file (abs_path, fs, digest_str, pool));
+      SVN_ERR (abs_path_to_lock_file (&abs_path, fs, parent_path, pool));
+
+      /* Make sure we don't put the root hash in the root dir. */
+      if ((strcmp (child_path, "/") == 0)
+          && (strcmp (parent_path, "/") == 0))
+        break;
+
+      SVN_ERR (add_hash_to_entries_file (abs_path, fs, digest_str, 
+                                         &created_new_file, pool));
+      if (!created_new_file) /* We just added our entry to an existing dir. */
+        break;
     }
+  while (node_name);
 
   /* Create our hash and load it up. */
   hash = apr_hash_make (pool);
@@ -437,25 +465,6 @@ write_lock_to_file (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-
-/* Join all items in COMPONENTS with directory separators to create
-   PATH. */
-static svn_error_t *
-merge_array_components (const char **path,
-                        apr_array_header_t *components,
-                        apr_pool_t *pool)
-{
-  int i;
-  *path = "/";
-
-  for (i = 0; i < components->nelts; i++)
-    {
-      char *component;
-      component = APR_ARRAY_IDX (components, i, char *);
-      SVN_ERR (merge_paths (path, *path, component, pool));
-    }
-  return SVN_NO_ERROR;
-}
 
 static svn_error_t *
 delete_lock (svn_fs_t *fs, 
