@@ -138,7 +138,7 @@ svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
 
 
 
-/*** Property change wrappers ***/
+/*** Property wrappers ***/
 
 /* Validate that property NAME is valid for use in a Subversion
    repository. */
@@ -182,6 +182,114 @@ svn_repos_fs_change_txn_prop (svn_fs_txn_t *txn,
 }
 
 
+/* A revision's changed paths are either all readable, all unreadable,
+   or a mixture of the two. */
+enum rev_readability_level
+{
+  rev_readable = 1,
+  rev_partially_readable,
+  rev_unreadable
+};
+
+
+/* Helper func: examine the changed-paths of REV in FS using
+   AUTHZ_READ_FUNC.  Set *CAN_READ to one of the three
+   readability_level enum values.  Use POOL for invoking the authz func. */
+static svn_error_t *
+get_readability (int *can_read,
+                 svn_fs_t *fs,
+                 svn_revnum_t rev,
+                 svn_repos_authz_func_t authz_read_func,
+                 void *authz_read_baton,
+                 apr_pool_t *pool)
+{
+  svn_fs_root_t *root;
+  apr_hash_t *changes;
+  apr_hash_index_t *hi;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  svn_boolean_t found_readable = FALSE, found_unreadable = FALSE;
+
+  SVN_ERR (svn_fs_revision_root (&root, fs, rev, pool));
+  SVN_ERR (svn_fs_paths_changed (&changes, root, pool));
+
+  if (apr_hash_count (changes) == 0)
+    {
+      /* No paths changed in this revision?  Uh, sure, I guess the
+         revision is readable, then.  */
+      *can_read = rev_readable;
+      return SVN_NO_ERROR;
+    }
+
+  for (hi = apr_hash_first (pool, changes); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      const char *path;
+      svn_boolean_t readable;
+
+      svn_pool_clear (subpool);
+
+      apr_hash_this (hi, &key, NULL, NULL);
+      path = (const char *) key;
+
+      SVN_ERR (authz_read_func (&readable, root, path,
+                                authz_read_baton, subpool));
+      if (readable)
+        found_readable = TRUE;
+      else
+        found_unreadable = TRUE;
+    }
+
+  svn_pool_destroy (subpool);
+
+  if (found_unreadable && (! found_readable))
+    *can_read = rev_unreadable;
+  else if (found_readable && (! found_unreadable))
+    *can_read = rev_readable;
+  else  /* found both readable and unreadable */
+    *can_read = rev_partially_readable;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_repos_fs_change_rev_prop2 (svn_repos_t *repos,
+                               svn_revnum_t rev,
+                               const char *author,
+                               const char *name,
+                               const svn_string_t *new_value,
+                               svn_repos_authz_func_t authz_read_func,
+                               void *authz_read_baton,
+                               apr_pool_t *pool)
+{
+  svn_string_t *old_value;
+  int readability = rev_readable;
+
+  if (authz_read_func)
+    SVN_ERR (get_readability (&readability, repos->fs, rev,
+                              authz_read_func, authz_read_baton, pool));    
+  if (readability == rev_readable)
+    {
+      SVN_ERR (validate_prop (name, pool));
+      SVN_ERR (svn_fs_revision_prop (&old_value, repos->fs, rev, name, pool));
+      SVN_ERR (svn_repos__hooks_pre_revprop_change (repos, rev, author, name, 
+                                                    new_value, pool));
+      SVN_ERR (svn_fs_change_rev_prop (repos->fs, rev, name, new_value, pool));
+      SVN_ERR (svn_repos__hooks_post_revprop_change (repos, rev, author, 
+                                                     name, old_value, pool));
+    }
+  else  /* rev is either unreadable or only partially readable */
+    {
+      return svn_error_createf 
+        (SVN_ERR_AUTHZ_UNREADABLE, NULL,
+         "Write denied:  not authorized to read all of revision %ld.", rev);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
 svn_error_t *
 svn_repos_fs_change_rev_prop (svn_repos_t *repos,
                               svn_revnum_t rev,
@@ -190,21 +298,104 @@ svn_repos_fs_change_rev_prop (svn_repos_t *repos,
                               const svn_string_t *new_value,
                               apr_pool_t *pool)
 {
-  svn_string_t *old_value;
+  return svn_repos_fs_change_rev_prop2 (repos, rev, author, name, new_value,
+                                        NULL, NULL, pool);  
+}     
 
-  SVN_ERR (validate_prop (name, pool));
-  SVN_ERR (svn_fs_revision_prop (&old_value, repos->fs, rev, name, pool));
-  SVN_ERR (svn_repos__hooks_pre_revprop_change (repos, rev, author, name, 
-                                                new_value, pool));
-  SVN_ERR (svn_fs_change_rev_prop (repos->fs, rev, name, new_value, pool));
-  SVN_ERR (svn_repos__hooks_post_revprop_change (repos, rev, author, 
-                                                 name, old_value, pool));
+
+
+svn_error_t *
+svn_repos_fs_revision_prop (svn_string_t **value_p,
+                            svn_repos_t *repos,
+                            svn_revnum_t rev,
+                            const char *propname,
+                            svn_repos_authz_func_t authz_read_func,
+                            void *authz_read_baton,
+                            apr_pool_t *pool)
+{
+  int readability = rev_readable;
+
+  if (authz_read_func)
+    SVN_ERR (get_readability (&readability, repos->fs, rev,
+                              authz_read_func, authz_read_baton, pool));    
+
+  if (readability == rev_unreadable)
+    {
+      /* Property?  What property? */
+      *value_p = NULL;
+    }
+  else if (readability == rev_partially_readable)
+    {      
+      /* Only svn:author and svn:date are fetchable. */
+      if ((strncmp (propname, SVN_PROP_REVISION_AUTHOR,
+                    strlen(SVN_PROP_REVISION_AUTHOR)) != 0)
+          && (strncmp (propname, SVN_PROP_REVISION_DATE,
+                       strlen(SVN_PROP_REVISION_DATE)) != 0))
+        *value_p = NULL;
+
+      else
+        SVN_ERR (svn_fs_revision_prop (value_p, repos->fs,
+                                       rev, propname, pool));
+    }
+  else /* wholly readable revision */
+    {
+      SVN_ERR (svn_fs_revision_prop (value_p, repos->fs, rev, propname, pool));
+    }
 
   return SVN_NO_ERROR;
 }
 
 
 
+svn_error_t *
+svn_repos_fs_revision_proplist (apr_hash_t **table_p,
+                                svn_repos_t *repos,
+                                svn_revnum_t rev,
+                                svn_repos_authz_func_t authz_read_func,
+                                void *authz_read_baton,
+                                apr_pool_t *pool)
+{
+  int readability = rev_readable;
+
+  if (authz_read_func)
+    SVN_ERR (get_readability (&readability, repos->fs, rev,
+                              authz_read_func, authz_read_baton, pool));    
+
+  if (readability == rev_unreadable)
+    {
+      /* Return an empty hash. */
+      *table_p = apr_hash_make (pool);
+    }
+  else if (readability == rev_partially_readable)
+    {      
+      apr_hash_t *tmphash;
+      svn_string_t *value;
+
+      /* Produce two property hashtables, both in POOL. */
+      SVN_ERR (svn_fs_revision_proplist (&tmphash, repos->fs, rev, pool));
+      *table_p = apr_hash_make (pool);
+
+      /* If they exist, we only copy svn:author and svn:date into the
+         'real' hashtable being returned. */
+      value = apr_hash_get (tmphash, SVN_PROP_REVISION_AUTHOR,
+                            APR_HASH_KEY_STRING);
+      if (value)
+        apr_hash_set (*table_p, SVN_PROP_REVISION_AUTHOR,
+                      APR_HASH_KEY_STRING, value);
+
+      value = apr_hash_get (tmphash, SVN_PROP_REVISION_DATE,
+                            APR_HASH_KEY_STRING);
+      if (value)
+        apr_hash_set (*table_p, SVN_PROP_REVISION_DATE,
+                      APR_HASH_KEY_STRING, value);
+    }
+  else /* wholly readable revision */
+    {
+      SVN_ERR (svn_fs_revision_proplist (table_p, repos->fs, rev, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 
 

@@ -851,7 +851,10 @@ svn_error_t *svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
                                                 apr_pool_t *pool);
 
 
-/** Like @c svn_fs_change_rev_prop(), but invoke the @a repos's pre- and
+/** 
+ * @since New in 1.1. 
+ *
+ * Like @c svn_fs_change_rev_prop(), but invoke the @a repos's pre- and
  * post-revprop-change hooks around the change.  Use @a pool for
  * temporary allocations.
  *
@@ -859,6 +862,27 @@ svn_error_t *svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
  * name of the property, and @a new_value is the new value of the
  * property.   @a author is the authenticated username of the person
  * changing the property value, or null if not available.
+ *
+ * If @a authz_read_func is non-NULL, then use it (with @a
+ * authz_read_baton) to validate the changed-paths associated with @a
+ * rev.  If the revision contains any unreadable changed paths, then
+ * return SVN_ERR_AUTHZ_UNREADABLE.
+ */
+svn_error_t *svn_repos_fs_change_rev_prop2 (svn_repos_t *repos,
+                                            svn_revnum_t rev,
+                                            const char *author,
+                                            const char *name,
+                                            const svn_string_t *new_value,
+                                            svn_repos_authz_func_t
+                                                          authz_read_func,
+                                            void *authz_read_baton,
+                                            apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ *
+ * Similar to svn_repos_fs_change_rev_prop2(), but with the
+ * @a authz_read_func parameter always NULL.
  */
 svn_error_t *svn_repos_fs_change_rev_prop (svn_repos_t *repos,
                                            svn_revnum_t rev,
@@ -866,6 +890,58 @@ svn_error_t *svn_repos_fs_change_rev_prop (svn_repos_t *repos,
                                            const char *name,
                                            const svn_string_t *new_value,
                                            apr_pool_t *pool);
+
+
+
+/**
+ * @since New in 1.1.
+ *
+ * Set @a *value_p to the value of the property named @a propname on
+ * revision @a rev in the filesystem opened in @a repos.  If @a rev
+ * has no property by that name, set @a *value_p to zero.  Allocate
+ * the result in @a pool.
+ *
+ * If @a authz_read_func is non-NULL, then use it (with @a
+ * authz_read_baton) to validate the changed-paths associated with @a
+ * rev.  If the changed-paths are all unreadable, then set @a *value_p
+ * to zero unconditionally.  If only some of the changed-paths are
+ * unreadable, then allow 'svn:author' and 'svn:date' propvalues to be
+ * fetched, but return 0 for any other property.
+ */
+svn_error_t *svn_repos_fs_revision_prop (svn_string_t **value_p,
+                                         svn_repos_t *repos,
+                                         svn_revnum_t rev,
+                                         const char *propname,
+                                         svn_repos_authz_func_t
+                                                      authz_read_func,
+                                         void *authz_read_baton,
+                                         apr_pool_t *pool);
+
+
+/**
+ * @since New in 1.1.
+ *
+ * Set @a *table_p to the entire property list of revision @a rev in
+ * filesystem opened in @a repos, as a hash table allocated in @a
+ * pool.  The table maps <tt>char *</tt> property names to @c
+ * svn_string_t * values; the names and values are allocated in @a
+ * pool.
+ *
+ * If @a authz_read_func is non-NULL, then use it (with @a
+ * authz_read_baton) to validate the changed-paths associated with @a
+ * rev.  If the changed-paths are all unreadable, then return an empty
+ * hash. If only some of the changed-paths are unreadable, then return
+ * an empty hash, except for 'svn:author' and 'svn:date' properties
+ * (assuming those properties exist).
+ */
+svn_error_t *svn_repos_fs_revision_proplist (apr_hash_t **table_p,
+                                             svn_repos_t *repos,
+                                             svn_revnum_t rev,
+                                             svn_repos_authz_func_t
+                                                        authz_read_func,
+                                             void *authz_read_baton,
+                                             apr_pool_t *pool);
+
 
 
 /* ---------------------------------------------------------------*/
