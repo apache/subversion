@@ -580,7 +580,7 @@ def build_tree_from_status(lines):
     repos_rev = '?'
     
   # Try http://www.wordsmith.org/anagram/anagram.cgi?anagram=ACDRMGU
-  rm = re.compile ('^([MACDRUG_ ][MACDRUG_ ])(.)(.)   .   [^0-9-]+(\d+|-)(.{23})(.+)')
+  rm = re.compile ('^([MACDRUG_ ][MACDRUG_ ])(.)(.)   .   [^0-9-]+(\d+|-)( +\S+ +\S+ +)(.+)')
   for line in lines:
     match = rm.search(line)
     if match and match.groups():
