@@ -182,6 +182,39 @@ svn_cl__log (apr_getopt_t *os,
   /* Add "." if user passed 0 arguments */
   svn_cl__push_implicit_dot_target(targets, pool);
 
+  if ((opt_state->start_revision.kind != svn_client_revision_unspecified)
+      && (opt_state->end_revision.kind == svn_client_revision_unspecified))
+    {
+      /* If the user specified exactly one revision, then start rev is
+         set but end is not.  We show the log message for just that
+         revision by making end equal to start.
+
+         Note that if the user requested a single dated revision, then
+         this will cause the same date to be resolved twice.  The
+         extra code complexity to get around this slight inefficiency
+         doesn't seem worth it, however.  */
+
+      opt_state->end_revision.kind = opt_state->start_revision.kind;
+
+      opt_state->end_revision.value = opt_state->start_revision.value;
+
+      opt_state->end_revision.value.number
+        = opt_state->start_revision.value.number;
+
+      opt_state->end_revision.value.date
+        = opt_state->start_revision.value.date;
+    }
+  else if (opt_state->start_revision.kind == svn_client_revision_unspecified)
+    {
+      opt_state->start_revision.kind = svn_client_revision_head;
+
+      if (opt_state->end_revision.kind == svn_client_revision_unspecified)
+        {
+          opt_state->end_revision.kind = svn_client_revision_number;
+          opt_state->end_revision.value.number = 1;  /* oldest commit */
+        }
+    }
+
   lb.first_call = 1;
   lb.pool = pool;
   SVN_ERR (svn_client_log (auth_baton,
