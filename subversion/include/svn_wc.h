@@ -533,29 +533,6 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
 /*** Updates. ***/
 
 /*
- * Return an editor for updating a working copy.
- * 
- * ANCHOR is the local path to the working copy which will be used as
- * the root of our editor.  TARGET is the entry in ANCHOR that will
- * actually be updated, or NULL if all of ANCHOR should be update.
- *
- * TARGET_REVISION is the repository revision that results from this set
- * of changes.
- *
- * EDITOR, EDIT_BATON, and DIR_BATON are all returned by reference,
- * and the latter two should be used as parameters to editor
- * functions.
- */
-svn_error_t *svn_wc_get_update_editor (svn_stringbuf_t *anchor,
-                                       svn_stringbuf_t *target,
-                                       svn_revnum_t target_revision,
-                                       svn_boolean_t recurse,
-                                       const svn_delta_edit_fns_t **editor,
-                                       void **edit_baton,
-                                       apr_pool_t *pool);
-
-
-/*
  * Set *WC_ROOT to TRUE if PATH represents a "working copy root",
  * FALSE otherwise.  Use POOL for any intermediate allocations.
  *
@@ -585,6 +562,25 @@ svn_error_t *svn_wc_get_actual_target (svn_stringbuf_t *path,
                                        apr_pool_t *pool);
 
 
+/* Set *EDITOR and *EDIT_BATON to an editor and baton for updating a
+ * working copy.
+ * 
+ * ANCHOR is the local path to the working copy which will be used as
+ * the root of our editor.  TARGET is the entry in ANCHOR that will
+ * actually be updated, or NULL if all of ANCHOR should be updated.
+ *
+ * TARGET_REVISION is the repository revision that results from this set
+ * of changes.
+ */
+svn_error_t *svn_wc_get_update_editor (svn_stringbuf_t *anchor,
+                                       svn_stringbuf_t *target,
+                                       svn_revnum_t target_revision,
+                                       svn_boolean_t recurse,
+                                       const svn_delta_edit_fns_t **editor,
+                                       void **edit_baton,
+                                       apr_pool_t *pool);
+
+
 /* Like svn_wc_get_update_editor(), except that:
  *
  * DEST will be created as a working copy, if it does not exist
@@ -597,46 +593,17 @@ svn_error_t *svn_wc_get_actual_target (svn_stringbuf_t *path,
  * such a case and do as little damage as possible, but makes no
  * promises.
  *
- * REPOS is the repository string to be recorded in this working
- * copy.
- *
- * kff todo: Actually, REPOS is one of several possible non-delta-ish
- * things that may be needed by a editor when creating new
- * administrative subdirs.  Other things might be username and/or auth
- * info, which aren't necessarily included in the repository string.
- * Thinking more on this question...
+ * ANCESTOR_URL is the repository string to be recorded in this
+ * working copy.
  */
 svn_error_t *svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
-                                         svn_stringbuf_t *ancestor_path,
+                                         svn_stringbuf_t *ancestor_url,
                                          svn_revnum_t target_revision,
                                          svn_boolean_t recurse,
                                          const svn_delta_edit_fns_t **editor,
                                          void **edit_baton,
                                          apr_pool_t *pool);
 
-
-#if 0
-/* kff: Will have to think about the interface here a bit more. */
-
-/* GJS: the function will look something like this:
- *
- * svn_wc_commit(source, commit_editor, commit_edit_baton, dir_baton, pool)
- *
- * The Client Library will fetch the commit_editor (& baton) from RA.
- * Source is something that describes the files/dirs (and recursion) to
- * commit. Internally, WC will edit the local dirs and push changes into
- * the commit editor.
- */
-
-svn_error_t *svn_wc_make_skelta (void *delta_src,
-                                 svn_delta_write_fn_t *delta_stream_writer,
-                                 apr_array_header_t *paths);
-
-
-svn_error_t *svn_wc_make_delta (void *delta_src,
-                                svn_delta_write_fn_t *delta_stream_writer,
-                                apr_array_header_t *paths);
-#endif /* 0 */
 
 
 /* A word about the implementation of working copy property storage:

@@ -72,16 +72,12 @@ wc_to_wc_copy (svn_stringbuf_t *src_path,
     return svn_error_createf (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
                               "path `%s' does not exist.", src_path->data);
 
-  /* Verify that DST_PATH is not an existing file. */
-  SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
-  if (dst_kind == svn_node_file)
-    return svn_error_createf (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool,
-                              "file `%s' already exists.", dst_path->data);
-
   /* If DST_PATH does not exist, then its basename will become a new
      file or dir added to its parent (possibly an implicit '.').  If
      DST_PATH is a dir, then SRC_PATH's basename will become a new
-     file or dir within DST_PATH itself. */
+     file or dir within DST_PATH itself.  Else if it's a file, just
+     error out. */
+  SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
   if (dst_kind == svn_node_none)
     svn_path_split (dst_path, &parent, &basename, svn_path_local_style, pool);
   else if (dst_kind == svn_node_dir)
@@ -306,7 +302,9 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
   void *ra_baton, *sess, *cb_baton;
   svn_ra_plugin_t *ra_lib;
   svn_ra_callbacks_t *ra_callbacks;
-  svn_node_kind_t src_kind;
+  svn_node_kind_t src_kind, dst_kind;
+  const svn_delta_edit_fns_t *editor;
+  void *edit_baton;
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -324,7 +322,77 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
       (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
        "path `%s' does not exist in revision `%ld'", src_url->data, src_rev);
 
-  /* ### todo:  now do a checkout, essentially? */
+  /* There are two interfering sets of cases to watch out for here:
+   *
+   * First set:
+   *
+   *   1) If DST_PATH does not exist, then great.  We're going to
+   *      create a new entry in its parent.
+   *   2) If it does exist, then it must be a directory and we're
+   *      copying to a new entry inside that dir (the entry's name is
+   *      the basename of SRC_URL).
+   *
+   * But while that's all going on, we must also remember:
+   *
+   *   A) If SRC_URL is a directory in the repository, we can check
+   *      it out directly, no problem.
+   *   B) If SRC_URL is a file, we have to manually get the editor
+   *      started, since there won't be a root to open.
+   *
+   * I'm going to ignore B for the moment, and implement cases 1 and
+   * 2 under A.
+   */
+
+  SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
+  if (dst_kind == svn_node_dir)
+    {
+      svn_stringbuf_t *unused, *basename;
+      svn_path_split (src_url, &unused, &basename, svn_path_url_style, pool);
+
+      /* We shouldn't affect the caller's dst_path, so dup first and
+         then extend. */
+      dst_path = svn_stringbuf_dup (dst_path, pool);
+      svn_path_add_component (dst_path, basename, svn_path_local_style);
+    }
+  else if (dst_kind != svn_node_none)  /* must be a file */
+    return svn_error_createf (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool,
+                              "file `%s' already exists.", dst_path->data);
+
+  /* Get a checkout editor. */
+  SVN_ERR (svn_wc_get_checkout_editor (dst_path,
+                                       src_url,
+                                       src_rev,
+                                       1, /* ### recurse? */
+                                       &editor,
+                                       &edit_baton,
+                                       pool));
+
+
+  /* ### todo: it might be nice for "svn cp" to print out what it's
+   * doing as it's doing it, when the network is involved.  This
+   * probably means taking before_ and after_ editors, which means
+   * they'd need to be passed through from svn_client_copy() and
+   * svn_client_move().  Not everyone would use them; for example,
+   * wc_to_wc_copy() wouldn't bother.
+   *
+   * See checkout.c:svn_client_checkout() for an example of the editor
+   * wrapping I'm talking about.
+   */
+
+  abort ();
+
+#if 0
+  /* some notes for myself */
+
+  1. do the checkout;
+  2. do these things in order, or write a routine that does them:
+    recursively_remove_all_wcprops ():
+    svn_wc_add_directory ():
+    // ---> which just calls add_to_revision_control(), which needs to
+    // be renamed and take copyfrom args directly instead of deriving
+    // it from src_url (or get abstracted, blah blah);
+
+#endif /* 0 */
 
   return SVN_NO_ERROR;
 }
