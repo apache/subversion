@@ -1,6 +1,6 @@
-package org.tigris.subversion.lib;
-
-/**
+/*
+ * svn_jni.h header for all of the java binding utility functions
+ *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
@@ -14,24 +14,17 @@ package org.tigris.subversion.lib;
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
- *
  */
 
-public class Item 
-{
-  public final Object key;
-  public final Object data;
-
-  public Item(Object key, Object data) 
-  {
-    this.key = key;
-    this.data = data;
-  }
-}
+#ifndef SVN_JNI_H
+#define SVN_JNI_H
 
 
 
+#endif
 
-
+/* local variables:
+ * eval: (load-file "../../../svn-dev.el")
+ * end: */
 
 
