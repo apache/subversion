@@ -42,9 +42,9 @@ svn_error_t *svn_fs__reserve_copy_id (const char **copy_id_p,
                                       trail_t *trail);
 
 /* Create a new copy with id COPY_ID in FS as part of TRAIL.
-   SRC_PATH/SRC_REV are the path/revision (respectively) of the copy
-   source, and DST_NODEREV_ID is the node revision id of the copy
-   destination.  
+   SRC_PATH/SRC_TXN_ID are the path/transaction ID (respectively) of
+   the copy source, and DST_NODEREV_ID is the node revision id of the
+   copy destination.
 
    SRC_PATH is expected to be a canonicalized filesystem path (see
    svn_fs__canonicalize_abspath).
@@ -53,7 +53,7 @@ svn_error_t *svn_fs__reserve_copy_id (const char **copy_id_p,
 svn_error_t *svn_fs__create_copy (const char *copy_id,
                                   svn_fs_t *fs,
                                   const char *src_path,
-                                  svn_revnum_t src_rev,
+                                  const char *src_txn_id,
                                   const svn_fs_id_t *dst_noderev_id,
                                   trail_t *trail);
 

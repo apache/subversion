@@ -27,6 +27,7 @@
 #include "../trail.h"
 #include "../id.h"
 #include "copies-table.h"
+#include "rev-table.h"
 
 
 int
@@ -124,14 +125,13 @@ svn_error_t *
 svn_fs__create_copy (const char *copy_id,
                      svn_fs_t *fs,
                      const char *src_path,
-                     svn_revnum_t src_rev,
+                     const char *src_txn_id,
                      const svn_fs_id_t *dst_noderev_id,
                      trail_t *trail)
 {
   svn_fs__copy_t copy;
-
   copy.src_path = src_path;
-  copy.src_revision = src_rev;
+  copy.src_txn_id = src_txn_id;
   copy.dst_noderev_id = (svn_fs_id_t *) dst_noderev_id;
   return put_copy (fs, &copy, copy_id, trail);
 }

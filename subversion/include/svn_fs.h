@@ -233,9 +233,7 @@ int svn_fs_check_related (const svn_fs_id_t *id1,
 
 /* Parse the LEN bytes at DATA as a node revision ID.  Return zero if
    the bytes are not a properly-formed ID.  Allocate the parsed ID in
-   POOL.  If POOL is zero, malloc the ID; we need this in certain
-   cases where we can't pass in a pool, but it's generally best to use
-   a pool whenever possible.  */
+   POOL.  */
 svn_fs_id_t *svn_fs_parse_id (const char *data, 
                               apr_size_t len,
                               apr_pool_t *pool);

@@ -379,8 +379,7 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
     return svn_error_createf 
       (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
        "initial copy id not `0' in filesystem `%s'", fs->path);
-  SVN_ERR (svn_fs__create_copy (copy_id, fs, NULL, SVN_INVALID_REVNUM, 
-                                root_id, trail));
+  SVN_ERR (svn_fs__create_copy (copy_id, fs, NULL, NULL, root_id, trail));
 
   /* Link it into filesystem revision 0. */
   revision.txn_id = txn_id;
@@ -1433,6 +1432,7 @@ svn_fs__dag_copy (dag_node_t *to_node,
       const char *copy_id;
       svn_fs_t *fs = svn_fs__dag_get_fs (from_node);
       const svn_fs_id_t *src_id = svn_fs__dag_get_id (from_node);
+      const char *from_txn_id = NULL;
 
       /* Make a copy of the original node revision. */
       SVN_ERR (get_node_revision (&from_noderev, from_node, trail));
@@ -1449,13 +1449,16 @@ svn_fs__dag_copy (dag_node_t *to_node,
       SVN_ERR (svn_fs__create_successor (&id, fs, src_id, to_noderev,
                                          copy_id, txn_id, trail));
 
+      /* Translate FROM_REV into a transaction ID. */
+      SVN_ERR (svn_fs__rev_get_txn_id (&from_txn_id, fs, from_rev, trail));
+
       /* Now that we've done the copy, we need to add the information
          about the copy to the `copies' table, using the COPY_ID we
          reserved above.  */
       SVN_ERR (svn_fs__create_copy 
                (copy_id, fs, 
                 svn_fs__canonicalize_abspath (from_path, trail->pool), 
-                from_rev, id, trail));
+                from_txn_id, id, trail));
 
       /* Finally, add the COPY_ID to the transaction's list of copies
          so that, if this transaction is aborted, the `copies' table
@@ -1504,7 +1507,13 @@ svn_fs__dag_copied_from (svn_revnum_t *rev_p,
                                      id_copy_id, trail));
           if (svn_fs__id_eq (copy->dst_noderev_id, id))
             {
-              *rev_p = copy->src_revision;
+              /* We need to translate the COPY's transaction ID into a
+                 revision.  So we lookup the transaction, and pull the
+                 revision from it.  It's really not that complicated.  */
+              svn_fs__transaction_t *txn;
+              SVN_ERR (svn_fs__get_txn (&txn, svn_fs__dag_get_fs (node),
+                                        copy->src_txn_id, trail));
+              *rev_p = txn->revision;
               *path_p = copy->src_path;
             }
         }

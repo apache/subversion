@@ -105,8 +105,7 @@ allocate_txn_id (const char **id_p,
 
   svn_fs__str_to_dbt (&query, (char *) svn_fs__next_key_key);
 
-  /* Get the current value associated with the `next-key' key in the
-     copies table.  */
+  /* Get the current value associated with the `next-key' key in the table.  */
   SVN_ERR (DB_WRAP (fs, "allocating new txn ID (getting `next-key')",
                     fs->transactions->get (fs->transactions, trail->db_txn,
                                            &query, 
