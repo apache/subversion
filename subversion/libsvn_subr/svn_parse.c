@@ -52,6 +52,56 @@
 #include <svn_error.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
+#include <apr_file_io.h>
+
+
+
+/* 
+   NOT EXPORTED.
+
+   Input:  an open file, a bytestring ptr, and a pool.
+
+   Returns:  either APR_EOF or APR_SUCCESS, and a filled-in bytestring
+             containing the next line of the file.
+
+         (Note that the same bytestring can be reused in multiple
+         calls to this routine, because the bytestring is cleared at
+         the beginning.)  
+*/
+
+
+ap_status_t
+my__readline (ap_file_t *FILE, svn_string_t *line, ap_pool_t *pool)
+{
+  char c;
+  ap_status_t result;
+
+  svn_string_setempty (line);  /* clear the bytestring first! */
+
+  while (1)
+    {
+      result = ap_getc (&c, FILE);  /* read a byte from the file */
+
+      if (result == APR_EOF)  /* file is finished. */
+        {
+          return APR_EOF;
+        }
+      
+      if (c == '\n')          /* line is finished. */
+        {
+          return APR_SUCCESS;
+        }
+      
+      else  /* otherwise, just append this byte to the bytestring */
+        {
+          svn_string_appendbytes (line, &c, 1, pool);
+        }
+    }  
+}
+
+
+
+
 
 
 /* 
@@ -64,12 +114,11 @@
 
    The hash returned is a mapping from section-names to hash pointers;
    each hash contains the keys/vals for each section.  All
-   section-names, keys and vals are stored as bytestrings pointers.
+   section-names, keys and vals are stored as svn_string_t pointers.
    (These bytestrings are allocated in the same pool as the hashes.)
 
    This routine makes no attempt to understand the sections, keys or
-   values.  :) 
-*/
+   values.  :) */
 
 
 ap_hash_t *
@@ -77,8 +126,14 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
 {
   ap_hash_t *uberhash;      /* our hash of hashes */
   ap_hash_t *current_hash;  /* the hash we're currently storing vals in */
-  ap_status_t result;
+
   ap_file_t *FILE;
+  ap_pool_t *scratchpool;
+  ap_string_t *currentline;
+  ap_status_t result;     
+
+  char c;          
+  ap_size_t n = 1;
   
   /* Create our uberhash */
   uberhash = ap_make_hash (pool);
@@ -87,24 +142,47 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
   result = ap_open (&FILE,
                     svn_string_2cstring (filename, pool),
                     APR_READ,
-                    perms,
+                    perms,/*TODO: WHAT IS THIS? */
                     pool);
   
   if (result != APR_SUCCESS)
     {
       svn_string_t *msg = svn_string_create 
         ("svn_parse(): can't open for reading, file ", pool);
-      svn_string_appendstr (filename, pool);
+      svn_string_appendstr (msg, filename, pool);
 
       /* Declare this a fatal error! */
       svn_handle_error (svn_create_error (result, TRUE, msg, pool));
     }
 
+  /* Create a scratch memory pool for buffering our file as we read it */
+
+  if ((result = ap_create_pool (&scratchpool, NULL)) != APR_SUCCESS)
+    {
+      /* hoo boy, obfuscated C below!  :)  */
+      svn_handle_error 
+        (svn_create_error 
+         (result, TRUE, 
+          svn_string_create ("svn_parse(): fatal: can't create scratchpool",
+                             pool), pool));
+    }
+
+  /* Create a bytestring to hold the current line of FILE */
+
+  currentline = svn_string_create ("<nobody home>", scratchpool);
 
 
-  /* now loop through the file (using apr file routines?)...
+  /* Now start scanning our file, one line at a time */
 
-     each time we find a comment line, break back to top of loop;
+  while (my__readline (FILE, currentline, scratchpool) != APR_EOF)
+    {
+      
+
+
+    }
+
+
+  /*each time we find a comment line, break back to top of loop;
 
      each time we find a new section, place the section name in
      a bytestring called "new_section".  Then: */
@@ -114,9 +192,9 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
     current_hash = new_section_hash;  /* make this the "active" hash */
 
     /* store this new hash in our uberhash */
-    
+     
     ap_hash_set (uberhash, 
-                 new_section,         /* key: ptr to new_section bytestring */
+                 new_section,         /* key: ptr to bytestring */
                  sizeof(svn_string_t),/* the length of the key */
                  new_section_hash);   /* val: ptr to the new hash */
   }
@@ -127,10 +205,29 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
   */
   {
     ap_hash_set (current_hash,
-                 new_key,
+                 new_key,             /* key: ptr to bytestring */
                  sizeof(svn_string_t),
-                 new_val);
+                 new_val);            /* val: ptr to bytestring */
   }
+
+     
+  /* Close the file and free our scratchpool */
+
+  result = ap_close (FILE);
+  if (result != APR_SUCCESS)
+    {
+      svn_string_t *msg = svn_string_create 
+        ("svn_parse(): warning: can't close file ", pool);
+      svn_string_appendstr (msg, filename, pool);
+      
+      /* Not fatal, just annoying */
+      svn_handle_error (svn_create_error (result, FALSE, msg, pool));
+    }
+  
+  ap_destroy_pool (scratchpool);
+
+
+  /* Return the hash of hashes */
 
   return uberhash;
 }
