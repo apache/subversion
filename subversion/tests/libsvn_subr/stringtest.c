@@ -434,7 +434,7 @@ test13 (const char **msg,
 
   status = apr_file_open (&file, fname, APR_WRITE | APR_TRUNCATE | APR_CREATE,
                           APR_OS_DEFAULT, pool);
-  if (!APR_STATUS_IS_SUCCESS(status))
+  if (status)
     return fail (pool, "opening file");
 
   repeat = 100;
@@ -443,25 +443,25 @@ test13 (const char **msg,
   for (i = 0; i < repeat; ++i)
     {
       status = apr_file_write_full (file, ftext, sizeof(ftext) - 1, &len);
-      if (!APR_STATUS_IS_SUCCESS(status))
+      if (status)
         return fail (pool, "writing file");
     }
 
   /* A null byte, I don't *think* any of our platforms mangle these */
   status = apr_file_write_full (file, "\0", 1, &len);
-  if (!APR_STATUS_IS_SUCCESS(status))
+  if (status)
     return fail (pool, "writing file");
 
   /* Some more text */
   for (i = 0; i < repeat; ++i)
     {
       status = apr_file_write_full (file, ftext, sizeof(ftext) - 1, &len);
-      if (!APR_STATUS_IS_SUCCESS(status))
+      if (status)
         return fail (pool, "writing file");
     }
 
   status = apr_file_close (file);
-  if (!APR_STATUS_IS_SUCCESS(status))
+  if (status)
     return fail (pool, "closing file");
 
   SVN_ERR (svn_string_from_file (&s, fname, pool));
@@ -471,14 +471,14 @@ test13 (const char **msg,
   s = NULL;
 
   status = apr_file_open (&file, fname, APR_READ, APR_OS_DEFAULT, pool);
-  if (!APR_STATUS_IS_SUCCESS(status))
+  if (status)
     return fail (pool, "opening file");
 
   SVN_ERR (svn_string_from_aprfile(&s, file, pool));
   SVN_ERR (check_string_contents (s, ftext, sizeof(ftext) - 1, repeat, pool));
 
   status = apr_file_close (file);
-  if (!APR_STATUS_IS_SUCCESS(status))
+  if (status)
     return fail (pool, "closing file");
 
   return SVN_NO_ERROR;

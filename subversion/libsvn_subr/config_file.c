@@ -461,7 +461,7 @@ svn_config_ensure (apr_pool_t *pool)
   if (kind == svn_node_none)
     {
       apr_err = apr_dir_make (path, APR_OS_DEFAULT, pool);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
+      if (apr_err)
         return SVN_NO_ERROR;
     }
   else if (kind != svn_node_dir)
@@ -600,7 +600,7 @@ svn_config_ensure (apr_pool_t *pool)
                                APR_OS_DEFAULT,
                                pool);
 
-      if (APR_STATUS_IS_SUCCESS (apr_err))
+      if (! apr_err)
         {
           apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
           if (apr_err)
@@ -681,7 +681,7 @@ svn_config_ensure (apr_pool_t *pool)
                                APR_OS_DEFAULT,
                                pool);
 
-      if (APR_STATUS_IS_SUCCESS (apr_err))
+      if (! apr_err)
         {
           apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
           if (apr_err)

@@ -333,7 +333,7 @@ sync_adm_file (svn_stringbuf_t *path,
  
   /* Rename. */
   apr_err = apr_file_rename (tmp_path->data, path->data, pool);
-  if (APR_STATUS_IS_SUCCESS (apr_err))
+  if (! apr_err)
     SVN_ERR (svn_io_set_file_read_only (path->data, FALSE, pool));
 
   /* Unconditionally restore path. */
@@ -680,7 +680,7 @@ close_adm_file (apr_file_t *fp,
       
       /* Rename. */
       apr_err = apr_file_rename (tmp_path->data, path->data, pool);
-      if (APR_STATUS_IS_SUCCESS(apr_err))
+      if (! apr_err)
         SVN_ERR (svn_io_set_file_read_only (path->data, FALSE, pool));
       
       /* Unconditionally restore path. */

@@ -239,7 +239,7 @@ install_committed_file (svn_boolean_t *overwrote_working,
                                     tmp_wfile->data, SVN_WC__TMP_EXT,
                                     FALSE, pool));
   apr_err = apr_file_close (ignored);
-  if (! (APR_STATUS_IS_SUCCESS (apr_err)))
+  if (apr_err)
     return svn_error_createf
       (apr_err, 0, NULL, pool,
        "install_committed_file: error closing %s", tmp_wfile->data);

@@ -635,7 +635,7 @@ main (int argc, const char * const *argv)
         lockfile_path = svn_fs_db_lockfile (fs, pool);
         apr_err = apr_file_open (&lockfile_handle, lockfile_path,
                                  (APR_WRITE | APR_APPEND), APR_OS_DEFAULT, pool);
-        if (! APR_STATUS_IS_SUCCESS (apr_err))
+        if (apr_err)
           {
             err = svn_error_createf
               (apr_err, 0, NULL, pool,
@@ -644,7 +644,7 @@ main (int argc, const char * const *argv)
           }
 
         apr_err = apr_file_lock (lockfile_handle, APR_FLOCK_EXCLUSIVE);
-        if (! APR_STATUS_IS_SUCCESS (apr_err))
+        if (apr_err)
           {
             err = svn_error_createf
               (apr_err, 0, NULL, pool,
@@ -663,7 +663,7 @@ main (int argc, const char * const *argv)
 
         /* Release the exclusive lock. */
         apr_err = apr_file_unlock (lockfile_handle);
-        if (! APR_STATUS_IS_SUCCESS (apr_err))
+        if (apr_err)
           {
             err = svn_error_createf
               (apr_err, 0, NULL, pool,
@@ -672,7 +672,7 @@ main (int argc, const char * const *argv)
           }
 
         apr_err = apr_file_close (lockfile_handle);
-        if (! APR_STATUS_IS_SUCCESS (apr_err))
+        if (apr_err)
           {
             err = svn_error_createf
               (apr_err, 0, NULL, pool,

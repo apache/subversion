@@ -231,7 +231,7 @@ svn_error_init_pool (apr_pool_t *top_pool)
   if (check == NULL)
     {
       apr_err = svn_error__make_error_pool (top_pool, &error_pool);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
+      if (apr_err)
         return apr_err;
 
       svn_error__set_error_pool (top_pool, error_pool, 1);

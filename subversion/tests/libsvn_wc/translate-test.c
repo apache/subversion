@@ -167,7 +167,7 @@ create_file (const char *fname, const char *eol_str, apr_pool_t *pool)
   apr_err = apr_file_open (&f, fname,
                            (APR_WRITE | APR_CREATE | APR_EXCL | APR_BINARY),
                            APR_OS_DEFAULT, pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
+  if (apr_err)
     return svn_error_create (apr_err, 0, NULL, pool, fname);
   
   for (i = 0; i < (sizeof (lines) / sizeof (*lines)); i++)
@@ -181,13 +181,13 @@ create_file (const char *fname, const char *eol_str, apr_pool_t *pool)
       for (j = 0; this_eol_str[j]; j++)
         {
           apr_err = apr_file_putc (this_eol_str[j], f);
-          if (! APR_STATUS_IS_SUCCESS (apr_err))
+          if (apr_err)
             return svn_error_create (apr_err, 0, NULL, pool, fname);
         }
     }
 
   apr_err = apr_file_close (f);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
+  if (apr_err)
     return svn_error_create (apr_err, 0, NULL, pool, fname);
   
   return SVN_NO_ERROR;
@@ -202,12 +202,12 @@ remove_file (const char *fname, apr_pool_t *pool)
   apr_status_t apr_err;
   apr_finfo_t finfo;
 
-  if (APR_STATUS_IS_SUCCESS (apr_stat (&finfo, fname, APR_FINFO_TYPE, pool)))
+  if (apr_stat (&finfo, fname, APR_FINFO_TYPE, pool) == APR_SUCCESS)
     {
       if (finfo.filetype == APR_REG)
         {
           apr_err = apr_file_remove (fname, pool);
-          if (! APR_STATUS_IS_SUCCESS (apr_err))
+          if (apr_err)
             return svn_error_create (apr_err, 0, NULL, pool, fname);
         }
       else

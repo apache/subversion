@@ -201,7 +201,7 @@ svn_diff__file_datasource_get_next_token(void **token, void *baton,
     }
   while (rv == APR_SUCCESS);
 
-  if (rv != APR_SUCCESS && rv != APR_EOF)
+  if (rv != APR_SUCCESS && ! APR_STATUS_IS_EOF(rv))
     {
       return svn_error_createf(rv, 0, NULL, file_baton->pool, 
                                "error reading from '%s'.",
@@ -411,14 +411,14 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
     }
   while (rv == APR_SUCCESS);
 
-  if (rv != APR_SUCCESS && rv != APR_EOF)
+  if (rv != APR_SUCCESS && ! APR_STATUS_IS_EOF(rv))
     {
       return svn_error_createf(rv, 0, NULL, baton->pool, 
                                "error reading from '%s'.",
                                baton->path[idx]);
     }
 
-  if (rv == APR_EOF)
+  if (APR_STATUS_IS_EOF(rv))
     {
       /* Special case if we reach the end of file AND the last line is in the
          changed range AND the file doesn't end with a newline */

@@ -743,7 +743,7 @@ svn_wc_translated_file (svn_stringbuf_t **xlated_p,
       /* We were just reserving the name and don't actually need the
          filehandle, so close immediately. */
       apr_err = apr_file_close (ignored);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
+      if (apr_err)
         return svn_error_createf
           (0, 0, NULL, pool,
            "svn_wc_translated_file: unable to close %s", tmp_vfile->data);
