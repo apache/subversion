@@ -1,0 +1,25 @@
+Goal: Allow working copy permissions to be stored in the repository and
+      provide a mechanism for the client to set them in a portable way.
+
+Idea: Have a svn:permissions property.
+Problem: Define a value that can be properly interpreted on at least Unix and
+         Win32-style permissions.
+
+Unix permissions:
+Summary:  u-g-o model (user, group, other).
+          Each subset (u,g,o) can have read, write, and execute property.
+          Traditionally represented with octets of the following form:
+            read:  4
+            write: 2
+            exec:  1
+
+          Each file has a specific owner and group it belongs to.
+          If the uid of the user matches, the user permissions apply.
+           If the gid of the user matches, the group permissions apply.
+            Else, the other permissions apply.
+
+Note: Some OSes (Solaris) have more complicated and expressive ACL
+      mechanisms.
+  
+Win32 permissions:
+
