@@ -69,7 +69,7 @@ fail (void)
 }
 
 
-/* Free everything from pool, and return an empty subversion string.  */
+/* Free everything from pool, and return an empty Subversion string.  */
 static svn_string_t *
 get_empty_string (void)
 {
@@ -632,6 +632,204 @@ parse_list (const char **msg)
 
 
 
+/* Building interesting skels.  */
+
+/* Build an atom skel containing the LEN bytes at DATA.  */
+static skel_t *
+build_atom (apr_size_t len, char *data)
+{
+  char *copy = NEWARRAY (pool, char, len);
+  skel_t *skel = NEW (pool, skel_t);
+
+  memcpy (copy, data, len);
+  skel->is_atom = 1;
+  skel->len = len;
+  skel->data = copy;
+
+  return skel;
+}
+
+/* Build an empty list skel.  */
+static skel_t *
+empty (void)
+{
+  skel_t *skel = NEW (pool, skel_t);
+
+  skel->is_atom = 0;
+  skel->children = 0;
+
+  return skel;
+}
+
+/* Stick ELEMENT at the beginning of the list skeleton LIST.  */
+static void
+add (skel_t *element, skel_t *list)
+{
+  element->next = list->children;
+  list->children = element;
+}
+
+
+/* Return true if the contents of skel A are identical to those of
+   skel B.  */
+static int
+skel_equal (skel_t *a, skel_t *b)
+{
+  if (a->is_atom != b->is_atom)
+    return 0;
+
+  if (a->is_atom)
+    return (a->len == b->len
+	    && ! memcmp (a->data, b->data, a->len));
+  else
+    {
+      skel_t *a_child, *b_child;
+
+      for (a_child = a->children, b_child = b->children;
+	   a_child && b_child;
+	   a_child = a_child->next, b_child = b_child->next)
+	if (! skel_equal (a_child, b_child))
+	  return 0;
+
+      if (a_child || b_child)
+	return 0;
+    }
+
+  return 1;
+}
+
+
+/* Unparsing implicit-length atoms.  */
+
+static int
+unparse_implicit_length (const char **msg)
+{
+  *msg = "unparse implicit-length atoms";
+
+  /* Unparse and check every single-byte implicit-length atom.  */
+  {
+    int byte;
+
+    for (byte = 0; byte < 256; byte++)
+      if (skel_is_name (byte))
+	{
+	  svn_string_t *str = get_empty_string ();
+	  char buf = byte;
+	  skel_t *skel = build_atom (1, &buf);
+
+	  str = svn_fs__skel_unparse (skel, pool);
+	  
+	  if (! (str
+		 && str->len == 2
+		 && str->data[0] == byte
+		 && skel_is_space (str->data[1])))
+	    return fail ();
+	}
+  }
+
+  return 0;
+}
+
+
+
+/* Unparse some lists.  */
+
+static int
+unparse_list (const char **msg)
+{
+  *msg = "unparse lists";
+
+  /* Make a list of all the single-byte implicit-length atoms.  */
+  {
+    svn_string_t *str = get_empty_string ();
+    int byte;
+    skel_t *list = empty ();
+    skel_t *reparsed, *elt;
+
+    for (byte = 0; byte < 256; byte++)
+      if (skel_is_name (byte))
+	{
+	  char buf = byte;
+	  add (build_atom (1, &buf), list);
+	}
+
+    /* Unparse that, parse it again, and see if we got the same thing
+       back.  */
+    str = svn_fs__skel_unparse (list, pool);
+    reparsed = svn_fs__skel_parse (str->data, str->len, pool);
+
+    if (! reparsed || reparsed->is_atom)
+      return fail ();
+
+    if (! skel_equal (list, reparsed))
+      return fail ();
+
+    elt = reparsed->children;
+    for (byte = 255; byte >= 0; byte--)
+      if (skel_is_name (byte))
+	{
+	  if (! (elt
+		 && elt->is_atom
+		 && elt->len == 1
+		 && elt->data[0] == byte))
+	    return fail ();
+
+	  /* Verify that each element's data falls within the string.  */
+	  if (elt->data < str->data
+	      || elt->data + elt->len > str->data + str->len)
+	    return fail ();
+
+	  elt = elt->next;
+	}
+
+    /* We should have reached the end of the list at this point.  */
+    if (elt)
+      return fail ();
+  }
+
+  /* Make a list of lists.  */
+  {
+    svn_string_t *str = get_empty_string ();
+    skel_t *top = empty ();
+    skel_t *reparsed;
+    int i;
+
+    for (i = 0; i < 10; i++)
+      {
+	skel_t *middle = empty ();
+	int j;
+
+	for (j = 0; j < 10; j++)
+	  {
+	    char buf[10];
+	    int k, val;
+
+	    /* Make some interesting atom, containing lots of binary
+               characters.  */
+	    val = i * 10 + j;
+	    for (k = 0; k < sizeof (buf); k++)
+	      {
+		buf[k] = val;
+		val += j;
+	      }
+
+	    add (build_atom (sizeof (buf), buf), middle);
+	  }
+
+	add (middle, top);
+      }
+
+    str = svn_fs__skel_unparse (top, pool);
+    reparsed = svn_fs__skel_parse (str->data, str->len, pool);
+
+    if (! skel_equal (top, reparsed))
+      return fail ();
+  }
+
+  return 0;
+}
+
+
 /* The test table.  */
 
 int (*test_funcs[]) (const char **msg) = {
@@ -639,5 +837,7 @@ int (*test_funcs[]) (const char **msg) = {
   parse_implicit_length,
   parse_explicit_length,
   parse_list,
+  unparse_implicit_length,
+  unparse_list,
   0
 };
