@@ -257,14 +257,23 @@ svn_client__get_diff_editor (svn_stringbuf_t *target,
 
 */
 
+/* State flags for use with the svn_client_commit_item_t structure
+   (see the note about the namespace for that structure, which also
+   applies to these flags). */
+#define SVN_CLIENT_COMMIT_ITEM_ADD         0x01
+#define SVN_CLIENT_COMMIT_ITEM_DELETE      0x02
+#define SVN_CLIENT_COMMIT_ITEM_TEXT_MODS   0x04
+#define SVN_CLIENT_COMMIT_ITEM_PROP_MODS   0x08
+#define SVN_CLIENT_COMMIT_ITEM_IS_COPY     0x10
+
 
 /* The commit candidate structure. */
 typedef struct svn_client_commit_item_t
 {
   svn_stringbuf_t *path;      /* absolute working-copy path of item */
-  svn_wc_entry_t *entry;      /* entry for this item (sorta) */
-  svn_boolean_t text_mods;    /* does this item have textual mods? */
-  svn_boolean_t prop_mods;    /* does this item have property mods? */
+  svn_stringbuf_t *url;       /* commit url for this item */
+  svn_wc_entry_t *entry;      /* entry for this item */
+  apr_byte_t state_flags;     /* state flags */
 
 } svn_client_commit_item_t; /* ### This should probably be
                                svn_client__commit_item_t, but the
@@ -301,19 +310,22 @@ typedef struct svn_client_commit_item_t
        multi-repository support actually exists, the single key here
        will actually be some arbitrary thing to be ignored.  
 
-   Therefore, at the successful return of this function, COMMITTABLES
-   will be an apr_hash_t * hash of apr_array_header_t * arrays (of
+   At the successful return of this function, COMMITTABLES will be an
+   apr_hash_t * hash of apr_array_header_t * arrays (of
    svn_client_commit_item_t * structures), keyed on const char *
-   canonical repository URLs.  
+   canonical repository URLs.  Also, LOCKED_DIRS will be an apr_hash_t
+   * hash of meaningless data keyed on const char * working copy path
+   directory names which were locked in the process of this crawl.
+   These will need to be unlocked again post-commit.
 
    ### this will one day replace svn_wc_crawl_local_mods,
    crawl_local_mods, crawl_dir, and report_single_entry.  
 
    ### needed: a committables generator to replace
-   svn_wc_crawl_as_copy and crawl_as_copy.
-*/
+   svn_wc_crawl_as_copy and crawl_as_copy.  */
 svn_error_t *
 svn_client__harvest_committables (apr_hash_t **committables,
+                                  apr_hash_t **locked_dirs,
                                   svn_stringbuf_t *parent_dir,
                                   apr_array_header_t *targets,
                                   apr_pool_t *pool);
@@ -324,11 +336,11 @@ svn_client__harvest_committables (apr_hash_t **committables,
 int svn_client__sort_commit_item_urls (const void *a, const void *b);
 
 
-/* Rewrite the COMMITTABLES array to be sorted by URL.  Also, discover
+/* Rewrite the COMMIT_ITEMS array to be sorted by URL.  Also, discover
    a common *BASE_URL for the items in the array, and rewrite those
    items' URLs to be relative to that *BASE_URL.  */
 svn_error_t *
-svn_client__condense_committables (svn_stringbuf_t **base_url,
+svn_client__condense_commit_items (svn_stringbuf_t **base_url,
                                    apr_array_header_t *commit_items,
                                    apr_pool_t *pool);
 

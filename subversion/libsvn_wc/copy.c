@@ -306,7 +306,6 @@ svn_wc_copy (svn_stringbuf_t *src_path,
                                          notify_func, notify_baton, pool));
 
   else if (src_kind == svn_node_dir)
-
     SVN_ERR (copy_dir_administratively (src_path, dst_parent, dst_basename,
                                         notify_func, notify_baton, pool));
 
