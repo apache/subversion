@@ -236,7 +236,7 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
 
   *position_list = position;
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 /*
@@ -515,7 +515,7 @@ svn_diff(svn_diff_t **diff,
   /* Get rid of all the data we don't have a use for anymore */
   svn_pool_destroy(subpool);
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -985,7 +985,7 @@ svn_diff3(svn_diff_t **diff,
 
   svn_pool_destroy(subpool);
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 
@@ -1079,5 +1079,5 @@ svn_diff_output(svn_diff_t *diff,
       diff = diff->next;
     }
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
