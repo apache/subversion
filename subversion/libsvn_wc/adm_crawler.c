@@ -531,7 +531,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
       full_path_to_entry = svn_string_dup (path, subpool);
       if (current_entry_name != NULL)
         svn_path_add_component (full_path_to_entry, current_entry_name,
-                                svn_path_local_style, subpool);
+                                svn_path_local_style);
 
 
       /* Start examining the current_entry: */
@@ -574,7 +574,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
               longpath = svn_string_dup (path, top_pool);
               if (current_entry_name != NULL)
                 svn_path_add_component (longpath, current_entry_name,
-                                        svn_path_local_style, top_pool);
+                                        svn_path_local_style);
               apr_hash_set (affected_targets,
                             longpath->data, longpath->len, tb);              
             }
@@ -596,7 +596,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
               if (current_entry_name != NULL)
                 svn_path_add_component (new_path,
                                         current_entry_name,
-                                        svn_path_local_style, subpool);
+                                        svn_path_local_style);
               
               err = process_subdirectory (new_path, new_dir_baton,
                                           editor, edit_baton,
@@ -655,7 +655,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
               if (current_entry_name != NULL)
                 svn_path_add_component (new_path,
                                         current_entry_name,
-                                        svn_path_local_style, subpool);
+                                        svn_path_local_style);
               
               err = process_subdirectory (new_path, new_dir_baton,
                                           editor, edit_baton,
@@ -694,7 +694,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
               longpath = svn_string_dup (path, top_pool);
               if (current_entry_name != NULL)
                 svn_path_add_component (longpath, current_entry_name,
-                                        svn_path_local_style, top_pool);
+                                        svn_path_local_style);
               apr_hash_set (affected_targets,
                             longpath->data, longpath->len, tb);
 
@@ -741,7 +741,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
               longpath = svn_string_dup (path, top_pool);
               if (current_entry_name != NULL)
                 svn_path_add_component (longpath, current_entry_name,
-                                        svn_path_local_style, top_pool);
+                                        svn_path_local_style);
               apr_hash_set (affected_targets,
                             longpath->data, longpath->len, tb);
             }

@@ -81,7 +81,7 @@ merge_text (svn_string_t *path,
   void *diff;
 
   filepath = svn_string_dup (path, pool);
-  svn_path_add_component_nts (filepath, name, svn_path_local_style, pool);
+  svn_path_add_component_nts (filepath, name, svn_path_local_style);
 
   /* Get the local edits. */
   err = svn_wc__get_local_changes (svn_wc__gnudiff_differ,
@@ -114,7 +114,7 @@ replace_text_base (svn_string_t *path,
   enum svn_node_kind kind;
 
   filepath = svn_string_dup (path, pool);
-  svn_path_add_component_nts (filepath, name, svn_path_local_style, pool);
+  svn_path_add_component_nts (filepath, name, svn_path_local_style);
 
   tmp_text_base = svn_wc__text_base_path (filepath, 1, pool);
   err = svn_io_check_path (tmp_text_base, &kind, pool);
@@ -205,8 +205,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
             = svn_string_dup (loggy->path, loggy->pool);
           svn_path_add_component (working_file,
                                   sname,
-                                  svn_path_local_style,
-                                  loggy->pool);
+                                  svn_path_local_style);
 
           err = svn_wc__file_affected_time (&timestamp,
                                             working_file,
@@ -268,8 +267,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
           working_file = svn_string_dup (loggy->path, loggy->pool);
           svn_path_add_component (working_file,
                                   sname,
-                                  svn_path_local_style,
-                                  loggy->pool);
+                                  svn_path_local_style);
           tmp_base = svn_wc__text_base_path (working_file, 1, loggy->pool);
           
           err = svn_io_check_path (tmp_base, &kind, loggy->pool);
@@ -474,8 +472,7 @@ svn_wc__cleanup (svn_string_t *path,
               svn_path_add_component 
                 (target,
                  svn_string_ncreate ((char *) key, keylen, pool),
-                 svn_path_local_style,
-                 pool);
+                 svn_path_local_style);
               
               if (apr_hash_get (targets, target->data, target->len))
                 care_about_this_dir = 1;
@@ -489,8 +486,7 @@ svn_wc__cleanup (svn_string_t *path,
           svn_string_t *subdir = svn_string_dup (path, pool);
           svn_path_add_component (subdir,
                                   svn_string_create ((char *) key, pool),
-                                  svn_path_local_style,
-                                  pool);
+                                  svn_path_local_style);
 
           err = svn_wc__cleanup (subdir, targets, bail_on_lock, pool);
           if (err)
@@ -571,8 +567,7 @@ svn_wc__log_commit (svn_string_t *path,
           svn_string_t *subdir = svn_string_dup (path, pool);
           svn_path_add_component (subdir,
                                   svn_string_create ((char *) key, pool),
-                                  svn_path_local_style,
-                                  pool);
+                                  svn_path_local_style);
 
           err = svn_wc__log_commit (subdir, targets, version, pool);
           if (err)
@@ -593,8 +588,7 @@ svn_wc__log_commit (svn_string_t *path,
               svn_path_add_component
                 (target,
                  svn_string_ncreate ((char *) key, keylen, pool),
-                 svn_path_local_style,
-                 pool);
+                 svn_path_local_style);
               
               if (! apr_hash_get (targets, target->data, target->len))
                 continue;

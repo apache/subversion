@@ -111,14 +111,14 @@ v_extend_with_adm_name (svn_string_t *path,
   int components_added = 0;
 
   /* Tack on the administrative subdirectory. */
-  svn_path_add_component_nts (path, adm_subdir (), svn_path_local_style, pool);
+  svn_path_add_component_nts (path, adm_subdir (), svn_path_local_style);
   components_added++;
 
   /* If this is a tmp file, name it into the tmp area. */
   if (use_tmp)
     {
       svn_path_add_component_nts
-        (path, SVN_WC__ADM_TMP, svn_path_local_style, pool);
+        (path, SVN_WC__ADM_TMP, svn_path_local_style);
       components_added++;
     }
 
@@ -128,7 +128,7 @@ v_extend_with_adm_name (svn_string_t *path,
       if (this[0] == '\0')
         continue;
 
-      svn_path_add_component_nts (path, this, svn_path_local_style, pool);
+      svn_path_add_component_nts (path, this, svn_path_local_style);
       components_added++;
     }
 

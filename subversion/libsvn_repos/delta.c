@@ -416,7 +416,7 @@ replace_related (struct context *c, void *dir_baton,
   /* Compute the full name of the ancestor.  */
   ancestor_path = svn_string_dup (ancestor_dir_path, c->pool);
   svn_path_add_component (ancestor_path, ancestor_name,
-			  svn_path_repos_style, c->pool);
+			  svn_path_repos_style);
 
   /* Get the ancestor's version number.  */
   ancestor_version = svn_fs_node_version (a);

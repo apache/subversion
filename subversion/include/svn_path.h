@@ -92,15 +92,13 @@ enum svn_path_style {
    a Unix system, it would also be '/'.  */
 void svn_path_add_component (svn_string_t *path,
                              const svn_string_t *component,
-                             enum svn_path_style style,
-                             apr_pool_t *pool);
+                             enum svn_path_style style);
 
 /* Same as `svn_path_add_component', except that the COMPONENT argument is 
    a C-style '\0'-terminated string, not an svn_string_t.  */
 void svn_path_add_component_nts (svn_string_t *path, 
                                  const char *component,
-                                 enum svn_path_style style,
-                                 apr_pool_t *pool);
+                                 enum svn_path_style style);
 
 /* Remove one component off the end of PATH. */
 void svn_path_remove_component (svn_string_t *path,

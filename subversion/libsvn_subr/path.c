@@ -80,8 +80,7 @@ static void
 add_component_internal (svn_string_t *path,
                         const char *component,
                         size_t len,
-                        enum svn_path_style style,
-                        apr_pool_t *pool)
+                        enum svn_path_style style)
 {
   /* kff todo: `style' ignored presently. */
 
@@ -99,10 +98,9 @@ add_component_internal (svn_string_t *path,
 void
 svn_path_add_component_nts (svn_string_t *path, 
                             const char *component,
-                            enum svn_path_style style,
-                            apr_pool_t *pool)
+                            enum svn_path_style style)
 {
-  add_component_internal (path, component, strlen (component), style, pool);
+  add_component_internal (path, component, strlen (component), style);
 }
 
 
@@ -110,10 +108,9 @@ svn_path_add_component_nts (svn_string_t *path,
 void
 svn_path_add_component (svn_string_t *path, 
                         const svn_string_t *component,
-                        enum svn_path_style style,
-                        apr_pool_t *pool)
+                        enum svn_path_style style)
 {
-  add_component_internal (path, component->data, component->len, style, pool);
+  add_component_internal (path, component->data, component->len, style);
 }
 
 

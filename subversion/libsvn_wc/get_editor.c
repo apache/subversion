@@ -149,7 +149,7 @@ make_dir_baton (svn_string_t *name,
   svn_string_t *path = svn_string_dup (parent_path, subpool);
 
   if (name)
-    svn_path_add_component (path, name, svn_path_local_style, subpool);
+    svn_path_add_component (path, name, svn_path_local_style);
 
   d->path         = path;
   d->edit_baton   = edit_baton;
@@ -261,8 +261,7 @@ make_file_baton (struct dir_baton *parent_dir_baton, svn_string_t *name)
   /* Make the file's on-disk name. */
   svn_path_add_component (path,
                           name,
-                          svn_path_local_style,
-                          subpool);
+                          svn_path_local_style);
 
   f->pool       = subpool;
   f->dir_baton  = parent_dir_baton;
