@@ -24,6 +24,15 @@
 
 /* Initializing a filesystem.  */
 
+struct dag_node_t
+{
+  svn_fs_t *fs;
+  svn_fs_id_t *id;
+  apr_pool_t *pool;
+  /* kff todo: working here */
+};
+
+
 /* Trail body for svn_fs__dag_init_fs. */
 static svn_error_t *
 dag_init_fs (void *fs_baton, trail_t *trail)
