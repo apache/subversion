@@ -61,8 +61,8 @@
 typedef struct svn_string_t
 {
   char *data;                /* pointer to the bytestring */
-  size_t len;                /* length of bytestring */
-  size_t blocksize;          /* total size of buffer allocated */
+  apr_size_t len;            /* length of bytestring */
+  apr_size_t blocksize;      /* total size of buffer allocated */
 } svn_string_t;
 
 
@@ -72,14 +72,14 @@ typedef struct svn_string_t
 
 svn_string_t * svn_string_create (const char *cstring, 
                                   apr_pool_t *pool);
-svn_string_t * svn_string_ncreate (const char *bytes, const size_t size, 
+svn_string_t * svn_string_ncreate (const char *bytes, const apr_size_t size, 
                                    apr_pool_t *pool);
 
 /* Set/get  a bytestring empty */
 
 void svn_string_setempty (svn_string_t *str);
 svn_boolean_t svn_string_isempty (const svn_string_t *str);
-void svn_string_chop (svn_string_t *str, size_t bytes);
+void svn_string_chop (svn_string_t *str, apr_size_t bytes);
 
 /* Fill bytestring with a character */
 
@@ -108,7 +108,7 @@ svn_boolean_t svn_string_compare (const svn_string_t *str1,
 
 /* convenience routines */
 
-size_t svn_string_first_non_whitespace (const svn_string_t *str);
+apr_size_t svn_string_first_non_whitespace (const svn_string_t *str);
 void svn_string_strip_whitespace (svn_string_t *str);
 
 /* Return position of last occurrence of CHAR in STR, or return

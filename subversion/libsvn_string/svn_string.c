@@ -50,8 +50,7 @@
 
 
 #include <string.h>      /* for memcpy(), memcmp(), strlen() */
-#include <stdio.h>       /* for putch() and printf() */
-#include <ctype.h>       /* for isspace() */
+#include <apr_lib.h>     /* for apr_isspace() */
 #include "svn_string.h"  /* loads "svn_types.h" and <apr_pools.h> */
 
 
@@ -59,7 +58,7 @@
 /* Our own realloc, since APR doesn't have one.  Note: this is a
    generic realloc for memory pools, *not* for strings. */
 static void *
-my__realloc (char *data, const size_t oldsize, const size_t request, 
+my__realloc (char *data, const apr_size_t oldsize, const apr_size_t request, 
              apr_pool_t *pool)
 {
   void *new_area;
@@ -87,7 +86,7 @@ my__realloc (char *data, const size_t oldsize, const size_t request,
 /* Create a new bytestring by copying SIZE bytes from BYTES; requires a
    memory POOL to allocate from. */
 svn_string_t *
-svn_string_ncreate (const char *bytes, const size_t size, 
+svn_string_ncreate (const char *bytes, const apr_size_t size, 
                     apr_pool_t *pool)
 {
   svn_string_t *new_string;
@@ -142,7 +141,7 @@ svn_string_setempty (svn_string_t *str)
 
 /* Chop NBYTES bytes off end of STR, but not more than STR->len. */
 void
-svn_string_chop (svn_string_t *str, size_t nbytes)
+svn_string_chop (svn_string_t *str, apr_size_t nbytes)
 {
   if (nbytes > str->len)
     str->len = 0;
@@ -163,7 +162,7 @@ svn_string_isempty (const svn_string_t *str)
 
 static void
 ensure_block_capacity (svn_string_t *str, 
-                       size_t minimum_size,
+                       apr_size_t minimum_size,
                        apr_pool_t *pool)
 {
   /* Keep doubling capacity until have enough. */
@@ -180,9 +179,9 @@ ensure_block_capacity (svn_string_t *str,
 /* Copy COUNT bytes from BYTES onto the end of bytestring STR. */
 void
 svn_string_appendbytes (svn_string_t *str, const char *bytes, 
-                        const size_t count, apr_pool_t *pool)
+                        const apr_size_t count, apr_pool_t *pool)
 {
-  size_t total_len;
+  apr_size_t total_len;
   void *start_address;
 
   if (str == NULL)
@@ -248,14 +247,14 @@ svn_string_compare (const svn_string_t *str1, const svn_string_t *str2)
 
 
 /* Return offset of first non-whitespace character in STR, or -1 if none.  */
-size_t
+apr_size_t
 svn_string_first_non_whitespace (const svn_string_t *str)
 {
-  size_t i;
+  apr_size_t i;
 
   for (i = 0; i < str->len; i++)
     {
-      if (! isspace (str->data[i]))
+      if (! apr_isspace (str->data[i]))
         {
           return i;
         }
@@ -270,10 +269,10 @@ svn_string_first_non_whitespace (const svn_string_t *str)
 void
 svn_string_strip_whitespace (svn_string_t *str)
 {
-  size_t i;
+  apr_size_t i;
 
   /* Find first non-whitespace character */
-  size_t offset = svn_string_first_non_whitespace (str);
+  apr_size_t offset = svn_string_first_non_whitespace (str);
 
   /* Go ahead!  Waste some RAM, we've got pools! :)  */
   str->data += offset;
@@ -284,7 +283,7 @@ svn_string_strip_whitespace (svn_string_t *str)
 
   for (i = (str->len - 1); i >= 0; i--)
     {
-      if (! isspace (str->data[i]))
+      if (! apr_isspace (str->data[i]))
         {
           break;
         }
