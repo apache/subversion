@@ -319,8 +319,8 @@
                 ((eq svn-process-cmd 'propset)
                  (svn-status-update))
                 ((eq svn-process-cmd 'propdel)
-                 (svn-status-update)))
-          (message "svn-process had event: %s" event))
+                 (svn-status-update))))
+          ;;(message "svn-process had event: %s" event))
       ;;(message (format "SVN Error: :%s:" event))
       (svn-status-show-process-buffer-internal t))))
 
@@ -388,6 +388,15 @@
                                                modified-external)))))
                                                ;;file-svn-info
           (next-line 1)))))
+
+(defun svn-status-remove-control-M ()
+  "Remove ^M at end of line in the whole buffer."
+  (interactive)
+  (save-match-data
+    (save-excursion
+      (goto-char (point-min))
+      (while (re-search-forward "\r$" (point-max) t)
+        (replace-match "" nil nil)))))
 
 (condition-case nil
     ;;(easy-menu-add-item nil '("tools") ["SVN Status" svn-status t] "PCL-CVS")
@@ -1054,6 +1063,7 @@ Then move to that line."
     (delete-region (point-min) (point-max))
     (setq default-directory dir)
     (insert prop-value)
+    (svn-status-remove-control-M)
     (when new-prop-value
       (when (listp new-prop-value)
         (message "Adding new prop values %S " new-prop-value)
