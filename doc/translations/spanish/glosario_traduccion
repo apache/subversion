@@ -105,3 +105,9 @@ trunk -> tronco
     Se refiere al nombre que recibe la línea de desarrollo
     principal del repositorio que no está asociada a ninguna rama
     en particular. Traducción obtenida del manual de CVS en español.
+
+log, log message -> informe de cambios, mensaje del informe de cambios
+    Traducción estraída del manual de CVS en españól. La traducción
+    de "log message" es muy larga, pero únicamente porque no se
+    tiene contexto alguno. Con contexto suele ser posible omitir
+    la palabra informe si se considera apropiado.
