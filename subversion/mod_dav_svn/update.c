@@ -273,6 +273,9 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
              real_path on manually, ignoring its leading slash. */
           if (real_path && (! svn_path_is_empty(real_path)))
             bc_url = svn_path_url_add_component(bc_url, real_path+1, pool);
+
+          /* make sure that the BC_URL is xml attribute safe. */
+          bc_url = apr_xml_quote_string(pool, bc_url, 1);
         }
 
 
