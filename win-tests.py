@@ -50,7 +50,7 @@ if len(sys.argv) == 1 or sys.argv[1] == 'd' or sys.argv[1] == 'debug':
 elif sys.argv[1] == 'r' or sys.argv[1] == 'release':
   filter = 'Release'
 else:
-  sys.stderr.write("Wrong test mode '" + type + "'\n")
+  sys.stderr.write("Wrong test mode '" + sys.argv[1] + "'.\n")
   sys.exit(1)
 
 if len(sys.argv) == 3:
