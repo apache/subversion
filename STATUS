@@ -81,7 +81,7 @@ These changes are to the "core" of Subversion:
      Justification: Constructor helps with backward compatibility.
      Votes:
       +0: jerenkrantz, gstein, cmpilato
-      +1: rooneg, ghudson
+      +1: rooneg, ghudson, sussman
 
 
    * Issue #999
@@ -164,7 +164,7 @@ These changes are to the "core" of Subversion:
        r8101 below solves the problem, I believe, so will remove this
        veto when that one has got approval.
      Votes:
-      +1: jerenkrantz, bliss, ghudson, epg
+      +1: jerenkrantz, bliss, ghudson, epg, sussman
       -0: gstein
       -1: kfogel
 
@@ -174,7 +174,7 @@ These changes are to the "core" of Subversion:
      Justification: Better external API documentation, ultra-low risk.
      Notes: See Concerns field of r8013 above.
      Votes:
-      +1: bliss, ghudson
+      +1: bliss, ghudson, sussman
       +0: gstein, cmpilato
 
 
@@ -208,6 +208,7 @@ These changes are to the "core" of Subversion:
      Votes:
       +1: jerenkrantz, jszakmeister, epg, cmpilato
       -0: gstein
+      +0: sussman
 
 
    * Issue #1671
@@ -231,14 +232,14 @@ These changes are to the "core" of Subversion:
      Justification: Low risk; we should be nice to binary packagers.
      Votes:
       +0: cmpilato
-      +1: ghudson, epg
+      +1: ghudson, epg, sussman
 
 
    * Issue #1639 (r8014)
      Rename 'store-password' option renamed to 'store-auth-creds'
      Justification: API stability; low risk;  more accurate name.
      Votes:
-      +1: bliss, cmpilato
+      +1: bliss, cmpilato, sussman
       -0: gstein
 
 
@@ -270,7 +271,7 @@ These changes are to the "core" of Subversion:
      Justification: API change; allow better report processing; no risk.
      Votes:
       +1: ghudson, jszakmeister, epg
-      +0: gstein, cmpilato
+      +0: gstein, cmpilato, sussman
 
 
    * Issue #408
@@ -304,6 +305,7 @@ These changes are to the "core" of Subversion:
      Justification: better UI, fixes latent tempfile leak; low risk.
      Votes:
       +1: mbk, rooneg, jszakmeister, cmpilato
+      +0: sussman
       -0: gstein (or remove the feature)
 
 
@@ -343,7 +345,7 @@ These changes are to the "core" of Subversion:
      Justification: Avoid uncontrolled svnserve termination, low risk.
      Votes:
       +1: bliss, mbk, rooneg, jszakmeister, epg
-      +0: gstein
+      +0: gstein, sussman
 
 
    * r8142
@@ -360,7 +362,8 @@ These changes are to the "core" of Subversion:
      Votes:
       +1: bliss, ghudson
       +0: cmpilato
-      -0: gstein
+      -0: gstein, sussman
+
      
    * r8154
      Fix a small bug in the FS history harvesting code.  
