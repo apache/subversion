@@ -1511,7 +1511,7 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  * If @a path is non-existent, that's fine.  The path is reserved, and
  * a lock-token is returned.
  *
- * ### Note:  at this time, only files can be locked.
+ * Note:  at this time, only files can be locked.
  */
 svn_error_t *svn_fs_lock (svn_lock_t **lock,
                           svn_fs_t *fs,
@@ -1551,7 +1551,7 @@ svn_error_t *svn_fs_lock (svn_lock_t **lock,
  * successfully, and should refetch the lock (using svn_fs_get_lock())
  * if they have additional uses for it.
  *
- * ### Note:  at this time, only files can be locked.
+ * Note:  at this time, only files can be locked.
 */
 svn_error_t *svn_fs_attach_lock (svn_lock_t *lock,
                                  svn_fs_t *fs,

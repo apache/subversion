@@ -1489,7 +1489,7 @@ static int getlocks_end_element(void *userdata, int state,
 
         if (baton->encoding)
           {
-            /* ### possibly recognize other encodings someday */
+            /* Possibly recognize other encodings someday. */
             if (strcmp(baton->encoding, "base64") == 0)
               {
                 svn_string_t *encoded_val;

@@ -424,7 +424,7 @@ typedef svn_error_t *(*svn_cancel_func_t) (void *cancel_baton);
  * over the network to the client.  Assuming lock structures are
  * created with apr_pcalloc(), a default value of 0 is universally safe.
  *
- * ### Note: in the current implementation, only files are lockable.
+ * Note: in the current implementation, only files are lockable.
  */
 typedef struct svn_lock_t
 {
