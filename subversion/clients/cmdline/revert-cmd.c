@@ -43,8 +43,8 @@ svn_cl__revert (apr_getopt_t *os,
 
   targets = svn_cl__args_to_target_array (os, pool);
 
-  /* Add "." if user passed 0 arguments */
-  svn_cl__push_implicit_dot_target(targets, pool);
+  /* Revert has no implicit dot-target `.', so don't you put that code
+     here! */
 
   if (targets->nelts)
     for (i = 0; i < targets->nelts; i++)
