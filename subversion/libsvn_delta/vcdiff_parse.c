@@ -142,6 +142,7 @@ svn_vcdiff_send_window (svn_vcdiff_parser_t *parser, apr_size_t len)
   new_op->offset = 0;
   new_op->length = len;
   
+  window->my_pool = parser->subpool;
   window->num_ops = 1;
   window->ops = new_op;
   window->new = parser->buffer;  /* just give away our whole
