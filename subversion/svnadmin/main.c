@@ -432,12 +432,12 @@ get_revnum (svn_revnum_t *revnum, const svn_opt_revision_t *revision,
     *revnum = SVN_INVALID_REVNUM;
   else
     return svn_error_create
-      (SVN_ERR_CL_ARG_PARSING_ERROR, NULL, "Invalid revision specifier");
+      (SVN_ERR_CL_ARG_PARSING_ERROR, NULL, _("Invalid revision specifier"));
 
   if (*revnum > youngest)
     return svn_error_createf
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       "Revisions must not be greater than the youngest revision (%ld)",
+       _("Revisions must not be greater than the youngest revision (%ld)"),
        youngest);
 
   return SVN_NO_ERROR;
