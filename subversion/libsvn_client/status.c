@@ -88,7 +88,7 @@ svn_client_status (svn_revnum_t *result_rev,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access;
+  svn_wc_adm_access_t *anchor_access, *target_access;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
   const char *anchor, *target;
   const svn_delta_editor_t *editor;
@@ -97,6 +97,7 @@ svn_client_status (svn_revnum_t *result_rev,
   const svn_wc_entry_t *entry;
   struct status_baton sb;
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
+  svn_error_t *err;
 
   sb.real_status_func = status_func;
   sb.real_status_baton = status_baton;
@@ -104,13 +105,17 @@ svn_client_status (svn_revnum_t *result_rev,
 
   /* First checks do not require a lock on the working copy.  We will
      reopen the working copy with a lock later. */
-  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, path, 
+  SVN_ERR (svn_wc_adm_probe_open2 (&target_access, NULL, path, 
                                    FALSE, 0, pool));
 
   /* Get the entry for this path so we can determine our anchor and
      target.  If the path is unversioned, and the caller requested
      that we contact the repository, we error. */
-  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
+  SVN_ERR (svn_wc_entry (&entry, path, target_access, FALSE, pool));
+
+  /* Close up our ADM area and reopen it with the depth we want. */
+  SVN_ERR (svn_wc_adm_close (target_access));
+
   if (entry)
     SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
   else if (! update)
@@ -119,27 +124,52 @@ svn_client_status (svn_revnum_t *result_rev,
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                               _("'%s' is not under version control"), path);
   
-  /* Close up our ADM area.  We'll be re-opening soon. */
-  SVN_ERR (svn_wc_adm_close (adm_access));
+  /* Need to lock the tree.  We lock the anchor first, to not lock too much
+     if we have a target.  We need to lock the target and immediate children
+     if the status is non-recursive.  Else, we lock the whole hierarchy
+     under target.  If we are contacting the repository, we need a recursive
+     lock under anchor so that auth data can be stored. */
 
-  /* Need to lock the tree.  A recursive status requires us to lock the whole
-     tree.  A non-recursive status requires the target directory and immediate
-     subdirectories to be locked.  However, if the user does "svn status
-     --non-recursive dir1/dir2", then we start locking from dir1, so in order
-     to lock the children of dir2 we need a depth of 2.
-     ### FIXME: In the non-recursive case this always locks too much.  This
-     ###        is a performance bug.  (But this is better than locking too
-     ###        little, which would be a correctness bug).
-   */
-  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, anchor, 
-                                   FALSE, (descend ? -1 : 2), pool));
+  if (update)
+    {
+      SVN_ERR (svn_wc_adm_open2 (&anchor_access, NULL, anchor,
+                                 FALSE, -1, pool));
+      SVN_ERR (svn_wc_adm_probe_retrieve (&target_access, anchor_access,
+                                          path, pool));
+    }
+  else
+    {
+      SVN_ERR (svn_wc_adm_probe_open2 (&anchor_access, NULL, anchor, 
+                                       FALSE,
+                                       *target ? 0 : (descend ? -1 : 1), pool));
+      if (*target)
+        {
+          /* Careful! svn_adm_probe_open2 may lock the parent in certain
+             situations, which results in an already locked error.  We use the
+             svn_wc_adm_open2 function instead, since we already have the
+             parent locked. */
+          err = svn_wc_adm_open2 (&target_access, anchor_access, path,
+                                  FALSE, (descend || update) ? -1 : 1, pool);
+          /* If target is not a versioned directory, then that's fine: we need
+             no locking. */
+          if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
+            {
+              svn_error_clear (err);
+              target_access = anchor_access;
+            }
+          else
+            SVN_ERR (err);
+        }
+      else
+        target_access = anchor_access;
+    }
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
   SVN_ERR (svn_wc_get_status_editor (&editor, &edit_baton, &edit_revision,
-                                     adm_access, target, ctx->config, descend,
-                                     get_all, no_ignore, tweak_status, &sb,
-                                     ctx->cancel_func, ctx->cancel_baton,
+                                     anchor_access, target, ctx->config,
+                                     descend, get_all, no_ignore, tweak_status,
+                                     &sb, ctx->cancel_func, ctx->cancel_baton,
                                      traversal_info, pool));
 
   /* If we want to know about out-of-dateness, we crawl the working copy and
@@ -150,16 +180,7 @@ svn_client_status (svn_revnum_t *result_rev,
       void *ra_baton, *session, *report_baton;
       const svn_ra_reporter_t *reporter;
       const char *URL;
-      svn_wc_adm_access_t *anchor_access;
       svn_node_kind_t kind;
-
-      /* Using pool cleanup to close it. This needs to be recursive so that
-         auth data can be stored. */
-      if (strlen (anchor) != strlen (path))
-        SVN_ERR (svn_wc_adm_open2 (&anchor_access, NULL, anchor, FALSE, 
-                                   -1, pool));
-      else
-        anchor_access = adm_access;
 
       /* Get full URL from the ANCHOR. */
       SVN_ERR (svn_wc_entry (&entry, anchor, anchor_access, FALSE, pool));
@@ -202,7 +223,6 @@ svn_client_status (svn_revnum_t *result_rev,
         }
       else
         {
-          svn_wc_adm_access_t *tgt_access;
           svn_revnum_t revnum;
             
           if (revision->kind == svn_opt_revision_head)
@@ -227,9 +247,7 @@ svn_client_status (svn_revnum_t *result_rev,
              within PATH.  When we call reporter->finish_report,
              EDITOR will be driven to describe differences between our
              working copy and HEAD. */
-          SVN_ERR (svn_wc_adm_probe_retrieve (&tgt_access, adm_access, 
-                                              path, pool));
-          SVN_ERR (svn_wc_crawl_revisions (path, tgt_access, reporter, 
+          SVN_ERR (svn_wc_crawl_revisions (path, target_access, reporter, 
                                            report_baton, FALSE, descend, 
                                            FALSE, NULL, NULL, NULL, pool));
         }
@@ -256,7 +274,7 @@ svn_client_status (svn_revnum_t *result_rev,
   /* Close the access baton here, as svn_client__do_external_status()
      calls back into this function and thus will be re-opening the
      working copy. */
-  SVN_ERR (svn_wc_adm_close (adm_access));
+  SVN_ERR (svn_wc_adm_close (anchor_access));
 
   /* If there are svn:externals set, we don't want those to show up as
      unversioned or unrecognized, so patch up the hash.  If caller wants
