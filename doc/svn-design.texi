@@ -77,7 +77,9 @@
 @page
 @vskip 0pt plus 1filll
 Copyright @copyright{} 2000 Collab.Net, Inc. @*
-See @xref{License} for details.
+See @xref{License} for details. @*
+First version: June 2000.  @*
+Last updated:  $Date: 2000-10-23 17:37:31 $
 
 @end titlepage
 @c -----------------------------------------------------------------
