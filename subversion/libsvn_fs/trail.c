@@ -138,6 +138,7 @@ commit_trail (trail_t *trail,
               svn_fs_t *fs)
 {
   struct undo *undo;
+  int db_err;
 
   /* Undo those changes which should persist only while the
      transaction is active.  */
@@ -155,8 +156,29 @@ commit_trail (trail_t *trail,
   /* Do a checkpoint here, if enough has gone on.
      The checkpoint parameters below are pretty arbitrary.  Perhaps
      there should be an svn_fs_berkeley_mumble function to set them.  */
-  SVN_ERR (BDB_WRAP (fs, "checkpointing after Berkeley DB transaction",
-                    fs->env->txn_checkpoint (fs->env, 1024, 5, 0)));
+  db_err = fs->env->txn_checkpoint (fs->env, 1024, 5, 0);
+
+  /* Pre-4.1 Berkeley documentation says:
+
+ 	The DB_ENV->txn_checkpoint function returns a non-zero error
+ 	value on failure, 0 on success, and returns DB_INCOMPLETE if
+ 	there were pages that needed to be written to complete the
+ 	checkpoint but that DB_ENV->memp_sync was unable to write
+ 	immediately.
+
+     It's safe to ignore DB_INCOMPLETE if we get it while
+     checkpointing.  (Post-4.1 Berkeley doesn't have DB_INCOMPLETE
+     anymore, so it's not an issue there.)  */
+  if (db_err)
+    {
+#if SVN_BDB_HAS_DB_INCOMPLETE
+      if (db_err != DB_INCOMPLETE)
+#endif /* SVN_BDB_HAS_DB_INCOMPLETE */
+        {
+          return svn_fs__bdb_wrap_db
+            (fs, "checkpointing after Berkeley DB transaction", db_err);
+        }
+    }
 
   /* We don't destroy the pool; we assume it contains stuff which will
      be useful beyond the transaction.  But we *do* destroy the
