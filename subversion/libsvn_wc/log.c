@@ -668,16 +668,95 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
  *
  * If REJFILE does not exist, do nothing.
  *
- * CONFLICT_TYPE is one of kff todo: see wc.h, Ben.
+ * CONFLICT_TYPE is either SVN_WC__LOG_ATTR_TEXT_REJFILE or
+ * SVN_WC__LOG_ATTR_PROP_REJFILE.
  */
 static svn_error_t *
-conflict_if_file (svn_string_t *parent_dir,
-                  const char *rejfile,
-                  const char *entry,
-                  const char *conflict_type,
-                  apr_pool_t *pool)
+conflict_if_rejfile (svn_string_t *parent_dir,
+                     const char *rejfile,
+                     const char *entry,
+                     const char *conflict_type,
+                     apr_pool_t *pool)
 {
-  /* kff todo: fooo in progress */
+  svn_error_t *err;
+  svn_string_t *rejfile_full_path;
+  enum svn_node_kind kind;
+
+  rejfile_full_path = svn_string_dup (parent_dir, pool);
+  svn_path_add_component_nts (rejfile_full_path, rejfile,
+                              svn_path_local_style);
+  
+  /* Check most basic case: no rejfile, not even an empty one. */
+  err = svn_io_check_path (rejfile_full_path, &kind, pool);
+  if (err)
+    return err;
+
+  if (kind == svn_node_none)
+    return SVN_NO_ERROR;
+  else if (kind != svn_node_file)
+    return svn_error_createf
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
+       "conflict_if_rejfile: %s exists, but is not a reject file",
+       rejfile_full_path->data);
+  else  /* a (possibly empty) reject file exists, proceed */
+    {
+      apr_status_t apr_err;
+      apr_finfo_t finfo;
+      apr_err = apr_stat (&finfo, rejfile_full_path->data, pool);
+      
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        return svn_error_createf
+          (apr_err, 0, NULL, pool,
+           "conflict_if_rejfile: trouble stat()'ing %s",
+           rejfile_full_path->data);
+      
+      if (finfo.size == 0)
+        {
+          apr_err = apr_remove_file (rejfile_full_path->data, pool);
+          if (apr_err)
+            return svn_error_createf
+              (apr_err, 0, NULL, pool,
+               "conflict_if_rejfile: trouble removing %s",
+               rejfile_full_path->data);
+
+          /* kff todo: still need to clear rejfile attributes!  Do
+             this by extending merge_sync(). */
+
+          err = svn_wc__entry_merge_sync
+            (parent_dir,
+             svn_string_create (entry, pool),
+             SVN_INVALID_REVNUM,
+             svn_node_none,
+             (SVN_WC_ENTRY_CLEAR_NAMED | SVN_WC_ENTRY_CONFLICT),
+             0,
+             0,
+             pool,
+             NULL);
+          if (err)
+            return err;
+        }
+      else  /* reject file size > 0 means the entry has conflicts. */
+        {
+          apr_hash_t *att_overlay = apr_make_hash (pool);
+
+          apr_hash_set (att_overlay,
+                        conflict_type, APR_HASH_KEY_STRING,
+                        svn_string_create (rejfile, pool));
+
+          err = svn_wc__entry_merge_sync 
+            (parent_dir,
+             svn_string_create (entry, pool),
+             SVN_INVALID_REVNUM,
+             svn_node_none,
+             SVN_WC_ENTRY_CONFLICT,
+             0,
+             0,
+             pool,
+             att_overlay);
+          if (err)
+            return err;
+        } 
+    }
 
   return SVN_NO_ERROR;
 }
@@ -694,16 +773,18 @@ log_do_updated (struct log_runner *loggy,
 
   if (t)
     {
-      err = conflict_if_file (loggy->path, t, name, "kff todo: text!",
-                              loggy->pool);
+      err = conflict_if_rejfile (loggy->path, t, name,
+                                 SVN_WC__LOG_ATTR_TEXT_REJFILE,
+                                 loggy->pool);
       if (err)
         return err;
     }
 
   if (p)
     {
-      err = conflict_if_file (loggy->path, p, name, "kff todo: prop!",
-                              loggy->pool);
+      err = conflict_if_rejfile (loggy->path, p, name,
+                                 SVN_WC__LOG_ATTR_PROP_REJFILE,
+                                 loggy->pool);
       if (err)
         return err;
     }
@@ -793,7 +874,7 @@ log_do_committed (struct log_runner *loggy,
                                           sname,
                                           atoi (revstr),
                                           svn_node_file,
-                                          SVN_WC_ENTRY_CLEAR,
+                                          SVN_WC_ENTRY_CLEAR_ALL,
                                           timestamp,
                                           0, /* FIX THIS.  Is this
                                                 code aware of

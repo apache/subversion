@@ -95,7 +95,7 @@ svn_cl__delete( int argc, char** argv, apr_pool_t* pool,
   else
     {
       fputs ("svn delete: object-to-delete required\n", stderr);
-      err = svn_cl__help (3, get_help, pool, p_opt_state);
+      err = svn_cl__help (3, (char **) get_help, pool, p_opt_state);
     }
 
   return err;
