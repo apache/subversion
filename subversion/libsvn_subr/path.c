@@ -308,6 +308,9 @@ previous_segment (const char *path,
   while (len > 0 && path[--len] != '/')
     ;
 
+  while (len > 0 && path[len - 1] == '/')
+    len--;
+  
   if (len == 0 && path[0] == '/')
     return 1;
   else
