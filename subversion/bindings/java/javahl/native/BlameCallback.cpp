@@ -22,79 +22,105 @@
 #include "BlameCallback.h"
 #include "JNIUtil.h"
 #include <svn_time.h>
-//////////////////////////////////////////////////////////////////////
-// Construction/Destruction
-//////////////////////////////////////////////////////////////////////
-
+/**
+ * Create a BlameCallback object
+ * @param jcallback the java callback object.
+ */
 BlameCallback::BlameCallback(jobject jcallback)
 {
-	m_callback = jcallback;
+    m_callback = jcallback;
 }
-
+/**
+ * Destroy a BlameCallback object
+ */
 BlameCallback::~BlameCallback()
 {
-
+    // the m_callback does not need to be destroyed, because it is the passed 
+    // in parameter to the java SVNClient.blame method.
 }
-void BlameCallback::callback(svn_revnum_t revision, const char *author, const char *date, const char *line, apr_pool_t *pool)
+/**
+ * Callback called for a single line in the file, for which the blame 
+ * information was requested
+ * @param revision  the revision number, when the line was last changed
+ *                  or -1, if not changed during the request revision
+ *                  interval
+ *
+ * @param author    the author, who performed the last change of the line
+ * @param date      the date of the last change of the line
+ * @param line      the content of the line
+ * @param pool      memory pool for the use of this function
+ */
+void BlameCallback::callback(svn_revnum_t revision, const char *author, 
+                             const char *date, const char *line, 
+                             apr_pool_t *pool)
 {
-	static jmethodID mid = 0;
-	JNIEnv *env = JNIUtil::getEnv();
-	if(mid == 0)
-	{
-		jclass clazz = env->FindClass(JAVA_PACKAGE"/BlameCallback");
-		if(JNIUtil::isJavaExceptionThrown())
-		{
-			return;
-		}
-		mid = env->GetMethodID(clazz, "singleLine", "(Ljava/util/Date;JLjava/lang/String;Ljava/lang/String;)V");
-		if(JNIUtil::isJavaExceptionThrown() || mid == 0)
-		{
-			return;
-		}
-		env->DeleteLocalRef(clazz);
-		if(JNIUtil::isJavaExceptionThrown())
-		{
-			return;
-		}
-	}
+    JNIEnv *env = JNIUtil::getEnv();
 
-	jstring jauthor = JNIUtil::makeJString(author);
-	if(JNIUtil::isJavaExceptionThrown())
-	{
-		return;
-	}
+    static jmethodID mid = 0; // the method id will not change during
+                              // the time this library is loaded, so
+                              // it can be cached. 
+    if(mid == 0)
+    {
+        jclass clazz = env->FindClass(JAVA_PACKAGE"/BlameCallback");
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return;
+        }
+        mid = env->GetMethodID(clazz, "singleLine", 
+            "(Ljava/util/Date;JLjava/lang/String;Ljava/lang/String;)V");
+        if(JNIUtil::isJavaExceptionThrown() || mid == 0)
+        {
+            return;
+        }
+        env->DeleteLocalRef(clazz);
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return;
+        }
+    }
+
+    // convert the parameters to their java relatives
+    jstring jauthor = JNIUtil::makeJString(author);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return;
+    }
     apr_time_t timeTemp;
     svn_time_from_cstring (&timeTemp, date, pool);
 
-	jobject jdate = JNIUtil::createDate(timeTemp);
-	if(JNIUtil::isJavaExceptionThrown())
-	{
-		return;
-	}
-	jstring jline = JNIUtil::makeJString(line);
-	if(JNIUtil::isJavaExceptionThrown())
-	{
-		return;
-	}
+    jobject jdate = JNIUtil::createDate(timeTemp);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return;
+    }
+    jstring jline = JNIUtil::makeJString(line);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return;
+    }
 
-	env->CallVoidMethod(m_callback, mid, jdate, (jlong)revision, jauthor, jline);
-	if(JNIUtil::isJavaExceptionThrown())
-	{
-		return;
-	}
-	env->DeleteLocalRef(jline);
-	if(JNIUtil::isJavaExceptionThrown())
-	{
-		return;
-	}
-	env->DeleteLocalRef(jauthor);
-	if(JNIUtil::isJavaExceptionThrown())
-	{
-		return;
-	}
-	env->DeleteLocalRef(jdate);
-	if(JNIUtil::isJavaExceptionThrown())
-	{
-		return;
-	}
+    // call the java method
+    env->CallVoidMethod(m_callback, mid, jdate, (jlong)revision, jauthor, 
+        jline);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return;
+    }
+
+    // cleanup the temporary java objects
+    env->DeleteLocalRef(jline);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return;
+    }
+    env->DeleteLocalRef(jauthor);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return;
+    }
+    env->DeleteLocalRef(jdate);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return;
+    }
 }
