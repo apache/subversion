@@ -1,0 +1,12 @@
+Debug
+Release
+.libs
+skel-test
+fs-test
+key-test
+test-repo-*
+strings-reps-test
+*.o
+*~
+.*~
+.*.ra_dav

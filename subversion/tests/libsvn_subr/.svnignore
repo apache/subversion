@@ -1,0 +1,15 @@
+Debug
+Release
+.libs
+hashdump-test
+hashdump.out
+hashdump2.out
+stringtest
+target-test
+stream-test
+path-test
+z
+*.o
+*~
+.*~
+.*.ra_dav

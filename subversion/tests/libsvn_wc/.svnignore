@@ -1,0 +1,10 @@
+Debug
+Release
+.libs
+checkout-test
+commit-test
+this
+*.o
+*~
+.*~
+.*.ra_dav

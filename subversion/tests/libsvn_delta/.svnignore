@@ -1,0 +1,12 @@
+Debug
+Release
+.libs
+deltaparse-test
+vdelta-test
+random-test
+xml-output-test
+svndiff-test
+*.o
+*~
+.*~
+.*.ra_dav
