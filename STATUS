@@ -83,7 +83,7 @@ Candidate changes:
       -1: ghudson
           (http://www.contactor.se/~dast/svn/archive-2004-08/0754.shtml)
 
-  * r10467, r10734, r10472, r10759, r10789, rXXXXX
+  * r10467, r10472, r10485, r10734, r10759, r10789, rXXXXX
     Detect and report lock-contention at recovery time.
     Justification:
       Improved user interface, low risk.
