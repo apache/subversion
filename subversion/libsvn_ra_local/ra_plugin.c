@@ -730,19 +730,22 @@ svn_ra_local__get_log (svn_ra_session_t *session,
                        apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sbaton = session->priv;
-  apr_array_header_t *abs_paths
-    = apr_array_make (pool, paths->nelts, sizeof (const char *));
   int i;
+  apr_array_header_t *abs_paths =
+    apr_array_make (pool, 0, sizeof (const char *));
 
-  for (i = 0; i < paths->nelts; i++)
+  if (paths)
     {
-      const char *abs_path = "";
-      const char *relative_path = (((const char **)(paths)->elts)[i]);
-
-      /* Append the relative paths to the base FS path to get an
-         absolute repository path. */
-      abs_path = svn_path_join (sbaton->fs_path, relative_path, pool);
-      (*((const char **)(apr_array_push (abs_paths)))) = abs_path;
+      for (i = 0; i < paths->nelts; i++)
+        {
+          const char *abs_path = "";
+          const char *relative_path = (((const char **)(paths)->elts)[i]);
+          
+          /* Append the relative paths to the base FS path to get an
+             absolute repository path. */
+          abs_path = svn_path_join (sbaton->fs_path, relative_path, pool);
+          (*((const char **)(apr_array_push (abs_paths)))) = abs_path;
+        }
     }
 
   return svn_repos_get_logs3 (sbaton->repos,
