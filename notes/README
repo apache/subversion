@@ -1,13 +1,13 @@
-This directory contains the process of designing Inversion. :-)
+This directory contains the process of designing Subversion. :-)
 
 Type
 
    $ make
 
-to produce inversion.html from inversion.txt (the outline-mode spec).
+to produce subversion.html from subversion.txt (the outline-mode spec).
 
 Once it's settled down, the finished design docs will be migrated to
 src/.  For the time being, it's nice to have them over here so that we
 don't run into silly file removal issues in an important directory
 like src/ (of course, silly file removal issues are one of the things
-we hope to fix with with Inversion).
+we hope to fix with with Subversion).
