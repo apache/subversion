@@ -52,12 +52,6 @@ Candidate changes:
     Justification: Perl correctness issue.
     Votes:
 
-  * r8718
-    Remove shell calls in perl bindings tests.
-    Justification: Will fail if svn isn't already installed.
-    Votes:
-      +1: breser, clkao
-
 Status of 1.0.1:
 ================
 
