@@ -66,9 +66,7 @@
 /* -----------------------------------------------------------------------
    'svn_renum_t *' will always be an OUTPUT parameter
 */
-// ### for now, disable this. it interferes with 'svn_fs_id_t *' params
-// ### awaiting some swig fixes.
-//%apply long *OUTPUT { svn_revnum_t * };
+%apply long *OUTPUT { svn_revnum_t * };
 
 /* -----------------------------------------------------------------------
    Define a general ptr/len typemap. This takes a single script argument
