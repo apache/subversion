@@ -180,7 +180,8 @@ remove_lock (const char *path, apr_pool_t *pool)
 
 /* An APR pool cleanup handler.  This handles access batons that have not
    been closed when their pool gets destroyed.  The physical locks
-   associated with such batons remain in the working copy. */
+   associated with such batons remain in the working copy if they are
+   protecting a log file. */
 static apr_status_t
 pool_cleanup (void *p)
 {
@@ -891,13 +892,19 @@ svn_wc__adm_is_cleanup_required (svn_boolean_t *cleanup,
                                  svn_wc_adm_access_t *adm_access,
                                  apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
-  const char *log_path = svn_wc__adm_path (svn_wc_adm_access_path (adm_access),
-                                           FALSE, pool, SVN_WC__ADM_LOG, NULL);
+  if (adm_access->type == svn_wc__adm_access_write_lock)
+    {
+      svn_node_kind_t kind;
+      const char *log_path
+        = svn_wc__adm_path (svn_wc_adm_access_path (adm_access),
+                            FALSE, pool, SVN_WC__ADM_LOG, NULL);
 
-  /* The presence of a log file demands cleanup */
-  SVN_ERR (svn_io_check_path (log_path, &kind, pool));
-  *cleanup = (kind == svn_node_file);
+      /* The presence of a log file demands cleanup */
+      SVN_ERR (svn_io_check_path (log_path, &kind, pool));
+      *cleanup = (kind == svn_node_file);
+    }
+  else
+    *cleanup = FALSE;
 
   return SVN_NO_ERROR;
 }
