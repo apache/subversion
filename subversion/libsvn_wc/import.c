@@ -137,6 +137,13 @@ import_dir (const svn_delta_edit_fns_t *editor,
           svn_string_t *name = svn_string_create (this_entry.name, subpool);
           void *this_dir_baton;
 
+          /* Skip entries for this dir and its parent.  
+             ### kff todo: APR actually promises that they'll come
+             first, so this guard could be moved outside the loop. */
+          if ((strcmp (this_entry.name, ".") == 0)
+              || (strcmp (this_entry.name, "..") == 0))
+            continue;
+
           /* Get descent baton from the editor. */
           SVN_ERR (editor->add_directory (name,
                                           dir_baton,
@@ -207,7 +214,7 @@ svn_wc_import (svn_string_t *path,
        "new entry name may not be the empty string when importing");
 
   /* Get a root dir baton. */
-  SVN_ERR (editor->replace_root (edit_baton, SVN_INVALID_REVNUM, &root_baton));
+  SVN_ERR (editor->replace_root (edit_baton, 0, &root_baton));
 
   /* Import a file or a directory tree. */
   SVN_ERR (svn_io_check_path (path, &kind, pool));
