@@ -196,12 +196,6 @@ int svn_path_compare_paths (const svn_string_t *path1,
                             const svn_string_t *path2,
                             enum svn_path_style style)
 {
-  /* FIXME: this does not get the right results for status report
-     ordering.  There we want a dir to appear right before the files
-     in it, and then all subdirs at the end, each right before the
-     stuff in it, etc...  That cannot be done in a pure two-at-a-time
-     manner, it needs a holistic appreciation of the data. */
-
   size_t min_len = ((path1->len) < (path2->len)) ? path1->len : path2->len;
   size_t i;
   
@@ -210,9 +204,13 @@ int svn_path_compare_paths (const svn_string_t *path1,
     ;
 
   if ((path1->len == path2->len) && (i >= min_len))
-    return 0;
+    return 0;     /* the paths are the same */
+  else if (path1->data[i] == SVN_PATH__REPOS_SEPARATOR)
+    return 1;     /* path1 child of path2, parent always comes before child */
+  else if (path2->data[i] == SVN_PATH__REPOS_SEPARATOR)
+    return -1;    /* path2 child of path1, parent always comes before child */
   else
-    return strncmp (path1->data + i, path2->data + i, min_len);
+    return strncmp (path1->data + i, path2->data + i, (min_len - i));
 }
 
 
