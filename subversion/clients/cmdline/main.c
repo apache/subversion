@@ -112,13 +112,6 @@ const apr_getopt_option_t svn_cl__options[] =
                       "use ARG as external editor"},
     {"old",           svn_cl__old_cmd_opt, 1, "use ARG as the older target"},
     {"new",           svn_cl__new_cmd_opt, 1, "use ARG as the newer target"},
-
-    /* ### Perhaps the option should be named "--rev-prop" instead?
-           Generally, we do include the hyphen; the only reason not to
-           here is that in code and emails we almost always refer to
-           them as "revprops", like with "wcprops".  So this
-           inconsistency is justified in the name of consistency.  How
-           distressingly typical.  Thoughts? :-) */
     {"revprop",       svn_cl__revprop_opt, 0,
                       "operate on a revision property (use with -r)"},
     {"relocate",      svn_cl__relocate_opt, 0,
