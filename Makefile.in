@@ -248,13 +248,7 @@ INSTALL_EXTRA_JAVAHL_JAVA=\
 INSTALL_EXTRA_JAVAHL_LIB=@INSTALL_EXTRA_JAVAHL_LIB@
 
 INSTALL_EXTRA_SWIG_RB=\
-	$(RUBY) -run -e mkdir -- -p $(DESTDIR)$(SWIG_RB_SITE_LIB_DIR)/svn/ext; \
-	(cd $(SWIG_RB_DIR); \
-	  find svn \
-	    -name "*.rb" \
-	    -exec $(RUBY) -run -e install -- \
-	       $(SWIG_RB_DIR)/\{\} \
-	       $(DESTDIR)$(SWIG_RB_SITE_LIB_DIR)/\{\} \;)
+  $(INSTALL_DATA) $(abs_srcdir)/subversion/bindings/swig/ruby/svn/*.rb $(DESTDIR)$(SWIG_RB_SITE_LIB_DIR)
 
 APXS = @APXS@ 
 
