@@ -218,7 +218,7 @@ print_dirents_xml (apr_hash_t *dirents,
       /* "<commit revision=...>" */
       svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, "commit",
                              "revision",
-                             apr_psprintf (subpool, "%" SVN_REVNUM_T_FMT,
+                             apr_psprintf (subpool, "%ld",
                                            dirent->created_rev),
                              NULL);
       if (dirent->last_author)
