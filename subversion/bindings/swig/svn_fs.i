@@ -133,6 +133,11 @@ apr_array_header_t **revs {
         svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_fs_path_change_t));
 }
 
+%typemap(perl5, in,numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;
+%typemap(perl5, argout) apr_hash_t **changed_paths_p {
+    ST(argvi++) = svn_swig_pl_convert_hash(*$1, SWIGTYPE_p_svn_fs_path_change_t);
+}
+
 /* -----------------------------------------------------------------------
    Fix the return value for svn_fs_commit_txn(). If the conflict result is
    NULL, then t_output_helper() is passed Py_None, but that goofs up
@@ -149,12 +154,7 @@ apr_array_header_t **revs {
     $result = Py_BuildValue("zi", *$1, (long)*$2);
 }
 
-%typemap(perl5, argout) apr_hash_t **changed_paths_p {
-    /* ### FIXME-perl */
-}
 /* ----------------------------------------------------------------------- */
-
-
 
 %include svn_fs.h
 %{
