@@ -7,11 +7,9 @@ SUBDIRS = libsvn_subr                \
           libsvn_delta               \
           libsvn_wc                  \
           libsvn_ra_dav              \
-          libsvn_ra_local            \
           libsvn_client              \
+          @FS_BASED_DIRS@            \
           client                     \
-          @LIBSVN_FS@                \
-          @SVNADMIN@                 \
           @APACHE_MODULES@           \
           tests
 

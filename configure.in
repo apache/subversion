@@ -119,18 +119,12 @@ dnl AC_CHECK_LIB() calls go here, if we ever need any
 # Build the filesystem library (and repository administration tool)
 # only if we have an appropriate version of Berkeley DB.
 SVN_LIB_BERKELEY_DB(3, 1, 14)
-case "$svn_lib_berkeley_db" in
-  yes )
-    LIBSVN_FS="libsvn_fs"
-    SVNADMIN="svnadmin"
-  ;;
-  no )
-    LIBSVN_FS=""
-    SVNADMIN=""
-  ;;
-esac
-AC_SUBST(LIBSVN_FS)
-AC_SUBST(SVNADMIN)
+if test "$svn_lib_berkeley_db" = "yes"; then
+  FS_BASED_DIRS="libsvn_fs libsvn_ra_local svnadmin"
+  FS_BASED_TESTS="libsvn_fs libsvn_ra_local"
+fi
+AC_SUBST(FS_BASED_DIRS)
+AC_SUBST(FS_BASED_TESTS)
 
 
 dnl Check for header files ----------------
@@ -208,6 +202,18 @@ AC_DEFINE_UNQUOTED(SVN_CLIENT_PATCH, "$SVN_CLIENT_PATCH",
 dnl Since this is used only on Unix-y systems, define the path separator as '/'
 AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',
         [Defined to be the path separator used on your local filesystem])
+
+dnl decide whether we want to link against the RA libraries
+if test "$enable_shared" = "no"; then
+  AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_DAV, 1,
+        [Defined if libsvn_client should link against libsvn_ra_dav])
+  AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL, 1,
+        [Defined if libsvn_client should link against libsvn_ra_local])
+
+  LIBSVN_CLIENT_DEPS="$SVN_LIBSVN_RA_DAV_LIBS $SVN_LIBSVN_RA_LOCAL_LIBS $SVN_LIBSVN_FS_LIBS $SVN_NEON_LIBS"
+fi
+AC_SUBST(LIBSVN_CLIENT_DEPS)
+
 
 dnl Pass some config data ----------------------------
 
