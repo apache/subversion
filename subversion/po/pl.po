@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-09-26 22:38+0200\n"
-"PO-Revision-Date: 2004-09-26 23:00+0200\n"
+"PO-Revision-Date: 2004-09-30 00:12+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2661,11 +2661,11 @@ msgstr "'%s' to nazwa zastrzeżona i nie może zostać zaimportowany"
 
 #: libsvn_client/commit.c:766 libsvn_client/copy.c:541
 msgid "Commit failed (details follow):"
-msgstr "Zatwierdzenie się nie powiodło (szczegóły poniżej):"
+msgstr "Zatwierdzenie nie powiodło się (szczegóły poniżej):"
 
 #: libsvn_client/commit.c:774 libsvn_client/copy.c:549
 msgid "Commit succeeded, but other errors follow:"
-msgstr "Zatwierdzenie się powiodło, lecz wystąpiły inne błędy:"
+msgstr "Zatwierdzenie powiodło się, lecz wystąpiły inne błędy:"
 
 #: libsvn_client/commit.c:781 libsvn_client/copy.c:556
 msgid "Error unlocking locked dirs (details follow):"
