@@ -118,10 +118,9 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   if (window == NULL)
     {
       /* We're done; clean up.  */
-      len = 0;
       err = svn_stream_close (eb->output);
       apr_pool_destroy (eb->pool);
-      return SVN_NO_ERROR;
+      return err;
     }
 
   /* Encode the instructions.  */
