@@ -1421,16 +1421,10 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
   digger->postfix_hash     = apr_make_hash (main_subpool);
 
   /* Create an expat parser */
-  expat_parser = XML_ParserCreate (NULL);
-
-  /* All expat callbacks should receive the digger structure. */
-  XML_SetUserData (expat_parser, digger);
-
-  /* Register our local callbacks with the expat parser */
-  XML_SetElementHandler (expat_parser,
-                         xml_handle_start,
-                         xml_handle_end); 
-  XML_SetCharacterDataHandler (expat_parser, xml_handle_data);
+  expat_parser = svn_xml_make_parser (digger,
+                                      xml_handle_start,
+                                      xml_handle_end,
+                                      xml_handle_data);
 
   /* Store the parser in the digger too, so that our expat callbacks
      can magically set themselves to NULL in the case of an error. */
