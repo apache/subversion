@@ -821,8 +821,9 @@ III.  BUILDING A SUBVERSION SERVER
           $ svn co http://localhost/svn/repos wc
 
       The most common reason this might fail is permission problems
-      reading the repository db files.  If the checkout fails, chmod
-      777 and try again.
+      reading the repository db files.  If the checkout fails, make
+      sure that the httpd process has permission to read and write to
+      the repository.
 
       You can see all of mod_dav_svn's complaints in the Apache
       error logfile, /usr/local/apache2/logs/error_log.  For more
