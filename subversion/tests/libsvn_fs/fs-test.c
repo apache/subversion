@@ -229,6 +229,76 @@ reopen_trivial_transaction (const char **msg)
 
 
 static int
+create_file_transaction (const char **msg)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_error_t *err;
+  const char *ignored;
+  static int made_txn_already = 0;
+
+  *msg = "begin a txn, get the txn root, and add a file!";
+
+  if (! made_txn_already)
+    {
+      /* Make sure the FS exists. */
+      if (create_berkeley_filesystem (&ignored) != 0)
+        return fail();
+      
+      /* Open the FS. */
+      fs = svn_fs_new (pool);
+      if (fs == NULL)
+        return fail();
+      
+      if (SVN_NO_ERROR != svn_fs_open_berkeley (fs, repository))
+        return fail();
+      
+      /* Begin a transaction. */
+      if (SVN_NO_ERROR != svn_fs_begin_txn (&txn, fs, 0, pool))
+        return fail();
+      
+      /* Test that it got id "0", since it's the second txn. */
+      {
+        char *txn_name;
+        
+        err = svn_fs_txn_name (&txn_name, txn, pool);
+        if (err)
+          return fail();
+        
+        if (strcmp (txn_name, "0") != 0)
+          return fail();
+      }
+      
+      {
+        svn_fs_root_t *txn_root;
+
+        /* Get the txn root */
+        if (SVN_NO_ERROR != svn_fs_txn_root (&txn_root, txn, pool))
+          return fail();
+
+        /* Create a file named "my_file.txt" in the root directory. */
+        if (SVN_NO_ERROR != svn_fs_make_file (txn_root,
+                                              "my_file.txt",
+                                              pool))
+          return fail();
+      }
+
+      /* Close it. */
+      if (SVN_NO_ERROR != svn_fs_close_txn (txn))
+        return fail();
+      
+     /* Close the FS. */
+      if (SVN_NO_ERROR != svn_fs_close_fs (fs))
+        return fail();
+
+      made_txn_already = 1;
+    }
+
+  return 0;
+}
+
+
+static int
 list_live_transactions (const char **msg)
 {
   svn_fs_t *fs;
@@ -280,6 +350,7 @@ int (*test_funcs[]) (const char **msg) = {
   open_berkeley_filesystem,
   trivial_transaction,
   reopen_trivial_transaction,
+  create_file_transaction,
   list_live_transactions,
   0
 };
