@@ -399,6 +399,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_CLIENT_BAD_REVISION,
               "Bogus revision information given")
 
+  SVN_ERRDEF (SVN_ERR_CLIENT_DUPLICATE_COMMIT_URL,
+              "Attempting to commit to a URL more than once")
+
   /* END libsvn_client errors */
 
 
