@@ -906,8 +906,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
     repos->username = "anonymous";
 
   /* open the SVN FS */
-  repos->fs = svn_fs_new(r->pool);
-  serr = svn_fs_open_berkeley(repos->fs, fs_path);
+  serr = svn_repos_open(&(repos->fs), fs_path, r->pool);
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

@@ -39,9 +39,10 @@ Ben todo:
 
 Karl M3 stack:
 
-   - fs work with Mike
    - conservative mime type detection
+
    - Greg's suggested rewrite (unwrite) of hook system
+
    - DB_RUN_RECOVERY, about which Greg writes:
 
      As much of that as you'd like to do :-) The bulk of the code
@@ -56,6 +57,19 @@ Karl M3 stack:
      keep the file open as long as possible, and use locks on either a
      per-op basis or across groups of ops (we should discuss tradeoffs
      on the list; I've got ideas but would like discussion).
+
+     See in apache cvs tree this file, for an example of APR lock usage:
+
+         srclib/apr-util/dbm/sdbm/sdbm_lock.c   // Has two funcs in it.
+                                  sdbm.c        // Calls above to do
+                                                   locking and unlocking.
+
+     Summary: you have an open file handle, just call the file lock
+              functions on it.
+
+    
+
+
 
 Karl post-M3:
 

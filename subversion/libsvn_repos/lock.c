@@ -42,43 +42,66 @@
 
 
 
-#if 0  /* in progress */
-/* doc string here */
+
+/* Clear all outstanding locks on ARG, an open apr_file_t *. */
 static apr_status_t
-unlock_repository (void *arg)
+clear_and_close (void *arg)
 {
-  /* in progress */
+  apr_status_t apr_err;
+  apr_file_t *f = arg;
+
+  /* Remove locks. */
+  apr_err = apr_file_unlock (f);
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    return apr_err;
+
+  /* Close the file. */
+  apr_err = apr_file_close (f);
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    return apr_err;
 
   return 0;
 }
-#endif /* 0 */
+
 
 svn_error_t *
 svn_repos_open (svn_fs_t **fs_p,
                 const char *path,
                 apr_pool_t *pool)
 {
-#if 0  /* in progress */
   svn_fs_t *fs;
   apr_status_t apr_err;
 
   fs = svn_fs_new (pool);
   SVN_ERR (svn_fs_open_berkeley (fs, path));
 
-  /* Get shared lock. */
-  apr_err = apr_file_lock (db->dirf, APR_FLOCK_SHARED);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
-    return svn_error_createf (SVN_ERR_REPOS_LOCKED, 0, err, pool,
-             "svn_repos_open: repository `%s' locked", path);
+  /* Locking. */
+  {
+    const char *lockfile_path;
+    apr_file_t *lockfile_handle;
 
-  /* Register an unlock function for the shared lock. */
-  apr_pool_cleanup_register (pool, dbt->data,
-                             unlock_repository,
-                             apr_pool_cleanup_null);
+    /* Get a filehandle for the repository's db lockfile. */
+    lockfile_path = svn_fs_db_lockfile (fs, pool);
+    apr_err = apr_file_open (&lockfile_handle, lockfile_path,
+                             APR_READ, APR_OS_DEFAULT, pool);
+    if (! APR_STATUS_IS_SUCCESS (apr_err))
+      return svn_error_createf
+        (apr_err, 0, NULL, pool,
+         "svn_repos_open: error opening db lockfile `%s'", lockfile_path);
+    
+    /* Get shared lock on the filehandle. */
+    apr_err = apr_file_lock (lockfile_handle, APR_FLOCK_SHARED);
+    if (! APR_STATUS_IS_SUCCESS (apr_err))
+      return svn_error_createf
+        (apr_err, 0, NULL, pool,
+         "svn_repos_open: shared db lock on repository `%s' failed", path);
+    
+    /* Register an unlock function for the shared lock. */
+    apr_pool_cleanup_register (pool, lockfile_handle, clear_and_close,
+                               apr_pool_cleanup_null);
+  }
 
   *fs_p = fs;
-#endif /* 0 */
-
   return SVN_NO_ERROR;
 }
 

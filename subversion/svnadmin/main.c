@@ -23,7 +23,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
-
+#include "svn_repos.h"
 
 
 
@@ -171,10 +171,9 @@ main (int argc, const char * const *argv)
   apr_initialize ();
   pool = svn_pool_create (NULL);
 
-  fs = svn_fs_new(pool);
-
   if (is_create)
     {
+      fs = svn_fs_new(pool);
       err = svn_fs_create_berkeley(fs, path);
       if (err) goto error;
     }
@@ -182,7 +181,7 @@ main (int argc, const char * const *argv)
     {
       svn_revnum_t youngest_rev;
 
-      err = svn_fs_open_berkeley(fs, path);
+      err = svn_repos_open (&fs, path, pool);
       if (err) goto error;
 
       svn_fs_youngest_rev (&youngest_rev, fs, pool);
@@ -193,7 +192,7 @@ main (int argc, const char * const *argv)
       char **txns;
       char *txn_name;
 
-      err = svn_fs_open_berkeley(fs, path);
+      err = svn_repos_open (&fs, path, pool);
       if (err) goto error;
 
       err = svn_fs_list_transactions(&txns, fs, pool);
@@ -251,7 +250,7 @@ main (int argc, const char * const *argv)
         upper = SVN_INVALID_REVNUM,
         this;
 
-      err = svn_fs_open_berkeley(fs, path);
+      err = svn_repos_open (&fs, path, pool);
       if (err) goto error;
 
       /* Do the args tell us what revisions to inspect? */
@@ -328,7 +327,7 @@ main (int argc, const char * const *argv)
           return EXIT_FAILURE;
         }
 
-      err = svn_fs_open_berkeley(fs, path);
+      err = svn_repos_open (&fs, path, pool);
       if (err) goto error;
       
       err = svn_fs_open_txn (&txn, fs, argv[3], pool);
@@ -347,7 +346,7 @@ main (int argc, const char * const *argv)
           return EXIT_FAILURE;
         }
 
-      err = svn_fs_open_berkeley(fs, path);
+      err = svn_repos_open (&fs, path, pool);
       if (err) goto error;
 
       err = svn_fs_begin_txn (&txn, fs, (svn_revnum_t) atoi(argv[3]), pool);

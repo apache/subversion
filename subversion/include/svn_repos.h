@@ -37,8 +37,10 @@ extern "C" {
 /* Set *FS_P to an opened filesystem object for the repository at
    PATH.  Allocate *FS_P in POOL.
 
-   *FS_P acquires a shared lock on the repository, and a cleanup
-   function is attached to POOL to remove that lock.  */
+   Acquires a shared lock on the repository, and attaches a cleanup
+   function to POOL to remove the lock.  If no lock can be acquired,
+   returns error, with undefined effect on *FS_P.  If an exclusive
+   lock is present, this blocks until it's gone.  */
 svn_error_t *svn_repos_open (svn_fs_t **fs_p,
                              const char *path,
                              apr_pool_t *pool);
