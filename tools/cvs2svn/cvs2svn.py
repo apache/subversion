@@ -1705,8 +1705,20 @@ class SymbolicNameTracker:
         rev = pair[0]
     return rev
 
+  def is_best_rev(self, scores, rev, limit_rev):
+    """Return true if REV has the highest score for revisions older than
+    LIMIT_REV from SCORES, a list returned by score_revisions()."""
+    max_score = 0
+    rev_score = 0
+    for pair in scores:
+      if pair[1] > max_score and pair[0] < limit_rev:
+        max_score = pair[1]
+      if pair[0] <= rev:
+        rev_score = pair[1]
+    return rev_score == max_score
+
   # Helper for copy_descend().
-  def cleanup_entries(self, rev, entries, is_tag):
+  def cleanup_entries(self, rev, limit_rev, entries, is_tag):
     """Return a copy of ENTRIES, minus the individual entries whose
     highest scoring revision doesn't match REV (and also, minus and
     special '/'-denoted flags).  IS_TAG is 1 or None, based on whether
@@ -1725,8 +1737,7 @@ class SymbolicNameTracker:
       entry = entries.get(key)
       val = self.db[entry]
       scores = self.score_revisions(val.get(opening_key), val.get(closing_key))
-      best_rev = self.best_rev(scores, rev + 1)
-      if rev == best_rev:
+      if self.is_best_rev(scores, rev, limit_rev):
         new_entries[key] = entry
     return new_entries
       
@@ -1779,7 +1790,8 @@ class SymbolicNameTracker:
         else:
           copy_dst = make_path(ctx, dst_path, name, None)
 
-        expected_entries = self.cleanup_entries(rev, val, is_tag)
+        expected_entries = self.cleanup_entries(rev, dumper.revision,
+                                                val, is_tag)
         if (rev != parent_rev):
           if jit_new_rev and jit_new_rev[0]:
             dumper.start_revision(make_revision_props(ctx, name, is_tag))
