@@ -638,7 +638,7 @@ typedef struct svn_diff3__file_output_baton_t
 
   const char *conflict_modified;
   const char *conflict_original;
-  const char *conflict_seperator;
+  const char *conflict_separator;
   const char *conflict_latest;
 
   svn_boolean_t display_original_in_conflict;
@@ -816,7 +816,7 @@ svn_diff3__file_output_conflict(void *baton,
               original_start, original_length));
     }
 
-  rv = apr_file_puts(file_baton->conflict_seperator, file_baton->output_file);
+  rv = apr_file_puts(file_baton->conflict_separator, file_baton->output_file);
   if (rv != APR_SUCCESS)
     {
       return svn_error_create(rv, NULL,
@@ -849,7 +849,7 @@ svn_diff3_file_output(apr_file_t *output_file,
                       const char *conflict_original,
                       const char *conflict_modified,
                       const char *conflict_latest,
-                      const char *conflict_seperator,
+                      const char *conflict_separator,
                       svn_boolean_t display_original_in_conflict,
                       svn_boolean_t display_resolved_conflicts,
                       apr_pool_t *pool)
@@ -870,7 +870,7 @@ svn_diff3_file_output(apr_file_t *output_file,
                             : apr_psprintf(pool, "<<<<<<< %s", modified_path);
   baton.conflict_original = conflict_original ? conflict_original
                             : apr_psprintf(pool, "||||||| %s", original_path);
-  baton.conflict_seperator = conflict_seperator ? conflict_seperator
+  baton.conflict_separator = conflict_separator ? conflict_separator
                              : "=======";
   baton.conflict_latest = conflict_latest ? conflict_latest 
                           : apr_psprintf(pool, ">>>>>>> %s", latest_path);
