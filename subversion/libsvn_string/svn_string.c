@@ -331,17 +331,24 @@ svn_string_strip_whitespace (svn_string_t *str)
 void
 svn_string_print (const svn_string_t *str, 
                   FILE *stream, 
-                  svn_boolean_t show_all_fields)
+                  svn_boolean_t show_all_fields,
+                  svn_boolean_t add_newline)
 {
   if (str->len >= 0) 
     {
+
+      /*      fwrite (str->data, 1, str->len, stream); */
+
       if (show_all_fields)
         {
-          fprintf (stream, "String blocksize: %d, length: %d\n", 
+          fprintf (stream, " (blocksize: %d, length: %d)", 
                    str->blocksize, str->len);
         }
-      fwrite (str->data, 1, str->len, stream);
-      fprintf (stream, "\n");
+
+      if (add_newline)
+        {
+          fprintf (stream, "\n");
+        }
     }
 }
 

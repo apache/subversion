@@ -104,7 +104,8 @@ char * svn_string_2cstring (const svn_string_t *str, ap_pool_t *pool);
 size_t svn_string_first_non_whitespace (const svn_string_t *str);
 void svn_string_strip_whitespace (svn_string_t *str);
 void svn_string_print (const svn_string_t *str, FILE *stream,
-                       svn_boolean_t show_all_fields);
+                       svn_boolean_t show_all_fields,
+                       svn_boolean_t add_newline);
 
 #endif  /* __SVN_STRING_H__ */
 

@@ -30,7 +30,7 @@ main ()
 
   /* Print out our configdata uber-hash */
 
-
+  svn_uberhash_print (configdata, stdout);
 
 
   /* If we were an application using libsvn_svr, we would now pass
