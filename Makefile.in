@@ -124,38 +124,10 @@ local-extraclean: local-distclean
 local-install: @INSTALL_RULES@ @SWIG_INSTALL_RULES@
 
 check: $(TEST_DEPS) @FS_TEST_DEPS@
-	@logfile=`pwd`/tests.log ; \
-	echo > $$logfile ; \
-	failed=no ; \
-	$(PYTHON) $(top_srcdir)/build/pycheck.py ; \
-	list='$(TEST_PROGRAMS) @FS_TEST_PROGRAMS@'; for prog in $$list; do \
-	    progbase=`echo $$prog | sed 's?.*/??'` ; \
-	    progdir=`echo $$prog | sed 's?/[^/]*$$??'` ; \
-	    echo $(ECHO_N) "Running all tests in $$progbase...$(ECHO_C)" ; \
-	    echo "START: $$progbase" >> $$logfile ; \
-	    if echo $$progbase | grep \\.py$$ > /dev/null; then  \
-		runprog="$(PYTHON) $(abs_srcdir)/$$prog" ; \
-	    elif echo $$progbase | grep \\.sh$$ > /dev/null; then  \
-		runprog="$(SHELL) $(abs_srcdir)/$$prog $(abs_builddir)/$$progdir $(abs_srcdir)/$$progdir" ; \
-	    elif test -x $$prog ; then \
-		runprog="./$$progbase" ; \
-	    else  \
-		echo "Don't know what to do about $$progbase" ; \
-		exit 1 ; \
-	    fi ; \
-	    if ( cd $$progdir && $$runprog ) >> $$logfile ; then \
-		echo "success" ; \
-	    else \
-		echo "FAILURE" ; \
-		failed=yes; \
-	    fi; \
-	    echo "END: $$progbase" >> $$logfile ; \
-	    echo >> $$logfile ; \
-	done ; \
-	if test "$$failed" = "yes"; then \
-	    echo "at least one test FAILED, checking tests.log." ; \
-	    grep FAIL $$logfile || true ; \
-	fi
+	@$(PYTHON) $(top_srcdir)/build/pycheck.py ; \
+	$(PYTHON) $(top_srcdir)/build/run-tests.py \
+		'$(abs_srcdir)' '$(abs_builddir)' '$(PYTHON)' '$(SHELL)' \
+		$(TEST_PROGRAMS) @FS_TEST_PROGRAMS@
 
 mkdir-init:
 	@list='$(BUILD_DIRS) $(DOC_DIRS)'; for i in $$list doc; do \
