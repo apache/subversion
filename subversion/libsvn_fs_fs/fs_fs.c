@@ -20,6 +20,7 @@
 #include <string.h>
 #include <errno.h>              /* for EINVAL */
 #include <ctype.h>
+#include <assert.h>
 
 #include <apr_general.h>
 #include <apr_pools.h>
@@ -1271,7 +1272,45 @@ rep_read_get_baton (struct rep_read_baton **rb_p,
   return SVN_NO_ERROR;
 }
 
-/* Get one delta window that is a result of combining all the deltas
+/* Skip forwards to THIS_CHUNK in REP_STATE and then read the next delta
+   window into *NWIN. */
+static svn_error_t *
+read_window (svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
+             apr_pool_t *pool)
+{
+  svn_stream_t *stream;
+
+  assert (rs->chunk_index <= this_chunk);
+
+  /* Skip windows to reach the current chunk if we aren't there yet. */
+  while (rs->chunk_index < this_chunk)
+    {
+      SVN_ERR (svn_txdelta_skip_svndiff_window (rs->file, rs->ver, pool));
+      rs->chunk_index++;
+      rs->off = 0;
+      SVN_ERR (svn_io_file_seek (rs->file, APR_CUR, &rs->off, pool));
+      if (rs->off >= rs->end)
+        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                 _("Reading one svndiff window read "
+                                   "beyond the end of the "
+                                   "representation"));
+    }
+
+  /* Read the next window. */
+  stream = svn_stream_from_aprfile (rs->file, pool);
+  SVN_ERR (svn_txdelta_read_svndiff_window (nwin, stream, rs->ver, pool));
+  rs->chunk_index++;
+  SVN_ERR (get_file_offset (&rs->off, rs->file, pool));
+
+  if (rs->off > rs->end)
+    return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                             _("Reading one svndiff window read beyond "
+                               "the end of the representation"));
+  
+  return SVN_NO_ERROR;
+}  
+
+/* Get one delta window that is a result of combining all but the last deltas
    from the current desired representation identified in *RB, to its
    final base representation.  Store the window in *RESULT. */
 static svn_error_t *
@@ -1279,12 +1318,13 @@ get_combined_window (svn_txdelta_window_t **result,
                      struct rep_read_baton *rb)
 {
   apr_pool_t *pool, *new_pool;
-  int i, this_chunk;
+  int i;
   svn_txdelta_window_t *window, *nwin;
   svn_stream_t *stream;
   struct rep_state *rs;
 
-  this_chunk = rb->chunk_index++;
+  assert (rb->rs_list->nelts >= 2);
+
   pool = svn_pool_create (rb->pool);
 
   /* Read the next window from the original rep. */
@@ -1299,37 +1339,14 @@ get_combined_window (svn_txdelta_window_t **result,
                                "of the representation"));
 
   /* Combine in the windows from the other delta reps, if needed. */
-  for (i = 1; i < rb->rs_list->nelts; i++)
+  for (i = 1; i < rb->rs_list->nelts - 1; i++)
     {
       if (window->src_ops == 0)
         break;
 
       rs = APR_ARRAY_IDX (rb->rs_list, i, struct rep_state *);
 
-      /* Skip windows to reach the current chunk if we aren't there yet. */
-      while (rs->chunk_index < this_chunk)
-        {
-          SVN_ERR (svn_txdelta_skip_svndiff_window (rs->file, rs->ver, pool));
-          rs->chunk_index++;
-          rs->off = 0;
-          SVN_ERR (svn_io_file_seek (rs->file, APR_CUR, &rs->off, pool));
-          if (rs->off >= rs->end)
-            return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                     _("Reading one svndiff window read "
-                                       "beyond the end of the "
-                                       "representation"));
-        }
-
-      /* Read the next window. */
-      stream = svn_stream_from_aprfile (rs->file, pool);
-      SVN_ERR (svn_txdelta_read_svndiff_window (&nwin, stream, rs->ver, pool));
-      rs->chunk_index++;
-      SVN_ERR (get_file_offset (&rs->off, rs->file, pool));
-
-      if (rs->off > rs->end)
-        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                 _("Reading one svndiff window read beyond "
-                                   "the end of the representation"));
+      SVN_ERR (read_window (&nwin, rb->chunk_index, rs, pool));
 
       /* Combine this window with the current one.  Cycles pools so that we
          only need to hold three windows at a time. */
@@ -1360,10 +1377,10 @@ get_contents (struct rep_read_baton *rb,
               char *buf,
               apr_size_t *len)
 {
-  apr_size_t copy_len, remaining = *len;
-  char *sbuf, *cur = buf;
+  apr_size_t copy_len, remaining = *len, tlen;
+  char *sbuf, *tbuf, *cur = buf;
   struct rep_state *rs;
-  svn_txdelta_window_t *window;
+  svn_txdelta_window_t *cwindow, *lwindow;
 
   /* Special case for when there are no delta reps, only a plain
      text. */
@@ -1412,40 +1429,80 @@ get_contents (struct rep_read_baton *rb,
             break;
           
           /* Get more buffered data by evaluating a chunk. */
-          SVN_ERR (get_combined_window (&window, rb));
-          if (window->src_ops > 0)
+          if (rb->rs_list->nelts > 1)
+            SVN_ERR (get_combined_window (&cwindow, rb));
+          else
+            cwindow = NULL;
+          if (!cwindow || cwindow->src_ops > 0)
             {
-              if (! rb->src_state)
-                return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                         _("svndiff data requested "
-                                           "non-existent source"));
-              rs = rb->src_state;
-              sbuf = apr_pcalloc (rb->pool, window->sview_len);
-              if (! ((rs->start + window->sview_offset) < rs->end))
-                return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                         _("svndiff requested position beyond "
-                                           "end of stream"));
-              if ((rs->start + window->sview_offset) != rs->off)
+              rs = APR_ARRAY_IDX (rb->rs_list, rb->rs_list->nelts - 1,
+                                  struct rep_state *);
+              /* Read window from last representation in list. */
+              /* We apply this window directly instead of combining it with the
+                 others.  We do this because vdelta is used for deltas against
+                 the empty stream, which will trigger quadratic behaviour in
+                 the delta combiner. */
+              SVN_ERR (read_window (&lwindow, rb->chunk_index, rs, rb->pool));
+
+              if (lwindow->src_ops > 0)
                 {
-                  rs->off = rs->start + window->sview_offset;
-                  SVN_ERR (svn_io_file_seek (rs->file, APR_SET, &rs->off,
-                                             rb->pool));
+                  if (! rb->src_state)
+                    return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                             _("svndiff data requested "
+                                               "non-existent source"));
+                  rs = rb->src_state;
+                  sbuf = apr_palloc (rb->pool, lwindow->sview_len);
+                  if (! ((rs->start + lwindow->sview_offset) < rs->end))
+                    return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                             _("svndiff requested position "
+                                               "beyond end of stream"));
+                  if ((rs->start + lwindow->sview_offset) != rs->off)
+                    {
+                      rs->off = rs->start + lwindow->sview_offset;
+                      SVN_ERR (svn_io_file_seek (rs->file, APR_SET, &rs->off,
+                                                 rb->pool));
+                    }
+                  SVN_ERR (svn_io_file_read_full (rs->file, sbuf,
+                                                  lwindow->sview_len,
+                                                  NULL, rb->pool));
+                  rs->off += lwindow->sview_len;
                 }
-              SVN_ERR (svn_io_file_read_full (rs->file, sbuf,
-                                              window->sview_len,
-                                              NULL, rb->pool));
-              rs->off += window->sview_len;
+              else
+                sbuf = NULL;
+
+              /* Apply lwindow to source. */
+              tlen = lwindow->tview_len;
+              tbuf = apr_palloc (rb->pool, tlen);
+              svn_txdelta__apply_instructions (lwindow, sbuf, tbuf,
+                                               &tlen);
+              if (tlen != lwindow->tview_len)
+                return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                         _("svndiff window length is "
+                                           "corrupt"));
+              sbuf = tbuf;
             }
           else
             sbuf = NULL;
+
+          rb->chunk_index++;
+
+          if (cwindow)
+            {
+              rb->buf_len = cwindow->tview_len;
+              rb->buf = apr_palloc (rb->pool, rb->buf_len);
+              svn_txdelta__apply_instructions (cwindow, sbuf, rb->buf,
+                                               &rb->buf_len);
+              if (rb->buf_len != cwindow->tview_len)
+                return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                         _("svndiff window length is "
+                                           "corrupt"));
+            }
+          else
+            {
+              rb->buf_len = lwindow->tview_len;
+              rb->buf = sbuf;
+            }
           
-          rb->buf_len = window->tview_len;
-          rb->buf = apr_pcalloc (rb->pool, rb->buf_len);
-          svn_txdelta__apply_instructions (window, sbuf, rb->buf,
-                                           &rb->buf_len);
-          if (rb->buf_len != window->tview_len)
-            return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                     _("svndiff window length is corrupt"));
           rb->buf_pos = 0;
         }
     }
