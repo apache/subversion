@@ -191,8 +191,10 @@ remove_file (const char *fname, apr_pool_t *pool)
  * 
  * If the verification fails, leave the files for post-mortem.  If the
  * failure is due to non-eol data being wrong, return
- * SVN_ERR_MALFORMED_FILE, else if the problem is an incorrect eol
- * marker, return SVN_ERR_CORRUPT_EOL.
+ * SVN_ERR_MALFORMED_FILE.  If the problem is an incorrect eol marker,
+ * return SVN_ERR_CORRUPT_EOL.  If the problem is that a mixed eol
+ * style was repaired even though no repair flag was passed, return
+ * SVN_ERR_TEST_FAILED.
  *
  * Use POOL for temporary allocation.
  *
@@ -211,6 +213,7 @@ substitute_and_verify (const char *test_name,
                        const char *url,
                        apr_pool_t *pool)
 {
+  svn_error_t *err;
   svn_stringbuf_t *contents;
   int idx = 0;
   int i;
@@ -222,9 +225,35 @@ substitute_and_verify (const char *test_name,
   SVN_ERR (remove_file (src_fname, pool));
   SVN_ERR (remove_file (dst_fname, pool));
   SVN_ERR (create_file (src_fname, src_eol, pool));
-  SVN_ERR (svn_io_copy_and_translate (src_fname, dst_fname, dst_eol, repair,
-                                      rev, date, author, url, pool));
+  err = svn_io_copy_and_translate (src_fname, dst_fname, dst_eol, repair,
+                                   rev, date, author, url, pool);
 
+  /* Conversion should have failed, if src has mixed eol and the repair
+     flag was not set. */
+  if ((! src_eol) && (! repair))
+    {
+      if (! err)
+        {
+          return svn_error_createf
+            (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+             "translation of %s should have failed, but didn't", src_fname);
+        }
+      else if (err->apr_err != SVN_ERR_IO_INCONSISTENT_EOL)
+        {
+          char buf[1024];
+
+          svn_strerror (err->apr_err, buf, sizeof (buf));
+
+          return svn_error_createf
+            (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+             "translation of %s should fail, but not with error \"%s\"",
+             src_fname, buf);
+        }
+    }
+  else if (err)
+    return err;
+
+      
   /** Verify that the conversion worked. **/
 
   for (i = 0; i < (sizeof (expect) / sizeof (*expect)); i++)
@@ -409,8 +438,8 @@ substitute_and_verify (const char *test_name,
 
 static svn_error_t *
 crlf_to_crlf (const char **msg,
-                svn_boolean_t msg_only,
-                apr_pool_t *pool)
+              svn_boolean_t msg_only,
+              apr_pool_t *pool)
 {
   *msg = "convert CRLF to CRLF";
 
@@ -426,8 +455,8 @@ crlf_to_crlf (const char **msg,
 
 static svn_error_t *
 lf_to_crlf (const char **msg,
-              svn_boolean_t msg_only,
-              apr_pool_t *pool)
+            svn_boolean_t msg_only,
+            apr_pool_t *pool)
 {
   *msg = "convert LF to CRLF";
 
@@ -443,8 +472,8 @@ lf_to_crlf (const char **msg,
 
 static svn_error_t *
 cr_to_crlf (const char **msg,
-              svn_boolean_t msg_only,
-              apr_pool_t *pool)
+            svn_boolean_t msg_only,
+            apr_pool_t *pool)
 {
   *msg = "convert CR to CRLF";
 
@@ -460,8 +489,8 @@ cr_to_crlf (const char **msg,
 
 static svn_error_t *
 mixed_to_crlf (const char **msg,
-                     svn_boolean_t msg_only,
-                     apr_pool_t *pool)
+               svn_boolean_t msg_only,
+               apr_pool_t *pool)
 {
   *msg = "convert mixed line endings to CRLF";
 
@@ -469,7 +498,7 @@ mixed_to_crlf (const char **msg,
     return SVN_NO_ERROR;
 
   SVN_ERR (substitute_and_verify
-           ("mixed_to_crlf", NULL, "\r\n", 0, NULL, NULL, NULL, NULL, pool));
+           ("mixed_to_crlf", NULL, "\r\n", 1, NULL, NULL, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -477,8 +506,8 @@ mixed_to_crlf (const char **msg,
 
 static svn_error_t *
 lf_to_lf (const char **msg,
-            svn_boolean_t msg_only,
-            apr_pool_t *pool)
+          svn_boolean_t msg_only,
+          apr_pool_t *pool)
 {
   *msg = "convert LF to LF";
 
@@ -494,8 +523,8 @@ lf_to_lf (const char **msg,
 
 static svn_error_t *
 crlf_to_lf (const char **msg,
-              svn_boolean_t msg_only,
-              apr_pool_t *pool)
+            svn_boolean_t msg_only,
+            apr_pool_t *pool)
 {
   *msg = "convert CRLF to LF";
 
@@ -511,8 +540,8 @@ crlf_to_lf (const char **msg,
 
 static svn_error_t *
 cr_to_lf (const char **msg,
-            svn_boolean_t msg_only,
-            apr_pool_t *pool)
+          svn_boolean_t msg_only,
+          apr_pool_t *pool)
 {
   *msg = "convert CR to LF";
 
@@ -528,8 +557,8 @@ cr_to_lf (const char **msg,
 
 static svn_error_t *
 mixed_to_lf (const char **msg,
-                   svn_boolean_t msg_only,
-                   apr_pool_t *pool)
+             svn_boolean_t msg_only,
+             apr_pool_t *pool)
 {
   *msg = "convert mixed line endings to LF";
 
@@ -537,7 +566,27 @@ mixed_to_lf (const char **msg,
     return SVN_NO_ERROR;
 
   SVN_ERR (substitute_and_verify
-           ("cr_to_lf", NULL, "\n", 0, NULL, NULL, NULL, NULL, pool));
+           ("cr_to_lf", NULL, "\n", 1, NULL, NULL, NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+mixed_no_repair (const char **msg,
+                 svn_boolean_t msg_only,
+                 apr_pool_t *pool)
+{
+  *msg = "don't convert mixed line endings in absence of repair flag";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("mixed_no_repair", NULL, "\n", 0, NULL, NULL, NULL, NULL, pool));
+
+  SVN_ERR (substitute_and_verify
+           ("mixed_no_repair", NULL, "\r\n", 0, NULL, NULL, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -561,6 +610,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   cr_to_lf,
   mixed_to_lf,
   /* ### Is there any compelling reason to test CR or LFCR? */
+  mixed_no_repair,
   0
 };
 
