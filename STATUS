@@ -67,7 +67,7 @@ Candidate changes:
     Votes:
       +1: maxb
 
-  * r10159
+  * r10159, r10176
     Require neon-0.24.7.  Fixes some nasty zlib bugs.
     Justification:  fixes malformed XML errors from large
                     ra_dav checkouts/updates/etc.  
