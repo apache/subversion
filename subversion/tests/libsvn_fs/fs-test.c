@@ -925,11 +925,11 @@ node_props (const char **msg,
 
   /* Change some of the above properties. */
   SET_STR (&s1, "Best Rock Artist");
-  SET_STR (&s1, "P.O.D.");
+  SET_STR (&s2, "P.O.D.");
   SVN_ERR (svn_fs_change_node_prop (txn_root, "music.txt", &s1, &s2, pool));
 
   SET_STR (&s1, "Best Rap Artist");
-  SET_STR (&s1, "Busta Rhymes");
+  SET_STR (&s2, "Busta Rhymes");
   SVN_ERR (svn_fs_change_node_prop (txn_root, "music.txt", &s1, &s2, pool));
 
   /* Remove a property altogether */
