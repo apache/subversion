@@ -1092,7 +1092,7 @@ svn_wc_install_file (const char *file_path,
   char *revision_str = NULL;
   svn_stringbuf_t *file_path_str, *parent_dir, *basename;
   svn_stringbuf_t *log_accum, *txtb, *tmp_txtb;
-  svn_boolean_t has_binary_prop, is_locally_modified;
+  svn_boolean_t is_locally_modified;
   apr_hash_t *prop_conflicts;
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
     *entry_props = NULL;
@@ -1274,27 +1274,23 @@ svn_wc_install_file (const char *file_path,
         }
     }
 
-  /* For 'textual' merging, we implement this matrix:
+  /* For 'textual' merging, we implement this matrix.
 
-                  Text file                Binary File
-               --------------------------------------------
-    Local Mods |  merge using      |  rename working file; | 
-               |    diff3          |  copy new file out.   |
-               --------------------------------------------
-    No Mods    |        Just overwrite working file.       |
-               |                                           |
-               ---------------------------------------------
+                  Text file                   Binary File
+               -----------------------------------------------
+    Local Mods | svn_wc_merge uses diff3, | svn_wc_merge     |
+               | possibly makes backups & | makes backups,   |
+               | marks file as conflicted.| marks conflicted |
+               -----------------------------------------------
+    No Mods    |        Just overwrite working file.         |
+               |                                             |
+               -----------------------------------------------
 
    So the first thing we do is figure out where we are in the
    matrix. */
 
-  if (new_text_path)
+  if (new_text_path)   /* is there a new text-base to install? */
     {
-      /* Text or Binary File?  Note that this is not a definitive test of
-         whether the file is actually text or binary, just whether it has
-         a mime-type that "marks" the file as binary. */
-      SVN_ERR (svn_wc_has_binary_prop (&has_binary_prop, file_path_str, pool));
-      
       /* Has the user made local mods to the working file?  */
       SVN_ERR (svn_wc_text_modified_p (&is_locally_modified,
                                        file_path_str, pool));
@@ -1322,122 +1318,69 @@ svn_wc_install_file (const char *file_path,
   
       else   /* working file is locally modified... */
         {
-          if (! has_binary_prop)  /* and is of type text... */
+          enum svn_node_kind wfile_kind = svn_node_unknown;
+          
+          SVN_ERR (svn_io_check_path (file_path_str, &wfile_kind, pool));
+          if (wfile_kind == svn_node_none) /* working file is missing?! */
             {
-              enum svn_node_kind wfile_kind = svn_node_unknown;
-              
-              SVN_ERR (svn_io_check_path (file_path_str, &wfile_kind, pool));
-              if (wfile_kind == svn_node_none) /* working file is missing?! */
-                {
-                  /* Just copy the new text-base to the file. */
-                  svn_xml_make_open_tag (&log_accum,
-                                         pool,
-                                         svn_xml_self_closing,
-                                         SVN_WC__LOG_CP_AND_TRANSLATE,
-                                         SVN_WC__LOG_ATTR_NAME,
-                                         tmp_txtb,
-                                         SVN_WC__LOG_ATTR_DEST,
-                                         basename,
-                                         NULL);
-                }
-              else  /* working file exists, and has local mods.*/
-                {                  
-                  /* Now we need to use diff3 to contextually merge
-                     the textual changes into the working file. */
-                  const char *oldrev_str, *newrev_str;
-                  svn_wc_entry_t *e;
-                  svn_stringbuf_t *oldrev_strbuf, *newrev_strbuf, *mine_strbuf;
-
-                  /* Create strings representing the revisions of the
-                     old and new text-bases. */
-                  SVN_ERR (svn_wc_entry (&e, file_path_str, pool));
-                  assert (e != NULL);
-                  oldrev_str = apr_psprintf (pool, ".r%ld", e->revision);
-                  newrev_str = apr_psprintf (pool, ".r%ld", new_revision);
-                  /* !?@*!#*!* bloody stringbufs */
-                  oldrev_strbuf = svn_stringbuf_create (oldrev_str, pool);
-                  newrev_strbuf = svn_stringbuf_create (newrev_str, pool);
-                  mine_strbuf = svn_stringbuf_create (".mine", pool);
-
-                  /* Merge the changes from the old-textbase (TXTB) to
-                     new-textbase (TMP_TXTB) into the file we're
-                     updating (BASENAME).  Either the merge will
-                     happen smoothly, or a conflict will result.
-                     Luckily, this routine will take care of all eol
-                     and keyword translation, and diff3 will insert
-                     conflict markers for us. */
-                  svn_xml_make_open_tag (&log_accum,
-                                         pool,
-                                         svn_xml_self_closing,
-                                         SVN_WC__LOG_MERGE,
-                                         SVN_WC__LOG_ATTR_NAME, basename,
-                                         SVN_WC__LOG_ATTR_ARG_1, txtb,
-                                         SVN_WC__LOG_ATTR_ARG_2, tmp_txtb,
-                                         SVN_WC__LOG_ATTR_ARG_3, oldrev_strbuf,
-                                         SVN_WC__LOG_ATTR_ARG_4, newrev_strbuf,
-                                         SVN_WC__LOG_ATTR_ARG_5, mine_strbuf,
-                                         NULL);
-
-                  /* If a conflict happens, then the entry will be
-                     marked "Conflicted" and will track 3 new
-                     temporary fulltext files that resulted. */
-
-                } /* end: working file exists */
-            } /* end:  file is type text */
-
-          else  /* file is marked as binary */
-            {
-              /* ### interesting... apparently binary files aren't
-                 being eol- or keyword- translated at all.  I seem to
-                 remember that we wanted to allow this, should the
-                 user want to shoot himself in the foot. */
-
-              apr_file_t *renamed_fp;
-              svn_stringbuf_t *renamed_path, *renamed_basename;
-              
-              /* Rename the working file. */
-              SVN_ERR (svn_io_open_unique_file (&renamed_fp,
-                                                &renamed_path,
-                                                file_path_str->data,
-                                                ".orig",
-                                                FALSE,
-                                                pool));
-              apr_err = apr_file_close (renamed_fp);
-              if (apr_err)
-                return svn_error_createf (apr_err, 0, NULL, pool,
-                                          "close_file: error closing %s",
-                                          renamed_path->data);
-              
-              renamed_basename =
-                svn_stringbuf_create (svn_path_basename (renamed_path->data,
-                                                         pool),
-                                      pool);
-
+              /* Just copy the new text-base to the file. */
               svn_xml_make_open_tag (&log_accum,
                                      pool,
                                      svn_xml_self_closing,
-                                     SVN_WC__LOG_CP,
-                                     SVN_WC__LOG_ATTR_NAME,
-                                     basename,
-                                     SVN_WC__LOG_ATTR_DEST,
-                                     renamed_basename,
-                                     NULL);
-              
-              /* Copy the new text-base file out into working area. */
-              svn_xml_make_open_tag (&log_accum,
-                                     pool,
-                                     svn_xml_self_closing,
-                                     SVN_WC__LOG_CP,
+                                     SVN_WC__LOG_CP_AND_TRANSLATE,
                                      SVN_WC__LOG_ATTR_NAME,
                                      tmp_txtb,
                                      SVN_WC__LOG_ATTR_DEST,
                                      basename,
                                      NULL);
             }
-        }
-    }  /* End  of "textual" merging process */
+          else  /* working file exists, and has local mods.*/
+            {                  
+              /* Now we need to let loose svn_wc_merge() to merge the
+                 textual changes into the working file. */
+              const char *oldrev_str, *newrev_str;
+              svn_wc_entry_t *e;
+              svn_stringbuf_t *oldrev_strbuf, *newrev_strbuf, *mine_strbuf;
+              
+              /* Create strings representing the revisions of the
+                 old and new text-bases. */
+              SVN_ERR (svn_wc_entry (&e, file_path_str, pool));
+              assert (e != NULL);
+              oldrev_str = apr_psprintf (pool, ".r%ld", e->revision);
+              newrev_str = apr_psprintf (pool, ".r%ld", new_revision);
+              /* !?@*!#*!* bloody stringbufs */
+              oldrev_strbuf = svn_stringbuf_create (oldrev_str, pool);
+              newrev_strbuf = svn_stringbuf_create (newrev_str, pool);
+              mine_strbuf = svn_stringbuf_create (".mine", pool);
+              
+              /* Merge the changes from the old-textbase (TXTB) to
+                 new-textbase (TMP_TXTB) into the file we're
+                 updating (BASENAME).  Either the merge will
+                 happen smoothly, or a conflict will result.
+                 Luckily, this routine will take care of all eol
+                 and keyword translation, and diff3 will insert
+                 conflict markers for us.  It also deals with binary
+                 files appropriately.  */
+              svn_xml_make_open_tag (&log_accum,
+                                     pool,
+                                     svn_xml_self_closing,
+                                     SVN_WC__LOG_MERGE,
+                                     SVN_WC__LOG_ATTR_NAME, basename,
+                                     SVN_WC__LOG_ATTR_ARG_1, txtb,
+                                     SVN_WC__LOG_ATTR_ARG_2, tmp_txtb,
+                                     SVN_WC__LOG_ATTR_ARG_3, oldrev_strbuf,
+                                     SVN_WC__LOG_ATTR_ARG_4, newrev_strbuf,
+                                     SVN_WC__LOG_ATTR_ARG_5, mine_strbuf,
+                                     NULL);
+              
+              /* If a conflict happens, then the entry will be
+                 marked "Conflicted" and will track either 2 or 3 new
+                 temporary fulltext files that resulted. */
+              
+            } /* end: working file exists and has mods */
+        } /* end: working file has mods */
+    }  /* end:  "textual" merging process */
   
-
   /* Write log entry which will bump the revision number:  */
   revision_str = apr_psprintf (pool, "%ld", new_revision);
   svn_xml_make_open_tag (&log_accum,
