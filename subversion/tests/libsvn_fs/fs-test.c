@@ -5754,8 +5754,12 @@ revisions_changed (const char **msg,
         int i;
         const char *path = greek_paths[j];
         const svn_revnum_t num_revs = chrevs[j][0];
+        apr_array_header_t *paths;
+
+        paths = apr_array_make (spool, 1, sizeof (const char *));
+        (*(const char **)apr_array_push(paths)) = path;
         
-        SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, path, spool));
+        SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, paths, spool));
 
         /* Are we at least looking at the right number of returned
            revisions? */

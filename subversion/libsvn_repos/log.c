@@ -104,6 +104,7 @@ svn_repos_get_logs (svn_repos_t *repos,
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *changed_paths = NULL;
   svn_fs_t *fs = repos->fs;
+  apr_array_header_t *revs = NULL;
 
   if (start == SVN_INVALID_REVNUM)
     SVN_ERR (svn_fs_youngest_rev (&start, fs, pool));
@@ -111,11 +112,48 @@ svn_repos_get_logs (svn_repos_t *repos,
   if (end == SVN_INVALID_REVNUM)
     SVN_ERR (svn_fs_youngest_rev (&end, fs, pool));
 
+  if (paths && paths->nelts)
+    {
+      int i;
+      svn_fs_root_t *rev_root;
+      apr_array_header_t *cpaths =
+          apr_array_make(subpool, paths->nelts, sizeof(const char *));
+
+      /* Build an array of const char's from our stringbuf stuff.  */
+      for (i = 0; i < paths->nelts; i++)
+        (*(const char **)apr_array_push(cpaths)) =
+                (APR_ARRAY_IDX(paths, i, svn_stringbuf_t *))->data;
+
+      /* Set the revision root to the newer of the revisions we are
+       * searching for.  */
+      SVN_ERR (svn_fs_revision_root (&rev_root, fs, (start > end) ? start : end, subpool));
+
+      /* And the search is on... */
+      SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, cpaths, subpool));
+
+      /* If no revisions were found for these entries, we have nothing to
+       * show. Just return now before we break a sweat.  */
+      if (!revs || !revs->nelts)
+        return SVN_NO_ERROR;
+    }
+
   for (this_rev = start;
        ((start >= end) ? (this_rev >= end) : (this_rev <= end));
        ((start >= end) ? this_rev-- : this_rev++))
     {
       svn_string_t *author, *date, *message;
+
+      /* If we have a list of revs for use, check to make sure this is one
+       * of them.  */
+      if (revs)
+        {
+          int i, matched = 0;
+          for (i = 0; i < revs->nelts && !matched; i++)
+            if (this_rev == ((svn_revnum_t *)(revs->elts))[i])
+              matched = 1;
+          if (! matched)
+            continue;
+	}
 
       SVN_ERR (svn_fs_revision_prop
                (&author, fs, this_rev, SVN_PROP_REVISION_AUTHOR, subpool));
@@ -126,20 +164,7 @@ svn_repos_get_logs (svn_repos_t *repos,
 
       /* ### Below, we discover changed paths if the user requested
          them (i.e., "svn log -v" means `discover_changed_paths' will
-         be non-zero here), OR if we're filtering on paths, in which
-         case we use changed_paths to determine whether or not to even
-         invoke the log receiver on this log item.
-
-         Note that there is another, more efficient way to filter by
-         path.  Instead of looking at every revision, and eliminating
-         those that didn't change any of the paths in question, you
-         start at `start', and grab the fs node for every path in
-         paths.  Check the created rev field; if any of them equal
-         `start', include this log item.  Then jump immediately to the
-         next highest/lowest created-rev field of any path in paths,
-         and do the same thing, until you jump to a rev that's beyond
-         `end'.  Premature optimization right now, however.
-      */
+         be non-zero here).  */
 
 #ifndef SVN_REPOS_ALLOW_LOG_WITH_PATHS
       discover_changed_paths = FALSE;
@@ -153,8 +178,8 @@ svn_repos_get_logs (svn_repos_t *repos,
 
           changed_paths = apr_hash_make (subpool);
           
-          SVN_ERR (svn_fs_revision_root (&base_root, fs, this_rev - 1, pool));
-          SVN_ERR (svn_fs_revision_root (&this_root, fs, this_rev, pool));
+          SVN_ERR (svn_fs_revision_root (&base_root, fs, this_rev - 1, subpool));
+          SVN_ERR (svn_fs_revision_root (&this_root, fs, this_rev, subpool));
 
           /* ### todo: not sure this needs an editor and dir_deltas.
              Might be easier to just walk the one revision tree,
@@ -188,32 +213,6 @@ svn_repos_get_logs (svn_repos_t *repos,
              for repository style. */
         }
 
-      /* Check if any of the filter paths changed in this revision. */
-      if (paths && paths->nelts > 0)
-        {
-          int i;
-          void *val;
-
-          for (i = 0; i < paths->nelts; i++)
-            {
-              svn_stringbuf_t *this_path;
-              this_path = (((svn_stringbuf_t **)(paths)->elts)[i]);
-              val = apr_hash_get (changed_paths,
-                                  this_path->data, this_path->len); 
-              
-              if (val)   /* Stop looking -- we've found a match. */
-                break;
-            }
-
-          /* The check below happens outside the `for' loop
-             immediately above, so that the `continue' will apply to
-             the outermost `for' loop.  The logic is: if we are doing
-             path filtering, and this revision *doesn't* affect one of
-             the filter paths, then we skip the invocation of the log
-             receiver and `continue' on to the next revision. */
-          if (! val)
-            continue;
-        }
 #endif /* SVN_REPOS_ALLOW_LOG_WITH_PATHS */
 
       SVN_ERR ((*receiver) (receiver_baton,

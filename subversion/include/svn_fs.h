@@ -666,7 +666,9 @@ svn_node_kind_t svn_fs_check_path (svn_fs_root_t *root,
 
 
 /* Allocate and return an array *REVS of svn_revnum_t revisions in
-   which PATH under ROOT was modified.  Use POOL for all allocations.
+   which PATHS under ROOT were modified.  Use POOL for all allocations.
+   The array of *REVS are sorted in descending order. All duplicates
+   will also be removed. PATHS is an array of `const char *' entries.
 
    NOTE: This function uses node-id ancestry alone to determine
    modifiedness, and therefore does NOT claim that in any of the
@@ -674,7 +676,7 @@ svn_node_kind_t svn_fs_check_path (svn_fs_root_t *root,
    directory entries lists changed, etc.  */
 svn_error_t *svn_fs_revisions_changed (apr_array_header_t **revs,
                                        svn_fs_root_t *root,
-                                       const char *path,
+                                       const apr_array_header_t *paths,
                                        apr_pool_t *pool);
 
 

@@ -70,6 +70,18 @@ int svn_sort_compare_strings_as_paths (const void *a, const void *b);
 int svn_sort_compare_items_as_paths (const svn_item_t *a, const svn_item_t *b);
 
 
+/* Compare two svn_revnum_t's, returning an integer greater than, equal
+ * to, or less than 0, according as B is greater than, equal to, or less
+ * than A. Note that this sorts newest revsion to oldest (IOW, descending
+ * order).
+ *
+ * This is useful for converting an array of revisions into a sorted
+ * apr_array_header_t. You are responsible for detecting, preventing or
+ * removing duplicates.
+ */
+int svn_sort_compare_revisions (const void *a, const void *b);
+
+
 #ifndef apr_hash_sorted_keys
 /* Sort HT according to its keys, return an apr_array_header_t
    containing svn_item_t structures holding those keys and values
