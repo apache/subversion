@@ -703,6 +703,7 @@ svn_error_t *svn_wc__file_exists_p (svn_boolean_t *exists,
 static svn_error_t *
 check_adm_exists (int *exists,
                   svn_string_t *path,
+                  svn_string_t *repository,
                   svn_string_t *ancestor_path,
                   svn_vernum_t ancestor_version,
                   apr_pool_t *pool)
@@ -949,30 +950,48 @@ init_adm (svn_string_t *path,
 }
 
 
+
+/*** adm area guarantees ***/
+
 /* Make sure that PATH (a directory) contains a complete adm area,
  * based at REPOSITORY.
  *
  * Creates the adm area if none, in which case PATH starts out at
  * version 0.
+ *
+ * If REQUIRE_NEW is non-zero, then it is an error for this directory
+ * to be already a working copy.
+ *
+ * Note: The adm area's lock-state is not changed by this function,
+ * and if the adm area is created, it is left in an unlocked state.
  */
 svn_error_t *
-svn_wc__ensure_adm (svn_string_t *path,
-                    svn_string_t *repository,
-                    svn_string_t *ancestor_path,
-                    svn_vernum_t ancestor_version,
-                    apr_pool_t *pool)
+svn_wc__ensure_wc (svn_string_t *path,
+                   svn_string_t *repository,
+                   svn_string_t *ancestor_path,
+                   svn_vernum_t ancestor_version,
+                   svn_boolean_t require_new,
+                   apr_pool_t *pool)
 {
   svn_error_t *err;
-  int exists_already;
+  svn_boolean_t exists_already;
 
-  /* kff todo: check repos... and ancestry? */
   err = check_adm_exists (&exists_already,
                           path,
+                          repository,
                           ancestor_path,
                           ancestor_version,
                           pool);
   if (err)
     return err;
+
+  if (require_new && exists_already)
+    {
+      return svn_error_createf
+        (SVN_ERR_OBSTRUCTED_UPDATE, 0, NULL, pool,
+         "svn_wc__ensure_wc: %s is already a working copy",
+         path->data);
+    }
 
   if (! exists_already)
     {
@@ -980,7 +999,7 @@ svn_wc__ensure_adm (svn_string_t *path,
       if (err)
         return err;
     }
-        
+
   return SVN_NO_ERROR;
 }
 

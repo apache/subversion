@@ -399,49 +399,6 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 }
 
 
-/* Prepare directory PATH for updating or checking out.
- *
- * If FORCE is non-zero, then the directory will definitely exist
- * after this call, else the directory must exist already.
- *
- * If the path already exists, but is not a working copy for
- * DIRECTORY, then an error will be returned. 
- */
-static svn_error_t *
-prep_directory (svn_string_t *path,
-                svn_string_t *repository,
-                svn_string_t *ancestor_path,
-                svn_vernum_t ancestor_version,
-                svn_boolean_t force,
-                apr_pool_t *pool)
-{
-  svn_error_t *err;
-
-  /* kff todo: how about a sanity check that it's not a dir of the
-     same name from a different repository or something? 
-     Well, that will be later on down the line... */
-
-  if (force)   /* Make sure the directory exists. */
-    {
-      err = svn_wc__ensure_directory (path, pool);
-      if (err)
-        return err;
-    }
-
-  /* Make sure it's the right working copy, either by creating it so,
-     or by checking that it is so already. */
-  err = svn_wc__ensure_wc (path,
-                           repository,
-                           ancestor_path,
-                           ancestor_version,
-                           pool);
-  if (err)
-    return err;
-
-  return SVN_NO_ERROR;
-}
-
-
 
 /*** The callbacks we'll plug into an svn_delta_edit_fns_t structure. ***/
 
@@ -462,12 +419,17 @@ replace_root (void *edit_baton,
       ancestor_path = eb->ancestor_path;
       ancestor_version = eb->target_version;
       
-      err = prep_directory (d->path,
-                            eb->repository,
-                            ancestor_path,
-                            ancestor_version,
-                            1, /* force */
-                            d->pool);
+      /* Make sure the directory exists. */
+      err = svn_wc__ensure_directory (eb->dest_dir, eb->pool);
+      if (err)
+        return err;
+
+      err = svn_wc__ensure_wc (eb->dest_dir,
+                               eb->repository,
+                               ancestor_path,
+                               ancestor_version,
+                               1,
+                               eb->pool);
       if (err)
         return err;
     }
@@ -517,12 +479,16 @@ add_directory (svn_string_t *name,
     return err;
 
 
-  err = prep_directory (this_dir_baton->path,
-                        this_dir_baton->edit_baton->repository,
-                        ancestor_path,
-                        ancestor_version,
-                        1, /* force */
-                        this_dir_baton->pool);
+  err = svn_wc__ensure_directory (this_dir_baton->path, this_dir_baton->pool);
+  if (err)
+    return (err);
+
+  err = svn_wc__ensure_wc (this_dir_baton->path,
+                           this_dir_baton->edit_baton->repository,
+                           ancestor_path,
+                           ancestor_version,
+                           1,
+                           this_dir_baton->pool);
   if (err)
     return (err);
 
