@@ -87,16 +87,16 @@ sub init_repo
     my ( $repo, $create, $no_sync ) = @_;
     if ( $create )
       {
-	rmtree([$repo]) if -e $repo;
-	my $svnadmin_cmd = "svnadmin create $repo";
+        rmtree([$repo]) if -e $repo;
+        my $svnadmin_cmd = "svnadmin create $repo";
         $svnadmin_cmd = "$svnadmin_cmd --bdb-txn-nosync" if $no_sync;
-	system( $svnadmin_cmd) and die "$svnadmin_cmd: failed: $?\n";
+        system( $svnadmin_cmd) and die "$svnadmin_cmd: failed: $?\n";
       }
     else
       {
-	my $svnlook_cmd = "svnlook youngest $repo";
-	my $revision = readpipe $svnlook_cmd;
-	die "$svnlook_cmd: failed\n" if not $revision =~ m{^[0-9]};
+        my $svnlook_cmd = "svnlook youngest $repo";
+        my $revision = readpipe $svnlook_cmd;
+        die "$svnlook_cmd: failed\n" if not $revision =~ m{^[0-9]};
       }
     $repo = getcwd . "/$repo" if not $repo =~ m[^/];
     return $repo;
@@ -149,9 +149,9 @@ sub status_update_commit
     die "fork failed: $!\n" if not defined $pid;
     if ( not $pid )
       {
-	# This is the child process
-	open( STDERR, ">&COMMIT_ERR_WRITE" ) or die "redirect failed: $!\n";
-	exec $svn_cmd or die "exec $svn_cmd failed: $!\n";
+        # This is the child process
+        open( STDERR, ">&COMMIT_ERR_WRITE" ) or die "redirect failed: $!\n";
+        exec $svn_cmd or die "exec $svn_cmd failed: $!\n";
       }
 
     # This is the main parent process, look for acceptable errors
@@ -159,16 +159,16 @@ sub status_update_commit
     my $acceptable_error = 0;
     while ( <COMMIT_ERR_READ> )
       {
-	print STDERR;
-	$acceptable_error = 1 if ( /^svn:[ ]
-				   (
-				    Transaction[ ]is[ ]out[ ]of[ ]date
-				    |
-				    Merge[ ]conflict[ ]during[ ]commit
-				    |
-				    Baseline[ ]incorrect
-				   )
-				   $/x );
+        print STDERR;
+        $acceptable_error = 1 if ( /^svn:[ ]
+                                   (
+                                    Transaction[ ]is[ ]out[ ]of[ ]date
+                                    |
+                                    Merge[ ]conflict[ ]during[ ]commit
+                                    |
+                                    Baseline[ ]incorrect
+                                   )
+                                   $/x );
       }
     close COMMIT_ERR_READ or die "close COMMIT_ERR_READ: $!\n";
 
@@ -206,31 +206,31 @@ sub populate
 
     for $nfile ( 1..$file_width )
       {
-	my $filename = "$dir/foo$nfile";
-	open( FOO, ">$filename" ) or die "open $filename: $!\n";
+        my $filename = "$dir/foo$nfile";
+        open( FOO, ">$filename" ) or die "open $filename: $!\n";
 
-	for $line ( 0..9 )
-	  {
-	    print FOO "A$line\n$line\n" or die "write to $filename: $!\n";
+        for $line ( 0..9 )
+          {
+            print FOO "A$line\n$line\n" or die "write to $filename: $!\n";
             map { print FOO $_ x 255, "\n"; } ("a", "b", "c", "d")
               foreach (1..$pad);
-	  }
-	close FOO or die "close $filename: $!\n";
+          }
+        close FOO or die "close $filename: $!\n";
 
-	my $svn_cmd = "svn add $filename";
-	system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+        my $svn_cmd = "svn add $filename";
+        system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
       }
 
     if ( $depth )
       {
-	for $ndir ( 1..$dir_width )
-	  {
-	    my $dirname = "$dir/bar$ndir";
-	    my $svn_cmd = "svn mkdir $dirname";
-	    system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+        for $ndir ( 1..$dir_width )
+          {
+            my $dirname = "$dir/bar$ndir";
+            my $svn_cmd = "svn mkdir $dirname";
+            system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
 
-	    populate( "$dirname", $dir_width, $file_width, $depth, $pad );
-	  }
+            populate( "$dirname", $dir_width, $file_width, $depth, $pad );
+          }
       }
   }
 
@@ -342,10 +342,10 @@ for $mod_number ( 1..$cmd_opts{'n'} )
     my @chosen;
     for ( 1..$cmd_opts{'x'} )
       {
-	# Extract random file from list and modify it
-	my $mod_file = splice @wc_files, int rand $#wc_files, 1;
-	ModFile $mod_file, $mod_number, $cmd_opts{'i'};
-	push @chosen, $mod_file;
+        # Extract random file from list and modify it
+        my $mod_file = splice @wc_files, int rand $#wc_files, 1;
+        ModFile $mod_file, $mod_number, $cmd_opts{'i'};
+        push @chosen, $mod_file;
       }
     # Reinstate list of files, the order doesn't matter
     push @wc_files, @chosen;
