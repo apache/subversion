@@ -112,7 +112,7 @@ my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
   if (! window)
     {
       print_spaces (fb->indent_level + indent_amount);
-      printf ("-- end of windows --\n");
+      printf ("end of windows\n");
       return SVN_NO_ERROR;
     }
 
@@ -131,16 +131,30 @@ my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
                                   pool);
             
             print_spaces (fb->indent_level + indent_amount);
-            printf ("-- got txdelta window -- : new text: [%s]\n", str->data);
+            printf ("txdelta window: new text (%ld bytes): %s\n",
+                    window->ops[i].length, str->data);
+            break;
           }
         case svn_txdelta_source:
           {
+            print_spaces (fb->indent_level + indent_amount);
+            printf ("txdelta window: source text: offset %ld, length %ld\n",
+                    window->ops[i].offset, window->ops[i].length);
+            break;
           }
         case svn_txdelta_target:
           {
+            print_spaces (fb->indent_level + indent_amount);
+            printf ("txdelta window: target text: offset %ld, length %ld\n",
+                    window->ops[i].offset, window->ops[i].length);
+            break;
           }
         default:
           {
+            print_spaces (fb->indent_level + indent_amount);
+            printf ("txdelta window: whoa, unknown op: %d\n",
+                    window->ops[i].action_code);
+            break;
           }
         }
               
