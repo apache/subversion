@@ -940,17 +940,13 @@ svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
                                 apr_pool_t *pool);
 
 
-/**
- * @since New in 1.1.
- *
- * Read and parse dumpfile-formatted @a dumpstream, reconstructing
+/** Read and parse dumpfile-formatted @a dumpstream, reconstructing
  * filesystem revisions in already-open @a repos, handling uuids
  * in accordance with @a uuid_action.
  *
  * Read and parse dumpfile-formatted @a dumpstream, reconstructing
  * filesystem revisions in already-open @a repos.  Use @a pool for all
  * allocation.  If non-@c NULL, send feedback to @a feedback_stream.
- * The feedback is verbose if @a verbose is TRUE.
  *
  * If the dumpstream contains copy history that is unavailable in the
  * repository, an error will be thrown.
@@ -971,22 +967,6 @@ svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
  * If @a cancel_func is not @c NULL, it is called periodically with
  * @a cancel_baton as argument to see if the client wishes to cancel
  * the load.
- */
-svn_error_t *svn_repos_load_fs2 (svn_repos_t *repos,
-                                 svn_stream_t *dumpstream,
-                                 svn_stream_t *feedback_stream,
-                                 svn_boolean_t verbose,
-                                 enum svn_repos_load_uuid uuid_action,
-                                 const char *parent_dir,
-                                 svn_cancel_func_t cancel_func,
-                                 void *cancel_baton,
-                                 apr_pool_t *pool);
-
-/**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
- *
- * Similar to svn_repos_load_fs2(), but with the @a verbose parameter
- * always set to @c TRUE.
  */
 svn_error_t *svn_repos_load_fs (svn_repos_t *repos,
                                 svn_stream_t *dumpstream,
@@ -1140,8 +1120,7 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
  * loaded nodes, from root to @a parent_dir.  The directory @a parent_dir
  * must be an existing directory in the repository.
  *
- * Print all parsing feedback to @a outstream (if non-@c NULL).  If @a
- * verbose is TRUE, the output will be verbose.
+ * Print all parsing feedback to @a outstream (if non-@c NULL).
  *
  */
 svn_error_t *
@@ -1151,7 +1130,6 @@ svn_repos_get_fs_build_parser2 (const svn_repos_parser_fns2_t **parser,
                                 svn_boolean_t use_history,
                                 enum svn_repos_load_uuid uuid_action,
                                 svn_stream_t *outstream,
-                                svn_boolean_t verbose,
                                 const char *parent_dir,
                                 apr_pool_t *pool);
 
