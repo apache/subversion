@@ -116,7 +116,8 @@ BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
 
    3.  Configure Visual C++ with paths to swig.exe and language specific
        libraries. In Visual C++ 6, go to Tools -> Options -> Directories.
-       In Visual C++.NET, go to ???.
+       In Visual C++ .NET, go to Tools -> Options -> Projects 
+       -> VC++ Directories.
 
        Add the following paths:
 
