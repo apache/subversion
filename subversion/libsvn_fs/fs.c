@@ -56,7 +56,7 @@
 
 #include "apr_general.h"
 #include "apr_pools.h"
-
+#include "svn_fs.h"
 #include "fs.h"
 #include "err.h"
 
@@ -81,6 +81,19 @@ check_db (svn_fs_t *fs, const char *operation, int db_err)
 			   fs->env_path ? fs->env_path : "(none)");
 }
 
+
+/* If FS is already open, then return an SVN_ERR_FS_ALREADY_OPEN
+   error.  Otherwise, return zero.  */
+static svn_error_t *
+check_already_open (svn_fs_t *fs)
+{
+  if (fs->env)
+    return svn_create_error (SVN_ERR_FS_ALREADY_OPEN, 0,
+			     "filesystem object already open", 
+			     0, fs->pool);
+  else
+    return 0;
+}
 
 
 /* A default warning handling function.  */
@@ -158,7 +171,7 @@ cleanup_fs (svn_fs_t *fs)
 
    It's a pity that we can't return an svn_error_t object from an APR
    cleanup function.  For now, we return the rather generic
-   SVN_ERR_FS_GENERAL, and store a pointer to the real svn_error_t
+   SVN_ERR_FS_CLEANUP, and store a pointer to the real svn_error_t
    object in *(FS->cleanup_error), for someone else to discover, if
    they like.  */
 
@@ -186,7 +199,7 @@ cleanup_fs_apr (void *data)
 	   the bit bucket.)  */
 	fs->warning (fs->warning_baton, "%s", svn_err->message);
       
-      return SVN_ERR_FS_GENERAL;
+      return SVN_ERR_FS_CLEANUP;
     }
 }
 
@@ -228,8 +241,32 @@ svn_fs_set_warning_func (svn_fs_t *fs,
 }
 
 
-/* Creating new filesystems.  */
+/* Allocating an appropriate Berkeley DB environment object.  */
 
+/* Allocate a Berkeley DB environment object for the filesystem FS,
+   and set up its default parameters appropriately.  */
+static svn_error_t *
+allocate_env (svn_fs_t *fs)
+{
+  svn_error_t *svn_err;
+
+  /* Allocate a Berkeley DB environment object.  */
+  svn_err = check_db (fs, "allocating environment object",
+		      db_env_create (&fs->env, 0));
+  if (svn_err) return svn_err;
+
+  /* If we detect a deadlock, select a transaction to abort at random
+     from those participating in the deadlock.  */
+  svn_err = check_db (fs, "setting deadlock detection policy",
+		      fs->env->set_lk_detect (fs->env, DB_LOCK_RANDOM));
+  if (svn_err) return svn_err;
+
+  return 0;
+}
+
+
+
+/* Creating new filesystems.  */
 
 /* Allocate a DB object, and create a table for it to refer to, for a
    Subversion file system.
@@ -247,11 +284,10 @@ create_table (svn_fs_t *fs, DB **db_ptr, const char *name, DBTYPE type)
   char *table_msg = alloca (strlen (name) + 50);
 
   sprintf (obj_msg, "allocating `%s' table object", name);
-  sprintf (table_msg, "creating `%s' table", name);
-
   svn_err = check_db (fs, obj_msg, db_create (db_ptr, fs->env, 0));
   if (svn_err) return svn_err;
 
+  sprintf (table_msg, "creating `%s' table", name);
   svn_err = check_db (fs, table_msg,
 		      (*db_ptr)->open (*db_ptr, name, 0, type,
 				       DB_CREATE | DB_EXCL,
@@ -267,22 +303,16 @@ svn_fs_newfs (svn_fs_t *fs, const char *path)
 {
   svn_error_t *svn_err;
 
-  /* Allocate a Berkeley DB environment object.  */
-  svn_err = check_db (fs, "allocating environment object",
-		      db_env_create (&fs->env, 0));
-  if (svn_err) goto error;
+  svn_err = check_already_open (fs);
+  if (svn_err) return svn_err;
 
-  /* If we detect a deadlock, select a transaction to abort at random
-     from those participating in the deadlock.  */
-  svn_err = check_db (fs, "setting deadlock detection policy",
-		      fs->env->set_lk_detect (fs->env, DB_LOCK_RANDOM));
+  svn_err = allocate_env (fs);
   if (svn_err) goto error;
 
   /* Create the Berkeley DB environment.  */
   svn_err = check_db (fs, "creating environment",
 		      fs->env->open (fs->env, path,
 				     (DB_CREATE
-				      | DB_RECOVER
 				      | DB_INIT_LOCK 
 				      | DB_INIT_LOG
 				      | DB_INIT_MPOOL
@@ -301,6 +331,72 @@ svn_fs_newfs (svn_fs_t *fs, const char *path)
   return 0;
 
 error:
+  cleanup_fs (fs);
+  return svn_err;
+}
+
+
+/* Gaining access to an existing filesystem.  */
+
+/* Allocate a DB object, and use it to open a table in a Subversion
+   file system.
+   - FS is the filesystem whose table we're opening.
+   - *DB_PTR is where we should put the new database pointer.
+   - NAME is the name of the table.
+   - TYPE is the access method to use for the table (btree, hash, etc.)
+   Return an svn_error_t if anything goes wrong.  */
+
+static svn_error_t *
+open_table (svn_fs_t *fs, DB **db_ptr, const char *name, DBTYPE type)
+{
+  svn_error_t *svn_err;
+  char *obj_msg = alloca (strlen (name) + 50);
+  char *table_msg = alloca (strlen (name) + 50);
+
+  sprintf (obj_msg, "allocating `%s' table object", name);
+  svn_err = check_db (fs, obj_msg, db_create (db_ptr, fs->env, 0));
+  if (svn_err) return svn_err;
+
+  sprintf (table_msg, "opening `%s' table", name);
+  svn_err = check_db (fs, table_msg,
+		      (*db_ptr)->open (*db_ptr, name, 0, type,
+				       DB_EXCL, 0666));
+  if (svn_err) return svn_err;
+
+  return 0;
+}
+
+
+svn_error_t *
+svn_fs_open (svn_fs_t *fs, const char *path)
+{
+  svn_error_t *svn_err;
+
+  svn_err = check_already_open (fs);
+  if (svn_err) return svn_err;
+
+  svn_err = allocate_env (fs);
+  if (svn_err) goto error;
+
+  /* Open the Berkeley DB environment.  */
+  svn_err = check_db (fs, "opening environment",
+		      fs->env->open (fs->env, path,
+				     (DB_INIT_LOCK
+				      | DB_INIT_LOG
+				      | DB_INIT_MPOOL
+				      | DB_INIT_TXN),
+				     0666));
+  if (svn_err) goto error;
+
+  /* Open the various databases.  */
+  svn_err = open_table (fs, &fs->versions, "versions", DB_BTREE);
+  if (svn_err) goto error;
+  svn_err = open_table (fs, &fs->full_texts, "full_texts", DB_BTREE);
+  if (svn_err) goto error;
+  svn_err = open_table (fs, &fs->deltas, "deltas", DB_BTREE);
+  if (svn_err) goto error;
+  
+ error:
   cleanup_fs (fs);
   return svn_err;
 }
