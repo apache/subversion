@@ -197,7 +197,7 @@ static int dav_svn_parse_vcc_uri(dav_resource_combined *comb,
 
       comb->res.type = DAV_RESOURCE_TYPE_VERSION;
 
-      /* exists? collection? need to wait for now */
+      /* exists? need to wait for now */
       comb->res.versioned = TRUE;
       comb->res.baselined = TRUE;
 
@@ -222,8 +222,14 @@ static int dav_svn_parse_baseline_coll_uri(dav_resource_combined *comb,
 
   /* ### what to do with LABEL and USE_CHECKED_IN ?? */
 
-  if ((slash = ap_strchr_c(path, '/')) == NULL || slash == path)
-    return TRUE;
+  slash = ap_strchr_c(path, '/');
+  if (slash == NULL)
+    slash = "/";        /* they are referring to the root of the BC */
+  else if (slash == path)
+    return TRUE;        /* the REVISION was missing(?)
+                           ### not sure this can happen, though, because
+                           ### it would imply two slashes, yet those are
+                           ### cleaned out within get_resource */
 
   revnum = atoi(path);  /* assume slash terminates conversion */
   if (!SVN_IS_VALID_REVNUM(revnum))
@@ -236,6 +242,37 @@ static int dav_svn_parse_baseline_coll_uri(dav_resource_combined *comb,
   comb->res.type = DAV_RESOURCE_TYPE_REGULAR;
   comb->priv.root.rev = revnum;
   comb->priv.repos_path = slash;
+
+  return FALSE;
+}
+
+static int dav_svn_parse_baseline_uri(dav_resource_combined *comb,
+                                      const char *path,
+                                      const char *label,
+                                      int use_checked_in)
+{
+  int revnum;
+
+  /* format: REVISION */
+
+  /* ### what to do with LABEL and USE_CHECKED_IN ?? */
+
+  revnum = atoi(path);
+  if (!SVN_IS_VALID_REVNUM(revnum))
+    return TRUE;        /* ### be nice to get better feedback */
+
+  /* create a Baseline resource (a special Version Resource) */
+
+  comb->res.type = DAV_RESOURCE_TYPE_VERSION;
+
+  /* exists? need to wait for now */
+  comb->res.versioned = TRUE;
+  comb->res.baselined = TRUE;
+
+  /* which baseline (revision tree) to access */
+  comb->priv.root.rev = revnum;
+
+  /* NOTE: comb->priv.repos_path == NULL */
 
   return FALSE;
 }
@@ -270,6 +307,7 @@ static const struct special_defn
   { "act", dav_svn_parse_activity_uri, DAV_SVN_RESTYPE_ACT_COLLECTION },
   { "vcc", dav_svn_parse_vcc_uri, DAV_SVN_RESTYPE_VCC_COLLECTION },
   { "bc", dav_svn_parse_baseline_coll_uri, DAV_SVN_RESTYPE_BC_COLLECTION },
+  { "bln", dav_svn_parse_baseline_uri, DAV_SVN_RESTYPE_BLN_COLLECTION },
 
   { NULL } /* sentinel */
 };
