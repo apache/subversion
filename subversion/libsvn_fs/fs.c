@@ -404,11 +404,9 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   /* Write the DB_CONFIG file. */
   {
     apr_file_t *dbconfig_file = NULL;
-    apr_size_t written = 0;
     const char *dbconfig_file_name = apr_psprintf (fs->pool,
-                                                   "%s/%s",
-                                                   path, "DB_CONFIG");
-    const char *dbconfig_contents =
+                                                   "%s/DB_CONFIG", path);
+    static const char * const dbconfig_contents =
       "# This is the configuration file for the Berkeley DB environment\n"
       "# used by your Subversion repository.\n"
       "\n"
@@ -431,7 +429,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
                                 "opening `%s' for writing", dbconfig_file_name);
 
     apr_err = apr_file_write_full (dbconfig_file, dbconfig_contents,
-                                   strlen (dbconfig_contents), &written);
+                                   strlen (dbconfig_contents), NULL);
     if (apr_err != APR_SUCCESS)
       return svn_error_createf (apr_err, 0, 0, fs->pool,
                                 "writing to `%s'", dbconfig_file_name);
