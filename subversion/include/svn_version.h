@@ -88,7 +88,7 @@ extern "C" {
  *
  * Always change this at the same time as SVN_VER_NUMTAG.
  */
-#define SVN_VER_TAG        " (dev build)"
+#define SVN_VER_TAG        " (r13838)"
 
 
 /** Number tag: a string describing the version.
@@ -103,7 +103,7 @@ extern "C" {
  *
  * Always change this at the same time as SVN_VER_TAG.
  */
-#define SVN_VER_NUMTAG     "-dev"
+#define SVN_VER_NUMTAG     ""
 
 
 /** Revision number: The repository revision number of this release.
