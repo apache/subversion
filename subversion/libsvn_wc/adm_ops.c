@@ -98,12 +98,16 @@ recursively_tweak_entries (svn_wc_adm_access_t *dirpath,
       if (base_url)
         child_url = svn_path_url_add_component (base_url, name, subpool);
       
-      /* If a file (or deleted dir), tweak the entry. */
+      /* If a file, or deleted or absent dir, then tweak the entry but
+         don't recurse. */
       if ((current_entry->kind == svn_node_file)
-          || (current_entry->deleted))
-        SVN_ERR (svn_wc__tweak_entry (entries, name,
-                                      child_url, new_rev, &write_required,
-                                      svn_wc_adm_access_pool (dirpath)));
+          || current_entry->deleted
+          || current_entry->absent)
+        {
+          SVN_ERR (svn_wc__tweak_entry (entries, name,
+                                        child_url, new_rev, &write_required,
+                                        svn_wc_adm_access_pool (dirpath)));
+        }
       
       /* If a directory... */
       else if (current_entry->kind == svn_node_dir)        
@@ -132,7 +136,7 @@ recursively_tweak_entries (svn_wc_adm_access_t *dirpath,
               /* Else if missing item is schedule-add, do nothing. */
             }
 
-          /* Not missing or deleted, so recurse. */
+          /* Not missing, deleted, or absent, so recurse. */
           else
             {
               svn_wc_adm_access_t *child_access;
