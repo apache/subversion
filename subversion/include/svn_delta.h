@@ -59,32 +59,8 @@
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_io.h"
 
-
-
-/*** Stuff used throughout the delta interface.  ***/
-
-/* A typedef for functions resembling the POSIX `read' system call,
-   representing a incoming stream of bytes, in caller-pulls form.
-
-   We will need to compute text deltas for data drawn from files,
-   memory, sockets, and so on.  We will need to read tree deltas from
-   various sources.  The data may be huge --- too large to read into
-   memory at one time.  Using a `read'-like function like this to
-   represent the input data allows us to process the data as we go.
-
-   BATON is some opaque structure representing what we're reading.
-   Whoever provided the function gets to use BATON however they
-   please.
-
-   BUFFER is a buffer to hold the data, and *LEN indicates how many
-   bytes to read.  Upon return, the function should set *LEN to the
-   number of bytes actually read, or zero at the end of the data
-   stream.  */
-typedef svn_error_t *svn_delta_read_fn_t (void *baton,
-                                          char *buffer,
-                                          apr_off_t *len,
-                                          apr_pool_t *pool);
 
 
 
@@ -198,15 +174,15 @@ extern void svn_txdelta_free_window (svn_txdelta_window_t *window);
    string from SOURCE into the byte stream from TARGET.
 
    SOURCE_FN and TARGET_FN are both `read'-like functions; see the
-   description of `svn_delta_read_fn_t' above.  When we call
+   description of `svn_read_fn_t' above.  When we call
    `svn_txdelta_next_window' on *STREAM, it will call upon SOURCE_FN
    and TARGET_FN to gather as much data as it needs.
 
    Do any necessary allocation in a sub-pool of POOL.  */
 extern svn_error_t *svn_txdelta (svn_txdelta_stream_t **stream,
-                                 svn_delta_read_fn_t *source_fn,
+                                 svn_read_fn_t *source_fn,
                                  void *source_baton,
-                                 svn_delta_read_fn_t *target_fn,
+                                 svn_read_fn_t *target_fn,
                                  void *target_baton,
                                  apr_pool_t *pool);
 
@@ -224,7 +200,7 @@ extern void svn_txdelta_free (svn_txdelta_stream_t *stream);
    return a text delta in VCDIFF format.  READ_FN will draw windows as
    needed from the text delta window stream STREAM, and convert them
    to VCDIFF format.  Do all allocation for the conversion in POOL.  */
-extern svn_error_t *svn_txdelta_to_vcdiff (svn_delta_read_fn_t **read_fn,
+extern svn_error_t *svn_txdelta_to_vcdiff (svn_read_fn_t **read_fn,
                                            void **read_baton,
                                            svn_txdelta_stream_t *stream,
                                            apr_pool_t *pool);
@@ -583,7 +559,7 @@ svn_xml_parsebytes (char *buffer, apr_off_t len, int isFinal,
    traversal.  DIR_BATON is a data passthrough for the root directory;
    the callbacks can establish new DIR_BATON values for
    subdirectories.  Use POOL for allocations.  */
-extern svn_error_t *svn_xml_auto_parse (svn_delta_read_fn_t *source_fn,
+extern svn_error_t *svn_xml_auto_parse (svn_read_fn_t *source_fn,
                                         void *source_baton,
                                         const svn_delta_walk_t *walker,
                                         void *walk_baton,

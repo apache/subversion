@@ -191,7 +191,7 @@ make_xml_parser (struct version_mod *vmod)
 
 
 svn_error_t *
-svn_wc__parse_versions (svn_delta_read_fn_t *source_fn,
+svn_wc__parse_versions (svn_read_fn_t *source_fn,
                         void *source_baton,
                         const svn_delta_walk_t *walker,
                         void *walk_baton,
@@ -240,7 +240,7 @@ svn_wc__parse_versions (svn_delta_read_fn_t *source_fn,
       }
 
     /* How many bytes were actually read into buf?  According to the
-       definition of an svn_delta_read_fn_t, we should keep reading
+       definition of an svn_read_fn_t, we should keep reading
        until the reader function says that 0 bytes were read. */
     done = (len == 0);
     

@@ -1319,7 +1319,7 @@ svn_xml_parsebytes (char *buffer, apr_off_t len, int isFinal,
   Once called, it retains control and "pulls" data from SOURCE_FN
   until either the stream runs out or it encounters an error. */
 svn_error_t *
-svn_xml_auto_parse (svn_delta_read_fn_t *source_fn,
+svn_xml_auto_parse (svn_read_fn_t *source_fn,
                     void *source_baton,
                     const svn_delta_walk_t *walker,
                     void *walk_baton,
@@ -1348,7 +1348,7 @@ svn_xml_auto_parse (svn_delta_read_fn_t *source_fn,
       return svn_quick_wrap_error (err, "svn_delta_parse: can't read source");
 
     /* How many bytes were actually read into buf?  According to the
-       definition of an svn_delta_read_fn_t, we should keep reading
+       definition of an svn_read_fn_t, we should keep reading
        until the reader function says that 0 bytes were read. */
     done = (len == 0);
 

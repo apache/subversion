@@ -84,7 +84,7 @@ test_read_fn (void *baton, char *buffer, apr_off_t *len, apr_pool_t *pool)
 
 static svn_error_t *
 apply_delta (void *delta_src,
-             svn_delta_read_fn_t *read_fn,
+             svn_read_fn_t *read_fn,
              svn_string_t *dest,
              svn_string_t *repos,
              svn_vernum_t version,
