@@ -9,11 +9,3 @@ Status of 1.0.7:
 
 Candidate changes:
 
-  * r9861
-    fixes reentrancy problem for javahl binding. The pool for a call could be
-    destroyed before the end of the call. This could crash the jvm
-    Justification: javahl binding only fix to prevent a crash
-    Votes:
-      +1: pmayweg
-      +0: breser
-

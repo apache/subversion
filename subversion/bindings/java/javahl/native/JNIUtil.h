@@ -62,11 +62,11 @@ public:
 	static void throwError(const char *message);
 	static apr_pool_t * getPool();
 	static bool JNIInit(JNIEnv *env);
+    static JNIMutex *getGlobalPoolMutex();
 	enum { formatBufferSize = 2048 };
 	enum { noLog, errorLog, exceptionLog, entryLog } LogLevel;
 private:
 	static void assembleErrorMessage(svn_error_t *err, int depth, apr_status_t parent_apr_err, std::string &buffer);
-	static Pool * g_requestPool;
 	static int g_logLevel;
 	static void setExceptionThrown();
 	static apr_pool_t* g_pool;
@@ -78,6 +78,7 @@ private:
 	static JNIEnv *g_initEnv;
 	static char g_initFormatBuffer[formatBufferSize];
 	static std::ofstream g_logStream;
+    static JNIMutex *g_globalPoolMutext;
 };
 
 #endif // !defined(AFX_JNIUTIL_H__82301908_C6CB_4A77_8A28_899E72FBEEFF__INCLUDED_)

@@ -28,6 +28,7 @@
 #include <jni.h>
 #include "JNIUtil.h"
 struct apr_threadkey_t;
+class Pool;
 class JNIThreadData  
 {
 public:
@@ -40,6 +41,7 @@ public:
 	bool m_exceptionThrown;
 	char m_formatBuffer[JNIUtil::formatBufferSize];
 	bool m_bInCatchEveryThing;
+    Pool *m_requestPool;
 private:
 	static apr_threadkey_t * g_key;
 };

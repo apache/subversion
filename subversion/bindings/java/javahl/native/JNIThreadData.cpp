@@ -38,6 +38,7 @@ JNIThreadData::JNIThreadData()
 	m_env = NULL;
 	m_exceptionThrown = false;
 	m_bInCatchEveryThing = false;
+    m_requestPool = NULL;
 }
 
 JNIThreadData::~JNIThreadData()

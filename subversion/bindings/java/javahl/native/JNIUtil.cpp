@@ -40,13 +40,13 @@ apr_pool_t *JNIUtil::g_pool = NULL;
 std::list<SVNClient*> JNIUtil::g_finalizedObjects;
 JNIMutex *JNIUtil::g_finalizedObjectsMutex = NULL;
 JNIMutex *JNIUtil::g_logMutex = NULL;
+JNIMutex *JNIUtil::g_globalPoolMutext = NULL;
 bool JNIUtil::g_initException;
 bool JNIUtil::g_inInit;
 JNIEnv *JNIUtil::g_initEnv;
 char JNIUtil::g_initFormatBuffer[formatBufferSize];
 int JNIUtil::g_logLevel = JNIUtil::noLog;
 std::ofstream JNIUtil::g_logStream;
-Pool *JNIUtil::g_requestPool;
 
 bool JNIUtil::JNIInit(JNIEnv *env)
 {
@@ -120,6 +120,12 @@ bool JNIUtil::JNIInit(JNIEnv *env)
 		return false;
 	}
 
+    g_globalPoolMutext = new JNIMutex(g_pool);
+	if(isExceptionThrown())
+	{
+		return false;
+	}
+
 	if(!JNIThreadData::initThreadData())
 	{
 		return false;
@@ -139,6 +145,11 @@ bool JNIUtil::JNIInit(JNIEnv *env)
 apr_pool_t * JNIUtil::getPool()
 {
 	return g_pool;
+}
+
+JNIMutex *JNIUtil::getGlobalPoolMutex()
+{
+    return g_globalPoolMutext;
 }
 
 void JNIUtil::throwError(const char *message)
@@ -392,12 +403,12 @@ jobject JNIUtil::createDate(apr_time_t time)
 
 Pool * JNIUtil::getRequestPool()
 {
-	return g_requestPool;
+    return JNIThreadData::getThreadData()->m_requestPool;
 }
 
 void JNIUtil::setRequestPool(Pool *pool)
 {
-	g_requestPool = pool;
+	JNIThreadData::getThreadData()->m_requestPool = pool;
 }
 
 jbyteArray JNIUtil::makeJByteArray(const signed char *data, int length)
