@@ -226,8 +226,9 @@ Greg's mail about it:
    because libsvn_fs isn't around, just run "make libsvn_fs" to build it
    immediately, then go back to the regular "make".
    
-   Note that the system still conditionally builds the FS stuff based on
-   whether DB is available, and mod_dav_svn if Apache is available.
+   Note that the system still conditionally builds the FS stuff based
+   on whether DB (See 'Building on Unix' below) is available, and
+   mod_dav_svn if Apache is available.
    
    Handy hint: if you don't like dependencies, then you can do:
    
@@ -274,6 +275,29 @@ Greg's mail about it:
    -- 
    Greg Stein, http://www.lyra.org/
    
+
+Building on Unix
+================
+
+Note that if you have Berkeley DB installed and you try running
+configure with the
+
+      --with-berkeley-db=/path/to/BerkeleyDB.3.3
+
+option, you have to make sure that your linker knows where the
+Berkeley DB libs are:
+
+kfogel says: 
+
+   After you install Berkeley, say in /usr/local/BerkeleyDB.3.3, you
+   may need to modify /etc/ld.so.conf or /etc/rc.conf (those seem to
+   be Linux and FreeBSD, respectively; Your Mileage May Vary), and run
+   `ldconfig' or whatever your system wants.
+  
+   The problem is that configure tries to build, link, and run a small
+   program against Berkeley DB.  If the system loader doesn't yet know
+   how to do that, configure will claim it can't find Berkeley DB.
+
 
 
 Building on Win32
