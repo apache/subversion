@@ -441,17 +441,43 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                           svn_wc_notify_state_unknown,
                           SVN_INVALID_REVNUM);
 
-      /* ### Here, check for explicit error, and if the dir isn't
-         there to update, try a checkout instead. */
+      /* Try an update, but if no such dir, then check out instead. */
+      {
+        svn_error_t *err;
 
-      SVN_ERR (svn_client_update
-               (ib->auth_baton,
-                path,
-                NULL,
-                &(new_item->revision),
-                TRUE, /* recurse */
-                ib->notify_func, ib->notify_baton,
-                ib->pool));
+        err = svn_client_update (ib->auth_baton,
+                                 path,
+                                 NULL,
+                                 &(new_item->revision),
+                                 TRUE, /* recurse */
+                                 ib->notify_func, ib->notify_baton,
+                                 ib->pool);
+
+        if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND))
+          {
+            /* No problem.  Probably user added this external item, but
+               hasn't updated since then, so they don't actually have a
+               working copy of it yet.  Just check it out. */
+               
+            /* The target dir might have multiple components.  Guarantee
+               the path leading down to the last component. */
+            {
+              const char *parent;
+              svn_path_split_nts (path, &parent, NULL, ib->pool);
+              SVN_ERR (svn_io_make_dir_recursively (parent, ib->pool));
+            }
+
+            SVN_ERR (svn_client_checkout
+                     (ib->notify_func, ib->notify_baton,
+                      ib->auth_baton,
+                      new_item->url,
+                      path,
+                      &(new_item->revision),
+                      TRUE, /* recurse */
+                      NULL,
+                      ib->pool));
+          }
+      }
     }
 
   return SVN_NO_ERROR;
