@@ -47,8 +47,7 @@ else
 fi
 
 # Handle the neon/ subdir
-#if [ ! -d neon]; then
-if test ""; then
+if [ ! -d neon ]; then
   echo ""
   echo "You don't have a neon/ subdirectory here.  Please get the latest"
   echo "Neon distribution from:"
