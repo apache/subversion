@@ -809,6 +809,21 @@ def dont_diff_binary_file(sbox):
 
   return 0
 
+def diff_nonextant_urls(sbox):
+  "svn diff errors against a non-existant URL"
+
+  non_extant_url = sbox.repo_url + '/A/does_not_exist'
+  extant_url = sbox.repo_url + '/A/mu'
+
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', non_extant_url,
+                                                 extant_url)
+  if not re.match('svn: Filesystem has no item$', err_output[0]):
+    raise svntest.Failure
+
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', extant_url,
+                                                 non_extant_url)
+  if not re.match('svn: Filesystem has no item$', err_output[0]):
+    raise svntest.Failure
 
 ########################################################################
 # Run the tests
@@ -827,6 +842,7 @@ test_list = [ None,
               diff_pure_repository_update_a_file,
               diff_only_property_change,
               dont_diff_binary_file,
+              diff_nonextant_urls,
               ]
 
 if __name__ == '__main__':
