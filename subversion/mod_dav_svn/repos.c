@@ -34,6 +34,7 @@
 #include "svn_repos.h"
 #include "svn_dav.h"
 #include "svn_sorts.h"
+#include "svn_version.h"
 
 #include "dav_svn.h"
 
@@ -1549,7 +1550,8 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
 
     ap_fputs(output, bb,
              " </ul>\n <hr noshade><em>Powered by "
-             "<a href=\"http://subversion.tigris.org/\">Subversion</a>"
+             "<a href=\"http://subversion.tigris.org/\">Subversion</a> "
+             "version " SVN_VERSION "."
              "</em>\n</body></html>");
 
     bkt = apr_bucket_eos_create(output->c->bucket_alloc);
