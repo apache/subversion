@@ -457,7 +457,7 @@
       first import or for any following imports to upgrade a vendor
       branch.</para>
 
-    <para>For the fqirst foobar-1.0 release located in
+    <para>For the first foobar-1.0 release located in
       <filename>~/foobar-1.0</filename>:</para>
 
     <screen>
