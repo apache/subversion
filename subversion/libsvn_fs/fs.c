@@ -302,6 +302,8 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
 
   SVN_ERR (check_already_open (fs));
 
+  fs->env_path = apr_pstrdup (fs->pool, path);
+
   svn_err = allocate_env (fs);
   if (svn_err) goto error;
 
@@ -374,3 +376,11 @@ svn_fs_berkeley_recover (const char *path,
 
   return 0;
 }
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */
