@@ -1466,7 +1466,7 @@ Checksum: /3L38YwzhT93BWvgpdF6Zw==
 $ svn info vendors
 Path: trunk
 Url: http://svn.red-bean.com/repos/test/vendors
-bRevision: 19
+Revision: 19
 Node Kind: directory
 Schedule: normal
 Last Changed Author: harry
@@ -1888,9 +1888,9 @@ U  myproj/thhgttg.txt
           <para>To merge changes to a single file:</para>
 
           <screen>
-+$ cd myproj
-+$ svn merge -r 30:31 thhgttg.txt 
-+U  thhgttg.txt
+$ cd myproj
+$ svn merge -r 30:31 thhgttg.txt 
+U  thhgttg.txt
           </screen>
 
           </refsect1>

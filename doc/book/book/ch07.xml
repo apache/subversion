@@ -826,8 +826,8 @@ The following repository access (RA) modules are available:
       that library, and found inside the library directories
       themselves) differ from this naming scheme in that instead of a
       single underscore after the library code, they use a double
-      underscore (<literal>"__"</literal>).  Functions private a given
-      source file have no special prefixing, and are declared
+      underscore (<literal>"__"</literal>).  Functions that are private
+      to a given source file have no special prefixing, and are declared
       <literal>static</literal>.  Of course, a compiler isn't
       interested in these naming conventions, but they definitely help
       to clarify the scope of a given function or datatype.</para>
@@ -1116,9 +1116,6 @@ if __name__ == '__main__':
           and basically serves the purposes of CVS's
           <filename>Entries</filename>, <filename>Root</filename>, and
           <filename>Repository</filename> files combined.
-          Authentication data is also stored within
-          <filename>.svn</filename>, rather than in a single
-          .cvspass-like file.</para>
 
       </sidebar>
 
@@ -1252,21 +1249,6 @@ if __name__ == '__main__':
         property files ("working" and "base" versions) uses a simple
         "hash-on-disk" file format for storing the property names and
         values.</para>
-
-    </sect2>
-
-    <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-7-sect-3.3">
-      <title>The Authentication Area</title>
-
-      <para>We will wrap up our peek at the working copy internals by
-        noting the <filename>.svn/auth</filename> directory.  Here is
-        where Subversion stores a cache of various data used when
-        authenticating against a server that requires such.
-        Subversion uses OS-level permissioning to secure the contents
-        of these files, but also gives users the option of disabling
-        this cache altogether (via a per-use command-line argument, or
-        more conveniently via the user's configuration files).</para>
 
     </sect2>
   </sect1>
