@@ -371,7 +371,7 @@ write_handler (void *baton,
   /* Chew up four bytes at the beginning for the header.  */
   if (db->header_bytes < 4)
     {
-      int nheader = 4 - db->header_bytes;
+      apr_size_t nheader = 4 - db->header_bytes;
       if (nheader > *len)
         nheader = *len;
       if (memcmp (buffer, "SVN\0" + db->header_bytes, nheader) != 0)
@@ -431,6 +431,8 @@ write_handler (void *baton,
 
       /* Check for integer overflow (don't want to let the input trick
          us into invalid pointer games using negative numbers).  */
+      /* FIXME: Some of these are apr_size_t, which is
+         unsigned. Should they be apr_ptrdiff_t instead? --xbc */
       if (sview_offset < 0 || sview_len < 0 || tview_len < 0 || inslen < 0
 	  || newlen < 0 || inslen + newlen < 0 || sview_offset + sview_len < 0)
 	return svn_error_create (SVN_ERR_SVNDIFF_CORRUPT_WINDOW, 0, NULL, 
@@ -447,7 +449,7 @@ write_handler (void *baton,
 
       /* Wait for more data if we don't have enough bytes for the
          whole window.  */
-      if (end - p < inslen + newlen)
+      if (apr_size_t (end - p) < inslen + newlen)
 	return SVN_NO_ERROR;
 
       /* Count the instructions and make sure they are all valid.  */
