@@ -200,7 +200,7 @@ struct decode_baton {
    appended to STR.  */
 static void
 decode_bytes (svn_stringbuf_t *str, const char *data, apr_size_t len,
-              unsigned char *inbuf, int *inbuflen)
+              char *inbuf, int *inbuflen)
 {
   const char *p, *find1, *find2;
   char c;
@@ -296,7 +296,7 @@ svn_stringbuf_t *
 svn_quoprint_decode_string (svn_stringbuf_t *str, apr_pool_t *pool)
 {
   svn_stringbuf_t *decoded = svn_stringbuf_create ("", pool);
-  unsigned char ingroup[4];
+  char ingroup[4];
   int ingrouplen = 0;
 
   decode_bytes (decoded, str->data, str->len, ingroup, &ingrouplen);
