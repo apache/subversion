@@ -20,9 +20,13 @@
 #include <svn_fs.h>
 
 #include "svn_ruby.h"
+#include "fs.h"
 #include "fs_root.h"
 #include "fs_txn.h"
 #include "error.h"
+#include "util.h"
+
+static VALUE cSvnFS;
 
 
 /* Class Fs */
@@ -38,10 +42,38 @@ static void
 fs_free (void *p)
 {
   svn_ruby_fs_t *fs = p;
+  long count = svn_ruby_get_refcount (fs->pool);
   if (! fs->closed)
     svn_fs_close_fs (fs->fs);
-  apr_pool_destroy (fs->pool);
+  if (count == 1)
+    apr_pool_destroy (fs->pool);
+  else
+    svn_ruby_set_refcount (fs->pool, count - 1);
   free (fs);
+}
+
+VALUE
+svn_ruby_fs_new (VALUE class, svn_fs_t *fs, apr_pool_t *pool)
+{
+  VALUE obj;
+  svn_ruby_fs_t *rb_fs;
+  if (class == Qnil)
+    {
+      /* This object shares pool with an Svn::Repos object.  */
+      long count;
+      obj = Data_Make_Struct (cSvnFS, svn_ruby_fs_t, 0, fs_free, rb_fs);
+      count = svn_ruby_get_refcount (pool);
+      svn_ruby_set_refcount (pool, count + 1);
+    }
+  else
+    {
+      obj = Data_Make_Struct (class, svn_ruby_fs_t, 0, fs_free, rb_fs);
+      svn_ruby_set_refcount (pool, 1);
+    }
+  rb_fs->fs = fs;
+  rb_fs->pool = pool;
+  rb_fs->closed = FALSE;
+  return obj;
 }
 
 static VALUE
@@ -53,16 +85,12 @@ open_or_create (VALUE class, VALUE aPath, int create)
   char *path;
 
   VALUE obj, argv[1];
-  svn_ruby_fs_t *rb_fs;
 
   Check_Type (aPath, T_STRING);
   path = StringValuePtr (aPath);
   pool = svn_pool_create (NULL);
   fs = svn_fs_new (pool);
-  obj = Data_Make_Struct (class, svn_ruby_fs_t, 0, fs_free, rb_fs);
-  rb_fs->fs = fs;
-  rb_fs->pool = pool;
-  rb_fs->closed = FALSE;
+  obj = svn_ruby_fs_new (class, fs, pool);
   argv[0] = aPath;
   rb_obj_call_init (obj, 1, argv);
   
@@ -126,7 +154,7 @@ fs_recover (VALUE class, VALUE aPath)
 /* Instance methods. */
 
 static VALUE
-fs_initialize (VALUE self, VALUE aPath)
+fs_initialize (int argc, VALUE *argv, VALUE self)
 {
   /* Do nothing. */
   return self;
@@ -398,8 +426,6 @@ fs_list_transactions (VALUE self)
 void
 svn_ruby_init_fs ()
 {
-  VALUE cSvnFS;
-
   cSvnFS = rb_define_class_under (svn_ruby_mSvn, "Fs", rb_cObject);
   rb_define_singleton_method (cSvnFS, "new", fs_open, 1);
   rb_define_singleton_method (cSvnFS, "open", fs_open, 1);
@@ -407,7 +433,7 @@ svn_ruby_init_fs ()
   rb_define_singleton_method (cSvnFS, "delete", fs_delete, 1);
   rb_define_singleton_method (cSvnFS, "recover", fs_recover, 1);
 
-  rb_define_method (cSvnFS, "initialize", fs_initialize, 1);
+  rb_define_method (cSvnFS, "initialize", fs_initialize, -1);
   rb_define_method (cSvnFS, "closed?", fs_is_closed, 0);
   rb_define_method (cSvnFS, "close", fs_close, 0);
   rb_define_method (cSvnFS, "youngestRev", fs_youngest_rev, 0);
