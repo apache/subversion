@@ -1,17 +1,33 @@
-This file lists immediate, short-term (next few days) stuff on the
-stack.  It makes reference to phone conversations and private emails,
-so a given item may not make much sense unless you are familiar the
-out-of-band context.  We just keep it here because this is a
-convenient location.
+If you're looking for a task to take on, please see the TASKS file.
 
-Karl todo:
-   - finish svn_wc__run_log
-   - ancestry args to replace_root go away?  Think about this.
+This file merely lists immediate, short-term (next few days) stuff on
+people's stacks.  It may make reference to phone conversations and
+private emails, so a given item might not make much sense unless one
+is familiar with its out-of-band context.  We keep this file under
+version control mainly for convenience -- feel free to add your own
+short-term tasks to it, if that's helpful.
+
+------------------------------------------------------------------------
+
+Ben and Karl XML factorization todo:
+   - generalize signal_expat_bailout
 
 Ben todo:
-   - update delta/xml_parser.c to use new parser creation stuff
    - crawler
+
+Karl working copy todo:
+   - make updates work as checkouts do (should only be a little bit
+     left)
+   - work on properties, or work with someone on props
+   - probably decide that all entries in a versions file will always
+     be listed explicitly (they'd have to be for checksums to be kept
+     anyway), and change the documentation about this everywhere.
+     Should result in no code changes, as none of the code folded
+     redundant version information anyway.
+   - fix working copy identification/allergy code
+
+Karl/all todo:
+   - ancestry args to replace_root go away?  Think about this.
 
 Ben and Karl more later:
    - xml dtd, for both xml deltas and wc formats
-   - more tasks for TASKS, if possible

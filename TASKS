@@ -37,3 +37,20 @@ to take something on.
      apparently we shouldn't use.
 
    The configure script should accomodate this diversity.
+
+
+3. Make the working copy library actually use the vdelta code that has
+   been so patiently waiting. 
+
+
+4. Make the working copy library property handling code work.
+
+
+5. Hook the fs into Apache (becomes higher priority after Milestone 1
+   on October 7th).
+
+
+6. Start writing a basic command-line client, to talk over the network
+   to the Apache-connected Subversion server (see 5).
+
+
