@@ -194,6 +194,57 @@ def import_export_symlink(sbox):
     raise svntest.Failure
 
 
+
+
+#----------------------------------------------------------------------
+# Regression test for issue 1986
+
+def copy_tree_with_symlink(sbox):
+  "'svn cp dir1 dir2' which contains a symlink"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a versioned symlink within directory 'A/D/H'.
+  newfile_path = os.path.join(wc_dir, 'A', 'D', 'H', 'newfile')
+  linktarget_path = os.path.join(wc_dir, 'A', 'D', 'H', 'linktarget')
+  svntest.main.file_append(linktarget_path, 'this is just a link target')
+  os.symlink('linktarget', newfile_path)
+  svntest.main.run_svn(None, 'add', newfile_path, linktarget_path)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/H/newfile' : Item(verb='Adding'),
+    'A/D/H/linktarget' : Item(verb='Adding'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/D/H/newfile' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/H/linktarget' : Item(status='  ', wc_rev=2, repos_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+  # Copy H to H2
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  H2_path = os.path.join(wc_dir, 'A', 'D', 'H2')
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', H_path, H2_path)
+
+  # 'svn status' should show just "A/D/H2  A +".  Nothing broken.
+  expected_status.add({
+    'A/D/H2' : Item(status='A ', copied='+', wc_rev='-', repos_rev=2),
+    'A/D/H2/chi' : Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
+    'A/D/H2/omega' : Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
+    'A/D/H2/psi' : Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
+    'A/D/H2/linktarget' : Item(status='  ', copied='+',wc_rev='-',repos_rev=2),
+    'A/D/H2/newfile' : Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
+    })
+  svntest.actions.run_and_verify_status (wc_dir, expected_status)
+
+
+
 ########################################################################
 # Run the tests
 
@@ -202,7 +253,8 @@ def import_export_symlink(sbox):
 test_list = [ None,
               Skip(general_symlink, (os.name != 'posix')),
               Skip(replace_file_with_symlink, (os.name != 'posix')),
-              Skip(import_export_symlink, (os.name != 'posix'))
+              Skip(import_export_symlink, (os.name != 'posix')),
+              Skip(copy_tree_with_symlink, (os.name != 'posix')),
              ]
 
 if __name__ == '__main__':
