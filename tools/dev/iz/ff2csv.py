@@ -2,7 +2,7 @@
 # -*- Python -*-
 """Transform find-fix.py output into Excellable csv."""
 
-__date__ = "Time-stamp: <03/08/08 18:35:22 jrepenning>"[13:30]
+__date__ = "Time-stamp: <2003-10-16 13:26:27 jrepenning>"[13:30]
 __author__ = "Jack Repenning <jrepenning@collab.net>"
 
 import getopt
@@ -61,6 +61,8 @@ manager-speak pictures."""
     # do something fruitful with your life
     if len(args) == 0:
         args = ["query-set-1.tsv", "core-history.csv"]
+        print ("ff2csv %s %s" % args)
+
     if len(args) != 2:
         print "%s: Wrong number of args." % me
         shortusage()
@@ -77,7 +79,7 @@ manager-speak pictures."""
                           "inval= +([0-9]+) +"
                           "dup= +([0-9]+) +"
                           "other= +([0-9]+) +"
-                          "remain= +([0-9]+)")
+                          "remain= *([0-9]+)")
     for year in ("2001", "2002", "2003", "2004"):
         for month in ("01", "02", "03", "04", "05", "06", "07", "08",
                       "09", "10", "11", "12"):
@@ -85,6 +87,11 @@ manager-speak pictures."""
                              ("08", "15"),
                              ("15", "22"),
                              ("22", "28")):
+                if verbose:
+                    print "searching %s-%s-%s to %s" % (year,
+                                                        month,
+                                                        dayrange[0],
+                                                        dayrange[1])
                 ffpy = os.popen("python ./find-fix.py --m=beta "
                                 "%s %s-%s-%s %s-%s-%s"
                                 % (args[0],
@@ -100,10 +107,12 @@ manager-speak pictures."""
                 if verbose:
                     print "initial match is: ", matches
                 while line and not matches:
+                    line = ffpy.readline()
                     if verbose:
                         print "%s: read line '%s'" % (me, line)
-                    line = ffpy.readline()
                     matches = totalsre.search(line)
+                    if verbose:
+                        print "subsequent line is: ", line
 
                 ffpy.close()
 
@@ -139,7 +148,7 @@ def shortusage():
 def usage():
   "Print multi-line usage tome."
   shortusage()
-  print '''%s [opts] queryfile outfile
+  print '''%s [opts] [queryfile [outfile]]
 Option keywords may be abbreviated to any unique prefix.
 Option order is not important.
 Most options require "=xxx" arguments:''' % me
