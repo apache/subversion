@@ -108,6 +108,11 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Thu Feb 19 2004 David Summers <david@summersoft.fay.ar.us> 0.37.0-8770
+- cvs2svn.1 man page taken out of distribution.  Change RPM so that if it
+  just so happens to magically reappear someday then it will get put into
+  the package.
+
 * Wed Jan 28 2004 David Summers <david@summersoft.fay.ar.us> 0.37.0-8534
 - Change version number to new format based on dev list discussion.
 
@@ -446,7 +451,9 @@ mkdir -p $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
 cp -r tools/cvs2svn/rcsparse $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages/rcsparse
 mv $RPM_BUILD_ROOT/usr/lib/svn-python/* $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
 rmdir $RPM_BUILD_ROOT/usr/lib/svn-python
-cp $RPM_BUILD_DIR/subversion-%{version}/tools/cvs2svn/cvs2svn.1 $RPM_BUILD_ROOT/usr/share/man/man1
+if [ -f $RPM_BUILD_DIR/subversion-%{version}/tools/cvs2svn/cvs2svn.1 ]; then
+   cp $RPM_BUILD_DIR/subversion-%{version}/tools/cvs2svn/cvs2svn.1 $RPM_BUILD_ROOT/usr/share/man/man1
+fi
 
 %if %{perl_bindings}
 # Install PERL SWIG bindings.
