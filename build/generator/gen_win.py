@@ -391,9 +391,31 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                                            custom_target=csrc,
                                            user_deps=user_deps))
 
+    def_file = self.get_def_file(target, rootpath)
+    if def_file is not None:
+      gsrc = "%s\\build\\generator\\extractor.py" % rootpath
+
+      deps = []
+      for header in target.msvc_export:
+        deps.append("%s\\%s\\%s" % (rootpath, target.path, header))
+
+      cbuild = "python $(InputPath) %s > %s" \
+               % (string.join(deps), def_file)
+
+      sources.append(ProjectItem(path=gsrc, reldir=None, custom_build=cbuild,
+                                 user_deps=deps, custom_target=def_file))
+
+      sources.append(ProjectItem(path=def_file, reldir=None, 
+                                 custom_build=None, user_deps=[]))
+
     sources.sort(lambda x, y: cmp(x.path, y.path))
     return sources
-  
+
+  def get_def_file(self, target, rootpath):
+    if isinstance(target, gen_base.TargetLib) and target.msvc_export:
+      return "%s\\%s\\%s.def" % (rootpath, target.path, target.name)
+    return None
+
   def gen_proj_names(self, install_targets):
     "Generate project file names for the targets"
     # Generate project file names for the targets: replace dashes with
@@ -624,7 +646,9 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     if isinstance(target, gen_base.TargetExe):
       nondeplibs.append('setargv.obj')
 
-    if isinstance(target, gen_base.TargetSWIG) and target.lang == 'perl':
+    if ((isinstance(target, gen_base.TargetSWIG) 
+         or isinstance(target, gen_base.TargetSWIGLib))
+        and target.lang == 'perl'):
       nondeplibs.append(self.perl_lib)
 
     for dep in self.get_win_depends(target, FILTER_LIBS):

@@ -69,6 +69,7 @@ class Generator(gen_win.WinGeneratorBase):
       'swig_options': self.swig_options,
       'default_platform' : self.platforms[0],
       'default_config' : configs[0].name,
+      'def_file' : self.get_def_file(target, rootpath),
       'is_exe' : ezt.boolean(isinstance(target, gen_base.TargetExe)),
       'is_external' : ezt.boolean((isinstance(target, gen_base.TargetProject)
                                    or isinstance(target, gen_base.TargetI18N))
