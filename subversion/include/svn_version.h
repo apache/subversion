@@ -48,7 +48,7 @@ extern "C" {
    pre-1.0 milestone versions), use this string for the version name
    instead. Otherwise, this symbol should be #undef'd. */
 /* #undef SVN_VER_NAME */
-#define SVN_VER_NAME       "M3"
+#define SVN_VER_NAME       "M5"
 
 
 /* Version tag: A string describing the of the version.
