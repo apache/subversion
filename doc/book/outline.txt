@@ -48,17 +48,15 @@ IV. Branching and Merging
    Opening explanation of what branches are, how they're used.
    (Ben has a great explanation for this.)
 
-   A. Branching with svn cp.  (Use 'svn co' to work with the branch.) 
+   A. Creating branches  (svn cp)
 
-   C. Moving changes with svn merge
+   B. Porting changes  (svn merge)
 
-   D. Rolling back a change with svn merge
+   C. Removing changes  (svn merge)
 
-   E. Vendor branches
+   D. Branch maintentance (layout, svn mv, svn rm)
 
-   F. Removing a Branch or Tag with svn rm
-
-   G. "Advanced shortcut": switching to a Branch with svn switch.
+   E. "Advanced shortcuts": switching to a Branch with svn switch.
        Show clever use-cases in here too. (Ben has some examples.)
 
 
@@ -69,6 +67,7 @@ V.  Repository Administration
       1. creating a repository
       2. repository hooks
       3. DB_CONFIG file
+      4. examples of 'svn import'
 
    B.  Repository maintenance
 
@@ -81,12 +80,6 @@ V.  Repository Administration
       1. apache setup
       2. auth options
       3. common mistakes (?? permissions of repos/dav and such)
-
-   D.  Adding projects
-
-      1. examples of 'svn import'
-      2. vendor branches
-           (discussion of strategies and svn_load_dirs.pl)
 
 
 VI.  Advanced Topics
@@ -101,6 +94,9 @@ VI.  Advanced Topics
        4. Other special keywords (executable, mime-type, ignore)
 
    C. Modules  [2.6]
+
+   D. Vendor branches (strategies and svn_load_dirs.pl)
+
 
 
 VII.  Developer Information
