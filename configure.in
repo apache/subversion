@@ -216,18 +216,20 @@ else
   fi
 fi
 
-dnl Find a diff program
-AC_PATH_PROG(SVN_CLIENT_DIFF, diff, none)
-if test "$SVN_CLIENT_DIFF" = "none";  then
+dnl Find a diff that supports the "-u" flag
+AC_MSG_CHECKING([for diff])
+SVN_CLIENT_DIFF="`${abs_srcdir}/ac-helpers/check-diff.sh ${abs_srcdir}/ac-helpers`"
+if test "$SVN_CLIENT_DIFF" = "";  then
   AC_MSG_ERROR([not found
 
-Cannot find a diff program in your PATH.
-If necessary, you can install the GNU diff program.
+Cannot find a diff in your PATH that supports the -u flag.
+We recommend GNU diff (version 2.7 or later).
 You can get it from ftp://ftp.gnu.org/pub/gnu/diffutils.
-])
-fi
+ ])
+ fi
+AC_MSG_RESULT([$SVN_CLIENT_DIFF])
 AC_DEFINE_UNQUOTED(SVN_CLIENT_DIFF, "$SVN_CLIENT_DIFF", 
-	[Define to be the full path to a diff program])
+        [Define to be the full path to diff])
 
 dnl Find a (non-broken) version of GNU diff3
 AC_MSG_CHECKING([for non-broken GNU diff3])
@@ -239,9 +241,10 @@ Cannot find an unbroken GNU diff3 program in your PATH.
 Please make sure you have GNU diff (version 2.7 or later) installed.  
 You can get it from ftp://ftp.gnu.org/pub/gnu/diffutils.
 
-(Note that FreeBSD uses a *hacked* version of GNU diff3 that is unable
-to handle certain types of text files.  If you are using FreeBSD, please 
-install the "real" /usr/ports/textproc/diffutils port.)
+(Note that FreeBSD uses a modified version of GNU diff that is unable
+to handle certain types of text files.  Since diff3 uses GNU diff to do
+the actual diffing, this effectively breaks diff3 as well.  If you are
+using FreeBSD, please install the /usr/ports/textproc/diffutils port.)
 ])
 fi
 AC_MSG_RESULT([$SVN_CLIENT_DIFF3])
