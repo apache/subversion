@@ -299,6 +299,12 @@ def run_and_verify_merge(dir, rev1, rev2, url,
   if isinstance(status_tree, wc.State):
     status_tree = status_tree.old_tree()
 
+  ### See http://subversion.tigris.org/issues/show_bug.cgi?id=748
+  ### "svn merge" only works in "." right now, unlike all the other
+  ### commands.  This means that people building expected_output trees
+  ### should pass "" as the wc_dir for now, until we can run merge on
+  ### a target deeper than ".".
+
   saved_cwd = os.getcwd()
   os.chdir(dir)
 
