@@ -719,13 +719,15 @@ svn_error_t *svn_fs_change_node_prop (svn_fs_root_t *root,
                                       apr_pool_t *pool);
 
 
-/* Set *CHANGED_P to 1 if the properties at PATH differ under ROOT1
-   versus ROOT2, or set it to 0 if they are the same.  Both roots must
-   be in the same filesystem, and PATH must exist in both. */
+/* Set *CHANGED_P to 1 if the properties at PATH1 under ROOT1 differ
+   from those at PATH2 under ROOT2, or set it to 0 if they are the
+   same.  Both paths must exist under their respective roots, and both
+   roots must be in the same filesystem.  */
 svn_error_t *svn_fs_props_changed (int *changed_p,
                                    svn_fs_root_t *root1,
+                                   const char *path1,
                                    svn_fs_root_t *root2,
-                                   const char *path,
+                                   const char *path2,
                                    apr_pool_t *pool);
 
 
@@ -1011,13 +1013,15 @@ svn_error_t *svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
                                      apr_pool_t *pool);
 
 
-/* Set *CHANGED_P to 1 if the contents at PATH differ under ROOT1
-   versus ROOT2, or set it to 0 if they are the same.  Both roots must
-   be in the same filesystem, and PATH must be a file in both. */
+/* Set *CHANGED_P to 1 if the contents at PATH1 under ROOT1 differ
+   from those at PATH2 under ROOT2, or set it to 0 if they are the
+   same.  Both paths must exist under their respective roots, and both
+   roots must be in the same filesystem.  */
 svn_error_t *svn_fs_contents_changed (int *changed_p,
                                       svn_fs_root_t *root1,
+                                      const char *path1,
                                       svn_fs_root_t *root2,
-                                      const char *path,
+                                      const char *path2,
                                       apr_pool_t *pool);
 
 

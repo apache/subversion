@@ -1903,8 +1903,38 @@ svn_fs__things_different (int *props_changed,
                           dag_node_t *node2,
                           trail_t *trail)
 {
-  /* ### todo: finish this. */
-  abort ();
+  skel_t *node_rev1, *node_rev2;
+
+  /* If we have no place to store our results, don't bother doing
+     anything. */
+  if (! props_changed && ! contents_changed)
+    return SVN_NO_ERROR;
+
+  /* The the node revision skels for these two nodes. */
+  SVN_ERR (get_node_revision (&node_rev1, node1, trail));
+  SVN_ERR (get_node_revision (&node_rev2, node2, trail));
+
+  /* Compare property keys. */
+  if (props_changed != NULL)
+    {
+      if (svn_fs__skels_are_equal 
+          (SVN_FS__NR_PROP_KEY (node_rev1), SVN_FS__NR_PROP_KEY (node_rev2)))
+        *props_changed = 0;
+      else
+        *props_changed = 1;
+    }
+
+  /* Compare contents keys. */
+  if (contents_changed != NULL)
+    {
+      if (svn_fs__skels_are_equal 
+          (SVN_FS__NR_DATA_KEY (node_rev1), SVN_FS__NR_DATA_KEY (node_rev2)))
+        *contents_changed = 0;
+      else
+        *contents_changed = 1;
+    }
+  
+  return SVN_NO_ERROR;
 }
 
 
