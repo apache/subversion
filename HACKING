@@ -7,7 +7,7 @@ this first.
                      HACKER'S GUIDE TO SUBVERSION
                      ============================
 
-              Last updated:  $Date: 2001-08-16 19:45:37 $
+              Last updated:  $Date: 2001-08-27 00:02:59 $
 
 
 TABLE OF CONTENTS
@@ -285,19 +285,24 @@ C++ 6.x; earlier versions of the compiler are not supported at this
 time.
 
 If you want to build the server components, you'll also need a copy of
-Berkeley DB, version 3.2.9 or newer. The sources are available at
+Berkeley DB, version 3.3.11 or newer. The sources are available at
 http://www.sleepycat.com. There is a binary distibution at 
 
-    http://www.xbc.nu/svn/db-3.2.9-win32.zip
+    http://www.xbc.nu/svn/db-3.3.11-win32.zip
 
-Unpack the distribution, then set the environment variable
-SVN_DB3_WIN32 to the full path of the db-win32 directory (use the
-System control panel on WinNT/Win2k).
+Unpack the distribution, and add <path/to/berkeley-db>/include/ and
+<path/to/berkeley-db>/lib/ to Include and Link files respectively
+under Tools->Options->Directories.
 
-MSVC will look for the include files in $(SVN_DB3_WIN32)\include and
-for the libraries in $(SVN_DB3_WIN32)\lib, so if you decide to build
-Berkeley DB from sources, you'll have to set up those directories
-yourself.
+If you build Berkeley DB from the source, these will be
+
+    <path/to/berkeley-db>/include/
+
+and
+
+    <path/to/berkeley-db>/build_win32/release
+
+respectively.
 
 The workspace `subversion.dsw' at the top of the source tree includes
 all the necessary projects. Right now, only static libraries are
