@@ -111,10 +111,11 @@ reporter_link_path (void *report_baton, const char *path, const char *url,
   const char *ancestor;
   apr_size_t len;
 
-  /* Get the common ancestor of the URL and our current ancestor. */
   ancestor = svn_path_get_longest_ancestor (url, rb->ancestor, pool);
 
-  /* If we got a shorter ancestor, truncate our current ancestor. */
+  /* If we got a shorter ancestor, truncate our current ancestor.
+     Note that svn_path_get_longest_ancestor will allocate its return
+     value even if it identical to one of its arguments. */
   len = strlen (ancestor);
   if (len < strlen (rb->ancestor))
     rb->ancestor[len] = '\0';
@@ -161,6 +162,8 @@ reporter_abort_report (void *report_baton, apr_pool_t *pool)
   return rb->wrapped_reporter->abort_report (rb->wrapped_report_baton, pool);
 }
 
+/* A reporter that keeps track of the common URL ancestor of all paths in
+   the WC and fetches repository locks for all paths under this ancestor. */
 static svn_ra_reporter2_t lock_fetch_reporter = {
   reporter_set_path,
   reporter_delete_path,
