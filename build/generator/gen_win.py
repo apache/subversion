@@ -99,10 +99,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     # parse (and save) the options that were passed to us
     self.parse_options(options)
 
-### GJS: don't do this right now
-#    self.movefile(os.path.join("subversion","mod_dav_svn","davlog.c"), os.path.join("subversion","mod_dav_svn","log.c"))
-#    self.movefile(os.path.join("subversion","mod_dav_svn","davrepos.c"), os.path.join("subversion","mod_dav_svn","repos.c"))
-
     #Find db-4.0.x or db-4.1.x
     #We translate all slashes to windows format later on
     db41 = self.search_for("libdb41.lib", ["db4-win32/lib"])
@@ -221,6 +217,68 @@ class WinGeneratorBase(gen_base.GeneratorBase):
           libs.append(gen_base.ExternalLibrary(libname))
     return libs
 
+  def get_install_targets(self):
+    "Generate the list of targets"
+    # Generate a fake depaprutil project
+    self.targets['depsubr'] = gen_base.TargetUtility('depsubr', None,
+                                                     'build/win32',
+                                                     None, None, self.cfg,
+                                                     None)
+    self.targets['depdelta'] = gen_base.TargetUtility('depdelta', None,
+                                                      'build/win32',
+                                                      None, None, self.cfg,
+                                                      None)
+
+    install_targets = self.targets.values() \
+                      + self.graph.get_all_sources(gen_base.DT_INSTALL)
+    install_targets = gen_base.unique(install_targets)
+
+    # sort these for output stability, to watch out for regressions.
+    install_targets.sort()
+    return install_targets
+
+  def get_configs(self, target, rootpath):
+    "Get the list of configurations for the project"
+    configs = [ ]
+    for cfg in self.configs:
+      configs.append(
+        ProjectItem(name=cfg,
+                    lower=string.lower(cfg),
+                    defines=self.get_win_defines(target, cfg),
+                    libdirs=self.get_win_lib_dirs(target,rootpath, cfg),
+                    libs=self.get_win_libs(target, cfg),
+                    ))
+    return configs
+  
+  def get_proj_sources(self, quote_path, target, rootpath):
+    "Get the list of source files for each project"
+    sources = [ ]
+    if not isinstance(target, gen_base.TargetUtility):
+      for src, reldir in self.get_win_sources(target):
+        rsrc = string.replace(os.path.join(rootpath, src), os.sep, '\\')
+        if quote_path and '-' in rsrc:
+          rsrc = '"%s"' % rsrc
+        sources.append(ProjectItem(path=rsrc, reldir=reldir,
+                                   swig_language=None, swig_output=None))
+
+    if isinstance(target, gen_base.SWIGLibrary):
+      for obj in self.graph.get_sources(gen_base.DT_LINK, target):
+        if isinstance(obj, gen_base.SWIGObject):
+          for cobj in self.graph.get_sources(gen_base.DT_OBJECT, obj):
+            if isinstance(cobj, gen_base.SWIGObject):
+              csrc = rootpath + '\\' + string.replace(cobj.fname, '/', '\\')
+              sources.append(ProjectItem(path=csrc, reldir=None,
+                                         swig_language=None, swig_output=None))
+
+              for ifile in self.graph.get_sources(gen_base.DT_SWIG_C, cobj):
+                isrc = rootpath + '\\' + string.replace(ifile, '/', '\\')
+                sources.append(ProjectItem(path=isrc, reldir=None, 
+                                           swig_language=target.lang,
+                                           swig_output=csrc))
+        
+    sources.sort(lambda x, y: cmp(x.path, y.path))
+    return sources
+  
   def gen_proj_names(self, install_targets):
     "Generate project file names for the targets"
     # Generate project file names for the targets: replace dashes with
@@ -514,3 +572,8 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     "Override me when creating a new project type"
 
     raise NotImplementedError
+
+class ProjectItem:
+  "A generic item class for holding sources info, config info, etc for a project"
+  def __init__(self, **kw):
+    vars(self).update(kw)
