@@ -162,7 +162,9 @@ pool_cleanup_child (void *p)
 }
 
 /* Allocate from POOL, intialise and return an access baton. TYPE and PATH
-   are used to initialise the baton. */
+   are used to initialise the baton.  PATH is assumed to be canonicalized,
+   paths need to be canonicalized so that path matching and parent-child
+   identification work. */
 static svn_wc_adm_access_t *
 adm_access_alloc (enum svn_wc__adm_access_type type,
                   const char *path,
@@ -172,9 +174,7 @@ adm_access_alloc (enum svn_wc__adm_access_type type,
   lock->type = type;
   lock->set = NULL;
   lock->lock_exists = FALSE;
-  /* ### Some places lock with a path that is not canonical, we need
-     ### cannonical paths for reliable parent-child determination */
-  lock->path = svn_path_canonicalize_nts (apr_pstrdup (pool, path), pool);
+  lock->path = path;
   lock->pool = pool;
 
   apr_pool_cleanup_register (lock->pool, lock, pool_cleanup,
@@ -213,11 +213,14 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
                  svn_boolean_t tree_lock,
                  apr_pool_t *pool)
 {
+  /* Sigh. There are non-canonical paths coming in here. */
+  const char *canonical = svn_path_canonicalize_nts (apr_pstrdup (pool, path),
+                                                     pool);
   svn_wc_adm_access_t *lock;
 
   if (associated && associated->set)
     {
-      lock = apr_hash_get (associated->set, path, APR_HASH_KEY_STRING);
+      lock = apr_hash_get (associated->set, canonical, APR_HASH_KEY_STRING);
       if (lock)
         /* Already locked.  The reason we don't return the existing baton
            here is that the user is supposed to know whether a directory is
@@ -231,7 +234,7 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
   /* Need to create a new lock */
   if (write_lock)
     {
-      lock = adm_access_alloc (svn_wc__adm_access_write_lock, path, pool);
+      lock = adm_access_alloc (svn_wc__adm_access_write_lock, canonical, pool);
       SVN_ERR (create_lock (lock, 0, pool));
       lock->lock_exists = TRUE;
     }
@@ -240,13 +243,13 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
       /* ### Read-lock not yet implemented. Since no physical lock gets
          ### created we must check PATH is not a file. */
       enum svn_node_kind node_kind;
-      SVN_ERR (svn_io_check_path (path, &node_kind, pool));
+      SVN_ERR (svn_io_check_path (canonical, &node_kind, pool));
       if (node_kind != svn_node_dir)
         return svn_error_createf (SVN_ERR_WC_INVALID_LOCK, 0, NULL, pool,
                                   "lock path is not a directory (%s)",
                                   path);
 
-      lock = adm_access_alloc (svn_wc__adm_access_unlocked, path, pool);
+      lock = adm_access_alloc (svn_wc__adm_access_unlocked, canonical, pool);
     }
 
   if (associated)
@@ -266,7 +269,7 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
       apr_hash_index_t *hi;
       apr_pool_t *subpool = svn_pool_create (pool);
 
-      SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, subpool));
+      SVN_ERR (svn_wc_entries_read (&entries, lock->path, FALSE, subpool));
 
       /* Use a temporary hash until all children have been opened. */
       if (associated)
@@ -340,9 +343,13 @@ svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
                      const char *path,
                      apr_pool_t *pool)
 {
+  /* Sigh. There are non-canonical paths coming in here. */
+  const char *canonical = svn_path_canonicalize_nts (apr_pstrdup (pool, path),
+                                                     pool);
   if (associated->set)
-    *adm_access = apr_hash_get (associated->set, path, APR_HASH_KEY_STRING);
-  else if (! strcmp (associated->path, path))
+    *adm_access = apr_hash_get (associated->set, canonical,
+                                APR_HASH_KEY_STRING);
+  else if (! strcmp (associated->path, canonical))
     *adm_access = associated;
   else
     *adm_access = NULL;

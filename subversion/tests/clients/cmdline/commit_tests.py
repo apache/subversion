@@ -1267,6 +1267,8 @@ def commit_from_long_dir(sbox):
     return 1
   os.chdir(was_dir)
   
+#----------------------------------------------------------------------
+
 def commit_with_lock(sbox):
   "try to commit when directory is locked"
 
@@ -1310,6 +1312,44 @@ def commit_with_lock(sbox):
     return 1
 
 
+#----------------------------------------------------------------------
+
+# Explicitly commit the current directory.  This did at one point fail
+# in post-commit processing due to a path canonicalization problem.
+
+def commit_current_dir(sbox):
+  "commit the current directory"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  svntest.main.run_svn(None, 'propset', 'pname', 'pval', wc_dir)
+
+  was_cwd = os.getcwd()
+  os.chdir(wc_dir)
+
+  expected_output = svntest.wc.State('.', {
+    '.' : Item(verb='Sending'),
+    })
+  if svntest.actions.run_and_verify_commit('.',
+                                           expected_output,
+                                           None,
+                                           None,
+                                           None, None,
+                                           None, None,
+                                           '.'):
+    os.chdir(was_cwd)
+    return 1
+  os.chdir(was_cwd)
+
+  # I can't get the status check to work as part of run_and_verify_commit.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2)
+  expected_status.tweak('', wc_rev=2, status='__')
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+
 ########################################################################
 # Run the tests
 
@@ -1338,6 +1378,7 @@ test_list = [ None,
               commit_add_file_twice,
               commit_from_long_dir,
               commit_with_lock,
+              commit_current_dir,
              ]
 
 if __name__ == '__main__':
