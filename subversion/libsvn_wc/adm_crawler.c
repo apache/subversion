@@ -159,7 +159,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                   svn_revnum_t dir_rev,
                   const svn_ra_reporter_t *reporter,
                   void *report_baton,
-                  svn_wc_notify_func_t notify_func,
+                  svn_wc_notify_func2_t notify_func,
                   void *notify_baton,
                   svn_boolean_t restore_files,
                   svn_boolean_t recurse,
@@ -174,6 +174,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
   const svn_wc_entry_t *dot_entry;
   const char *this_url, *this_path, *full_path, *this_full_path;
   svn_wc_adm_access_t *dir_access;
+  svn_wc_notify_t *notify;
 
   /* Get both the SVN Entries and the actual on-disk entries.   Also
      notice that we're picking up hidden entries too. */
@@ -301,15 +302,13 @@ report_revisions (svn_wc_adm_access_t *adm_access,
               
               /* ... report the restoration to the caller.  */
               if (notify_func != NULL)
-                (*notify_func) (notify_baton, 
-                                this_full_path,
-                                svn_wc_notify_restore,
-                                svn_node_file,
-                                NULL,
-                                svn_wc_notify_state_unknown,
-                                svn_wc_notify_state_unknown,
-                                SVN_INVALID_REVNUM);
-
+                {
+                  notify = svn_wc_create_notify (this_full_path,
+                                                 svn_wc_notify_restore,
+                                                 iterpool);
+                  notify->kind = svn_node_file;
+                  (*notify_func) (notify_baton, notify, iterpool);
+                }
             }
 
           if (report_everything)
@@ -443,23 +442,24 @@ report_revisions (svn_wc_adm_access_t *adm_access,
 /* This is the main driver of the working copy state "reporter", used
    for updates. */
 svn_error_t *
-svn_wc_crawl_revisions (const char *path,
-                        svn_wc_adm_access_t *adm_access,
-                        const svn_ra_reporter_t *reporter,
-                        void *report_baton,
-                        svn_boolean_t restore_files,
-                        svn_boolean_t recurse,
-                        svn_boolean_t use_commit_times,
-                        svn_wc_notify_func_t notify_func,
-                        void *notify_baton,
-                        svn_wc_traversal_info_t *traversal_info,
-                        apr_pool_t *pool)
+svn_wc_crawl_revisions2 (const char *path,
+                         svn_wc_adm_access_t *adm_access,
+                         const svn_ra_reporter_t *reporter,
+                         void *report_baton,
+                         svn_boolean_t restore_files,
+                         svn_boolean_t recurse,
+                         svn_boolean_t use_commit_times,
+                         svn_wc_notify_func2_t notify_func,
+                         void *notify_baton,
+                         svn_wc_traversal_info_t *traversal_info,
+                         apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   const svn_wc_entry_t *entry;
   svn_revnum_t base_rev = SVN_INVALID_REVNUM;
   svn_boolean_t missing = FALSE;
   const svn_wc_entry_t *parent_entry = NULL;
+  svn_wc_notify_t *notify;
 
   /* The first thing we do is get the base_rev from the working copy's
      ROOT_DIRECTORY.  This is the first revnum that entries will be
@@ -558,12 +558,12 @@ svn_wc_crawl_revisions (const char *path,
 
           /* Report the restoration to the caller. */
           if (notify_func != NULL)
-            (*notify_func) (notify_baton, path, svn_wc_notify_restore,
-                            svn_node_file,
-                            NULL,
-                            svn_wc_notify_state_unknown,
-                            svn_wc_notify_state_unknown,
-                            SVN_INVALID_REVNUM);
+            {
+              notify = svn_wc_create_notify (path, svn_wc_notify_restore,
+                                             pool);
+              notify->kind = svn_node_file;
+              (*notify_func) (notify_baton, notify, pool);
+            }
         }
       
       /* Split PATH into parent PDIR and basename BNAME. */
@@ -622,6 +622,26 @@ svn_wc_crawl_revisions (const char *path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_crawl_revisions (const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        const svn_ra_reporter_t *reporter,
+                        void *report_baton,
+                        svn_boolean_t restore_files,
+                        svn_boolean_t recurse,
+                        svn_boolean_t use_commit_times,
+                        svn_wc_notify_func_t notify_func,
+                        void *notify_baton,
+                        svn_wc_traversal_info_t *traversal_info,
+                        apr_pool_t *pool)
+{
+  svn_wc__compat_notify_baton_t nb = { notify_func, notify_baton };
+
+  return svn_wc_crawl_revisions2 (path, adm_access, reporter, report_baton,
+                                  restore_files, recurse, use_commit_times,
+                                  svn_wc__compat_call_notify_func, &nb,
+                                  traversal_info, pool);
+}
 
 svn_error_t *
 svn_wc_transmit_text_deltas (const char *path,

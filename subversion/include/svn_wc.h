@@ -564,46 +564,86 @@ typedef enum svn_wc_notify_state_t
 } svn_wc_notify_state_t;
 
 
-/** Notify the world that @a action has happened to @a path.  @a path is 
- * either absolute or relative to cwd (i.e., not relative to an anchor).
+/** @since New in 1.2.
  *
- * @a kind, @a content_state and @a prop_state are from after @a action, 
- * not before.
+ * Structure used in the @c svn_wc_notify_func2_t function.
  *
- * If @a mime_type is non-null, it indicates the mime-type of @a path.  It
- * is always @c NULL for directories.
+ * @note Callers of notification functions should use @c svn_wc_create_notify
+ * to create structures of this type to allow for exstinsibility. */
+typedef struct svn_wc_notify_t {
+  const char *path;
+  svn_wc_notify_action_t action;
+  svn_node_kind_t kind;
+  const char *mime_type;
+  svn_wc_notify_state_t content_state;
+  svn_wc_notify_state_t prop_state;
+  svn_revnum_t revision;
+} svn_wc_notify_t;
+
+/** @since New in 1.2.
  *
- * @a revision is @c SVN_INVALID_REVNUM, except when @a action is
- * @c svn_wc_notify_update_completed, in which case @a revision is 
+ * Allocate an @c svn_wc_notify_t structure in @a pool, initialize and return
+ * it.
+ *
+ * Set the @c path field of the created struct to @a path, and @c action to
+ * @a action.  Set all other fields to their @c _unknown, @c NULL or
+ * invalid value, respectively.
+ */
+svn_wc_notify_t *
+svn_wc_create_notify (const char *path, svn_wc_notify_action_t action,
+                      apr_pool_t *pool);
+
+/** @since New in 1.2.
+ *
+ * Notify the world that @a notify->action has happened to @a notify->path.
+ * @a notify->path is either absolute or relative to cwd (i.e., not relative
+ * to an anchor).
+ *
+ * @a notify->kind, @a notify->content_state and @a notify->prop_state are
+ * from after @a notify->action, not before.
+ *
+ * If @a notify->mime_type is non-null, it indicates the mime-type of 
+ * @a notify->path.  It is always @c NULL for directories.
+ *
+ * @a notify->revision is @c SVN_INVALID_REVNUM, except when @a action is
+ * @c svn_wc_notify_update_completed, in which case @a notify->revision is 
  * the target revision of the update if available, else it is still
  * @c SVN_INVALID_REVNUM.
  *
- * Note that if @a action is @c svn_wc_notify_update, then @a path has 
+ * Note that if @a notify->action is @c svn_wc_notify_update, then @a path has 
  * already been installed, so it is legitimate for an implementation of
- * @c svn_wc_notify_func_t to examine @a path in the working copy.
+ * @c svn_wc_notify_func2_t to examine @a notify->path in the working copy.
  *
  * ### Design Notes:
  *
- * The purpose of the @a kind, @a mime_type, @a content_state, and 
- * @a prop_state fields is to provide "for free" information that this 
- * function is likely to want, and which it would otherwise be forced 
- * to deduce via expensive operations such as reading entries and 
- * properties.  However, if the caller does not have this information, 
- * it will simply pass the corresponding `*_unknown' values, and it is 
- * up to the implementation how to handle that (i.e., whether or not to
- * attempt deduction, or just to punt and give a less informative
- * notification).
+ * The purpose of the @a notify->kind, @a notify->mime_type,
+ * @a notify->content_state, and @a notify->prop_state fields is to provide
+ * "for free" information that this function is likely to want, and which it
+ * would otherwise be forced to deduce via expensive operations such as
+ * reading entries and properties.  However, if the caller does not have
+ * this information, it will simply pass the corresponding `*_unknown'
+ * values, and it is up to the implementation how to handle that (i.e.,
+ * whether or not to attempt deduction, or just to punt and give a less
+ * informative notification).
  *
- * Recommendation: callers of @c svn_wc_notify_func_t should avoid
- * invoking it multiple times on the same @a path within a given
+ * Recommendation: callers of @c svn_wc_notify_func2_t should avoid
+ * invoking it multiple times on the same path within a given
  * operation, and implementations should not bother checking for such
  * duplicate calls.  For example, in an update, the caller should not
  * invoke the notify func on receiving a prop change and then again
  * on receiving a text change.  Instead, wait until all changes have
  * been received, and then invoke the notify func once (from within
  * an @c svn_delta_editor_t's @c close_file(), for example), passing 
- * the appropriate @a content_state and @a prop_state flags.
+ * the appropriate @a notify->content_state and @a notify->prop_state flags.
  */
+typedef void (*svn_wc_notify_func2_t) (void *baton,
+                                       const svn_wc_notify_t *notify,
+                                       apr_pool_t *pool);
+
+/** @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_wc_notify_func2_t, but takes the information as arguments
+ * instead of struct fields. */
 typedef void (*svn_wc_notify_func_t) (void *baton,
                                       const char *path,
                                       svn_wc_notify_action_t action,
@@ -1470,7 +1510,9 @@ svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
 /** @} */
 
 
-/** Copy @a src to @a dst_basename in @a dst_parent, and schedule 
+/** @sincew New in 1.2.
+ *
+ * Copy @a src to @a dst_basename in @a dst_parent, and schedule 
  * @a dst_basename for addition to the repository, remembering the copy 
  * history.
  *
@@ -1491,6 +1533,19 @@ svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
  * to the repository until a commit occurs.  This scheduling can be
  * removed with @c svn_client_revert.
  */
+svn_error_t *svn_wc_copy2 (const char *src,
+                           svn_wc_adm_access_t *dst_parent,
+                           const char *dst_basename,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           svn_wc_notify_func2_t notify_func,
+                           void *notify_baton,
+                           apr_pool_t *pool);
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_wc_copy2, but takes an @c svn_wc_notify_func_t instead.
+ */
 svn_error_t *svn_wc_copy (const char *src,
                           svn_wc_adm_access_t *dst_parent,
                           const char *dst_basename,
@@ -1500,8 +1555,9 @@ svn_error_t *svn_wc_copy (const char *src,
                           void *notify_baton,
                           apr_pool_t *pool);
 
-
-/** Schedule @a path for deletion, it will be deleted from the repository on
+/** @since New in 1.2.
+ *
+ * Schedule @a path for deletion, it will be deleted from the repository on
  * the next commit.  If @a path refers to a directory, then a recursive
  * deletion will occur.  @a adm_access must hold a write lock for the parent 
  * of @a path.
@@ -1520,6 +1576,18 @@ svn_error_t *svn_wc_copy (const char *src,
  * the @a notify_baton and that path. The @a notify_func callback may be
  * @c NULL if notification is not needed.
  */
+svn_error_t *svn_wc_delete2 (const char *path,
+                             svn_wc_adm_access_t *adm_access,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             svn_wc_notify_func2_t notify_func,
+                             void *notify_baton,
+                             apr_pool_t *pool);
+
+/** @deprecated Provided for backwards compatibility with the 1.2 API.
+ *
+ * Similart to @c svn_wc_delete2, but takes an @c svn_wc_notify_func_t instead.
+ */
 svn_error_t *svn_wc_delete (const char *path,
                             svn_wc_adm_access_t *adm_access,
                             svn_cancel_func_t cancel_func,
@@ -1529,7 +1597,9 @@ svn_error_t *svn_wc_delete (const char *path,
                             apr_pool_t *pool);
 
 
-/** Put @a path under version control by adding an entry in its parent,
+/** @since New in 1.2.
+ *
+ * Put @a path under version control by adding an entry in its parent,
  * and, if @a path is a directory, adding an administrative area.  The
  * new entry and anything under it is scheduled for addition to the
  * repository.  @a parent_access should hold a write lock for the parent
@@ -1581,6 +1651,20 @@ svn_error_t *svn_wc_delete (const char *path,
  * ### Update: see "###" comment in svn_wc_add_repos_file()'s doc
  * string about this.
  */
+svn_error_t *svn_wc_add2 (const char *path,
+                          svn_wc_adm_access_t *parent_access,
+                          const char *copyfrom_url,
+                          svn_revnum_t copyfrom_rev,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *pool);
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_wc_add2, but takes an @c svn_wc_notify_func_t instead.
+ */
 svn_error_t *svn_wc_add (const char *path,
                          svn_wc_adm_access_t *parent_access,
                          const char *copyfrom_url,
@@ -1590,7 +1674,6 @@ svn_error_t *svn_wc_add (const char *path,
                          svn_wc_notify_func_t notify_func,
                          void *notify_baton,
                          apr_pool_t *pool);
-
 
 /** Add a file to a working copy at @a dst_path, obtaining the file's
  * contents from @a new_text_path and its properties from @a new_props,
@@ -1704,7 +1787,7 @@ svn_error_t *svn_wc_resolved_conflict2 (const char *path,
                                         svn_boolean_t resolve_text,
                                         svn_boolean_t resolve_props,
                                         svn_boolean_t recursive,
-                                        svn_wc_notify_func_t notify_func,
+                                        svn_wc_notify_func2_t notify_func,
                                         void *notify_baton,
                                         svn_cancel_func_t cancel_func,
                                         void *cancel_baton,
@@ -1713,7 +1796,8 @@ svn_error_t *svn_wc_resolved_conflict2 (const char *path,
 /**
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_wc_resolved_conflict2(), but without cancellation support.
+ * Similar to svn_wc_resolved_conflict2(), but taking an svn_wc_notify_func_t
+ * and without cancellation support.
  */
 svn_error_t *svn_wc_resolved_conflict (const char *path,
                                        svn_wc_adm_access_t *adm_access,
@@ -1753,7 +1837,9 @@ svn_error_t *svn_wc_process_committed (const char *path,
 
 
 
-/** Do a depth-first crawl in a working copy, beginning at @a path.
+/** @since New in 1.2.
+ *
+ * Do a depth-first crawl in a working copy, beginning at @a path.
  *
  * Communicate the `state' of the working copy's revisions to
  * @a reporter/@a report_baton.  Obviously, if @a path is a file instead 
@@ -1779,6 +1865,24 @@ svn_error_t *svn_wc_process_committed (const char *path,
  * If @a traversal_info is non-null, then record pre-update traversal
  * state in it.  (Caller should obtain @a traversal_info from
  * @c svn_wc_init_traversal_info.)
+ */
+svn_error_t *
+svn_wc_crawl_revisions2 (const char *path,
+                         svn_wc_adm_access_t *adm_access,
+                         const svn_ra_reporter_t *reporter,
+                         void *report_baton,
+                         svn_boolean_t restore_files,
+                         svn_boolean_t recurse,
+                         svn_boolean_t use_commit_times,
+                         svn_wc_notify_func2_t notify_func,
+                         void *notify_baton,
+                         svn_wc_traversal_info_t *traversal_info,
+                         apr_pool_t *pool);
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ * Simliar to @c svn_wc_crawl_revisions2, but takes an svn_wc_notify_func_t
+ * instead.
  */
 svn_error_t *
 svn_wc_crawl_revisions (const char *path,
@@ -1830,7 +1934,9 @@ svn_error_t *svn_wc_get_actual_target (const char *path,
 
 /* Update and update-like functionality. */
 
-/** Set @a *editor and @a *edit_baton to an editor and baton for updating a
+/** @since New in 1.2.
+ *
+ * Set @a *editor and @a *edit_baton to an editor and baton for updating a
  * working copy.
  *
  * If @a ti is non-null, record traversal info in @a ti, for use by
@@ -1863,6 +1969,26 @@ svn_error_t *svn_wc_get_actual_target (const char *path,
  * FALSE, the working files will be touched with the 'now' time.
  *
  */
+svn_error_t *svn_wc_get_update_editor2 (svn_revnum_t *target_revision,
+                                        svn_wc_adm_access_t *anchor,
+                                        const char *target,
+                                        svn_boolean_t use_commit_times,
+                                        svn_boolean_t recurse,
+                                        svn_wc_notify_func2_t notify_func,
+                                        void *notify_baton,
+                                        svn_cancel_func_t cancel_func,
+                                        void *cancel_baton,
+                                        const char *diff3_cmd,
+                                        const svn_delta_editor_t **editor,
+                                        void **edit_baton,
+                                        svn_wc_traversal_info_t *ti,
+                                        apr_pool_t *pool);
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_wc_get_update_editor, but takes an svn_wc_notify_func_t
+ * instead.
+ */
 svn_error_t *svn_wc_get_update_editor (svn_revnum_t *target_revision,
                                        svn_wc_adm_access_t *anchor,
                                        const char *target,
@@ -1878,8 +2004,9 @@ svn_error_t *svn_wc_get_update_editor (svn_revnum_t *target_revision,
                                        svn_wc_traversal_info_t *ti,
                                        apr_pool_t *pool);
 
-
-/** A variant of @c svn_wc_get_update_editor().
+/** @since New in 1.2.
+ *
+ * A variant of @c svn_wc_get_update_editor().
  *
  * Set @a *editor and @a *edit_baton to an editor and baton for "switching"
  * a working copy to a new @a switch_url.  (Right now, this URL must be
@@ -1915,6 +2042,27 @@ svn_error_t *svn_wc_get_update_editor (svn_revnum_t *target_revision,
  * have their working timestamp set to the last-committed-time.  If
  * FALSE, the working files will be touched with the 'now' time.
  *
+ */
+svn_error_t *svn_wc_get_switch_editor2 (svn_revnum_t *target_revision,
+                                        svn_wc_adm_access_t *anchor,
+                                        const char *target,
+                                        const char *switch_url,
+                                        svn_boolean_t use_commit_times,
+                                        svn_boolean_t recurse,
+                                        svn_wc_notify_func2_t notify_func,
+                                        void *notify_baton,
+                                        svn_cancel_func_t cancel_func,
+                                        void *cancel_baton,
+                                        const char *diff3_cmd,
+                                        const svn_delta_editor_t **editor,
+                                        void **edit_baton,
+                                        svn_wc_traversal_info_t *ti,
+                                        apr_pool_t *pool);
+
+/** @deprecated Provided for backwards compatibility with the 1.2 API.
+ *
+ * Similar to @c svn_wc_get_switch_editor, but takes an @c svn_wc_notify_func_t
+ * instead.
  */
 svn_error_t *svn_wc_get_switch_editor (svn_revnum_t *target_revision,
                                        svn_wc_adm_access_t *anchor,
@@ -2406,7 +2554,9 @@ svn_wc_relocate (const char *path,
                  apr_pool_t *pool);
 
 
-/** Revert changes to @a path (perhaps in a @a recursive fashion).  Perform
+/** @since New in 1.2.
+ *
+ * Revert changes to @a path (perhaps in a @a recursive fashion).  Perform
  * necessary allocations in @a pool.
  *
  * @a parent_access is an access baton for the directory containing @a path,
@@ -2430,6 +2580,21 @@ svn_wc_relocate (const char *path,
  * SVN_ERR_UNVERSIONED_RESOURCE.
  */
 svn_error_t *
+svn_wc_revert2 (const char *path, 
+                svn_wc_adm_access_t *parent_access,
+                svn_boolean_t recursive, 
+                svn_boolean_t use_commit_times,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                svn_wc_notify_func2_t notify_func,
+                void *notify_baton,
+                apr_pool_t *pool);
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_wc_revert2, but takes an @c svn_wc_notify_func_t instead.
+ */
+svn_error_t *
 svn_wc_revert (const char *path, 
                svn_wc_adm_access_t *parent_access,
                svn_boolean_t recursive, 
@@ -2439,7 +2604,6 @@ svn_wc_revert (const char *path,
                svn_wc_notify_func_t notify_func,
                void *notify_baton,
                apr_pool_t *pool);
-
 
 
 /* Tmp files */

@@ -213,6 +213,20 @@ svn_error_t *svn_wc__prep_file_for_replacement (const char *path,
                                                 svn_boolean_t ignore_enoent,
                                                 apr_pool_t *pool);
 
+/* Baton for svn_wc__compat_call_notify_func below. */
+typedef struct svn_wc__compat_notify_baton_t {
+  /* Wrapped func/baton. */
+  svn_wc_notify_func_t func;
+  void *baton;
+} svn_wc__compat_notify_baton_t;
+
+/* Implements svn_wc_notify_func2_t.  Call BATON->func (BATON is of type
+   svn_wc__compat_notify_baton_t), passing BATON->baton and the appropriate
+   arguments from NOTIFY. */
+void svn_wc__compat_call_notify_func (void *baton,
+                                      const svn_wc_notify_t *notify,
+                                      apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
