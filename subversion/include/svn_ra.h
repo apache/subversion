@@ -278,9 +278,12 @@ typedef struct svn_ra_plugin_t
    *
    * Get the latest revision number from the repository. This is
    * useful for the `svn status' command.  :)
+   *
+   * Use @a pool for memory allocation.
    */
   svn_error_t *(*get_latest_revnum) (void *session_baton,
-                                     svn_revnum_t *latest_revnum);
+                                     svn_revnum_t *latest_revnum,
+                                     apr_pool_t *pool);
 
   /** Get the latest revision number at time @a time. */
   svn_error_t *(*get_dated_revision) (void *session_baton,

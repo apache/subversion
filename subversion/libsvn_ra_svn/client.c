@@ -398,10 +398,10 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *ra_svn_get_latest_rev(void *sess, svn_revnum_t *rev)
+static svn_error_t *ra_svn_get_latest_rev(void *sess, svn_revnum_t *rev,
+                                          apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = sess;
-  apr_pool_t *pool = conn->pool;
 
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-latest-rev", ""));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "r", rev));

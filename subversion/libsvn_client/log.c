@@ -275,7 +275,7 @@ svn_client_log (const apr_array_header_t *targets,
       {
         svn_revnum_t youngest_rev;
         
-        SVN_ERR (ra_lib->get_latest_revnum (session, &youngest_rev));
+        SVN_ERR (ra_lib->get_latest_revnum (session, &youngest_rev, pool));
         if (youngest_rev == 0)
           {
             err = SVN_NO_ERROR;

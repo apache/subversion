@@ -455,7 +455,8 @@ ra_get_latest_revnum (VALUE self)
   if (ra->closed)
     rb_raise (rb_eRuntimeError, "not opened");
 
-  err = ra->plugin->get_latest_revnum (ra->session_baton, &latest_revnum);
+  err = ra->plugin->get_latest_revnum (ra->session_baton, &latest_revnum,
+                                       ra->pool);
 
   if (err)
     svn_ruby_raise (err);

@@ -1403,7 +1403,8 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
 /* ------------------------------------------------------------------------- */
 
 svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
-                                           svn_revnum_t *latest_revnum)
+                                           svn_revnum_t *latest_revnum,
+                                           apr_pool_t *pool)
 {
   svn_ra_session_t *ras = session_baton;
 
@@ -1414,7 +1415,7 @@ svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
      give us the latest revision number */
   SVN_ERR( svn_ra_dav__get_baseline_info(NULL, NULL, NULL, latest_revnum,
                                          ras->sess, ras->root.path,
-                                         SVN_INVALID_REVNUM, ras->pool) );
+                                         SVN_INVALID_REVNUM, pool) );
 
   SVN_ERR( svn_ra_dav__maybe_store_auth_info(ras) );
 

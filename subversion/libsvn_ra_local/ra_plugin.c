@@ -267,12 +267,13 @@ svn_ra_local__open (void **session_baton,
 
 static svn_error_t *
 svn_ra_local__get_latest_revnum (void *session_baton,
-                                 svn_revnum_t *latest_revnum)
+                                 svn_revnum_t *latest_revnum,
+                                 apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
 
-  SVN_ERR (svn_fs_youngest_rev (latest_revnum, baton->fs, baton->pool));
+  SVN_ERR (svn_fs_youngest_rev (latest_revnum, baton->fs, pool));
 
   return SVN_NO_ERROR;
 }
@@ -392,7 +393,8 @@ svn_ra_local__do_checkout (void *session_baton,
     (svn_ra_local__session_baton_t *) session_baton;
   
   if (! SVN_IS_VALID_REVNUM(revision))
-    SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revnum_to_fetch));
+    SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revnum_to_fetch,
+                                              sbaton->pool));
   else
     revnum_to_fetch = revision;
 
@@ -425,7 +427,7 @@ make_reporter (void *session_baton,
 
   /* Get the HEAD revision if one is not supplied. */
   if (! SVN_IS_VALID_REVNUM(revision))
-    SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revision));
+    SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revision, sbaton->pool));
 
   /* If OTHER_URL was provided, validate it and convert it into a
      regular filesystem path. */
