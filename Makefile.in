@@ -1,4 +1,3 @@
-
 top_builddir = .
 top_srcdir = @top_srcdir@
 abs_builddir = @abs_builddir@
@@ -92,6 +91,9 @@ INSTALL_SWIG_PY_LIB = $(INSTALL_LIB)
 
 PYTHON = @PYTHON@
 
+ECHO_C = @ECHO_C@
+ECHO_N = @ECHO_N@
+
 all: external-all local-all
 clean: external-clean local-clean
 distclean: external-distclean local-distclean
@@ -129,7 +131,7 @@ check: $(TEST_DEPS) @FS_TEST_DEPS@
 	list='$(TEST_PROGRAMS) @FS_TEST_PROGRAMS@'; for prog in $$list; do \
 	    progbase=`echo $$prog | sed 's?.*/??'` ; \
 	    progdir=`echo $$prog | sed 's?/[^/]*$$??'` ; \
-	    echo -n "Running all tests in $$progbase..." ; \
+	    echo $(ECHO_N) "Running all tests in $$progbase...$(ECHO_C)" ; \
 	    echo "START: $$progbase" >> $$logfile ; \
 	    if echo $$progbase | grep \\.py$$ > /dev/null; then  \
 		runprog="$(PYTHON) $(abs_srcdir)/$$prog" ; \
