@@ -9,6 +9,13 @@ Status of 1.1.0:
 
 Candidate changes:
 
+  * r10941
+    Fix perl bindings build to work with VPATH
+    Justification:
+      Make jerenkrantz happy!
+    Votes:
+      +1: breser
+
 Status of 1.1.1:
 ================
 
