@@ -152,7 +152,7 @@ copy_versioned_files (const char *from,
                   svn_string_t *executable;
                   const char *eol = NULL;
                   svn_boolean_t local_mod = FALSE;
-                  apr_time_t time;
+                  apr_time_t tm;
     
                   if (revision->kind != svn_opt_revision_working)
                     {
@@ -188,9 +188,9 @@ copy_versioned_files (const char *from,
 
                   if (local_mod)
                     /* Use the modified time from the working copy if the file */
-                    SVN_ERR (svn_io_file_affected_time (&time, copy_from, iterpool));
+                    SVN_ERR (svn_io_file_affected_time (&tm, copy_from, iterpool));
                   else
-                    time = entry->cmt_date;
+                    tm = entry->cmt_date;
 
                   if (keywords)
                     {
@@ -218,7 +218,7 @@ copy_versioned_files (const char *from,
                                               fmt,
                                               entry->cmt_rev),
                                 entry->url,
-                                time,
+                                tm,
                                 author,
                                 iterpool));
                     }
@@ -230,7 +230,7 @@ copy_versioned_files (const char *from,
                   if (executable)
                     SVN_ERR (svn_io_set_file_executable (copy_to, TRUE, FALSE, iterpool));
                 
-                  SVN_ERR (svn_io_set_file_affected_time (time, copy_to, iterpool));
+                  SVN_ERR (svn_io_set_file_affected_time (tm, copy_to, iterpool));
                 }
             }
 
