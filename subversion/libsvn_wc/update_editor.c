@@ -315,6 +315,7 @@ complete_directory (struct edit_baton *eb,
       const char *name;
       svn_wc_entry_t *current_entry;
 
+      svn_pool_clear (subpool);
       apr_hash_this (hi, &key, NULL, &val);
       name = key;
       current_entry = val;
@@ -323,7 +324,14 @@ complete_directory (struct edit_baton *eb,
         {
           if (eb->target_deleted)
             /* if the target of the update is 'deleted', we leave it
-               be.  see r6748, issue #919. */
+               be.  see r6748, issue #919.  
+
+               For those confused: eb->target_deleted is a global
+               state; it turns out that if we're here, the deleted
+               entry we're seeing *was* the target of the update.
+               close_dir() is being called on the anchor directory
+               (originally opened by open_root()), and thus we're
+               looking here at the deleted 'target' of the update. */
             continue;
           else
             svn_wc__entry_remove (entries, name);
@@ -332,7 +340,8 @@ complete_directory (struct edit_baton *eb,
         {
           const char *child_path = svn_path_join (bdi->path, name, subpool);
           
-          if (svn_wc__adm_missing (adm_access, child_path))
+          if ((svn_wc__adm_missing (adm_access, child_path))
+              && (current_entry->schedule != svn_wc_schedule_add))
             {
               svn_wc__entry_remove (entries, name);
               if (eb->notify_func)
@@ -344,8 +353,6 @@ complete_directory (struct edit_baton *eb,
                                      SVN_INVALID_REVNUM);
             }
         }
-
-      svn_pool_clear (subpool);
     }
   
   /* An atomic write of the whole entries file. */
