@@ -3,10 +3,12 @@
 ###########################################################################
 #                                                                         #
 #  This shell script demonstrates a backup/restore recipe for live        #
-#  Subversion repositories.  It is intended only as an example; the       #
-#  idea is that you can read over this script, understand how it works    #
-#  (it's extensively commented), and then implement real backup and       #
-#  restore scripts based on this recipe.                                  #
+#  Subversion repositories, using a standard full+incrementals process.   #
+#                                                                         #
+#  This script is intended only as an example; the idea is that you       #
+#  can read over it, understand how it works (it's extensively commented) #
+#  and then implement real backup and restore scripts based on this       #
+#  recipe.                                                                #
 #                                                                         #
 #  To reiterate: this is *not* a backup and restore solution.  It's       #
 #  really just documentation, in the form of code with comments.          #
