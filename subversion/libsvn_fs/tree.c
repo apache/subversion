@@ -3069,11 +3069,14 @@ typedef struct txdelta_baton_t
 } txdelta_baton_t;
 
 
-/* A trail-ready wrapper around svn_fs__dag_finalize_edits. */
+/* A trail-ready wrapper around svn_fs__dag_finalize_edits. 
+   This closes BATON->target_stream. */
 static svn_error_t *
 txn_body_finalize_edits (void *baton, trail_t *trail)
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
+
+  SVN_ERR (svn_stream_close (tb->target_stream));
   return svn_fs__dag_finalize_edits (tb->node, 
                                      tb->result_checksum,
                                      svn_fs_txn_root_name (tb->root,
@@ -3144,11 +3147,9 @@ window_consumer (svn_txdelta_window_t *window, void *baton)
   /* Is the window NULL?  If so, we're done, and we need to tell the
      dag subsystem that we're finished with our edits. */
   if (! window)
-    {
-      SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (tb->root),
-                                  txn_body_finalize_edits, tb, tb->pool));
-      SVN_ERR (svn_stream_close (tb->target_stream));
-    }
+    SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (tb->root),
+                                txn_body_finalize_edits, tb, tb->pool));
+
 
   return SVN_NO_ERROR;
 }
@@ -3287,6 +3288,7 @@ another_txn_body_finalize_edits (void *baton, trail_t *trail)
          (like svn_fs_apply_textdelta does now), it will need to be
          propagated through to here. */
 
+  SVN_ERR (svn_stream_close (tb->file_stream));
   return svn_fs__dag_finalize_edits (tb->node, 
                                      NULL,
                                      svn_fs_txn_root_name (tb->root, 
@@ -3316,8 +3318,7 @@ text_stream_closer (void *baton)
   SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (tb->root),
                               another_txn_body_finalize_edits, tb, tb->pool));
 
-  /* Close the -real- file stream. */
-  return svn_stream_close (tb->file_stream);
+  return SVN_NO_ERROR;
 }
 
 
