@@ -234,10 +234,9 @@ convfiles:
 bookdiff:
 	mkdir $(BDTMP)
 	svn co -N -r`cat LAST_UPDATED` $(COLLAB)/trunk/doc/book/book $(BDTMP)/eng
-	svn co -N $(COLLAB)/trunk/doc/translations/norwegian_nb/book $(BDTMP)/norw
 	for _ptd in $(BDFILES); do \
 		cat $(BDTMP)/eng/$$_ptd | bin/clean_files -e >>$(BDTMP)/eng.txt; \
-		cat $(BDTMP)/norw/$$_ptd | bin/clean_files -e >>$(BDTMP)/norw.txt; \
+		cat book/$$_ptd | bin/clean_files -e >>$(BDTMP)/norw.txt; \
 	done
 	vimdiff $(BDTMP)/norw.txt $(BDTMP)/eng.txt
 	@echo The temporary files are still in $(BDTMP)/ for you to play with.
