@@ -612,6 +612,42 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
 
 
 
+svn_error_t *
+svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
+                       apr_hash_t **original_props,
+                       const char *path,
+                       apr_pool_t *pool)
+{
+  svn_stringbuf_t *path_s, *prop_path, *prop_base_path;
+  apr_array_header_t *local_propchanges;
+  apr_hash_t *localprops = apr_hash_make (pool);
+  apr_hash_t *baseprops = apr_hash_make (pool);
+
+  path_s = svn_stringbuf_create (path, pool);
+
+  SVN_ERR (svn_wc__prop_path (&prop_path, path_s, 0, pool));
+  SVN_ERR (svn_wc__prop_base_path (&prop_base_path, path_s, 0, pool));
+
+  SVN_ERR (svn_wc__load_prop_file (prop_path->data, localprops, pool));
+  SVN_ERR (svn_wc__load_prop_file (prop_base_path->data, baseprops, pool));
+
+  /* At this point, if either of the propfiles are non-existent, then
+     the corresponding hash is simply empty. */
+
+  SVN_ERR (svn_wc__get_local_propchanges (&local_propchanges,
+                                          localprops,
+                                          baseprops,
+                                          pool));
+
+  if (original_props != NULL)
+    *original_props = baseprops;
+
+  *propchanges = local_propchanges;
+
+  return SVN_NO_ERROR;
+}
+
+
 
 
 

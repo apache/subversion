@@ -150,12 +150,11 @@ diff_dir_deleted (const char *path,
 }
   
 static svn_error_t *
-diff_prop_changed (const char *path,
-                   const char *name,
-                   const svn_string_t *value,
-                   void *diff_baton)
+diff_props_changed (const char *path,
+                    const apr_array_header_t *propchanges,
+                    void *diff_baton)
 {
-  /* ### todo:  send feedback to app */
+  /* ### todo:  send feedback to app. */
   return SVN_NO_ERROR;
 }
 
@@ -168,7 +167,7 @@ diff_callbacks =
     diff_file_deleted,
     diff_dir_added,
     diff_dir_deleted,
-    diff_prop_changed
+    diff_props_changed
   };
 
 
@@ -388,22 +387,24 @@ merge_dir_deleted (const char *path,
 }
   
 static svn_error_t *
-merge_prop_changed (const char *path,
-                    const char *name,
-                    const svn_string_t *value,
-                    void *baton)
+merge_props_changed (const char *path,
+                     const apr_array_header_t *propchanges,
+                     void *baton)
 {
-  int len;
+  apr_array_header_t *entry_props, *wc_props, *regular_props;
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
 
-  enum svn_prop_kind kind = svn_property_kind (&len, name);
+  SVN_ERR (svn_categorize_props (propchanges,
+                                 &entry_props, &wc_props, &regular_props,
+                                 subpool));
 
-  if (kind == svn_prop_regular_kind)
-    SVN_ERR (svn_client_propset (name, value, path, FALSE, subpool));
-  
+  /* We only want to merge "regular" version properties:  by
+     definition, 'svn merge' shouldn't touch any data within .svn/  */
+  if (regular_props)
+    SVN_ERR (svn_wc_merge_prop_diffs (path, regular_props, subpool));
+
   svn_pool_destroy (subpool);
-  return SVN_NO_ERROR;
   return SVN_NO_ERROR;
 }
 
@@ -416,7 +417,7 @@ merge_callbacks =
     merge_file_deleted,
     merge_dir_added,
     merge_dir_deleted,
-    merge_prop_changed
+    merge_props_changed
   };
 
 
@@ -847,6 +848,9 @@ svn_client_merge (const svn_delta_editor_t *after_editor,
   /* ### TODO:  when PATH1 and PATH2 represent -files- instead of
      directories, we can fetch fulltexts manually and run
      svn_wc_merge() by itself.
+
+     What about properties?  How do we "merge" those?  Isn't there an
+     existing svn_wc API for that, given a list of changes to merge?
 
      In PATH1 and PATH2 are directories, then we do the fancy
      diff-editor thing:*/

@@ -368,8 +368,72 @@ svn_wc__get_existing_prop_reject_file (const svn_string_t **reject_file,
 
 /*** Merging propchanges into the working copy ***/
 
-/* This routine is called by the working copy update editor, by both
-   close_file() and close_dir(): */
+svn_error_t *
+svn_wc_merge_prop_diffs (const char *path,
+                         const apr_array_header_t *propchanges,
+                         apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+  apr_hash_t *ignored_conflicts;
+  svn_wc_entry_t *entry;
+  svn_stringbuf_t *path_s, *parent_s, *basename_s, *log_accum;
+  apr_file_t *log_fp = NULL;
+
+  SVN_ERR (svn_wc_entry (&entry, svn_stringbuf_create (path, pool), pool));
+  if (entry == NULL)
+    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+                              "Can't merge props into '%s':"
+                              "it's not under revision control.", path);
+
+  /* Notice that we're not using svn_path_split_if_file(), because
+     that looks at the actual working file.  It's existence shouldn't
+     matter, so we're looking at entry->kind instead. */
+  switch (entry->kind)
+    {
+    case svn_node_dir:
+      parent_s = svn_stringbuf_create (path, pool);
+      basename_s = NULL;
+      break;
+    case svn_node_file:
+      path_s = svn_stringbuf_create (path, pool);
+      svn_path_split (path_s, &parent_s, &basename_s, pool);
+    default:
+      return SVN_NO_ERROR; /* ### svn_node_none or svn_node_unknown */
+    }
+
+  SVN_ERR (svn_wc_lock (parent_s, 0, pool));
+  SVN_ERR (svn_wc__open_adm_file (&log_fp, parent_s, SVN_WC__ADM_LOG,
+                                  (APR_WRITE | APR_CREATE), /* not excl */
+                                  pool));
+  log_accum = svn_stringbuf_create ("", pool);
+  
+  /* Note that while this routine does the "real" work, it's only
+     prepping tempfiles and writing log commands.  */
+  SVN_ERR (svn_wc__merge_prop_diffs (parent_s->data,
+                                     basename_s ? basename_s->data : NULL,
+                                     propchanges,
+                                     pool,
+                                     &log_accum,
+                                     &ignored_conflicts));
+
+  apr_err = apr_file_write_full (log_fp, log_accum->data, 
+                                 log_accum->len, NULL);
+  if (apr_err)
+    {
+      apr_file_close (log_fp);
+      return svn_error_createf (apr_err, 0, NULL, pool,
+                                "svn_wc_merge_prop_diffs:"
+                                "error writing log for %s", path);
+    }
+
+  SVN_ERR (svn_wc__close_adm_file (log_fp, parent_s, SVN_WC__ADM_LOG,
+                                   1, /* sync */ pool));
+  SVN_ERR (svn_wc__run_log (parent_s, pool));
+
+  SVN_ERR (svn_wc_unlock (parent_s, pool));
+
+  return SVN_NO_ERROR;
+}
 
 
 svn_error_t *

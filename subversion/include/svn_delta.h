@@ -977,11 +977,11 @@ typedef struct svn_diff_callbacks_t
   svn_error_t *(*dir_deleted) (const char *path,
                                void *diff_baton);
   
-  /* A property NAME attached to PATH changed value to VALUE. */
-  svn_error_t *(*prop_changed) (const char *path,
-                                const char *name,
-                                const svn_string_t *value,
-                                void *diff_baton);
+  /* A list of property changes (PROPCHANGES) was applied to PATH.
+     The array is a list of (svn_prop_t *) structures. */
+  svn_error_t *(*props_changed) (const char *path,
+                                 const apr_array_header_t *propchanges,
+                                 void *diff_baton);
 
 } svn_diff_callbacks_t;
 
