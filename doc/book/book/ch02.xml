@@ -395,8 +395,8 @@ U button.c
         trees.  Imagine an array of revision numbers, starting at 0,
         stretching from left to right.  Each revision number has a
         filesystem tree hanging below it, and each tree is a
-        "snapshot" of the way the repository looked after each
-        commit. </para>
+        <quote>snapshot</quote> of the way the repository looked after
+        each commit. </para>
       
       <figure id="svn-ch2-dia7">
         <title>The repository</title>
