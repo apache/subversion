@@ -1046,6 +1046,8 @@ svn_io_run_cmd (const char *path,
   apr_status_t apr_err;
   apr_proc_t cmd_proc;
   apr_procattr_t *cmdproc_attr;
+  apr_exit_why_e exitwhy_val;
+  int exitcode_val;
 
   /* Create the process attributes. */
   apr_err = apr_procattr_create (&cmdproc_attr, pool); 
@@ -1117,13 +1119,32 @@ svn_io_run_cmd (const char *path,
        "svn_io_run_cmd: error starting %s process",
        cmd);
 
+  /* The Win32 apr_proc_wait doesn't set this... */
+  exitwhy_val = APR_PROC_EXIT;
+
   /* Wait for the cmd command to finish. */
-  apr_err = apr_proc_wait (&cmd_proc, exitcode, exitwhy, APR_WAIT);
+  apr_err = apr_proc_wait (&cmd_proc, &exitcode_val, &exitwhy_val, APR_WAIT);
   if (APR_STATUS_IS_CHILD_NOTDONE (apr_err))
     return svn_error_createf
       (apr_err, 0, NULL, pool,
        "svn_io_run_cmd: error waiting for %s process",
        cmd);
+
+  if (exitwhy)
+    *exitwhy = exitwhy_val;
+  else if (! APR_PROC_CHECK_EXIT(exitwhy_val))
+    return svn_error_createf
+      (SVN_ERR_EXTERNAL_PROGRAM, 0, NULL, pool,
+       "svn_io_run_cmd: error exitwhy %d for process %s",
+       exitwhy_val, cmd);
+
+  if (exitcode)
+    *exitcode = exitcode_val;
+  else if (exitcode_val != 0)
+    return svn_error_createf
+      (SVN_ERR_EXTERNAL_PROGRAM, 0, NULL, pool,
+       "svn_io_run_cmd: error exitcode %d for process %s",
+       exitcode_val, cmd);
 
   return SVN_NO_ERROR;
 }
