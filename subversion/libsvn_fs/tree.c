@@ -495,9 +495,15 @@ make_path_mutable (svn_fs_root_t *root,
 {
   dag_node_t *clone;
 
-  /* Is the node mutable already?  */
-  if (svn_fs__dag_is_mutable (parent_path->node))
-    return SVN_NO_ERROR;
+  {
+    svn_boolean_t is_mutable;
+
+    /* Is the node mutable already?  */
+    SVN_ERR (svn_fs__dag_check_mutable (&is_mutable,
+                                        parent_path->node, trail));
+    if (is_mutable)
+      return SVN_NO_ERROR;
+  }
 
   /* Are we trying to clone the root, or somebody's child node?  */
   if (parent_path->parent)

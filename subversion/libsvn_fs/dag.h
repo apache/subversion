@@ -76,8 +76,10 @@ svn_fs_t *svn_fs__dag_get_fs (dag_node_t *node);
 const svn_fs_id_t *svn_fs__dag_get_id (dag_node_t *node);
 
 
-/* Return true iff NODE is mutable.  */
-int svn_fs__dag_is_mutable (dag_node_t *node);
+/* Set IS_MUTABLE to TRUE iff NODE is mutable */
+svn_error_t *svn_fs__dag_check_mutable (svn_boolean_t *is_mutable,
+                                        dag_node_t *node,
+                                        trail_t *trail);
 
 /* Return true iff NODE is a file/directory/copy.  */
 int svn_fs__dag_is_file (dag_node_t *node);
