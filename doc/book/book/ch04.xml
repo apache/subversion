@@ -140,8 +140,8 @@
       collaborators.  You'll see exactly how this works later
       on.</para>
 
-  <sect2 id="svn-ch-4-sect-2.1">
-    <title>Creating a Branch</title> 
+    <sect2 id="svn-ch-4-sect-2.1">
+      <title>Creating a Branch</title> 
       
       <para>Creating a branch is very simple&mdash;you make a copy of
         the project in the repository using the <command>svn

@@ -149,7 +149,7 @@
         <term><command>svn status</command></term>
         <listitem>
           <para>Shows you any local changes you've made (see <xref
-            linkend="svn-ch-3-sect-4.3.1"/>)</para>
+            linkend="svn-ch-3-sect-5.3.1"/>)</para>
         </listitem>
       </varlistentry>
 
@@ -157,7 +157,7 @@
         <term><command>svn diff</command></term>
         <listitem>
           <para>Shows you the details of your changes (see <xref
-            linkend="svn-ch-3-sect-4.3.2"/>)</para>
+            linkend="svn-ch-3-sect-5.3.2"/>)</para>
         </listitem>
       </varlistentry>
 
@@ -165,7 +165,7 @@
         <term><command>svn revert</command></term>
         <listitem>
           <para>Removes your local changes (see <xref
-            linkend="svn-ch-3-sect-4.3.3"/>)</para>
+            linkend="svn-ch-3-sect-5.3.3"/>)</para>
         </listitem>
       </varlistentry>
 
@@ -310,7 +310,7 @@ X    Resource is external to this working copy (comes from another
       whole sentence about it.</para>
 
     <para>For a more detailed discussion of <command>svn
-      status</command>, see <xref linkend="svn-ch-3-sect-4.3.1" />.</para>
+      status</command>, see <xref linkend="svn-ch-3-sect-5.3.1" />.</para>
 
 
   </sect1>
@@ -386,7 +386,7 @@ X    Resource is external to this working copy (comes from another
       tangible.  It remembers that a file is in a state of conflict,
       and won't allow you to commit your changes until you run
       <command>svn resolved</command>.  See <xref
-      linkend="svn-ch-3-sect-4.4"/> for more details.</para>
+      linkend="svn-ch-3-sect-5.4"/> for more details.</para>
   </sect1>
 
   <!-- ================================================================= -->
