@@ -1,11 +1,11 @@
-# New ports collection makefile for: apr-devel
+# New ports collection makefile for: apr
 # Date created:		19 February 2002
 # Whom:			Garrett Rooney <rooneg@electricjellyfish.net>
 #
 # $FreeBSD$
 #
 
-PORTNAME=	apr-devel
+PORTNAME=	apr
 PORTVERSION=	20020707163141
 CATEGORIES=	devel
 MASTER_SITES=	http://www.apache.org/dist/apr/not-released/
@@ -22,7 +22,7 @@ GNU_CONFIGURE=	yes
 WRKSRC=	${WRKDIR}
 
 pre-fetch:
-	@${SH} pkg-install apr-devel PRE-INSTALL
+	@${SH} pkg-install apr PRE-INSTALL
 
 pre-configure:
 	@(cd ${WRKDIR}/apr/ && ./buildconf)
