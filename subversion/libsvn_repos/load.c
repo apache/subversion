@@ -801,22 +801,16 @@ new_revision_record (void **revision_baton,
   struct parse_baton *pb = parse_baton;
   struct revision_baton *rb;
   svn_revnum_t head_rev;
-  svn_revnum_t *old_rev, *new_rev;
 
   rb = make_revision_baton (headers, pb, pool);
   SVN_ERR (svn_fs_youngest_rev (&head_rev, pb->fs, pool));
 
-  /* Calculate the revision 'offset' for finding copyfrom sources.
+  /* FIXME: This is a lame fallback loading multiple segments of dump in
+     several seperate operations. It is highly susceptible to race conditions.
+     Calculate the revision 'offset' for finding copyfrom sources.
      It might be positive or negative. */
   rb->rev_offset = (rb->rev) - (head_rev + 1);
  
-  /* Store the new revision for finding copyfrom sources. */
-  old_rev = apr_palloc (pb->pool, sizeof(svn_revnum_t) * 2);
-  new_rev = old_rev + 1;
-  *old_rev = rb->rev;
-  *new_rev = head_rev + 1;
-  apr_hash_set (pb->rev_map, old_rev, sizeof(svn_revnum_t), new_rev);
-
   if (rb->rev > 0)
     {
       /* Create a new fs txn. */
@@ -1110,13 +1104,18 @@ close_revision (void *baton)
   struct revision_baton *rb = baton;
   struct parse_baton *pb = rb->pb;
   const char *conflict_msg = NULL;
-  svn_revnum_t new_rev;
+  svn_revnum_t *old_rev, *new_rev;
   svn_error_t *err;
 
   if (rb->rev <= 0)
     return SVN_NO_ERROR;
 
-  err = svn_fs_commit_txn (&conflict_msg, &new_rev, rb->txn, rb->pool);
+  /* Prepare memory for saving dump-rev -> in-repos-rev mapping. */
+  old_rev = apr_palloc (pb->pool, sizeof(svn_revnum_t) * 2);
+  new_rev = old_rev + 1;
+  *old_rev = rb->rev;
+
+  err = svn_fs_commit_txn (&conflict_msg, &(*new_rev), rb->txn, rb->pool);
 
   if (err)
     {
@@ -1127,29 +1126,34 @@ close_revision (void *baton)
         return err;
     }
 
+  /* After a successful commit, must record the dump-rev -> in-repos-rev
+     mapping, so that copyfrom instructions in the dump file can look up the
+     correct repository revision to copy from. */
+  apr_hash_set (pb->rev_map, old_rev, sizeof(svn_revnum_t), new_rev);
+
   /* Deltify the predecessors of paths changed in this revision. */
-  SVN_ERR (svn_fs_deltify_revision (pb->fs, new_rev, rb->pool));
+  SVN_ERR (svn_fs_deltify_revision (pb->fs, *new_rev, rb->pool));
 
   /* Grrr, svn_fs_commit_txn rewrites the datestamp property to the
      current clock-time.  We don't want that, we want to preserve
      history exactly.  Good thing revision props aren't versioned! */
   if (rb->datestamp)
-    SVN_ERR (svn_fs_change_rev_prop (pb->fs, new_rev,
+    SVN_ERR (svn_fs_change_rev_prop (pb->fs, *new_rev,
                                      SVN_PROP_REVISION_DATE, rb->datestamp,
                                      rb->pool));
 
-  if (new_rev == rb->rev)
+  if (*new_rev == rb->rev)
     {
       SVN_ERR (svn_stream_printf (pb->outstream, rb->pool,
                                   _("\n------- Committed revision %ld"
-                                    " >>>\n\n"), new_rev));
+                                    " >>>\n\n"), *new_rev));
     }
   else
     {
       SVN_ERR (svn_stream_printf (pb->outstream, rb->pool,
                                   _("\n------- Committed new rev %ld"
                                     " (loaded from original rev %ld"
-                                    ") >>>\n\n"), new_rev, rb->rev));
+                                    ") >>>\n\n"), *new_rev, rb->rev));
     }
 
   return SVN_NO_ERROR;
