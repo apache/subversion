@@ -230,10 +230,17 @@ static svn_error_t *
 relegate_external (const char *path, apr_pool_t *pool)
 {
   svn_error_t *err;
-  err = svn_wc_remove_from_revision_control (path,
+  svn_wc_adm_access_t *adm_access;
+
+  SVN_ERR (svn_wc_adm_open (&adm_access, path, TRUE, pool));
+  err = svn_wc_remove_from_revision_control (adm_access,
                                              SVN_WC_ENTRY_THIS_DIR,
                                              TRUE,
                                              pool);
+
+  /* ### Ugly. Unlock only if not going to return an error. Revisit */
+  if (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
+    SVN_ERR (svn_wc_adm_close (adm_access));
 
   if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
     {
@@ -369,13 +376,20 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
          just be renamed to a new one. */ 
 
       svn_error_t *err;
+      svn_wc_adm_access_t *adm_access;
+
+      SVN_ERR (svn_wc_adm_open (&adm_access, path, TRUE, ib->pool));
 
       /* We don't use relegate_external() here, because we know that
          nothing else in this externals description (at least) is
          going to need this directory, and therefore it's better to
          leave stuff where the user expects it. */
       err = svn_wc_remove_from_revision_control
-        (path, SVN_WC_ENTRY_THIS_DIR, TRUE, ib->pool);
+        (adm_access, SVN_WC_ENTRY_THIS_DIR, TRUE, ib->pool);
+
+      /* ### Ugly. Unlock only if not going to return an error. Revisit */
+      if (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
+        SVN_ERR (svn_wc_adm_close (adm_access));
 
       if (err && (err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD))
         return err;

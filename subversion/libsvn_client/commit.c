@@ -487,7 +487,7 @@ get_ra_editor (void **ra_baton,
                                         is_commit, !is_commit,
                                         auth_baton, pool));
   
-  /* Fetch RA commit editor, giving it svn_wc_process_committed(). */
+  /* Fetch RA commit editor */
   return (*ra_lib)->get_commit_editor (*session, editor, edit_baton, 
                                        committed_rev, committed_date, 
                                        committed_author, log_msg);
@@ -897,10 +897,6 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   /* Make a note that our commit is finished. */
   commit_in_progress = FALSE;
 
-  /* Unlock the locked directories. */
-  if (! ((unlock_err = unlock_dirs (locked_dirs, pool))))
-    locked_dirs = NULL;
-  
   /* Bump the revision if the commit went well. */
   if (! cmt_err)
     {
@@ -914,13 +910,23 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
           svn_client_commit_item_t *item
             = ((svn_client_commit_item_t **) commit_items->elts)[i];
           svn_boolean_t recurse = FALSE;
+          const char *adm_access_path;
+          svn_wc_adm_access_t *adm_access;
+
+          if (item->kind == svn_node_dir)
+            adm_access_path = item->path;
+          else
+            svn_path_split_nts (item->path, &adm_access_path, NULL, pool);
+          adm_access = apr_hash_get (locked_dirs, adm_access_path,
+                                     APR_HASH_KEY_STRING);
           
           if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD) 
               && (item->kind == svn_node_dir)
               && (item->copyfrom_url))
             recurse = TRUE;
 
-          if ((bump_err = svn_wc_process_committed (item->path, recurse,
+          if ((bump_err = svn_wc_process_committed (item->path, adm_access,
+                                                    recurse,
                                                     committed_rev, 
                                                     committed_date,
                                                     committed_author, 
@@ -936,6 +942,10 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
       if (! bump_err)
         svn_pool_destroy (subpool);
     }
+
+  /* Unlock the locked directories. */
+  if (! ((unlock_err = unlock_dirs (locked_dirs, pool))))
+    locked_dirs = NULL;
 
   /* If we were committing into XML, close the xml file. */      
   if (use_xml)

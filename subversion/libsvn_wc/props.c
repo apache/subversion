@@ -421,7 +421,7 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
 
   SVN_ERR (svn_wc__close_adm_file (log_fp, parent, SVN_WC__ADM_LOG,
                                    1, /* sync */ pool));
-  SVN_ERR (svn_wc__run_log (parent, pool));
+  SVN_ERR (svn_wc__run_log (adm_access, pool));
 
   SVN_ERR (svn_wc_adm_close (adm_access));
 
