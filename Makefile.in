@@ -101,22 +101,32 @@ install: external-install local-install
 
 local-all: @BUILD_RULES@ @SWIG_BUILD_RULES@
 
-local-clean: doc-clean
+# clean everything but the bulky test output, returning the system back
+# to before 'make' was run.
+fast-clean: doc-clean
 	@list='$(BUILD_DIRS)'; for i in $$list; do \
 	    echo "Cleaning $$i ..." ; \
 	    (cd $$i && rm -f *.o *.lo *.la *.la-a && rm -rf .libs) ; \
 	done
 	rm -f $(CLEAN_FILES)
 
-local-distclean: local-clean check-clean
+# clean all but bulky test output, returning to before './configure' was run.
+fast-distclean: fast-clean
 	rm -f Makefile config.cache config.log config.status libtool \
 		svn_private_config.h
 
+# clean everything out, returning to before './autogen.sh' was run.
 local-extraclean: local-distclean
 	rm -f build-outputs.mk svn_private_config.h.in configure \
 		ac-helpers/config.guess ac-helpers/config.sub \
 		ac-helpers/libtool.m4 ac-helpers/ltconfig \
 		ac-helpers/ltmain.sh
+
+# clean everything, including test output.
+local-clean: fast-clean check-clean
+
+# clean everything, including test output.
+local-distclean: fast-distclean check-clean
 
 local-install: @INSTALL_RULES@ @SWIG_INSTALL_RULES@
 
