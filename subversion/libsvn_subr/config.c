@@ -158,13 +158,13 @@ svn_config_read_all (svn_config_t **cfgp, apr_pool_t *pool)
       return svn_error_createf
         (apr_err, 0, NULL, pool,
          "svn_config_read_all: unable to get home dir for user %s.", username);
-   
+
     /* ### No compelling reason to use svn's path lib here. */
     usr_cfg_path = apr_psprintf
       (pool, "%s/%s/%s", homedir, SVN_CONFIG__DIRECTORY, SVN_CONFIG__FILE);
-   
-   svn_config_merge (*cfgp, usr_cfg_path, FALSE);
- }
+
+    SVN_ERR (svn_config_merge (*cfgp, usr_cfg_path, FALSE));
+  }
 
   return SVN_NO_ERROR;
 }

@@ -317,7 +317,6 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
 
         case '\n':              /* Empty line */
           ++ctx.line;
-          ch = getc(fd);
           break;
 
         case EOF:               /* End of file or read error */
