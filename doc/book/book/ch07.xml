@@ -53,7 +53,7 @@
         <tbody>
           <row>
             <entry>libsvn_auth</entry> 
-            <entry>Authentication and authorization functionality</entry>
+            <entry>Authentication functionality</entry>
           </row>
           <row>
             <entry>libsvn_client</entry> 

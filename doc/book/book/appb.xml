@@ -90,8 +90,6 @@ $ cvs2svn.py -s /new/svn/repos /cvs/repos
       Subversion's history, before it became self-hosting), it takes
       about 30 minutes, and commits about 3000 revisions to the
       Subversion repository.</para>
-        
-    <para>### Does the subversion repository get auto-created?</para>
 
   </sect1>
 
