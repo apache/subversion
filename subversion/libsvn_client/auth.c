@@ -283,6 +283,14 @@ simple_prompt_next_creds (void **credentials,
 }
 
 
+static const svn_auth_provider_t simple_prompt_provider = {
+  SVN_AUTH_CRED_SIMPLE,
+  simple_prompt_first_creds,
+  simple_prompt_next_creds,
+  NULL,
+};
+
+
 /* Public API */
 void
 svn_client_get_simple_prompt_provider (const svn_auth_provider_t **provider,
@@ -293,18 +301,12 @@ svn_client_get_simple_prompt_provider (const svn_auth_provider_t **provider,
                                        apr_pool_t *pool)
 {
   prompt_provider_baton_t *pb = apr_pcalloc (pool, sizeof(*pb));
-  svn_auth_provider_t *prov = apr_palloc (pool, sizeof (*prov));
-
-  prov->cred_kind = SVN_AUTH_CRED_SIMPLE;
-  prov->first_credentials = simple_prompt_first_creds;
-  prov->next_credentials = simple_prompt_next_creds;
-  prov->save_credentials = NULL;
 
   pb->prompt_func = prompt_func;
   pb->prompt_baton = prompt_baton;
   pb->retry_limit = retry_limit;
 
-  *provider = prov;
+  *provider = &simple_prompt_provider;
   *provider_baton = pb;
 }
 
@@ -385,6 +387,14 @@ username_prompt_next_creds (void **credentials,
 }
 
 
+static const svn_auth_provider_t username_prompt_provider = {
+  SVN_AUTH_CRED_USERNAME,
+  username_prompt_first_creds,
+  username_prompt_next_creds,
+  NULL,
+};
+
+
 /* Public API */
 void
 svn_client_get_username_prompt_provider (const svn_auth_provider_t **provider,
@@ -395,17 +405,11 @@ svn_client_get_username_prompt_provider (const svn_auth_provider_t **provider,
                                          apr_pool_t *pool)
 {
   prompt_provider_baton_t *pb = apr_pcalloc (pool, sizeof(*pb));
-  svn_auth_provider_t *prov = apr_palloc (pool, sizeof (*prov));
-
-  prov->cred_kind = SVN_AUTH_CRED_USERNAME;
-  prov->first_credentials = username_prompt_first_creds;
-  prov->next_credentials = username_prompt_next_creds;
-  prov->save_credentials = NULL;
 
   pb->prompt_func = prompt_func;
   pb->prompt_baton = prompt_baton;
   pb->retry_limit = retry_limit;
 
-  *provider = prov;
+  *provider = &username_prompt_provider;
   *provider_baton = pb;
 }
