@@ -1550,7 +1550,7 @@ svn_wc_status_t *svn_wc_dup_status (svn_wc_status_t *orig_stat,
  *
  * The other available results for the @c text_status field are more
  * straightforward in their meanings.  See the comments on the
- * @c svn_wc_status_kind structure above for some hints.
+ * @c svn_wc_status_kind structure for some hints.
  */
 svn_error_t *svn_wc_status2 (svn_wc_status2_t **status, 
                              const char *path, 

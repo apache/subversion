@@ -393,9 +393,9 @@ typedef svn_error_t *
  *
  * @a cert_info is a structure describing the server cert that was
  * presented to the client, and @a failures is a bitmask that
- * describes exactly why the cert could not be automatically validated.
- * (See the #define error flag values below.)  @a realm is a string
- * that can be used in the prompt string.
+ * describes exactly why the cert could not be automatically validated,
+ * composed from the constants SVN_AUTH_SSL_* (@c SVN_AUTH_SSL_NOTYETVALID
+ * etc.).  @a realm is a string that can be used in the prompt string.
  *
  * If @a may_save is FALSE, the auth system does not allow the credentials
  * to be saved (to disk). A prompt function shall not ask the user if the
