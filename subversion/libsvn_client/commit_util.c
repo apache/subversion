@@ -394,6 +394,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
   do
     {
       svn_wc_entry_t *entry;
+      svn_stringbuf_t *url;
 
       /* Add the relative portion of our full path (if there are no
          relative paths, TARGET will just be PARENT_DIR for a single
@@ -402,29 +403,76 @@ svn_client__harvest_committables (apr_hash_t **committables,
         svn_path_add_component (target, 
                                 (((svn_stringbuf_t **) targets->elts)[i]));
 
-      /* Read the entry for PATH.  We require it, and require it to
-         have a URL. */
+      /* No entry?  This TARGET isn't even under version control! */
       SVN_ERR (svn_wc_entry (&entry, target, pool));
       if (! entry)
         return svn_error_create 
           (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool, target->data);
+      
       if (! entry->url)
-        return svn_error_createf 
-          (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool, 
-           "Entry for `%s' has no URL.  Perhaps you're committing "
-           "inside of an unversioned (or not-yet-versioned) directory?",
-           target->data);
+        {
+          svn_stringbuf_t *parent, *basename;
+          svn_wc_entry_t *p_entry;
+          svn_boolean_t wc_root;
+
+          /* An entry with no URL should only come about when it is
+             scheduled for addition or replacement. */
+          if (! ((entry->schedule == svn_wc_schedule_add)
+                 || (entry->schedule == svn_wc_schedule_replace)))
+            return svn_error_createf 
+              (SVN_ERR_WC_CORRUPT, 0, NULL, pool, 
+               "Entry for `%s' has no URL, yet is not scheduled for addition",
+               target->data);
+
+          /* Check for WC-root-ness. */
+          SVN_ERR (svn_wc_is_wc_root (&wc_root, target, pool));
+          if (wc_root)
+            return svn_error_createf 
+              (SVN_ERR_ILLEGAL_TARGET, 0, NULL, pool, 
+               "Entry for `%s' has no URL, and none can be derived for it",
+               target->data);
+          
+          /* See if the parent is under version control (corruption if it
+             isn't) and possibly scheduled for addition (illegal target if
+             it is). */
+          svn_path_split (target, &parent, &basename, pool);
+          if (svn_path_is_empty (parent))
+            parent = svn_stringbuf_create (".", pool);
+          SVN_ERR (svn_wc_entry (&p_entry, parent, pool));
+          if (! p_entry)
+            return svn_error_createf 
+              (SVN_ERR_WC_CORRUPT, 0, NULL, pool, 
+               "Entry for `%s' has no URL, and its parent directory does"
+               "not appear to be under version control", target->data);
+          if ((p_entry->schedule == svn_wc_schedule_add)
+              || (p_entry->schedule == svn_wc_schedule_replace))
+            return svn_error_createf 
+              (SVN_ERR_ILLEGAL_TARGET, 0, NULL, pool, 
+               "`%s' is the child an unversioned (or not-yet-versioned)"
+               "directory.  Try committing the directory itself",
+               target->data);
+          
+          /* Manufacture a URL for this TARGET. */
+          url = svn_stringbuf_dup (p_entry->url, pool);
+          svn_path_add_component (url, basename);
+        }
+      else
+        url = entry->url;
+      
+      /* If this entry is marked as 'copied' but scheduled normally, then
+         it should be the child of something else marked for addition with
+         history. */
       if ((entry->copied) && (entry->schedule == svn_wc_schedule_normal))
         return svn_error_createf 
           (SVN_ERR_ILLEGAL_TARGET, 0, NULL, pool, 
-           "Entry for `%s' is marked as `copied'.  Perhaps you're committing "
+           "Entry for `%s' is marked as `copied' but is not itself scheduled "
+           "for addition.  Perhaps you're committing a target that this "
            "inside of an unversioned (or not-yet-versioned) directory?",
            target->data);
 
       /* Handle our TARGET. */
       SVN_ERR (harvest_committables (*committables, *locked_dirs, target, 
-                                     entry->url, NULL, entry, 
-                                     FALSE, FALSE, pool));
+                                     url, NULL, entry, FALSE, FALSE, pool));
 
       /* Reset our base path for the next iteration, and increment our
          counter. */

@@ -192,6 +192,43 @@ def commit_one_file(sbox):
   
 #----------------------------------------------------------------------
 
+def commit_one_new_file(sbox):
+  "commit one newly added file."
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Make standard slew of changes to working copy.
+  if make_standard_slew_of_changes(wc_dir): return 1
+
+  # Create expected output tree.
+  gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo') 
+  output_list = [ [gloo_path, None, {}, {'verb' : 'Adding' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Created expected status tree.
+  status_list = get_standard_status_list(wc_dir) # pre-commit status
+  for item in status_list:
+    item[3]['repos_rev'] = '2'     # post-commit status
+    if (item[0] == gloo_path):
+      item[3]['wc_rev'] = '2'
+      item[3]['status'] = '_ '
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  # Commit the one file.
+  return svntest.actions.run_and_verify_commit (wc_dir,
+                                                expected_output_tree,
+                                                expected_status_tree,
+                                                None,
+                                                None, None,
+                                                None, None,
+                                                gloo_path)
+
+  
+#----------------------------------------------------------------------
+
 def commit_multiple_targets(sbox):
   "commit multiple targets"
 
@@ -1256,6 +1293,7 @@ def commit_rmd_and_deleted_file(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               commit_one_file,
+              commit_one_new_file,
               commit_multiple_targets,
               commit_multiple_targets_2,
               commit_inclusive_dir,
