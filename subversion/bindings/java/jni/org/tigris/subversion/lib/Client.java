@@ -29,7 +29,7 @@ package org.tigris.subversion.lib;
  */
 
 import org.tigris.subversion.SubversionException;
-import java.util.Hashtable;
+import java.util.Vector;
 import java.util.Date;
 
 public interface Client {
@@ -159,9 +159,9 @@ public interface Client {
    * children.  (See svn_wc.h:svn_wc_statuses() for more verbiage on
    * this).
    */
-  public Hashtable status(String path, boolean descend,
-    boolean get_all, boolean update )
-    throws SubversionException;
+  public Vector status(String path, boolean descend,
+		       boolean get_all, boolean update )
+      throws SubversionException;
 
   /**
    * Given a PATH to a working copy file, return a path to a temporary
