@@ -286,7 +286,7 @@ svn_error_t *svn_fs__get_txn_list (char ***names_p,
           names = tmp;
         }
 
-      names[names_count++] = key.data;
+      names[names_count++] = apr_pstrndup(pool, key.data, key.size);
     }
 
   names[names_count] = NULL;
