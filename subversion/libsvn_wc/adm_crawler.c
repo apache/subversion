@@ -97,7 +97,7 @@ get_next_child_subdir (svn_string_t **name,
   do {
     /* Read the next entry from dirhandle, get its name and type, too. */
     status = apr_readdir (dirhandle);
-    if (status = APR_ENOENT) /* no more entries */
+    if (status == APR_ENOENT) /* no more entries */
       {
         *name = NULL;
         return SVN_NO_ERROR;
