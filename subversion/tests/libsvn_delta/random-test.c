@@ -95,6 +95,70 @@ static void init_params (apr_uint32_t *seed,
 }
 
 
+/* Open and close temporary files. This hack is necessary because, on
+   Windows, tmpfile() may fail if the root directory of the current
+   drive isn't writable by the user. And guess what? There's no way to
+   tell tmpfile to use $TMP or $TEMP or $TMPDIR. */
+typedef struct tempfile_magic_t tempfile_magic_t;
+struct tempfile_magic_t
+{
+  FILE* fp;
+  char* name;
+  tempfile_magic_t *next;
+};
+
+static tempfile_magic_t *first = NULL;
+
+static FILE *
+open_temp (void)
+{
+  tempfile_magic_t *magic = calloc (1, sizeof *magic);
+  assert (magic != NULL);
+  magic->name = tempnam (NULL, NULL);
+  magic->fp = fopen (magic->name, "w+b");
+
+  magic->next = first;
+  first = magic;
+  return magic->fp;
+}
+
+static tempfile_magic_t *
+unlink_magic_struct (FILE *fp)
+{
+  tempfile_magic_t **rover = &first;
+  while (*rover)
+    {
+      if ((*rover)->fp == fp)
+        {
+          tempfile_magic_t *rv = *rover;
+          *rover = rv->next;
+          return rv;
+        }
+
+      rover = &(*rover)->next;
+    }
+
+  return NULL;
+}
+
+static int
+close_temp (FILE *fp)
+{
+  tempfile_magic_t *magic = unlink_magic_struct (fp);
+  int rc1, rc2;
+
+  /* This is a precaution against people passing in an ordinary FILE*
+     that's not part of the magic struct. */
+  assert (magic != NULL);
+
+  rc1 = fclose (magic->fp);
+  rc2 = remove (magic->name);
+  free (magic->name);
+  free (magic);
+  return (rc1 ? rc1 : rc2);
+}
+
+
 /* Generate a temporary file containing sort-of random data.  Diffs
    between files of random data tend to be pretty boring, so we try to
    make sure there are a bunch of common substrings between two runs
@@ -111,7 +175,7 @@ generate_random_file (apr_uint32_t maxlen,
   FILE *fp;
   unsigned long r;
 
-  fp = tmpfile ();
+  fp = open_temp ();
   assert (fp != NULL);
   len = svn_test_rand (seed) % maxlen; /* We might go over this by a bit.  */
   while (len > 0)
@@ -190,7 +254,7 @@ copy_tempfile (FILE *fp)
   FILE *newfp;
   int c;
 
-  newfp = tmpfile ();
+  newfp = open_temp ();
   assert (newfp != NULL);
   rewind(fp);
   while ((c = getc (fp)) != EOF)
@@ -236,7 +300,7 @@ random_test (const char **msg,
                                            random_bytes, bytes_range,
                                            dump_files);
       FILE *source_copy = copy_tempfile (source);
-      FILE *target_regen = tmpfile ();
+      FILE *target_regen = open_temp ();
 
       svn_txdelta_stream_t *txdelta_stream;
       svn_txdelta_window_handler_t handler;
@@ -276,10 +340,10 @@ random_test (const char **msg,
 
       SVN_ERR (compare_files (target, target_regen, dump_files));
 
-      fclose(source);
-      fclose(target);
-      fclose(source_copy);
-      fclose(target_regen);
+      close_temp (source);
+      close_temp (target);
+      close_temp (source_copy);
+      close_temp (target_regen);
     }
 
   return SVN_NO_ERROR;
@@ -327,7 +391,7 @@ do_random_combine_test (const char **msg,
                                            dump_files);
       FILE *source_copy = copy_tempfile (source);
       FILE *middle_copy = copy_tempfile (middle);
-      FILE *target_regen = tmpfile ();
+      FILE *target_regen = open_temp ();
 
       svn_txdelta_stream_t *txdelta_stream_A;
       svn_txdelta_stream_t *txdelta_stream_B;
@@ -413,12 +477,12 @@ do_random_combine_test (const char **msg,
 
       SVN_ERR (compare_files (target, target_regen, dump_files));
 
-      fclose(source);
-      fclose(middle);
-      fclose(target);
-      fclose(source_copy);
-      fclose(middle_copy);
-      fclose(target_regen);
+      close_temp (source);
+      close_temp (middle);
+      close_temp (target);
+      close_temp (source_copy);
+      close_temp (middle_copy);
+      close_temp (target_regen);
     }
 
   return SVN_NO_ERROR;
