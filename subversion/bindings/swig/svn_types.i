@@ -118,9 +118,7 @@
     $2 = PyString_GET_SIZE($input);
 }
 
-%typemap(java, arginit) (const char *PTR, apr_size_t LEN) "char c;"
-
-%typemap(java, in) (const char *PTR, apr_size_t LEN) {
+%typemap(java, in) (const char *PTR, apr_size_t LEN) (char c) {
     if ($input != NULL) {
 	    /* Do not use GetPrimitiveArrayCritical and ReleasePrimitiveArrayCritical
 		* since the Subversion client might block the thread */
@@ -134,8 +132,10 @@
 	}
 }
 
-%typemap(java, argfree) (const char *PTR, apr_size_t LEN) {
-	if ($input != NULL)	JCALL3(jenv, ReleaseByteArrayElements, @input, $1, JNI_ABORT); 	
+%typemap(java, freearg) (const char *PTR, apr_size_t LEN) {
+	if ($input != NULL) {
+           JCALL3(ReleaseByteArrayElements, jenv, $input, $1, JNI_ABORT);
+        }
 	/* Since this buffer is used as input JNI_ABORT is safe as "mode" above*/
 }
 
