@@ -221,12 +221,16 @@ svn_fs__delete_rep_if_mutable (svn_fs_t *fs,
 
 svn_error_t *
 svn_fs__rep_read_range (svn_fs_t *fs,
-                        skel_t *rep,
+                        const char *rep_key,
                         char *buf,
                         apr_size_t offset,
                         apr_size_t *len,
                         trail_t *trail)
 {
+  skel_t *rep;
+        
+  SVN_ERR (svn_fs__read_rep (&rep, fs, rep_key, trail));
+
   if (rep_is_fulltext (rep))
     {
       const char *string_key = apr_pstrndup (trail->pool,

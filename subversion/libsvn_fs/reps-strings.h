@@ -81,17 +81,11 @@ svn_error_t *svn_fs__delete_rep_if_mutable (svn_fs_t *fs,
 
 
 /* Copy into BUF *LEN bytes starting at OFFSET from the string
-   represented by REP in FS, as part of TRAIL.
+   represented via REP_KEY in FS, as part of TRAIL.
    
-   The number of bytes actually copied is stored in *LEN.
-
-   Justificatory note: REP is a skel instead of a key because our
-   callers want to cache the representation once and then use it for
-   every iteration of a reading loop.  If this function took a key,
-   then each iteration would have an extra database hit to read the
-   rep.  Comments welcome.  */
+   The number of bytes actually copied is stored in *LEN.  */
 svn_error_t *svn_fs__rep_read_range (svn_fs_t *fs,
-                                     skel_t *rep,
+                                     const char *rep_key,
                                      char *buf,
                                      apr_size_t offset,
                                      apr_size_t *len,
