@@ -671,7 +671,7 @@ locks_dir_walker (void *baton,
   const char *rel_path;
   svn_lock_t *lock;
   struct dir_walker_baton *dir_baton;
-  dir_baton = (struct dir_walker_baton *)baton;
+  dir_baton = baton;
   
   /* Skip directories. */
   if (finfo->filetype == APR_DIR)
@@ -679,7 +679,7 @@ locks_dir_walker (void *baton,
 
   /* Get the repository-relative path for the lock. */
   SVN_ERR (base_path_to_lock_file (&base_path, dir_baton->fs, pool));
-  rel_path = path + strlen(base_path);
+  rel_path = path + strlen (base_path);
 
   /* Get lock */
   SVN_ERR (svn_fs_fs__get_lock_from_path (&lock, dir_baton->fs, 
@@ -704,10 +704,10 @@ svn_fs_fs__get_locks (apr_hash_t **locks,
   baton.locks = *locks;
 
   /* Compose the absolute/rel path to PATH */
-  SVN_ERR (abs_path_to_lock_file(&abs_path, fs, path, pool));
+  SVN_ERR (abs_path_to_lock_file (&abs_path, fs, path, pool));
 
   SVN_ERR (svn_io_dir_walk (abs_path, APR_FINFO_TYPE, locks_dir_walker,
-                            (void *)&baton, pool));
+                            &baton, pool));
 
   return SVN_NO_ERROR;
 }
