@@ -24,6 +24,7 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_fs.h"
+#include "svn_repos.h"
 #include "svn_ra.h"
 
 
@@ -47,7 +48,11 @@ typedef struct svn_ra_local__session_baton_t
   svn_stringbuf_t *repos_path;
   svn_stringbuf_t *fs_path;
 
-  /* A repository filesystem */
+  /* A repository object. */
+  svn_repos_t *repos;
+
+  /* The filesystem object associated with REPOS above (for
+     convenience). */
   svn_fs_t *fs;
 
 } svn_ra_local__session_baton_t;

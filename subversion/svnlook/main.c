@@ -30,6 +30,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_repos.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_time.h"
@@ -61,6 +62,7 @@ typedef enum svnlook_cmd_t
 
 typedef struct svnlook_ctxt_t
 {
+  svn_repos_t *repos;
   svn_fs_t *fs;
   svn_boolean_t is_revision;
   svn_revnum_t rev_id;
@@ -117,7 +119,7 @@ get_root (svn_fs_root_t **root,
 /* Generate a generic delta tree. */
 static svn_error_t *
 generate_delta_tree (svn_repos_node_t **tree,
-                     svn_fs_t *fs,
+                     svn_repos_t *repos,
                      svn_fs_root_t *root, 
                      svn_revnum_t base_rev, 
                      apr_pool_t *pool)
@@ -127,6 +129,7 @@ generate_delta_tree (svn_repos_node_t **tree,
   void *edit_baton;
   apr_hash_t *src_revs = apr_hash_make (pool);
   apr_pool_t *edit_pool = svn_pool_create (pool);
+  svn_fs_t *fs = svn_repos_fs (repos);
 
   /* Get the current root. */
   apr_hash_set (src_revs, "", APR_HASH_KEY_STRING, &base_rev);
@@ -135,7 +138,7 @@ generate_delta_tree (svn_repos_node_t **tree,
   SVN_ERR (svn_fs_revision_root (&base_root, fs, base_rev, pool));
 
   /* Request our editor. */
-  SVN_ERR (svn_repos_node_editor (&editor, &edit_baton, fs,
+  SVN_ERR (svn_repos_node_editor (&editor, &edit_baton, repos,
                                   base_root, root, pool, edit_pool));
   
   /* Drive our editor. */
@@ -749,7 +752,7 @@ do_dirs_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
        "Transaction '%s' is not based on a revision.  How odd.",
        c->txn_name);
   
-  SVN_ERR (generate_delta_tree (&tree, c->fs, root, base_rev_id, pool)); 
+  SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, pool)); 
   if (tree)
     print_dirs_changed_tree (tree, svn_stringbuf_create ("", pool), pool);
 
@@ -778,7 +781,7 @@ do_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
        "Transaction '%s' is not based on a revision.  How odd.",
        c->txn_name);
   
-  SVN_ERR (generate_delta_tree (&tree, c->fs, root, base_rev_id, pool)); 
+  SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, pool)); 
   if (tree)
     print_changed_tree (tree, svn_stringbuf_create ("", pool), pool);
 
@@ -806,7 +809,7 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
        "Transaction '%s' is not based on a revision.  How odd.",
        c->txn_name);
   
-  SVN_ERR (generate_delta_tree (&tree, c->fs, root, base_rev_id, pool)); 
+  SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, pool)); 
   if (tree)
     {
       SVN_ERR (svn_fs_revision_root (&base_root, c->fs, base_rev_id, pool));
@@ -827,7 +830,7 @@ do_tree (svnlook_ctxt_t *c, svn_boolean_t show_ids, apr_pool_t *pool)
   svn_repos_node_t *tree;
 
   SVN_ERR (get_root (&root, c, pool));
-  SVN_ERR (generate_delta_tree (&tree, c->fs, root, 0, pool)); 
+  SVN_ERR (generate_delta_tree (&tree, c->repos, root, 0, pool)); 
   if (tree)
     {
       if (show_ids)
@@ -1015,7 +1018,8 @@ main (int argc, const char * const *argv)
   pool = svn_pool_create (NULL);
 
   /* Open the repository with the given path. */
-  INT_ERR (svn_repos_open (&(c.fs), repos_path, pool));
+  INT_ERR (svn_repos_open (&(c.repos), repos_path, pool));
+  c.fs = svn_repos_fs (c.repos);
 
   /* If this is a transaction, open the transaction. */
   if (! c.is_revision)
@@ -1076,8 +1080,8 @@ main (int argc, const char * const *argv)
   if (c.txn && (! c.is_revision))
     svn_fs_close_txn (c.txn);
 
-  if (c.fs)
-    svn_fs_close_fs (c.fs);
+  if (c.repos)
+    svn_repos_close (c.repos);
 
   svn_pool_destroy (pool);
   apr_terminate ();

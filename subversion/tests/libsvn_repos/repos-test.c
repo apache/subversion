@@ -38,6 +38,7 @@ dir_deltas (const char **msg,
             svn_boolean_t msg_only,
             apr_pool_t *pool)
 { 
+  svn_repos_t *repos;
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root, *revision_root;
@@ -66,8 +67,8 @@ dir_deltas (const char **msg,
      S is identical to T when it is all said and done.  */
 
   /* Create a filesystem and repository. */
-  SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-dir-deltas", pool));
+  SVN_ERR (svn_test__create_repos (&repos, "test-repo-dir-deltas", pool));
+  fs = svn_repos_fs (repos);
   expected_trees[revision_count].num_entries = 0;
   expected_trees[revision_count++].entries = 0;
 
@@ -77,7 +78,7 @@ dir_deltas (const char **msg,
 
   /* Create and commit the greek tree. */
   SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
-  SVN_ERR (svn_repos_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn));
   SVN_ERR (svn_fs_close_txn (txn));
 
   /***********************************************************************/
@@ -137,7 +138,7 @@ dir_deltas (const char **msg,
     };
     SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 10, pool));
   }
-  SVN_ERR (svn_repos_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn));
   SVN_ERR (svn_fs_close_txn (txn));
 
   /***********************************************************************/
@@ -191,7 +192,7 @@ dir_deltas (const char **msg,
     };
     SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 4, pool));
   }
-  SVN_ERR (svn_repos_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn));
   SVN_ERR (svn_fs_close_txn (txn));
 
   /***********************************************************************/
@@ -243,7 +244,7 @@ dir_deltas (const char **msg,
   SVN_ERR (svn_fs_copy (revision_root, "A/epsilon",
                         txn_root, "A/B/epsilon",
                         pool));
-  SVN_ERR (svn_repos_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn));
   SVN_ERR (svn_fs_close_txn (txn));
 
   /***********************************************************************/
@@ -352,6 +353,7 @@ dir_deltas (const char **msg,
     }
 
   svn_pool_destroy (subpool);
+  svn_repos_close (repos);
   return SVN_NO_ERROR;
 }
 

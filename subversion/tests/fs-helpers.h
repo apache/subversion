@@ -21,6 +21,7 @@
 #include <apr_pools.h>
 #include "svn_error.h"
 #include "svn_fs.h"
+#include "svn_repos.h"
 #include "svn_delta.h"
 #include "svn_test.h"
 
@@ -37,12 +38,20 @@ svn_error_t *
 svn_test__fs_new (svn_fs_t **fs_p, apr_pool_t *pool);
 
 
-/* Create a berkeley db repository in a subdir NAME and return a new
+/* Create a berkeley db filesystem in a subdir NAME and return a new
    FS object which points to it.  */
 svn_error_t *
-svn_test__create_fs_and_repos (svn_fs_t **fs_p,
-                               const char *name, 
-                               apr_pool_t *pool);
+svn_test__create_fs (svn_fs_t **fs_p,
+                     const char *name, 
+                     apr_pool_t *pool);
+
+
+/* Create a berkeley db repository in a subdir NAME and return a new
+   REPOS object which points to it.  */
+svn_error_t *
+svn_test__create_repos (svn_repos_t **repos_p,
+                        const char *name,
+                        apr_pool_t *pool);
 
 
 /* Read all data from a generic read STREAM, and return it in STRING.

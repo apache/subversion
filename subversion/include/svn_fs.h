@@ -122,6 +122,12 @@ svn_error_t *svn_fs_create_berkeley (svn_fs_t *fs, const char *path);
 svn_error_t *svn_fs_open_berkeley (svn_fs_t *fs, const char *path);
 
 
+/* Return the path to FS's repository, allocated in POOL.
+   Note: this is just what was passed to svn_fs_create_berkeley() or
+   svn_fs_open_berkeley() -- might be absolute, might not.  */
+const char *svn_fs_berkeley_path (svn_fs_t *fs, apr_pool_t *pool);
+
+
 /* Register an error handling function for Berkeley DB error messages.
    If a Berkeley DB error occurs, the filesystem will call HANDLER
    with two strings: an error message prefix, which will be zero, and
@@ -544,58 +550,6 @@ svn_error_t *svn_fs_change_txn_prop (svn_fs_txn_t *txn,
                                      const char *name,
                                      const svn_string_t *value,
                                      apr_pool_t *pool);
-
-
-
-/* Repository paths. */
-
-/**********************************************************************
- *                                                                    *
- * See issue #428; a lot of this code will get moved to libsvn_repos. *
- *                                                                    *
- **********************************************************************/
-
-/* Return the path to FS's repository, allocated in POOL.
-   Note: this is just what was passed to svn_fs_create_berkeley() or
-   svn_fs_open_berkeley() -- might be absolute, might not.  */
-const char *svn_fs_repository (svn_fs_t *fs, apr_pool_t *pool);
-
-/* Return the path to FS's Berkeley DB environment, allocated in POOL.
-   Note: although most of these path-accessor functions will go away
-   or be moved to libsvn_repos when issue #428 is resolved, this one
-   should stay right here. */
-const char *svn_fs_db_env (svn_fs_t *fs, apr_pool_t *pool);
-
-/* Return the path to FS's configuration directory, allocated in POOL. */
-const char *svn_fs_conf_dir (svn_fs_t *fs, apr_pool_t *pool);
-
-/* Return path to FS's lock directory or db lockfile, respectively,
-   allocated in POOL. */
-const char *svn_fs_lock_dir (svn_fs_t *fs, apr_pool_t *pool);
-const char *svn_fs_db_lockfile (svn_fs_t *fs, apr_pool_t *pool);
-
-/* Return the path to FS's hook directory, allocated in POOL. */
-const char *svn_fs_hook_dir (svn_fs_t *fs, apr_pool_t *pool);
-
-/* Return the path to FS's start-commit hook program, allocated in
-   POOL. */
-const char *svn_fs_start_commit_hook (svn_fs_t *fs, apr_pool_t *pool);
-
-/* Return the path to FS's pre-commit hook program, allocated in
-   POOL. */
-const char *svn_fs_pre_commit_hook (svn_fs_t *fs, apr_pool_t *pool);
-
-/* Return the path to FS's post-commit hook program, allocated in
-   POOL. */
-const char *svn_fs_post_commit_hook (svn_fs_t *fs, apr_pool_t *pool);
-
-/* Return the path to FS's read sentinel program, allocated in
-   POOL. */
-const char *svn_fs_read_sentinel_hook (svn_fs_t *fs, apr_pool_t *pool);
-
-/* Return the path to FS's write sentinel program, allocated in
-   POOL. */
-const char *svn_fs_write_sentinel_hook (svn_fs_t *fs, apr_pool_t *pool);
 
 
 

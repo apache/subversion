@@ -130,9 +130,13 @@ open (void **session_baton,
                                     session->pool));
 
   /* Open the filesystem at located at environment `repos_path' */
-  SVN_ERR (svn_repos_open (&(session->fs),
+  SVN_ERR (svn_repos_open (&(session->repos),
                            session->repos_path->data,
                            session->pool));
+
+  /* Cache the filesystem object from the repos here for
+     convenience. */
+  session->fs = svn_repos_fs (session->repos);
 
   /* ### ra_local is not going to bother to store the username in the
      working copy.  This means that the username will always be
@@ -156,9 +160,11 @@ close (void *session_baton)
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
 
-  /* Close the repository filesystem, which will free any memory used
-     by it. */
-  SVN_ERR (svn_fs_close_fs (baton->fs));
+  /* Close the repository, which will free any memory used by it. */
+  SVN_ERR (svn_repos_close (baton->repos));
+  
+  /* NULL out the FS cache so no one is tempted to use it again. */
+  baton->fs = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -188,7 +194,7 @@ get_dated_revision (void *session_baton,
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
 
-  SVN_ERR (svn_repos_dated_revision (revision, baton->fs, tm, baton->pool));
+  SVN_ERR (svn_repos_dated_revision (revision, baton->repos, tm, baton->pool));
 
   return SVN_NO_ERROR;
 }
@@ -313,7 +319,7 @@ do_update (void *session_baton,
   return svn_repos_begin_report (report_baton,
                                  revnum_to_update_to,
                                  sbaton->username,
-                                 sbaton->fs, sbaton->fs_path,
+                                 sbaton->repos, sbaton->fs_path,
                                  update_target, TRUE,
                                  recurse,
                                  update_editor, update_baton,
@@ -342,7 +348,7 @@ do_status (void *session_baton,
   return svn_repos_begin_report (report_baton,
                                  revnum_to_update_to,
                                  sbaton->username,
-                                 sbaton->fs, sbaton->fs_path,
+                                 sbaton->repos, sbaton->fs_path,
                                  status_target, FALSE,
                                  recurse,
                                  status_editor, status_baton,
@@ -386,7 +392,7 @@ get_log (void *session_baton,
       (*((svn_stringbuf_t **)(apr_array_push (abs_paths)))) = abs_path;
     }
 
-  return svn_repos_get_logs (sbaton->fs,
+  return svn_repos_get_logs (sbaton->repos,
                              abs_paths,
                              start,
                              end,

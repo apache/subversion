@@ -475,7 +475,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   fs_base = svn_stringbuf_create(resource->info->repos_path, resource->pool);
   uc.anchor = fs_base->data;
   serr = svn_repos_begin_report(&rbaton, revnum, repos->username, 
-                                repos->fs, fs_base, target, FALSE, recurse,
+                                repos->repos, fs_base, target, FALSE, recurse,
                                 editor, &uc, resource->pool);
 
   if (serr != NULL)

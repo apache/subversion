@@ -31,7 +31,7 @@
 #include "svn_delta.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
-
+#include "repos.h"
 
 
 /*** Node creation and assembly structures and routines. ***/
@@ -360,7 +360,7 @@ change_dir_prop (void *parent_baton,
 svn_error_t *
 svn_repos_node_editor (const svn_delta_edit_fns_t **editor,
                        void **edit_baton,
-                       svn_fs_t *fs,
+                       svn_repos_t *repos,
                        svn_fs_root_t *base_root,
                        svn_fs_root_t *root,
                        apr_pool_t *node_pool,
@@ -385,7 +385,7 @@ svn_repos_node_editor (const svn_delta_edit_fns_t **editor,
   my_edit_baton = apr_pcalloc (pool, sizeof (*my_edit_baton));
   my_edit_baton->node_pool = node_pool;
   my_edit_baton->pool = pool;
-  my_edit_baton->fs = fs;
+  my_edit_baton->fs = repos->fs;
   my_edit_baton->root = root;
   my_edit_baton->base_root = base_root;
 

@@ -28,7 +28,7 @@
 #include "svn_delta.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
-
+#include "repos.h"
 
 /* In the code below, "hook" is sometimes used indiscriminately to
    mean either hook or sentinel.  */
@@ -64,15 +64,15 @@ run_cmd_with_output (const char *cmd,
 }
 
 
-/* Run the start-commit hook for FS.  Use POOL for any temporary
+/* Run the start-commit hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  */
 static svn_error_t *
-run_start_commit_hook (svn_fs_t *fs,
+run_start_commit_hook (svn_repos_t *repos,
                        const char *user,
                        apr_pool_t *pool)
 {
   enum svn_node_kind kind;
-  const char *hook = svn_fs_start_commit_hook (fs, pool);
+  const char *hook = svn_repos_start_commit_hook (repos, pool);
 
   if ((! svn_io_check_path (svn_stringbuf_create (hook, pool), &kind, pool)) 
       && (kind == svn_node_file))
@@ -81,7 +81,7 @@ run_start_commit_hook (svn_fs_t *fs,
       const char *args[4];
 
       args[0] = hook;
-      args[1] = svn_fs_repository (fs, pool);
+      args[1] = svn_repos_path (repos, pool);
       args[2] = user;
       args[3] = NULL;
 
@@ -97,15 +97,15 @@ run_start_commit_hook (svn_fs_t *fs,
 }
 
 
-/* Run the pre-commit hook for FS.  Use POOL for any temporary
+/* Run the pre-commit hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  */
 static svn_error_t  *
-run_pre_commit_hook (svn_fs_t *fs,
+run_pre_commit_hook (svn_repos_t *repos,
                      const char *txn_name,
                      apr_pool_t *pool)
 {
   enum svn_node_kind kind;
-  const char *hook = svn_fs_pre_commit_hook (fs, pool);
+  const char *hook = svn_repos_pre_commit_hook (repos, pool);
 
   if ((! svn_io_check_path (svn_stringbuf_create (hook, pool), &kind, pool)) 
       && (kind == svn_node_file))
@@ -116,7 +116,7 @@ run_pre_commit_hook (svn_fs_t *fs,
       const char *args[4];
 
       args[0] = hook;
-      args[1] = svn_fs_repository (fs, pool);
+      args[1] = svn_repos_path (repos, pool);
       args[2] = txn_name;
       args[3] = NULL;
 
@@ -138,15 +138,15 @@ run_pre_commit_hook (svn_fs_t *fs,
 }
 
 
-/* Run the post-commit hook for FS.  Use POOL for any temporary
+/* Run the post-commit hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, run SVN_ERR_REPOS_HOOK_FAILURE.  */
 static svn_error_t  *
-run_post_commit_hook (svn_fs_t *fs,
+run_post_commit_hook (svn_repos_t *repos,
                       svn_revnum_t rev,
                       apr_pool_t *pool)
 {
   enum svn_node_kind kind;
-  const char *hook = svn_fs_post_commit_hook (fs, pool);
+  const char *hook = svn_repos_post_commit_hook (repos, pool);
 
   if ((! svn_io_check_path (svn_stringbuf_create (hook, pool), &kind, pool)) 
       && (kind == svn_node_file))
@@ -155,7 +155,7 @@ run_post_commit_hook (svn_fs_t *fs,
       const char *args[4];
 
       args[0] = hook;
-      args[1] = svn_fs_repository (fs, pool);
+      args[1] = svn_repos_path (repos, pool);
       args[2] = apr_psprintf (pool, "%lu", rev);
       args[3] = NULL;
 
@@ -176,25 +176,31 @@ run_post_commit_hook (svn_fs_t *fs,
 
 svn_error_t *
 svn_repos_fs_commit_txn (const char **conflict_p,
+                         svn_repos_t *repos,
                          svn_revnum_t *new_rev,
                          svn_fs_txn_t *txn)
 {
-  svn_fs_t *fs = svn_fs_txn_fs (txn);
+  svn_fs_t *fs = repos->fs;
   apr_pool_t *pool = svn_fs_txn_pool (txn);
+
+  if (fs != svn_fs_txn_fs (txn))
+    return svn_error_createf 
+      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+       "Transaction does not belong to given repository's filesystem");
 
   /* Run pre-commit hooks. */
   {
     const char *txn_name;
 
     SVN_ERR (svn_fs_txn_name (&txn_name, txn, pool));
-    SVN_ERR (run_pre_commit_hook (fs, txn_name, pool));
+    SVN_ERR (run_pre_commit_hook (repos, txn_name, pool));
   }
 
   /* Commit. */
   SVN_ERR (svn_fs_commit_txn (conflict_p, new_rev, txn));
 
   /* Run post-commit hooks. */
-  SVN_ERR (run_post_commit_hook (fs, *new_rev, pool));
+  SVN_ERR (run_post_commit_hook (repos, *new_rev, pool));
 
   return SVN_NO_ERROR;
 }
@@ -202,17 +208,17 @@ svn_repos_fs_commit_txn (const char **conflict_p,
 
 svn_error_t *
 svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
-                                   svn_fs_t *fs,
+                                   svn_repos_t *repos,
                                    svn_revnum_t rev,
                                    const char *author,
                                    svn_string_t *log_msg,
                                    apr_pool_t *pool)
 {
   /* Run start-commit hooks. */
-  SVN_ERR (run_start_commit_hook (fs, author, pool));
+  SVN_ERR (run_start_commit_hook (repos, author, pool));
 
   /* Begin the transaction. */
-  SVN_ERR (svn_fs_begin_txn (txn_p, fs, rev, pool));
+  SVN_ERR (svn_fs_begin_txn (txn_p, repos->fs, rev, pool));
 
   /* We pass the author and log message to the filesystem by adding
      them as properties on the txn.  Later, when we commit the txn,
@@ -242,7 +248,7 @@ svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
 
 svn_error_t *
 svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
-                                   svn_fs_t *fs,
+                                   svn_repos_t *repos,
                                    svn_revnum_t rev,
                                    const char *author,
                                    apr_pool_t *pool)
@@ -250,7 +256,7 @@ svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
   /* ### someday, we might run a read-hook here. */
 
   /* Begin the transaction. */
-  SVN_ERR (svn_fs_begin_txn (txn_p, fs, rev, pool));
+  SVN_ERR (svn_fs_begin_txn (txn_p, repos->fs, rev, pool));
 
   /* We pass the author to the filesystem by adding it as a property
      on the txn. */

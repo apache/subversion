@@ -88,7 +88,7 @@ write_new_rep (const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
-  SVN_ERR (svn_test__create_fs_and_repos
+  SVN_ERR (svn_test__create_fs
            (&fs, "test-repo-write-new-rep", pool));
 
   /* Set up transaction baton */
@@ -127,7 +127,7 @@ write_rep (const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
-  SVN_ERR (svn_test__create_fs_and_repos
+  SVN_ERR (svn_test__create_fs
            (&fs, "test-repo-write-rep", pool));
 
   /* Set up transaction baton */
@@ -179,7 +179,7 @@ read_rep (const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
-  SVN_ERR (svn_test__create_fs_and_repos
+  SVN_ERR (svn_test__create_fs
            (&fs, "test-repo-read-rep", pool));
 
   /* Set up transaction baton */
@@ -264,7 +264,7 @@ delete_rep (const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
-  SVN_ERR (svn_test__create_fs_and_repos
+  SVN_ERR (svn_test__create_fs
            (&fs, "test-repo-delete-rep", pool));
 
   /* Set up transaction baton */
@@ -472,7 +472,7 @@ test_strings (const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
-  SVN_ERR (svn_test__create_fs_and_repos
+  SVN_ERR (svn_test__create_fs
            (&fs, "test-repo-test-strings", pool));
 
   /* The plan (after each step below, verify the size and contents of
@@ -578,7 +578,7 @@ write_null_string (const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
-  SVN_ERR (svn_test__create_fs_and_repos
+  SVN_ERR (svn_test__create_fs
            (&fs, "test-repo-test-strings", pool));
 
   args.fs = fs;
@@ -605,7 +605,7 @@ abort_string (const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
-  SVN_ERR (svn_test__create_fs_and_repos
+  SVN_ERR (svn_test__create_fs
            (&fs, "test-repo-abort-string", pool));
 
   /* The plan:
@@ -674,7 +674,7 @@ copy_string (const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
-  SVN_ERR (svn_test__create_fs_and_repos
+  SVN_ERR (svn_test__create_fs
            (&fs, "test-repo-copy-string", pool));
 
   /*  Write a new string (string1). */

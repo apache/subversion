@@ -939,7 +939,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
     repos->username = "anonymous";
 
   /* open the SVN FS */
-  serr = svn_repos_open(&(repos->fs), fs_path, r->pool);
+  serr = svn_repos_open(&(repos->repos), fs_path, r->pool);
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -947,6 +947,9 @@ static dav_error * dav_svn_get_resource(request_rec *r,
                                               "Could not open the SVN "
                                               "filesystem at %s", fs_path));
     }
+
+  /* cache the filesystem object */
+  repos->fs = svn_repos_fs (repos->repos);
 
   /* capture warnings during cleanup of the FS */
   svn_fs_set_warning_func(repos->fs, log_warning, r);
@@ -1050,8 +1053,8 @@ static int is_our_resource(const dav_resource *res1,
   if (res1->info->repos != res2->info->repos)
     {      
       /* close the old, redundant filesystem */
-      (void) svn_fs_close_fs(res2->info->repos->fs);
-      
+      (void) svn_repos_close(res2->info->repos->repos);
+
       /* have res2 point to res1's filesystem */
       res2->info->repos = res1->info->repos;
 

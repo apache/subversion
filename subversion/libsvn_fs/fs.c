@@ -359,478 +359,13 @@ allocate_env (svn_fs_t *fs)
 
 
 
-/* Creating a new Berkeley DB-based filesystem.  */
-
-/* Return APR_SUCCESS if directory PATH is an empty directory,
-   APR_EGENERAL if it is not empty, or the associated apr error if
-   there was any trouble finding out whether or not it's empty.  */
-static apr_status_t
-dir_empty (const char *path, apr_pool_t *pool)
-{
-  apr_status_t apr_err, retval;
-  apr_dir_t *dir;
-  apr_finfo_t finfo;
-  
-  apr_err = apr_dir_open (&dir, path, pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
-    return apr_err;
-      
-  /* All systems return "." and ".." as the first two files, so read
-     past them unconditionally. */
-  apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir);
-  if (! APR_STATUS_IS_SUCCESS (apr_err)) return apr_err;
-  apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir);
-  if (! APR_STATUS_IS_SUCCESS (apr_err)) return apr_err;
-
-  /* Now, there should be nothing left.  If there is something left,
-     return EGENERAL. */
-  apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir);
-  if (APR_STATUS_IS_ENOENT (apr_err))
-    retval = APR_SUCCESS;
-  else if (APR_STATUS_IS_SUCCESS (apr_err))
-    retval = APR_EGENERAL;
-  else
-    retval = apr_err;
-
-  apr_err = apr_dir_close (dir);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
-    return apr_err;
-
-  return retval;
-}
-
-
-
-/* Paths. */
-
+/* Filesystem creation/opening. */
 const char *
-svn_fs_repository (svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_berkeley_path (svn_fs_t *fs, apr_pool_t *pool)
 {
   return apr_pstrdup (pool, fs->path);
 }
 
-
-const char *
-svn_fs_db_env (svn_fs_t *fs, apr_pool_t *pool)
-{
-  return apr_pstrdup (pool, fs->env_path);
-}
-
-
-const char *
-svn_fs_conf_dir (svn_fs_t *fs, apr_pool_t *pool)
-{
-  return apr_pstrdup (pool, fs->conf_path);
-}
-
-
-const char *
-svn_fs_lock_dir (svn_fs_t *fs, apr_pool_t *pool)
-{
-  return apr_pstrdup (pool, fs->lock_path);
-}
-
-
-const char *
-svn_fs_db_lockfile (svn_fs_t *fs, apr_pool_t *pool)
-{
-  return apr_pstrcat (pool,
-                      fs->lock_path, "/" SVN_FS__REPOS_DB_LOCKFILE,
-                      NULL);
-}
-
-
-const char *
-svn_fs_hook_dir (svn_fs_t *fs, apr_pool_t *pool)
-{
-  return apr_pstrdup (pool, fs->hook_path);
-}
-
-
-const char *
-svn_fs_start_commit_hook (svn_fs_t *fs, apr_pool_t *pool)
-{
-  return apr_pstrcat (fs->pool,
-                      fs->hook_path, "/" SVN_FS__REPOS_HOOK_START_COMMIT,
-                      NULL);
-}
-
-
-const char *
-svn_fs_pre_commit_hook (svn_fs_t *fs, apr_pool_t *pool)
-{
-  return apr_pstrcat (fs->pool,
-                      fs->hook_path, "/" SVN_FS__REPOS_HOOK_PRE_COMMIT,
-                      NULL);
-}
-
-
-const char *
-svn_fs_post_commit_hook (svn_fs_t *fs, apr_pool_t *pool)
-{
-  return apr_pstrcat (fs->pool,
-                      fs->hook_path, "/" SVN_FS__REPOS_HOOK_POST_COMMIT,
-                      NULL);
-}
-
-
-const char *
-svn_fs_read_sentinel_hook (svn_fs_t *fs, apr_pool_t *pool)
-{
-  return apr_pstrcat (fs->pool,
-                      fs->hook_path, "/" SVN_FS__REPOS_HOOK_READ_SENTINEL,
-                      NULL);
-}
-
-
-const char *
-svn_fs_write_sentinel_hook (svn_fs_t *fs, apr_pool_t *pool)
-{
-  return apr_pstrcat (fs->pool,
-                      fs->hook_path, "/" SVN_FS__REPOS_HOOK_WRITE_SENTINEL,
-                      NULL);
-}
-
-
-static svn_error_t *
-create_locks (svn_fs_t *fs, const char *path)
-{
-  apr_status_t apr_err;
-
-  /* Create the locks directory. */
-  fs->lock_path = apr_psprintf (fs->pool, "%s/%s",
-                                path, SVN_FS__REPOS_LOCK_DIR);
-  apr_err = apr_dir_make (fs->lock_path, APR_OS_DEFAULT, fs->pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
-    return svn_error_createf (apr_err, 0, 0, fs->pool,
-                              "creating lock dir `%s'", fs->lock_path);
-
-  /* Create the DB lockfile under that directory. */
-  {
-    apr_file_t *f = NULL;
-    apr_size_t written;
-    const char *contents;
-    const char *lockfile_path;
-
-    lockfile_path = svn_fs_db_lockfile (fs, fs->pool);
-    apr_err = apr_file_open (&f, lockfile_path,
-                             (APR_WRITE | APR_CREATE | APR_EXCL),
-                             APR_OS_DEFAULT,
-                             fs->pool);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "creating lock file `%s'", lockfile_path);
-    
-    contents = 
-      "DB lock file, representing locks on the versioned filesystem.\n"
-      "\n"
-      "All accessors -- both readers and writers -- of the repository's\n"
-      "Berkeley DB environment take out shared locks on this file, and\n"
-      "each accessor removes its lock when done.  If and when the DB\n"
-      "recovery procedure is run, the recovery code takes out an\n"
-      "exclusive lock on this file, so we can be sure no one else is\n"
-      "using the DB during the recovery.\n"
-      "\n"
-      "You should never have to edit or remove this file.\n";
-    
-    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "writing lock file `%s'", lockfile_path);
-    
-    apr_err = apr_file_close (f);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "closing lock file `%s'", lockfile_path);
-  }
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-create_hooks (svn_fs_t *fs, const char *path)
-{
-  const char *this_path, *contents;
-  apr_status_t apr_err;
-  apr_file_t *f;
-  apr_size_t written;
-
-  /* Create the hook directory. */
-  fs->hook_path = apr_psprintf (fs->pool, "%s/%s",
-                                path, SVN_FS__REPOS_HOOK_DIR);
-  apr_err = apr_dir_make (fs->hook_path, APR_OS_DEFAULT, fs->pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
-    return svn_error_createf (apr_err, 0, 0, fs->pool,
-                              "creating hook directory `%s'", fs->hook_path);
-
-  /* Write a default template for each standard hook file. */
-
-  /* Start-commit hooks. */
-  {
-    this_path = apr_psprintf (fs->pool, "%s%s",
-                              svn_fs_start_commit_hook (fs, fs->pool),
-                              SVN_FS__REPOS_HOOK_DESC_EXT);
-    
-    apr_err = apr_file_open (&f, this_path,
-                             (APR_WRITE | APR_CREATE | APR_EXCL),
-                             APR_OS_DEFAULT,
-                             fs->pool);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "creating hook file `%s'", this_path);
-    
-    contents = 
-      "#!/bin/sh\n"
-      "\n"
-      "# START-COMMIT HOOK\n"
-      "#\n"
-      "# The start-commit hook is invoked before a Subversion txn is created\n"
-      "# in the process of doing a commit.  Subversion runs this hook\n"
-      "# by invoking a program (script, executable, binary, etc.) named\n"
-      "# `" 
-      SVN_FS__REPOS_HOOK_START_COMMIT
-      "' (for which this file is a template)\n"
-      "# with the following ordered arguments:\n"
-      "#\n"
-      "#   [1] REPOS-PATH   (the path to this repository)\n"
-      "#   [2] USER         (the authenticated user attempting to commit)\n"
-      "#\n"
-      "# If the hook program exits with success, the commit continues; but\n"
-      "# if it exits with failure (non-zero), the commit is stopped before\n"
-      "# even a Subversion txn is created.\n"
-      "#\n"
-      "# On a Unix system, the normal procedure is to have "
-      "`"
-      SVN_FS__REPOS_HOOK_START_COMMIT
-      "'\n" 
-      "# invoke other programs to do the real work, though it may do the\n"
-      "# work itself too.\n"
-      "#\n"
-      "# On a Windows system, you should name the hook program\n"
-      "# `" SVN_FS__REPOS_HOOK_START_COMMIT ".bat' or "
-      "`" SVN_FS__REPOS_HOOK_START_COMMIT ".exe', but the basic idea is\n"
-      "# the same.\n"
-      "# \n"
-      "# Here is an example hook script, for a Unix /bin/sh interpreter:\n"
-      "#\n"
-      "# REPOS=${1}\n"
-      "# USER=${2}\n"
-      "#\n"
-      "# commit_allower.pl --repository ${REPOS} --user ${USER}\n"
-      "# special-auth-check.py --user ${USER} --auth-level 3\n";
-
-    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "writing hook file `%s'", this_path);
-
-    apr_err = apr_file_close (f);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "closing hook file `%s'", this_path);
-  }  /* end start-commit hooks */
-
-  /* Pre-commit hooks. */
-  {
-    this_path = apr_psprintf (fs->pool, "%s%s",
-                              svn_fs_pre_commit_hook (fs, fs->pool),
-                              SVN_FS__REPOS_HOOK_DESC_EXT);
-
-    apr_err = apr_file_open (&f, this_path,
-                             (APR_WRITE | APR_CREATE | APR_EXCL),
-                             APR_OS_DEFAULT,
-                             fs->pool);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "creating hook file `%s'", this_path);
-
-    contents =
-      "#!/bin/sh\n"
-      "\n"
-      "# PRE-COMMIT HOOK\n"
-      "#\n"
-      "# The pre-commit hook is invoked before a Subversion txn is\n"
-      "# committed.  Subversion runs this hook by invoking a program\n"
-      "# (script, executable, binary, etc.) named "
-      "`" 
-      SVN_FS__REPOS_HOOK_PRE_COMMIT "' (for which\n"
-      "# this file is a template), with the following ordered arguments:\n"
-      "#\n"
-      "#   [1] REPOS-PATH   (the path to this repository)\n"
-      "#   [2] TXN-NAME     (the name of the txn about to be committed)\n"
-      "#\n"
-      "# If the hook program exits with success, the txn is committed; but\n"
-      "# if it exits with failure (non-zero), the txn is aborted and no\n"
-      "# commit takes place.  The hook program can use the `svnlook'\n"
-      "# utility to help it examine the txn.\n"
-      "#\n"
-      "# On a Unix system, the normal procedure is to have "
-      "`"
-      SVN_FS__REPOS_HOOK_PRE_COMMIT
-      "'\n" 
-      "# invoke other programs to do the real work, though it may do the\n"
-      "# work itself too.\n"
-      "#\n"
-      "# On a Windows system, you should name the hook program\n"
-      "# `" SVN_FS__REPOS_HOOK_PRE_COMMIT ".bat' or "
-      "`" SVN_FS__REPOS_HOOK_PRE_COMMIT ".exe', but the basic idea is\n"
-      "# the same.\n"
-      "#\n"
-      "# Here is an example hook script, for a Unix /bin/sh interpreter:\n"
-      "#\n"
-      "# REPOS=${1}\n"
-      "# TXN=${2}\n"
-      "#\n"
-      "# SVNLOOK=/usr/local/bin/svnlook\n"
-      "# LOG=`${SVNLOOK} ${REPOS} txn ${TXN} log`\n"
-      "# echo ${LOG} | grep \"[a-zA-Z0-9]\" > /dev/null || exit 1\n"
-      "# exit 0\n"
-      "#\n";
-    
-    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "writing hook file `%s'", this_path);
-
-    apr_err = apr_file_close (f);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "closing hook file `%s'", this_path);
-  }  /* end pre-commit hooks */
-
-  /* Post-commit hooks. */
-  {
-    this_path = apr_psprintf (fs->pool, "%s%s",
-                              svn_fs_post_commit_hook (fs, fs->pool),
-                              SVN_FS__REPOS_HOOK_DESC_EXT);
-
-    apr_err = apr_file_open (&f, this_path,
-                             (APR_WRITE | APR_CREATE | APR_EXCL),
-                             APR_OS_DEFAULT,
-                             fs->pool);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "creating hook file `%s'", this_path);
-    
-    contents =
-      "#!/bin/sh\n"
-      "\n"
-      "# POST-COMMIT HOOK\n"
-      "#\n"
-      "# The post-commit hook is invoked after a commit. Subversion runs\n"
-      "# this hook by invoking a program (script, executable, binary,\n"
-      "# etc.) named `" 
-      SVN_FS__REPOS_HOOK_POST_COMMIT 
-      "' "
-      "(for which this file is a template),\n"
-      "# with the following ordered arguments:\n"
-      "#\n"
-      "#   [1] REPOS-PATH   (the path to this repository)\n"
-      "#   [2] REV          (the number of the revision just committed)\n"
-      "#\n"
-      "# Because the commit has already completed and cannot be undone,\n"
-      "# the exit code of the hook program is ignored.  The hook program\n"
-      "# can use the `svnlook' utility to help it examine the\n"
-      "# newly-committed tree.\n"
-      "#\n"
-      "# On a Unix system, the normal procedure is to have "
-      "`"
-      SVN_FS__REPOS_HOOK_POST_COMMIT
-      "'\n" 
-      "# invoke other programs to do the real work, though it may do the\n"
-      "# work itself too.\n"
-      "#\n"
-      "# On a Windows system, you should name the hook program\n"
-      "# `" SVN_FS__REPOS_HOOK_POST_COMMIT ".bat' or "
-      "`" SVN_FS__REPOS_HOOK_POST_COMMIT ".exe', but the basic idea is\n"
-      "# the same.\n"
-      "# \n"
-      "# Here is an example hook script, for a Unix /bin/sh interpreter:\n"
-      "#\n"
-      "# REPOS=${1}\n"
-      "# REV=${2}\n"
-      "#\n"
-      "# commit-email.pl ${REPOS} ${REV} commit-watchers@example.org\n"
-      "# log-commit.py --repository ${REPOS} --revision ${REV}\n";
-
-    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "writing hook file `%s'", this_path);
-
-    apr_err = apr_file_close (f);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "closing hook file `%s'", this_path);
-  } /* end post-commit hooks */
-
-  /* Read sentinels. */
-  {
-    this_path = apr_psprintf (fs->pool, "%s%s",
-                              svn_fs_read_sentinel_hook (fs, fs->pool),
-                              SVN_FS__REPOS_HOOK_DESC_EXT);
-
-    apr_err = apr_file_open (&f, this_path,
-                             (APR_WRITE | APR_CREATE | APR_EXCL),
-                             APR_OS_DEFAULT,
-                             fs->pool);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "creating hook file `%s'", this_path);
-    
-    contents =
-      "READ-SENTINEL\n"
-      "\n"
-      "The invocation convention and protocol for the read-sentinel\n"
-      "is yet to be defined.\n"
-      "\n";
-
-    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "writing hook file `%s'", this_path);
-
-    apr_err = apr_file_close (f);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "closing hook file `%s'", this_path);
-  }  /* end read sentinels */
-
-  /* Write sentinels. */
-  {
-    this_path = apr_psprintf (fs->pool, "%s%s",
-                              svn_fs_write_sentinel_hook (fs, fs->pool),
-                              SVN_FS__REPOS_HOOK_DESC_EXT);
-
-    apr_err = apr_file_open (&f, this_path,
-                             (APR_WRITE | APR_CREATE | APR_EXCL),
-                             APR_OS_DEFAULT,
-                             fs->pool);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "creating hook file `%s'", this_path);
-    
-    contents =
-      "WRITE-SENTINEL\n"
-      "\n"
-      "The invocation convention and protocol for the write-sentinel\n"
-      "is yet to be defined.\n"
-      "\n";
-
-    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "writing hook file `%s'", this_path);
-
-    apr_err = apr_file_close (f);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "closing hook file `%s'", this_path);
-  }  /* end write sentinels */
-
-  return SVN_NO_ERROR;
-}
 
 
 svn_error_t *
@@ -841,66 +376,22 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 
   SVN_ERR (check_already_open (fs));
 
-  /* Create the repository directory. */
-  apr_err = apr_dir_make (path, APR_OS_DEFAULT, fs->pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
-    {
-      if (APR_STATUS_IS_EEXIST (apr_err))
-        {
-          apr_status_t empty = dir_empty (path, fs->pool);
-          if (! APR_STATUS_IS_SUCCESS (empty))
-            return svn_error_createf
-              (apr_err, 0, 0, fs->pool,
-               "`%s' exists and is non-empty, repository creation failed",
-               path);
-        }
-      else
-        {
-          return svn_error_createf
-            (apr_err, 0, 0, fs->pool, "unable to create repository `%s'",
-             path);
-        }
-    }
-
   /* Initialize the fs's path. */
   fs->path = apr_pstrdup (fs->pool, path);
 
-  /* Create the DAV sandbox directory.  */
-  fs->dav_path = apr_psprintf (fs->pool, "%s/%s",
-                               path, SVN_FS__REPOS_DAV_DIR);
-  apr_err = apr_dir_make (fs->dav_path, APR_OS_DEFAULT, fs->pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
-    return svn_error_createf (apr_err, 0, 0, fs->pool,
-                              "creating DAV sandbox dir `%s'", fs->dav_path);
-
-  /* Create the conf directory.  */
-  fs->conf_path = apr_psprintf (fs->pool, "%s/%s",
-                               path, SVN_FS__REPOS_CONF_DIR);
-  apr_err = apr_dir_make (fs->conf_path, APR_OS_DEFAULT, fs->pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
-    return svn_error_createf (apr_err, 0, 0, fs->pool,
-                              "creating conf dir `%s'", fs->conf_path);
-
-  /* Create the lock directory.  */
-  SVN_ERR (create_locks (fs, path));
-
-  /* Create the hooks directory.  */
-  SVN_ERR (create_hooks (fs, path));
-
   /* Create the directory for the new Berkeley DB environment.  */
-  fs->env_path = apr_psprintf (fs->pool, "%s/%s", path, SVN_FS__REPOS_DB_DIR);
-  apr_err = apr_dir_make (fs->env_path, APR_OS_DEFAULT, fs->pool);
+  apr_err = apr_dir_make (fs->path, APR_OS_DEFAULT, fs->pool);
   if (! APR_STATUS_IS_SUCCESS (apr_err))
     return svn_error_createf (apr_err, 0, 0, fs->pool,
                               "creating Berkeley DB environment dir `%s'",
-                              fs->env_path);
+                              fs->path);
 
   svn_err = allocate_env (fs);
   if (svn_err) goto error;
 
   /* Create the Berkeley DB environment.  */
   svn_err = DB_WRAP (fs, "creating environment",
-                     fs->env->open (fs->env, fs->env_path,
+                     fs->env->open (fs->env, fs->path,
                                     (DB_CREATE
                                      | DB_INIT_LOCK 
                                      | DB_INIT_LOG
@@ -929,46 +420,10 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
                      svn_fs__open_strings_table (&fs->strings,
                                                  fs->env, 1));
   if (svn_err) goto error;
+
+  /* Initialize the DAG subsystem. */
   svn_err = svn_fs__dag_init_fs (fs);
   if (svn_err) goto error;
-
-  /* Write the top-level README file. */
-  {
-    const char *readme_contents =
-      "This is a Subversion repository; use the `svnadmin' tool to examine\n"
-      "it.  Do not add, delete, or modify files here unless you know how\n"
-      "to avoid corrupting the repository.\n"
-      "\n"
-      "The directory \""
-      SVN_FS__REPOS_DB_DIR
-      "\" contains a Berkeley DB environment.\n"
-      "\n"
-      "Visit http://subversion.tigris.org/ for more information.\n";
-
-    const char *readme_file_name
-      = apr_psprintf (fs->pool, "%s/%s", path, SVN_FS__REPOS_README);
-
-    apr_file_t *readme_file = NULL;
-    apr_size_t written = 0;
-
-    apr_err = apr_file_open (&readme_file, readme_file_name,
-                             APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
-                             fs->pool);
-    if (! APR_STATUS_IS_SUCCESS (apr_err))
-      return svn_error_createf (apr_err, 0, 0, fs->pool,
-                                "opening `%s' for writing", readme_file_name);
-
-    apr_err = apr_file_write_full (readme_file, readme_contents,
-                                   strlen (readme_contents), &written);
-    if (! APR_STATUS_IS_SUCCESS (apr_err))
-      return svn_error_createf (apr_err, 0, 0, fs->pool,
-                                "writing to `%s'", readme_file_name);
-    
-    apr_err = apr_file_close (readme_file);
-    if (! APR_STATUS_IS_SUCCESS (apr_err))
-      return svn_error_createf (apr_err, 0, 0, fs->pool,
-                                "closing `%s'", readme_file_name);
-  }
 
   return SVN_NO_ERROR;
 
@@ -990,23 +445,13 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
 
   /* Initialize paths. */
   fs->path = apr_pstrdup (fs->pool, path);
-  fs->dav_path = apr_psprintf (fs->pool, "%s/%s",
-                               path, SVN_FS__REPOS_DAV_DIR);
-  fs->hook_path = apr_psprintf (fs->pool, "%s/%s",
-                                path, SVN_FS__REPOS_HOOK_DIR);
-  fs->lock_path = apr_psprintf (fs->pool, "%s/%s",
-                                path, SVN_FS__REPOS_LOCK_DIR);
-  fs->conf_path = apr_psprintf (fs->pool, "%s/%s",
-                                path, SVN_FS__REPOS_CONF_DIR);
-  fs->env_path = apr_psprintf (fs->pool, "%s/%s",
-                               path, SVN_FS__REPOS_DB_DIR);
 
   svn_err = allocate_env (fs);
   if (svn_err) goto error;
 
   /* Open the Berkeley DB environment.  */
   svn_err = DB_WRAP (fs, "opening environment",
-                     fs->env->open (fs->env, fs->env_path,
+                     fs->env->open (fs->env, fs->path,
                                     (DB_INIT_LOCK
                                      | DB_INIT_LOG
                                      | DB_INIT_MPOOL
@@ -1053,8 +498,6 @@ svn_fs_berkeley_recover (const char *path,
 {
   int db_err;
   DB_ENV *env;
-  const char *db_path
-    = apr_psprintf (pool, "%s/%s", path, SVN_FS__REPOS_DB_DIR);
 
   db_err = db_env_create (&env, 0);
   if (db_err)
@@ -1070,10 +513,10 @@ svn_fs_berkeley_recover (const char *path,
      we leave the region around, the application that should create
      it will simply join it instead, and will then be running with
      incorrectly sized (and probably terribly small) caches.  */
-  db_err = env->open (env, db_path, (DB_RECOVER | DB_CREATE
-                                     | DB_INIT_LOCK | DB_INIT_LOG
-                                     | DB_INIT_MPOOL | DB_INIT_TXN
-                                     | DB_PRIVATE),
+  db_err = env->open (env, path, (DB_RECOVER | DB_CREATE
+                                  | DB_INIT_LOCK | DB_INIT_LOG
+                                  | DB_INIT_MPOOL | DB_INIT_TXN
+                                  | DB_PRIVATE),
                       0666);
   if (db_err)
     return svn_fs__dberr (pool, db_err);
@@ -1095,21 +538,19 @@ svn_fs_delete_berkeley (const char *path,
                         apr_pool_t *pool)
 {
   apr_status_t apr_err;
-  const char *db_path;
   int db_err;
   DB_ENV *env;
 
   /* First, use the Berkeley DB library function to remove any shared
      memory segments.  */
-  db_path = apr_psprintf (pool, "%s/%s", path, SVN_FS__REPOS_DB_DIR);
   db_err = db_env_create (&env, 0);
   if (db_err)
     return svn_fs__dberr (pool, db_err);
-  db_err = env->remove (env, db_path, DB_FORCE);
+  db_err = env->remove (env, path, DB_FORCE);
   if (db_err)
     return svn_fs__dberr (pool, db_err);
   
-  /* Remove the repository. */
+  /* Remove the environment directory. */
   apr_err = apr_dir_remove_recursively (path, pool);
   if (! APR_STATUS_IS_SUCCESS (apr_err))
     return svn_error_createf (apr_err, 0, 0, pool,
