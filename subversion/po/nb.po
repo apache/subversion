@@ -2614,8 +2614,8 @@ msgstr "Ukjent posttype for '%s'"
 
 #: libsvn_client/commit_util.c:236
 #, c-format
-msgid "Entry '%s' has been replaced by a special file"
-msgstr "Posten '%s' er blitt erstattet av en spesiell fil"
+msgid "Entry '%s' has unexpectedly changed special status"
+msgstr "Posten '%s' har uventet forandret spesialstatus"
 
 #: libsvn_client/commit_util.c:286
 #, c-format
