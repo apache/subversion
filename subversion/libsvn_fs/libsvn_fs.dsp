@@ -87,7 +87,15 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
+SOURCE=".\clones-table.c"
+# End Source File
+# Begin Source File
+
 SOURCE=".\convert-size.c"
+# End Source File
+# Begin Source File
+
+SOURCE=.\dag.c
 # End Source File
 # Begin Source File
 
@@ -101,6 +109,7 @@ SOURCE=.\delta.c
 # Begin Source File
 
 SOURCE=.\dir.c
+# PROP Exclude_From_Build 1
 # End Source File
 # Begin Source File
 
@@ -121,11 +130,26 @@ SOURCE=.\id.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\nodes-table.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\node.c
+# PROP Exclude_From_Build 1
+# End Source File
+# Begin Source File
+
+SOURCE=.\rep.c
+# PROP Exclude_From_Build 1
+# End Source File
+# Begin Source File
+
+SOURCE=.\rev-table.c
 # End Source File
 # Begin Source File
 
 SOURCE=.\revision.c
+# PROP Exclude_From_Build 1
 # End Source File
 # Begin Source File
 
@@ -133,7 +157,23 @@ SOURCE=.\skel.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\trail.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\tree.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\txn-table.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\txn.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\validate.c
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -141,15 +181,19 @@ SOURCE=.\txn.c
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
+SOURCE=".\clones-table.h"
+# End Source File
+# Begin Source File
+
 SOURCE=".\convert-size.h"
 # End Source File
 # Begin Source File
 
-SOURCE=.\dbt.h
+SOURCE=".\dag.h"
 # End Source File
 # Begin Source File
 
-SOURCE=.\dir.h
+SOURCE=.\dbt.h
 # End Source File
 # Begin Source File
 
@@ -169,7 +213,19 @@ SOURCE=.\id.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\node-rev.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\node.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\nodes-table.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\rev-table.h
 # End Source File
 # Begin Source File
 
@@ -181,7 +237,23 @@ SOURCE=.\skel.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\trail.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\tree.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\txm-table.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\txn.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\validate.h
 # End Source File
 # End Group
 # End Target
