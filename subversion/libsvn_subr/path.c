@@ -129,8 +129,8 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
 
 
 static svn_boolean_t
-is_canonical_nts (const char *path,
-                  apr_size_t len)
+is_canonical (const char *path,
+              apr_size_t len)
 {
   return (! SVN_PATH_IS_PLATFORM_EMPTY (path, len)
           && (len <= 1 || path[len-1] != '/'));
@@ -145,8 +145,8 @@ char *svn_path_join (const char *base,
   apr_size_t clen = strlen (component);
   char *path;
 
-  assert (is_canonical_nts (base, blen));
-  assert (is_canonical_nts (component, clen));
+  assert (is_canonical (base, blen));
+  assert (is_canonical (component, clen));
 
   /* If the component is absolute, then return it.  */
   if (*component == '/')
@@ -186,7 +186,7 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
 
   total_len = strlen (base);
 
-  assert (is_canonical_nts (base, total_len));
+  assert (is_canonical (base, total_len));
 
   if (total_len == 1 && *base == '/')
     base_is_root = TRUE;
@@ -206,7 +206,7 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
     {
       len = strlen (s);
 
-      assert (is_canonical_nts (s, len));
+      assert (is_canonical (s, len));
 
       if (SVN_PATH_IS_EMPTY (s))
         continue;
@@ -306,8 +306,8 @@ svn_path_add_component (svn_stringbuf_t *path,
 {
   apr_size_t len = strlen (component);
 
-  assert (is_canonical_nts (path->data, path->len));
-  assert (is_canonical_nts (component, len));
+  assert (is_canonical (path->data, path->len));
+  assert (is_canonical (component, len));
 
   /* Append a dir separator, but only if this path is neither empty
      nor consists of a single dir separator already. */
@@ -327,7 +327,7 @@ svn_path_remove_component (svn_stringbuf_t *path)
 {
   apr_size_t len;
 
-  assert (is_canonical_nts (path->data, path->len));
+  assert (is_canonical (path->data, path->len));
 
   while (path->len > 0 && path->data[path->len - 1] != '/')
     --path->len;
@@ -356,7 +356,7 @@ svn_path_dirname (const char *path, apr_pool_t *pool)
 {
   apr_size_t canonical_len, len = strlen (path);
 
-  assert (is_canonical_nts (path, len));
+  assert (is_canonical (path, len));
 
   while (len > 0 && path[len - 1] != '/')
     --len;
@@ -380,7 +380,7 @@ svn_path_basename (const char *path, apr_pool_t *pool)
   apr_size_t len = strlen (path);
   apr_size_t start;
 
-  assert (is_canonical_nts (path, len));
+  assert (is_canonical (path, len));
 
   if (len == 1 && path[0] == '/')
     start = 0;
@@ -415,7 +415,7 @@ svn_path_split (const char *path,
 int
 svn_path_is_empty (const char *path)
 {
-  /* assert (is_canonical_nts (path, strlen (path)));  ### Expensive strlen */
+  /* assert (is_canonical (path, strlen (path))); ### Expensive strlen */
 
   if (SVN_PATH_IS_EMPTY (path))
     return 1;
@@ -440,8 +440,8 @@ svn_path_compare_paths (const char *path1,
   apr_size_t min_len = ((path1_len < path2_len) ? path1_len : path2_len);
   apr_size_t i = 0;
 
-  assert (is_canonical_nts (path1, path1_len));
-  assert (is_canonical_nts (path2, path2_len));
+  assert (is_canonical (path1, path1_len));
+  assert (is_canonical (path2, path2_len));
 
   /* Skip past common prefix. */
   while (i < min_len && path1[i] == path2[i])
@@ -518,8 +518,8 @@ svn_path_is_child (const char *path1,
 {
   apr_size_t i;
 
-  /* assert (is_canonical_nts (path1, strlen (path1)));  ### Expensive strlen */
-  /* assert (is_canonical_nts (path2, strlen (path2)));  ### Expensive strlen */
+  /* assert (is_canonical (path1, strlen (path1)));  ### Expensive strlen */
+  /* assert (is_canonical (path2, strlen (path2)));  ### Expensive strlen */
 
   /* Allow "" and "foo" to be parent/child */
   if (SVN_PATH_IS_EMPTY (path1)                /* "" is the parent  */
@@ -569,7 +569,7 @@ svn_path_decompose (const char *path,
   apr_array_header_t *components = 
     apr_array_make (pool, 1, sizeof(const char *));
 
-  /* assert (is_canonical_nts (path, strlen (path)));  ### Expensive strlen */
+  /* assert (is_canonical (path, strlen (path)));  ### Expensive strlen */
 
   if (SVN_PATH_IS_EMPTY (path))
     return components;  /* ### Should we return a "" component? */
@@ -615,7 +615,7 @@ svn_path_decompose (const char *path,
 svn_boolean_t
 svn_path_is_single_path_component (const char *name)
 {
-  /* assert (is_canonical_nts (name, strlen (name)));  ### Expensive strlen */
+  /* assert (is_canonical (name, strlen (name)));  ### Expensive strlen */
 
   /* Can't be empty or `..'  */
   if (SVN_PATH_IS_EMPTY (name)
@@ -888,7 +888,7 @@ svn_path_split_if_file(const char *path,
   apr_finfo_t finfo;
   svn_error_t *err;
 
-  /* assert (is_canonical_nts (path, strlen (path)));  ### Expensive strlen */
+  /* assert (is_canonical (path, strlen (path)));  ### Expensive strlen */
 
   err = svn_io_stat(&finfo, path, APR_FINFO_TYPE, pool);
   if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))
