@@ -1,12 +1,26 @@
-<h1>Subversion FAQ</h1>
+<html>
+<head>
+<title>Subversion FAQ</title>
+<link rel="stylesheet" type="text/css" 
+      href="http://subversion.tigris.org/branding/css/tigris.css"/>
+<link rel="stylesheet" type="text/css" 
+      href="http://subversion.tigris.org/branding/css/inst.css"/>
+<link rel="stylesheet" type="text/css" media="print"
+      href="http://subversion.tigris.org/branding/css/print.css"/>
+<script type="text/javascript"
+        src="http://subversion.tigris.org/branding/scripts/tigris.js"></script>
+</head>
 
-<p/>
+<body>
+<div class="app">
 
-<![CDATA[ Table of Contents ]]>
-<ol>
-<p>
-<strong>General questions:</strong>
-</p>
+<h2>Subversion FAQ</h2>
+
+<![CDATA[=========================================================]]>
+
+<h3>Table of Contents</h3>
+
+<h4>General questions:</h4>
 <li><a href="#why">Why does this project exist?</a></li>
 <li><a href="#collab">Is Subversion proprietary?  I heard that it
     belongs to CollabNet.</a></li> 
@@ -37,9 +51,7 @@
 <li><a href="#more-information">I have other questions.  Where can I
     get more information?</a></li>  
 
-<p>
-<strong>How-to:</strong>
-</p>
+<h4>How-to:</h4>
 <li><a href="#co-svn">How do I check out the Subversion code?</a></li>
 <li><a href="#repository">How do I create a repository?  How do I
     import data into it?</a></li> 
@@ -83,12 +95,10 @@ committed.  How can I make 'svn commit' ignore the file?</a></li>
 svn+ssh, my password is not cached in ~/.subversion/auth/.  How do
 I avoid having to type it so often?</a></li>
 
-<p>
-<strong>Troubleshooting:</strong>
-</p>
+<h4>Troubleshooting:</h4>
 <li><a href="#stuck-bdb-repos">My repository seems to get stuck all the
-          time, giving me errors about needing recovery
-          (DB_RUNRECOVERY).  What could be the cause?</a></li>
+    time, giving me errors about needing recovery (DB_RUNRECOVERY).
+    What could be the cause?</a></li>
 <li><a href="#bdb-recovery">Every time I try to access
     my repository, the process just hangs.  Is my repository
     corrupt?</a></li>
@@ -149,28 +159,21 @@ a <tt>file:</tt> URL?</a></li>
     module cannot be found, yet the mod_dav_svn.so file is right 
     there in <tt>\Apache\modules.</tt></a></li>
 
-<p>
-<strong>Developer questions:</strong>
-</p>
+<h4>Developer questions:</h4>
 <li><a href="#ramdisk-tests">How do I run the regression tests in a
     ram disk?</a></li>
 
-<p>
-<strong>References:</strong>
-</p>
+<h4>References:</h4>
 <li><a href="#http-methods">What are all the HTTP methods Subversion 
     uses?</a></li>
 <li><a href="#bikeshed">What's a 'bikeshed'?</a></li> 
 <li><a href="#baton">What's a 'baton'?</a></li> 
-</ol>
 
 <![CDATA[=========================================================]]>
 
-<p/>
 <hr/>
-<p/>
+
 <h2>General questions:</h2>
-<p/>
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -2085,3 +2088,7 @@ provide context to a function.  In other APIs, they're often called
 <tt>void *ctx</tt> or <tt>void *userdata</tt>  Subversion
 developers call the structures "batons" because they're passed around
 quite a bit.</p>
+
+</div>
+</body>
+</html>

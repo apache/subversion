@@ -1,35 +1,20 @@
-<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
 <html>
-  <head>
-    <title>Use of WebDAV in Subversion</title>
-    <style type="text/css">
-      .comment {
-        color: #900000;
-	background: #ffffc0;
-      }
-      .method {
-        font-family: courier;
-        font-weight: bold;
-      }
-      .term {
-        font-style: italic;
-      }
-      .prop {
-        font-family: courier;
-        font-weight: bold;
-      }
-      .url {
-        font-family: courier;
-      }
-      <!-- ### this dt thing isn't working... need to fix -->
-      dt {
-        font-weight: bold;
-      }
-    </style>
-  </head>
+<head>
+<title>Use of WebDAV in Subversion</title>
+<link rel="stylesheet" type="text/css" 
+      href="http://subversion.tigris.org/branding/css/tigris.css"/>
+<link rel="stylesheet" type="text/css" 
+      href="http://subversion.tigris.org/branding/css/inst.css"/>
+<link rel="stylesheet" type="text/css" media="print"
+      href="http://subversion.tigris.org/branding/css/print.css"/>
+<script type="text/javascript"
+        src="http://subversion.tigris.org/branding/scripts/tigris.js"></script>
+</head>
 
-  <body bgcolor=white>
-    <h1>Use of WebDAV in Subversion</h1>
+<body>
+<div class="app">
+
+    <h2>Use of WebDAV in Subversion</h2>
 
     <p>
       This document details how WebDAV is used within the
@@ -52,7 +37,6 @@
       replicated here.
     </p>
 
-    <!-- ### put some of this stuff into a stylesheet -->
     <center>
       <table width="70%" border="0" bgcolor="#ff0000" cellspacing="0"
 	     cellpadding="10">
@@ -98,8 +82,7 @@
 
     <p></p>
 
-    <hr width="80&#37;">
-    <h2>Basic Concepts</h2>
+    <h3>Basic Concepts</h3>
     <p>
       Subversion uses a tree-based format to describe a change set
       against the repository. This tree is constructed on the client
@@ -147,8 +130,7 @@
       servers.
     </blockquote>
 
-    <hr width="80&#37;">
-    <h2>DeltaV Concepts Used by Subversion</h2>
+    <h3>DeltaV Concepts Used by Subversion</h3>
     <p>
       Subversion uses many of the DeltaV concepts, as listed
       below. Note that many of these concepts are not fully
@@ -208,8 +190,7 @@
 
     </dl>
 
-    <hr width="80&#37;">
-    <h2>Subversion Projects as URLs</h2>
+    <h3>Subversion Projects as URLs</h3>
     <p>
       The very first concept to define is how a project is exposed to
       the client. Subversion will expose all projects as URLs on a
@@ -242,8 +223,7 @@
       <span class="url">http://subversion.tigris.org/repos/example/sub/file.c</span>.
     </p>
 
-    <hr width="80&#37;">
-    <h2>Initial Checkout</h2>
+    <h3>Initial Checkout</h3>
     <p>
       When the user performs the initial checkout of a Subversion
       project, the client will issue a series of <span
@@ -274,8 +254,7 @@ property for each
       work.
     </p>
 
-    <hr width="80&#37;">
-    <h2>Committing a Change</h2>
+    <h3>Committing a Change</h3>
     <p>
       Subversion commits are modeled using the "activity" concept from
       DeltaV. An activity can be viewed as a transaction for a set of
@@ -593,8 +572,7 @@ property for each
       </li>
     </ol>
 
-    <hr width="80&#37;">
-    <h2>URL Layout</h2>
+    <h3>URL Layout</h3>
     <p>
       The Subversion server exposes repositories at user-defined
       URLs. For example, the "foo" repository might be located at
@@ -801,8 +779,7 @@ property for each
       </dd>
     </dl>
 
-    <hr width="80&#37;">
-    <h2>Property Management (and History/Log Reporting)</h2>
+    <h3>Property Management (and History/Log Reporting)</h3>
     <p class="comment">
       this section needs to be reworked. the properties occur on the
       FS revisions (and exposed via baselines).
@@ -856,8 +833,7 @@ property for each
       functionality)
     </blockquote>
 
-    <hr width="80&#37;">
-    <h2>Fetching Status and Updates</h2>
+    <h3>Fetching Status and Updates</h3>
     <p>
       After the initial checkout, the client can request a status
       report (what has been changed on the client, pending a commit;
@@ -944,8 +920,7 @@ property for each
       etag (and other properties) can be fetched using that mechanism.
     </p>
 
-    <hr width="80&#37;">
-    <h2>Tags and Branches</h2>
+    <h3>Tags and Branches</h3>
     <p>
       Tags and branches within Subversion are performed by copying
       from one area to another. For example:
@@ -972,8 +947,7 @@ property for each
       class="method">MERGE</span> request.
     </p>
 
-    <hr width="80&#37;">
-    <h2>Server Requirements</h2>
+    <h3>Server Requirements</h3>
     <p class="comment">
       <strong>Warning:</strong> this section is out of date. The
       DeltaV draft has gone through a number of revisions, and our use
@@ -1180,7 +1154,7 @@ property for each
       Discuss other implementation details of ra_dav and mod_dav_svn.
     </p>
 
-    <h2><a name="rationale">Appendix A: Rationale</a></h2>
+    <h3><a name="rationale">Appendix A: Rationale</a></h3>
     <p>
       Several times, people have asked, "Why choose
       HTTP/WebDAV/DeltaV? That seems awfully bloated and
@@ -1302,5 +1276,7 @@ property for each
 <!-- hhmts start -->
 Last modified: Fri Jan 25 12:54:20 PST 2002
 <!-- hhmts end -->
-  </body>
+
+</div>
+</body>
 </html>

@@ -1,3 +1,19 @@
+<html>
+<head>
+<title>Subversion 1.1 Release Notes</title>
+<link rel="stylesheet" type="text/css" 
+      href="http://subversion.tigris.org/branding/css/tigris.css"/>
+<link rel="stylesheet" type="text/css" 
+      href="http://subversion.tigris.org/branding/css/inst.css"/>
+<link rel="stylesheet" type="text/css" media="print"
+      href="http://subversion.tigris.org/branding/css/print.css"/>
+<script type="text/javascript"
+        src="http://subversion.tigris.org/branding/scripts/tigris.js"></script>
+</head>
+
+<body>
+<div class="app">
+
 <center>
 <h1>Subversion 1.1 Release Notes</h1>
 <h2>(and State of the Project)</h2>
@@ -8,7 +24,7 @@ hasn't been forked/updated yet to cover new Subversion 1.1 features,
 so here are some brief release notes.  Once the book is updated, these
 will no longer be necessary.</p>
 
-<h2>Overview</h2>
+<h3>Overview</h3>
 
 <p>Subversion 1.1 can best be summarized as: (1) an optional new
 non-database repository back-end, and (2) a whole slew of client-side
@@ -19,7 +35,7 @@ releases.  The 1.0.x releases contain nothing but critical bugfixes
 backported from the 1.1 development line.  Subversion 1.1 introduces
 new features and fixes many smaller bugs.</p>
 
-<h2>Compatibility Concerns</h2>
+<h3>Compatibility Concerns</h3>
 
 <p>Subversion's compatibility and version-numbering policy is
     documented in the project's <a
@@ -46,9 +62,9 @@ new features and fixes many smaller bugs.</p>
 </ul>
 
 
-<h2>New Major Features</h2>
+<h3>New Major Features</h3>
 
-<h3>Non-database repositories</h3>
+<h4>Non-database repositories</h4>
 
 <p>It's now possible to create repositories that don't use a
    BerkeleyDB database.  Instead, these new repositories store data in
@@ -74,7 +90,7 @@ new features and fixes many smaller bugs.</p>
     fsfs.</p>
 
 
-<h3>Symlink versioning</h3>
+<h4>Symlink versioning</h4>
 
 <p>This feature allows unix users to place symlinks under version
     control.  (Note: this is <em>not</em> about creating links
@@ -91,7 +107,7 @@ new features and fixes many smaller bugs.</p>
     system.)</p>
 
 
-<h3>Client follows renames</h3>
+<h4>Client follows renames</h4>
 
 <p>Subversion makes a lot of noise about the way branches (copies) of
     files and directories maintain historical connections to their
@@ -105,7 +121,7 @@ new features and fixes many smaller bugs.</p>
     and directories.</p>
 
 
-<h3>Commandline auto-escaping of URI and IRIs</h3>
+<h4>Commandline auto-escaping of URI and IRIs</h4>
 
 <p>In the 1.0 commandline client, users had to escape URLs manually.
     The client only accepted "legally correct" URLs, such as</p>
@@ -124,7 +140,7 @@ new features and fixes many smaller bugs.</p>
 
 
 
-<h3>Localized messages</h3>
+<h4>Localized messages</h4>
 
 <p>Subversion 1.1 is now using gettext() to display translated error,
    informational, and help messages to the user.  We currently have
@@ -142,17 +158,17 @@ new features and fixes many smaller bugs.</p>
      </pre>
 
 
-<h2>Other Improvements</h2>
+<h3>Other Improvements</h3>
 
 <dl>
 
-<dt><h3>Speed optimizations:</h3></dt>
+<dt><h4>Speed optimizations:</h4></dt>
 <dd>Faster <tt>checkout</tt>, <tt>update</tt>, <tt>status</tt>, and
       <tt>blame</tt> commands.</dd>
 
 <p>
 
-<dt><h3>Shareable working copies:</h3></dt>
+<dt><h4>Shareable working copies:</h4></dt>
 
 <dd>There have been historical problems with permissions when multiple
 users share a working copy.  We believe these problems to be fixed
@@ -163,7 +179,7 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=1509">issue
 <p>
 
 
-<dt><h3>New 'store-passwords' runtime variable:</h3></dt>
+<dt><h4>New 'store-passwords' runtime variable:</h4></dt>
 
 <dd>The previous <tt>store-auth-creds</tt> runtime variable still
 works, but many users were unhappy with it.  It disables <b>all</b>
@@ -175,14 +191,14 @@ server certificates can still be remembered.</dd>
 
 
 
-<dt><h3>Bugfixes:</h3></dt>
+<dt><h4>Bugfixes:</h4></dt>
 <dd>More than 40 "small" bugs fixed.  See the <a
 href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
       for details.</dd>
 
 <p>
 
-<dt><h3>New subcommand switches:</h3></dt>
+<dt><h4>New subcommand switches:</h4></dt>
 <dd>
    <dl>
       <dt><tt>svn blame --verbose</tt></dt>
@@ -232,7 +248,7 @@ href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
 
 
 
-<h2>Developer Changes</h2>
+<h3>Developer Changes</h3>
 
 <p>A number of new 1.1 functions have been introduced, with the "2"
 suffix, and the older versions are now marked deprecated (and will be
@@ -247,7 +263,7 @@ integrated into the main Subversion build system (just run 'make
 swig-py' or 'make swig-pl' or 'make javahl').</p>
 
 
-<h2>Propaganda and Roadmap</h2>
+<h3>Propaganda and Roadmap</h3>
 
 <p>There's no formal roadmap or timeframe for future Subversion
 releases.  However, the consensus among developers is that the "next
@@ -264,4 +280,6 @@ Subversion-related sites, projects, and essays on our <a
 href="http://subversion.tigris.org/project_links.html">links
 page</a>.</p>
 
-
+</div>
+</body>
+</html>
