@@ -569,10 +569,10 @@ def pass4(ctx):
 
     # scan for commits to process
     process = [ ]
-    for id, c in commits.items():
-      if c.t_max + COMMIT_THRESHOLD < timestamp:
-        process.append((c.t_max, c))
-        del commits[id]
+    for scan_id, scan_c in commits.items():
+      if scan_c.t_max + COMMIT_THRESHOLD < timestamp:
+        process.append((scan_c.t_max, scan_c))
+        del commits[scan_id]
 
     # sort the commits into time-order, then commit 'em
     process.sort()
