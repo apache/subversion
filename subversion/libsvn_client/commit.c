@@ -85,8 +85,7 @@ send_file_contents (const char *path,
  * non-null.  (These are used to send postfix textdeltas later).
  *
  * If CTX->NOTIFY_FUNC is non-null, invoke it with CTX->NOTIFY_BATON for each
- * file.  ### add mime-type (or at least binary) indicator to
- *            notify_func ###
+ * file.
  *
  * Use POOL for any temporary allocation.
  */
