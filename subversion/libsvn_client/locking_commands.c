@@ -219,6 +219,8 @@ organize_lock_targets (const char **common_parent,
       svn_revnum_t *invalid_revnum;
       invalid_revnum = apr_palloc (pool, sizeof (*invalid_revnum));
       *invalid_revnum = SVN_INVALID_REVNUM;
+      *parent_adm_access_p = NULL;
+      *parent_entry_p = NULL;
 
       for (i = 0; i < rel_targets->nelts; i++)
         {
@@ -238,7 +240,16 @@ organize_lock_targets (const char **common_parent,
 
       SVN_ERR (svn_wc_entry (parent_entry_p, *common_parent, 
                              *parent_adm_access_p, FALSE, pool));
-      
+
+      if (! *parent_entry_p)
+        return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                                  _("'%s' is not under version control"), 
+                                  svn_path_local_style (*common_parent, pool));
+      if (! (*parent_entry_p)->url)
+        return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
+                                  _("'%s' has no URL"),
+                                  svn_path_local_style (*common_parent, pool));
+
       /* Verify all paths. */
       for (i = 0; i < rel_targets->nelts; i++)
         {
@@ -304,27 +315,6 @@ organize_lock_targets (const char **common_parent,
 }
 
 
-/* Set the value of each key in PATH_REVS to a pointer to the latest
-   revision (allocated in POOL) of the repository open in RA_SESSION. */
-static svn_error_t *
-store_head_revision (svn_ra_session_t *ra_session,
-                     apr_hash_t *path_revs,
-                     apr_pool_t *pool)
-{
-  svn_revnum_t *latest = apr_palloc (pool, sizeof (*latest));
-  apr_hash_index_t *hi;
-
-  SVN_ERR (svn_ra_get_latest_revnum (ra_session, latest, pool));
-  for (hi = apr_hash_first (pool, path_revs); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      apr_ssize_t klen;
-      apr_hash_this (hi, &key, &klen, NULL);
-      apr_hash_set (path_revs, key, klen, latest);
-    }
-
-  return SVN_NO_ERROR;
-}
 
 
 svn_error_t *
@@ -376,10 +366,6 @@ svn_client_lock (apr_array_header_t **locks_p,
   cb.nested_callback = lock_func;
   cb.nested_baton = lock_baton;
   cb.adm_access = adm_access;
-
-  /* ### This is a total crock. :-( */
-  if (is_url)
-    SVN_ERR (store_head_revision (ra_session, path_revs, pool));
 
   /* Lock the paths. */
   SVN_ERR (svn_ra_lock (ra_session, &locks, path_revs, comment, 
