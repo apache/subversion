@@ -44,6 +44,7 @@ svn_cl__propget (apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = baton;
   const char *pname, *pname_utf8;
   apr_array_header_t *args, *targets;
+  svn_client_auth_baton_t *auth_baton;
   int i;
 
   /* PNAME is first argument (and PNAME_UTF8 will be a UTF-8 version
@@ -59,6 +60,8 @@ svn_cl__propget (apr_getopt_t *os,
                                          &(opt_state->end_revision),
                                          FALSE, pool));
 
+  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
+
   /* Add "." if user passed 0 file arguments */
   svn_opt_push_implicit_dot_target (targets, pool);
 
@@ -66,7 +69,6 @@ svn_cl__propget (apr_getopt_t *os,
     {
       svn_revnum_t rev;
       const char *URL, *target;
-      svn_client_auth_baton_t *auth_baton;
       svn_string_t *propval;
 
       /* All property commands insist on a specific revision when
@@ -75,8 +77,6 @@ svn_cl__propget (apr_getopt_t *os,
         return svn_cl__revprop_no_rev_error (pool);
 
       /* Else some revision was specified, so proceed. */
-
-      auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
       /* Either we have a URL target, or an implicit wc-path ('.')
          which needs to be converted to a URL. */
@@ -110,13 +110,6 @@ svn_cl__propget (apr_getopt_t *os,
     }
   else  /* operate on a normal, versioned property (not a revprop) */
     {
-      /* ### This check will go away when svn_client_propget takes
-         a revision arg and can access the repository, see issue #943. */ 
-      if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
-        return svn_error_create
-          (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
-           "Revision argument to propget not yet supported (see issue #943)");
-
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = ((const char **) (targets->elts))[i];
@@ -126,6 +119,7 @@ svn_cl__propget (apr_getopt_t *os,
           
           SVN_ERR (svn_client_propget (&props, pname_utf8, target,
                                        &(opt_state->start_revision),
+                                       auth_baton,
                                        opt_state->recursive, pool));
           
           print_filenames = (opt_state->recursive || targets->nelts > 1

@@ -840,10 +840,11 @@ svn_client_revprop_set (const char *propname,
    Don't store any path, not even TARGET, if it does not have a
    property named PROPNAME.
 
-   If REVISION->kind is svn_opt_revision_unspecified, then get
-   properties from the working copy, if TARGET is a working copy path,
+   If REVISION->kind is svn_opt_revision_unspecified, then: get
+   properties from the working copy if TARGET is a working copy path,
    or from the repository head if TARGET is a url.  Else get the
-   properties as of REVISION.
+   properties as of REVISION.  Use AUTH_BATON for authentication if
+   contacting the repository.
 
    If TARGET is a file or RECURSE is false, *PROPS will have
    at most one element.
@@ -855,6 +856,7 @@ svn_client_propget (apr_hash_t **props,
                     const char *propname,
                     const char *target,
                     const svn_opt_revision_t *revision,
+                    svn_client_auth_baton_t *auth_baton,
                     svn_boolean_t recurse,
                     apr_pool_t *pool);
 
@@ -889,7 +891,8 @@ svn_client_revprop_get (const char *propname,
    If REVISION->kind is svn_opt_revision_unspecified, then get
    properties from the working copy, if TARGET is a working copy path,
    or from the repository head if TARGET is a url.  Else get the
-   properties as of REVISION.
+   properties as of REVISION.  Use AUTH_BATON for authentication if
+   contacting the repository.
 
    If RECURSE is false, or TARGET is a file, *PROPS will contain only
    a single element.  Otherwise, it will contain one element for each
@@ -898,6 +901,7 @@ svn_error_t *
 svn_client_proplist (apr_array_header_t **props,
                      const char *target, 
                      const svn_opt_revision_t *revision,
+                     svn_client_auth_baton_t *auth_baton,
                      svn_boolean_t recurse,
                      apr_pool_t *pool);
 

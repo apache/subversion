@@ -223,10 +223,12 @@ recursive_propget (apr_hash_t *props,
 
 
 /* If REVISION represents a revision not present in the working copy,
- * then set *NEW_TARGET to the url for TARGET, allocated in POOL, else
- * set *NEW_TARGET to TARGET (just assign, do not copy).
+ * then set *NEW_TARGET to the url for TARGET, allocated in POOL; else
+ * set *NEW_TARGET to TARGET (just assign, do not copy), whether or
+ * not TARGET is a url.
  *
- * *NEW_TARGET may be the same as TARGET.
+ * TARGET and *NEW_TARGET may be the same, though most callers
+ * probably don't want them to be.
  */
 static svn_error_t *
 maybe_convert_to_url (const char **new_target,
@@ -234,6 +236,8 @@ maybe_convert_to_url (const char **new_target,
                       const svn_opt_revision_t *revision,
                       apr_pool_t *pool)
 {
+  /* If we don't already have a url, and the revision kind is such
+     that we need a url, then get one. */
   if ((revision->kind != svn_opt_revision_unspecified)
       && (revision->kind != svn_opt_revision_base)
       && (revision->kind != svn_opt_revision_working)
@@ -270,22 +274,125 @@ svn_client_propget (apr_hash_t **props,
                     const char *propname,
                     const char *target,
                     const svn_opt_revision_t *revision,
+                    svn_client_auth_baton_t *auth_baton,
                     svn_boolean_t recurse,
                     apr_pool_t *pool)
 {
   apr_hash_t *prop_hash = apr_hash_make (pool);
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *node;
+  const char *utarget;  /* target, or the url for target */
 
-  SVN_ERR (maybe_convert_to_url (&target, target, revision, pool));
+  SVN_ERR (maybe_convert_to_url (&utarget, target, revision, pool));
 
-  if (svn_path_is_url (target))
+  if (svn_path_is_url (utarget))
     {
-      /* ### This will change when svn_client_propget takes a
-         revision arg and can access the repository, see issue #943. */  
-      return svn_error_create
-        (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
-         "URL argument to propget not yet supported (see issue #943)");
+      void *ra_baton, *session;
+      svn_ra_plugin_t *ra_lib;
+      svn_node_kind_t kind;
+      svn_opt_revision_t new_revision;  /* only used in one case */
+      svn_revnum_t revnum;
+
+      SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, utarget, pool));
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, utarget,
+                                            NULL, NULL, NULL, TRUE,
+                                            FALSE, FALSE, auth_baton, pool));
+
+      *props = apr_hash_make (pool);
+
+      /* Default to HEAD. */
+      if (revision->kind == svn_opt_revision_unspecified)
+        {
+          new_revision.kind = svn_opt_revision_head;
+          revision = &new_revision;
+        }
+
+      if ((revision->kind == svn_opt_revision_head)
+          || (revision->kind == svn_opt_revision_date)
+          || (revision->kind == svn_opt_revision_number))
+        {
+          SVN_ERR (svn_client__get_revision_number
+                   (&revnum, ra_lib, session, revision, NULL, pool));
+
+          SVN_ERR (ra_lib->check_path (&kind, session, "", revnum));
+
+          if (kind == svn_node_file)
+            {
+              SVN_ERR (ra_lib->get_file (session, "", revnum,
+                                         NULL, NULL, &prop_hash));
+
+              apr_hash_set (*props, target, strlen (target),
+                            apr_hash_get (prop_hash, propname,
+                                          strlen (propname)));
+            }
+          else if (kind == svn_node_dir)
+            {
+              return svn_error_createf
+                (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+                 "deriving revision from \"%s\" is not yet implemented "
+                 "(see issue #943)", target);
+            }
+          else
+            {
+              return svn_error_createf
+                (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL,
+                 "unknown node kind for \"%s\"", utarget);
+            }
+
+        }
+      else if ((revision->kind == svn_opt_revision_committed)
+               || (revision->kind == svn_opt_revision_base)
+               || (revision->kind == svn_opt_revision_previous)
+               || (revision->kind == svn_opt_revision_working))
+        {
+          if (svn_path_is_url (target))
+            {
+              return svn_error_createf
+                (SVN_ERR_ILLEGAL_TARGET, 0, NULL,
+                 "\"%s\" is a url, but revision kind requires a working copy",
+                 target);
+            }
+          else  /* target is a working copy path */
+            {
+              /* ### replace this with real code someday */
+
+              return svn_error_createf
+                (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+                 "deriving revision from \"%s\" is not yet implemented "
+                 "(see issue #943)", target);
+
+              /* ### todo: something like:
+
+                 if (target is a directory)
+                   base = target;
+                 else
+                   base = basename (target);
+
+                 SVN_ERR (svn_client__get_revision_number
+                    (&revnum, ra_lib, session, revision, base, pool));
+
+                 ...and so on.
+              */
+
+              /* Heh, heh.  A very questionable behavior is possible
+                 here.  If we do 'svn proplist -rPREV -R somedir',
+                 then the PREV keyword will expand to the previous
+                 revision for somedir, and that revision will be used
+                 all the way down the recursion, even though there
+                 might be other objects that have different previous
+                 revisions, beneath somedir.  Not sure what to do
+                 about this, just pointing it out for now. */
+            }
+        }
+      else
+        {
+          return svn_error_create
+            (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL, "unknown revision kind");
+        }
+
+      /* Close the RA session. */
+      SVN_ERR (ra_lib->close (session));
     }
   else  /* working copy path */
     {
@@ -432,6 +539,7 @@ svn_error_t *
 svn_client_proplist (apr_array_header_t **props,
                      const char *target, 
                      const svn_opt_revision_t *revision,
+                     svn_client_auth_baton_t *auth_baton,
                      svn_boolean_t recurse,
                      apr_pool_t *pool)
 {
@@ -439,16 +547,128 @@ svn_client_proplist (apr_array_header_t **props,
       = apr_array_make (pool, 5, sizeof (svn_client_proplist_item_t *));
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
+  const char *utarget;  /* target, or the url for target */
 
-  SVN_ERR (maybe_convert_to_url (&target, target, revision, pool));
+  SVN_ERR (maybe_convert_to_url (&utarget, target, revision, pool));
 
-  if (svn_path_is_url (target))
+  if (svn_path_is_url (utarget))
     {
-      /* ### This will change when svn_client_proplist takes a
-         revision arg and can access the repository, see issue #943. */  
-      return svn_error_create
-        (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
-         "URL argument to proplist not yet supported (see issue #943)");
+      void *ra_baton, *session;
+      svn_ra_plugin_t *ra_lib;
+      svn_node_kind_t kind;
+      svn_opt_revision_t new_revision;  /* only used in one case */
+      svn_revnum_t revnum;
+
+      SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, utarget, pool));
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, utarget,
+                                            NULL, NULL, NULL, TRUE,
+                                            FALSE, FALSE, auth_baton, pool));
+
+      /* Default to HEAD. */
+      if (revision->kind == svn_opt_revision_unspecified)
+        {
+          new_revision.kind = svn_opt_revision_head;
+          revision = &new_revision;
+        }
+
+      if ((revision->kind == svn_opt_revision_head)
+          || (revision->kind == svn_opt_revision_date)
+          || (revision->kind == svn_opt_revision_number))
+        {
+          SVN_ERR (svn_client__get_revision_number
+                   (&revnum, ra_lib, session, revision, NULL, pool));
+
+          SVN_ERR (ra_lib->check_path (&kind, session, "", revnum));
+
+          if (kind == svn_node_file)
+            {
+              apr_hash_t *prop_hash;
+              
+              SVN_ERR (ra_lib->get_file (session, "", revnum,
+                                         NULL, NULL, &prop_hash));
+
+              /* ### This bit was swiped from add_to_proplist().  It
+                 all really needs to be refactored. */
+              if (prop_hash && apr_hash_count (prop_hash))
+                {
+                  svn_client_proplist_item_t *item
+                    = apr_palloc (pool, sizeof (svn_client_proplist_item_t));
+                  item->node_name = svn_stringbuf_create (target, pool);
+                  item->prop_hash = prop_hash;
+                  
+                  *((svn_client_proplist_item_t **) apr_array_push (prop_list))
+                    = item;
+                }
+            }
+          else if (kind == svn_node_dir)
+            {
+              return svn_error_createf
+                (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+                 "deriving revision from \"%s\" is not yet implemented "
+                 "(see issue #943)", target);
+            }
+          else
+            {
+              return svn_error_createf
+                (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL,
+                 "unknown node kind for \"%s\"", utarget);
+            }
+
+        }
+      else if ((revision->kind == svn_opt_revision_committed)
+               || (revision->kind == svn_opt_revision_base)
+               || (revision->kind == svn_opt_revision_previous)
+               || (revision->kind == svn_opt_revision_working))
+        {
+          if (svn_path_is_url (target))
+            {
+              return svn_error_createf
+                (SVN_ERR_ILLEGAL_TARGET, 0, NULL,
+                 "\"%s\" is a url, but revision kind requires a working copy",
+                 target);
+            }
+          else  /* target is a working copy path */
+            {
+              /* ### replace this with real code someday */
+
+              return svn_error_createf
+                (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+                 "deriving revision from \"%s\" is not yet implemented "
+                 "(see issue #943)", target);
+
+              /* ### todo: something like:
+
+                 if (target is a directory)
+                   base = target;
+                 else
+                   base = basename (target);
+
+                 SVN_ERR (svn_client__get_revision_number
+                    (&revnum, ra_lib, session, revision, base, pool));
+
+                 ...and so on.
+              */
+
+              /* Heh, heh.  A very questionable behavior is possible
+                 here.  If we do 'svn propget -rPREV -R foo somedir',
+                 then the PREV keyword will expand to the previous
+                 revision for somedir, and that revision will be used
+                 all the way down the recursion, even though there
+                 might be other objects that both have the foo
+                 property and have a different previous revision,
+                 beneath somedir.  Not sure what to do about this,
+                 just pointing it out for now. */
+            }
+        }
+      else
+        {
+          return svn_error_create
+            (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL, "unknown revision kind");
+        }
+
+      /* Close the RA session. */
+      SVN_ERR (ra_lib->close (session));
     }
   else  /* working copy path */
     {
@@ -466,9 +686,9 @@ svn_client_proplist (apr_array_header_t **props,
         SVN_ERR (add_to_proplist (prop_list, target, pool));
       
       SVN_ERR (svn_wc_adm_close (adm_access));
-      
-      *props = prop_list;
     }
+
+  *props = prop_list;
 
   return SVN_NO_ERROR;
 }
