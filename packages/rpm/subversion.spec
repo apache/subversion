@@ -7,7 +7,7 @@ Copyright: BSD
 Group: Utilities/System
 URL: http://subversion.tigris.org
 Source0: subversion-%{version}-%{release}.tar.gz
-Source1: apr-2001-09-28.tar.gz
+Source1: apr-2001-10-24.tar.gz
 Source2: neon-%{neon_version}.tar.gz
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
