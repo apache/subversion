@@ -37,7 +37,7 @@ def main(pool, cmd, config_fname, repos_dir, rev, author, propname):
   repos = Repository(repos_dir, rev, pool)
 
   if cmd == 'commit':
-    cfg = Config(config_fname, repos, { 'author' : author })
+    cfg = Config(config_fname, repos, { 'author' : author or repos.author })
     messenger = Commit(pool, cfg, repos)
   elif cmd == 'propchange':
     # Override the repos revision author with the author of the propchange
