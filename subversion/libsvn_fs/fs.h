@@ -62,6 +62,9 @@ struct svn_fs_t
 
   /* The filesystem configuration. */
   apr_hash_t *config;
+
+  /* The filesystem UUID (or NULL if not-yet-known; see svn_fs_get_uuid). */
+  const char *uuid;
 };
 
 
