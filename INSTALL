@@ -29,6 +29,11 @@ Contents:
      D. Running and Testing
      E. Alternative:  'svnserve' and ra_svn
 
+    IV. PLATFORM-SPECIFIC ISSUES
+     A. Windows XP
+     B. Mac OS X
+
+     V. SWIG LANGU
 
 
 I.    BUILD REQUIREMENTS
@@ -1000,3 +1005,10 @@ IV.   PLATFORM-SPECIFIC ISSUES
       --------
       
       [TBD: Describe BDB 4.0.x problem]
+
+
+
+V.    SWIG LANGUAGE BINDINGS
+      ======================
+      
+      (See the file ./subversion/bindings/swig/INSTALL.)
