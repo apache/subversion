@@ -68,7 +68,7 @@
   <!-- ======================== SECCIÓN 3 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-3-sect-3">
-    <title>Revisiones: Números, Palabras clave, y Fechas, ¡Oh mi!</title>
+    <title>Revisiones: números, palabras clave, y fechas, ¡Oh mi!</title>
        <!--Revisions: Numbers, Keywords, and Dates, Oh My!-->
 
     <para>Antes de continuar <!--TODO:Before we go on-->, debería saber
@@ -227,7 +227,7 @@ $ svn update --revision PREV foo.c
     </sect2>
     
     <sect2 id="svn-ch-3-sect-3.3">
-      <title>Fechas de Revisión</title>
+      <title>Fechas de revisión</title>
       
       <para>Dondequiera que usted especifique un número de revisión o
         palabra clave de revisión, usted también puede especificar una
@@ -357,7 +357,7 @@ Checked out revision 2499.
 </screen>
     
     <sidebar>
-      <title>Esquema del Repositorio</title>
+      <title>Esquema del repositorio</title>
          <!--TODO: Repository Layout-->
 
       <para>Si se está preguntando qué es todo lo de alrededor de
@@ -463,7 +463,7 @@ Checked out revision 2499.
   <!-- ======================== SECCIÓN 5 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-3-sect-5">
-    <title>Ciclo Basico de Trabajo</title><!--TODO:Basic Work Cycle-->
+    <title>Ciclo básico de trabajo</title><!--TODO:Basic Work Cycle-->
 
     <para>Subversion tiene numerosas características, opciones, campanas
       y silbidos<!--TODO:bells and whistles-->, pero en una base cotidiana
@@ -650,7 +650,7 @@ Updated to revision 2.
     </sect2>
 
     <sect2 id="svn-ch-3-sect-4.2">
-      <title>Hacer Cambios en Su Copia de Trabajo Local</title>
+      <title>Hacer cambios en su copia de trabajo local</title>
       
       <para>Ahora puede conseguir trabajar y hacer cambios en su copia
         de trabajo local. Generalmente es más conveniente decidir un
@@ -778,7 +778,7 @@ Updated to revision 2.
       </variablelist>
 
       <sidebar>
-        <title>Cambiando el Repositorio Sin una Copia de Trabajo</title>
+        <title>Cambiando el repositorio sin una copia de trabajo</title>
 
         <!-- ### pll - Fri 07 Feb 2003 12:55:07                            -->
         <!-- I find this sidebar rather confusing here, since you really   -->
@@ -819,7 +819,7 @@ Updated to revision 2.
     </sect2>
 
     <sect2 id="svn-ch-3-sect-4.3">
-      <title>Examine Sus Cambios</title>
+      <title>Examine sus cambios</title>
       
       <para>Una vez que haya terminado de hacer cambios, necesita enviarlos
         al repositorio, pero antes de hacerlo, generalmente es buena
@@ -862,7 +862,7 @@ Updated to revision 2.
           más que cualquier otro comando de Subversion.</para>
         
         <sidebar>
-          <title>Usuarios de CVS: ¡Lleve a cabo Esa Actualización!</title>
+          <title>Usuarios de CVS: ¡Lleve a cabo esa actualización!</title>
             <!--TODO:CVS Users: Hold That Update!... según google
             "¡Lleve a cabo Esa Actualización!"-->
           <para>Probablemente esté acostumbrado a usar<!--TODO:You're
@@ -1334,7 +1334,7 @@ $ svn status README
       </sect3>
 
       <sidebar>
-          <title>¡Mira Mamá! ¡Sin red!</title>
+          <title>¡Mira mamá! ¡Sin red!</title>
           <!--TODO:Look Ma! No Network!... supongo que lo habré traducido
           bien, pero por si acaso-->
 
@@ -1371,7 +1371,7 @@ $ svn status README
     </sect2>
 
     <sect2 id="svn-ch-3-sect-4.4">
-      <title>Resolver Conflictos (Fusionando los Cambios de Otros)</title>
+      <title>Resolver conflictos (fusionando los cambios de otros)</title>
            
       <para>Ya hemos visto cómo <command>svn status -u</command> puede
         predecir conflictos. Suponga que ejecuta <command>svn
@@ -1543,7 +1543,7 @@ Resolved conflicted state of 'sandwich.txt'
 </screen>
 
       <sect3 id="svn-ch-3-sect-4.4.1">
-        <title>Fusionando Conflictos a mano</title>
+        <title>Fusionando conflictos a mano</title>
 
         <para>Fusionar conflictos a mano puede ser absolutamente
           intimidatorio la primera vez que lo haga<!--TODO:you attempt
@@ -1648,7 +1648,7 @@ $ svn commit -m "Go ahead and use my sandwich, discarding Sally's edits."
       </sect3>
 
       <sect3 id="svn-ch-3-sect-4.4.2">
-        <title>Copiando un Fichero en su Fichero de Trabajo</title>
+        <title>Copiando un fichero en su fichero de trabajo</title>
 
         <para>Si obtiene un conflicto y decide que quiere rechazar sus
           cambios, simplemente usted puede copiar uno de los ficheros
@@ -1701,7 +1701,7 @@ sandwich.txt
     </sect2>
     
     <sect2 id="svn-ch-3-sect-4.5">
-      <title>Enviar Sus Cambios</title>
+      <title>Enviar sus cambios</title>
       
       <para>¡Finalmente! Su edición está terminada, ha fusionado todos
         los cambios del servidor, y está listo para enviar sus cambios
