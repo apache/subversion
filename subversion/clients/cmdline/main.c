@@ -998,7 +998,7 @@ main (int argc, const char * const *argv)
             if (! err)
               err = svn_error_createf
                 (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                 "Syntax error in native-eol argument '%s'",
+                 _("Syntax error in native-eol argument '%s'"),
                  utf8_opt_arg);
             svn_handle_error (err, stderr, FALSE);
             svn_error_clear (err);
