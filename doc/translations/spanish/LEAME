@@ -8,6 +8,7 @@ Este documento contiene las siguientes secciones:
   Reglas mínimas para todos los traductores
   Reglas mínimas para traductores con acceso de escritura
   Traducción de la web del libro
+  Corrección ortográfica con aspell
   Lista de correo para discutir la traducción
 
 
@@ -388,6 +389,65 @@ le han abducido, en cuyo caso hay que ponerse en contacto con los
 webmasters de la página para obtener instrucciones sobre acceso
 de escritura.  Y de paso, cambiar al coordinador del proyecto. Ya
 le vale, qué vago.
+
+
+Corrección ortográfica con aspell
+=================================
+
+El comando aspell en sistemas Unix permite realizar una corrección
+ortográfica básica, útil para capturar esos pequeños descuidos que
+acaban colándose de una forma u otra. Primero hay que instalar
+el propio programa corrector y un diccionario en español. En
+distribuciones Debian esto se puede hacer con un "apt-get aspell-bin
+aspell-es". También es necesario el programa "make" para ejecutar
+los scripts.
+
+El mecanismo de verificación ortográfica sólo es útil una vez
+se ha traducido un fichero por completo, dado que la herramienta
+no es capaz de procesar documentos multilingües. Igualmente, el
+diccionario básico no va a tener todos los términos informáticos
+o palabras derivadas que son válidas, así que también muestra
+"falsos positivos".
+
+Primero hay que añadir el nombre base del fichero que queremos
+traducir a la línea BOOK_ASPELL_FILES del fichero Makefile. Ahora
+desde el directorio raíz del proyecto tecleamos en la línea de
+comando "make aspell_check".  Este comando ejecutará aspell sobre
+todos los ficheros de la variable BOOK_ASPELL_FILES. Los que ya
+están verificados no tendrán fallos, así que como mucho veremos un
+parpadeo de pantalla que indica que aspell comencó la verificación
+y salió sin encontrar ningún fallo.
+
+Pero como acabamos de añadir un fichero nuevo, el proceso se
+dentendrá en cuanto llegue el turno del fichero que hemos añadido. La
+interfaz de aspell es simple: muestra el texto en la pantalla
+superior junto con la palabra que no está en su diccionario, y una
+leyenda de opciones en la parte inferior de la pantalla. Pulsando
+uno de los números sutituiremos la palabra resaltada por esa opción.
+
+Así, lo único que tenemos que hacer es ir corrigiendo lo que esté
+mal.  Para aquellas palabras que están bien, o que se han dejado
+en inglés, hay que presionar la tecla I, que sirve para "Ignorar
+todas". Tras finalizar la verificación completa, o pulsar x para
+salir, un "svn diff" debería mostrar los cambios que acabamos de
+hacer, y podemos enviar los cambios al repositorio para mantenerlos.
+
+Pero si volvemos a ejecutar "make aspell_check", veremos que aspell
+vuelve a pararse en las palabras que anteriormente ignoramos. Para
+evitar esto, hay que ejecutar "make aspell_add_words". Este comando
+revisa los ficheros y vuelca en fichero.xml.aspell_ignore la lista
+de palabras que hemos ignorado. Esta lista de palabras es usada por
+"make aspell_check" como diccionario adicional, y así evitamos que
+vuelva a preguntar por palabras que queremos ignorar. Por supuesto,
+los ficheros aspell_ignore hay que enviarlos al repositorio para
+que otros traductores no tengan que volver a realizar este trabajo.
+
+En resumen, se trata de un proceso algo laborioso, pero que merece la
+pena porque es una primera línea de defensa contra fallos básicos.
+En cualquier caso, esta verificación no es obligatoria para los
+traductores. Si no se desea realizar o no se puede por falta de las
+herramientas adecuadas, se puede pedir al coordinador que se encargue
+de añadir el fichero traducido a la lista de ficheros verificados.
 
 
 Lista de correo para discutir la traducción
