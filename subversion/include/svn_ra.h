@@ -810,14 +810,20 @@ svn_error_t *svn_ra_get_file_revs (svn_ra_session_t *session,
                                    void *handler_baton,
                                    apr_pool_t *pool);
 
-/** Return a @a *descriptions string (allocated in @a pool) that is a textual
- * list of all available RA libraries.
+/** @since New in 1.2.
  *
- * @a unused is provided for backwards compatibility with the 1.1 API and is
- * ignored.
+ * Return a @a *descriptions string (allocated in @a pool) that is a textual
+ * list of all available RA libraries.
  */
+svn_error_t *svn_ra_print_ra_libraries2 (svn_stringbuf_t **descriptions,
+                                         apr_pool_t *pool);
+
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_ra_print_libraries2.  @a ra_baton is ignored. */
 svn_error_t *svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
-                                        void *unused,
+                                        void *ra_baton,
                                         apr_pool_t *pool);
 
 
