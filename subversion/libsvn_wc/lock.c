@@ -590,18 +590,39 @@ svn_wc__adm_is_cleanup_required (svn_boolean_t *cleanup,
   return SVN_NO_ERROR;
 }
 
+static void
+prune_deleted (svn_wc_adm_access_t *adm_access)
+{
+  if (! adm_access->entries && adm_access->entries_deleted)
+    {
+      apr_hash_index_t *hi;
+      adm_access->entries = apr_hash_make (adm_access->pool);
+      for (hi = apr_hash_first (adm_access->pool, adm_access->entries_deleted);
+           hi;
+           hi = apr_hash_next (hi))
+        {
+          void *val;
+          const void *key;
+          svn_wc_entry_t *entry;
+
+          apr_hash_this (hi, &key, NULL, &val);
+          entry = val;
+          if (! entry->deleted)
+            apr_hash_set (adm_access->entries, key, APR_HASH_KEY_STRING, entry);
+        }
+    }
+}
+
 
 void
 svn_wc__adm_access_set_entries (svn_wc_adm_access_t *adm_access,
                                 svn_boolean_t show_deleted,
                                 apr_hash_t *entries)
 {
-#if SVN_WC_ADM_CACHE_ENTRIES
   if (show_deleted)
     adm_access->entries_deleted = entries;
   else
     adm_access->entries = entries;
-#endif
 }
 
 
@@ -609,7 +630,13 @@ apr_hash_t *
 svn_wc__adm_access_entries (svn_wc_adm_access_t *adm_access,
                             svn_boolean_t show_deleted)
 {
-  return show_deleted ? adm_access->entries_deleted : adm_access->entries;
+  if (! show_deleted)
+    {
+      prune_deleted (adm_access);
+      return adm_access->entries;
+    }
+  else
+    return adm_access->entries_deleted;
 }
 
 

@@ -65,7 +65,8 @@ recursively_tweak_entries (svn_wc_adm_access_t *dirpath,
 
   /* Tweak "this_dir" */
   SVN_ERR (svn_wc__tweak_entry (entries, SVN_WC_ENTRY_THIS_DIR,
-                                base_url, new_rev, subpool));
+                                base_url, new_rev,
+                                svn_wc_adm_access_pool (dirpath)));
 
   /* Recursively loop over all children. */
   for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
@@ -92,7 +93,8 @@ recursively_tweak_entries (svn_wc_adm_access_t *dirpath,
       if ((current_entry->kind == svn_node_file)
           || (current_entry->deleted))
         SVN_ERR (svn_wc__tweak_entry (entries, name,
-                                      child_url, new_rev, subpool));
+                                      child_url, new_rev,
+                                      svn_wc_adm_access_pool (dirpath)));
       
       /* If a dir, recurse. */
       else if (current_entry->kind == svn_node_dir)        
@@ -143,7 +145,8 @@ svn_wc__do_update_cleanup (const char *path,
       SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, parent, pool));
       SVN_ERR (svn_wc_entries_read (&entries, dir_access, TRUE, pool));
       SVN_ERR (svn_wc__tweak_entry (entries, base_name,
-                                    base_url, new_revision, pool));
+                                    base_url, new_revision,
+                                    svn_wc_adm_access_pool (dir_access)));
       SVN_ERR (svn_wc__entries_write (entries, dir_access, pool));
     }
 
@@ -156,7 +159,8 @@ svn_wc__do_update_cleanup (const char *path,
         {
           SVN_ERR (svn_wc_entries_read (&entries, dir_access, TRUE, pool));
           SVN_ERR (svn_wc__tweak_entry (entries, SVN_WC_ENTRY_THIS_DIR,
-                                        base_url, new_revision, pool));
+                                        base_url, new_revision,
+                                        svn_wc_adm_access_pool (dir_access)));
           SVN_ERR (svn_wc__entries_write (entries, adm_access, pool));
         }
       else
@@ -475,10 +479,12 @@ mark_tree (svn_wc_adm_access_t *adm_access,
   if (! (entry->schedule == svn_wc_schedule_add
          && schedule == svn_wc_schedule_delete))
   {
-     entry->schedule = schedule;
-     entry->copied = copied;
-     SVN_ERR (svn_wc__entry_modify (adm_access, NULL, entry, modify_flags,
-                                    subpool));
+    if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
+      entry->schedule = schedule;
+    if (modify_flags & SVN_WC__ENTRY_MODIFY_COPIED)
+      entry->copied = copied;
+    SVN_ERR (svn_wc__entry_modify (adm_access, NULL, entry, modify_flags,
+                                   subpool));
   }
   
   /* Destroy our per-iteration pool. */

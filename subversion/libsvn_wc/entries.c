@@ -796,14 +796,7 @@ svn_wc_entries_read (apr_hash_t **entries,
   new_entries = svn_wc__adm_access_entries (adm_access, show_deleted);
   if (! new_entries)
     {
-      /* ### If the entries for show_deleted are available, but those for
-         ### not show_deleted are not, it may be quicker to construct the
-         ### latter from the former, rather than parsing the entries
-         ### file. */
-
-#if SVN_WC_ADM_CACHE_ENTRIES
       pool = svn_wc_adm_access_pool (adm_access);
-#endif
       new_entries = apr_hash_make (pool);
 
       SVN_ERR (read_entries (new_entries, svn_wc_adm_access_path (adm_access),
@@ -1092,9 +1085,7 @@ svn_wc__entries_write (apr_hash_t *entries,
                                    svn_wc_adm_access_path (adm_access),
                                    SVN_WC__ADM_ENTRIES, 1, pool);
 
-  /* ### We would like to use entries to populate the access baton cache,
-     ### but it's not yet always allocated from the correct pool */
-  svn_wc__adm_access_set_entries (adm_access, TRUE, NULL);
+  svn_wc__adm_access_set_entries (adm_access, TRUE, entries);
   svn_wc__adm_access_set_entries (adm_access, FALSE, NULL);
 
   return err;
@@ -1469,10 +1460,8 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
   if (name == NULL)
     name = SVN_WC_ENTRY_THIS_DIR;
 
-#if SVN_WC_ADM_CACHE_ENTRIES
   pool = svn_wc_adm_access_pool (adm_access);
   name = apr_pstrdup (pool, name);
-#endif
 
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
     {
@@ -1504,9 +1493,6 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
 
   /* Sync changes to disk. */
   SVN_ERR (svn_wc__entries_write (entries, adm_access, pool));
-
-  /* ### We really want svn_wc__entries_write to do this */
-  svn_wc__adm_access_set_entries (adm_access, TRUE, entries);
 
   return SVN_NO_ERROR;
 }
