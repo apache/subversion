@@ -681,7 +681,7 @@ create_hooks (svn_fs_t *fs, const char *path)
       "# REPOS=${1}\n"
       "# TXN=${2}\n"
       "#\n"
-      "# SVNLOOK=/usr/local/svn/bin/svnlook\n"
+      "# SVNLOOK=/usr/local/bin/svnlook\n"
       "# LOG=`${SVNLOOK} ${REPOS} txn ${TXN} log`\n"
       "# echo ${LOG} | grep \"[a-zA-Z0-9]\" > /dev/null || exit 1\n"
       "# exit 0\n"
