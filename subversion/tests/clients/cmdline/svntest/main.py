@@ -291,7 +291,7 @@ class Sandbox:
     self.repo_dir = os.path.join(general_repo_dir, self.name)
 
   def build(self):
-    return actions.make_repo_and_wc(self.name)
+    return actions.make_repo_and_wc(self)
 
 
 ######################################################################

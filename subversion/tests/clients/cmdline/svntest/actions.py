@@ -555,7 +555,7 @@ def compare_and_display_lines(message, label, expected, actual):
 
 
 # This allows a test to *quickly* bootstrap itself.
-def make_repo_and_wc(test_name):
+def make_repo_and_wc(sbox):
   """Create a fresh repository and checkout a wc from it.
 
   The repo and wc directories will both be named TEST_NAME, and
@@ -563,19 +563,15 @@ def make_repo_and_wc(test_name):
   'general_wc_dir' (variables defined at the top of this test
   suite.)  Return 0 on success, non-zero on failure."""
 
-  # Where the repos and wc for this test should be created.
-  wc_dir = os.path.join(main.general_wc_dir, test_name)
-  repo_dir = os.path.join(main.general_repo_dir, test_name)
-
-  # Store the path to the current repository
-  main.set_repos_paths(repo_dir)
+  # Store the path of the current repository.
+  main.set_repos_paths(sbox.repo_dir)
 
   # Create (or copy afresh) a new repos with a greek tree in it.
-  guarantee_greek_repository(repo_dir)
+  guarantee_greek_repository(sbox.repo_dir)
 
   # Generate the expected output tree.
   expected_output = main.greek_state.copy()
-  expected_output.wc_dir = wc_dir
+  expected_output.wc_dir = sbox.wc_dir
   expected_output.tweak(status='A ', contents=None)
 
   # Generate an expected wc tree.
@@ -583,7 +579,7 @@ def make_repo_and_wc(test_name):
 
   # Do a checkout, and verify the resulting output and disk contents.
   return run_and_verify_checkout(main.current_repo_url,
-                                 wc_dir,
+                                 sbox.wc_dir,
                                  expected_output,
                                  expected_wc)
 
