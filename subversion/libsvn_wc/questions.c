@@ -56,8 +56,7 @@ svn_wc_check_wc (const char *path,
   if (kind == svn_node_none)
     {
       return svn_error_createf
-        (APR_ENOENT, NULL,
-         "svn_wc_check_wc: '%s' does not exist", path);
+        (APR_ENOENT, NULL, "'%s' does not exist", path);
     }
   else if (kind != svn_node_dir)
     *wc_format = 0;
@@ -96,7 +95,7 @@ svn_wc__check_format (int wc_format, const char *path, apr_pool_t *pool)
     {
       return svn_error_createf
         (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-         "working copy format of '%s' is too old (%d);\n"
+         "Working copy format of '%s' is too old (%d); "
          "please check out your working copy again",
          path, wc_format);
     }
@@ -104,7 +103,7 @@ svn_wc__check_format (int wc_format, const char *path, apr_pool_t *pool)
     {
       return svn_error_createf
         (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-         "this client is too old to work with working copy '%s';\n"
+         "This client is too old to work with working copy '%s'; "
          "please get a newer Subversion client",
          path);
     }
@@ -173,7 +172,7 @@ svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
   if (entry == NULL)
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-       "timestamps_equal_p: '%s' not under version control", entryname);
+       "'%s' is not under version control", entryname);
 
   /* Get the timestamp from the working file and the entry */
   if (timestamp_kind == svn_wc__text_time)

@@ -304,7 +304,7 @@ def basic_corruption(sbox):
 
   # This commit should fail due to text base corruption.
   svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                            expected_status, "checksum",
+                                            expected_status, "svn: Checksum",
                                             None, None, None, None, wc_dir)
 
   # Restore the uncorrupted text base.
@@ -353,7 +353,7 @@ def basic_corruption(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        "checksum", other_wc)
+                                        "svn: Checksum", other_wc)
   
   # Restore the uncorrupted text base.
   os.chmod (tb_dir_path, 0777)

@@ -353,9 +353,8 @@ report_revisions (svn_wc_adm_access_t *adm_access,
             {
               return svn_error_createf
                 (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                 "The entry '%s' is no longer a directory,\n"
-                 "which prevents proper updates.\n"
-                 "Please remove this entry and try updating again.",
+                 "The entry '%s' is no longer a directory; "
+                 "remove the entry before updating",
                  this_path);
             }
 
@@ -573,7 +572,7 @@ svn_wc_crawl_revisions (const char *path,
       svn_error_t *fserr;
       if ((fserr = reporter->abort_report (report_baton)))
         {
-          fserr = svn_error_quick_wrap (fserr, "Error aborting report.");
+          fserr = svn_error_quick_wrap (fserr, "Error aborting report");
           svn_error_compose (err, fserr);
         }
       return err;
@@ -670,12 +669,9 @@ svn_wc_transmit_text_deltas (const char *path,
                   
                   return svn_error_createf
                     (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-                     "svn_wc_transmit_text_deltas: "
-                     "checksum mismatch for '%s':\n"
-                     "   recorded checksum:        %s\n"
-                     "   actual checksum (hex):    %s\n"
-                     "   actual checksum (base64): %s\n",
-                     tb, ent->checksum, base_digest_hex, digest_base64);
+                     "Checksum mismatch for '%s': "
+		     "expected '%s', actual: '%s'",
+                     tb, ent->checksum, base_digest_hex);
                 }
             }
         }

@@ -119,8 +119,7 @@ svn_wc__entries_init (const char *path,
     {
       apr_file_close (f);
       return svn_error_createf (apr_err, NULL,
-                                "svn_wc__entries_init: "
-                                "error writing entries file for '%s'.",
+                                "Error writing entries file for '%s'",
                                 path);
     }
 
@@ -572,17 +571,17 @@ resolve_to_defaults (apr_hash_t *entries,
   if (! default_entry)
     return svn_error_create (SVN_ERR_ENTRY_NOT_FOUND,
                              NULL,
-                             "missing default entry");
+                             "Missing default entry");
 
   if (default_entry->revision == SVN_INVALID_REVNUM)
     return svn_error_create (SVN_ERR_ENTRY_MISSING_REVISION,
                              NULL,
-                             "default entry has no revision number");
+                             "Default entry has no revision number");
 
   if (! default_entry->url)
     return svn_error_create (SVN_ERR_ENTRY_MISSING_URL,
                              NULL,
-                             "default entry missing URL");
+                             "Default entry is missing URL");
   
     
   /* Then use it to fill in missing information in other entries. */
@@ -664,13 +663,13 @@ read_entries (svn_wc_adm_access_t *adm_access,
     apr_err = apr_file_read_full (infile, buf, sizeof(buf), &bytes_read);
     if (apr_err && !APR_STATUS_IS_EOF(apr_err))
       return svn_error_create 
-        (apr_err, NULL, "read_entries: apr_file_read_full choked");
+        (apr_err, NULL, NULL);
     
     err = svn_xml_parse (svn_parser, buf, bytes_read,
                          APR_STATUS_IS_EOF(apr_err));
     if (err)
       return svn_error_createf (err->apr_err, err, 
-                                "read_entries: XML parser failed (%s).", 
+                                "XML parser failed in '%s'", 
                                 svn_wc_adm_access_path (adm_access));
   } while (!APR_STATUS_IS_EOF(apr_err));
 
@@ -1165,7 +1164,7 @@ svn_wc__entries_write (apr_hash_t *entries,
   apr_err = apr_file_write_full (outfile, bigstr->data, bigstr->len, NULL);
   if (apr_err)
     err = svn_error_createf (apr_err, NULL,
-                             "svn_wc__entries_write: %s",
+                             "Error writing to '%s'",
                              svn_wc_adm_access_path (adm_access));
   else
     err = svn_wc__close_adm_file (outfile,
@@ -1364,10 +1363,7 @@ fold_scheduling (apr_hash_t *entries,
           return SVN_NO_ERROR;
 
         default:
-          return 
-            svn_error_createf 
-            (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
-             "fold_state_changes: Illegal schedule in state set operation");
+          return svn_error_createf (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL, NULL);
         }
     }
 
@@ -1379,10 +1375,9 @@ fold_scheduling (apr_hash_t *entries,
         return SVN_NO_ERROR;
       else
         return 
-          svn_error_createf 
-          (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
-           "fold_state_changes: '%s' is not a versioned resource",
-           name);
+          svn_error_createf (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
+                             "'%s' is not under version control",
+                             name);
     }
 
   /* Get the default entry */
@@ -1407,26 +1402,23 @@ fold_scheduling (apr_hash_t *entries,
     {
       if (*schedule == svn_wc_schedule_add)
         return 
-          svn_error_createf 
-          (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
-           "fold_state_changes: Can't add '%s' to deleted directory"
-           "--try undeleting its parent directory first",
-           name);
+          svn_error_createf (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
+                             "Can't add '%s' to deleted directory; "
+                             "try undeleting its parent directory first",
+                             name);
       if (*schedule == svn_wc_schedule_replace)
         return 
-          svn_error_createf 
-          (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
-           "fold_state_changes: Can't replace '%s' in deleted directory"
-           "--try undeleting its parent directory first",
-           name);
+          svn_error_createf (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
+                             "Can't replace '%s' in deleted directory; "
+                             "try undeleting its parent directory first",
+                             name);
     }
 
   if (entry->absent && (*schedule == svn_wc_schedule_add))
     {
       return svn_error_createf 
         (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
-         "fold_state_changes: '%s' is marked as absent, "
-         "so cannot be scheduled for addition",
+         "'%s' is marked as absent, so it cannot be scheduled for addition",
          name);
     }
 
@@ -1455,8 +1447,7 @@ fold_scheduling (apr_hash_t *entries,
             return 
               svn_error_createf 
               (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
-               "fold_state_changes: Entry '%s' already under version control",
-               name);
+               "Entry '%s' is already under version control", name);
         }
       break;
 
@@ -1548,8 +1539,7 @@ fold_scheduling (apr_hash_t *entries,
       return 
         svn_error_createf 
         (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
-         "fold_state_changes: Entry '%s' has illegal schedule",
-         name);
+         "Entry '%s' has illegal schedule", name);
     }
   return SVN_NO_ERROR;
 }
@@ -1799,7 +1789,7 @@ svn_wc_walk_entries (const char *path,
 
   else
     return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                              "%s: unrecognized node kind.", path);
+                              "'%s' has an unrecognized node kind.", path);
 }
 
 
@@ -1832,6 +1822,6 @@ svn_wc_mark_missing_deleted (const char *path,
     }
   else
     return svn_error_createf (SVN_ERR_WC_PATH_FOUND, NULL,
-                              "svn_wc_mark_missing_deleted: path '%s' isn't "
-                              "missing.", path);
+                              "Unexpectedly found '%s': "
+			      "path is marked 'missing'", path);
 }

@@ -78,7 +78,7 @@ svn_wc__ensure_directory (const char *path, apr_pool_t *pool)
             {
               /* A weird and probably rare situation. */
               return svn_error_create (0, NULL,
-                                       "unable to make any directories");
+                                       "Unable to make any directories");
             }
           else  /* We have a valid path, so recursively ensure it. */
             {

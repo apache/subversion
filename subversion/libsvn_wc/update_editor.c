@@ -804,7 +804,7 @@ leftmod_error_chain (svn_error_t *err,
 
       return svn_error_createf
         (SVN_ERR_WC_OBSTRUCTED_UPDATE, tmp_err,
-         "failed to delete dir '%s': local mods found within.", path);
+         "Won't delete locally modified directory '%s'", path);
     }
 
   return err;
@@ -848,7 +848,7 @@ do_entry_deletion (struct edit_baton *eb,
       if (tmodified_p || pmodified_p)
         return svn_error_createf
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           "failed to delete file '%s': file has local modifications.",
+           "Won't delete locally modified file '%s'",
            base_name);
     }
 
@@ -903,7 +903,7 @@ do_entry_deletion (struct edit_baton *eb,
     {
       apr_file_close (log_fp);
       return svn_error_createf (apr_err, NULL,
-                                "delete error writing log file for '%s'.",
+                                "Error writing log file for '%s'",
                                 parent_path);
     }
 
@@ -1009,14 +1009,14 @@ add_directory (const char *path,
   if (kind != svn_node_none)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       "failed to add directory '%s': object of the same name already exists",
+       "Failed to add directory '%s': object of the same name already exists",
        db->path);
 
   /* It may not be named the same as the administrative directory. */
   if (strcmp (svn_path_basename (path, pool), SVN_WC_ADM_DIR_NAME) == 0)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       "failed to add directory '%s': \nobject of the same name as the "
+       "Failed to add directory '%s': object of the same name as the "
        "administrative directory", db->path);
 
   /* Either we got real copyfrom args... */
@@ -1029,7 +1029,7 @@ add_directory (const char *path,
          copied tree.  Someday! */      
       return svn_error_createf
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-         "failed to add directory '%s': copyfrom args not yet supported",
+         "Failed to add directory '%s': copyfrom arguments not yet supported",
          db->path);
     }
   else  /* ...or we got invalid copyfrom args. */
@@ -1049,7 +1049,7 @@ add_directory (const char *path,
       if (dir_entry && dir_entry->schedule == svn_wc_schedule_add)
         return svn_error_createf
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           "failed to add dir '%s': \nobject of the same name is already "
+           "Failed to add dir '%s': object of the same name is already "
            "scheduled for addition", path);
 
       /* Immediately create an entry for the new directory in the parent.
@@ -1289,7 +1289,7 @@ close_directory (void *dir_baton,
         {
           apr_file_close (log_fp);
           return svn_error_createf (apr_err, NULL,
-                                    "error writing log file for '%s'",
+                                    "Error writing log file for '%s'",
                                     db->path);
         }
 
@@ -1350,7 +1350,7 @@ absent_file_or_dir (const char *path,
   if (ent && (ent->schedule == svn_wc_schedule_add))
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       "failed to mark '%s' absent:\nitem of the same name is already "
+       "Failed to mark '%s' absent: item of the same name is already "
        "scheduled for addition", path);
   
   /* Immediately create an entry for the new item in the parent.  Note
@@ -1441,7 +1441,7 @@ add_or_open_file (const char *path,
   if (adding && (kind != svn_node_none))
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       "failed to add file '%s': object of the same name already exists",
+       "Failed to add file '%s': object of the same name already exists",
        fb->path);
 
   /* sussman sez: If we're trying to add a file that's already in
@@ -1462,15 +1462,15 @@ add_or_open_file (const char *path,
   if (adding && entry && entry->schedule == svn_wc_schedule_add)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       "failed to add file '%s': \nobject of the same name is already "
+       "Failed to add file '%s': object of the same name is already "
        "scheduled for addition", fb->path);
     
 
   /* If replacing, make sure the .svn entry already exists. */
   if ((! adding) && (! entry))
-    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                              "trying to open non-versioned file "
-                              "'%s' in directory '%s'",
+    return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                              "File '%s' in directory '%s' "
+			      "is not a versioned resource",
                               fb->name, pb->path);
   
   /* ### todo:  right now the incoming copyfrom* args are being
@@ -1572,9 +1572,7 @@ apply_textdelta (void *file_baton,
           if (strcmp (hex_digest, base_checksum) != 0)
             return svn_error_createf
               (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-               "apply_textdelta: checksum mismatch for '%s':\n"
-               "   expected checksum:  %s\n"
-               "   actual checksum:    %s\n",
+               "Checksum mismatch for '%s'; expected: '%s', actual: '%s'",
                tb, base_checksum, hex_digest);
         }
       
@@ -1591,11 +1589,8 @@ apply_textdelta (void *file_baton,
             {
               return svn_error_createf
                 (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-                 "apply_textdelta: checksum mismatch for '%s':\n"
-                 "   recorded checksum:        %s\n"
-                 "   actual checksum (hex):    %s\n"
-                 "   actual checksum (base64): %s\n",
-                 tb, ent->checksum, hex_digest, base64_digest);
+                 "Checksum mismatch for '%s'; recorded: '%s', actual: '%s'",
+                 tb, ent->checksum, hex_digest);
             }
         }
     }
@@ -2249,7 +2244,7 @@ install_file (svn_wc_notify_state_t *content_state,
     {
       apr_file_close (log_fp);
       return svn_error_createf (apr_err, NULL,
-                                "error writing log for '%s'.",
+                                "Error writing log for '%s'.",
                                 file_path);
     }
 
@@ -2324,10 +2319,7 @@ close_file (void *file_baton,
           if (real_sum && (strcmp (text_checksum, real_sum) != 0))
             return svn_error_createf
               (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-               "close_file: expected and actual checksums do not match:\n"
-               "(%s):\n"
-               "   expected checksum:  %s\n"
-               "   actual checksum:    %s\n",
+               "Checksum mismatch for '%s'; expected: '%s', actual: '%s'",
                fb->path, text_checksum, real_sum);
         }
     }
@@ -2706,8 +2698,8 @@ check_wc_root (svn_boolean_t *wc_root,
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
   if (! entry)
     return svn_error_createf 
-      (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-       "svn_wc_is_wc_root: '%s' is not a versioned resource", path);
+      (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+       "'%s' is not under version control", path);
   if (kind)
     *kind = entry->kind;
 
@@ -2734,7 +2726,7 @@ check_wc_root (svn_boolean_t *wc_root,
   if (! p_entry->url)
     return svn_error_createf 
       (SVN_ERR_ENTRY_MISSING_URL, NULL,
-       "svn_wc_is_wc_root: '%s' has no ancestry information.", 
+       "'%s' has no ancestry information.", 
        parent);
 
   /* If PATH's parent in the WC is not its parent in the repository,

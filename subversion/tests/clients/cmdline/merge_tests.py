@@ -722,9 +722,9 @@ def simple_property_merges(sbox):
   # Merge B 3:4 into B2 now causes a conflict
   expected_disk.add({
     'E/dir_conflicts.prej'
-    : Item("prop 'foo': user deleted, but update sets it to 'mod_foo'.\n"),
+    : Item("Property 'foo' locally deleted, but update sets it to 'mod_foo'"),
     'E/alpha.prej'
-    : Item("prop 'foo': user deleted, but update sets it to 'mod_foo'.\n"),
+    : Item("Property 'foo' locally deleted, but update sets it to 'mod_foo'"),
     })
   expected_disk.tweak('E', 'E/alpha', props={'bar' : 'bar_val'})
   expected_status.tweak('E', 'E/alpha', status=' C')

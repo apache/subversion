@@ -195,7 +195,7 @@ svn_wc__make_adm_thing (svn_wc_adm_access_t *adm_access,
          segfault or other obvious indicator that something went
          wrong.  Even so, not sure if it's appropriate.  Thoughts? */
       err = svn_error_create 
-        (0, NULL, "svn_wc__make_admin_thing: bad type indicator");
+        (0, NULL, "Bad type indicator");
     }
 
   return err;
@@ -474,9 +474,7 @@ open_adm_file (apr_file_t **handle,
         {
           err = svn_error_quick_wrap(err,
                                "Your .svn/tmp directory may be missing or "
-                               "corrupt. "
-                               "Please run 'svn cleanup' and try your "
-                               "operation again.");
+                               "corrupt; run 'svn cleanup' and try again");
         }
     }
 
@@ -654,13 +652,14 @@ svn_wc__open_props (apr_file_t **handle,
   if (wc_format_version == 0)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       "svn_wc__open_props: '%s' is not a working copy directory", parent_dir);
+       "'%s' is not a working copy", parent_dir);
 
   /* Then examine the flags to know -which- kind of prop file to get. */
 
   if (base && wcprops)
     return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             "open_props: no such thing as 'base' wcprops!");
+                             "No such thing as 'base' "
+			     "working copy properties!");
 
   else if (base)
     {
@@ -728,13 +727,14 @@ svn_wc__close_props (apr_file_t *fp,
   if (wc_format_version == 0)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       "svn_wc__close_props: '%s' is not a working copy directory", parent_dir);
+       "'%s' is not a working copy", parent_dir);
 
   /* Then examine the flags to know -which- kind of prop file to get. */
 
   if (base && wcprops)
     return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             "close_props: no such thing as 'base' wcprops!");
+                             "No such thing as 'base' "
+			     "working copy properties!");
 
   else if (base)
     {
@@ -797,7 +797,8 @@ svn_wc__sync_props (const char *path,
 
   if (base && wcprops)
     return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             "close_props: no such thing as 'base' wcprops!");
+                             "No such thing as 'base' "
+			     "working copy properties!");
 
   else if (base)
     {
@@ -916,7 +917,7 @@ check_adm_exists (svn_boolean_t *exists,
       SVN_ERR (svn_wc_adm_close (adm_access));
       if (!entry)
         return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                                  "no entry for '%s'", path);
+                                  "No entry for '%s'", path);
 
       /* The revisions must match except when adding a directory with a
          name that matches a directory scheduled for deletion. That's
@@ -926,7 +927,7 @@ check_adm_exists (svn_boolean_t *exists,
           && !(entry->schedule == svn_wc_schedule_delete && revision == 0))
         return
           svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                             "revision %" SVN_REVNUM_T_FMT
+                             "Revision %" SVN_REVNUM_T_FMT
                              " doesn't match existing revision %"
                              SVN_REVNUM_T_FMT " in '%s'",
                              revision, entry->revision, path);
