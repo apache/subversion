@@ -120,6 +120,20 @@ make_file_baton (struct edit_context *ec, enum elemtype addreplace)
 }
 
 
+static svn_error_t *
+close_edit (struct edit_context *ec)
+{
+  svn_string_t *str = NULL;
+  apr_size_t len;
+
+  svn_xml_make_close_tag (&str, ec->pool, "delta-pkg");
+  len = str->len;
+  SVN_ERR (svn_stream_write (ec->output, str->data, &len));
+  SVN_ERR (svn_stream_close (ec->output));
+  return SVN_NO_ERROR;
+}
+
+
 /* The meshing between the edit_fns interface and the XML delta format
    is such that we can't usually output the end of an element until we
    go on to the next thing, and for a given call we may or may not
@@ -553,21 +567,6 @@ close_file (void *file_baton)
   ec->open_file_count--;
   if (ec->root_dir_closed && ec->open_file_count == 0)
     SVN_ERR (close_edit (ec));
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-close_edit (struct edit_context *ec)
-{
-  svn_error_t *err;
-  svn_string_t *str = NULL;
-  apr_size_t len;
-
-  svn_xml_make_close_tag (&str, ec->pool, "delta-pkg");
-  len = str->len;
-  SVN_ERR (svn_stream_write (ec->output, str->data, &len));
-  SVN_ERR (svn_stream_close (ec->output));
   return SVN_NO_ERROR;
 }
 
