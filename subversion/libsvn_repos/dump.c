@@ -790,6 +790,8 @@ write_revision_record (svn_stream_t *stream,
   apr_size_t len;
   apr_hash_t *props;
   svn_stringbuf_t *encoded_prophash;
+  apr_time_t timetemp;
+  svn_string_t *datevalue;
 
   /* Read the revision props even if we're aren't going to dump
      them for verification purposes */
@@ -803,10 +805,8 @@ write_revision_record (svn_stream_t *stream,
   /* Run revision date properties through the time conversion to
      canonize them. */
   /* ### Remove this when it is no longer needed for sure. */
-  apr_time_t timetemp;
-  svn_string_t *datevalue = apr_hash_get (props,
-                                          SVN_PROP_REVISION_DATE,
-                                          APR_HASH_KEY_STRING);
+  datevalue = apr_hash_get (props, SVN_PROP_REVISION_DATE,
+                            APR_HASH_KEY_STRING);
   if (datevalue)
     {
       SVN_ERR (svn_time_from_cstring (&timetemp, datevalue->data, pool));
