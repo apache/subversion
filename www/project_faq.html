@@ -80,6 +80,8 @@
 <li><a href="#db3db4">When I start Apache, mod_dav_svn complains about
     a "bad database version", that it found db-3.X, rather than
     db-4.X.</a></li>
+<li><a href="#redhat-db">I'm getting "Function not implemented" errors on
+    RedHat 9, and nothing works.  How do I fix this?</a></li>
 <p>
 
 <strong>References:</strong>
@@ -876,6 +878,35 @@ apache's configure: "--with-dbm=db4 --with-berkeley-db=/the/db/prefix".</p>
 
 
 <![CDATA[=========================================================]]>
+
+<h3><a name="redhat-db">I'm getting "Function not implemented" errors on RedHat
+9, and nothing works.  How do I fix this?</a></h3>
+
+<p>This is not really a problem with Subversion, but it often affects
+Subversion users.</p>
+
+<p>RedHat 9 ships with a Berkeley DB library that relies on the kernel
+support for NPTL (the Native Posix Threads Library).</p>
+
+<p>The kernels that RedHat provides have this support built in, but if you
+compile your own kernel, then you may well not have the NPTL support.  If that
+is the case, then you will see errors like this:
+<blockquote><pre>
+svn: Berkeley DB error
+svn: Berkeley DB error while creating environment for filesystem tester/db:
+Function not implemented
+</pre></blockquote>
+This can be fixed in one of several ways:
+<ul>
+<li>Rebuild db4 for the kernel you're using.</li>
+<li>Use a RedHat 9 kernel.</li>
+<li>Apply the NPTL patches to the kernel you're using.</li>
+<li>Use a recent (2.5.x) kernel with the NPTL support included.</li>
+</ul>
+</p>
+
+<![CDATA[-----------------------------------------------------------]]>
+
 
 <p>
 <hr>
