@@ -55,23 +55,6 @@ svn_wc_get_default_ignores (apr_array_header_t **patterns,
   return SVN_NO_ERROR;
 }
 
-svn_boolean_t
-svn_wc_is_ignored (const char *path,
-                   apr_array_header_t *ignores)
-{
-  int i;
-
-  for (i = 0; ignores && (i < ignores->nelts); i++)
-    {
-      const char *pat = (((const char **) (ignores)->elts))[i];
-
-      if (APR_SUCCESS == apr_fnmatch (pat, path, FNM_PERIOD))
-        return TRUE;
-    }
-
-  return FALSE;
-}
-
 /* Helper routine: add to *PATTERNS patterns from the value of
    the SVN_PROP_IGNORE property set on DIRPATH.  If there is no such
    property, or the property contains no patterns, do nothing.
@@ -463,7 +446,7 @@ add_unversioned_items (const char *path,
       if (! strcmp (keystring, SVN_WC_ADM_DIR_NAME))
         continue;
 
-      ignore_me = svn_wc_is_ignored (keystring, patterns);
+      ignore_me = svn_cstring_match_glob_list (keystring, patterns);
 
       /* If we aren't ignoring it, add a status structure for this
          dirent. */

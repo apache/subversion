@@ -310,13 +310,12 @@ void svn_cstring_split_append (apr_array_header_t *array,
 
 
 /** Return @c TRUE iff @a str matches any of the elements of @a list, a list 
- * of one or more glob patterns separated by commas and optional whitespace.
+ * of zero or more glob patterns.
  *
  * Use @a pool for temporary allocation.
  */
 svn_boolean_t svn_cstring_match_glob_list (const char *str,
-                                           const char *list,
-                                           apr_pool_t *pool);
+                                           apr_array_header_t *list);
 
 
 /** @} */

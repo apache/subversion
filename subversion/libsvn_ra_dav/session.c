@@ -133,6 +133,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
   svn_config_t *cfg;
   const char *exceptions;
   const char *port_str, *timeout_str, *server_group, *debug_str;
+  svn_boolean_t is_exception = FALSE;
 
   /* If we find nothing, default to nulls. */
   *proxy_host     = NULL;
@@ -148,8 +149,12 @@ static svn_error_t *get_server_settings(const char **proxy_host,
   /* If there are defaults, use them, but only if the requested host
      is not one of the exceptions to the defaults. */
   svn_config_get(cfg, &exceptions, "default", "http-proxy-exceptions", NULL);
-  if ((! exceptions) || (! svn_cstring_match_glob_list(requested_host,
-                                                       exceptions, pool)))
+  if (exceptions)
+    {
+      apr_array_header_t *l = svn_cstring_split (exceptions, ",", TRUE, pool);
+      is_exception = svn_cstring_match_glob_list (requested_host, l);
+    }
+  if (! is_exception)
     {
       svn_config_get(cfg, proxy_host, "default", "http-proxy-host", NULL);
       svn_config_get(cfg, &port_str, "default", "http-proxy-port", NULL);
