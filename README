@@ -137,12 +137,12 @@ V.   CONVERTING FROM CVS
      If you're a CVS user trying to move your CVS history over to
      Subversion, then be sure to visit the 'cvs2svn' project:
 
-          http://cvs2svn.subversion.org
+          http://cvs2svn.tigris.org
 
-     You can get the latest version of the cvs2svn converter by doing
-     an svn checkout:
+     You can get the latest released version of the cvs2svn converter
+     from the project downloads area:
 
-          svn checkout http://svn.collab.net/repos/cvs2svn/trunk cvs2svn
+          http://cvs2svn.tigris.org/servlets/ProjectDocumentList?folderID=2976
 
      Please note that the cvs2svn project is a *separate* project from
      Subversion.  If you have problems with cvs2svn or are confused,
