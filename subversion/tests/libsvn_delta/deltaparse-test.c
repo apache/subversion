@@ -95,9 +95,11 @@ my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
 svn_error_t *
 test_delete (svn_string_t *filename, void *walk_baton, void *parent_baton)
 {
+  char *Aname = filename->data ? filename->data : "(unknown)";
+
   print_spaces (walk_baton);
 
-  printf ("DELETE event:  delete filename '%s'\n", filename->data);
+  printf ("DELETE event:  delete filename '%s'\n", Aname);
   return SVN_NO_ERROR;         
 }
 
@@ -109,11 +111,14 @@ test_add_directory (svn_string_t *name,
                     long int ancestor_version,
                     void **child_baton)
 {
+  char *Aname = name ? name->data : "(unknown)";
+  char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
+
   inc_spaces (walk_baton);
   print_spaces (walk_baton);
 
   printf ("ADD_DIR event:  name '%s', ancestor '%s' version %d\n",
-          name->data, ancestor_path->data, ancestor_version);
+          Aname, ancestor, ancestor_version);
 
   /* Set child_baton to the name of the new directory. */
   *child_baton = (svn_string_t *) svn_string_dup (name, globalpool);  
@@ -129,11 +134,14 @@ test_replace_directory (svn_string_t *name,
                         long int ancestor_version,
                         void **child_baton)
 {
+  char *Aname = name ? name->data : "(unknown)";
+  char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
+
   inc_spaces (walk_baton);
   print_spaces (walk_baton);
 
   printf ("REPLACE_DIR event:  name '%s', ancestor '%s' version %d\n",
-          name->data, ancestor_path->data, ancestor_version);
+          Aname, ancestor, ancestor_version);
   
   /* Set child_baton to the name of the new directory. */
   *child_baton = (svn_string_t *) svn_string_dup (name, globalpool);  
@@ -179,10 +187,12 @@ test_apply_textdelta (void *walk_baton, void *parent_baton, void *file_baton,
                       svn_txdelta_window_handler_t **handler,
                       void **handler_baton)
 {
+  char *Aname = ((svn_string_t *) file_baton)->data ? 
+    ((char *) ((svn_string_t *) file_baton)->data) : "(unknown)";
+
   print_spaces (walk_baton);
 
-  printf ("TEXT-DELTA event within file '%s'.\n", 
-          (char *) ((svn_string_t *) file_baton)->data);
+  printf ("TEXT-DELTA event within file '%s'.\n", Aname);
 
   /* Set the value of HANDLER and HANDLER_BATON here */
   *handler        = my_vcdiff_windoweater;
@@ -202,11 +212,14 @@ test_add_file (svn_string_t *name,
                long int ancestor_version,
                void **file_baton)
 {
+  char *Aname = name ? name->data : "(unknown)";
+  char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
+
   inc_spaces (walk_baton);
   print_spaces (walk_baton);
 
   printf ("ADD_FILE event:  name '%s', ancestor '%s' version %d\n",
-          name->data, ancestor_path->data, ancestor_version);
+          Aname, ancestor, ancestor_version);
   
   /* Put the filename in file_baton */
   *file_baton = (svn_string_t *) svn_string_dup (name, globalpool);
@@ -223,11 +236,14 @@ test_replace_file (svn_string_t *name,
                    long int ancestor_version,
                    void **file_baton)
 {
+  char *Aname = name ? name->data : "(unknown)";
+  char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
+
   inc_spaces (walk_baton);
   print_spaces (walk_baton);
 
   printf ("REPLACE_FILE event:  name '%s', ancestor '%s' version %d\n",
-          name->data, ancestor_path->data, ancestor_version);
+          Aname, ancestor, ancestor_version);
 
   /* Put the filename in file_baton */
   *file_baton = (svn_string_t *) svn_string_dup (name, globalpool);
