@@ -31,22 +31,22 @@ RSC=rc.exe
 
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries [is configs.name "Debug"]1[else]0[end]
-[if-any is_external]# PROP Output_Dir "[rootpath]\[target.path]\[configs.name]"
-# PROP Intermediate_Dir "[rootpath]\[target.path]\[configs.name]"
+[if-any is_external]# PROP Output_Dir "[rootpath]\[target.output_dir]\[configs.name]"
+# PROP Intermediate_Dir "[rootpath]\[target.intermediate_dir]\[configs.name]"
 # PROP Cmd_Line "cmd /c [target.cmd] [configs.lower]"
 # PROP Rebuild_Opt "rebuild"
-# PROP Target_File "[rootpath]\[target.path]\[is configs.name "Debug"][target.debug][else][target.release][end]"
-# PROP Target_Dir "[rootpath]\[target.path]"
-[else]# PROP Output_Dir "[rootpath]\[configs.name]\[target.path]"
-# PROP Intermediate_Dir "[rootpath]\[configs.name]\[target.path][if-any target.shared_dir]\[target.name][end]"
+# PROP Target_File "[rootpath]\[target.output_dir]\[is configs.name "Debug"][target.debug][else][target.release][end]"
+# PROP Target_Dir "[rootpath]\[target.output_dir]"
+[else]# PROP Output_Dir "[rootpath]\[configs.name]\[target.output_dir]"
+# PROP Intermediate_Dir "[rootpath]\[configs.name]\[target.intermediate_dir]"
 # PROP Target_Dir ""
 [if-any is_utility][else]LIB32=link.exe -lib
-# ADD LIB32 /out:"[rootpath]\[configs.name]\[target.path]\[target.output_name]"
+# ADD LIB32 /out:"[rootpath]\[configs.name]\[target.output_dir]\[target.output_name]"
 # ADD CPP /nologo /W3 /FD /c [is configs.name "Debug"]/MDd /Gm /Gi /GX /ZI /Od /GZ[else]/MD /GX /O2 /Zi[end][for configs.defines] /D "[configs.defines]"[end][if-any instrument_apr_pools] /D "APR_POOL_DEBUG=[instrument_apr_pools]"[end][for includes] /I "[includes]"[end]
 # ADD RSC /l [if-any is_exe]0x409[else]0x424[end] /d [is configs.name "Debug"]"_DEBUG"[else]"NDEBUG"[end] [for includes] /I "[includes]"[end]
 BSC32=bscmake.exe
 LINK32=link.exe
-[if-any is_exe is_dll]# ADD LINK32 /nologo[if-any is_exe] /subsystem:console[end][if-any is_dll] /dll[end] /debug /machine:IX86[for configs.libs] [configs.libs][end][for configs.libdirs] /libpath:"[configs.libdirs]"[end] /out:"[rootpath]\[configs.name]\[target.path]\[target.output_name]"[if-any instrument_purify_quantify] /fixed:no[end]
+[if-any is_exe is_dll]# ADD LINK32 /nologo[if-any is_exe] /subsystem:console[end][if-any is_dll] /dll[end] /debug /machine:IX86[for configs.libs] [configs.libs][end][for configs.libdirs] /libpath:"[configs.libdirs]"[end] /out:"[rootpath]\[configs.name]\[target.output_dir]\[target.output_name]"[if-any instrument_purify_quantify] /fixed:no[end]
 [end][end][end][end][end]
 !ENDIF 
 
@@ -59,7 +59,7 @@ SOURCE=[sources.path][if-any sources.reldir]
 [for platforms][for configs]
 ![if-index platforms first][if-index configs first][else]ELSE[end][else]ELSE[end]IF  "$(CFG)" == "[target.proj_name] - [platforms] [configs.name]"
 
-# PROP Intermediate_Dir "[rootpath]\[configs.name]\[target.path]\[sources.reldir]"
+# PROP Intermediate_Dir "[rootpath]\[configs.name]\[target.intermediate_dir]\[sources.reldir]"
 [end][end]
 !ENDIF
 [end][for sources.user_deps][if-index sources.user_deps first]

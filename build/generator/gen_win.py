@@ -261,9 +261,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
           ctarget = os.path.join(rootpath, object.filename_win)
 
-          ### why are we reseting this value here?
-          target.path = "../" + target.headers
-
         elif isinstance(target, gen_base.TargetJavaClasses):
           classes = targetdir = os.path.join(rootpath, target.classes)
           if self.junit_path is not None:
@@ -275,9 +272,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                    % tuple(map(self.quote, (classes, targetdir, sourcepath)))
 
           ctarget = os.path.join(rootpath, object.filename)
-
-          ### why are we reseting this value here?
-          target.path = "../" + target.classes
 
         if quote_path and '-' in rsrc:
           rsrc = '"%s"' % rsrc
@@ -409,6 +403,40 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
     sources.sort(lambda x, y: cmp(x.path, y.path))
     return sources
+
+  def get_output_name(self, target):
+    if isinstance(target, gen_base.TargetExe):
+      return target.name + '.exe'
+    elif isinstance(target, gen_base.TargetJava):
+      return None
+    elif isinstance(target, gen_base.TargetApacheMod):
+      return target.name + '.so'
+    elif isinstance(target, gen_base.TargetLib):
+      if target.msvc_static:
+        return '%s-%d.lib' % (target.name, self.cfg.version)
+      else:
+        return os.path.basename(target.filename)
+    elif isinstance(target, gen_base.TargetProject):
+      ### Since this target type doesn't produce any output, we shouldn't
+      ### need to specify an output filename. But to keep the VC.NET template
+      ### happy for now we have to return something
+      return target.name + '.exe'
+    elif isinstance(target, gen_base.TargetI18N):
+      return target.name
+
+  def get_output_dir(self, target):
+    if isinstance(target, gen_base.TargetJavaHeaders):
+      return "../" + target.headers
+    elif isinstance(target, gen_base.TargetJavaClasses):
+      return "../" + target.classes
+    else:
+      return target.path
+
+  def get_intermediate_dir(self, target):
+    if isinstance(target, gen_base.TargetSWIG):
+      return target.path + "\\" + target.name
+    else:
+      return self.get_output_dir(target)
 
   def get_def_file(self, target, rootpath):
     if isinstance(target, gen_base.TargetLib) and target.msvc_export:
