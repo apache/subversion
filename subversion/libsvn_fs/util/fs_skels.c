@@ -555,7 +555,7 @@ svn_fs__parse_representation_skel (svn_fs__representation_t **rep_p,
                               window_skel->children->next->next->data,
                               window_skel->children->next->next->len);
           chunk->offset = 
-            apr_atoui64 (apr_pstrmemdup (pool, 
+            svn__atoui64 (apr_pstrmemdup (pool,
                                          chunk_skel->children->data,
                                          chunk_skel->children->len));
 

@@ -34,7 +34,9 @@ extern "C" {
 
 
 
-/** This structure is used to hold a key/value from a hash table */
+/** This structure is used to hold a key/value from a hash table.
+ * NOTE: Private. For use by Subversion's own code only. See issue #1644.
+ */
 typedef struct {
   /** pointer to the key */
   const void *key;
@@ -44,10 +46,10 @@ typedef struct {
 
   /** pointer to the value */
   void *value;
-} svn_item_t;
+} svn_sort__item_t;
 
 
-/** Compare two @c svn_item_t's, returning an integer greater than,
+/** Compare two @c svn_sort__item_t's, returning an integer greater than,
  * equal to, or less than 0, according as @a a is greater than, equal to,
  * or less than @a b.
  * 
@@ -56,13 +58,13 @@ typedef struct {
  * array, do this:
  * 
  *<pre>   apr_array_header_t *hdr;
- *   hdr = apr_hash_sorted_keys (hsh, @c svn_sort_compare_items_as_paths,
- *                               pool);</pre>
+ *   hdr = svn_sort__hash (hsh, @c svn_sort_compare_items_as_paths, pool);</pre>
  *
  * The key strings must be null-terminated, even though klen does not
  * include the terminator.
  */
-int svn_sort_compare_items_as_paths (const svn_item_t *a, const svn_item_t *b);
+int svn_sort_compare_items_as_paths (const svn_sort__item_t *a,
+                                     const svn_sort__item_t *b);
 
 
 /** Compare two @c svn_revnum_t's, returning an integer greater than, equal
@@ -77,42 +79,28 @@ int svn_sort_compare_items_as_paths (const svn_item_t *a, const svn_item_t *b);
 int svn_sort_compare_revisions (const void *a, const void *b);
 
 
-#ifndef apr_hash_sorted_keys
 /** Sort @a ht according to its keys, return an @c apr_array_header_t
- * containing @c svn_item_t structures holding those keys and values
- * (i.e. for each @c svn_item_t @a item in the returned array, @a item->key
- * and @a item->size are the hash key, and @a item->data points to
+ * containing @c svn_sort__item_t structures holding those keys and values
+ * (i.e. for each @c svn_sort__item_t @a item in the returned array,
+ * @a item->key and @a item->size are the hash key, and @a item->data points to
  * the hash value).
  *
  * Storage is shared with the original hash, not copied.
  *
- * @a comparison_func should take two @c svn_item_t's and return an integer
- * greater than, equal to, or less than 0, according as the first item
+ * @a comparison_func should take two @c svn_sort__item_t's and return an
+ * integer greater than, equal to, or less than 0, according as the first item
  * is greater than, equal to, or less than the second.
  *
- * NOTE:
- * This function and the @a svn_item_t should go over to APR. Got a Round Tuit?
+ * NOTE: Private. For use by Subversion's own code only. See issue #1644.
+ *
+ * NOTE: This function and the @a svn_sort__item_t should go over to APR.
  */
 apr_array_header_t *
-apr_hash_sorted_keys (apr_hash_t *ht,
-                      int (*comparison_func) (const svn_item_t *,
-                                              const svn_item_t *),
-                      apr_pool_t *pool);
-#endif /* apr_hash_sorted_keys */
+svn_sort__hash (apr_hash_t *ht,
+                int (*comparison_func) (const svn_sort__item_t *,
+                                        const svn_sort__item_t *),
+                apr_pool_t *pool);
 
-#ifndef apr_array_prepend
-/** Return a pointer to an empty slot at the head of array @a arr.
- *
- * Note that if your application does not strictly need the new
- * element to be at the head of the array, consider using the much
- * more efficient function, apr_array_push() (which will add your new
- * element at the tail of the array).
- *
- * NOTE:
- * This function should go over to APR. 
- */
-void *apr_array_prepend (apr_array_header_t *arr);
-#endif /* apr_array_prepend */
 
 #ifdef __cplusplus
 }

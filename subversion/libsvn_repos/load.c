@@ -508,7 +508,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
             SVN_ERR (parse_fns->remove_node_props (node_baton));
 
           SVN_ERR (parse_property_block (stream,
-                                         apr_atoui64 (valstr),
+                                         svn__atoui64 (valstr),
                                          parse_fns,
                                          found_node ? node_baton : rev_baton,
                                          found_node,
@@ -521,7 +521,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
                                   APR_HASH_KEY_STRING)))
         {
           SVN_ERR (parse_text_block (stream, 
-                                     apr_atoui64 (valstr),
+                                     svn__atoui64 (valstr),
                                      parse_fns,
                                      found_node ? node_baton : rev_baton,
                                      buffer, 

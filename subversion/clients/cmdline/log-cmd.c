@@ -262,15 +262,15 @@ log_message_receiver (void *baton,
       int i;
 
       /* Get an array of sorted hash keys. */
-      sorted_paths = apr_hash_sorted_keys (changed_paths,
-                                           svn_sort_compare_items_as_paths, 
-                                           pool);
+      sorted_paths = svn_sort__hash (changed_paths,
+                                     svn_sort_compare_items_as_paths, pool);
 
       SVN_ERR (svn_stream_printf (lb->out, pool,
                                   "Changed paths:" APR_EOL_STR));
       for (i = 0; i < sorted_paths->nelts; i++)
         {
-          svn_item_t *item = &(APR_ARRAY_IDX (sorted_paths, i, svn_item_t));
+          svn_sort__item_t *item = &(APR_ARRAY_IDX (sorted_paths, i,
+                                                    svn_sort__item_t));
           const char *path_stdout, *path = item->key;
           svn_log_changed_path_t *log_item 
             = apr_hash_get (changed_paths, item->key, item->klen);

@@ -273,14 +273,15 @@ log_message_receiver (void *baton,
       apr_array_header_t *paths;
 
       /* Build a sorted list of the changed paths. */
-      paths = apr_hash_sorted_keys (changed_paths,
-                                    svn_sort_compare_items_as_paths, pool);
+      paths = svn_sort__hash (changed_paths,
+                              svn_sort_compare_items_as_paths, pool);
 
       /* Now, walk the list of paths backwards, looking a parent of
          our path that has copyfrom information. */
       for (i = paths->nelts; i > 0; i--)
         {
-          svn_item_t item = APR_ARRAY_IDX (paths, i - 1, svn_item_t);
+          svn_sort__item_t item = APR_ARRAY_IDX (paths, i - 1,
+                                                 svn_sort__item_t);
           const char *ch_path = item.key;
           int len = strlen (ch_path);
 

@@ -146,7 +146,7 @@ jobjectArray SVNClient::list(const char *url, Revision &revision, bool recurse)
 	if (Err == NULL)
 	{
 		apr_array_header_t *array =
-		 apr_hash_sorted_keys (dirents, svn_sort_compare_items_as_paths,
+		 svn_sort__hash (dirents, svn_sort_compare_items_as_paths,
 							   subPool.pool());
 		
 		// create the array of DirEntry
@@ -169,10 +169,10 @@ jobjectArray SVNClient::list(const char *url, Revision &revision, bool recurse)
 
 		for (int i = 0; i < array->nelts; i++)
 		{
-			const svn_item_t *item;
+			const svn_sort__item_t *item;
 			svn_dirent_t *dirent = NULL;
 
-			item = &APR_ARRAY_IDX (array, i, const svn_item_t);
+			item = &APR_ARRAY_IDX (array, i, const svn_sort__item_t);
 			dirent = (svn_dirent_t *) item->value;
 
 			jobject obj = createJavaDirEntry((const char *)item->key, dirent);
