@@ -59,11 +59,19 @@ svn_cl__cat (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = ((const char **) (targets->elts))[i];
+      const char *truepath;
+      svn_opt_revision_t peg_revision;
 
       svn_pool_clear (subpool);
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
-      SVN_ERR (svn_client_cat (out, target, &(opt_state->start_revision),
-                               ctx, subpool));
+
+      /* Get peg revisions. */
+      SVN_ERR (svn_opt_parse_path (&peg_revision, &truepath, target,
+                                   subpool));
+      
+      SVN_ERR (svn_client_cat2 (out, truepath, &peg_revision,
+                                &(opt_state->start_revision),
+                                ctx, subpool));
     }
   svn_pool_destroy (subpool);
 

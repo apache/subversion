@@ -185,12 +185,18 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   { "blame", svn_cl__blame, {"praise", "annotate", "ann"},
     N_("Output the content of specified files or\n"
        "URLs with revision and author information in-line.\n"
-       "usage: blame TARGET...\n"),
+       "usage: blame TARGET[@REV]...\n"
+       "\n"
+       "  If specified, REV determines in which revision the target is first\n"
+       "  looked up.\n"),
     {'r', 'v', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "cat", svn_cl__cat, {0},
     N_("Output the content of specified files or URLs.\n"
-       "usage: cat TARGET...\n"),
+       "usage: cat TARGET[@REV]...\n"
+       "\n"
+       "  If specified, REV determines in which revision the target is first\n"
+       "  looked up.\n"),
     {'r', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "checkout", svn_cl__checkout, {"co"}, N_
@@ -339,12 +345,14 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
  
   { "list", svn_cl__ls, {"ls"},
     N_("List directory entries in the repository.\n"
-       "usage: list [TARGET...]\n"
+       "usage: list [TARGET[@REV]...]\n"
        "\n"
        "  List each TARGET file and the contents of each TARGET directory as\n"
        "  they exist in the repository.  If TARGET is a working copy path, "
        "the\n"
-       "  corresponding repository URL will be used.\n"
+       "  corresponding repository URL will be used. If specified, REV "
+       "determines\n"
+       "  in which revision the target is first looked up.\n"  
        "\n"
        "  The default TARGET is '.', meaning the repository URL of the "
        "current\n"
@@ -475,10 +483,11 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "propget", svn_cl__propget, {"pget", "pg"},
     N_("Print value of PROPNAME on files, dirs, or revisions.\n"
-       "usage: 1. propget PROPNAME [PATH...]\n"
+       "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
        "       2. propget PROPNAME --revprop -r REV [URL]\n"
        "\n"
-       "  1. Prints versioned prop in working copy.\n"
+       "  1. Prints versioned prop. If specified, REV determines in which\n"
+       "     revision the target is first looked up.\n"
        "  2. Prints unversioned remote prop on repos revision.\n"
        "\n"
        "  By default, this subcommand will add an extra newline to the end\n"
@@ -492,10 +501,11 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
 
   { "proplist", svn_cl__proplist, {"plist", "pl"},
     N_("List all properties on files, dirs, or revisions.\n"
-       "usage: 1. proplist [PATH...]\n"
+       "usage: 1. proplist [TARGET[@REV]...]\n"
        "       2. proplist --revprop -r REV [URL]\n"
        "\n"
-       "  1. Lists versioned props in working copy.\n"
+       "  1. Lists versioned props. If specified, REV determines in which\n"
+       "     revision the target is first looked up.\n"
        "  2. Lists unversioned remote props on repos revision.\n"),
     {'v', 'R', 'r', 'q', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },

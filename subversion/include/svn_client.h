@@ -794,9 +794,16 @@ svn_client_log (const apr_array_header_t *targets,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool);
 
-/** Invoke @a receiver with @a receiver_baton on each line-blame item
+/**
+ * @since New in 1.2.
+ *
+ * Invoke @a receiver with @a receiver_baton on each line-blame item
  * associated with revision @a end of @a path_or_url, using @a start
- * as the default source of all blame. 
+ * as the default source of all blame.  @a peg_revision indicates in
+ * which revision @a path_or_url is valid.  If @a peg_revision is @c
+ * svn_opt_revision_unspecified, then it defaults to @c
+ * svn_opt_revision_head for URLs or @c svn_opt_revision_working for
+ * WC targets.
  *
  * If @a start->kind or @a end->kind is @c svn_opt_revision_unspecified,
  * return the error @c SVN_ERR_CLIENT_BAD_REVISION.  If any of the
@@ -804,6 +811,22 @@ svn_client_log (const apr_array_header_t *targets,
  * error @c SVN_ERR_CLIENT_IS_BINARY_FILE.
  *
  * Use @a pool for any temporary allocation.
+ */
+svn_error_t *
+svn_client_blame2 (const char *path_or_url,
+                   const svn_opt_revision_t *peg_revision,
+                   const svn_opt_revision_t *start,
+                   const svn_opt_revision_t *end,
+                   svn_client_blame_receiver_t receiver,
+                   void *receiver_baton,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_client_blame except that @a peg_revision is always
+ * the same as @a end.
  */
 svn_error_t *
 svn_client_blame (const char *path_or_url,
@@ -1210,7 +1233,10 @@ svn_client_revprop_set (const char *propname,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool);
                         
-/** Set @a *props to a hash table whose keys are `<tt>char *</tt>' paths,
+/**
+ * @since New in 1.2.
+ *
+ * Set @a *props to a hash table whose keys are `<tt>char *</tt>' paths,
  * prefixed by @a target (a working copy path or a URL), of items on
  * which property @a propname is set, and whose values are `@c svn_string_t
  * *' representing the property value for @a propname at that path.
@@ -1221,16 +1247,36 @@ svn_client_revprop_set (const char *propname,
  * property named @a propname.
  *
  * If @a revision->kind is @c svn_opt_revision_unspecified, then: get
- * properties from the working copy if @a target is a working copy path,
- * or from the repository head if @a target is a URL.  Else get the
- * properties as of @a revision.  Use the authentication baton in @a ctx 
- * for authentication if contacting the repository.
+ * properties from the working copy if @a target is a working copy
+ * path, or from the repository head if @a target is a URL.  Else get
+ * the properties as of @a revision.  The actual node revision
+ * selected is determined by the path as it exists in @a peg_revision.
+ * If @a peg_revision is @c svn_opt_revision_unspecified, then it
+ * defaults to @c svn_opt_revision_head for URLs or @c
+ * svn_opt_revision_working for WC targets.  Use the authentication
+ * baton in @a ctx for authentication if contacting the repository.
  *
  * If @a target is a file or @a recurse is false, @a *props will have
  * at most one element.
  *
  * If error, don't touch @a *props, otherwise @a *props is a hash table 
  * even if empty.
+ */
+svn_error_t *
+svn_client_propget2 (apr_hash_t **props,
+                     const char *propname,
+                     const char *target,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *revision,
+                     svn_boolean_t recurse,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_client_propget2, except that the peg revision is
+ * always the same as @a revision.
  */
 svn_error_t *
 svn_client_propget (apr_hash_t **props,
@@ -1261,7 +1307,10 @@ svn_client_revprop_get (const char *propname,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool);
 
-/** Set @a *props to the regular properties of @a target, a URL or working
+/**
+ * @since New in 1.2.
+ *
+ * Set @a *props to the regular properties of @a target, a URL or working
  * copy path.
  *
  * Each element of the returned array is (@c svn_client_proplist_item_t *).
@@ -1272,10 +1321,15 @@ svn_client_revprop_get (const char *propname,
  * Allocate @a *props and its contents in @a pool.
  *
  * If @a revision->kind is @c svn_opt_revision_unspecified, then get
- * properties from the working copy, if @a target is a working copy path,
- * or from the repository head if @a target is a URL.  Else get the
- * properties as of @a revision.  Use the authentication baton cached in @a ctx 
- * for authentication if contacting the repository.
+ * properties from the working copy, if @a target is a working copy
+ * path, or from the repository head if @a target is a URL.  Else get
+ * the properties as of @a revision.  The actual node revision
+ * selected is determined by the path as it exists in @a peg_revision.
+ * If @a peg_revision is @c svn_opt_revision_unspecified, then it
+ * defaults to @c svn_opt_revision_head for URLs or @c
+ * svn_opt_revision_working for WC targets.  Use the authentication
+ * baton cached in @a ctx for authentication if contacting the
+ * repository.
  *
  * If @a recurse is false, or @a target is a file, @a *props will contain 
  * only a single element.  Otherwise, it will contain one element for each
@@ -1284,8 +1338,23 @@ svn_client_revprop_get (const char *propname,
  * If @a target is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
  */
 svn_error_t *
+svn_client_proplist2 (apr_array_header_t **props,
+                      const char *target,
+                      const svn_opt_revision_t *peg_revision,
+                      const svn_opt_revision_t *revision,
+                      svn_boolean_t recurse,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_client_proplist2, except that the peg revision is
+ * always the same as @a revision.
+ */
+svn_error_t *
 svn_client_proplist (apr_array_header_t **props,
-                     const char *target, 
+                     const char *target,
                      const svn_opt_revision_t *revision,
                      svn_boolean_t recurse,
                      svn_client_ctx_t *ctx,
@@ -1374,8 +1443,15 @@ svn_client_export (svn_revnum_t *result_rev,
                    apr_pool_t *pool);
 
 
-/** Set @a *dirents to a newly allocated hash of entries for @a path_or_url
- * at @a revision.
+/**
+ * @since New in 1.2.
+ *
+ * Set @a *dirents to a newly allocated hash of entries for @a
+ * path_or_url at @a revision.  The actual node revision selected is
+ * determined by the path as it exists in @a peg_revision.  If @a
+ * peg_revision is @c svn_opt_revision_unspecified, then it defaults
+ * to @c svn_opt_revision_head for URLs or @c svn_opt_revision_working
+ * for WC targets.
  *
  * If @a path_or_url is a directory, return all dirents in the hash.  If
  * @a path_or_url is a file, return only the dirent for the file.  If @a
@@ -1391,6 +1467,21 @@ svn_client_export (svn_revnum_t *result_rev,
  * be a recursive operation.
  */
 svn_error_t *
+svn_client_ls2 (apr_hash_t **dirents,
+                const char *path_or_url,
+                svn_opt_revision_t *peg_revision,
+                svn_opt_revision_t *revision,
+                svn_boolean_t recurse,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_client_ls2 except that the peg revision is always
+ * the same as @a revision.
+ */
+svn_error_t *
 svn_client_ls (apr_hash_t **dirents,
                const char *path_or_url,
                svn_opt_revision_t *revision,
@@ -1399,8 +1490,15 @@ svn_client_ls (apr_hash_t **dirents,
                apr_pool_t *pool);
 
 
-/** Output the content of file identified by @a path_or_url and @a
- * revision to the stream @a out.
+/**
+ * @since New in 1.2.
+ *
+ * Output the content of file identified by @a path_or_url and @a
+ * revision to the stream @a out.  The actual node revision selected
+ * is determined by the path as it exists in @a peg_revision.  If @a
+ * peg_revision is @c svn_opt_revision_unspecified, then it defaults
+ * to @c svn_opt_revision_head for URLs or @c svn_opt_revision_working
+ * for WC targets.
  *
  * If @a path_or_url is not a local path, then if @a revision is of
  * kind @c svn_opt_revision_previous (or some other kind that requires
@@ -1413,6 +1511,21 @@ svn_client_ls (apr_hash_t **dirents,
  * Perform all allocations from @a pool.
  *
  * ### TODO: Add an expansion/translation flag?
+ */
+svn_error_t *
+svn_client_cat2 (svn_stream_t *out,
+                 const char *path_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_client_cat2 except that the peg revision is always
+ * the same as @a revision.
  */
 svn_error_t *
 svn_client_cat (svn_stream_t *out,

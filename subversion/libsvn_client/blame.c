@@ -505,13 +505,14 @@ old_blame (const char *target, const char *url,
            struct file_rev_baton *frb);
 
 svn_error_t *
-svn_client_blame (const char *target,
-                  const svn_opt_revision_t *start,
-                  const svn_opt_revision_t *end,
-                  svn_client_blame_receiver_t receiver,
-                  void *receiver_baton,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
+svn_client_blame2 (const char *target,
+                   const svn_opt_revision_t *peg_revision,
+                   const svn_opt_revision_t *start,
+                   const svn_opt_revision_t *end,
+                   svn_client_blame_receiver_t receiver,
+                   void *receiver_baton,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
 {
   struct file_rev_baton frb;
   svn_ra_plugin_t *ra_lib; 
@@ -531,7 +532,7 @@ svn_client_blame (const char *target,
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR (svn_client__ra_lib_from_path (&ra_lib, &session, &end_revnum,
-                                         &url, target, end,
+                                         &url, target, peg_revision, end,
                                          ctx, pool));
 
   SVN_ERR (svn_client__get_revision_number (&start_revnum, ra_lib, session,
@@ -620,6 +621,20 @@ svn_client_blame (const char *target,
   svn_pool_destroy (iterpool);
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client_blame (const char *target,
+                  const svn_opt_revision_t *start,
+                  const svn_opt_revision_t *end,
+                  svn_client_blame_receiver_t receiver,
+                  void *receiver_baton,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  return svn_client_blame2 (target, end, start, end,
+                            receiver, receiver_baton, ctx, pool);
 }
 
 

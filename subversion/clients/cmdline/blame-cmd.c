@@ -138,6 +138,9 @@ svn_cl__blame (apr_getopt_t *os,
     {
       svn_error_t *err;
       const char *target = ((const char **) (targets->elts))[i];
+      const char *truepath;
+      svn_opt_revision_t peg_revision;
+      
       svn_pool_clear (subpool);
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
       if (is_head_or_base)
@@ -147,13 +150,19 @@ svn_cl__blame (apr_getopt_t *os,
           else
             opt_state->end_revision.kind = svn_opt_revision_base;
         }
-      err = svn_client_blame (target,
-                              &opt_state->start_revision,
-                              &opt_state->end_revision,
-                              blame_receiver,
-                              &bl,
-                              ctx,
-                              subpool);
+
+      /* Check for a peg revision. */
+      SVN_ERR (svn_opt_parse_path (&peg_revision, &truepath, target,
+                                   subpool));
+               
+      err = svn_client_blame2 (truepath,
+                               &peg_revision,
+                               &opt_state->start_revision,
+                               &opt_state->end_revision,
+                               blame_receiver,
+                               &bl,
+                               ctx,
+                               subpool);
       if (err)
         {
           if (err->apr_err == SVN_ERR_CLIENT_IS_BINARY_FILE)

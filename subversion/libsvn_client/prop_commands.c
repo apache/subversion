@@ -507,13 +507,14 @@ remote_propget (apr_hash_t *props,
 
 /* Note: this implementation is very similar to svn_client_proplist. */
 svn_error_t *
-svn_client_propget (apr_hash_t **props,
-                    const char *propname,
-                    const char *target,
-                    const svn_opt_revision_t *revision,
-                    svn_boolean_t recurse,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool)
+svn_client_propget2 (apr_hash_t **props,
+                     const char *propname,
+                     const char *target,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *revision,
+                     svn_boolean_t recurse,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *node;
@@ -535,8 +536,8 @@ svn_client_propget (apr_hash_t **props,
 
       /* Get an RA plugin for this filesystem object. */
       SVN_ERR (svn_client__ra_lib_from_path (&ra_lib, &session, &revnum,
-                                             &url, target, revision,
-                                             ctx, pool));
+                                             &url, target, peg_revision,
+                                             revision, ctx, pool));
 
       SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
 
@@ -601,6 +602,19 @@ svn_client_propget (apr_hash_t **props,
 }
 
 
+svn_error_t *
+svn_client_propget (apr_hash_t **props,
+                    const char *propname,
+                    const char *target,
+                    const svn_opt_revision_t *revision,
+                    svn_boolean_t recurse,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
+{
+  return svn_client_propget2 (props, propname, target, revision, revision,
+                              recurse, ctx, pool);
+}
+  
 svn_error_t *
 svn_client_revprop_get (const char *propname,
                         svn_string_t **propval,
@@ -851,12 +865,13 @@ proplist_walk_cb (const char *path,
 
 /* Note: this implementation is very similar to svn_client_propget. */
 svn_error_t *
-svn_client_proplist (apr_array_header_t **props,
-                     const char *target, 
-                     const svn_opt_revision_t *revision,
-                     svn_boolean_t recurse,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool)
+svn_client_proplist2 (apr_array_header_t **props,
+                      const char *target,
+                      const svn_opt_revision_t *peg_revision,
+                      const svn_opt_revision_t *revision,
+                      svn_boolean_t recurse,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *node;
@@ -878,8 +893,8 @@ svn_client_proplist (apr_array_header_t **props,
 
       /* Get an RA plugin for this filesystem object. */
       SVN_ERR (svn_client__ra_lib_from_path (&ra_lib, &session, &revnum,
-                                             &url, target, revision,
-                                             ctx, pool));
+                                             &url, target, peg_revision,
+                                             revision, ctx, pool));
       
       SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
 
@@ -933,6 +948,19 @@ svn_client_proplist (apr_array_header_t **props,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client_proplist (apr_array_header_t **props,
+                     const char *target,
+                     const svn_opt_revision_t *revision,
+                     svn_boolean_t recurse,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
+{
+  return svn_client_proplist2 (props, target, revision, revision,
+                               recurse, ctx, pool);
 }
 
 

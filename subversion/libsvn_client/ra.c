@@ -809,6 +809,7 @@ svn_client__ra_lib_from_path (svn_ra_plugin_t **ra_lib_p,
                               svn_revnum_t *rev_p,
                               const char **url_p,
                               const char *path_or_url,
+                              const svn_opt_revision_t *peg_revision_p,
                               const svn_opt_revision_t *revision,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool)
@@ -817,7 +818,11 @@ svn_client__ra_lib_from_path (svn_ra_plugin_t **ra_lib_p,
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   const svn_opt_revision_t *good_rev;
+  svn_opt_revision_t peg_revision, start_rev;
+  svn_opt_revision_t dead_end_rev;
+  svn_opt_revision_t *ignored_rev, *new_rev;
   svn_revnum_t rev;
+  const char *ignored_url;
   
   /* Get an RA library for the incoming path. */
   SVN_ERR (svn_client_url_from_path (&initial_url, path_or_url, pool));
@@ -828,38 +833,54 @@ svn_client__ra_lib_from_path (svn_ra_plugin_t **ra_lib_p,
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, initial_url, pool));
 
+  /* If a peg revision was specified, but a desired revision was not,
+     assume it is the same as the peg revision. */
+  if (revision->kind == svn_opt_revision_unspecified &&
+      peg_revision_p->kind != svn_opt_revision_unspecified)
+    revision = peg_revision_p;
+  
   if (svn_path_is_url (path_or_url))
     {
-      /* If an explicit URL was passed in, just use it. */
-      good_rev = revision;
-      url = initial_url;
+      /* URLs get a default starting rev of HEAD. */
+      if (revision->kind == svn_opt_revision_unspecified)
+        start_rev.kind = svn_opt_revision_head;
+      else
+        start_rev = *revision;
+          
+      /* If an explicit URL was passed in, the default peg revision is
+         HEAD. */
+      if (peg_revision_p->kind == svn_opt_revision_unspecified)
+        peg_revision.kind = svn_opt_revision_head;
+      else
+        peg_revision = *peg_revision_p;
     }
   else
     {
-      /* For a working copy path, don't blindly use its initial_url
-         from the entries file.  Run the history function to get the
-         object's (possibly different) url in REVISION. */
-      svn_opt_revision_t base_rev, dead_end_rev, start_rev;
-      svn_opt_revision_t *ignored_rev, *new_rev;
-      const char *ignored_url;
-
-      dead_end_rev.kind = svn_opt_revision_unspecified;
-      base_rev.kind = svn_opt_revision_working;
-
+      /* And a default starting rev of BASE. */
       if (revision->kind == svn_opt_revision_unspecified)
         start_rev.kind = svn_opt_revision_base;
       else
         start_rev = *revision;
-
-      SVN_ERR (svn_client__repos_locations (&url, &new_rev,
-                                            &ignored_url, &ignored_rev,
-                                            /* peg coords are path@BASE: */
-                                            path_or_url, &base_rev,
-                                            /* search range: */
-                                            &start_rev, &dead_end_rev,
-                                            ra_lib, ctx, pool));
-      good_rev = new_rev;
+      
+      /* WC paths have a default peg revision of WORKING. */
+      if (peg_revision_p->kind == svn_opt_revision_unspecified)
+        peg_revision.kind = svn_opt_revision_working;
+      else
+        peg_revision = *peg_revision_p;
     }
+  
+  dead_end_rev.kind = svn_opt_revision_unspecified;
+  
+  /* Run the history function to get the object's (possibly
+     different) url in REVISION. */
+  SVN_ERR (svn_client__repos_locations (&url, &new_rev,
+                                        &ignored_url, &ignored_rev,
+                                        /* peg coords are path@BASE: */
+                                        path_or_url, &peg_revision,
+                                        /* search range: */
+                                        &start_rev, &dead_end_rev,
+                                        ra_lib, ctx, pool));
+  good_rev = new_rev;
 
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url,
                                         NULL, NULL, NULL, FALSE, FALSE,
