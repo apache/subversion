@@ -365,13 +365,13 @@ svn_test__txn_script_exec (svn_fs_root_t *txn_root,
   for (i = 0; i < num_edits; i++)
     {
       const char *path = script[i].path;
-      const char *contents = script[i].contents;
+      const char *param1 = script[i].param1;
       int cmd = script[i].cmd;
-      int is_dir = (contents == 0);
+      int is_dir = (param1 == 0);
  
       switch (cmd)
         {
-        case '+':
+        case 'a':
           if (is_dir)
             {
               SVN_ERR (svn_fs_make_dir (txn_root, path, pool));
@@ -380,19 +380,31 @@ svn_test__txn_script_exec (svn_fs_root_t *txn_root,
             {
               SVN_ERR (svn_fs_make_file (txn_root, path, pool));
               SVN_ERR (svn_test__set_file_contents (txn_root, path, 
-                                                    contents, pool));
+                                                    param1, pool));
             }
           break;
 
-        case '-':
+        case 'c':
+          {
+            svn_revnum_t youngest;
+            svn_fs_root_t *rev_root;
+            svn_fs_t *fs = svn_fs_root_fs (txn_root);
+
+            SVN_ERR (svn_fs_youngest_rev (&youngest, fs, pool));
+            SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest, pool));
+            SVN_ERR (svn_fs_copy (rev_root, path, txn_root, param1, pool));
+          }
+          break;
+
+        case 'd':
           SVN_ERR (svn_fs_delete_tree (txn_root, path, pool));
           break;
 
-        case '>':
+        case 'e':
           if (! is_dir)
             {
               SVN_ERR (svn_test__set_file_contents (txn_root, path, 
-                                                    contents, pool));
+                                                    param1, pool));
             }
           break;
 

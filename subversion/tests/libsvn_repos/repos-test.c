@@ -116,16 +116,16 @@ dir_deltas (const char **msg,
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   {
     svn_test__txn_script_command_t script_entries[] = {
-      { '+', "A/delta",     "This is the file 'delta'.\n" },
-      { '+', "A/epsilon",   "This is the file 'epsilon'.\n" },
-      { '+', "A/B/Z",       0 },
-      { '+', "A/B/Z/zeta",  "This is the file 'zeta'.\n" },
-      { '-', "A/C",         0 },
-      { '-', "A/mu"         "" },
-      { '-', "A/D/G/tau",   "" },
-      { '-', "A/D/H/omega", "" },
-      { '>', "iota",        "Changed file 'iota'.\n" },
-      { '>', "A/D/G/rho",   "Changed file 'rho'.\n" }
+      { 'a', "A/delta",     "This is the file 'delta'.\n" },
+      { 'a', "A/epsilon",   "This is the file 'epsilon'.\n" },
+      { 'a', "A/B/Z",       0 },
+      { 'a', "A/B/Z/zeta",  "This is the file 'zeta'.\n" },
+      { 'd', "A/C",         0 },
+      { 'd', "A/mu"         "" },
+      { 'd', "A/D/G/tau",   "" },
+      { 'd', "A/D/H/omega", "" },
+      { 'e', "iota",        "Changed file 'iota'.\n" },
+      { 'e', "A/D/G/rho",   "Changed file 'rho'.\n" }
     };
     SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 10, pool));
   }
@@ -176,10 +176,10 @@ dir_deltas (const char **msg,
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   {
     svn_test__txn_script_command_t script_entries[] = {
-      { '+', "A/mu",        "Re-added file 'mu'.\n" },
-      { '+', "A/D/H/omega", 0 }, /* re-add omega as directory! */
-      { '-', "iota",        "" },
-      { '>', "A/delta",     "This is the file 'delta'.\nLine 2.\n" }
+      { 'a', "A/mu",        "Re-added file 'mu'.\n" },
+      { 'a', "A/D/H/omega", 0 }, /* re-add omega as directory! */
+      { 'd', "iota",        "" },
+      { 'e', "A/delta",     "This is the file 'delta'.\nLine 2.\n" }
     };
     SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 4, pool));
   }
