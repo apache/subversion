@@ -42,7 +42,6 @@
 */
 typedef struct
 {
-  const char *path;
   const char *url;
   const char *vsn_url;
   const char *wr_url;
@@ -53,12 +52,13 @@ typedef struct
   svn_ra_session_t *ras;
   const char *activity_url;
 
-  /* ### maybe key off of URL and don't worry about local path; we never
-     ### really "need" the local path...  if so, toss RESOURCE_T.PATH */
-  apr_hash_t *resources;        /* LOCAL PATH (const char *) -> RESOURCE_T */
+  apr_hash_t *resources;        /* URL (const char *) -> RESOURCE_T */
 
   /* This is how we pass back the new revision number to our callers. */
   svn_revnum_t *new_revision;
+
+  /* name of local prop to hold the version resource's URL */
+  svn_string_t *vsn_url_name;
 
 } commit_ctx_t;
 
@@ -163,9 +163,9 @@ create_activity (commit_ctx_t *cc)
 }
 
 static svn_error_t *
-checkout_resource (commit_ctx_t *cc, const char *path, const char **wr_url)
+checkout_resource (commit_ctx_t *cc, const char *url, const char **wr_url)
 {
-  resource_t *res = apr_hash_get(cc->resources, path, APR_HASH_KEY_STRING);
+  resource_t *res = apr_hash_get(cc->resources, url, APR_HASH_KEY_STRING);
 
   if (res != NULL && res->wr_url != NULL)
     {
@@ -176,9 +176,15 @@ checkout_resource (commit_ctx_t *cc, const char *path, const char **wr_url)
   if (res == NULL)
     {
       res = apr_pcalloc(cc->ras->pool, sizeof(*res));
-      res->path = apr_pstrdup(cc->ras->pool, path);
 
-      /* ### construct res->url */
+      /* ### check to see if we need the copy */
+      res->url = apr_pstrdup(cc->ras->pool, url);
+
+      /* ### need the path */
+#if 0
+      SVN_ERR( svn_wc_prop_get(&res->vsn_url, cc->vsn_url_name, path,
+                               cc->ras->pool) );
+#endif
       /* ### fetch vsn_url from the local prop store */
     }
 
@@ -232,7 +238,6 @@ commit_replace_root (void *edit_baton, void **root_baton)
 
   root->cc = cc;
 
-  /* ### where to get res.path? */
   root->res.url = cc->ras->root.path;
   /* ### fetch vsn_url from props */
 
@@ -252,7 +257,7 @@ commit_delete_item (svn_string_t *name, void *parent_baton)
 #endif
 
   /* get the URL to the working collection */
-  SVN_ERR( checkout_resource(parent->cc, parent->res.path, &workcol) );
+  SVN_ERR( checkout_resource(parent->cc, parent->res.url, &workcol) );
 
   /* create the URL for the child resource */
   /* ### does the workcol have a trailing slash? do some extra work */
@@ -267,14 +272,13 @@ commit_delete_item (svn_string_t *name, void *parent_baton)
       /* ### need to be more sophisticated with reporting the failure */
       return svn_error_createf(SVN_ERR_RA_DELETE_FAILED, 0, NULL,
                                parent->cc->ras->pool,
-                               "Could not DELETE the resource corresponding "
-                               "to %s/%s", parent->res.path, name->data);
+                               "Could not DELETE %s", child);
     }
 #endif
 
   /* ### CHECKOUT parent collection, then DELETE */
-  printf("[delete] CHECKOUT: %s\n[delete] DELETE: %s/%s\n",
-         parent->res.url, parent->res.url, name->data);
+  printf("[delete] CHECKOUT: %s\n[delete] DELETE: %s\n",
+         parent->res.url, child);
 
   return NULL;
 }
@@ -290,7 +294,6 @@ commit_add_dir (svn_string_t *name,
   dir_baton_t *child = apr_pcalloc(parent->cc->ras->pool, sizeof(*child));
 
   child->cc = parent->cc;
-  /* ### fill out child->res.path */
   child->res.url = apr_pstrcat(child->cc->ras->pool, parent->res.url,
                                "/", name->data, NULL);
 
@@ -314,7 +317,6 @@ commit_rep_dir (svn_string_t *name,
   dir_baton_t *child = apr_pcalloc(parent->cc->ras->pool, sizeof(*child));
 
   child->cc = parent->cc;
-  /* ### fill out child->res.path */
   child->res.url = apr_pstrcat(child->cc->ras->pool, parent->res.url,
                                "/", name->data, NULL);
 
@@ -373,7 +375,6 @@ commit_add_file (svn_string_t *name,
   file_baton_t *file = apr_pcalloc(parent->cc->ras->pool, sizeof(*file));
 
   file->cc = parent->cc;
-  /* ### fill out child->res.path */
   file->res.url = apr_pstrcat(file->cc->ras->pool, parent->res.url,
                               "/", name->data, NULL);
   /* ### store name, parent? */
@@ -402,7 +403,6 @@ commit_rep_file (svn_string_t *name,
   file_baton_t *file = apr_pcalloc(parent->cc->ras->pool, sizeof(*file));
 
   file->cc = parent->cc;
-  /* ### fill out child->res.path */
   file->res.url = apr_pstrcat(file->cc->ras->pool, parent->res.url,
                               "/", name->data, NULL);
   /* ### store more info? */
@@ -529,6 +529,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
 
   cc->ras = ras;
   cc->resources = apr_make_hash(ras->pool);
+  cc->vsn_url_name = svn_string_create(SVN_RA_DAV__LP_VSN_URL, ras->pool);
 
   /* ### disable for now */
   err = 0 && create_activity(cc);
