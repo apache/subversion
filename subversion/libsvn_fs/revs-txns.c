@@ -659,12 +659,13 @@ txn_body_open_txn (void *baton,
 {
   struct open_txn_args *args = baton;
   svn_fs__transaction_t *fstxn;
-  svn_revnum_t base_rev;
+  svn_revnum_t base_rev = SVN_INVALID_REVNUM;
 
   SVN_ERR (get_txn (&fstxn, trail->fs, args->name, FALSE, trail));
-  SVN_ERR (svn_fs__txn_get_revision (&base_rev, trail->fs,
-                                     svn_fs__id_txn_id (fstxn->base_id), 
-                                     trail));
+  if (fstxn->kind == svn_fs__transaction_kind_normal)
+    SVN_ERR (svn_fs__txn_get_revision (&base_rev, trail->fs,
+                                       svn_fs__id_txn_id (fstxn->base_id), 
+                                       trail));
   *args->txn_p = make_txn (trail->fs, args->name, base_rev, trail->pool); 
   return SVN_NO_ERROR;
 }
