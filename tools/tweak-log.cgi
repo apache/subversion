@@ -177,10 +177,9 @@ sub doFetchLog
     print "<blockquote><hr /><pre>$escaped_log</pre><hr /></blockquote>\n";
     print "\n<p>\n";
     print "<font color=\"red\">\n";
-    print "<i>This cgi script is perfect and has no bugs.  Therefore, the\n";
-    print "ordinarily sensible precaution of running `<tt>svn log</tt>' and\n";
-    print "saving the output before you modify a log message is entirely\n";
-    print "unnecessary.  After all, what could possibly go wrong?</i>\n";
+    print "<i>Every change made is logged in <tt>${gHistoryFile}</tt> in\n";
+    print "the directory this cgi script runs in.  If you make a bogus\n";
+    print "change, you can still recover the old message from there.</i>\n";
     print "</font>\n";
     print "\n<p>\n";
     print "<form action=\"$gActionURL\" method=\"post\">\n";
