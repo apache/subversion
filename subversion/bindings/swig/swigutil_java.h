@@ -46,6 +46,10 @@ jobject svn_swig_java_prophash_to_dict(JNIEnv *jenv, apr_hash_t *hash);
 /* convert a hash of 'const char *' -> TYPE into a Java Map */
 jobject svn_swig_java_convert_hash(JNIEnv *jenv, apr_hash_t *hash);
 
+/* add all the elements from an array to an existing java.util.List */
+void svn_swig_java_add_to_list(JNIEnv* jenv, apr_array_header_t *array,
+                               jobject list);
+
 /* add all the elements from a hash to an existing java.util.Map */
 void svn_swig_java_add_to_map(JNIEnv* jenv, apr_hash_t *hash, jobject map);
 

@@ -151,6 +151,27 @@ typedef apr_int32_t time_t;
 }
 
 /* -----------------------------------------------------------------------
+   Handle an apr_array_header_t * in Java
+*/
+
+%typemap(jni) apr_array_header_t * "jobject"
+%typemap(jtype) apr_array_header_t * "java.util.List"
+%typemap(jstype) apr_array_header_t * "java.util.List"
+%typemap(javain) apr_array_header_t * "$javainput"
+
+%typemap(javaout) apr_array_header_t * {
+    return $jnicall;
+  }
+
+%typemap(java, out) apr_array_header_t * {
+    svn_swig_java_add_to_list(jenv, $1, $input);
+}
+
+%typemap(java, argout) apr_array_header_t * {
+    svn_swig_java_add_to_list(jenv, $1, $input);
+}
+
+/* -----------------------------------------------------------------------
   handle apr_file_t *
 */
 
