@@ -22,39 +22,33 @@ To obtain Subversion now, you should:
 
 <ol>
 
-   <li>Download a tarball distribution from the <a
+   <li>Download the latest tarball distribution from the <a
    href="http://subversion.tigris.org/servlets/ProjectDownloadList">Downloads
    Page</a>
    </li>
  <p>
    <li>Build and install it according to the instructions in the
    INSTALL file in the top level of the distribution.  You will end up
-   with a 'svn' binary in the subversion/clients/cmdline/ directory.
+   with a 'svn' binary in the subversion/clients/cmdline/ directory
+   (or installed in /usr/local/bin/, if you ran 'make install'.)
    </li>
  <p>
-   <li>Use it to check out a working copy of Subversion:
+   <li>Use it to check out the newest Subversion source:
    <p>
    <pre>
-      $ svn co http://svn.collab.net/repos/svn
+      $ svn co http://svn.collab.net/repos/svn/trunk -d subversion
    </pre>
    <p>
-   That will get you a new subdirectory named `svn/', with another
-   subdirectory in, `svn/trunk/'.  The sources you know and love are
-   under `trunk/'.  For now, do the checkout command exactly as given
-   above; there's a known path-correspondence bug that will cause you
-   some inconvenience in your working copy if your initial checkout is
-   of a repository subdir.
-   These will be fixed as soon as possible; see issue
-   <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=454">
-   #454</a>.
+   That will get you a new working copy directory named `subversion/',
+   containing the latest, bleeding-edge source.
    </li>
    <p>
-   Some people reported DNS lookup errors for `svn.collab.net'.  The
-   IP address is 216.127.237.133, in case you should need it.
+   (Some people have reported DNS lookup errors for `svn.collab.net'.
+   The IP address is 216.127.237.133, in case you should need it.)
  <p>
    <li>
    <pre>
-      cd svn/trunk
+      cd subversion
       svn status
       svn update
       etc, etc, etc...
@@ -65,6 +59,12 @@ To obtain Subversion now, you should:
    would expect.  Many of them have bugs, or misconfigured defaults.
    Many features are missing.  Please make sure you're subscribed to
    dev@subversion.tigris.org if you're going to run this.
+
+   <p>
+
+   Here's a hint: read the introductory <b>SVN for CVS Users</b> paper
+   on the <a href="/servlets/ProjectDocumentList">Docs</a> page.  It
+   should help.
    </li>
  <p>
    <li>Generally, you should always rebuild and install Subversion
