@@ -223,13 +223,13 @@ find "$DISTPATH" -depth -type d -name 'autom4te*.cache' -exec rm -rf {} \;
 
 echo "Downloading book into sandbox..."
 
-wget http://svnbook.red-bean.com/book.pdf \
-  -O "$DISTPATH/doc/book/book/book.pdf" ||
-  ( echo "ERROR: Problem getting the book.pdf file." && exit 1 )
+wget http://svnbook.red-bean.com/svnbook-1.1/svn-book.pdf \
+  -O "$DISTPATH/doc/book/book/svn-book.pdf" ||
+  ( echo "ERROR: Problem getting the svn-book.pdf file." && exit 1 )
 
-wget http://svnbook.red-bean.com/book.html \
-  -O "$DISTPATH/doc/book/book/book.html" ||
-  ( echo "ERROR: Problem getting the book.html file." && exit 1 )
+wget http://svnbook.red-bean.com/svnbook-1.1/svn-book.html \
+  -O "$DISTPATH/doc/book/book/svn-book.html" ||
+  ( echo "ERROR: Problem getting the svn-book.html file." && exit 1 )
 
 cat > "$DISTPATH/ChangeLog.CVS" <<EOF
 The old CVS ChangeLog is kept at 
