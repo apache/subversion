@@ -43,13 +43,13 @@ class WinGeneratorBase(gen_base.GeneratorBase):
   def copyfile(self, dest, src):
     "Copy file to dest from src"
 
-    open(dest, 'w').write(open(src).read())
+    open(dest, 'wb').write(open(src, 'rb').read())
 
   def movefile(self, dest, src):
     "Move file to dest from src if src exists"
 
     if os.path.exists(src):
-      open(dest,'w').write(open(src).read())
+      open(dest,'wb').write(open(src, 'rb').read())
       os.unlink(src)
 
   def __init__(self, fname, verfname, subdir):
@@ -103,7 +103,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     #Make some files for the installer so that we don't need to require sed or some other command to do it
     ### GJS: don't do this right now
     if 0:
-      buf = open(os.path.join("packages","win32-innosetup","svn.iss.in")).read()
+      buf = open(os.path.join("packages","win32-innosetup","svn.iss.in"), 'rb').read()
       buf = buf.replace("@VERSION@", "0.16.1+").replace("@RELEASE@", "4365")
       buf = buf.replace("@DBBINDLL@", self.dbbindll)
       svnissrel = os.path.join("packages","win32-innosetup","svn.iss.release")
@@ -345,12 +345,12 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     "Compare buf vs the contents of file & only write out to file if the contents have changed"
 
     try:
-      f=open(file, 'r+')
+      f=open(file, 'r+b')
       if f.read()==buf:
         f.close()
         return 0
     except IOError:
-      f=open(file, 'w')
+      f=open(file, 'wb')
     f.seek(0)
     f.truncate(0)
     f.write(buf)
