@@ -692,7 +692,7 @@ The following repository access (RA) modules are available:
 
       </sect3>
 
-      <sect3 id="svn-ch-7-sect-1.2.2">
+      <sect3 id="svn-ch-7-sect-1.2.4">
         <title>Your RA Library Here</title>
 
         <para>For those who wish to access a Subversion repository
@@ -706,6 +706,7 @@ The following repository access (RA) modules are available:
           we?&mdash;you could even implement an email-based protocol.
           Subversion supplies the APIs; you supply the creativity.</para>
 
+      </sect3>
     </sect2>
 
     <!-- ***************************************************************** -->
@@ -1349,7 +1350,7 @@ if __name__ == '__main__':
       with it, but only if that client operates within the narrow
       confines of those features that the server has implemented.  The
       Subversion development team plans to address generic WebDAV
-      interoperability in a future release of Subversion.</sect1>
+      interoperability in a future release of Subversion.</para>
 
   </sect1>
 
