@@ -386,13 +386,18 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
                                             "<S:strict-node-history/>"));
     }
 
-  for (i = 0; i < paths->nelts; i++)
+  if (paths)
     {
-      const char *this_path =
-        apr_xml_quote_string(ras->pool, ((const char **)paths->elts)[i], 0);
-      svn_stringbuf_appendcstr(request_body, "<S:path>");
-      svn_stringbuf_appendcstr(request_body, this_path);
-      svn_stringbuf_appendcstr(request_body, "</S:path>");
+      for (i = 0; i < paths->nelts; i++)
+        {
+          const char *this_path =
+            apr_xml_quote_string(ras->pool,
+                                 ((const char **)paths->elts)[i],
+                                 0);
+          svn_stringbuf_appendcstr(request_body, "<S:path>");
+          svn_stringbuf_appendcstr(request_body, this_path);
+          svn_stringbuf_appendcstr(request_body, "</S:path>");
+        }
     }
 
   svn_stringbuf_appendcstr(request_body, log_request_tail);
