@@ -108,11 +108,11 @@ check: $(TEST_DEPS)
 	    echo -n "Running all tests in $$progbase..." ; \
 	    echo "START: $$progbase" >> $$logfile ; \
 	    if echo $$prog | grep \.py > /dev/null; then  \
-		runprog="$(PYTHON) $$prog" ; \
+		runprog="$(PYTHON) $$progbase" ; \
 	    else  \
-		runprog="cd $$progdir && ./$$progbase" ; \
+		runprog="./$$progbase" ; \
 	    fi ; \
-	    if ( eval $$runprog ) >> $$logfile ; then \
+	    if ( cd $$progdir && $$runprog ) >> $$logfile ; then \
 		echo "SUCCESS" ; \
 	    else \
 		failed=yes; \
