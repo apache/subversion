@@ -23,6 +23,7 @@
 /*** Includes. ***/
 
 #include <apr_lib.h>
+#include <apr_poll.h>
 
 #include "svn_cmdline.h"
 #include "svn_wc.h"
@@ -36,8 +37,41 @@
 #include "svn_private_config.h"
 
 
+
+/* Wait for input on @a *f for @a timeout miliseconds doing all allocations
+ * in @a pool.  This functions is based on apr_wait_for_io_or_timeout(),
+ * but we can't use it because APR doesn't export anyway to change
+ * the timeout value set on the apr_file_t.
+ *
+ * ### FIX: When APR gives us a better way of doing this use it. */
+static apr_status_t wait_for_input_or_timeout(apr_file_t *f,
+                                              apr_interval_time_t timeout,
+                                              apr_pool_t *pool)
+{
+    apr_pollfd_t pollset;
+    int srv, n;
+
+    pollset.desc_type = APR_POLL_FILE;
+    pollset.desc.f = f;
+    pollset.p = pool;
+    pollset.reqevents = APR_POLLIN;
+    
+    do
+      {
+        srv = apr_poll(&pollset, 1, &n, 10);
+
+        if (n == 1 && pollset.rtnevents & APR_POLLIN)
+          return APR_SUCCESS;
+      }
+      while (APR_STATUS_IS_EINTR(srv));
+
+    return srv;
+}
+
 /* Set @a *result to the result of prompting the user with @a
- * prompt_msg.  Allocate @a *result in @a pool.
+ * prompt_msg.  Use @ *ctx to get the cancel_func and cancel_baton.
+ * Do not call the cancel_func if @a *ctx is NULL.
+ * Allocate @a *result in @a pool.
  *
  * If @a hide is true, then try to avoid displaying the user's input.
  */
@@ -45,6 +79,7 @@ static svn_error_t *
 prompt (const char **result,
         const char *prompt_msg,
         svn_boolean_t hide,
+        svn_client_ctx_t *ctx,
         apr_pool_t *pool)
 {
   apr_status_t status;
@@ -65,6 +100,14 @@ prompt (const char **result,
 
       while (1)
         {
+           /* Hack to allow us to not block for io on the prompt, so
+            * we can cancel. */
+           if (ctx)
+             SVN_ERR ( (*ctx->cancel_func) (ctx->cancel_baton));
+           status = wait_for_input_or_timeout(fp,10,pool);
+           if (status != APR_SUCCESS && status != APR_ENOTIMPL)
+             continue;
+
           status = apr_file_getc (&c, fp);
           if (status && ! APR_STATUS_IS_EOF(status))
             return svn_error_wrap_apr (status, _("Can't read stdin"));
@@ -145,16 +188,17 @@ svn_cl__auth_simple_prompt (svn_auth_cred_simple_t **cred_p,
 {
   svn_auth_cred_simple_t *ret = apr_pcalloc (pool, sizeof (*ret));
   const char *pass_prompt;
+  svn_client_ctx_t *ctx = (svn_client_ctx_t *) baton;
 
   SVN_ERR (maybe_print_realm (realm, pool));
 
   if (username)
     ret->username = apr_pstrdup (pool, username);
   else
-    SVN_ERR (prompt (&(ret->username), _("Username: "), FALSE, pool));
+    SVN_ERR (prompt (&(ret->username), _("Username: "), FALSE, ctx, pool));
 
   pass_prompt = apr_psprintf (pool, _("Password for '%s': "), ret->username);
-  SVN_ERR (prompt (&(ret->password), pass_prompt, TRUE, pool));
+  SVN_ERR (prompt (&(ret->password), pass_prompt, TRUE, ctx, pool));
   ret->may_save = may_save;
   *cred_p = ret;
   return SVN_NO_ERROR;
@@ -170,10 +214,11 @@ svn_cl__auth_username_prompt (svn_auth_cred_username_t **cred_p,
                               apr_pool_t *pool)
 {
   svn_auth_cred_username_t *ret = apr_pcalloc (pool, sizeof (*ret));
+  svn_client_ctx_t *ctx = (svn_client_ctx_t *) baton;
 
   SVN_ERR (maybe_print_realm (realm, pool));
 
-  SVN_ERR (prompt (&(ret->username), _("Username: "), FALSE, pool));
+  SVN_ERR (prompt (&(ret->username), _("Username: "), FALSE, ctx, pool));
   ret->may_save = may_save;
   *cred_p = ret;
   return SVN_NO_ERROR;
@@ -193,6 +238,7 @@ svn_cl__auth_ssl_server_trust_prompt (
 {
   const char *choice;
   svn_stringbuf_t *msg;
+  svn_client_ctx_t *ctx = (svn_client_ctx_t *) baton;
   svn_stringbuf_t *buf = svn_stringbuf_createf
     (pool, _("Error validating server certificate for '%s':\n"), realm);
 
@@ -251,7 +297,7 @@ svn_cl__auth_ssl_server_trust_prompt (
     {
       svn_stringbuf_appendcstr (buf, _("(R)eject or accept (t)emporarily? "));
     }
-  SVN_ERR (prompt (&choice, buf->data, FALSE, pool));
+  SVN_ERR (prompt (&choice, buf->data, FALSE, ctx, pool));
 
   if (choice && (choice[0] == 't' || choice[0] == 'T'))
     {
@@ -284,10 +330,11 @@ svn_cl__auth_ssl_client_cert_prompt (svn_auth_cred_ssl_client_cert_t **cred_p,
 {
   svn_auth_cred_ssl_client_cert_t *cred = NULL;
   const char *cert_file = NULL;
+  svn_client_ctx_t *ctx = (svn_client_ctx_t *) baton;
 
   SVN_ERR (maybe_print_realm (realm, pool));
   SVN_ERR (prompt (&cert_file, _("Client certificate filename: "), 
-                   FALSE, pool));
+                   FALSE, ctx, pool));
 
   cred = apr_palloc (pool, sizeof(*cred));
   cred->cert_file = cert_file;
@@ -310,8 +357,9 @@ svn_cl__auth_ssl_client_cert_pw_prompt (
   svn_auth_cred_ssl_client_cert_pw_t *cred = NULL;
   const char *result;
   const char *text = apr_psprintf (pool, _("Passphrase for '%s': "), realm);
+  svn_client_ctx_t *ctx = (svn_client_ctx_t *) baton;
 
-  SVN_ERR (prompt (&result, text, TRUE, pool));
+  SVN_ERR (prompt (&result, text, TRUE, ctx, pool));
 
   cred = apr_pcalloc (pool, sizeof (*cred));
   cred->password = result;
@@ -330,5 +378,5 @@ svn_cl__prompt_user (const char **result,
                      const char *prompt_str,
                      apr_pool_t *pool)
 {
-  return prompt (result, prompt_str, FALSE /* don't hide input */, pool);
+  return prompt (result, prompt_str, FALSE /* don't hide input */, NULL, pool);
 }
