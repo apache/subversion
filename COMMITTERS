@@ -66,3 +66,4 @@ Commit access for specific areas:
          clkao   Chia-liang Kao <clkao@clkao.org>            (perl bindings)
     jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
       sergeyli   Sergey A. Lipnevich <sergey@optimaltec.com> (neon-0.24 port)
+      lonestar   Martin MAURER <martin.maurer@email.de>      (svnshow)
