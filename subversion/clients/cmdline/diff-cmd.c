@@ -64,7 +64,14 @@ svn_cl__diff (apr_getopt_t *os,
         case svn_node_dir:
           err = svn_cl__print_dir_diff (target, pool);
           break;
-        default:
+        case svn_node_unknown:
+          err = svn_error_createf (0, 0, NULL, pool,
+                                  "File type unrecognized for target `%s'.",
+                                  target->data);
+          break;                                  
+        case svn_node_none:
+          err = svn_error_createf (APR_ENOENT, 0, NULL, pool, 
+                                   "Target `%s' not found.", target->data);
           break;
         }
 
