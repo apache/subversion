@@ -15,6 +15,9 @@
  * ====================================================================
  */
 
+#define APR_WANT_STRFUNC
+#include "apr_want.h"
+
 #include "proplist.h"
 #include "validate.h"
 

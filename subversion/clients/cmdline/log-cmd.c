@@ -69,18 +69,24 @@ num_lines (const char *msg)
 }
 
 
+/* Baton for log_message_receiver(). */
+struct log_message_receiver_baton
+{
+  apr_pool_t *pool;
+};
+
+
 /* This implements `svn_log_message_receiver_t'. */
 static svn_error_t *
 log_message_receiver (void *baton,
-                      const apr_hash_t *changed_paths,
+                      apr_hash_t *changed_paths,
                       svn_revnum_t rev,
                       const char *author,
                       const char *date,
                       const char *msg,
                       svn_boolean_t last_call)
 {
-  /* ### todo: we ignore changed_paths for now; the repository isn't
-     calculating it anyway, currently. */
+  struct log_message_receiver_baton *lb = baton;
 
   /* Number of lines in the msg. */
   int lines;
@@ -115,14 +121,40 @@ log_message_receiver (void *baton,
 
   printf (SEP_STRING);
   lines = num_lines (msg);
-  printf ("rev %lu:  %s | %s | %d line%s\n\n",
+  printf ("rev %lu:  %s | %s | %d line%s\n",
           rev, author, dbuf, lines, (lines > 1) ? "s" : "");
+  if (changed_paths)
+    {
+      apr_hash_index_t *hi;
+      char *path;
+
+      /* Note: This is the only place we need a pool, and therefore
+         one might think we could just get it via
+         apr_hash_pool_get().  However, that accessor will never be
+         able to qualify its hash table parameter with `const',
+         because it is a read/write accessor defined by
+         APR_POOL_DECLARE_ACCESSOR().  Since I still hold out hopes of
+         one day being able to constify `changed_paths' -- only some
+         bizarre facts about apr_hash_first() currently prevent it --
+         might as well just have the baton w/ pool ready right now, so
+         it doesn't become an issue later. */
+
+      printf ("Changed paths:\n");
+      for (hi = apr_hash_first(lb->pool, changed_paths);
+           hi != NULL;
+           hi = apr_hash_next(hi))
+        {
+          apr_hash_this(hi, (void *) &path, NULL, NULL);
+          printf ("   %s\n", path);
+        }
+    }
+  printf ("\n");  /* A blank line always precedes the log message. */
   printf ("%s\n", msg);
 
   if (last_call)
     printf (SEP_STRING);
 
-  /* We don't use the baton at all, since using printf() for output. */
+  /* Turns out we don't need the baton at all, oh well. */
 
   return SVN_NO_ERROR;
 }
@@ -135,6 +167,7 @@ svn_cl__log (apr_getopt_t *os,
 {
   apr_array_header_t *targets;
   svn_client_auth_baton_t *auth_baton;
+  struct log_message_receiver_baton lb;
 
   targets = svn_cl__args_to_target_array (os, pool);
 
@@ -144,13 +177,17 @@ svn_cl__log (apr_getopt_t *os,
   /* Add "." if user passed 0 arguments */
   svn_cl__push_implicit_dot_target(targets, pool);
 
+  /* ### todo: If opt_state->{start,end}_date, then convert to
+     opt_state->{start,end}_revision here. */
+
+  lb.pool = pool;
   SVN_ERR (svn_client_log (auth_baton,
                            targets,
                            opt_state->start_revision,
                            opt_state->end_revision,
-                           0,   /* `discover_changed_paths' ignored for now */
+                           opt_state->verbose,
                            log_message_receiver,
-                           NULL,  /* no receiver baton right now */
+                           &lb,
                            pool));
 
   return SVN_NO_ERROR;

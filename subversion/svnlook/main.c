@@ -136,7 +136,7 @@ generate_delta_tree (svn_repos_node_t **tree,
 
   /* Request our editor. */
   SVN_ERR (svn_repos_node_editor (&editor, &edit_baton, fs,
-                                  root, base_root, pool, edit_pool));
+                                  base_root, root, pool, edit_pool));
   
   /* Drive our editor. */
   SVN_ERR (svn_repos_dir_delta (base_root, 

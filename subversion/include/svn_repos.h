@@ -331,18 +331,23 @@ typedef struct svn_repos_node_t
 } svn_repos_node_t;
 
 
-/* Return an EDITOR that, when driving by svn_repos_dir_delta(),
-   builds an in-memory linked-list tree of svn_repos_node_t structures
-   representing the delta between the trees found under ROOT and
-   BASE_ROOT in FS.  The root node of the linked-list tree lives in
-   EDIT_BATON, and can be accessed with svn_repos_node_from_baton().
-   Perform all allocations necessary to build the linked-list tree in
-   NODE_POOL, all others in POOL.  */
+/* Set *EDITOR and *EDIT_BATON to an editor that, when driven by
+   svn_repos_dir_delta(), builds an `svn_repos_node_t *' tree
+   representing the delta from BASE_ROOT to ROOT in FS.
+   
+   Invoke svn_repos_node_from_baton() on EDIT_BATON to obtain the root
+   node afterwards.
+
+   Note that the delta includes "bubbled-up" directories; that is,
+   many of the directory nodes will have no prop_mods.
+
+   Allocate the tree and its contents in NODE_POOL; do all other
+   allocation in POOL.  */
 svn_error_t *svn_repos_node_editor (const svn_delta_edit_fns_t **editor,
                                     void **edit_baton,
                                     svn_fs_t *fs,
-                                    svn_fs_root_t *root,
                                     svn_fs_root_t *base_root,
+                                    svn_fs_root_t *root,
                                     apr_pool_t *node_pool,
                                     apr_pool_t *pool);
 

@@ -65,7 +65,7 @@ static void send_xml(struct log_receiver_baton *lrb, const char *fmt, ...)
 
 /* This implements `svn_log_message_receiver_t'. */
 static svn_error_t * log_receiver(void *baton,
-                                  const apr_hash_t *changed_paths,
+                                  apr_hash_t *changed_paths,
                                   svn_revnum_t rev,
                                   const char *author,
                                   const char *date,
@@ -73,9 +73,6 @@ static svn_error_t * log_receiver(void *baton,
                                   svn_boolean_t last_call)
 {
   struct log_receiver_baton *lrb = baton;
-
-  /* ### todo: we ignore changed_paths for now; libsvn_repos isn't
-     yet calculating them anyway. */
 
   if (lrb->first_call)
     {
@@ -92,13 +89,30 @@ static svn_error_t * log_receiver(void *baton,
            /* ### this should be DAV:creation-date, but we need to format
               ### that date a bit differently */
            "<S:date>%s</S:date>" DEBUG_CR
-           "<D:comment>%s</D:comment>" DEBUG_CR
-           "</S:log-item>" DEBUG_CR,
+           "<D:comment>%s</D:comment>" DEBUG_CR,
            rev,
            apr_xml_quote_string(lrb->pool, author, 0),
            apr_xml_quote_string(lrb->pool, date, 0),
            apr_xml_quote_string(lrb->pool, msg, 0));
 
+  if (changed_paths)
+    {
+      apr_hash_index_t *hi;
+      char *path;
+
+      for (hi = apr_hash_first(lrb->pool, changed_paths);
+           hi != NULL;
+           hi = apr_hash_next(hi))
+        {
+          apr_hash_this(hi, (void *) &path, NULL, NULL);
+          /* ### todo: is there a D: namespace equivalent for
+             `changed-path'?  Should use it if so. */
+          send_xml(lrb, "<S:changed-path>%s</S:changed-path>" DEBUG_CR,
+                   apr_xml_quote_string(lrb->pool, path, 0));
+        }
+    }
+
+  send_xml(lrb, "</S:log-item>" DEBUG_CR);
 
   if (last_call)
     send_xml(lrb, "</S:log-report>" DEBUG_CR);
