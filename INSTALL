@@ -539,7 +539,9 @@ II.   INSTALLATION
       There is some support for building Subversion on Win32 platforms.
       The project files included in the source tree are from Microsoft
       Visual C++ 6.x; earlier versions of the compiler are not
-      supported at this time.
+      supported at this time.  You'll also need a fairly recent version
+      of the Microsoft Platform SDK; the header files that come with
+      MSVC 6.x are too old.
 
       To build the client components, you'll need a copy of neon
       0.21.3.  See section I.5 for details on where to get one and

@@ -27,10 +27,6 @@
 #include "svn_types.h"
 #include "svn_path.h"
 
-#ifdef SVN_WIN32
-#include <shlobj.h>
-#endif /* SVN_WIN32 */
-
 
 /* File parsing context */
 typedef struct parse_context_t
@@ -268,18 +264,15 @@ svn_config__sys_config_path (const char **path_p,
   /* Note that even if fname is null, svn_path_join_many will DTRT. */
 
 #ifdef SVN_WIN32
- {
-   HRESULT res;
-   char folder[MAX_PATH] = { 0 };
-   
-   res = SHGetFolderPath (NULL, CSIDL_COMMON_APPDATA, NULL, SHGFP_TYPE_CURRENT,
-                          (LPTSTR) folder);
-   if (res != S_OK)
-     return SVN_NO_ERROR;
-   
-   *path_p = svn_path_join_many (pool, folder,
-                                 SVN_CONFIG__SUBDIRECTORY, fname, NULL);
- }
+  {
+    char folder[MAX_PATH];
+    HRESULT res = svn_config__win_config_path (folder, TRUE);
+    if (res != S_OK)
+      return SVN_NO_ERROR;
+
+    *path_p = svn_path_join_many (pool, folder,
+                                  SVN_CONFIG__SUBDIRECTORY, fname, NULL);
+  }
 
 #else  /* ! SVN_WIN32 */
 
@@ -305,20 +298,13 @@ svn_config__user_config_path (const char **path_p,
 
 #ifdef SVN_WIN32
   {
-    HRESULT res;
-    char sp_folder[MAX_PATH] = { 0 };
-    
-    /* Or we could do:
-       SHGetSpecialFolderPath (NULL, (LPTSTR) sp_folder, CSIDL_APPDATA, TRUE);
-    */
-    res = SHGetFolderPath (NULL, CSIDL_APPDATA, NULL, SHGFP_TYPE_CURRENT,
-                           (LPTSTR) sp_folder);
+    char folder[MAX_PATH];
+    HRESULT res = svn_config__win_config_path (folder, FALSE);
     if (res != S_OK)
       return SVN_NO_ERROR;
 
-    if (*sp_folder)
-      *path_p = svn_path_join_many (pool, sp_folder,
-                                    SVN_CONFIG__SUBDIRECTORY, fname, NULL);
+    *path_p = svn_path_join_many (pool, folder,
+                                  SVN_CONFIG__SUBDIRECTORY, fname, NULL);
   }
 
 #else  /* ! SVN_WIN32 */

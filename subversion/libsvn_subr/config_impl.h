@@ -63,6 +63,9 @@ svn_error_t *svn_config__parse_file (svn_config_t *cfg,
 
 
 #ifdef SVN_WIN32
+/* Get the common or user-specific AppData folder */
+HRESULT svn_config__win_config_path (char *folder, int system_path);
+
 /* Read sections and options from the Windows Registry. */
 svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
                                          const char *file,
