@@ -16,6 +16,11 @@
 ######################################################################
 #
 
+# to retain backwards Python compat, we don't use 'import foo as bar'
+import string
+_string = string
+del string
+
 # bring all the symbols up into this module
 ### in the future, we may want to limit this, rename things, etc
 from _util import *
@@ -49,15 +54,15 @@ class Stream:
       # read the rest of the stream
       chunks = [ ]
       while 1:
-        data = util.svn_stream_read(self._stream, util.SVN_STREAM_CHUNK_SIZE)
+        data = svn_stream_read(self._stream, SVN_STREAM_CHUNK_SIZE)
         if not data:
           break
         chunks.append(data)
-      return string.join(chunks, '')
+      return _string.join(chunks, '')
 
     # read the amount specified
-    return util.svn_stream_read(self._stream, int(amt))
+    return svn_stream_read(self._stream, int(amt))
 
   def write(self, buf):
     ### what to do with the amount written? (the result value)
-    util.svn_stream_write(self._stream, buf)
+    svn_stream_write(self._stream, buf)
