@@ -5577,6 +5577,82 @@ lock_expiration (const char **msg,
   return SVN_NO_ERROR;
 }
 
+/* Test that a lock can be broken, stolen, or refreshed */
+static svn_error_t *
+lock_break_steal_refresh (const char **msg,
+                          svn_boolean_t msg_only,
+                          apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  const char *conflict;
+  svn_revnum_t newrev;
+  svn_fs_access_t *access;
+  svn_lock_t *mylock, *somelock;
+
+  *msg = "breaking, stealing, refreshing a lock";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Prepare a filesystem and a new txn. */
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-basic-commit", pool));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+
+  /* Create the greek tree and commit it. */
+  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
+  SVN_ERR (svn_fs_commit_txn (&conflict, &newrev, txn, pool));
+
+  /* Become 'bubba' and lock "/A/D/G/rho". */
+  SVN_ERR (svn_fs_create_access (&access, "bubba", pool));
+  SVN_ERR (svn_fs_set_access (fs, access));
+  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", 0, 0, NULL, pool));
+
+  /* Become 'hortense' and break bubba's lock, then verify it's gone. */
+  SVN_ERR (svn_fs_create_access (&access, "hortense", pool));
+  SVN_ERR (svn_fs_set_access (fs, access));
+  SVN_ERR (svn_fs_unlock (fs, mylock->token, 1 /* FORCE BREAK */, pool));
+  SVN_ERR (svn_fs_get_lock_from_path (&somelock, fs, "/A/D/G/rho", pool));
+  if (somelock)
+    return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
+                             "Tried to break a lock, but it's still there.");
+
+  /* As hortense, create a new lock, and verify that we own it. */
+  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", 0, 0, NULL, pool));
+  SVN_ERR (svn_fs_get_lock_from_path (&somelock, fs, "/A/D/G/rho", pool));
+  if (strcmp (somelock->owner, mylock->owner) != 0)
+    return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
+                             "Made a lock, but we don't seem to own it.");
+  
+  /* As bubba, steal hortense's lock, creating a new one that expires. */
+  SVN_ERR (svn_fs_create_access (&access, "bubba", pool));
+  SVN_ERR (svn_fs_set_access (fs, access));
+  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho",
+                        1 /* FORCE STEAL */,
+                        300 /* expire in 5 minutes */,
+                        NULL, pool));
+  SVN_ERR (svn_fs_get_lock_from_path (&somelock, fs, "/A/D/G/rho", pool));
+  if (strcmp (somelock->owner, mylock->owner) != 0)
+    return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
+                             "Made a lock, but we don't seem to own it.");
+  if (! somelock->expiration_date)
+    return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
+                             "Made expiring lock, but seems not to expire.");
+    
+  /* Refresh the lock, so that it never expires. */
+  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", 0,
+                        0 /* never expire */,
+                        somelock->token, /* refresh using existing token */
+                        pool));
+  SVN_ERR (svn_fs_get_lock_from_path (&somelock, fs, "/A/D/G/rho", pool));
+  if (somelock->expiration_date)
+    return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
+                             "Made non-expirirng lock, but it expires.");  
+
+  return SVN_NO_ERROR;
+}
 
 
 /* ------------------------------------------------------------------------ */
@@ -5628,5 +5704,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (lock_dir_propchange),
     SVN_TEST_PASS (lock_name_reservation),
     SVN_TEST_PASS (lock_expiration),
+    SVN_TEST_PASS (lock_break_steal_refresh),
     SVN_TEST_NULL
   };

@@ -221,6 +221,10 @@ txn_body_unlock (void *baton, trail_t *trail)
   svn_node_kind_t kind = svn_node_none;
   svn_lock_t *lock;
 
+  /* Sanity check:  we don't want to pass a NULL key to BDB lookup. */
+  if (! args->token)
+    return svn_fs_base__err_bad_lock_token (trail->fs, "null");
+
   /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN or SVN_ERR_FS_LOCK_EXPIRED. */
   SVN_ERR (svn_fs_bdb__lock_get (&lock, trail->fs, args->token, trail));
   
