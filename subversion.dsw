@@ -15,7 +15,7 @@ Package=<4>
     Project_Dep_Name __config__
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name aprlib
+    Project_Dep_Name apr
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libexpat
@@ -96,7 +96,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "aprlib"=.\apr\aprlib.dsp - Package Owner=<4>
+Project: "apr"=.\apr\apr.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -162,7 +162,7 @@ Package=<4>
     Project_Dep_Name __config__
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name aprlib
+    Project_Dep_Name apr
     End Project Dependency
 }}}
 
@@ -240,7 +240,7 @@ Package=<4>
     Project_Dep_Name __config__
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name aprlib
+    Project_Dep_Name apr
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libexpat
