@@ -21,11 +21,13 @@
                 </file>
               </new>
               <new name="E">
+                <prop-delta><set name="car">buick</set></prop-delta>
                 <dir ancestor="/A/B/E">
                 </dir>
               </new>
               <new name="F">
                 <dir ancestor="/A/B/F">
+                  <prop-delta><delete name="glub"/></prop-delta>
                 </dir>
               </new>
             </tree-delta>
