@@ -29,10 +29,12 @@ Init_svn (void)
 
   svn_ruby_init_stream ();
   svn_ruby_init_txdelta ();
+#if 0
   svn_ruby_init_delta_editor ();
+#endif
   svn_ruby_init_error ();
   svn_ruby_init_types ();
-
+#if 0
   svn_ruby_init_fs ();
   svn_ruby_init_fs_root ();
   svn_ruby_init_fs_node ();
@@ -41,5 +43,6 @@ Init_svn (void)
 
   svn_ruby_init_ra ();
   svn_ruby_init_wc ();
+#endif
   svn_ruby_init_client ();
 }
