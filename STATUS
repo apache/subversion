@@ -40,17 +40,6 @@ Candidate changes:
     Votes:
       +1: maxb, breser
 
-  * r10148
-    Fixes crash when deleting a revprop.
-    Justification:  it's a crash.  we shouldn't ever crash.
-    Comments: Do we want r10154 as well, then?  I'm not sure it's
-      absolutely necessary, but it tidied up some bits of r10148.
-      Also, r10148 does a lot more than just fix the crash.  It might
-      be better to use a patch that *just* fixes the crash, and leave
-      all the other goodies for 1.1.
-    Votes:
-      +1: sussman, lundblad, breser
-
   * r10132, r10136, 10138, 10139
     Allow user to interrupt between auth prompts.
     Justification:  not a critical bugfix, but something users have 
