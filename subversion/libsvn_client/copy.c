@@ -205,6 +205,9 @@ path_driver_cb_func (void **dir_baton,
   struct path_driver_cb_baton *cb_baton = callback_baton;
   svn_boolean_t do_delete = TRUE, do_add = FALSE;
 
+  /* Initialize return value. */
+  *dir_baton = NULL;
+
   /* If this is a resurrection, we know the source and dest paths are
      the same, and that our driver will only be calling us once.  */
   if (cb_baton->resurrection)
