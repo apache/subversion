@@ -2,12 +2,50 @@
 # Copyright (C) 2004 Collab Net.
 # This file is distributed under the same license as the subversion package.
 #
+# Translation dictionary:
+#
+# NOTE: This is a proposed list that isn't currenlty reflected in the
+# translations
+#
+# bogus        ogiltig
+# (to) branch  (skapa) förgrening
+# checkout     checka ut (hämta?)
+# commit       arkivera (var tidigare checka in)
+# diff         skillnad (ev. med diff inom parentes beroedne på sammanhang)
+# entry        post
+# item         objekt
+# label        märke
+# lock         lås
+# locked       låst
+# merge        förena
+# obstruct(ed) blockera
+# PROPNAME     EGENSKAPSNAMN
+# PROPVAL      EGENSKAPSVÄRDE
+# relocate     flytta (??? förväxlas med move)
+# REPOS        ARKIV
+# REPOS_PATH   ARKIV_SÖKVÄG
+# Repository   Arkiv
+# repository access (RA) arkivåtkomst
+# revert       återställa
+# revision     revision (??? version)
+# scheduling   schemalägga (planera?)
+# stream       ström
+# switch       växla (till)
+# tag          märke
+# text-base    textbas (???)
+# to dump      dumpa
+# unlock       låsa upp
+# update       uppdatera
+# usage        användning
+# whitespace   tomrum
+# working copy (WC) arbetskopia (AK)
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-07-25 21:50+0200\n"
-"PO-Revision-Date: 2004-07-25 21:57+0200\n"
+"PO-Revision-Date: 2004-08-14 23:14+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
