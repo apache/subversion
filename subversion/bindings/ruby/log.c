@@ -92,7 +92,6 @@ svn_ruby_get_log_args (int argc,
                        apr_pool_t *pool)
 {
   int i;
-  apr_pool_t *subpool;
   VALUE aPaths, receiver;
 
   rb_scan_args (argc, argv, "50&", &aPaths, start, end,

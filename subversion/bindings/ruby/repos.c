@@ -159,7 +159,6 @@ static VALUE
 repos_close (VALUE self)
 {
   svn_ruby_repos_t *repos;
-  svn_error_t *err;
 
   Data_Get_Struct (self, svn_ruby_repos_t, repos);
   if (repos->closed)
