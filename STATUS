@@ -66,28 +66,6 @@ Core changes that don't have three +1's yet, or have a veto.  (If you
 make the threshold vote on one of these items, please move it to the
 section for approved changes.)
 
-    * r8299
-      Fix a small bug in ra_dav's get_repos_root() implementation that caused
-      it to return an incomplete root URL, if the session URL was already the
-      root URL.
-      Votes:
-       +1: jszakmeister, ghudson
-
-
-    * r8341, r8352
-      Fix some more 'access denied' errors on Windows.
-      Votes:
-       +1: ghudson, philip
-
-
-    * r8343
-      Use 'unsigned char secret[64]' instead of 'char secret[64]'.
-      Justification: SVN won't compile on AIX with xlc without this.
-      Comments: ghudson (Doesn't actually make us build with xlc,
-                         but doesn't hurt either.)
-      Votes:
-       +1: kfogel, philip, ghudson
-
 
     * Issue #1705
       Exorcise apr_off_t.
@@ -98,21 +76,6 @@ section for approved changes.)
              ghudson (svn_io_file_seek needs a little more work)
       Votes:
        +0: ghudson
-
-    * r8296
-      Change to correctly build Fedora Core 1 RPMs.
-      Justification: Without this the generated package name
-         contains "Unknown" instead of the platform abbreviation.
-      Notes:
-      Votes:
-       +1: david, ghudson, jszakmeister
-
-
-    * r8361
-      Fix wc-to-wc copies with non-ASCII characters in a non-UTF-8 locale.
-      Justification: obvious run-time bug, trivial fix
-      Votes:
-       +1: philip, ghudson, jszakmeister
 
 
     * r8368
@@ -139,11 +102,50 @@ the section for unapproved changes.)
       Votes:
        +1: cmpilato, kfogel, ghudson
 
-       
+
     * r8346
       Fix infinite recursion in libsvn_subr/utf.c.
       Votes:
        +1: epg, ghudson, philip
+
+
+    * r8299
+      Fix a small bug in ra_dav's get_repos_root() implementation that caused
+      it to return an incomplete root URL, if the session URL was already the
+      root URL.
+      Votes:
+       +1: jszakmeister, ghudson, brane
+
+
+    * r8341, r8352
+      Fix some more 'access denied' errors on Windows.
+      Votes:
+       +1: ghudson, philip, brane
+
+
+    * r8343
+      Use 'unsigned char secret[64]' instead of 'char secret[64]'.
+      Justification: SVN won't compile on AIX with xlc without this.
+      Comments: ghudson (Doesn't actually make us build with xlc,
+                         but doesn't hurt either.)
+      Votes:
+       +1: kfogel, philip, ghudson, brane
+
+
+    * r8296
+      Change to correctly build Fedora Core 1 RPMs.
+      Justification: Without this the generated package name
+         contains "Unknown" instead of the platform abbreviation.
+      Notes:
+      Votes:
+       +1: david, ghudson, jszakmeister
+
+
+    * r8361
+      Fix wc-to-wc copies with non-ASCII characters in a non-UTF-8 locale.
+      Justification: obvious run-time bug, trivial fix
+      Votes:
+       +1: philip, ghudson, jszakmeister
 
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
