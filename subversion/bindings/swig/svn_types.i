@@ -299,26 +299,43 @@
 */
 %typemap(perl5, in) svn_opt_revision_t * (svn_opt_revision_t rev) {
     $1 = &rev;
-    if ($input == NULL || $input == &PL_sv_undef) {
-	rev.kind = svn_opt_revision_unspecified;
+    if ($input == NULL || $input == &PL_sv_undef || !SvOK($input)) {
+        rev.kind = svn_opt_revision_unspecified;
     }
     else if (sv_isobject($input) && sv_derived_from($input, "_p_svn_opt_revision_t")) {
-	SWIG_ConvertPtr($input, (void **)&$1, $1_descriptor, 0);
+        SWIG_ConvertPtr($input, (void **)&$1, $1_descriptor, 0);
     }
     else if (SvIOK($input)) {
-	rev.kind = svn_opt_revision_number;
-	rev.value.number = SvIV($input);
+        rev.kind = svn_opt_revision_number;
+        rev.value.number = SvIV($input);
     }
-    else {
-	char *input = SvPV_nolen($input);
-	if (strcasecmp(input, "BASE") == 0)
-	    rev.kind = svn_opt_revision_base;
-	else if (strcasecmp(input, "HEAD") == 0)
-	    rev.kind = svn_opt_revision_head;
-	else
-	    SWIG_croak("unknown opt_revison_t type");
-    }
-
+    else if (SvPOK($input)) {
+        char *input = SvPV_nolen($input);
+        if (strcasecmp(input, "BASE") == 0)
+            rev.kind = svn_opt_revision_base;
+        else if (strcasecmp(input, "HEAD") == 0)
+            rev.kind = svn_opt_revision_head;
+        else if (strcasecmp(input, "WORKING") == 0)
+            rev.kind = svn_opt_revision_working;
+        else if (strcasecmp(input, "COMMITTED") == 0)
+            rev.kind = svn_opt_revision_committed;
+        else if (strcasecmp(input, "PREV") == 0)
+            rev.kind = svn_opt_revision_previous;
+        else if (*input = '{') {
+            time_t tm;
+            char *end = strchr(input,'}');
+            if (!end)
+                SWIG_croak("unknown opt_revision_t type");
+            *end = '\0';
+            tm = svn_parse_date (input + 1, NULL);
+            if (tm == -1)
+                SWIG_croak("unknown opt_revision_t type");
+            rev.kind = svn_opt_revision_date;
+            apr_time_ansi_put(&(rev.value.date), tm);
+        } else
+            SWIG_croak("unknown opt_revison_t type");
+    } else
+        SWIG_croak("unknown opt_revision_t type");
 }
 
 /* -----------------------------------------------------------------------
