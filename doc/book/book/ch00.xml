@@ -482,19 +482,24 @@
       <title>From Brian W. Fitzpatrick</title>
 
       <para>Huge thanks to my wife Marie for being incredibly
-        understanding, supportive, and most of all, patient.  A big
-        thank you to my brother Eric who first introduced me to UNIX
-        programming way back when, and to my Mom and Grandmother who
-        endured a Christmas holiday where I came home and promptly
-        buried my head in my laptop to work on the book.</para>
+        understanding, supportive, and most of all, patient.  Thank
+        you to my brother Eric who first introduced me to UNIX
+        programming way back when; Thanks to my Mom and Grandmother
+        for all their support, not to mention enduring a Christmas
+        holiday where I came home and promptly buried my head in my
+        laptop to work on the book.</para>
 
       <para>To Mike and Ben: It was a pleasure working with you on the
         book.  Heck, it's a pleasure working with you at work!</para>
 
       <para>To everyone in the Subversion community and the Apache
-        Software Foundation, thanks for having me&mdash;not a day goes
-        by where I don't learn something from at least one of you.
+        Software Foundation, thanks for having me.  Not a day goes by
+        where I don't learn something from at least one of you.
       </para>
+
+      <para>Lastly, thanks to my Grandfather who always told me that
+        <quote>freedom equals responsibility.</quote> I couldn't agree
+        more.</para>
 
     </sect2>
 
