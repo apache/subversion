@@ -146,7 +146,7 @@ timestamps_equal_p (svn_boolean_t *equal_p,
   /* Get the timestamp from the working file and the entry */
   if (timestamp_kind == svn_wc__text_time)
     {
-      err = svn_wc__file_affected_time (&wfile_time, filename, pool);
+      err = svn_io_file_affected_time (&wfile_time, filename, pool);
       if (err) return err;
 
       entrytime = entry->text_time;
@@ -160,7 +160,7 @@ timestamps_equal_p (svn_boolean_t *equal_p,
                                                   SVN_WC__ADM_PROPS,
                                                   filename,
                                                   NULL);
-      err = svn_wc__file_affected_time (&wfile_time, prop_path, pool);
+      err = svn_io_file_affected_time (&wfile_time, prop_path, pool);
       if (err) return err;      
 
       entrytime = entry->prop_time;

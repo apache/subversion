@@ -60,29 +60,6 @@
 
 /*** Timestamp generation and comparison. ***/
 
-svn_error_t *
-svn_wc__file_affected_time (apr_time_t *apr_time,
-                            svn_string_t *path,
-                            apr_pool_t *pool)
-{
-  apr_finfo_t finfo;
-  apr_status_t apr_err;
-
-  apr_err = apr_stat (&finfo, path->data, pool);
-  if (apr_err)
-    return svn_error_createf
-      (apr_err, 0, NULL, pool,
-       "svn_wc__file_affected_time: cannot stat %s", path->data);
-
-  if (finfo.mtime > finfo.ctime)
-    *apr_time = finfo.mtime;
-  else
-    *apr_time = finfo.ctime;
-
-  return SVN_NO_ERROR;
-}
-
-
 /** kff todo: these are quite general and could go into
     libsvn_subr or a libsvn_time. **/
 

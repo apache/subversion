@@ -461,9 +461,9 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                     return;
                   }
                 if (tfile_kind == svn_node_file)
-                  err = svn_wc__file_affected_time (&text_time,
-                                                    tfile,
-                                                    loggy->pool);
+                  err = svn_io_file_affected_time (&text_time,
+                                                   tfile,
+                                                   loggy->pool);
                 if (err)
                   {
                     signal_error (loggy, svn_error_createf
@@ -513,9 +513,9 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                     return;
                   }
                 if (pfile_kind == svn_node_file)
-                  err = svn_wc__file_affected_time (&prop_time,
-                                                    pfile,
-                                                    loggy->pool);
+                  err = svn_io_file_affected_time (&prop_time,
+                                                   pfile,
+                                                   loggy->pool);
                 if (err)
                   {
                     signal_error (loggy, svn_error_createf
@@ -657,9 +657,8 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                       return;
                     }
                   
-                  err = svn_wc__file_affected_time (&timestamp,
-                                                    same ? working_file : tmp_base,
-                                                    loggy->pool);
+                  err = svn_io_file_affected_time 
+                    (&timestamp, same ? working_file : tmp_base, loggy->pool);
                   if (err)
                     {
                       signal_error

@@ -191,5 +191,23 @@ svn_error_t *svn_io_append_file (svn_string_t *src,
                                  apr_pool_t *pool);
 
 
+/* Set *APR_TIME to the later of PATH's (a regular file) mtime or ctime.
+ *
+ * Unix traditionally distinguishes between "mod time", which is when
+ * someone last modified the contents of the file, and "change time",
+ * when someone changed something else about the file (such as
+ * permissions).
+ *
+ * Since Subversion versions both kinds of information, our timestamp
+ * comparisons have to notice either kind of change.  That's why this
+ * function gives the time of whichever kind came later.  APR will
+ * hopefully make sure that both ctime and mtime always have useful
+ * values, even on OS's that do things differently. (?)
+ */
+svn_error_t *svn_io_file_affected_time (apr_time_t *apr_time,
+                                        svn_string_t *path,
+                                        apr_pool_t *pool);
+
+
 
 #endif /* SVN_IO_H */
