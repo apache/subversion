@@ -8,6 +8,8 @@ VPATH = @top_srcdir@
 SVN_RA_LIB_DEPS = @SVN_RA_LIB_DEPS@
 SVN_RA_LIB_LINK = @SVN_RA_LIB_LINK@
 
+DOC_DIRS = doc/programmer/design doc/user/manual
+
 EXTERNAL_PROJECT_DIRS = neon apr @DB_SUBDIR@
 
 SVN_APR_LIBS = @SVN_APR_LIBS@
@@ -81,7 +83,7 @@ install: external-install local-install
 
 local-all: libs programs @FS_RULES@ @BUILD_APACHE_RULE@
 
-local-clean:
+local-clean: doc-clean
 	@list='$(BUILD_DIRS)'; for i in $$list; do \
 	    echo "Cleaning $$i ..." ; \
 	    (cd $$i && rm -f *.o *.lo *.la *.la-a && rm -rf .libs) ; \
@@ -133,7 +135,7 @@ check: $(TEST_DEPS)
 	fi
 
 mkdir-init:
-	@list='$(BUILD_DIRS)'; for i in $$list; do \
+	@list='$(BUILD_DIRS) $(DOC_DIRS)'; for i in $$list doc; do \
 	    echo "$(MKDIR) $$i" ; \
 	    $(MKDIR) $$i ; \
 	done
@@ -177,6 +179,16 @@ doc-html: doc/programmer/design/svn-design.html doc/user/manual/svn-manual.html
 doc-ps: doc/programmer/design/svn-design.ps doc/user/manual/svn-manual.ps
 doc-pdf: doc/programmer/design/svn-design.pdf doc/user/manual/svn-manual.pdf
 
+doc-clean:
+	for d in $(DOC_DIRS);                               \
+        do                                                  \
+            (cd $$d;                                        \
+             rm -f *.info *.info-1 *.info-2 *.info-3        \
+                   *.aux *.cp *.fn *.ky *.log *.pg *.toc    \
+                   *.tp *.vr                                \
+                   *.dvi *.txt *.html *.ps *.pdf);          \
+        done
+
 ### Build a tarball.
 dist: 
 	./dist.sh
@@ -199,17 +211,16 @@ dist:
 
 
 .texi.info:
-	rm -f $@ $@-[0-9] $@-[0-9][0-9]
-	$(MAKEINFO) -I `dirname $(top_srcdir)/$<` -o $@ $< 
+	$(MAKEINFO) -I `dirname $<` -o $@ $< 
 
 .texi.dvi:
-	$(TEXI2DVI) -I `dirname $(top_srcdir)/$<` $<
+	wd=`pwd` ; cd `dirname $@` ; $(TEXI2DVI) -I `dirname $$wd/$<` $$wd/$<
 
 .texi.txt:
-	$(MAKEINFO) -I `dirname $(top_srcdir)/$<` --no-headers -o $@ $<
+	$(MAKEINFO) -I `dirname $<` --no-headers -o $@ $<
 
 .texi.html:
-	$(MAKEINFO) -I `dirname $(top_srcdir)/$<` --no-headers --html -o $@ $<
+	$(MAKEINFO) -I `dirname $<` --no-headers --html -o $@ $<
 
 .dvi.ps:
 	$(DVIPS) $< -o $@
