@@ -53,6 +53,7 @@
 
 /*** Includes. ***/
 
+#include <string.h>
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
@@ -144,7 +145,7 @@ static const svn_cl__cmd_desc_t cmd_table[] = {
 };
 
 
-static svn_cl__cmd_desc_t *
+static const svn_cl__cmd_desc_t *
 get_cmd_table_entry (const char *cmd_name)
 {
   int max = sizeof (cmd_table) / sizeof (cmd_table[0]);
@@ -375,10 +376,10 @@ parse_command_options (int argc,
  * CMD must be a valid command name; the behavior is
  * undefined if it is not.
  */
-static svn_cl__cmd_desc_t *
+static const svn_cl__cmd_desc_t *
 get_canonical_command (const char *cmd)
 {
-  svn_cl__cmd_desc_t *cmd_desc = get_cmd_table_entry (cmd);
+  const svn_cl__cmd_desc_t *cmd_desc = get_cmd_table_entry (cmd);
 
   if (cmd_desc == NULL)
     return cmd_desc;
@@ -394,7 +395,7 @@ print_command_info (const char *cmd,
                     svn_boolean_t help,
                     apr_pool_t *pool)
 {
-  svn_cl__cmd_desc_t *canonical_cmd = get_canonical_command (cmd);
+  const svn_cl__cmd_desc_t *canonical_cmd = get_canonical_command (cmd);
 
   /*  IF we get a NULL back, then an informative message has already
       been printed.  */
@@ -404,7 +405,7 @@ print_command_info (const char *cmd,
   fputs (canonical_cmd->cmd_name, stdout);
   if (canonical_cmd[1].is_alias)
     {
-      svn_cl__cmd_desc_t *p_alias = canonical_cmd + 1;
+      const svn_cl__cmd_desc_t *p_alias = canonical_cmd + 1;
       fputs (" (", stdout);
       for (;;)
         {
@@ -470,7 +471,7 @@ svn_cl__help (int argc, char **argv, apr_pool_t *pool,
 int
 main (int argc, char **argv)
 {
-  svn_cl__cmd_desc_t* p_cmd = get_cmd_table_entry (argv[1]);
+  const svn_cl__cmd_desc_t *p_cmd = get_cmd_table_entry (argv[1]);
   apr_pool_t *pool;
   svn_cl__opt_state_t opt_state;
 
