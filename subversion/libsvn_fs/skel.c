@@ -408,7 +408,7 @@ svn_fs__str_atom (const char *str, apr_pool_t *pool)
 {
   skel_t *skel = apr_palloc (pool, sizeof (*skel));
   skel->is_atom = 1;
-  skel->data = str;
+  skel->data = (char *)str;     /* ### be nice to fix this... */
   skel->len = strlen (str);
 
   return skel;
