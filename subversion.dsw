@@ -35,9 +35,6 @@ Package=<5>
 
 Package=<4>
 {{{
-    Begin Project Dependency
-    Project_Dep_Name aprlib
-    End Project Dependency
 }}}
 
 ###############################################################################
@@ -50,9 +47,6 @@ Package=<5>
 
 Package=<4>
 {{{
-    Begin Project Dependency
-    Project_Dep_Name aprlib
-    End Project Dependency
 }}}
 
 ###############################################################################
@@ -77,9 +71,6 @@ Package=<5>
 
 Package=<4>
 {{{
-    Begin Project Dependency
-    Project_Dep_Name aprlib
-    End Project Dependency
 }}}
 
 ###############################################################################
@@ -92,9 +83,6 @@ Package=<5>
 
 Package=<4>
 {{{
-    Begin Project Dependency
-    Project_Dep_Name aprlib
-    End Project Dependency
 }}}
 
 ###############################################################################
@@ -107,9 +95,6 @@ Package=<5>
 
 Package=<4>
 {{{
-    Begin Project Dependency
-    Project_Dep_Name aprlib
-    End Project Dependency
 }}}
 
 ###############################################################################
@@ -122,9 +107,6 @@ Package=<5>
 
 Package=<4>
 {{{
-    Begin Project Dependency
-    Project_Dep_Name aprlib
-    End Project Dependency
 }}}
 
 ###############################################################################
@@ -153,11 +135,128 @@ Package=<4>
     Project_Dep_Name libsvn_subr
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name libsvn_test_editor
-    End Project Dependency
-    Begin Project Dependency
     Project_Dep_Name libsvn_wc
     End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_delta_deltaparse"=.\subversion\libsvn_delta\tests\deltaparse_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_delta_random"=.\subversion\libsvn_delta\tests\random_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_delta_svndiff"=.\subversion\libsvn_delta\tests\svndiff_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_delta_vdelta"=.\subversion\libsvn_delta\tests\vdelta_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_delta_xml_output"=.\subversion\libsvn_delta\tests\xml_output_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_fs_skel"=.\subversion\libsvn_fs\tests\skel_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_subr_hashdump"=.\subversion\libsvn_subr\tests\hashdump_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_subr_string"=.\subversion\libsvn_subr\tests\sting_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_wc_checkout"=.\subversion\libsvn_wc\tests\checkout_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_wc_commit"=.\subversion\libsvn_wc\tests\commit_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
 }}}
 
 ###############################################################################
