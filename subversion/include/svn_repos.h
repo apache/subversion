@@ -268,6 +268,11 @@ const char *svn_repos_pre_revprop_change_hook (svn_repos_t *repos,
 const char *svn_repos_post_revprop_change_hook (svn_repos_t *repos,
                                                 apr_pool_t *pool);
 
+
+/** @defgroup svn_repos_lock_hooks paths to lock hooks
+ * @{ 
+ * @since New in 1.2. */
+
 /** Return the path to @a repos's pre-lock hook, allocated in @a pool. */
 const char *svn_repos_pre_lock_hook (svn_repos_t *repos, apr_pool_t *pool);
 
@@ -280,6 +285,7 @@ const char *svn_repos_pre_unlock_hook (svn_repos_t *repos, apr_pool_t *pool);
 /** Return the path to @a repos's post-unlock hook, allocated in @a pool. */
 const char *svn_repos_post_unlock_hook (svn_repos_t *repos, apr_pool_t *pool);
 
+/** @} */
 
 /* ---------------------------------------------------------------*/
 
@@ -983,12 +989,13 @@ svn_error_t *svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
                                                 apr_pool_t *pool);
 
 
-/** 
- * @since New in 1.2. 
- *
- * Like @c svn_fs_lock(), but invoke the @a repos's pre- and post-lock
- * hooks before and after the locking action.  Use @a pool for any
- * necessary allocations.
+/** @defgroup svn_repos_fs_locks repository lock wrappers
+ * @{ 
+ * @since New in 1.2. */
+
+/** Like @c svn_fs_lock(), but invoke the @a repos's pre- and
+ * post-lock hooks before and after the locking action.  Use @a pool
+ * for any necessary allocations.
  *
  * If the pre-lock hook or svn_fs_lock() fails, throw the original
  * error to caller.  If an error occurs when running the post-lock
@@ -1007,10 +1014,7 @@ svn_error_t *svn_repos_fs_lock (svn_lock_t **lock,
                                 apr_pool_t *pool);
 
 
-/** 
- * @since New in 1.2. 
- *
- * Like @c svn_fs_unlock(), but invoke the @a repos's pre- and
+/** Like @c svn_fs_unlock(), but invoke the @a repos's pre- and
  * post-unlock hooks before and after the unlocking action.  Use @a
  * pool for any necessary allocations.
  *
@@ -1028,10 +1032,7 @@ svn_error_t *svn_repos_fs_unlock (svn_repos_t *repos,
 
 
 
-/** 
- * @since New in 1.2. 
- *
- * Look up all the locks in and under @a path in @a repos, setting @a
+/** Look up all the locks in and under @a path in @a repos, setting @a
  * locks to a hash which maps @c const char * paths to the @c
  * svn_lock_t locks associate with those paths.  Use @a
  * authz_read_func and @a authz_read_baton to "screen" all returned
@@ -1045,6 +1046,7 @@ svn_error_t *svn_repos_fs_get_locks (apr_hash_t **locks,
                                      void *authz_read_baton,
                                      apr_pool_t *pool);
 
+/** @} */
 
 /** 
  * @since New in 1.1. 
