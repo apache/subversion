@@ -81,7 +81,7 @@ merge_text (svn_string_t *path,
   void *diff;
 
   filepath = svn_string_dup (path, pool);
-  svn_path_add_component_nts (filepath, name, SVN_PATH_LOCAL_STYLE, pool);
+  svn_path_add_component_nts (filepath, name, svn_path_local_style, pool);
 
   /* Get the local edits. */
   err = svn_wc__get_local_changes (svn_wc__gnudiff_differ,
@@ -114,7 +114,7 @@ replace_text_base (svn_string_t *path,
   svn_boolean_t exists;
 
   filepath = svn_string_dup (path, pool);
-  svn_path_add_component_nts (filepath, name, SVN_PATH_LOCAL_STYLE, pool);
+  svn_path_add_component_nts (filepath, name, svn_path_local_style, pool);
 
   tmp_text_base = svn_wc__text_base_path (filepath, 1, pool);
   err = svn_wc__file_exists_p (&exists, tmp_text_base, pool);
@@ -142,7 +142,7 @@ set_entry (svn_string_t *path,
 
   /* Get the working file's timestamp. */
   local_file = svn_string_dup (path, pool);
-  svn_path_add_component (local_file, sname, SVN_PATH_LOCAL_STYLE, pool);
+  svn_path_add_component (local_file, sname, svn_path_local_style, pool);
   err = svn_wc__file_affected_time (&t, local_file, pool);
   if (err)
     return err;

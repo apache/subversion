@@ -98,7 +98,7 @@ svn_wc__ensure_directory (svn_string_t *path, apr_pool_t *pool)
              directory.  We don't know which one, so we recursively
              back up one level and try again. */
           svn_string_t *shorter = svn_string_dup (npath, pool);
-          svn_path_remove_component (shorter, SVN_PATH_LOCAL_STYLE);
+          svn_path_remove_component (shorter, svn_path_local_style);
 
           if (svn_string_isempty (shorter))
             {

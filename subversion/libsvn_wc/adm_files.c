@@ -82,21 +82,6 @@ adm_subdir (void)
 }
 
 
-/* Divide PATH into DIRPATH and BASENAME, return them by reference,
-   in their own storage in POOL.  The separator between DIRPATH and
-   BASENAME is not included in the returned value. */
-static void
-wc_split_path (svn_string_t *path, 
-               svn_string_t **dirpath,
-               svn_string_t **basename,
-               apr_pool_t *pool)
-{
-  *dirpath = svn_string_dup (path, pool);
-  *basename = svn_path_last_component (*dirpath, SVN_PATH_LOCAL_STYLE, pool);
-  svn_path_remove_component (*dirpath, SVN_PATH_LOCAL_STYLE);
-}
-
-
 /* Extend PATH to the name of something in PATH's administrative area.
  * Returns the number of path components added to PATH.
  * 
@@ -126,14 +111,14 @@ v_extend_with_adm_name (svn_string_t *path,
   int components_added = 0;
 
   /* Tack on the administrative subdirectory. */
-  svn_path_add_component_nts (path, adm_subdir (), SVN_PATH_LOCAL_STYLE, pool);
+  svn_path_add_component_nts (path, adm_subdir (), svn_path_local_style, pool);
   components_added++;
 
   /* If this is a tmp file, name it into the tmp area. */
   if (use_tmp)
     {
       svn_path_add_component_nts
-        (path, SVN_WC__ADM_TMP, SVN_PATH_LOCAL_STYLE, pool);
+        (path, SVN_WC__ADM_TMP, svn_path_local_style, pool);
       components_added++;
     }
 
@@ -143,7 +128,7 @@ v_extend_with_adm_name (svn_string_t *path,
       if (this[0] == '\0')
         continue;
 
-      svn_path_add_component_nts (path, this, SVN_PATH_LOCAL_STYLE, pool);
+      svn_path_add_component_nts (path, this, svn_path_local_style, pool);
       components_added++;
     }
 
@@ -180,7 +165,7 @@ static void
 chop_admin_name (svn_string_t *path, int num_components)
 {
   while (num_components-- > 0)
-    svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
+    svn_path_remove_component (path, svn_path_local_style);
 }
 
 
@@ -438,7 +423,7 @@ svn_error_t *
 svn_wc__sync_text_base (svn_string_t *path, apr_pool_t *pool)
 {
   svn_string_t *newpath, *basename;
-  wc_split_path (path, &newpath, &basename, pool);
+  svn_path_split (path, &newpath, &basename, svn_path_local_style, pool);
   return sync_adm_file (newpath,
                         pool,
                         SVN_WC__ADM_TEXT_BASE,
@@ -453,7 +438,7 @@ svn_wc__text_base_path (svn_string_t *path,
                         apr_pool_t *pool)
 {
   svn_string_t *newpath, *basename;
-  wc_split_path (path, &newpath, &basename, pool);
+  svn_path_split (path, &newpath, &basename, svn_path_local_style, pool);
 
   extend_with_adm_name (newpath,
                         0,
@@ -642,7 +627,7 @@ svn_wc__open_text_base (apr_file_t **handle,
                         apr_pool_t *pool)
 {
   svn_string_t *newpath, *basename;
-  wc_split_path (path, &newpath, &basename, pool);
+  svn_path_split (path, &newpath, &basename, svn_path_local_style, pool);
   return open_adm_file (handle, newpath, flags, pool,
                         SVN_WC__ADM_TEXT_BASE, basename->data, NULL);
 }
@@ -655,7 +640,7 @@ svn_wc__close_text_base (apr_file_t *fp,
                          apr_pool_t *pool)
 {
   svn_string_t *newpath, *basename;
-  wc_split_path (path, &newpath, &basename, pool);
+  svn_path_split (path, &newpath, &basename, svn_path_local_style, pool);
   return close_adm_file (fp, newpath, write, pool,
                          SVN_WC__ADM_TEXT_BASE, basename->data, NULL);
 }

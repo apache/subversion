@@ -72,16 +72,11 @@
 
 #define SVN_PATH_REPOS_SEPARATOR '/'
 
-/* Pass this when you want a component added using the local
-   pathname conventions. */
-#define SVN_PATH_LOCAL_STYLE 1
-
-/* Pass this when you want a component added using repository pathname
-   conventions. */
-#define SVN_PATH_REPOS_STYLE 2
-
-/* Pass this when you want a component added using URL conventions ('/'). */
-#define SVN_PATH_URL_STYLE 3
+enum svn_path_style {
+  svn_path_local_style = 1,  /* parse path using local (client) conventions */
+  svn_path_repos_style,      /* parse path using repository conventions */
+  svn_path_url_style         /* parse path using URL conventions */
+};
 
 
 /* Add a COMPONENT (a null-terminated C-string) to PATH.
@@ -93,33 +88,44 @@
    If the result ends in a separator character, then remove the separator.
 
    The separator character is chosen according to STYLE.  For
-   SVN_PATH_REPOS_STYLE, it would be '/'.  For SVN_PATH_LOCAL_STYLE on
+   svn_path_repos_style, it would be '/'.  For svn_path_local_style on
    a Unix system, it would also be '/'.  */
 void svn_path_add_component (svn_string_t *path,
                              const svn_string_t *component,
-                             int style,
+                             enum svn_path_style style,
                              apr_pool_t *pool);
 
 /* Same as `svn_path_add_component', except that the COMPONENT argument is 
    a C-style '\0'-terminated string, not an svn_string_t.  */
 void svn_path_add_component_nts (svn_string_t *path, 
                                  const char *component,
-                                 int style,
+                                 enum svn_path_style style,
                                  apr_pool_t *pool);
 
 /* Remove one component off the end of PATH. */
-void svn_path_remove_component (svn_string_t *path, int style);
+void svn_path_remove_component (svn_string_t *path,
+                                enum svn_path_style style);
 
 
 /* Duplicate and return PATH's last component, w/o separator. */
 svn_string_t *svn_path_last_component (svn_string_t *path,
-                                       int style,
+                                       enum svn_path_style style,
                                        apr_pool_t *pool);
+
+/* Divide PATH into DIRPATH and BASENAME, return them by reference,
+   in their own storage in POOL.  The separator between DIRPATH and
+   BASENAME is not included in either of the new names. */
+void svn_path_split (svn_string_t *path, 
+                     svn_string_t **dirpath,
+                     svn_string_t **basename,
+                     enum svn_path_style style,
+                     apr_pool_t *pool);
+
 
 /* Return non-zero iff PATH is empty or represents the current
    directory -- that is, if it is NULL or if prepending it as a
    component to an existing path would result in no meaningful
    change. */
-int svn_path_isempty (const svn_string_t *path, int style);
+int svn_path_isempty (const svn_string_t *path, enum svn_path_style style);
 
 #endif /* SVN_PATHS_H */
