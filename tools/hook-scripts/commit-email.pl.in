@@ -288,6 +288,7 @@ my @difflines = &read_from_process($svnlook, 'diff', $repos,
 # there's no point in collapsing the directories, and only if more
 # than one directory was modified.
 my $commondir = '';
+my @dirschanged_orig = @dirschanged;
 if (!$rootchanged and @dirschanged > 1)
   {
     my $firstline    = shift @dirschanged;
@@ -367,7 +368,7 @@ foreach my $project (@project_settings_list)
   {
     my $match_re = $project->{match_re};
     my $match    = 0;
-    foreach my $path (@dirschanged, @adds, @dels, @mods)
+    foreach my $path (@dirschanged_orig, @adds, @dels, @mods)
       {
         if ($path =~ $match_re)
           {
