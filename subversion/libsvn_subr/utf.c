@@ -136,6 +136,7 @@ get_xlate_handle_node (xlate_handle_node_t **ret,
             return svn_error_create (apr_err, NULL,
                                      "Can't lock charset translation "
                                      "mutex");
+#endif
           old_handle = apr_hash_get (xlate_handle_hash, userdata_key,
                                      APR_HASH_KEY_STRING);
           if (old_handle)
@@ -148,25 +149,16 @@ get_xlate_handle_node (xlate_handle_node_t **ret,
                   apr_hash_set (xlate_handle_hash, userdata_key,
                                 APR_HASH_KEY_STRING, (*ret)->next);
                   (*ret)->next = NULL;
+#if APR_HAS_THREADS
                   apr_err = apr_thread_mutex_unlock (xlate_handle_mutex);
                   if (apr_err != APR_SUCCESS)
                     return svn_error_create (apr_err, NULL,
                                              "Can't unlock charset "
                                              "translation mutex");
+#endif
                   return SVN_NO_ERROR;
                 }
             }
-#else /* ! APR_HAS_THREADS */
-          old_handle = apr_hash_get(xlate_handle_hash, userdata_key,
-                                    APR_HASH_KEY_STRING);
-          if (old_handle)
-            {
-              *ret = old_handle;
-              /* Ensure that the handle is still valid. */
-              if ((*ret)->handle)
-                return SVN_NO_ERROR;
-            }
-#endif
         }
       else
         {
