@@ -70,4 +70,4 @@ Candidate changes:
                     of whether largefile support is compiled into APR.
     Notes:  many users have hit this problem (issue #1819).
     Votes:
-      +1: sussman
+      +1: sussman, ghudson
