@@ -1647,7 +1647,7 @@ close LASTDUMPED;
         repository directory:</para>
 
       <programlisting>
-(cd /path/to/hook/scripts; ./hot-backup.py ${REPOS} /path/to/backups &)
+(cd /path/to/hook/scripts; ./hot-backup.py ${REPOS} /path/to/backups &amp;)
 </programlisting>
 
       <para>The resulting backup is a fully functional Subversion
