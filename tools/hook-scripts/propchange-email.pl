@@ -202,7 +202,7 @@ unless (-d _)
 
 # Get the new property value svn.
 my $repos_url = 'file://' . &abs_path($repos);
-my @svnlines = &read_from_process($svn, 'propget', '-r', $rev, 
+my @svnlines = &read_from_process($svn, 'propget', '--revprop', '-r', $rev, 
                                   $propname, $repos_url);
 
 # Figure out what directories have changed using svnlook.  This is
