@@ -87,6 +87,7 @@ parse_node_revision_dbt (const DBT *d)
   /* It must be a node revision ID, not a node ID.  */
   if (svn_fs__id_length (id) & 1)
     {
+      free (id->digits);
       free (id);
       return 0;
     }
@@ -144,8 +145,16 @@ compare_nodes_keys (DB *dummy, const DBT *ak, const DBT *bk)
   else
     result = svn_fs__compare_dbt (ak, bk);
 
-  if (a) free (a);
-  if (b) free (b);
+  if (a)
+    {
+      free (a->digits);
+      free (a);
+    }
+  if (b)
+    {
+      free (b->digits);
+      free (b);
+    }
 
   return result;
 }

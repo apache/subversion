@@ -383,13 +383,19 @@ svn_ra_dav__open (void **session_baton,
     int proxy_port;
     const char *proxy_username;
     const char *proxy_password;
+    svn_error_t *err;
     
-    SVN_ERR( get_proxy(&proxy_host,
-                       &proxy_port,
-                       &proxy_username,
-                       &proxy_password,
-                       uri.host,
-                       pool) );
+    err = get_proxy(&proxy_host,
+                    &proxy_port,
+                    &proxy_username,
+                    &proxy_password,
+                    uri.host,
+                    pool);
+    if (err)
+      {
+        uri_free(&uri);
+        return err;
+      }
 
     if (proxy_port == -1)
       proxy_port = 80;
@@ -446,7 +452,7 @@ svn_ra_dav__open (void **session_baton,
   ras = apr_pcalloc(pool, sizeof(*ras));
   ras->pool = pool;
   ras->url = apr_pstrdup (pool, repos_URL->data);
-  ras->root = uri;
+  ras->root = uri; /* copies uri pointer members, they get free'd in __close. */
   ras->sess = sess;
   ras->sess2 = sess2;  
   ras->callbacks = callbacks;
@@ -474,6 +480,7 @@ static svn_error_t *svn_ra_dav__close (void *session_baton)
 
   (void) apr_pool_cleanup_run(ras->pool, ras->sess, cleanup_session);
   (void) apr_pool_cleanup_run(ras->pool, ras->sess2, cleanup_session);
+  uri_free(&ras->root);
   return NULL;
 }
 

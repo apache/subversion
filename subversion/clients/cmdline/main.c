@@ -787,7 +787,7 @@ main (int argc, const char * const *argv)
 {
   svn_error_t *err;
   apr_pool_t *pool;
-  int opt_id;
+  int opt_id, err2;
   apr_getopt_t *os;  
   svn_cl__opt_state_t opt_state;
   int received_opts[SVN_CL__MAX_OPTS];
@@ -795,6 +795,7 @@ main (int argc, const char * const *argv)
   const svn_cl__cmd_desc_t *subcommand = NULL;
   svn_boolean_t log_under_version_control = FALSE;
   svn_boolean_t log_is_pathname = FALSE;
+  apr_status_t apr_err;
 
   /* FIXME: This is a first step towards support for localization in
      `svn'.  In real life, this call would be
@@ -810,7 +811,18 @@ main (int argc, const char * const *argv)
   setlocale (LC_ALL, "C");
 
 
-  apr_initialize ();
+  apr_err = apr_initialize ();
+  if (apr_err)
+    {
+      fprintf (stderr, "error: apr_initialize\n");
+      return EXIT_FAILURE;
+    }
+  err2 = atexit (apr_terminate);
+  if (err2)
+    {
+      fprintf (stderr, "error: atexit returned %d\n", err2);
+      return EXIT_FAILURE;
+    }
   pool = svn_pool_create (NULL);
   memset (&opt_state, 0, sizeof (opt_state));
 
