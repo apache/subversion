@@ -417,10 +417,10 @@
     <title>A Quick Start</title>
     
     <para>Some people have trouble absorbing a new technology by
-      reading the sort of "top down" approach provided by this book.
-      This section is a very short introduction to Subversion, and is
-      designed to give "bottom up" learners a fighting chance.  If
-      you're one of those folks who prefers to learn by
+      reading the sort of <quote>top down</quote> approach provided by this
+      book.  This section is a very short introduction to Subversion, and is
+      designed to give <quote>bottom up</quote> learners a fighting chance.
+      If you're one of those folks who prefers to learn by
       experimentation, the following demonstration will get you up and
       running.  Along the way, we give links to the relevant chapters
       of this book.</para>
