@@ -473,6 +473,19 @@ open_adm_file (apr_file_t **handle,
          be a reason this is useful... Anyway, we don't want the
          handle. */
       *handle = NULL;
+      /* If we receive a failure to open a file in our temporary directory,
+       * it may be because our temporary directories aren't created.
+       * Older SVN clients did not create these directories.
+       * 'svn cleanup' will fix this problem.
+       */
+      if (APR_STATUS_IS_ENOENT(err->apr_err) && (flags & APR_WRITE))
+        {
+          err = svn_error_quick_wrap(err,
+                               "Your .svn/tmp directory may be missing or "
+                               "corrupt. "
+                               "Please run 'svn cleanup' and try your "
+                               "operation again.");
+        }
     }
 
   return err;
