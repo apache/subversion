@@ -408,9 +408,16 @@ def compare_trees(a, b,
     # A and B are both files.
     if ((a.children is None) and (b.children is None)):
       if compare_file_nodes(a, b):
-        print "Unequal nodes from actual",a.name,"and expected",b.name
-        a.pprint()
+        print "============================================================="
+        print "Expected", b.name, "and actual", a.name, "are different!"
+        print "============================================================="
+        print "EXPECTED NODE TO BE:"
+        print "============================================================="
         b.pprint()
+        print "============================================================="
+        print "ACTUAL NODE FOUND:"
+        print "============================================================="
+        a.pprint()
         raise main.SVNTreeUnequal
     # One is a file, one is a directory.
     elif (((a.children is None) and (b.children is not None))
