@@ -1003,6 +1003,13 @@ crawl_dir (svn_stringbuf_t *path,
       (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, top_pool,
        "Can't find `.' entry in %s", path->data);
 
+  /* If the `.' entry is marked with ADD, then we *only* want to
+     notice child entries that are also added.  It makes no sense to
+     look for deletes or local mods in an added directory. */
+  if ((this_dir_entry->schedule == svn_wc_schedule_add)
+      || (this_dir_entry->schedule == svn_wc_schedule_replace))
+    adds_only = TRUE;
+
   /* Push the current {path, baton, this_dir} to the top of the stack */
   push_stack (stack, path, dir_baton, this_dir_entry, top_pool);
 
