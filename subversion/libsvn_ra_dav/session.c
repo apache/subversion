@@ -817,14 +817,14 @@ static svn_error_t *svn_ra_dav__do_get_uuid(void *session_baton,
         /* ### better error reporting... */
         return svn_error_create(APR_EGENERAL, NULL,
                                 _("The UUID property was not found on the "
-                                  "resource or any of its parents."));
+                                  "resource or any of its parents"));
 
       if (uuid_propval && (uuid_propval->len > 0))
         ras->uuid = apr_pstrdup(ras->pool, uuid_propval->data); /* cache */
       else
         return svn_error_create
           (SVN_ERR_RA_NO_REPOS_UUID, NULL,
-           _("Please upgrade the server to 0.19 or later."));
+           _("Please upgrade the server to 0.19 or later"));
     }
 
   *uuid = ras->uuid;
@@ -866,7 +866,7 @@ svn_error_t *svn_ra_dav_init(int abi_version,
       || abi_version > SVN_RA_ABI_VERSION)
     return svn_error_createf (SVN_ERR_RA_UNSUPPORTED_ABI_VERSION, NULL,
                               _("Unsupported RA plugin ABI version (%d) "
-                                "for ra_dav."), abi_version);
+                                "for ra_dav"), abi_version);
 
   apr_hash_set (hash, "http", APR_HASH_KEY_STRING, &dav_plugin);
 

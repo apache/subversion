@@ -1245,7 +1245,7 @@ static svn_error_t *ra_svn_get_file_revs(void *session_baton, const char *path,
   if (!had_revision)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             _("The get-file-revs command didn't return "
-                              "any revisions."));
+                              "any revisions"));
 
   svn_pool_destroy(chunk_pool);
   svn_pool_destroy(rev_pool);
