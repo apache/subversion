@@ -965,16 +965,10 @@ check_repos_version (const char *path,
                      apr_pool_t *pool)
 {
   int version;
-  svn_error_t *err;
+  const char *format_path;
 
-  err = svn_io_read_version_file 
-    (&version, svn_path_join (path, SVN_REPOS__FORMAT, pool), pool);
-  if (err)
-    return svn_error_createf 
-      (SVN_ERR_REPOS_UNSUPPORTED_VERSION, err,
-       "Expected version '%d' of repository; found no version at all; "
-       "is '%s' a valid repository path?",
-       SVN_REPOS__VERSION, path);
+  format_path = svn_path_join (path, SVN_REPOS__FORMAT, pool);
+  SVN_ERR (svn_io_read_version_file (&version, format_path, pool));
 
   if (version != SVN_REPOS__VERSION)
     return svn_error_createf 
