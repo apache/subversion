@@ -393,7 +393,8 @@ main (int argc, const char * const *argv)
   err = (*subcommand->cmd_func) (os, &opt_state, pool);
   if (err)
     {
-      svn_handle_error (err, stdout, 0);
+      if (err->apr_err != SVN_ERR_CL_ARG_PARSING_ERROR)
+        svn_handle_error (err, stdout, 0);
       apr_pool_destroy (pool);
       return EXIT_FAILURE;
     }
