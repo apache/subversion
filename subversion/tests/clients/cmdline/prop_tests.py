@@ -857,8 +857,8 @@ def prop_value_conversions(sbox):
              ['foo http://foo.com/repos'+os.linesep])
 
   # Check svn:keywords
-  check_prop('svn:keywords', iota_path, ['Rev Date'])
-  check_prop('svn:keywords', mu_path, ['Rev  Date'])
+  check_prop('svn:keywords', iota_path, ['Revision Date'])
+  check_prop('svn:keywords', mu_path, ['Revision Date'])
 
   # Check svn:executable
   check_prop('svn:executable', iota_path, ['*'])

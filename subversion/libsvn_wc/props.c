@@ -987,6 +987,82 @@ validate_eol_prop_against_file (const char *path,
 }
 
 
+/** Return in a <tt>svn_stringbuf_t *</tt>, the
+ * canonicalized equivalent of @a value.
+ * Repeated instances of the same keyword are ignored.
+ *
+ * All memory is allocated out of @a pool.
+ */
+static svn_stringbuf_t *
+canonicalize_keywords (const svn_string_t *value,
+                       apr_pool_t *pool)
+{
+  /* Structure to be used for canonicalization of svn:keywords */
+  typedef struct canon_table_s
+  {
+    const char *prop_value; /* the property value */
+    const int index; /* the index to the corresponding canonical form */
+    const int flag;  /* bit pattern to flag that this canonical form
+                     ** is already set */
+  } canon_table_t;
+  static canon_table_t canon_kw_table[]
+    = {
+         { SVN_KEYWORD_REVISION_LONG,   2, 0x0001 },
+         { SVN_KEYWORD_REVISION_SHORT,  2, 0x0001 },
+         { SVN_KEYWORD_REVISION_MEDIUM, 2, 0x0001 },
+         { SVN_KEYWORD_DATE_LONG,       4, 0x0002 },
+         { SVN_KEYWORD_DATE_SHORT,      4, 0x0002 },
+         { SVN_KEYWORD_AUTHOR_LONG,     6, 0x0004 },
+         { SVN_KEYWORD_AUTHOR_SHORT,    6, 0x0004 },
+         { SVN_KEYWORD_URL_SHORT,       7, 0x0008 },
+         { SVN_KEYWORD_URL_LONG,        7, 0x0008 },
+         { SVN_KEYWORD_ID,              9, 0x0010 }
+      };
+  const int sizeof_canon_kw_table
+    = sizeof (canon_kw_table) / sizeof (canon_table_t);
+
+  apr_array_header_t *keyword_tokens;
+  svn_stringbuf_t *canonicalized_value = NULL;
+  int flags = 0;
+  int i, j;
+
+  /* tokenize the input */
+  keyword_tokens = svn_cstring_split (value->data, " \t\v\n\b\r\f",
+                                      TRUE /* chop */, pool);
+
+  /* for all the tokens */
+  for (i = 0; i < keyword_tokens->nelts; ++i)
+    {
+      const char *keyword = APR_ARRAY_IDX (keyword_tokens, i, const char *);
+
+      for (j = 0; j < sizeof_canon_kw_table; j++)
+        {
+          /* see if an equivalent standard form exists */
+          if ((! strcasecmp (canon_kw_table[j].prop_value, keyword))
+              && (! (flags & canon_kw_table[j].flag)))
+            {
+              /* If so, canonicalize and prepare output */
+              if (! canonicalized_value)
+                canonicalized_value = svn_stringbuf_create
+                  (canon_kw_table[canon_kw_table[j].index].prop_value,
+                   pool);
+              else
+                {
+                  svn_stringbuf_appendcstr (canonicalized_value, " ");
+                  svn_stringbuf_appendcstr
+                    (canonicalized_value,
+                     canon_kw_table[canon_kw_table[j].index].prop_value);
+                }
+              flags |= canon_kw_table[j].flag;
+              break; /* goto the next token from the input */
+            }
+        }
+    }
+
+  return canonicalized_value;
+}
+
+
 svn_error_t *
 svn_wc_prop_set2 (const char *name,
                   const svn_string_t *value,
@@ -1061,7 +1137,7 @@ svn_wc_prop_set2 (const char *name,
         }
       else if (strcmp (name, SVN_PROP_KEYWORDS) == 0)
         {
-          new_value = svn_stringbuf_create_from_string (value, pool);
+          new_value = canonicalize_keywords (value, pool);
           svn_stringbuf_strip_whitespace (new_value);
         }
     }
