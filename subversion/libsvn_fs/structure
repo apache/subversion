@@ -166,7 +166,7 @@ fulltext of the file is stored elsewhere in the database, or perhaps
 in an ordinary Unix file.)
 
 
-DIR:
+DIR: how directories are represented.
 
 If the header's KIND is "dir", then the node-revision skel
 represents a directory, and has the form:
@@ -438,6 +438,189 @@ ANCESTOR:
 *** == something actually happens
 
 
+How transactions work
+
+A committed filesystem revision behaves like a read-only directory
+tree: we can traverse it, and read file and directory contents, but we
+can't change anything.  We can't edit history.
+
+When we open a transaction against some base revision R, the
+transaction behaves like a writeable directory tree, initially
+identical to R.  We can traverse it and read node contents, and also
+create, delete, rename, and change nodes.  Once we've made the changes
+we want, we can commit the transaction, creating a new, read-only
+filesystem revision.
+
+To implement this behavior efficiently, we treat a fresh transaction
+as a "copy-on-write" duplicate of its base revision.  Each transaction
+begins life sharing its entire node structure with its base revision,
+directories and files alike; a new transaction is effectively a single
+pointer to its base revision's root directory.  Then, to make changes
+within the transaction, we create a copy of each node revision we
+change, leaving the base revision's tree undisturbed.  In the tree of
+node revisions, this copy is a direct descendent of the original node
+revision.  We call each copied node revision a "clone".
+
+The Subversion filesystem's `bubble up' rule says that 1) any change
+committed to a node creates a separate node revision, and 2) directory
+entries refer to specific node revisions, not nodes.  The immediate
+consequence of this rule is that, if a transaction changes a node,
+creating a clone of that node, it must clone all of that node's parent
+directories as well.  Since any given node need be cloned only once
+per transaction, this is not an onerous requirement.
+
+As we make changes within a transaction, the cumulative effect of
+cloning and the `bubble up' rule is that the transaction always
+consists of a tree of cloned nodes, pointing back into the base
+revision's tree for unmodified files and directories.  An unmodified
+transaction is simply the border case, where the "tree" of cloned
+nodes is empty, and the root itself is shared with the base revision.
+
+[[Here would be a good place for some diagrams.]]
+
+Note that, within a given transaction, once we have cloned some node
+revision, it is not shared with the base revision's tree, so we can
+make further changes to that node revision freely.  We need never
+create a clone of a clone.  This is the usual behavior for
+"copy-on-write" structures: once a node revision has been cloned, it
+is writable thereafter.  If a node revision is a clone in an
+uncommitted transaction, we call it "mutable".
+
+There's an important wrinkle here, responsible for the complexity of
+the filesystem's data structures.  The node revisions in a committed
+filesystem revision actually form a DAG, not a tree.  Multiple
+entries, possibly in different directories, may point to the same node
+revision, each one acting as a virtual copy of the full tree.
+
+For example, consider the following node revisions, as they might
+appear in a filesystem revision:
+
+10.1: directory (("a" 11.1) ("b" 11.1))
+11.1: directory (("c" 12.1) ("d" 12.1))
+12.1: file "Good morning."
+
+This `tree' contains three directories --- the top directory, `a', and
+`b' --- and four distinct files, named `a/c', `a/d', `b/c', and `b/d',
+all of whose contents are the string "Good morning."  The fact that
+`a/c' and `b/d' are the same node, 12.1, doesn't matter; they are
+virtual copies.
+
+When a transaction refers to a structure like the above, it must treat
+node revision 12.1 as four distinct files, depending on what path the
+user finds it under.  The directories `a' and `b' happen to share
+their structure completely, as do all four files.  If the transaction
+changes all four files, `a/c', `a/d', `b/c' and `b/d', then node
+revision 12.1 will be cloned four times, yielding four distinct new
+node revisions.
+
+If you hold a reference to some node in an uncommitted transaction,
+and decide to modify the node, the `bubble up' rule requires you to
+make sure all its parent directories are cloned in that transaction.
+However, the structure sharing described above makes it complex to
+decide whether a given node has already been cloned, and if so, which
+clone is the appropriate one to use.
+
+For example, supposed 10.1 is the root of some revision R, and we
+begin a new transaction X based on R.  If we change a/c in X, that
+creates the following structure, where 10.2 is the root of the
+transaction:
+
+10.1: directory (("a" 11.1) ("b" 11.1))
+11.1: directory (("c" 12.1) ("d" 12.1))
+12.1: file "Good morning."
+
+10.2: directory (("a" 11.2) ("b" 11.1))
+11.2: directory (("c" 12.2) ("d" 12.1))
+12.2: file "Good afternoon."
+
+Note that X's `b' directory still shares all its nodes with R's `b'
+directory, but that the root, `a' and `a/c' have been cloned.
+
+Now, if we decide to modify X's `b/c', we should get the following
+structure:
+
+10.1: directory (("a" 11.1) ("b" 11.1))
+11.1: directory (("c" 12.1) ("d" 12.1))
+12.1: file "Good morning."
+
+10.2: directory (("a" 11.2) ("b" 11.1.1.1))
+11.2: directory (("c" 12.2) ("d" 12.1))
+12.2: file "Good afternoon."
+
+11.1.1.1: directory (("c" 12.1.1.1) ("d" 12.1))
+12.1.1.1: file "Good night."
+
+We cloned 12.1, here representing the file `b/c', yielding 12.1.1.1.
+Then, we cloned the directory 11.1 again, representing the directory
+`b', yielding 11.1.1.1.  However, we did not clone 10.1 again, since
+we have already cloned the root directory.  Instead, we modify the
+node revision 10.2 in place, making the entry `b' refer to the new
+clone 11.1.1.1.
+
+The filesystem uses the `clones' table to record, for each active
+transaction, which of the base revision's node revisions have been
+cloned so far, and which directory entry should be updated should a
+new node be cloned.  Each key in the `clones' table has the form:
+
+   (TXN PATH)
+
+where TXN is the ID of the transaction, and PATH is the path *in the
+base revision* of a node that has been cloned.  Each value in the
+`clones' table has one of the following forms:
+
+   (cloned ID)
+       The node identified by the given path has been cloned in TXN,
+       yielding node revision ID.
+
+   (renamed ID NAME)
+       The node identified by the given path has not yet been cloned,
+       but the only reference to it has been moved in TXN.  The node
+       is now referred to by the directory entry named NAME in the
+       clone node revision ID.
+
+A reference to a transaction's node must have one of two forms:
+- the ID of a clone in the transaction, or 
+- the full path, in the transaction's base revision, of the node.
+
+If a reference has the first form, you know the node has already been
+cloned; you can make changes directly to the clone.
+
+If a reference has the second form, the node may or may not have been
+cloned yet.  To modify the node, follow this procedure:
+
+Set PATH to the node's full path, and set PATHID to the node's ID.
+while PATH is non-empty:
+  if `clones' has an entry for (TXN PATH):
+    if the value is (cloned ID):
+      then ID specifies the clone you should modify.  You're done.
+    if the value is (renamed PARENTID NAME):
+      then clone PATHID, adding an appropriate `cloned' entry.
+      adjust the entry named NAME in PARENTID to point to the clone.
+      You're done.
+  if `clones' has no entry for (TXN PATH):
+    clone PATHID, yielding CLONE, adding an appropriate `cloned' entry.
+    remove the last element, NAME, from PATH
+    set PATHID to the node ID the new PATH refers to in the base revision
+      (this needn't require a lookup; you could record the node numbers
+       along with PATH.)
+    Adjust the entry named NAME in PATHID to refer to CLONE.
+    go around the loop again, to clone the parent.
+
+This procedure:
+- clones all the directories as required by the `bubble up' rule.
+- clones each virtual copy at most once.
+
+
+
+
+
+
+
+
+
+
+
+
 TRANSACTION: How we represent transactions in the database
 
 Building a transaction creates ordinary node revisions in the
@@ -493,26 +676,106 @@ root directory for this transaction, ROOT is the empty string.
 
 The database contains a table called "transactions", which is a btree
 table indexed by transaction ID, mapping each one onto a TRANSACTION
-header, and a list of all the nodes that are part of that transaction.
-The header and the nodes are stored as duplicate entries under the
-same key: the first value stored is the transaction header skel, and
-each subsequent value is an atom skel whose contents are the node
-revision ID of some node in the transaction.  The nodes appear in no
-particular order.
+header.  The "transactions" table also maps the string "next" to the
+ID to be assigned to the next transaction.
 
-Transaction ID's are decimal numbers, with no particular property
-beyond being unique within the repository.  The keys of the
-"transactions" table are the shorted ASCII decimal representation of
-the transaction ID.  The entries of the "transactions" table are
-sorted by the ID's numeric value.
-
-
+Transaction ID's are decimal numbers.  No transaction ID is ever
+reused, within a given repository.  The keys of the "transactions"
+table are the shortest ASCII decimal representation of the transaction
+ID.  The entries of the "transactions" table are sorted by the ID's
+numeric value.
 
 If the transaction succeeds, the transaction's root directory becomes
 the new revision's root directory, after any necessary merging.  If the
 transaction fails, we delete all of its nodes from the filesystem.  In
 either case, once the transaction is finished, we delete all trace of
 it from the "transactions" table.
+
+
+The "changes" table
+
+If the user has an svn_fs_node_t object referring to a particular node
+in a transaction, it's reasonable to assume that, if the node's parent
+directories are cloned (to satisfy the bubble-up property) or renamed,
+the svn_fs_node_t object will continue to refer to the same node.
+
+However, this property is challenging to implement.  The unchanged
+portions of a transaction's tree are represented by immutable nodes;
+to allow virtual copies, a given immutable node may appear more than
+once in a given tree.  Each appearance of the node, however,
+represents a distinct file.  Consider the following tree:
+
+root of revision R: node 10.1
+
+node 10.1: a:11.1, b:11.1
+node 11.1: c:12.1, d:12.2
+node 12.1: a file
+
+In this tree, the paths /a/c, /a/d, /b/c, and /b/d all refer to node
+12, which is a file.  From Subversion's point of view, this is a
+directory tree with three directories --- /, /a, and /b, and four
+files.  That is, the four paths above refer to four distinct files:
+changing one does not affect the others.
+
+This means that an svn_fs_node_t object cannot keep track of which
+node it refers to simply by recording a node version ID
+
+
+
+
+As the user constructs a transaction, immutable nodes from committed
+revisions are cloned, yielding mutable nodes to hold the transaction's
+changes.  If an application wants to treat a transaction as a
+directory tree, it is useful to be able refer a specific nodes in a
+transaction's tree, without regard for whether that node has been
+cloned yet.
+
+This means that the implementation needs some way to map from an
+immutable node to its clone.  Since subtrees can be shared in
+revisions, an immutable node revision could have more than one
+distinct clones in the transaction.  This means that the ID of an
+immutable node revision alone is not enough to find the appropriate
+clone --- we need to know the path by which we reached the node, and
+the cloned revisions of each node on that path.
+
+To this end, the database contains a table called "clones", which is a
+btree with KEY -> VALUE pairs of the form:
+
+	(TXN-ID PARENT-ID ENTRY-NAME) -> CHILD-ID
+
+meaning: "In the transaction TXN-ID, the directory entry named
+ENTRY-NAME in the mutable directory node PARENT-ID was cloned,
+yielding node CHILD-ID."  In other words, it's a record of all the
+cloning that went on.  CHILD-ID can also be "deleted", indicating that
+the directory entry was deleted.
+
+These entries 
+
+
+If a node object refers to a mutable node, it can simply keep track of
+its node revision ID.  If a node object refers to an immutable node,
+it must record the path from the root of the transaction to the node.
+
+
+
+
+ directory entry name and node revision ID of 
+
+
+recording the clone made for each immutable node modified in
+each transaction.  Each key has the form "TXN-ID PARENT-ID NAME",
+where TXN-ID is a transaction ID, PARENT-ID is a node revision ID, and
+NAME is a directory entry name.  Each value has the form "CHILD-ID",
+where CHILD-ID is a node revision ID.  An entry mapping "PARENT-ID
+NAME" to "CHILD-ID" indicates that, when the entry named NAME in the
+already mutable directory PARENT-ID was first cloned, CHILD-ID was the
+clone's node revision ID.
+
+Using the "clones" table, we can always find the new mutable node
+corresponding to an old immutable node in a transaction by starting
+from the transaction's root and 
+
+
 
 
 Non-Historical Properties
