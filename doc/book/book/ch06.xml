@@ -244,7 +244,7 @@ REGEDIT4
           Subversion configuration options related to the network
           layers.  There are two special section names in this
           file&mdash;<literal>groups</literal> and
-          <literal>default</literal>.  The <literal>groups</literal>
+          <literal>global</literal>.  The <literal>groups</literal>
           section is essentially a cross-reference table.  The keys in
           this section are the names of other sections in the file;
           their values are <firstterm>globs</firstterm>&mdash;textual
@@ -272,7 +272,7 @@ collabnet = svn.collab.net
           group's name.  From that section it reads the actual network
           configuration settions.</para>
 
-        <para>The <literal>default</literal> section contains the
+        <para>The <literal>global</literal> section contains the
           settings which are meant for all of the servers not matched
           by one of the globs under the <literal>groups</literal>
           section.  The options available in this section are
