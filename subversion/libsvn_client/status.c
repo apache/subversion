@@ -69,14 +69,14 @@ svn_client_status (apr_hash_t **statushash,
     {
       URL = entry->ancestor->data;
 
-  /* Get the RA vtable that matches URL. */
+      /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       err = svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool);
 
-  /* If we got a valid RA layer by looking up the URL, then proceed.
-     If the URL was bogus, or just has no RA match, that's okay.
-     Leave the repository revnum fields invalid.  (Perhaps the wc came
-     from xml or something.) */
+      /* If we got a valid RA layer by looking up the URL, then proceed.
+         If the URL was bogus, or just has no RA match, that's okay.
+         Leave the repository revnum fields invalid.  (Perhaps the wc came
+         from xml or something.) */
       if (err && (err->apr_err != SVN_ERR_RA_ILLEGAL_URL))
         return err;
 
