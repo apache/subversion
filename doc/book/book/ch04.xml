@@ -236,7 +236,7 @@ Committed revision 341.
         <para>At this point, you might be thinking to yourself: "Holy
           cow, the repository is copying entire directories -- doesn't
           that mean that the repository will get really huge if you
-          start making branch-copies of big projects?"</para>
+          start making copies of big projects?"</para>
         
         <para>This is a valid concern!  However, no need to worry.
           Subversion's repository has a clever internal design.  When
@@ -330,7 +330,7 @@ rev 303:  felix | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
 * document.c:  changed a docstring.
 
 ------------------------------------------------------------------------
-rev 98:  felix | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
+rev 98:  felix | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
 
 * document.c:  adding this file to the project.
 
@@ -359,7 +359,7 @@ rev 303:  felix | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
 * document.c:  changed a docstring.
 
 ------------------------------------------------------------------------
-rev 98:  felix | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
+rev 98:  felix | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
 
 * document.c:  adding this file to the project.
 
@@ -371,7 +371,7 @@ rev 98:  felix | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
       these two commits affected different files in different
       repository locations.  However, Subversion
       <emphasis>does</emphasis> show that the two files share a common
-      history before the branch-copy was made in revision 341: they
+      history.  Before the branch-copy was made in revision 341, they
       used to be the same file.  That's why you and Felix both see
       revisions 303 and 98.</para>
 
@@ -404,8 +404,8 @@ rev 98:  felix | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
           is only a "branch" because <emphasis>you</emphasis> attach
           that meaning to it.  You may think of the directory
           differently, or treat it differently, but to Subversion it's
-          just an ordinary directory that happens to have a copy in
-          its history.</para>
+          just an ordinary directory that happens to have been created
+          by copying.</para>
         </listitem>
       </orderedlist>
 
