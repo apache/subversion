@@ -986,8 +986,7 @@ pre_send_hook(ne_request *req,
 }
 
 
-/* ###TODO: Send all locks to the server at once by using a custom POST.
-   Ben, this shim's for you. */
+/* ### TODO for 1.3: Send all locks to the server at once. */
 static svn_error_t *
 shim_svn_ra_dav__lock(svn_ra_session_t *session,
                  svn_lock_t **lock,
@@ -1090,8 +1089,8 @@ svn_ra_dav__lock(svn_ra_session_t *session,
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create (pool);
 
-  /* ###TODO send all the locks over the wire at once.  This loop is
-        just a temporary shim. */
+  /* ### TODO for 1.3: Send all the locks over the wire at once.  This
+        loop is just a temporary shim. */
   for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
     {
       svn_lock_t *lock;
@@ -1129,8 +1128,7 @@ svn_ra_dav__lock(svn_ra_session_t *session,
 }
 
 
-/* ###TODO: Send all lock tokens to the server at once by using a
-   custom POST.  Ben, this shim's for you. */
+/* ###TODO for 1.3: Send all lock tokens to the server at once. */
 static svn_error_t *
 shim_svn_ra_dav__unlock(svn_ra_session_t *session,
                         const char *path,
@@ -1225,8 +1223,8 @@ svn_ra_dav__unlock(svn_ra_session_t *session,
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create (pool);
 
-  /* ###TODO send all the lock tokens over the wire at once.  This
-        loop is just a temporary shim. */
+  /* ### TODO for 1.3: Send all the lock tokens over the wire at once.
+        This loop is just a temporary shim. */
   for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
     {
       const void *key;
