@@ -55,15 +55,13 @@ same, only the txnID changes (actually there is a circumstance where
 the copyID can change, but more on that later).  The new txnID is not
 necessarily greater than the old one -- sometimes txns get committed
 out of order! -- but anyway it's different from the old txnID, and the
-same new txnID is used for all other changes in that commit.  A txnID
-is just a unique string; in fact, we may use base36 or base62.
+same new txnID is used for all other changes in that commit.
 
   [Greg and Karl disagree on whether to use integer types or `char *'
    for the parsed representation of IDs.  See the dev list thread
    that starts here for the details of this:
    http://subversion.tigris.org/servlets/ReadMsg?msgId=72277&listName=dev
   ]
-   
 
 After a commit, the txn record in the transactions table does not go
 away; instead, it is updated so it now maps the txnID to the new
