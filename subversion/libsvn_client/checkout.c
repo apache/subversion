@@ -111,6 +111,7 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
 
       /* ben sez:  todo:  update RA interface here to take REVISION. */
       SVN_ERR (ra_lib->do_checkout (session,
+                                    revision,
                                     checkout_editor,
                                     checkout_edit_baton));
 
