@@ -22,6 +22,12 @@ import marshal
 
 # Make sure this Python is recent enough.
 import sys
+
+# Warnings and errors start with these strings.  They are typically
+# followed by a colon and a space, as in "%s: " ==> "Warning: ".
+warning_prefix = "Warning"
+error_prefix = "Error"
+
 if sys.hexversion < 0x2000000:
   sys.stderr.write("'%s: Python 2.0 or higher required, "
                    "see www.python.org.\n" % error_prefix)
@@ -68,12 +74,6 @@ OP_DELETE = 'D'
 OP_CHANGE = 'C'
 
 DIGEST_END_IDX = 9 + (sha.digestsize * 2)
-
-# Warnings and errors start with these strings.  They are typically
-# followed by a colon and a space, as in "%s: " ==> "Warning: ".
-warning_prefix = "Warning"
-error_prefix = "Error"
-
 
 # Officially, CVS symbolic names must use a fairly restricted set of
 # characters.  Unofficially, CVS 1.10 allows any character but [$,.:;@]
