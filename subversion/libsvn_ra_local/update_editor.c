@@ -101,19 +101,17 @@ send_entry_props (svn_fs_root_t *root,
   name = svn_stringbuf_create (SVN_PROP_ENTRY_COMMITTED_REV, subpool);
   value = svn_stringbuf_create (revision_str, subpool);
   SVN_ERR ((*pset_func) (real_baton, name, value));
-  
+
+  /* Give the update editor either real or NULL values for the date
+     and author props. */
+  name = svn_stringbuf_create (SVN_PROP_ENTRY_COMMITTED_DATE, subpool);  
   if (committed_date)
-    {
-      name = svn_stringbuf_create (SVN_PROP_ENTRY_COMMITTED_DATE, subpool);
-      value = svn_stringbuf_create_from_string (committed_date, subpool);
-    }
+    value = svn_stringbuf_create_from_string (committed_date, subpool);
   SVN_ERR ((*pset_func) (real_baton, name, value));
 
+  name = svn_stringbuf_create (SVN_PROP_ENTRY_LAST_AUTHOR, subpool);
   if (last_author)
-    {
-      name = svn_stringbuf_create (SVN_PROP_ENTRY_LAST_AUTHOR, subpool);
-      value = svn_stringbuf_create_from_string (last_author, subpool);
-    }
+    value = svn_stringbuf_create_from_string (last_author, subpool);
   SVN_ERR ((*pset_func) (real_baton, name, value));
 
   svn_pool_destroy (subpool);

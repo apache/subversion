@@ -231,11 +231,19 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
     send_xml(baton->uc, "<S:prop>");
     send_xml(baton->uc, "<D:version-name>%ld</D:version-name>",
              committed_rev);
-    send_xml(baton->uc, "<D:creationdate>%s</D:creationdate>",
-             committed_date ? committed_date->data : "");
-    send_xml(baton->uc,
-             "<D:creator-displayname>%s</D:creator-displayname>",
-             last_author ? last_author->data : "");
+
+    if (committed_date)
+      send_xml(baton->uc, "<D:creationdate>%s</D:creationdate>",
+               committed_date->data);
+    else
+      send_xml(baton->uc, "<S:remove-prop name=\"creationdate\"/>");
+
+    if (last_author)
+      send_xml(baton->uc, "<D:creator-displayname>%s</D:creator-displayname>",
+               last_author->data);
+    else
+      send_xml(baton->uc, "<S:remove-prop name=\"creator-displayname\"/>");
+
     send_xml(baton->uc, "</S:prop>\n");
   }
 
