@@ -288,12 +288,15 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {0} },
   
   { "propget", svn_cl__propget, {"pget", "pg"},
-    "Print value of property PROPNAME on files or directories.\n"
-    "usage: propget PROPNAME [TARGETS]\n",
-    {'R'} },
+    "Print value of PROPNAME on files, dirs, or revisions.\n"
+    "usage: 1. propget PROPNAME [WC_TARGETS]\n"
+    "       2. propget PROPNAME -r REV [URL]\n\n"
+    "First usage prints versioned prop in working copy.\n"
+    "Second usage prints unversioned remote prop on repos revision.\n\n",
+    {'R', 'r'} },
   
   { "proplist", svn_cl__proplist, {"plist", "pl"},
-    "List all properties attached to files, dirs, or revisions.\n"
+    "List all properties on files, dirs, or revisions.\n"
     "usage: 1. proplist [WC_TARGETS]\n"
     "       2. proplist -r REV [URL]\n\n"
     "First usage lists versioned props in working copy.\n"

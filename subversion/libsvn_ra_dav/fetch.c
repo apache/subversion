@@ -1481,6 +1481,9 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
      forget to escape the binary value someday too!)  that's easy.
      the harder part is teaching mod_dav_svn how to handle the
      PROPPATCH on a bc.. */
+
+  /* ### also, don't forget to marshall/demarshall the propname.  see
+     svn_ra_dav__rev_prop below for an example. */
   
   return svn_error_create
     (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, ras->pool,
@@ -1513,6 +1516,68 @@ svn_error_t *svn_ra_dav__rev_proplist (void *session_baton,
 
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *svn_ra_dav__rev_prop (void *session_baton,
+                                   svn_revnum_t rev,
+                                   const char *name,
+                                   svn_string_t **value)
+{
+  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav_resource_t *baseline;
+  apr_hash_t *filtered_props;
+  const char *namespace, *marshalled_name;
+
+  /* E-Z initialization */
+  ne_propname wanted_props[] =
+    {
+      { "", "" },
+      { NULL }
+    };
+
+  /* Decide on the namespace and propname for XML marshalling. */
+  if (svn_prop_is_svn_prop(name))
+    {
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+      namespace = SVN_PROP_PREFIX;
+#else
+      namespace = SVN_DAV_PROP_NS_SVN;
+#endif
+      marshalled_name = name + sizeof(SVN_PROP_PREFIX) - 1;
+    }
+  else
+    {
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+      namespace = SVN_PROP_CUSTOM_PREFIX;
+#else
+      namespace = SVN_DAV_PROP_NS_CUSTOM;
+#endif
+      marshalled_name = name;
+    }
+
+  wanted_props[0].nspace = namespace;
+  wanted_props[0].name = marshalled_name;
+
+  /* Main objective: do a PROPFIND (allprops) on a baseline object */  
+  SVN_ERR (svn_ra_dav__get_baseline_props(NULL, &baseline,
+                                          ras->sess, 
+                                          ras->url,
+                                          rev,
+                                          wanted_props,
+                                          ras->pool));
+
+  /* Build a new property hash, based on the one in the baseline
+     resource.  In particular, convert the xml-property-namespaces
+     into ones that the client understands.  Strip away the DAV:
+     liveprops as well. */
+  filtered_props = apr_hash_make(ras->pool);
+  SVN_ERR (filter_props (filtered_props, baseline, FALSE, ras->pool));
+
+  *value = apr_hash_get(filtered_props, name, APR_HASH_KEY_STRING);
+
+  return SVN_NO_ERROR;
+}
+
 
 
 

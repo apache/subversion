@@ -81,6 +81,11 @@ svn_error_t *svn_ra_dav__rev_proplist (void *session_baton,
                                        svn_revnum_t rev,
                                        apr_hash_t **props);
 
+svn_error_t *svn_ra_dav__rev_prop (void *session_baton,
+                                   svn_revnum_t rev,
+                                   const char *name,
+                                   svn_string_t **value);
+
 svn_error_t * svn_ra_dav__get_commit_editor(
   void *session_baton,
   const svn_delta_editor_t **editor,

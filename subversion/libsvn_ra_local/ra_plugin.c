@@ -328,6 +328,21 @@ svn_ra_local__rev_proplist (void *session_baton,
 
 
 static svn_error_t *
+svn_ra_local__rev_prop (void *session_baton,
+                        svn_revnum_t rev,
+                        const char *name,
+                        svn_string_t **value)
+{
+  svn_ra_local__session_baton_t *baton = 
+    (svn_ra_local__session_baton_t *) session_baton;
+
+  SVN_ERR (svn_fs_revision_prop (value, baton->fs, rev, name, baton->pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 svn_ra_local__get_commit_editor (void *session_baton,
                                  const svn_delta_editor_t **editor,
                                  void **edit_baton,
@@ -884,6 +899,7 @@ static const svn_ra_plugin_t ra_local_plugin =
   svn_ra_local__get_dated_revision,
   svn_ra_local__change_rev_prop,
   svn_ra_local__rev_proplist,
+  svn_ra_local__rev_prop,
   svn_ra_local__get_commit_editor,
   svn_ra_local__get_file,
   svn_ra_local__get_dir,

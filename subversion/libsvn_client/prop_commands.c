@@ -252,6 +252,43 @@ svn_client_propget (apr_hash_t **props,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_client_revprop_get (const char *propname,
+                        svn_string_t **propval,
+                        const char *URL,
+                        const svn_opt_revision_t *revision,
+                        svn_client_auth_baton_t *auth_baton,
+                        svn_revnum_t *set_rev,
+                        apr_pool_t *pool)
+{
+  void *ra_baton, *session;
+  svn_ra_plugin_t *ra_lib;
+
+  /* Open an RA session for the URL. Note that we don't have a local
+     directory, nor a place to put temp files or store the auth data. */
+  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
+                                        NULL, NULL, FALSE, FALSE, TRUE,
+                                        auth_baton, pool));
+
+  /* Resolve the revision into something real, and return that to the
+     caller as well. */
+  SVN_ERR (svn_client__get_revision_number
+           (set_rev, ra_lib, session, revision, NULL, pool));
+
+  /* The actual RA call. */
+  SVN_ERR (ra_lib->rev_prop (session, *set_rev, propname, propval));
+
+  /* All done. */
+  SVN_ERR (ra_lib->close(session));
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* Helper for svn_client_proplist, and recursive_proplist. */
 static svn_error_t *
 add_to_proplist (apr_array_header_t *prop_list,

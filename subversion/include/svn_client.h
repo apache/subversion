@@ -841,6 +841,26 @@ svn_client_propget (apr_hash_t **props,
                     svn_boolean_t recurse,
                     apr_pool_t *pool);
 
+/* Set *PROPVAL to the value of PROPNAME on revision REVISION in the
+   repository represented by URL.  Use AUTH_BATON for authentication,
+   and POOL for all memory allocation.  Return the actual rev queried
+   in *SET_REV.
+
+   Note that unlike its cousin svn_client_propget(), this routine
+   doesn't affect the working copy at all; it's a pure network
+   operation that queries an *unversioned* property attached to a
+   revision.  This can be query log messages, dates, authors, and the
+   like.
+*/
+svn_error_t *
+svn_client_revprop_get (const char *propname,
+                        svn_string_t **propval,
+                        const char *URL,
+                        const svn_opt_revision_t *revision,
+                        svn_client_auth_baton_t *auth_baton,
+                        svn_revnum_t *set_rev,
+                        apr_pool_t *pool);
+
 /* Returns an apr_array_header_t of svn_client_proplist_item_t's in *PROPS,
    allocated from POOL. Each item will contain the node_name relative to the
    same base as target in item->node_name, and a property hash of 
