@@ -14,15 +14,10 @@ Copyright: BSD
 Group: Utilities/System
 URL: http://subversion.tigris.org
 SOURCE0: subversion-%{version}-%{release}.tar.gz
-SOURCE1: subversion.conf
-SOURCE2: httpd.davcheck.conf
-Patch0: install.patch
-Patch1: doc.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: apache-libapr >= %{apache_version}
 Requires: db4 >= 4.0.14
-Requires: expat
 Requires: neon >= %{neon_version}
 Requires: python2
 Obsoletes: subversion-cvs2svn
@@ -34,7 +29,6 @@ BuildPreReq: db4-devel >= 4.0.14
 BuildPreReq: docbook-style-xsl >= 1.58.1
 BuildPreReq: doxygen
 BuildPreReq: expat-devel
-BuildPreReq: gdbm-devel
 BuildPreReq: libtool >= 1.4.2-12
 BuildPreReq: libxslt >= 1.0.27
 BuildPreReq: neon-devel >= %{neon_version}
@@ -98,6 +92,18 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Jul 19 2003 David Summers <david@summersoft.fay.ar.us> 0.25.0-6514
+- PORTING file no longer exists.
+- Thanks to Ralph Loader <suckfish@ihug.co.nz> for the following changes:
+- gdbm-devel is not a build pre-req for subversion but APR/APR-UTIL.
+- LDFLAGS no longer needed when compiling without subversion-devel installed.
+- Use %configure instead of ./configure.
+- expat is not a direct dependency of subversion.
+- No need to copy separate subversion.conf and httpd.davcheck.conf as they
+  are in the source tree, just reference them there.
+- Simplify "make install" by making use of DESTDIR macro instead of setting
+  individual directory components.
+
 * Sun Jul 13 2003 David Summers <david@summersoft.fay.ar.us> 0.25.0-6462
 - Fix revision number to be properly generated during RPM build.  Can't use
   the normal svnversion command at this point because the SRPM is not a
@@ -266,10 +272,10 @@ sh autogen.sh
 
 
 # Fix up mod_dav_svn installation.
-%patch0 -p1
+patch -p1 < packages/rpm/redhat-7.x/install.patch
 
 # Fix documentation version generation.
-%patch1 -p1
+patch -p1 < packages/rpm/redhat-7.x/doc.patch
 
 # Brand release number into the displayed version number.
 RELEASE_NAME="r%{release}"
@@ -280,23 +286,11 @@ sed -e \
   < "$vsn_file" > "${vsn_file}.tmp"
 mv "${vsn_file}.tmp" "$vsn_file"
 
-LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_delta/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_fs/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_repos/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_dav/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_local/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_svn/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_subr/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_wc/.libs"
-
 # Configure static.
-LDFLAGS="${LDFLAGS}" ./configure \
+%configure \
 	--without-berkeley-db \
 	--disable-shared \
 	--enable-all-static \
-	--prefix=/usr \
 	--with-swig \
 	--with-python=/usr/bin/python2.2 \
 	--with-apxs=%{apache_dir}/bin/apxs \
@@ -311,8 +305,7 @@ make subversion/svnadmin/svnadmin
 cp subversion/svnadmin/svnadmin svnadmin.static
 
 # Configure shared.
-LDFLAGS="${LDFLAGS}" ./configure \
-	--prefix=/usr \
+%configure \
 	--with-swig \
 	--with-python=/usr/bin/python2.2 \
 	--with-apxs=%{apache_dir}/bin/apxs \
@@ -346,7 +339,7 @@ echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
 killall httpd || true
 sleep 1
 cp -f /usr/local/apache2/bin/httpd .
-sed -e "s;@SVNDIR@;`pwd`;" < %{SOURCE2} > httpd.conf
+sed -e "s;@SVNDIR@;`pwd`;" < packages/rpm/redhat-7.x/httpd.davcheck.conf > httpd.conf
 ./httpd -f `pwd`/httpd.conf
 sleep 1
 make check BASE_URL='http://localhost:15835'
@@ -359,18 +352,11 @@ make swig-py
 
 %install
 rm -rf $RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT/usr/share
 mkdir -p $RPM_BUILD_ROOT/%{apache_dir}/conf
-make install \
-	prefix=$RPM_BUILD_ROOT/usr \
-	mandir=$RPM_BUILD_ROOT/usr/share/man \
-	fs_libdir=$RPM_BUILD_ROOT/usr/lib \
-	base_libdir=$RPM_BUILD_ROOT/usr/lib \
-	infodir=$RPM_BUILD_ROOT/usr/share/info \
-	libexecdir=$RPM_BUILD_ROOT/%{apache_dir}/lib
+make install DESTDIR="$RPM_BUILD_ROOT"
 
 # Add subversion.conf configuration file into httpd.conf directory.
-cp %{SOURCE1} $RPM_BUILD_ROOT/%{apache_dir}/conf
+cp packages/rpm/redhat-7.x/subversion.conf $RPM_BUILD_ROOT/%{apache_dir}/conf
 
 # Install cvs2svn and supporting files
 make install-swig-py DESTDIR=$RPM_BUILD_ROOT DISTUTIL_PARAM=--prefix=$RPM_BUILD_ROOT
@@ -447,7 +433,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
-%doc BUGS CHANGES COMMITTERS COPYING HACKING IDEAS INSTALL PORTING README
+%doc BUGS CHANGES COMMITTERS COPYING HACKING IDEAS INSTALL README
 %doc subversion/LICENSE
 %doc book
 /usr/bin/cvs2svn
