@@ -3,11 +3,6 @@
 # svn-graph.pl - produce a GraphViz .dot graph for the branch history
 #                of a node
 #
-# WARNING:  Right now, this will produce a very large graph for
-#           repositories with lots of revisions that participate
-#           in the history of the paths you're graphing.  See the TODO
-#           below for a description of what remains to be done to
-#           filter out some of the noise.
 # ====================================================================
 # Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
@@ -29,13 +24,12 @@
 #     the node of interest as a single URL
 #   - produce the graphical output ourselves (SVG?) instead
 #     of using .dot?
-#   - trim out changes along a codeline that aren't a source of copies
-#     to massively reduce the size of the graph.  Right now, every
-#     change to a path makes a new node (i.e. there are 10000 nodes
-#     for trunk for the Subversion repository).
 #
 
 use strict;
+
+# Turn off output buffering
+$|=1;
 
 require SVN::Core;
 require SVN::Ra;
@@ -62,8 +56,13 @@ my $startpath = "/trunk";
 #   following as we move through time.  If we hit a delete of a path
 #   we remove it from the tracking array (i.e. we're no longer interested
 #   in it).
-my %interesting = ();
+my %interesting = ("$startpath:$startrev",1);
 my %tracking = ("$startpath", $startrev);
+
+my %codeline_changes_forward = ();
+my %codeline_changes_back = ();
+my %copysource = ();
+my %copydest = ();
 
 # This function is a callback which is called for every revision
 # as we traverse
@@ -75,12 +74,8 @@ sub process_revision {
   my $message = shift || "";
   my $pool = shift;
 
-  print STDERR "$revision ";
+  print STDERR "$revision\r";
 
-  #  print "Revision: $revision\n";
-  #  print "Author: $author\n";
-  #  print "Date: $date\n";
-  #  print "Changes:\n";
   foreach my $path (keys %$changed_paths) {
     my $copyfrom_path = $$changed_paths{$path}->copyfrom_path;
     my $copyfrom_rev = $$changed_paths{$path}->copyfrom_rev;
@@ -89,8 +84,8 @@ sub process_revision {
     # See if we're deleting one of our tracking nodes
     if ($action eq "D" and exists($tracking{$path})) 
     {
-      print "\"$path:$tracking{$path}\" ";
-      print "[label=\"$path:$tracking{$path}\\nDeleted in r$revision\"]\n";
+      print "\t\"$path:$tracking{$path}\" ";
+      print "[label=\"$path:$tracking{$path}\\nDeleted in r$revision\",color=red];\n";
       delete($tracking{$path});
       next;
     }
@@ -102,7 +97,9 @@ sub process_revision {
       $interesting{$path.":".$revision} = 1;
       $tracking{$path} = $revision;
       print "\t\"$copyfrom_path:$copyfrom_rev\" -> ";
-      print " \"$path:$revision\" [label=\"copy\",weight=1,color=red];\n";
+      print " \"$path:$revision\" [label=\"copy at r$revision\",weight=1,color=green];\n";
+      $copysource{"$copyfrom_path:$copyfrom_rev"} = 1;
+      $copydest{"$path:$revision"} = 1;
     }
 
     # For each change, we'll move up the path, updating any parents
@@ -111,8 +108,10 @@ sub process_revision {
     # for copies), draw a link, and update it's tracking revision.
     while ($path =~ m:/:) {
       if (exists($tracking{$path}) && $tracking{$path} != $revision) {
-        print "\t\"$path:$tracking{$path}\" -> \"$path:$revision\" ";
-        print "[label=\"change\",weight=10];\n";
+        $codeline_changes_forward{"$path:$tracking{$path}"} =
+          "$path:$revision";
+        $codeline_changes_back{"$path:$revision"} =
+          "$path:$tracking{$path}";
         $interesting{$path.":".$revision} = 1;
         $tracking{$path} = $revision;
       }
@@ -127,4 +126,36 @@ print "digraph tree {\n";
 
 $ra->get_log(['/'], $startrev, $youngest, 1, 0, \&process_revision); 
 
+# Now ensure that everything is linked.
+foreach my $codeline_change (keys %codeline_changes_forward) {
+
+  # If this node is not the first in its codeline chain, and it isn't
+  # the source of a copy, it won't be the source of an edge
+  if (exists($codeline_changes_back{$codeline_change}) &&
+      !exists($copysource{$codeline_change})) {
+    next;
+  }
+
+  # If this node is the first in it's chain, or the source of
+  # a copy, then we'll print it, and then find the next in
+  # the chain that needs to be printed too
+  if (!exists($codeline_changes_back{$codeline_change}) or
+       exists($copysource{$codeline_change}) ) {
+    print "\t\"$codeline_change\" -> ";
+    my $nextchange = $codeline_changes_forward{$codeline_change};
+    my $changecount = 1;
+    while (defined($nextchange)) {
+      if (exists($copysource{$nextchange}) or
+          !exists($codeline_changes_forward{$nextchange}) ) {
+        print "\"$nextchange\" [weight=100,label=\"$changecount change(s)\",style=bold];";
+        last;
+      }
+      $changecount++;
+      $nextchange = $codeline_changes_forward{$nextchange};
+    }
+    print "\n";
+  }
+}
+
 print "}\n";
+print STDERR "\n";
