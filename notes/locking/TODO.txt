@@ -12,8 +12,6 @@ MUST HAVE
 
 * svn status -u shows lock info from repos.  (lundblad?)
 
-    --> list discussion:  separate subcommand instead?  (fitz)
-
 * research future ra_dav shim removal plan:  will it work? (sussman)
 
 * chat with jorton about neon 0.25 escaping bugs.  This affects:
