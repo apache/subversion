@@ -171,7 +171,6 @@ If you've never used it before, try invoking it like this:
 
    cd subversion/subversion
    cvs2cl.pl -S -r      /* produces `ChangeLog' in the current directory */
-   more ChangeLog
 
 That will produce a readable general-purpose ChangeLog; the "-r" flag
 means to include revision numbers.  Run "cvs2cl.pl --help" to see more
