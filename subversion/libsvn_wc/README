@@ -84,7 +84,12 @@ analogous to CVS/ sudirs:
        properties               /* Properties for this directory */
        tree-edits               /* Records changes to tree structure */
        prop-edits               /* Records changes to properties */
-       lock                     /* Optional, you know what this is */
+       lock                     /* Optional, tells others this dir is busy */
+       doing-*                  /* What this dir is busy doing (expand star) */
+            -co                       /* checkout */
+            -ci                       /* commit */
+            -up                       /* update */
+            -lc                       /* local changes */
        tmp                      /* Local tmp space is preferable to /tmp */
        text-base/               /* Pristine repos versions of the files... */
             foo.c

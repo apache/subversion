@@ -78,14 +78,21 @@ svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
 #define SVN_WC__ADM_DIR_DEFAULT   "SVN"
 
 /* The files within the administrative subdir. */
-#define SVN_WC__ADM_VERSIONS      "versions"
-#define SVN_WC__ADM_PROPERTIES    "properties"
-#define SVN_WC__ADM_TREE_EDITS    "tree-edits"
-#define SVN_WC__ADM_PROP_EDITS    "prop-edits"
-#define SVN_WC__ADM_LOCK          "lock"
-#define SVN_WC__ADM_TMP           "tmp"
-#define SVN_WC__ADM_TEXT_BASE     "text-base"
-#define SVN_WC__ADM_PROP_BASE     "prop-base"
+#define SVN_WC__ADM_VERSIONS            "versions"
+#define SVN_WC__ADM_PROPERTIES          "properties"
+#define SVN_WC__ADM_TREE_EDITS          "tree-edits"
+#define SVN_WC__ADM_PROP_EDITS          "prop-edits"
+#define SVN_WC__ADM_LOCK                "lock"
+#define SVN_WC__ADM_TMP                 "tmp"
+#define SVN_WC__ADM_TEXT_BASE           "text-base"
+#define SVN_WC__ADM_PROP_BASE           "prop-base"
+
+/* kff todo: not sure all of this is going to be used... */
+#define SVN_WC__ADM_DOING               "doing-"
+#define SVN_WC__ADM_DOING_CHECKOUT      SVN_WC__ADM_DOING  "co"
+#define SVN_WC__ADM_DOING_COMMIT        SVN_WC__ADM_DOING  "ci"
+#define SVN_WC__ADM_DOING_UPDATE        SVN_WC__ADM_DOING  "up"
+#define SVN_WC__ADM_DOING_LOCAL_CHANGE  SVN_WC__ADM_DOING  "lc"
 
 /* Return a string containing the admin subdir name. */
 svn_string_t *svn_wc__adm_subdir (apr_pool_t *pool);
