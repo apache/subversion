@@ -13,11 +13,6 @@
 # working copy's revisions of the doc master files, it's probably
 # simplest if you just make sure your working copy is at HEAD as well.
 # Then you won't get any unexpected results.
-#
-# Note: currently, you'll also need a line in your ~/.cvspass about
-# ":pserver:guest@cvs.tigris.org:/cvs", for the export.  If you've
-# been following the Subversion project, chances are you already have
-# such a line.
 ##########################################################################
 
 ### Rolling block.
@@ -49,9 +44,10 @@ rm -rf ${DIST_SANDBOX}
 mkdir ${DIST_SANDBOX}
 
 ### Export the dist tree, clean it up.
-(cd ${DIST_SANDBOX} && cvs -d :pserver:guest@cvs.tigris.org:/cvs \
-                         export -D tomorrow -d ${DISTNAME} subversion)
-rm -rf `find ${DIST_SANDBOX}/${DISTNAME} -name .cvsignore -print`
+(cd ${DIST_SANDBOX} && svn co http://svn.collab.net/repos/svn/trunk \
+			-d ${DISTNAME} --username "foo" --password "bar")
+rm -rf `find ${DIST_SANDBOX}/${DISTNAME} -name SVN -type d -print`
+rm -rf `find ${DIST_SANDBOX}/${DISTNAME} -name .svnignore -print`
 
 ### Ship with (relatively) clean APR and neon working copies
 ### inside the tarball, just to make people's lives easier.
