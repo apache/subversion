@@ -60,7 +60,7 @@
  * Do you want to debug code in this file?
  * Just uncomment the following define.
  */
-#define SVN_JNI__DEBUG_ENTRY
+//#define SVN_JNI__DEBUG_ENTRY
 
 /*** Code ***/
 jobject
