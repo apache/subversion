@@ -59,14 +59,3 @@ Candidate changes:
     Votes:
       +1: sussman, jpieper
       +0: (philip?  sussman is guessing here)
-
-  * r10851
-    Fix bug in commit-editor driver.  Stop doing 'delete' operations
-        on every target before adding-with-history.
-    Justification:
-      One-line patch.
-      Creates unnecessary network turnarounds.
-      Also, a user should not require DELETE permission in order to
-      add a new object.
-    Votes:
-      +1: sussman, cmpilato
