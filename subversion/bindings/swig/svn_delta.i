@@ -39,10 +39,7 @@
    mark window.new_data as readonly since we would need a pool to set it
    properly (e.g. to allocate an svn_string_t structure).
 */
-/* ### well, there isn't an obvious way to make it readonly, so let's
-   ### just axe it altogether for now. */
-%ignore svn_txdelta_window_t::new_data;
-// [swig 1.3.12] %immutable svn_txdelta_window_t::new_data;
+%immutable svn_txdelta_window_t::new_data;
 
 /* -----------------------------------------------------------------------
    thunk editors for the various language bindings.
