@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.11 $ of this document.)
+              ($Revision: 1.12 $ of this document.)
 
 * Introduction
 
@@ -540,10 +540,19 @@ a brain dump; there's no reason it can't be shortened.)
 
 *** Party A commits while Party B's commit is in progress, but no conflicts
 
+In this context, "conflicts" means the same entities were changed,
+even if the changes are non-overlapping.
+
 *** Party A commits while Party B's commit is in progress, with conflicts
 
-Also, vary on the nature of the conflicts: did they add the same file,
-or both modify a pre-existing file?
+In this context, "conflicts" means the same entities were changed,
+even if the changes are non-overlapping.
+
+Conflicts can mean changing the same file, or adding the same file, or
+one person modifying it while the other wants to delete it, or
+whatever.  (I don't think it will matter in the end, as the
+implementation is mainly concerned with the idea that someone wants to
+do something with a non-up-to-date file).
 
 *** Add a new entity (directory or file)
 
