@@ -63,3 +63,8 @@ const signed char * JNIByteArray::getBytes()
 {
 	return m_data;
 }
+
+bool JNIByteArray::isNull()
+{
+    return m_data == NULL;
+}

@@ -455,3 +455,22 @@ void JNIUtil::assembleErrorMessage(svn_error_t *err, int depth, apr_status_t par
     assembleErrorMessage(err->child, depth + 1, err->apr_err, buffer);
 
 }
+
+void JNIUtil::throwNullPointerException(const char *message)
+{
+	if(getLogLevel() >= errorLog)
+	{
+		JNICriticalSection cs(*g_logMutex);
+		g_logStream << "NullPointerException thrown" << std::endl;
+	}
+	JNIEnv *env = getEnv();
+	jclass clazz = env->FindClass("java/lang/NullPointerException");
+	if(isJavaExceptionThrown())
+	{
+		return;
+	}
+	env->ThrowNew(clazz, message);
+	setExceptionThrown();
+	env->DeleteLocalRef(clazz);
+
+}

@@ -42,6 +42,7 @@ struct svn_error_t;
 class JNIUtil  
 {
 public:
+	static void throwNullPointerException(const char *message);
 	static jbyteArray makeJByteArray(const signed char *data, int length);
 	static void setRequestPool(Pool *pool);
 	static Pool * getRequestPool();

@@ -140,6 +140,12 @@ jobjectArray SVNClient::list(const char *url, Revision &revision, bool recurse)
 		return NULL;
 	}
 
+    if(url == NULL)
+    {
+        JNIUtil::throwNullPointerException("path or url");
+        return NULL;
+    }
+
 	apr_hash_t *dirents;
 	svn_error_t *Err = svn_client_ls (&dirents, url, (struct svn_opt_revision_t *)revision.revision (),
                               recurse, ctx, subPool.pool());
@@ -237,6 +243,12 @@ jobjectArray SVNClient::status(const char *path, bool descend, bool onServer, bo
 	svn_revnum_t youngest = SVN_INVALID_REVNUM;
 	svn_opt_revision_t rev;
 
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return NULL;
+    }
+
 	svn_client_ctx_t *ctx = getContext(NULL);
 	if(ctx == NULL)
 	{
@@ -307,6 +319,12 @@ jobject SVNClient::singleStatus(const char *path, bool onServer)
 	svn_revnum_t youngest = SVN_INVALID_REVNUM;
 	svn_opt_revision_t rev;
 
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return NULL;
+    }
+
 	svn_client_ctx_t *ctx = getContext(NULL);
 	if(ctx == NULL)
 	{
@@ -372,6 +390,13 @@ jobjectArray SVNClient::logMessages(const char *path, Revision &revisionStart, R
 {
 	std::vector<jobject> logs;
     Pool pool;
+    
+    if(path ==NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return NULL;
+    }
+
 	m_lastPath = svn_path_internal_style (path, pool.pool());
     Targets target (m_lastPath.c_str () );
 	svn_client_ctx_t *ctx = getContext(NULL);
@@ -436,6 +461,18 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath, Revision
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
+
+    if(moduleName == NULL)
+    {
+        JNIUtil::throwNullPointerException("moduleName");
+        return -1;
+    }
+    if(destPath == NULL)
+    {
+        JNIUtil::throwNullPointerException("destPath");
+        return -1;
+    }
+    
     m_lastPath = svn_path_internal_style (destPath, apr_pool);
     svn_revnum_t retval;
 
@@ -491,6 +528,13 @@ void SVNClient::revert(const char *path, bool recurse)
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
+
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
+        
     m_lastPath = svn_path_internal_style (path, apr_pool);
    	svn_client_ctx_t *ctx = getContext(NULL);
     Targets target (m_lastPath.c_str () );
@@ -510,6 +554,12 @@ void SVNClient::add(const char *path, bool recurse)
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
 
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
+
     m_lastPath = svn_path_internal_style (path, apr_pool);
 	svn_client_ctx_t *ctx = getContext(NULL);
 	if(ctx == NULL)
@@ -528,6 +578,13 @@ jlong SVNClient::update(const char *path, Revision &revision, bool recurse)
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
+
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return -1;
+    }
+
     m_lastPath = svn_path_internal_style (path, apr_pool);
    	svn_client_ctx_t *ctx = getContext(NULL);
     svn_revnum_t retval;
@@ -578,6 +635,18 @@ void SVNClient::copy(const char *srcPath, const char *destPath, const char *mess
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
+
+    if(srcPath == NULL)
+    {
+        JNIUtil::throwNullPointerException("srcPath");
+        return;
+    }
+    if(destPath == NULL)
+    {
+        JNIUtil::throwNullPointerException("destPath");
+        return;
+    }
+
     Path sourcePath = srcPath;
     m_lastPath = svn_path_internal_style (destPath, apr_pool);
 
@@ -603,6 +672,17 @@ void SVNClient::move(const char *srcPath, const char *destPath, const char *mess
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
+    
+    if(srcPath == NULL)
+    {
+        JNIUtil::throwNullPointerException("srcPath");
+        return;
+    }
+    if(destPath == NULL)
+    {
+        JNIUtil::throwNullPointerException("destPath");
+        return;
+    }
     svn_client_commit_info_t *commit_info = NULL;
     Path sourcePath = srcPath;
     m_lastPath = svn_path_internal_style (destPath, apr_pool);
@@ -649,6 +729,11 @@ void SVNClient::cleanup(const char *path)
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
     m_lastPath = svn_path_internal_style (path, apr_pool);
    	svn_client_ctx_t *ctx = getContext(NULL);
 	if(ctx == NULL)
@@ -666,6 +751,11 @@ void SVNClient::resolved(const char *path, bool recurse)
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
     m_lastPath = svn_path_internal_style (path, apr_pool);
    	svn_client_ctx_t *ctx = getContext(NULL);
 	if(ctx == NULL)
@@ -686,6 +776,16 @@ jlong SVNClient::doExport(const char *srcPath, const char *destPath, Revision &r
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
+    if(srcPath == NULL)
+    {
+        JNIUtil::throwNullPointerException("srcPath");
+        return -1;
+    }
+    if(destPath == NULL)
+    {
+        JNIUtil::throwNullPointerException("destPath");
+        return -1;
+    }
     Path sourcePath = srcPath;
     m_lastPath = svn_path_internal_style (destPath, apr_pool);
     svn_revnum_t retval;
@@ -716,6 +816,16 @@ jlong SVNClient::doSwitch(const char *path, const char *url, Revision &revision,
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return -1;
+    }
+    if(url == NULL)
+    {
+        JNIUtil::throwNullPointerException("url");
+        return -1;
+    }
     m_lastPath = svn_path_internal_style (path, apr_pool);
     svn_revnum_t retval;
    	svn_client_ctx_t *ctx = getContext(NULL);
@@ -742,6 +852,16 @@ void SVNClient::doImport(const char *path, const char *url, const char *message,
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
+    if(url == NULL)
+    {
+        JNIUtil::throwNullPointerException("url");
+        return;
+    }
     m_lastPath = svn_path_internal_style (path, apr_pool);
     svn_client_commit_info_t *commit_info = NULL;
    	svn_client_ctx_t *ctx = getContext(message);
@@ -765,6 +885,21 @@ void SVNClient::doImport(const char *path, const char *url, const char *message,
 void SVNClient::merge(const char *path1, Revision &revision1, const char *path2, Revision &revision2, const char *localPath, bool force, bool recurse)
 {
     Pool subPool;
+    if(path1 == NULL)
+    {
+        JNIUtil::throwNullPointerException("path1");
+        return;
+    }
+    if(path2 == NULL)
+    {
+        JNIUtil::throwNullPointerException("path2");
+        return;
+    }
+    if(localPath == NULL)
+    {
+        JNIUtil::throwNullPointerException("localPath");
+        return;
+    }
     apr_pool_t * apr_pool = subPool.pool ();
     m_lastPath = svn_path_internal_style (localPath, apr_pool);
     Path srcPath1 = path1;
@@ -798,6 +933,16 @@ void SVNClient::merge(const char *path1, Revision &revision1, const char *path2,
 jobject SVNClient::propertyGet(jobject jthis, const char *path, const char *name)
 {
   Pool subPool;
+  if(path == NULL)
+  {
+      JNIUtil::throwNullPointerException("path");
+      return NULL;
+  }
+  if(name == NULL)
+  {
+      JNIUtil::throwNullPointerException("name");
+      return NULL;
+  }
   apr_pool_t * apr_pool = subPool.pool ();
   m_lastPath = svn_path_internal_style (path, apr_pool);
 	
@@ -839,6 +984,11 @@ jobjectArray SVNClient::properties(jobject jthis, const char *path)
 {
   apr_array_header_t * props;
   Pool subPool;
+  if(path == NULL)
+  {
+      JNIUtil::throwNullPointerException("path");
+      return NULL;
+  }
   apr_pool_t * apr_pool = subPool.pool ();
   m_lastPath = svn_path_internal_style (path, apr_pool);
 	
@@ -918,6 +1068,21 @@ jobjectArray SVNClient::properties(jobject jthis, const char *path)
 void SVNClient::propertySet(const char *path, const char *name, const char *value, bool recurse)
 {
 	Pool pool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
+    if(name == NULL)
+    {
+        JNIUtil::throwNullPointerException("name");
+        return;
+    }
+    if(value == NULL)
+    {
+        JNIUtil::throwNullPointerException("value");
+        return;
+    }
 	svn_string_t *val = svn_string_create(value, pool.pool());
 	propertySet(path, name, val, recurse);
 }
@@ -925,6 +1090,21 @@ void SVNClient::propertySet(const char *path, const char *name, const char *valu
 void SVNClient::propertySet(const char *path, const char *name, JNIByteArray &value, bool recurse)
 {
 	Pool pool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
+    if(name == NULL)
+    {
+        JNIUtil::throwNullPointerException("name");
+        return;
+    }
+    if(value.isNull())
+    {
+        JNIUtil::throwNullPointerException("value");
+        return;
+    }
 	svn_string_t *val = svn_string_ncreate((const char *)value.getBytes(), value.getLength(), pool.pool());
 	propertySet(path, name, val, recurse);
 }
@@ -932,12 +1112,37 @@ void SVNClient::propertySet(const char *path, const char *name, JNIByteArray &va
 void SVNClient::propertyRemove(const char *path, const char *name, bool recurse)
 {
 	Pool pool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
+    if(name == NULL)
+    {
+        JNIUtil::throwNullPointerException("name");
+        return;
+    }
 	propertySet(path, name, (svn_string_t*)NULL, recurse);
 }
 
 void SVNClient::propertyCreate(const char *path, const char *name, const char *value, bool recurse)
 {
 	Pool pool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
+    if(name == NULL)
+    {
+        JNIUtil::throwNullPointerException("name");
+        return;
+    }
+    if(value == NULL)
+    {
+        JNIUtil::throwNullPointerException("value");
+        return;
+    }
 	svn_string_t *val = svn_string_create(value, pool.pool());
 	propertySet(path, name, val, recurse);
 }
@@ -945,6 +1150,22 @@ void SVNClient::propertyCreate(const char *path, const char *name, const char *v
 void SVNClient::propertyCreate(const char *path, const char *name, JNIByteArray &value, bool recurse)
 {
 	Pool pool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
+    if(name == NULL)
+    {
+        JNIUtil::throwNullPointerException("name");
+        return;
+    }
+    if(value.isNull())
+    {
+        JNIUtil::throwNullPointerException("value");
+        return;
+    }
+
 	svn_string_t *val = svn_string_ncreate((const char *)value.getBytes(), value.getLength(), pool.pool());
 	propertySet(path, name, val, recurse);
 }
@@ -957,7 +1178,21 @@ void SVNClient::diff(const char *target1, Revision &revision1,
 	Pool pool;
 	svn_error_t *err = NULL;
 	apr_array_header_t *options;
-
+    if(target1 == NULL)
+    {
+        JNIUtil::throwNullPointerException("target1");
+        return;
+    }
+    if(target2 == NULL)
+    {
+        JNIUtil::throwNullPointerException("target2");
+        return;
+    }
+    if(outfileName == NULL)
+    {
+        JNIUtil::throwNullPointerException("outfileName");
+        return;
+    }
 	svn_client_ctx_t *ctx = getContext(NULL);
 	if(ctx == NULL)
 		return;
@@ -1478,6 +1713,11 @@ void SVNClient::propertySet(const char *path, const char *name, svn_string_t *va
 jbyteArray SVNClient::fileContent(const char *path, Revision &revision)
 {
 	Pool pool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return NULL;
+    }
 	path = svn_path_internal_style (path, pool.pool());
 
 	svn_stream_t *read_stream = NULL;
@@ -1633,6 +1873,16 @@ jobject SVNClient::createJavaDirEntry(const char *path, svn_dirent_t *dirent)
 jobject SVNClient::revProperty(jobject jthis, const char *path, const char *name, Revision &rev)
 {
   Pool subPool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return NULL;
+    }
+    if(name == NULL)
+    {
+        JNIUtil::throwNullPointerException("name");
+        return NULL;
+    }
   apr_pool_t * apr_pool = subPool.pool ();
   m_lastPath = svn_path_internal_style (path, apr_pool);
 	
@@ -1674,6 +1924,21 @@ void SVNClient::relocate(const char *from, const char *to, const char *path, boo
 {
   Pool subPool;
   apr_pool_t * apr_pool = subPool.pool ();
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
+    if(from == NULL)
+    {
+        JNIUtil::throwNullPointerException("from");
+        return;
+    }
+    if(to == NULL)
+    {
+        JNIUtil::throwNullPointerException("to");
+        return;
+    }
   m_lastPath = svn_path_internal_style (path, apr_pool);
 	
   svn_client_ctx_t *ctx = getContext(NULL);
@@ -1716,6 +1981,11 @@ blame_receiver (void *baton,
 jbyteArray SVNClient::blame(const char *path, Revision &revisionStart, Revision &revisionEnd)
 {
   Pool subPool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return NULL;
+    }
   apr_pool_t * apr_pool = subPool.pool ();
   m_lastPath = svn_path_internal_style (path, apr_pool);
 	
@@ -1783,6 +2053,11 @@ blame_receiver2 (void *baton,
 void SVNClient::blame(const char *path, Revision &revisionStart, Revision &revisionEnd, BlameCallback *callback)
 {
   Pool subPool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
   apr_pool_t * apr_pool = subPool.pool ();
   m_lastPath = svn_path_internal_style (path, apr_pool);
 	

@@ -17,15 +17,6 @@ Candidate changes:
       +1: pmayweg
       +0: breser
 
-  * r9883, r9905
-    Fix for crash in javahl binding. If the first parameter of SVNClient.list
-    is null, the jvm will crash. r9905 is the result of a scan of the binding
-    code searching for this problem in all possible places.
-    Justification: javahl binding only fix to prevent a crash
-    Votes:
-      +1: pmayweg
-      +0: breser
-
   * r10112, r10113, r10215, r10440, r10441, r10458, r10711, r10775
     Backport Perl bindings fixes from the 1.1.x branch
     Justification:
