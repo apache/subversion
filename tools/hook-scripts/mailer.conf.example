@@ -4,15 +4,32 @@
 
 [general]
 
-### for now, this is passed to os.popen(), meaning it is a shell line, which
-### means it must be quoted properly. "soon" it will become an argument list
-### and spaces will be separators. quoting won't be needed...  (and I don't
-### know how I plan to allow the insertion of spaces)
-diff = /usr/bin/diff -u -L "%(label_from)s" -L "%(label_to)s" "%(from)s" "%(to)s"
+# If you would like a prefix on the subject line, place it here
+subject_prefix =
 
-# if this is set, then output is delivered via SMTP to this host
+# This is not passed to the shell, so do not use shell metacharacters.
+# The command is split around whitespace, so if you want to include
+# whitespace in the command, then ### something ###
+diff = /usr/bin/diff -u -L %(label_from)s -L %(label_to)s %(from)s %(to)s
+
+# --------------
+#
+# One delivery method must be chosen. mailer.py will prefer using the
+# "mail_command" option. If that option is empty or commented out,
+# then it checks whether the "smtp_hostname" option has been
+# specified. If neither option is set, then the commit message is
+# delivered to stdout.
+#
+
+# This command will be invoked with destination addresses on the command
+# line, and the message piped into it.
+#mail_command = /usr/sbin/sendmail
+
+# This option specifies the hostname for delivery via SMTP
 #smtp_hostname = localhost
 
-### temporary addresses for when we use SMTP
+# --------------
+
+### temporary addresses for when we send mail
 from_addr = invalid@example.com
 to_addr = invalid@example.com

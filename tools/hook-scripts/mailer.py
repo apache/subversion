@@ -13,6 +13,7 @@ import sys
 import string
 import ConfigParser
 import time
+import popen2
 
 import svn.fs
 import svn.util
@@ -20,6 +21,7 @@ import svn.delta
 import svn.repos
 
 SEPARATOR = '=' * 78
+
 
 def main(pool, config_fname, repos_dir, rev):
   cfg = Config(config_fname)
@@ -45,22 +47,60 @@ def main(pool, config_fname, repos_dir, rev):
 def determine_output(cfg, repos, changes):
   ### process changes to determine the applicable groups
 
+  if cfg.is_set('general.mail_command'):
+    subject = mail_subject(cfg, repos, changes)
+    return PipeOutput(cfg, subject)
+
   ### selecting SMTP will be more than this, but this'll do for now
-  if hasattr(cfg.general, 'smtp_hostname'):
-    return SMTPOutput(cfg)
+  if cfg.is_set('general.smtp_hostname'):
+    subject = mail_subject(cfg, repos, changes)
+    return SMTPOutput(cfg, subject)
 
   return StandardOutput()
 
 
-class SMTPOutput:
-  def __init__(self, cfg):
-    import cStringIO
+def mail_subject(cfg, repos, changes):
+  subject = 'rev %d - DIRS-GO-HERE' % repos.rev
+  if cfg.general.subject_prefix:
+    return cfg.general.subject_prefix + ' ' + subject
+  return subject
+
+
+class MailedOutput:
+  def __init__(self, cfg, subject):
     self.cfg = cfg
+    self.subject = subject
+
+  def mail_headers(self):
+    return 'From: %s\n' \
+           'To: %s\n' \
+           'Subject: %s\n' \
+           % (self.cfg.general.from_addr,
+              self.cfg.general.to_addr,
+              self.subject)
+
+
+class SMTPOutput(MailedOutput):
+  "Deliver a mail message to an MDA using SMTP."
+
+  def __init__(self, cfg, subject):
+    MailedOutput.__init__(self, cfg, subject)
+
+    import cStringIO
     self.buffer = cStringIO.StringIO()
     self.write = self.buffer.write
 
-    self.write("From: %s\nTo: %s\n\n" % (self.cfg.general.from_addr,
-                                         self.cfg.general.to_addr))
+    self.write(self.mail_headers())
+    self.write('\n')
+
+  def run_diff(self, cmd):
+    # we're holding everything in memory, so we may as well read the
+    # entire diff into memory and stash that into the buffer
+    pipe_ob = popen2.Popen3(cmd)
+    self.write(pipe_ob.fromchild.read())
+
+    # wait on the child so we don't end up with a billion zombies
+    pipe_ob.wait()
 
   def finish(self):
     import smtplib
@@ -72,12 +112,95 @@ class SMTPOutput:
                     self.buffer.getvalue())
     server.quit()
 
+
 class StandardOutput:
+  "Print the commit message to stdout."
+
   def __init__(self):
     self.write = sys.stdout.write
 
+  def run_diff(self, cmd):
+    # we can simply fork and exec the diff, letting it generate all the
+    # output to our stdout (and stderr, if necessary).
+    pid = os.fork()
+    if pid:
+      # in the parent. we simply want to wait for the child to finish.
+      ### should we deal with the return values?
+      os.waitpid(pid, 0)
+    else:
+      # in the child. run the diff command.
+      try:
+        os.execvp(cmd[0], cmd)
+      finally:
+        os._exit(1)
+
   def finish(self):
     pass
+
+
+class PipeOutput(MailedOutput):
+  "Deliver a mail message to an MDA via a pipe."
+
+  def __init__(self, cfg, subject):
+    MailedOutput.__init__(self, cfg, subject)
+
+    # figure out the command for delivery
+    cmd = string.split(cfg.general.mail_command)
+    cmd.append(cfg.general.to_addr)
+
+    # construct the pipe for talking to the mailer
+    self.pipe = popen2.Popen3(cmd)
+    self.write = self.pipe.tochild.write
+
+    # we don't need the read-from-mailer descriptor, so close it
+    self.pipe.fromchild.close()
+
+    # we want a handle to /dev/null for hooking up to the diffs' stdin
+    self.null = os.open('/dev/null', os.O_RDONLY)
+
+    # start writing out the mail message
+    self.write(self.mail_headers())
+    self.write('\n')
+
+  def run_diff(self, cmd):
+    # flush the buffers that write to the mailer. we're about to fork, and
+    # we don't want data sitting in both copies of the buffer. we also
+    # want to ensure the parts are delivered to the mailer in the right order.
+    self.pipe.tochild.flush()
+
+    pid = os.fork()
+    if pid:
+      # in the parent
+
+      # wait for the diff to finish
+      ### do anything with the return value?
+      os.waitpid(pid, 0)
+
+      return
+
+    # in the child
+
+    # duplicate the write-to-mailer descriptor to our stdout and stderr
+    os.dup2(self.pipe.tochild.fileno(), 1)
+    os.dup2(self.pipe.tochild.fileno(), 2)
+
+    # hook up stdin to /dev/null
+    os.dup2(self.null, 0)
+
+    ### do we need to bother closing self.null and self.pipe.tochild ?
+
+    # run the diff command, now that we've hooked everything up
+    try:
+      os.execvp(cmd[0], cmd)
+    finally:
+      os._exit(1)
+
+  def finish(self):
+    # signal that we're done sending content
+    self.pipe.tochild.close()
+
+    # wait to avoid zombies
+    self.pipe.wait()
 
 
 def generate_content(output, cfg, repos, changes, pool):
@@ -181,17 +304,12 @@ def generate_diff(output, cfg, repos, date, change, pool):
 
   src_fname, dst_fname = diff.get_files()
 
-  pipe = os.popen(cfg.general.diff % {
+  output.run_diff(cfg.get_diff_cmd({
     'label_from' : label1,
     'label_to' : label2,
     'from' : src_fname,
     'to' : dst_fname,
-    })
-  while 1:
-    chunk = pipe.read(100000)
-    if not chunk:
-      break
-    output.write(chunk)
+    }))
 
 
 class Repository:
@@ -373,6 +491,28 @@ class Config:
         value = cp.get(section, option, raw=1)
         setattr(section_ob, option, value)
 
+    ### do some better splitting to enable quoting of spaces
+    self._diff_cmd = string.split(self.general.diff)
+
+  def get_diff_cmd(self, args):
+    cmd = [ ]
+    for part in self._diff_cmd:
+      cmd.append(part % args)
+    return cmd
+
+  def is_set(self, option):
+    """Return None if the option is not set; otherwise, its value is returned.
+
+    The option is specified as a dotted symbol, such as 'general.mail_command'
+    """
+    parts = string.split(option, '.')
+    ob = self
+    for part in string.split(option, '.'):
+      if not hasattr(ob, part):
+        return None
+      ob = getattr(ob, part)
+    return ob
+
 
 class _sub_section:
   pass
@@ -435,7 +575,6 @@ if __name__ == '__main__':
 # ------------------------------------------------------------------------
 # TODO
 #
-# * pipe output into a mail program (and avoid os.popen)
 # * add configuration options
 #   - default options
 #   - per-group overrides
