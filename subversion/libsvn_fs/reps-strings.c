@@ -1199,37 +1199,6 @@ svn_fs__rep_contents_write_stream (svn_stream_t **ws_p,
 
 /*** Deltified storage. ***/
 
-/* Baton for svn_write_fn_t write_string(). */
-struct write_string_baton
-{
-  /* The fs where lives the string we're writing. */
-  svn_fs_t *fs;
-
-  /* The key of the string we're writing to.  Typically this is
-     initialized to NULL, so svn_fs__string_append() can fill in a
-     value. */
-  const char *key;
-
-  /* The trail we're writing in. */
-  trail_t *trail;
-};
-
-
-/* Function of type `svn_write_fn_t', for writing to a string;
-   BATON is `struct write_string_baton *'.
-
-   On the first call, BATON->key is null.  A new string key in
-   BATON->fs is chosen and stored in BATON->key; each call appends
-   *LEN bytes from DATA onto the string.  *LEN is never changed; if
-   the write fails to write all *LEN bytes, an error is returned.  */
-static svn_error_t *
-write_string (void *baton, const char *data, apr_size_t *len)
-{
-  struct write_string_baton *wb = baton;
-  return svn_fs__bdb_string_append (wb->fs, &(wb->key), *len, data, wb->trail);
-}
-
-
 /* Baton for svn_write_fn_t write_string_set(). */
 struct write_svndiff_strings_baton
 {
