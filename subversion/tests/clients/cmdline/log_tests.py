@@ -152,7 +152,7 @@ def guarantee_repos_and_wc(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_path, 9)
   expected_status.remove('A/B/E/alpha')
   expected_status.add({
-    'A/C/epsilon' : Item(status='  ', wc_rev=9, repos_rev=9),
+    'A/C/epsilon' : Item(status='  ', wc_rev=9),
     })
 
   # props exist on A/B and A/mu

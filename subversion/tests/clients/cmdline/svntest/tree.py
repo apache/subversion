@@ -116,9 +116,9 @@ class SVNTypeMismatch(SVNTreeError):
 #   - in the 'svn status' use-case (which is always run with the -v
 #     (--verbose) flag), each line of output contains a working revision
 #     number and a two-letter status code similar to the 'svn co/up'
-#     case.  The repository revision is also printed.  All of this
-#     information is stored in attributes named 'wc_rev', 'status', and
-#     'repos_rev', respectively.
+#     case.  This information is stored in attributes named 'wc_rev'
+#     and 'status'.  The repository revision is also printed, but it
+#     is ignored.
 
 #   - in the working-copy use-case, the att-hash is ignored.
 
@@ -614,22 +614,15 @@ def build_tree_from_commit(lines):
 #
 #   Tree nodes will contain no contents, and these atts:
 #
-#          'status', 'wc_rev', 'repos_rev',
+#          'status', 'wc_rev',
 #             ... and possibly 'locked', 'copied', 'writelocked',
 #             IFF columns non-empty.
 # 
 
 def build_tree_from_status(lines):
-  "Return a tree derived by parsing the output LINES from 'st'."
+  "Return a tree derived by parsing the output LINES from 'st -vuq'."
 
   root = SVNTreeNode(root_node_name)
-  rm = re.compile ('^.+\:.+(\d+)')
-  lastline = string.strip(lines.pop())
-  match = rm.search(lastline)
-  if match and match.groups():
-    repos_rev = match.group(1)
-  else:
-    repos_rev = '?'
     
   # Try http://www.wordsmith.org/anagram/anagram.cgi?anagram=ACDRMGU
   rm = re.compile ('^([!MACDRUG_ ][MACDRUG_ ])(.)(.)(.)([KOBT ]) .   [^0-9-]+(\d+|-)( +\S+ +\S+ +)(.+)')
@@ -645,8 +638,7 @@ def build_tree_from_status(lines):
     if match and match.groups():
       if match.group(7) != '-': # ignore items that only exist on repos
         atthash = {'status' : match.group(1),
-                   'wc_rev' : match.group(6),
-                   'repos_rev' : repos_rev}
+                   'wc_rev' : match.group(6)}
         if match.group(2) != ' ':
           atthash['locked'] = match.group(2)
         if match.group(3) != ' ':

@@ -69,9 +69,9 @@ def add_files(sbox):
   # Make sure the adds show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'delta' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'A/B/zeta' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'A/D/G/epsilon' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'delta' : Item(status='A ', wc_rev=0),
+    'A/B/zeta' : Item(status='A ', wc_rev=0),
+    'A/D/G/epsilon' : Item(status='A ', wc_rev=0),
     })
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -98,9 +98,9 @@ def add_directories(sbox):
   # Make sure the adds show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'X' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'A/C/Y' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'A/D/H/Z' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'X' : Item(status='A ', wc_rev=0),
+    'A/C/Y' : Item(status='A ', wc_rev=0),
+    'A/D/H/Z' : Item(status='A ', wc_rev=0),
     })
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -148,16 +148,16 @@ def nested_adds(sbox):
   # Make sure the adds show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'X' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'A/C/Y' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'A/D/H/Z' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'X/P' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'A/C/Y/Q' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'A/D/H/Z/R' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'X/delta' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'A/C/Y/epsilon' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'A/C/Y/upsilon' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'A/D/H/Z/zeta' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'X' : Item(status='A ', wc_rev=0),
+    'A/C/Y' : Item(status='A ', wc_rev=0),
+    'A/D/H/Z' : Item(status='A ', wc_rev=0),
+    'X/P' : Item(status='A ', wc_rev=0),
+    'A/C/Y/Q' : Item(status='A ', wc_rev=0),
+    'A/D/H/Z/R' : Item(status='A ', wc_rev=0),
+    'X/delta' : Item(status='A ', wc_rev=0),
+    'A/C/Y/epsilon' : Item(status='A ', wc_rev=0),
+    'A/C/Y/upsilon' : Item(status='A ', wc_rev=0),
+    'A/D/H/Z/zeta' : Item(status='A ', wc_rev=0),
     })
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -469,10 +469,10 @@ def unschedule_missing_added(sbox):
   # Make sure the 4 adds show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'file1' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'file2' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'dir1' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'dir2' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'file1' : Item(status='A ', wc_rev=0),
+    'file2' : Item(status='A ', wc_rev=0),
+    'dir1' : Item(status='A ', wc_rev=0),
+    'dir2' : Item(status='A ', wc_rev=0),
     })
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -589,7 +589,6 @@ def status_add_deleted_directory(sbox):
                                        'A'    : Item(status='A ', wc_rev=0),
                                        'iota' : Item(status='  ', wc_rev=1),
                                        })
-  expected_status.tweak(repos_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Update will *not* remove the entry for A despite it being marked
@@ -630,9 +629,9 @@ def add_recursive_already_versioned(sbox):
   # Make sure the adds show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'delta' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'A/B/zeta' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'A/D/G/epsilon' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'delta' : Item(status='A ', wc_rev=0),
+    'A/B/zeta' : Item(status='A ', wc_rev=0),
+    'A/D/G/epsilon' : Item(status='A ', wc_rev=0),
     })
 
   return svntest.actions.run_and_verify_status(wc_dir, expected_status)

@@ -153,8 +153,8 @@ def delete_file_in_moved_dir(sbox):
   expected_status.tweak(wc_rev=1)
   expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
   expected_status.add({
-    'A/B/E2'      : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/E2/beta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/E2'      : Item(status='  ', wc_rev=2),
+    'A/B/E2/beta' : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output,

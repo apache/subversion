@@ -112,7 +112,6 @@ def commit_props(sbox):
 
   # Created expected status tree.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('A/mu', 'A/D/H', wc_rev=2, status='  ')
 
   # Commit the one file.
@@ -153,7 +152,6 @@ def update_props(sbox):
 
   # Created expected status tree.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('A/mu', 'A/D/H', wc_rev=2, status='  ')
 
   # Commit the one file.
@@ -211,7 +209,6 @@ def downdate_props(sbox):
 
   # Created expected status tree.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('iota', wc_rev=2, status='  ')
 
   # Commit the one file.
@@ -230,7 +227,6 @@ def downdate_props(sbox):
 
   # Created expected status tree.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=3)
   expected_status.tweak('iota', wc_rev=2, status='  ')
   expected_status.tweak('A/mu', wc_rev=3, status='  ')
 
@@ -251,7 +247,6 @@ def downdate_props(sbox):
   
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=3)
 
   # Do the update and check the results in three ways... INCLUDING PROPS
   svntest.actions.run_and_verify_update(wc_dir,
@@ -287,7 +282,6 @@ def remove_props(sbox):
 
   # Created expected status tree.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=3)
   expected_status.tweak('iota', wc_rev=3, status='  ')
 
   # Commit the one file.
@@ -411,7 +405,6 @@ def commit_replacement_props(sbox):
 
   # Sanity check:  the two files should be scheduled for (R)eplacement.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('iota', wc_rev=2, status='R ')
   expected_status.tweak('A/B/lambda', wc_rev=2, status='R ')
 
@@ -430,7 +423,6 @@ def commit_replacement_props(sbox):
 
   # Expected status tree:  lambda has one prop, iota doesn't.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=3)
   expected_status.tweak('iota', wc_rev=3)
   expected_status.tweak('A/B/lambda', wc_rev=3, status='  ')
 
@@ -469,7 +461,6 @@ def revert_replacement_props(sbox):
 
   # Sanity check:  the two files should be scheduled for (R)eplacement.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('iota', wc_rev=2, status='R ')
   expected_status.tweak('A/B/lambda', wc_rev=2, status='R ')
 
@@ -931,7 +922,6 @@ def binary_props(sbox):
     'A/mu' : Item(verb='Sending'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('A', 'A/B', 'iota', 'A/B/lambda', 'A/mu',
                         wc_rev=2, status='  ')
   
@@ -1035,11 +1025,10 @@ def recursive_base_wc_ops(sbox):
 
   # Test recursive propset (issue 1794)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('A/mu', status='D ', wc_rev=2)
   expected_status.tweak('iota', status=' M', wc_rev=2)
   expected_status.add({
-    'A/added'     : Item(status='A ', repos_rev=2, wc_rev=0),
+    'A/added'     : Item(status='A ', wc_rev=0),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 

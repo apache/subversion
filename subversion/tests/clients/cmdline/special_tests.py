@@ -69,8 +69,8 @@ def general_symlink(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'newfile' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'linktarget' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'newfile' : Item(status='  ', wc_rev=2),
+    'linktarget' : Item(status='  ', wc_rev=2),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -113,8 +113,8 @@ def general_symlink(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=2)
   expected_status.add({
-    'newfile' : Item(status='  ', wc_rev=3, repos_rev=3),
-    'linktarget' : Item(status='  ', wc_rev=2, repos_rev=3),
+    'newfile' : Item(status='  ', wc_rev=3),
+    'linktarget' : Item(status='  ', wc_rev=2),
     })
   
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -230,8 +230,8 @@ def copy_tree_with_symlink(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/D/H/newfile' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/H/linktarget' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/H/newfile' : Item(status='  ', wc_rev=2),
+    'A/D/H/linktarget' : Item(status='  ', wc_rev=2),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -244,12 +244,12 @@ def copy_tree_with_symlink(sbox):
 
   # 'svn status' should show just "A/D/H2  A +".  Nothing broken.
   expected_status.add({
-    'A/D/H2' : Item(status='A ', copied='+', wc_rev='-', repos_rev=2),
-    'A/D/H2/chi' : Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
-    'A/D/H2/omega' : Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
-    'A/D/H2/psi' : Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
-    'A/D/H2/linktarget' : Item(status='  ', copied='+',wc_rev='-',repos_rev=2),
-    'A/D/H2/newfile' : Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
+    'A/D/H2' : Item(status='A ', copied='+', wc_rev='-'),
+    'A/D/H2/chi' : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D/H2/omega' : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D/H2/psi' : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D/H2/linktarget' : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D/H2/newfile' : Item(status='  ', copied='+', wc_rev='-'),
     })
   svntest.actions.run_and_verify_status (wc_dir, expected_status)
 
@@ -275,8 +275,8 @@ def replace_symlink_with_file(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'newfile' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'linktarget' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'newfile' : Item(status='  ', wc_rev=2),
+    'linktarget' : Item(status='  ', wc_rev=2),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -328,8 +328,8 @@ def remove_symlink(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'newfile' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'linktarget' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'newfile' : Item(status='  ', wc_rev=2),
+    'linktarget' : Item(status='  ', wc_rev=2),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -347,7 +347,7 @@ def remove_symlink(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'linktarget' : Item(status='  ', wc_rev=2, repos_rev=3),
+    'linktarget' : Item(status='  ', wc_rev=2),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,

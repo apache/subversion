@@ -250,8 +250,8 @@ def basic_mkdir_url(sbox):
     })
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 2)
   expected_status.add({
-    'Y'   : Item(status='  ', wc_rev=2, repos_rev=2),
-    'Y/Z' : Item(status='  ', wc_rev=2, repos_rev=2)
+    'Y'   : Item(status='  ', wc_rev=2),
+    'Y/Z' : Item(status='  ', wc_rev=2)
     })
 
   svntest.actions.run_and_verify_update(sbox.wc_dir,
@@ -660,7 +660,7 @@ def basic_revert(sbox):
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.tweak('A/B/E/beta', 'iota', 'A/D/G/rho', status='M ')
   expected_output.add({
-    'A/D/H/zeta' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/D/H/zeta' : Item(status='A ', wc_rev=0),
     })
 
   svntest.actions.run_and_verify_status (wc_dir, expected_output)
@@ -719,7 +719,7 @@ def basic_revert(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'X' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'X' : Item(status='A ', wc_rev=0),
     })
   svntest.actions.run_and_verify_status (wc_dir, expected_status)
   svntest.main.safe_rmtree(X_path)
@@ -832,9 +832,9 @@ def basic_switch(sbox):
                          'A/D/H/omega',
                          'A/D/H/psi')
   expected_status.add({
-    'A/D/H/pi'  : Item(status='  ', wc_rev=1, repos_rev=1),
-    'A/D/H/rho' : Item(status='  ', wc_rev=1, repos_rev=1),
-    'A/D/H/tau' : Item(status='  ', wc_rev=1, repos_rev=1),
+    'A/D/H/pi'  : Item(status='  ', wc_rev=1),
+    'A/D/H/rho' : Item(status='  ', wc_rev=1),
+    'A/D/H/tau' : Item(status='  ', wc_rev=1),
     })
   expected_status.tweak('iota', 'A/D/H', switched='S')
 
@@ -913,9 +913,9 @@ def basic_delete(sbox):
   expected_output.tweak('A/D/G/rho', 'A/B/F', status=' M')
 #  expected_output.tweak('A/C/sigma', status='? ')
   expected_output.add({
-    'A/B/X' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'A/B/X/xi' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'A/D/Y' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/B/X' : Item(status='A ', wc_rev=0),
+    'A/B/X/xi' : Item(status='A ', wc_rev=0),
+    'A/D/Y' : Item(status='A ', wc_rev=0),
     })
 
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
@@ -1005,7 +1005,7 @@ def basic_delete(sbox):
                         'iota',
                         'A/D/gamma', status='D ')
   expected_status.add({
-    'A/D/Y' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/D/Y' : Item(status='A ', wc_rev=0),
     })
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -1157,7 +1157,7 @@ def basic_node_kind_change(sbox):
 
   expected_status.tweak(wc_rev=2)
   expected_status.add({
-    'A/D/gamma' : Item(status='A ', wc_rev=0, repos_rev=2),
+    'A/D/gamma' : Item(status='A ', wc_rev=0),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -1202,9 +1202,9 @@ def basic_import(sbox):
   # Newly imported file should be at revision 2.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'dirA'                : Item(status='  ', wc_rev=2, repos_rev=2),
-    'dirA/dirB'           : Item(status='  ', wc_rev=2, repos_rev=2),
-    'dirA/dirB/new_file'  : Item(status='  ', wc_rev=2, repos_rev=2),
+    'dirA'                : Item(status='  ', wc_rev=2),
+    'dirA/dirB'           : Item(status='  ', wc_rev=2),
+    'dirA/dirB/new_file'  : Item(status='  ', wc_rev=2),
     })
 
   # Create expected output tree for the update.
@@ -1282,11 +1282,11 @@ def basic_import_executable(sbox):
   # Newly imported file should be at revision 2.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'all_exe' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'none_exe' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'user_exe' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'group_exe' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'other_exe' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'all_exe' : Item(status='  ', wc_rev=2),
+    'none_exe' : Item(status='  ', wc_rev=2),
+    'user_exe' : Item(status='  ', wc_rev=2),
+    'group_exe' : Item(status='  ', wc_rev=2),
+    'other_exe' : Item(status='  ', wc_rev=2),
     })
 
   # Create expected output tree for the update.
@@ -1550,8 +1550,8 @@ def basic_import_ignores(sbox):
   # Newly imported file should be at revision 2.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'dir' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'dir/foo.c' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'dir' : Item(status='  ', wc_rev=2),
+    'dir/foo.c' : Item(status='  ', wc_rev=2),
     })
 
   # Create expected output tree for the update.
