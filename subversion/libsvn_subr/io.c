@@ -1113,22 +1113,19 @@ svn_io_run_diff (const char *dir,
                  int *pexitcode, 
                  apr_file_t *outfile, 
                  apr_file_t *errfile, 
-                 apr_hash_t *config,
+                 const char *diff_cmd,
                  apr_pool_t *pool)
 {
   const char **args;
   int i; 
   int exitcode;
   int nargs = 4; /* the diff command itself, two paths, plus a trailing NULL */
-  const char *diff_cmd;
   const char *diff_utf8;
   apr_pool_t *subpool = svn_pool_create (pool);
-  svn_config_t *cfg = config ? apr_hash_get (config, 
-                                             SVN_CONFIG_CATEGORY_CONFIG,
-                                             APR_HASH_KEY_STRING) : NULL;
-  
-  svn_config_get (cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS, 
-                  SVN_CONFIG_OPTION_DIFF_CMD, SVN_CLIENT_DIFF);
+
+  if (diff_cmd == NULL)
+    diff_cmd = SVN_CLIENT_DIFF;
+
   SVN_ERR (svn_path_cstring_to_utf8 (&diff_utf8, diff_cmd, pool));
 
   if (pexitcode == NULL)
@@ -1209,19 +1206,16 @@ svn_io_run_diff3 (const char *dir,
                   const char *yours_label,
                   apr_file_t *merged,
                   int *exitcode,
-                  apr_hash_t *config,
+                  const char *diff3_cmd,
                   apr_pool_t *pool)
 {
   const char *args[14];
   const char *diff3_utf8;
   int nargs = 13, i = 0;
-  const char *diff3_cmd;
-  svn_config_t *cfg = config ? apr_hash_get (config, 
-                                             SVN_CONFIG_CATEGORY_CONFIG,
-                                             APR_HASH_KEY_STRING) : NULL;
 
-  svn_config_get (cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS, 
-                  SVN_CONFIG_OPTION_DIFF3_CMD, SVN_CLIENT_DIFF3);
+  if (diff3_cmd == NULL)
+    diff3_cmd = SVN_CLIENT_DIFF3;
+
   SVN_ERR (svn_path_cstring_to_utf8 (&diff3_utf8, diff3_cmd, pool));
 
   /* Labels fall back to sensible defaults if not specified. */
@@ -1249,6 +1243,17 @@ svn_io_run_diff3 (const char *dir,
 #ifdef SVN_DIFF3_HAS_DIFF_PROGRAM_ARG
   {
     const char *has_arg;
+
+    /* ### FIXME: we really shouldn't be reading the config here;
+       instead, the necessary bits should be passed in by the caller.
+       But should we add another parameter to this function, when the
+       whole external diff3 thing might eventually go away?  */
+    apr_hash_t *config;
+    svn_config_t *cfg;
+
+    SVN_ERR (svn_config_get_config (&config, pool));
+    cfg = config ? apr_hash_get (config, SVN_CONFIG_CATEGORY_CONFIG,
+                                 APR_HASH_KEY_STRING) : NULL;
     svn_config_get (cfg, &has_arg, SVN_CONFIG_SECTION_HELPERS, 
                     SVN_CONFIG_OPTION_DIFF3_HAS_PROGRAM_ARG, "yes");
     if (0 == strcasecmp(has_arg, "yes")

@@ -80,6 +80,10 @@ struct edit_baton
   /* Non-null if this is a 'switch' operation. */
   const char *switch_url;
 
+  /* External diff3 to use for merges (can be null, in which case
+     internal merge code is used). */
+  const char *diff3_cmd;
+
   /* Object for gathering info to be accessed after the edit is
      complete. */
   svn_wc_traversal_info_t *traversal_info;
@@ -663,7 +667,7 @@ delete_entry (const char *path,
                                    TRUE, /* sync */
                                    pool));
     
-  SVN_ERR (svn_wc__run_log (adm_access, pool));
+  SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
 
   /* The passed-in `path' is relative to the anchor of the edit, so if
    * the operation was invoked on something other than ".", then
@@ -1006,7 +1010,7 @@ close_directory (void *dir_baton,
                                        db->pool));
 
       /* Run the log. */
-      SVN_ERR (svn_wc__run_log (adm_access, db->pool));
+      SVN_ERR (svn_wc__run_log (adm_access, NULL, db->pool));
     }
 
   /* We're done with this directory, so remove one reference from the
@@ -1334,6 +1338,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
                      const apr_array_header_t *props,
                      svn_boolean_t is_full_proplist,
                      const char *new_URL,
+                     const char *diff3_cmd,
                      apr_pool_t *pool)
 {
   apr_file_t *log_fp = NULL;
@@ -1763,7 +1768,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
   /* The log is ready to run.  Close it and run it! */
   SVN_ERR (svn_wc__close_adm_file (log_fp, parent_dir, SVN_WC__ADM_LOG,
                                    TRUE, /* sync */ pool));
-  SVN_ERR (svn_wc__run_log (adm_access, pool));
+  SVN_ERR (svn_wc__run_log (adm_access, diff3_cmd, pool));
 
   if (content_state)
     {
@@ -1838,6 +1843,7 @@ close_file (void *file_baton,
                                 propchanges,
                                 FALSE, /* -not- a full proplist */
                                 fb->new_URL,
+                                fb->edit_baton->diff3_cmd,
                                 fb->pool));
 
   /* We have one less referrer to the directory's bump information. */
@@ -1939,6 +1945,7 @@ make_editor (svn_wc_adm_access_t *adm_access,
              void *notify_baton,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
+             const char *diff3_cmd,
              const svn_delta_editor_t **editor,
              void **edit_baton,
              svn_wc_traversal_info_t *traversal_info,
@@ -1965,6 +1972,7 @@ make_editor (svn_wc_adm_access_t *adm_access,
   eb->notify_func     = notify_func;
   eb->notify_baton    = notify_baton;
   eb->traversal_info  = traversal_info;
+  eb->diff3_cmd       = diff3_cmd;
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
@@ -2002,6 +2010,7 @@ svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
                           void *notify_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
+                          const char *diff3_cmd,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_wc_traversal_info_t *traversal_info,
@@ -2011,7 +2020,7 @@ svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
                       target, target_revision, 
                       FALSE, NULL, NULL,
                       recurse, notify_func, notify_baton,
-                      cancel_func, cancel_baton,
+                      cancel_func, cancel_baton, diff3_cmd,
                       editor, edit_baton, traversal_info, pool);
 }
 
@@ -2033,7 +2042,7 @@ svn_wc_get_checkout_editor (const char *dest,
   return make_editor (NULL, dest, NULL, target_revision, 
                       TRUE, ancestor_url, NULL,
                       recurse, notify_func, notify_baton,
-                      cancel_func, cancel_baton,
+                      cancel_func, cancel_baton, NULL,
                       editor, edit_baton,
                       traversal_info, pool);
 }
@@ -2049,6 +2058,7 @@ svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
                           void *notify_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
+                          const char *diff3_cmd,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_wc_traversal_info_t *traversal_info,
@@ -2060,7 +2070,7 @@ svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
                       target, target_revision,
                       FALSE, NULL, switch_url,
                       recurse, notify_func, notify_baton,
-                      cancel_func, cancel_baton,
+                      cancel_func, cancel_baton, diff3_cmd,
                       editor, edit_baton,
                       traversal_info, pool);
 }

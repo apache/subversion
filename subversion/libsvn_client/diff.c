@@ -277,8 +277,7 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
       SVN_ERR (svn_io_run_diff (".", args, nargs, label1, label2,
                                 tmpfile1, tmpfile2, 
                                 &exitcode, outfile, errfile,
-                                diff_cmd_baton->config,
-                                subpool));
+                                diff_cmd, subpool));
     }
   else
     {
@@ -421,6 +420,12 @@ struct merge_cmd_baton {
   const char *url;                    /* The second URL in the merge */
   const svn_opt_revision_t *revision; /* Revision of second URL in the merge */
   svn_client_ctx_t *ctx;
+
+  /* The diff3_cmd in ctx->config, if any, else null.  We could just
+     extract this as needed, but since more than one caller uses it,
+     we just set it up when this baton is created. */
+  const char *diff3_cmd;
+
   apr_pool_t *pool;
 };
 
@@ -457,7 +462,7 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
   SVN_ERR (svn_wc_merge (older, yours, mine, adm_access,
                          left_label, right_label, target_label,
                          merge_b->dry_run, &merge_outcome, 
-                         merge_b->ctx->config, subpool));
+                         merge_b->diff3_cmd, subpool));
 
   /* Philip asks "Why?"  Why does the notification depend on whether the
      file had modifications before the merge?  If the merge didn't change
@@ -553,7 +558,7 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
         SVN_ERR (svn_wc_merge (older, yours, mine, adm_access,
                                ".older", ".yours", ".working", /* ###? */
                                merge_b->dry_run, &merge_outcome, 
-                               merge_b->ctx->config, subpool));
+                               merge_b->diff3_cmd, subpool));
         break;      
       }
     default:
@@ -1483,6 +1488,16 @@ svn_client_merge (const char *URL1,
   merge_cmd_baton.revision = revision2;
   merge_cmd_baton.ctx = ctx;
   merge_cmd_baton.pool = pool;
+
+  /* Set up the diff3 command, so various callers don't have to. */
+  {
+    svn_config_t *cfg = apr_hash_get (ctx->config,
+                                      SVN_CONFIG_CATEGORY_CONFIG,
+                                      APR_HASH_KEY_STRING);
+    svn_config_get (cfg, &(merge_cmd_baton.diff3_cmd),
+                    SVN_CONFIG_SECTION_HELPERS,
+                    SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
+  }
 
   /* If our target_wcpath is a single file, assume that PATH1 and
      PATH2 are files as well, and do a single-file merge. */

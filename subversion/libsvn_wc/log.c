@@ -47,7 +47,8 @@ struct log_runner
   apr_pool_t *pool;
   svn_xml_parser_t *parser;
   svn_boolean_t entries_modified;
-  svn_wc_adm_access_t *adm_access;  /* the dir in which this is all happening */
+  svn_wc_adm_access_t *adm_access;  /* the dir in which all this happens */
+  const char *diff3_cmd;            /* external diff3 cmd, or null if none */
 };
 
 
@@ -434,7 +435,7 @@ log_do_merge (struct log_runner *loggy,
   /* Now do the merge with our full paths. */
   SVN_ERR (svn_wc_merge (left, right, name, loggy->adm_access,
                          left_label, right_label, target_label,
-                         FALSE, &merge_outcome, config, subpool));
+                         FALSE, &merge_outcome, loggy->diff3_cmd, subpool));
 
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
@@ -1215,7 +1216,9 @@ start_handler (void *userData, const char *eltname, const char **atts)
 /*** Using the parser to run the log file. ***/
 
 svn_error_t *
-svn_wc__run_log (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
+svn_wc__run_log (svn_wc_adm_access_t *adm_access,
+                 const char *diff3_cmd,
+                 apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_status_t apr_err;
@@ -1236,6 +1239,7 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
   loggy->pool = pool;
   loggy->parser = parser;
   loggy->entries_modified = FALSE;
+  loggy->diff3_cmd = diff3_cmd;
 
   /* Expat wants everything wrapped in a top-level form, so start with
      a ghost open tag. */
@@ -1400,7 +1404,7 @@ svn_wc_cleanup (const char *path,
       /* Is there a log?  If so, run it. */
       SVN_ERR (svn_io_check_path (log_path, &kind, pool));
       if (kind == svn_node_file)
-        SVN_ERR (svn_wc__run_log (adm_access, pool));
+        SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
     }
 
   /* Cleanup the tmp area of the admin subdir, if running the log has not

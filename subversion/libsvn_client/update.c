@@ -30,6 +30,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_io.h"
+#include "svn_config.h"
 #include "svn_time.h"
 #include "client.h"
 
@@ -57,7 +58,8 @@ svn_client__update_internal (const char *path,
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t sleep_here = FALSE;
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
-
+  const char *diff3_cmd;
+  
   /* Sanity check.  Without this, the update is meaningless. */
   assert (path);
 
@@ -84,6 +86,17 @@ svn_client__update_internal (const char *path,
   else
     revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */
 
+  /* Get the external diff3, if any. */
+  {
+    svn_config_t *cfg = ctx->config
+      ? apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,  
+                      APR_HASH_KEY_STRING)
+      : NULL;
+    
+    svn_config_get (cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
+                    SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
+  }
+
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
   SVN_ERR (svn_wc_get_update_editor (adm_access,
@@ -92,6 +105,7 @@ svn_client__update_internal (const char *path,
                                      recurse,
                                      ctx->notify_func, ctx->notify_baton,
                                      ctx->cancel_func, ctx->cancel_baton,
+                                     diff3_cmd,
                                      &update_editor, &update_edit_baton,
                                      traversal_info,
                                      pool));

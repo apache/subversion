@@ -1354,6 +1354,9 @@ svn_error_t *svn_wc_get_actual_target (const char *path,
  * If @a cancel_func is non-null, the editor will invoke @a cancel_func with 
  * @a cancel_baton as the update progresses to see if it should continue.
  *
+ * If @a diff3_cmd is non-null, then use it as the diff3 command for
+ * any merging; otherwise, use the built-in merge code.
+ *
  * @a target_revision is the repository revision that results from this set
  * of changes.
  */
@@ -1365,6 +1368,7 @@ svn_error_t *svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
                                        void *notify_baton,
                                        svn_cancel_func_t cancel_func,
                                        void *cancel_baton,
+                                       const char *diff3_cmd,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        svn_wc_traversal_info_t *ti,
@@ -1433,6 +1437,9 @@ svn_error_t *svn_wc_get_checkout_editor (const char *dest,
  * If @a cancel_func is non-null, it will be called with @a cancel_baton as 
  * the switch progresses to determine if it should continue.
  *
+ * If @a diff3_cmd is non-null, then use it as the diff3 command for
+ * any merging; otherwise, use the built-in merge code.
+ *
  * @a target_revision is the repository revision that results from this set
  * of changes.
  */
@@ -1445,6 +1452,7 @@ svn_error_t *svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
                                        void *notify_baton,
                                        svn_cancel_func_t cancel_func,
                                        void *cancel_baton,
+                                       const char *diff3_cmd,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        svn_wc_traversal_info_t *ti,
@@ -1498,9 +1506,12 @@ svn_error_t *svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
  * properties after the installation; if return error, the value of
  * @a *prop_state is undefined.
  *
- * If @a new_url is non-@c NULL, then this URL will be attached to the file
+ * If @a new_url is non-null, then this URL will be attached to the file
  * in the 'entries' file.  Otherwise, the file will simply "inherit"
  * its URL from the parent dir.
+ *
+ * If @a diff3_cmd is non-null, then use it as the diff3 command for
+ * any merging; otherwise, use the built-in merge code.
  *
  * @a pool is used for all bookkeeping work during the installation.
  */
@@ -1513,6 +1524,7 @@ svn_error_t *svn_wc_install_file (svn_wc_notify_state_t *content_state,
                                   const apr_array_header_t *props,
                                   svn_boolean_t is_full_proplist,
                                   const char *new_URL,
+                                  const char *diff3_cmd,
                                   apr_pool_t *pool);
 
 
@@ -1765,7 +1777,8 @@ typedef enum svn_wc_merge_outcome_t
  * is @c TRUE the merge will be carried out to determine the result but
  * @a merge_target will not be modified.
  *
- * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c svn_config_t's.
+ * If @a diff3_cmd is non-null, then use it as the diff3 command for
+ * any merging; otherwise, use the built-in merge code.
  *
  * The outcome of the merge is returned in @a *merge_outcome. If there is
  * a conflict and @a dry_run is @c FALSE, then
@@ -1802,7 +1815,7 @@ svn_error_t *svn_wc_merge (const char *left,
                            const char *target_label,
                            svn_boolean_t dry_run,
                            enum svn_wc_merge_outcome_t *merge_outcome,
-                           apr_hash_t *config,
+                           const char *diff3_cmd,
                            apr_pool_t *pool);
 
 
