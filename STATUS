@@ -60,3 +60,11 @@ Candidate changes:
       Simple fix.
     Votes:
       +1: lundblad
+
+  * r11190
+    Make it possible to set SVNPathAuthz to Off.
+    Justification:
+      There is a performance regression from 1.0 when it's set to On
+      (which is why it was implemented in the first place).
+    Votes:
+      +1: bliss
