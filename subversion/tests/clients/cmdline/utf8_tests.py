@@ -54,19 +54,6 @@ def basic_utf8_conversion(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Make sure the test runs in an ISO-8859-1 environment.  Otherwise,
-  # it would run in whatever random locale the testing platform
-  # happens to have, and then we couldn't predict the exact results.
-  if svntest.main.windows:
-    # In this case, it would probably be "english_usa.1252", but you should
-    # be able to set just the encoding by using ".1252" (that's codepage
-    # 1252, which is almost but not quite entirely unlike tea; um, I mean
-    # it's very similar to ISO-8859-1).
-    #                                     -- Branko Čibej <brane@xbc.nu>
-    locale.setlocale(locale.LC_ALL, '.1252')
-  else:
-    locale.setlocale(locale.LC_ALL, 'en_US.ISO8859-1')
-
   # Create the new i18n file and schedule it for addition
   svntest.main.file_append(os.path.join(wc_dir, i18n_filename), "hi")
   svntest.actions.run_and_verify_svn(
@@ -96,6 +83,24 @@ def basic_utf8_conversion(sbox):
 ########################################################################
 # Run the tests
 
+try:
+  # Generic setlocale so that getlocale returns something sensible
+  locale.setlocale(locale.LC_ALL, '')
+
+  # Try to make these test run in an ISO-8859-1 environment, otherwise
+  # they would run in whatever random locale the testing platform
+  # happens to have, and then we couldn't predict the exact results.
+  if svntest.main.windows:
+    # In this case, it would probably be "english_usa.1252", but you should
+    # be able to set just the encoding by using ".1252" (that's codepage
+    # 1252, which is almost but not quite entirely unlike tea; um, I mean
+    # it's very similar to ISO-8859-1).
+    #                                     -- Branko Čibej <brane@xbc.nu>
+    locale.setlocale(locale.LC_ALL, '.1252')
+  else:
+    locale.setlocale(locale.LC_ALL, 'en_US.ISO8859-1')
+except:
+  pass
 
 # list all tests here, starting with None:
 test_list = [ None,

@@ -725,13 +725,19 @@ def copy_inherits_special_props(sbox):
 
 def revprop_change(sbox):
   "set, get, and delete a revprop change"
-  
+
   sbox.build()
 
-  hook = os.path.join(svntest.main.current_repo_dir,
-                      'hooks', 'pre-revprop-change')
-  svntest.main.file_append(hook, "#!/bin/sh\n\nexit 0\n")
-  os.chmod(hook, 0755)
+  # Create the revprop-change hook for this test
+  if os.name == 'posix':
+    hook = os.path.join(svntest.main.current_repo_dir,
+                        'hooks', 'pre-revprop-change')
+    svntest.main.file_append(hook, "#!/bin/sh\n\nexit 0\n")
+    os.chmod(hook, 0755)
+  elif sys.platform == 'win32':
+    hook = os.path.join(svntest.main.current_repo_dir,
+                        'hooks', 'pre-revprop-change.bat')
+    svntest.main.file_append(hook, "@exit 0\n")
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--revprop', '-r', '0',
@@ -1136,7 +1142,8 @@ test_list = [ None,
               copy_inherits_special_props,
               # If we learn how to write a pre-revprop-change hook for
               # non-Posix platforms, we won't have to skip here:
-              Skip(revprop_change, (os.name != 'posix')),
+              Skip(revprop_change, (os.name != 'posix'
+                                    and sys.platform != 'win32')),
               prop_value_conversions,
               binary_props,
               recursive_base_wc_ops,

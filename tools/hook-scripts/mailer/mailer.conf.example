@@ -48,7 +48,7 @@
 # presence of a non-matching for_repos has no relevance. Note that you may
 # still use a for_repos value to extract useful information (more on this
 # later). Any user-defined groups without a for_repos, or which contains
-# a matching for_repos will be selected for potential use.
+# a matching for_repos, will be selected for potential use.
 #
 # The subset of user-defined groups identified by the repository are further
 # refined based on the for_paths option. A group is selected if at least
@@ -165,12 +165,13 @@ to_addr = invalid@example.com
 # If this is set, then a Reply-To: will be inserted into the message
 reply_to =
 
-# When set to one of the valid options, the mailer will create a diff
-# for the appropriate type of change in the repository.  If this is
-# empty or contains other words than the valid options no diffs will
-# be created.  Note that the operation is always mentioned in the
+# When set to one or more of the valid options, the mailer will create
+# diffs for the corresponding types of changes in the repository.  If
+# no options are given, or if any invalid options are given, no diffs
+# will be created.  Note that the operation is always mentioned in the
 # message header, regardless of this option's value.
-# Valid options: add copy delete modify
+#
+# Valid options: add copy modify delete
 generate_diffs = add copy modify
 
 # When set to "yes", the mailer will suppress the creation of a diff which
@@ -189,12 +190,15 @@ suppress_deletes = yes
 ### DEPRECATED (if generate_diffs is not empty, this option is ignored)
 #suppress_adds = yes
 
-# A revision will be reported on if any changed-path matches the for_paths
-# option. If only some of the changed-paths of a revision match, this
-# controls the behaviour for the non-matching paths. Possible values are:
-#   yes: (Default) Show in both summary and diffs.
+# A revision is reported on if any of its changed paths match the
+# for_paths option.  If only some of the changed paths of a revision
+# match, this variable controls the behaviour for the non-matching
+# paths.  Possible values are:
+#
+#   yes:     (Default) Show in both summary and diffs.
 #   summary: Show the changed paths in the summary, but omit the diffs.
-#   no: Show nothing more than a note saying "and changes in other areas"
+#   no:      Show nothing more than a note saying "and changes in other areas"
+#
 show_nonmatching_paths = yes
 
 # Subject line length limit.  The generated subject line will be truncated
@@ -208,7 +212,7 @@ show_nonmatching_paths = yes
 
 #
 # This section can be used define rewrite mappings for option values. It
-# is most helpful for computing from/to addresses, but can actually be
+# is typically used for computing from/to addresses, but can actually be
 # used to remap values for any option in this file.
 #
 # The mappings are global for the entire configuration file. There is

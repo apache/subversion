@@ -645,6 +645,12 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
   /* Split the url into its component pieces (schema, host, path,
      etc).  We want the path part. */
   ne_uri_parse (url, &parsed_url);
+  if (parsed_url.path == NULL)
+    {
+      return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                _("Neon was unable to parse URL '%s'"), url);
+    }
+
   path_s = svn_stringbuf_create (parsed_url.path, pool);
 
   /* Try to get the starting_props from the public url.  If the

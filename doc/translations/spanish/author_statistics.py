@@ -23,6 +23,7 @@ import xml.parsers.expat
 # Some globals.
 LOOKING_FOR = ["gradha", "ruben", "beerfrick", "dbrouard"]
 STATISTICS = []
+COMMIT_NUMBER = 0
 SECONDS_A_DAY = 60 * 60 * 24
 
 
@@ -84,6 +85,8 @@ def start_element(name, dummy):
     """Processes logentry, author and date XML start tags. Changes state."""
     if STATE.num == 0:
         if name == "logentry":
+            global COMMIT_NUMBER
+            COMMIT_NUMBER += 1
             STATE.num = 1
     elif STATE.num == 1:
         if name == "author":
@@ -197,7 +200,9 @@ def obtain_information():
     """Fills data into the STATISTICS and STATE global variables.
 
     Creates an expat parser, runs the external 'svn log' command
-    and connects its output to the XML parsing of expat.
+    and connects its output to the XML parsing of expat. Commit
+    information about the authors and the whole progress of the
+    project will be gathered.
     """
     p = xml.parsers.expat.ParserCreate()
     
@@ -214,6 +219,7 @@ def obtain_information():
         while line:
             p.Parse(line)
             if STATE.num < 0:
+                print "Aborting!"
                 sys.exit(0)
             line = stdout.readline()
 

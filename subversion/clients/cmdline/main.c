@@ -111,11 +111,13 @@ const apr_getopt_option_t svn_cl__options[] =
     {"dry-run",       svn_cl__dry_run_opt, 0,
                       N_("try operation but make no changes")},
     {"no-diff-deleted", svn_cl__no_diff_deleted, 0,
-                       N_("do not print differences for deleted files")},
+                      N_("do not print differences for deleted files")},
     {"notice-ancestry", svn_cl__notice_ancestry_opt, 0,
-                       N_("notice ancestry when calculating differences")},
+                      N_("notice ancestry when calculating differences")},
     {"ignore-ancestry", svn_cl__ignore_ancestry_opt, 0,
-                       N_("ignore ancestry when calculating merges")},
+                      N_("ignore ancestry when calculating merges")},
+    {"ignore-externals", svn_cl__ignore_externals_opt, 0,
+                      N_("ignore externals definitions")},
     {"diff-cmd",      svn_cl__diff_cmd_opt, 1,
                       N_("use ARG as diff command")},
     {"diff3-cmd",     svn_cl__merge_cmd_opt, 1,
@@ -210,7 +212,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      "  the destination. If multiple URLs are given each will be checked\n"
      "  out into a sub-directory of PATH, with the name of the sub-directory\n"
      "  being the basename of the URL.\n"),
-    {'r', 'q', 'N', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+    {'r', 'q', 'N', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
+     svn_cl__ignore_externals_opt} },
 
   { "cleanup", svn_cl__cleanup, {0},
     N_("Recursively clean up the working copy, removing locks, resuming\n"
@@ -324,7 +327,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "first\n"
        "  looked up.\n"),
     {'r', 'q', svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__config_dir_opt, svn_cl__native_eol_opt} },
+     svn_cl__config_dir_opt, svn_cl__native_eol_opt, 
+     svn_cl__ignore_externals_opt} },
 
   { "help", svn_cl__help, {"?", "h"},
     N_("Describe the usage of this program or its subcommands.\n"
@@ -373,7 +377,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "    Author of the last commit\n"
        "    Size (in bytes)\n"
        "    Date and time of the last commit\n"),
-    {'r', 'v', 'R', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+    {'r', 'v', 'R', svn_cl__incremental_opt, svn_cl__xml_opt,
+     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
   
   { "lock", svn_cl__lock, {0},
     N_("Lock working copy path(s) in the repository, so that no other user\n"
@@ -655,7 +660,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      "                 965       687 joe          wc/zig.c\n"
      "    Head revision:   981\n"),
     { 'u', 'v', 'N', 'q', svn_cl__no_ignore_opt, SVN_CL__AUTH_OPTIONS, 
-      svn_cl__config_dir_opt} },
+      svn_cl__config_dir_opt, svn_cl__ignore_externals_opt} },
   
   { "switch", svn_cl__switch, {"sw"},
     N_("Update the working copy to a different URL.\n"
@@ -708,7 +713,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "  while updates to the file's properties are shown in the second "
        "column.\n"),
     {'r', 'N', 'q', svn_cl__merge_cmd_opt, SVN_CL__AUTH_OPTIONS, 
-     svn_cl__config_dir_opt} },
+     svn_cl__config_dir_opt, svn_cl__ignore_externals_opt} },
 
   { "version", svn_cl__version, {"ver"},
     N_("Print client version info\n"),
@@ -990,6 +995,9 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__ignore_ancestry_opt:
         opt_state.ignore_ancestry = TRUE;
+        break;
+      case svn_cl__ignore_externals_opt:
+        opt_state.ignore_externals = TRUE;
         break;
       case svn_cl__relocate_opt:
         opt_state.relocate = TRUE;

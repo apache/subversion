@@ -934,15 +934,15 @@ The following repository access (RA) modules are available:
       <para>Además de proporcionar implemntaciones consistentes de
         llamadas de sistema que difieren entre sistemas operativos,
         <footnote>
-          <para>Subversion uses ANSI system calls and datatypes
-            as much as possible.</para>
+          <para>Subversion usa llamadas de sistema y tipos de datos
+            ANSI siempre que es posible.</para>
         </footnote> APR le da a Subversion acceso inmediato a muchos
         tipos de datos, como arrays dinámicos o tablas hash<!--
         TODO picadillo? -->.  Subversion usa en gran medida estos
         tipos a lo largo del código fuente. Pero quizás el tipo de
         datos APR más usado, encontrado en casi todo prototipo de la
         API de Subversion, es <literal>apr_pool_t</literal>&mdash;el
-        grupo de memoria de APR.  Subversion usa internamente grupos
+        área de memoria de APR.  Subversion usa internamente áreas
         de memoria para todas las peticiones de reserva de memoria
         que necesita (excepto cuando una librería externa requiere
         un esquema de gestión de memoria diferente para los datos
@@ -951,88 +951,102 @@ The following repository access (RA) modules are available:
             librerías.</para>
         </footnote> y aunque una persona que programa usando las
         APIs de Subversion no está obligada a hacer lo mismo, tiene
-        que proporcionar grupos de memoria a las funciones de la API
+        que proporcionar áreas de memoria a las funciones de la API
         que los necesitan. Esto significa que los usuarios de la API
         de Subversion también tienen que enlazar con APR, y deben
         llamar <function>apr_initialize()</function> para iniciar el
-        subsistema APR, y entonces adquirir un grupo de memoria para
-        usarlo con las llamadas de la API de Subversion. Vea <xref
+        subsistema APR, y entonces adquirir un área de memoria para
+        usarla con las llamadas de la API de Subversion. Vea <xref
         linkend="svn-ch-8-sect-5"/> para más información.</para>
 
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-2.2">
-      <title>URL and Path Requirements</title>
+      <title>Requisitos de URL y ruta</title>
 
-      <para>With remote version control operation as the whole point
-        of Subversion's existence, it makes sense that some attention
-        has been paid to internationalization (i18n) support.  After
-        all, while <quote>remote</quote> might mean <quote>across the
-        office</quote>, it could just as well mean <quote>across the
-        globe.</quote> To facilitate this, all of Subversion's public
-        interfaces that accept path arguments expect those paths to be
-        canonicalized, and encoded in UTF-8.  This means, for example,
-        that any new client binary that drives the libsvn_client
-        interface needs to first convert paths from the
-        locale-specific encoding to UTF-8 before passing those paths
-        to the Subversion libraries, and then re-convert any resultant
-        output paths from Subversion back into the locale's encoding
-        before using those paths for non-Subversion purposes.
-        Fortunately, Subversion provides a suite of functions (see
-        <filename>subversion/include/svn_utf.h</filename>) that can be
-        used by any program to do these conversions.</para>
+      <para>Con operaciones de control de versiones remotas como
+        razón de la existencia de Subversion, tiene sentido
+        prestar atención al soporte de internacionalización
+        (i18n<footnote><para>N.T.: Forma breve de referirse
+        a la palabra internacionalización, en inglés
+        <quote>internationalization</quote>, que comienza con una
+        <quote>i</quote>, seguida de 18 carácteres y terminada en
+        <quote>n</quote>.</para> </footnote>). Después de todo,
+        aunque <quote>remotas</quote> pueda significar <quote>de
+        un lado a otro de la oficina</quote>, podría significar
+        perfectamente <quote>de un lado a otro del globo.</quote>.
+        Para facilitar esto, todas las interfaces públicas de
+        Subversion que aceptan parámetros de rutas esperan que éstas
+        sean canónicas, y codificadas en UTF-8.  Esto significa,
+        por ejemplo, que cualquier nuevo cliente binario que use
+        la interfaz libsvn_client necesita convertir primero las
+        rutas de la codificación específica local a UTF-8 antes
+        de pasarlas a las librerías de Subversion, y entonces
+        reconvertir cualquier resultado generado por Subversion de
+        nuevo en la codificación local antes de usar esas rutas con
+        propósitos no relacionados con Subversion. Afortunadamente,
+        Subversion proporciona un conjunto de funciones (vea
+        <filename>subversion/include/svn_utf.h</filename>) que
+        pueden ser usadas por cualquier programa para realizar
+        estas conversiones.</para>
 
-      <para>Also, Subversion APIs require all URL parameters to be
-        properly URI-encoded.  So, instead of passing <systemitem
-        class="url">file:///home/username/My File.txt</systemitem> as
-        the URL of a file named <literal>My File.txt</literal>, you
-        need to pass <systemitem
-        class="url">file:///home/username/My%20File.txt</systemitem>.
-        Again, Subversion supplies helper functions that your
-        application can
-        use&mdash;<function>svn_path_uri_encode</function> and
-        <function>svn_path_uri_decode</function>, for URI encoding and
-        decoding, respectively.</para>
+      <para>Además, las APIs de Subversion requieren que todos los
+        parámetros con URLs estén codificados correctamente
+        como URIs. Así, que en lugar de pasar <systemitem
+        class="url">file:///home/nombreusuario/Mi
+        fichero.txt</systemitem> como la
+        URL de un fichero llamado <literal>Mi
+        fichero.txt</literal>, usted necesita pasar <systemitem
+        class="url">file:///home/nombreusuario/Mi%20fichero.txt</systemitem>.
+        De nuevo, Subversion proporciona
+        funciones de ayuda que su aplicación puede
+        usar&mdash;<function>svn_path_uri_encode</function> y
+        <function>svn_path_uri_decode</function>, para codificar
+        y decodificar URIs, respectivamente.</para>
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-2.3">
-      <title>Using Languages Other than C and C++</title> 
+      <title>Usando lenguajes distintos de C y C++</title>
 
-      <para>If you are interested in using the Subversion libraries in
-        conjunction with something other than a C program&mdash;say a
-        Python script or Java application&mdash;Subversion has some
-        initial support for this via the Simplified Wrapper and
-        Interface Generator (SWIG).  The SWIG bindings for Subversion
-        are located in <filename>subversion/bindings/swig</filename>
-        and are slowly maturing into a usable state.  These bindings
-        allow you to call Subversion API functions indirectly, using
-        wrappers that translate the datatypes native to your
-        scripting language into the datatypes needed by Subversion's
-        C libraries.</para>
+      <para>Si está interesado en usar las librerías de Subversion
+        junto con algo que no sea un programa en C&mdash;digamos que
+        un script en Python o una aplicación en Java&mdash;Subversion
+        tiene un soporte básico para esto vía el generador
+        simplificado de envoltorios e interfaces (SWIG)
+        <footnote><para>N.T.: <quote>Simplified wrapper and interface
+        generator</quote> en inglés</para></footnote>. Los
+        enlaces SWIG para Subversion se encuentran en
+        <filename>subversion/bindings/swig</filename> y están
+        madurando lentamente hasta llegar a un estado usable. Estos
+        enlaces le permiten realizar llamadas a funciones de la
+        API de Subversion indirectamente, usando los envoltorios
+        que traducen los tipos de datos nativos de su lenguaje de
+        script a los tipos de datos necesarios por las librerías
+        C de Subversion.</para>
 
-      <para>There is an obvious benefit to accessing the Subversion
-        APIs via a language binding&mdash;simplicity.  Generally
-        speaking, languages such as Python and Perl are much more
-        flexible and easy to use than C or C++.  The sort of
-        high-level datatypes and context-driven type checking provided
-        by these languages are often better at handling information
-        that comes from users.  As you know, humans are proficient at
-        botching up input to a program, and scripting languages tend
-        to handle that misinformation more gracefully.  Of course,
-        often that flexibility comes at the cost of performance.  That
-        is why using a tightly-optimized, C-based interface and
-        library suite, combined with a powerful, flexible binding
-        language, is so appealing.</para>
+      <para>Hay otro beneficio al acceder a las APIs de Subversion
+        a través de un enlace con otro lenguaje&mdash;simplicidad. En
+        general, lenguajes como Python y Perl son mucho más flexibles
+        y fáciles de usar que C o C++. Los tipos de datos de alto
+        nivel y la verificación de tipos por contexto proporcionados
+        por estos lenguajes son a menudo mejores manejando la
+        información que viene de los usuarios. Como ya sabrá, los
+        humanos son muy hábiles fastidiando los datos de entrada de
+        un programa, y los lenguajes de script tienden a manejar
+        tales incorrecciones con más gracilidad. Por eso usar una
+        interfaz y conjunto de librerías altamente optimizados,
+        basados en C, combinados con un lenguaje poderoso, flexible,
+        es tan atractivo.</para>
 
-      <para>Let's look at an example that uses Subversion's Python
-        SWIG bindings.  Our example will do the same thing as our last
-        example.  Note the difference in size and complexity of the
-        function this time!</para>
+      <para>Echemos un vistazo a un ejemplo que usa los envoltorios
+        SWIG de Subversion para Python. Nuestro ejemplo hará
+        exáctamente lo mismo que el último. ¡Fíjese en la diferencia
+        de tamaño y complejidad de esta versión de la función!</para>
 
       <example id="svn-ch-8-sect-2.3-ex-1">
-        <title>Using the Repository Layer with Python</title>
+        <title>Usando la capa de repositorio con Python</title>
 
         <programlisting>
 from svn import fs
@@ -1070,27 +1084,29 @@ def crawl_filesystem_dir (root, directory, pool):
 </programlisting>
       </example>
 
-      <para>An implementation in C of the previous example would
-        stretch on quite a bit longer.  The same routine in C would
-        need to pay close attention to memory usage, and need to use
-        custom datatypes for representing the hash of entries and the
-        list of paths.  Python has hashes (called
-        <quote>dictionaries</quote>) and lists as built-in datatypes,
-        and provides a wonderful selection of methods for operating on
-        those types.  And since Python uses reference counting and
-        garbage collection, users of the language don't have to bother
-        themselves with allocating and freeing memory.</para>
+      <para>Una implementación en C del ejemplo anterior se alargaría
+        bastante más. La misma rutina en C necesitaría prestar
+        especial atención al uso de la memoria, y tendría que usar
+        tipos de datos de propios para representar las tablas hash
+        y la lista de rutas. Python tiene tablas hash (llamadas
+        <quote>diccionarios</quote>) y listas como tipos de datos
+        nativos, y proporciona una maravillosa selección de métodos
+        para operar sobre esos tipos de datos. Y dado que Python
+        usa recolección de basura y recuento de referencias,
+        los usuarios del lenguaje no necesitan preocuparse con la
+        reserva y liberación de memoria.</para>
 
-      <para>In the previous section of this chapter, we mentioned the
-        <filename>libsvn_client</filename> interface, and how it
-        exists for the sole purpose of simplifying the process of
-        writing a Subversion client.  The following is a brief example
-        of how that library can be accessed via the SWIG bindings.  In
-        just a few lines of Python, you can check out a fully
-        functional Subversion working copy!</para>
+      <para>En la sección previa de este capítulo, mencionamos la
+        interfaz <filename>libsvn_client</filename>, y cómo existe
+        con el único propósito de simplificar el proceso de escribir
+        un cliente de Subversion. A continuación presentamos un breve
+        ejemplo que muestra cómo esta librería puede ser usada vía
+        los envoltorios SWIG. ¡En sólo unas pocas línea de Python,
+        puede obtener una copia de trabajo local de Subversion
+        totalmente funcional!</para>
 
       <example id="svn-ch-8-sect-2.3-ex-2">
-        <title>A Simple Script to Check Out a Working Copy.</title>
+        <title>Un script simple para obtener una copia de trabajo local.</title>
 
         <programlisting>
 #!/usr/bin/env python
@@ -1120,18 +1136,20 @@ if __name__ == '__main__':
 </programlisting>
       </example>
 
-      <para>Subversion's language bindings unfortunately tend to lack
-        the level of attention given to the core Subversion modules.
-        However, there have been significant efforts towards creating
-        functional bindings for Python, Perl, and Java.  Once you have
-        the SWIG interface files properly configured, generation of
-        the specific wrappers for all the supported SWIG languages
-        (which currently includes versions of C#, Guile, Java,
-        MzScheme, OCaml, Perl, PHP, Python, Ruby, and Tcl) should
-        theoretically be trivial.  Still, some extra programming is
-        required to compensate for complex APIs that SWIG needs some
-        help generalizing.  For more information on SWIG itself, see
-        the project's website at <systemitem
+      <para>Los envoltorios de Subversion para otros lenguajes
+        desafortunadamente tienden a no recibir el mismo nivel
+        de atención redibido por los módulos principales de
+        Subversion. No obstante, se han dado pasos significativos
+        hacia la creación de enlaces funcionales para Python,
+        Perl y Java. Una vez tenga los ficheros del interfaz SWIG
+        configurados correctamente, la generación de envoltorios
+        específicos para todos los lenguajes soportados por SWIG
+        (que actualmente incluye versiones de C#, Guile, Java,
+        MzScheme, OCaml, Perl, PHP, Python, Ruby y Tcl) debería ser
+        teóricamente trivial. A pesar de esto, todavía se requiere
+        un poco de programación extra para compensar las complejas
+        APIs con las que SWIG necesita ayuda. Para más información
+        sobre SWIG, vea la página web del proyecto en <systemitem
         class="url">http://www.swig.org/</systemitem>.</para>
 
     </sect2>
@@ -1141,76 +1159,83 @@ if __name__ == '__main__':
   <!-- *** SECTION 3:  INSIDE THE WORKING COPY ADMINISTRATION AREA     *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-8-sect-3">
-    <title>Inside the Working Copy Administration Area</title>
+    <title>Dentro del área de administración de la copia local de trabajo</title>
     
-    <para>As we mentioned earlier, each directory of a Subversion
-      working copy contains a special subdirectory called
-      <filename>.svn</filename> which houses administrative data about
-      that working copy directory.  Subversion uses the information in
-      <filename>.svn</filename> to keep track of things like:</para>
+    <para>Tal y como mencionamos anteriormente, cada directorio de
+      una copia local de trabajo realizada con Subversion contiene
+      un subdirectorio especial llamado <filename>.svn</filename>
+      que almacena datos administrativos sobre ese directorio
+      local de trabajo. Subversion usa la información de
+      <filename>.svn</filename> para llevar la pista de cosas
+      como:</para>
 
     <itemizedlist>
       <listitem>
-        <para>Which repository location(s) are represented by the
-          files and subdirectories in the working copy
-          directory.</para>
+        <para>Qué lugar(es) del repositorio está representado por los
+          ficheros y subdirectorios del directorio de la copia local
+          de trabajo.</para>
       </listitem>
       <listitem>
-        <para>What revision of each of those files and directories are
-          currently present in the working copy.</para>
+        <para>Qué revisión de cada uno de esos ficheros y directorios
+          está actualmente presente en la copia local.</para>
       </listitem>
       <listitem>
-        <para>Any user-defined properties that might be attached
-          to those files and directories.</para>
+        <para>Cualquier <!--TODO property--> atributo definido por el
+          usuario que pudiese estár asociado a esos ficheros y
+          directorios.</para>
       </listitem>
       <listitem>
-        <para>Pristine (un-edited) copies of the working copy
-        files.</para>
+        <para>Copias prístinas (no editadas) de los ficheros de
+          la copia local de trabajo.</para>
       </listitem>
     </itemizedlist>
 
-    <para>While there are several other bits of data stored in the
-      <filename>.svn</filename> directory, we will examine only a
-      couple of the most important items.</para>
+    <para>A pesar de que hay varios otros datos almacenados en
+      el directorio <filename>.svn</filename>, examinaremos sólo
+      un puñado de los elementos más importantes.</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-3.1">
-      <title>The Entries File</title>
+      <title>El fichero de entradas</title>
 
-      <para>Perhaps the single most important file in the
-        <filename>.svn</filename> directory is the
-        <filename>entries</filename> file.  The entries file is an XML
-        document which contains the bulk of the administrative
-        information about a versioned resource in a working copy
-        directory.  It is this one file which tracks the repository
-        URLs, pristine revision, file checksums, pristine text and
-        property timestamps, scheduling and conflict state
-        information, last-known commit information (author, revision,
-        timestamp), local copy history&mdash;practically everything
-        that a Subversion client is interested in knowing about a
-        versioned (or to-be-versioned) resource!</para>
+      <para>Quizás el fichero más importante en el directorio
+        <filename>.svn</filename> es el fichero
+        <filename>entries</filename>.  El fichero de entradas es
+        un documento XML que contiene el grueso de la información
+        administrativa sobre un recurso versionado en el directorio
+        de la copia local de trabajo.  Es el fichero que lleva
+        la pista a las URLs de repositorio, revisiones prístinas,
+        sumas de control de ficheros, textos prístinos y fechas de
+        modificación de propiedades, información de planificación y
+        estado de conflicto, última información conocida de cambios
+        en el repositorio (autor, revisión, fecha de modificación),
+        historia de la copia local&mdash;¡prácticamente todo lo que
+        un cliente de Subversion puede estar interesado en saber
+        sobre un recurso versionado (o por versionar)!</para>
 
       <sidebar>
-        <title>Comparing the Administrative Areas of Subversion and
-          CVS</title>
+        <title>Comparando las áreas administrativas de Subversion
+          y CVS</title>
 
-        <para>A glance inside the typical <filename>.svn</filename>
-          directory turns up a bit more than what CVS maintains in its
-          <filename>CVS</filename> administrative directories.  The
-          <filename>entries</filename> file contains XML which
-          describes the current state of the working copy directory,
-          and basically serves the purposes of CVS's
-          <filename>Entries</filename>, <filename>Root</filename>, and
-          <filename>Repository</filename> files combined.</para>
+        <para>Un vistazo dentro del típico directorio
+          <filename>.svn</filename> revela más cosas <!-- TODO turns
+          up a bit more, ¿ein? --> que lo que CVS mantiene en su
+          directorio administrativo <filename>CVS</filename>. El
+          fichero <filename>entries</filename> contiene
+          XML que describe el estado actual del directorio
+          de la copia local de trabajo, y básicamente
+          sirve para los propósitos de los ficheros de CVS
+          <filename>Entries</filename>, <filename>Root</filename>,
+          y <filename>Repository</filename> combinados.</para>
 
       </sidebar>
 
-      <para>The following is an example of an actual entries
-        file:</para>
+      <para>A continuación mostramos un ejemplo de un fichero de
+        entradas real:</para>
 
       <example id="svn-ch-8-sect-3-ex-1">
-        <title>Contents of a Typical <filename>.svn/entries</filename>
-          File</title>
+        <title>Contenido de un fichero
+          <filename>.svn/entries</filename> típico.</title>
         <programlisting>
 &lt;?xml version="1.0" encoding="utf-8"?&gt;
 &lt;wc-entries
@@ -1252,89 +1277,101 @@ if __name__ == '__main__':
 </programlisting>
       </example>
 
-      <para>As you can see, the entries file is essentially a list of
-        entries.  Each <sgmltag>entry</sgmltag> tag represents one of
-        three things: the working copy directory itself (called the
-        <quote>this directory</quote> entry, and noted as having an
-        empty value for its <structfield>name</structfield>
-        attribute), a file in that working copy directory (noted by
-        having its <structfield>kind</structfield> attribute set to
-        <literal>"file"</literal>), or a subdirectory in that working
-        copy (<structfield>kind</structfield> here is set to
-        <literal>"dir"</literal>).  The files and subdirectories whose
-        entries are stored in this file are either already under
-        version control, or (as in the case of the file named
-        <filename>zeta</filename> above) are scheduled to be added to
-        version control when the user next commits this working copy
-        directory's changes.  Each entry has a unique name, and each
-        entry has a node kind.</para>
+      <para>Tal y como puede ver, el fichero entries es esencialmente
+        una lista de entradas. Cada etiqueta <sgmltag>entry</sgmltag>
+        representa una de tres posibles cosas: el propio directorio
+        de la copia local (entrada conocida como <quote>este
+        directorio</quote>, y caracterizada por tener un valor
+        vacío para su atributo <structfield>name</structfield>),
+        un fichero en esa copia local (caracterizado por tener
+        en su atributo <structfield>kind</structfield> el valor
+        <literal>"file"</literal>), o un subdirectorio en esa
+        copia local (<structfield>kind</structfield> en este caso
+        tendrá el valor <literal>"dir"</literal>). Los ficheros
+        y subdirectorios cuyas entradas ya están almacenadas en
+        este fichero estan o bien bajo control de versiones, o
+        (como en el caso del fichero <filename>zeta</filename> más
+        arriba) están programados para ser puestos bajo control
+        de versiones la siguiente vez que el usuario envíe los
+        cambios de este directorio al repositorio. Cada entrada
+        tiene un nombre único, y cada entrada es de tipo nodo <!--
+        TODO seguro?-->.</para>
 
-      <para>Developers should be aware of some special rules that
-        Subversion uses when reading and writing its
-        <filename>entries</filename> files.  While each entry has a
-        revision and URL associated with it, note that not every
-        <sgmltag>entry</sgmltag> tag in the sample file has explicit
-        <structfield>revision</structfield> or
-        <structfield>url</structfield> attributes attached to it.
-        Subversion allows entries to not explicitly store those two
-        attributes when their values are the same as (in the
-        <structfield>revision</structfield> case) or trivially
-        calculable from
+      <para>Los desarrolladores deben tener presentes algunas
+        reglas especiales que Subversion usa cuando lee y escribe
+        sus ficheros <filename>entries</filename>. Aunque cada
+        entrada tiene asociada una revisión y URL, fíjese que no toda
+        etiqueta <sgmltag>entry</sgmltag> en el fichero de ejemplo
+        tiene un atributo <structfield>revision</structfield> o
+        <structfield>url</structfield> asociado a ella.  Subversion
+        permite que las entradas no almacenen explícitamente esos
+        dos atributos cuando sus valores son iguales que (en el
+        caso de <structfield>revision</structfield>) o triviales
+        de calcular a partir de
         <footnote>
-          <para>That is, the URL for the entry is the same as the
-            concatenation of the parent directory's URL and the
-            entry's name.</para>
+          <para>Es decir, la URL de la entrada es igual que la
+            concatenación de la URL del directorio padre y el nombre
+            de la entrada.</para>
         </footnote>
-        (in the <structfield>url</structfield> case) the data stored
-        in the <quote>this directory</quote> entry.  Note also that
-        for subdirectory entries, Subversion stores only the crucial
-        attributes&mdash;name, kind, url, revision, and schedule.  In
-        an effort to reduce duplicated information, Subversion
-        dictates that the method for determining the full set of
-        information about a subdirectory is to traverse down into that
-        subdirectory, and read the <quote>this directory</quote> entry
-        from its own <filename>.svn/entries</filename> file.  However,
-        a reference to the subdirectory is kept in its parent's
-        <filename>entries</filename> file, with enough information to
-        permit basic versioning operations in the event that the
-        subdirectory itself is actually missing from disk.</para>
+        (en el caso de <structfield>url</structfield>)
+        los datos almacenados en la entrada <quote>este
+        directorio</quote>. Tenga también en cuenta que para
+        las entradas de subdirectorios, Subversion almacena
+        únicamente los atributos cruciales&mdash;nombre, tipo, url,
+        revisión, y acción programada. En un esfuerzo para reducir
+        información duplicada, Subversion dicta que el método para
+        determinar el conjunto completo de información sobre un
+        subdirectorio es descender dentro de ese subdirectorio, y
+        leer la entrada <quote>este directorio</quote> de su propio
+        fichero <filename>.svn/entries</filename>.  No obstante,
+        se mantiene una referencia al subdirectorio en el fichero
+        <filename>entries</filename> del padre, con suficiente
+        información para permitir operaciones básicas de versionado
+        en el evento de que el propio subdirectorio no esté presente
+        en el disco<!--TODO aquí la traducción de disco quizás
+        pierde calidad, pues se refiere a disco duro-->.</para>
 
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-3.2">
-      <title>Pristine Copies and Property Files</title>
+      <title>Copias prístinas y propiedades de ficheros</title>
 
-      <para>As mentioned before, the <filename>.svn</filename>
-        directory also holds the pristine <quote>text-base</quote>
-        versions of files.  Those can be found in
-        <filename>.svn/text-base</filename>.  The benefits of these
-        pristine copies are multiple&mdash;network-free checks for
-        local modifications and difference reporting, network-free
-        reversion of modified or missing files, smaller transmission
-        of changes to the server&mdash;but comes at the cost of having
-        each versioned file stored at least twice on disk.  These
-        days, this seems to be a negligible penalty for most files.
-        However, the situation gets uglier as the size of your
-        versioned files grows.  Some attention is being given to
-        making the presence of the <quote>text-base</quote> an option.
-        Ironically though, it is as your versioned files' sizes get
-        larger that the existence of the <quote>text-base</quote>
-        becomes more crucial&mdash;who wants to transmit a huge file
-        across a network just because they want to commit a tiny
-        change to it?</para>
+      <para>Tal y como mencionamos anteriormente, el directorio
+        <filename>.svn</filename> también contiene
+        versiones <quote>text-base</quote> prístinas
+        de los ficheros.  Éstas pueden encontrarse en
+        <filename>.svn/text-base</filename>. Los beneficios de
+        estas copias son múltiples&mdash;evitan conexiones por
+        red cuando se quiere saber si hay modificaciones locales
+        y qué es lo que ha cambiado, permiten revertir ficheros
+        modificados o eliminados, los cambios que se transmiten al
+        servidor son menores&mdash;pero hay que pagar el precio de
+        almacenar cada fichero versionado dos veces en el disco.
+        Hoy en día, esto parece una desventaja despreciable para
+        la mayoría de los ficheros. No obstante, esta situación
+        se vuelve más delicada <!-- uglier != delicada --> a
+        medida que el tamaño de sus ficheros versionados crece.
+        Se está prestando atención para permitir que la presencia de
+        <quote>text-base</quote> sea una opción. Pero irónicamente,
+        es a medida que los tamaños de sus ficheros versionados
+        crecen cuando la existencia de <quote>text-base</quote>
+        se vuelve más crucial&mdash;¿quién quiere transmitir un
+        fichero enorme por red sólo porque quieren realizar una
+        pequeña modificación sobre el mismo?</para>
 
-      <para>Similar in purpose to the <quote>text-base</quote> files
-        are the property files and their pristine
-        <quote>prop-base</quote> copies, located in
-        <filename>.svn/props</filename> and
-        <filename>.svn/prop-base</filename> respectively.  Since
-        directories can have properties, too, there are also
-        <filename>.svn/dir-props</filename> and
-        <filename>.svn/dir-prop-base</filename> files.  Each of these
-        property files (<quote>working</quote> and <quote>base</quote>
-        versions) uses a simple <quote>hash-on-disk</quote> file
-        format for storing the property names and values.</para>
+      <para>Con un propósito similar a los ficheros
+        <quote>text-base</quote> existen los ficheros de
+        propiedades y sus copias <quote>prop-base</quote>
+        prístinas, encontradas en <filename>.svn/props</filename>
+        y <filename>.svn/prop-base</filename> respectivamente.  Dado
+        que los directorios también pueden tener propiedades, también
+        existen los ficheros <filename>.svn/dir-props</filename>
+        y <filename>.svn/dir-prop-base</filename>.  Cada uno de
+        estos ficheros de propiedades (versiones <quote>base</quote>
+        y <quote>en desarrollo</quote>) usan un simple fichero
+        de formato <quote>hash-on-disk</quote> para almacenar los
+        nombres de las propiedades y sus valores.</para>
 
     </sect2>
   </sect1>
@@ -1345,38 +1382,41 @@ if __name__ == '__main__':
   <sect1 id="svn-ch-8-sect-4">
     <title>WebDAV</title>
 
-    <para>WebDAV (shorthand for <quote>Web-based Distributed Authoring
-      and Versioning</quote>) is an extension of the standard HTTP
-      protocol designed to make the web into a read/write medium,
-      instead of the basically read-only medium that exists today.
-      The theory is that directories and files can be shared&mdash;as
-      both readable and writable objects&mdash;over the web.  RFCs
-      2518 and 3253 describe the WebDAV/DeltaV extensions to HTTP, and
-      are available (along with a lot of other useful information) at
-      <systemitem
+    <para>WebDAV (acrónimo de <quote>Web-based Distributed Authoring
+      and Versioning</quote><footnote><para>N.T.: Gestión y
+      versionado distribuído vía web</para></footnote>) es
+      una extensión del protocolo estándar HTTP diseñada para
+      transformar la web en un medio de lectura y escritura,
+      en lugar del medio básicamente de sólo lectura que existe
+      hoy en día.  La teoría es que los directorios y ficheros
+      pueden ser compartidos&mdash;tanto como objetos de lectura y
+      escritura&mdash;sobre la web. Los RFCs 2518 y 3253 describen
+      las extensiones WebDAV/DeltaV de HTTP, y están disponibles
+      (junto con bastante información útil) en <systemitem
       class="url">http://www.webdav.org/</systemitem>.</para>
 
-    <para>A number of operating system file browsers are already able
-      to mount networked directories using WebDAV.  On Win32, the
-      Windows Explorer can browse what it calls WebFolders (which are
-      just WebDAV-ready network locations) as if they were regular
-      shared folders.  Mac OS X also has this capability, as do the
-      Nautilus and Konqueror browsers (under GNOME and KDE,
-      respectively).</para>
+    <para>Varios navegadores de ficheros en diferentes sistemas
+      operativos ya son capaces de montar directorios por red
+      usando WebDAV. En Win32, el explorador de Windows puede
+      navegar por lo que llama WebFolders (que son localizaciones
+      red montadas con WebDAV) como si fuesen normales carpetas
+      compartidas. Mac OS X también tiene esta capacidad, al igual
+      que los navegadores Nautilus y Konqueror (bajo GNOME y KDE,
+      respectivamente).</para>
 
-    <para>How does all of this apply to Subversion?  The mod_dav_svn
-      Apache module uses HTTP, extended by WebDAV and DeltaV, as one
-      of its network protocols.  Subversion uses mod_dav_svn to map
-      between Subversion's versioning concepts and those of RFCs 2518
-      and 3253.
+    <para>¿Cómo afecta todo esto a Subversion? El módulo mod_dav_svn
+      de Apache usa HTTP, extendido por WebDAV y DeltaV, como uno
+      de sus protocolos de red. Subversion usa mod_dav_svn para
+      relacionar los conceptos de versionado de Subversion con los
+      de los RFCs 2518 y 3253.
     </para>
 
-    <para>For a more thorough discussion of WebDAV, how it works, and
-      how Subversion uses it, see <xref linkend="svn-ap-c"/>.  Among
-      other things, that appendix discusses the degree to which
-      Subversion adheres to the generic WebDAV specification, and how
-      that affects interoperability with generic WebDAV
-      clients.</para>
+    <para>Puede encontrar una descripción más detallada de WebDAV,
+      cómo funciona, y cómo es usado por Subversion en <xref
+      linkend="svn-ap-c"/>.  Entre otras cosas, ese apéndice discute
+      el grado con el que Subversion se adhiere a la especificación
+      WebDAV genérica, y cómo eso afecta la interoperabilidad con
+      clientes WebDAV genéricos.</para>
   </sect1>
 
   <!-- ******************************************************************* -->

@@ -26,13 +26,6 @@
 #include "svn_test.h"
 #include "fs-helpers.h"
 
-#include "../libsvn_fs_base/fs.h"
-#include "../libsvn_fs_base/dag.h"
-#include "../libsvn_fs_base/trail.h"
-
-#include "../libsvn_fs_base/bdb/rev-table.h"
-#include "../libsvn_fs_base/bdb/nodes-table.h"
-
 
 /*-------------------------------------------------------------------*/
 
@@ -391,7 +384,8 @@ svn_test__validate_tree (svn_fs_root_t *root,
 
               /* Append this entry name to the list of corrupt entries. */
               svn_stringbuf_appendcstr (corrupt_entries, "   "); 
-              svn_stringbuf_appendbytes (corrupt_entries, (char *)key, keylen);
+              svn_stringbuf_appendbytes (corrupt_entries, (const char *)key,
+                                         keylen);
               svn_stringbuf_appendcstr (corrupt_entries, "\n"); 
             }
 
@@ -405,7 +399,8 @@ svn_test__validate_tree (svn_fs_root_t *root,
 
           /* Append this entry name to the list of missing entries. */
           svn_stringbuf_appendcstr (missing_entries, "   "); 
-          svn_stringbuf_appendbytes (missing_entries, (char *)key, keylen);
+          svn_stringbuf_appendbytes (missing_entries, (const char *)key,
+                                     keylen);
           svn_stringbuf_appendcstr (missing_entries, "\n"); 
         } 
     }
@@ -428,7 +423,7 @@ svn_test__validate_tree (svn_fs_root_t *root,
       
       /* Append this entry name to the list of missing entries. */
       svn_stringbuf_appendcstr (extra_entries, "   "); 
-      svn_stringbuf_appendbytes (extra_entries, (char *)key, keylen);
+      svn_stringbuf_appendbytes (extra_entries, (const char *)key, keylen);
       svn_stringbuf_appendcstr (extra_entries, "\n"); 
     }
 

@@ -419,7 +419,10 @@ svn_error_t *
 svn_client_create_context (svn_client_ctx_t **ctx,
                            apr_pool_t *pool);
 
-/** Checkout a working copy of @a URL at @a revision, looked up at @a
+/**
+ * @since New in 1.2.
+ *
+ * Checkout a working copy of @a URL at @a revision, looked up at @a
  * peg_revision, using @a path as the root directory of the newly
  * checked out working copy, and authenticating with the
  * authentication baton cached in @a ctx.  If @a result_rev is not @c
@@ -430,6 +433,9 @@ svn_client_create_context (svn_client_ctx_t **ctx,
  * @c svn_opt_revision_head, or @c svn_opt_revision_date.  If
  * @c revision does not meet these requirements, return the error
  * @c SVN_ERR_CLIENT_BAD_REVISION.
+ *
+ * If @a ignore_externals is set, don't process externals definitions
+ * as part of this operation.
  *
  * If @a ctx->notify_func is non-null, invoke @a ctx->notify_func with 
  * @a ctx->notify_baton as the checkout progresses.
@@ -443,6 +449,7 @@ svn_client_checkout2 (svn_revnum_t *result_rev,
                       const svn_opt_revision_t *peg_revision,
                       const svn_opt_revision_t *revision,
                       svn_boolean_t recurse,
+                      svn_boolean_t ignore_externals,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool);
 
@@ -484,6 +491,9 @@ svn_client_checkout (svn_revnum_t *result_rev,
  * is no guarantee that revision represented by @c svn_opt_revision_head
  * will remain the same as each path is updated.
  *
+ * If @a ignore_externals is set, don't process externals definitions
+ * as part of this operation.
+ *
  * If @a ctx->notify_func is non-null, invoke @a ctx->notify_func with
  * @a ctx->notify_baton for each item handled by the update, and also for
  * files restored from text-base.  If @a ctx->cancel_func is non-null, invoke
@@ -496,6 +506,7 @@ svn_client_update2 (apr_array_header_t **result_revs,
                     const apr_array_header_t *paths,
                     const svn_opt_revision_t *revision,
                     svn_boolean_t recurse,
+                    svn_boolean_t ignore_externals,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 
@@ -743,8 +754,10 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
-
-/** Given @a path to a working copy directory (or single file), call
+/** 
+ * @since New in 1.2.
+ *
+ * Given @a path to a working copy directory (or single file), call
  * @a status_func/status_baton with a set of @c svn_wc_status_t *
  * structures which describe the status of @a path and its children.
  *
@@ -762,11 +775,32 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
  *      working copy was compared (@a *result_rev is not meaningful unless
  *      @a update is set).
  *
- * This function recurses into externals definitions ('svn:externals')
- * after handling the main target, if any exist.  The function calls
- * the client notification function (in @a ctx) with the @c
+ * If @a ignore_externals is not set, then recurse into externals
+ * definitions (if any exist) after handling the main target.  This
+ * calls the client notification function (in @a ctx) with the @c
  * svn_wc_notify_status_external action before handling each externals
- * definition, and with @c svn_wc_notify_status_completed after each.
+ * definition, and with @c svn_wc_notify_status_completed
+ * after each.
+ */
+svn_error_t *
+svn_client_status2 (svn_revnum_t *result_rev,
+                    const char *path,
+                    svn_opt_revision_t *revision,
+                    svn_wc_status_func_t status_func,
+                    void *status_baton,
+                    svn_boolean_t descend,
+                    svn_boolean_t get_all,
+                    svn_boolean_t update,
+                    svn_boolean_t no_ignore,
+                    svn_boolean_t ignore_externals,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_client_status2(), but with the @a ignore_externals
+ * parameter always set to @c TRUE.
  */
 svn_error_t *
 svn_client_status (svn_revnum_t *result_rev,
@@ -1544,6 +1578,9 @@ svn_client_revprop_list (apr_hash_t **props,
  *
  * @a force if true will cause the export to overwrite files or directories.
  *
+ * If @a ignore_externals is set, don't process externals definitions
+ * as part of this operation.
+ *
  * @a native_eol allows you to override the standard eol marker on the platform
  * you are running on.  Can be either "LF", "CR" or "CRLF" or NULL.  If NULL
  * will use the standard eol marker.  Any other value will cause the
@@ -1558,6 +1595,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
                     const svn_opt_revision_t *peg_revision,
                     const svn_opt_revision_t *revision,
                     svn_boolean_t force, 
+                    svn_boolean_t ignore_externals,
                     const char *native_eol,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);

@@ -46,7 +46,14 @@ AC_DEFUN(SVN_LIB_NEON,
   [
     if test -d $abs_srcdir/neon ; then
       AC_MSG_CHECKING([neon library version])
-      NEON_VERSION=`$abs_srcdir/build/get-neon-ver.sh $abs_srcdir/neon`
+
+      svn_neon_m4_file="$abs_srcdir/neon/macros/neon.m4"
+      svn_neon_major="`sed -n '/NEON_VERSION_MAJOR=/s/.*=//p' $svn_neon_m4_file`"
+      svn_neon_minor="`sed -n '/NEON_VERSION_MINOR=/s/.*=//p' $svn_neon_m4_file`"
+      svn_neon_release="`sed -n '/NEON_VERSION_RELEASE=/s/.*=//p' $svn_neon_m4_file`"
+
+      NEON_VERSION="$svn_neon_major.$svn_neon_minor.$svn_neon_release"
+
       AC_MSG_RESULT([$NEON_VERSION])
       case "$NEON_VERSION" in
         $NEON_WANTED_REGEX)

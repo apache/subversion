@@ -72,17 +72,18 @@ tweak_status (void *baton,
 
 
 svn_error_t *
-svn_client_status (svn_revnum_t *result_rev,
-                   const char *path,
-                   svn_opt_revision_t *revision,
-                   svn_wc_status_func_t status_func,
-                   void *status_baton,
-                   svn_boolean_t descend,
-                   svn_boolean_t get_all,
-                   svn_boolean_t update,
-                   svn_boolean_t no_ignore,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
+svn_client_status2 (svn_revnum_t *result_rev,
+                    const char *path,
+                    svn_opt_revision_t *revision,
+                    svn_wc_status_func_t status_func,
+                    void *status_baton,
+                    svn_boolean_t descend,
+                    svn_boolean_t get_all,
+                    svn_boolean_t update,
+                    svn_boolean_t no_ignore,
+                    svn_boolean_t ignore_externals,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
 {
   svn_wc_adm_access_t *anchor_access, *target_access;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
@@ -218,10 +219,29 @@ svn_client_status (svn_revnum_t *result_rev,
      are interesting to an svn:externals property to
      svn_wc_status_unversioned, otherwise we'll just remove the status
      item altogether. */
-  if (descend)
+  if (descend && (! ignore_externals))
     SVN_ERR (svn_client__do_external_status (traversal_info, status_func,
                                              status_baton, get_all, update,
                                              no_ignore, ctx, pool));
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_status (svn_revnum_t *result_rev,
+                   const char *path,
+                   svn_opt_revision_t *revision,
+                   svn_wc_status_func_t status_func,
+                   void *status_baton,
+                   svn_boolean_t descend,
+                   svn_boolean_t get_all,
+                   svn_boolean_t update,
+                   svn_boolean_t no_ignore,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_client_status2 (result_rev, path, revision, 
+                             status_func, status_baton,
+                             descend, get_all, update, no_ignore, FALSE,
+                             ctx, pool);
 }

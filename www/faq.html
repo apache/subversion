@@ -106,6 +106,14 @@ everything in the repository?  Also, how can I make sure that every
 new file coming into the repository has these properties?</a></li>
 <li><a href="#divining-bdb-version">How do I determine which version of
 Berkeley DB a repository is using?</a></li>
+<li><a href="#website-auto-update">I'm managing a website in my
+repository.  How can I make the live site automatically update after
+every commit?</a></li>
+<li><a href="#single-file-checkout">How do I check out a single
+file?</a></li>
+<li><a href="#wc-change-detection">How do I detect adds, deletes,
+copies and renames in a working copy after they've already
+happened?</a></li>
 </ul>
 
 <h4>Troubleshooting:</h4>
@@ -825,7 +833,7 @@ partitions, but we've only ever seen BDB databases get corrupted when
 living on an NFS or SMB network drive.</p>
 
 <p>If you are using the <a href="http://web.mit.edu/ghudson/info/fsfs"
->FSFS</a> repository back end, then storing the repository on a moderne
+>FSFS</a> repository back end, then storing the repository on a modern
 NFS server (i.e., one that supports locking) should be fine.</p>
 
 <p>Working copies can be stored on NFS (one common scenario is when
@@ -1365,9 +1373,9 @@ environment based on <tt>make</tt>, add something like this to your
 ##
 svn_version.c: FORCE
     echo -n 'const char* svn_version(void) { const char* SVN_Version = "' \
-                                       > svn_version.c
-    svnversion -n .                   >> svn_version.c
-    echo '"; return SVN_Version; }'   >> svn_version.c
+                                       &gt; svn_version.c
+    svnversion -n .                   &gt;&gt; svn_version.c
+    echo '"; return SVN_Version; }'   &gt;&gt; svn_version.c
 
 </pre>
 
@@ -1544,6 +1552,104 @@ using the table below:</p>
   <tr><td>8 (0x00000008)</td><td>4.2</td></tr>
   <tr><td>10 (0x0000000a)</td><td>4.3</td></tr>
 </table>
+
+<![CDATA[=========================================================]]>
+
+<h3><a name="website-auto-update">I'm managing a website in my
+repository.  How can I make the live site automatically update after
+every commit?</a></h3>
+
+<p>This is done all the time, and is easily accomplished by adding a
+post-commit hook script to your repository.  Read about hook scripts
+in <a
+href="http://svnbook.red-bean.com/en/1.1/ch05s02.html#svn-ch-5-sect-2.1">Chapter
+5</a> of the book.  The basic idea is to make the "live site" just an
+ordinary working copy, and then have your post-commit hook script run
+'svn update' on it.</p>
+
+<p>In practice, there are a couple of things to watch out for.  The
+server program performing the commit (svnserve or apache) is the same
+program that will be running the post-commit hook script.  That means
+that this program must have proper permissions to update the working
+copy.  In other words, the working copy must be owned by the same user
+that svnserve or apache runs as -- or at least the working copy must
+have appropriate permissions set.</p>
+
+<p>If the server needs to update a working copy that it doesn't own
+(for example, user joe's ~/public_html/ area), one technique is create
+a +s binary program to run the update, since Unix won't allow scripts
+to run +s.  Compile a tiny C program:</p>
+
+<pre>
+#include &lt;stdlib.h&gt;
+int main(int argc, const char *argv[])
+{
+  system("/usr/local/bin/svn update /home/joe/public_html/");
+}
+</pre>
+
+<p>... and then <tt>chmod +s</tt> the binary, and make sure it's owned
+by user 'joe'.  Then in the post-commit hook, add a line to run the
+binary.</p>
+
+<p>Also, you'll probably want to prevent apache from exporting the
+.svn/ directories in the live working copy.  Add this to your
+<tt>httpd.conf</tt>:</p>
+
+<pre>
+# Disallow browsing of Subversion working copy administrative dirs.
+&lt;DirectoryMatch "^/.*/\.svn/"&gt;
+    Order deny,allow
+    Deny from all
+&lt;/DirectoryMatch&gt;
+</pre>
+
+<![CDATA[=========================================================]]>
+
+<h3><a name="single-file-checkout" title="#single-file-checkout"
+    >How do I check out a single file?</a></h3>
+
+<p>Subversion does not support checkout of a single file, it only
+supports checkout of directory structures.</p>
+
+<p>However, you can use 'svn cat' to export a single file.  This will
+retrieve the file's contents, it just won't create a versioned working
+copy.</p>
+
+<![CDATA[=========================================================]]>
+
+<h3><a name="wc-change-detection">How do I detect adds, deletes,
+copies and renames in a working copy after they've already
+happened?</a></h3>
+
+<p>You don't.  It's a bad idea to try.</p>
+
+<p>The basic design of the working copy has two rules: (1) edit files
+as you please, and (2) use a Subversion cilent to make any
+tree-changes (add, delete, move, copy).  If these rules are followed,
+the client can sucessfully manage the working copy.  If renames or
+other rearrangements happen outside of Subversion, then the UI has
+been violated and the working copy might be broken.  The client cannot
+guess what happened.</p>
+
+<p>People sometimes run into this problem because they want to make
+version control "transparent".  They trick users into using a working
+copy, then have a script run later that tries to guess what happened
+and run appropriate client commands.  Unfortunately, this technique
+only goes a short distance.  'svn status' will show missing items and
+unversioned items, which the script can then automatically 'svn rm' or
+'svn add'.  But if a move or copy has happened, you're out of luck.
+Even if the script has a foolproof way of detecting these things, 'svn
+mv' and 'svn cp' can't operate after the action has already
+occurred.</p>
+
+<p>In summary: a working copy is wholly under Subversion's control,
+and Subversion wasn't designed to be transparent.  If you're looking
+for transparency, try setting up an apache server and using the
+"SVNAutoversioning" feature described in appendix C of the book.  This
+will allow users to mount the repository as a network disk, and any
+changes made to the volume cause automatic commits on the server.</p>
+
 
 <![CDATA[=========================================================]]>
 
@@ -1809,7 +1915,7 @@ following command:
 </p>
 <pre>
   $ ldd /usr/local/apache2/bin/httpd | fgrep libdb
-      libdb-4.2.so => /usr/local/BerkeleyDB.4.2/lib/libdb-4.2.so
+      libdb-4.2.so =&gt; /usr/local/BerkeleyDB.4.2/lib/libdb-4.2.so
 </pre>
 
 <p>And then you can simply build Subversion with no mention of BDB.
@@ -1832,7 +1938,7 @@ library with the following:
 </p>
 <pre>
   $ ldd /usr/local/bin/svn | fgrep libdb
-      libdb-4.2.so => /usr/local/BerkeleyDB.4.2/lib/libdb-4.2.so
+      libdb-4.2.so =&gt; /usr/local/BerkeleyDB.4.2/lib/libdb-4.2.so
 </pre>
 
 <p>

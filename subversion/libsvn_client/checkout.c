@@ -47,6 +47,7 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
                                const svn_opt_revision_t *peg_revision,
                                const svn_opt_revision_t *revision,
                                svn_boolean_t recurse,
+                               svn_boolean_t ignore_externals,
                                svn_boolean_t *timestamp_sleep,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool)
@@ -105,7 +106,8 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
           
           /* Have update fix the incompleteness. */
           err = svn_client__update_internal (result_rev, path, revision,
-                                             recurse, use_sleep, ctx, pool);
+                                             recurse, ignore_externals,
+                                             use_sleep, ctx, pool);
         }
       else if (kind == svn_node_dir)
         {
@@ -119,7 +121,8 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
               /* Make the unversioned directory into a versioned one. */
               SVN_ERR (svn_wc_ensure_adm (path, uuid, URL, revnum, pool));
               err = svn_client__update_internal (result_rev, path, revision,
-                                                 recurse, use_sleep, ctx, pool);
+                                                 recurse, ignore_externals,
+                                                 use_sleep, ctx, pool);
               goto done;
             }
 
@@ -135,7 +138,8 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
           if (entry->url && (strcmp (entry->url, URL) == 0))
             {
               err = svn_client__update_internal (result_rev, path, revision,
-                                                 recurse, use_sleep, ctx, pool);
+                                                 recurse, ignore_externals,
+                                                 use_sleep, ctx, pool);
             }
           else
             {
@@ -191,11 +195,13 @@ svn_client_checkout2 (svn_revnum_t *result_rev,
                       const svn_opt_revision_t *peg_revision,
                       const svn_opt_revision_t *revision,
                       svn_boolean_t recurse,
+                      svn_boolean_t ignore_externals,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
   return svn_client__checkout_internal (result_rev, URL, path, peg_revision,
-                                        revision, recurse, NULL, ctx, pool);
+                                        revision, recurse, ignore_externals,
+                                        NULL, ctx, pool);
 }
 
 svn_error_t *
@@ -212,5 +218,6 @@ svn_client_checkout (svn_revnum_t *result_rev,
   peg_revision.kind = svn_opt_revision_unspecified;
   
   return svn_client__checkout_internal (result_rev, URL, path, &peg_revision,
-                                        revision, recurse, NULL, ctx, pool);
+                                        revision, recurse, FALSE, NULL, 
+                                        ctx, pool);
 }

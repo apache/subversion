@@ -479,7 +479,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# Make sure that the log message contains some text."
       APR_EOL_STR
-      "SVNLOOK=" SVN_BINARY_DIR "/svnlook"
+      "SVNLOOK=" SVN_BINDIR "/svnlook"
       APR_EOL_STR
       "$SVNLOOK log -t \"$TXN\" \"$REPOS\" | \\"
       APR_EOL_STR
@@ -726,7 +726,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       "# (Maybe this script could send email to the to the lock owner?)"
       APR_EOL_STR
       APR_EOL_STR
-      "SVNLOOK=" SVN_BINARY_DIR "/svnlook"
+      "SVNLOOK=" SVN_BINDIR "/svnlook"
       APR_EOL_STR
       "$SVNLOOK lock \"$REPOS\" \"$PATH\" | \\"
       APR_EOL_STR
@@ -834,7 +834,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       "# (Maybe this script could send email to the to the lock owner?)"
       APR_EOL_STR
       APR_EOL_STR
-      "SVNLOOK=" SVN_BINARY_DIR "/svnlook"
+      "SVNLOOK=" SVN_BINDIR "/svnlook"
       APR_EOL_STR
       "OWNER_VALUE=`svnlook lock \"$REPOS\" \"$PATH\" | \\"
       APR_EOL_STR

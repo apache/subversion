@@ -7,8 +7,8 @@
 # $LastChangedBy$
 # $LastChangedRevision$
 #
-# USAGE: mailer.py commit     REPOS-DIR REVISION [CONFIG-FILE]
-#        mailer.py propchange REPOS-DIR REVISION AUTHOR PROPNAME [CONFIG-FILE]
+# USAGE: mailer.py commit     REPOS REVISION [CONFIG-FILE]
+#        mailer.py propchange REPOS REVISION AUTHOR PROPNAME [CONFIG-FILE]
 #
 #   Using CONFIG-FILE, deliver an email describing the changes between
 #   REV and REV-1 for the repository REPOS.
@@ -881,11 +881,11 @@ except NameError:
 if __name__ == '__main__':
   def usage():
     sys.stderr.write(
-"""USAGE: %s commit     REPOS-DIR REVISION [CONFIG-FILE]
-       %s propchange REPOS-DIR REVISION AUTHOR PROPNAME ACTION [CONFIG-FILE]
+"""USAGE: %s commit     REPOS REVISION [CONFIG-FILE]
+       %s propchange REPOS REVISION AUTHOR PROPNAME ACTION [CONFIG-FILE]
 
 If no CONFIG-FILE is provided, the script will first search for a mailer.conf
-file in REPOS-DIR/conf/.  Failing that, it will search the directory in which
+file in REPOS/conf/.  Failing that, it will search the directory in which
 the script itself resides.
 
 Additionally, CONFIG-FILE may be '-' to indicate that configuration options

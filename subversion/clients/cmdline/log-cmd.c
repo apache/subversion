@@ -73,29 +73,6 @@ num_lines (const char *msg)
   return count;
 }
 
-static svn_error_t *
-error_checked_fputs(const char *string, FILE* stream)
-{
-  /* This function is equal to svn_cmdline_fputs() minus
-     the utf8->local encoding translation */
-
-  /* On POSIX systems, errno will be set on an error in fputs, but this might
-     not be the case on other platforms.  We reset errno and only
-     use it if it was set by the below fputs call.  Else, we just return
-     a generic error. */
-  errno = 0;
-
-  if (fputs (string, stream) == EOF)
-    {
-      if (errno)
-        return svn_error_wrap_apr (errno, _("Write error"));
-      else
-        return svn_error_create (SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Baton for log_message_receiver() and log_message_receiver_xml(). */
 struct log_receiver_baton
 {
@@ -435,7 +412,7 @@ log_message_receiver_xml (void *baton,
   /* </logentry> */
   svn_xml_make_close_tag (&sb, pool, "logentry");
 
-  SVN_ERR (error_checked_fputs (sb->data, stdout));
+  SVN_ERR (svn_cl__error_checked_fputs (sb->data, stdout));
 
   return SVN_NO_ERROR;
 }
@@ -538,7 +515,7 @@ svn_cl__log (apr_getopt_t *os,
           /* "<log>" */
           svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "log", NULL);
 
-          SVN_ERR (error_checked_fputs (sb->data, stdout));
+          SVN_ERR (svn_cl__error_checked_fputs (sb->data, stdout));
         }
       
       SVN_ERR (svn_client_log2 (targets,
@@ -559,7 +536,7 @@ svn_cl__log (apr_getopt_t *os,
           /* "</log>" */
           svn_xml_make_close_tag (&sb, pool, "log");
 
-          SVN_ERR (error_checked_fputs (sb->data, stdout));
+          SVN_ERR (svn_cl__error_checked_fputs (sb->data, stdout));
         }
     }
   else  /* default output format */

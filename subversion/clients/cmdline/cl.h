@@ -56,6 +56,7 @@ typedef enum {
   svn_cl__force_log_opt,
   svn_cl__force_opt,
   svn_cl__ignore_ancestry_opt,
+  svn_cl__ignore_externals_opt,
   svn_cl__incremental_opt,
   svn_cl__limit_opt,
   svn_cl__merge_cmd_opt,
@@ -126,6 +127,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_diff_deleted; /* do not show diffs for deleted files */
   svn_boolean_t notice_ancestry; /* notice ancestry for diff-y operations */
   svn_boolean_t ignore_ancestry; /* ignore ancestry for merge-y operations */
+  svn_boolean_t ignore_externals;/* ignore externals definitions */
   svn_boolean_t stop_on_copy;    /* don't cross copies during processing */
   svn_boolean_t dry_run;         /* try operation but make no changes */
   svn_boolean_t revprop;         /* operate on a revision property */
@@ -437,6 +439,10 @@ svn_error_t *svn_cl__cleanup_log_msg (void *log_msg_baton,
 
 /* Add a message about --force if appropriate */
 svn_error_t *svn_cl__may_need_force (svn_error_t *err);
+
+/* Write the STRING to the stdio STREAM, returning an error if it fails. */
+svn_error_t *svn_cl__error_checked_fputs (const char *string,
+                                          FILE* stream);
 
 
 #ifdef __cplusplus

@@ -54,6 +54,7 @@ svn_cl__update (apr_getopt_t *os,
   SVN_ERR (svn_client_update2 (NULL, targets,
                                &(opt_state->start_revision),
                                opt_state->nonrecursive ? FALSE : TRUE,
+                               opt_state->ignore_externals,
                                ctx, pool));
 
   return SVN_NO_ERROR;

@@ -309,7 +309,8 @@ svn_error_t * svn_client__wc_delete (const char *path,
 /*** Checkout and update ***/
 
 /* Update a working copy PATH to REVISION, and (if not NULL) set
-   RESULT_REV to the update revision.  If TIMESTAMP_SLEEP is NULL this
+   RESULT_REV to the update revision.  RECURSE if so commanded;
+   likewise, possibly IGNORE_EXTERNALS.  If TIMESTAMP_SLEEP is NULL this
    function will sleep before returning to ensure timestamp integrity.
    If TIMESTAMP_SLEEP is not NULL then the function will not sleep but
    will set *TIMESTAMP_SLEEP to TRUE if a sleep is required, and will
@@ -319,17 +320,19 @@ svn_client__update_internal (svn_revnum_t *result_rev,
                              const char *path,
                              const svn_opt_revision_t *revision,
                              svn_boolean_t recurse,
+                             svn_boolean_t ignore_externals,
                              svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
 /* Checkout into PATH a working copy of URL at REVISION, and (if not
-   NULL) set RESULT_REV to the checked out revision.  If
-   TIMESTAMP_SLEEP is NULL this function will sleep before returning
-   to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not NULL then
-   the function will not sleep but will set *TIMESTAMP_SLEEP to TRUE
-   if a sleep is required, and will not change *TIMESTAMP_SLEEP if no
-   sleep is required. */
+   NULL) set RESULT_REV to the checked out revision.  RECURSE if so
+   commanded; likewise, possibly IGNORE_EXTERNALS.  If TIMESTAMP_SLEEP
+   is NULL this function will sleep before returning to ensure
+   timestamp integrity.  If TIMESTAMP_SLEEP is not NULL then the
+   function will not sleep but will set *TIMESTAMP_SLEEP to TRUE if a
+   sleep is required, and will not change *TIMESTAMP_SLEEP if no sleep
+   is required. */
 svn_error_t *
 svn_client__checkout_internal (svn_revnum_t *result_rev,
                                const char *URL,
@@ -337,6 +340,7 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
                                const svn_opt_revision_t *peg_revision,
                                const svn_opt_revision_t *revision,
                                svn_boolean_t recurse,
+                               svn_boolean_t ignore_externals,
                                svn_boolean_t *timestamp_sleep,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool);

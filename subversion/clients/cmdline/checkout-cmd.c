@@ -148,6 +148,7 @@ svn_cl__checkout (apr_getopt_t *os,
                                      &peg_revision,
                                      &(opt_state->start_revision),
                                      opt_state->nonrecursive ? FALSE : TRUE,
+                                     opt_state->ignore_externals,
                                      ctx, subpool));
       svn_pool_clear (subpool);
     }

@@ -147,6 +147,8 @@ def main():
 
     date = time.strftime("día %d del mes %m del %Y", time.localtime())
     print "Estado de la traducción, a %s\n" % date
+    print "%d cambios realizados hasta la fecha en el repositorio.\n" % (
+        author_statistics.COMMIT_NUMBER)
 
     show_commiter_info(commiters)
 
