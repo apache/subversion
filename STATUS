@@ -46,3 +46,10 @@ Candidate changes:
       Regression and annoying for people using non-ASCII chars in log messages.
     Votes:
       +1: lundblad
+
+  * r11181
+    Fix encoding regression since 1.0.x
+    Justification:
+      It's a regression.
+    Votes:
+      +1: dionisos
