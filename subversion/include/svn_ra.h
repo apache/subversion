@@ -237,7 +237,7 @@ typedef struct svn_ra_reporter2_t
  */
 typedef struct svn_ra_reporter_t
 {
-  /** Similar to the correspoinding field in @c svn_ra_reporter2_t, but
+  /** Similar to the corresponding field in @c svn_ra_reporter2_t, but
    * with @a lock_token always set to NULL. */
   svn_error_t *(*set_path) (void *report_baton,
                             const char *path,
@@ -245,12 +245,12 @@ typedef struct svn_ra_reporter_t
                             svn_boolean_t start_empty,
                             apr_pool_t *pool);
 
-  /** Same as the correspondning field in @c svn_ra_reporter2_t. */
+  /** Same as the corresponding field in @c svn_ra_reporter2_t. */
   svn_error_t *(*delete_path) (void *report_baton,
                                const char *path,
                                apr_pool_t *pool);
     
-  /** Similar to the correspoinding field in @c svn_ra_reporter2_t, but
+  /** Similar to the corresponding field in @c svn_ra_reporter2_t, but
    * with @a lock_token always set to NULL. */
   svn_error_t *(*link_path) (void *report_baton,
                              const char *path,
@@ -259,11 +259,11 @@ typedef struct svn_ra_reporter_t
                              svn_boolean_t start_empty,
                              apr_pool_t *pool);
 
-  /** Same as the correspondning field in @c svn_ra_reporter2_t. */
+  /** Same as the corresponding field in @c svn_ra_reporter2_t. */
   svn_error_t *(*finish_report) (void *report_baton,
                                  apr_pool_t *pool);
 
-  /** Same as the correspondning field in @c svn_ra_reporter2_t. */
+  /** Same as the corresponding field in @c svn_ra_reporter2_t. */
   svn_error_t *(*abort_report) (void *report_baton,
                                 apr_pool_t *pool);
 } svn_ra_reporter_t;

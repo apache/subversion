@@ -162,11 +162,11 @@ static svn_error_t *compat_delete_path (void *report_baton,
 }
 
 static svn_error_t *compat_link_path (void *report_baton,
-                               const char *path,
-                               const char *url,
-                               svn_revnum_t revision,
-                               svn_boolean_t start_empty,
-                               apr_pool_t *pool)
+                                      const char *path,
+                                      const char *url,
+                                      svn_revnum_t revision,
+                                      svn_boolean_t start_empty,
+                                      apr_pool_t *pool)
 {
   struct compat_report_baton *crb = report_baton;
 
