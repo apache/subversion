@@ -1144,7 +1144,7 @@ protect for the regular expression.
 This sample configuration file was used to load on a Unix box a number
 of Zip files containing Windows files with @samp{CRLF} end of lines.
 
-@verbatim
+@example
    \.doc$              break   svn:mime-type   application/msword
    \.ds(p|w)$          break   svn:eol-style   CRLF
    \.ilk$              break   svn:eol-style   CRLF
@@ -1153,7 +1153,7 @@ of Zip files containing Windows files with @samp{CRLF} end of lines.
    \.exe$              break   svn:mime-type   application/octet-stream
    dos2unix-eol\.sh$   break
    .*                  break   svn:eol-style   native
-@end verbatim
+@end example
 
 In this example, all the files should be converted to the native end of
 line style, which the last line of the configuration handles.  The
