@@ -40,6 +40,7 @@
     svn_fs_txn_t **,
     void **,
     svn_fs_id_t **,
+    const char **,
     svn_stream_t **
 };
 
@@ -58,12 +59,6 @@
 %apply (const char *PTR, apr_size_t LEN) {
     (const char *data, apr_size_t len)
 }
-
-/* -----------------------------------------------------------------------
-   all uses of "const char **" are returning strings
-*/
-
-%apply const char **OUTPUT { const char ** };
 
 /* -----------------------------------------------------------------------
    list_transaction's "apr_array_header_t **" is returning a list of strings.
