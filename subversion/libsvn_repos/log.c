@@ -209,7 +209,7 @@ svn_repos_get_logs3 (svn_repos_t *repos,
                      const apr_array_header_t *paths,
                      svn_revnum_t start,
                      svn_revnum_t end,
-                     int limit,
+                     unsigned int limit,
                      svn_boolean_t discover_changed_paths,
                      svn_boolean_t strict_node_history,
                      svn_repos_authz_func_t authz_read_func,
@@ -222,7 +222,7 @@ svn_repos_get_logs3 (svn_repos_t *repos,
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_fs_t *fs = repos->fs;
   apr_array_header_t *revs = NULL;
-  int count = 0;
+  unsigned int count = 0;
 
   SVN_ERR (svn_fs_youngest_rev (&head, fs, pool));
 

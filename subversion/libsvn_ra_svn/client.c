@@ -1005,7 +1005,7 @@ static svn_error_t *ra_svn_diff(void *baton,
 
 static svn_error_t *ra_svn_log2(void *baton, const apr_array_header_t *paths,
                                 svn_revnum_t start, svn_revnum_t end,
-                                int limit,
+                                unsigned int limit,
                                 svn_boolean_t discover_changed_paths,
                                 svn_boolean_t strict_node_history,
                                 svn_log_message_receiver_t receiver,
