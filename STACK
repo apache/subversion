@@ -26,8 +26,6 @@ Ben todo:
 
 Karl todo:
 
-   - Fix bug whereby subdir S's parent entry for S has an ancestor
-     field.  Only S's own entry in S/SVN/entries should have that.
    - Propagate changes down into libsvn_client.  Currently, the client
      usually takes a `targets' list and iterates over it, invoking
      some libsvn_client routine each time.  There are cases where the
