@@ -265,6 +265,9 @@ substitute_and_verify (const char *test_name,
              "translation of %s should fail, but not with error \"%s\"",
              src_fname, buf);
         }
+      else
+        return SVN_NO_ERROR;
+
     }
   else if (err)
     return err;
@@ -337,7 +340,7 @@ substitute_and_verify (const char *test_name,
           expect[51 - 1] =
             apr_pstrcat (pool, "Line 51: ",
                          "same, but with embedded keyword ",
-                         "$$$$$$$$Date: ", date, "$$$$$$$$$$$.",
+                         "$$$$$$$$Date: ", date, " $$$$$$$$$$.",
                          NULL);
           expect[52 - 1] =
             apr_pstrcat (pool, "Line 52: ",
@@ -375,8 +378,8 @@ substitute_and_verify (const char *test_name,
                          NULL);
           expect[37 - 1] =
             apr_pstrcat (pool, "Line 37: ",
-                         "Valid $LastChangedBy$, started expanded.",
-                         NULL);
+                         "Valid $LastChangedBy: ", author, 
+                         " $, started expanded.", NULL);
           expect[38 - 1] =
             apr_pstrcat (pool, "Line 38: ",
                          "Valid $Author: ", author, " $, started expanded.",

@@ -155,10 +155,11 @@ svn_error_t *svn_io_append_file (svn_stringbuf_t *src,
    are detected only if they are no longer than SVN_IO_MAX_KEYWORD_LEN
    bytes, including the delimiters and the keyword itself.
 
-   Implication of above:
+   Implication of above: If EOL_STR, REVISION, DATE, AUTHOR, and URL
+   are all NULL, just do a byte-for-byte copy.  
 
-   If EOL_STR, REVISION, DATE, AUTHOR, and URL are all NULL, just do a
-   byte-for-byte copy.  */
+   Note that if anything goes wrong during the copy, this function
+   will attempt to delete DST (if it exists). */
 svn_error_t *svn_io_copy_and_translate (const char *src,
                                         const char *dst,
                                         const char *eol_str,
