@@ -29,10 +29,10 @@
 #include "ra_dav.h"
 
 
-static const struct ne_xml_elm options_elements[] =
+static const svn_ra_dav__xml_elm_t options_elements[] =
 {
   { "DAV:", "activity-collection-set", ELEM_activity_coll_set, 0 },
-  { "DAV:", "href", NE_ELM_href, NE_XML_CDATA },
+  { "DAV:", "href", ELEM_href, SVN_RA_DAV__XML_CDATA },
   { "DAV:", "options-response", ELEM_options_response, 0 },
 
   { NULL }
@@ -46,54 +46,54 @@ typedef struct {
 
 
 
-static int validate_element(void *userdata, ne_xml_elmid parent,
-                            ne_xml_elmid child)
+static int validate_element(void *userdata, svn_ra_dav__xml_elmid parent,
+                            svn_ra_dav__xml_elmid child)
 {
   switch (parent)
     {
-    case NE_ELM_root:
+    case ELEM_root:
       if (child == ELEM_options_response)
-        return NE_XML_VALID;
+        return SVN_RA_DAV__XML_VALID;
       else
-        return NE_XML_INVALID;
+        return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_options_response:
       if (child == ELEM_activity_coll_set)
-        return NE_XML_VALID;
+        return SVN_RA_DAV__XML_VALID;
       else
-        return NE_XML_DECLINE; /* not concerned with other response */
+        return SVN_RA_DAV__XML_DECLINE; /* not concerned with other response */
 
     case ELEM_activity_coll_set:
-      if (child == NE_ELM_href)
-        return NE_XML_VALID;
+      if (child == ELEM_href)
+        return SVN_RA_DAV__XML_VALID;
       else
-        return NE_XML_DECLINE; /* not concerned with unknown crud */
+        return SVN_RA_DAV__XML_DECLINE; /* not concerned with unknown crud */
 
     default:
-      return NE_XML_DECLINE;
+      return SVN_RA_DAV__XML_DECLINE;
     }
 
   /* NOTREACHED */
 }
 
-static int start_element(void *userdata, const struct ne_xml_elm *elm,
+static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
                          const char **atts)
 {
   /* nothing to do here */
-  return 0;
+  return SVN_RA_DAV__XML_VALID;
 }
 
-static int end_element(void *userdata, const struct ne_xml_elm *elm,
+static int end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
                        const char *cdata)
 {
   options_ctx_t *oc = userdata;
 
-  if (elm->id == NE_ELM_href)
+  if (elm->id == ELEM_href)
     {
       oc->activity_coll = svn_string_create(cdata, oc->pool);
     }
 
-  return 0;
+  return SVN_RA_DAV__XML_VALID;
 }
 
 svn_error_t * svn_ra_dav__get_activity_collection(
