@@ -3,6 +3,7 @@ Version 0.10.1
  User-visible changes:
  * New --targets command-line option for some commands.
  * conflicts now create conflict-markers in files, and 3 fulltext backups.
+ * conflicts on binary files create 2 fulltext backups.
  * new 'svn resolve' command removes conflicted state (by removing backups)
   
  Developer-visible changes:

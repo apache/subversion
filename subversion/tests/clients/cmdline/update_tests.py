@@ -41,15 +41,13 @@ def detect_extra_files(node, extra_files):
 
   # Baton is of the form:
   #
-  #     [ WC_DIR,
-  #       [pattern, contents],
-  #       [pattern, contents], ... ]
-
-  wc_dir = extra_files.pop(0)
+  #       [ [wc_dir, pattern, contents],
+  #         [wc_dir, pattern, contents], ... ]
 
   for pair in extra_files:
-    pattern = pair[0]
-    contents = pair[1]
+    wc_dir = pair[0]
+    pattern = pair[1]
+    contents = pair[2]
     match_obj = re.match(pattern, node.name)
     if match_obj:
       fp = open(os.path.join (wc_dir, node.path))
@@ -140,21 +138,21 @@ def update_binary_file(sbox):
   theta_contents_local = theta_contents + "extra theta text"
 
   # Create expected output tree for an update of wc_backup.
-  output_list = [ [theta_backup_path, None, {}, {'status' : 'U '}] ]
+  output_list = [ [theta_backup_path, None, {}, {'status' : 'C '}] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Create expected disk tree for the update -- 
   #    look!  binary contents, and a binary property!
   my_greek_tree = svntest.main.copy_greek_tree()
   my_greek_tree.append(['A/theta',
-                        theta_contents_r3,
+                        theta_contents_local,
                         {'svn:mime-type' : 'application/octet-stream'}, {}])
   expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
 
   # Create expected status tree for the update.
   status_list = svntest.actions.get_virginal_status_list(wc_backup, '3')
   status_list.append([theta_backup_path, None, {},
-                      {'status' : '__',
+                      {'status' : 'C_',
                        'wc_rev' : '3',
                        'repos_rev' : '3'}])  
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
@@ -164,7 +162,8 @@ def update_binary_file(sbox):
   # to an .orig file.
   #  This is a list of lists, of the form [ WC_DIR,
   #                                         [pattern, contents], ...]
-  extra_files = [wc_backup, ['theta.*\.orig', theta_contents_local]]
+  extra_files = [[wc_backup, 'theta.*\.r2', theta_contents],
+                 [wc_backup, 'theta.*\.r3', theta_contents_r3]]
   
   # Do the update and check the results in three ways.  Pass our
   # custom singleton handler to verify the .orig file; this handler

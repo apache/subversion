@@ -936,6 +936,7 @@ svn_error_t *svn_wc_diff (svn_stringbuf_t *anchor,
    differences between LEFT and RIGHT into MERGE_TARGET.  (It may help
    to know that LEFT, RIGHT, and MERGE_TARGET correspond to "OLDER",
    "YOURS", and "MINE", respectively, in the diff3 documentation.)
+   Use POOL for any temporary allocation. 
 
    This function assumes that LEFT and RIGHT are in repository-normal
    form (linefeeds, with keywords contracted); if necessary,
@@ -963,7 +964,15 @@ svn_error_t *svn_wc_diff (svn_stringbuf_t *anchor,
 
      * Return the error SVN_ERR_WC_CONFLICT.
 
-   Use POOL for any temporary allocation. 
+   Binary case:
+
+    If all three files are binary files, then no merging is attempted.
+    Instead, a variant of the conflict procedure is carried out: the
+    working MERGE_TARGET is untouched, and copies of LEFT and RIGHT
+    are created next to it using LEFT_LABEL and RIGHT_LABEL.
+    MERGE_TARGET's entry is marked as "conflicted", and begins
+    tracking the two backup files.  SVN_ERR_WC_CONFLICT is returned.
+
 */
 svn_error_t *svn_wc_merge (const char *parent,
                            const char *left,
