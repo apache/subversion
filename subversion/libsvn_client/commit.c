@@ -55,7 +55,6 @@
 
 #include <assert.h>
 #include <apr_strings.h>
-#include <apr_uuid.h>
 #include "svn_wc.h"
 #include "svn_delta.h"
 #include "svn_client.h"
@@ -98,19 +97,11 @@ svn_client_commit (svn_string_t *path,
 {
   svn_error_t *err;
   apr_status_t apr_err;
-  svn_string_t *tok;
   apr_file_t *dst = NULL; /* old habits die hard */
   svn_delta_edit_fns_t *editor;
   void *edit_baton;
-  apr_uuid_t uuid;
-  char uuid_buf[APR_UUID_FORMATTED_LENGTH + 1];
 
-  /* Step 1: make a unique ID for this commit. */
-  apr_get_uuid (&uuid);
-  apr_format_uuid (uuid_buf, &uuid);
-  tok = svn_string_create (uuid_buf, pool);
-
-  /* Step 2: look for local mods and send 'em out. */
+  /* Step 1: look for local mods and send 'em out. */
   apr_err = apr_open (&dst, xml_dst->data,
                       (APR_WRITE | APR_CREATE),
                       APR_OS_DEFAULT,
@@ -141,8 +132,8 @@ svn_client_commit (svn_string_t *path,
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "error closing %s", xml_dst->data);
   
-  /* Step 3: tell the working copy the commit succeeded. */
-  err = svn_wc_close_commit (path, tok, version, pool);
+  /* Step 2: tell the working copy the commit succeeded. */
+  err = svn_wc_close_commit (path, version, pool);
   if (err)
     return err;
 

@@ -103,11 +103,9 @@ svn_error_t *svn_wc_add_file (svn_string_t *file,
 
 /*** Commits. ***/
 
-/* Update working copy PATH with NEW_VERSION after the commit
-   identified by TOK has succeeded. */
+/* Update working copy PATH with NEW_VERSION after a commit has succeeded. */
 svn_error_t *
 svn_wc_close_commit (svn_string_t *path,
-                     svn_string_t *tok,
                      svn_vernum_t new_version,
                      apr_pool_t *pool);
 
