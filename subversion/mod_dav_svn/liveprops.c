@@ -148,6 +148,13 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
         const char *datestring;
         apr_time_t timeval;
         enum dav_svn_time_format format;
+
+        /* ### for now, our global VCC has no such property. */
+        if (resource->type == DAV_RESOURCE_TYPE_PRIVATE
+            && resource->info->restype == DAV_SVN_RESTYPE_VCC)
+          {
+            return DAV_PROP_INSERT_NOTSUPP;
+          }
        
         if (propid == DAV_PROPID_creationdate)
           {
@@ -174,6 +181,13 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       {        
         svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
         svn_string_t *last_author = NULL;
+
+        /* ### for now, our global VCC has no such property. */
+        if (resource->type == DAV_RESOURCE_TYPE_PRIVATE
+            && resource->info->restype == DAV_SVN_RESTYPE_VCC)
+          {
+            return DAV_PROP_INSERT_NOTSUPP;
+          }
 
         if (resource->baselined && resource->type == DAV_RESOURCE_TYPE_VERSION)
           {
@@ -255,6 +269,12 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
         if (resource->baselined && resource->type == DAV_RESOURCE_TYPE_VERSION)
           return DAV_PROP_INSERT_NOTSUPP;
 
+        if (resource->type == DAV_RESOURCE_TYPE_PRIVATE
+            && resource->info->restype == DAV_SVN_RESTYPE_VCC)
+          {
+            return DAV_PROP_INSERT_NOTSUPP;
+          }
+
         serr = svn_fs_node_prop (&pval, resource->info->root.root,
                                  resource->info->repos_path,
                                  SVN_PROP_MIME_TYPE, p);
@@ -292,6 +312,12 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       }
 
     case DAV_PROPID_getetag:
+      if (resource->type == DAV_RESOURCE_TYPE_PRIVATE
+          && resource->info->restype == DAV_SVN_RESTYPE_VCC)
+        {
+          return DAV_PROP_INSERT_NOTSUPP;
+        }
+
       value = dav_svn_getetag(resource, p);
       break;
 
@@ -373,6 +399,12 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       if ((resource->type != DAV_RESOURCE_TYPE_VERSION)
           && (! resource->versioned))
         return DAV_PROP_INSERT_NOTSUPP;
+
+      if (resource->type == DAV_RESOURCE_TYPE_PRIVATE
+          && resource->info->restype == DAV_SVN_RESTYPE_VCC)
+        {
+          return DAV_PROP_INSERT_NOTSUPP;
+        }
 
       if (resource->baselined)
         {
