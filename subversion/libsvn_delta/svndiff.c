@@ -403,31 +403,26 @@ write_handler (void *baton,
       p = decode_int (&val, p, end);
       if (p == NULL)
 	return SVN_NO_ERROR;
-      printf ("got sview_offset\n");
       sview_offset = val;
 
       p = decode_int (&val, p, end);
       if (p == NULL)
 	return SVN_NO_ERROR;
-      printf ("got sview_len\n");
       sview_len = val;
 
       p = decode_int (&val, p, end);
       if (p == NULL)
 	return SVN_NO_ERROR;
-      printf ("got tview_len\n");
       tview_len = val;
 
       p = decode_int (&val, p, end);
       if (p == NULL)
 	return SVN_NO_ERROR;
-      printf ("got inslen\n");
       inslen = val;
 
       p = decode_int (&val, p, end);
       if (p == NULL)
 	return SVN_NO_ERROR;
-      printf ("got newlen\n");
       newlen = val;
 
       /* Check for integer overflow (don't want to let the input trick
@@ -450,7 +445,6 @@ write_handler (void *baton,
          whole window.  */
       if (end - p < inslen + newlen)
 	return SVN_NO_ERROR;
-      printf ("got enough data for a window\n");
 
       /* Count the instructions and make sure they are all valid.  */
       end = p + inslen;
@@ -483,9 +477,6 @@ write_handler (void *baton,
 	= svn_stringbuf_ncreate ((const char *) p, newlen, db->subpool);
       window->pool = db->subpool;
 
-      printf ("soff %d, slen %d, tlen %d, inslen %d, newlen %d\n",
-              sview_offset, sview_len, tview_len, inslen, newlen);
-
       /* Send it off.  */
       err = db->consumer_func (window, db->consumer_baton);
 
@@ -496,13 +487,6 @@ write_handler (void *baton,
       remaining = db->buffer->data + db->buffer->len - (const char *) p;
       db->buffer = 
 	svn_stringbuf_ncreate ((const char *) p, remaining, db->subpool);
-
-      {
-        char *printthing;
-
-        printthing = apr_pstrndup (db->subpool, (const char *)p, remaining);
-        printf ("remaining (len %d) = %s\n", remaining, printthing);
-      }
 
       /* Remember the offset and length of the source view for next time.  */
       db->last_sview_offset = sview_offset;
