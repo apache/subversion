@@ -379,14 +379,24 @@ sync_entry (svn_wc__entry_t *entry, apr_pool_t *pool)
                   NULL);
   
   /* Flags. */
-  apr_hash_set (entry->attributes,
-                SVN_WC__ENTRIES_ATTR_ADD, APR_HASH_KEY_STRING,
-                ((entry->flags & SVN_WC__ENTRY_ADD) ?
-                 svn_string_create ("true", pool) : NULL));
-  apr_hash_set (entry->attributes,
-                SVN_WC__ENTRIES_ATTR_DELETE, APR_HASH_KEY_STRING,
-                ((entry->flags & SVN_WC__ENTRY_DELETE) ?
-                 svn_string_create ("true", pool) : NULL));
+  if (entry->flags & SVN_WC__ENTRY_CLEAR)
+    {
+      apr_hash_set (entry->attributes, SVN_WC__ENTRIES_ATTR_ADD,
+                    APR_HASH_KEY_STRING, NULL);
+      apr_hash_set (entry->attributes, SVN_WC__ENTRIES_ATTR_DELETE,
+                    APR_HASH_KEY_STRING, NULL);
+    }
+  else  /* don't lose any existing flags, but maybe set some new ones */
+    {
+      if (entry->flags & SVN_WC__ENTRY_ADD)
+        apr_hash_set (entry->attributes,
+                      SVN_WC__ENTRIES_ATTR_ADD, APR_HASH_KEY_STRING,
+                      svn_string_create ("true", pool));
+      if (entry->flags & SVN_WC__ENTRY_DELETE)
+        apr_hash_set (entry->attributes,
+                      SVN_WC__ENTRIES_ATTR_DELETE, APR_HASH_KEY_STRING,
+                      svn_string_create ("true", pool));
+    }
   
   /* Timestamp. */
   if (entry->timestamp)

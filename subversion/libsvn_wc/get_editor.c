@@ -446,6 +446,11 @@ delete (svn_string_t *name, void *parent_baton)
 {
   struct dir_baton *parent_dir_baton = parent_baton;
   
+  /* kff todo: this is wrong.  It's not just a matter of removing the
+     entry, you actually have to remove the entity from disk too.  But
+     only if it's not locally modified.  If it is, remove the entry,
+     but leave the thing?  Hmmm. */
+
   return svn_wc__entry_merge_sync (parent_dir_baton->path,
                                    name,
                                    SVN_INVALID_VERNUM,

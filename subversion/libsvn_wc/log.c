@@ -325,7 +325,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                           sname,
                                           atoi (verstr),
                                           svn_file_kind,
-                                          0,
+                                          SVN_WC__ENTRY_CLEAR,
                                           timestamp,
                                           loggy->pool,
                                           NULL);
