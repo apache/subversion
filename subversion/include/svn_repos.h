@@ -31,7 +31,7 @@ extern "C" {
 
 /* ---------------------------------------------------------------*/
 
-/* Making changes to a filesystem, editor-style.  */
+/*** Making changes to a filesystem, editor-style.  */
 
 /* Hook function type for commits.  When a filesystem commit happens,
  * one of these should be invoked on the NEW_REVISION that resulted
@@ -67,6 +67,8 @@ svn_error_t *svn_repos_get_editor (svn_delta_edit_fns_t **editor,
 
 /* ---------------------------------------------------------------*/
 
+/*** Reporting the state of a working copy, for updates. */
+
 
 /* Construct and return a REPORT_BATON to hold context while collecting
    working copy revision state. When the collection of state is completed,
@@ -117,7 +119,11 @@ svn_error_t *svn_repos_finish_report (void *report_baton);
 svn_error_t *svn_repos_abort_report (void *report_baton);
 
 
+/* ---------------------------------------------------------------*/
 
+/*** The magical dir_delta update routines. */
+
+
 /* Compute the differences between directories SOURCE_PATH in
    SOURCE_ROOT and TARGET in TARGET_ROOT, and make calls describing
    those differences on EDITOR, using the provided EDIT_BATON.  Due to
@@ -215,6 +221,31 @@ svn_repos_update (svn_fs_root_t *target_root,
                   const svn_delta_edit_fns_t *editor,
                   void *edit_baton,
                   apr_pool_t *pool);
+
+
+/* ---------------------------------------------------------------*/
+
+/*** Finding particular revisions. */
+
+/* Set *REVISION to the revision number in FS that was youngest at
+   time TIME. */
+svn_error_t *
+svn_repos_dated_revision (svn_revnum_t *revision,
+                          svn_fs_t *fs,
+                          apr_time_t time,
+                          apr_pool_t *pool);
+                          
+
+
+/* ### other queries we can do someday --
+
+     * fetch the last revision created by <user>
+         (once usernames become revision properties!)
+     * fetch the last revision where <path> was modified
+     
+*/
+
+
 
 
 #endif /* SVN_REPOS_H */
