@@ -279,6 +279,10 @@ diff_callbacks =
 
 struct merge_cmd_baton {
   svn_boolean_t force;
+  const char *target;
+  const char *path;
+  const svn_client_revision_t *revision;
+  svn_client_auth_baton_t *auth_baton;
   apr_pool_t *pool;
 };
 
@@ -347,13 +351,20 @@ merge_file_added (const char *mine,
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
   enum svn_node_kind kind;
+  const char *copyfrom_url;
+  const char *child;
 
   SVN_ERR (svn_io_check_path (mine, &kind, subpool));
   switch (kind)
     {
     case svn_node_none:
-      SVN_ERR (svn_io_copy_file (yours, mine, TRUE, subpool));
-      SVN_ERR (svn_client_add (mine, FALSE, NULL, NULL, subpool));      
+      child = svn_path_is_child(merge_b->target, mine, merge_b->pool);
+      assert (child != NULL);
+      copyfrom_url = svn_path_join (merge_b->path, child, merge_b->pool);
+      /* ### FIXME: This will get the file again! */
+      SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, mine,
+                                merge_b->auth_baton, NULL, NULL, NULL, NULL,
+                                merge_b->pool));
       break;
     case svn_node_dir:
       /* ### create a .drej conflict or something someday? */
@@ -365,32 +376,23 @@ merge_file_added (const char *mine,
       {
         /* file already exists, is it under version control? */
         svn_wc_entry_t *entry;
+        svn_error_t *err;
         SVN_ERR (svn_wc_entry (&entry, mine, FALSE, subpool));
-        if (entry)
-          {
-            if (entry->schedule == svn_wc_schedule_delete)
-              {
-                /* If already scheduled for deletion, then carry out
-                   an add, which is really a (R)eplacement.  */
-                SVN_ERR (svn_io_copy_file (yours, mine, TRUE, subpool));
-                SVN_ERR (svn_client_add (mine, FALSE, NULL, NULL, subpool));
-              }
-            else
-              {
-                svn_error_t *err;
-                err = svn_wc_merge (older, yours, mine,
-                                    ".older", ".yours", ".working", /* ###? */
-                                    subpool);
-                if (err && (err->apr_err != SVN_ERR_WC_CONFLICT))
-                  return err;
-              }
-          }
-        else
+
+        /* If it's an unversioned file, don't touch it.  If its scheduled
+           for deletion, then rm removed it from the working copy and the
+           user must have recreated it, don't touch it */
+        if (!entry || entry->schedule == svn_wc_schedule_delete)
           return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, 
                                     subpool,
                                     "Cannot create file '%s' for addition, "
                                     "because an unversioned file by that name "
                                     "already exists.", mine);
+        err = svn_wc_merge (older, yours, mine,
+                            ".older", ".yours", ".working", /* ###? */
+                            subpool);
+        if (err && (err->apr_err != SVN_ERR_WC_CONFLICT))
+          return err;
         break;      
       }
     default:
@@ -443,20 +445,29 @@ merge_dir_added (const char *path,
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
   enum svn_node_kind kind;
   svn_wc_entry_t *entry;
+  const char *copyfrom_url, *child;
+
+  child = svn_path_is_child (merge_b->target, path, subpool);
+  assert (child != NULL);
+  copyfrom_url = svn_path_join (merge_b->path, child, subpool);
 
   SVN_ERR (svn_io_check_path (path, &kind, subpool));
   switch (kind)
     {
     case svn_node_none:
-      SVN_ERR (svn_client_mkdir (NULL, path, NULL, NULL, NULL,
-                                 NULL, NULL, subpool));
+      /* ### FIXME: This will get the directory tree again! */
+      SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, path,
+                                merge_b->auth_baton, NULL, NULL, NULL, NULL,
+                                subpool));
       break;
     case svn_node_dir:
-      /* ### should unversioned directories generate 'obstructed update'
-         errors? */
+      /* Adding an unversioned directory doesn't destroy data */
       SVN_ERR (svn_wc_entry (&entry, path, TRUE, subpool));
       if (! entry || (entry && entry->schedule == svn_wc_schedule_delete))
-        SVN_ERR (svn_client_add (path, FALSE, NULL, NULL, subpool));
+        /* ### FIXME: This will get the directory tree again! */
+        SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, path,
+                                  merge_b->auth_baton, NULL, NULL, NULL, NULL,
+                                  subpool));
       break;
     case svn_node_file:
       /* ### create a .drej conflict or something someday? */
@@ -1254,6 +1265,10 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
     {
       struct merge_cmd_baton merge_cmd_baton;
       merge_cmd_baton.force = force;
+      merge_cmd_baton.target = target_wcpath;
+      merge_cmd_baton.path = path2;
+      merge_cmd_baton.revision = revision2;
+      merge_cmd_baton.auth_baton = auth_baton;
       merge_cmd_baton.pool = pool;
 
       SVN_ERR (do_merge (notify_func,
