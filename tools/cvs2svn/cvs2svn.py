@@ -2371,6 +2371,7 @@ def pass5(ctx):
   os.unlink(NODES_DB)
   os.unlink(SYMBOLIC_NAME_ROOTS_DB)
   os.unlink(SYMBOLIC_NAMES_DB)
+  os.unlink(DEFAULT_BRANCHES_DB)
   
   # Remove our other data files
   for suffix in (REVS_SUFFIX, CLEAN_REVS_SUFFIX,
