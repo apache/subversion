@@ -717,7 +717,7 @@ svn_wc_statuses (apr_hash_t *statushash,
       if (wc_format_version == 0)
         return svn_error_createf
           (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-           "svn_wc_statuses: %s is not a working copy directory", path);
+           "svn_wc_statuses: '%s' is not a working copy directory", path);
 
       SVN_ERR (svn_wc_is_wc_root (&is_root, path, adm_access, pool));
       if (! is_root)

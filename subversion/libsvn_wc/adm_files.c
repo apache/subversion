@@ -350,7 +350,7 @@ prop_path_internal (const char **prop_path,
       if (wc_format_version == 0)
         return svn_error_createf
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           "prop_path_internal: %s is not a working copy directory",
+           "prop_path_internal: '%s' is not a working copy directory",
            *prop_path);
 
       if (wc_format_version <= SVN_WC__OLD_PROPNAMES_VERSION)
@@ -697,7 +697,7 @@ svn_wc__open_props (apr_file_t **handle,
   if (wc_format_version == 0)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       "svn_wc__open_props: %s is not a working copy directory", parent_dir);
+       "svn_wc__open_props: '%s' is not a working copy directory", parent_dir);
 
   /* Then examine the flags to know -which- kind of prop file to get. */
 
@@ -774,7 +774,7 @@ svn_wc__close_props (apr_file_t *fp,
   if (wc_format_version == 0)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       "svn_wc__close_props: %s is not a working copy directory", parent_dir);
+       "svn_wc__close_props: '%s' is not a working copy directory", parent_dir);
 
   /* Then examine the flags to know -which- kind of prop file to get. */
 
