@@ -752,6 +752,9 @@ struct edit_baton
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
 
+  /* The configured set of default ignores. */
+  apr_array_header_t *ignores;
+
   /* Externals info harvested during the status run. */
   svn_wc_traversal_info_t *traversal_info;
 
@@ -852,11 +855,10 @@ make_dir_baton (void **dir_baton,
       && (parent_status->entry->kind == svn_node_dir)
       && (eb->descend || (! pb)))
     {
-      apr_array_header_t *ignores;
       svn_wc_adm_access_t *dir_access;
+      apr_array_header_t *ignores = eb->ignores;
       SVN_ERR (svn_wc_adm_retrieve (&dir_access, eb->adm_access, 
                                     d->path, pool));
-      SVN_ERR (svn_wc_get_default_ignores (&ignores, eb->config, pool));
       SVN_ERR (get_dir_status (parent_status->entry, dir_access, NULL, ignores,
                                FALSE, TRUE, TRUE, TRUE, hash_stash, d->statii, 
                                NULL, NULL, eb->traversal_info, pool));
@@ -980,11 +982,8 @@ handle_statii (struct edit_baton *eb,
                svn_boolean_t descend,
                apr_pool_t *pool)
 {
-  apr_array_header_t *ignores;
+  apr_array_header_t *ignores = eb->ignores;
   apr_hash_index_t *hi;
-
-  /* Read the default ignores from the config hash. */
-  SVN_ERR (svn_wc_get_default_ignores (&ignores, eb->config, pool));
 
   /* Loop over all the statuses still in our hash, handling each one. */
   for (hi = apr_hash_first (pool, statii); hi; hi = apr_hash_next (hi))
@@ -1333,7 +1332,7 @@ close_edit (void *edit_baton,
             apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
-  apr_array_header_t *ignores;
+  apr_array_header_t *ignores = eb->ignores;
   
   /* If we get here and the root was not opened as part of the edit,
      we need to transmit statuses for everything.  Otherwise, we
@@ -1343,11 +1342,6 @@ close_edit (void *edit_baton,
 
   /* If we have a target, that's the thing we're sending, otherwise
      we're sending the anchor. */
-
-  /* Read the default ignores list. */
-  /* ### this is stupid.  just do this once, please, and store it in
-     the edit baton. */
-  SVN_ERR (svn_wc_get_default_ignores (&ignores, eb->config, pool));
 
   if (eb->target)
     {
@@ -1447,6 +1441,9 @@ svn_wc_get_status_editor (const svn_delta_editor_t **editor,
   /* The edit baton's status structure maps to PATH, and the editor
      have to be aware of whether that is the anchor or the target. */
   SVN_ERR (svn_wc_status (&(eb->anchor_status), eb->anchor, anchor, pool));
+
+  /* Get the set of default ignores. */
+  SVN_ERR (svn_wc_get_default_ignores (&(eb->ignores), eb->config, pool));
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
