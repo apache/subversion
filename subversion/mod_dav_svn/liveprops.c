@@ -106,24 +106,32 @@ static const dav_liveprop_group dav_svn_liveprop_group =
     &dav_svn_hooks_liveprop
 };
 
-/* Return the revision property PROPNAME's value in PROPVAL for
-   RESOURCE in the revision COMMITTED_REV after verifying that the
-   path is readable.  If the property if inaccessible, SVN_NO_ERROR is
-   returned and *PROPVAL is NULL.
+/* Set *PROPVAL to the value for the revision property PROPNAME on
+   COMMITTED_REV, in the repository identified by RESOURCE, if
+   RESOURCE's path is readable.  If it is not readable, set *PROPVAL
+   to NULL and return SVN_NO_ERROR.  Use POOL for temporary
+   allocations and the allocation of *PROPVAL.
 
-   This function must only be used to retrieve properties for which it
-   is sufficient to have read access to a single changed path in the
-   revision to have access to the revprop, e.g.
-   SVN_PROP_REVISION_AUTHOR or SVN_PROP_REVISION_DATE.
+   Note that this function does not check the readability of the
+   revision property, but the readability of a path.  The true
+   readability of a revision property is determined by investigating
+   the readability of all changed paths in the revision.  For certain
+   revision properties (e.g. svn:author and svn:date) to be readable,
+   it is enough if at least one changed path is readable.  When we
+   already have a changed path, we can skip the check for the other
+   changed paths in the revision and save a lot of work.  This means
+   that we will make a mistake when our path is unreadable and another
+   changed path is readable, but we will at least only hide too much
+   and not leak any protected properties.
 
-   The reason for this is that we only check readability of the
-   current path (which is one of the revisions' changed paths per
-   definition).  If the current path is readable, the revprop is also
-   readable.  While it's possible that the property is readable even
-   though the current path is not readable (because another path in
-   the same revision is readable), it's a silly situation worth
-   ignoring to gain the extra performance. */
-static svn_error_t *svn_svn_get_path_revprop(svn_string_t **propval,
+   WARNING: This method of only checking the readability of a path is
+   only valid to get revision properties for which it is enough if at
+   least one changed path is readable.  Using this function to get
+   revision properties for which all changed paths must be readable
+   might leak protected information because we will only test the
+   readability of a single changed path.
+*/
+static svn_error_t *dav_svn_get_path_revprop(svn_string_t **propval,
                                              const dav_resource *resource,
                                              svn_revnum_t committed_rev,
                                              const char *propname,
@@ -268,7 +276,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
             return DAV_PROP_INSERT_NOTSUPP;
           }
 
-        serr = svn_svn_get_path_revprop(&last_author,
+        serr = dav_svn_get_path_revprop(&last_author,
                                         resource,
                                         committed_rev,
                                         SVN_PROP_REVISION_AUTHOR,
@@ -738,7 +746,7 @@ int dav_svn_get_last_modified_time (const char **datestring,
       return 1;
     }
 
-  serr = svn_svn_get_path_revprop(&committed_date,
+  serr = dav_svn_get_path_revprop(&committed_date,
                                   resource,
                                   committed_rev,
                                   SVN_PROP_REVISION_DATE,
