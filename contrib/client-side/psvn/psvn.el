@@ -474,6 +474,7 @@ If ARG then pass the -u argument to `svn status'."
   (define-key svn-status-mode-map "\M-DEL" 'svn-status-unset-all-user-mark)
   (define-key svn-status-mode-map [(backspace)] 'svn-status-unset-user-mark-backwards)
   (define-key svn-status-mode-map [?.] 'svn-status-goto-root-or-return)
+  (define-key svn-status-mode-map [?I] 'svn-status-parse-info)
   (define-key svn-status-mode-map [??] 'svn-status-toggle-hide-unknown)
   (define-key svn-status-mode-map [?_] 'svn-status-toggle-hide-unmodified)
   (define-key svn-status-mode-map [?a] 'svn-status-add-file)
@@ -586,6 +587,7 @@ If ARG then pass the -u argument to `svn status'."
   .     - svn-status-goto-root-or-return
   f     - svn-status-find-file
   o     - svn-status-find-file-other-window
+  I     - svn-status-parse-info
   P l   - svn-status-property-list
   P s   - svn-status-property-set
   P d   - svn-status-property-delete
@@ -746,6 +748,7 @@ Symbolic links to directories count as directories (see `file-directory-p')."
         (overlay)
         (unmodified-count 0)
         (unknown-count 0)
+        (marked-count 0)
         (fname (svn-status-line-info->filename (svn-status-get-line-information)))
         (column (current-column)))
     (delete-region (point-min) (point-max))
@@ -759,6 +762,8 @@ Symbolic links to directories count as directories (see `file-directory-p')."
              (setq unmodified-count (+ unmodified-count 1)))
             (t
              (svn-insert-line-in-status-buffer (car st-info))))
+      (when (svn-status-line-info->has-usermark (car st-info))
+        (setq marked-count (+ marked-count 1)))
       (setq overlay (make-overlay start-pos (point)))
       (overlay-put overlay 'svn-info (car st-info))
       (setq st-info (cdr st-info)))
@@ -778,14 +783,24 @@ Symbolic links to directories count as directories (see `file-directory-p')."
       (insert
        (format "%d Unmodified files are hidden - press _ to toggle hiding\n"
                unmodified-count)))
+    (insert (format "%d files marked\n" marked-count))
     (if fname
         (progn
           (svn-status-goto-file-name fname)
           (goto-char (+ column (point-at-bol))))
       (goto-char (+ (next-overlay-change (point-min)) svn-status-default-column)))))
 
-(defun svn-status-parse-info ()
-  (svn-run-svn t t 'parse-info "info" "."))
+(defun svn-status-parse-info (arg)
+  "Parse the svn info output for the base directory.
+Show the repository url after this call in the *svn-status* buffer.
+When called with the prefix argument 0, reset the information to nil.
+This hides the repository information again."
+  (interactive "P")
+  (if (eq arg 0)
+      (setq svn-status-base-info nil)
+    (svn-run-svn nil t 'parse-info "info" ".")
+    (svn-status-parse-info-result))
+  (svn-status-update-buffer))
 
 (defun svn-status-parse-info-result ()
   (let ((url))
@@ -794,8 +809,7 @@ Symbolic links to directories count as directories (see `file-directory-p')."
       (goto-char (point-min))
       (search-forward "Url: ")
       (setq url (buffer-substring-no-properties (point) (point-at-eol))))
-    (setq svn-status-base-info `((url ,url))))
-  (message "%S" (svn-status-base-info->url)))
+    (setq svn-status-base-info `((url ,url)))))
 
 (defun svn-status-base-info->url ()
   (if svn-status-base-info
@@ -989,14 +1003,21 @@ Then move to that line."
     (goto-char (point-min)))
   (other-window 1))
 
-(defun svn-status-show-svn-log ()
-  (interactive)
-  ;(message "show log info for: %S" (svn-status-marked-files))
-  (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
-  (svn-run-svn t t 'log "log" "--targets" svn-status-temp-arg-file)
-  (save-excursion
-    (set-buffer "*svn-process*")
-    (log-view-mode)))
+(defun svn-status-show-svn-log (arg)
+  "Show the svn log file.
+When called with a prefix argument add the following command switches:
+ prefix argument = 0:    use the -q switch (quiet)
+ other prefix arguments: use the -v switch (verbose)"
+  (interactive "P")
+  (let ((switch (cond ((eq arg 0) "-q")
+                      (arg        "-v")
+                      (t          ""))))
+    ;;(message "show log info for: %S" (svn-status-marked-files))
+    (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
+    (svn-run-svn t t 'log "log" "--targets" svn-status-temp-arg-file switch)
+    (save-excursion
+      (set-buffer "*svn-process*")
+      (log-view-mode))))
 
 (defun svn-status-info ()
   (interactive)
