@@ -337,7 +337,7 @@ svn_string_print (const svn_string_t *str,
   if (str->len >= 0) 
     {
 
-      /*      fwrite (str->data, 1, str->len, stream); */
+      fwrite (str->data, 1, str->len, stream);
 
       if (show_all_fields)
         {
@@ -359,3 +359,4 @@ svn_string_print (const svn_string_t *str,
  * eval: (load-file "../svn-dev.el")
  * end:
  */
+

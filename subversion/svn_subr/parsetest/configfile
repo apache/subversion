@@ -1,17 +1,35 @@
 
 # This is a sample Subversion config file
 
-[foosection]
-giraffe:17
-elephant:green
+# Nicely Formatted Part
 
-[barsection]
-3.14159:pi
-eee:2.71
-ghoti:phish
+[Grades]
+
+Joe : A
+Mary : B-
+Alice : A+
+
+[Doughnuts]
+
+Powdered : $.39
+Chocolate : $1.59
+
+
+# BaDlY FoRMatTed paRT
+
+    [foosection]    
+                giraffe         : 17
+  elephant:   green
+
+    # Yummy section
+
+ [barsection   ]
+  3.14159  :pi
+ eee : 2.71 
+        ghoti   :       phish
 
 # Really important section!
 
-[bazsection]
-airplane:bahamas
+   [    bazsection ]
+airplane:    bahamas   
 
