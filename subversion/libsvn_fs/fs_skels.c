@@ -101,10 +101,10 @@ is_valid_representation_skel (skel_t *skel)
 {
   int len = svn_fs__list_length (skel);
 
-  /* ### TODO:  This is *really* weak validity checking! */
   if ((len >= 2)
       && (! skel->children->is_atom)
-      && (svn_fs__list_length (skel->children) >= 1))
+      && (svn_fs__list_length (skel->children) == 2)
+      && (skel->children->children->next->is_atom))
     {
       if (svn_fs__matches_atom (skel->children->children, "fulltext"))
         {
@@ -348,20 +348,10 @@ svn_fs__parse_representation_skel (svn_fs__representation_t **rep_p,
   else
     rep->kind = svn_fs__rep_kind_delta;
 
-  /* FLAG ... ("mutable" is the only supported one) */
-  {
-    skel_t *flag = header_skel->children->next;
-    while (flag)
-      {
-        if (svn_fs__matches_atom (flag, "mutable"))
-          {
-            rep->is_mutable = TRUE;
-            break;
-          }
-        flag = flag->next;
-      }
-  }
-
+  /* TXN */
+  rep->txn_id = apr_pstrmemdup (pool, header_skel->children->next->data,
+                                header_skel->children->next->len);
+  
   /* KIND-SPECIFIC stuff */
   if (rep->kind == svn_fs__rep_kind_fulltext)
     {
@@ -733,10 +723,12 @@ svn_fs__unparse_representation_skel (skel_t **skel_p,
         svn_fs__prepend (svn_fs__str_atom 
                          (rep->contents.fulltext.string_key, pool), skel);
       
-      /* "mutable" flag (optional) */
-      if (rep->is_mutable)
-        svn_fs__prepend (svn_fs__str_atom ("mutable", pool), header_skel);
-      
+      /* TXN */
+      if (rep->txn_id)
+        svn_fs__prepend (svn_fs__str_atom (rep->txn_id, pool), header_skel);
+      else
+        svn_fs__prepend (svn_fs__mem_atom (NULL, 0, pool), header_skel);
+
       /* "fulltext" */
       svn_fs__prepend (svn_fs__str_atom ("fulltext", pool), header_skel);
 
@@ -805,9 +797,11 @@ svn_fs__unparse_representation_skel (skel_t **skel_p,
       /* Create the header. */
       header_skel = svn_fs__make_empty_list (pool);
       
-      /* "mutable" flag (optional) */
-      if (rep->is_mutable)
-        svn_fs__prepend (svn_fs__str_atom ("mutable", pool), header_skel);
+      /* TXN */
+      if (rep->txn_id)
+        svn_fs__prepend (svn_fs__str_atom (rep->txn_id, pool), header_skel);
+      else
+        svn_fs__prepend (svn_fs__mem_atom (NULL, 0, pool), header_skel);
       
       /* "delta" */
       svn_fs__prepend (svn_fs__str_atom ("delta", pool), header_skel);

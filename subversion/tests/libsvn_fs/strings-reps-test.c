@@ -86,7 +86,7 @@ write_new_rep (const char **msg,
                apr_pool_t *pool)
 {
   struct rep_args args;
-  const char *rep = "((fulltext) a83t2Z0q)";
+  const char *rep = "((fulltext 0 ) a83t2Z0q)";
   svn_fs_t *fs;
 
   *msg = "Write a new rep, get a new key back.";
@@ -124,8 +124,8 @@ write_rep (const char **msg,
 {
   struct rep_args new_args;
   struct rep_args args;
-  const char *new_rep = "((fulltext) a83t2Z0q)";
-  const char *rep = "((fulltext muggly mutable) kfogel31337)";
+  const char *new_rep = "((fulltext 0 ) a83t2Z0q)";
+  const char *rep = "((fulltext 0 ) kfogel31337)";
   svn_fs_t *fs;
 
   *msg = "Write a new rep, then overwrite it.";
@@ -175,8 +175,8 @@ read_rep (const char **msg,
   struct rep_args new_args;
   struct rep_args args;
   struct rep_args read_args;
-  const char *new_rep = "((fulltext mutable) a83t2Z0)";
-  const char *rep = "((fulltext) kfogel31337)";
+  const char *new_rep = "((fulltext 0 ) a83t2Z0)";
+  const char *rep = "((fulltext 0 ) kfogel31337)";
   svn_stringbuf_t *skel_data;
   svn_fs_t *fs;
 
@@ -263,7 +263,7 @@ delete_rep (const char **msg,
   struct rep_args new_args;
   struct rep_args delete_args;
   struct rep_args read_args;
-  const char *new_rep = "((fulltext) a83t2Z0q)";
+  const char *new_rep = "((fulltext 0 ) a83t2Z0q)";
   svn_fs_t *fs;
   svn_error_t *err;
 

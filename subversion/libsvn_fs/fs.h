@@ -185,8 +185,10 @@ typedef struct
   /* representation kind */
   svn_fs__rep_kind_t kind;
 
-  /* is this representation mutable? */
-  int is_mutable;
+  /* transaction ID under which representation was created (used as a
+     mutability flag when compared with a current editing
+     transaction). */
+  const char *txn_id;
 
   /* kind-specific stuff */
   union 

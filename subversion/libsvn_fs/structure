@@ -719,9 +719,8 @@ Representations:
                  OFFSET ::= number ;
              REP-OFFSET ::= number ;
 
-                 HEADER ::= (KIND FLAG ...)
+                 HEADER ::= (KIND TXN) ;
                    KIND ::= "fulltext" | "delta" ;
-                   FLAG ::= "mutable" | ;
              
                    SIZE ::= number ;
                CHECKSUM ::= ("md5" BYTES) ;
