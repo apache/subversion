@@ -2063,8 +2063,7 @@ struct file_length_args
 {
   svn_fs_root_t *root;
   const char *path;
-
-  apr_off_t length;     /* OUT parameter */
+  apr_size_t length;     /* OUT parameter */
 };
 
 static svn_error_t *

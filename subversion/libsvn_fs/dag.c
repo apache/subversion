@@ -499,6 +499,29 @@ add_new_entry (dag_node_t *parent,
 }
 
 
+static svn_error_t *
+string_key_from_rep (svn_string_t *strkey,
+                     svn_fs_t *fs,
+                     skel_t *rep,
+                     trail_t *trail)
+{
+  skel_t *header = rep->children;
+  skel_t *kind = header->children;
+
+  if (svn_fs__matches_atom (kind, "fulltext"))
+    {
+      strkey->data = apr_pstrndup (trail->pool,
+                                   header->next->data,
+                                   header->next->len);
+      strkey->len = header->next->len;
+    }
+  else if (svn_fs__matches_atom (kind, "delta"))
+    abort ();   /* ### we don't undeltify yet */
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Set STR->data to the fulltext string for REP in FS, and STR->len to
    the string's length, as part of TRAIL.  The data is allocated in
    TRAIL->pool.  */
@@ -508,24 +531,14 @@ string_from_rep (svn_string_t *str,
                  skel_t *rep,
                  trail_t *trail)
 {
-  skel_t *header = rep->children;
-  skel_t *kind = header->children;
+  svn_string_t strkey;
+  char *data;
 
-  if (svn_fs__matches_atom (kind, "fulltext"))
-    {
-      const char *key = apr_pstrndup (trail->pool,
-                                      header->next->data,
-                                      header->next->len);
-      char *data;
-
-      SVN_ERR (svn_fs__string_size (&(str->len), fs, key, trail));
-      data = apr_palloc (trail->pool, str->len);
-      SVN_ERR (svn_fs__string_read (fs, key, 0, &(str->len), data, trail));
-      str->data = data;
-    }
-  else if (svn_fs__matches_atom (kind, "delta"))
-    abort ();   /* ### we don't know how to undeltify yet */
-
+  SVN_ERR (string_key_from_rep (&strkey, fs, rep, trail));
+  SVN_ERR (svn_fs__string_size (&(str->len), fs, strkey.data, trail));
+  data = apr_palloc (trail->pool, str->len);
+  SVN_ERR (svn_fs__string_read (fs, strkey.data, 0, &(str->len), data, trail));
+  str->data = data;
   return SVN_NO_ERROR;
 }
 
@@ -1584,7 +1597,7 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
 
   /* Go get a fresh node-revision for FILE. */
   SVN_ERR (get_node_revision (&node_rev, file, trail));
-  
+
   /* This node-rev *might* be allocated in node's pool, or it *might*
      be allocated in trail's pool, depending on mutability.  However,
      because this routine promises to allocate the stream in trail's
@@ -1606,12 +1619,13 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
 
 
 svn_error_t *
-svn_fs__dag_file_length (apr_off_t *length,
+svn_fs__dag_file_length (apr_size_t *length,
                          dag_node_t *file,
                          trail_t *trail)
 { 
   skel_t *node_rev;
-
+  svn_string_t strkey;
+  
   /* Make sure our node is a file. */
   if (! svn_fs__dag_is_file (file))
     return 
@@ -1622,8 +1636,15 @@ svn_fs__dag_file_length (apr_off_t *length,
   /* Go get a fresh node-revision for FILE. */
   SVN_ERR (get_node_revision (&node_rev, file, trail));
 
-  /* ### skel.len is apr_size_t ... we return apr_off_t */
-  *length = node_rev->children->next->len;
+  /* Seg-fault protection. */
+  assert (node_rev->len >= 3);
+
+  /* Get the string key from the rep...duh. */
+  string_key_from_rep (&strkey, file->fs, 
+                       node_rev->children->next->next, trail);
+
+  /* Use the string key to query the string record's size. */
+  SVN_ERR (svn_fs__string_size (length, file->fs, strkey.data, trail));
 
   return SVN_NO_ERROR;
 }
@@ -2051,9 +2072,6 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
     /* "revision" */
     svn_fs__prepend (svn_fs__str_atom ("revision", trail->pool),
                      new_revision_skel);
-
-    /* ### kff todo: later, when we have properties on txns, get the
-       log msg property and store it in the revision skel. */
 
     SVN_ERR (svn_fs__put_rev (new_rev, fs, new_revision_skel, trail));
   }

@@ -339,13 +339,14 @@ two forms currently recognized:
    (("fulltext" ...) KEY)
        The data is at KEY in the `strings' table.
 
-   (("delta" ...) REP-KEY STRING-KEY CHECKSUM)
-       Apply the delta at STRING-KEY in the `strings' table against the
-       fulltext derived from REP-KEY in the `representations' table.
-       "Derived" because REP-KEY might not refer to a fulltext, in
-       which case further processing is necessary before the data at
-       STRING-KEY can be applied against it.
-       CHECKSUM is a checksum on the resulting fulltext.
+   (("delta" ...) REP-KEY DIFF CHECKSUM)
+       where DIFF is, right now, ("svndiff" STRING-KEY).  Apply the
+       delta at STRING-KEY in the `strings' table against the fulltext
+       derived from REP-KEY in the `representations' table.  "Derived"
+       because REP-KEY might not refer to a fulltext, in which case
+       further processing is necessary before the data at STRING-KEY
+       can be applied against it.  CHECKSUM is a checksum on the
+       resulting fulltext.
 
 In the future, there may be other representations, for example
 indicating that the text is stored elsewhere in the database, or

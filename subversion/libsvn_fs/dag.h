@@ -362,7 +362,7 @@ svn_error_t *svn_fs__dag_set_contents (dag_node_t *file,
 
 
 /* Set *LENGTH to the length of the contents of FILE, as part of TRAIL. */
-svn_error_t *svn_fs__dag_file_length (apr_off_t *length,
+svn_error_t *svn_fs__dag_file_length (apr_size_t *length,
                                       dag_node_t *file,
                                       trail_t *trail);
 
