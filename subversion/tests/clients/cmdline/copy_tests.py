@@ -1125,7 +1125,27 @@ def resurrect_deleted_file(sbox):
     })
   svntest.actions.run_and_verify_status (wc_dir, expected_status)
 
+#-------------------------------------------------------------
+# Regression tests for Issue #1297:
+# svn diff failed after a repository to WC copy of a single file
+# This test checks just that.
 
+def diff_repos_to_wc_copy(sbox):
+  "copy file from repos to working copy and run diff"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  iota_repos_path = svntest.main.current_repo_url + '/iota'
+  target_wc_path = os.path.join(wc_dir, 'new_file');
+
+  # Copy a file from the repository to the working copy.
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', 
+                                     iota_repos_path, target_wc_path)
+
+  # Run diff.
+  svntest.actions.run_and_verify_svn(None, None, [], 'diff', wc_dir)
+  
 
 ########################################################################
 # Run the tests
@@ -1150,6 +1170,7 @@ test_list = [ None,
               url_copy_parent_into_child,
               wc_copy_parent_into_child,
               resurrect_deleted_file,
+              XFail(diff_repos_to_wc_copy),
              ]
 
 if __name__ == '__main__':
