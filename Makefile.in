@@ -99,6 +99,7 @@ LIBTOOL = @SVN_LIBTOOL@
 LTFLAGS = --silent
 LT_LDFLAGS = @LT_LDFLAGS@
 LT_NO_UNDEFINED = @LT_NO_UNDEFINED@
+LT_CXX_LIBADD = @LT_CXX_LIBADD@
 
 INCLUDES = @SVN_EXTRA_INCLUDES@ @SVN_NEON_INCLUDES@                    \
            @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@
@@ -178,7 +179,7 @@ COMPILE_JAVA_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_JAVA_COMPILE)
 LINK_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_PY_LINK) $(SWIG_LDFLAGS) -rpath $(swig_pydir) -avoid-version -module
 LINK_JAVA_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_JAVA_LINK) $(SWIG_LDFLAGS) -rpath $(swig_javadir) -avoid-version -module
 
-LINK_JAVAHL_CXX = $(LIBTOOL) $(LTFLAGS) --mode=link $(CXX) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(libdir)
+LINK_JAVAHL_CXX = $(LIBTOOL) $(LTFLAGS) --mode=link $(CXX) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) $(LT_CXX_LIBADD) -rpath $(libdir)
 
 INSTALL = @INSTALL@
 INSTALL_LIB = $(LIBTOOL) --mode=install $(INSTALL)
