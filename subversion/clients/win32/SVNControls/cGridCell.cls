@@ -25,6 +25,14 @@ Private m_lIndent As Long
 Private m_lExtraIconIndex As Long
 Private m_vText As Variant
 Private m_lItemData As Long
+Private m_sKey As String
+
+Friend Property Let Key(s As String)
+    m_sKey = s
+End Property
+Public Property Get Key() As String
+   Key = m_sKey
+End Property
 
 Public Property Get ItemData() As Long
    ItemData = m_lItemData
