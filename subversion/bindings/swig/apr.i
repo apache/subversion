@@ -18,15 +18,27 @@
 
 /* This is the interface for the APR headers. This is not built as a module
    because we aren't going to wrap the APR functions. Thus, we only define
-   the various types in here, as necessary. */
-/* ### actually, we may need to wrap some things, such as apr_initialize() */
+   the various types in here, as necessary.
+
+   Actually, util.i wraps a few, key functions.
+*/
 
 %include typemaps.i
 
+
 /* ----------------------------------------------------------------------- */
 
-/* 'apr_off_t *' will always be an OUTPUT parameter */
-%apply long *OUTPUT { apr_off_t * };
+/* define an OUTPUT typemap for 'apr_off_t *'. for now, we'll treat it as
+   a 'long' even if that isn't entirely correct... */
+%typemap(in,numinputs=0) apr_off_t * (apr_off_t temp)
+    "$1 = &temp;";
+
+%typemap(python,argout,fragment="t_output_helper") apr_off_t *
+    "$result = t_output_helper($result,PyInt_FromLong((long) (*$1)));";
+
+%typemap(java,argout) apr_off_t * {
+    /* ### FIXME */
+}
 
 /* ----------------------------------------------------------------------- */
 
@@ -56,12 +68,12 @@ typedef apr_int32_t time_t;
 %apply long long { apr_time_t };
 
 /* 'apr_time_t *' will always be an OUTPUT parameter */
-%typemap(in,numinputs=0) apr_time_t * (apr_time_t temp) {
-    $1 = &temp;
-}
-%typemap(python,argout,fragment="t_output_helper") apr_time_t * {
-    $result = t_output_helper($result, PyLong_FromLongLong(*$1));
-}
+%typemap(in,numinputs=0) apr_time_t * (apr_time_t temp)
+    "$1 = &temp;";
+
+%typemap(python,argout,fragment="t_output_helper") apr_time_t *
+    "$result = t_output_helper($result, PyLong_FromLongLong(*$1));";
+
 %typemap(java,argout) apr_time_t * {
     jclass cls = JCALL1(FindClass, jenv, "java/lang/Long");
     jmethodID ctor = JCALL3(GetMethodID, jenv, cls, "<init>", "(J)V");
@@ -90,9 +102,8 @@ typedef apr_int32_t time_t;
    create an OUTPUT argument typemap for an apr_hash_t **
 */
 
-%typemap(in,numinputs=0) apr_hash_t **OUTPUT (apr_hash_t *temp) {
-    $1 = &temp;
-}
+%typemap(in,numinputs=0) apr_hash_t **OUTPUT (apr_hash_t *temp)
+    "$1 = &temp;";
 
 /* -----------------------------------------------------------------------
    create an OUTPUT argument defn for an apr_hash_t ** which is storing
@@ -124,14 +135,14 @@ typedef apr_int32_t time_t;
    apr_file_t ** is always an OUT param
 */
 
-%typemap(in,numinputs=0) apr_file_t ** (apr_file_t *temp) {
-    $1 = &temp;
-}
-%typemap(python,argout,fragment="t_output_helper") apr_file_t ** {
-    $result = t_output_helper(
+%typemap(in,numinputs=0) apr_file_t ** (apr_file_t *temp)
+    "$1 = &temp;";
+
+%typemap(python,argout,fragment="t_output_helper") apr_file_t **
+    "$result = t_output_helper(
         $result,
-        SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
-}
+        SWIG_NewPointerObj(*$1, $*1_descriptor, 0));";
+
 %typemap(java,argout) apr_file_t ** {
     /* HELP: Is there a JNI equivalent of SWIG_NewPointerObj, or is
        this actually a cross-language typemap? */

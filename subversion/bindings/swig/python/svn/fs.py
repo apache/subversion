@@ -39,29 +39,34 @@ def entries(root, path, pool):
 
 
 class FileDiff:
-  def __init__(self, root1, path1, root2, path2, pool, diffoptions=None):
-    assert(not ((path1 is None) and (path2 is None)))
+  def __init__(self, root1, path1, root2, path2, pool, diffoptions=''):
+    assert path1 or path2
+
     self.tempfile1 = None
     self.tempfile2 = None
+
     self.root1 = root1
     self.path1 = path1
     self.root2 = root2
     self.path2 = path2
-    self.pool = pool
-    if diffoptions is None:
-      diffoptions = ''
     self.diffoptions = diffoptions
 
-  def get_pipe(self):
+    # the caller can't manage this pool very well given our indirect use
+    # of it. so we'll create a subpool and clear it at "proper" times.
+    self.pool = _util.svn_pool_create(pool)
+
+  def get_files(self):
+    if self.tempfile1:
+      # no need to do more. we ran this already.
+      return self.tempfile1, self.tempfile2
+
     self.tempfile1 = tempfile.mktemp()
     contents = ''
     if self.path1 is not None:
       len = file_length(self.root1, self.path1, self.pool)
       stream = file_contents(self.root1, self.path1, self.pool)
       contents = _util.svn_stream_read(stream, len)
-    fp = open(self.tempfile1, 'w+')
-    fp.write(contents)
-    fp.close()
+    open(self.tempfile1, 'w+').write(contents)
 
     self.tempfile2 = tempfile.mktemp()
     contents = ''
@@ -69,10 +74,15 @@ class FileDiff:
       len = file_length(self.root2, self.path2, self.pool)
       stream = file_contents(self.root2, self.path2, self.pool)
       contents = _util.svn_stream_read(stream, len)
-    fp = open(self.tempfile2, 'w+')
-    fp.write(contents)
-    fp.close()
+    open(self.tempfile2, 'w+').write(contents)
 
+    # get rid of anything we put into our subpool
+    _util.svn_pool_clear(self.pool)
+
+    return self.tempfile1, self.tempfile2
+
+  def get_pipe(self):
+    self.get_files()
     return os.popen("diff %s %s %s"
                     % (self.diffoptions, self.tempfile1, self.tempfile2))
 

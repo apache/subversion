@@ -116,10 +116,18 @@
 #endif
 }
 
+/* ----------------------------------------------------------------------- */
+
 %include svn_types.h
 
 %header %{
+#include "svn_types.h"
+
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
+#endif
+
+#ifdef SWIGJAVA
+#include "swigutil_java.h"
 #endif
 %}
