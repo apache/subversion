@@ -111,6 +111,12 @@ const svn_fs_id_t *svn_fs__dag_get_id (dag_node_t *node)
 }
 
 
+svn_fs_t *svn_fs__dag_get_fs (dag_node_t *node)
+{
+  return node->fs;
+}
+
+
 svn_error_t *svn_fs__dag_get_proplist (skel_t **proplist_p,
                                        dag_node_t *node,
                                        trail_t *trail)
