@@ -715,7 +715,6 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
                                   svn_stream_t *stream,
                                   svn_revnum_t *fetched_rev)
 {
-  int rv;
   svn_stringbuf_t *url_str;
   const char *final_url;
   svn_ra_session_t *ras = (svn_ra_session_t *) session_baton;
@@ -1206,18 +1205,14 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
     case ELEM_remove_prop:
       name = get_attr(atts, "name");
+      /* ### verify we got it. punt on error. */
+      svn_stringbuf_set(rb->namestr, name);
 
       /* Removing a prop.  */
       if (rb->file_baton == NULL)
-        {
-          svn_stringbuf_t *namestr = svn_stringbuf_create(name, rb->ras->pool);
-          rb->editor->change_dir_prop(TOP_DIR(rb).baton, namestr, NULL);
-        }
+        rb->editor->change_dir_prop(TOP_DIR(rb).baton, rb->namestr, NULL);
       else
-        {
-          svn_stringbuf_t *namestr = svn_stringbuf_create(name, rb->ras->pool);
-          rb->editor->change_file_prop(rb->file_baton, namestr, NULL);
-        }
+        rb->editor->change_file_prop(rb->file_baton, rb->namestr, NULL);
       break;
       
     case ELEM_fetch_props:
@@ -1227,12 +1222,12 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
              property change are uninteresting.  Simply call our
              editor function with bogus data so it registers a
              property mod. */
-          svn_stringbuf_t *namestr = 
-            svn_stringbuf_create(SVN_PROP_PREFIX "BOGOSITY", rb->ras->pool);
+          svn_stringbuf_set(rb->namestr, SVN_PROP_PREFIX "BOGOSITY");
+
           if (rb->file_baton == NULL)
-            rb->editor->change_dir_prop(TOP_DIR(rb).baton, namestr, NULL);
+            rb->editor->change_dir_prop(TOP_DIR(rb).baton, rb->namestr, NULL);
           else
-            rb->editor->change_file_prop(rb->file_baton, namestr, NULL);
+            rb->editor->change_file_prop(rb->file_baton, rb->namestr, NULL);
         }
       else
         {
