@@ -1429,7 +1429,7 @@ ssl-client-cert-password = somepassword
 
         <para>These are only a few simple examples.  For more in-depth
           information about Apache access control and the
-          <literal>Require</literal> directive,, take a look at the
+          <literal>Require</literal> directive, take a look at the
           <literal>Security</literal> section of the Apache
           documentation's tutorials collection at <systemitem
           class="url">http://httpd.apache.org/docs-2.0/misc/tutorials.html</systemitem>.</para>
