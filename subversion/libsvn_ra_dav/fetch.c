@@ -74,7 +74,7 @@
 
 
 enum {
-  ELEM_resourcetype,
+  ELEM_resourcetype = 0x1000,
   ELEM_collection,
   ELEM_target
 };
@@ -85,11 +85,13 @@ static const dav_propname fetch_props[] =
   { "DAV:", "target" },
   { NULL }
 };
+
 static const struct hip_xml_elm fetch_elems[] =
 {
   { "DAV:", "resourcetype", ELEM_resourcetype, 0 },
   { "DAV:", "collection", ELEM_collection, HIP_XML_CDATA },
   { "DAV:", "target", ELEM_target, 0 },
+  { "DAV:", "href", DAV_ELM_href, HIP_XML_CDATA },
   { NULL }
 };
 
@@ -211,13 +213,36 @@ static int
 validate_element (hip_xml_elmid parent, hip_xml_elmid child)
 {
   /*  printf("validate_element: #%d as child of #%d\n", child, parent); */
+  
+  switch (parent)
+    {
+    case DAV_ELM_prop:
+        switch (child)
+          {
+          case ELEM_target:
+          case ELEM_resourcetype:
+            return HIP_XML_VALID;
+          default:
+            return HIP_XML_DECLINE;
+          }
+        
+    case ELEM_target:
+      if (child == DAV_ELM_href)
+        return HIP_XML_VALID;
+      else
+        return HIP_XML_DECLINE; /* not concerned with other types */
+      
+    case ELEM_resourcetype:
+      if (child == ELEM_collection)
+        return HIP_XML_VALID;
+      else
+        return HIP_XML_INVALID;
+      
+    default:
+      return HIP_XML_DECLINE;
+    }
 
-  if (parent == ELEM_target && child != DAV_ELM_href)
-    return HIP_XML_INVALID;
-  if (child == ELEM_collection && parent != ELEM_resourcetype)
-    return HIP_XML_INVALID;
-
-  return HIP_XML_VALID;
+  /* NOTREACHED */
 }
 
 static int
@@ -265,8 +290,6 @@ end_element (void *userdata, const struct hip_xml_elm *elm, const char *cdata)
   }
 #endif
 
-  /* ### we don't have DAV_ELM_href in fetch_elems, so we never see this!
-     ### waiting on feedback from Joe */
   if (elm->id == DAV_ELM_href)
     r->target_href = apr_pstrdup(fc->pool, cdata);
 
