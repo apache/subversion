@@ -15,11 +15,11 @@ set exitcode=0
 
 if "%2" == "rebuild" goto clean
 if not "%2" == "" goto pIIerr
-set target=all
+set target=ALL
 goto mode
 
 :clean
-set target=clean all
+set target=CLEAN ALL
 
 :mode
 if "%1" == "release" goto release
@@ -28,13 +28,15 @@ goto pIerr
 
 @rem **************************************************************************
 :release
-nmake /f neon.mak %target% EXPAT_SRC=..\expat-lite
+@echo nmake /f neon.mak %target% EXPAT_SRC=..\expat-lite
+nmake /nologo /f neon.mak %target% EXPAT_SRC=..\expat-lite
 if not errorlevel 0 goto err
 goto end
 
 @rem **************************************************************************
 :debug
-nmake /f neon.mak %target% EXPAT_SRC=..\expat-lite DEBUG_BUILD=Aye
+@echo nmake /f neon.mak %target% EXPAT_SRC=..\expat-lite DEBUG_BUILD=Aye
+nmake /nologo /f neon.mak %target% EXPAT_SRC=..\expat-lite DEBUG_BUILD=Aye
 if not errorlevel 0 goto err
 goto end
 

@@ -62,7 +62,7 @@ CFG=neon - Win32 Debug
 # PROP Use_Debug_Libraries 1
 # PROP Output_Dir "..\..\neon\Debug"
 # PROP Intermediate_Dir "..\..\neon\Debug"
-# PROP Cmd_Line "cd && echo ..\build\win32\build_neon.bat debug"
+# PROP Cmd_Line "cmd /c ..\build\win32\build_neon.bat debug"
 # PROP Rebuild_Opt "rebuild"
 # PROP Target_File "..\..\neon\libneonD.lib"
 # PROP Bsc_Name ""
