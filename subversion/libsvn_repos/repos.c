@@ -783,7 +783,7 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "### This option controls the location of the password database.  This"
       APR_EOL_STR
-      "### path may be relative to the repository root.  There is no default."
+      "### path may be relative to the conf directory.  There is no default."
       APR_EOL_STR
       "### The format of the password database is:"
       APR_EOL_STR
