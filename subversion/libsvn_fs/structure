@@ -52,13 +52,34 @@ difference from 100.10 to 100.12.
 
 How nodes are represented in the database.
 
+[[This is a crummy explanation.  Rewrite.]]
+
 The database contains a table called "nodes", which is a btree indexed
-by node version ID's, mapping them onto a description of their
-contents.  Each node specifies whether it's a directory or a file, and
-whether it's full-text or a delta vs. the next node version.
+by node version (`nv') ID's, mapping them onto a description of their
+contents.  Each nv specifies whether it's a directory or a
+file, and whether it's full-text or a delta vs. the next nv.
 
+Every nv record has one of the following forms:
 
+("fulltext" OBJECT HASH)
+    This nv is represented in full in this record; OBJECT is the
+    fulltext representation of the node's contents.  See below for
+    possible forms for OBJECT.
 
+("younger" DELTA HASH)
+    This nv is represented as a delta against the next younger nv.
+
+    DELTA specifies how to compute some target string from some source
+    string.  In this case, the source string is the fulltext form of
+    the next younger nv, and the target string is the fulltext form of
+    this nv.  By "fulltext form", we mean the concrete form of the
+    OBJECT skel.
+
+    For example, if the record of nv 10.3 is ("younger" DELTA), then
+    you should retrieve the fulltext of nv 10.4 --- the unparsed form
+    of OBJECT --- and then apply DELTA to that byte string.  This
+    should give you a new byte string which is the unparsed form of
+    OBJECT for nv 10.3.
 
 
 Since the "nodes" table is a btree, it's efficent to walk over the
@@ -71,19 +92,49 @@ Here's the sort order we use:
 - Nodes are sorted by their node number.
 - All the versions of a given node come together, in order of 
   increasing version number.
-- Each node's versions node are followed by a record whose key is
+- Each node's versions are followed by a record whose key is
   "NODENUM.head".  This lets us quickly find the head of any given
   chain of node versions by looking for "NODENUM.head", and then going
   back one record.
 - All branches off any version of a node come immediately after that
   node, ordered by increasing version number.
 
+
+OBJECT forms
 
+OBJECT must have one of the following forms:
 
+("file" PROPLIST CONTENTS)
+    PROPLIST is a property list; see below.  CONTENTS is an atom
+    giving the full contents of the file.
 
+("directory" PROPLIST (ENTRY ...))
+    PROPLIST is a property list; see below.  Each ENTRY has the form:
 
+        (NAME ID PROPLIST)
 
+    where NAME is the name of the directory entry, in UTF-8, ID is the
+    ID of the nv to which this entry refers, and PROPLIST is a
+    property list for this directory entry.
 
+A property list has the form:
+
+    (NAME1 VALUE1 NAME2 VALUE2 ...)
+
+where each NAMEi is the name of a property, and VALUEi is the value of
+the property named NAMEi.
+
+
+DELTA forms 
+
+The job of a DELTA form is to describe how to turn one string (the
+`source' string) into another (the `target' string).  The context of
+the DELTA form must specify exactly what the source and target are.
+
+At the moment, there is only one form of DELTA allowed:
+
+(vcdiff DATA)
+    DATA is an atom whose contents are a VCDIFF-form diff.
 
 
 Transactions
@@ -99,3 +150,9 @@ The Subversion filesystem must provide the following characteristics:
 - readers must never block other readers or writers
 - writers must never block readers
 - writers may block writers
+
+
+Non-Historical Properties
+
+[[Yes, do tell.]]
+
