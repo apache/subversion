@@ -208,9 +208,23 @@ dump_node (struct edit_baton *eb,
     }
   else if (action == svn_node_action_replace)
     {
-      SVN_ERR (svn_stream_printf (eb->stream, pool,
-                                  SVN_REPOS_DUMPFILE_NODE_ACTION
-                                  ": replace\n"));  
+      if (copyfrom_path == NULL)
+        {
+          /* a simple delete+add, implied by a single 'replace' action. */
+          SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                      SVN_REPOS_DUMPFILE_NODE_ACTION
+                                      ": replace\n")); 
+        }
+      else
+        {
+          /* more complex:  delete original, then add-with-history.  */
+          SVN_ERR (dump_node (eb, path, kind, svn_node_action_delete,
+                              copyfrom_path, copyfrom_rev, pool));
+
+          SVN_ERR (dump_node (eb, path, kind, svn_node_action_add,
+                              copyfrom_path, copyfrom_rev, pool));          
+        }
+
     }
   else if (action == svn_node_action_delete)
     {
@@ -244,8 +258,16 @@ dump_node (struct edit_baton *eb,
                                       SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV 
                                       ": %" SVN_REVNUM_T_FMT "\n"
                                       SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH
-                                      ": %s\n",                  
+                                      ": %s\n\n",                  
                                       copyfrom_rev, copyfrom_path));
+          
+          /* Notice the extra \n above;  that's because this is the -last-
+             header in the block.  (Normally, we have a double \n after the
+             Content-length header.) */
+          
+          /* Get out!  We're done! */
+          return SVN_NO_ERROR;
+
           /* ### someday write a node-copyfrom-source-checksum. */
         }
     }
