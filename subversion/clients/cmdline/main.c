@@ -34,6 +34,7 @@
 #include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_client.h"
+#include "svn_config.h"
 #include "svn_string.h"
 #include "svn_path.h"
 #include "svn_delta.h"
@@ -972,6 +973,24 @@ main (int argc, const char * const *argv)
            opts that commands like svn diff might need. Hmmm indeed. */
         break;  
       }
+    }
+
+  /* ### This really belongs in libsvn_client.  The trouble is,
+     there's no one place there to run it from, no
+     svn_client_init().  We'd have to add it to all the public
+     functions that a client might call.  It's unmaintainable to do
+     initialization from within libsvn_client itself, but it seems
+     burdensome to demand that all clients call svn_client_init()
+     before calling any other libsvn_client function... On the other
+     hand, the alternative is effective to demand that they call
+     svn_config_ensure() instead, so maybe we should have a generic
+     init function anyway.  Thoughts?  */
+  err = svn_config_ensure (pool);
+  if (err)
+    {
+      svn_handle_error (err, stderr, 0);
+      svn_pool_destroy (pool);
+      return EXIT_FAILURE;
     }
 
   /* If the user asked for help, then the rest of the arguments are

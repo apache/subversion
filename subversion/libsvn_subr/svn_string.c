@@ -547,7 +547,7 @@ svn_cstring_split (const char *input,
 
   while (1)
     {
-      if (chop_whitespace && (isspace (*b)))
+      if (chop_whitespace && (apr_isspace (*b)))
         {
           b++;
 
@@ -562,7 +562,7 @@ svn_cstring_split (const char *input,
             {
               if (e2 > b)
                 {
-                  while (isspace (*(--e2)))
+                  while (apr_isspace (*(--e2)))
                     ;
                   e2++;
                 }

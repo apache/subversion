@@ -19,6 +19,7 @@
 
 
 #include <apr_pools.h>
+#include <apr_fnmatch.h>
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 #include <apr_general.h>
@@ -30,6 +31,7 @@
 
 #include "svn_error.h"
 #include "svn_ra.h"
+#include "svn_config.h"
 #include "svn_version.h"
 
 #include "ra_dav.h"
@@ -114,6 +116,115 @@ static int ssl_set_verify_callback(void *userdata, int failures,
   return 0;
 }
 
+
+/* Baton for search_groups(). */
+struct search_groups_baton
+{
+  const char *requested_host;  /* the host in the original uri */
+
+  const char *proxy_group;     /* NULL unless/until we find a host
+                                  match, in which case this is set to
+                                  the name of the config file section
+                                  where we can find proxy information
+                                  for this host. */
+  apr_pool_t *pool;
+};
+
+
+/* This is an `svn_config_enumerator_t' function, and BATON is a
+ * `struct search_groups_baton *'.
+ *
+ * If an element of VALUE matches BATON->requested_host, then set
+ * BATON->proxy_group to a copy of NAME allocated in BATON->pool, and
+ * return false (to end the enumeration).  
+ * 
+ * VALUE is a comma-separated list of one or more expressions to match
+ * a host, possibly using wildcards.  For example, these are all
+ * valid VALUEs:
+ *
+ *   "svn.collab.net"
+ *   "svn.collab.net, *.tigris.org"
+ *   "*.collab.net, *.tigris.org, sp.red-bean.com"
+ *
+ * If no match, return true (to continue enumerating).
+ */
+static svn_boolean_t
+search_groups (const char *name, const char *value, void *baton)
+{
+  struct search_groups_baton *b = baton;
+  apr_array_header_t *subvals = svn_cstring_split (value, ',', TRUE, b->pool);
+  int j;
+
+  for (j = 0; j < subvals->nelts; j++)
+    {
+      const char *this_pattern = APR_ARRAY_IDX (subvals, j, char *);
+      apr_status_t apr_err = apr_fnmatch (this_pattern, b->requested_host, 0);
+
+      if (APR_STATUS_IS_SUCCESS (apr_err))
+        {
+          b->proxy_group = apr_pstrdup (b->pool, name);
+          return FALSE;
+        }
+    }
+
+  return TRUE;
+}
+
+
+/* Set *PROXY_HOST, *PROXY_PORT, *PROXY_USERNAME, and *PROXY_PASSWORD
+ * the proxy information for REQUESTED_HOST, allocated in POOL, if
+ * there is any applicable information.  Else set *PROXY_PORT to -1
+ * and the rest to NULL.
+ *
+ * If return error, the effect on the return parameters is undefined.
+ */
+static svn_error_t *
+get_proxy (const char **proxy_host,
+           int *proxy_port,
+           const char **proxy_username,
+           const char **proxy_password,
+           const char *requested_host,
+           apr_pool_t *pool)
+{
+  struct search_groups_baton gb;
+  svn_config_t *cfg;
+  const char *port_str;
+
+  SVN_ERR (svn_config_read_proxies (&cfg, pool));
+
+  /* Start out with defaults. */
+  svn_config_get (cfg, proxy_host, "default", "host", NULL);
+  svn_config_get (cfg, &port_str, "default", "port", NULL);
+  svn_config_get (cfg, proxy_username, "default", "username", NULL);
+  svn_config_get (cfg, proxy_password, "default", "password", NULL);
+
+  /* Search for a proxy pattern specific to this host. */
+  gb.requested_host = requested_host;
+  gb.proxy_group = NULL;
+  gb.pool = pool;
+  (void) svn_config_enumerate (cfg, "groups", search_groups, &gb);
+
+  if (gb.proxy_group)
+    {
+      svn_config_get (cfg, proxy_host, gb.proxy_group, "host", *proxy_host);
+      svn_config_get (cfg, &port_str, gb.proxy_group, "port", port_str);
+      svn_config_get (cfg, proxy_username, gb.proxy_group, "username",
+                      *proxy_username);
+      svn_config_get (cfg, proxy_password, gb.proxy_group, "password",
+                      *proxy_password);
+    }
+
+  /* Special case: convert the port value, if any. */
+  if (port_str)
+    *proxy_port = atoi (port_str);
+  else
+    *proxy_port = -1;
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* ### need an ne_session_dup to avoid the second gethostbyname
  * call and make this halfway sane. */
 
@@ -152,6 +263,32 @@ svn_ra_dav__open (void **session_baton,
   /* #### enable this block for debugging output on stderr. */
   ne_debug_init(stderr, NE_DBG_HTTP|NE_DBG_HTTPBODY);
 #endif
+
+  /* Does the requested URL need to go through a proxy? */
+  {
+    const char *proxy_host;
+    int proxy_port;
+    const char *proxy_username;
+    const char *proxy_password;
+    
+    SVN_ERR (get_proxy (&proxy_host,
+                        &proxy_port,
+                        &proxy_username,
+                        &proxy_password,
+                        uri.host,
+                        pool));
+
+#if 0  /* ### view proxy information for debugging */
+    if (proxy_host)
+      {
+        printf ("%s ==>\n", uri.host);
+        printf ("   %s:%d\n", proxy_host, proxy_port);
+        printf ("   %s\n", proxy_username);
+        printf ("   %s\n", proxy_password);
+        printf ("\n");
+      }
+#endif /* 0 */
+  }
 
   /* we want to know if the repository is actually somewhere else */
   /* ### not yet: http_redirect_register(sess, ... ); */
