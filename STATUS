@@ -151,7 +151,7 @@ Candidate changes:
       svn_io_copy_dirs_recursively() function to notice/copy symlinks. 
       And this is a bug in one of the new svn 1.1 features.
     Votes:
-      +1: sussman
+      +1: sussman, ghudson
 
   * r10505
     Remove 'svn_node_special' from svn_node_kind_t.
@@ -159,7 +159,7 @@ Candidate changes:
       A simple API clensing; we don't want svn 1.1 to have this
       junk.  If it does, we'll have to support it until 2.0.
     Votes:
-      +1: sussman
+      +1: sussman, ghudson
 
   * r10507,r10508,r10509
     Perform checksum verification in FSFS (r10507) and verify file
