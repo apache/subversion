@@ -146,7 +146,7 @@ copy_node_revision (svn_fs__node_revision_t *noderev,
     nr->prop_key = apr_pstrdup (pool, noderev->prop_key);
   if (noderev->data_key)
     nr->data_key = apr_pstrdup (pool, noderev->data_key);
-  if ((noderev->kind == svn_node_file) && (noderev->edit_key))
+  if (noderev->edit_key)
     nr->edit_key = apr_pstrdup (pool, noderev->edit_key);
 
   return nr;
@@ -1090,12 +1090,10 @@ svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
                hi; 
                hi = apr_hash_next (hi))
             {
-              const void *key;
               void *val;
-              apr_ssize_t klen;
               svn_fs_dirent_t *dirent;
               
-              apr_hash_this (hi, &key, &klen, &val);
+              apr_hash_this (hi, NULL, NULL, &val);
               dirent = val;
               SVN_ERR (svn_fs__dag_delete_if_mutable (fs, dirent->id, 
                                                       txn_id, trail));
@@ -1120,7 +1118,7 @@ svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
                                             txn_id, trail));
 
   /* Delete any mutable edit representation (files only). */
-  if ((svn_fs__dag_is_file (node)) && noderev->edit_key)
+  if (noderev->edit_key)
     SVN_ERR (svn_fs__delete_rep_if_mutable (fs, noderev->edit_key, 
                                             txn_id, trail));
 
@@ -1294,8 +1292,7 @@ svn_fs__dag_get_edit_stream (svn_stream_t **contents,
   SVN_ERR (get_node_revision (&noderev, file, trail));
 
   /* If this node already has an EDIT-DATA-KEY, destroy the data
-     associated with that key.  ### todo: should this return an error
-     instead?  */
+     associated with that key.  */
   if (noderev->edit_key)
     SVN_ERR (svn_fs__delete_rep_if_mutable (fs, noderev->edit_key,
                                             txn_id, trail));
@@ -1343,8 +1340,7 @@ svn_fs__dag_finalize_edits (dag_node_t *file,
   /* Get the node revision. */
   SVN_ERR (get_node_revision (&noderev, file, trail));
 
-  /* If this node has no EDIT-DATA-KEY, this is a no-op.  ### todo:
-     should this return an error? */
+  /* If this node has no EDIT-DATA-KEY, this is a no-op. */
   if (! noderev->edit_key)
     return SVN_NO_ERROR;
 

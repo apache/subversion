@@ -140,7 +140,8 @@ typedef struct
   const char *data_key;
 
   /* representation key for this node's text-data-in-progess (files
-     only).  NULL if no edits are currently in-progress. */
+     only).  NULL if no edits are currently in-progress.  This field
+     is always NULL for kinds other than "file".  */
   const char *edit_key;
 
 } svn_fs__node_revision_t;

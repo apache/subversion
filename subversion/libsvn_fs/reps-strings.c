@@ -700,7 +700,7 @@ struct rep_read_baton
   svn_fs_t *fs;
 
   /* The representation skel whose contents we want to read.  If this
-     is null, the rep has never had any contents, so all reads fetch 0
+     is NULL, the rep has never had any contents, so all reads fetch 0
      bytes.
 
      Formerly, we cached the entire rep skel here, not just the key.

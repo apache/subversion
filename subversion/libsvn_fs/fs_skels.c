@@ -850,9 +850,11 @@ svn_fs__unparse_node_revision_skel (skel_t **skel_p,
   else
     abort ();
 
+  /* ### do we really need to check *node->FOO_key ? if a key doesn't
+     ### exist, then the field should be NULL ...  */
+
   /* EDIT-DATA-KEY (optional) */
-  if ((noderev->kind == svn_node_file)
-      && ((noderev->edit_key) && (*noderev->edit_key)))
+  if ((noderev->edit_key) && (*noderev->edit_key))
     svn_fs__prepend (svn_fs__str_atom (noderev->edit_key, pool), skel);
 
   /* DATA-KEY */
