@@ -72,7 +72,9 @@ put_txn (svn_fs_t *fs,
 		   txn_skel);
   svn_fs__prepend (svn_fs__str_atom ("transaction", pool), txn_skel);
 
-  svn_fs__str_to_dbt (&key, svn_txn);
+  /* Only in the context of this function do we know that the DB call
+     will not attempt to modify svn_txn, so the cast belongs here.  */
+  svn_fs__str_to_dbt (&key, (char *) svn_txn);
   svn_fs__skel_to_dbt (&value, txn_skel, pool);
   SVN_ERR (DB_WRAP (fs, "storing transaction record",
 		    fs->transactions->put (fs->transactions, trail->db_txn,
@@ -174,9 +176,12 @@ svn_fs__get_txn (svn_fs_id_t **root_id_p,
   DBT key, value;
   skel_t *transaction;
 
+  /* Only in the context of this function do we know that the DB call
+     will not attempt to modify svn_txn, so the cast belongs here.  */
+  svn_fs__str_to_dbt (&key, (char *) svn_txn);
   SVN_ERR (DB_WRAP (fs, "reading transaction",
 		    fs->transactions->get (fs->transactions, trail->db_txn,
-					   svn_fs__str_to_dbt (&key, svn_txn),
+					   &key,
 					   svn_fs__result_dbt (&value),
 					   0)));
   svn_fs__track_dbt (&value, trail->pool);
