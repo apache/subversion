@@ -45,11 +45,12 @@ print_dirents (const char *url,
 
   for (hi = apr_hash_first (pool, dirents); hi; hi = apr_hash_next (hi))
     {
+      const char *utf8_entryname, *native_entryname;
+      const char *native_author;
+      svn_dirent_t *dirent;
+      char timestr[20];
       const void *key;
       void *val;
-      const char *utf8_entryname, *native_entryname;
-      const char *native_author, *timestr;
-      svn_dirent_t *dirent;
       
       apr_hash_this (hi, &key, NULL, &val);
       utf8_entryname = (const char *) key;
@@ -58,13 +59,29 @@ print_dirents (const char *url,
       SVN_ERR (svn_utf_cstring_from_utf8 (&native_entryname,
                                           utf8_entryname, pool));      
       SVN_ERR (svn_utf_cstring_from_utf8 (&native_author,
-                                          dirent->last_author, pool));      
-      timestr =  svn_time_to_human_nts (dirent->time, pool);
+                                          dirent->last_author, pool));
 
-      printf ("%"SVN_REVNUM_T_FMT" %s %d %ld %s %s%s\n", 
+      {
+        /* svn_time_to_human_nts gives us something *way* to long to use for 
+           this, so we have to roll our own. */
+        apr_time_exp_t exp_time;
+        apr_status_t apr_err;
+        apr_size_t size;
+
+        apr_time_exp_lt (&exp_time, dirent->time);
+
+        apr_err = apr_strftime (timestr, &size, sizeof (timestr), "%b %d %H:%m",
+                                &exp_time);
+
+        /* if that failed, just zero out the string and print nothing */
+        if (apr_err)
+          timestr[0] = '\0';
+      }
+
+      printf ("%c %7"SVN_REVNUM_T_FMT" %8.8s %8ld %12s %s%s\n", 
+              dirent->has_props ? 'P' : '_',
               dirent->created_rev,
-              dirent->last_author,
-              dirent->has_props,
+              dirent->last_author ? dirent->last_author : "      ? ",
               (long int) dirent->size,
               timestr,
               native_entryname,
