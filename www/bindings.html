@@ -1,0 +1,134 @@
+<html>
+<head>
+<title>Subversion API bindings</title>
+</head>
+
+<body>
+<div class="app">
+
+<h2>Subversion API bindings</h2>
+
+<p>The library-based architecture of Subversion's canonical C language
+implementation presents an easily hackable API around which to create
+bindings for other languages.  Existing bindings generally cover the
+<a
+href="http://svn.collab.net/svn-doxygen/svn__client_8h.html">Subversion
+client API</a>.</p>
+
+<ul>
+  <li><a href="#python">Python</a></li>
+  <li><a href="#java">Java</a></li>
+  <li><a href="#perl">Perl</a></li>
+  <li><a href="#ruby">Ruby</a></li>
+</ul>
+
+
+<a name="python" />
+<h3>Python</h3>
+
+<dl>
+  <dt>Status</dt>
+  <dd>Mostly complete and maintained</dd>
+
+  <dt>Type</dt>
+  <dd>SWIG-based, no Python-friendly veneer</dd>
+
+  <dt>Location</dt>
+  <dd>http://svn.collab.net/repos/svn/trunk/subversion/bindings/swig/python/</dd>
+</dl>
+
+
+<a name="java" />
+<h3>Java</h3>
+
+<h4>Subversion javahl bindings</h4>
+
+<dl>
+  <dt>Status</dt>
+  <dd>Complete, not up to date with latest version of SVN</dd>
+
+  <dt>Type</dt>
+  <dd>Hand-coded JNI in C++, Java-friendly veneer</dd>
+
+  <dt>Notes</dt>
+  <dd>Auto-loads native libaries.  Originally from the <a
+    href="http://svnup.tigris.org/">svnup project</a>, a plug-in for
+    the IDEA IDE.</dt>
+
+  <dt>Location</dt>
+  <dd>http://svn.collab.net/repos/svn/trunk/subversion/bindings/java/javahl/</dd>
+</dl>
+
+<h4>Subversion SWIG-Java bindings</h4>
+
+<dl>
+  <dt>Status</dt>
+  <dd>Incomplete</dd>
+
+  <dt>Type</dt>
+  <dd>SWIG-based, Java-friendly veneer</dd>
+
+  <dt>Notes</dt>
+  <dd>Auto-loads native libaries.</dt>
+
+  <dt>Location</dt>
+  <dd>http://svn.collab.net/repos/svn/trunk/subversion/bindings/swig/perl/</dd>
+</dl>
+
+<h4>Alternate Computing jsvn bindings</h4>
+
+<dl>
+  <dt>Status</dt>
+  <dd>Mostly complete and up to date</dd>
+
+  <dt>Type</dt>
+  <dd>Command-line binary wrapper</dd>
+
+  <dt>Notes</dt>
+  <dd>Includes GUI and Ant tasks.  Requires installation of the native
+    command-line client.</dd>
+
+  <dt>Location</dt>
+  <dd>http://jsvn.alternatecomputing.com/</dd>
+</dl>
+
+
+<a name="perl" />
+<h3>Perl</h3>
+
+<dl>
+  <dt>Status</dt>
+  <dd>Mostly complete?</dd>
+
+  <dt>Type</dt>
+  <dd>SWIG-based</dd>
+
+  <dt>Location</dt>
+  <dd>http://svn.collab.net/repos/svn/trunk/subversion/bindings/swig/perl/</dd>
+</dl>
+
+
+<a name="ruby" />
+<h3>Ruby</h3>
+
+<dl>
+  <dt>Status</dt>
+  <dd>Removed</dd>
+
+  <dt>Type</dt>
+  <dd>Hand coded</dd>
+
+   <dt>Notes</dt>
+   <dd>Due to age, would require significant effort to resurrect.</dd>
+
+  <dt>Location</dt>
+  <dd>http://svn.collab.net/repos/svn/trunk/subversion/bindings/ruby/</dd>
+</dl>
+
+
+<hr />
+<p><small>Last modified: $LastChangedDate$</small></p>
+
+</div>
+</body>
+</html>
