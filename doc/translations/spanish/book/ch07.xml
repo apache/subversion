@@ -321,22 +321,23 @@ collabnet = svn.collab.net
 &hellip;
 </programlisting>
 
-        <para>When Subversion is used over a network, it attempts to
-          match the name of the server it is trying to reach with a
-          group name under the <literal>groups</literal> section.  If
-          a match is made, Subversion then looks for a section in the
-          <filename>servers</filename> file whose name is the matched
-          group's name.  From that section it reads the actual network
-          configuration settings.</para>
+        <para>Cuando Subversion es usado en una red, intenta
+          encontrar una coincidencia entre el nombre del servidor
+          al que intenta llegar con un nombre de grupo de la
+          sección <literal>groups</literal>. Si se encuentra tal
+          coincidencia, Subversion busca entonces una sección en el
+          fichero <filename>servers</filename> cuyo nombre coincida
+          con el nombre del grupo.  De esta sección obtendrá la
+          configuración de red que será usada.</para>
 
-        <para>The <literal>global</literal> section contains the
-          settings that are meant for all of the servers not matched
-          by one of the globs under the <literal>groups</literal>
-          section.  The options available in this section are
-          exactly the same as those valid for the other server
-          sections in the file (except, of course, the special
-          <literal>groups</literal> section), and are as
-          follows:</para>
+        <para>La sección <literal>global</literal> contiene la
+          configuración que será usada para todos los servidores
+          que no encajen con ninguna de las máscaras de la
+          sección <literal>groups</literal>. Las opciones
+          disponibles en esta sección son exáctamente las mismas
+          que aquellas válidas para otras secciones de servidor en
+          el fichero (excepto, por supuesto, la sección especial
+          <literal>groups</literal>), y son las siguientes:</para>
 
         <variablelist>
           <varlistentry>
