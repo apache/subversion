@@ -33,6 +33,7 @@ get_dir_contents (apr_hash_t *dirents,
                   svn_ra_plugin_t *ra_lib,
                   void *session,
                   svn_boolean_t recurse,
+                  svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
   apr_hash_t *tmpdirents;
@@ -46,6 +47,9 @@ get_dir_contents (apr_hash_t *dirents,
   else
     return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
                              _("No get_dir() available for URL schema"));
+
+  if (ctx->cancel_func)
+    SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
 
   for (hi = apr_hash_first (pool, tmpdirents);
        hi;
@@ -65,7 +69,7 @@ get_dir_contents (apr_hash_t *dirents,
 
       if (recurse && the_ent->kind == svn_node_dir)
         SVN_ERR (get_dir_contents (dirents, path, rev, ra_lib, session,
-                                   recurse, pool));
+                                   recurse, ctx, pool));
     }
 
   return SVN_NO_ERROR;
@@ -98,7 +102,7 @@ svn_client_ls (apr_hash_t **dirents,
       *dirents = apr_hash_make (pool);
 
       SVN_ERR (get_dir_contents (*dirents, "", rev, ra_lib, session, recurse,
-                                 pool));
+                                 ctx, pool));
     }
   else if (url_kind == svn_node_file)
     {

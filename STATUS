@@ -9,14 +9,6 @@ Status of 1.1.0:
 
 Candidate changes:
 
-  * r10840
-    Insert cancellation points for the list (ls) command.
-    Justification:
-      Simple fix for an annoying problem reported by users.
-    Votes:
-      +1: bliss, sussman, lundblad
-
-
 Status of 1.1.1:
 ================
 
