@@ -30,6 +30,8 @@
 #include "svn_path.h"
 #include "svn_config.h"
 
+#include "svn_private_config.h"
+
 #include "ra_dav.h"
 
 
@@ -265,15 +267,15 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
     {
     case NE_AUTH:
       errcode = SVN_ERR_RA_NOT_AUTHORIZED;
-      msg = "authorization failed";
+      msg = _("authorization failed");
       break;
       
     case NE_CONNECT:
-      msg = "could not connect to server";
+      msg = _("could not connect to server");
       break;
 
     case NE_TIMEOUT:
-      msg = "timed out waiting for server";
+      msg = _("timed out waiting for server");
       break;
 
     default:
@@ -443,7 +445,8 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
          size for buffered files. */
   status = apr_file_info_get(&finfo, APR_FINFO_SIZE, body_file);
   if (status)
-    return svn_error_wrap_apr(status, "Can't calculate the request body size");
+    return svn_error_wrap_apr(status,
+                              _("Can't calculate the request body size"));
 
   ne_set_request_body_provider(req, (size_t) finfo.size,
                                ra_dav_body_provider, body_file);
@@ -629,12 +632,12 @@ parsed_request(ne_session *sess,
     {
       if (code == 404)
       {
-        msg = apr_psprintf(pool, "'%s' path not found", url);
+        msg = apr_psprintf(pool, _("'%s' path not found"), url);
         err = svn_error_create(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL, msg);
       }
       else
       {
-        msg = apr_psprintf(pool, "%s of '%s'", method, url);
+        msg = apr_psprintf(pool, _("%s of '%s'"), method, url);
         err = svn_ra_dav__convert_error(sess, msg, rv);
       }
       goto cleanup;
@@ -645,8 +648,8 @@ parsed_request(ne_session *sess,
   if (msg != NULL && *msg != '\0')
     {
       err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                              "The %s request returned invalid XML "
-                              "in the response: %s (%s)",
+                              _("The %s request returned invalid XML "
+                              "in the response: %s (%s)"),
                               method, msg, url);
       goto cleanup;
     }
@@ -659,7 +662,7 @@ parsed_request(ne_session *sess,
   ne_xml_destroy(error_parser);
   if (err)
     return svn_error_createf(err->apr_err, err,
-                             "%s request failed on '%s'", method, url );
+                             _("%s request failed on '%s'"), method, url );
   return SVN_NO_ERROR;
 }
 
@@ -777,6 +780,6 @@ svn_ra_dav__request_dispatch(int *code_p,
 
   /* We either have a neon error, or some other error
      that we didn't expect. */
-  msg = apr_psprintf(pool, "%s of %s", method, url);
+  msg = apr_psprintf(pool, _("%s of %s"), method, url);
   return svn_ra_dav__convert_error(session, msg, rv);
 }

@@ -31,6 +31,7 @@
 #include "svn_error.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
 
 
 /*** Code. ***/
@@ -70,7 +71,7 @@ svn_cl__mkdir (apr_getopt_t *os,
     {
       if (err->apr_err == APR_EEXIST)
         return svn_error_quick_wrap
-          (err, "Try 'svn add' or 'svn add --non-recursive' instead?");
+          (err, _("Try 'svn add' or 'svn add --non-recursive' instead?"));
       else
         return err;
     }

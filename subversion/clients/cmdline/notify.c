@@ -32,6 +32,8 @@
 #include "svn_pools.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
+
 
 /* Baton for notify and friends. */
 struct notify_baton
@@ -66,7 +68,7 @@ notify (void *baton,
   err = svn_cmdline_path_local_style_from_utf8 (&path_stdout, path, nb->pool);
   if (err)
     {
-      printf ("WARNING: error decoding UTF-8 for ?\n");
+      printf (_("WARNING: error decoding UTF-8 for ?\n"));
       svn_pool_clear (nb->pool);
       svn_error_clear (err);
       return;
@@ -75,9 +77,9 @@ notify (void *baton,
     {
     case svn_wc_notify_skip:
       if (content_state == svn_wc_notify_state_missing)
-        printf ("Skipped missing target: '%s'\n", path_stdout);
+        printf (_("Skipped missing target: '%s'\n"), path_stdout);
       else
-        printf ("Skipped '%s'\n", path_stdout);
+        printf (_("Skipped '%s'\n"), path_stdout);
       break;
 
     case svn_wc_notify_update_delete:
@@ -91,19 +93,20 @@ notify (void *baton,
       break;
 
     case svn_wc_notify_restore:
-      printf ("Restored '%s'\n", path_stdout);
+      printf (_("Restored '%s'\n"), path_stdout);
       break;
 
     case svn_wc_notify_revert:
-      printf ("Reverted '%s'\n", path_stdout);
+      printf (_("Reverted '%s'\n"), path_stdout);
       break;
 
     case svn_wc_notify_failed_revert:
-      printf ("Failed to revert '%s' -- try updating instead.\n", path_stdout);
+      printf (_("Failed to revert '%s' -- try updating instead.\n"), 
+              path_stdout);
       break;
 
     case svn_wc_notify_resolved:
-      printf ("Resolved conflicted state of '%s'\n", path_stdout);
+      printf (_("Resolved conflicted state of '%s'\n"), path_stdout);
       break;
 
     case svn_wc_notify_add:
@@ -162,7 +165,7 @@ notify (void *baton,
     case svn_wc_notify_update_external:
       /* Currently this is used for checkouts and switches too.  If we
          want different output, we'll have to add new actions. */
-      printf ("\nFetching external item into '%s'\n", path_stdout);
+      printf (_("\nFetching external item into '%s'\n"), path_stdout);
 
       /* Remember that we're now "inside" an externals definition. */
       nb->in_external = TRUE;
@@ -197,8 +200,8 @@ notify (void *baton,
             else  /* no revision */
               {
                 if (nb->is_export)
-                  printf ("%sxport complete.\n",
-                          nb->in_external ? "External e" : "E");
+                  printf (nb->in_external ? _("External export complete.\n") : 
+                                            _("Export complete.\n"));
                 else if (nb->is_checkout)
                   printf ("%sheckout complete.\n",
                           nb->in_external ? "External c" : "C");
@@ -214,7 +217,8 @@ notify (void *baton,
       break;
 
     case svn_wc_notify_status_external:
-      printf ("\nPerforming status on external item at '%s'\n", path_stdout);
+      printf (_("\nPerforming status on external item at '%s'\n"), 
+              path_stdout);
       break;
 
     case svn_wc_notify_status_completed:
@@ -223,7 +227,7 @@ notify (void *baton,
       break;
 
     case svn_wc_notify_commit_modified:
-      printf ("Sending        %s\n", path_stdout);
+      printf (_("Sending        %s\n"), path_stdout);
       break;
 
     case svn_wc_notify_commit_added:
@@ -238,13 +242,13 @@ notify (void *baton,
       break;
 
     case svn_wc_notify_commit_replaced:
-      printf ("Replacing      %s\n", path_stdout);
+      printf (_("Replacing      %s\n"), path_stdout);
       break;
 
     case svn_wc_notify_commit_postfix_txdelta:
       if (! nb->sent_first_txdelta)
         {
-          printf ("Transmitting file data ");
+          printf (_("Transmitting file data "));
           nb->sent_first_txdelta = TRUE;
         }
 

@@ -33,7 +33,7 @@
 #include "svn_error.h"
 #include "cl.h"
 
-
+#include "svn_private_config.h"
 
 
 /* Set @a *result to the result of prompting the user with @a
@@ -56,7 +56,7 @@ prompt (const char **result,
 
   status = apr_file_open_stdin (&fp, pool);
   if (status)
-    return svn_error_wrap_apr (status, "Can't open stdin");
+    return svn_error_wrap_apr (status, _("Can't open stdin"));
 
   SVN_ERR (svn_cmdline_cstring_from_utf8 (&prompt_stdout, prompt_msg, pool));
 
@@ -70,7 +70,7 @@ prompt (const char **result,
         {
           status = apr_file_getc (&c, fp);
           if (status && ! APR_STATUS_IS_EOF(status))
-            return svn_error_wrap_apr (status, "Can't read stdin");
+            return svn_error_wrap_apr (status, _("Can't read stdin"));
 
           if (saw_first_half_of_eol)
             {
@@ -104,7 +104,7 @@ prompt (const char **result,
 
       status = apr_password_get (prompt_stdout, strbuf->data, &bufsize);
       if (status)
-        return svn_error_wrap_apr (status, "Can't get password");
+        return svn_error_wrap_apr (status, _("Can't get password"));
     }
 
   SVN_ERR (svn_cmdline_cstring_to_utf8 (result, strbuf->data, pool));
@@ -128,7 +128,7 @@ maybe_print_realm (const char *realm, apr_pool_t *pool)
   if (realm)
     {
       SVN_ERR (svn_cmdline_cstring_from_utf8 (&realm_native, realm, pool));
-      fprintf (stderr, "Authentication realm: %s\n", realm_native);
+      fprintf (stderr, _("Authentication realm: %s\n"), realm_native);
       fflush (stderr);
     }
 
@@ -153,9 +153,9 @@ svn_cl__auth_simple_prompt (svn_auth_cred_simple_t **cred_p,
   if (username)
     ret->username = apr_pstrdup (pool, username);
   else
-    SVN_ERR (prompt (&(ret->username), "Username: ", FALSE, pool));
+    SVN_ERR (prompt (&(ret->username), _("Username: "), FALSE, pool));
 
-  pass_prompt = apr_psprintf (pool, "Password for '%s': ", ret->username);
+  pass_prompt = apr_psprintf (pool, _("Password for '%s': "), ret->username);
   SVN_ERR (prompt (&(ret->password), pass_prompt, TRUE, pool));
   ret->may_save = may_save;
   *cred_p = ret;
@@ -175,7 +175,7 @@ svn_cl__auth_username_prompt (svn_auth_cred_username_t **cred_p,
 
   SVN_ERR (maybe_print_realm (realm, pool));
 
-  SVN_ERR (prompt (&(ret->username), "Username: ", FALSE, pool));
+  SVN_ERR (prompt (&(ret->username), _("Username: "), FALSE, pool));
   ret->may_save = may_save;
   *cred_p = ret;
   return SVN_NO_ERROR;
@@ -196,47 +196,47 @@ svn_cl__auth_ssl_server_trust_prompt (
   const char *choice;
   svn_stringbuf_t *msg;
   svn_stringbuf_t *buf = svn_stringbuf_createf
-    (pool, "Error validating server certificate for '%s':\n", realm);
+    (pool, _("Error validating server certificate for '%s':\n"), realm);
 
   if (failures & SVN_AUTH_SSL_UNKNOWNCA)
     {
       svn_stringbuf_appendcstr
         (buf,
-         " - The certificate is not issued by a trusted authority. Use the\n"
-         "   fingerprint to validate the certificate manually!\n");
+         _(" - The certificate is not issued by a trusted authority. Use the\n"
+         "   fingerprint to validate the certificate manually!\n"));
     }
 
   if (failures & SVN_AUTH_SSL_CNMISMATCH)
     {
       svn_stringbuf_appendcstr
-        (buf, " - The certificate hostname does not match.\n");
+        (buf, _(" - The certificate hostname does not match.\n"));
     } 
 
   if (failures & SVN_AUTH_SSL_NOTYETVALID)
     {
       svn_stringbuf_appendcstr
-        (buf, " - The certificate is not yet valid.\n");
+        (buf, _(" - The certificate is not yet valid.\n"));
     }
 
   if (failures & SVN_AUTH_SSL_EXPIRED)
     {
       svn_stringbuf_appendcstr
-        (buf, " - The certificate has expired.\n");
+        (buf, _(" - The certificate has expired.\n"));
     }
 
   if (failures & SVN_AUTH_SSL_OTHER)
     {
       svn_stringbuf_appendcstr
-        (buf, " - The certificate has an unknown error.\n");
+        (buf, _(" - The certificate has an unknown error.\n"));
     }
 
   msg = svn_stringbuf_createf
     (pool,
-     "Certificate information:\n"
+     _("Certificate information:\n"
      " - Hostname: %s\n"
      " - Valid: from %s until %s\n"
      " - Issuer: %s\n"
-     " - Fingerprint: %s\n",
+     " - Fingerprint: %s\n"),
      cert_info->hostname,
      cert_info->valid_from,
      cert_info->valid_until,
@@ -247,11 +247,11 @@ svn_cl__auth_ssl_server_trust_prompt (
   if (may_save)
     {
       svn_stringbuf_appendcstr
-        (buf, "(R)eject, accept (t)emporarily or accept (p)ermanently? ");
+        (buf, _("(R)eject, accept (t)emporarily or accept (p)ermanently? "));
     }
   else
     {
-      svn_stringbuf_appendcstr (buf, "(R)eject or accept (t)emporarily? ");
+      svn_stringbuf_appendcstr (buf, _("(R)eject or accept (t)emporarily? "));
     }
   SVN_ERR (prompt (&choice, buf->data, FALSE, pool));
 
@@ -288,7 +288,8 @@ svn_cl__auth_ssl_client_cert_prompt (svn_auth_cred_ssl_client_cert_t **cred_p,
   const char *cert_file = NULL;
 
   SVN_ERR (maybe_print_realm (realm, pool));
-  SVN_ERR (prompt (&cert_file, "Client certificate filename: ", FALSE, pool));
+  SVN_ERR (prompt (&cert_file, _("Client certificate filename: "), 
+                   FALSE, pool));
 
   cred = apr_palloc (pool, sizeof(*cred));
   cred->cert_file = cert_file;
@@ -310,7 +311,7 @@ svn_cl__auth_ssl_client_cert_pw_prompt (
 {
   svn_auth_cred_ssl_client_cert_pw_t *cred = NULL;
   const char *result;
-  const char *text = apr_psprintf (pool, "Passphrase for '%s': ", realm);
+  const char *text = apr_psprintf (pool, _("Passphrase for '%s': "), realm);
 
   SVN_ERR (prompt (&result, text, TRUE, pool));
 

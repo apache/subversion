@@ -30,6 +30,8 @@
 #include "entries.h"
 #include "props.h"
 
+#include "svn_private_config.h"
+
 
 /* Relocate the main URL and the copyfrom URL for ENTRY by changing FROM to
  * TO.  ADM_ACCESS is the access baton for ENTRY.  If DO_SYNC is set then

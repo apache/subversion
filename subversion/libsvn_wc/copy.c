@@ -33,6 +33,8 @@
 #include "adm_files.h"
 #include "props.h"
 
+#include "svn_private_config.h"
+
 
 /*** Code. ***/
 
@@ -142,7 +144,7 @@ copy_file_administratively (const char *src_path,
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
   if (dst_kind != svn_node_none)
     return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
-                              "'%s' already exists and is in the way",
+                              _("'%s' already exists and is in the way"),
                               dst_path);
 
   /* Even if DST_PATH doesn't exist it may still be a versioned file; it
@@ -154,12 +156,12 @@ copy_file_administratively (const char *src_path,
     {
       if (dst_entry->schedule == svn_wc_schedule_delete)
         return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
-                                  "'%s' is scheduled for deletion; it must"
-                                  " be committed before being overwritten",
+                                  _("'%s' is scheduled for deletion; it must"
+                                  " be committed before being overwritten"),
                                   dst_path);
       else
         return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
-                                  "There is already a versioned item '%s'",
+                                  _("There is already a versioned item '%s'"),
                                   dst_path);
     }
 
@@ -170,15 +172,15 @@ copy_file_administratively (const char *src_path,
   if (! src_entry)
     return svn_error_createf 
       (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-       "Cannot copy or move '%s': it's not under version control",
+       _("Cannot copy or move '%s': it's not under version control"),
        src_path);
   if ((src_entry->schedule == svn_wc_schedule_add)
       || (! src_entry->url)
       || (src_entry->copied))
     return svn_error_createf 
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-       "Cannot copy or move '%s': it's not in the repository yet; "
-       "try committing first",
+       _("Cannot copy or move '%s': it's not in the repository yet; "
+       "try committing first"),
        src_path);
 
   /* Now, make an actual copy of the working file. */
@@ -286,14 +288,14 @@ copy_dir_administratively (const char *src_path,
   if (! src_entry)
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, NULL, 
-       "'%s' is not under version control", src_path);
+       _("'%s' is not under version control"), src_path);
   if ((src_entry->schedule == svn_wc_schedule_add)
       || (! src_entry->url)
       || (src_entry->copied))
     return svn_error_createf 
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-       "Not allowed to copy or move '%s': it is not in the repository yet; "
-       "try committing first",
+       _("Not allowed to copy or move '%s': it is not in the repository yet; "
+       "try committing first"),
        src_path);
 
   /* Recursively copy the whole directory over.  This gets us all

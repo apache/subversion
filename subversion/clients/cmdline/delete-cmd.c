@@ -31,6 +31,7 @@
 #include "svn_pools.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
 
 
 /*** Code. ***/
@@ -44,8 +45,8 @@ svn_cl__may_need_force (svn_error_t *err)
     {
       /* Should this svn_error_compose a new error number? Probably not,
          the error hasn't changed. */
-      err = svn_error_quick_wrap (err,
-                                  "Use --force to override this restriction" );
+      err = svn_error_quick_wrap
+        (err, _("Use --force to override this restriction") );
     }
 
   return err;

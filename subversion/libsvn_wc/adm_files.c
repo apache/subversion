@@ -41,6 +41,8 @@
 #include "adm_files.h"
 #include "entries.h"
 
+#include "svn_private_config.h"
+
 
 /*** File names in the adm area. ***/
 
@@ -195,7 +197,7 @@ svn_wc__make_adm_thing (svn_wc_adm_access_t *adm_access,
          segfault or other obvious indicator that something went
          wrong.  Even so, not sure if it's appropriate.  Thoughts? */
       err = svn_error_create 
-        (0, NULL, "Bad type indicator");
+        (0, NULL, _("Bad type indicator"));
     }
 
   return err;
@@ -402,7 +404,7 @@ open_adm_file (apr_file_t **handle,
           /* We don't handle append.  To do so we would need to copy the
              contents into the apr_file_t once it has been opened. */
           return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                   "APR_APPEND not supported for adm files");
+                                   _("APR_APPEND not supported for adm files"));
         }
 
       /* Need to own the temporary file, so don't reuse an existing one. */
@@ -445,8 +447,8 @@ open_adm_file (apr_file_t **handle,
       if (APR_STATUS_IS_ENOENT(err->apr_err) && (flags & APR_WRITE))
         {
           err = svn_error_quick_wrap(err,
-                               "Your .svn/tmp directory may be missing or "
-                               "corrupt; run 'svn cleanup' and try again");
+                               _("Your .svn/tmp directory may be missing or "
+                               "corrupt; run 'svn cleanup' and try again"));
         }
     }
 
@@ -620,14 +622,14 @@ svn_wc__open_props (apr_file_t **handle,
   if (wc_format_version == 0)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       "'%s' is not a working copy", parent_dir);
+       _("'%s' is not a working copy"), parent_dir);
 
   /* Then examine the flags to know -which- kind of prop file to get. */
 
   if (base && wcprops)
     return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             "No such thing as 'base' "
-                             "working copy properties!");
+                             _("No such thing as 'base' "
+                             "working copy properties!"));
 
   else if (base)
     {
@@ -695,14 +697,14 @@ svn_wc__close_props (apr_file_t *fp,
   if (wc_format_version == 0)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       "'%s' is not a working copy", parent_dir);
+       _("'%s' is not a working copy"), parent_dir);
 
   /* Then examine the flags to know -which- kind of prop file to get. */
 
   if (base && wcprops)
     return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             "No such thing as 'base' "
-                             "working copy properties!");
+                             _("No such thing as 'base' "
+                             "working copy properties!"));
 
   else if (base)
     {
@@ -765,8 +767,8 @@ svn_wc__sync_props (const char *path,
 
   if (base && wcprops)
     return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             "No such thing as 'base' "
-                             "working copy properties!");
+                             _("No such thing as 'base' "
+                             "working copy properties!"));
 
   else if (base)
     {
@@ -834,7 +836,7 @@ check_adm_exists (svn_boolean_t *exists,
       /* If got an error other than dir non-existence, then
          something's weird and we should return a genuine error. */
       return svn_error_createf (APR_ENOTDIR, NULL,
-                                "'%s' is not a directory", tmp_path);
+                                _("'%s' is not a directory"), tmp_path);
     }
   else if (kind == svn_node_none)
     {
@@ -887,7 +889,7 @@ check_adm_exists (svn_boolean_t *exists,
       SVN_ERR (svn_wc_adm_close (adm_access));
       if (!entry)
         return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                                  "No entry for '%s'", path);
+                                  _("No entry for '%s'"), path);
 
       /* The revisions must match except when adding a directory with a
          name that matches a directory scheduled for deletion. That's
@@ -907,7 +909,7 @@ check_adm_exists (svn_boolean_t *exists,
         return
           svn_error_createf
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           "URL '%s' doesn't match existing URL '%s' in '%s'",
+           _("URL '%s' doesn't match existing URL '%s' in '%s'"),
            url, entry->url, path);
     }
 

@@ -28,6 +28,8 @@
 #include "adm_files.h"
 #include "questions.h"
 
+#include "svn_private_config.h"
+
 
 
 struct svn_wc_adm_access_t
@@ -153,7 +155,7 @@ create_lock (svn_wc_adm_access_t *adm_access, int wait_for, apr_pool_t *pool)
     }
 
   return svn_error_createf (SVN_ERR_WC_LOCKED, NULL,
-                            "Working copy '%s' locked",
+                            _("Working copy '%s' locked"),
                             svn_path_local_style (adm_access->path, pool));
 }
 
@@ -273,7 +275,8 @@ probe (const char **dir,
         {
           return svn_error_createf
             (SVN_ERR_WC_BAD_PATH, NULL,
-             "Path '%s' ends in '%s', which is unsupported for this operation",
+             _("Path '%s' ends in '%s', "
+               "which is unsupported for this operation"),
              svn_path_local_style (path, pool), base_name);
         }
 
@@ -350,7 +353,7 @@ do_open (svn_wc_adm_access_t **adm_access,
            locked: if it's not locked call svn_wc_adm_open, if it is locked
            call svn_wc_adm_retrieve.  */
         return svn_error_createf (SVN_ERR_WC_LOCKED, NULL,
-                                  "Working copy '%s' locked",
+                                  _("Working copy '%s' locked"),
                                   path);
     }
 
@@ -368,7 +371,7 @@ do_open (svn_wc_adm_access_t **adm_access,
           /* Should we attempt to distinguish certain errors? */
           svn_error_clear (err);
           return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-                                    "'%s' is not a working copy",
+                                    _("'%s' is not a working copy"),
                                     svn_path_local_style (path, pool));
         }
 
@@ -593,7 +596,7 @@ svn_wc_adm_probe_open2 (svn_wc_adm_access_t **adm_access,
         {
           svn_error_clear (err);
           return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-                                    "'%s' is not a working copy",
+                                    _("'%s' is not a working copy"),
                                     svn_path_local_style (path, pool));
         }
       else
@@ -641,7 +644,7 @@ svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
      for NULL batons. */
   if (! *adm_access)
     return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
-                              "Working copy '%s' not locked",
+                              _("Working copy '%s' not locked"),
                               path);
 
   return SVN_NO_ERROR;
@@ -835,14 +838,14 @@ svn_wc__adm_write_check (svn_wc_adm_access_t *adm_access)
           SVN_ERR (svn_wc_locked (&locked, adm_access->path, adm_access->pool));
           if (! locked)
             return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL, 
-                                      "Write-lock stolen in '%s'",
+                                      _("Write-lock stolen in '%s'"),
                                       adm_access->path); 
         }
     }
   else
     {
       return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL, 
-                                "No write-lock in '%s'", adm_access->path); 
+                                _("No write-lock in '%s'"), adm_access->path);
     }
 
   return SVN_NO_ERROR;
@@ -862,7 +865,7 @@ svn_wc_locked (svn_boolean_t *locked, const char *path, apr_pool_t *pool)
     *locked = FALSE;
   else
     return svn_error_createf (SVN_ERR_WC_LOCKED, NULL,
-                              "Lock file '%s' is not a regular file",
+                              _("Lock file '%s' is not a regular file"),
                               lockfile);
     
   return SVN_NO_ERROR;

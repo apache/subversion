@@ -45,6 +45,7 @@
 #include "adm_files.h"
 #include "translate.h"
 
+#include "svn_private_config.h"
 
 svn_error_t *
 svn_wc_translated_file (const char **xlated_p,
@@ -122,7 +123,7 @@ svn_wc_translated_file (const char **xlated_p,
         {
           return svn_error_createf
             (SVN_ERR_IO_UNKNOWN_EOL, NULL,
-             "'%s' has unknown value for svn:eol-style property",
+             _("'%s' has unknown value for svn:eol-style property"),
              vfile);
         }
 

@@ -31,6 +31,8 @@
 #include "svn_pools.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
+
 
 /*** Code. ***/
 
@@ -121,7 +123,7 @@ svn_cl__checkout (apr_getopt_t *os,
       if (! svn_path_is_url (repos_url))
         return svn_error_createf 
           (SVN_ERR_BAD_URL, NULL, 
-           "'%s' does not appear to be a URL", repos_url);
+           _("'%s' does not appear to be a URL"), repos_url);
 
       repos_url = svn_path_canonicalize (repos_url, subpool);
 

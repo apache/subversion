@@ -29,25 +29,26 @@
 #include "svn_utf.h"
 #include "cl.h"
 
-
-/*** Code. ***/
+#include "svn_private_config.h"
 
 const char svn_cl__help_header[] =
-    "usage: svn <subcommand> [options] [args]\n"
-    "Type \"svn help <subcommand>\" for help on a specific subcommand.\n"
-    "\n"
-    "Most subcommands take file and/or directory arguments, recursing\n"
-    "on the directories.  If no arguments are supplied to such a\n"
-    "command, it will recurse on the current directory (inclusive) by\n" 
-    "default.\n"
-    "\n"
-    "Available subcommands:\n";
+    N_("usage: svn <subcommand> [options] [args]\n"
+       "Type \"svn help <subcommand>\" for help on a specific subcommand.\n"
+       "\n"
+       "Most subcommands take file and/or directory arguments, recursing\n"
+       "on the directories.  If no arguments are supplied to such a\n"
+       "command, it will recurse on the current directory (inclusive) by\n" 
+       "default.\n"
+       "\n"
+       "Available subcommands:\n");
 
 const char svn_cl__help_footer[] =
-    "Subversion is a tool for version control.\n"
-    "For additional information, see http://subversion.tigris.org/\n"
-    "\n";
+    N_("Subversion is a tool for version control.\n"
+       "For additional information, see http://subversion.tigris.org/\n"
+       "\n");
 
+
+/*** Code. ***/
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
@@ -59,7 +60,7 @@ svn_cl__help (apr_getopt_t *os,
 
   void *ra_baton;
   const char *ra_desc_start
-    = "The following repository access (RA) modules are available:\n\n";
+    = _("The following repository access (RA) modules are available:\n\n");
   svn_stringbuf_t *ra_desc_body, *ra_desc_all;
 
   if (baton)
@@ -77,10 +78,10 @@ svn_cl__help (apr_getopt_t *os,
                                opt_state ? opt_state->version : FALSE,
                                opt_state ? opt_state->quiet : FALSE,
                                ra_desc_all->data,
-                               svn_cl__help_header,
+                               gettext (svn_cl__help_header),
                                svn_cl__cmd_table,
                                svn_cl__options,
-                               svn_cl__help_footer,
+                               gettext (svn_cl__help_footer),
                                pool));
 
   return SVN_NO_ERROR;

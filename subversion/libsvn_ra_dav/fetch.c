@@ -49,6 +49,8 @@
 #include "svn_dav.h"
 #include "svn_time.h"
 
+#include "svn_private_config.h"
+
 #include "ra_dav.h"
 
 
@@ -251,7 +253,7 @@ static svn_error_t *simple_store_vsn_url(const char *vsn_url,
   /* store the version URL as a property */
   SVN_ERR_W( (*setter)(baton, SVN_RA_DAV__LP_VSN_URL, 
                        svn_string_create(vsn_url, pool), pool),
-             "Could not save the URL of the version resource" );
+             _("Could not save the URL of the version resource") );
 
   return NULL;
 }
@@ -395,7 +397,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                               "Could not create a GET request for '%s'",
+                               _("Could not create a GET request for '%s'"),
                                url);
     }
 
@@ -459,7 +461,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
     {
        const char *msg;
 
-       msg = apr_psprintf(pool, "GET request failed for %s", url);
+       msg = apr_psprintf(pool, _("GET request failed for %s"), url);
        if (err)
          svn_error_clear (err);
        err = svn_ra_dav__convert_error(sess, msg, decompress_rv);
@@ -582,7 +584,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
                                         pool,
                                         &frc.handler,
                                         &frc.handler_baton),
-             "Could not save file");
+             _("Could not save file"));
 
   /* Only bother with text-deltas if our caller cares. */
   if (! text_deltas)
@@ -631,7 +633,7 @@ static void get_file_reader(void *userdata, const char *buf, size_t len)
       /* Uh oh, didn't write as many bytes as neon gave us. */
       return 
         svn_error_create(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                         "Error writing to stream: unexpected EOF");
+                         _("Error writing to stream: unexpected EOF"));
     }
 #endif
       
@@ -816,9 +818,9 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
           if (strcmp (hex_digest, expected_checksum->data) != 0)
             return svn_error_createf
               (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-               "Checksum mismatch for '%s':\n"
+               _("Checksum mismatch for '%s':\n"
                "   expected checksum:  %s\n"
-               "   actual checksum:    %s\n",
+               "   actual checksum:    %s\n"),
                path, expected_checksum->data, hex_digest);
         }
     }
@@ -1077,14 +1079,14 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
                                           drev_start_element, drev_end_element,
                                           revision, NULL, NULL, pool);
   if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
-    return svn_error_quick_wrap(err, "Server does not support date-based "
-                                "operations");
+    return svn_error_quick_wrap(err, _("Server does not support date-based "
+                                "operations"));
   else if (err)
     return err;
 
   if (*revision == SVN_INVALID_REVNUM)
     return svn_error_create(SVN_ERR_INCOMPLETE_DATA, NULL,
-                            "Invalid server response to dated-rev request");
+                            _("Invalid server response to dated-rev request"));
 
   return SVN_NO_ERROR;
 }
@@ -1171,8 +1173,8 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
     return 
       svn_error_create
       (SVN_ERR_RA_DAV_REQUEST_FAILED, err,
-       "DAV request failed; it's possible that the repository's "
-       "pre-revprop-change hook either failed or is non-existent");
+       _("DAV request failed; it's possible that the repository's "
+       "pre-revprop-change hook either failed or is non-existent"));
 
   return SVN_NO_ERROR;
 }
@@ -1913,7 +1915,7 @@ static int cdata_handler(void *userdata, int state,
           {
             /* Short write without associated error?  "Can't happen." */
             CHKERR( svn_error_createf(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                                      "Error writing to '%s': unexpected EOF",
+                                      _("Error writing to '%s': unexpected EOF"),
                                       rb->namestr->data) );
           }
       }
@@ -2050,7 +2052,7 @@ static int end_element(void *userdata, int state,
         else
           {
             CHKERR( svn_error_createf(SVN_ERR_XML_UNKNOWN_ENCODING, NULL,
-                                      "Unknown XML encoding: '%s'",
+                                      _("Unknown XML encoding: '%s'"),
                                       rb->encoding->data) );
             abort(); /* Not reached. */
           }
@@ -2310,7 +2312,7 @@ static svn_error_t * reporter_finish_report(void *report_baton,
     {
       return svn_error_createf 
         (SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-         "REPORT response handling failed to complete the editor drive");
+         _("REPORT response handling failed to complete the editor drive"));
     }
 
   /* store auth info if we can. */

@@ -18,12 +18,15 @@
 
 
 /*** Includes. ***/
+
 #include "svn_client.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_cmdline.h"
 #include "svn_time.h"
 #include "cl.h"
+
+#include "svn_private_config.h"
 
 typedef struct
 {
@@ -137,7 +140,7 @@ svn_cl__blame (apr_getopt_t *os,
         {
           if (err->apr_err == SVN_ERR_CLIENT_IS_BINARY_FILE)
             {
-              printf ("Skipping binary file: '%s'\n", target);
+              printf (_("Skipping binary file: '%s'\n"), target);
               svn_error_clear (err);
             }
           else

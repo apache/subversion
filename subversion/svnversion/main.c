@@ -22,6 +22,8 @@
 #include "svn_opt.h"
 #include <apr_tables.h>
 
+#include "svn_private_config.h"
+
 #define SVNVERSION_OPT_VERSION SVN_OPT_FIRST_LONGOPT_ID
 
 struct status_baton
@@ -119,7 +121,7 @@ static void
 usage(const apr_getopt_option_t *options, apr_pool_t *pool)
 {
   fprintf(stderr, 
-          "usage: svnversion [options] wc_path [trail_url]\n\n"
+          _("usage: svnversion [options] wc_path [trail_url]\n\n"
           "  Produce a compact \"version number\" for the working copy path\n"
           "  WC_PATH.  TRAIL_URL is the trailing portion of the URL used to\n"
           "  determine if WC_PATH itself is switched (detection of switches\n"
@@ -142,7 +144,7 @@ usage(const apr_getopt_option_t *options, apr_pool_t *pool)
           "  If invoked on a directory that is not a working copy, an\n"
           "  exported directory say, the program will output \"exported\".\n"
           "\n"
-          "Valid options:\n");
+          "Valid options:\n"));
   while (options->description)
     {
       const char *optstr;
@@ -175,9 +177,9 @@ main(int argc, const char *argv[])
   apr_getopt_t *os;
   const apr_getopt_option_t options[] =
     {
-      {"no-newline", 'n', 0, "do not output the trailing newline"},
-      {"committed",  'c', 0, "last changed rather than current revisions"},
-      {"version", SVNVERSION_OPT_VERSION, 0, "show version information"},
+      {"no-newline", 'n', 0, N_("do not output the trailing newline")},
+      {"committed",  'c', 0, N_("last changed rather than current revisions")},
+      {"version", SVNVERSION_OPT_VERSION, 0, N_("show version information")},
       {0,             0,  0,  0}
     };
 
@@ -259,7 +261,8 @@ main(int argc, const char *argv[])
         }
       else
         {
-          fprintf (stderr, "'%s' not versioned, and not exported\n", wc_path);
+          fprintf (stderr, _("'%s' not versioned, and not exported\n"),
+                   wc_path);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }
