@@ -67,6 +67,7 @@ svn_fs__bdb_get_rev (svn_fs__revision_t **revision_p,
      numbers begin with one.  */
   db_recno_t recno = rev + 1;
 
+  svn_fs__trail_debug (trail, "revisions", "get");
   db_err = fs->revisions->get (fs->revisions, trail->db_txn,
                                svn_fs__set_dbt (&key, &recno, sizeof (recno)),
                                svn_fs__result_dbt (&value),
@@ -117,6 +118,7 @@ svn_fs__bdb_put_rev (svn_revnum_t *rev,
       
       /* Update the filesystem revision with the new skel. */
       recno = *rev + 1;
+      svn_fs__trail_debug (trail, "revisions", "put");
       db_err = fs->revisions->put 
         (fs->revisions, trail->db_txn,
          svn_fs__set_dbt (&query, &recno, sizeof (recno)),
@@ -124,6 +126,7 @@ svn_fs__bdb_put_rev (svn_revnum_t *rev,
       return BDB_WRAP (fs, "updating filesystem revision", db_err);
     }
       
+  svn_fs__trail_debug (trail, "revisions", "put");
   db_err = fs->revisions->put (fs->revisions, trail->db_txn,
                                svn_fs__recno_dbt(&key, &recno),
                                svn_fs__skel_to_dbt (&value, skel, trail->pool),
@@ -155,6 +158,7 @@ svn_fs__bdb_youngest_rev (svn_revnum_t *youngest_p,
   SVN_ERR (svn_fs__check_fs (fs));
 
   /* Create a database cursor.  */
+  svn_fs__trail_debug (trail, "revisions", "cursor");
   SVN_ERR (BDB_WRAP (fs, "getting youngest revision (creating cursor)",
                     fs->revisions->cursor (fs->revisions, trail->db_txn,
                                            &cursor, 0)));
