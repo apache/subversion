@@ -897,6 +897,7 @@ struct rep_write_baton
      closed. */
   struct apr_md5_ctx_t md5_context;
   unsigned char md5_digest[MD5_DIGESTSIZE];
+  svn_boolean_t finalized;
 
   /* Used for temporary allocations, iff `trail' (above) is null.  */
   apr_pool_t *pool;
@@ -1071,7 +1072,11 @@ rep_write_close_contents (void *baton)
      a checksum mismatch, it just happens that our code never tries to
      do that anyway. */
 
-  apr_md5_final (wb->md5_digest, &wb->md5_context);
+  if (! wb->finalized)
+    {
+      apr_md5_final (wb->md5_digest, &wb->md5_context);
+      wb->finalized = TRUE;
+    }
 
   /* If we got a trail, use it; else make one. */
   if (wb->trail)
