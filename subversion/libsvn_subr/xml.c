@@ -181,9 +181,9 @@ svn_xml_escape_string (svn_stringbuf_t **outstr,
 
 
 void
-svn_xml_escape_nts (svn_stringbuf_t **outstr,
-                    const char *string,
-                    apr_pool_t *pool)
+svn_xml_escape_cstring (svn_stringbuf_t **outstr,
+                        const char *string,
+                        apr_pool_t *pool)
 {
   xml_escape (outstr, string, (apr_size_t) strlen (string), pool);
 }
@@ -208,9 +208,9 @@ svn_xml_unescape_string (svn_stringbuf_t **outstr,
 
 
 void
-svn_xml_unescape_nts (svn_stringbuf_t **outstr,
-                      const char *string,
-                      apr_pool_t *pool)
+svn_xml_unescape_cstring (svn_stringbuf_t **outstr,
+                          const char *string,
+                          apr_pool_t *pool)
 {
   xml_unescape (outstr, string, (apr_size_t) strlen (string), pool);
 }
@@ -455,7 +455,7 @@ svn_xml_make_open_tag_hash (svn_stringbuf_t **str,
       svn_stringbuf_appendcstr (*str, "\n   ");
       svn_stringbuf_appendcstr (*str, key);
       svn_stringbuf_appendcstr (*str, "=\"");
-      svn_xml_escape_nts (str, val, pool);
+      svn_xml_escape_cstring (str, val, pool);
       svn_stringbuf_appendcstr (*str, "\"");
     }
 

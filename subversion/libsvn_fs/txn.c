@@ -143,7 +143,7 @@ svn_fs_begin_txn (svn_fs_txn_t **txn_p,
   {
     svn_string_t date;
 
-    date.data = svn_time_to_nts (apr_time_now(), pool);
+    date.data = svn_time_to_cstring (apr_time_now(), pool);
     date.len = strlen (date.data);
 
     SVN_ERR (svn_fs_change_txn_prop (txn, SVN_PROP_REVISION_DATE, 

@@ -31,24 +31,24 @@ const char *test_old_timestring =
 
 
 static svn_error_t *
-test_time_to_nts (const char **msg,
-                  svn_boolean_t msg_only,
-                  apr_pool_t *pool)
+test_time_to_cstring (const char **msg,
+                      svn_boolean_t msg_only,
+                      apr_pool_t *pool)
 {
   const char *timestring;
 
-  *msg = "test svn_time_to_nts";
+  *msg = "test svn_time_to_cstring";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  timestring = svn_time_to_nts(test_timestamp,pool);
+  timestring = svn_time_to_cstring(test_timestamp,pool);
 
   if (strcmp(timestring,test_timestring) != 0)
     {
       return svn_error_createf
         (SVN_ERR_TEST_FAILED, 0, NULL,
-         "svn_time_to_nts (%" APR_TIME_T_FMT
+         "svn_time_to_cstring (%" APR_TIME_T_FMT
          ") returned date string '%s' instead of '%s'",
          test_timestamp,timestring,test_timestring);
     }
@@ -58,24 +58,24 @@ test_time_to_nts (const char **msg,
 
 
 static svn_error_t *
-test_time_from_nts (const char **msg,
-                    svn_boolean_t msg_only,
-                    apr_pool_t *pool)
+test_time_from_cstring (const char **msg,
+                        svn_boolean_t msg_only,
+                        apr_pool_t *pool)
 {
   apr_time_t timestamp;
 
-  *msg = "test svn_time_from_nts";
+  *msg = "test svn_time_from_cstring";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (svn_time_from_nts (&timestamp, test_timestring, pool));
+  SVN_ERR (svn_time_from_cstring (&timestamp, test_timestring, pool));
 
   if (timestamp != test_timestamp)
     {
       return svn_error_createf
         (SVN_ERR_TEST_FAILED, 0, NULL,
-         "svn_time_from_nts (%s) returned time '%" APR_TIME_T_FMT
+         "svn_time_from_cstring (%s) returned time '%" APR_TIME_T_FMT
          "' instead of '%" APR_TIME_T_FMT "'",
          test_timestring,timestamp,test_timestamp);
     }
@@ -85,24 +85,24 @@ test_time_from_nts (const char **msg,
 
 
 static svn_error_t *
-test_time_from_nts_old (const char **msg,
-                    svn_boolean_t msg_only,
-                    apr_pool_t *pool)
+test_time_from_cstring_old (const char **msg,
+                            svn_boolean_t msg_only,
+                            apr_pool_t *pool)
 {
   apr_time_t timestamp;
 
-  *msg = "test svn_time_from_nts (old format)";
+  *msg = "test svn_time_from_cstring (old format)";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR (svn_time_from_nts (&timestamp, test_old_timestring, pool));
+  SVN_ERR (svn_time_from_cstring (&timestamp, test_old_timestring, pool));
 
   if (timestamp != test_timestamp)
     {
       return svn_error_createf
         (SVN_ERR_TEST_FAILED, 0, NULL,
-         "svn_time_from_nts (%s) returned time '%" APR_TIME_T_FMT
+         "svn_time_from_cstring (%s) returned time '%" APR_TIME_T_FMT
          "' instead of '%" APR_TIME_T_FMT "'",
          test_old_timestring,timestamp,test_timestamp);
     }
@@ -120,19 +120,19 @@ test_time_invariant (const char **msg,
   const char *timestring;
   apr_time_t timestamp;
 
-  *msg = "test svn_time_to_nts and svn_time_from_nts invariant";
+  *msg = "test svn_time_to_cstring and svn_time_from_cstring invariant";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  timestring = svn_time_to_nts(current_timestamp,pool);
-  SVN_ERR (svn_time_from_nts (&timestamp, timestring, pool));
+  timestring = svn_time_to_cstring(current_timestamp,pool);
+  SVN_ERR (svn_time_from_cstring (&timestamp, timestring, pool));
 
   if (timestamp != current_timestamp)
     {
       return svn_error_createf
         (SVN_ERR_TEST_FAILED, 0, NULL,
-         "svn_time_from_nts ( svn_time_to_nts (n) ) returned time '%" APR_TIME_T_FMT
+         "svn_time_from_cstring ( svn_time_to_nts (n) ) returned time '%" APR_TIME_T_FMT
          "' instead of '%" APR_TIME_T_FMT "'",
          timestamp,current_timestamp);
     }
@@ -147,9 +147,9 @@ test_time_invariant (const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS (test_time_to_nts),
-    SVN_TEST_PASS (test_time_from_nts),
-    SVN_TEST_PASS (test_time_from_nts_old),
+    SVN_TEST_PASS (test_time_to_cstring),
+    SVN_TEST_PASS (test_time_from_cstring),
+    SVN_TEST_PASS (test_time_from_cstring_old),
     SVN_TEST_PASS (test_time_invariant),
     SVN_TEST_NULL
   };

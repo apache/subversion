@@ -835,7 +835,7 @@ svn_ra_local__get_dir (void *session_baton,
                                              &(entry->last_author),
                                              root, fullpath, pool));
       if (datestring)
-        SVN_ERR (svn_time_from_nts(&(entry->time), datestring, subpool));
+        SVN_ERR (svn_time_from_cstring(&(entry->time), datestring, subpool));
 
       /* Store. */
       apr_hash_set (*dirents, entryname, APR_HASH_KEY_STRING, entry);

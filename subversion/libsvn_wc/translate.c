@@ -1024,7 +1024,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
     {
       if (entry && (entry->cmt_date))
         keywords->date = svn_string_create
-          (svn_time_to_human_nts (entry->cmt_date, pool), pool);
+          (svn_time_to_human_cstring (entry->cmt_date, pool), pool);
       else
         keywords->date = svn_string_create ("", pool);
     }

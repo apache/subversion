@@ -49,7 +49,7 @@ svn_ra_pipe__set_path (void *report_baton,
   svn_stringbuf_t *buf = NULL;
   svn_stringbuf_t *qpath = NULL;
 
-  svn_xml_escape_nts (&qpath, path, baton->pool);
+  svn_xml_escape_cstring (&qpath, path, baton->pool);
 
   svn_xml_make_open_tag (&buf, baton->pool, svn_xml_normal,
                          SVN_RA_PIPE__ENTRY_TAG, SVN_RA_PIPE__ATT_REV,
@@ -75,7 +75,7 @@ svn_ra_pipe__delete_path (void *report_baton, const char *path)
   svn_stringbuf_t *buf = NULL;
   svn_stringbuf_t *qpath = NULL;
 
-  svn_xml_escape_nts (&qpath, path, baton->pool);
+  svn_xml_escape_cstring (&qpath, path, baton->pool);
 
   svn_xml_make_open_tag (&buf, baton->pool, svn_xml_normal,
                          SVN_RA_PIPE__MISSING_TAG, NULL);
@@ -102,8 +102,8 @@ svn_ra_pipe__link_path (void *report_baton,
   svn_stringbuf_t *qpath = NULL;
   svn_stringbuf_t *linkpath = NULL;
 
-  svn_xml_escape_nts (&qpath, path, baton->pool);
-  svn_xml_escape_nts (&linkpath, url, baton->pool);
+  svn_xml_escape_cstring (&qpath, path, baton->pool);
+  svn_xml_escape_cstring (&linkpath, url, baton->pool);
 
   svn_xml_make_open_tag (&buf, baton->pool, svn_xml_normal,
                          SVN_RA_PIPE__ENTRY_TAG, SVN_RA_PIPE__ATT_REV,
@@ -218,7 +218,7 @@ svn_ra_pipe__get_reporter (const svn_ra_reporter_t **reporter,
   if (dst_path)
     {
       svn_stringbuf_t *escaped_dst_path = NULL;
-      svn_xml_escape_nts (&escaped_dst_path, dst_path, pool);
+      svn_xml_escape_cstring (&escaped_dst_path, dst_path, pool);
       svn_xml_make_open_tag (&buf, pool, svn_xml_normal,
                              SVN_RA_PIPE__DST_PATH_TAG, NULL);
       svn_stringbuf_appendstr (buf, escaped_dst_path);

@@ -340,7 +340,8 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                it.  */
           }
         else
-          SVN_ERR (svn_time_from_nts (&entry->text_time, text_timestr, pool));
+          SVN_ERR (svn_time_from_cstring (&entry->text_time, text_timestr,
+                                          pool));
         
         *modify_flags |= SVN_WC__ENTRY_MODIFY_TEXT_TIME;
       }
@@ -357,7 +358,8 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                it.  */
           }
         else
-          SVN_ERR (svn_time_from_nts (&entry->prop_time, prop_timestr, pool));
+          SVN_ERR (svn_time_from_cstring (&entry->prop_time, prop_timestr,
+                                          pool));
         
         *modify_flags |= SVN_WC__ENTRY_MODIFY_PROP_TIME;
       }
@@ -379,7 +381,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                                 APR_HASH_KEY_STRING);
     if (cmt_datestr)
       {
-        SVN_ERR (svn_time_from_nts (&entry->cmt_date, cmt_datestr, pool));
+        SVN_ERR (svn_time_from_cstring (&entry->cmt_date, cmt_datestr, pool));
         *modify_flags |= SVN_WC__ENTRY_MODIFY_CMT_DATE;
       }
     else
@@ -919,12 +921,12 @@ write_entry (svn_stringbuf_t **output,
   if (entry->text_time)
     {
       apr_hash_set (atts, SVN_WC__ENTRY_ATTR_TEXT_TIME, APR_HASH_KEY_STRING,
-                    svn_time_to_nts (entry->text_time, pool));
+                    svn_time_to_cstring (entry->text_time, pool));
     }
   if (entry->prop_time)
     {
       apr_hash_set (atts, SVN_WC__ENTRY_ATTR_PROP_TIME, APR_HASH_KEY_STRING,
-                    svn_time_to_nts (entry->prop_time, pool));
+                    svn_time_to_cstring (entry->prop_time, pool));
     }
 
   /* Checksum */
@@ -944,7 +946,7 @@ write_entry (svn_stringbuf_t **output,
   if (entry->cmt_date)
     {
       apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CMT_DATE, APR_HASH_KEY_STRING,
-                    svn_time_to_nts (entry->cmt_date, pool));
+                    svn_time_to_cstring (entry->cmt_date, pool));
     }
     
 

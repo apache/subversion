@@ -79,7 +79,7 @@ static const char * const human_timestamp_format_suffix =
 
 
 const char *
-svn_time_to_nts (apr_time_t t, apr_pool_t *pool)
+svn_time_to_cstring (apr_time_t t, apr_pool_t *pool)
 {
   const char *t_cstr;
   apr_time_exp_t exploded_time;
@@ -144,7 +144,7 @@ find_matching_string (char *str, apr_size_t size, const char strings[][4])
 
 
 svn_error_t *
-svn_time_from_nts(apr_time_t *when, const char *data, apr_pool_t *pool)
+svn_time_from_cstring(apr_time_t *when, const char *data, apr_pool_t *pool)
 {
   apr_time_exp_t exploded_time;
   apr_status_t apr_err;
@@ -218,7 +218,7 @@ svn_time_from_nts(apr_time_t *when, const char *data, apr_pool_t *pool)
 
 
 const char *
-svn_time_to_human_nts (apr_time_t t, apr_pool_t *pool)
+svn_time_to_human_cstring (apr_time_t t, apr_pool_t *pool)
 {
   apr_time_exp_t exploded_time;
   apr_size_t len, retlen;

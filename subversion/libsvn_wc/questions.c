@@ -181,8 +181,8 @@ svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
        will only comment it out because I do not possess the guts to
        remove it altogether. */
     /*
-    const char *tstr = svn_time_to_nts (wfile_time, pool);
-    SVN_ERR (svn_time_from_nts (&wfile_time, tstr, pool));
+    const char *tstr = svn_time_to_cstring (wfile_time, pool);
+    SVN_ERR (svn_time_from_cstring (&wfile_time, tstr, pool));
     */
   }
   

@@ -141,8 +141,8 @@ log_message_receiver (void *baton,
       /* Convert date to a format for humans. */
       apr_time_t time_temp;
       
-      SVN_ERR (svn_time_from_nts (&time_temp, date, pool));
-      date = svn_time_to_human_nts(time_temp, pool);
+      SVN_ERR (svn_time_from_cstring (&time_temp, date, pool));
+      date = svn_time_to_human_cstring(time_temp, pool);
     }
   else
     date = "(no date)";
@@ -291,7 +291,7 @@ log_message_receiver_xml (void *baton,
   /* <author>xxx</author> */
   svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "author",
                          NULL);
-  svn_xml_escape_nts (&sb, author, pool);
+  svn_xml_escape_cstring (&sb, author, pool);
   svn_xml_make_close_tag (&sb, pool, "author");
 
   if (date == NULL)
@@ -301,7 +301,7 @@ log_message_receiver_xml (void *baton,
   /* <date>xxx</date> */
   svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "date",
                          NULL);
-  svn_xml_escape_nts (&sb, date, pool);
+  svn_xml_escape_cstring (&sb, date, pool);
   svn_xml_make_close_tag (&sb, pool, "date");
 
   if (changed_paths)
@@ -331,7 +331,7 @@ log_message_receiver_xml (void *baton,
             {
               /* <path action="X" copyfrom-path="aaa" copyfrom-rev="> */
               svn_stringbuf_t *escpath = svn_stringbuf_create ("", pool);
-              svn_xml_escape_nts (&escpath, log_item->copyfrom_path, pool);
+              svn_xml_escape_cstring (&escpath, log_item->copyfrom_path, pool);
               revstr = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, 
                                      log_item->copyfrom_rev);
               svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "path",
@@ -346,7 +346,7 @@ log_message_receiver_xml (void *baton,
                                      "action", action, NULL);
             }
           /* xxx</path> */
-          svn_xml_escape_nts (&sb, path, pool);
+          svn_xml_escape_cstring (&sb, path, pool);
           svn_xml_make_close_tag (&sb, pool, "path");
         }
 
@@ -365,7 +365,7 @@ log_message_receiver_xml (void *baton,
                                      NULL,        /* no keywords */
                                      FALSE,       /* no expansion */
                                      pool));
-  svn_xml_escape_nts (&sb, msg_native_eol, pool);
+  svn_xml_escape_cstring (&sb, msg_native_eol, pool);
   svn_xml_make_close_tag (&sb, pool, "msg");
   
   /* </logentry> */
