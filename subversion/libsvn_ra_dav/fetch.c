@@ -1604,6 +1604,8 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
                                       &lb,
                                       ras->pool) );
   
+  svn_pool_destroy (lb.subpool);
+
   return SVN_NO_ERROR;
 }
 
