@@ -169,20 +169,10 @@ typedef struct svn_ra_simple_password_authenticator_t
    vtable. */
 typedef struct svn_ra_callbacks_t
 {
-  /* Open a temporary file FILENAME in the working copy. 
-     Arguments are identical to apr_file_open(), except that FILENAME
-     is presumed to be a basename (instead of a whole path.) */
+  /* Open a unique temporary file for writing in the working copy.
+     This file will be automatically deleted when FP is closed. */
   svn_error_t *(*open_tmp_file) (apr_file_t **fp,
-                                 const char *filename,
-                                 apr_int32_t flag,
-                                 apr_fileperms_t perm,
-                                 void *callback_baton,
-                                 apr_pool_t *pool);
-  
-  /* Close (and delete!) the temporary file previously created. */
-  svn_error_t *(*close_tmp_file) (apr_file_t *fp,
-                                  void *callback_baton);
-
+                                 void *callback_baton);
   
   /* Retrieve an AUTHENTICATOR/AUTH_BATON pair from the client,
      which represents the protocol METHOD.  */

@@ -517,6 +517,7 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
                                                &reject_tmp_path,
                                                tmppath,
                                                SVN_WC__PROP_REJ_EXT,
+                                               FALSE,
                                                pool);
                 if (err) return err;
 
@@ -712,6 +713,7 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
                                          &reserved_path,
                                          full_reject_path,
                                          SVN_WC__PROP_REJ_EXT,
+                                         FALSE,
                                          pool);
           if (err) return err;
 

@@ -84,6 +84,7 @@ svn_io_open_unique_file (apr_file_t **f,
                          svn_stringbuf_t **unique_name,
                          const svn_stringbuf_t *path,
                          const char *suffix,
+                         svn_boolean_t delete_on_close,
                          apr_pool_t *pool)
 {
   char number_buf[6];
@@ -126,6 +127,10 @@ svn_io_open_unique_file (apr_file_t **f,
   for (i = 1; i <= 99999; i++)
     {
       apr_status_t apr_err;
+      apr_int32_t flag = (APR_READ | APR_WRITE | APR_CREATE | APR_EXCL);
+
+      if (delete_on_close)
+        flag |= APR_DELONCLOSE;
 
       /* Tweak last attempted name to get the next one. */
       sprintf (number_buf, "%05d", i);
@@ -135,9 +140,8 @@ svn_io_open_unique_file (apr_file_t **f,
       (*unique_name)->data[iterating_portion_idx + 3] = number_buf[3];
       (*unique_name)->data[iterating_portion_idx + 4] = number_buf[4];
 
-      apr_err = apr_file_open (f, (*unique_name)->data,
-                          (APR_WRITE | APR_CREATE | APR_EXCL),
-                          APR_OS_DEFAULT, pool);
+      apr_err = apr_file_open (f, (*unique_name)->data, flag,
+                               APR_OS_DEFAULT, pool);
 
       if (APR_STATUS_IS_EEXIST(apr_err))
         continue;

@@ -55,7 +55,9 @@ svn_error_t *svn_io_check_path (const svn_stringbuf_t *path,
 
 /* Open a new file (for writing) with a unique name based on PATH, in the
  * same directory as PATH.  The file handle is returned in *F, and the
- * name, which ends with SUFFIX, is returned in *UNIQUE_NAME.
+ * name, which ends with SUFFIX, is returned in *UNIQUE_NAME.  If
+ * DELETE_ON_CLOSE is set, then the APR_DELONCLOSE flag will be used when
+ * opening the file.
  *
  * The name will include as much of PATH as possible, then a dot,
  * then a random portion, then another dot, then an iterated attempt
@@ -101,6 +103,7 @@ svn_error_t *svn_io_open_unique_file (apr_file_t **f,
                                       svn_stringbuf_t **unique_name,
                                       const svn_stringbuf_t *path,
                                       const char *suffix,
+                                      svn_boolean_t delete_on_close,
                                       apr_pool_t *pool);
 
 

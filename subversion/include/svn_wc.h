@@ -664,6 +664,19 @@ svn_wc_set_auth_file (svn_stringbuf_t *path,
                       apr_pool_t *pool);
 
 
+
+/*** Tmp files ***/
+
+/* Create a unique temporary file in administrative tmp/ area of PATH.
+   Return a handle in *FP.
+   
+   The flags will be APR_WRITE | APR_CREATE | APR_EXCL | APR_DELONCLOSE.
+
+   This means that as soon as FP is closed, the tmp file will vanish.  */
+svn_error_t *
+svn_wc_create_tmp_file (apr_file_t **fp,
+                        svn_stringbuf_t *path,
+                        apr_pool_t *pool);
 
 
 
