@@ -737,7 +737,7 @@ delta_dirs (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       t_entry = apr_hash_get (t_entries, name, APR_HASH_KEY_STRING);
       s_fullpath = s_path ? svn_path_join (s_path, name, subpool) : NULL;
       s_entry = s_entries ?
-        apr_hash_get (t_entries, name, APR_HASH_KEY_STRING) : NULL;
+        apr_hash_get (s_entries, name, APR_HASH_KEY_STRING) : NULL;
 
       SVN_ERR (update_entry (b, s_rev, s_fullpath, s_entry, t_fullpath,
                              t_entry, dir_baton, e_fullpath, info,
