@@ -1026,6 +1026,7 @@ without downloading a working copy:
 $ svn list http://svn.red-bean.com/repos/test/support
 README.txt
 INSTALL
+...
 
 ============================================================
 
@@ -1119,7 +1120,7 @@ svn merge URL1[@N] URL2[@M] [PATH]
 svn merge -r N:M TARGET [PATH]
 
 In the first form, URL1 and URL2 are URLs specified at revisions N and
-M.  These are the two sources to be compared.  The revisons default to
+M.  These are the two sources to be compared.  The revisions default to
 HEAD if omitted.
 
 In the second form TARGET can be an URL, or it can be a working copy
@@ -1144,6 +1145,23 @@ Switches:
 --non-interactive
 
 Examples
+
+merge a branch back into the trunk (assuming that you are a working
+copy of the trunk):
+
+$ svn merge http://svn.red-bean.com/repos/trunk/vendors http://svn.red-bean.com/repos/branches/vendors-with-fix
+U  myproj/tiny.txt
+U  myproj/thhgttg.txt
+U  myproj/win.txt
+U  myproj/flo.txt
+
+If you branched at revision 23, and you want to merge changes on trunk
+into your branch, you could do this from inside the working copy of
+your branch:
+
+$ svn merge -r 23:30 file:///tmp/repos/trunk/vendors
+U  myproj/thhgttg.txt
+...
 
 ============================================================
 
@@ -1171,6 +1189,18 @@ Switches:
 --encoding ENC
 
 Examples
+
+Create a directory in your working copy:
+
+$ svn mkdir newdir
+A         newdir
+
+Create on in the repository (instant commit, so a log message is
+required):
+
+$ svn mkdir -m "Making a new dir." http://svn.red-bean.com/repos/newdir
+
+Committed revision 26.
 
 ============================================================
 
@@ -1201,6 +1231,114 @@ Switches:
 
 Examples
 
+Move a file in your working copy:
+
+$ svn mv foo.c bar.c
+A         bar.c
+D         foo.c
+
+Move a file in the repository (an immediate commit, so it requires a
+commit message): 
+
+$ svn mv -m "Move a file" http://svn.red-bean.com/repos/foo.c http://svn.red-bean.com/repos/bar.c
+
+Committed revision 27.
+
+Note: Currently, Subversion does not support copying between URLs and
+your working copy.
+
+============================================================
+
+svn propset
+
+svn propset PROPNAME [PROPVAL | -F VALFILE] PATH [PATH [PATH ... ]]
+svn propset PROPNAME --revprop -r REV [PROPVAL | -F VALFILE] [URL]
+
+The first creates a versioned, local propchange in working copy.
+
+The second creates an unversioned, remote propchange on a repository
+revision.
+
+Note: svn recognizes the following special versioned properties
+but will store any arbitrary properties set:
+
+  svn:ignore     - A newline separated list of file patterns to ignore.
+
+  svn:keywords   - Keywords to be expanded.  Valid keywords are:
+    URL, HeadURL             - The URL for the head version of the object.
+    Author, LastChangedBy    - The last person to modify the file.
+    Date, LastChangedDate    - The date/time the object was last modified.
+    Rev, LastChangedRevision - The last revision the object changed.
+    Id                       - A compressed summary of the previous
+                                 4 keywords.
+
+  svn:executable - If present, make the file executable. This
+    property cannot be set on a directory.  A non-recursive attempt
+    will fail, and a recursive attempt will set the property only
+    on the file children of the directory.
+
+  svn:eol-style  - One of 'native', 'LF', 'CR', 'CRLF'. 
+
+  svn:mime-type - The mimetype of the file.  Used to determine whether
+    to merge the file, and how to serve it from Apache.  A mimetype
+    beginning with 'text/' (or an absent mimetype) is treated as text.
+    Anything else is treated as binary. The Internet media type
+    registry is at http://www.iana.org/assignments/media-types/
+
+  svn:externals  - A newline separated list of module specifiers,
+    each of which consists of a relative directory path, optional
+    revision flags, and an URL.  For example
+      foo             http://example.com/repos/zig
+      foo/bar -r 1234 http://example.com/repos/zag
+
+Alternate names: pset, ps
+Changes: working copy, repository only if operating on a URL
+Needs Network: Only if operating on a URL
+Switches:
+--file (-F) FILE
+--quiet (-q)
+--revision (-r) REV
+--targets FILENAME
+--recursive (-R)
+--revprop
+--encoding ENC
+
+Examples
+
+Set the mimetype on a file:
+
+$ svn propest svn:mime-type image/jpeg foo.jpg 
+property `svn:mime-type' set on 'foo.jpg'
+
+If you want a file to have the executable bit set:
+
+$ svn ps svn:executable ON somescript
+property `svn:executable' set on 'somescript'
+
+Perhaps you have an internal policy to set certain properties for the
+benefit of your coworkers:
+
+$ svn propset owner sally foo.c
+property `owner' set on 'foo.c'
+
+If you made a mistake in a log message for a particular revision and
+want to change it, use --revprop and set svn:log to the new log
+message:
+
+$ svn propset --revprop -r 25 svn:log "Journaled about trip to New York."
+property `svn:log' set on repository revision '25'
+
+Or, if you don't have a working copy, you can provide a URL.
+
+$ svn propset --revprop -r 26 svn:log "Document nap." http://svn.red-bean.com/repos
+property `svn:log' set on repository revision '25'
+
+NOTE: 1. By default, you cannot modify revprops in a Subversion
+repository.  Your repository administrator must explicitly enable
+revprop modifications by creating a hook named
+'pre-revprop-change'. See <xref linkend="svn-ch-5-sect-2.1"/> for more
+information on hook scripts.
+
 ============================================================
 
 svn propdel
@@ -1223,6 +1361,16 @@ Switches:
 
 Examples
 
+Delete a property from a file in your working copy
+
+$ svn propdel svn:mime-type  some-script
+property `svn:mime-type' deleted from 'some-script'.
+
+Delete a revprop
+
+$ svn propdel --revprop -r 26 release-date 
+property `release-date' deleted from repository revision '26'
+
 ============================================================
 
 svn propedit
@@ -1244,6 +1392,16 @@ Switches:
 
 Examples
 
+svn propedit makes it easy to modify properties that have multiple
+values:
+
+$ svn propedit svn:keywords  foo.jpg 
+    &lt;svn will launch your favorite editor here, with a buffer open
+    containing the current contents of the svn:keywords property.  You
+    can add multiple values to a property easily here by entering one
+    value per line.&gt;
+Set new value for property `svn:keywords' on `foo.c'
+
 ============================================================
 
 svn propget
@@ -1264,6 +1422,17 @@ Switches:
 --revprop
 
 Examples
+
+Examine a prop for a file in your working copy
+
+$ svn propget svn:keywords foo.c
+AuthorLastChangedBy
+Rev
+
+The same goes for a revprop:
+
+$ svn propget svn:log --revprop -r 20 
+Began journal.
 
 ============================================================
 
@@ -1287,56 +1456,23 @@ Switches:
 
 Examples
 
-============================================================
+You can use proplist to see the properties on an item in your working copy:
 
-svn propset
+$ svn proplist foo.c
+Properties on 'foo.c':
+  svn:mime-type
+  svn:keywords
+  owner
 
-svn propset PROPNAME [PROPVAL | -F VALFILE] PATH [PATH [PATH ... ]]
-svn propset PROPNAME --revprop -r REV [PROPVAL | -F VALFILE] [URL]
+But with the --verbose flag, svn proplist is extremely handy as it
+also shows you the values for the properties:
 
-The first creates a versioned, local propchange in working copy.
-The second creates an unversioned, remote propchange on repos revision.
-
-Note: svn recognizes the following special versioned properties
-but will store any arbitrary properties set:
-
-  svn:ignore     - A newline separated list of file patterns to ignore.
-  svn:keywords   - Keywords to be expanded.  Valid keywords are:
-    URL, HeadURL             - The URL for the head version of the object.
-    Author, LastChangedBy    - The last person to modify the file.
-    Date, LastChangedDate    - The date/time the object was last modified.
-    Rev, LastChangedRevision - The last revision the object changed.
-    Id                       - A compressed summary of the previous
-                                 4 keywords.
-  svn:executable - If present, make the file executable. This
-    property cannot be set on a directory.  A non-recursive attempt
-    will fail, and a recursive attempt will set the property only
-    on the file children of the directory.
-  svn:eol-style  - One of 'native', 'LF', 'CR', 'CRLF'. 
-  svn:mime-type  - The mimetype of the file.  Used to determine
-    whether to merge the file, and how to serve it from Apache.
-    A mimetype beginning with 'text/' (or an absent mimetype) is
-    treated as text.  Anything else is treated as binary.
-  svn:externals  - A newline separated list of module specifiers,
-    each of which consists of a relative directory path, optional
-    revision flags, and an URL.  For example
-      foo             http://example.com/repos/zig
-      foo/bar -r 1234 http://example.com/repos/zag
-
-
-Alternate names: pset, ps
-Changes: working copy, repository only if operating on a URL
-Needs Network: Only if operating on a URL
-Switches:
---file (-F) FILE
---quiet (-q)
---revision (-r) REV
---targets FILENAME
---recursive (-R)
---revprop
---encoding ENC
-
-Examples
+$ svn proplist --verbose foo.c
+Properties on 'foo.c':
+  svn:mime-type : text/plain
+  svn:keywords : AuthorLastChangedBy
+Rev
+  owner : fitz
 
 ============================================================
 
