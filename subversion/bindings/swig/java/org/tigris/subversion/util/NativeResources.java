@@ -24,7 +24,7 @@ import org.tigris.subversion.swig.SWIGTYPE_p_apr_allocator_t;
  * Handles operations involving the native libraries composing
  * Subversion's implementation.
  *
- * @since Subversion 0.30
+ * @since Subversion 0.31
  */
 public class NativeResources
 {

@@ -35,7 +35,7 @@ import org.tigris.subversion.swig.SWIGTYPE_p_svn_opt_revision_t;
 /**
  * A SWIG-based implementation of the {@link Client} interface.
  *
- * @since Subversion 0.30
+ * @since Subversion 0.31
  */
 public class StandardClient
     implements Client
@@ -111,7 +111,7 @@ public class StandardClient
                                    dummy /*revision2*/, recurse,
                                    ignoreAncestry, noDiffDeleted,
                                    // TODO: Need type conversion for
-                                   // outfile and errfile.
+                                   // output and error.
                                    (SWIGTYPE_p_apr_file_t) null,
                                    (SWIGTYPE_p_apr_file_t) null, clientCtx,
                                    (SWIGTYPE_p_apr_pool_t) null);
