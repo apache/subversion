@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include "svn_types.h"
 #include "svn_error.h"
+#include "svn_path.h"
 #include "svn_delta.h"
 #include "apr_pools.h"
 #include "apr_file_io.h"
@@ -51,17 +52,15 @@ print_spaces (int total)
 }
 
 void
-inc_spaces (void *i)
+inc_spaces (struct edit_baton *eb)
 {
-  int *j = (int *) i;
-  *j += 4;
+  eb->indentation += 4;
 }
 
 void
-dec_spaces (void *i)
+dec_spaces (struct edit_baton *eb)
 {
-  int *j = (int *) i;
-  *j -= 4;
+  eb->indentation -= 4;
 }
 
 
@@ -126,32 +125,6 @@ test_delete (svn_string_t *filename, void *parent_baton)
 
 
 svn_error_t *
-test_add_directory (svn_string_t *name,
-                    void *parent_baton,
-                    svn_string_t *ancestor_path,
-                    long int ancestor_version,
-                    void **child_baton)
-{
-  struct dir_baton *d = (struct dir_baton *) parent_baton;
-  char *Aname = name ? name->data : "(unknown)";
-  char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
-
-  inc_spaces (&(d->edit_baton->indentation));
-  print_spaces (d->edit_baton->indentation);
-
-  printf ("ADD_DIR:  name '%s', ancestor '%s' version %d\n",
-          Aname, ancestor, ancestor_version);
-
-  /* Set child_baton to the name of the new directory. */
-  *child_baton = (svn_string_t *) svn_string_dup (name, globalpool);  
-  
-  return SVN_NO_ERROR;
-}
-
-
-
-
-svn_error_t *
 test_replace_root (svn_string_t *base_path,
                    svn_vernum_t base_version,
                    void *edit_baton,
@@ -161,9 +134,59 @@ test_replace_root (svn_string_t *base_path,
   struct dir_baton *d = apr_palloc (eb->pool, sizeof (*d));
 
   d->path = (svn_string_t *) svn_string_dup (base_path, globalpool);
+  d->edit_baton = eb;
   *root_baton = d;
 
   return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+add_or_replace_dir (svn_string_t *name,
+                    void *parent_baton,
+                    svn_string_t *ancestor_path,
+                    long int ancestor_version,
+                    void **child_baton,
+                    const char *pivot_string)
+{
+  struct dir_baton *pd = (struct dir_baton *) parent_baton;
+  char *Aname = name ? name->data : "(unknown)";
+  char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
+  struct dir_baton *d;
+
+  inc_spaces (pd->edit_baton);
+  print_spaces (pd->edit_baton->indentation);
+
+  printf ("%s:  name '%s', ancestor '%s' version %d\n",
+          pivot_string, Aname, ancestor, ancestor_version);
+
+  /* Set child_baton to a new dir baton. */
+  d = apr_pcalloc (pd->edit_baton->pool, sizeof (*d));
+  d->path = svn_string_dup (pd->path, pd->edit_baton->pool);
+  svn_path_add_component (d->path,
+                          svn_string_create (Aname, pd->edit_baton->pool),
+                          SVN_PATH_LOCAL_STYLE,
+                          pd->edit_baton->pool);
+  d->edit_baton = pd->edit_baton;
+  *child_baton = d;
+  
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+test_add_directory (svn_string_t *name,
+                    void *parent_baton,
+                    svn_string_t *ancestor_path,
+                    long int ancestor_version,
+                    void **child_baton)
+{
+  return add_or_replace_dir (name,
+                             parent_baton,
+                             ancestor_path,
+                             ancestor_version,
+                             child_baton,
+                             "ADD_DIR");
 }
 
 
@@ -175,20 +198,12 @@ test_replace_directory (svn_string_t *name,
                         long int ancestor_version,
                         void **child_baton)
 {
-  struct dir_baton *d = (struct dir_baton *) parent_baton;
-  char *Aname = name ? name->data : "(unknown)";
-  char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
-
-  inc_spaces (&(d->edit_baton->indentation));
-  print_spaces (d->edit_baton->indentation);
-
-  printf ("REPLACE_DIR:  name '%s', ancestor '%s' version %d\n",
-          Aname, ancestor, ancestor_version);
-  
-  /* Set child_baton to the name of the new directory. */
-  *child_baton = (svn_string_t *) svn_string_dup (name, globalpool);  
-
-  return SVN_NO_ERROR;
+  return add_or_replace_dir (name,
+                             parent_baton,
+                             ancestor_path,
+                             ancestor_version,
+                             child_baton,
+                             "REPLACE_DIR");
 }
 
 
@@ -197,7 +212,7 @@ test_close_directory (void *dir_baton)
 {
   struct dir_baton *d = (struct dir_baton *) dir_baton;
   print_spaces (d->edit_baton->indentation);
-  dec_spaces (&(d->edit_baton->indentation));
+  dec_spaces (d->edit_baton);
 
   if (d->path)
     printf ("CLOSE_DIR '%s'\n", d->path->data);
@@ -214,11 +229,10 @@ test_close_file (void *file_baton)
   struct file_baton *fb = (struct file_baton *) file_baton;
 
   print_spaces (fb->dir_baton->edit_baton->indentation);
-  dec_spaces (&(fb->dir_baton->edit_baton->indentation));
+  dec_spaces (fb->dir_baton->edit_baton);
 
   if (file_baton)
-    printf ("CLOSE_FILE '%s'\n", 
-            (char *)((svn_string_t *) file_baton)->data);
+    printf ("CLOSE_FILE '%s'\n", fb->path->data);
   else
     printf ("CLOSE_FILE:  no name!!\n");
 
@@ -261,7 +275,7 @@ add_or_replace_file (svn_string_t *name,
   char *Aname = name ? name->data : "(unknown)";
   char *ancestor = ancestor_path ? ancestor_path->data : "(unknown)";
 
-  inc_spaces (&(d->edit_baton->indentation));
+  inc_spaces (d->edit_baton);
   print_spaces (d->edit_baton->indentation);
 
   printf ("%s:  name '%s', ancestor '%s' version %d\n",
@@ -269,6 +283,7 @@ add_or_replace_file (svn_string_t *name,
 
   /* Put the filename in file_baton */
   fb = apr_palloc (d->edit_baton->pool, sizeof (*fb));
+  fb->dir_baton = parent_baton;
   fb->path = (svn_string_t *) svn_string_dup (name, globalpool);
   *file_baton = fb;
 
@@ -483,7 +498,7 @@ int main(int argc, char *argv[])
                                   &my_editor,
                                   base_path,
                                   base_version,
-                                  &my_edit_baton,
+                                  my_edit_baton,
                                   globalpool);
 
   apr_close (source_baton);
