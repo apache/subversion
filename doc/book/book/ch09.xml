@@ -2539,7 +2539,7 @@ Properties on 'foo.c':
           <para>Set PROPNAME to PROPVAL on files, directories, or
           revisions. The first example creates a versioned, local
           property change in the working copy, and the second creates
-          an unversioned, remote property change change on a repository
+          an unversioned, remote property change on a repository
           revision.</para>
 
           <tip>
