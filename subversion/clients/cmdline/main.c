@@ -207,8 +207,8 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
  
   { "info", svn_cl__info, {0},
     "Display info about a resource.\n"
-    "usage: svn info TARGET1 [TARGET2...]\n\n"
-    "    Print information about TARGETs.\n",
+    "usage: svn info [PATH1 [PATH2] ...]\n\n"
+    "    Print information about PATHs.\n",
     {svn_cl__targets_opt} },
  
   { "log", svn_cl__log, {0},
