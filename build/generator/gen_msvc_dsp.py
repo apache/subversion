@@ -66,7 +66,8 @@ class Generator(gen_win.WinGeneratorBase):
       'default_platform' : self.platforms[0],
       'default_config' : configs[0].name,
       'is_exe' : ezt.boolean(isinstance(target, gen_base.TargetExe)),
-      'is_external' : ezt.boolean(isinstance(target, gen_base.TargetProject)
+      'is_external' : ezt.boolean((isinstance(target, gen_base.TargetProject)
+                                   or isinstance(target, gen_base.TargetI18N))
                                   and target.cmd),
       'is_utility' : ezt.boolean(isinstance(target,
                                             gen_base.TargetProject)),
@@ -89,11 +90,10 @@ class Generator(gen_win.WinGeneratorBase):
 
     # Traverse the targets and generate the project files
     for target in install_targets:
-      # These aren't working yet
-      if isinstance(target, gen_base.TargetI18N):
-        continue
       name = target.name
-      if isinstance(target, gen_base.TargetLinked) and target.external_project:
+      if ((isinstance(target, gen_base.TargetLinked)
+         or isinstance(target, gen_base.TargetI18N))
+         and target.external_project):
         # Figure out where the external .dsp is located.
         fname = target.external_project + '.dsp'
       else:
@@ -105,7 +105,9 @@ class Generator(gen_win.WinGeneratorBase):
       if '-' in fname:
         fname = '"%s"' % fname
         
-      depends = self.adjust_win_depends(target, name)
+      depends = [ ]
+      if not isinstance(target, gen_base.TargetI18N):
+        depends = self.adjust_win_depends(target, name)
 
       dep_names = [ ]
       for dep in depends:
