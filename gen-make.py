@@ -6,7 +6,10 @@
 #    gen-make.py [-s] [BUILD-CONFIG]
 #
 
-import os, sys
+import os
+import sys
+import getopt
+
 
 sys.path.insert(0, 'build')
 import gen_make
@@ -24,23 +27,24 @@ def main(fname, verfname=None, oname=None, skip_depends=0):
 
 def _usage_exit():
   "print usage, exit the script"
-  print "usage:  gen-make.py [-s] conf-file\n"
+  print "usage:  gen-make.py [-s] [conf-file]\n"
   sys.exit(0)
 
 if __name__ == '__main__':
-  argc = len(sys.argv)
-
-  fname = "build.conf"
-  skip = 0
-  optind = 1
-  if argc > optind and sys.argv[optind] == '-s':
-    skip = 1
-    optind += 1
-  if argc > optind:
-    fname = sys.argv[optind]
-    optind += 1
-  if argc > optind:
+  opts, args = getopt.getopt(sys.argv[1:], 's')
+  if len(args) > 1:
     _usage_exit()
+
+  if args:
+    fname = args[0]
+  else:
+    fname = 'build.conf'
+
+  if ('-s', '') in opts:
+    skip = 1
+  else:
+    skip = 0
+
   main(fname, skip_depends=skip)
 
 
