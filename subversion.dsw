@@ -18,7 +18,10 @@ Package=<4>
     Project_Dep_Name apr
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name libexpat
+    Project_Dep_Name aprutil
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name xml
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libsvn_fs
@@ -141,6 +144,36 @@ Package=<4>
 
 ###############################################################################
 
+Project: "aprutil"=.\apr-util\aprutil.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name apr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name xml
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "xml"=.\apr-util\xml\expat\lib\xml.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "neon"=.\build\win32\neon.dsp - Package Owner=<4>
 
 Package=<5>
@@ -150,20 +183,11 @@ Package=<5>
 Package=<4>
 {{{
     Begin Project Dependency
-    Project_Dep_Name libexpat
+    Project_Dep_Name aprutil
     End Project Dependency
-}}}
-
-###############################################################################
-
-Project: "libexpat"=".\expat-lite\libexpat.dsp" - Package Owner=<4>
-
-Package=<5>
-{{{
-}}}
-
-Package=<4>
-{{{
+    Begin Project Dependency
+    Project_Dep_Name xml
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -336,7 +360,10 @@ Package=<4>
     Project_Dep_Name apr
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name libexpat
+    Project_Dep_Name aprutil
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name xml
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libsvn_client
@@ -381,6 +408,12 @@ Package=<4>
     Project_Dep_Name apr
     End Project Dependency
     Begin Project Dependency
+    Project_Dep_Name aprutil
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name xml
+    End Project Dependency
+    Begin Project Dependency
     Project_Dep_Name libsvn_client
     End Project Dependency
     Begin Project Dependency
@@ -391,9 +424,6 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libsvn_subr
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name libexpat
     End Project Dependency
 }}}
 
@@ -414,7 +444,10 @@ Package=<4>
     Project_Dep_Name apr
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name libexpat
+    Project_Dep_Name aprutil
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name xml
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libsvn_client
