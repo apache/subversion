@@ -170,7 +170,16 @@
 %typemap(python,argout,fragment="t_output_helper") svn_filesize_t *
     "$result = t_output_helper($result,PyInt_FromLong((long) (*$1)));";
 
-%apply long *OUTPUT { svn_filesize_t * };
+%typemap(perl5,in,numinputs=0) svn_filesize_t * (svn_filesize_t temp)
+    "$1 = &temp;";
+
+/* XXX: apply long long *OUTPUT doesn't track $1 correctly */
+%typemap(perl5,argout) svn_filesize_t * {
+    char temp[256];
+    sprintf(temp,"%lld", *$1);
+    ST(argvi) = sv_newmortal();
+    sv_setpv((SV*)ST(argvi++), temp);
+};
 
 /* -----------------------------------------------------------------------
    Define a general ptr/len typemap. This takes a single script argument

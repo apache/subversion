@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 10;
+use Test::More tests => 11;
 use strict;
 no warnings 'once'; # shut up about variables that are only used once.
 
@@ -53,6 +53,8 @@ is(<$stream>, $text, 'content verified');
 is($root->file_md5_checksum ($path), 'dd2314129f81675e95b940ff94ddc935',
    'md5 verified');
 }
+
+cmp_ok( $root->file_length ($path), '==', length($text) );
 
 is ($fs->revision_prop(1, 'not:exists'), undef, 'nonexisting property');
 
