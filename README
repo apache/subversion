@@ -146,8 +146,8 @@ V.   CONVERTING FROM CVS
 
      Please note that the cvs2svn project is a *separate* project from
      Subversion.  If you have problems with cvs2svn or are confused,
-     please email cvs2svn project's mailing lists, not the Subversion
-     lists.
+     please email the cvs2svn project's mailing lists, not the
+     Subversion lists.
 
      Finally, be sure to see Appendix A in the Subversion book.  It
      contains a very quick overview of the major differences between
