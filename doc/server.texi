@@ -42,15 +42,16 @@ Subversion from the bottom up.  (For full diagram, @xref{Architecture}.)
  |                                         |                            
  |          Subversion Filesystem          |                            
  |                                         |                            
- +-+--------------+--------+---------+-----+                            
+ +-+--------------+--------+---------+-----+ <===== Database interface  
    | Berkeley DBM |        |   SQL   |                                  
    +--------------+        +---------+      
 
 @end example
 
 @menu
-* Back-ends::                 Putting the information on disk.
+* Database::                  Putting the information on disk.
 * Filesystem::                The low-level Subversion Filesystem.
+* Deltas::                    Subversion's way of describing changes.
 * Locking::                   How read/write locks work in the Filesystem.
 * Main Library::              The highest-level server interface.
 * Apache::                    The actual server process.
@@ -58,9 +59,67 @@ Subversion from the bottom up.  (For full diagram, @xref{Architecture}.)
 
 @c ----------------------------------------------------------------
 
-@node Back-ends
-@section Back-ends
+@node Database
+@section Database
 
+At the bottom of our design, we require a way of storing information on
+disk.  More specifically, we need @dfn{transactions}.
+
+A @dfn{transaction} is a term that refers to a set of modifications made
+to a database; however, these modifications behave as a @emph{single
+unit} of change.  Specifically,
+
+@enumerate
+@item
+   If a transaction succeeds, the database recognizes a single unit of
+   work as having been performed.  (And if the database allows you to
+   "undo" the work, the entire set of changes is undone as a unit.)
+@item
+   If some portion of the transaction fails, then the @emph{entire}
+   transaction fails, and no changes are made at all.  The database is
+   guaranteed to remain in a good, consistent state.
+@end enumerate
+
+This inability to divide the set of changes is known as @dfn{atomicity},
+and is the critical concept behind transactions.
+
+Subversion's @dfn{database interface} (@dfn{svn_db.h}), therefore, is a
+simple API for reading and writing information to any sort of disk-based
+system that supports transactions.  The Subversion Filesystem
+(@xref{Filesystem}.)  is the only library that will depend on this
+interface.
+
+@c OK, guys, this is tricky to specify.  This requires a good knowledge
+@c of Berkeley DBM's API, SQL, and database API's in general!  What's
+@c written here is a simplification of a typical DBM API:
+
+@table @code
+@item svn_db_init ()
+   tell the database to initialize itself
+@item svn_db_open (path)
+   open a particular database file (or object)
+@item svn_db_close (db)
+   close a database file (or object)
+@item svn_db_txn_begin (db, *txn_id)
+   start a transaction, receiving transaction_id
+@item svn_db_put (db, *txn_id, *key, *value)
+   write a key/value pair into the database
+@item svn_db_get (db, *txn_id, *key, *value)
+   read a key/value pair from the database
+@item svn_db_del (db, *txn_id, *key)
+   remove a key/value pair from the database
+@item svn_db_txn_commit (db, *txn_id)
+   commit the transaction
+@item svn_db_txn_abort (db, *txn_id)
+   abort the transaction in progress
+@end table
+
+For the initial release of Subversion, we will probably use the
+open-source Berkeley DBM library.  (For information, see
+@uref{http://www.sleepycat.com, Sleepycat Software}.)
+
+In the future, of course, contributors are free to write libraries that
+implement this same API on top of a more powerful SQL system.
 
 
 @c ----------------------------------------------------------------
@@ -68,44 +127,87 @@ Subversion from the bottom up.  (For full diagram, @xref{Architecture}.)
 @node Filesystem
 @section Filesystem
 
-Here is a rough draft of the Subversion Filesystem API.
+The @dfn{Subversion Filesystem} (abbreviated: @dfn{svn_fs}) gives us an
+abstract way of thinking about the way files are stored and versioned,
+independent of the actual means of storage.
 
-@c  Ben sez:  @table specificially creates a 2-column table.
-@c  Ben sez:    first argument is how to format the first column.
-@c  Ben sez:    for multiple columns, use @multitable.
+Like any typical UNIX-like filesystem, files are stored in a tree.
+However, while CVS uses the actual UNIX filesystem to store items, the
+svn_fs treats implments files and directories as database objects.
+
+Because of this, the svn_fs can store any sort of information in a
+"file" or "directory".  Here's a simple schema used by svn_fs:
+
+@c This is taken from jimb's very first Subversion spec.
+
+A @dfn{text string} is a string of Unicode characters which is
+canonically decomposed and ordered, according to the rules described in
+the Unicode standard.
+
+A @dfn{string of bytes} is what you'd expect.
+
+A @dfn{property list} is an ordered list of properties.  A
+@dfn{property} is a pair @code{(@var{name}, @var{value})}, where
+@var{name} is a text string, and @var{value} is a string of bytes.
+
+A @dfn{file} is a property list and a string of bytes.
+
+A @dfn{node} is either a file or a directory.  (We define a directory
+below.)  Nodes are distinguished unions --- you can always tell whether
+a node is a file or a directory.
+
+A @dfn{node table} is an array mapping some set of positive integers,
+called @dfn{node numbers}, onto @dfn{nodes}.  If a node table maps some
+number @var{i} to some node @var{n}, then @var{i} is a @dfn{valid node
+number} in that table, and @dfn{node @var{i}} is @var{n}.  Otherwise,
+@var{i} is an @dfn{invalid node number} in that table.
+
+A @dfn{directory entry} is a triple @code{(@var{name}, @var{props},
+@var{node})}, where @var{name} is a text string, @var{props} is a
+property list, and @var{node} is a node number.
+
+A @dfn{directory} is an unordered list of directory entries.
+
+A @dfn{version} is a node number and a property list.
+
+A @dfn{history} is an array of versions, indexed by a contiguous range
+of positive integers containing 1.
+
+A @dfn{repository} consists of node table and a history.
+
+
+Here is a rough draft of the Subversion Filesystem API.
 
 @table @code
 
 @item latest ()
  returns the latest global version of the repository
-
 @item read (version, path)
  if path is a file, return full text (which includes property stream);
  if path is a directory, return list of directory entries.
-
 @item read_node_prop (version, path, propname)
 @itemx write_node_prop (version, path, propname)
  read/write a particular property of a file or directory
-
 @item read_version_prop (version, propname)
 @itemx write_version_prop (version, propname)
  read/write a particular property of a version-history (such as a log)
-
 @item delta (from_version, from_path, to_version, to_path)
  produce a delta object which converts one subtree to another
-
 @item submit (delta)
  ask filesystem's lock manager for approval of delta; returns token (or
 failure)
-
 @item write (delta, token)
  actually write the delta into the filesystem 
-
 @item abandon (token)
  tell lock manager that the delta will @emph{not} be written (despite
  previous approval)
-
 @end table
+
+@c ----------------------------------------------------------------
+
+@node Deltas
+@section Deltas
+
 
 @c ----------------------------------------------------------------
 
