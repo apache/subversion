@@ -933,7 +933,7 @@ test_list = [ None,
               # whether or not it starts with 'http').  So, skip for all
               # RA layers until we turn on binary property support in
               # libsvn_ra_dav (see issue #1015).
-              Skip(binary_props),
+              Skip(binary_props, 1),
              ]
 
 if __name__ == '__main__':
