@@ -47,14 +47,12 @@ typedef struct {
      vsn-url's during the edit. */
   const char *dst_path;
 
-  /* ### the two fields below will go away, when we switch to filters for
-     ### report generation */
+  /* this buffers the output for a bit and is automatically flushed,
+     at appropriate times, by the Apache filter system. */
+  apr_bucket_brigade *bb;
 
-  /* pool for storing output text */
-  apr_pool_t *opool;
-
-  /* where to place the output */
-  apr_text_header *output;
+  /* where to deliver the output */
+  ap_filter_t *output;
 } update_ctx_t;
 
 typedef struct {
@@ -103,13 +101,10 @@ static item_baton_t *make_child_baton(item_baton_t *parent, const char *name,
 static void send_xml(update_ctx_t *uc, const char *fmt, ...)
 {
   va_list ap;
-  const char *s;
 
   va_start(ap, fmt);
-  s = apr_pvsprintf(uc->opool, fmt, ap);
+  (void) apr_brigade_vprintf(uc->bb, ap_filter_flush, uc->output, fmt, ap);
   va_end(ap);
-
-  apr_text_append(uc->opool, uc->output, s);
 }
 
 static void send_vsn_url(item_baton_t *baton)
@@ -276,6 +271,7 @@ static svn_error_t * upd_set_target_revision(void *edit_baton,
   update_ctx_t *uc = edit_baton;
 
   send_xml(uc,
+           DAV_XML_HEADER DEBUG_CR
 	   "<S:update-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
            "xmlns:D=\"DAV:\">" DEBUG_CR
 	   "<S:target-revision rev=\"%ld\"/>" DEBUG_CR, target_revision);
@@ -440,7 +436,7 @@ static svn_error_t * upd_close_edit(void *edit_baton)
 
 dav_error * dav_svn__update_report(const dav_resource *resource,
 				   const apr_xml_doc *doc,
-				   apr_text_header *report)
+				   ap_filter_t *output)
 {
   svn_delta_edit_fns_t *editor;
   apr_xml_elem *child;
@@ -563,10 +559,10 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   editor->close_edit = upd_close_edit;
 
   uc.resource = resource;
-  uc.opool = resource->pool;  /* ### not ideal, but temporary anyhow */
-  uc.output = report;
+  uc.output = output;
   uc.anchor = resource->info->repos_path;
   uc.dst_path = dst_path;
+  uc.bb = apr_brigade_create(resource->pool);
 
   /* Get the root of the revision we want to update to. This will be used
      to generated stable id values. */
@@ -645,6 +641,10 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   /* this will complete the report, and then drive our editor to generate
      the response to the client. */
   serr = svn_repos_finish_report(rbaton);
+
+  /* flush the contents of the brigade */
+  ap_fflush(output, uc.bb);
+
   if (serr != NULL)
     {
       /* ### This removes the fs txn.  todo: check error. */

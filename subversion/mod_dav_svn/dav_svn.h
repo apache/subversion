@@ -360,13 +360,13 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
 
 dav_error * dav_svn__update_report(const dav_resource *resource,
 				   const apr_xml_doc *doc,
-				   apr_text_header *report);
+                                   ap_filter_t *output);
 
 /* ### todo: document this, as soon as understand what the heck it
    does :-).  -kff */   
 dav_error * dav_svn__log_report(const dav_resource *resource,
                                 const apr_xml_doc *doc,
-                                apr_text_header *report);
+                                ap_filter_t *output);
 
 int dav_svn_find_ns(apr_array_header_t *namespaces, const char *uri);
 

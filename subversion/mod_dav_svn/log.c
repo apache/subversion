@@ -34,13 +34,12 @@
 
 struct log_receiver_baton
 {
-  /* Where to store the output for sending. */
-  /* ### todo: Make this a file instead of an apr_text_header, because
-     it can grow quite large.  NO, WAIT, we won't even do that --
-     instead, we'll send back the response streamily, as Greg has
-     stated he intends to do with update reports as well, now that
-     Apache can handle it. */
-  apr_text_header *output;
+  /* this buffers the output for a bit and is automatically flushed,
+     at appropriate times, by the Apache filter system. */
+  apr_bucket_brigade *bb;
+
+  /* where to deliver the output */
+  ap_filter_t *output;
 
   /* For temporary allocations. */
   apr_pool_t *pool;
@@ -50,13 +49,10 @@ struct log_receiver_baton
 static void send_xml(struct log_receiver_baton *lrb, const char *fmt, ...)
 {
   va_list ap;
-  const char *s;
 
   va_start(ap, fmt);
-  s = apr_pvsprintf(lrb->pool, fmt, ap);
+  (void) apr_brigade_vprintf(lrb->bb, ap_filter_flush, lrb->output, fmt, ap);
   va_end(ap);
-
-  apr_text_append(lrb->pool, lrb->output, s);
 }
 
 
@@ -114,6 +110,9 @@ static svn_error_t * log_receiver(void *baton,
 
   send_xml(lrb, "</S:log-item>" DEBUG_CR);
 
+  /* Clear out anything we may have placed in here. */
+  svn_pool_clear(lrb->pool);
+
   return SVN_NO_ERROR;
 }
 
@@ -122,7 +121,7 @@ static svn_error_t * log_receiver(void *baton,
 
 dav_error * dav_svn__log_report(const dav_resource *resource,
                                 const apr_xml_doc *doc,
-                                apr_text_header *report)
+                                ap_filter_t *output)
 {
   svn_error_t *serr;
   apr_xml_elem *child;
@@ -194,11 +193,13 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
       /* else unknown element; skip it */
     }
 
-  lrb.output = report;
-  lrb.pool = resource->pool;
+  lrb.bb = apr_brigade_create(resource->pool);  /* not the subpool! */
+  lrb.output = output;
+  lrb.pool = svn_pool_create(resource->pool);
 
   /* Start the log report. */
   send_xml(&lrb,
+           DAV_XML_HEADER DEBUG_CR
            "<S:log-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
            "xmlns:D=\"DAV:\">" DEBUG_CR);
 
@@ -215,10 +216,21 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   /* End the log report. */
   send_xml(&lrb, "</S:log-report>" DEBUG_CR);
 
+  /* flush the contents of the brigade */
+  ap_fflush(output, lrb.bb);
+
+  /* All done with the pool! */
+  svn_pool_destroy(lrb.pool);
+
   if (serr)
-    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "The log receiver or its caller encountered "
-                               "an error.");
+    {
+      /* NOTE: we've definitely generated some content into the output
+         filter, which means that we cannot return an error here.
+         Oh well... */
+      /* ### in the future, mod_dav may specify a way to signal an error
+         ### even after the response stream has begun */
+      return NULL;
+    }
   
   return NULL;
 }
