@@ -835,8 +835,10 @@ static dav_error * dav_svn_get_resource(request_rec *r,
      the error pool, as a subpool of the request pool. */
   (void) svn_error_init_pool(r->pool);
 
-  if (((fs_path = dav_svn_get_fs_path(r)) == NULL)
-      && ((fs_parent_path = dav_svn_get_fs_parent_path(r)) == NULL))
+  fs_path = dav_svn_get_fs_path(r);
+  fs_parent_path = dav_svn_get_fs_parent_path(r);
+
+  if ((fs_path == NULL) && (fs_parent_path == NULL))
     {
       /* ### are SVN_ERR_APMOD codes within the right numeric space? */
       return dav_new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
@@ -922,7 +924,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
       true_root_path = root_path;
       true_fs_path = fs_path;
     }
-  else if (fs_parent_path != NULL)
+  else /* else we know that fs_parent_path != NULL */
     {
       /* SVNParentPath was used: assume the first component of
          'relative' is the name of a repository. */
