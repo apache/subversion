@@ -118,9 +118,6 @@ AC_FUNC_MEMCMP
 dnl svn_error's default warning handler uses vfprintf()
 AC_FUNC_VPRINTF
 
-dnl vdelta.c is using strerror() right now 
-AC_CHECK_FUNCS(strerror)
-
 
 dnl Process some configuration options ----------
 
@@ -141,7 +138,7 @@ AC_ARG_WITH(maintainer-mode,
     if test "$GCC" = "yes"; then
       dnl SVN_DEBUG enables specific features for developer builds
       dnl AP_DEBUG enables specific (Apache) features for developer builds
-      CFLAGS="$CFLAGS -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Wpointer-arith -DSVN_DEBUG -DAP_DEBUG";
+      CFLAGS="$CFLAGS -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Wpointer-arith -Wwrite-strings -Wshadow -Wredundant-decls -DSVN_DEBUG -DAP_DEBUG";
     fi
   fi
 ])
