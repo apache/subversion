@@ -599,7 +599,8 @@ svn_fs__parse_node_revision_skel (svn_fs__node_revision_t **noderev_p,
     }
 
   /* COMMITTED-PATH */
-  noderev->committed_path = apr_pstrmemdup (pool, skel->children->next->data,
+  if (skel->children->next)
+    noderev->committed_path = apr_pstrmemdup (pool, skel->children->next->data,
                                               skel->children->next->len);
       
   /* PROP-KEY */
@@ -1067,10 +1068,10 @@ svn_fs__unparse_node_revision_skel (skel_t **skel_p,
     svn_fs__prepend (svn_fs__mem_atom (NULL, 0, pool), skel);
 
   /* COMMITTED-PATH */
-  svn_fs__prepend (svn_fs__mem_atom (noderev->committed_path,
-                                     strlen(noderev->committed_path),
-                                     pool),
-                   skel);
+  if (noderev->committed_path)
+    svn_fs__prepend (svn_fs__str_atom (noderev->committed_path, pool), skel);
+  else
+    svn_fs__prepend (svn_fs__mem_atom (NULL, 0, pool), skel);
   
   /* HEADER */
   svn_fs__prepend (header_skel, skel);
