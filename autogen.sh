@@ -113,6 +113,9 @@ if [ -f config.cache ]; then
   rm -f configure.$$.tmp
 fi
 
+# Remove autoconf 2.5x's cache directory
+rm -rf autom4te.cache
+
 # Run apr/buildconf if it exists.
 if test -x "apr/buildconf" ; then
   echo "Creating configuration files for apr." # apr's equivalent of autogen.sh
