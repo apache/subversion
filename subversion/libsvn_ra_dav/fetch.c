@@ -190,6 +190,8 @@ static const struct ne_xml_elm report_elements[] =
   { SVN_XML_NAMESPACE, "remove-prop", ELEM_remove_prop, 0 },
   { SVN_XML_NAMESPACE, "fetch-file", ELEM_fetch_file, 0 },
   { SVN_XML_NAMESPACE, "prop", ELEM_prop, 0 },
+  { SVN_DAV_PROP_NS_DAV, "repository-uuid",
+    ELEM_repository_uuid, NE_XML_CDATA },
 
   { SVN_DAV_PROP_NS_DAV, "md5-checksum", ELEM_md5_checksum, NE_XML_CDATA },
 
@@ -280,6 +282,11 @@ static svn_error_t *set_special_wc_prop (const char *key,
   else if (strcmp(key, SVN_RA_DAV__PROP_CREATOR_DISPLAYNAME) == 0)
     {
       SVN_ERR( (*setter)(baton, SVN_PROP_ENTRY_LAST_AUTHOR,
+                         svn_string_create(val, pool), pool) );
+    }
+  else if (strcmp(key, SVN_RA_DAV__PROP_REPOSITORY_UUID) == 0)
+    {
+      SVN_ERR( (*setter)(baton, SVN_PROP_ENTRY_UUID,
                          svn_string_create(val, pool), pool) );
     }
 
@@ -1743,6 +1750,7 @@ static int validate_element(void *userdata,
           || child == ELEM_creationdate
           || child == ELEM_creator_displayname
           || child == ELEM_md5_checksum
+          || child == ELEM_repository_uuid
           || child == ELEM_remove_prop)
         return NE_XML_VALID;
       else

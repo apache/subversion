@@ -30,6 +30,7 @@
 #include "svn_md5.h"
 #include "svn_xml.h"
 #include "svn_path.h"
+#include "svn_dav.h"
 
 #include "dav_svn.h"
 
@@ -83,6 +84,7 @@ typedef struct {
   const char *committed_rev;
   const char *committed_date;
   const char *last_author;
+  const char *uuid;
 
 } item_baton_t;
 
@@ -405,6 +407,10 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
     if (baton->last_author)
       send_xml(baton->uc, "<D:creator-displayname>%s</D:creator-displayname>",
                baton->last_author);
+
+    if (baton->uuid)
+      send_xml(baton->uc, "<S2:repository-uuid>%s</S2:repository-uuid>",
+               baton->uuid);
     
     send_xml(baton->uc, "</S:prop>\n");
   }
@@ -426,7 +432,8 @@ static svn_error_t * upd_set_target_revision(void *edit_baton,
       send_xml(uc,
                DAV_XML_HEADER DEBUG_CR
                "<S:update-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
-               "xmlns:D=\"DAV:\">" DEBUG_CR
+               "xmlns:D=\"DAV:\" " DEBUG_CR
+               "xmlns:S2=\"" SVN_DAV_PROP_NS_DAV "\">" DEBUG_CR
                "<S:target-revision rev=\"%" SVN_REVNUM_T_FMT "\"/>" DEBUG_CR,
                target_revision);
 
@@ -530,6 +537,8 @@ static svn_error_t * upd_change_xxx_prop(void *baton,
         b->committed_date = value ? apr_pstrdup(b->pool, value->data) : NULL;
       else if (! strcmp(name, SVN_PROP_ENTRY_LAST_AUTHOR))
         b->last_author = value ? apr_pstrdup(b->pool, value->data) : NULL;
+      else if (! strcmp(name, SVN_PROP_ENTRY_UUID))
+        b->uuid = value ? apr_pstrdup(b->pool, value->data) : NULL;
       
       return SVN_NO_ERROR;
     }

@@ -250,6 +250,9 @@ svn_ra_local__open (void **session_baton,
      convenience. */
   session->fs = svn_repos_fs (session->repos);
 
+  /* Cache the repository UUID as well */
+  SVN_ERR (svn_fs_get_uuid (session->fs, &session->uuid, session->pool));
+
   /* Stuff the callbacks/baton here. */
   session->callbacks = callbacks;
   session->callback_baton = callback_baton;
@@ -320,6 +323,18 @@ svn_ra_local__change_rev_prop (void *session_baton,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+svn_ra_local__get_uuid (void *session_baton,
+                        const char **uuid)
+{
+  svn_ra_local__session_baton_t *baton = 
+    (svn_ra_local__session_baton_t *) session_baton;
+
+  *uuid = baton->uuid;
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 svn_ra_local__rev_proplist (void *session_baton,
@@ -761,6 +776,10 @@ svn_ra_local__get_file (void *session_baton,
       apr_hash_set (*props, SVN_PROP_ENTRY_LAST_AUTHOR, 
                     APR_HASH_KEY_STRING, value);
             
+      value = svn_string_create (sbaton->uuid, sbaton->pool); 
+      apr_hash_set (*props, SVN_PROP_ENTRY_UUID,
+                    APR_HASH_KEY_STRING, value);
+
       /* We have no 'wcprops' in ra_local, but might someday. */
     }
 
@@ -906,6 +925,10 @@ svn_ra_local__get_dir (void *session_baton,
 
       apr_hash_set (*props, SVN_PROP_ENTRY_LAST_AUTHOR, 
                     APR_HASH_KEY_STRING, value);
+      
+      value = svn_string_create (sbaton->uuid, pool); 
+      apr_hash_set (*props, SVN_PROP_ENTRY_UUID,
+                    APR_HASH_KEY_STRING, value);
             
       /* We have no 'wcprops' in ra_local, but might someday. */
     }
@@ -939,7 +962,8 @@ static const svn_ra_plugin_t ra_local_plugin =
   svn_ra_local__do_status,
   svn_ra_local__do_diff,
   svn_ra_local__get_log,
-  svn_ra_local__do_check_path
+  svn_ra_local__do_check_path,
+  svn_ra_local__get_uuid
 };
 
 
