@@ -230,20 +230,22 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         if self.targets.has_key(libname):
           libs.append(self.targets[libname])
         else:
-          libs.append(gen_base.ExternalLibrary(libname))
+          libs.append(libname)
     return libs
 
   def get_install_targets(self):
     "Generate the list of targets"
     # Generate a fake depaprutil project
     options = {'path': 'build/win32'}
-    self.targets['depsubr'] = gen_base.TargetUtility('depsubr', options,
-                                                     self.cfg, None)
-    self.targets['depdelta'] = gen_base.TargetUtility('depdelta', options,
-                                                      self.cfg, None)
+    utility = gen_base.TargetUtility
+    self.targets['depsubr'] = utility.Section(options, utility)
+    self.targets['depdelta'] = utility.Section(options, utility)
 
-    self.targets['depsubr'].add_dependencies('', self.graph)
-    self.targets['depdelta'].add_dependencies('', self.graph)
+    self.targets['depsubr'].create_targets(self.graph, 'depsubr', self.cfg, 
+                                           self._extension_map)
+
+    self.targets['depdelta'].create_targets(self.graph, 'depdelta', self.cfg,
+                                            self._extension_map)
 
     install_targets = self.graph.get_all_sources(gen_base.DT_PROJECT)   \
                       + self.graph.get_all_sources(gen_base.DT_INSTALL)
@@ -276,14 +278,14 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         sources.append(ProjectItem(path=rsrc, reldir=reldir, user_deps=[],
                                    swig_language=None))
 
-    if isinstance(target, gen_base.SWIGLibrary):
+    if isinstance(target, gen_base.TargetSWIG):
       for obj in self.graph.get_sources(gen_base.DT_LINK, target.name):
         if isinstance(obj, gen_base.SWIGObject):
           for cobj in self.graph.get_sources(gen_base.DT_OBJECT, obj):
             if isinstance(cobj, gen_base.SWIGObject):
               csrc = rootpath + '\\' + string.replace(cobj.fname, '/', '\\')
 
-              if isinstance(target, gen_base.SWIGRuntimeLibrary):
+              if isinstance(target, gen_base.TargetSWIGRuntime):
                 bsrc = rootpath + "\\build\\win32\\gen_swig_runtime.py"
                 sources.append(ProjectItem(path=bsrc, reldir=None, user_deps=[],
                                            swig_language=target.lang,
@@ -324,7 +326,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       pos = string.find(name, '-test')
       if pos >= 0:
         proj_name = 'test_' + string.replace(name[:pos], '-', '_')
-      elif isinstance(target, gen_base.SWIGLibrary):
+      elif isinstance(target, gen_base.TargetSWIG):
         proj_name = 'swig_' + string.replace(name, '-', '_')
       else:
         proj_name = string.replace(name, '-', '_')
@@ -339,37 +341,35 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     if name == '__CONFIG__':
       depends = []
     else:
-      depends = [self.targets['__CONFIG__']]
+      depends = self.targets['__CONFIG__'].get_dep_targets(target)
 
     if isinstance(target, gen_base.TargetApacheMod):
       if target.name == 'mod_authz_svn':
-        depends.append(self.targets['mod_dav_svn'])
+        depends.extend(self.targets['mod_dav_svn'].get_dep_targets(target))
       pass
     elif name == 'depdelta':
-      depends.append(self.targets['libsvn_delta'])
+      depends.extend(self.targets['libsvn_delta'].get_dep_targets(target))
     elif name == 'libsvn_wc':
-      depends.append(self.targets['depdelta'])
+      depends.extend(self.targets['depdelta'].get_dep_targets(target))
     elif name == 'depsubr':
-      depends.append(self.targets['libsvn_subr'])
+      depends.extend(self.targets['libsvn_subr'].get_dep_targets(target))
     elif name == 'libsvn_ra_svn':
-      depends.append(self.targets['depsubr'])
+      depends.extend(self.targets['depsubr'].get_dep_targets(target))
     elif name == 'libsvn_ra_dav':
-      depends.append(self.targets['depsubr'])
-      depends.append(self.targets['neon'])
-    elif isinstance(target, gen_base.Target):
-      if isinstance(target, gen_base.TargetExe):
-        depends.extend(self.get_win_depends(target, 1, 
-                                            ccls=gen_base.TargetLib))
-      else:
-        depends.extend(self.get_win_depends(target, 3))
-    elif isinstance(target, gen_base.SWIGLibrary):
+      depends.extend(self.targets['depsubr'].get_dep_targets(target))
+      depends.extend(self.targets['neon'].get_dep_targets(target))
+    elif isinstance(target, gen_base.TargetExe):
+      depends.extend(self.get_win_depends(target, 1,
+                                          ccls=gen_base.TargetLib))
+    elif isinstance(target, gen_base.TargetSWIG):
       for lib in self.graph.get_sources(gen_base.DT_LINK, target.name):
         if hasattr(lib, 'proj_name'):
           depends.append(lib)
-          depends.extend(self.get_win_depends(lib, 0))          
-      if not isinstance(target, gen_base.SWIGRuntimeLibrary):
-        runtime = self.targets['swig_runtime'].get_library(target.lang)
-        if runtime: depends.append(runtime)
+          depends.extend(self.get_win_depends(lib, 0))        
+      if not isinstance(target, gen_base.TargetSWIGRuntime):
+        depends.extend(self.targets['swig_runtime'].get_dep_targets(target))
+    elif isinstance(target, gen_base.Target):
+      depends.extend(self.get_win_depends(target, 3))
     else:
       assert 0
     depends.sort() ### temporary
@@ -400,13 +400,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       child_deps = { }
 
     for obj in self.graph.get_sources(gen_base.DT_LINK, target.name, cls):
-
-      if isinstance(obj, gen_base.TargetSWIG):
-        tname = 'swig-' + gen_base.lang_abbrev[target.language]
-        for dep in self.graph.get_sources(gen_base.DT_INSTALL, tname):
-          deps[dep] = None
-        continue
-
       if deps is not None:
         deps[obj] = None
 
@@ -436,7 +429,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     else:
       fakedefines.extend(["APR_DECLARE_STATIC","APU_DECLARE_STATIC"])
 
-    if isinstance(target, gen_base.SWIGLibrary):
+    if isinstance(target, gen_base.TargetSWIG):
       fakedefines.append("SWIG_GLOBAL")
 
     if cfg == 'Debug':
@@ -459,7 +452,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         self.httpd_path + "/srclib/apr-util/xml/expat/lib",
         self.httpd_path + "/include"
         ])
-    elif isinstance(target, gen_base.SWIGLibrary):
+    elif isinstance(target, gen_base.TargetSWIG):
       fakeincludes = self.map_rootpath(["subversion/bindings/swig",
                                         "subversion/include",
                                         "apr/include"], rootpath)  
@@ -514,7 +507,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                     'shfolder.lib' ])
       return libs
 
-    if isinstance(target, gen_base.SWIGLibrary):
+    if isinstance(target, gen_base.TargetSWIG):
       libs = [ self.dblibname+(cfg == 'Debug' and 'd.lib' or '.lib'),
                'mswsock.lib',
                'ws2_32.lib',

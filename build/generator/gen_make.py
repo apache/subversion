@@ -242,7 +242,7 @@ class Generator(gen_base.GeneratorBase):
                          '%s_LINK = %s\n\n' % (name, string.join(deps, ' '),
                                                name, string.join(link, ' ')))
 
-      elif isinstance(target, gen_base.SWIGLibrary):
+      elif isinstance(target, gen_base.TargetSWIG):
         wrappers[target.lang].append(target)
 
     ### not yet

@@ -33,6 +33,9 @@ class Generator(gen_win.WinGeneratorBase):
         #DLL
         target.output_name = target.name + '.so'
         config_type=2
+      elif isinstance(target, gen_base.TargetSWIG):
+        config_type=2
+        target.output_name = os.path.basename(target.fname)  
       else:
         #LIB
         config_type=4
@@ -40,9 +43,6 @@ class Generator(gen_win.WinGeneratorBase):
     elif isinstance(target, gen_base.TargetUtility):
       config_type=1
       target.output_name = target.name + '.exe'
-    elif isinstance(target, gen_base.SWIGLibrary):
-      config_type=2
-      target.output_name = os.path.basename(target.fname)
     else:
       raise gen_base.GenError("Cannot create project for %s" % target.name)
 
