@@ -757,6 +757,7 @@ void svn_swig_py_notify_func(void *baton,
 
 svn_error_t *
 svn_swig_py_get_commit_log_func(const char **log_msg,
+                                const char **tmp_file,
                                 apr_array_header_t *commit_items,
                                 void *baton,
                                 apr_pool_t *pool)
@@ -764,6 +765,11 @@ svn_swig_py_get_commit_log_func(const char **log_msg,
   PyObject *function = baton;
   PyObject *result;
   PyObject *cmt_items;
+
+  *log_msg = NULL;
+  *tmp_file = NULL;
+
+  /* ### todo: for now, just ignore the whole tmp_file thing.  */
 
   if ((function == NULL) || (function == Py_None))
     return SVN_NO_ERROR;
