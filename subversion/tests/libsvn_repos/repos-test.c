@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <apr_pools.h>
+#include <apr_md5.h>
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
@@ -344,6 +345,244 @@ dir_deltas (const char **msg,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+verify_hooks (const char **msg,
+              apr_pool_t *pool)
+{ 
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  apr_file_t *conf_file;
+  apr_status_t apr_err;
+  svn_revnum_t new_rev;
+  apr_uid_t userid;
+  apr_gid_t groupid;
+  char *username;
+  const char *repos_path;
+
+  *msg = "test hook system";
+
+  /* Get the current user and group ids. */
+  apr_err = apr_current_userid (&userid, &groupid, pool);
+  if (apr_err)
+    return svn_error_create 
+      (apr_err, 0, NULL, pool,
+       "Unable to get current user- and group-ids");
+  
+  /* Use the userid to look up the username. */
+  apr_err = apr_get_username (&username, userid, pool);
+  if (apr_err)
+    return svn_error_create 
+      (apr_err, 0, NULL, pool,
+       "Unable to lookup username");
+
+  /* Create a filesystem and repository. */
+  SVN_ERR (svn_test__create_fs_and_repos 
+           (&fs, "test-repo-verify-hooks", pool));
+  
+  /* Get the path to the repository. */
+  repos_path = svn_fs_repository (fs);
+
+  /*** START-COMMIT-HOOK ***/
+  /* Config looks like:
+
+     md5args <checksum> foo --repository $repos \
+     --user $user
+  */
+  {
+    const char *conf_path;
+    const char *conf_data = "foo --repository $repos \\\n--user $user\n";
+    svn_stringbuf_t *conf_data_str;
+    svn_stringbuf_t *conf_check;
+    unsigned char digest[MD5_DIGESTSIZE];
+    svn_stringbuf_t *digest_str;
+    apr_size_t len;
+    int i;
+
+    /* Build new contents for the conf file. */ 
+    conf_check = svn_stringbuf_create ("foo --repository ", pool);
+    svn_stringbuf_appendcstr (conf_check, repos_path);
+    svn_stringbuf_appendcstr (conf_check, " --user ");
+    svn_stringbuf_appendcstr (conf_check, username);
+
+    apr_md5 (digest, conf_check->data, conf_check->len);
+    digest_str = svn_stringbuf_create ("", pool);
+    for (i = 0; i < MD5_DIGESTSIZE; i++)
+      {
+        svn_stringbuf_t *tmp_str = 
+          svn_stringbuf_createf (pool, "%02X", digest[i]);
+        svn_stringbuf_appendstr (digest_str, tmp_str);
+      }
+
+    conf_data_str = svn_stringbuf_create ("md5args ", pool);
+    svn_stringbuf_appendstr (conf_data_str, digest_str);
+    svn_stringbuf_appendcstr (conf_data_str, " ");
+    svn_stringbuf_appendcstr (conf_data_str, conf_data);
+
+    /* Get the path for the conf file and write the new file contents. */
+    conf_path = svn_fs_start_commit_conf (fs, pool);
+    apr_err = apr_file_open (&conf_file, conf_path, APR_WRITE,
+                             APR_OS_DEFAULT, pool);
+    if (apr_err)
+      return svn_error_create 
+        (apr_err, 0, NULL, pool,
+         "Unable to open start-commit-hook conf file for writing");
+    len = conf_data_str->len;
+    apr_err = apr_file_write_full (conf_file, conf_data_str->data, len, &len);
+    if (apr_err)
+      return svn_error_create 
+        (apr_err, 0, NULL, pool,
+         "Unable to write new contents to start-commit-hook conf file");
+    apr_err = apr_file_trunc (conf_file, len);
+    if (apr_err)
+      return svn_error_create 
+        (apr_err, 0, NULL, pool,
+         "Unable to truncate start-commit-hook conf file");
+    apr_err = apr_file_close (conf_file);
+    if (apr_err)
+      return svn_error_create 
+        (apr_err, 0, NULL, pool,
+         "Unable to close start-commit-hook conf file");
+  }
+
+  /*** PRE-COMMIT-HOOK ***/
+  /* Config looks like:
+
+     md5args <checksum> bar \$REPO\$ \
+        $repos \$TXN\$ $txn
+  */
+  {
+    const char *conf_path;
+    const char *conf_data = "bar \\$REPO\\$ \\\n   $repos \\$TXN\\$ $txn\n";
+    svn_stringbuf_t *conf_data_str;
+    svn_stringbuf_t *conf_check;
+    unsigned char digest[MD5_DIGESTSIZE];
+    svn_stringbuf_t *digest_str;
+    apr_size_t len;
+    int i;
+
+    /* Build new contents for the conf file. */ 
+    conf_check = svn_stringbuf_create ("bar \\$REPO\\$ ", pool);
+    svn_stringbuf_appendcstr (conf_check, repos_path);
+    svn_stringbuf_appendcstr (conf_check, " \\$TXN\\$ 0");
+
+    apr_md5 (digest, conf_check->data, conf_check->len);
+    digest_str = svn_stringbuf_create ("", pool);
+    for (i = 0; i < MD5_DIGESTSIZE; i++)
+      {
+        svn_stringbuf_t *tmp_str = 
+          svn_stringbuf_createf (pool, "%02X", digest[i]);
+        svn_stringbuf_appendstr (digest_str, tmp_str);
+      }
+
+    conf_data_str = svn_stringbuf_create ("md5args ", pool);
+    svn_stringbuf_appendstr (conf_data_str, digest_str);
+    svn_stringbuf_appendcstr (conf_data_str, " ");
+    svn_stringbuf_appendcstr (conf_data_str, conf_data);
+
+    /* Get the path for the conf file and write the new file contents. */
+    conf_path = svn_fs_pre_commit_conf (fs, pool);
+    apr_err = apr_file_open (&conf_file, conf_path, APR_WRITE,
+                             APR_OS_DEFAULT, pool);
+    if (apr_err)
+      return svn_error_create 
+        (apr_err, 0, NULL, pool,
+         "Unable to open pre-commit-hook conf file for writing");
+    len = conf_data_str->len;
+    apr_err = apr_file_write_full (conf_file, conf_data_str->data, len, &len);
+    if (apr_err)
+      return svn_error_create 
+        (apr_err, 0, NULL, pool,
+         "Unable to write new contents to pre-commit-hook conf file");
+    apr_err = apr_file_trunc (conf_file, len);
+    if (apr_err)
+      return svn_error_create 
+        (apr_err, 0, NULL, pool,
+         "Unable to truncate pre-commit-hook conf file");
+    apr_err = apr_file_close (conf_file);
+    if (apr_err)
+      return svn_error_create 
+        (apr_err, 0, NULL, pool,
+         "Unable to close pre-commit-hook conf file");
+  }
+
+  /*** POST-COMMIT-HOOK ***/
+  /* Config looks like:
+
+     md5args <checksum> baz \$repo \$\$$repos \$ruv$rev
+  */
+  {
+    const char *conf_path;
+    const char *conf_data = "baz \\$repo \\$\\$$repos \\$ruv$rev\n";
+    svn_stringbuf_t *conf_data_str;
+    svn_stringbuf_t *conf_check;
+    unsigned char digest[MD5_DIGESTSIZE];
+    svn_stringbuf_t *digest_str;
+    apr_size_t len;
+    int i;
+
+    /* Build new contents for the conf file. */ 
+    conf_check = svn_stringbuf_create ("bar \\$repo \\$\\$", pool);
+    svn_stringbuf_appendcstr (conf_check, repos_path);
+    svn_stringbuf_appendcstr (conf_check, " \\$ruv1");
+
+    apr_md5 (digest, conf_check->data, conf_check->len);
+    digest_str = svn_stringbuf_create ("", pool);
+    for (i = 0; i < MD5_DIGESTSIZE; i++)
+      {
+        svn_stringbuf_t *tmp_str = 
+          svn_stringbuf_createf (pool, "%02X", digest[i]);
+        svn_stringbuf_appendstr (digest_str, tmp_str);
+      }
+
+    conf_data_str = svn_stringbuf_create ("md5args ", pool);
+    svn_stringbuf_appendstr (conf_data_str, digest_str);
+    svn_stringbuf_appendcstr (conf_data_str, " ");
+    svn_stringbuf_appendcstr (conf_data_str, conf_data);
+
+    /* Get the path for the conf file and write the new file contents. */
+    conf_path = svn_fs_post_commit_conf (fs, pool);
+    apr_err = apr_file_open (&conf_file, conf_path, APR_WRITE,
+                             APR_OS_DEFAULT, pool);
+    if (apr_err)
+      return svn_error_create 
+        (apr_err, 0, NULL, pool,
+         "Unable to open post-commit-hook conf file for writing");
+    len = conf_data_str->len;
+    apr_err = apr_file_write_full (conf_file, conf_data_str->data, len, &len);
+    if (apr_err)
+      return svn_error_create 
+        (apr_err, 0, NULL, pool,
+         "Unable to write new contents to post-commit-hook conf file");
+    apr_err = apr_file_trunc (conf_file, len);
+    if (apr_err)
+      return svn_error_create 
+        (apr_err, 0, NULL, pool,
+         "Unable to truncate post-commit-hook conf file");
+    apr_err = apr_file_close (conf_file);
+    if (apr_err)
+      return svn_error_create 
+        (apr_err, 0, NULL, pool,
+         "Unable to close post-commit-hook conf file");
+  }
+  
+  /* Prepare a txn to receive the greek tree. */
+  SVN_ERR (svn_repos_fs_begin_txn_for_commit 
+           (&txn, fs, 0, username, NULL, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+
+  /* Create and commit the greek tree. */
+  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
+  SVN_ERR (svn_repos_fs_commit_txn (NULL, &new_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /* Cleanup. */
+  SVN_ERR (svn_fs_close_fs (fs));
+  return SVN_NO_ERROR;
+}
+
+
 
 /* The test table.  */
 
@@ -351,6 +590,9 @@ svn_error_t * (*test_funcs[]) (const char **msg,
                                apr_pool_t *pool) = {
   0,
   dir_deltas,
+#ifdef KARL_GETS_HIS_CONF_PARSING_STUFF_RIGHT
+  verify_hooks,
+#endif
   0
 };
 
