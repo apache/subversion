@@ -956,15 +956,11 @@ fs_node_id (const svn_fs_id_t **id_p,
 }
 
 
-/* Set *REVISION to the revision in which PATH under ROOT was created.
-   Use POOL for any temporary allocations.  If PATH is in an
-   uncommitted transaction, *REVISION will be set to
-   SVN_INVALID_REVNUM. */
-static svn_error_t *
-fs_node_created_rev (svn_revnum_t *revision,
-                     svn_fs_root_t *root,
-                     const char *path,
-                     apr_pool_t *pool)
+svn_error_t *
+svn_fs_fs__node_created_rev (svn_revnum_t *revision,
+                             svn_fs_root_t *root,
+                             const char *path,
+                             apr_pool_t *pool)
 {
   dag_node_t *node;
 
@@ -3287,7 +3283,7 @@ static root_vtable_t root_vtable = {
   svn_fs_fs__check_path,
   fs_node_history,
   fs_node_id,
-  fs_node_created_rev,
+  svn_fs_fs__node_created_rev,
   fs_node_created_path,
   fs_delete_node,
   fs_copied_from,
