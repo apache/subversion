@@ -151,7 +151,14 @@ svn_cl__get_trace_commit_editor (const svn_delta_edit_fns_t **editor,
                                  void **edit_baton,
                                  svn_string_t *initial_path,
                                  apr_pool_t *pool);
+
+/* make the command table information available to all commands */ 
+extern const svn_cl__cmd_desc_t svn_cl__cmd_table[];
 
+const svn_cl__cmd_desc_t *
+svn_cl__get_canonical_command (const char *cmd);
+
+
 
 #endif /* SVN_CL_H */
 
