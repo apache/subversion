@@ -161,21 +161,21 @@
         
         <varlistentry>
           <term><command>Constant width</command></term>
-          <listiatem>
+          <listitem>
             <para>Used for commands, command output, and switches</para>
           </listitem>
         </varlistentry>
 
         <varlistentry>
           <term><replaceable>Constant width italic</replaceable></term>
-          <listiatem>
+          <listitem>
             <para>Used for replaceable items in code and text</para>
           </listitem>
         </varlistentry>
 
         <varlistentry>
           <term><filename>Italic</filename></term>
-          <listiatem>
+          <listitem>
             <para>Used for file and directory names</para>
           </listitem>
         </varlistentry>
@@ -184,7 +184,7 @@
 
     </sect2>
 
-    <sect2 id="svn-ch-0-sect3.1">
+    <sect2 id="svn-ch-0-sect3.2">
       <title>Icons</title>
 
       <note>
@@ -221,7 +221,7 @@
         
         <varlistentry>
           <term>Chapter 1, <emphasis>Introduction</emphasis></term>
-          <listiatem>
+          <listitem>
             <para>Covers the history of
               <productname>Subversion</productname> as well as its
               features, architecture architecture, components, and
@@ -231,7 +231,7 @@
 
         <varlistentry>
           <term>Chapter 2, <emphasis>Basic Concepts</emphasis></term>
-          <listiatem>
+          <listitem>
             <para>Explains the basics of version control and different
               versioning models, along with Subversion's repository,
               working copies, and revisions.</para>
@@ -240,7 +240,7 @@
 
         <varlistentry>
           <term>Chapter 3, <emphasis>Guided Tour</emphasis></term>
-          <listiatem>
+          <listitem>
             <para>Walks you through a day in the life of a Subversion
               user.  It demonstrates how to use Subversion obtain,
               modify, and commit data using Subversion.</para>
@@ -249,7 +249,7 @@
 
         <varlistentry>
           <term>Chapter 4, <emphasis>Branching and Merging</emphasis></term>
-          <listiatem>
+          <listitem>
             <para>Discusses branches, merges, and tagging, including
               best practices for branching and merging, common
               use-cases, how to undo changes, and how to easily swing
@@ -259,7 +259,7 @@
 
         <varlistentry>
           <term>Chapter 5, <emphasis>Repository Administration</emphasis></term>
-          <listiatem>
+          <listitem>
             <para>Describes the basics of the Subversion repository,
               how to create, configure, and maintain a repository, as
               well as the tools you can use to do so.</para>
@@ -268,7 +268,7 @@
 
         <varlistentry>
           <term>Chapter 6, <emphasis>Server Configuration</emphasis></term>
-          <listiatem>
+          <listitem>
             <para>Explains how to configure your Subversion server and
               the three ways to access your repository:
               <literal>HTTP</literal>, the <literal>svn</literal>
@@ -280,7 +280,7 @@
 
         <varlistentry>
           <term>Chapter 7, <emphasis>Advanced Topics</emphasis></term>
-          <listiatem>
+          <listitem>
             <para>Explores the Subversion client configuration files,
               file and directory properties, how to
               <literal>ignore</literal> files in your working copy,
@@ -291,7 +291,7 @@
 
         <varlistentry>
           <term>Chapter 8, <emphasis>Developer Information</emphasis></term>
-          <listiatem>
+          <listitem>
             <para>Describes the internals of Subversion, the
               Subversion filesystem, and the working copy
               administrative areas from a programmer's point of view.
@@ -303,7 +303,7 @@
 
         <varlistentry>
           <term>Chapter 9, <emphasis>Subversion Complete Reference</emphasis></term>
-          <listiatem>
+          <listitem>
             <para>Explains in great detail every subcommand of
               <command>svn</command>, <command>svnadmin</command>, and
               <command>svnlook</command> with plenty of examples for
@@ -313,7 +313,7 @@
 
         <varlistentry>
           <term>Appendix A, <emphasis>Subversion for CVS Users</emphasis></term>
-          <listiatem>
+          <listitem>
             <para>Covers the similarities and differences between
               Subversion and CVS, with numerous suggestions on how to
               break all the bad habits you picked up from years of
@@ -327,7 +327,7 @@
 
         <varlistentry>
           <term>Appendix B, <emphasis>Troubleshooting</emphasis></term>
-          <listiatem>
+          <listitem>
             <para>Addresses common problems and difficulties using and
               building Subversion.</para>
           </listitem>
@@ -335,7 +335,7 @@
 
         <varlistentry>
           <term>Appendix C, <emphasis>WebDAV and Autoversioning</emphasis></term>
-          <listiatem>
+          <listitem>
             <para>Describes the details of WebDAV and DeltaV, and how
             you can configure your Subversion repository to be mounted
             read/write as a DAV share with any changes you make are
@@ -345,7 +345,7 @@
 
         <varlistentry>
           <term>Appendix D, <emphasis>Other Subversion Clients</emphasis></term>
-          <listiatem>
+          <listitem>
             <para>Explains where you can find Subversion clients other
             than the command line client.</para>
           </listitem>
@@ -353,11 +353,13 @@
 
         <varlistentry>
           <term>Appendix E, <emphasis>Third Party Tools</emphasis></term>
-          <listiatem>
+          <listitem>
             <para>Discusses tools that support or use
             Subversion.</para>
           </listitem>
         </varlistentry>
+
+    </variablelist>
 
   </sect1>
 
