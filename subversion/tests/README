@@ -74,6 +74,7 @@ Instead, your code should define an externally visible array
     /* The test table.  */
 
     int (*test_funcs[]) (const char **msg) = {
+      0,
       test_a,
       test_b,
       test_c,
@@ -81,8 +82,10 @@ Instead, your code should define an externally visible array
     };
 
 In this example, `test_a', `test_b', and `test_c' are the names of
-test functions.  The zero must come after all your test functions; the
-standard `main' function searches for it to find the end of the array.
+test functions.  The first and last elements of the array must be
+zero.  The first zero is there to leave room for Buddha.  The standard
+`main' function searches for the final zero to determine the size of
+the array.
 
 Each test function has the following type:
 
