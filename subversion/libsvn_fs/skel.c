@@ -475,7 +475,7 @@ svn_fs__prepend (skel_t *skel, skel_t *list_skel)
 
 
 int
-svn_fs__is_atom (skel_t *skel, const char *str)
+svn_fs__matches_atom (skel_t *skel, const char *str)
 {
   if (skel
       && skel->is_atom)

@@ -155,7 +155,7 @@ is_valid_flag (skel_t *skel)
   int len = svn_fs__list_length (skel);
 
   if (len == 2
-      && svn_fs__is_atom (skel->children, "mutable")
+      && svn_fs__matches_atom (skel->children, "mutable")
       && skel->children->next->is_atom)
     return 1;
 
@@ -201,11 +201,11 @@ is_valid_node_revision (skel_t *skel)
 
       if (is_valid_header (header, &kind))
         {
-          if (svn_fs__is_atom (kind, "file")
+          if (svn_fs__matches_atom (kind, "file")
               && len == 2
               && header->next->is_atom)
             return 1;
-          else if (svn_fs__is_atom (kind, "dir")
+          else if (svn_fs__matches_atom (kind, "dir")
                    && len == 2)
             {
               skel_t *entry_list = header->next;
@@ -249,12 +249,12 @@ is_valid_representation (skel_t *skel)
     {
       skel_t *type = skel->children;
 
-      if (svn_fs__is_atom (type, "fulltext")
+      if (svn_fs__matches_atom (type, "fulltext")
           && len == 2
           && is_valid_node_revision (type->next))
         return 1;
 #if 0
-      else if (svn_fs__is_atom (type, "younger")
+      else if (svn_fs__matches_atom (type, "younger")
                && len == 3
                && is_valid_delta (type->next)
                && is_valid_checksum (type->next->next))

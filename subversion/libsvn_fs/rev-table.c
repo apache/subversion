@@ -50,7 +50,7 @@ is_valid_filesystem_revision (skel_t *skel)
 
   if (len == 3)
     {
-      if (svn_fs__is_atom (skel->children, "revision")
+      if (svn_fs__matches_atom (skel->children, "revision")
           && skel->children->next != NULL
           && svn_fs__is_valid_proplist (skel->children->next->next))
         {

@@ -56,7 +56,7 @@ is_valid_transaction (skel_t *skel)
   int len = svn_fs__list_length (skel);
 
   if (len == 3
-      && svn_fs__is_atom (skel->children, "transaction")
+      && svn_fs__matches_atom (skel->children, "transaction")
       && skel->children->next->is_atom
       && skel->children->next->next->is_atom)
     return 1;
