@@ -181,15 +181,21 @@ INSTALL_EXTRA_SWIG_PY=\
 SWIG_JAVA_DIR = $(abs_builddir)/subversion/bindings/swig/java
 # These are the 'extra' classes which complement SWIG's generated bindings
 SWIG_EXTRA_JAVA_DIR = $(abs_srcdir)/subversion/bindings/java
+SWIG_EXTRA_SWIG_DIR = $(abs_srcdir)/subversion/bindings/swig/java
 SWIG_JAVA_SOURCES = $(SWIG_EXTRA_JAVA_DIR)/org/tigris/subversion/*.java \
                     $(SWIG_EXTRA_JAVA_DIR)/org/tigris/subversion/auth/*.java \
                     $(SWIG_EXTRA_JAVA_DIR)/org/tigris/subversion/client/*.java \
                     $(SWIG_EXTRA_JAVA_DIR)/org/tigris/subversion/opt/*.java \
                     $(SWIG_EXTRA_JAVA_DIR)/org/tigris/subversion/wc/*.java \
+                    $(SWIG_EXTRA_SWIG_DIR)/org/tigris/subversion/util/*.java \
+                    $(SWIG_EXTRA_SWIG_DIR)/org/tigris/subversion/client/*.java \
                     $(SWIG_JAVA_DIR)/org/tigris/subversion/swig/*.java
 
+# Have to work around different versions of SWIG that output the java files
+# in different directories.
 INSTALL_EXTRA_SWIG_JAVA=\
 	if [ ! -d $(SWIG_JAVA_DIR)/build ]; then mkdir $(SWIG_JAVA_DIR)/build; fi; \
+	if [ ! -f $(SWIG_JAVA_DIR)/org/tigris/subversion/swig/clientJNI.java ]; then mv $(SWIG_JAVA_DIR)/*.java $(SWIG_JAVA_DIR)/org/tigris/subversion/swig; fi; \
 	$(JAVAC) -g -d $(SWIG_JAVA_DIR)/build $(SWIG_JAVA_SOURCES); \
 	$(JAR) cf $(SWIG_JAVA_DIR)/build/svn-api.jar -C $(SWIG_JAVA_DIR)/build org; \
 	$(INSTALL_DATA) $(SWIG_JAVA_DIR)/build/svn-api.jar $(DESTDIR)$(swig_javadir);

@@ -413,6 +413,40 @@ static svn_error_t * close_baton(void *baton, const char *method)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t * close_baton_checksum(void *baton, 
+                                          const char *text_checksum,
+                                          const char *method)
+{
+  item_baton *ib = baton;
+  jobject result;
+  JNIEnv *jenv = ib->jenv;
+  jclass cls = JCALL1(GetObjectClass, jenv, ib->editor);
+  jmethodID methodID;
+
+  methodID = JCALL3(GetMethodID, jenv, cls, method,
+                    "(Ljava/lang/Object;)Ljava/lang/Object;");
+  result = JCALL4(CallObjectMethod, jenv, ib->editor, methodID, ib->baton,
+                  text_checksum);
+
+  if (result == NULL)
+      return convert_exception(ib->jenv, ib->pool);
+
+  /* there is no return value, so just toss this object */
+  JCALL1(DeleteGlobalRef, ib->jenv, result);
+
+  /* We're now done with the baton. Since there isn't really a free, all
+     we need to do is note that its objects are no longer referenced by
+     the baton.  */
+  JCALL1(DeleteGlobalRef, ib->jenv, ib->editor);
+  JCALL1(DeleteGlobalRef, ib->jenv, ib->baton);
+
+#ifdef SVN_DEBUG
+  ib->editor = ib->baton = NULL;
+#endif
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t * thunk_set_target_revision(void *edit_baton,
                                                svn_revnum_t target_revision,
                                                apr_pool_t *pool)
@@ -655,7 +689,6 @@ static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
 static svn_error_t * thunk_apply_textdelta(
     void *file_baton,
     const char *base_checksum,
-    const char *result_checksum,
     apr_pool_t *pool,
     svn_txdelta_window_handler_t *handler,
     void **h_baton)
@@ -720,9 +753,11 @@ static svn_error_t * thunk_change_file_prop(void *file_baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t * thunk_close_file(void *file_baton, apr_pool_t *pool)
+static svn_error_t * thunk_close_file(void *file_baton, 
+                                      const char *text_checksum,
+                                      apr_pool_t *pool)
 {
-  return close_baton(file_baton, "close_file");
+  return close_baton_checksum(file_baton, text_checksum, "close_file");
 }
 
 static svn_error_t * thunk_close_edit(void *edit_baton, apr_pool_t *pool)
