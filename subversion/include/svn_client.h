@@ -509,13 +509,13 @@ svn_client_add (const char *path,
 
 /** Create a directory, either in a repository or a working copy.
  *
- * If @a path is a URL, use the authentication baton in @a ctx and 
- * @a message to immediately attempt to commit the creation of the directory 
- * @a path in the repository.  If the commit succeeds, allocate (in @a pool) 
- * and populate @a *commit_info.
+ * If @a paths contains URLs, use the authentication baton in @a ctx
+ * and @a message to immediately attempt to commit the creation of the
+ * directories in @a paths in the repository.  If the commit succeeds,
+ * allocate (in @a pool) and populate @a *commit_info.
  *
- * Else, create the directory on disk, and attempt to schedule it for
- * addition (using @c svn_client_add, whose docstring you should
+ * Else, create the directories on disk, and attempt to schedule them
+ * for addition (using @c svn_client_add, whose docstring you should
  * read).
  *
  * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that 
@@ -525,11 +525,10 @@ svn_client_add (const char *path,
  * If @a ctx->notify_func is non-null, when the directory has been created
  * (successfully) in the working copy, call @a ctx->notify_func with
  * @a ctx->notify_baton and the path of the new directory.  Note that this is
- * only called for items added to the working copy.
- */
+ * only called for items added to the working copy.  */
 svn_error_t *
 svn_client_mkdir (svn_client_commit_info_t **commit_info,
-                  const char *path,
+                  apr_array_header_t *paths,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
                   

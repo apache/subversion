@@ -152,7 +152,7 @@ delete_urls (svn_client_commit_info_t **commit_info,
       APR_ARRAY_PUSH (targets, const char *) = bname;
     }
 
-  /* Create a new commit item and add it to the array. */
+  /* Create new commit items and add them to the array. */
   if (ctx->log_msg_func)
     {
       svn_client_commit_item_t *item;
