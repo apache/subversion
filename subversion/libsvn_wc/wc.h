@@ -338,7 +338,7 @@ svn_error_t *svn_wc__entry_remove (svn_string_t *path,
                                    apr_pool_t *pool);
 
 
-#if 0  /* Ben, have at it. */
+
 
 struct svn_wc__entries_index
 {
@@ -361,7 +361,7 @@ svn_error_t *svn_wc__entries_next (struct svn_wc__entries_index *idx,
                                    svn_vernum_t *version,
                                    int *kind,
                                    apr_hash_t **hash);
-#endif /* 0 */
+
 
 
 
