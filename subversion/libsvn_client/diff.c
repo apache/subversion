@@ -112,6 +112,13 @@ display_prop_diffs (const apr_array_header_t *propchanges,
                                        propchange->name, APR_HASH_KEY_STRING);
       else
         original_value = NULL;
+
+      /* If the property doesn't exist on either side, or if it exists
+         with the same value, skip it.  */
+      if ((! (original_value || propchange->value))
+          || (original_value && propchange->value 
+              && svn_string_compare (original_value, propchange->value)))
+        continue;
       
       SVN_ERR (file_printf_from_utf8 (file, _("Name: %s%s"),
                                       propchange->name, APR_EOL_STR));
