@@ -9,11 +9,11 @@ http://svn.collab.net/repos/svn/branches/0.35.0
        release 0.33.0 should now be reverted.  Look for a line with
        "svnadmin deltify" in hooks/post-commit, and remove it.
 
-    2. We now recommend using Berkeley DB 4.2 or higher for Subversion
-       repositories.  See http://sleepycat.com/download/index.shtml.
+    2. We now recommend using Berkeley DB 4.2.50 or higher for SVN
+       repositories.  See http://sleepycat.com/download/index.shtml. 
 
  User-visible changes:
- * BDB log files are automatically pruned, with BDB 4.2 and higher (#1615)
+ * BDB log files are automatically pruned, with BDB 4.2.50 and higher (#1615)
  * deltification is automatic again (issue #1601)
  * 
  * 
