@@ -2,6 +2,7 @@ Este documento contiene las siguientes secciones:
 
   Pasos para poder compilar el libro
   Cómo colaborar con la traducción
+  Obteniendo acceso de escritura al repositorio
   Cambios futuros que se realizarán en el libro
   Herramientas para ayudar en la traducción
   Reglas mínimas para traductores
@@ -92,10 +93,12 @@ Cómo colaborar con la traducción
 
 En este momento el coordinador del proyecto de traducción
 es Grzegorz Adam Hankiewicz, con quien se puede contactar en
-gradha@titanium.sabren.com.  Se puede colaborar traduciendo el
-libro o revisando las traducciones realizadas. En ambos casos,
-cualquier colaboración por mímina que sea será anotada en un listado
-de contribuciones.
+gradha@titanium.sabren.com, aunque es preferible que cualquier
+contacto sea realizado a través de la lista de correo (ver sección
+"Lista de correo para discutir la traducción") para evitar largas
+esperas. Se puede colaborar traduciendo el libro o revisando las
+traducciones realizadas. En ambos casos, cualquier colaboración
+por mímina que sea será anotada en un listado de contribuciones.
 
 Antes de colaborar alguna traducción, hay que entender que
 esta traducción se realiza bajo la misma licencia que el libro
@@ -145,6 +148,60 @@ Al finalizar la traducción completa se volverá a realizar una
 revisión global. Tras ésta, se considerará actualizar la traducción
 a la versión actual del libro original, pues la traducción se realiza
 sobre una versión específica que con seguiridad quedará obsoleta.
+
+
+Obteniendo acceso de escritura al repositorio
+=============================================
+
+En la sección anterior se ha mencionado que el repositorio está en
+modo lectura (de hecho se puede ver via navegador web a través de
+http://svn.collab.net/repos/svn/trunk/doc/translations/spanish/).
+Esto es aceptable para hacer trabajos de revisión, cuando lo único
+importante es tener acceso a la última versión y poder compilar el
+libro para leerlo en su forma final.
+
+Para traducir texto, se puede mandar parches diferenciales a la
+lista de correo de la traducción, o se puede obtener acceso directo
+de escritura al repositorio.
+
+En el primero de los casos, los parches conviene generarlos
+capturando la salida del comando "svn diff" ejecutado en el
+directorio raíz de la traducción. Ejemplo:
+
+   [~/project/svnbook-es]$ svn diff > cambios.diff
+
+Si el parche diferencial ocupa bastante (más de 10KB), conviene
+comprimirlo, preferiblemente con gzip:
+
+   [~/project/svnbook-es]$ gzip cambios.diff
+
+Una vez generado el parche se envía a la lista de correo y se espera
+a que alguien con acceso de escritura lo incluya en el repositorio.
+
+El segundo caso (acceso con escritura al repositorio) consiste
+en estar de acuerdo con las reglas enumeradas en "Reglas mínimas
+para traductores" (se pueden negociar) y crearse una cuenta en el
+servidor http://www.tigris.org/.  Esta cuenta es similar a la que
+se puede obtener en servicios como http://www.sourceofrge.net/ o
+http://developer.berlios.de. El nombre o alias que usemos en esta
+cuenta será el que figurará en los informes de cambios que genera
+el repositorio cuando se envian cambios.
+
+Una vez creada esta cuenta, mandar un mensaje a la lista de la
+traducción indicando el nombre de usuario de tigris.org. Entonces
+alguien con acceso de escritura mandará un email a los
+responsables del repositorio indicando la aprobación de ese
+nombre de usuario. Simultáneamente, mandar a kfogel@collab.net,
+cmpilato@collab.net y sussman@collab.net un mensaje indicando el
+nombre de usuario de tigris.org y la palabra clave que se quiere
+usar para tener el acceso de escritura.
+
+Cuando los responsables hayan recibido su mensaje y el de
+confirmación de alguien que ya tiene acceso de escritura, le
+indicarán si su acceso es aprobado. Con esto, simplemente cambiar
+un fichero en la copia local que tenemos de la documentación, y al
+hacer "svn commit" introducir el nombre de usuario de tigris.org
+y la clave de acceso de escritura.
 
 
 Cambios futuros que se realizarán en el libro
