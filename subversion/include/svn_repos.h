@@ -432,10 +432,10 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
  * convenience of the implementor, who should not expect it to live
  * longer than a single callback call.
  */
-typedef svn_error_t *svn_repos_history_func_t (void *baton,
-                                               const char *path,
-                                               svn_revnum_t revision,
-                                               apr_pool_t *pool);
+typedef svn_error_t *(*svn_repos_history_func_t) (void *baton,
+                                                  const char *path,
+                                                  svn_revnum_t revision,
+                                                  apr_pool_t *pool);
 
 /** Call @a history_func (with @a history_baton) for each interesting
  * history location in the lifetime of @a path in @a fs, from the
