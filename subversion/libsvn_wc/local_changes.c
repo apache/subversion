@@ -287,14 +287,16 @@ svn_wc__merge_local_changes (svn_wc_patch_fn_t *patch_fn,
      But for now, we just copy the tmp text-base over to the real
      file.
   */
-  svn_boolean_t exists;
+  enum svn_node_kind kind;
   svn_error_t *err;
   svn_string_t *tmp_text_base = svn_wc__text_base_path (path, 1, pool);
-  err = svn_wc__file_exists_p (&exists, tmp_text_base, pool);
+  err = svn_io_check_path (tmp_text_base, &kind, pool);
   if (err)
     return err;
 
-  if (! exists)
+  /* kff todo: switch on kind */
+
+  if (kind == svn_invalid_kind)
     return SVN_NO_ERROR;   /* tolerate mop-up calls gracefully */
   else
     return (*patch_fn) (diff, tmp_text_base, path, pool);

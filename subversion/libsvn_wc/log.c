@@ -111,17 +111,17 @@ replace_text_base (svn_string_t *path,
   svn_string_t *filepath;
   svn_string_t *tmp_text_base;
   svn_error_t *err;
-  svn_boolean_t exists;
+  enum svn_node_kind kind;
 
   filepath = svn_string_dup (path, pool);
   svn_path_add_component_nts (filepath, name, svn_path_local_style, pool);
 
   tmp_text_base = svn_wc__text_base_path (filepath, 1, pool);
-  err = svn_wc__file_exists_p (&exists, tmp_text_base, pool);
+  err = svn_io_check_path (tmp_text_base, &kind, pool);
   if (err)
     return err;
 
-  if (! exists)
+  if (kind == svn_invalid_kind)
     return SVN_NO_ERROR;  /* tolerate mop-up calls gracefully */
   else
     return svn_wc__sync_text_base (filepath, pool);

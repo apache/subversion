@@ -665,32 +665,6 @@ svn_wc__remove_adm_file (svn_string_t *path, apr_pool_t *pool, ...)
 }
 
 
-svn_error_t *svn_wc__file_exists_p (svn_boolean_t *exists,
-                                    svn_string_t *path,
-                                    apr_pool_t *pool)
-{
-  apr_file_t *f = NULL;
-  apr_status_t apr_err;
-
-  apr_err = apr_open (&f, path->data, APR_READ, APR_OS_DEFAULT, pool);
-
-  if (apr_err && (apr_err == APR_ENOENT))
-    {
-      *exists = 0;
-      return SVN_NO_ERROR;
-    }
-  else if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL, pool,
-                              "svn_wc__file_exists_p: problem examining %s",
-                              path->data);
-
-  /* Else. */
-  apr_close (f);
-  *exists = 1;
-  return SVN_NO_ERROR;
-}
-
-
 
 /*** Checking for and creating administrative subdirs. ***/
 
