@@ -1725,6 +1725,39 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
 ## disk space reclaimed!
 </screen>
 
+        <para>To keep the size of the repository as small as possible,
+          Subversion uses <firstterm>deltification</firstterm> (or,
+          <quote>deltified storage</quote>) within the repository
+          itself.  Deltification involves encoding the representation
+          of a chunk of data as a collection of differences against
+          some other chunk of data.  If the two pieces of data are
+          very similar, this deltification results in storage savings
+          for the deltified chunk&mdash;rather than taking up space
+          equal to the size of the original data, it only takes up
+          enough space to say, <quote>I look just like this other
+          piece of data over here, except for the following couple of
+          changes.</quote> Specifically, each time a new version of a
+          file is committed to the repository, Subversion encodes the
+          previous version (actually, several previous versions) as a
+          delta against the new version.  The result is that most of
+          the repository data that tends to be sizable&mdash;namely,
+          the contents of versioned files&mdash;is stored at a much
+          smaller size than the original <quote>fulltext</quote>
+          representation of that data.</para>
+
+        <note>
+          <para>Because all of the Subversion repository data that is
+            subject to deltification is stored in a single Berkeley DB
+            database file, reducing the size of the stored values will
+            not necessarily reduce the size of the database file
+            itself.  Berkeley DB will, however, keep internal records
+            of unused areas of the database file, and use those areas
+            first before growing the size of the database file.  So
+            while deltification doesn't produce immediate space
+            savings, it can drastically slow future growth of the
+            database.</para>
+        </note>
+
     </sect2>
         
     <!-- ***************************************************************** -->

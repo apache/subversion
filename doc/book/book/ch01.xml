@@ -60,12 +60,12 @@
       its initial version control system, CVS's limitations were
       obvious from the beginning, and CollabNet knew it would
       eventually have to find something better.  Unfortunately, CVS
-      had become the de facto standard in the open source world
-      largely because there <emphasis>wasn't</emphasis> anything
-      better, at least not under a free license.  So CollabNet
-      determined to write a new version control system from scratch,
-      retaining the basic ideas of CVS, but without the bugs and
-      misfeatures.</para>
+      had become the <foreignphrase>de facto</foreignphrase> standard
+      in the open source world largely because there
+      <emphasis>wasn't</emphasis> anything better, at least not under
+      a free license.  So CollabNet determined to write a new version
+      control system from scratch, retaining the basic ideas of CVS,
+      but without the bugs and misfeatures.</para>
 
     <para>In February 2000, they contacted Karl Fogel, the author of
       <citetitle>Open Source Development with CVS</citetitle>

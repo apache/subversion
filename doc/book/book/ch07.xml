@@ -1152,16 +1152,17 @@ $
           <literal>global-ignores</literal> run-time configuration
           option (see <xref linkend="svn-ch-7-sect-1.3.2" />) to
           filter unversioned files and directories out of commands
-          like <command>svn status</command>.</para>
+          like <command>svn status</command>, <command>svn
+          add</command>, and <command>svn import</command>.</para>
 
         <para>The rationale behind the <literal>svn:ignore</literal>
           property is easily explained.  Subversion does not assume
           that every file or subdirectory in a working copy directory
           is intended for version control.  Resources must be
           explicitly placed under Subversion's management using the
-          <command>svn add</command> command.  As a result, there are
-          often many resources in a working copy that are not
-          versioned.</para>
+          <command>svn add</command> or <command>svn import</command>
+          commands.  As a result, there are often many resources in a
+          working copy that are not versioned.</para>
 
         <para>Now, the <command>svn status</command> command displays
           as part of its output every unversioned file or subdirectory
@@ -1303,9 +1304,17 @@ I      calc/debug_log.2.gz
 I      calc/debug_log.3.gz
 </screen>
 
+        <para>The list of patterns to ignore is also used by
+          <command>svn add</command> and <command>svn
+          import</command>.  Both of these operations involve asking
+          Subversion to begin managing some set of files and
+          directories.  Rather than force the user to pick and choose
+          which files in a tree she wishes to start versioning,
+          Subversion uses the ignore patterns to determine which files
+          should not be swept into the version control system as part
+          of a larger recursive addition or import operation.</para>
+   
       </sect3>
-
-      <!-- cmpilato was here -->
 
       <sect3 id="svn-ch-7-sect-2.3.4">
         <title><literal>svn:keywords</literal></title>
@@ -1662,10 +1671,10 @@ Cumulus clouds are appearing more frequently as summer approaches.
       URL&mdash;and possibly a particular revision&mdash;of a
       versioned resource.  In Subversion, you declare externals
       definitions in groups using the <literal>svn:externals</literal>
-      property.  This property is set on a versioned directory, and
-      its value is a multi-line table of subdirectories (relative to
-      the versioned directory on which the property is set) and
-      Subversion repository URLs.</para>
+      property.  This property may be set on any versioned directory,
+      and its value is a multi-line table of subdirectories (relative
+      to the versioned directory on which the property is set) and
+      fully qualified, absolute Subversion repository URLs.</para>
 
     <screen>
 $ svn propget svn:externals calc
@@ -1734,6 +1743,23 @@ Fetching external item into calc/third-party/skins
       you've made in one or more of the auxiliary working copies, you
       must run <command>svn commit</command> explicitly on those
       working copies, not on the primary working copy.</para>
+
+    <para>Also, since the definitions themselves use absolute URLs,
+      moving or copying a directory to which they are attached will
+      not affect what gets checked out as an external (though the
+      relative local target subdirectory will, of course, move with
+      renamed directory).  This can be confusing&mdash;even
+      frustrating&mdash;in certain situtations.  For example, if you
+      use externals definitions on a directory in your
+      <filename>/trunk</filename> development line which point to
+      other areas of that same line, and then you use <command>svn
+      copy</command> to branch that line to some new location
+      <filename>/branches/my-branch</filename>, the externals
+      definitions on items in your new branch will still refer to
+      versioned resources in <filename>/trunk</filename>.  Also, be
+      aware that if you need to re-parent your working copy (using
+      <command>svn switch --relocate</command>), externals definitions
+      will <emphasis>not</emphasis> also be re-parented.</para>
 
   </sect1>
 
