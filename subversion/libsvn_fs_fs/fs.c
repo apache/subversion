@@ -86,7 +86,7 @@ svn_fs_set_warning_func (svn_fs_t *fs,
 const char *
 svn_fs_berkeley_path (svn_fs_t *fs, apr_pool_t *pool)
 {
-  abort ();
+  return apr_pstrdup (pool, fs->fs_path);
 }
 
 svn_error_t *
@@ -146,7 +146,8 @@ svn_error_t *svn_fs_berkeley_logfiles (apr_array_header_t **logfiles,
                                        svn_boolean_t only_unused,
                                        apr_pool_t *pool)
 {
-  abort ();
+  /* A no-op for FSFS. */
+  *logfiles = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -161,7 +162,8 @@ svn_error_t *
 svn_fs_delete_berkeley (const char *path,
                         apr_pool_t *pool)
 {
-  abort ();
+  /* Remove everything. */
+  SVN_ERR (svn_io_remove_dir (path, pool));
 
   return SVN_NO_ERROR;
 }
