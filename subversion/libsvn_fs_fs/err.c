@@ -37,7 +37,7 @@ svn_fs_fs__check_fs (svn_fs_t *fs)
     return SVN_NO_ERROR;
   else
     return svn_error_create (SVN_ERR_FS_NOT_OPEN, 0,
-                             _("filesystem object has not been opened yet"));
+                             _("Filesystem object has not been opened yet"));
 }
 
 
