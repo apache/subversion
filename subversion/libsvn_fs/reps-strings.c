@@ -652,7 +652,6 @@ struct rep_read_baton
 static struct rep_read_baton *
 rep_read_get_baton (svn_fs_t *fs,
                     const char *rep_key,
-                    svn_boolean_t use_trail_for_reads,
                     trail_t *trail,
                     apr_pool_t *pool)
 {
@@ -661,7 +660,7 @@ rep_read_get_baton (svn_fs_t *fs,
   b = apr_pcalloc (pool, sizeof (*b));
   apr_md5_init (&(b->md5_context));
   b->fs = fs;
-  b->trail = use_trail_for_reads ? trail : NULL;
+  b->trail = trail;
   b->pool = pool;
   b->rep_key = rep_key;
   b->offset = 0;
@@ -1032,7 +1031,8 @@ svn_fs__rep_contents_read_stream (svn_fs_t *fs,
                                   apr_pool_t *pool)
 {
   struct rep_read_baton *rb
-    = rep_read_get_baton (fs, rep_key, use_trail_for_reads, trail, pool);
+    = rep_read_get_baton (fs, rep_key,
+                          use_trail_for_reads ? trail : NULL, pool);
 
   svn_stream_t *rs = svn_stream_create (rb, pool);
   svn_stream_set_read (rs, rep_read_contents);
