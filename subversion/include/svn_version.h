@@ -55,7 +55,7 @@ extern "C" {
  * Modify when new functionality is added or new interfaces are
  * defined, but all changes are backward compatible.
  */
-#define SVN_VER_MINOR      37
+#define SVN_VER_MINOR      38
 
 /** Patch number.
  *
@@ -73,26 +73,32 @@ extern "C" {
 
 /** Version tag: a string describing the version.
  *
- * This tag remains "dev build" in the repository so that we can always
- * see from "svn --version" that the software has been built from the
- * repository rather than a "blessed" distribution.
+ * This tag remains " (dev build)" in the repository so that we can
+ * always see from "svn --version" that the software has been built
+ * from the repository rather than a "blessed" distribution.
  *
- * During the distribution process, we automatically replace this text
- * with something like "r1504".
+ * When rolling a tarball, we automatically replace this text with ""
+ * for final releases; in prereleases, it becomes " (Alpha)",
+ * " (Beta 1)", etc., as appropriate.
+ *
+ * Always change this at the same time as SVN_VER_NUMTAG.
  */
-#define SVN_VER_TAG        "dev build"
+#define SVN_VER_TAG        " (dev build)"
 
 
-/** Number tag: a string indicating whether this is a released version.
+/** Number tag: a string describing the version.
  *
  * This tag is used to generate a version number string to identify
  * the client and server in HTTP requests, for example. It must not
- * contain any spaces. This value remains "+" in the repository.
+ * contain any spaces. This value remains "-dev" in the repository.
  *
- * During the distribution process, we automatically replace this text
- * with "" to indicate a baselined version.
+ * When rolling a tarball, we automatically replace this text with ""
+ * for final releases; in prereleases, it becomes "-alpha", "-beta1",
+ * etc., as appropriate.
+ *
+ * Always change this at the same time as SVN_VER_TAG.
  */
-#define SVN_VER_NUMTAG     "+"
+#define SVN_VER_NUMTAG     "-dev"
 
 
 /** Revision number: The repository revision number of this release.
@@ -100,8 +106,8 @@ extern "C" {
  * This constant is used to generate the build number part of the Windows
  * file version. Its value remains 0 in the repository.
  *
- * During the distribution process, we automatically replace it with
- * what we guess to be the correct revision number.
+ * When rolling a tarball, we automatically replace it with what we
+ * guess to be the correct revision number.
  */
 #define SVN_VER_REVISION   0
 
@@ -117,7 +123,7 @@ extern "C" {
 #define SVN_VER_NUMBER     SVN_VER_NUM SVN_VER_NUMTAG
 
 /** Complete version string */
-#define SVN_VERSION        SVN_VER_NUM " (" SVN_VER_TAG ")"
+#define SVN_VERSION        SVN_VER_NUM SVN_VER_TAG
 
 
 
