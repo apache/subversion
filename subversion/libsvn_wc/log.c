@@ -103,6 +103,9 @@ file_xfer_under_path (svn_stringbuf_t *path,
                                         pool);
 
     case svn_wc__xfer_mv:
+      /* Remove read-only flag on destination. */
+      SVN_ERR (svn_io_set_file_read_write (full_dest_path->data, TRUE, pool));
+
       status = apr_file_rename (full_from_path->data,
                               full_dest_path->data, pool);
       if (status)
@@ -878,6 +881,11 @@ log_do_committed (struct log_runner *loggy,
                   (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
                    "error getting file_affected_time on %s",
                    same ? prop_path->data : tmp_prop_path->data);
+
+              /* Remove read-only flag on terminated file. */
+              SVN_ERR (svn_io_set_file_read_write (prop_base_path->data,
+                                                   TRUE,
+                                                   loggy->pool));
 
               /* Make the tmp prop file the new pristine one. */
               status = apr_file_rename (tmp_prop_path->data,

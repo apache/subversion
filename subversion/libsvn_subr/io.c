@@ -684,7 +684,12 @@ svn_string_from_aprfile (svn_stringbuf_t **result,
 svn_error_t *
 svn_io_remove_file (const char *path, apr_pool_t *pool)
 {
-  apr_status_t apr_err = apr_file_remove (path, pool);
+  apr_status_t apr_err;
+
+  /* Remove read-only flag on terminated file. */
+  SVN_ERR (svn_io_set_file_read_write (path, TRUE, pool));
+
+  apr_err = apr_file_remove (path, pool);
 
   if (! APR_STATUS_IS_SUCCESS (apr_err))
     return svn_error_createf
