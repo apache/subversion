@@ -116,10 +116,10 @@ static const apr_getopt_option_t options_table[] =
      "specify template for the repository structure"},
 
     {"ignore-uuid", svnadmin__ignore_uuid, 0,
-     "ignore the UUID specified in the file."},
+     "ignore any repos UUID found in the stream."},
 
     {"force-uuid", svnadmin__force_uuid, 0,
-     "force the repository UUID to be updated."},
+     "set repos UUID to that found in stream, if any."},
 
     {NULL}
   };
