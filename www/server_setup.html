@@ -1,0 +1,176 @@
+<h1>Subversion Server Setup</h1>
+
+<p>
+
+This page describes how to install the Subversion server (which
+involves installing Apache 2 with mod_dav + mod_dav_svn), how to
+create a repository, and how to import some data.  The server only
+works under Unix right now, though patches for other OS's are welcome.
+If you try it under Windows, try NT, not the 9x series -- Berkeley DB
+3 (and Apache?) have known issues under 95 and 98.
+
+<p>
+
+<i>Note: this is the same document that used to be called
+<tt>dav_setup.txt</tt> notes; all this will eventually be fleshed out
+and moved into the master documentation, of course.</i>
+
+<p>
+
+<plaintext>
+
+                        Subversion Server HOWTO
+                        =======================
+
+1.  Checkout the "httpd-2.0" cvs module from apache.org.  Put it
+    whereever you wish;  it's an independent project.
+
+      cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic login
+         (password 'anoncvs')
+
+      cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co httpd-2.0
+
+2.  cd httpd-2.0/srclib/, and checkout the "apr" and "apr-util"
+    modules into this directory:
+
+      cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co apr
+      cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co apr-util
+
+3.  At the top of the httpd-2.0 tree:
+
+   ./buildconf
+   ./configure --enable-dav --enable-so --prefix=/usr/local/apache2 \
+	       --with-mpm=prefork
+
+     The first arg says to build mod_dav.
+     The second arg says to enable (and build everything) as shared libs.
+     The third arg is where you will ultimately install apache.
+     The fourth arg says to use the "prefork" style of operation.
+       NOTE: The fourth arg is needed for FreeBSD systems (broken
+       threads), but should be left out for other platforms (which
+       will cause Apache to default to a threaded model of
+       operation).  Also note that "libmm.so" is needed for the
+       prefork option;  if you're running FreeBSD, you may have to
+       build it out of /usr/ports.
+
+     Note: if you build Subversion with --enable-maintainer-mode, then
+     do the same for Apache. mod_dav_svn uses Apache's maintainer-mode
+     stuff from its headers, so you want to ensure that Apache is
+     built with the same assumption. Just add --enable-maintainer-mode
+     to the configure line above.
+
+     All instructions below assume you configured Apache to install
+     under /usr/local/apache2/; substitute appropriately if you chose
+     some other location.
+
+4.  make depend && make && make install
+
+5.  Go back into your subversion working copy and run ./autogen.sh if
+    you need to.  Then run
+ 
+      ./configure --with-apxs=/usr/local/apache2/bin/apxs
+
+    This argument tells subversion to build mod_dav_svn, and where to
+    find the required information to do so.
+
+    Note: do *not* configure subversion with "--disable-shared"!
+    mod_dav_svn *must* be built as a shared library, and it will look
+    for other libsvn_*.so libraries on your system.
+
+    Note: it *is* possible to build mod_dav_svn as a static library
+    and link it directly into Apache. Possible, but painful. Stick
+    with the shared library for now; if you can't, then ask.
+
+6. rm /usr/local/lib/libsvn*
+
+   If you have old subversion libraries sitting on your system,
+   libtool will link them instead of the `fresh' ones in your tree.
+   Remove them before building subversion.
+
+7. make clean && make && make install
+
+   After the make install, the Subversion shared libraries are in
+   /usr/local/lib/.  libmod_dav_svn.so should be installed in
+   /usr/local/apache2/modules/.
+
+8.  Add this to the *bottom* of /usr/local/apache2/conf/httpd.conf:
+
+          <Location /svn/repos>
+             DAV svn
+             SVNPath /absolute/path/to/repository
+          </Location>
+
+    Make sure that the user 'nobody' (or whatever UID the httpd
+    process runs as) is able to read the berkeley db files.
+
+9.  Now fire up apache 2.0:
+
+           /usr/local/apache2/bin/apachectl stop
+           /usr/local/apache2/bin/apachectl start
+
+    Check /usr/local/apache2/logs/error_log to make sure it started
+    up okay.
+
+10. Finally, try doing a network checkout from the repository:
+
+          svn co http://localhost/svn/repos -d wc
+
+    The most common reason this might fail is permission problems
+    reading the repository db files.  If the checkout fails, chmod 777
+    and try again.
+
+    You can see all of mod_dav_svn's complaints in the Apache logfile.
+    Look in /usr/local/apache2/logs/error_log.
+
+--------------------------------------------------------------------
+
+ADDENDUM 1:     Setting up the Repository Itself
+
+
+If the repository you defined in step 8 doesn't already exist, you
+will need to create it:
+
+    % svnadmin create /absolute/path/to/repository
+
+This creates an empty repository.  Then you can import something into
+it, either locally, or over dav:
+
+    % svn import file:///absolute/path/to/repository /some/local/dir
+    % svn import http://foo.com/repos/path /some/local/dir 
+
+The above examples import the contents of /some/local/dir right into
+the root of the repository.  If you want to put these contents into a
+new repository directory, use *three* args to import.  (Try 'svn help
+import').
+
+Also, watch out for 'ownership' pitfalls.  Notice who has the rights to
+modify the .db files in the repository.  Make sure that Apache has the
+right to do this, or you'll get all sorts of Apache errors.  Often
+people create an 'svn' user who owns the repository, and folks put a
+line into httpd.conf that tells Apache to run as that special user.
+
+
+--------------------------------------------------------------------
+
+ADDENDUM 2:     Debugging Apache
+
+'mod_dav_svn.so' contains the main Subversion server logic;  it runs
+as a module within mod_dav, which runs as a module within httpd.
+
+If you need to debug the server, follow this recipe:  
+
+  % gdb httpd
+  (gdb) run -X
+  ^C
+  (gdb) break some_func_in_mod_dav_svn
+  (gdb) continue
+
+The '-X' switch runs httpd in a single thread, and insures it won't
+detach from the tty.  As soon as it starts, it will sit and wait for
+requests.  Then hit control-C and set your breakpoint.
+
+kfogel adds:
+
+Hmmm, I had thought httpd 2.0 also had these options: -DONE_PROCESS
+and -DNO_DETACH.  How are they related to -X, and/or should they be
+used in combination with -X?  Anyone know?
