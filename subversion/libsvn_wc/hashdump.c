@@ -68,6 +68,11 @@
  *   name (a string of <nlength> bytes, followed by a newline)
  *   V <vlength>
  *   val (a string of <vlength> bytes, followed by a newline)
+ *   [... etc, etc ...]
+ *   END
+ *
+ *
+ * (Yes, there is a newline after END.)
  *
  * For example:
  *
@@ -88,6 +93,8 @@
  *   price
  *   V 8
  *   US $6.50
+ *   END
+ *
  */
 
 
