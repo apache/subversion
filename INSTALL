@@ -201,7 +201,7 @@ I.    BUILD REQUIREMENTS
           http://subversion.tigris.org/servlets/ProjectDownloadList
 
 
-      7.  Apache Web Server 2.0.40 or newer
+      7.  Apache Web Server 2.0.42 or newer
 
       The Apache HTTP server is required if you wish to offer your
       Subversion repository over the Internet. Building Subversion, the
@@ -365,7 +365,7 @@ II.   INSTALLATION
       subversion RPM depending on what packages you already have installed:
 
           subversion*.i386.rpm
-          apache*.i386.rpm (Version 2.0.41 or greater)
+          apache*.i386.rpm (Version 2.0.42 or greater)
           db*.i386.rpm     (Version 4.0.14 or greater)
           expat            (Comes with RedHat)
           neon             (Version 0.23.4)
