@@ -171,13 +171,18 @@ def update_props():
                                             wc_dir):
     return 1
 
+  # Overwrite mu_path and H_path to refer to the backup copies from
+  # here on out.
+  mu_path = os.path.join(wc_backup, 'A', 'mu') 
+  H_path = os.path.join(wc_backup, 'A', 'D', 'H') 
+  
   # Create expected output tree for an update of the wc_backup.
-  output_list = [ [os.path.join(wc_backup, mu_path),
+  output_list = [ [mu_path,
                    None, {}, {'status' : '_U'}],
-                  [os.path.join(wc_backup,  H_path),
+                  [H_path,
                    None, {}, {'status' : '_U'}] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
-
+  
   # Create expected disk tree for the update.
   my_greek_tree = svntest.main.copy_greek_tree()
   my_greek_tree[2][2]['blue'] = 'azul'  # A/mu
@@ -190,7 +195,7 @@ def update_props():
     if (item[0] == mu_path) or (item[0] == H_path):
       item[3]['status'] = '__'
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
-  
+
   # Do the update and check the results in three ways... INCLUDING PROPS
   return svntest.actions.run_and_verify_update(wc_backup,
                                                expected_output_tree,
