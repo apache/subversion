@@ -77,30 +77,10 @@ find_undeletables (void *baton,
 
 svn_error_t *
 svn_client__can_delete (const char *path,
-                        svn_wc_adm_access_t *adm_access,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
-  svn_wc_adm_access_t *dir_access;
   struct status_baton sb;
-
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
-  if (kind == svn_node_dir)
-    {
-      svn_error_t *err = svn_wc_adm_retrieve (&dir_access, adm_access, path,
-                                              pool);
-      if (err)
-        {
-          svn_error_clear (err);
-          SVN_ERR (svn_wc_adm_open (&dir_access, adm_access,
-                                    path, TRUE, TRUE, pool));
-        }
-    }
-  else
-    {
-      dir_access = adm_access;
-    }
 
   sb.err = SVN_NO_ERROR;
   SVN_ERR (svn_client_status (NULL, path, find_undeletables, &sb,
@@ -238,7 +218,7 @@ svn_client__wc_delete (const char *path,
 
   if (!force)
     /* Verify that there are no "awkward" files */
-    SVN_ERR (svn_client__can_delete (path, adm_access, ctx, pool));
+    SVN_ERR (svn_client__can_delete (path, ctx, pool));
 
   if (!dry_run)
     /* Mark the entry for commit deletion and perform wc deletion */

@@ -536,6 +536,9 @@ get_dir_status (const svn_wc_entry_t *parent_entry,
   /* Read PATH's dirents. */
   SVN_ERR (svn_io_get_dirents (&dirents, path, subpool));
 
+  /* Get this directory's entry. */
+  SVN_ERR (svn_wc_entry (&dir_entry, path, adm_access, FALSE, subpool));
+
   /* Unless specified, add default ignore regular expressions and try
      to add any svn:ignore properties from the parent directory. */
   if (ignores)
@@ -608,9 +611,6 @@ get_dir_status (const svn_wc_entry_t *parent_entry,
                                       patterns, no_ignore, 
                                       status_func, status_baton, iterpool));
     }
-
-  /* Get this directory's entry. */
-  SVN_ERR (svn_wc_entry (&dir_entry, path, adm_access, FALSE, subpool));
 
   /* If "this dir" has "svn:externals" property set on it, store its name
      in traversal_info. */
@@ -1169,7 +1169,7 @@ close_directory (void *dir_baton,
   struct dir_baton *pb = db->parent_baton;
   struct edit_baton *eb = db->edit_baton;
   svn_wc_status_t *dir_status = NULL;
-
+  
   /* If nothing has changed, return. */
   if (db->added || db->prop_changed || db->text_changed)
     {
@@ -1205,7 +1205,8 @@ close_directory (void *dir_baton,
       dir_status = apr_hash_get (pb->statii, db->path, APR_HASH_KEY_STRING);
       SVN_ERR (handle_statii (eb, dir_status ? dir_status->entry : NULL, 
                               db->path, db->statii, TRUE, pool));
-      (eb->status_func) (eb->status_baton, db->path, dir_status);
+      if (is_sendable_status (dir_status, eb))
+        (eb->status_func) (eb->status_baton, db->path, dir_status);
       apr_hash_set (pb->statii, db->path, APR_HASH_KEY_STRING, NULL);
     }
   else if (! pb)
@@ -1227,7 +1228,8 @@ close_directory (void *dir_baton,
         {
           SVN_ERR (handle_statii (eb, eb->anchor_status->entry, 
                                   db->path, db->statii, eb->descend, pool));
-          (eb->status_func) (eb->status_baton, db->path, eb->anchor_status);
+          if (is_sendable_status (eb->anchor_status, eb))
+            (eb->status_func) (eb->status_baton, db->path, eb->anchor_status);
           eb->anchor_status = NULL;
         }
     }
