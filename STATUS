@@ -70,15 +70,6 @@ Candidate changes:
     Votes:
       +1: philip, dlr, breser
 
-  * r8949, r9084
-    Use subpools when processing multiple update and commit targets. (#1635)
-    Justification:  Embarrassing scalability bugs; extremely simple patches.
-    Notes:  Users (on TSVN in particular) have reported skyrocketing
-            memory when dealing with many targets.  One user has already
-            verified that /trunk fixes the problems.
-    Votes:
-      +1: sussman, kfogel, cmpilato
-
   * r9315
     Change the formating codes used in svn_swig_pl_callback_thunk.
     Justification: The old ones weren't portable and caused problems on Win32.
