@@ -201,10 +201,13 @@ def erase(path):
 # The log_dictionary comes from parse_log(svn_repos).
 already_converted = { }
 
-def ensure_conversion(name):
+def ensure_conversion(name, no_prune=None):
   """Convert CVS repository NAME to Subversion, but only if it has not
   been converted before by this invocation of this script.  If it has
   been converted before, do nothing.
+
+  If NO_PRUNE is set, then pass the --no-prune option to cvs2svn.py
+  when converting.
 
   NAME is just one word.  For example, 'main' would mean to convert
   './test-data/main-cvsrepos', and after the conversion, the resulting
@@ -231,7 +234,10 @@ def ensure_conversion(name):
       erase(svnrepos)
       erase(wc)
       
-      run_cvs2svn('--create', '-s', svnrepos, cvsrepos)
+      if no_prune:
+        run_cvs2svn('--no-prune', '--create', '-s', svnrepos, cvsrepos)
+      else:
+        run_cvs2svn('--create', '-s', svnrepos, cvsrepos)
       run_svn('co', repos_to_url(svnrepos), wc)
       log_dict = parse_log(svnrepos)
     finally:
@@ -333,6 +339,35 @@ def prune_with_care():
   if not (logs[5].changed_paths.has_key('/prune-with-care/trunk')
           and logs[5].changed_paths['/prune-with-care/trunk'] == 'D'):
     print "Revision 5 failed to remove '/prune-with-care/trunk'."
+    raise svntest.Failure
+
+
+def double_delete():
+  "file deleted twice, in the root of the repository"
+  # This really tests several things: how we handle a file that's
+  # removed (state 'dead') in two successive revisions; how we
+  # handle a file in the root of the repository (there were some
+  # bugs in cvs2svn's svn path construction for top-level files); and
+  # the --no-prune option.
+  repos, wc, logs = ensure_conversion('double-delete', 1)
+  
+  path = '/trunk/twice-removed'
+
+  if not (logs[1].changed_paths.has_key(path)
+          and logs[1].changed_paths[path] == 'A'):
+    raise svntest.Failure
+
+  if logs[1].msg.find('Initial revision') != 0:
+    raise svntest.Failure
+
+  if not (logs[2].changed_paths.has_key(path)
+          and logs[2].changed_paths[path] == 'D'):
+    raise svntest.Failure
+
+  if logs[2].msg.find('Remove this file for the first time.') != 0:
+    raise svntest.Failure
+
+  if logs[2].changed_paths.has_key('/trunk'):
     raise svntest.Failure
 
 
@@ -579,6 +614,7 @@ test_list = [ None,
               space_fname,
               two_quick,
               prune_with_care,
+              double_delete,
               simple_commits,
               interleaved_commits,
               XFail(simple_tags),
