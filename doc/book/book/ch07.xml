@@ -155,7 +155,7 @@
       command-line client does.  Subversion's libsvn_client library is
       the one-stop shop for most of the functionality necessary for
       designing a working Subversion client (see <xref
-      linkend="svn-ch-7-sect-1.3">Client Layer</xref>.</para>
+      linkend="svn-ch-7-sect-1.3"/>).</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-7-sect-1.1">
@@ -702,9 +702,8 @@ The following repository access (RA) modules are available:
         <filename>.svn</filename> subdirectory is similar in purpose
         to the <filename>CVS</filename> administrative directories
         found in CVS working copies.  For more information about the
-        <filename>.svn</filename> administrative area, see the <xref
-        linkend="svn-ch-7-sect-3">Inside the Working Copy
-        Administration Area</xref> section of this chapter.</para>
+        <filename>.svn</filename> administrative area, see <xref
+        linkend="svn-ch-7-sect-3"/>in this chapter.</para>
 
       <para>The Subversion client library, libsvn_client, has the
         broadest responsibility; its job is to mingle the
@@ -833,8 +832,7 @@ The following repository access (RA) modules are available:
         against APR, must call <function>apr_initialize()</function>
         to initialize the APR subsystem, and then must acquire a pool
         for use with Subversion API calls.  See <xref
-        linkend="svn-ch-7-sect-5">Programming with Memory Pools</xref>
-        for more information.</para>
+        linkend="svn-ch-7-sect-5"/> for more information.</para>
 
     </sect2>
 
