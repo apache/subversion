@@ -974,18 +974,18 @@ svn_error_t *svn_io_file_lock (const char *lock_file,
 
 /* Data consistency/coherency operations. */
 
+static svn_error_t *
+do_io_file_wrapper_cleanup (apr_file_t *file, apr_status_t status, 
+                            const char *op, apr_pool_t *pool);
+
 svn_error_t *svn_io_file_flush_to_disk (apr_file_t *file,
                                         apr_pool_t *pool)
 {
-  /* First make sure that any user-space buffered data is flushed. */
-  apr_status_t apr_err;
   apr_os_file_t filehand;
 
-  apr_err = apr_file_flush (file);
-
-  if (apr_err)
-    return svn_error_wrap_apr
-      (apr_err, "Can't flush file '%s' to disk.", file);
+  /* First make sure that any user-space buffered data is flushed. */
+  SVN_ERR (do_io_file_wrapper_cleanup (file, apr_file_flush (file),
+                                       "flush", pool));
 
   apr_os_file_get (&filehand, file);
     
