@@ -5,39 +5,44 @@ This directory contains the scripts necessary and sufficient
 to build the subversion*.i386.rpm and subversion*.src.rpm files as a
 non-root user in the user's home (rpms) directory.
 
-This build requires certain other packages to be installed.  In particular,
-the apache-2.0.28 or greater is required and the db-4.0.14 or greater is
-required.  Here is the current list of required packages:
+This build requires certain other packages to be installed.
 
-To run:
-apr >= 0.2001.12.18
-db >= 4.0.14
-expat (comes with RedHat)
-neon = 0.18.2
-apache >= 2.0.28 (for subversion-server)
+1.  Requirements
 
-To compile:
-apr-devel >= 0.2001.12.18
-autoconf >= 2.52
-apache >= 2.0.28
-apache-devel >= 2.0.28
-expat-devel
-libtool >= 1.4.2
-neon = 0.18.2
-python >= 1.5.2
+    A. To run:
 
-The non-standard packages apr, apache-2.0.28, db, and neon, can be found at:
-http://summersoft.fay.ar.us/pub/linux/RPMS/i386
-http://summersoft.fay.ar.us/pub/linux/RPMS/ppc
-http://summersoft.fay.ar.us/pub/linux/RPMS/src
+       apr >= 0.2001.01.19
+       db >= 4.0.14
+       expat (comes with RedHat)
+       neon = 0.18.2
+       apache >= 2.0.31 (for subversion-server)
 
-To build the latest release directly from the subversion repository:
+    B. To compile:
 
-cd ../..; svn update; cd packages/rpm; make
+       apr-devel >= 0.2002.01.19
+       autoconf >= 2.52
+       apache >= 2.0.28
+       apache-devel >= 2.0.31
+       expat-devel
+       libtool >= 1.4.2
+       neon = 0.18.2
+       python >= 1.5.2
 
-To make a particular release:
+    The non-standard packages apr, apache-2.0.31, db, and neon, can be found at:
 
-cd ../..; svn update -r <ReleaseNumber>; cd packages/rpm; make
+    http://summersoft.fay.ar.us/pub/linux/RPMS/i386
+    http://summersoft.fay.ar.us/pub/linux/RPMS/ppc
+    http://summersoft.fay.ar.us/pub/linux/RPMS/src
+
+2.  Building a source and binary RPM
+
+    To build the latest release directly from the subversion repository:
+
+    cd ../..; svn update; cd packages/rpm; make
+
+    To make a particular release:
+
+    cd ../..; svn update -r <ReleaseNumber>; cd packages/rpm; make
 
 
 If you have any questions or problems, please direct them to the
