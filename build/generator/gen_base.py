@@ -136,6 +136,12 @@ class GeneratorBase:
       if isinstance(target, TargetLinked):
         for lib in self._find_libs(parser.get(name, 'libs')):
           self.graph.add(DT_LINK, name, lib)
+        try:
+          for nonlib in self._find_libs(parser.get(name, 'nonlibs')):
+               self.graph.add(DT_LINK, name, nonlib)
+        except:
+          pass
+         
 
     # collect various files
     self.includes = _collect_paths(parser.get('options', 'includes'))
