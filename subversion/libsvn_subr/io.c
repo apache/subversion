@@ -68,11 +68,15 @@ io_check_path (const char *path,
   flags = resolve_symlinks ? APR_FINFO_MIN : (APR_FINFO_MIN | APR_FINFO_LINK);
   apr_err = apr_stat (&finfo, path_apr, flags, pool);
 
-  if (apr_err && !APR_STATUS_IS_ENOENT(apr_err))
+  if (apr_err 
+      && !APR_STATUS_IS_ENOTDIR(apr_err)
+      && !APR_STATUS_IS_ENOENT(apr_err))
     return svn_error_createf
       (apr_err, NULL,
        "check_path: problem checking path \"%s\"", path);
   else if (APR_STATUS_IS_ENOENT(apr_err))
+    *kind = svn_node_none;
+  else if (APR_STATUS_IS_ENOTDIR(apr_err))
     *kind = svn_node_none;
   else if (finfo.filetype == APR_NOFILE)
     *kind = svn_node_unknown;
