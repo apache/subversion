@@ -56,7 +56,7 @@ my $seen_blank_line;  # A blank line separates headers from body.
 
 while (<LOGDATA>)
 {
-  if (/^rev ([0-9]+):  [^\|]+ \| [^\|]+ \| ([0-9]+) (line|lines)$/)
+  if (/^r([0-9]+) \| [^\|]+ \| [^\|]+ \| ([0-9]+) (line|lines)$/)
   {
     $this_rev = $1;
     $this_lines = $2 + 1;  # Compensate for blank line preceding body.
