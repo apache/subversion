@@ -33,7 +33,7 @@ struct undo {
   /* A bitmask indicating when this action should be run.  */
   enum {
     undo_on_failure = 1,
-    undo_on_success = 2,
+    undo_on_success = 2
   } when;
 
   void (*func) (void *baton);

@@ -28,7 +28,7 @@ enum char_type {
   type_space = 1,
   type_digit = 2,
   type_paren = 3,
-  type_name = 4,
+  type_name = 4
 };
 
 
@@ -419,7 +419,7 @@ svn_fs__str_atom (const char *str, apr_pool_t *pool)
 
 
 skel_t *
-svn_fs__mem_atom (const char *addr, 
+svn_fs__mem_atom (const void *addr, 
                   apr_size_t len,
                   apr_pool_t *pool)
 {

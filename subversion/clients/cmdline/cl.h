@@ -51,7 +51,7 @@ typedef enum {
   svn_cl__auth_username_opt,
   svn_cl__auth_password_opt,
   svn_cl__targets_opt,
-  svn_cl__xml_opt,
+  svn_cl__xml_opt
 } svn_cl__longopt_t;
 
 

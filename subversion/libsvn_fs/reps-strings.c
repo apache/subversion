@@ -1481,8 +1481,10 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
   svn_stream_t *target_stream; /* stream to write the fulltext */
   struct write_string_baton target_baton;
   apr_array_header_t *orig_keys;
-  unsigned char buf[65536];
   apr_size_t len;
+
+  /* ### crap. this shouldn't be on the stack. way too big! */
+  char buf[65536];
 
   /* Read the rep skel. */
   SVN_ERR (svn_fs__read_rep (&rep, fs, rep_key, trail));

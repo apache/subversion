@@ -123,7 +123,7 @@ reporter_set_path (void *reporter_baton,
 {
   reporter_baton_t *rbaton = reporter_baton;
   return svn_repos_set_path (rbaton->report_baton, path, revision);
-};
+}
 
 
 static svn_error_t *

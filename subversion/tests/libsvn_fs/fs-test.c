@@ -4292,7 +4292,7 @@ get_file_digest (unsigned char digest[MD5_DIGESTSIZE],
      crappy.  We need to keep this buffer fairly large so we don't run
      out of memory doing undeltification of large files into tiny
      buffers.  Issue #465.  */
-  char buf[100000]; 
+  char *buf = apr_palloc (pool, 100000);
 
   /* Get a stream for the file contents. */
   SVN_ERR (svn_fs_file_contents (&stream, root, path, pool));  

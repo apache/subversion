@@ -74,7 +74,7 @@ enum char_type {
   type_space = 1,
   type_digit = 2,
   type_paren = 3,
-  type_name = 4,
+  type_name = 4
 };
 
 static int skel_char_map_initialized;
