@@ -231,7 +231,7 @@ typedef svn_error_t *
  * implements all the auth-protocols;  libsvn_wc does nothing but
  * blindly store and retrieve these files from protected areas.
  *
- * @defgroup svn_client authentication files
+ * @defgroup svn_client_auth_files authentication files
  * @{
  */
 #define SVN_CLIENT_AUTH_USERNAME            "username"
@@ -866,7 +866,7 @@ svn_client_move (svn_client_commit_info_t **commit_info,
  * @c svn_prop_needs_translation, @c svn_subst_translate_string,  and @c 
  * svn_subst_detranslate_string.
  *
- * @defgroup svn_client property functions
+ * @defgroup svn_client_prop_funcs property functions
  * @{
  */
 
