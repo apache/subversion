@@ -193,7 +193,13 @@ struct handle_external_item_change_baton
 
 /* Return true if NEW_ITEM and OLD_ITEM represent the same external
    item at the same revision checked out into the same target subdir,
-   else return false. */
+   else return false.
+
+   ### If this returned the nature of the difference, we could use it
+   to update externals more efficiently.  For example, if we know
+   that only the revision number changed, but the target URL did not,
+   we could get away with an "update -r" on the external, instead of
+   a re-checkout. */
 static svn_boolean_t
 compare_external_items (struct external_item *new_item,
                         struct external_item *old_item)
@@ -331,12 +337,12 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
         SVN_ERR (svn_io_make_dir_recursively (checkout_parent, ib->pool));
       }
 
-      /* ### We could handle renames better.  Before checking out a
-         new subdir, we could somehow learn if it's really just a
-         rename of an old one.  It would work in tandem with the next
-         case -- this case would do nothing, knowing that the next
-         case either already has, or soon will, rename the external
-         subdirectory. */
+      /* If we were handling renames the fancy way, then  before
+         checking out a new subdir here, we would somehow learn if
+         it's really just a rename of an old one.  That would work in
+         tandem with the next case -- this case would do nothing,
+         knowing that the next case either already has, or soon will,
+         rename the external subdirectory. */
 
       SVN_ERR (svn_client_checkout
                (ib->notify_func, ib->notify_baton,
@@ -350,9 +356,9 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
     }
   else if (! new_item)
     {
-      /* ### See comment in above case about handling renames better.
-         Here, before removing an old subdir, we would see if it wants
-         to just be renamed to a new one. */
+      /* See comment in above case about fancy rename handling.  Here,
+         before removing an old subdir, we would see if it wants to
+         just be renamed to a new one. */ 
 
       svn_error_t *err;
 
