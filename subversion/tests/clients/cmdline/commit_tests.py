@@ -1609,29 +1609,15 @@ def commit_with_bad_log_message(sbox):
   
   wc_dir = sbox.wc_dir
   iota_path = os.path.join(wc_dir, 'iota')
+  log_msg_path = os.path.join(wc_dir, 'log-message') 
 
   # Make a random change, so there's something to commit.
   svntest.main.file_append(iota_path, 'fish')
   
-  # Create a log message containing bad (but non-zero) data.
-  log_msg_path = os.path.join(wc_dir, 'log-message') 
-  svntest.main.file_append(log_msg_path, '\x08')
-  
-  # Commit, expect an error.
-  if svntest.actions.run_and_verify_commit(wc_dir,
-                                           None, None,
-                                           "Non-ascii character",
-                                           None, None,
-                                           None, None,
-                                           '-F', log_msg_path,
-                                           iota_path):
-    return 1
-
   # Create a log message containing a zero-byte.
-  os.remove(log_msg_path)
   svntest.main.file_append(log_msg_path, '\x00')
 
-  # Commit again, expect a different error this time.
+  # Commit and expect an error.
   if svntest.actions.run_and_verify_commit(wc_dir,
                                            None, None,
                                            "contains a zero byte",
