@@ -107,9 +107,8 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   SVN_ERR (svn_wc_get_status_editor (&status_editor, &edit_baton,
                                      anchor, target,
                                      statushash, pool));
-  SVN_ERR (ra_lib->do_update (session,
+  SVN_ERR (ra_lib->do_status (session,
                               &reporter, &report_baton,
-                              SVN_INVALID_REVNUM,
                               target,
                               status_editor, edit_baton));
 

@@ -97,6 +97,14 @@ svn_error_t * svn_ra_dav__do_update(
   const svn_delta_edit_fns_t *wc_update,
   void *wc_update_baton);
 
+svn_error_t * svn_ra_dav__do_status(
+  void *session_baton,
+  const svn_ra_reporter_t **reporter,
+  void **report_baton,
+  svn_stringbuf_t *status_target,
+  const svn_delta_edit_fns_t *wc_status,
+  void *wc_status_baton);
+
 /*
 ** SVN_RA_DAV__LP_*: local properties for RA/DAV
 **

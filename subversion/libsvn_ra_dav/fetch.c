@@ -110,6 +110,8 @@ typedef struct {
   apr_file_t *tmpfile;
   svn_stringbuf_t *fname;
 
+  svn_boolean_t is_status;
+
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
 
@@ -350,6 +352,7 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
 
 static svn_error_t *simple_fetch_file(svn_ra_session_t *ras,
                                       const char *url,
+                                      svn_boolean_t text_deltas,
                                       void *file_baton,
                                       const svn_delta_edit_fns_t *editor,
                                       apr_pool_t *pool)
@@ -365,6 +368,13 @@ static svn_error_t *simple_fetch_file(svn_ra_session_t *ras,
   if (err)
     {
       return svn_error_quick_wrap(err, "could not save file");
+    }
+
+  /* Only bother with text-deltas if our caller cares. */
+  if (! text_deltas)
+    {
+      SVN_ERR ((*frc.handler)(NULL, frc.handler_baton));
+      return SVN_NO_ERROR;
     }
 
   frc.pool = pool;
@@ -407,7 +417,7 @@ static svn_error_t *fetch_file(svn_ra_session_t *ras,
   if (err)
     return svn_error_quick_wrap(err, "could not add a file");
 
-  err = simple_fetch_file(ras, bc_url, file_baton, editor, pool);
+  err = simple_fetch_file(ras, bc_url, TRUE, file_baton, editor, pool);
   if (err)
     {
       /* ### do we really need to bother with closing the file_baton? */
@@ -944,6 +954,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       break;
 
     case ELEM_fetch_props:
+      /* Need to examine rb->is_status, I think. */
       if (rb->file_baton == NULL)
         {
           /* ### not yet implemented: fetch dir props. using TOP_DIR.vsn_url */
@@ -956,8 +967,9 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
     case ELEM_fetch_file:
       /* assert: rb->href->len > 0 */
-      CHKERR( simple_fetch_file(rb->ras, rb->href->data, rb->file_baton,
-                                rb->editor, rb->ras->pool) );
+      CHKERR( simple_fetch_file(rb->ras, rb->href->data, 
+                                rb->is_status ? FALSE : TRUE,
+                                rb->file_baton, rb->editor, rb->ras->pool) );
       break;
 
     case ELEM_delete_entry:
@@ -1001,8 +1013,9 @@ static int end_element(void *userdata, const struct ne_xml_elm *elm,
          retrieve the href before fetching. */
 
       /* fetch file */
-      CHKERR( simple_fetch_file(rb->ras, rb->href->data, rb->file_baton,
-                                rb->editor, rb->ras->pool) );
+      CHKERR( simple_fetch_file(rb->ras, rb->href->data, 
+                                rb->is_status ? FALSE : TRUE,
+                                rb->file_baton, rb->editor, rb->ras->pool) );
 
       /* ### not yet implemented: fetch file props */
 
@@ -1015,6 +1028,10 @@ static int end_element(void *userdata, const struct ne_xml_elm *elm,
       break;
 
     case NE_ELM_href:
+      /* do nothing during a status update. */
+      if (rb->is_status)
+        break;
+
       /* record the href that we just found */
       svn_ra_dav__copy_href(rb->href, cdata);
 
@@ -1185,13 +1202,18 @@ static const svn_ra_reporter_t ra_dav_reporter = {
   reporter_abort_report
 };
 
-svn_error_t * svn_ra_dav__do_update(void *session_baton,
-                                    const svn_ra_reporter_t **reporter,
-                                    void **report_baton,
-                                    svn_revnum_t revision_to_update_to,
-                                    svn_stringbuf_t *update_target,
-                                    const svn_delta_edit_fns_t *wc_update,
-                                    void *wc_update_baton)
+
+/* Make a generic reporter/baton for reporting the state of the
+   working copy during updates or status checks. */
+static svn_error_t *
+make_reporter (void *session_baton,
+               const svn_ra_reporter_t **reporter,
+               void **report_baton,
+               svn_revnum_t revision,
+               svn_stringbuf_t *target,
+               const svn_delta_edit_fns_t *editor,
+               void *edit_baton,
+               svn_boolean_t is_status)
 {
   svn_ra_session_t *ras = session_baton;
   report_baton_t *rb;
@@ -1203,8 +1225,9 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
 
   rb = apr_pcalloc(ras->pool, sizeof(*rb));
   rb->ras = ras;
-  rb->editor = wc_update;
-  rb->edit_baton = wc_update_baton;
+  rb->editor = editor;
+  rb->edit_baton = edit_baton;
+  rb->is_status = is_status;
 
   /* Neon "pulls" request body content from the caller. The reporter is
      organized where data is "pushed" into self. To match these up, we use
@@ -1233,17 +1256,13 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
       goto error;
     }
 
-  /* ### cmpilato todo:  we need to give UPDATE_TARGET to someone who
-     cares.  I imagine this means passing it over the wire as part of
-     our report to mod_dav_svn, who can then do something useful with
-     it. */
-
   /* an invalid revnum means "latest". we can just omit the target-revision
      element in that case. */
-  if (SVN_IS_VALID_REVNUM(revision_to_update_to))
+  if (SVN_IS_VALID_REVNUM(revision))
     {
-      s = apr_psprintf(ras->pool, "<S:target-revision>%ld</S:target-revision>",
-                       revision_to_update_to);
+      s = apr_psprintf(ras->pool, 
+                       "<S:target-revision>%ld</S:target-revision>",
+                       revision);
       status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
       if (status)
         {
@@ -1252,15 +1271,16 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
         }
     }
 
-  /* a null update_target is noooo problem. */
-  if (update_target && update_target->data)
+  /* A NULL target is no problem.  */
+  if (target && target->data)
     {
-      s = apr_psprintf(ras->pool, "<S:update-target>%s</S:update-target>",
-                       update_target->data);
+      s = apr_psprintf(ras->pool, 
+                       "<S:update-target>%s</S:update-target>",
+                       target->data);
       status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
       if (status)
         {
-          msg = "Failed writing the update target to the report tempfile.";
+          msg = "Failed writing the target to the report tempfile.";
           goto error;
         }
     }
@@ -1273,6 +1293,43 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
  error:
   (void) apr_file_close(rb->tmpfile);
   return svn_error_create(status, 0, NULL, ras->pool, msg);
+}                      
+
+
+svn_error_t * svn_ra_dav__do_update(void *session_baton,
+                                    const svn_ra_reporter_t **reporter,
+                                    void **report_baton,
+                                    svn_revnum_t revision_to_update_to,
+                                    svn_stringbuf_t *update_target,
+                                    const svn_delta_edit_fns_t *wc_update,
+                                    void *wc_update_baton)
+{
+  return make_reporter (session_baton,
+                        reporter,
+                        report_baton,
+                        revision_to_update_to,
+                        update_target,
+                        wc_update,
+                        wc_update_baton,
+                        FALSE); /* is_status */
+}
+
+
+svn_error_t * svn_ra_dav__do_status(void *session_baton,
+                                    const svn_ra_reporter_t **reporter,
+                                    void **report_baton,
+                                    svn_stringbuf_t *status_target,
+                                    const svn_delta_edit_fns_t *wc_status,
+                                    void *wc_status_baton)
+{
+  return make_reporter (session_baton,
+                        reporter,
+                        report_baton,
+                        SVN_INVALID_REVNUM,
+                        status_target,
+                        wc_status,
+                        wc_status_baton,
+                        TRUE); /* is_status */
 }
 
 

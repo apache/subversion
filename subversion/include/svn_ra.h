@@ -308,6 +308,32 @@ typedef struct svn_ra_plugin_t
                              const svn_delta_edit_fns_t *update_editor,
                              void *update_baton);
 
+  /* Ask the network layer to describe the status of a working copy
+     with respect to the HEAD revision of the repository.
+
+     The client initially provides an STATUS_EDITOR/BATON to the RA
+     layer; this editor contains knowledge of where the change will
+     begin in the working copy (when replace_root() is called).
+
+     In return, the client receives a REPORTER/REPORT_BATON. The
+     client then describes its working-copy revision numbers by making
+     calls into the REPORTER structure; the RA layer assumes that all
+     paths are relative to the URL used to create SESSION_BATON.
+
+     When finished, the client calls REPORTER->finish_report(). The RA
+     layer then drives STATUS_EDITOR to report, essentially, what
+     would would be modified in the working copy were the client to
+     call do_update().  STATUS_TARGET is an optional single path
+     component will restrict the scope of the status report to an
+     entry in the directory represented by the SESSION_BATON's URL, or
+     NULL if the entire directory is meant to be examined. */
+  svn_error_t *(*do_status) (void *session_baton,
+                             const svn_ra_reporter_t **reporter,
+                             void **report_baton,
+                             svn_stringbuf_t *status_target,
+                             const svn_delta_edit_fns_t *status_editor,
+                             void *status_baton);
+
 } svn_ra_plugin_t;
 
 
