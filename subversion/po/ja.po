@@ -61,8 +61,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-08-03 08:29+0900\n"
-"PO-Revision-Date: 2004-08-03 08:26+0900\n"
+"POT-Creation-Date: 2004-08-04 02:49+0900\n"
+"PO-Revision-Date: 2004-08-04 02:44+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1426,14 +1426,14 @@ msgstr "クライアントのバージョン情報を表示します\n"
 msgid "Caught signal"
 msgstr "シグナルを受け取りました"
 
-#: clients/cmdline/main.c:824 svnadmin/main.c:941
+#: clients/cmdline/main.c:824 svnadmin/main.c:953
 msgid ""
 "Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
 msgstr ""
 "複数のリビジョン引数が指定されています。'-r M -r N' の代わりに '-r M:N' を\n"
 "使ってみてください"
 
-#: clients/cmdline/main.c:836 svnadmin/main.c:958
+#: clients/cmdline/main.c:836 svnadmin/main.c:970
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "リビジョン引数 '%s' で構文エラーが生じました"
@@ -1445,13 +1445,13 @@ msgstr "--auto-props と --no-auto-props は互いに排他的です"
 #: clients/cmdline/main.c:1008
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
-msgstr "native-eol の引数 '%s' 中でシンタックスエラーが生じました"
+msgstr "native-eol の引数 '%s' 中で構文エラーが生じました"
 
 #: clients/cmdline/main.c:1051
 msgid "Subcommand argument required\n"
 msgstr "サブコマンドに引数が必要です\n"
 
-#: clients/cmdline/main.c:1069 svnadmin/main.c:1075 svnlook/main.c:1971
+#: clients/cmdline/main.c:1069 svnadmin/main.c:1087 svnlook/main.c:1971
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "未知のコマンドです: '%s'\n"
@@ -2130,7 +2130,7 @@ msgstr "サポートされていない作業コピーの形式です"
 # ? in this context
 #: include/svn_error_codes.h:362
 msgid "Path syntax not supported in this context"
-msgstr "この操作ではパスシンタックスはサポートされていません"
+msgstr "この操作ではパスの構文はサポートされていません"
 
 #: include/svn_error_codes.h:368
 msgid "General filesystem error"
@@ -2154,7 +2154,7 @@ msgstr "ファイルシステムが壊れています"
 
 #: include/svn_error_codes.h:388
 msgid "Invalid filesystem path syntax"
-msgstr "ファイルシステムのパスのシンタックスが不正です。"
+msgstr "ファイルシステムのパスの構文が不正です。"
 
 #: include/svn_error_codes.h:392
 msgid "Invalid filesystem revision number"
@@ -4135,7 +4135,7 @@ msgstr "引数が少なすぎます"
 #: libsvn_subr/opt.c:512
 #, c-format
 msgid "Syntax error parsing revision '%s'"
-msgstr "リビジョン '%s' のパース中にシンタックスエラーが生じました"
+msgstr "リビジョン '%s' のパース中に構文エラーが生じました"
 
 #: libsvn_subr/opt.c:593
 #, c-format
@@ -5229,11 +5229,17 @@ msgstr ""
 "\n"
 "利用可能なサブコマンド:\n"
 
-#: svnadmin/main.c:629
+#: svnadmin/main.c:630
 msgid "Please wait; recovering the repository may take some time...\n"
 msgstr "お待ちください。リポジトリの復旧にはいくらか時間がかかります...\n"
 
-#: svnadmin/main.c:635
+#: svnadmin/main.c:641
+msgid "Waiting on repository lock; perhaps another process has it open?\n"
+msgstr ""
+"リポジトリにロックがかかるのを待ち続けています。おそらく別のプロセスがロック"
+"を解除してしまったのでしょう。\n"
+
+#: svnadmin/main.c:647
 msgid ""
 "\n"
 "Recovery completed.\n"
@@ -5241,33 +5247,33 @@ msgstr ""
 "\n"
 "復旧が終わりました。\n"
 
-#: svnadmin/main.c:642
+#: svnadmin/main.c:654
 #, c-format
 msgid "The latest repos revision is %ld.\n"
 msgstr "リポジトリの最新のリビジョンは %ld です。\n"
 
-#: svnadmin/main.c:750
+#: svnadmin/main.c:762
 #, c-format
 msgid "Transaction '%s' removed.\n"
 msgstr "トランザクション '%s' が削除されました。\n"
 
-#: svnadmin/main.c:774
+#: svnadmin/main.c:786
 msgid "Missing revision"
 msgstr "空のリビジョンです"
 
-#: svnadmin/main.c:777
+#: svnadmin/main.c:789
 msgid "Only one revision allowed"
 msgstr "リビジョンの指定は 1 つだけしかできません"
 
-#: svnadmin/main.c:783
+#: svnadmin/main.c:795
 msgid "Exactly one file argument required"
 msgstr "ファイルの引数が 1 つだけ必要です"
 
-#: svnadmin/main.c:1053 svnlook/main.c:1948
+#: svnadmin/main.c:1065 svnlook/main.c:1948
 msgid "subcommand argument required\n"
 msgstr "サブコマンドに引数が必要です\n"
 
-#: svnadmin/main.c:1143
+#: svnadmin/main.c:1155
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -5677,23 +5683,55 @@ msgid ""
 "\n"
 "Valid options:\n"
 msgstr ""
+"使用方法: svnversion [<オプション>] <作業コピーパス> [<TRAIL_URL>]\n"
+"\n"
+"  <作業コピーパス> にある作業コピーの簡潔な「バージョン番号」を生成します。\n"
+"  <TRAIL_URL> は、<作業コピーパス> 自体が switch で切り替えられたかどうかを\n"
+"  決めるのに用いられる、URL の末尾の部分です (<作業コピーパス> 内での切り替え"
+"の\n"
+"  検出は <TRAIL_URL> に依存しません)。\n"
+"  バージョン番号は標準出力に書き込まれます。以下に例を示します:\n"
+"\n"
+"    $ svnversion . /repos/svn/trunk \n"
+"    4168\n"
+"\n"
+"  作業コピーが単一のリビジョンをもち、変更を受けていなく、switch による\n"
+"  切り替えもされていなく、引数 <TRAIL_URL> にマッチする URL であった場合、\n"
+"  バージョン番号は単一の数字となります。\n"
+"  そうでない場合は、バージョン番号は以下のようにより複雑になります:\n"
+"\n"
+"   4123:4168     複数のリビジョンが混在している作業コピー\n"
+"   4168M         変更が加えられた作業コピー\n"
+"   4123S         switch によって切り替えられた作業コピー\n"
+"   4123:4168MS   複数のリビジョンが混在しており、変更が加えられている、\n"
+"                 switch によって切り替えられた作業コピー\n"
+"\n"
+"  例えばエクスポートされたディレクトリのような、作業コピー以外のディレクトリ"
+"に\n"
+"  対して実行すると、プログラムは「エクスポートされたものです」と出力しま"
+"す。\n"
+"\n"
+"有効なオプション:\n"
 
+# svnversion -n
 #: svnversion/main.c:199
 msgid "do not output the trailing newline"
-msgstr "末尾に改行を出力しません"
+msgstr "出力の末尾に改行をつけません"
 
+# svnversion -c
 #: svnversion/main.c:200
 msgid "last changed rather than current revisions"
-msgstr "現在のリビジョンより新しい変更"
+msgstr ""
+"現在のリビジョンの代わりに、最後に変更が加えられたリビジョンを表示します"
 
 #: svnversion/main.c:287
 msgid "exported\n"
-msgstr "エクスポートしました\n"
+msgstr "エクスポートされたものです\n"
 
 #: svnversion/main.c:295
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
-msgstr "'%s' はバージョン管理下にはなく、エクスポートされてもいません\n"
+msgstr "'%s' はバージョン管理下になく、エクスポートされたものでもありません\n"
 
 #~ msgid "Impossibly long relative URL"
 #~ msgstr "相対 URL が長すぎます"
