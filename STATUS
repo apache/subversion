@@ -36,14 +36,12 @@ Candidate changes:
     Justification: Perl correctness issue.
     Votes:
 
-  * r8794
-    Fix memory corruption bug in mod_dav_svn.
-    Justification:  Because it can cause a segfault!
-    Notes:  Simple patch which allocates errors in a longer-lived pool.
+  * r8490,r8794
+    Make dav_svn_convert_err() consume its svn_error_t * input.
+    Justification:  Fixes svn_error_t leaks.
+    Notes
     Votes:
-      +1: sussman
-      -1: cmpilato (this change is a fix followup to r8490, which is not
-                    going to live in 1.0.x line since it changes an API)
+      +1: cmpilato, kfogel
 
   * r8838
     Finish issue #1750 -- svn export [url] doesn't export any svn:externals
