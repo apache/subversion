@@ -54,7 +54,7 @@ AC_DEFUN(SVN_SUBDIR_CONFIG, [
     esac
 
     # The eval makes quoting arguments work.
-    if eval $ac_abs_srcdir/configure $ac_configure_args --cache-file=$ac_sub_cache_file --srcdir=$ac_abs_srcdir $2
+    if eval $SHELL $ac_abs_srcdir/configure $ac_configure_args --cache-file=$ac_sub_cache_file --srcdir=$ac_abs_srcdir $2
     then :
       echo "$1 configured properly"
     else
