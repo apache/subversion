@@ -85,7 +85,8 @@ test1 (const char **msg,
             (APR_WRITE | APR_CREATE),
             APR_OS_DEFAULT, pool);
 
-  result = svn_hash_write (proplist, f, pool);
+  result = svn_hash_write2 (proplist, svn_stream_from_aprfile (f, pool),
+                            SVN_HASH_TERMINATOR, pool);
 
   apr_file_close (f);
 
@@ -112,7 +113,8 @@ test2 (const char **msg,
 
   apr_file_open (&f, "hashdump.out", APR_READ, APR_OS_DEFAULT, pool);
 
-  result = svn_hash_read (new_proplist, f, pool);
+  result = svn_hash_read2 (new_proplist, svn_stream_from_aprfile (f, pool),
+                           SVN_HASH_TERMINATOR, pool);
 
   apr_file_close (f);
 
