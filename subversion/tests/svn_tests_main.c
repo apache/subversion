@@ -49,6 +49,7 @@
 
 
 
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "apr_pools.h"
@@ -92,9 +93,8 @@ static int
 do_test_num (const char *progname, int test_num)
 {
   int retval;
-  int (*func)(const char **msg);
   int array_size = get_array_size();
-  const char *msg;  /* the message this individual test prints out */
+  const char *msg = 0;  /* the message this individual test prints out */
 
   /* Check our array bounds! */
   if ((test_num > array_size) || (test_num <= 0))
@@ -108,8 +108,11 @@ do_test_num (const char *progname, int test_num)
     }
 
   /* Do test */
-  func = test_funcs[test_num];
-  retval = (*func)(&msg);
+  retval = test_funcs[test_num](&msg);
+
+  /* Did the test set the message?  */
+  if (! msg)
+    msg = "(test did not provide name)";
 
   if (! retval)
     printf ("PASS: ");
@@ -128,10 +131,10 @@ do_test_num (const char *progname, int test_num)
 int
 main (int argc, char *argv[])
 {
+  char *prog_name;
   int test_num;
   int i;
   int got_error = 0;
-
 
   /* How many tests are there? */
   int array_size = get_array_size();
@@ -149,15 +152,22 @@ main (int argc, char *argv[])
       exit (1);
     }
 
+  /* Strip off any leading path components from the program name.  */
+  prog_name = strrchr (argv[0], '/');
+  if (prog_name)
+    prog_name++;
+  else
+    prog_name = argv[0];
+
   /* Notice if there's a command-line argument */
   if (argc >= 2) 
     {
       test_num = atoi (argv[1]);
-      got_error = do_test_num (argv[0], test_num);
+      got_error = do_test_num (prog_name, test_num);
     }
   else /* just run all tests */
     for (i = 1; i <= array_size; i++)
-      if (do_test_num (argv[0], i))
+      if (do_test_num (prog_name, i))
         got_error = 1;
 
   /* Clean up APR */
