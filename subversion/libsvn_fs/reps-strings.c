@@ -1301,7 +1301,7 @@ struct write_svndiff_strings_baton
 
 
 /* Function of type `svn_write_fn_t', for writing to a collection of
-   strings; BATON is `struct write_string_set_baton *'.
+   strings; BATON is `struct write_svndiff_strings_baton *'.
 
    On the first call, BATON->key is null.  A new string key in
    BATON->fs is chosen and stored in BATON->key; each call appends
