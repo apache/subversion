@@ -10,6 +10,7 @@ info_TEXINFOS = svn-design.texi
 svn_design_TEXINFOS = architecture.texi	\
                       model.texi        \
                       client.texi       \
+                      deltas.texi       \
                       protocol.texi     \
                       future.texi	\
                       server.texi       \

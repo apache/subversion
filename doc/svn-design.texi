@@ -79,7 +79,7 @@
 Copyright @copyright{} 2000 Collab.Net, Inc. @*
 See @xref{License} for details. @*
 First version: June 2000.  @*
-Last updated:  $Date: 2000-10-23 17:37:31 $
+Last updated:  $Date: 2000-12-08 01:36:45 $
 
 @end titlepage
 @c -----------------------------------------------------------------
@@ -100,6 +100,7 @@ system.
 * Goals::                        The goals of the Subversion project.
 * Model::                        The versioning model used by Subversion.
 * Architecture::                 How Subversion's components work together.
+* Deltas::                       How to describe changes.
 * Client::                       How the client works.
 * Protocol::                     How the client and server communicate.
 * Server::                       How the server works.
@@ -110,6 +111,7 @@ system.
 @include goals.texi
 @include model.texi
 @include architecture.texi
+@include deltas.texi
 @include client.texi
 @include protocol.texi
 @include server.texi
