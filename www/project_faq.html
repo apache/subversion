@@ -413,14 +413,16 @@ http://subversion.tigris.org/project_status.html</a>.</p>
 
 <h3><a name="symlinks">Does Subversion support symlinks?</a></h3>
 
-<p>Subversion does not currently support symlinks, and there are no
-concrete plans to support them.  The obstacle has been that symbolic
-links are not portable across all the platforms Subversion runs on.
-Therefore, any design for symlink support has to account for how the
-symlinks will behave in a working copy checked out into an environment
-that doesn't support symlinks.  If you have a proposal, please share
-it with the developers at <a href="mailto:dev@subversion.tigris.org"
->dev@subversion.tigris.org</a>.
+<p>Subversion 1.1 (and later) has the ability to put a symlink under
+version control, via the usual <tt>svn add</tt> command.</p>
+
+<p>Note: the Subversion repository has no internal concept of a
+symlink.  It stores a "versioned symlink" as an ordinary file with an
+'svn:special' property attached.  The svn client (on unix) sees the
+property and translates the file into a symlink in the working copy.
+Win32 has no symlinks, so a win32 client won't do any such
+translation: the object appears as a normal file.</p>
+
 
 <![CDATA[-----------------------------------------------------------]]>
 
