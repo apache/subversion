@@ -708,12 +708,23 @@ static svn_error_t * upd_change_xxx_prop(void *baton,
                                          apr_pool_t *pool)
 {
   item_baton_t *b = baton;
-  const char *qname = apr_xml_quote_string (b->pool, name, 1);
+  const char *qname;
+
+  /* Resource walks say nothing about props. */
+  if (b->uc->resource_walk)
+    return SVN_NO_ERROR;
+
+  /* Else this not a resource walk, so either send props or cache them
+     to send later, depending on whether this is a modern report
+     response or not. */
+
+  qname = apr_xml_quote_string (b->pool, name, 1);
 
   /* apr_xml_quote_string doesn't realloc if there is nothing to
      quote, so dup the name, but only if necessary. */
   if (qname == name)
     qname = apr_pstrdup (b->pool, name);
+
 
   if (b->uc->send_all)
     {
@@ -861,6 +872,17 @@ static svn_error_t * window_handler(svn_txdelta_window_t *window, void *baton)
 }
 
 
+/* This implements 'svn_txdelta_window_handler_t'.
+   During a resource walk, the driver sends an empty window as a
+   boolean indicating that a change happened to this file, but we
+   don't want to send anything over the wire as a result. */
+static svn_error_t * dummy_window_handler(svn_txdelta_window_t *window,
+                                          void *baton)
+{
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t * upd_apply_textdelta(void *file_baton, 
                                          const char *base_checksum,
                                          apr_pool_t *pool,
@@ -870,6 +892,13 @@ static svn_error_t * upd_apply_textdelta(void *file_baton,
   item_baton_t *file = file_baton;
   struct window_handler_baton *wb = apr_palloc(file->pool, sizeof(*wb));
   svn_stream_t *base64_stream;
+
+  if (file->uc->resource_walk)
+    {
+      *handler = dummy_window_handler;
+      *handler_baton = NULL;
+      return SVN_NO_ERROR;
+    }
 
   file->base_checksum = apr_pstrdup(file->pool, base_checksum);
   file->text_changed = TRUE;
