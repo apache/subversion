@@ -714,8 +714,8 @@ svn_error_t *
 svn_client_export3 (svn_revnum_t *result_rev,
                     const char *from,
                     const char *to,
-                    svn_opt_revision_t *peg_revision,
-                    svn_opt_revision_t *revision,
+                    const svn_opt_revision_t *peg_revision,
+                    const svn_opt_revision_t *revision,
                     svn_boolean_t force, 
                     const char *native_eol,
                     svn_client_ctx_t *ctx,
@@ -808,16 +808,17 @@ svn_client_export3 (svn_revnum_t *result_rev,
     }
   else
     {
+      svn_opt_revision_t working_revision = *revision;
       /* This is a working copy export. */
-      if (revision->kind == svn_opt_revision_unspecified)
+      if (working_revision.kind == svn_opt_revision_unspecified)
         {
           /* Default to WORKING in the case that we have
              been given a working copy path */
-          revision->kind = svn_opt_revision_working;
+          working_revision.kind = svn_opt_revision_working;
         }
       
       /* just copy the contents of the working copy into the target path. */
-      SVN_ERR (copy_versioned_files (from, to, revision, force, native_eol,
+      SVN_ERR (copy_versioned_files (from, to, &working_revision, force, native_eol,
                                      ctx, pool));
     }
   
