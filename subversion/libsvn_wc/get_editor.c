@@ -431,11 +431,12 @@ svn_wc_apply_delta (void *delta_src,
 }
 
 
-svn_error_t *svn_wc_get_change_walker(svn_string_t *dest,
-                                      const svn_delta_walk_t **walker,
-                                      void **walk_baton,
-                                      void **dir_baton,
-                                      apr_pool_t *pool)
+svn_error_t *
+svn_wc_get_change_walker (svn_string_t *dest,
+                          const svn_delta_walk_t **walker,
+                          void **walk_baton,
+                          void **dir_baton,
+                          apr_pool_t *pool)
 {
   svn_error_t *err;
   struct w_baton *w_baton;
