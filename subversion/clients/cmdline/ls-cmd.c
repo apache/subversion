@@ -43,6 +43,7 @@ print_dirents (apr_hash_t *dirents,
 {
   apr_array_header_t *array;
   int i;
+  apr_pool_t *subpool = svn_pool_create (pool); 
 
   array = svn_sort__hash (dirents, svn_sort_compare_items_as_paths, pool);
   
@@ -51,6 +52,8 @@ print_dirents (apr_hash_t *dirents,
       const char *utf8_entryname;
       svn_dirent_t *dirent;
       svn_sort__item_t *item;
+
+      svn_pool_clear (subpool);
 
       if (ctx->cancel_func)
         SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
@@ -91,12 +94,13 @@ print_dirents (apr_hash_t *dirents,
             timestr[0] = '\0';
 
           /* we need it in UTF-8. */
-          SVN_ERR (svn_utf_cstring_to_utf8 (&utf8_timestr, timestr, pool));
+          SVN_ERR (svn_utf_cstring_to_utf8 (&utf8_timestr, timestr, subpool));
 
-          sizestr = apr_psprintf (pool, "%" SVN_FILESIZE_T_FMT, dirent->size);
+          sizestr = apr_psprintf (subpool, "%" SVN_FILESIZE_T_FMT,
+                                  dirent->size);
 
           SVN_ERR (svn_cmdline_printf
-                   (pool, "%7ld %-8.8s %10s %12s %s%s\n",
+                   (subpool, "%7ld %-8.8s %10s %12s %s%s\n",
                     dirent->created_rev,
                     dirent->last_author ? dirent->last_author : " ? ",
                     (dirent->kind == svn_node_file) ? sizestr : "",
@@ -106,12 +110,14 @@ print_dirents (apr_hash_t *dirents,
         }
       else
         {
-          SVN_ERR (svn_cmdline_printf (pool, "%s%s\n", utf8_entryname, 
+          SVN_ERR (svn_cmdline_printf (subpool, "%s%s\n", utf8_entryname,
                                        (dirent->kind == svn_node_dir)
                                        ? "/" : ""));
         }
     }
 
+  svn_pool_destroy (subpool);
+  
   return SVN_NO_ERROR;
 }
 
@@ -142,6 +148,7 @@ print_dirents_xml (apr_hash_t *dirents,
 
   apr_array_header_t *array;
   int i;
+  apr_pool_t *subpool = svn_pool_create (pool); 
 
   array = svn_sort__hash (dirents, svn_sort_compare_items_as_paths, pool);
   
@@ -156,6 +163,8 @@ print_dirents_xml (apr_hash_t *dirents,
       svn_dirent_t *dirent;
       svn_sort__item_t *item;
 
+      svn_pool_clear (subpool);
+
       if (ctx->cancel_func)
         SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
      
@@ -166,52 +175,56 @@ print_dirents_xml (apr_hash_t *dirents,
       dirent = apr_hash_get (dirents, utf8_entryname, item->klen);
 
       /* "<entry ...>" */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "entry",
+      svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, "entry",
                              "kind", kind_str (dirent->kind),
                              NULL);
 
       /* "<name>xxx</name> */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "name", NULL);
-      svn_xml_escape_cdata_cstring (&sb, utf8_entryname, pool);
-      svn_xml_make_close_tag (&sb, pool, "name");
+      svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, "name",
+                             NULL);
+      svn_xml_escape_cdata_cstring (&sb, utf8_entryname, subpool);
+      svn_xml_make_close_tag (&sb, subpool, "name");
 
       /* "<size>xxx</size>" */
       if (dirent->kind == svn_node_file)
         {
-          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "size",
+          svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, "size",
                                  NULL);
           svn_xml_escape_cdata_cstring
-            (&sb, apr_psprintf (pool, "%" SVN_FILESIZE_T_FMT, dirent->size),
-             pool);
-          svn_xml_make_close_tag (&sb, pool, "size");
+            (&sb, apr_psprintf (subpool, "%" SVN_FILESIZE_T_FMT, dirent->size),
+             subpool);
+          svn_xml_make_close_tag (&sb, subpool, "size");
         }
 
       /* "<commit revision=...>" */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "commit",
+      svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, "commit",
                              "revision",
-                             apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
+                             apr_psprintf (subpool, "%" SVN_REVNUM_T_FMT,
                                            dirent->created_rev),
                              NULL);
       if (dirent->last_author)
         {
           /* "<author>xxx</author>" */
-          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "author",
-                                 NULL);
-          svn_xml_escape_cdata_cstring (&sb, dirent->last_author, pool);
-          svn_xml_make_close_tag (&sb, pool, "author");
+          svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata,
+                                 "author", NULL);
+          svn_xml_escape_cdata_cstring (&sb, dirent->last_author, subpool);
+          svn_xml_make_close_tag (&sb, subpool, "author");
         }
       /* "<date>xxx</date>" */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "date", NULL);
+      svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, "date",
+                             NULL);
       svn_xml_escape_cdata_cstring
-        (&sb, svn_time_to_cstring (dirent->time, pool), pool);
-      svn_xml_make_close_tag (&sb, pool, "date");
+        (&sb, svn_time_to_cstring (dirent->time, subpool), subpool);
+      svn_xml_make_close_tag (&sb, subpool, "date");
       /* "</commit>" */
-      svn_xml_make_close_tag (&sb, pool, "commit");
+      svn_xml_make_close_tag (&sb, subpool, "commit");
 
       /* "</entry>" */
-      svn_xml_make_close_tag (&sb, pool, "entry");
+      svn_xml_make_close_tag (&sb, subpool, "entry");
     }
 
+  svn_pool_destroy (subpool);
+  
   /* "</list>" */
   svn_xml_make_close_tag (&sb, pool, "list");
 
@@ -276,12 +289,14 @@ svn_cl__ls (apr_getopt_t *os,
       const char *target = ((const char **) (targets->elts))[i];
       const char *truepath;
       svn_opt_revision_t peg_revision;
+
+      svn_pool_clear (subpool);
      
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
 
       /* Get peg revisions. */
       SVN_ERR (svn_opt_parse_path (&peg_revision, &truepath, target,
-                                   pool));
+                                   subpool));
       SVN_ERR (svn_client_ls2 (&dirents, truepath, &peg_revision,
                                &(opt_state->start_revision),
                                opt_state->recursive, ctx, subpool));
@@ -290,10 +305,10 @@ svn_cl__ls (apr_getopt_t *os,
         SVN_ERR (print_dirents_xml (dirents, truepath, ctx, subpool));
       else
         SVN_ERR (print_dirents (dirents, opt_state->verbose, ctx, subpool));
-
-      svn_pool_clear (subpool);
     }
 
+  svn_pool_destroy (subpool);
+  
   if (opt_state->xml)
     {
       if (! opt_state->incremental)
