@@ -559,15 +559,65 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
 
 
 
+
+
+
 /*  Callback:  called whenever we find a close tag (close paren) */
 
 void svn_xml_handle_end (void *userData, const char *name)
 {
+  svn_error_t *err;
   svn_delta_digger_t *my_digger = (svn_delta_digger_t *) userData;
 
-  /* TODO: snip the now-closed element off the delta, by setting its
-     pointer to NULL after checking that it matches the open-tag it's
-     trying to close. */
+  
+  /* First, figure out what kind of element is being "closed" in our
+     XML stream */
+
+  if (strcmp (name, "tree-delta") == 0)
+    {
+      /* Snip the now-closed tree off the delta. */
+      err = svn_starpend_delta (my_digger, NULL, svn_XML_treedelta, TRUE);
+    }
+
+  else if (strcmp (name, "text-delta") == 0)
+    {
+      /* TODO */
+      /* bottomost object of delta should be an edit_content_t,
+         so we unset it's text_delta flag here. */
+    }
+
+  else if (strcmp (name, "prop-delta") == 0)
+    {
+      /* TODO */
+      /* bottomost object of delta should be an edit_content_t,
+         so we unset it's prop_delta flag here. */
+    }
+
+  else if ((strcmp (name, "new") == 0) 
+           || (strcmp (name, "replace") == 0)
+           || (strcmp (name, "delete") == 0))
+    {
+      /* Snip the now-closed edit_t off the delta. */
+      err = svn_starpend_delta (my_digger, NULL, svn_XML_edit, TRUE);
+    }
+
+  else if ((strcmp (name, "file") == 0)
+           || (strcmp (name, "dir") == 0))
+    {
+      /* Snip the now-closed edit_content_t off the delta. */
+      err = svn_starpend_delta (my_digger, NULL, svn_XML_editcontent, TRUE);
+    }
+
+  else  /* default */
+    {
+      /* Found some unrecognized tag, so PUNT to the caller's
+         default handler. */
+      err = (* (my_digger->unknown_elt_handler)) (my_digger, name, atts);
+    }
+
+  /* TODO: what to do with a potentially returned
+     SVN_ERR_MALFORMED_XML at this point?  Do we need to longjump out
+     of expat's callback, or does expat have a error system? */  
 }
 
 
