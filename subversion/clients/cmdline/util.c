@@ -169,11 +169,10 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
     apr_err = apr_err2;
   
   /* Make sure the whole CONTENTS were written, else return an error. */
-  if (apr_err || (written != strlen (contents_native)))
+  if (apr_err)
     {
-      err = svn_error_createf
-        (apr_err ? apr_err : SVN_ERR_INCOMPLETE_DATA, NULL,
-         "failed writing '%s'", tmpfile_name);
+      err = svn_error_createf (apr_err, NULL,
+                               "failed writing '%s'", tmpfile_name);
       goto cleanup;
     }
 
