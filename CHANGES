@@ -6,7 +6,7 @@ http://svn.collab.net/repos/svn/tags/0.37.0
  * bugfix: buffer overflow for AIX client
  * 'svn merge' now notices ancestry by default. (r8390)
  * bugfix:  double Ctrl-C on windows no longer wedges repository.
- * New date formats (see apichange: Rewrite of date parser below)
+ * New date formats (see API change: Rewrite of date parser below)
  * bugfix: Errors in authentication when --no-interactive is turned on (r8139)
  * bugfix: Fix some 'access denied' errors on Windows (r8341, r8352)
 
