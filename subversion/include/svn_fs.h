@@ -1463,15 +1463,14 @@ svn_error_t *svn_fs_lock (const char **token,
 
 /**  Remove lock on the path represented by @a token in @a fs.
  *
- * If the path is not locked, return @c SVN_ERR_FS_PATH_NOT_LOCKED.
+ * If @a token doesn't point to a lock, return @c SVN_ERR_FS_BAD_LOCK_TOKEN.
+ * If @a token points to an expired lock, return @c SVN_ERR_FS_LOCK_EXPIRED.
+ * If @a fs has no username associated with it, return @c SVN_ERR_FS_NO_USER.
  *
- * If the path is locked, but @a token doesn't point to the correct
- * lock, return @c SVN_ERR_FS_BAD_LOCK_TOKEN.
- *
- * If @a token points to the correct lock, but the username of @a fs's
- * access context doesn't match the lock's owner, return @c
- * SVN_ERR_FS_LOCK_OWNER_MISMATCH.  Do not return this error if @a
- * force is true; allow the unlock to succeed.
+ * If @a token points to a lock, but the username of @a fs's access
+ * context doesn't match the lock's owner, return @c
+ * SVN_ERR_FS_LOCK_OWNER_MISMATCH.  If @force is true, however, don't
+ * return error;  allow the lock to be "broken" by the alternate user.
  *
  * Use @a pool for temporary allocations.
  */
@@ -1495,7 +1494,7 @@ svn_error_t *svn_fs_get_lock_from_path (svn_lock_t **lock,
 /** If @a token points to a lock in @a fs, set @a *lock to an
  * svn_lock_t which represents the lock, allocated in @a pool.
  *  
- * If @a token doesn't point to a lock, set @a *lock to NULL.
+ * If @a token doesn't point to a lock, return SVN_ERR_FS_BAD_LOCK_TOKEN.
  *
  * If @a token points to a lock that has expired, then return
  * SVN_ERR_FS_LOCK_EXPIRED.  (And incidentally, the lock is really

@@ -116,6 +116,14 @@ svn_error_t *svn_fs_base__err_corrupt_lock (svn_fs_t *fs,
 /* SVN_ERR_FS_NO_SUCH_LOCK: there is no lock on PATH in FS.  */
 svn_error_t *svn_fs_base__err_no_such_lock (svn_fs_t *fs, const char *path);
 
+/* SVN_ERR_FS_NO_USER: there is username associated with FS.  */
+svn_error_t *svn_fs_base__err_no_user (svn_fs_t *fs);
+
+/* SVN_ERR_FS_LOCK_OWNER_MISMATCH: trying to use a lock whose OWNER
+   doesn't match the USERNAME associated with FS.  */
+svn_error_t *svn_fs_base__err_lock_owner_mismatch (svn_fs_t *fs,
+                                                   const char *username,
+                                                   const char *lock_owner);
 
 #ifdef __cplusplus
 }

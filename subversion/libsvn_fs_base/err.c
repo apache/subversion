@@ -253,3 +253,25 @@ svn_fs_base__err_no_such_lock (svn_fs_t *fs, const char *path)
      "No lock on path '%s' in filesystem '%s'",
      path, fs->path);
 }
+
+svn_error_t *
+svn_fs_base__err_no_user (svn_fs_t *fs)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_NO_USER, 0,
+     "No username is currently associated with filesystem '%s'",
+     fs->path);
+}
+
+svn_error_t *
+svn_fs_base__err_lock_owner_mismatch (svn_fs_t *fs,
+                                      const char *username,
+                                      const char *lock_owner)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_LOCK_OWNER_MISMATCH, 0,
+     "User '%s' is trying to use a lock owned by '%s' in filesystem '%s'",
+     username, lock_owner, fs->path);
+}

@@ -57,24 +57,18 @@ svn_fs_base__unlock (svn_fs_t *fs,
 {
   svn_lock_t *lock;
 
+  /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN or SVN_ERR_FS_LOCK_EXPIRED */
   SVN_ERR (svn_fs_base__get_lock_from_token (&lock, fs, token, pool));
 
-  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
-                           "Function not yet implemented.");
-
+  /* There better be a username attached to the fs. */
   if (!fs->access_ctx || !fs->access_ctx->username)
-    {
-      /* TODO: Return specific error noting that a username has to be set
-       * TODO: for unlock to function.
-       */
-    }
+    return svn_fs_base__err_no_user (fs);
 
+  /* And that username better be the same as the lock's owner. */
   if (!force && strcmp(fs->access_ctx->username, lock->owner) != 0)
-    {
-      /* TODO: Return specific error noting that username must
-       * TODO: be owner or the force flag should be set.
-       */
-    }
+    return svn_fs_base__err_lock_owner_mismatch (fs,
+                                                 fs->access_ctx->username,
+                                                 lock->owner);
 
   return svn_fs_base__retry_txn (fs, txn_body_expire_lock,
                                  lock, pool);
@@ -84,10 +78,9 @@ svn_fs_base__unlock (svn_fs_t *fs,
 static svn_error_t *
 check_lock_expired (svn_lock_t *lock, trail_t *trail)
 {
-  if (lock->expiration_date && lock->expiration_date < apr_time_now())
-    {
-      return SVN_NO_ERROR;
-    }
+  if (! lock->expiration_date
+      || (lock->expiration_date > apr_time_now()))   
+    return SVN_NO_ERROR;
 
   SVN_ERR (txn_body_expire_lock (lock, trail));
   
@@ -171,22 +164,13 @@ svn_fs_base__get_lock_from_token (svn_lock_t **lock,
                                   apr_pool_t *pool)
 {
   struct lock_get_args args;
-  svn_error_t *err;
 
   SVN_ERR (svn_fs_base__check_fs (fs));
   
   args.lock_token = token;
   args.lock_p = lock;
-  err = svn_fs_base__retry_txn (fs, txn_body_get_lock_from_token,
-                                &args, pool);
-
-  if (err && err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)
-    {
-      *lock = NULL;
-      return SVN_NO_ERROR;
-    }
-
-  return err;
+  return svn_fs_base__retry_txn (fs, txn_body_get_lock_from_token,
+                                 &args, pool);
 }
 
 
