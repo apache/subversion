@@ -664,7 +664,8 @@ add_directory (const char *path,
          parent, and make the revision equal to the global target
          revision. */
       svn_wc_adm_access_t *adm_access;
-      const svn_wc_entry_t *parent_entry;
+      const svn_wc_entry_t *parent_entry, *dir_entry;
+      apr_hash_t *entries;
 
       SVN_ERR (svn_wc_adm_retrieve (&adm_access, pb->edit_baton->adm_access,
                                     pb->path, db->pool));
@@ -674,6 +675,17 @@ add_directory (const char *path,
                                                   db->name,
                                                   db->pool);
       copyfrom_revision = pb->edit_baton->target_revision;      
+
+      /* Extra check:  a directory by this name may not exist, but there
+         may still be one scheduled for addition.  That's a genuine
+         tree-conflict.  */
+      SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, db->pool));
+      dir_entry = apr_hash_get (entries, db->name, APR_HASH_KEY_STRING);
+      if (dir_entry && dir_entry->schedule == svn_wc_schedule_add)
+        return svn_error_createf
+          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+           "failed to add dir '%s': \nobject of the same name is already "
+           "scheduled for addition", path);
     }
 
   /* Create dir (if it doesn't yet exist), make sure it's formatted
