@@ -30,6 +30,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_props.h"
+#include "svn_private_config.h"
 
 
 
@@ -38,25 +39,26 @@
 svn_error_t *
 svn_mime_type_validate (const char *mime_type, apr_pool_t *pool)
 {
-  if (strchr (mime_type, '/') == NULL)
+  /* Since svn:mine-type can actually contain a full content type
+     specification, e.g., "text/html; charset=UTF-8", make sure we're
+     only looking at the media type here. */
+  const apr_size_t len = strcspn (mime_type, "; ");
+  const char *const slash_pos = strchr (mime_type, '/');
+
+  if (len == 0)
     return svn_error_createf
       (SVN_ERR_BAD_MIME_TYPE, NULL,
-       "MIME type '%s' misses '/'", mime_type);
+       _("MIME type '%s' has empty media type"), mime_type);
 
-  {
-    /* Could just take an optional `len' arg and avoid this strlen.
-       Many callers have the length anyway.  But is such a
-       micro-optimization worth the extra interface noise?  Is it
-       even worth this comment?? */
-    char c = mime_type[strlen(mime_type) - 1];
-    
-    /* Man page seems to claim that isalnum is always a function.
-       But I don't trust it. */
-    if (! apr_isalnum (c))
-      return svn_error_createf
-        (SVN_ERR_BAD_MIME_TYPE, NULL,
-         "MIME type '%s' ends with non-alphanumeric character", mime_type);
-  }
+  if (slash_pos == NULL || slash_pos >= &mime_type[len])
+    return svn_error_createf
+      (SVN_ERR_BAD_MIME_TYPE, NULL,
+       _("MIME type '%s' does not contain '/'"), mime_type);
+
+  if (! apr_isalnum (mime_type[len - 1]))
+    return svn_error_createf
+      (SVN_ERR_BAD_MIME_TYPE, NULL,
+       _("MIME type '%s' ends with non-alphanumeric character"), mime_type);
 
   return SVN_NO_ERROR;
 }
@@ -65,8 +67,10 @@ svn_mime_type_validate (const char *mime_type, apr_pool_t *pool)
 svn_boolean_t
 svn_mime_type_is_binary (const char *mime_type)
 {
+  /* See comment in svn_mime_type_validate() above. */
+  const apr_size_t len = strcspn (mime_type, "; ");
   return ((strncmp (mime_type, "text/", 5) != 0)
-          && (strcmp (mime_type, "image/x-xbitmap") != 0)
-          && (strcmp (mime_type, "image/x-xpixmap") != 0)
+          && (strncmp (mime_type, "image/x-xbitmap", len) != 0)
+          && (strncmp (mime_type, "image/x-xpixmap", len) != 0)
           );
 }
