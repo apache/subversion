@@ -47,7 +47,7 @@
 const apr_getopt_option_t svn_cl__options[] =
   {
     {"destination",   'd', 1, "put results in new directory ARG"}, 
-    {"force",         'f', 0, "force operation to run"},
+    {"force",         svn_cl__force_opt, 0, "force operation to run"},
     {"help",          'h', 0, "show help on a subcommand"},
     {"message",       'm', 1, "specify commit message \"ARG\""},
     {"quiet",         'q', 0, "print as little as possible"},
@@ -147,7 +147,8 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "usage: svn commit [TARGETS]\n\n"
     "   Be sure to use one of -m or -F to send a log message;\n"
     "   the -r switch is only for use with --xml-file.\n",
-    {'m', 'F', 'q', 'f', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
+    {'m', 'F', 'q', 
+     svn_cl__force_opt, svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__xml_file_opt, 'r'} },
   { "ci",         TRUE, NULL, NULL, {0} },
   
@@ -169,7 +170,8 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    upon next commit.  (The working item itself will only be removed\n"
     "    if --force is passed.)  If run on URL, item is deleted from\n"
     "    repository via an immediate commit.\n",
-    {'f', 'm', 'F', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
+    {svn_cl__force_opt, 'm', 'F',
+     svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
   { "del",        TRUE, NULL, NULL, {0} },
   { "remove",     TRUE, NULL, NULL, {0} },
   { "rm",         TRUE, NULL, NULL, {0} },
@@ -850,7 +852,7 @@ main (int argc, const char * const *argv)
       case 'M':
         opt_state.modified = TRUE;
         break;
-      case 'f':
+      case svn_cl__force_opt:
         opt_state.force = TRUE;
         break;
       case svn_cl__recursive_opt:
