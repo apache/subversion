@@ -21,40 +21,34 @@ sub committed {
     diag "committed ".join(',',@_);
 }
 
-my $pool = SVN::Core::pool_create(undef);
-
 my $editor = SVN::Delta::Editor->
     new(SVN::Repos::get_commit_editor($repos, "file://$repospath",
 				      '/', 'root', 'FOO', \&committed));
 
-my $rootbaton = $editor->open_root(0, $pool);
+my $rootbaton = $editor->open_root(0);
 
-my $dirbaton = $editor->add_directory ('trunk', $rootbaton, undef, 0, $pool);
+my $dirbaton = $editor->add_directory ('trunk', $rootbaton, undef, 0);
 
-my $fbaton = $editor->add_file ('trunk/filea', $dirbaton,
-			       undef, -1, $pool);
+my $fbaton = $editor->add_file ('trunk/filea', $dirbaton, undef, -1);
 
-my $ret = $editor->apply_textdelta ($fbaton, undef, $pool);
+my $ret = $editor->apply_textdelta ($fbaton, undef);
 
-SVN::_Delta::svn_txdelta_send_string("FILEA CONTENT",
-                                    @$ret, $pool);
+SVN::TxDelta::send_string("FILEA CONTENT", @$ret);
 
-#SVN::TxDelta::send_string("FILEA CONTENT", @$ret, $pool);
-
-$editor->close_edit($pool);
+$editor->close_edit();
 
 cmp_ok($fs->youngest_rev, '==', 1);
 {
 $editor = SVN::Delta::Editor->
     new (SVN::Repos::get_commit_editor($repos, "file://$repospath",
 				       '/', 'root', 'FOO', \&committed));
-my $rootbaton = $editor->open_root(1, $pool);
+my $rootbaton = $editor->open_root(1);
 
-my $dirbaton = $editor->add_directory ('tags', $rootbaton, undef, 1, $pool);
+my $dirbaton = $editor->add_directory ('tags', $rootbaton, undef, 1);
 my $subdirbaton = $editor->add_directory ('tags/foo', $dirbaton, 
-					  "file://$repospath/trunk", 1, $pool);
+					  "file://$repospath/trunk", 1);
 
-$editor->close_edit($pool);
+$editor->close_edit();
 }
 cmp_ok($fs->youngest_rev, '==', 2);
 
@@ -63,10 +57,10 @@ $editor = SVN::Delta::Editor->
     new (SVN::Repos::get_commit_editor($repos, "file://$repospath",
 				       '/', 'root', 'FOO', \&committed));
 
-my $rootbaton = $editor->open_root(2, $pool);
-$editor->delete_entry('tags', 2, $rootbaton, $pool);
+my $rootbaton = $editor->open_root(2);
+$editor->delete_entry('tags', 2, $rootbaton);
 
-$editor->close_edit($pool);
+$editor->close_edit();
 }
 
 cmp_ok($fs->youngest_rev, '==', 3);
