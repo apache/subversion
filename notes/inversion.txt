@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.20 $ of this document.)
+              ($Revision: 1.21 $ of this document.)
 
 * Introduction
 
@@ -633,7 +633,7 @@ might sprout off any version in myproj's history):
   line-of-ancestry copying is forced.] 
 
 
-** How is meta-data stored
+** How meta-data is stored
 
 Each node has a property list (key->value, key->value).  Among the
 things we can store in the property list are file permissions, data
