@@ -45,8 +45,6 @@
    that should be fine for now, but a better solution must be found in
    combination with issue #850. */
 #include "arch/win32/apr_arch_utf8.h"
-
-#include <mbctype.h>
 #endif
 
 #define SVN_UTF_CONTOU_XLATE_HANDLE "svn-utf-contou-xlate-handle"
