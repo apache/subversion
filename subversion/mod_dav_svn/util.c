@@ -95,6 +95,10 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
 
   path = comp.path;
 
+  /* clean up the URI */
+  ap_getparents(path);
+  ap_no2slash(path);
+
   /*
    * Does the URI path specify the same repository? It does not if one of:
    *
