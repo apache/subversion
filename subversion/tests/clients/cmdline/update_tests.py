@@ -1036,8 +1036,7 @@ def update_deleted_missing_dir(sbox):
 #----------------------------------------------------------------------
 
 # Issue 919.  This test was written as a regression test for "item
-# should remain 'deleted' when an update deletes a sibling", but it
-# fails due to issue 919.
+# should remain 'deleted' when an update deletes a sibling".
 def another_hudson_problem(sbox):
   "another \"hudson\" problem: updates that delete"
 
@@ -1091,6 +1090,54 @@ def another_hudson_problem(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status)  
+
+#----------------------------------------------------------------------
+def update_deleted_targets(sbox):
+  "explicit update of deleted=true targets"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Delete/commit thus creating 'deleted=true' entries
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma') 
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  svntest.main.run_svn(None, 'rm', gamma_path, F_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/gamma' : Item(verb='Deleting'),
+    'A/B/F'     : Item(verb='Deleting'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.remove('A/D/gamma', 'A/B/F')
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+
+  # Explicit update must not remove the 'deleted=true' entries
+  svntest.actions.run_and_verify_svn(None, ['At revision 2.\n'], None,
+                                     'update', gamma_path)
+  svntest.actions.run_and_verify_svn(None, ['At revision 2.\n'], None,
+                                     'update', F_path)
+
+  # Update to r1 to restore items, since the parent directory is already
+  # at r1 this fails if the 'deleted=true' entries are missing (issue 2250)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/gamma' : Item(status='A '),
+    'A/B/F'     : Item(status='A '),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status.tweak(wc_rev=1)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,  
+                                        None, None, None, None, None, 0,
+                                        '-r', '1', wc_dir)
+  
+
 
 #----------------------------------------------------------------------
 
@@ -1504,6 +1551,7 @@ test_list = [ None,
               update_receive_illegal_name,
               update_deleted_missing_dir,
               another_hudson_problem,
+              update_deleted_targets,
               new_dir_with_spaces,
               non_recursive_update,
               checkout_empty_dir,

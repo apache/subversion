@@ -497,8 +497,7 @@ svn_error_t *svn_ra_get_dir (svn_ra_session_t *session,
  * @a update_target is an optional single path component to restrict
  * the scope of the update to just that entry (in the directory
  * represented by the @a session's URL).  If @a update_target is the
- * empty string, the entire directory is updated.  @a update_target
- * may not be NULL.
+ * empty string, the entire directory is updated.
  *
  * If @a recurse is true and the target is a directory, update
  * recursively; otherwise, update just the target and its immediate

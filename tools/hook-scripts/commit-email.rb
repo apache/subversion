@@ -225,7 +225,7 @@ def diff_info(info, uri, add_diff)
           command = "cat"
           rev = (info.revision - 1).to_s
         else
-          raise "unknown diff type: #{value[:type]}"
+          raise "unknown diff type: #{value.type}"
         end
 
         link = [uri, key].compact.join("/")

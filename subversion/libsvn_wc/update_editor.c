@@ -96,7 +96,7 @@ struct edit_baton
   svn_wc_traversal_info_t *traversal_info;
 
   /* This editor sends back notifications as it edits. */
-  svn_wc_notify_func_t notify_func;
+  svn_wc_notify_func2_t notify_func;
   void *notify_baton;
 
   /* This editor is normally wrapped in a cancellation editor anyway,
@@ -435,12 +435,14 @@ complete_directory (struct edit_baton *eb,
             {
               svn_wc__entry_remove (entries, name);
               if (eb->notify_func)
-                (* eb->notify_func) (eb->notify_baton, child_path, 
-                                     svn_wc_notify_update_delete,
-                                     current_entry->kind, NULL, 
-                                     svn_wc_notify_state_unknown,
-                                     svn_wc_notify_state_unknown,
-                                     SVN_INVALID_REVNUM);
+                {
+                  svn_wc_notify_t *notify
+                    = svn_wc_create_notify (child_path,
+                                            svn_wc_notify_update_delete,
+                                            subpool);
+                  notify->kind = current_entry->kind;
+                  (* eb->notify_func) (eb->notify_baton, notify, subpool);
+                }
             }
         }
     }
@@ -973,14 +975,10 @@ do_entry_deletion (struct edit_baton *eb,
    * so we just join them together to get a good notification path.
    */
   if (eb->notify_func)
-    (*eb->notify_func) (eb->notify_baton,
-                        svn_path_join (parent_path, base_name, pool),
-                        svn_wc_notify_update_delete,
-                        svn_node_unknown,
-                        NULL,
-                        svn_wc_notify_state_unknown,
-                        svn_wc_notify_state_unknown,
-                        SVN_INVALID_REVNUM);
+    (*eb->notify_func)
+      (eb->notify_baton,
+       svn_wc_create_notify (svn_path_join (parent_path, base_name, pool),
+                             svn_wc_notify_update_delete, pool), pool);
 
   return SVN_NO_ERROR;
 }
@@ -1094,14 +1092,13 @@ add_directory (const char *path,
   *child_baton = db;
 
   if (eb->notify_func)
-    (*eb->notify_func) (eb->notify_baton,
-                        db->path,
-                        svn_wc_notify_update_add,
-                        svn_node_dir,
-                        NULL,
-                        svn_wc_notify_state_unknown,
-                        svn_wc_notify_state_unknown,
-                        SVN_INVALID_REVNUM);
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify (db->path,
+                                                      svn_wc_notify_update_add,
+                                                      pool);
+      notify->kind = svn_node_dir;
+      (*eb->notify_func) (eb->notify_baton, notify, pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1330,14 +1327,14 @@ close_directory (void *dir_baton,
      if it's an added directory, because notification has already
      happened in that case. */
   if ((! db->added) && (db->edit_baton->notify_func))
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify (db->path, svn_wc_notify_update_update, pool);
+      notify->kind = svn_node_dir;
+      notify->prop_state = prop_state;
     (*db->edit_baton->notify_func) (db->edit_baton->notify_baton,
-                                    db->path,
-                                    svn_wc_notify_update_update,
-                                    svn_node_dir,
-                                    NULL,
-                                    svn_wc_notify_state_unknown,
-                                    prop_state,
-                                    SVN_INVALID_REVNUM);
+                                    notify, pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -2371,19 +2368,19 @@ close_file (void *file_baton,
   /* We have one less referrer to the directory's bump information. */
   SVN_ERR (maybe_bump_dir_info (eb, fb->bump_info, pool));
 
-  if ((content_state != svn_wc_notify_state_unchanged) ||
-      (prop_state != svn_wc_notify_state_unchanged))
+  if (((content_state != svn_wc_notify_state_unchanged) ||
+       (prop_state != svn_wc_notify_state_unchanged)) &&
+      eb->notify_func)
     {
-      if (eb->notify_func)
-        (*eb->notify_func) (eb->notify_baton,
-                            fb->path,
-                            fb->added ? svn_wc_notify_update_add 
-                                      : svn_wc_notify_update_update,
-                            svn_node_file,
-                            NULL,  /* ### use install_file() mimetype here */
-                            content_state,
-                            prop_state,
-                            SVN_INVALID_REVNUM);
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify (fb->path,
+                                fb->added ? svn_wc_notify_update_add 
+                                : svn_wc_notify_update_update, pool);
+      notify->kind = svn_node_file;
+      notify->content_state = content_state;
+      notify->prop_state = prop_state;
+      /* ### use install_file() mimetype here */
+      (*eb->notify_func) (eb->notify_baton, notify, pool);
     }
   return SVN_NO_ERROR;  
 }
@@ -2466,7 +2463,7 @@ make_editor (svn_revnum_t *target_revision,
              svn_boolean_t use_commit_times,
              const char *switch_url,
              svn_boolean_t recurse,
-             svn_wc_notify_func_t notify_func,
+             svn_wc_notify_func2_t notify_func,
              void *notify_baton,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
@@ -2527,6 +2524,28 @@ make_editor (svn_revnum_t *target_revision,
 
 
 svn_error_t *
+svn_wc_get_update_editor2 (svn_revnum_t *target_revision,
+                           svn_wc_adm_access_t *anchor,
+                           const char *target,
+                           svn_boolean_t use_commit_times,
+                           svn_boolean_t recurse,
+                           svn_wc_notify_func2_t notify_func,
+                           void *notify_baton,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           const char *diff3_cmd,
+                           const svn_delta_editor_t **editor,
+                           void **edit_baton,
+                           svn_wc_traversal_info_t *traversal_info,
+                           apr_pool_t *pool)
+{
+  return make_editor (target_revision, anchor, svn_wc_adm_access_path (anchor),
+                      target, use_commit_times, NULL, recurse, notify_func, 
+                      notify_baton, cancel_func, cancel_baton, diff3_cmd,
+                      editor, edit_baton, traversal_info, pool);
+}
+
+svn_error_t *
 svn_wc_get_update_editor (svn_revnum_t *target_revision,
                           svn_wc_adm_access_t *anchor,
                           const char *target,
@@ -2542,12 +2561,39 @@ svn_wc_get_update_editor (svn_revnum_t *target_revision,
                           svn_wc_traversal_info_t *traversal_info,
                           apr_pool_t *pool)
 {
-  return make_editor (target_revision, anchor, svn_wc_adm_access_path (anchor),
-                      target, use_commit_times, NULL, recurse, notify_func, 
-                      notify_baton, cancel_func, cancel_baton, diff3_cmd,
-                      editor, edit_baton, traversal_info, pool);
+  svn_wc__compat_notify_baton_t nb = { notify_func, notify_baton };
+
+  return svn_wc_get_update_editor2 (target_revision, anchor, target,
+                                    use_commit_times, recurse,
+                                    svn_wc__compat_call_notify_func, &nb,
+                                    cancel_func, cancel_baton, diff3_cmd,
+                                    editor, edit_baton, traversal_info, pool);
 }
 
+svn_error_t *
+svn_wc_get_switch_editor2 (svn_revnum_t *target_revision,
+                           svn_wc_adm_access_t *anchor,
+                           const char *target,
+                           const char *switch_url,
+                           svn_boolean_t use_commit_times,
+                           svn_boolean_t recurse,
+                           svn_wc_notify_func2_t notify_func,
+                           void *notify_baton,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           const char *diff3_cmd,
+                           const svn_delta_editor_t **editor,
+                           void **edit_baton,
+                           svn_wc_traversal_info_t *traversal_info,
+                           apr_pool_t *pool)
+{
+  assert (switch_url);
+
+  return make_editor (target_revision, anchor, svn_wc_adm_access_path (anchor),
+                      target, use_commit_times, switch_url, recurse, 
+                      notify_func, notify_baton, cancel_func, cancel_baton, 
+                      diff3_cmd, editor, edit_baton, traversal_info, pool);
+}
 
 svn_error_t *
 svn_wc_get_switch_editor (svn_revnum_t *target_revision,
@@ -2566,13 +2612,15 @@ svn_wc_get_switch_editor (svn_revnum_t *target_revision,
                           svn_wc_traversal_info_t *traversal_info,
                           apr_pool_t *pool)
 {
-  assert (switch_url);
+  svn_wc__compat_notify_baton_t nb = { notify_func, notify_baton };
 
-  return make_editor (target_revision, anchor, svn_wc_adm_access_path (anchor),
-                      target, use_commit_times, switch_url, recurse, 
-                      notify_func, notify_baton, cancel_func, cancel_baton, 
-                      diff3_cmd, editor, edit_baton, traversal_info, pool);
+  return svn_wc_get_switch_editor2 (target_revision, anchor, target,
+                                    switch_url, use_commit_times, recurse,
+                                    svn_wc__compat_call_notify_func, &nb,
+                                    cancel_func, cancel_baton, diff3_cmd,
+                                    editor, edit_baton, traversal_info, pool);
 }
+                                    
 
 svn_wc_traversal_info_t *
 svn_wc_init_traversal_info (apr_pool_t *pool)

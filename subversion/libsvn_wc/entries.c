@@ -1668,6 +1668,7 @@ svn_wc__tweak_entry (apr_hash_t *entries,
                      const char *name,
                      const char *new_url,
                      svn_revnum_t new_rev,
+                     svn_boolean_t allow_removal,
                      svn_boolean_t *write_required,
                      apr_pool_t *pool)
 {
@@ -1704,9 +1705,13 @@ svn_wc__tweak_entry (apr_hash_t *entries,
 
      If the entry is still marked 'absent' and yet is not the same
      revision as new_rev, then the server did not re-add it, nor
-     re-absent it, so we can remove the entry. */
-  if ((entry->deleted)
-      || (entry->absent && (entry->revision != new_rev)))
+     re-absent it, so we can remove the entry.
+
+     ### This function cannot always determine whether removal is
+     ### appropriate, hence the ALLOW_REMOVAL flag.  It's all a bit of a
+     ### mess. */
+  if (allow_removal
+      && (entry->deleted || (entry->absent && entry->revision != new_rev)))
     {
       *write_required = TRUE;
       apr_hash_set (entries, name, APR_HASH_KEY_STRING, NULL);
