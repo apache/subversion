@@ -26,7 +26,7 @@
 #pragma once
 #endif // _MSC_VER > 1000
 #include <string>
-
+struct svn_error_t;
 /**
  * Encapsulation for Subversion Path handling
  */
@@ -35,6 +35,8 @@ class Path
 private:
     // the path to be stored
     std::string m_path;
+
+    svn_error_t *m_error_occured;
 
     /**
      * initialize the class
@@ -83,6 +85,9 @@ public:
      */
     const char * 
     c_str() const;
+
+    svn_error_t * 
+    error_occured() const;
 };
 
 // !defined(AFX_PATH_H__A143CB2A_1115_4770_8CD5_AA33CCD285FA__INCLUDED_)
