@@ -19,6 +19,8 @@ Here's an example, probably as complex as an entry would ever get:
        implementation; see thread at http://... (Message-Id: blahblahblah)
      Votes:
        +1: ghudson, bliss
+       +0: cmpilato
+       -0: gstein
        -1: jerenkrantz
 
 A change needs three +1 votes from full committers (or partial committers
@@ -70,8 +72,8 @@ section for approved changes.)
      Justification: API change; avoid permanent support for bizarre and
      unpredictable date formats.
      Votes:
-      +0: cmpilato
       +1: mbk, ghudson, dionisos, epg
+      +0: cmpilato
       -1: gstein (why such a change now? sheesh)
 
 
@@ -79,8 +81,8 @@ section for approved changes.)
      Blame UI changes.
      Justification: much nicer user experience; low risk.
      Votes:
-      +0: cmpilato
       +1: mbk, jszakmeister
+      +0: cmpilato
       -0: gstein (alternative is to remove the late-added 'blame' feature)
 
 
@@ -128,17 +130,17 @@ the section for unapproved changes.)
      Notes: This goes with r8127, but the others here haven't reviewed
             that change, so it needs to be listed separately for now.
      Votes:
-      +0: cmpilato
-      +1 (concept): jerenkrantz
       +1: rooneg, ghudson, dionisos
+      +1 (concept): jerenkrantz
+      +0: cmpilato
 
 
    * r8053, r8054
      Constructor for svn_client_ctx_t
      Justification: Constructor helps with backward compatibility.
      Votes:
-      +0: jerenkrantz, gstein, cmpilato
       +1: rooneg, ghudson, sussman
+      +0: jerenkrantz, gstein, cmpilato
 
 
    * Issue #999
@@ -148,9 +150,9 @@ the section for unapproved changes.)
             into trunk unless it goes into 1.0 too, see
             http://www.contactor.se/~dast/svn/archive-2003-12/0736.shtml.
      Votes:
-      -0: gstein
-      +0: jerenkrantz, cmpilato
       +1: ghudson, dionisos, epg
+      +0: jerenkrantz, cmpilato
+      -0: gstein
 
 
    * r8003
@@ -166,8 +168,8 @@ the section for unapproved changes.)
      apr_ and APR_ namespace symbols in Subversion
      Justification: API stability, non-interference w/ APR's namespace
      Votes:
-      +0: cmpilato
       +1: jerenkrantz, ghudson (#1644 attachment Dec 19 17:03:00), epg
+      +0: cmpilato
 
 
    * r8023, r8030, r8040
@@ -184,8 +186,8 @@ the section for unapproved changes.)
      Fix a handle leak that caused a test failure on Windows.
      Justification: Windows correctness, test failure, and went into 0.35.1.
      Votes:
-      +0: cmpilato
       +1: brane, jerenkrantz, ghudson, dionisos, gstein
+      +0: cmpilato
 
 
    * r8052, r8062  (issue #1660)
@@ -245,8 +247,8 @@ the section for unapproved changes.)
      Notes: Should apply this after most other changes, to avoid
             creating silly merge problems.
      Votes:
-      +1 (concept): jerenkrantz
       +1: ghudson, dionisos, epg
+      +1 (concept): jerenkrantz
       -0: gstein, kfogel (seem to be doing fine with our current msgs so far)
 
 
@@ -255,8 +257,8 @@ the section for unapproved changes.)
      Justification: API stability; and, old name was overly restrictive.
      Votes:
       +1: jerenkrantz, jszakmeister, epg, cmpilato
-      -0: gstein
       +0: sussman
+      -0: gstein
 
 
    * Issue #1671
@@ -279,8 +281,8 @@ the section for unapproved changes.)
      Load RA modules as foo-MAJOR.so.0 instead of foo-MAJOR.so.
      Justification: Low risk; we should be nice to binary packagers.
      Votes:
-      +0: cmpilato
       +1: ghudson, epg, sussman
+      +0: cmpilato
 
 
    * Issue #1639 (r8014)
@@ -375,8 +377,8 @@ Bindings changes that affect the build system:
      Fix for bindings build on Windows. Related to issue 1666.
      Justification: Python bindings will not build otherwise. Low risk.
      Votes:
-       +0: cmpilato
        +1: brane, jerenkrantz, gstein
+       +0: cmpilato
 
 
    * r8106
