@@ -79,22 +79,15 @@ class SVNLook:
   def cmd_dirs_changed(self):
     if self.txn_ptr:
       base_rev = fs.txn_base_revision(self.txn_ptr)
-      root = fs.txn_root(self.txn_ptr, self.pool)
     else:
       base_rev = self.rev - 1
-      root = fs.revision_root(self.fs_ptr, self.rev, self.pool)
 
-    base_root = fs.revision_root(self.fs_ptr, base_rev, self.pool)
+    ### oops. this prints bubble-up dirs, not just those with changes
 
-    editor, baton = delta.make_editor(Editor(), self.pool)
-    wrap_editor, wrap_baton = delta.svn_delta_compat_wrap(editor, baton,
-                                                          self.pool)
-    _repos.svn_repos_dir_delta(base_root, '', None, root, '',
-                               wrap_editor, wrap_baton,
-                               0, 1, 0, 1, self.pool)
+    self._print_tree(base_rev, dirs_only=1)
 
   def cmd_ids(self):
-    raise NotImplementedError
+    self._print_tree(0, do_indent=1, show_ids=1)
 
   def cmd_info(self):
     self.cmd_author()
@@ -109,27 +102,93 @@ class SVNLook:
     print log
 
   def cmd_tree(self):
-    raise NotImplementedError
+    self._print_tree(0, do_indent=1)
 
   def _get_property(self, name):
     if self.txn_ptr:
       return fs.txn_prop(self.txn_ptr, name, self.pool)
     return fs.revision_prop(self.fs_ptr, self.rev, name, self.pool)
 
+  def _print_tree(self, base_rev, dirs_only=0, do_indent=0, show_ids=0):
+    # get the current root
+    if self.txn_ptr:
+      root = fs.txn_root(self.txn_ptr, self.pool)
+    else:
+      root = fs.revision_root(self.fs_ptr, self.rev, self.pool)
+
+    # the base of the comparison
+    base_root = fs.revision_root(self.fs_ptr, base_rev, self.pool)
+
+    if show_ids:
+      editor = Editor(dirs_only, do_indent, root)
+    else:
+      editor = Editor(dirs_only, do_indent)
+
+    # construct the editor for printing these things out
+    e_ptr, e_baton = delta.make_editor(editor, self.pool)
+    wrap_editor, wrap_baton = delta.svn_delta_compat_wrap(e_ptr, e_baton,
+                                                          self.pool)
+
+    # compute the delta, printing as we go
+    _repos.svn_repos_dir_delta(base_root, '', None, root, '',
+                               wrap_editor, wrap_baton,
+                               0, 1, 0, 1, self.pool)
+
 
 class Editor(delta.Editor):
-  def __init__(self):
-    pass
+  def __init__(self, dirs_only=0, do_indent=0, root=None):
+    self.dirs_only = dirs_only
+    self.do_indent = do_indent
+    self.root = root
+
+    self.indent = ''
 
   def open_root(self, base_revision, dir_pool):
-    print '/'
+    print '/' + self._get_id('/', dir_pool)
+    if self.do_indent:
+      self.indent = self.indent + ' '    # indent one space
 
-  def add_directory(self, path, parent_baton,
-                    copyfrom_path, copyfrom_revision, dir_pool):
-    print path + '/'
+  def add_directory(self, path, *args):
+    id = self._get_id(path, args[-1])
+    if self.do_indent:
+      print self.indent + _basename(path) + '/' + id
+      self.indent = self.indent + ' '    # indent one space
+    else:
+      print path + '/' + id
 
-  def open_directory(self, path, parent_baton, base_revision, dir_pool):
-    print path + '/'
+  # we cheat. one method implementation for two entry points.
+  open_directory = add_directory
+
+  def close_directory(self, baton):
+    # note: if indents are being performed, this slice just returns
+    # another empty string.
+    self.indent = self.indent[:-1]
+
+  def add_file(self, path, *args):
+    if self.dirs_only:
+      return
+    id = self._get_id(path, args[-1])
+    if self.do_indent:
+      print self.indent + _basename(path) + id
+    else:
+      print path + id
+
+  # we cheat. one method implementation for two entry points.
+  open_file = add_file
+
+  def _get_id(self, path, pool):
+    if self.root:
+      id = fs.node_id(self.root, path, pool)
+      return ' <%s>' % fs.unparse_id(id, pool)
+    return ''
+
+
+def _basename(path):
+  "Return the basename for a '/'-separated path."
+  idx = string.rfind(path, '/')
+  if idx == -1:
+    return path
+  return path[idx+1:]
 
 
 def usage(exit):
