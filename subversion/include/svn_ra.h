@@ -423,27 +423,6 @@ typedef struct svn_ra_plugin_t
                            apr_hash_t **props,
                            apr_pool_t *pool);
 
-
-  /** Check out revision @a revision of the url specified in
-   * @a session_baton, using @a editor and @a edit_baton to create the 
-   * working copy.  If @a recurse is non-zero, create the full working tree, 
-   * else just its topmost directory. 
-   *
-   * Do a complete drive of @a editor, ending with a call to @c close_edit().
-   *
-   * The editing operations of @a editor may not perform any ra
-   * operations using @a session_baton.
-   *
-   * Use @a pool for memory allocation.
-   */
-  svn_error_t *(*do_checkout) (void *session_baton,
-                               svn_revnum_t revision,
-                               svn_boolean_t recurse,
-                               const svn_delta_editor_t *editor,
-                               void *edit_baton,
-                               apr_pool_t *pool);
-
-
   /** Ask the network layer to update a working copy.
    *
    * The client initially provides an @a update_editor/@a baton to the 

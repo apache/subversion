@@ -203,11 +203,6 @@ The main command set corresponds to the svn_ra interfaces.
                 created-rev:number [ created-date:string ]
                 [ last-author:string ] )
 
-  checkout
-    params:   ( [ rev:number ] recurse:bool )
-    response: ( )
-    After sending response, server switches to editor command set.
-
   update
     params:   ( [ rev:number ] target:string recurse:bool )
     response: ( )

@@ -424,22 +424,6 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
 */
 
 
-/* ---------------------------------------------------------------*/
-
-/* Making checkouts. */
-
-/** Recursively walk over @a revnum:@a path inside an already-open repository
- * @a fs, and drive a checkout @a editor, allocating all data in @a pool.
- */
-svn_error_t *
-svn_repos_checkout (svn_fs_t *fs, 
-                    svn_revnum_t revnum, 
-                    svn_boolean_t recurse,
-                    const char *fs_path,
-                    const svn_delta_editor_t *editor, 
-                    void *edit_baton,
-                    apr_pool_t *pool);
-
 
 /* ---------------------------------------------------------------*/
 

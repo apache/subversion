@@ -136,14 +136,6 @@ svn_error_t * svn_ra_dav__abort_commit(
  void *session_baton,
  void *edit_baton);
 
-svn_error_t * svn_ra_dav__do_checkout (
-  void *session_baton,
-  svn_revnum_t revision,
-  svn_boolean_t recurse,
-  const svn_delta_editor_t *editor,
-  void *edit_baton,
-  apr_pool_t *pool);
-
 svn_error_t * svn_ra_dav__do_update(
   void *session_baton,
   const svn_ra_reporter_t **reporter,

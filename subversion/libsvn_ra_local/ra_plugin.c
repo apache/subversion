@@ -390,32 +390,6 @@ svn_ra_local__get_commit_editor (void *session_baton,
 }
 
 
-static svn_error_t *
-svn_ra_local__do_checkout (void *session_baton,
-                           svn_revnum_t revision,
-                           svn_boolean_t recurse,
-                           const svn_delta_editor_t *editor,
-                           void *edit_baton,
-                           apr_pool_t *pool)
-{
-  svn_revnum_t revnum_to_fetch;
-  svn_ra_local__session_baton_t *sbaton = 
-    (svn_ra_local__session_baton_t *) session_baton;
-  
-  if (! SVN_IS_VALID_REVNUM(revision))
-    SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revnum_to_fetch, pool));
-  else
-    revnum_to_fetch = revision;
-
-  SVN_ERR (svn_repos_checkout (sbaton->fs,
-                               revnum_to_fetch,
-                               recurse,
-                               sbaton->fs_path,
-                               editor, edit_baton, pool));
-
-  return SVN_NO_ERROR;
-}
-
 
 static svn_error_t *
 make_reporter (void *session_baton,
@@ -924,7 +898,6 @@ static const svn_ra_plugin_t ra_local_plugin =
   svn_ra_local__get_commit_editor,
   svn_ra_local__get_file,
   svn_ra_local__get_dir,
-  svn_ra_local__do_checkout,
   svn_ra_local__do_update,
   svn_ra_local__do_switch,
   svn_ra_local__do_status,
