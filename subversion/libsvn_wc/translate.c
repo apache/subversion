@@ -349,18 +349,22 @@ svn_wc_keywords_differ (svn_wc_keywords_t *a,
                         svn_wc_keywords_t *b,
                         svn_boolean_t compare_values)
 {
-  if (((a == NULL) && (b == NULL))
-      || ((a == NULL)
+  if (((a == NULL) && (b == NULL)) /* no A or B */
+      /* no A, and B has no contents */
+      || ((a == NULL) 
           && (b->revision == NULL)
           && (b->date == NULL)
           && (b->author == NULL)
           && (b->url == NULL))
-      || ((b == NULL)
+      /* no B, and A has no contents */
+      || ((b == NULL) 
           && (a->revision == NULL)
           && (a->date == NULL)
           && (a->author == NULL)
           && (a->url == NULL))
-      || ((b->revision == NULL)
+      /* neither A nor B has any contents */
+      || ((a != NULL) && (b != NULL) 
+          && (b->revision == NULL)
           && (b->date == NULL)
           && (b->author == NULL)
           && (b->url == NULL)
