@@ -332,7 +332,7 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
   fetch_ctx_t *fc = userdata;
   svn_txdelta_window_t window = { 0 };
   svn_txdelta_op_t op;
-  svn_string_t data = { (char *)buf, len, len };
+  svn_string_t data = { (char *)buf, len, len, fc->pool };
   svn_error_t *err;
 
   if (len == 0)
