@@ -5,8 +5,9 @@
 # particular, this means looking for GNU diff.
 #
 #   Note:  FreeBSD's `diff' claims to be GNU, but is actually a hacked
-#          version that fails this test.  Native versions of `diff' on other
-#          Unices probably fail this test as well.
+#          version that fails this test.  Native versions of `diff' on
+#          other Unices probably fail this test as well.  Install GNU
+#          patch and GNU diffutils from the ports/packages.
 #
 #
 # Usage:  gnu-diff.sh PATCHPATH
@@ -23,51 +24,46 @@ if test "$1" = ""; then
   exit 1
 fi
 
-gnu_diff_path=""
-gnu_patch_path=$1
-pathlist=$PATH
-final="no"
+patch=$1
 
 # Loop over $PATH, looking for `diff' binaries
 
-while test "$final" != "";  do
-    searchdir=`echo $pathlist | sed -e 's/:.*$//'` 
-    final=`echo $pathlist | grep :`
-    pathlist=`echo $pathlist | sed -e 's/^[^:]*://'`
+IFS=':'
 
-    # does $searchdir contain an executable called `diff'?
-    if test -f ${searchdir}/diff -o -h ${searchdir}/diff; then
-        if test -x ${searchdir}/diff; then
+for searchdir in $PATH; do
+    # does $searchdir contain an executable called either `gdiff' or `diff'?
+    for name in gdiff diff; do
+	diff=$searchdir/$name
+	if test -x $diff; then
+	    # create two identical one-line files (no newline endings)
+	    echo -n "some text, no newline" > foofile
+	    cp foofile foofile2
 
-            # create two identical one-line files (no newline endings)
-            echo -n "some text, no newline" > foofile
-            cp foofile foofile2
+	    # append to the first file
+	    echo -n "...extra text, still no newline" >> foofile
 
-            # append to the first file
-            echo -n "...extra text, still no newline" >> foofile
+	    # do a diff, create a patch.
+	    $diff -u foofile foofile2 > foofile.patch 2>/dev/null
 
-            # do a diff, create a patch.
-            ${searchdir}/diff -u foofile foofile2 > foo.patch 2>/dev/null
+	    # apply the patch to foofile2
+	    $patch < foofile.patch >/dev/null 2>&1
 
-            # apply the patch to foofile2
-            ${gnu_patch_path} < foo.patch 2>&1 >/dev/null
+	    # the files should be *identical* now.
+	    if cmp -s foofile foofile2; then
+		identical=yes
+	    else
+		identical=no
+	    fi
 
-            # the files should be *identical* now.
-            cmp -s foofile foofile2 2>&1 >/dev/null
-            if test $? -eq 0; then
-                gnu_diff_path=${searchdir}/diff
-                final=""
-            fi
+	    # cleanup
+	    rm -f foofile*
 
-            # cleanup
-            rm foofile foofile2 foo.patch *.rej *.orig 2>/dev/null
-
-        fi
-    fi
+	    if test "$identical" = "yes"; then
+		echo $diff
+		exit
+	    fi
+	fi
+    done
 done
 
-echo $gnu_diff_path
-
-
-
-
+echo ""
