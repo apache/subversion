@@ -21,6 +21,8 @@ our @methods = qw/apply_textdelta apply_text change_node_prop
 		 node_proplist paths_changed rename revision_link
 		 revision_root_revision/;
 
+*fs = *{"SVN::Fs::root_fs"};
+
 for (@methods) {
     *{$_} = *{"SVN::Fs::$_"};
 }
