@@ -5,12 +5,13 @@
 
 2. Bump the version numbers in svn_version.h and CHANGES.  Commit.
 
-3. Create the release branch, check out a working copy of the branch.
-   Make sure the working copy contains apr, apr-util, neon, and the
-   Docbook tools (XSL, FOP).  Those are all needed to build a
-   distribution.  (Note that only the release manager commits to the
-   branch; everyone else continues working on trunk, and the release
-   manager ports changes across only if absolutely necessary.)
+3. Create the release branch, check out a working copy of the branch,
+   run autogen.sh and ./configure in it.  Also, make sure the working
+   copy contains apr, apr-util, neon, and the Docbook tools (XSL,
+   FOP).  Those are all needed to build a distribution.  (Note that
+   only the release manager commits to the branch; everyone else
+   continues working on trunk, and the release manager ports changes
+   across only if absolutely necessary.)
 
 4. Run './dist.sh [ARGS ...]'    (see dist.sh for details about ARGS)
    Watch dist.sh's output to make sure everything goes smoothly; when
@@ -24,9 +25,6 @@
      e) (start up Apache for testing, then) make davcheck
      f) (start up svnserve for testing, then) make svncheck
      g) subversion/clients/cmdline/svn co http://svn.collab.net/repos/svn/trunk
-     h) rm -rf trunk
-     i) subversion/clients/cmdline/svn co svn://svn.collab.net/repos/svn/trunk
-     j) rm -rf trunk
 
 6. [OPTIONAL] Upgrade svn.collab.net to head, then repeat step 5e.
    Someone with administrative access should do this, usually not the
@@ -40,7 +38,7 @@
    (with the minor version number incremented), apply fixes, and go
    through the release process again.
 
-9. Update status webpage (on trunk and branch).
+9. Update www/project_status.html on trunk.  Commit.
 
 10. Post news item, send announcement to dev and announce lists.
 
