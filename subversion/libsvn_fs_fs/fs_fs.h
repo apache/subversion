@@ -114,7 +114,9 @@ svn_error_t *svn_fs__fs_file_checksum (unsigned char digest[],
 /* Names of special files in the fs_fs filesystem. */
 #define SVN_FS_FS__UUID              "uuid"     /* Contains UUID */
 #define SVN_FS_FS__CURRENT           "current"  /* Youngest revision */
-#define SVN_FS_FS__REV_PROPS_EXT     ".props"   /* extension for rev-props */
+
+#define SVN_FS_FS__REVS_DIR          "revs"     /* Directory of revisions */
+#define SVN_FS_FS__REVPROPS_DIR      "revprops" /* Directory of revprops */
 
 /* Headers used to describe node-revision in the revision file. */
 #define SVN_FS_FS__NODE_ID           "id"       

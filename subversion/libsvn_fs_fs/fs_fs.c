@@ -110,7 +110,7 @@ hash_read (apr_hash_t *hash,
               svn_string_t *value = apr_palloc (pool, sizeof (*value));
 
               /* Get the length of the value */
-              int vallen = atoi (stringbuf->data + 2);
+              apr_size_t vallen = atoi (stringbuf->data + 2);
 
               /* Again, 1 extra byte for the null termination. */
               void *valbuf = apr_palloc (pool, vallen + 1);
@@ -283,7 +283,11 @@ open_and_seek_revision (apr_file_t **file,
   rev_filename = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
 
   SVN_ERR (svn_io_file_open (&rev_file,
-                             svn_path_join (fs->fs_path, rev_filename, pool),
+                             svn_path_join_many (pool, 
+                                                 fs->fs_path,
+                                                 SVN_FS_FS__REVS_DIR,
+                                                 rev_filename,
+                                                 NULL),
                              APR_READ, APR_OS_DEFAULT, pool));
 
   SVN_ERR (svn_io_file_seek (rev_file, APR_SET, &offset, pool));
@@ -662,8 +666,11 @@ svn_fs__fs_rev_get_root (svn_fs_id_t **root_id_p,
   revision_filename = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
 
   SVN_ERR (svn_io_file_open (&revision_file,
-                             svn_path_join (fs->fs_path,
-                                            revision_filename, pool),
+                             svn_path_join_many (pool, 
+                                                 fs->fs_path,
+                                                 SVN_FS_FS__REVS_DIR,
+                                                 revision_filename,
+                                                 NULL),
                              APR_READ, APR_OS_DEFAULT, pool));
 
   SVN_ERR (get_root_offset (&root_offset, revision_file, pool));
@@ -687,12 +694,14 @@ svn_fs__fs_revision_proplist (apr_hash_t **proplist_p,
   apr_file_t *revprop_file;
   apr_hash_t *proplist;
 
-  revprop_filename =
-    apr_psprintf (pool, "%" SVN_REVNUM_T_FMT SVN_FS_FS__REV_PROPS_EXT, rev);
+  revprop_filename = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
 
   SVN_ERR (svn_io_file_open (&revprop_file,
-                             svn_path_join (fs->fs_path,
-                                            revprop_filename, pool),
+                             svn_path_join_many (pool,
+                                                 fs->fs_path,
+                                                 SVN_FS_FS__REVPROPS_DIR, 
+                                                 revprop_filename,
+                                                 NULL),
                              APR_READ, APR_OS_DEFAULT, pool));
 
   proplist = apr_hash_make (pool);
