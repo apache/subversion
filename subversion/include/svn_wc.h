@@ -80,9 +80,9 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
  * which case @a adm_access is the start of a new set.
  *
  * @a depth specifies how much to lock.  Zero means just the specified
- * directory. Any negative value means to lock the entire working copy
- * directory hierarchy under @a path. A positive value indicates the number of
- * levels of directories to lock - 1 means just immediate subdirectories, 2
+ * directory.  Any negative value means to lock the entire working copy
+ * directory hierarchy under @a path.  A positive value indicates the number of
+ * levels of directories to lock -- 1 means just immediate subdirectories, 2
  * means immediate subdirectories and their subdirectories, etc.  All the
  * access batons will become part of the set containing @a adm_access.  This
  * is an all-or-nothing option, if it is not possible to lock all the
