@@ -58,6 +58,44 @@
 
 
 
+/*** Timestamp generation and comparision. ***/
+
+svn_error_t *
+svn_wc__file_affected_time (apr_time_t *apr_time,
+                            svn_string_t *path,
+                            apr_pool_t *pool)
+{
+  apr_file_t *f = NULL;
+  apr_finfo_t finfo;
+  apr_status_t apr_err;
+
+  apr_err = apr_open (&f, path->data, APR_READ, APR_OS_DEFAULT, pool);
+  if (apr_err)
+    goto error;
+
+  apr_err = apr_getfileinfo (&finfo, f);
+  if (apr_err)
+    goto error;
+
+  if (finfo.mtime > finfo.ctime)
+    *apr_time = finfo.mtime;
+  else
+    *apr_time = finfo.ctime;
+
+  apr_err = apr_close (f);
+  if (apr_err)
+    goto error;
+
+  return SVN_NO_ERROR;
+
+ error:
+  return svn_error_createf (apr_err, 0, NULL, pool,
+                            "svn_wc__file_affected_time: %s", path->data);
+}
+
+
+
+
 /*** Storing the diff between calls. ***/
 
 struct svn_wc__diff_holder

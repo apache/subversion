@@ -460,6 +460,10 @@ do_parse (svn_wc__entry_baton_t *baton)
         (apr_err, 0, NULL, baton->pool,
          "svn_wc__entry_set: apr_full_read choked");
     
+    /* kff todo fooo: apparently, this isn't working.  Attributes in
+       baton->attributes aren't getting set, that's why iota and other
+       files don't ever get their timestamp set.  Fix this.  Why isn't
+       handle_start() being called at the right time? */
     err = svn_xml_parse (svn_parser, buf, bytes_read, (apr_err == APR_EOF));
     if (err)
       return svn_error_quick_wrap 
@@ -566,6 +570,7 @@ svn_wc__entry_set (svn_string_t *path,
   /* Convert the va_list into a hash of attributes */
   att_hash = svn_xml_ap_to_hash (ap, pool);
   
+  /* kff todo: `kind' argument is getting tossed!  Change do_entry(). */
   err = do_entry (path, pool, entryname,
                   version, NULL,
                   1,  /* "setting" flag */
@@ -588,6 +593,7 @@ svn_wc__entry_get (svn_string_t *path,
   svn_error_t *err;
   apr_hash_t *ht = apr_make_hash (pool);  /* Create a new, empty hashtable */
 
+  /* kff todo: `kind' argument is getting tossed!  Change do_entry(). */
   err = do_entry (path, pool, entryname, 0, version, 0, ht);
   if (err)
     return err;
