@@ -418,7 +418,7 @@ do_check_path (svn_node_kind_t *kind,
 
   svn_path_add_component (abs_path, path, svn_path_repos_style);
   SVN_ERR (svn_fs_revision_root (&root, sbaton->fs, revision, sbaton->pool));
-  *kind = svn_fs_check_path (root, abs_path, sbaton->pool);
+  *kind = svn_fs_check_path (root, abs_path->data, sbaton->pool);
   return SVN_NO_ERROR;
 }
 
