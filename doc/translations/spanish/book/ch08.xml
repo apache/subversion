@@ -68,7 +68,7 @@
           </row>
           <row>
             <entry>libsvn_fs</entry>
-            <entry>Librería del sistema de archivos de
+            <entry>Librería del sistema de ficheros de
               Subversion</entry>
           </row>
           <row>
@@ -196,14 +196,14 @@
         También tiene características que no son tan comunes, como
         la habilidad de añadir, modificar o eliminar meta datos
         (<quote>propiedades</quote>) sobre cualquier fichero o
-        directorio.  Además, el sistema de archivos de Subversion
+        directorio.  Además, el sistema de ficheros de Subversion
         es versionado, lo que significa que a medida que realiza
         cambios a su árbol de directorios, Subversion recuerda el
         aspecto que tenía el árbol antes de esos cambios. Y antes
         que los cambios anteriores. Y que los anteriores a los
         anteriores. Y así todo el camino de vuelta por el tiempo
         de versionado hasta el momento inicial en el cual comenzó
-        a añadir cosas al sistema de archivos.</para>
+        a añadir cosas al sistema de ficheros.</para>
 
       <para>Todas las modificaciones que haga a su árbol se
         realizarán en el contexto de una transacción de
@@ -496,33 +496,36 @@ make_new_directory (const char *repos_path,
 
       <orderedlist>
         <listitem>
-          <para>create, open, destroy, and perform recovery steps on a
-            Subversion repository and the filesystem included in that
-            repository.</para>
+          <para>crear, abrir, destruír y realizar los pasos de
+            recuperación sobre un repositorio Subversion y el sistema
+            de ficheros incluido en el mismo.</para>
         </listitem>
         <listitem>
-          <para>describe the differences between two filesystem
-            trees.</para>
+          <para>describir las diferencias entre dos árboles de
+            sistema de ficheros.</para>
         </listitem>
         <listitem>
-          <para>query for the commit log messages
-            associated with all (or some) of the revisions in which a
-            set of files was modified in the filesystem.</para>
+          <para>obtener el informe de cambios asociado con todas
+            (o algunas) las revisiones en las cuales un conjunto de
+            ficheros fue modificado en el sistema de ficheros.</para>
         </listitem>
         <listitem>
-          <para>generate a human-readable <quote>dump</quote> of the
-            filesystem, a complete representation of the revisions in
-            the filesystem.</para>
+          <para>generar un <quote>volcado</quote> legible por un
+            humano del sistema de ficheros, una representación
+            completa de las revisiones en el sistema de
+            ficheros.</para>
         </listitem>
         <listitem>
-          <para>parse that dump format, loading the dumped revisions
-            into a different Subversion repository.</para>
+          <para>procesar el formato de ese volcado, cargando
+            revisiones volcadas en un repositorio Subversion
+            diferente.</para>
         </listitem>
       </orderedlist>
 
-      <para>As Subversion continues to evolve, the repository library
-        will grow with the filesystem library to offer increased
-        functionality and configurable option support.</para>
+      <para>A medida que Subversion continúa evolucionando, la
+        librería de repositorio seguirá creciendo con la librería
+        del sistema de ficheros para ofrecer una mayor funcionalidad
+        y soporte configurable de opciones.</para>
 
     </sect2>
 
