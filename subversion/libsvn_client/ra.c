@@ -36,7 +36,7 @@ open_admin_tmp_file (apr_file_t **fp,
 {
   svn_client__callback_baton_t *cb = callback_baton;
   
-  SVN_ERR (svn_wc_create_tmp_file (fp, cb->base_dir, cb->pool));
+  SVN_ERR (svn_wc_create_tmp_file (fp, cb->base_dir, TRUE, cb->pool));
 
   return SVN_NO_ERROR;
 }

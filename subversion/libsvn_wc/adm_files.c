@@ -1350,6 +1350,7 @@ svn_wc__adm_cleanup_tmp_area (svn_stringbuf_t *path, apr_pool_t *pool)
 svn_error_t *
 svn_wc_create_tmp_file (apr_file_t **fp,
                         svn_stringbuf_t *path,
+                        svn_boolean_t delete_on_close,
                         apr_pool_t *pool)
 {
   svn_stringbuf_t *truepath = svn_stringbuf_dup (path, pool);
@@ -1366,7 +1367,8 @@ svn_wc_create_tmp_file (apr_file_t **fp,
 
   /* Open a unique file;  use APR_DELONCLOSE. */  
   SVN_ERR (svn_io_open_unique_file (fp, &ignored_filename,
-                                    truepath, ".tmp", TRUE, pool));
+                                    truepath, ".tmp",
+                                    delete_on_close, pool));
 
   return SVN_NO_ERROR;
 }
