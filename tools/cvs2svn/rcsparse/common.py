@@ -119,7 +119,7 @@ class _Parser:
         pass
         # warn("Unexpected RCS token: $token\n")
 
-    raise RuntimeError, "Unexpected EOF";
+    raise RuntimeError, "Unexpected EOF"
 
   def parse_rcs_tree(self):
     while 1:

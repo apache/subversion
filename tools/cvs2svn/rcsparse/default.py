@@ -218,4 +218,4 @@ class Parser(common._Parser):
         pass
         # warn("Unexpected RCS token: $token\n")
 
-    raise RuntimeError, "Unexpected EOF";
+    raise RuntimeError, "Unexpected EOF"
