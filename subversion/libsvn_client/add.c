@@ -148,6 +148,8 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
                   void *notify_baton,
                   apr_pool_t *pool)
 {
+  svn_error_t *err;
+
   /* If this is a URL, we want to drive a commit editor to create this
      directory. */
   if (svn_path_is_url (path))
@@ -233,8 +235,16 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
   /* This is a regular "mkdir" + "svn add" */
   SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, pool));
   
-  return svn_wc_add (path, NULL, SVN_INVALID_REVNUM,
-                     notify_func, notify_baton, pool);
+  err = svn_wc_add (path, NULL, SVN_INVALID_REVNUM,
+                    notify_func, notify_baton, pool);
+
+  /* Trying to add a directory with the same name as a file that is
+     scheduled for deletion is not supported.  Leaving an unversioned
+     directory makes the working copy hard to use.  */
+  if (err && err->apr_err == SVN_ERR_WC_NODE_KIND_CHANGE)
+    svn_io_remove_dir (path, pool); /* Discard error */
+
+  return err;
 }
 
 

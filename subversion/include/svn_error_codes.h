@@ -245,6 +245,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_WC_CORRUPT_TEXT_BASE,
               "Working copy text base is corrupt")
 
+  SVN_ERRDEF (SVN_ERR_WC_NODE_KIND_CHANGE,
+              "Cannot change node kind")
+
   SVN_ERRDEF (SVN_ERR_FS_GENERAL,
               "General filesystem error")
 
