@@ -17,6 +17,9 @@ a change to it.
      This also applies recursively, to all child directories & files.
 
 
+     [How about depth-0 directory locks? The use-case is to protect
+      dir props only; useful since those are not merged. --brane]
+
 
 Repository Implementation:
 --------------------------
@@ -34,14 +37,35 @@ Repository Implementation:
           read and write -- because then we'd open the door to
           implementing 'read hooks'.)
 
+   [Looking at this again, I find there's one big problem with using
+    the repos layer for this. It means the lock table has to be
+    exposed through the FS API. That's a) inconsistent, and b) a
+    dangerous restriction for implementing different FS backends.
+    'fs_lock/unlock' are generic enough, but 'fs_lookup_lock_table'
+    should be an implementatin detail.  -- brane]
+
 * Locks table
 
    How should this be implemented?  As a separate BDB table managed by
    libsvn_repos?  That would certainly scale, but then it might create
-   NFS problems, etc.  Another idea is to use an XML file (parsed once
+   NFS problems, etc.
+
+   [Huh? What NFS problems would it create that the repository doesn't
+    already have? Well, really. --brane]
+
+   Another idea is to use an XML file (parsed once
    and stored in the svn_repos_t), or even a human-editable INI file,
    like our other configs.   This last option might be very friendly
    for admins who want to peruse and/or hand-tweak locks.
+
+   [Please don't even think of anything but a FS-backend-specific
+    lookup table. Will you rewrite some text file every time a lock
+    changes? With no transaction-based consistency protection?
+    Will you let the admin edit the lock file behind a running
+    server's back? And more to the point, will you take the penalty
+    of keeping the whole lookup table in memory after we add ACL
+    lookup to it and suddenly find that 50000 ACLS are no small
+    thing? *shudder* -- brane]
 
 
 -----------------
@@ -72,9 +96,17 @@ Framework:
        Instead, we identify locks by uniquely named lock-tokens.
        Hence the UUID.]
 
+       [+2. Also think about optinally adding the client name and local
+        path to the locked file to the token (not only 'who', but 'where')
+        -- useful info in an in-company team. Also a note, commit-log
+        template if you will, which could be used to describe the
+        reason for the lock to other users. So not only 'who' and
+        'where', but also 'why'. Also the lock depth, for directories.
+        --brane]
+
    - 'svn lock' returns a lock-token to the client, then stored in the WC.
       If the connection is unauthenticated, then the lock creation fails.
-      In other words, we don't allow "anonymous" locks.        
+      In other words, we don't allow "anonymous" locks.
 
    - 'svn commit' notices the lock-token on a committable object, and
      sends it when building the repository transaction.  (The server
@@ -84,9 +116,18 @@ Framework:
    - 'svn unlock' also requires authentication (but not a token).  If
      successful, the lock is removed from the path.
 
+     [Um. Only the lock owner (and an admin, yes) should be able to
+      remove a lock. Therefore a lock token should be required by
+      default. You could overroide that with "svn unlock --force".
+      Then after we add ACLs, there will also be a 'break locks'
+      global privilege -- brane]
+
    - need to extend 'svn status' to include locked objects in its
      standard display of "interesting things."  (Additionally, 'svn st
      -u' probably needs to show objects locked in the repository?)
+
+     [Yup, including the 'where' and 'why' of a lock, if verbose. :-)
+      -- brane]
 
 
 UI interaction models:
@@ -97,6 +138,9 @@ UI interaction models:
        lock' it first.  If you forget to do that, then you run the
        risk of wasting time on unresolvable changes... and you deserve
        whatever happens to you.
+
+       [And we deserve any abuse we get for implementing such a broken
+        system. :-\ Let's not reinvent the wheel here. --brane]
 
    - From brane and jpieper, an extension of the above:
 
@@ -111,6 +155,11 @@ UI interaction models:
        Note that you can still 'svn lock' any file you want.  The
        special property isn't required, it's just a way of helping
        people remember that a file is unmergeable.
+
+       [I suggest that this should be a read-only liveprop whose
+        value is implied by server-side configuration, and can't
+        be modified by the client. This is a repository policy,
+        not a user decision. -- brane]
 
 
 Weird scenarios with lock-tokens/working-copies:
@@ -132,8 +181,37 @@ Weird scenarios with lock-tokens/working-copies:
           into one, so there's no small window of time where someone
           else might lock the file?
 
+      [This is entirely common and reasonable. The most common use for
+       locking a file is to prevent concurrent changes to unmergeable
+       files. 'Concurrent' means 'in different working copies', not
+       'by different users'. IF the user is so concerned about losing
+       the file lock during the unlocked window, well, then they
+       shouldn't change working copies in the first place. There's
+       no need to complicate things by introducing atomic lock
+       ownership transfer.
+       Now if you _really_ need it, you can do "svn lock --force" to
+       steal the existing lock. Again, later on, the ACL can tell you
+       if a) you can steal locks at all, and b) you can steal other
+       people's, not just your own. -- brane]
+
         * Question: what about the first working copy?  It still
           thinks it has a lock, but that lock doesn't even exist
           anymore.  It's been destroyed.  What's the mechanism for the
           working copy to learn this and toss its dead lock-token?
 
+      [Aha, I've been thinking about that. First of all, a lock token
+       is obviously unique to the working copy, not to the user. The
+       WC "owns" a copy of the lock token, but the master is in the
+       repository. I suggest the update editor's description of the
+       current state should include lock tokens, and the response
+       should tell if the locks are stale. This would let the client
+       remove out-of-date locks at "svn update" or even "svn st -u"
+       (although that would be a bit weird, given that "status" is
+       supposed to be a non-modifying command). The result of having
+       your lock removed externally would be similar to a conflict
+       during update. "svn commit" should fail with an out-of-date if
+       the lock token isn't current.
+       Oh by the way, all of this implies that the server never
+       transmits the lock GUID to anyone once the lock token has been
+       sent to the owner after an "svn lock", otherwise you open the
+       door to lock spoofing -- _not_ a good idea! --brane]
