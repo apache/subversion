@@ -23,6 +23,7 @@
 #include "svn_client.h"
 #include "svn_ra.h"
 #include "svn_error.h"
+#include "svn_io.h"
 
 
 /*-----------------------------------------------------------------------*/
@@ -43,7 +44,13 @@ typedef struct svn_auth_info_baton_t
 static svn_error_t *
 store_auth_info (void *baton)
 {
+  enum svn_node_kind kind;
   svn_auth_info_baton_t *aibt = (svn_auth_info_baton_t *) baton;
+
+  /* Sanity check */
+  SVN_ERR (svn_io_check_path (aibt->path, &kind, aibt->pool));
+  if (kind != svn_node_dir)
+    return SVN_NO_ERROR;
 
   /* If present, recursively store the username. */
   if (aibt->username)
@@ -95,7 +102,7 @@ authorize_username (void **session_baton,
     {
       err = svn_wc_get_auth_file (path, SVN_CLIENT_AUTH_USERNAME,
                                   &username, pool);
-      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
+      if (err)
         {
           /* 3. Else, just use the process owner. */
           char *un;
@@ -175,7 +182,7 @@ authorize_simple_password (void **session_baton,
     {
       err = svn_wc_get_auth_file (path, SVN_CLIENT_AUTH_USERNAME,
                                   &username, pool);
-      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
+      if (err)
         {
           /* 3. From the user directly, by prompting */
           char *answer;
@@ -202,7 +209,7 @@ authorize_simple_password (void **session_baton,
     {
       err = svn_wc_get_auth_file (path, SVN_CLIENT_AUTH_PASSWORD,
                                   &password, pool);
-      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
+      if (err)
         {
           /* 3. From the user directly, by prompting */
           char *answer;
