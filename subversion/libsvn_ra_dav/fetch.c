@@ -738,7 +738,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
 {
   svn_ra_dav_resource_t *rsrc;
   const char *final_url;
-  svn_ra_session_t *ras = (svn_ra_session_t *) session_baton;
+  svn_ra_session_t *ras = session_baton;
   const char *url = svn_path_url_add_component (ras->url, path, pool);
 
   /* If the revision is invalid (head), then we're done.  Just fetch
@@ -852,7 +852,7 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
   apr_hash_t *resources;
   const char *final_url;
   apr_size_t final_url_n_components;
-  svn_ra_session_t *ras = (svn_ra_session_t *) session_baton;
+  svn_ra_session_t *ras = session_baton;
   const char *url = svn_path_url_add_component (ras->url, path, pool);
 
   /* If the revision is invalid (head), then we're done.  Just fetch
@@ -1494,7 +1494,7 @@ static void push_dir(report_baton_t *rb,
                      svn_stringbuf_t *pathbuf,
                      apr_pool_t *pool)
 {
-  dir_item_t *di = (dir_item_t *)apr_array_push(rb->dirs);
+  dir_item_t *di = apr_array_push(rb->dirs);
 
   memset(di, 0, sizeof(*di));
   di->baton = baton;
