@@ -66,7 +66,7 @@ typedef struct
   const char *vsn_url;
   const char *wr_url;
 
-  svn_stringbuf_t *local_path;
+  const char *local_path;
 } resource_t;
 
 typedef struct
@@ -193,7 +193,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc, resource_t *rsrc,
       const svn_string_t *vsn_url_value;
 
       SVN_ERR( (*cc->get_func)(cc->close_baton,
-                               rsrc->local_path->data,
+                               rsrc->local_path,
                                SVN_RA_DAV__LP_VSN_URL,
                                &vsn_url_value,
                                cc->ras->pool) );
@@ -317,6 +317,7 @@ static svn_error_t * add_child(resource_t **child,
                                int created,
                                svn_revnum_t revision)
 {
+  /* use ras->pool for the proper lifetime */
   apr_pool_t *pool = cc->ras->pool;
   resource_t *rsrc;
 
@@ -328,10 +329,8 @@ static svn_error_t * add_child(resource_t **child,
   */
 
   rsrc = apr_pcalloc(pool, sizeof(*rsrc));
-  rsrc->url = apr_pstrcat(pool, parent->url, "/", name, NULL);
-
-  rsrc->local_path = svn_stringbuf_dup(parent->local_path, pool);
-  svn_path_add_component_nts(rsrc->local_path, name);
+  rsrc->url = svn_path_join(parent->url, name, pool);
+  rsrc->local_path = svn_path_join(parent->local_path, name, pool);
 
   /* Case 1:  the resource is truly "new".  Either it was added as a
      completely new object, or implicitly created via a COPY.  Either
@@ -340,8 +339,7 @@ static svn_error_t * add_child(resource_t **child,
      the WR you COPY to."  */
   if (created || (parent->vsn_url == NULL))
     {
-      /* ### does the workcol have a trailing slash? do some extra work */
-      rsrc->wr_url = apr_pstrcat(pool, parent->wr_url, "/", name, NULL);
+      rsrc->wr_url = svn_path_join(parent->wr_url, name, pool);
     }
 
   /* Case 2: the resource is already under version-control somewhere.
@@ -426,7 +424,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
                                    "Server returned a Conflict Error:\n "
                                    "Your copy of '%s' " 
                                    "is probably out-of-date.",
-                                   res->local_path->data);
+                                   res->local_path);
         }
       /* ### other likely status codes we can look for? */
       else
@@ -458,9 +456,15 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
 
 static void record_prop_change(apr_pool_t *pool,
                                resource_baton_t *r,
-                               const svn_stringbuf_t *name,
-                               const svn_stringbuf_t *value)
+                               const char *name,
+                               const svn_string_t *value)
 {
+  /* copy the name into the pool so we get the right lifetime (who knows
+     what the caller will do with it) */
+  /* ### this isn't strictly need for the table case, but we're going
+     ### to switch that to a hash soon */
+  name = apr_pstrdup(pool, name);
+
   if (value)
     {
       svn_stringbuf_t *escaped = NULL;
@@ -469,19 +473,17 @@ static void record_prop_change(apr_pool_t *pool,
       if (r->prop_changes == NULL)
         r->prop_changes = apr_table_make(pool, 5);
 
-      svn_xml_escape_stringbuf(&escaped, value, pool);
-      apr_table_set(r->prop_changes, name->data, escaped->data);
+      svn_xml_escape_string(&escaped, value, pool);
+      apr_table_set(r->prop_changes, name, escaped->data);
     }
   else
     {
       /* deleted property. */
-      const char **elt;
 
       if (r->prop_deletes == NULL)
         r->prop_deletes = apr_array_make(pool, 5, sizeof(char *));
   
-      elt = apr_array_push(r->prop_deletes);
-      *elt = apr_pstrdup(pool, name->data);
+      *(const char **)apr_array_push(r->prop_deletes) = name;
     }
 }
 
@@ -583,25 +585,25 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
 }
 
 static svn_error_t * commit_open_root(void *edit_baton,
-                                      svn_revnum_t base_revision, 
+                                      svn_revnum_t base_revision,
+                                      apr_pool_t *dir_pool,
                                       void **root_baton)
 {
   commit_ctx_t *cc = edit_baton;
   resource_baton_t *root;
   resource_t *rsrc;
 
-  /* create the root resource. no wr_url (yet) */
+  /* create the root resource. no wr_url (yet). use ras->pool for the
+     proper lifetime of the resource. */
   rsrc = apr_pcalloc(cc->ras->pool, sizeof(*rsrc));
   rsrc->url = cc->ras->root.path;
-
-  /* ### should we use the WC symbol? (SVN_WC_ENTRY_THIS_DIR) */
-  rsrc->local_path = svn_stringbuf_create("", cc->ras->pool);
+  rsrc->local_path = "";
 
   SVN_ERR( get_version_url(cc, rsrc, SVN_INVALID_REVNUM) );
 
   apr_hash_set(cc->resources, rsrc->url, APR_HASH_KEY_STRING, rsrc);
 
-  root = apr_pcalloc(cc->ras->pool, sizeof(*root));
+  root = apr_pcalloc(dir_pool, sizeof(*root));
   root->cc = cc;
   root->rsrc = rsrc;
 
@@ -610,12 +612,13 @@ static svn_error_t * commit_open_root(void *edit_baton,
   return NULL;
 }
 
-static svn_error_t * commit_delete_entry(svn_stringbuf_t *name,
+static svn_error_t * commit_delete_entry(const char *path,
                                          svn_revnum_t revision,
-                                         void *parent_baton)
+                                         void *parent_baton,
+                                         apr_pool_t *pool)
 {
   resource_baton_t *parent = parent_baton;
-  apr_pool_t *pool = parent->cc->ras->pool;
+  const char *name = svn_path_basename(path, pool);
   const char *child;
   int code;
 
@@ -623,8 +626,7 @@ static svn_error_t * commit_delete_entry(svn_stringbuf_t *name,
   SVN_ERR( checkout_resource(parent->cc, parent->rsrc) );
 
   /* create the URL for the child resource */
-  /* ### does the workcol have a trailing slash? do some extra work */
-  child = apr_pstrcat(pool, parent->rsrc->wr_url, "/", name->data, NULL);
+  child = svn_path_join(parent->rsrc->wr_url, name, pool);
 
   /* Note: the child cannot have a resource stored in the resources table
      because of the editor traversal rules. That is: this is the first time
@@ -645,32 +647,34 @@ static svn_error_t * commit_delete_entry(svn_stringbuf_t *name,
                                "Could not DELETE %s", child);
     }
 
+  /* duplicate the path into ras->pool for the proper lifetime */
   *(const char **)apr_array_push(parent->cc->deleted) =
-    apr_pstrcat(pool, parent->rsrc->local_path->data, "/", name->data, NULL);
+    apr_pstrdup(parent->cc->ras->pool, path);
 
   return NULL;
 }
 
-static svn_error_t * commit_add_dir(svn_stringbuf_t *name,
+static svn_error_t * commit_add_dir(const char *path,
                                     void *parent_baton,
-                                    svn_stringbuf_t *copyfrom_path,
+                                    const char *copyfrom_path,
                                     svn_revnum_t copyfrom_revision,
+                                    apr_pool_t *dir_pool,
                                     void **child_baton)
 {
   resource_baton_t *parent = parent_baton;
-  apr_pool_t *pool = parent->cc->ras->pool;
   resource_baton_t *child;
   int code;
+  const char *name = svn_path_basename(path, dir_pool);
 
   /* check out the parent resource so that we can create the new collection
      as one of its children. */
   SVN_ERR( checkout_resource(parent->cc, parent->rsrc) );
 
   /* create a child object that contains all the resource urls */
-  child = apr_pcalloc(pool, sizeof(*child));
+  child = apr_pcalloc(dir_pool, sizeof(*child));
   child->cc = parent->cc;
   SVN_ERR( add_child(&child->rsrc, parent->cc, parent->rsrc,
-                     name->data, 1, SVN_INVALID_REVNUM) );
+                     name, 1, SVN_INVALID_REVNUM) );
 
   if (! copyfrom_path)
     {
@@ -683,14 +687,14 @@ static svn_error_t * commit_add_dir(svn_stringbuf_t *name,
         {
           /* ### need to be more sophisticated with reporting the failure */
           return 
-            svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL, pool,
-                              "MKCOL request failed for '%s'", name->data);
+            svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL, dir_pool,
+                              "MKCOL request failed for '%s'", path);
         }
     }
   else
     {
       svn_string_t bc_url, bc_relative;
-      svn_stringbuf_t *src_url;
+      const char *copy_src;
       int status;
 
       /* This add has history, so we need to do a COPY. */
@@ -701,30 +705,29 @@ static svn_error_t * commit_add_dir(svn_stringbuf_t *name,
       SVN_ERR( svn_ra_dav__get_baseline_info(NULL,
                                              &bc_url, &bc_relative, NULL,
                                              parent->cc->ras->sess,
-                                             copyfrom_path->data,
+                                             copyfrom_path,
                                              copyfrom_revision,
-                                             pool));
+                                             dir_pool));
 
 
       /* Combine the BC-URL and relative path; this is the main
          "source" argument to the COPY request.  The "Destination:"
          header given to COPY is simply the wr_url that is already
          part of the child object. */
-      src_url = svn_stringbuf_create(bc_url.data, pool);
-      svn_path_add_component_nts(src_url, bc_relative.data);
+      copy_src = svn_path_join(bc_url.data, bc_relative.data, dir_pool);
 
       /* Have neon do the COPY. */
       status = ne_copy(parent->cc->ras->sess,
                        1,                   /* overwrite */
                        NE_DEPTH_INFINITE,   /* always copy dirs deeply */
-                       src_url->data,       /* source URI */
+                       copy_src,            /* source URI */
                        child->rsrc->wr_url); /* dest URI */
 
       if (status != NE_OK)
         {
-          const char *msg = apr_psprintf(pool, "COPY of %s", name->data);
+          const char *msg = apr_psprintf(dir_pool, "COPY of %s", path);
           return svn_ra_dav__convert_error(parent->cc->ras->sess,
-                                           msg, status, pool);
+                                           msg, status, dir_pool);
         }
     }
 
@@ -732,18 +735,19 @@ static svn_error_t * commit_add_dir(svn_stringbuf_t *name,
   return NULL;
 }
 
-static svn_error_t * commit_open_dir(svn_stringbuf_t *name,
+static svn_error_t * commit_open_dir(const char *path,
                                      void *parent_baton,
                                      svn_revnum_t base_revision,
+                                     apr_pool_t *dir_pool,
                                      void **child_baton)
 {
   resource_baton_t *parent = parent_baton;
-  apr_pool_t *pool = parent->cc->ras->pool;
-  resource_baton_t *child = apr_pcalloc(pool, sizeof(*child));
+  resource_baton_t *child = apr_pcalloc(dir_pool, sizeof(*child));
+  const char *name = svn_path_basename(path, dir_pool);
 
   child->cc = parent->cc;
   SVN_ERR( add_child(&child->rsrc, parent->cc, parent->rsrc,
-                     name->data, 0, base_revision) );
+                     name, 0, base_revision) );
 
   /*
   ** Note: open_dir simply means that a change has occurred somewhere
@@ -760,12 +764,14 @@ static svn_error_t * commit_open_dir(svn_stringbuf_t *name,
 }
 
 static svn_error_t * commit_change_dir_prop(void *dir_baton,
-                                            svn_stringbuf_t *name,
-                                            svn_stringbuf_t *value)
+                                            const char *name,
+                                            const svn_string_t *value,
+                                            apr_pool_t *pool)
 {
   resource_baton_t *dir = dir_baton;
 
   /* record the change. it will be applied at close_dir time. */
+  /* ### we should put this into the dir_baton's pool */
   record_prop_change(dir->cc->ras->pool, dir, name, value);
 
   /* do the CHECKOUT sooner rather than later */
@@ -785,17 +791,16 @@ static svn_error_t * commit_close_dir(void *dir_baton)
   return NULL;
 }
 
-static svn_error_t * commit_add_file(svn_stringbuf_t *name,
+static svn_error_t * commit_add_file(const char *path,
                                      void *parent_baton,
-                                     svn_stringbuf_t *copyfrom_path,
+                                     const char *copyfrom_path,
                                      svn_revnum_t copyfrom_revision,
+                                     apr_pool_t *file_pool,
                                      void **file_baton)
 {
   resource_baton_t *parent = parent_baton;
-  apr_pool_t *pool = parent->cc->ras->pool;
   resource_baton_t *file;
-
-  /* ### store name, parent? */
+  const char *name = svn_path_basename(path, file_pool);
 
   /*
   ** To add a new file into the repository, we CHECKOUT the parent
@@ -810,10 +815,10 @@ static svn_error_t * commit_add_file(svn_stringbuf_t *name,
   SVN_ERR( checkout_resource(parent->cc, parent->rsrc) );
 
   /* Construct a file_baton that contains all the resource urls. */
-  file = apr_pcalloc(pool, sizeof(*file));
+  file = apr_pcalloc(file_pool, sizeof(*file));
   file->cc = parent->cc;
   SVN_ERR( add_child(&file->rsrc, parent->cc, parent->rsrc,
-                     name->data, 1, SVN_INVALID_REVNUM) );
+                     name, 1, SVN_INVALID_REVNUM) );
 
   if (! copyfrom_path)
     {
@@ -828,7 +833,7 @@ static svn_error_t * commit_add_file(svn_stringbuf_t *name,
   else
     {
       svn_string_t bc_url, bc_relative;
-      svn_stringbuf_t *src_url;
+      const char *copy_src;
       int status;
 
       /* This add has history, so we need to do a COPY. */
@@ -839,30 +844,29 @@ static svn_error_t * commit_add_file(svn_stringbuf_t *name,
       SVN_ERR( svn_ra_dav__get_baseline_info(NULL,
                                              &bc_url, &bc_relative, NULL,
                                              parent->cc->ras->sess,
-                                             copyfrom_path->data,
+                                             copyfrom_path,
                                              copyfrom_revision,
-                                             pool));
+                                             file_pool));
 
 
       /* Combine the BC-URL and relative path; this is the main
          "source" argument to the COPY request.  The "Destination:"
          header given to COPY is simply the wr_url that is already
          part of the file_baton. */
-      src_url = svn_stringbuf_create(bc_url.data, pool);
-      svn_path_add_component_nts(src_url, bc_relative.data);
+      copy_src = svn_path_join(bc_url.data, bc_relative.data, file_pool);
 
       /* Have neon do the COPY. */
       status = ne_copy(parent->cc->ras->sess,
                        1,                   /* overwrite */
                        NE_DEPTH_ZERO,       /* for a file, does it care? */
-                       src_url->data,       /* source URI */
+                       copy_src,            /* source URI */
                        file->rsrc->wr_url); /* dest URI */
 
       if (status != NE_OK)
         {
-          const char *msg = apr_psprintf(pool, "COPY of %s", name->data);
+          const char *msg = apr_psprintf(file_pool, "COPY of %s", path);
           return svn_ra_dav__convert_error(parent->cc->ras->sess,
-                                           msg, status, pool);
+                                           msg, status, file_pool);
         }
     }
 
@@ -871,19 +875,20 @@ static svn_error_t * commit_add_file(svn_stringbuf_t *name,
   return NULL;
 }
 
-static svn_error_t * commit_open_file(svn_stringbuf_t *name,
+static svn_error_t * commit_open_file(const char *path,
                                       void *parent_baton,
                                       svn_revnum_t base_revision,
+                                      apr_pool_t *file_pool,
                                       void **file_baton)
 {
   resource_baton_t *parent = parent_baton;
-  apr_pool_t *pool = parent->cc->ras->pool;
   resource_baton_t *file;
+  const char *name = svn_path_basename(path, file_pool);
 
-  file = apr_pcalloc(pool, sizeof(*file));
+  file = apr_pcalloc(file_pool, sizeof(*file));
   file->cc = parent->cc;
   SVN_ERR( add_child(&file->rsrc, parent->cc, parent->rsrc,
-                     name->data, 0, base_revision) );
+                     name, 0, base_revision) );
 
   /* do the CHECKOUT now. we'll PUT the new file contents later on. */
   SVN_ERR( checkout_resource(parent->cc, file->rsrc) );
@@ -924,7 +929,7 @@ static svn_error_t * commit_stream_close(void *baton)
   int code;
   apr_status_t status;
   apr_off_t offset = 0;
-  svn_stringbuf_t *url_str = escape_url(rsrc->wr_url, cc->ras->pool);
+  svn_stringbuf_t *url_str = escape_url(rsrc->wr_url, pb->pool);
 
   /* create/prep the request */
   req = ne_request_create(cc->ras->sess, "PUT", url_str->data);
@@ -1004,7 +1009,7 @@ commit_apply_txdelta(void *file_baton,
   put_baton_t *baton;
   svn_stream_t *stream;
 
-  /* construct a writable stream that gathers its contents into a buffer */
+  /* ### should use the file_baton's pool */
   subpool = svn_pool_create(file->cc->ras->pool);
 
   baton = apr_pcalloc(subpool, sizeof(*baton));
@@ -1033,14 +1038,15 @@ commit_apply_txdelta(void *file_baton,
   return NULL;
 }
 
-static svn_error_t * commit_change_file_prop(
-  void *file_baton,
-  svn_stringbuf_t *name,
-  svn_stringbuf_t *value)
+static svn_error_t * commit_change_file_prop(void *file_baton,
+                                             const char *name,
+                                             const svn_string_t *value,
+                                             apr_pool_t *pool)
 {
   resource_baton_t *file = file_baton;
 
   /* record the change. it will be applied at close_file time. */
+  /* ### we should put this into the file_baton's pool */
   record_prop_change(file->cc->ras->pool, file, name, value);
 
   /* do the CHECKOUT sooner rather than later */
@@ -1149,7 +1155,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   svn_ra_session_t *ras = session_baton;
 
   /* The main commit editor and its baton. */
-  svn_delta_edit_fns_t *commit_editor;
+  svn_delta_editor_t *commit_editor;
   commit_ctx_t *cc;
 
   /* The editor we return will be composed with a tracking editor,
@@ -1158,6 +1164,10 @@ svn_error_t * svn_ra_dav__get_commit_editor(
      bumping directories on commit. */
   svn_delta_edit_fns_t *tracking_editor;
   void *tracking_baton;
+
+  /* ### temporary, until we can use the new-style editor directly */
+  const svn_delta_edit_fns_t *wrapped_editor;
+  void *wrapped_baton;
 
   /* Build the main commit editor's baton. */
   cc = apr_pcalloc(ras->pool, sizeof(*cc));
@@ -1198,7 +1208,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   ** uses these callbacks to describe all the changes in the working copy
   ** that must be committed to the server.
   */
-  commit_editor = svn_delta_old_default_editor(ras->pool);
+  commit_editor = svn_delta_default_editor(ras->pool);
   commit_editor->open_root = commit_open_root;
   commit_editor->delete_entry = commit_delete_entry;
   commit_editor->add_directory = commit_add_dir;
@@ -1212,6 +1222,11 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   commit_editor->close_file = commit_close_file;
   commit_editor->close_edit = commit_close_edit;
 
+  /* ### temporary: wrap our commit editor */
+  svn_delta_compat_wrap(&wrapped_editor, &wrapped_baton,
+                        commit_editor, cc,
+                        ras->pool);
+
   /* Get the tracking editor. */
   SVN_ERR( svn_delta_get_commit_track_editor(&tracking_editor,
                                              &tracking_baton,
@@ -1224,7 +1239,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   /* Compose the two editors, returning the composition by reference. */
   svn_delta_compose_editors(editor, edit_baton,
                             tracking_editor, tracking_baton,
-                            commit_editor, cc,
+                            wrapped_editor, wrapped_baton,
                             ras->pool);
 
   return NULL;
