@@ -19,6 +19,7 @@
 
 #include "apr_pools.h"
 #include "svn_error.h"
+#include "svn_fs.h"
 
 
 /* Return an svn_error_t object that reports a Berkeley DB error.
@@ -74,29 +75,6 @@ svn_error_t *svn_fs__wrap_db (svn_fs_t *fs,
 svn_error_t *svn_fs__check_fs (svn_fs_t *fs);
 
 
-/* Try a Berkeley DB transaction repeatedly until it doesn't deadlock.
-
-   That is:
-   - Begin a new Berkeley DB transaction, DB_TXN, in the filesystem FS.
-   - Apply TXN_BODY to BATON and DB_TXN.  TXN_BODY should try to do
-     some series of DB operations which needs to be atomic, using
-     DB_TXN as the transaction.  If a DB operation deadlocks, or if
-     any other kind of error happens, TXN_BODY should simply return
-     with an appropriate svn_error_t.
-   - If TXN_BODY returns an error indicating that a deadlock occurred,
-     retry the operation.
-   - Otherwise, return what TXN_BODY returned.
-
-   One benefit of using this function is that it makes it easy to
-   ensure that whatever transactions a filesystem function starts, it
-   either aborts or commits before it returns.  If we don't somehow
-   complete all our transactions, later operations could deadlock.  */
-svn_error_t *svn_fs__retry_txn (svn_fs_t *fs,
-				svn_error_t *(*txn_body) (void *baton,
-							  DB_TXN *db_txn),
-				void *baton);
-
-
 
 /* Building common error objects.  */
 
@@ -112,11 +90,21 @@ svn_error_t *svn_fs__err_corrupt_node_revision (svn_fs_t *fs,
 /* SVN_ERR_FS_CORRUPT: ID is a node ID, not a node revision ID.  */
 svn_error_t *svn_fs__err_corrupt_id (svn_fs_t *fs, const svn_fs_id_t *id);
 
+/* SVN_ERR_FS_CORRUPT: the clone record for BASE_PATH in SVN_TXN in FS
+   is corrupt.  */
+svn_error_t *svn_fs__err_corrupt_clone (svn_fs_t *fs,
+					const char *svn_txn,
+					const char *base_path);
+
 /* SVN_ERR_FS_CORRUPT: something in FS refers to node revision ID, but
    that node revision doesn't exist.  */
 svn_error_t *svn_fs__err_dangling_id (svn_fs_t *fs, const svn_fs_id_t *id);
 
 /* SVN_ERR_FS_CORRUPT: a key in FS's `nodes' table is bogus.  */
 svn_error_t *svn_fs__err_corrupt_nodes_key (svn_fs_t *fs);
+
+/* SVN_ERR_FS_NOT_MUTABLE: the caller attempted to change a node revision
+   which is not mutable.  */
+svn_error_t *svn_fs__err_not_mutable (svn_fs_t *fs, const svn_fs_id_t *id);
 
 #endif /* SVN_LIBSVN_FS_ERR_H */

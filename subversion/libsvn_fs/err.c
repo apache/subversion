@@ -72,48 +72,6 @@ svn_fs__check_fs (svn_fs_t *fs)
 }
 
 
-svn_error_t *
-svn_fs__retry_txn (svn_fs_t *fs,
-		   svn_error_t *(*txn_body) (void *baton,
-					     DB_TXN *db_txn),
-		   void *baton)
-{
-  for (;;)
-    {
-      DB_TXN *db_txn;
-      svn_error_t *svn_err;
-      
-      SVN_ERR (DB_WRAP (fs, "creating transaction (beginning DB transaction)",
-			txn_begin (fs->env, 0, &db_txn, 0)));
-
-      /* Do the body of the transaction.  */
-      svn_err = (*txn_body) (baton, db_txn);
-
-      if (! svn_err)
-	{
-	  /* The transaction succeeded!  Commit it.  */
-	  SVN_ERR (DB_WRAP (fs,
-			    "creating transaction (committing DB transaction)",
-			    txn_commit (db_txn, 0)));
-	  return 0;
-	}
-
-      /* Is this a real error, or do we just need to retry?  */
-      if (svn_err->apr_err != SVN_ERR_BERKELEY_DB
-	  || svn_err->src_err != DB_LOCK_DEADLOCK)
-	{
-	  /* Ignore any error returns.  The first error is more valuable.  */
-	  txn_abort (db_txn);
-	  return svn_err;
-	}
-
-      /* We deadlocked.  Abort the transaction, and try again.  */
-      SVN_ERR (DB_WRAP (fs, "creating transaction (aborting DB transaction)",
-			txn_abort (db_txn)));
-    }
-}
-
-
 
 /* Building common error objects.  */
 
@@ -147,6 +105,19 @@ svn_fs__err_corrupt_node_revision (svn_fs_t *fs, const svn_fs_id_t *id)
 
 
 svn_error_t *
+svn_fs__err_corrupt_clone (svn_fs_t *fs,
+			   const char *svn_txn,
+			   const char *base_path)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
+     "corrupt clone record for `%s' in transaction `%s' in filesystem `%s'",
+     base_path, svn_txn, fs->env_path);
+}
+
+
+svn_error_t *
 svn_fs__err_corrupt_id (svn_fs_t *fs, const svn_fs_id_t *id)
 {
   return
@@ -171,4 +142,17 @@ svn_fs__err_corrupt_nodes_key (svn_fs_t *fs)
     svn_error_createf
     (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
      "malformed ID as key in `nodes' table of filesystem `%s'", fs->env_path);
+}
+
+
+svn_error_t *
+svn_fs__err_not_mutable (svn_fs_t *fs, const svn_fs_id_t *id)
+{
+  svn_string_t *unparsed_id = svn_fs_unparse_id (id, fs->pool);
+
+  return
+    svn_error_createf
+    (SVN_ERR_FS_NOT_MUTABLE, 0, 0, fs->pool,
+     "attempt to modify committed node revision `%s' in filesystem `%s'",
+     unparsed_id->data, fs->env_path);
 }

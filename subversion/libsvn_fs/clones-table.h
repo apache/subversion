@@ -15,18 +15,20 @@
 #define SVN_LIBSVN_FS_CLONES_TABLE_H
 
 #include "svn_fs.h"
+#include "trail.h"
+#include "skel.h"
+
 
 /* Set *CLONE_INFO_P to the entry from the `clones' table for
    BASE_PATH in the Subversion transaction SVN_TXN in FS, or zero if
-   there is no such entry, as part of the Berkeley DB transaction
-   DB_TXN.  This assures that *CLONE_INFO_P is either zero or a
-   well-formed CLONE skel.  Allocate the result in POOL.  */
+   there is no such entry, as part of TRAIL.  This assures that
+   *CLONE_INFO_P is either zero or a well-formed CLONE skel.  Allocate
+   the result in TRAIL->pool.  */
 svn_error_t *svn_fs__check_clone (skel_t **clone_info_p,
 				  svn_fs_t *fs,
 				  const char *svn_txn,
 				  const char *base_path,
-				  DB_TXN *db_txn,
-				  apr_pool_t *pool);
+				  trail_t *trail);
 
 
 /* If CLONE_INFO indicates that a node was cloned, set *CLONE_ID_P to
@@ -44,6 +46,26 @@ int svn_fs__is_cloned (skel_t **clone_id_p, skel_t *clone_info);
 int svn_fs__is_renamed (skel_t **parent_clone_id_p,
 			skel_t **entry_name_p,
 			skel_t *clone_info);
+
+
+/* Record that BASE_PATH was cloned in the Subversion transaction
+   SVN_TXN to produce node CLONE_ID in FS, as part of TRAIL.  */
+svn_error_t *svn_fs__record_clone (svn_fs_t *fs,
+				   const char *svn_txn,
+				   const char *base_path,
+				   const svn_fs_id_t *clone_id,
+				   trail_t *trail);
+
+
+/* Record that BASE_PATH was renamed in the Subversion transaction
+   SVN_TXN, and is now named ENTRY_NAME in the mutable directory
+   PARENT_ID, as part of TRAIL.  */
+svn_error_t *svn_fs__record_rename (svn_fs_t *fs,
+				    const char *svn_txn,
+				    const char *base_path,
+				    const svn_fs_id_t *parent_id,
+				    const char *entry_name,
+				    trail_t *trail);
 
 
 #endif /* SVN_LIBSVN_FS_CLONES_TABLE_H */
