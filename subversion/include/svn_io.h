@@ -664,7 +664,7 @@ svn_io_file_read (apr_file_t *file, void *buf,
                   apr_size_t *nbytes, apr_pool_t *pool);
 
 
-/** Wrapper for @c apr_file_write_full(), which see. */
+/** Wrapper for @c apr_file_read_full(), which see. */
 svn_error_t *
 svn_io_file_read_full (apr_file_t *file, void *buf, 
                        apr_size_t nbytes, apr_size_t *bytes_read,
