@@ -1,0 +1,172 @@
+HOW-TO:  Compiling the Subversion Book
+======================================
+
+This Subversion Book is written in Docbook Lite, a scaled-down version
+of the Docbook DTD, used by O'Reilly & Associates.
+
+The goal of this document is to give simple instructions to anyone who
+wants to compile this book into a useful format, like HTML or PDF.  It
+should state *exactly* which tools to use, and how to invoke them, in
+simplest terms.
+
+Table of Contents:
+
+  I. PRIMER
+ II. COMPILING THE DOCS
+III. HACKING ON THE DOCS
+
+I. PRIMER
+
+  Docbook has a tortured, confusing history.  Before you do anything,
+  take a look at Eric Raymond's excellent "Docbook Demystification HOWTO":
+
+     http://tldp.org/HOWTO/DocBook-Demystification-HOWTO/
+
+  It's very short and clears up many things.
+
+  Note that there are actually two DocBook documents here: The book
+  itself, "Subversion: The Definitive Guide", and a miscellaneous
+  holding area known only as the "misc docs" (e.g., misc-docs.pdf,
+  etc).  The Misc Docs hold material that either isn't yet ready to go
+  into the Definitive Guide, or which may never go into the Guide but
+  instead into companion documents that will also be available from
+  the Subversion site.  Think of Misc Docs as a temporary, but
+  published, holding area.
+
+
+II. COMPILING THE DOCS
+
+
+1. Fetch XSL stylesheets for Docbook and place them in tools/xsl
+
+   The "Docbook Open Repository" on Sourceforge has a large collection
+   of XSL stylesheets that specifically operate on Docbook.  Download
+   and install the latest 'docbook-xsl' package from this page:
+  
+      http://sourceforge.net/project/showfiles.php?group_id=21935
+
+   Download docbook-xsl-1.56.1.tar.gz (or later), unpack it, then
+   rename the unpacked directory to tools/xsl, something like this:
+
+      $ cd subversion/doc/book/tools
+      $ tar zxvf docbook-xsl-1.56.1.tar.gz
+      $ mv docbook-xsl-1.56.1 xsl
+
+   The default build process expects to the stylesheets to be in
+   tools/xsl/.  If you already have them installed elsewhere on your
+   system, you can change the variable XSL_DIR in doc/book/Makefile.
+
+
+2. Use XSLT to transform the book.
+
+   XSLT applies an .xsl stylesheet to an .xml file, and produces some
+   new markup document.
+
+   * Get libxslt, a C library for XSLT, from http://xmlsoft.org/XSLT/.
+     (If you're having trouble finding a source package to compile,
+     try ftp://archive.progeny.com/GNOME/sources/libxslt/1.0/.)
+     Install it:
+
+        $ tar zxvf libxslt-1.0.22.tar.gz
+        $ cd libxslt-1.0.22
+        $ ./configure
+        $ ./make
+        # make install
+
+     (Note: you may discover that you need to install libxml2 first.
+     Find it at ftp://archive.progeny.com/GNOME/sources/libxml2/)
+
+     If you don't want to compile libxslt, you can just fetch the
+     appropriate OS binary package.  
+
+   * From the book directory, do 
+
+        make all-html
+
+     This produces an HTML version of the book in book/book.html, and
+     HTML for the miscellaneous docs in docs/docs.html.
+
+         
+3. Make a PDF file.
+
+   Formatting Objects (FO) is a layout language, kind of like
+   postscript, dvi or css.  People are quickly standardizing on it.
+
+   * Fetch FOP, a java program which converts .fo files into PDF:
+
+        http://xml.apache.org/fop/index.html
+
+     There are approximately 17576 ways to install FOP.  Rather than
+     describe them all, we will recommend one way.  If you've already
+     installed FOP some other way, that's fine, then you can ignore
+     the following recipe:
+
+        1. Download the latest from http://xml.apache.org/dist/fop/,
+           for example, fop-0.20.4-bin.tar.gz.  Just get a binary
+           distribution, there's no need for the Java source.
+
+        2. Unpack it into tools/fop/
+
+           $ cd subversion/doc/book/tools
+           $ tar zxvf fop-0.20.4-bin.tar.gz
+           $ mv fop-0.20.4 fop
+
+     That should be enough.  The Makefile will actually invoke
+     tools/bin/find-fop.sh.  That script attempts to find FOP already
+     installed on your system, but falls back to the FOP unpacked into
+     tools/fop/ if there's no other FOP available.
+
+     Of course, to run FOP at all, you also need a Java runtime
+     environment.  Try java.sun.com or www.blackdown.org if you don't
+     already have that. 
+
+   * If you want images to be included in the PDF, you'll need to use
+     the JIMI image processing library.  Grab the latest release from
+     http://java.sun.com/products/jimi/, then cp the jar file into the
+     same place as the FOP jar files:
+
+        $ cd subversion/doc/book/tools/
+        $ tar zxvf jimi1_0.tar.Z
+        $ cp Jimi/examples/AppletDemo/JimiProClasses.jar fop/lib/
+
+     Poof!  You now have PNG support.
+
+   * From the book directory, do
+
+        make all-pdf
+
+     This produces PDF for the book in book/book.pdf, and
+     PDF for the miscellaneous docs in docs/docs.pdf.
+
+
+III. HACKING ON THE DOCS
+
+In addition to everything in section II:
+
+
+1. Get a nice editing environment for SGML/XML.
+
+   This isn't strictly required, but it's nice when your editor
+   colorizes things, understands the DTD, tells you what tags you can
+   insert, etc.
+
+   If you use emacs, we recommend the PSGML major-mode.  Most free
+   operating systems package it, or its home page is here:
+
+         http://www.lysator.liu.se/projects/about_psgml.html
+
+   If you use vi... (### can someone recommend something?)
+
+
+2. Get a validating parser.
+
+   We recommend nsgmls, a parser written by James Clark:
+   http://www.jclark.com/sp/nsgmls.  It's nice to check that the XML
+   you write has matching tags, and follows the DTD correctly.
+
+
+3. Read about the DocBook lite tags.
+
+   The tools/dblite/doc/ area contains HTML documentation that
+   describes how to write with DocBook Lite.  Familiarize yourself
+   with these tags before changing the docs.

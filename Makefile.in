@@ -7,7 +7,10 @@ VPATH = @top_srcdir@
 SVN_RA_LIB_DEPS = @SVN_RA_LIB_DEPS@
 SVN_RA_LIB_LINK = @SVN_RA_LIB_LINK@
 
-DOC_DIRS = doc/programmer/design doc/handbook doc/handbook/translations/french
+DESIGN_DIR = doc/programmer/design
+BOOK_DIR = doc/book/book
+MDOCS_DIR = doc/book/misc-docs
+DOC_DIRS = $(DESIGN_DIR) $(BOOK_DIR) $(MDOCS_DIR) 
 
 SWIG_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig
 SWIG_BUILD_DIR = $(abs_builddir)/subversion/bindings/swig
@@ -195,14 +198,50 @@ external-extraclean:
 	    fi; \
 	done;
 
-doc: doc-info doc-txt doc-html
 
-doc-info: doc/programmer/design/svn-design.info doc/handbook/svn-handbook.info doc/handbook/translations/french/svn-handbook-french.info
-doc-dvi: doc/programmer/design/svn-design.dvi doc/handbook/svn-handbook.dvi doc/handbook/translations/french/svn-handbook-french.dvi
-doc-txt: doc/programmer/design/svn-design.txt doc/handbook/svn-handbook.txt doc/handbook/translations/french/svn-handbook-french.txt
-doc-html: doc/programmer/design/svn-design.html doc/handbook/svn-handbook.html doc/handbook/translations/french/svn-handbook-french.html
-doc-ps: doc/programmer/design/svn-design.ps doc/handbook/svn-handbook.ps doc/handbook/translations/french/svn-handbook-french.ps
-doc-pdf: doc/programmer/design/svn-design.pdf doc/handbook/svn-handbook.pdf doc/handbook/translations/french/svn-handbook-french.pdf
+# DOCUMENTATION RULES
+
+# Every single document in every format.
+doc: doc-design doc-book doc-misc-docs
+
+# Build all types of a certain doc.
+doc-book: doc-book-html doc-book-pdf doc-book-ps
+doc-misc-docs: doc-misc-docs-html doc-misc-docs-pdf doc-misc-docs-ps
+doc-design: doc-design-info doc-design-html doc-design-txt
+
+# Build all docs of a certain type.
+doc-all-html: doc-design-html doc-book-html doc-misc-docs-html
+doc-all-pdf: doc-design-pdf doc-book-pdf dock-misc-docs-pdf
+doc-all-ps: doc-design-ps doc-book-ps dock-misc-docs-ps
+doc-all-info: doc-design-info
+
+# Different outputs for the 'design' document, written in texinfo.
+# Assumes you have {makeinfo, texi2dvi, dvips, dvipdf} installed.
+doc-design-info: doc/programmer/design/svn-design.info
+doc-design-html: doc/programmer/design/svn-design.html
+doc-design-txt: doc/programmer/design/svn-design.txt
+doc-design-dvi: doc/programmer/design/svn-design.dvi
+doc-design-ps: doc/programmer/design/svn-design.ps
+doc-design-pdf: doc/programmer/design/svn-design.pdf
+
+# Different outputs for the main Subversion 'book', written in docbook.
+# Assumes you have {xsltproc, fop, stylesheets} installed.
+doc-book-html:
+	cd doc/book && make book-html
+doc-book-pdf:
+	cd doc/book && make book-pdf
+doc-book-ps:
+	cd doc/book && make book-ps
+
+# Different outputs for the misc docs.
+# Assumes you have {xsltproc, fop, stylesheets} installed.
+doc-misc-docs-html:
+	cd doc/book && make misc-docs-html
+doc-misc-docs-pdf:
+	cd doc/book && make misc-docs-pdf
+doc-misc-docs-ps:
+	cd doc/book && make misc-docs-ps
+
 
 doc-clean:
 	for d in $(DOC_DIRS);                               \
@@ -211,7 +250,7 @@ doc-clean:
              rm -f *.info *.info-[1-9]                      \
                    *.aux *.cp *.fn *.ky *.log *.pg *.toc    \
                    *.tp *.vr                                \
-                   *.dvi *.txt *.html *.ps *.pdf);          \
+                   *.dvi *.txt *.html *.ps *.pdf *.fo);     \
         done
 
 swig-py-ext:
@@ -285,7 +324,7 @@ install-man:
 	  $(INSTALL_DATA) $$file $(DESTDIR)$(manroot)$$ext/$$inst; \
 	done
 
-install-info: doc-info
+install-info: doc-all-info
 	$(MKDIR) $(DESTDIR)$(infodir)
 	@list='$(INFOPAGES)'; \
 	for i in $$list; do \

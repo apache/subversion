@@ -1,0 +1,65 @@
+<preface id="svn-ch-0">
+  <title>Preface</title>
+
+  <simplesect>
+    <para>
+      This will be the start of the preface.
+    </para>
+  </simplesect>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 1 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-0-sect-1">
+    <title>What is Subversion</title>
+
+    <para>
+      <indexterm><primary>Subversion</primary><secondary>history
+          of</secondary></indexterm> Subversion comes from...
+    </para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 2 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-0-sect-2">
+    <title>How This Book is Organized</title>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 3 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-0-sect-3">
+    <title>Conventions used in this book</title>
+
+    <para>The source code examples are just that&mdash;examples. While
+      they will compile with the proper compiler incantations, they
+      are intended to illustrate the problem at hand. So don't be
+      surprised if an example is lacking error checking code and other
+      bits that you would expect from production-quality code.
+    </para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 4 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-0-sect-4">
+    <title>Comments and Questions</title>
+    
+    <para>Insert ORA boilerplate here</para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 5 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-0-sect-5">
+    <title>Acknowledgements</title>
+
+  </sect1>
+
+
+</preface>

@@ -1,0 +1,219 @@
+<chapter id="misc-docs-quick_walkthrough">
+  <title>Quick Walkthrough</title>
+
+  <simplesect>
+
+    <para>Here's an opportunity to play with Subversion in some
+      hands-on examples.  The Subversion commands demoed here are just
+      small examples of what Subversion can do; see the Chapter 3 in
+      the Subversion Book for full explanations of each.</para>
+
+  </simplesect>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 1 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="misc-docs-quick_walkthrough-sect-1">
+    <title>Make a Repository</title>
+
+    <para>The Subversion client has an abstract interface for
+      accessing a repository.  Two <quote>Repository Access</quote>
+      (RA) implementations currently exist as libraries.  You can see
+      which methods are available to your svn client like so:</para>
+
+      <screen>
+$ svn --version
+Subversion Client, version N
+compiled Jan 26 2002, 16:43:58
+
+Copyright (C) 2000-2002 CollabNet.
+Subversion is open source software, see @uref{http://subversion.tigris.org/}
+
+The following repository access (RA) modules are available:
+
+* ra_dav : Module for accessing a repository via WebDAV (DeltaV) protocol.
+     - handles 'http' schema
+* ra_local : Module for accessing a repository on local disk.
+     - handles 'file' schema
+      </screen>
+
+    <para>If you don't see ra_local, it probably means that Berkeley
+      DB (or relevant database back-end) wasn't found when compiling
+      your client binary.  To continue with these examples, you'll
+      need to have ra_local available.</para>
+
+    <para>Start by creating a new, empty repository using the
+      <command>svnadmin</command> tool:</para>
+
+    <screen>
+$ svnadmin create myrepos
+    </screen>
+
+    <para>Let's assume you have a directory <filename>someproject</filename>
+      which contains files that you wish to place under version
+      control:</para>
+
+    <screen>
+someproject/foo
+            bar
+            baz/
+            baz/gloo
+            baz/bloo
+    </screen>
+
+    <para>Once the repository exists, you can initially import your
+      data into it, using the ra_local access method (invoked by using
+      a <quote>file</quote> URL):</para>
+
+    <screen>
+$ svn import file:///absolute/path/to/myrepos someproject myproj    
+&hellip;
+Committed revision 1.
+    </screen>
+
+    <para>The example above creates a new directory
+      <filename>myproj</filename> in the root of the repository's filesystem,
+      and copies all the data from <filename>someproject</filename> into it.</para>
+
+    <sect2 id="misc-docs-quick_walkthrough-sect-1.1">
+      <title>Make Some Working Copies</title>
+
+      <para>Now check out a fresh <quote>working copy</quote> of your
+        project.  To do this, we specify a URL to the exact directory
+        within the repository that we want.  The parameter after the
+        URL allows us to name the working copy we check out.</para>
+
+      <screen>
+$ svn co file:///usr/local/svn/repos/myproj wc
+A  wc/foo
+A  wc/bar
+A  wc/baz
+A  wc/baz/gloo
+A  wc/baz/bloo
+      </screen>
+
+      <para>Now we have a working copy in a local directory called
+        <filename>wc</filename>, which represents the location
+        <filename>/myproj</filename> in the repository (assuming the
+        repository's root is <systemitem
+        class="url">file:///usr/local/svn/repos</systemitem>.)</para>
+
+      <para>For the sake of example, let's duplicate the working copy,
+        and pretend it belongs to someone else:</para>
+
+      <screen>
+$ cp -R wc wc2
+      </screen>
+
+      <para>From here, let's make some changes within our original
+      working copy:</para>
+
+      <screen>
+$ cd wc
+$ echo "new text" &gt;&gt; bar     # change bar's text
+$ svn propset color green foo      # add a metadata property to foo
+$ svn rm baz                       # schedule baz directory for deletion
+$ touch newfile    
+$ svn add newfile                  # schedule newfile for addition
+</screen>
+
+      <para>That's a lot of changes!  If we were to leave and come
+        back tomorrow, how could we remember what changes we'd made?
+        Easy.  The <command>status</command> command will show us all
+        of the <quote>local modifications</quote> in our working
+        copy:</para>
+
+      <screen>
+$ svn status                   # See what's locally modified
+M   ./bar
+_M  ./foo
+A   ./newfile
+D   ./baz
+D   ./baz/gloo
+D   ./baz/bloo
+      </screen>
+
+      <para>According to this output, three items are scheduled to be
+        (D)eleted from the repository, one item is scheduled to be
+        (A)dded to the repository, and two items have had their
+        contents (M)odified in some way.  For more details, be sure to
+        read about <command>svn status</command> in Chapter 3 of the
+        Subversion Book.</para>
+
+      <para>Now we decide to commit our changes, creating Revision 2
+        in the repository:</para>
+
+      <screen>
+$ svn commit -m "fixed bug #233"
+Sending    bar
+Sending    foo
+Adding     newfile
+Deleting   baz
+Transmitting data...
+Committed revision 2.
+      </screen>
+
+      <para>The -m argument is a way of specifying a <firstterm>log
+        message</firstterm>: that is, a specific description of your
+        change-set sent to the repository.  The log message is now
+        attached to Revision 2.  A future user might peruse repository
+        log messages, and now will know what your Revision 2 changes
+        were for.</para>
+
+      <para>Finally, pretend that you are now Felix, or some other
+        collaborator.  If you go <filename>wc2</filename> (that other working
+        copy you made), it will need the <command>svn update</command>
+        command to receive the Revision 2 changes:</para>
+
+      <screen>
+$ cd ../wc2                # change to the back-up working copy
+
+$ svn update               # get changes from repository
+U   ./bar
+_U  ./foo
+A   ./newfile
+D   ./baz
+      </screen>
+
+      <para>The output of the <command>svn update</command> command
+        tells Felix that baz was (D)eleted from his working copy,
+        newfile was (A)dded to his working copy, and that bar and foo
+        had their contents (U)pdated.</para>
+
+      <para>If for some reason <filename>bar</filename> contained some local
+        changes made by Felix, then the server changes would be
+        <firstterm>merged</firstterm> into <filename>bar</filename>: that is,
+        <filename>bar</filename> would now contain both sets of changes.
+        Whenever server changes are merged into a locally-modified
+        file, two possible things can happen:</para>
+
+      <itemizedlist>
+
+        <listitem>
+          <para>The merge can go smoothly.  That is, the two sets of
+            changes do not overlap.  In this case, <command>svn
+            update</command> prints a <literal>G</literal>
+            (``mer(G)ed'').</para>
+        </listitem>
+
+        <listitem>
+          <para>The sets of changes overlap, and a
+            <literal>C</literal> for (C)onflict is printed.  See
+            section ??? for information about how conflict resolution
+            works.</para>
+        </listitem>
+
+      </itemizedlist>
+
+    </sect2>
+
+  </sect1>
+
+</chapter>
+
+<!--
+local variables: 
+eval: (load-file "../tools/svnbook.el")
+sgml-parent-document: ("misc-docs.xml" "chapter")
+end:
+-->

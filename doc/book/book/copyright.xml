@@ -1,0 +1,13 @@
+<copyrightpg id="svn-copyright">
+  <title>Copyright</title>
+
+    <para>Copyright TBD</para>
+
+</copyrightpg>
+
+<!--
+local variables: 
+eval: (load-file "../tools/svnbook.el")
+sgml-parent-document: ("book.xml" "")
+end:
+-->

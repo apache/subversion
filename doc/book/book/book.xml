@@ -1,0 +1,87 @@
+<?xml version="1.0"?>
+<!DOCTYPE book SYSTEM "../tools/dtd/dblite.dtd"
+[
+<!ENTITY ch00     SYSTEM "ch00.xml">
+<!ENTITY ch01     SYSTEM "ch01.xml">
+<!ENTITY ch02     SYSTEM "ch02.xml">
+<!ENTITY ch03     SYSTEM "ch03.xml">
+<!ENTITY ch04     SYSTEM "ch04.xml">
+<!ENTITY ch05     SYSTEM "ch05.xml">
+<!ENTITY ch06     SYSTEM "ch06.xml">
+<!ENTITY ch07     SYSTEM "ch07.xml">
+<!ENTITY ch08     SYSTEM "ch08.xml">
+<!ENTITY appa     SYSTEM "appa.xml">
+<!ENTITY appb     SYSTEM "appb.xml">
+<!ENTITY appc     SYSTEM "appc.xml">
+<!ENTITY appd     SYSTEM "appd.xml">
+<!ENTITY appe     SYSTEM "appe.xml">
+<!ENTITY appf     SYSTEM "appf.xml">
+<!ENTITY gloss    SYSTEM "glossary.xml">
+<!ENTITY copy     SYSTEM "copyright.xml">
+<!ENTITY colo     SYSTEM "colo.xml">
+]>
+
+  <book id="svn">
+  <title>Subversion: The Definitive Guide</title>
+
+  <bookinfo>
+
+    <edition>First</edition>
+    <isbn>?-?????-???-?</isbn>
+    <authorgroup>
+
+      <author>
+        <firstname>Ben</firstname>
+        <surname>Collins-Sussman</surname>
+      </author>
+
+      <author>
+        <firstname>Brian W.</firstname>
+        <surname>Fitzpatrick</surname>
+      </author>
+
+      <author>
+        <firstname>C. Michael</firstname>
+        <surname>Pilato</surname>
+      </author>
+
+    </authorgroup>
+
+    <editor>
+      <firstname>Linda</firstname>
+      <surname>Mui</surname>
+    </editor>
+
+    <pagenums>350 pages (est.)</pagenums>
+    <pubdate>(TBA)</pubdate>
+
+  </bookinfo>
+
+  <!-- External entity refs -->
+
+  &ch00;
+  &ch01;
+  &ch02;
+  &ch03;
+  &ch04;
+  &ch05;
+  &ch06;
+  &ch07;
+  &ch08;
+  &appa;
+  &appb;
+  &appc;
+  &appd;
+  &appe;
+  &appf;
+<!--  &copy; This gives validation errors -->
+  &gloss;
+  &colo;
+
+  </book>
+
+<!--
+local variables: 
+eval: (load-file "../tools/svnbook.el")
+end:
+-->

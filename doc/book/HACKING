@@ -1,0 +1,106 @@
+This style guide is intended to be *in addition* to the O'Reilly and
+Associates style guide at
+http://www.ora.com/oreilly/author/stylesheet.html
+===========================================================================
+
+===========
+Prose Guide
+===========
+
+Tone: somewhere between formal and informal. 
+      For example:
+      - We use contractions
+      - We don't say things like "You see"
+
+- Always title sidebars  
+
+- High level chapter outline: 
+  - This is what I'm going to tell you.
+  - I'm telling you this *right now*.
+  - This is what I told you.
+
+- We have a "Version Control System", NOT a "Revision Control
+  System"
+
+- We have "working copies", not "working directories"
+
+- Always use long Subversion commands (e.g. checkout, not co, etc)
+
+- Always "Apache HTTP Server" not httpd.
+
+===========================================================================
+
+================
+Subversion Guide
+================
+
+- Our sample repository will be its own repository that all
+  examples come from and it will be publically accessible. ###TODO
+
+- Primary user: Sally
+
+- Secondary user: Harry
+
+- Tertiary user: Ira
+
+- Primary client machine: newyork
+
+- Primary server machine/URL: svn.red-bean.com
+
+===========================================================================
+
+============
+Markup Guide
+============
+
+- The DTD used for the Subversion book is the Docbook Lite DTD as
+  defined by O'Reilly & Associates. You'll find it at in our source
+  tree and in ftp://ftp.oreilly.com/pub/dblite/
+
+- You should *always* validate your xml before checking in. Do not
+  check in xml that is not well-formed.
+
+- All markup should be properly indented, with the exception of
+  <screen></screen> blocks, which should be aligned all the way to the
+  left. For example:
+
+<chapter id="svn-ch-pi">
+<title>Tips</title>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 1 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-pi-sect-1">
+    <title>Flornthorple Plathering</title>
+    
+    <para>The real key to <firstterm>Plathering</firstterm> is to start with
+       a good glab. A good glab provides a solid thorpy foundation.</para>
+
+    <sect2 id="svn-ch-pi-sect-1.1">
+      <title>Cross-blather</title>
+      
+      <para>Cross-blather tends to create a hoopy pile of crandy. You
+        can avoid this by using the cross-blather avoid
+        command.</para>
+
+      <screen>
+$ cb-avoid
+Avoiding blather......... Done
+$
+      </screen>
+              
+    </sect2>
+
+  </sect1>
+
+</chapter>
+
+===========================================================================
+
+=============
+Miscellaneous
+=============
+
+- Anything that needs attention or fixing should be marked with
+  ###TODO so that it's easy to find. Also, please add your userid to
+  any inline comments to facilitate discussion 'in the code.'

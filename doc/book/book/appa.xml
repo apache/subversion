@@ -1,0 +1,430 @@
+<appendix id="svn-ap-a">
+<title>Subversion for CVS Users</title>
+
+  <simplesect>
+
+    <para>This document is meant to be a quick-start guide for CVS
+      users new to Subversion.  It's not a substitute for real
+      documentation and manuals; but it should give you a quick
+      conceptual <quote>diff</quote> when switching over.</para>
+
+    <para>The goal of Subversion is to take over the current and
+      future CVS user base.  Subversion not only includes new
+      features, but attempts to fix certain <quote>broken</quote>
+      behaviors that CVS had.  This means that you may be encouraged
+      to break certain habits&mdash;ones that you forgot were odd to
+      begin with.</para>
+
+  </simplesect>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 1 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-app-a-sect-1">
+    <title>Revision Numbers Are Different Now</title>
+
+    <para>In CVS, revision numbers are per-file.  This is because CVS
+      uses RCS as a backend; each file has a corresponding RCS file in
+      the repository, and the repository is roughly laid out according
+      to structure of your project tree.</para>
+
+    <para>In Subversion, the repository looks like a single
+      filesystem.  Each commit results in an entirely new filesystem
+      tree; in essence, the repository is an array of trees.  Each of
+      these trees is labeled with a single revision number.  When
+      someone talks about <quote>revision 54,</quote> they're talking
+      about a particular tree (and indirectly, the way the filesystem
+      looked after the 54th commit).</para>
+
+    <para>Technically, it's not valid to talk about <quote>revision 5
+      of <filename>foo.c</filename></quote>.  Instead, one would say
+      <quote><filename>foo.c</filename> as it appears in revision
+      5.</quote> Also, be careful when making assumptions about the
+      evolution of a file.  In CVS, revisions 5 and 6 of
+      <filename>foo.c</filename> are always different.  In Subversion,
+      it's most likely that <filename>foo.c</filename> did *not*
+      change between revisions 5 and 6.</para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 2 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-app-a-sect-2">
+    <title>More Disconnected Operations</title>
+
+    <para>In recent years, disk space has become outrageously cheap
+      and abundant, but network bandwidth has not.  Therefore, the
+      Subversion working copy has been optimized around the scarcer
+      resource.</para>
+
+    <para>The <filename>.svn</filename> administrative directory
+      serves the same purpose as the <filename>CVS</filename>
+      directory, except that it also stores <quote>pristine</quote>
+      copies of files.  This allows you to do many things
+      off-line:</para>
+    
+    <variablelist>
+      
+      <varlistentry>
+        <term><command>svn status</command></term>
+        <listitem>
+          <para>Shows you local modifications (see below)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><command>svn diff</command></term>
+        <listitem>
+          <para>Shows you the details of your modifications</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><command>svn ci</command></term>
+        <listitem>
+          <para>Sends differences to the repository (CVS only
+            sends fulltexts!)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><command>svn revert</command></term>
+        <listitem>
+          <para>Removes your modifications</para>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+    <para>This last subcommand is new; it will not only remove local
+      mods, but it will un-schedule operations such as adds and
+      deletes.  It's the preferred way to revert a file; running
+      <command>rm file; svn up</command> will still work, but it blurs
+      the purpose of updating.  And, while we're on this
+      subject&hellip;
+
+    </para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 3 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-app-a-sect-3">
+    <title>Distinction Between Status and Update</title>
+
+    <para>In Subversion, we've tried to erase a lot of the confusion
+      between the <command>status</command> and
+      <command>update</command> subcommands.</para>
+
+    <para>The <command>status</command> command has two purposes: (1)
+      to show the user any local modifications in the working copy,
+      and (2) to show the user which files are out-of-date.
+      Unfortunately, because of CVS's hard-to-read output, many CVS
+      users don't take advantage of this command at all.  Instead,
+      they've developed a habit of running <command>cvs up</command>
+      to quickly see their mods.  Of course, this has the side effect
+      of merging repository changes that you may not be ready to deal
+      with!</para>
+
+    <para>With Subversion, we've tried to remove this muddle by making
+      the output of <command>svn status</command> easy to read for
+      humans and parsers.  Also, <command>svn update</command> only
+      prints information about files that are updated,
+      <emphasis>not</emphasis> local modifications.</para>
+
+    <para>Here's a quick guide to <command>svn status</command>.  We
+      encourage all new Subversion users to use it early and often:</para>
+
+
+    <variablelist>
+      <title><command>svn status</command> prints all files that have
+        local modifications; the network is not accessed by
+        default.</title>
+      
+      <varlistentry>
+        <term><option>-u</option> switch</term>
+        <listitem>
+          <para>Add out-of-dateness information from repository.</para>
+        </listitem>
+      </varlistentry>
+      
+      <varlistentry>
+        <term><option>-v</option> switch</term>
+        <listitem>
+          <para>Show <emphasis>all</emphasis> entries under
+            version control.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-n</option> switch</term>
+        <listitem>
+          <para>Nonrecursive.</para>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+    <para>The status command has two output formats.  In the default
+      <quote>short</quote> format, local modifications look like
+      this:</para>
+
+    <screen>
+% svn status
+M     ./foo.c
+M     ./bar/baz.c
+    </screen>
+
+    <para>If you specify either the <option>-u</option> or
+      <option>-v</option> switch, a <quote>long</quote> format is
+      used:</para>
+
+    <screen>
+% svn status
+M             1047    ./foo.c
+_      *      1045    ./faces.html
+_      *         -    ./bloo.png
+M             1050    ./bar/baz.c
+Head revision:   1066
+    </screen>
+
+    <para>In this case, two new columns appear.  The second column
+      contains an asterisk if the file or directory is out-of-date.
+      The third column shows the working-copy's revision number of the
+      item.  In the example above, the asterisk indicates that
+      <filename>faces.html</filename> would be patched if we updated,
+      and that <filename>bloo.png</filename> is a newly added file in
+      the repository.  (The <command>-</command> next to bloo.png
+      means that it doesn't yet exist in the working copy.)</para>
+
+    <para>Lastly, here's a quick summary of status codes that you may
+    see:</para>
+
+    <screen>
+A    Add
+D    Delete
+R    Replace  (delete, then re-add)
+M    local Modification
+U    Updated
+G    merGed
+C    Conflict
+    </screen>
+
+    <para>Subversion has combined the CVS <command>P</command> and
+      <command>U</command> codes into just <command>U</command>.  When
+      a merge or conflict occurs, Subversion simply prints
+      <command>G</command> or <command>C</command>, rather than a
+      whole sentence about it.</para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 4 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-app-a-sect-4">
+    <title>Meta-data Properties</title>
+
+    <para>A new feature of Subversion is that you can attach arbitrary
+      metadata to files and directories.  We refer to this data as
+      <firstterm>properties</firstterm>, and they can be thought of as
+      collections of name/value pairs (hashtables) attached to each
+      item in your working copy.</para>
+  
+    <para>To set or get a property name, use the <command>svn
+        propset</command> and <command>svn propget</command>
+        subcommands.  To list all properties on an object, use
+        <command>svn proplist</command>.</para>
+
+    <para>For more information, see <xref linkend="svn-ch-6-sect-2"/>.</para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 5 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-app-a-sect-5">
+    <title>Directory versions</title>
+    
+    <para>Subversion tracks tree structures, not just file contents.
+      It's one of the biggest reasons Subversion was written to
+      replace CVS.</para>
+
+    <para>Here's what this means to you:</para>
+
+      <itemizedlist>
+
+        <listitem>
+        <para>The <command>svn add</command> and <command>svn
+          rm</command> commands work on directories now, just as they
+          work on files.  So do <command>svn cp</command> and
+          <command>svn mv</command>.  However, these commands do *not*
+          cause any kind of immediate change in the repository.
+          Instead, the working directory is recursively ``scheduled''
+          for addition or deletion.  No repository changes happen
+          until you commit.</para>
+        </listitem>
+
+      <listitem>
+        <para>Directories aren't dumb containers anymore; they have
+          revision numbers like files.  (Or more properly, it's
+          correct to talk about ``directory <filename>foo/</filename>
+          in revision 5''.)</para>
+      </listitem>
+
+    </itemizedlist>
+
+    <para>Let's talk more about that last point.  Directory versioning
+      is a Hard Problem.  Because we want to allow mixed-revision
+      working copies, there are some limitations on how far we can
+      abuse this model.</para>
+
+    <para>From a theoretical point of view, we define <quote>revision
+        5 of directory <filename>foo</filename></quote> to mean a
+      specific collection of directory-entries and properties.  Now
+      suppose we start adding and removing files from
+      <filename>foo</filename>, and then commit.  It would be a lie
+      to say that we still have revision 5 of
+      <filename>foo</filename>.  However, if we bumped
+      <filename>foo</filename>'s revision number after the commit,
+      that would be a lie too; there may be other changes to
+      <filename>foo</filename> we haven't yet received, because we
+      haven't updated yet.</para>
+    
+    <para>Subversion deals with this problem by quietly tracking
+      committed adds and deletes in the <filename>.svn</filename>
+      area.  When you eventually run <command>svn update</command>,
+      all accounts are settled with the repository, and the
+      directory's new revision number is set correctly.
+      <emphasis>Therefore, only after an update is it truly safe to
+        say that you have a <quote>perfect</quote> revision of a
+        directory.</emphasis> Most of the time, your working copy will
+      contain <quote>imperfect</quote> directory revisions.</para>
+    
+    <para>Similarly, a problem arises if you attempt to commit
+      property changes on a directory.  Normally, the commit would
+      bump the working directory's local revision number.  But again,
+      that would be a lie, because there may be adds or deletes that
+      the directory doesn't yet have, because no update has happened.
+      <emphasis>Therefore, you are not allowed to commit
+        property-changes on a directory unless the directory is
+        up-to-date.</emphasis></para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 6 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-app-a-sect-6">
+    <title>Conflicts</title>
+
+    <para>CVS marks conflicts with in-line <quote>conflict
+        markers</quote>, and prints a <command>C</command> during an
+        update.  Historically, this has caused problems.  Many users
+        forget about (or don't see) the <command>C</command> after it
+        whizzes by on their terminal.  They often forget that the
+        conflict-markers are even present, and then accidentally
+        commit garbaged files.</para>
+
+    <para>Subversion solves this problem by making conflicts more
+      tangible.  See <xref linkend="svn-ch-3-sect-4"/> for more
+      details.  In particular, read the section about <quote>Merging
+      others' changes</quote>.</para><!-- ###TODO Is this xref still a
+      correct ref? -Fitz -->
+
+  </sect1>
+
+<!-- ###TODO Should this be eliminated? -Fitz -->
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 7 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-app-a-sect-7">
+    <title>Binary files</title>
+    
+    <para>CVS users have to mark binary files with
+      <option>-kb</option> flags, to prevent data from being munged
+      (due to keyword expansion and line-ending translations).  They
+      sometimes forget to do this.</para>
+
+    <para>Subversion examines the <literal>svn:mime-type</literal>
+      property to decide if a file is text or binary.  If the file has
+      no <literal>svn:mime-type</literal> property, Subversion assumes
+      it is text.  If the file has the
+      <literal>svn:mime-type</literal> property set to anything other
+      than <literal>text/*</literal>, it assumes the file is
+      binary.</para>
+
+    <para>Subversion also helps users by running a binary-detection
+      algorithm in the <command>svn import</command> and <command>svn
+      add</command> subcommands.  These subcommands will make a good
+      guess and then (possibly) set a binary
+      <literal>svn:mime-type</literal> property on the file being
+      added.  (If Subversion guesses wrong, you can always remove or
+      hand-edit the property.)</para>
+
+    <para>As in CVS, binary files are not subject to keyword expansion
+      or line-ending conversions.  Also, when a binary file is
+      <quote>merged</quote> during update, no real merge occurs.
+      Instead, Subversion creates two files side-by-side in your
+      working copy; the one containing your local modifications is
+      renamed with an <filename>.orig</filename> extension.</para>
+
+  </sect1>
+
+<!-- ###TODO Should this be eliminated? -Fitz -->
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 8 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-app-a-sect-8">
+    <title>Authorization</title>
+
+    <para>Unlike CVS, SVN can handle anonymous and authorized users in
+      the same repository.  There is no need for an anonymous user or
+      a separate repository.  If the SVN server requests authorization
+      when committing, the client should prompt you for your
+      authorization (password).</para>
+
+  </sect1>
+
+<!-- ###TODO Should this be eliminated? -Fitz -->
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 9 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-app-a-sect-9">
+
+    <title>Versioned Modules</title>
+
+    <para>Unlike CVS, a Subversion working copy is aware that it has
+      checked out a module.  That means that if somebody changes the
+      definition of a module, then a call to <command>svn up</command>
+      will update the working copy appropriately.</para>
+
+    <para>Subversion defines modules as a list of directories within a
+      directory property.  <xref linkend="svn-ch-6-sect-3"/>.</para>
+
+  </sect1>
+
+<!-- ###TODO Should this be eliminated? -Fitz -->
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 10 ============================= -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-app-a-sect-10">
+    <title>Branches and Tags</title>
+
+    <para>Subversion doesn't distinguish between filesystem space and
+      <quote>branch</quote> space; branches and tags are ordinary
+      directories within the filesystem.  This is probably the single
+      biggest mental hurdle a CVS user will need to climb.  Read all
+      about it: <xref linkend="svn-ch-4"/></para>
+
+  </sect1>
+
+</appendix>
+
+<!--
+local variables: 
+eval: (load-file "../tools/svnbook.el")
+sgml-parent-document: ("book.xml" "appendix")
+end:
+-->

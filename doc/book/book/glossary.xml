@@ -1,0 +1,29 @@
+<glossary id="svn-glossary">
+  <title>Glossary</title>
+
+  <simplesect>
+
+    <variablelist>
+
+      <varlistentry>
+        <term>Add</term>
+        <listitem>
+
+          <para> A <command>svn</command> command that is used to add a
+            file or directory to a repository.  </para>
+
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </simplesect>
+
+</glossary>
+
+<!--
+local variables: 
+eval: (load-file "../tools/svnbook.el")
+sgml-parent-document: ("book.xml" "glossary")
+end:
+-->

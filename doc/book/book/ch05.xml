@@ -1,0 +1,1211 @@
+<chapter id="svn-ch-5">
+<title>Setting up a Repository</title>
+
+      <simplesect>
+
+        <para>How to administer a Subversion repository.</para>
+        
+        <para>In this chapter, we'll mainly focus on how to use the
+          <command>svnadmin</command> and <command>svnlook</command> programs to
+          work with repositories.</para>
+        
+      </simplesect>
+
+      <!-- ================================================================= -->
+      <!-- ======================== SECTION 1 ============================== -->
+      <!-- ================================================================= -->
+      <sect1 id="svn-ch-5-sect-1">
+        <title>Server Setup</title>
+
+        <sect2 id="svn-ch-5-sect-1.1">
+          <title>Creating a Repository</title>
+          
+          <para>Creating a repository is incredibly simple:</para>
+          
+          <screen>
+            $ svnadmin create path/to/myrepos
+          </screen>
+          
+          <para>This creates a new repository in a subdirectory
+            <filename>myrepos</filename>.</para>
+          
+          <para>(Note that the <command>svnadmin</command> and
+            <command>svnlook</command> programs operate
+            <emphasis>directly</emphasis> on a repository, by linking
+            to <filename>libsvn_fs.so</filename>.  So these tools
+            expect ordinary, local paths to the repositories.  This is
+            in contrast with the <command>svn</command> client
+            program, which always accesses a repository via some URL,
+            whether it be via <systemitem
+            class="url">http://</systemitem> or <systemitem
+            class="url">file:///</systemitem> schemas.)</para>
+            
+          <para>A new repository always begins life at revision 0,
+            which is defined to be nothing but the root
+            (<filename>/</filename>) directory.</para>
+            
+          <para>As mentioned earlier, repository revisions can have
+            unversioned properties attached to them.  In particular,
+            every revision is created with a
+            <literal>svn:date</literal> timestamp property.  (Other
+            common properties include <literal>svn:author</literal>
+            and <literal>svn:log</literal>)</para>
+        
+          <para>For a newly created repository, revision 0 has nothing
+            but a <literal>svn:date</literal> property attached.</para>
+            
+          <para>Here is a quick run-down of the anatomy of a
+            repository:</para>
+          
+          <screen>
+            $ ls myrepos
+            conf/
+            dav/
+            db/
+            hooks/
+            locks/
+          </screen>
+          
+          
+          <variablelist>
+            
+            <varlistentry>
+              <term>conf</term>
+              <listitem>
+                <para>Currently unused; repository-side config files
+                  will go in here someday.</para>
+              </listitem>
+            </varlistentry>
+
+            <varlistentry>
+              <term>dav</term>
+              <listitem>
+                <para>If the repository is being accessed by Apache and
+                  mod_dav_svn, some private housekeeping databases are
+                  stored here.</para>
+              </listitem>
+            </varlistentry>
+
+            <varlistentry>
+              <term>db</term>
+              <listitem>
+                <para>The main Berkeley DB environment, full of DB
+                  tables that comprise the data store for libsvn_fs.
+                  This is where all of your data is!  In particular,
+                  most of your files' contents end up in the <quote>strings</quote>
+                  table.  Logfiles accumulate here as well, so
+                  transactions can be recovered.</para>
+              </listitem>
+            </varlistentry>
+
+            <varlistentry>
+              <term>hooks</term>
+              <listitem>
+                <para>Where pre-commit and post-commit hook scripts
+                  live.  (And someday, read-hooks.)</para>
+              </listitem>
+            </varlistentry>
+
+            <varlistentry>
+              <term>locks</term>
+              <listitem>
+                <para>A single file lives here; repository readers and
+                  writers take out shared locks on this file.  Do not
+                  remove this file.</para>
+              </listitem>
+            </varlistentry>
+
+          </variablelist>
+        
+          <para>Once the repository has been created, it's very likely
+            that you'll want to use the svn client to import an
+            initial tree.  See <xref linkend="svn-ch-5"/><!-- ###TODO
+            link this to 'other commands' -Fitz -->.)</para>
+          
+          <para>You may want to give your repository an initial
+            directory structure that reflects the trunk, branches, and
+            tags of your project(s) (See <xref linkend="svn-ch-4"/>.)
+            You can do this via <command>svn mkdir</command>:</para>
+            
+          <screen>
+            $ svnadmin create /path/to/repos
+            $ svn mkdir file:///path/to/repos/projectA -m 'Base dir for A'
+            Committed revision 1.
+            
+            $ svn mkdir file:///path/to/repos/projectA/trunk -m 'Main dir for A'
+            Committed revision 2.
+            
+            $ svn mkdir file:///path/to/repos/projectA/branches -m 'Branches for A'
+            Committed revision 3.
+            
+            $ svn mkdir file:///path/to/repos/projectA/tags -m 'Tags for A'
+            Committed revision 4.
+            
+            $ svn co file:///path/to/repos/projectA/trunk projectA
+            Checked out revision 4.
+             
+            # ... now work on projectA ...
+          </screen>
+          
+          <para>With <command>svn import</command>, you can create the
+            structure with a single commit:</para>
+            
+          <screen>
+            $ svnadmin create /path/to/repos
+            $ mkdir projectA
+            $ mkdir projectA/trunk
+            $ mkdir projectA/branches
+            $ mkdir projectA/tags    
+            $ svn import file:///path/to/repos projectA projectA -m 'Dir layout for A'
+            Adding         projectA/trunk
+            Adding         projectA/branches
+            Adding         projectA/tags
+            Committed revision 1.
+            
+            $ rm -rf projectA/
+            $ svn co file:///path/to/repos/projectA/trunk projectA
+            Checked out revision 1.
+            
+            #  ... now work on projectA ...
+            </screen>
+
+        </sect2>
+
+        <sect2 id="svn-ch-5-sect-1.2">
+          <title>Examining a Repository</title>
+            
+          <sect3 id="svn-ch-5-sect-1.2.1">
+            <title>Transactions and Revisions</title>
+            
+            <para>A Subversion repository is essentially a sequence of
+              trees; each tree is called a
+              <literal>revision</literal>.  (If this is news to you,
+              it might be good for you to see <xref
+              linkend="svn-ch-2"/><!-- ###TODO make this more specific
+              -->.)</para>
+            
+            <para>Every revision begins life as a
+              <literal>transaction</literal> tree.  When doing a
+              commit, a client builds a transaction that mirrors their
+              local changes, and when the commit succeeds, the
+              transaction is effectively <quote>promoted</quote> into
+              a new revision tree, and is assigned a new revision
+              number.</para>
+            
+            <para>At the moment, updates work in a similar way: the
+              client builds a transaction tree that is a
+              <quote>mirror</quote> of their working copy.  The
+              repository then compares the transaction tree with some
+              revision tree, and sends back a tree-delta.  After the
+              update completes, the transaction is deleted.</para>
+            
+            <para>Transaction trees are the only way to
+              <quote>write</quote> to the repository's versioned
+              filesystem; all users of libsvn_fs will do this.
+              However, it's important to understand that the lifetime
+              of a transaction is completely flexible.  In the case of
+              updates, transactions are temporary trees that are
+              immediately destroyed.  In the case of commits,
+              transactions are transformed into permanent revisions
+              (or aborted if the commit fails.)  In the case of an
+              error or bug, it's possible that a transaction can be
+              accidentally left lying around -- the libsvn_fs caller
+              might die before deleting it.  And in theory, someday
+              whole workflow applications might revolve around the
+              creation of transactions; they might be examined in turn
+              by different managers before being deleted or promoted
+              to revisions.</para>
+            
+            <para>The point is: if you're administering a Subversion
+              repository, you're going to have to examine revisions
+              and transactions.  It's part of monitoring the health of
+              the repository.</para>
+            
+          </sect3>
+
+          <sect3 id="svn-ch-5-sect-1.2.2">
+            <title>svnlook</title>
+            
+            <para><command>svnlook</command> is a read-only
+              <footnote id="svn-ch-5-fn-1">
+                <para>Why read-only?  Because if a pre-commit
+                  hook script changed the transaction before commit, the
+                  working copy would have no way of knowing what happened,
+                  and would therefore be out of sync and not know it.
+                  Subversion currently has no way to handle this situation,
+                  and maybe never will.</para>
+              </footnote>
+              tool that can be used to examine the revision and
+              transaction trees within a repository.  Its useful for
+              system administrators, and can be used by the
+              <literal>pre-commit</literal> and
+              <literal>post-commit</literal> hook scripts as
+              well.</para>
+            
+            <para>The simplest usage is</para>
+            
+            <screen>
+              $ svnlook repos
+            </screen>
+            
+            <para>This will print information about the
+              <literal>HEAD</literal> revision in the repository
+              <quote>repos</quote>.  In particular, it will show the
+              log message, author, date, and a diagram of the
+              tree.</para>
+            
+            <para>To look at a particular revision or
+            transaction:</para>
+            
+            <screen>
+              $ svnlook repos rev 522
+              $ svnlook repos txn 340
+            </screen>
+            
+            <para>Or, if you only want to see certain types of
+              information, <command>svnlook</command> accepts a number
+              of subcommands.  For example,</para>
+            
+            <screen>
+              $ svnlook repos rev 522 log
+              $ svnlook repos rev 559 diff
+            </screen>
+               
+            <para>Available subcommands are:</para>
+               
+            <variablelist>
+
+              <varlistentry>
+                <term><literal>log</literal></term>
+                <listitem>
+                  <para>Print the tree's log message.</para>
+                </listitem>
+              </varlistentry>
+
+              <varlistentry>
+                <term><literal>author</literal></term>
+                <listitem>
+                  <para>Print the tree's author.</para>
+                </listitem>
+              </varlistentry>
+
+              <varlistentry>
+                <term><literal>date</literal></term>
+                <listitem>
+                  <para>Print the tree's datestamp.</para>
+                </listitem>
+              </varlistentry>
+
+              <varlistentry>
+                <term><literal>dirs-changed</literal></term>
+                <listitem>
+                  <para>List the directories that changed in the
+                  tree.</para>
+                </listitem>
+              </varlistentry>
+
+              <varlistentry>
+                <term><literal>changed</literal></term>
+                <listitem>
+                  <para>List all files and directories that changed in
+                  the tree.</para>
+                </listitem>
+              </varlistentry>
+
+              <varlistentry>
+                <term><literal>diff</literal></term>
+                <listitem>
+                  <para>Print unified diffs of changed files.</para>
+                </listitem>
+              </varlistentry>
+
+            </variablelist>
+
+          </sect3>
+
+          <sect3 id="svn-ch-5-sect-1.2.3">
+            <title>The Shell</title>
+            
+            <para>The <command>svnadmin</command> tool has a toy
+              <quote>shell</quote> mode as well.  It doesn't do much,
+              but it allows you to poke around the repository as if it
+              were an imaginary mounted filesystem.  The basic
+              commands <literal>cd</literal>, <literal>ls</literal>,
+              <literal>exit</literal>, and <literal>help</literal> are
+              available, as well as the very special command
+              <literal>cr</literal>&mdash;<quote>change
+              revision</quote>.  The last command allows you to move
+              <emphasis>between</emphasis> revision trees.</para>
+            
+            <screen> 
+              $ svnadmin shell repos
+              &lt;609: /&gt;$
+              &lt;609: /&gt;$ ls
+                &lt; 1.0.2i7&gt;  [   601]  1           0    trunk/
+                &lt;nh.0.2i9&gt;  [   588]  0           0    branches/
+                &lt;jz.0.18c&gt;  [   596]  0           0    tags/
+            
+              &lt;609: /&gt;$ cd trunk
+              &lt;609: /trunk&gt;$ cr 500
+              &lt;500: /trunk&gt;$ ls
+                &lt;   2.0.1&gt;  [     1]  0        3462    svn_config.dsp
+                &lt;  4.0.dj&gt;  [   487]  0        3856    PORTING
+                &lt;  3.0.cr&gt;  [   459]  0        7886    Makefile.in
+                &lt;  d.0.ds&gt;  [   496]  0        9736    build.conf
+                &lt;  5.0.d9&gt;  [   477]  1           0    ac-helpers/
+                &lt;   y.0.1&gt;  [     1]  0        1805    subversion.dsp
+              &hellip;
+              &lt;500: /&gt;$ exit
+            </screen>
+            
+            <para>The output of <command>ls</command> has only a few
+            columns:</para>
+            
+            <screen>
+              NODE-ID  CREATED-REV HAS_PROPS?  SIZE  NAME
+              
+              &lt; 1.0.2i7&gt;  [   601]  1           0    trunk/
+              &lt;nh.0.2i9&gt;  [   588]  0           0    branches/
+              &lt;jz.0.18c&gt;  [   596]  0           0    tags/
+            </screen>
+            
+          </sect3>
+
+        </sect2>
+
+        <sect2 id="svn-ch-5-sect-1.3">
+          <title>Networking a Repository</title>
+          
+          <para>Okay, so now you have a repository, and you want to
+            make it available over a network.</para>
+            
+          <para>Subversion's primary network server is Apache httpd
+            speaking WebDAV/deltaV protocol, which is a set of
+            extension methods to http.  (For more information on DAV,
+            see <systemitem
+            class="url">http://www.webdav.org/</systemitem>.)</para>
+            
+          <para>To network your repository, you'll need to</para>
+
+          <itemizedlist>
+
+            <listitem>
+              <para>Get Apache httpd 2.0 up and running with the
+              mod_dav module.</para>
+            </listitem>
+
+            <listitem>
+              <para>Install the mod_dav_svn plugin to mod_dav, which
+                uses Subversion's libraries to access the
+                repository.</para>
+            </listitem>
+
+            <listitem>
+              <para>Configure your <filename>httpd.conf</filename>
+              file to export the repository.</para>
+            </listitem>
+
+          </itemizedlist>
+
+          <para>You can accomplish the first two items by either
+            building httpd and Subversion from source code, or by
+            installing a binary packages on your system.  The second
+            appendix of this document contains more detailed
+            instructions on doing this. (<xref
+            linkend="svn-ch-5"/><!-- ###TODO link this to
+            'Compiling-and-installing' -Fitz -->.)  Instructions are
+            also available in the <filename>INSTALL</filename> file in
+            Subversion's source tree.</para><!-- ###TODO Do we really
+            want to point to the INSTALL doc? -->
+            
+          <para>In this section, we focus on configuring your
+            <filename>httpd.conf</filename>.</para>
+            
+          <para>Somewhere near the bottom of your configuration file,
+            define a new <literal>&lt;Location&gt;</literal> block:</para>
+            
+          <screen>
+            &lt;Location /repos/myrepo&gt;
+               DAV svn
+               SVNPath /absolute/path/to/myrepo
+            &lt;/Location&gt;
+          </screen>
+            
+          <para>This now makes your <filename>myrepo</filename>
+            repository available at the URL <systemitem
+              class="url">http://hostname/repos/myrepo</systemitem>.</para>
+          
+          <para>Alternately, you can use the
+            <literal>SVNParentPath</literal> directive to indicate a
+            <quote>parent</quote> directory whose immediate
+            subdirectories are are assumed to be independent
+            repositories:</para>
+            
+          <screen>
+            &lt;Location /repos&gt;
+               DAV svn
+               SVNParentPath /absolute/path/to/parent/dir
+            &lt;/Location&gt;
+          </screen>
+            
+          <para>If you were to run <command>svnadmin create
+              foorepo</command> within this parent directory, then the
+            url <systemitem
+              class="url">http://hostname/repos/foorepo</systemitem>
+            would automatically be accessible without having to
+            change <filename>httpd.conf</filename> or restart
+            httpd.</para>
+          
+          <para>Note that this simple <literal>&lt;Location&gt;</literal>
+            setup starts life with no access restrictions at
+            all:</para>
+            
+          <itemizedlist>
+
+            <listitem>
+              <para>Anyone can use their svn client to checkout either
+                a working copy of a repository URL, or of any URL that
+                corresponds to a subdirectory of a repository.</para>
+            </listitem>
+
+            <listitem>
+              <para>By pointing an ordinary web browser at a
+                repository URL, anyone can interactively browse the
+                repository's latest revision.</para>
+            </listitem>
+
+            <listitem>
+              <para>Anyone can commit to a repository.</para>
+            </listitem>
+
+          </itemizedlist>
+
+          <para>If you want to restrict either read or write access to
+            a repository as a whole, you can use Apache's built-in
+            access control features.</para>
+            
+          <para>First, create an empty file that will hold httpd
+            usernames and passwords.  Place names and crypted
+            passwords into this file like so:</para>
+            
+          <screen>
+            joe:Msr3lKOsYMkpc
+            frank:Ety6rZX6P.Cqo
+            mary:kV4/mQbu0iq82
+          </screen>
+            
+          <para>You can generate the crypted passwords by using the
+            standard <literal>crypt(3)</literal> command, or using the
+            <command>htpasswd</command> tool supplied in Apache's
+            <filename>bin</filename> directory:</para>
+            
+          <screen>
+            $ /usr/local/apache2/bin/htpasswd -n sussman
+            New password: 
+            Re-type new password: 
+            sussman:kUqncD/TBbdC6
+          </screen>
+          
+          <para>Next, add lines within your
+            <literal>&lt;Location&gt;</literal> block that point to the user
+            file:</para>
+            
+          <screen>
+            AuthType Basic
+            AuthName "Subversion repository"
+            AuthUserFile /path/to/users/file
+          </screen>
+            
+          <para>If you want to restrict <emphasis>all</emphasis>
+            access to the repository, add one more line:</para>
+            
+          <screen>
+            Require valid-user
+          </screen>
+            
+          <para>This line makes Apache require user authentication for
+            every single type of http request to your
+            repository.</para>
+            
+          <para>To restrict write-access only, you need to require a
+            valid user for all request methods
+            <emphasis>except</emphasis> those that are
+            read-only:</para>
+            
+          <screen>
+            &lt;LimitExcept GET PROPFIND OPTIONS REPORT&gt;
+              Require valid-user
+            &lt;/LimitExcept&gt;
+            </screen>
+            
+          <para>Or, if you want to get fancy, you can create two
+            separate user files, one for readers, and one for
+            writers:</para>
+          
+          <screen>
+            AuthGroupFile /my/svn/group/file
+            
+            &lt;LimitExcept GET PROPFIND OPTIONS REPORT&gt;
+              Require group svn_committers
+            &lt;/LimitExcept&gt;
+            
+            &lt;Limit GET PROPFIND OPTIONS REPORT&gt;
+               Require group svn_committers
+               Require group svn_readers
+            &lt;/Limit&gt;
+          </screen>
+            
+          <para>These are only a few simple examples.  For a complete
+            tutorial on Apache access control, please consider taking
+            a look at the <quote>Security</quote> tutorials found at
+            <systemitem
+            class="url">http://httpd.apache.org/docs-2.0/misc/tutorials.html</systemitem>.</para>
+            
+          <para>Another note: in order for <command>svn cp</command>
+            to work (which is actually implemented as a <literal>DAV
+            COPY</literal> request), mod_dav needs to be able to be
+            able to determine the hostname of the server.  A standard
+            way of doing this is to use Apache's
+            <literal>ServerName</literal> directive to set the
+            server's hostname.  Edit your
+            <filename>httpd.conf</filename> to include:</para>
+            
+          <screen>
+            ServerName svn.myserver.org
+          </screen>
+            
+          <para>If you are using virtual hosting through Apache's
+            <literal>NameVirtualHost</literal> directive, you may need
+            to use the <literal>ServerAlias</literal> directive to
+            specify additional names that your server is known
+            by.</para>
+            
+          <para>(If you are unfamiliar with an Apache directive, or
+            not exactly sure about what it does, don't hesitate to
+            look it up in the documentation: <systemitem
+            class="url">http://httpd.apache.org/docs-2.0/mod/directives.html</systemitem>.)</para>
+            
+          <para>You can test your exported repository by firing up
+            httpd:</para>
+            
+          <screen>
+            $ /usr/local/apache2/bin/apachectl stop
+            $ /usr/local/apache2/bin/apachectl start
+          </screen>
+            
+          <para>Check
+            <filename>/usr/local/apache2/logs/error_log</filename> to
+            make sure it started up okay.  Try doing a network
+            checkout from the repository:</para>
+            
+          <screen>
+            $ svn co http://localhost/repos wc
+          </screen>
+            
+          <para>The most common reason this might fail is permission
+            problems reading the repository db files.  Make sure that
+            the user <literal>nobody</literal> (or whatever
+            <literal>UID</literal> the httpd process runs as) has
+            permission to read and write the Berkeley DB files!  This
+            is a very common problem.</para>
+            
+          <para>You can see all of mod_dav_svn's complaints in the
+            Apache error logfile,
+            <filename>/usr/local/apache2/logs/error_log</filename>, or
+            wherever you installed Apache.  For more information about
+            tracing problems, see "Debugging the server" in the
+            <filename>HACKING</filename> file.</para><!-- ###TODO Do
+            we want to point to the HACKING file? -Fitz -->
+
+        </sect2>
+
+        <sect2 id="svn-ch-5-sect-1.4">
+          <title>Repository Maintenance</title>
+            
+          <sect3 id="svn-ch-5-sect-1.4.1">
+            <title>Berkeley DB Management</title>
+            
+            <para>At the time of writing, the Subversion repository
+              has only one database back-end: Berkeley DB.  All of
+              your filesystem's structure and data live in a set of
+              tables within <filename>repos/db/</filename>.</para>
+            
+            <para>Berkeley DB comes with a number of tools for
+              managing these files, and they have their own excellent
+              documentation.  (See <systemitem
+              class="url">http://www.sleepycat.com/</systemitem>, or
+              just read the BDB man pages.)  We won't cover all of
+              these tools here; rather, we'll mention just a few of
+              the more common procedures that repository
+              administrators might need.</para>
+            
+            <para>First, remember that Berkeley DB has genuine
+              transactions.  Every attempt to change the DB is first
+              logged.  If anything ever goes wrong, the DB can back
+              itself up to a previous <literal>checkpoint</literal>
+              and replay transactions to get the data back into a sane
+              state.</para>
+            
+            <para>In our experience, we have seen situations where a
+              bug in Subversion (which causes a crash) can sometimes
+              have a side-effect of leaving the DB environment in a
+              <quote>locked</quote> state.  Any further attempts to
+              read or write to the repository just sit there, waiting
+              on the lock.</para>
+            
+            <para>To <quote>unwedge</quote> the repository:</para>
+ 
+            <orderedlist>
+
+              <listitem>
+                <para>Shut down the Subversion server, to make sure
+            nobody is accessing the repository's Berkeley DB
+            files.</para>
+              </listitem>
+
+              <listitem>
+                <para>Switch to the user who owns and manages the
+                database.</para>
+              </listitem>
+
+              <listitem>
+                <para>Run the command <command>db_recover -v -h
+                    <replaceable>/path/to/repos/db</replaceable></command>},
+                  where <replaceable>repos</replaceable> is the
+                  repository's directory name.  You should see
+                  output like this:</para>
+                
+                <screen>
+                  db_recover: Finding last valid log LSN: file: 40 offset 4080873
+                  db_recover: Checkpoint at: [40][4080333]
+                  db_recover: Checkpoint LSN: [40][4080333]
+                  db_recover: Previous checkpoint: [40][4079793]
+                  db_recover: Checkpoint at: [40][4079793]
+                  db_recover: Checkpoint LSN: [40][4079793]
+                  db_recover: Previous checkpoint: [40][4078761]
+                  db_recover: Recovery complete at Sun Jul 14 07:15:42 2002
+                  db_recover: Maximum transaction id 80000000 Recovery checkpoint [40][4080333]
+                </screen>
+
+                <para>Make sure that the <command>db_recover</command>
+                  program you invoke is the one distributed with the
+                  same version of Berkeley DB you're using in your
+                  Subversion server.</para>
+              </listitem>
+
+              <listitem>
+                <para>Restart the Subversion server.</para>
+              </listitem>
+
+            </orderedlist>
+            
+            <para>Make sure you run this command as the user that owns
+              and manages the database&mdash;typically your Apache
+              process&mdash;and <emphasis>not</emphasis> as root.
+              Running <command>db_recover</command> as root leaves
+              files owned by root in the <filename>db</filename>
+              directory, which the non-root user that manages the
+              database cannot open.  If you do this, you'll get
+              <quote>permission denied</quote> error messages when you
+              try to access the repository.</para><!-- ###TODO Make
+              this a warning block? -Fitz -->
+            
+            <para>Second, a repository administrator may need to
+              manage the growth of logfiles.  At any given time, the
+              DB environment is using at least one logfile to log
+              transactions; when the <quote>current</quote> logfile
+              grows to 10 megabytes, a new logfile is started, and the
+              old one continues to exist.</para>
+            
+            <para>Thus, after a while, you may see a whole group of
+              1MB logfiles lying around the environment.  At this
+              point, you can make a choice: if you leave every single
+              logfile behind, it's guaranteed that
+              <command>db_recover</command> will always be able to
+              replay every single DB transaction, all the way back to
+              the first commit.  (This is the <quote>safe</quote>, or
+              perhaps paranoid, route.)  On the other hand, you can
+              ask Berkeley DB to tell you which logfiles are no longer
+              being actively written to:</para>
+            
+            <screen>
+              $ db_archive -a -h repos/db
+              log.0000000023
+              log.0000000024
+              log.0000000029
+            </screen>
+            
+            <para>Subversion's own repository uses a
+              <literal>post-commit</literal> hook script, which, after
+              performing a <quote>hot-backup</quote> of the
+              repository, removes these excess logfiles.  (In the
+              Subversion source tree, see
+              <filename>tools/backup/hot-backup.py</filename>).</para>
+            
+            <para>This script also illustrates the safe way to perform
+              a backup of the repository while it's still up and
+              running: recursively copy the entire repository
+              directory, then re-copy the logfiles listed by
+              <command>db_archive -l</command>.</para>
+            
+            <para>To start using a repository backup that you've
+              restored, be sure to run <command>db_recover
+                -v</command> command in the <filename>db</filename> area
+              first.  This guarantees that any unfinished log
+              transactions are fully played before the repository goes
+              live again.  (The <command>hot-backup.py</command>
+              script does that for you during backup, so you can skip
+              this step if you decide to use it.)</para>
+            
+            <para>Finally, note that Berkeley DB has a whole locking
+              subsystem; in extremely intensive svn operations, we
+              have seen situations where the DB environment runs out
+              of locks.  The maximum number of locks can be adjusted
+              by changing the values in the
+              <filename>repos/db/DB_CONFIG</filename> file.  Don't
+              change the default values unless you know what you're
+              doing; be sure to read <systemitem
+              class="url">http://www.sleepycat.com/docs/ref/lock/max.html</systemitem>
+              first.</para>
+            
+          </sect3>
+
+          <sect3 id="svn-ch-5-sect-1.4.2">
+            <title>Tweaking with Svnadmin</title>
+            
+            <para>The <command>svnadmin</command> tool has some
+              subcommands that are specifically useful to repository
+              administrators.  Be careful with the
+              <command>svnadmin</command>!  Unlike
+              <command>svnlook</command>, which is read-only,
+              <command>svnadmin</command> has the ability to modify
+              the repository.</para>
+            
+            <para>The most-used feature is probably <literal>svnadmin
+              setlog</literal>.  A commit's log message is an
+              unversioned property directly attached to the revision
+              object; there's only one log message per revision.
+              Sometimes a user screws up the message, and it needs to
+              be replaced:</para>
+            
+            <screen>
+              $ echo "Here is the new, correct log message" > newlog.txt
+              $ svnadmin setlog myrepos 388 newlog.txt
+            </screen>
+            
+            <para>There's a nice CGI script in
+              <filename>tools/cgi/</filename> that allows people (with
+              commit-access passwords) to tweak existing log messages
+              via web browser.</para>
+            
+            <para>Another common use of <command>svnadmin</command> is
+              to inspect and clean up old, dead transactions.  Commits
+              and updates both create transaction trees, but
+              occasionally a bug or crash can leave them lying around.
+              By inspecting the datestamp on a transaction, an
+              administrator can make a judgment call and remove
+              it:</para>
+            
+            <screen>
+              $ svnadmin lstxns myrepos
+              319
+              321
+              $ svnadmin lstxns --long myrepos
+              Transaction 319
+              Created: 2002-07-14T12:57:22.748388Z
+              &hellip;
+              $ svnadmin rmtxns myrepos 319 321
+            </screen>
+            
+            <!-- ###TODO Hey guys, are going to continue to support
+              svnadmin undeltify? -Ben -->
+            
+            <para>Another useful subcommand: <command>svnadmin
+              undeltify</command>.  Remember that the latest version
+              of each file is stored as fulltext in the repository,
+              but that earlier revisions of files are stored as
+              <quote>deltas</quote> against each next-most-recent
+              revisions.  When a user attempts to access an earlier
+              revision, the repository must apply a sequence of
+              backwards-deltas to the newest fulltexts in order to
+              derive the older data.</para>
+            
+            <para>If a particular revision tree is extremely popular,
+              the administrator can speed up the access time to this
+              tree by <quote>undeltifying</quote> any path within the
+              revision&mdash; that is, by converting every file to
+              fulltext:</para>
+            
+            <screen>
+              $ svnadmin undeltify myrepos 230 /project/tags/release-1.3
+              Undeltifying `/project/tags/release-1.3' in revision 230...done.
+            </screen>
+            
+          </sect3>
+
+        </sect2>
+
+        <sect2 id="svn-ch-5-sect-1.5">
+          <title>Repository Hooks</title>
+
+          <para>A <firstterm>hook</firstterm> is a program triggered
+            by a repository read or write access.  The hook is handed
+            enough information to tell what the action is, what
+            target(s) it's operating on, and who is doing it.
+            Depending on the hook's output or return status, the hook
+            program may continue the action, stop it, or suspend it in
+            some way.</para>
+            
+          <para>Subversion's hooks are programs that live in the
+            repository's <filename>hooks</filename> directory:</para>
+            
+          <screen>
+            $ ls repos/hooks/
+            post-commit.tmpl  read-sentinels.tmpl  write-sentinels.tmpl
+            pre-commit.tmpl   start-commit.tmpl
+          </screen>
+            
+          <para>This is how the <filename>hooks</filename> directory
+            appears after a repository is first created.  It doesn't
+            contain any hook programs&mdash;just templates.</para>
+          
+          <para>The actual hooks need to be named
+            <filename>start-commit</filename>,
+            <filename>pre-commit</filename> and
+            <filename>post-commit</filename>.  The template (.tmpl)
+            files are example shell scripts to get you started; read
+            them for details about how each hook works.  To make your
+            own hook, just copy <filename>foo.tmpl</filename> to
+            <filename>foo</filename> and edit.</para>
+          
+          <para>(The <filename>read-sentinels</filename> and
+            <filename>write-sentinels</filename> are not yet
+            implemented.  They are intended to be more like daemons
+            than hooks.  A sentinel is started up at the beginning of
+            a user operation.  The Subversion server communicates with
+            the sentinel using a protocol yet to be defined.
+            Depending on the sentinel's responses, Subversion may stop
+            or otherwise modify the operation.)</para>
+            
+            <para>Here is a description of the hook programs:</para>
+            
+          <variablelist>
+
+            <varlistentry>
+              <term><filename>start-commit</filename></term>
+              <listitem>
+                <para>This is run before the committer's transaction
+                  is even created.  It is typically used to decide if
+                  the user has commit privileges at all.  The
+                  repository passes two arguments to this program: the
+                  path to the repository, and username which is
+                  attempting to commit.  If the program returns a
+                  non-zero exit value, the commit is stopped before
+                  the transaction is even created.</para>
+              </listitem>
+            </varlistentry>
+
+
+
+            
+            <varlistentry>
+              <term><filename>pre-commit</filename></term>
+              <listitem>
+                <para>This is run when the transaction is complete,
+                  but before it is committed.  Typically, this hook is
+                  used to protect against commits that are disallowed
+                  due to content or location (for example, your site
+                  might require that all commits to a certain branch
+                  include a ticket number from the bug tracker, or
+                  that the incoming log message is
+                  non-empty.)
+                  <footnote id="svn-ch-5-fn-2">
+                    <para>At this time, this is the only
+                      method by which users can implement finer-grained
+                      access control beyond what
+                      <filename>httpd.conf</filename> offers.  In a future
+                      version of Subversion, we plan to implement ACLs
+                      directly in the filesystem.</para>
+                  </footnote>
+                  The repository passes
+                  two arguments to this program: the path to the
+                  repository, and the name of the transaction being
+                  committed.  If the program returns a non-zero exit
+                  value, the commit is aborted and transaction is
+                  removed.</para>
+
+                <para>The Subversion distribution includes a
+                  <command>tools/hook-scripts/commit-access-control.pl</command>
+                  script that can be called from
+                  <command>pre-commit</command> to implement
+                  fine-grained access control.</para>
+              </listitem>
+            </varlistentry>
+
+            <varlistentry>
+              <term><filename>post-commit</filename></term>
+              <listitem>
+                <para>This is run after the transaction is committed,
+                  and we have a new revision.  Most people use this
+                  hook to send out descriptive commit-emails or to
+                  make a hot-backup of the repository.  The repository
+                  passes two arguments to this program: the path to
+                  the repository, and the new revision number that was
+                  created.  The exit code of the program is
+                  ignored.</para>
+                
+                <para>The Subversion distribution includes a
+                  <command>tools/hook-scripts/commit-email.pl</command>
+                  script that can be used to send out the differences
+                  applied in the commit to any number of email
+                  addresses.  Also included is
+                  <command>tools/backup/hot-backup.py</command>,
+                  which is a script that perform hot backups of your
+                  Subversion repository after every commit.</para>
+              </listitem>
+            </varlistentry>
+
+          </variablelist>
+            
+          <para>Note that the hooks must be executable by the user who
+            will invoke them (commonly the user httpd runs as), and
+            that same user needs to be able to access the
+            repository.</para>
+          
+          <para>The <command>pre-commit</command> and
+            <command>post-commit</command> hooks need to know things
+            about the change about to be committed (or that has just
+            been committed).  The solution is a standalone program,
+            <command>svnlook</command> <xref
+              linkend="svn-ch-5-sect-1.2"/>.) which was installed in the
+            same place as the <command>svn</command> binary.  Have the
+            script use <command>svnlook</command> to examine a
+            transaction or revision tree.  It produces output that is
+            both human and machine-readable, so hook scripts can
+            easily parse it.  Note that <command>svnlook</command> is
+            read-only&mdash;it can only inspect, not change the
+            repository.</para>
+
+        </sect2>
+
+        <sect2 id="svn-ch-5-sect-1.6">
+          <title>Migrating a Repository (dump/load)</title>
+
+          <para>###TODO write this.</para>
+      
+        </sect2>
+
+      </sect1>
+
+      <!-- ================================================================= -->
+      <!-- ======================== SECTION 2 ============================== -->
+      <!-- ================================================================= -->
+      <sect1 id="svn-ch-5-sect-2">
+        <title>Adding projects</title>
+
+        <sect2 id="svn-ch-5-sect-2.1">
+          <title>Examples of 'svn import'</title>
+          
+          <para>###TODO write this.</para>
+
+        </sect2>
+
+        <sect2 id="svn-ch-5-sect-2.2">
+          <title>Vendor Branches</title>
+
+          <para>(discussion of strategies and svn_load_dirs.pl)</para>
+
+          <para>###TODO write this.</para>
+
+        </sect2>
+
+      </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 3 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-5-sect-3">
+    <title>Migrating a repository</title>
+    
+    <para>Sometimes special situations arise where you need to move
+      all of your filesystem data from one repository to another.
+      Perhaps the internal fs database schema has changed in some way
+      in a new release of Subversion, or perhaps you'd like to start
+      using a different database <quote>back end</quote>.</para>
+
+    <para>Either way, your data needs to be migrated to a new
+      repository.  To do this, we have the <command>svnadmin dump</command> and
+      <command>svnadmin load</command> commands.</para>
+
+    <para><command>svnadmin dump</command> writes a stream of your
+      repository's data to stdout:</para>
+
+    <screen>
+$ svnadmin dump myrepos > dumpfile
+* Dumped revision 0.
+* Dumped revision 1.
+* Dumped revision 2.
+@hellip;
+    </screen>
+
+    <para>This stream describes every revision in your repository as a
+      list of changes to nodes.  It's mostly human-readable text; but
+      when a file's contents change, the entire fulltext is dumped
+      into the stream.  If you have binary files or binary
+      property-values in your repository, those parts of the stream
+      may be unfriendly to human readers.</para>
+
+    <para>After dumping your data, you would then move the file to a
+      different system (or somehow alter the environment to use a
+      different version of <command>svnadmin</command> and/or
+      <filename>libsvn_fs.so</filename>), and create a
+      <quote>new</quote>-style repository that has a new schema or DB
+      back-end:</para>
+
+    <screen>
+$ svnadmin create newrepos
+    </screen>
+    
+    <para>The <command>svnadmin load</command> command attempts to
+      read a dumpstream from stdin, and effectively replays each
+      commit:</para>
+
+    <screen>
+$ svnadmin load newrepos &lt; dumpfile
+&lt;&lt;&lt; Started new txn, based on original revision 1
+     * adding path : A ... done.
+     * adding path : A/B ... done.
+&hellip;
+------- Committed new rev 1 (loaded from original rev 1) &gt;&gt;&gt;
+
+&lt;&lt;&lt; Started new txn, based on original revision 2
+     * editing path : A/mu ... done.
+     * editing path : A/D/G/rho ... done.
+
+------- Committed new rev 2 (loaded from original rev 2) &gt;&gt;&gt;
+    </screen>
+
+    <para>Voila, your revisions have been recommitted into the new
+      repository.</para>
+    
+    <para>And because <command>svnadmin</command> uses standand input
+      and output streams for the repository dump and load process,
+      people who are feeling saucy with Unix can try things like
+      this:</para>
+
+    <screen>
+$ svnadmin create newrepos
+$ svnadmin dump myrepos | svnadmin load newrepos
+    </screen>
+
+    <sect2 id="svn-ch-5-sect-3.1">
+      <title>Partial dump/load</title>
+
+      <para>You can also create a dumpfile that represents a specific
+        range of revisions.  <command>svnadmin dump</command> takes
+        optional starting and ending revisions to accomplish just that
+        task.</para>
+
+      <screen>
+$ svnadmin dump myrepos 23 > rev-23.dumpfile
+$ svnadmin dump myrepos 100 200 > revs-100-200.dumpfile
+      </screen>
+
+      <para>Now, regardless of the range of revisions used when
+        dumping the repository, the default behavior is for the first
+        revision dumped to always be compared against revision 0,
+        which is just the empty root directory <filename>/</filename>.
+        This means that the first revision in any dumpfile will always
+        look like a gigantic list of <quote>added</quote> nodes.  We
+        do this so that a file like
+        <filename>revs-100-200.dumpfile</filename> can be directly
+        loaded into an empty repository.</para>
+
+      <para>However, if you add the <option>--incremental</option>
+        option when you dump your repository, this tells
+        <command>svnadmin</command> to compare the first dumped
+        revision against the previous revision in the repository, the
+        same way it treats every other revision that gets dumped.  The
+        benefit of this is that you can create several small dumpfiles
+        that can be loaded in succession, instead of one large one,
+        like so:</para>
+
+      <screen>
+$ svnadmin dump myrepos 0 1000 > dumpfile1
+$ svnadmin dump myrepos 1001 2000 --incremental > dumpfile2
+$ svnadmin dump myrepos 2001 3000 --incremental > dumpfile3
+      </screen>
+
+      <para>These dumpfiles could be loaded into a new repository with
+        the following command sequence:</para>
+
+      <screen>
+$ svnadmin load newrepos &lt; dumpfile1
+$ svnadmin load newrepos &lt; dumpfile2
+$ svnadmin load newrepos &lt; dumpfile3
+      </screen>
+
+      <para>Another neat trick you can perform with this
+        <option>--incremental</option> option involves appending to an
+        existing dumpfile a new range of revisions.  For example, you
+        might have a post-commit hook that simply appends the
+        repository dump of the single revision that triggered the
+        hook.  Or you might have a script like the following that runs
+        nightly to append dumpfile data for all the revisions that
+        were added to the repository since the last time the script
+        ran.</para>
+
+      <screen>
+#!/usr/bin/perl
+
+$repos_path  = '/path/to/repos';
+$dumpfile    = '/usr/backup/svn-dumpfile';
+$last_dumped = '/var/log/svn-last-dumped';
+ 
+# Figure out the starting revision (0 if we cannot read the last-dumped file,
+# else use the revision in that file incremented by 1).
+if (open LASTDUMPED, "$last_dumped")
+{
+    $new_start = &lt;LASTDUMPED&gt;;
+    chomp $new_start;
+    $new_start++;
+    close LASTDUMPED;
+}
+else
+{
+    $new_start = 0;
+}
+
+# Query the youngest revision in the repos.
+$youngest = `svnadmin youngest $repos_path`;
+chomp $youngest;
+
+# Do the backup.
+`svnadmin dump $repos_path $new_start $youngest --incremental >> $dumpfile`;
+
+# Store a new last-dumped revision
+open LASTDUMPED, "> $last_dumped" or die;
+print LASTDUMPED "$youngest\n";
+close LASTDUMPED;
+
+# All done!
+      </screen>
+
+      <para>As you can see, the Subversion repository dumpfile format,
+        and specifically <command>svnadmin</command>'s use of that
+        format, can be a valuable means by which to backup changes to
+        your repository over time in case of a system crash or some
+        other catastrophic event.</para>
+
+    </sect2>
+
+  </sect1>
+           
+</chapter>
+
+<!--
+local variables: 
+eval: (load-file "../tools/svnbook.el")
+sgml-parent-document: ("book.xml" "chapter")
+end:
+-->
