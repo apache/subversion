@@ -126,17 +126,10 @@ svn_cl__prompt_user (char **result,
       size_t bufsize = 300;
       svn_stringbuf_ensure (strbuf, bufsize);
 
-      /* Hopefully this won't echo to the screen. */
       status = apr_password_get (prompt_native, strbuf->data, &bufsize);
       if (status)
         return svn_error_create (status, NULL,
                                  "error from apr_password_get().");      
-
-      /* If echo is turned off, then we must manually add the visible
-         newline that the user's input would have provided; this
-         prevents formatting ugliness, see resolved issue #450 for
-         more details.  */
-      printf ("\n");
     }
 
   SVN_ERR (svn_utf_cstring_to_utf8 ((const char **)result, strbuf->data,
