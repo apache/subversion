@@ -24,7 +24,9 @@ Tone: somewhere between formal and informal.
 
 - We have "working copies", not "working directories"
 
-- Always use long Subversion commands (e.g. checkout, not co, etc)
+- Always use long Subversion commands (e.g. "checkout", not "co", etc)
+
+- We perform "commits"; we don't "check in" or do "checkins"
 
 ===========================================================================
 
