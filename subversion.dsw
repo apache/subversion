@@ -21,6 +21,9 @@ Package=<4>
     Project_Dep_Name aprutil
     End Project Dependency
     Begin Project Dependency
+    Project_Dep_Name apriconv
+    End Project Dependency
+    Begin Project Dependency
     Project_Dep_Name xml
     End Project Dependency
     Begin Project Dependency
@@ -138,6 +141,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "apriconv"=".\apr-iconv\apriconv.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "aprutil"=".\apr-util\aprutil.dsp" - Package Owner=<4>
 
 Package=<5>
@@ -151,6 +166,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name apr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apriconv
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name xml
@@ -264,7 +282,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libsvn_repos"=.\SUBVERSION\LIBSVN_REPOS\libsvn_repos.dsp - Package Owner=<4>
+Project: "libsvn_repos"=.\subversion\libsvn_repos\libsvn_repos.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -418,6 +436,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name aprutil
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apriconv
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name xml

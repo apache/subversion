@@ -41,7 +41,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir "Release\obj"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\include" /I "..\..\apr\include" /I "..\..\apr-util\xml\expat\lib" /I "..\.." /D "NDEBUG" /D "_WINDOWS" /D "WIN32" /D "APR_DECLARE_STATIC" /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\include" /I "..\..\apr\include" /I "..\..\apr-util\include" /I "..\..\apr-util\xml\expat\lib" /I "..\.." /D "NDEBUG" /D "_WINDOWS" /D "WIN32" /D "APR_DECLARE_STATIC" /D "APU_DECLARE_STATIC" /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x424 /d "NDEBUG"
 # ADD RSC /l 0x424 /d "NDEBUG"
@@ -65,7 +65,7 @@ LIB32=link.exe -lib
 # PROP Intermediate_Dir "Debug\obj"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
-# ADD CPP /nologo /MDd /W3 /GX /ZI /Od /I "..\include" /I "..\..\apr\include" /I "..\..\apr-util\xml\expat\lib" /I "..\.." /D "SVN_DEBUG" /D "_DEBUG" /D "_WINDOWS" /D "WIN32" /D "APR_DECLARE_STATIC" /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /GX /ZI /Od /I "..\include" /I "..\..\apr\include" /I "..\..\apr-util\include" /I "..\..\apr-util\xml\expat\lib" /I "..\.." /D "SVN_DEBUG" /D "_DEBUG" /D "_WINDOWS" /D "WIN32" /D "APR_DECLARE_STATIC" /D "APU_DECLARE_STATIC" /FD /GZ /c
 # SUBTRACT CPP /YX /Yc /Yu
 # ADD BASE RSC /l 0x424 /d "_DEBUG"
 # ADD RSC /l 0x424 /d "_DEBUG"
