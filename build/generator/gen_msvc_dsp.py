@@ -98,12 +98,20 @@ class Generator(gen_win.WinGeneratorBase):
     "Write a Workspace (.dsw)"
 
     # Generate a fake depaprutil project
-    self.targets['depsubr'] = gen_base.TargetUtility('depsubr', 'build/win32', None, None, self.cfg, None)
-    self.targets['depdelta'] = gen_base.TargetUtility('depdelta', 'build/win32', None, None, self.cfg, None)
+    self.targets['depsubr'] = gen_base.TargetUtility('depsubr',
+                                                     'build/win32',
+                                                     None, None, self.cfg,
+                                                     None)
+    self.targets['depdelta'] = gen_base.TargetUtility('depdelta',
+                                                      'build/win32',
+                                                      None, None, self.cfg,
+                                                      None)
 
     targets = [ ]
 
-    for name, target in self.targets.items():
+    items = self.targets.items()
+    items.sort()
+    for name, target in items:
       # This isn't working yet
       if string.find(name, '-test') >= 0:
         continue
