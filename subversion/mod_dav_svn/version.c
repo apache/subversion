@@ -17,7 +17,8 @@
 #include <httpd.h>
 #include <mod_dav.h>
 #include <apr_tables.h>
-#include <apr_buckets.h>
+
+#include "svn_fs.h"
 
 #include "dav_svn.h"
 
@@ -348,7 +349,6 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
   const char *conflict;
   svn_error_t *serr;
   svn_revnum_t new_rev;
-  apr_bucket_brigade *bb;
 
   /* We'll use the target's pool for our operation. We happen to know that
      it matches the request pool, which (should) have the proper lifetime. */
@@ -381,27 +381,24 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
     {
       const char *msg;
 
-      /* ### we need to convert the conflict path into a URI */
-      msg = apr_psprintf(pool,
-                         "A conflict occurred during the MERGE processing. "
-                         "The problem occurred with the \"%s\" resource.",
-                         conflict);
+      if (serr->apr_err == SVN_ERR_FS_CONFLICT)
+        {
+          /* ### we need to convert the conflict path into a URI */
+          msg = apr_psprintf(pool,
+                             "A conflict occurred during the MERGE "
+                             "processing. The problem occurred with the "
+                             "\"%s\" resource.",
+                             conflict);
+        }
+      else
+        msg = "An error occurred while committing the transaction.";
+
       return dav_svn_convert_err(serr, HTTP_CONFLICT, msg);
     }
 
-  bb = apr_brigade_create(pool);
-  ap_fputs(output, bb,
-           DAV_XML_HEADER DEBUG_CR
-           "<D:merge-response xmlns:D=\"DAV:\">" DEBUG_CR
-           "<D:merged-set>" DEBUG_CR);
-
-  /* ### more work here... */
-
-  ap_fputs(output, bb,
-           "</D:merged-set>" DEBUG_CR
-           "</D:merge-response>" DEBUG_CR);
-
-  return NULL;
+  /* process the response for the new revision. */
+  return dav_svn__merge_response(output, source->info->repos->fs, new_rev,
+                                 prop_elem, pool);
 }
 
 const dav_hooks_vsn dav_svn_hooks_vsn = {
