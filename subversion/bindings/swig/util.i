@@ -116,7 +116,7 @@
 apr_status_t apr_initialize(void);
 void apr_terminate(void);
 
-apr_status_t apr_ansi_time_to_apr_time(apr_time_t *result, time_t input);
+apr_status_t apr_time_ansi_put(apr_time_t *result, time_t input);
 
 void apr_pool_destroy(apr_pool_t *p);
 
