@@ -104,6 +104,11 @@ I.    BUILD REQUIREMENTS
       The "./apr" and "./apr-util" directories will not be considered
       if the search for apr-config and apu-config scripts is successful.
 
+      NOTE: On Windows you will also need apr-iconv.  Check it out next to
+      the apr and apr-util directories:
+
+          $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co apr-iconv
+
 
       2.  autoconf 2.50 or newer (Unix only)
 
@@ -656,8 +661,9 @@ III.  BUILDING A SUBVERSION SERVER
       see section I.6.
 
       You may also want to include other modules in your build. Add
-      --enable-ssl to turn on SSL support, for example.  Consult the
-      Apache documentation for more details.
+      --enable-ssl to turn on SSL support, and --enable-deflate to turn on
+      compression support, for example.  Consult the Apache documentation
+      for more details.
 
       All instructions below assume you configured Apache to install
       under /usr/local/apache2/; substitute appropriately if you
@@ -739,6 +745,12 @@ III.  BUILDING A SUBVERSION SERVER
       The following assumes you have already created a repository.
       For documentation on how to do that, see README.
 
+      The following also assumes that you have modified
+      /usr/local/apache2/conf/httpd.conf to reflect your setup.
+      At a minimum you should look at the User, Group and ServerName
+      directives.  Full details on setting up apache can be found at:
+      http://httpd.apache.org/docs-2.0/
+
       Add this to the *bottom* of /usr/local/apache2/conf/httpd.conf:
 
       <Location /svn/repos>
@@ -795,6 +807,13 @@ III.  BUILDING A SUBVERSION SERVER
       If you are using virtual hosting through Apache's NameVirtualHost
       directive, you may need to use the ServerAlias directive to specify
       additional names that your server is known by.
+
+      If you have configured mod_deflate to be in the server, you can enable
+      compression support for your repository by adding the following line
+      to your Location block:
+
+          SetOutputFilter DEFLATE
+
 
       NOTE: If you are unfamiliar with an Apache directive, or not exactly
       sure about what it does, don't hesitate to look it up in the
