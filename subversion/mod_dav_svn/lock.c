@@ -38,6 +38,7 @@
 struct dav_lockdb_private
 {
   /* These represent 'custom' request hearders only sent by svn clients: */
+  svn_boolean_t svn_client;
   svn_boolean_t lock_steal;
   svn_boolean_t lock_break;
   svn_revnum_t working_revnum;
@@ -71,11 +72,31 @@ svn_lock_to_dav_lock(dav_lock **dlock,
   token->uuid_str = apr_pstrdup(pool, slock->token);
   lock->locktoken = token;
 
-  /* the svn_lock_t 'comment' is the equivalent of the 'DAV:owner'
-     field, just a scratch-space for notes abotu the lock. */
-  lock->owner = apr_pstrdup(pool, slock->comment);
+  /* the svn_lock_t 'comment' field maps to the 'DAV:owner' field. */
+  if (slock->comment)
+    {
+      if (! slock->xml_comment)
+        {
+          /* We need to wrap the naked comment with <DAV:owner>, lest
+             we send back an invalid http response.  mod_dav won't do
+             it for us, because it assumes that it personally created
+             every lock in the repository, and thus the wrapping is
+             already present. */
+          lock->owner = apr_pstrcat(pool,
+                                    "<D:owner xmlns:D=\"DAV:\">",
+                                    slock->comment,
+                                    "</D:owner>", NULL);
+        }
+      else
+        {
+          lock->owner = apr_pstrdup(pool, slock->comment);
+        }
+    }
+  else
+    lock->owner = NULL;
 
-  /* the svn_lock_t 'owner' is the actual authenticated owner of the lock. */
+  /* the svn_lock_t 'owner' is the actual authenticated owner of the
+     lock, and maps to the 'auth_user' field in the mod_dav lock. */
 
   /* (If the client ran 'svn unlock --force', then we don't want to
      return lock->auth_user.  Otherwise mod_dav will throw an error
@@ -95,11 +116,36 @@ svn_lock_to_dav_lock(dav_lock **dlock,
 
 
 
+/* Helper function;  return only the cdata portion of the incoming
+   <D:owner> string, allocated in POOL. */
+static const char *
+extract_cdata(const char *ownerstring, apr_pool_t *pool)
+{
+  const char *closetag, *cdata;
+  apr_off_t end;
+
+  closetag = ap_strchr_c(ownerstring, '>');
+  if (! closetag)
+    return ownerstring;
+
+  cdata = closetag + 1;
+  
+  /* Jump to end of string, search backwards for '<'. */
+  end = strlen(cdata) - 1;
+  while ((cdata[end] != '<') && (end > 0))
+    end--;
+  
+  return apr_pstrndup(pool, cdata, end);
+}
+
+
+
 /* Helper func:  convert a dav_lock to an svn_lock_t, allocated in pool. */
 static dav_error *
 dav_lock_to_svn_lock(svn_lock_t **slock,
                      const dav_lock *dlock,
                      const char *path,
+                     dav_lockdb_private *info,
                      apr_pool_t *pool)
 {
   svn_lock_t *lock;
@@ -125,8 +171,22 @@ dav_lock_to_svn_lock(svn_lock_t **slock,
   if (dlock->auth_user)
     lock->owner = apr_pstrdup(pool, dlock->auth_user);
   
+  /* We need to be very careful about stripping the <D:owner> tag away
+     from the cdata.  It's okay to do for svn clients, but not other
+     DAV clients! */
   if (dlock->owner)
-    lock->comment = apr_pstrdup(pool, dlock->owner);
+    {
+      if (info->svn_client)
+        {
+          lock->comment = extract_cdata(dlock->owner, pool);
+          lock->xml_comment = 0;  /* comment is NOT xml-wrapped. */
+        }
+      else
+        {          
+          lock->comment = apr_pstrdup(pool, dlock->owner);
+          lock->xml_comment = 1; /* comment IS xml-wrapped. */
+        }
+    }
 
   if (dlock->timeout)
     lock->expiration_date = (apr_time_t)dlock->timeout * APR_USEC_PER_SEC;
@@ -285,6 +345,10 @@ dav_svn_open_lockdb(request_rec *r,
   svn_client_options = apr_table_get(r->headers_in, SVN_DAV_OPTIONS_HEADER);
   if (svn_client_options)
     {
+      /* Was the LOCK request sent by an svn client? */
+      if (ap_strstr_c(svn_client_options, SVN_DAV_OPTION_SVN_CLIENT_LOCK))
+        info->svn_client = TRUE;
+
       /* 'svn [lock | unlock] --force' */
       if (ap_strstr_c(svn_client_options, SVN_DAV_OPTION_LOCK_BREAK))
         info->lock_break = TRUE;
@@ -626,7 +690,7 @@ dav_svn_append_locks(dav_lockdb *lockdb,
 
   /* Convert the dav_lock into an svn_lock_t. */  
   derr = dav_lock_to_svn_lock(&slock, lock, resource->info->repos_path,
-                              resource->pool);
+                              info, resource->pool);
   if (derr)
     return derr;
 

@@ -48,6 +48,7 @@
 #define CREATION_DATE_KEY "creation_date"
 #define EXPIRATION_DATE_KEY "expiration_date"
 #define COMMENT_KEY "comment"
+#define XML_COMMENT_KEY "xml_comment"
 
 
 /* Return the base path to the directory in FS where lock files (and
@@ -417,6 +418,7 @@ write_lock_to_file (svn_fs_t *fs,
   hash_store (hash, TOKEN_KEY, lock->token, pool); 
   hash_store (hash, OWNER_KEY, lock->owner, pool); 
   hash_store (hash, COMMENT_KEY, lock->comment, pool); 
+  hash_store (hash, XML_COMMENT_KEY, lock->xml_comment ? "1" : "0", pool);
 
   hash_store (hash, CREATION_DATE_KEY, 
               svn_time_to_cstring(lock->creation_date, pool), pool);
@@ -595,6 +597,14 @@ read_lock_from_abs_path (svn_lock_t **lock_p,
     lock->comment = val;
   else /* Comment optional. */
     lock->comment = NULL;
+
+  val = hash_fetch (hash, XML_COMMENT_KEY, pool);
+  if (!val)
+    return svn_fs_fs__err_corrupt_lockfile (fs, abs_path);
+  if (strcmp (val, "1") == 0)
+    lock->xml_comment = TRUE;
+  else
+    lock->xml_comment = FALSE;
 
   val = hash_fetch (hash, CREATION_DATE_KEY, pool);
   if (!val)

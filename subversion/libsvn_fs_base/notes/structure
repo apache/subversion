@@ -580,7 +580,7 @@ The `locks' table is a btree whose key is a UUID string (also known as
 a "lock-token"), and whose value is a skel representing a lock.  The
 fields in the skel mirror those of an svn_lock__t (see svn_types.h):
 
-    ("lock" PATH UUID OWNER COMMENT CREATION-DATE EXPIRATION-DATE)
+    ("lock" PATH UUID OWNER COMMENT XML-P CREATION-DATE EXPIRATION-DATE)
 
 where:
 
@@ -593,6 +593,10 @@ where:
 
    * COMMENT is a string describing the lock.  It may be empty, or it
      might describe the rationale for locking.
+
+   * XML-P is a boolean (either 0 or 1) indicating whether the COMMENT
+     field is wrapped in an XML tag.  (This is something only used by
+     the DAV layer, for webdav interoperabliity.)
 
    * CREATION-DATE is a string representation of the date/time when
      the lock was created.  (see svn_time_to_cstring())
@@ -898,9 +902,12 @@ UUIDs:
 
 Locks:
 
-                   LOCK ::= ("lock" PATH TOKEN OWNER COMMENT CR-DATE [X-DATE]);
+                   LOCK ::= ("lock" PATH TOKEN OWNER 
+                                    COMMENT XML-P CR-DATE [X-DATE]);
                    PATH ::= atom ;
                   OWNER ::= atom ;
+                COMMENT ::= atom ;
+                  XML-P ::= "0" | "1" ;
                 CR-DATE ::= atom ;
                  X-DATE ::= atom ;
 

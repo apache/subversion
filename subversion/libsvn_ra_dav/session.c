@@ -939,19 +939,23 @@ pre_send_hook(ne_request *req,
 
   if (strcmp(lrb->method, "LOCK") == 0)
     {
+      /* Unconditionally create an X-SVN-Options: header that
+         indicates this is an svn client (not a generic DAV client)
+         creating the lock.  Also, possibly add another option value
+         indicating that the lock is being stolen.  */
+      char *hdr = apr_psprintf(lrb->pool, "%s: %s %s\r\n",
+                               SVN_DAV_OPTIONS_HEADER,
+                               SVN_DAV_OPTION_SVN_CLIENT_LOCK,
+                               lrb->force ? SVN_DAV_OPTION_LOCK_STEAL : "");
+      ne_buffer_zappend(header, hdr);
+
+      /* If we have a working-revision of the file, send it so that
+         svn_fs_lock() can do an out-of-dateness check. */
       if (SVN_IS_VALID_REVNUM(lrb->current_rev))
         {
           char *buf = apr_psprintf(lrb->pool, "%s: %ld\r\n",
                                    SVN_DAV_VERSION_NAME_HEADER,
                                    lrb->current_rev);
-          ne_buffer_zappend(header, buf);
-        }
-
-      if (lrb->force)
-        {
-          char *buf = apr_psprintf(lrb->pool, "%s: %s\r\n",
-                                   SVN_DAV_OPTIONS_HEADER,
-                                   SVN_DAV_OPTION_LOCK_STEAL);
           ne_buffer_zappend(header, buf);
         }
     }
