@@ -497,8 +497,8 @@ svn_cl__log (apr_getopt_t *os,
   lb.omit_log_message = opt_state->quiet;
   
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
-                          FALSE, pool);
+    svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                          FALSE, FALSE, pool);
   
   if (opt_state->xml)
     {

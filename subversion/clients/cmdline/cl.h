@@ -378,7 +378,7 @@ svn_cl__auth_ssl_client_cert_pw_prompt (
  * If don't want a summary line at the end of notifications, set
  * SUPPRESS_FINAL_LINE.
  */
-void svn_cl__get_notifier (svn_wc_notify_func_t *notify_func_p,
+void svn_cl__get_notifier (svn_wc_notify_func2_t *notify_func_p,
                            void **notify_baton_p,
                            svn_boolean_t is_checkout,
                            svn_boolean_t is_export,

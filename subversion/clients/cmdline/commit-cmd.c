@@ -69,8 +69,8 @@ svn_cl__commit (apr_getopt_t *os,
     }
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
-                          FALSE, pool);
+    svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                          FALSE, FALSE, pool);
 
   /* We're creating a new log message baton because we can use our base_dir 
      to store the temp file, instead of the current working directory.  The 

@@ -101,7 +101,7 @@ svn_cl__import (apr_getopt_t *os,
        _("Invalid URL '%s'"), url);
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton,
+    svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2,
                           FALSE, FALSE, FALSE, pool);
 
   SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton), opt_state, 
