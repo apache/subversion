@@ -1096,16 +1096,26 @@ svn_fs_fs__rev_get_root (svn_fs_id_t **root_id_p,
   apr_file_t *revision_file;
   apr_off_t root_offset;
   svn_fs_id_t *root_id;
+  svn_error_t *err;
 
   revision_filename = apr_psprintf (pool, "%ld", rev);
 
-  SVN_ERR (svn_io_file_open (&revision_file,
-                             svn_path_join_many (pool, 
-                                                 fs->path,
-                                                 SVN_FS_FS__REVS_DIR,
-                                                 revision_filename,
-                                                 NULL),
-                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
+  err = svn_io_file_open (&revision_file,
+                          svn_path_join_many (pool, 
+                                              fs->path,
+                                              SVN_FS_FS__REVS_DIR,
+                                              revision_filename,
+                                              NULL),
+                          APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
+  if (err && APR_STATUS_IS_ENOENT (err->apr_err))
+    {
+      svn_error_clear (err);
+      return svn_error_createf (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                "No such revision %ld", rev);
+    }
+  else if (err)
+    return err;
+      
 
   SVN_ERR (get_root_changes_offset (&root_offset, NULL, revision_file, pool));
 
