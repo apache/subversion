@@ -1181,11 +1181,11 @@ main (int argc, const char * const *argv)
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
         svn_client_get_ssl_client_cert_prompt_provider
-          (&provider, svn_cl__auth_ssl_client_cert_prompt, NULL, pool);
+          (&provider, svn_cl__auth_ssl_client_cert_prompt, NULL, 2, pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
         svn_client_get_ssl_client_cert_pw_prompt_provider
-          (&provider, svn_cl__auth_ssl_client_cert_pw_prompt, NULL, pool);
+          (&provider, svn_cl__auth_ssl_client_cert_pw_prompt, NULL, 2, pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
       }
 
