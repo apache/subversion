@@ -760,6 +760,21 @@ static void get_file_reader(void *userdata, const char *buf, size_t len)
       
 }
 
+
+/* minor helper for svn_ra_dav__get_file, of type prop_setter_t */
+static svn_error_t * 
+add_prop_to_hash (void *baton,
+                  svn_stringbuf_t *name,
+                  svn_stringbuf_t *value)
+{
+  apr_hash_t *ht = (apr_hash_t *) baton;
+  
+  apr_hash_set(ht, name->data, name->len, value);
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *svn_ra_dav__get_file(void *session_baton,
                                   const char *path,
                                   svn_revnum_t revision,
@@ -828,12 +843,29 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
 
           apr_hash_this(hi, &key, NULL, &val);
 
+          /* If the property starts with "svn:custom:", then it's a
+             normal user-controlled property coming from the fs.  Just
+             strip off this prefix and add to the hash. */
 #define NSLEN (sizeof(SVN_PROP_CUSTOM_PREFIX) - 1)
           if (strncmp(key, SVN_PROP_CUSTOM_PREFIX, NSLEN) == 0)
             apr_hash_set(*props, &((const char *)key)[NSLEN], 
                          APR_HASH_KEY_STRING, 
                          svn_string_create(val, ras->pool));    
 #undef NSLEN
+          
+          else if (strcmp(key, SVN_RA_DAV__PROP_CHECKED_IN) == 0)
+            /* For files, we currently only have one 'wc' prop. */
+            apr_hash_set(*props, SVN_RA_DAV__LP_VSN_URL, APR_HASH_KEY_STRING, 
+                         svn_string_create(val, ras->pool));
+          
+          else
+            /* If it's one of the 'entry' props, this func will
+               recognize the DAV name & add it to the hash mapped to a
+               new name recognized by libsvn_wc. */
+            SVN_ERR( set_special_wc_prop ((const char *) key,
+                                          (const char *) val,
+                                          add_prop_to_hash, *props, 
+                                          ras->pool) );
         }
     }
 

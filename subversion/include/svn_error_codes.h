@@ -109,6 +109,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_UNKNOWN_NODE_KIND,
               "Unknown svn_node_kind")
 
+  SVN_ERRDEF (SVN_ERR_UNKNOWN_PROP_KIND,
+              "Unknown svn_prop_kind")
+
   SVN_ERRDEF (SVN_ERR_DELTA_MD5_CHECKSUM_ABSENT,
               "MD5 checksum is missing")
 

@@ -759,6 +759,52 @@ svn_error_t *svn_wc_get_switch_editor (svn_stringbuf_t *anchor,
                                        void **edit_baton,
                                        apr_pool_t *pool);
 
+
+/* Given a FILE_PATH already under version control, fully "install" a
+   NEW_REVISION of the file.  
+
+   By "install", we mean: the working copy library creates a new
+   text-base and prop-base, merges any textual and property changes
+   into the working file, and finally updates all metadata so that the
+   working copy believes it has a new working revision of the file.
+   All of this work includes being sensitive to eol translation,
+   keyword substitution, and performing all actions using a journaled
+   logfile.
+
+   The caller provides a NEW_TEXT_PATH which points to a temporary
+   file containing the 'new' full text of the file at revision
+   NEW_REVISION.  This function automatically removes NEW_TEXT_PATH
+   upon successful completion.  If there is no new text, then caller
+   must set NEW_TEXT_PATH to NULL.
+
+   The caller also provides the new properties for the file in the
+   PROPS array; if there are no new props, then caller must pass NULL
+   instead.  This argument is an array of svn_prop_t structures, and
+   can be interpreted in one of two ways:
+
+      - if IS_FULL_PROPLIST is set, then the array represents the
+        complete list of all properties for the file.  It is the new
+        'pristine' proplist.
+
+      - if IS_FULL_PROPLIST is unset, then the array represents a set of
+        *differences* against the file's existing pristine proplist.
+        (A deletion is represented by setting an svn_prop_t's 'value'
+        field to NULL.)  
+
+   Note that the PROPS array is expected to contain all categories of
+   props, not just 'regular' ones that the user sees.  (See 'enum
+   svn_prop_kind').
+
+   POOL is used for all bookkeeping work during the installation.
+ */
+svn_error_t *svn_wc_install_file (const char *file_path,
+                                  svn_revnum_t new_revision,
+                                  const char *new_text_path,
+                                  const apr_array_header_t *props,
+                                  svn_boolean_t is_full_proplist,
+                                  apr_pool_t *pool);
+
+
 
 /* A word about the implementation of working copy property storage:
  *

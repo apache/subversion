@@ -714,8 +714,50 @@ get_file (void *session_baton,
     }
 
   if (props)
-    SVN_ERR (svn_fs_node_proplist (props, root, abs_path->data, sbaton->pool));
+    {
+      svn_revnum_t committed_rev;
+      svn_string_t *committed_date, *last_author;
+      svn_stringbuf_t *value;
+      svn_string_t *abs_path_s;
+      char *revision_str = NULL;
 
+      /* Create a hash with props attached to the fs node. */
+      SVN_ERR (svn_fs_node_proplist (props, root, abs_path->data,
+                                     sbaton->pool));
+      
+      /* Now add some non-tweakable metadata to the hash as well... */
+    
+      /* The so-called 'entryprops' with info about CR & friends. */
+      abs_path_s = svn_string_create_from_buf (abs_path, sbaton->pool);
+      SVN_ERR (svn_repos_get_committed_info (&committed_rev,
+                                             &committed_date,
+                                             &last_author,
+                                             root, abs_path_s,
+                                             sbaton->pool));
+
+
+      revision_str = apr_psprintf (sbaton->pool, "%ld", committed_rev);
+      value = svn_stringbuf_create (revision_str, sbaton->pool);
+      apr_hash_set (*props, SVN_PROP_ENTRY_COMMITTED_REV, 
+                    APR_HASH_KEY_STRING, value);
+                    
+      if (committed_date)
+        value = svn_stringbuf_create_from_string (committed_date,
+                                                  sbaton->pool);
+      else
+        value = NULL;
+      apr_hash_set (*props, SVN_PROP_ENTRY_COMMITTED_DATE, 
+                    APR_HASH_KEY_STRING, value);
+      
+      if (last_author)
+        value = svn_stringbuf_create_from_string (last_author, sbaton->pool);
+      else
+        value = NULL;
+      apr_hash_set (*props, SVN_PROP_ENTRY_LAST_AUTHOR, 
+                    APR_HASH_KEY_STRING, value);
+            
+      /* We have no 'wcprops' in ra_local, but might someday. */
+    }
   return SVN_NO_ERROR;
 }
 

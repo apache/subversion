@@ -34,17 +34,6 @@
 #define SVN_WC__BASE_EXT      ".svn-base"
 
 
-
-/* A general in-memory representation of a single property.  Most of
-   the time, property lists will be stored completely in hashes.  But
-   sometimes it's useful to have an "ordered" collection of
-   properties, in which case we use an apr_array of the type below. */
-typedef struct svn_prop_t
-{
-  const char *name;
-  const svn_string_t *value;
-} svn_prop_t;
-
 
 
 /** File comparisons **/
@@ -760,12 +749,12 @@ svn_wc__save_prop_file (const char *propfile_path,
    hash.
 */
 svn_error_t *
-svn_wc__do_property_merge (const char *path,
-                           const char *name,
-                           const apr_array_header_t *propchanges,
-                           apr_pool_t *pool,
-                           svn_stringbuf_t **entry_accum,
-                           apr_hash_t **conflicts);
+svn_wc__merge_prop_diffs (const char *path,
+                          const char *name,
+                          const apr_array_header_t *propchanges,
+                          apr_pool_t *pool,
+                          svn_stringbuf_t **entry_accum,
+                          apr_hash_t **conflicts);
 
 
 /* Get a single 'wcprop' NAME for versioned object PATH, return in

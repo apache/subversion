@@ -380,12 +380,12 @@ svn_wc__get_existing_prop_reject_file (const svn_string_t **reject_file,
 
 
 svn_error_t *
-svn_wc__do_property_merge (const char *path,
-                           const char *name,
-                           const apr_array_header_t *propchanges,
-                           apr_pool_t *pool,
-                           svn_stringbuf_t **entry_accum,
-                           apr_hash_t **conflicts)
+svn_wc__merge_prop_diffs (const char *path,
+                          const char *name,
+                          const apr_array_header_t *propchanges,
+                          apr_pool_t *pool,
+                          svn_stringbuf_t **entry_accum,
+                          apr_hash_t **conflicts)
 {
   int i;
   svn_boolean_t is_dir;
@@ -762,6 +762,8 @@ svn_wc__do_property_merge (const char *path,
 
   return SVN_NO_ERROR;
 }
+
+
 
 /*------------------------------------------------------------------*/
 
