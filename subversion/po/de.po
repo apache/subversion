@@ -50,7 +50,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "POT-Creation-Date: 2004-09-30 09:48+0200\n"
-"PO-Revision-Date: 2004-10-11 11:31+0100\n"
+"PO-Revision-Date: 2004-10-13 09:02+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -645,10 +645,10 @@ msgid ""
 msgstr ""
 "Zeigt die Unterschiede zwischen zwei Pfaden.\n"
 "Aufruf: 1. diff -r N[:M] [ZIEL[@REV]...]\n"
-"\"        2. diff [-r N[:M]] --old ZIELALT[@REVALT] --new ZIELNEU[@REVNEU] \\\n"
+"        2. diff [-r N[:M]] --old ZIELALT[@REVALT] --new ZIELNEU[@REVNEU] \\\n"
 "                [PFAD...]\n"
 "        3. diff URLALT[@REVALT] URLNEU[@REVNEU]\n"
-"\"\n"
+"\n"
 "  1. Zeigt die Änderungen an ZIELen, wie sie in REV zwischen zwei Revisionen\n"
 "     sichtbar sind. ZIELe können Arbeitskopien oder URLs sein.\n"
 "\n"
@@ -2737,7 +2737,7 @@ msgstr "Übertragenes Objekt '%s' ist als Kopie markiert, hat aber eine ungülti
 #: libsvn_client/copy.c:102
 #: libsvn_client/copy.c:646
 #: libsvn_client/copy.c:834
-#: libsvn_ra_dav/commit.c:896
+#: libsvn_ra_dav/commit.c:897
 #, c-format
 msgid "File '%s' already exists"
 msgstr "Datei '%s' existiert bereits"
@@ -3388,21 +3388,21 @@ msgstr "Unbekanntes URL Schema '%s'"
 msgid "  - handles '%s' schema\n"
 msgstr "  - behandelt '%s' Schema\n"
 
-#: libsvn_ra_dav/commit.c:166
+#: libsvn_ra_dav/commit.c:167
 #, c-format
 msgid "Could not create a request (%s '%s')"
 msgstr "Konnte keine Anfrage (%s '%s') erzeugen"
 
-#: libsvn_ra_dav/commit.c:1017
+#: libsvn_ra_dav/commit.c:1018
 msgid "Could not write svndiff to temp file"
 msgstr "Konte svndiff nicht in Temporärdatei schreiben"
 
-#: libsvn_ra_dav/commit.c:1107
+#: libsvn_ra_dav/commit.c:1108
 #, c-format
 msgid "Could not create a PUT request (%s)"
 msgstr "Konnte keine PUT Anfrage (%s) erzeugen"
 
-#: libsvn_ra_dav/commit.c:1254
+#: libsvn_ra_dav/commit.c:1255
 #, c-format
 msgid "applying log message to %s"
 msgstr "wende Log-Meldung auf %s an"
@@ -3617,11 +3617,11 @@ msgstr "Konnte keine Verbindung zum Server herstellen"
 msgid "timed out waiting for server"
 msgstr "Zeitüberschreitung beim Warten auf Server"
 
-#: libsvn_ra_dav/util.c:455
+#: libsvn_ra_dav/util.c:467
 msgid "Can't calculate the request body size"
 msgstr "Kann die Größe der Anfrage nicht berechnen"
 
-#: libsvn_ra_dav/util.c:641
+#: libsvn_ra_dav/util.c:653
 #, c-format
 msgid "'%s' path not found"
 msgstr "'%s' Pfad nicht gefunden"
@@ -3629,18 +3629,18 @@ msgstr "'%s' Pfad nicht gefunden"
 #  We either have a neon error, or some other error
 #  that we didn't expect.
 #. We either have a neon error, or some other error
-#: libsvn_ra_dav/util.c:646
-#: libsvn_ra_dav/util.c:789
+#: libsvn_ra_dav/util.c:658
+#: libsvn_ra_dav/util.c:801
 #, c-format
 msgid "%s of '%s'"
 msgstr "%s von '%s'"
 
-#: libsvn_ra_dav/util.c:657
+#: libsvn_ra_dav/util.c:669
 #, c-format
 msgid "The %s request returned invalid XML in the response: %s (%s)"
 msgstr "Die %s Anfrage gab in der Antwort ungültiges XML zurück: %s (%s)"
 
-#: libsvn_ra_dav/util.c:671
+#: libsvn_ra_dav/util.c:683
 #, c-format
 msgid "%s request failed on '%s'"
 msgstr "%s Anfrage fehlgeschlagen auf '%s'"
@@ -5339,7 +5339,7 @@ msgstr "erledigt.\n"
 #: svnadmin/main.c:578
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
-"Type \"svnadmin help <subcommand>\" for help on a specific subcommand.\n"
+"Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
@@ -5481,7 +5481,7 @@ msgstr ""
 #: svndumpfilter/main.c:799
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
-"Type \"svndumpfilter help <subcommand>\" for help on a specific subcommand.\n"
+"Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
@@ -5524,11 +5524,6 @@ msgstr "Revisionen folgendermaßen neu numeriert:\n"
 #, c-format
 msgid "   %ld => (dropped)\n"
 msgstr "   %ld => (fallen gelassen)\n"
-
-#: svndumpfilter/main.c:925
-#, c-format
-msgid "   %ld => %ld\n"
-msgstr "   %ld => %ld\n"
 
 #: svndumpfilter/main.c:936
 #, c-format
@@ -5814,7 +5809,7 @@ msgid ""
 "Note: any subcommand which takes the '--revision' and '--transaction'\n"
 "      options will, if invoked without one of those options, act on\n"
 "      the repository's youngest revision.\n"
-"Type \"svnlook help <subcommand>\" for help on a specific subcommand.\n"
+"Type 'svnlook help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
@@ -5867,7 +5862,7 @@ msgstr ""
 msgid ""
 "usage: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n"
 "\n"
-"  Produce a compact \"version number\" for the working copy path\n"
+"  Produce a compact 'version number' for the working copy path\n"
 "  WC_PATH.  TRAIL_URL is the trailing portion of the URL used to\n"
 "  determine if WC_PATH itself is switched (detection of switches\n"
 "  within WC_PATH does not rely on TRAIL_URL).  The version number\n"
@@ -5887,36 +5882,13 @@ msgid ""
 "   4123:4168MS   mixed revision, modified, switched working copy\n"
 "\n"
 "  If invoked on a directory that is not a working copy, an\n"
-"  exported directory say, the program will output \"exported\".\n"
+"  exported directory say, the program will output 'exported'.\n"
 "\n"
 "Valid options:\n"
 msgstr ""
 "Aufruf: svnversion [OPTIONEN] AK_PFAD [ANGEH_URL]\n"
 "\n"
-"  Erzeuge eine kompakte 'Versionsnummer' für den Pfad AK_PFAD der  Arbeitskopie.  ANGEH_URL ist der angehängte Teil der URL, welcher\n"
-"  benutzt wird, um festzustellen, ob AK_PFAD selbst umgestellt wird\n"
-"  (Die Erkennung von Umstellungen selbst innerhalb von AK_PFAD hängt\n"
-"  nicht von ANGEH_URL ab). Die Versionsnummer selbst wird auf die\n"
-"  Standardausgabe ausgegeben. Ein Beispiel:\n"
-"\n"
-"    $ svnversion . /repos/svn/trunk \n"
-"    4168\n"
-"\n"
-"  Die Versionsnummer ist eine einzelne Nummer, falls die Arbeitskopie\n"
-"  eine einzelne Revision besitzt, die nicht modifiziert, nicht umgeschaltet\n"
-"  ist und eine URL, welche mit ANGEH_URL übereinstimmt.  Falls die\n"
-"  Arbeitskopie ungewöhnlich ist, ist die Versionsnummer komplexer:\n"
-"\n"
-"   4123:4168     Arbeitskopie aus verschiedenen Revisionen\n"
-"   4168M         geänderte Arbeitskopie\n"
-"   4123S         umgestellte Arbeitskopie\n"
-"   4123:4168MS   geänderte, umgestellte Arbeitskopie aus verschiedenen\n"
-"                 Revisionen\n"
-"\n"
-"  Das Programm gibt 'exportiert' aus, falls es in einem Verzeichnis, das\n"
-"  keine Arbeitskopie ist, ausgeführt wird.\n"
-"\n"
-"Gültige Optionen:\n"
+"  Erzeuge eine kompakte 'Versionsnummer' für den Pfad AK_PFAD der\n"
 
 #: svnversion/main.c:199
 msgid "do not output the trailing newline"
