@@ -181,13 +181,23 @@ static dav_error *dav_svn_make_activity(dav_resource *resource)
 {
   const char *activity_id = resource->info->root.activity_id;
   const char *txn_name;
+  dav_error *err;
 
   /* ### need to check some preconditions? */
 
-  /* ### just hack one together for now... */
-  txn_name = apr_psprintf(resource->pool, "txn.%s", activity_id);
+  err = dav_svn_create_activity(resource->info->repos, &txn_name,
+                                resource->pool);
+  if (err != NULL)
+    return err;
 
-  return dav_svn_store_activity(resource->info->repos, activity_id, txn_name);
+  err = dav_svn_store_activity(resource->info->repos, activity_id, txn_name);
+  if (err != NULL)
+    return err;
+
+  /* everything is happy. update the resource */
+  resource->info->root.txn_name = txn_name;
+  resource->exists = 1;
+  return NULL;
 }
 
 

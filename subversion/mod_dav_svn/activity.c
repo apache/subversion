@@ -21,6 +21,7 @@
 
 #include "svn_string.h"
 #include "svn_path.h"
+#include "svn_fs.h"
 
 #include "dav_svn.h"
 
@@ -93,6 +94,38 @@ dav_error *dav_svn_store_activity(dav_svn_repos *repos,
     {
       /* ### return an error */
       return NULL;
+    }
+
+  return NULL;
+}
+
+dav_error *dav_svn_create_activity(dav_svn_repos *repos,
+                                   const char **ptxn_name,
+                                   apr_pool_t *pool)
+{
+  svn_revnum_t rev;
+  svn_fs_txn_t *txn;
+  svn_error_t *serr;
+
+  serr = svn_fs_youngest_rev(&rev, repos->fs, pool);
+  if (serr != NULL)
+    {
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "could not determine youngest revision");
+    }
+
+  serr = svn_fs_begin_txn(&txn, repos->fs, rev, pool);
+  if (serr != NULL)
+    {
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "could not begin a transaction");
+    }
+
+  serr = svn_fs_txn_name(ptxn_name, txn, pool);
+  if (serr != NULL)
+    {
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "could not fetch transaction name");
     }
 
   return NULL;
