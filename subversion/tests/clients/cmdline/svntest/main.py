@@ -87,15 +87,17 @@ greek_dump_dir = os.path.join(temp_dir, "greekfiles")
 test_area_url = "file://" + os.path.abspath(os.getcwd())
 
 
-# Our pristine greek tree, used to assemble 'expected' trees.
-# This is in the form
+# Our pristine greek-tree list of lists.
 #
-#     [ ['path', 'contents', {props}, {atts}], ...]
+# If a test wishes to create an "expected" working-copy tree, it should
+# call main.copy_greek_tree().  That function will return a *mutable*
+# version of this list.  That list can then be edited, and finally
+# passed to tree.build_generic_tree().  The result will be a genuine
+# SVNTreeNode structure that looks like the standard "Greek Tree" (or
+# some variant thereof).
 #
-#   Which is the format expected by svn_tree.build_generic_tree().
-#
-# Keep this global list IMMUTABLE by defining it as a tuple.  This
-# should prevent users from accidentally forgetting to copy it.
+# Please read the documentation at the top of 'tree.py' to understand
+# the format of this list!
 
 greek_tree = ( ('iota', "This is the file 'iota'.", {}, {}),
                ('A', None, {}, {}),
@@ -240,7 +242,7 @@ def write_tree(path, lists):
 
 # For returning a *mutable* copy of greek_tree (a tuple of tuples).
 def copy_greek_tree():
-  "Return a mutable (list) copy of svn_test_main.greek_tree."
+  "Return a mutable (list) copy of svntest.main.greek_tree."
 
   templist = []
   for x in greek_tree:
@@ -252,7 +254,13 @@ def copy_greek_tree():
   return copy.deepcopy(templist)
 
 ######################################################################
-# Main functions
+# Main testing functions
+
+# These two functions each take a TEST_LIST as input.  The TEST_LIST
+# should be a list of test functions; each test function should take
+# no arguments and return a 0 on success, non-zero on failure.
+# Ideally, each test should also have a short, one-line docstring (so
+# it can be displayed by the 'list' command.)
 
 # Func to run one test in the list.
 def run_one_test(n, test_list):
@@ -275,11 +283,16 @@ def run_one_test(n, test_list):
   return error
 
 
-# Main func
-# Three Modes, dependent on sys.argv:
-# 1) No arguments: all tests are run
-# 2) Number 'n' as arg: only test n is run
-# 3) String "list" as arg: test numbers & descriptions are listed
+# Main func.  This is the "entry point" that all the test scripts call
+# to run their list of tests.
+#
+# There are three modes for invoking this routine, and they all depend
+# on parsing sys.argv[]:
+#
+#   1.  No command-line arguments: all tests in TEST_LIST are run.
+#   2.  Number 'N' passed on command-line: only test N is run
+#   3.  String "list" passed on command-line:  print each test's docstring.
+
 def run_tests(test_list):
   "Main routine to run all tests in TEST_LIST."
 

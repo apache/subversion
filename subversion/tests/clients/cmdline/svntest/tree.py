@@ -23,6 +23,96 @@ import os.path
 import main  # the general svntest routines in this module.
 
 
+#========================================================================
+
+# ===>  Overview of our Datastructures  <===
+
+# The general idea here is that many, many things can be represented by
+# a tree structure:
+
+#   - a working copy's structure and contents
+#   - the output of 'svn status'
+#   - the output of 'svn checkout/update'
+#   - the output of 'svn commit'
+
+# The idea is that a test function creates a "expected" tree of some
+# kind, and is then able to compare it to an "actual" tree that comes
+# from running the Subversion client.  This is what makes a test
+# automated; if an actual and expected tree match exactly, then the test
+# has passed.  (See compare_trees() below.)
+
+# The SVNTreeNode class is the fundamental data type used to build tree
+# structures.  The class contains a method for "dropping" a new node
+# into an ever-growing tree structure. (See also create_from_path()).
+
+# We have four parsers in this file for the four use cases listed above:
+# each parser examines some kind of input and returns a tree of
+# SVNTreeNode objects.  (See build_tree_from_checkout(),
+# build_tree_from_commit(), build_tree_from_status(), and
+# build_tree_from_wc()).  These trees are the "actual" trees that result
+# from running the Subversion client.
+
+# Also necessary, of course, is a convenient way for a test to create an
+# "expected" tree.  The test *could* manually construct and link a bunch
+# of SVNTreeNodes, certainly.  But instead, all the tests are using the
+# build_generic_tree() routine instead.
+
+# build_generic_tree() takes a specially-formatted list of lists as
+# input, and returns a tree of SVNTreeNodes.  The list of lists has this
+# structure:
+
+#   [ ['/full/path/to/item', 'text contents', {prop-hash}, {att-hash}],
+#     [...],
+#     [...],
+#     ...   ]
+
+# You can see that each item in the list essentially defines an
+# SVNTreeNode.  build_generic_tree() instantiates a SVNTreeNode for each
+# item, and then drops it into a tree by parsing each item's full path.
+
+# So a typical test routine spends most of its time preparing lists of
+# this format and sending them to build_generic_tree(), rather than
+# building the "expected" trees directly.
+
+#   ### Note: in the future, we'd like to remove this extra layer of
+#   ### abstraction.  We'd like the SVNTreeNode class to be more
+#   ### directly programmer-friendly, providing a number of accessor
+#   ### routines, so that tests can construct trees directly.
+
+# The first three fields of each list-item are self-explanatory.  It's
+# the fourth field, the "attribute" hash, that needs some explanation.
+# The att-hash is used to place extra information about the node itself,
+# depending on the parsing context:
+
+#   - in the 'svn co/up' use-case, each line of output starts with two
+#     characters from the set of (A, D, G, U, C, _).  This status code
+#     is stored in a attribute named 'status'.
+
+#   - in the 'svn ci/im' use-case, each line of output starts with one
+#      of the words (Adding, Deleting, Sending).  This verb is stored in
+#      an attribute named 'verb'.
+
+#   - in the 'svn status' use-case (which is always run with the -v
+#     (--verbose) flag), each line of output contains a working revision
+#     number and a two-letter status code similar to the 'svn co/up'
+#     case.  The repository revision is also printed.  All of this
+#     information is stored in attributes named 'wc_rev', 'status', and
+#     'repos_rev', respectively.
+
+#   - in the working-copy use-case, the att-hash is ignored.
+
+
+# Finally, one last explanation: the file 'actions.py' contain a number
+# of helper routines named 'run_and_verify_FOO'.  These routines take
+# one or more "expected" trees as input, then run some svn subcommand,
+# then push the output through an appropriate parser to derive an
+# "actual" tree.  Then it runs compare_trees() and returns the result.
+# This is why most tests typically end with a call to
+# run_and_verify_FOO().
+
+
+
+#========================================================================
 
 # A node in a tree.
 #
@@ -387,6 +477,11 @@ def dump_tree(n,indent=""):
       dump_tree(c,indent + "  +-- ")
     else:
       dump_tree(c,indent + "  |-- ")
+
+
+###################################################################
+###################################################################
+# PARSERS that return trees made of SVNTreeNodes....
 
 
 ###################################################################

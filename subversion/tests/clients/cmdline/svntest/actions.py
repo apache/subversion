@@ -377,6 +377,9 @@ def get_virginal_status_list(wc_dir, rev):
   return output_list
 
 
+# Ben sez: this is -proof- that we really want a hash of SVNTreeNodes
+# when we do a future rewrite.  :-)
+#
 # Convenience routine for treating our list format like a pseudo-hash
 def path_index(list, path):
   "Return the index of PATH in our standard list-format"
