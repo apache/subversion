@@ -59,6 +59,7 @@
 #include "svn_types.h"
 #include "svn_delta.h"
 #include "svn_string.h"
+#include "svn_path.h"
 #include "svn_error.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
@@ -150,8 +151,9 @@ add_directory (svn_string_t *name,
   svn_string_t *path = (svn_string_t *) parent_baton;
   struct w_baton *wb = (struct w_baton *) walk_baton;
 
-  svn_wc__path_add_component (path, name, wb->pool);
-  printf ("%s/\n", path->data);
+  svn_path_add_component (path, name, wb->pool);
+  printf ("%s/    (ancestor == %s, %d)\n",
+          path->data, ancestor_path->data, (int) ancestor_version);
 
   err = svn_wc__set_up_new_dir (path,
                                 ancestor_path,
@@ -182,7 +184,7 @@ finish_directory (void *child_baton)
 {
   svn_string_t *path = (svn_string_t *) child_baton;
 
-  svn_wc__path_remove_component (path);
+  svn_path_remove_component (path);
 
   return 0;
 }
@@ -241,7 +243,7 @@ add_file (svn_string_t *name,
   svn_string_t *path = (svn_string_t *) parent_baton;
   struct w_baton *wb = (struct w_baton *) walk_baton;
 
-  svn_wc__path_add_component (path, name, wb->pool);
+  svn_path_add_component (path, name, wb->pool);
 
   printf ("%s\n   ", path->data);
 
@@ -268,7 +270,7 @@ finish_file (void *child_baton)
 
   printf ("\n");
   /* Lop off the filename, so baton is the parent directory again. */
-  svn_wc__path_remove_component (fname);
+  svn_path_remove_component (fname);
   return 0;
 }
 
