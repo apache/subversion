@@ -2253,7 +2253,7 @@ static svn_error_t * reporter_set_path(void *report_baton,
   const char *entry;
   svn_stringbuf_t *qpath = NULL;
 
-  svn_xml_escape_cstring (&qpath, path, pool);
+  svn_xml_escape_cdata_cstring (&qpath, path, pool);
   entry = apr_psprintf(pool,
                        "<S:entry rev=\"%"
                        SVN_REVNUM_T_FMT
@@ -2294,8 +2294,8 @@ static svn_error_t * reporter_link_path(void *report_baton,
                                          pool));
   
   
-  svn_xml_escape_cstring (&qpath, path, pool);
-  svn_xml_escape_cstring (&qlinkpath, bc_relative.data, pool);
+  svn_xml_escape_cdata_cstring (&qpath, path, pool);
+  svn_xml_escape_attr_cstring (&qlinkpath, bc_relative.data, pool);
   entry = apr_psprintf(pool,
                        "<S:entry rev=\"%" SVN_REVNUM_T_FMT
                        "\" linkpath=\"/%s\">%s</S:entry>" DEBUG_CR,
@@ -2323,7 +2323,7 @@ static svn_error_t * reporter_delete_path(void *report_baton,
   const char *s;
   svn_stringbuf_t *qpath = NULL;
 
-  svn_xml_escape_cstring (&qpath, path, pool);
+  svn_xml_escape_cdata_cstring (&qpath, path, pool);
   s = apr_psprintf(pool,
                    "<S:missing>%s</S:missing>" DEBUG_CR,
                    qpath->data);
@@ -2507,7 +2507,7 @@ make_reporter (void *session_baton,
   if (dst_path)
     {
       svn_stringbuf_t *dst_path_str = NULL;
-      svn_xml_escape_cstring (&dst_path_str, dst_path, ras->pool);
+      svn_xml_escape_cdata_cstring (&dst_path_str, dst_path, ras->pool);
 
       s = apr_psprintf(ras->pool, "<S:dst-path>%s</S:dst-path>",
                        dst_path_str->data);

@@ -1048,6 +1048,7 @@ def commit_uri_unsafe(sbox):
   hash_dir = os.path.join(wc_dir, '#hash#')
   nasty_dir = os.path.join(wc_dir, nasty_name)
   space_path = os.path.join(wc_dir, 'A', 'D', 'space path')
+  tab_path = os.path.join(wc_dir, 'A', 'D', 'G', "tab\tpath")
   bang_path = os.path.join(wc_dir, 'A', 'D', 'H', 'bang!')
   bracket_path = os.path.join(wc_dir, 'A', 'D', 'H', 'bra[ket')
   brace_path = os.path.join(wc_dir, 'A', 'D', 'H', 'bra{e')
@@ -1059,6 +1060,7 @@ def commit_uri_unsafe(sbox):
   os.mkdir(hash_dir)
   os.mkdir(nasty_dir)
   svntest.main.file_append(space_path, "This path has a space in it.")
+  svntest.main.file_append(tab_path, "This path has a tab in it.")
   svntest.main.file_append(bang_path, "This path has a bang in it.")
   svntest.main.file_append(bracket_path, "This path has a bracket in it.")
   svntest.main.file_append(brace_path, "This path has a brace in it.")
@@ -1070,6 +1072,7 @@ def commit_uri_unsafe(sbox):
   add_list = [hash_dir,
               nasty_dir, # not xml-safe
               space_path,
+              tab_path,
               bang_path,
               bracket_path,
               brace_path,
@@ -1085,6 +1088,7 @@ def commit_uri_unsafe(sbox):
     '#hash#' : Item(verb='Adding'),
     nasty_name : Item(verb='Adding'),
     'A/D/space path' : Item(verb='Adding'),
+    "A/D/G/tab\tpath" : Item(verb='Adding'),
     'A/D/H/bang!' : Item(verb='Adding'),
     'A/D/H/bra[ket' : Item(verb='Adding'),
     'A/D/H/bra{e' : Item(verb='Adding'),

@@ -55,27 +55,53 @@ enum svn_xml_open_tag_style {
 /** Create or append in @a *outstr an xml-escaped version of @a string.
  *
  * Create or append in @a *outstr an xml-escaped version of @a string,
- * suitable for output as character data or as an attribute value.
+ * suitable for output as character data.
  * If @a *outstr is @c NULL, store a new stringbuf, else append to the
  * existing stringbuf there.
  */
-void svn_xml_escape_stringbuf (svn_stringbuf_t **outstr,
-                               const svn_stringbuf_t *string,
-                               apr_pool_t *pool);
+void svn_xml_escape_cdata_stringbuf (svn_stringbuf_t **outstr,
+                                     const svn_stringbuf_t *string,
+                                     apr_pool_t *pool);
 
-/** Same as @c svn_xml_escape_stringbuf, but @a string is an @c svn_string_t.
+/** Same as @c svn_xml_escape_cdata_stringbuf, but @a string is an
+ * @c svn_string_t.
  */
-void svn_xml_escape_string (svn_stringbuf_t **outstr,
-                            const svn_string_t *string,
-                            apr_pool_t *pool);
+void svn_xml_escape_cdata_string (svn_stringbuf_t **outstr,
+                                  const svn_string_t *string,
+                                  apr_pool_t *pool);
 
-/** Same as @c svn_xml_escape_stringbuf, but @a string is a null-terminated
- * C string.
+/** Same as @c svn_xml_escape_cdata_stringbuf, but @a string is a
+ * null-terminated C string.
  */
-void svn_xml_escape_cstring (svn_stringbuf_t **outstr,
-                             const char *string,
-                             apr_pool_t *pool);
+void svn_xml_escape_cdata_cstring (svn_stringbuf_t **outstr,
+                                   const char *string,
+                                   apr_pool_t *pool);
 
+
+/** Create or append in @a *outstr an xml-escaped version of @a string.
+ *
+ * Create or append in @a *outstr an xml-escaped version of @a string,
+ * suitable for output as an attribute value.
+ * If @a *outstr is @c NULL, store a new stringbuf, else append to the
+ * existing stringbuf there.
+ */
+void svn_xml_escape_attr_stringbuf (svn_stringbuf_t **outstr,
+                                    const svn_stringbuf_t *string,
+                                    apr_pool_t *pool);
+
+/** Same as @c svn_xml_escape_attr_stringbuf, but @a string is an
+ * @c svn_string_t.
+ */
+void svn_xml_escape_attr_string (svn_stringbuf_t **outstr,
+                                 const svn_string_t *string,
+                                 apr_pool_t *pool);
+
+/** Same as @c svn_xml_escape_attr_stringbuf, but @a string is a
+ * null-terminated C string.
+ */
+void svn_xml_escape_attr_cstring (svn_stringbuf_t **outstr,
+                                  const char *string,
+                                  apr_pool_t *pool);
 
 
 /*---------------------------------------------------------------*/

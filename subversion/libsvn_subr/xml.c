@@ -61,10 +61,10 @@ struct svn_xml_parser_t
 /*** XML escaping. ***/
 
 static void
-xml_escape (svn_stringbuf_t **outstr,
-            const char *data,
-            apr_size_t len,
-            apr_pool_t *pool)
+xml_escape_cdata (svn_stringbuf_t **outstr,
+                  const char *data,
+                  apr_size_t len,
+                  apr_pool_t *pool)
 {
   const char *end = data + len;
   const char *p = data, *q;
@@ -79,8 +79,48 @@ xml_escape (svn_stringbuf_t **outstr,
          quoted if it follows "]]", but it's easier to quote it all
          the time.  */
       q = p;
+      while (q < end && *q != '&' && *q != '<' && *q != '>')
+        q++;
+      svn_stringbuf_appendbytes (*outstr, p, q - p);
+
+      /* We may already be a winner.  */
+      if (q == end)
+        break;
+
+      /* Append the entity reference for the character.  */
+      if (*q == '&')
+        svn_stringbuf_appendcstr (*outstr, "&amp;");
+      else if (*q == '<')
+        svn_stringbuf_appendcstr (*outstr, "&lt;");
+      else if (*q == '>')
+        svn_stringbuf_appendcstr (*outstr, "&gt;");
+
+      p = q + 1;
+    }
+}
+
+/* Essentially the same as xml_escape_cdata, with the addition of
+   whitespace and quote characters. */
+static void
+xml_escape_attr (svn_stringbuf_t **outstr,
+                 const char *data,
+                 apr_size_t len,
+                 apr_pool_t *pool)
+{
+  const char *end = data + len;
+  const char *p = data, *q;
+
+  if (*outstr == NULL)
+    *outstr = svn_stringbuf_create ("", pool);
+
+  while (1)
+    {
+      /* Find a character which needs to be quoted and append bytes up
+         to that point. */
+      q = p;
       while (q < end && *q != '&' && *q != '<' && *q != '>'
-             && *q != '"' && *q != '\'')
+             && *q != '"' && *q != '\'' && *q != '\r'
+             && *q != '\n' && *q != '\t')
         q++;
       svn_stringbuf_appendbytes (*outstr, p, q - p);
 
@@ -99,6 +139,12 @@ xml_escape (svn_stringbuf_t **outstr,
         svn_stringbuf_appendcstr (*outstr, "&quot;");
       else if (*q == '\'')
         svn_stringbuf_appendcstr (*outstr, "&apos;");
+      else if (*q == '\r')
+        svn_stringbuf_appendcstr (*outstr, "&#13;");
+      else if (*q == '\n')
+        svn_stringbuf_appendcstr (*outstr, "&#10;");
+      else if (*q == '\t')
+        svn_stringbuf_appendcstr (*outstr, "&#9;");
 
       p = q + 1;
     }
@@ -106,29 +152,56 @@ xml_escape (svn_stringbuf_t **outstr,
 
 
 void
-svn_xml_escape_stringbuf (svn_stringbuf_t **outstr,
-                          const svn_stringbuf_t *string,
-                          apr_pool_t *pool)
+svn_xml_escape_cdata_stringbuf (svn_stringbuf_t **outstr,
+                                const svn_stringbuf_t *string,
+                                apr_pool_t *pool)
 {
-  xml_escape (outstr, string->data, string->len, pool);
+  xml_escape_cdata (outstr, string->data, string->len, pool);
 }
 
 
 void
-svn_xml_escape_string (svn_stringbuf_t **outstr,
-                       const svn_string_t *string,
-                       apr_pool_t *pool)
+svn_xml_escape_cdata_string (svn_stringbuf_t **outstr,
+                             const svn_string_t *string,
+                             apr_pool_t *pool)
 {
-  xml_escape (outstr, string->data, string->len, pool);
+  xml_escape_cdata (outstr, string->data, string->len, pool);
 }
 
 
 void
-svn_xml_escape_cstring (svn_stringbuf_t **outstr,
-                        const char *string,
-                        apr_pool_t *pool)
+svn_xml_escape_cdata_cstring (svn_stringbuf_t **outstr,
+                              const char *string,
+                              apr_pool_t *pool)
 {
-  xml_escape (outstr, string, strlen (string), pool);
+  xml_escape_cdata (outstr, string, (apr_size_t) strlen (string), pool);
+}
+
+
+void
+svn_xml_escape_attr_stringbuf (svn_stringbuf_t **outstr,
+                               const svn_stringbuf_t *string,
+                               apr_pool_t *pool)
+{
+  xml_escape_attr (outstr, string->data, string->len, pool);
+}
+
+
+void
+svn_xml_escape_attr_string (svn_stringbuf_t **outstr,
+                            const svn_string_t *string,
+                            apr_pool_t *pool)
+{
+  xml_escape_attr (outstr, string->data, string->len, pool);
+}
+
+
+void
+svn_xml_escape_attr_cstring (svn_stringbuf_t **outstr,
+                             const char *string,
+                             apr_pool_t *pool)
+{
+  xml_escape_attr (outstr, string, (apr_size_t) strlen (string), pool);
 }
 
 
@@ -408,7 +481,7 @@ svn_xml_make_open_tag_hash (svn_stringbuf_t **str,
       svn_stringbuf_appendcstr (*str, "\n   ");
       svn_stringbuf_appendcstr (*str, key);
       svn_stringbuf_appendcstr (*str, "=\"");
-      svn_xml_escape_cstring (str, val, pool);
+      svn_xml_escape_attr_cstring (str, val, pool);
       svn_stringbuf_appendcstr (*str, "\"");
     }
 

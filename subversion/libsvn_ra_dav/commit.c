@@ -515,7 +515,7 @@ static void record_prop_change(apr_pool_t *pool,
       if (r->prop_changes == NULL)
         r->prop_changes = apr_table_make(pool, 5);
 
-      svn_xml_escape_string(&escaped, value, pool);
+      svn_xml_escape_cdata_string(&escaped, value, pool);
       apr_table_set(r->prop_changes, name, escaped->data);
     }
   else
@@ -1243,7 +1243,7 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
 
   /* XML-Escape the log message. */
   xml_data = NULL;           /* Required by svn_xml_escape_*. */
-  svn_xml_escape_cstring(&xml_data, log_msg, cc->ras->pool);
+  svn_xml_escape_cdata_cstring(&xml_data, log_msg, cc->ras->pool);
 
   po[0].name = &log_message_prop;
   po[0].type = ne_propset;
