@@ -38,6 +38,12 @@ my $sendmail = "/usr/sbin/sendmail";
 # Svnlook path.
 my $svnlook = "/usr/local/bin/svnlook";
 
+# By default, when a file is deleted from the repository, svnlook diff
+# prints the entire contents of the file.  If you want to save space
+# in the log and email messages by not printing the file, then set
+# $no_diff_on_delete to 1.
+my $no_diff_on_delete = 0;
+
 # Since the path to svnlook depends upon the local installation
 # preferences, check that the required programs exist to insure that
 # the administrator has set up the script properly.
@@ -252,7 +258,9 @@ foreach my $line (@svnlooklines)
   }
 
 # Get the diff from svnlook.
-my @difflines = &read_from_process($svnlook, 'diff', $repos, '-r', $rev);
+my @no_diff_on_delete = $no_diff_on_delete ? ('--no-diff-on-delete') : ();
+my @difflines = &read_from_process($svnlook, 'diff', $repos,
+                                   '-r', $rev, @no_diff_on_delete);
 
 ######################################################################
 # Modified directory name collapsing.
