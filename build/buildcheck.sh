@@ -16,7 +16,7 @@ fi
 #--------------------------------------------------------------------------
 # autoconf 2.50 or newer
 #
-ac_version=`${AUTOCONF:-autoconf} --version 2>/dev/null|head -1| sed -e 's/^[^0-9]*//' -e 's/[a-z]* *$//'`
+ac_version=`${AUTOCONF:-autoconf} --version 2>/dev/null|sed -e 's/^[^0-9]*//' -e 's/[a-z]* *$//' -e 1q`
 if test -z "$ac_version"; then
   echo "buildcheck: autoconf not found."
   echo "            You need autoconf version 2.50 or newer installed."
@@ -38,7 +38,7 @@ echo "buildcheck: autoconf version $ac_version (ok)"
 #--------------------------------------------------------------------------
 # autoheader 2.50 or newer
 #
-ah_version=`${AUTOHEADER:-autoheader} --version 2>/dev/null|head -1| sed -e 's/^[^0-9]*//' -e 's/[a-z]* *$//'`
+ah_version=`${AUTOHEADER:-autoheader} --version 2>/dev/null|sed -e 's/^[^0-9]*//' -e 's/[a-z]* *$//' -e 1q`
 if test -z "$ah_version"; then
   echo "buildcheck: autoheader not found."
   echo "            You need autoheader version 2.50 or newer installed."
@@ -83,7 +83,7 @@ libtool=`which glibtool 2>/dev/null`
 if test ! -x "$libtool"; then
   libtool=`which libtool`
 fi
-lt_pversion=`$libtool --version 2>/dev/null|head -1|sed -e 's/^[^0-9]*//' -e 's/[- ].*//'`
+lt_pversion=`$libtool --version 2>/dev/null|sed -e 's/^[^0-9]*//' -e 's/[- ].*//' -e 1q`
 if test -z "$lt_pversion"; then
   echo "buildcheck: libtool not found."
   echo "            You need libtool version $LIBTOOL_WANTED_VERSION or newer installed"
