@@ -16,13 +16,16 @@ Candidate changes:
     Votes:
       +1: bliss, lundblad
 
-  * r11143,11145
+  * r11143, r11145
     Fix broken RPM build caused by changes to book Makefile right before
     1.0.7 was released.
     Justification:
       Broken builds are bad.
+    Notes:
+      These changes are already committed on the 1.0.x branch.
     Votes:
       +1: david
+      +0: bliss
 
   * r11211, r11232, r11285
     Fix performance regression for ls/RA->get_dir over ra_rav.
