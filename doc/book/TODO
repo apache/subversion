@@ -23,6 +23,11 @@ To be fixed by someone:
 
 To be fixed by cmpilato:
 
+  - deltification no longer happens in-process -- repository
+    administrators *must* use 'svnadmin deltify', preferably
+    backgrounded in the post-commit hook, to keep their repositories
+    small.
+
   - define a 'project root', recommend 'standard' repos layout beneath
     such roots.
 

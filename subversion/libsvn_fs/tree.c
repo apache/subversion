@@ -2627,7 +2627,6 @@ svn_fs_commit_txn (const char **conflict_p,
 
   svn_error_t *err;
   svn_fs_t *fs = txn->fs;
-  const char *txn_id = txn->id;
 
   /* Initialize output params. */
   *new_rev = SVN_INVALID_REVNUM;
@@ -2698,22 +2697,13 @@ svn_fs_commit_txn (const char **conflict_p,
             svn_error_clear (err);
         }
       else if (err)
-        return err;
+        {
+          return err;
+        }
       else
         {
-          svn_fs_root_t *rev_root;
-
           /* Set the return value -- our brand spankin' new revision! */
           *new_rev = commit_args.new_rev;
-
-          /* Get the new revision root. */
-          SVN_ERR_W (svn_fs_revision_root (&rev_root, fs, *new_rev, pool),
-                     "Commit succeeded, but error getting new revision root");
-
-          /* Now...deltify! */
-          SVN_ERR_W (deltify_mutable (fs, rev_root, "/", txn_id, pool),
-                     "Commit succeeded; deltification failed");
-
           return SVN_NO_ERROR;
         }
     }
@@ -2792,6 +2782,43 @@ svn_fs_merge (const char **conflict_p,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+struct rev_get_txn_id_args
+{
+  const char **txn_id;
+  svn_fs_t *fs;
+  svn_revnum_t revision;
+};
+
+
+static svn_error_t *
+txn_body_rev_get_txn_id (void *baton, trail_t *trail)
+{
+  struct rev_get_txn_id_args *args = baton;
+  return svn_fs__rev_get_txn_id (args->txn_id, args->fs, 
+                                 args->revision, trail);
+}
+
+
+svn_error_t *
+svn_fs_deltify_revision (svn_fs_t *fs,
+                         svn_revnum_t revision,
+                         apr_pool_t *pool)
+{
+  svn_fs_root_t *root;
+  const char *txn_id;
+  struct rev_get_txn_id_args args;
+
+  SVN_ERR (svn_fs_revision_root (&root, fs, revision, pool));
+
+  args.txn_id = &txn_id;
+  args.fs = fs;
+  args.revision = revision;
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_rev_get_txn_id, &args, pool));
+
+  return deltify_mutable (fs, root, "/", txn_id, pool);
 }
 
 

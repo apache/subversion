@@ -637,6 +637,11 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       "REV=\"$2\""
       APR_EOL_STR
       APR_EOL_STR
+      "# Deltify predecessors of things changed in this revision."
+      APR_EOL_STR
+      "svnadmin deltify \"$REPOS\" -r \"$REV\""
+      APR_EOL_STR
+      APR_EOL_STR
       "commit-email.pl \"$REPOS\" \"$REV\" commit-watchers@example.org"
       APR_EOL_STR
       "log-commit.py --repository \"$REPOS\" --revision \"$REV\""

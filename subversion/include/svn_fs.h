@@ -1215,6 +1215,18 @@ svn_error_t *svn_fs_youngest_rev (svn_revnum_t *youngest_p,
                                   apr_pool_t *pool);
 
 
+/** Deltify predecessors of paths modified in @a revision in
+ * filesystem @a fs.  Use @a pool for all allocations. 
+ * 
+ * NOTE:  This can be a time-consuming process, depending the breadth
+ * of the changes made in @a revision, and the depth of the history of
+ * those changed paths. 
+ */
+svn_error_t *svn_fs_deltify_revision (svn_fs_t *fs,
+                                      svn_revnum_t revision,
+                                      apr_pool_t *pool);
+
+
 /** Set @a *value_p to the value of the property named @a propname on
  * revision @a rev in the filesystem @a fs.  If @a rev has no property by 
  * that name, set @a *value_p to zero.  Allocate the result in @a pool.
