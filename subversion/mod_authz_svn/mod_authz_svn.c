@@ -128,7 +128,8 @@ static svn_boolean_t parse_authz_line(const char *name, const char *value,
         if (!b->user) {
             return TRUE;
         }
-        else if (*name == '@') {
+
+        if (*name == '@') {
             if (!group_contains_user(b->config, &name[1], b->user, b->pool))
                 return TRUE;
         }
@@ -158,53 +159,83 @@ static svn_boolean_t parse_authz_line(const char *name, const char *value,
     return TRUE;
 }
 
-static int check_access(svn_config_t *cfg,
-                        const char *repos_path, const char *user,
-                        int required_access, apr_pool_t *pool)
+static int parse_authz_lines(svn_config_t *cfg,
+                             const char *repos_name, const char *repos_path,
+                             const char *user,
+                             int required_access, int *access,
+                             apr_pool_t *pool)
 {
-    const char *base_name;
+    const char *qualified_repos_path;
     struct parse_authz_line_baton baton = { 0 };
-
-    if (!repos_path) {
-        /* XXX: Check if the user has 'required_access' _anywhere_ in the
-	 * XXX: repository.  For now, make this always succeed, until
-	 * XXX: we come up with a good way of figuring this out.
-	 */
-        return 1;
-    }
 
     baton.pool = pool;
     baton.config = cfg;
     baton.user = user;
 
+    /* First try repos specific */
+    qualified_repos_path = apr_pstrcat(pool, repos_name, ":", repos_path,
+                                       NULL);
+    svn_config_enumerate(cfg, qualified_repos_path,
+                         parse_authz_line, &baton);
+    *access = !(baton.deny & required_access)
+              || (baton.allow & required_access) != 0;
+
+    if ((baton.deny & required_access)
+        || (baton.allow & required_access))
+        return TRUE;
+
     svn_config_enumerate(cfg, repos_path,
                          parse_authz_line, &baton);
+    *access = !(baton.deny & required_access)
+              || (baton.allow & required_access) != 0;
+
+    return (baton.deny & required_access)
+           || (baton.allow & required_access);
+}
+
+static int check_access(svn_config_t *cfg,
+                        const char *repos_name, const char *repos_path,
+                        const char *user, int required_access,
+                        apr_pool_t *pool)
+{
+    const char *base_name;
+    int access;
+
+    if (!repos_path) {
+        /* XXX: Check if the user has 'required_access' _anywhere_ in the
+         * XXX: repository.  For now, make this always succeed, until
+         * XXX: we come up with a good way of figuring this out.
+         */
+        return 1;
+    }
+
+    if (parse_authz_lines(cfg, repos_name, repos_path,
+                          user, required_access, &access,
+                          pool))
+        return access;
 
     base_name = repos_path;
-    while (!(baton.deny & required_access)
-           && !(baton.allow & required_access)) {
+    do {
         if (base_name[0] == '/' && base_name[1] == '\0') {
             /* By default, deny access */
             return 0;
         }
 
         svn_path_split(repos_path, &repos_path, &base_name, pool);
-        svn_config_enumerate(cfg, repos_path,
-                             parse_authz_line, &baton);
     }
+    while (!parse_authz_lines(cfg, repos_name, repos_path,
+                              user, required_access, &access,
+                              pool));
 
-    /* XXX: We could use an 'order = deny,allow' option to make this more
-     * XXX: configurable.
-     */
-    return !(baton.deny & required_access)
-           || (baton.allow & required_access) != 0;
+    return access;
 }
 
 /* Check if the current request R is allowed.  Upon exit *REPOS_PATH_REF
- * will contain the path that an operation was requested on.
- * *DEST_REPOS_PATH_REF will contain the destination path if the the requested
- * operation was a MOVE or a COPY.  Returns OK when access is allowed,
- * DECLINED when it isn't, or an HTTP_ error code when an error occurred.
+ * will contain the path and repository name that an operation was requested
+ * on in the form 'name:path'.  *DEST_REPOS_PATH_REF will contain the
+ * destination path if the the requested operation was a MOVE or a COPY.
+ * Returns OK when access is allowed, DECLINED when it isn't, or an HTTP_
+ * error code when an error occurred.
  */
 static int req_check_access(request_rec *r,
                             authz_svn_config_rec *conf,
@@ -272,7 +303,7 @@ static int req_check_access(request_rec *r,
     if (repos_path)
         repos_path = svn_path_join("/", repos_path, r->pool);
 
-    *repos_path_ref = repos_path;
+    *repos_path_ref = apr_pstrcat(r->pool, repos_name, ":", repos_path, NULL);
 
     if (r->method_number == M_MOVE || r->method_number == M_COPY) {
         dest_uri = apr_table_get(r->headers_in, "Destination");
@@ -313,7 +344,8 @@ static int req_check_access(request_rec *r,
         if (dest_repos_path)
             dest_repos_path = svn_path_join("/", dest_repos_path, r->pool);
 
-        *dest_repos_path_ref = dest_repos_path;
+        *dest_repos_path_ref = apr_pstrcat(r->pool, dest_repos_name, ":",
+                                           dest_repos_path, NULL);
     }
 
     /* Retrieve/cache authorization file */
@@ -335,7 +367,8 @@ static int req_check_access(request_rec *r,
     }
 
     if (!check_access(access_conf,
-                      repos_path, r->user, authz_svn_type,
+                      repos_name, repos_path,
+                      r->user, authz_svn_type,
                       r->pool)) {
         return DECLINED;
     }
@@ -352,7 +385,8 @@ static int req_check_access(request_rec *r,
 
     /* Check access on the first repos_path */
     if (!check_access(access_conf,
-                      dest_repos_path, r->user, AUTHZ_SVN_WRITE,
+                      dest_repos_name, dest_repos_path,
+                      r->user, AUTHZ_SVN_WRITE,
                       r->pool)) {
         return DECLINED;
     }
