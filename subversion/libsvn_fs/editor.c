@@ -41,7 +41,7 @@ struct edit_baton
   /* The txn name.  This is just the cached result of applying
      svn_fs_txn_name to TXN, above.
      This is zero until the driver calls replace_root.  */
-  char *txn_name;
+  const char *txn_name;
 
   /* The root directory of the transaction. */
   svn_fs_root_t *root_p;
