@@ -1023,6 +1023,27 @@ revert_admin_things (const char *parent_dir,
       /* Modify our entry structure. */
       *modify_flags |= SVN_WC__ENTRY_MODIFY_PROP_TIME;
     }
+  else if (entry->schedule == svn_wc_schedule_replace)
+    {
+      /* Edge case: we're reverting a replacement, and
+         svn_wc_props_modified_p thinks there's no property mods.
+         However, because of the scheduled replacement,
+         svn_wc_props_modified_p is deliberately ignoring the
+         base-props; it's "no" answer simply means that there are no
+         working props.  It's *still* possible that the base-props
+         exist, however, from the original replaced file.  If they do,
+         then we need to restore them. */
+      SVN_ERR (svn_wc__prop_path (&thing, fullpath, 0, pool)); 
+      SVN_ERR (svn_wc__prop_base_path (&base_thing, fullpath, 0, pool));
+      SVN_ERR (svn_io_check_path (base_thing, &kind, pool));
+
+      if ((err = svn_io_copy_file (base_thing, thing, FALSE, pool)))
+        return revert_error (err, fullpath, "restoring props", pool);
+      
+      SVN_ERR (svn_io_file_affected_time (&tstamp, thing, pool));
+      entry->prop_time = tstamp;
+      *modify_flags |= SVN_WC__ENTRY_MODIFY_PROP_TIME;
+    }
 
   if (entry->kind == svn_node_file)
     {
