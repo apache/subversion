@@ -206,12 +206,12 @@ svn_error_t *svn_error_create (apr_status_t apr_err,
 /* Create an error structure with the given APR_ERR, SRC_ERR, CHILD,
    and POOL, with a printf-style error message produced by passing
    FMT, ... through apr_psprintf.  */
-extern svn_error_t *svn_error_createf (apr_status_t apr_err,
-                                       int src_err,
-                                       svn_error_t *child,
-                                       apr_pool_t *pool,
-                                       const char *fmt, 
-                                       ...);
+svn_error_t *svn_error_createf (apr_status_t apr_err,
+                                int src_err,
+                                svn_error_t *child,
+                                apr_pool_t *pool,
+                                const char *fmt, 
+                                ...);
 
 
 /* A quick n' easy way to create a wrappered exception with your own

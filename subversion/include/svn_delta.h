@@ -180,12 +180,12 @@ typedef struct svn_txdelta_stream_t svn_txdelta_stream_t;
 /* Set *WINDOW to a pointer to the next window from the delta stream
    STREAM.  When we have completely reconstructed the target string,
    set *WINDOW to zero.  */
-extern svn_error_t *svn_txdelta_next_window (svn_txdelta_window_t **window,
-                                             svn_txdelta_stream_t *stream);
+svn_error_t *svn_txdelta_next_window (svn_txdelta_window_t **window,
+                                      svn_txdelta_stream_t *stream);
 
 
 /* Free the delta window WINDOW.  */
-extern void svn_txdelta_free_window (svn_txdelta_window_t *window);
+void svn_txdelta_free_window (svn_txdelta_window_t *window);
      
 
 /* Set *STREAM to a pointer to a delta stream that will turn the byte
@@ -197,16 +197,16 @@ extern void svn_txdelta_free_window (svn_txdelta_window_t *window);
    and TARGET_FN to gather as much data as it needs.
 
    Do any necessary allocation in a sub-pool of POOL.  */
-extern svn_error_t *svn_txdelta (svn_txdelta_stream_t **stream,
-                                 svn_read_fn_t *source_fn,
-                                 void *source_baton,
-                                 svn_read_fn_t *target_fn,
-                                 void *target_baton,
-                                 apr_pool_t *pool);
+svn_error_t *svn_txdelta (svn_txdelta_stream_t **stream,
+                          svn_read_fn_t *source_fn,
+                          void *source_baton,
+                          svn_read_fn_t *target_fn,
+                          void *target_baton,
+                          apr_pool_t *pool);
 
 
 /* Free the delta stream STREAM.  */
-extern void svn_txdelta_free (svn_txdelta_stream_t *stream);
+void svn_txdelta_free (svn_txdelta_stream_t *stream);
 
 
 
@@ -252,10 +252,10 @@ void svn_txdelta_applicator_free (svn_txdelta_applicator_t *appl);
    return a text delta in VCDIFF format.  READ_FN will draw windows as
    needed from the text delta window stream STREAM, and convert them
    to VCDIFF format.  Do all allocation for the conversion in POOL.  */
-extern svn_error_t *svn_txdelta_to_vcdiff (svn_read_fn_t **read_fn,
-                                           void **read_baton,
-                                           svn_txdelta_stream_t *stream,
-                                           apr_pool_t *pool);
+svn_error_t *svn_txdelta_to_vcdiff (svn_read_fn_t **read_fn,
+                                    void **read_baton,
+                                    svn_txdelta_stream_t *stream,
+                                    apr_pool_t *pool);
      
 
 /* Definitions for converting VCDIFF -> text delta window streams.  */
@@ -298,10 +298,10 @@ typedef struct svn_vcdiff_parser_t
    described below, to send VCDIFF-format data through the parser.
    PARSER will invoke HANDLER to handle each window it recognizes,
    passing it HANDLER_BATON.  */
-extern svn_vcdiff_parser_t *svn_make_vcdiff_parser
-                            (svn_txdelta_window_handler_t *handler,
-                             void *handler_baton,
-                             apr_pool_t *pool);
+svn_vcdiff_parser_t *svn_make_vcdiff_parser
+                     (svn_txdelta_window_handler_t *handler,
+                      void *handler_baton,
+                      apr_pool_t *pool);
 
 
 /* Parse the LEN bytes at BUFFER as the next block of data in the
@@ -313,9 +313,9 @@ extern svn_vcdiff_parser_t *svn_make_vcdiff_parser
    You *must* call svn_vcdiff_parse with LEN == 0 at the end of your
    data stream; otherwise, the parser may still have buffered data it
    hasn't passed to HANDLER yet.  */
-extern svn_error_t *svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
-                                      const char *buffer,
-                                      apr_size_t len);
+svn_error_t *svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
+                               const char *buffer,
+                               apr_size_t len);
 
 
 /*** Traversing tree deltas. ***/
@@ -629,13 +629,13 @@ svn_delta_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal,
    traversal.  DIR_BATON is a data passthrough for the root directory;
    the callbacks can establish new DIR_BATON values for
    subdirectories.  Use POOL for allocations.  */
-extern svn_error_t *svn_delta_xml_auto_parse (svn_read_fn_t *source_fn,
-                                        void *source_baton,
-                                        const svn_delta_edit_fns_t *editor,
-                                        svn_string_t *base_path,
-                                        svn_vernum_t base_version,
-                                        void *edit_baton,
-                                        apr_pool_t *pool);
+svn_error_t *svn_delta_xml_auto_parse (svn_read_fn_t *source_fn,
+                                       void *source_baton,
+                                       const svn_delta_edit_fns_t *editor,
+                                       svn_string_t *base_path,
+                                       svn_vernum_t base_version,
+                                       void *edit_baton,
+                                       apr_pool_t *pool);
 
 
 #endif  /* SVN_DELTA_H */
