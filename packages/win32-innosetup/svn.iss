@@ -71,7 +71,7 @@ Source: {#= path_iconv}\*.so; DestDir: {app}\iconv; Flags: ignoreversion
 Source: {#= path_locale}\*.*; DestDir: {app}\share\locale; Flags: ignoreversion recursesubdirs
 #endif
 Source: {#= path_setup_in}\berkeley\BerkeleyLicense.txt; DestDir: {app}
-Source: {#= path_setup_in}\doc\svn-doc.chm; DestDir: {app}\doc
+Source: {#= path_setup_in}\doc\svn-book.chm; DestDir: {app}\doc
 
 ; APR DLLs
 Source: {#= path_libapr_dll}\libapr.dll; DestDir: {app}\bin; Flags: ignoreversion
@@ -134,9 +134,9 @@ Name: {group}\Subversion on the Web; Filename: {app}\svn.url
 Name: {group}\Uninstall Subversion; Filename: {app}\UninsHs.exe
 Name: {group}\Licenses\Subversion; Filename: {app}\SubversionLicense.txt
 Name: {group}\Licenses\Berkeley DB Licence; Filename: {app}\BerkeleyLicense.txt
-Name: {group}\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; IconFilename: {app}\bin\svn.exe; Comment: The standard Subversion documentation; IconIndex: 0
-Name: {userdesktop}\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; IconFilename: {app}\svn.exe; Comment: The standard Subversion documentation; IconIndex: 0; Tasks: desktopicon
-Name: {userappdata}\Microsoft\Internet Explorer\Quick Launch\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; Comment: The standard Subversion Documentation; IconFilename: {app}\svn.exe; IconIndex: 0; MinVersion: 4.01.1998,5.00.2195; Tasks: quicklaunchicon
+Name: {group}\Subversion Documentation; Filename: {app}\doc\svn-book.chm; IconFilename: {app}\bin\svn.exe; Comment: The standard Subversion documentation; IconIndex: 0
+Name: {userdesktop}\Subversion Documentation; Filename: {app}\doc\svn-book.chm; IconFilename: {app}\svn.exe; Comment: The standard Subversion documentation; IconIndex: 0; Tasks: desktopicon
+Name: {userappdata}\Microsoft\Internet Explorer\Quick Launch\Subversion Documentation; Filename: {app}\doc\svn-book.chm; Comment: The standard Subversion Documentation; IconFilename: {app}\svn.exe; IconIndex: 0; MinVersion: 4.01.1998,5.00.2195; Tasks: quicklaunchicon
 Name: {group}\Read Me; Filename: {app}\Readme.txt
 Name: {group}\Download and install msvcp60.dll; Filename: {app}\doc\missing_msvcp60dll.html; Check: VCRuntimeNotFound
 Name: {group}\Download and install shfolder.dll; Filename: {app}\doc\missing_shfolderdll.html; Check: ShFolderDllNotFound
@@ -181,3 +181,4 @@ Name: en; MessagesFile: compiler:Default.isl
 
 [Code]
 #include "is_main.pas"
+

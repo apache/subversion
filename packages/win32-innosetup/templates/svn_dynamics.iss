@@ -31,10 +31,16 @@
 ; Apache Server: The minimum required version
 #define apache_ver_min "2.0.52"
 
+;Paths the program locations and the Subversion Book sources ------------------
 ; Edit the paths below according to your system
 
-;Subversion Core --------------------------------------------------------------
-#define path_svn "C:\work\Subversion\binaries_svn\svn-win32\"
+; Full path to the binaries root folder
+#define path_svn "C:\work\Subversion\binaries_svn\svn-win32"
+; Full path to the WC of the svnbook
+#define path_svnbook "C:\work\Subversion\svnbook"
+; Full path to MS HTML help compiler hhc.exe's parent folder
+#define path_hhc "E:\HTMLHelpWorkShop"
+
 
 ; Basic files
 #define path_svnclient         (path_svn + "bin")

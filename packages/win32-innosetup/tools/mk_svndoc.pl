@@ -3,7 +3,7 @@
 # FILE       mk_svndoc
 # PURPOSE    Making MS HTML-help from the Subversion source documentation
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2005 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -19,7 +19,7 @@
 ##########################################################################
 # INCLUDED LIBRARY FILES
 use strict;
-use File::Find;
+use File::Basename;
 use Cwd;
 use Win32;
 require 'cmn.pl';
@@ -28,19 +28,14 @@ require 'cmn.pl';
 # FUNCTION DECLARATIONS
 sub Main;
 sub CheckForProgs;
-sub CntHhc;
-sub CntHhcHead;
-sub CntHhp;
-sub CntHhpHead;
-sub CopyFiles;
+sub CopyAndEolU2W;
 sub MkDirP;
 
 ##########################################################################
 # CONSTANTS AND GLOBAL VARIABLES
 # Sorces and destinations
-my $g_PathDocRoot='..\..';
+my $g_PathDocRoot=&cmn_ValuePathfile('path_svnbook');
 my $g_PathMiscIn=&cmn_ValuePathfile('path_setup_in');
-my $g_PathDocDest="$g_PathMiscIn\\doc";
 my %g_FilesToCpAndConv=
     (
         'COPYING', 'subversion\SubversionLicense.txt',
@@ -49,24 +44,15 @@ my %g_FilesToCpAndConv=
         'doc\programmer\WritingChangeLogs.txt', 'doc\WritingChangeLogs.txt', 
     );
 
-my %g_XmlFiles2Copy =
-    (
-        'doc\book\book\*.xml',                    'tools\doc\book',
-        'doc\book\book\images\*.png',             'tools\doc\book\images',
-        'doc\book\misc-docs\*.xml',               'tools\doc\misc-docs',
-        'doc\book\tools\dtd\*.*',                 'tools\doc\tools\dtd',
-        'doc\book\tools\xsl\*.*',                 'tools\doc\tools\xsl'
-    );
-
 # Programs needed for making the documentation
 my $g_Prog_hhc='';
 my %g_ProgsInPath=
     (
-        'libxslt are needed for converting the XML-documentaion.',
+        'libxslt is needed for converting the XML-documentaion.',
             'xsltproc.exe',
-        'iconv are needed by libxslt and libxslt for converting the XML-documentaion.',
+        'iconv is needed by libxslt and libxslt for converting the XML-documentaion.',
             'iconv.exe',
-        'libxml2 are needed libxslt by for converting the XML-documentaion.',
+        'libxml2 is needed by libxslt for converting the XML-documentaion.',
             'libxml2.dll'
     );
 
@@ -81,50 +67,54 @@ Main;
 # DOES       This is the program's main function
 sub Main
 {
-    my $CntSvnDocHhp='';
-    my $CntHhc='';
-    my @Books=('book', 'misc-docs');
-    my %XlsParams='';
+    my $CntMkHtmBat='';
+    my %Values;
+    my $RootSvnBook=&cmn_ValuePathfile('path_svnbook');
+    my $DocOut=&cmn_ValuePathfile('path_setup_in');
+    my $PathWinIsPack='';
+    my $Pwd='';
 
-    #In $g_PathMiscIn is relative
-    #my $DirOrig = getcwd;
-    chdir "..";
+    # Get absolute path of the current PWD's parent
+    $PathWinIsPack=getcwd;
+    $Pwd=basename($PathWinIsPack);
+    $PathWinIsPack =~ s/\//\\/g;
+    $PathWinIsPack =~ s/\\$Pwd$//;
 
-    &MkDirP ($g_PathDocDest);
-    
+    # Make $DocOut to an absolute path
+    if ($DocOut eq 'in')
+      {
+        $DocOut = "$PathWinIsPack\\in\\doc";
+      }
+
+    #Make the out dir in "$RootSvnBook\src if needed
+    &MkDirP ("$RootSvnBook\\src\\out") unless (-e "$RootSvnBook\\src\\out");
+
+    #Check for needed programs
     &CheckForProgs;
-    &CopyFiles;
+    &CopyAndEolU2W;
 
-    chdir 'tools/doc';
-    system ("copy ..\\mk_htmlhelp.bat mk_htmlhelp.bat");
-    system ("copy ..\\..\\templates\\svn-doc.css svn-doc.css");
-    system ("copy ..\\..\\images\\svn_bck.png svn_bck.png");
-    
-    system ("mk_htmlhelp.bat");
-    
-    $CntSvnDocHhp=&CntHhpHead;
-    $CntSvnDocHhp= $CntSvnDocHhp . &CntHhp('book/book.hhp', 'book');
-    $CntSvnDocHhp= $CntSvnDocHhp . &CntHhp('misc-docs/misc-docs.hhp', 'misc-docs');
+    #Create the mk_htmlhelp.bat file from ..\templates\\mk_htmlhelp.bat and
+    #collected data, save it to $RootSvnBook\src\out\mk_htmlhelp.bat
+    %Values =
+      (
+        tv_path_hhc => $g_Prog_hhc,
+        tv_bookdest => $DocOut
+      );
 
-    open (FH_HHP, ">" . "svn-doc.hhp");
-        print FH_HHP $CntSvnDocHhp;
+    $CntMkHtmBat=&cmn_Template("$PathWinIsPack\\templates\\mk_htmlhelp.bat", \%Values);
+
+    open (FH_HHP, ">" . "$RootSvnBook\\src\\out\\mk_htmlhelp.bat");
+        print FH_HHP $CntMkHtmBat;
     close (FH_HHP);
 
-    $CntHhc=&CntHhcHead;
-    $CntHhc = $CntHhc . &CntHhc('book/book.hhc', 'book');
-    $CntHhc = $CntHhc . &CntHhc('misc-docs/misc-docs.hhc', 'misc-docs');
-    $CntHhc = "$CntHhc    </BODY>\n</HTML>\n";
+    #Copy style sheet and background image to $RootSvnBook\src\out
+    system ("copy /Y ..\\templates\\svn-doc.css $RootSvnBook\\src\\out");
+    system ("copy /Y ..\\images\\svn_bck.png $RootSvnBook\\src\\out");
 
-    open (FH_HHC, ">" . "toc.hhc");
-        print FH_HHC $CntHhc;
-    close (FH_HHC);
-    
-    system ("$g_Prog_hhc svn-doc.hhp");
-
-    chdir '../..';
-    system ("copy /Y tools\\doc\\svn-doc.chm $g_PathDocDest");
-    chdir 'tools';
-    system ("rmdir /Q /S doc");
+    # Make the chm file
+    chdir "$RootSvnBook\\src\\out";
+    system ("$RootSvnBook\\src\\out\\mk_htmlhelp.bat");
+    chdir $Pwd;
 }
 
 #-------------------------------------------------------------------------
@@ -132,14 +122,12 @@ sub Main
 # DOES       Checking if required programs exists
 sub CheckForProgs
 {
-    my $Key = '';
-    my $Value = '';
     my @MissingProgs;
     my @SysPath;
     my $bMissingProgs=0;
     my $Prog2CheckDesc='';
     my $Prog2Check='';
-    
+
     # Fill the %PATH% in @SysPath
     @SysPath = split (/;/, $ENV{PATH});
 
@@ -163,20 +151,18 @@ sub CheckForProgs
             push @MissingProgs, $Prog2CheckDesc;
           }
       }
-    
+
     # Check for MS HTML help compiler
-    $Key = 'HKLM/Software/Microsoft/Windows/CurrentVersion/App Paths/hhw.exe';
-    $Value = 'Path';
-    $g_Prog_hhc = &cmn_RegGetValue ($Key, $Value);
+    $g_Prog_hhc = &cmn_ValuePathfile('path_hhc');
     $g_Prog_hhc = "$g_Prog_hhc\\hhc.exe";
-    
+
     if (! -e $g_Prog_hhc)
       {
         $bMissingProgs = 1;
-        push @MissingProgs, 'Microsoft HTML Help Workshop are needed for making the HTML-help file';
+        push @MissingProgs, 'Microsoft HTML Help Workshop is needed for making the HTML-help file';
       }
     $g_Prog_hhc = "\"$g_Prog_hhc\"";
-    
+
     if ($bMissingProgs)
       {
         my $Msg="One or more required programs needed for making the docs are missing:\n\n";
@@ -191,136 +177,6 @@ sub CheckForProgs
           Win32::MsgBox($Msg, 0+MB_ICONSTOP, 'ERROR: Missing required programs.');
           exit 1;
       }
-}
-
-#-------------------------------------------------------------------------
-# FUNCTION   CntHhc
-# DOES       Getting and returning the menu entries from a HTML-help
-#            toc file 
-sub CntHhc
-{
-    my ($HhcFile, $book) = @_;
-    my $CntHhcFile='';
-    my $iCount=0;
-
-    open (FH_HHCFILE, $HhcFile);
-    while (<FH_HHCFILE>)
-		  {
-        chomp($_);
-        $_ =~ s/^\s+//;
-	      $_ =~ s/\s+$//;
-
-        if ($_ eq '<UL>')
-          {
-            $iCount = 1;
-          }
-        elsif ($_ eq '</BODY>')
-          {
-            $iCount = 0;
-          }
-
-        if ($iCount == 1)
-          {
-            $_ = "    $_" if ($_ =~ /<\/OBJECT>/);
-            $_ = "      $_" if ($_ =~ /<param /);
-
-            if ($CntHhcFile)
-              {
-                $CntHhcFile = "$CntHhcFile" . "$_\n";
-              }
-            else
-              {
-                $CntHhcFile = "$_\n";
-              }
-          }          
-      }
-        
-    close (FH_HHCFILE);
-
-    return $CntHhcFile;
-}
-
-#-------------------------------------------------------------------------
-# FUNCTION   CntHhp
-# DOES       Getting and returning the files in a HTML-help project file
-#            and prefix the files with the book name folder name
-sub CntHhp
-{
-    my ($HhpFile, $book) = @_;
-    my $CntHhpFile='';
-    my $iCount=0;
-
-    open (FH_HHPFILE, $HhpFile);
-    while (<FH_HHPFILE>)
-		  {
-			  chomp($_);
-        if (/\[FILES]/)
-          {
-            $iCount = 1;
-          }
-
-        if ($iCount > 0)
-          {
-            $iCount++;
-          }
-
-        if ($iCount > 2)
-          {
-            if ($CntHhpFile)
-              {
-                $CntHhpFile = "$CntHhpFile" . "$book/$_\n";
-              }
-            else
-              {
-                $CntHhpFile = "$book/$_\n";
-              }
-          }       
-      }
-    close (FH_HHPFILE);
-
-    return $CntHhpFile;
-}
-#-------------------------------------------------------------------------
-# FUNCTION   CntHhcHead
-# DOES       Returning the header of a HTML-help toc file
-sub CntHhcHead
-{
-    my $CntHead="<HTML>";
-    $CntHead="$CntHead\n<HEAD>";
-    $CntHead="$CntHead\n</HEAD>";
-    $CntHead="$CntHead\n  <BODY>";
-    $CntHead="$CntHead\n<OBJECT type=\"text/site properties\">";
-    $CntHead="$CntHead\n	<param name=\"ImageType\" value=\"Folder\">";
-    $CntHead="$CntHead\n</OBJECT>\n";
-
-    return $CntHead;
-}
-
-#-------------------------------------------------------------------------
-# FUNCTION   CntHhpHead
-# DOES       Returning the header of a HTML-help project file
-sub CntHhpHead
-{
-    my $CntHead="[OPTIONS]";
-    #$CntHead="$CntHead\nBinary TOC=Yes";
-    $CntHead="$CntHead\nCompatibility=1.1 or later";
-    $CntHead="$CntHead\nCompiled file=svn-doc.chm";
-    $CntHead="$CntHead\nContents file=toc.hhc";
-    $CntHead="$CntHead\nDefault Window=Main";
-    $CntHead="$CntHead\nDefault topic=book/index.html";
-    $CntHead="$CntHead\nDisplay compile progress=No";
-    $CntHead="$CntHead\nFull-text search=Yes";
-    $CntHead="$CntHead\nLanguage=0x409 Engelska (USA)";
-    $CntHead="$CntHead\nTitle=Subversion Documentation";
-
-    $CntHead="$CntHead\n\n[WINDOWS]";
-    $CntHead="$CntHead\nMain=\"Subversion Documentation\",\"toc.hhc\",,\"book/index.html\",\"book/index.html\",,,,,0x23520,,0x60300e,,,,,,,,0\n";
-    $CntHead="$CntHead\n\n[INFOTYPES]";
-    $CntHead="$CntHead\n\n[FILES]";
-    $CntHead="$CntHead\nsvn-doc.css";
-    $CntHead="$CntHead\nsvn_bck.png\n";
-    
-    return $CntHead;
 }
 
 #-------------------------------------------------------------------------
@@ -355,37 +211,13 @@ sub CopyAndEolU2W
                   }
               }
          close (FH_SRC);
-               
+
         open (FH_DEST, ">" . $FileDest);
             print FH_DEST $FileCnt;
         close (FH_DEST);
 
         $FileCnt='';
       }
-}
-
-#-------------------------------------------------------------------------
-# FUNCTION   CopyFiles
-# DOES       Copying all the files needed to make the MS HTML-help file
-#            to the doc folder
-sub CopyFiles
-{
-    
-    my $PathSrc='';
-    my $PathDest='';
-    my @PathsDest;
-    my @SubPaths;
-
-    # Copy the files who should 
-    &CopyAndEolU2W;
-
-    # Make sure that the destination folders exists and copy files
-    while (($PathSrc, $PathDest) = each %g_XmlFiles2Copy)
-      {
-        &MkDirP("$PathDest");
-        print "Copying from: $PathSrc To: $PathDest\n";
-        system ("xcopy /Y /S $g_PathDocRoot\\$PathSrc $PathDest > NUL");
-      }    
 }
 
 #-------------------------------------------------------------------------
