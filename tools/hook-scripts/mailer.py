@@ -389,3 +389,23 @@ if __name__ == '__main__':
 
   ### run some validation on these params
   svn.util.run_app(main, config_fname, repos_dir, revision)
+
+
+# ------------------------------------------------------------------------
+# TODO
+#
+# * pipe output into a mail program (and avoid os.popen)
+# * add configuration options
+#   - default options
+#   - per-group overrides
+#   - group selection based on repos and on path
+#   - each group defines:
+#     o how to construct From:
+#     o how to construct To:
+#     o whether to set Reply-To and/or Mail-Followup-To
+#       (btw: it is legal do set Reply-To since this is the originator of the
+#        mail; i.e. different from MLMs that munge it)
+#     o max size of diff before trimming
+#     o how to construct a ViewCVS URL for the diff
+#     o optional, non-mail log file
+#
