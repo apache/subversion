@@ -111,6 +111,9 @@ repository.  How can I make the live site automatically update after
 every commit?</a></li>
 <li><a href="#single-file-checkout">How do I check out a single
 file?</a></li>
+<li><a href="#wc-change-detection">How do I detect adds, deletes,
+copies and renames in a working copy after they've already
+happened?</a></li>
 </ul>
 
 <h4>Troubleshooting:</h4>
@@ -1612,6 +1615,41 @@ supports checkout of directory structures.</p>
 <p>However, you can use 'svn cat' to export a single file.  This will
 retrieve the file's contents, it just won't create a versioned working
 copy.</p>
+
+<![CDATA[=========================================================]]>
+
+<h3><a name="wc-change-detection">How do I detect adds, deletes,
+copies and renames in a working copy after they've already
+happened?</a></h3>
+
+<p>You don't.  It's a bad idea to try.</p>
+
+<p>The basic design of the working copy has two rules: (1) edit files
+as you please, and (2) use a Subversion cilent to make any
+tree-changes (add, delete, move, copy).  If these rules are followed,
+the client can sucessfully manage the working copy.  If renames or
+other rearrangements happen outside of Subversion, then the UI has
+been violated and the working copy might be broken.  The client cannot
+guess what happened.</p>
+
+<p>People sometimes run into this problem because they want to make
+version control "transparent".  They trick users into using a working
+copy, then have a script run later that tries to guess what happened
+and run appropriate client commands.  Unfortunately, this technique
+only goes a short distance.  'svn status' will show missing items and
+unversioned items, which the script can then automatically 'svn rm' or
+'svn add'.  But if a move or copy has happened, you're out of luck.
+Even if the script has a foolproof way of detecting these things, 'svn
+mv' and 'svn cp' can't operate after the action has already
+occurred.</p>
+
+<p>In summary: a working copy is wholly under Subversion's control,
+and Subversion wasn't designed to be transparent.  If you're looking
+for transparency, try setting up an apache server and using the
+"SVNAutoversioning" feature described in appendix C of the book.  This
+will allow users to mount the repository as a network disk, and any
+changes made to the volume cause automatic commits on the server.</p>
+
 
 <![CDATA[=========================================================]]>
 
