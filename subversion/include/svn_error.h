@@ -66,7 +66,7 @@
    that in APR: from APR_OS_START_USEERR to APR_OS_START_SYSERR (see
    apr_errno.h).
 */
-enum svn_errno_t {
+typedef enum svn_errno_t {
   SVN_WARNING = (APR_OS_START_USEERR + 1),
   SVN_ERR_NOT_AUTHORIZED,
   SVN_ERR_PLUGIN_LOAD_FAILURE,
@@ -83,7 +83,7 @@ enum svn_errno_t {
   /* The error is a Berkeley DB error.  `src_err' is the Berkeley DB
      error code, and `message' is an error message.  */
   SVN_ERR_BERKELEY_DB
-};
+} svn_errno_t;
 
 
 
@@ -122,6 +122,14 @@ svn_error_t *svn_create_error (apr_status_t apr_err,
                                svn_error_t *child,
                                apr_pool_t *pool);
 
+/* Create an error structure with the given APR_ERR, SRC_ERR, CHILD,
+   and POOL, with a printf-style error message produced by passing
+   FMT, ... through apr_psprintf.  */
+svn_error_t *svn_create_errorf (apr_status_t apr_err,
+                                int src_err,
+                                svn_error_t *child,
+                                apr_pool_t *pool,
+                                const char *fmt, ...);
 
 
 /* A quick n' easy way to create a wrappered exception with your own
