@@ -276,7 +276,7 @@ if [ "`grep -i subversion.conf $CONF`"x = "x" ]; then
    cat >> $CONF <<EOF
 
 # Begin Subversion server configuration - Please don't delete this line.
-include subversion.conf
+include conf/subversion.conf
 # End Subversion server configuration - Please don't delete this line.
 EOF
 fi
