@@ -654,8 +654,10 @@ svn_path_is_child (const char *path1,
     return NULL;
 
   /* Allow "." and "foo" to be parent/child */
-  if (path1[0] == '.' && path1[1] == '\0' && path2[0] != '.'
-      && path2[0] != SVN_PATH_SEPARATOR)
+  if ((path1[0] == '.' && path1[1] == '\0')
+      &&
+      ! ((path2[0] == '.' && path2[1] == '\0') /* "." not a child */
+         || path2[0] == SVN_PATH_SEPARATOR))   /* "/foo" not a child */
     return apr_pstrdup (pool, path2);
 
   /* Reach the end of at least one of the paths. */
