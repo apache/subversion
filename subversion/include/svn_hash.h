@@ -1,5 +1,5 @@
 /*
- * hashdump.c :  dumping and reading hash tables to/from files.
+ * svn_hash.h :  dumping and reading hash tables to/from files.
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
@@ -49,77 +49,41 @@
 
 
 
-#include <stdio.h>       /* for sprintf() */
-#include <stdlib.h>
-#include <apr_pools.h>
-#include <apr_hash.h>
-#include <apr_file_io.h>
-#include "svn_types.h"
-#include "svn_string.h"
-#include "svn_error.h"
-#include "svn_hash.h"
+
+#ifndef SVN_HASH_H
+#define SVN_HASH_H
 
 
-
-int
-main (void)
-{
-  ap_pool_t *pool = NULL;
-  ap_hash_t *proplist;
-  svn_string_t *key;
-  ap_file_t *f = NULL;     /* init to NULL very important! */
-
-  /* Our longest piece of test data. */
-  char *review =
-    "A forthright entrance, yet coquettish on the tongue, its deceptively\n"
-    "fruity exterior hides the warm mahagony undercurrent that is the\n"
-    "hallmark of Chateau Fraisant-Pitre.  Connoisseurs of the region will\n"
-    "be pleased to note the familiar, subtle hints of mulberries and\n"
-    "carburator fluid.  Its confident finish is marred only by a barely\n"
-    "detectable suggestion of rancid squid ink.";
-
-  ap_initialize ();
-  ap_create_pool (&pool, NULL);
-
-  proplist = ap_make_hash (pool);
-  
-  /* Fill it in with test data. */
-
-  key = svn_string_create ("color", pool);
-  ap_hash_set (proplist, key->data, key->len,
-               svn_string_create ("red", pool));
-  
-  key = svn_string_create ("wine review", pool);
-  ap_hash_set (proplist, key->data, key->len,
-               svn_string_create (review, pool));
-  
-  key = svn_string_create ("price", pool);
-  ap_hash_set (proplist, key->data, key->len,
-               svn_string_create ("US $6.50", pool));
-
-  /* Test overwriting: same key both times, but different values. */
-  key = svn_string_create ("twice-used property name", pool);
-  ap_hash_set (proplist, key->data, key->len,
-               svn_string_create ("This is the FIRST value.", pool));
-  ap_hash_set (proplist, key->data, key->len,
-               svn_string_create ("This is the SECOND value.", pool));
-
-
-  /* Dump it. */
-  ap_open (&f, "hashdump.out", (APR_WRITE | APR_CREATE), APR_OS_DEFAULT, pool);
-  hash_write (proplist, svn_unpack_bytestring, f);
-  ap_close (f);
-  ap_destroy_pool (pool);
-
-  return 0;
-}
-
-
-
-
-
-/* -----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../svn-dev.el")
- * end:
+/* Generalized routines for reading/writing hashtables to disk.
+ *  
+ * Each takes a "helper" routine which can encode/decode a hash value.
+ *
  */
+
+ap_status_t hash_read (ap_hash_t **hash, 
+                       void *(*pack_func) (size_t len, const char *val,
+                                           ap_pool_t *pool),
+                       ap_file_t *srcfile,
+                       ap_pool_t *pool);
+
+ap_status_t hash_write (ap_hash_t *hash, 
+                        ap_size_t (*unpack_func) (char **unpacked_data,
+                                                  void *val),
+                        ap_file_t *destfile);
+
+
+/* Helper routines specific to Subversion proplists;  
+ *                 passed to hash_read() and hash_write().
+ *
+ *  (Subversion's proplists are hashes whose "values" are pointers to
+ *  svn_string_t objects.)
+ */
+
+ap_size_t svn_unpack_bytestring (char **returndata, void *value);
+
+void * svn_pack_bytestring (size_t len, const char *val, ap_pool_t *pool);
+
+
+
+
+#endif /* SVN_HASH_H */
