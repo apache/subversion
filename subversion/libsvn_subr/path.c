@@ -539,7 +539,7 @@ char_is_uri_safe (char c)
 svn_boolean_t 
 svn_path_is_uri_safe (const svn_string_t *path)
 {
-  int i;
+  apr_size_t i;
 
   for (i = 0; i < path->len; i++)
     if (! char_is_uri_safe (path->data[i]))
@@ -553,7 +553,8 @@ svn_stringbuf_t *
 svn_path_uri_encode (const svn_string_t *path, apr_pool_t *pool)
 {
   svn_stringbuf_t *retstr;
-  int i, copied = 0;
+  apr_size_t i;
+  int copied = 0;
   char c;
 
   if ((! path) || (! path->data))
@@ -598,7 +599,7 @@ svn_stringbuf_t *
 svn_path_uri_decode (const svn_string_t *path, apr_pool_t *pool)
 {
   svn_stringbuf_t *retstr;
-  int i;
+  apr_size_t i;
 
   if ((! path) || (! path->data))
     return NULL;
