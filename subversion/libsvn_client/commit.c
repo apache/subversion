@@ -96,7 +96,7 @@ import_file (apr_hash_t *committed_targets,
   void *file_baton;
   const char *mimetype;
   svn_stringbuf_t *full_path 
-    = svn_stringbuf_dup (path, apr_hash_pool_get (committed_targets));;
+    = svn_stringbuf_dup (path, apr_hash_pool_get (committed_targets));
 
   SVN_ERR (editor->add_file (name, dir_baton, NULL, SVN_INVALID_REVNUM, 
                              &file_baton));          
@@ -340,6 +340,53 @@ import (svn_stringbuf_t *path,
 }
 
 
+/* Fetch an EDITOR/EDIT_BATON that will allow us to commit to
+   XML_STREAM.  If REVISION is a valid revision, the committed items
+   will be "bumped" (using the CCB baton) to that revision after the
+   commit. */
+static svn_error_t *
+get_xml_editor (const svn_delta_editor_t **editor,
+                void **edit_baton,
+                svn_stream_t *xml_stream,
+                struct svn_wc_close_commit_baton *ccb,
+                svn_revnum_t revision,
+                apr_pool_t *pool)
+{
+  const svn_delta_editor_t *cmt_editor, *trk_editor;
+  void *cmt_edit_baton, *trk_edit_baton;
+
+  /* ### kff todo: imports are not known to work with xml yet. 
+     They should someday. */
+
+  /* Fetch the xml commit editor. */
+  SVN_ERR (svn_delta_get_xml_editor (xml_stream, &cmt_editor, 
+                                     &cmt_edit_baton, pool));
+
+  /* If we're not supposed to bump revisions, just return the commit
+     editor and baton. */
+  if (! SVN_IS_VALID_REVNUM (revision))
+    {
+      *editor = cmt_editor;
+      *edit_baton = cmt_edit_baton;
+      return SVN_NO_ERROR;
+    }
+
+  /* Else, we're supposed to bump revisions to REVISION.  So fetch the
+     tracking editor and compose it.  Committed targets will be stored
+     in a hash, and bumped by svn_wc_process_committed().  */
+  SVN_ERR (svn_delta_get_commit_track_editor 
+           (&trk_editor, &trk_edit_baton, pool, apr_hash_make (pool),
+            revision, svn_wc_process_committed, ccb));
+
+  svn_delta_compose_editors (editor, edit_baton,
+                             cmt_editor, cmt_edit_baton,
+                             trk_editor, trk_edit_baton, 
+                             pool);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Import a tree or commit changes from a working copy.  
  *
  * Set *COMMITTED_REVISION, *COMMITTED_DATE, and *COMMITTED_AUTHOR to
@@ -416,91 +463,59 @@ send_to_repos (svn_client_commit_info_t **commit_info,
                svn_revnum_t revision,
                apr_pool_t *pool)
 {
+  /* Error values. */
   apr_status_t apr_err;
   svn_error_t *err;
-  apr_file_t *dst = NULL; /* old habits die hard */
-  const svn_delta_editor_t *track_editor, *commit_editor;
-  void *commit_edit_baton, *track_edit_baton;
+
+  /* Editors/batons. */
   const svn_delta_editor_t *editor;
   void *edit_baton;
   const svn_delta_edit_fns_t *wrap_editor;
   void *wrap_edit_baton;
-#if 0  /* restore post-M2, see related #if farther down */
-  const svn_delta_editor_t *test_editor;
-  void *test_edit_baton;
-#endif /* 0 */
+  struct svn_wc_close_commit_baton ccb = { base_path };
+
+  /* RA-layer stuff. */
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
-  svn_boolean_t is_import;
-  struct svn_wc_close_commit_baton ccb;
-  apr_hash_t *committed_targets;
+
+  /* Post-commit stuff. */
   svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
   const char *committed_date = NULL;
   const char *committed_author = NULL;
-  
-  ccb.prefix_path	= base_path;
-  committed_targets	= apr_hash_make (pool);
+  apr_file_t *xml_hnd;
 
-  if (url) 
-    is_import = TRUE;
-  else
-    is_import = FALSE;
+  /* Some shortcut flags. */
+  svn_boolean_t use_xml = (xml_dst && xml_dst->data) ? TRUE : FALSE;
+  svn_boolean_t is_import = url ? TRUE : FALSE;
+
+
+  /*** Setting up the commit/import ***/
 
   /* Sanity check: if this is an import, then NEW_ENTRY can be null or
      non-empty, but it can't be empty. */ 
   if (is_import && (new_entry && (strcmp (new_entry->data, "") == 0)))
-    {
-      return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, 0, NULL, pool,
-                               "empty string is an invalid entry name");
-    }
+    return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, 0, NULL, pool,
+                             "empty string is an invalid entry name");
 
-  /* If we're committing to XML... */
+  /* If we're committing to XML ... */
   if (xml_dst && xml_dst->data)
     {
-      /* ### kff todo: imports are not known to work with xml yet.
-         They should someday. */
-
       /* Open the xml file for writing. */
-      apr_err = apr_file_open (&dst, xml_dst->data,
-                               (APR_WRITE | APR_CREATE),
-                               APR_OS_DEFAULT,
-                               pool);
-      if (apr_err)
+      if ((apr_err = apr_file_open (&xml_hnd, xml_dst->data,
+                                    (APR_WRITE | APR_CREATE),
+                                    APR_OS_DEFAULT, pool)))
         return svn_error_createf (apr_err, 0, NULL, pool,
                                   "error opening %s", xml_dst->data);
       
-
-      /* Fetch the xml commit editor. */
-      SVN_ERR (svn_delta_get_xml_editor (svn_stream_from_aprfile (dst, pool),
-                                         &commit_editor, &commit_edit_baton,
-                                         pool));
-
-      if (! SVN_IS_VALID_REVNUM (revision))
-        {
-          editor = commit_editor;
-          edit_baton = commit_edit_baton;
-        }
-      else
-        {
-          /* If we're supposed to bump revisions to REVISION, then
-             fetch tracking editor and compose it.  Committed targets
-             will be stored in committed_targets, and bumped by
-             svn_wc_process_committed().  */
-          SVN_ERR (svn_delta_get_commit_track_editor (&track_editor,
-                                                      &track_edit_baton,
-                                                      pool,
-                                                      committed_targets,
-                                                      revision,
-                                                      svn_wc_process_committed,
-                                                      &ccb));
-
-          svn_delta_compose_editors (&editor, &edit_baton,
-                                     commit_editor, commit_edit_baton,
-                                     track_editor, track_edit_baton, 
-                                     pool);
-        }        
+      /* ... we need an XML commit editor. */
+      SVN_ERR (get_xml_editor (&editor, &edit_baton, 
+                               svn_stream_from_aprfile (xml_hnd, pool),
+                               &ccb, revision, pool));
+      use_xml = TRUE;
     }
-  else   /* Else we're committing to an RA layer. */
+
+  /* Else we're committing to an RA layer. */
+  else  
     {
       svn_wc_entry_t *entry;
 
@@ -534,12 +549,8 @@ send_to_repos (svn_client_commit_info_t **commit_info,
       
       /* Fetch RA commit editor, giving it svn_wc_process_committed(). */
       SVN_ERR (ra_lib->get_commit_editor
-               (session,
-                &editor, &edit_baton,
-                &committed_rev,
-                &committed_date,
-                &committed_author,
-                log_msg,
+               (session, &editor, &edit_baton, &committed_rev, 
+                &committed_date, &committed_author, log_msg,
                 /* wc prop fetching routine */
                 is_import ? NULL : svn_wc_get_wc_prop,
                 /* wc prop setting routine */
@@ -549,22 +560,6 @@ send_to_repos (svn_client_commit_info_t **commit_info,
                 /* baton for the three funcs */
                 &ccb));
     }
-
-#if 0
-  /* ### kff todo: after M2, put this back wrapped in a conditional,
-     for implementing 'svn --trace' */
-  SVN_ERR (svn_test_get_editor (&test_editor,
-                                &test_edit_baton,
-                                svn_stream_from_stdio (stdout, pool),
-                                0,
-                                base_path,
-                                pool));
-  
-  svn_delta_compose_editors (&editor, &edit_baton,
-                             editor, edit_baton,
-                             test_editor, test_edit_baton, pool);
-#endif /* 0 */
-
 
   /* Wrap the resulting editor with BEFORE and AFTER editors. */
   svn_delta_wrap_editor (&editor, &edit_baton,
@@ -577,56 +572,35 @@ send_to_repos (svn_client_commit_info_t **commit_info,
   svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton, 
                          editor, edit_baton, pool);
   
-  /* Do the commit. */
+
+  /*** Performing the commit/import ***/
+
   if (is_import)
-    {
-      /* Crawl a directory tree, importing. */
-      err = import (base_path, new_entry, wrap_editor, wrap_edit_baton, pool);
-      if (err)
-        {
-          /* ignoring the return value of this.  we're *already* about
-             to die.  we just want to give the editor a chance to
-             clean up the fs transaction. */
-          wrap_editor->abort_edit (wrap_edit_baton);
-          return err;
-        }
-    }
+    /* Crawl a directory tree, importing. */
+    err = import (base_path, new_entry, wrap_editor, wrap_edit_baton, pool);
   else
+    /* Crawl local mods and report changes to EDITOR.  When
+       close_edit() is called, revisions will be bumped. */
+    err = (svn_wc_crawl_local_mods 
+           (base_path, condensed_targets, wrap_editor, wrap_edit_baton,
+            use_xml ? NULL : &(ra_lib->get_latest_revnum),
+            use_xml ? NULL : session, pool));
+
+  /* If an error occured during the commit, abort the edit and return
+     the error.  We don't even care if the abort itself fails.  */
+  if (err)
     {
-      /* Crawl local mods and report changes to EDITOR.  When
-         close_edit() is called, revisions will be bumped. */
-
-      if (xml_dst && xml_dst->data)
-        /* committing to XML */
-        err = svn_wc_crawl_local_mods (base_path,
-                                       condensed_targets,
-                                       wrap_editor, wrap_edit_baton,
-                                       NULL, NULL,
-                                       pool);
-      else 
-        /* committing to RA layer */
-        err = svn_wc_crawl_local_mods (base_path,
-                                       condensed_targets,
-                                       wrap_editor, wrap_edit_baton,
-                                       &(ra_lib->get_latest_revnum), session,
-                                       pool);
-
-      if (err)
-        {
-          /* ignoring the return value of this.  we're *already* about
-             to die.  we just want to give the editor a chance to
-             clean up the fs transaction. */
-          wrap_editor->abort_edit (wrap_edit_baton);
-          return err;
-        }
+      wrap_editor->abort_edit (wrap_edit_baton);
+      return err;
     }
 
 
-  if (xml_dst && xml_dst->data)
+  /*** Finishing the commit/import ***/
+
+  if (use_xml)
     {
       /* If we were committing into XML, close the xml file. */      
-      apr_err = apr_file_close (dst);
-      if (apr_err)
+      if ((apr_err = apr_file_close (xml_hnd)))
         return svn_error_createf (apr_err, 0, NULL, pool,
                                   "error closing %s", xml_dst->data);
       
@@ -636,6 +610,9 @@ send_to_repos (svn_client_commit_info_t **commit_info,
   else  
     /* We were committing to RA, so close the session. */
     SVN_ERR (ra_lib->close (session));
+
+
+  /*** Telling the caller what we've accomplished ***/
 
   /* Fill in the commit_info structure. */
   *commit_info = svn_client__make_commit_info (committed_rev,
