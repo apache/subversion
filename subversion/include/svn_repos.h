@@ -30,6 +30,20 @@ extern "C" {
 
 
 /* ---------------------------------------------------------------*/
+
+
+/* Opening a filesystem. */
+
+/* Set *FS_P to an opened filesystem object for the repository at
+   PATH.  Allocate *FS_P in POOL.
+
+   *FS_P acquires a shared lock on the repository, and a cleanup
+   function is attached to POOL to remove that lock.  */
+svn_error_t *svn_repos_open (svn_fs_t **fs_p,
+                             const char *path,
+                             apr_pool_t *pool);
+
+
 
 /*** Making changes to a filesystem, editor-style.  */
 
