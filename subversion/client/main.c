@@ -243,17 +243,14 @@ svn_cl__parse_options (int argc,
                          pool);
 
   /* Sanity checks: make sure we got what we needed. */
-  /* Any command may have an xml_file, but ADD, STATUS and DELETE
-     *must* have the xml_file option */
-  /* kff todo: I am confused by the above comment for two reasons.
-     One, add status and delete *don't* need an xml_file option.  Two,
-     even if that were true, isn't the test below testing that this
-     is *not* one those commands, instead of the other way around? */
+  /* Any command may have an xml_file option.  Not really true, but true
+     in this framework.  In any event, the four commands that do need it
+     are: add, commit, checkout and update */
   if ((! *xml_file)
-      && (command != svn_cl__add_command)
-      && (command != svn_cl__status_command)
-      && (command != svn_cl__proplist_command)
-      && (command != svn_cl__delete_command))
+      && (  (command == svn_cl__add_command) 
+         || (command == svn_cl__commit_command)
+         || (command == svn_cl__checkout_command)
+         || (command == svn_cl__update_command)))
     {
       fprintf (stderr, "%s: need \"--xml-file FILE.XML\"\n", s);
       exit (1);
@@ -263,7 +260,7 @@ svn_cl__parse_options (int argc,
       fprintf (stderr, "%s: \"--force\" meaningless except for delete\n", s);
       exit (1);
     }
-  /* COMMIT and UPDATE must have a valid revision */
+  /* commit and update must have a valid revision */
   if ((*revision == SVN_INVALID_REVNUM)
       && (  (command == svn_cl__commit_command)
          || (command == svn_cl__update_command)))
@@ -272,7 +269,7 @@ svn_cl__parse_options (int argc,
                "to specify target revision\n", s);
       exit (1);
     }
-  /* CHECKOUT, UPDATE, COMMIT and STATUS have a default target */
+  /* checkout, update, commit, status and proplist have a default target */
   if ((*target == NULL)
       &&  (  (command == svn_cl__checkout_command) 
           || (command == svn_cl__update_command)
