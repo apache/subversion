@@ -129,9 +129,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   void *ra_baton, *sess;
   svn_ra_plugin_t *ra_lib;
   svn_node_kind_t src_kind, dst_kind;
-  const svn_delta_editor_t *new_editor;
-  void *new_edit_baton;
-  const svn_delta_edit_fns_t *editor;
+  const svn_delta_editor_t *editor;
   void *edit_baton;
   void *root_baton, *baton;
   void **batons;
@@ -140,6 +138,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   const char *committed_date = NULL;
   const char *committed_author = NULL;
   svn_revnum_t src_revnum;
+  svn_stringbuf_t *piece, *telepath;
 
   /* ### TODO:  Currently, this function will violate the depth-first
      rule of editors when doing a move of something up into one of its
@@ -234,20 +233,23 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
                               "file `%s' already exists.", dst_url->data);
 
   /* Fetch RA commit editor. */
-  SVN_ERR (ra_lib->get_commit_editor
-           (sess, &new_editor, &new_edit_baton,
-            &committed_rev,
-            &committed_date,
-            &committed_author,
-            message));
+  SVN_ERR (ra_lib->get_commit_editor (sess, &editor, &edit_baton,
+                                      &committed_rev,
+                                      &committed_date,
+                                      &committed_author,
+                                      message));
 
-  /* ### todo:  This is a TEMPORARY wrapper around our editor so we
-     can use it with an old driver. */
-  svn_delta_compat_wrap (&editor, &edit_baton, 
-                         new_editor, new_edit_baton, pool);
+  /* Initialize telepath to an empty string that's as big as our
+     biggest relative target (we don't want to have to realloc this
+     thing. */
+  if (src_rel->len > dst_rel->len)
+    telepath = svn_stringbuf_dup (src_rel, pool);
+  else
+    telepath = svn_stringbuf_dup (dst_rel, pool);
+  svn_stringbuf_setempty (telepath);
 
   /* Drive that editor, baby! */
-  SVN_ERR (editor->open_root (edit_baton, youngest, &root_baton));
+  SVN_ERR (editor->open_root (edit_baton, youngest, pool, &root_baton));
 
   /* Stuff the root baton here for convenience. */
   batons[i] = root_baton;
@@ -256,28 +258,28 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
      copy. */
   if (dst_pieces && dst_pieces->nelts)
     {
-      svn_stringbuf_t *piece;
-
       /* open_directory() all the way down to DST's parent. */
       while (i < dst_pieces->nelts)
         {
           piece = (((svn_stringbuf_t **)(dst_pieces)->elts)[i]);
-          SVN_ERR (editor->open_directory (piece, batons[i], 
-                                           youngest, &(batons[i + 1])));
+          svn_path_add_component (telepath, piece);
+          SVN_ERR (editor->open_directory (telepath->data, batons[i], 
+                                           youngest, pool, &(batons[i + 1])));
           i++;
         }
     }
   /* Add our file/dir with copyfrom history. */
+  svn_path_add_component (telepath, basename);
   if (src_kind == svn_node_dir)
     {
-      SVN_ERR (editor->add_directory (basename, batons[i], src_url,
-                                      src_revnum, &baton));
+      SVN_ERR (editor->add_directory (telepath->data, batons[i], src_url->data,
+                                      src_revnum, pool, &baton));
       SVN_ERR (editor->close_directory (baton));
     }
   else
     {
-      SVN_ERR (editor->add_file (basename, batons[i], src_url,
-                                 src_revnum, &baton));
+      SVN_ERR (editor->add_file (telepath->data, batons[i], src_url->data,
+                                 src_revnum, pool, &baton));
       SVN_ERR (editor->close_file (baton));
     }
 
@@ -290,10 +292,9 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
     }
 
   /* If this was a move, we need to remove the SRC_URL. */
+  svn_stringbuf_setempty (telepath);
   if (is_move)
     {
-      svn_stringbuf_t *piece;
-
       /* If SRC_PIECES is NULL, we're trying to move a directory into
          itself (or one of its chidren...we should have caught that by
          now). */
@@ -303,14 +304,17 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
       while (i < (src_pieces->nelts - 1))
         {
           piece = (((svn_stringbuf_t **)(src_pieces)->elts)[i]);
-          SVN_ERR (editor->open_directory (piece, batons[i],
-                                           youngest, &(batons[i + 1])));
+          svn_path_add_component (telepath, piece);
+          SVN_ERR (editor->open_directory (telepath->data, batons[i], 
+                                           youngest, pool, &(batons[i + 1])));
           i++;
         }
           
       /* Delete SRC. */
       piece = (((svn_stringbuf_t **)(src_pieces)->elts)[i]);
-      SVN_ERR (editor->delete_entry (piece, SVN_INVALID_REVNUM, batons[i]));
+      svn_path_add_component (telepath, piece);
+      SVN_ERR (editor->delete_entry (telepath->data, SVN_INVALID_REVNUM, 
+                                     batons[i], pool));
 
       /* Now, close up all those batons (except the root
          baton). */
