@@ -178,6 +178,9 @@ typedef enum svn_errno_t {
   /* The root object given is not a transaction root.  */
   SVN_ERR_FS_NOT_TXN_ROOT,
 
+  /* The root object given is not a revision root.  */
+  SVN_ERR_FS_NOT_REVISION_ROOT,
+
   /* The transaction could not be committed, because of a conflict with
      a prior change.  */
   SVN_ERR_FS_CONFLICT,
