@@ -21,7 +21,8 @@ use File::Path qw(rmtree);
 my $testpath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1);
 
 my $repospath = catdir($testpath,'repo');
-my $reposurl = "file:///$repospath";
+my $reposurl = 'file://' . (substr($repospath,0,1) ne '/' ? '/' : '')
+               . $repospath;
 my $wcpath = catdir($testpath,'wc');
 my $importpath = catdir($testpath,'import');
 
