@@ -695,7 +695,7 @@ svn_client_status (svn_revnum_t *youngest,  /* only touched if `update' set */
  * to @a receiver will be passed on each invocation.
  *
  * If @a strict_node_history is set, copy history (if any exists) will
- * not be traversed while harvest revision logs for each target.
+ * not be traversed while harvesting revision logs for each target.
  *
  * If @a start->kind or @a end->kind is @c svn_opt_revision_unspecified,
  * return the error @c SVN_ERR_CLIENT_BAD_REVISION.
