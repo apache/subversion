@@ -209,7 +209,8 @@ make_txn_root (svn_fs_t *fs,
    isn't cached. */
 static dag_node_t *
 dag_node_cache_get (svn_fs_root_t *root,
-                    const char *path)
+                    const char *path,
+                    apr_pool_t *pool)
 {
   struct dag_node_cache_t *cache_item;
 
@@ -223,7 +224,7 @@ dag_node_cache_get (svn_fs_root_t *root,
   /* Look in the cache for our desired item. */
   cache_item = apr_hash_get (root->node_cache, path, APR_HASH_KEY_STRING);
   if (cache_item)
-    return cache_item->node;
+    return svn_fs__dag_dup (cache_item->node, pool);
 
   return NULL;
 }
@@ -865,7 +866,7 @@ open_path (parent_path_t **parent_path_p,
           /* If we found a directory entry, follow it.  First, we
              check our node cache, and, failing that, we hit the DAG
              layer. */
-          cached_node = dag_node_cache_get (root, path_so_far);
+          cached_node = dag_node_cache_get (root, path_so_far, pool);
           if (cached_node)
             child = cached_node;
           else
@@ -1030,7 +1031,7 @@ get_dag (dag_node_t **dag_node_p,
   path = svn_fs__canonicalize_abspath (path, trail->pool);
 
   /* If ROOT is a revision root, we'll look for the DAG in our cache. */
-  node = dag_node_cache_get (root, path);
+  node = dag_node_cache_get (root, path, trail->pool);
   if (! node)
     {
       /* Call open_path with no flags, as we want this to return an error
