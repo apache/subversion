@@ -865,11 +865,8 @@ main (int argc, const char * const *argv)
   apr_initialize ();
   pool = svn_pool_create (NULL);
 
-  /* Allocate a new filesystem object. */
-  c.fs = svn_fs_new (pool);
-
   /* Open the repository with the given path. */
-  INT_ERR (svn_fs_open_berkeley (c.fs, repos_path));
+  INT_ERR (svn_repos_open (&(c.fs), repos_path, pool));
 
   /* If this is a transaction, open the transaction. */
   if (! c.is_revision)

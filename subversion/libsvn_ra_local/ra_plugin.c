@@ -77,9 +77,6 @@ authenticate (void **sbaton, void *pbaton)
   svn_ra_local__session_baton_t *session_baton =
     (svn_ra_local__session_baton_t *) pbaton;
 
-  /* Make a filesystem. */
-  session_baton->fs = svn_fs_new (session_baton->pool);
-
   /* Look through the URL, figure out which part points to the
      repository, and which part is the path *within* the
      repository. */
@@ -89,8 +86,9 @@ authenticate (void **sbaton, void *pbaton)
                                     session_baton->pool));
 
   /* Open the filesystem at located at environment `repos_path' */
-  SVN_ERR (svn_fs_open_berkeley (session_baton->fs,
-                                 session_baton->repos_path->data));
+  SVN_ERR (svn_repos_open (&(session_baton->fs),
+                           session_baton->repos_path->data,
+                           session_baton->pool));
 
   /* Return the session baton, heh, even though the caller unknowingly
      already has it as 'pbaton'.  :-) */

@@ -322,39 +322,39 @@ dir_empty (const char *path, apr_pool_t *pool)
 /* Paths. */
 
 const char *
-svn_fs_repository (svn_fs_t *fs)
+svn_fs_repository (svn_fs_t *fs, apr_pool_t *pool)
 {
-  return fs->path;
+  return apr_pstrdup (pool, fs->path);
 }
 
 
 const char *
-svn_fs_conf_dir (svn_fs_t *fs)
+svn_fs_conf_dir (svn_fs_t *fs, apr_pool_t *pool)
 {
-  return fs->conf_path;
+  return apr_pstrdup (pool, fs->conf_path);
 }
 
 
 const char *
-svn_fs_lock_dir (svn_fs_t *fs)
+svn_fs_lock_dir (svn_fs_t *fs, apr_pool_t *pool)
 {
-  return fs->lock_path;
+  return apr_pstrdup (pool, fs->lock_path);
 }
 
 
 const char *
-svn_fs_db_lockfile (svn_fs_t *fs)
+svn_fs_db_lockfile (svn_fs_t *fs, apr_pool_t *pool)
 {
-  return apr_pstrcat (fs->pool,
+  return apr_pstrcat (pool,
                       fs->lock_path, "/" SVN_FS__REPOS_DB_LOCKFILE,
                       NULL);
 }
 
 
 const char *
-svn_fs_hook_dir (svn_fs_t *fs)
+svn_fs_hook_dir (svn_fs_t *fs, apr_pool_t *pool)
 {
-  return fs->hook_path;
+  return apr_pstrdup (pool, fs->hook_path);
 }
 
 
@@ -423,7 +423,7 @@ create_locks (svn_fs_t *fs, const char *path)
     const char *contents;
     const char *lockfile_path;
 
-    lockfile_path = svn_fs_db_lockfile (fs);
+    lockfile_path = svn_fs_db_lockfile (fs, fs->pool);
     apr_err = apr_file_open (&f, lockfile_path,
                              (APR_WRITE | APR_CREATE | APR_EXCL),
                              APR_OS_DEFAULT,
@@ -900,6 +900,10 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
   fs->path = apr_pstrdup (fs->pool, path);
   fs->dav_path = apr_psprintf (fs->pool, "%s/%s",
                                path, SVN_FS__REPOS_DAV_DIR);
+  fs->hook_path = apr_psprintf (fs->pool, "%s/%s",
+                                path, SVN_FS__REPOS_HOOK_DIR);
+  fs->lock_path = apr_psprintf (fs->pool, "%s/%s",
+                                path, SVN_FS__REPOS_LOCK_DIR);
   fs->conf_path = apr_psprintf (fs->pool, "%s/%s",
                                 path, SVN_FS__REPOS_CONF_DIR);
   fs->env_path = apr_psprintf (fs->pool, "%s/%s",

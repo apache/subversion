@@ -74,7 +74,7 @@ run_start_commit_hook (svn_fs_t *fs,
       const char *args[4];
 
       args[0] = hook;
-      args[1] = svn_fs_repository (fs);
+      args[1] = svn_fs_repository (fs, pool);
       args[2] = user;
       args[3] = NULL;
 
@@ -107,7 +107,7 @@ run_pre_commit_hook (svn_fs_t *fs,
       const char *args[4];
 
       args[0] = hook;
-      args[1] = svn_fs_repository (fs);
+      args[1] = svn_fs_repository (fs, pool);
       args[2] = txn_name;
       args[3] = NULL;
 
@@ -140,7 +140,7 @@ run_post_commit_hook (svn_fs_t *fs,
       const char *args[4];
 
       args[0] = hook;
-      args[1] = svn_fs_repository (fs);
+      args[1] = svn_fs_repository (fs, pool);
       args[2] = apr_psprintf (pool, "%lu", rev);
       args[3] = NULL;
 

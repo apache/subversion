@@ -39,7 +39,11 @@ typedef struct svn_fs_t svn_fs_t;
 
 /* Create a new filesystem object in POOL.  It doesn't refer to any
    actual repository yet; you need to invoke svn_fs_open_* or
-   svn_fs_create_* on it for that to happen.  */
+   svn_fs_create_* on it for that to happen.  
+
+   NOTE: you probably don't want to use this directly, especially not
+   if it's followed immediately by a call to svn_fs_open_berkeley().
+   Take a look at svn_repos_open() instead.  */
 svn_fs_t *svn_fs_new (apr_pool_t *pool);
 
 
@@ -106,7 +110,11 @@ svn_error_t *svn_fs_create_berkeley (svn_fs_t *fs, const char *path);
 
    Only one thread may operate on any given filesystem object at once.
    Two threads may access the same filesystem simultaneously only if
-   they open separate filesystem objects.  */
+   they open separate filesystem objects.  
+
+   NOTE: you probably don't want to use this directly, especially not
+   if it's immediately preceded by a call to svn_fs_new().  Take a
+   look at svn_repos_open() instead.  */
 svn_error_t *svn_fs_open_berkeley (svn_fs_t *fs, const char *path);
 
 
@@ -537,21 +545,28 @@ svn_error_t *svn_fs_change_txn_prop (svn_fs_txn_t *txn,
 
 /* Repository paths. */
 
-/* Return the path to FS's repository.
+/**********************************************************************
+ *                                                                    *
+ * See issue #428; a lot of this code will get moved to libsvn_repos. *
+ *                                                                    *
+ **********************************************************************/
+
+/* Return the path to FS's repository, allocated in POOL.
    Note:
    The path is just whatever was passed to svn_fs_create_berkeley() or
    svn_fs_open_berkeley() -- might be absolute, might not.  */
-const char *svn_fs_repository (svn_fs_t *fs);
+const char *svn_fs_repository (svn_fs_t *fs, apr_pool_t *pool);
 
-/* Return the path to FS's configuration directory. */
-const char *svn_fs_conf_dir (svn_fs_t *fs);
+/* Return the path to FS's configuration directory, allocated in POOL. */
+const char *svn_fs_conf_dir (svn_fs_t *fs, apr_pool_t *pool);
 
-/* Return path to FS's lock directory or db lockfile, respectively. */
-const char *svn_fs_lock_dir (svn_fs_t *fs);
-const char *svn_fs_db_lockfile (svn_fs_t *fs);
+/* Return path to FS's lock directory or db lockfile, respectively,
+   allocated in POOL. */
+const char *svn_fs_lock_dir (svn_fs_t *fs, apr_pool_t *pool);
+const char *svn_fs_db_lockfile (svn_fs_t *fs, apr_pool_t *pool);
 
-/* Return the path to FS's hook directory. */
-const char *svn_fs_hook_dir (svn_fs_t *fs);
+/* Return the path to FS's hook directory, allocated in POOL. */
+const char *svn_fs_hook_dir (svn_fs_t *fs, apr_pool_t *pool);
 
 /* Return the path to FS's start-commit hook program, allocated in
    POOL. */
