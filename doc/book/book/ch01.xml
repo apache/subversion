@@ -176,7 +176,7 @@
             inheriting the history of the old&mdash;perhaps completely
             unrelated&mdash; file.  With Subversion, you can add,
             delete, copy, and rename both files and directories.  And
-            every newly added file begins a with a fresh, clean
+            every newly added file begins with a fresh, clean
             history all its own.</para>
         </listitem>
       </varlistentry>

@@ -646,7 +646,7 @@ done
       <para>A word of warning: while <command>svn diff</command> and
         <command>svn merge</command> are very similar in concept, they
         do have different syntax in many cases.  Be sure to read about
-        them in Chapter 8 for details, or ask <command>svn
+        them in Chapter 9 for details, or ask <command>svn
         help</command>.  For example, <command>svn merge</command>
         requires a working-copy path as a target, i.e. a place where
         it should apply the tree-changes.  If the target isn't

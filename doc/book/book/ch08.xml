@@ -321,8 +321,8 @@
         code when certain actions take place.  These scripts are
         useful for notification, authorization, or whatever purposes
         the repository administrator desires.  This type of
-        functionality, and other utility provided by the repository
-        library, is not strictly related to implementing a versioning
+        functionality, and other utilities provided by the repository
+        library, are not strictly related to implementing a versioning
         filesystem, which is why it was placed into its own
         library.</para>
       
