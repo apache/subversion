@@ -698,7 +698,8 @@ III.  BUILDING A SUBVERSION SERVER
           $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic login
           (password 'anoncvs')
 
-          $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co httpd-2.0
+          $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic \
+            co -r APACHE_2_0_BRANCH httpd-2.0
 
       Checkout the "apr" and "apr-util" modules into the srclib/ directory:
 
@@ -806,6 +807,9 @@ III.  BUILDING A SUBVERSION SERVER
       exists in your httpd.conf:
 
          LoadModule dav_svn_module     modules/mod_dav_svn.so
+
+      NOTE: if you built mod_dav as a dynamic module aswell, make sure
+      the above line appears after the one that loads mod_dav.so.
 
       Next, add this to the *bottom* of your httpd.conf:
 
