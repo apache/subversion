@@ -1040,14 +1040,56 @@ svn_fs__dag_delete (dag_node_t *parent,
 
 
 svn_error_t *
+svn_fs__dag_remove_node (svn_fs_t *fs,
+                         const svn_fs_id_t *id,
+                         const char *txn_id,
+                         trail_t *trail)
+{
+  dag_node_t *node;
+  svn_fs__node_revision_t *noderev;
+
+  /* Fetch the node. */
+  SVN_ERR (svn_fs__dag_get_node (&node, fs, id, trail));
+
+  /* If immutable, do nothing and return immediately. */
+  if (! svn_fs__dag_check_mutable (node, txn_id))
+    return svn_error_createf (SVN_ERR_FS_NOT_MUTABLE, NULL, 
+                              "Attempted removal of immutable node");
+
+  /* Get a fresh node-revision. */
+  SVN_ERR (svn_fs__bdb_get_node_revision (&noderev, fs, id, trail));
+
+  /* Delete any mutable property representation. */
+  if (noderev->prop_key)
+    SVN_ERR (svn_fs__delete_rep_if_mutable (fs, noderev->prop_key,
+                                            txn_id, trail));
+  
+  /* Delete any mutable data representation. */
+  if (noderev->data_key)
+    SVN_ERR (svn_fs__delete_rep_if_mutable (fs, noderev->data_key, 
+                                            txn_id, trail));
+
+  /* Delete any mutable edit representation (files only). */
+  if (noderev->edit_key)
+    SVN_ERR (svn_fs__delete_rep_if_mutable (fs, noderev->edit_key, 
+                                            txn_id, trail));
+
+  /* Delete the node revision itself. */
+  SVN_ERR (svn_fs__delete_node_revision (fs, id, trail));
+  
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
                                const svn_fs_id_t *id,
                                const char *txn_id,
                                trail_t *trail)
 {
   dag_node_t *node;
-  svn_fs__node_revision_t *noderev;
 
+  /* Get the node. */
   SVN_ERR (svn_fs__dag_get_node (&node, fs, id, trail));
 
   /* If immutable, do nothing and return immediately. */
@@ -1082,27 +1124,7 @@ svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
 
   /* ... then delete the node itself, after deleting any mutable
      representations and strings it points to. */
-
-  /* Get a fresh node-revision. */
-  SVN_ERR (svn_fs__bdb_get_node_revision (&noderev, fs, id, trail));
-
-  /* Delete any mutable property representation. */
-  if (noderev->prop_key)
-    SVN_ERR (svn_fs__delete_rep_if_mutable (fs, noderev->prop_key,
-                                            txn_id, trail));
-  
-  /* Delete any mutable data representation. */
-  if (noderev->data_key)
-    SVN_ERR (svn_fs__delete_rep_if_mutable (fs, noderev->data_key, 
-                                            txn_id, trail));
-
-  /* Delete any mutable edit representation (files only). */
-  if (noderev->edit_key)
-    SVN_ERR (svn_fs__delete_rep_if_mutable (fs, noderev->edit_key, 
-                                            txn_id, trail));
-
-  /* Delete the node revision itself. */
-  SVN_ERR (svn_fs__delete_node_revision (fs, id, trail));
+  SVN_ERR (svn_fs__dag_remove_node (fs, id, txn_id, trail));
   
   return SVN_NO_ERROR;
 }
@@ -1496,16 +1518,10 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
                         const char *txn_id,
                         trail_t *trail)
 {
-  dag_node_t *root;
   svn_fs__revision_t revision;
-  svn_fs__transaction_t *transaction;
   svn_string_t date;
 
-  SVN_ERR (svn_fs__dag_txn_root (&root, fs, txn_id, trail));
-
-  /* Add new revision entry to `revisions' table, copying the
-     transaction's property list.  */
-  SVN_ERR (svn_fs__bdb_get_txn (&transaction, fs, txn_id, trail));
+  /* Add new revision entry to `revisions' table. */
   revision.txn_id = txn_id;
   if (new_rev)
     *new_rev = SVN_INVALID_REVNUM;

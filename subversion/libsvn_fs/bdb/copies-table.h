@@ -59,15 +59,15 @@ svn_error_t *svn_fs__bdb_create_copy (svn_fs_t *fs,
                                       trail_t *trail);
 
 /* Remove the copy whose name is COPY_ID from the `copies' table of
-   FS, as part of TRAIL.  */
+   FS, as part of TRAIL.  If there is no such copy,
+   SVN_ERR_FS_NO_SUCH_COPY is the error returned.  */
 svn_error_t *svn_fs__bdb_delete_copy (svn_fs_t *fs,
                                       const char *copy_id,
                                       trail_t *trail);
 
 /* Retrieve the copy *COPY_P named COPY_ID from the `copies' table of
-   FS, as part of TRAIL.  Perform all allocations in TRAIL->pool.
-   
-   If there is no such copy, SVN_ERR_FS_NO_SUCH_COPY is the error
+   FS, as part of TRAIL.  Perform all allocations in TRAIL->pool.  If
+   there is no such copy, SVN_ERR_FS_NO_SUCH_COPY is the error
    returned.  */
 svn_error_t *svn_fs__bdb_get_copy (svn_fs__copy_t **copy_p,
                                    svn_fs_t *fs,

@@ -96,12 +96,24 @@ typedef struct
 } svn_fs__revision_t;
 
 
+/*** Transaction Kind ***/
+typedef enum
+{
+  svn_fs__transaction_kind_normal = 1,  /* normal, uncommitted */
+  svn_fs__transaction_kind_committed,   /* committed */
+  svn_fs__transaction_kind_dead         /* uncommitted and dead */
+
+} svn_fs__transaction_kind_t;
+
+
 /*** Filesystem Transaction ***/
 typedef struct
 {
+  /* kind of transaction. */
+  svn_fs__transaction_kind_t kind;
+
   /* revision which this transaction was committed to create, or an
-     invalid revision number to indicate that this is a transaction
-     still unfinished. */
+     invalid revision number if this transaction was never committed. */
   svn_revnum_t revision;
 
   /* property list (const char * name, svn_string_t * value).

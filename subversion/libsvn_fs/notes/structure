@@ -441,9 +441,11 @@ transaction ID in its shortest ASCII form.
 
 The Berkeley DB `transactions' table records both unfinished and
 committed transactions.  Every key in this table is a transaction ID.
-Unfinished transactions have values that are skels of the form:
+Unfinished transactions have values that are skels of one of the
+following forms:
 
    ("transaction" ROOT-ID BASE-ID PROPLIST COPIES)
+   ("dead" ROOT-ID BASE-ID PROPLIST COPIES)
 
 where:
 
@@ -460,6 +462,9 @@ where:
      referencing all the filesystem copies created inside of this
      transaction.  If the transaction is aborted, these copies get
      removed from the `copies' table.
+
+   * A "dead" transaction is one that has been requested to be
+     destroyed, and should never, ever, be committed.
 
 Committed transaction, however, have values that are skels of the form:
 
@@ -750,9 +755,10 @@ Filesystem revisions:
 
 Transactions:
 
-            TRANSACTION ::= UNFINISHED-TXN | COMMITTED-TXN
+            TRANSACTION ::= UNFINISHED-TXN | COMMITTED-TXN | DEAD-TXN
          UNFINISHED-TXN ::= ("transaction" ROOT-ID BASE-ID PROPLIST COPIES) ;
           COMMITTED-TXN ::= ("committed" ROOT-ID REV PROPLIST COPIES) ;
+               DEAD-TXN ::= ("dead" ROOT-ID BASE-ID PROPLIST COPIES) ;
                 ROOT-ID ::= NODE-REV-ID ;
                 BASE-ID ::= NODE-REV-ID ;
                  COPIES ::= (CPY ...) ;

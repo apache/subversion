@@ -35,7 +35,7 @@
 static svn_boolean_t 
 is_committed (svn_fs__transaction_t *txn)
 {
-  return SVN_IS_VALID_REVNUM (txn->revision);
+  return (txn->kind == svn_fs__transaction_kind_committed) ? TRUE : FALSE;
 }
 
 
@@ -146,6 +146,7 @@ svn_fs__bdb_create_txn (const char **txn_name_p,
   svn_fs__transaction_t txn;
 
   SVN_ERR (allocate_txn_id (&txn_name, fs, trail));
+  txn.kind = svn_fs__transaction_kind_normal;
   txn.root_id = root_id;
   txn.base_id = root_id;
   txn.proplist = NULL;
@@ -166,7 +167,7 @@ svn_fs__bdb_delete_txn (svn_fs_t *fs,
   DBT key;
   svn_fs__transaction_t *txn;
   
-  /* Make sure TXN is not a committed transaction. */
+  /* Make sure TXN is dead. */
   SVN_ERR (svn_fs__bdb_get_txn (&txn, fs, txn_name, trail));
   if (is_committed (txn))
     return svn_fs__err_txn_not_mutable (fs, txn_name);

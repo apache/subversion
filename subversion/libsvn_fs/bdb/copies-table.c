@@ -152,11 +152,14 @@ svn_fs__bdb_delete_copy (svn_fs_t *fs,
                          trail_t *trail)
 {
   DBT key;
+  int db_err;
 
   svn_fs__str_to_dbt (&key, (char *) copy_id);
   svn_fs__trail_debug (trail, "copies", "del");
-  return BDB_WRAP (fs, "deleting entry from 'copies' table",
-                  fs->copies->del (fs->copies, trail->db_txn, &key, 0));
+  db_err = fs->copies->del (fs->copies, trail->db_txn, &key, 0);
+  if (db_err == DB_NOTFOUND)
+    return svn_fs__err_no_such_copy (fs, copy_id);
+  return BDB_WRAP (fs, "deleting entry from 'copies' table", db_err);
 }
 
 
