@@ -70,7 +70,7 @@ if [ "$WC_REVISION" != "$REVISION" ]; then
 fi
 
 echo "Cleaning old docs in docs/ ..."
-make doc-clean
+
 rm -f doc/translations/french/svn-handbook-french.info
 rm -f doc/translations/french/svn-handbook-french.info-*
 rm -f doc/translations/french/svn-handbook-french.html
@@ -79,7 +79,8 @@ rm -f doc/translations/french/svn-handbook-french.txt
 echo "Building new docs in docs/ ..."
 FOP_OPTS="-Xms100m -Xmx200m"
 export FOP_OPTS
-make doc
+
+make doc-design
 
 rm -rf "$DIST_SANDBOX"
 mkdir "$DIST_SANDBOX"
@@ -117,11 +118,13 @@ for name in doc/programmer/design/svn-design.info   \
             doc/programmer/design/svn-design.html   \
             doc/programmer/design/svn-design.txt    \
             doc/book/book/*.html                    \
-            doc/book/book/*.pdf                     \
-            doc/book/book/*.ps
+            doc/book/book/*.pdf                     
 do
    cp "$name" "$DISTPATH/$name"
 done
+
+echo "Copying images into sandbox..."
+cp -r "doc/book/book/images/" "$DISTPATH/doc/book/book/images/"
 
 cat > "$DISTPATH/ChangeLog.CVS" <<EOF
 The old CVS ChangeLog is kept at 
