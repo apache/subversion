@@ -116,6 +116,54 @@ Subversion hits 1.0.  A majority of pre-1.0 bugs are due to the code
 being in the "initial growth" stage.)
 
 
+What not to test
+----------------
+
+Regression tests are for testing interface promises.  This might
+include semi-private interfaces (such as the non-public .h files
+inside module subdirs), but does not include implementation details
+behind the interfaces.  For example, this is a good way to test
+svn_fs_txn_name:
+
+      /* Test that svn_fs_txn_name fulfills its promise. */
+      char *txn_name = NULL;
+      SVN_ERR = svn_fs_txn_name (&txn_name, txn, pool);
+      if (txn_name == NULL)
+        return fail();
+
+But this is not:
+
+      /* Test that the txn got id "0", since it's the first txn. */
+      char *txn_name = NULL;
+      SVN_ERR = svn_fs_txn_name (&txn_name, txn, pool);
+      if (txn_name && (strcmp (txn_name, "0") != 0))
+        return fail();
+
+During development, it may sometimes be very convenient to
+*temporarily* test implementation details via the regular test suite.
+It's okay to do that, but please remove the test when you're done and
+make sure it's clearly marked in the meantime.  Since implementation
+details are not interface promises, they might legitimately change --
+and when they change, that test will break.  At which point whoever
+encountered the problem will look into the test suite and find the
+temporary test you forgot to remove.  As long as it's marked like
+this...
+
+      /* Temporary test for debugging only: Test that the txn got id
+       * "0", since it's the first txn. 
+       * NOTE: If the test suite is failing because of this test, then
+       * just remove the test.  It was written to help me debug an
+       * implementation detail that might have changed by now, so its
+       * failure does not necessarily mean there's anything wrong with
+       * Subversion. */
+      char *txn_name = NULL;
+      SVN_ERR = svn_fs_txn_name (&txn_name, txn, pool);
+      if (txn_name && (strcmp (txn_name, "0") != 0))
+        return fail();
+
+...then they won't have wasted much time.
+
+
 Conclusion
 ----------
 
