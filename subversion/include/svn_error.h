@@ -157,11 +157,22 @@ typedef enum svn_errno_t {
   /* The filesystem has no version by the given number.  */
   SVN_ERR_FS_NO_SUCH_VERSION,
 
+  /* The filesystem has no transaction with the given name.  */
+  SVN_ERR_FS_NO_SUCH_TRANSACTION,
+
   /* There is no file by the given name.  */
   SVN_ERR_FS_NOT_FOUND,
 
   /* The name given does not refer to a directory.  */
   SVN_ERR_FS_NOT_DIRECTORY,
+
+  /* The user has called `svn_fs_replace_root' more than once on a
+     given transaction (which is permitted), but specified different
+     version numbers each time.  */
+  SVN_ERR_FS_BAD_REPLACE_ROOT,
+
+  /* The caller attempted to change a node which is not mutable.  */
+  SVN_ERR_FS_NOT_MUTABLE,
 
   /* The error is a Berkeley DB error.  `src_err' is the Berkeley DB
      error code, and `message' is an error message.  */
