@@ -20,27 +20,14 @@
 
 #include <string.h>
 #include <assert.h>
+
+#include "apr_file_info.h"
+
 #include "svn_string.h"
 #include "svn_path.h"
 #include "svn_private_config.h"         /* for SVN_PATH_LOCAL_SEPARATOR */
 #include "svn_utf.h"
-#include "apr_file_info.h"
 
-
-/* todo: Though we have a notion of different types of separators for
- * the local path style, there currently is no logic in place to
- * account for cases where the separator for one system is a valid
- * non-separator character for others.  For example, a backslash (\)
- * character is a legal member of a Unix filename, but is the
- * separator character for Windows platforms (the *file* foo\bar.c on
- * Unix machine runs the risk of being interpreted by a Windows box as
- * file bar.c in a directory foo). */
-
-/* kff todo: hey, it looks like APR may handle some parts of path
-   portability for us, and we just get to use `/' everywhere.  Check
-   up on this. */
-
-/* Working on exactly that --xbc */
 
 /* The canonical empty path.  Can this be changed?  Well, change the empty
    test below and the path library will work, not so sure about the fs/wc
@@ -130,7 +117,6 @@ svn_path_canonicalize (svn_stringbuf_t *path)
       path->len = len;
       path->data[path->len] = '\0';
     }
-
 }
 
 
@@ -149,12 +135,12 @@ svn_path_canonicalize_nts (const char *path, apr_pool_t *pool)
     len = 1;
 
   if (SVN_PATH_IS_PLATFORM_EMPTY (path, len))
-    return apr_pmemdup (pool, SVN_EMPTY_PATH, sizeof (SVN_EMPTY_PATH));
+    return SVN_EMPTY_PATH;      /* the canonical empty path */
 
-  else if (len == orig_len)
+  if (len == orig_len)
     return path;
-  else
-    return apr_pstrmemdup (pool, path, len);
+
+  return apr_pstrmemdup (pool, path, len);
 }
 
 
@@ -407,7 +393,8 @@ svn_path_remove_component_nts (const char *path, apr_pool_t *pool)
 char *
 svn_path_basename (const char *path, apr_pool_t *pool)
 {
-  apr_size_t len = strlen (path), start;
+  apr_size_t len = strlen (path);
+  apr_size_t start;
 
   assert (is_canonical_nts (path, len));
 
@@ -685,7 +672,7 @@ svn_path_decompose (const char *path,
       char dirsep = '/';
 
       *((const char **) apr_array_push (components))
-        = apr_pstrndup (pool, &dirsep, sizeof (dirsep));
+        = apr_pstrmemdup (pool, &dirsep, sizeof (dirsep));
 
       i++;
       oldi++;
@@ -699,11 +686,10 @@ svn_path_decompose (const char *path,
         {
           if (SVN_PATH_IS_PLATFORM_EMPTY (path + oldi, i - oldi))
             /* ### Should canonicalization strip "//" and "/./" substrings? */
-            *((const char **) apr_array_push (components))
-              = apr_pmemdup (pool, SVN_EMPTY_PATH, sizeof (SVN_EMPTY_PATH));
+            *((const char **) apr_array_push (components)) = SVN_EMPTY_PATH;
           else
             *((const char **) apr_array_push (components))
-              = apr_pstrndup (pool, path + oldi, i - oldi);
+              = apr_pstrmemdup (pool, path + oldi, i - oldi);
 
           i++;
           oldi = i;  /* skipping past the dirsep */
