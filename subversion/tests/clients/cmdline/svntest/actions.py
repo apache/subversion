@@ -57,7 +57,7 @@ def guarantee_greek_repository(path):
 
     # check for any errors from the import
     if len(errput):
-      display_lines("Errors during initial 'svn import':"
+      display_lines("Errors during initial 'svn import':",
                     'STDERR', None, errput)
       sys.exit(1)
 
@@ -441,7 +441,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
     
   # Verify actual output against expected output.
   if tree.compare_trees (expected_tree, output_tree):
-    display_trees("Output of commit is unexpected."
+    display_trees("Output of commit is unexpected.",
                   "OUTPUT TREE", expected_tree, output_tree)
     return 1
     
