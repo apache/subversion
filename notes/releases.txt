@@ -273,12 +273,25 @@
 
 15. Post news item <http://subversion.tigris.org/servlets/ProjectNewsAdd>,
     and send an announcement to dev@, users@, and announce@ lists.
-    Remember to include the URL and MD5 checksum in the announcement.
+    Remember to include the URL and MD5 checksums in the announcement!
 
-    Note that the subversion.tigris.org announcement is in HTML format not
-    plain text.
+    Note that the subversion.tigris.org news item is in HTML format not
+    plain text.  A tigris.org user with RM or higher status must approve
+    the subversion.tigris.org news item.
 
-    Also notify freshmeat of the new release.
+    For the email to the lists, ensure that your mailer doesn't wrap over
+    80 character lines.
+
+    You should also notify freshmeat of the new release:
+
+      http://freshmeat.net/projects/subversion/
+
+    You need to be listed as a release manager or admin on Freshmeat.
+    Contact one of the folks listed on the Subversion project page for
+    access.  Your submission will also be tweaked by the freshmeat crew
+    before it goes public.
 
 16. Someone with administrative access should upgrade svn.collab.net
     to head.  (This is not usually the release manager.)
+
+17. If you've made it this far, go and enjoy your $favorite_beverage now.
