@@ -251,8 +251,7 @@ def run_svn(error_expected, *varargs):
   """Run svn with VARARGS; return stdout, stderr as lists of lines.
   If ERROR_EXPECTED is None, any stderr also will be printed.  If
   you're just checking that something does/doesn't come out of
-  stdout/stderr, you might want to use actions.run_and_verify_svn() or
-  actions.run_and_verify_svn_error()."""
+  stdout/stderr, you might want to use actions.run_and_verify_svn()."""
   global config_dir
   return run_command(svn_binary, error_expected, 0,
                      *varargs + ('--config-dir', config_dir))
