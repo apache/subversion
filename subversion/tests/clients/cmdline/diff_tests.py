@@ -853,7 +853,7 @@ def diff_head_of_moved_file(sbox):
 #----------------------------------------------------------------------
 # Regression test for issue #977: make 'svn diff -r BASE:N' compare a
 # repository tree against the wc's text-bases, rather than the wc's
-# working files.
+# working files.  This is a long test, which checks many variations.
 
 def diff_base_to_repos(sbox):
   "diff text-bases against repository"
@@ -864,28 +864,34 @@ def diff_base_to_repos(sbox):
   wc_dir = sbox.wc_dir
 
   iota_path = os.path.join(sbox.wc_dir, 'iota')
+  newfile_path = os.path.join(sbox.wc_dir, 'A', 'D', 'newfile')
   mu_path = os.path.join(sbox.wc_dir, 'A', 'mu')
 
-  # Make changes to iota and mu, then commit revision 2.
+  # Make changes to iota, commit r2, update to HEAD (r2).
   svntest.main.file_append(iota_path, "some rev2 iota text.")
-  svntest.main.file_append(mu_path, "some rev2 mu text.")
 
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(verb='Sending'),
-    'A/mu' : Item(verb='Sending'),
     })
   
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
-  expected_status.tweak('A/mu', 'iota', wc_rev=2)
+  expected_status.tweak('iota', wc_rev=2)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None,
                                         None, None, None, None, wc_dir)
 
-  # Now make local mods to iota and mu.
+  expected_output = svntest.wc.State(wc_dir, {})
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak ('iota',
+                       contents="This is the file 'iota'.some rev2 iota text.")
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        expected_disk, expected_status)
+  
+  # Now make another local mod to iota.
   svntest.main.file_append(iota_path, "an iota local mod.")
-  svntest.main.file_append(mu_path, "a mu local mod.")
 
   # If we run 'svn diff -r 1', we should see diffs that include *both*
   # the rev2 changes and local mods.  That's because the working files
@@ -895,21 +901,12 @@ def diff_base_to_repos(sbox):
   if err_output:
     raise svntest.Failure
 
-  line1 = "+This is the file 'mu'.some rev2 mu text.a mu local mod.\n"
-  line2 = "+This is the file 'iota'.some rev2 iota text.an iota local mod.\n"
+  line1 = "+This is the file 'iota'.some rev2 iota text.an iota local mod.\n"
 
-  got_match = 0;
   for line in diff_output:
     if (line == line1):
-      got_match = 1;
-  if not got_match:
-    raise svntest.Failure
-
-  got_match = 0;
-  for line in diff_output:
-    if (line == line2):
-      got_match = 1;
-  if not got_match:
+      break
+  else:
     raise svntest.Failure
 
   # If we run 'svn diff -r BASE:1', we should see diffs that only show
@@ -920,11 +917,148 @@ def diff_base_to_repos(sbox):
   if err_output:
     raise svntest.Failure
 
-  line1 = "-This is the file 'mu'.some rev2 mu text.\n"
-  line2 = "-This is the file 'iota'.some rev2 iota text.\n"
+  line1 = "-This is the file 'iota'.some rev2 iota text.\n"
 
-  # ### TODO:  look for specific lines above.
+  for line in diff_output:
+    if (line == line1):
+      break
+  else:
+    raise svntest.Failure
 
+  # But that's not all folks... no, no, we're just getting started
+  # here!  There are so many other tests to do.
+
+  # For example, we just ran 'svn diff -rBASE:1'.  The output should
+  # look exactly the same as 'svn diff -r2:1'.  (If you remove the
+  # header commentary)  
+  diff_output2, err_output = svntest.main.run_svn(None, 'diff', '-r',
+                                                 '2:1', wc_dir)
+  if err_output:
+    raise svntest.Failure
+
+  diff_output[2:4] = []
+  diff_output2[2:4] = []
+
+  if (diff_output2 != diff_output):
+    raise svntest.Failure
+
+  # and similarly, does 'svn diff -r1:2' == 'svn diff -r1:BASE' ?
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r',
+                                                 '1:2', wc_dir)
+  if err_output:
+    raise svntest.Failure
+  
+  diff_output2, err_output = svntest.main.run_svn(None, 'diff', '-r',
+                                                 '1:BASE', wc_dir)
+  if err_output:
+    raise svntest.Failure
+
+  diff_output[2:4] = []
+  diff_output2[2:4] = []
+
+  if (diff_output2 != diff_output):
+    raise svntest.Failure
+
+  # Now we schedule an addition and a deletion.
+  svntest.main.file_append(newfile_path, "Contents of newfile")
+  svntest.main.run_svn(None, 'add', newfile_path)
+  svntest.main.run_svn(None, 'rm', mu_path)
+
+  expected_output = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_output.add({
+    'A/D/newfile' : Item(status='A ', wc_rev=0, repos_rev=2),
+    })
+  expected_output.tweak('A/mu', status='D ')
+  expected_output.tweak('iota', status='M ')
+  svntest.actions.run_and_verify_status (wc_dir, expected_output)
+
+  # once again, verify that -r1:2 and -r1:BASE look the same, as do
+  # -r2:1 and -rBASE:1.  None of these diffs should mention the
+  # scheduled addition or deletion.
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r',
+                                                 '1:2', wc_dir)
+  if err_output:
+    raise svntest.Failure
+
+  diff_output2, err_output = svntest.main.run_svn(None, 'diff', '-r',
+                                                 '1:BASE', wc_dir)
+  if err_output:
+    raise svntest.Failure
+
+  diff_output3, err_output = svntest.main.run_svn(None, 'diff', '-r',
+                                                 '2:1', wc_dir)
+  if err_output:
+    raise svntest.Failure
+
+  diff_output4, err_output = svntest.main.run_svn(None, 'diff', '-r',
+                                                 'BASE:1', wc_dir)
+  if err_output:
+    raise svntest.Failure
+
+  diff_output[2:4] = []
+  diff_output2[2:4] = []
+  diff_output3[2:4] = []
+  diff_output4[2:4] = []
+
+  if (diff_output != diff_output2):
+    raise svntest.Failure
+
+  if (diff_output3 != diff_output4):
+    raise svntest.Failure
+
+  # Great!  So far, so good.  Now we commit our three changes (a local
+  # mod, an addition, a deletion) and update to HEAD (r3).
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    'A/mu' : Item(verb='Deleting'),
+    'A/D/newfile' : Item(verb='Adding')
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=2)
+  expected_status.tweak('iota', wc_rev=3)
+  expected_status.remove('A/mu')
+  expected_status.add({
+    'A/D/newfile' : Item(status='  ', wc_rev=3, repos_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  expected_output = svntest.wc.State(wc_dir, {})
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota',
+                      contents="This is the file 'iota'.some rev2 iota text.an iota local mod.")
+  expected_disk.add({'A/D/newfile' : Item("Contents of newfile")})
+  expected_disk.remove ('A/mu')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.remove('A/mu')
+  expected_status.add({
+    'A/D/newfile' : Item(status='  ', wc_rev=3, repos_rev=3),
+    })
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        expected_disk, expected_status)
+  
+  # Now 'svn diff -r3:2' should == 'svn diff -rBASE:2', showing the
+  # removal of changes to iota, the adding of mu, and deletion of newfile.
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r',
+                                                 '3:2', wc_dir)
+  if err_output:
+    raise svntest.Failure
+
+  diff_output2, err_output = svntest.main.run_svn(None, 'diff', '-r',
+                                                 'BASE:2', wc_dir)
+  if err_output:
+    raise svntest.Failure
+
+  for line in diff_output:
+    print line,
+  print "*********************************"
+  for line in diff_output2:
+    print line,
+
+  ### now actually figure out a way to do the comparison, probably by
+  ### removing all lines that match (revision *) and (working copy)
   
 
 ########################################################################
