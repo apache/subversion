@@ -86,19 +86,13 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
        "svn_client_update: entry '%s' has no URL", anchor->data);
   URL = svn_stringbuf_dup (entry->url, pool);
 
-  /* Do RA interaction here to figure out what is out of date with
-     respect to the repository.  All RA errors are non-fatal!! */
-
   /* Get the RA library that handles URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  if (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool) != NULL)
-    return SVN_NO_ERROR;
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
 
   /* Open a repository session to the URL. */
-  /* ### if we're supposed to talk to the repos, then it better be there */
-  if (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
-                                   TRUE, TRUE, auth_baton, pool) != NULL)
-    return SVN_NO_ERROR;
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
+                                        TRUE, TRUE, auth_baton, pool));
 
 
   /* Tell RA to drive a status-editor; this will fill in the
@@ -107,22 +101,21 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   SVN_ERR (svn_wc_get_status_editor (&status_editor, &edit_baton,
                                      path, descend, statushash,
                                      youngest, pool));
-  if (ra_lib->do_status (session,
-                         &reporter, &report_baton,
-                         target, descend,
-                         status_editor, edit_baton) == NULL)
-    {
-      /* Drive the reporter structure, describing the revisions within
-         PATH.  When we call reporter->finish_report, the
-         status_editor will be driven by svn_repos_dir_delta. */
-      SVN_ERR (svn_wc_crawl_revisions (path, reporter, report_baton, 
-                                       FALSE, /* don't restore missing files */
-                                       descend,
-                                       pool));
-    }
+  SVN_ERR (ra_lib->do_status (session,
+                              &reporter, &report_baton,
+                              target, descend,
+                              status_editor, edit_baton));
+
+  /* Drive the reporter structure, describing the revisions within
+     PATH.  When we call reporter->finish_report, the
+     status_editor will be driven by svn_repos_dir_delta. */
+  SVN_ERR (svn_wc_crawl_revisions (path, reporter, report_baton, 
+                                   FALSE, /* don't restore missing files */
+                                   descend,
+                                   pool));
 
   /* We're done with the RA session. */
-  (void) ra_lib->close (session);
+  SVN_ERR (ra_lib->close (session));
 
   return SVN_NO_ERROR;
 }

@@ -77,20 +77,13 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
        "svn_client_update: entry '%s' has no URL", basename->data);
   URL = svn_stringbuf_dup (entry->url, pool);
 
-  /* ### huh!? the "log" feature kinda needs to talk to the repos... */
-  /* Do RA interaction here to figure out what is out of date with
-     respect to the repository.  All RA errors are non-fatal!! */
-
   /* Get the RA library that handles URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  if (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool) != NULL)
-    return SVN_NO_ERROR;
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
 
   /* Open a repository session to the URL. */
-  /* ### why is an error okay in this situation? */
-  if (svn_client__open_ra_session (&session, ra_lib, URL, basename,
-                                   TRUE, TRUE, auth_baton, pool) != NULL)
-    return SVN_NO_ERROR;
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, basename,
+                                        TRUE, TRUE, auth_baton, pool));
 
   SVN_ERR (ra_lib->get_log (session,
                             condensed_targets,  /* ### todo: or `targets'? */
@@ -101,7 +94,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
                             receiver_baton));
 
   /* We're done with the RA session. */
-  (void) ra_lib->close (session);
+  SVN_ERR (ra_lib->close (session));
 
   return SVN_NO_ERROR;
 }
