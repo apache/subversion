@@ -58,11 +58,6 @@ DBT *svn_fs__set_dbt (DBT *dbt, void *data, u_int32_t size);
      to be freed when POOL is cleared.  */
 DBT *svn_fs__result_dbt (DBT *dbt);
 
-/* Prepare DBT for use as a key into a RECNO table.  This call makes
-   DBT refer to the db_recno_t pointed to by RECNO as its buffer; the
-   record number you assign to *RECNO will be the table key.  */
-DBT *svn_fs__recno_dbt (DBT *dbt, db_recno_t *recno);
-
 /* Arrange for POOL to `track' DBT's data: when POOL is cleared,
    DBT->data will be freed, using `free'.  If DBT->data is zero,
    do nothing.
@@ -70,6 +65,12 @@ DBT *svn_fs__recno_dbt (DBT *dbt, db_recno_t *recno);
    This is meant for use with svn_fs__result_dbt; see the explanation
    there.  */
 DBT *svn_fs__track_dbt (DBT *dbt, apr_pool_t *pool);
+
+
+/* Prepare DBT for use as a key into a RECNO table.  This call makes
+   DBT refer to the db_recno_t pointed to by RECNO as its buffer; the
+   record number you assign to *RECNO will be the table key.  */
+DBT *svn_fs__recno_dbt (DBT *dbt, db_recno_t *recno);
 
 
 /* Compare two DBT values in byte-by-byte lexicographic order.  */
