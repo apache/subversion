@@ -238,7 +238,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
  
   { "list", svn_cl__ls, {"ls"},
     "List directory entries of a URL.\n"
-    "usage: svn list [-r REV] [URL1 [URL2] ...]\n\n"
+    "usage: svn list [-r REV] URL1 [URL2 ...]\n\n"
     "    If URL is a file, just file entry will be displayed.\n",
     {'r', 'D'} },
   
