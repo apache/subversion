@@ -112,9 +112,9 @@ static svn_error_t *svn_ra_close (void *session_baton)
 }
 
 static const svn_ra_plugin_t dav_plugin = {
-  NULL,
-  NULL,
-  NULL,
+  "ra_dav",
+  "This RA library communicates with the SVN repository using the WebDAV "
+  "(DeltaV) protocol.",
   svn_ra_open,
   svn_ra_close,
   svn_ra_dav__get_commit_editor,
@@ -123,18 +123,16 @@ static const svn_ra_plugin_t dav_plugin = {
 };
 
 svn_error_t *svn_ra_dav_init(int abi_version,
-                             svn_ra_init_params *params)
+                             apr_pool_t *pconf,
+                             const svn_ra_plugin_t **plugin)
 {
   /* ### need a version number to check here... */
   if (abi_version != 0)
     ;
 
-#if 0
-  /* ### doesn't exist in any library yet */
-  return svn_ra_register_plugin(&dav_plugin, params);
-#else
+  *plugin = &dav_plugin;
+
   return NULL;
-#endif
 }
 
 
