@@ -7,7 +7,7 @@ VPATH = @top_srcdir@
 SVN_RA_LIB_DEPS = @SVN_RA_LIB_DEPS@
 SVN_RA_LIB_LINK = @SVN_RA_LIB_LINK@
 
-DOC_DIRS = doc/programmer/design doc/handbook
+DOC_DIRS = doc/programmer/design doc/handbook doc/handbook/translations/french
 
 EXTERNAL_PROJECT_DIRS = @SVN_SUBDIRS@
 
@@ -162,18 +162,18 @@ external-extraclean:
 
 doc: doc-info doc-txt doc-html
 
-doc-info: doc/programmer/design/svn-design.info doc/handbook/svn-handbook.info
-doc-dvi: doc/programmer/design/svn-design.dvi doc/handbook/svn-handbook.dvi
-doc-txt: doc/programmer/design/svn-design.txt doc/handbook/svn-handbook.txt
-doc-html: doc/programmer/design/svn-design.html doc/handbook/svn-handbook.html
-doc-ps: doc/programmer/design/svn-design.ps doc/handbook/svn-handbook.ps
-doc-pdf: doc/programmer/design/svn-design.pdf doc/handbook/svn-handbook.pdf
+doc-info: doc/programmer/design/svn-design.info doc/handbook/svn-handbook.info doc/handbook/translations/french/svn-handbook-french.info
+doc-dvi: doc/programmer/design/svn-design.dvi doc/handbook/svn-handbook.dvi doc/handbook/translations/french/svn-handbook-french.dvi
+doc-txt: doc/programmer/design/svn-design.txt doc/handbook/svn-handbook.txt doc/handbook/translations/french/svn-handbook-french.txt
+doc-html: doc/programmer/design/svn-design.html doc/handbook/svn-handbook.html doc/handbook/translations/french/svn-handbook-french.html
+doc-ps: doc/programmer/design/svn-design.ps doc/handbook/svn-handbook.ps doc/handbook/translations/french/svn-handbook-french.ps
+doc-pdf: doc/programmer/design/svn-design.pdf doc/handbook/svn-handbook.pdf doc/handbook/translations/french/svn-handbook-french.pdf
 
 doc-clean:
 	for d in $(DOC_DIRS);                               \
         do                                                  \
             (cd $$d;                                        \
-             rm -f *.info *.info-1 *.info-2 *.info-3        \
+             rm -f *.info *.info-[1-9]                      \
                    *.aux *.cp *.fn *.ky *.log *.pg *.toc    \
                    *.tp *.vr                                \
                    *.dvi *.txt *.html *.ps *.pdf);          \
