@@ -261,7 +261,7 @@ $ svn log --revision {2002-11-20}:{2002-11-29}
       <para>As we pointed out, you can also mix dates and revisions:</para>
       
       <screen>
-$svn log -r {11/20/02}:4040
+$ svn log -r {11/20/02}:4040
       </screen>
         
     </sect2>
@@ -627,7 +627,7 @@ Updated to revision 2.
               is a directory, everything underneath <filename>foo</filename>
               will be scheduled for addition.  If you only want to
               schedule <filename>foo</filename> itself, pass the
-              <option>--nonrecursive</option> (<option>-N</option>)
+              <option>--non-recursive</option> (<option>-N</option>)
               switch.</para>
           </listitem>
         </varlistentry>

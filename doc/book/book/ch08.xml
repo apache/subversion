@@ -703,7 +703,7 @@ svn: The operation was interrupted
 svn: caught SIGINT
 
 $ cd test
-$ svn up
+$ svn update
 A  test/e
 A  test/f
 Updated to revision 3.
@@ -2644,7 +2644,7 @@ property `owner-pic' set on 'moo.c'
             semantically resolve conflict markers; it merely removes
             conflict-related artifact files and allows PATH to be
             committed again; that is, it tells Subversion that the
-            conflicts have been "resolved".  See <xref
+            conflicts have been <quote>resolved</quote>.  See <xref
             linkend="svn-ch-3-sect-4.4"/> for an in-depth look at
             resolving conflicts.</para>
         </refsect1>
@@ -2770,7 +2770,7 @@ Reverted foo.c
             use the <option>--recursive</option> flag:</para>
 
           <screen>
-$svn revert --recursive .
+$ svn revert --recursive .
 Reverted newdir/afile
 Reverted foo.c
 Reverted bar.txt
@@ -3230,7 +3230,7 @@ A  test/b
 $ mv repos newlocation
 $ cd test/
 
-$ svn up
+$ svn update
 subversion/libsvn_ra_local/ra_plugin.c:225: (apr_err=180001)
 svn: Couldn't open a repository.
 svn: Unable to open an ra_local session to URL
@@ -3238,7 +3238,7 @@ subversion/libsvn_ra_local/split_url.c:105: (apr_err=180001)
 svn: Unable to open repository 'file:///tmp/repos'
 
 $ svn switch --relocate file:///tmp/repos file:///tmp/newlocation .
-$ svn up
+$ svn update
 At revision 3.
           </screen>
 
