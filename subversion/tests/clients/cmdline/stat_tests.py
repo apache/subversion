@@ -728,6 +728,26 @@ def status_on_partially_nonrecursive_wc(sbox):
     os.chdir(saved_cwd)
 
 
+def missing_dir_in_anchor(sbox):
+  "a missing dir in the anchor"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  foo_path = os.path.join(wc_dir, 'foo')
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', foo_path)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'foo' : Item(status='A ', wc_rev=0, repos_rev=1),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # At one point this caused a "foo not locked" error
+  svntest.main.safe_rmtree(foo_path)
+  expected_status.remove('foo')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
 #----------------------------------------------------------------------  
 
 
@@ -752,6 +772,7 @@ test_list = [ None,
               timestamp_behaviour,
               status_on_unversioned_dotdot,
               status_on_partially_nonrecursive_wc,
+              missing_dir_in_anchor,
              ]
 
 if __name__ == '__main__':
