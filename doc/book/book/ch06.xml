@@ -465,7 +465,7 @@ collabnet = svn.collab.net
 
               <para>You can override this option for a single instance
                 of the <command>svn status</command> command by using
-                the <option>--no-ignores</option> command-line flag.
+                the <option>--no-ignore</option> command-line flag.
                 For information on more fine-grained control of
                 ignored items, see <xref linkend="svn-ch-6-sect-2.3.3"
                 />.</para>
