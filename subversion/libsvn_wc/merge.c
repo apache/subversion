@@ -36,7 +36,7 @@ svn_wc_merge (const char *left,
               apr_pool_t *pool)
 {
   const char *tmp_target, *result_target, *tmp_left, *tmp_right;
-  const char *pt, *bn, *bn_left, *bn_right, *mt_pt, *mt_bn;
+  const char *mt_pt, *mt_bn;
   apr_file_t *tmp_f, *result_f;
   svn_boolean_t is_binary, toggled;
   svn_wc_keywords_t *keywords;
@@ -94,7 +94,7 @@ svn_wc_merge (const char *left,
          the same directory.  So make temporary copies of LEFT and
          RIGHT right next to the target. */
       SVN_ERR (svn_io_open_unique_file (&tmp_f, &tmp_left,
-                                        merge_target,
+                                        tmp_target,
                                         SVN_WC__TMP_EXT,
                                         FALSE, pool));
       apr_err = apr_file_close (tmp_f);
@@ -105,7 +105,7 @@ svn_wc_merge (const char *left,
            tmp_left);
 
       SVN_ERR (svn_io_open_unique_file (&tmp_f, &tmp_right,
-                                        merge_target,
+                                        tmp_target,
                                         SVN_WC__TMP_EXT,
                                         FALSE, pool));
       apr_err = apr_file_close (tmp_f);
@@ -117,17 +117,9 @@ svn_wc_merge (const char *left,
       SVN_ERR (svn_io_copy_file (left, tmp_left, TRUE, pool));
       SVN_ERR (svn_io_copy_file (right, tmp_right, TRUE, pool));
 
-      svn_path_split_nts (tmp_left, &pt, &bn_left, pool);
-      svn_path_split_nts (tmp_right, &pt, &bn_right, pool);
-      svn_path_split_nts (tmp_target, &pt, &bn, pool);
-      
-      /* sanity check */
-      if (mt_pt[0] == '\0')
-        mt_pt = ".";
-
       /* Do the Deed, using all four scratch files. */
-      SVN_ERR (svn_io_run_diff3 (mt_pt,
-                                 bn, bn_left, bn_right,
+      SVN_ERR (svn_io_run_diff3 (".",
+                                 tmp_target, tmp_left, tmp_right,
                                  target_label, left_label, right_label,
                                  result_f,
                                  &exit_code,
