@@ -582,7 +582,7 @@ bail_if_unresolved_conflict (svn_string_t *full_path,
 
 /* Declaration to allow mutual-recursion between two static funcs. */
 static svn_error_t *report_local_mods (svn_string_t *path,
-                                       void *dir_baton,
+                                       void **dir_baton,
                                        svn_string_t *filename,
                                        const svn_delta_edit_fns_t *editor,
                                        void *edit_baton,
@@ -881,7 +881,7 @@ examine_and_report_entry (svn_string_t *path,
          NULL?  Because that will later force a call to
          do_dir_replaces() and get the _correct_ dir baton for the
          child directory. */
-      err = report_local_mods (full_path_to_entry, new_dir_baton, NULL,
+      err = report_local_mods (full_path_to_entry, &new_dir_baton, NULL,
                                editor, edit_baton,
                                stack, affected_targets, locks,
                                top_pool);
@@ -923,7 +923,7 @@ examine_and_report_entry (svn_string_t *path,
 
 static svn_error_t *
 report_local_mods (svn_string_t *path,
-                   void *dir_baton,
+                   void **dir_baton,
                    svn_string_t *filename,
                    const svn_delta_edit_fns_t *editor,
                    void *edit_baton,
@@ -983,7 +983,7 @@ report_local_mods (svn_string_t *path,
       /* Do the dirty work.  No recursion here.  For a single file,
          stack should already contain a stackframe for PATH (which
          should be the immediate parent of the file.) */
-      SVN_ERR (examine_and_report_entry (path, &dir_baton,
+      SVN_ERR (examine_and_report_entry (path, dir_baton,
                                          filename,
                                          editor, edit_baton,
                                          stack,
@@ -999,7 +999,7 @@ report_local_mods (svn_string_t *path,
   /* Else do real recursion on PATH. */
 
   /* Push the current {path, baton, this_dir} to the top of the stack */
-  push_stack (stack, path, dir_baton, this_dir, subpool);
+  push_stack (stack, path, *dir_baton, this_dir, subpool);
   
   /* Loop over each entry */
   for (entry_index = apr_hash_first (entries); entry_index;
@@ -1030,7 +1030,7 @@ report_local_mods (svn_string_t *path,
                                 svn_path_local_style);
       
       /* Do the dirty work, and mutually recurse. */
-      SVN_ERR (examine_and_report_entry (path, &dir_baton,
+      SVN_ERR (examine_and_report_entry (path, dir_baton,
                                          filename,
                                          editor, edit_baton,
                                          stack,
@@ -1213,6 +1213,7 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
   int i;
   svn_string_t *filename;
   svn_wc_entry_t *parent_entry, *tgt_entry;
+  void *initial_dir_baton = NULL;
 
   /* A stack that will store all paths and dir_batons as we drive the
      editor depth-first. */
@@ -1245,7 +1246,7 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
       will be automatically pushed to the empty stack, but not
       removed.  This way we can examine the frame to see if there's a
       root_dir_baton, and thus whether we need to call close_edit(). */
-      err = report_local_mods (parent_dir, NULL, NULL,
+      err = report_local_mods (parent_dir, &initial_dir_baton, NULL,
                                edit_fns, edit_baton,
                                &stack, affected_targets, locked_dirs,
                                pool);
@@ -1253,7 +1254,7 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
         {
           remove_all_locks (locked_dirs, pool);
           return svn_error_quick_wrap 
-            (err, "Atomic commit failed: while sending tree-delta to repos.");
+            (err, "commit failed: while sending tree-delta to repos.");
         }
     }
       
@@ -1352,7 +1353,7 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
              will be continually added to AFFECTED_TARGETS, and locked
              directories will be appended to LOCKED_DIRS. */
           err = report_local_mods (filename ? ptarget : target,
-                                   NULL, filename,
+                                   &(stack->baton), filename,
                                    edit_fns, edit_baton,
                                    &stack, affected_targets, locked_dirs,
                                    pool);
@@ -1360,7 +1361,7 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
             {
               remove_all_locks (locked_dirs, pool);
               return svn_error_quick_wrap 
-                (err, "Atomic commit failed: while sending tree-delta.");
+                (err, "commit failed: while sending tree-delta.");
             }
 
         } /*  -- End of main target loop -- */
@@ -1386,7 +1387,7 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
     {
       remove_all_locks (locked_dirs, pool);
       return svn_error_quick_wrap 
-        (err, "Atomic commit failed:  while sending postfix text-deltas.");
+        (err, "commit failed:  while sending postfix text-deltas.");
     }
 
   /* Have *any* edits been made at all?  We can tell by looking at the
@@ -1407,7 +1408,7 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
              revision-bumping or wcprop error. */
           remove_all_locks (locked_dirs, pool);
           return svn_error_quick_wrap
-            (err, "Atomic commit failed: while calling close_edit()");
+            (err, "commit failed: while calling close_edit()");
         }
     }
 
