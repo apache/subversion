@@ -216,13 +216,10 @@ do_dir_replaces (void **newest_baton,
 
       else
         {
-          /* Can't descend?  We must be at stack bottom.  Lock the
-             root directory and fetch the root baton. */
+          /* Can't descend?  We must be at stack bottom, fetch the
+             root baton. */
           void *root_baton;
 
-          err = do_lock (stackptr->path, locks, top_pool);
-          if (err) return err;
-          
           err = editor->replace_root (edit_baton, &root_baton);  
           if (err) return err;
           
@@ -244,10 +241,6 @@ do_dir_replaces (void **newest_baton,
 
           /* Move up the stack */
           stackptr = stackptr->next;
-
-          /* Lock this directory */
-          err = do_lock (stackptr->path, locks, top_pool);
-          if (err) return err;
 
           /* We only want the last component of the path; that's what
              the editor's replace_directory() expects from us. */
@@ -277,6 +270,10 @@ do_dir_replaces (void **newest_baton,
      goes with our youngest PATH */
   *newest_baton = stackptr->baton;
 
+  /* Lock this youngest directory */
+  err = do_lock (stackptr->path, locks, top_pool);
+  if (err) return err;
+  
   return SVN_NO_ERROR;
 }
 
