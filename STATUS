@@ -100,6 +100,12 @@ Bindings changes that affect the build system:
      Votes:
       +1: breser (for 8280, concept +1 for 8279)
 
+    * r8290
+     Applying r8279 + r8290 for javahl
+     Breaks bindings if base is applied, javahl local change, low risk.
+     Votes:
+      +1: patrick (if above is applied)
+     
 Bindings changes that don't affect the build system:
 Already have three +1 votes:
 
@@ -113,7 +119,7 @@ Don't yet have three +1 votes:
      Justification: Implementation of above API change in javahl bindings.
      Notes: this obviously assumes svn_client_ctx_t gets imp'd (see above)
      Votes:
-      +1: ghudson, rooneg
+      +1: ghudson, rooneg, patrick
       +1 (concept): gstein
 
 
@@ -121,7 +127,7 @@ Don't yet have three +1 votes:
      Implementing API change of r8021 in javahl bindings.
      Justification: with 8021 and without 8031 javahl breaks. Local change.
      Votes:
-      +1: ghudson
+      +1: ghudson, patrick
       +1 (concept): gstein (assuming base change imp'd)
 
 
@@ -129,7 +135,7 @@ Don't yet have three +1 votes:
      Implementing API change of r8006 in javahl bindings.
      Justification: with 8006 and without 8012 javahl breaks. Local change.
      Votes:
-      +1: ghudson
+      +1: ghudson, patrick
       +1 (concept): gstein (assuming base change imp'd)
 
 
@@ -137,6 +143,7 @@ Don't yet have three +1 votes:
      Implementing API change of r8013 in javahl bindings.
      Justification: with 8013 and without 8015,8020 javahl breaks. Local change
      Votes:
+      +1: patrick
       +1 (concept): gstein (assuming base change is imp'd)
 
 
@@ -144,6 +151,7 @@ Don't yet have three +1 votes:
      Improved interface for blame in javahl bindings.
      Justification: API stability; low risk because of bindings only change.
      Votes:
+      +1: patrick
       +0: gstein
 
 
@@ -151,7 +159,15 @@ Don't yet have three +1 votes:
      javahl bindings did not know status external.
      Justification: API stability; low risk because of bindings only change.
      Votes:
+      +1: patrick
       +0: gstein
+
+   * r8289
+     Applying r8220 to javahl.
+     Cleanup of struct declarations.
+     Justification: API stability; low risk because of bindings only change.
+     Votes:
+      +1: patrick
 
    * r8270
      Perl bindings fixes and enhancements.
