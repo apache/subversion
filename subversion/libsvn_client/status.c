@@ -164,7 +164,8 @@ svn_client_status (apr_hash_t **statushash,
      working copy. */
   SVN_ERR (svn_wc_statuses (hash, path, adm_access,
                             descend, get_all, no_ignore,
-                            ctx->notify_func, ctx->notify_baton, pool));
+                            ctx->notify_func, ctx->notify_baton,
+                            ctx->config, pool));
 
   if (update)    
     {

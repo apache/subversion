@@ -38,14 +38,15 @@
 
 svn_error_t *
 svn_wc_get_default_ignores (apr_array_header_t **patterns,
+                            apr_hash_t *config,
                             apr_pool_t *pool)
 {
-  struct svn_config_t *cfg;
+  svn_config_t *cfg = apr_hash_get (config, SVN_CONFIG_CATEGORY_CONFIG, 
+                                    APR_HASH_KEY_STRING);
   const char *val;
 
   /* Check the Subversion run-time configuration for global ignores.
      If no configuration value exists, we fall back to our defaults. */
-  SVN_ERR (svn_config_read_config (&cfg, pool));
   svn_config_get (cfg, &val, "miscellany", "global-ignores",
                   "*.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#*");
   *patterns = apr_array_make (pool, 16, sizeof (const char *));
@@ -652,6 +653,7 @@ svn_wc_statuses (apr_hash_t *statushash,
                  svn_boolean_t no_ignore,
                  svn_wc_notify_func_t notify_func,
                  void *notify_baton,
+                 apr_hash_t *config,
                  apr_pool_t *pool)
 {
   svn_node_kind_t kind;
@@ -716,7 +718,7 @@ svn_wc_statuses (apr_hash_t *statushash,
         parent_entry = NULL;
 
       /* Read the default ignores from the config files. */
-      SVN_ERR (svn_wc_get_default_ignores (&ignores, pool));
+      SVN_ERR (svn_wc_get_default_ignores (&ignores, config, pool));
 
       SVN_ERR (get_dir_status(statushash, parent_entry, adm_access,
                               ignores, descend, get_all, no_ignore,

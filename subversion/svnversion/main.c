@@ -75,6 +75,8 @@ main(int argc, char *argv[])
   /* Create our top-level pool. */
   pool = svn_pool_create (NULL);
 
+  ctx.config = apr_hash_make (pool);
+
   SVN_INT_ERR (svn_utf_cstring_to_utf8 (&wc_path, argv[1], NULL, pool));
   wc_path = svn_path_internal_style (wc_path, pool);
   err = svn_client_status (&status_hash, &youngest, wc_path, TRUE, TRUE,
