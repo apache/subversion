@@ -58,7 +58,7 @@
       whatever works best for you and your users.</para>
       
 
-    <table id="svn-ch-06-table-1">
+    <table id="svn-ch-6-table-1">
       <title>Network Server Comparison</title>
       <tgroup cols="3">
         <thead>
@@ -167,7 +167,7 @@
         protocol are hidden from the user; the client attempts to
         access a URL, and depending on the URL schema, a particular
         protocol is used to contact the server (see <xref
-        linkend="svn-ch-02-sidebar-1"/>).  Users can run <command>svn
+        linkend="svn-ch-2-sidebar-1"/>).  Users can run <command>svn
         --version</command> to see which URL schemas and protocols the
         client knows how to use.</para>
 

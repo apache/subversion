@@ -263,10 +263,10 @@
         Subversion.  Think of a directory tree as a two-dimensional
         system, where a node's siblings represent a sort of
         left-and-right motion, and descending into subdirectories a
-        downward motion.  <xref linkend="svn-ch8-sect1.1-dia1"/> shows
+        downward motion.  <xref linkend="svn-ch-8-dia-1"/> shows
         a typical representation of a tree as exactly that.</para>
 
-      <figure id="svn-ch8-sect1.1-dia1">
+      <figure id="svn-ch-8-dia-1">
         <title>Files and directories in two dimensions</title>
         <graphic fileref="images/ch08dia1.png"/>
       </figure>
@@ -289,10 +289,10 @@
         third-dimensional context needed to understand the difference
         between <filename>/foo/bar</filename> in revision 32, and the
         same path as it exists in revision 98.  <xref
-        linkend="svn-ch8-sect1.1-dia2"/> shows revision history as an
+        linkend="svn-ch-8-dia-2"/> shows revision history as an
         added dimension to the Subversion filesystem universe.</para>
 
-      <figure id="svn-ch8-sect1.1-dia2">
+      <figure id="svn-ch-8-dia-2">
         <title>Revisioning time&mdash;the third dimension!</title>
         <graphic fileref="images/ch08dia2.png"/>
       </figure>

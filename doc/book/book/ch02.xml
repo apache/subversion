@@ -16,7 +16,7 @@
   </simplesect>
   
   
-  <sect1 id="svn-ch2-sect-1" > 
+  <sect1 id="svn-ch-2-sect-1" > 
     <title>The Repository</title>  
     
     <para>Subversion is a centralized system for sharing information.
@@ -27,10 +27,10 @@
       <firstterm>clients</firstterm> connect to the repository, and
       then read or write to these files.  By writing data, a client
       makes the information available to others; by reading data, the
-      client receives information from others.  Figure 2-1
-      illustrates this.</para>
+      client receives information from others.  <xref
+      linkend="svn-ch-2-dia-1"/> illustrates this.</para>
 
-    <figure id="svn-ch2-dia1">
+    <figure id="svn-ch-2-dia-1">
       <title>A typical client/server system</title>
       <graphic fileref="images/ch02dia1.png"/>
     </figure>
@@ -71,22 +71,22 @@
         accidentally overwrite each other's changes in the
         repository.</para>
 
-      <para>Consider the scenario shown in Figure 2-2.  Suppose we
-        have two co-workers, Harry and Sally.  They each decide to
-        edit the same repository file at the same time.  If Harry
-        saves his changes to the repository first, then it's possible
-        that (a few moments later) Sally could accidentally overwrite
-        them with her own new version of the file.  While Harry's
-        version of the file won't be lost forever (because the system
-        remembers every change), any changes Harry made
-        <emphasis>won't</emphasis> be present in Sally's newer version
-        of the file, because she never saw Harry's changes to begin
-        with.  Harry's work is still effectively lost&mdash;or at
-        least missing from the latest version of the file&mdash;and
-        probably by accident.  This is definitely a situation we want
-        to avoid!</para>
+      <para>Consider the scenario shown in <xref
+        linkend="svn-ch-2-dia-2"/>.  Suppose we have two co-workers,
+        Harry and Sally.  They each decide to edit the same repository
+        file at the same time.  If Harry saves his changes to the
+        repository first, then it's possible that (a few moments
+        later) Sally could accidentally overwrite them with her own
+        new version of the file.  While Harry's version of the file
+        won't be lost forever (because the system remembers every
+        change), any changes Harry made <emphasis>won't</emphasis> be
+        present in Sally's newer version of the file, because she
+        never saw Harry's changes to begin with.  Harry's work is
+        still effectively lost&mdash;or at least missing from the
+        latest version of the file&mdash;and probably by accident.
+        This is definitely a situation we want to avoid!</para>
 
-      <figure id="svn-ch2-dia2">
+      <figure id="svn-ch-2-dia-2">
         <title>The problem to avoid</title>
         <graphic fileref="images/ch02dia2.png"/>
       </figure>
@@ -107,10 +107,11 @@
         the repository will deny the request.  All she can do is read
         the file, and wait for Harry to finish his changes and release
         his lock.  After Harry unlocks the file, his turn is over, and
-        now Sally can take her turn by locking and editing.  Figure
-        2-3 demonstrates this simple solution.</para>
+        now Sally can take her turn by locking and editing.  <xref
+        linkend="svn-ch-2-dia-3"/> demonstrates this simple
+        solution.</para>
       
-      <figure id="svn-ch2-dia3">
+      <figure id="svn-ch-2-dia-3">
         <title>The lock-modify-unlock solution</title>
         <graphic fileref="images/ch02dia3.png"/>
       </figure>
@@ -186,15 +187,16 @@
         any new changes from the repository into his working copy of
         file A.  Chances are that Sally's changes don't overlap with
         his own; so once he has both sets of changes integrated, he
-        saves his working copy back to the repository.  Figures 2-4
-        and 2-5 show this process.</para>
+        saves his working copy back to the repository.  <xref
+        linkend="svn-ch-2-dia-4"/> and <xref linkend="svn-ch-2-dia-5"/>
+        show this process.</para>
 
-      <figure id="svn-ch2-dia4">
+      <figure id="svn-ch-2-dia-4">
         <title>The copy-modify-merge solution</title>
         <graphic fileref="images/ch02dia4.png"/>
       </figure>
       
-      <figure id="svn-ch2-dia5">
+      <figure id="svn-ch-2-dia-5">
         <title>The copy-modify-merge solution (continued)</title>
         <graphic fileref="images/ch02dia5.png"/>
       </figure>
@@ -282,9 +284,10 @@
       <para>For example, suppose you have a repository that contains
         two software projects, <literal>paint</literal> and
         <literal>calc</literal>.  Each project lives in its own
-        top-level subdirectory, as shown in Figure 2-6.</para>
+        top-level subdirectory, as shown in <xref
+        linkend="svn-ch-2-dia-6"/>.</para>
 
-      <figure id="svn-ch2-dia6">
+      <figure id="svn-ch-2-dia-6">
         <title>The repository's filesystem</title>
         <graphic fileref="images/ch02dia6.png"/>
       </figure>
@@ -316,7 +319,7 @@ Makefile  integer.c  button.c  .svn/
         extra information needed by Subversion, as mentioned
         earlier.</para>
 
-      <sidebar id="svn-ch-02-sidebar-1">
+      <sidebar id="svn-ch-2-sidebar-1">
         <title>Repository URLs</title>
 
         <para>Subversion repositories can be accessed through many
@@ -325,7 +328,7 @@ Makefile  integer.c  button.c  .svn/
           always a URL.  Table 2-1 describes how different URL
           schemas map to the available access methods.</para>
 
-        <table id="svn-ch-02-table-1">
+        <table id="svn-ch-2-table-1">
           <title>Repository Access URLs</title>
           <tgroup cols="2">
             <thead>
@@ -487,14 +490,14 @@ U button.c
         repository is numbered zero, and consists of nothing but an
         empty root directory.</para>
       
-      <para>Figure 2-7 illustrates a nice way to visualize the
-        repository.  Imagine an array of revision numbers, starting at
-        0, stretching from left to right.  Each revision number has a
-        filesystem tree hanging below it, and each tree is a
-        <quote>snapshot</quote> of the way the repository looked after
-        each commit. </para>
+      <para><xref linkend="svn-ch-2-dia-7"/> illustrates a nice way to
+        visualize the repository.  Imagine an array of revision
+        numbers, starting at 0, stretching from left to right.  Each
+        revision number has a filesystem tree hanging below it, and
+        each tree is a <quote>snapshot</quote> of the way the
+        repository looked after each commit. </para>
       
-      <figure id="svn-ch2-dia7">
+      <figure id="svn-ch-2-dia-7">
         <title>The repository</title>
         <graphic fileref="images/ch02dia7.png"/>
       </figure>

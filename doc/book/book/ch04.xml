@@ -46,9 +46,10 @@
       development that exists independently of another line, yet still
       shares a common history if you look far enough back in time.  A
       branch always begins life as a copy of something, and moves on
-      from there, generating its own history (see Figure 4-1).</para>
+      from there, generating its own history (see <xref
+      linkend="svn-ch-4-dia-1"/>).</para>
 
-      <figure id="svn-ch-4-dia1">
+      <figure id="svn-ch-4-dia-1">
         <title>Branches of development</title>
         <graphic fileref="images/ch04dia1.png"/>
       </figure>
@@ -79,12 +80,12 @@
       Chapter 2.  Remember that you and your collaborator, Sally, are
       sharing a repository that contains two projects,
       <filename>paint</filename> and <filename>calc</filename>.
-      Notice that in Figure 4-2, however, each project directory now
-      contains subdirectories named <filename>trunk</filename> and
-      <filename>branches</filename>.  The reason for this will soon
-      become clear.</para>
+      Notice that in <xref linkend="svn-ch-4-dia-2"/>, however, each
+      project directory now contains subdirectories named
+      <filename>trunk</filename> and <filename>branches</filename>.
+      The reason for this will soon become clear.</para>
     
-      <figure id="svn-ch-4-dia2">
+      <figure id="svn-ch-4-dia-2">
         <title>Starting repository layout</title>
         <graphic fileref="images/ch04dia2.png"/>
       </figure>
@@ -220,9 +221,9 @@ Committed revision 341.
       <para>There's really no difference between these two methods.
         Both procedures create a new directory in revision 341, and
         the new directory is a copy of
-        <filename>/calc/trunk</filename>.  This is shown in Figure
-        4-3.  Notice that the second method, however, performs an
-        <emphasis>immediate</emphasis> commit.
+        <filename>/calc/trunk</filename>.  This is shown in <xref
+        linkend="svn-ch-4-dia-3"/>.  Notice that the second method,
+        however, performs an <emphasis>immediate</emphasis> commit.
         <footnote> 
           <para>Subversion does not support
             cross-repository copying.  When using URLs with <command>svn
@@ -234,7 +235,7 @@ Committed revision 341.
         technique doesn't even require you to have a working copy at
         all.</para>
       
-      <figure id="svn-ch4-dia3">
+      <figure id="svn-ch-4-dia-3">
         <title>Repository with new copy</title>
         <graphic fileref="images/ch04dia3.png"/>
       </figure>
@@ -322,9 +323,10 @@ Checked out revision 341.
       </itemizedlist>
 
       <para>There are now two independent lines of development, shown
-        in Figure 4-4, happening on <filename>integer.c</filename>.</para>
+        in <xref linkend="svn-ch-4-dia-4"/>, happening on
+        <filename>integer.c</filename>.</para>
 
-      <figure id="svn-ch4-dia4">
+      <figure id="svn-ch-4-dia-4">
         <title>The branching of one file's history</title>
         <graphic fileref="images/ch04dia4.png"/>
       </figure>
