@@ -1222,7 +1222,7 @@ close_file (void *file_baton)
                          SVN_WC_ENTRY_ATTR_REVISION,
                          svn_string_create (revision_str, fb->pool),
                          SVN_WC_ENTRY_ATTR_TIMESTAMP,
-                         svn_string_create (SVN_WC__LOG_ATTR_TIMESTAMP_WC,
+                         svn_string_create (SVN_WC_TIMESTAMP_WC,
                                             fb->pool), /* use wfile time */
                          NULL);
 

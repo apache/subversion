@@ -92,6 +92,10 @@ svn_wc__check_wc (svn_string_t *path, apr_pool_t *pool)
 
    "Are the contents of F different than the contents of SVN/text-base/F?"
 
+   or
+
+   "Are the contents of SVN/props/xxx different than SVN/prop-base/xxx?"
+
    In other words, we're looking to see if a user has made local
    modifications to a file since the last update or commit.
 
