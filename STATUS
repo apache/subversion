@@ -98,15 +98,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r11708
-    Fix a bug which caused certain unfinished switch operations to leave
-    the working copy in a busticated state.
-    Justification:
-      Did you miss the part where I said "working copy ... busticated state"?
-    Notes: See r12192 for clarification to code comment.
-    Votes:
-      +1: cmpilato, epg, kfogel
-
   * r12133 (Issue #2106)
     Client-side memory leak when doing 'svn switch' over http://.
     Justification: Scalability bug, very small & simple fix.
