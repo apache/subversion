@@ -379,9 +379,7 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
  * When committed, this transaction will create a new revision.
  *
  * Allocate the new transaction in @a pool; when @a pool is freed, the new
- * transaction will be closed (neither committed nor aborted).  You
- * can also close the transaction explicitly, using
- * @c svn_fs_close_txn.
+ * transaction will be closed (neither committed nor aborted).
  *
  *<pre>   >> Note: if you're building a txn for committing, you probably <<
  *   >> don't want to call this directly.  Instead, call            <<
@@ -469,9 +467,7 @@ svn_revnum_t svn_fs_txn_base_revision (svn_fs_txn_t *txn);
  * the error returned.
  *
  * Allocate the new transaction in @a pool; when @a pool is freed, the new
- * transaction will be closed (neither committed nor aborted).  You
- * can also close the transaction explicitly, using
- * @c svn_fs_close_txn.
+ * transaction will be closed (neither committed nor aborted).
  */
 svn_error_t *svn_fs_open_txn (svn_fs_txn_t **txn,
                               svn_fs_t *fs,
@@ -571,9 +567,8 @@ svn_boolean_t svn_fs_is_txn_root (svn_fs_root_t *root);
 svn_boolean_t svn_fs_is_revision_root (svn_fs_root_t *root);
 
 
-/** If @a root is the root of a transaction, return a pointer to the name
- * of the transaction; otherwise, return zero.  The name is owned by
- * @a root, and will be freed when @a root is closed.
+/** If @a root is the root of a transaction, return the name of the
+ * transaction, allocated in @a pool; otherwise, return null.
  */
 const char *svn_fs_txn_root_name (svn_fs_root_t *root,
                                   apr_pool_t *pool);
@@ -1011,7 +1006,7 @@ svn_error_t *svn_fs_delete (svn_fs_root_t *root,
  * mutable nodes --- it's just more code.)
  *
  * Note: to do a copy without preserving copy history, use
- * @c svn_fs_link().
+ * @c svn_fs_revision_link().
  *
  * Do any necessary temporary allocation in @a pool.
  */
@@ -1026,9 +1021,9 @@ svn_error_t *svn_fs_copy (svn_fs_root_t *from_root,
  * the PATH.  You cannot use @c svn_fs_copied_from() later to find out
  * where this copy came from.
  *
- * Use @c svn_fs_link() in situations where you don't care about the copy
- * history, and where @a to_path and @a from_path are the same, because it
- * is cheaper than @c svn_fs_copy().
+ * Use @c svn_fs_revision_link() in situations where you don't care
+ * about the copy history, and where @a to_path and @a from_path are
+ * the same, because it is cheaper than @c svn_fs_copy().
  */
 svn_error_t *svn_fs_revision_link (svn_fs_root_t *from_root,
                                    svn_fs_root_t *to_root,

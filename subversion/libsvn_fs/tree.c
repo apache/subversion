@@ -529,7 +529,7 @@ svn_fs_txn_root_name (svn_fs_root_t *root,
   if (root->kind == transaction_root)
     return apr_pstrdup (pool, root->txn);
   else
-    return 0;
+    return NULL;
 }
 
 
