@@ -22,6 +22,7 @@
 %import apr.i
 %import svn_types.i
 %import svn_string.i
+%import svn_delta.i
 %import svn_fs.i
 
 /* -----------------------------------------------------------------------
@@ -46,6 +47,15 @@
 %apply const apr_array_header_t *STRINGLIST {
     const apr_array_header_t *paths
 };
+
+/* -----------------------------------------------------------------------
+   XXX: for some reasons svn_delta_editor doesn't get typemapped even
+   if svn_delta.i is imported. so we redeclare here.
+*/
+
+%typemap(perl5, in) (const svn_delta_editor_t *editor, void *edit_baton) {
+    svn_delta_make_editor(&$1, &$2, $input, _global_pool);
+}
 
 /* -----------------------------------------------------------------------
    commit editor support	
