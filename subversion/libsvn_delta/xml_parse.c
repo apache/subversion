@@ -1452,8 +1452,7 @@ svn_delta_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal,
 
 
 svn_error_t *
-svn_delta_xml_auto_parse (svn_read_fn_t *source_fn,
-                          void *source_baton,
+svn_delta_xml_auto_parse (svn_stream_t *source,
                           const svn_delta_edit_fns_t *editor,
                           void *edit_baton,
                           svn_string_t *base_path,
@@ -1476,13 +1475,13 @@ svn_delta_xml_auto_parse (svn_read_fn_t *source_fn,
   if (err)
     return err;
 
-  /* Repeatedly pull data from SOURCE_FN and feed it to the parser,
+  /* Repeatedly pull data from SOURCE and feed it to the parser,
      until there's no more data (or we get an error). */
   
   do {
     /* Read BUFSIZ bytes into buf using the supplied read function. */
     len = BUFSIZ;
-    err = (*(source_fn)) (source_baton, buf, &len, pool);
+    err = svn_stream_read (source, buf, &len);
     if (err)
       return svn_error_quick_wrap (err, "svn_delta_parse: can't read source");
 

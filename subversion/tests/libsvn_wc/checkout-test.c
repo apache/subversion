@@ -32,26 +32,7 @@
 
 
 static svn_error_t *
-test_read_fn (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
-{
-  apr_file_t *src = (apr_file_t *) baton;
-  apr_status_t stat;
-
-  stat = apr_full_read (src, buffer, (apr_size_t) *len, (apr_size_t *) len);
-
-  if (stat && !APR_STATUS_IS_EOF(stat))
-    return
-      svn_error_create (stat, 0, NULL, pool,
-                        "error reading incoming delta stream");
-  
-  else 
-    return 0;  
-}
-
-
-static svn_error_t *
-apply_delta (void *delta_src,
-             svn_read_fn_t *read_fn,
+apply_delta (svn_stream_t *delta,
              svn_string_t *dest,
              svn_string_t *repos,
              svn_revnum_t revision,
@@ -74,8 +55,7 @@ apply_delta (void *delta_src,
     return err;
 
   /* ... and edit! */
-  return svn_delta_xml_auto_parse (read_fn,
-                                   delta_src,
+  return svn_delta_xml_auto_parse (delta,
                                    editor,
                                    edit_baton,
                                    svn_string_create ("", pool),
@@ -121,8 +101,7 @@ main (int argc, char **argv)
     target = svn_string_create (argv[2], pool);
 
   err = apply_delta
-    (src, 
-     test_read_fn,
+    (svn_stream_from_aprfile (src, pool),
      target,
      svn_string_create (":ssh:jrandom@svn.tigris.org/repos", pool),
      1,  /* kff todo: revision must be passed in, right? */

@@ -610,15 +610,14 @@ svn_delta_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal,
                           svn_delta_xml_parser_t *svn_xml_parser);
 
 
-/* Reads an XML stream from SOURCE_FN using expat internally,
-   validating the XML as it goes (according to Subversion's own
-   tree-delta DTD).  Whenever an interesting event happens, it calls a
-   caller-specified callback routine from EDITOR.  
+/* Reads an XML stream from SOURCE using expat internally, validating
+   the XML as it goes (according to Subversion's own tree-delta DTD).
+   Whenever an interesting event happens, it calls a caller-specified
+   callback routine from EDITOR.  
    
-   Once called, it retains control and "pulls" data from SOURCE_FN
+   Once called, it retains control and "pulls" data from SOURCE
    until either the stream runs out or an error occurs. */
-svn_error_t *svn_delta_xml_auto_parse (svn_read_fn_t *source_fn,
-                                       void *source_baton,
+svn_error_t *svn_delta_xml_auto_parse (svn_stream_t *source,
                                        const svn_delta_edit_fns_t *editor,
                                        void *edit_baton,
                                        svn_string_t *base_path,
