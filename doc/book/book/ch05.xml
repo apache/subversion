@@ -418,11 +418,7 @@ pre-commit.tmpl
               arguments to this program: the path to the repository,
               and the name of the transaction being committed.  If the
               program returns a non-zero exit value, the commit is
-              aborted and the transaction is removed.  Note that as a
-              precaution against losing unversioned property data,
-              Subversion clients will not be allowed to remotely
-              modify revision properties at all unless this hook is
-              implemented for your repository.</para>
+              aborted and the transaction is removed.</para>
 
             <para>The Subversion distribution includes some access
               control scripts (located in the
@@ -483,7 +479,10 @@ pre-commit.tmpl
               counterpart, <filename>post-revprop-change</filename>)
               so that repository administrators can keep records of
               changes to these items using some external means if
-              they so desire.</para>
+              they so desire.  As a precaution against losing
+              unversioned property data, Subversion clients will not
+              be allowed to remotely modify revision properties at all
+              unless this hook is implemented for your repository.</para>
 
             <para>This hook runs just before such a modification is
               made to the repository.  The repository passes four
