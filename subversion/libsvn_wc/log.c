@@ -841,9 +841,29 @@ log_do_committed (struct log_runner *loggy,
   {
     const char *wf, *tmpf, *basef;
 
-    /* ### Logic check: if is_this_dir, then full_path is the same as
-       loggy->path, I think.  In which case we don't need the inline
-       conditional below... */
+    /* Get property file pathnames (not from the `tmp' area) depending
+       on whether we're examining a file or THIS_DIR */
+    
+    /* ### Logic check: if is_this_dir, then full_path is the same
+       as loggy->path, I think.  In which case we don't need the
+       inline conditionals below... */
+    
+    SVN_ERR (svn_wc__prop_path (&wf, 
+                                is_this_dir ? loggy->path : full_path, 
+                                0, pool));
+    SVN_ERR (svn_wc__prop_base_path (&basef,
+                                     is_this_dir ? loggy->path : full_path,
+                                     0, pool));
+    
+    /* If this file was replaced in the commit, then we definitely
+       need to begin by removing any old residual prop-base file.  */
+    if (entry->schedule == svn_wc_schedule_replace)
+      {
+        svn_node_kind_t kinder;
+        SVN_ERR (svn_io_check_path (basef, &kinder, pool));
+        if (kinder == svn_node_file)
+          SVN_ERR (svn_io_remove_file (basef, pool));
+      }
 
     SVN_ERR (svn_wc__prop_path (&tmpf, is_this_dir ? loggy->path : full_path,
                                 1, pool));
@@ -855,20 +875,6 @@ log_do_committed (struct log_runner *loggy,
         svn_boolean_t same;
         apr_status_t status;
         const char *chosen;
-
-        /* Get property file pathnames (not from the `tmp' area) depending
-           on whether we're examining a file or THIS_DIR */
-
-        /* ### Logic check: if is_this_dir, then full_path is the same
-           as loggy->path, I think.  In which case we don't need the
-           inline conditionals below... */
-
-        SVN_ERR (svn_wc__prop_path (&wf, 
-                                    is_this_dir ? loggy->path : full_path, 
-                                    0, pool));
-        SVN_ERR (svn_wc__prop_base_path (&basef,
-                                         is_this_dir ? loggy->path : full_path,
-                                         0, pool));
         
         /* We need to decide which prop-timestamp to use, just like we
            did with text-time above. */
