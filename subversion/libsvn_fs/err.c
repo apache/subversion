@@ -95,15 +95,6 @@ corrupt_rev (const char *fmt, svn_revnum_t rev, svn_fs_t *fs)
 
 
 svn_error_t *
-svn_fs__err_corrupt_representation (svn_fs_t *fs, const svn_fs_id_t *id)
-{
-  return
-    corrupt_id ("corrupt representation for node `%s' in filesystem `%s'",
-                id, fs);
-}
-
-
-svn_error_t *
 svn_fs__err_corrupt_node_revision (svn_fs_t *fs, const svn_fs_id_t *id)
 {
   return

@@ -109,19 +109,6 @@ numbers, separated by dots.
 
 
 
-
-   #######################################################################
-   ###                                                                 ###
-   ### Note: everything from here on down documents new filesystem     ###
-   ### internals that have not been completely implemented yet.  If    ###
-   ### you want documentation that reflects the code as it is right    ###
-   ### now, read revision 1.36 or earlier of this file.  When the new  ###
-   ### implementation is complete, this notice will be removed.        ###
-   ###                                                                 ###
-   #######################################################################
-
-
-
 NODE-REVISION and HEADER: how we represent a node revision
 
 We represent a given revision of a file or directory node using a list
@@ -339,13 +326,14 @@ two forms currently recognized:
    (("fulltext" ...) KEY)
        The data is at KEY in the `strings' table.
 
-   (("delta" ...) REP-KEY STRING-KEY CHECKSUM)
-       Apply the delta at STRING-KEY in the `strings' table against the
-       fulltext derived from REP-KEY in the `representations' table.
-       "Derived" because REP-KEY might not refer to a fulltext, in
-       which case further processing is necessary before the data at
-       STRING-KEY can be applied against it.
-       CHECKSUM is a checksum on the resulting fulltext.
+   (("delta" ...) REP-KEY DIFF CHECKSUM)
+       where DIFF is, right now, ("svndiff" STRING-KEY).  Apply the
+       delta at STRING-KEY in the `strings' table against the fulltext
+       derived from REP-KEY in the `representations' table.  "Derived"
+       because REP-KEY might not refer to a fulltext, in which case
+       further processing is necessary before the data at STRING-KEY
+       can be applied against it.  CHECKSUM is a checksum on the
+       resulting fulltext.
 
 In the future, there may be other representations, for example
 indicating that the text is stored elsewhere in the database, or
@@ -399,6 +387,38 @@ Since the filesystem interface doesn't expose these details, we can
 change the representation pretty much as we please to optimize
 whatever parameter we care about --- storage size, speed, robustness,
 etc.
+
+A Note For The Near Future: How To Deltify:
+-------------------------------------------
+
+When a representation is deltified, it is changed in place, along with
+its underlying string.  That is, the node revision referring to that
+representation will not be changed; instead, the same rep key will now
+be associated with different value.  That way, we get reader locking
+for free: if someone's trying to read a file as Subversion is
+deltifying it, one of the two sides will get a DB_DEADLOCK and
+svn_fs__retry_txn() will retry.
+
+[todo: the reps will deadlock, but not sure that the strings locking
+will happen properly as things are currently structured.  Needs to be
+investigated.]
+
+When a rep is deltified, we must also make sure that a fulltext is
+reachable from it.  For example, suppose rep "2342" looks like this:
+
+   (("fulltext") "50956")
+
+So it's saying to use string "50956" and treat it as fulltext.  Now we
+deltify that rep, so it looks like this:
+
+   (("delta") "2343" ("svndiff" "50956") ...)
+
+Before making this change, we must examine rep "2343".  If it is a
+fulltext, then we're okay.  If it is not, we must recurse into 2343's
+base rep, and so on, until we reach a fulltext (we'll check for cycles
+as we go).  If we never reach a fulltext, there's a big problem in the
+filesystem, and we shouldn't add to it by committing another delta rep
+against the mess.
 
 
 

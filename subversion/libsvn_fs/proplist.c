@@ -164,7 +164,7 @@ svn_fs__set_prop (skel_t *proplist,
       prev = prop;
     }
 
-  if (! prop)
+  if ((! prop) && value)
     {
       /* The property we were seeking to change is not currently in
          the property list, so well add its name and desired value to

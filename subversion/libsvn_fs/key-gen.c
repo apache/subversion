@@ -166,7 +166,7 @@ svn_fs__next_key (const char *this, apr_size_t *len, char *next)
   /* ... then handle any leftover carry. */
   if (carry)
     {
-      for (i = (olen - 1); i > 0; i--)
+      for (i = (olen - 1); i >= 0; i--)
         next[i + 1] = next[i];
       next[0] = '1';
       *len = olen + 1;
