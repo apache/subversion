@@ -544,7 +544,7 @@ class RepositoryMirror:
   def change_path(self, path, tags, branches,
                   intermediate_dir_func=None,
                   copyfrom_path=None, copyfrom_rev=None,
-                  expected_entries=None):
+                  expected_entries=None, only_if_already_exists=None):
     """Record a change to PATH.  PATH may not have a leading slash.
     Return a Change instance representing the result of the
     change.
@@ -574,7 +574,11 @@ class RepositoryMirror:
 
     No action is taken for keys in EXPECTED_ENTRIES but not in the
     dst; it is assumed that the caller will compensate for these by
-    calling change_path again with other arguments."""
+    calling change_path again with other arguments.
+    
+    If ONLY_IF_ALREADY_EXISTS is set, then do a no-op, rather than an add,
+    if the path does not exist. This is to allow pruning using EXPECTED_ENTRIES
+    without risking erroneously adding a path."""
     if ((copyfrom_rev and not copyfrom_path) or
         (copyfrom_path and not copyfrom_rev)):
       sys.stderr.write("error: change_path() called with one copyfrom "
@@ -602,6 +606,12 @@ class RepositoryMirror:
 
       # Ensure that the parent has an entry for this component.
       if not parent.has_key(component):
+        if only_if_already_exists:
+          if expected_entries:
+            return Change(OP_NOOP, [], [], [])
+          else:
+            return Change(OP_NOOP, [], [])
+        # else
         new_child_key = gen_key()
         parent[component] = new_child_key
         self.nodes_db[new_child_key] = marshal.dumps(self.empty_mutable_thang)
@@ -647,6 +657,11 @@ class RepositoryMirror:
       # else
       op = OP_CHANGE
       new_val = marshal.loads(self.nodes_db[parent[last_component]])
+    elif only_if_already_exists:
+      if expected_entries:
+        return Change(OP_NOOP, [], [], [])
+      else:
+        return Change(OP_NOOP, [], [])
 
     leaf_key = gen_key()
     deletions = []
@@ -981,7 +996,7 @@ class Dumper:
                                            [], [],
                                            self.add_dir,
                                            None, None,
-                                           expected)
+                                           expected, 1)
     for ent in change.deleted_entries:
       self.dumpfile.write('Node-path: %s\n'
                           'Node-action: delete\n'
