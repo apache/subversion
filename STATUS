@@ -14,7 +14,7 @@ Candidate changes:
     Justification:
       Trivial, obviously correct fix.
     Votes:
-      +1: maxb, ghudson
+      +1: maxb, ghudson, clkao
 
   * r10604
     Cleanup some qsort-related stuff.
@@ -58,3 +58,11 @@ Candidate changes:
       in 1.1.x.  So only --force would be added to add from the r10531 rev.
     Votes:
       +1: breser
+
+  * r10711
+    Fix a non-portable temp file creation in SVN::Ra::Callback.  This
+    triggers error on win32 ra_dav.
+    Justification:
+      Perl bindings only; win32 fixes.
+    Votes:
+      +1: clkao
