@@ -67,6 +67,8 @@ struct edit_baton
   /* The object representing the root directory of the svn txn. */
   svn_fs_root_t *txn_root;
 
+  /* The name of the transaction. */
+  const char *txn_name;
 };
 
 
@@ -74,24 +76,17 @@ struct dir_baton
 {
   struct edit_baton *edit_baton;
   struct dir_baton *parent;
-
-  svn_revnum_t base_rev;  /* the revision of this dir in the wc */
-
-  svn_stringbuf_t *path;  /* the -absolute- path to this dir in the fs */
-
-  apr_pool_t *subpool; /* my personal subpool, in which I am allocated. */
-  int ref_count;       /* how many still-open batons depend on my pool. */
+  svn_stringbuf_t *path; /* the -absolute- path to this dir in the fs */
+  apr_pool_t *subpool;   /* my personal subpool, in which I am allocated. */
+  int ref_count;         /* how many still-open batons depend on my pool. */
 };
 
 
 struct file_baton
 {
   struct dir_baton *parent;
-
-  svn_stringbuf_t *path;  /* the -absolute- path to this file in the fs */
-
-  apr_pool_t *subpool;  /* used by apply_textdelta() */
-
+  svn_stringbuf_t *path; /* the -absolute- path to this file in the fs */
+  apr_pool_t *subpool;   /* used by apply_textdelta() */
 };
 
 
@@ -123,6 +118,13 @@ decrement_dir_ref_count (struct dir_baton *db)
 }
 
 
+/* Create and return a generic out-of-dateness error. */
+static svn_error_t *
+out_of_date (const char *path, const char *txn_name, apr_pool_t *pool)
+{
+  return svn_error_createf (SVN_ERR_TXN_OUT_OF_DATE, 0, NULL, pool, 
+                            "out of date: `%s' in txn `%s'", path, txn_name);
+}
 
 
 
@@ -137,12 +139,9 @@ open_root (void *edit_baton,
   struct dir_baton *dirb;
   struct edit_baton *eb = edit_baton;
 
-  /* If we're given an invalid base_revision, we'll base our
-     transaction on the latest revision available at this time. */
-  if (! SVN_IS_VALID_REVNUM(base_revision))
-    {
-      SVN_ERR (svn_fs_youngest_rev (&base_revision, eb->fs, eb->pool));
-    }
+  /* Ignore BASE_REVISION.  We always build our transaction against
+     HEAD. */
+  SVN_ERR (svn_fs_youngest_rev (&base_revision, eb->fs, eb->pool));
 
   /* Begin a subversion transaction, cache its name, and get its
      root object. */
@@ -153,6 +152,7 @@ open_root (void *edit_baton,
                                               &(eb->log_msg),
                                               eb->pool));
   SVN_ERR (svn_fs_txn_root (&(eb->txn_root), eb->txn, eb->pool));
+  SVN_ERR (svn_fs_txn_name (&(eb->txn_name), eb->txn, eb->pool));
   
   /* Finish filling out the root dir baton.  The `base_path' field is
      an -absolute- path in the filesystem, upon which all dir batons
@@ -160,7 +160,6 @@ open_root (void *edit_baton,
   subpool = svn_pool_create (eb->pool);
   dirb = apr_pcalloc (subpool, sizeof (*dirb));
   dirb->edit_baton = edit_baton;
-  dirb->base_rev = base_revision;
   dirb->parent = NULL;
   dirb->subpool = subpool;
   dirb->path = svn_stringbuf_dup (eb->base_path, dirb->subpool);
@@ -179,17 +178,30 @@ delete_entry (svn_stringbuf_t *name,
 {
   struct dir_baton *parent = parent_baton;
   struct edit_baton *eb = parent->edit_baton;
-  svn_stringbuf_t *path_to_kill = svn_stringbuf_dup (parent->path, 
-                                                     parent->subpool);
-  svn_path_add_component (path_to_kill, name, svn_path_repos_style);
+  svn_node_kind_t kind;
+  svn_revnum_t cr_rev;
+  svn_stringbuf_t *path = svn_stringbuf_dup (parent->path, parent->subpool);
+  svn_path_add_component (path, name, svn_path_repos_style);
 
+  /* Check PATH in our transaction.  */
+  kind = svn_fs_check_path (eb->txn_root, path->data, parent->subpool);
+
+  /* If PATH doesn't exist in the txn, that's fine (merge
+     allows this). */
+  if (kind == svn_node_none)
+    return SVN_NO_ERROR;
+
+  /* Now, make sure we're deleting the node we *think* we're
+     deleting, else return an out-of-dateness error. */
+  SVN_ERR (svn_fs_node_created_rev (&cr_rev, eb->txn_root, path->data,
+                                    parent->subpool));
+  if (revision < cr_rev)
+    return out_of_date (path->data, eb->txn_name, parent->subpool);
+  
   /* This routine is a mindless wrapper.  We call svn_fs_delete_tree
      because that will delete files and recursively delete
      directories.  */
-  SVN_ERR (svn_fs_delete_tree (eb->txn_root, path_to_kill->data,
-                               parent->subpool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_delete_tree (eb->txn_root, path->data, parent->subpool);
 }
 
 
@@ -202,11 +214,13 @@ add_directory (svn_stringbuf_t *name,
                svn_revnum_t copyfrom_revision,
                void **child_baton)
 {
-  apr_pool_t *subpool;
   struct dir_baton *new_dirb;
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  
+  apr_pool_t *subpool = svn_pool_create (pb->subpool);
+  svn_stringbuf_t *path = svn_stringbuf_dup (pb->path, subpool);
+  svn_path_add_component (path, name, svn_path_repos_style);
+
   /* Sanity check. */  
   if (copyfrom_path && (copyfrom_revision <= 0))
     return 
@@ -217,14 +231,12 @@ add_directory (svn_stringbuf_t *name,
 
   /* Build a new dir baton for this directory in a subpool of parent's
      pool. */
-  subpool = svn_pool_create (pb->subpool);
   new_dirb = apr_pcalloc (subpool, sizeof (*new_dirb));
   new_dirb->edit_baton = eb;
   new_dirb->parent = pb;
   new_dirb->ref_count = 1;
   new_dirb->subpool = subpool;
-  new_dirb->path = svn_stringbuf_dup (pb->path, new_dirb->subpool);
-  svn_path_add_component (new_dirb->path, name, svn_path_repos_style);
+  new_dirb->path = path;
   
   /* Increment parent's refcount. */
   pb->ref_count++;
@@ -234,6 +246,13 @@ add_directory (svn_stringbuf_t *name,
       svn_stringbuf_t *repos_path; 
       svn_stringbuf_t *fs_path;
       svn_fs_root_t *copyfrom_root;
+      svn_node_kind_t kind;
+
+      /* Check PATH in our transaction.  Make sure it does not exist,
+         else return an out-of-dateness error. */
+      kind = svn_fs_check_path (eb->txn_root, path->data, subpool);
+      if (kind != svn_node_none)
+        return out_of_date (path->data, eb->txn_name, subpool);
 
       /* This add has history.  Let's split the copyfrom_url. */
       SVN_ERR (svn_ra_local__split_URL (&repos_path, &fs_path,
@@ -250,25 +269,20 @@ add_directory (svn_stringbuf_t *name,
       
       /* Now use the "fs_path" as an absolute path within the
          repository to make the copy from. */      
-
       SVN_ERR (svn_fs_revision_root (&copyfrom_root, eb->fs,
                                      copyfrom_revision, new_dirb->subpool));
 
       SVN_ERR (svn_fs_copy (copyfrom_root, fs_path->data,
                             eb->txn_root, new_dirb->path->data,
                             new_dirb->subpool));
-
-      /* And don't forget to fill out the the dir baton! */
-      new_dirb->base_rev = copyfrom_revision;
     }
   else
     {
-      /* No ancestry given, just make a new directory. */      
+      /* No ancestry given, just make a new directory.  We don't
+         bother with an out-of-dateness check here because
+         svn_fs_make_dir will error out if PATH already exists.  */      
       SVN_ERR (svn_fs_make_dir (eb->txn_root, new_dirb->path->data,
                                 new_dirb->subpool));
-
-      /* Inherent revision from parent. */
-      new_dirb->base_rev = pb->base_rev;
     }
 
   *child_baton = new_dirb;
@@ -283,39 +297,30 @@ open_directory (svn_stringbuf_t *name,
                 svn_revnum_t base_revision,
                 void **child_baton)
 {
-  apr_pool_t *subpool;
   struct dir_baton *new_dirb;
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
+  apr_pool_t *subpool = svn_pool_create (pb->subpool);
+  svn_node_kind_t kind;
+  svn_stringbuf_t *path = svn_stringbuf_dup (pb->path, subpool);
+  svn_path_add_component (path, name, svn_path_repos_style);
+
+  /* Check PATH in our transaction.  Make sure it does not exist,
+     else return an out-of-dateness error. */
+  kind = svn_fs_check_path (eb->txn_root, path->data, subpool);
+  if (kind == svn_node_none)
+    return out_of_date (path->data, eb->txn_name, subpool);
 
   /* Build a new dir baton for this directory */
-  subpool = svn_pool_create (pb->subpool);
   new_dirb = apr_pcalloc (subpool, sizeof (*new_dirb));
   new_dirb->edit_baton = eb;
   new_dirb->parent = pb;
   new_dirb->subpool = subpool;
   new_dirb->ref_count = 1;
-  new_dirb->path = svn_stringbuf_dup (pb->path, new_dirb->subpool);
-  svn_path_add_component (new_dirb->path, name, svn_path_repos_style);
+  new_dirb->path = path;
 
   /* Increment parent's refcount. */
   pb->ref_count++;
-
-  /* If this dir is at a different revision than its parent, make a
-     cheap copy into our transaction. */
-  if (base_revision != pb->base_rev)
-    {
-      svn_fs_root_t *other_root;
-
-      SVN_ERR (svn_fs_revision_root (&other_root, eb->fs,
-                                     base_revision, new_dirb->subpool));
-      SVN_ERR (svn_fs_link (other_root, new_dirb->path->data,
-                            eb->txn_root, new_dirb->path->data,
-                            new_dirb->subpool));
-    }
-  else
-    /* If it's the same rev as parent, just inherit the rev_root. */
-    new_dirb->base_rev = pb->base_rev;
 
   *child_baton = new_dirb;
   return SVN_NO_ERROR;
@@ -377,10 +382,12 @@ add_file (svn_stringbuf_t *name,
           long int copy_revision,
           void **file_baton)
 {
-  apr_pool_t *subpool;
   struct file_baton *new_fb;
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
+  apr_pool_t *subpool = svn_pool_create (pb->subpool);
+  svn_stringbuf_t *path = svn_stringbuf_dup (pb->path, subpool);
+  svn_path_add_component (path, name, svn_path_repos_style);
 
   /* Sanity check. */  
   if (copy_path && (copy_revision <= 0))
@@ -391,12 +398,10 @@ add_file (svn_stringbuf_t *name,
        name->data);
 
   /* Build a new file baton */
-  subpool = svn_pool_create (pb->subpool);
   new_fb = apr_pcalloc (subpool, sizeof (*new_fb));
   new_fb->parent = pb;
   new_fb->subpool = subpool;
-  new_fb->path = svn_stringbuf_dup (pb->path, new_fb->subpool);
-  svn_path_add_component (new_fb->path, name, svn_path_repos_style);
+  new_fb->path = path;
 
   /* Increment parent's refcount. */
   pb->ref_count++;
@@ -406,6 +411,13 @@ add_file (svn_stringbuf_t *name,
       svn_stringbuf_t *repos_path; 
       svn_stringbuf_t *fs_path;
       svn_fs_root_t *copy_root;
+      svn_node_kind_t kind;
+
+      /* Check PATH in our transaction.  It had better not exist, or
+         our transaction is out of date. */
+      kind = svn_fs_check_path (eb->txn_root, path->data, subpool);
+      if (kind != svn_node_none)
+        return out_of_date (path->data, eb->txn_name, subpool);
 
       /* This add has history.  Let's split the copyfrom_url. */
       SVN_ERR (svn_ra_local__split_URL (&repos_path, &fs_path,
@@ -431,7 +443,10 @@ add_file (svn_stringbuf_t *name,
     }
   else
     {
-      /* No ancestry given, just make a new, empty file. */      
+      /* No ancestry given, just make a new, empty file.  Note that we
+         don't perform an existence check here like the copy-from case
+         does -- that's because svn_fs_make_file() already errors out
+         if the file already exists.  */
       SVN_ERR (svn_fs_make_file (eb->txn_root, new_fb->path->data,
                                  new_fb->subpool));
     }
@@ -449,35 +464,31 @@ open_file (svn_stringbuf_t *name,
            svn_revnum_t base_revision,
            void **file_baton)
 {
-  apr_pool_t *subpool;
   struct file_baton *new_fb;
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
+  svn_revnum_t cr_rev;
+  apr_pool_t *subpool = svn_pool_create (pb->subpool);
+  svn_stringbuf_t *path = svn_stringbuf_dup (pb->path, subpool);
+  svn_path_add_component (path, name, svn_path_repos_style);
 
   /* Build a new file baton */
-  subpool = svn_pool_create (pb->subpool);
   new_fb = apr_pcalloc (subpool, sizeof (*new_fb));
   new_fb->parent = pb;
   new_fb->subpool = subpool;
-  new_fb->path = svn_stringbuf_dup (pb->path, new_fb->subpool);
-  svn_path_add_component (new_fb->path, name, svn_path_repos_style);
-
+  new_fb->path = path;
+  
+  /* Get this node's creation revision (doubles as an existence check). */
+  SVN_ERR (svn_fs_node_created_rev (&cr_rev, eb->txn_root,
+                                    path->data, new_fb->subpool));
+  
+  /* If the node our caller has has an older revision number than the
+     one in our transaction, return an out-of-dateness error. */
+  if (base_revision < cr_rev)
+    return out_of_date (path->data, eb->txn_name, subpool);
+  
   /* Increment parent's refcount. */
   pb->ref_count++;
-
-  /* If this file is at a different revision than its parent, make a
-     cheap copy into our transaction. */
-  if (base_revision != pb->base_rev)
-    {
-      svn_fs_root_t *other_root;
-
-      SVN_ERR (svn_fs_revision_root (&other_root, eb->fs,
-                                     base_revision, new_fb->subpool));
-      SVN_ERR (svn_fs_link (other_root, new_fb->path->data,
-                            eb->txn_root, new_fb->path->data,
-                            new_fb->subpool));
-    }
-
 
   *file_baton = new_fb;
   return SVN_NO_ERROR;

@@ -1035,8 +1035,7 @@ report_single_mod (const char *name,
      or was already 'deleted' in an earlier commit. */
   if (! adds_only)
     if ((entry->schedule == svn_wc_schedule_delete)
-        || (entry->schedule == svn_wc_schedule_replace)
-        || (entry->existence == svn_wc_existence_deleted))
+        || (entry->schedule == svn_wc_schedule_replace))
       {
         do_delete = TRUE;
       }
