@@ -183,18 +183,19 @@ svn_cl__diff (apr_getopt_t *os,
           target1 = svn_path_join (old_target, path, subpool);
           target2 = svn_path_join (new_target, path, subpool);
           
-          SVN_ERR (svn_client_diff (options,
-                                    target1,
-                                    &(opt_state->start_revision),
-                                    target2,
-                                    &(opt_state->end_revision),
-                                    opt_state->nonrecursive ? FALSE : TRUE,
-                                    opt_state->notice_ancestry ? FALSE : TRUE,
-                                    opt_state->no_diff_deleted,
-                                    outfile,
-                                    errfile,
-                                    ((svn_cl__cmd_baton_t *)baton)->ctx,
-                                    pool));
+          SVN_ERR (svn_client_diff2 (options,
+                                     target1,
+                                     &(opt_state->start_revision),
+                                     target2,
+                                     &(opt_state->end_revision),
+                                     opt_state->nonrecursive ? FALSE : TRUE,
+                                     opt_state->notice_ancestry ? FALSE : TRUE,
+                                     opt_state->no_diff_deleted,
+                                     opt_state->force,
+                                     outfile,
+                                     errfile,
+                                     ((svn_cl__cmd_baton_t *)baton)->ctx,
+                                     pool));
         }
       else
         {
@@ -209,20 +210,21 @@ svn_cl__diff (apr_getopt_t *os,
             peg_revision.kind = svn_path_is_url (path)
               ? svn_opt_revision_head : svn_opt_revision_working;
 
-          SVN_ERR (svn_client_diff_peg (options,
-                                        truepath,
-                                        &peg_revision,
-                                        &opt_state->start_revision,
-                                        &opt_state->end_revision,
-                                        opt_state->nonrecursive
-                                        ? FALSE : TRUE,
-                                        opt_state->notice_ancestry
-                                        ? FALSE : TRUE,
-                                        opt_state->no_diff_deleted,
-                                        outfile,
-                                        errfile,
-                                        ((svn_cl__cmd_baton_t *)baton)->ctx,
-                                        pool));
+          SVN_ERR (svn_client_diff_peg2 (options,
+                                         truepath,
+                                         &peg_revision,
+                                         &opt_state->start_revision,
+                                         &opt_state->end_revision,
+                                         opt_state->nonrecursive
+                                         ? FALSE : TRUE,
+                                         opt_state->notice_ancestry
+                                         ? FALSE : TRUE,
+                                         opt_state->no_diff_deleted,
+                                         opt_state->force,
+                                         outfile,
+                                         errfile,
+                                         ((svn_cl__cmd_baton_t *)baton)->ctx,
+                                         pool));
         }
     }
   svn_pool_destroy (subpool);

@@ -1696,6 +1696,82 @@ def diff_keywords(sbox):
   verify_excluded_output(diff_output, "$Id: ")
 
 
+def diff_force(sbox):
+  "show diffs for binary files with --force"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  iota_path = os.path.join(wc_dir, 'iota')
+  
+  # Append a line to iota and make it binary.
+  svntest.main.file_append(iota_path, "new line")
+  svntest.main.run_svn(None, 'propset', 'svn:mime-type',
+                       'application/octet-stream', iota_path)  
+
+  # Created expected output tree for 'svn ci'
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'iota' : Item(status='  ', wc_rev=2, repos_rev=2),
+    })
+
+  # Commit iota, creating revision 2.
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Add another line, while keeping he file as binary.
+  svntest.main.file_append(iota_path, "another line")
+
+  # Commit creating rev 3.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'iota' : Item(status='  ', wc_rev=3, repos_rev=3),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Check that we get diff when the first, the second and both files are
+  # marked as binary.
+
+  re_nodisplay = re.compile('^Cannot display:')
+
+  stdout, stderr = svntest.main.run_svn(None, 'diff', '-r1:2', iota_path,
+                                        '--force')
+
+  for line in stdout:
+    if (re_nodisplay.match(line)):
+      raise svntest.Failure
+
+  stdout, stderr = svntest.main.run_svn(None, 'diff', '-r2:1', iota_path,
+                                        '--force')
+
+  for line in stdout:
+    if (re_nodisplay.match(line)):
+      raise svntest.Failure
+
+  stdout, stderr = svntest.main.run_svn(None, 'diff', '-r2:3', iota_path,
+                                        '--force')
+
+  for line in stdout:
+    if (re_nodisplay.match(line)):
+      raise svntest.Failure
+
+
+
 ########################################################################
 #Run the tests
 
@@ -1727,6 +1803,7 @@ test_list = [ None,
               diff_within_renamed_dir,
               XFail(diff_prop_on_named_dir),
               diff_keywords,
+              diff_force
               ]
 
 if __name__ == '__main__':

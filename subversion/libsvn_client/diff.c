@@ -78,7 +78,7 @@ file_printf_from_utf8 (apr_file_t *fptr, const char *format, ...)
 
 /* A helper func that writes out verbal descriptions of property diffs
    to FILE.   Of course, the apr_file_t will probably be the 'outfile'
-   passed to svn_client_diff, which is probably stdout. */
+   passed to svn_client_diff2, which is probably stdout. */
 static svn_error_t *
 display_prop_diffs (const apr_array_header_t *propchanges,
                     apr_hash_t *original_props,
@@ -208,7 +208,7 @@ check_schema_match (svn_wc_adm_access_t *adm_access, const char *url)
       return svn_error_createf
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
          _("Access schema mixtures not yet supported ('%s' and '%s')"),
-	 url, ent->url);
+         url, ent->url);
     }
 
   /* else */
@@ -236,7 +236,7 @@ struct diff_cmd_baton {
   const char *orig_path_2;
 
   /* These are the numeric representations of the revisions passed to
-     svn_client_diff, either may be SVN_INVALID_REVNUM.  We need these
+     svn_client_diff2, either may be SVN_INVALID_REVNUM.  We need these
      because some of the svn_wc_diff_callbacks2_t don't get revision
      arguments.
 
@@ -249,9 +249,12 @@ struct diff_cmd_baton {
   /* Client config hash (may be NULL). */
   apr_hash_t *config;
 
+  /* Set this if you want diff output even for binary files. */
+  svn_boolean_t force_binary;
+
   /* Set this flag if you want diff_file_changed to output diffs
      unconditionally, even if the diffs are empty. */
-  svn_boolean_t force_diff_output;
+  svn_boolean_t force_empty;
 
 };
 
@@ -395,14 +398,15 @@ diff_content_changed (const char *path,
   label1 = diff_label (path1, rev1, subpool);
   label2 = diff_label (path2, rev2, subpool);
 
-  /* Possible easy-out: if either mime-type is binary, don't attempt
-     to generate a viewable diff at all.   Print a warning and exit. */
+  /* Possible easy-out: if either mime-type is binary and force was not
+     specified, don't attempt to generate a viewable diff at all.
+     Print a warning and exit. */
   if (mimetype1)
     mt1_binary = svn_mime_type_is_binary (mimetype1);
   if (mimetype2)
     mt2_binary = svn_mime_type_is_binary (mimetype2);
 
-  if (mt1_binary || mt2_binary)
+  if (! diff_cmd_baton->force_binary && (mt1_binary || mt2_binary))
     {
       /* Print out the diff header. */
       SVN_ERR (svn_stream_printf (os, subpool,
@@ -490,7 +494,7 @@ diff_content_changed (const char *path,
 
       SVN_ERR (svn_diff_file_diff (&diff, tmpfile1, tmpfile2, subpool));
 
-      if (svn_diff_contains_diffs (diff) || diff_cmd_baton->force_diff_output)
+      if (svn_diff_contains_diffs (diff) || diff_cmd_baton->force_empty)
         {
           /* Print out the diff header. */
           SVN_ERR (svn_stream_printf (os, subpool,
@@ -572,7 +576,7 @@ diff_file_added (svn_wc_adm_access_t *adm_access,
      added.)  It's important, because 'patch' would still see an empty
      diff and create an empty file.  It's also important to let the
      user see that *something* happened. */
-  diff_cmd_baton->force_diff_output = TRUE;
+  diff_cmd_baton->force_empty = TRUE;
 
   SVN_ERR (diff_file_changed (adm_access, content_state, prop_state, path,
                               tmpfile1, tmpfile2, 
@@ -580,7 +584,7 @@ diff_file_added (svn_wc_adm_access_t *adm_access,
                               mimetype1, mimetype2,
                               prop_changes, original_props, diff_baton));
   
-  diff_cmd_baton->force_diff_output = FALSE;
+  diff_cmd_baton->force_empty = FALSE;
 
   return SVN_NO_ERROR;
 }
@@ -716,7 +720,7 @@ merge_props_changed (svn_wc_adm_access_t *adm_access,
       err = svn_wc_merge_prop_diffs (state, path, adm_access, props,
                                      FALSE, merge_b->dry_run, subpool);
       if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND
-		  || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
+                  || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
         {
           /* if the entry doesn't exist in the wc, just 'skip' over
              this part of the tree-delta. */
@@ -1382,7 +1386,7 @@ do_merge (const char *initial_URL1,
     {
       return svn_error_create
         (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-	 _("Not all required revisions are specified"));
+         _("Not all required revisions are specified"));
     }
 
   /* Establish first RA session to URL1. */
@@ -1631,7 +1635,7 @@ do_single_file_merge (const char *initial_URL1,
 
 /* A Theoretical Note From Ben, regarding do_diff().
 
-   This function is really svn_client_diff().  If you read the public
+   This function is really svn_client_diff2().  If you read the public
    API description for svn_client_diff, it sounds quite Grand.  It
    sounds really generalized and abstract and beautiful: that it will
    diff any two paths, be they working-copy paths or URLs, at any two
@@ -1652,7 +1656,7 @@ do_single_file_merge (const char *initial_URL1,
    pigeonholed into one of these three use-cases, we currently bail
    with a friendly apology.
 
-   Perhaps someday a brave soul will truly make svn_client_diff
+   Perhaps someday a brave soul will truly make svn_client_diff2
    perfectly general.  For now, we live with the 90% case.  Certainly,
    the commandline client only calls this function in legal ways.
    When there are other users of svn_client.h, maybe this will become
@@ -1665,7 +1669,7 @@ static svn_error_t *
 unsupported_diff_error (svn_error_t *child_err)
 {
   return svn_error_create (SVN_ERR_INCORRECT_PARAMS, child_err,
-                           _("Sorry, svn_client_diff was called in a way "
+                           _("Sorry, svn_client_diff2 was called in a way "
                            "that is not yet supported"));
 }
 
@@ -1675,7 +1679,7 @@ unsupported_diff_error (svn_error_t *child_err)
    PATH1 and PATH2 are both working copy paths.  REVISION1 and
    REVISION2 are their respective revisions.
 
-   All other options are the same as those passed to svn_client_diff(). */
+   All other options are the same as those passed to svn_client_diff2(). */
 static svn_error_t *
 diff_wc_wc (const apr_array_header_t *options,
             const char *path1,
@@ -1730,7 +1734,7 @@ diff_wc_wc (const apr_array_header_t *options,
    and the actual two paths compared are determined by following copy
    history from PATH2.
 
-   All other options are the same as those passed to svn_client_diff(). */
+   All other options are the same as those passed to svn_client_diff2(). */
 static svn_error_t *
 diff_repos_repos (const apr_array_header_t *options,
                   const char *path1,
@@ -1896,7 +1900,7 @@ diff_repos_repos (const apr_array_header_t *options,
    revision, and the actual repository path to be compared is
    determined by following copy history.
 
-   All other options are the same as those passed to svn_client_diff(). */
+   All other options are the same as those passed to svn_client_diff2(). */
 static svn_error_t *
 diff_repos_wc (const apr_array_header_t *options,
                const char *path1,
@@ -2011,7 +2015,7 @@ diff_repos_wc (const apr_array_header_t *options,
 }
 
 
-/* This is basically just the guts of svn_client_diff(). */
+/* This is basically just the guts of svn_client_diff2(). */
 static svn_error_t *
 do_diff (const apr_array_header_t *options,
          const char *path1,
@@ -2096,7 +2100,7 @@ do_diff (const apr_array_header_t *options,
   return SVN_NO_ERROR;
 }
 
-/* This is basically just the guts of svn_client_diff_peg(). */
+/* This is basically just the guts of svn_client_diff_peg2(). */
 static svn_error_t *
 do_diff_peg (const apr_array_header_t *options,
              const char *path,
@@ -2208,28 +2212,29 @@ do_diff_peg (const apr_array_header_t *options,
       ------------++------------+------------+------------+
       * These cases require server communication.
 
-   Svn_client_diff() is the single entry point for all of the diff
+   Svn_client_diff2() is the single entry point for all of the diff
    operations, and will be in charge of examining the inputs and
    making decisions about how to accurately report contextual diffs.
 
-   NOTE:  In the near future, svn_client_diff() will likely only
+   NOTE:  In the near future, svn_client_diff2() will likely only
    continue to report textual differences in files.  Property diffs
    are important, too, and will need to be supported in some fashion
    so that this code can be re-used for svn_client_merge(). 
 */
 svn_error_t *
-svn_client_diff (const apr_array_header_t *options,
-                 const char *path1,
-                 const svn_opt_revision_t *revision1,
-                 const char *path2,
-                 const svn_opt_revision_t *revision2,
-                 svn_boolean_t recurse,
-                 svn_boolean_t ignore_ancestry,
-                 svn_boolean_t no_diff_deleted,
-                 apr_file_t *outfile,
-                 apr_file_t *errfile,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
+svn_client_diff2 (const apr_array_header_t *options,
+                  const char *path1,
+                  const svn_opt_revision_t *revision1,
+                  const char *path2,
+                  const svn_opt_revision_t *revision2,
+                  svn_boolean_t recurse,
+                  svn_boolean_t ignore_ancestry,
+                  svn_boolean_t no_diff_deleted,
+                  svn_boolean_t force,
+                  apr_file_t *outfile,
+                  apr_file_t *errfile,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
 {
   struct diff_cmd_baton diff_cmd_baton;
   svn_wc_diff_callbacks2_t diff_callbacks;
@@ -2253,6 +2258,8 @@ svn_client_diff (const apr_array_header_t *options,
   diff_cmd_baton.revnum2 = SVN_INVALID_REVNUM;
 
   diff_cmd_baton.config = ctx->config;
+  diff_cmd_baton.force_empty = FALSE;
+  diff_cmd_baton.force_binary = force;
 
   return do_diff (options,
                   path1, revision1,
@@ -2264,20 +2271,39 @@ svn_client_diff (const apr_array_header_t *options,
                   pool);
 }
 
+svn_error_t *
+svn_client_diff (const apr_array_header_t *options,
+                 const char *path1,
+                 const svn_opt_revision_t *revision1,
+                 const char *path2,
+                 const svn_opt_revision_t *revision2,
+                 svn_boolean_t recurse,
+                 svn_boolean_t ignore_ancestry,
+                 svn_boolean_t no_diff_deleted,
+                 apr_file_t *outfile,
+                 apr_file_t *errfile,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  return svn_client_diff2 (options, path1, revision1, path2, revision2,
+                           recurse, ignore_ancestry, no_diff_deleted, FALSE,
+                           outfile, errfile, ctx, pool);
+}
 
 svn_error_t *
-svn_client_diff_peg (const apr_array_header_t *options,
-                     const char *path,
-                     const svn_opt_revision_t *peg_revision,
-                     const svn_opt_revision_t *start_revision,
-                     const svn_opt_revision_t *end_revision,
-                     svn_boolean_t recurse,
-                     svn_boolean_t ignore_ancestry,
-                     svn_boolean_t no_diff_deleted,
-                     apr_file_t *outfile,
-                     apr_file_t *errfile,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool)
+svn_client_diff_peg2 (const apr_array_header_t *options,
+                      const char *path,
+                      const svn_opt_revision_t *peg_revision,
+                      const svn_opt_revision_t *start_revision,
+                      const svn_opt_revision_t *end_revision,
+                      svn_boolean_t recurse,
+                      svn_boolean_t ignore_ancestry,
+                      svn_boolean_t no_diff_deleted,
+                      svn_boolean_t force,
+                      apr_file_t *outfile,
+                      apr_file_t *errfile,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool)
 {
   struct diff_cmd_baton diff_cmd_baton;
   svn_wc_diff_callbacks2_t diff_callbacks;
@@ -2301,6 +2327,8 @@ svn_client_diff_peg (const apr_array_header_t *options,
   diff_cmd_baton.revnum2 = SVN_INVALID_REVNUM;
 
   diff_cmd_baton.config = ctx->config;
+  diff_cmd_baton.force_empty = FALSE;
+  diff_cmd_baton.force_binary = force;
 
   return do_diff_peg (options,
                       path, peg_revision,
@@ -2312,6 +2340,25 @@ svn_client_diff_peg (const apr_array_header_t *options,
                       pool);
 }
 
+svn_error_t *
+svn_client_diff_peg (const apr_array_header_t *options,
+                     const char *path,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *start_revision,
+                     const svn_opt_revision_t *end_revision,
+                     svn_boolean_t recurse,
+                     svn_boolean_t ignore_ancestry,
+                     svn_boolean_t no_diff_deleted,
+                     apr_file_t *outfile,
+                     apr_file_t *errfile,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
+{
+  return svn_client_diff_peg2 (options, path, peg_revision,
+                               start_revision, end_revision, recurse,
+                               ignore_ancestry, no_diff_deleted, FALSE,
+                               outfile, errfile, ctx, pool);
+}
 
 svn_error_t *
 svn_client_merge (const char *source1,
