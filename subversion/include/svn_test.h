@@ -23,6 +23,7 @@ extern "C" {
 
 #include <apr_pools.h>
 #include "svn_delta.h"
+#include "svn_path.h"
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_string.h"
@@ -32,82 +33,97 @@ extern "C" {
 /* Set *EDITOR and *EDIT_BATON to an editor that prints its arguments
  * to OUT_STREAM.  The edit starts at PATH, that is, PATH will be
  * prepended to the appropriate paths in the output.  Allocate the
- * editor in POOL. 
+ * editor in POOL.  The STYLE parameter exists to make this editor
+ * fully compatible with all supported Subversion path types, and
+ * should of course represent the path style appropriate for the
+ * supplied PATH.
+ *
+ * VERBOSE is a flag for specifying whether or not your want all the
+ * nitty gritty details displayed.  When VERBOSE is FALSE, each editor
+ * function will print only a one-line summary. 
  *
  * INDENTATION is the number of spaces to indent by at each level; use
  * 0 for no indentation.  The indent level is always the same for a
  * given call (i.e, stack frame).
+ * 
+ */
+
+/* SOME EXAMPLES */
+
+/* 
+ * With an indentation of 3, and with verbose = TRUE
  *
- * Without indentation, the output looks like this (where "blah" and
- * "N" are strings and numbers, respectively):
+
+[EDITOR] set_target_revision (23)
+[EDITOR] replace_root (wc)
+   base_revision: 1
+   [EDITOR] replace_directory (A)
+      parent: wc
+      base_revision: 1
+      [EDITOR] replace_directory (B)
+         parent: wc/A
+         base_revision: 1
+      [EDITOR] change_dir_prop (wc/A/B)
+         name: foo
+         value: bar
+      [EDITOR] close_directory (wc/A/B)
+   [EDITOR] delete_entry (mu)
+   [EDITOR] close_directory (wc/A)
+   [EDITOR] add_file (zeta)
+      parent: wc
+      copyfrom_path: 
+      copyfrom_revision: 0
+   [EDITOR] replace_file (iota)
+      parent: wc
+      base_revision: 1
+   [EDITOR] apply_textdelta (iota)
+      [EDITOR] window_handler (3 ops)
+         (1) new text: length 4
+         (2) target text: offset 24, length 6
+         (3) unknown window type
+      [EDITOR] window_handler (EOT)
+   [EDITOR] close_directory (iota)
+   [EDITOR] apply_textdelta (zeta)
+      [EDITOR] window_handler (1 ops)
+         (1) new text: length 4
+      [EDITOR] window_handler (EOT)
+   [EDITOR] close_directory (zeta)
+[EDITOR] close_edit
+*/
+
+/* 
+ * With an indentation of 3, and with verbose = FALSE
  *
- *   CALLED set_target_revision
- *   target_revision: N
- *
- *   CALLED replace_root
- *   path: blah
- *   base_revision: N
- *
- *   CALLED delete_entry
- *   parent: blah
- *   name: blah
- *
- *   CALLED add_directory
- *   parent: blah
- *   name: blah
- *   copyfrom_path: blah
- *   copyfrom_revision: N
- *
- *   CALLED replace_directory
- *   parent: blah
- *   name: blah
- *   base_revision: N
- *
- *   CALLED change_dir_prop
- *   path: blah
- *   name: blah
- *   value: blah
- *
- *   CALLED close_directory
- *   path: blah
- *
- *   CALLED add_file
- *   parent: blah
- *   name: blah
- *   copyfrom_path: blah
- *   copyfrom_revision: N
- *
- *   CALLED replace_file
- *   parent: blah
- *   name: blah
- *   base_revision: N
- *
- *   CALLED apply_textdelta
- *   path: blah
- *
- *   CALLED window_handler
- *   new text: length N                          // For window_handler,
- *   source text: offset N, length M             // just one of these four
- *   target text: offset N, length M             // lines will be printed
- *   end                                         // for a given call.
- *
- *   CALLED change_file_prop
- *   path: blah
- *   name: blah
- *   value: blah
- *
- *   CALLED close_file
- *   path: blah
- *
- *   CALLED close_edit
- *
+
+[EDITOR] set_target_revision (23)
+[EDITOR] replace_root (wc)
+   [EDITOR] replace_directory (A)
+      [EDITOR] replace_directory (B)
+      [EDITOR] change_dir_prop (wc/A/B)
+      [EDITOR] close_directory (wc/A/B)
+   [EDITOR] delete_entry (mu)
+   [EDITOR] close_directory (wc/A)
+   [EDITOR] add_file (zeta)
+   [EDITOR] replace_file (iota)
+   [EDITOR] apply_textdelta (iota)
+   [EDITOR] close_directory (iota)
+   [EDITOR] apply_textdelta (zeta)
+   [EDITOR] close_directory (zeta)
+[EDITOR] close_edit
+*/
+
+
+/*
  * This is implemented in tests/libsvn_test_editor.la
  */
 svn_error_t *svn_test_get_editor (const svn_delta_edit_fns_t **editor,
                                   void **edit_baton,
+                                  svn_string_t *editor_name,
                                   svn_stream_t *out_stream,
                                   int indentation,
+                                  svn_boolean_t verbose,
                                   svn_string_t *path,
+                                  enum svn_path_style style,
                                   apr_pool_t *pool);
      
 #endif /* SVN_TEST_H */
