@@ -53,12 +53,13 @@
       sees only the latest version of the filesystem tree.  But the
       client also has the ability to view
       <emphasis>previous</emphasis> states of the filesystem.  For
-      example, a client can ask historical questions like, "what did
-      this directory contain last Wednesday?", or "who was the last
-      person to change this file, and what changes did they make?"
-      These are the sorts of questions that are at the heart of any
-      <firstterm>version control system</firstterm>: systems that are
-      designed to record and track changes to data over time.
+      example, a client can ask historical questions like, <quote>What
+      did this directory contain last Wednesday?</quote> or <quote>Who
+      was the last person to change this file, and what changes did
+      they make?</quote> These are the sorts of questions that are at
+      the heart of any <firstterm>version control system</firstterm>:
+      systems that are designed to record and track changes to data
+      over time.
     </para>
 
   </sect1>
@@ -106,14 +107,15 @@
         <firstterm>lock-modify-unlock</firstterm> model to address
         this problem, which is a very simple solution.  In such a
         system, the repository allows only one person to change a file
-        at a time.  First Harry must "lock" the file before he can begin
-        making changes to it.  Locking a file is a lot like borrowing
-        a book from the library; if Harry has locked a file, then Sally
-        cannot make any changes to it.  If she tries to lock the file,
-        the repository will deny the request.  All she can do is read
-        the file, and wait for Harry to finish his changes and release
-        his lock.  After Harry unlocks the file, his turn is over, and
-        now Sally can take her turn by locking and editing.</para>
+        at a time.  First Harry must <quote>lock</quote> the file
+        before he can begin making changes to it.  Locking a file is a
+        lot like borrowing a book from the library; if Harry has
+        locked a file, then Sally cannot make any changes to it.  If
+        she tries to lock the file, the repository will deny the
+        request.  All she can do is read the file, and wait for Harry
+        to finish his changes and release his lock.  After Harry
+        unlocks the file, his turn is over, and now Sally can take her
+        turn by locking and editing.</para>
       
       <figure id="svn-ch2-dia3">
         <title>The Lock-Modify-Unlock Solution</title>
@@ -181,7 +183,7 @@
       <para>Here's an example.  Say that Harry and Sally each create
         working copies of the same project, copied from the
         repository.  They work concurrently, and make changes to the
-        same file "A" within their copies.  Sally saves her changes to
+        same file A within their copies.  Sally saves her changes to
         the repository first.  When Harry attempts to save his changes
         later, the repository informs him that his file A is
         <firstterm>out-of-date</firstterm>.  In other words, that file
@@ -259,11 +261,11 @@
 
       <para>After you've made some changes to the files in your
         working copy and verified that they work properly, Subversion
-        provides you with commands to "publish" your changes to the
-        other people working with you on your project (by writing to
-        the repository).  If other people publish their own changes,
-        Subversion provides you with commands to merge those changes
-        into your working directory (by reading from the
+        provides you with commands to <quote>publish</quote> your
+        changes to the other people working with you on your project
+        (by writing to the repository).  If other people publish their
+        own changes, Subversion provides you with commands to merge
+        those changes into your working directory (by reading from the
         repository).</para>
 
       <para>A working copy also contains some extra files, created and
@@ -296,11 +298,11 @@
 
       <para>To get a working copy, you must <firstterm>check
         out</firstterm> some subtree of the repository.  (The term
-        "check out" may sound like it has something to do with locking
-        or reserving resources, but it doesn't; it simply creates a
-        private copy of the project for you.) For example, if you
-        check out <filename>/calc</filename>, you will get a working
-        copy like this: </para>
+        <quote>check out</quote> may sound like it has something to do
+        with locking or reserving resources, but it doesn't; it simply
+        creates a private copy of the project for you.) For example,
+        if you check out <filename>/calc</filename>, you will get a
+        working copy like this: </para>
 
 <screen>
 $ svn checkout http://svn.example.com/repos/calc
@@ -505,7 +507,7 @@ U button.c
       </figure>
 
 
-        <sidebar>
+      <sidebar>
         <title>Global Revision Numbers</title>
          
         <para>Unlike those of many other version control systems,
@@ -520,10 +522,9 @@ U button.c
           ``<filename>foo.c</filename> as it appears in revision 5.''
           Notice that in general, revisions N and M of a file do
           <emphasis>not</emphasis> necessarily differ!  Because CVS
-          uses per-file revisions numbers, CVS users might want to
-          look at Appendix A, "SVN for CVS Users", for more details.
-          <!-- ### add xref here! --></para>
-        </sidebar>
+          uses per-file revisions numbers, CVS users might want to see
+          <xref linkend="svn-ap-a"/> for more details.</para>
+      </sidebar>
 
       <para>It's important to note that working copies do not always
         correspond to any single revision in the repository; they may
@@ -636,12 +637,12 @@ calc/Makefile:6
 
           <listitem><para>The file has been changed both in the
           working directory, and in the repository.  An <command>svn
-          commit</command> of the file will fail with an "out-of-date"
-          error.  The file should be updated first; an <command>svn
-          update</command> command will attempt to merge the public
-          changes with the local changes.  If Subversion can't
-          complete the merge in a plausible way automatically, it
-          leaves it to the user to resolve the
+          commit</command> of the file will fail with an
+          <quote>out-of-date</quote> error.  The file should be
+          updated first; an <command>svn update</command> command will
+          attempt to merge the public changes with the local changes.
+          If Subversion can't complete the merge in a plausible way
+          automatically, it leaves it to the user to resolve the
           conflict.</para></listitem>
         </varlistentry>
       </variablelist>

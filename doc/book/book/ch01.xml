@@ -77,19 +77,19 @@
       later sold the business, they still used CVS every day at their
       jobs.  Their frustration with CVS had led Jim to think carefully
       about better ways to manage versioned data, and he'd already
-      come up with not only the name "Subversion", but also with the
-      basic design of the Subversion repository.  When CollabNet
-      called, Karl immediately agreed to work on the project, and Jim
-      got his employer, RedHat Software, to essentially donate him to
-      the project for an indefinite period of time.  CollabNet hired
-      Karl and Ben Collins-Sussman, and detailed design work began in
-      May.  With the help of some well-placed prods from Brian
-      Behlendorf and Jason Robbins of CollabNet, and Greg Stein (at
-      the time an independent developer active in the WebDAV/DeltaV
-      specification process), Subversion quickly attracted a community
-      of active developers.  Many people had had frustrating
-      experiences with CVS, and welcomed the chance to finally do
-      something about it.</para>
+      come up with not only the name <quote>Subversion</quote>, but
+      also with the basic design of the Subversion repository.  When
+      CollabNet called, Karl immediately agreed to work on the
+      project, and Jim got his employer, RedHat Software, to
+      essentially donate him to the project for an indefinite period
+      of time.  CollabNet hired Karl and Ben Collins-Sussman, and
+      detailed design work began in May.  With the help of some
+      well-placed prods from Brian Behlendorf and Jason Robbins of
+      CollabNet, and Greg Stein (at the time an independent developer
+      active in the WebDAV/DeltaV specification process), Subversion
+      quickly attracted a community of active developers.  Many people
+      had had frustrating experiences with CVS, and welcomed the
+      chance to finally do something about it.</para>
 
     <para>The original design team settled on some simple goals.  They
       didn't want to break new ground in version control methodology,

@@ -15,8 +15,8 @@
       unconsciously.  For all intents and purposes, you are ready to
       use Subversion in a typical environment.</para>
 
-    <para>But the Subversion feature set doesn't stop at "common
-      version control operations".</para>
+    <para>But the Subversion feature set doesn't stop at <quote>common
+      version control operations</quote>.</para>
 
     <para>This chapter highlights some of Subversion's features that
       aren't quite so regularly used.  In it, we will discuss
@@ -392,7 +392,7 @@ collabnet = svn.collab.net
             <listitem>
               <para>Set this variable to <literal>yes</literal> if you
                 want Subversion to automatically trust the set of
-                "default" CAs that ship with OpenSSL.</para>
+                default CAs that ship with OpenSSL.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
@@ -622,8 +622,9 @@ collabnet = svn.collab.net
                 for the working copy files to have timestamps that
                 reflect the last time they were changed in the
                 repository.  The <command>svn export</command> command
-                always places these "last-commit timestamps" on trees
-                that it produces.  By setting this config variable to
+                always places these <quote>last-commit
+                timestamps</quote> on trees that it produces.  By
+                setting this config variable to
                 <literal>yes</literal>, the <command>svn
                 checkout</command>, <command>svn update</command>,
                 <command>svn switch</command>, and <command>svn
@@ -1286,7 +1287,7 @@ $ svn status
           Subversion is simply not reminding you that they are present
           and unversioned.  And now with all the trivial noise removed
           from the display, you are left with more interesting
-          items&mdash; such as that source code file that you probably
+          items&mdash;such as that source code file that you probably
           forgot to add to version control.</para>
 
         <para>If you want to see the ignored files, you can pass the 
