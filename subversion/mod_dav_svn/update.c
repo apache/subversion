@@ -454,8 +454,11 @@ static svn_error_t * upd_change_xxx_prop(void *baton,
     }
 #undef NSLEN
                 
-  /* apr_xml_quote_string doesn't realloc if there is nothing to quote */
-  qname = apr_xml_quote_string (b->pool, apr_pstrdup (b->pool, name), 1);
+  qname = apr_xml_quote_string (b->pool, name, 1);
+  /* apr_xml_quote_string doesn't realloc if there is nothing to
+     quote, so dup the name, but only if necessary. */
+  if (qname == name)
+    qname = apr_pstrdup (b->pool, name);
   if (value)
     {
       if (! b->changed_props)
@@ -702,7 +705,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                 /* ### This removes the fs txn.  todo: check error. */
                 svn_repos_abort_report(rbaton);
                 serr = svn_error_create (SVN_ERR_XML_ATTRIB_NOT_FOUND, 0, 
-                                         NULL, resource->pool, "rev");
+                                         NULL, "rev");
                 return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                            "A failure occurred while "
                                            "recording one of the items of "
@@ -824,12 +827,5 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
 				 "report.");
     }
 
-  return SVN_NO_ERROR;
+  return NULL;
 }
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

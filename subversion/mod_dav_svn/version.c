@@ -719,10 +719,3 @@ const dav_hooks_vsn dav_svn_hooks_vsn = {
   dav_svn_make_activity,
   dav_svn_merge,
 };
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

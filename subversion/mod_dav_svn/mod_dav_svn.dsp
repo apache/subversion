@@ -500,23 +500,6 @@ SOURCE=..\libsvn_delta\compose_delta.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\libsvn_delta\compose_editors.c
-
-!IF  "$(CFG)" == "mod_dav_svn - Win32 Release"
-
-# PROP Intermediate_Dir "Release\obj\libsvn_delta"
-# ADD CPP /I "..\libsvn_delta" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\..\httpd-2.0\srclib\apr-util\xml\expat\lib" /I "..\include" /I "..\.."
-
-!ELSEIF  "$(CFG)" == "mod_dav_svn - Win32 Debug"
-
-# PROP Intermediate_Dir "Debug\obj\libsvn_delta"
-# ADD CPP /I "..\libsvn_delta" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\..\httpd-2.0\srclib\apr-util\xml\expat\lib" /I "..\include" /I "..\.."
-
-!ENDIF 
-
-# End Source File
-# Begin Source File
-
 SOURCE=..\libsvn_delta\default_editor.c
 
 !IF  "$(CFG)" == "mod_dav_svn - Win32 Release"

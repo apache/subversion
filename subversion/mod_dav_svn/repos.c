@@ -1069,10 +1069,6 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   dav_error *err;
   int had_slash;
 
-  /* this is usually the first entry into mod_dav_svn, so let's initialize
-     the error pool, as a subpool of the request pool. */
-  (void) svn_error_init_pool(r->pool);
-  
   repo_name = dav_svn_get_repo_name(r);
   xslt_uri = dav_svn_get_xslt_uri(r);
 
@@ -1487,7 +1483,7 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
                                 resource->pool);
   if (serr != NULL && serr->apr_err == SVN_ERR_FS_NOT_FOUND)
     {
-      svn_error_clear_all(serr);
+      svn_error_clear(serr);
       serr = svn_fs_make_file(resource->info->root.root,
                               resource->info->repos_path,
                               resource->pool);
@@ -1739,7 +1735,7 @@ static svn_error_t *dav_svn_write_to_filter(void *baton,
   bkt = apr_bucket_transient_create(buffer, *len, dc->output->c->bucket_alloc);
   APR_BRIGADE_INSERT_TAIL(bb, bkt);
   if ((status = ap_pass_brigade(dc->output, bb)) != APR_SUCCESS) {
-    return svn_error_create(status, 0, NULL, dc->pool,
+    return svn_error_create(status, 0, NULL,
                             "Could not write data to filter.");
   }
 
@@ -1757,10 +1753,8 @@ static svn_error_t *dav_svn_close_filter(void *baton)
   bb = apr_brigade_create(dc->pool, dc->output->c->bucket_alloc);
   bkt = apr_bucket_eos_create(dc->output->c->bucket_alloc);
   APR_BRIGADE_INSERT_TAIL(bb, bkt);
-  if ((status = ap_pass_brigade(dc->output, bb)) != APR_SUCCESS) {
-    return svn_error_create(status, 0, NULL, dc->pool,
-                            "Could not write EOS to filter.");
-  }
+  if ((status = ap_pass_brigade(dc->output, bb)) != APR_SUCCESS)
+    return svn_error_create(status, 0, NULL, "Could not write EOS to filter.");
 
   return SVN_NO_ERROR;
 }
@@ -2498,10 +2492,3 @@ const dav_hooks_repository dav_svn_hooks_repos =
   dav_svn_walk,
   dav_svn_getetag,
 };
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

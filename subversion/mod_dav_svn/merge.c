@@ -133,7 +133,7 @@ static svn_error_t *send_response(mr_baton *baton,
                        NULL);
 
   if (status != APR_SUCCESS)
-    return svn_error_create(status, 0, NULL, pool,
+    return svn_error_create(status, 0, NULL,
                             "could not write response to output");
 
   return APR_SUCCESS;
@@ -434,10 +434,3 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
 
   return SVN_NO_ERROR;
 }
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */
