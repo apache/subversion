@@ -77,10 +77,10 @@
 <p>
 <strong>Troubleshooting:</strong>
 </p>
-<li><a href="#permissions">My repository seems to get stuck all the
+<li><a href="#stuck-bdb-repos">My repository seems to get stuck all the
           time, giving me errors about needing recovery
           (DB_RUNRECOVERY).  What could be the cause?</a></li>
-<li><a href="#wedged-repos">Every time I try to access
+<li><a href="#bdb-recovery">Every time I try to access
     my repository, the process just hangs.  Is my repository
     corrupt?</a></li>
 <li><a href="#wedged-wc">Every time I try to run a svn
@@ -820,16 +820,23 @@ href="http://www.sleepycat.com/docs/api_c/env_set_flags.html#DB_LOG_AUTOREMOVE">
 
 <![CDATA[=========================================================]]>
 
-
 <h3><a name="reposperms">How do I set repository
 permissions correctly?</a></h3>
 
+<p>Try to have as <em>few</em> users access the repository as
+possible.  For example, run apache or 'svnserve -d' as a specific
+user, and make the repository wholly owned by that user.  Don't allow
+any other users to access the repository via <tt>file:///</tt> urls,
+and be sure to run 'svnlook' and 'svnadmin' only as the user which
+owns the repository.</p>
 
-<p>If you have multiple processes (httpd, svnserve, etc.) accessing
-the repository, look at <a
-href="http://svnbook.red-bean.com/html-chunk/ch06s05.html"> this
-section of the Subversion Book</a>.</p>
-
+<p>If your clients are accessing via <tt>file:///</tt> or
+<tt>svn+ssh://</tt>, then there's no way to avoid access by multiple
+users.  In that case, read <a
+href="http://svnbook.red-bean.com/html-chunk/ch06s05.html">the last
+section in chapter 6</a>, and pay particular attention to the
+"checklist" sidebar at the bottom.  It outlines a number of steps to
+make this scenario safer.</p>
 
 <![CDATA[=========================================================]]>
 
@@ -1251,56 +1258,44 @@ file with the current working copy revision.
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h3><a name="permissions">My repository seems to get stuck all the
+<h3><a name="permissions">
+    <a name="stuck-bdb-repos">My repository seems to get stuck all the
 time, giving me errors about needing recovery (DB_RUNRECOVERY).  What
 could be the cause?</a></h3>
 
-<p>The BerkeleyDB database in your repository is susceptible to
+<p>The BerkeleyDB database in your repository is sensitive to
 interruptions.  If a process accessing the database exits without
 "cleanly" closing the environment, then the database is left in an
 inconsistent state.  Common causes of this include:</p>
 
 <ul>
+  <li>the process exiting when it hits a permission problem</li>
   <li>the process crashing/segfaulting</li>
   <li>the process being forcibly killed</li>
-  <li>the process exiting when it hits a permission problem</li>
+  <li>running out of disk space</li>
 </ul>
 
-<p>To make the repository function again, simply run "svnadmin
-recover".  This rewinds the repository back to a consistent state.
-(See <a href="#wedged-repos">this question</a> for more
-information.)</p>
+<p>For most of these cases, you should run "svnadmin recover", which
+rewinds the repository back to a consistent state; see <a
+href="#wedged-repos">this question</a> for details.  Note that running
+out of disk space, combined with frequent checkouts or updates, can
+cause the repository to crash in a way where recovery is not possible
+(so keep backups).</p>
 
-<p>The <strong>best</strong> way to prevent this problem is to get
-your repository permissions and ownership set up correctly.  Segfaults
-and forced killings are pretty rare; far and away, this problem almost
-always results from one process accessing the repository and
-accidentally changing ownership or permissions.  Then another process
-tries to access and chokes on the permissions.</p>
+<p>Segfaults, forced killings, and running out of disk space are
+pretty rare.  Permission problems are far more common: one process
+accesses the repository and accidentally changes ownership or
+permissions, then another process tries to access and chokes on the
+permissions.</p>
 
-<p>Here are our recommendations:</p>
-
-<ul>
- <li>Try to have as <em>few</em> users access the repository as
-    possible.  For example, run apache or 'svnserve -d' as a specific
-    user, and make the repository wholly owned by that user.  Don't
-    allow any other users to access the repository via
-    <tt>file:///</tt> urls, and be sure to run 'svnlook' and
-    'svnadmin' only as the user which owns the repository.</li>
-
- <li>If your clients are accessing via <tt>file:///</tt> or
-    <tt>svn+ssh://</tt>, then there's no way to avoid access by
-    multiple users.  In that case, read <a href="
-    http://svnbook.red-bean.com/html-chunk/ch06s05.html">the last
-    section in chapter 6</a>, and pay particular attention to the
-    "checklist" sidebar at the bottom.  It outlines a number of steps
-    to make this scenario safer.</li>
-</ul>
-
+<p>The best way to prevent this is to get your repository permissions
+and ownership set up correctly.  See <a href="#reposperms">here</a>
+for our recommendations.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h3><a name="wedged-repos">Every time I try to access my repository, the
+<h3><a name="wedged-repos">
+    <a name="bdb-recovery">Every time I try to access my repository, the
 process just hangs. Is my repository corrupt?</a></h3>
 
 <p>
