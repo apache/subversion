@@ -1,3 +1,14 @@
+These hand-coded JNI bindings and the remainder of this README are
+woefully out of date with the rest of Subversion.  If you're
+interested in contributing to the Java bindings initiative, please see
+the README files in the subversion/bindings/java/ and
+subversion/bindings/swig/java/ directories, and mail
+dev@subversion.tigris.org indicating the area in which you'd like to
+help out.
+
+
+			    -------------
+
 Alexander Mueller <Alexander.Mueller@littleblue.de> is working on JNI
 bindings for the Subversion libraries here; please mail
 dev at subversion dot tigris org if you'd like to help out.
