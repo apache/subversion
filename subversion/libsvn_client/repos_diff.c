@@ -835,6 +835,8 @@ svn_client__get_diff_editor (const char *target,
                              svn_revnum_t revision,
                              svn_wc_notify_func_t notify_func,
                              void *notify_baton,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
                              const svn_delta_editor_t **editor,
                              void **edit_baton,
                              apr_pool_t *pool)
@@ -871,8 +873,13 @@ svn_client__get_diff_editor (const char *target,
   tree_editor->change_dir_prop = change_dir_prop;
   tree_editor->close_edit = close_edit;
 
-  *edit_baton = eb;
-  *editor = tree_editor;
+  SVN_ERR (svn_delta_get_cancellation_editor (cancel_func,
+                                              cancel_baton,
+                                              tree_editor,
+                                              eb,
+                                              editor,
+                                              edit_baton,
+                                              pool));
 
   return SVN_NO_ERROR;
 }

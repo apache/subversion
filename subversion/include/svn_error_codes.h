@@ -746,6 +746,10 @@ SVN_ERROR_START
               SVN_ERR_MISC_CATEGORY_START + 14,
               "A checksum mismatch occurred")
 
+  SVN_ERRDEF (SVN_ERR_CANCELLED,
+              SVN_ERR_MISC_CATEGORY_START + 15,
+              "The operation was canceled")
+
   /* command-line client errors */
 
   SVN_ERRDEF (SVN_ERR_CL_ARG_PARSING_ERROR,

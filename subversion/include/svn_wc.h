@@ -44,6 +44,7 @@
 #include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_ra.h"    /* for svn_ra_reporter_t type */
+#include "svn_cancel.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -1598,12 +1599,17 @@ svn_boolean_t svn_wc_is_entry_prop (const char *name);
  * @a recurse determines whether to descend into subdirectories when @a target
  * is a directory.  If @a recurse is @c TRUE then @a anchor should be part of 
  * an access baton set for the @a target hierarchy.
+ *
+ * If @a cancel_func is non-null, it will be used along with @a cancel_baton 
+ * to periodically check if the client has canceled the operation.
  */
 svn_error_t *svn_wc_get_diff_editor (svn_wc_adm_access_t *anchor,
                                      const char *target,
                                      const svn_wc_diff_callbacks_t *callbacks,
                                      void *callback_baton,
                                      svn_boolean_t recurse,
+                                     svn_cancel_func_t cancel_func,
+                                     void *cancel_baton,
                                      const svn_delta_editor_t **editor,
                                      void **edit_baton,
                                      apr_pool_t *pool);

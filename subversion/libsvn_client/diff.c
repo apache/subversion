@@ -841,6 +841,8 @@ do_merge (const char *URL1,
                                         start_revnum,
                                         ctx->notify_func,
                                         ctx->notify_baton,
+                                        ctx->cancel_func,
+                                        ctx->cancel_baton,
                                         &diff_editor,
                                         &diff_edit_baton,
                                         pool));
@@ -1117,6 +1119,7 @@ do_diff (const apr_array_header_t *options,
       SVN_ERR (svn_wc_get_diff_editor (adm_access, target,
                                        callbacks, callback_baton,
                                        recurse,
+                                       ctx->cancel_func, ctx->cancel_baton,
                                        &diff_editor, &diff_edit_baton,
                                        pool));
 
@@ -1277,6 +1280,8 @@ do_diff (const apr_array_header_t *options,
                                             start_revnum,
                                             NULL, /* no notify_func */
                                             NULL, /* no notify_baton */
+                                            ctx->cancel_func,
+                                            ctx->cancel_baton,
                                             &diff_editor,
                                             &diff_edit_baton,
                                             pool));
