@@ -126,7 +126,7 @@ AC_DEFUN(SVN_FIND_SWIG,
       fi
     else
         SWIG_SUITABLE=no
-        AC_MSG_WARN([swig bindings version 1.3.19 or newer needed for swig support.])
+        AC_MSG_WARN([swig versions 1.3.19, 1.3.20 or 1.3.21 are needed for swig support.])
     fi
 
     if test "$PYTHON" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_python" = "yes"; then
