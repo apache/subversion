@@ -16,15 +16,8 @@ int main()
   int done;
   svn_delta_digger_t my_digger;
 
-  /* Create the parser */
-  XML_Parser parser = XML_ParserCreate (NULL);
-
-  /* All callbacks should receive the delta structure */
-  XML_SetUserData (parser, &my_digger);
-
-  /* Register subversion-specific callbacks with the parser */
-  XML_SetElementHandler (parser, svn_xml_startElement, svn_xml_endElement);
-  XML_SetCharacterDataHandler (parser, svn_xml_DataHandler);
+  /* Create a parser for XML deltas. */
+  XML_Parser parser = svn_delta_make_xml_parser (&my_digger);
 
   /* TODO:  create an apr pool, palloc() space for the digger structure */
 
