@@ -219,8 +219,11 @@ svn_client_diff (svn_stringbuf_t *path,
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
 
+  /* Set the arbitrary wc revision flag, to indicate that the wc revision
+     may bear no relation to the revision of the requested data. */
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
-                                        TRUE, use_admin, auth_baton, pool));
+                                        use_admin, use_admin, TRUE, auth_baton,
+                                        pool));
 
   if (start_date)
     SVN_ERR (ra_lib->get_dated_revision (session, &start_revision, start_date));
@@ -261,9 +264,29 @@ svn_client_diff (svn_stringbuf_t *path,
          reused. This applies to ra_dav, ra_local does not appears to have
          this limitation. */
       void *session2;
-      SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL, anchor,
-                                            TRUE, use_admin,
+
+      /* ### TODO: Forcing the anchor to null prevents the server sending
+         diffs over the second session. The repository diff editor doesn't
+         handle them yet. */
+      SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL,
+                                            NULL, /* ### TODO: anchor, */
+                                            FALSE, FALSE, TRUE,
                                             auth_baton, pool));
+
+      if (anchor)
+        {
+          /* Closing and reopening the first session, forcing the anchor to
+             null, is required. Otherwise the ra_dav server will send
+             differences between the working copy and end_revision instead
+             of between start_revision and end_revision. This in itself is
+             not a problem, the editor could be modified to handle it, but
+             ra_local doesn't do this and there is no way to distinguish
+             which we are using. */
+          SVN_ERR (ra_lib->close (session));
+          SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
+                                                FALSE, FALSE, TRUE,
+                                                auth_baton, pool));
+        }
 
       SVN_ERR (svn_client__get_diff_editor (target,
                                             svn_client__diff_cmd,
@@ -294,8 +317,7 @@ svn_client_diff (svn_stringbuf_t *path,
 }
 
 
-
-
+
 /* --------------------------------------------------------------
  * local variables:
  * eval: (load-file "../svn-dev.el")

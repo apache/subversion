@@ -51,6 +51,11 @@ typedef struct
   /* Record whether we should store the user/pass into the WC */
   svn_boolean_t do_store;
 
+  /* If set indicates that the working copy revision may have no relation
+     to that of the data requested from the server. This is the case for
+     the diff command. */
+  svn_boolean_t arbitrary_wc;
+
   /* The pool to use for session-related items. */
   apr_pool_t *pool;
 
@@ -83,6 +88,7 @@ svn_error_t * svn_client__open_ra_session (void **session_baton,
                                            svn_stringbuf_t *base_dir,
                                            svn_boolean_t do_store,
                                            svn_boolean_t use_admin,
+                                           svn_boolean_t arbitrary_wc,
                                            void *auth_baton,
                                            apr_pool_t *pool);
 
@@ -141,11 +147,23 @@ svn_client__update_internal (const svn_delta_edit_fns_t *before_editor,
 /*** Editor for repository diff ***/
 
 /* Create an editor for a pure repository comparison, i.e. comparing one
-   repository version against the other. TARGET can be a working copy path
-   or an URL. REVISION is the start revision in the comparison.
-   DIFF_CMD/DIFF_CMD_BATON define the diff callback for comparing two
-   files. RA_LIB/RA_SESSION define the ra session for requesting file
-   contents. The editor is returned in EDITOR/EDIT_BATON. */
+ * repository version against the other. 
+ *
+ * TARGET represents the base of the hierarchy to be compared. TARGET can
+ * be a working copy path, or an URL.
+ *
+ * DIFF_CMD/DIFF_CMD_BATON represent the callback and calback argument that
+ * implement the file comparison function
+ *
+ * RECURSE is set if the diff is to be recursive.
+ *
+ * RA_LIB/RA_SESSION define the additional ra session for requesting file
+ * contents.
+ *
+ * REVISION is the start revision in the comparison.
+ *
+ * EDITOR/EDIT_BATON return the newly created editor and baton/
+ */
 svn_error_t *
 svn_client__get_diff_editor (svn_stringbuf_t *target,
                              svn_wc_diff_cmd_t diff_cmd,
