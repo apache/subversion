@@ -20,13 +20,38 @@
 #include "dag.h"
 #include "err.h"
 #include "fs.h"
-#include "node-rev.h"
 #include "nodes-table.h"
 #include "txn-table.h"
 #include "rev-table.h"
+#include "reps-table.h"
+#include "strings-table.h"
+#include "reps-strings.h"
 #include "skel.h"
 #include "trail.h"
 #include "validate.h"
+
+
+/* Accessor macros. */
+
+
+/* Access the header of a node revision skel. */
+#define NR_HEADER(node_rev) (node_rev->children)
+
+/* Access the property rep key of a node revision skel. */
+#define NR_PROP_KEY(node_rev) (node_rev->children->next)
+
+/* Access the data rep key of a node revision skel. */
+#define NR_DATA_KEY(node_rev) (node_rev->children->next->next)
+
+/* Access the kind skel of a node revision header. */
+#define HDR_KIND(header) (header->children)
+
+/* Access the revision skel of a node revision header. */
+#define HDR_REV(header) (header->children->next)
+
+/* Access the flags skel of a node revision header. */
+#define HDR_FLAGS(header) (header->children->next->next)
+
 
 
 /* Initializing a filesystem.  */
@@ -58,6 +83,9 @@ struct dag_node_t
   /* The node's type (file, dir, copy, etc.) */
   dag_node_kind_t kind;
 
+  /* ### tweakit: maybe not worth it to cache node revisions anymore,
+     now that they're so small.  But we'll leave it in for now. */
+
   /* The node's NODE-REVISION skel, or zero if we haven't read it in
      yet.  This is allocated either in this node's POOL, if the node
      is immutable, or in some trail's pool, if the node is mutable.
@@ -74,7 +102,42 @@ struct dag_node_t
 };
 
 
-/* Creating nodes. */
+
+/* Trivial helper/accessor functions. */
+int 
+svn_fs__dag_is_file (dag_node_t *node)
+{
+  return (node->kind == dag_node_kind_file ? TRUE : FALSE);
+}
+
+
+int 
+svn_fs__dag_is_directory (dag_node_t *node)
+{
+  return (node->kind == dag_node_kind_dir ? TRUE : FALSE);
+}
+
+
+int 
+svn_fs__dag_is_copy (dag_node_t *node)
+{
+  return (node->kind == dag_node_kind_copy ? TRUE : FALSE);
+}
+
+
+const svn_fs_id_t *
+svn_fs__dag_get_id (dag_node_t *node)
+{
+  return node->id;
+}
+
+
+svn_fs_t *
+svn_fs__dag_get_fs (dag_node_t *node)
+{
+  return node->fs;
+}
+
 
 /* Looks at node-revision NODE_REV's 'kind' to see if it matches the
    kind described by KINDSTR. */
@@ -82,11 +145,8 @@ static int
 node_is_kind_p (skel_t *node_rev,
                 const char *kindstr)
 {
-  /* The first element of the header (which is the first element of
-     the node-revision) should be an atom defining the node kind. */
-  skel_t *kind = node_rev->children->children;
-
-  return svn_fs__matches_atom (kind, kindstr);
+  skel_t *header = NR_HEADER (node_rev);
+  return svn_fs__matches_atom (HDR_KIND (header), kindstr);
 }
 
 
@@ -94,26 +154,19 @@ node_is_kind_p (skel_t *node_rev,
    WARNING! WARNING! WARNING!  This should not be called by *anything*
    that doesn't first get an up-to-date NODE-REVISION skel! */
 static int
-has_mutable_flag (skel_t *node_content)
+node_rev_has_mutable_flag (skel_t *node_content)
 {
-  /* The node "header" is the first element of a node-revision skel,
-     itself a list. */
-  skel_t *header = node_content->children;
-  
-  /* The 3rd element of the header, IF it exists, is the header's
-     first `flag'.  It could be NULL.  */
-  /* ### tweakit: Heh.  Funny the way this worked out: the proplist
-     disappeared from the header, so FLAGS would now start at the
-     second element... except that we're proposing to add a REV field,
-     so FLAGS would once again be the third element.  Talk with Mike
-     about this -- probably we should stick dummy, empty-string REVs
-     in there now, so everything stays at the same place, and only
-     start using them later, after this initial rewrite is done. */
-  skel_t *flag = header->children->next->next;
+  skel_t *header = NR_HEADER (node_content);
+  skel_t *flag = HDR_FLAGS (header);
   
   while (flag)
     {
       /* Looking for the `mutable' flag, which is itself a list. */
+      /* ### kff todo: note how node revision flags are different from
+         representation flags.  A node rev flag is a list of two
+         elements, a rep flag is an atom.  We may want to unify this
+         someday... I'm not sure that we're actually using the second
+         element (rev num) of node revision flags anyway.  ? */
       if (svn_fs__matches_atom (flag->children, "mutable"))
         return TRUE;
 
@@ -133,10 +186,11 @@ has_mutable_flag (skel_t *node_content)
    null, the mutable flag skel will have the empty string as its
    PARENT-ID element. */
 static void
-set_mutable_flag (skel_t *content, svn_fs_id_t *parent_id, apr_pool_t *pool)
+node_rev_set_mutable_flag (skel_t *content,
+                           svn_fs_id_t *parent_id,
+                           apr_pool_t *pool)
 {
-  /* ### tweakit: see comment in has_mutable_flag() above. */
-  if (has_mutable_flag (content))
+  if (node_rev_has_mutable_flag (content))
     return;
   else
     {
@@ -177,7 +231,7 @@ cache_node_revision (dag_node_t *node,
                      skel_t *skel,
                      trail_t *trail)
 {
-  if (has_mutable_flag (skel))
+  if (node_rev_has_mutable_flag (skel))
     {
       /* Mutable nodes might have other processes change their
          contents, so we must throw away this skel once the trail is
@@ -213,10 +267,6 @@ get_node_revision (skel_t **skel_p,
 {
   skel_t *node_revision;
 
-  /* ### tweakit: I think this function doesn't change just because
-     we're getting most content out of the node revision itself, but
-     must think more.  Comments... Mike?  Anyone?*/
-
   /* If we've already got a copy, there's no need to read it in.  */
   if (! node->node_revision)
     {
@@ -240,8 +290,6 @@ set_node_revision (dag_node_t *node,
                    skel_t *skel,
                    trail_t *trail)
 {
-  /* ### tweakit: see comment in get_node_revision() above. */
-
   /* Write it out.  */
   SVN_ERR (svn_fs__put_node_revision (node->fs, node->id, skel, trail));
 
@@ -259,7 +307,7 @@ svn_fs__dag_check_mutable (svn_boolean_t *is_mutable,
 {
   skel_t *node_rev;
   SVN_ERR (get_node_revision (&node_rev, node, trail));
-  *is_mutable = has_mutable_flag (node_rev);
+  *is_mutable = node_rev_has_mutable_flag (node_rev);
   return SVN_NO_ERROR;
 }
 
@@ -272,8 +320,6 @@ svn_fs__dag_get_node (dag_node_t **node,
 {
   dag_node_t *new_node;
   skel_t *contents;
-
-  /* ### tweakit: beautiful -- nothing to change here. */
 
   /* Construct the node. */
   new_node = apr_pcalloc (trail->pool, sizeof (*new_node));
@@ -308,13 +354,9 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
 {
   svn_fs_t *fs = fs_baton;
 
-  /* Create empty root directory with node revision 0.0:
-     "nodes" : "0.0" -> "(fulltext [(dir ()) ()])" */
+  /* Create empty root directory with node revision 0.0. */
   {
-    /* ### tweakit: change the skel below as appropriate for new REV
-       field: "((dir 0 ()) ())", or "((dir 1 0 ()) ())" if we're
-       feeling ambitious. :-). */
-    static char unparsed_node_rev[] = "((dir ()) ())";
+    static char unparsed_node_rev[] = "((dir 3 0.0) 0 0 )";
     skel_t *node_rev = svn_fs__parse_skel (unparsed_node_rev,
                                            sizeof (unparsed_node_rev) - 1,
                                            trail->pool);
@@ -354,170 +396,252 @@ svn_fs__dag_init_fs (svn_fs_t *fs)
 
 
 
-/* Trivial helper/accessor functions. */
-int svn_fs__dag_is_file (dag_node_t *node)
-{
-  return (node->kind == dag_node_kind_file ? TRUE : FALSE);
-}
-
-
-int svn_fs__dag_is_directory (dag_node_t *node)
-{
-  return (node->kind == dag_node_kind_dir ? TRUE : FALSE);
-}
-
-
-int svn_fs__dag_is_copy (dag_node_t *node)
-{
-  return (node->kind == dag_node_kind_copy ? TRUE : FALSE);
-}
-
-
-const svn_fs_id_t *svn_fs__dag_get_id (dag_node_t *node)
-{
-  return node->id;
-}
-
-
-svn_fs_t *svn_fs__dag_get_fs (dag_node_t *node)
-{
-  return node->fs;
-}
-
-
-
 /*** Directory node functions ***/
 
 /* Some of these are helpers for functions outside this section. */
 
-/* In PARENT, add an entry ENTRY_NAME pointing to ENTRY_ID, as part of
- * TRAIL.  The new entry will be allocated in TRAIL.
- * 
- * Caller must ensure that:
- *   - PARENT is a mutable directory.
- *   - PARENT does not already have an entry named NAME.
- *   - NAME is a single path component.
- */
-static void
-add_new_entry_skel (skel_t *parent,
-                    const char *entry_name,
-                    const svn_fs_id_t *id,
-                    trail_t *trail)
-{
-  skel_t *new_entry_skel, *name_skel, *id_skel;
-  svn_stringbuf_t *id_str = svn_fs_unparse_id (id, trail->pool);
-
-  /* Create the new entry. */
-  new_entry_skel = svn_fs__make_empty_list (trail->pool);
-  name_skel      = svn_fs__str_atom (entry_name, trail->pool);
-  id_skel        = svn_fs__str_atom (id_str->data, trail->pool);
-  svn_fs__prepend (id_skel, new_entry_skel);
-  svn_fs__prepend (name_skel, new_entry_skel);
-  
-  /* Put it into parent's entries list. */
-  /* ### tweakit: Nope.  Go fetch the entries list via its rep, store
-     the entry there.  We're going to have a mutability issue.  How do
-     we know whether to create a new string, or append to an existing
-     string?  Looks like representations themselves will have to
-     record whether they're mutable or not -- new reps start out
-     mutable, and get unmutabled when the nodes that point to them get
-     unmutabled.  Must write it up in `structure' first, before doing
-     anything here. :-) */
-  svn_fs__prepend (new_entry_skel, parent->children->next);
-}
-
-
-/* Adds to PARENT a new directory entry NAME pointing to ID.
-   Allocations are done in TRAIL.
-
-   Assumptions:
-   - PARENT is a directory.
-   - PARENT does not already have an entry named NAME.
-   - ID does not refer to an ancestor of parent
-   - NAME is a single path component
-*/
+/* Given directory NODE_REV in FS, set *ENTRIES to its entries list
+   skel, as part of TRAIL.  The entries list will be allocated in
+   TRAIL->pool.  If NODE_REV is not a directory, return the error
+   SVN_ERR_FS_NOT_DIRECTORY.  */
 static svn_error_t *
-add_new_entry (dag_node_t *parent,
-               const svn_fs_id_t *id,
-               const char *name,
-               trail_t *trail)
+get_dir_entries (skel_t **entries,
+                 svn_fs_t *fs,
+                 skel_t *node_rev,
+                 trail_t *trail)
 {
-  skel_t *parent_node_rev;
-  skel_t *new_node_rev;
-
-  SVN_ERR (get_node_revision (&parent_node_rev, parent, trail));
-  new_node_rev = svn_fs__copy_skel (parent_node_rev, trail->pool);
-  /* ### tweakit: see comment in add_new_entry_skel() above. */
-  add_new_entry_skel (new_node_rev, name, id, trail);
-  
-  /* Store the new incarnation of the directory. */
-  SVN_ERR (set_node_revision (parent, new_node_rev, trail));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Given a node-revision PNODE_REV that represents a directory, search
-   for a directory entry named NAME (which is assumed to be a single
-   path component).  If no such entry exists, *ENTRY is set to NULL.
-   Else *ENTRY is pointed to that `entry' list skel, a reference into
-   the memory allocated for PNODE_REV. */
-static svn_error_t *
-find_dir_entry_skel (skel_t **entry, 
-                     skel_t *pnode_rev,
-                     const char *name, 
-                     trail_t *trail)
-{
-  skel_t *header;
-  
-  /* ### tweakit: Hmmm.  Okay, time to generalize.  This func, along
-     with other recent ones, suggests that what we want is one
-     mini-interface for reading and writing dir entry lists given a
-     noderev, and another mini-interface for operating on the entry
-     list while we have it.  Future `tweakit' comments may refer to
-     these proposed interfaces... */
-
-  /* The node "header" is the first element of a node-revision skel,
-     itself a list. */
-  header = pnode_rev->children;
+  skel_t *header = NR_HEADER (node_rev);
 
   if (header)
     {
       /* Make sure we're looking at a directory node here */
-      if (svn_fs__matches_atom (header->children, "dir"))
+      if (svn_fs__matches_atom (HDR_KIND (header), "dir"))
         {
-          /* The entry list is the 2nd element of the node-revision
-             skel. */
-          skel_t *entry_list = header->next;
+          skel_t *rep_key = NR_DATA_KEY (node_rev);
+          skel_t *rep;
+          const char *key = apr_pstrndup (trail->pool,
+                                          rep_key->data,
+                                          rep_key->len);
+          svn_string_t unparsed_entries;
+          skel_t *entry;
 
-          /* The entries are the children of the entry list,
-             naturally. */
-          skel_t *cur_entry = entry_list->children;
-
-          /* search the entry list for one whose name matches NAME.  */
-          for (cur_entry = entry_list->children; 
-               cur_entry; cur_entry = cur_entry->next)
+          /* Empty rep key means no entries exist. */
+          if ((! key) || (key[0] == '\0'))
             {
-              if (svn_fs__matches_atom (cur_entry->children, name))
-                {
-                  if (svn_fs__list_length (cur_entry) != 2)
-                    {
-                      return svn_error_createf
-                        (SVN_ERR_FS_CORRUPT, 0, 0, trail->pool,
-                         "directory entry \"%s\" ill-formed", name);
-                    }
-                  else
-                    {
-                      *entry = cur_entry;
-                      return SVN_NO_ERROR;
-                    }
-                }
+              *entries = svn_fs__make_empty_list (trail->pool);
+              return SVN_NO_ERROR;
+            }
+
+          /* Get the representation. */
+          SVN_ERR (svn_fs__read_rep (&rep, fs, key, trail));
+
+          /* Now we have a rep, follow through to get the entries. */
+          SVN_ERR (svn_fs__string_from_rep (&unparsed_entries, 
+                                            fs, rep, trail));
+          *entries = svn_fs__parse_skel ((char *) unparsed_entries.data,
+                                         unparsed_entries.len,
+                                         trail->pool);
+
+          /* Check entries are well-formed. */
+          for (entry = (*entries)->children; entry; entry = entry->next)
+            {
+              /* ENTRY must be a list of two elements. */
+              if (svn_fs__list_length (entry) != 2)
+                return svn_error_create (SVN_ERR_FS_CORRUPT, 0, 
+                                         NULL, trail->pool,
+                                         "Malformed directory entry.");
+            }
+        }
+      else
+        return 
+          svn_error_create
+          (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL, trail->pool,
+           "Attempted to create entry in non-directory parent");
+    }
+  else
+    return 
+      svn_error_create
+      (SVN_ERR_FS_CORRUPT, 0, NULL, trail->pool,
+       "Bad skel");
+  
+  return SVN_NO_ERROR;
+}
+
+
+/* Search for an entry NAME in directory entries list ENTRIES.
+   NAME must be a single path component.
+
+   If there is such an entry, then
+        - set *ENTRY_P to point to that list skel (a reference into
+          the memory allocated for ENTRIES);
+        - and if PREV_ENTRY_P is non-null, then
+               - if the entry found is not the first entry, set
+                 *PREV_ENTRY_P to point to the entry before it,
+               - else set *PREV_ENTRY_P to null.
+
+   Else if there is no such entry, set *ENTRY_P to NULL and, if
+   PREV_ENTRY_P is non-null, set *PREV_ENTRY_P to the last entry in
+   the list.  */
+static svn_error_t *
+find_dir_entry (skel_t **entry_p,
+                skel_t **prev_entry_p,
+                skel_t *entries,
+                const char *name, 
+                trail_t *trail)
+{
+  skel_t *cur_entry, *prev_entry;
+
+  /* search the entry list for one whose name matches NAME.  */
+  for (prev_entry = NULL, cur_entry = entries->children;
+       cur_entry != NULL;
+       prev_entry = cur_entry, cur_entry = cur_entry->next)
+    {
+      if (svn_fs__matches_atom (cur_entry->children, name))
+        {
+          if (svn_fs__list_length (cur_entry) != 2)
+            return svn_error_createf
+              (SVN_ERR_FS_CORRUPT, 0, 0, trail->pool,
+               "directory entry \"%s\" ill-formed", name);
+          else
+            {
+              *entry_p = cur_entry;
+              if (prev_entry_p)
+                *prev_entry_p = prev_entry;
+              return SVN_NO_ERROR;
             }
         }
     }
 
   /* We never found the entry, but this is non-fatal. */
-  *entry = (skel_t *)NULL;
+  *entry_p = (skel_t *) NULL;
+  if (prev_entry_p)
+    *prev_entry_p = prev_entry;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Set *ENTRY to the skel for entry NAME in PARENT, as part of TRAIL.
+   If no such entry, set *ENTRY to null but do not error.  The entry
+   is allocated in TRAIL->pool or in the same pool as PARENT; the
+   caller should copy if it cares.  */
+static svn_error_t *
+dir_entry_from_node (skel_t **entry, 
+                     dag_node_t *parent,
+                     const char *name,
+                     trail_t *trail)
+{
+  skel_t *entries;
+
+  SVN_ERR (svn_fs__dag_dir_entries_skel (&entries, parent, trail));
+  return find_dir_entry (entry, NULL, entries, name, trail);
+}
+
+
+/* Add or set in PARENT a directory entry NAME pointing to ID.
+   Allocations are done in TRAIL.
+
+   Assumptions:
+   - PARENT is a mutable directory.
+   - ID does not refer to an ancestor of parent
+   - NAME is a single path component
+*/
+static svn_error_t *
+set_entry (dag_node_t *parent,
+           const char *name,
+           const svn_fs_id_t *id,
+           trail_t *trail)
+{
+  skel_t *parent_node_rev;
+  const char *rep_key, *mutable_rep_key;
+  svn_fs_t *fs = parent->fs;
+
+  SVN_ERR (get_node_revision (&parent_node_rev, parent, trail));
+  rep_key = apr_pstrndup (trail->pool,
+                          (NR_DATA_KEY (parent_node_rev))->data,
+                          (NR_DATA_KEY (parent_node_rev))->len);
+
+  /* Empty string is allowable, but null is not. */
+  assert (rep_key != NULL);
+
+  if (rep_key[0] == '\0')
+    {
+      /* Create a rep skel like this: (('fulltext' 'mutable') '') .  */
+
+      skel_t *header, *rep;
+      const char *string_key = NULL;
+      const char *empty = "()";  /* an initial entries list */
+      
+      header = svn_fs__make_empty_list (trail->pool);
+      svn_fs__prepend (svn_fs__str_atom ("mutable", trail->pool), header);
+      svn_fs__prepend (svn_fs__str_atom ("fulltext", trail->pool), header);
+      rep = svn_fs__make_empty_list (trail->pool);
+      svn_fs__string_append (fs, &string_key, strlen (empty), empty, trail);
+      svn_fs__prepend (svn_fs__str_atom (string_key, trail->pool), rep);
+      svn_fs__prepend (header, rep);
+      SVN_ERR (svn_fs__write_new_rep (&mutable_rep_key, fs, rep, trail));
+    }
+  else
+    SVN_ERR (svn_fs__get_mutable_rep (&mutable_rep_key, rep_key, fs, trail));
+  
+  /* If the parent node already pointed at a mutable representation,
+     we don't need to do anything.  But if it didn't, either because
+     the parent didn't refer to any rep yet or because it referred to
+     an immutable one, we must make the parent refer to the mutable
+     rep we just created. */ 
+
+  if (strcmp (rep_key, mutable_rep_key) != 0)
+    {
+      skel_t *new_node_rev = svn_fs__copy_skel (parent_node_rev, trail->pool);
+      (NR_DATA_KEY (new_node_rev))->data = mutable_rep_key;
+      (NR_DATA_KEY (new_node_rev))->len = strlen (mutable_rep_key);
+      SVN_ERR (set_node_revision (parent, new_node_rev, trail));
+    }
+
+  /* Change the entries list. */
+  {
+    skel_t *rep, *entries;
+    skel_t *entry;
+    svn_string_t str;
+    svn_stringbuf_t *unparsed_entries;
+    const char *string_key;
+    svn_stringbuf_t *id_str = svn_fs_unparse_id (id, trail->pool);
+
+    SVN_ERR (svn_fs__read_rep (&rep, fs, mutable_rep_key, trail));
+    SVN_ERR (svn_fs__string_from_rep (&str, fs, rep, trail));
+    entries = svn_fs__parse_skel ((char *) str.data, str.len, trail->pool);
+    SVN_ERR (find_dir_entry (&entry, NULL, entries, name, trail));
+
+    if (entry)
+      {
+        /* Tweak an existing entry. */
+        entry->children->next->data = id_str->data;
+        entry->children->next->len  = id_str->len;
+      }
+    else
+      {
+        /* Create a new entry. */
+        skel_t *new_entry_skel;
+
+        new_entry_skel = svn_fs__make_empty_list (trail->pool);
+        svn_fs__prepend (svn_fs__str_atom (id_str->data, trail->pool),
+                         new_entry_skel);
+        svn_fs__prepend (svn_fs__str_atom (name, trail->pool), new_entry_skel);
+        svn_fs__prepend (new_entry_skel, entries);
+      }
+
+    unparsed_entries = svn_fs__unparse_skel (entries, trail->pool);
+    string_key = svn_fs__string_key_from_rep (rep, trail->pool);
+
+    /* Blow away the old entries list, then write the new one. */
+    if (string_key && (string_key[0] != '\0'))
+      SVN_ERR (svn_fs__string_clear (fs, string_key, trail));
+    SVN_ERR (svn_fs__string_append (fs, &string_key,
+                                    unparsed_entries->len,
+                                    unparsed_entries->data,
+                                    trail));
+  }
+
   return SVN_NO_ERROR;
 }
 
@@ -538,40 +662,20 @@ make_entry (dag_node_t **child_p,
   svn_fs_id_t *new_node_id;
   skel_t *new_node_skel;
 
-  /* ### tweakit: Retrieve the rep for this directory's entries list.
-     If it is not mutable, make a mutable new rep (this is a deep
-     copy, as it must make a new string too).  Make the entry in the
-     new rep, write it out.  Something like:
-
-        get_mutable_rep (old_rep_key, &new_rep_key);
-        do_stuff_to_new_rep_and_its_string (new_rep_key, stuff...);
-        write_new_rep (new_rep_key); // takes care of the strings, too 
-        set_entries_key (this_mutable_node_rev, new_rep_key);
-  */
+  /* Make sure that NAME is a single path component. */
+  if (! svn_fs__is_single_path_component (name))
+    return 
+      svn_error_createf 
+      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
+       "Attempted to create a node with an illegal name `%s'", name);
 
   /* Make sure that parent is a directory */
   if (! svn_fs__dag_is_directory (parent))
     return 
-      svn_error_createf 
+      svn_error_create
       (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL, trail->pool,
        "Attempted to create entry in non-directory parent");
     
-  /* Check that parent does not already have an entry named NAME. */
-  {
-    skel_t *entry_skel;
-    skel_t *pnode_rev;
-
-    SVN_ERR (get_node_revision (&pnode_rev, parent, trail));
-    SVN_ERR (find_dir_entry_skel (&entry_skel, pnode_rev, name, trail));
-    if (entry_skel)
-      {
-        return 
-          svn_error_createf 
-          (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL, trail->pool,
-           "Attempted to create entry that already exists");
-      }
-  }
-
   /* Check that the parent is mutable. */
   {
     svn_boolean_t is_mutable;
@@ -586,18 +690,22 @@ make_entry (dag_node_t **child_p,
       }
   }
 
-  /* Make sure that NAME is a single path component. */
-  if (! svn_fs__is_single_path_component (name))
-    return 
-      svn_error_createf 
-      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
-       "Attempted to create a node with an illegal name `%s'", name);
+  /* Check that parent does not already have an entry named NAME. */
+  {
+    skel_t *entry_skel;
+
+    SVN_ERR (dir_entry_from_node (&entry_skel, parent, name, trail));
+    if (entry_skel)
+      {
+        return 
+          svn_error_createf 
+          (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL, trail->pool,
+           "Attempted to create entry that already exists");
+      }
+  }
 
   /* Create the new node's NODE-REVISION skel */
   {
-    /* ### tweakit: Of course, change this whole block to use the new
-       noderev format.  Hmmm, time to make constructor/destructor?  */
-
     skel_t *header_skel;
     skel_t *flag_skel;
     svn_stringbuf_t *id_str;
@@ -605,119 +713,56 @@ make_entry (dag_node_t **child_p,
     /* Call .toString() on parent's id -- oops!  This isn't Java! */
     id_str = svn_fs_unparse_id (parent->id, trail->pool);
     
-    /* Create a new skel for our new node, the format of which is
-       (HEADER KIND-SPECIFIC).  If we are making a directory, the
-       HEADER is (`dir' PROPLIST (`mutable' PARENT-ID)).  If not, then
-       this is a file, whose HEADER is (`file' PROPLIST (`mutable'
-       PARENT-ID)).  KIND-SPECIFIC is an empty atom for files, an
-       empty list for directories. */
-    
+    /* Create a new skel for our new node.  If we are making a
+       directory, NODE-REVISION is:
+
+          ((TYPE REVISION (`mutable' PARENT-ID)) PROP-KEY DATA-KEY)
+
+       where TYPE is `file' or `dir'.
+
+       For new both types, PROP-KEY and DATA-KEY start out as empty
+       atoms -- that is, they point to no representations.  They will
+       be filled in on demand by other code.  */
+
     /* Step 1: create the FLAG skel. */
     flag_skel = svn_fs__make_empty_list (trail->pool);
-    svn_fs__prepend (svn_fs__str_atom (id_str->data, trail->pool),
-                     flag_skel);
-    svn_fs__prepend (svn_fs__str_atom ("mutable", trail->pool), 
-                     flag_skel);
+    svn_fs__prepend (svn_fs__str_atom (id_str->data, trail->pool), flag_skel);
+    svn_fs__prepend (svn_fs__str_atom ("mutable", trail->pool), flag_skel);
     /* Now we have a FLAG skel: (`mutable' PARENT-ID) */
     
     /* Step 2: create the HEADER skel. */
     header_skel = svn_fs__make_empty_list (trail->pool);
     svn_fs__prepend (flag_skel, header_skel);
-    svn_fs__prepend (svn_fs__make_empty_list (trail->pool),
-                     header_skel);
+    svn_fs__prepend (svn_fs__str_atom ("", trail->pool), header_skel);
     if (is_dir)
-      {
-        svn_fs__prepend (svn_fs__str_atom ("dir", trail->pool),
-                         header_skel);
-      }
+      svn_fs__prepend (svn_fs__str_atom ("dir", trail->pool), header_skel);
     else
-      {
-        svn_fs__prepend (svn_fs__str_atom ("file", trail->pool),
-                         header_skel);
-      }
+      svn_fs__prepend (svn_fs__str_atom ("file", trail->pool), header_skel);
     /* Now we have a HEADER skel: (`file'-or-`dir' () FLAG) */
     
     /* Step 3: assemble the NODE-REVISION skel. */
     new_node_skel = svn_fs__make_empty_list (trail->pool);
-    if (is_dir)
-      {
-        svn_fs__prepend (svn_fs__make_empty_list (trail->pool),
-                         new_node_skel);
-      }
-    else
-      {
-        svn_fs__prepend (svn_fs__str_atom ("", trail->pool),
-                         new_node_skel);
-      }
+    svn_fs__prepend (svn_fs__str_atom ("", trail->pool), new_node_skel);
+    svn_fs__prepend (svn_fs__str_atom ("", trail->pool), new_node_skel);
     svn_fs__prepend (header_skel, new_node_skel);
     /* All done, skel-wise.  We have a NODE-REVISION skel as described
        far above. */
     
-    /* Time to actually create our new node in the filesystem */
+    /* Time to actually create our new node in the filesystem. */
     SVN_ERR (svn_fs__create_node (&new_node_id, parent->fs,
                                   new_node_skel, trail));
   }
 
   /* Create a new node_dag_t for our new node */
-  SVN_ERR (svn_fs__dag_get_node (child_p, 
-                                    svn_fs__dag_get_fs (parent),
-                                    new_node_id, trail));
+  SVN_ERR (svn_fs__dag_get_node (child_p,
+                                 svn_fs__dag_get_fs (parent),
+                                 new_node_id, trail));
 
-  /* We can safely call add_new_entry because we already know that
+  /* We can safely call set_entry because we already know that
      PARENT is mutable, and we just created CHILD, so we know it has
      no ancestors (therefore, PARENT cannot be an ancestor of CHILD) */
-  SVN_ERR (add_new_entry (parent, svn_fs__dag_get_id (*child_p),
-                          name, trail));
+  SVN_ERR (set_entry (parent, name, svn_fs__dag_get_id (*child_p), trail));
 
-  return SVN_NO_ERROR;
-}
-
-
-/* Helper function for svn_fs__dag_clone_child.
-   Given a PARENT directory, and the NAME of an entry in that
-   directory, update the PARENT's ENTRY list item for the NAMEd entry
-   to refer to a different node ID than the one currently associated
-   with it.
-   ENTRY must exist in PARENT.
-   Allocations occur in TRAIL->pool. */
-static svn_error_t *
-replace_dir_entry (dag_node_t *parent, 
-                   const char *name, 
-                   svn_fs_id_t *new_node_id, 
-                   trail_t *trail) 
-{ 
-  skel_t *parent_rev;
-  skel_t *entry_skel;
-
-  /* ### tweakit: see comments in make_entry() above. */
-
-  /* Go get a fresh NODE-REVISION for the parent. */
-  SVN_ERR (get_node_revision (&parent_rev, parent, trail));
-  parent_rev = svn_fs__copy_skel (parent_rev, trail->pool);
-
-  /* Find the entry that we're interested in, by name, as a pointer
-     into the PARENT_REV skel. */
-  SVN_ERR (find_dir_entry_skel (&entry_skel, parent_rev, name, trail));
-  {
-    svn_stringbuf_t *id_str;
-    
-    /* Make sure the entry exists. */
-    if (entry_skel == NULL)
-      return svn_error_createf
-        (SVN_ERR_FS_NO_SUCH_ENTRY, 0, NULL, trail->pool,
-         "no such entry `%s'", name);
-
-    /* Get a string representation of the new ID */
-    id_str = svn_fs_unparse_id (new_node_id, trail->pool);
-
-    /* Replace the ID portion of this ENTRY with a new skel_t
-       containing our beautiful updated id */
-    entry_skel->children->next = svn_fs__str_atom (id_str->data,
-                                                   trail->pool);
-
-    /* Commit the new node-revision, within the given trail. */
-    SVN_ERR (set_node_revision (parent, parent_rev, trail));
-  }
   return SVN_NO_ERROR;
 }
 
@@ -727,9 +772,7 @@ svn_fs__dag_dir_entries_skel (skel_t **entries_p,
                               dag_node_t *node,
                               trail_t *trail)
 {
-  skel_t *node_rev, *entries, *entry;
-  
-  /* ### tweakit: this will change in the obvious way. */
+  skel_t *node_rev;
 
   if (! svn_fs__dag_is_directory (node))
     return svn_error_create
@@ -738,21 +781,7 @@ svn_fs__dag_dir_entries_skel (skel_t **entries_p,
   
   /* Get the NODE-REVISION for this node. */
   SVN_ERR (get_node_revision (&node_rev, node, trail));
-  
-  /* Directory entries start at the second element of a node-revision
-     skel, itself a list. */
-  entries = node_rev->children->next;
-  
-  /* Check entries are well-formed. */
-  for (entry = entries->children; entry; entry = entry->next)
-    {
-      /* ENTRY must be a list of two elements. */
-      if (svn_fs__list_length (entry) != 2)
-        return svn_error_create (SVN_ERR_FS_CORRUPT, 0, NULL, trail->pool,
-                                 "Malformed directory entry.");
-    }
-  
-  *entries_p = entries;
+  SVN_ERR (get_dir_entries (entries_p, node->fs, node_rev, trail));
   return SVN_NO_ERROR;
 }
 
@@ -764,9 +793,6 @@ svn_fs__dag_dir_entries_hash (apr_hash_t **table_p,
 {
   skel_t *entries, *entry;
   apr_hash_t *table;
-
-  /* ### tweakit: this shouldn't need to change at all, as it just
-     uses svn_fs__dag_dir_entries_skel(). */
 
   SVN_ERR (svn_fs__dag_dir_entries_skel (&entries, node, trail));
 
@@ -797,14 +823,7 @@ svn_fs__dag_set_entry (dag_node_t *node,
                        svn_fs_id_t *id,
                        trail_t *trail)
 {
-  /* ### kff todo: This should probably be factored with
-     replace_dir_entry(), which behaves the same when the entry is
-     already present.  */
-
-  skel_t *node_revision;
-  skel_t *entry;
   svn_boolean_t is_mutable;
-  svn_stringbuf_t *id_str = svn_fs_unparse_id (id, trail->pool);
 
   /* Check it's a directory. */
   if (! svn_fs__dag_is_directory (node))
@@ -819,35 +838,7 @@ svn_fs__dag_set_entry (dag_node_t *node,
       (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL, trail->pool,
        "Attempted to set entry in immutable node.");
 
-  /* ### tweakit: again, use the library to make sure the rep itself
-     is mutable, which always implies that the string to which it
-     points is also mutable.  [Note: when mutablifying a rep, if it is
-     a delta rep, the new copy should say "fulltext" and the mutable
-     string to which it points will be the undeltified version of the
-     string the old rep pointed to.  But that's not relevant yet.]
-     The rest of this func is basically fine, just make it write the
-     string instead of the the node revision, etc, etc. */
-
-  /* Get and dup the node revision. */
-  SVN_ERR (get_node_revision (&node_revision, node, trail));
-  node_revision = svn_fs__copy_skel (node_revision, trail->pool);
-
-  SVN_ERR (find_dir_entry_skel (&entry, node_revision, entry_name, trail));
-
-  if (entry)
-    {
-      entry->children->next->data = id_str->data;
-      entry->children->next->len  = id_str->len;
-    }
-  else
-    {
-      add_new_entry_skel (node_revision, entry_name, id, trail);
-    }
-
-  /* Store it. */
-  SVN_ERR (set_node_revision (node, node_revision, trail));
-
-  return SVN_NO_ERROR;
+  return set_entry (node, entry_name, id, trail);
 }
 
 
@@ -860,17 +851,30 @@ svn_fs__dag_get_proplist (skel_t **proplist_p,
                           trail_t *trail)
 {
   skel_t *node_rev;
-  skel_t *header;
+  skel_t *rep_key_skel, *rep;
+  const char *rep_key;
+  svn_string_t propstr;
   
   /* Go get a fresh NODE-REVISION for this node. */
   SVN_ERR (get_node_revision (&node_rev, node, trail));
 
-  /* The node "header" is the first element of a node-revision skel,
-     itself a list. */
-  header = node_rev->children;
+  /* Get key skel for properties. */
+  rep_key_skel = NR_PROP_KEY (node_rev);
 
-  /* The property list is the 2nd item in the header skel. */
-  *proplist_p = header->children->next;
+  /* Get the string associated with the property rep, parsing it as a
+     skel. */
+  if (rep_key_skel->len == 0)
+    {
+      *proplist_p = svn_fs__make_empty_list (trail->pool);
+      return SVN_NO_ERROR;
+    }
+
+  rep_key = apr_pstrndup (trail->pool, rep_key_skel->data, rep_key_skel->len);
+  SVN_ERR (svn_fs__read_rep (&rep, node->fs, rep_key, trail));
+  SVN_ERR (svn_fs__string_from_rep (&propstr, node->fs, rep, trail));
+  *proplist_p = svn_fs__parse_skel ((char *) propstr.data,
+                                    propstr.len,
+                                    trail->pool);
 
   return SVN_NO_ERROR;
 }
@@ -882,14 +886,15 @@ svn_fs__dag_set_proplist (dag_node_t *node,
                           trail_t *trail)
 {
   skel_t *node_rev;
-  skel_t *header;
+  skel_t *rep;
+  const char *orig_rep_key, *mutable_rep_key, *str_key;
+  svn_stringbuf_t *unparsed_props;
   
   /* Sanity check: this node better be mutable! */
   {
     svn_boolean_t is_mutable;
-    
-    SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, node, trail));
 
+    SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, node, trail));
     if (! is_mutable)
       {
         svn_stringbuf_t *idstr = svn_fs_unparse_id (node->id, node->pool);
@@ -901,49 +906,45 @@ svn_fs__dag_set_proplist (dag_node_t *node,
       }
   }
 
-  /* Well-formed tests:  make sure the incoming proplist is of the
-     form 
-               PROPLIST ::= (PROP ...) ;
-                   PROP ::= atom atom ;                     */
-  {
-    skel_t *this;
-    int len = svn_fs__list_length (proplist);
-
-    /* Does proplist contain an even number of elements? (If proplist
-       isn't a list in the first place, list_length will return -1,
-       which will still fail the test.) */
-    if (len % 2 != 0)
-      abort ();
-    
-    /* Is each element an atom? */
-    for (this = proplist->children; this; this = this->next)
-      {
-        if (! this->is_atom)
-          abort ();
-      }
-  }
+  /* Make sure it's a valid proplist. */
+  if (! svn_fs__is_valid_proplist (proplist))
+    return svn_error_create
+      (SVN_ERR_FS_CORRUPT, 0, NULL, trail->pool,
+       "svn_fs__dag_set_proplist: Malformed property list.");
   
   /* Go get a fresh NODE-REVISION for this node. */
   SVN_ERR (get_node_revision (&node_rev, node, trail));
 
-  {
-    skel_t *node_rev_copy;
+  /* Get the property rep key. */
+  orig_rep_key = apr_pstrndup (trail->pool,
+                               (NR_PROP_KEY (node_rev))->data,
+                               (NR_PROP_KEY (node_rev))->len);
 
-    /* Copy this NODE-REVISION skel so we can work on it without fear
-       of tampering with the cache. */
-    node_rev_copy = svn_fs__copy_skel (node_rev, trail->pool);
+  /* Get a mutable version of this rep. */
+  SVN_ERR (svn_fs__get_mutable_rep (&mutable_rep_key, orig_rep_key,
+                                    node->fs, trail));
 
-    /* The node "header" is the first element of a node-revision skel,
-       itself a list. */
-    header = node_rev_copy->children;
+  /* Now, get the key to the string our mutable rep points to. */
+  SVN_ERR (svn_fs__read_rep (&rep, node->fs, mutable_rep_key, trail));
+  str_key = svn_fs__string_key_from_rep (rep, trail->pool);
 
-    /* Insert the new proplist into the content_skel.  */
-    proplist->next = header->children->next->next;
-    header->children->next = proplist;
-  
-    /* Commit the new content_skel, within the given trail. */
-    SVN_ERR (set_node_revision (node, node_rev_copy, trail));
-  }
+  /* Clear the old string, write the new one. */
+  unparsed_props = svn_fs__unparse_skel (proplist, trail->pool);
+  SVN_ERR (svn_fs__string_clear (node->fs, str_key, trail));
+  SVN_ERR (svn_fs__string_append (node->fs, &str_key, 
+                                  unparsed_props->len, 
+                                  unparsed_props->data, 
+                                  trail));
+
+  /* If we made a new rep, record it in the node revision. */
+  if (strcmp (mutable_rep_key, orig_rep_key) != 0)
+    {
+      (NR_PROP_KEY (node_rev))->data = mutable_rep_key;
+      (NR_PROP_KEY (node_rev))->len = strlen (mutable_rep_key);
+      SVN_ERR (svn_fs__put_node_revision (node->fs, node->id,
+                                          node_rev, trail));
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -1005,6 +1006,7 @@ svn_fs__dag_clone_child (dag_node_t **child_p,
   dag_node_t *cur_entry; /* parent's current entry named NAME */
   svn_fs_id_t *new_node_id; /* node id we'll put into NEW_NODE */
 
+  /* First check that the parent is mutable. */
   {
     svn_boolean_t is_mutable;
 
@@ -1050,8 +1052,8 @@ svn_fs__dag_clone_child (dag_node_t **child_p,
         SVN_ERR (get_node_revision (&node_rev, cur_entry, trail));
         
         /* Set the mutable flag */
-        if (! has_mutable_flag (node_rev))
-          set_mutable_flag (node_rev, NULL, trail->pool);
+        if (! node_rev_has_mutable_flag (node_rev))
+          node_rev_set_mutable_flag (node_rev, NULL, trail->pool);
 
         /* Do the clone thingy here. */
         SVN_ERR (svn_fs__create_successor (&new_node_id, 
@@ -1062,15 +1064,14 @@ svn_fs__dag_clone_child (dag_node_t **child_p,
 
         /* Replace the ID in the parent's ENTRY list with the ID which
            refers to the mutable clone of this child. */
-        SVN_ERR (replace_dir_entry (parent, name, new_node_id,
-                                    trail));
+        SVN_ERR (set_entry (parent, name, new_node_id, trail));
       }
   }
 
   /* Initialize the youngster. */
   SVN_ERR (svn_fs__dag_get_node (child_p, 
-                                    svn_fs__dag_get_fs (parent), 
-                                    new_node_id, trail));
+                                 svn_fs__dag_get_fs (parent), 
+                                 new_node_id, trail));
   
   return SVN_NO_ERROR;
 }
@@ -1103,8 +1104,8 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
 
       /* With its Y-chromosome changed to X...
          (If it's not mutable already, make it so). */
-      if (! has_mutable_flag (root_skel))
-        set_mutable_flag (root_skel, NULL, trail->pool);
+      if (! node_rev_has_mutable_flag (root_skel))
+        node_rev_set_mutable_flag (root_skel, NULL, trail->pool);
 
       /* Store it. */
       SVN_ERR (svn_fs__create_successor (&root_id, fs, base_root_id, root_skel,
@@ -1139,8 +1140,16 @@ delete_entry (dag_node_t *parent,
               svn_boolean_t require_empty,
               trail_t *trail)
 {
-  skel_t *node_rev, *new_dirent_list, *prev_entry, *entry;
-  int deleted = FALSE;
+  skel_t *parent_node_rev;
+  const char *rep_key, *mutable_rep_key;
+  svn_fs_t *fs = parent->fs;
+  skel_t *prev_entry, *entry;
+  skel_t *rep, *entries;
+  svn_string_t str;
+  svn_stringbuf_t *unparsed_entries;
+  const char *string_key;
+  svn_fs_id_t *id;
+  dag_node_t *node; 
 
   /* Make sure parent is a directory. */
   if (! svn_fs__dag_is_directory (parent))
@@ -1153,9 +1162,7 @@ delete_entry (dag_node_t *parent,
   /* Make sure parent is mutable. */
   {
     svn_boolean_t is_mutable;
-
     SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, parent, trail));
-
     if (! is_mutable)
       {
         return 
@@ -1174,86 +1181,84 @@ delete_entry (dag_node_t *parent,
        "Attempted to delete a node with an illegal name `%s'", name);
 
   /* Get a fresh NODE-REVISION for this node. */
-  SVN_ERR (get_node_revision (&node_rev, parent, trail));
+  SVN_ERR (get_node_revision (&parent_node_rev, parent, trail));
 
-  /* We don't use svn_fs__dag_dir_entries_skel here -- to keep things
-   * simple, we're going to dup the entire directory node-revision
-   * skel anyway, since we're changing it.  Given that, we might as
-   * well just find copy's entries list by hand and modify it
-   * in-place.  But note that if we wanted to avoid dup'ing the whole
-   * noderev skel, we could, we'd just need to put an undo func/baton
-   * pair in TRAIL, to undelete the entry in case the Berkeley txn
-   * fails.  The space savings doesn't seem worth the extra
-   * complexity, however.
-   */
+  /* Get the key for this node's data representation. */
+  rep_key = apr_pstrndup (trail->pool,
+                          (NR_DATA_KEY (parent_node_rev))->data,
+                          (NR_DATA_KEY (parent_node_rev))->len);
 
-  node_rev = svn_fs__copy_skel (node_rev, trail->pool);
-  new_dirent_list = node_rev->children->next;
+  /* No REP_KEY means no representation, and no representation means
+     no data, and no data means no enties...there's nothing here to
+     delete! */
+  if (rep_key[0] == '\0')
+      return svn_error_createf 
+        (SVN_ERR_FS_NO_SUCH_ENTRY, 0, NULL, trail->pool,
+         "Delete failed--directory has no entry `%s'", name);
 
-  /* new_dirent_list looks like "((NAME ID) (NAME ID) (NAME ID) ...)" */
-  for (prev_entry = NULL, entry = new_dirent_list->children;
-       entry != NULL;
-       prev_entry = entry, entry = entry->next)
+  /* Ensure we have a key to a mutable representation of the entries
+     list.  We'll have to update the NODE-REVISION if it points to an
+     immutable version.  */
+  SVN_ERR (svn_fs__get_mutable_rep (&mutable_rep_key, rep_key, fs, trail));
+  if (strcmp (rep_key, mutable_rep_key) != 0)
     {
-      /* entry looks like "(NAME ID)" */
-      if (svn_fs__matches_atom (entry->children, name))
+      skel_t *new_node_rev = svn_fs__copy_skel (parent_node_rev, trail->pool);
+      (NR_DATA_KEY (new_node_rev))->data = mutable_rep_key;
+      (NR_DATA_KEY (new_node_rev))->len = strlen (mutable_rep_key);
+      SVN_ERR (set_node_revision (parent, new_node_rev, trail));
+    }
+
+  /* Read the representation, then use it to get the string that holds
+     the entries list.  Parse that list into a browsable skel. */
+  SVN_ERR (svn_fs__read_rep (&rep, fs, mutable_rep_key, trail));
+  SVN_ERR (svn_fs__string_from_rep (&str, fs, rep, trail));
+  entries = svn_fs__parse_skel ((char *) str.data, str.len, trail->pool);
+
+  /* Find NAME in the ENTRIES skel.  */
+  SVN_ERR (find_dir_entry (&entry, &prev_entry, entries, name, trail));
+  if (! entry)
+    return svn_error_createf 
+      (SVN_ERR_FS_NO_SUCH_ENTRY, 0, NULL, trail->pool,
+       "Delete failed--directory has no entry `%s'", name);
+
+  /* Use the ID of this ENTRY to get the entry's node.  If the node we
+     get is a directory, make sure it meets up to our emptiness
+     standards (as determined by REQUIRE_EMPTY).  */
+  id = svn_fs_parse_id (entry->children->next->data, 
+                        entry->children->next->len,
+                        trail->pool);
+  SVN_ERR (svn_fs__dag_get_node (&node, parent->fs, id, trail));
+  if (svn_fs__dag_is_directory (node))
+    {
+      skel_t *entries_here;
+      SVN_ERR (svn_fs__dag_dir_entries_skel (&entries_here, node, trail));
+
+      if (require_empty && (svn_fs__list_length (entries_here)))
         {
-          /* Found the entry. */
-          skel_t *id_atom = entry->children->next;
-          dag_node_t *node; 
-          svn_boolean_t is_mutable = 0;
-          svn_fs_id_t *id = svn_fs_parse_id (id_atom->data, id_atom->len,
-                                             trail->pool);
-
-          SVN_ERR (svn_fs__dag_get_node (&node, parent->fs, id, trail));
-          SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, node, trail));
-
-          if (svn_fs__dag_is_directory (node))
-            {
-              skel_t *content;
-              SVN_ERR (svn_fs__get_node_revision (&content, parent->fs,
-                                                  id, trail));
-              
-              if (require_empty
-                  && (svn_fs__list_length (content->children->next) != 0))
-                {
-                  return
-                    svn_error_createf
-                    (SVN_ERR_FS_DIR_NOT_EMPTY, 0, NULL, parent->pool,
-                     "Attempt to delete non-empty directory `%s'.",
-                     name);
-                }
-            }
-
-          /* If mutable, remove it and any mutable children from db. */
-          SVN_ERR (svn_fs__dag_delete_if_mutable (parent->fs, id, trail));
-
-          /* Just "lose" this entry by setting the previous entry's
-             next ptr to the current entry's next ptr. */
-          if (! prev_entry)
-            /* Base case: the first entry (the head of the list) matched. */
-            new_dirent_list->children = entry->next;
-          else
-            prev_entry->next = entry->next;
-
-          deleted = TRUE;
-          break;
+          return svn_error_createf
+            (SVN_ERR_FS_DIR_NOT_EMPTY, 0, NULL, parent->pool,
+             "Attempt to delete non-empty directory `%s'.", name);
         }
     }
-    
-  if (! deleted)
-    return 
-      svn_error_createf
-      (SVN_ERR_FS_NO_SUCH_ENTRY, 0, NULL, parent->pool,
-       "Can't delete entry `%s', not found in parent dir.",
-       name);      
-    
-  /* Else, the linked list has been appropriately modified.  Hook it
-     back into the content skel and re-write the node-revision. */
-  SVN_ERR (svn_fs__put_node_revision (parent->fs,
-                                      parent->id,
-                                      node_rev,
-                                      trail));
+
+  /* If mutable, remove it and any mutable children from db. */
+  SVN_ERR (svn_fs__dag_delete_if_mutable (parent->fs, id, trail));
+        
+  /* Just "lose" this entry by setting the previous entry's
+       next ptr to the current entry's next ptr. */
+  if (! prev_entry)
+    entries->children = entry->next;
+  else
+    prev_entry->next = entry->next;
+
+  /* Write out the updated entries list. */
+  unparsed_entries = svn_fs__unparse_skel (entries, trail->pool);
+  string_key = svn_fs__string_key_from_rep (rep, trail->pool);
+  SVN_ERR (svn_fs__string_clear (fs, string_key, trail));
+  SVN_ERR (svn_fs__string_append (fs, &string_key,
+                                  unparsed_entries->len,
+                                  unparsed_entries->data,
+                                  trail));
 
   return SVN_NO_ERROR;
 }
@@ -1284,6 +1289,7 @@ svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
 {
   svn_boolean_t is_mutable;
   dag_node_t *node;
+  skel_t *node_rev;
 
   SVN_ERR (svn_fs__dag_get_node (&node, fs, id, trail));
 
@@ -1308,7 +1314,32 @@ svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
         }
     }
 
-  /* ... then delete the node itself. */
+  /* ... then delete the node itself, after deleting any mutable
+     representations and strings it points to. */
+
+  SVN_ERR (svn_fs__get_node_revision (&node_rev, fs, id, trail));
+
+  /* Delete any mutable property representation. */
+  {
+    const char *prop_rep_key;
+    prop_rep_key = apr_pstrndup (trail->pool,
+                                 (NR_PROP_KEY (node_rev))->data,
+                                 (NR_PROP_KEY (node_rev))->len);
+    if (prop_rep_key[0] != '\0')
+      SVN_ERR (svn_fs__delete_rep_if_mutable (fs, prop_rep_key, trail));
+  }
+  
+  /* Delete any mutable data representation. */
+  {
+    const char *data_rep_key;
+    data_rep_key = apr_pstrndup (trail->pool,
+                                 (NR_DATA_KEY (node_rev))->data,
+                                 (NR_DATA_KEY (node_rev))->len);
+    if (data_rep_key[0] != '\0')
+      SVN_ERR (svn_fs__delete_rep_if_mutable (fs, data_rep_key, trail));
+  }
+
+  /* Delete the node revision itself. */
   SVN_ERR (svn_fs__delete_node_revision (fs, id, trail));
   
   return SVN_NO_ERROR;
@@ -1379,12 +1410,10 @@ svn_fs__dag_link (dag_node_t *parent,
 
   {
     skel_t *entry_skel;
-    skel_t *pnode_rev;
 
     /* Verify that this parent node does not already have an entry named
        NAME. */
-    SVN_ERR (get_node_revision (&pnode_rev, parent, trail));
-    SVN_ERR (find_dir_entry_skel (&entry_skel, pnode_rev, name, trail));
+    SVN_ERR (dir_entry_from_node (&entry_skel, parent, name, trail));
     if (entry_skel)
       return 
         svn_error_createf 
@@ -1392,55 +1421,90 @@ svn_fs__dag_link (dag_node_t *parent,
          "Attempted to create entry that already exists");
   }
 
-  /* We can safely call add_new_entry because we already know that
+  /* We can safely call set_entry because we already know that
      PARENT is mutable, and we know that CHILD is immutable (since
      every parent of a mutable node is mutable itself, we know that
      CHILD can't be equal to, or a parent of, PARENT).  */
-  SVN_ERR (add_new_entry (parent, svn_fs__dag_get_id (child), name, trail));
+  SVN_ERR (set_entry (parent, name, svn_fs__dag_get_id (child), trail));
 
   return SVN_NO_ERROR;
 }
 
 
-/* svn_fs__dag_get_contents():
-
-   Right now, we *always* hold an entire node-revision skel in
-   memory.  Someday this routine will evolve to incrementally read
-   large file contents from disk. 
-*/
-
 /* Local typedef for __dag_get_contents */
 typedef struct file_content_baton_t
 {
-  /* Yum, the entre contents of the file in RAM.  This is all
-     allocated in trail->pool (the trail passed to __dag_get_contents). */
-  skel_t *text;
+  /* The FS from which we're reading. */
+  svn_fs_t *fs;
+
+  /* The representation skel for the file's contents.  If this is
+     null, the file has never had any contents, so all reads fetch 0
+     bytes.
+
+     We cache the entire rep skel, rather than the key, for
+     efficiency.  This way we don't have to fetch the rep from the db
+     every time we want to read a little bit more of the file.  So if
+     the underlying rep changes, we're just going to blunder along
+     ignorantly.  This is permissible, though; see the doc string for
+     svn_fs_file_contents().  */
+  skel_t *rep;
   
   /* How many bytes have been read already. */
   apr_size_t offset;
 
+  /* Used for temporary allocations.  This is really for
+     txn_body_read_file_contents(), but to get it into
+     read_file_contents(), we have to package it here. */
+  apr_pool_t *pool;
+
 } file_content_baton_t;
+
+
+struct read_file_contents_args
+{
+  file_content_baton_t *fb;   /* The data source.             */
+  char *buf;                  /* Where to put what we read.   */
+  apr_size_t *len;            /* How much to read / was read. */
+};
+
+
+static svn_error_t *
+txn_body_read_file_contents (void *baton, trail_t *trail)
+{
+  struct read_file_contents_args *args = baton;
+
+  if (args->fb->rep)
+    {
+      SVN_ERR (svn_fs__rep_read_range (args->fb->fs,
+                                       args->fb->rep,
+                                       args->buf,
+                                       args->fb->offset,
+                                       args->len,
+                                       trail));
+      args->fb->offset += *(args->len);
+    }
+  /* Else do nothing. */
+
+  return SVN_NO_ERROR;
+}
 
 
 /* Helper func of type svn_read_func_t, used to read the CONTENTS
    stream in __dag_get_contents below. */
 static svn_error_t *
-read_file_contents (void *baton, char *buffer, apr_size_t *len)
+read_file_contents (void *baton, char *buf, apr_size_t *len)
 {
-  file_content_baton_t *fbaton = (file_content_baton_t *) baton;
+  file_content_baton_t *fb = baton;
+  struct read_file_contents_args args;
 
-  /* To be perfectly clear... :) */
-  apr_size_t want_len = *len;
-  apr_size_t len_remaining = (fbaton->text->len) - (fbaton->offset);
-  apr_size_t min_len = want_len <= len_remaining ? want_len : len_remaining;
+  args.fb = fb;
+  args.buf = buf;
+  args.len = len;
 
-  /* Sanity check */
-  if (! fbaton->text->is_atom)
-    abort();
-
-  memcpy (buffer, (fbaton->text->data + fbaton->offset), min_len);
-  fbaton->offset += min_len;
-  *len = min_len;
+  SVN_ERR (svn_fs__retry_txn (fb->fs,
+                              txn_body_read_file_contents,
+                              &args,
+                              fb->pool));
   
   return SVN_NO_ERROR;
 }
@@ -1462,17 +1526,31 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
        "Attempted to get textual contents of a *non*-file node.");
   
   /* Build a read baton in trail->pool. */
-  baton = apr_pcalloc (trail->pool, sizeof(*baton));
+  baton = apr_pcalloc (trail->pool, sizeof (*baton));
+  baton->pool = trail->pool;
+  baton->fs = file->fs;
   baton->offset = 0;
 
   /* Go get a fresh node-revision for FILE. */
   SVN_ERR (get_node_revision (&node_rev, file, trail));
-  
-  /* This node-rev *might* be allocated in node's pool, or it *might*
-     be allocated in trail's pool, depending on mutability.  However,
-     because this routine promises to allocate the stream in trail's
-     pool, the only *safe* thing to do is dup the skel there. */
-  baton->text = svn_fs__copy_skel (node_rev->children->next, trail->pool);
+
+  /* Get the rep skel. */
+  {
+    const char *rep_key;
+    skel_t *rep_skel;
+    
+    if (node_rev->children->next->next->len != 0)
+      {
+        rep_key = apr_pstrndup (trail->pool,
+                                (NR_DATA_KEY (node_rev))->data,
+                                (NR_DATA_KEY (node_rev))->len);
+        
+        SVN_ERR (svn_fs__read_rep (&rep_skel, file->fs, rep_key, trail));
+        baton->rep = rep_skel;
+      }
+    else
+      baton->rep = NULL;
+  }
 
   /* Create a stream object in trail->pool, and make it use our read
      func and baton. */
@@ -1487,14 +1565,14 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
 }
 
 
-
 svn_error_t *
-svn_fs__dag_file_length (apr_off_t *length,
+svn_fs__dag_file_length (apr_size_t *length,
                          dag_node_t *file,
                          trail_t *trail)
 { 
   skel_t *node_rev;
-
+  const char *str_key;
+  
   /* Make sure our node is a file. */
   if (! svn_fs__dag_is_file (file))
     return 
@@ -1505,8 +1583,22 @@ svn_fs__dag_file_length (apr_off_t *length,
   /* Go get a fresh node-revision for FILE. */
   SVN_ERR (get_node_revision (&node_rev, file, trail));
 
-  /* ### skel.len is apr_size_t ... we return apr_off_t */
-  *length = node_rev->children->next->len;
+  /* Seg-fault protection. */
+  assert (svn_fs__list_length (node_rev) >= 3);
+
+  /* Get the string key from the rep. */
+  {
+    skel_t *rep;
+    const char *rep_key = apr_pstrndup (trail->pool,
+                                        (NR_DATA_KEY (node_rev))->data,
+                                        (NR_DATA_KEY (node_rev))->len);
+
+    SVN_ERR (svn_fs__read_rep (&rep, file->fs, rep_key, trail));
+    str_key = svn_fs__string_key_from_rep (rep, trail->pool);
+  }
+
+  /* Use the string key to query the string record's size. */
+  SVN_ERR (svn_fs__string_size (length, file->fs, str_key, trail));
 
   return SVN_NO_ERROR;
 }
@@ -1518,9 +1610,10 @@ svn_fs__dag_set_contents (dag_node_t *file,
                           svn_stringbuf_t *contents,
                           trail_t *trail)
 {
-  /* This whole routine will have to be reincarnated as a "streamy"
-     interface someday. */
-  skel_t *content_skel;
+  /* ### todo: writing file contents needs to move to a streamy
+     interface. */
+
+  skel_t *node_rev_skel;
   svn_boolean_t is_mutable;
 
   /* Make sure our node is a file. */
@@ -1539,16 +1632,39 @@ svn_fs__dag_set_contents (dag_node_t *file,
        "Attempted to set textual contents of an immutable node.");
 
   /* Get the node's current contents... */
-  SVN_ERR (get_node_revision (&content_skel, file, trail));
-  
-  /* ...aaaaaaaaand then swap 'em out with some new ones! */
-  content_skel->children->next = svn_fs__mem_atom (contents->data,
-                                                   contents->len,
-                                                   trail->pool);
+  SVN_ERR (get_node_revision (&node_rev_skel, file, trail));
 
-  /* Stash the file's new contents in the db. */
-  SVN_ERR (svn_fs__put_node_revision (file->fs, file->id,
-                                      content_skel, trail));
+  /* Get a mutable representation for the contents, write them. */
+  {
+    const char *old_key, *new_key;
+
+    old_key = apr_pstrndup (trail->pool,
+                            (NR_DATA_KEY (node_rev_skel))->data,
+                            (NR_DATA_KEY (node_rev_skel))->len);
+
+    SVN_ERR (svn_fs__get_mutable_rep (&new_key, old_key, file->fs, trail));
+
+    /* This is so losing.  We need to move to a streamy, delta-aware
+       interface.  Thanks for listening. */
+
+    SVN_ERR (svn_fs__string_clear (file->fs, new_key, trail));
+    SVN_ERR (svn_fs__string_append (file->fs, &new_key,
+                                    contents->len,
+                                    contents->data,
+                                    trail));
+
+    if (strcmp (old_key, new_key) != 0)
+      {
+        /* We made a new rep, so update the node revision. */
+        (NR_DATA_KEY (node_rev_skel))->data = new_key;
+        (NR_DATA_KEY (node_rev_skel))->len  = strlen (new_key);
+        SVN_ERR (svn_fs__put_node_revision (file->fs, file->id,
+                                            node_rev_skel, trail));
+      }
+
+    /* Else the node revision already pointed to a mutable rep, and so
+       doesn't need to be updated. */
+  }
 
   return SVN_NO_ERROR;
 }
@@ -1574,10 +1690,6 @@ svn_fs__dag_dup (dag_node_t *node,
 }
 
 
-/* Open the node named NAME in the directory PARENT, as part of TRAIL.
-   Set *CHILD_P to the new node, allocated in TRAIL->pool.  NAME must be a
-   single path component; it cannot be a slash-separated directory
-   path.  */
 svn_error_t *
 svn_fs__dag_open (dag_node_t **child_p,
                   dag_node_t *parent,
@@ -1585,12 +1697,9 @@ svn_fs__dag_open (dag_node_t **child_p,
                   trail_t *trail)
 {
   skel_t *entry_skel;
-  skel_t *pnode_rev;
   svn_fs_id_t *node_id;
   
-  /* Find the entry named NAME in PARENT if it exists. */
-  SVN_ERR (get_node_revision (&pnode_rev, parent, trail));
-  SVN_ERR (find_dir_entry_skel (&entry_skel, pnode_rev, name, trail));
+  SVN_ERR (dir_entry_from_node (&entry_skel, parent, name, trail));
   if (! entry_skel)
     {
       /* return some other nasty error */
@@ -1616,8 +1725,8 @@ svn_fs__dag_open (dag_node_t **child_p,
   }
 
   SVN_ERR (svn_fs__dag_get_node (child_p, 
-                                    svn_fs__dag_get_fs (parent),
-                                    node_id, trail));
+                                 svn_fs__dag_get_fs (parent),
+                                 node_id, trail));
 
   return SVN_NO_ERROR;
 }
@@ -1664,6 +1773,10 @@ svn_fs__dag_make_copy (dag_node_t **child_p,
   skel_t *new_node_skel;
   svn_fs_id_t *new_node_id;
 
+  abort();
+
+  /* NOTREACHED */
+
   /* Make sure that parent is a directory */
   if (! svn_fs__dag_is_directory (parent))
     return 
@@ -1686,10 +1799,8 @@ svn_fs__dag_make_copy (dag_node_t **child_p,
   /* Check that parent does not already have an entry named NAME. */
   {
     skel_t *entry_skel;
-    skel_t *pnode_rev;
 
-    SVN_ERR (get_node_revision (&pnode_rev, parent, trail));
-    SVN_ERR (find_dir_entry_skel (&entry_skel, pnode_rev, name, trail));
+    SVN_ERR (dir_entry_from_node (&entry_skel, parent, name, trail));
     if (entry_skel)
       {
         return 
@@ -1785,16 +1896,12 @@ svn_fs__dag_make_copy (dag_node_t **child_p,
                                     svn_fs__dag_get_fs (parent),
                                     new_node_id, trail));
 
-  /* We can safely call add_new_entry because we already know that
+  /* We can safely call set_entry because we already know that
      PARENT is mutable, and we just created CHILD, so we know it has
      no ancestors (therefore, PARENT cannot be an ancestor of CHILD) */
-  SVN_ERR (add_new_entry (parent, svn_fs__dag_get_id (*child_p), name, trail));
+  SVN_ERR (set_entry (parent, name, svn_fs__dag_get_id (*child_p), trail));
 
   return SVN_NO_ERROR;
-
-  abort();
-  /* NOTREACHED */
-  return NULL;
 }
 
 
@@ -1815,33 +1922,55 @@ svn_fs__dag_get_copy (svn_revnum_t *rev_p,
 
 /*** Committing ***/
 
-/* If NODE is mutable, make it immutable, as part of TRAIL.  Else do
-   nothing.  Callers beware: if NODE is a directory, this does _not_
-   check that all the directory's children are immutable.  */
+/* If NODE is mutable, make it immutable, as part of TRAIL; else do
+   nothing.  This immutates any mutable representations referred to by
+   NODE as well.
+
+   Callers beware: if NODE is a directory, this does _not_ check that
+   all the directory's children are immutable.  You probably meant to
+   use stabilize_node().  */
 static svn_error_t *
 make_node_immutable (dag_node_t *node, trail_t *trail)
 {
   skel_t *node_rev;
   skel_t *header;
   skel_t *flag, *prev;
-  apr_pool_t *subpool = svn_pool_create (trail->pool);
 
   /* Go get a fresh NODE-REVISION for this node. */
   SVN_ERR (get_node_revision (&node_rev, node, trail));
 
-  /* Copy the node_rev skel into our subpool.  todo:  One day, when
-     the entire contents of a file aren't stored in the node_rev skel,
-     we might not bother with this copy. */
-  node_rev = svn_fs__copy_skel (node_rev, subpool);
+  /* Copy the node_rev skel into our subpool. */
+  node_rev = svn_fs__copy_skel (node_rev, trail->pool);
 
-  /* The node HEADER is the first element of a node-revision skel,
-     itself a list. */
-  header = node_rev->children;
+  /* The HEADER is the first element of the node-revision skel. */
+  header = NR_HEADER (node_rev);
   
-  /* The FLAG is the 3rd element of the header. */
-  for (flag = header->children->next->next, prev = NULL;
+  /* The PROP-KEY is the second element. */
+  {
+    const char *prop_rep_key;
+  
+    prop_rep_key = apr_pstrndup (trail->pool,
+                                 (NR_PROP_KEY (node_rev))->data,
+                                 (NR_PROP_KEY (node_rev))->len);
+    if (prop_rep_key && prop_rep_key[0] != '\0')
+      SVN_ERR (svn_fs__make_rep_immutable (node->fs, prop_rep_key, trail));
+  }
+
+  /* The DATA-KEY is the third element. */
+  {
+    const char *data_rep_key;
+
+    data_rep_key = apr_pstrndup (trail->pool,
+                                 (NR_DATA_KEY (node_rev))->data,
+                                 (NR_DATA_KEY (node_rev))->len);
+    if (data_rep_key && data_rep_key[0] != '\0')
+      SVN_ERR (svn_fs__make_rep_immutable (node->fs, data_rep_key, trail));
+  }
+
+  /* The FLAGs start at the 2nd element of the header. */
+  for (flag = header->children->next, prev = NULL;
        flag;
-       flag = flag->next)
+       prev = flag, flag = flag->next)
     {
       if ((! flag->is_atom)
           && svn_fs__matches_atom (flag->children, "mutable"))
@@ -1853,14 +1982,10 @@ make_node_immutable (dag_node_t *node, trail_t *trail)
             header->children->next->next = 0;
 
           SVN_ERR (set_node_revision (node, node_rev, trail));
-
-          svn_pool_destroy (subpool);
-          return SVN_NO_ERROR;
+          break;
         }
-      prev = flag;
     }
 
-  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
@@ -1944,9 +2069,6 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
     svn_fs__prepend (svn_fs__str_atom ("revision", trail->pool),
                      new_revision_skel);
 
-    /* ### kff todo: later, when we have properties on txns, get the
-       log msg property and store it in the revision skel. */
-
     SVN_ERR (svn_fs__put_rev (new_rev, fs, new_revision_skel, trail));
   }
 
@@ -1963,3 +2085,6 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
  * eval: (load-file "../svn-dev.el")
  * end:
  */
+
+
+

@@ -54,7 +54,7 @@ svn_error_t *svn_fs__write_rep (svn_fs_t *fs,
 
 /* Store SKEL as a new representation in FS, and the new rep's key in
    *KEY, as part of trail.  The new key is allocated in TRAIL->pool.  */
-svn_error_t *svn_fs__write_new_rep (char **key,
+svn_error_t *svn_fs__write_new_rep (const char **key,
                                     svn_fs_t *fs,
                                     skel_t *skel,
                                     trail_t *trail);

@@ -2063,8 +2063,7 @@ struct file_length_args
 {
   svn_fs_root_t *root;
   const char *path;
-
-  apr_off_t length;     /* OUT parameter */
+  apr_size_t length;     /* OUT parameter */
 };
 
 static svn_error_t *
@@ -2078,7 +2077,7 @@ txn_body_file_length (void *baton,
   SVN_ERR (get_dag (&file, args->root, args->path, trail));
 
   /* Now fetch its length */
-  return svn_fs__dag_file_length(&args->length, file, trail);
+  return svn_fs__dag_file_length (&args->length, file, trail);
 }
 
 svn_error_t *
@@ -2208,8 +2207,12 @@ write_to_string (void *baton, const char *data, apr_size_t *len)
 }
 
 
-/* Helper function: takes a txdelta_baton_t and converts its file
-   information into a readable generic stream. */
+/* Helper function: insure that BATON->path is a mutable file, set
+   BATON->source_stream to a readable generic stream for the file's
+   contents.  The stream is allocated in TRAIL->pool.  
+   
+   If BATON->path is not a file, return SVN_ERR_FS_NOT_FILE; if it is
+   an immutable file, make it mutable.  */
 static svn_error_t *
 txn_body_get_mutable_source_stream (void *baton, trail_t *trail)
 {
@@ -2287,6 +2290,25 @@ svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
   tb->pool = pool;
   tb->target_string = svn_stringbuf_create ("", pool);
  
+  /* ### kff & cmpilato todo: we speculate that insuring the file's
+     mutability is not logically connected with getting a read stream
+     on it, and that therefore there should be two different calls
+     below.  txn_body_get_mutable_source_stream() would go back to
+     being txn_body_get_source_stream(), and we'd separately insure
+     that the path is mutable.  However, this all may be related to
+     the losing way we're accumulating the target_string in memory at
+     the moment (see txdelta_baton_t's documentation), and more
+     thought is required. 
+
+     One thought: the "base" contents shouldn't be the mutable file,
+     but the original, immutable contents.  Then the new file would
+     start out with a clear() call, followed by apply() calls (see the
+     strings-table.h string clear/append interface, for example),
+     where the apply() calls apply deltas against the immutable
+     contents.  That is one possible way out of the
+     accumulate-the-whole-string then-write-it method we're using now.
+     Further investigation required.  */
+
   /* Make a readable "source" stream out of the current contents of
      ROOT/PATH; obviously, this must done in the context of a
      db_txn.  The stream is returned in tb->source_stream. */

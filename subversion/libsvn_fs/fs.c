@@ -473,6 +473,14 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
                      svn_fs__open_transactions_table (&fs->transactions,
                                                       fs->env, 0));
   if (svn_err) goto error;
+  svn_err = DB_WRAP (fs, "creating `representations' table",
+                     svn_fs__open_reps_table (&fs->representations,
+                                              fs->env, 0));
+  if (svn_err) goto error;
+  svn_err = DB_WRAP (fs, "creating `strings' table",
+                     svn_fs__open_strings_table (&fs->strings,
+                                                 fs->env, 0));
+  if (svn_err) goto error;
 
   return SVN_NO_ERROR;
   

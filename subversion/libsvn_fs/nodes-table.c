@@ -186,8 +186,7 @@ is_valid_header (skel_t *skel, skel_t **kind_p)
 
   if (len >= 2)
     {
-      if (skel->children->is_atom
-          && svn_fs__is_valid_proplist (skel->children->next))
+      if (skel->children->is_atom && skel->children->next->is_atom)
         {
           skel_t *flag;
 
@@ -218,129 +217,16 @@ is_valid_node_revision (skel_t *skel)
 
       if (is_valid_header (header, &kind))
         {
-          if (svn_fs__matches_atom (kind, "file")
-              && len == 2
-              && header->next->is_atom)
+          if ((svn_fs__matches_atom (kind, "file")
+               || svn_fs__matches_atom (kind, "dir"))
+              && len == 3
+              && header->next->is_atom
+              && header->next->next->is_atom)
             return 1;
-          else if (svn_fs__matches_atom (kind, "dir")
-                   && len == 2)
-            {
-              skel_t *entry_list = header->next;
-
-              if (! entry_list->is_atom)
-                {
-                  skel_t *entry;
-
-                  for (entry = entry_list->children; 
-                       entry;
-                       entry = entry->next)
-                    {
-                      int entry_len = svn_fs__list_length (entry);
-
-                      if ((entry_len == 2 || entry_len == 3)
-                          && entry->children->is_atom
-                          && entry->children->next->is_atom
-                          && (! entry->children->next->next
-                              || entry->children->next->next->is_atom))
-                        ;
-                      else
-                        return 0;
-                    }
-                  
-                  return 1;
-                }
-            }
         }
     }
 
   return 0;
-}
-
-
-static int
-is_valid_representation (skel_t *skel)
-{
-  int len = svn_fs__list_length (skel);
-
-  if (len >= 1)
-    {
-      skel_t *type = skel->children;
-
-      if (svn_fs__matches_atom (type, "fulltext")
-          && len == 2
-          && is_valid_node_revision (type->next))
-        return 1;
-#if 0
-      else if (svn_fs__matches_atom (type, "younger")
-               && len == 3
-               && is_valid_delta (type->next)
-               && is_valid_checksum (type->next->next))
-        return 1;
-#endif
-    }
-
-  return 0;
-}
-
-
-
-/* Storing and retrieving representations.  */
-
-
-svn_error_t *
-svn_fs__get_rep (skel_t **skel_p,
-                 svn_fs_t *fs,
-                 const svn_fs_id_t *id,
-                 trail_t *trail)
-{
-  int db_err;
-  DBT key, value;
-  skel_t *skel;
-
-  db_err = fs->nodes->get (fs->nodes, trail->db_txn,
-                           svn_fs__id_to_dbt (&key, id, trail->pool),
-                           svn_fs__result_dbt (&value),
-                           0);
-  svn_fs__track_dbt (&value, trail->pool);
-
-  /* If there's no such node, return an appropriately specific error.  */
-  if (db_err == DB_NOTFOUND)
-    return svn_fs__err_dangling_id (fs, id);
-
-  /* Handle any other error conditions.  */
-  SVN_ERR (DB_WRAP (fs, "reading node representation", db_err));
-
-  /* Parse and check the REPRESENTATION skel.  */
-  skel = svn_fs__parse_skel (value.data, value.size, trail->pool);
-  if (! skel
-      || ! is_valid_representation (skel))
-    return svn_fs__err_corrupt_representation (fs, id);
-
-  *skel_p = skel;
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs__put_rep (svn_fs_t *fs,
-                 const svn_fs_id_t *id, 
-                 skel_t *skel,
-                 trail_t *trail)
-{
-  DB_TXN *db_txn = trail->db_txn;
-  apr_pool_t *pool = trail->pool;
-  DBT key, value;
-
-  if (! is_valid_representation (skel))
-    return svn_fs__err_corrupt_representation (fs, id);
-
-  SVN_ERR (DB_WRAP (fs, "storing node representation",
-                    fs->nodes->put (fs->nodes, db_txn,
-                                    svn_fs__id_to_dbt (&key, id, pool),
-                                    svn_fs__skel_to_dbt (&value, skel, pool),
-                                    0)));
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -589,6 +475,145 @@ svn_fs__delete_nodes_entry (svn_fs_t *fs,
                                     0)));
   
   return SVN_NO_ERROR;
+}
+
+
+
+
+/* Storing and retrieving NODE-REVISION skels.  */
+
+
+svn_error_t *
+svn_fs__get_node_revision (skel_t **skel_p,
+                           svn_fs_t *fs,
+                           const svn_fs_id_t *id,
+                           trail_t *trail)
+{
+  skel_t *skel;
+  int db_err;
+  DBT key, value;
+
+  db_err = fs->nodes->get (fs->nodes, trail->db_txn,
+                           svn_fs__id_to_dbt (&key, id, trail->pool),
+                           svn_fs__result_dbt (&value),
+                           0);
+  svn_fs__track_dbt (&value, trail->pool);
+
+  /* If there's no such node, return an appropriately specific error.  */
+  if (db_err == DB_NOTFOUND)
+    return svn_fs__err_dangling_id (fs, id);
+
+  /* Handle any other error conditions.  */
+  SVN_ERR (DB_WRAP (fs, "reading node revision", db_err));
+
+  /* Parse and check the NODE-REVISION skel.  */
+  skel = svn_fs__parse_skel (value.data, value.size, trail->pool);
+  if (! skel
+      || ! is_valid_node_revision (skel))
+    return svn_fs__err_corrupt_node_revision (fs, id);
+
+  *skel_p = skel;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs__put_node_revision (svn_fs_t *fs,
+                           const svn_fs_id_t *id,
+                           skel_t *skel,
+                           trail_t *trail)
+{
+  DB_TXN *db_txn = trail->db_txn;
+  apr_pool_t *pool = trail->pool;
+  DBT key, value;
+
+  if (! is_valid_node_revision (skel))
+    return svn_fs__err_corrupt_node_revision (fs, id);
+
+  SVN_ERR (DB_WRAP (fs, "storing node revision",
+                    fs->nodes->put (fs->nodes, db_txn,
+                                    svn_fs__id_to_dbt (&key, id, pool),
+                                    svn_fs__skel_to_dbt (&value, skel, pool),
+                                    0)));
+
+  return 0;
+}
+
+
+
+/* Creating completely new nodes.  */
+
+
+svn_error_t *
+svn_fs__create_node (svn_fs_id_t **id_p,
+                     svn_fs_t *fs,
+                     skel_t *skel,
+                     trail_t *trail)
+{
+  svn_fs_id_t *id;
+
+  /* Find an unused ID for the node.  */
+  SVN_ERR (svn_fs__new_node_id (&id, fs, trail));
+
+  /* Store its NODE-REVISION skel.  */
+  SVN_ERR (svn_fs__put_node_revision (fs, id, skel, trail));
+
+  *id_p = id;
+  return SVN_NO_ERROR;
+}
+
+
+
+/* Creating new revisions of existing nodes.  */
+
+
+svn_error_t *
+svn_fs__create_successor (svn_fs_id_t **new_id_p,
+                          svn_fs_t *fs,
+                          svn_fs_id_t *old_id,
+                          skel_t *new_skel,
+                          trail_t *trail)
+{
+  svn_fs_id_t *new_id;
+
+  /* Choose an ID for the new node, and store it in the database.  */
+  SVN_ERR (svn_fs__new_successor_id (&new_id, fs, old_id, trail));
+
+  /* Store the new skel under that ID.  */
+  SVN_ERR (svn_fs__put_node_revision (fs, new_id, new_skel, trail));
+
+  *new_id_p = new_id;
+  return SVN_NO_ERROR;
+}
+
+
+
+/* Stable nodes and deltification.  */
+
+
+svn_error_t *
+svn_fs__stable_node (svn_fs_t *fs,
+                     svn_fs_id_t *id,
+                     trail_t *trail)
+{
+  /* As remarked above, we don't actually store anything in a
+     deltified form yet, so this function is a no-op.  This
+     implementation, along with the definitions of
+     svn_fs__get_node_revision and svn_fs__put_node_revision, is
+     completely correct, but not efficient.  */
+  return SVN_NO_ERROR;
+}
+
+
+
+/* Deleting a node revision. */
+
+svn_error_t *
+svn_fs__delete_node_revision (svn_fs_t *fs,
+                              const svn_fs_id_t *id,
+                              trail_t *trail)
+{
+  return svn_fs__delete_nodes_entry (fs, id, trail);
 }
 
 

@@ -18,6 +18,7 @@
 #include "dbt.h"
 #include "trail.h"
 #include "reps-table.h"
+#include "strings-table.h"
 #include "key-gen.h"
 
 
@@ -110,7 +111,7 @@ svn_fs__write_rep (svn_fs_t *fs,
 
 
 svn_error_t *
-svn_fs__write_new_rep (char **key,
+svn_fs__write_new_rep (const char **key,
                        svn_fs_t *fs,
                        skel_t *skel,
                        trail_t *trail)
