@@ -280,6 +280,8 @@ telescope_delta_stack (svn_delta_digger_t *digger,
 static void
 xml_handle_start (void *userData, const char *name, const char **atts)
 {
+  svn_error_t *err;
+
   /* Resurrect our digger structure */
   svn_delta_digger_t *my_digger = (svn_delta_digger_t *) userData;
 
@@ -299,7 +301,11 @@ xml_handle_start (void *userData, const char *name, const char **atts)
         /* This is the very FIRST element of our tree delta! */
         my_digger->stack = new_frame;
       else  /* This is a nested tree-delta.  Hook it in. */
-        telescope_delta_stack (my_digger, FALSE, new_frame, name);
+        {
+          err = telescope_delta_stack (my_digger, FALSE, new_frame, name);
+          if (err)
+            svn_handle_error (err, stderr);
+        }
     }
 
   else if (strcmp (name, "text-delta") == 0)
@@ -331,7 +337,9 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       fill_attributes (my_digger->pool, new_frame, atts);
 
       /* Append this frame to the end of the stack. */
-      telescope_delta_stack (my_digger, FALSE, new_frame, name);
+      err = telescope_delta_stack (my_digger, FALSE, new_frame, name);
+      if (err)
+        svn_handle_error (err, stderr);
     }
 
   else if (strcmp (name, "replace") == 0)
@@ -347,7 +355,9 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       fill_attributes (my_digger->pool, new_frame, atts);
 
       /* Append this frame to the end of the stack. */
-      telescope_delta_stack (my_digger, FALSE, new_frame, name);
+      err = telescope_delta_stack (my_digger, FALSE, new_frame, name);
+      if (err)
+        svn_handle_error (err, stderr);
     }
 
   else if (strcmp (name, "delete") == 0)
@@ -363,8 +373,9 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       fill_attributes (my_digger->pool, new_frame, atts);
 
       /* Append this frame to the end of the stack. */
-      telescope_delta_stack (my_digger, FALSE, new_frame, name);
-
+      err = telescope_delta_stack (my_digger, FALSE, new_frame, name);
+      if (err)
+        svn_handle_error (err, stderr);
     }
 
   else if (strcmp (name, "file") == 0)
@@ -380,7 +391,9 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       fill_attributes (my_digger->pool, new_frame, atts);
 
       /* Append this frame to the end of the stack. */
-      telescope_delta_stack (my_digger, FALSE, new_frame, name);
+      err = telescope_delta_stack (my_digger, FALSE, new_frame, name);
+      if (err)
+        svn_handle_error (err, stderr);
     }
 
   else if (strcmp (name, "dir") == 0)
@@ -396,7 +409,9 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       fill_attributes (my_digger->pool, new_frame, atts);
 
       /* Append this frame to the end of the stack. */
-      telescope_delta_stack (my_digger, FALSE, new_frame, name);
+      err = telescope_delta_stack (my_digger, FALSE, new_frame, name);
+      if (err)
+        svn_handle_error (err, stderr);
 
       /* Call the "directory" callback in the digger struct; this
          allows the client to possibly create new subdirs on-the-fly,
@@ -410,10 +425,12 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       svn_error_t *err;
       /* Found some unrecognized tag, so PUNT to the caller's
          default handler. */
-      if (my_digger->unknown_elt_handler)
+      if (my_digger->unknown_elt_handler) {
         err = (* (my_digger->unknown_elt_handler)) (my_digger, name);
+        if (err)
+          svn_handle_error (err, stderr);
+      }
 
-      /* TODO: check for error */
     }
 }
 
@@ -427,6 +444,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
 static void 
 xml_handle_end (void *userData, const char *name)
 {
+  svn_error_t *err;
   svn_delta_digger_t *my_digger = (svn_delta_digger_t *) userData;
 
   
@@ -441,7 +459,9 @@ xml_handle_end (void *userData, const char *name)
       || (strcmp (name, "dir") == 0))
     {
       /* Snip the bottommost frame off of the stackframe */
-      telescope_delta_stack (my_digger, TRUE, NULL, name);
+      err = telescope_delta_stack (my_digger, TRUE, NULL, name);
+      if (err)
+        svn_handle_error (err, stderr);
     }
 
   else if (strcmp (name, "text-delta") == 0)
@@ -464,8 +484,11 @@ xml_handle_end (void *userData, const char *name)
     {
       /* Found some unrecognized tag, so PUNT to the caller's
          default handler. */
-      if (my_digger->unknown_elt_handler)
-        (* (my_digger->unknown_elt_handler)) (my_digger, name);
+      if (my_digger->unknown_elt_handler) {
+        err = (* (my_digger->unknown_elt_handler)) (my_digger, name);
+        if (err)
+          svn_handle_error (err, stderr);
+      }
     }
 }
 
