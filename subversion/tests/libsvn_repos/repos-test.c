@@ -44,7 +44,7 @@ dir_deltas (const char **msg,
   svn_fs_root_t *txn_root, *revision_root;
   svn_revnum_t youngest_rev;
   void *edit_baton;
-  const svn_delta_edit_fns_t *editor;
+  const svn_delta_editor_t *editor;
   svn_test__tree_t expected_trees[8];
   int revision_count = 0;
   int i, j;
@@ -311,7 +311,7 @@ dir_deltas (const char **msg,
                                          &edit_baton,
                                          fs,
                                          txn_root,
-                                         svn_stringbuf_create ("", subpool),
+                                         "",
                                          subpool));
 
           /* Here's the kicker...do the directory delta. */

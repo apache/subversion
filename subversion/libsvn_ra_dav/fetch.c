@@ -2567,9 +2567,16 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
                                     svn_revnum_t revision_to_update_to,
                                     const char *update_target,
                                     svn_boolean_t recurse,
-                                    const svn_delta_edit_fns_t *wc_update,
+                                    const svn_delta_editor_t *wc_update,
                                     void *wc_update_baton)
 {
+  svn_ra_session_t *ras = session_baton;
+  const svn_delta_edit_fns_t *compat_editor;
+  void *compat_baton;
+
+  svn_delta_compat_wrap (&compat_editor, &compat_baton, wc_update,
+                         wc_update_baton, ras->pool);
+
   return make_reporter (session_baton,
                         reporter,
                         report_baton,
@@ -2578,8 +2585,8 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
                         NULL,
                         recurse,
                         FALSE,
-                        wc_update,
-                        wc_update_baton,
+                        compat_editor,
+                        compat_baton,
                         TRUE); /* fetch_content */
 }
 
@@ -2589,9 +2596,16 @@ svn_error_t * svn_ra_dav__do_status(void *session_baton,
                                     void **report_baton,
                                     const char *status_target,
                                     svn_boolean_t recurse,
-                                    const svn_delta_edit_fns_t *wc_status,
+                                    const svn_delta_editor_t *wc_status,
                                     void *wc_status_baton)
 {
+  svn_ra_session_t *ras = session_baton;
+  const svn_delta_edit_fns_t *compat_editor;
+  void *compat_baton;
+
+  svn_delta_compat_wrap (&compat_editor, &compat_baton, wc_status,
+                         wc_status_baton, ras->pool);
+
   return make_reporter (session_baton,
                         reporter,
                         report_baton,
@@ -2600,8 +2614,8 @@ svn_error_t * svn_ra_dav__do_status(void *session_baton,
                         NULL,
                         recurse,
                         FALSE,
-                        wc_status,
-                        wc_status_baton,
+                        compat_editor,
+                        compat_baton,
                         FALSE); /* fetch_content */
 }
 
@@ -2613,9 +2627,16 @@ svn_error_t * svn_ra_dav__do_switch(void *session_baton,
                                     const char *update_target,
                                     svn_boolean_t recurse,
                                     const char *switch_url,
-                                    const svn_delta_edit_fns_t *wc_update,
+                                    const svn_delta_editor_t *wc_update,
                                     void *wc_update_baton)
 {
+  svn_ra_session_t *ras = session_baton;
+  const svn_delta_edit_fns_t *compat_editor;
+  void *compat_baton;
+
+  svn_delta_compat_wrap (&compat_editor, &compat_baton, wc_update,
+                         wc_update_baton, ras->pool);
+
   return make_reporter (session_baton,
                         reporter,
                         report_baton,
@@ -2624,8 +2645,8 @@ svn_error_t * svn_ra_dav__do_switch(void *session_baton,
                         switch_url,
                         recurse,
                         TRUE,
-                        wc_update,
-                        wc_update_baton,
+                        compat_editor,
+                        compat_baton,
                         TRUE); /* fetch_content */
 }
 
@@ -2637,9 +2658,16 @@ svn_error_t * svn_ra_dav__do_diff(void *session_baton,
                                   const char *diff_target,
                                   svn_boolean_t recurse,
                                   const char *versus_url,
-                                  const svn_delta_edit_fns_t *wc_diff,
+                                  const svn_delta_editor_t *wc_diff,
                                   void *wc_diff_baton)
 {
+  svn_ra_session_t *ras = session_baton;
+  const svn_delta_edit_fns_t *compat_editor;
+  void *compat_baton;
+
+  svn_delta_compat_wrap (&compat_editor, &compat_baton, wc_diff,
+                         wc_diff_baton, ras->pool);
+
   return make_reporter (session_baton,
                         reporter,
                         report_baton,
@@ -2648,8 +2676,8 @@ svn_error_t * svn_ra_dav__do_diff(void *session_baton,
                         versus_url,
                         recurse,
                         FALSE,
-                        wc_diff,
-                        wc_diff_baton,
+                        compat_editor,
+                        compat_baton,
                         TRUE); /* fetch_content */
 }
 

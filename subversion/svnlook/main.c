@@ -129,9 +129,8 @@ generate_delta_tree (svn_repos_node_t **tree,
                      apr_pool_t *pool)
 {
   svn_fs_root_t *base_root;
-  const svn_delta_edit_fns_t *wrap_editor;
   const svn_delta_editor_t *editor;
-  void *edit_baton, *wrap_edit_baton;
+  void *edit_baton;
   apr_pool_t *edit_pool = svn_pool_create (pool);
   svn_fs_t *fs = svn_repos_fs (repos);
 
@@ -142,13 +141,9 @@ generate_delta_tree (svn_repos_node_t **tree,
   SVN_ERR (svn_repos_node_editor (&editor, &edit_baton, repos,
                                   base_root, root, pool, edit_pool));
 
-  /* ### temporary compatibility wrapper */
-  svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton,
-                         editor, edit_baton, pool);
-
   /* Drive our editor. */
   SVN_ERR (svn_repos_dir_delta (base_root, "", NULL, root, "",
-                                wrap_editor, wrap_edit_baton, 
+                                editor, edit_baton, 
                                 FALSE, TRUE, FALSE, 
                                 use_copy_history, edit_pool));
 

@@ -475,7 +475,7 @@ typedef struct svn_ra_plugin_t
                              svn_revnum_t revision_to_update_to,
                              const char *update_target,
                              svn_boolean_t recurse,
-                             const svn_delta_edit_fns_t *update_editor,
+                             const svn_delta_editor_t *update_editor,
                              void *update_baton);
 
   /* Ask the network layer to 'switch' a working copy to a new
@@ -513,7 +513,7 @@ typedef struct svn_ra_plugin_t
                              const char *update_target,
                              svn_boolean_t recurse,
                              const char *switch_url,
-                             const svn_delta_edit_fns_t *update_editor,
+                             const svn_delta_editor_t *update_editor,
                              void *update_baton);
 
   /* Ask the network layer to describe the status of a working copy
@@ -541,7 +541,7 @@ typedef struct svn_ra_plugin_t
                              void **report_baton,
                              const char *status_target,
                              svn_boolean_t recurse,
-                             const svn_delta_edit_fns_t *status_editor,
+                             const svn_delta_editor_t *status_editor,
                              void *status_baton);
 
 
@@ -580,7 +580,7 @@ typedef struct svn_ra_plugin_t
                            const char *diff_target,
                            svn_boolean_t recurse,
                            const char *versus_url,
-                           const svn_delta_edit_fns_t *diff_editor,
+                           const svn_delta_editor_t *diff_editor,
                            void *diff_baton);
 
   /* Invoke RECEIVER with RECEIVER_BATON on each log message from

@@ -814,8 +814,7 @@ svn_repos_dump_fs (svn_repos_t *repos,
                    apr_pool_t *pool)
 {
   const svn_delta_editor_t *dump_editor;
-  const svn_delta_edit_fns_t *editor;
-  void *dump_edit_baton, *edit_baton;
+  void *dump_edit_baton;
   svn_revnum_t i;  
   svn_fs_t *fs = svn_repos_fs (repos);
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -889,16 +888,13 @@ svn_repos_dump_fs (svn_repos_t *repos,
       SVN_ERR (get_dump_editor (&dump_editor, &dump_edit_baton, 
                                 fs, to_rev, "/", stream, feedback_stream,
                                 start_rev, subpool));
-      /* ### remove this wrapper someday: */
-      svn_delta_compat_wrap (&editor, &edit_baton,
-                             dump_editor, dump_edit_baton, subpool);
 
       /* Drive the editor. */
       SVN_ERR (svn_fs_revision_root (&from_root, fs, from_rev, subpool));
       SVN_ERR (svn_fs_revision_root (&to_root, fs, to_rev, subpool));
       SVN_ERR (svn_repos_dir_delta (from_root, "/", NULL, 
                                     to_root, "/",
-                                    editor, edit_baton,
+                                    dump_editor, dump_edit_baton,
                                     FALSE, /* don't send text-deltas */
                                     TRUE, /* recurse */
                                     FALSE, /* don't send entry props */

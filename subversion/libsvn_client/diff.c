@@ -700,9 +700,8 @@ do_merge (svn_wc_notify_func_t notify_func,
   svn_ra_plugin_t *ra_lib;
   const svn_ra_reporter_t *reporter;
   void *report_baton;
-  const svn_delta_edit_fns_t *diff_editor;
-  const svn_delta_editor_t *new_diff_editor;
-  void *diff_edit_baton, *new_diff_edit_baton;
+  const svn_delta_editor_t *diff_editor;
+  void *diff_edit_baton;
 
   /* Sanity check -- ensure that we have valid revisions to look at. */
   if ((revision1->kind == svn_opt_revision_unspecified)
@@ -744,14 +743,10 @@ do_merge (svn_wc_notify_func_t notify_func,
                                         start_revnum,
                                         notify_func,
                                         notify_baton,
-                                        &new_diff_editor,
-                                        &new_diff_edit_baton,
+                                        &diff_editor,
+                                        &diff_edit_baton,
                                         pool));
 
-  /* ### Make composed editor look "old" style.  Remove someday. */
-  svn_delta_compat_wrap (&diff_editor, &diff_edit_baton,
-                         new_diff_editor, new_diff_edit_baton, pool);
-  
   SVN_ERR (ra_lib->do_diff (session,
                             &reporter, &report_baton,
                             end_revnum,
@@ -960,7 +955,7 @@ do_diff (const apr_array_header_t *options,
   svn_ra_plugin_t *ra_lib;
   const svn_ra_reporter_t *reporter;
   void *report_baton;
-  const svn_delta_edit_fns_t *diff_editor;
+  const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
 
   /* Sanity check -- ensure that we have valid revisions to look at. */
@@ -1082,8 +1077,6 @@ do_diff (const apr_array_header_t *options,
            && (revision1->kind != svn_opt_revision_working)
            && (revision1->kind != svn_opt_revision_base))
     {
-      const svn_delta_editor_t *new_diff_editor;
-      void *new_diff_edit_baton;
       const char *URL1, *URL2;
       const char *anchor1, *target1, *anchor2, *target2;
       svn_boolean_t path1_is_url, path2_is_url;
@@ -1200,13 +1193,9 @@ do_diff (const apr_array_header_t *options,
                                             start_revnum,
                                             NULL, /* no notify_func */
                                             NULL, /* no notify_baton */
-                                            &new_diff_editor,
-                                            &new_diff_edit_baton,
+                                            &diff_editor,
+                                            &diff_edit_baton,
                                             pool));
-
-      /* ### Make diff editor look "old" style.  Remove someday. */
-      svn_delta_compat_wrap (&diff_editor, &diff_edit_baton,
-                             new_diff_editor, new_diff_edit_baton, pool);
 
       /* We want to switch our txn into URL2 */
       SVN_ERR (ra_lib->do_diff (session,

@@ -411,7 +411,7 @@ make_reporter (void *session_baton,
                const char *other_url,
                svn_boolean_t text_deltas,
                svn_boolean_t recurse,
-               const svn_delta_edit_fns_t *editor,
+               const svn_delta_editor_t *editor,
                void *edit_baton)
 {
   svn_ra_local__session_baton_t *sbaton = session_baton;
@@ -474,7 +474,7 @@ svn_ra_local__do_update (void *session_baton,
                          svn_revnum_t update_revision,
                          const char *update_target,
                          svn_boolean_t recurse,
-                         const svn_delta_edit_fns_t *update_editor,
+                         const svn_delta_editor_t *update_editor,
                          void *update_baton)
 {
   return make_reporter (session_baton,
@@ -498,7 +498,7 @@ svn_ra_local__do_switch (void *session_baton,
                          const char *update_target,
                          svn_boolean_t recurse,
                          const char *switch_url,
-                         const svn_delta_edit_fns_t *update_editor,
+                         const svn_delta_editor_t *update_editor,
                          void *update_baton)
 {
   return make_reporter (session_baton,
@@ -520,7 +520,7 @@ svn_ra_local__do_status (void *session_baton,
                          void **report_baton,
                          const char *status_target,
                          svn_boolean_t recurse,
-                         const svn_delta_edit_fns_t *status_editor,
+                         const svn_delta_editor_t *status_editor,
                          void *status_baton)
 {
   return make_reporter (session_baton,
@@ -544,7 +544,7 @@ svn_ra_local__do_diff (void *session_baton,
                        const char *update_target,
                        svn_boolean_t recurse,
                        const char *switch_url,
-                       const svn_delta_edit_fns_t *update_editor,
+                       const svn_delta_editor_t *update_editor,
                        void *update_baton)
 {
   return make_reporter (session_baton,
