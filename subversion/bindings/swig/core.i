@@ -18,6 +18,12 @@
 
 %module core
 
+#ifdef SWIGPERL
+    /* We want the error code enums wrapped so we must include error_codes.h
+       before anything else does. */
+    %include svn_error_codes.h
+#endif
+
 %include typemaps.i
 
 %{
@@ -40,9 +46,9 @@
    char * member may leak memory."
 */
 %immutable svn_log_changed_path_t::copyfrom_path;
-%immutable svn_dirent::last_author;
-%immutable svn_error::message;
-%immutable svn_error::file;
+%immutable svn_dirent_t::last_author;
+%immutable svn_error_t::message;
+%immutable svn_error_t::file;
 
 %include svn_types.h
 
@@ -87,6 +93,10 @@
    handle the variadic, so ignore it. */
 %ignore svn_stream_printf;
 
+/* Ugliness because the constants are typedefed and SWIG ignores them
+   as a result. */
+%constant svn_revnum_t SWIG_SVN_INVALID_REVNUM = -1;
+%constant svn_revnum_t SWIG_SVN_IGNORED_REVNUM = -1;
 
 /* -----------------------------------------------------------------------
    these types (as 'type **') will always be an OUT param
@@ -210,30 +220,7 @@
     }
 }
 %typemap(perl5, in) FILE * {
-    dSP ;
-    int count, fd ;
-
-    ENTER ;
-    SAVETMPS;
-
-    PUSHMARK(SP) ;
-    XPUSHs($input);
-    PUTBACK ;
-
-    count = call_pv("fileno", G_SCALAR);
-    SPAGAIN ;
-
-    if (count != 1)
-        croak("Big trouble\n") ;
-
-    if (fd = POPi < 0)
-        croak("not an accessible filehandle");
-
-    $1 = fdopen (fd, "r+");
-
-    PUTBACK ;
-    FREETMPS ;
-    LEAVE ;
+    $1 = PerlIO_exportFILE (IoIFP (sv_2io ($input)), NULL);
 }
 
 /* -----------------------------------------------------------------------
@@ -325,6 +312,7 @@ PyObject *svn_swig_py_exception_type(void);
 
 #ifdef SWIGPERL
 %include svn_diff.h
+%include svn_error.h
 #endif
 
 %{

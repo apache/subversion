@@ -93,15 +93,19 @@
 
 %typemap(perl5,out) svn_error_t * {
     if ($1) {
-	char buf[128], *p;
-	SV *err = sv_newmortal();
-	p = svn_strerror($1->apr_err, buf, 128);
-	sv_setpv (err, p);
-	while ($1) {
-	    sv_catpvf (err, ": %s", $1->message);
-	    $1 = $1->child;
-	}
-	croak (SvPV_nolen(err));
+        SV *exception_handler = perl_get_sv ("SVN::Error::handler", FALSE);
+
+        if (SvOK(exception_handler)) {
+            SV *callback_result;
+
+            svn_swig_pl_callback_thunk (CALL_SV, exception_handler,
+                                        &callback_result, "S", $1,
+                                        $1_descriptor);
+        } else {
+            $result = sv_newmortal();
+            SWIG_MakePtr ($result, (void *)$1, $1_descriptor ,0);
+            argvi++;
+        }
     }
 }
 
@@ -220,6 +224,17 @@
         SWIG_croak("Expecting a string");
     }
 }
+
+/* ---------------------------------------------------------------------------------
+   Handle retrieving the error message from svn_strerror
+*/
+
+%typemap(perl5,in,numinputs=0) (char *buf, apr_size_t bufsize) ( char temp[128] ) {
+    memset (temp,0,128); /* paranoia */
+    $1 = temp;
+    $2 = 128;
+}
+
 /* -----------------------------------------------------------------------
    Define a generic arginit mapping for pools.
 */

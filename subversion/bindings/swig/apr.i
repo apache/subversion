@@ -85,9 +85,6 @@ typedef apr_int32_t time_t;
 	/* FIXME: What goes here? */
 }
 
-%typemap(perl5,argout) apr_time_t * {
-    /* ### FIXME-perl apr_time_t out */
-}
 /* -----------------------------------------------------------------------
    create some INOUT typemaps for apr_size_t
 */
