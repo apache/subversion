@@ -263,7 +263,8 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
       svn_config_t *cfg = apr_hash_get (diff_cmd_baton->config,
                                         SVN_CONFIG_CATEGORY_CONFIG,
                                         APR_HASH_KEY_STRING);
-      svn_config_get (cfg, &diff_cmd, "helpers", "diff-cmd", NULL);
+      svn_config_get (cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
+                      SVN_CONFIG_OPTION_DIFF_CMD, NULL);
     }
 
   if (diff_cmd)
