@@ -102,11 +102,11 @@ module Svn
       end
       
       def propset(name, value, target, recurse=true, force=false)
-        Client.propset2(name, value, target, recurse, force, @pool)
+        Client.propset2(name, value, target, recurse, force, self, @pool)
       end
       
       def propdel(name, target, recurse=true, force=false)
-        Client.propset2(name, nil, target, recurse, force, @pool)
+        Client.propset2(name, nil, target, recurse, force, self, @pool)
       end
       
       def copy(src_path, dst_path, rev=nil)
