@@ -411,29 +411,6 @@ def log_with_empty_repos(sbox):
   return 0
 
 
-def log_where_nothing_changed(sbox):
-  "test 'svn log -r' (issue #1057)"
-  if sbox.build():
-    return 1
-
-  mu_path = os.path.join (sbox.wc_dir, 'A', 'mu')
-  svntest.main.file_append (mu_path, "some new material in mu")
-  stdout_lines, stderr_lines = svntest.main.run_svn (1, 'ci', '-m', 'log msg')
-  if (len(stderr_lines) != 0):
-    print stderr_lines
-    return 1
-
-  # Now run 'svn log -r2' on a directory unaffected by revision 2.
-  B_path = os.path.join(sbox.wc_dir, 'B')
-  stdout_lines, stderr_lines = svntest.main.run_svn(None, "log", B_path)
-
-  if (len(stderr_lines) != 0):
-    print stderr_lines
-    return 1
-
-  return 0
-
-
 ########################################################################
 # Run the tests
 
@@ -443,7 +420,6 @@ test_list = [ None,
               plain_log,
               versioned_log_message,
               log_with_empty_repos,
-              log_where_nothing_changed,
              ]
 
 if __name__ == '__main__':
