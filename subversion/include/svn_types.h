@@ -98,7 +98,7 @@ typedef struct svn_directory_t
 /* a node is either a file or directory, a distinguished union  */
 typedef struct svn_node_t
 {
-  enum svn_node_kind {svn_invalid_kind = 0,
+  enum svn_node_kind {svn_invalid_kind = 0,  /* keep this 0, some code cares */
                       svn_file_kind,
                       svn_dir_kind} kind;
   union node_union 

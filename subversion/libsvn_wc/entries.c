@@ -682,6 +682,132 @@ svn_wc__entry_merge_sync (svn_string_t *path,
 
 
 
+/*** Recursion on entries. ***/
+
+/* Recurse on the versioned parts of a working copy tree, starting at
+ * PATH.
+ *
+ * Each time a directory is entered, ENTER_DIR is called with the
+ * directory's path and the BATON as arguments.
+ *
+ * Each time a directory is left, LEAVE_DIR is called with the
+ * directory's path and the BATON as arguments.
+ *
+ * Each time a file is seen, HANDLE_FILE is called with the parent
+ * directory, the file's basename, and the BATON as arguments.
+ *
+ * If NAMED_TARGETS is non-null, then those functions are only invoked
+ * on directories and files whose names are included (perhaps
+ * implicitly) in NAMED_TARGETS:
+ *
+ * Each key in NAMED_TARGETS is a path to a file or directory, and the
+ * value is the (svn_string_t *) corresponding to that path (this is
+ * done for convenience).  The goal of NAMED_TARGETS is to reflect the
+ * behavior of svn on the command line.  For example, if you invoke
+ *
+ *    svn commit foo bar/baz/blim.c blah.c
+ *
+ * the commit should 
+ *
+ *    1. descend into foo (which is a directory), calling ENTER_DIR
+ *       and LEAVE_DIR on foo itself, and calling those two and
+ *       HANDLE_FILE appropriately depending on what it finds
+ *       underneath foo,
+ *
+ *    2. call ENTER_DIR and LEAVE_DIR on every intermediate dir
+ *       leading up to blim.c, and call HANDLE_FILE on blim.c itself,
+ *
+ *    3. call handle_file on blah.c
+ *
+ * In order for that to happen with depth-firstness observed and no
+ * redundant entering or leaving of directories, the NAMED_TARGETS
+ * hash undergoes the following treatment:
+ *
+ * Every path P in NAMED_TARGETS is checked to make sure that a parent
+ * path of P is not also in NAMED_TARGETS.  If P does have a parent, P
+ * is removed from NAMED_TARGETS, because recursion on the parent will
+ * be sufficient to reach P anyway.
+ *
+ * After this, there will be no two paths with a parent/descendant
+ * relationship in P -- all relationships will be sibling or cousin.
+ *
+ * Once NAMED_TARGETS is free of redundancies, recursion happens on
+ * each path P in NAMED_TARGETS like so:
+ *
+ *    ENTER_DIR is called on the first component of P
+ *      [ENTER_DIR is called on the first/second component of P]
+ *        [ENTER_DIR is called on the first/second/third component of P]
+ *          [...]
+ *            [If P's last component is a file, then HANDLE_FILE is
+ *            invoked on that file only.  Else if P's last component
+ *            is a directory, then we recurse on every entry in that
+ *            directory, calling HANDLE_FILE and/or {ENTER,LEAVE}_DIR
+ *            as appropriate.]
+ *          [...]
+ *        [LEAVE_DIR is called on the first/second/third component of P]
+ *      [LEAVE_DIR is called on the first/second component of P]
+ *    LEAVE_DIR is called on the first component of P
+ *
+ * todo: currently, the code does not handle gracefully the case of
+ * paths refering to superdirectories (i.e., "svn ci ../../foo.c").
+ *
+ * todo: fix algorithm for case
+ *
+ *   svn commit bar/baz/blim.c bar/baz/bloo.c
+ */
+
+/* See documentation in wc.h for svn_wc__entries_recurse(), it
+   explains what this does. */ 
+static void
+compose_paths (apr_hash_t *paths, apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+
+  /* First, iterate over the hash canonicalizing paths. */
+  for (hi = apr_hash_first (paths); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_size_t keylen;
+      void *val;
+      svn_string_t *path;
+
+      apr_hash_this (hi, &key, &keylen, &val);
+      path = val;
+
+      apr_hash_set (paths, key, keylen, NULL);
+      svn_path_canonicalize (path, svn_path_local_style);
+      apr_hash_set (paths, path->data, path->len, path);
+    }
+
+  /* Now, iterate over the hash removing redundancies. */
+  for (hi = apr_hash_first (paths); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_size_t keylen;
+      void *val;
+      svn_string_t *path;
+
+      apr_hash_this (hi, &key, &keylen, &val);
+      path = val;
+
+      /* Untelescope path, checking at each stage to see if the new,
+         shorter parent path is already in the hash.  If it is, remove
+         the original path from the hash. */
+      {
+        svn_string_t *shrinking = svn_string_dup (path, pool);
+        for (svn_path_remove_component (shrinking, svn_path_local_style);
+             (! svn_string_isempty (shrinking));
+             svn_path_remove_component (shrinking, svn_path_local_style))
+          {
+            if (apr_hash_get (paths, shrinking->data, shrinking->len))
+              apr_hash_set (paths, path->data, path->len, NULL);
+          }
+      }
+    }
+}
+
+
+
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")

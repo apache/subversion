@@ -181,15 +181,6 @@ svn_error_t *svn_wc__remove_adm_file (svn_string_t *path,
                                       apr_pool_t *pool,
                                       ...);
 
-/* Set *EXISTS to true iff PATH exists, false otherwise.
- * If PATH's existence cannot be determined, an error will be
- * returned, and *EXISTS untouched.
- */
-svn_error_t *svn_wc__file_exists_p (svn_boolean_t *exists,
-                                    svn_string_t *path,
-                                    apr_pool_t *pool);
-
-
 /* Open the text-base for FILE.
  * FILE can be any kind of path ending with a filename.
  * Behaves like svn_wc__open_adm_file(), which see.
@@ -379,96 +370,6 @@ svn_error_t *svn_wc__entry_merge_sync (svn_string_t *path,
 
 /* Remove entry NAME from ENTRIES, unconditionally. */
 void svn_wc__entry_remove (apr_hash_t *entries, svn_string_t *name);
-
-
-/** Recursion on entries **/
-#define BEN_TURN_THIS_ON 0
-#if BEN_TURN_THIS_ON
-typedef svn_error_t *svn_wc__recurse_enter_dir_t (svn_string_t *path,
-                                                  void *baton);
-
-typedef svn_error_t *svn_wc__recurse_leave_dir_t (svn_string_t *path,
-                                                  void *baton);
-
-typedef svn_error_t *svn_wc__recurse_handle_file_t (svn_string_t *dir,
-                                                    svn_string_t *basename,
-                                                    void *baton);
-
-/* Recurse on the versioned parts of a working copy tree, starting at
- * PATH.
- *
- * Each time a directory is entered, ENTER_DIR is called with the
- * directory's path and the BATON as arguments.
- *
- * Each time a directory is left, LEAVE_DIR is called with the
- * directory's path and the BATON as arguments.
- *
- * Each time a file is seen, HANDLE_FILE is called with the parent
- * directory, the file's basename, and the BATON as arguments.
- *
- * If NAMED_TARGETS is non-null, then those functions are only invoked
- * on directories and files whose names are included (perhaps
- * implicitly) in NAMED_TARGETS:
- *
- * Each key in NAMED_TARGETS is a path to a file or directory, and the
- * value is the (svn_string_t *) corresponding to that path (this is
- * done for convenience).  The goal of NAMED_TARGETS is to reflect the
- * behavior of svn on the command line.  For example, if you invoke
- *
- *    svn commit foo bar/baz/blim.c blah.c
- *
- * the commit should 
- *
- *    1. descend into foo (which is a directory), calling ENTER_DIR
- *       and LEAVE_DIR on foo itself, and calling those two and
- *       HANDLE_FILE appropriately depending on what it finds
- *       underneath foo,
- *
- *    2. call ENTER_DIR and LEAVE_DIR on every intermediate dir
- *       leading up to blim.c, and call HANDLE_FILE on blim.c itself,
- *
- *    3. call handle_file on blah.c
- *
- * In order for that to happen with depth-firstness observed and no
- * redundant entering or leaving of directories, the NAMED_TARGETS
- * hash undergoes the following treatment:
- *
- * Every path P in NAMED_TARGETS is checked to make sure that a parent
- * path of P is not also in NAMED_TARGETS.  If P does have a parent, P
- * is removed from NAMED_TARGETS, because recursion on the parent will
- * be sufficient to reach P anyway.
- *
- * After this, there will be no two paths with a parent/descendant
- * relationship in P -- all relationships will be sibling or cousin.
- *
- * Once NAMED_TARGETS is free of redundancies, recursion happens on
- * each path P in NAMED_TARGETS like so:
- *
- *    ENTER_DIR is called on the first component of P
- *      [ENTER_DIR is called on the first/second component of P]
- *        [ENTER_DIR is called on the first/second/third component of P]
- *          [...]
- *            [If P's last component is a file, then HANDLE_FILE is
- *            invoked on that file only.  Else if P's last component
- *            is a directory, then we recurse on every entry in that
- *            directory, calling HANDLE_FILE and/or {ENTER,LEAVE}_DIR
- *            as appropriate.]
- *          [...]
- *        [LEAVE_DIR is called on the first/second/third component of P]
- *      [LEAVE_DIR is called on the first/second component of P]
- *    LEAVE_DIR is called on the first component of P
- */
-svn_error_t *
-svn_wc__entries_recurse (svn_string_t *path,
-                         apr_hash_t *named_targets,
-                         svn_wc__recurse_enter_dir_t *enter_dir,
-                         svn_wc__recurse_leave_dir_t *leave_dir,
-                         svn_wc__recurse_handle_file_t *handle_file,
-                         void *baton,
-                         apr_pool_t *pool);
-
-#endif /* BEN_TURN_THIS_ON */
-
 
 
 /*** General utilities that may get moved upstairs at some point. */

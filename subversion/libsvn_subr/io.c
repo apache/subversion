@@ -1,5 +1,5 @@
 /*
- * svn_io.h :  general Subversion I/O definitions
+ * io.c:   shared file reading, writing, and probing code.
  *
  * ================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
@@ -44,63 +44,88 @@
  * ====================================================================
  * 
  * This software consists of voluntary contributions made by many
- * individuals on behalf of CollabNet.
+ * individuals and marine fronds on behalf of CollabNet.
  */
 
-/* ==================================================================== */
 
-
-#ifndef SVN_IO_H
-#define SVN_IO_H
-
+
+#include <apr_pools.h>
+#include <apr_file_io.h>
 #include "svn_types.h"
-#include "svn_error.h"
+#include "svn_path.h"
 #include "svn_string.h"
+#include "svn_error.h"
+#include "svn_io.h"
+
+svn_error_t *
+svn_io_check_path (svn_string_t *path,
+                   enum svn_node_kind *kind,
+                   apr_pool_t *pool)
+{
+  apr_dir_t *d = NULL;
+  apr_file_t *f = NULL;
+  apr_status_t apr_err;
+
+  /* Try it as a dir first. */
+  apr_err = apr_opendir (&d, path->data, pool);
+  if (! apr_err)
+    {
+      *kind = svn_dir_kind;
+      apr_err = apr_closedir (d);
+      if (apr_err)
+        return svn_error_createf (apr_err, 0, NULL, pool,
+                                  "svn_io_check_path: "
+                                  "problem closing dir %s",
+                                  path->data);
+      else
+        return SVN_NO_ERROR;
+    }
+  else if (apr_err && (apr_err == APR_ENOENT))
+    {
+      *kind = svn_invalid_kind;
+      return SVN_NO_ERROR;
+    }
+  else if (apr_err && (apr_err != APR_ENOTDIR))
+    {
+      return svn_error_createf (apr_err, 0, NULL, pool,
+                                "svn_io_check_path: "
+                                "opendir %s failed, but not with ENOTDIR",
+                                path->data);
+    }
+  
+  /* todo: handle symlink case, others, someday? */
+
+  /* Else try it as a file. */
+
+  apr_err = apr_open (&f, path->data, APR_READ, APR_OS_DEFAULT, pool);
+  if (! apr_err)
+    {
+      *kind = svn_file_kind;
+      apr_err = apr_close (f);
+      if (apr_err)
+        return svn_error_createf (apr_err, 0, NULL, pool,
+                                  "svn_io_check_path: "
+                                  "problem closing file %s",
+                                  path->data);
+      return SVN_NO_ERROR;
+    }
+  else if (apr_err && (apr_err == APR_ENOENT))
+    {
+      *kind = svn_invalid_kind;
+      return SVN_NO_ERROR;
+    }
+  else
+    return svn_error_createf (apr_err, 0, NULL, pool,
+                              "svn_io_check_path: "
+                              "problem opening file %s",
+                              path->data);
+}
+
 
 
 
-/* If PATH exists, set *KIND to the appropriate kind, else set it to
-   svn_invalid_kind. */
-svn_error_t *svn_io_check_path (svn_string_t *path,
-                                enum svn_node_kind *kind,
-                                apr_pool_t *pool);
-
-
-
-/* A typedef for functions resembling the POSIX `read' system call,
-   representing a incoming stream of bytes, in `caller-pulls' form.
-
-   We will need to compute text deltas for data drawn from files,
-   memory, sockets, and so on.  We will need to read tree deltas from
-   various sources.  The data may be huge --- too large to read into
-   memory at one time.  Using a `read'-like function like this to
-   represent the input data allows us to process the data as we go.
-
-   BATON is some opaque structure representing what we're reading.
-   Whoever provided the function gets to use BATON however they
-   please.
-
-   BUFFER is a buffer to hold the data, and *LEN indicates how many
-   bytes to read.  Upon return, the function should set *LEN to the
-   number of bytes actually read, or zero at the end of the data
-   stream.  *LEN should only change when there is a read error or the
-   input stream ends before the full count of bytes can be read; the
-   generic read function is obligated to perform a full read when
-   possible.
-
-   Any necessary temporary allocation should be done in a sub-pool of
-   POOL.  (If the read function needs to perform allocations which
-   last beyond the lifetime of the function, it must use a different
-   pool, e.g. one referenced through BATON.)  */
-typedef svn_error_t *svn_read_fn_t (void *baton,
-                                    char *buffer,
-                                    apr_size_t *len,
-                                    apr_pool_t *pool);
-
-/* Similar to svn_read_fn_t, but for writing.  */
-typedef svn_error_t *svn_write_fn_t (void *baton,
-				     const char *data,
-				     apr_size_t *len,
-				     apr_pool_t *pool);
-
-#endif /* SVN_IO_H */
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */
