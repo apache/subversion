@@ -63,6 +63,7 @@ static svn_opt_subcommand_t
   subcommand_diff,
   subcommand_dirschanged,
   subcommand_help,
+  subcommand_history,
   subcommand_info,
   subcommand_log,
   subcommand_pget,
@@ -155,6 +156,12 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "usage: svnlook help [SUBCOMMAND...]\n\n"
      "Display this usage message.\n",
      {svnlook__version} },
+
+    {"history", subcommand_history, {0},
+     "usage: svnlook history REPOS_PATH [PATH_IN_REPOS]\n\n"
+     "Print information about the history of a path in the repository (or\n"
+     "the root directory if no path is supplied).\n",
+     {'r', svnlook__show_ids} },
 
     {"info", subcommand_info, {0},
      "usage: svnlook info REPOS_PATH\n\n"
@@ -1254,6 +1261,92 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
 }
 
 
+/* Write this. */
+static svn_error_t *
+do_history (svnlook_ctxt_t *c, 
+            const char *path, 
+            svn_boolean_t show_ids,
+            apr_pool_t *pool)
+{
+  svn_fs_root_t *root;
+  svn_node_kind_t kind;
+  svn_fs_history_t *history;
+  apr_pool_t *oldpool = svn_pool_create (pool);
+  apr_pool_t *newpool = svn_pool_create (pool);
+  const char *history_path;
+  svn_revnum_t history_rev;
+
+  SVN_ERR (get_root (&root, c, pool));
+  SVN_ERR (verify_path (&kind, root, path, pool));
+
+  if (show_ids)
+    {
+      printf ("REVISION   PATH\n");
+      printf ("--------   ----\n");
+    }
+  else
+    {
+      printf ("REVISION   PATH <ID>\n");
+      printf ("--------   ---------\n");
+    }
+
+  SVN_ERR (svn_fs_node_history (&history, root, path, oldpool));
+
+  /* Now, we loop over the history items, calling svn_fs_history_prev(). */
+  do
+    {
+      apr_pool_t *tmppool;
+      svn_string_t *id_string = NULL;
+
+      /* Note that we have to do some crazy pool work here.  We can't
+         get rid of the old history until we use it to get the new, so
+         we alternate back and forth between our subpools.  */
+      SVN_ERR (svn_fs_history_prev (&history, history, 1, newpool));
+
+      /* Only continue if there is further history to deal with. */
+      if (! history)
+        break;
+
+      /* Fetch the location information for this history step.
+         ### We would probably just use POOL if we actually cared
+         ### about the HISTORY_PATH. */
+      SVN_ERR (svn_fs_history_location (&history_path, &history_rev,
+                                        history, newpool));
+      SVN_ERR (svn_cmdline_cstring_from_utf8 (&history_path, 
+                                              history_path, newpool));
+
+      if (show_ids)
+        {
+          const svn_fs_id_t *node_id;
+          svn_fs_root_t *rev_root;
+          SVN_ERR (svn_fs_revision_root (&rev_root, c->fs, 
+                                         history_rev, newpool));
+          SVN_ERR (svn_fs_node_id (&node_id, rev_root, 
+                                   history_path, newpool));
+          id_string = svn_fs_unparse_id (node_id, newpool);
+        }
+      printf ("%8" SVN_REVNUM_T_FMT "   %s%s%s%s\n",
+              history_rev, history_path,
+              id_string ? " <" : "",
+              id_string ? id_string->data : "",
+              id_string ? ">" : "");
+     
+      /* We're done with the old history item, so we can clear its
+         pool, and then toggle our notion of "the old pool". */
+      svn_pool_clear (oldpool);
+      tmppool = oldpool;
+      oldpool = newpool;
+      newpool = tmppool;
+    }
+  while (history); /* shouldn't hit this */
+
+  svn_pool_destroy (oldpool);
+  svn_pool_destroy (newpool);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Print the value of property PROPNAME on PATH in the repository.
    Error with SVN_ERR_FS_NOT_FOUND if PATH does not exist, or with
    SVN_ERR_PROPERTY_NOT_FOUND if no such property on PATH. */
@@ -1487,6 +1580,22 @@ subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                header, cmd_table, options_table, NULL,
                                pool));
   
+  return SVN_NO_ERROR;
+}
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_history (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnlook_opt_state *opt_state = baton;
+  svnlook_ctxt_t *c;
+  const char *path = "/";
+
+  if (opt_state->arg1)
+    path = opt_state->arg1;
+
+  SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
+  SVN_ERR (do_history (c, path, opt_state->show_ids, pool));
   return SVN_NO_ERROR;
 }
 
