@@ -51,16 +51,17 @@ typedef svn_error_t *svn_repos_commit_hook_t (svn_revnum_t new_revision,
 
 /* Return an EDITOR and EDIT_BATON to commit changes to FS, beginning
  * at location `rev:BASE_PATH', where "rev" is the argument given to
- * replace_root().  Store LOG_MSG as the commit message.
+ * replace_root().  Store USER as the author of the commit and
+ * LOG_MSG as the commit message.
  *
- * FS is assumed to be a previously opened file system.
+ * FS is a previously opened file system.
  *
  * Calling (*EDITOR)->close_edit completes the commit.  Before
  * close_edit returns, but after the commit has succeeded, it will
  * invoke HOOK with the new revision number and HOOK_BATON as
  * arguments.  If HOOK returns an error, that error will be returned
  * from close_edit, otherwise close_edit will return successfully
- * (unless it encountered an error before invoking HOOK).  
+ * (unless it encountered an error before invoking HOOK).
  *
  * NOTE: this HOOK is not related to the standard repository hooks
  * run before and after commits, which are configured in the
@@ -71,6 +72,7 @@ svn_error_t *svn_repos_get_editor (svn_delta_edit_fns_t **editor,
                                    void **edit_baton,
                                    svn_fs_t *fs,
                                    svn_stringbuf_t *base_path,
+                                   const char *user,
                                    svn_stringbuf_t *log_msg,
                                    svn_repos_commit_hook_t *hook,
                                    void *hook_baton,
@@ -257,6 +259,18 @@ svn_repos_dated_revision (svn_revnum_t *revision,
 */
 
 
+
+/*** Hook-sensitive wrappers for libsvn_fs routines. ***/
+
+
+/* Like svn_fs_commit_txn(), but invoke the repository's pre- and
+ * post-commit hooks around the commit.
+ *
+ * CONFLICT_P, NEW_REV, and TXN are as in svn_fs_commit_txn().
+ */
+svn_error_t *svn_repos_fs_commit_txn (const char **conflict_p,
+                                      svn_revnum_t *new_rev,
+                                      svn_fs_txn_t *txn);
 
 
 #endif /* SVN_REPOS_H */

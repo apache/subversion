@@ -407,11 +407,16 @@ svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
                                apr_pool_t *pool);
 
 
-/* Commit the transaction TXN.  If the transaction conflicts with
-   other changes committed to the repository, return an
-   SVN_ERR_FS_CONFLICT error.  Otherwise, create a new filesystem
-   revision containing the changes made in TXN, storing that new
-   revision number in *NEW_REV, and return zero.
+/* Commit TXN.
+
+     >> Note: you probably don't want to call this directly.       <<
+     >> Instead, call svn_repos_fs_commit_txn(), which honors the  <<
+     >> repository's hook configurations.                          <<
+
+   If the transaction conflicts with other changes committed to the
+   repository, return an SVN_ERR_FS_CONFLICT error.  Otherwise, create
+   a new filesystem revision containing the changes made in TXN,
+   storing that new revision number in *NEW_REV, and return zero.
 
    If CONFLICT_P is non-zero, use it to provide details on any
    conflicts encountered merging TXN with the most recent committed

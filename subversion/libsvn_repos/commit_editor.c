@@ -12,6 +12,8 @@
  */
 
 
+#include <string.h>
+
 #include "apr_pools.h"
 #include "apr_file_io.h"
 
@@ -31,6 +33,10 @@ struct edit_baton
   apr_pool_t *pool;
 
   /* Supplied when the editor is created: */
+
+  /* The user doing the commit.  Presumably, some higher layer has
+     already authenticated this user. */
+  const char *user;
 
   /* Commit message for this commit. */
   svn_string_t log_msg;
@@ -476,31 +482,43 @@ close_edit (void *edit_baton)
   svn_revnum_t new_revision = SVN_INVALID_REVNUM;
   svn_error_t *err;
   const char *conflict;
-  svn_string_t propname = { SVN_PROP_REVISION_LOG,
-                            sizeof(SVN_PROP_REVISION_LOG) - 1};
+  svn_string_t date_prop_name = { SVN_PROP_REVISION_LOG,
+                                  sizeof(SVN_PROP_REVISION_LOG) - 1};
+  svn_string_t author_prop_name = { SVN_PROP_REVISION_AUTHOR,
+                                    sizeof(SVN_PROP_REVISION_AUTHOR) - 1};
 
-  /* Here, we pass the log message to the filesystem by adding it as a
-     property on the transaction.  Later, when we commit the
-     transaction, that log message will be copied into the newly
-     created revision.   This solves the problem of making sure that
-     the commit and the setting of the initial log message happens as
-     a single atomic "thing." */
-  SVN_ERR (svn_fs_change_txn_prop (eb->txn, &propname,
+  /* We pass the author and log message to the filesystem by adding
+     them as properties on the txn.  Later, when we commit the txn,
+     these properties will be copied into the newly created revision. */
+
+  /* User (author). */
+  {
+    svn_string_t val;
+    val.data = eb->user;
+    val.len = strlen (eb->user);
+
+    SVN_ERR (svn_fs_change_txn_prop (eb->txn, &author_prop_name,
+                                     &val, eb->pool));
+  }
+
+  /* Log message. */
+  SVN_ERR (svn_fs_change_txn_prop (eb->txn, &date_prop_name,
                                    &eb->log_msg, eb->pool));
 
-  err = svn_fs_commit_txn (&conflict, &new_revision, eb->txn);
+  /* Commit. */
+  err = svn_repos_fs_commit_txn (&conflict, &new_revision, eb->txn);
 
   if (err)
     {
       /* ### todo: we should check whether it really was a conflict,
          and return the conflict info if so? */
 
-      /* If the commit failed, it's *probably* due to an out-of-date
-         conflict.  Now, the filesystem gives us the ability to
-         continue diddling the transaction and try again; but let's
-         face it: that's not how the cvs or svn works from a user
-         interface standpoint.  Thus we don't make use of this fs
-         feature (for now, at least.)
+      /* If the commit failed, it's *probably* due to a conflict --
+         that is, the txn being out-of-date.  The filesystem gives us
+         the ability to continue diddling the transaction and try
+         again; but let's face it: that's not how the cvs or svn works
+         from a user interface standpoint.  Thus we don't make use of
+         this fs feature (for now, at least.)
 
          So, in a nutshell: svn commits are an all-or-nothing deal.
          Each commit creates a new fs txn which either succeeds or is
@@ -511,7 +529,9 @@ close_edit (void *edit_baton)
       return err;
     }
 
-  /* Pass the new revision number to the caller's hook. */
+  /* Pass the new revision number to the caller's hook.  Note that
+     this hook is unrelated to the standard repository post-commit
+     hooks.  See svn_repos.h for more on this. */
   SVN_ERR ((*eb->hook) (new_revision, eb->hook_baton));
 
   return SVN_NO_ERROR;
@@ -540,6 +560,7 @@ svn_repos_get_editor (svn_delta_edit_fns_t **editor,
                       void **edit_baton,
                       svn_fs_t *fs,
                       svn_stringbuf_t *base_path,
+                      const char *user,
                       svn_stringbuf_t *log_msg,
                       svn_repos_commit_hook_t *hook,
                       void *hook_baton,
@@ -566,6 +587,7 @@ svn_repos_get_editor (svn_delta_edit_fns_t **editor,
 
   /* Set up the edit baton. */
   eb->pool = subpool;
+  eb->user = apr_pstrdup (subpool, user);
   eb->log_msg.data = apr_pmemdup (subpool, log_msg->data, log_msg->len + 1);
   eb->log_msg.len = log_msg->len;
   eb->hook = hook;

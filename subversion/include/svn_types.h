@@ -83,6 +83,9 @@ typedef int svn_boolean_t;
 #define SVN_PROP_PREFIX "svn:"
 
 
+/* The fs revision property that stores a commit's author. */
+#define SVN_PROP_REVISION_AUTHOR  SVN_PROP_PREFIX "author"
+
 /* The fs revision property that stores a commit's log message. */
 #define SVN_PROP_REVISION_LOG  SVN_PROP_PREFIX "log"
 
