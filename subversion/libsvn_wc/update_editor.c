@@ -1,5 +1,5 @@
 /*
- * get_editor.c :  routines for update and checkout
+ * update_editor.c :  main editor for checkouts and updates
  *
  * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
@@ -82,6 +82,18 @@ struct dir_baton
   /* Basename of this directory. */
   svn_stringbuf_t *name;
 
+  /* The repository URL this directory corresponds to. */
+  svn_stringbuf_t *URL;
+
+  /* Gets set iff this directory has a "disjoint url", i.e. its URL is
+     not its [parent's URL + name].
+
+     ### NOTE:  this editor is now detecting disjoint files and
+     subtrees, but is not yet *using* this information.  It will when
+     we finish issue #575.
+  */
+  svn_boolean_t disjoint_url;
+
   /* The number of other changes associated with this directory in the
      delta (typically, the number of files being changed here, plus
      this dir itself).  BATON->ref_count starts at 1, is incremented
@@ -142,7 +154,10 @@ make_dir_baton (svn_stringbuf_t *name,
   struct edit_baton *eb = edit_baton;
   apr_pool_t *subpool = svn_pool_create (pool);
   struct dir_baton *d = apr_pcalloc (subpool, sizeof (*d));
-  svn_stringbuf_t *path;
+  svn_stringbuf_t *path, *URL;
+  svn_error_t *err;
+  svn_wc_entry_t *entry;
+  svn_boolean_t disjoint_url = FALSE;
 
   if (parent_baton)
     {
@@ -162,6 +177,48 @@ make_dir_baton (svn_stringbuf_t *name,
       svn_path_add_component (path, name);
     }
 
+  /* Figure out the URL for this directory. */
+  if (edit_baton->is_checkout)
+    {
+      /* for checkouts, telescope the URL normally.  no such thing as
+         disjoint urls.   */
+      if (parent_baton)
+        {
+
+          URL = svn_stringbuf_dup (parent_baton->URL, subpool);
+          svn_path_add_component (URL, name);
+        }
+      else
+        URL = svn_stringbuf_dup (eb->ancestor_url, subpool);
+    }
+  else 
+    {
+      svn_stringbuf_t *parent_URL;
+
+      /* For updates, look in the 'entries' file */
+      err = svn_wc_entry (&entry, path, subpool);
+      if (err || (entry == NULL))
+        {
+          /* ### hm, this function doesn't return svn_error_t... */
+          URL = svn_stringbuf_create ("", subpool);
+        }
+      else
+        URL = entry->url;
+
+      /* Is the URL disjoint from its parent's URL?  Notice that we
+         define disjointedness not just in terms of having an
+         unexpected URL, but also as a condition that is automatically
+         *inherited* from a parent baton.  */
+      if (parent_baton) 
+        {
+          parent_URL = svn_stringbuf_dup (parent_baton->URL, subpool);
+          svn_path_add_component (parent_URL, name);
+          if (parent_baton->disjoint_url
+              || (! svn_stringbuf_compare (parent_URL, URL)))
+            disjoint_url = TRUE;
+        }
+    }
+
   d->path         = path;
   d->edit_baton   = edit_baton;
   d->parent_baton = parent_baton;
@@ -169,6 +226,8 @@ make_dir_baton (svn_stringbuf_t *name,
   d->pool         = subpool;
   d->propchanges  = apr_array_make (subpool, 1, sizeof(svn_prop_t));
   d->added        = added;
+  d->URL          = URL;
+  d->disjoint_url = disjoint_url;
 
   if (parent_baton)
     parent_baton->ref_count++;
@@ -277,6 +336,18 @@ struct file_baton
   /* Path to this file, either abs or relative to the change-root. */
   svn_stringbuf_t *path;
 
+  /* The repository URL this directory corresponds to. */
+  svn_stringbuf_t *URL;
+
+  /* Gets set iff this directory has a "disjoint url", i.e. its URL is
+     not its [parent's URL + name].
+
+     ### NOTE:  this editor is now detecting disjoint files and
+     subtrees, but is not yet *using* this information.  It will when
+     we finish issue #575.
+  */
+  svn_boolean_t disjoint_url;
+
   /* This gets set if the file underwent a text change, which guides
      the code that syncs up the adm dir and working copy. */
   svn_boolean_t text_changed;
@@ -301,9 +372,46 @@ make_file_baton (struct dir_baton *parent_dir_baton,
 {
   struct file_baton *f = apr_pcalloc (subpool, sizeof (*f));
   svn_stringbuf_t *path = svn_stringbuf_dup (parent_dir_baton->path, subpool);
+  svn_stringbuf_t *URL;
+  svn_error_t *err;
+  svn_wc_entry_t *entry;
+  svn_boolean_t disjoint_url = FALSE;
 
   /* Make the file's on-disk name. */
   svn_path_add_component (path, name);
+
+  /* Figure out the URL for this file. */
+  if (parent_dir_baton->edit_baton->is_checkout)
+    {
+      /* for checkouts, telescope the URL normally.  no such thing as
+         disjoint urls.   */
+      URL = svn_stringbuf_dup (parent_dir_baton->URL, subpool);
+      svn_path_add_component (URL, name);
+    }
+  else 
+    {
+      svn_stringbuf_t *parent_URL;
+
+      /* For updates, look in the 'entries' file */
+      err = svn_wc_entry (&entry, path, subpool);
+      if (err || (entry == NULL))
+        {
+          /* ### hm, this function doesn't return svn_error_t... */
+          URL = svn_stringbuf_create ("", subpool);
+        }
+      else
+        URL = entry->url;
+
+      /* Is the URL disjoint from its parent's URL?  Notice that we
+         define disjointedness not just in terms of having an
+         unexpected URL, but also as a condition that is automatically
+         *inherited* from a parent baton.  */
+      parent_URL = svn_stringbuf_dup (parent_dir_baton->URL, subpool);
+      svn_path_add_component (parent_URL, name);
+      if (parent_dir_baton->disjoint_url
+          || (! svn_stringbuf_compare (parent_URL, URL)))
+        disjoint_url = TRUE;      
+    }
 
   f->pool       = subpool;
   f->dir_baton  = parent_dir_baton;
@@ -313,6 +421,8 @@ make_file_baton (struct dir_baton *parent_dir_baton,
   f->name       = svn_stringbuf_dup (name, subpool);
   f->path       = path;
   f->propchanges = apr_array_make (subpool, 1, sizeof(svn_prop_t));
+  f->URL        = URL;
+  f->disjoint_url = disjoint_url;
 
   parent_dir_baton->ref_count++;
 
