@@ -39,6 +39,10 @@ if you don't have root access on your machine but would like to use this
 package.
 
 %changelog
+* Fri Feb 01 2002 David Summers <david@summersoft.fay.ar.us> 0.8.0-1132
+- Took out patches to install procedure now not required because of fixes
+  in rev 1130.
+
 * Fri Feb 01 2002 David Summers <david@summersoft.fay.ar.us> 0.8.0-1129
 - Added requirement for APR 0.2002.01.19 rev 2 where the /usr/bin/apr-config
   program was added.
@@ -104,14 +108,6 @@ mv $RPM_BUILD_ROOT/usr/man $RPM_BUILD_ROOT/usr/share/man
 
 # Install INFO pages in correct place.
 mv $RPM_BUILD_ROOT/usr/info $RPM_BUILD_ROOT/usr/share/info
-
-# Install bolixed shared libraries (won't install correctly).
-cp subversion/libsvn_ra_local/.libs/libsvn_ra_local.so.0.0.0? $RPM_BUILD_ROOT/usr/lib/libsvn_ra_local.so.0.0.0
-(cd $RPM_BUILD_ROOT/usr/lib; ln -s libsvn_ra_local.so.0.0.0 libsvn_ra_local.so;
-ln -s libsvn_ra_local.so.0.0.0 libsvn_ra_local.so.0)
-
-cp subversion/libsvn_ra/.libs/libsvn_ra.so.0.0.0? $RPM_BUILD_ROOT/usr/lib/libsvn_ra.so.0.0.0
-(cd $RPM_BUILD_ROOT/usr/lib; ln -s libsvn_ra.so.0.0.0 libsvn_ra.so; ln -s libsvn_ra.so.0.0.0 libsvn_ra.so.0)
 
 %post
 /sbin/install-info /usr/share/info/svn-design.info.gz /usr/share/info/dir --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
