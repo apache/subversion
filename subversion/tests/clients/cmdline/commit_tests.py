@@ -35,6 +35,8 @@ def get_standard_status_list(wc_dir):
 
   status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
 
+  ### todo:  use status-hash below instead.
+
   # `.'
   status_list[0][3]['status'] = '_M'
 
@@ -211,13 +213,105 @@ def commit_multi_targets():
   
 #----------------------------------------------------------------------
 
+# regression test for bug #391
+
+def nested_dir_replacements():
+  "Replace two nested dirs, verify empty contents"
+
+  # Bootstrap:  make independent repo and working copy.
+  sbox = sandbox(nested_dir_replacements)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+
+  if svntest.actions.make_repo_and_wc(sbox): return 1
+
+  # Delete and re-add A/D (a replacement), and A/D/H (another replace).
+  svntest.main.run_svn('rm', os.path.join(wc_dir, 'A', 'D'))
+  svntest.main.run_svn('add', os.path.join(wc_dir, 'A', 'D'))
+  svntest.main.run_svn('add', os.path.join(wc_dir, 'A', 'D', 'H'))
+                       
+  # For kicks, add new file A/D/bloo.
+  svntest.main.file_append(os.path.join(wc_dir, 'A', 'D', 'bloo'), "hi")
+  svntest.main.run_svn('add', os.path.join(wc_dir, 'A', 'D', 'bloo'))
+  
+  # Verify pre-commit status:
+  #    - A/D and A/D/H should both be scheduled as "R" at rev 0
+  #    - A/D/bloo scheduled as "A" at rev 0
+  #    - ALL other children of A/D scheduled as "D" at rev 1
+
+  # (abbreviation)
+  path_index = svntest.actions.path_index
+  
+  sl = svntest.actions.get_virginal_status_list(wc_dir, '1')
+
+  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D'))][3]['status'] = "R "
+  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D'))][3]['wc_rev'] = "0"  
+  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H'))][3]['status'] = "R "
+  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H'))][3]['wc_rev'] = "0"  
+  sl.append([os.path.join(wc_dir, 'A', 'D', 'bloo'), None, {},
+             {'status' : 'A ', 'wc_rev' : '0', 'repos_rev' : '1'}])
+
+  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'G'))][3]['status'] = "D "
+  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'G', 'pi'))][3]['status'] = "D "
+  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'G', 'rho'))][3]['status'] = "D "
+  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'G', 'tau'))][3]['status'] = "D "
+  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H', 'chi'))][3]['status'] = "D "
+  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H', 'omega'))][3]['status'] = "D "
+  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H', 'psi'))][3]['status'] = "D "
+  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'gamma'))][3]['status'] = "D "
+  expected_status_tree = svntest.tree.build_generic_tree(sl)
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status_tree):
+    return 1
+
+  # Build expected post-commit trees:
+
+  # Create expected output tree.
+  output_list = [ [os.path.join(wc_dir, 'A', 'D'),
+                   None, {}, {'verb' : 'Replacing' }], # STACKED value!
+                  [os.path.join(wc_dir, 'A', 'D', 'H'),
+                   None, {}, {'verb' : 'Adding' }],
+                  [os.path.join(wc_dir, 'A', 'D', 'bloo'),
+                   None, {}, {'verb' : 'Adding' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Created expected status tree.
+  sl = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  for item in sl:
+    item[3]['wc_rev'] = '1'
+  
+  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D'))][3]['wc_rev'] = "2"  
+  sl[path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H'))][3]['wc_rev'] = "2"  
+  sl.append([os.path.join(wc_dir, 'A', 'D', 'bloo'), None, {},
+             {'status' : '_ ', 'wc_rev' : '2', 'repos_rev' : '2'}])
+
+  sl.pop(path_index(sl, os.path.join(wc_dir, 'A', 'D', 'G')))
+  sl.pop(path_index(sl, os.path.join(wc_dir, 'A', 'D', 'G', 'pi')))
+  sl.pop(path_index(sl, os.path.join(wc_dir, 'A', 'D', 'G', 'rho')))
+  sl.pop(path_index(sl, os.path.join(wc_dir, 'A', 'D', 'G', 'tau')))
+  sl.pop(path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H', 'chi')))
+  sl.pop(path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H', 'omega')))
+  sl.pop(path_index(sl, os.path.join(wc_dir, 'A', 'D', 'H', 'psi')))
+  sl.pop(path_index(sl, os.path.join(wc_dir, 'A', 'D', 'gamma')))
+    
+  expected_status_tree = svntest.tree.build_generic_tree(sl)
+
+  # Commit from the top of the working copy and verify output & status.
+  return svntest.actions.run_and_verify_commit (wc_dir,
+                                                expected_output_tree,
+                                                expected_status_tree,
+                                                None, None,
+                                                None, None,
+                                                wc_dir)
+
+
+
 ########################################################################
 # Run the tests
 
 
 # list all tests here, starting with None:
 test_list = [ None,
-              commit_one_file
+              commit_one_file,
+              nested_dir_replacements
              ]
 
 if __name__ == '__main__':

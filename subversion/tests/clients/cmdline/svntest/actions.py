@@ -326,6 +326,15 @@ def get_virginal_status_list(wc_dir, rev):
   return output_list
 
 
+# Convenience routine for treating our list format like a pseudo-hash
+def path_index(list, path):
+  "Return the index of PATH in our standard list-format"
+  
+  for item in list:
+    if item[0] == path:
+      return list.index(item)
+  return None
+
 
 
 ### End of file.

@@ -62,7 +62,7 @@ class SVNTreeNode:
         # this is the 'end' of the chain, so copy any content here.
         a.contents = newchild.contents
         a.props = newchild.props
-        a.atts = newchild.atts
+        a.atts = attribute_merge(a.atts, newchild.atts)
       else:
         # try to add dangling children to your matching node
         for i in newchild.children:
@@ -95,9 +95,25 @@ class SVNTreeUnequal(Exception): pass
 
 class SVNTypeMismatch(Exception): pass
 
-# Exceptiono raised if get_child is passed a file.
+# Exception raised if get_child is passed a file.
 
 class SVNTreeIsNotDirectory(Exception): pass
+
+
+# Some attributes 'stack' on each other if the same node is added
+# twice to a tree.  Place all such special cases in here.
+def attribute_merge(orighash, newhash):
+  "Merge the attributes in NEWHASH into ORIGHASH."
+
+  # Special case: if a commit reports a node as "deleted", then
+  # "added", it's a replacment.
+  if orighash['verb'] == "Deleting":
+    if newhash['verb'] == "Adding":
+      orighash['verb'] == "Replacing"
+
+  # Add future stackable attributes here...
+
+  return orighash
 
 
 # helper func
@@ -269,6 +285,7 @@ def get_child(node, name):
 def default_singleton_handler(a, baton):
   "Printing SVNTreeNode A's name, then raise SVNTreeUnequal."
   print "Got singleton", a.name
+  a.pprint()
   raise SVNTreeUnequal
 
 
@@ -307,6 +324,8 @@ def compare_trees(a, b,
     # One is a file, one is a directory.
     elif (((a.children is None) and (b.children is not None))
           or ((a.children is not None) and (b.children is None))):
+      a.pprint()
+      b.pprint()
       raise SVNTypeMismatch
     # They're both directories.
     else:
