@@ -246,13 +246,23 @@ svn_hash_read (apr_hash_t *hash,
   apr_size_t num_read;
   char c;
   void *package;
+  int first_time = 1;
+  
 
   while (1)
     {
       /* Read a key length line.  Might be END, though. */
       int len = SVN_KEYLINE_MAXLEN;
       err = read_length_line (srcfile, buf, &len);
-      if (err) return err;
+      if ((err == APR_EOF) && first_time)
+        /* We got an EOF on our very first attempt to read, which
+           means it's a zero-byte file.  No problem, just go home. */        
+        return SVN_NO_ERROR;
+      else if (err)
+        /* Any other circumstance is a genuine error. */
+        return err;
+
+      first_time = 0;
 
       if ((len == 3)
           && (buf[0] == 'E')       /* We've reached the end of the  */
