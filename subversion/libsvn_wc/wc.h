@@ -459,7 +459,7 @@ svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
  * If KIND is svn_node_none, then the entry's kind will not be
  * changed, else it will be set to KIND.
  * 
- * If flags has the SVN_WC_ENTRY_CLEAR bit set, then the entry's
+ * If FLAGS has the SVN_WC_ENTRY_CLEAR bit set, then the entry's
  * flags will be cleared.  If it has any other bits set, those bits
  * will be OR'd onto the entry's flags.
  * 
