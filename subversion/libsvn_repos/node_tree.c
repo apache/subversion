@@ -250,6 +250,10 @@ add_directory (svn_stringbuf_t *name,
   d->node = create_child_node (pd->node, name->data, eb->node_pool);
   d->node->kind = svn_node_dir;
   d->node->action = 'A';
+  d->node->copyfrom_rev = copyfrom_revision;
+  d->node->copyfrom_path
+    = copyfrom_path ? apr_pstrdup (eb->node_pool, copyfrom_path->data) : NULL;
+  
   *child_baton = d;
 
   return SVN_NO_ERROR;
@@ -301,6 +305,10 @@ add_file (svn_stringbuf_t *name,
   fb->node = create_child_node (pd->node, name->data, eb->node_pool);
   fb->node->kind = svn_node_file;
   fb->node->action = 'A';
+  fb->node->copyfrom_rev = copyfrom_revision;
+  fb->node->copyfrom_path
+    = copyfrom_path ? apr_pstrdup (eb->node_pool, copyfrom_path->data) : NULL;
+
   *file_baton = fb;
 
   return SVN_NO_ERROR;
