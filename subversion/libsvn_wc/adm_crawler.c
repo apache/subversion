@@ -120,6 +120,7 @@ pop_stack (struct stack_object **stack)
   if ((*stack)->previous)
     {
       new_top = (*stack)->previous;
+      new_top->next = NULL;
       *stack = new_top;
     }
 

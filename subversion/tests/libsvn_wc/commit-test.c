@@ -51,7 +51,7 @@ main (int argc, char *argv[])
     {
       svn_handle_error (err, stderr, 0);
       apr_destroy_pool (globalpool);
-      exit (err->apr_err);
+      exit (1);
     }
 
 
@@ -62,7 +62,7 @@ main (int argc, char *argv[])
     {
       svn_handle_error (err, stderr, 0);
       apr_destroy_pool (globalpool);
-      exit (err->apr_err);
+      exit (1);
     }
 
   /* Close the edit */
@@ -72,7 +72,7 @@ main (int argc, char *argv[])
     {
       svn_handle_error (err, stderr, 0);
       apr_destroy_pool (globalpool);
-      exit (err->apr_err);
+      exit (1);
     }
 
   apr_destroy_pool (globalpool);
