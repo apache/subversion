@@ -47,7 +47,7 @@ svn_client__checkout_internal (const char *URL,
                                const char *path,
                                const svn_opt_revision_t *revision,
                                svn_boolean_t recurse,
-                               svn_boolean_t timestamp_sleep,
+                               svn_boolean_t *timestamp_sleep,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool)
 {
@@ -56,6 +56,8 @@ svn_client__checkout_internal (const char *URL,
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
   svn_error_t *err;
   svn_revnum_t revnum;
+  svn_boolean_t sleep_here = FALSE;
+  svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
 
   /* Sanity check.  Without these, the checkout is meaningless. */
   assert (path != NULL);
@@ -110,12 +112,15 @@ svn_client__checkout_internal (const char *URL,
                                  recurse,
                                  checkout_editor,
                                  checkout_edit_baton);
-      /* Sleep to ensure timestamp integrity. */
-      if (timestamp_sleep)
-        svn_sleep_for_timestamps ();
-      
+
       if (err)
-        return err;
+        {
+          /* Don't rely on the error handling to handle the sleep later, do
+             it now */
+          svn_sleep_for_timestamps ();
+          return err;
+        }
+      *use_sleep = TRUE;
 
       /* Close the RA session. */
       SVN_ERR (ra_lib->close (session));
@@ -123,8 +128,14 @@ svn_client__checkout_internal (const char *URL,
   
   /* We handle externals after the initial checkout is complete, so
      that fetching external items (and any errors therefrom) doesn't
-     delay the primary checkout.  */
-  SVN_ERR (svn_client__handle_externals (traversal_info, FALSE, ctx, pool));
+     delay the primary checkout.
+
+     ### Should we really do externals if recurse is false?
+  */
+  SVN_ERR (svn_client__handle_externals (traversal_info, FALSE, use_sleep,
+                                         ctx, pool));
+  if (sleep_here)
+    svn_sleep_for_timestamps ();
 
   return SVN_NO_ERROR;
 }
@@ -137,6 +148,6 @@ svn_client_checkout (const char *URL,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
-  return svn_client__checkout_internal (URL, path, revision, recurse, TRUE,
-                                        ctx, pool);
+  return svn_client__checkout_internal (URL, path, revision, recurse, NULL, ctx,
+                                        pool);
 }

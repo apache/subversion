@@ -240,28 +240,31 @@ svn_error_t * svn_client__can_delete (const char *path,
 
 /*** Checkout and update ***/
 
-/* Update a working copy PATH to REVISION.  If TIMESTAMP_SLEEP is TRUE this
-   function will sleep before returning to ensure timestamp integrity,
-   otherwise it will return without sleeping and the caller is responsible
-   for ensuring timestamp integrity.  */
+/* Update a working copy PATH to REVISION.  If TIMESTAMP_SLEEP is NULL this
+   function will sleep before returning to ensure timestamp integrity.  If
+   TIMESTAMP_SLEEP is not NULL then the function will not sleep but will
+   set *TIMESTAMP_SLEEP to TRUE if a sleep is required, and will not change
+   *TIMESTAMP_SLEEP if no sleep is required. */
 svn_error_t *
 svn_client__update_internal (const char *path,
                              const svn_opt_revision_t *revision,
                              svn_boolean_t recurse,
-                             svn_boolean_t timestamp_sleep,
+                             svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
 /* Checkout into PATH a working copy of URL at REVISION.  If
-   TIMESTAMP_SLEEP is TRUE this function will sleep before returning to
-   ensure timestamp integrity, otherwise it will return without sleeping
-   and the caller is responsible for ensuring timestamp integrity.  */
+   TIMESTAMP_SLEEP is NULL this function will sleep before returning to
+   ensure timestamp integrity.  If TIMESTAMP_SLEEP is not NULL then the
+   function will not sleep but will set *TIMESTAMP_SLEEP to TRUE if a sleep
+   is required, and will not change *TIMESTAMP_SLEEP if no sleep is
+   required. */
 svn_error_t *
 svn_client__checkout_internal (const char *URL,
                                const char *path,
                                const svn_opt_revision_t *revision,
                                svn_boolean_t recurse,
-                               svn_boolean_t timestamp_sleep,
+                               svn_boolean_t *timestamp_sleep,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool);
 
@@ -491,10 +494,15 @@ svn_client__do_commit (const char *base_url,
    items that are the same in both the before and after traversal
    info.
 
+   *TIMESTAMP_SLEEP will be set TRUE if a sleep is required to ensure
+   timestamp integrity, *TIMESTAMP_SLEEP will be unchanged if no sleep
+   is required.
+
    Use POOL for temporary allocation. */
 svn_error_t *svn_client__handle_externals
    (svn_wc_traversal_info_t *traversal_info,
     svn_boolean_t update_unchanged,
+    svn_boolean_t *timestamp_sleep,
     svn_client_ctx_t *ctx,
     apr_pool_t *pool);
 

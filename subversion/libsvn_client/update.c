@@ -41,7 +41,7 @@ svn_error_t *
 svn_client__update_internal (const char *path,
                              const svn_opt_revision_t *revision,
                              svn_boolean_t recurse,
-                             svn_boolean_t timestamp_sleep,
+                             svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool)
 {
@@ -55,6 +55,8 @@ svn_client__update_internal (const char *path,
   svn_revnum_t revnum;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
   svn_wc_adm_access_t *adm_access;
+  svn_boolean_t sleep_here = FALSE;
+  svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
 
   /* Sanity check.  Without this, the update is meaningless. */
   assert (path);
@@ -138,12 +140,14 @@ svn_client__update_internal (const char *path,
                                     ctx->notify_func, ctx->notify_baton,
                                     traversal_info, pool);
       
-      /* Sleep to ensure timestamp integrity. */
-      if (timestamp_sleep)
-        svn_sleep_for_timestamps ();
-
       if (err)
-        return err;
+        {
+          /* Don't rely on the error handling to handle the sleep later, do
+             it now */
+          svn_sleep_for_timestamps ();
+          return err;
+        }
+      *use_sleep = TRUE;
 
       /* Close the RA session. */
       SVN_ERR (ra_lib->close (session));
@@ -155,8 +159,12 @@ svn_client__update_internal (const char *path,
   if (recurse)
     SVN_ERR (svn_client__handle_externals (traversal_info,
                                            TRUE, /* update unchanged ones */
+                                           use_sleep,
                                            ctx,
                                            pool));
+
+  if (sleep_here)
+    svn_sleep_for_timestamps ();
 
   SVN_ERR (svn_wc_adm_close (adm_access));
 
@@ -170,5 +178,5 @@ svn_client_update (const char *path,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  return svn_client__update_internal (path, revision, recurse, TRUE, ctx, pool);
+  return svn_client__update_internal (path, revision, recurse, NULL, ctx, pool);
 }
