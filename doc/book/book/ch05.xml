@@ -2161,7 +2161,7 @@ ServerName svn.red-bean.com
         repository with that layout and with initial project data.
         There are a couple of ways to do this in Subversion.  You
         could use the <command>svn mkdir</command> command (see <xref
-        linkend="svn-ch-3-sect-7.6"/>) to create each directory in
+        linkend="svn-ch-8-todo3"/>) to create each directory in
         your skeletal repository layout, one-by-one.  A quicker way to
         accomplish the same task is to use the <command>svn
         import</command> command (see <xref

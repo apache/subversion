@@ -7,6 +7,89 @@
 <para>
 ###TODO Write this
 </para>
+    
+    <!-- Put here for storage -->
+    <sect2 id="svn-ch-8-todo1">
+      <title><command>svn info</command></title>
+
+      <para>In general, we try to discourage you from directly reading
+        the <filename>.svn/entries</filename> file used to track items
+        in a Subversion working copy.  Instead, you can get tons of
+        information about an item in your working copy by using the
+        <command>svn info</command> command to display most of the
+        tracked information:</para>
+
+      <screen>
+$ svn info rules.txt
+Path: rules.txt
+Name: rules.txt
+Url: http://svn.red-bean.com/repos/example/trunk/text/rules.txt
+Revision: 8
+Node Kind: file
+Schedule: normal
+Last Changed Author: harry
+Last Changed Rev: 7
+Last Changed Date: 2002-11-15 23:03:54 -0500 (Fri, 15 Nov 2002)
+Text Last Updated: 2002-11-16 08:48:04 -0500 (Sat, 16 Nov 2002)
+Properties Last Updated: 2002-11-16 08:48:03 -0500 (Sat, 16 Nov 2002)
+Checksum: 8sfaU+5dqyOgkhuSdyxGrQ==
+      </screen>
+
+    </sect2>
+
+    <!-- Put here for storage -->
+    <sect2 id="svn-ch-8-todo2">
+      <title><command>svn export</command></title>
+
+      <para>The export command is a quick way to create an unversioned
+        tree of files from a repository directory&mdash;a tree that
+        looks like a typical working copy, but doesn't contain the
+        <filename>.svn</filename> directories:</para>
+
+      <screen>
+$ svn export file:///usr/local/svn/newrepos/fooproject
+A  fooproject/foo.c
+A  fooproject/bar.c
+A  fooproject/subdir
+A  fooproject/subdir/quux.h
+Checked out revision 3.
+      </screen>
+
+      <para>The resulting directory will not contain any
+        <filename>.svn</filename> administrative areas, and all
+        property metadata will be lost.  (Hint: don't use this
+        technique for backing up; it's probably better for rolling
+        source distributions.)</para>
+
+    </sect2>
+
+    <!-- Put here for storage -->
+    <sect2 id="svn-ch-8-todo3">
+      <title><command>svn mkdir</command></title>
+
+      <para>This is another convenience command, and it has two
+        uses.</para>
+
+      <para>First, it can be used to simultaneously create a new working copy
+        directory and schedule it for addition:</para>
+      
+      <screen>
+$ svn mkdir new-dir
+A     new-dir
+      </screen>
+
+      <para>Or, it can be used to instantly create a directory in a
+        repository (no working copy needed):</para>
+
+      <screen>
+$ svn mkdir file:///usr/local/svn/newrepos/branches --message "made new dir"
+Committed revision 1123.
+      </screen>
+
+      <para>Again, this is a form of immediate commit, so some sort of
+        log message is required.</para>
+
+    </sect2>
 
 </sect1>
 
