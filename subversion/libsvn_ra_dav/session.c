@@ -61,28 +61,33 @@ static int request_auth(void *userdata, const char *realm, int attempt,
 {
   svn_error_t *err;
   svn_ra_session_t *ras = userdata;
-  svn_auth_cred_simple_t *creds;  
+  void *creds;
+  svn_auth_cred_simple_t *simple_creds;  
 
   /* No auth_baton?  Give up. */
   if (! ras->callbacks->auth_baton)
     return -1;
 
   if (attempt == 0)
-    err = svn_auth_first_credentials ((void **) &creds,
+    err = svn_auth_first_credentials (&creds,
                                       &(ras->auth_iterstate), 
                                       SVN_AUTH_CRED_SIMPLE,
                                       ras->callbacks->auth_baton,
                                       ras->pool);
   else /* attempt > 0 */
-    err = svn_auth_next_credentials ((void **) &creds,
+    err = svn_auth_next_credentials (&creds,
                                      ras->auth_iterstate,
                                      ras->pool);
   if (err || ! creds)
-    return -1;
+    {
+      svn_error_clear (err);
+      return -1;
+    }
+  simple_creds = creds;
   
   /* ### silently truncates username/password to 256 chars. */
-  apr_cpystrn(username, creds->username, NE_ABUFSIZ);
-  apr_cpystrn(password, creds->password, NE_ABUFSIZ);
+  apr_cpystrn(username, simple_creds->username, NE_ABUFSIZ);
+  apr_cpystrn(password, simple_creds->password, NE_ABUFSIZ);
 
   return 0;
 }

@@ -204,7 +204,6 @@ svn_ra_local__open (void **session_baton,
                     apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *session;
-  svn_auth_cred_username_t *creds;
   svn_auth_iterstate_t *iterstate;
   
   /* Allocate and stash the session_baton args we have already. */
@@ -220,7 +219,9 @@ svn_ra_local__open (void **session_baton,
     }
   else
     {
-      SVN_ERR (svn_auth_first_credentials ((void **) &creds, &iterstate, 
+      void *creds;
+      svn_auth_cred_username_t *username_creds;
+      SVN_ERR (svn_auth_first_credentials (&creds, &iterstate, 
                                            SVN_AUTH_CRED_USERNAME,
                                            callbacks->auth_baton,
                                            pool));
@@ -229,11 +230,12 @@ svn_ra_local__open (void **session_baton,
          first_creds() somehow failed to authenticate.  But there's no
          challenge going on, so we use whatever creds we get back on
          the first try. */
-      if (creds == NULL
-          || (creds->username == NULL))
+      username_creds = creds;
+      if (username_creds == NULL
+          || (username_creds->username == NULL))
         session->username = "";
       else
-        session->username = apr_pstrdup (pool, creds->username);
+        session->username = apr_pstrdup (pool, username_creds->username);
     }
 
   /* Look through the URL, figure out which part points to the
