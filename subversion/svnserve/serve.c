@@ -225,7 +225,6 @@ static svn_error_t *write_proplist(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *name;
   svn_string_t *value;
 
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
   if (props)
     {
       for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
@@ -236,7 +235,6 @@ static svn_error_t *write_proplist(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cs", name, value));
         }
     }
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
   return SVN_NO_ERROR;
 }
 
@@ -349,13 +347,9 @@ static svn_error_t *rev_proplist(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "r", &rev));
   SVN_CMD_ERR(svn_fs_revision_proplist(&props, b->fs, rev, pool));
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  SVN_ERR(svn_ra_svn_write_word(conn, pool, "success"));
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
   SVN_ERR(write_proplist(conn, pool, props));
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
   return SVN_NO_ERROR;
 }
 
@@ -444,17 +438,10 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     SVN_CMD_ERR(svn_fs_file_contents(&contents, root, full_path, pool));
 
   /* Send successful command response with revision and props. */
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  SVN_ERR(svn_ra_svn_write_word(conn, pool, "success"));
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  if (hex_digest)
-    SVN_ERR(svn_ra_svn_write_cstring(conn, pool, hex_digest));
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-  SVN_ERR(svn_ra_svn_write_number(conn, pool, rev));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((?c)r(!", "success",
+                                 hex_digest, rev));
   SVN_ERR(write_proplist(conn, pool, props));
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
 
   /* Now send the file's contents. */
   if (want_contents)
@@ -570,12 +557,8 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
 
   /* Write out response. */
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  SVN_ERR(svn_ra_svn_write_word(conn, pool, "success"));
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  SVN_ERR(svn_ra_svn_write_number(conn, pool, rev));
-  SVN_ERR(write_proplist(conn, pool, props));
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(r(!", "success", rev));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(!"));
   if (want_contents)
     {
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
@@ -592,9 +575,7 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                          cdate, entry->last_author));
         }
     }
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
   return SVN_NO_ERROR;
 }
 
@@ -695,10 +676,7 @@ static svn_error_t *log_receiver(void *baton, apr_hash_t *changed_paths,
   svn_log_changed_path_t *change;
   char action[2];
 
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-
-  /* Element 1: changed paths */
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "(!"));
   if (changed_paths)
     {
       for (h = apr_hash_first(pool, changed_paths); h; h = apr_hash_next(h))
@@ -713,30 +691,8 @@ static svn_error_t *log_receiver(void *baton, apr_hash_t *changed_paths,
                                          change->copyfrom_rev));
         }
     }
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-
-  /* Element 2: revision number */
-  SVN_ERR(svn_ra_svn_write_number(conn, pool, rev));
-
-  /* Element 3: author */
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  if (author)
-    SVN_ERR(svn_ra_svn_write_cstring(conn, pool, author));
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-
-  /* Element 4: date */
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  if (date)
-    SVN_ERR(svn_ra_svn_write_cstring(conn, pool, date));
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-
-  /* Element 5: message */
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  if (message)
-    SVN_ERR(svn_ra_svn_write_cstring(conn, pool, message));
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)r(?c)(?c)(?c)", rev, author,
+                                 date, message));
   return SVN_NO_ERROR;
 }
 
@@ -907,25 +863,14 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
 
   /* Send greeting, saying we only support protocol version 1, the
    * anonymous authentication mechanism, and no extensions. */
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  SVN_ERR(svn_ra_svn_write_word(conn, pool, "success"));
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  /* Our minimum and maximum supported protocol version is 1. */
-  SVN_ERR(svn_ra_svn_write_number(conn, pool, 1));
-  SVN_ERR(svn_ra_svn_write_number(conn, pool, 1));
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  /* We support anonymous and maybe external authentication. */
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(nn(!", "success",
+                                 (apr_uint64_t) 1, (apr_uint64_t) 1));
   SVN_ERR(svn_ra_svn_write_word(conn, pool, "ANONYMOUS"));
 #if APR_HAS_USER
   if (tunnel)
     SVN_ERR(svn_ra_svn_write_word(conn, pool, "EXTERNAL"));
 #endif
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-  /* We have no special capabilities. */
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)())"));
 
   /* Read client response.  This should specify version 1, the
    * mechanism, a mechanism argument, and possibly some
