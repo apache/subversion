@@ -443,11 +443,12 @@
 (defun svn-status-remove-control-M ()
   "Remove ^M at end of line in the whole buffer."
   (interactive)
-  (save-match-data
-    (save-excursion
-      (goto-char (point-min))
-      (while (re-search-forward "\r$" (point-max) t)
-        (replace-match "" nil nil)))))
+  (let ((buffer-read-only nil))
+    (save-match-data
+      (save-excursion
+        (goto-char (point-min))
+        (while (re-search-forward "\r$" (point-max) t)
+          (replace-match "" nil nil))))))
 
 (condition-case nil
     ;;(easy-menu-add-item nil '("tools") ["SVN Status" svn-status t] "PCL-CVS")
@@ -926,19 +927,23 @@ Then move to that line."
   (interactive)
   ;(message "show log info for: %S" (svn-status-marked-files))
   (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
-  (svn-run-svn t t 'log "log" "--targets" svn-status-temp-arg-file))
+  (svn-run-svn t t 'log "log" "--targets" svn-status-temp-arg-file)
+  (save-excursion
+    (set-buffer "*svn-process*")
+    (log-view-mode)))
 
 (defun svn-status-info ()
   (interactive)
   (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
   (svn-run-svn t t 'info "info" "--targets" svn-status-temp-arg-file))
 
-(defun svn-status-show-svn-diff ()
-  (interactive)
+(defun svn-status-show-svn-diff (arg)
+  (interactive "P")
   (let ((fl (svn-status-marked-files))
-        (clear-buf t))
+        (clear-buf t)
+        (revision (if arg (svn-status-read-revision-string "Diff with files for version: " "PREV") "BASE")))
     (while fl
-      (svn-run-svn nil clear-buf 'diff "diff" (svn-status-line-info->filename (car fl)))
+      (svn-run-svn nil clear-buf 'diff "diff" "-r" revision (svn-status-line-info->filename (car fl)))
       (setq clear-buf nil)
       (setq fl (cdr fl))))
   (svn-status-show-process-buffer-internal t)
@@ -1014,14 +1019,14 @@ Then move to that line."
 ;; Getting older revisions
 ;; --------------------------------------------------------------------------------
 
-(defun svn-status-get-specific-revision (&optional only-actual-file)
+(defun svn-status-get-specific-revision (&optional only-actual-file arg)
   "Retrieve older revisions.
 The older revisions are stored in backup files named F.~REVISION~."
   (interactive)
   (let* ((file-names (if only-actual-file
                          (list (svn-status-line-info->filename (svn-status-get-line-information)))
                        (svn-status-marked-file-names)))
-         (revision (svn-status-read-revision-string "Get files for version: " "COMMITTED"))
+         (revision (if arg (svn-status-read-revision-string "Get files for version: " "PREV") "BASE"))
          (file-name)
          (file-name-with-revision))
     (message "Getting revision %s for %S" revision file-names)
@@ -1046,10 +1051,10 @@ The older revisions are stored in backup files named F.~REVISION~."
              svn-status-get-specific-revision-file-info)))
 
 
-(defun svn-status-ediff-with-revision ()
+(defun svn-status-ediff-with-revision (arg)
   "Run ediff on the actual file with a previous revision."
-  (interactive)
-  (svn-status-get-specific-revision t)
+  (interactive "P")
+  (svn-status-get-specific-revision t arg)
   (ediff-files
    (cdr (car svn-status-get-specific-revision-file-info))
    (car (car svn-status-get-specific-revision-file-info))))
@@ -1078,7 +1083,8 @@ Note: use C-q C-j to send a line termination character"
   (interactive "sSend string to svn process: ")
   (save-excursion
     (set-buffer "*svn-process*")
-    (insert string)
+    (let ((buffer-read-only nil))
+      (insert string))
     (set-marker (process-mark (get-process "svn")) (point)))
   (process-send-string "svn" string))
 
@@ -1354,10 +1360,10 @@ Commands:
                  "-F" (concat svn-status-temp-dir "svn-prop-edit.txt")))
   (set-window-configuration svn-status-pre-propedit-window-configuration))
 
-(defun svn-prop-edit-svn-diff ()
-  (interactive)
+(defun svn-prop-edit-svn-diff (arg)
+  (interactive "P")
   (set-buffer "*svn-status*")
-  (svn-status-show-svn-diff))
+  (svn-status-show-svn-diff arg))
 
 (defun svn-prop-edit-svn-log ()
   (interactive)
@@ -1425,10 +1431,10 @@ Commands:
                  "-F" (concat svn-status-temp-dir "svn-log-edit.txt")))
   (set-window-configuration svn-status-pre-commit-window-configuration))
 
-(defun svn-log-edit-svn-diff ()
-  (interactive)
+(defun svn-log-edit-svn-diff (arg)
+  (interactive "P")
   (set-buffer "*svn-status*")
-  (svn-status-show-svn-diff))
+  (svn-status-show-svn-diff arg))
 
 (defun svn-log-edit-svn-log ()
   (interactive)
