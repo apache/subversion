@@ -1,4 +1,4 @@
-THIS IS A WORK IN PROGRESS
+English translation at the end.
 
  1     Respecto a la comunidad de traductores
  1.1    Definición de la comunidad
@@ -36,8 +36,8 @@ proporcione alguna mejora "material" al proyecto deberá ser añadida
 al fichero de colaboradores.
 
 
-1.2 Desripción del puesto de coordinador
-========================================
+1.2 Descripción del puesto de coordinador
+=========================================
 
 El coordinador del proyecto de traducción puede tomar dos papeles
 (normalmente ambos): traductor y coordinador. En ambos casos debe
@@ -51,12 +51,12 @@ tanto está sujeta a la opinión global de ésta.
 
 El papel de traductor no es obligatorio, un coordinador puede
 dedicarse únicamente a coordinar el proyecto sin colaborar una
-sóla línea de texto a la traducción final. No obstante, en caso de
+sola línea de texto a la traducción final. No obstante, en caso de
 colaborar como traductor, aparte de seguir las mismas reglas que
 usan el resto de los traductores, debe ser un modelo de dedicación.
 Por esto se entiende que realizará trabajo de traducción de forma
 periódica y constante, de forma que anime a otros a colaborar.
-Este trabajo contínuo e ininterrumpido tiene como objetivo principal
+Este trabajo continuo e ininterrumpido tiene como objetivo principal
 mostrar de cara al público que el proyecto no está "muerto"
 y progresa, a la velocidad que sea.
 
@@ -134,7 +134,7 @@ con la que cualquier usuario de Internet debe enfrentarse, se exige
 que el mensaje de la lista de correo sea reenviado cada 5 días,
 para asegurarse de que es visto. Estos reenvíos, no obstante, no
 extienden el periodo de 20 días especificado por el primer mensaje,
-el cual el coordinador debe cumpliar.
+el cual el coordinador debe cumplir.
 
 
 1.5 Manutención básica del proyecto
@@ -154,13 +154,13 @@ estadísticas básicas de actividad que deben ser enviadas una vez
 por semana a la lista de correo de la comunidad de traductores.
 
 
-1.5 Elección/cambio de coordinador
+1.6 Elección/cambio de coordinador
 ==================================
 
 En el caso de que haya que hacer un cambio de coordinador, se
 contempla la posibilidad de que el coordinador haya desaparecido
-completamente del proyecto, o que siga pudiendo colaboral, obviamente
-por debajo de los requisitos minimos planteados por este documento
+completamente del proyecto, o que siga pudiendo colaborar, obviamente
+por debajo de los requisitos mínimos planteados por este documento
 (ya que de lo contrario no se entendería la necesidad del cambio).
 
 En el primer caso es urgente que los traductores en activo, mediante
@@ -178,7 +178,7 @@ aparcar el proyecto, pero es decisión que debe ser tomada por
 alguien, no dejada al azar. Es una lástima que por falta de voluntad
 un proyecto de traducción deba ser detenido, pero es peor aun que
 a falta de establecer este hecho claramente dentro de la comunidad
-de Subversion y la página web del proyectp, otros potenciales
+de Subversion y la página web del proyecto, otros potenciales
 voluntarios no se decidan a retomar el proyecto.
 
 En el segundo caso, igualmente hay que nombrar a otro coordinador
@@ -195,7 +195,7 @@ En ambos casos, el cambio de coordinador debe ser comunicado a la
 comunidad de desarrolladores de Subversion.
 
 
-1.6 Situaciones excepcionales y delegación de responsabilidades
+1.7 Situaciones excepcionales y delegación de responsabilidades
 ===============================================================
 
 Como situación excepcional se entiende cualquier razón por la
@@ -230,7 +230,7 @@ Se entiende por comunidad de Subversion a aquellas personas que
 se comunican o leen la lista de correo dev alojada en el servidor
 subversion.org.  Mediante esta lista de correo se comunican los
 desarrolladores de Subversion y los administradores del proyecto,
-responables de los servicios proporcionados al proyecto de
+responsables de los servicios proporcionados al proyecto de
 traducción, en forma de lista de correo y acceso a un repositorio
 común de trabajo.
 
@@ -245,7 +245,7 @@ lista de desarrolladores sea percibido, añadir las palabras "[BOOK
 SPANISH]" al título del correo.  Alternativamente enviar el mensaje
 copiando en la dirección al coordinador, para que esté al tanto de la
 discusión y la siga. Estas opciones son necesarias dada la cantidad
-de volúmen de la lista de correo, y el hecho de que la mayoría no
+de volumen de la lista de correo, y el hecho de que la mayoría no
 sea de interés a un coordinador de un proyecto de traducción.
 
 Aparte de estar al tanto de lo que la comunidad de Subversion pueda
@@ -266,7 +266,7 @@ para que éste sea visible al resto del mundo.
 =======================
 
 Son los mismos que en la sección 1.4, con la condición añadida
-descrita en la sección anterior (2.2) para llamar la antención
+descrita en la sección anterior (2.2) para llamar la atención
 del coordinador.
 
 
@@ -293,3 +293,292 @@ repositorio de Subversion.
 ===============================================================
 
 Iguales que el punto 1.7.
+
+
+
+
+                         **** ENGLISH ****
+
+
+
+
+ 1     With regards to the translators community
+ 1.1    Definition of community
+ 1.2    Description of coordinator role
+ 1.3.1   Translator role
+ 1.3.2   Coordinator role
+ 1.4    Reaction times
+ 1.5    Basic maintenance of the project
+ 1.6    Election/change of coordinator
+ 1.7    Exceptional situations and responsibility delegation
+
+ 2     With regards to the Subversion community
+ 2.1    Definition of community
+ 2.2    Description of coordinator role
+ 2.3    Reaction times
+ 2.4    Election/change of coordinator
+ 2.5    Exceptional situations and responsibility delegation
+
+
+
+1 With regards to the translators community
+*******************************************
+
+1.1 Definition of community
+===========================
+
+The translators community is formed by those people who communicate
+through or just read the mailing list l10n-es hosted on the server
+subversion.org. Translators, although the more generic term should
+be contributor, are any person who wants to translate text from
+English to Spanish, criticise the project, or review already made
+translations.  Any person interacting in this way and providing any
+"material" improvement to the project should be added to the file
+of contributors.
+
+
+1.2 Description of coordinator role
+===================================
+
+The translation project coordinator can take two roles (usually
+both): translator and coordinator. In both cases he has to follow
+some rules which define his responsibilities, since he has a public
+position in this community, and therefore is bound to the public
+opinion.
+
+
+1.3.1 Translator role
+---------------------
+
+The translator role is not mandatory, a coordinator can keep
+doing coordination of the project without collaborating a single
+line of text to the final translation. However, in the case of
+working as a translator, on top of following the same rules as the
+other translators, the coordinator has to be a model of dedication.
+This means he will work on the translation frequently and constantly,
+in order to encourage others to collaborate. This continuous and
+uninterrupted work has the objective of showing to the public that
+the project is not "dead" and goes on, at whatever speed is possible.
+
+If the temporal restrictions applied to other translators are
+not met, the coordinator looses his position and stays as backup
+coordinator until a switch is performed. The lack of work can be
+accepted if the coordinator previously notifies of any exceptional
+situation as stated below.
+
+As translator he is required to know deeply the Spanish language
+in order to be able to choose between translation styles. After
+all, a translation cannot be literal, and concepts end up being
+"rewritten" with other words. As such, he can and has to influence
+the translations of others for the final style of the whole project
+to be perceived as a single work by any reader.
+
+
+1.3.2 Coordinator role
+----------------------
+
+The coordination task is mandatory for the position. In this
+function communication and action are differentiated. Communication
+is the task of answering via email any petition, incident, question,
+etc, made personally or via mailing lists. Action is considered the
+taking of decisions considered necessary for the project to succeed.
+In order to see the differences between communication and action,
+here are two examples:
+
+Two translators want to work on a specific file. Through
+communication the coordinator suggest that one of them should be
+in charge. The translators, because of the coordinator's arguments
+or others clear up the conflict and decide one of them will be
+in charge.
+
+Action would take place in the case of not being able to resolve
+the conflict. In this situation the coordinator takes the decision
+of making one of both translators the person in charge. This is an
+action and has to be followed by the translators.
+
+As it can be understood, the coordinator has absolute power to
+resolve any type of conflict. However, this should not be necessary
+if the task of communication is performed correctly.
+
+On the other hand, there are actions which don't affect translators
+and which are only to be done by the coordinator, like maintaining
+the meta files of the project, update the web page of the book,
+send regularly activity reports to the mailing list, etc. These
+other actions are more "boring", and definitely less harmful,
+but they have to be done.
+
+
+1.4 Reaction times
+==================
+
+Both for communication and action, specific time limits have to
+be met, outside of which the coordinator is not performing his
+role and therefore has to be changed. Since we are talking about
+an email based community, these times are more elastic than those
+where collaborators meet face to face.
+
+Taking a mailing list message as reference, it is considered a
+quick answer one sent in the following two days. If the answer
+happens between 2 and 5 days later, the answer is good. If the
+answer happens between 5 and 10 days, it is acceptable. If the
+answer happens between 10 and 20 days, the answer is average. Longer
+than 20 days means that the coordinator is not reading his email,
+and therefore doesn't perform his coordination task.
+
+However, given the volatility of email and the quantities of SPAM
+each Internet user has to deal with, for the message to be accepted
+through the mailing list it has to be resent each five days, to
+make sure it is seen. These resendings, however, don't extend the
+period of 20 days given by the first message, which the coordinator
+has to meet.
+
+
+1.5 Basic maintenance of the project
+====================================
+
+The coordinator has to keep updated all the files related with the
+project, meaning those located in the root directory, for example
+LEAME, TRABAJO, TODO, etc. It is especially important to correctly
+maintain the file which keeps the relationship between work and
+author, so everybody knows who has collaborated in what way.
+
+In the root directory there are also some Python scripts which can
+be run in a Unix or similar environment (they possibly won't work
+under Windows). One of them generates basic activity statistics
+which have to be sent once a week to the mailing list of the
+translators community.
+
+
+1.6 Election/change of coordinator
+==================================
+
+In the case of having to replace the coordinator, there is the
+case of the coordinator disappearing completely from the project,
+and the case of still being able to collaborate to it, obviously
+below the required levels specified in this document (otherwise
+the change would not make sense).
+
+In the first case the active translators have to urgently decide
+through the mailing list one person to perform the tasks of the
+coordinator. This choice has to taken before two months elapse since
+the last public message of the coordinator. While a translation
+is a job which doesn't really require much of coordination, it is
+required that somebody acquires the responsibility of the project
+in order to make effective the tasks of action and communication,
+vital for the project to avoid stagnancy.
+
+In other words: the extreme decision could well be to stop the
+project, but it is a decision which has to be done by somebody. It
+is a shame that a translation project has to stop due to lack of
+collaborations, but it is worse that because of not stating this
+status in the Subversion community and the web page of the project,
+other potential volunteers may not retake the project.
+
+In the second case, a coordinator has to be chosen also in a period
+of two months. But since the previous coordinator is still there,
+he may still perform that function until a new person is found.
+In this period, any translator acquires temporarily the power of
+the coordinator: since there is a void of "formal" power, anybody
+is valid to take decisions usually left to the coordinator. In
+the worst of the cases the future coordinator can undo the change,
+if some decision was made incorrectly.
+
+In both cases, the change of coordinator has to be communicated to
+the community of Subversion developers.
+
+
+1.6 Exceptional situations and responsibility delegation
+========================================================
+
+An exceptional situation is any reason because of which the
+coordinator might not be able to perform his task for a while.
+Examples are holidays, being hospitalised, excessive amount of work
+in real life, etc. The coordinator can notify of these situations to
+the mailing list, indicating the amount of time he won't be able to
+perform his tasks. At the same time he has to choose a translator
+to replace him temporarily, but this is only required for the role
+of coordinating, not for the role of ideal translator.
+
+Also, if these situations cannot be foreseen but are explained later,
+they may work as exculpation to avoid being replaced as coordinator,
+but only if the other translators accept the "excuse".
+
+An exceptional situation which requires responsibility delegation
+in another person includes not only the tasks of coordinator with
+regards to the translator community, it also includes the tasks
+related to the Subversion community (more about this in the next
+chapter).
+
+
+
+2 With regards to the Subversion community
+******************************************
+
+2.1 Definition of community
+===========================
+
+The Subversion community is formed by those people who communicate
+through or just read the mailing list dev hosted on the server
+subversion.org. The Subversion developers and administrators
+communicate through this mailing list, they are responsible for
+providing the services to the translation project, in form of
+mailing list and repository write access.
+
+
+2.2 Description of coordinator role
+===================================
+
+The coordinator has to be present in the Subversion community to
+answer anything about the translation project. In order to make sure
+that a message sent to the developer mailing list is perceived, add
+the words "[BOOK SPANISH]" to the subject. Alternatively send the
+message also to the address of the coordinator, so he knows there's
+a discussion to keep an eye on. These options are necessary because
+of the volume of the mailing list, and the fact that most of the
+contents are not of interest to a translation project coordinator.
+
+Apart of being there to answer anything to the Subversion community,
+there are only two other tasks to be done. One is the maintenance
+of the COMMITERS file in the root directory of the repository. This
+file contains a relationship between the repository write access
+user name and real name and email address. The coordinator has
+to keep this information updated according to the people working
+actively on the project.
+
+The other task is updating the web page http://svnbook.red-bean.com/.
+The coordinator hast to translate this web page and acknowledge
+there the existence and state of the translation project so it is
+visible to the rest of the world.
+
+
+2.3 Reaction times
+==================
+
+They are the same as those in section 1.4, with the added condition
+described in the previous section (2.2) to bring the attention of
+the coordinator.
+
+
+2.4 Election/change of coordinator
+==================================
+
+The project coordinator also has to work with the Subversion
+community.  If this community considers the work of the coordinator
+to be incorrect, it can request a change of coordinator to the
+translators.
+
+In the case of accepting the request, the translator community will
+act as stated in section 1.5 to find another coordinator.
+
+In the case of not accepting the request, a conflict of interests
+is created between the community and the translators. In this case
+the translators will need to move the project to another place in
+order to be able to work under their own conditions. This extreme
+decision has to be explained in the web page of the book, since
+it contains links pointing into the Subversion repository.
+
+
+2.5 Exceptional situations and responsibility delegation
+========================================================
+
+The same as those in section 1.7.
