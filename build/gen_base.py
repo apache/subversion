@@ -26,6 +26,9 @@ class _GeneratorBase:
     self.parser = ConfigParser.ConfigParser(_cfg_defaults)
     self.parser.read(fname)
 
+    # extract some basic information
+    self.version = self.parser.get('options', 'version')
+
     self.targets = { }
     self.includes = [ ]
     self.install = { }                       # install area name -> targets
@@ -42,11 +45,18 @@ class _GeneratorBase:
     errors = 0
     self.target_names = _filter_targets(self.parser.sections())
     for target in self.target_names:
+      install = self.parser.get(target, 'install')
+      type = self.parser.get(target, 'type')
+      if type == 'lib' and install != 'apache-mod':
+        vsn = self.version
+      else:
+        vsn = None
       try:
         target_ob = _Target(target,
                             self.parser.get(target, 'path'),
-                            self.parser.get(target, 'install'),
-                            self.parser.get(target, 'type'),
+                            install,
+                            type,
+                            vsn,
                             self._extension_map)
       except GenError, e:
         print e
@@ -99,6 +109,7 @@ class MakefileGenerator(_GeneratorBase):
     self.ofile.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n\n')
 
   def write(self):
+    ra_modules = [ ]
     errors = 0
     for target in self.target_names:
       target_ob = self.targets[target]
@@ -143,8 +154,9 @@ class MakefileGenerator(_GeneratorBase):
           deps.append(tlib.output)
 
           # link in the library by simply referring to the .la file
-          ### hmm. use join() for retreat + ... ?
-          libs.append(retreat + os.path.join(tlib.path, lib + '.la'))
+          libs.append(os.path.join(retreat,
+                                   tlib.path,
+                                   '%s-%s.la' % (lib, self.version)))
         else:
           # something we don't know, so just include it directly
           libs.append(lib)
@@ -186,6 +198,8 @@ class MakefileGenerator(_GeneratorBase):
             self.ofile.write('%s%s: %s\n\t$(COMPILE_SWIG_PY)\n'
                              % (src[:-2], objext, src))
         self.ofile.write('\n')
+      elif custom == 'ra-module':
+        ra_modules.append(target_ob)
 
     for g_name, g_targets in self.install.items():
       self.target_names = [ ]
@@ -279,14 +293,14 @@ class MakefileGenerator(_GeneratorBase):
                                                              'paths'))
     errors = errors or i_errors
 
+    includedir = os.path.join('$(includedir)', 'subversion-%s' % self.version)
     self.ofile.write('install-include: %s\n'
-                     '\t$(MKDIR) $(includedir)\n'
-                     % (string.join(self.includes),))
+                     '\t$(MKDIR) %s\n'
+                     % (string.join(self.includes), includedir))
     for file in self.includes:
       self.ofile.write('\t$(INSTALL_INCLUDE) %s %s\n'
                        % (os.path.join('$(top_srcdir)', file),
-                          os.path.join('$(includedir)',
-                                       os.path.basename(file))))
+                          os.path.join(includedir, os.path.basename(file))))
 
     self.ofile.write('\n# handy shortcut targets\n')
     for name, target in self.targets.items():
@@ -309,7 +323,7 @@ class MakefileGenerator(_GeneratorBase):
     for d in script_dirs:
       build_dirs[d] = None
 
-    self.ofile.write('BUILD_DIRS = %s\n' % string.join(build_dirs.keys()))
+    self.ofile.write('BUILD_DIRS = %s\n\n' % string.join(build_dirs.keys()))
 
     self.ofile.write('FS_TEST_DEPS = %s\n\n' %
                      string.join(self.fs_test_deps + fs_scripts))
@@ -319,6 +333,16 @@ class MakefileGenerator(_GeneratorBase):
                      string.join(self.test_deps + scripts))
     self.ofile.write('TEST_PROGRAMS = %s\n\n' %
                      string.join(self.test_progs + scripts))
+
+    for mod in ra_modules:
+      name = string.upper(mod.name[7:])  # strip 'libsvn_' and upper-case it
+
+      # construct a list of the other .la libs to link against
+      retreat = _retreat_dots(mod.path)
+      link = [ os.path.join(retreat, mod.output) ]
+      for dep in mod.deps:
+        link.append(os.path.join(retreat, dep.output))
+      self.ofile.write('%s_LINK = %s\n\n' % (name, string.join(link, ' ')))
 
     self.ofile.write('MANPAGES = %s\n\n' % string.join(self.manpages))
     self.ofile.write('INFOPAGES = %s\n\n' % string.join(self.infopages))
@@ -362,7 +386,7 @@ class MakefileGenerator(_GeneratorBase):
 
 
 class _Target:
-  def __init__(self, name, path, install, type, extmap):
+  def __init__(self, name, path, install, type, vsn, extmap):
     self.name = name
     self.deps = [ ]	# dependencies (list of other Target objects)
     self.path = path
@@ -379,8 +403,16 @@ class _Target:
     else:
       raise GenError('ERROR: unknown build type: ' + type)
 
-    if type == 'exe' or type == 'lib':
-      tfile = name + extmap[(type, 'target')]
+    if type == 'doc':
+      ### dunno what yet
+      pass
+    else:
+      # type == 'lib' or type == 'exe'
+      if vsn:
+        # the target file is the name, vsn, and appropriate extension
+        tfile = '%s-%s%s' % (name, vsn, extmap[(type, 'target')])
+      else:
+        tfile = name + extmap[(type, 'target')]
       self.objext = extmap[(type, 'object')]
 
     self.install = install
@@ -436,6 +468,7 @@ _default_sources = {
   }
 
 _predef_sections = [
+  'options',
   'includes',
   'static-apache',
   'test-scripts',

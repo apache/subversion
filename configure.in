@@ -333,26 +333,20 @@ AC_ARG_ENABLE(dso,
 if test "$enable_shared" = "no" -o "$enable_dso" != "yes"; then
   AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_DAV, 1,
         [Defined if libsvn_client should link against libsvn_ra_dav])
-  SVN_RA_LIB_DEPS="subversion/libsvn_ra_dav/libsvn_ra_dav.la"
-  SVN_RA_LIB_LINK="\$(abs_builddir)/subversion/libsvn_ra_dav/libsvn_ra_dav.la"
+  SVN_RA_LIB_DEPS="libsvn_ra_dav"
+  SVN_RA_LIB_LINK="\$(RA_DAV_LINK)"
 
   if test "$svn_lib_berkeley_db" = "yes"; then
     AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL, 1,
         [Defined if libsvn_client should link against libsvn_ra_local])
-    SVN_RA_LIB_DEPS="subversion/libsvn_ra_local/libsvn_ra_local.la \
-	subversion/libsvn_repos/libsvn_repos.la \
-	subversion/libsvn_fs/libsvn_fs.la \
-	subversion/libsvn_ra_dav/libsvn_ra_dav.la"
+    SVN_RA_LIB_DEPS="libsvn_ra_local libsvn_ra_dav"
 
     ### We can't just append to SVN_RA_LIB_LINK because of the following
     ### scenario: user has neon and db3 in /usr/local, and db4 in
     ### /usr/local/BerkeleyDB.4.0.  If libsvn_ra_dav.la comes before 
-    ### libsvn_fs.la then libtool ends up link libsvn_fs to the db3 in
+    ### libsvn_fs.la then libtool ends up linking libsvn_fs to the db3 in
     ### /usr/local/lib
-    SVN_RA_LIB_LINK="\$(abs_builddir)/subversion/libsvn_ra_local/libsvn_ra_local.la \
-	\$(abs_builddir)/subversion/libsvn_repos/libsvn_repos.la \
-	\$(abs_builddir)/subversion/libsvn_fs/libsvn_fs.la \
-	\$(abs_builddir)/subversion/libsvn_ra_dav/libsvn_ra_dav.la"
+    SVN_RA_LIB_LINK="\$(RA_LOCAL_LINK) \$(RA_DAV_LINK)"
   fi
 
 fi
