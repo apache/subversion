@@ -23,10 +23,7 @@
 
 /* This interface provides raw access to the `strings' table.  It does
    not deal with deltification, undeltification, or skels.  It just
-   reads and writes strings of bytes.  
-
-   They KEY argument is often, but not necessarily, an unparsed
-   svn_fs_id_t.  */
+   reads and writes strings of bytes. */
 
 
 /* Open a `strings' table in ENV.  If CREATE is non-zero, create
