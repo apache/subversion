@@ -428,10 +428,10 @@ svn_error_t * (*test_funcs[]) (const char **msg) = {
   trivial_transaction,
   reopen_trivial_transaction,
   create_file_transaction,
+  verify_txn_list,
   write_and_read_file,
   create_mini_tree_transaction,
   create_greek_tree_transaction,
-  verify_txn_list,
   0
 };
 
