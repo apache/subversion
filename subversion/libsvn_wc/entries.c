@@ -1559,9 +1559,6 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, TRUE, pool));
   SVN_ERR (svn_wc_entries_read (&entries_nohidden, adm_access, FALSE, pool));
 
-  /* These two hashes cannot be the exact same ones. */
-  assert (entries != entries_nohidden);
-
   /* Ensure that NAME is valid. */
   if (name == NULL)
     name = SVN_WC_ENTRY_THIS_DIR;
@@ -1579,14 +1576,17 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
          manage those modifications. */
       SVN_ERR (fold_scheduling (entries, name, &modify_flags, 
                                 &entry->schedule, pool));
-
-      SVN_ERR (fold_scheduling (entries_nohidden, name, &orig_modify_flags,
-                                &orig_schedule, pool));
-
-      /* Make certain that both folding operations had the same
-         result. */
-      assert(orig_modify_flags == modify_flags);
-      assert(orig_schedule == entry->schedule);
+      
+      if (entries != entries_nohidden)
+        {
+          SVN_ERR (fold_scheduling (entries_nohidden, name, &orig_modify_flags,
+                                    &orig_schedule, pool));
+          
+          /* Make certain that both folding operations had the same
+             result. */
+          assert(orig_modify_flags == modify_flags);
+          assert(orig_schedule == entry->schedule);
+        }
 
       /* Special case:  fold_state_changes() may have actually REMOVED
          the entry in question!  If so, don't try to fold_entry, as
@@ -1605,8 +1605,9 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
     {
       fold_entry (entries, name, modify_flags, entry,
                   svn_wc_adm_access_pool (adm_access));
-      fold_entry (entries_nohidden, name, modify_flags, entry,
-                  svn_wc_adm_access_pool (adm_access));
+      if (entries != entries_nohidden)
+        fold_entry (entries_nohidden, name, modify_flags, entry,
+                    svn_wc_adm_access_pool (adm_access));
     }
 
   /* Sync changes to disk. */
