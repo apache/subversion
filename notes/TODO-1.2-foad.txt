@@ -37,18 +37,25 @@
 > svn_client_export3
 > svn_client_lock
 > svn_client_unlock
-> svn_fs_lock
-> svn_fs_unlock
 > svn_ra_lock
 > svn_ra_unlock
-> svn_repos_fs_lock
-> svn_repos_fs_unlock
 > svn_wc_prop_set2
 >    Bug: parameter "force" needs a better name (and, in some cases,
 >    description?).  In some cases, such as svn_fs_unlock, it feels like
 >    the name "force" is good enough and can have no other interpretation,
 >    but I think that's an illusion and it should be renamed anyway.
-> 
+>
+> svn_fs_lock
+> svn_fs_unlock
+> svn_repos_fs_lock
+> svn_repos_fs_unlock
+>    Bug: parameter "force" needs a better name (and, in some cases,
+>    description?).  In some cases, such as svn_fs_unlock, it feels like
+>    the name "force" is good enough and can have no other interpretation,
+>    but I think that's an illusion and it should be renamed anyway.
+
+cmpilato
+
 > svn_cmdline_init2
 >    I'm not terribly happy with this.  I don't think it makes clear
 >    what "server mode" is and why.
