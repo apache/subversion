@@ -1915,6 +1915,7 @@ install_file (svn_wc_notify_state_t *content_state,
     {
       apr_array_header_t *propchanges;
       apr_hash_t *old_pristine_props, *new_pristine_props;
+      int i;
       
       if (is_full_proplist)
         {         
@@ -1922,13 +1923,13 @@ install_file (svn_wc_notify_state_t *content_state,
              of the file's properties, we need to compare it to the
              current 'pristine' list and deduce the differences. */
           const char *pristine_prop_path;
-          int i;
           old_pristine_props = apr_hash_make (pool);
           new_pristine_props = apr_hash_make (pool);
           
           /* Get the current pristine props. */
           SVN_ERR (svn_wc__prop_base_path (&pristine_prop_path,
-                                           file_path, adm_access, FALSE, pool));
+                                           file_path, adm_access, 
+                                           FALSE, pool));
           SVN_ERR (svn_wc__load_prop_file (pristine_prop_path,
                                            old_pristine_props, pool));
           
@@ -1946,27 +1947,25 @@ install_file (svn_wc_notify_state_t *content_state,
                                    old_pristine_props, pool));
         }
       else
-        /* The user gave us a list prop diffs directly, yay. */
-        propchanges = regular_props;
+        {
+          /* The user gave us a list prop diffs directly, yay. */
+          propchanges = regular_props;
+        }
       
       /* Now that we have the list of diffs... */
       
       /* Determine if any of the propchanges are the "magic" ones that
          might require changing the working file. */
-      {
-        int i;
-        for (i = 0; i < propchanges->nelts; i++)
-          {
-            svn_prop_t *propchange
-              = &APR_ARRAY_IDX (propchanges, i, svn_prop_t);
+      for (i = 0; i < propchanges->nelts; i++)
+        {
+          svn_prop_t *propchange = &APR_ARRAY_IDX (propchanges, i, svn_prop_t);
             
-            if ((! strcmp (propchange->name, SVN_PROP_EXECUTABLE))
-                || (! strcmp (propchange->name, SVN_PROP_KEYWORDS))
-                || (! strcmp (propchange->name, SVN_PROP_EOL_STYLE))
-                || (! strcmp (propchange->name, SVN_PROP_SPECIAL)))
-              magic_props_changed = TRUE;
-          }
-      }
+          if ((! strcmp (propchange->name, SVN_PROP_EXECUTABLE))
+              || (! strcmp (propchange->name, SVN_PROP_KEYWORDS))
+              || (! strcmp (propchange->name, SVN_PROP_EOL_STYLE))
+              || (! strcmp (propchange->name, SVN_PROP_SPECIAL)))
+            magic_props_changed = TRUE;
+        }
 
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged
