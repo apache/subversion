@@ -407,11 +407,14 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
     if (baton->last_author)
       send_xml(baton->uc, "<D:creator-displayname>%s</D:creator-displayname>",
                baton->last_author);
-
+#if 0
+    /* ### Send this UUID property some other day, when clients out
+       there will either understand it or ignore it.  At the moment,
+       it causes pre-0.19 clients to choke during xml validation. */
     if (baton->uuid)
       send_xml(baton->uc, "<S2:repository-uuid>%s</S2:repository-uuid>",
                baton->uuid);
-    
+#endif    
     send_xml(baton->uc, "</S:prop>\n");
   }
     
