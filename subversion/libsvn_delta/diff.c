@@ -138,7 +138,7 @@ svn_diff__tree_insert_token(svn_diff__tree_t *tree,
           position_ref = &parent->position[idx];
 
           while (*position_ref != NULL
-                 && (*position_ref)->offset < offset)
+                 && (*position_ref)->offset > offset)
             {
               position_ref = &(*position_ref)->next_in_node;
             }
