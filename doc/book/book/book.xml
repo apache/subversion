@@ -24,7 +24,7 @@
 ]>
 
   <book id="svn">
-  <title>Subversion: The Definitive Guide</title>
+  <title>Version Control with Subversion</title>
 
   <!-- Using revnumber would be more appropriate, but our stylesheets -->
   <!-- don't seem to render it. -->
