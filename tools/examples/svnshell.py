@@ -67,11 +67,12 @@ class SVNShell(Cmd):
     if kind == core.svn_node_dir:
       print "Path '%s' is not a file." % catpath
       return
-    ### be nice to get some paging in here.  also, not reading the
-    ### whole contents of the file at once.  but whatever.
+    ### be nice to get some paging in here.
     filelen = fs.file_length(self.root, catpath, self.taskpool)
     stream = fs.file_contents(self.root, catpath, self.taskpool)
-    print core.svn_stream_read(stream, filelen)
+    while filelen > core.SVN_STREAM_CHUNK_SIZE:
+      print core.svn_stream_read(stream, int(core.SVN_STREAM_CHUNK_SIZE))
+    print core.svn_stream_read(stream, int(filelen))
     
   def do_cd(self, arg):
     """change directory"""
