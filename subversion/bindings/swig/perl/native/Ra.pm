@@ -3,6 +3,7 @@ use warnings;
 
 package SVN::Ra;
 use SVN::Base qw(Ra svn_ra_);
+use File::Temp;
 
 =head1 NAME
 
@@ -178,9 +179,13 @@ sub new {
 }
 
 sub open_tmp_file {
+    local $^W; # silence the warning for unopened temp file
     my $self = shift;
-    my ($fd, $name) = SVN::Core::io_open_unique_file
-	('/tmp/foobar', 'tmp', 1, $self->{pool});
+    my ($fd, $name) = SVN::Core::io_open_unique_file(
+        ( File::Temp::tempfile(
+            'XXXXXXXX', OPEN => 0, DIR => File::Spec->tmpdir
+        ))[1], 'tmp', 1, $self->{pool}
+    );
     return $fd;
 }
 
