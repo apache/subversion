@@ -238,7 +238,7 @@ svn_repos_dated_revision (svn_revnum_t *revision,
  */
 svn_error_t *
 svn_repos_get_logs (svn_fs_t *fs,
-                    apr_array_header_t *paths,
+                    const apr_array_header_t *paths,
                     svn_revnum_t start,
                     svn_revnum_t end,
                     svn_boolean_t discover_changed_paths,
