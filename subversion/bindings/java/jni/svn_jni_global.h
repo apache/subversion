@@ -1,7 +1,7 @@
 /*
  * svn_jni_util.h header for all of the java binding utility functions
  *
-      * ====================================================================
+ * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which

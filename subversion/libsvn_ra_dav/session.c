@@ -1,7 +1,7 @@
 /*
  * session.c :  routines for maintaining sessions state (to the DAV server)
  *
-      * ====================================================================
+ * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which

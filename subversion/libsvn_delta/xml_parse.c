@@ -1,7 +1,7 @@
 /*
  * xml_parse.c:  parse an Subversion "tree-delta" XML stream
  *
-      * ====================================================================
+ * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which

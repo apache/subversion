@@ -4,7 +4,7 @@
  * - svn strings (svn_string_t)
  * - c strings (char *)
  *
-      * ====================================================================
+ * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which

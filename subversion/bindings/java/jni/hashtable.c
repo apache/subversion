@@ -1,7 +1,7 @@
 /*
  * utility functions to handle the java class java.util.Hashtable
  *
-      * ====================================================================
+ * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which

@@ -1,7 +1,7 @@
 /*
  * svn_client.h :  public interface for libsvn_client
  *
-      * ====================================================================
+ * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which

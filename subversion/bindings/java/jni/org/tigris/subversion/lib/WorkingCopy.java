@@ -3,7 +3,7 @@ package org.tigris.subversion.lib;
 /**
  * public interface for the Subversion Working Copy Library
  *
-      * ====================================================================
+ * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
