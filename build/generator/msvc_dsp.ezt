@@ -43,7 +43,7 @@ RSC=rc.exe
 [if-any is_utility][else]LIB32=link.exe -lib
 # ADD LIB32 /out:"[rootpath]\[configs.name]\[target.path]\[target.output_name]"
 # ADD CPP /nologo /W3 /FD /c [is configs.name "Debug"]/MDd /Gm /Gi /GX /ZI /Od /GZ[else]/MD /GX /O2 /Ob2[end][for configs.defines] /D "[configs.defines]"[end][for includes] /I "[includes]"[end]
-# ADD RSC /l [if-any is_exe]0x409[else]0x424[end]
+# ADD RSC /l [if-any is_exe]0x409[else]0x424[end] /d [is configs.name "Debug"]"_DEBUG"[else]"NDEBUG"[end]
 BSC32=bscmake.exe
 LINK32=link.exe
 [if-any is_exe is_apache_mod]# ADD LINK32 /nologo [if-any is_exe]/subsystem:console[end] /debug [if-any is_apache_mod]/dll[end] /machine:IX86[for configs.libs] [configs.libs][end][for configs.libdirs] /libpath:"[configs.libdirs]"[end] /out:"[rootpath]\[configs.name]\[target.path]\[target.output_name]"
