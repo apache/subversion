@@ -432,8 +432,17 @@ create_locks (svn_fs_t *fs, const char *path)
       return svn_error_createf (apr_err, 0, NULL, fs->pool, 
                                 "creating lock file `%s'", lockfile_path);
     
-    /* ### todo: more explanation here. */
-    contents = "DB lock file.\n";
+    contents = 
+      "DB lock file, representing locks on the versioned filesystem.\n"
+      "\n"
+      "All accessors -- both readers and writers -- of the repository's\n"
+      "Berkeley DB environment take out shared locks on this file, and\n"
+      "each accessor removes its lock when done.  If fs code ever sees\n"
+      "DB_RUN_RECOVERY, an exclusive lock is taken out, and the recovery\n"
+      "procedures are run knowing that no one else is accessing the DB\n"
+      "during the recovery.\n"
+      "\n"
+      "You should never have to edit or remove this file.\n";
     
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
