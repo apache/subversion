@@ -101,8 +101,8 @@ svn_client_status (svn_revnum_t *result_rev,
   sb.real_status_baton = status_baton;
   sb.deleted_in_repos = FALSE;
 
-  /* Need to lock the tree as even a non-recursive status requires the
-     immediate directories to be locked. */
+  /* First checks do not require a lock on the working copy.  We will
+     reopen the working copy with a lock later. */
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, 
                                   FALSE, FALSE, pool));
 
