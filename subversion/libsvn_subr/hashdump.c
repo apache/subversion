@@ -361,5 +361,9 @@ hash_read (apr_hash_t **hash,
 }
 
 
-
-
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */
