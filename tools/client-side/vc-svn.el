@@ -346,14 +346,12 @@ to be merged."
   (vc-do-command nil 'async vc-svn-program-name file "log"))
 
 
-;;; This never gets called, due to a bug vc-print-log that makes it 
-;;; try to use log-view-mode no matter what the back end.  Boo.
 (defun vc-svn-show-log-entry (version)
   "Search the log entry for VERSION in the current buffer.
 Make sure it is displayed in the buffer's window."
   (when (re-search-forward (concat "^-+\n\\(rev\\) "
                                    (regexp-quote version)
-                                   ":[^|]|[^|]| [0-9]+ lines?"))
+                                   ":[^|]+|[^|]+| [0-9]+ lines?"))
     (goto-char (match-beginning 1))
     (recenter 1)))
 
