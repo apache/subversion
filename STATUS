@@ -71,13 +71,15 @@ Candidate changes:
 
   * r8969
     Do not copy doc/book/book/images into sandbox.
-    Justification: We end up with duplicate images dir and the files are
-    already there.
+    Justification: Don't waste space in the tarball by having duplictate
+    images. 
     Votes:
 
   * Issue #1775
     Allow reverting a replaced file with no properties.
-    Justification: It's a bug.
+    Justification: Results in a somewhat wedged working copy.  Fix is 
+    straightforward, we just look at the results of the test for the existence
+    of the file that we were already running. 
     Notes: Patch on issue will require the regression test be moved to a
     different file, because we don't have that file.
     Votes:
