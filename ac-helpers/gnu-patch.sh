@@ -12,7 +12,7 @@ for searchdir in $PATH; do
 	patch=$searchdir/$name
 	if test -x $patch; then
 	    # run `patch --version`
-	    if $patch --version 2>&1 | grep -qw GNU; then
+	    if $patch --version 2>&1 | grep GNU >/dev/null; then
 		echo $patch
 		exit
 	    fi
