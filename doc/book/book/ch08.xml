@@ -37,9 +37,10 @@
       main layers&mdash;the Repository Layer, the Repository Access
       (RA) Layer, or the Client Layer.  We will examine these layers
       shortly, but first, see our brief inventory of Subversion's
-      libraries in Table 7-1.  For the sake of consistency, we will
-      refer to the libraries by their extensionless Unix library names
-      (e.g.: libsvn_fs, libsvn_wc, mod_dav_svn).</para>
+      libraries in <xref linkend="svn-ch-8-table-1"/>.  For the sake
+      of consistency, we will refer to the libraries by their
+      extensionless Unix library names (e.g.: libsvn_fs, libsvn_wc,
+      mod_dav_svn).</para>
 
     <table id="svn-ch-8-table-1">
       <title>A Brief Inventory of the Subversion Libraries</title>
@@ -106,14 +107,14 @@
     </table>
 
     <para>The fact that the word <quote>miscellaneous</quote> only
-      appears once in Table 7-1 is a good sign.  The Subversion
-      development team is serious about making sure that functionality
-      lives in the right layer and libraries.  Perhaps the greatest
-      advantage of the modular design is its lack of complexity from a
-      developer's point of view.  As a developer, you can quickly
-      formulate that kind of <quote>big picture</quote> that allows
-      you to pinpoint the location of certain pieces of functionality
-      with relative ease.</para>
+      appears once in <xref linkend="svn-ch-8-table-1"/> is a good
+      sign.  The Subversion development team is serious about making
+      sure that functionality lives in the right layer and libraries.
+      Perhaps the greatest advantage of the modular design is its lack
+      of complexity from a developer's point of view.  As a developer,
+      you can quickly formulate that kind of <quote>big
+      picture</quote> that allows you to pinpoint the location of
+      certain pieces of functionality with relative ease.</para>
 
     <para>Another benefit of modularity is the ability to replace a
       given module with a whole new library that implements the same
@@ -262,8 +263,8 @@
         Subversion.  Think of a directory tree as a two-dimensional
         system, where a node's siblings represent a sort of
         left-and-right motion, and descending into subdirectories a
-        downward motion.  Figure 7-2 shows a typical representation of
-        a tree as exactly that.</para>
+        downward motion.  <xref linkend="svn-ch8-sect1.1-dia1"/> shows
+        a typical representation of a tree as exactly that.</para>
 
       <figure id="svn-ch8-sect1.1-dia1">
         <title>Files and Directories in Two Dimensions</title>
@@ -287,9 +288,9 @@
         usually just a revision-to-be), and provides that
         third-dimensional context needed to understand the difference
         between <filename>/foo/bar</filename> in revision 32, and the
-        same path as it exists in revision 98.  Figure 7-3 shows
-        revision history as an added dimension to the Subversion
-        filesystem universe.</para>
+        same path as it exists in revision 98.  <xref
+        linkend="svn-ch8-sect1.1-dia2"/> shows revision history as an
+        added dimension to the Subversion filesystem universe.</para>
 
       <figure id="svn-ch8-sect1.1-dia2">
         <title>Revisioning Time&mdash;the Third Dimension!</title>
