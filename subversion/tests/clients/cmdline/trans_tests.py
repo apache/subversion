@@ -487,7 +487,7 @@ def keyword_expanded_on_checkout(sbox):
 
   other_wc_dir = wc_dir + ".other"
   other_url_path = os.path.join(other_wc_dir, 'Z', 'url')
-  svntest.main.remove_wc(other_wc_dir)
+  svntest.main.safe_rmtree(other_wc_dir)
   output, errput = svntest.main.run_svn (None, 'checkout',
                                          '--username', svntest.main.wc_author,
                                          '--password', svntest.main.wc_passwd,

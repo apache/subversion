@@ -729,7 +729,7 @@ def basic_revert(sbox):
     })
   if svntest.actions.run_and_verify_status (wc_dir, expected_status):
     return 1
-  svntest.main.remove_wc(X_path)
+  svntest.main.safe_rmtree(X_path)
   outlines, errlines = svntest.main.run_svn(None, 'revert', X_path)
   if errlines:
     return 1
@@ -744,7 +744,7 @@ def basic_revert(sbox):
   outlines, errlines = svntest.main.run_svn(None, 'rm', E_path)
   if errlines:
     return 1
-  svntest.main.remove_wc(E_path)
+  svntest.main.safe_rmtree(E_path)
   expected_status.tweak('A/B/E', status='D ')
   extra_files = ['E']
   if (svntest.actions.run_and_verify_status (wc_dir, expected_status,
@@ -1478,7 +1478,7 @@ def basic_auth_cache(sbox):
   repo_url       = os.path.join(svntest.main.test_area_url, repo_dir)
 
   # Create a working copy without auth tokens
-  svntest.main.remove_wc(wc_dir)
+  svntest.main.safe_rmtree(wc_dir)
   output, errput = svntest.main.run_svn(None, 'checkout',
                                         '--username', svntest.main.wc_author,
                                         '--password', svntest.main.wc_passwd,
@@ -1487,7 +1487,7 @@ def basic_auth_cache(sbox):
   if errput: return 1
 
   # Failed with "not locked" error on missing directory
-  svntest.main.remove_wc(os.path.join(wc_dir, 'A', 'B', 'E'))
+  svntest.main.safe_rmtree(os.path.join(wc_dir, 'A', 'B', 'E'))
   output, errput = svntest.main.run_svn(None, 'status', '-u',
                                         '--username', svntest.main.wc_author,
                                         '--password', svntest.main.wc_passwd,

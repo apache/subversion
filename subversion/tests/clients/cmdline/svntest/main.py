@@ -123,6 +123,9 @@ wc_passwd = 'rayjandom'
 # Global variable indicating if we want verbose output.
 verbose_mode = 0
 
+# Global variable indicating if we want test data cleaned up after success
+cleanup_mode = 0
+
 # Global URL to testing area.  Default to ra_local, current working dir.
 test_area_url = file_schema_prefix + os.path.abspath(os.getcwd())
 
@@ -269,8 +272,8 @@ def chmod_tree(path, mode, mask):
   os.path.walk(path, visit, (mode, mask))
 
 # For clearing away working copies
-def remove_wc(dirname):
-  "Remove a working copy named DIRNAME."
+def safe_rmtree(dirname):
+  "Remove the tree at DIRNAME, making it writable first"
 
   if os.path.exists(dirname):
     chmod_tree(dirname, 0666, 0666)
@@ -375,11 +378,21 @@ class Sandbox:
     self.name = '%s-%d' % (module, idx)
     self.wc_dir = os.path.join(general_wc_dir, self.name)
     self.repo_dir = os.path.join(general_repo_dir, self.name)
+    self.test_paths = (self.wc_dir, self.repo_dir)
 
   def build(self):
     if actions.make_repo_and_wc(self):
       raise Failure("Could not build repository and sandbox '%s'" % self.name)
 
+  def add_test_path(self, path):
+    self.test_paths.append(path)
+
+  def cleanup_test_paths(self):
+    global verbose_mode
+    for path in self.test_paths:
+      if verbose_mode:
+        print "CLEANUP: " + path
+      safe_rmtree(path)
 
 ######################################################################
 # Main testing functions
@@ -411,10 +424,14 @@ def run_one_test(n, test_list):
     sandbox = Sandbox(module, n)
     args = (sandbox,)
   else:
+    sandbox = None
     args = ()
 
   # Run the test.
-  return tc.run(args)
+  exit_code = tc.run(args)
+  if sandbox is not None and not exit_code and cleanup_mode:
+    sandbox.cleanup_test_paths()
+  return exit_code
 
 def _internal_run_tests(test_list, testnum=None):
   exit_code = 0
@@ -447,6 +464,7 @@ def run_tests(test_list):
 
   global test_area_url
   global verbose_mode
+  global cleanup_mode
   testnum = None
 
   url_re = re.compile('^(?:--url|BASE_URL)=(.+)')
@@ -468,14 +486,17 @@ def run_tests(test_list):
       index = sys.argv.index(arg)
       test_area_url = sys.argv[index + 1]
 
-    elif arg == "-v":
+    elif arg == "-v" or arg == "--verbose":
       verbose_mode = 1
+
+    elif arg == "--cleanup":
+      cleanup_mode = 1
 
     else:
       match = url_re.search(arg)
       if match:
         test_area_url = match.group(1)
-    
+
       else:
         try:
           testnum = int(arg)

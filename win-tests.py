@@ -44,8 +44,8 @@ client_tests = ['subversion/tests/clients/cmdline/getopt_tests.py',
 import os, sys, string, shutil, traceback
 import getopt
 
-opts, args = getopt.getopt(sys.argv[1:], 'rdvu:',
-                           ['release', 'debug', 'verbose', 'url='])
+opts, args = getopt.getopt(sys.argv[1:], 'rdvcu:',
+                           ['release', 'debug', 'verbose', 'cleanup', 'url='])
 if len(args):
   print 'Warning: non-option arguments will be ignored'
 
@@ -54,6 +54,7 @@ all_tests = tests + fs_tests + client_tests
 repo_loc = 'local repository.'
 base_url = None
 verbose = 0
+cleanup = None
 filter = 'Debug'
 log = 'tests.log'
 
@@ -64,6 +65,8 @@ for opt,arg in opts:
     filter = 'Debug'
   elif opt in ['-v', '--verbose']:
     verbose = 1
+  elif opt in ['-c', '--cleanup']:
+    cleanup=1
   elif opt in ['-u', '--url']:
     all_tests = client_tests
     repo_loc = 'remote repository ' + arg + '.'
@@ -100,7 +103,8 @@ abs_builddir = abs_srcdir  ### For now ...
 sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 import run_tests
 th = run_tests.TestHarness(abs_srcdir, abs_builddir, sys.executable, None,
-                           os.path.abspath(log), base_url)
+                           os.path.abspath(log),
+                           base_url=base_url, verbose=1, cleanup=cleanup)
 failed = th.run(all_tests)
 
 

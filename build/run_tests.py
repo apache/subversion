@@ -3,14 +3,14 @@
 #
 
 import os, sys
-
+import getopt
 
 class TestHarness:
   '''Test harness for Subversion tests.
   '''
 
   def __init__(self, abs_srcdir, abs_builddir, python, shell, logfile,
-               base_url = None):
+               base_url = None, verbose=None, cleanup=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -25,6 +25,8 @@ class TestHarness:
     self.shell = shell
     self.logfile = logfile
     self.base_url = base_url
+    self.verbose = verbose
+    self.cleanup = cleanup
     self.log = None
 
   def run(self, list):
@@ -75,6 +77,10 @@ class TestHarness:
       progname = self.python
       cmdline = [quote(progname),
                  quote(os.path.join(self.srcdir, prog))]
+      if self.verbose is not None:
+        cmdline.append('--verbose')
+      if self.cleanup is not None:
+        cmdline.append('--cleanup')
       if self.base_url is not None:
         cmdline.append('--url')
         cmdline.append(quote(self.base_url))
@@ -88,6 +94,8 @@ class TestHarness:
       progname = './' + progbase
       cmdline = [quote(progname),
                  quote('--srcdir=' + os.path.join(self.srcdir, progdir))]
+      if self.cleanup is not None:
+        cmdline.append('--cleanup')
     else:
       print 'Don\'t know what to do about ' + progbase
       sys.exit(1)
@@ -135,33 +143,41 @@ class TestHarness:
 
 
 def main():
-  '''Argument parsing and test driver.
+  '''Usage: run_tests.py [--url <base_url>] [--verbose] [--cleanup]
+                      <abs_srcdir> <abs_builddir> <python> <shell>
+                      <prog ...>
 
-  Usage: run-tests.py [--url <base_url>] <abs_srcdir> <abs_builddir>
-                      <python> <shell> <prog ...>
-
-  The optional base_url and the first four parameters and  are passed
-  unchanged to the TestHarness constuctor.  All other parameters
-  are names of test programs.
+  The optional base_url, verbose and cleanup options, and the first
+  four parameters are passed unchanged to the TestHarness constuctor.
+  All other parameters are names of test programs.
   '''
-  if len(sys.argv) < 6 \
-     or sys.argv[1] == '--url' and len(sys.argv) < 8:
-    print 'Usage: run-tests.py <abs_srcdir> <abs_builddir>' \
-          '<python> <shell> [--url <base_url>] <prog ...>'
+
+  try:
+    opts, args = getopt.getopt(sys.argv[1:], '',
+                               ['url=', 'verbose', 'cleanup'])
+  except getopt.GetoptError:
+    args = []
+
+  if len(args) < 5:
+    print __doc__
     sys.exit(2)
 
-  if sys.argv[1] == '--url':
-    base_index = 2
-    base_url = sys.argv[2]
-  else:
-    base_index = 0
-    base_url = None
+  base_url, verbose, cleanup = None, None, None
+  for opt, val in opts:
+    if opt == '--url':
+      base_url = val
+    elif opt == '--verbose':
+      verbose = 1
+    elif opt == '--cleanup':
+      cleanup = 1
+    else:
+      raise getopt.GetoptError
 
-  th = TestHarness(sys.argv[base_index+1], sys.argv[base_index+2],
-                   sys.argv[base_index+3], sys.argv[base_index+4],
-                   os.path.abspath('tests.log'), base_url)
+  th = TestHarness(args[0], args[1], args[2], args[3],
+                   os.path.abspath('tests.log'),
+                   base_url, verbose, cleanup)
 
-  failed = th.run(sys.argv[base_index+5:])
+  failed = th.run(sys.argv[4:])
   if failed:
     sys.exit(1)
 

@@ -578,8 +578,8 @@ def unschedule_missing_added(sbox):
   # Poof, all 4 added things are now missing in action.
   os.remove(file1_path)
   os.remove(file2_path)
-  svntest.main.remove_wc(dir1_path)
-  svntest.main.remove_wc(dir2_path)
+  svntest.main.safe_rmtree(dir1_path)
+  svntest.main.safe_rmtree(dir2_path)
 
   # Unschedule the additions, using 'svn rm' and 'svn revert'.
   svntest.main.run_svn(None, 'rm', file1_path, dir1_path)
@@ -611,7 +611,7 @@ def delete_missing(sbox):
 
   # Manually remove a file and a directory.
   os.remove(mu_path)
-  svntest.main.remove_wc(H_path)
+  svntest.main.safe_rmtree(H_path)
 
   # Now schedule them for deletion anyway, and make sure no error is output.
   stdout, stderr = svntest.main.run_svn(None, 'rm', mu_path, H_path)

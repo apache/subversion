@@ -51,9 +51,9 @@ def externals_test_cleanup(sbox):
     shutil.rmtree(sbox.repo_dir)
   if os.path.exists(sbox.repo_dir + ".other"):
     shutil.rmtree(sbox.repo_dir + ".other")
-  svntest.main.remove_wc(sbox.wc_dir)
-  svntest.main.remove_wc(sbox.wc_dir + ".other")
-  svntest.main.remove_wc(sbox.wc_dir + ".init")
+  svntest.main.safe_rmtree(sbox.wc_dir)
+  svntest.main.safe_rmtree(sbox.wc_dir + ".other")
+  svntest.main.safe_rmtree(sbox.wc_dir + ".init")
 
 ### todo: it's inefficient to keep calling externals_test_setup() for
 ### every test.  It's slow.  But it's very safe -- we're guaranteed to
@@ -89,7 +89,7 @@ def externals_test_setup(sbox):
   if sbox.build():
     return 1
 
-  svntest.main.remove_wc(sbox.wc_dir) # The test itself will recreate this
+  svntest.main.safe_rmtree(sbox.wc_dir) # The test itself will recreate this
 
   wc_init_dir    = sbox.wc_dir + ".init"  # just for setting up props
   repo_dir       = sbox.repo_dir

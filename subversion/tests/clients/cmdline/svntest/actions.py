@@ -129,7 +129,7 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
     disk_tree = disk_tree.old_tree()
 
   # Remove dir if it's already there.
-  main.remove_wc(wc_dir_name)
+  main.safe_rmtree(wc_dir_name)
 
   # Checkout and make a tree of the output, using l:foo/p:bar
   ### todo: svn should not be prompting for auth info when using
@@ -608,7 +608,7 @@ def duplicate_dir(wc_name, wc_copy_name):
   existing tree at that location."""
 
   if os.path.exists(wc_copy_name):
-    main.remove_wc(wc_copy_name)
+    main.safe_rmtree(wc_copy_name)
   shutil.copytree(wc_name, wc_copy_name)
   
 
