@@ -534,7 +534,7 @@ test_list = [ None,
               status_for_unignored_file,
               status_for_nonexistent_file,
               status_file_needs_update,
-              XFail(status_uninvited_parent_directory),
+              status_uninvited_parent_directory,
              ]
 
 if __name__ == '__main__':
