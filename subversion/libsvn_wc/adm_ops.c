@@ -529,6 +529,7 @@ add_to_revision_control (svn_stringbuf_t *path,
   svn_stringbuf_t *copyfrom_url, *copyfrom_rev;
   svn_wc_entry_t *orig_entry, *anc_entry, *parent_entry;
   svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
+  svn_boolean_t is_replace = FALSE;
   apr_status_t apr_err;
   apr_hash_t *atts = apr_hash_make (pool);
   svn_stringbuf_t *url = NULL;
@@ -566,6 +567,8 @@ add_to_revision_control (svn_stringbuf_t *path,
              " -- try committing your deletion first and then re-adding '%s'",
              path->data, path->data);
         }
+      if (orig_entry->schedule == svn_wc_schedule_delete)
+        is_replace = TRUE;
     }
     
   /* Split off the basename from the parent directory. */
@@ -603,11 +606,10 @@ add_to_revision_control (svn_stringbuf_t *path,
 
   /* Now, add the entry for this item to the parent_dir's
      entries file, marking it for addition. */
-  /* ### todo:  Should we NOT reset the revision if this is a replace? */
   SVN_ERR (svn_wc__entry_modify
            (parent_dir, basename,
             (SVN_WC__ENTRY_MODIFY_SCHEDULE
-             | SVN_WC__ENTRY_MODIFY_REVISION
+             | (is_replace ? 0 : SVN_WC__ENTRY_MODIFY_REVISION)
              | SVN_WC__ENTRY_MODIFY_KIND
              | SVN_WC__ENTRY_MODIFY_ATTRIBUTES),
             0, kind,
@@ -659,7 +661,7 @@ add_to_revision_control (svn_stringbuf_t *path,
       
       /* Things we plan to change in this_dir. */
       flags = (SVN_WC__ENTRY_MODIFY_SCHEDULE
-               | SVN_WC__ENTRY_MODIFY_REVISION 
+               | (is_replace ? 0 : SVN_WC__ENTRY_MODIFY_REVISION)
                | SVN_WC__ENTRY_MODIFY_KIND
                | SVN_WC__ENTRY_MODIFY_ATTRIBUTES
                | SVN_WC__ENTRY_MODIFY_FORCE);
@@ -675,10 +677,7 @@ add_to_revision_control (svn_stringbuf_t *path,
                (path, NULL,
                 flags,
                 0, svn_node_dir,
-                ((orig_entry 
-                  && orig_entry->schedule == svn_wc_schedule_delete) 
-                 ? svn_wc_schedule_replace 
-                 : svn_wc_schedule_add),
+                is_replace ? svn_wc_schedule_replace : svn_wc_schedule_add,
                 svn_wc_existence_normal,
                 FALSE, 0, 0,
                 url,   /* may or may not be null */

@@ -56,9 +56,7 @@ def get_standard_status_list(wc_dir):
 
   # A/B/E, A/D/H/chi
   status_list[6][3]['status'] = 'R '
-  status_list[6][3]['wc_rev'] = '0'
   status_list[18][3]['status'] = 'R '
-  status_list[18][3]['wc_rev'] = '0'
 
   # A/B/E/alpha, A/B/E/beta, A/C, A/D/gamma
   status_list[7][3]['status'] = 'D '
