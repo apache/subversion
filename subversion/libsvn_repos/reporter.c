@@ -183,6 +183,7 @@ svn_repos_finish_report (void *report_baton)
                                 rev_path,
                                 rbaton->update_editor,
                                 rbaton->update_edit_baton,
+                                TRUE,
                                 rbaton->pool));
                            
   /* Still here?  Great!  Throw out the transaction. */

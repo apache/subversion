@@ -143,7 +143,7 @@ generate_delta_tree (svn_repos_node_t **tree,
                                 svn_stringbuf_create ("", edit_pool), 
                                 NULL, src_revs, root, 
                                 svn_stringbuf_create ("", edit_pool), 
-                                editor, edit_baton, edit_pool));
+                                editor, edit_baton, FALSE, edit_pool));
 
   /* Return the tree we just built. */
   *tree = svn_repos_node_from_baton (edit_baton);
