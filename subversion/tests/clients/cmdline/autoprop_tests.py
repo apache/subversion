@@ -29,39 +29,20 @@ XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
 
-# Helper functions
-def check_prop(name, path, exp_out):
-  """Verify that property NAME on PATH has a value of EXP_OUT"""
-  # Not using run_svn because binary_mode must be set
-  out, err = svntest.main.run_svn(None, 'pg', '--strict', name, path)
-  if out != exp_out:
-    print "Expected standard output: ", exp_out, "\n"
-    print "Actual standard output: ", out, "\n"
-    raise svntest.Failure
-
-
+# Helper function
 def check_proplist(path, exp_out):
   """Verify that property list on PATH has a value of EXP_OUT"""
-  # Not using run_svn because binary_mode must be set
-  out, err = svntest.main.run_svn(None, 'proplist', path)
-  if len(out) == 0 and len(exp_out) == 0:
-    # no properties expected and svn didn't output anything so it's ok
-    return
+  out, err = svntest.main.run_svn(None, 'proplist', '--verbose', path)
 
-  if len(out) < 1:
-    print "Expected result: ", exp_out, "\n"
-    print "Actual standard output: ", out, "\n"
-    raise svntest.Failure
   out2 = []
-  if len(out) > 1:
-    for line in out[1:]:
-      out2 = out2 + [string.strip(line)]
+  for line in out[1:]:
+    out2 = out2 + [string.strip(line)]
   out2.sort()
   exp_out.sort()
   if out2 != exp_out:
-    print "Expected result: ", exp_out, "\n"
-    print "Actual result: ", out2, "\n"
-    print "Actual standard output: ", out, "\n"
+    print "Expected properties:", exp_out
+    print "Actual properties:  ", out2
+    print "Actual proplist output:", out
     raise svntest.Failure
 
 
@@ -201,31 +182,18 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
 
   # check the properties
   if enable_flag:
-    filename = os.path.join(files_wc_dir, 'foo.h' )
-    check_proplist(filename,['auto'])
-    check_prop('auto', filename, ['oui'])
-    filename = os.path.join(files_wc_dir, 'foo.c' )
-    check_proplist(filename,['cfile', 'auto'])
-    check_prop('auto', filename, ['oui'])
-    check_prop('cfile', filename, ['yes'])
-    filename = os.path.join(files_wc_dir, 'foo.jpg' )
-    check_proplist(filename,['jpgfile', 'auto'])
-    check_prop('auto', filename, ['oui'])
-    check_prop('jpgfile', filename, ['ja'])
-    filename = os.path.join(files_wc_dir, 'fubar.tar' )
-    check_proplist(filename,['tarfile', 'auto'])
-    check_prop('auto', filename, ['oui'])
-    check_prop('tarfile', filename, ['si'])
-    filename = os.path.join(files_wc_dir, 'foobar.lha' )
-    check_proplist(filename,['lhafile', 'lzhfile', 'auto'])
-    check_prop('auto', filename, ['oui'])
-    check_prop('lhafile', filename, ['da'])
-    check_prop('lzhfile', filename, ['niet'])
-    filename = os.path.join(files_wc_dir, 'spacetest' )
-    check_proplist(filename,['abc', 'ghi', 'auto'])
-    check_prop('auto', filename, ['oui'])
-    check_prop('abc', filename, ['def'])
-    check_prop('ghi', filename, [])
+    filename = os.path.join(files_wc_dir, 'foo.h')
+    check_proplist(filename, ['auto : oui'])
+    filename = os.path.join(files_wc_dir, 'foo.c')
+    check_proplist(filename, ['auto : oui', 'cfile : yes'])
+    filename = os.path.join(files_wc_dir, 'foo.jpg')
+    check_proplist(filename, ['auto : oui', 'jpgfile : ja'])
+    filename = os.path.join(files_wc_dir, 'fubar.tar')
+    check_proplist(filename, ['auto : oui', 'tarfile : si'])
+    filename = os.path.join(files_wc_dir, 'foobar.lha')
+    check_proplist(filename, ['auto : oui', 'lhafile : da', 'lzhfile : niet'])
+    filename = os.path.join(files_wc_dir, 'spacetest')
+    check_proplist(filename, ['auto : oui', 'abc : def', 'ghi :'])
   else:
     for filename in filenames:
       check_proplist(os.path.join(files_wc_dir, filename), [])
