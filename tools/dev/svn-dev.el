@@ -28,6 +28,28 @@
       (save-buffer))
     (message "Reverted \"%s\"." fname)))
 
+(defun svn-resolved ()
+  "Revert the current buffer and its file to its svn base revision."
+  (interactive)
+  (let ((obuf (current-buffer))
+        (fname (buffer-file-name))
+        (outbuf (get-buffer-create "*svn output*")))
+    (set-buffer outbuf)
+    (delete-region (point-min) (point-max))
+    (call-process "svn" nil outbuf nil "status" fname)
+    (goto-char (point-min))
+    (search-forward fname)
+    (beginning-of-line)
+    (if (looking-at "^?")
+        (error "\"%s\" is not a Subversion-controlled file" fname))
+    (call-process "svn" nil outbuf nil "resolved" fname)
+    (set-buffer obuf)
+    ;; todo: make a backup~ file?
+    (save-excursion
+      (revert-buffer nil t)
+      (save-buffer))
+    (message "Marked \"%s\" as conflict-free." fname)))
+
 (defconst svn-adm-area ".svn"
   "The name of the Subversion administrative subdirectory.")
 
