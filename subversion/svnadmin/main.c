@@ -224,6 +224,9 @@ static const apr_getopt_option_t options_table[] =
     {"clean-logs", svnadmin__clean_logs, 0,
      N_("remove redundant log files from source repository")},
 
+    {"verbose", 'v', 0,
+     N_("print extra information")},
+
     {NULL}
   };
 
@@ -288,7 +291,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
         "was previously empty, its UUID will, by default, be changed to the\n"
         "one specified in the stream.  Progress feedback is sent to"
         " stdout.\n"),
-     {'q', svnadmin__ignore_uuid, svnadmin__force_uuid, 
+     {'q', 'v', svnadmin__ignore_uuid, svnadmin__force_uuid, 
       svnadmin__parent_dir} },
 
     {"lstxns", subcommand_lstxns, {0},
@@ -351,6 +354,7 @@ struct svnadmin_opt_state
   svn_boolean_t bypass_hooks;                       /* --bypass-hooks */
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
                                                        --force-uuid */
+  svn_boolean_t verbose;                            /* --verbose */
   const char *parent_dir;
 
   const char *config_dir;    /* Overriding Configuration Directory */
@@ -565,9 +569,10 @@ subcommand_load (apr_getopt_t *os, void *baton, apr_pool_t *pool)
     SVN_ERR (create_stdio_stream (&stdout_stream,
                                   apr_file_open_stdout, pool));
   
-  SVN_ERR (svn_repos_load_fs (repos, stdin_stream, stdout_stream,
-                              opt_state->uuid_action, opt_state->parent_dir,
-                              check_cancel, NULL, pool));
+  SVN_ERR (svn_repos_load_fs2 (repos, stdin_stream, stdout_stream,
+                               opt_state->verbose, opt_state->uuid_action,
+                               opt_state->parent_dir, check_cancel, NULL,
+                               pool));
 
   return SVN_NO_ERROR;
 }
@@ -937,6 +942,9 @@ main (int argc, const char * const *argv)
         break;
       case 'q':
         opt_state.quiet = TRUE;
+        break;
+      case 'v':
+        opt_state.verbose = TRUE;
         break;
       case 'h':
       case '?':
