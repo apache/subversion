@@ -299,13 +299,14 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
  * "Single repository, multiple projects?" for more.  We may simple
  * need to offer a few different semantics for PATHS.
  *
- * ### Of course, right now the PATHS argument is ignored anyway, see
- * http://subversion.tigris.org/issues/show_bug.cgi?id=562 for why.
- *
  * If DISCOVER_CHANGED_PATHS, then each call to RECEIVER passes a
  * `const apr_hash_t *' for the receiver's CHANGED_PATHS argument; the
  * hash's keys are all the paths committed in that revision.
  * Otherwise, each call to RECEIVER passes null for CHANGED_PATHS.
+ *
+ * ### NOTE: PATHS and DISCOVER_CHANGED_PATHS are currently ignored,
+ * see http://subversion.tigris.org/issues/show_bug.cgi?id=562 for
+ * more information.
  *
  * If any invocation of RECEIVER returns error, return that error
  * immediately and without wrapping it.
