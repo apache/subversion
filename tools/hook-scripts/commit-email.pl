@@ -25,8 +25,8 @@ close (INPUT);
 
 # parse the author, date, and log message
 chomp @svnlooklines;
-$author = shift @svnlooklines;
-$date = shift @svnlooklines;
+my $author = shift @svnlooklines;
+my $date = shift @svnlooklines;
 
 # open a pipe from svnlook
 open (INPUT, "svnlook $repos rev $rev log |") 
@@ -34,7 +34,7 @@ open (INPUT, "svnlook $repos rev $rev log |")
 @svnlooklines = <INPUT>;
 close (INPUT);
 
-@log = @svnlooklines; # something else, obviously.
+my @log = @svnlooklines; # something else, obviously.
 
 # open a pipe from svnlook
 open (INPUT, "svnlook $repos rev $rev changed |") 
@@ -44,17 +44,17 @@ close (INPUT);
 
 # parse the changed nodes
 my %path_mods = ();
-foreach $line (@svnlooklines)
+foreach my $line (@svnlooklines)
 {
   chomp $line;
 
-  ($code, $path) = split ('   ', $line);
+  my ($code, $path) = split ('   ', $line);
 
-  if ($path_mods{ $code } ne '') {
-    $path_mods{ $code } = $path_mods{ $code } . ' ' . $path;
+  if (defined ($path_mods{$code}) && ($path_mods{$code} ne '')) {
+    $path_mods{$code} = $path_mods{$code} . ' ' . $path;
   }
   else {
-    $path_mods{ $code } = $path;
+    $path_mods{$code} = $path;
   }
 }
 
@@ -65,9 +65,15 @@ open (INPUT, "svnlook $repos rev $rev diff |")
 close (INPUT);
 
 print MAILER "Author: $author\nDate: $date\n\n";
-print MAILER "Added: ", $path_mods{ 'A' }, "\n" if $path_mods{ 'A' } ne '';
-print MAILER "Removed: ", $path_mods{ 'D' }, "\n" if $path_mods{ 'D' } ne '';
-print MAILER "Modified: ", $path_mods{ 'U' }, "\n" if $path_mods{ 'U' } ne '';
+if (defined ($path_mods{'A'}) && ($path_mods{'A'} ne '')) {
+  print MAILER "Added: ", $path_mods{ 'A' }, "\n" ;
+}
+if (defined ($path_mods{'D'}) && ($path_mods{'D'} ne '')) {
+  print MAILER "Removed: ", $path_mods{ 'D' }, "\n";
+}
+if (defined ($path_mods{'U'}) && ($path_mods{'U'} ne '')) {
+  print MAILER "Modified: ", $path_mods{ 'U' }, "\n" ;
+}
 print MAILER "Log:\n", @log, "\n";
 print MAILER @svnlooklines;
 
