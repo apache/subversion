@@ -1,24 +1,24 @@
-# Microsoft Developer Studio Project File - Name="subversion_client" - Package Owner=<4>
+# Microsoft Developer Studio Project File - Name="tests_libsvn_delta_xml_output" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Console Application" 0x0103
 
-CFG=subversion_client - Win32 Debug
+CFG=tests_libsvn_delta_xml_output - Win32 Debug
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
-!MESSAGE NMAKE /f "subversion_client.mak".
+!MESSAGE NMAKE /f "tests_libsvn_delta_xml_output.mak".
 !MESSAGE 
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "subversion_client.mak" CFG="subversion_client - Win32 Debug"
+!MESSAGE NMAKE /f "tests_libsvn_delta_xml_output.mak" CFG="tests_libsvn_delta_xml_output - Win32 Debug"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "subversion_client - Win32 Release" (based on "Win32 (x86) Console Application")
-!MESSAGE "subversion_client - Win32 Debug" (based on "Win32 (x86) Console Application")
+!MESSAGE "tests_libsvn_delta_xml_output - Win32 Release" (based on "Win32 (x86) Console Application")
+!MESSAGE "tests_libsvn_delta_xml_output - Win32 Debug" (based on "Win32 (x86) Console Application")
 !MESSAGE 
 
 # Begin Project
@@ -28,7 +28,7 @@ CFG=subversion_client - Win32 Debug
 CPP=cl.exe
 RSC=rc.exe
 
-!IF  "$(CFG)" == "subversion_client - Win32 Release"
+!IF  "$(CFG)" == "tests_libsvn_delta_xml_output - Win32 Release"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 0
@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\include" /I "..\..\apr\include" /I "..\..\expat-lite" /D "NDEBUG" /D "_WINDOWS_CONSOLE" /D "WIN32" /D "APR_DECLARE_EXPORT" /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\..\include" /I "..\..\..\apr\include" /I "..\..\..\expat-lite" /D "NDEBUG" /D "APR_DECLARE_EXPORT" /D "WIN32" /D "_WINDOWS_CONSOLE" /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x424 /d "NDEBUG"
 # ADD RSC /l 0x424 /d "NDEBUG"
@@ -51,9 +51,9 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /machine:I386
-# ADD LINK32 ..\libsvn_client\Release\libsvn_client.lib ..\libsvn_delta\Release\libsvn_delta.lib ..\libsvn_subr\Release\libsvn_subr.lib ..\libsvn_wc\Release\libsvn_wc.lib ..\..\apr\LibR\apr.lib ..\..\expat-lite\Release\libexpat.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /subsystem:console /machine:I386 /out:"Release/svn.exe"
+# ADD LINK32 ..\Release\libsvn_delta.lib ..\..\libsvn_subr\Release\libsvn_subr.lib ..\..\..\apr\LibR\apr.lib ..\..\..\expat-lite\Release\libexpat.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /subsystem:console /machine:I386 /out:"Release/xml-output-test.exe"
 
-!ELSEIF  "$(CFG)" == "subversion_client - Win32 Debug"
+!ELSEIF  "$(CFG)" == "tests_libsvn_delta_xml_output - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
@@ -67,7 +67,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /GZ /c
-# ADD CPP /nologo /MDd /W3 /GX /ZI /Od /I "..\include" /I "..\..\apr\include" /I "..\..\expat-lite" /D "SVN_DEBUG" /D "_DEBUG" /D "_WINDOWS_CONSOLE" /D "WIN32" /D "APR_DECLARE_EXPORT" /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /GX /ZI /Od /I "..\..\include" /I "..\..\..\apr\include" /I "..\..\..\expat-lite" /D "SVN_DEBUG" /D "_DEBUG" /D "APR_DECLARE_EXPORT" /D "WIN32" /D "_WINDOWS_CONSOLE" /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x424 /d "_DEBUG"
 # ADD RSC /l 0x424 /d "_DEBUG"
@@ -76,37 +76,21 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 ..\libsvn_client\Debug\libsvn_client.lib ..\libsvn_delta\Debug\libsvn_delta.lib ..\libsvn_subr\Debug\libsvn_subr.lib ..\libsvn_wc\Debug\libsvn_wc.lib ..\..\apr\LibD\apr.lib ..\..\expat-lite\Debug\libexpat.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /subsystem:console /debug /machine:I386 /out:"Debug/svn.exe" /pdbtype:sept
+# ADD LINK32 ..\Debug\libsvn_delta.lib ..\..\libsvn_subr\Debug\libsvn_subr.lib ..\..\..\apr\LibD\apr.lib ..\..\..\expat-lite\Debug\libexpat.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /subsystem:console /debug /machine:I386 /out:"Debug/xml-output-test.exe" /pdbtype:sept
 # SUBTRACT LINK32 /incremental:no
 
 !ENDIF 
 
 # Begin Target
 
-# Name "subversion_client - Win32 Release"
-# Name "subversion_client - Win32 Debug"
+# Name "tests_libsvn_delta_xml_output - Win32 Release"
+# Name "tests_libsvn_delta_xml_output - Win32 Debug"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=.\main.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\status.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\trace.c
-# End Source File
-# End Group
-# Begin Group "Header Files"
-
-# PROP Default_Filter "h;hpp;hxx;hm;inl"
-# Begin Source File
-
-SOURCE=.\cl.h
+SOURCE=".\xml-output-test.c"
 # End Source File
 # End Group
 # End Target
