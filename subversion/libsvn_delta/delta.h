@@ -164,7 +164,7 @@ typedef struct svn_delta__digger_t
   svn_delta__stackframe_t *stack;
 
   /* Callbacks to use when we discover interesting XML events */
-  svn_delta_walk_t *walker;
+  const svn_delta_walk_t *walker;
 
   /* Userdata structures that we need to keep track of while we parse,
      given to us by either the SVN filesystem or the SVN client */
