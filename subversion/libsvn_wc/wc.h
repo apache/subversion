@@ -587,6 +587,17 @@ svn_wc__do_property_merge (svn_string_t *path,
                            apr_pool_t *pool,
                            svn_string_t **entry_accum);
 
+
+/* Given a DIR_PATH under version control, decide if one of its
+   entries (ENTRY) is in state of conflict; return the answer in
+   CONFLICTED_P.  If the entry mentions that a .rej or .prej exist,
+   but they are both removed, assume the conflict has been resolved by
+   the user. */
+svn_error_t * svn_wc__conflicted_p (svn_boolean_t *conflicted_p,
+                                    svn_string_t *dir_path,
+                                    svn_wc_entry_t *entry,
+                                    apr_pool_t *pool);
+
 
 /* 
  * local variables:

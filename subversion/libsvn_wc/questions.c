@@ -551,6 +551,89 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
 
 
 
+
+
+
+svn_error_t *
+svn_wc__conflicted_p (svn_boolean_t *conflicted_p,
+                      svn_string_t *dir_path,
+                      svn_wc_entry_t *entry,
+                      apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_string_t *rej_file, *prej_file;
+  svn_string_t *rej_path, *prej_path;
+
+  /* Note:  it's assumed that ENTRY is a particular entry inside
+     DIR_PATH's entries file. */
+  
+  if (entry->flags & SVN_WC_ENTRY_CONFLICT)
+    {
+      /* Get up to two reject files */
+      rej_file = apr_hash_get (entry->attributes,
+                               SVN_WC_ENTRY_ATTR_REJFILE,
+                               APR_HASH_KEY_STRING);
+
+      prej_file = apr_hash_get (entry->attributes,
+                                SVN_WC_ENTRY_ATTR_PREJFILE,
+                                APR_HASH_KEY_STRING);
+      
+      if ((! rej_file) && (! prej_file))
+        {
+          /* freaky, why is the entry marked as conflicted, but there
+             are no reject files?  assume there's no more conflict.
+             maybe this should be an error.  :) */
+          *conflicted_p = FALSE;
+          return SVN_NO_ERROR;
+        }
+
+      else
+        {
+          enum svn_node_kind kind;
+
+          if (rej_file)
+            {
+              rej_path = svn_string_dup (dir_path, pool);
+              svn_path_add_component (rej_path, rej_file,
+                                      svn_path_local_style);
+
+              err = svn_io_check_path (rej_path, &kind, pool);
+              if (err) return err;
+
+              if (kind == svn_node_file)
+                {
+                  /* The conflict file is still there. */
+                  *conflicted_p = TRUE;
+                  return SVN_NO_ERROR;
+                }
+            }
+
+          if (prej_file)
+            {
+              prej_path = svn_string_dup (dir_path, pool);
+              svn_path_add_component (prej_path, prej_file,
+                                      svn_path_local_style);
+
+              err = svn_io_check_path (prej_path, &kind, pool);
+              if (err) return err;
+
+              if (kind == svn_node_file)
+                {
+                  /* The conflict file is still there. */
+                  *conflicted_p = TRUE;
+                  return SVN_NO_ERROR;
+                }
+            }
+        }
+    }
+  else
+    *conflicted_p = FALSE;
+
+  return SVN_NO_ERROR;
+}
+
+
+
 
 /* 
  * local variables:
