@@ -61,8 +61,9 @@
 #include "svn_error.h"
 #include "cl.h"
 
-static char* get_help[] = {
-  "svn", "help", "delete", NULL };
+static const char *get_help[] = {
+  "svn", "help", "delete", NULL
+};
 
 
 /*** Code. ***/
