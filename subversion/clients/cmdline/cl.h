@@ -84,7 +84,6 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t verbose;
   svn_boolean_t very_verbose;
   svn_boolean_t update;
-  svn_boolean_t modified;
   apr_array_header_t *args;
   /* TODO fixme. This still doesn't handle binary data from a file! */
   svn_stringbuf_t *filedata;
