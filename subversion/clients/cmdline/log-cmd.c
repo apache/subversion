@@ -184,7 +184,7 @@ log_message_receiver (void *baton,
           char action = (char) ((int) apr_hash_get (changed_paths, 
                                                     item->key, item->klen));
           SVN_ERR (svn_utf_cstring_from_utf8 (path, &path_native, pool));
-          printf ("   %c %s\n", (action == 'R' ? 'U' : action), path_native);
+          printf ("   %c %s\n", action, path_native);
         }
     }
   printf ("\n");  /* A blank line always precedes the log message. */
