@@ -15,7 +15,7 @@
  * ====================================================================
  */
 
-// TODO how many of these can I get rid of?
+/* TODO how many of these can I get rid of? */
 #include <stdlib.h>
 #include <string.h>
 #include <apr_pools.h>

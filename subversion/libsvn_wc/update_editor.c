@@ -1832,14 +1832,14 @@ install_file (svn_wc_notify_state_t *content_state,
   const char *logfile_name;
   svn_wc_notify_lock_state_t local_lock_state;
 
-  /* We need the lock state, even if the caller doesn't. */
-  if (! lock_state)
-    lock_state = &local_lock_state;
-
   /* The code flow does not depend upon these being set to NULL, but
      it removes a gcc 3.1 `might be used uninitialized in this
      function' warning. */
   const char *txtb = NULL, *tmp_txtb = NULL;
+
+  /* We need the lock state, even if the caller doesn't. */
+  if (! lock_state)
+    lock_state = &local_lock_state;
 
   /* Start by splitting FILE_PATH. */
   svn_path_split (file_path, &parent_dir, &base_name, pool);

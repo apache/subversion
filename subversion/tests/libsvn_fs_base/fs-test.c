@@ -15,7 +15,7 @@
  * ====================================================================
  */
 
-// TODO clean
+/* TODO clean */
 #include <stdlib.h>
 #include <string.h>
 #include <apr_pools.h>
