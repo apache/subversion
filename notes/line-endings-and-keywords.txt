@@ -96,8 +96,8 @@ do the basic proposal first, then see how well things work out.
 
 Next, Greg responded to an observation by William Uther, in which
 William pointed out that the behavior is not reversible when
-svn:newline-style is LF or CRLF.  Greg agrees, but explains why this
-is desirable:
+svn:newline-style is LF or CRLF.  Greg agrees, but explains why that's
+okay:
 
    On Fri, 2001-12-14 at 15:48, William Uther wrote:
    > --On Friday, 14 December 2001 1:16 PM -0500 Greg Hudson
@@ -134,8 +134,8 @@ is desirable:
    and abort the commit if we notice any kind of mixing of newline
    styles.  (Can also combine with variation 1.)
 
-Colin Putney also followed up to William Uther's post, and explained
-the same thing as Greg but in even more detail:
+Colin Putney also followed up to William Uther's post, agreeing with
+Greg and explaining why in even more detail:
 
    > I don't think this preserves reversability.  If a file contains
    > BOTH <native-style newline> and <requested-style newline> then
@@ -191,9 +191,9 @@ the same thing as Greg but in even more detail:
 
    Colin
 
-Finally, Greg followed up confirming again what he meant by that
-portion of the proposal, but also saying that he could the other way
-on the question too:
+Finally, Greg followed up, confirming again what he meant by that
+portion of the proposal, but also saying that he could go the other
+way on the question too:
 
    > +1 on Greg Hudson's latest proposal -- and I think we're now
    > ready to Actually Do It. :-)
