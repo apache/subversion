@@ -142,11 +142,6 @@ deltify (svn_fs_id_t *target_id,
   svn_txdelta_stream_t
     *txdelta_stream;      /* stream to read delta windows  */
 
-  svn_fs__rep_read_baton_t
-    *source_rb,           /* stream reading baton for source */
-    *target_rb;           /* stream reading baton for target */
-
-
   /* stream to write new (deltified) target data */
   svn_stream_t *new_target_stream;
   struct write_string_baton new_target_baton;
@@ -228,23 +223,15 @@ deltify (svn_fs_id_t *target_id,
 
   /* We're just doing data deltification for now, no props. */
  
-  source_rb = svn_fs__rep_read_get_baton
-    (fs, source_dkey, 0, trail, trail->pool);
-  target_rb = svn_fs__rep_read_get_baton
-    (fs, target_dkey, 0, trail, trail->pool);
-
   /* Right now, we just write the delta as a single svndiff string.
      See the section "Random access to delta-encoded files" in the
      top-level IDEAS file for leads on other things we could do here,
      though... */
 
-  /* Create a stream object in trail->pool, and make it use our read
-     func and baton. */
-  source_stream = svn_stream_create (source_rb, trail->pool);
-  svn_stream_set_read (source_stream, svn_fs__rep_read_contents);
-
-  target_stream = svn_stream_create (target_rb, trail->pool);
-  svn_stream_set_read (target_stream, svn_fs__rep_read_contents);
+  source_stream
+    = svn_fs__rep_read_stream (fs, source_dkey, 0, trail, trail->pool);
+  target_stream
+    = svn_fs__rep_read_stream (fs, target_dkey, 0, trail, trail->pool);
 
   svn_txdelta (&txdelta_stream, source_stream, target_stream, trail->pool);
   svn_txdelta_to_svndiff (new_target_stream,

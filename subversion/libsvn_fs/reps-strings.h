@@ -86,78 +86,33 @@ svn_error_t *svn_fs__delete_rep_if_mutable (svn_fs_t *fs,
 
 /*** Stream-based reading and writing of rep/string contents. ***/
 
-/* A baton type for representation read streams.  */
-typedef struct svn_fs__rep_read_baton_t svn_fs__rep_read_baton_t;
+/* Return a stream to read the contents of the representation
+   identified by REP_KEY.  Allocate the stream in POOL, and start
+   reading at OFFSET in the rep's contents.
 
-
-/* Return a rep reading baton to use with the svn stream reading
-   function svn_fs__rep_read_contents().  The baton is allocated in
-   POOL.
-
-   The baton is for reading representation REP_KEY's data starting at
-   OFFSET in FS, doing temporary allocations in POOL.  If TRAIL is
-   non-null, do the stream's reads as part of TRAIL; otherwise, each
-   read happens in an internal, one-off trail. 
-
+   If TRAIL is non-null, the stream's reads are part of TRAIL;
+   otherwise, each read happens in an internal, one-off trail. 
    POOL may be TRAIL->pool.  */
-svn_fs__rep_read_baton_t *svn_fs__rep_read_get_baton (svn_fs_t *fs,
-                                                      const char *rep_key,
-                                                      apr_size_t offset,
-                                                      trail_t *trail,
-                                                      apr_pool_t *pool);
+svn_stream_t *svn_fs__rep_read_stream (svn_fs_t *fs,
+                                       const char *rep_key,
+                                       apr_size_t offset,
+                                       trail_t *trail,
+                                       apr_pool_t *pool);
 
+                                       
+/* Return a stream to write the contents of the representation
+   identified by REP_KEY.  Allocate the stream in POOL.
 
-/* Stream read func (matches the `svn_read_func_t' type);
-   BATON is an `svn_fs__rep_read_baton_t'.
+   If TRAIL is non-null, the stream's writes are part of TRAIL;
+   otherwise, each write happens in an internal, one-off trail.
+   POOL may be TRAIL->pool.
 
-   Read *LEN bytes into BUF starting at BATON->offset in the data
-   represented by BATON->rep_key, in BATON->FS.  Set *LEN to the
-   amount read and add that amount to BATON->offset.  
-
-   If BATON->trail is non-null, then do the read as part of that
-   trail.  Use BATON->pool for all allocations; if BATON->trail is
-   present, BATON->pool may or may not be the same as
-   BATON->trail->pool.  */
-svn_error_t *
-svn_fs__rep_read_contents (void *baton, char *buf, apr_size_t *len);
-
-
-/* A baton type for representation write streams.  */
-typedef struct svn_fs__rep_write_baton_t svn_fs__rep_write_baton_t;
-
-
-/* Return a rep writing baton to use with the svn stream writing
-   function svn_fs__rep_write_contents().  The baton is allocated in
-   POOL.
-
-   The baton is for writing to representation REP_KEY's data starting
-   at OFFSET in FS, doing temporary allocations in POOL.  If TRAIL is
-   non-null, do the stream's writes as part of TRAIL; otherwise, each
-   write happens in an internal, one-off trail. 
-
-   POOL may be TRAIL->pool.  */
-svn_fs__rep_write_baton_t *svn_fs__rep_write_get_baton (svn_fs_t *fs,
-                                                        const char *rep_key,
-                                                        trail_t *trail,
-                                                        apr_pool_t *pool);
-
-
-/* Stream read func (matches the `svn_write_func_t' type);
-   BATON is an `svn_fs__rep_write_baton_t'.
-
-   Write *LEN bytes into BUF starting at BATON->offset in the data
-   represented by BATON->rep_key, in BATON->FS.
-
-   If BATON->trail is non-null, then do the write as part of that
-   trail.  Use BATON->pool for all allocations.  If BATON->trail is
-   present, BATON->pool may or may not be the same as
-   BATON->trail->pool.
-
-   If the representation is not mutable, return the error
-   SVN_FS_REP_NOT_MUTABLE.  */
-svn_error_t *
-svn_fs__rep_write_contents (void *baton, const char *buf, apr_size_t *len);
-
+   If the representation is not mutable, writes will return the error
+   SVN_ERR_FS_REP_NOT_MUTABLE.  */
+svn_stream_t *svn_fs__rep_write_stream (svn_fs_t *fs,
+                                        const char *rep_key,
+                                        trail_t *trail,
+                                        apr_pool_t *pool);
 
 
 /* stabilize_rep */
