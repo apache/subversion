@@ -138,7 +138,7 @@ class Generator(gen_base.GeneratorBase):
              path, target_ob.link_cmd,
              build_path_basename(target_ob.filename),
              (isinstance(target_ob, gen_base.TargetLib) and not
-               target_ob.undefined_lib_symbols) and "-no-undefined" or "",
+               target_ob.undefined_lib_symbols) and '$(LT_NO_UNDEFINED)' or "",
              targ_varname, string.join(gen_base.unique(libs)))
           )
 

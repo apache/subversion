@@ -226,7 +226,21 @@ AC_ARG_ENABLE(all-static,
 
 AC_SUBST(LT_LDFLAGS)
 
-
+dnl Check if -no-undefined is needed for the platform.
+dnl It should always work but with libtool 1.4.3 on OS X it breaks the build.
+dnl So we only turn it on for platforms where we know we really need it.
+AC_MSG_CHECKING([whether libtool needs -no-undefined])
+case $host in
+  *-*-cygwin*)
+    AC_MSG_RESULT([yes])
+    LT_NO_UNDEFINED="-no-undefined"
+    ;;
+  *)
+    AC_MSG_RESULT([no])
+    LT_NO_UNDEFINED=""
+    ;;
+esac
+AC_SUBST(LT_NO_UNDEFINED)
 
 NEON_WANTED_REGEX="`sed -n '/NEON_WANTED_REGEX=/s/.*=//p' $srcdir/build/buildcheck.sh`"
 dnl You can skip the neon version check only if you know what you are doing 
