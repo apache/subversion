@@ -175,8 +175,9 @@ svn_repos_get_logs (svn_repos_t *repos,
                                         "",
                                         editor,
                                         edit_baton,
-                                        0,
-                                        1,
+                                        FALSE,
+                                        TRUE,
+                                        FALSE,
                                         subpool));
 
           detect_changed (changed_paths,
