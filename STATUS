@@ -46,12 +46,6 @@ toward the total, but they can be useful for tracking down people who
 are following the change and might be willing to spend more time on
 it.
 
-Thursday, Jan. 8th, 2004 is the deadline for candidate changes to be
-voted on.  The sooner a change is listed, the more time people have to
-review and vote.  (Obviously, emergency bugs can be reported, fixed,
-and voted on at any time -- this deadline is for changes that we
-already know about.)
-
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
 
 Core changes that don't have three +1's yet, or have a veto.  (If you
