@@ -161,13 +161,6 @@ svn_diff__file_datasource_get_next_token(void **token, void *baton,
 
   apr_md5_init(&md5_ctx);
 
-  if (length > 0 && *curp == '\n')
-    {
-      curp++;
-      length--;
-      file_baton->length[idx] = length;
-    }
-
   do
     {
       if (length > 0)
@@ -176,7 +169,10 @@ svn_diff__file_datasource_get_next_token(void **token, void *baton,
 
           if (eol != NULL)
             {
-              apr_size_t len = (apr_size_t)(eol - curp);
+              apr_size_t len;
+             
+              eol++;
+              len = (apr_size_t)(eol - curp);
               
               file_token->length += len;
               length -= len;
@@ -193,6 +189,7 @@ svn_diff__file_datasource_get_next_token(void **token, void *baton,
           apr_md5_update(&md5_ctx, curp, length);
         }
 
+      file_baton->length[idx] = 0;
       curp = file_baton->buffer[idx];
       length = sizeof(file_baton->buffer[idx]);
 
@@ -207,8 +204,11 @@ svn_diff__file_datasource_get_next_token(void **token, void *baton,
                                file_baton->path[idx]);
     }
 
-  apr_md5_final(file_token->md5, &md5_ctx);
-  *token = file_token;
+  if (file_token->length > 0)
+    {
+      apr_md5_final(file_token->md5, &md5_ctx);
+      *token = file_token;
+    }
 
   return NULL;
 }
