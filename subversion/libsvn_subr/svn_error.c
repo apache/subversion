@@ -332,7 +332,7 @@ svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
 
 
 void 
-svn_handle_warning (void *data, char *fmt, ...)
+svn_handle_warning (void *data, const char *fmt, ...)
 {
   va_list ap;
 

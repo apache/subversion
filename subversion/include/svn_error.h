@@ -381,7 +381,7 @@ void svn_handle_error (svn_error_t *error,
                        svn_boolean_t fatal);
 
 /* Basic, default warning handler, just prints to stderr. */
-void svn_handle_warning (void *data, char *fmt, ...);
+void svn_handle_warning (void *data, const char *fmt, ...);
 
 
 /* A statement macro for checking error return values.
