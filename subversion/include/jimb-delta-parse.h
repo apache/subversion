@@ -1,10 +1,12 @@
+/* Traversing tree deltas.  */
+
 /* A structure of callback functions the parser will invoke as it
    reads in the delta.  */
 typedef struct svn_delta_walk_t
 {
   /* In the following callback functions:
 
-     - NAME is a single path component, nota full directory name.  The
+     - NAME is a single path component, not a full directory name.  The
        caller should use its PARENT_BATON pointers to keep track of
        the current complete subdirectory name, if necessary.
 
@@ -87,14 +89,14 @@ typedef struct svn_delta_walk_t
 } svn_delta_walk_t;
 
 /* Create a delta parser that consumes data from SOURCE_FN and
-   SOURCE_DATA, and invokes the callback functions in WALKER as
+   SOURCE_BATON, and invokes the callback functions in WALKER as
    appropriate.  CALLER_WALK is a data passthrough for the entire
    traversal.  CALLER_DIR is a data passthrough for the root
    directory; the callbacks can establish new CALLER_DIR values for
    subdirectories.  Use POOL for allocations.  */
 extern svn_error_t *svn_delta_parse (svn_delta_read_fn_t *source_fn,
-				     void *source_context,
+				     void *source_baton,
 				     svn_delta_walk_t *walker,
-				     void *walk_context,
-				     void *dir_context,
+				     void *walk_baton,
+				     void *dir_baton,
 				     apr_pool_t *pool);
