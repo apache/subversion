@@ -808,6 +808,9 @@ svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
  *   @a uuid_action is not equal to @c svn_repos_load_uuid_ignore and
  *   either the repository contains no revisions or
  *          @a uuid_action is equal to @c svn_repos_load_uuid_force.
+ *
+ * If the dumpstream contains no UUID, then @a uuid_action is
+ * ignored and the repository UUID is not touched.
  */
 
 svn_error_t *svn_repos_load_fs (svn_repos_t *repos,
