@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 #
 #  client_test.py: an automated test suite for the 'svn' binary
 #
