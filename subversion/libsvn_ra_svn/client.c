@@ -33,6 +33,7 @@
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_config.h"
+#include "svn_private_config.h"
 #include "svn_ra.h"
 #include "svn_ra_svn.h"
 #include "svn_md5.h"
@@ -1059,6 +1060,72 @@ static svn_error_t *ra_svn_check_path(void *baton, const char *path,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *ra_svn_get_locations(void *session_baton,
+                                         apr_hash_t **locations,
+                                         const char *path,
+                                         svn_revnum_t peg_revision,
+                                         apr_array_header_t *location_revisions,
+                                         apr_pool_t *pool)
+{
+  ra_svn_session_baton_t *sess = session_baton;
+  svn_ra_svn_conn_t *conn = sess->conn;
+  svn_revnum_t revision;
+  svn_ra_svn_item_t *item;
+  svn_boolean_t is_done;
+  int i;
+  const char *ret_path;
+  svn_error_t *err;
+
+  /* Transmit the parameters. */
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(cr(!",
+                                 "get-locations", path, peg_revision));
+  for (i = 0; i < location_revisions->nelts; i++)
+    {
+      revision = ((svn_revnum_t *)location_revisions->elts)[i];
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!r!", revision));
+    }
+
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
+
+  err = handle_auth_request(sess, pool);
+
+  /* Servers before 1.1 don't support this command. Check for this here. */
+  if (err && err->apr_err == SVN_ERR_RA_SVN_UNKNOWN_CMD)
+    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
+                             _("get-locations not implemented"));
+  SVN_ERR(err);
+
+  /* Read the hash items. */
+  is_done = FALSE;
+
+  *locations = apr_hash_make(pool);
+
+  /* ### Check for error and return not implemented. */
+  while (!is_done)
+    {
+      SVN_ERR(svn_ra_svn_read_item(conn, pool, &item));
+      if (item->kind == SVN_RA_SVN_WORD && strcmp(item->u.word, "done") == 0)
+        is_done = 1;
+      else if (item->kind != SVN_RA_SVN_LIST)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                "Location entry not a list");
+      else
+        {
+          SVN_ERR(svn_ra_svn_parse_tuple (item->u.list, pool, "rc",
+                                          &revision, &ret_path));
+          apr_hash_set(*locations, apr_pmemdup(pool, &revision,
+                                               sizeof(revision)),
+                       sizeof(revision), ret_path);
+        }
+    }
+
+  /* Read the response. This is so the server would have a chance to
+   * report an error. */
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
+
+  return SVN_NO_ERROR;
+}
+
 static const svn_ra_plugin_t ra_svn_plugin = {
   "ra_svn",
   "Module for accessing a repository using the svn network protocol.",
@@ -1078,7 +1145,8 @@ static const svn_ra_plugin_t ra_svn_plugin = {
   ra_svn_log,
   ra_svn_check_path,
   ra_svn_get_uuid,
-  ra_svn_get_repos_root
+  ra_svn_get_repos_root,
+  ra_svn_get_locations
 };
 
 svn_error_t *svn_ra_svn_init(int abi_version, apr_pool_t *pool,

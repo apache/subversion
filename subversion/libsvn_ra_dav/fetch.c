@@ -26,6 +26,7 @@
 #include <apr_strings.h>
 #include <apr_md5.h>
 #include <apr_portable.h>
+#include <apr_xml.h>
 
 #include <ne_socket.h>
 #include <ne_basic.h>
@@ -1097,6 +1098,146 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
   return SVN_NO_ERROR;
 }
 
+typedef struct {
+  svn_ra_session_t *ras;
+  apr_hash_t *hash;
+  apr_pool_t *pool;
+} get_locations_baton_t;
+
+/*
+ * Plan for processing the XML. The XML will be of the form:
+ *
+ * <S:get-locations-report xmlns...>
+ *     <S:location rev="..." path="..."/>
+ *     ...
+ * </S:get-locations-report>
+ *
+ * We extract what we want at the start of <S:location>. */
+/* Elements used in a get-locations response */
+static const svn_ra_dav__xml_elm_t gloc_report_elements[] =
+{
+  { SVN_XML_NAMESPACE, "get-locations-report", ELEM_get_locations_report, 0 },
+  { SVN_XML_NAMESPACE, "location", ELEM_location, 0 },
+  { NULL }
+};
+
+static const char *get_attr(const char **atts, const char *which);
+
+/* This implements the `ne_xml_startelem_cb' prototype. */
+static int gloc_start_element(void *userdata, int parent_state, const char *ns,
+                              const char *ln, const char **atts)
+{
+  get_locations_baton_t *baton = userdata;
+  const svn_ra_dav__xml_elm_t *elm;
+
+  elm = svn_ra_dav__lookup_xml_elem(gloc_report_elements, ns, ln);
+
+  /* Just skip unknown elements. */
+  if (!elm)
+    return NE_XML_DECLINE;
+
+  if (parent_state == ELEM_get_locations_report
+      && elm->id == ELEM_location)
+    {
+      svn_revnum_t rev = SVN_INVALID_REVNUM;
+      const char *path;
+      const char *r;
+
+      r = get_attr(atts, "rev");
+      if (r)
+        rev = SVN_STR_TO_REV(r);
+
+      path = get_attr(atts, "path");
+
+      if (SVN_IS_VALID_REVNUM(rev) && path)
+        apr_hash_set(baton->hash,
+                     apr_pmemdup(baton->pool, &rev, sizeof (rev)),
+                     sizeof(rev), apr_pstrdup(baton->pool, path));
+      else
+        return NE_XML_ABORT;
+    }
+
+  return elm->id;
+}
+
+svn_error_t *
+svn_ra_dav__get_locations(void *session_baton,
+                          apr_hash_t **locations,
+                          const char *relative_path,
+                          svn_revnum_t peg_revision,
+                          apr_array_header_t *location_revisions,
+                          apr_pool_t *pool)
+{
+  svn_ra_session_t *ras = session_baton;
+  svn_stringbuf_t *request_body;
+  svn_error_t *err;
+  get_locations_baton_t request_baton;
+  const char *relative_path_quoted;
+  svn_string_t bc_url, bc_relative;
+  const char *final_bc_url;
+  int i;
+  int status_code = 0;
+
+  *locations = apr_hash_make (pool);
+
+  request_body = svn_stringbuf_create("", pool);
+  svn_stringbuf_appendcstr(request_body,
+                           "<?xml version=\"1.0\" encoding=\"utf-8\"?>" DEBUG_CR
+                           "<S:get-locations xmlns:S=\"" SVN_XML_NAMESPACE
+                           "\" xmlns:D=\"DAV:\">" DEBUG_CR);
+
+  svn_stringbuf_appendcstr(request_body, "<S:path>");
+  /* We need to escape the path XML-wise. */
+  relative_path_quoted = apr_xml_quote_string(pool, relative_path, 0);
+  svn_stringbuf_appendcstr(request_body, relative_path_quoted);
+  svn_stringbuf_appendcstr(request_body, "</S:path>" DEBUG_CR);
+  svn_stringbuf_appendcstr(request_body,
+                           apr_psprintf(pool,
+                                        "<S:peg-revision>%ld"
+                                        "</S:peg-revision>" DEBUG_CR,
+                                        peg_revision));
+
+  for (i = 0; i < location_revisions->nelts; ++i)
+    {
+      svn_revnum_t rev = APR_ARRAY_IDX(location_revisions, i, svn_revnum_t);
+      svn_stringbuf_appendcstr(request_body,
+                               apr_psprintf(pool,
+                                            "<S:location-revision>%ld"
+                                            "</S:location-revision>" DEBUG_CR,
+                                            rev));
+    }
+
+  svn_stringbuf_appendcstr (request_body, "</S:get-locations>");
+
+  request_baton.ras = ras;
+  request_baton.hash = *locations;
+  request_baton.pool = pool;
+
+  /* ras's URL may not exist in HEAD, and thus it's not safe to send
+     it as the main argument to the REPORT request; it might cause
+     dav_get_resource() to choke on the server.  So instead, we pass a
+     baseline-collection URL, which we get from the largest of the
+     START and END revisions. */
+  SVN_ERR( svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
+                                         ras->sess, ras->url, peg_revision,
+                                         ras->pool) );
+  final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
+                                            ras->pool);
+
+  err = svn_ra_dav__parsed_request(ras->sess, "REPORT", final_bc_url,
+                                   request_body->data, NULL, NULL,
+                                   gloc_start_element, NULL, NULL,
+                                   &request_baton, NULL, &status_code,
+                                   pool);
+
+  /* Map status 501: Method Not Implemented to our not implemented error.
+     1.0.x servers and older don't support this report. */
+  if (status_code == 501)
+    return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, err,
+                             _("get-locations REPORT not implemented"));
+
+  return err;
+}
 
 /* Populate the members of ne_propname structure *PROP for the
    Subversion property NAME.  */

@@ -711,6 +711,28 @@ typedef struct svn_ra_plugin_t
                                   const char **url,
                                   apr_pool_t *pool);
 
+  /** @since New in 1.1.
+   *
+   * Set @a *locations to the locations at the repository revisions
+   * @a location_revisions of the file @a path present at the repository in
+   * revision @a peg_revision.  @a path is a path relative to the URL to which
+   * the RA session was opened. @a location_revisions is an array of
+   * svn_revnum_t's. @a *locations will be a mapping from the revisions to
+   * their appropriate absolute paths.  If the file doesn't exist in a
+   * in location_revision, that revision will be ignored.
+   *
+   * NOTE: For servers older than 1.1, this function will return an
+   * SVN_ERR_RA_NOT_IMPLEMENTED error.
+   *
+   * Use @a pool for all allocations.
+   */
+  svn_error_t *(*get_locations) (void *session_baton,
+                                 apr_hash_t **locations,
+                                 const char *path,
+                                 svn_revnum_t peg_revision,
+                                 apr_array_header_t *location_revisions,
+                                 apr_pool_t *pool);
+
 } svn_ra_plugin_t;
 
 
