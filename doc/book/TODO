@@ -90,6 +90,8 @@ To be fixed by fitz:
   - new 'svn diff' UI (when it's done) -- affects ch03, ch09, and
     maybe other chapters.
 
+  - document formats accepted by the new dateparser.
+
 
 --------------------------------------------------------------
 
@@ -112,9 +114,10 @@ To be fixed by sussman:
       - move use-case to new section:  undoing a committed change, or
         a range of changes.
 
-      - move use-case to new section:  merging one branch to another.
+      - move use-case to new section:  merging one branch to another,
+        either repeatedly (how to avoid repeated merges!  see point
+        below!), or merge the 'entire' to another.
        
-
   - ch04:  clarify that merged revisions must be tracked in *log
     messages*, i.e. that it's the user's responsibility to document
     merges there.  'svn log -v' will only show changed files, and when
