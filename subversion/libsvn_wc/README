@@ -357,9 +357,15 @@ the same intersections.  It did. :-) -kff]
 
 (BEN SEZ:  [grin])
 
-A note about Table 2: "if name conflicts" means "if the same child
-name is mentioned in both changes".  (It doesn't matter if it's oName
-or nName; if it appears anywhere on both sides, it's a conflict.)
+Notes about Table 2: "if name conflicts" means "if the same child name
+is mentioned in both changes".  (It doesn't matter if it's oName or
+nName; if it appears anywhere on both sides, it's a conflict.)
+
+In a sense, the conflicts-on-name don't even need to be mentioned,
+because the two child entities will directly conflict with each other
+in Table 3 below.  However, if Table 2 is to show circumstances in
+which indirect changes do not conflict, it needs to also mention the
+one circumstance in which they would conflict, for contrast.
 
 
            Table 3: Direct changes against direct changes
@@ -391,15 +397,21 @@ or nName; if it appears anywhere on both sides, it's a conflict.)
               |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
 
+Note about all three tables: Haven't thought carefully about how this
+extends to directory *entries* as entities.  I think it works out, but
+am not sure yet.
+
+
 Scenarios.
 ----------
 
-todo: Write some scenarios here, using the tables.
+Each of these scenarios examines the meeting of two changes.  If the 
 
 
 
------------------------------- Notes -----------------------------------
+/dir1/file1
+      file2
+      dir2/file3
+           file4
+      dir3/file5
 
-[1] Haven't thought carefully about whether this all works smoothly
-when directory *entries* are considered entities.  I think so, but am
-not sure yet.
