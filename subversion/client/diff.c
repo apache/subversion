@@ -71,6 +71,13 @@ svn_cl__print_file_diff (svn_string_t *path,
   
   apr_close (outhandle);
 
+  /* Cleanup the tmp pristine file now that we're done with it. */
+  status = apr_remove_file (pristine_copy_path->data, pool);
+  if (status)
+    return svn_error_createf (status, 0, NULL, pool,
+                              "error: can't remove temporary file `%s'",
+                              pristine_copy_path->data);
+
   return SVN_NO_ERROR;
 }
 
