@@ -275,9 +275,9 @@ value, the commit is aborted and transaction is removed.
 
 @item post-commit
 This is run after the transaction is committed, and we have a new
-revision.  Most people use this hook to send out desciptive
+revision.  Most people use this hook to send out descriptive
 commit-emails or to make a hot-backup of the repository.  The repository
-passes two arugments to this program:  the path to the repository, and
+passes two arguments to this program:  the path to the repository, and
 the new revision number that was created.  The exit code of the program
 is ignored.
 
@@ -339,6 +339,11 @@ db_recover: Recovery complete at Sun Jul 14 07:15:42 2002
 db_recover: Maximum transaction id 80000000 Recovery checkpoint [40][4080333]
 @end example
 
+Make sure you run this command as the user that owns and manages the
+database and not as root because running @command{db_recover} as root
+will leave root owned files in the db directory which cannot be opened
+by the non-root user that manages the database, which is typically your
+Apache process.
 
 Second, a repository administrator may need to manage the growth of
 logfiles.  At any given time, the DB environment is using at least one
@@ -374,7 +379,7 @@ entire repository directory, then re-copy the logfiles listed by
 
 Finally, note that Berkeley DB has a whole locking subsystem;  in
 extremely intensive svn operations, we have seen situations where the
-DB enviroment runs out of locks.  The maximum number of locks can be
+DB environment runs out of locks.  The maximum number of locks can be
 adjusted by changing the values in the @file{repos/db/DB_CONFIG}
 file.  Don't change the default values unless you know what you're
 doing;  be sure to read
@@ -406,7 +411,7 @@ Another common use of @command{svnadmin} is to inspect and clean up
 old, dead transactions.  Commits and updates both create transaction
 trees, but occasionally a bug or crash can leave them lying around.
 By inspecting the datestamp on a transaction, an administrator can
-make a judgement call and remove it:
+make a judgment call and remove it:
 
 @example
 $ svnadmin lstxns myrepos

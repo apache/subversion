@@ -7,7 +7,7 @@ How to get started with Subversion.
 * Introduction::                History and overview of features.
 * Design::                      Overview of system design.
 * Installation::                How to obtain Subversion.
-* Basics::                      Casual description and first-time walkthrough.
+* Basics::                      Casual description and first-time walk-through.
 @end menu
 
 
@@ -87,7 +87,7 @@ and transmit deltas in both directions, regardless of whether a file
 is of text or binary type.
 
 @item
-@b{Meta-data} Each file or directory has an invisible hashtable
+@b{Meta-data} Each file or directory has an invisible hash table
 attached.  You can invent and store any arbitrary key/value pairs you
 wish: owner, perms, icons, app-creator, mime-type, personal notes,
 etc.  This is a general-purpose feature for users.  Properties are
