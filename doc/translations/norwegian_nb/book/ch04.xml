@@ -2,7 +2,7 @@
 <!-- @ENGLISH {{{
 <title>Branching and Merging</title>
 @ENGLISH }}} -->
-<title>Forgreninger og fletting</title>
+<title>Forgrening og fletting</title>
 
   <simplesect>
 
@@ -13,7 +13,7 @@
       you are familiar, then hopefully you'll find it interesting to
       see how Subversion implements these ideas.</para>
     @ENGLISH }}} -->
-    <para>Forgreninger (<quote>branching</quote>), merking 
+    <para>Forgrening (<quote>branching</quote>), merking 
       (<quote>tagging</quote>) og fletting (<quote>merging</quote>) er 
       konsepter felles for nesten alle versjonskontrollsystemer.
       Hvis du ikke er vant med disse id&#233;ene, gir vi en god introduksjon 
@@ -98,10 +98,9 @@
       linkend="svn-ch-4-dia-1"/>).</para>
     @ENGLISH }}} -->
     <para>Dette er det grunnleggende konseptet for en 
-      <firstterm>forgrening</firstterm> &#8212; <!-- &#164; namely -->en 
-      utviklingslinje som eksisterer uavhengig av en annen linje, men 
-      som likevel deler en felles historie hvis du ser langt nok tilbake 
-      i tid.
+      <firstterm>forgrening</firstterm> &#8212; det vil si en utviklingslinje 
+      som eksisterer uavhengig av en annen linje, men som likevel deler 
+      en felles historie hvis du ser langt nok tilbake i tid.
       En forgrening begynner bestandig livet som en kopi av noe, og g&#229;r 
       videre derfra ved &#229; lage sin egen historie (se <xref 
       linkend="svn-ch-4-dia-1"/>).</para>
@@ -1003,19 +1002,6 @@ Index: integer.c
       @ENGLISH }}} -->
       <para><command>svn merge</command> gj&#248;r omtrent n&#248;yaktig det 
         samme.
-        <!-- &#164; Spr&#229;kbr&#229;k:
-          Bruk av &#171;dem&#187; h&#248;res d&#229;rlig ut av en eller annen grunn.
-
-          Her er den originale setninga:
-
-              Istedenfor &#229; skrive forskjellene til terminalen din, 
-              legger den dem direkte til arbeidskopien din som 
-              <emphasis>lokale modifikasjoner</emphasis>:
-
-          Ytterst Mystisk&#8482;. Det der m&#229; sjekkes opp. Er &#171;dem&#187; 
-          mindreverdig tale i seri&#248;s dokumentasjon? For sikkerhets skyld 
-          skriver jeg den om.
-        -->
         Istedenfor &#229; skrive forskjellene til terminalen din, blir de 
         lagt direkte til arbeidskopien din som <emphasis>lokale 
         modifikasjoner</emphasis>:</para>
@@ -1369,7 +1355,7 @@ U   my-calc-branch/integer.c
           technique in action.</para>
         @ENGLISH }}} -->
         <para>I den neste seksjonen vil vi vise noen eksempler p&#229; denne 
-          teknikken i <!-- &#164; -->praksis.</para>
+          teknikken i praksis.</para>
 
       </sect3>
       
@@ -1415,8 +1401,8 @@ U   my-calc-branch/integer.c
           <option>-&#64738;-dry-run</option> option to the merge
           command:</para>
         @ENGLISH }}} -->
-        <para>I tilfeller som dette, <!-- &#164; -->vil det v&#230;re greit &#229; 
-          kunne forutsi eller unders&#248;ke forandringer f&#248;r de skjer.
+        <para>I tilfeller som dette vil det v&#230;re greit &#229; kunne forutsi 
+          eller unders&#248;ke forandringer f&#248;r de skjer.
           En enkel m&#229;te &#229; gj&#248;re det p&#229; er &#229; kj&#248;re <command>svn 
           diff</command> med de samme argumentene som du planlegger &#229; gi 
           til <command>svn merge</command>, som vi allerede har vist i 

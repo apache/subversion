@@ -639,8 +639,8 @@ Checked out revision 2499.
       URL:</para>
     @ENGLISH }}} -->
     <para>Selv om eksempelet ovenfor henter ut trunk-katalogen, kan du 
-      like gjerne hente ut en hvilken som helst dyp underkatalog fra et 
-      depot ved &#229; spesifisere underkatalogen i adressen:</para>
+      like lettvint hente ut en hvilken som helst dyp underkatalog fra 
+      et depot ved &#229; spesifisere underkatalogen i adressen:</para>
     
     <!-- @ENGLISH {{{
     <screen>
@@ -888,7 +888,7 @@ Checked out revision 2499.
         <!-- @ENGLISH {{{
         <para>Commit your changes</para>
         @ENGLISH }}} -->
-        <para>Legg inn dine forandringer</para>
+        <para>Legg inn forandringene dine</para>
         <itemizedlist>
           <listitem>
             <para><command>svn commit</command></para>
@@ -1051,7 +1051,7 @@ Updated to revision 2.
               (<computeroutput>C</computeroutput>onflict) med dine egne.
               Forandringene fra tjeneren overlapper direkte med dine 
               egne forandringer i filen.
-              Men ingen grunn til panikk.
+              Men det er ingen grunn til panikk.
               Denne overlappingen m&#229; bli l&#248;st av et menneske (deg); vi 
               diskuterer denne situasjonen senere i dette 
               kapittelet.</para>
