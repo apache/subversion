@@ -1932,11 +1932,11 @@ Frozzled the sub-space winch.
 </screen>
 
       <sidebar>
-        <title>Why Does <command>svn log</command> Give Me an Empty
-          Response?</title>
+        <title>¿Por qué <command>svn log</command> me da una respuesta
+          vacía?</title>
         
-        <para>After working with Subversion for a bit, most users will
-          come across something like this:</para>
+        <para>Después de trabajar con Subversion un poco, la mayoría de
+          los usuarios tendrán algo como esto:</para>
 
         <screen>
 $ svn log -r 2
@@ -1944,17 +1944,19 @@ $ svn log -r 2
 $
 </screen>
 
-        <para>At first glance, this seems like an error.  But recall
-          that while revisions are repository-wide, <command>svn
-          log</command> operates on a path in the repository.  If you
-          supply no path, Subversion uses the current working
-          directory as the default target.  As a result, if you're
-          operating in a subdirectory of your working copy and attempt
-          to log a revision in which neither that directory nor any of
-          its children was changed, Subversion will give you an empty
-          log.  If you want to see what changed in that revision, try
-          pointing <command>svn log</command> directly at the top-most
-          URL of your repository, as in <command>svn log -r 2
+        <para>A primer vistazo, esto parece como un error. Pero recuerde
+          que mientras las revisiones son repository-wide<!--TODO:cómo
+          traducir "repository-wide"?-->, <command>svn log</command>
+          funciona sobre una ruta en el repositorio. Si no provee
+          ninguna ruta de fichero, Subversion usa el directorio de
+          trabajo actual como destino por defecto. En consecuencia, si
+          usted está trabajando<!--TODO:operating--> en un subdirectorio
+          de su copia de trabajo y procurando registrar una revisión
+          en la cual ni ese directorio ni cualquiera de sus hijos fue
+          cambiado, Subversion le dará un registro vacio. Si desea ver
+          qué cambió en esa revisión, intente indicando
+          <command>svn log</command> directamente en lo más alto del
+          URL de su repositorio, como en <command>svn log -r 2
           http://svn.collab.net/repos/svn</command>.</para>
 
       </sidebar>
@@ -1964,38 +1966,39 @@ $
     <sect2 id="svn-ch-3-sect-5.2">
       <title>svn diff</title>
 
-      <para>We've already seen <command>svn diff</command>
-        before&mdash;it displays file differences in unified diff
-        format; it was used to show the local modifications made to
-        our working copy before committing to the repository.</para>
+      <para>Ya hemos visto <command>svn diff</command>
+        antes&mdash;éste muestra las diferencias de fichero en un
+        formato unificado del diff; fue utilizado para mostrar las
+        modificaciones locales hechas a nuestra copia de trabajo
+        antes de enviarlas al repositorio.</para>
       
-      <para>In fact, it turns out that there are
-        <emphasis>three</emphasis> distinct uses of <command>svn
-          diff</command>:</para>
+      <para>De hecho, resulta que hay <emphasis>three</emphasis> usos
+        distintos para <command>svn diff</command>:</para>
 
       <itemizedlist>
 
         <listitem>
-          <para>Examine local changes</para>
+          <para>Examinar cambios locales</para>
         </listitem>
 
         <listitem>
-          <para>Compare your working copy to the repository</para>
+          <para>Comparar su copia de trabajo con la del repositorio</para>
         </listitem>
 
         <listitem>
-          <para>Compare repository to repository</para>
+          <para>Comparar repositorio con repositorio</para>
         </listitem>
 
       </itemizedlist>
       
       <sect3 id="svn-ch-3-sect-5.2.1">
-        <title>Examining Local Changes</title>
+        <title>Examinando cambios locales</title>
 
-        <para>As we've seen, invoking <command>svn diff</command> with
-          no switches will compare your working files to the cached
-          <quote>pristine</quote> copies in
-          the <filename>.svn</filename> area:</para>
+        <para>Como hemos visto, invocando<!--TODO:invoking... mejor
+          poner otra cosa?--> <command>svn diff</command> sin
+          argumentos comparará sus ficheros de trabajo con las
+          copias <quote>pristinas</quote> almacenadas en el área
+          <filename>.svn</filename>:</para>
         
         <screen>
 $ svn diff
@@ -2016,12 +2019,12 @@ $
       </sect3>
 
       <sect3 id="svn-ch-3-sect-5.2.2">
-        <title>Comparing Working Copy to Repository</title>
+        <title>Comparando copia de trabajo con repositorio</title>
 
-        <para>If a single <option>--revision</option>
-          (<option>-r</option>) number is passed, then your
-          working copy is compared to the specified revision in the
-          repository.</para>
+        <para>Si se pasa un único <option>--revision</option>
+          (<option>-r</option>) número, entonces su copia de trabajo
+          es comparada con la revisión especificada del
+          repositorio.</para>
           
         <screen>
 $ svn diff --revision 3 rules.txt 
@@ -2042,12 +2045,12 @@ $
       </sect3>
 
       <sect3 id="svn-ch-3-sect-5.2.3">
-        <title>Comparing Repository to Repository</title>
+        <title>Comparando repositorio con repositorio</title>
         
-        <para>If two revision numbers, separated by a colon, are
-          passed via <option>--revision</option>
-          (<option>-r</option>), then the two revisions are directly
-          compared.</para>
+        <para>Si dos números de revisión, separados por una coma, son
+          pasados via <option>--revision</option>
+          (<option>-r</option>), entonces las dos revisiones son
+          comparadas directamente.</para>
           
         <screen>
 $ svn diff --revision 2:3 rules.txt 
@@ -2064,13 +2067,14 @@ Index: rules.txt
 $
 </screen>
           
-        <para>Not only can you use <command>svn diff</command> to
-           compare files in your working copy to the repository, but
-           if you supply a URL argument, you can examine the
-           differences between items in the repository without even
-           having a working copy.  This is especially useful if you
-           wish to inspect changes in a file when you don't have a
-           working copy on your local machine:</para>
+        <para>No solo puede usar <command>svn diff</command> para
+           comparar ficheros en su copia de trabajo con el repositorio,
+           sino que si suministra una URL como argumento<!--TODO:supply
+           a URL argument-->, usted puede examinar las diferencias entre
+           elementos en el repositorio incluso sin tener<!--TODO:without
+           even having--> una copia de trabajo. Esto es especialmente
+           útil si desea inspeccionar cambios en un fichero cuando
+           no tiene una copia de trabajo en su máquina local:</para>
            
         <screen>
 $ svn diff --revision 4:5 http://svn.red-bean.com/repos/example/trunk/text/rules.txt
@@ -2085,9 +2089,9 @@ $
     <sect2 id="svn-ch-3-sect-5.3">
        <title><command>svn cat</command></title>
 
-      <para>If you want to examine an earlier version of a file and
-        not necessarily the differences between two files, you can use
-        <command>svn cat</command>:</para>
+      <para>Si desea examinar una versión anterior de un fichero y
+        no necesariamente las diferencias entre dos ficheros, puede
+        usar <command>svn cat</command>:</para>
 
       <screen>
 $ svn cat --revision 2 rules.txt 
@@ -2098,8 +2102,8 @@ Chew with your mouth closed
 $
 </screen>
 
-      <para>You can also redirect the output directly into a
-        file:</para>
+      <para>También puede redireccionar la salida directamente a un
+        fichero:</para>
 
       <screen>
 $ svn cat --revision 2 rules.txt &gt; rules.txt.v2
