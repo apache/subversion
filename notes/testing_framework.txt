@@ -6,15 +6,12 @@
 The three goals of Subversion's automated test-suite:
 
       1.  It must be easy to run.
-
       2.  It must be easy to understand the results.
-
       3.  It must be easy to add new tests.
 
 
-
-What automake gives us for free
--------------------------------
+What automake gives us
+----------------------
 
 Automake defines a variable TESTS (in a `Makefile.am') which is a list
 of test-programs to run in a subdirectory.  `make check' runs all
@@ -22,51 +19,57 @@ these tests, examines the return value of each, and finally states how
 many passed.  When run from the top of the source tree, `make check'
 works recursively and reports the results from each subdir.
 
+i.e., if a line in Makefile.am looks like:
+
+      TESTS = test1 test2 test3 test4
+
+the `make check' command will run each program and ultimately print
+something like:
+
+    ===================
+    1 of 4 tests failed
+    ===================
 
 
 
+The definition of an SVN "test"
+-------------------------------
 
+Define a "Subversion test program" as any executable (binary or
+script) with this interface:
 
-The structural requirements of an SVN "test"
---------------------------------------------
+1.  Requires a single numeric argument -- an internal test number to
+    run.
 
-1.  Accept standardized arguments:
-
-       -h/--help (or no args)     print usage message & arg list
-       -l/--list                  print list of all tests app can do
-       N                          run test #N
-
-2.  Print standardized output after finishing a test:
+2.  Print standardized, human-readable output after finishing a test.
 
       (argv[0]) test (N):  (description) ............... (PASS | FAIL)
 
 
-
-Here's an imaginary session with a SVN test app.
-
-[sussman@newton:~] ./frobtest -h
-
-    frobtest:  check subversion's frobbing abilities
-
-       -h/--help              this usage message
-       -l/--list              list all frob tests
-       N                      run test #N
-
-[sussman@newton:~] ./frobtest -l
-
-    frobtest:  check subversion's frobbing abilities
-
-    1. basic frob test on fixed data
-    2. order-N frobbing on even parity data
-    3. advanced frobnification (maxdepth == 1000)
-    4. tensor-stressed frob
+For example,
 
 [sussman@newton:~] ./frobtest 2
 
- frobtest test 2: order-N frobbing on even parity data...........PASS
+ frobtest test 2: order-N frobbing on even parity data........... PASS
 
-[sussman@newton:~]
 
+
+
+Integrating an SVN test app into Makefile.am
+--------------------------------------------
+
+In the example above, we'd like the automake TESTS variable to run
+frobtest four times -- each time with a different argument.  However,
+this won't work:
+     
+     TESTS = frobtest 1 frobtest 2 frobtest 3 frobtest 4
+
+`make check' sees that as eight different programs to run.
+
+Instead, then, a magic Makefile rule creates mini-scripts on the fly.
+Each mini-script executes a test program with a particular numeric
+argument, redirects the output to a logfile, and then deletes itself.
+(Look in a Makefile.am for details.)
 
 
 
@@ -78,11 +81,10 @@ tend to recur over and over.  Thus the CVS community has adopted a
 hard-and-fast rule that whenever somebody fixes a bug, a *new* test is
 added to the suite to specifically check for it.  It's a common case
 that in the process of fixing a bug, several old bugs are accidentally
-resurrected... and then quickly revealed by the test suite -- quite a
-boon.
+resurrected... and then quickly revealed by the test suite.
 
   This same rule should apply to Subversion development:  ** If you
-fix a bug, write a test for it! **
+fix a bug, write a test for it. **
 
   (However, we should note that this rule is somewhat relaxed until
 Subversion hits 1.0.  A majority of pre-1.0 bugs are due to the code
@@ -100,19 +102,18 @@ How well have we met the original three goals of a test-suite?
 
   1.  It must be easy to run.
 
-      * `make check' at any level of the tree
+      * run `make check' at any level of the tree
 
 
   2.  It must be easy to understand the results.
 
       * each test prints a standardized self-description and result
-
-      * `make check' summarizes overall results of each subdir's tests
-
-      * all test program output is logged to one file
+      * all test output is logged
+      * `make check' summarizes statistical results
 
 
   3.  It must be easy to add new tests.
 
-      * write an app that meets the "requirements" outlined above,
-        then add it to the TESTS variable in a Makefile.am
+      * add a test to an existing app, and then add it to the TESTS
+        line in the appropriate Makefile.am
+
