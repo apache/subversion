@@ -237,7 +237,6 @@ do_dir_replaces (svn_wc__crawler_baton_t *crawlbaton,
   apr_pool_t *pool = crawlbaton->pool;
   struct stack_object *stack = crawlbaton->stack;
   svn_delta_edit_fns_t *editor = crawlbaton->editor;
-  void *edit_baton = crawlbaton->edit_baton;
 
   stackptr = stack;   /* Start at the top of the stack */
   
@@ -251,14 +250,11 @@ do_dir_replaces (svn_wc__crawler_baton_t *crawlbaton,
         stackptr = stackptr->previous;  /* descend. */
       else
         {
-          /* Can't descend?  We must have reached stack_bottom, which
-             is just an empty placeholder.  */
-          
-          /* Move up the stack to the "root" stackframe and fetch the
-             root baton. */
+          /* Can't descend?  We must be at stack bottom.  Fetch the
+             root baton here. */
           void *root_baton;
           
-          err = editor->replace_root (edit_baton, &root_baton);  
+          err = editor->replace_root (crawlbaton->edit_baton, &root_baton);  
           if (err) return err;
           
           /* Store it */
@@ -276,6 +272,7 @@ do_dir_replaces (svn_wc__crawler_baton_t *crawlbaton,
         {
           svn_string_t *ancestor_path;
           svn_vernum_t ancestor_ver;
+          svn_string_t *dirname;
           void *dir_baton;
 
           /* Move up the stack */
@@ -286,11 +283,16 @@ do_dir_replaces (svn_wc__crawler_baton_t *crawlbaton,
                                             &ancestor_path, &ancestor_ver,
                                             pool);
           if (err) return err;
-          
+
+          /* We only want the last component of the path; that's what
+             the editor's replace_directory() expects from us. */
+          dirname = svn_path_last_component (stackptr->path,
+                                             svn_path_local_style, pool);
+
           /* Get a baton for this directory */
           err = 
-            editor->replace_directory (stackptr->path, /* current dir */
-                                       stackptr->previous->path, /* parent */
+            editor->replace_directory (dirname, /* current dir */
+                                       stackptr->previous->baton, /* parent */
                                        ancestor_path,
                                        ancestor_ver,
                                        &dir_baton);
@@ -499,16 +501,6 @@ process_subdirectory (svn_wc__crawler_baton_t *crawlbaton)
                                 SVN_WC__ADM_ENTRIES, 0, crawlbaton->pool);
   if (err) return err;
 
-  /* Special case: watch out for the *root* stack frame.  It can only
-     be closed by close_edit(), not close_directory().  And we don't
-     want to remove this frame anyway -- no sir.  This frame contains
-     our filehash, chok' full of open file batons waiting for text
-     deltas. */
-  if (crawlbaton->stack->previous == NULL)
-    /* This is the top-level frame, we're all done, return to
-       svn_wc_crawl_local_mods now!  */
-    return SVN_NO_ERROR;
-
   /* If the current stackframe has a non-NULL directory baton, then we
      must have issued an add_dir() or replace_dir() call already.
      Before we exit the function and move "up" the tree, we need to
@@ -519,7 +511,15 @@ process_subdirectory (svn_wc__crawler_baton_t *crawlbaton)
       if (err) return err;
     }
 
-  /* Discard top of stack */
+  /* Special case: watch out for the *root* stack frame -- don't
+     remove it.  It contains our filehash, chok' full of open file
+     batons waiting for text deltas. */
+  if (crawlbaton->stack->previous == NULL)
+    /* This is the top-level frame, we're all done, return to
+       svn_wc_crawl_local_mods now!  */
+    return SVN_NO_ERROR;
+
+  /* Otherwise, discard top of stack */
   remove_stack (crawlbaton);
 
   /* Pop "up" a directory in the working copy. */
@@ -558,7 +558,7 @@ entry_callback (void *loop_baton,
     = (svn_wc__crawler_baton_t *) loop_baton;
 
   /* Vars we steal from the crawlbaton */
-  svn_string_t *path = crawlbaton->path;
+  svn_string_t *path = crawlbaton->stack->path;
   svn_delta_edit_fns_t *editor = crawlbaton->editor;
   apr_pool_t *pool = crawlbaton->pool;
 
@@ -616,7 +616,8 @@ entry_callback (void *loop_baton,
           if (err) return err;
           
           /* Recurse, using the new, extended path and new dir_baton. */
-          svn_path_add_component (crawlbaton->path, current_entry_name,
+          svn_path_add_component (crawlbaton->path,
+                                  current_entry_name,
                                   svn_path_local_style, pool);
           crawlbaton->dir_baton = new_dir_baton;
 
@@ -726,7 +727,8 @@ entry_callback (void *loop_baton,
       /* Recurse, using a NULL dir_baton.  Why NULL?  Because that
          will later force a call to do_dir_replaces() and get the
          _correct_ dir baton for the child directory. */
-      svn_path_add_component (crawlbaton->path, current_entry_name,
+      svn_path_add_component (crawlbaton->path,
+                              current_entry_name,
                               svn_path_local_style, pool);
       crawlbaton->dir_baton = NULL;
 
@@ -763,7 +765,7 @@ svn_wc_crawl_local_mods (svn_string_t *root_directory,
      and stack as the crawler moves through the working copy. */
   crawlbaton = apr_pcalloc (pool, sizeof(struct svn_wc__crawler_baton_t));
 
-  crawlbaton->path       = root_directory;
+  crawlbaton->path       = svn_string_dup (root_directory, pool);
   crawlbaton->dir_baton  = NULL;
   crawlbaton->editor     = edit_fns;
   crawlbaton->edit_baton = edit_baton;
@@ -785,15 +787,6 @@ svn_wc_crawl_local_mods (svn_string_t *root_directory,
      text-deltas that may be needed. */
   err = do_postfix_text_deltas (crawlbaton->filehash, edit_fns, pool);
   if (err) return err;
-
-  /* If the bottom of the stack contains a non-NULL dir baton, that
-     means the editor was actually used at some point, and we're
-     looking at the remaining "root" baton.  Close it. */
-  if (crawlbaton->stack->baton)
-    {
-      err = edit_fns->close_directory (crawlbaton->stack->baton);
-      if (err) return err;
-    }
 
   /* Finally, finish all the edits. */
   err = edit_fns->close_edit (edit_baton);
