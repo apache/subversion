@@ -85,6 +85,7 @@ adm_subdir (apr_pool_t *pool)
 
 
 /* Make name of wc admin file ADM_FILE by appending to directory PATH. 
+ * Returns the number of path components added to PATH.
  * 
  * IMPORTANT: chances are you will want to call chop_admin_thing() to
  * restore PATH to its original value before exiting anything that
@@ -97,28 +98,34 @@ adm_subdir (apr_pool_t *pool)
  * statement, and that return occurs *after* an unconditional call to
  * chop_admin_thing().
  */
-static void
+static int
 extend_with_admin_name (svn_string_t *path,
                         char *adm_file,
                         apr_pool_t *pool)
 {
-  svn_path_add_component (path, adm_subdir (pool), SVN_PATH_LOCAL_STYLE, pool);
+  int components_added = 0;
 
-  if (adm_file && (adm_file[0] != '\0'))    
-    svn_path_add_component_nts (path, adm_file, SVN_PATH_LOCAL_STYLE, pool);
+  svn_path_add_component (path, adm_subdir (pool), SVN_PATH_LOCAL_STYLE, pool);
+  components_added++;
+
+  if (adm_file && (adm_file[0] != '\0'))
+    {
+      svn_path_add_component_nts (path, adm_file, SVN_PATH_LOCAL_STYLE, pool);
+      components_added++;
+    }
+
+  return components_added;
 }
 
 
-/* Restore PATH to what it was before a call to extend_with_admin_name(). 
-   If SECOND_COMPONENT is non-zero, then PATH had been extended with
-   not only the adm_subdir name, but a file beyond that, so chop
-   both; otherwise, just chop one component. */
+/* Restore PATH to what it was before a call to
+ * extend_with_admin_name(), by lopping off NUM_COMPONENTS
+ * components.
+ */
 static void
-chop_admin_thing (svn_string_t *path, int second_component)
+chop_admin_thing (svn_string_t *path, int num_components)
 {
-  svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
-
-  if (second_component)
+  while (num_components-- > 0)
     svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
 }
 
@@ -133,8 +140,9 @@ svn_wc__make_adm_thing (svn_string_t *path,
   svn_error_t *err = NULL;
   apr_file_t *f = NULL;
   apr_status_t apr_err = 0;
+  int components_added;
 
-  extend_with_admin_name (path, thing, pool);
+  components_added = extend_with_admin_name (path, thing, pool);
 
   if (type == svn_file_kind)
     {
@@ -166,10 +174,7 @@ svn_wc__make_adm_thing (svn_string_t *path,
     }
 
   /* Restore path to its original state no matter what. */
-  chop_admin_thing (path, strlen (thing));   /* todo: thing[0] would
-                                                involve no funcall,
-                                                but stylistically
-                                                questionable? */
+  chop_admin_thing (path, components_added);
 
   return err;
 }
@@ -184,8 +189,23 @@ svn_wc__open_adm_file (apr_file_t **handle,
 {
   svn_error_t *err = NULL;
   apr_status_t apr_err = 0;
+  int components_added;
 
-  extend_with_admin_name (path, fname, pool);
+  components_added = extend_with_admin_name (path, fname, pool);
+
+#if 0
+  if (flags | APR_WRITE)
+    {
+      /* kff todo: I'd like to use PID here, but how to do that
+         portably through APR? */
+
+      /* Not using ".tmp" to avoid confusing people about purpose of
+         tmp/ dir vs these temporary files. */
+      const char *tmp_ext = ".wkg";
+      svn_string_appendbytes (path, tmp_ext, sizeof (tmp_ext), pool);
+      fooo;
+    }
+#endif /* 0 */
 
   apr_err = apr_open (handle, path->data, flags, APR_OS_DEFAULT, pool);
 
@@ -193,7 +213,7 @@ svn_wc__open_adm_file (apr_file_t **handle,
     err = svn_create_error (apr_err, 0, path->data, NULL, pool);
 
   /* Restore path to its original state no matter what. */
-  chop_admin_thing (path, 1);
+  chop_admin_thing (path, components_added);
 
   return err;
 }
@@ -207,8 +227,9 @@ svn_wc__close_adm_file (apr_file_t *fp,
 {
   svn_error_t *err = NULL;
   apr_status_t apr_err = 0;
+  int components_added;
 
-  extend_with_admin_name (path, fname, pool);
+  components_added = extend_with_admin_name (path, fname, pool);
 
   apr_err = apr_close (fp);
 
@@ -216,7 +237,7 @@ svn_wc__close_adm_file (apr_file_t *fp,
     err = svn_create_error (apr_err, 0, path->data, NULL, pool);
 
   /* Restore path to its original state no matter what. */
-  chop_admin_thing (path, 1);
+  chop_admin_thing (path, components_added);
 
   return err;
 }
@@ -230,15 +251,16 @@ svn_wc__remove_adm_thing (svn_string_t *path,
 {
   svn_error_t *err = NULL;
   apr_status_t apr_err = 0;
+  int components_added;
 
-  extend_with_admin_name (path, thing, pool);
+  components_added = extend_with_admin_name (path, thing, pool);
 
   apr_err = apr_remove_file (path->data, pool);
   if (apr_err)
     err = svn_create_error (apr_err, 0, path->data, NULL, pool);
 
   /* Restore path to its original state no matter what. */
-  chop_admin_thing (path, 1);
+  chop_admin_thing (path, components_added);
 
   return err;
 }
@@ -257,10 +279,10 @@ check_adm_exists (int *exists, svn_string_t *path, apr_pool_t *pool)
   apr_dir_t *ignore_me = NULL;
   int dir_exists = 0;
   apr_file_t *f = NULL;
-
+  int components_added;
   /** Step 1: check that the directory exists. **/
 
-  extend_with_admin_name (path, NULL, pool);
+  components_added = extend_with_admin_name (path, NULL, pool);
   apr_err = apr_opendir (&ignore_me, path->data, pool);
 
   if (apr_err && (apr_err != APR_ENOENT))
@@ -284,7 +306,7 @@ check_adm_exists (int *exists, svn_string_t *path, apr_pool_t *pool)
     err = svn_create_error (apr_err, 0, path->data, NULL, pool);
 
   /* Restore path to its original state. */
-  chop_admin_thing (path, 0);
+  chop_admin_thing (path, components_added);
 
   /* Okay, first stopping point; see how we're doing. */
   if (err)
@@ -319,14 +341,15 @@ make_empty_adm (svn_string_t *path, apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_status_t apr_err;
+  int components_added;
 
-  extend_with_admin_name (path, NULL, pool);
+  components_added = extend_with_admin_name (path, NULL, pool);
 
   apr_err = apr_make_dir (path->data, APR_OS_DEFAULT, pool);
   if (apr_err)
     err = svn_create_error (apr_err, 0, path->data, NULL, pool);
     
-  chop_admin_thing (path, 0);
+  chop_admin_thing (path, components_added);
 
   return err;
 }
@@ -372,6 +395,7 @@ static svn_error_t *
 init_adm (svn_string_t *path,
           svn_string_t *repository,
           svn_vernum_t version,
+          const char *initial_unwind,
           apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -480,6 +504,15 @@ init_adm (svn_string_t *path,
     return err;
 
 
+  /* Leave a note about what we're doing here, if anything, so there's
+     no point when the dir appears both complete and up-to-date. */
+  if (initial_unwind)
+    {
+      err = svn_wc__push_unwind (path, initial_unwind, NULL, pool);
+      if (err)
+        return err;
+    }
+
   /* THIS FILE MUST BE CREATED LAST: 
      After this exists, the dir is considered complete. */
   err = svn_wc__make_adm_thing (path, SVN_WC__ADM_README,
@@ -494,10 +527,16 @@ init_adm (svn_string_t *path,
 
 
   /* Unlock -- the dir is now complete. */
-  err = svn_wc__unlock (path, pool);
-  if (err)
-    return err;
-
+  if (! initial_unwind)
+    {
+      /* kff todo: this is overloading the initial_unwind argument a
+         bit.  But is there ever a time when we'd want to unlock
+         despite having an initial_unwind, or lock when not having
+         initial_unwind?  I think not... */
+      err = svn_wc__unlock (path, pool);
+      if (err)
+        return err;
+    }
 
   /* Else no problems, we're outta here. */
   return SVN_NO_ERROR;
@@ -508,6 +547,7 @@ svn_error_t *
 svn_wc__ensure_adm (svn_string_t *path,
                     svn_string_t *repository,
                     svn_vernum_t version,
+                    const char *initial_unwind,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -519,8 +559,29 @@ svn_wc__ensure_adm (svn_string_t *path,
 
   if (! exists)
     {
-      /* kff todo: modify chain above to pass ancestry/version down. */
-      err = init_adm (path, repository, version, pool);
+      /* kff todo: modify call chain to pass ancestry/version down. */
+      err = init_adm (path, repository, version, initial_unwind, pool);
+      if (err)
+        return err;
+    }
+  else if (initial_unwind)
+    {
+      /* Already exists, so just lock iff about to do something */
+
+      /* kff todo: again, overloading the initial_unwind argument a
+       * bit.  But is there ever a time when we'd want to unlock
+       * despite having an initial_unwind, or lock when not having
+       * initial_unwind?  I think not... 
+       * 
+       * Note that the `unwind' file can't just be our lockfile.  We
+       * will often need to lock first before generating an unwind
+       * stack.
+       */
+      err = svn_wc__lock (path, 0, pool);
+      if (err)
+        return err;
+
+      err = svn_wc__push_unwind (path, initial_unwind, NULL, pool);
       if (err)
         return err;
     }

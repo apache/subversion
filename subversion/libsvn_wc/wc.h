@@ -67,20 +67,21 @@ svn_error_t *svn_wc__working_copy_p (int *answer,
                                      apr_pool_t *pool);
 
 
-
 
-/*** Various things to do with administrative files. ***/
+/*** Locking. ***/
 
 /* Lock the working copy administrative area.
    Wait for WAIT seconds if encounter another lock, trying again every
-   second, then return 0 if success or an SVN_ERR_ENCOUNTERED_LOCK
-   error if failed to obtain the lock. */
+   second, then return 0 if success or an SVN_ERR_WC_LOCKED error if
+   failed to obtain the lock. */
 svn_error_t *svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool);
+
+/* Unlock PATH, or error if can't. */
 svn_error_t *svn_wc__unlock (svn_string_t *path, apr_pool_t *pool);
 
-/* Return temporary working name based on PATH.
-   For a given PATH, the working name is the same every time. */
-svn_string_t *svn_wc__working_name (svn_string_t *path, apr_pool_t *pool);
+
+
+/*** Names and file/dir operations in the administrative area. ***/
 
 /* Create DIR as a working copy directory. */
 svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
@@ -89,12 +90,9 @@ svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
                                      apr_pool_t *pool);
 
 
-
-/*** Names and file/dir operations in the administrative area. ***/
-
-/* kff todo: these #defines have to be protected as though they're in
-   the global namespace, right?  Because they'd silently override any
-   other #define with the same name. */
+/* kff todo: namespace-protecting these #defines so we never have to
+   worry about them conflicting with future all-caps symbols that may
+   be defined in svn_wc.h. */
 
 /* The files within the administrative subdir. */
 #define SVN_WC__ADM_FORMAT              "format"
@@ -150,20 +148,33 @@ svn_error_t *svn_wc__remove_adm_thing (svn_string_t *path,
                                        apr_pool_t *pool);
 
 
-/* Ensure that PATH is a working copy directory. 
-   (In practice, this means creating an adm area.) */
-svn_error_t *svn_wc__ensure_wc_prepared (svn_string_t *path,
-                                         svn_string_t *repository,
-                                         svn_vernum_t version,
-                                         apr_pool_t *pool);
+/* Ensure that PATH is a working copy directory.
+ * (In practice, this means creating an adm area.)
+ * 
+ * REPOSITORY is a repository string for initializing the adm area.
+ *
+ * VERSION is the version for this directory.  kff todo: ancestor_path?
+ *
+ * INITIAL_UNWIND is an unwind marker to push for this directory, or
+ * null if none is needed.  If INITIAL_UNWIND non-null, and an adm
+ * area is being created, the unwind marker will be set _before_ the
+ * adm area is completed, so there is no point at which this working
+ * copy dir appears both complete and also up-to-date.  
+ */
+svn_error_t *svn_wc__ensure_prepare_wc (svn_string_t *path,
+                                        svn_string_t *repository,
+                                        svn_vernum_t version,
+                                        const char *initial_unwind,
+                                        apr_pool_t *pool);
 
 
-/* Ensure that an administrative area exists for PATH. 
+/* Ensure that an administrative area exists for PATH.
    Does not ensure existence of PATH itself; if PATH does not exist,
    an error will result. */
 svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
                                  svn_string_t *repository,
                                  svn_vernum_t version,
+                                 const char *initial_unwind,
                                  apr_pool_t *pool);
 
 
@@ -173,6 +184,65 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 svn_string_t *svn_wc__versions_init_contents (svn_vernum_t version,
                                               apr_pool_t *pool);
 
+
+/*** The working copy unwind stack. ***/
+
+/* Unwindable actions. */
+#define SVN_WC__UNWIND_UPDATE "update"  /* no args, use for checkouts too */
+#define SVN_WC__UNWIND_MV     "mv"      /* takes SRC and DST args */
+#define SVN_WC__UNWIND_MERGE  "merge"   /* takes SRC and DST args */
+
+
+/* Push an action on the top of the `unwind' stack. 
+ * PATH means we're talking about the `PATH/SVN/unwind' file.
+ * ACTION is the tag name to push.
+ * ATTS are attributes to the action; kff todo: may want a slightly
+ * more structured interface when discover similarities among pushes. 
+ */
+svn_error_t *svn_wc__push_unwind (svn_string_t *path,
+                                  const char *action,
+                                  const char **atts,
+                                  apr_pool_t *pool);
+
+/* Pop (and execute) the action on the top of the `unwind' stack.
+ *
+ * If ACTION is non-null, then the top item on the stack must match
+ * that action -- if it doesn't, the error SVN_ERR_WC_UNWIND_MISMATCH
+ * is returned and the top item is not popped.
+ *
+ * If DEFAULT_TO_DONE is non-zero, than it will not be an error for
+ * the top item on the stack to appear to have already been done.
+ * This always means it *has* already been done, but that things
+ * spooked before the unwind stack could be adjusted.  Such items are
+ * treated as a no-op and popped anyway.  Remaining pops should not
+ * interpret such an situation as innocent, of course.
+ *
+ * (For actions which have no operands, the DEFAULT_TO_DONE argument
+ * is ignored.)
+ *
+ * If *EMPTY_STACK is non-null, it gets set to non-zero if the stack
+ * is empty _after_ the pop.  (Popping an unwind stack that's already
+ * empty is an error, SVN_ERR_WC_UNWIND_EMPTY).
+ */
+svn_error_t *svn_wc__pop_unwind (svn_string_t *path,
+                                 const char *action,
+                                 int default_to_done,
+                                 int *empty_stack,
+                                 apr_pool_t *pool);
+
+
+/* Unwind the entire stack.
+   kff todo: it may be that pop_unwind() should be static & hidden,
+   and only ever called from unwind_all(). */
+svn_error_t *svn_wc__unwind_all (svn_string_t *path,
+                                 apr_pool_t *pool);
+
+
+/* Sets *ISEMPTY to non-zero iff the unwind stack for PATH is empty.
+   Does not affect the stack in any way. */
+svn_error_t *svn_wc__unwind_empty_p (svn_string_t *path,
+                                     int *isempty,
+                                     apr_pool_t *pool);
 
 
 /*** General utilities that may get moved upstairs at some point. */

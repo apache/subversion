@@ -50,6 +50,13 @@
 /* ==================================================================== */
 
 
+#include <apr_pools.h>
+#include <apr_file_io.h>
+#include "svn_types.h"
+#include "svn_string.h"
+#include "svn_error.h"
+#include "svn_path.h"
+#include "svn_wc.h"
 #include "wc.h"
 
 
@@ -202,7 +209,7 @@ do_crawl (svn_string_t *current_dir,
   /* If non-NULL, append to our xml_buffer and send everything to parser */
   if (localmod_buffer)
     {
-      svn_string_appendstr (xml_buffer, localmod_buffer, pool)
+      svn_string_appendstr (xml_buffer, localmod_buffer, pool);
       err = flush_xml_buffer (xml_buffer, xml_parser);
       if (err)
         return err;
@@ -260,7 +267,11 @@ do_crawl (svn_string_t *current_dir,
     }
 
   else
-    return SVN_ERR_UNFRUITFUL_DESCENT;
+    return svn_create_error (SVN_ERR_UNFRUITFUL_DESCENT,
+                             0,
+                             "kff todo: Ben, what string do you want here?",
+                             NULL,
+                             pool);
 }
 
 

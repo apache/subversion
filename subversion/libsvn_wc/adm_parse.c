@@ -191,12 +191,12 @@ make_xml_parser (struct version_mod *vmod)
 
 
 svn_error_t *
-svn_xml_parse (svn_delta_read_fn_t *source_fn,
-               void *source_baton,
-               const svn_delta_walk_t *walker,
-               void *walk_baton,
-               void *dir_baton,
-               apr_pool_t *pool)
+svn_wc__parse_versions (svn_delta_read_fn_t *source_fn,
+                        void *source_baton,
+                        const svn_delta_walk_t *walker,
+                        void *walk_baton,
+                        void *dir_baton,
+                        apr_pool_t *pool)
 {
   char buf[BUFSIZ];
   apr_off_t len;

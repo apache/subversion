@@ -192,10 +192,11 @@ add_directory (svn_string_t *name,
   svn_string_t *npath;
 
   maybe_prepend_dest (&path_so_far, wb);
-  svn_wc__ensure_wc_prepared (path_so_far, 
-                              wb->repository,
-                              wb->version,
-                              wb->pool);
+  svn_wc__ensure_prepare_wc (path_so_far,
+                             wb->repository,
+                             wb->version,
+                             SVN_WC__UNWIND_UPDATE,
+                             wb->pool);
 
   npath = svn_string_dup (path_so_far, wb->pool);
   svn_path_add_component (npath, name, SVN_PATH_LOCAL_STYLE, wb->pool);
@@ -210,17 +211,13 @@ add_directory (svn_string_t *name,
     return err;
 
   /* Prep it. */
-  err = svn_wc__ensure_wc_prepared (npath,
-                                    wb->repository,
-                                    wb->version,
-                                    wb->pool);
+  err = svn_wc__ensure_prepare_wc (npath,
+                                   wb->repository,
+                                   wb->version,
+                                   SVN_WC__UNWIND_UPDATE,
+                                   wb->pool);
   if (err)
     return err;
-
-  /* kff todo fooo: okay, now drop an `update' or `checkout' marker in
-     the doing/ area (may need to rework the arrangement of stuff in
-     doing/ a bit, to accomodate arbitrary levels of sub-actions).
-     Later, in finish_directory(), undrop the marker. */
 
   printf ("%s/    (ancestor == %s, %d)\n",
           npath->data, ancestor_path->data, (int) ancestor_version);
@@ -288,9 +285,29 @@ change_dirent_prop (void *walk_baton,
 
 
 static svn_error_t *
-finish_directory (void *w_baton, void *child_baton)
+finish_directory (void *walk_baton, void *child_baton)
 {
-  /* kff todo ? */
+  svn_error_t *err;
+  struct w_baton *wb = (struct w_baton *) walk_baton;
+  svn_string_t *path = (svn_string_t *) child_baton;
+  int stack_empty;
+
+  /* This directory is complete, mark it so. */
+  err = svn_wc__pop_unwind (path,
+                            SVN_WC__UNWIND_UPDATE,
+                            0,
+                            &stack_empty,
+                            wb->pool);
+  if (err)
+    return err;
+
+  /* And remove the lock, so others can work here. */
+  err = svn_wc__unlock (path, wb->pool);
+  if (err)
+    return err;
+
+  /* kff todo: anything else? */
+
   return SVN_NO_ERROR;
 }
 
@@ -308,10 +325,11 @@ add_file (svn_string_t *name,
   svn_string_t *npath;
 
   maybe_prepend_dest (&path_so_far, wb);
-  svn_wc__ensure_wc_prepared (path_so_far,
-                              wb->repository,
-                              wb->version,
-                              wb->pool);
+  svn_wc__ensure_prepare_wc (path_so_far,
+                             wb->repository,
+                             wb->version,
+                             SVN_WC__UNWIND_UPDATE,
+                             wb->pool);
 
   npath = svn_string_dup (path_so_far, wb->pool);
   svn_path_add_component (npath, name, SVN_PATH_LOCAL_STYLE, wb->pool);
@@ -374,9 +392,46 @@ change_file_prop (void *walk_baton,
 
 
 static svn_error_t *
-finish_file (void *w_baton, void *child_baton)
+finish_file (void *walk_baton, void *child_baton)
 {
   /* kff todo */
+
+  printf ("\n");
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+finish_walk (void *walk_baton, void *dir_baton)
+{
+  struct w_baton *wb = (struct w_baton *) walk_baton;
+  svn_string_t *path = (svn_string_t *) dir_baton;
+  svn_error_t *err;
+  int stack_empty;
+
+  /* Unwind the update. */
+  err = svn_wc__pop_unwind (path,
+                            SVN_WC__UNWIND_UPDATE,
+                            0,
+                            &stack_empty,
+                            wb->pool);
+  if (err)
+    return (err);
+  if (! stack_empty)
+    return svn_create_error (SVN_ERR_WC_UNWIND_NOT_EMPTY,
+                             0,
+                             path->data,
+                             NULL,
+                             wb->pool);
+
+  /* And remove the lock, so others can work here. */
+  err = svn_wc__unlock (path, wb->pool);
+  if (err)
+    return err;
+
+  /* The walk is over, free its pool. */
+  apr_destroy_pool (wb->pool);
+
   printf ("\n");
   return SVN_NO_ERROR;
 }
@@ -395,7 +450,8 @@ static const svn_delta_walk_t change_walker =
   replace_file,
   apply_textdelta,
   change_file_prop,
-  finish_file
+  finish_file,
+  finish_walk
 };
 
 
@@ -410,6 +466,9 @@ svn_wc_get_change_walker (svn_string_t *dest,
 {
   svn_error_t *err;
   struct w_baton *w_baton;
+  apr_pool_t *subpool;
+
+  subpool = apr_make_sub_pool (pool, NULL);
 
   /* ### this bit with creating the destination should be deferred */
 
@@ -417,31 +476,31 @@ svn_wc_get_change_walker (svn_string_t *dest,
     {
       int is_working_copy = 0;
 
-      err = svn_wc__ensure_directory (dest, pool);
+      err = svn_wc__ensure_directory (dest, subpool);
       if (err)
         return err;
 
       /* kff todo: actually, we can't always err out if dest turns out
          to be a working copy; instead, we just need to note it
          somewhere and be careful.  Right now, though, punt. */
-      svn_wc__working_copy_p (&is_working_copy, dest, pool);
+      svn_wc__working_copy_p (&is_working_copy, dest, subpool);
       if (is_working_copy)
         return svn_create_error (SVN_ERR_OBSTRUCTED_UPDATE,
-                                 0, dest->data, NULL, pool);
+                                 0, dest->data, NULL, subpool);
     }
 
   /* Else nothing in the way, so continue. */
 
   *walker = &change_walker;
 
-  w_baton = apr_pcalloc(pool, sizeof(*w_baton));
+  w_baton = apr_pcalloc (subpool, sizeof (*w_baton));
   w_baton->dest_dir   = dest;   /* Remember, DEST might be null. */
   w_baton->repository = repos;
-  w_baton->pool       = pool;
+  w_baton->pool       = subpool;
   w_baton->version    = version;
   *walk_baton = w_baton;
 
-  *dir_baton = svn_string_create ("", pool);
+  *dir_baton = svn_string_create ("", subpool);
 
   return NULL;
 }
