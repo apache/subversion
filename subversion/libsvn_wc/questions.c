@@ -67,7 +67,7 @@ svn_wc_check_wc (const char *path,
 
       err = svn_io_read_version_file (wc_format, format_file_path, pool);
 
-      if ((*wc_format > SVN_WC__VERSION) || err)
+      if (err || (*wc_format > SVN_WC__VERSION))
         {
           /* It really doesn't matter if it was a version mismatch or
              an error, or if an error, what kind.  If there's anything
