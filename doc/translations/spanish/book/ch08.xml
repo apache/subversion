@@ -1149,31 +1149,34 @@ if __name__ == '__main__':
   <!-- *** SECTION 3:  INSIDE THE WORKING COPY ADMINISTRATION AREA     *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-8-sect-3">
-    <title>Inside the Working Copy Administration Area</title>
+    <title>Dentro del área de administración de la copia local de trabajo</title>
     
-    <para>As we mentioned earlier, each directory of a Subversion
-      working copy contains a special subdirectory called
-      <filename>.svn</filename> which houses administrative data about
-      that working copy directory.  Subversion uses the information in
-      <filename>.svn</filename> to keep track of things like:</para>
+    <para>Tal y como mencionamos anteriormente, cada directorio de
+      una copia local de trabajo realizada con Subversion contiene
+      un subdirectorio especial llamado <filename>.svn</filename>
+      que almacena datos administrativos sobre ese directorio
+      local de trabajo. Subversion usa la información de
+      <filename>.svn</filename> para llevar la pista de cosas
+      como:</para>
 
     <itemizedlist>
       <listitem>
-        <para>Which repository location(s) are represented by the
-          files and subdirectories in the working copy
-          directory.</para>
+        <para>Qué lugar(es) del repositorio está representado por los
+          ficheros y subdirectorios del directorio de la copia local
+          de trabajo.</para>
       </listitem>
       <listitem>
-        <para>What revision of each of those files and directories are
-          currently present in the working copy.</para>
+        <para>Qué revisión de cada uno de esos ficheros y directorios
+          está actualmente presente en la copia local.</para>
       </listitem>
       <listitem>
-        <para>Any user-defined properties that might be attached
-          to those files and directories.</para>
+        <para>Cualquier <!--TODO property--> atributo definido por el
+          usuario que pudiese estár asociado a esos ficheros y
+          directorios.</para>
       </listitem>
       <listitem>
-        <para>Pristine (un-edited) copies of the working copy
-        files.</para>
+        <para>Copias prístinas (no editadas) de los ficheros de
+          la copia local de trabajo.</para>
       </listitem>
     </itemizedlist>
 
