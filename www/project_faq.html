@@ -1,3 +1,5 @@
+<!DOCTYPE html PUBLIC "-//Tigris//DTD XHTML 1.0 Transitional//EN" 
+"http://style.tigris.org/tigris_transitional.dtd">
 <html>
 <head>
 <title>Subversion FAQ</title>
@@ -21,6 +23,7 @@
 <h3>Table of Contents</h3>
 
 <h4>General questions:</h4>
+<ul>
 <li><a href="#why">Why does this project exist?</a></li>
 <li><a href="#collab">Is Subversion proprietary?  I heard that it
     belongs to CollabNet.</a></li> 
@@ -50,8 +53,10 @@
     where can I get it?</a></li>
 <li><a href="#more-information">I have other questions.  Where can I
     get more information?</a></li>  
+</ul>
 
 <h4>How-to:</h4>
+<ul>
 <li><a href="#co-svn">How do I check out the Subversion code?</a></li>
 <li><a href="#repository">How do I create a repository?  How do I
     import data into it?</a></li> 
@@ -94,8 +99,10 @@ committed.  How can I make 'svn commit' ignore the file?</a></li>
 <li><a href="#ssh-auth-cache">When I access a repository using
 svn+ssh, my password is not cached in ~/.subversion/auth/.  How do
 I avoid having to type it so often?</a></li>
+</ul>
 
 <h4>Troubleshooting:</h4>
+<ul>
 <li><a href="#stuck-bdb-repos">My repository seems to get stuck all the
     time, giving me errors about needing recovery (DB_RUNRECOVERY).
     What could be the cause?</a></li>
@@ -165,18 +172,23 @@ a <tt>file:</tt> URL?</a></li>
     never seem to happen.</a></li>
 <li><a href="#diff-cmd">Why does my --diff-cmd complain about '-u'?
     I tried to override it with --extensions, but it's not working.</a></li>
+</ul>
 
 <h4>Developer questions:</h4>
+<ul>
 <li><a href="#ramdisk-tests">How do I run the regression tests in a
     ram disk?</a></li>
+</ul>
 
 <h4>References:</h4>
+<ul>
 <li><a href="#http-methods">What are all the HTTP methods Subversion 
     uses?</a></li>
 <li><a href="#bikeshed">What's a 'bikeshed'?</a></li> 
 <li><a href="#baton">What's a 'baton'?</a></li> 
 <li><a href="#def-wedged-repository">What do you mean when you say that
     repository is 'wedged'?</a></li>
+</ul>
 
 <![CDATA[=========================================================]]>
 
@@ -1144,7 +1156,7 @@ case in the filename.  Alternatively, you may just decide to change
 the case of an existing file in the repository.</p>
 
 <p>If you're working in a case-sensitive file system, this is no
-problem at all.  Just move the file to the new name, e.g.,
+problem at all.  Just move the file to the new name, e.g.,</p>
 
 <pre>
 svn&nbsp;mv&nbsp;file.java&nbsp;File.java
@@ -1481,7 +1493,7 @@ working copy is out of date?</a></h3>
     up-to-date; revert doesn't do that.)</p>
 </li>
 
-<li><p>Mixed revisions.<p>
+<li><p>Mixed revisions.</p>
 
      <p>When Subversion commits, the client only bumps the revision
      numbers of the nodes the commit touches, not all nodes in the
