@@ -502,17 +502,35 @@ svn_repos_node_t *svn_repos_node_from_baton (void *edit_baton);
     If you simply want to backup your filesystem, you're probably
     better off using the built-in facilities of the DB backend (using
     Berkeley DB's hot-backup feature, for example.)
+    
+    For a description of the dumpfile format, see
+    /trunk/notes/fs_dumprestore.txt.
 */
+
+/* The RFC822-style headers in our dumpfile format. */
+#define SVN_REPOS_DUMPFILE_MAGIC_HEADER            "SVN-fs-dump-format-version"
+#define SVN_REPOS_DUMPFILE_FORMAT_VERSION           1
+
+#define SVN_REPOS_DUMPFILE_REVISION_NUMBER           "Revision-number"
+#define SVN_REPOS_DUMPFILE_REVISION_CONTENT_CHECKSUM "Revision-content-md5"
+#define SVN_REPOS_DUMPFILE_REVISION_CONTENT_LENGTH   "Content-length"
+
+#define SVN_REPOS_DUMPFILE_NODE_PATH                 "Node-path"
+#define SVN_REPOS_DUMPFILE_NODE_KIND                 "Node-kind"
+#define SVN_REPOS_DUMPFILE_NODE_ACTION               "Node-action"
+#define SVN_REPOS_DUMPFILE_NODE_COPIED_FROM          "Node-copied-from"
+#define SVN_REPOS_DUMPFILE_NODE_COPY_SOURCE_CHECKSUM "Node-copy-source-md5"
+#define SVN_REPOS_DUMPFILE_NODE_CONTENT_CHECKSUM     "Node-content-md5"
+#define SVN_REPOS_DUMPFILE_NODE_CONTENT_LENGTH       "Content-length"
+
 
 
 /* Dump the contents of the filesystem within already-open REPOS into
    writable STREAM.  Begin at revision START_REV, and dump every
-   revision up through END_REV.
+   revision up through END_REV.  Use POOL for all allocation.
 
    If START_REV is SVN_INVALID_REVNUM, then start dumping at revision 0.
    If END_REV is SVN_INVALID_REVNUM, then dump through the HEAD revision.
-   
-   Use POOL for all allocation.
 */
 svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
                                 svn_stream_t *stream,
@@ -521,7 +539,84 @@ svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
                                 apr_pool_t *pool);
 
 
+/* Read and parse dumpfile-formatted STREAM, reconstructing filesystem
+   revisions in already-open REPOS.  Use POOL for all allocation.
 
+   ### ? Describe policy/interface for adding revisions to a non-empty
+       repository.  Also, interface for adding revisions to a -subdir-
+       of existing repository?
+ */
+svn_error_t *svn_repos_load_fs (svn_repos_t *repos,
+                                svn_stream_t *stream,
+                                apr_pool_t *pool);
+
+
+/* A vtable that is driven by svn_repos_parse_dumpstream. */
+typedef struct svn_repos_parse_fns_t
+{
+  /* The parser has discovered a new revision record.  All the headers
+     are placed in HEADERS (allocated in POOL), which maps (const char
+     *) header-name ==> (const char *) header-value.  The
+     REVISION_BATON received back (also allocated in POOL) represents
+     the revision, and will be used for setting properties. */
+  svn_error_t *(*new_revision_record) (void **revision_baton,
+                                       apr_hash_t *headers,
+                                       apr_pool_t *pool);
+
+  /* The parser has discovered a new node record within the current
+     revision.  All the headers are placed in HEADERS as above,
+     allocated in POOL.  The NODE_BATON received back is allocated in
+     POOL and represents the node, and will be used for setting
+     properties and fulltext. */
+  svn_error_t *(*new_node_record) (void **node_baton,
+                                   apr_hash_t *headers,
+                                   apr_pool_t *pool);
+
+  /* For a given BATON representing either a revision or a node, set a
+     property NAME to VALUE. */
+  svn_error_t *(*set_property) (void *baton,
+                                const char *name,
+                                const svn_string_t *value);
+
+  /* For a given NODE_BATON, receive a writable STREAM capable of
+     receiving the node's fulltext.  After writing the fulltext, call
+     the stream's close() function.
+
+     If a NULL is returned instead of a stream, the vtable is
+     indicating that no text is desired, and the parser will not
+     attempt to send it.  */
+  svn_error_t *(*set_fulltext) (svn_stream_t **stream,
+                                void *node_baton);
+
+  /* The parser has reached the end of the current revision or node
+     represented by BATON.  The baton may be freed.*/
+  svn_error_t *(*close_record) (void *baton);
+
+} svn_repos_parser_fns_t;
+
+
+
+/* Read and parse dumpfile-formatted STREAM, calling callbacks in
+   PARSE_FNS and using POOL for allocations.
+
+   This parser has built-in knowledge of the dumpfile format, but only
+   in a general sense:
+
+      * it recognizes revision and node records by looking for either
+        a REVISION_NUMBER or NODE_PATH headers.
+
+      * it recognizes the CONTENT-LENGTH headers, so it knows if and
+        how to suck up the content body.
+
+      * it knows how to parse a content body into two parts:  props
+        and text, and pass the pieces to the vtable.
+
+   This is enough knowledge to make it easy on vtable implementors,
+   but still allow expansion of the format:  most headers are ignored.
+*/
+svn_error_t *svn_repos_parse_dumpstream (svn_stream_t *stream,
+                                         svn_repos_parser_fns_t *parse_fns,
+                                         apr_pool_t *pool);
 
 
 
