@@ -17,13 +17,20 @@
 #include <apr_general.h>
 #include <apr_pools.h>
 
+/* Commenting out the following includes by default since they aren't
+   perfectly portable.  */
+#ifdef ENABLE_SPLIT_URL_TESTS
+#include <unistd.h> /* for getcwd() */
+#include <string.h> /* for strcat() */
+#endif /* ENABLE_SPLIT_URL_TESTS */
+
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_ra.h"
 #include "svn_fs.h"
 #include "svn_client.h"
-
+#include "../../libsvn_ra_local/ra_local.h"
 
 /* Notice that we're including the FS API above.  This isn't because
    the RA API needs to know about it;  rather, it's so our tests can
@@ -181,8 +188,135 @@ get_youngest_rev (const char **msg)
   return SVN_NO_ERROR;
 }
 
+#ifdef ENABLE_SPLIT_URL_TESTS
+
+/* Helper function.  Run svn_ra_local__split_URL with interest only in
+   the return value, not the populated path items */
+static svn_error_t *
+try_split_url (const char *url)
+{
+  svn_string_t *repos_path, *fs_path;
+
+  SVN_ERR (svn_ra_local__split_URL (&repos_path, &fs_path, 
+                                    svn_string_create (url, pool),
+                                    pool));
+  return SVN_NO_ERROR;
+}
 
 
+
+static svn_error_t *
+split_url_test_1 (const char **msg)
+{
+  svn_error_t *err;
+  
+  *msg = "test svn_ra_local__split_URL's URL-validating abilities";
+
+  /* TEST 1:  Make sure we can recognize bad URLs (this should not
+     require a filesystem) */
+
+  /* Use `blah' for scheme instead of `file' */
+  err = try_split_url ("blah:///bin/svn/");
+  if (err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
+    return svn_error_create 
+      (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+       "svn_ra_local__split_URL failed to catch bad URL (scheme)");
+
+  /* Use only single slash after scheme */
+  err = try_split_url ("file:/path/to/repos/");
+  if (err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
+    return svn_error_create 
+      (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+       "svn_ra_local__split_URL failed to catch bad URL (slashes)");
+  
+  /* Use only a hostname, with no path */  
+  err = try_split_url ("file://hostname");
+  if (err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
+    return svn_error_create 
+      (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+       "svn_ra_local__split_URL failed to catch bad URL (no path)");
+
+  /* Give a hostname other than `' or `localhost' */
+  err = try_split_url ("file://myhost/repos/path/");
+  if (err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
+    return svn_error_create 
+      (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+       "svn_ra_local__split_URL failed to catch bad URL (hostname)");
+
+  /* Make sure we *don't* fuss about a good URL (note that this URL
+     still doesn't point to an existing versioned resource) */
+  err = try_split_url ("file:///repos/path/");
+  if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
+    return svn_error_create 
+      (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+       "svn_ra_local__split_URL cried foul about a good URL (no hostname)");
+  err = try_split_url ("file://localhost/repos/path/");
+  if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
+    return svn_error_create 
+      (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+       "svn_ra_local__split_URL cried foul about a good URL (localhost)");
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Helper function.  Creates a filesystem in the current working
+   directory named FS_PATH, then assembes a URL that points to that
+   FS, plus addition cruft (REPOS_PATH) that theoretically refers to a
+   versioned resource in that filesystem.  Finally, it runs this URL
+   through svn_ra_local__split_URL to verify that it accurately
+   separates the filesystem path and the repository path cruft. */
+static svn_error_t *
+check_split_url (const char *fs_path,
+                 const char *repos_path)
+{
+  svn_fs_t *fs;
+  char fs_loc[PATH_MAX], url[PATH_MAX];
+  svn_string_t *repos_part, *fs_part;
+
+  /* Because the URLs are absolute paths, we have to figure out where
+     this system.   */
+  getcwd (fs_loc, PATH_MAX - 1);
+  strcat (fs_loc, "/");
+  strcat (fs_loc, fs_path);
+
+  /* Create a filesystem and repository */
+  SVN_ERR (create_fs_and_repos (&fs, fs_loc));
+
+  /* Now, assemble the test URL */
+  sprintf (url, "file://%s%s", fs_loc, repos_path);
+
+  /* Run this URL through our splitter... */
+  SVN_ERR (svn_ra_local__split_URL (&repos_part, &fs_part, 
+                                    svn_string_create (url, pool),
+                                    pool));
+  if ((strcmp (fs_part->data, fs_loc))
+      || (strcmp (repos_part->data, repos_path)))
+    return svn_error_create 
+      (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+       "svn_ra_local__split_URL failed to properly split the URL");
+  
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+split_url_test_2 (const char **msg)
+{
+  *msg = "test svn_ra_local__split_URL's URL-validating abilities";
+
+  /* TEST 2: Given well-formed URLs, make sure that we can correctly
+     find where the filesystem portion of the path ends and the
+     repository path begins.  */
+  SVN_ERR (check_split_url ("test-repo-split-fs1",
+                            "/path/to/repos"));
+  SVN_ERR (check_split_url ("test-repo-split-fs2",
+                            "/big/old/long/path/to/my/other/repository"));
+
+  return SVN_NO_ERROR;
+}
+
+#endif /* ENABLE_SPLIT_URL_TESTS */
 
 
 
@@ -191,6 +325,10 @@ get_youngest_rev (const char **msg)
 
 svn_error_t * (*test_funcs[]) (const char **msg) = {
   0,
+#ifdef ENABLE_SPLIT_URL_TESTS
+  split_url_test_1,
+  split_url_test_2,
+#endif /* ENABLE_SPLIT_URL_TESTS */
 #if 0
   open_ra_session,
   get_youngest_rev,

@@ -14,7 +14,7 @@
 
 #include "ra_local.h"
 #include <assert.h>
-
+#include <string.h>
 
 
 svn_error_t *
@@ -24,70 +24,82 @@ svn_ra_local__split_URL (svn_string_t **repos_path,
                          apr_pool_t *pool)
 {
   svn_error_t *err;
-  int i = 1;
+  svn_string_t *url;
+  char *hostname, *url_data, *path;
   apr_pool_t *subpool = svn_pool_create (pool);
-  apr_array_header_t *components = apr_array_make (subpool, 1,
-                                                   sizeof(svn_string_t *));
-
-  svn_string_t *shrinking_URL = svn_string_dup (URL, subpool);
-  svn_string_t *growing_URL = svn_string_create ("/", subpool);
-  svn_string_t *remainder = svn_string_create ("", subpool);
   svn_fs_t *test_fs = svn_fs_new (subpool);
 
-  /* Yank path components off the end of URL_copy, storing them in an
-     array.  */
-  do
-    {
-      svn_string_t *component = svn_path_last_component (shrinking_URL,
-                                                         svn_path_url_style,
-                                                         subpool);
-      *((svn_string_t **)apr_array_push (components)) = component;
-      svn_path_remove_component (shrinking_URL, svn_path_url_style);
+  /* Verify that the URL is well-formed (loosely) */
+  url_data = URL->data;
 
-    } while (! svn_string_isempty (shrinking_URL));
+  /* First, check for the "file://" prefix. */
+  if (memcmp ("file://", url_data, 7))
+    return svn_error_create 
+      (SVN_ERR_RA_ILLEGAL_URL, 0, NULL, pool, 
+       ("svn_ra_local__split_URL: URL does not contain `file://' prefix"));
   
-  /* Start from the 2nd item in the component array, build up a path,
-     successively adding new components and trying to successfuly call
-     svn_fs_open_berkeley().  */
-  i = components->nelts - 1;
-  do
-    {
-      svn_string_t *component = (((svn_string_t **)(components)->elts)[i]);
-      svn_path_add_component (growing_URL, component, svn_path_url_style);
-      printf ("Testing path: %s\n", growing_URL->data); fflush(stdout);
-      err = svn_fs_open_berkeley (test_fs, growing_URL->data);
-      i--;
-    } while ((i >= 0) && err);
+  /* Then, skip what's between the "file://" prefix and the next
+     occurance of '/' -- this is the hostname, and we are considering
+     everything from that '/' until the end of the URL to be the
+     absolute path portion of the URL. */
+  hostname = url_data + 7;
+  path = strchr (hostname, '/');
+  if (! path)
+    return svn_error_create 
+      (SVN_ERR_RA_ILLEGAL_URL, 0, NULL, pool, 
+       ("svn_ra_local__split_URL: URL contains only a hostname, no path"));
 
-  /* We're out of the loop, either because we ran out of search
-     paths... */
-  if (i < 0)
-    return 
-      svn_error_create 
-      (SVN_ERR_RA_ILLEGAL_URL, 0, NULL, pool,
-       "svn_ra_local__split_url:  can't find a repository anywhere in URL!");
-  
-  /* ..or because svn_fs_open_berkeley() finally returned SVN_NO_ERROR. */
-  else
+  /* Currently, the only hostnames we are allowing are the empty
+     string and 'localhost' */
+  if ((hostname != path) && (memcmp (hostname, "localhost", 9)))
+    return svn_error_create 
+      (SVN_ERR_RA_ILLEGAL_URL, 0, NULL, pool, 
+       ("svn_ra_local__split_URL: URL contains unsupported hostname"));
+
+  /* Duplicate the URL, starting at the top of the path */
+  url = svn_string_create ((const char *)path, subpool);
+
+  /* Loop, trying to open a FS at URL.  If this fails, remove the last
+     component from the URL, then try again. */
+  while (1)
     {
-      assert (err == SVN_NO_ERROR);
-      err = svn_fs_close_fs (test_fs);
-      if (err) return err;
+      /* Attempt to open FS */
+      err = svn_fs_open_berkeley (test_fs, url->data);
+
+      /* Hey, cool, we were successfully.  Stop loopin'. */
+      if (err == SVN_NO_ERROR)
+        break;
+
+      /* If we're down to an empty path here, and we still haven't
+         found the filesystem, we're just out of luck.  Time to bail
+         and face the music. */
+      if (svn_path_is_empty (url, svn_path_url_style))
+        break;
+
+      /* We didn't successfully open the filesystem, and we haven't
+         hacked this path down to a bare nub yet, so we'll chop off
+         the last component of this path. */
+      svn_path_remove_component (url, svn_path_url_style);
     }
 
-  /* Create repos_path and fs_path in -original- pool, then free our
-     scratchwork subpool */
-  *repos_path = svn_string_dup (growing_URL, pool);
+  /* If we are still sitting in an error-ful state, we must not have
+     found the filesystem.  We give up. */
+  if (err)
+    return svn_error_create 
+      (SVN_ERR_RA_NOT_VERSIONED_RESOURCE, 0, NULL, pool, 
+       ("svn_ra_local__split_URL: Unable to find valid repository"));
+  
+  /* We apparently found a filesystem.  Let's close it since we aren't
+     really going to do anything with it. */
+  SVN_ERR (svn_fs_close_fs (test_fs));
 
-  while (i >= 0)
-    {
-      svn_string_t *component = (((svn_string_t **)(components)->elts)[i]);
-      svn_path_add_component (remainder, component, svn_path_url_style);
-      i--;
-    }
+  /* What remains of URL after being hacked at in the previous step is
+     FS_PATH.  REPOS_PATH is what we've hacked off in the process.  We
+     need to make sure these are allocated in the -original- pool. */
+  *fs_path = svn_string_dup (url, pool);
+  *repos_path = svn_string_create (path + strlen (url->data), pool);
 
-  *fs_path = svn_string_dup (remainder, pool);
-
+  /* Destroy our temporary memory pool. */
   apr_pool_destroy (subpool);
 
   return SVN_NO_ERROR;

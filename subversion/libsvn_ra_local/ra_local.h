@@ -33,7 +33,7 @@ typedef struct svn_ra_local__session_baton_t
      of like an Apache transaction, I guess. :) */
   apr_pool_t *pool;
   
-  /* A `file:' URL containing a local repository and path. */
+  /* A `file://' URL containing a local repository and path. */
   svn_string_t *repository_URL;
 
   /* The URL above, split into two components. */
@@ -92,10 +92,13 @@ svn_ra_local__get_commit_track_editor (svn_delta_edit_fns_t **editor,
     
 
 
-/* Given a `file:/' URL, figure out which portion specifies a
+/* Given a `file://' URL, figure out which portion specifies a
    repository on local disk, and return in REPOS_PATH; return the
    remainder (the path *within* the repository's filesystem) in
-   FS_PATH.  Allocate the return values in POOL */
+   FS_PATH.  Allocate the return values in POOL.  Currently, we are
+   not expecting to handle `file://hostname/'-type URLs; hostname, in
+   this case, is expected to be the empty string.  Also, the path
+   which follows the */
 svn_error_t *
 svn_ra_local__split_URL (svn_string_t **repos_path,
                          svn_string_t **fs_path,
