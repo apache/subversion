@@ -39,6 +39,7 @@ struct parse_baton
 
   svn_boolean_t use_history;
   svn_stream_t *outstream;
+  enum svn_repos_load_uuid uuid_action;
 };
 
 struct revision_baton
@@ -456,8 +457,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
       else if (NULL != (uuid = apr_hash_get (headers, SVN_REPOS_DUMPFILE_UUID,
                                              APR_HASH_KEY_STRING)))
         {
-          if (parse_fns->uuid_record)
-            SVN_ERR (parse_fns->uuid_record (uuid, parse_baton, pool));
+          SVN_ERR (parse_fns->uuid_record (uuid, parse_baton, pool));
         }
 
       /* Or is this bogosity?! */
@@ -697,6 +697,18 @@ uuid_record (const char *uuid,
              apr_pool_t *pool)
 {
   struct parse_baton *pb = parse_baton;
+  svn_revnum_t youngest_rev;
+
+  if (pb->uuid_action == svn_repos_load_uuid_ignore)
+    return SVN_NO_ERROR;
+
+  if (pb->uuid_action != svn_repos_load_uuid_force)
+    {
+      SVN_ERR (svn_fs_youngest_rev (&youngest_rev, pb->fs, pool));
+      if (youngest_rev != 0)
+        return SVN_NO_ERROR;
+    }
+
   return svn_fs_set_uuid (pb->fs, uuid, pool);
 }
 
@@ -887,7 +899,7 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser_callbacks,
                                void **parse_baton,
                                svn_repos_t *repos,
                                svn_boolean_t use_history,
-                               svn_boolean_t ignore_uuid,
+                               enum svn_repos_load_uuid uuid_action,
                                svn_stream_t *outstream,
                                apr_pool_t *pool)
 {
@@ -896,7 +908,7 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser_callbacks,
 
   parser->new_revision_record = new_revision_record;
   parser->new_node_record = new_node_record;
-  parser->uuid_record = ignore_uuid? NULL : uuid_record;
+  parser->uuid_record = uuid_record;
   parser->set_revision_property = set_revision_property;
   parser->set_node_property = set_node_property;
   parser->set_fulltext = set_fulltext;
@@ -907,6 +919,7 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser_callbacks,
   pb->fs = svn_repos_fs (repos);
   pb->use_history = use_history;
   pb->outstream = outstream;
+  pb->uuid_action = uuid_action;
 
   *parser_callbacks = parser;
   *parse_baton = pb;
@@ -919,7 +932,7 @@ svn_error_t *
 svn_repos_load_fs (svn_repos_t *repos,
                    svn_stream_t *dumpstream,
                    svn_stream_t *feedback_stream,
-                   svn_boolean_t ignore_uuid,
+                   enum svn_repos_load_uuid uuid_action,
                    apr_pool_t *pool)
 {
   const svn_repos_parser_fns_t *parser;
@@ -930,7 +943,7 @@ svn_repos_load_fs (svn_repos_t *repos,
   SVN_ERR (svn_repos_get_fs_build_parser (&parser, &parse_baton,
                                           repos,
                                           TRUE, /* look for copyfrom revs */
-                                          ignore_uuid,
+                                          uuid_action,
                                           feedback_stream,
                                           pool));
 

@@ -759,6 +759,13 @@ enum svn_node_action
   svn_node_action_replace
 };
 
+/** The different policies for processing the UUID in the dumpfile. */
+enum svn_repos_load_uuid
+{
+  svn_repos_load_uuid_default,
+  svn_repos_load_uuid_ignore,
+  svn_repos_load_uuid_force,
+};
 
 /** Dump the contents of the filesystem within already-open @a repos into
  * writable @a dumpstream. 
@@ -786,7 +793,8 @@ svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
 
 
 /* Read and parse dumpfile-formatted @a dumpstream, reconstructing
- * filesystem revisions in already-open @a repos, 
+ * filesystem revisions in already-open @a repos, handling uuids
+ * in accordance with @a uuid_action.
  *
  * Read and parse dumpfile-formatted @a dumpstream, reconstructing
  * filesystem revisions in already-open @a repos.  Use @a pool for all
@@ -795,14 +803,17 @@ svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
  * If the dumpstream contains copy history that is unavailable in the
  * repository, an error will be thrown.
  *
- * If @a ignore_uuid is @c TRUE, the repository's UUID will not be
- * updated.
+ * The repository's UUID will be updated iff
+ *   the dumpstream contains a UUID and
+ *   @a uuid_action is not equal to @c svn_repos_load_uuid_ignore and
+ *   either the repository contains no revisions or
+ *          @a uuid_action is equal to @c svn_repos_load_uuid_force.
  */
 
 svn_error_t *svn_repos_load_fs (svn_repos_t *repos,
                                 svn_stream_t *dumpstream,
                                 svn_stream_t *feedback_stream,
-                                svn_boolean_t ignore_uuid,
+                                enum svn_repos_load_uuid uuid_action,
                                 apr_pool_t *pool);
 
 
@@ -920,10 +931,14 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
 
 
 /** Set @a *parser and @a *parse_baton to a vtable parser which commits new
- * revisions to the fs in @a repos.  Use @a pool to operate on the fs.
+ * revisions to the fs in @a repos.  The constructed parser will treat
+ * UUID records in a manner consistent with @a uuid_action.  Use @a pool
+ * to operate on the fs.
  *
  * Set @a *parser and @a *parse_baton to a vtable parser which commits new
- * revisions to the fs in @a repos.  Use @a pool to operate on the fs.
+ * revisions to the fs in @a repos.  The constructed parser will treat
+ * UUID records in a manner consistent with @a uuid_action.  Use @a pool
+ * to operate on the fs.
  *
  * If @a use_history is set, then the parser will require relative
  * 'copyfrom' history to exist in the repository when it encounters
@@ -931,15 +946,13 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
  *
  * Print all parsing feedback to @a outstream (if non-@c NULL).
  *
- * If @a ignore_uuid is @c TRUE, the repository's UUID will not be
- * updated.
  */
 svn_error_t *
 svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser,
                                void **parse_baton,
                                svn_repos_t *repos,
                                svn_boolean_t use_history,
-                               svn_boolean_t ignore_uuid,
+                               enum svn_repos_load_uuid uuid_action,
                                svn_stream_t *outstream,
                                apr_pool_t *pool);
 /** @} */

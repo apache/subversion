@@ -83,7 +83,8 @@ enum
     svnadmin__follow_copies,
     svnadmin__on_disk_template,
     svnadmin__in_repos_template,
-    svnadmin__ignore_uuid
+    svnadmin__ignore_uuid,
+    svnadmin__force_uuid
   };
 
 /* Option codes and descriptions.
@@ -117,7 +118,10 @@ static const apr_getopt_option_t options_table[] =
      "specify template for the repository structure"},
 
     {"ignore-uuid", svnadmin__ignore_uuid, 0,
-     "ignore the UUID specified in the file"},
+     "ignore the UUID specified in the file."},
+
+    {"force-uuid", svnadmin__force_uuid, 0,
+     "force the repository UUID to be updated."},
 
     {NULL}
   };
@@ -156,9 +160,10 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     {"load", subcommand_load, {0},
      "usage: svnadmin load REPOS_PATH\n\n"
      "Read a 'dumpfile'-formatted stream from stdin, committing\n"
-     "new revisions into the repository's filesystem.\n"
-     "Send progress feedback to stdout.\n",
-     {svnadmin__ignore_uuid} },
+     "new revisions into the repository's filesystem.  If the repository\n"
+     "was previously empty, its UUID will, by default, be changed to the\n"
+     "one specified in the stream.  Progress feedback is sent to stdout.\n",
+     {svnadmin__ignore_uuid, svnadmin__force_uuid} },
 
     {"lscr", subcommand_lscr, {0},
      "usage: svnadmin lscr REPOS_PATH PATH [--copies]\n\n"
@@ -208,7 +213,8 @@ struct svnadmin_opt_state
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t incremental;                        /* --incremental */
   svn_boolean_t follow_copies;                      /* --copies */
-  svn_boolean_t ignore_uuid;                        /* --ignore-uuid */
+  enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
+                                                       --force-uuid */
   const char *on_disk;
   const char *in_repos;
 };
@@ -344,7 +350,7 @@ subcommand_load (apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                 apr_file_open_stdout, pool));
   
   SVN_ERR (svn_repos_load_fs (repos, stdin_stream, stdout_stream,
-                              opt_state->ignore_uuid, pool));
+                              opt_state->uuid_action, pool));
 
   return SVN_NO_ERROR;
 }
@@ -655,7 +661,10 @@ main (int argc, const char * const *argv)
           }
         break;
       case svnadmin__ignore_uuid:
-        opt_state.ignore_uuid = TRUE;
+        opt_state.uuid_action = svn_repos_load_uuid_ignore;
+        break;
+      case svnadmin__force_uuid:
+        opt_state.uuid_action = svn_repos_load_uuid_force;
         break;
       default:
         {
