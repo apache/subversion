@@ -19,7 +19,7 @@ libmod_dav_svn_la_LIBADD = -L../libsvn_fs/.libs -lsvn_fs \
 ## we don't need the .so version stuff for an Apache module, so avoid them
 LDFLAGS = -avoid-version
 
-INCLUDES = -I../include $(APACHE_INCLUDES)
+INCLUDES = -I../include $(APACHE_INCLUDES) -I../../apr/include
 
 SUBDIRS = . tests
 
