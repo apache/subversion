@@ -107,6 +107,20 @@ When we need to treat a node or node revision ID as a string of bytes,
 we use the forms shown here --- a series of unsigned ASCII decimal
 numbers, separated by dots.
 
+
+
+
+   #######################################################################
+   ###                                                                 ###
+   ### Note: everything from here on down documents new filesystem     ###
+   ### internals that have not been completely implemented yet.  If    ###
+   ### you want documentation that reflects the code as it is right    ###
+   ### now, read revision 1.36 or earlier of this file.  When the new  ###
+   ### implementation is complete, this notice will be removed.        ###
+   ###                                                                 ###
+   #######################################################################
+
+
 
 NODE-REVISION and HEADER: how we represent a node revision
 
@@ -114,26 +128,27 @@ We represent a given revision of a file or directory node using a list
 skel (see skel.h for an explanation of skels).  A node revision skel
 has the form:
 
-    (HEADER KIND-SPECIFIC ...)
+    (HEADER PROP-KEY KIND-SPECIFIC ...)
 
 where HEADER is a header skel, whose structure is common to all nodes,
-and the KIND-SPECIFIC elements carry data dependent on what kind of
-node this is --- file, directory, etc.
+PROP-KEY identifies the representation for the property list of this
+node (see discussion of representations later), and the KIND-SPECIFIC
+elements carry data dependent on what kind of node this is --- file,
+directory, etc.
 
 HEADER has the form:
 
-    (KIND PROPLIST FLAG ...)
+    (KIND FLAG ...)
 
 where:
-- KIND indicates what sort of node this is,
-- PROPLIST is the node's property list, and
-- FLAG ... is a sequence of zero or more flags.
+   - KIND indicates what sort of node this is,
+   - FLAG ... is a sequence of zero or more flags.
 
 KIND must be one of the following:
-- "file", indicating that the node is a file (see FILE below).
-- "dir", indicating that the node is a directory (see DIR below).
-- "copy", indicating that the node is a copy of another node (see COPY
-  below).
+   - "file", indicating that the node is a file (see FILE below).
+   - "dir", indicating that the node is a directory (see DIR below).
+   - "copy", indicating that the node is a copy of another node (see
+     COPY below).
 
 A FLAG has one of the following forms:
 
@@ -152,59 +167,12 @@ possible for a node change kinds from revision to revision --- 10.3
 could be a directory, while 10.4 could be a file --- but Subversion
 does not allow this.
 
-We store the node kind in the node revision for simplicity.  This way,
-we can store *everything* about a node in the node revisions --- we
-don't need the complexity of a separate per-node structure, or the
-overhead of looking in two places.
+PROP-KEY is a key into the `representations' table (which see), whose
+value is a PROPLIST skel.
+
 
 
-FILE: how files are represented.
-
-If a NODE-REVISION's header's KIND is "file", then the node-revision
-skel represents a file, and has the form:
-
-    (HEADER DATA)
-
-where DATA is an atom giving the full contents of the file.  (In the
-future, DATA may have other alternate forms, indicating that the
-fulltext of the file is stored elsewhere in the database, or perhaps
-in an ordinary Unix file.)
-
-
-DIR: how directories are represented.
-
-If the header's KIND is "dir", then the node-revision skel
-represents a directory, and has the form:
-
-    (HEADER (ENTRY ...))
-
-The list (ENTRY ...) gives the directory entries; each ENTRY has the form:
-
-    (NAME ID)
-
-where:
-  - NAME is the name of the directory entry, in UTF-8, and
-  - ID is the ID of the node revision to which this entry refers
-
-
-COPY: how copied nodes are represented.
-
-NOTE: Copy nodes are pretty experimental.  I'm not sure they're
-necessary at all.  So don't take this stuff too seriously.
-
-If the header's KIND is "copy", then the node-revision skel represente
-a copy of another node, and has the form:
-
-    (HEADER SOURCE-REVISION (NAME ...))
-
-where SOURCE-REVISION is a filesystem revision, and (NAME ...) is a
-list of directory entry names (the path) that identifies the copy
-source in this revision. The copy source may not be a mutable node.
-
-
-PROPLIST: property lists for nodes and directory entries
-
-A property list is a list skel of the form:
+PROPLIST: a property list is a list skel of the form:
 
     (NAME1 VALUE1 NAME2 VALUE2 ...)
 
@@ -214,54 +182,177 @@ number of elements.
 
 
 
-REPRESENTATION: how Subversion stores many similar node revisions efficiently
+FILE: how files are represented.
 
-It would be correct, but not efficient, to store Subversion filesystem
-nodes simply as a table mapping node revision ID's onto NODE-REVISION
-skels, as described above.  However, in this application we know that
-successive revisions of files and directories will often be very
-similar to each other, so compression can be very effective.
+If a NODE-REVISION's header's KIND is "file", then the node-revision
+skel represents a file, and has the form:
 
-Instead of storing straight NODE-REVISION skels, we store
-REPRESENTATION skels, whose job is to provide enough information to
-construct a complete NODE-REVISION skel.  At the moment, there are only
-two forms of REPRESENTATION skels:
+    (HEADER REP-KEY)
 
-("fulltext" NODE-REVISION)
-    We store the complete text of the node revision, NODE-REVISION.
+where REP-KEY identifies the representation for the file's contents.
+See discussion of representations later.
 
-("younger" DELTA CHECKSUM)
-    We store a delta that transforms the next younger revision of the
-    node into this revision.  To find the contents of this revision:
 
-    - We find the unparsed form of the NODE-REVISION skel for the next
-      younger revision.
+
+DIR: how directories are represented.
 
-    - We apply DELTA to that string, yielding the unparsed form of the
-      NODE-REVISION skel for this revision.
+If the header's KIND is "dir", then the node-revision skel
+represents a directory, and has the form:
 
-    To be sure that we've reconstructed the node revision correctly, we
-    store a checksum of the unparsed form of this revision's
-    NODE-REVISION skel.  We compare this against the checksum of the
-    result from applying the DELTA.
+    (HEADER REP-KEY)
 
-At present, Subversion stores the youngest revision of every node and
-branch in "fulltext" form, and stores all other revisions in "younger"
-form.  However, there's nothing magic about that particular
+where REP-KEY identifies the representation for the directory's
+entries list (see discussion of representations later).  An entries
+list has the form
+
+    (ENTRY ...)
+
+where each entry is
+
+    (NAME ID)
+
+where:
+  - NAME is the name of the directory entry, in UTF-8, and
+  - ID is the ID of the node revision to which this entry refers
+
+
+
+COPY: how copied nodes are represented.
+
+NOTE: Copy nodes are pretty experimental.  I'm not sure they're
+necessary at all.  So don't take this stuff too seriously.  [It's not
+currently implemented in the filesystem, I'm pretty sure. -kff]
+
+If the header's KIND is "copy", then the node-revision skel represents
+a copy of another node, and has the form:
+
+    (HEADER SOURCE-REVISION (NAME ...))
+
+where SOURCE-REVISION is a filesystem revision, and (NAME ...) is a
+list of directory entry names (the path) that identifies the copy
+source in this revision. The copy source may not be a mutable node.
+
+
+
+REPRESENTATIONS: where and how Subversion stores your data.
+
+Some parts of a node revision are essentially constant-length: for
+example, the KIND field and the FLAGS.  Other parts can have
+arbitrarily varying length: property lists, file contents, and
+directory entry lists.  This variable-length data is often similar
+from one revision to the next, so Subversion stores just the deltas
+between them, instead of successive fulltexts.
+
+The HEADER portion of a node revision holds the constant-length stuff,
+which is never deltified.  The rest of a node revision just points to
+data stored outside the node revision proper.  This design makes the
+repository code easier to maintain, because deltification and
+undeltification are confined to a layer separate from node revisions,
+and makes the code more efficient, because Subversion can retrieve
+just the parts of a node it needs for a given operation.
+
+Deltifiable data is stored in the `strings' table, as mediated by the
+`representations' table.  Here's how it works:
+
+The `strings' table stores only raw bytes.  A given string could be
+any one of these:
+
+   - a file's contents
+   - a delta that when reconstructed is file contents
+   - a directory entry list skel
+   - a delta that when reconstructed is a directory entry list skel
+   - a property list skel
+   - a delta that when reconstructed is a property list skel
+
+There is no way to tell, from looking at a string, what kind of data
+it is.  A directory entry list skel is indistinguishable from file
+contents that just happen to look exactly like the unparsed form of a
+directory entry list skel.  File contents that just happen to look
+like svndiff data are indistinguishable from an actual delta.
+
+The code is able to interpret a given string because Subversion
+
+   a) knows the `kind' of the node revision in question,
+
+   b) knows whether to be looking for a property list or some
+      kind-specific data,
+
+   c) always goes through the `representations' table to discover if
+      any undeltification is needed.
+
+The `representations' table is an intermediary between node revisions
+and strings.  Node revisions never refer directly into the `strings'
+table; instead, they always refer into the `representations' table,
+which knows whether a given string is a fulltext or a delta, and if it
+is a delta, what it is a delta against.  That, combined with the
+knowledge in (a) and (b) above, allows Subversion to retrieve the data
+and parse it appropriately.  Each entry in the `representations' table
+has one of two forms:
+
+   ("fulltext" KEY)
+       The data is at KEY in the `strings' table.
+
+   ("delta" REP-KEY STRING-KEY CHECKSUM)
+       Apply the delta at STRING-KEY in the `strings' table against the
+       fulltext derived from REP-KEY in the `representations' table.
+       "Derived" because REP-KEY might not refer to a fulltext, in
+       which case further processing is necessary before the data at
+       STRING-KEY can be applied against it.
+       CHECKSUM is a checksum on the resulting fulltext.
+
+In the future, there may be other representations, for example
+indicating that the text is stored elsewhere in the database, or
+perhaps in an ordinary Unix file.
+
+Let's work through an example node revision:
+
+   (("file" FLAGS ...) PROP-KEY "2345")
+
+The entry for key "2345" in `representations' is:
+
+   ("delta" "2343" "1729" CHECKSUM)
+
+and the entry for key "2343" in `representations' is:
+
+   ("fulltext" "1001")
+
+while the entry for key "1729" in `strings' is:
+
+   ("svndiff" DATA)   /* DATA being some unprintable svndiff glob */
+
+which, when applied to the fulltext at key "1001" in strings, results
+in this fulltext:
+
+   "((some text) (that looks) (deceptively like) (directory entries))"
+
+Et voila!  Subversion knew enough, via the `representations' and
+`strings' tables, to undeltify and get that fulltext; and knew enough,
+because of the node revision's "file" type, to interpret the result as
+file contents, not as a directory entry list.
+
+Representations know nothing about ancestry -- the `representations'
+table never refers to node revision id's, only to strings or to other
+representations.  In other words, the `nodes' table allows recovery of
+ancestry information, while the `representations' and `strings' tables
+together allow deltification and undeltification *independently* of
+ancestry.  At present, Subversion generally stores the youngest
+strings in "fulltext" form, and older strings as "delta"s against
+them.  However, there's nothing magic about that particular
 arrangement.  Other interesting alternatives:
 
-- We could store the N most recently accessed node revisions as
-  fulltext, letting access patterns determine the most appropriate
-  representation for each revision.
+   - We could store the N most recently accessed strings as fulltexts,
+     letting access patterns determine the most appropriate
+     representation for each revision.
 
-- We could occasionally store deltas against the N'th younger revision,
-  storing larger jumps with a frequency inverse to the distance
-  covered, yielding a tree-structured history.
+   - We could occasionally store deltas against the N'th younger
+     revision, storing larger jumps with a frequency inverse to the
+     distance covered, yielding a tree-structured history.
 
 Since the filesystem interface doesn't expose these details, we can
 change the representation pretty much as we please to optimize
 whatever parameter we care about --- storage size, speed, robustness,
 etc.
+
 
 
 DELTA: how we represent text deltas
@@ -275,6 +366,7 @@ At the moment, there is only one form of DELTA allowed:
 
 ("svndiff" DATA)
     DATA is an atom whose contents are a VCDIFF-form diff.
+
 
 
 CHECKSUM: how we represent checksums
@@ -354,6 +446,7 @@ insert garbage keys into the table, we extend our ordering to handle
 arbitrary byte strings: any mis-formed ID comes before any well-formed
 ID, and two mis-formed IDs are compared byte-by-byte.
 
+
 
 REVISION: filesystem revisions, and the Berkeley DB "revisions" table
 
@@ -370,6 +463,7 @@ filesystem revision numbers start at zero, revision V is stored as
 record number V+1 in the `revisions' table.  Filesystem revision zero
 always has node revision 0.0 as its root directory; that node revision
 is guaranteed to be an empty directory.
+
 
 
 Transactions
@@ -399,6 +493,7 @@ lowest transaction ID that has never yet been used.  We use this entry
 to allocate ID's for new transactions.
 
 The `transactions' table is a btree, with no particular sort order.
+
 
 
 Copying
@@ -442,6 +537,7 @@ Copying
       I think it's all been explained above.  Other folks, feel free to
       add to this explanation.
 ]]]
+
 
 
 Merge rules
@@ -529,6 +625,7 @@ ANCESTOR:
 
 *** == something actually happens
 
+
 
 Non-Historical Properties
 
@@ -576,6 +673,7 @@ tree.c          Operations on the tree filesystem.  This layer is
 
 delta.c         Computing deltas.
 
+
 
 Appendix: Filesystem structure summary
 ======================================
@@ -583,7 +681,7 @@ Appendix: Filesystem structure summary
 Berkeley DB tables
 ------------------
 
-                "nodes" : btree(ID -> REPRESENTATION)
+                "nodes" : btree(ID -> NODE-REVISION)
             "revisions" : recno(REVISION)
          "transactions" : btree(TXN -> TRANSACTION,
                                 "next-id" -> TXN)
@@ -596,15 +694,6 @@ Table keys:
 
                      ID ::= node.revision-id ;
                     TXN ::= number ;
-
-
-Nodes:
-
-         REPRESENTATION ::= ("fulltext" NODE-REVISION)
-                          | ("younger" DELTA CHECKSUM) ;
-                  DELTA ::= ("svndiff" DATA) ;
-               CHECKSUM ::= ("md5" BYTES) ;
-            DATA, BYTES ::= atom ;
 
 
 Filesystem revisions:
@@ -623,20 +712,43 @@ Transactions:
 
 Node revisions:
 
+
           NODE-REVISION ::= FILE | DIR | COPY ;
-                   FILE ::= (HEADER DATA) ;
-                    DIR ::= (HEADER (ENTRY ...)) ;
+                   FILE ::= (HEADER PROP-KEY DATA-KEY) ;
+                    DIR ::= (HEADER PROP-KEY ENTRIES-KEY) ;
                    COPY ::= (HEADER SOURCE-REVISION (NAME ...)) ;
                   ENTRY ::= (NAME ID) ;
                    NAME ::= atom ;
 
-
-                 HEADER ::= (KIND PROPLIST FLAG ...) ;
+                 HEADER ::= (KIND FLAG ...) ;
                    KIND ::= "file" | "dir" | "copy" ;
                    FLAG ::= ("mutable" PARENT-ID) ;
               PARENT-ID ::= "" | node.revision-id ;
         SOURCE-REVISION ::= number ;
 
+               PROP-KEY ::= atom ;
+                REP-KEY ::= atom ;
+
+
+Representations:
+
+         REPRESENTATION ::= FULLTEXT | DELTA ;
+               FULLTEXT ::= ("fulltext" STRING-KEY) ;
+                  DELTA ::= ("delta" REP-KEY STRING-KEY CHECKSUM) ;
+
+             STRING-KEY ::= atom ;
+                REP-KEY ::= atom ;
+
+               CHECKSUM ::= ("md5" BYTES) ;
+                  BYTES ::= atom ;
+
+Strings:
+
+                 STRING ::= RAWTEXT | LISTTEXT | DELTATEXT
+                RAWTEXT ::= /{anything.class}*/ ;
+               SKELTEXT ::= list ;
+              DELTATEXT ::= ("svndiff" BYTES) ;
+                  BYTES ::= atom ;
 
 
 Lexical elements
@@ -671,4 +783,5 @@ Character classes:
 
                ws.class ::= [\t\n\f\r\ ] ;
             digit.class ::= [0-9] ;
-            name.class  ::= [A-Za-z] ;
+             name.class ::= [A-Za-z] ;
+         anything.class ::= anything at all ;

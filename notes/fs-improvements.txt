@@ -1,4 +1,4 @@
-Last updated: $Date: 2001-06-05 14:52:21 $
+Last updated: $Date: 2001-06-08 00:56:48 $
 
 [Note: much of this was thought up by Jim Blandy, or developed in
 conversation with him.  Please review, folks; I'm planning to start on
@@ -21,88 +21,8 @@ get to alpha:
 a) File contents need to be moved into a separate table.
 ========================================================
 
-There is a new table, `strings'.  The keys are numbers (or whatever --
-the point is, they're not node rev IDs), and the values are, well,
-strings.  A string may represent a skel, or it may simply be the
-contents of a file.  Since Berkeley keeps track of length for us
-anyway, there's no point using skels for straight file contents.
-
-Before we go on, here's some background from `structure':
-
-   ! NODE-REVISION and HEADER: how we represent a node revision
-   ! 
-   ! We represent a given revision of a file or directory node using a list
-   ! skel (see skel.h for an explanation of skels).  A node revision skel
-   ! has the form:
-   ! 
-   !     (HEADER KIND-SPECIFIC ...)
-   ! 
-   ! where HEADER is a header skel, whose structure is common to all nodes,
-   ! and the KIND-SPECIFIC elements carry data dependent on what kind of
-   ! node this is --- file, directory, etc.
-   ! 
-   ! HEADER has the form:
-   ! 
-   !     (KIND PROPLIST FLAG ...)
-   !
-   ! [...]
-   !
-   ! If a NODE-REVISION's header's KIND is "file", then the
-   ! node-revision skel represents a file, and has the form:
-   !
-   !    (HEADER DATA)
-   !
-   ! where DATA is an atom giving the full contents of the file.  (In
-   ! the future, DATA may have other alternate forms, indicating that
-   ! the fulltext of the file is stored elsewhere in the database, or
-   ! perhaps in an ordinary Unix file.)
-   !
-   ! [...]
-   !
-   ! If the header's KIND is "dir", then the node-revision skel
-   ! represents a directory, and has the form:
-   ! 
-   !     (HEADER (ENTRY ...))
-
-Great, thank you `structure'.  Take it away, Eric the Orchestra
-Leader...
-
-The goal is to separate property lists from file contents, and store
-both separately from node revisions.  We break PROPLIST out of HEADER,
-and put PROPLIST and DATA in the `strings' table:
-
-   ! NODE-REVISION and HEADER: how we represent a node revision
-   ! 
-   ! We represent a given revision of a file or directory node using a list
-   ! skel (see skel.h for an explanation of skels).  A node revision skel
-   ! has the form:
-   ! 
-   !     (HEADER PROPLIST KIND-SPECIFIC ...)
-   ! 
-   ! where HEADER is a header skel, whose structure is common to all
-   ! nodes, PROPLIST is a property list, whose structure is also
-   ! common to all nodes, and the KIND-SPECIFIC elements carry data
-   ! dependent on what kind of node this is --- file, directory, etc.
-   ! 
-   ! HEADER has the form:
-   ! 
-   !     (KIND FLAG ...)
-   !
-   ! [...]
-   !
-   ! If a NODE-REVISION's header's KIND is "file", then the
-   ! node-revision skel represents a file, and has the form:
-   !
-   !    (HEADER PROP-KEY CONTENTS-KEY)
-   !
-   ! where PROP-KEY and CONTENTS-KEY are keys into the `strings'
-   ! table, the values for which are the property list skel and node
-   ! revision's contents, respectively.  For files, the content is a
-   ! straight string, for directories, it is a skel:
-   ! 
-   !     (ENTRY ...)
-
-Now,
+The plan is now in `libsvn_fs/structure'; see there for details.  To
+implement the plan, we'll need to:
 
    - Replace dag_node_t->node_revision with three fields:
      dag_node_t->node_rev_header, dag_node_t->node_rev_proplist, and
