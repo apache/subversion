@@ -333,8 +333,9 @@ const char *svn_path_uri_decode (const char *path, apr_pool_t *pool);
 
 /* Extend URL by a single COMPONENT, URI-encoding that COMPONENT
    before adding it to the URL.  Return the new URL, allocated in
-   POOL.  Note: if COMPONENT is already URI-encoded, calling code
-   should just use svn_path_join (url, component, pool). */
+   POOL.  Notes: if COMPONENT is NULL, just return a copy or URL
+   allocated in POOL; if COMPONENT is already URI-encoded, calling
+   code should just use svn_path_join (url, component, pool). */
 const char *svn_path_url_add_component (const char *url,
                                         const char *component,
                                         apr_pool_t *pool);

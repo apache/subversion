@@ -306,12 +306,11 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
   prop_ctx_t pc = { 0 };
   ne_request *req;
   int status_code;
-  const char *encoded_url = svn_path_uri_encode(url, pool);
 
   pc.pool = pool;
   pc.props = apr_hash_make(pc.pool);
 
-  pc.dph = ne_propfind_create(sess, encoded_url, depth);
+  pc.dph = ne_propfind_create(sess, url, depth);
   ne_propfind_set_private(pc.dph, create_private, &pc);
   hip = ne_propfind_get_parser(pc.dph);
   ne_xml_push_handler(hip, neon_descriptions,
@@ -339,13 +338,13 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
 
   if (rv != NE_OK)
     {
-      const char *msg = apr_psprintf(pool, "PROPFIND of %s", encoded_url);
+      const char *msg = apr_psprintf(pool, "PROPFIND of %s", url);
       return svn_ra_dav__convert_error(sess, msg, rv, pool);
     }
 
   if (404 == status_code)
     return svn_error_createf(SVN_ERR_RA_PROPS_NOT_FOUND, 0, NULL, pool,
-                             "Failed to fetch props for '%s'", encoded_url);
+                             "Failed to fetch props for '%s'", url);
 
   *results = pc.props;
 
@@ -694,7 +693,7 @@ svn_ra_dav__do_check_path(svn_node_kind_t *kind,
                           svn_revnum_t revision)
 {
   svn_ra_session_t *ras = session_baton;
-  svn_stringbuf_t *url = svn_stringbuf_create (ras->url, ras->pool);
+  const char *url = ras->url;
   svn_error_t *err;
   svn_boolean_t is_dir;
 
@@ -728,14 +727,14 @@ svn_ra_dav__do_check_path(svn_node_kind_t *kind,
 
   /* If we were given a relative path to append, append it. */
   if (path)
-    svn_path_add_component_nts(url, path);
+    url = svn_path_url_add_component(url, path, ras->pool);
 
   err = svn_ra_dav__get_baseline_info(&is_dir,
                                       NULL,
                                       NULL,
                                       NULL,
                                       ras->sess,
-                                      url->data,
+                                      url,
                                       revision,
                                       ras->pool);
 
