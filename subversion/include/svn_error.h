@@ -155,7 +155,7 @@ typedef enum svn_errno_t {
  * appropriate APR error code, or else a default abort function which
  * exits the program will be run.
  */
-apr_pool_t *svn_pool_create (apr_pool_t *containing_pool,
+apr_pool_t *svn_pool_create (apr_pool_t *parent_pool,
                              int (*abort_func) (int retcode));
 
 

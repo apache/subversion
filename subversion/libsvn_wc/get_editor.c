@@ -94,7 +94,6 @@ struct dir_baton
   int ref_count;
 
   /* The global edit baton. */
-  /* kff todo: suspect we may never use this, remove it if so. */
   struct edit_baton *edit_baton;
 
   /* Baton for this directory's parent, or NULL if this is the root
@@ -108,6 +107,20 @@ struct dir_baton
   /* The pool in which this baton itself is allocated. */
   apr_pool_t *pool;
 };
+
+
+/* kff todo debugging */
+static void
+debug_dir_baton (struct dir_baton *d, const char *msg)
+{
+  struct dir_baton *tmp;
+
+  printf ("*** %s:\n", msg);
+  for (tmp = d; tmp; tmp = tmp->parent_baton)
+    printf ("   %s (%d), pool %p, baton itself %p\n",
+            tmp->path->data, tmp->ref_count, tmp->pool, tmp);
+  printf ("\n");
+}
 
 
 /* Create a new dir_baton for subdir NAME in PARENT_PATH with
@@ -138,6 +151,11 @@ make_dir_baton (svn_string_t *name,
   d->ref_count    = 1;
   d->pool         = subpool;
 
+  if (parent_baton)
+    parent_baton->ref_count++;
+
+  debug_dir_baton (d, "make_dir_baton");
+
   return d;
 }
 
@@ -161,8 +179,10 @@ free_dir_baton (struct dir_baton *dir_baton)
   if (err)
     return err;
 
+  debug_dir_baton (dir_baton, "free_dir_baton (before)");
   /* After we destroy DIR_BATON->pool, DIR_BATON itself is lost. */
   apr_destroy_pool (dir_baton->pool);
+  debug_dir_baton (parent, "free_dir_baton (parent, after dir destroyed)");
 
   /* We've declared this directory done, so decrement its parent's ref
      count too. */ 
@@ -241,7 +261,33 @@ make_file_baton (struct dir_baton *parent_dir_baton, svn_string_t *name)
   f->name       = name;
   f->path       = path;
 
+  parent_dir_baton->ref_count++;
+
+  debug_dir_baton (parent_dir_baton, "make_file_baton");
+
   return f;
+}
+
+
+static svn_error_t *
+free_file_baton (struct file_baton *fb)
+{
+  struct dir_baton *parent = fb->dir_baton;
+
+  /* kff fooo: working here.
+     If we comment out the apr_destroy_pool() below, then the Corrupt
+     Parent Path bug does not manifest itself.  If we do destroy the
+     file_baton's pool, then the parent dir's path gets corrupted in a
+     way that suggests pool bleed. 
+
+     Changing svn_error.c:svn_pool_create() to use apr_make_sub_pool()
+     instead of apr_create_pool() has not solved this. */
+#if 1
+  apr_destroy_pool (fb->pool);
+#endif /* 0/1 */
+
+  debug_dir_baton (parent, "free_file_baton (before)");
+  return decrement_ref_count (parent);
 }
 
 
@@ -285,7 +331,6 @@ window_handler (svn_txdelta_window_t *window, void *baton)
             apr_size_t written;
             const char *data = ((svn_string_t *) (window->new))->data;
 
-            printf ("%.*s", (int) this_op.length, (data + this_op.offset));
             apr_err = apr_full_write (dest, (data + this_op.offset),
                                       this_op.length, &written);
             if (apr_err)
@@ -351,8 +396,6 @@ prep_directory (svn_string_t *path,
   if (err)
     return err;
 
-  printf ("%s\n", path->data);
-
   return SVN_NO_ERROR;
 }
 
@@ -414,11 +457,8 @@ add_directory (svn_string_t *name,
                       parent_dir_baton,
                       parent_dir_baton->pool);
 
-  /* kff todo urgent: need to also let the parent know this new
-     subdirectory exists! */
-
-  parent_dir_baton->ref_count++;
-  *child_baton = this_dir_baton;
+  /* kff todo: need to also let the parent know this new subdirectory
+     exists! */
 
   err = prep_directory (this_dir_baton->path,
                         this_dir_baton->edit_baton->repository,
@@ -428,6 +468,8 @@ add_directory (svn_string_t *name,
                         this_dir_baton->pool);
   if (err)
     return (err);
+
+  *child_baton = this_dir_baton;
 
   return SVN_NO_ERROR;
 }
@@ -524,14 +566,9 @@ add_file (svn_string_t *name,
   if (err)
     return err;
 
-  /* Okay, looks like we're good to go. */
-
-  /* kff todo urgent: check all calls you know what I mean. */
+  /* Set up the file's baton. */
   fb = make_file_baton (parent_dir_baton, name);
-  parent_dir_baton->ref_count++;
   *file_baton = fb;
-
-  printf ("%s\n   ", fb->path->data);
 
   return SVN_NO_ERROR;
 }
@@ -557,10 +594,7 @@ replace_file (svn_string_t *name,
   /* ... except that you must check that the file existed already, and
      was under version control */
 
-  /* kff todo urgent: HERE, do what above says */
-
-  printf ("replace file \"%s\"\n",
-          ((struct file_baton *) (*file_baton))->path->data);
+  /* kff todo: HERE, do what above says */
 
   return err;
 }
@@ -705,10 +739,6 @@ close_file (void *file_baton)
   if (err)
     return err;
 
-  /* kff todo: there's going to be an issue with the lack of
-     outermost wrapping XML element in the log file.  Several ways
-     to deal with that, sleep on it... */
-  
   /* kff todo: save *local_changes somewhere, maybe to a tmp file
      in SVN/. */
   
@@ -796,11 +826,10 @@ close_file (void *file_baton)
     return err;
 
   /* Tell the directory it has one less thing to worry about. */
-  err = decrement_ref_count (fb->dir_baton);
+  err = free_file_baton (fb);
   if (err)
     return err;
 
-  printf ("\n");
   return SVN_NO_ERROR;
 }
 
@@ -815,7 +844,6 @@ close_edit (void *edit_baton)
 
   /* kff todo:  Wow.  Is there _anything_ else that needs to be done? */
 
-  printf ("\n");
   return SVN_NO_ERROR;
 }
 

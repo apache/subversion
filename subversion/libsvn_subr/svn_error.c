@@ -125,7 +125,7 @@ default_abort (int retcode)
 
 
 apr_pool_t *
-svn_pool_create (apr_pool_t *cont_pool,
+svn_pool_create (apr_pool_t *parent_pool,
                  int (*abort_func) (int retcode))
 {
   apr_pool_t *ret_pool;
@@ -135,22 +135,16 @@ svn_pool_create (apr_pool_t *cont_pool,
   if (! abort_func)
     abort_func = default_abort;
 
-  apr_err = apr_create_pool (&ret_pool, cont_pool);
-  if (apr_err)
-    (*abort_func) (apr_err);
+  ret_pool = apr_make_sub_pool (parent_pool, abort_func);
 
-  if (cont_pool)
+  if (parent_pool)
     {
-      apr_get_userdata ((void **) &error_pool, SVN_ERROR_POOL, cont_pool);
+      apr_get_userdata ((void **) &error_pool, SVN_ERROR_POOL, parent_pool);
       if (! error_pool)
         (*abort_func) (SVN_ERR_BAD_CONTAINING_POOL);
     }
   else
-    {
-      apr_err = apr_create_pool (&error_pool, ret_pool);
-      if (apr_err)
-        (*abort_func) (apr_err);
-    }
+    error_pool = apr_make_sub_pool (ret_pool, abort_func);
 
   /* Set the error pool on its parent. */
   apr_err = apr_set_userdata (error_pool,
