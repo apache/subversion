@@ -349,9 +349,12 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
   /* Get the full path of the textbase revision of filename */
   textbase_filename = svn_wc__text_base_path (filename, 0, pool);
 
+  err = svn_io_check_path (textbase_filename, &kind, pool);
+  if (err) return err;
+
   /* Simple case:  if there's no text-base revision of the file, all we
      can do is look at timestamps.  */
-  if (! textbase_filename)
+  if (kind != svn_node_file)
     {
       err = timestamps_equal_p (&equal_timestamps, filename,
                                 svn_wc__text_time, pool);
