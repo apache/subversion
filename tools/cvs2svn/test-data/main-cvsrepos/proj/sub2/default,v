@@ -57,7 +57,7 @@ lines to ./branch_B_MIXED_only on branch B_MIXED.
 
 1.2
 log
-@Second commit to proj, affecting all 8 files.
+@Second commit to proj, affecting all 7 files.
 @
 text
 @d6 3
