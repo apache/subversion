@@ -335,7 +335,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "       2. propdel PROPNAME --revprop -r REV [URL]\n\n"
     "  1. Removes versioned props in working copy.\n"
     "  2. Removes unversioned remote prop on repos revision.\n\n",
-    {'q', 'R', 'r', svn_cl__revprop_opt} },
+    {'q', 'R', 'r', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
+     svn_cl__revprop_opt} },
   
   { "propedit", svn_cl__propedit, {"pedit", "pe"},
     "Edit property PROPNAME with $EDITOR on targets.\n"
@@ -343,7 +344,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "       2. propedit PROPNAME --revprop -r REV [URL]\n\n"
     "  1. Edits versioned props in working copy.\n"
     "  2. Edits unversioned remote prop on repos revision.\n\n",
-    {'r', svn_cl__revprop_opt, svn_cl__encoding_opt} },
+    {'r', svn_cl__revprop_opt, svn_cl__encoding_opt,
+     svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
   
   { "propget", svn_cl__propget, {"pget", "pg"},
     "Print value of PROPNAME on files, dirs, or revisions.\n"
@@ -351,7 +353,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "       2. propget PROPNAME --revprop -r REV [URL]\n\n"
     "  1. Prints versioned prop in working copy.\n"
     "  2. Prints unversioned remote prop on repos revision.\n\n",
-    {'R', 'r', svn_cl__revprop_opt} },
+    {'R', 'r', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
+     svn_cl__revprop_opt} },
   
   { "proplist", svn_cl__proplist, {"plist", "pl"},
     "List all properties on files, dirs, or revisions.\n"
@@ -359,7 +362,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "       2. proplist --revprop -r REV [URL]\n\n"
     "  1. Lists versioned props in working copy.\n"
     "  2. Lists unversioned remote props on repos revision.\n\n",
-    {'v', 'R', 'r', svn_cl__revprop_opt} },
+    {'v', 'R', 'r', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
+     svn_cl__revprop_opt} },
   
   { "propset", svn_cl__propset, {"pset", "ps"},
     "Set PROPNAME to PROPVAL on files, dirs, or revisions.\n\n"
@@ -395,7 +399,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "        foo             http://example.com/repos/zig\n"
     "        foo/bar -r 1234 http://example.com/repos/zag\n",
     {'F', 'q', 'r', svn_cl__targets_opt, 'R', svn_cl__revprop_opt,
-      svn_cl__encoding_opt} },
+     svn_cl__auth_username_opt, svn_cl__auth_password_opt,
+     svn_cl__encoding_opt} },
   
   { "revert", svn_cl__revert, {0},
     "Restore pristine working copy file (undo all local edits)\n"
