@@ -18,8 +18,19 @@
 
 %module _util
 
+%include "typemaps.i"
+
 %import apr.i
 %import svn_types.i
+
+/* -----------------------------------------------------------------------
+   apr_size_t * is always an IN/OUT parameter in svn_io.h
+*/
+
+%typemap(in) apr_size_t * = apr_size_t *INOUT;
+%typemap(argout) apr_size_t * = apr_size_t *INOUT;
+
+/* ----------------------------------------------------------------------- */
 
 %include svn_io.h
 %include svn_pools.h
