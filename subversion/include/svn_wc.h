@@ -40,6 +40,7 @@
 
 #include "svn_types.h"
 #include "svn_string.h"
+#include "svn_auth.h"
 #include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_ra.h"    /* for svn_ra_reporter_t type */
@@ -1867,6 +1868,18 @@ svn_wc_set_auth_file (svn_wc_adm_access_t *adm_access,
                       svn_stringbuf_t *contents,
                       apr_pool_t *pool);
 
+
+/** Set @a *provider and @ *provider_baton to an authentication
+    provider of type @c svn_auth_cred_simple_t that gets/sets
+    information from a working copy directory @a wc_dir.  If an access
+    baton for @a wc_dir is already open and available, pass it in @a
+    wc_dir_access, else pass NULL. */
+void 
+svn_wc_get_simple_wc_provider (const svn_auth_provider_t **provider,
+                               void **provider_baton,
+                               const char *wc_dir,
+                               svn_wc_adm_access_t *wc_dir_access,
+                               apr_pool_t *pool);
 
 
 /* Tmp files */

@@ -145,11 +145,11 @@ const svn_auth_provider_t simple_wc_provider =
 
 /* Public API */
 void
-svn_auth_get_simple_wc_provider (const svn_auth_provider_t **provider,
-                                 void **provider_baton,
-                                 const char *wc_dir,
-                                 svn_wc_adm_access_t *wc_dir_access,
-                                 apr_pool_t *pool)
+svn_wc_get_simple_wc_provider (const svn_auth_provider_t **provider,
+                               void **provider_baton,
+                               const char *wc_dir,
+                               svn_wc_adm_access_t *wc_dir_access,
+                               apr_pool_t *pool)
 {
   simple_wc_provider_baton_t *pb = apr_pcalloc (pool, sizeof(*pb));
   pb->base_dir = apr_pstrdup (pool, wc_dir);

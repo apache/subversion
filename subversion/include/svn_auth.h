@@ -25,8 +25,7 @@
 #include <apr_pools.h>
 
 #include "svn_types.h"
-#include "svn_wc.h"
-#include "svn_client.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -223,16 +222,23 @@ svn_error_t * svn_auth_save_credentials(const char *cred_kind,
 
 /** General authentication providers */
 
-/** Set @a *provider and @ *provider_baton to an authentication
-    provider of type @c svn_auth_cred_simple_t that gets/sets
-    information from a working copy directory @a wc_dir.  If an access
-    baton for @a wc_dir is already open and available, pass it in @a
-    wc_dir_access, else pass NULL. */
-void svn_auth_get_simple_wc_provider (const svn_auth_provider_t **provider,
-                                      void **provider_baton,
-                                      const char *wc_dir,
-                                      svn_wc_adm_access_t *wc_dir_access,
-                                      apr_pool_t *pool);
+
+/** A callback function type defined by a top-level svn application.
+ *
+ * If libsvn_client is unable to retrieve certain authorization
+ * information, it can use this callback; the application will then
+ * directly query the user with @a prompt and return the answer in 
+ * @c info, allocated in @a pool.  @a baton is provided at the same 
+ * time as the callback, and @a hide indicates that the user's answer 
+ * should not be displayed on the screen.
+ */
+typedef svn_error_t *(*svn_auth_prompt_t)
+       (char **info,
+        const char *prompt,
+        svn_boolean_t hide,
+        void *baton,
+        apr_pool_t *pool);
+
 
 /** Set @a *provider and @ *provider_baton to an authentication
     provider of type @c svn_auth_cred_simple_t that gets information
@@ -242,7 +248,7 @@ void svn_auth_get_simple_wc_provider (const svn_auth_provider_t **provider,
     called. */
 void svn_auth_get_simple_prompt_provider (const svn_auth_provider_t **provider,
                                           void **provider_baton,
-                                          svn_client_prompt_t prompt_func,
+                                          svn_auth_prompt_t prompt_func,
                                           void *prompt_baton,
                                           const char *default_username,
                                           const char *default_password,
