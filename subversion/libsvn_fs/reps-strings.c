@@ -113,9 +113,8 @@ string_key (const char **string_key_p, skel_t *rep, apr_pool_t *pool)
  * baton, so that rep_read_range() won't bother looping over the
  * trailing svndiff data.
  * 
- * We won't bother to evaluate plan #1; it's weaknesses are
- * well-known, although it'll probably be acceptable for quite a
- * while.
+ * We won't bother to evaluate plan #1; its weaknesses are well-known,
+ * although it'll probably perform acceptably for a while.
  *
  * Let's assume we've finished implementing plan #2.  How does it
  * perform?  In terms of number of passes over ignored leading svndiff
