@@ -386,9 +386,31 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
               
               if (baton->outfile) /* we're writing out a change */
                 {
-                  /* Rewrite the tag only if we're not removing it. */
+                  /* Maybe rewrite the tag. */
                   if (! baton->removing)
                     {
+
+                      /* Maybe preserve the old tag too. */
+                      if (baton->allow_duplicate)
+                        {
+                          apr_hash_t *pristine_att_hash
+                            = apr_make_hash (baton->pool);
+                          svn_xml_hash_atts_overlaying (atts,
+                                                        pristine_att_hash,
+                                                        baton->pool);
+                          err = write_entry (baton->outfile,
+                                             baton->entryname,
+                                             SVN_INVALID_VERNUM,
+                                             0, /* kff todo: invalid_kind? */
+                                             pristine_att_hash,
+                                             baton->pool);
+                          if (err)
+                            {
+                              svn_xml_signal_bailout (err, baton->parser);
+                              return;
+                            }
+                        }
+
                       err = write_entry (baton->outfile,
                                          baton->entryname,
                                          baton->version,
@@ -557,6 +579,7 @@ static svn_error_t *
 do_entry (svn_string_t *path,
           apr_pool_t *pool,
           svn_string_t *entryname,
+          svn_boolean_t allow_duplicate,
           svn_vernum_t version,
           svn_vernum_t *version_receiver,
           enum svn_node_kind kind,
@@ -605,14 +628,15 @@ do_entry (svn_string_t *path,
     }
 
   /* Fill in the userdata structure */
-  baton->pool       = pool;
-  baton->infile     = infile;
-  baton->outfile    = outfile;
-  baton->removing   = removing;
-  baton->entryname  = entryname;
-  baton->version    = version;
-  baton->kind       = kind;
-  baton->attributes = attributes;
+  baton->pool              = pool;
+  baton->infile            = infile;
+  baton->outfile           = outfile;
+  baton->removing          = removing;
+  baton->entryname         = entryname;
+  baton->version           = version;
+  baton->kind              = kind;
+  baton->allow_duplicate   = allow_duplicate;
+  baton->attributes        = attributes;
 
   /* Set the att. */
   err = do_parse (baton);
@@ -666,6 +690,7 @@ svn_wc__entry_set (svn_string_t *path,
   va_end (ap);
   
   err = do_entry (path, pool, entryname,
+                  0, /* kff todo: if this func goes away, this won't matter */
                   version, NULL,
                   kind, NULL,
                   0, /* not removing */
@@ -691,6 +716,7 @@ svn_wc__entry_merge (svn_string_t *path,
   svn_error_t *err;
   va_list ap;
   const char *key;
+  svn_boolean_t allow_duplicate = 0;
 
   svn_vernum_t existing_version;
   enum svn_node_kind existing_kind;
@@ -713,12 +739,38 @@ svn_wc__entry_merge (svn_string_t *path,
   va_start (ap, pool);
   while ((key = va_arg (ap, char *)) != NULL)
     {
-      svn_string_t *val = va_arg (ap, svn_string_t *);
+      svn_string_t *val;
+
+      /* Treat add and delete specially.  One of them in the argument list
+         overrides the other in the hash.  (They had better not *both*
+         be in the argument list!)  Then we also have to tell
+         do_entry() to ignore matches and write out a new entry with
+         the same name.
+      */
+      if ((strcmp (key, SVN_WC__ENTRIES_ATTR_ADD) == 0)
+          && (apr_hash_get (existing_hash, SVN_WC__ENTRIES_ATTR_DELETE,
+                            strlen (SVN_WC__ENTRIES_ATTR_DELETE))))
+        {
+          apr_hash_set (existing_hash, SVN_WC__ENTRIES_ATTR_DELETE,
+                        strlen (SVN_WC__ENTRIES_ATTR_DELETE), NULL);
+          allow_duplicate = 1;
+        }
+      else if ((strcmp (key, SVN_WC__ENTRIES_ATTR_DELETE) == 0)
+               && (apr_hash_get (existing_hash, SVN_WC__ENTRIES_ATTR_ADD,
+                                 strlen (SVN_WC__ENTRIES_ATTR_ADD))))
+        {
+          apr_hash_set (existing_hash, SVN_WC__ENTRIES_ATTR_ADD,
+                        strlen (SVN_WC__ENTRIES_ATTR_ADD), NULL);
+          allow_duplicate = 1;
+        }
+
+      val = va_arg (ap, svn_string_t *);
       apr_hash_set (existing_hash, key, strlen (key), val);
     }
   va_end (ap);
 
   err = do_entry (path, pool, entryname,
+                  allow_duplicate,
                   version, NULL,
                   kind, NULL,
                   0, /* not removing */
@@ -745,6 +797,7 @@ svn_wc__entry_get (svn_string_t *path,
   apr_hash_t *ht = apr_make_hash (pool);
 
   err = do_entry (path, pool, entryname,
+                  0,
                   SVN_INVALID_VERNUM, version,
                   0, kind,
                   0, /* not removing */
@@ -769,6 +822,7 @@ svn_error_t *svn_wc__entry_remove (svn_string_t *path,
   err = do_entry (path,
                   pool,
                   entryname,
+                  0,
                   SVN_INVALID_VERNUM,  /* irrelevant */
                   NULL,                /* irrelevant */
                   0,                   /* irrelevant */

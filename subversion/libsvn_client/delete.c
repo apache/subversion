@@ -1,5 +1,5 @@
 /*
- * svn_client.h :  public interface for libsvn_client
+ * delete.c:  wrappers around wc delete functionality.
  *
  * ================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
@@ -47,69 +47,51 @@
  * individuals on behalf of CollabNet.
  */
 
+/* ==================================================================== */
+
 
 
-/*** Includes ***/
+/*** Includes. ***/
 
-/* 
- * Requires:  The working copy library.
- * Provides:  Broad wrappers around working copy library functionality.
- * Used By:   Client programs.
- */
-
-#ifndef SVN_CLIENT_H
-#define SVN_CLIENT_H
-
-#include <apr_tables.h>
+#include <apr_file_io.h>
 #include "svn_types.h"
 #include "svn_wc.h"
+#include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_path.h"
 
 
 
-/*** What is a good title for this section. ***/
-
-/* These interfaces are very basic for milestone 1.  They will
-   probably be changed significantly soon. */
+/*** Code. ***/
 
 svn_error_t *
-svn_client_checkout (svn_string_t *path,
-                     svn_string_t *xml_src,
-                     svn_string_t *ancestor_path,
-                     svn_vernum_t ancestor_version,
-                     apr_pool_t *pool);
+svn_client_delete (svn_string_t *file, svn_boolean_t force, apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_status_t apr_err;
 
+  /* Marke the entry for deletion. */
+  err = svn_wc_delete_file (file, pool);
+  if (err)
+    return err;
 
-svn_error_t *
-svn_client_update (svn_string_t *path,
-                   svn_string_t *xml_src,
-                   apr_pool_t *pool);
+  if (force)
+    {
+      /* Remove the file. */
+      apr_err = apr_remove_file (file->data, pool);
+      if (apr_err)
+        return svn_error_createf (apr_err, 0, NULL, pool,
+                                  "svn_client_delete: error deleting %s",
+                                  file->data);
+    }
 
-
-svn_error_t *
-svn_client_add (svn_string_t *file,
-                apr_pool_t *pool);
-
-
-svn_error_t *
-svn_client_delete (svn_string_t *file,
-                   svn_boolean_t force,
-                   apr_pool_t *pool);
-
-
-svn_error_t *
-svn_client_commit (svn_string_t *path,
-                   svn_string_t *xml_dst,
-                   svn_vernum_t version,  /* this param is temporary */
-                   apr_pool_t *pool);
+  return SVN_NO_ERROR;
+}
 
 
 
-#endif  /* SVN_CLIENT_H */
-
-/* --------------------------------------------------------------
+/* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
- * end: 
- */
+ * end: */

@@ -200,8 +200,8 @@ set_entry_flags (svn_string_t *filename,
   /* Examine the hash for a "new" xml attribute.  If this attribute
      doesn't exists, then the hash value will be NULL.  */
   value = apr_hash_get (current_entry_hash,
-                        SVN_WC__ENTRIES_ATTR_NEW,
-                        strlen(SVN_WC__ENTRIES_ATTR_NEW));
+                        SVN_WC__ENTRIES_ATTR_ADD,
+                        strlen(SVN_WC__ENTRIES_ATTR_ADD));
   *new_p = value ? TRUE : FALSE;
 
   /* Examine the hash for a "delete" xml attribute in the same

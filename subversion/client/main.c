@@ -66,6 +66,7 @@
 enum command { checkout_command = 1,
                update_command,
                add_command,
+               delete_command,
                commit_command };
 
 
@@ -78,6 +79,7 @@ parse_command_options (int argc,
                        svn_string_t **target,
                        svn_vernum_t *version,
                        svn_string_t **ancestor_path,
+                       svn_boolean_t *force,
                        apr_pool_t *pool)
 {
   for (; i < argc; i++)
@@ -126,6 +128,8 @@ parse_command_options (int argc,
           else
             *version = (svn_vernum_t) atoi (argv[i]);
         }
+      else if (strcmp (argv[i], "--force") == 0)
+        *force = 1;
       else
         *target = svn_string_create (argv[i], pool);
     }
@@ -143,6 +147,7 @@ parse_options (int argc,
                svn_string_t **target,  /* dest_dir or file to add */
                svn_vernum_t *version,  /* ancestral or new */
                svn_string_t **ancestor_path,
+               svn_boolean_t *force,
                apr_pool_t *pool)
 {
   char *s = argv[0];  /* svn progname */
@@ -166,6 +171,11 @@ parse_options (int argc,
           *command = add_command;
           goto do_command_opts;
         }
+      else if (strcmp (argv[i], "delete") == 0)
+        {
+          *command = delete_command;
+          goto do_command_opts;
+        }
       else if (strcmp (argv[i], "commit") == 0)
         {
           *command = commit_command;
@@ -181,7 +191,7 @@ parse_options (int argc,
 
  do_command_opts:
   parse_command_options (argc, argv, ++i, s,
-                         xml_file, target, version, ancestor_path,
+                         xml_file, target, version, ancestor_path, force,
                          pool);
 
   /* Sanity checks: make sure we got what we needed. */
@@ -190,18 +200,24 @@ parse_options (int argc,
       fprintf (stderr, "%s: no command given\n", s);
       exit (1);
     }
-  if ((! *xml_file) && (*command != add_command))
+  if ((! *xml_file) && ((*command != add_command)
+                        && (*command != delete_command)))
     {
       fprintf (stderr, "%s: need \"--xml-file FILE.XML\"\n", s);
       exit (1);
     }
-  else if ((*command == commit_command) && (*version == SVN_INVALID_VERNUM))
+  if (*force && (*command != delete_command))
+    {
+      fprintf (stderr, "%s: \"--force\" meaningless except for delete\n", s);
+      exit (1);
+    }
+  if ((*command == commit_command) && (*version == SVN_INVALID_VERNUM))
     {
       fprintf (stderr, "%s: please use \"--version VER\" "
                "to specify target version\n", s);
       exit (1);
     }
-  else if ((*command == checkout_command) && (*target == NULL))
+  if ((*command == checkout_command) && (*target == NULL))
     *target = svn_string_create (".", pool);
 }
 
@@ -215,13 +231,14 @@ main (int argc, char **argv)
   svn_string_t *xml_file = NULL;
   svn_string_t *target = NULL;
   svn_string_t *ancestor_path = NULL;
+  svn_boolean_t force = 0;
   enum command command = 0;
 
   apr_initialize ();
   pool = svn_pool_create (NULL, NULL);
 
   parse_options (argc, argv, &command,
-                 &xml_file, &target, &version, &ancestor_path,
+                 &xml_file, &target, &version, &ancestor_path, &force,
                  pool);
   
   switch (command)
@@ -235,6 +252,9 @@ main (int argc, char **argv)
       break;
     case add_command:
       err = svn_client_add (target, pool);
+      break;
+    case delete_command:
+      err = svn_client_delete (target, force, pool);
       break;
     case commit_command:
       err = svn_client_commit (target, xml_file, version, pool);
