@@ -180,6 +180,14 @@ class Generator(gen_base.GeneratorBase):
       # get the output files for these targets, sorted in dependency order
       files = gen_base._sorted_files(self.graph, area)
 
+      install_deps = {}
+      for target in inst_targets:
+        for target_dep in self.graph.get_sources(gen_base.DT_LINK, target.name,
+                                                 gen_base.TargetLib):
+          if target_dep.install and target_dep.install != area:
+            install_deps['install-%s' % target_dep.install] = None
+      install_deps = install_deps.keys()
+
       if area == 'apache-mod':
         self.ofile.write('install-mods-shared: %s\n' % (string.join(files),))
         la_tweaked = { }
@@ -233,7 +241,7 @@ class Generator(gen_base.GeneratorBase):
         upper_var = string.upper(area_var)
         self.ofile.write('install-%s: %s\n'
                          '\t$(MKDIR) $(DESTDIR)$(%sdir)\n'
-                         % (area, string.join(files), area_var))
+                         % (area, string.join(files + install_deps), area_var))
         for file in files:
           # cd to dirname before install to work around libtool 1.4.2 bug.
           dirname, fname = build_path_splitfile(file)
