@@ -106,10 +106,10 @@ merge_text (svn_string_t *path,
 /* Move a file NAME to DEST, assuming that PATH is the common parent
    of both locations.  */
 static svn_error_t *
-rename_within_directory (svn_string_t *path,
-                         const char *name,
-                         const char *dest,
-                         apr_pool_t *pool)
+rename_under_directory (svn_string_t *path,
+                        const char *name,
+                        const char *dest,
+                        apr_pool_t *pool)
 {
   apr_status_t status;
   svn_string_t *full_from_path, *full_dest_path;
@@ -123,7 +123,7 @@ rename_within_directory (svn_string_t *path,
   status = apr_rename_file (full_from_path->data, full_dest_path->data, pool);
   if (status)
     return svn_error_createf (status, 0, NULL, pool,
-                              "rename_within_directory: "
+                              "rename_under_directory: "
                               "can't move %s to %s",
                               name, dest);
 
@@ -295,10 +295,8 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                      "missing dest attr in %s",
                                      loggy->path->data));
       else
-        err = rename_within_directory (loggy->path,
-                                       name,
-                                       dest,
-                                       loggy->pool);
+        err = rename_under_directory (loggy->path, name, dest,
+                                      loggy->pool);
     }
   else if (strcmp (eltname, SVN_WC__LOG_DELETE_ENTRY) == 0)
     {
