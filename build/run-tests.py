@@ -4,14 +4,6 @@
 
 import os, sys
 
-# xreadlins is new in Python 2.1; we only require 2.0
-try:
-  from xreadlines import xreadlines
-except ImportError:
-  def xreadlines(file):
-    'Replacement for the xreadlines module.'
-    return file.readlines()
-
 
 class TestHarness:
   '''Test harness for Subversion tests.
@@ -42,7 +34,7 @@ class TestHarness:
       print 'At least one test FAILED, checking ' + self.logfile
       self._open_log('r')
       map(sys.stdout.write, filter(lambda x: x[:4] == 'FAIL',
-                                   xreadlines(self.log)))
+                                   self.log.readlines()))
     self._close_log()
 
   def _open_log(self, mode):
@@ -100,17 +92,27 @@ class TestHarness:
 
   def _run_prog(self, cmdline):
     'Execute COMMAND, redirecting standard output and error to the log file.'
+    def restore_streams(stdout, stderr):
+      os.dup2(stdout, 1)
+      os.dup2(stderr, 2)
+      os.close(stdout)
+      os.close(stderr)
+
+    sys.stdout.flush()
+    sys.stderr.flush()
     self.log.flush()
     old_stdout = os.dup(1)
     old_stderr = os.dup(2)
-    os.dup2(self.log.fileno(), 1)
-    os.dup2(self.log.fileno(), 2)
-    rv = os.spawnv(os.P_WAIT, cmdline[0], cmdline)
-    os.dup2(old_stdout, 1)
-    os.dup2(old_stderr, 2)
-    os.close(old_stdout)
-    os.close(old_stderr)
-    return rv
+    try:
+      os.dup2(self.log.fileno(), 1)
+      os.dup2(self.log.fileno(), 2)
+      rv = os.spawnv(os.P_WAIT, cmdline[0], cmdline)
+    except:
+      restore_streams(old_stdout, old_stderr)
+      raise
+    else:
+      restore_streams(old_stdout, old_stderr)
+      return rv
 
 
 def main():
@@ -150,4 +152,4 @@ if __name__ == '__main__':
 #        @$(PYTHON) $(top_srcdir)/build/pycheck.py ; \
 #        $(PYTHON) $(top_srcdir)/build/run-tests.py \
 #             '$(abs_srcdir)' '$(abs_builddir)' '$(PYTHON)' '$(SHELL)' \
-#             $(TEST_DEPS) @FS_TEST_DEPS@
+#             $(TEST_PROGRAMS) @FS_TEST_PROGRAMS@
