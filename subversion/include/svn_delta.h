@@ -317,11 +317,11 @@ extern svn_error_t *svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
    - The working copy library consumes that delta, and makes the
      appropriate changes to the working copy.
 
-   The simplest approach would be to represent tree deltas as the
+   The simplest approach would be to represent tree deltas using the
    obvious data structure.  To do an update, the server would
-   construct a delta structure, the working copy library would apply
-   it to the working copy; WebDAV's job would simply be to get the
-   structure across the net intact.
+   construct a delta structure, and the working copy library would
+   apply that structure to the working copy; WebDAV's job would simply
+   be to get the structure across the net intact.
 
    However, we expect that these deltas will occasionally be too large
    to fit in a typical workstation's swap area.  For example, in
