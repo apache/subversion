@@ -86,6 +86,12 @@ section for approved changes.)
       Votes:
        +1: sussman
 
+    * r8394
+      Add capability to build Subversion Perl bindings RPM.
+      Justification: Additional capability.
+      Notes:
+      Votes:
+       +1: david
 
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
