@@ -380,9 +380,9 @@ collabnet = svn.collab.net
             </listitem>
           </varlistentry>
           <varlistentry>
-            <term><literal>ssl-authorities-file</literal></term>
+            <term><literal>ssl-authority-files</literal></term>
             <listitem>
-              <para>This specifies the path of a file that contains the
+              <para>A semi-colon delimited list of paths to files containing
                 certificates of the certificate authorities (or CAs) that
                 are accepted by the Subversion client when accessing the
                 repository over HTTPS.</para>
