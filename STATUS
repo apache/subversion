@@ -18,6 +18,7 @@ Candidate changes:
       r10389 is a doc and utility fix for r10206.
     Votes:
       +3: brane. That should be enough :-)
+      +0: breser. Don't know enough about the Windows build to be +1
 
   * r10386, r10388:
     Add IRI support and URI auto-escaping (issue #1910).
@@ -27,13 +28,15 @@ Candidate changes:
       before I know if this is accepted...
     Votes:
       +1 lundblad, sussman
+      -0 breser (I'm still not sure this belongs in 1.1.0, but I don't see
+                 anything technically wrong with it).
 
   * r10440
     Fix pool usage for SVN::Ra in the Perl bindings.
     Justification:
       Bindings only, important fixes for long-life ra sessions.
     Votes:
-      +1: clkao
+      +1: clkao, breser
 
   * r10353, r10375
     Fix encoding of get_repos_url result.
@@ -48,7 +51,7 @@ Candidate changes:
      restart the 1.1 soak anyway.  But don't merge until we've come to
      a decision on whether to restart the 1.1 soak.
     Votes:
-      +1: lundblad, ghudson
+      +1: lundblad, ghudson, breser
 
   * r10400, r10401
     Perl bindings build fixes.
@@ -57,13 +60,14 @@ Candidate changes:
     r10401: Transfer some libsvn_swig_perl dependencies incorrectly listed as
       nonlibs to libs.
     Votes:
-      +1: maxb, ghudson, clkao
+      +1: maxb, ghudson, clkao, breser
 
   * r10422
     Python bindings build fix. Make the compile flags more like distutils uses,
     avoiding large amounts of compiler warnings.
     Votes:
       +1: maxb, ghudson
+      +0: breser
 
   * r10410, r10450
     Python bindings build fix. Explicitly link libpython to the python
@@ -71,6 +75,7 @@ Candidate changes:
     avoid merge conflicts.
     Votes:
       +1: maxb
+      +0: breser (don't fully understand the python code but looks okay to me)
 
   * r10458
     Properly return values for ra->get_rev. Allow SVN::Delta::Editor subclasses
@@ -78,7 +83,7 @@ Candidate changes:
     Justification:
       Bindings only, wrapping completeness.
     Votes:
-      +1: clkao
+      +1: clkao, breser
 
   * r10464
     Have mailer.py open repository via svn_repos.h, not svn_fs.h.
@@ -86,13 +91,14 @@ Candidate changes:
        Allows mailer.py to work with fsfs.
     Votes:
       +1: sussman, cmpilato
+      +0: breser
 
   * r10461
     Fix bug in XML directory listing in mod_dav_svn.
     Justification:
       One-liner that is good for pathnames with non-ASCII chars.
     Votes:
-      +1: lundblad, sussman
+      +1: lundblad, sussman, breser
 
   * r10473
     Fix OS X build.
@@ -105,7 +111,7 @@ Candidate changes:
     Justification:
       Crashes are unnice.
     Votes:
-      +1: lundblad, sussman
+      +1: lundblad, sussman, breser
 
   * r10480
     Fix handling of non-canonical copyfrom data in FSFS.
@@ -114,7 +120,7 @@ Candidate changes:
      the bud than have to worry about them for years.  And it's a
      small fix.
     Votes:
-      +1: ghudson, cmpilato, sussman
+      +1: ghudson, cmpilato, sussman, breser
 
   * r10418, r10426, r10468, r10483
     New po file for Japanese, ja.po, reviewed by some Japanese users.
@@ -129,6 +135,7 @@ Candidate changes:
       "854 translated messages, 14 untranslated messages." (in 1.1.x).
     Votes:
       +1: nori, lundblad
+      +0: breser (don't read JP, but IMHO this doesn't need a vote anyway)
 
   * r10379,r10380,r10384,r10469,r10470,r10487
     Support creation of zip archives for Windows.
@@ -139,12 +146,14 @@ Candidate changes:
     Votes:
       +1: breser
 
-  * r10462,r10491
+  * r10462,r10491,r10493
     Add 2 new features to the javahl binding. svn info and svn log -v for
     the java client.
     Justification:
       The subclipse (subclipse.tigris.org) people need these patches.
     Notes:
       The feature are implemented, so existing clients do not break.
+      r10493 fixes line endings in the Java bindings to be set to native.
     Votes:
-      +1: pmayweg
+      +1: pmayweg (without r10493)
+      +0: breser (with r10493)
