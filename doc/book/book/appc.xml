@@ -333,7 +333,7 @@ The specified activity does not exist.
 
           <para>The error you are seeing means that the dynamic
             linker/loader can't find the plugins to load. This
-            normally happens when you build subversion with shared
+            normally happens when you build Subversion with shared
             libraries, then attempt to run it without first running
             <literal>make install'</literal> Another possible cause is
             that you ran make install, but the libraries were

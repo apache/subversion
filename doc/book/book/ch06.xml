@@ -1823,8 +1823,8 @@ Fetching external item into calc/third-party/skins
     <para>This script always compares the directory being imported to
       what currently exists in the Subversion repository and takes the
       necessary steps to add, delete and rename files and directories
-      to make the subversion repository match the imported directory.
-      As such, it can be used on an empty subversion directory for the
+      to make the Subversion repository match the imported directory.
+      As such, it can be used on an empty Subversion directory for the
       first import or for any following imports to upgrade a vendor
       branch.</para>
 
