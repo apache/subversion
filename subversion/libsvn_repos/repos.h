@@ -27,11 +27,17 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/*** Repository version number. */
+#define SVN_REPOS__VERSION     0
+
+
 /*** Repository layout. ***/
 
 /* The top-level repository dir contains a README and various
    subdirectories.  */
 #define SVN_REPOS__README      "README"  /* Explanation for trespassers. */
+#define SVN_REPOS__FORMAT      "format"  /* Stores the current version
+                                            of the repository. */
 #define SVN_REPOS__DB_DIR      "db"      /* Where Berkeley lives. */
 #define SVN_REPOS__DAV_DIR     "dav"     /* DAV sandbox. */
 #define SVN_REPOS__LOCK_DIR    "locks"   /* Lock files live here. */

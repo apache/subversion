@@ -61,9 +61,7 @@ svn_repos_lock_dir (svn_repos_t *repos, apr_pool_t *pool)
 const char *
 svn_repos_db_lockfile (svn_repos_t *repos, apr_pool_t *pool)
 {
-  return apr_pstrcat (pool,
-                      repos->lock_path, "/" SVN_REPOS__DB_LOCKFILE,
-                      NULL);
+  return svn_path_join (repos->lock_path, SVN_REPOS__DB_LOCKFILE, pool);
 }
 
 
@@ -77,45 +75,35 @@ svn_repos_hook_dir (svn_repos_t *repos, apr_pool_t *pool)
 const char *
 svn_repos_start_commit_hook (svn_repos_t *repos, apr_pool_t *pool)
 {
-  return apr_pstrcat (pool,
-                      repos->hook_path, "/" SVN_REPOS__HOOK_START_COMMIT,
-                      NULL);
+  return svn_path_join (repos->hook_path, SVN_REPOS__HOOK_START_COMMIT, pool);
 }
 
 
 const char *
 svn_repos_pre_commit_hook (svn_repos_t *repos, apr_pool_t *pool)
 {
-  return apr_pstrcat (pool,
-                      repos->hook_path, "/" SVN_REPOS__HOOK_PRE_COMMIT,
-                      NULL);
+  return svn_path_join (repos->hook_path, SVN_REPOS__HOOK_PRE_COMMIT, pool);
 }
 
 
 const char *
 svn_repos_post_commit_hook (svn_repos_t *repos, apr_pool_t *pool)
 {
-  return apr_pstrcat (pool,
-                      repos->hook_path, "/" SVN_REPOS__HOOK_POST_COMMIT,
-                      NULL);
+  return svn_path_join (repos->hook_path, SVN_REPOS__HOOK_POST_COMMIT, pool);
 }
 
 
 const char *
 svn_repos_read_sentinel_hook (svn_repos_t *repos, apr_pool_t *pool)
 {
-  return apr_pstrcat (pool,
-                      repos->hook_path, "/" SVN_REPOS__HOOK_READ_SENTINEL,
-                      NULL);
+  return svn_path_join (repos->hook_path, SVN_REPOS__HOOK_READ_SENTINEL, pool);
 }
 
 
 const char *
 svn_repos_write_sentinel_hook (svn_repos_t *repos, apr_pool_t *pool)
 {
-  return apr_pstrcat (pool,
-                      repos->hook_path, "/" SVN_REPOS__HOOK_WRITE_SENTINEL,
-                      NULL);
+  return svn_path_join (repos->hook_path, SVN_REPOS__HOOK_WRITE_SENTINEL, pool);
 }
 
 
@@ -513,16 +501,11 @@ clear_and_close (void *arg)
 static void
 init_repos_dirs (svn_repos_t *repos, apr_pool_t *pool)
 {
-  repos->db_path = apr_psprintf 
-    (pool, "%s/%s", repos->path, SVN_REPOS__DB_DIR);
-  repos->dav_path = apr_psprintf 
-    (pool, "%s/%s", repos->path, SVN_REPOS__DAV_DIR);
-  repos->conf_path = apr_psprintf 
-    (pool, "%s/%s", repos->path, SVN_REPOS__CONF_DIR);
-  repos->hook_path = apr_psprintf 
-    (pool, "%s/%s", repos->path, SVN_REPOS__HOOK_DIR);
-  repos->lock_path = apr_psprintf 
-    (pool, "%s/%s", repos->path, SVN_REPOS__LOCK_DIR);
+  repos->db_path = svn_path_join (repos->path, SVN_REPOS__DB_DIR, pool);
+  repos->dav_path = svn_path_join (repos->path, SVN_REPOS__DAV_DIR, pool);
+  repos->conf_path = svn_path_join (repos->path, SVN_REPOS__CONF_DIR, pool);
+  repos->hook_path = svn_path_join (repos->path, SVN_REPOS__HOOK_DIR, pool);
+  repos->lock_path = svn_path_join (repos->path, SVN_REPOS__LOCK_DIR, pool);
 }
 
 
@@ -583,8 +566,8 @@ svn_repos_create (svn_repos_t **repos_p, const char *path, apr_pool_t *pool)
   /* Write the top-level README file. */
   {
     apr_file_t *readme_file = NULL;
-    const char *readme_file_name
-      = apr_psprintf (pool, "%s/%s", path, SVN_REPOS__README);
+    const char *readme_file_name 
+      = svn_path_join (path, SVN_REPOS__README, pool);
     static const char * const readme_contents =
       "This is a Subversion repository; use the `svnadmin' tool to examine\n"
       "it.  Do not add, delete, or modify files here unless you know how\n"
@@ -616,6 +599,11 @@ svn_repos_create (svn_repos_t **repos_p, const char *path, apr_pool_t *pool)
                                 "closing `%s'", readme_file_name);
   }
 
+  /* Write the top-level FORMAT file. */
+  SVN_ERR (svn_io_write_version_file 
+           (svn_path_join (path, SVN_REPOS__FORMAT, pool),
+            SVN_REPOS__VERSION, pool));
+
   *repos_p = repos;
   return SVN_NO_ERROR;
 }
@@ -627,6 +615,25 @@ svn_repos_open (svn_repos_t **repos_p,
 {
   apr_status_t apr_err;
   svn_repos_t *repos;
+  int version;
+
+  /* Verify the validity of our repository format. */
+  /* ### for now, an error here might occur because we *just*
+     introduced the whole format thing.  Until the next time we
+     *change* our format, we'll ignore the error (and default to a 0
+     version). */
+  if (svn_io_read_version_file (&version, 
+                                svn_path_join (path, SVN_REPOS__FORMAT, pool),
+                                pool))
+    {
+      version = 0;
+    }
+
+  if (version != SVN_REPOS__VERSION)
+    return svn_error_createf 
+      (SVN_ERR_REPOS_UNSUPPORTED_VERSION, 0, NULL, pool,
+       "Expected version '%d' of repository; found version '%d'", 
+       SVN_REPOS__VERSION, version);
 
   /* Allocate a repository object. */
   repos = apr_pcalloc (pool, sizeof (*repos));
@@ -635,7 +642,7 @@ svn_repos_open (svn_repos_t **repos_p,
   /* Initialize the repository paths. */
   repos->path = apr_pstrdup (pool, path);
   init_repos_dirs (repos, pool);
-  
+
   /* Initialize the filesystem object. */
   repos->fs = svn_fs_new (pool);
 
@@ -674,7 +681,7 @@ svn_error_t *
 svn_repos_delete (const char *path, 
                   apr_pool_t *pool)
 {
-  const char *db_path = apr_psprintf (pool, "%s/%s", path, SVN_REPOS__DB_DIR);
+  const char *db_path = svn_path_join (path, SVN_REPOS__DB_DIR, pool);
 
   /* Delete the Berkeley environment... */
   SVN_ERR (svn_fs_delete_berkeley (db_path, pool));

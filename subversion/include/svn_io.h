@@ -551,6 +551,22 @@ svn_error_t *
 svn_io_file_printf (apr_file_t *fptr, const char *format, ...);
 
 
+
+/*** Version/format files. ***/
+
+/* Read the file at PATH as a textfile that contains a single line of
+   text, formatted as a integer followed by a newline, and return that
+   integer in *VERSION.  Use POOL for all allocations.  */
+svn_error_t *
+svn_io_read_version_file (int *version, const char *path, apr_pool_t *pool);
+
+/* Create (or overwrite) the file at PATH with new contents,
+   formatted as a non-negative integer VERSION followed by a single
+   newline.  Use POOL for all allocations. */
+svn_error_t *
+svn_io_write_version_file (const char *path, int version, apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

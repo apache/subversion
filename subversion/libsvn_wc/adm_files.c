@@ -1099,7 +1099,6 @@ init_adm (const char *path,
   apr_fileperms_t perms = APR_OS_DEFAULT;
 
   /* Initial contents for certain adm files. */
-  const char *format_contents = "1\n";
   const char *readme_contents =
     "This is a Subversion working copy administrative directory.\n"
     "Visit http://subversion.tigris.org/ for more information.\n";
@@ -1143,7 +1142,11 @@ init_adm (const char *path,
   /** Initialize each administrative file. */
 
   /* SVN_WC__ADM_FORMAT */
-  SVN_ERR (init_adm_file (path, SVN_WC__ADM_FORMAT, format_contents, pool));
+  SVN_ERR (svn_io_write_version_file 
+           (svn_path_join_many (pool, 
+                                path, adm_subdir (), SVN_WC__ADM_FORMAT, 
+                                NULL),
+            SVN_WC__VERSION, pool));
 
   /* SVN_WC__ADM_ENTRIES */
   SVN_ERR (svn_wc__entries_init (path, url, pool));

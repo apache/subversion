@@ -41,6 +41,8 @@ extern "C" {
 #define SVN_WC__BASE_EXT      ".svn-base"
 
 
+
+#define SVN_WC__VERSION       1
 
 
 /*** Update traversals. ***/
