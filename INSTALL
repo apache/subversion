@@ -415,48 +415,6 @@ V.  BUILDING A SUBVERSION SERVER
       777 and try again.
 
       You can see all of mod_dav_svn's complaints in the Apache
-      logfile.  Look in /usr/local/apache2/logs/error_log.
-
-
-
---------------------------------------------------------------------
-
-ADDENDUM:     Debugging Apache
-
-'mod_dav_svn.so' contains the main Subversion server logic;  it runs
-as a module within mod_dav, which runs as a module within httpd.
-
-If you need to debug the server, follow this recipe:  
-
-  % gdb httpd
-  (gdb) run -X
-  ^C
-  (gdb) break some_func_in_mod_dav_svn
-  (gdb) continue
-
-The '-X' switch runs httpd in a single thread, and insures it won't
-detach from the tty.  As soon as it starts, it will sit and wait for
-requests.  Then hit control-C and set your breakpoint.
-
-kfogel adds:
-
-Hmmm, I had thought httpd 2.0 also had these options: -DONE_PROCESS
-and -DNO_DETACH.  How are they related to -X, and/or should they be
-used in combination with -X?  Anyone know?
-
-jerenkrantz clarifies:
-
-Yes, httpd-2.0 MPMs recognize -DONE_PROCESS and -DNO_DETACH as 
-command line arguments.  ONE_PROCESS inhibits multiple processes from 
-being spawned.  NO_DETACH ensures that httpd remains attached to the
-terminal (useful by itself for debugging multiple children logic).  
--X has the same effect as setting both variables - so, doing
-
-./httpd -DONE_PROCESS -DNO_DETACH
-
-is identical to
-
-./httpd -X
-
-
-
+      error logfile, /usr/local/apache2/logs/error_log.  For more
+      information about tracing problems, see "Debugging the server"
+      in the HACKING file.

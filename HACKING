@@ -19,6 +19,7 @@ TABLE OF CONTENTS
   * APR status codes
   * Automated tests
   * Writing test cases before code
+  * Debugging the server
   * Writing log entries
   * Patch submission guidelines
   * The Configuration/Build System Under Unix
@@ -298,6 +299,37 @@ As Subversion gets more complex, though, the automated test suite gets
 more crucial, so let's all get in the habit of using it early.
 
 -K
+
+
+
+Debugging the server
+====================
+
+'mod_dav_svn.so' contains the main Subversion server logic; it runs as
+a module within mod_dav, which runs as a module within httpd.  Since
+httpd is probably using dynamic shared modules, you normally won't be
+able to set breakpoints in advance when you start Apache in a debugger
+such as GDB.  Instead, you'll need to start up, then interrupt httpd,
+set your breakpoint, and continue:
+
+  % gdb httpd
+  (gdb) run -X
+  ^C
+  (gdb) break some_func_in_mod_dav_svn
+  (gdb) continue
+
+The -X switch is equivalent to -DONE_PROCESS and -DNO_DETACH, which
+ensure that httpd runs as a single thread and remains attached to the
+tty, respectively.  As soon as it starts, it sits and waits for
+requests; that's when you hit control-C and set your breakpoint.
+
+You'll probably want to watch Apache's run-time logs
+
+   /usr/local/apache2/logs/error_log
+   /usr/local/apache2/logs/access_log
+
+to help determine what might be going wrong and where to set
+breakpoints.
 
 
 
