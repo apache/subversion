@@ -27,16 +27,13 @@
    Note: SWIGTYPE is just a placeholder for "some arbitrary type". This
          typemap will be applied onto a "real" type.
 */
-
 %typemap(python, in, numinputs=0) SWIGTYPE **OUTPARAM ($*1_type temp) {
-    $1 = ($1_ltype)&temp;
-}
-%typemap(java, in) SWIGTYPE **OUTPARAM ($*1_type temp) {
     $1 = ($1_ltype)&temp;
 }
 %typemap(perl5, in, numinputs=0) SWIGTYPE **OUTPARAM ($*1_type temp) {
     $1 = ($1_ltype)&temp;
 }
+
 %typemap(python, argout, fragment="t_output_helper") SWIGTYPE **OUTPARAM {
     $result = t_output_helper($result,
                               SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
@@ -46,10 +43,20 @@
     SWIG_MakePtr(ST(argvi++), (void *)*$1, $*1_descriptor,0);
 }
 
+%typemap(java, in) SWIGTYPE **OUTPARAM ($*1_type temp) {
+    $1 = ($1_ltype)&temp;
+}
+
+%apply SWIGTYPE **OUTPARAM { svn_stream_t ** };
+
 /* -----------------------------------------------------------------------
    Create a typemap for specifying string args that may be NULL.
 */
 %typemap(python, in, parse="z") const char *MAY_BE_NULL "";
+
+#ifdef SWIGPERL
+%apply const char * { const char *MAY_BE_NULL };
+#endif
 
 %typemap(java, in) const char *MAY_BE_NULL { 
   /* ### WHEN IS THIS USED? */
@@ -58,28 +65,6 @@
     $1 = ($1_ltype)JCALL2(GetStringUTFChars, jenv, $input, 0);
     if (!$1) return $null;
   }
-}
-
-#ifdef SWIGPERL
-%apply const char * { const char *MAY_BE_NULL };
-#endif
-
-%typemap(perl5,out) svn_error_t * {
-    if ($1) {
-        SV *exception_handler = perl_get_sv ("SVN::Error::handler", FALSE);
-
-        if (SvOK(exception_handler)) {
-            SV *callback_result;
-
-            svn_swig_pl_callback_thunk (CALL_SV, exception_handler,
-                                        &callback_result, "S", $1,
-                                        $1_descriptor);
-        } else {
-            $result = sv_newmortal();
-            SWIG_MakePtr ($result, (void *)$1, $1_descriptor ,0);
-            argvi++;
-        }
-    }
 }
 
 /* -----------------------------------------------------------------------
@@ -100,7 +85,6 @@
 /* -----------------------------------------------------------------------
    Specify how svn_error_t returns are turned into exceptions.
 */
-
 %typemap(python, out) svn_error_t * {
     if ($1 != NULL) {
         if ($1->apr_err != SVN_ERR_SWIG_PY_EXCEPTION_SET)
@@ -111,6 +95,24 @@
     }
     Py_INCREF(Py_None);
     $result = Py_None;
+}
+
+%typemap(perl5,out) svn_error_t * {
+    if ($1) {
+        SV *exception_handler = perl_get_sv ("SVN::Error::handler", FALSE);
+
+        if (SvOK(exception_handler)) {
+            SV *callback_result;
+
+            svn_swig_pl_callback_thunk (CALL_SV, exception_handler,
+                                        &callback_result, "S", $1,
+                                        $1_descriptor);
+        } else {
+            $result = sv_newmortal();
+            SWIG_MakePtr ($result, (void *)$1, $1_descriptor ,0);
+            argvi++;
+        }
+    }
 }
 
 %typemap(java, out) svn_error_t * %{
@@ -181,6 +183,17 @@
     $2 = PyString_GET_SIZE($input);
 }
 
+%typemap(perl5, in) (const char *PTR, apr_size_t LEN) {
+    if (SvPOK($input)) {
+        $1 = SvPV($input, $2);
+    } else {
+        /* set to 0 to avoid warning */
+        $1 = 0;
+        $2 = 0;
+        SWIG_croak("Expecting a string");
+    }
+}
+
 %typemap(java, in) (const char *PTR, apr_size_t LEN) (char c) {
     if ($input != NULL) {
 	    /* Do not use GetPrimitiveArrayCritical and ReleasePrimitiveArrayCritical
@@ -210,18 +223,7 @@
     return $jnicall;
   }
 
-%typemap(perl5, in) (const char *PTR, apr_size_t LEN) {
-    if (SvPOK($input)) {
-        $1 = SvPV($input, $2);
-    } else {
-        /* set to 0 to avoid warning */
-        $1 = 0;
-        $2 = 0;
-        SWIG_croak("Expecting a string");
-    }
-}
-
-/* ---------------------------------------------------------------------------------
+/* -----------------------------------------------------------------------
    Handle retrieving the error message from svn_strerror
 */
 
@@ -241,6 +243,7 @@
                     (void **)&$1, $1_descriptor, SWIG_POINTER_EXCEPTION | 0);
     _global_pool = $1;
 }
+
 %typemap(perl5, in) apr_pool_t *pool "";
 %typemap(perl5, default) apr_pool_t *pool(apr_pool_t *_global_pool) {
     _global_pool = $1 = svn_swig_pl_make_pool (ST(items-1));
@@ -275,8 +278,6 @@
     $2 = (void *)$input;
 }
 
-/* stream_t * */
-%apply SWIGTYPE **OUTPARAM { svn_stream_t ** };
 
 /* -----------------------------------------------------------------------
    thunk commit_callback
