@@ -1,7 +1,7 @@
 head     1.1;
 branch   1.1.1;
 access   ;
-symbols  release:1.1.1.1 vendor:1.1.1;
+symbols  vendortag:1.1.1.1 vendorbranch:1.1.1;
 locks    ; strict;
 comment  @# @;
 
