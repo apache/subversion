@@ -1383,12 +1383,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                                      &caplist, &client_url));
       SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
 
-      if (params->ssl_layer) 
-        { 
-          if (!svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_SSL))
-	    return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-	                            _("Client must have SSL capability"));
-
+      if (params->ssl_layer 
+          && svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_SSL))
           /* Flush write buffer before SSL handshake. */
           svn_ra_svn_flush(conn, pool);
 
