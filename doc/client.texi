@@ -89,6 +89,14 @@ David Korn and Kiem-Phong Vo have submitted an Internet Draft, titled
 ``The VCDIFF Generic Differencing and Compression Data Format,''
 describing an improvement to VDelta which we may adopt.
 
+The concrete form of a text delta, used for transmitting such deltas
+over the net, is a well-formed XML element, having the following form:
+@example
+<text-delta>@var{data}</text-delta>
+@end example
+Here, @var{data} is the raw VDelta data, escaped appropriately for XML
+character data.
+
 
 @c -----------------------------------------------------------------------
 @node Property Deltas
@@ -102,7 +110,7 @@ the text of any number of properties.
 A property delta is an unordered set of name/change pairs.  No two
 pairs within a given property delta have the same name.  A pair's name
 indicates the property affected, and the change indicates what happens
-to its value.  There are three kinds of changes:
+to its value.  There are two kinds of changes:
 @table @code
 @item set @var{value}
 Change the value of the named property to the byte string @var{value}.
@@ -125,43 +133,22 @@ This would give us a compact way to describe small changes to large
 property values.
 
 The concrete form of a property delta, used for transmitting such deltas
-over the net, is the concatenation of the following items:
-@itemize @bullet
-@item
-a non-negative ASCII decimal number S, followed by an ASCII newline
-character, and
-@item
-a series of name/change pairs, S bytes long in total.
-@end itemize
+over the net, is a well-formed XML element, having the following form:
+@example
+<property-delta>@var{change}@dots{}</property-delta>
+@end example
+Each @var{change} in a property delta has one of the following forms:
+@example
+<set name='@var{name}'>@var{value}</set>
+<delete name='@var{name}'/>
+@end example
+The @var{name} attribute of a @code{set} or @code{delete} element gives
+the name of the property to change.  The @var{value} of a @code{set}
+element gives the new value of the property.
 
-Each name/change pair is represented by the concatenation of the
-following items:
-@itemize @bullet
-@item
-a non-negative ASCII decimal number N, followed by a space,
-@item
-the property name, as a Unicode UTF-8 string N bytes long, canonically
-decomposed and ordered, followed by a newline, and
-@item
-a @code{set} or @code{delete} item, followed by a newline.
-@end itemize
-
-A @code{set} item has the following form:
-@itemize @bullet
-@item
-the word @samp{set}, encoded in lower-case ASCII characters, followed by
-a space,
-@item
-a non-negative ASCII decimal number P, followed by a space, and
-@item
-the property value, as a byte string P bytes long.
-@end itemize
-
-A @code{delete} item has the following form:
-@itemize @bullet
-@item
-the word @code{delete}, encoded in lower-case ASCII characters.
-@end itemize
+If either the property name or the property value contains the
+characters @samp{&}, @samp{<}, or @samp{'}, they should be replaced with
+the sequences @samp{&#38}, @samp{&#60}, or @samp{&#96}, respectively.
 
 
 @c -----------------------------------------------------------------------
@@ -188,93 +175,138 @@ A tree delta is interpreted in the context of three parameters:
 @var{source-root}, the name of the directory to which this complete
 tree delta applies,
 @item
+@var{version}, indicating a particular version of @dots{}
+@item
 @var{source-dir}, which is a directory in the source tree that we are
 currently modifying to yield @dots{}
 @item
 @dots{} @dfn{target-dir} --- the directory we're constructing.
 @end itemize
-When we start interpreting a tree delta, all three parameters are equal.
-As we walk the tree delta, @var{target-dir} walks the tree we are
-constructing, and @var{source-dir} walks the corresponding portion of
-the source tree, which we use as the original.  @var{Source-root}
-remains constant as we walk the delta; we may use it to choose new
-source trees.
+When we start interpreting a tree delta, @var{source-root},
+@var{source-dir}, and @var{target-dir} are all equal.  As we walk the
+tree delta, @var{target-dir} walks the tree we are constructing, and
+@var{source-dir} walks the corresponding portion of the source tree,
+which we use as the original.  @var{Source-root} remains constant as we
+walk the delta; we may use it to choose new source trees.
 
-A tree delta is a list of changes, @code{(tdelta @var{change} @dots{})},
-describing how to edit the contents of @var{source-dir} to yield
+A tree delta is a list of changes of the form
+@example
+<tree-delta>@var{change}@dots{}</tree-delta>
+@end example
+which describe how to edit the contents of @var{source-dir} to yield
 @var{target-dir}.  There are three kinds of changes:
 @table @code
 
-@item (delete "@var{name}")
+@item <delete name='@var{name}'/>
 @var{Source-dir} has an entry named @var{name}, which is not present in
 @var{target-dir}.
 
-@item (new "@var{name}" @var{content})
+@item <new name='@var{name}'>@var{content}</new>
 @var{target-dir} has an entry named @var{name}, which is not present in
 @var{source-dir}; @var{content} describes the file or directory to which
 the new directory entry refers.
 
-@item (replace "@var{name}" @var{content})
+@item <replace name='@var{name}'>@var{content}</replace>
 Both @var{source-dir} and @var{target-dir} have an entry named
 @var{name}, which has changed; @var{content} describes the new file or
 directory.
 
 @end table
 Any entries in @var{source-dir} whose names aren't mentioned are assumed
-to appear unchanged in @var{target-dir}.  Thus, an empty change list
-indicates that a directory is unchanged.
+to appear unchanged in @var{target-dir}.  Thus, an empty
+@code{tree-delta} element indicates that @var{target-dir} is identical
+to @var{source-dir}.
 
 In the change descriptions above, each @var{content} takes one of the
 following forms:
 @table @code
 
-@item file @var{ancestor} @var{text-delta}
+@item <file @var{ancestor}>@var{prop-delta} @var{text-delta}</file>
 The given @var{target-dir} entry refers to a file, @var{f}.
-@var{Ancestor} indicates which directory in the source tree @var{f} is
-derived from, if any, and @var{text-delta} describes how to construct
-@var{f} from that ancestor.
+@var{Ancestor} indicates which file in the source tree @var{f} is
+derived from, if any.
 
-@item directory @var{ancestor} @var{tree-delta}
+@var{Prop-delta} is a property delta describing how @var{f}'s properties
+differ from that ancestor; it may be omitted, indicating that the
+properties are unchanged.
+
+@var{Text-delta} is a text delta describing how to construct @var{f}
+from that ancestor; it may also be omitted, indicating that @var{f}'s
+text is identical to its ancestor's.
+
+
+@item <file @var{ancestor}/>
+An abbreviation for @code{<file @var{ancestor}></file>} --- a file
+element with no property or text delta, thus describing a file identical
+to its ancestor.
+
+
+@item <directory @var{ancestor}>@var{prop-delta} @var{tree-delta}</directory>
 The given @var{target-dir} entry refers to a subdirectory, @var{sub}.
 @var{Ancestor} indicates which directory in the source tree @var{sub} is
 derived from, if any.
 
-The tree delta @var{tree-delta} describes how to construct @var{sub}
-from that ancestor.  It should be interpreted with the @var{source-dir}
-given by @var{ancestor}, and a new @var{target-dir} of
-@file{@var{target-dir}/@var{name}}.
+@var{Prop-delta} is a property delta describing how @var{sub}'s
+properties differ from that ancestor; it may be omitted, indicating that
+the properties are unchanged.
+
+@var{Tree-delta} describes how to construct @var{sub} from that
+ancestor; it may be omitted, indicating that the directory is identical
+to its ancestor.  @var{Tree-delta} should be interpreted with a new
+@var{target-dir} of @file{@var{target-dir}/@var{name}}.
 
 Since @var{tree-delta} is itself a complete tree delta structure, tree
-deltas are trees.  The structure of a tree delta is a subgraph of the
-target tree.
+deltas are themselves trees, whose structure is a subgraph of the target
+tree.
+
+
+@item <directory @var{ancestor}/>
+An abbreviation for @code{<directory @var{ancestor}></directory>} --- a
+directory element with no property or tree delta, thus describing a
+directory identical to its ancestor.
 
 @end table
 
-In the @var{content} descriptions above, each @var{ancestor} takes one
-of the following forms:
+The @var{content} of a @code{new} or @code{replace} tag may also contain
+a property delta, describing changes to the properties of that
+@emph{directory entry}.
+
+In the @code{file} and @code{directory} elements described above, each
+@var{ancestor} has one of the following forms:
 @table @code
 
-@item "@var{path}"
+@item ancestor='@var{path}'
 The ancestor of the new or changed file or directory is
-@file{@var{source-root}/@var{path}}.  When followed by a
-@var{text-delta}, that text delta should be applied to
-@file{@var{source-root}/@var{path}}.  When followed by a
-@var{tree-delta}, @file{@var{source-root}/@var{path}} should be the new
-@var{source-dir} for interpreting that tree delta.
+@file{@var{source-root}/@var{path}}, in @var{version}.  When this
+appears as an attribute of a @code{file} element, the element's text
+delta should be applied to @file{@var{source-root}/@var{path}}.  When
+this appears as an attribute of a @code{directory} element,
+@file{@var{source-root}/@var{path}} should be the new @var{source-dir}
+for interpreting that element's tree delta.
 
-@item same
-This is a shortcut for a @var{path} of @var{source-dir}/@var{name}.
-This makes the common case --- files or directories modified in place
---- more compact.
-
-@item none
+@item new='true'
 This indicates that the file or directory has no ancestor in the source
 tree.  When followed by a @var{text-delta}, that delta should be applied
-to the empty file to yield the new text.  When followed by a
+to the empty file to yield the new text; when followed by a
 @var{tree-delta}, that delta should be evaluated as if @var{source-dir}
 were an imaginary empty directory.
 
+@item @var{nothing}
+If neither an @code{ancestor} nor a @code{new} attribute is given, this
+is an abbreviation for @code{ancestor='@var{source-dir}/@var{name}'},
+with the same version number.  This makes the common case --- files or
+directories modified in place --- more compact.
+
 @end table
+
+If the @var{ancestor} spec is not @code{new='true'}, it may also contain
+the text @code{version='@var{v}'}, indicating a new value for
+@var{version}, in which we should find the ancestor.
+
+If a filename or path appearing as a @var{name} or @var{path} in the
+description above contains the characters @samp{&}, @samp{<}, or
+@samp{'}, they should be replaced with the sequences @samp{&#38},
+@samp{&#60}, or @samp{&#96}, respectively.
 
 Suppose we have the following source tree:
 @example
@@ -290,27 +322,42 @@ If we edit the contents of @file{/dir1/file1}, we can describe the
 effect on the tree with the following tree delta, to be applied to the
 root:
 @example
-(tdelta
-  (replace "dir1" directory same
-    (tdelta
-      (replace "file1" file same @var{text-delta}))))
+<tree-delta>
+  <replace name='dir1'>
+    <directory>
+      <tree-delta>
+        <replace name='file1'>
+          <file>@var{text-delta}</file>
+        </replace>
+      </tree-delta>
+    </directory>
+  </replace>
+</tree-delta>
 @end example
-The outer @code{tdelta} form describes the changes made to the root
+The outer @code{tree-delta} element describes the changes made to the root
 directory.  Within the root directory, there are changes in @file{dir1},
-described by the nested @code{tdelta}.  Within @file{/dir1}, there are
+described by the nested @code{tree-delta}.  Within @file{/dir1}, there are
 changes in @file{file1}, described by the @var{text-delta}.
 
 If we had edited both @file{/dir1/file1} and @file{/dir1/file2}, then
-there would simply be two entries in the inner @code{tdelta}.
+there would simply be two @code{replace} elements in the inner
+@code{tree-delta}.
 
 As another example, starting from the same source tree, suppose we
 rename @file{/dir1/file1} to @file{/dir1/file8}:
 @example
-(tdelta
-  (replace "dir1" directory same
-    (tdelta
-      (delete "file1")
-      (new "file8" file "/dir1/file1" @var{null-delta}))))
+<tree-delta>
+  <replace name='dir1'>
+    <directory>
+      <tree-delta>
+        <delete name='file1'/>
+        <new name='file8'>
+          <file ancestor='/dir1/file1'/>
+        </new>
+      </tree-delta>
+    </directory>
+  </replace>
+</tree-delta>
 @end example
 As above, the inner @code{tdelta} describes how @file{/dir1} has
 changed: the entry for @file{/dir1/file1} has disappeared, but there is
@@ -330,11 +377,20 @@ renaming @file{/dir1/tmp} to @file{/dir1/file2}
 @end enumerate
 (in other words, exchanging @file{file1} and @file{file2}):
 @example
-(tdelta
-  (replace "dir1" directory same
-    (tdelta
-      (replace "file1" file "/dir1/file2" @var{null-delta})
-      (replace "file2" file "/dir1/file1" @var{null-delta}))))
+<tree-delta>
+  <replace name='dir1'>
+    <directory>
+      <tree-delta>
+        <replace name='file1'>
+          <file ancestor='/dir1/file2'/>
+        </replace>
+        <replace name='file2'>
+          <file ancestor='/dir1/file1'/>
+        </replace>
+      </tree-delta>
+    </directory>
+  </replace>
+</tree-delta>
 @end example
 The indirectness allows the tree delta to capture an arbitrary
 rearrangement without resorting to temporary filenames.
@@ -351,16 +407,31 @@ move @file{file3} from @var{/dir1/dir4} to @var{/dir1/dir2}.
 Note that @file{file3}'s path has remained the same, even though the
 directories around it have changed.  Here is the tree delta:
 @example
-(tdelta
-  (replace "dir1" directory same
-    (tdelta
-      (replace "dir2" directory "/dir1/dir3"
-        (tdelta
-          (new "file3" file "/dir1/dir2/file3" @var{null-delta})))
-      (delete "dir3")
-      (new "dir4" directory "/dir1/dir2"
-        (tdelta
-          (delete "file3"))))))
+<tree-delta>
+  <replace name='dir1'>
+    <directory>
+      <tree-delta>
+        <replace name='dir2'>
+          <directory ancestor='/dir1/dir3'>
+            <tree-delta>
+              <new name='file3'>
+                <file ancestor='/dir1/dir2/file3'/>
+              </new>
+            </tree-delta>
+          </directory>
+        </replace>
+        <delete name='dir3'/>
+        <new name='dir4'>
+          <directory ancestor='/dir1/dir2'>
+            <tree-delta>
+              <delete name='file3'/>
+            </tree-delta>
+          </directory>
+        </new>
+      </tree-delta>
+    </directory>
+  </replace>
+</tree-delta>
 @end example
 In other words:
 @itemize @bullet
