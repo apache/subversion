@@ -22,6 +22,7 @@
 
 #include <apr.h>
 
+#include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_test.h"
 #include "../fs-helpers.h"
@@ -539,6 +540,171 @@ changes_fetch (const char **msg,
 }
 
 
+static svn_error_t *
+changes_fetch_ordering (const char **msg, 
+                        svn_boolean_t msg_only,
+                        apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_revnum_t youngest_rev = 0;
+  const char *txn_name;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  struct changes_args args;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_hash_index_t *hi;
+
+  *msg = "verify ordered-ness of fetched compressed changes";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create a new fs and repos */
+  SVN_ERR (svn_test__create_fs 
+           (&fs, "test-repo-changes-fetch-ordering", pool));
+
+  /*** REVISION 1: Make some files and dirs. ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  {
+    static svn_test__txn_script_command_t script_entries[] = {
+      { 'a', "dir1",        0 },
+      { 'a', "file1",       "This is the file 'file1'.\n" },
+      { 'a', "dir1/file2",  "This is the file 'file2'.\n" },
+      { 'a', "dir1/file3",  "This is the file 'file3'.\n" },
+      { 'a', "dir1/file4",  "This is the file 'file4'.\n" },
+    };
+    SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 5, subpool));
+  }
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
+  svn_pool_clear (subpool);
+
+  /*** REVISION 2: Delete and add some stuff, non-depth-first. ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_name (&txn_name, txn, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  {
+    static svn_test__txn_script_command_t script_entries[] = {
+      { 'd', "file1",       "This is the file 'file1'.\n" },
+      { 'd', "dir1/file2",  "This is the file 'file2'.\n" },
+      { 'd', "dir1/file3",  "This is the file 'file3'.\n" },
+      { 'a', "dir1/file5",  "This is the file 'file4'.\n" },
+      { 'a', "dir1/dir2",   0 },
+      { 'd', "dir1",        0 },
+      { 'a', "dir3",        0 },
+    };
+    SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 7, subpool));
+  }
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
+  svn_pool_clear (subpool);
+  
+  /*** TEST:  We should have only three changes, the deletion of 'file1'
+       the deletion of 'dir1', and the addition of 'dir3'. ***/
+  args.fs = fs;
+  args.key = txn_name;
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_changes_fetch, &args, subpool));
+  if ((! args.changes) || (apr_hash_count (args.changes) != 3))
+    return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
+                             "expected changes");
+  for (hi = apr_hash_first (subpool, args.changes); 
+       hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      svn_fs_path_change_t *change;
+
+      /* KEY will be the path, VAL the change. */
+      apr_hash_this (hi, &key, NULL, &val);
+      change = val;
+
+      if ((change->change_kind == svn_fs_path_change_add) 
+          && (strcmp (key, "/dir3") == 0))
+        ;
+      else if ((change->change_kind == svn_fs_path_change_delete)
+               && ((strcmp (key, "/dir1") == 0)
+                   || (strcmp (key, "/file1") == 0)))
+        ;
+      else
+        return svn_error_create (SVN_ERR_TEST_FAILED, NULL, 
+                                 "got wrong changes");
+    }
+
+  /*** REVISION 3: Do the same stuff as in revision 1. ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  {
+    static svn_test__txn_script_command_t script_entries[] = {
+      { 'a', "dir1",        0 },
+      { 'a', "file1",       "This is the file 'file1'.\n" },
+      { 'a', "dir1/file2",  "This is the file 'file2'.\n" },
+      { 'a', "dir1/file3",  "This is the file 'file3'.\n" },
+      { 'a', "dir1/file4",  "This is the file 'file4'.\n" },
+    };
+    SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 5, subpool));
+  }
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
+  svn_pool_clear (subpool);
+
+  /*** REVISION 4: Do the same stuff as in revision 2, but use a copy
+       overwrite of the top directory (instead of a delete) to test
+       that the 'replace' change type works, too.  (And add 'dir4'
+       instead of 'dir3', since 'dir3' still exists).  ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_name (&txn_name, txn, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, 1, subpool));
+  {
+    static svn_test__txn_script_command_t script_entries[] = {
+      { 'd', "file1",       "This is the file 'file1'.\n" },
+      { 'd', "dir1/file2",  "This is the file 'file2'.\n" },
+      { 'd', "dir1/file3",  "This is the file 'file3'.\n" },
+      { 'a', "dir1/file5",  "This is the file 'file4'.\n" },
+      { 'a', "dir1/dir2",   0 },
+    };
+    SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 5, subpool));
+    SVN_ERR (svn_fs_copy (rev_root, "dir1", txn_root, "dir1", subpool));
+    SVN_ERR (svn_fs_make_dir (txn_root, "dir4", subpool));
+  }
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
+  svn_pool_clear (subpool);
+
+  /*** TEST:  We should have only three changes, the deletion of 'file1'
+       the replacement of 'dir1', and the addition of 'dir4'. ***/
+  args.fs = fs;
+  args.key = txn_name;
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_changes_fetch, &args, subpool));
+  if ((! args.changes) || (apr_hash_count (args.changes) != 3))
+    return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
+                             "expected changes");
+  for (hi = apr_hash_first (subpool, args.changes); 
+       hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      svn_fs_path_change_t *change;
+
+      /* KEY will be the path, VAL the change. */
+      apr_hash_this (hi, &key, NULL, &val);
+      change = val;
+
+      if ((change->change_kind == svn_fs_path_change_add) 
+          && (strcmp (key, "/dir4") == 0))
+        ;
+      else if ((change->change_kind == svn_fs_path_change_replace) 
+               && (strcmp (key, "/dir1") == 0))
+        ;
+      else if ((change->change_kind == svn_fs_path_change_delete) 
+               && (strcmp (key, "/file1") == 0))
+        ;
+      else
+        return svn_error_create (SVN_ERR_TEST_FAILED, NULL, 
+                                 "got wrong changes");
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* The test table.  */
 
@@ -549,5 +715,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (changes_fetch_raw),
     SVN_TEST_PASS (changes_delete),
     SVN_TEST_PASS (changes_fetch),
+    SVN_TEST_PASS (changes_fetch_ordering),
     SVN_TEST_NULL
   };
