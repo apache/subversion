@@ -153,7 +153,7 @@
 }
 
 %typemap(perl5, in) (svn_client_blame_receiver_t receiver,
-                     %void *receiver_baton) {
+                     void *receiver_baton) {
   $1 = svn_swig_pl_blame_func;
   $2 = $input; /* our function is the baton. */
 }

@@ -82,7 +82,9 @@
 %ignore svn_io_check_path;
 %ignore svn_io_check_special_path;
 %ignore svn_io_check_resolved_path;
+/* svn_io_open_unique_file is used by perl bindings' ra callback.
 %ignore svn_io_open_unique_file;
+*/
 %ignore svn_io_create_unique_link;
 %ignore svn_io_read_link;
 %ignore svn_io_temp_dir;
