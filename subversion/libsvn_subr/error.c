@@ -173,7 +173,6 @@ handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal,
               int depth, apr_status_t parent_apr_err)
 {
   char errbuf[256];
-  char utfbuf[2048];
   const char *err_string;
 
   /* Pretty-print the error */
@@ -181,9 +180,9 @@ handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal,
 
 #ifdef SVN_DEBUG
   if (err->file)
-    fprintf (stream, "%s:%ld",
-             svn_utf_utf8_to_native (err->file, utfbuf, sizeof (utfbuf)),
-             err->line);
+    /* Note: err->file is _not_ in UTF-8, because it's expanded from
+             the __FILE__ preprocessor macro. */
+    fprintf (stream, "%s:%ld", err->file, err->line);
   else
     fputs (SVN_FILE_LINE_UNDEFINED, stream);
 
@@ -197,9 +196,8 @@ handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal,
       /* Is this a Subversion-specific error code? */
       if ((err->apr_err > APR_OS_START_USEERR)
           && (err->apr_err <= APR_OS_START_CANONERR))
-        err_string = svn_utf_utf8_to_native
-          (svn_strerror (err->apr_err, errbuf, sizeof (errbuf)),
-           utfbuf, sizeof (utfbuf));
+        err_string = svn_utf_cstring_from_utf8_fuzzy
+          (svn_strerror (err->apr_err, errbuf, sizeof (errbuf)), err->pool);
       /* Otherwise, this must be an APR error code. */
       else
         err_string = apr_strerror (err->apr_err, errbuf, sizeof (errbuf));
@@ -208,7 +206,7 @@ handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal,
     }
   if (err->message)
     fprintf (stream, "svn: %s\n",
-             svn_utf_utf8_to_native (err->message, utfbuf, sizeof (utfbuf)));
+             svn_utf_cstring_from_utf8_fuzzy (err->message, err->pool));
   fflush (stream);
 
   if (err->child)

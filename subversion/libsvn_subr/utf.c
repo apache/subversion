@@ -444,7 +444,10 @@ svn_utf_cstring_from_utf8_fuzzy (const char *src,
   err = svn_utf_cstring_from_utf8 (((const char **) &new), new_orig, pool);
 
   if (err)
-    return new_orig;
+    {
+      svn_error_clear (err);
+      return new_orig;
+    }
   else
     return (const char *) new;
 
@@ -491,62 +494,5 @@ svn_utf_cstring_from_utf8_string (const char **dest,
       SVN_ERR (check_non_ascii (src->data, src->len, pool));
       *dest = apr_pstrmemdup (pool, src->data, src->len);
       return SVN_NO_ERROR;
-    }
-}
-
-
-const char *
-svn_utf_utf8_to_native (const char *utf8_string,
-                        char *buf,
-                        apr_size_t bufsize)
-{
-  apr_xlate_t *convset;
-
-  /* Set up state variables for xlate */
-  apr_size_t srclen = strlen (utf8_string);
-  apr_size_t destlen = bufsize - 1;
-
-  /* Ick.  Need a pool here so that we can call apr_xlate_open. */
-  apr_pool_t *pool = svn_pool_create (NULL);
-
-  if (get_uton_xlate_handle (&convset, pool) != SVN_NO_ERROR)
-    {
-      svn_pool_destroy (pool);
-      return "(charset translator procurement failed)";
-    }
-
-  if (convset)
-    {
-      /* Attempt the conversion */
-      if (apr_xlate_conv_buffer (convset, utf8_string,
-                                 &srclen, buf, &destlen) == APR_SUCCESS)
-        {
-          /* Conversion succeeded.  Zero-terminate and return buffer */
-          buf[bufsize-1-destlen] = '\0';
-          svn_pool_destroy (pool);
-          return buf;
-        }
-      
-      svn_pool_destroy (pool);
-      return "(charset conversion failed)";
-    }
-  else
-    {
-      apr_size_t i;
-      
-      /* Just replace non-ASCII characters with '?' here... 
-         This could be rewritten to be more in line with
-         check_non_ascii(), but is it important to do so? */
-
-      for (i=0; i<bufsize && *utf8_string; utf8_string++)
-        if (*(const unsigned char *)utf8_string < 128)
-          /* ASCII character */
-          buf[i++] = *utf8_string;
-        else if(*(const unsigned char *)utf8_string >= 192)
-          /* First octet of a multibyte sequence */
-          buf[i++] = '?';
-      
-      buf[i>=bufsize? bufsize-1 : i] = '\0';
-      return buf;
     }
 }
