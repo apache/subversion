@@ -977,7 +977,7 @@ svn_repos_recover (const char *path,
                "svn_repos_recover: error opening db lockfile");
     
     apr_err = apr_file_unlock (lockfile_handle);
-    if (apr_err)
+    if (apr_err && ! APR_STATUS_IS_EACCES(apr_err))
       return svn_error_createf
         (apr_err, NULL,
          "svn_repos_recover: failed to delete all locks on repository `%s'.",
