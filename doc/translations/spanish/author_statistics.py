@@ -170,14 +170,12 @@ def update_working_copy():
     stdout.readlines()
 
 
-def main():
-    """Main entry point of the application.
+def obtain_information():
+    """Fills data into the STATISTICS and STATE global variables.
 
     Creates an expat parser, runs the external 'svn log' command
-    and connects its output to the XML parsing of expat. At the
-    end of the operation, statistics are printed.
+    and connects its output to the XML parsing of expat.
     """
-    update_working_copy()
     p = xml.parsers.expat.ParserCreate()
     
     p.StartElementHandler = start_element
@@ -197,8 +195,19 @@ def main():
             line = stdout.readline()
 
     finally:
-        print_statistics()
         stdout.close()
+
+
+def main():
+    """Main entry point of the application.
+
+    First obtains information from the authors, then prints it.
+    
+    end of the operation, statistics are printed.
+    """
+    update_working_copy()
+    obtain_information()
+    print_statistics()
     
 
 if __name__ == "__main__":
