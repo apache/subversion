@@ -50,6 +50,51 @@ def main(pool, cmd, config_fname, repos_dir, rev, author, propname):
   messenger.generate()
 
 
+# ============================================================================
+if sys.platform == "win32":
+  _escape_shell_arg_re = re.compile(r'(\\+)(\"|$)')
+
+  def escape_shell_arg(arg):
+    # The (very strange) parsing rules used by the C runtime library are
+    # described at:
+    # http://msdn.microsoft.com/library/en-us/vclang/html/_pluslang_Parsing_C.2b2b_.Command.2d.Line_Arguments.asp
+
+    # double up slashes, but only if they are followed by a quote character
+    arg = re.sub(_escape_shell_arg_re, r'\1\1\2', arg)
+
+    # surround by quotes and escape quotes inside
+    arg = '"' + string.replace(arg, '"', '"^""') + '"'
+    return arg
+
+
+  def argv_to_command_string(argv):
+    """Flatten a list of command line arguments into a command string.
+
+    The resulting command string is expected to be passed to the system
+    shell which os functions like popen() and system() invoke internally.
+    """
+
+    # According cmd's usage notes (cmd /?), it parses the command line by
+    # "seeing if the first character is a quote character and if so, stripping
+    # the leading character and removing the last quote character."
+    # So to prevent the argument string from being changed we add an extra set
+    # of quotes around it here.
+    return '"' + string.join(map(escape_shell_arg, argv), " ") + '"'
+
+else:
+  def escape_shell_arg(str):
+    return "'" + string.replace(str, "'", "'\\''") + "'"
+
+  def argv_to_command_string(argv):
+    """Flatten a list of command line arguments into a command string.
+
+    The resulting command string is expected to be passed to the system
+    shell which os functions like popen() and system() invoke internally.
+    """
+
+    return string.join(map(escape_shell_arg, argv), " ")
+# ============================================================================
+
 # Minimal, incomplete, versions of popen2.Popen[34] for those platforms
 # for which popen2 does not provide them.
 try:
@@ -59,7 +104,7 @@ except AttributeError:
   class Popen3:
     def __init__(self, cmd, capturestderr = False):
       if type(cmd) != types.StringType:
-        cmd = svn.core.argv_to_command_string(cmd)
+        cmd = argv_to_command_string(cmd)
       if capturestderr:
         self.fromchild, self.tochild, self.childerr \
             = popen2.popen3(cmd, mode='b')
@@ -77,7 +122,7 @@ except AttributeError:
   class Popen4:
     def __init__(self, cmd):
       if type(cmd) != types.StringType:
-        cmd = svn.core.argv_to_command_string(cmd)
+        cmd = argv_to_command_string(cmd)
       self.fromchild, self.tochild = popen2.popen4(cmd, mode='b')
 
 
