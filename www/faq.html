@@ -106,6 +106,9 @@ everything in the repository?  Also, how can I make sure that every
 new file coming into the repository has these properties?</a></li>
 <li><a href="#divining-bdb-version">How do I determine which version of
 Berkeley DB a repository is using?</a></li>
+<li><a href="#website-auto-update">I'm managing a website in my
+repository.  How can I make the live site automatically update after
+every commit?</a></li>
 </ul>
 
 <h4>Troubleshooting:</h4>
@@ -825,7 +828,7 @@ partitions, but we've only ever seen BDB databases get corrupted when
 living on an NFS or SMB network drive.</p>
 
 <p>If you are using the <a href="http://web.mit.edu/ghudson/info/fsfs"
->FSFS</a> repository back end, then storing the repository on a moderne
+>FSFS</a> repository back end, then storing the repository on a modern
 NFS server (i.e., one that supports locking) should be fine.</p>
 
 <p>Working copies can be stored on NFS (one common scenario is when
@@ -1544,6 +1547,58 @@ using the table below:</p>
   <tr><td>8 (0x00000008)</td><td>4.2</td></tr>
   <tr><td>10 (0x0000000a)</td><td>4.3</td></tr>
 </table>
+
+<![CDATA[=========================================================]]>
+
+<h3><a name="website-auto-update">I'm managing a website in my
+repository.  How can I make the live site automatically update after
+every commit?</a></h3>
+
+<p>This is done all the time, and is easily accomplished by adding a
+post-commit hook script to your repository.  Read about hook scripts
+in <a
+href="http://svnbook.red-bean.com/en/1.1/ch05s02.html#svn-ch-5-sect-2.1">Chapter
+5</a> of the book.  The basic idea is to make the "live site" just an
+ordinary working copy, and then have your post-commit hook script run
+'svn update' on it.</p>
+
+<p>In practice, there are a couple of things to watch out for.  The
+server program performing the commit (svnserve or apache) is the same
+program that will be running the post-commit hook script.  That means
+that this program must have proper permissions to update the working
+copy.  In other words, the working copy must be owned by the same user
+that svnserve or apache runs as -- or at least the working copy must
+have appropriate permissions set.</p>
+
+<p>If the server needs to update a working copy that it doesn't own
+(for example, user joe's ~/public_html/ area), one technique is create
+a +s binary program to run the update, since Unix won't allow scripts
+to run +s.  Compile a tiny C program:</p>
+
+<pre>
+#include <stdlib.h>
+int main(int argc, const char *argv[])
+{
+  system("/usr/local/bin/svn update /home/joe/public_html/");
+}
+</pre>
+
+<p>... and then <tt>chmod +s</tt> the binary, and make sure it's owned
+by user 'joe'.  Then in the post-commit hook, add a line to run the
+binary.</p>
+
+<p>Also, you'll probably want to prevent apache from exporting the
+.svn/ directories in the live working copy.  Add this to your
+<tt>httpd.conf</tt>:</p>
+
+<pre>
+# Disallow browsing of Subversion working copy administrative dirs.
+&lt;DirectoryMatch "^/.*/\.svn/"&gt;
+    Order deny,allow
+    Deny from all
+&lt;/DirectoryMatch&gt;
+</pre>
+
 
 <![CDATA[=========================================================]]>
 
