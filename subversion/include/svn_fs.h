@@ -52,7 +52,7 @@ svn_error_t *svn_fs_close_fs (svn_fs_t *fs);
    in the call to `svn_fs_set_warning_func'; the filesystem passes it through
    to the callback.  FMT is a printf-style format string, which tells us
    how to interpret any successive arguments.  */
-typedef void (svn_fs_warning_callback_t) (void *baton, const char *fmt, ...);
+typedef void (*svn_fs_warning_callback_t) (void *baton, const char *fmt, ...);
 
 
 /* Provide a callback function, WARNING, that FS should use to report
@@ -69,7 +69,7 @@ typedef void (svn_fs_warning_callback_t) (void *baton, const char *fmt, ...);
    for server processes, since those may both be equivalent to
    /dev/null.  */
 void svn_fs_set_warning_func (svn_fs_t *fs,
-                              svn_fs_warning_callback_t *warning,
+                              svn_fs_warning_callback_t warning,
                               void *warning_baton);
 
 
