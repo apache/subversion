@@ -325,7 +325,7 @@ random_test (const char **msg,
       /* Make stage 4: apply the text delta.  */
       svn_txdelta_apply (svn_stream_from_aprfile (source_copy, delta_pool),
                          svn_stream_from_aprfile (target_regen, delta_pool),
-                         NULL, delta_pool, &handler, &handler_baton);
+                         NULL, NULL, delta_pool, &handler, &handler_baton);
 
       /* Make stage 3: reparse the text delta.  */
       stream = svn_txdelta_parse_svndiff (handler, handler_baton, TRUE,
@@ -417,7 +417,7 @@ do_random_combine_test (const char **msg,
       /* Make stage 4: apply the text delta.  */
       svn_txdelta_apply (svn_stream_from_aprfile (source_copy, delta_pool),
                          svn_stream_from_aprfile (target_regen, delta_pool),
-                         NULL, delta_pool, &handler, &handler_baton);
+                         NULL, NULL, delta_pool, &handler, &handler_baton);
 
       /* Make stage 3: reparse the text delta.  */
       stream = svn_txdelta_parse_svndiff (handler, handler_baton, TRUE,

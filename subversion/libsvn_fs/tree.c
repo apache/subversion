@@ -3183,9 +3183,11 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
       unsigned char digest[MD5_DIGESTSIZE];
       const char *hex;
 
+      /* Until we finalize the node, its data_key points to the old
+         contents, in other words, the base text. */
       SVN_ERR (svn_fs__dag_file_checksum (digest, tb->node, trail));
       hex = svn_md5_digest_to_cstring (digest, trail->pool);
-      if (strcmp (tb->base_checksum, hex) != 0)
+      if (hex && (strcmp (tb->base_checksum, hex) != 0))
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH, 
            NULL,
@@ -3215,6 +3217,7 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
   svn_txdelta_apply (tb->source_stream,
                      tb->string_stream,
                      NULL,
+                     tb->path,
                      tb->pool,
                      &(tb->interpreter),
                      &(tb->interpreter_baton));
@@ -3281,6 +3284,10 @@ struct text_baton_t
   /* The actual fs stream that the returned stream will write to. */
   svn_stream_t *file_stream;
 
+  /* Hex MD5 digest for the final fulltext written to the file.  May
+     be null, in which case ignored. */
+  const char *result_checksum;
+
   /* Pool used by db txns */
   apr_pool_t *pool;
 };
@@ -3300,13 +3307,9 @@ txn_body_fulltext_finalize_edits (void *baton, trail_t *trail)
 {
   struct text_baton_t *tb = baton;
 
-  /* ### todo#689: When svn_fs_apply_text() takes a checksum argument
-         (like svn_fs_apply_textdelta does now), it will need to be
-         propagated through to here. */
-
   SVN_ERR (svn_stream_close (tb->file_stream));
   return svn_fs__dag_finalize_edits (tb->node, 
-                                     NULL,
+                                     tb->result_checksum,
                                      svn_fs_txn_root_name (tb->root, 
                                                            trail->pool),
                                      trail);
@@ -3375,6 +3378,7 @@ svn_error_t *
 svn_fs_apply_text (svn_stream_t **contents_p,
                    svn_fs_root_t *root,
                    const char *path,
+                   const char *result_checksum,
                    apr_pool_t *pool)
 {
   struct text_baton_t *tb = apr_pcalloc (pool, sizeof(*tb));
@@ -3382,6 +3386,11 @@ svn_fs_apply_text (svn_stream_t **contents_p,
   tb->root = root;
   tb->path = path;
   tb->pool = pool;
+
+  if (result_checksum)
+    tb->result_checksum = apr_pstrdup (pool, result_checksum);
+  else
+    tb->result_checksum = NULL;
 
   SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (root),
                               txn_body_apply_text, tb, pool));

@@ -1298,16 +1298,24 @@ svn_error_t *svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
  * this routine to create new files;  use @c svn_fs_make_file to create
  * an empty file first.)
  *
+ * @a result_checksum is the hex MD5 digest for the final fulltext
+ * written to the stream.  It is ignored if null, but if not null, it
+ * must match the checksum of the result; if it does not, then the @a
+ * *contents_p call which detects the mismatch will return the error
+ * SVN_ERR_CHECKSUM_MISMATCH.
+ *
  * Do any necessary temporary allocation in @a pool.
  *
- * ### todo#689: this is like svn_fs_apply_textdelta, but takes the
- * text straight.  It is currently used only by the loader, see
- * libsvn_repos/load.c.  It should accept a checksum, of course,
- * which would come from a header in the dump file.
+ * ### This is like svn_fs_apply_textdelta, but takes the text
+ * straight.  It is currently used only by the loader, see
+ * libsvn_repos/load.c.  It should accept a checksum, of course, which
+ * would come from an (optional) header in the dump file.  See
+ * http://subversion.tigris.org/issues/show_bug.cgi?id=1102 for more.
  */
 svn_error_t *svn_fs_apply_text (svn_stream_t **contents_p,
                                 svn_fs_root_t *root,
                                 const char *path,
+                                const char *result_checksum,
                                 apr_pool_t *pool);
 
 

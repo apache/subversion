@@ -89,7 +89,8 @@ txdelta_new (VALUE class, VALUE source, VALUE target)
   delta->closed = TRUE;
   /* svn_ruby_stream can raise exception */
   svn_txdelta_apply (svn_ruby_stream (source), svn_ruby_stream (target),
-                     delta->pool, &delta->handler, &delta->handler_baton);
+                     NULL, delta->pool, &delta->handler,
+                     &delta->handler_baton);
   delta->closed = FALSE;
   argv[0] = source;
   argv[1] = target;

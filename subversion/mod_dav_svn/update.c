@@ -283,14 +283,12 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
       if (! is_dir)
         {
           unsigned char digest[MD5_DIGESTSIZE];
-          static const unsigned char zeros_digest[MD5_DIGESTSIZE] = { 0 };
           const char *real_path = get_real_fs_path(child, pool);
 
           SVN_ERR (svn_fs_file_md5_checksum
                    (digest, uc->rev_root, real_path, pool));
           
-          if (memcmp(digest, zeros_digest, MD5_DIGESTSIZE) != 0)
-            hex_digest = svn_md5_digest_to_cstring(digest, pool);
+          hex_digest = svn_md5_digest_to_cstring(digest, pool);
         }
 
       if (copyfrom_path == NULL)

@@ -61,6 +61,7 @@ struct node_baton
   const char *path;
   svn_node_kind_t kind;
   enum svn_node_action action;
+  const char *md5_checksum;     /* null, if not available */
 
   svn_revnum_t copyfrom_rev;
   const char *copyfrom_path;
@@ -565,6 +566,12 @@ make_node_baton (apr_hash_t *headers,
       nb->copyfrom_path = apr_pstrdup (pool, val);
     }
 
+  if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_CHECKSUM,
+                           APR_HASH_KEY_STRING)))
+    {
+      nb->md5_checksum = apr_pstrdup (pool, val);
+    }
+
   /* What's cool about this dump format is that the parser just
      ignores any unrecognized headers.  :-)  */
 
@@ -790,6 +797,7 @@ set_fulltext (svn_stream_t **stream,
 
   return svn_fs_apply_text (stream,
                             rb->txn_root, nb->path,
+                            nb->md5_checksum,
                             nb->pool);
 }
 

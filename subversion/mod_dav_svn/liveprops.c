@@ -38,11 +38,18 @@ static const char * const dav_svn_namespace_uris[] =
 {
     "DAV:",
     SVN_DAV_PROP_NS_DAV,
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+    SVN_PROP_PREFIX,
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+
     NULL	/* sentinel */
 };
 enum {
     DAV_SVN_NAMESPACE_URI_DAV,  /* the DAV: namespace URI */
     DAV_SVN_NAMESPACE_URI,      /* the dav<->ra_dav namespace URI */
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+    DAV_SVN_NAMESPACE_URI_OLD   /* the OLD dav<->ra_dav namespace URI */
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
 };
 
 #define SVN_RO_DAV_PROP(name) \
@@ -59,8 +66,18 @@ enum {
 #define SVN_RW_SVN_PROP(sym,name) \
 	{ DAV_SVN_NAMESPACE_URI, #name, SVN_PROPID_##sym, 1 }
 
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+#define SVN_RO_SVN_OLD_PROP(sym,name) \
+	{ DAV_SVN_NAMESPACE_URI_OLD, #name, SVN_OLD_PROPID_##sym, 0 }
+#define SVN_RW_SVN_OLD_PROP(sym,name) \
+	{ DAV_SVN_NAMESPACE_URI_OLD, #name, SVN_OLD_PROPID_##sym, 1 }
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+
 enum {
   SVN_PROPID_baseline_relative_path = 1,
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+  SVN_OLD_PROPID_baseline_relative_path,
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
   SVN_PROPID_md5_checksum
 };
 
@@ -88,6 +105,9 @@ static const dav_liveprop_spec dav_svn_props[] =
 
   /* SVN properties */
   SVN_RO_SVN_PROP(baseline_relative_path, baseline-relative-path),
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+  SVN_RO_SVN_OLD_PROP(baseline_relative_path, baseline-relative-path),
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
   SVN_RO_SVN_PROP(md5_checksum, md5-checksum),
 
   { 0 } /* sentinel */
@@ -452,6 +472,9 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
         }
       break;
 
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+    case SVN_OLD_PROPID_baseline_relative_path:
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
     case SVN_PROPID_baseline_relative_path:
       /* only defined for VCRs */
       /* ### VCRs within the BC should not have this property! */
@@ -471,7 +494,6 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
               || resource->type == DAV_RESOURCE_TYPE_VERSION))
         {
           unsigned char digest[MD5_DIGESTSIZE];
-          static const unsigned char zeros_digest[MD5_DIGESTSIZE] = { 0 };
 
           serr = svn_fs_file_md5_checksum(digest,
                                           resource->info->root.root,
@@ -483,9 +505,9 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
               break;
             }
 
-          if (memcmp (digest, zeros_digest, MD5_DIGESTSIZE) != 0)
-            value = svn_md5_digest_to_cstring (digest, p);
-          else
+          value = svn_md5_digest_to_cstring (digest, p);
+
+          if (! value)
             return DAV_PROP_INSERT_NOTSUPP;
         }
       else

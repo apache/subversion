@@ -22,7 +22,7 @@
 
 
 /* The MD5 digest for the empty string. */
-const char svn_md5_empty_string_digest[] = {
+const unsigned char svn_md5_empty_string_digest[] = {
   212, 29, 140, 217, 143, 0, 178, 4, 233, 128, 9, 152, 236, 248, 66, 126
 };
 
@@ -31,18 +31,27 @@ const char svn_md5_empty_string_digest[] = {
 const char *
 svn_md5_digest_to_cstring (unsigned char digest[], apr_pool_t *pool)
 {
-  static const char *hex = "0123456789abcdef";
-  char *str = apr_palloc (pool, (MD5_DIGESTSIZE * 2) + 1);
-  int i;
+  static const unsigned char zeros_digest[MD5_DIGESTSIZE] = { 0 };
 
-  for (i = 0; i < MD5_DIGESTSIZE; i++)
+  if (memcmp (digest, zeros_digest, MD5_DIGESTSIZE) != 0)
     {
-      str[i*2]   = hex[digest[i] >> 4];
-      str[i*2+1] = hex[digest[i] & 0x0f];
+      static const char *hex = "0123456789abcdef";
+      char *str = apr_palloc (pool, (MD5_DIGESTSIZE * 2) + 1);
+      int i;
+      
+      for (i = 0; i < MD5_DIGESTSIZE; i++)
+        {
+          str[i*2]   = hex[digest[i] >> 4];
+          str[i*2+1] = hex[digest[i] & 0x0f];
+        }
+      str[i*2] = '\0';
+      
+      return str;
     }
-  str[i*2] = '\0';
-
-  return str;
+  else
+    {
+      return NULL;
+    }
 }
 
 

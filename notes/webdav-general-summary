@@ -156,7 +156,7 @@ collection, whatever.
    itself.  The pointer is just a property, called "DAV:checked-in".
    By definition, the contents of the VCR are always equal to the
    contents of the VR it points to.  If you change the pointer to a
-   different VR, the the VCR's contents magically change to match.
+   different VR, the VCR's contents magically change to match.
 
  * All of a VCR's VR objects need to be organized somehow.  And in
    fact, they *are* organized into a little tree of predecessors and

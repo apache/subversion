@@ -78,17 +78,30 @@ extern "C" {
 #define SVN_VER_TAG        "dev build"
 
 
+/** Number tag: a string indicating whether this is a released version.
+ *
+ * This tag is used to generate a version number string to identify
+ * the client and server in HTTP requests, for example. It must not
+ * contain any spaces. This value remains "+" in the
+ * repository. During the distribution process, we automatically
+ * replace it with "" to indicate a baselined version.
+ */
+#define SVN_VER_NUMTAG     "+"
+
+
 
 /* Version strings composed from the above definitions. */
 
-
 /** Version number */
-#define SVN_VER_NUMBER   APR_STRINGIFY(SVN_VER_MAJOR) \
-                         "." APR_STRINGIFY(SVN_VER_MINOR) \
-                         "." APR_STRINGIFY(SVN_VER_MICRO)
+#define SVN_VER_NUM        APR_STRINGIFY(SVN_VER_MAJOR) \
+                           "." APR_STRINGIFY(SVN_VER_MINOR) \
+                           "." APR_STRINGIFY(SVN_VER_MICRO)
+
+/** Version number with tag (contains no whitespace) */
+#define SVN_VER_NUMBER     SVN_VER_NUM SVN_VER_NUMTAG
 
 /** Complete version string */
-#define SVN_VERSION      SVN_VER_NUMBER " (" SVN_VER_TAG ")"
+#define SVN_VERSION        SVN_VER_NUM " (" SVN_VER_TAG ")"
 
 
 #ifdef __cplusplus

@@ -192,13 +192,18 @@ you probably want to use the "svn log" command -- and if it
 does not do what you need, please send in a patch!
 EOF
 
-### Give this release a unique name, to help us interpret bug reports
+### Give this release a unique name, to help us interpret bug reports;
+### and change the number tag, to indicate that it is baselined
 vsn_file="${DIST_SANDBOX}/${DISTNAME}/subversion/include/svn_version.h"
 sed -e \
  "/#define *SVN_VER_TAG/s/dev build/${RELEASE_NAME}/" \
   < "$vsn_file" > "${vsn_file}.tmp"
 
-mv "${vsn_file}.tmp" "$vsn_file"
+sed -e \
+ "/#define *SVN_VER_NUMTAG/s/\+//" \
+  < "${vsn_file}.tmp" > "$vsn_file"
+
+rm -f "${vsn_file}.tmp"
 
 
 ### Make the tarball.

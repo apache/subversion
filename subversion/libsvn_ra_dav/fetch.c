@@ -804,10 +804,6 @@ static void get_file_reader(void *userdata, const char *buf, size_t len)
   wlen = len;
   svn_stream_write(stream, buf, &wlen);
 
- 
-  /* ### todo#689: this doesn't handle checksums yet.  It's ultimately
-         used by the ra_plugin->get_file() interface. */
-
 #if 0
   /* Neon's callback won't let us return error.  Joe knows this is a
      bug in his API, so this section can be reactivated someday. */
@@ -1493,7 +1489,6 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
   svn_ra_session_t *ras = session_baton;
   svn_ra_dav_resource_t *baseline;
   svn_boolean_t is_svn_prop;
-  const char *dav_propname;
   int rv;
   static ne_propname propname_struct = {0, 0};
   ne_proppatch_operation po[2] = { { 0 } };
@@ -1535,16 +1530,10 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
   /* Possibly strip off the 'svn:' prefix for DAV transport.  The
      namespace will be used instead to convey the same meaning. */
   is_svn_prop = svn_prop_is_svn_prop (name);
-  dav_propname = is_svn_prop ? (name + sizeof(SVN_PROP_PREFIX) - 1) : name;
-  propname_struct.name = dav_propname;
-
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-  propname_struct.nspace = is_svn_prop ? 
-    SVN_PROP_PREFIX : SVN_PROP_CUSTOM_PREFIX;
-#else /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
-  propname_struct.nspace = is_svn_prop ?
-    SVN_DAV_PROP_NS_SVN : SVN_DAV_PROP_NS_CUSTOM;
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+  propname_struct.nspace = is_svn_prop ? SVN_DAV_PROP_NS_SVN 
+                                       : SVN_DAV_PROP_NS_CUSTOM;
+  propname_struct.name = is_svn_prop ? (name + sizeof(SVN_PROP_PREFIX) - 1) 
+                                     : name;
 
   po[0].name = &propname_struct;
   po[0].type = value ? ne_propset : ne_propremove;
@@ -1554,7 +1543,7 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
   if (rv != NE_OK)
     {
       const char *msg = apr_psprintf(ras->pool,
-                                     "applying property change to to %s",
+                                     "applying property change to %s",
                                      baseline->url);
       return svn_ra_dav__convert_error(ras->sess, msg, rv);
     }
@@ -1598,7 +1587,7 @@ svn_error_t *svn_ra_dav__rev_prop (void *session_baton,
   svn_ra_session_t *ras = session_baton;
   svn_ra_dav_resource_t *baseline;
   apr_hash_t *filtered_props;
-  const char *namespace, *marshalled_name;
+  svn_boolean_t is_svn_prop;
 
   /* E-Z initialization */
   ne_propname wanted_props[] =
@@ -1608,27 +1597,11 @@ svn_error_t *svn_ra_dav__rev_prop (void *session_baton,
     };
 
   /* Decide on the namespace and propname for XML marshalling. */
-  if (svn_prop_is_svn_prop(name))
-    {
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-      namespace = SVN_PROP_PREFIX;
-#else
-      namespace = SVN_DAV_PROP_NS_SVN;
-#endif
-      marshalled_name = name + sizeof(SVN_PROP_PREFIX) - 1;
-    }
-  else
-    {
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-      namespace = SVN_PROP_CUSTOM_PREFIX;
-#else
-      namespace = SVN_DAV_PROP_NS_CUSTOM;
-#endif
-      marshalled_name = name;
-    }
-
-  wanted_props[0].nspace = namespace;
-  wanted_props[0].name = marshalled_name;
+  is_svn_prop = svn_prop_is_svn_prop(name);
+  wanted_props[0].nspace = is_svn_prop ? SVN_DAV_PROP_NS_SVN 
+                                       : SVN_DAV_PROP_NS_CUSTOM;
+  wanted_props[0].name = is_svn_prop ? name + sizeof(SVN_PROP_PREFIX) - 1
+                                     : name;
 
   /* Main objective: do a PROPFIND (allprops) on a baseline object */  
   SVN_ERR (svn_ra_dav__get_baseline_props(NULL, &baseline,

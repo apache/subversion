@@ -613,7 +613,7 @@ typedef struct svn_wc_entry_t
  * If @a path is not a directory then @a adm_access must be an access baton 
  * for the parent directory of @a path.  To avoid needing to know whether 
  * @a path is a directory or not, if @a path is a directory @a adm_access 
- * can still be be an access baton for the parent of @a path so long as the 
+ * can still be an access baton for the parent of @a path so long as the 
  * access baton for @a path itself is in the same access baton set.
  *
  * Note that it is possible for @a path to be absent from disk but still
