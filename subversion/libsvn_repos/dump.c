@@ -218,11 +218,19 @@ dump_node (struct edit_baton *eb,
       else
         {
           /* more complex:  delete original, then add-with-history.  */
-          SVN_ERR (dump_node (eb, path, kind, svn_node_action_delete,
+
+          /* the path & kind headers have already been printed;  just
+             add a delete action, and end the record.*/
+          SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                      SVN_REPOS_DUMPFILE_NODE_ACTION
+                                      ": delete\n\n"));  
+
+          /* recurse:  print an add-with-history record. */
+          SVN_ERR (dump_node (eb, path, kind, svn_node_action_add,
                               copyfrom_path, copyfrom_rev, pool));
 
-          SVN_ERR (dump_node (eb, path, kind, svn_node_action_add,
-                              copyfrom_path, copyfrom_rev, pool));          
+          /* get out, because we don't need to dump any content. */
+          return SVN_NO_ERROR;
         }
 
     }
