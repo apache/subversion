@@ -479,7 +479,7 @@ svn_repos__hooks_pre_unlock (svn_repos_t *repos,
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
       args[2] = path;
-      args[3] = username;
+      args[3] = username ? username : "";
       args[4] = NULL;
 
       SVN_ERR (run_hook_cmd ("pre-unlock", hook, args, TRUE, NULL, pool));
@@ -509,7 +509,7 @@ svn_repos__hooks_post_unlock (svn_repos_t *repos,
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
       args[2] = path;
-      args[3] = username;
+      args[3] = username ? username : "";
       args[4] = NULL;
 
       SVN_ERR (run_hook_cmd ("post-unlock", hook, args, FALSE, NULL, pool));

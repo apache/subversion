@@ -661,8 +661,9 @@ svn_fs_fs__unlock (svn_fs_t *fs,
      SVN_ERR_FS_LOCK_EXPIRED. */
   SVN_ERR (svn_fs_fs__get_lock_from_token(&existing_lock, fs, token, pool));
   
-  /* There better be a username attached to the fs. */
-  if (!fs->access_ctx || !fs->access_ctx->username)
+  /* Unless breaking the lock, there better be a username attached to the
+     fs. */
+  if (!force && (!fs->access_ctx || !fs->access_ctx->username))
     return svn_fs_fs__err_no_user (fs);
 
   /* And that username better be the same as the lock's owner. */

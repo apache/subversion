@@ -1562,16 +1562,17 @@ svn_error_t *svn_fs_generate_token (const char **token,
                                     apr_pool_t *pool);
 
 
-/**  Remove lock on the path represented by @a token in @a fs.
+/** Remove lock on the path represented by @a token in @a fs.
  *
  * If @a token doesn't point to a lock, return @c SVN_ERR_FS_BAD_LOCK_TOKEN.
  * If @a token points to an expired lock, return @c SVN_ERR_FS_LOCK_EXPIRED.
- * If @a fs has no username associated with it, return @c SVN_ERR_FS_NO_USER.
+ * If @a fs has no username associated with it, return @c SVN_ERR_FS_NO_USER
+ * unless @a force is specified.
  *
  * If @a token points to a lock, but the username of @a fs's access
  * context doesn't match the lock's owner, return @c
- * SVN_ERR_FS_LOCK_OWNER_MISMATCH.  If @force is true, however, don't
- * return error;  allow the lock to be "broken" by the alternate user.
+ * SVN_ERR_FS_LOCK_OWNER_MISMATCH.  If @a force is true, however, don't
+ * return error;  allow the lock to be "broken" in any case.
  *
  * Use @a pool for temporary allocations.
  */

@@ -496,10 +496,10 @@ svn_repos_fs_unlock (svn_repos_t *repos,
   if (access_ctx)
     SVN_ERR (svn_fs_access_get_username (&username, access_ctx));
 
-  if (! username)
+  if (! force && ! username)
     return svn_error_createf 
       (SVN_ERR_FS_NO_USER, NULL,
-       "Cannot unlock path '%s', no authenticated username available.",
+       _("Cannot unlock path '%s', no authenticated username available"),
        lock->path);
 
   /* Run pre-unlock hook.  This could throw error, preventing
@@ -513,7 +513,7 @@ svn_repos_fs_unlock (svn_repos_t *repos,
   if ((err = svn_repos__hooks_post_unlock (repos, lock->path, username, pool)))
     return svn_error_create
       (SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED, err,
-       "Unlock succeeded, but post-unlock hook failed");
+       _("Unlock succeeded, but post-unlock hook failed"));
 
   return SVN_NO_ERROR;
 }

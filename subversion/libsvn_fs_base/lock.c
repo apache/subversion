@@ -336,8 +336,10 @@ txn_body_unlock (void *baton, trail_t *trail)
   /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN or SVN_ERR_FS_LOCK_EXPIRED. */
   SVN_ERR (svn_fs_bdb__lock_get (&lock, trail->fs, args->token, trail));
   
-  /* There better be a username attached to the fs. */
-  if (!trail->fs->access_ctx || !trail->fs->access_ctx->username)
+  /* If not breaking the lock, there better be a username attached to
+     the fs. */
+  if (!args->force
+      && (!trail->fs->access_ctx || !trail->fs->access_ctx->username))
     return svn_fs_base__err_no_user (trail->fs);
 
   /* And that username better be the same as the lock's owner. */
