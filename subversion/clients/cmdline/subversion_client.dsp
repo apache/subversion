@@ -210,10 +210,6 @@ SOURCE=".\switch-cmd.c"
 # End Source File
 # Begin Source File
 
-SOURCE=".\trace-update.c"
-# End Source File
-# Begin Source File
-
 SOURCE=".\update-cmd.c"
 # End Source File
 # Begin Source File
