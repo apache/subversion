@@ -416,7 +416,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
     }
 
   /* Now, run the editor command line.  */
-  cmd = apr_psprintf (pool, "%s %s", editor, tmpfile_native);
+  cmd = apr_psprintf (pool, "%s \"%s\"", editor, tmpfile_native);
   sys_err = system (cmd);
   if (sys_err != 0)
     {
