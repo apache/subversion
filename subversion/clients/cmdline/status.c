@@ -138,6 +138,8 @@ print_status (const char *path,
                            status->copied ? '+' : ' ',
                            status->switched ? 'S' : ' ',
                            path));
+
+  return SVN_NO_ERROR;
 }
 
 /* Called by status-cmd.c */
@@ -155,6 +157,6 @@ svn_cl__print_status (const char *path,
           && status->repos_text_status == svn_wc_status_none))
     return SVN_NO_ERROR;
 
-  SVN_ERR (print_status (svn_path_local_style (path, pool),
-                         detailed, show_last_committed, status, pool));
+  return print_status (svn_path_local_style (path, pool),
+                       detailed, show_last_committed, status, pool);
 }
