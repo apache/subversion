@@ -19,9 +19,6 @@ Everyone:
 
      This needs a more formal writeup, then to the list.
 
-Ben and Karl XML factorization todo:
-   - generalize signal_expat_bailout
-
 Ben todo:
    - UPDATE the SPEC!!!
    - finish implementing properties.  it's 95% done already.  :)

@@ -66,55 +66,12 @@
 /* useful macro, suggested by Greg Stein */
 #define APR_ARRAY_GET_ITEM(ary,i,type) (((type *)(ary)->elts)[i])
 
-
-
-/* a file is a proplist and a string */
-typedef struct svn_file_t
+enum svn_node_kind
 {
-  apr_hash_t *proplist;          /* the file's properties */
-  struct svn_string_t *text;     /* the file's main content */
-} svn_file_t;
-
-
-/* a directory entry points to a node */
-typedef struct svn_dirent_t
-{
-  unsigned long node_num;     /* a node pointed to */
-  struct svn_string_t *name;  /* name of the node pointed to */
-  apr_hash_t *proplist;       /* entry's properties */
-} svn_dirent_t;
-
-
-/* TODO:  use an actual apr_array below */
-/* a directory is an unordered list of directory entries, and a proplist */
-typedef struct svn_directory_t
-{
-  svn_dirent_t *list;        /* an array of dirents */
-  size_t len;                /* length of array */
-  apr_hash_t *proplist;  /* directory's properties */
-} svn_directory_t;
-
-
-/* a node is either a file or directory, a distinguished union  */
-typedef struct svn_node_t
-{
-  enum svn_node_kind {svn_invalid_kind = 0,  /* keep this 0, some code cares */
-                      svn_file_kind,
-                      svn_dir_kind} kind;
-  union node_union 
-  {
-    svn_file_t *file;
-    svn_directory_t *directory;
-  } contents;                             /* my contents */
-} svn_node_t;
-
-
-/* a version object is a node number and property list */
-typedef struct svn_ver_t
-{
-  unsigned long node_num;             /* the root node of a tree */
-  apr_hash_t *proplist;           /* version's properties */
-} svn_ver_t;
+  svn_invalid_kind = 0,  /* keep this 0, some code cares */
+  svn_file_kind,
+  svn_dir_kind
+};
 
 
 typedef long int svn_vernum_t;
@@ -124,77 +81,7 @@ typedef long int svn_vernum_t;
 #define SVN_INVALID_VERNUM -1
 
 
-/* These things aren't critical to define yet; I'll leave them to
-   jimb, who's writing the filesystem: */
-
-/* a node table is a mapping of some set of natural numbers to nodes. */
-
-/* a history is an array of versions */
-
-/* a repository is a node table and a history */
-
-
-/* A list of all filesystem calls that users can perform.  Each
-   ACL/authorization system must create its own concept of
-   "permissions" around these filesystem calls. */
-
-typedef enum 
-{
-  svn_action_latest,
-  svn_action_get_ver_prop,
-  svn_action_get_ver_proplist,
-  svn_action_get_ver_propnames,
-  svn_action_read,
-  svn_action_get_node_prop,
-  svn_action_get_dirent_prop,
-  svn_action_get_node_proplist,
-  svn_action_get_dirent_proplist,
-  svn_action_get_node_propnames,
-  svn_action_get_dirent_propnames,
-  svn_action_submit,
-  svn_action_write,
-  svn_action_abandon,
-  svn_action_get_delta,
-  svn_action_get_diff,
-  svn_action_status,
-  svn_action_update
-} svn_svr_action_t;
-
-
-
-
-/* This structure defines a client 'user' to be used by any security
-   plugin on the Subversion server.  This structure is created by the
-   network layer when it performs initial authentication with some
-   database.  */
-
-typedef struct svn_user_t
-{
-  /* The first three fields are filled in by the network layer,
-     and possibly used by the server for informational or matching purposes */
-
-  struct svn_string_t *auth_username;  /* the authenticated username */
-  struct svn_string_t *auth_method;    /* the authentication system used */
-  struct svn_string_t *auth_domain;    /* where the user comes from */
-
-
-  /* This field is used by all of the server's "wrappered" fs calls */
-
-  struct svn_string_t *svn_username;   /* the username which will
-                                          >actually< be used when making
-                                          filesystem calls */
-
-  void *username_data;                 /* if a security plugin needs to
-                                          store extra data, such as a
-                                          WinNT SID */
-
-} svn_user_t;
-
-
-
-
 /* YABT:  Yet Another Boolean Type */
-
 typedef int svn_boolean_t;
 
 #ifndef TRUE
@@ -204,9 +91,6 @@ typedef int svn_boolean_t;
 #ifndef FALSE
 #define FALSE 0
 #endif /* FALSE */
-
-
-typedef unsigned long svn_token_t;
 
 
 
