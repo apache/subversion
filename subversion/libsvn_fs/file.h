@@ -23,7 +23,7 @@
    contents of the node ID in FS.  Allocate the stream in POOL.
 
    *CONTENTS becomes invalid when FS is closed.  */
-svn_error_t *svn_fs__file_contents (svn_read_fn_t **contents,
+svn_error_t *svn_fs__file_contents (svn_stream_t **contents,
 				    svn_fs_t *fs,
 				    svn_fs_id_t *id,
 				    apr_pool_t *pool);
