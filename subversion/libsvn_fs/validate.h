@@ -30,6 +30,13 @@ int svn_fs__count_id_components (const char *data, apr_size_t data_len);
 int svn_fs__is_valid_proplist (skel_t *skel);
 
 
+/* Validating paths. */
+
+/* Validate that name NAME is a single path component, not a
+   slash-separated directory path.  Also, NAME cannot be `.' or `..'
+   at this time. */
+int svn_fs__is_single_path_component (const char *name);
+
 #endif /* SVN_LIBSVN_FS_VALIDATE_H */
 
 
