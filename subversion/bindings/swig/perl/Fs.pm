@@ -31,6 +31,7 @@ use SVN::Base qw/Fs svn_fs_history_/;
 package _p_svn_fs_txn_t;
 use SVN::Base qw/Fs svn_fs_txn_/;
 
+*close = *SVN::Fs::close_txn;
 *commit = *SVN::Fs::commit_txn;
 
 package _p_svn_fs_dirent_t;
