@@ -53,8 +53,8 @@
    defined tin the design doc. */
 
 
-#ifndef __SVN_TYPES_H__
-#define __SVN_TYPES_H__
+#ifndef SVN_TYPES_H
+#define SVN_TYPES_H
 
 
 #include <stdlib.h>          /* defines size_t */
@@ -322,7 +322,7 @@ typedef svn_delta_t svn_skelta_t;
 /* A line-based diff is just a huge wad of text. */
 typedef svn_string_t svn_diff_t;
 
-#endif  /* __SVN_TYPES_H__ */
+#endif  /* SVN_TYPES_H */
 
 
 /* --------------------------------------------------------------

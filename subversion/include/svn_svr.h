@@ -67,8 +67,8 @@
 
 */
 
-#ifndef __SVN_SVR_H__
-#define __SVN_SVR_H__
+#ifndef SVN_SVR_H
+#define SVN_SVR_H
 
 
 #include <svn_types.h>   /* publically declared types */
@@ -399,7 +399,7 @@ svn_delta_t * svn_svr_get_update (svn_svr_policies_t *policy,
 
 
 
-#endif  /* __SVN_SVR_H__ */
+#endif  /* SVN_SVR_H */
 
 /* --------------------------------------------------------------
  * local variables:

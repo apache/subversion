@@ -49,8 +49,8 @@
  */
 
 
-#ifndef __SVN_STRING_H__
-#define __SVN_STRING_H__
+#ifndef SVN_STRING_H
+#define SVN_STRING_H
 
 
 #include <svn_types.h>
@@ -112,7 +112,7 @@ void svn_string_print (const svn_string_t *str, FILE *stream,
                        svn_boolean_t show_all_fields,
                        svn_boolean_t add_newline);
 
-#endif  /* __SVN_STRING_H__ */
+#endif  /* SVN_STRING_H */
 
 
 /* --------------------------------------------------------------

@@ -48,8 +48,8 @@
 
 
 
-#ifndef __SVN_PARSE_H__
-#define __SVN_PARSE_H__
+#ifndef SVN_PARSE_H
+#define SVN_PARSE_H
 
 #include <svn_types.h>
 #include <svn_string.h>
@@ -82,7 +82,7 @@ void svn_hash_print (ap_hash_t *hash, FILE *stream);
 void svn_uberhash_print (ap_hash_t *uberhash, FILE *stream);
 
 
-#endif /* __SVN_PARSE_H__ */
+#endif /* SVN_PARSE_H */
 
 
 /* 

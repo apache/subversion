@@ -63,8 +63,8 @@
  *            Clients.
  */
 
-#ifndef __SVN_WC_H__
-#define __SVN_WC_H__
+#ifndef SVN_WC_H
+#define SVN_WC_H
 
 #include <svn_types.h>
 
@@ -107,7 +107,7 @@ ap_hash_t *svn_wc_get_node_propnames (path);
 /* Return all property names of directory entry PATH. */
 ap_hash_t *svn_wc_get_dirent_propnames (path);
 
-#endif  /* __SVN_SVR_H__ */
+#endif  /* SVN_WC_H */
 
 /* --------------------------------------------------------------
  * local variables:
