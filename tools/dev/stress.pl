@@ -149,7 +149,6 @@ sub status_update_commit
                     $svn_cmd);
 
     # Look for acceptable errors
-    close COMMIT_WRITE or die "close COMMIT_WRITE: $!\n";
     my $acceptable_error = 0;
     while ( <COMMIT_ERR_READ> )
       {
