@@ -1463,72 +1463,142 @@ LoadModule authz_svn_module   modules/mod_authz_svn.so
 </screen>
 
         <para>To activate this module, you need to configure your
-          <literal>Location</literal> block in a specific way:</para>
+          <literal>Location</literal> block to use the
+          <literal>AuthzSVNAccessFile</literal> directive, which
+          specifies a file containing the permissions policy for paths
+          within your repositories.  (In a moment, we'll discuss the
+          format of that file.)</para>
 
-        <itemizedlist>
-          <listitem>
-            <para>You must use <literal>SVNPath</literal>.  The
-              <literal>SVNParentPath</literal> directive is not yet
-              supported.</para></listitem>
-          <listitem>
-            <para>You must unconditionally <literal>Require
-                valid-user</literal>; it cannot be modified via
-                <literal>Limit</literal> or
-                <literal>LimitExcept</literal> directives.</para></listitem>
-          <listitem>
-            <para>You must specify a path to an <firstterm>access
-                file</firstterm>, which describes the permissions
-                policy for the repository, via the new
-                <literal>AuthzSVNAccessFile</literal>
-                directive.</para></listitem>.
-        </itemizedlist>
+        <para>Apache is flexible, so you have the option to configure
+          your block in one of three general patterns.  To begin,
+          choose one of these basic configuration patterns.  (The
+          examples below are very simple; look at Apache's own
+          documentation for much more detail on Apache authentication
+          and authorization options.) </para>
 
-        <para>Here's a simple example:</para>
+        <para>The simplest block is to allow open access to everyone.
+          In this scenario, Apache never sends authentication
+          challenges, so all users are treated as
+          <quote>anonymous</quote>.</para>
 
-        <screen>
-&lt;Location /svn/project&gt;
-  DAV svn
-  SVNPath /usr/local/svn/project
+        <example id="svn-ch-6-sect-4.4.2-ex-1">
+          <title>A sample configuration for anonymous access.</title>
+          <programlisting>
+            &lt;Location /repos&gt;
+              DAV svn
+              SVNParentPath /usr/local/svn
 
-  # how to authenticate a user
-  AuthType Basic
-  AuthName "Subversion repository"
-  AuthUserFile /path/to/users/file
+              # our access control policy
+              AuthzSVNAccessFile /path/to/access/file                 
+            &lt;/Location&gt;
+          </programlisting>
+        </example>
 
-  # only authenticated users may access the repository
-  Require valid-user
+        <para>On the opposite end of the paranoia scale, you can
+          configure your block to demand authentication from everyone.
+          All clients must supply credentials to identify themselves.
+          Your block unconditionally requires authentication via the
+          <literal>Require valid-user</literal> directive, and defines
+          a means to authenticate.</para>
 
-  # our access control policy
-  AuthzSVNAccessFile /path/to/access/file
+        <example id="svn-ch-6-sect-4.4.2-ex-2">
+          <title>A sample configuration for authenticated access.</title>
+          <programlisting>
+            &lt;Location /repos&gt;
+              DAV svn
+              SVNParentPath /usr/local/svn
+            
+              # our access control policy
+              AuthzSVNAccessFile /path/to/access/file                 
+            
+              # only authenticated users may access the repository
+              Require valid-user
+            
+              # how to authenticate a user
+              AuthType Basic
+              AuthName "Subversion repository"
+              AuthUserFile /path/to/users/file                  
+            &lt;/Location&gt;
+          </programlisting>
+        </example>
 
-&lt;/Location&gt;
-</screen>
+        <para>A third very popular pattern is to allow a combination
+          of authenticated and anonymous access.  For example, many
+          administrators want to allow anonymous users to read certain
+          repository directories, but want only authenticated users to
+          read (or write) more sensitive areas.  In this setup, all
+          users start out accessing the repository anonymously.  If
+          your access control policy demands a real username at any
+          point, Apache will demand authentication from the client.
+          To do this, you use both the <literal>Satisfy Any</literal>
+          and <literal>Require valid-user</literal> directives
+          together.</para>
+
+        <example id="svn-ch-6-sect-4.4.2-ex-3">
+          <title>A sample configuration for mixed
+            authenticated/anonymous access.</title>
+          <programlisting>
+            &lt;Location /repos&gt;
+              DAV svn
+              SVNParentPath /usr/local/svn
+            
+              # our access control policy
+              AuthzSVNAccessFile /path/to/access/file                 
+            
+              # try anonymous access first, resort to real 
+              # authentication if necessary.
+              Sasisfy Any
+              Require valid-user
+            
+              # how to authenticate a user
+              AuthType Basic
+              AuthName "Subversion repository"
+              AuthUserFile /path/to/users/file                  
+            &lt;/Location&gt;
+          </programlisting>
+        </example>
         
-        <para>At this point, you need to create the access file and
-          define some authorization rules in it.</para>
+        <para>Once your basic <literal>Location</literal> block is
+          configured, you can create an access file and define some
+          authorization rules in it.</para>
 
-        <para>The format of the access file is the same familiar one
-          used by <command>svnserve.conf</command> and runtime
+        <para>The syntax of the access file is the same familiar one
+          used by <command>svnserve.conf</command> and the runtime
           configuration files.  Lines that start with hash
           (<literal>#</literal>)) are ignored.  In its simplest form,
-          each <quote>section</quote> is a path within the repository,
-          and the authenticated usernames are the variables.  The
-          value of each variable describes the user's level of access
-          to the repository path: either <literal>r</literal>
-          (read-only) or <literal>rw</literal> (read-write).  If the
-          user is not mentioned at all, no access is allowed.</para>
+          each <quote>section</quote> names a repository and path
+          within it, and the authenticated usernames are the
+          <quote>variables</quote> within each section.  The value of
+          each variable describes the user's level of access to the
+          repository path: either <literal>r</literal> (read-only) or
+          <literal>rw</literal> (read-write).  If the user is not
+          mentioned at all, no access is allowed.</para>
 
+        <para>To be more specific: the value of the section-names are
+          either of the form <literal>[repos-name:path]</literal> or
+          the form <literal>[path]</literal>.  If you're using the
+          <literal>SVNParentPath</literal> directive, then it's
+          important to specify the repository names in your sections.
+          If you omit them, then a section like
+          <literal>[/some/dir]</literal> will match the path
+          <filename>/some/dir</filename> in <emphasis>every</emphasis>
+          repository.  If you're using the <literal>SVNPath</literal>
+          directive, however, then it's fine to only define paths in
+          your sections&mdash;after all, there's only one
+          repository.</para>
+          
         <screen>
-[/branches/calc/bug-142]
+[calc:/branches/calc/bug-142]
 harry = rw
 sally = r
 </screen>
 
-        <para>In this example, user harry has full read and write
-          access on the <filename>/branches/calc/bug-142</filename>
-          directory, but user sally has read-only
-          access.  Any other users are blocked from accessing this
-          directory.</para>
+        <para>In this first example, user harry has full read and
+          write access on the
+          <filename>/branches/calc/bug-142</filename> directory in the
+          <literal>calc</literal> repository, but user sally has
+          read-only access.  Any other users are blocked from
+          accessing this directory.</para>
 
         <para>Of course, permissions <quote>inherit</quote> from
           parent to child directory.  That means that we can specify a
@@ -1536,12 +1606,12 @@ sally = r
           sally:</para>
 
         <screen>
-[/branches/calc/bug-142]
+[calc:/branches/calc/bug-142]
 harry = rw
 sally = r
 
 # give sally write access only to the 'testing' subdir
-[/branches/calc/bug-142/testing]
+[calc:/branches/calc/bug-142/testing]
 sally = rw
 </screen>
 
@@ -1555,11 +1625,11 @@ sally = rw
           variable to nothing:</para>
 
         <screen>
-[/branches/calc/bug-142]
+[calc:/branches/calc/bug-142]
 harry = rw
 sally = r
 
-[/branches/calc/bug-142/secret]
+[calc:/branches/calc/bug-142/secret]
 harry =
 </screen>
         
@@ -1580,12 +1650,29 @@ harry =
 * = r
 </screen>
 
-        <para>This is a common setup; once all users have read-access
-          to the repository, you can give explicit
-          <literal>rw</literal> permission to certain users on certain
-          subdirectories.  Fortunately, the access file allows you to
-          define whole groups of users, much like the Unix
-          <filename>/etc/group</filename> file:</para>
+        <para>This is a common setup; notice that there's no
+          repository name mentioned in the section name.  This makes
+          all repositories world readable to all users, whether you're
+          using <literal>SVNPath</literal> or
+          <literal>SVNParentPath</literal>.  Once all users have
+          read-access to the repositor(ies), you can give explicit
+          <literal>rw</literal> permission to certain users on specific
+          subdirectories within specific repositories.</para>
+
+        <para>The asterisk variable (<literal>*</literal>) is also
+          worth special mention here: it's the
+          <emphasis>only</emphasis> pattern which matches an anonymous
+          user.  If you've configured your <literal>Location</literal>
+          block to allow a mixture of anonymous and authenticated
+          access, all users start out accessing Apache anonymously.
+          <command>mod_authz_svn</command> looks for a
+          <literal>*</literal> value defined for the path being
+          accessed;  if it can't find one, then Apache demands real
+          authentication from the client.</para>
+
+        <para>The access file also allows you to define whole groups
+          of users, much like the Unix <filename>/etc/group</filename>
+          file:</para>
 
         <screen>
 [groups]
@@ -1598,28 +1685,15 @@ everyone = harry, sally, joe, frank, sally, jane
           Distinguish them with a <literal>@</literal> prefix:</para>
 
         <screen>
-[/projects/calc]
+[calc:/projects/calc]
 @calc-developers = rw
 
-[/projects/paint]
+[paint:/projects/paint]
 @paint-developers = rw
 jane = r 
 </screen>
 
         <para>...and that's pretty much all there is to it.</para>
-
-        <para>A final note about <command>mod_authz_svn</command>:
-          because it demands an authenticated user at all times, this
-          means your repository cannot be accessed anonymously.  In
-          the simpler authorization setup (<xref
-          linkend="svn-ch-6-sect-4.4.1"/>), it's possible for certain
-          HTTP requests to happen without any authentication at all.
-          But at the moment, <command>mod_authz_svn</command> requires
-          an authenticated username to be associated with every HTTP
-          request.  As a workaround, you might want to create a
-          <quote>guest</quote> user with read-access to your
-          repository, and announce the account to the general
-          public.</para>        
 
       </sect3>
 
