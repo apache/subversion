@@ -77,8 +77,8 @@ def compare_line_lists(expected_lines, actual_lines, regexp):
    are said to match."""
 
   remachine = re.compile(regexp)
-  elist = expected_lines [:]     # make copies so we can change them
-  alist = actual_lines [:]
+  elist = expected_lines[:]     # make copies so we can change them
+  alist = actual_lines[:]
 
   for eline in elist:
     for aline in alist:  # alist will shrink each time this loop starts
