@@ -219,14 +219,17 @@ The node-rev files have the same format as node-revs in a revision
 file, except that the "text" and "props" fields are augmented as
 follows:
 
-  * The "props" field may have the value "this" if properties have
+  * The "props" field may have the value "-1" if properties have
     been changed and are contained in a "props" file within the
     node-rev subdirectory.
 
   * For directory node-revs, the "text" field may have the value
-    "this" if entries have been changed and are contained in a
+    "-1" if entries have been changed and are contained in a
     "contents" file in the node-rev subdirectory.
 
-  * For file node-revs, the "text" field may have the value "this
+  * For file node-revs, the "text" field may have the value "-1
     <offset> <length> <size> <digest>" if the text representation is
     within the prototype rev file.
+
+  * The "copyroot" field may have the value "-1 <created-path>" if the
+    copy root of the node-rev is part of the transaction in process.
