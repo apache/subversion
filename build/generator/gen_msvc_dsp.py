@@ -30,20 +30,16 @@ class Generator(gen_win.WinGeneratorBase):
     if isinstance(target, gen_base.TargetExe):
       targtype = "Win32 (x86) Console Application"
       targval = "0x0103"
-      target.output_name = target.name + '.exe'
     elif isinstance(target, gen_base.TargetJava):
         targtype = "Win32 (x86) Generic Project"
         targval = "0x010a"
-        target.output_name = None
     elif isinstance(target, gen_base.TargetLib):
       if target.msvc_static:
         targtype = "Win32 (x86) Static Library"
         targval = "0x0104"
-        target.output_name = '%s-%d.lib' % (target.name, self.cfg.version)
       else:
         targtype = "Win32 (x86) Dynamic-Link Library"
         targval = "0x0102"
-        target.output_name = os.path.basename(target.filename)
     elif isinstance(target, gen_base.TargetProject):
       if target.cmd:
         targtype = "Win32 (x86) External Target"
@@ -54,8 +50,9 @@ class Generator(gen_win.WinGeneratorBase):
     else:
       raise gen_base.GenError("Cannot create project for %s" % target.name)
 
-    if isinstance(target, gen_base.TargetApacheMod):
-      target.output_name = target.name + '.so'
+    target.output_name = self.get_output_name(target)
+    target.output_dir = self.get_output_dir(target)
+    target.intermediate_dir = self.get_intermediate_dir(target)
 
     configs = self.get_configs(target, rootpath)
 

@@ -289,10 +289,6 @@ class Target(DependencyNode):
     self.add_deps = options.get('add-deps', '')
     self.msvc_name = options.get('msvc-name') # override project name
 
-    # true if several targets share the same directory, as is the case
-    # with SWIG bindings.
-    self.shared_dir = None
-
   def add_dependencies(self, graph, cfg, extmap):
     # subclasses should override to provide behavior, as appropriate
     raise NotImplementedError
@@ -489,7 +485,6 @@ class TargetSWIG(TargetLib):
     TargetLib.__init__(self, name, options, cfg, extmap)
     self.lang = lang
     self.desc = self.desc + ' for ' + lang_full_name[lang]
-    self.shared_dir = 1
 
     ### hmm. this is Makefile-specific
     self.link_cmd = '$(LINK_%s_WRAPPER)' % string.upper(lang_abbrev[lang])
