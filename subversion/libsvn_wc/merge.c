@@ -58,9 +58,10 @@ svn_wc_merge (const char *left,
   /* Sanity check:  the merge target must be under revision control. */
   SVN_ERR (svn_wc_entry (&entry, merge_target, adm_access, FALSE, pool));
   if (! entry)
-    return svn_error_createf
-      (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-       "svn_wc_merge: `%s' not under revision control", merge_target);
+    {
+      *merge_outcome = svn_wc_merge_no_merge;
+      return SVN_NO_ERROR;
+    }
 
   /* Decide if the merge target is a text or binary file. */
   SVN_ERR (svn_wc_has_binary_prop (&is_binary, merge_target, adm_access, pool));

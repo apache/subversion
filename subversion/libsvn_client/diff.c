@@ -474,6 +474,8 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
         *state = svn_wc_notify_state_merged;
       else if (merge_outcome == svn_wc_merge_merged)
         *state = svn_wc_notify_state_changed;
+      else if (merge_outcome == svn_wc_merge_no_merge)
+        *state = svn_wc_notify_state_unknown;
       else /* merge_outcome == svn_wc_merge_unchanged */
         *state = svn_wc_notify_state_unchanged;
     }

@@ -786,6 +786,62 @@ def simple_property_merges(sbox):
   return 0
 
 #----------------------------------------------------------------------
+def merge_catches_nonexistent_target(sbox):
+  "merge should not die if a target file is absent (issue #1176)"
+  
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Copy G to a new directory, Q.  Create Q/newfile.  Commit a change
+  # to Q/newfile.  Now merge that change... into G.  Merge should not
+  # error, but should do nothing.
+
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  Q_path = os.path.join(wc_dir, 'A', 'D', 'Q')
+  newfile_path = os.path.join(Q_path, 'newfile')
+  Q_url = os.path.join(svntest.main.current_repo_url, 'A', 'D', 'Q')
+
+  outlines,errlines = svntest.main.run_svn(None, 'cp', G_path, Q_path)
+  if errlines:
+    return 1
+  
+  svntest.main.file_append(newfile_path, 'This is newfile.\n')
+  outlines,errlines = svntest.main.run_svn(None, 'add', newfile_path)
+  if errlines:
+    return 1
+  
+  outlines,errlines = svntest.main.run_svn(None, 'ci', '-m', 'rev 2', Q_path)
+  if errlines:
+    return 1
+
+  svntest.main.file_append(newfile_path, 'A change to newfile.\n')
+  outlines,errlines = svntest.main.run_svn(None, 'ci', '-m', 'rev 3', Q_path)
+  if errlines:
+    return 1
+
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(G_path)
+    out, err = svntest.main.run_svn(0, 'merge', '-r', '2:3', Q_url)
+    if err:
+      print err
+      return 1
+    found = None
+    for line in out:
+      if re.match("\\s+newfile", line):
+        found = 1
+    if not found:
+      print "Did not see expected output for unmerged file \'newfile\'\n"
+      return 1
+  finally:
+    os.chdir(saved_cwd)
+
+  return 0
+
+
+#----------------------------------------------------------------------
 def merge_one_file(sbox):
   "merge one file, receive a specific error"
 
@@ -948,6 +1004,7 @@ test_list = [ None,
               add_with_history,
               delete_file_and_dir,
               simple_property_merges,
+              merge_catches_nonexistent_target,
               # merge_one_file,          # See issue #1150.
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
