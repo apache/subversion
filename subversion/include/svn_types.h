@@ -80,12 +80,25 @@ typedef int svn_boolean_t;
 
 
 
-/* Defines for *reserved* svn property names.  */
+/* Defines for reserved ("svn:") property names.  */
 
+/* The fs revision property that stores the commit-log. */
 #define SVN_PROP_REVISION_LOG "svn:log"
 
+/* The propname *prefix* that makes a propname a "WC property". 
+   
+   For example, ra_dav might store a versioned-resource url as a WC
+   prop like this:
 
+      name = svn:wc:dav_url
+      val  = http://www.lyra.org/repos/452348/e.289
 
+   The client will try to protect WC props by warning users against
+   changing them.  The client will also send them back to the RA layer
+   when committing.  (gstein:  does the client need to send them when
+   "reporting" wc state before an update, too?)
+*/
+#define SVN_PROP_WC_PREFIX "svn:wc:"
 
 
 

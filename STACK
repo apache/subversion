@@ -221,42 +221,6 @@ Changes to svn_delta_edit_fns_t:
       the "plug n' play" vision of editors is lost here, although we're
       skirting the near the line.
    
-   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-   Change #4:  Revise the commit cleanup process.  (in svn_ra.h)
-   STATUS: Half done, will be completed by Ben
-   The Way It Works Now:
-      The client calls get_commit_editor() in the RA layer, drives the
-      commit editor, and finishes the edit.  Assuming the commit is
-      successful, RA sets the new filesystem head revision in the
-      *new_revision argument.  At this point, the client bumps all WC
-      revisions to this new number.
-   
-   Proposed Change:
-      Remove the *new_revision argument; in the call to
-      get_commit_editor(), the client passes pointers to two new
-      functions and a baton:
-   
-            close_baton
-            close_commit_func (close_baton, relative_path, new_rev)
-            set_wc_prop_func (close_baton, relative_path, name, val)
-   
-      After finishing with RA's commit editor, RA does the "cleanup" by
-      calling the two functions above.  close_commit_func() bumps the
-      revision number of a path, and set_wc_prop_func() stores WC
-      properties on that path.
-   
-   Rationale:
-      Following on the heels of the previous issue, RA needs the ability
-      to store special "WC properties" after a commit.  In the case of
-      ra_dav, these are the magical "versioned resource URL" cookies.  In
-      the case of ra_local, perhaps someday these WC props will be
-      something else.
-   
-      As long as RA is doing this, it's simpler and more elegant to let
-      it bump revision numbers as well.  Right now the WC is storing a
-      list of all committed targets and doing the cleanup manually;  it's
-      far easier to let RA do the work.  In the end, WC won't have to do
-      anything but cleanup lockfiles.  Much simpler.
    
    =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
    Change #6:  Move textdeltas to the "other side" of the editor.
