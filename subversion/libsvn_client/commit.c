@@ -821,7 +821,6 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   display_dir = svn_path_get_longest_ancestor (display_dir, base_dir, pool);
   notify_path_offset = display_dir->len ? display_dir->len + 1 : 0;
 
-  printf ("notify_path_offset:%d\n", notify_path_offset);
   /* Perform the commit. */
   cmt_err = svn_client__do_commit (base_url, commit_items, editor, edit_baton, 
                                    notify_func, notify_baton,
