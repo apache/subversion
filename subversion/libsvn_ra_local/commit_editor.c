@@ -324,7 +324,7 @@ add_file (const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   const char *full_path = svn_path_join (eb->base_path->data, path, pool);
-  apr_pool_t *subpool = svn_pool_create (pb->pool);
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   /* Sanity check. */  
   if (copy_path && (! SVN_IS_VALID_REVNUM (copy_revision)))
