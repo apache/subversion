@@ -127,22 +127,11 @@ if [ -f /usr/bin/autoconf-2.53 ]; then
 fi
 sh autogen.sh
 
-LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_delta/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_fs/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_repos/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_dav/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_local/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_subr/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_wc/.libs \
-	" ./configure \
+./configure \
 	--prefix=/usr \
 	--with-apxs=%{apache_dir}/usr/bin/apxs \
 	--with-apr=%{apache_dir}/bin/apr-config \
 	--with-apr-util=%{apache_dir}/bin/apu-config
-
-#	--libdir=/usr/lib \
 
 # Fix up mod_dav_svn installation.
 %patch0 -p1
@@ -160,8 +149,6 @@ make install \
 	base_libdir=$RPM_BUILD_ROOT/usr/lib \
 	infodir=$RPM_BUILD_ROOT/usr/share/info \
 	libexecdir=$RPM_BUILD_ROOT/%{apache_dir}/lib
-
-#	libdir=$RPM_BUILD_ROOT/usr/lib \
 
 %post
 /sbin/install-info /usr/share/info/svn-design.info.gz /usr/share/info/dir --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
@@ -190,11 +177,11 @@ if [ "`grep -i dav_svn_module $CONF`"x = "x" ]; then
    while ( <> )
       {
       $FirstLoadFound = 1 if ( ! $FirstLoadFound &&
-           (/^LoadModule/ || /^#LoadModule/ ||  /^# LoadModule/) );
+           ( /^LoadModule/ ) );
       $InsertPointFound = 1,
          print "LoadModule dav_svn_module modules/mod_dav_svn.so\n"
          if ( $FirstLoadFound && ! $InsertPointFound &&
-              ! (/^LoadModule/ ) );
+              ! ( /^LoadModule/ ) );
       print;
       }
    ' < $CONF > $CONF.new && mv $CONF $CONF.bak && mv $CONF.new $CONF
