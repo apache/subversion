@@ -148,6 +148,10 @@ svn_fs__bdb_new_successor_id (svn_fs_id_t **successor_p,
          new_id_str->data, id_str->data, fs->path);
     }
 
+  /* err is SVN_ERR_FS_ID_NOT_FOUND, meaning the ID is available. But
+     we don't want this error. */
+  svn_error_clear (err);
+
   /* Return the new node revision ID. */
   *successor_p = new_id;
   return SVN_NO_ERROR;

@@ -199,6 +199,14 @@ struct dav_resource_private {
   /* the value of any SVN_DAV_OPTIONS_HEADER that came in the request */
   const char *svn_client_options;
 
+  /* the revnum value from a possible SVN_DAV_VERSION_NAME_HEADER */
+  svn_revnum_t version_name;
+
+  /* Hex MD5 digests for base text and resultant fulltext.
+     Either or both of these may be null, in which case ignored. */
+  const char *base_checksum;
+  const char *result_checksum;
+
   /* was this resource auto-checked-out? */
   svn_boolean_t auto_checked_out;
 
@@ -474,10 +482,10 @@ dav_error * dav_svn_split_uri (request_rec *r,
    pairs, and thus one of {svn_node_file, svn_node_dir, svn_node_none}
    will be returned.
 
-   If URI is something more abstract, then set *KIND to to
+   If URI is something more abstract, then set *KIND to
    svn_node_unknown.  This is true for baselines, working baselines,
    version controled configurations, activities, histories, and other
-   private resources.  
+   private resources.
 */
 dav_error * dav_svn_resource_kind (request_rec *r,
                                    const char *uri,

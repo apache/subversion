@@ -256,13 +256,12 @@ svn_ra_local__open (void **session_baton,
 static svn_error_t *
 svn_ra_local__close (void *session_baton)
 {
-  svn_ra_local__session_baton_t *baton = 
-    (svn_ra_local__session_baton_t *) session_baton;
+  svn_ra_local__session_baton_t *baton = session_baton;
 
-  /* Close the repository, which will free any memory used by it. */
-  SVN_ERR (svn_repos_close (baton->repos));
-  
-  /* NULL out the FS cache so no one is tempted to use it again. */
+  /* ### maybe arrange to have a pool which can be cleared... */
+
+  /* People shouldn't try and use these objects now. */
+  baton->repos = NULL;
   baton->fs = NULL;
 
   return SVN_NO_ERROR;
@@ -684,6 +683,15 @@ svn_ra_local__get_file (void *session_baton,
           rlen = SVN_STREAM_CHUNK_SIZE; 
           SVN_ERR (svn_stream_read (contents, buf, &rlen));
           
+          /* Note that this particular RA layer does not computing a
+             checksum as we go, and confirming it against the
+             repository's checksum when done.  That's because it calls
+             svn_fs_file_contents() directly, which already checks the
+             stored checksum, and all we're doing here is writing
+             bytes in a loop.  Truly, Nothing Can Go Wrong :-).  But
+             RA layers that go over a network should confirm the
+             checksum. */
+
           /* write however many bytes you read, please. */
           wlen = rlen;
           SVN_ERR (svn_stream_write (stream, buf, &wlen));

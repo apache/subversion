@@ -18,11 +18,15 @@
 
 
 #include <locale.h>
+
 #include <apr_file_io.h>
+
 #include "svn_error.h"
 #include "svn_opt.h"
 #include "svn_utf.h"
 #include "svn_subst.h"
+#include "svn_path.h"
+
 #include "svnadmin.h"
 
 
@@ -77,7 +81,8 @@ enum
   { 
     svnadmin__incremental = SVN_OPT_FIRST_LONGOPT_ID,
     svnadmin__follow_copies,
-    svnadmin__long_output
+    svnadmin__on_disk_template,
+    svnadmin__in_repos_template
   };
 
 /* Option codes and descriptions.
@@ -104,7 +109,13 @@ static const apr_getopt_option_t options_table[] =
     {"copies",   svnadmin__follow_copies, 0,
      "follow copy history"},
 
-    {0,               0, 0, 0}
+    {"on-disk-template", svnadmin__on_disk_template, 1,
+     "specify template for the on disk structure"},
+
+    {"in-repos-template", svnadmin__in_repos_template, 1,
+     "specify template for the repository structure"},
+
+    {NULL}
   };
 
 
@@ -116,7 +127,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     {"create", subcommand_create, {0},
      "usage: svnadmin create REPOS_PATH\n\n"
      "Create a new, empty repository at REPOS_PATH.\n",
-     {0} },
+     {svnadmin__on_disk_template, svnadmin__in_repos_template} },
     
     {"createtxn", subcommand_createtxn, {0},
      "usage: svnadmin createtxn REPOS_PATH -r REVISION\n\n"
@@ -193,7 +204,8 @@ struct svnadmin_opt_state
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t incremental;                        /* --incremental */
   svn_boolean_t follow_copies;                      /* --copies */
-  svn_boolean_t long_output;                        /* --long */
+  const char *on_disk;
+  const char *in_repos;
 };
 
 /* This implements `svn_opt_subcommand_t'. */
@@ -203,8 +215,8 @@ subcommand_create (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
 
-  SVN_ERR (svn_repos_create (&repos, opt_state->repository_path, pool));
-  SVN_ERR (svn_repos_close (repos));
+  SVN_ERR (svn_repos_create (&repos, opt_state->repository_path,
+                             opt_state->on_disk, opt_state->in_repos, pool));
 
   return SVN_NO_ERROR;
 }
@@ -231,7 +243,6 @@ subcommand_createtxn (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_fs_begin_txn (&txn, fs, opt_state->start_revision.value.number,
                              pool));
   SVN_ERR (svn_fs_close_txn (txn));
-  SVN_ERR (svn_repos_close (repos));
   
   return SVN_NO_ERROR;
 }
@@ -287,8 +298,6 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_repos_dump_fs (repos, stdout_stream, stderr_stream,
                               lower, upper, opt_state->incremental, pool));
 
-  SVN_ERR (svn_repos_close (repos));
-
   return SVN_NO_ERROR;
 }
 
@@ -331,8 +340,6 @@ subcommand_load (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   
   SVN_ERR (svn_repos_load_fs (repos, stdin_stream, stdout_stream, pool));
 
-  SVN_ERR (svn_repos_close (repos));
-
   return SVN_NO_ERROR;
 }
 
@@ -371,8 +378,6 @@ subcommand_lscr (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       svn_revnum_t this_rev = ((svn_revnum_t *)revs->elts)[i];
       printf ("%" SVN_REVNUM_T_FMT "\n", this_rev);
     }
-  
-  SVN_ERR (svn_repos_close (repos));
 
   return SVN_NO_ERROR;
 }
@@ -397,8 +402,6 @@ subcommand_lstxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
     {
       printf ("%s\n", APR_ARRAY_IDX (txns, i, const char *));
     }
-
-  SVN_ERR (svn_repos_close (repos));
   
   return SVN_NO_ERROR;
 }
@@ -412,8 +415,8 @@ subcommand_recover (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_repos_t *repos;
   struct svnadmin_opt_state *opt_state = baton;
 
-  printf ("Acquiring exclusive lock on repository db, and running "
-          "recovery procedures.\nPlease stand by...");
+  printf ("Acquiring exclusive lock on repository db.\n"
+          "Recovery is running, please stand by...");
   fflush(stdout);
 
   SVN_ERR (svn_repos_recover (opt_state->repository_path, pool));
@@ -427,7 +430,6 @@ subcommand_recover (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_fs_youngest_rev (&youngest_rev, svn_repos_fs (repos), pool));
   printf ("The latest repos revision is %"
           SVN_REVNUM_T_FMT ".\n", youngest_rev);
-  SVN_ERR (svn_repos_close (repos));
 
   return SVN_NO_ERROR;
 }
@@ -461,8 +463,6 @@ subcommand_rmtxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       SVN_ERR (svn_fs_abort_txn (txn));
       svn_pool_clear (subpool);
     }
-
-  SVN_ERR (svn_repos_close (repos));
 
   return SVN_NO_ERROR;
 }
@@ -512,8 +512,6 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_fs_change_rev_prop (fs, opt_state->start_revision.value.number,
                                    SVN_PROP_REVISION_LOG,
                                    log_contents, pool));
-
-  SVN_ERR (svn_repos_close (repos));
 
   return SVN_NO_ERROR;
 }
@@ -632,8 +630,23 @@ main (int argc, const char * const *argv)
       case svnadmin__follow_copies:
         opt_state.follow_copies = TRUE;
         break;
-      case svnadmin__long_output:
-        opt_state.long_output = TRUE;
+      case svnadmin__on_disk_template:
+        err = svn_path_cstring_to_utf8 (&opt_state.on_disk, opt_arg, pool);
+        if (err)
+          {
+            svn_handle_error (err, stderr, FALSE);
+            svn_pool_destroy (pool);
+            return EXIT_FAILURE;
+          }
+        break;
+      case svnadmin__in_repos_template:
+        err = svn_path_cstring_to_utf8 (&opt_state.in_repos, opt_arg, pool);
+        if (err)
+          {
+            svn_handle_error (err, stderr, FALSE);
+            svn_pool_destroy (pool);
+            return EXIT_FAILURE;
+          }
         break;
       default:
         {

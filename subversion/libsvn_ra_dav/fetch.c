@@ -24,6 +24,7 @@
 #include <apr_pools.h>
 #include <apr_tables.h>
 #include <apr_strings.h>
+#include <apr_md5.h>
 #include <apr_portable.h>
 
 #include <ne_basic.h>
@@ -39,6 +40,7 @@
 #include "svn_pools.h"
 #include "svn_delta.h"
 #include "svn_io.h"
+#include "svn_md5.h"
 #include "svn_ra.h"
 #include "svn_path.h"
 #include "svn_xml.h"
@@ -78,6 +80,12 @@ typedef struct {
   svn_stream_t *stream;
 
 } file_read_ctx_t;
+
+typedef struct {
+  svn_boolean_t do_checksum;  /* only accumulate checksum if set */
+  apr_md5_ctx_t md5_context;  /* accumulating checksum of file contents */
+  svn_stream_t *stream;       /* stream to write file contents to */
+} file_write_ctx_t;
 
 typedef struct {
   svn_error_t *err;             /* propagate an error out of the reader */
@@ -131,9 +139,10 @@ typedef struct {
 #define TOP_DIR(rb) (((dir_item_t *)(rb)->dirs->elts)[(rb)->dirs->nelts - 1])
 #define PUSH_BATON(rb,b) (*(void **)apr_array_push((rb)->dirs) = (b))
 
-  /* These two items are only valid inside add- and open-file tags! */
+  /* These items are only valid inside add- and open-file tags! */
   void *file_baton;
   apr_pool_t *file_pool;
+  const char *result_checksum; /* hex md5 digest of result; may be null */
 
   svn_stringbuf_t *namestr;
   svn_stringbuf_t *cpathstr;
@@ -169,6 +178,8 @@ static const struct ne_xml_elm report_elements[] =
   { SVN_XML_NAMESPACE, "remove-prop", ELEM_remove_prop, 0 },
   { SVN_XML_NAMESPACE, "fetch-file", ELEM_fetch_file, 0 },
   { SVN_XML_NAMESPACE, "prop", ELEM_prop, 0 },
+
+  { SVN_DAV_PROP_NS_DAV, "md5-checksum", ELEM_md5_checksum, NE_XML_CDATA },
 
   { "DAV:", "version-name", ELEM_version_name, NE_XML_CDATA },
   { "DAV:", "creationdate", ELEM_creationdate, NE_XML_CDATA },
@@ -646,6 +657,8 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
                                       const char *relpath,
                                       svn_boolean_t text_deltas,
                                       void *file_baton,
+                                      const char *base_checksum,
+                                      const char *result_checksum,
                                       const svn_delta_editor_t *editor,
                                       svn_ra_get_wc_prop_func_t get_wc_prop,
                                       void *cb_baton,
@@ -654,13 +667,13 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
   file_read_ctx_t frc = { 0 };
 
   SVN_ERR_W( (*editor->apply_textdelta)(file_baton,
-                                        NULL, NULL,
+                                        base_checksum, result_checksum,
                                         pool,
                                         &frc.handler,
                                         &frc.handler_baton),
              "could not save file");
 
-  /* If we have to handler for the windows, we can do nothing here. */
+  /* If we have no handler for the windows, we can do nothing here. */
   if (! frc.handler)
     return SVN_NO_ERROR;
 
@@ -694,6 +707,9 @@ static svn_error_t *fetch_file(ne_session *sess,
   svn_error_t *err;
   svn_error_t *err2;
   void *file_baton;
+  const char *checksum = apr_hash_get(rsrc->propset,
+                                      SVN_RA_DAV__PROP_MD5_CHECKSUM,
+                                      APR_HASH_KEY_STRING);
 
   SVN_ERR_W( (*editor->add_file)(edit_path, dir_baton,
                                  NULL, SVN_INVALID_REVNUM,
@@ -703,8 +719,9 @@ static svn_error_t *fetch_file(ne_session *sess,
   /* fetch_file() is only used for checkout, so we just pass NULL for the
      simple_fetch_file() params related to fetching version URLs (for
      fetching deltas) */
-  err = simple_fetch_file(sess, bc_url, NULL, TRUE, file_baton, editor,
-                          NULL, NULL, pool);
+  err = simple_fetch_file(sess, bc_url, NULL, TRUE, file_baton, 
+                          NULL, checksum,
+                          editor, NULL, NULL, pool);
   if (err)
     {
       /* ### do we really need to bother with closing the file_baton? */
@@ -777,12 +794,16 @@ static void get_file_reader(void *userdata, const char *buf, size_t len)
   apr_size_t wlen;
 
   /* The stream we want to push data at. */
-  svn_stream_t *stream = cgc->subctx;
+  file_write_ctx_t *fwc = cgc->subctx; 
+  svn_stream_t *stream = fwc->stream;
+
+  if (fwc->do_checksum)
+    apr_md5_update(&(fwc->md5_context), buf, len);
 
   /* Write however many bytes were passed in by neon. */
   wlen = len;
   svn_stream_write(stream, buf, &wlen);
- 
+
 #if 0
   /* Neon's callback won't let us return error.  Joe knows this is a
      bug in his API, so this section can be reactivated someday. */
@@ -954,11 +975,62 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
 
   if (stream)
     {
+      svn_error_t *err;
+      const svn_string_t *expected_checksum = NULL;
+      file_write_ctx_t fwc;
+      ne_propname md5_propname = { SVN_DAV_PROP_NS_DAV, "md5-checksum" };
+      unsigned char digest[MD5_DIGESTSIZE];
+      const char *hex_digest;
+
+      /* Only request a checksum if we're getting the file contents. */
+      /* ### We should arrange for the checksum to be returned in the
+         svn_ra_dav__get_baseline_info() call above; that will prevent
+         the extra round trip, at least some of the time. */
+      err = svn_ra_dav__get_one_prop(&expected_checksum,
+                                     ras->sess,
+                                     final_url,
+                                     NULL,
+                                     &md5_propname,
+                                     ras->pool);
+
+      /* Older servers don't serve this prop, but that's okay. */
+      /* ### temporary hack for 0.17. if the server doesn't have the prop,
+         ### then __get_one_prop returns an empty string. deal with it.  */
+      if ((err && (err->apr_err == SVN_ERR_RA_DAV_PROPS_NOT_FOUND))
+          || *expected_checksum->data == '\0')
+        {
+          fwc.do_checksum = FALSE;
+          svn_error_clear(err);
+        }
+      else if (err)
+        return err;
+      else
+        fwc.do_checksum = TRUE;
+
+      fwc.stream = stream;
+
+      if (fwc.do_checksum)
+        apr_md5_init(&(fwc.md5_context));
+
       /* Fetch the file, shoving it at the provided stream. */
       SVN_ERR( custom_get_request(ras->sess, final_url, path,
-                                  get_file_reader, stream,
+                                  get_file_reader, &fwc,
                                   ras->callbacks->get_wc_prop,
                                   ras->callback_baton, ras->pool) );
+
+      if (fwc.do_checksum)
+        {
+          apr_md5_final(digest, &(fwc.md5_context));
+          hex_digest = svn_md5_digest_to_cstring(digest, ras->pool);
+
+          if (strcmp (hex_digest, expected_checksum->data) != 0)
+            return svn_error_createf
+              (SVN_ERR_CHECKSUM_MISMATCH, NULL,
+               "svn_ra_dav__get_file: checksum mismatch for '%s':\n"
+               "   expected checksum:  %s\n"
+               "   actual checksum:    %s\n",
+               path, expected_checksum->data, hex_digest);
+        }
     }
 
   if (props)
@@ -1417,7 +1489,6 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
   svn_ra_session_t *ras = session_baton;
   svn_ra_dav_resource_t *baseline;
   svn_boolean_t is_svn_prop;
-  const char *dav_propname;
   int rv;
   static ne_propname propname_struct = {0, 0};
   ne_proppatch_operation po[2] = { { 0 } };
@@ -1459,16 +1530,10 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
   /* Possibly strip off the 'svn:' prefix for DAV transport.  The
      namespace will be used instead to convey the same meaning. */
   is_svn_prop = svn_prop_is_svn_prop (name);
-  dav_propname = is_svn_prop ? (name + sizeof(SVN_PROP_PREFIX) - 1) : name;
-  propname_struct.name = dav_propname;
-
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-  propname_struct.nspace = is_svn_prop ? 
-    SVN_PROP_PREFIX : SVN_PROP_CUSTOM_PREFIX;
-#else /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
-  propname_struct.nspace = is_svn_prop ?
-    SVN_DAV_PROP_NS_SVN : SVN_DAV_PROP_NS_CUSTOM;
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+  propname_struct.nspace = is_svn_prop ? SVN_DAV_PROP_NS_SVN 
+                                       : SVN_DAV_PROP_NS_CUSTOM;
+  propname_struct.name = is_svn_prop ? (name + sizeof(SVN_PROP_PREFIX) - 1) 
+                                     : name;
 
   po[0].name = &propname_struct;
   po[0].type = value ? ne_propset : ne_propremove;
@@ -1478,7 +1543,7 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
   if (rv != NE_OK)
     {
       const char *msg = apr_psprintf(ras->pool,
-                                     "applying property change to to %s",
+                                     "applying property change to %s",
                                      baseline->url);
       return svn_ra_dav__convert_error(ras->sess, msg, rv);
     }
@@ -1522,7 +1587,7 @@ svn_error_t *svn_ra_dav__rev_prop (void *session_baton,
   svn_ra_session_t *ras = session_baton;
   svn_ra_dav_resource_t *baseline;
   apr_hash_t *filtered_props;
-  const char *namespace, *marshalled_name;
+  svn_boolean_t is_svn_prop;
 
   /* E-Z initialization */
   ne_propname wanted_props[] =
@@ -1532,27 +1597,11 @@ svn_error_t *svn_ra_dav__rev_prop (void *session_baton,
     };
 
   /* Decide on the namespace and propname for XML marshalling. */
-  if (svn_prop_is_svn_prop(name))
-    {
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-      namespace = SVN_PROP_PREFIX;
-#else
-      namespace = SVN_DAV_PROP_NS_SVN;
-#endif
-      marshalled_name = name + sizeof(SVN_PROP_PREFIX) - 1;
-    }
-  else
-    {
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-      namespace = SVN_PROP_CUSTOM_PREFIX;
-#else
-      namespace = SVN_DAV_PROP_NS_CUSTOM;
-#endif
-      marshalled_name = name;
-    }
-
-  wanted_props[0].nspace = namespace;
-  wanted_props[0].name = marshalled_name;
+  is_svn_prop = svn_prop_is_svn_prop(name);
+  wanted_props[0].nspace = is_svn_prop ? SVN_DAV_PROP_NS_SVN 
+                                       : SVN_DAV_PROP_NS_CUSTOM;
+  wanted_props[0].name = is_svn_prop ? name + sizeof(SVN_PROP_PREFIX) - 1
+                                     : name;
 
   /* Main objective: do a PROPFIND (allprops) on a baseline object */  
   SVN_ERR (svn_ra_dav__get_baseline_props(NULL, &baseline,
@@ -1677,10 +1726,11 @@ static int validate_element(void *userdata,
       if (child == ELEM_version_name
           || child == ELEM_creationdate
           || child == ELEM_creator_displayname
+          || child == ELEM_md5_checksum
           || child == ELEM_remove_prop)
         return NE_XML_VALID;
       else
-        return NE_XML_INVALID;
+        return NE_XML_DECLINE;
 
     default:
       return NE_XML_DECLINE;
@@ -1724,6 +1774,8 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
   void *new_dir_baton;
   svn_stringbuf_t *pathbuf;
   apr_pool_t *subpool;
+  const char *base_checksum = NULL;
+  const char *result_checksum = NULL;
 
   switch (elm->id)
     {
@@ -1872,6 +1924,10 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       parent_dir = &TOP_DIR(rb);
       rb->file_pool = svn_pool_create(rb->ras->pool);
 
+      result_checksum = get_attr(atts, "result-checksum");
+      if (result_checksum)
+        rb->result_checksum = apr_pstrdup(rb->file_pool, result_checksum);
+
       /* Add this file's name into the directory's path buffer. It will be
          removed in end_element() */
       svn_path_add_component(parent_dir->pathbuf, rb->namestr->data);
@@ -1928,11 +1984,16 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       break;
 
     case ELEM_fetch_file:
+      base_checksum = get_attr(atts, "base-checksum");
+      result_checksum = get_attr(atts, "result-checksum");
       /* assert: rb->href->len > 0 */
       CHKERR( simple_fetch_file(rb->ras->sess2, rb->href->data,
                                 TOP_DIR(rb).pathbuf->data,
                                 rb->fetch_content,
-                                rb->file_baton, rb->editor,
+                                rb->file_baton,
+                                base_checksum,
+                                result_checksum,
+                                rb->editor,
                                 rb->ras->callbacks->get_wc_prop,
                                 rb->ras->callback_baton,
                                 rb->file_pool) );
@@ -2056,7 +2117,10 @@ static int end_element(void *userdata,
       CHKERR( simple_fetch_file(rb->ras->sess2, rb->href->data,
                                 TOP_DIR(rb).pathbuf->data,
                                 rb->fetch_content,
-                                rb->file_baton, rb->editor,
+                                rb->file_baton,
+                                NULL,  /* no base checksum in an add */
+                                rb->result_checksum,
+                                rb->editor,
                                 rb->ras->callbacks->get_wc_prop,
                                 rb->ras->callback_baton,
                                 rb->file_pool) );

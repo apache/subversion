@@ -135,6 +135,7 @@ Directory structure
   path_setup_out      Where svn-X.XX.X-rXXXX-setup.exe is to find after
                       compiling the setup
   path_setup_in       Contains misc. files to include in the setup
+  path_isx            Path to ISX
   path_svnclient      svn.exe
   path_svnadmin       svnadmin.exe
   path_svnlook        svnlook.exe
@@ -160,9 +161,9 @@ Programs used for the Subversion Windows installer
   reliable and stable.
 
   The Inno Setup used by Subversion are extended with "My Inno Setup
-  Extentions" made by Martijn Laan and "Inno Setup Pre Proccessor" made by Alex
-  Yackimoff. ISX includes IS and ISPP so all you need to do, is to install
-  install "My Inno Setup Extentions"
+  Extentions" made by Martijn Laan and "Inno Setup Pre Proccessor"
+  made by Alex Yackimoff. ISX includes IS and ISPP so all you need to
+  do, is to install "My Inno Setup Extentions"
 
   Oh, you should visit Jordan Russell's (the Inno Setup creater) homepage at:
     http://www.jrsoftware.org/
@@ -212,8 +213,8 @@ Programs used for the Subversion Windows installer
   libxml, libxslt and iconv
   -------------------------
   We need to include some documentation and this tools will help us to convert
-  the XML files in the doc directory in the the repository to a Windows HTML
-  help file.
+  the XML files in the doc directory in the repository to a Windows HTML help
+  file.
   
   Installation notes:
     Unpack the zip-files and place the contents of the 'lib' and 'util' folders
@@ -254,14 +255,19 @@ Making a distro
      in your WC and edit it according to the documentation inside it.
   3. Make sure that all the files to include in the setup are where they are
      supposed to be according to the paths_inno_src.iss file.
-  4. Change directory (cd) to the packages\win32-innosetup\tools folder on your
-     working Subversion repository and run the following commands:
-         perl mk_svndoc.pl
-         perl set_version.pl
-  5. Go back to the packages\win32-innosetup directory and compile the setup
-     with istool.
-  6. Go to your "path_setup_out" directory and run the file "mk7zsfx.bat".
-     The result of this should be a nice svn-X.X.X-rXXXX-setup.exe
+  4. Now, you have two diffrent ways of making the documentation and the setup:
+
+     A. Change directory (cd) to the packages\win32-innosetup\tools folder on
+        your working Subversion repository and run the following command and
+        follow the instructions:
+            mk_distro
+         
+     B. You may want to make a automatic setup (nightly build, anything else),
+        just run the packages\win32-innosetup\tools\mk_distro file as:
+            path\to\packages\win32-innosetup\tools\mk_distro -a
+
+  A shiny new svn-X.XX.X-rXXXX-setup.exe should now be in your path_setup_out
+  folder if you have done everything right.
 
 Good luck!
 

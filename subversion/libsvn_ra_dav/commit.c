@@ -119,6 +119,8 @@ typedef struct
 {
   apr_file_t *tmpfile;
   svn_stringbuf_t *fname;
+  const char *base_checksum;    /* hex md5 of base text; may be null */
+  const char *result_checksum;  /* hex md5 of resulting text; may be null */
   resource_baton_t *file;
 } put_baton_t;
 
@@ -134,6 +136,7 @@ static const ne_propname log_message_prop = { SVN_DAV_PROP_NS_SVN, "log" };
 
 static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
                                     const char *url, int *code,
+                                    apr_hash_t *extra_headers,
                                     int okay_1, int okay_2)
 {
   ne_request *req;
@@ -145,6 +148,20 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
       return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
                                "Could not create a request (%s %s)",
                                method, url);
+    }
+
+  /* add any extra headers passed in by caller. */
+  if (extra_headers != NULL)
+    {
+      apr_hash_index_t *hi;
+      for (hi = apr_hash_first (ras->pool, extra_headers);
+           hi; hi = apr_hash_next (hi))
+        {
+          const void *key;
+          void *val;
+          apr_hash_this (hi, &key, NULL, &val);
+          ne_add_request_header(req, (const char *) key, (const char *) val); 
+        }
     }
 
   /* run the request and get the resulting status code (and svn_error_t) */
@@ -307,7 +324,7 @@ static svn_error_t * create_activity(commit_ctx_t *cc)
   SVN_ERR( get_activity_collection(cc, &activity_collection, FALSE) );
   url = svn_path_url_add_component(activity_collection->data, 
                                    uuid_buf, cc->ras->pool);
-  SVN_ERR( simple_request(cc->ras, "MKACTIVITY", url, &code,
+  SVN_ERR( simple_request(cc->ras, "MKACTIVITY", url, &code, NULL,
                           201 /* Created */,
                           404 /* Not Found */) );
 
@@ -319,7 +336,8 @@ static svn_error_t * create_activity(commit_ctx_t *cc)
       SVN_ERR( get_activity_collection(cc, &activity_collection, TRUE) );
       url = svn_path_url_add_component(activity_collection->data, 
                                        uuid_buf, cc->ras->pool);
-      SVN_ERR( simple_request(cc->ras, "MKACTIVITY", url, &code, 201, 0) );
+      SVN_ERR( simple_request(cc->ras, "MKACTIVITY", url, &code,
+                              NULL, 201, 0) );
     }
 
   cc->activity_url = url;
@@ -526,6 +544,46 @@ static int do_setprop(void *rec, const char *name, const char *value)
   return 1;
 }
 
+/* 
+A very long note about enforcing directory-up-to-dateness when
+proppatching, writ by Ben: 
+
+Once upon a time, I thought it would be necessary to attach the
+X-SVN-Version-Name header to every PROPPATCH request we send.  This
+would allow mod_dav_svn to verify that a directory is up-to-date.
+
+But it turns out that mod_dav_svn screams and errors if you *ever* try
+to CHECKOUT an out-of-date VR.  And furthermore, a directory is never
+a 'committable' (according to svn_client_commit) unless it has a
+propchange.  Therefore:
+
+1. when ra_dav's commit editor attempts to CHECKOUT a parent directory
+   because some child is being added or deleted, it's *unable* to get
+   the VR cache, and thus just gets the HEAD one instead.  So it ends
+   up always doing a CHECKOUT of the latest version of the directory.
+   This is actually fine; Subversion's semantics allow us to
+   add/delete children on out-of-date directories.  If, in dav terms,
+   this means always checking out the latest directory, so be it.  Any
+   namespace conflicts will be detected with the actual PUT or DELETE
+   of the child.
+
+2. when ra_dav's commit editor receives a directory propchange, it
+   *is* able to get the VR cache (because the dir is a "committable"),
+   and thus it does a CHECKOUT of the older directory.  And mod_dav_svn
+   will scream if the VR is out-of-date, which is exactly what we want in
+   the directory propchange scenario.
+
+The only potential badness here is the case of committing a directory
+with a propchange, and an add/rm of its child.  This commit should
+fail, due to the out-of-date propchange.  However, it's *possible*
+that it will fail for a different reason:  we might attempt the add/rm
+first, which means checking out the parent VR, which *would* be
+available from the cache, and thus we get an early error.  Instead of
+seeing an error about 'cannot proppatch out-of-date dir', the user
+will see an error about 'cannot checkout out-of-date parent'.  Not
+really a big deal I guess.
+
+*/
 static svn_error_t * do_proppatch(svn_ra_session_t *ras,
                                   const resource_t *rsrc,
                                   resource_baton_t *rb)
@@ -648,8 +706,17 @@ static svn_error_t * commit_delete_entry(const char *path,
 {
   resource_baton_t *parent = parent_baton;
   const char *name = svn_path_basename(path, pool);
+  apr_hash_t *extra_headers = NULL;
   const char *child;
   int code;
+
+  if (SVN_IS_VALID_REVNUM(revision))
+    {
+      const char *revstr = apr_psprintf(pool, "%" SVN_REVNUM_T_FMT, revision);
+      extra_headers = apr_hash_make(pool);
+      apr_hash_set(extra_headers, SVN_DAV_VERSION_NAME_HEADER,
+                   APR_HASH_KEY_STRING, revstr);
+    }
 
   /* get the URL to the working collection */
   SVN_ERR( checkout_resource(parent->cc, parent->rsrc, TRUE) );
@@ -668,6 +735,7 @@ static svn_error_t * commit_delete_entry(const char *path,
      failed deletion (because it's already missing) is OK;  deletion
      is an idempotent merge operation. */
   SVN_ERR( simple_request(parent->cc->ras, "DELETE", child, &code,
+                          extra_headers,
                           204 /* Created */, 404 /* Not Found */) );
 
   /* Add this path to the valid targets hash. */
@@ -704,7 +772,7 @@ static svn_error_t * commit_add_dir(const char *path,
       /* This a new directory with no history, so just create a new,
          empty collection */
       SVN_ERR( simple_request(parent->cc->ras, "MKCOL", child->rsrc->wr_url,
-                              &code, 201 /* Created */, 0) );
+                              &code, NULL, 201 /* Created */, 0) );
     }
   else
     {
@@ -1010,8 +1078,15 @@ static svn_error_t * commit_stream_close(void *baton)
                                url);
     }
 
-  /* ### use a symbolic name somewhere for this MIME type? */
   ne_add_request_header(req, "Content-Type", SVN_SVNDIFF_MIME_TYPE);
+
+  if (pb->base_checksum)
+    ne_add_request_header
+      (req, SVN_DAV_BASE_FULLTEXT_MD5_HEADER, pb->base_checksum);
+
+  if (pb->result_checksum)
+    ne_add_request_header
+      (req, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER, pb->result_checksum);
 
   /* Rewind the tmpfile. */
   status = apr_file_seek(pb->tmpfile, APR_SET, &offset);
@@ -1062,6 +1137,16 @@ commit_apply_txdelta(void *file_baton,
 
   baton = apr_pcalloc(pool, sizeof(*baton));
   baton->file = file;
+
+  if (base_checksum)
+    baton->base_checksum = apr_pstrdup (pool, base_checksum);
+  else
+    baton->base_checksum = NULL;
+
+  if (result_checksum)
+    baton->result_checksum = apr_pstrdup (pool, result_checksum);
+  else
+    baton->result_checksum = NULL;
 
   /* ### oh, hell. Neon's request body support is either text (a C string),
      ### or a FILE*. since we are getting binary data, we must use a FILE*

@@ -25,6 +25,8 @@
 #ifndef SVN_ERROR_H
 #define SVN_ERROR_H
 
+#include <stdio.h>
+
 #include <apr.h>
 #include <apr_errno.h>     /* APR's error system */
 #include <apr_pools.h>
@@ -74,7 +76,7 @@ char *svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize);
  *
  * Notes: Errors are always allocated in a subpool of the global pool,
  *        since an error's lifetime is generally not related to the
- *        lifetime of the any convenient pool.  Errors must be be freed
+ *        lifetime of the any convenient pool.  Errors must be freed
  *        with @c svn_error_clear().
  *
  *        If creating the "bottommost" error in a chain, pass @c NULL for
@@ -145,10 +147,10 @@ void svn_handle_error (svn_error_t *error,
 
 /** Basic, default warning handler.
  *
- * Just prints to a <tt>FILE *</tt> stream, which must be passed in @a data.  
- * Allocates from a subpool of @a pool.
+ * Just prints @a error to the stdio stream given in @a stream. Allocations
+ * are performed in the error's pool.
  */
-void svn_handle_warning (apr_pool_t *pool, void *data, const char *fmt, ...);
+void svn_handle_warning (FILE *stream, svn_error_t *error);
 
 
 /** A statement macro for checking error return values.

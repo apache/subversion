@@ -355,9 +355,6 @@ typedef svn_error_t *(*svn_close_fn_t) (void *baton);
 /** Creating a generic stream.  */
 svn_stream_t *svn_stream_create (void *baton, apr_pool_t *pool);
 
-/** Duplicate a generic stream. */
-svn_stream_t *svn_stream_dup (svn_stream_t *stream, apr_pool_t *pool);
-
 /** Set @a stream's baton to @a baton */
 void svn_stream_set_baton (svn_stream_t *stream, void *baton);
 
@@ -496,6 +493,31 @@ svn_error_t *svn_io_get_dirents (apr_hash_t **dirents,
                                  apr_pool_t *pool);
 
 
+/** Callback function type for @c svn_io_dir_walk  */
+typedef svn_error_t * (*svn_io_walk_func_t) (void *baton,
+                                             const char *path,
+                                             const apr_finfo_t *finfo,
+                                             apr_pool_t *pool);
+
+/** Perform a "walk" over the files and directories, invoking a callback.
+ *
+ * This function will recursively walk over the files and directories
+ * rooted at @a dirname, a utf8-encoded path. For each file or directory,
+ * @a walk_func is invoked, passing in the @a walk_baton, the utf8-encoded
+ * full path to the entry, an @c apr_finfo_t structure, and a temporary
+ * pool for allocations.
+ *
+ * The set of information passed to @a walk_func is specified by @a wanted,
+ * and the items specified by @c APR_FINFO_TYPE and @c APR_FINFO_NAME.
+ *
+ * All allocations will be performed in @a pool.
+ */
+svn_error_t *svn_io_dir_walk (const char *dirname,
+                              apr_int32_t wanted,
+                              svn_io_walk_func_t walk_func,
+                              void *walk_baton,
+                              apr_pool_t *pool);
+
 /** Run a command.
  *
  * Invoke @a cmd with @a args, using utf8-encoded @a path as working directory.
@@ -617,7 +639,7 @@ svn_io_file_open (apr_file_t **new_file, const char *fname,
                   apr_pool_t *pool);
 
 
-/* Wrapper for @c apr_stat().
+/** Wrapper for @c apr_stat().
  *
  * Wrapper for @c apr_stat(), which see.  @a fname is utf8-encoded.
  */

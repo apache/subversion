@@ -538,24 +538,16 @@ svn_path_is_child (const char *path1,
         return NULL;
     }
 
-  /* Now run through the possibilities. */
+  /* The only possibility for it being child here is when path1 is now blank,
+   * and path 2 is the beginning of a directory.
+   */
 
-  if (path1[i] && (! path2[i]))
+  if (path1[i] == '\0' && path2[i] == '/')
     {
-      return NULL;
-    }
-  else if ((! path1[i]) && path2[i])
-    {
-      if (path2[i] == '/')
-        return apr_pstrdup (pool, path2 + i + 1);
-      else
-        return NULL;
-    }
-  else  /* both ended */
-    {
-      return NULL;
+      return apr_pstrdup (pool, path2 + i + 1);
     }
 
+  /* Otherwise, path2 isn't a child. */
   return NULL;
 }
 
@@ -861,16 +853,18 @@ svn_path_get_absolute(const char **pabsolute,
   /* We call svn_path_canonicalize() on the input data, rather
      than the output, so that `buffer' can be returned directly
      without const vs non-const issues. */
+  /* ### This comment seems totally wrong, what? --xbc */
 
-  char * buffer;
+  char *buffer;
   apr_status_t apr_err;
-  const char *path_native;
+  const char *path_apr;
+  const char *pabsolute_buff;
 
-  SVN_ERR (svn_utf_cstring_from_utf8
-           (&path_native, svn_path_canonicalize (relative, pool), pool));
+  SVN_ERR (svn_path_cstring_from_utf8
+           (&path_apr, svn_path_canonicalize (relative, pool), pool));
 
   apr_err = apr_filepath_merge(&buffer, NULL,
-                               path_native,
+                               path_apr,
                                (APR_FILEPATH_NOTRELATIVE
                                 | APR_FILEPATH_TRUENAME),
                                pool);
@@ -880,9 +874,9 @@ svn_path_get_absolute(const char **pabsolute,
                              "Couldn't determine absolute path of %s.", 
                              relative);
 
-  return svn_utf_cstring_to_utf8 (pabsolute,
-                                  svn_path_canonicalize (buffer, pool),
-                                  NULL, pool);
+  SVN_ERR (svn_path_cstring_to_utf8 (&pabsolute_buff, buffer, pool));
+  *pabsolute = svn_path_canonicalize(pabsolute_buff, pool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -920,4 +914,60 @@ svn_path_split_if_file(const char *path,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+/** Get APR's internal path encoding. */
+static svn_error_t *
+get_path_encoding (svn_boolean_t *path_is_utf8, apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+  int encoding_style;
+
+  apr_err = apr_filepath_encoding (&encoding_style, pool);
+  if (!apr_err)
+    {
+      /* ### What to do about APR_FILEPATH_ENCODING_UNKNOWN?
+         Well, for now we'll just punt to the svn_utf_ functions;
+         those will at least do the ASCII-subset check. */
+      *path_is_utf8 = (encoding_style == APR_FILEPATH_ENCODING_UTF8);
+      return SVN_NO_ERROR;
+    }
+  else
+    return svn_error_create (apr_err, NULL,
+                             "Can't determine the native path encoding");
+}
+
+
+svn_error_t *
+svn_path_cstring_from_utf8 (const char **path_apr,
+                            const char *path_utf8,
+                            apr_pool_t *pool)
+{
+  svn_boolean_t path_is_utf8;
+  SVN_ERR (get_path_encoding (&path_is_utf8, pool));
+  if (path_is_utf8)
+    {
+      *path_apr = apr_pstrdup (pool, path_utf8);
+      return SVN_NO_ERROR;
+    }
+  else
+    return svn_utf_cstring_from_utf8 (path_apr, path_utf8, pool);
+}
+
+
+svn_error_t *
+svn_path_cstring_to_utf8 (const char **path_utf8,
+                          const char *path_apr,
+                          apr_pool_t *pool)
+{
+  svn_boolean_t path_is_utf8;
+  SVN_ERR (get_path_encoding (&path_is_utf8, pool));
+  if (path_is_utf8)
+    {
+      *path_utf8 = apr_pstrdup (pool, path_apr);
+      return SVN_NO_ERROR;
+    }
+  else
+    return svn_utf_cstring_to_utf8 (path_utf8, path_apr, NULL, pool);
 }

@@ -213,27 +213,29 @@ svn_wc_process_committed (const char *path,
     {
       /* PATH must be some sort of file */
       const char *tmp_text_base;
-      unsigned char digest[MD5_DIGESTSIZE];
-      svn_error_t *err;
+      svn_node_kind_t kind;
 
-      /* We know that the new text base is sitting in the adm tmp area
-         by now, because the commit succeeded. */
+      /* There may be a new text base is sitting in the adm tmp area by
+         now, because the commit succeeded.  A file that is copied, but not
+         otherwise modified, doesn't have a new text base. */
       tmp_text_base = svn_wc__text_base_path (path, TRUE, pool);
+      SVN_ERR (svn_io_check_path (tmp_text_base, &kind, pool));
+      if (kind == svn_node_file)
+        {
+          /* It would be more efficient to compute the checksum as part of
+             some other operation that has to process all the bytes anyway
+             (such as copying or translation).  But that would make a lot
+             of other code more complex, since the relevant copy and/or
+             translation operations happened elsewhere, a long time ago.
+             If we were to obtain the checksum then/there, we'd still have
+             to somehow preserve it until now/here, which would result in
+             unexpected and hard-to-maintain dependencies.  Ick.
 
-      /* It would be more efficient to compute the checksum as part of
-         some other operation that has to process all the bytes anyway
-         (such as copying or translation).  But that would make a lot
-         of other code more complex, since the relevant copy and/or
-         translation operations happened elsewhere, a long time ago.
-         If we were to obtain the checksum then/there, we'd still have
-         to somehow preserve it until now/here, which would result in
-         unexpected and hard-to-maintain dependencies.  Ick.
-
-         So instead we just do the checksum from scratch.  Ick. */
-      err = svn_io_file_checksum (digest, tmp_text_base, pool);
-      hex_digest = svn_md5_digest_to_cstring (digest, pool);
-      if (err)
-         svn_error_clear (err); 
+             So instead we just do the checksum from scratch.  Ick. */
+          unsigned char digest[MD5_DIGESTSIZE];
+          SVN_ERR (svn_io_file_checksum (digest, tmp_text_base, pool));
+          hex_digest = svn_md5_digest_to_cstring (digest, pool);
+        }
 
       /* Oh, and recursing at this point isn't really sensible. */
       recurse = FALSE;
@@ -673,7 +675,7 @@ svn_wc_delete (const char *path,
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent, pool));
       SVN_ERR (svn_wc_entries_read (&entries, parent_access, TRUE, pool));
       entry_in_parent = apr_hash_get (entries, base_name, APR_HASH_KEY_STRING);
-      was_deleted = entry_in_parent->deleted;
+      was_deleted = entry_in_parent ? entry_in_parent->deleted : FALSE;
 
       if (was_schedule_add && !was_deleted)
         {

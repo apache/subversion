@@ -66,15 +66,6 @@ I.    BUILD REQUIREMENTS
       to stay compatible with the versions bundled within the latest
       httpd-2.0 release.
 
- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
- NOTE: This release of Subversion requires an httpd, APR, and APRUTIL
- more advanced than the latest public releases.  Please use
- http://subversion.tigris.org/files/documents/15/2609/httpd-2.0.44-dev.tar.gz
- and the APR/APRUTIL bundled inside it.  This is a temporary situation; we
- expect Subversion to be building against official releases, or at least
- snapshots, of Apache and APR/APRUTIL releases again soon.
- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
-
       If you already have the APR libraries compiled and do not wish to
       regenerate them from source code, then Subversion needs to be
       able to find them.
@@ -221,7 +212,7 @@ I.    BUILD REQUIREMENTS
           http://subversion.tigris.org/servlets/ProjectDownloadList
 
 
-      7.  Apache Web Server 2.0.44-dev or newer
+      7.  Apache Web Server 2.0.44 or newer
 
       The Apache HTTP server is required if you wish to offer your
       Subversion repository over the Internet. Building Subversion, the
@@ -229,13 +220,6 @@ I.    BUILD REQUIREMENTS
       with Subversion are complicated enough that there is a whole
       section at the end of this document that describes how it is
       done. See section III for details.
-
- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
-                              NOTE: please use
- http://subversion.tigris.org/files/documents/15/2609/httpd-2.0.44-dev.tar.gz
-                        with this release of Subversion.
- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
-
 
       8.  Python 2.0
 

@@ -3,7 +3,49 @@
      while certainly influencing the resultant chapter, might
      themselves get lost in the mix. -->
 <chapter id="svn-ch-6">
-<title>Advanced Topics</title>
+  <title>Advanced Topics</title>
+
+  <simplesect id="svn-ch-6-sect-0">
+
+    <para>If you've been reading this book chapter by chapter, from
+      start to finish, you should by now have acquired enough
+      knowledge to use the Subversion client to perform the most
+      common version control operations.  You understand how to
+      checkout a working copy from a Subversion repository.  You are
+      comfortable with submitting and receiving changes using the
+      <command>svn commit</command> and <command>svn update</command>
+      functions.  You've probably even developed a reflex which causes
+      you to run the <command>svn status</command> command almost
+      unconsciously.  For all intents and purposes, you are ready to
+      use Subversion in a typical environment.</para>
+
+    <para>But the Subversion feature set doesn't stop at "common
+      version control operations".</para>
+
+    <para>This chapter highlights some of Subversion's features which
+      aren't quite so regularly used.  In it, we will discuss
+      Subversion's property (or <quote>metadata</quote>) support, and
+      how to modify Subversion's default behaviors by tweaking its
+      run-time configuration area.  We will describe how you can use
+      module definitions to instruct Subversion to pull data from
+      multiple repositories.  We'll cover in detail some of the
+      additional client- and server-side tools that are part of the
+      Subversion distribution.</para>
+
+    <para>Before reading this chapter, you should be familiar with the
+      basic file and directory versioning capabilities of Subversion.
+      If you haven't already read about those, or if you need a
+      refresher, we crecommend that you check out <xref
+      linkend="svn-ch-1" /> and <xref linkend="svn-ch-2" />.  Once
+      you've mastered the basics and consumed this chapter, you'll be
+      a Subversion power-user&mdash;or we'll refund your money!
+      <footnote>
+        <para>This offer applies only to those who, like most folks,
+          pay nothing for Subversion.</para>
+      </footnote>
+    </para>
+
+  </simplesect>
 
   <!-- ******************************************************************* -->
   <!-- *** SECTION 1:  RUNTIME CONFIGURATION AREA                      *** -->
@@ -11,93 +53,434 @@
   <sect1 id="svn-ch-6-sect-1">
     <title>Run-time Configuration Area</title>
     
-    <para>When you first run the <command>svn</command> command-line
-      client, it creates a per-user <firstterm>configuration
-      area</firstterm>.  On Unix-like systems, a
-      <filename>.subversion/</filename> directory is created in the
-      user's home directory.  On Win32 systems, a
-      <filename>Subversion</filename> folder is created wherever its
-      appropriate to do so (typically somewhere within
-      <filename>Documents and Settings\username</filename>, although
-      it depends on the system.)</para>
+    <para>Subversion provides many optional behaviors that can be
+      controlled by the user.  Many of these options are of the kind
+      that a user would wish to apply to all Subversion operations.
+      So, rather than forcing users to remember command-line arguments
+      for specifying these options, and to use them for each and every
+      operation they perform, Subversion uses configuration files,
+      segregated into a Subversion configuration area.</para>
+
+    <para>The Subversion <firstterm>configuration area</firstterm> is
+      a two-tiered heirarchy of option names and their values.
+      Usually, this boils down to a special directory which contains
+      <firstterm>configuration files</firstterm> (the first tier),
+      which are just text files in standard INI format (with
+      <quote>sections</quote> providing the second tier).  These files
+      can be easily edited using your favorite text editor (such as
+      emacs or vi), and contain directives read by the client to
+      determine which of several optional behaviors the user
+      prefers.</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-6-sect-1.1">
-      <title>Proxies</title>
-      
-      <para>At the time of writing, the configuration area only
-        contains one item: a <filename>proxies</filename> file.  By
-        setting values in this file, your Subversion client can
-        operate through an http proxy.  (Read the file itself for
-        details; it should be self-documenting.)</para><!-- ###TODO
-      This is already inaccurate. -Fitz :) -->
-      
+      <title>Configuration Area Layout</title>
+
+      <para>The first time that the <command>svn</command>
+        command-line client is executed, it creates a per-user
+        configuration area.  On Unix-like systems, this area appears
+        as a directory named <filename>.subversion</filename> in the
+        user's home directory.  On Win32 systems, Subversion creates a
+        folder named <filename>Subversion</filename>, typically inside
+        the <filename>Application Data</filename> area of the user's
+        profile directory.  However, on this platform the exact
+        location differs from system to system, and is dictated by the
+        Windows registry.  We will refer to the per-user configuration
+        area using its Unix name,
+        <filename>.subversion</filename>.</para>
+
+      <para>In addition to the per-user configuration area, Subversion
+        also recognizes the existence of a system-wide configuration
+        area.  The gives system administrators the ability to
+        establish defaults for all users on a given machine.  Note
+        that the system-wide configuration area does not alone dictate
+        mandatory policy&mdash;the settings in the per-user
+        configuration area override those in the system-wide one, and
+        command-line arguments supplied to <command>svn</command>
+        program have the final word on behavior.  On Unix-like
+        platforms, the sytem-wide configuration area is expected to be
+        the <filename>/etc/subversion</filename> directory; on Windows
+        machines, it again looks for a <filename>Subversion</filename>
+        directory inside the common Application Data location (again,
+        as specified by the Windows Registry).  Unlike the per-user
+        case, the <command>svn</command> program does not attempt to
+        create the system-wide configuration area.</para>
+
+      <para>The <filename>.subversion</filename> directory currently
+        contains three files&mdash;two configuration files
+        (<filename>config</filename> and
+        <filename>servers</filename>), and a
+        <filename>README</filename> file which describes the INI
+        format.  At the time of their creation, the files contain
+        default values for each of the supported Subversion options,
+        mostly commented out and grouped with textual descriptions
+        about how the values for the key affect Subversion's behavior.
+        To change a certain behavior, you need only to load the
+        appropriate configuration file into a text editor, and modify
+        the desired option value.  If at any time you wish to have the
+        default settings restore to one or more of the configuration
+        files, you can simply delete the file, and run some innocuous
+        <command>svn</command> command, such as <command>svn
+        --version</command>, and the missing file will be recreated in
+        its default state.</para>
+
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-6-sect-1.2">
-      <title>Config</title>
+      <title>Configuration and the Windows Registry</title>
 
-      <para>Soon&mdash;very soon&mdash;a <filename>config</filename>
-        file will exist in this area for defining general user
-        preferences.  For example, the preferred
-        <command>$EDITOR</command> to use, options to pass through to
-        <command>svn diff</command>, preferences for date/time
-        formats, and so on.  </para> <!-- ###TODO This is already
-        inaccurate. See issue 668 -Fitz :) -->
+      <para>In addition to the usual INI-based configuration area,
+        Subversion clients running on Windows platforms may also use
+        the Windows registry to hold the configuration data.  The
+        option names and their values are the same as in the INI
+        files.  The <quote>file/section</quote> heirarchy is
+        preserved as well, though addressed in a slightly different
+        fashion&mdash;in this schema, files and sections are just
+        levels in the registry key tree.</para>
+
+      <para>Subversion looks for system-wide configuration values
+        under the
+        <literal>HKEY_LOCAL_MACHINE\Software\Tigris.org\Subversion</literal>
+        key.  For example, the <literal>compression</literal> option,
+        which is in the <literal>miscellany</literal> section of the
+        <filename>config</filename> file, would be found at
+        <literal>HKEY_LOCAL_MACHINE\Software\Tigris.org\Subversion\Config\Miscellany\compression</literal>.
+        Per-user configuration values should be stored under
+        <literal>HKEY_CURRENT_USER\Software\Tigris.org\Subversion</literal>.
+      </para>
+
+      <para>Registry-based configuration options are parsed
+        <emphasis>before</emphasis> their file-based counterparts,
+        so are overridden by values found in the configuration
+        files.  In other words, configuration priority is granted in
+        the following order on a Windows system:</para>
+      
+      <orderedlist>
+        <listitem>
+          <para>Command-line options</para>
+        </listitem>
+        <listitem>
+          <para>The per-user INI files</para>
+        </listitem>
+        <listitem>
+          <para>The pre-user Registry values</para>
+        </listitem>
+        <listitem>
+          <para>The system-wide INI files</para>
+        </listitem>
+        <listitem>
+          <para>The system-wide Registry values</para>
+        </listitem>
+      </orderedlist>
+
+      <para>Also, the Windows Registry doesn't really support the
+        notion of something being <quote>commented out</quote>.
+        However, Subversion will ignore any option key whose name
+        begins with a hash (<literal>#</literal>) character.  This
+        allows you to effectively comment out a Subversion option
+        without deleting the entire key from the Registry, obviously
+        simplifying the process of restoring that option.</para>
+
+      <para>The <command>svn</command> command-line client never
+        attempts to write to the Windows Registry, and will not
+        attempt to create a default configuration area there.  You can
+        create the keys you need using the <command>REGEDIT</command>
+        program.  Alternatively, you can create a
+        <filename>.REG</filename> file, and then double-click on that
+        file from the Explorer shell, which will cause the data to be
+        merged into your registry.</para>
+
+      <example id="svn-ch-6-sect-1.2-ex-1">
+        <title>Sample registration entries (.REG) file.</title>
+
+        <programlisting>
+REGEDIT4
+
+[HKEY_LOCAL_MACHINE\Software\Tigris.org\Subversion\Servers\DEFAULT]
+"#http-proxy-host"=""
+"#http-proxy-port"=""
+"#http-proxy-username"=""
+"#http-proxy-password"=""
+"#http-proxy-timeout"="0"
+
+[HKEY_CURRENT_USER\Software\Tigris.org\Subversion\Config\auth]
+"#store-password"="no"
+
+[HKEY_CURRENT_USER\Software\Tigris.org\Subversion\Config\helpers]
+"#editor-cmd"="notepad"
+
+[HKEY_CURRENT_USER\Software\Tigris.org\Subversion\Config\miscellany]
+"#global-ignores"="*.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#*"
+"#compression"="yes"
+</programlisting>
+      </example>
+
+      <para>The previous example shows the contents of a
+        <filename>.REG</filename> file which contains some of most
+        commonly used configuration options and their default values.
+        Note the presence of both system-wide (for network
+        proxy-related options) and per-user settings (editor programs
+        and passoword storage, among others).  Also note that all the
+        options are effectively commented out.  You need only to
+        remove the hash (<literal>#</literal>) character from the
+        beginning of the option names, and set the values as you
+        desire.</para>
 
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-6-sect-1.3">
-      <title>Multiple config areas</title>
+      <title>The Configuration Options</title>
       
-      <para>On Unix, an administrator can create <quote>global</quote>
-        Subversion preferences by creating and populating an
-        <filename>/etc/subversion/</filename> area.  The per-user
-        <filename>~/.subversion/</filename> configuration will still
-        override these defaults, however.</para>
+      <para>In this section, we will discuss the currently supported
+        run-time configuration options.</para>
 
-      <para>On Win32, an administrator has the option of creating
-        three other locations: a global
-        <filename>Subversion</filename> folder in the <quote>All
-        Users</quote> area, a collection of global registry settings,
-        or a collection of per-user registry settings.  The registry
-        settings are set in:</para>
+      <sect3 id="svn-ch-6-sect-1.3.1">
+        <title>Servers</title>
 
-      <screen>
-HKCU\Software\Tigris.org\Subversion\Proxies
-HKCU\Software\Tigris.org\Subversion\Config
-etc.
-      </screen>
+        <para>The <filename>servers</filename> file contains
+          Subversion configuration options related to the network
+          layers.  There are two special section names in this
+          file&mdash;<literal>groups</literal> and
+          <literal>default</literal>.  The <literal>groups</literal>
+          section is cross-reference table of sort.  The keys in this
+          section are the names of other sections in the file; their
+          values are globs which are compared against the hostnames of
+          the machine to which Subversion requests are sent.</para>
 
-      <para>To clarify, here is the order Subversion searches for
-        run-time settings on Win32.  Each subsequent location
-        overrides the previous one:</para>
+        <programlisting>
+[groups]
+beanie-babies = *.red-bean.com
+collabnet = svn.collab.net
 
-      <itemizedlist>
+[beanie-babies]
+&hellip;
 
-        <listitem>
-          <para>global registry</para>
-        </listitem>
+[collabnet]
+&hellip;
+</programlisting>
 
-        <listitem>
-          <para>global <filename>Subversion</filename> folder
-          </para>
-        </listitem>
+        <para>When Subversion is used over a network, it attempts to
+          match the name of the server it is trying to reach with a
+          group name under the <literal>groups</literal> section.  If
+          a match is made, Subversion then looks for a section in the
+          <filename>servers</filename> file whose name is the matched
+          group's name.  From that section it reads the actual network
+          configuration settions.</para>
 
-        <listitem>
-          <para>user registry
-          </para>
-        </listitem>
+        <para>The <literal>default</literal> section contains the
+          settings which are meant for all of the servers not matched
+          by one of the globs under the <literal>groups</literal>
+          section.  The available options under this section are
+          exactly the same as those valid for the other server
+          sections in the file (except, of course, the special
+          <literal>groups</literal> section), and are as
+          follows:</para>
 
-        <listitem>
-          <para>user <filename>Subversion</filename> folder
-          </para>
-        </listitem>
+        <variablelist>
+          <varlistentry>
+            <term><literal>http-proxy-host</literal></term>
+            <listitem>
+              <para>This specifies the hostname of the proxy computer
+                through which your HTTP-based Subversion requests must
+                pass.  It defaults to an empty value, which means that
+                Subversion will not attempt to route HTTP requests
+                through a proxy computer, and will instead attempt to
+                contact the destination machine directly.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>http-proxy-port</literal></term>
+            <listitem>
+              <para>This specifies the port number on the proxy host
+                to use.  It defaults to an empty value.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>http-proxy-username</literal></term>
+            <listitem>
+              <para>This specifies the username to supply to the proxy
+                machine.  It defaults to an empty value.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>http-proxy-password</literal></term>
+            <listitem>
+              <para>This specifies the password to supply to the proxy
+                machine.  It defaults to an empty value.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>http-timeout</literal></term>
+            <listitem>
+              <para>This specifies the amount of time, in seconds, to
+                wait for a server response.  If you experience
+                problems with a slow network connection causing
+                Subversion operations to timeout, you should increase
+                the value of this option.  The default value is
+                <literal>0</literal>, which instructs the underlying
+                HTTP library, Neon, to use its default timeout
+                setting.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>neon-debug-mask</literal></term>
+            <listitem>
+              <para>This is an integer mask which the underlying HTTP
+                library, Neon, uses for choosing what type of
+                debugging output to yield.  The default value is
+                <literal>0</literal>, which will silence all debugging
+                output.</para>
+            </listitem>
+          </varlistentry>
+          <!--
+          <varlistentry>
+            <term><literal>svn-tunnel-agent</literal></term>
+            <listitem>
+              <para>This specifies the external agent program through
+                which to tunnel SVN protocol requests.</para>
+            </listitem>
+          </varlistentry>
+          -->
+        </variablelist>
 
-      </itemizedlist>
+      </sect3>
+      <sect3 id="svn-ch-6-sect-1.3.2">
+        <title>Config</title>
 
+        <para>The <filename>config</filename> file contains the rest
+          of the currently available Subversion run-time options,
+          those not related to networking.  There are only a few
+          options in use at this time, but they are again group into
+          sections in expectation of future additions.</para>
+
+        <para>The <literal>auth</literal> section contains settings
+          related to Subversion's authentication and authorization
+          against the repository.  It contains:</para>
+
+        <variablelist>
+          <varlistentry>
+            <term><literal>store-password</literal></term>
+            <listitem>
+              <para>This instructs Subversion to cache, or not to
+                cache, passwords that are supplied by the user in
+                response to server authentication challenges.  The
+                default value is <literal>yes</literal>.  Set this to
+                <literal>no</literal> to disable this on-disk password
+                caching.  You can override this option for a single
+                instance of the <command>svn</command> command using
+                the <option>--no-auth-cache</option> command-line
+                parameter (for those subcommands that support it).</para>
+            </listitem>
+          </varlistentry>
+        </variablelist>
+
+        <para>The <literal>helpers</literal> section controls which
+          external applications Subversion uses to accomplish its
+          tasks.  Valid options in this section are:</para>
+
+        <variablelist>
+          <varlistentry>
+            <term><literal>editor-cmd</literal></term>
+            <listitem>
+              <para>This specifies the program Subversion will use to
+                query the user for a commit log.  This program is also
+                used with the <command>svn propedit</command>
+                command&mdash;a temporary file is populated with the
+                current value of the property the user wishes to edit,
+                and the edits take places right in the editor program
+                (see <xref linkend="svn-ch-6-sect-2" />).  This
+                option's default value is empty.  If the option is not
+                set, Subversion will fall back to checking the
+                environment variables <literal>SVN_EDITOR</literal>,
+                <literal>VISUAL</literal>, and
+                <literal>EDITOR</literal> (in that order) for an
+                editor command.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>diff-cmd</literal></term>
+            <listitem>
+              <para>This specifies the absolute path of a differencing
+                program, used when Subversion generates
+                <quote>diff</quote> output (such as when using the
+                <command>svn diff</command> command).  The default
+                value is the path of the GNU diff utility, as
+                determined by the Subversion source code build
+                system.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>diff3-cmd</literal></term>
+            <listitem>
+              <para>This specifies the absolute path of a three-way
+                differencing program.  Subversion uses this program
+                merge changes made by the user with those received
+                from the repository.  The default value is the path of
+                the GNU diff3 utility, as determined by the Subversion
+                source code build system.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>diff3-has-program-arg</literal></term>
+            <listitem>
+              <para>This flag should be set to <literal>true</literal>
+              if the program specified by the
+              <literal>diff3-cmd</literal> option accepts a
+              <option>--diff-program</option> command-line parameter.
+              Since the <literal>diff3-cmd</literal> option's default
+              value is determined at compilation time, the default
+              value for the <literal>diff3-has-program-arg</literal>
+              is, too.</para>
+            </listitem>
+          </varlistentry>
+        </variablelist>
+
+        <para>The <literal>miscellany</literal> section is where
+          everything that doesn't belong elsewhere winds up.
+          <footnote>
+            <para>Anyone for potluck dinner?</para> 
+          </footnote>
+          In this section, you can find:</para>
+
+        <variablelist>
+          <varlistentry>
+            <term><literal>global-ignores</literal></term>
+            <listitem>
+              <para>When running the <command>svn status</command>
+                command, Subversion lists unversioned files and
+                directories along with the versioned ones, annotating
+                them with a <literal>?</literal> character (see <xref
+                linkend="svn-ch-3-sect-4.3.1" />).  Sometimes, it can
+                be annoying to see uninteresting, unversioned
+                items&mdash;for example, object files that result from
+                a program's compilation&mdash;in this display.  The
+                <literal>global-ignores</literal> option is a list of
+                whitespace-delimited globs which describe the names of
+                files and directories that Subversion should not
+                display unless they are versioned.  The default value
+                is <literal>*.o *.lo *.la #*# .*.rej *.rej .*~ *~
+                .#*</literal>.  You can override this option for a
+                single instance of the <command>svn status</command>
+                command by using the <option>--no-ignores</option>
+                command-line flag.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>compression</literal></term>
+            <listitem>
+              <para>This specifies whether or not Subversion should
+                attempt to compress network requests made to DAV-ready
+                servers.  The default value is 'yes' (though
+                compression will only occur if that capability is
+                compiled into the network layer).  Set this to 'no' to
+                disable compression, such as when debugging network
+                transmissions.</para>
+            </listitem>
+          </varlistentry>
+        </variablelist>
+      </sect3>
     </sect2>
   </sect1>
 
@@ -107,81 +490,308 @@ etc.
   <sect1 id="svn-ch-6-sect-2">
     <title>Properties</title>
 
-    <!-- ###TODO This is the way this chapter was laid out in the
-    outline. This pull from the handbook doesn't really follow that,
-    so we need to decide what to do here.
-    
-         1. General use (pset, pget, plist, pdel, pedit)
-         2. EOL translation
-         3. Keyword substitution
-         4. Other special keywords (executable, mime-type, ignore) -->
+    <para>We've already covered in detail how Subversion stores and
+      retrieves various versions of files and directories in its
+      repository.  Whole chapters have been devoted to this most
+      foundational piece of functionality provided by the tool.  And
+      if the versioning support stopped there, Subversion would still
+      be complete from version control perspective.  But it
+      doesn't stop there.</para>
 
-    <para>Subversion allows you to attach arbitrary
-      <quote>metadata</quote> to files and directories.  We refer to
-      this data as <firstterm>properties</firstterm>, and they can be
-      thought of as collections of name/value pairs (hash-tables)
-      attached to each item in your working copy.</para>
-  
-    <para>To set or get a property on a file or directory, use the
-      <command>svn propset</command> and <command>svn
-      propget</command> commands.  To list all properties attached to
-      an item, use <command>svn proplist</command>.  To delete a
-      property, use <command>svn propdel</command>.</para>
+    <para>In addition to versioning your directories and files,
+      Subversion provides interfaces for adding, modifying, and
+      removing versioned metadata on each of your versioned
+      directories and files.  We refer to this metadata as
+      <firstterm>properties</firstterm>, and they can be thought of as
+      two-column tables that map property names to arbitrary values
+      attached to each item in your working copy.  Generally speaking,
+      the names and values of the properties can be whatever you want
+      them to be, with the constraint that the names must be
+      human-readable text.  And the best part about these properties
+      is that they, too, are versioned, just like the textual contents
+      of your files.  You can modify, commit, and revert property
+      changes as easily as committing textual changes.  And you
+      receive other people's property changes as you update your
+      working copy.</para>
 
-    <screen>
-$ svn propset color green foo.c
-property `color' set on 'foo.c'
+    <sidebar>
+      <title>Other Properties in Subversion</title>
 
-$ svn propget color foo.c
-green
+      <para>Properties show up elsewhere in Subversion, too.  Just as
+        files and directories may have arbitrary property names and
+        values attached to them, each revision as a whole may have
+        arbitrary properties attached to it.  The same constraints
+        apply&mdash;human-readable, text names and anything-you-want,
+        binary values&mdash;except that revision properties are not
+        versioned.  See <xref linkend="svn-ch-5-sect-1.2" /> for more
+        information on these unversioned properties.</para>
+    </sidebar>
 
-$ svn propset height "5 feet" foo.c
-property `height' set on 'foo.c'
+    <para>In this section, we will examine the utility&mdash;both to
+      users of Subversion, and to Subversion itself&mdash;of property
+      support.  You'll learn about the property-related
+      <command>svn</command> subcommands, and how property
+      modifications affect your normal Subversion workflow.
+      Hopefully, you'll be convinced that Subversion properties can
+      enhance your version control experience.</para>
 
- svn proplist foo.c
-Properties on 'foo.c':
-  height
-  color
+    <!-- ***************************************************************** -->
+    <sect2 id="svn-ch-6-sect-2.1">
+      <title>Why Properties?</title>
 
-$ svn proplist foo.c --verbose
-Properties on 'foo.c':
-  height : 5 feet
-  color : green
+      <para>Properties can be very useful additions to your working
+        copy.  In fact, Subversion itself uses properties to house
+        special information, and as a way to denote that certain
+        special processing might be needed.  Likewise, you can use
+        properties for your own purposes.  Of course, anything you can
+        do with properties you could also do using regular versioned
+        files, but consider the following example of Subversion
+        property use.</para>
 
-$ svn propdel color foo.c
-property `color' deleted from 'foo.c'
-    </screen>
+      <para>Say you wish to design a website that houses many digital
+        photos, and displays them with captions and a datestamp.  Now,
+        your set of photos is constantly changing, so you'd like to
+        have as much of this site automated as possible.  These photos
+        can be quite large, so as is common with sites of this nature,
+        you want to provide smaller thumbnail images to your site
+        visitors.  You can do this with traditional files.  That is,
+        you can have your <filename>image123.jpg</filename> and an
+        <filename>image123-thumbnail.jpg</filename> side-by-side in a
+        directory.  Or if you want to keep the filenames the same, you
+        might have your thumbnails in a different directory, like
+        <filename>thumbnails/image123.jpg</filename>.  You can also
+        store your captions and datestamps in a similar fashion, again
+        separated from the original image file.  Soon, your tree of
+        files is a mess, and grows in multiples with each new photo
+        added to the site.</para>
 
-    <para>Properties are <emphasis>versioned</emphasis>, just like
-      file contents.  This means that new properties can be merged
-      into your working files, and can sometimes come into conflict
-      too.  Property values need not be text, either.  For example,
-      you could attach a binary property-value by using the
-      <option>-F</option> switch:</para>
+     <para>Now consider the same setup using Subversion's file
+        properties.  Imagine having a single image file,
+        <filename>image123.jpg</filename>, and then properties set on
+        that file named <literal>caption</literal>,
+        <literal>datestamp</literal>, and even
+        <literal>thumbnail</literal>.  Now your working copy directory
+        looks much more manageable&mdash;in fact, it looks like there
+        are nothing but image files in it.  But your automation
+        scripts know better.  They know that they can use
+        <command>svn</command> (or better yet, they can use the
+        Subversion language bindings&mdash;see <xref
+        linkend="svn-ch-7-sect-2.3" />) to dig out the extra
+        information that your site needs to display without having to
+        read an index file or play path manipulation games.</para>
 
-<screen>
+      <para>Of course, how (and if) you use Subversion properties is
+        up to you.  As we mentioned, Subversion has it own uses for
+        properties, which we'll discuss a little later in this
+        chapter.  But first, let's discuss how to manipulate options
+        using the <command>svn</command> program.</para>
+
+    </sect2>
+
+    <!-- ***************************************************************** -->
+    <sect2 id="svn-ch-6-sect-2.2">
+      <title>Manipulating Properties</title>
+
+      <para>The <command>svn</command> command affords a few ways to
+        add or modify file and directory properties.  For properties
+        with short, human-readable values, perhaps the simplest way to
+        add a new property is to specify the property name and value
+        on the command-line of <command>propset</command>
+        subcommand.</para>
+
+      <screen>
+$ svn propset copyright '(c) 2003 Red-Bean Software' calc/button.c
+property `copyright' set on 'calc/button.c'
+$
+</screen>
+       
+      <para>Of course, we've been touting the flexibility that
+        Subversion offers for your property values.  And if you are
+        planning to have a multi-line textual, or even binary,
+        property value, you probably do not want to supply that value
+        on the command-line.  So the <command>propset</command>
+        subcommand takes a <option>--file (-F)</option> option for
+        specifying the name of a file which contains the new property
+        value.</para>
+
+      <screen>
+$ svn propset license -F /path/to/LICENSE calc/button.c
+property `license' set on 'calc/button.c'
+$
+</screen>
+
+      <para>In addition to the <command>propset</command> command, the
+        <command>svn</command> program supplies the
+        <command>propedit</command> command.  This command uses the
+        configured editor program (see <xref
+        linkend="svn-ch-6-sect-1.3.2" />) to add or modify properties.
+        When you run the command, <command>svn</command> invokes your
+        editor program on a temporary file that contains the current
+        value of the property (or which is empty, if you are adding a
+        new property).  Then, you just modify that value in your
+        editor program until it represents the new value you wish to
+        store for the property, save the temporary file, and then exit
+        the editor program.  If Subversion detects that you've
+        actually changed the existing value of the property, it will
+        accept that as the new property value.  If you exit your
+        editor without making any changes, no property modification
+        will occur.</para>
+
+      <screen>
+$ svn propedit copyright calc/button.c  ### exit the editor without changes
+No changes to property `copyright' on `calc/button.c'
+$
+</screen>
+
+      <para>We should note that, as with other <command>svn</command>
+        subcommands, those related to properties can act on multiple
+        paths at once.  This enables you to modify properties on whole
+        sets of files with a single command.  For example, we could
+        have done:</para>
+
+      <screen>
+$ svn propset copyright '(c) 2002 Red-Bean Software' calc/*
+property `copyright' set on 'calc/Makefile'
+property `copyright' set on 'calc/button.c'
+property `copyright' set on 'calc/integer.c'
+&hellip;
+$
+</screen>
+
+      <para>All of this property adding and editing isn't really very
+        useful if you can't easily get the stored property value.  So
+        the <command>svn</command> program supplies two subcommands
+        for displaying the names and values of properties stored on
+        files and directories.  The <command>svn proplist</command>
+        command will list the names of properties which exist on a
+        path.  Once you know the names of the properties on the node,
+        you can request their values individually using <command>svn
+        propget</command>.  This command will, given a path (or set of
+        paths) and a property name, print the value of the property to
+        the standard output stream.</para>
+
+      <para>You can add file or directory properties with the
+        <command>svn propset</command> command.  provides a To set or
+        get a property on a file or directory, use the <command>svn
+        propset</command> and <command>svn propget</command> commands.
+        To list all properties attached to an item, use <command>svn
+        proplist</command>.  To delete a property, use <command>svn
+        propdel</command>.</para>
+
+      <screen>
+$ svn proplist calc/button.c
+Properties on 'calc/button.c':
+  copyright
+  license
+$ svn propget copyright calc/button.c
+(c) 2003 Red-Bean Software
+</screen>
+
+      <para>There's even a variation of the
+        <command>proplist</command> command which will list both the
+        name and value of all of the properties.  Simply supply the
+        <option>--verbose (-v)</option> option.</para>
+
+      <screen>
+$ svn proplist --verbose calc/button.c
+Properties on 'calc/button.c':
+  copyright : (c) 2003 Red-Bean Software
+  license : ================================================================
+Copyright (c) 2003 Red-Bean Software.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions 
+are met:
+
+1. Redistributions of source code must retain the above copyright
+notice, this list of conditions, and the recipe for Fitz's famous
+red-beans-and-rice.
+&hellip;
+</screen>
+
+      <para>The last property-related subcommand is
+        <command>propdel</command>.  Since Subversion allows you to
+        store properties with empty values, you can't remove a
+        property altogether using <command>propedit</command> or
+        <command>propset</command>.  For example, this command will
+        <emphasis>not</emphasis> work:</para>
+
+      <screen>
+$ svn propset license '' calc/button.c
+property `license' set on 'calc/button.c'
+$ svn proplist --verbose calc/button.c
+Properties on 'calc/button.c':
+  copyright : (c) 2003 Red-Bean Software
+  license : 
+$
+</screen>
+
+      <para>You need to use the <command>propdel</command> command to
+        delete properties altogether.  The syntax is similar to the
+        other property commands:</para>
+
+      <screen>
+$ svn propdel license calc/button.c
+property `foo' deleted from ''.
+$ svn proplist --verbose calc/button.c
+Properties on 'calc/button.c':
+  copyright : (c) 2003 Red-Bean Software
+$
+</screen>
+
+      <para>You are now familiar with all of the property-related
+        <command>svn</command> subcommands.</para>
+
+      <sidebar>
+        <title>Modifying Revision Properties</title>
+
+        <para>Remember those unversioned revision properties?  You can
+          modify those with the <command>svn</command> program, too.
+          Simply add the <option>--revprop</option> command-line
+          parameter, and specify the revision whose property you wish
+          to modify.  Since revisions are global, you don't need to
+          specify a path in this case as long as you are positioned in
+          the working copy of the repository whose revision property
+          you wish to modify.</para>
+
+        <screen>
+$ svn pset status 'compiles, but does not work' -r11 --revprop
+property `status' set on repository revision '11'
+$
+</screen>
+
+        <para>Note that the ability to modify these unversioned
+          properties must be explicitly added by the repository
+          administrator.  Since the properties aren't versioned, you
+          run the risk of losing information if you aren't careful
+          with your edits.  The repository administrator can setup
+          methods to protect against this lossage, but by default,
+          modification of unversioned properties is disabled.</para>
+
+      </sidebar>
+
+      <!-- ### cmpilato wuz here. -->
+
+      <para>Properties are <emphasis>versioned</emphasis>, just like
+        file contents.  This means that new properties can be merged
+        into your working files, and can sometimes come into conflict
+        too.  Property values need not be text, either.  For example,
+        you could attach a binary property-value by using the
+        <option>-F</option> switch:</para>
+
+      <screen>
 $ svn propset x-face -F joeface.jpg foo.c
 property `x-face' set on 'foo.c'
 </screen>
 
-    <para>Subversion also provides a great convenience method for
-      editing existing properties: <command>svn
-      propedit</command>. When you invoke it, Subversion will open the
-      value of the property in question in your favorite editor (or at
-      least the editor that you've defined as
-      <command>$EDITOR</command> in your shell), and you can edit the
-      value just as you would edit any text file. This is
-      exceptionally convenient for properties that are a
-      newline-separated array of values. (More about this
-      later).</para>
+      <para>Property changes are still considered <quote>local
+        modifications</quote>, and aren't permanent until you commit.
+        Like textual changes, property changes can be seen by
+        <command>svn diff</command>, <command>svn status</command>,
+        and reverted altogether with <command>svn
+        revert</command>:</para>
 
-    <para>Property changes are still considered <quote>local
-      modifications</quote>, and aren't permanent until you commit.
-      Like textual changes, property changes can be seen by
-      <command>svn diff</command>, <command>svn status</command>, and
-      reverted altogether with <command>svn revert</command>:</para>
-
-    <screen>
+      <screen>
 $ svn diff
 Property changes on: foo.c
 ___________________________________________________________________
@@ -190,7 +800,7 @@ Name: color
 
 $ svn status
 _M   foo.c
-    </screen>
+</screen>
 
     <para>Notice that a 2nd column has appeared in the status output;
       the leading underscore indicates that you've not made any
@@ -207,13 +817,16 @@ _M   foo.c
       <command>svn diff</command> and redirect the output to create a
       usable patch file.  The <command>patch</command> program will
       ignore property patches; as a rule, it ignores any noise it
-      can't understand.  (In future versions of Subversion, though, we
-      may start using a new patch format that describes property
-      changes and file copies/renames.)</para><!-- ###TODO Do we want
-      to mention "we may do this" kind of stuff? -Fitz -->
+      can't understand.  This does unfortunately mean that to fully
+      apply a patch generated by <command>svn diff</command>, any
+      property modifications will need to be applied by hand.
+      Improvements in this area will be address in a future release of
+      Subversion.</para>
+
+    </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-6-sect-2.1">
+    <sect2 id="svn-ch-6-sect-2.3">
       
      <title>Special properties</title>
 
@@ -224,7 +837,7 @@ _M   foo.c
         properties begin with this prefix.  We'll cover these features
         here.</para>
       
-      <sect3 id="svn-ch-6-sect-2.1.1">
+      <sect3 id="svn-ch-6-sect-2.3.1">
         <title><literal>svn:executable</literal></title>
         
         <para>This is a file-only property, and can be set to any
@@ -233,7 +846,7 @@ _M   foo.c
 
       </sect3>
 
-      <sect3 id="svn-ch-6-sect-2.1.2">
+      <sect3 id="svn-ch-6-sect-2.3.2">
         <title><literal>svn:mime-type</literal></title>
         
         <para>At the present time, Subversion examines the
@@ -270,7 +883,7 @@ _M   foo.c
 
       </sect3>
 
-      <sect3 id="svn-ch-6-sect-2.1.3">
+      <sect3 id="svn-ch-6-sect-2.3.3">
         <title><literal>svn:ignore</literal></title>
 
         <para>If you attach this property to a directory, it causes
@@ -298,7 +911,7 @@ $ svn propget svn:ignore .
 
       </sect3>
 
-      <sect3 id="svn-ch-6-sect-2.1.4">
+      <sect3 id="svn-ch-6-sect-2.3.4">
         <title><literal>svn:keywords</literal></title>
 
         <para>Subversion has the ability to substitute useful strings
@@ -409,7 +1022,7 @@ property `svn:keywords' set on 'foo.c'
 
       </sect3>
 
-      <sect3 id="svn-ch-6-sect-2.1.5">
+      <sect3 id="svn-ch-6-sect-2.3.5">
         <title><literal>svn:eol-style</literal></title>
 
         <para>By default, Subversion doesn't pay any attention to line
@@ -445,7 +1058,7 @@ property `svn:keywords' set on 'foo.c'
 
       </sect3>
 
-      <sect3 id="svn-ch-6-sect-2.1.6">
+      <sect3 id="svn-ch-6-sect-2.3.6">
         <title><literal>svn:externals</literal></title>
 
         <para>See <xref linkend="svn-ch-6-sect-3"/>.</para>

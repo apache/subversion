@@ -776,20 +776,19 @@ static dav_resource *dav_svn_create_private_resource(
   return &comb->res;
 }
 
-static void log_warning(apr_pool_t *pool, void *baton, const char *fmt, ...)
+static void log_warning(void *baton, svn_error_t *err)
 {
   request_rec *r = baton;
-  va_list va;
-  const char *s;
 
-  va_start(va, fmt);
-  s = apr_pvsprintf(r->pool, fmt, va);
-  va_end(va);
+  /* ### hmm. the FS is cleaned up at request cleanup time. "r" might
+     ### not really be valid. we should probably put the FS into a
+     ### subpool to ensure it gets cleaned before the request.
 
-  ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r, "%s", s);
+     ### is there a good way to create and use a subpool for all
+     ### of our functions ... ??
+  */
 
-  /* Ignore the `pool' parameter, we got our pool from the baton. */
-  (void) pool;
+  ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r, "%s", err->message);
 }
 
 
@@ -1062,6 +1061,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   const char *repos_name;
   const char *relative;
   const char *repos_path;
+  const char *version_name;
   svn_error_t *serr;
   dav_error *err;
   int had_slash;
@@ -1115,6 +1115,17 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   /* Gather any options requested by an svn client. */
   comb->priv.svn_client_options = apr_table_get(r->headers_in,
                                                 SVN_DAV_OPTIONS_HEADER);
+
+  /* See if the client sent a custom 'version name' request header. */
+  version_name = apr_table_get(r->headers_in, SVN_DAV_VERSION_NAME_HEADER);
+  comb->priv.version_name 
+    = version_name ? SVN_STR_TO_REV(version_name): SVN_INVALID_REVNUM;
+
+  /* Remember checksums, if any. */
+  comb->priv.base_checksum =
+    apr_table_get (r->headers_in, SVN_DAV_BASE_FULLTEXT_MD5_HEADER);
+  comb->priv.result_checksum =
+    apr_table_get (r->headers_in, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER);
 
   /* "relative" is part of the "uri" string, so it has the proper
      lifetime to store here. */
@@ -1286,8 +1297,8 @@ static int is_our_resource(const dav_resource *res1,
   /* coalesce the repository */
   if (res1->info->repos != res2->info->repos)
     {      
-      /* close the old, redundant filesystem */
-      (void) svn_repos_close(res2->info->repos->repos);
+      /* ### might be nice to have a pool which we can clear to toss
+         ### out the old, redundant repos/fs.  */
 
       /* have res2 point to res1's filesystem */
       res2->info->repos = res1->info->repos;
@@ -1485,6 +1496,8 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
                                 &(*stream)->delta_baton,
                                 resource->info->root.root,
                                 resource->info->repos_path,
+                                resource->info->base_checksum,
+                                resource->info->result_checksum,
                                 resource->pool);
   if (serr != NULL && serr->apr_err == SVN_ERR_FS_NOT_FOUND)
     {
@@ -1502,6 +1515,8 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
                                     &(*stream)->delta_baton,
                                     resource->info->root.root,
                                     resource->info->repos_path,
+                                    resource->info->base_checksum,
+                                    resource->info->result_checksum,
                                     resource->pool);
     }
   if (serr != NULL)
@@ -2264,6 +2279,31 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
                              0, 0, 0, NULL, NULL);
       if (err)
         return err;
+    }
+
+  /* Sanity check: an svn client may have sent a custom request header
+     containing the revision of the item it thinks it's deleting.  In
+     this case, we enforce the svn-specific semantic that the item
+     must be up-to-date. */
+  if (SVN_IS_VALID_REVNUM(resource->info->version_name))
+    {
+      svn_revnum_t created_rev;
+      serr = svn_fs_node_created_rev (&created_rev,
+                                      resource->info->root.root,
+                                      resource->info->repos_path,
+                                      resource->pool);
+      if (serr)
+        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   "Could not get created rev of resource.");
+
+      if (resource->info->version_name < created_rev)
+        {
+          serr = svn_error_createf (SVN_ERR_RA_OUT_OF_DATE, NULL,
+                                    "Item '%s' is out of date.", 
+                                    resource->info->repos_path);
+          return dav_svn_convert_err(serr, HTTP_CONFLICT,
+                                     "Can't DELETE out-of-date resource.");
+        }
     }
 
   if ((serr = svn_fs_delete_tree(resource->info->root.root,

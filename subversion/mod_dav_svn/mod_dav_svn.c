@@ -48,7 +48,7 @@ typedef struct {
   const char *fs_path;          /* path to the SVN FS */
   const char *repo_name;        /* repository name */
   const char *xslt_uri;         /* XSL transform URI */
-  const char *fs_parent_path;   /* path to parent of of SVN FS'es  */
+  const char *fs_parent_path;   /* path to parent of SVN FS'es  */
   svn_boolean_t autoversioning; /* whether autoversioning is active */
 } dav_svn_dir_conf;
 
@@ -62,7 +62,7 @@ extern module AP_MODULE_DECLARE_DATA dav_svn_module;
 static int dav_svn_init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp,
                         server_rec *s)
 {
-    ap_add_version_component(p, "SVN/" SVN_VERSION);
+    ap_add_version_component(p, "SVN/" SVN_VER_NUMBER);
     return OK;
 }
 

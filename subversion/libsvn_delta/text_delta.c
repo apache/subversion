@@ -25,6 +25,7 @@
 
 #include "svn_delta.h"
 #include "svn_io.h"
+#include "svn_md5.h"
 #include "svn_pools.h"
 #include "delta.h"
 
@@ -68,6 +69,11 @@ struct apply_baton {
   apr_size_t sbuf_len;          /* Length of SBUF data */
   char *tbuf;                   /* Target buffer */
   apr_size_t tbuf_size;         /* Allocated target buffer space */
+
+  apr_md5_ctx_t md5_context;    /* Leads to result_checksum below. */
+  const char *result_checksum;  /* Hex MD5 digest of resultant fulltext. */
+
+  const char *error_info;       /* Optional extra info for error returns. */
 };
 
 
@@ -417,9 +423,35 @@ apply_window (svn_txdelta_window_t *window, void *baton)
   if (window == NULL)
     {
       /* We're done; just clean up.  */
-      svn_stream_close (ab->target);
+      svn_error_t *err2 = NULL;
+
+      /* ### If streams had checksums, this code wouldn't be here... */
+      if (ab->result_checksum)
+        {
+          const char *actual_checksum;
+          unsigned char digest[MD5_DIGESTSIZE];
+          
+          apr_md5_final(digest, &(ab->md5_context));
+          actual_checksum = svn_md5_digest_to_cstring (digest, ab->pool);
+          
+          if (strcmp (ab->result_checksum, actual_checksum) != 0)
+            err2 = svn_error_createf
+              (SVN_ERR_CHECKSUM_MISMATCH, NULL,
+               "apply_window: checksum mismatch after applying text delta\n"
+               "(%s):\n"
+               "   expected checksum:  %s\n"
+               "   actual checksum:    %s\n",
+               ab->error_info ? ab->error_info : "no additional context",
+               ab->result_checksum, actual_checksum);
+        }
+
+      err = svn_stream_close (ab->target);
       svn_pool_destroy (ab->pool);
-      return SVN_NO_ERROR;
+
+      if (err2)
+        return err2;
+
+      return err;
     }
 
   /* Make sure the source view didn't slide backwards.  */
@@ -474,6 +506,17 @@ apply_window (svn_txdelta_window_t *window, void *baton)
   assert (len == window->tview_len);
 
   /* Write out the output. */
+
+  /* ### We've also considered just adding two (optionally null)
+     arguments to svn_stream_create(): read_checksum and
+     write_checksum.  Then instead of every caller updating an md5
+     context when it calls svn_stream_write() or svn_stream_read(),
+     streams would do it automatically, and verify the checksum in
+     svn_stream_closed().  But this might be overkill for issue #689;
+     so for now we just update the context here. */
+  if (ab->result_checksum)
+    apr_md5_update(&(ab->md5_context), ab->tbuf, len);
+
   return svn_stream_write (ab->target, ab->tbuf, &len);
 }
 
@@ -481,6 +524,8 @@ apply_window (svn_txdelta_window_t *window, void *baton)
 void
 svn_txdelta_apply (svn_stream_t *source,
                    svn_stream_t *target,
+                   const char *result_checksum,
+                   const char *error_info,
                    apr_pool_t *pool,
                    svn_txdelta_window_handler_t *handler,
                    void **handler_baton)
@@ -499,6 +544,20 @@ svn_txdelta_apply (svn_stream_t *source,
   ab->sbuf_len = 0;
   ab->tbuf = NULL;
   ab->tbuf_size = 0;
+
+  if (result_checksum)
+    {
+      ab->result_checksum = apr_pstrdup (subpool, result_checksum);
+      apr_md5_init (&(ab->md5_context));
+    }
+  else
+    ab->result_checksum = NULL;
+
+  if (error_info)
+    ab->error_info = apr_pstrdup (subpool, error_info);
+  else
+    ab->error_info = NULL;
+
   *handler = apply_window;
   *handler_baton = ab;
 }

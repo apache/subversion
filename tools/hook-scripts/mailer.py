@@ -237,7 +237,9 @@ class PipeOutput(MailedOutput):
   def start(self, group, params):
     MailedOutput.start(self, group, params)
 
-    cmd = self.cmd + [ self.to_addr ]
+    ### gotta fix this. this is pretty specific to sendmail and qmail's
+    ### mailwrapper program. should be able to use option param substitution
+    cmd = self.cmd + [ '-f', self.from_addr, self.to_addr ]
 
     # construct the pipe for talking to the mailer
     self.pipe = popen2.Popen3(cmd)
@@ -537,7 +539,7 @@ class ChangeCollector(svn.delta.Editor):
     base_path = _svn_join(parent_baton[1], _svn_basename(path))
     return (path, base_path, base_revision)  # file_baton
 
-  def apply_textdelta(self, file_baton):
+  def apply_textdelta(self, file_baton, base_checksum, result_checksum):
     file_path = file_baton[0]
     if self.changes.has_key(file_path):
       self.changes[file_path].text_changed = True
@@ -687,7 +689,11 @@ class Config:
           continue
         params = self._global_params.copy()
         params.update(match.groupdict())
-      self._group_re.append((group, re.compile(sub.for_paths), params))
+
+      # if a matching rule hasn't been given, then use the empty string
+      # as it will match all paths
+      for_paths = getattr(sub, 'for_paths', '')
+      self._group_re.append((group, re.compile(for_paths), params))
 
     # after all the groups are done, add in the default group
     try:
@@ -783,6 +789,7 @@ if __name__ == '__main__':
 #        mail; i.e. different from MLMs that munge it)
 #   - each group defines content construction:
 #     o max size of diff before trimming
+#     o max size of entire commit message before truncation
 #     o flag to disable generation of add/delete diffs
 #   - per-repository configuration
 #     o extra config living in repos
@@ -791,4 +798,5 @@ if __name__ == '__main__':
 #     o look up authors (username -> email; for the From: header) in a
 #       file(s) or DBM
 #   - put the commit author into the params dict  [DONE]
+#   - if the subject line gets too long, then trim it. configurable?
 #

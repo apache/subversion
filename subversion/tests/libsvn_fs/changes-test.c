@@ -29,33 +29,32 @@
 #include "../../libsvn_fs/util/fs_skels.h"
 #include "../../libsvn_fs/bdb/changes-table.h"
 
-#define SET_STR(ps, s) ((ps)->data = (s), (ps)->len = strlen(s))
 
 
 /* Helper functions/variables.  */
 static const char *standard_txns[6]
-  = { "1", "2", "3", "4", "5", "6" };
+  = { "0", "1", "2", "3", "4", "5" };
 static const char *standard_changes[19][6] 
      /* KEY   PATH   NODEREVID  KIND     TEXT PROP */
-  = { { "1",  "/foo",  "1.0.1",  "add",     0,  0  },
-      { "1",  "/foo",  "1.0.1",  "modify",  0, "1" },
-      { "1",  "/bar",  "2.0.1",  "add",     0,  0  },
-      { "1",  "/bar",  "2.0.1",  "modify", "1", 0  },
-      { "1",  "/bar",  "2.0.1",  "modify",  0, "1" },
-      { "1",  "/baz",  "3.0.1",  "add",     0,  0  },
-      { "1",  "/baz",  "3.0.1",  "modify", "1", 0  },
-      { "2",  "/foo",  "1.0.2",  "modify", "1", 0  },
-      { "3",  "/foo",  "1.0.3",  "modify",  0, "1" },
-      { "3",  "/bar",  "2.0.3",  "modify", "1", 0  },
-      { "4",  "/baz",  "3.0.4",  "modify", "1", 0  },
-      { "5",  "/fob",  "4.0.5",  "add",     0,  0  },
-      { "5",  "/fob",  "4.0.5",  "modify", "1", 0  },
-      { "6",  "/baz",  "3.0.4",  "delete",  0,  0  },
-      { "6",  "/baz",  "5.0.6",  "add",     0,  0  },
-      { "6",  "/baz",  "5.0.6",  "modify", "1", 0  },
-      { "7",  "/fob",  "4.0.7",  "modify", "1", 0  },
-      { "7",  "/fob",  "4.0.7",  "reset",   0,  0  },
-      { "7",  "/fob",  "4.0.7",  "modify",  0, "1" } };
+  = { { "0",  "/foo",  "1.0.0",  "add",     0,  0  },
+      { "0",  "/foo",  "1.0.0",  "modify",  0, "1" },
+      { "0",  "/bar",  "2.0.0",  "add",     0,  0  },
+      { "0",  "/bar",  "2.0.0",  "modify", "1", 0  },
+      { "0",  "/bar",  "2.0.0",  "modify",  0, "1" },
+      { "0",  "/baz",  "3.0.0",  "add",     0,  0  },
+      { "0",  "/baz",  "3.0.0",  "modify", "1", 0  },
+      { "1",  "/foo",  "1.0.1",  "modify", "1", 0  },
+      { "2",  "/foo",  "1.0.2",  "modify",  0, "1" },
+      { "2",  "/bar",  "2.0.2",  "modify", "1", 0  },
+      { "3",  "/baz",  "3.0.3",  "modify", "1", 0  },
+      { "4",  "/fob",  "4.0.4",  "add",     0,  0  },
+      { "4",  "/fob",  "4.0.4",  "modify", "1", 0  },
+      { "5",  "/baz",  "3.0.3",  "delete",  0,  0  },
+      { "5",  "/baz",  "5.0.5",  "add",     0, "1" },
+      { "5",  "/baz",  "5.0.5",  "modify", "1", 0  },
+      { "6",  "/fob",  "4.0.6",  "modify", "1", 0  },
+      { "6",  "/fob",  "4.0.6",  "reset",   0,  0  },
+      { "6",  "/fob",  "4.0.6",  "modify",  0, "1" } };
 
 
 static svn_fs_path_change_kind_t string_to_kind (const char *str)
@@ -106,6 +105,7 @@ add_standard_changes (svn_fs_t *fs,
       svn_fs__change_t change;
 
       /* Set up the current change item. */
+      change.path = standard_changes[i][1];
       change.noderev_id = svn_fs_parse_id (standard_changes[i][2], 
                                            strlen (standard_changes[i][2]), 
                                            pool);
@@ -122,90 +122,6 @@ add_standard_changes (svn_fs_t *fs,
       SVN_ERR (svn_fs__retry_txn (args.fs, txn_body_changes_add, &args, pool));
     }
 
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-add_standard_fs_changes (svn_fs_t *fs,
-                      apr_pool_t *pool)
-{
-  int i;
-  int num_changes = sizeof (standard_changes) / sizeof (const char *) / 6;
-  int num_stdtxns = sizeof (standard_txns) / sizeof (const char *);
-  svn_string_t s1;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
-  const char *last_key = "";
-  svn_boolean_t txn_open = FALSE;
-  svn_revnum_t youngest_rev = 0;
-
-  SET_STR(&s1, "PropValue");
-  
-  /* svn_fs_change_node_prop (txn_root, filename, propname, &s1, pool); */
-  for (i = 0; i < num_changes; i++)
-    {
-      svn_fs__change_t change;
-      const char *path = standard_changes[i][1];
-
-      /* Set up the current change item. */
-      change.kind = string_to_kind (standard_changes[i][3]);
-      change.text_mod = standard_changes[i][4] ? 1 : 0;
-      change.prop_mod = standard_changes[i][5] ? 1 : 0;
-
-      if (strcmp(last_key, standard_changes[i][0]) != 0)
-        {
-          if (txn_open)
-            {
-              SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-              SVN_ERR (svn_fs_close_txn (txn));
-              txn_open = FALSE;
-              if (youngest_rev == num_stdtxns)
-                {
-                  break;
-                }
-            }
-          SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
-          txn_open = TRUE;
-          SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-          last_key = standard_changes[i][0];
-        }
-
-      if (change.kind == svn_fs_path_change_add)
-        {
-          SVN_ERR (svn_fs_make_file (txn_root, path, pool));
-        }
-      else if (change.kind == svn_fs_path_change_delete)
-        {
-          SVN_ERR (svn_fs_delete (txn_root, path, pool));
-        }
-      else if (change.kind == svn_fs_path_change_modify)
-        {
-          if (change.text_mod)
-            {
-              SVN_ERR (svn_test__set_file_contents 
-                       (txn_root, path, "Textmod\n", pool));
-            }
-          else
-            {
-              SVN_ERR (svn_fs_change_node_prop (txn_root, path,
-                                                "PropName", &s1, pool));
-            }
-        }
-      else if (change.kind == svn_fs_path_change_replace)
-        {
-          continue;
-        }
-      else if (change.kind == svn_fs_path_change_reset)
-        {
-          continue;
-        }
-    }
-  if (txn_open)
-    {
-      SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-      SVN_ERR (svn_fs_close_txn (txn));
-      txn_open = FALSE;
-    }
   return SVN_NO_ERROR;
 }
 
@@ -254,9 +170,6 @@ changes_add (const char **msg,
 
   /* Add the standard slew of changes. */
   SVN_ERR (add_standard_changes (fs, pool));
-
-  /* Close the filesystem. */
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
@@ -328,6 +241,12 @@ changes_fetch_raw (const char **msg,
               (SVN_ERR_TEST_FAILED, NULL,
                "missing some changes for key `%s'", txn_id);
             
+          /* Verify that the PATH matches. */
+          if (strcmp (standard_changes[cur_change_index][1], change->path))
+            return svn_error_createf 
+              (SVN_ERR_TEST_FAILED, NULL,
+               "paths differ in change for key `%s'", txn_id);
+
           /* Verify that the NODE-REV-ID matches. */
           noderev_id = svn_fs_unparse_id (change->noderev_id, pool);
           if (strcmp (standard_changes[cur_change_index][2], noderev_id->data))
@@ -359,9 +278,6 @@ changes_fetch_raw (const char **msg,
           cur_change_index++;
         }
     }
-
-  /* Close the filesystem. */
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
@@ -404,9 +320,6 @@ changes_delete (const char **msg,
            "expected empty changes array for txn `%s'", args.key);
     }
 
-  /* Close the filesystem. */
-  SVN_ERR (svn_fs_close_fs (fs));
-
   return SVN_NO_ERROR;
 }
 
@@ -417,85 +330,85 @@ get_ideal_changes (const char *txn_id,
 {
   apr_hash_t *ideal = apr_hash_make (pool);
   svn_fs_path_change_t *change;
-  if (strcmp (txn_id, "1") == 0)
+  if (strcmp (txn_id, "0") == 0)
     {
       change = apr_palloc (pool, sizeof (*change));
-      change->node_rev_id = svn_fs_parse_id ("1.0.1", 5, pool);
+      change->node_rev_id = svn_fs_parse_id ("1.0.0", 5, pool);
       change->change_kind = svn_fs_path_change_add;
       change->text_mod = 0;
       change->prop_mod = 1;
       apr_hash_set (ideal, "/foo", APR_HASH_KEY_STRING, change);
 
       change = apr_palloc (pool, sizeof (*change));
-      change->node_rev_id = svn_fs_parse_id ("2.0.1", 5, pool);
+      change->node_rev_id = svn_fs_parse_id ("2.0.0", 5, pool);
       change->change_kind = svn_fs_path_change_add;
       change->text_mod = 1;
       change->prop_mod = 1;
       apr_hash_set (ideal, "/bar", APR_HASH_KEY_STRING, change);
 
       change = apr_palloc (pool, sizeof (*change));
-      change->node_rev_id = svn_fs_parse_id ("3.0.1", 5, pool);
+      change->node_rev_id = svn_fs_parse_id ("3.0.0", 5, pool);
       change->change_kind = svn_fs_path_change_add;
       change->text_mod = 1;
       change->prop_mod = 0;
       apr_hash_set (ideal, "/baz", APR_HASH_KEY_STRING, change);
+    }
+  if (strcmp (txn_id, "1") == 0)
+    {
+      change = apr_palloc (pool, sizeof (*change));
+      change->node_rev_id = svn_fs_parse_id ("1.0.1", 5, pool);
+      change->change_kind = svn_fs_path_change_modify;
+      change->text_mod = 1;
+      change->prop_mod = 0;
+      apr_hash_set (ideal, "/foo", APR_HASH_KEY_STRING, change);
     }
   if (strcmp (txn_id, "2") == 0)
     {
       change = apr_palloc (pool, sizeof (*change));
       change->node_rev_id = svn_fs_parse_id ("1.0.2", 5, pool);
       change->change_kind = svn_fs_path_change_modify;
-      change->text_mod = 1;
-      change->prop_mod = 0;
-      apr_hash_set (ideal, "/foo", APR_HASH_KEY_STRING, change);
-    }
-  if (strcmp (txn_id, "3") == 0)
-    {
-      change = apr_palloc (pool, sizeof (*change));
-      change->node_rev_id = svn_fs_parse_id ("1.0.3", 5, pool);
-      change->change_kind = svn_fs_path_change_modify;
       change->text_mod = 0;
       change->prop_mod = 1;
       apr_hash_set (ideal, "/foo", APR_HASH_KEY_STRING, change);
 
       change = apr_palloc (pool, sizeof (*change));
-      change->node_rev_id = svn_fs_parse_id ("2.0.3", 5, pool);
+      change->node_rev_id = svn_fs_parse_id ("2.0.2", 5, pool);
       change->change_kind = svn_fs_path_change_modify;
       change->text_mod = 1;
       change->prop_mod = 0;
       apr_hash_set (ideal, "/bar", APR_HASH_KEY_STRING, change);
     }
-  if (strcmp (txn_id, "4") == 0)
+  if (strcmp (txn_id, "3") == 0)
     {
       change = apr_palloc (pool, sizeof (*change));
-      change->node_rev_id = svn_fs_parse_id ("3.0.4", 5, pool);
+      change->node_rev_id = svn_fs_parse_id ("3.0.3", 5, pool);
       change->change_kind = svn_fs_path_change_modify;
       change->text_mod = 1;
       change->prop_mod = 0;
       apr_hash_set (ideal, "/baz", APR_HASH_KEY_STRING, change);
     }
-  if (strcmp (txn_id, "5") == 0)
+  if (strcmp (txn_id, "4") == 0)
     {
       change = apr_palloc (pool, sizeof (*change));
-      change->node_rev_id = svn_fs_parse_id ("4.0.5", 5, pool);
+      change->node_rev_id = svn_fs_parse_id ("4.0.4", 5, pool);
       change->change_kind = svn_fs_path_change_add;
       change->text_mod = 1;
       change->prop_mod = 0;
       apr_hash_set (ideal, "/fob", APR_HASH_KEY_STRING, change);
     }
+  if (strcmp (txn_id, "5") == 0)
+    {
+      change = apr_palloc (pool, sizeof (*change));
+      change->node_rev_id = svn_fs_parse_id ("5.0.5", 5, pool);
+      change->change_kind = svn_fs_path_change_replace;
+      change->text_mod = 1;
+      change->prop_mod = 1;
+      apr_hash_set (ideal, "/baz", APR_HASH_KEY_STRING, change);
+    }
   if (strcmp (txn_id, "6") == 0)
     {
       change = apr_palloc (pool, sizeof (*change));
-      change->node_rev_id = svn_fs_parse_id ("5.0.6", 5, pool);
-      change->change_kind = svn_fs_path_change_replace;
-      change->text_mod = 1;
-      change->prop_mod = 0;
-      apr_hash_set (ideal, "/baz", APR_HASH_KEY_STRING, change);
-    }
-  if (strcmp (txn_id, "7") == 0)
-    {
-      change = apr_palloc (pool, sizeof (*change));
-      change->node_rev_id = svn_fs_parse_id ("4.0.7", 5, pool);
+      change->node_rev_id = svn_fs_parse_id ("4.0.6", 5, pool);
       change->change_kind = svn_fs_path_change_modify;
       change->text_mod = 0;
       change->prop_mod = 1;
@@ -533,7 +446,7 @@ compare_changes (apr_hash_t *ideals,
           (SVN_ERR_TEST_FAILED, NULL,
            "missing expected change for path `%s' in txn_id `%s'", 
            path, txn_id);
-
+            
       /* Verify that the NODE-REV-ID matches. */
       if (svn_fs_compare_ids (change->node_rev_id, 
                               ideal_change->node_rev_id))
@@ -590,9 +503,8 @@ changes_fetch (const char **msg,
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "expected empty changes hash");
   
-
   /* Add the standard slew of changes. */
-  SVN_ERR (add_standard_fs_changes (fs, pool));
+  SVN_ERR (add_standard_changes (fs, pool));
 
   /* For each transaction, fetch that transaction's changes, and
      compare those changes against our ideal compressed changes
@@ -622,9 +534,6 @@ changes_fetch (const char **msg,
            "unexpected number of changes for key `%s'", txn_id);
       SVN_ERR (compare_changes (ideals, args.changes, txn_id, pool));
     }
-
-  /* Close the filesystem. */
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }

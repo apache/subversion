@@ -102,7 +102,7 @@ svn_error_t *svn_utf_cstring_from_utf8 (const char **dest,
 /** Return a fuzzily native-encoded C string from utf8 C string @a src,
  * allocated in @a pool.
  *
- * Return a fuzzily native-encoded C string from utf8 C string SRC,
+ * Return a fuzzily native-encoded C string from utf8 C string @a src,
  * allocated in @a pool.  A fuzzy recoding leaves all 7-bit ascii
  * characters the same, and substitutes "?\\XXX" for others, where XXX
  * is the unsigned decimal code for that character.

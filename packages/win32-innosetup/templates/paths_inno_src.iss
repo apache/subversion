@@ -16,6 +16,8 @@
 #define path_setup_in "in"
 ; This is where the final setup ends
 #define path_setup_out "out"
+; Path to ISX
+#define path_isx "E:\inno\isx"
 
 ; Example - Downloaded files --------------------------------------------------
 ; Here is a example (commented) if you want to compile a setup from files

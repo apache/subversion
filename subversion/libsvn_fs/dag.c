@@ -22,6 +22,7 @@
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_error.h"
+#include "svn_md5.h"
 #include "svn_fs.h"
 
 #include "dag.h"
@@ -126,7 +127,6 @@ uncache_node_revision (void *baton)
 /* Dup NODEREV and all associated data into POOL */
 static svn_fs__node_revision_t *
 copy_node_revision (svn_fs__node_revision_t *noderev,
-                    const char *to_path,
                     apr_pool_t *pool)
 {
   svn_fs__node_revision_t *nr = apr_pcalloc (pool, sizeof (*nr));
@@ -134,10 +134,6 @@ copy_node_revision (svn_fs__node_revision_t *noderev,
   if (noderev->predecessor_id)
     nr->predecessor_id = svn_fs__id_copy (noderev->predecessor_id, pool);
   nr->predecessor_count = noderev->predecessor_count;
-  if (to_path != NULL)
-    nr->committed_path = apr_pstrdup (pool, to_path);
-  else
-    nr->committed_path = apr_pstrdup (pool, noderev->committed_path);
   if (noderev->prop_key)
     nr->prop_key = apr_pstrdup (pool, noderev->prop_key);
   if (noderev->data_key)
@@ -178,7 +174,7 @@ cache_node_revision (dag_node_t *node,
     {
       /* For immutable nodes, we can cache the contents permanently,
          but we need to copy them over into the node's own pool.  */
-      node->node_revision = copy_node_revision (noderev, NULL, node->pool);
+      node->node_revision = copy_node_revision (noderev, node->pool);
     }
 #endif /* 0 */
 }
@@ -315,15 +311,6 @@ svn_fs__dag_get_predecessor_count (int *count,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs__dag_get_committed_path (const char **path, dag_node_t *node,
-                                trail_t *trail)
-{
-  svn_fs__node_revision_t *noderev;
-  SVN_ERR (get_node_revision (&noderev, node, trail));
-  *path = noderev->committed_path;
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
 svn_fs__dag_walk_predecessors (dag_node_t *node,
@@ -378,7 +365,6 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
   /* Create empty root directory with node revision 0.0.0. */
   memset (&noderev, 0, sizeof (noderev));
   noderev.kind = svn_node_dir;
-  noderev.committed_path = "";
   SVN_ERR (svn_fs__bdb_put_node_revision (fs, root_id, &noderev, trail));
 
   /* Create a new transaction (better have an id of "0") */
@@ -551,7 +537,7 @@ set_entry (dag_node_t *parent,
   if (! svn_fs__same_keys (rep_key, mutable_rep_key))
     {
       svn_fs__node_revision_t *new_noderev = 
-        copy_node_revision (parent_noderev, NULL, trail->pool);
+        copy_node_revision (parent_noderev, trail->pool);
       new_noderev->data_key = mutable_rep_key;
       SVN_ERR (set_node_revision (parent, new_noderev, trail));
     }
@@ -599,7 +585,6 @@ make_entry (dag_node_t **child_p,
             const char *name,
             svn_boolean_t is_dir,
             const char *txn_id,
-            const char *path,
             trail_t *trail)
 {
   const svn_fs_id_t *new_node_id;
@@ -633,8 +618,6 @@ make_entry (dag_node_t **child_p,
   /* Create the new node's NODE-REVISION */
   memset (&new_noderev, 0, sizeof (new_noderev));
   new_noderev.kind = is_dir ? svn_node_dir : svn_node_file;
-  new_noderev.committed_path = apr_pstrdup(trail->pool, path);
-  
   SVN_ERR (svn_fs__create_node (&new_node_id, svn_fs__dag_get_fs (parent),
                                 &new_noderev, txn_id, trail));
 
@@ -828,7 +811,6 @@ svn_fs__dag_clone_child (dag_node_t **child_p,
                          const char *name,
                          const char *copy_id,
                          const char *txn_id,
-                         const char *path,
                          trail_t *trail)
 {
   dag_node_t *cur_entry; /* parent's current entry named NAME */
@@ -868,8 +850,6 @@ svn_fs__dag_clone_child (dag_node_t **child_p,
       noderev->predecessor_id = svn_fs__id_copy (cur_entry->id, trail->pool);
       if (noderev->predecessor_count != -1)
         noderev->predecessor_count++;
-      if (path)
-        noderev->committed_path = apr_pstrdup (trail->pool, path);
       SVN_ERR (svn_fs__create_successor (&new_node_id, fs, cur_entry->id, 
                                          noderev, copy_id, txn_id, trail));
       
@@ -1001,7 +981,7 @@ delete_entry (dag_node_t *parent,
   if (! svn_fs__same_keys (mutable_rep_key, rep_key))
     {
       svn_fs__node_revision_t *new_noderev =
-        copy_node_revision (parent_noderev, NULL, trail->pool);
+        copy_node_revision (parent_noderev, trail->pool);
       new_noderev->data_key = mutable_rep_key;
       SVN_ERR (set_node_revision (parent, new_noderev, trail));
     }
@@ -1162,12 +1142,11 @@ svn_error_t *
 svn_fs__dag_make_file (dag_node_t **child_p,
                        dag_node_t *parent,
                        const char *name,
-                       const char *txn_id,
-                       const char *path,
+                       const char *txn_id, 
                        trail_t *trail)
 {
   /* Call our little helper function */
-  return make_entry (child_p, parent, name, FALSE, txn_id, path, trail);
+  return make_entry (child_p, parent, name, FALSE, txn_id, trail);
 }
 
 
@@ -1175,12 +1154,11 @@ svn_error_t *
 svn_fs__dag_make_dir (dag_node_t **child_p,
                       dag_node_t *parent,
                       const char *name,
-                      const char *txn_id,
-                      const char *path,
+                      const char *txn_id, 
                       trail_t *trail)
 {
   /* Call our little helper function */
-  return make_entry (child_p, parent, name, TRUE, txn_id, path, trail);
+  return make_entry (child_p, parent, name, TRUE, txn_id, trail);
 }
 
 
@@ -1371,6 +1349,7 @@ svn_fs__dag_get_edit_stream (svn_stream_t **contents,
 
 svn_error_t *
 svn_fs__dag_finalize_edits (dag_node_t *file,
+                            const char *checksum,
                             const char *txn_id, 
                             trail_t *trail)
 {
@@ -1396,6 +1375,25 @@ svn_fs__dag_finalize_edits (dag_node_t *file,
   /* If this node has no EDIT-DATA-KEY, this is a no-op. */
   if (! noderev->edit_key)
     return SVN_NO_ERROR;
+
+  if (checksum)
+    {
+      unsigned char digest[MD5_DIGESTSIZE];
+      const char *hex;
+
+      SVN_ERR (svn_fs__rep_contents_checksum
+               (digest, fs, noderev->edit_key, trail));
+
+      hex = svn_md5_digest_to_cstring (digest, trail->pool);
+      if (strcmp (checksum, hex) != 0)
+        return svn_error_createf
+          (SVN_ERR_CHECKSUM_MISMATCH, 
+           NULL,
+           "svn_fs__dag_finalize_edits: checksum mismatch, rep \"%s\":\n"
+           "   expected:  %s\n"
+           "     actual:  %s\n",
+           noderev->edit_key, checksum, hex);
+    }
 
   /* Now, we want to delete the old representation and replace it with
      the new.  Of course, we don't actually delete anything until
@@ -1469,8 +1467,7 @@ svn_fs__dag_copy (dag_node_t *to_node,
                   svn_boolean_t preserve_history,
                   svn_revnum_t from_rev,
                   const char *from_path,
-                  const char *txn_id,
-                  const char *to_path,
+                  const char *txn_id, 
                   trail_t *trail)
 {
   const svn_fs_id_t *id;
@@ -1485,7 +1482,7 @@ svn_fs__dag_copy (dag_node_t *to_node,
 
       /* Make a copy of the original node revision. */
       SVN_ERR (get_node_revision (&from_noderev, from_node, trail));
-      to_noderev = copy_node_revision (from_noderev, to_path, trail->pool);
+      to_noderev = copy_node_revision (from_noderev, trail->pool);
       
       /* Reserve a copy ID for this new copy. */
       SVN_ERR (svn_fs__bdb_reserve_copy_id (&copy_id, fs, trail));

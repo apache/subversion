@@ -24,6 +24,7 @@
 #include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_time.h"
+#include "svn_md5.h"
 
 
 #define ARE_VALID_COPY_ARGS(p,r) ((p && SVN_IS_VALID_REVNUM (r)) ? 1 : 0)
@@ -396,15 +397,25 @@ dump_node (struct edit_baton *eb,
                                   ": %" APR_SIZE_T_FMT "\n", proplen));
     }
 
-  /* If we are supposed to dump text, write out a text length header here. */
+  /* If we are supposed to dump text, write out a text length header
+     here, and a md5 checksum (if available.) */
   if (must_dump_text && (kind == svn_node_file))
     {
+      unsigned char md5_digest[MD5_DIGESTSIZE];
+      const char *hex_digest;
+
       SVN_ERR (svn_fs_file_length (&textlen, eb->fs_root, path, pool));
       content_length += textlen;
       SVN_ERR (svn_stream_printf (eb->stream, pool,
                                   SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH 
                                   ": %" APR_OFF_T_FMT "\n", textlen));
-      /* ### someday write a node-content-checksum here.  */
+
+      SVN_ERR (svn_fs_file_md5_checksum (md5_digest, eb->fs_root, path, pool));
+      hex_digest = svn_md5_digest_to_cstring (md5_digest, pool);
+      if (hex_digest)
+        SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                    SVN_REPOS_DUMPFILE_TEXT_CONTENT_CHECKSUM 
+                                    ": %s\n", hex_digest));
     }
 
   /* 'Content-length:' is the last header before we dump the content,

@@ -49,6 +49,13 @@ extern "C" {
  */
 #define SVN_DAV_OPTIONS_HEADER "X-SVN-Options"
 
+/** This header is used when an svn client wants to tell mod_dav_svn
+ * exactly what revision of a resource it thinks it's operating on.
+ * (For example, an svn server can use it to validate a DELETE request.)
+ * Normal WebDAV or DeltaV clients won't use it.
+ */
+#define SVN_DAV_VERSION_NAME_HEADER "X-SVN-Version-Name"
+
 /** These headers are for client and server to verify that the base
  * and the result of a change transmission are the same on both
  * sides, regardless of what transformations (svndiff deltification,

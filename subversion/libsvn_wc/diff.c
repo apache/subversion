@@ -688,7 +688,9 @@ open_directory (const char *path,
   struct dir_baton *b;
   const char *full_path;
 
-  full_path = svn_path_join (pb->edit_baton->anchor_path, path, dir_pool);
+  /* Allocate path from the parent pool since the memory is used in the
+     parent's compared hash */
+  full_path = svn_path_join (pb->edit_baton->anchor_path, path, pb->pool);
   b = make_dir_baton (full_path, pb, pb->edit_baton, FALSE, dir_pool);
   *child_baton = b;
 
@@ -889,10 +891,17 @@ apply_textdelta (void *file_baton,
   apr_pool_cleanup_register (b->pool, file_baton, temp_file_cleanup_handler,
                              temp_file_cleanup_handler_remover);
 
-  svn_txdelta_apply (svn_stream_from_aprfile (b->original_file, b->pool),
-                     svn_stream_from_aprfile (b->temp_file, b->pool),
-                     b->pool,
-                     &b->apply_handler, &b->apply_baton);
+  {
+    const char *tmp_path;
+
+    apr_file_name_get (&tmp_path, b->temp_file);
+    svn_txdelta_apply (svn_stream_from_aprfile (b->original_file, b->pool),
+                       svn_stream_from_aprfile (b->temp_file, b->pool),
+                       NULL,
+                       tmp_path,
+                       b->pool,
+                       &b->apply_handler, &b->apply_baton);
+  }
 
   *handler = window_handler;
   *handler_baton = file_baton;
@@ -930,31 +939,34 @@ close_file (void *file_baton,
     }
   else
     {
-      /* Be careful with errors to ensure that the temporary translated
-         file is deleted. */
-      svn_error_t *err1, *err2 = SVN_NO_ERROR;
-      const char *translated;
-      
-      SVN_ERR (svn_wc_translated_file (&translated, b->path, adm_access,
-                                       TRUE, b->pool));
-
-      err1 = b->edit_baton->callbacks->file_changed
-        (NULL, NULL,
-         b->path,
-         temp_file_path,
-         translated,
-         b->edit_baton->revnum,
-         SVN_INVALID_REVNUM,
-         b->edit_baton->callback_baton);
-      
-      if (translated != b->path)
-        err2 = svn_io_remove_file (translated, b->pool);
-
-      if (err1 || err2)
+      if (b->temp_file) /* A property-only change will not have opened a file */
         {
-          if (err1 && err2)
-            svn_error_clear (err2);
-          return err1 ? err1 : err2;
+          /* Be careful with errors to ensure that the temporary translated
+             file is deleted. */
+          svn_error_t *err1, *err2 = SVN_NO_ERROR;
+          const char *translated;
+      
+          SVN_ERR (svn_wc_translated_file (&translated, b->path, adm_access,
+                                           TRUE, b->pool));
+
+          err1 = b->edit_baton->callbacks->file_changed
+            (NULL, NULL,
+             b->path,
+             temp_file_path,
+             translated,
+             b->edit_baton->revnum,
+             SVN_INVALID_REVNUM,
+             b->edit_baton->callback_baton);
+      
+          if (translated != b->path)
+            err2 = svn_io_remove_file (translated, b->pool);
+
+          if (err1 || err2)
+            {
+              if (err1 && err2)
+                svn_error_clear (err2);
+              return err1 ? err1 : err2;
+            }
         }
       
       if (b->propchanges->nelts > 0)

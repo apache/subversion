@@ -235,16 +235,16 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
       if (path1[0] == '\0')
         path1 = apr_psprintf (subpool, "%s", path);
       else if (path1[0] == '/')
-        path1 = apr_psprintf (subpool, "(...%s) %s", path1, path);
+        path1 = apr_psprintf (subpool, "%s (...%s)", path, path1);
       else
-        path1 = apr_psprintf (subpool, "(.../%s) %s", path1, path);
+        path1 = apr_psprintf (subpool, "%s (.../%s)", path, path1);
 
       if (path2[0] == '\0')
         path2 = apr_psprintf (subpool, "%s", path);
       else if (path2[0] == '/')
-        path2 = apr_psprintf (subpool, "(...%s) %s", path2, path);
+        path2 = apr_psprintf (subpool, "%s (...%s)", path, path2);
       else
-        path2 = apr_psprintf (subpool, "(.../%s) %s", path2, path);
+        path2 = apr_psprintf (subpool, "%s (.../%s)", path, path2);
       
       label1 = diff_label (path1, rev1, subpool);
       label2 = diff_label (path2, rev2, subpool);

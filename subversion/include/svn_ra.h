@@ -712,7 +712,7 @@ typedef struct svn_ra_plugin_t
    * to the session's common parent.
    *
    * If @a discover_changed_paths, then each call to receiver passes a
-   * <tt>const apr_hash_t *<tt> for the receiver's @a changed_paths argument;
+   * <tt>const apr_hash_t *</tt> for the receiver's @a changed_paths argument;
    * the hash's keys are all the paths committed in that revision.
    * Otherwise, each call to receiver passes null for @a changed_paths.
    *

@@ -41,12 +41,16 @@
 
 /* Generic Berkeley DB error handler function. */
 static void
-berkeley_error_handler (const char *errpfx,
-                                    char *msg)
+berkeley_error_handler (const char *errpfx, char *msg)
 {
   fprintf (stderr, "%s%s\n", errpfx ? errpfx : "", msg);
 }
 
+static void
+fs_warning_handler (void *baton, svn_error_t *err)
+{
+  svn_handle_warning(stderr, err);
+}
 
 svn_error_t *
 svn_test__fs_new (svn_fs_t **fs_p, apr_pool_t *pool)
@@ -57,7 +61,7 @@ svn_test__fs_new (svn_fs_t **fs_p, apr_pool_t *pool)
                              "Couldn't alloc a new fs object.");
 
   /* Provide a warning function that just dumps the message to stderr.  */
-  svn_fs_set_warning_func (*fs_p, svn_handle_warning, stderr);
+  svn_fs_set_warning_func (*fs_p, fs_warning_handler, NULL);
 
   return SVN_NO_ERROR;
 }
@@ -116,7 +120,7 @@ svn_test__create_repos (svn_repos_t **repos_p,
                                   "there is already a file named `%s'", name);
     }
 
-  SVN_ERR (svn_repos_create (repos_p, name, pool));
+  SVN_ERR (svn_repos_create (repos_p, name, NULL, NULL, pool));
   
   /* Provide a handler for Berkeley DB error messages.  */
   SVN_ERR (svn_fs_set_berkeley_errcall (svn_repos_fs (*repos_p), 
@@ -172,7 +176,7 @@ svn_test__set_file_contents (svn_fs_root_t *root,
   svn_string_t string;
 
   SVN_ERR (svn_fs_apply_textdelta (&consumer_func, &consumer_baton,
-                                   root, path, pool));
+                                   root, path, NULL, NULL, pool));
 
   string.data = contents;
   string.len = strlen(contents);

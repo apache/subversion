@@ -805,7 +805,7 @@ def hudson_part_2(sbox):
   return svntest.actions.run_and_verify_commit (wc_dir,
                                                 None,
                                                 None,
-                                                "not up-to-date",
+                                                "out.of.date",
                                                 None, None,
                                                 None, None,
                                                 wc_dir)
@@ -1079,7 +1079,7 @@ def commit_uri_unsafe(sbox):
               nasty_path, # not xml-safe
               ]
   for item in add_list:
-    svntest.main.run_svn(None, 'add', item)
+    svntest.main.run_svn(None, 'add', '--non-recursive', item)
 
   expected_output = svntest.wc.State(wc_dir, {
     '#hash#' : Item(verb='Adding'),
@@ -1627,7 +1627,7 @@ test_list = [ None,
               commit_multiple_wc,
               XFail(failed_commit),
               Skip(commit_symlink, (os.name != 'posix')),
-              #commit_out_of_date_deletions,
+              commit_out_of_date_deletions,
              ]
 
 if __name__ == '__main__':

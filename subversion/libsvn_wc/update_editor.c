@@ -838,7 +838,6 @@ close_directory (void *dir_baton,
 {
   struct dir_baton *db = dir_baton;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
-  apr_hash_t *prop_conflicts;
 
   /* If this directory has property changes stored up, now is the time
      to deal with them. */
@@ -911,9 +910,8 @@ close_directory (void *dir_baton,
           }
       }
 
-      /* Merge pending properties into temporary files and detect
-         conflicts. */
-      SVN_ERR_W (svn_wc__merge_prop_diffs (&prop_state, &prop_conflicts,
+      /* Merge pending properties into temporary files (ignoring conflicts). */
+      SVN_ERR_W (svn_wc__merge_prop_diffs (&prop_state,
                                            adm_access, NULL,
                                            db->propchanges, TRUE, FALSE,
                                            db->pool, &entry_accum),
@@ -1164,7 +1162,8 @@ apply_textdelta (void *file_baton,
       */
 
       /* Before applying incoming svndiff data to text base, make sure
-         text base hasn't been corrupted. */
+         text base hasn't been corrupted, and that its checksum
+         matches the expected base checksum. */
       {
         svn_wc_adm_access_t *adm_access;
         const svn_wc_entry_t *ent;
@@ -1190,6 +1189,20 @@ apply_textdelta (void *file_baton,
             SVN_ERR (svn_io_file_checksum (digest, tb, subpool));
             hex_digest = svn_md5_digest_to_cstring (digest, pool);
             
+            /* Compare the base_checksum here, rather than in the
+               window handler, because there's no guarantee that the
+               handler will see every byte of the base file. */
+            if (base_checksum)
+              {
+                if (strcmp (hex_digest, base_checksum) != 0)
+                  return svn_error_createf
+                    (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+                     "apply_textdelta: checksum mismatch for '%s':\n"
+                     "   expected checksum:  %s\n"
+                     "   actual checksum:    %s\n",
+                     tb, base_checksum, hex_digest);
+              }
+
             if (strcmp (hex_digest, ent->checksum) != 0)
               {
                 /* Compatibility hack: working copies created before
@@ -1247,9 +1260,15 @@ apply_textdelta (void *file_baton,
     }
   
   /* Prepare to apply the delta.  */
-  svn_txdelta_apply (svn_stream_from_aprfile (hb->source, subpool),
-                     svn_stream_from_aprfile (hb->dest, subpool),
-                     subpool, &hb->apply_handler, &hb->apply_baton);
+  {
+    const char *tmp_path;
+
+    apr_file_name_get (&tmp_path, hb->dest);
+    svn_txdelta_apply (svn_stream_from_aprfile (hb->source, subpool),
+                       svn_stream_from_aprfile (hb->dest, subpool),
+                       result_checksum, tmp_path, subpool,
+                       &hb->apply_handler, &hb->apply_baton);
+  }
   
   hb->pool = subpool;
   hb->fb = fb;
@@ -1450,18 +1469,10 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged
          props.  */
-      {
-        apr_hash_t *ignored_conflicts;
-
-        /* ### There are at least two callers that are ignoring the
-           conflict report.  Ideally, the argument would be optional,
-           so we could just pass NULL.  It's mandatory right now.  */
-
-        SVN_ERR (svn_wc__merge_prop_diffs (prop_state, &ignored_conflicts,
-                                           adm_access, base_name,
-                                           propchanges, TRUE, FALSE, pool,
-                                           &log_accum));
-      }
+      SVN_ERR (svn_wc__merge_prop_diffs (prop_state,
+                                         adm_access, base_name,
+                                         propchanges, TRUE, FALSE, pool,
+                                         &log_accum));
     }
   
   /* If there are any ENTRY PROPS, make sure those get appended to the
@@ -1690,7 +1701,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
     }  /* end:  "textual" merging process */
 
   /* Possibly write log commands to tweak text/prop entry timestamps: */
-  if (new_text_path)
+  if ((new_text_path) || (magic_props_changed))
     {
       /* Log entry which sets a new textual timestamp, but only if
          there are no local changes to the text. */

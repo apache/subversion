@@ -1303,7 +1303,13 @@ add_file (const char *path,
 {
   struct item_baton *db = parent_baton;
   struct item_baton *new_baton = make_baton (db->eb, NULL, path, pool);
-  printf ("   Adding  : %s\n", path);
+  const char *copystuffs = "";
+  if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
+    copystuffs = apr_psprintf (pool, 
+                               " (copied from %s:%" SVN_REVNUM_T_FMT ")",
+                               copyfrom_path,
+                               copyfrom_revision);
+  printf ("   Adding  : %s%s\n", path, copystuffs);
   *baton = new_baton;
   return (*db->eb->real_editor->add_file) (path, db->real_baton,
                                            copyfrom_path, copyfrom_revision,
@@ -1361,13 +1367,17 @@ change_file_prop (void *file_baton,
 
 static svn_error_t *
 apply_textdelta (void *file_baton,
+                 const char *base_checksum,
+                 const char *result_checksum,
                  apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {
   struct item_baton *fb = file_baton;
   printf ("      Transmitting text...\n");
-  return (*fb->eb->real_editor->apply_textdelta) (fb->real_baton, pool,
+  return (*fb->eb->real_editor->apply_textdelta) (fb->real_baton,
+                                                  base_checksum,
+                                                  result_checksum, pool,
                                                   handler, handler_baton);
 }
 
@@ -1389,7 +1399,13 @@ add_directory (const char *path,
 {
   struct item_baton *db = parent_baton;
   struct item_baton *new_baton = make_baton (db->eb, NULL, path, pool);
-  printf ("   Adding  : %s\n", path);
+  const char *copystuffs = "";
+  if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
+    copystuffs = apr_psprintf (pool, 
+                               " (copied from %s:%" SVN_REVNUM_T_FMT ")",
+                               copyfrom_path,
+                               copyfrom_revision);
+  printf ("   Adding  : %s%s\n", path, copystuffs);
   *baton = new_baton;
   return (*db->eb->real_editor->add_directory) (path,
                                                 db->real_baton,

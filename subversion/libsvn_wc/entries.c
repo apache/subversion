@@ -598,7 +598,20 @@ read_entries (svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-
+/* For non-directory PATHs full entry information is obtained by reading
+ * the entries for the parent directory of PATH and then extracting PATH's
+ * entry.  If PATH is a directory then only abrieviated information is
+ * available in the parent directory, more complete information is
+ * available by reading the entries for PATH itself.
+ *
+ * Note: There is one bit of information about directories that is only
+ * available in the parent directory, that is the "deleted" state.  If PATH
+ * is a versioned directory then the "deleted" state information will not
+ * be returned in ENTRY.  This means some bits of the code (e.g. revert)
+ * need to obtain it by directly extracting the directory entry from the
+ * parent directory's entries.  I wonder if this function should handle
+ * that?
+ */
 svn_error_t *
 svn_wc_entry (const svn_wc_entry_t **entry,
               const char *path,
@@ -606,78 +619,39 @@ svn_wc_entry (const svn_wc_entry_t **entry,
               svn_boolean_t show_deleted,
               apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
-  apr_hash_t *entries;
-  int is_wc;
+  const char *entry_name;
+  svn_wc_adm_access_t *dir_access;
 
-  *entry = NULL;
+  svn_error_t *err = svn_wc_adm_retrieve (&dir_access, adm_access, path, pool);
+  if (err && err->apr_err != SVN_ERR_WC_NOT_LOCKED)
+    return err;
 
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
-
-  /* ### todo:
-     Make an innocent way to discover that a dir/path is or is not
-     under version control, so that this function can be robust.  I
-     think svn_wc_entries_read() will return an error right now if,
-     for example, PATH represents a new dir that svn still thinks is a
-     regular file under version control. */
-
-  if (kind == svn_node_dir)
+  if (err)
     {
-      SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
-      if (is_wc)
+      const char *dir_path, *base_name;
+      svn_path_split (path, &dir_path, &base_name, pool);
+      svn_error_clear (err);
+      err = svn_wc_adm_retrieve (&dir_access, adm_access, dir_path, pool);
+      if (err)
         {
-          svn_wc_adm_access_t *dir_access;
-          svn_error_t *err;
-          err = svn_wc_adm_retrieve (&dir_access, adm_access, path, pool);
-          if (err)
-            {
-              if (err->apr_err != SVN_ERR_WC_NOT_LOCKED)
-                return err;
-              svn_error_clear (err);
-
-              /* It could be that this is a versioned file that has
-                 been replaced by a unversioned directory. */
-              is_wc = FALSE;
-            }
-          else
-            {
-              SVN_ERR (svn_wc_entries_read (&entries, dir_access, show_deleted,
-                                            pool));
-              *entry = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR,
-                                     APR_HASH_KEY_STRING);
-            }
+          if (err->apr_err != SVN_ERR_WC_NOT_LOCKED)
+            return err;
+          dir_access = NULL;
+          svn_error_clear (err);
         }
+      entry_name = base_name;
     }
+  else
+    entry_name = SVN_WC_ENTRY_THIS_DIR;
 
-  if (kind != svn_node_dir || ! is_wc)
+  if (dir_access)
     {
-      /* Maybe we're here because PATH is an unversioned directory, in
-         which case PATH may also be a file that is deleted or scheduled
-         for deletion.
-         
-         Or PATH could be a versioned directory that has been removed from
-         the filesystem, and possibly replaced by an unversioned file. In
-         this case there is partial entry information in the parent.
-
-         Or maybe we're here because PATH is a regular file.
-
-         Whatever, if PATH is a versioned entity, it has an entry in the
-         parent.  So split and look in parent for entry info. */
-
-      const char *dir, *base_name;
-      svn_path_split (path, &dir, &base_name, pool);
-
-      SVN_ERR (svn_wc_check_wc (dir, &is_wc, pool));
-      if (! is_wc)
-        return svn_error_createf
-          (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-           "svn_wc_entry: %s is not a working copy directory",
-           kind == svn_node_dir ? path : dir);
-
-      SVN_ERR (svn_wc_entries_read (&entries, adm_access, show_deleted, pool));
-      
-      *entry = apr_hash_get (entries, base_name, APR_HASH_KEY_STRING);
+      apr_hash_t *entries;
+      SVN_ERR (svn_wc_entries_read (&entries, dir_access, show_deleted, pool));
+      *entry = apr_hash_get (entries, entry_name, APR_HASH_KEY_STRING);
     }
+  else
+    *entry = NULL;
 
   return SVN_NO_ERROR;
 }

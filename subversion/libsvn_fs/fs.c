@@ -100,7 +100,7 @@ check_already_open (svn_fs_t *fs)
 /* A default warning handling function.  */
 
 static void
-default_warning_func (apr_pool_t *pool, void *baton, const char *fmt, ...)
+default_warning_func (void *baton, svn_error_t *err)
 {
   /* The one unforgiveable sin is to fail silently.  Dumping to stderr
      or /dev/tty is not acceptable default behavior for server
@@ -196,6 +196,75 @@ cleanup_fs (svn_fs_t *fs)
   return SVN_NO_ERROR;
 }
 
+static void print_fs_stats(svn_fs_t *fs)
+{
+#if 0   /* Set to 1 for instrumenting. */
+
+  DB_TXN_STAT *t;
+  DB_LOCK_STAT *l;
+  int db_err;
+
+  /* Print transaction statistics for this DB env. */
+  if ((db_err = fs->env->txn_stat (fs->env, &t, 0)) != 0)
+    fprintf (stderr, "Error running fs->env->txn_stat(): %s",
+             db_strerror (db_err));
+  else
+    {
+      printf ("*** DB txn stats, right before closing env:\n");
+      printf ("   Number of txns currently active: %d\n",
+              t->st_nactive);
+      printf ("   Max number of active txns at any one time: %d\n",
+              t->st_maxnactive);
+      printf ("   Number of transactions that have begun: %d\n",
+              t->st_nbegins);
+      printf ("   Number of transactions that have aborted: %d\n",
+              t->st_naborts);
+      printf ("   Number of transactions that have committed: %d\n",
+              t->st_ncommits);
+      printf ("   Number of times a thread was forced to wait: %d\n",
+              t->st_region_wait);
+      printf ("   Number of times a thread didn't need to wait: %d\n",
+              t->st_region_nowait);
+      printf ("*** End DB txn stats.\n\n");
+    }
+
+  /* Print transaction statistics for this DB env. */
+  if ((db_err = fs->env->lock_stat (fs->env, &l, 0)) != 0)
+    fprintf (stderr, "Error running fs->env->lock_stat(): %s",
+             db_strerror (db_err));
+  else
+    {
+      printf ("*** DB lock stats, right before closing env:\n");
+      printf ("   The number of current locks: %d\n",
+              l->st_nlocks);
+      printf ("   Max number of locks at any one time: %d\n",
+              l->st_maxnlocks);
+      printf ("   Number of current lockers: %d\n",
+              l->st_nlockers);
+      printf ("   Max number of lockers at any one time: %d\n",
+              l->st_maxnlockers);
+      printf ("   Number of current objects: %d\n",
+              l->st_nobjects);
+      printf ("   Max number of objects at any one time: %d\n",
+              l->st_maxnobjects);
+      printf ("   Total number of locks requested: %d\n",
+              l->st_nrequests);
+      printf ("   Total number of locks released: %d\n",
+              l->st_nreleases);
+      printf ("   Total number of lock reqs failed because "
+              "DB_LOCK_NOWAIT was set: %d\n", l->st_nnowaits);
+      printf ("   Total number of locks not immediately available "
+              "due to conflicts: %d\n", l->st_nconflicts);
+      printf ("   Number of deadlocks detected: %d\n", l->st_ndeadlocks);
+      printf ("   Number of times a thread waited before "
+              "obtaining the region lock: %d\n", l->st_region_wait);
+      printf ("   Number of times a thread didn't have to wait: %d\n",
+              l->st_region_nowait);
+      printf ("*** End DB lock stats.\n\n");
+    }
+
+#endif /* 0/1 */
+}
 
 /* An APR pool cleanup function for a filesystem.  DATA must be a
    pointer to the filesystem to clean up.
@@ -209,36 +278,29 @@ cleanup_fs (svn_fs_t *fs)
 
    It's a pity that we can't return an svn_error_t object from an APR
    cleanup function.  For now, we return the rather generic
-   SVN_ERR_FS_CLEANUP, and store a pointer to the real svn_error_t
-   object in *(FS->cleanup_error), for someone else to discover, if
-   they like.  */
+   SVN_ERR_FS_CLEANUP, and pass the real svn_error_t to the registered
+   warning callback.  */
 
 static apr_status_t
 cleanup_fs_apr (void *data)
 {
-  svn_fs_t *fs = (svn_fs_t *) data;
-  svn_error_t *svn_err = cleanup_fs (fs);
+  svn_fs_t *fs = data;
+  svn_error_t *err;
 
-  if (! svn_err)
+  print_fs_stats (fs);
+
+  err = cleanup_fs (fs);
+  if (! err)
     return APR_SUCCESS;
-  else
-    {
-      /* Try to pass the error back up to the caller, if they're
-         prepared to receive it.  Don't overwrite a previously stored
-         error --- in a cascade, the first message is usually the most
-         helpful.  */
-      if (fs->cleanup_error 
-          && ! *fs->cleanup_error)
-        *fs->cleanup_error = svn_err;
-      else
-        /* If we can't return this error, print it as a warning.
-           (Feel free to replace this with some more sensible
-           behavior.  I just don't want to throw any information into
-           the bit bucket.)  */
-        (*fs->warning) (fs->pool, fs->warning_baton, "%s", svn_err->message);
-      
-      return SVN_ERR_FS_CLEANUP;
-    }
+
+  /* Darn. An error during cleanup. Call the warning handler to
+     try and do something "right" with this error. Note that
+     the default will simply abort().  */
+  (*fs->warning) (fs->warning_baton, err);
+
+  svn_error_clear(err);
+
+  return SVN_ERR_FS_CLEANUP;
 }
 
 
@@ -247,24 +309,24 @@ cleanup_fs_apr (void *data)
 svn_fs_t *
 svn_fs_new (apr_pool_t *parent_pool)
 {
-  svn_fs_t *new;
+  svn_fs_t *new_fs;
 
   /* Allocate a new filesystem object in its own pool, which is a
      subpool of POOL.  */
   {
     apr_pool_t *pool = svn_pool_create (parent_pool);
 
-    new = apr_pcalloc (pool, sizeof (svn_fs_t));
-    new->pool = pool;
+    new_fs = apr_pcalloc (pool, sizeof (svn_fs_t));
+    new_fs->pool = pool;
   }
 
-  new->warning = default_warning_func;
+  new_fs->warning = default_warning_func;
 
-  apr_pool_cleanup_register (new->pool, (void *) new,
-                             (apr_status_t (*) (void *)) cleanup_fs_apr,
+  apr_pool_cleanup_register (new_fs->pool, new_fs,
+                             cleanup_fs_apr,
                              apr_pool_cleanup_null);
 
-  return new;
+  return new_fs;
 }
 
 
@@ -287,87 +349,6 @@ svn_fs_set_berkeley_errcall (svn_fs_t *fs,
   fs->env->set_errcall(fs->env, db_errcall_fcn);
 
   return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs_close_fs (svn_fs_t *fs)
-{
-  svn_error_t *svn_err = 0;
-
-#if 0   /* Set to 1 for instrumenting. */
-  {
-    DB_TXN_STAT *t;
-    DB_LOCK_STAT *l;
-    int db_err;
-
-    /* Print transaction statistics for this DB env. */
-    if ((db_err = fs->env->txn_stat (fs->env, &t, 0)) != 0)
-      fprintf (stderr, "Error running fs->env->txn_stat(): %s",
-               db_strerror (db_err));
-    else
-      {
-        printf ("*** DB txn stats, right before closing env:\n");
-        printf ("   Number of txns currently active: %d\n",
-                t->st_nactive);
-        printf ("   Max number of active txns at any one time: %d\n",
-                t->st_maxnactive);
-        printf ("   Number of transactions that have begun: %d\n",
-                t->st_nbegins);
-        printf ("   Number of transactions that have aborted: %d\n",
-                t->st_naborts);
-        printf ("   Number of transactions that have committed: %d\n",
-                t->st_ncommits);
-        printf ("   Number of times a thread was forced to wait: %d\n",
-                t->st_region_wait);
-        printf ("   Number of times a thread didn't need to wait: %d\n",
-                t->st_region_nowait);
-        printf ("*** End DB txn stats.\n\n");
-      }
-
-    /* Print transaction statistics for this DB env. */
-    if ((db_err = fs->env->lock_stat (fs->env, &l, 0)) != 0)
-      fprintf (stderr, "Error running fs->env->lock_stat(): %s",
-               db_strerror (db_err));
-    else
-      {
-        printf ("*** DB lock stats, right before closing env:\n");
-        printf ("   The number of current locks: %d\n",
-                l->st_nlocks);
-        printf ("   Max number of locks at any one time: %d\n",
-                l->st_maxnlocks);
-        printf ("   Number of current lockers: %d\n",
-                l->st_nlockers);
-        printf ("   Max number of lockers at any one time: %d\n",
-                l->st_maxnlockers);
-        printf ("   Number of current objects: %d\n",
-                l->st_nobjects);
-        printf ("   Max number of objects at any one time: %d\n",
-                l->st_maxnobjects);
-        printf ("   Total number of locks requested: %d\n",
-                l->st_nrequests);
-        printf ("   Total number of locks released: %d\n",
-                l->st_nreleases);
-        printf ("   Total number of lock reqs failed because "
-                "DB_LOCK_NOWAIT was set: %d\n", l->st_nnowaits);
-        printf ("   Total number of locks not immediately available "
-                "due to conflicts: %d\n", l->st_nconflicts);
-        printf ("   Number of deadlocks detected: %d\n", l->st_ndeadlocks);
-        printf ("   Number of times a thread waited before "
-                "obtaining the region lock: %d\n", l->st_region_wait);
-        printf ("   Number of times a thread didn't have to wait: %d\n",
-                l->st_region_nowait);
-        printf ("*** End DB lock stats.\n\n");
-      }
-  }
-#endif /* 0/1 */
-
-  /* We've registered cleanup_fs_apr as a cleanup function for this
-     pool, so just freeing the pool should shut everything down
-     nicely.  But do catch an error, if one occurs.  */
-  fs->cleanup_error = &svn_err;
-
-  return svn_err;
 }
 
 

@@ -228,29 +228,20 @@ svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
 
 
 void
-svn_handle_warning (apr_pool_t *pool, void *data, const char *fmt, ...)
+svn_handle_warning (FILE *stream, svn_error_t *err)
 {
-  va_list ap;
-  svn_stringbuf_t *msg, *msg_utf8;
-  svn_error_t *err;
-  apr_pool_t *subpool = svn_pool_create (pool);
-  FILE *stream = data;
+  const char *msg_native;
+  svn_error_t *err2;
 
-  va_start (ap, fmt);
-  msg_utf8 = svn_stringbuf_create (apr_pvsprintf (subpool, fmt, ap), subpool);
-  va_end (ap);
+  err2 = svn_utf_cstring_from_utf8 (&msg_native, err->message, err->pool);
 
-  err = svn_utf_stringbuf_from_utf8 (&msg, msg_utf8, subpool);
-
-  if (err)
-    handle_error (err, stream, FALSE, 0, APR_SUCCESS);
+  if (err2)
+    handle_error (err2, stream, FALSE, 0, APR_SUCCESS);
   else
     {
-      fprintf (stream, "svn: warning: %s\n", msg->data);
+      fprintf (stream, "svn: warning: %s\n", msg_native);
       fflush (stream);
     }
-
-  svn_pool_destroy (subpool);
 }
 
 

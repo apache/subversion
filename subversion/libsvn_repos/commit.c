@@ -91,6 +91,7 @@ struct dir_baton
   struct edit_baton *edit_baton;
   struct dir_baton *parent;
   const char *path; /* the -absolute- path to this dir in the fs */
+  svn_revnum_t base_rev;        /* the revision I'm based on  */
   svn_boolean_t was_copied; /* was this directory added with history? */
   apr_pool_t *pool; /* my personal pool, in which I am allocated. */
 };
@@ -150,6 +151,7 @@ open_root (void *edit_baton,
   dirb->pool = pool;
   dirb->was_copied = FALSE;
   dirb->path = apr_pstrdup (pool, eb->base_path);
+  dirb->base_rev = base_revision;
 
   *root_baton = dirb;
   return SVN_NO_ERROR;
@@ -265,6 +267,7 @@ add_directory (const char *path,
   new_dirb->pool = pool;
   new_dirb->path = full_path;
   new_dirb->was_copied = was_copied;
+  new_dirb->base_rev = SVN_INVALID_REVNUM;
 
   *child_baton = new_dirb;
   return SVN_NO_ERROR;
@@ -298,6 +301,7 @@ open_directory (const char *path,
   new_dirb->pool = pool;
   new_dirb->path = full_path;
   new_dirb->was_copied = FALSE;
+  new_dirb->base_rev = base_revision;
 
   *child_baton = new_dirb;
   return SVN_NO_ERROR;
@@ -315,7 +319,10 @@ apply_textdelta (void *file_baton,
   struct file_baton *fb = file_baton;
   return svn_fs_apply_textdelta (handler, handler_baton, 
                                  fb->edit_baton->txn_root, 
-                                 fb->path, fb->pool);
+                                 fb->path,
+                                 base_checksum,
+                                 result_checksum,
+                                 fb->pool);
 }
 
 
@@ -453,6 +460,19 @@ change_dir_prop (void *dir_baton,
 {
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->edit_baton;
+
+  if (SVN_IS_VALID_REVNUM(db->base_rev))
+    {
+      /* Subversion rule:  propchanges can only happen on a directory
+         which is up-to-date. */
+      svn_revnum_t created_rev;
+      SVN_ERR (svn_fs_node_created_rev (&created_rev,
+                                        eb->txn_root, db->path, pool));
+
+      if (db->base_rev < created_rev)
+        return out_of_date (db->path, eb->txn_name);
+    }
+
   return svn_repos_fs_change_node_prop (eb->txn_root, db->path, 
                                         name, value, pool);
 }

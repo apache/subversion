@@ -36,6 +36,8 @@
 #include "props.h"
 
 
+/* Get the run-time configured list of ignore patterns, and store them
+   in *PATTERNS.  Allocate *PATTERNS and its contents in POOL.  */
 static svn_error_t *
 get_default_ignores (apr_array_header_t **patterns,
                      apr_pool_t *pool)
@@ -43,11 +45,15 @@ get_default_ignores (apr_array_header_t **patterns,
   struct svn_config_t *cfg;
   const char *val;
 
+  /* Check the Subversion run-time configuration for global ignores.
+     If no configuration value exists, we fall back to our defaults. */
   SVN_ERR (svn_config_read_config (&cfg, pool));
-  svn_config_get (cfg, &val, "miscellany", "global-ignores", "");
-  *patterns = apr_array_make (pool, 4, sizeof (const char *));
-  svn_cstring_split_append (*patterns, val, "\n\r\t\v ", FALSE, pool);
+  svn_config_get (cfg, &val, "miscellany", "global-ignores",
+                  "*.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#*");
+  *patterns = apr_array_make (pool, 16, sizeof (const char *));
 
+  /* Split the patterns on whitespace, and stuff them into *PATTERNS. */
+  svn_cstring_split_append (*patterns, val, "\n\r\t\v ", FALSE, pool);
   return SVN_NO_ERROR;
 }
 
@@ -164,10 +170,12 @@ assemble_status (svn_wc_status_t **status,
   if (entry->kind == svn_node_dir
       && path_kind == svn_node_dir)
     {
-      int is_wc;
+      int wc_format_version;
 
-      SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
-      if (! is_wc)
+      SVN_ERR (svn_wc_check_wc (path, &wc_format_version, pool));
+
+      /* a "version" of 0 means a non-wc directory */
+      if (wc_format_version == 0)
         final_text_status = svn_wc_status_obstructed;
     }
 
@@ -699,12 +707,14 @@ svn_wc_statuses (apr_hash_t *statushash,
       /* Sanity check to make sure that we're being called on a working copy.
          This isn't strictly necessary, since svn_wc_entries_read will fail 
          anyway, but it lets us return a more meaningful error. */ 
-      int is_wc;
+      int wc_format_version;
       svn_boolean_t is_root;
       const svn_wc_entry_t *parent_entry;
 
-      SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
-      if (! is_wc)
+      SVN_ERR (svn_wc_check_wc (path, &wc_format_version, pool));
+
+      /* a "version" of 0 means a non-wc directory */
+      if (wc_format_version == 0)
         return svn_error_createf
           (SVN_ERR_WC_NOT_DIRECTORY, NULL,
            "svn_wc_statuses: %s is not a working copy directory", path);

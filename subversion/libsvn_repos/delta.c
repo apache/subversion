@@ -19,10 +19,12 @@
 
 #include <assert.h>
 #include <apr_hash.h>
+#include <apr_md5.h>
 
 #include "svn_types.h"
 #include "svn_delta.h"
 #include "svn_fs.h"
+#include "svn_md5.h"
 #include "svn_path.h"
 #include "svn_repos.h"
 #include "svn_pools.h"
@@ -102,6 +104,8 @@ static svn_error_t *delta_proplists (struct context *c,
 /* Constructing deltas for file constents.  */
 static svn_error_t *send_text_delta (struct context *c,
                                      void *file_baton,
+                                     const char *base_checksum,
+                                     const char *result_checksum,
                                      svn_txdelta_stream_t *delta_stream,
                                      apr_pool_t *pool);
 
@@ -565,10 +569,13 @@ delta_proplists (struct context *c,
 
 
 /* Change the contents of FILE_BATON in C->editor, according to the
-   text delta from DELTA_STREAM.  */
+   text delta from DELTA_STREAM.  Pass BASE_CHECKSUM and
+   RESULT_CHECKSUM along to C->editor->apply_textdelta. */
 static svn_error_t *
 send_text_delta (struct context *c,
                  void *file_baton,
+                 const char *base_checksum,
+                 const char *result_checksum,
                  svn_txdelta_stream_t *delta_stream,
                  apr_pool_t *pool)
 {
@@ -577,7 +584,7 @@ send_text_delta (struct context *c,
 
   /* Get a handler that will apply the delta to the file.  */
   SVN_ERR (c->editor->apply_textdelta 
-           (file_baton, NULL, NULL, pool,
+           (file_baton, base_checksum, result_checksum, pool,
             &delta_handler, &delta_handler_baton));
 
   /* Our editor didn't provide a window handler, so don't sweat the deltas. */
@@ -636,11 +643,15 @@ delta_files (struct context *c,
          necessarily has textual mods. */
     }
 
-  /* If we care about text_deltas, and there, we need to get a delta
-     stream and hand that off to . */
+  /* If there is a change, and the context indicates that we should
+     care about it, then hand it off to a delta stream.  */
   if (changed)
     {
       svn_txdelta_stream_t *delta_stream = NULL;
+      unsigned char source_digest[MD5_DIGESTSIZE];
+      unsigned char target_digest[MD5_DIGESTSIZE];
+      const char *source_hex_digest = NULL;
+      const char *target_hex_digest;
 
       if (c->text_deltas)
         {
@@ -653,7 +664,23 @@ delta_files (struct context *c,
                     c->target_root, target_path, subpool));
         }
 
-      SVN_ERR (send_text_delta (c, file_baton, delta_stream, subpool));
+      if (source_path)
+        {
+          SVN_ERR (svn_fs_file_md5_checksum
+                   (source_digest, c->source_root, source_path, subpool));
+
+          source_hex_digest = svn_md5_digest_to_cstring (source_digest,
+                                                         subpool);
+        }
+
+      SVN_ERR (svn_fs_file_md5_checksum
+               (target_digest, c->target_root, target_path, subpool));
+
+      target_hex_digest = svn_md5_digest_to_cstring (target_digest, subpool);
+
+      SVN_ERR (send_text_delta (c, file_baton,
+                                source_hex_digest, target_hex_digest,
+                                delta_stream, subpool));
     }
 
   /* Cleanup. */

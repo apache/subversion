@@ -23,7 +23,7 @@ import popen2
 
 import _fs
 import _util
-
+import string
 
 # copy the wrapper functions out of the extension module, dropping the
 # 'svn_fs_' prefix.

@@ -21,11 +21,13 @@
 #include <apr_pools.h>
 #include <apr_strings.h>
 #include <apr_xml.h>
+#include <apr_md5.h>
 #include <mod_dav.h>
 
 #include "svn_pools.h"
 #include "svn_repos.h"
 #include "svn_fs.h"
+#include "svn_md5.h"
 #include "svn_xml.h"
 #include "svn_path.h"
 
@@ -170,6 +172,46 @@ static item_baton_t *make_child_baton(item_baton_t *parent,
   return baton;
 }
 
+
+/* Construct an xml element with optional BASE_CHECKSUM and
+ * RESULT_CHECKSUM attributes.
+ *
+ * (PREFIX and SUFFIX don't need whitespace on the end and beginning
+ * respectively; this function will add the padding itself.
+ */
+static const char *
+insert_checksum_attributes(const char *prefix,
+                           const char *base_checksum,
+                           const char *result_checksum,
+                           const char *suffix,
+                           apr_pool_t *pool)
+{
+  if (base_checksum && result_checksum)
+    {
+      return apr_pstrcat(pool, prefix, " ",
+                         "base-checksum=\"", base_checksum, "\" ",
+                         "result-checksum=\"", result_checksum, "\" ",
+                         suffix, NULL);
+    }
+  else if (base_checksum)
+    {
+      return apr_pstrcat(pool, prefix, " ",
+                         "base-checksum=\"", base_checksum, "\" ",
+                         suffix, NULL);
+    }
+  else if (result_checksum)
+    {
+      return apr_pstrcat(pool, prefix, " ",
+                         "result-checksum=\"", result_checksum, "\" ",
+                         suffix, NULL);
+    }
+  else
+    {
+      return apr_pstrcat(pool, prefix, " ", suffix, NULL);
+    }
+}
+
+
 static void send_xml(update_ctx_t *uc, const char *fmt, ...)
 {
   va_list ap;
@@ -179,20 +221,26 @@ static void send_xml(update_ctx_t *uc, const char *fmt, ...)
   va_end(ap);
 }
 
+
+/* Get the real filesystem PATH for BATON, and return the value
+   allocated from POOL.  This function juggles the craziness of
+   updates, switches, and updates of switched things. */
+static const char *
+get_real_fs_path(item_baton_t *baton, apr_pool_t *pool)
+{
+  const char *path = get_from_path_map(baton->uc->pathmap, baton->path, pool);
+  return strcmp(path, baton->path) ? path : baton->path2;
+}
+
+
 static void send_vsn_url(item_baton_t *baton, apr_pool_t *pool)
 {
   const char *href;
   const char *path;
   svn_revnum_t revision;
 
-  /* when sending back vsn urls, we'll try to see what this editor
-     path really points to in the repos.  if it doesn't point to
-     something other than itself, we'll use path2.  if it does point
-     to something else, we'll use the path that it points to. */
-  path = get_from_path_map(baton->uc->pathmap, baton->path, pool);
-  path = strcmp(path, baton->path) ? path : baton->path2;
-
   /* Try to use the CR, assuming the path exists in CR. */
+  path = get_real_fs_path(baton, pool);
   revision = dav_svn_get_safe_cr(baton->uc->rev_root, path, pool);
     
   href = dav_svn_build_uri(baton->uc->resource->info->repos,
@@ -204,13 +252,13 @@ static void send_vsn_url(item_baton_t *baton, apr_pool_t *pool)
            apr_xml_quote_string (pool, href, 1));
 }
 
-static void add_helper(svn_boolean_t is_dir,
-		       const char *path,
-		       item_baton_t *parent,
-		       const char *copyfrom_path,
-		       svn_revnum_t copyfrom_revision,
-                       apr_pool_t *pool,
-		       void **child_baton)
+static svn_error_t * add_helper(svn_boolean_t is_dir,
+                                const char *path,
+                                item_baton_t *parent,
+                                const char *copyfrom_path,
+                                svn_revnum_t copyfrom_revision,
+                                apr_pool_t *pool,
+                                void **child_baton)
 {
   item_baton_t *child;
   const char *qname;
@@ -228,22 +276,46 @@ static void add_helper(svn_boolean_t is_dir,
     }
   else
     {
+      const char *hex_digest = NULL;
+
       qname = apr_xml_quote_string(pool, child->name, 1);
       
+      if (! is_dir)
+        {
+          unsigned char digest[MD5_DIGESTSIZE];
+          const char *real_path = get_real_fs_path(child, pool);
+
+          SVN_ERR (svn_fs_file_md5_checksum
+                   (digest, uc->rev_root, real_path, pool));
+          
+          hex_digest = svn_md5_digest_to_cstring(digest, pool);
+        }
+
       if (copyfrom_path == NULL)
-        send_xml(child->uc, "<S:add-%s name=\"%s\">" DEBUG_CR,
-                 DIR_OR_FILE(is_dir), qname);
+        {
+          const char *prefix
+            = apr_psprintf(pool, "<S:add-%s name=\"%s\"",
+                           DIR_OR_FILE(is_dir), qname);
+
+          const char *elt = insert_checksum_attributes(prefix,
+                                                       NULL, hex_digest,
+                                                       ">", pool);
+          send_xml(child->uc, "%s" DEBUG_CR, elt);
+        }
       else
         {
-          const char *qcopy;
-          
-          qcopy = apr_xml_quote_string(pool, copyfrom_path, 1);
-          send_xml(child->uc,
-                   "<S:add-%s name=\"%s\" "
-                   "copyfrom-path=\"%s\" copyfrom-rev=\"%"
-                   SVN_REVNUM_T_FMT "\"/>" DEBUG_CR,
-                   DIR_OR_FILE(is_dir),
-                   qname, qcopy, copyfrom_revision);
+          const char *qcopy = apr_xml_quote_string(pool, copyfrom_path, 1);
+          const char *prefix
+            = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
+                           "copyfrom-path=\"%s\" copyfrom-rev=\"%"
+                           SVN_REVNUM_T_FMT "\"",
+                           DIR_OR_FILE(is_dir),
+                           qname, qcopy, copyfrom_revision);
+
+          const char *elt = insert_checksum_attributes(prefix,
+                                                       NULL, hex_digest,
+                                                       ">", pool);
+          send_xml(child->uc, "%s" DEBUG_CR, elt);
         }
     }
 
@@ -253,6 +325,8 @@ static void add_helper(svn_boolean_t is_dir,
     send_xml(child->uc, "</S:resource>" DEBUG_CR);
 
   *child_baton = child;
+
+  return SVN_NO_ERROR;
 }
 
 static void open_helper(svn_boolean_t is_dir,
@@ -412,10 +486,9 @@ static svn_error_t * upd_add_directory(const char *path,
                                        apr_pool_t *pool,
 				       void **child_baton)
 {
-  add_helper(TRUE /* is_dir */,
-             path, parent_baton, copyfrom_path, copyfrom_revision, pool,
-             child_baton);
-  return SVN_NO_ERROR;
+  return add_helper(TRUE /* is_dir */,
+                    path, parent_baton, copyfrom_path, copyfrom_revision, pool,
+                    child_baton);
 }
 
 static svn_error_t * upd_open_directory(const char *path,
@@ -494,10 +567,9 @@ static svn_error_t * upd_add_file(const char *path,
                                   apr_pool_t *pool,
 				  void **file_baton)
 {
-  add_helper(FALSE /* is_dir */,
-	     path, parent_baton, copyfrom_path, copyfrom_revision, pool,
-	     file_baton);
-  return SVN_NO_ERROR;
+  return add_helper(FALSE /* is_dir */,
+                    path, parent_baton, copyfrom_path, copyfrom_revision, pool,
+                    file_baton);
 }
 
 static svn_error_t * upd_open_file(const char *path,
@@ -511,6 +583,7 @@ static svn_error_t * upd_open_file(const char *path,
   return SVN_NO_ERROR;
 }
 
+
 static svn_error_t * upd_apply_textdelta(void *file_baton, 
                                          const char *base_checksum,
                                          const char *result_checksum,
@@ -521,8 +594,15 @@ static svn_error_t * upd_apply_textdelta(void *file_baton,
   item_baton_t *file = file_baton;
 
   /* if we added the file, then no need to tell the client to fetch it */
-  if (!file->added)
-    send_xml(file->uc, "<S:fetch-file/>" DEBUG_CR);
+  if (! file->added)
+    {
+      const char *elt = insert_checksum_attributes("<S:fetch-file",
+                                                   base_checksum,
+                                                   result_checksum,
+                                                   "/>",
+                                                   pool);
+      send_xml(file->uc, "%s" DEBUG_CR, elt);
+    }
 
   *handler = NULL;
 

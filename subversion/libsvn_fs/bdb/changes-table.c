@@ -26,7 +26,6 @@
 #include "../id.h"
 #include "../err.h"
 #include "../trail.h"
-#include "../dag.h"
 #include "../util/fs_skels.h"
 #include "bdb-err.h"
 #include "dbt.h"
@@ -129,21 +128,20 @@ make_change (svn_fs__change_t *change,
    single summarical (is that real word?) change per path. */
 static svn_error_t *
 fold_change (apr_hash_t *changes,
-             const char *change_path,
              svn_fs__change_t *change)
 {
   apr_pool_t *pool = apr_hash_pool_get (changes);
   svn_fs_path_change_t *old_change, *new_change;
   const char *path;
 
-  if ((old_change = apr_hash_get (changes, change_path, APR_HASH_KEY_STRING)))
+  if ((old_change = apr_hash_get (changes, change->path, APR_HASH_KEY_STRING)))
     {
       /* This path already exists in the hash, so we have to merge
          this change into the already existing one. */
       
       /* Since the path already exists in the hash, we don't have to
          dup the allocation for the path itself. */
-      path = change_path;
+      path = change->path;
 
       /* Sanity check:  only allow NULL node revision ID in the
          `reset' case. */
@@ -227,7 +225,7 @@ fold_change (apr_hash_t *changes,
          structure from the internal one (in the hash's pool), and dup
          the path into the hash's pool, too. */
       new_change = make_change (change, pool);
-      path = apr_pstrdup (pool, change_path);
+      path = apr_pstrdup (pool, change->path);
     }
 
   /* Add (or update) this path, removing any leading slash that might exist. */
@@ -267,8 +265,6 @@ svn_fs__bdb_changes_fetch (apr_hash_t **changes_p,
     {
       svn_fs__change_t *change;
       skel_t *result_skel;
-      const char *change_path;
-      dag_node_t *node;
       
       /* RESULT now contains a change record associated with KEY.  We
          need to parse that skel into an svn_fs__change_t structure ...  */
@@ -282,15 +278,9 @@ svn_fs__bdb_changes_fetch (apr_hash_t **changes_p,
       err = svn_fs__parse_change_skel (&change, result_skel, subpool);
       if (err)
         goto cleanup;
-
-      SVN_ERR (svn_fs__dag_get_node(&node, fs, change->noderev_id,
-                                    trail));
-      SVN_ERR (svn_fs__dag_get_committed_path (&change_path, node, trail));
+      
       /* ... and merge it with our return hash.  */
-      SVN_ERR (fold_change (changes,
-                            svn_fs__canonicalize_abspath (change_path,
-                                                          trail->pool),
-                            change));
+      SVN_ERR (fold_change (changes, change));
 
       /* Advance the cursor to the next record with this same KEY, and
          fetch that record. */

@@ -71,7 +71,7 @@ rep_lines_res = [
                   'version X.Y.Z '),
                  # In 'svn --version --quiet', we print only the version
                  # number in a single line.
-                 (re.compile(r'^\d+\.\d+\.\d+$'), 'X.Y.Z\n'),
+                 (re.compile(r'^\d+\.\d+\.\d+\+?$'), 'X.Y.Z\n'),
                 ]
 
 def process_lines(lines):

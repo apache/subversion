@@ -1,9 +1,11 @@
-%define apache_version 2.0.43-0.1
+%define apache_version 2.0.44-0.1
 %define neon_version 0.23.2
 %define apache_dir /usr
 # If you don't have 360+ MB of free disk space or don't want to run checks then
-# set make_check to 0.
-%define make_check 1
+# set make_*_check to 0.
+%define make_ra_local_check 1
+%define make_ra_svn_check 1
+%define make_ra_dav_check 0
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -83,7 +85,21 @@ Converts CVS repositories to Subversion repositories.
 
 See /usr/share/doc/subversion*/tools/cvs2svn directory for more information.
 
+%package tools
+Group: Utilities/System
+Summary: Tools for Subversion
+%description tools
+Tools for Subversion.
+
 %changelog
+* Sat Jan 18 2003 David Summers <david@summersoft.fay.ar.us> 0.16.1-4433
+- Created tools package to hold the tools.
+
+* Thu Jan 16 2003 David Summers <david@summersoft.fay.ar.us> 0.16.1-4405
+- Now requires httpd >= 2.0.44-0.1 (APACHE_2_0_BRANCH) which contains the new
+  version of APR/APR-UTILS as of 2003.01.15.
+- Added svnversion command.
+
 * Tue Dec 31 2002 David Summers <david@summersoft.fay.ar.us> 0.16.0-4218
 - Create a svnadmin.static which is copied to svnadmin-version-release
   when the package is erased, so users can still dump/load their repositories
@@ -242,8 +258,25 @@ make
 # Build cvs2svn python bindings
 make swig-py-ext
 
-%if %{make_check}
+%if %{make_ra_local_check}
+echo "*** Running regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 make check
+echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
+%endif
+
+%if %{make_ra_svn_check}
+echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
+killall lt-svnserve || true
+./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline/
+make svncheck
+killall lt-svnserve
+echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
+%endif
+
+%if %{make_ra_dav_check}
+echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
+make davcheck
+echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
 
 %install
@@ -271,6 +304,10 @@ cp %{SOURCE2} $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
 # Copy svnadmin.static to destination
 cp svnadmin.static $RPM_BUILD_ROOT/usr/bin/svnadmin-%{version}-%{release}.static
 
+# Set up tools package files.
+mkdir -p $RPM_BUILD_ROOT/usr/lib/subversion
+cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
+
 %post
 # Only add to INFO directory if this is the only instance installed.
 if [ "$1"x = "1"x ]; then
@@ -283,7 +320,7 @@ fi
 
 %preun
 # Save current copy of svnadmin.static
-echo "Saving current svnadmin-%{version}-%{release}.static as svnadmin-%{version}-%{release}"
+echo "Saving current svnadmin-%{version}-%{release}.static as svnadmin-%{version}-%{release}."
 echo "Erase this program only after you make sure you won't need to dump/reload"
 echo "any of your repositories to upgrade to a new version of the database."
 cp /usr/bin/svnadmin-%{version}-%{release}.static /usr/bin/svnadmin-%{version}-%{release}
@@ -317,12 +354,13 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root)
 %doc BUGS COMMITTERS COPYING HACKING IDEAS INSTALL PORTING README
-%doc tools subversion/LICENSE
+%doc subversion/LICENSE
 /usr/bin/svn
 /usr/bin/svnadmin
 /usr/bin/svnadmin-%{version}-%{release}.static
 /usr/bin/svnlook
 /usr/bin/svnserve
+/usr/bin/svnversion
 /usr/lib/libsvn_auth*so*
 /usr/lib/libsvn_client*so*
 /usr/lib/libsvn_delta*so*
@@ -353,3 +391,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/lib/python2.2/site-packages/svn
 /usr/lib/python2.2/site-packages/rcsparse.py
 /usr/lib/libsvn_swig_py*so*
+
+%files tools
+%defattr(-,root,root)
+/usr/lib/subversion/tools

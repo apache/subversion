@@ -57,7 +57,7 @@ extern "C" {
  *
  * To compute a new text delta:
  *
- * - We call @c svn_txdelta on the strings we want to compare.  That
+ * - We call @c svn_txdelta on the streams we want to compare.  That
  *   returns us an @c svn_txdelta_stream_t object.
  *
  * - We then call @c svn_txdelta_next_window on the stream object
@@ -277,9 +277,26 @@ svn_error_t *svn_txdelta_send_txstream (svn_txdelta_stream_t *txstream,
  * @a pool.  On return, @a *handler is set to a window handler function and
  * @a *handler_baton is set to the value to pass as the @a baton argument to
  * @a *handler.
+ *
+ * If @a result_checksum is non-null, it is the hex MD5 digest for the
+ * result written to @a target.  If this does not match the checksum
+ * of the final fulltext resulting from this delta application, the
+ * call to @a *handler that determined this will return the error
+ * SVN_ERR_CHECKSUM_MISMATCH.
+ *
+ * If @a error_info is non-null, it is inserted parenthetically into
+ * the error string for any error returned by svn_txdelta_apply() or
+ * @a *handler.  (It is normally used to provide path information,
+ * since there's nothing else in the delta application's context to
+ * supply a path for error messages.)
+ *
+ * Note: To avoid lifetime issues, @a result_checksum and 
+ * @a error_info are copied into @a pool or a subpool thereof. 
  */
 void svn_txdelta_apply (svn_stream_t *source,
                         svn_stream_t *target,
+                        const char *result_checksum,
+                        const char *error_info,
                         apr_pool_t *pool,
                         svn_txdelta_window_handler_t *handler,
                         void **handler_baton);
@@ -695,11 +712,11 @@ typedef struct
    * which the delta is being applied; it is ignored if null, and may
    * be ignored even if not null.  If it is not ignored, it must match
    * the checksum of the base text against which svndiff data is being
-   * applied; if it does not, the @a *handler call which detects the
-   * mismatch will return the error SVN_ERR_CHECKSUM_MISMATCH.  If
-   * there is no base text, then the @a *handler may error if 
-   * @a base_checksum is neither null nor the hex MD5 checksum of the
-   * empty string.
+   * applied; if it does not, apply_textdelta or the @a *handler call
+   * which detects the mismatch will return the error
+   * SVN_ERR_CHECKSUM_MISMATCH (if there is no base text, there may
+   * still be an error if @a base_checksum is neither null nor the hex
+   * MD5 checksum of the empty string).
    *
    * @a result_checksum is the hex MD5 digest for the fulltext that
    * results from this delta application.  It is ignored if null, but

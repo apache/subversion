@@ -312,11 +312,12 @@ static svn_error_t *
 prop_path_internal (const char **prop_path,
                     const char *path,
                     svn_boolean_t base,
+                    svn_boolean_t wcprop,
                     svn_boolean_t tmp,
                     apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  int wc_format_version;
+  int wc_format_version = 0;
   const char *entry_name;
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
@@ -324,7 +325,6 @@ prop_path_internal (const char **prop_path,
   /* kff todo: some factorization can be done on most callers of
      svn_wc_check_wc()? */
 
-  wc_format_version = FALSE;
   entry_name = NULL;
   if (kind == svn_node_dir)
     {
@@ -338,7 +338,8 @@ prop_path_internal (const char **prop_path,
          NULL,
          tmp,
          pool,
-         base ? SVN_WC__ADM_DIR_PROP_BASE : SVN_WC__ADM_DIR_PROPS,
+         base ? SVN_WC__ADM_DIR_PROP_BASE
+         : (wcprop ? SVN_WC__ADM_DIR_WCPROPS : SVN_WC__ADM_DIR_PROPS),
          NULL);
     }
   else  /* It's either a file, or a non-wc dir (i.e., maybe an ex-file) */
@@ -359,7 +360,8 @@ prop_path_internal (const char **prop_path,
              base ? SVN_WC__BASE_EXT : NULL,
              tmp,
              pool,
-             base ? SVN_WC__ADM_PROP_BASE : SVN_WC__ADM_PROPS,
+             base ? SVN_WC__ADM_PROP_BASE
+             : (wcprop ? SVN_WC__ADM_WCPROPS : SVN_WC__ADM_PROPS),
              entry_name,
              NULL);
         }
@@ -370,7 +372,8 @@ prop_path_internal (const char **prop_path,
              base ? SVN_WC__BASE_EXT : SVN_WC__WORK_EXT,
              tmp,
              pool,
-             base ? SVN_WC__ADM_PROP_BASE : SVN_WC__ADM_PROPS,
+             base ? SVN_WC__ADM_PROP_BASE
+             : (wcprop ? SVN_WC__ADM_WCPROPS : SVN_WC__ADM_PROPS),
              entry_name,
              NULL);
         }
@@ -388,51 +391,7 @@ svn_wc__wcprop_path (const char **wcprop_path,
                      svn_boolean_t tmp,
                      apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
-  int is_wc;
-  const char *entry_name;
-
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
-
-  /* kff todo: some factorization can be done on most callers of
-     svn_wc_check_wc()? */
-
-  is_wc = FALSE;
-  entry_name = NULL;
-  if (kind == svn_node_dir)
-    {
-      SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
-    }
-
-  if (is_wc)  /* It's not only a dir, it's a working copy dir */
-    {
-      *wcprop_path = extend_with_adm_name (path,
-                                           NULL,
-                                           tmp,
-                                           pool,
-                                           SVN_WC__ADM_DIR_WCPROPS,
-                                           NULL);
-    }
-  else  /* It's either a file, or a non-wc dir (i.e., maybe an ex-file) */
-    {
-      svn_path_split (path, wcprop_path, &entry_name, pool);
- 
-      SVN_ERR (svn_wc_check_wc (*wcprop_path, &is_wc, pool));
-      if (! is_wc)
-        return svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           "wcprop_path: %s is not a working copy directory", *wcprop_path);
-
-      *wcprop_path = extend_with_adm_name (*wcprop_path,
-                                           NULL,
-                                           tmp,
-                                           pool,
-                                           SVN_WC__ADM_WCPROPS,
-                                           entry_name,
-                                           NULL);
-    }
-
-  return SVN_NO_ERROR;
+  return prop_path_internal (wcprop_path, path, FALSE, TRUE, tmp, pool);
 }
 
 
@@ -444,7 +403,7 @@ svn_wc__prop_path (const char **prop_path,
                    svn_boolean_t tmp,
                    apr_pool_t *pool)
 {
-  return prop_path_internal (prop_path, path, FALSE, tmp, pool);
+  return prop_path_internal (prop_path, path, FALSE, FALSE, tmp, pool);
 }
 
 
@@ -454,7 +413,7 @@ svn_wc__prop_base_path (const char **prop_path,
                         svn_boolean_t tmp,
                         apr_pool_t *pool)
 {
-  return prop_path_internal (prop_path, path, TRUE, tmp, pool);
+  return prop_path_internal (prop_path, path, TRUE, FALSE, tmp, pool);
 }
 
 

@@ -103,16 +103,8 @@ svn_error_t *svn_wc__save_prop_file (const char *propfile_path,
    unconditionally, if BASE_MERGE is TRUE, they do not generate conficts.
 
    If STATE is non-null, set *STATE to the state of the local properties
-   after the merge.
-
-   Any conflicts are also returned in a hash that maps (const char *)
-   propnames -> conflicting (const svn_prop_t *) ptrs from the PROPCHANGES
-   array.  In this case, *CONFLICTS will be allocated in POOL.  If no
-   conflicts occurred, then *CONFLICTS is simply allocated as an empty
-   hash.
-*/
+   after the merge.  */
 svn_error_t *svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
-                                       apr_hash_t **conflicts,
                                        svn_wc_adm_access_t *adm_access,
                                        const char *name,
                                        const apr_array_header_t *propchanges,

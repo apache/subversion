@@ -36,6 +36,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_md5.h"
 #include "svn_fs.h"
 #include "svn_hash.h"
 #include "svn_sorts.h"
@@ -213,6 +214,7 @@ already_exists (svn_fs_root_t *root, const char *path)
     abort ();
 }
 
+
 static svn_error_t *
 not_txn (svn_fs_root_t *root)
 {
@@ -339,16 +341,7 @@ typedef enum copy_id_inherit_t
    also needs to change the parent directory.  */
 typedef struct parent_path_t
 {
-  /* The last non-lazy branchpoint that was encountered for this node.
-     or NULL if the lazy determination logic in open_path was skipped. */
-  const svn_fs_id_t *last_branch_id;
-    
-  /* This is set to true if this node hasn't been modified
-     since being copied onto this path. This is set to false
-     if this node hasn't been copied, or has been modified since
-     being copied. */
-  svn_boolean_t in_lazy_land;
-    
+  
   /* A node along the path.  This could be the final node, one of its
      parents, or the root.  Every parent path ends with an element for
      the root directory.  */
@@ -358,10 +351,6 @@ typedef struct parent_path_t
      root directory, which (obviously) has no name in its parent.  */
   char *entry;
 
-  /* The path that this entry was last committed at for a lazy
-     branch point. */
-  const char *last_path;
-    
   /* The parent of NODE, or zero if NODE is the root directory.  */
   struct parent_path_t *parent;
   
@@ -374,104 +363,16 @@ typedef struct parent_path_t
 static parent_path_t *
 make_parent_path (dag_node_t *node,
                   char *entry,
-                  const svn_fs_id_t *last_branch_id,
-                  svn_boolean_t in_lazy_land,
-                  const char *last_path,
                   parent_path_t *parent,
                   apr_pool_t *pool)
 {
   parent_path_t *parent_path = apr_pcalloc (pool, sizeof (*parent_path));
-  parent_path->last_branch_id = last_branch_id;
-  parent_path->in_lazy_land = in_lazy_land;
   parent_path->node = node;
   parent_path->entry = entry;
   parent_path->parent = parent;
-  parent_path->last_path = last_path;
   return parent_path;
 }
 
-static svn_error_t *
-get_id_path (const char **path,
-             svn_fs_t *fs,
-             const svn_fs_id_t *id,
-             trail_t *trail)
-{
-  dag_node_t *node;
-  
-  /* Initialize returned value. */
-  *path = NULL;
-
-  SVN_ERR (svn_fs__dag_get_node (&node, fs, id, trail));
-  SVN_ERR (svn_fs__dag_get_committed_path (path, node, trail));
-  *path = svn_fs__canonicalize_abspath (*path, trail->pool);
-  return SVN_NO_ERROR;
-}
-
-
-/* Sets lazy_p to TRUE if the child_id was not committed at
-   child_path. Sets branch_p to TRUE if the child_id is not
-   lazy and child_id is a branch point. Set
-   last_committed_path if child_id is a lazy branch point.
-*/
-static svn_error_t *
-is_child_lazy_copied (svn_boolean_t *lazy_p,
-                      svn_boolean_t *branch_p,
-                      char **last_committed_path,
-                      svn_fs_t *fs,
-                      const svn_fs_id_t *parent_id,
-                      const svn_fs_id_t *child_id,
-                      const char *child_path,
-                      trail_t *trail)
-{
-  char *child_committed_path;
-  svn_fs__copy_t *copy;
-    
-  /* If the current CopyID and the child CopyID are different
-     then the child is either a branch point, or a lazy copied
-     node revision. */
-  if (strcmp (svn_fs__id_copy_id (parent_id),
-              svn_fs__id_copy_id (child_id)) != 0)
-    {
-      
-      /* The only way to determine laziness is to compare the
-         current path against the committed path. */
-      SVN_ERR (get_id_path (&child_committed_path, fs,
-                            child_id, trail));
-        
-      if (child_committed_path
-          && strcmp (child_path, child_committed_path) == 0)
-        {
-          /* It's not lazy copied. This means it is a 
-             non-lazy branch point. */
-          /* Assert branch point-ness here. */
-          *branch_p = TRUE;
-          *lazy_p = FALSE;
-        }
-      else
-        {
-          /* This is a lazy node revision on this path. */
-          SVN_ERR (svn_fs__bdb_get_copy (&copy, fs,
-                                         svn_fs__id_copy_id (child_id),
-                                         trail));
-          if (strcmp (svn_fs__id_node_id (copy->dst_noderev_id),
-                      svn_fs__id_node_id (child_id)) == 0
-              && strcmp (svn_fs__id_copy_id (copy->dst_noderev_id),
-                         svn_fs__id_copy_id (child_id)) == 0
-              && child_committed_path
-              && last_committed_path)
-            {
-              *last_committed_path = apr_pstrdup (trail->pool,
-                                                  child_committed_path);
-            }
-          *lazy_p = TRUE;
-        }
-    }
-  else
-    {
-      *lazy_p = FALSE;
-    }
-  return SVN_NO_ERROR;
-}
 
 /* Return a null-terminated copy of the first component of PATH,
    allocated in POOL.  If path is empty, or consists entirely of
@@ -526,10 +427,7 @@ typedef enum open_path_flags_t {
      directories must exist, as usual.)  If the last component doesn't
      exist, simply leave the `node' member of the bottom parent_path
      component zero.  */
-  open_path_last_optional = 1,
-    
-  /* open_path will skip its lazy copy detection logic */
-  open_path_skip_lazy_detection = 2,
+  open_path_last_optional = 1
 
 } open_path_flags_t;
 
@@ -556,27 +454,16 @@ open_path (parent_path_t **parent_path_p,
   svn_fs_t *fs = root->fs;
   apr_pool_t *pool = trail->pool;
   const svn_fs_id_t *id;
-  const svn_fs_id_t *child_id;
-  const svn_fs_id_t *last_branch_id = NULL;
-  svn_boolean_t in_lazy_land = FALSE;
   dag_node_t *here; /* The directory we're currently looking at.  */
   parent_path_t *parent_path; /* The path from HERE up to the root.  */
   const char *rest; /* The portion of PATH we haven't traversed yet.  */
   const char *canon_path = svn_fs__canonicalize_abspath (path, trail->pool);
-  char *last_path = NULL;
 
   /* Make a parent_path item for the root node, using its own current
      copy id.  */
   SVN_ERR (root_node (&here, root, trail));
-
   id = svn_fs__dag_get_id (here);
-  if (!(flags & open_path_skip_lazy_detection))
-    {
-      last_branch_id = id;
-    }
-  
-  parent_path = make_parent_path (here, NULL, last_branch_id, FALSE,
-                                  NULL, NULL, pool);
+  parent_path = make_parent_path (here, 0, 0, pool);
   rest = canon_path + 1; /* skip the leading '/', it saves in iteration */
 
   /* Whenever we are at the top of this loop:
@@ -618,9 +505,8 @@ open_path (parent_path_t **parent_path_p,
               if ((flags & open_path_last_optional)
                   && (! next || *next == '\0'))
                 {
-                  parent_path = make_parent_path (NULL, entry,
-                                                  NULL, in_lazy_land, 
-                                                  NULL, parent_path, pool);
+                  parent_path = make_parent_path (NULL, entry, parent_path, 
+                                                  pool);
                   break;
                 }
               else
@@ -634,46 +520,8 @@ open_path (parent_path_t **parent_path_p,
           /* Other errors we return normally.  */
           SVN_ERR (err);
 
-          child_id = svn_fs__dag_get_id (child);
-          
-          /* We now need to determine if child is a lazy entity, or was
-             actually committed at this path. */
-          if (!(flags & open_path_skip_lazy_detection))
-            {
-              
-              if (!in_lazy_land)
-                {
-                  int length = strlen (canon_path) + 1;
-                  char *child_path = apr_palloc (trail->pool, length);
-                  svn_boolean_t is_branch = FALSE;
-                  char *end = strchr (rest, '/');
-                  
-                  if (end == NULL)
-                    {
-                      memcpy (child_path, canon_path, length);
-                    }
-                  else
-                    {
-                      length = end - canon_path;
-                      memcpy (child_path, canon_path, length);
-                      child_path[length] = '\0';
-                    }
-                    
-                  SVN_ERR (is_child_lazy_copied (&in_lazy_land, &is_branch,
-                                                 &last_path, fs, id, child_id,
-                                                 child_path, trail));
-                  if (!in_lazy_land && is_branch)
-                    {
-                      /* It must be a branch point. */
-                      last_branch_id = child_id;
-                    }
-                }
-            }
-          
           /* Now, make a parent_path item for CHILD. */
-          parent_path = make_parent_path (child, entry, last_branch_id,
-                                          in_lazy_land, last_path, parent_path,
-                                          pool);
+          parent_path = make_parent_path (child, entry, parent_path, pool);
         }
       
       /* Are we finished traversing the path?  */
@@ -686,8 +534,6 @@ open_path (parent_path_t **parent_path_p,
       
       rest = next;
       here = child;
-      id = child_id;
-      last_path = NULL;
     }
 
   *parent_path_p = parent_path;
@@ -707,6 +553,43 @@ parent_path_path (parent_path_t *parent_path,
          : path_so_far;
 }
 
+static svn_error_t *
+get_id_path (const char **path,
+             svn_fs_t *fs,
+             const svn_fs_id_t *id,
+             trail_t *trail)
+{
+  apr_hash_t *changes;
+  apr_hash_index_t *hi;
+
+  /* Initialize returned value. */
+  *path = NULL;
+
+  /* Fetch all the changes that occured in the transaction that child
+     appeared in.  Find the change whose node revision id is ID, and
+     return the path associated with it.  If no such change exists,
+     return the default value. */
+  SVN_ERR (svn_fs__bdb_changes_fetch (&changes, fs, 
+                                      svn_fs__id_txn_id (id), trail));
+  for (hi = apr_hash_first (trail->pool, changes); hi; hi = apr_hash_next (hi))
+    {
+      svn_fs_path_change_t *change;
+      void *val;
+      const void *key;
+      const char *change_path;
+
+      apr_hash_this (hi, &key, NULL, &val);
+      change_path = key;
+      change = val;
+      if (svn_fs_compare_ids (change->node_rev_id, id) == 0)
+        {
+          *path = change_path;
+          break;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
 
 
 /* Choose a copy ID inheritance method *INHERIT_P to be used in the
@@ -745,7 +628,7 @@ choose_copy_id (copy_id_inherit_t *inherit_p,
   /* Special case: if the child's copy ID is '0', use the parent's
      copy ID. */
   if (strcmp (child_copy_id, "0") == 0)
-    return SVN_NO_ERROR;  
+    return SVN_NO_ERROR;
 
   /* Compare the copy IDs of the child and its parent.  If they are
      the same, then the child is already on the same branch as the
@@ -762,27 +645,26 @@ choose_copy_id (copy_id_inherit_t *inherit_p,
      or if it is a branch point that we are accessing via its original
      copy destination path. */
   SVN_ERR (svn_fs__bdb_get_copy (&copy, fs, child_copy_id, trail));
-  if (!(strcmp (svn_fs__id_node_id (copy->dst_noderev_id),
-                svn_fs__id_node_id (child_id)) == 0
-        && strcmp (svn_fs__id_copy_id (copy->dst_noderev_id),
-                   svn_fs__id_copy_id (child_id)) == 0))
+  if (svn_fs_compare_ids (copy->dst_noderev_id, child_id) == -1)
     return SVN_NO_ERROR;
 
-  /* The parent_path of child already knows whether or not this node
-     was committed on the current path or not. */
-  if (!child->in_lazy_land)
+  /* Fetch all the changes that occured in the transaction that child
+     appeared in.  Find the change whose node revision ID is the
+     child, so we can determine if we are looking at the child via its
+     original path or as a subtree item of a copied tree. */
+  SVN_ERR (get_id_path (&id_path, fs, child_id, trail));
+  child_path = parent_path_path (child, trail->pool);
+  if (id_path && child_path && (strcmp (child_path, id_path) == 0))
     {
-       /* We now know that this branch was created on this path, and any
-          change to this node should keep the current CopyID. */
-       *inherit_p = copy_id_inherit_self;
-       return SVN_NO_ERROR;
+      *inherit_p = copy_id_inherit_self;
+      return SVN_NO_ERROR;
     }
 
-  /* We are sure that the child node is an unedited nested
+  /* We are pretty sure that the child node is an unedited nested
      branched node.  When it needs to be made mutable, it should claim
      a new copy ID. */
   *inherit_p = copy_id_inherit_new;
-  *copy_src_path = child->last_path;
+  *copy_src_path = id_path;
   return SVN_NO_ERROR;
 }
 
@@ -846,8 +728,6 @@ make_path_mutable (svn_fs_root_t *root,
                                         parent_path->parent->node,
                                         parent_path->entry, 
                                         copy_id, txn_id,
-                                        parent_path_path (parent_path,
-                                                          trail->pool),
                                         trail));
       
       /* If we just created a brand new copy ID, we need to store a
@@ -884,14 +764,14 @@ get_dag (dag_node_t **dag_node_p,
 {
   parent_path_t *parent_path;
 
-  /* Call open_path with the skip lazy detection flag, as we
-     don't care about that data atm. */
-  SVN_ERR (open_path (&parent_path, root, path,
-                      open_path_skip_lazy_detection, trail));
+  /* Call open_path with no flags, as we want this to return an error
+     if the node for which we are searching doesn't exist. */
+  SVN_ERR (open_path (&parent_path, root, path, 0, trail));
   *dag_node_p = parent_path->node;
 
   return SVN_NO_ERROR;
 }
+
 
 
 /* Populating the `changes' table. */
@@ -904,6 +784,7 @@ get_dag (dag_node_t **dag_node_p,
 static svn_error_t *
 add_change (svn_fs_t *fs,
             const char *txn_id,
+            const char *path,
             const svn_fs_id_t *noderev_id,
             svn_fs_path_change_kind_t change_kind,
             int text_mod,
@@ -911,12 +792,14 @@ add_change (svn_fs_t *fs,
             trail_t *trail)
 {
   svn_fs__change_t change;
+  change.path = svn_fs__canonicalize_abspath (path, trail->pool);
   change.noderev_id = noderev_id;
   change.kind = change_kind;
   change.text_mod = text_mod;
   change.prop_mod = prop_mod;
   return svn_fs__bdb_changes_add (fs, txn_id, &change, trail);
 }
+
 
 
 /* Generic node operations.  */
@@ -972,31 +855,10 @@ static svn_error_t *
 txn_body_node_created_rev (void *baton, trail_t *trail)
 {
   struct node_created_rev_args *args = baton;
-  parent_path_t *parent_path;
-  svn_fs__copy_t *copy;
-  svn_fs__transaction_t *txn;
+  dag_node_t *node;
 
-  SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
-  if (parent_path->in_lazy_land)
-    {
-       SVN_ERR (svn_fs__bdb_get_copy (&copy, args->root->fs, 
-                                      svn_fs__id_copy_id (
-                                          parent_path->last_branch_id),
-                                      trail));
-       SVN_ERR (svn_fs__bdb_get_txn (&txn, args->root->fs,
-                                     svn_fs__id_txn_id (copy->dst_noderev_id),
-                                     trail));
-    }
-  else
-    {
-       SVN_ERR (svn_fs__bdb_get_txn (
-                    &txn, args->root->fs,
-                    svn_fs__id_txn_id (
-                        svn_fs__dag_get_id (
-                            parent_path->node)),
-                    trail));
-    }
-  args->revision = txn->revision;
+  SVN_ERR (get_dag (&node, args->root, args->path, trail));
+  SVN_ERR (svn_fs__dag_get_revision (&(args->revision), node, trail));
   return SVN_NO_ERROR;
 }
 
@@ -1241,8 +1103,7 @@ txn_body_node_proplist (void *baton, trail_t *trail)
   parent_path_t *parent_path;
   apr_hash_t *proplist;
 
-  SVN_ERR (open_path (&parent_path, args->root, args->path,
-                      open_path_skip_lazy_detection, trail));
+  SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
   SVN_ERR (svn_fs__dag_get_proplist (&proplist, parent_path->node, trail));
   *args->table_p = proplist ? proplist : apr_hash_make (trail->pool);
   return SVN_NO_ERROR;
@@ -1286,8 +1147,6 @@ txn_body_change_node_prop (void *baton,
   apr_hash_t *proplist;
   const char *txn_id = svn_fs_txn_root_name (args->root, trail->pool);
 
-  /* We must calculate lazy infomration here so that make_path_mutable
-     can take advantage of the calculated information. */
   SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
   SVN_ERR (make_path_mutable (args->root, parent_path, args->path, trail));
   SVN_ERR (svn_fs__dag_get_proplist (&proplist, parent_path->node, trail));
@@ -1309,7 +1168,7 @@ txn_body_change_node_prop (void *baton,
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (args->root), txn_id, 
-                       svn_fs__dag_get_id (parent_path->node),
+                       args->path, svn_fs__dag_get_id (parent_path->node),
                        svn_fs_path_change_modify, 0, 1, trail));
   
   return SVN_NO_ERROR;
@@ -1356,10 +1215,8 @@ txn_body_props_changed (void *baton, trail_t *trail)
   struct things_changed_args *args = baton;
   parent_path_t *parent_path_1, *parent_path_2;
 
-  SVN_ERR (open_path (&parent_path_1, args->root1, args->path1,
-                      open_path_skip_lazy_detection, trail));
-  SVN_ERR (open_path (&parent_path_2, args->root2, args->path2,
-                      open_path_skip_lazy_detection, trail));
+  SVN_ERR (open_path (&parent_path_1, args->root1, args->path1, 0, trail));
+  SVN_ERR (open_path (&parent_path_2, args->root2, args->path2, 0, trail));
 
   SVN_ERR (svn_fs__things_different (args->changed_p,
                                      NULL,
@@ -1649,11 +1506,11 @@ undelete_change (svn_fs_t *fs,
     {
       /* If so, reset the changes and re-add everything except the
          deletion. */
-      SVN_ERR (add_change (fs, txn_id, NULL, 
+      SVN_ERR (add_change (fs, txn_id, path, NULL, 
                            svn_fs_path_change_reset, 0, 0, trail));
       if (this_change->change_kind == svn_fs_path_change_replace)
         {
-          SVN_ERR (add_change (fs, txn_id, this_change->node_rev_id, 
+          SVN_ERR (add_change (fs, txn_id, path, this_change->node_rev_id, 
                                svn_fs_path_change_add, this_change->text_mod, 
                                this_change->prop_mod, trail));
         }
@@ -2270,7 +2127,7 @@ txn_body_merge (void *baton, trail_t *trail)
     }
   
   if (svn_fs__id_eq (svn_fs__dag_get_id (ancestor_node),
-                     svn_fs__dag_get_id (txn_root_node)))
+                    svn_fs__dag_get_id (txn_root_node)))
     {
       /* If no changes have been made in TXN since its current base,
          then it can't conflict with any changes since that base.  So
@@ -2606,107 +2463,11 @@ txn_body_dir_entries (void *baton,
   struct dir_entries_args *args = baton;
   parent_path_t *parent_path;
   apr_hash_t *entries;
-  apr_hash_index_t *hi;
-  svn_revnum_t last_revision;
-  svn_fs__copy_t *copy;
-  svn_fs__transaction_t *txn;
-  const char *parent_copy_id;
-  const svn_fs_id_t *parent_id;
-  svn_boolean_t lazy = FALSE;
-  svn_string_t *createdrev = NULL;
-  svn_fs_t *fs;
 
-  fs = args->root->fs;
-
-  /* The following code relies on correct laziness calculations, so
-     we can't skip that expensive operation here. */
   SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
 
   /* Get the entries for PARENT_PATH. */
   SVN_ERR (svn_fs__dag_dir_entries (&entries, parent_path->node, trail));
-  if (entries == NULL)
-    {
-       *args->table_p = apr_hash_make (trail->pool);
-       return SVN_NO_ERROR;
-    }
-
-  parent_id = svn_fs__dag_get_id (parent_path->node);
-  parent_copy_id = svn_fs__id_copy_id (parent_id);
-
-  /* open_path has logic to see through the laziness of the DAG implemented
-     by dag.c. We need to something similar for directory entries. */
-
-  /* If the containing directory is completly lazy, then every entry of ours
-     will also be lazy. */
-  if (parent_path->in_lazy_land)
-    {
-       SVN_ERR (svn_fs__bdb_get_copy (&copy, fs,
-                                      svn_fs__id_copy_id (
-                                          parent_path->last_branch_id),
-                                      trail));
-       SVN_ERR (svn_fs__bdb_get_txn (&txn, fs,
-                                     svn_fs__id_txn_id (copy->dst_noderev_id),
-                                     trail));
-       last_revision = txn->revision;
-    }
-
-  /* Add created on path at revision data to each directory entry. */
-  for (hi = apr_hash_first (trail->pool, entries); hi; hi = apr_hash_next (hi))
-    {
-       const void *key;
-       apr_ssize_t klen;
-       void *val;
-       svn_fs_dirent_t *dirent;
-      
-       /* KEY will be the entry name in parent, VAL the dirent.  */
-       apr_hash_this (hi, &key, &klen, &val);
-       dirent = (svn_fs_dirent_t *)val;
-
-       /* If we already know we're in lazy land, then the value will never
-          change, so use the value we already know. */
-       if (parent_path->in_lazy_land)
-         {
-            dirent->created_rev = last_revision;
-         }
-       else
-         {
-            const char *child_path =
-                svn_fs__canonicalize_abspath (svn_path_join (
-                                                  args->path, dirent->name,
-                                                  trail->pool),
-                                              trail->pool);
-            svn_boolean_t is_branch = FALSE;
-            
-            SVN_ERR (is_child_lazy_copied (&lazy, &is_branch, NULL, fs,
-                                           parent_id, dirent->id, child_path,
-                                           trail));
-            if (lazy)
-              {
-                 /* Lookup the revision of the copy operation that exposed
-                    this node revision at this path. */
-                 SVN_ERR (svn_fs__bdb_get_copy (&copy, fs, 
-                                                svn_fs__id_copy_id (
-                                                    parent_path->last_branch_id),
-                                                trail));
-                 SVN_ERR (svn_fs__bdb_get_txn (&txn, fs,
-                                               svn_fs__id_txn_id (
-                                                   copy->dst_noderev_id),
-                                               trail));
-                 dirent->created_rev = txn->revision;
-              }
-            else
-              {
-                 /* Now we have to lookup the created revision property
-                    ourselves. */
-                 SVN_ERR (svn_fs__bdb_get_txn (&txn, fs,
-                                               svn_fs__id_txn_id (dirent->id),
-                                               trail));
-                                                
-                 dirent->created_rev = txn->revision;
-              }
-         }
-       apr_hash_set (entries, key, klen, (void *) dirent);
-    }
 
   /* Potentially initialize the return value to an empty hash. */
   *args->table_p = entries ? entries : apr_hash_make (trail->pool);
@@ -2754,8 +2515,6 @@ txn_body_make_dir (void *baton,
   dag_node_t *sub_dir;
   const char *txn_id = svn_fs_txn_root_name (root, trail->pool);
 
-  /* We can't skip lazy calculations here because make_path_mutable
-     cares about those calculations. */
   SVN_ERR (open_path (&parent_path, root, path, open_path_last_optional,
                       trail));
 
@@ -2770,12 +2529,11 @@ txn_body_make_dir (void *baton,
                                  parent_path->parent->node, 
                                  parent_path->entry,
                                  txn_id,
-                                 path,
                                  trail));
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
-                       svn_fs__dag_get_id (sub_dir),
+                       path, svn_fs__dag_get_id (sub_dir),
                        svn_fs_path_change_add, 0, 0, trail));
 
   return SVN_NO_ERROR;
@@ -2819,8 +2577,6 @@ txn_body_delete (void *baton,
   parent_path_t *parent_path;
   const char *txn_id = svn_fs_txn_root_name (root, trail->pool);
 
-  /* We can't skip lazy calculations here because make_path_mutable
-     cares about those calculations. */
   SVN_ERR (open_path (&parent_path, root, path, 0, trail));
 
   if (! svn_fs_is_txn_root (root))
@@ -2849,7 +2605,7 @@ txn_body_delete (void *baton,
   
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
-                       svn_fs__dag_get_id (parent_path->node),
+                       path, svn_fs__dag_get_id (parent_path->node),
                        svn_fs_path_change_delete, 0, 0, trail));
   
   return SVN_NO_ERROR;
@@ -2921,9 +2677,6 @@ txn_body_copy (void *baton,
                              NULL,
                              "copy from mutable tree not currently supported");
 
-  /* We can't skip lazy calculations here because make_path_mutable
-     cares about those calculations. */
-  
   /* Build up the parent path from FROM_PATH, making sure that it
      exists in FROM_ROOT */
   SVN_ERR (open_path (&from_parent_path, from_root, from_path, 
@@ -2957,12 +2710,12 @@ txn_body_copy (void *baton,
                                  from_parent_path->node,
                                  args->preserve_history,
                                  svn_fs_revision_root_revision (from_root),
-                                 from_path, txn_id, to_path, trail));
+                                 from_path, txn_id, trail));
 
       /* Make a record of this modification in the changes table. */
       SVN_ERR (get_dag (&new_node, to_root, to_path, trail));
       SVN_ERR (add_change (svn_fs_root_fs (to_root), txn_id, 
-                           svn_fs__dag_get_id (new_node),
+                           to_path, svn_fs__dag_get_id (new_node),
                            kind, 0, 0, trail));
     }
   else
@@ -3047,10 +2800,7 @@ txn_body_copied_from (void *baton, trail_t *trail)
   struct copied_from_args *args = baton;
   parent_path_t *path_down;
 
-  /* Thankfully, we can skip laziness calculation for this
-     difficult operation. */
-  SVN_ERR (open_path (&path_down, args->root, args->path,
-                      open_path_skip_lazy_detection, trail));
+  SVN_ERR (open_path (&path_down, args->root, args->path, 0, trail));
   SVN_ERR (svn_fs__dag_copied_from (&(args->result_rev),
                                     &(args->result_path),
                                     path_down->node,
@@ -3104,7 +2854,6 @@ txn_body_make_file (void *baton,
   dag_node_t *child;
   const char *txn_id = svn_fs_txn_root_name (root, trail->pool);
 
-  /* We can't skip laziness calcs because make_path_mutable relies on it. */
   SVN_ERR (open_path (&parent_path, root, path, open_path_last_optional,
                       trail));
 
@@ -3119,12 +2868,11 @@ txn_body_make_file (void *baton,
                                   parent_path->parent->node, 
                                   parent_path->entry,
                                   txn_id,
-                                  path,
                                   trail));
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
-                       svn_fs__dag_get_id (child),
+                       path, svn_fs__dag_get_id (child),
                        svn_fs_path_change_add, 0, 0, trail));
 
   return SVN_NO_ERROR;
@@ -3309,18 +3057,35 @@ typedef struct txdelta_baton_t
   svn_stream_t *string_stream;
   svn_stringbuf_t *target_string;
 
+  /* Hex MD5 digest for the base text against which a delta is to be
+     applied, and for the resultant fulltext, respectively.  Either or
+     both may be null, in which case ignored. */
+  const char *base_checksum;
+  const char *result_checksum;
+
   /* Pool used by db txns */
   apr_pool_t *pool;
 
 } txdelta_baton_t;
 
 
-/* A trail-ready wrapper around svn_fs__dag_finalize_edits. */
+/* A trail-ready wrapper around svn_fs__dag_finalize_edits. 
+ * This closes BATON->target_stream.
+ *
+ * Note: If you're confused about how this function relates to another
+ * of similar name, think of it this way:
+ *
+ * svn_fs_apply_textdelta() ==> ... ==> txn_body_txdelta_finalize_edits()
+ * svn_fs_apply_text()      ==> ... ==> txn_body_fulltext_finalize_edits()
+ */
 static svn_error_t *
-txn_body_finalize_edits (void *baton, trail_t *trail)
+txn_body_txdelta_finalize_edits (void *baton, trail_t *trail)
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
+
+  SVN_ERR (svn_stream_close (tb->target_stream));
   return svn_fs__dag_finalize_edits (tb->node, 
+                                     tb->result_checksum,
                                      svn_fs_txn_root_name (tb->root,
                                                            trail->pool),
                                      trail);
@@ -3389,11 +3154,10 @@ window_consumer (svn_txdelta_window_t *window, void *baton)
   /* Is the window NULL?  If so, we're done, and we need to tell the
      dag subsystem that we're finished with our edits. */
   if (! window)
-    {
-      SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (tb->root),
-                                  txn_body_finalize_edits, tb, tb->pool));
-      SVN_ERR (svn_stream_close (tb->target_stream));
-    }
+    SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (tb->root),
+                                txn_body_txdelta_finalize_edits, tb,
+                                tb->pool));
+
 
   return SVN_NO_ERROR;
 }
@@ -3414,6 +3178,25 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
   SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, trail));
   tb->node = parent_path->node;
 
+  if (tb->base_checksum)
+    {
+      unsigned char digest[MD5_DIGESTSIZE];
+      const char *hex;
+
+      /* Until we finalize the node, its data_key points to the old
+         contents, in other words, the base text. */
+      SVN_ERR (svn_fs__dag_file_checksum (digest, tb->node, trail));
+      hex = svn_md5_digest_to_cstring (digest, trail->pool);
+      if (hex && (strcmp (tb->base_checksum, hex) != 0))
+        return svn_error_createf
+          (SVN_ERR_CHECKSUM_MISMATCH, 
+           NULL,
+           "txn_body_apply_textdelta: base checksum mismatch on \"%s\":\n"
+           "   expected:  %s\n"
+           "     actual:  %s\n",
+           tb->path, tb->base_checksum, hex);
+    }
+
   /* Make a readable "source" stream out of the current contents of
      ROOT/PATH; obviously, this must done in the context of a db_txn.
      The stream is returned in tb->source_stream. */
@@ -3433,13 +3216,15 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
   /* Now, create a custom window handler that uses our two streams. */
   svn_txdelta_apply (tb->source_stream,
                      tb->string_stream,
+                     NULL,
+                     tb->path,
                      tb->pool,
                      &(tb->interpreter),
                      &(tb->interpreter_baton));
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (tb->root), txn_id, 
-                       svn_fs__dag_get_id (tb->node),
+                       tb->path, svn_fs__dag_get_id (tb->node),
                        svn_fs_path_change_modify, 1, 0, trail));
 
   return SVN_NO_ERROR;
@@ -3451,6 +3236,8 @@ svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
                         void **contents_baton_p,
                         svn_fs_root_t *root,
                         const char *path,
+                        const char *base_checksum,
+                        const char *result_checksum,
                         apr_pool_t *pool)
 {
   txdelta_baton_t *tb = apr_pcalloc (pool, sizeof(*tb));
@@ -3459,7 +3246,16 @@ svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
   tb->path = path;
   tb->pool = pool;
 
-  /* See IZ Issue #438 */
+  if (base_checksum)
+    tb->base_checksum = apr_pstrdup (pool, base_checksum);
+  else
+    tb->base_checksum = NULL;
+
+  if (result_checksum)
+    tb->result_checksum = apr_pstrdup (pool, result_checksum);
+  else
+    tb->result_checksum = NULL;
+
   SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (root),
                               txn_body_apply_textdelta, tb, pool));
   
@@ -3488,17 +3284,32 @@ struct text_baton_t
   /* The actual fs stream that the returned stream will write to. */
   svn_stream_t *file_stream;
 
+  /* Hex MD5 digest for the final fulltext written to the file.  May
+     be null, in which case ignored. */
+  const char *result_checksum;
+
   /* Pool used by db txns */
   apr_pool_t *pool;
 };
 
 
-/* A different trail-ready wrapper around svn_fs__dag_finalize_edits. */
+/* A trail-ready wrapper around svn_fs__dag_finalize_edits, but for
+ * fulltext data, not text deltas.  Closes BATON->file_stream. 
+ *
+ * Note: If you're confused about how this function relates to another
+ * of similar name, think of it this way:
+ *
+ * svn_fs_apply_textdelta() ==> ... ==> txn_body_txdelta_finalize_edits()
+ * svn_fs_apply_text()      ==> ... ==> txn_body_fulltext_finalize_edits()
+ */
 static svn_error_t *
-another_txn_body_finalize_edits (void *baton, trail_t *trail)
+txn_body_fulltext_finalize_edits (void *baton, trail_t *trail)
 {
   struct text_baton_t *tb = baton;
+
+  SVN_ERR (svn_stream_close (tb->file_stream));
   return svn_fs__dag_finalize_edits (tb->node, 
+                                     tb->result_checksum,
                                      svn_fs_txn_root_name (tb->root, 
                                                            trail->pool),
                                      trail);
@@ -3524,10 +3335,9 @@ text_stream_closer (void *baton)
 
   /* Need to tell fs that we're done sending text */
   SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (tb->root),
-                              another_txn_body_finalize_edits, tb, tb->pool));
+                              txn_body_fulltext_finalize_edits, tb, tb->pool));
 
-  /* Close the -real- file stream. */
-  return svn_stream_close (tb->file_stream);
+  return SVN_NO_ERROR;
 }
 
 
@@ -3557,7 +3367,7 @@ txn_body_apply_text (void *baton, trail_t *trail)
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (tb->root), txn_id, 
-                       svn_fs__dag_get_id (tb->node),
+                       tb->path, svn_fs__dag_get_id (tb->node),
                        svn_fs_path_change_modify, 1, 0, trail));
 
   return SVN_NO_ERROR;
@@ -3568,6 +3378,7 @@ svn_error_t *
 svn_fs_apply_text (svn_stream_t **contents_p,
                    svn_fs_root_t *root,
                    const char *path,
+                   const char *result_checksum,
                    apr_pool_t *pool)
 {
   struct text_baton_t *tb = apr_pcalloc (pool, sizeof(*tb));
@@ -3575,6 +3386,11 @@ svn_fs_apply_text (svn_stream_t **contents_p,
   tb->root = root;
   tb->path = path;
   tb->pool = pool;
+
+  if (result_checksum)
+    tb->result_checksum = apr_pstrdup (pool, result_checksum);
+  else
+    tb->result_checksum = NULL;
 
   SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (root),
                               txn_body_apply_text, tb, pool));
@@ -3595,10 +3411,8 @@ txn_body_contents_changed (void *baton, trail_t *trail)
   struct things_changed_args *args = baton;
   parent_path_t *parent_path_1, *parent_path_2;
 
-  SVN_ERR (open_path (&parent_path_1, args->root1, args->path1,
-                      open_path_skip_lazy_detection, trail));
-  SVN_ERR (open_path (&parent_path_2, args->root2, args->path2,
-                      open_path_skip_lazy_detection, trail));
+  SVN_ERR (open_path (&parent_path_1, args->root1, args->path1, 0, trail));
+  SVN_ERR (open_path (&parent_path_2, args->root2, args->path2, 0, trail));
 
   SVN_ERR (svn_fs__things_different (NULL,
                                      args->changed_p,
@@ -3755,8 +3569,8 @@ revisions_changed_callback (void *baton,
 struct revisions_changed_args
 {
   apr_hash_t *revs;
-  svn_fs_root_t *root;
-  const char *path;
+  svn_fs_t *fs;
+  const svn_fs_id_t *id;
   int cross_copy_history;
 };
 
@@ -3766,9 +3580,7 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
 {
   struct revisions_changed_args *args = baton;
   struct revisions_changed_baton b;
-  parent_path_t *parent_path;
-  svn_fs__copy_t *copy;
-  svn_fs__transaction_t *txn;
+  dag_node_t *node;
   svn_revnum_t *rev 
     = apr_palloc (apr_hash_pool_get (args->revs), sizeof (*rev));
 
@@ -3783,32 +3595,16 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
      about to start working on a new node. */
   b.successor_id = NULL;
 
-  SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
-  
-  /* Stop immediately with the revision that created us at this path
-     if we've been lazy copied but not yet modified and we're not
-     crossing copy history. */
-  if (parent_path->in_lazy_land)
-    {
-       SVN_ERR (svn_fs__bdb_get_copy (&copy, args->root->fs,
-                                      svn_fs__id_copy_id (
-                                          parent_path->last_branch_id),
-                                      trail));
-       SVN_ERR (svn_fs__bdb_get_txn (&txn, args->root->fs,
-                                     svn_fs__id_txn_id (copy->dst_noderev_id),
-                                     trail));
-       if (!b.cross_copy_history)
-         return SVN_NO_ERROR;
-    }
+  /* Get the NODE for ARGS->id.  */
+  SVN_ERR (svn_fs__dag_get_node (&node, args->fs, args->id, trail));
 
   /* Add NODE's created rev to the array in the baton. */
-  SVN_ERR (svn_fs__dag_get_revision (rev, parent_path->node, trail));
+  SVN_ERR (svn_fs__dag_get_revision (rev, node, trail));
   if (SVN_IS_VALID_REVNUM (*rev))
     apr_hash_set (b.revs, (void *)rev, sizeof (rev), (void *)1);
 
   /* Walk NODE's predecessors, harvesting revisions changed. */
-  return svn_fs__dag_walk_predecessors (parent_path->node,
-                                        revisions_changed_callback,
+  return svn_fs__dag_walk_predecessors (node, revisions_changed_callback,
                                         &b, trail);
 }
 
@@ -3832,14 +3628,16 @@ svn_fs_revisions_changed (apr_array_header_t **revs,
 
   /* Populate the common baton members. */
   args.revs = all_revs;
-  args.root = root;
+  args.fs = fs;
   args.cross_copy_history = cross_copy_history;
 
   /* Get the node revision id for each PATH under ROOT, and find out
      in which revisions that node revision id was changed.  */
   for (i = 0; i < paths->nelts; i++)
     {
-      args.path = APR_ARRAY_IDX (paths, i, const char *);
+      SVN_ERR (svn_fs_node_id (&(args.id), root, 
+                               APR_ARRAY_IDX (paths, i, const char *), 
+                               subpool));
       SVN_ERR (svn_fs__retry_txn (fs, txn_body_revisions_changed,
                                   &args, subpool));
       svn_pool_clear (subpool);

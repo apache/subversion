@@ -57,40 +57,21 @@ typedef struct svn_fs_t svn_fs_t;
 svn_fs_t *svn_fs_new (apr_pool_t *pool);
 
 
-/** Free the filesystem object @a fs.
- *
- * Free the filesystem object @a fs.  This frees memory, closes files,
- * frees database library structures, etc.
- */
-svn_error_t *svn_fs_close_fs (svn_fs_t *fs);
-
-
 /** The type of a warning callback function.
  *
  * The type of a warning callback function.  @a baton is the value specified
  * in the call to @c svn_fs_set_warning_func; the filesystem passes it through
- * to the callback.  @a fmt is a printf-style format string, which tells us
- * how to interpret any successive arguments.  @a pool can be used for any
- * allocations, but the implemntation may decide to pass a pool around
- * in the baton.
+ * to the callback.  @a msg contains the warning message.
  */
-#ifndef SWIG
-typedef void (*svn_fs_warning_callback_t) (apr_pool_t *pool, void *baton,
-                                           const char *fmt, ...);
-#endif
+typedef void (*svn_fs_warning_callback_t) (void *baton, svn_error_t *err);
 
 
 /** Provide a callback function, @a warning, that @a fs should use to report
  * warning messages.
  *
  * Provide a callback function, @a warning, that @a fs should use to report
- * warning messages.  To print a warning message, the filesystem will
- * call @a warning, passing it @a baton, a printf-style format string, and
- * any further arguments as appropriate for the format string.
- *
- * If it's acceptable to print messages on a standard stream, then the
- * function @c svn_handle_warning, declared in @c svn_error.h, would be
- * a suitable warning function.
+ * (non-fatal) errors.  To print an error, the filesystem will call
+ * @a warning, passing it @a baton and the error.
  *
  * By default, this is set to a function that will crash the process.
  * Dumping to @c stderr or <tt>/dev/tty</tt> is not acceptable default 
@@ -1047,10 +1028,6 @@ typedef struct svn_fs_dirent_t {
   /** The node revision ID it names.  */
   svn_fs_id_t *id;
 
-  /* The first revision that this node revision appeared
-     at this path. */
-  svn_revnum_t created_rev;
-
 } svn_fs_dirent_t;
 
 
@@ -1281,12 +1258,30 @@ svn_error_t *svn_fs_make_file (svn_fs_root_t *root,
  * this routine to create new files;  use @c svn_fs_make_file to create
  * an empty file first.)
  *
- * Do any necessary temporary allocation in @a pool.
+ * @a base_checksum is the hex MD5 digest for the base text against
+ * which the delta is to be applied; it is ignored if null, and may be
+ * ignored even if not null.  If it is not ignored, it must match the
+ * checksum of the base text against which svndiff data is being
+ * applied; if not, svn_fs_apply_textdelta or the @a *contents_p call
+ * which detects the mismatch will return the error
+ * SVN_ERR_CHECKSUM_MISMATCH (if there is no base text, there may
+ * still be an error if @a base_checksum is neither null nor the
+ * checksum of the empty string).
+ *
+ * @a result_checksum is the hex MD5 digest for the fulltext that
+ * results from this delta application.  It is ignored if null, but if
+ * not null, it must match the checksum of the result; if it does not,
+ * then the @a *contents_p call which detects the mismatch will return
+ * the error SVN_ERR_CHECKSUM_MISMATCH.
+ *
+ * Do temporary allocation in @a pool.
  */
 svn_error_t *svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
                                      void **contents_baton_p,
                                      svn_fs_root_t *root,
                                      const char *path,
+                                     const char *base_checksum,
+                                     const char *result_checksum,
                                      apr_pool_t *pool);
 
 
@@ -1303,11 +1298,24 @@ svn_error_t *svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
  * this routine to create new files;  use @c svn_fs_make_file to create
  * an empty file first.)
  *
+ * @a result_checksum is the hex MD5 digest for the final fulltext
+ * written to the stream.  It is ignored if null, but if not null, it
+ * must match the checksum of the result; if it does not, then the @a
+ * *contents_p call which detects the mismatch will return the error
+ * SVN_ERR_CHECKSUM_MISMATCH.
+ *
  * Do any necessary temporary allocation in @a pool.
+ *
+ * ### This is like svn_fs_apply_textdelta, but takes the text
+ * straight.  It is currently used only by the loader, see
+ * libsvn_repos/load.c.  It should accept a checksum, of course, which
+ * would come from an (optional) header in the dump file.  See
+ * http://subversion.tigris.org/issues/show_bug.cgi?id=1102 for more.
  */
 svn_error_t *svn_fs_apply_text (svn_stream_t **contents_p,
                                 svn_fs_root_t *root,
                                 const char *path,
+                                const char *result_checksum,
                                 apr_pool_t *pool);
 
 

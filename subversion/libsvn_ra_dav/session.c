@@ -170,7 +170,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
       svn_config_get(cfg, proxy_password, "default", "http-proxy-password",
                      NULL);
       svn_config_get(cfg, &timeout_str, "default", "http-timeout", NULL);
-      svn_config_get(cfg, &debug_str, "default", "http-debug", NULL);
+      svn_config_get(cfg, &debug_str, "default", "neon-debug-mask", NULL);
     }
 
   server_group = svn_config_find_group(cfg, requested_host, "groups", pool);
@@ -186,7 +186,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                      *proxy_password);
       svn_config_get(cfg, &timeout_str, server_group, "http-timeout",
                      timeout_str);
-      svn_config_get(cfg, &debug_str, server_group, "http-debug",
+      svn_config_get(cfg, &debug_str, server_group, "neon-debug-mask",
                      debug_str);
     }
 
@@ -234,7 +234,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
 
       if (*endstr)
         return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                                "illegal character in debug value");
+                                "illegal character in debug mask value");
 
       *neon_debug = debug;
     }

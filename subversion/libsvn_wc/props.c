@@ -202,12 +202,9 @@ svn_wc__conflicting_propchanges_p (const svn_string_t **description,
          local->name, local->value->data, update->value->data);
       return TRUE;  /* conflict */
     }
-  else
-    /* values are the same, so another implicit merge. */
-    return FALSE;  /* no conflict */
 
-  /* Default (will anyone ever reach this line?) */
-  return FALSE;  /* no conflict found */
+  /* values are the same, so another implicit merge. */
+  return FALSE;  /* no conflict */
 }
 
 
@@ -366,7 +363,6 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
                          apr_pool_t *pool)
 {
   apr_status_t apr_err;
-  apr_hash_t *ignored_conflicts;
   const svn_wc_entry_t *entry;
   const char *parent, *base_name;
   svn_stringbuf_t *log_accum;
@@ -404,15 +400,9 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
   
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
-  SVN_ERR (svn_wc__merge_prop_diffs (state,
-                                     &ignored_conflicts,
-                                     adm_access,
-                                     base_name,
-                                     propchanges,
-                                     base_merge,
-                                     dry_run,
-                                     pool,
-                                     &log_accum));
+  SVN_ERR (svn_wc__merge_prop_diffs (state, adm_access, base_name,
+                                     propchanges, base_merge, dry_run,
+                                     pool, &log_accum));
 
   if (! dry_run)
     {
@@ -437,7 +427,6 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
 
 svn_error_t *
 svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
-                          apr_hash_t **conflicts,
                           svn_wc_adm_access_t *adm_access,
                           const char *name,
                           const apr_array_header_t *propchanges,
@@ -473,8 +462,6 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
 
   apr_file_t *reject_tmp_fp = NULL;       /* the temporary conflicts file */
   const char *reject_tmp_path = NULL;
-
-  *conflicts = apr_hash_make (pool);
 
   if (name == NULL)
     {
@@ -574,23 +561,7 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
           /* Now see if the two changes actually conflict */
           if (conflict)
             {
-              /* Found a conflict! */
-              
-              const svn_prop_t *conflict_prop;
-              
-              /* Copy the conflicting prop structure out of the array so that
-                 changes to the array do not muck up the pointers stored into
-                 the hash table. */
-              conflict_prop = apr_pmemdup (pool,
-                                           update_change,
-                                           sizeof(*update_change));
-
-              /* Note the conflict in the conflict-hash. */
-              apr_hash_set (*conflicts,
-                            update_change->name, APR_HASH_KEY_STRING,
-                            conflict_prop);
-
-              /* Reflect the conflict in the notification state. */
+              /* Found one!  Reflect the conflict in the notification state. */
               if (state && is_normal)
                 *state = svn_wc_notify_state_conflicted;
 
