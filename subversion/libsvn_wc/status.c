@@ -243,7 +243,8 @@ assemble_status (svn_wc_status_t **status,
         abs_path = NULL;
 
       if (abs_path)
-        repos_lock = apr_hash_get (repos_locks, abs_path,
+        repos_lock = apr_hash_get (repos_locks,
+                                   svn_path_uri_decode (abs_path, pool),
                                    APR_HASH_KEY_STRING);
     }
 
@@ -940,14 +941,16 @@ hash_stash (void *baton,
    exist, and the REPOS_TEXT_STATUS indicates that this is an
    addition, create a new status struct using the hash's pool.  Merge
    REPOS_TEXT_STATUS and REPOS_PROP_STATUS into the status structure's
-   "network" fields. */
+   "network" fields.
+   If a new struct was added, set the repos_lock to REPOS_LOCK. */
 static svn_error_t *
 tweak_statushash (apr_hash_t *statushash,
                   svn_wc_adm_access_t *adm_access,
                   const char *path,
                   svn_boolean_t is_dir,
                   enum svn_wc_status_kind repos_text_status,
-                  enum svn_wc_status_kind repos_prop_status)
+                  enum svn_wc_status_kind repos_prop_status,
+                  svn_lock_t *repos_lock)
 {
   svn_wc_status_t *statstruct;
   apr_pool_t *pool = apr_hash_pool_get (statushash);
@@ -973,8 +976,8 @@ tweak_statushash (apr_hash_t *statushash,
         return SVN_NO_ERROR;
 
       /* Use the public API to get a statstruct, and put it into the hash. */
-      /* ### lundblad TODO: Make sure lock info is added. */
       SVN_ERR (svn_wc_status (&statstruct, path, NULL, pool));
+      statstruct->repos_lock = repos_lock;
       apr_hash_set (statushash, apr_pstrdup (pool, path), 
                     APR_HASH_KEY_STRING, statstruct);
     }
@@ -1083,6 +1086,29 @@ make_file_baton (struct dir_baton *parent_dir_baton,
   return f;
 }
 
+/* Returns the URL for DB, or NULL: */
+static const char *
+find_dir_url (const struct dir_baton *db, apr_pool_t *pool)
+{
+  /* If we have no name, we're the root, return the anchor URL. */
+  if (! db->name)
+    return db->edit_baton->anchor_status->entry->url;
+  else
+    {
+      const char *url;
+      struct dir_baton *pb = db->parent_baton;
+      svn_wc_status_t *status = apr_hash_get (pb->statii, db->name,
+                                              APR_HASH_KEY_STRING);
+      if (status && status->entry)
+        return status->entry->url;
+
+      url = find_dir_url (pb, pool);
+      if (url)
+        return svn_path_url_add_component (url, db->name, pool);
+      else
+        return NULL;
+    }
+}
 
 /* Return a boolean answer to the question "Is STATUS something that
    should be reported?".  EB is the edit baton. */
@@ -1324,7 +1350,7 @@ delete_entry (const char *path,
   if (apr_hash_get (entries, hash_key, APR_HASH_KEY_STRING))
     SVN_ERR (tweak_statushash (db->statii, eb->adm_access,
                                full_path, kind == svn_node_dir,
-                               svn_wc_status_deleted, 0));
+                               svn_wc_status_deleted, 0, NULL));
 
   /* Mark the parent dir -- it lost an entry (unless that parent dir
      is the root node and we're not supposed to report on the root
@@ -1332,7 +1358,7 @@ delete_entry (const char *path,
   if (db->parent_baton && (! *eb->target))
     SVN_ERR (tweak_statushash (db->parent_baton->statii, eb->adm_access,
                                db->path, kind == svn_node_dir,
-                               svn_wc_status_modified, 0));
+                               svn_wc_status_modified, 0, NULL));
 
   return SVN_NO_ERROR;
 }
@@ -1420,11 +1446,13 @@ close_directory (void *dir_baton,
          that tweak_statushash won't do anything if repos_text_status
          is not svn_wc_status_added. */
       if (pb)
+        /* NOTE: When we add directory locking, we need to find a directory
+           lock here. */
         SVN_ERR (tweak_statushash (pb->statii,
                                    eb->adm_access,
                                    db->path, TRUE,
                                    repos_text_status,
-                                   repos_prop_status));
+                                   repos_prop_status, NULL));
     }
 
   /* Handle this directory's statuses, and then note in the parent
@@ -1571,6 +1599,7 @@ close_file (void *file_baton,
   struct file_baton *fb = file_baton;
   enum svn_wc_status_kind repos_text_status;
   enum svn_wc_status_kind repos_prop_status;
+  svn_lock_t *repos_lock = NULL;
   
   /* If nothing has changed, return. */
   if (! (fb->added || fb->prop_changed || fb->text_changed))
@@ -1579,8 +1608,23 @@ close_file (void *file_baton,
   /* If this is a new file, add it to the statushash. */
   if (fb->added)
     {
+      const char *url;
       repos_text_status = svn_wc_status_added;
       repos_prop_status = fb->prop_changed ? svn_wc_status_added : 0;
+
+      if (fb->edit_baton->repos_locks)
+        {
+          url = find_dir_url (fb->dir_baton, pool);
+          if (url)
+            {
+              url = svn_path_url_add_component (url, fb->name, pool);
+              repos_lock = apr_hash_get
+                (fb->edit_baton->repos_locks,
+                 svn_path_uri_decode (url +
+                                      strlen (fb->edit_baton->repos_root),
+                                      pool), APR_HASH_KEY_STRING);
+            }
+        }
     }
   else
     {
@@ -1592,7 +1636,8 @@ close_file (void *file_baton,
                              fb->edit_baton->adm_access,
                              fb->path, FALSE,
                              repos_text_status,
-                             repos_prop_status));
+                             repos_prop_status,
+                             repos_lock));
 
   return SVN_NO_ERROR;
 }
