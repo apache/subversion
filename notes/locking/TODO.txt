@@ -16,7 +16,9 @@ MUST HAVE
   repository will retain a lock on a (now) nonexistent path.  One
   argument is that this is OK as long as we can delete the lock via a
   URL.  The other argument is that, on a delete, the lock should be
-  unconditionally deleted.3
+  unconditionally deleted.
+
+  Writing test right now. (fitz)
 
 * subversion/libsvn_wc/status.c:982
     /* ### lundblad TODO: Make sure lock info is added. */ (lundblad)
