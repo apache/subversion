@@ -264,12 +264,14 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
 static void
 take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
 {
-  /* Inherits parent's revision if don't have a revision of one's own,
-     unless this is a subdirectory. */
+  /* Inherits parent's revision if doesn't have a revision of one's
+     own, unless this is a subdirectory. */
   if ((dst->revision == SVN_INVALID_REVNUM) && (dst->kind != svn_node_dir))
     dst->revision = src->revision;
   
-  if (! dst->ancestor)
+  /* Inherits parent's ancestor if doesn't have an ancestor of one's
+     own and is not marked for addition */
+  if ((! dst->ancestor) && (! (dst->state & SVN_WC_ENTRY_ADDED)))
     {
       svn_string_t *name = apr_hash_get (dst->attributes,
                                          SVN_WC_ENTRY_ATTR_NAME,
@@ -346,6 +348,7 @@ normalize_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
                   svn_string_createf (pool, "%ld", entry->revision));
   
   /* Ancestor. */
+  if ((entry->ancestor) && (entry->ancestor->len))
   apr_hash_set (entry->attributes,
                 SVN_WC_ENTRY_ATTR_ANCESTOR, APR_HASH_KEY_STRING,
                 entry->ancestor);
@@ -579,6 +582,9 @@ svn_wc__entries_write (apr_hash_t *entries,
   apr_file_t *outfile = NULL;
   apr_status_t apr_err;
   apr_hash_index_t *hi;
+  svn_wc_entry_t *this_dir;
+  svn_string_t *this_dir_name = 
+    svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
 
   /* Open entries file for writing. */
   err = svn_wc__open_adm_file (&outfile, path, SVN_WC__ADM_ENTRIES,
@@ -594,17 +600,63 @@ svn_wc__entries_write (apr_hash_t *entries,
                          svn_string_create (SVN_XML_NAMESPACE, pool),
                          NULL);
 
+  /* Get a copy of the "this dir" entry for comparison purposes. */
+  this_dir = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, 
+                           APR_HASH_KEY_STRING);
+
   for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       apr_size_t keylen;
       void *val;
       svn_wc_entry_t *this_entry;
+      svn_string_t *name;
 
       /* Get the entry and make sure its attributes are up-to-date. */
       apr_hash_this (hi, &key, &keylen, &val);
       this_entry = val;
+
+      /* Normalize this entry */
       normalize_entry (this_entry, pool);
+
+      /* We only want to write out 'revision' and 'ancestor' for the
+         following things:
+         1. the current directory's "this dir" entry.
+         2. an entry marked for addition (which should have invalid
+            revnum and 
+         2. the revision or ancestor is valid and different than that of
+         the "this dir" entry.
+         3. the entry is a new addition
+      */
+      name = svn_string_ncreate ((const char *)key, keylen, pool);
+      if (! svn_string_compare (this_dir_name, name))
+        {
+          svn_string_t *this_path;
+
+          /* If this is not the "this dir" entry, and the revision is
+             the same as that of the "this dir" entry, don't write it
+             out at all. */
+          if (this_entry->revision == this_dir->revision)
+            apr_hash_set (this_entry->attributes, 
+                          SVN_WC_ENTRY_ATTR_REVISION,
+                          APR_HASH_KEY_STRING,
+                          NULL);
+
+          /* If this is not the "this dir" entry, and the revision is
+             the same as that of the "this dir" entry, don't write it
+             out at all. */
+          if (this_entry->ancestor)
+            {
+              this_path = svn_string_dup (this_dir->ancestor, pool);
+              svn_path_add_component (this_path, name,
+                                      svn_path_repos_style);
+              if (svn_string_compare (this_path, this_entry->ancestor))
+                apr_hash_set (this_entry->attributes, 
+                              SVN_WC_ENTRY_ATTR_ANCESTOR,
+                              APR_HASH_KEY_STRING,
+                              NULL);
+            }
+        }
 
       /* Append the entry onto the accumulating string. */
       svn_xml_make_open_tag_hash (&bigstr,
@@ -1039,7 +1091,8 @@ svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
   svn_wc_entry_t *dupentry = apr_pcalloc (pool, sizeof(*dupentry));
 
   dupentry->revision   = entry->revision;
-  dupentry->ancestor   = svn_string_dup (entry->ancestor, pool);
+  if (entry->ancestor)
+    dupentry->ancestor = svn_string_dup (entry->ancestor, pool);
   dupentry->kind       = entry->kind;
   dupentry->state      = entry->state;
   dupentry->text_time  = entry->text_time;
