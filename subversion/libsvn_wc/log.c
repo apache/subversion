@@ -1218,6 +1218,13 @@ svn_wc_cleanup (const char *path,
                                            SVN_WC__ADM_LOG, NULL);
   svn_boolean_t locked;
   enum svn_node_kind kind;
+  svn_boolean_t is_wc;
+
+  SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
+  if (! is_wc)
+    return svn_error_createf
+      (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, pool,
+       "svn_wc_cleanup: %s is not a working copy directory", path);
 
   /* Recurse on versioned subdirs first, oddly enough. */
   SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));
