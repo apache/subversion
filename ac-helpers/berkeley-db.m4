@@ -105,9 +105,9 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
     # Linking directly to the .la is broken with --disable-shared
     # because Berkeley db does not seem to generate a .la library.
     if test "$enable_shared" = "yes"; then
-	DB_VERSION_MAJOR=`sed -n s/DB_VERSION_MAJOR=//p db/dist/RELEASE`
-	DB_VERSION_MINOR=`sed -n s/DB_VERSION_MINOR=//p db/dist/RELEASE`
-	SVN_DB_LIBS="$dbdir/libdb-$DB_VERSION_MAJOR.$DB_VERSION_MINOR.la"
+        DB_VERSION_MAJOR=`sed -n 's/#define[ 	]\+DB_VERSION_MAJOR[ 	]\+//p' db/dist/db.h`
+        DB_VERSION_MINOR=`sed -n 's/#define[ 	]\+DB_VERSION_MINOR[ 	]\+//p' db/dist/db.h`
+        SVN_DB_LIBS="$dbdir/libdb-$DB_VERSION_MAJOR.$DB_VERSION_MINOR.la"
     else
         SVN_DB_LIBS="-L$dbdir -ldb" # ignoring $db_libname here on purpose.
     fi
