@@ -67,27 +67,6 @@ svn_wc__ensure_wc (svn_string_t *path,
 /*** Closing commits. ***/
 
 svn_error_t *
-svn_wc_close_commit (svn_string_t *path,
-                     svn_revnum_t new_revision,
-                     apr_hash_t *targets,
-                     apr_pool_t *pool)
-{
-  svn_error_t *err;
-
-  err = svn_wc__log_commit (path, targets, new_revision, pool);
-  if (err)
-    return err;
-
-  err = svn_wc__cleanup (path, targets, 0, pool);
-  if (err)
-    return err;
-
-  return SVN_NO_ERROR;
-}
-
-
-
-svn_error_t *
 svn_wc_set_revision (void *baton,
                      svn_string_t *target,
                      svn_revnum_t new_revnum)

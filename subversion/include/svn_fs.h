@@ -627,6 +627,30 @@ svn_error_t *svn_fs_merge (const char **conflict_p,
                            apr_pool_t *pool);
 
 
+
+/* Compare the nodes ROOT1:PATH1 and ROOT2:PATH2, and determine if
+   they are "different".  Return the answer in IS_DIFFERENT.
+
+   We define two nodes to be "different" if:
+
+       - they are different node types, or
+
+       - if both files, they have different node-revision-ids, or 
+ 
+       - if both dirs, they have different entry lists.
+
+   (Note that there is a small chance of getting a false positive: two
+   different node-rev-ids don't *necessarily* have different contents.
+   But right now it's not worth doing byte-for-byte comparisons.  This
+   problem will go away when we have deltified storage.) */
+svn_error_t *svs_fs_is_different (int *is_different,
+                                  svn_fs_root_t *root1,
+                                  const char *path1,
+                                  svn_fs_root_t *root2,
+                                  const char *path2,
+                                  apr_pool_t *pool);
+                                  
+
 
 /* Directories.  */
 

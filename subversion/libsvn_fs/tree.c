@@ -651,6 +651,100 @@ svn_fs_is_file (int *is_file,
 }
 
 
+/* Helper for svn_fs_is_different.  Return KIND of node at ROOT:PATH. */
+static svn_error_t *
+get_node_kind (enum svn_node_kind *kind,
+               svn_fs_root_t *root,
+               const char *path,
+               apr_pool_t *pool)
+{
+  int is_dir, is_file;
+
+  SVN_ERR (svn_fs_is_dir (&is_dir, root, path, pool));
+  if (is_dir)
+    *kind = svn_node_dir;
+  else
+    {
+      SVN_ERR (svn_fs_is_file (&is_file, root, path, pool));
+      if (is_file)
+        *kind = svn_node_file;
+      else
+        return 
+          svn_error_createf 
+          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+           "Node for `%s' seems to be neither file nor dir.", path);
+    }
+  
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svs_fs_is_different (int *is_different,
+                     svn_fs_root_t *root1,
+                     const char *path1,
+                     svn_fs_root_t *root2,
+                     const char *path2,
+                     apr_pool_t *pool)
+{
+
+  enum svn_node_kind kind1, kind2;
+
+  /* Easy check:  are they different node types? */
+  SVN_ERR (get_node_kind (&kind1, root1, path1, pool));
+  SVN_ERR (get_node_kind (&kind2, root2, path2, pool));
+  
+  if (kind1 != kind2)
+    {
+      *is_different = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  /* If they're both files... */
+  if (kind1 == svn_node_file)
+    {
+      svn_fs_id_t *id1, *id2;
+      
+      /* ... compare node_rev_ids.  (todo: later on, check the stored
+         delta to prevent false positives.) */
+      SVN_ERR (svn_fs_node_id (&id1, root1, path1, pool));
+      SVN_ERR (svn_fs_node_id (&id2, root2, path2, pool));
+
+      if (svn_fs_id_eq (id1, id2))
+        *is_different = FALSE;
+      else 
+        *is_different = TRUE;
+
+      return SVN_NO_ERROR;
+    }
+
+
+  /* If they're both dirs... */
+  if (kind1 == svn_node_dir)
+    {
+      /* ... compare dirent hashes.  (steal code from
+         libsvn_wc/props.c?).  For each dirent match, check to see if
+         the dirent node-rev-ids have any relationship to one
+         another. */
+
+
+
+
+
+
+
+
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
+
+
+
 struct node_prop_args
 {
   svn_string_t **value_p;
