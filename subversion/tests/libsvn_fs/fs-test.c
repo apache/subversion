@@ -356,9 +356,8 @@ call_functions_with_unopened_fs (const char **msg,
   }
 
   {
-    svn_stringbuf_t *ignored;
-    svn_string_t unused;
-    err = svn_fs_revision_prop (&ignored, fs, 0, &unused, pool);
+    svn_string_t *ignored;
+    err = svn_fs_revision_prop (&ignored, fs, 0, NULL, pool);
     SVN_ERR (check_no_fs_error (err, pool));
   }
 
@@ -675,7 +674,7 @@ revision_props (const char **msg,
 {
   svn_fs_t *fs;
   apr_hash_t *proplist;
-  svn_stringbuf_t *value;
+  svn_string_t *value;
   int i;
   svn_string_t s1;
   svn_string_t s2;
@@ -725,8 +724,7 @@ revision_props (const char **msg,
   SVN_ERR (svn_fs_change_rev_prop (fs, 0, &s1, NULL, pool));
 
   /* Copy a property's value into a new property. */
-  SET_STR (&s1, "color");
-  SVN_ERR (svn_fs_revision_prop (&value, fs, 0, &s1, pool));
+  SVN_ERR (svn_fs_revision_prop (&value, fs, 0, "color", pool));
 
   SET_STR (&s1, "flower");
   s2.data = value->data;
@@ -785,7 +783,7 @@ transaction_props (const char **msg,
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   apr_hash_t *proplist;
-  svn_stringbuf_t *value;
+  svn_string_t *value;
   svn_revnum_t after_rev;
   int i;
   svn_string_t s1;
@@ -838,8 +836,7 @@ transaction_props (const char **msg,
   SVN_ERR (svn_fs_change_txn_prop (txn, &s1, NULL, pool));
 
   /* Copy a property's value into a new property. */
-  SET_STR (&s1, "color");
-  SVN_ERR (svn_fs_txn_prop (&value, txn, &s1, pool));
+  SVN_ERR (svn_fs_txn_prop (&value, txn, "color", pool));
 
   SET_STR (&s1, "flower");
   s2.data = value->data;
@@ -950,7 +947,7 @@ node_props (const char **msg,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
   apr_hash_t *proplist;
-  svn_stringbuf_t *value;
+  svn_string_t *value;
   int i;
   svn_string_t s1;
   svn_string_t s2;
@@ -1006,8 +1003,8 @@ node_props (const char **msg,
   SVN_ERR (svn_fs_change_node_prop (txn_root, "music.txt", &s1, NULL, pool));
 
   /* Copy a property's value into a new property. */
-  SET_STR (&s1, "Best Sound Designer");
-  SVN_ERR (svn_fs_node_prop (&value, txn_root, "music.txt", &s1, pool));
+  SVN_ERR (svn_fs_node_prop (&value, txn_root, "music.txt",
+                             "Best Sound Designer", pool));
 
   SET_STR (&s1, "Biggest Cakewalk Fanatic");
   s2.data = value->data;
@@ -4029,8 +4026,7 @@ commit_date (const char **msg,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
   svn_revnum_t rev;
-  svn_string_t propname;
-  svn_stringbuf_t *datestamp;
+  svn_string_t *datestamp;
   apr_time_t before_commit, at_commit, after_commit;
 
   *msg = "commit datestamps";
@@ -4054,16 +4050,15 @@ commit_date (const char **msg,
   after_commit = apr_time_now ();
 
   /* Get the datestamp of the commit. */
-  propname.data = SVN_PROP_REVISION_DATE;
-  propname.len  = strlen (SVN_PROP_REVISION_DATE);
-  SVN_ERR (svn_fs_revision_prop (&datestamp, fs, rev, &propname, pool));
+  SVN_ERR (svn_fs_revision_prop (&datestamp, fs, rev, SVN_PROP_REVISION_DATE,
+                                 pool));
 
   if (datestamp == NULL)
     return svn_error_create
       (SVN_ERR_FS_GENERAL, 0, NULL, pool,
        "failed to get datestamp of committed revision");
 
-  at_commit = svn_time_from_string (datestamp);
+  at_commit = svn_time_from_nts (datestamp->data);
 
   if (at_commit < before_commit)
     return svn_error_create

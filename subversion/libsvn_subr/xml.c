@@ -172,6 +172,15 @@ svn_xml_escape_stringbuf (svn_stringbuf_t **outstr,
 
 
 void
+svn_xml_escape_string (svn_stringbuf_t **outstr,
+                       const svn_string_t *string,
+                       apr_pool_t *pool)
+{
+  return xml_escape (outstr, string->data, string->len, pool);
+}
+
+
+void
 svn_xml_escape_nts (svn_stringbuf_t **outstr,
                     const char *string,
                     apr_pool_t *pool)
@@ -184,6 +193,15 @@ void
 svn_xml_unescape_stringbuf (svn_stringbuf_t **outstr,
                             const svn_stringbuf_t *string,
                             apr_pool_t *pool)
+{
+  return xml_unescape (outstr, string->data, string->len, pool);
+}
+
+
+void
+svn_xml_unescape_string (svn_stringbuf_t **outstr,
+                         const svn_string_t *string,
+                         apr_pool_t *pool)
 {
   return xml_unescape (outstr, string->data, string->len, pool);
 }

@@ -46,10 +46,10 @@ static const char *timestamp_format =
 "%s %d %s %d %02d:%02d:%02d.%06d (day %03d, dst %d, gmt_off %06d)";
 
 
-svn_stringbuf_t *
-svn_time_to_string (apr_time_t t, apr_pool_t *pool)
+const char *
+svn_time_to_nts (apr_time_t t, apr_pool_t *pool)
 {
-  char *t_cstr;
+  const char *t_cstr;
   apr_exploded_time_t exploded_time;
 
   /* We toss apr_status_t return value here -- for one thing, caller
@@ -78,7 +78,7 @@ svn_time_to_string (apr_time_t t, apr_pool_t *pool)
                          exploded_time.tm_isdst,
                          exploded_time.tm_gmtoff);
 
-  return svn_stringbuf_create (t_cstr, pool);
+  return t_cstr;
 }
 
 
@@ -120,13 +120,13 @@ find_matching_string (char *str, const char strings[][4])
 
 
 apr_time_t
-svn_time_from_string (svn_stringbuf_t *tstr)
+svn_time_from_nts (const char *data)
 {
   apr_exploded_time_t exploded_time;
   char wday[4], month[4];
   apr_time_t when;
 
-  sscanf (tstr->data,
+  sscanf (data,
           timestamp_format,
           wday,
           &exploded_time.tm_mday,

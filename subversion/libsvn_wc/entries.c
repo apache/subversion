@@ -305,7 +305,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                it.  */
           }
         else
-          entry->text_time = svn_time_from_string (text_timestr);
+          entry->text_time = svn_time_from_nts (text_timestr->data);
         
         *modify_flags |= SVN_WC__ENTRY_MODIFY_TEXT_TIME;
       }
@@ -323,7 +323,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                it.  */
           }
         else
-          entry->prop_time = svn_time_from_string (prop_timestr);
+          entry->prop_time = svn_time_from_nts (prop_timestr->data);
         
         *modify_flags |= SVN_WC__ENTRY_MODIFY_PROP_TIME;
       }
@@ -569,15 +569,17 @@ normalize_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
   /* Timestamps */
   if (entry->text_time)
     {
+      const char *timestr = svn_time_to_nts (entry->text_time, pool);
       apr_hash_set (entry->attributes,
                     SVN_WC_ENTRY_ATTR_TEXT_TIME, APR_HASH_KEY_STRING,
-                    svn_time_to_string (entry->text_time, pool));
+                    svn_stringbuf_create (timestr, pool));
     }
   if (entry->prop_time)
     {
+      const char *timestr = svn_time_to_nts (entry->prop_time, pool);
       apr_hash_set (entry->attributes,
                     SVN_WC_ENTRY_ATTR_PROP_TIME, APR_HASH_KEY_STRING,
-                    svn_time_to_string (entry->prop_time, pool));
+                    svn_stringbuf_create (timestr, pool));
     }
 }
 

@@ -520,9 +520,9 @@ svn_error_t *svn_fs_list_transactions (char ***names_p,
 /* Set *VALUE_P to the value of the property named PROPNAME on
    transaction TXN.  If TXN has no property by that name, set *VALUE_P
    to zero.  Allocate the result in POOL.  */
-svn_error_t *svn_fs_txn_prop (svn_stringbuf_t **value_p,
+svn_error_t *svn_fs_txn_prop (svn_string_t **value_p,
                               svn_fs_txn_t *txn,
-                              const svn_string_t *propname,
+                              const char *propname,
                               apr_pool_t *pool);
 
 
@@ -719,10 +719,10 @@ svn_error_t *svn_fs_node_id (svn_fs_id_t **id_p,
 /* Set *VALUE_P to the value of the property named PROPNAME of PATH in
    ROOT.  If the node has no property by that name, set *VALUE_P to
    zero.  Allocate the result in POOL.  */
-svn_error_t *svn_fs_node_prop (svn_stringbuf_t **value_p,
+svn_error_t *svn_fs_node_prop (svn_string_t **value_p,
                                svn_fs_root_t *root,
                                const char *path,
-                               const svn_string_t *propname,
+                               const char *propname,
                                apr_pool_t *pool);
    
 
@@ -1114,14 +1114,11 @@ svn_error_t *svn_fs_youngest_rev (svn_revnum_t *youngest_p,
 
 /* Set *VALUE_P to the value of the property named PROPNAME on
    revision REV in the filesystem FS.  If REV has no property by that
-   name, set *VALUE_P to zero.  Allocate the result in POOL.
-
-   ### todo (issue #406): svn_string_t, not svn_stringbuf_t.  And the
-   name could be const char *.  */
-svn_error_t *svn_fs_revision_prop (svn_stringbuf_t **value_p,
+   name, set *VALUE_P to zero.  Allocate the result in POOL.  */
+svn_error_t *svn_fs_revision_prop (svn_string_t **value_p,
                                    svn_fs_t *fs,
                                    svn_revnum_t rev,
-                                   const svn_string_t *propname,
+                                   const char *propname,
                                    apr_pool_t *pool);
 
 

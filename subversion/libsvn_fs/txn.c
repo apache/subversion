@@ -137,17 +137,12 @@ svn_fs_begin_txn (svn_fs_txn_t **txn_p,
      automatically overwritten with a revision datestamp. */
   {
     svn_string_t propname, date;
-    svn_stringbuf_t *date_buf;
 
     propname.data = SVN_PROP_REVISION_DATE;
     propname.len  = strlen (SVN_PROP_REVISION_DATE);
 
-    /* ### kff todo: hmmm.  This is rather annoying.  Perhaps the
-       svn_time_* functions should just use svn_string_t, instead of
-       stringbuf?  Or even... gasp... const char *?  */
-    date_buf = svn_time_to_string (apr_time_now(), pool);
-    date.data = date_buf->data;
-    date.len = date_buf->len;
+    date.data = svn_time_to_nts (apr_time_now(), pool);
+    date.len = strlen (date.data);
 
     SVN_ERR (svn_fs_change_txn_prop (txn, &propname, &date, pool));
   }

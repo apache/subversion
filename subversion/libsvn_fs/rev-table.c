@@ -262,10 +262,10 @@ svn_fs_youngest_rev (svn_revnum_t *youngest_p,
 
 
 struct revision_prop_args {
-  svn_stringbuf_t **value_p;
+  svn_string_t **value_p;
   svn_fs_t *fs;
   svn_revnum_t rev;
-  const svn_string_t *propname;
+  const char *propname;
 };
 
 
@@ -292,14 +292,14 @@ txn_body_revision_prop (void *baton,
 
 
 svn_error_t *
-svn_fs_revision_prop (svn_stringbuf_t **value_p,
+svn_fs_revision_prop (svn_string_t **value_p,
                       svn_fs_t *fs,
                       svn_revnum_t rev,
-                      const svn_string_t *propname,
+                      const char *propname,
                       apr_pool_t *pool)
 {
   struct revision_prop_args args;
-  svn_stringbuf_t *value;
+  svn_string_t *value;
 
   SVN_ERR (svn_fs__check_fs (fs));
 

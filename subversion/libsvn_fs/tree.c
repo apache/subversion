@@ -800,10 +800,10 @@ svn_fs_is_different (int *is_different,
 
 struct node_prop_args
 {
-  svn_stringbuf_t **value_p;
+  svn_string_t **value_p;
   svn_fs_root_t *root;
   const char *path;
-  const svn_string_t *propname;
+  const char *propname;
 };
 
 
@@ -827,14 +827,14 @@ txn_body_node_prop (void *baton,
 
 
 svn_error_t *
-svn_fs_node_prop (svn_stringbuf_t **value_p,
+svn_fs_node_prop (svn_string_t **value_p,
                   svn_fs_root_t *root,
                   const char *path,
-                  const svn_string_t *propname,
+                  const char *propname,
                   apr_pool_t *pool)
 {
   struct node_prop_args args;
-  svn_stringbuf_t *value;
+  svn_string_t *value;
 
   args.value_p  = &value;
   args.root     = root;
