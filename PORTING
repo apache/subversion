@@ -124,25 +124,24 @@ Irix 6.5 IP 27:
      Tester:     Blair Zajac <blair@orcaware.com>
      Notes:      compiled with gcc 3.0.3
 
-Mac OS X 10.1.2:
+Mac OS X 10.1.5:
      Client:     Build OK
-     Filesystem: ?
-     Last Check: 15 Feb 2002, revision 1302
+     Filesystem: Build OK
+     Last Check: 30 Jul 2002, revision 2793
      Testers:    Garrett Rooney <rooneg@electricjellyfish.net>,
-                 Max Horn <max@quendi.de>
+                 Max Horn <max@quendi.de>,
+                 Hamilton Link <helink@sandia.gov>
      Notes:      
-     -- Garrett says: "you have to give it --disable-shared or it
-        errors out while building neon".  Benjamin Reed followed up, see
-        http://subversion.tigris.org/servlets/ReadMsg?msgId=59618&listName=dev
-        offering a Neon fix; then Joe Orton followed up saying that
-        latest libtool may take care of this for us, see
-        http://subversion.tigris.org/servlets/ReadMsg?msgId=59622&listName=dev
+     -- As of lately, autoconf 2.53, libtool 1.42, automake 1.5 (for aclocal),
+        and texinfo 4.0 are needed to complete the entire server build process.
+        Suitable versions are not provided with OS X yet. Use fink and see
+        http://www.apache.org/~piers/macosx/ to gather them all. Additional
+        system-neutral dependancies are listed in the INSTALL file.
+     -- As of 0.21.3, neon appears to build with or without --enable-shared,
+        but currently the svn build process later gives a warning without it.
      -- These comments from Brian Fitzpatrick <fitz@apple.com> regarding
         some older builds may also still apply:
           + haven't tried to build apr with dso enabled.
-          + haven't gotten around to building the svn server either.
-          + needs autoconf 2.52 (get from GNU)
-          + needs libtool 1.4.2 (get from Darwin CVS repository)
 
 NetBSD (1.5, 1.6_BETA, -CURRENT):
      Client:     Build OK, Check OK.
