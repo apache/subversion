@@ -142,7 +142,7 @@ enum svn_wc_schedule_t
   svn_wc_schedule_normal,       /* Nothing special here */
   svn_wc_schedule_add,          /* Slated for addition */
   svn_wc_schedule_delete,       /* Slated for deletion */
-  svn_wc_schedule_replace,      /* Slated for replacement (delete + add) */
+  svn_wc_schedule_replace       /* Slated for replacement (delete + add) */
 };
 
 
