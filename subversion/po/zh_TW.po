@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-09-08 21:54+0200\n"
-"PO-Revision-Date: 2004-09-08 21:44+0200\n"
+"POT-Creation-Date: 2004-09-12 22:05+0800\n"
+"PO-Revision-Date: 2004-09-12 22:05+0800\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Traditional Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1562,8 +1562,8 @@ msgstr "性質 '%s' 於修訂版 %ld 設為新值\n"
 
 #: clients/cmdline/propedit-cmd.c:145
 #, c-format
-msgid "No changes to property '%s' on revision %ld"
-msgstr "性質 '%s' 於修訂版 %ld 沒有更動"
+msgid "No changes to property '%s' on revision %ld\n"
+msgstr "性質 '%s' 於修訂版 %ld 沒有更動\n"
 
 #: clients/cmdline/propedit-cmd.c:153
 #, c-format
@@ -1773,8 +1773,8 @@ msgstr "Framing error in pipe protocol"
 msgid "Read error in pipe"
 msgstr "管道發生讀取錯誤"
 
-#: include/svn_error_codes.h:220 libsvn_subr/cmdline.c:311
-#: libsvn_subr/cmdline.c:328
+#: include/svn_error_codes.h:220 libsvn_subr/cmdline.c:316
+#: libsvn_subr/cmdline.c:333
 msgid "Write error"
 msgstr "寫入錯誤"
 
@@ -2407,12 +2407,12 @@ msgstr "無法使用外部編輯器"
 msgid "Something is wrong with the log message's contents"
 msgstr "紀錄訊息的內容有不妥的地方"
 
-#: libsvn_client/add.c:343
+#: libsvn_client/add.c:348
 #, c-format
 msgid "Error during recursive add of '%s'"
 msgstr "進行 '%s' 的遞迴式新增時發生錯誤"
 
-#: libsvn_client/add.c:353
+#: libsvn_client/add.c:358
 #, c-format
 msgid "Can't close directory '%s'"
 msgstr "無法關閉目錄 '%s'"
@@ -2534,27 +2534,27 @@ msgstr "無法以非遞迴式送交目錄刪除"
 msgid "Unknown entry kind for '%s'"
 msgstr "未知的項目類型 '%s'"
 
-#: libsvn_client/commit_util.c:236
+#: libsvn_client/commit_util.c:237
 #, c-format
 msgid "Entry '%s' has unexpectedly changed special status"
 msgstr "項目 '%s' 不預期地變換特殊狀態"
 
-#: libsvn_client/commit_util.c:286
+#: libsvn_client/commit_util.c:287
 #, c-format
 msgid "Aborting commit: '%s' remains in conflict"
 msgstr "中止送交: '%s' 仍處於衝突狀態"
 
-#: libsvn_client/commit_util.c:342
+#: libsvn_client/commit_util.c:343
 #, c-format
 msgid "Did not expect '%s' to be a working copy root"
 msgstr "並未預期 '%s' 是工作複本的根目錄"
 
-#: libsvn_client/commit_util.c:359
+#: libsvn_client/commit_util.c:360
 #, c-format
 msgid "Commit item '%s' has copy flag but no copyfrom URL\n"
 msgstr "送交項目 '%s' 有複製旗標, 但是沒有 copyfrom URL\n"
 
-#: libsvn_client/commit_util.c:606 libsvn_client/commit_util.c:731
+#: libsvn_client/commit_util.c:607 libsvn_client/commit_util.c:732
 #: libsvn_client/copy.c:1079 libsvn_client/delete.c:66
 #: libsvn_client/diff.c:1206 libsvn_client/diff.c:1856
 #: libsvn_client/diff.c:2291 libsvn_client/diff.c:2396
@@ -2569,17 +2569,17 @@ msgstr "送交項目 '%s' 有複製旗標, 但是沒有 copyfrom URL\n"
 msgid "'%s' is not under version control"
 msgstr "'%s' 尚未納入版本控制"
 
-#: libsvn_client/commit_util.c:609
+#: libsvn_client/commit_util.c:610
 #, c-format
 msgid "Entry for '%s' has no URL"
 msgstr "'%s' 的項目沒有 URL"
 
-#: libsvn_client/commit_util.c:640
+#: libsvn_client/commit_util.c:641
 #, c-format
 msgid "'%s' is scheduled for addition within unversioned parent"
 msgstr "'%s' 於未納入版本控制的父路徑中被排入新增時程"
 
-#: libsvn_client/commit_util.c:660
+#: libsvn_client/commit_util.c:661
 #, c-format
 msgid ""
 "Entry for '%s' is marked as 'copied' but is not itself scheduled\n"
@@ -2589,7 +2589,7 @@ msgstr ""
 "'%s' 項目被標示為 '已複製', 但是本身尚未排入新增時程. 也許你送交的\n"
 "目標是位於未納入版本控制 (或尚未納入) 的目錄中?"
 
-#: libsvn_client/commit_util.c:700
+#: libsvn_client/commit_util.c:701
 #, c-format
 msgid ""
 "'%s' is not under version control and is not part of the commit, yet its "
@@ -2597,17 +2597,17 @@ msgid ""
 msgstr ""
 "'%s' 尚未納入版本控制, 也不是送交的一部份, 但是它的子路徑 '%s' 是送交的一部份"
 
-#: libsvn_client/commit_util.c:780
+#: libsvn_client/commit_util.c:781
 #, c-format
 msgid "Cannot commit both '%s' and '%s' as they refer to the same URL"
 msgstr "無法送交 '%s' 與 '%s', 因為它們都指向同一個 URL"
 
-#: libsvn_client/commit_util.c:924
+#: libsvn_client/commit_util.c:925
 #, c-format
 msgid "Commit item '%s' has copy flag but no copyfrom URL"
 msgstr "送交項目 '%s' 有複製旗標, 但是沒有 copyfrom URL"
 
-#: libsvn_client/commit_util.c:928
+#: libsvn_client/commit_util.c:929
 #, c-format
 msgid "Commit item '%s' has copy flag but an invalid revision"
 msgstr "送交項目 '%s' 有複製旗標, 但是修訂版無效"
@@ -4687,7 +4687,7 @@ msgstr "自來源檔案庫移除多餘的紀錄檔"
 # XXX: This doesn't look right.  Wait for a while.
 #: svnadmin/main.c:269
 msgid ""
-"wait instead of exit if the the repository is in\n"
+"wait instead of exit if the repository is in\n"
 "                             use by another process"
 msgstr ""
 
