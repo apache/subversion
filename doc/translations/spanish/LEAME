@@ -251,6 +251,16 @@ Reglas mínimas para traductores
   falta incluir el parche en el email) para recibir comentarios
   sobre la misma y si es necesario, modificarla.
 
+- A la hora de enviar cambios al repositorio, el mensaje de log
+  debe estar en inglés y comenzar con "Book Spanish.". Ejemplo:
+
+    Book Spanish. Translated two paragraphs.
+
+  Si se nos olvida, siempre se puede modificar el log de un cambio
+  antiguo con el subcomando propset. Ejemplo:
+
+    svn propedit svn:log -r113 --revprop
+
 A medida que salgan cosas, ser irán poniendo aquí.
 
 
