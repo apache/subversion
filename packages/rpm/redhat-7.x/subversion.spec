@@ -1,6 +1,6 @@
 %define apache_version 2.0.48-0.1
 %define neon_version 0.24.7
-%define swig_version 1.3.19
+%define swig_version 1.3.19-3
 %define apache_dir /usr/local/apache2
 # If you don't have 360+ MB of free disk space or don't want to run checks then
 # set make_*_check to 0.
@@ -105,6 +105,10 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sun Mar 27 2005 David Summers <david@summersoft.fay.ar.us> r13714
+- Changed swig-1.3.19-3 RPM package to co-exist with swig package that comes
+  with Redhat.
+
 * Sun Mar 27 2005 David Summers <david@summersoft.fay.ar.us> r13711
 - Take out "static build" feature that never actually worked as intended.
 
@@ -390,7 +394,7 @@ mv "${vsn_file}.tmp" "$vsn_file"
 rm -rf apr apr-util neon
 
 %configure \
-	--with-swig \
+	--with-swig=/usr/bin/swig-1.3.19 \
 	--with-python=/usr/bin/python2.2 \
 	--with-apxs=%{apache_dir}/bin/apxs \
 	--with-apr=%{apache_dir}/bin/apr-config \
