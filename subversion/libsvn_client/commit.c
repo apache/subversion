@@ -36,6 +36,7 @@
 #include "svn_path.h"
 #include "svn_test.h"
 #include "svn_io.h"
+#include "svn_time.h"
 
 #include "client.h"
 

@@ -34,6 +34,7 @@
 #include "svn_path.h"
 #include "svn_io.h"
 #include "svn_opt.h"
+#include "svn_time.h"
 #include "client.h"
 
 
@@ -42,12 +43,13 @@
 
 
 svn_error_t *
-svn_client_checkout (const char *URL,
-                     const char *path,
-                     const svn_opt_revision_t *revision,
-                     svn_boolean_t recurse,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool)
+svn_client__checkout_internal (const char *URL,
+                               const char *path,
+                               const svn_opt_revision_t *revision,
+                               svn_boolean_t recurse,
+                               svn_boolean_t timestamp_sleep,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *pool)
 {
   const svn_delta_editor_t *checkout_editor;
   void *checkout_edit_baton;
@@ -109,7 +111,8 @@ svn_client_checkout (const char *URL,
                                  checkout_editor,
                                  checkout_edit_baton);
       /* Sleep to ensure timestamp integrity. */
-      svn_sleep_for_timestamps ();
+      if (timestamp_sleep)
+        svn_sleep_for_timestamps ();
       
       if (err)
         return err;
@@ -124,4 +127,16 @@ svn_client_checkout (const char *URL,
   SVN_ERR (svn_client__handle_externals (traversal_info, FALSE, ctx, pool));
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_checkout (const char *URL,
+                     const char *path,
+                     const svn_opt_revision_t *revision,
+                     svn_boolean_t recurse,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
+{
+  return svn_client__checkout_internal (URL, path, revision, recurse, TRUE,
+                                        ctx, pool);
 }

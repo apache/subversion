@@ -240,30 +240,30 @@ svn_error_t * svn_client__can_delete (const char *path,
 
 /*** Checkout and update ***/
 
+/* Update a working copy PATH to REVISION.  If TIMESTAMP_SLEEP is TRUE this
+   function will sleep before returning to ensure timestamp integrity,
+   otherwise it will return without sleeping and the caller is responsible
+   for ensuring timestamp integrity.  */
 svn_error_t *
-svn_client__checkout_internal (const svn_delta_editor_t *before_editor,
-                               void *before_edit_baton,
-                               const svn_delta_editor_t *after_editor,
-                               void *after_edit_baton,
-                               const char *path,
-                               const char *xml_src,
-                               const char *ancestor_path,
-                               svn_revnum_t ancestor_revision,
-                               svn_boolean_t recurse,
-                               apr_pool_t *pool);
-
-
-svn_error_t *
-svn_client__update_internal (const svn_delta_editor_t *before_editor,
-                             void *before_edit_baton,
-                             const svn_delta_editor_t *after_editor,
-                             void *after_edit_baton,
-                             const char *path,
-                             const char *xml_src,
-                             svn_revnum_t ancestor_revision,
+svn_client__update_internal (const char *path,
+                             const svn_opt_revision_t *revision,
                              svn_boolean_t recurse,
+                             svn_boolean_t timestamp_sleep,
+                             svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
+/* Checkout into PATH a working copy of URL at REVISION.  If
+   TIMESTAMP_SLEEP is TRUE this function will sleep before returning to
+   ensure timestamp integrity, otherwise it will return without sleeping
+   and the caller is responsible for ensuring timestamp integrity.  */
+svn_error_t *
+svn_client__checkout_internal (const char *URL,
+                               const char *path,
+                               const svn_opt_revision_t *revision,
+                               svn_boolean_t recurse,
+                               svn_boolean_t timestamp_sleep,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
 

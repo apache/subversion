@@ -366,11 +366,12 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                                  svn_wc_notify_state_unknown,
                                  SVN_INVALID_REVNUM);
 
-      SVN_ERR (svn_client_checkout
+      SVN_ERR (svn_client__checkout_internal
                (new_item->url,
                 path,
                 &(new_item->revision),
                 TRUE, /* recurse */
+                FALSE, /* timestamp_sleep */
                 ib->ctx,
                 ib->pool));
     }
@@ -423,11 +424,12 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                                  svn_wc_notify_state_unknown,
                                  SVN_INVALID_REVNUM);
 
-      SVN_ERR (svn_client_checkout
+      SVN_ERR (svn_client__checkout_internal
                (new_item->url,
                 path,
                 &(new_item->revision),
                 TRUE, /* recurse */
+                FALSE, /* timestamp_sleep */
                 ib->ctx,
                 ib->pool));
     }
@@ -450,11 +452,12 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                                  SVN_INVALID_REVNUM);
 
       /* Try an update, but if no such dir, then check out instead. */
-      err = svn_client_update (path,
-                               &(new_item->revision),
-                               TRUE, /* recurse */
-                               ib->ctx,
-                               ib->pool);
+      err = svn_client__update_internal (path,
+                                         &(new_item->revision),
+                                         TRUE, /* recurse */
+                                         FALSE, /* timestamp_sleep */
+                                         ib->ctx,
+                                         ib->pool);
 
       if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND))
         {
@@ -472,11 +475,12 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
             SVN_ERR (svn_io_make_dir_recursively (parent, ib->pool));
           }
           
-          SVN_ERR (svn_client_checkout
+          SVN_ERR (svn_client__checkout_internal
                    (new_item->url,
                     path,
                     &(new_item->revision),
                     TRUE, /* recurse */
+                    FALSE, /* timestamp_sleep */
                     ib->ctx,
                     ib->pool));
         }
