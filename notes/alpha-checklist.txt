@@ -24,7 +24,7 @@ Outline Mode:
   ESTIMATE: 1 programmer week for most of us to get props over DAV
             working, less time if gstein or joe orton does it.
 
-Things that depend on (non-wc) props:
+  STATUS: Ben is working on this as we speak.
 
 *** autodetection of text/binary types / keyword sub / newline translation
 
@@ -73,16 +73,8 @@ Things that depend on (non-wc) props:
   ESTIMATE: .5 to 1 programmer week.  Not difficult to code at all,
             just a matter of getting properties interpreted right.
 
-** Many working copy bugs & theoretical issues (sussman and cmpilato)
-
-*** need many tests for tricky multi-target commits and updates
-
-Ben is working on these, has a list from cmpilato of the new
-functionality that needs testing.
-
-  ESTIMATE: working on now, Ben sez definitely done before 6 July 2001
-
-** new 'libsvn_repos':  utils built on *top* of libsvn_fs
+  STATUS: Karl is waiting on Ben's props-over-DAV work, then will do
+          (though volunteers welcome!)
 
 *** cross-process read/write lock function for DB_RUN_RECOVERY. (gstein)
 
@@ -110,21 +102,8 @@ functionality that needs testing.
 
   ESTIMATE: 2 programmer weeks.
 
-** fs deltification (brane, kfogel, anyone else)
-
-  This may also get us efficient file streaming; if it does not, an
-  issue will be opened.  Since it's not critical to functionality,
-  though, it's not an item on this list.
-
-  ESTIMATE: kfogel, brane working on right now, needs a couple of
-  weeks, consider us allocated through 18th July, sigh.
-
-** keep node-rev-id strings short  (kfogel)
-
-   Solution is known, easy to code.  See the long "### kff todo"
-   comment right after the recursive call in tree.c:merge().
-
-   ESTIMATE: 1 day
+  STATUS: Mike and Karl working on right now, see
+          subversion/libsvn_repos/hooks.txt.
 
 ** cvs2svn (gstein?  Thom Wood?  Someone else)
 
@@ -153,18 +132,6 @@ functionality that needs testing.
 
   ESTIMATE: ?  Need to start discussion on the list about this.
 
-** 'svn cleanup' command (kfogel)
-
-  Often when svn segfaults, it leaves the working copy locked.
-  Normally this is no big deal, we just blow away the working copy and
-  do the test over again.
-
-  But in M3, this is not an option!  We need graceful crash recovery
-  -- we need to be able to run 'svn cleanup', which will run orphaned
-  logs and remove locks.
-
-  ESTIMATE: .5 programmer weeks
-
 * ALPHA items
 
   Alpha is when we're ready to release 1.0, except that we've got lots
@@ -174,14 +141,9 @@ functionality that needs testing.
 
 *** dir_delta use 'copyfrom' args    /* cmpilato, in progres */
 
-*** copy properties  
+*** Deltification and undeltification performance improvements.
 
-We need better history tracking when making cheap copies in the fs, else we lose copy history information.
-
-   ANSWER: We will record filesystem copies by setting a property on
-           the copy which indicates the revision and path of the
-           original. The property will be named svn:copied-from.
-
+    See issue #414.
 
 ** 'svn cp' and friends  (cmpilato and sussman)
 
@@ -226,11 +188,11 @@ subdirs, or hide them under a cvs-like interface?
    removed from various structures and take a pool from the caller
    (may involve changing arguments, etc).
 
-** internalized diff/patch library:  (sussman has started)
+** internalized diff/patch library:  (on hold)
 
-** user documentation (kfogel will research/look for volunteers)
+** user documentation (no one responded to call for volunteers)
 
-** UTF-8 preparations (jimb)
+** UTF-8 preparations (jimb?)
 
 ** change ra_local commit-style (sussman & gstein will discuss)
 
