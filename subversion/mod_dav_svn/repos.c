@@ -776,20 +776,19 @@ static dav_resource *dav_svn_create_private_resource(
   return &comb->res;
 }
 
-static void log_warning(apr_pool_t *pool, void *baton, const char *fmt, ...)
+static void log_warning(void *baton, svn_error_t *err)
 {
   request_rec *r = baton;
-  va_list va;
-  const char *s;
 
-  va_start(va, fmt);
-  s = apr_pvsprintf(r->pool, fmt, va);
-  va_end(va);
+  /* ### hmm. the FS is cleaned up at request cleanup time. "r" might
+     ### not really be valid. we should probably put the FS into a
+     ### subpool to ensure it gets cleaned before the request.
 
-  ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r, "%s", s);
+     ### is there a good way to create and use a subpool for all
+     ### of our functions ... ??
+  */
 
-  /* Ignore the `pool' parameter, we got our pool from the baton. */
-  (void) pool;
+  ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r, "%s", err->message);
 }
 
 

@@ -41,12 +41,16 @@
 
 /* Generic Berkeley DB error handler function. */
 static void
-berkeley_error_handler (const char *errpfx,
-                                    char *msg)
+berkeley_error_handler (const char *errpfx, char *msg)
 {
   fprintf (stderr, "%s%s\n", errpfx ? errpfx : "", msg);
 }
 
+static void
+fs_warning_handler (void *baton, svn_error_t *err)
+{
+  svn_handle_warning(stderr, err);
+}
 
 svn_error_t *
 svn_test__fs_new (svn_fs_t **fs_p, apr_pool_t *pool)
@@ -57,7 +61,7 @@ svn_test__fs_new (svn_fs_t **fs_p, apr_pool_t *pool)
                              "Couldn't alloc a new fs object.");
 
   /* Provide a warning function that just dumps the message to stderr.  */
-  svn_fs_set_warning_func (*fs_p, svn_handle_warning, stderr);
+  svn_fs_set_warning_func (*fs_p, fs_warning_handler, NULL);
 
   return SVN_NO_ERROR;
 }

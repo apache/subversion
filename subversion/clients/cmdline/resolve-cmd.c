@@ -73,7 +73,7 @@ svn_cl__resolve (apr_getopt_t *os,
                                 subpool);
       if (err)
         {
-          svn_handle_warning (err->pool, stderr, err->message);
+          svn_handle_warning (stderr, err);
           svn_error_clear (err);
         }
       
