@@ -1104,9 +1104,12 @@ thread resolves on its own (because the patch gets committed, or
 because there is consensus that the patch doesn't need to be applied,
 or whatever) then no further action need be taken.  But if the thread
 fades out without any clear decision, then the patch needs to be saved
-in the issue tracker, by filing a new issue of type 'PATCH',
-summarizing the patch and the responses to it, and pointing to the
-relevant mailing list archive URLs.
+in the issue tracker.  This means that a summary of any discussion
+threads around that patch, and links to relevant mailing list
+archives, will be added to some issue in the tracker.  For a patch
+which addresses an existing issue tracker item, the patch is saved to
+that item.  Otherwise, a new issue of type 'PATCH' is filed, and the
+patch is saved to that new issue.
 
 The Patch Manager needs a basic technical understanding of Subversion,
 and the ability to skim a thread and get a rough understanding of
