@@ -17,10 +17,10 @@ http://svn.collab.net/repos/svn/tags/0.34.0
 ##                                                                 ##
 #####################################################################
 
- Please see the notes/repos_upgrade_HOWTO document located  for
- documentation on migrating pre-0.34.0 repos to 0.34.0.
+ Please see notes/repos_upgrade_HOWTO for documentation on migrating
+ pre-0.34.0 repos to 0.34.0.
 
- Also located here:
+ That document is also located here:
     http://svn.collab.net/repos/svn/trunk/notes/repos_upgrade_HOWTO
 
  User-visible changes:
@@ -294,10 +294,10 @@ Version 0.28.0 (released 27 August 2003, rev 6894, branches/release-0.28)
 ##                                                                 ##
 #####################################################################
 
- Please see the notes/repos_upgrade_HOWTO document located  for
- documentation on migrating pre-.28 repos to revision .28.
+ Please see notes/repos_upgrade_HOWTO for documentation on migrating
+ pre-0.28.0 repos to 0.28.0.
 
- Also located here:
+ That document is also located here:
     http://svn.collab.net/repos/svn/trunk/notes/repos_upgrade_HOWTO
 
  User-visible changes:
