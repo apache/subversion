@@ -122,6 +122,7 @@ svn_cl__propdel (apr_getopt_t *os,
                       opt_state->recursive ? " (recursively) " : " ",
                       target_native);
             }
+          SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
         }
       svn_pool_destroy (subpool);
     }

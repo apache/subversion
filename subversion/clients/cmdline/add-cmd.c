@@ -79,7 +79,7 @@ svn_cl__add (apr_getopt_t *os,
           else
             return err;
         }
-      
+      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
       svn_pool_clear (subpool);
     }
 

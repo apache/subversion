@@ -23,6 +23,7 @@
 /*** Includes. ***/
 
 #include "svn_wc.h"
+#include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_path.h"
@@ -43,6 +44,7 @@ svn_cl__mkdir (apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
+  apr_pool_t *subpool = svn_pool_create (pool);
   int i;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
@@ -58,20 +60,22 @@ svn_cl__mkdir (apr_getopt_t *os,
     svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
                           FALSE, pool);
 
-  for (i = 0; i < targets->nelts; i++)
+  for (i = 0; i < targets->nelts; i++, svn_pool_clear (subpool))
     {
       const char *target = ((const char **) (targets->elts))[i];
       svn_client_commit_info_t *commit_info = NULL;
 
       SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton), opt_state,
-                                           NULL, ctx->config, pool));
+                                           NULL, ctx->config, subpool));
       SVN_ERR (svn_cl__cleanup_log_msg
                (ctx->log_msg_baton, svn_client_mkdir (&commit_info, target, 
-                                                      ctx, pool)));
+                                                      ctx, subpool)));
 
       if (commit_info && ! opt_state->quiet)
         svn_cl__print_commit_info (commit_info);
+      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
     }
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
