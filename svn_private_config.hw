@@ -45,6 +45,8 @@
 #  define SVN_DIFF3_HAS_DIFF_PROGRAM_ARG 1
 #endif
 
+/* Location of the on-disk and in-repos templates. */
+#define SVN_TEMPLATE_ROOT_DIR "C:\\SVN\\templates"
 
 /* Path separator for local filesystem */
 #define SVN_PATH_LOCAL_SEPARATOR '\\'
