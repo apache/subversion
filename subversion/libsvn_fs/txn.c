@@ -112,6 +112,16 @@ svn_fs_begin_txn (svn_fs_txn_t **txn_p,
 
 
 svn_error_t *
+svn_fs_txn_name (char **name_p,
+                 svn_fs_txn_t *txn,
+                 apr_pool_t *pool)
+{
+  *name_p = apr_pstrdup (pool, txn->id);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_fs_close_txn (svn_fs_txn_t *txn)
 {
   /* Anything done with this transaction was written immediately to
@@ -161,3 +171,10 @@ svn_fs_open_txn_root (svn_fs_node_t **dir_p,
   return 0;
 }
 
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */
