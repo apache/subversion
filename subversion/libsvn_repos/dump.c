@@ -76,7 +76,7 @@ write_hash_to_stringbuf (apr_hash_t *hash,
 
       svn_stringbuf_appendbytes (*strbuf, "K ", 2);
 
-      sprintf (buf, "%ld%n", (long int) keylen, &bytes_used);
+      sprintf (buf, "%" APR_SSIZE_T_FMT "%n", keylen, &bytes_used);
       svn_stringbuf_appendbytes (*strbuf, buf, bytes_used);
       svn_stringbuf_appendbytes (*strbuf, "\n", 1);
 

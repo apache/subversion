@@ -34,8 +34,8 @@ print_delta_window (int quiet, svn_txdelta_window_t *window, FILE *stream)
   /* Try to estimate the size of the delta. */
   for (i = 0; i < window->num_ops; ++i)
     {
-      apr_off_t const offset = window->ops[i].offset;
-      apr_off_t const length = window->ops[i].length;
+      apr_size_t const offset = window->ops[i].offset;
+      apr_size_t const length = window->ops[i].length;
       if (window->ops[i].action_code == svn_txdelta_new)
         {
           len += 1;             /* opcode */
@@ -53,23 +53,23 @@ print_delta_window (int quiet, svn_txdelta_window_t *window, FILE *stream)
   if (quiet)
     return len;
   
-  fprintf (stream, "(WINDOW %ld", (long) len);
+  fprintf (stream, "(WINDOW %" APR_OFF_T_FMT, len);
   for (i = 0; i < window->num_ops; ++i)
     {
-      apr_off_t const offset = window->ops[i].offset;
-      apr_off_t const length = window->ops[i].length;
+      apr_size_t const offset = window->ops[i].offset;
+      apr_size_t const length = window->ops[i].length;
       switch (window->ops[i].action_code)
         {
         case svn_txdelta_source:
-          fprintf (stream, "\n  (SOURCE %ld %ld)",
-                   (long) offset, (long) length);
+          fprintf (stream, "\n  (SOURCE %" APR_SIZE_T_FMT
+                   " %" APR_SIZE_T_FMT ")", offset, length);
           break;
         case svn_txdelta_target:
-          fprintf (stream, "\n  (TARGET %ld %ld)",
-                   (long) offset, (long) length);
+          fprintf (stream, "\n  (TARGET %" APR_SIZE_T_FMT
+                   " %" APR_SIZE_T_FMT ")", offset, length);
           break;
         case svn_txdelta_new:
-          fprintf (stream, "\n  (INSERT %ld \"", (long) length);
+          fprintf (stream, "\n  (INSERT %" APR_SIZE_T_FMT " \"", length);
           for (tmp = offset; tmp < offset + length; ++tmp)
             {
               int const dat = window->new_data->data[tmp];
@@ -144,7 +144,7 @@ main (int argc, char **argv)
       }
   } while (window != NULL);
   svn_pool_destroy (wpool);
-  fprintf (stdout, "(LENGTH %ld +%d)\n", (long) len, count);
+  fprintf (stdout, "(LENGTH %" APR_OFF_T_FMT " +%d)\n", len, count);
 
   if (source_file)
     fclose (source_file);

@@ -110,9 +110,9 @@ my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
 
   if (window)
     str = svn_stringbuf_createf (pool,
-                              "[%s] window_handler (%ld ops)\n",
+                              "[%s] window_handler (%d ops)\n",
                               fb->dir_baton->edit_baton->editor_name->data,
-                              (long int) window->num_ops);
+                              window->num_ops);
   else
     str = svn_stringbuf_createf (pool,
                               "[%s] window_handler (EOT)\n",
@@ -131,9 +131,8 @@ my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
               {
                 str = svn_stringbuf_createf 
                   (pool,
-                   "(%ld) new text: length %ld\n",
-                   (long int) i,
-                   (long int) (window->ops[i].length));
+                   "(%d) new text: length %" APR_SIZE_T_FMT "\n",
+                   i, (window->ops[i].length));
             
                 SVN_ERR (print (fb->dir_baton->edit_baton,
                                 fb->indent_level + 2,
@@ -144,10 +143,9 @@ my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
               {
                 str = svn_stringbuf_createf 
                   (pool,
-                   "(%ld) source text: offset %ld, length %ld\n",
-                   (long int) i,
-                   (long int) window->ops[i].offset,
-                   (long int) window->ops[i].length);
+                   "(%d) source text: offset %" APR_SIZE_T_FMT
+                   ", length %" APR_SIZE_T_FMT "\n",
+                   i, window->ops[i].offset, window->ops[i].length);
 
                 SVN_ERR (print (fb->dir_baton->edit_baton,
                                 fb->indent_level + 2,
@@ -159,10 +157,9 @@ my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
               {
                 str = svn_stringbuf_createf
                   (pool,
-                   "(%ld) target text: offset %ld, length %ld\n",
-                   (long int) i,
-                   (long int) window->ops[i].offset,
-                   (long int) window->ops[i].length);
+                   "(%d) target text: offset %" APR_SIZE_T_FMT
+                   ", length %" APR_SIZE_T_FMT "\n",
+                   i,  window->ops[i].offset, window->ops[i].length);
             
                 SVN_ERR (print (fb->dir_baton->edit_baton,
                                 fb->indent_level + 2,
@@ -173,9 +170,7 @@ my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
             default:
               {
                 str = svn_stringbuf_createf
-                  (pool,
-                   "(%ld) unknown window type\n",
-                   (long int) i);
+                  (pool, "(%d) unknown window type\n", i);
             
                 SVN_ERR (print (fb->dir_baton->edit_baton,
                                 fb->indent_level + 2,
@@ -225,9 +220,11 @@ test_set_target_revision (void *edit_baton,
   svn_stringbuf_t *str;
 
   str = svn_stringbuf_createf (eb->pool,
-                            "[%s] set_target_revision (%ld)\n",
-                            eb->editor_name->data,
-                            (long int) target_revision);
+                               "[%s] set_target_revision (%"
+                               SVN_REVNUM_T_FMT
+                               ")\n",
+                               eb->editor_name->data,
+                               target_revision);
   SVN_ERR (print (eb, 0, str));
 
   if (eb->verbose)
@@ -262,8 +259,8 @@ test_open_root (void *edit_baton,
     return SVN_NO_ERROR;
 
   str = svn_stringbuf_createf (eb->pool, 
-                            "base_revision: %ld\n",
-                            (long int) base_revision);
+                            "base_revision: %" SVN_REVNUM_T_FMT "\n",
+                            base_revision);
   SVN_ERR (print (eb, d->indent_level, str));
   SVN_ERR (newline (eb));
 
@@ -314,16 +311,16 @@ add_or_open_dir (svn_stringbuf_t *name,
       SVN_ERR (print (d->edit_baton, d->indent_level, str));
 
       str = svn_stringbuf_createf (pd->edit_baton->pool,
-                                "copyfrom_revision: %ld\n",
-                                (long int) base_revision);
+                                "copyfrom_revision: %" SVN_REVNUM_T_FMT "\n",
+                                base_revision);
       SVN_ERR (print (d->edit_baton, d->indent_level, str));
 
     }
   else
     {
       str = svn_stringbuf_createf (pd->edit_baton->pool,
-                                "base_revision: %ld\n",
-                                (long int) base_revision);
+                                "base_revision: %" SVN_REVNUM_T_FMT "\n",
+                                base_revision);
       SVN_ERR (print (d->edit_baton, d->indent_level, str));
     }
 
@@ -489,15 +486,15 @@ add_or_open_file (svn_stringbuf_t *name,
       SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level, str));
 
       str = svn_stringbuf_createf (d->edit_baton->pool,
-                                "copyfrom_revision: %ld\n",
-                                (long int) base_revision);
+                                "copyfrom_revision: %" SVN_REVNUM_T_FMT "\n",
+                                base_revision);
       SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level, str));
     }
   else
     {
       str = svn_stringbuf_createf (d->edit_baton->pool,
-                                "base_revision: %ld\n",
-                                (long int) base_revision);
+                                "base_revision: %" SVN_REVNUM_T_FMT "\n",
+                                base_revision);
       SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level, str));
     }
 

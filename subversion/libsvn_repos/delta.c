@@ -497,7 +497,8 @@ delta_proplists (struct context *c,
           svn_fs_t *fs = svn_fs_root_fs (c->target_root);
 
           /* Transmit the committed-rev. */
-          cr_str = svn_string_createf (subpool, "%ld", committed_rev);
+          cr_str = svn_string_createf (subpool, "%" SVN_REVNUM_T_FMT,
+                                       committed_rev);
           SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_COMMITTED_REV, 
                               cr_str, subpool));
 

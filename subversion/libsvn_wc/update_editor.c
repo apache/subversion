@@ -776,7 +776,7 @@ close_directory (void *dir_baton)
 
       /* Set revision. */
       revision_str = apr_psprintf (db->pool,
-                                   "%ld",
+                                   "%" SVN_REVNUM_T_FMT,
                                    db->edit_baton->target_revision);
       
       /* Write a log entry to bump the directory's revision. */
@@ -1401,8 +1401,10 @@ svn_wc_install_file (const char *file_path,
                  old and new text-bases. */
               SVN_ERR (svn_wc_entry (&e, file_path_str, pool));
               assert (e != NULL);
-              oldrev_str = apr_psprintf (pool, ".r%ld", e->revision);
-              newrev_str = apr_psprintf (pool, ".r%ld", new_revision);
+              oldrev_str = apr_psprintf (pool, ".r%" SVN_REVNUM_T_FMT,
+                                         e->revision);
+              newrev_str = apr_psprintf (pool, ".r%" SVN_REVNUM_T_FMT,
+                                         new_revision);
               /* !?@*!#*!* bloody stringbufs */
               oldrev_strbuf = svn_stringbuf_create (oldrev_str, pool);
               newrev_strbuf = svn_stringbuf_create (newrev_str, pool);
@@ -1465,7 +1467,7 @@ svn_wc_install_file (const char *file_path,
     }
 
   /* Write log entry which will bump the revision number:  */
-  revision_str = apr_psprintf (pool, "%ld", new_revision);
+  revision_str = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, new_revision);
   svn_xml_make_open_tag (&log_accum,
                          pool,
                          svn_xml_self_closing,

@@ -94,7 +94,7 @@ set_any_props (svn_fs_root_t *root,
                                          &last_author,
                                          root, path, pool));
     
-  revision_str = apr_psprintf (pool, "%ld", committed_rev);
+  revision_str = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, committed_rev);
   apr_hash_set (props, SVN_PROP_ENTRY_COMMITTED_REV, 
                 strlen(SVN_PROP_ENTRY_COMMITTED_REV),
                 svn_stringbuf_create (revision_str, pool));

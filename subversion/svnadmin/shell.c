@@ -175,7 +175,7 @@ cr (svn_revnum_t rev,
   if ((rev < 0) || (rev > youngest))
     {
       /* non-fatal error */
-      printf ("There is no revision %ld.\n", (long int) rev);
+      printf ("There is no revision %" SVN_REVNUM_T_FMT ".\n", rev);
       return SVN_NO_ERROR;
     }
 
@@ -333,7 +333,8 @@ display_prompt (shcxt_t *shcxt)
 {
   /* this could be more sophisticated, or configurable, I suppose. */
 
-  printf ("<%ld: %s>$ ", (long int) shcxt->current_rev, shcxt->cwd->data);
+  printf ("<%" SVN_REVNUM_T_FMT ": %s>$ ",
+          shcxt->current_rev, shcxt->cwd->data);
   fflush (stdout);
 }
 

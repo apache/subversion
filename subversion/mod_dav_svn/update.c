@@ -238,7 +238,8 @@ static void add_helper(svn_boolean_t is_dir,
       qcopy = apr_xml_quote_string(child->pool, copyfrom_path->data, 1);
       send_xml(child->uc,
 	       "<S:add-%s name=\"%s\" "
-	       "copyfrom-path=\"%s\" copyfrom-rev=\"%ld\"/>" DEBUG_CR,
+	       "copyfrom-path=\"%s\" copyfrom-rev=\"%"
+               SVN_REVNUM_T_FMT "\"/>" DEBUG_CR,
                DIR_OR_FILE(is_dir),
 	       qname, qcopy, copyfrom_revision);
     }
@@ -262,7 +263,8 @@ static void open_helper(svn_boolean_t is_dir,
   qname = apr_xml_quote_string(child->pool, name, 1);
   /* ### Sat 24 Nov 2001: leaving this as "replace-" while clients get
      upgraded.  Will change to "open-" soon.  -kff */
-  send_xml(child->uc, "<S:replace-%s name=\"%s\" rev=\"%ld\">" DEBUG_CR,
+  send_xml(child->uc, "<S:replace-%s name=\"%s\" rev=\"%"
+           SVN_REVNUM_T_FMT "\">" DEBUG_CR,
 	   DIR_OR_FILE(is_dir), qname, base_revision);
 
   send_vsn_url(child);
@@ -339,7 +341,8 @@ static svn_error_t * upd_set_target_revision(void *edit_baton,
            DAV_XML_HEADER DEBUG_CR
 	   "<S:update-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
            "xmlns:D=\"DAV:\">" DEBUG_CR
-	   "<S:target-revision rev=\"%ld\"/>" DEBUG_CR, target_revision);
+	   "<S:target-revision rev=\"%" SVN_REVNUM_T_FMT "\"/>" DEBUG_CR,
+           target_revision);
 
   return NULL;
 }
@@ -364,7 +367,8 @@ static svn_error_t * upd_open_root(void *edit_baton,
 
   /* ### Sat 24 Nov 2001: leaving this as "replace-" while clients get
      upgraded.  Will change to "open-" soon.  -kff */
-  send_xml(uc, "<S:replace-directory rev=\"%ld\">" DEBUG_CR, base_revision);
+  send_xml(uc, "<S:replace-directory rev=\"%" SVN_REVNUM_T_FMT "\">" DEBUG_CR,
+           base_revision);
   send_vsn_url(b);
 
   return NULL;

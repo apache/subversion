@@ -212,7 +212,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   if (src_kind == svn_node_none)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
-       "path `%s' does not exist in revision `%ld'",
+       "path `%s' does not exist in revision `%" SVN_REVNUM_T_FMT "'",
        src_url->data, src_revnum);
 
   /* Figure out the basename that will result from this operation. */
@@ -651,7 +651,8 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
       if (SVN_IS_VALID_REVNUM (src_revnum))
         return svn_error_createf
           (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
-           "path `%s' not found in revision `%ld'", src_url->data, src_revnum);
+           "path `%s' not found in revision `%" SVN_REVNUM_T_FMT "'",
+           src_url->data, src_revnum);
       else
         return svn_error_createf
           (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,

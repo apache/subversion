@@ -56,7 +56,7 @@ get_time (apr_time_t *tm,
   if (! date_str)    
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-       "failed to find tm on revision %ld", rev);
+       "failed to find tm on revision %" SVN_REVNUM_T_FMT, rev);
 
   *tm = svn_time_from_nts (date_str->data);
 

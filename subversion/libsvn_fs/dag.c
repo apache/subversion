@@ -1706,7 +1706,8 @@ svn_fs__dag_copy (dag_node_t *to_node,
       /* Set the copy option in the new skel. */
       {
         skel_t *copy_opt;
-        char *rev_str = apr_psprintf (trail->pool, "%ld", from_rev);
+        char *rev_str = apr_psprintf (trail->pool, "%" SVN_REVNUM_T_FMT,
+                                      from_rev);
         
         copy_opt = svn_fs__make_empty_list (trail->pool);
         svn_fs__prepend (svn_fs__str_atom (from_path, trail->pool), copy_opt);

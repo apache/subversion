@@ -195,8 +195,8 @@ svn_fs__err_not_mutable (svn_fs_t *fs, svn_revnum_t rev, const char *path)
   return
     svn_error_createf
     (SVN_ERR_FS_NOT_MUTABLE, 0, 0, fs->pool,
-     "File is not mutable: filesystem `%s', revision %ld, path `%s'",
-     fs->path, rev, path);
+     "File is not mutable: filesystem `%s', revision %" SVN_REVNUM_T_FMT
+     ", path `%s'", fs->path, rev, path);
 }
 
 

@@ -204,7 +204,7 @@ svn_wc_process_committed (svn_stringbuf_t *path,
   apr_status_t apr_err;
   svn_stringbuf_t *log_parent, *logtags, *basename;
   apr_file_t *log_fp = NULL;
-  char *revstr = apr_psprintf (pool, "%ld", new_revnum);
+  char *revstr = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, new_revnum);
   svn_stringbuf_t *checksum = NULL;
 
   /* Set PATH's working revision to NEW_REVNUM; if REV_DATE and

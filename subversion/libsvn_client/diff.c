@@ -258,8 +258,10 @@ merge_file_changed (const char *mine,
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
   const char *target_label = ".working";
-  const char *left_label = apr_psprintf (subpool, ".r%ld", older_rev);
-  const char *right_label = apr_psprintf (subpool, ".r%ld", yours_rev);
+  const char *left_label = apr_psprintf (subpool, ".r%" SVN_REVNUM_T_FMT,
+                                         older_rev);
+  const char *right_label = apr_psprintf (subpool, ".r%" SVN_REVNUM_T_FMT,
+                                          yours_rev);
   svn_error_t *err;
 
   /* This callback is essentially no more than a wrapper around
@@ -736,8 +738,8 @@ do_single_file_merge (const svn_delta_editor_t *after_editor,
   
   /* Perform a 3-way merge between the temporary fulltexts and the
      current working file. */
-  oldrev_str = apr_psprintf (pool, ".r%ld", rev1);
-  newrev_str = apr_psprintf (pool, ".r%ld", rev2); 
+  oldrev_str = apr_psprintf (pool, ".r%" SVN_REVNUM_T_FMT, rev1);
+  newrev_str = apr_psprintf (pool, ".r%" SVN_REVNUM_T_FMT, rev2); 
   err = svn_wc_merge (tmpfile1->data, tmpfile2->data,
                       target_wcpath->data,
                       oldrev_str, newrev_str, ".working", pool);
@@ -1018,9 +1020,9 @@ do_diff (const apr_array_header_t *options,
               break;
             default:
               return svn_error_createf (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
-                                        "'%s' at rev %ld wasn't found "
-                                        "in repository.", path2->data,
-                                        end_revnum);
+                                        "'%s' at rev %" SVN_REVNUM_T_FMT
+                                        " wasn't found in repository.",
+                                        path2->data, end_revnum);
             }                   
         }
       else

@@ -90,7 +90,7 @@ svn_cl__info (apr_getopt_t *os,
         printf ("Repository: %s\n", entry->repos->data);
 
       if (SVN_IS_VALID_REVNUM (entry->revision))
-        printf ("Revision: %ld\n", entry->revision);
+        printf ("Revision: %" SVN_REVNUM_T_FMT "\n", entry->revision);
 
       switch (entry->kind) 
         {
@@ -140,14 +140,15 @@ svn_cl__info (apr_getopt_t *os,
             printf ("Copied From Url: %s\n", entry->copyfrom_url->data);
 
           if (SVN_IS_VALID_REVNUM (entry->copyfrom_rev))
-            printf ("Copied From Rev: %ld\n", entry->copyfrom_rev);
+            printf ("Copied From Rev: %" SVN_REVNUM_T_FMT "\n",
+                    entry->copyfrom_rev);
         }
 
       if (entry->cmt_author)
         printf ("Last Changed Author: %s\n", entry->cmt_author->data);
 
       if (SVN_IS_VALID_REVNUM (entry->cmt_rev))
-        printf ("Last Changed Rev: %ld\n", entry->cmt_rev);
+        printf ("Last Changed Rev: %" SVN_REVNUM_T_FMT "\n", entry->cmt_rev);
 
       if (entry->cmt_date)
         svn_cl__info_print_time (entry->cmt_date, "Last Changed Date");

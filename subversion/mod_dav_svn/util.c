@@ -81,11 +81,11 @@ const char *dav_svn_build_uri(const dav_svn_repos *repos,
                           href1, root_path, special_uri, href2);
 
     case DAV_SVN_BUILD_URI_BASELINE:
-      return apr_psprintf(pool, "%s%s/%s/bln/%ld%s",
+      return apr_psprintf(pool, "%s%s/%s/bln/%" SVN_REVNUM_T_FMT "%s",
                           href1, root_path, special_uri, revision, href2);
 
     case DAV_SVN_BUILD_URI_BC:
-      return apr_psprintf(pool, "%s%s/%s/bc/%ld/%s",
+      return apr_psprintf(pool, "%s%s/%s/bc/%" SVN_REVNUM_T_FMT "/%s",
                           href1, root_path, special_uri, revision, href2);
 
     case DAV_SVN_BUILD_URI_PUBLIC:

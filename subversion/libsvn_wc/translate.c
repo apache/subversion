@@ -911,7 +911,8 @@ expand_keyword (svn_wc_keywords_t *keywords,
       || (! strcasecmp (keyword, SVN_KEYWORD_REVISION_SHORT)))
     {
       if ((entry) && (entry->cmt_rev))
-        keywords->revision = svn_string_createf (pool, "%ld", entry->cmt_rev);
+        keywords->revision = svn_string_createf (pool, "%" SVN_REVNUM_T_FMT,
+                                                 entry->cmt_rev);
       else
         /* We found a recognized keyword, so it needs to be expanded
            no matter what.  If the expansion value isn't available,

@@ -309,7 +309,8 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       if (resource->baselined)
         {
           /* just the revision number for baselines */
-          value = apr_psprintf(p, "%ld", resource->info->root.rev);
+          value = apr_psprintf(p, "%" SVN_REVNUM_T_FMT,
+                               resource->info->root.rev);
         }
       else
         {
@@ -328,7 +329,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
             }
           
           /* Convert the revision into a quoted string */
-          s = apr_psprintf(p, "%ld", committed_rev);
+          s = apr_psprintf(p, "%" SVN_REVNUM_T_FMT, committed_rev);
           value = apr_xml_quote_string(p, s, 1);
         }
       break;
