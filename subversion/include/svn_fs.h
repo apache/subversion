@@ -69,8 +69,8 @@ typedef void (svn_fs_warning_callback_t) (void *baton, const char *fmt, ...);
    for server processes, since those may both be equivalent to
    /dev/null.  */
 void svn_fs_set_warning_func (svn_fs_t *fs,
-			      svn_fs_warning_callback_t *warning,
-			      void *warning_baton);
+                              svn_fs_warning_callback_t *warning,
+                              void *warning_baton);
 
 
 
@@ -132,7 +132,7 @@ svn_error_t *svn_fs_open_berkeley (svn_fs_t *fs, const char *env);
    before it begins handling any requests.  */
 
 svn_error_t *svn_fs_berkeley_recover (const char *path,
-				      apr_pool_t *pool);
+                                      apr_pool_t *pool);
 
 
 
@@ -272,341 +272,6 @@ svn_fs_id_t *svn_fs_parse_id (const char *data, apr_size_t len,
 svn_string_t *svn_fs_unparse_id (const svn_fs_id_t *id, apr_pool_t *pool);
 
 
-/* Nodes.  */
-
-/* An svn_fs_node_t object refers to a node in a filesystem.
-
-   Every node is reached via some path from the root directory of a
-   revision, or a transaction.  A node object remembers the revision
-   or transaction whose root it was reached from, and the path taken
-   to it.
-
-   If a node is reached via the root directory of some transaction T,
-   it can be changed.  This will make mutable clones of the node and
-   its parents, if they are not mutable already; the new mutable nodes
-   will be part of transaction T's tree.  */
-
-typedef struct svn_fs_node_t svn_fs_node_t;
-
-
-/* Free the node object NODE.  */
-void svn_fs_close_node (svn_fs_node_t *node);
-
-
-/* Return non-zero iff NODE is a...  */
-int svn_fs_node_is_dir (svn_fs_node_t *node);
-int svn_fs_node_is_file (svn_fs_node_t *node);
-
-
-/* Return the filesystem to which NODE belongs.  */
-svn_fs_t *svn_fs_get_node_fs (svn_fs_node_t *node);
-
-
-/* Return a copy of NODE's ID, allocated in POOL.
-
-   Note that NODE's ID may change over time.  If NODE is an immutable
-   node reached via the root directory of some transaction, and
-   changes to NODE or its children create a mutable clone of that
-   node, then this node object's ID is updated to refer to the mutable
-   clone.  */
-svn_fs_id_t *svn_fs_get_node_id (svn_fs_node_t *node,
-				 apr_pool_t *pool);
-
-
-/* If NODE was reached via the root of a transaction, return the ID of
-   that transaction, as a null-terminated string allocated in POOL.
-   Otherwise, return zero.  */
-const char *svn_fs_get_node_txn (svn_fs_node_t *node,
-				 apr_pool_t *pool);
-
-
-/* If NODE was reached via the root of a revision, return the number
-   of that revision.  Otherwise, return -1.  */
-svn_revnum_t svn_fs_get_node_rev (svn_fs_node_t *node);
-
-
-/* Set *VALUE_P to the value of the property of NODE named PROPNAME.
-   If NODE has no property by that name, set *VALUE_P to zero.
-   Allocate the result in POOL.  */
-svn_error_t *svn_fs_get_node_prop (svn_string_t **value_p,
-				   svn_fs_node_t *node,
-				   svn_string_t *propname,
-				   apr_pool_t *pool);
-   
-
-/* Set *TABLE_P to the entire property list of NODE, as an APR hash
-   table allocated in POOL.  The resulting table maps property names
-   to pointers to svn_string_t objects containing the property value.  */
-svn_error_t *svn_fs_get_node_proplist (apr_hash_t **table_p,
-				       svn_fs_node_t *node,
-				       apr_pool_t *pool);
-
-
-/* Change a node's property's value, or add/delete a property.
-   - NODE is the node whose property should change.  NODE must have
-     been reached via the root directory of some transaction, not of a
-     revision.
-   - NAME is the name of the property to change.
-   - VALUE is the new value of the property, or zero if the property should
-     be removed altogether.
-     
-   This creates new mutable clones of any immutable parent directories
-   of the node being changed.  If you have any other node objects that
-   refer to the cloned directories, that reached them via the same
-   transaction root as PARENT, this function updates those node
-   objects to refer to the new clones.
-
-   Do any necessary temporary allocation in POOL.  */
-svn_error_t *svn_fs_change_node_prop (svn_fs_node_t *node,
-				      svn_string_t *name,
-				      svn_string_t *value,
-				      apr_pool_t *pool);
-
-
-/* Given two nodes SOURCE and TARGET, and a common ancestor ANCESTOR,
-   modify TARGET to contain all the changes made between ANCESTOR and
-   SOURCE, as well as the changes made between ANCESTOR and TARGET.
-   TARGET must have been reached via the root directory of some
-   transaction, not of a revision.
-
-   SOURCE and TARGET may be directories; in that case, this function
-   recursively merges the directories' contents.
-
-   If there are differences between ANCESTOR and SOURCE that conflict
-   with changes between ANCESTOR and TARGET, this function returns an
-   SVN_ERR_FS_CONFLICT error, and sets *CONFLICT_P to the name of the
-   node which couldn't be merged, relative to TARGET.
-
-   This creates new mutable clones of any immutable parent directories
-   of TARGET.  If you have any other node objects that refer to the
-   cloned directories, that reached them via the same transaction root
-   as PARENT, this function updates those node objects to refer to the
-   new clones.
-
-   Do any necessary temporary allocation in POOL.  */
-svn_error_t *svn_fs_merge (const char **conflict_p,
-			   svn_fs_node_t *source,
-			   svn_fs_node_t *target,
-			   svn_fs_node_t *ancestor,
-			   apr_pool_t *pool);
-
-
-
-/* Directories.  */
-
-
-/* Here are the rules for directory entry names, and directory paths:
-
-   A directory entry name is a Unicode string encoded in UTF-8, and
-   may not contain the null character (U+0000).  The name should be in
-   Unicode canonical decomposition and ordering.  No directory entry
-   may be named '.', '..', or the empty string.  Given a directory
-   entry name which fails to meet these requirements, a filesystem
-   function returns an SVN_ERR_FS_PATH_SYNTAX error.
-
-   A directory path is a sequence of one or more directory entry
-   names, separated by slash characters (U+002f).  Sequences of two or
-   more consecutive slash characters are treated as if they were a
-   single slash.  If a path ends with a slash, it refers to the same
-   node it would without the slash, but that node must be a directory,
-   or else the function returns an SVN_ERR_FS_NOT_DIRECTORY error.
-
-   Paths may not start with a slash.  All directory paths in
-   Subversion are relative; all functions that expect a path as an
-   argument also expect a directory the path should be interpreted
-   relative to.  If a function receives a path that begins with a
-   slash, it will return an SVN_ERR_FS_PATH_SYNTAX error.  */
-
-
-/* Set *CHILD_P to a node object representing the existing node named
-   PATH relative to the directory PARENT.
-
-   Allocate the node object in POOL.  The node will be closed when
-   POOL is destroyed, if it hasn't already been closed explicitly with
-   `svn_fs_close_node'.  */
-svn_error_t *svn_fs_open_node (svn_fs_node_t **child_p,
-			       svn_fs_node_t *parent,
-			       const char *path,
-			       apr_pool_t *pool);
-
-
-/* The type of a Subversion directory entry.  */
-typedef struct svn_fs_dirent_t {
-
-  /* The name of this directory entry.  */
-  char *name;
-
-  /* The node revision ID it names.  */
-  svn_fs_id_t *id;
-
-} svn_fs_dirent_t;
-
-
-/* Set *TABLE_P to a newly allocated APR hash table containing the
-   entries of the directory DIR.  The keys of the table are entry
-   names, as byte strings; the table's values are pointers to
-   svn_fs_dirent_t structures.  Allocate the table and its contents in
-   POOL.  */
-svn_error_t *svn_fs_dir_entries (apr_hash_t **table_p,
-				 svn_fs_node_t *dir,
-				 apr_pool_t *pool);
-
-
-/* Create a new directory named PATH relative to PARENT.  The new
-   directory has no entries, and no properties.  PARENT must have been
-   reached via the root directory of some transaction, not of a
-   revision.
-
-   This creates new mutable clones of any immutable parent directories
-   of the new directory.  If you have any other node objects that
-   refer to the cloned directories, that reached them via the same
-   transaction root as PARENT, this function updates those node
-   objects to refer to the new clones.
-
-   Do any necessary temporary allocation in POOL.  */
-svn_error_t *svn_fs_make_dir (svn_fs_node_t *parent,
-			      const char *path,
-			      apr_pool_t *pool);
-			      
-
-/* Delete the node named PATH relative to directory PARENT.  If the
-   node being deleted is a directory, it must be empty.  PARENT must
-   have been reached via the root directory of some transaction, not
-   of a revision.
-
-   This creates new mutable clones of any immutable parent directories
-   of the directory being changed.  If you have any other node objects
-   that refer to the cloned directories, that reached them via the
-   same transaction root as PARENT, this function updates those node
-   objects to refer to the new clones.
-
-   Do any necessary temporary allocation in POOL.  */
-svn_error_t *svn_fs_delete (svn_fs_node_t *parent,
-			    const char *path,
-			    apr_pool_t *pool);
-
-
-/* Delete the node named PATH relative to directory PARENT.  If the
-   node being deleted is a directory, its contents will be deleted
-   recursively.  PARENT must have been reached via the root directory
-   of some transaction, not of a revision.
-
-   This creates new mutable clones of any immutable parent directories
-   of the directory being changed.  If you have any other node objects
-   that refer to the cloned directories, that reached them via the
-   same transaction root as PARENT, this function updates those node
-   objects to refer to the new clones.
-
-   Do any necessary temporary allocation in POOL.  */
-svn_error_t *svn_fs_delete_tree (svn_fs_node_t *parent,
-				 const char *path,
-				 apr_pool_t *pool);
-
-
-/* Move the node named OLDPATH relative to OLDPARENT to NEWPATH
-   relative to NEWPARENT.  OLDPARENT and NEWPARENT must have been
-   reached via the root directory of the same transaction.
-
-   This creates new mutable clones of any immutable parent directories
-   of the directories being changed.  If you have any other node objects
-   that refer to the cloned directories, that reached them via the
-   same transaction root as PARENT, this function updates those node
-   objects to refer to the new clones.
-
-   Do any necessary temporary allocation in POOL.  */
-svn_error_t *svn_fs_rename (svn_fs_node_t *old_parent,
-			    const char *old_path,
-			    svn_fs_node_t *new_parent,
-			    const char *new_path,
-			    apr_pool_t *pool);
-
-
-/* Create a a copy of CHILD named PATH relative to PARENT.  PARENT
-   must have been reached via the root directory of some transaction,
-   not of a revision.  If CHILD is a directory, this copies the tree it
-   refers to recursively.
-
-   At the moment, CHILD must be an immutable node.  (This makes the
-   implementation trivial: since CHILD is immutable, there is no
-   detectable difference between copying CHILD and simply adding a
-   reference to it.  However, there's no reason not to extend this to
-   mutable nodes --- it's just more (straightforward) code.)
-
-   This creates new mutable clones of any immutable parent directories
-   of the directory being changed.  If you have any other node objects
-   that refer to the cloned directories, that reached them via the
-   same transaction root as PARENT, this function updates those node
-   objects to refer to the new clones.
-
-   Do any necessary temporary allocation in POOL.  */
-svn_error_t *svn_fs_copy (svn_fs_node_t *parent,
-			  const char *path,
-			  svn_fs_node_t *child,
-			  apr_pool_t *pool);
-
-
-
-/* Files.  */
-
-
-/* Set *LENGTH_P to the length of the file FILE, in bytes.  Do any
-   necessary temporary allocation in POOL.  */
-svn_error_t *svn_fs_file_length (apr_off_t *length_p,
-				 svn_fs_node_t *file,
-				 apr_pool_t *pool);
-
-
-/* Set *CONTENTS to a readable generic stream will yield the contents
-   of FILE.  Allocate the stream in POOL.  You can only use *CONTENTS
-   for as long as the underlying filesystem is open.  */
-svn_error_t *svn_fs_file_contents (svn_stream_t **contents,
-				   svn_fs_node_t *file,
-				   apr_pool_t *pool);
-
-
-/* Free the file content baton BATON.  */
-void svn_fs_free_file_contents (void *baton);
-
-
-/* Create a new file named PATH relative to PARENT.  The file's
-   initial contents are the empty string, and it has no properties.
-   PARENT must have been reached via the root directory of some
-   transaction, not of a revision.
-
-   This creates new mutable clones of any immutable parent directories
-   of the new file.  If you have any other node objects that refer to
-   the cloned directories, that reached them via the same transaction
-   root as PARENT, this function updates those node objects to refer
-   to the new clones.
-
-   Do any necessary temporary allocation in POOL.  */
-svn_error_t *svn_fs_make_file (svn_fs_node_t *parent,
-			       const char *path,
-			       apr_pool_t *pool);
-
-
-/* Apply a text delta to the file FILE.  FILE must have been reached
-   via the root directory of some transaction, not of a revision.
-
-   Set *CONTENTS_P to a function ready to receive text delta windows
-   describing how to change the file's contents, relative to its
-   current contents.  Set *CONTENTS_BATON_P to a baton to pass to
-   *CONTENTS_P.
-
-   This creates new mutable clones of any immutable parent directories
-   of the file being changed.  If you have any other node objects
-   that refer to the cloned directories, that reached them via the
-   same transaction root as PARENT, this function updates those node
-   objects to refer to the new clones.
-
-   Do any necessary temporary allocation in POOL.  */
-svn_error_t *svn_fs_apply_textdelta (svn_txdelta_window_handler_t **contents_p,
-				     void **contents_baton_p,
-				     svn_fs_node_t *file,
-				     apr_pool_t *pool);
-
-
-
 /* Transactions.  */
 
 
@@ -643,19 +308,19 @@ svn_error_t *svn_fs_apply_textdelta (svn_txdelta_window_handler_t **contents_p,
 
 
    There are two kinds of nodes in the filesystem: mutable, and
-   immutable.  The committed revisions in the filesystem consist
-   entirely of immutable nodes, whose contents never change.  A
-   transaction in progress, which the user is still constructing, uses
-   mutable nodes for those nodes which have been changed so far, and
-   refers to immutable nodes for portions of the tree which haven't
-   been changed yet in this transaction.
+   immutable.  Revisions in the filesystem consist entirely of
+   immutable nodes, whose contents never change.  A transaction in
+   progress, which the user is still constructing, uses mutable nodes
+   for those nodes which have been changed so far, and refers to
+   immutable nodes from existing revisions for portions of the tree
+   which haven't been changed yet in that transaction.
 
-   Immutable nodes, as part of committed transactions, never refer to
-   mutable nodes, which are part of uncommitted transactions.  Mutable
-   nodes may refer to immutable nodes, or other mutable nodes.
+   Immutable nodes, as part of revisions, never refer to mutable
+   nodes, which are part of uncommitted transactions.  Mutable nodes
+   may refer to immutable nodes, or other mutable nodes.
 
-   Note that the terms "immutable" and "mutable" describe whether the
-   nodes are part of a committed filesystem revision or not --- not
+   Note that the terms "immutable" and "mutable" describe whether or
+   not the nodes have been changed as part of a transaction --- not
    the permissions on the nodes they refer to.  Even if you aren't
    authorized to modify the filesystem's root directory, you might be
    authorized to change some descendant of the root; doing so would
@@ -673,9 +338,9 @@ svn_error_t *svn_fs_apply_textdelta (svn_txdelta_window_handler_t **contents_p,
    the database.
 
    Every transaction is assigned a name.  You can open a transaction
-   by name, and resume work on it, or find out the name of an existing
-   transaction.  You can also list all the transactions currently
-   present in the database.
+   by name, and resume work on it, or find out the name of a
+   transaction you already have open.  You can also list all the
+   transactions currently present in the database.
 
    Transaction names are guaranteed to contain only letters (upper-
    and lower-case), digits, `-', and `.', from the ASCII character
@@ -688,19 +353,17 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
 
 
 /* Begin a new transaction on the filesystem FS, based on existing
-   revision REV.  Set *TXN_P to a pointer to the new transaction.  The
-   new transaction's root directory is a mutable successor to the root
-   directory of filesystem revision REV.  When committed, this
-   transaction will create a new revision.
+   revision REV.  Set *TXN_P to a pointer to the new transaction.
+   When committed, this transaction will create a new revision.
 
    Allocate the new transaction in POOL; when POOL is freed, the new
-   transaction will be closed (neither committed nor aborted).  If
-   POOL is zero, we use FS's internal pool.  You can also close the
-   transaction explicitly, using `svn_fs_close_txn'.  */
+   transaction will be closed (neither committed nor aborted).  You
+   can also close the transaction explicitly, using
+   `svn_fs_close_txn'.  */
 svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
-			       svn_fs_t *fs,
-			       svn_revnum_t rev,
-			       apr_pool_t *pool);
+                               svn_fs_t *fs,
+                               svn_revnum_t rev,
+                               apr_pool_t *pool);
 
 
 /* Commit the transaction TXN.  If the transaction conflicts with
@@ -710,10 +373,10 @@ svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
    revision number in *NEW_REV, and return zero.
 
    If the commit succeeds, it frees TXN, and any temporary resources
-   it holds.  Any node objects referring to formerly mutable nodes
-   that were a part of that transaction become invalid; performing any
-   operation on them other than closing them will produce an
-   SVN_ERR_FS_DEAD_TRANSACTION error.
+   it holds.  Any root objects (see below) referring to the root
+   directory of TXN become invalid; performing any operation on them
+   other than closing them will produce an SVN_ERR_FS_DEAD_TRANSACTION
+   error.
 
    If the commit fails, TXN is still valid; you can make more
    operations to resolve the conflict, or call `svn_fs_abort_txn' to
@@ -725,55 +388,346 @@ svn_error_t *svn_fs_commit_txn (svn_revnum_t *new_rev, svn_fs_txn_t *txn);
    and the filesystem is left unchanged.
 
    If the commit succeeds, it frees TXN, and any temporary resources
-   it holds.  Any node objects referring to formerly mutable nodes
-   that were a part of that transaction become invalid; performing any
-   operation on them other than closing them will produce an
-   SVN_ERR_FS_DEAD_TRANSACTION error.  */
+   it holds.  Any root objects referring to TXN's root directory
+   become invalid; performing any operation on them other than closing
+   them will produce an SVN_ERR_FS_DEAD_TRANSACTION error.  */
 svn_error_t *svn_fs_abort_txn (svn_fs_txn_t *txn);
-
-
-/* Close the transaction TXN.  This is neither an abort nor a commit;
-   the state of the transaction so far is stored in the filesystem, to
-   be resumed later.  */
-svn_error_t *svn_fs_close_txn (svn_fs_txn_t *txn);
-
-
-/* Set *DIR_P to the root directory of transaction TXN.
-
-   Allocate the node object in POOL.  The node will be closed when
-   POOL is destroyed, if it hasn't already been closed explicitly with
-   `svn_fs_close_node'.  */
-svn_error_t *svn_fs_open_txn_root (svn_fs_node_t **dir_p,
-				   svn_fs_txn_t *txn,
-				   apr_pool_t *pool);
 
 
 /* Set *NAME_P to the name of the transaction TXN, as a
    null-terminated string.  Allocate the name in POOL.  */
 svn_error_t *svn_fs_txn_name (char **name_p,
-			      svn_fs_txn_t *txn,
-			      apr_pool_t *pool);
+                              svn_fs_txn_t *txn,
+                              apr_pool_t *pool);
 
 
 /* Open the transaction named NAME in the filesystem FS.  Set *TXN to
    the transaction.
 
    Allocate the new transaction in POOL; when POOL is freed, the new
-   transaction will be closed (neither committed nor aborted).  If
-   POOL is zero, we use FS's internal pool.  You can also close the
-   transaction explicitly, using `svn_fs_close_txn'.  */
+   transaction will be closed (neither committed nor aborted).  You
+   can also close the transaction explicitly, using
+   `svn_fs_close_txn'.  */
 svn_error_t *svn_fs_open_txn (svn_fs_txn_t **txn,
-			      svn_fs_t *fs,
-			      const char *name,
-			      apr_pool_t *pool);
+                              svn_fs_t *fs,
+                              const char *name,
+                              apr_pool_t *pool);
+
+
+/* Close the transaction TXN.  This is neither an abort nor a commit;
+   the state of the transaction so far is stored in the filesystem, to
+   be opened again later.  */
+svn_error_t *svn_fs_close_txn (svn_fs_txn_t *txn);
 
 
 /* Set *NAMES_P to a null-terminated array of pointers to strings,
    containing the names of all the currently active transactions in
    the filesystem FS.  Allocate the array in POOL.  */
 svn_error_t *svn_fs_list_transactions (char ***names_p,
-				       svn_fs_t *fs,
-				       apr_pool_t *pool);
+                                       svn_fs_t *fs,
+                                       apr_pool_t *pool);
+
+
+/* Roots.  */
+
+/* An svn_fs_root_t object represents the root directory of some
+   revision or transaction in a filesystem.  To refer to particular
+   node, you provide a root, and a directory path relative that root.  */
+
+typedef struct svn_fs_root_t svn_fs_root_t;
+
+
+/* Set *ROOT_P to the root directory of revision REV in filesystem FS.
+   Allocate *ROOT_P in POOL.  */
+svn_error_t *svn_fs_revision_root (svn_fs_root_t *root_p,
+                                   svn_fs_t *fs,
+                                   svn_revnum_t rev,
+                                   apr_pool_t *pool);
+
+
+/* Set *ROOT_P to the root directory of TXN.  Allocate *ROOT_P in POOL.  */
+svn_error_t *svn_fs_txn_root (svn_fs_root_t *root_p,
+                              svn_fs_txn_t *txn,
+                              apr_pool_t *pool);
+
+
+/* Free the root directory ROOT.  Simply clearing or destroying the
+   pool ROOT was allocated in will have the same effect as calling
+   this function.  */
+void svn_fs_close_root (svn_fs_root_t *root);
+
+
+/* Return the filesystem to which ROOT belongs.  */
+svn_fs_t *svn_fs_root_fs (svn_fs_root_t *root);
+
+
+/* Return true iff ROOT is the root of a transaction/revision.  */
+int svn_fs_is_txn_root      (svn_fs_root_t *root);
+int svn_fs_is_revision_root (svn_fs_root_t *root);
+
+
+/* If ROOT is the root of a transaction, return a pointer to the name
+   of the transaction; otherwise, return zero.  The name is owned by
+   ROOT, and will be freed when ROOT is closed.  */
+const char *svn_fs_txn_root_name (svn_fs_root_t *root,
+                                  apr_pool_t *pool);
+
+
+/* If ROOT is the root of a revision, return the revision number.
+   Otherwise, return -1.  */
+svn_revnum_t svn_fs_revision_root_revision (svn_fs_root_t *root);
+
+
+
+/* Directory entry names and directory paths.  */
+
+/* Here are the rules for directory entry names, and directory paths:
+
+   A directory entry name is a Unicode string encoded in UTF-8, and
+   may not contain the null character (U+0000).  The name should be in
+   Unicode canonical decomposition and ordering.  No directory entry
+   may be named '.', '..', or the empty string.  Given a directory
+   entry name which fails to meet these requirements, a filesystem
+   function returns an SVN_ERR_FS_PATH_SYNTAX error.
+
+   A directory path is a sequence of one or more directory entry
+   names, separated by slash characters (U+002f).  Sequences of two or
+   more consecutive slash characters are treated as if they were a
+   single slash.  If a path ends with a slash, it refers to the same
+   node it would without the slash, but that node must be a directory,
+   or else the function returns an SVN_ERR_FS_NOT_DIRECTORY error.
+
+   Paths may not start with a slash.  All directory paths in
+   Subversion are relative; all functions that expect a path as an
+   argument also expect a directory the path should be interpreted
+   relative to.  If a function receives a path that begins with a
+   slash, it will return an SVN_ERR_FS_PATH_SYNTAX error.  */
+
+
+
+/* Operations appropriate to all kinds of nodes.  */
+
+
+/* Return non-zero iff PATH in ROOT is a...  */
+int svn_fs_is_dir  (svn_fs_root_t *root, const char *path);
+int svn_fs_is_file (svn_fs_root_t *root, const char *path);
+
+
+/* Set *ID_P to the node revision ID of PATH in ROOT, allocated in POOL.
+
+   If ROOT is the root of a transaction, keep in mind that other
+   changes to the transaction can change which node PATH refers to,
+   and even whether the path exists at all.  */
+svn_error_t *svn_fs_node_id (svn_fs_id_t **id_p,
+                             svn_fs_root_t *root,
+                             const char *path,
+                             apr_pool_t *pool);
+
+
+/* Set *VALUE_P to the value of the property named PROPNAME of PATH in
+   ROOT.  If the node has no property by that name, set *VALUE_P to
+   zero.  Allocate the result in POOL.  */
+svn_error_t *svn_fs_node_prop (svn_string_t **value_p,
+                               svn_fs_root_t *root,
+                               const char *path,
+                               svn_string_t *propname,
+                               apr_pool_t *pool);
+   
+
+/* Set *TABLE_P to the entire property list of PATH in ROOT, as an APR
+   hash table allocated in POOL.  The resulting table maps property
+   names to pointers to svn_string_t objects containing the property
+   value.  */
+svn_error_t *svn_fs_node_proplist (apr_hash_t **table_p,
+                                   svn_fs_root_t *root,
+                                   const char *path,
+                                   apr_pool_t *pool);
+
+
+/* Change a node's property's value, or add/delete a property.
+   - ROOT and PATH indicate the node whose property should change.
+     ROOT must be the root of a transaction, not the root of a revision.
+   - NAME is the name of the property to change.
+   - VALUE is the new value of the property, or zero if the property should
+     be removed altogether.
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_change_node_prop (svn_fs_root_t *root,
+                                      const char *path,
+                                      svn_string_t *name,
+                                      svn_string_t *value,
+                                      apr_pool_t *pool);
+
+
+/* Given nodes SOURCE and TARGET, and a common ancestor ANCESTOR,
+   modify TARGET to contain all the changes made between ANCESTOR and
+   SOURCE, as well as the changes made between ANCESTOR and TARGET.
+   TARGET_ROOT must be the root of a transaction, not a revision.
+
+   SOURCE, TARGET, and ANCESTOR are generally directories; this
+   function recursively merges the directories' contents.  If they are
+   files, this function simply returns an error whenever SOURCE,
+   TARGET, and ANCESTOR are all distinct node revisions.
+
+   If there are differences between ANCESTOR and SOURCE that conflict
+   with changes between ANCESTOR and TARGET, this function returns an
+   SVN_ERR_FS_CONFLICT error, and sets *CONFLICT_P to the name of the
+   node in TARGET which couldn't be merged.
+
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_merge (const char **conflict_p,
+                           svn_fs_root_t *source_root,
+                           const char *source_path,
+                           svn_fs_root_t *target_root,
+                           const char *target_path,
+                           svn_fs_root_t *ancestor_root,
+                           const char *ancestor_path,
+                           apr_pool_t *pool);
+
+
+
+/* Directories.  */
+
+
+/* The type of a Subversion directory entry.  */
+typedef struct svn_fs_dirent_t {
+
+  /* The name of this directory entry.  */
+  char *name;
+
+  /* The node revision ID it names.  */
+  svn_fs_id_t *id;
+
+} svn_fs_dirent_t;
+
+
+/* Set *TABLE_P to a newly allocated APR hash table containing the
+   entries of the directory at PATH in ROOT.  The keys of the table
+   are entry names, as byte strings, excluding the final null
+   character; the table's values are pointers to svn_fs_dirent_t
+   structures.  Allocate the table and its contents in POOL.  */
+svn_error_t *svn_fs_dir_entries (apr_hash_t **table_p,
+                                 svn_fs_root_t *root,
+                                 const char *path,
+                                 apr_pool_t *pool);
+
+
+/* Create a new directory named PATH in ROOT.  The new directory has
+   no entries, and no properties.  ROOT must be the root of a
+   transaction, not a revision.
+
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_make_dir (svn_fs_root_t *root,
+                              const char *path,
+                              apr_pool_t *pool);
+                              
+
+/* Delete the node named PATH in ROOT.  If the node being deleted is a
+   directory, it must be empty.  ROOT must be the root of a
+   transaction, not a revision.
+
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_delete (svn_fs_root_t *root,
+                            const char *path,
+                            apr_pool_t *pool);
+
+
+/* Delete the node named PATH in ROOT.  If the node being deleted is a
+   directory, its contents will be deleted recursively.  ROOT must be
+   the root of a transaction, not of a revision.
+
+   This function may be more efficient than making the equivalent
+   series of calls to svn_fs_delete, because it takes advantage of the
+   fact that, to delete an immutable subtree, shared with some
+   committed revision, you need only remove the directory entry.  The
+   dumb algorithm would recurse into the subtree and end up cloning
+   each non-empty directory it contains, only to delete it later.
+
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_delete_tree (svn_fs_root_t *root,
+                                 const char *path,
+                                 apr_pool_t *pool);
+
+
+/* Move the node named FROM to TO, both in ROOT.  ROOT must be the
+   root of a transaction, not a revision.
+
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_rename (svn_fs_root_t *root,
+                            const char *from,
+                            const char *to,
+                            apr_pool_t *pool);
+
+
+/* Create a a copy of FROM_PATH in FROM_ROOT named TO_PATH in TO_ROOT.
+   If FROM_PATH in FROM_ROOT is a directory, copy the tree it refers
+   to recursively.
+
+   TO_ROOT must be the root of a transaction; FROM_PATH must be the
+   root of a revision.  (Requiring FROM_PATH to be the root of a
+   revision makes the implementation trivial: there is no detectable
+   difference (modulo node revision ID's) between copying FROM and
+   simply adding a reference to it.  So the operation takes place in
+   constant time.  However, there's no reason not to extend this to
+   mutable nodes --- it's just more code.)
+
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_copy (svn_fs_root_t *from_root,
+                          const char *from_path,
+                          svn_fs_root_t *to_root,
+                          const char *to_path,
+                          apr_pool_t *pool);
+
+
+
+/* Files.  */
+
+/* Set *LENGTH_P to the length of the file PATH in ROOT, in bytes.  Do
+   any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_file_length (apr_off_t *length_p,
+                                 svn_fs_root_t *root,
+                                 const char *path,
+                                 apr_pool_t *pool);
+
+
+/* Set *CONTENTS to a readable generic stream will yield the contents
+   of the file PATH in ROOT.  Allocate the stream in POOL.  You can
+   only use *CONTENTS for as long as the underlying filesystem is
+   open.  */
+svn_error_t *svn_fs_file_contents (svn_stream_t **contents,
+                                   svn_fs_root_t *root,
+                                   const char *path,
+                                   apr_pool_t *pool);
+
+
+/* Free the file content baton BATON.  */
+void svn_fs_free_file_contents (void *baton);
+
+
+/* Create a new file named PATH in ROOT.  The file's initial contents
+   are the empty string, and it has no properties.  ROOT must be the
+   root of a transaction, not a revision.
+
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_make_file (svn_fs_root_t *root,
+                               const char *path,
+                               apr_pool_t *pool);
+
+
+/* Apply a text delta to the file PATH in ROOT.  ROOT must be the root
+   of a transaction, not a revision.
+
+   Set *CONTENTS_P to a function ready to receive text delta windows
+   describing how to change the file's contents, relative to its
+   current contents.  Set *CONTENTS_BATON_P to a baton to pass to
+   *CONTENTS_P.
+
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_apply_textdelta (svn_txdelta_window_handler_t **contents_p,
+                                     void **contents_baton_p,
+                                     svn_fs_root_t *root,
+                                     const char *path,
+                                     apr_pool_t *pool);
+
 
 
 /* Filesystem revisions.  */
@@ -781,29 +735,18 @@ svn_error_t *svn_fs_list_transactions (char ***names_p,
 
 /* Set *YOUNGEST_P to the number of the youngest revision in filesystem FS.
    The oldest revision in any filesystem is numbered zero.  */
-svn_error_t *svn_fs_youngest_rev (svn_fs_t *fs,
-                                  svn_revnum_t *youngest_p);
+svn_error_t *svn_fs_youngest_rev (svn_revnum_t *youngest_p,
+                                  svn_fs_t *fs);
 
 
-/* Set *DIR_P to the root directory of revision REV of filesystem FS.
-
-   Allocate the node object in POOL.  The node will be closed when
-   POOL is destroyed, if it hasn't already been closed explicitly with
-   `svn_fs_close_node'.  */
-svn_error_t *svn_fs_open_rev_root (svn_fs_node_t **dir_p,
-				   svn_fs_t *fs,
-				   svn_revnum_t rev,
-				   apr_pool_t *pool);
-
-
-/* Set *VALUE_P to the value of the property name PROPNAME on revision
-   REV in the filesystem FS.  If REV has no property by that name, set
-   *VALUE_P to zero.  Allocate the result in POOL.  */
-svn_error_t *svn_fs_get_rev_prop (svn_string_t **value_p,
-				  svn_fs_t *fs,
-				  svn_revnum_t rev,
-				  svn_string_t *propname,
-				  apr_pool_t *pool);
+/* Set *VALUE_P to the value of the property named PROPNAME on
+   revision REV in the filesystem FS.  If REV has no property by that
+   name, set *VALUE_P to zero.  Allocate the result in POOL.  */
+svn_error_t *svn_fs_revision_prop (svn_string_t **value_p,
+                                   svn_fs_t *fs,
+                                   svn_revnum_t rev,
+                                   svn_string_t *propname,
+                                   apr_pool_t *pool);
 
 
 /* Set *TABLE_P to the entire property list of revision REV in
@@ -811,9 +754,9 @@ svn_error_t *svn_fs_get_rev_prop (svn_string_t **value_p,
    resulting table maps property names to pointers to svn_string_t
    objects containing the property value.  */
 svn_error_t *svn_fs_get_rev_proplist (apr_hash_t **table_p,
-				      svn_fs_t *fs,
-				      svn_revnum_t rev,
-				      apr_pool_t *pool);
+                                      svn_fs_t *fs,
+                                      svn_revnum_t rev,
+                                      apr_pool_t *pool);
 
 
 /* Change a revision's property's value, or add/delete a property.
@@ -830,50 +773,53 @@ svn_error_t *svn_fs_get_rev_proplist (apr_hash_t **table_p,
 
    Do any necessary temporary allocation in POOL.  */
 svn_error_t *svn_fs_change_rev_prop (svn_fs_t *fs,
-				     svn_revnum_t rev,
-				     svn_string_t *name,
-				     svn_string_t *value,
-				     apr_pool_t *pool);
+                                     svn_revnum_t rev,
+                                     svn_string_t *name,
+                                     svn_string_t *value,
+                                     apr_pool_t *pool);
 
 
 
 /* Computing deltas.  */
 
-/* Compute the differences between SOURCE_DIR and TARGET_DIR, and make
-   calls describing those differences on EDITOR, using the provided
-   EDIT_BATON.  SOURCE_DIR and TARGET_DIR must be directories from the
-   same filesystem.
+/* Compute the differences between directories SOURCE and TARGET, and
+   make calls describing those differences on EDITOR, using the
+   provided EDIT_BATON.
 
    The caller must call editor->close_edit on EDIT_BATON;
    svn_fs_dir_delta does not close the edit itself.
 
    Do any allocation necessary for the delta computation in POOL.
    This function's maximum memory consumption is at most roughly
-   proportional to the greatest depth of TARGET_DIR, not the total
+   proportional to the greatest depth of TARGET, not the total
    size of the delta.  */
-svn_error_t *svn_fs_dir_delta (svn_fs_node_t *source_dir,
-			       svn_fs_node_t *target_dir,
-			       svn_delta_edit_fns_t *editor,
-			       void *edit_baton,
-			       apr_pool_t *pool);
+svn_error_t *svn_fs_dir_delta (svn_fs_root_t *source_root,
+                               const char *source_path,
+                               svn_fs_root_t *target_root,
+                               const char *target_path,
+                               svn_delta_edit_fns_t *editor,
+                               void *edit_baton,
+                               apr_pool_t *pool);
 
 
 /* Set *STREAM_P to a pointer to a delta stream that will turn the
-   contents of SOURCE_FILE into the contents of TARGET_FILE.  If
-   SOURCE_FILE is zero, treat it as a file with zero length.
+   contents of the file SOURCE into the contents of the file TARGET.
+   If SOURCE_ROOT is zero, use a file with zero length as the source.
 
    This function does not compare the two files' properties.
 
    Allocate *STREAM_P, and do any necessary temporary allocation, in
    POOL.  */
 svn_error_t *svn_fs_file_delta (svn_txdelta_stream_t **stream_p,
-				svn_fs_node_t *source_file,
-				svn_fs_node_t *target_file,
-				apr_pool_t *pool);
+                                svn_fs_root_t *source_root,
+                                const char *source_path,
+                                svn_fs_root_t *target_root,
+                                const char *target_path,
+                                apr_pool_t *pool);
 
 
 
-/*** Making changes to a filesystem, editor-style. ***/
+/* Making changes to a filesystem, editor-style.  */
 
 /* Hook function type for commits.  When a filesystem commit happens,
  * one of these should be invoked on the NEW_REVISION that resulted
