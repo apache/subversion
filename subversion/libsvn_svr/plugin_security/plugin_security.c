@@ -126,7 +126,7 @@ svn_plugin_security_init (svn_svr_policies_t *policy,
   err = svn_svr_register_plugin (policy, newplugin);
 
   if (err)
-    return (svn_quick_wrap_error (err, "Can't register plugin_security."));
+    return (svn_error_quick_wrap (err, "Can't register plugin_security."));
   else
     return SVN_NO_ERROR;
 }

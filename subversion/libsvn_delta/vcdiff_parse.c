@@ -156,7 +156,7 @@ svn_vcdiff_send_window (svn_vcdiff_parser_t *parser, apr_size_t len)
     {
       err = (* (parser->consumer_func)) (window, parser->consumer_baton);
       if (err)
-        return svn_quick_wrap_error 
+        return svn_error_quick_wrap 
           (err, "svn_vcdiff_send_window: consumer_func choked.");
     }
   

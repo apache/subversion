@@ -165,12 +165,12 @@ contents_identical_p (svn_boolean_t *identical_p,
     {
       status = apr_full_read (file1, buf1, BUFSIZ, &bytes_read1);
       if (status)
-        return svn_create_error
+        return svn_error_create
           (status, 0, NULL, pool, "apr_full_read() failed.");
 
       status = apr_full_read (file2, buf2, BUFSIZ, &bytes_read2);
       if (status)
-        return svn_create_error
+        return svn_error_create
           (status, 0, NULL, pool, "apr_full_read() failed.");
       
       if (memcmp (buf1, buf2, bytes_read1)) 
@@ -207,7 +207,7 @@ svn_wc__file_modified_p (svn_boolean_t *modified_p,
   status = apr_open (&current_file, filename->data,
                      APR_READ, APR_OS_DEFAULT, pool);
   if (status)
-    return svn_create_error
+    return svn_error_create
       (status, 0, NULL, pool, "svn_wc__file_modified_p: apr_open failed.");
 
   err = svn_wc__open_text_base (&textbase_file, filename, APR_READ, pool);
@@ -218,19 +218,19 @@ svn_wc__file_modified_p (svn_boolean_t *modified_p,
         (pool,
          "svn_wc__file_modified_p:  failed to open text-base copy of `%s'",
          filename->data);
-      return svn_quick_wrap_error (err, msg);
+      return svn_error_quick_wrap (err, msg);
     }
                      
   /* Get stat info on both files */
   status = apr_getfileinfo (&current_stat, current_file);
   if (status)
-    return svn_create_error
+    return svn_error_create
       (status, 0, NULL, pool,
        "svn_wc__file_modified_p: apr_get_fileinfo failed.");
 
   status = apr_getfileinfo (&textbase_stat, textbase_file);
   if (status)
-    return svn_create_error
+    return svn_error_create
       (status, 0, NULL, pool,
        "svn_wc__file_modified_p: apr_get_fileinfo failed.");
 
@@ -266,7 +266,7 @@ svn_wc__file_modified_p (svn_boolean_t *modified_p,
 
   status = apr_close (current_file);
   if (status)
-    return svn_create_error (status, 0, NULL, pool,
+    return svn_error_create (status, 0, NULL, pool,
                              "svn_wc__file_modified_p: apr_close failed.");
 
 

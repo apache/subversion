@@ -174,7 +174,7 @@ typedef struct svn_error
 
 
 /*
-  svn_create_error() : for creating nested exception structures.
+  svn_error_create() : for creating nested exception structures.
 
   Input:  an APR or SVN custom error code,
           the original errno,
@@ -194,7 +194,7 @@ typedef struct svn_error
          If creating the "bottommost" error in a chain, pass NULL for
          the child argument.
  */
-svn_error_t *svn_create_error (apr_status_t apr_err,
+svn_error_t *svn_error_create (apr_status_t apr_err,
                                int src_err,
                                svn_error_t *child,
                                apr_pool_t *pool,
@@ -203,7 +203,7 @@ svn_error_t *svn_create_error (apr_status_t apr_err,
 /* Create an error structure with the given APR_ERR, SRC_ERR, CHILD,
    and POOL, with a printf-style error message produced by passing
    FMT, ... through apr_psprintf.  */
-extern svn_error_t *svn_create_errorf (apr_status_t apr_err,
+extern svn_error_t *svn_error_createf (apr_status_t apr_err,
                                        int src_err,
                                        svn_error_t *child,
                                        apr_pool_t *pool,
@@ -215,7 +215,7 @@ extern svn_error_t *svn_create_errorf (apr_status_t apr_err,
    message, before throwing it up the stack.  (It uses all of the
    child's fields.)  */
 
-svn_error_t *svn_quick_wrap_error (svn_error_t *child, const char *new_msg);
+svn_error_t *svn_error_quick_wrap (svn_error_t *child, const char *new_msg);
 
 
 /* Free ERROR by destroying its pool; note that the pool may be shared

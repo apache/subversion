@@ -235,7 +235,7 @@ svn_wc__parse_versions (svn_read_fn_t *source_fn,
     err = (*(source_fn)) (source_baton, buf, &len, digger->pool);
     if (err)
       {
-        err = svn_quick_wrap_error (err,
+        err = svn_error_quick_wrap (err,
                                     "svn_delta_parse: can't read data source");
         goto error;
       }
@@ -249,7 +249,7 @@ svn_wc__parse_versions (svn_read_fn_t *source_fn,
     if (! XML_Parse (expat_parser, buf, len, done))
     {
       /* Uh oh, expat *itself* choked somehow.  Return its message. */
-      err = svn_create_errorf
+      err = svn_error_createf
         (SVN_ERR_MALFORMED_XML, 0, NULL, pool,
          "%s at line %d",
          XML_ErrorString (XML_GetErrorCode (expat_parser)),

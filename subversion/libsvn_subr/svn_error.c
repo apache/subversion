@@ -176,7 +176,7 @@ svn_pool_create (apr_pool_t *cont_pool,
 /*** Creating and destroying errors. ***/
 
 /*
-  svn_create_error() : for creating nested exception structures.
+  svn_error_create() : for creating nested exception structures.
 
   Input:  an apr_status_t error code,
           the "original" system error code, if applicable,
@@ -189,7 +189,7 @@ svn_pool_create (apr_pool_t *cont_pool,
  */
 
 svn_error_t *
-svn_create_error (apr_status_t apr_err,
+svn_error_create (apr_status_t apr_err,
                   int src_err,
                   svn_error_t *child,
                   apr_pool_t *pool,
@@ -200,7 +200,7 @@ svn_create_error (apr_status_t apr_err,
 
 
 svn_error_t *
-svn_create_errorf (apr_status_t apr_err,
+svn_error_createf (apr_status_t apr_err,
                    int src_err,
                    svn_error_t *child,
                    apr_pool_t *pool,
@@ -223,9 +223,9 @@ svn_create_errorf (apr_status_t apr_err,
    child's fields by default.)  */
 
 svn_error_t *
-svn_quick_wrap_error (svn_error_t *child, const char *new_msg)
+svn_error_quick_wrap (svn_error_t *child, const char *new_msg)
 {
-  return svn_create_error (child->apr_err,
+  return svn_error_create (child->apr_err,
                            child->src_err,
                            child,
                            NULL,   /* allocate directly in child's pool */

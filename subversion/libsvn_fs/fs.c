@@ -88,7 +88,7 @@ static svn_error_t *
 check_already_open (svn_fs_t *fs)
 {
   if (fs->env)
-    return svn_create_error (SVN_ERR_FS_ALREADY_OPEN, 0, 0, fs->pool,
+    return svn_error_create (SVN_ERR_FS_ALREADY_OPEN, 0, 0, fs->pool,
                              "filesystem object already open");
   else
     return 0;

@@ -379,13 +379,13 @@ fetch_file (svn_ra_session_t *ras,
                                  ancestor_path, ancestor_version,
                                  &file_baton);
   if (err)
-    return svn_quick_wrap_error(err, "could not add a file");
+    return svn_error_quick_wrap(err, "could not add a file");
 
   err = (*fc->editor->apply_textdelta) (fc->edit_baton, fc->cur_baton,
                                         file_baton,
                                         &fc->handler, &fc->handler_baton);
   if (err)
-    return svn_quick_wrap_error(err, "could not save file");
+    return svn_error_quick_wrap(err, "could not save file");
 
   rv = http_read_file(ras->sess, url, fetch_file_reader, fc);
   if (rv != HTTP_OK)
@@ -453,7 +453,7 @@ svn_ra_checkout (svn_ra_session_t *ras,
 
           err = (*editor->close_directory) (edit_baton, parent_baton);
           if (err)
-            return svn_quick_wrap_error(err, "could not finish directory");
+            return svn_error_quick_wrap(err, "could not finish directory");
 
           if (fc.subdirs->nelts == 0)
             goto traversal_complete;
@@ -468,7 +468,7 @@ svn_ra_checkout (svn_ra_session_t *ras,
 
       err = fetch_dirents(ras, url, &fc);
       if (err)
-        return svn_quick_wrap_error(err, "could not fetch directory entries");
+        return svn_error_quick_wrap(err, "could not fetch directory entries");
 
       /* we fetched information about the directory successfully. time to
          create the local directory. */
@@ -477,7 +477,7 @@ svn_ra_checkout (svn_ra_session_t *ras,
                                       ancestor_path, ancestor_version,
                                       &this_baton);
       if (err)
-        return svn_quick_wrap_error(err, "could not add directory");
+        return svn_error_quick_wrap(err, "could not add directory");
 
       /* for each new directory added (including our marker), set its
          parent_baton */
@@ -495,7 +495,7 @@ svn_ra_checkout (svn_ra_session_t *ras,
 
           err = fetch_file(ras, fr->href, &fc);
           if (err)
-            return svn_quick_wrap_error(err, "could not checkout a file");
+            return svn_error_quick_wrap(err, "could not checkout a file");
         }
       /* reset the list of files */
       fc.files->nelts = 0;
