@@ -93,7 +93,12 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
     }
 
   activity_id = ((const char * const *)activities->elts)[0];
-  txn_name = NULL;      /* ### should we look this up? or lazy? */
+  if ((txn_name = dav_svn_get_txn(resource->info->repos, activity_id)) == NULL)
+    {
+      return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
+                           "The specified activity does not exist.");
+    }
+
   repos_path = resource->info->object_name;
 
   *working_resource = dav_svn_create_working_resource(resource,
