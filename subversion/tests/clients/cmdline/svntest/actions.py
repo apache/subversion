@@ -206,8 +206,13 @@ def run_and_verify_update(wc_dir_name,
                           b_baton = None,
                           check_props = 0,
                           *args):
+
   """Update WC_DIR_NAME.  *ARGS are any extra optional args to the
-  update subcommand.  
+  update subcommand.  NOTE: If *ARGS is specified at all, explicit
+  target paths must be passed in *ARGS as well (or a default `.' will
+  be chosen by the 'svn' binary).  This allows the caller to update
+  many items in a single working copy dir, but still verify the entire
+  working copy dir.
 
   If ERROR_RE_STRING, the update must exit with error, and the error
   message must match regular expression ERROR_RE_STRING.
@@ -224,7 +229,10 @@ def run_and_verify_update(wc_dir_name,
   Return 0 if successful."""
 
   # Update and make a tree of the output.
-  output, errput = main.run_svn (error_re_string, 'up', wc_dir_name, *args)
+  if len(args):
+    output, errput = main.run_svn (error_re_string, 'up', *args)
+  else:
+    output, errput = main.run_svn (error_re_string, 'up', wc_dir_name, *args)
 
   if (error_re_string):
     rm = re.compile(error_re_string)

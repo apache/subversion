@@ -281,7 +281,7 @@ def downdate_props(sbox):
                                                expected_disk_tree,
                                                expected_status_tree,
                                                None, None, None, None, None, 1,
-                                               '-r1')
+                                               '-r', '1', wc_dir)
 
 #----------------------------------------------------------------------
 

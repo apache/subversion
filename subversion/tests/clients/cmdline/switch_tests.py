@@ -62,6 +62,34 @@ def get_routine_status_list(wc_dir):
                                            'repos_rev' : '1'}])
   return status_list
 
+#----------------------------------------------------------------------
+
+def get_routine_disk_list(wc_dir):
+  """get the routine disk list for WC_DIR at the completion of an
+  initial call to do_routine_switching()"""
+
+  disk_list = svntest.main.copy_greek_tree()
+
+  # iota has the same contents as gamma
+  disk_list[0][1] = disk_list[11][1]
+
+  # A/D/H/* no longer exist, but have been replaced by copies of A/D/G/*
+  disk_list.pop(path_index(disk_list,
+                           os.path.join('A', 'D', 'H', 'chi')))
+  disk_list.pop(path_index(disk_list,
+                           os.path.join('A', 'D', 'H', 'omega')))
+  disk_list.pop(path_index(disk_list,
+                           os.path.join('A', 'D', 'H', 'psi')))
+  disk_list.append([os.path.join('A', 'D', 'H', 'pi'),
+                        "This is the file 'pi'.", {}, {}])
+  disk_list.append([os.path.join('A', 'D', 'H', 'rho'),
+                        "This is the file 'rho'.", {}, {}])
+  disk_list.append([os.path.join('A', 'D', 'H', 'tau'),
+                        "This is the file 'tau'.", {}, {}])
+
+  return disk_list
+
+#----------------------------------------------------------------------
 
 def do_routine_switching(wc_dir, verify):
   """perform some routine switching of the working copy WC_DIR for
@@ -123,36 +151,11 @@ def do_routine_switching(wc_dir, verify):
     
     # Create expected disk tree (iota will have gamma's contents,
     # A/D/H/* will look like A/D/G/*)
-    my_greek_tree = svntest.main.copy_greek_tree()
-    my_greek_tree[0][1] = my_greek_tree[11][1]
-    my_greek_tree.pop(path_index(my_greek_tree,
-                                 os.path.join('A', 'D', 'H', 'chi')))
-    my_greek_tree.pop(path_index(my_greek_tree,
-                                 os.path.join('A', 'D', 'H', 'omega')))
-    my_greek_tree.pop(path_index(my_greek_tree,
-                                 os.path.join('A', 'D', 'H', 'psi')))
-    my_greek_tree.append([os.path.join('A', 'D', 'H', 'pi'),
-                          "This is the file 'pi'.", {}, {}])
-    my_greek_tree.append([os.path.join('A', 'D', 'H', 'rho'),
-                          "This is the file 'rho'.", {}, {}])
-    my_greek_tree.append([os.path.join('A', 'D', 'H', 'tau'),
-                          "This is the file 'tau'.", {}, {}])
-    expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+    disk_list = get_routine_disk_list(wc_dir)
+    expected_disk_tree = svntest.tree.build_generic_tree(disk_list)
     
     # Create expected status
-    status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
-    status_list.pop(path_index(status_list, chi_path))
-    status_list.pop(path_index(status_list, omega_path))
-    status_list.pop(path_index(status_list, psi_path))
-    status_list.append([pi_path, None, {}, {'status' : '_ ',
-                                            'wc_rev' : '1',
-                                            'repos_rev' : '1'}])
-    status_list.append([rho_path, None, {}, {'status' : '_ ',
-                                             'wc_rev' : '1',
-                                             'repos_rev' : '1'}])
-    status_list.append([tau_path, None, {}, {'status' : '_ ',
-                                             'wc_rev' : '1',
-                                             'repos_rev' : '1'}])
+    status_list = get_routine_status_list(wc_dir)
     expected_status_tree = svntest.tree.build_generic_tree(status_list)
   
     # Do the switch and check the results in three ways.
@@ -164,48 +167,13 @@ def do_routine_switching(wc_dir, verify):
   else:
     svntest.main.run_svn(None, 'switch', ADH_path, ADG_url)
 
-  ### One final check to make sure that the function
-  ### get_routine_status_list() is always up-to-date with what this
-  ### function is doing.
-  if verify:
-    status_list = get_routine_status_list(wc_dir)
-    expected_status_tree = svntest.tree.build_generic_tree(status_list)
-    if svntest.actions.run_and_verify_status(wc_dir, expected_status_tree):
-      return 1
-    
   return 0
 
-
-######################################################################
-# Tests
-#
-#   Each test must return 0 on success or non-zero on failure.
-
 #----------------------------------------------------------------------
 
-def routine_switching(sbox):
-  "test some basic switching operations"
-    
-  if sbox.build():
-    return 1
-
-  # Setup (and verify) some switched things
-  return do_routine_switching(sbox.wc_dir, 1)
-
-#----------------------------------------------------------------------
-
-def commit_switched_things(sbox):
-  "commits after some basic switching operations"
-
-  if sbox.build():
-    return 1
-
-  wc_dir = sbox.wc_dir
+def commit_routine_switching(wc_dir, verify):
+  "Commit some stuff in a routinely-switched working copy."
   
-  # Setup some switched things (don't bother verifying)
-  if do_routine_switching(wc_dir, 0):
-    return 1
-
   # Make some local mods
   iota_path = os.path.join(wc_dir, 'iota')
   alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
@@ -264,35 +232,396 @@ def commit_switched_things(sbox):
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
 
   # Commit should succeed
-  if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output_tree,
-                                            expected_status_tree,
-                                            None, None, None, None, None,
-                                            wc_dir):
+  if verify:
+    if svntest.actions.run_and_verify_commit(wc_dir,
+                                             expected_output_tree,
+                                             expected_status_tree,
+                                             None, None, None, None, None,
+                                             wc_dir):
+      return 1
+  else:
+    svntest.main.run_svn(None, 'ci', '-m', 'foo', wc_dir)
+
+  return 0
+
+######################################################################
+# Tests
+#
+#   Each test must return 0 on success or non-zero on failure.
+
+#----------------------------------------------------------------------
+
+def routine_switching(sbox):
+  "test some basic switching operations"
+    
+  if sbox.build():
+    return 1
+
+  # Setup (and verify) some switched things
+  return do_routine_switching(sbox.wc_dir, 1)
+
+#----------------------------------------------------------------------
+
+def commit_switched_things(sbox):
+  "commits after some basic switching operations"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  
+  # Setup some switched things (don't bother verifying)
+  if do_routine_switching(wc_dir, 0):
+    return 1
+
+  # Commit some stuff (and verify)
+  if commit_routine_switching(wc_dir, 1):
     return 1
 
   return 0
-  
-  
-  
+    
 #----------------------------------------------------------------------
 
-### cmpilato todo:
+def full_update(sbox):
+  "update wc that contains switched things"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  
+  # Setup some switched things (don't bother verifying)
+  if do_routine_switching(wc_dir, 0):
+    return 1
+
+  # Copy wc_dir to a backup location
+  wc_backup = wc_dir + 'backup'
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+  
+  # Commit some stuff (don't bother verifying)
+  if commit_routine_switching(wc_backup, 0):
+    return 1
+
+  # Some convenient path variables
+  iota_path = os.path.join(wc_dir, 'iota')
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  Hpi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'pi')
+  HZ_path = os.path.join(wc_dir, 'A', 'D', 'H', 'Z')
+  Hzeta_path = os.path.join(wc_dir, 'A', 'D', 'H', 'Z', 'zeta')
+  Gpi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  GZ_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z')
+  Gzeta_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z', 'zeta')
+
+  # Create expected output tree for an update of wc_backup.
+  output_list = [ [iota_path, None, {}, {'status' : 'U '}],
+                  [gamma_path, None, {}, {'status' : 'U '}],
+                  [alpha_path, None, {}, {'status' : 'U '}],
+                  [Hpi_path, None, {}, {'status' : 'U '}],
+                  [HZ_path, None, {}, {'status' : 'A '}],
+                  [Hzeta_path, None, {}, {'status' : 'A '}],
+                  [Gpi_path, None, {}, {'status' : 'U '}],
+                  [GZ_path, None, {}, {'status' : 'A '}],
+                  [Gzeta_path, None, {}, {'status' : 'A '}] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected disk tree for the update
+  disk_list = get_routine_disk_list(wc_dir)
+  disk_list[path_index(disk_list,
+                       os.path.join('iota'))][1] = \
+            "This is the file 'gamma'.apple"
+  disk_list[path_index(disk_list,
+                       os.path.join('A', 'D', 'gamma'))][1] = \
+            "This is the file 'gamma'.apple"
+  disk_list[path_index(disk_list,
+                       os.path.join('A', 'D', 'H', 'pi'))][1] = \
+            "This is the file 'pi'.watermelon"
+  disk_list[path_index(disk_list,
+                       os.path.join('A', 'D', 'G', 'pi'))][1] = \
+            "This is the file 'pi'.watermelon"
+  disk_list[path_index(disk_list,
+                       os.path.join('A', 'B', 'E', 'alpha'))][1] = \
+            "This is the file 'alpha'.orange"
+  disk_list.append([os.path.join('A', 'D', 'H', 'Z'), None, {}, {}])
+  disk_list.append([os.path.join('A', 'D', 'H', 'Z', 'zeta'),
+                   "This is the file 'zeta'.", {}, {}])
+  disk_list.append([os.path.join('A', 'D', 'G', 'Z'), None, {}, {}])
+  disk_list.append([os.path.join('A', 'D', 'G', 'Z', 'zeta'),
+                   "This is the file 'zeta'.", {}, {}])
+  expected_disk_tree = svntest.tree.build_generic_tree(disk_list)
+
+  # Create expected status tree for the update.
+  status_list = get_routine_status_list(wc_dir)
+  for item in status_list:
+    item[3]['repos_rev'] = '2'
+    item[3]['wc_rev'] = '2'
+  status_list.append([GZ_path, None, {},
+                      {'status' : '_ ',
+                       'wc_rev' : '2',
+                       'repos_rev' : '2'}])
+  status_list.append([Gzeta_path, None, {},
+                      {'status' : '_ ',
+                       'wc_rev' : '2',
+                       'repos_rev' : '2'}])
+  status_list.append([HZ_path, None, {},
+                      {'status' : '_ ',
+                       'wc_rev' : '2',
+                       'repos_rev' : '2'}])
+  status_list.append([Hzeta_path, None, {},
+                      {'status' : '_ ',
+                       'wc_rev' : '2',
+                       'repos_rev' : '2'}])
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  return svntest.actions.run_and_verify_update(wc_dir,
+                                               expected_output_tree,
+                                               expected_disk_tree,
+                                               expected_status_tree)
+
+#----------------------------------------------------------------------
+
+def full_rev_update(sbox):
+  "reverse update wc that contains switched things"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  
+  # Setup some switched things (don't bother verifying)
+  if do_routine_switching(wc_dir, 0):
+    return 1
+
+  # Commit some stuff (don't bother verifying)
+  if commit_routine_switching(wc_dir, 0):
+    return 1
+
+  # Update to HEAD (tested elsewhere)
+  svntest.main.run_svn (None, 'up', wc_dir)
+
+  # Some convenient path variables
+  iota_path = os.path.join(wc_dir, 'iota')
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  Hpi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'pi')
+  HZ_path = os.path.join(wc_dir, 'A', 'D', 'H', 'Z')
+  Gpi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  GZ_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z')
+
+  # Now, reverse update, back to the pre-commit state.
+  output_list = [ [iota_path, None, {}, {'status' : 'U '}],
+                  [gamma_path, None, {}, {'status' : 'U '}],
+                  [alpha_path, None, {}, {'status' : 'U '}],
+                  [Hpi_path, None, {}, {'status' : 'U '}],
+                  [HZ_path, None, {}, {'status' : 'D '}],
+                  [Gpi_path, None, {}, {'status' : 'U '}],
+                  [GZ_path, None, {}, {'status' : 'D '}] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected disk tree
+  disk_list = get_routine_disk_list(wc_dir)
+  expected_disk_tree = svntest.tree.build_generic_tree(disk_list)
+    
+  # Create expected status
+  status_list = get_routine_status_list(wc_dir)
+  for item in status_list:
+    item[3]['repos_rev'] = '2'
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  return svntest.actions.run_and_verify_update(wc_dir,
+                                               expected_output_tree,
+                                               expected_disk_tree,
+                                               expected_status_tree,
+                                               None, None, None,
+                                               None, None, 1,
+                                               '-r', '1', wc_dir)
+
+#----------------------------------------------------------------------
+
 def update_switched_things(sbox):
   "update switched wc things to HEAD"
-  return 0
+
+  ### Items below commented out with '#?#' need to be reinstated for
+  ### this test to be fully functional.  They are commented out right
+  ### now because dir_delta doesn't allow one to update a single
+  ### switched file by name.
+  
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  
+  # Setup some switched things (don't bother verifying)
+  if do_routine_switching(wc_dir, 0):
+    return 1
+
+  # Copy wc_dir to a backup location
+  wc_backup = wc_dir + 'backup'
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+  
+  # Commit some stuff (don't bother verifying)
+  if commit_routine_switching(wc_backup, 0):
+    return 1
+
+  # Some convenient path variables
+  #?# iota_path = os.path.join(wc_dir, 'iota')
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  Hpi_path = os.path.join(H_path, 'pi')
+  HZ_path = os.path.join(H_path, 'Z')
+  Hzeta_path = os.path.join(H_path, 'Z', 'zeta')
+
+  # Create expected output tree for an update of wc_backup.
+  output_list = [ #?# [iota_path, None, {}, {'status' : 'U '}],
+                  [Hpi_path, None, {}, {'status' : 'U '}],
+                  [HZ_path, None, {}, {'status' : 'A '}],
+                  [Hzeta_path, None, {}, {'status' : 'A '}] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected disk tree for the update
+  disk_list = get_routine_disk_list(wc_dir)
+  #?# disk_list[path_index(disk_list,
+  #?#                     os.path.join('iota'))][1] = \
+  #?#          "This is the file 'gamma'.apple"
+  disk_list[path_index(disk_list,
+                       os.path.join('A', 'D', 'H', 'pi'))][1] = \
+            "This is the file 'pi'.watermelon"
+  disk_list.append([os.path.join('A', 'D', 'H', 'Z'), None, {}, {}])
+  disk_list.append([os.path.join('A', 'D', 'H', 'Z', 'zeta'),
+                   "This is the file 'zeta'.", {}, {}])
+  expected_disk_tree = svntest.tree.build_generic_tree(disk_list)
+
+  # Create expected status tree for the update.
+  status_list = get_routine_status_list(wc_dir)
+  for item in status_list:
+    item[3]['repos_rev'] = '2'
+    if ((item[0] == H_path)
+        or (item[0] == os.path.join(H_path, 'pi'))
+        or (item[0] == os.path.join(H_path, 'rho'))
+        or (item[0] == os.path.join(H_path, 'tau'))
+        #?# or (item[0] == iota_path)
+        ):
+      item[3]['wc_rev'] = '2'
+  status_list.append([HZ_path, None, {},
+                      {'status' : '_ ',
+                       'wc_rev' : '2',
+                       'repos_rev' : '2'}])
+  status_list.append([Hzeta_path, None, {},
+                      {'status' : '_ ',
+                       'wc_rev' : '2',
+                       'repos_rev' : '2'}])
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  return svntest.actions.run_and_verify_update(wc_dir,
+                                               expected_output_tree,
+                                               expected_disk_tree,
+                                               expected_status_tree,
+                                               None, None, None,
+                                               None, None, 0,
+                                               H_path,
+                                               #?# iota_path,
+                                               )
+
+#----------------------------------------------------------------------
 
 def rev_update_switched_things(sbox):
   "reverse update switched wc things to an older rev"
-  return 0
 
-def full_update(sbox):
-  "update an entire wc that contains switched things"
-  return 0
+  ### Items below commented out with '#?#' need to be reinstated for
+  ### this test to be fully functional.  They are commented out right
+  ### now because dir_delta doesn't allow one to update a single
+  ### switched file by name.
+  
+  if sbox.build():
+    return 1
 
-def full_rev_update(sbox):
-  "reverse update an entire wc that contains switched things"
-  return 0
+  wc_dir = sbox.wc_dir
+  
+  # Setup some switched things (don't bother verifying)
+  if do_routine_switching(wc_dir, 0):
+    return 1
+
+  # Commit some stuff (don't bother verifying)
+  if commit_routine_switching(wc_dir, 0):
+    return 1
+
+  # Some convenient path variables
+  iota_path = os.path.join(wc_dir, 'iota')
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  Hpi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'pi')
+  HZ_path = os.path.join(wc_dir, 'A', 'D', 'H', 'Z')
+  Hzeta_path = os.path.join(wc_dir, 'A', 'D', 'H', 'Z', 'zeta')
+  Gpi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  GZ_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z')
+  Gzeta_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z', 'zeta')
+
+  # Update to HEAD (tested elsewhere)
+  svntest.main.run_svn (None, 'up', wc_dir)
+
+  # Now, reverse update, back to the pre-commit state.
+  output_list = [ #?# [iota_path, None, {}, {'status' : 'U '}],
+                  [Hpi_path, None, {}, {'status' : 'U '}],
+                  [HZ_path, None, {}, {'status' : 'D '}] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected disk tree
+  disk_list = get_routine_disk_list(wc_dir)
+  #?# Remove this next line once single-switched-file update has been fixed.
+  disk_list[path_index(disk_list,
+                       os.path.join('iota'))][1] = \
+            "This is the file 'gamma'.apple"
+  disk_list[path_index(disk_list,
+                       os.path.join('A', 'D', 'gamma'))][1] = \
+            "This is the file 'gamma'.apple"
+  disk_list[path_index(disk_list,
+                       os.path.join('A', 'D', 'G', 'pi'))][1] = \
+            "This is the file 'pi'.watermelon"
+  disk_list[path_index(disk_list,
+                       os.path.join('A', 'B', 'E', 'alpha'))][1] = \
+            "This is the file 'alpha'.orange"
+  disk_list.append([os.path.join('A', 'D', 'G', 'Z'), None, {}, {}])
+  disk_list.append([os.path.join('A', 'D', 'G', 'Z', 'zeta'),
+                   "This is the file 'zeta'.", {}, {}])
+  expected_disk_tree = svntest.tree.build_generic_tree(disk_list)
+    
+  # Create expected status tree for the update.
+  status_list = get_routine_status_list(wc_dir)
+  for item in status_list:
+    item[3]['repos_rev'] = '2'
+    if ((item[0] == H_path)
+        or (item[0] == os.path.join(H_path, 'pi'))
+        or (item[0] == os.path.join(H_path, 'rho'))
+        or (item[0] == os.path.join(H_path, 'tau'))
+        #?# or (item[0] == iota_path)
+        ):
+      item[3]['wc_rev'] = '1'
+    else:
+      item[3]['wc_rev'] = '2'
+  status_list.append([GZ_path, None, {},
+                      {'status' : '_ ',
+                       'wc_rev' : '2',
+                       'repos_rev' : '2'}])
+  status_list.append([Gzeta_path, None, {},
+                      {'status' : '_ ',
+                       'wc_rev' : '2',
+                       'repos_rev' : '2'}])
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  return svntest.actions.run_and_verify_update(wc_dir,
+                                               expected_output_tree,
+                                               expected_disk_tree,
+                                               expected_status_tree,
+                                               None, None, None,
+                                               None, None, 1,
+                                               '-r', '1',
+                                               H_path,
+                                               #?# iota_path
+                                               )
+
+
+#----------------------------------------------------------------------
+
 ### ...and a slew of others...
 
 ########################################################################
@@ -303,7 +632,11 @@ def full_rev_update(sbox):
 test_list = [ None,
               routine_switching,
               commit_switched_things,
-             ]
+              full_update,
+              full_rev_update,
+              update_switched_things,
+              rev_update_switched_things,
+              ]
 
 if __name__ == '__main__':
   svntest.main.run_tests(test_list)

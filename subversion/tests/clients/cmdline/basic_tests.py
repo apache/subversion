@@ -265,7 +265,7 @@ def basic_corruption(sbox):
                                            expected_output_tree,
                                            expected_disk_tree,
                                            expected_status_tree,
-                                           "checksum"):
+                                           "checksum", other_wc):
     return 1
 
   # Restore the uncorrupted text base.
@@ -511,12 +511,12 @@ Original appended text for rho>>>>>>> .r2
   # Do the update and check the results in three ways.
   # All "extra" files are passed to detect_conflict_files().
   if svntest.actions.run_and_verify_update(wc_backup,
-                           expected_output_tree,
-                           expected_disk_tree,
-                           expected_status_tree,
-                           None,
-                           detect_conflict_files, # our singleton handler func
-                           extra_files):    # our handler will look for these
+                                           expected_output_tree,
+                                           expected_disk_tree,
+                                           expected_status_tree,
+                                           None,
+                                           detect_conflict_files,
+                                           extra_files):
     return 1
   
   # verify that the extra_files list is now empty.
