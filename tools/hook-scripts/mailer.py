@@ -54,16 +54,12 @@ def main(pool, config_fname, repos_dir, rev):
     group, params = cfg.which_group(path)
 
     # turn the params into a hashable object and stash it away
-    params = params.items()
-    params.sort()
-    groups[group, tuple(params)] = None
+    param_list = params.items()
+    param_list.sort()
+    groups[group, tuple(param_list)] = params
 
   output = determine_output(cfg, repos, changelist)
-
-  for group, params in groups:
-    output.start(group, params)
-    generate_content(output, cfg, repos, changelist, pool)
-    output.finish()
+  output.generate(groups, pool)
 
 
 def determine_output(cfg, repos, changelist):
@@ -80,6 +76,8 @@ def determine_output(cfg, repos, changelist):
 class MailedOutput:
   def __init__(self, cfg, repos, changelist):
     self.cfg = cfg
+    self.repos = repos
+    self.changelist = changelist
 
     # figure out the changed directories
     dirs = { }
@@ -109,6 +107,7 @@ class MailedOutput:
             break
       commondir = string.join(common, '/')
       if commondir:
+        # strip the common portion from each directory
         l = len(commondir) + 1
         dirlist = [ ]
         for d in dirs.keys():
@@ -117,6 +116,7 @@ class MailedOutput:
           else:
             dirlist.append(d[l:])
       else:
+        # nothing in common, so reset the list of directories
         dirlist = dirs.keys()
 
     # compose the basic subject line. later, we can prefix it.
@@ -126,6 +126,20 @@ class MailedOutput:
       self.subject = 'rev %d - in %s: %s' % (repos.rev, commondir, dirlist)
     else:
       self.subject = 'rev %d - %s' % (repos.rev, dirlist)
+
+  def generate(self, groups, pool):
+    "Generate email for the various groups and option-params."
+
+    ### these groups need to be further compressed. if the headers and
+    ### body are the same across groups, then we can have multiple To:
+    ### addresses. SMTPOutput holds the entire message body in memory,
+    ### so if the body doesn't change, then it can be sent N times
+    ### rather than rebuilding it each time.
+
+    for (group, param_tuple), params in groups.items():
+      self.start(group, params)
+      generate_content(self, self.cfg, self.repos, self.changelist, pool)
+      self.finish()
 
   def start(self, group, params):
     self.to_addr = self.cfg.get('to_addr', group, params)
@@ -169,7 +183,7 @@ class SMTPOutput(MailedOutput):
 
   def finish(self):
     server = smtplib.SMTP(self.cfg.general.smtp_hostname)
-    server.sendmail(self.to_addr, [ self.from_addr ], self.buffer.getvalue())
+    server.sendmail(self.from_addr, [ self.to_addr ], self.buffer.getvalue())
     server.quit()
 
 
@@ -177,10 +191,15 @@ class StandardOutput:
   "Print the commit message to stdout."
 
   def __init__(self, cfg, repos, changelist):
+    self.cfg = cfg
+    self.repos = repos
+    self.changelist = changelist
+
     self.write = sys.stdout.write
 
-  def start(self, group, params):
-    pass
+  def generate(self, groups, pool):
+    "Generate the output; the groups are ignored."
+    generate_content(self, self.cfg, self.repos, self.changelist, pool)
 
   def run_diff(self, cmd):
     # flush our output to keep the parent/child output in sync
@@ -200,9 +219,6 @@ class StandardOutput:
         os.execvp(cmd[0], cmd)
       finally:
         os._exit(1)
-
-  def finish(self):
-    pass
 
 
 class PipeOutput(MailedOutput):
@@ -744,20 +760,23 @@ if __name__ == '__main__':
 # TODO
 #
 # * add configuration options
-#   - default options
-#   - per-group overrides
-#   - group selection based on repos and on path
-#   - each group defines:
-#     o how to construct From:
-#     o how to construct To:
+#   - default options  [DONE]
+#   - per-group overrides  [DONE]
+#   - group selection based on repos and on path  [DONE]
+#   - each group defines delivery info:
+#     o how to construct From:  [DONE]
+#     o how to construct To:  [DONE]
+#     o subject line prefixes  [DONE]
 #     o whether to set Reply-To and/or Mail-Followup-To
 #       (btw: it is legal do set Reply-To since this is the originator of the
 #        mail; i.e. different from MLMs that munge it)
+#   - each group defines content construction:
 #     o max size of diff before trimming
+#     o flag to disable generation of add/delete diffs
+#   - per-repository configuration
+#     o extra config living in repos
 #     o how to construct a ViewCVS URL for the diff
 #     o optional, non-mail log file
-#     o flag to disable generation of add/delete diffs
 #     o look up authors (username -> email; for the From: header) in a
 #       file(s) or DBM
-#   - extra config living in repos
 #
