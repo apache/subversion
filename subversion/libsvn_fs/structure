@@ -132,7 +132,7 @@ where:
 KIND must be one of the following:
 - "file", indicating that the node is a file (see FILE below).
 - "dir", indicating that the node is a directory (see DIR below).
-- "copy", indeicating that the node is a copy of anoter node (see COPY
+- "copy", indicating that the node is a copy of another node (see COPY
   below).
 
 A FLAG has one of the following forms:
@@ -188,6 +188,9 @@ where:
 
 
 COPY: how copied nodes are represented.
+
+NOTE: Copy nodes are pretty experimental.  I'm not sure they're
+necessary at all.  So don't take this stuff too seriously.
 
 If the header's KIND is "copy", then the node-revision skel represente
 a copy of another node, and has the form:
@@ -666,6 +669,6 @@ Skels:
 
 Character classes:
 
-               ws.cpass ::= [\t\n\f\r\ ] ;
+               ws.class ::= [\t\n\f\r\ ] ;
             digit.class ::= [0-9] ;
             name.class  ::= [A-Za-z] ;
