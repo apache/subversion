@@ -69,7 +69,8 @@ send_file_contents (const char *path,
   contents = svn_stream_from_aprfile (f, pool);
 
   /* Get an editor func that wants to consume the delta stream. */
-  SVN_ERR (editor->apply_textdelta (file_baton, &handler, &handler_baton));
+  SVN_ERR (editor->apply_textdelta (file_baton, pool,
+                                    &handler, &handler_baton));
 
   /* Send the file's contents to the delta-window handler. */
   SVN_ERR (svn_txdelta_send_stream (contents, handler, handler_baton, pool));
@@ -253,7 +254,7 @@ import_dir (apr_hash_t *files,
                                FALSE, subpool));
 
           /* Finally, close the sub-directory. */
-          SVN_ERR (editor->close_directory (this_dir_baton));
+          SVN_ERR (editor->close_directory (this_dir_baton, subpool));
         }
       else if (finfo.filetype == APR_REG)
         {
@@ -401,7 +402,7 @@ import (const char *path,
 
       /* Close one baton or two. */
       if (new_dir_baton)
-        SVN_ERR (editor->close_directory (new_dir_baton));
+        SVN_ERR (editor->close_directory (new_dir_baton, pool));
     }
   else if (kind == svn_node_none)
     {
@@ -410,7 +411,7 @@ import (const char *path,
          "'%s' does not exist.", path);  
     }
 
-  SVN_ERR (editor->close_directory (root_baton));
+  SVN_ERR (editor->close_directory (root_baton, pool));
 
   /* Do post-fix textdeltas here! */
   for (hi = apr_hash_first (pool, files); hi; hi = apr_hash_next (hi))
@@ -438,11 +439,11 @@ import (const char *path,
                         svn_wc_notify_state_inapplicable,
                         SVN_INVALID_REVNUM);
 
-      SVN_ERR (editor->close_file (value->file_baton));
+      SVN_ERR (editor->close_file (value->file_baton, value->subpool));
       svn_pool_destroy (value->subpool);
     }
 
-  SVN_ERR (editor->close_edit (edit_baton));
+  SVN_ERR (editor->close_edit (edit_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -564,7 +565,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
                      notify_func, notify_baton,
                      editor, edit_baton, nonrecursive, pool)))
     {
-      editor->abort_edit (edit_baton);
+      editor->abort_edit (edit_baton, pool);
       return err;
     }
 
@@ -943,7 +944,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
  cleanup:
   /* Abort the commit if it is still in progress. */
   if (commit_in_progress)
-    editor->abort_edit (edit_baton); /* ignore return value */
+    editor->abort_edit (edit_baton, pool); /* ignore return value */
 
   /* ### Under what conditions should we remove the locks? */
   unlock_err = svn_wc_adm_close (base_dir_access);

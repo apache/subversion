@@ -437,13 +437,7 @@ typedef struct
      determined by the editor "driver". The driver is responsible for
      creating a pool for use on each iteration of the editor function,
      and clearing that pool between each iteration. The driver passes
-     the appropriate pool on each function invocation. These "iterative"
-     functions are:
-
-         open_directory   open_file
-         add_directory    add_file
-         change_dir_prop  change_file_prop
-         delete_entry
+     the appropriate pool on each function invocation. 
 
      Based on the requirement of calling the editor functions in a
      depth-first style, it is usually customary for the driver to similar
@@ -454,28 +448,6 @@ typedef struct
      functions. In fact, if "postfix deltas" are used for files, the file
      pools definitely need to live outside the scope of their parent
      directories' pools.
-
-     Some of the editor functions are called just once, so this interface
-     simplifies their signatures by removing a pool argument. It is
-     assumed that a pool is reachable through a baton for these functions
-     to perform their work. These functions, and pools they will
-     typically use are:
-
-         set_target_revision    EDIT_BATON holds a pool
-         close_directory        DIR_BATON holds a pool, and should be
-                                the DIR_POOL passed to the function
-                                which created DIR_BATON (open_root,
-                                open_directory, or add_directory)
-         apply_textdelta        FILE_BATON holds a pool, and should be
-                                the FILE_POOL passed to the function
-                                which created FILE_BATON (open_file
-                                or add_File)
-         close_file             FILE_BATON holds a pool, and should be
-                                the FILE_POOL passed to the function
-                                which created FILE_BATON (open_file
-                                or add_File)
-         close_edit             EDIT_BATON holds a pool
-         abort_edit             EDIT_BATON holds a pool
 
      Note that close_directory can be called *before* a file in that
      directory has been closed. That is, the directory's baton is
@@ -490,7 +462,8 @@ typedef struct
   /* Set the target revision for this edit to TARGET_REVISION.  This
      call, if used, should precede all other editor calls. */
   svn_error_t *(*set_target_revision) (void *edit_baton,
-                                       svn_revnum_t target_revision);
+                                       svn_revnum_t target_revision,
+                                       apr_pool_t *pool);
 
   /* Set *ROOT_BATON to a baton for the top directory of the change.
      (This is the top of the subtree being changed, not necessarily
@@ -575,7 +548,8 @@ typedef struct
      (set by add_directory or open_directory).  We won't be using
      the baton any more, so whatever resources it refers to may now be
      freed.  */
-  svn_error_t *(*close_directory) (void *dir_baton);
+  svn_error_t *(*close_directory) (void *dir_baton,
+                                   apr_pool_t *pool);
 
 
   /* Creating and modifying files.  */
@@ -635,6 +609,7 @@ typedef struct
      has occurred (by virtue of this function being invoked), but is
      simply indicating that it doesn't want the details.  */
   svn_error_t *(*apply_textdelta) (void *file_baton, 
+                                   apr_pool_t *pool,
                                    svn_txdelta_window_handler_t *handler,
                                    void **handler_baton);
 
@@ -653,15 +628,18 @@ typedef struct
   /* We are done processing a file, whose baton is FILE_BATON (set by
      `add_file' or `open_file').  We won't be using the baton any
      more, so whatever resources it refers to may now be freed.  */
-  svn_error_t *(*close_file) (void *file_baton);
+  svn_error_t *(*close_file) (void *file_baton,
+                              apr_pool_t *pool);
 
   /* All delta processing is done.  Call this, with the EDIT_BATON for
      the entire edit. */
-  svn_error_t *(*close_edit) (void *edit_baton);
+  svn_error_t *(*close_edit) (void *edit_baton, 
+                              apr_pool_t *pool);
 
   /* The editor-driver has decided to bail out.  Allow the editor to
      gracefully clean up things if it needs to. */
-  svn_error_t *(*abort_edit) (void *edit_baton);
+  svn_error_t *(*abort_edit) (void *edit_baton,
+                              apr_pool_t *pool);
 
 } svn_delta_editor_t;  
 

@@ -290,6 +290,7 @@ add_file (const char *path,
 
 static svn_error_t *
 apply_textdelta (void *file_baton, 
+                 apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {

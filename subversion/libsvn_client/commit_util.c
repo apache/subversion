@@ -696,7 +696,8 @@ push_stack (const char *rel_decoded_url, /* relative to commit base url */
 static svn_error_t *
 pop_stack (apr_array_header_t *db_stack,
            int *stack_ptr,
-           const svn_delta_editor_t *editor)
+           const svn_delta_editor_t *editor,
+           apr_pool_t *pool)
 {
   void *db;
 
@@ -705,7 +706,7 @@ pop_stack (apr_array_header_t *db_stack,
 
   /* Close the most recent directory pushed to the stack. */
   db = ((void **) db_stack->elts)[*stack_ptr];
-  return editor->close_directory (db);
+  return editor->close_directory (db, pool);
 }
 
 
@@ -923,7 +924,7 @@ do_item_commit (const char *url,
      "has local mods" conditional above. */
   else if (file_baton)
     {
-      SVN_ERR (editor->close_file (file_baton));
+      SVN_ERR (editor->close_file (file_baton, file_pool));
       svn_pool_destroy (file_pool);
     }
 
@@ -1013,7 +1014,7 @@ svn_client__do_commit (const char *base_url,
           int count = count_components (rel);
           while (count--)
             {
-              SVN_ERR (pop_stack (db_stack, &stack_ptr, editor));
+              SVN_ERR (pop_stack (db_stack, &stack_ptr, editor, pool));
             }
         }
 
@@ -1074,7 +1075,7 @@ svn_client__do_commit (const char *base_url,
   /* Close down any remaining open directory batons. */
   while (stack_ptr)
     {
-      SVN_ERR (pop_stack (db_stack, &stack_ptr, editor));
+      SVN_ERR (pop_stack (db_stack, &stack_ptr, editor, pool));
     }
 
   /* Transmit outstanding text deltas. */
@@ -1122,12 +1123,12 @@ svn_client__do_commit (const char *base_url,
           apr_hash_set (*tempfiles, tempfile, APR_HASH_KEY_STRING, (void *)1);
         }
       
-      SVN_ERR (editor->close_file (file_baton));
+      SVN_ERR (editor->close_file (file_baton, mod->subpool));
       svn_pool_destroy (mod->subpool);
     }
 
   /* Close the edit. */
-  SVN_ERR (editor->close_edit (edit_baton));
+  SVN_ERR (editor->close_edit (edit_baton, pool));
   return SVN_NO_ERROR;
 }
 

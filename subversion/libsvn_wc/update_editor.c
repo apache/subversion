@@ -492,7 +492,9 @@ prep_directory (struct dir_baton *db,
 /*** The callbacks we'll plug into an svn_delta_editor_t structure. ***/
 
 static svn_error_t *
-set_target_revision (void *edit_baton, svn_revnum_t target_revision)
+set_target_revision (void *edit_baton, 
+                     svn_revnum_t target_revision,
+                     apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
 
@@ -786,7 +788,8 @@ externals_prop_changed (apr_array_header_t *propchanges)
 
 
 static svn_error_t *
-close_directory (void *dir_baton)
+close_directory (void *dir_baton,
+                 apr_pool_t *pool)
 {
   struct dir_baton *db = dir_baton;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
@@ -1075,6 +1078,7 @@ open_file (const char *name,
 
 static svn_error_t *
 apply_textdelta (void *file_baton, 
+                 apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {
@@ -1765,7 +1769,8 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
 
 /* Mostly a wrapper around svn_wc_install_file. */
 static svn_error_t *
-close_file (void *file_baton)
+close_file (void *file_baton,
+            apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
   const char *new_text_path = NULL, *parent_path;
@@ -1820,7 +1825,8 @@ close_file (void *file_baton)
 
 
 static svn_error_t *
-close_edit (void *edit_baton)
+close_edit (void *edit_baton,
+            apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
   

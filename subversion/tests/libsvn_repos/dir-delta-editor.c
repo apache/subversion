@@ -201,6 +201,7 @@ test_add_file (const char *path,
 
 static svn_error_t *
 test_apply_textdelta (void *file_baton,
+                      apr_pool_t *pool,
                       svn_txdelta_window_handler_t *handler,
                       void **handler_baton)
 {
@@ -209,7 +210,7 @@ test_apply_textdelta (void *file_baton,
   return svn_fs_apply_textdelta (handler, handler_baton,
                                  fb->edit_baton->txn_root, 
                                  fb->path,
-                                 fb->edit_baton->pool);
+                                 pool);
 }
 
 

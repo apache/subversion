@@ -288,7 +288,8 @@ make_file_baton (struct dir_baton *parent_dir_baton,
 
 static svn_error_t *
 set_target_revision (void *edit_baton, 
-                     svn_revnum_t target_revision)
+                     svn_revnum_t target_revision,
+                     apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
   *(eb->youngest_revision) = target_revision;
@@ -405,7 +406,8 @@ change_dir_prop (void *dir_baton,
 
 
 static svn_error_t *
-close_directory (void *dir_baton)
+close_directory (void *dir_baton,
+                 apr_pool_t *pool)
 {
   struct dir_baton *db = dir_baton;
 
@@ -471,6 +473,7 @@ open_file (const char *path,
 
 static svn_error_t *
 apply_textdelta (void *file_baton, 
+                 apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {
@@ -501,7 +504,8 @@ change_file_prop (void *file_baton,
 
 
 static svn_error_t *
-close_file (void *file_baton)
+close_file (void *file_baton,
+            apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
 
@@ -527,7 +531,8 @@ close_file (void *file_baton)
 
 
 static svn_error_t *
-close_edit (void *edit_baton)
+close_edit (void *edit_baton,
+            apr_pool_t *pool)
 {
   /* The edit is over, free its pool. */
   svn_pool_destroy (((struct edit_baton *) edit_baton)->pool);

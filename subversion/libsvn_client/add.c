@@ -228,9 +228,9 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
                                   &root_baton));
       SVN_ERR (editor->add_directory (target, root_baton, NULL, 
                                       SVN_INVALID_REVNUM, pool, &dir_baton));
-      SVN_ERR (editor->close_directory (dir_baton));
-      SVN_ERR (editor->close_directory (root_baton));
-      SVN_ERR (editor->close_edit (edit_baton));
+      SVN_ERR (editor->close_directory (dir_baton, pool));
+      SVN_ERR (editor->close_directory (root_baton, pool));
+      SVN_ERR (editor->close_edit (edit_baton, pool));
 
       /* Fill in the commit_info structure. */
       *commit_info = svn_client__make_commit_info (committed_rev,

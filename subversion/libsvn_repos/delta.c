@@ -254,7 +254,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
   if (svn_fs_is_revision_root (tgt_root))
     {
       SVN_ERR (editor->set_target_revision 
-               (edit_baton, svn_fs_revision_root_revision (tgt_root)));
+               (edit_baton, svn_fs_revision_root_revision (tgt_root), pool));
     }
   else if (svn_fs_is_txn_root (tgt_root))
     {
@@ -263,8 +263,9 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
       svn_fs_txn_t *txn;
 
       SVN_ERR (svn_fs_open_txn (&txn, fs, txn_name, pool));
-      SVN_ERR (editor->set_target_revision 
-               (edit_baton, svn_fs_txn_base_revision (txn)));
+      SVN_ERR (editor->set_target_revision (edit_baton, 
+                                            svn_fs_txn_base_revision (txn),
+                                            pool));
       SVN_ERR (svn_fs_close_txn (txn));
     }
 
@@ -355,10 +356,10 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
  cleanup:
 
   /* Make sure we close the root directory we opened above. */
-  SVN_ERR (editor->close_directory (root_baton));
+  SVN_ERR (editor->close_directory (root_baton, pool));
 
   /* Close the edit. */
-  SVN_ERR (editor->close_edit (edit_baton));
+  SVN_ERR (editor->close_edit (edit_baton, pool));
 
   /* All's well that ends well. */
   return SVN_NO_ERROR;
@@ -577,7 +578,7 @@ send_text_delta (struct context *c,
 
   /* Get a handler that will apply the delta to the file.  */
   SVN_ERR (c->editor->apply_textdelta 
-           (file_baton, &delta_handler, &delta_handler_baton));
+           (file_baton, pool, &delta_handler, &delta_handler_baton));
 
   /* Our editor didn't provide a window handler, so don't sweat the deltas. */
   if (delta_handler == NULL)
@@ -729,7 +730,7 @@ add_file_or_dir (struct context *c, void *dir_baton,
                 copied_from_path, copied_from_revision, pool, &subdir_baton));
       SVN_ERR (delta_dirs (context, subdir_baton,
                            copied_from_path, t_fullpath, pool));
-      SVN_ERR (context->editor->close_directory (subdir_baton));
+      SVN_ERR (context->editor->close_directory (subdir_baton, pool));
     }
   else
     {
@@ -740,7 +741,7 @@ add_file_or_dir (struct context *c, void *dir_baton,
                 copied_from_path, copied_from_revision, pool, &file_baton));
       SVN_ERR (delta_files (context, file_baton,
                             copied_from_path, t_fullpath, pool));
-      SVN_ERR (context->editor->close_file (file_baton));
+      SVN_ERR (context->editor->close_file (file_baton, pool));
     }
 
   return SVN_NO_ERROR;
@@ -785,7 +786,7 @@ replace_file_or_dir (struct context *c,
                (edit_path (c, t_fullpath), dir_baton, 
                 base_revision, pool, &subdir_baton));
       SVN_ERR (delta_dirs (c, subdir_baton, s_fullpath, t_fullpath, pool));
-      SVN_ERR (c->editor->close_directory (subdir_baton));
+      SVN_ERR (c->editor->close_directory (subdir_baton, pool));
     }
   else
     {
@@ -795,7 +796,7 @@ replace_file_or_dir (struct context *c,
                (edit_path (c, t_fullpath), dir_baton, 
                 base_revision, pool, &file_baton));
       SVN_ERR (delta_files (c, file_baton, s_fullpath, t_fullpath, pool));
-      SVN_ERR (c->editor->close_file (file_baton));
+      SVN_ERR (c->editor->close_file (file_baton, pool));
     }
 
   return SVN_NO_ERROR;

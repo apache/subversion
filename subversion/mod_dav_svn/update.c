@@ -341,7 +341,8 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
 }
 
 static svn_error_t * upd_set_target_revision(void *edit_baton,
-					     svn_revnum_t target_revision)
+					     svn_revnum_t target_revision,
+                                             apr_pool_t *pool)
 {
   update_ctx_t *uc = edit_baton;
 
@@ -476,7 +477,8 @@ static svn_error_t * upd_change_xxx_prop(void *baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t * upd_close_directory(void *dir_baton)
+static svn_error_t * upd_close_directory(void *dir_baton,
+                                         apr_pool_t *pool)
 {
   item_baton_t *dir = dir_baton;
 
@@ -510,6 +512,7 @@ static svn_error_t * upd_open_file(const char *path,
 }
 
 static svn_error_t * upd_apply_textdelta(void *file_baton, 
+                                         apr_pool_t *pool,
                                          svn_txdelta_window_handler_t *handler,
                                          void **handler_baton)
 {
@@ -524,7 +527,8 @@ static svn_error_t * upd_apply_textdelta(void *file_baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t * upd_close_file(void *file_baton)
+static svn_error_t * upd_close_file(void *file_baton,
+                                    apr_pool_t *pool)
 {
   close_helper(FALSE /* is_dir */, file_baton);
   return SVN_NO_ERROR;

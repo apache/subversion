@@ -901,7 +901,8 @@ static svn_error_t * commit_change_dir_prop(void *dir_baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t * commit_close_dir(void *dir_baton)
+static svn_error_t * commit_close_dir(void *dir_baton,
+                                      apr_pool_t *pool)
 {
   resource_baton_t *dir = dir_baton;
 
@@ -1151,6 +1152,7 @@ static svn_error_t * commit_stream_close(void *baton)
 
 static svn_error_t * 
 commit_apply_txdelta(void *file_baton, 
+                     apr_pool_t *pool,
                      svn_txdelta_window_handler_t *handler,
                      void **handler_baton)
 {
@@ -1211,7 +1213,8 @@ static svn_error_t * commit_change_file_prop(void *file_baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t * commit_close_file(void *file_baton)
+static svn_error_t * commit_close_file(void *file_baton,
+                                       apr_pool_t *pool)
 {
   resource_baton_t *file = file_baton;
 
@@ -1223,7 +1226,8 @@ static svn_error_t * commit_close_file(void *file_baton)
 }
 
 
-static svn_error_t * commit_close_edit(void *edit_baton)
+static svn_error_t * commit_close_edit(void *edit_baton,
+                                       apr_pool_t *pool)
 {
   commit_ctx_t *cc = edit_baton;
 

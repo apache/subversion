@@ -530,9 +530,9 @@ svn_wc_transmit_text_deltas (const char *path,
      file baton; the editor returns to us a window consumer routine
      and baton.  If there is no handler provided, just close the file
      and get outta here.  */
-  SVN_ERR (editor->apply_textdelta (file_baton, &handler, &wh_baton));
+  SVN_ERR (editor->apply_textdelta (file_baton, pool, &handler, &wh_baton));
   if (! handler)
-    return editor->close_file (file_baton);
+    return editor->close_file (file_baton, pool);
 
   /* Make an untranslated copy of the working file in the
      adminstrative tmp area because a) we want this to work even if
@@ -630,7 +630,7 @@ svn_wc_transmit_text_deltas (const char *path,
     SVN_ERR (svn_wc__close_text_base (basefile, path, 0, pool));
 
   /* Close the file baton, and get outta here. */
-  return editor->close_file (file_baton);
+  return editor->close_file (file_baton, pool);
 }
 
 
