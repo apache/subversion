@@ -61,6 +61,7 @@ SVN_INVALID_REVNUM = -1
 
 COMMIT_THRESHOLD = 5 * 60	# flush a commit if a 5 minute gap occurs
 
+OP_NOOP   = '-'
 OP_ADD    = 'A'
 OP_DELETE = 'D'
 OP_CHANGE = 'C'
@@ -247,6 +248,8 @@ def make_path(ctx, path, branch_name = None, tag_name = None):
   CTX holds the name of the branches or tags directory, which is found
   under PATH's first component.
 
+  If PATH is empty or None, return the root trunk|branch|tag path.
+
   It is an error to pass both a BRANCH_NAME and a TAG_NAME."""
 
   # For a while, we treated each top-level subdir of the CVS
@@ -289,11 +292,20 @@ def make_path(ctx, path, branch_name = None, tag_name = None):
     sys.exit(1)
 
   if branch_name:
-    return ctx.branches_base + '/' + branch_name + '/' + path
+    if path:
+      return ctx.branches_base + '/' + branch_name + '/' + path
+    else:
+      return ctx.branches_base + '/' + branch_name
   elif tag_name:
-    return ctx.tags_base + '/' + tag_name + '/' + path
+    if path:
+      return ctx.tags_base + '/' + tag_name + '/' + path
+    else:
+      return ctx.tags_base + '/' + tag_name
   else:
-    return ctx.trunk_base + '/' + path
+    if path:
+      return ctx.trunk_base + '/' + path
+    else:
+      return ctx.trunk_base + '/' + path
 
 
 def relative_name(cvsroot, fname):
@@ -444,7 +456,9 @@ class RepositoryMirror:
     # It's not actually a parent at this point, it's the leaf node.
     return parent
 
-  def change_path(self, path, tags, branches, intermediate_dir_func=None):
+  def change_path(self, path, tags, branches,
+                  intermediate_dir_func=None,
+                  copyfrom_path=None, copyfrom_rev=None):
     """Record a change to PATH.  PATH may not have a leading slash.
 
     Return a tuple (op, (closed_names)), where op is 'A' if the
@@ -458,7 +472,22 @@ class RepositoryMirror:
 
     If INTERMEDIATE_DIR_FUNC is not None, then invoke it once on
     each full path to each missing intermediate directory in PATH, in
-    order from shortest to longest."""
+    order from shortest to longest.
+
+    If COPYFROM_REV and COPYFROM_PATH are not None, then they are a
+    revision and path to record as the copyfrom sources of this node.
+    Since this implies an 'A'dd, it would be reasonable to error and
+    exit if the copyfrom args are present but the node also already
+    exists.  Reasonable -- but not what we do :-).  The most useful
+    behavior for callers is instead to report that nothing was done,
+    by returning '-' for OP, so that's what we do.
+
+    It is an error for only one copyfrom argument to be present."""
+    if ((copyfrom_rev and not copyfrom_path) or
+        (copyfrom_path and not copyfrom_rev)):
+      sys.stderr.write("error: change_path() called with one copyfrom "
+                       "argument but not the other.\n")
+      sys.exit(1)
 
     components = string.split(path, '/')
     path_so_far = None
@@ -515,16 +544,14 @@ class RepositoryMirror:
     old_names = ()
     last_component = components[-1]
     if parent.has_key(last_component):
-      # Sanity check.
       child = marshal.loads(self.nodes_db[parent[last_component]])
-      if child.has_key(self.mutable_flag):
-        sys.stderr.write("'%s' has already been changed in revision %d;\n" \
-                         "can't change it again in the same revision."     \
-                         % (path, self.youngest))
-        sys.exit(1)
-      # Okay, passed the sanity check.
       op = OP_CHANGE
-      old_names = child[self.symbolic_names]
+      if child.has_key(self.symbolic_names):
+        old_names = child[self.symbolic_names]
+      # The contract for copying over existing nodes is to do nothing
+      # and return:
+      if copyfrom_path:
+        return (OP_NOOP, old_names)
 
     leaf_key = gen_key()
     parent[last_component] = leaf_key
@@ -804,14 +831,20 @@ class Dumper:
     else:                                          return 1
 
   def copy_path(self, svn_src_path, svn_src_rev, svn_dst_path):
-    # We don't need to include "Node-kind:" for copies; the loader
-    # ignores it anyway and just uses the source kind instead.
-    self.dumpfile.write('Node-path: %s\n'
-                        'Node-action: add\n'
-                        'Node-copyfrom-rev: %d\n'
-                        'Node-copyfrom-path: /%s\n'
-                        '\n'
-                        % (svn_dst_path, svn_src_rev, svn_src_path))
+    op, ign = self.repos_mirror.change_path(svn_dst_path,
+                                            [], [],
+                                            self.add_dir,
+                                            svn_src_path,
+                                            svn_src_rev)
+    if op == 'A':
+      # We don't need to include "Node-kind:" for copies; the loader
+      # ignores it anyway and just uses the source kind instead.
+      self.dumpfile.write('Node-path: %s\n'
+                          'Node-action: add\n'
+                          'Node-copyfrom-rev: %d\n'
+                          'Node-copyfrom-path: /%s\n'
+                          '\n'
+                          % (svn_dst_path, svn_src_rev, svn_src_path))
 
   def add_or_change_path(self, cvs_path, svn_path, cvs_rev, rcs_file,
                          tags, branches):
@@ -1007,11 +1040,16 @@ class SymbolicNameTracker:
     self.db = anydbm.open(self.db_file, 'n')
     self.root_key = gen_key()
     self.db[self.root_key] = marshal.dumps({})
+
     # The keys for the opening and closing revision lists attached to
     # each directory or file.  Includes "/" so as never to conflict
     # with any real entry.
     self.opening_revs_key = "/opening"
     self.closing_revs_key = "/closing"
+
+    # When a node is copied into the repository, the revision copied
+    # is stored under this key, and the opening and closing rev lists
+    # are removed.
     self.copyfrom_rev_key = "/copyfrom-rev"
 
   def probe_path(self, symbolic_name, path, debugging=None):
@@ -1213,54 +1251,111 @@ class SymbolicNameTracker:
     """Use DUMPER to create all currently available parts of BRANCH
     that have not been created already, and make sure that SVN_REV of
     SVN_PATH is in the branch afterwards."""
+
+    # Helper.
+    def copy_descend(dumper, ctx, branch, parent, entry_name,
+                     parent_rev, src_path, dst_path):
+      """Starting with ENTRY_NAME in directory object PARENT at
+      PARENT_REV, use DUMPER and CTX to copy nodes in the Subversion
+      repository, manufacturing the destination paths with BRANCH and
+      PATH_SO_FAR fooo.  Copy only nodes not implicitly copied as part of a
+      subtree."""
+      key = parent[entry_name]
+      val = marshal.loads(self.db[key])
+
+      if not val.has_key(self.copyfrom_rev_key):
+        # If not already copied this subdir, calculate its "best rev"
+        # and see if it differs from parent's best rev.
+        scores = self.score_revisions(val.get(self.opening_revs_key),
+                                      val.get(self.closing_revs_key))
+        rev = self.best_rev(scores)
+        if (rev != parent_rev):
+          parent_rev = rev
+          copy_dst = make_path(ctx, dst_path, branch)
+          dumper.copy_path(src_path, parent_rev, copy_path)
+          # Record that this copy is done:
+          val[self.copyfrom_rev_key] = parent_rev
+          if val.has_key(self.opening_revs_key):
+            del val[self.opening_revs_key]
+          if val.has_key(self.closing_revs_key):
+            del val[self.closing_revs_key]
+          self.db[key] = marshal.dumps(val)
+
+      for ent in val.keys():
+        if not ent[0] == '/':
+          if src_path: next_src = src_path + '/' + ent
+          else:        next_src = ent
+          if dst_path: next_dst = dst_path + '/' + ent
+          else:        next_dst = ent
+          copy_descend(dumper, ctx, branch, val, ent, parent_rev,
+                       next_src, next_dst)
+
+    # A source path looks like this in the symbolic name tree:
+    #
+    #    thisbranch/trunk/proj/foo/bar/baz.c
+    #
+    # ...or occasionally...
+    #
+    #    thisbranch/branches/sourcebranch/proj/foo/bar/baz.c
+    #
+    # (the latter when 'thisbranch' is branched off 'sourcebranch').
+    #
+    # Meanwhile, we're copying to a location in the repository like
+    #
+    #    /branches/thisbranch/proj/foo/bar/baz.c    or
+    #    /tags/tagname/proj/foo/bar/baz.c
+    #
+    # Of course all this depends on make_path()'s behavior.  At
+    # various times we've changed the way it produces paths (see
+    # revisions 6028 and 6347).  If it changes again, the logic here
+    # must be adjusted to match.
+
     parent_key = self.root_key
     parent = marshal.loads(self.db[parent_key])
 
     if not parent.has_key(branch):
       sys.stderr.write("No origin records for branch '%s'." % branch)
       sys.exit(1)
-    
-    def copy_descend(dumper, ctx, branch, parent, entry_name,
-                     path_so_far, parent_rev):
-      key = parent[entry_name]
-      val = marshal.loads(self.db[key])
-      scores = self.score_revisions(val.get(self.opening_revs_key),
-                                    val.get(self.closing_revs_key))
-      rev = self.best_rev(scores)
-      if ((rev != parent_rev) and not val.has_key(self.copyfrom_rev_key)):
-        parent_rev = rev
-        # print "KFF parent:", parent
-        # print "KFF entry_name: '%s'" % entry_name
-        # print "KFF openings:", val.get(self.opening_revs_key)
-        # print "KFF closings:", val.get(self.closing_revs_key)
-        # print "KFF scores:", scores
-        # print "KFF copyfrom-path: '%s'" % path_so_far
-        # print "KFF copyfrom-rev: '%s'" % parent_rev
-        ### FIXME: todo -- working here
-        ### This path is all wrong, of course.  We need to get
-        ### the source and dest to start at the same "level" in the
-        ### copy descent, so first we need to fix path generation for
-        ### projects.
-        dst_path = make_path(ctx, path_so_far, branch)
-        # print "KFF dst_path: '%s'" % dst_path
-        dumper.copy_path(path_so_far, parent_rev, dst_path)
-        # Record that this copy is done.
-        val[self.copyfrom_rev_key] = parent_rev
-        # print "KFF new val:", val
-        self.db[key] = marshal.dumps(val)
-      else:
-        # print "KFF filled by implication: '%s'" % path_so_far
-        pass
-      for ent in val.keys():
-        if not ent[0] == '/':
-          if path_so_far: next_path = path_so_far + '/' + ent
-          else:           next_path = ent
-          copy_descend(dumper, ctx, branch, val, ent, next_path, parent_rev)
 
-    # print ""
-    # print "KFF filling path: '%s'" % svn_path
-    copy_descend(dumper, ctx, branch, parent, branch, "", SVN_INVALID_REVNUM)
-    # print ""
+    # Now move down into the branch.  By the way, this has nothing to
+    # do with the directory we just emitted above -- that was for the
+    # svn repository, not the symbolic name tree.
+    parent_key = parent[branch]
+    parent = marshal.loads(self.db[parent_key])
+
+    # All Subversion source paths under the branch start with one of
+    # three things:
+    #
+    #   /trunk/...
+    #   /branches/foo/...
+    #   /tags/foo/...
+    #
+    # (We don't care what foo is, it's just a component to skip over.)
+    #
+    # Since these don't all have the same number of components, we
+    # manually descend into each as far as necessary, then invoke
+    # copy_descend() once we're in the right place in both trees.
+    #
+    # Since it's possible for a branch or tag to have some source
+    # paths on trunk and some on branches, there's some question about
+    # what to copy as the top-level directory of the branch.  Our
+    # solution is to [somewhat randomly] give preference to trunk.
+    # Note that none of these paths can ever conflict; for example,
+    # it would be impossible to have both
+    #
+    #   thisbranch/trunk/myproj/lib/drivers.c                   and
+    #   thisbranch/branches/sourcebranch/myproj/lib/drivers.c
+    #
+    # because that would imply that the symbolic name 'thisbranch'
+    # appeared twice in the RCS file header, referring to two
+    # different revisions.  Well, I suppose that's *possible*, but its
+    # effect is undefined, and it's as reasonable for us to just
+    # overwrite one with the other as anything else -- anyway, isn't
+    # that what CVS would do if you checked out the branch?  <shrug>
+
+    if parent.has_key(ctx.trunk_base):
+      copy_descend(dumper, ctx, branch, parent, ctx.trunk_base,
+                   SVN_INVALID_REVNUM, ctx.trunk_base, "")
 
 
 class Commit:
