@@ -1099,7 +1099,79 @@ def merge_mixed_revisions():
 
   return 0
 
+#----------------------------------------------------------------------
 
+def commit_uri_unsafe():
+  "commit files and dirs with URI-unsafe characters"
+
+  # Bootstrap:  make independent repo and working copy.
+  sbox = sandbox(commit_uri_unsafe)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+
+  if svntest.actions.make_repo_and_wc(sbox): return 1
+
+  # Make some convenient paths.
+  hash_dir = os.path.join(wc_dir, '#hash#')
+  nasty_dir = os.path.join(wc_dir, '#![]{}()<>%')
+  space_path = os.path.join(wc_dir, 'A', 'D', 'space path')
+  bang_path = os.path.join(wc_dir, 'A', 'D', 'H', 'bang!')
+  bracket_path = os.path.join(wc_dir, 'A', 'D', 'H', 'bra[ket')
+  brace_path = os.path.join(wc_dir, 'A', 'D', 'H', 'bra{e')
+  angle_path = os.path.join(wc_dir, 'A', 'D', 'H', '<angle>')
+  paren_path = os.path.join(wc_dir, 'A', 'D', 'pare)(theses')
+  percent_path = os.path.join(wc_dir, '#hash#', 'percen%')
+  nasty_path = os.path.join(wc_dir, 'A', '#![]{}()<>%')
+
+  os.mkdir(hash_dir)
+  os.mkdir(nasty_dir)
+  svntest.main.file_append(space_path, "This path has a space in it.")
+  svntest.main.file_append(bang_path, "This path has a bang in it.")
+  svntest.main.file_append(bracket_path, "This path has a bracket in it.")
+  svntest.main.file_append(brace_path, "This path has a brace in it.")
+  svntest.main.file_append(angle_path, "This path has angle brackets in it.")
+  svntest.main.file_append(paren_path, "This path has parentheses in it.")
+  svntest.main.file_append(percent_path, "This path has a percent in it.")
+  svntest.main.file_append(nasty_path, "This path has all sorts of ick in it.")
+
+  output_list = []
+  add_list = [hash_dir,
+              # nasty_dir, # not xml-safe
+              space_path,
+              bang_path,
+              bracket_path,
+              brace_path,
+              # angle_path, # not xml-safe
+              paren_path,
+              percent_path,
+              # nasty_path, # not xml-safe
+              ]
+  for item in add_list:
+    svntest.main.run_svn(None, 'add', item)
+    item_list = [item, None, {}, {'verb' : 'Adding'}]
+    output_list.append(item_list)
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  
+  # Items in the status list are all at rev 1
+  for item in status_list:
+    item[3]['wc_rev'] = '1'
+
+  # Items in our add list will be at rev 2
+  for item in add_list:
+    item_list = [item, None, {}, {'wc_rev': '2', 'repos_rev': '2',
+                                  'locked': ' ', 'status': '_ '}]
+    status_list.append(item_list)
+          
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output_tree,
+                                            expected_status_tree,
+                                            None, None, None, None, None,
+                                            wc_dir):
+    return 1
+  return 0
+  
 ########################################################################
 # Run the tests
 
@@ -1119,7 +1191,8 @@ test_list = [ None,
               hudson_part_2,
               ## ### todo: comment this back in when it's working
               ## hook_test,
-              merge_mixed_revisions
+              merge_mixed_revisions,
+              commit_uri_unsafe
              ]
 
 if __name__ == '__main__':
