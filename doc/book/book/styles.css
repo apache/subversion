@@ -79,6 +79,12 @@ A:hover
     text-decoration: underline;
 }
 
+A:visited 
+{
+    color: purple;
+    text-decoration: underline;
+}
+
 IMG
 {
     border: none;
