@@ -190,7 +190,11 @@ const apr_array_header_t *svn_swig_py_strings_to_array(PyObject *source,
     }
     targlen = PySequence_Length(source);
     temp = apr_array_make(pool, targlen, sizeof(const char *));
+    /* APR_ARRAY_IDX doesn't actually increment the array item count
+       (like, say, apr_array_push would). */
+    temp->nelts = targlen;
     while (targlen--) {
+        const char *string;
         PyObject *o = PySequence_GetItem(source, targlen);
         if (o == NULL)
             return NULL;
@@ -199,7 +203,8 @@ const apr_array_header_t *svn_swig_py_strings_to_array(PyObject *source,
             PyErr_SetString(PyExc_TypeError, "not a sequence");
             return NULL;
         }
-        APR_ARRAY_IDX(temp, targlen, const char *) = PyString_AS_STRING(o);
+        string = apr_pstrdup (pool, PyString_AS_STRING(o));
+        APR_ARRAY_IDX(temp, targlen, const char *) = string;
         Py_DECREF(o);
     }
     return temp;
