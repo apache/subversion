@@ -58,16 +58,6 @@ Core changes that don't have three +1's yet, or have a veto.  (If you
 make the threshold vote on one of these items, please move it to the
 section for approved changes.)
 
-   * r8127
-     Copyright notice fixes, like the {r8016, r8019, r8028} change.
-     Justification: Same as for above-referenced change.
-     Notes: The patch to trunk/subversion/bindings/com/SVNCOM.rc looks
-            like it modifies the whole file, because it fixed the line
-            endings in the repository.  See r8127 log msg for details.
-     Votes:
-      +1: kfogel, jszakmeister
-      +1 (concept): gstein (not reviewed)
-
    * Issue #408
      Date parser rewrite.
      Justification: API change; avoid permanent support for bizarre and
@@ -77,15 +67,6 @@ section for approved changes.)
       +0: cmpilato
       -1: gstein. see:
            http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=53839
-
-
-   * r8035, r8036, r8037, r8128, r8156
-     Blame UI changes.
-     Justification: much nicer user experience; low risk.
-     Votes:
-      +1: mbk, jszakmeister
-      +0: cmpilato
-      -0: gstein (alternative is to remove the late-added 'blame' feature)
 
 
    * r8055, r8085, r8104, r8105
@@ -105,13 +86,6 @@ section for approved changes.)
       -0: gstein, sussman
 
      
-   * Issue #1689
-     Clean up structure definitions.
-     Justification: Negligible risk, API cleanliness and stability.
-     Votes:
-      +1: ghudson, kfogel, dlr
-
-
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
 the section for unapproved changes.)
@@ -372,6 +346,33 @@ the section for unapproved changes.)
      Votes:
       +1: kfogel, jerenkrantz, jszakmeister
       +1 (concept): gstein
+
+
+   * r8127
+     Copyright notice fixes, like the {r8016, r8019, r8028} change.
+     Justification: Same as for above-referenced change.
+     Notes: The patch to trunk/subversion/bindings/com/SVNCOM.rc looks
+            like it modifies the whole file, because it fixed the line
+            endings in the repository.  See r8127 log msg for details.
+     Votes:
+      +1: kfogel, jszakmeister, ghudson
+      +1 (concept): gstein (not reviewed)
+
+
+   * r8035, r8036, r8037, r8128, r8156
+     Blame UI changes.
+     Justification: much nicer user experience; low risk.
+     Votes:
+      +1: mbk, jszakmeister, ghudson
+      +0: cmpilato
+      -0: gstein (alternative is to remove the late-added 'blame' feature)
+
+
+   * Issue #1689
+     Clean up structure definitions.
+     Justification: Negligible risk, API cleanliness and stability.
+     Votes:
+      +1: ghudson, kfogel, dlr
 
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
