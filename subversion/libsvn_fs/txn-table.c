@@ -24,6 +24,7 @@
 #include "dbt.h"
 #include "proplist.h"
 #include "skel.h"
+#include "fs_skels.h"
 #include "txn-table.h"
 #include "trail.h"
 #include "validate.h"
@@ -60,64 +61,23 @@ svn_fs__open_transactions_table (DB **transactions_p,
 }
 
 
-static int
-is_valid_transaction (skel_t *skel)
-{
-  int len = svn_fs__list_length (skel);
-
-  if (len == 4
-      && svn_fs__matches_atom (skel->children, "transaction")
-      && skel->children->next->is_atom
-      && skel->children->next->next->is_atom
-      && svn_fs__is_valid_proplist (skel->children->next->next->next))
-    return 1;
-
-  return 0;
-}
-
-
-/* Store ROOT_ID and BASE_ROOT_ID as the roots of SVN_TXN in FS, and
-   PROPLIST as a list of properties, all as part of TRAIL.  */
+/* Store TXN as a transaction named TXN_NAME in FS as part of TRAIL.  */
 static svn_error_t *
 put_txn (svn_fs_t *fs,
-         const char *svn_txn,
-         const svn_fs_id_t *root_id,
-         const svn_fs_id_t *base_root_id,
-         skel_t *proplist,
+         svn_fs__transaction_t *txn,
+         const char *txn_name,
          trail_t *trail)
 {
-  apr_pool_t *pool = trail->pool;
-  svn_stringbuf_t *unparsed_root_id = svn_fs_unparse_id (root_id, pool);
-  svn_stringbuf_t *unparsed_base_root_id = svn_fs_unparse_id (base_root_id, pool);
-  skel_t *txn_skel = svn_fs__make_empty_list (pool);
+  skel_t *txn_skel;
   DBT key, value;
 
-  /* PROPLIST */
-  svn_fs__prepend (proplist, txn_skel);
-
-  /* BASE-ROOT-ID */
-  svn_fs__prepend (svn_fs__mem_atom (unparsed_base_root_id->data,
-                                     unparsed_base_root_id->len,
-                                     pool),
-                   txn_skel);
-
-  /* ROOT-ID */
-  svn_fs__prepend (svn_fs__mem_atom (unparsed_root_id->data,
-                                     unparsed_root_id->len,
-                                     pool),
-                   txn_skel);
-
-  /* "transaction" */
-  svn_fs__prepend (svn_fs__str_atom ("transaction", pool), txn_skel);
-
-  /* Sanity check.  */
-  if (! is_valid_transaction (txn_skel))
-    abort ();
+  /* Convert native type to skel. */
+  SVN_ERR (svn_fs__unparse_transaction_skel (&txn_skel, txn, trail->pool));
 
   /* Only in the context of this function do we know that the DB call
-     will not attempt to modify svn_txn, so the cast belongs here.  */
-  svn_fs__str_to_dbt (&key, (char *) svn_txn);
-  svn_fs__skel_to_dbt (&value, txn_skel, pool);
+     will not attempt to modify txn_name, so the cast belongs here.  */
+  svn_fs__str_to_dbt (&key, (char *) txn_name);
+  svn_fs__skel_to_dbt (&value, txn_skel, trail->pool);
   SVN_ERR (DB_WRAP (fs, "storing transaction record",
                     fs->transactions->put (fs->transactions, trail->db_txn,
                                            &key, &value, 0)));
@@ -180,30 +140,34 @@ allocate_txn_id (char **id_p,
 
 
 svn_error_t *
-svn_fs__create_txn (char **txn_id_p,
+svn_fs__create_txn (char **txn_name_p,
                     svn_fs_t *fs,
                     const svn_fs_id_t *root_id,
                     trail_t *trail)
 {
-  char *svn_txn;
+  char *txn_name;
+  svn_fs__transaction_t txn;
+  svn_fs_id_t *id_copy = svn_fs__id_copy (root_id, trail->pool);
 
-  SVN_ERR (allocate_txn_id (&svn_txn, fs, trail));
-  SVN_ERR (put_txn (fs, svn_txn, root_id, root_id,
-                    svn_fs__make_empty_list (trail->pool), trail));
+  SVN_ERR (allocate_txn_id (&txn_name, fs, trail));
+  txn.root_id = id_copy;
+  txn.base_root_id = id_copy;
+  txn.proplist = NULL;
+  SVN_ERR (put_txn (fs, &txn, txn_name, trail));
 
-  *txn_id_p = svn_txn; 
+  *txn_name_p = txn_name; 
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
 svn_fs__delete_txn (svn_fs_t *fs,
-                    const char *svn_txn,
+                    const char *txn_name,
                     trail_t *trail)
 {
   DBT key;
 
-  svn_fs__str_to_dbt (&key, (char *) svn_txn);
+  svn_fs__str_to_dbt (&key, (char *) txn_name);
   SVN_ERR (DB_WRAP (fs, "deleting entry from `transactions' table",
                     fs->transactions->del (fs->transactions,
                                            trail->db_txn, &key, 0)));
@@ -213,71 +177,36 @@ svn_fs__delete_txn (svn_fs_t *fs,
 
 
 svn_error_t *
-svn_fs__get_txn (skel_t **txn_skel,
+svn_fs__get_txn (svn_fs__transaction_t **txn_p,
                  svn_fs_t *fs,
-                 const char *svn_txn,
+                 const char *txn_name,
                  trail_t *trail)
 {
   DBT key, value;
   int db_err;
-  skel_t *transaction;
+  skel_t *skel;
+  svn_fs__transaction_t *transaction;
 
   /* Only in the context of this function do we know that the DB call
-     will not attempt to modify svn_txn, so the cast belongs here.  */
+     will not attempt to modify txn_name, so the cast belongs here.  */
   db_err = fs->transactions->get (fs->transactions, trail->db_txn,
-                                  svn_fs__str_to_dbt (&key, (char *) svn_txn),
+                                  svn_fs__str_to_dbt (&key, (char *) txn_name),
                                   svn_fs__result_dbt (&value),
                                   0);
   svn_fs__track_dbt (&value, trail->pool);
 
   if (db_err == DB_NOTFOUND)
-    return svn_fs__err_no_such_txn (fs, svn_txn);
+    return svn_fs__err_no_such_txn (fs, txn_name);
   SVN_ERR (DB_WRAP (fs, "reading transaction", db_err));
 
-  transaction = svn_fs__parse_skel (value.data, value.size, trail->pool);
-  if (! transaction
-      || ! is_valid_transaction (transaction))
-    return svn_fs__err_corrupt_txn (fs, svn_txn);
+  /* Unparse TRANSACTION skel */
+  skel = svn_fs__parse_skel (value.data, value.size, trail->pool);
+  if (! skel)
+    return svn_fs__err_corrupt_txn (fs, txn_name);
 
-  *txn_skel = transaction;
-  return SVN_NO_ERROR;
-}
-
-
-/* Super-trivial helper function.  Get the PROPLIST skel from a
-   TRANSACTION skel TXN_SKEL.  */
-static skel_t *
-get_proplist_from_txn_skel (skel_t *txn_skel)
-{
-  return txn_skel->children->next->next->next;
-}
-
-
-/* Helper function.  Get the root id *ROOT_ID_P and base root id
-   *BASE_ROOT_ID_P from the "transaction" skel TXN_SKEL.  Use POOL for
-   any necessary allocations. */
-static svn_error_t *
-get_ids_from_txn_skel (svn_fs_id_t **root_id_p,
-                       svn_fs_id_t **base_root_id_p,
-                       skel_t *txn_skel,
-                       apr_pool_t *pool)
-{
-  skel_t *root_id_skel = txn_skel->children->next;
-  skel_t *base_root_id_skel = txn_skel->children->next->next;
-  svn_fs_id_t *root_id = svn_fs_parse_id (root_id_skel->data,
-                                          root_id_skel->len,
-                                          pool);
-  svn_fs_id_t *base_root_id = svn_fs_parse_id (base_root_id_skel->data,
-                                               base_root_id_skel->len,
-                                               pool);
-  if (! root_id || ! base_root_id)
-    return
-      svn_error_create
-      (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
-       "Transaction contains an invalid id.");
-
-  *root_id_p = root_id;
-  *base_root_id_p = base_root_id;
+  /* Convert skel to native type. */
+  SVN_ERR (svn_fs__parse_transaction_skel (&transaction, skel, trail->pool));
+  *txn_p = transaction;
   return SVN_NO_ERROR;
 }
 
@@ -286,54 +215,50 @@ svn_error_t *
 svn_fs__get_txn_ids (svn_fs_id_t **root_id_p,
                      svn_fs_id_t **base_root_id_p,
                      svn_fs_t *fs,
-                     const char *svn_txn,
+                     const char *txn_name,
                      trail_t *trail)
 {
-  skel_t *transaction;
-
-  SVN_ERR (svn_fs__get_txn (&transaction, fs, svn_txn, trail));
-  SVN_ERR (get_ids_from_txn_skel (root_id_p, base_root_id_p, transaction,
-                                  trail->pool));
+  svn_fs__transaction_t *txn;
+  
+  SVN_ERR (svn_fs__get_txn (&txn, fs, txn_name, trail));
+  *root_id_p = txn->root_id;
+  *base_root_id_p = txn->base_root_id;
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
 svn_fs__set_txn_root (svn_fs_t *fs,
-                      const char *svn_txn,
-                      const svn_fs_id_t *root_id,
+                      const char *txn_name,
+                      const svn_fs_id_t *new_id,
                       trail_t *trail)
 {
-  svn_fs_id_t *old_root_id, *base_root_id;
-  skel_t *txn_skel;
+  svn_fs__transaction_t *txn;
 
-  SVN_ERR (svn_fs__get_txn (&txn_skel, fs, svn_txn, trail));
-  SVN_ERR (get_ids_from_txn_skel (&old_root_id, &base_root_id,
-                                  txn_skel, trail->pool));
-  if (! svn_fs__id_eq (old_root_id, root_id))
-    SVN_ERR (put_txn (fs, svn_txn, root_id, base_root_id, 
-                      get_proplist_from_txn_skel (txn_skel), trail));
-
+  SVN_ERR (svn_fs__get_txn (&txn, fs, txn_name, trail));
+  if (! svn_fs__id_eq (txn->root_id, new_id))
+    {
+      txn->root_id = svn_fs__id_copy (new_id, trail->pool);
+      SVN_ERR (put_txn (fs, txn, txn_name, trail));
+    }
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
 svn_fs__set_txn_base (svn_fs_t *fs,
-                      const char *svn_txn,
+                      const char *txn_name,
                       const svn_fs_id_t *new_id,
                       trail_t *trail)
 {
-  svn_fs_id_t *root_id, *base_root_id;
-  skel_t *txn_skel;
+  svn_fs__transaction_t *txn;
 
-  SVN_ERR (svn_fs__get_txn (&txn_skel, fs, svn_txn, trail));
-  SVN_ERR (get_ids_from_txn_skel (&root_id, &base_root_id,
-                                  txn_skel, trail->pool));
-  if (! svn_fs__id_eq (base_root_id, new_id))
-    SVN_ERR (put_txn (fs, svn_txn, root_id, new_id, 
-                      get_proplist_from_txn_skel (txn_skel), trail));
-
+  SVN_ERR (svn_fs__get_txn (&txn, fs, txn_name, trail));
+  if (! svn_fs__id_eq (txn->base_root_id, new_id))
+    {
+      txn->base_root_id = svn_fs__id_copy (new_id, trail->pool);
+      SVN_ERR (put_txn (fs, txn, txn_name, trail));
+    }
   return SVN_NO_ERROR;
 }
 
@@ -427,18 +352,12 @@ txn_body_txn_prop (void *baton,
                    trail_t *trail)
 {
   struct txn_prop_args *args = baton;
-
-  skel_t *skel;
-  skel_t *proplist;
+  svn_fs__transaction_t *txn;
   
-  SVN_ERR (svn_fs__get_txn (&skel, args->fs, args->id, trail));
-  proplist = get_proplist_from_txn_skel (skel);
-
-  /* Return the results of the generic property getting function. */
-  return svn_fs__get_prop (args->value_p,
-                           proplist,
-                           args->propname,
-                           trail->pool);
+  SVN_ERR (svn_fs__get_txn (&txn, args->fs, args->id, trail));
+  *(args->value_p) = apr_hash_get (txn->proplist, 
+                                   args->propname, APR_HASH_KEY_STRING);
+  return SVN_NO_ERROR;
 }
 
 
@@ -476,17 +395,12 @@ struct txn_proplist_args {
 static svn_error_t *
 txn_body_txn_proplist (void *baton, trail_t *trail)
 {
+  svn_fs__transaction_t *txn;
   struct txn_proplist_args *args = baton;
-  skel_t *skel;
-  skel_t *proplist;
 
-  SVN_ERR (svn_fs__get_txn (&skel, args->fs, args->id, trail));
-  proplist = get_proplist_from_txn_skel (skel);
-
-  /* Return the results of the generic property hash getting function. */
-  return svn_fs__make_prop_hash (args->table_p,
-                                 proplist,
-                                 trail->pool);
+  SVN_ERR (svn_fs__get_txn (&txn, args->fs, args->id, trail));
+  *(args->table_p) = txn->proplist;
+  return SVN_NO_ERROR;
 }
 
 
@@ -526,19 +440,24 @@ svn_fs__set_txn_prop (svn_fs_t *fs,
                       const svn_string_t *value,
                       trail_t *trail)
 {
-  skel_t *skel;
-  skel_t *proplist;
-  svn_fs_id_t *root_id, *base_root_id;
+  svn_fs__transaction_t *txn;
 
-  SVN_ERR (svn_fs__get_txn (&skel, fs, txn_name, trail));
-  SVN_ERR (get_ids_from_txn_skel (&root_id, &base_root_id, skel, trail->pool));
-  proplist = get_proplist_from_txn_skel (skel);
+  SVN_ERR (svn_fs__get_txn (&txn, fs, txn_name, trail));
 
-  /* Call the generic property setting function. */
-  SVN_ERR (svn_fs__set_prop (proplist, name, value, trail->pool));
-  SVN_ERR (put_txn (fs, txn_name, root_id, base_root_id, proplist, trail));
+  /* If there's no proplist, but we're just deleting a property, exit
+     now. */
+  if ((! txn->proplist) && (! value))
+    return SVN_NO_ERROR;
 
-  return SVN_NO_ERROR;
+  /* Now, if there's no proplist, we know we need to make one. */
+  if (! txn->proplist)
+    txn->proplist = apr_hash_make (trail->pool);
+
+  /* Set the property. */
+  apr_hash_set (txn->proplist, name, APR_HASH_KEY_STRING, value);
+
+  /* Now overwrite the transaction. */
+  return put_txn (fs, txn, txn_name, trail);
 }
 
 

@@ -19,8 +19,8 @@
 #define SVN_LIBSVN_FS_REV_TABLE_H
 
 #include <db.h>
+#include "fs.h"
 #include "svn_fs.h"
-#include "skel.h"
 #include "trail.h"
 
 #ifdef __cplusplus
@@ -42,24 +42,20 @@ int svn_fs__open_revisions_table (DB **revisions_p,
 /* Storing and retrieving filesystem revisions.  */
 
 
-/* Set *SKEL_P to point to the REVISION skel for the filesystem
-   revision REV in FS, as part of TRAIL.
-   Allocate the skel and the data it points into in TAIL->pool.
-
-   This verifies that *SKEL_P is a well-formed REVISION skel.  */
-svn_error_t *svn_fs__get_rev (skel_t **skel_p,
+/* Set *REVISION_P to point to the revision structure for the
+   filesystem revision REV in FS, as part of TRAIL.  Perform all
+   allocations in TRAIL->pool.  */
+svn_error_t *svn_fs__get_rev (svn_fs__revision_t **revision_p,
                               svn_fs_t *fs,
                               svn_revnum_t rev,
                               trail_t *trail);
 
-/* Store SKEL as the REVISION skel in FS as part of TRAIL, and return
-   the new filesystem revision number in *REV.  Do any necessary
-   temporary allocation in TRAIL->pool.
-
-   This verifies that SKEL is a well-formed REVISION skel.  */
+/* Store REVISION in FS as part of TRAIL, and return the new
+   filesystem revision number in *REV.  Do any necessary temporary
+   allocation in TRAIL->pool.  */
 svn_error_t *svn_fs__put_rev (svn_revnum_t *rev,
                               svn_fs_t *fs,
-                              skel_t *skel,
+                              svn_fs__revision_t *revision,
                               trail_t *trail);
 
 

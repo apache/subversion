@@ -35,6 +35,7 @@
 #include "strings-table.h"
 #include "reps-strings.h"
 #include "skel.h"
+#include "fs_skels.h"
 #include "trail.h"
 #include "validate.h"
 #include "id.h"
@@ -330,14 +331,15 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
      "revisions" : 0 -> "(revision 3 0.0 ())" */
   {
     /* ### this should be const. we should make parse_skel() take a const */
-    static char rev_skel[] = "(revision 3 0.0 ())";
+    static char rev_skel_str[] = "(revision 3 0.0 ())";
+    svn_fs__revision_t *revision;
+    skel_t *rev_skel;
     svn_revnum_t rev = 0;
-    SVN_ERR (svn_fs__put_rev (&rev, fs,
-                              svn_fs__parse_skel (rev_skel,
-                                                  sizeof (rev_skel) - 1,
-                                                  trail->pool),
-                              trail));
-
+    
+    rev_skel = svn_fs__parse_skel (rev_skel_str, strlen (rev_skel_str), 
+                                   trail->pool);
+    SVN_ERR (svn_fs__parse_revision_skel (&revision, rev_skel, trail->pool));
+    SVN_ERR (svn_fs__put_rev (&rev, fs, revision, trail));
     if (rev != 0)
       return svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
                                 "initial revision number is not `0'"
@@ -1917,29 +1919,16 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
 
   SVN_ERR (svn_fs__dag_txn_root (&root, fs, svn_txn, trail));
 
-  /* Add new revision entry to `revisions' table.  */
+  /* Add new revision entry to `revisions' table, copying the
+     transaction's property list.  */
   {
-    skel_t *new_revision_skel;
-    svn_stringbuf_t *id_string = svn_fs_unparse_id (root->id, trail->pool);
-    skel_t *txn_skel;
+    svn_fs__revision_t revision;
+    svn_fs__transaction_t *transaction;
     
-    new_revision_skel = svn_fs__make_empty_list (trail->pool);
-
-    /* PROPLIST */
-    SVN_ERR (svn_fs__get_txn (&txn_skel, fs, svn_txn, trail));
-    svn_fs__prepend (txn_skel->children->next->next->next,
-                     new_revision_skel);
-
-    /* ID */
-    svn_fs__prepend (svn_fs__mem_atom (id_string->data,
-                                       id_string->len, trail->pool),
-                     new_revision_skel);
-
-    /* "revision" */
-    svn_fs__prepend (svn_fs__str_atom ("revision", trail->pool),
-                     new_revision_skel);
-
-    SVN_ERR (svn_fs__put_rev (new_rev, fs, new_revision_skel, trail));
+    SVN_ERR (svn_fs__get_txn (&transaction, fs, svn_txn, trail));
+    revision.id = root->id;
+    revision.proplist = transaction->proplist;
+    SVN_ERR (svn_fs__put_rev (new_rev, fs, &revision, trail));
   }
 
   /* Set a date on the commit.  We wait until now to fetch the date,

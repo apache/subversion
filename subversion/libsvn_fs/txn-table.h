@@ -35,31 +35,30 @@ int svn_fs__open_transactions_table (DB **transactions_p,
 
 
 /* Create a new transaction in FS as part of TRAIL, with an initial
-   root and base root ID of ROOT_ID.  Set *TXN_ID_P to the ID of the new
-   transaction, allocated in TRAIL->pool.  */
-svn_error_t *svn_fs__create_txn (char **txn_id_p,
+   root and base root ID of ROOT_ID.  Set *TXN_NAME_P to the name of the
+   new transaction, allocated in TRAIL->pool.  */
+svn_error_t *svn_fs__create_txn (char **txn_name_p,
                                  svn_fs_t *fs,
                                  const svn_fs_id_t *root_id,
                                  trail_t *trail);
 
 
-/* Remove the transaction whose ID is SVN_TXN from the `transactions'
+/* Remove the transaction whose name is TXN_NAME from the `transactions'
    table of FS, as part of TRAIL.  */
 svn_error_t *svn_fs__delete_txn (svn_fs_t *fs,
-                                 const char *svn_txn,
+                                 const char *txn_name,
                                  trail_t *trail);
 
  
-/* Retrieve the transaction skel *TXN_SKEL for the Subversion transaction
-   SVN_TXN from the `transactions' table of FS, as part of TRAIL.
-
+/* Retrieve the transaction *TXN_P for the Subversion transaction
+   named TXN_NAME from the `transactions' table of FS, as part of
+   TRAIL.  Perform all allocations in TRAIL->pool.
+   
    If there is no such transaction, SVN_ERR_FS_NO_SUCH_TRANSACTION is
-   the error returned.
-
-   Allocate *TXN_SKEL in TRAIL->pool.  */
-svn_error_t *svn_fs__get_txn (skel_t **txn_skel,
+   the error returned.  */
+svn_error_t *svn_fs__get_txn (svn_fs__transaction_t **txn_p,
                               svn_fs_t *fs,
-                              const char *svn_txn,
+                              const char *txn_name,
                               trail_t *trail);
 
 /* Retrieve information about the Subversion transaction SVN_TXN from
@@ -79,20 +78,20 @@ svn_error_t *svn_fs__get_txn_ids (svn_fs_id_t **root_id_p,
                                   trail_t *trail);
 
 
-/* Set the root directory of the Subversion transaction SVN_TXN in FS
+/* Set the root directory of the Subversion transaction TXN_NAME in FS
    to ROOT_ID, as part of TRAIL.  Do any necessary temporary
    allocation in TRAIL->pool.  */
 svn_error_t *svn_fs__set_txn_root (svn_fs_t *fs,
-                                   const char *svn_txn,
+                                   const char *txn_name,
                                    const svn_fs_id_t *root_id,
                                    trail_t *trail);
 
 
-/* Set the base root directory of SVN_TXN in FS to NEW_ID, as part of
+/* Set the base root directory of TXN_NAME in FS to NEW_ID, as part of
    TRAIL.  Do any necessary temporary allocation in TRAIL->pool.  */
 svn_error_t *
 svn_fs__set_txn_base (svn_fs_t *fs,
-                      const char *svn_txn,
+                      const char *txn_name,
                       const svn_fs_id_t *new_id,
                       trail_t *trail);
 

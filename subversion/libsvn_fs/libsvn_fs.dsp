@@ -107,6 +107,10 @@ SOURCE=.\fs.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\fs_skels.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\id.c
 # End Source File
 # Begin Source File
@@ -188,6 +192,10 @@ SOURCE=.\file.h
 # Begin Source File
 
 SOURCE=.\fs.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\fs_skels.h
 # End Source File
 # Begin Source File
 

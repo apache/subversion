@@ -22,6 +22,7 @@
 #include "apr_pools.h"
 #include "apr_hash.h"
 #include "svn_fs.h"
+#include "apr_md5.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -75,6 +76,170 @@ struct svn_fs_t {
      if it finds one.  */
   svn_error_t **cleanup_error;
 };
+
+
+/*** Filesystem Revision ***/
+typedef struct
+{
+  /* id of the root node. */
+  svn_fs_id_t *id;
+
+  /* property list (const char * name, svn_string_t * value) */
+  apr_hash_t *proplist; 
+
+} svn_fs__revision_t;
+
+
+/*** Filesystem Transaction ***/
+typedef struct
+{
+  /* id of the root node */
+  svn_fs_id_t *root_id;
+
+  /* id of the revision root node upon which this txn is base */
+  svn_fs_id_t *base_root_id;
+
+  /* property list (const char * name, svn_string_t * value) */
+  apr_hash_t *proplist;
+
+} svn_fs__transaction_t;
+
+
+/*** Node Revision Kind ***/
+typedef enum
+{
+  svn_fs__node_revision_kind_file = 1, /* file */
+  svn_fs__node_revision_kind_dir       /* dir */
+
+} svn_fs__node_revision_kind_t;
+
+
+/*** Node Revision Header ***/
+typedef struct
+{
+  /* node kind */
+  svn_fs__node_revision_kind_t kind;
+
+  /* revision in which this node was committed (< 1 here means this node
+     is mutable -- not yet committed */
+  svn_revnum_t revision;
+
+  /* ancestor path/revision */
+  const char *ancestor_path;
+  svn_revnum_t ancestor_rev;
+
+} svn_fs__node_revision_header_t;
+
+
+/*** Node-Revision ***/
+typedef struct
+{
+  /* node revision header */
+  svn_fs__node_revision_header_t *header;
+
+  /* node-specific stuff */
+  union 
+  {
+    /* file stuff */
+    struct 
+    {
+      /* representation key for this node's properties. */
+      const char *prop_key;
+
+      /* representation key for this node's text data. */
+      const char *data_key;
+
+      /* representation key for this node's text-data-in-progess. */
+      const char *edit_data_key;
+
+    } file;
+
+    /* dir stuff */
+    struct 
+    {
+      /* representation key for this node's properties. */
+      const char *prop_key;
+
+      /* representation key for this node's dirent list. */
+      const char *entries_key;
+
+    } dir;
+  } contents;
+} svn_fs__node_revision_t;
+
+
+/*** Representation Kind ***/
+typedef enum
+{
+  svn_fs__rep_kind_fulltext = 1, /* fulltext */
+  svn_fs__rep_kind_delta         /* delta */
+
+} svn_fs__rep_kind_t;
+
+
+/*** "Delta" Window ***/
+typedef struct
+{
+  /* string-key to which this representation points. */
+  const char *string_key; 
+
+  /* size of the fulltext data represented by this delta window. */
+  apr_size_t size;
+
+  /* MD5 checksum of the data */
+  unsigned char checksum[MD5_DIGESTSIZE];
+
+  /* represenatation-key to use when needed source data for
+     undeltification. */
+  const char *rep_key;
+
+  /* apr_off_t rep_offset;  ### not implemented */
+
+} svn_fs__rep_delta_window_t;
+
+
+/*** "Delta" Offset/Window Chunk ***/
+typedef struct 
+{
+  /* starting offset of the data represented by this chunk */
+  apr_size_t offset;
+
+  /* diff data window */
+  svn_fs__rep_delta_window_t *window;
+
+} svn_fs__rep_delta_chunk_t;
+
+
+/*** Representation ***/
+typedef struct
+{
+  /* representation kind */
+  svn_fs__rep_kind_t kind;
+
+  /* is this representation mutable? */
+  int is_mutable;
+
+  /* kind-specific stuff */
+  union 
+  {
+    /* fulltext stuff */
+    struct
+    {
+      /* string-key which holds the fulltext data */
+      const char *string_key;
+
+    } fulltext;
+
+    /* delta stuff */
+    struct
+    {
+      /* an array of svn_fs__rep_delta_chunk_t * chunks of delta
+         information */
+      apr_array_header_t *chunks;
+
+    } delta;
+  } contents;
+} svn_fs__representation_t;
 
 
 #ifdef __cplusplus
