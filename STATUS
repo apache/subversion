@@ -33,6 +33,7 @@ Candidate changes:
     Justification:  Allows malformed data into the repository.
     Votes:
       +1: philip
+      +0: julianfoad
     Old votes (for r8839,r8932,r8950):
       +0: julianfoad
       -1: philip (SEGV converting inconsistent eols, fixed in r8952)
