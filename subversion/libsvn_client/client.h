@@ -91,8 +91,12 @@ svn_client__revision_is_local (const svn_opt_revision_t *revision);
 /* Given the CHANGED_PATHS and REVISION from an instance of a
    svn_log_message_receiver_t function, determine at which location
    PATH may be expected in the next log message, and set *PREV_PATH_P
-   to that value.  KIND is the node kind of PATH.  Perform all
-   allocations in POOL.
+   to that value.  KIND is the node kind of PATH.  Set *ACTION_P to a
+   character describing the change that caused this revision (as
+   listed in svn_log_changed_path_t) and set *COPYFROM_REV_P to the
+   revision PATH was copied from, or SVN_INVALID_REVNUM if it was not
+   copied.  ACTION_P and COPYFROM_REV_P may be NULL, in which case
+   they are not used.  Perform all allocations in POOL.
 
    This is useful for tracking the various changes in location a
    particular resource has undergone when performing an RA->get_logs()
