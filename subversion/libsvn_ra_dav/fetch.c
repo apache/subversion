@@ -2239,7 +2239,8 @@ static svn_error_t * reporter_delete_path(void *report_baton,
 }
 
 
-static svn_error_t * reporter_abort_report(void *report_baton)
+static svn_error_t * reporter_abort_report(void *report_baton,
+                                           apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
 
@@ -2249,7 +2250,8 @@ static svn_error_t * reporter_abort_report(void *report_baton)
 }
 
 
-static svn_error_t * reporter_finish_report(void *report_baton)
+static svn_error_t * reporter_finish_report(void *report_baton,
+                                            apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
   svn_error_t *err;

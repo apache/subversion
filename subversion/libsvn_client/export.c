@@ -697,7 +697,7 @@ svn_client_export (svn_revnum_t *result_rev,
                                    TRUE, /* "help, my dir is empty!" */
                                    pool));
 
-      SVN_ERR (reporter->finish_report (report_baton));               
+      SVN_ERR (reporter->finish_report (report_baton, pool));               
 
       /* Special case: Due to our sly export/checkout method of
        * updating an empty directory, no target will have been created

@@ -345,7 +345,8 @@ static svn_error_t *ra_svn_link_path(void *baton, const char *path,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *ra_svn_finish_report(void *baton)
+static svn_error_t *ra_svn_finish_report(void *baton,
+                                         apr_pool_t *pool)
 {
   ra_svn_reporter_baton_t *b = baton;
 
@@ -357,7 +358,8 @@ static svn_error_t *ra_svn_finish_report(void *baton)
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *ra_svn_abort_report(void *baton)
+static svn_error_t *ra_svn_abort_report(void *baton,
+                                        apr_pool_t *pool)
 {
   ra_svn_reporter_baton_t *b = baton;
 

@@ -135,7 +135,7 @@ do_job (apr_pool_t * pool, const char *src_url, const char *dest_url,
 
   SVN_ERR (reporter->set_path (report_baton, "", start_rev, 0, pool));
 
-  SVN_ERR (reporter->finish_report (report_baton));
+  SVN_ERR (reporter->finish_report (report_baton, pool));
 
   return SVN_NO_ERROR;
 }

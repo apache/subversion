@@ -430,7 +430,8 @@ svn_repos_delete_path (void *report_baton,
  * any txns being aborted.
  */
 static svn_error_t *
-finish_report (void *report_baton)
+finish_report (void *report_baton,
+               apr_pool_t *pool)
 {
   svn_fs_root_t *root1, *root2;
   report_baton_t *rbaton = report_baton;
@@ -491,10 +492,11 @@ finish_report (void *report_baton)
  * finish_report returns an error.
  */
 svn_error_t *
-svn_repos_finish_report (void *report_baton)
+svn_repos_finish_report (void *report_baton,
+                         apr_pool_t *pool)
 {
-  svn_error_t *err1 = finish_report (report_baton);
-  svn_error_t *err2 = svn_repos_abort_report (report_baton);
+  svn_error_t *err1 = finish_report (report_baton, pool);
+  svn_error_t *err2 = svn_repos_abort_report (report_baton, pool);
   if (err1)
     {
       svn_error_clear (err2);
@@ -505,7 +507,8 @@ svn_repos_finish_report (void *report_baton)
 
 
 svn_error_t *
-svn_repos_abort_report (void *report_baton)
+svn_repos_abort_report (void *report_baton,
+                        apr_pool_t *pool)
 {
   report_baton_t *rbaton = report_baton;
 
