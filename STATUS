@@ -35,14 +35,6 @@ Candidate changes:
       +1: pmayweg
       +0: breser
 
-  * r9338, r9340
-    Add various missing library dependencies to build.conf, for various
-    binding-related stuff.
-    Justification: Trivial change, correctness, needed to allow build of
-    bindings on platforms with stricter linking requirements.
-    Votes:
-      +1: maxb, breser, ghudson
-
   * r10190
     Allow properties with colons in their name to be read with propget
     over DAV.
