@@ -69,7 +69,7 @@ svn_fs__put_node_revision (svn_fs_t *fs,
   rep[0].children = &rep[1];
   rep[1].is_atom = 1;
   rep[1].data = (char *) "fulltext";
-  rep[1].len  = sizeof ("fulltext");
+  rep[1].len  = sizeof ("fulltext") - 1;
   rep[1].next = skel;
   skel->next = 0;
 
