@@ -279,8 +279,8 @@ typedef struct svn_edit_content_t
     directory_type
   } kind;                           /* what kind of object is this? */
   svn_ancestor_t *ancestor;         /* "Hoosier paw?!" */
-  svn_pdelta_t *pdelta;             /* Change to property list, or NULL. */
-  svn_vdelta_t *vdelta;             /* Change to file contents, or NULL. */
+  svn_boolean_t prop_delta;         /* flag: upcoming prop delta data */
+  svn_boolean_t text_delta;         /* flag: upcoming text delta data */
   struct svn_delta_t *tree_delta;   /* A further tree delta, or NULL. */
 } svn_edit_content_t;
 
