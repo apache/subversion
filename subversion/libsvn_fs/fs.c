@@ -318,6 +318,165 @@ dir_empty (const char *path, apr_pool_t *pool)
 }
 
 
+static svn_error_t *
+create_conf (svn_fs_t *fs, const char *path)
+{
+  const char *this_path, *contents;
+  apr_status_t apr_err;
+  apr_file_t *f;
+  apr_size_t written;
+
+  /* Create the conf directory. */
+  fs->conf_path = apr_psprintf (fs->pool, "%s/%s",
+                                path, SVN_FS__REPOS_CONF_DIR);
+  apr_err = apr_dir_make (fs->conf_path, APR_OS_DEFAULT, fs->pool);
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    return svn_error_createf (apr_err, 0, 0, fs->pool,
+                              "creating conf directory `%s'", fs->conf_path);
+
+  /* Write a default template for each standard conf file. */
+
+  /* Pre-commit hooks. */
+  {
+    this_path = apr_psprintf (fs->pool, "%s/%s",
+                              fs->conf_path,
+                              SVN_FS__REPOS_CONF_PRECOMMIT_HOOKS);
+    
+    apr_err = apr_file_open (&f, this_path,
+                             (APR_WRITE | APR_CREATE | APR_EXCL),
+                             APR_OS_DEFAULT,
+                             fs->pool);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
+                                "creating conf file `%s'", this_path);
+    
+    contents =
+      "# Pre-commit hooks: invoke a program with some arguments.  One of\n"
+      "# the arguments may be \"$txn\", which is substituted with a\n"
+      "# Subversion txn id at the time the hook is run.  Another may be\n"
+      "# \"$repos\", which is substituted with the absolute path to the\n"
+      "# repository in which the txn can be found.\n"
+      "#\n"
+      "# If a hook program exits with non-zero status, the txn will be\n"
+      "# discarded and no commit will take place; if it exits with zero\n"
+      "# (successful) status, the txn will be committed.\n"
+      "#\n"
+      "# All hooks here will be run, until one fails or there are no more\n"
+      "# left.\n"
+      "#\n"
+      "# EXAMPLE:\n"
+      "#\n"
+      "# my-pre-commit-hook.py some_arg --repository $repos --txn-id $txn\n";
+
+    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
+                                "writing conf file `%s'", this_path);
+
+    apr_err = apr_file_close (f);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
+                                "closing conf file `%s'", this_path);
+  }  /* end pre-commit hooks */
+
+  /* Post-commit hooks. */
+  {
+    this_path = apr_psprintf (fs->pool, "%s/%s",
+                              fs->conf_path,
+                              SVN_FS__REPOS_CONF_POSTCOMMIT_HOOKS);
+    
+    apr_err = apr_file_open (&f, this_path,
+                             (APR_WRITE | APR_CREATE | APR_EXCL),
+                             APR_OS_DEFAULT,
+                             fs->pool);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
+                                "creating conf file `%s'", this_path);
+    
+    contents =
+      "# Post-commit hooks: invoke a program with some arguments.  One of\n"
+      "# the arguments may be \"$rev\", which is substituted with the\n"
+      "# revision number of the newly-committed tree.  Another may be\n"
+      "# \"$repos\", which is substituted with the absolute path to the\n"
+      "# repository in which the revision was committed.\n"
+      "#\n"
+      "# All hooks here will be run, regardless of the success or failure\n"
+      "# of any one hook.\n"
+      "#\n"
+      "# EXAMPLE:\n"
+      "#\n"
+      "# my-post-commit-hook.pl blah --repository $repos --revision $rev\n";
+
+    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
+                                "writing conf file `%s'", this_path);
+
+    apr_err = apr_file_close (f);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
+                                "closing conf file `%s'", this_path);
+  } /* end post-commit hooks */
+
+  /* Read sentinels. */
+  {
+    this_path = apr_psprintf (fs->pool, "%s/%s",
+                              fs->conf_path,
+                              SVN_FS__REPOS_CONF_READ_SENTINELS);
+    
+    apr_err = apr_file_open (&f, this_path,
+                             (APR_WRITE | APR_CREATE | APR_EXCL),
+                             APR_OS_DEFAULT,
+                             fs->pool);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
+                                "creating conf file `%s'", this_path);
+    
+    contents =
+      "# Read-sentinels: invocation conventions and protocol TBD.\n";
+
+    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
+                                "writing conf file `%s'", this_path);
+
+    apr_err = apr_file_close (f);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
+                                "closing conf file `%s'", this_path);
+  }  /* end read sentinels */
+
+  /* Write sentinels. */
+  {
+    this_path = apr_psprintf (fs->pool, "%s/%s",
+                              fs->conf_path,
+                              SVN_FS__REPOS_CONF_WRITE_SENTINELS);
+    
+    apr_err = apr_file_open (&f, this_path,
+                             (APR_WRITE | APR_CREATE | APR_EXCL),
+                             APR_OS_DEFAULT,
+                             fs->pool);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
+                                "creating conf file `%s'", this_path);
+    
+    contents =
+      "# Write-sentinels: invocation conventions and protocol TBD.\n";
+
+    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
+                                "writing conf file `%s'", this_path);
+
+    apr_err = apr_file_close (f);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
+                                "closing conf file `%s'", this_path);
+  }  /* end write sentinels */
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 {
@@ -346,6 +505,17 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
              path);
         }
     }
+
+  /* Create the DAV sandbox directory.  */
+  fs->dav_path = apr_psprintf (fs->pool, "%s/%s",
+                               path, SVN_FS__REPOS_DAV_DIR);
+  apr_err = apr_dir_make (fs->dav_path, APR_OS_DEFAULT, fs->pool);
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    return svn_error_createf (apr_err, 0, 0, fs->pool,
+                              "creating DAV sandbox dir `%s'", fs->dav_path);
+
+  /* Create the conf directory.  */
+  SVN_ERR (create_conf (fs, path));
 
   /* Create the directory for the new Berkeley DB environment.  */
   fs->env_path = apr_psprintf (fs->pool, "%s/%s", path, SVN_FS__REPOS_DB_DIR);
