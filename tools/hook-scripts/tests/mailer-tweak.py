@@ -13,7 +13,7 @@ import sys
 import os
 import getopt
 
-from svn import fs, util
+from svn import fs, core
 
 DATE_BASE = 1000000000
 DATE_INCR = 10000
@@ -29,16 +29,16 @@ def tweak_dates(pool, home='.'):
 
   for i in range(fs.youngest_rev(fsob, pool)):
     # convert secs into microseconds, then a string
-    date = util.svn_time_to_cstring((DATE_BASE+i*DATE_INCR) * 1000000L, pool)
+    date = core.svn_time_to_cstring((DATE_BASE+i*DATE_INCR) * 1000000L, pool)
     #print date
-    fs.change_rev_prop(fsob, i+1, util.SVN_PROP_REVISION_DATE, date, pool)
+    fs.change_rev_prop(fsob, i+1, core.SVN_PROP_REVISION_DATE, date, pool)
 
 def main():
   if len(sys.argv) != 2:
     print 'USAGE: %s REPOS' % sys.argv[0]
     sys.exit(1)
 
-  util.run_app(tweak_dates, sys.argv[1])
+  core.run_app(tweak_dates, sys.argv[1])
 
 if __name__ == '__main__':
   main()

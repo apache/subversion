@@ -16,7 +16,7 @@
  * ====================================================================
  */
 
-%module _repos
+%module repos
 %include typemaps.i
 
 %import apr.i

@@ -16,7 +16,7 @@
  * ====================================================================
  */
 
-%module _wc
+%module wc
 %include typemaps.i
 
 %import apr.i

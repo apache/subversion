@@ -16,7 +16,7 @@
  * ====================================================================
  */
 
-%module _client
+%module client
 %include typemaps.i
 
 %import apr.i

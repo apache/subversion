@@ -1,8 +1,10 @@
 #
-# client.py : various utilities for interacting with the _client module
+# __init__.py:  defines this directory as the 'libsvn' package.
 #
-######################################################################
-#
+#  Subversion is a tool for revision control. 
+#  See http://subversion.tigris.org for more information.
+#    
+# ====================================================================
 # Copyright (c) 2000-2003 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
@@ -13,5 +15,3 @@
 #
 ######################################################################
 #
-
-from libsvn.client import *

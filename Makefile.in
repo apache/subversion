@@ -71,7 +71,8 @@ swig_py_libdir = @libdir@
 swig_java_libdir = @libdir@
 
 ### these possibly need further discussion
-swig_pydir = @libdir@/svn-python/svn
+swig_pydir = @libdir@/svn-python/libsvn
+swig_pydir_extra = @libdir@/svn-python/svn
 swig_javadir = @libdir@/svn-java
 
 ### should search for these...
@@ -134,8 +135,8 @@ LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS
 
 # these commands run SWIG to generate wrapper source files (*.c)
 ### should we protect against swig not being available?
-RUN_SWIG_PY = $(SWIG) -c -python -noproxy $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -o $@
-RUN_SWIG_JAVA = cd ${SWIG_SRC_DIR}/java/org/tigris/subversion/swig && $(SWIG) -c -java -noproxy -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o ${abs_builddir}/$@
+RUN_SWIG_PY = $(SWIG) -c -python $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -o $@
+RUN_SWIG_JAVA = cd ${SWIG_SRC_DIR}/java/org/tigris/subversion/swig && $(SWIG) -c -java -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o ${abs_builddir}/$@
 
 # Compilation of SWIG-generated C source code
 COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@
@@ -165,7 +166,9 @@ INSTALL_SWIG_JAVA = $(INSTALL_LIB)
 INSTALL_SWIG_JAVA_LIB = $(INSTALL_LIB)
 
 # additional installation rules for the SWIG wrappers
-INSTALL_EXTRA_SWIG_PY=$(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_SRC_DIR}/python/svn" "$(DESTDIR)$(swig_pydir)"
+INSTALL_EXTRA_SWIG_PY=\
+   $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_SRC_DIR}/python" "$(DESTDIR)$(swig_pydir)" ; \
+   $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_SRC_DIR}/python/svn" "$(DESTDIR)$(swig_pydir_extra)"
 INSTALL_EXTRA_SWIG_JAVA=:
 
 APXS = @APXS@ 

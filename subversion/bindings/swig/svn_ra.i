@@ -16,7 +16,7 @@
  * ====================================================================
  */
 
-%module _ra
+%module ra
 %include typemaps.i
 
 %import apr.i

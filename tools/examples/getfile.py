@@ -9,7 +9,7 @@ import sys
 import os
 import getopt
 
-from svn import fs, util
+from svn import fs, core
 
 CHUNK_SIZE = 16384
 
@@ -28,7 +28,7 @@ def getfile(pool, path, rev=None, home='.'):
   root = fs.revision_root(fsob, rev, pool)
   file = fs.file_contents(root, path, pool)
   while 1:
-    data = util.svn_stream_read(file, CHUNK_SIZE)
+    data = core.svn_stream_read(file, CHUNK_SIZE)
     if not data:
       break
     sys.stdout.write(data)
@@ -48,7 +48,7 @@ def main():
       rev = int(value)
     elif name == '-h':
       home = value
-  util.run_app(getfile, args[0], rev, home)
+  core.run_app(getfile, args[0], rev, home)
 
 if __name__ == '__main__':
   main()
