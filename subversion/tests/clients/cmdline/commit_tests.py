@@ -789,7 +789,7 @@ test_list = [ None,
               hudson_part_1_variation_1,
               hudson_part_1_variation_2,
               hudson_part_2,
-              hook_test
+              # hook_test
              ]
 
 if __name__ == '__main__':

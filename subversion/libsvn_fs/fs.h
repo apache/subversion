@@ -31,11 +31,14 @@
 #define SVN_FS__REPOS_CUSTOM_DIR  "custom"  /* User space; svn stays out. */
 
 /* In the repository conf directory, look for these files. */
-#define SVN_FS__REPOS_CONF_START_COMMIT_HOOKS  "start-commit-hooks.txt"
-#define SVN_FS__REPOS_CONF_PRE_COMMIT_HOOKS    "pre-commit-hooks.txt"
-#define SVN_FS__REPOS_CONF_POST_COMMIT_HOOKS   "post-commit-hooks.txt"
-#define SVN_FS__REPOS_CONF_READ_SENTINELS      "read-sentinels.txt"
-#define SVN_FS__REPOS_CONF_WRITE_SENTINELS     "write-sentinels.txt"
+#define SVN_FS__REPOS_HOOK_START_COMMIT    "start-commit"
+#define SVN_FS__REPOS_HOOK_PRE_COMMIT      "pre-commit"
+#define SVN_FS__REPOS_HOOK_POST_COMMIT     "post-commit"
+#define SVN_FS__REPOS_HOOK_READ_SENTINEL   "read-sentinels"
+#define SVN_FS__REPOS_HOOK_WRITE_SENTINEL  "write-sentinels"
+
+/* The extension added to the names of example hook scripts. */
+#define SVN_FS__REPOS_HOOK_DESC_EXT        ".tmpl"
 
 
 /*** The filesystem structure.  ***/
