@@ -1,15 +1,20 @@
-Version 0.13.3 [Pre-Alpha] (released ?? July 2002, revision ???)
+Version 0.14.0 [Pre-Alpha] (released 23 July 2002, revision ???)
 
  User-visible changes:
- * mostly done with i18n (UTF-8) support;  ready to start testing.
- * add --recursive options to 'svn info' and 'svn resolve'
+ * finally some documentation: The Subversion Handbook
+ * i18n support for paths, prop names, and log messages; (not on Win32 yet)
+ * support for URI-escaped paths
+ * "-R" is now short for --recursive, and "-N" replaces "-n"
+ * add the -R option to 'svn info' and 'svn resolve'
  * new syntax for 'svn switch' and 'svn co'
  * new 'svn-config' file installed
  * new commit-access-control.pl utility (feature #775)
+ * new vc-svn.el, first pass at Emacs VC support for Subversion
  * lots of work on svn_load_dirs.pl (provides vendor-branch-like features)
  * new --message-encoding option for logfiles given by -F
  * support win32 drive-letters in file:/// urls
- * first draft of unified documentation:  Subversion Handbook
+ * improved date output syntax: ISO-8601 prefix, then human-friendly suffix
+ * the usual round of bug fixes
 
  Developer-visible changes:
  * UTF-8 changes
