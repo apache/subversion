@@ -124,6 +124,9 @@ class GeneratorBase:
 
     for objname, sources in self.graph.get_deps(DT_OBJECT):
       assert len(sources) == 1
+
+      # generated .c files must depend on all headers their parent .i file
+      # includes
       if isinstance(objname, SWIGObject):
         for ifile in self.graph.get_sources(DT_SWIG_C, sources[0]):
           if isinstance(ifile, SWIGSource):
@@ -131,22 +134,23 @@ class GeneratorBase:
                                         include_deps):
               self.graph.add(DT_SWIG_C, sources[0], 
                              build_path(include_deps[short][0]))
-        continue
 
-      if isinstance(sources[0], ObjectFile) or \
-        isinstance(sources[0], HeaderFile):
-        if sources[0].source_generated == 1:
+      # any non-swig C/C++ object must depend on the headers it's parent
+      # .c or .cpp includes. Note that 'object' includes gettext .mo files,
+      # Java .class files, and .h files generated from Java classes, so
+      # we must filter here.
+      elif isinstance(sources[0], SourceFile) and \
+          os.path.splitext(sources[0].filename)[1] in ('.c', '.cpp'):
+
+        filename = native_path(sources[0].filename)
+
+        if not os.path.isfile(filename):
           continue
 
-      filename = native_path(sources[0].filename)
-
-      if not os.path.isfile(filename):
-        continue
-
-      hdrs = [ ]
-      for short in _find_includes(filename, include_deps):
-        self.graph.add(DT_OBJECT, objname,
-                       build_path(include_deps[short][0]))
+        hdrs = [ ]
+        for short in _find_includes(filename, include_deps):
+          self.graph.add(DT_OBJECT, objname,
+                         build_path(include_deps[short][0]))
 
 
 class DependencyGraph:
