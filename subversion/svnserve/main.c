@@ -28,6 +28,7 @@
 #include <apr_signal.h>
 #include <apr_thread_proc.h>
 
+#include "svn_cmdline.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_pools.h"
