@@ -742,7 +742,7 @@ static svn_error_t * commit_add_file(svn_stringbuf_t *name,
     {
       svn_string_t bc_url, bc_relative;
       svn_stringbuf_t *src_url;
-      int stat;
+      int status;
 
       /* This add has history, so we need to do a COPY. */
       
@@ -775,13 +775,13 @@ static svn_error_t * commit_add_file(svn_stringbuf_t *name,
               src_url->data, file->rsrc->wr_url);              
 
       /* Have neon do the COPY. */
-      stat = ne_copy(parent->cc->ras->sess,
-                     1,                   /* overwrite */
-                     NE_DEPTH_ZERO,       /* for a file, does it care? */
-                     src_url->data,       /* source URI */
-                     file->rsrc->wr_url); /* dest URI */
+      status = ne_copy(parent->cc->ras->sess,
+                       1,                   /* overwrite */
+                       NE_DEPTH_ZERO,       /* for a file, does it care? */
+                       src_url->data,       /* source URI */
+                       file->rsrc->wr_url); /* dest URI */
 
-      printf ("ne_copy result code was: %d\n", stat);
+      printf ("ne_copy result code was: %d\n", status);
       fflush(stdout);
 
     }
