@@ -830,81 +830,153 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
     {
       apr_file_t *f;
       const char *contents =
-        "### This file specifies server-specific protocol parameters,\n"
-        "### including HTTP proxy information, and HTTP timeout settings.\n"
-        "###\n"
-        "### The currently defined server options are:\n"
-        "###   http-proxy-host            Proxy host for HTTP connection\n"
-        "###   http-proxy-port            Port number of proxy host service\n"
-        "###   http-proxy-username        Username for auth to proxy service\n"
-        "###   http-proxy-password        Password for auth to proxy service\n"
-        "###   http-proxy-exceptions      List of sites that do not use proxy\n"
-        "###   http-timeout               Timeout for HTTP requests in seconds\n"
-        "###   http-compression           Whether to compress HTTP requests\n"
-        "###   neon-debug-mask            Debug mask for Neon HTTP library\n"
-        "###   ssl-authority-files        List of files, each of a trusted CAs\n"
-        "###   ssl-trust-default-ca       Trust the system 'default' CAs\n" 
-        "###   ssl-client-cert-file       PKCS#12 format client certificate file\n"
-        "###   ssl-client-cert-password   Client Key password, if needed.\n"
-        "###\n"
-        "### HTTP timeouts, if given, are specified in seconds.  A timeout\n"
-        "### of 0, i.e. zero, causes a builtin default to be used.\n"
-        "###\n"
-        "### The commented-out examples below are intended only to\n"
-        "### demonstrate how to use this file; any resemblance to actual\n"
-        "### servers, living or dead, is entirely coincidental.\n"
-        "\n"
-        "### In this section, the URL of the repository you're trying to\n"
-        "### access is matched against the patterns on the right.  If a\n"
-        "### match is found, the server info is from the section with the\n"
-        "### corresponding name.\n"
-        "\n"
-        "# [groups]\n"
-        "# group1 = *.collab.net\n"
-        "# othergroup = repository.blarggitywhoomph.com\n"
-        "# thirdgroup = *.example.com\n"
-        "\n"
-        "### Information for the first group:\n"
-        "# [group1]\n"
-        "# http-proxy-host = proxy1.some-domain-name.com\n"
-        "# http-proxy-port = 80\n"
-        "# http-proxy-username = blah\n"
-        "# http-proxy-password = doubleblah\n"
-        "# http-timeout = 60\n"
-        "# neon-debug-mask = 130\n"
-        "\n"
-        "### Information for the second group:\n"
-        "# [othergroup]\n"
-        "# http-proxy-host = proxy2.some-domain-name.com\n"
-        "# http-proxy-port = 9000\n"
-        "# No username and password, so use the defaults below.\n"
-        "\n"
-        "### You can set default parameters in the 'global' section.\n"
-        "### These parameters apply if no corresponding parameter is set in\n"
-        "### a specifically matched group as shown above.  Thus, if you go\n"
-        "### through the same proxy server to reach every site on the\n"
-        "### Internet, you probably just want to put that server's\n"
-        "### information in the 'global' section and not bother with\n"
-        "### 'groups' or any other sections.\n"
-        "###\n"
-        "### If you go through a proxy for all but a few sites, you can\n"
-        "### list those exceptions under 'http-proxy-exceptions'.  This only\n"
-        "### overrides defaults, not explicitly matched server names.\n"
-        "###\n"
-        "### 'ssl-authority-files' is a semicolon-delimited list of files,\n"
-        "### each pointing to a PEM-encoded Certificate Authority (CA) \n"
-        "### SSL certificate.  See details above for overriding security \n"
-        "### due to SSL.\n"
-        "# [global]\n"
-        "# http-proxy-exceptions = *.exception.com, www.internal-site.org\n"
-        "# http-proxy-host = defaultproxy.whatever.com\n"
-        "# http-proxy-port = 7000\n"
-        "# http-proxy-username = defaultusername\n"
-        "# http-proxy-password = defaultpassword\n"
-        "# http-compression = no\n"
-        "# No http-timeout, so just use the builtin default.\n"
-        "# No neon-debug-mask, so neon debugging is disabled.\n"
-        "# ssl-authority-files = /path/to/CAcert.pem;/path/to/CAcert2.pem\n";
+        "### This file specifies server-specific protocol parameters,"
+        APR_EOL_STR
+        "### including HTTP proxy information, and HTTP timeout settings."
+        APR_EOL_STR
+        "###"
+        APR_EOL_STR
+        "### The currently defined server options are:"
+        APR_EOL_STR
+        "###   http-proxy-host            Proxy host for HTTP connection"
+        APR_EOL_STR
+        "###   http-proxy-port            Port number of proxy host service"
+        APR_EOL_STR
+        "###   http-proxy-username        Username for auth to proxy service"
+        APR_EOL_STR
+        "###   http-proxy-password        Password for auth to proxy service"
+        APR_EOL_STR
+        "###   http-proxy-exceptions      List of sites that do not use proxy"
+        APR_EOL_STR
+        "###   http-timeout               Timeout for HTTP requests in seconds"
+        APR_EOL_STR
+        "###   http-compression           Whether to compress HTTP requests"
+        APR_EOL_STR
+        "###   neon-debug-mask            Debug mask for Neon HTTP library"
+        APR_EOL_STR
+        "###   ssl-authority-files        List of files, each of a trusted CAs"
+        APR_EOL_STR
+        "###   ssl-trust-default-ca       Trust the system 'default' CAs" 
+        APR_EOL_STR
+        "###   ssl-client-cert-file       PKCS#12 format client certificate file"
+        APR_EOL_STR
+        "###   ssl-client-cert-password   Client Key password, if needed."
+        APR_EOL_STR
+        "###"
+        APR_EOL_STR
+        "### HTTP timeouts, if given, are specified in seconds.  A timeout"
+        APR_EOL_STR
+        "### of 0, i.e. zero, causes a builtin default to be used."
+        APR_EOL_STR
+        "###"
+        APR_EOL_STR
+        "### The commented-out examples below are intended only to"
+        APR_EOL_STR
+        "### demonstrate how to use this file; any resemblance to actual"
+        APR_EOL_STR
+        "### servers, living or dead, is entirely coincidental."
+        APR_EOL_STR
+        APR_EOL_STR
+        "### In this section, the URL of the repository you're trying to"
+        APR_EOL_STR
+        "### access is matched against the patterns on the right.  If a"
+        APR_EOL_STR
+        "### match is found, the server info is from the section with the"
+        APR_EOL_STR
+        "### corresponding name."
+        APR_EOL_STR
+        APR_EOL_STR
+        "# [groups]"
+        APR_EOL_STR
+        "# group1 = *.collab.net"
+        APR_EOL_STR
+        "# othergroup = repository.blarggitywhoomph.com"
+        APR_EOL_STR
+        "# thirdgroup = *.example.com"
+        APR_EOL_STR
+        APR_EOL_STR
+        "### Information for the first group:"
+        APR_EOL_STR
+        "# [group1]"
+        APR_EOL_STR
+"# http-proxy-host = proxy1.some-domain-name.com"
+        APR_EOL_STR
+        "# http-proxy-port = 80"
+        APR_EOL_STR
+        "# http-proxy-username = blah"
+        APR_EOL_STR
+        "# http-proxy-password = doubleblah"
+        APR_EOL_STR
+        "# http-timeout = 60"
+        APR_EOL_STR
+        "# neon-debug-mask = 130"
+        APR_EOL_STR
+        ""
+        APR_EOL_STR
+        "### Information for the second group:"
+        APR_EOL_STR
+        "# [othergroup]"
+        APR_EOL_STR
+        "# http-proxy-host = proxy2.some-domain-name.com"
+        APR_EOL_STR
+        "# http-proxy-port = 9000"
+        APR_EOL_STR
+        "# No username and password, so use the defaults below."
+        APR_EOL_STR
+        ""
+        APR_EOL_STR
+        "### You can set default parameters in the 'global' section."
+        APR_EOL_STR
+        "### These parameters apply if no corresponding parameter is set in"
+        APR_EOL_STR
+        "### a specifically matched group as shown above.  Thus, if you go"
+        APR_EOL_STR
+        "### through the same proxy server to reach every site on the"
+        APR_EOL_STR
+        "### Internet, you probably just want to put that server's"
+        APR_EOL_STR
+        "### information in the 'global' section and not bother with"
+        APR_EOL_STR
+        "### 'groups' or any other sections."
+        APR_EOL_STR
+        "###"
+        APR_EOL_STR
+        "### If you go through a proxy for all but a few sites, you can"
+        APR_EOL_STR
+        "### list those exceptions under 'http-proxy-exceptions'.  This only"
+        APR_EOL_STR
+        "### overrides defaults, not explicitly matched server names."
+        APR_EOL_STR
+        "###"
+        APR_EOL_STR
+        "### 'ssl-authority-files' is a semicolon-delimited list of files,"
+        APR_EOL_STR
+        "### each pointing to a PEM-encoded Certificate Authority (CA) "
+        APR_EOL_STR
+        "### SSL certificate.  See details above for overriding security "
+        APR_EOL_STR
+        "### due to SSL."
+        APR_EOL_STR
+        "# [global]"
+        APR_EOL_STR
+        "# http-proxy-exceptions = *.exception.com, www.internal-site.org"
+        APR_EOL_STR
+        "# http-proxy-host = defaultproxy.whatever.com"
+        APR_EOL_STR
+        "# http-proxy-port = 7000"
+        APR_EOL_STR
+        "# http-proxy-username = defaultusername"
+        APR_EOL_STR
+        "# http-proxy-password = defaultpassword"
+        APR_EOL_STR
+        "# http-compression = no"
+        APR_EOL_STR
+        "# No http-timeout, so just use the builtin default."
+        APR_EOL_STR
+        "# No neon-debug-mask, so neon debugging is disabled."
+        APR_EOL_STR
+        "# ssl-authority-files = /path/to/CAcert.pem;/path/to/CAcert2.pem"
+        APR_EOL_STR;
 
       apr_err = apr_file_open (&f, path,
                                (APR_WRITE | APR_CREATE | APR_EXCL),
@@ -934,100 +1006,186 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
     {
       apr_file_t *f;
       const char *contents =
-        "### This file configures various client-side behaviors.\n"
-        "###\n"
-        "### The commented-out examples below are intended to demonstrate\n"
-        "### how to use this file.\n"
-        "\n"
-        "### Section for authentication and authorization customizations.\n"
-        "### Set store-auth-creds to 'no' to avoid storing your subversion\n"
-        "### credentials in the auth/ area of your config directory.\n"
-        "### It defaults to 'yes'.  Note that this option only prevents\n"
-        "### saving of *new* credentials;  it doesn't invalidate existing\n"
-        "### caches.  (To do that, remove the cache files by hand.)\n"
-        "# [auth]\n"
-        "# store-auth-creds = no\n"
-        "\n"
-        "### Section for configuring external helper applications.\n"
-        "### Set editor to the command used to invoke your text editor.\n"
-        "###   This will override the environment variables that Subversion\n"
-        "###   examines by default to find this information ($EDITOR, \n"
-        "###   et al).\n"
-        "### Set diff-cmd to the absolute path of your 'diff' program.\n"
-        "###   This will override the compile-time default, which is to use\n"
-        "###   Subversion's internal diff implementation.\n"
-        "### Set diff3-cmd to the absolute path of your 'diff3' program.\n"
-        "###   This will override the compile-time default, which is to use\n"
-        "###   Subversion's internal diff3 implementation.\n"
-        "### Set diff3-has-program-arg to 'true' or 'yes' if your 'diff3'\n"
-        "###   program accepts the '--diff-program' option.\n"
-        "# [helpers]\n"
-        "# editor-cmd = editor (vi, emacs, notepad, etc.)\n"
-        "# diff-cmd = diff_program (diff, gdiff, etc.)\n"
-        "# diff3-cmd = diff3_program (diff3, gdiff3, etc.)\n"
-        "# diff3-has-program-arg = [true | false]\n"
-        "\n"
-        "### Section for configuring tunnel agents.\n"
-        "# [tunnels]\n"
-        "### Configure svn protocol tunnel schemes here.  By default, only\n"
-        "### the 'ssh' scheme is defined.  You can define other schemes to\n"
-        "### be used with 'svn+scheme://hostname/path' URLs.  A scheme\n"
-        "### definition is simply a command, optionally prefixed by an\n"
-        "### environment variable name which can override the command if it\n"
-        "### is defined.  The command (or environment variable) may contain\n"
-        "### arguments, using standard shell quoting for arguments with\n"
-        "### spaces.  The command will be invoked as:\n"
-        "###   <command> <hostname> svnserve -t\n"
-        "### (If the URL includes a username, then the hostname will be\n"
-        "### passed to the tunnel agent as <user>@<hostname>.)  If the\n"
-        "### built-in ssh scheme were not predefined, it could be defined\n"
-        "### as:\n"
-        "# ssh = $SVN_SSH ssh\n"
-        "### If you wanted to define a new 'rsh' scheme, to be used with\n"
-        "### 'svn+rsh:' URLs, you could do so as follows:\n"
-        "# rsh = rsh\n"
-        "### Or, if you wanted to specify a full path and arguments:\n"
-        "# rsh = /path/to/rsh -l myusername\n"
-        "### On Windows, if you are specifying a full path to a command,\n"
-        "### use a forward slash (/) or a paired backslash (\\\\) as the\n"
-        "### path separator.  A single backslash will be treated as an\n"
-        "### escape for the following character.\n" 
-        "\n"
-        "### Section for configuring miscelleneous Subversion options.\n"
-        "# [miscellany]\n"
-        "### Set global-ignores to a set of whitespace-delimited globs\n"
-        "### which Subversion will ignore in its 'status' output.\n"
-        "# global-ignores = " SVN_CONFIG_DEFAULT_GLOBAL_IGNORES "\n"
-        "### Set log-encoding to the default encoding for log messages\n"
-        "# log-encoding = latin1\n"
-        "### Set use-commit-times to make checkout/update/switch/revert\n"
-        "### put last-committed timestamps on every file touched.\n"
-        "# use-commit-times = yes\n"
-        "### Set enable-auto-props to 'yes' to enable automatic properties\n"
-        "### for 'svn add' and 'svn import', it defaults to 'no'.\n"
-        "### Automatic properties are defined in the section 'auto-props'.\n"
-        "# enable-auto-props = yes\n"
-        "\n"
-        "### Section for configuring automatic properties.\n"
-        "### The format of the entries is:\n"
-        "###   file-name-pattern = propname[=value][;propname[=value]...]\n"
-        "### The file-name-pattern can contain wildcards (such as '*' and\n"
-        "### '?').  All entries which match will be applied to the file.\n"
-        "### Note that auto-props functionality must be enabled, which\n"
-        "### is typically done by setting the 'enable-auto-props' option.\n"
-        "# [auto-props]\n"
-        "# *.c = svn:eol-style=native\n"
-        "# *.cpp = svn:eol-style=native\n"
-        "# *.h = svn:eol-style=native\n"
-        "# *.dsp = svn:eol-style=CRLF\n"
-        "# *.dsw = svn:eol-style=CRLF\n"
-        "# *.sh = svn:eol-style=native;svn:executable\n"
-        "# *.txt = svn:eol-style=native\n"
-        "# *.png = svn:mime-type=image/png\n"
-        "# *.jpg = svn:mime-type=image/jpeg\n"
-        "# Makefile = svn:eol-style=native\n"
-        "\n"
-        "\n";
+        "### This file configures various client-side behaviors."
+        APR_EOL_STR
+        "###"
+        APR_EOL_STR
+        "### The commented-out examples below are intended to demonstrate"
+        APR_EOL_STR
+        "### how to use this file."
+        APR_EOL_STR
+        APR_EOL_STR
+        "### Section for authentication and authorization customizations."
+        APR_EOL_STR
+        "### Set store-auth-creds to 'no' to avoid storing your subversion"
+        APR_EOL_STR
+        "### credentials in the auth/ area of your config directory."
+        APR_EOL_STR
+        "### It defaults to 'yes'.  Note that this option only prevents"
+        APR_EOL_STR
+        "### saving of *new* credentials;  it doesn't invalidate existing"
+        APR_EOL_STR
+        "### caches.  (To do that, remove the cache files by hand.)"
+        APR_EOL_STR
+        "# [auth]"
+        APR_EOL_STR
+        "# store-auth-creds = no"
+        APR_EOL_STR
+        APR_EOL_STR
+        "### Section for configuring external helper applications."
+        APR_EOL_STR
+        "### Set editor to the command used to invoke your text editor."
+        APR_EOL_STR
+        "###   This will override the environment variables that Subversion"
+        APR_EOL_STR
+        "###   examines by default to find this information ($EDITOR, "
+        APR_EOL_STR
+        "###   et al)."
+        APR_EOL_STR
+        "### Set diff-cmd to the absolute path of your 'diff' program."
+        APR_EOL_STR
+        "###   This will override the compile-time default, which is to use"
+        APR_EOL_STR
+        "###   Subversion's internal diff implementation."
+        APR_EOL_STR
+        "### Set diff3-cmd to the absolute path of your 'diff3' program."
+        APR_EOL_STR
+        "###   This will override the compile-time default, which is to use"
+        APR_EOL_STR
+        "###   Subversion's internal diff3 implementation."
+        APR_EOL_STR
+        "### Set diff3-has-program-arg to 'true' or 'yes' if your 'diff3'"
+        APR_EOL_STR
+        "###   program accepts the '--diff-program' option."
+        APR_EOL_STR
+        "# [helpers]"
+        APR_EOL_STR
+        "# editor-cmd = editor (vi, emacs, notepad, etc.)"
+        APR_EOL_STR
+        "# diff-cmd = diff_program (diff, gdiff, etc.)"
+        APR_EOL_STR
+        "# diff3-cmd = diff3_program (diff3, gdiff3, etc.)"
+        APR_EOL_STR
+        "# diff3-has-program-arg = [true | false]"
+        APR_EOL_STR
+        APR_EOL_STR
+        "### Section for configuring tunnel agents."
+        APR_EOL_STR
+        "# [tunnels]"
+        APR_EOL_STR
+        "### Configure svn protocol tunnel schemes here.  By default, only"
+        APR_EOL_STR
+        "### the 'ssh' scheme is defined.  You can define other schemes to"
+        APR_EOL_STR
+        "### be used with 'svn+scheme://hostname/path' URLs.  A scheme"
+        APR_EOL_STR
+        "### definition is simply a command, optionally prefixed by an"
+        APR_EOL_STR
+        "### environment variable name which can override the command if it"
+        APR_EOL_STR
+        "### is defined.  The command (or environment variable) may contain"
+        APR_EOL_STR
+        "### arguments, using standard shell quoting for arguments with"
+        APR_EOL_STR
+        "### spaces.  The command will be invoked as:"
+        APR_EOL_STR
+        "###   <command> <hostname> svnserve -t"
+        APR_EOL_STR
+        "### (If the URL includes a username, then the hostname will be"
+        APR_EOL_STR
+        "### passed to the tunnel agent as <user>@<hostname>.)  If the"
+        APR_EOL_STR
+        "### built-in ssh scheme were not predefined, it could be defined"
+        APR_EOL_STR
+        "### as:"
+        APR_EOL_STR
+        "# ssh = $SVN_SSH ssh"
+        APR_EOL_STR
+        "### If you wanted to define a new 'rsh' scheme, to be used with"
+        APR_EOL_STR
+        "### 'svn+rsh:' URLs, you could do so as follows:"
+        APR_EOL_STR
+        "# rsh = rsh"
+        APR_EOL_STR
+        "### Or, if you wanted to specify a full path and arguments:"
+        APR_EOL_STR
+        "# rsh = /path/to/rsh -l myusername"
+        APR_EOL_STR
+        "### On Windows, if you are specifying a full path to a command,"
+        APR_EOL_STR
+        "### use a forward slash (/) or a paired backslash (\\\\) as the"
+        APR_EOL_STR
+        "### path separator.  A single backslash will be treated as an"
+        APR_EOL_STR
+        "### escape for the following character." 
+        APR_EOL_STR
+        APR_EOL_STR
+        "### Section for configuring miscelleneous Subversion options."
+        APR_EOL_STR
+        "# [miscellany]"
+        APR_EOL_STR
+        "### Set global-ignores to a set of whitespace-delimited globs"
+        APR_EOL_STR
+        "### which Subversion will ignore in its 'status' output."
+        APR_EOL_STR
+        "# global-ignores = " SVN_CONFIG_DEFAULT_GLOBAL_IGNORES ""
+        APR_EOL_STR
+        "### Set log-encoding to the default encoding for log messages"
+        APR_EOL_STR
+        "# log-encoding = latin1"
+        APR_EOL_STR
+        "### Set use-commit-times to make checkout/update/switch/revert"
+        APR_EOL_STR
+        "### put last-committed timestamps on every file touched."
+        APR_EOL_STR
+        "# use-commit-times = yes"
+        APR_EOL_STR
+        "### Set enable-auto-props to 'yes' to enable automatic properties"
+        APR_EOL_STR
+        "### for 'svn add' and 'svn import', it defaults to 'no'."
+        APR_EOL_STR
+        "### Automatic properties are defined in the section 'auto-props'."
+        APR_EOL_STR
+        "# enable-auto-props = yes"
+        APR_EOL_STR
+        APR_EOL_STR
+        "### Section for configuring automatic properties."
+        APR_EOL_STR
+        "### The format of the entries is:"
+        APR_EOL_STR
+        "###   file-name-pattern = propname[=value][;propname[=value]...]"
+        APR_EOL_STR
+        "### The file-name-pattern can contain wildcards (such as '*' and"
+        APR_EOL_STR
+        "### '?').  All entries which match will be applied to the file."
+        APR_EOL_STR
+        "### Note that auto-props functionality must be enabled, which"
+        APR_EOL_STR
+        "### is typically done by setting the 'enable-auto-props' option."
+        APR_EOL_STR
+        "# [auto-props]"
+        APR_EOL_STR
+        "# *.c = svn:eol-style=native"
+        APR_EOL_STR
+        "# *.cpp = svn:eol-style=native"
+        APR_EOL_STR
+        "# *.h = svn:eol-style=native"
+        APR_EOL_STR
+        "# *.dsp = svn:eol-style=CRLF"
+        APR_EOL_STR
+        "# *.dsw = svn:eol-style=CRLF"
+        APR_EOL_STR
+        "# *.sh = svn:eol-style=native;svn:executable"
+        APR_EOL_STR
+        "# *.txt = svn:eol-style=native"
+        APR_EOL_STR
+        "# *.png = svn:mime-type=image/png"
+        APR_EOL_STR
+        "# *.jpg = svn:mime-type=image/jpeg"
+        APR_EOL_STR
+        "# Makefile = svn:eol-style=native"
+        APR_EOL_STR
+        APR_EOL_STR;
         
       apr_err = apr_file_open (&f, path,
                                (APR_WRITE | APR_CREATE | APR_EXCL),
