@@ -100,40 +100,54 @@ svn_repos_get_logs (svn_repos_t *repos,
                     void *receiver_baton,
                     apr_pool_t *pool)
 {
-  svn_revnum_t this_rev;
+  svn_revnum_t this_rev, head = SVN_INVALID_REVNUM;
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *changed_paths = NULL;
   svn_fs_t *fs = repos->fs;
   apr_array_header_t *revs = NULL;
 
-  if (start == SVN_INVALID_REVNUM)
-    SVN_ERR (svn_fs_youngest_rev (&start, fs, pool));
+  /* If no START revision was given, use HEAD. */
+  if (! SVN_IS_VALID_REVNUM (start))
+    {
+      SVN_ERR (svn_fs_youngest_rev (&head, fs, pool));
+      start = head;
+    }
 
-  if (end == SVN_INVALID_REVNUM)
-    SVN_ERR (svn_fs_youngest_rev (&end, fs, pool));
+  /* If no END revision was given, use HEAD (note that we might have
+     already calculate HEAD in the step above). */
+  if (! SVN_IS_VALID_REVNUM (end))
+    {
+      if (! SVN_IS_VALID_REVNUM (head))
+        SVN_ERR (svn_fs_youngest_rev (&head, fs, pool));
+      end = head;
+    }
 
+  /* If paths were specified, then we only really care about revisions
+     in which those paths were changed.  So we ask the filesystem for
+     all the revisions in which any of the paths was changed.  */
   if (paths && paths->nelts)
     {
       int i;
       svn_fs_root_t *rev_root;
       apr_array_header_t *cpaths =
-          apr_array_make(subpool, paths->nelts, sizeof(const char *));
+          apr_array_make (pool, paths->nelts, sizeof (const char *));
 
       /* Build an array of const char's from our stringbuf stuff.  */
       for (i = 0; i < paths->nelts; i++)
-        (*(const char **)apr_array_push(cpaths)) =
-                (APR_ARRAY_IDX(paths, i, svn_stringbuf_t *))->data;
+        (*(const char **)apr_array_push (cpaths)) =
+                (APR_ARRAY_IDX (paths, i, svn_stringbuf_t *))->data;
 
       /* Set the revision root to the newer of the revisions we are
-       * searching for.  */
-      SVN_ERR (svn_fs_revision_root (&rev_root, fs, (start > end) ? start : end, subpool));
+         searching for.  */
+      SVN_ERR (svn_fs_revision_root (&rev_root, fs, 
+                                     (start > end) ? start : end, pool));
 
       /* And the search is on... */
-      SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, cpaths, subpool));
+      SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, cpaths, pool));
 
-      /* If no revisions were found for these entries, we have nothing to
-       * show. Just return now before we break a sweat.  */
-      if (!revs || !revs->nelts)
+      /* If no revisions were found for these entries, we have nothing
+         to show. Just return now before we break a sweat.  */
+      if (! (revs && revs->nelts))
         return SVN_NO_ERROR;
     }
 
@@ -143,14 +157,17 @@ svn_repos_get_logs (svn_repos_t *repos,
     {
       svn_string_t *author, *date, *message;
 
-      /* If we have a list of revs for use, check to make sure this is one
-       * of them.  */
+      /* If we have a list of revs for use, check to make sure this is
+         one of them.  */
       if (revs)
         {
           int i, matched = 0;
-          for (i = 0; i < revs->nelts && !matched; i++)
-            if (this_rev == ((svn_revnum_t *)(revs->elts))[i])
-              matched = 1;
+          for (i = 0; ((i < revs->nelts) && (! matched)); i++)
+            {
+              if (this_rev == ((svn_revnum_t *)(revs->elts))[i])
+                matched = 1;
+            }
+
           if (! matched)
             continue;
 	}
@@ -173,42 +190,31 @@ svn_repos_get_logs (svn_repos_t *repos,
           (discover_changed_paths || (paths && paths->nelts > 0)))
         {
           const svn_delta_edit_fns_t *editor;
-          svn_fs_root_t *base_root, *this_root;
+          svn_fs_root_t *oldroot, *newroot;
           void *edit_baton;
 
           changed_paths = apr_hash_make (subpool);
           
-          SVN_ERR (svn_fs_revision_root (&base_root, fs, this_rev - 1, subpool));
-          SVN_ERR (svn_fs_revision_root (&this_root, fs, this_rev, subpool));
+          /* Use a dir_deltas run with the node editor between the
+             current revision and its immediate predecessor to see
+             what changed in this revision.
 
-          /* ### todo: not sure this needs an editor and dir_deltas.
+             ### todo: not sure this needs an editor and dir_deltas.
              Might be easier to just walk the one revision tree,
              looking at created-rev fields... */
-
-          SVN_ERR (svn_repos_node_editor (&editor, &edit_baton,
-                                          fs,
-                                          base_root,
-                                          this_root,
-                                          subpool,
-                                          subpool));
-
-          SVN_ERR (svn_repos_dir_delta (base_root,
-                                        "",
-                                        NULL,
-                                        NULL,
-                                        this_root,
-                                        "",
-                                        editor,
-                                        edit_baton,
-                                        FALSE,
-                                        TRUE,
-                                        FALSE,
-                                        subpool));
-
+          SVN_ERR (svn_fs_revision_root (&oldroot, fs, this_rev - 1, subpool));
+          SVN_ERR (svn_fs_revision_root (&newroot, fs, this_rev, subpool));
+          SVN_ERR (svn_repos_node_editor (&editor, &edit_baton, fs,
+                                          oldroot, newroot, subpool, subpool));
+          SVN_ERR (svn_repos_dir_delta (oldroot, "", NULL, NULL,
+                                        newroot, "",
+                                        editor, edit_baton,
+                                        FALSE, TRUE, FALSE, subpool));
           detect_changed (changed_paths,
                           svn_repos_node_from_baton (edit_baton),
                           svn_stringbuf_create ("/", subpool),
                           subpool);
+
           /* ### Feels slightly bogus to assume "/" as the right start
              for repository style. */
         }
