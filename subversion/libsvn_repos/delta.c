@@ -123,6 +123,7 @@ static svn_error_t *replace_file_or_dir (struct context *c,
                                          svn_string_t *source_entry,
                                          apr_pool_t *pool);
 
+#if 0 /* comment out until used, to avoid compiler warning */
 static svn_error_t *find_nearest_entry (svn_fs_dirent_t **s_entry,
                                         int *distance,
                                         struct context *c, 
@@ -130,6 +131,7 @@ static svn_error_t *find_nearest_entry (svn_fs_dirent_t **s_entry,
                                         svn_string_t *target_parent,
                                         svn_fs_dirent_t *t_entry,
                                         apr_pool_t *pool);
+#endif /* 0 */
 
 static svn_error_t *delta_dirs (struct context *c, 
                                 void *dir_baton,
@@ -798,6 +800,7 @@ replace_file_or_dir (struct context *c,
 }
 
 
+#if 0   /* commented out to avoid unused function warning */
 /* Do a `replace' edit in DIR_BATON, replacing the entry named
    T_ENTRY->name in the directory TARGET_PARENT with the closest
    related node available in SOURCE_PARENT.  If no relative can be
@@ -914,6 +917,7 @@ find_nearest_entry (svn_fs_dirent_t **s_entry,
 
   return SVN_NO_ERROR;
 }
+#endif /* 0 */
 
 
 /* Emit deltas to turn SOURCE_PATH into TARGET_PATH.  Assume that
