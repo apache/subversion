@@ -404,8 +404,12 @@ svn_wc_crawl_revisions (const char *path,
     {
       apr_finfo_t info;
       err = svn_io_stat (&info, path, APR_FINFO_MIN, pool);
-      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-        missing = TRUE;
+      if (err)
+        {
+          if (APR_STATUS_IS_ENOENT(err->apr_err))
+            missing = TRUE;
+          svn_error_clear (err);
+        }
     }
 
   if (entry->kind == svn_node_dir)

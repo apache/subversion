@@ -912,7 +912,10 @@ svn_node_kind_t svn_fs_check_path (svn_fs_root_t *root,
 
   err = svn_fs__retry_txn (root->fs, txn_body_node_kind, &args, pool);
   if (err)
-    return svn_node_none;
+    {
+      svn_error_clear (err);
+      return svn_node_none;
+    }
 
   return args.kind;
 }

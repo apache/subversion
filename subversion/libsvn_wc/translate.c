@@ -428,7 +428,7 @@ svn_wc_copy_and_translate (const char *src,
   const char *dst_tmp;
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
   apr_status_t apr_err;
-  svn_error_t *err = SVN_NO_ERROR;
+  svn_error_t *err = SVN_NO_ERROR, *err2;
   apr_status_t read_err;
   char c;
   apr_size_t len;
@@ -702,7 +702,9 @@ svn_wc_copy_and_translate (const char *src,
     apr_file_close (s); /* toss error */
   if (d)
     apr_file_close (d); /* toss error */
-  svn_io_remove_file (dst_tmp, pool); /* toss error */
+  err2 = svn_io_remove_file (dst_tmp, pool); /* toss error */
+  if (err2)
+    svn_error_clear (err2);
   return err;
 }
 

@@ -142,8 +142,12 @@ copy_versioned_files (const char *from,
               err = svn_wc_entry (&entry, copy_from, adm_access, FALSE,
                                   subpool);
 
-              if (err && err->apr_err != SVN_ERR_WC_NOT_FILE)
-                return err;
+              if (err)
+                {
+                  if (err->apr_err != SVN_ERR_WC_NOT_FILE)
+                    return err;
+                  svn_error_clear (err);
+                }
 
               /* don't copy it if it isn't versioned. */
               if (entry)

@@ -114,9 +114,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   if (eb->header_done == FALSE)
     {
       len = 4;
-      err = svn_stream_write (eb->output, "SVN\0", &len);
-      if (err != SVN_NO_ERROR)
-        return err;
+      SVN_ERR (svn_stream_write (eb->output, "SVN\0", &len));
       eb->header_done = TRUE;
     }
 

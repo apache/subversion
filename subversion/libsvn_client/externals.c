@@ -250,6 +250,8 @@ relegate_external (const char *path, apr_pool_t *pool)
       apr_file_t *f;
       const char *new_path;
 
+      svn_error_clear (err);
+
       /* Reserve the new dir name. */
       SVN_ERR (svn_io_open_unique_file
                (&f, &new_path, path, ".OLD", FALSE, pool));
@@ -273,7 +275,10 @@ relegate_external (const char *path, apr_pool_t *pool)
          in the meantime -- which would never happen in real life, so
          no big deal.
       */
-      svn_io_remove_file (new_path, pool);  /* toss error */
+      err = svn_io_remove_file (new_path, pool);
+      if (err)
+        svn_error_clear (err);  /* It's not clear why this is ignored, it
+                                   it because the rename will catch it? */
 
       /* Rename. */
       SVN_ERR (svn_io_file_rename (path, new_path, pool));
@@ -459,6 +464,8 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
              hasn't updated since then, so they don't actually have a
              working copy of it yet.  Just check it out. */
           
+          svn_error_clear (err);
+
           /* The target dir might have multiple components.  Guarantee
              the path leading down to the last component. */
           {

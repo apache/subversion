@@ -144,8 +144,13 @@ svn_client_add (const char *path,
                       notify_func, notify_baton, pool);
 
   err2 = svn_wc_adm_close (adm_access);
-  if (! err && err2)
-    err = err2;
+  if (err2)
+    {
+      if (err)
+        svn_error_clear (err2);
+      else
+        err = err2;
+    }
 
   return err;
 }
@@ -253,7 +258,11 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
      scheduled for deletion is not supported.  Leaving an unversioned
      directory makes the working copy hard to use.  */
   if (err && err->apr_err == SVN_ERR_WC_NODE_KIND_CHANGE)
-    svn_io_remove_dir (path, pool); /* Discard error */
+    {
+      svn_error_t *err2 = svn_io_remove_dir (path, pool);
+      if (err2)
+        svn_error_clear (err2);
+    }
 
   return err;
 }

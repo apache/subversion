@@ -502,13 +502,19 @@ static svn_error_t *custom_get_request(ne_session *sess,
   /* if there was an error writing the contents, then return it rather
      than Neon-related errors */
   if (cgc.err)
-    return cgc.err;
+    {
+      if (err)
+        svn_error_clear (err);
+      return cgc.err;
+    }
 
   if (decompress_rv != 0)
     {
        const char *msg;
 
        msg = apr_psprintf(pool, "GET request failed for %s", url);
+       if (err)
+         svn_error_clear (err);
        err = svn_ra_dav__convert_error(sess, msg, decompress_rv);
     }
   

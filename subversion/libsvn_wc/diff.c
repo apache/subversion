@@ -949,7 +949,11 @@ close_file (void *file_baton,
         err2 = svn_io_remove_file (translated, b->pool);
 
       if (err1 || err2)
-        return err1 ? err1 : err2;
+        {
+          if (err1 && err2)
+            svn_error_clear (err2);
+          return err1 ? err1 : err2;
+        }
       
       if (b->propchanges->nelts > 0)
         {
@@ -990,7 +994,9 @@ change_file_prop (void *file_baton,
       /* also notice we're ignoring error here;  there's a chance that
          this path might not exist in the working copy, in which case
          the baseprops remains an empty hash. */
-      svn_wc_prop_list (&(b->baseprops), b->path, b->pool);
+      svn_error_t *err = svn_wc_prop_list (&(b->baseprops), b->path, b->pool);
+      if (err)
+        svn_error_clear (err);
       b->fetched_baseprops = TRUE;
     }
 
@@ -1022,7 +1028,10 @@ change_dir_prop (void *dir_baton,
       /* also notice we're ignoring error here;  there's a chance that
          this path might not exist in the working copy, in which case
          the baseprops remains an empty hash. */
-      svn_wc_prop_list (&(db->baseprops), db->path, db->pool);
+      svn_error_t *err = svn_wc_prop_list (&(db->baseprops), db->path,
+                                           db->pool);
+      if (err)
+        svn_error_clear (err);
       db->fetched_baseprops = TRUE;
     }
 
