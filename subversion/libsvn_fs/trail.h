@@ -138,6 +138,10 @@ struct trail_t
      if we abort the transaction, and leave it around otherwise.  */
   apr_pool_t *pool;
 
+  /* A pool for scratchwork;  this pool will be freed after the
+     transaction completes.  */
+  apr_pool_t *scratchpool;
+
   /* A record of the side-effects to be undone in various
      circumstances.  */
   struct undo *undo;
