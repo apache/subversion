@@ -59,20 +59,37 @@ open_tmp_file (apr_file_t **fp,
 }
 
 
-svn_error_t *
-svn_client__get_ra_callbacks (svn_ra_callbacks_t **callbacks,
-                              void **callback_baton,
-                              svn_client_auth_baton_t *auth_baton,
-                              svn_stringbuf_t *path,
-                              svn_boolean_t do_store,
-                              svn_boolean_t use_admin,
-                              apr_pool_t *pool)
+/* Fetch a vtable of CALLBACKS/CALLBACK_BATON suitable for passing
+   to RA->open().  AUTH_BATON is originally provided by the calling
+   application.  Do allocation in POOL.
+
+   The calling libsvn_client routine customizes these callbacks, based
+   on what it's about to do with the RA session:
+
+      - PATH customizes the callbacks to operate on a specific path in
+        the working copy.  
+
+      - DO_STORE indicates whether the RA layer should attempt to
+        store authentication info.
+
+      - USE_ADMIN indicates that the RA layer should create tempfiles
+        in the administrative area instead of in the working copy itself.
+
+*/
+static svn_error_t *
+get_ra_callbacks (svn_ra_callbacks_t **callbacks,
+                  void **callback_baton,
+                  svn_client_auth_baton_t *auth_baton,
+                  svn_stringbuf_t *path,
+                  svn_boolean_t do_store,
+                  svn_boolean_t use_admin,
+                  apr_pool_t *pool)
 {
   svn_ra_callbacks_t *cbtable = 
     (svn_ra_callbacks_t *) apr_pcalloc (pool, sizeof(*cbtable));
   
   cbtable->open_tmp_file = use_admin ? open_admin_tmp_file : open_tmp_file;
-  cbtable->get_authenticator = get_authenticator;
+  cbtable->get_authenticator = svn_client__get_authenticator;
 
   /* Just copy the PATH and DO_STORE into the baton, so callbacks can
      see them later. */
@@ -103,10 +120,10 @@ svn_error_t * svn_client__open_ra_session (void **session_baton,
   svn_ra_callbacks_t *ra_callbacks;
   void *cb_baton;
 
-  SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton,
-                                         auth_baton, base_dir,
-                                         do_store, use_admin,
-                                         pool));
+  SVN_ERR (get_ra_callbacks (&ra_callbacks, &cb_baton,
+                             auth_baton, base_dir,
+                             do_store, use_admin,
+                             pool));
 
   SVN_ERR (ra_lib->open (session_baton, repos_URL,
                          ra_callbacks, cb_baton,

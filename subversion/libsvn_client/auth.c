@@ -281,15 +281,11 @@ store_user_and_pass (void *auth_baton)
 }
 
 
-
-/* Retrieve an AUTHENTICATOR/AUTH_BATON pair from the client,
-   which represents the protocol METHOD.  */
-static svn_error_t *
-get_authenticator (void **authenticator,
-                   void **auth_baton,
-                   apr_uint64_t method,
-                   void *callback_baton,
-                   apr_pool_t *pool)
+svn_error_t * svn_client__get_authenticator (void **authenticator,
+                                             void **auth_baton,
+                                             apr_uint64_t method,
+                                             void *callback_baton,
+                                             apr_pool_t *pool)
 {
   svn_client_auth_baton_t *cb = (svn_client_auth_baton_t *) callback_baton;
 
