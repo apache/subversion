@@ -441,9 +441,13 @@ parse_invalid_atoms (const char **msg,
                          "failed to detect parsing error in '%s'", ia->data);
         }
       else
-        if (try_explicit_length (ia->data, ia->len, strlen (ia->data), pool)
-            == SVN_NO_ERROR)
-          fail (pool, "got wrong length in explicit-length atom");
+        {
+          svn_error_t *err = try_explicit_length (ia->data, ia->len,
+                                                  strlen (ia->data), pool);
+          if (err == SVN_NO_ERROR)
+            return fail (pool, "got wrong length in explicit-length atom");
+          svn_error_clear (err);
+        }
 
       ia++;
     }

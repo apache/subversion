@@ -1043,7 +1043,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
  cleanup:
   /* Abort the commit if it is still in progress. */
   if (commit_in_progress)
-    editor->abort_edit (edit_baton, pool); /* ignore return value */
+    svn_error_clear (editor->abort_edit (edit_baton, pool));
 
   /* A bump error is likely to occur while running a working copy log file,
      explicitly unlocking and removing temporary files would be wrong in

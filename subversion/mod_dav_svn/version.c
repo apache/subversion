@@ -574,7 +574,7 @@ static dav_error *dav_svn_uncheckout(dav_resource *resource)
 
   /* Try to abort the txn if it exists;  but don't try too hard.  :-)  */
   if (resource->info->root.txn)
-    svn_fs_abort_txn(resource->info->root.txn);
+    svn_error_clear(svn_fs_abort_txn(resource->info->root.txn));
 
   resource->info->root.txn_name = NULL;
   resource->info->root.txn = NULL;
@@ -634,7 +634,7 @@ dav_error *dav_svn_checkin(dav_resource *resource,
           if (serr != NULL)
             {
               const char *msg;
-              svn_fs_abort_txn(resource->info->root.txn);
+              svn_error_clear(svn_fs_abort_txn(resource->info->root.txn));
               
               if (serr->apr_err == SVN_ERR_FS_CONFLICT)
                 {
@@ -880,7 +880,7 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
   if (serr != NULL)
     {
       const char *msg;
-      svn_fs_abort_txn(txn);
+      svn_error_clear(svn_fs_abort_txn(txn));
 
       if (serr->apr_err == SVN_ERR_FS_CONFLICT)
         {
