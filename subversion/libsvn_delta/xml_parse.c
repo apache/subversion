@@ -120,7 +120,7 @@ signal_expat_bailout (svn_error_t *error, svn_xml__digger_t *digger)
 /* Return an informative error message about invalid XML.
    (Set DESTROY_P to indicate an unexpected closure tag) */
 static svn_error_t *
-XML_validation_error (apr_pool_t *pool,
+xml_validation_error (apr_pool_t *pool,
                       const char *name,
                       svn_boolean_t destroy_p)
 {
@@ -315,7 +315,7 @@ do_stack_append (svn_xml__digger_t *digger,
 
       /* Make sure that it's indeed a tree-delta. */
       if (new_frame->tag != svn_delta__XML_treedelta)
-        return XML_validation_error (pool, tagname, FALSE);
+        return xml_validation_error (pool, tagname, FALSE);
 
       digger->stack = new_frame;
       /* kff todo: parent_baton cannot be side effected, so why do we
@@ -327,19 +327,19 @@ do_stack_append (svn_xml__digger_t *digger,
       /* <tree-delta> must follow <dir> */
       if ((new_frame->tag == svn_delta__XML_treedelta)
           && (youngest_frame->tag != svn_delta__XML_dir))
-        return XML_validation_error (pool, tagname, FALSE);
+        return xml_validation_error (pool, tagname, FALSE);
       
       /* <add>, <replace> must follow <tree-delta> */
       else if ( ((new_frame->tag == svn_delta__XML_add)
                  || (new_frame->tag == svn_delta__XML_replace))
                 && (youngest_frame->tag != svn_delta__XML_treedelta) )
-        return XML_validation_error (pool, tagname, FALSE);
+        return xml_validation_error (pool, tagname, FALSE);
 
       /* <delete> must follow either <tree-delta> or <prop-delta> */
       else if ( (new_frame->tag == svn_delta__XML_delete)
                 && (youngest_frame->tag != svn_delta__XML_treedelta)
                 && (youngest_frame->tag != svn_delta__XML_propdelta) )
-        return XML_validation_error (pool, tagname, FALSE);
+        return xml_validation_error (pool, tagname, FALSE);
       
       /* <file>, <dir> must follow either <add> or <replace> */
       else if ((new_frame->tag == svn_delta__XML_file)
@@ -347,7 +347,7 @@ do_stack_append (svn_xml__digger_t *digger,
         {
           if ((youngest_frame->tag != svn_delta__XML_add)
               && (youngest_frame->tag != svn_delta__XML_replace))
-            return XML_validation_error (digger->pool, tagname, FALSE);
+            return xml_validation_error (digger->pool, tagname, FALSE);
         }
       
       /* <prop-delta> must follow one of <add>, <replace> (if talking
@@ -358,24 +358,24 @@ do_stack_append (svn_xml__digger_t *digger,
                && (youngest_frame->tag != svn_delta__XML_replace)
                && (youngest_frame->tag != svn_delta__XML_file)
                && (youngest_frame->tag != svn_delta__XML_dir))
-        return XML_validation_error (pool, tagname, FALSE);
+        return xml_validation_error (pool, tagname, FALSE);
       
       /* <text-delta> must follow <file> */
       else if ((new_frame->tag == svn_delta__XML_textdelta)
                && (youngest_frame->tag != svn_delta__XML_file))
-        return XML_validation_error (pool, tagname, FALSE);
+        return xml_validation_error (pool, tagname, FALSE);
 
       /* <set> must follow <prop-delta> */
       else if ((new_frame->tag == svn_delta__XML_textdelta)
                && (youngest_frame->tag != svn_delta__XML_file))
-        return XML_validation_error (pool, tagname, FALSE);
+        return xml_validation_error (pool, tagname, FALSE);
 
       /* ancestry information can only appear as <file> or <dir> attrs */
       else if ((new_frame->ancestor_path
                 || (new_frame->ancestor_version >= 0))
                && (new_frame->tag != svn_delta__XML_file)
                && (new_frame->tag != svn_delta__XML_dir))
-        return XML_validation_error (pool, tagname, FALSE);
+        return xml_validation_error (pool, tagname, FALSE);
 
       /* Final check: if this is an <add> or <replace>, make sure the
          "name" attribute is unique within the parent <tree-delta>. */
@@ -415,14 +415,14 @@ do_stack_check_remove (svn_xml__digger_t *digger, const char *tagname)
   svn_xml__stackframe_t *youngest_frame = digger->stack;
 
   if (youngest_frame == NULL)
-    return XML_validation_error (pool, tagname, TRUE);
+    return xml_validation_error (pool, tagname, TRUE);
 
   /* Validity check: Make sure the kind of object we're removing (due
      to an XML TAGNAME closure) actually agrees with the type of frame
      at the top of the stack.  This also filters out bogus values of
      TAGNAME. */
   if (strcmp (tagname, svn_delta__tagmap[youngest_frame->tag]))
-    return XML_validation_error (pool, tagname, TRUE);
+    return xml_validation_error (pool, tagname, TRUE);
         
   return SVN_NO_ERROR;
 }
@@ -444,7 +444,7 @@ set_tag_type (svn_xml__stackframe_t *frame,
         return SVN_NO_ERROR;
       }
   
-  return XML_validation_error (digger->pool, name, TRUE);
+  return xml_validation_error (digger->pool, name, TRUE);
 }
 
 
