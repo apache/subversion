@@ -102,6 +102,9 @@ Package=<4>
     Project_Dep_Name tests_libsvn_subr_path
     End Project Dependency
     Begin Project Dependency
+    Project_Dep_Name tests_libsvn_subr_stream
+    End Project Dependency
+    Begin Project Dependency
     Project_Dep_Name tests_libsvn_subr_string
     End Project Dependency
     Begin Project Dependency
@@ -151,8 +154,6 @@ Package=<4>
 {{{
 }}}
 
-###############################################################################
-
 Project: "aprutil"=".\apr-util\aprutil.dsp" - Package Owner=<4>
 
 Package=<5>
@@ -190,6 +191,21 @@ Package=<4>
 ###############################################################################
 
 Project: "libsvn_client"=.\subversion\libsvn_client\libsvn_client.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "libsvn_auth"=.\subversion\libsvn_auth\libsvn_auth.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -408,6 +424,9 @@ Package=<4>
     Project_Dep_Name xml
     End Project Dependency
     Begin Project Dependency
+    Project_Dep_Name libsvn_auth
+    End Project Dependency
+    Begin Project Dependency
     Project_Dep_Name libsvn_client
     End Project Dependency
     Begin Project Dependency
@@ -460,6 +479,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name xml
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_auth
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libsvn_client
@@ -847,6 +869,27 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libsvn_tests_main
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_subr_stream"=.\subversion\tests\libsvn_subr\stream_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_subr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apr
     End Project Dependency
 }}}
 

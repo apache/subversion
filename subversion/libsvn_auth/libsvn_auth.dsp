@@ -1,24 +1,24 @@
-# Microsoft Developer Studio Project File - Name="libsvn_wc" - Package Owner=<4>
+# Microsoft Developer Studio Project File - Name="libsvn_auth" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Static Library" 0x0104
 
-CFG=libsvn_wc - Win32 Debug
+CFG=libsvn_auth - Win32 Debug
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
-!MESSAGE NMAKE /f "libsvn_wc.mak".
+!MESSAGE NMAKE /f "libsvn_auth.mak".
 !MESSAGE 
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "libsvn_wc.mak" CFG="libsvn_wc - Win32 Debug"
+!MESSAGE NMAKE /f "libsvn_auth.mak" CFG="libsvn_auth - Win32 Debug"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "libsvn_wc - Win32 Release" (based on "Win32 (x86) Static Library")
-!MESSAGE "libsvn_wc - Win32 Debug" (based on "Win32 (x86) Static Library")
+!MESSAGE "libsvn_auth - Win32 Release" (based on "Win32 (x86) Static Library")
+!MESSAGE "libsvn_auth - Win32 Debug" (based on "Win32 (x86) Static Library")
 !MESSAGE 
 
 # Begin Project
@@ -28,7 +28,7 @@ CFG=libsvn_wc - Win32 Debug
 CPP=cl.exe
 RSC=rc.exe
 
-!IF  "$(CFG)" == "libsvn_wc - Win32 Release"
+!IF  "$(CFG)" == "libsvn_auth - Win32 Release"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 0
@@ -50,9 +50,9 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo
+# ADD LIB32 shfolder.lib /nologo
 
-!ELSEIF  "$(CFG)" == "libsvn_wc - Win32 Debug"
+!ELSEIF  "$(CFG)" == "libsvn_auth - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
@@ -74,93 +74,29 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo
+# ADD LIB32 shfolder.lib /nologo
 
 !ENDIF 
 
 # Begin Target
 
-# Name "libsvn_wc - Win32 Release"
-# Name "libsvn_wc - Win32 Debug"
+# Name "libsvn_auth - Win32 Release"
+# Name "libsvn_auth - Win32 Debug"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=.\adm_crawler.c
+SOURCE=.\auth.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\adm_files.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\adm_ops.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\copy.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\diff.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\entries.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\update_editor.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\lock.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\log.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\merge.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\props.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\questions.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\simple_wc_provider.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\status.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\status_editor.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\translate.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\util.c
+SOURCE=.\simple_prompt_provider.c
 # End Source File
 # End Group
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
-# Begin Source File
-
-SOURCE=.\wc.h
-# End Source File
 # End Group
 # End Target
 # End Project
