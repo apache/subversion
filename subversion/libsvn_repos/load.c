@@ -933,7 +933,7 @@ close_revision (void *baton)
 
   if (err)
     {
-      svn_fs_abort_txn (rb->txn);
+      svn_error_clear (svn_fs_abort_txn (rb->txn));
       if (conflict_msg)
         return svn_error_quick_wrap (err, conflict_msg);
       else

@@ -339,7 +339,7 @@ dir_deltas (const char **msg,
           /* We don't really want to do anything with this
              transaction...so we'll abort it (good for software, bad
              bad bad for society). */
-          svn_fs_abort_txn (txn);
+          svn_error_clear (svn_fs_abort_txn (txn));
           svn_pool_clear (subpool);
         }
     }

@@ -327,6 +327,7 @@ delete_rep (const char **msg,
   if ((! err) && (read_args.skel))
     return svn_error_create (SVN_ERR_FS_GENERAL, NULL,
                              "error deleting representation");
+  svn_error_clear (err);
 
   return SVN_NO_ERROR;
 }
@@ -603,6 +604,7 @@ test_strings (const char **msg,
     if (err->apr_err != SVN_ERR_FS_NO_SUCH_STRING)
       return svn_error_create (SVN_ERR_FS_GENERAL, NULL,
                                "query failed with unexpected error");
+    svn_error_clear (err);
   }
 
   return SVN_NO_ERROR;
@@ -691,6 +693,7 @@ abort_string (const char **msg,
     if ((! err) || (err->apr_err != SVN_ERR_TEST_FAILED))
       return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                                "failed to intentionally abort a trail");
+    svn_error_clear (err);
   }
   
   /* Verify that record's size and contents are still that of string1 */

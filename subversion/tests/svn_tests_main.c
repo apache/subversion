@@ -154,7 +154,10 @@ do_test_num (const char *progname,
 
   /* If we got an error, print it out.  */
   if (err)
-    svn_handle_error (err, stdout, 0);
+    {
+      svn_handle_error (err, stdout, 0);
+      svn_error_clear (err);
+    }
 
   if (msg_only)
     {

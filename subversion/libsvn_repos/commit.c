@@ -550,30 +550,38 @@ close_edit (void *edit_baton,
 
          We ignore the possible error result from svn_fs_abort_txn();
          it's more important to return the original error. */
-      svn_fs_abort_txn (eb->txn);
+      svn_error_clear (svn_fs_abort_txn (eb->txn));
       return err;
     }
 
   /* Pass new revision information to the caller's callback. */
   {
     svn_string_t *date, *author;
+    svn_error_t *err2;
 
     /* Even if there was a post-commit hook failure, it's more serious
-       if one of the calls here fails, so we use the SVN_ERR() wrapper
+       if one of the calls here fails, so we explicitly check for errors
        here, while saving the possible post-commit error for later. */
 
-    SVN_ERR (svn_fs_revision_prop (&date, svn_repos_fs (eb->repos),
-                                   new_revision, SVN_PROP_REVISION_DATE,
-                                   eb->pool));
+    err2 = svn_fs_revision_prop (&date, svn_repos_fs (eb->repos),
+                                new_revision, SVN_PROP_REVISION_DATE,
+                                eb->pool);
+    if (! err2)
+      err2 =  svn_fs_revision_prop (&author, svn_repos_fs (eb->repos),
+                                    new_revision, SVN_PROP_REVISION_AUTHOR,
+                                    eb->pool);
 
-    SVN_ERR (svn_fs_revision_prop (&author, svn_repos_fs (eb->repos),
-                                   new_revision, SVN_PROP_REVISION_AUTHOR,
-                                   eb->pool));
-
-    SVN_ERR ((*eb->callback) (new_revision, 
+    if (! err2)
+      err2 = (*eb->callback) (new_revision, 
                               date ? date->data : NULL, 
                               author ? author->data : NULL,
-                              eb->callback_baton));
+                              eb->callback_baton);
+    if (err2)
+      {
+        svn_error_clear (err);
+        return err2;
+      }
+
   }
 
   return err;
