@@ -29,6 +29,7 @@
 #include "svn_client.h"
 #include "svn_ra.h"
 #include "svn_string.h"
+#include "svn_types.h"
 #include "svn_error.h"
 #include "svn_path.h"
 #include "client.h"
@@ -46,10 +47,19 @@
  *
  * (I.e., the format for values of the directory property
  * SVN_PROP_EXTERNALS.)
+ *
+ * BEFORE_EDITOR/BEFORE_EDIT_BATON and AFTER_EDITOR/AFTER_EDIT_BATON,
+ * along with AUTH_BATON, are passed along to svn_client_checkout() to
+ * check out the external item.
  */
 static svn_error_t *
 handle_externals_description (const char *externals,
                               const char *path,
+                              const svn_delta_editor_t *before_editor,
+                              void *before_edit_baton,
+                              const svn_delta_editor_t *after_editor,
+                              void *after_edit_baton,
+                              svn_client_auth_baton_t *auth_baton,
                               apr_pool_t *pool)
 {
   apr_array_header_t *description_lines
@@ -58,16 +68,30 @@ handle_externals_description (const char *externals,
   
   for (i = 0; i < description_lines->nelts; i++)
     {
-#if 0      
-      /* ### in progress */
-
-      const char *target_dir;
-      const char *url;
-
       const char *this_line
-        = APR_ARRAY_IDX (description_lines, i, (const char *));
-#endif /* 0 */
+        = APR_ARRAY_IDX (description_lines, i, const char *);
+      apr_array_header_t *line_parts
+        = svn_cstring_split (this_line, " \t", TRUE, pool);
       
+      const char *target_dir = APR_ARRAY_IDX (line_parts, 0, const char *);
+      const char *url = APR_ARRAY_IDX (line_parts, 1, const char *);
+      svn_client_revision_t revision;
+      
+      /* ### Eventually, parse revision numbers and even dates from
+         the description file. */
+      revision.kind = svn_client_revision_head;
+      
+      SVN_ERR (svn_client_checkout (before_editor,
+                                    before_edit_baton,
+                                    after_editor,
+                                    after_edit_baton,
+                                    auth_baton,
+                                    url,
+                                    svn_path_join (path, target_dir, pool),
+                                    &revision,
+                                    TRUE, /* recurse */
+                                    NULL,
+                                    pool));
     }
 
   return SVN_NO_ERROR;
@@ -79,20 +103,43 @@ handle_externals_description (const char *externals,
    items from in the property value, and check them out as subdirs
    of the directory that had the property.
 
+   BEFORE_EDITOR/BEFORE_EDIT_BATON and AFTER_EDITOR/AFTER_EDIT_BATON,
+   along with AUTH_BATON, are passed along to svn_client_checkout() to
+   check out the external items.   ### This is a lousy notification
+   system, soon it will be notification callbacks instead, that will
+   be nice! ###
+
+   ### todo: AUTH_BATON may not be so useful.  It's almost like we
+       need access to the original auth-obtaining callbacks that
+       produced auth baton in the first place.  Hmmm. ###
+
    Use POOL for temporary allocation.
    
    Notes: This is done _after_ the entire initial checkout is complete
-   so that fetching external items (and any errors therefrom) doesn't
+   so that fetching external items (and any errors therefrom) won't
    delay the primary checkout.  */
 static svn_error_t *
-process_externals (const char *path, apr_pool_t *pool)
+process_externals (const char *path, 
+                   const svn_delta_editor_t *before_editor,
+                   void *before_edit_baton,
+                   const svn_delta_editor_t *after_editor,
+                   void *after_edit_baton,
+                   svn_client_auth_baton_t *auth_baton,
+                   apr_pool_t *pool)
 {
   const svn_string_t *externals;
 
   SVN_ERR (svn_wc_prop_get (&externals, SVN_PROP_EXTERNALS, path, pool));
 
   if (externals)
-    SVN_ERR (handle_externals_description (externals->data, path, pool));
+    SVN_ERR (handle_externals_description (externals->data,
+                                           path,
+                                           before_editor,
+                                           before_edit_baton,
+                                           after_editor,
+                                           after_edit_baton,
+                                           auth_baton,
+                                           pool));
 
   /* Recurse. */
   {
@@ -113,11 +160,19 @@ process_externals (const char *path, apr_pool_t *pool)
             && (strcmp (ent->name, SVN_WC_ENTRY_THIS_DIR) != 0))
           {
             const char *path2 = svn_path_join (path, ent->name, subpool);
-            SVN_ERR (process_externals (path2, subpool));
+            SVN_ERR (process_externals (path2, 
+                                        before_editor,
+                                        before_edit_baton,
+                                        after_editor,
+                                        after_edit_baton,
+                                        auth_baton,
+                                        subpool));
           }
 
         svn_pool_clear (subpool);
       }
+
+    svn_pool_destroy (subpool);
   }
 
   return SVN_NO_ERROR;
@@ -253,10 +308,12 @@ svn_client_checkout (const svn_delta_editor_t *before_editor,
 
       /* Close XML file. */
       apr_file_close (in);
+
     }
 
-  /* fooo */
-  SVN_ERR (process_externals (path, pool));
+  SVN_ERR (process_externals (path, before_editor, before_edit_baton,
+                              after_editor, after_edit_baton, auth_baton,
+                              pool));
 
   return SVN_NO_ERROR;
 }
