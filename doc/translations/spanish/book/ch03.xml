@@ -1906,14 +1906,16 @@ $ svn log http://foo.com/svn/trunk/code/foo.c
         <emphasis>solo</emphasis> para esas revisiones en las cuales
         el fichero de trabajo (o URL) cambió.</para>
            
-      <para>If you want even more information about a file or
-        directory, <command>svn log</command> also takes a
-        <option>--verbose</option> (<option>-v</option>) switch.
-        Because Subversion allows you to move and copy files and
-        directories, it is important to be able to track path changes
-        in the filesystem, so in verbose mode, <command>svn
-        log</command> will include a list of changed paths in a
-        revision in its output:</para>
+      <para>Si deséa aún más información sobre un fichero o directorio,
+        <command>svn log</command> también toma una opción
+        <option>--verbose</option> (<option>-v</option>). Porque
+        Subversion le permite mover y copiar ficheros y directorios,
+        es importante poder seguir cambios de la ruta del fichero en el
+        sistema de ficheros, así en modo detallado<!--TODO:verbose-->,
+        <command>svn log</command> incluirá una lista de rutas de
+        fichero cambiadas en una revisión en su salida:<!--TODO:
+        will include a list of changed paths in a
+        revision in its output--></para>
 
       <screen>
 $ svn log -r 8 -v
