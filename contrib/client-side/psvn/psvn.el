@@ -409,7 +409,7 @@ If ARG then pass the -u argument to `svn status'."
   (interactive (list (read-directory-name "SVN status directory: "
                                           nil default-directory nil)
                      current-prefix-arg))
-  (setq arg (svn-status-possibly-negate-meaning-of-arg arg))
+  (setq arg (svn-status-possibly-negate-meaning-of-arg arg 'svn-status))
   (unless (file-directory-p dir)
     (error "%s is not a directory" dir))
   (if (not (file-exists-p (concat dir "/.svn/")))
@@ -1576,9 +1576,11 @@ non-interactive use."
   (when (svn-status-get-line-information)
     (goto-char (+ (point-at-bol) svn-status-default-column))))
 
-(defun svn-status-possibly-negate-meaning-of-arg (arg)
+(defun svn-status-possibly-negate-meaning-of-arg (arg &optional command)
   "Negate arg, if this-command is a member of svn-status-possibly-negate-meaning-of-arg."
-  (if (member this-command svn-status-negate-meaning-of-arg-commands)
+  (unless command
+    (setq command this-command))
+  (if (member command svn-status-negate-meaning-of-arg-commands)
       (not arg)
     arg))
 
