@@ -129,11 +129,15 @@ static const char *dav_svn_xslt_uri(cmd_parms *cmd, void *config,
   return NULL;
 }
 
-static const char *dav_svn_autoversioning_cmd(cmd_parms *cmd, void *config)
+static const char *dav_svn_autoversioning_cmd(cmd_parms *cmd, void *config,
+                                              int arg)
 {
   dav_svn_dir_conf *conf = config;
 
-  conf->autoversioning = TRUE;
+  if (arg)
+    conf->autoversioning = TRUE;
+  else
+    conf->autoversioning = FALSE;
 
   return NULL;
 }
@@ -281,8 +285,8 @@ static const command_rec dav_svn_cmds[] =
                 "subdirectories are assumed to be Subversion repositories."),
 
   /* per directory/location */
-  AP_INIT_NO_ARGS("SVNAutoversioning", dav_svn_autoversioning_cmd,
-                  NULL, ACCESS_CONF, "turns on deltaV autoversioning."),
+  AP_INIT_FLAG("SVNAutoversioning", dav_svn_autoversioning_cmd, NULL,
+               ACCESS_CONF|RSRC_CONF, "turn on deltaV autoversioning."),
 
   { NULL }
 };
