@@ -2454,7 +2454,8 @@ make_reporter (void *session_baton,
                svn_boolean_t resource_walk,
                const svn_delta_editor_t *editor,
                void *edit_baton,
-               svn_boolean_t fetch_content)
+               svn_boolean_t fetch_content,
+               apr_pool_t *pool)
 {
   svn_ra_session_t *ras = session_baton;
   report_baton_t *rb;
@@ -2464,7 +2465,7 @@ make_reporter (void *session_baton,
 
   /* ### create a subpool for this operation? */
 
-  rb = apr_pcalloc(ras->pool, sizeof(*rb));
+  rb = apr_pcalloc(pool, sizeof(*rb));
   rb->ras = ras;
   rb->editor = editor;
   rb->edit_baton = edit_baton;
@@ -2503,7 +2504,7 @@ make_reporter (void *session_baton,
      element in that case. */
   if (SVN_IS_VALID_REVNUM(revision))
     {
-      s = apr_psprintf(ras->pool, 
+      s = apr_psprintf(pool, 
                        "<S:target-revision>%" SVN_REVNUM_T_FMT
                        "</S:target-revision>", revision);
       status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
@@ -2517,7 +2518,7 @@ make_reporter (void *session_baton,
   /* A NULL target is no problem.  */
   if (target)
     {
-      s = apr_psprintf(ras->pool, 
+      s = apr_psprintf(pool, 
                        "<S:update-target>%s</S:update-target>",
                        target);
       status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
@@ -2536,9 +2537,9 @@ make_reporter (void *session_baton,
   if (dst_path)
     {
       svn_stringbuf_t *dst_path_str = NULL;
-      svn_xml_escape_cdata_cstring (&dst_path_str, dst_path, ras->pool);
+      svn_xml_escape_cdata_cstring (&dst_path_str, dst_path, pool);
 
-      s = apr_psprintf(ras->pool, "<S:dst-path>%s</S:dst-path>",
+      s = apr_psprintf(pool, "<S:dst-path>%s</S:dst-path>",
                        dst_path_str->data);
       status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
       if (status)
@@ -2590,7 +2591,8 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
                                     const char *update_target,
                                     svn_boolean_t recurse,
                                     const svn_delta_editor_t *wc_update,
-                                    void *wc_update_baton)
+                                    void *wc_update_baton,
+                                    apr_pool_t *pool)
 {
   return make_reporter (session_baton,
                         reporter,
@@ -2602,7 +2604,8 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
                         FALSE,
                         wc_update,
                         wc_update_baton,
-                        TRUE); /* fetch_content */
+                        TRUE, /* fetch_content */
+                        pool);
 }
 
 
@@ -2614,6 +2617,8 @@ svn_error_t * svn_ra_dav__do_status(void *session_baton,
                                     const svn_delta_editor_t *wc_status,
                                     void *wc_status_baton)
 {
+  svn_ra_session_t *ras = session_baton;
+
   return make_reporter (session_baton,
                         reporter,
                         report_baton,
@@ -2624,7 +2629,8 @@ svn_error_t * svn_ra_dav__do_status(void *session_baton,
                         FALSE,
                         wc_status,
                         wc_status_baton,
-                        FALSE); /* fetch_content */
+                        FALSE, /* fetch_content */
+                        ras->pool);
 }
 
 
@@ -2638,6 +2644,8 @@ svn_error_t * svn_ra_dav__do_switch(void *session_baton,
                                     const svn_delta_editor_t *wc_update,
                                     void *wc_update_baton)
 {
+  svn_ra_session_t *ras = session_baton;
+
   return make_reporter (session_baton,
                         reporter,
                         report_baton,
@@ -2648,7 +2656,8 @@ svn_error_t * svn_ra_dav__do_switch(void *session_baton,
                         TRUE,
                         wc_update,
                         wc_update_baton,
-                        TRUE); /* fetch_content */
+                        TRUE, /* fetch_content */
+                        ras->pool);
 }
 
 
@@ -2662,6 +2671,8 @@ svn_error_t * svn_ra_dav__do_diff(void *session_baton,
                                   const svn_delta_editor_t *wc_diff,
                                   void *wc_diff_baton)
 {
+  svn_ra_session_t *ras = session_baton;
+
   return make_reporter (session_baton,
                         reporter,
                         report_baton,
@@ -2672,5 +2683,6 @@ svn_error_t * svn_ra_dav__do_diff(void *session_baton,
                         FALSE,
                         wc_diff,
                         wc_diff_baton,
-                        TRUE); /* fetch_content */
+                        TRUE, /* fetch_content */
+                        ras->pool);
 }

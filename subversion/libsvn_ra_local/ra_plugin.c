@@ -422,7 +422,8 @@ make_reporter (void *session_baton,
                svn_boolean_t text_deltas,
                svn_boolean_t recurse,
                const svn_delta_editor_t *editor,
-               void *edit_baton)
+               void *edit_baton,
+               apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sbaton = session_baton;
   void *rbaton;
@@ -431,13 +432,13 @@ make_reporter (void *session_baton,
 
   /* Get the HEAD revision if one is not supplied. */
   if (! SVN_IS_VALID_REVNUM(revision))
-    SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revision, sbaton->pool));
+    SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revision, pool));
 
   /* If OTHER_URL was provided, validate it and convert it into a
      regular filesystem path. */
   if (other_url)
     {
-      other_url = svn_path_uri_decode (other_url, sbaton->pool);
+      other_url = svn_path_uri_decode (other_url, pool);
       repos_url_len = strlen(sbaton->repos_url);
       
       /* Sanity check:  the other_url better be in the same repository as
@@ -467,11 +468,11 @@ make_reporter (void *session_baton,
                                    recurse,
                                    editor, 
                                    edit_baton,
-                                   sbaton->pool));
+                                   pool));
   
   /* Wrap the report baton given us by the repos layer with our own
      reporter baton. */
-  *report_baton = make_reporter_baton (sbaton, rbaton, sbaton->pool);
+  *report_baton = make_reporter_baton (sbaton, rbaton, pool);
 
   return SVN_NO_ERROR;
 }
@@ -485,7 +486,8 @@ svn_ra_local__do_update (void *session_baton,
                          const char *update_target,
                          svn_boolean_t recurse,
                          const svn_delta_editor_t *update_editor,
-                         void *update_baton)
+                         void *update_baton,
+                         apr_pool_t *pool)
 {
   return make_reporter (session_baton,
                         reporter,
@@ -496,7 +498,8 @@ svn_ra_local__do_update (void *session_baton,
                         TRUE,
                         recurse,
                         update_editor,
-                        update_baton);
+                        update_baton,
+                        pool);
 }
 
 
@@ -511,6 +514,8 @@ svn_ra_local__do_switch (void *session_baton,
                          const svn_delta_editor_t *update_editor,
                          void *update_baton)
 {
+  svn_ra_local__session_baton_t *sbaton = session_baton;
+
   return make_reporter (session_baton,
                         reporter,
                         report_baton,
@@ -520,7 +525,8 @@ svn_ra_local__do_switch (void *session_baton,
                         TRUE,
                         recurse,
                         update_editor,
-                        update_baton);
+                        update_baton,
+                        sbaton->pool);
 }
 
 
@@ -533,6 +539,8 @@ svn_ra_local__do_status (void *session_baton,
                          const svn_delta_editor_t *status_editor,
                          void *status_baton)
 {
+  svn_ra_local__session_baton_t *sbaton = session_baton;
+
   return make_reporter (session_baton,
                         reporter,
                         report_baton,
@@ -542,7 +550,8 @@ svn_ra_local__do_status (void *session_baton,
                         FALSE,
                         recurse,
                         status_editor,
-                        status_baton);
+                        status_baton,
+                        sbaton->pool);
 }
 
 
@@ -557,6 +566,8 @@ svn_ra_local__do_diff (void *session_baton,
                        const svn_delta_editor_t *update_editor,
                        void *update_baton)
 {
+  svn_ra_local__session_baton_t *sbaton = session_baton;
+
   return make_reporter (session_baton,
                         reporter,
                         report_baton,
@@ -566,7 +577,8 @@ svn_ra_local__do_diff (void *session_baton,
                         TRUE,
                         recurse,
                         update_editor,
-                        update_baton);
+                        update_baton,
+                        sbaton->pool);
 }
 
 
