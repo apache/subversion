@@ -154,7 +154,45 @@ def unlock_file(sbox):
 # Attempt again with --force.  Should succeed.
 def break_lock(sbox):
   "lock a file and verify lock breaking behavior"
-  raise svntest.Failure
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a second copy of the working copy
+  wc_b = sbox.add_wc_path('_b')
+  svntest.actions.duplicate_dir(wc_dir, wc_b)
+
+  # lock a file as wc_author
+  fname = 'iota'
+  file_path = os.path.join(sbox.wc_dir, fname)
+  file_path_b = os.path.join(wc_b, fname)
+
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', file_path)
+
+  # --- Meanwhile, in our other working copy... ---
+  err_re = ".*User Sally does not own lock on path.*"
+
+  svntest.main.run_svn(None, 'update', wc_b)
+
+  # attempt (and fail) to unlock file as user Sally
+
+  # This should give a "iota' is not locked in this working copy" error
+  svntest.actions.run_and_verify_svn(None, None, svntest.SVNAnyOutput,
+                                     'unlock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'trying to break', file_path_b)
+
+  ### TODO This should succeed, but currently does not! 
+  svntest.actions.run_and_verify_svn(None, None, None,
+                                     'unlock', '--force',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'trying to break', file_path_b)
+
 
 
 #----------------------------------------------------------------------
