@@ -116,14 +116,22 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
     {
       void *ra_baton, *session;
       svn_ra_plugin_t *ra_lib;
+      svn_stringbuf_t *base_dir = path;
 
       /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
 
       /* Open an RA session to URL */
+      /* ### svn_client_authenticate only accepts directory paths */
+      if (entry->kind != svn_node_dir)
+        {
+          base_dir = svn_stringbuf_dup (path, pool);
+          svn_path_remove_component (base_dir, svn_path_local_style);
+        }
       SVN_ERR (svn_client_authenticate (&session, 
-                                        ra_lib, URL, path, auth_obj, pool));
+                                        ra_lib, URL, base_dir,
+                                        auth_obj, pool));
 
       /* Decide which revision to update to: */
 
