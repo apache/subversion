@@ -4,7 +4,7 @@ noinst_PROGRAMS = hashdump-test
 hashdump_test_SOURCES = hashdump-test.c
 
 ## Flags needed when compiling:
-CFLAGS = -pthread
+CFLAGS = @CFLAGS@ -pthread
 INCLUDES = -I../../include -I../../../apr/include
 
 ## Libraries this binary depends upon:

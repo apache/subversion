@@ -5,7 +5,7 @@ deltaparse_test_SOURCES = deltaparse-test.c
 vdelta_test_SOURCES = vdelta-test.c
 
 ## Flags needed when compiling:
-CFLAGS = -pthread
+CFLAGS = @CFLAGS@ -pthread
 INCLUDES = -I../../include -I../../../apr/include -I../../../expat-lite
 
 ## Libraries this binary depends upon:
