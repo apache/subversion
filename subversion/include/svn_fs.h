@@ -1428,7 +1428,7 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
 
 /* Filesystem locks.  (@since New in 1.2.) */
 
-/** Lock @a path in @a fs, and set @a *token to a lock-token
+/** Lock @a path in @a fs, and set @a *lock to a lock
  * representing the new lock, allocated in @a pool.
  *
  * @a fs must have a username associated with it (see @c
@@ -1452,7 +1452,7 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  *
  * ### Note:  at this time, only files can be locked.
  */
-svn_error_t *svn_fs_lock (const char **token,
+svn_error_t *svn_fs_lock (svn_lock_t **lock,
                           svn_fs_t *fs,
                           const char *path,
                           svn_boolean_t force,

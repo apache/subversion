@@ -27,7 +27,7 @@
 #include "../libsvn_fs/fs-loader.h"
 
 svn_error_t *
-svn_fs_base__lock (const char **token,
+svn_fs_base__lock (svn_lock_t **lock,
                    svn_fs_t *fs,
                    const char *path,
                    svn_boolean_t force,
@@ -41,13 +41,53 @@ svn_fs_base__lock (const char **token,
 
 
 static svn_error_t *
-txn_body_expire_lock (void *baton, trail_t *trail)
+check_lock_expired (svn_lock_t *lock, trail_t *trail)
 {
-  svn_lock_t *lock = baton;
+  if (! lock->expiration_date
+      || (lock->expiration_date > apr_time_now()))   
+    return SVN_NO_ERROR;
+
+  SVN_ERR (svn_fs_bdb__lock_token_delete (trail->fs, lock->token, trail));
+  SVN_ERR (svn_fs_bdb__lock_delete (trail->fs, lock->path, trail));
+  
+  return svn_error_create (SVN_ERR_FS_LOCK_EXPIRED, 0, "Lock expired.");
+}
+
+
+struct unlock_args
+{
+  const char *token;
+  svn_boolean_t force;
+};
+
+
+static svn_error_t *
+txn_body_unlock (void *baton, trail_t *trail)
+{
+  struct unlock_args *args = baton;
+  svn_lock_t *lock;
+
+  /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN */
+  SVN_ERR (svn_fs_bdb__lock_get (&lock, trail->fs, args->token, trail));
+  
+  /* This could return SVN_ERR_FS_LOCK_EXPIRED */
+  SVN_ERR (check_lock_expired (lock, trail));
+
+  /* There better be a username attached to the fs. */
+  if (!trail->fs->access_ctx || !trail->fs->access_ctx->username)
+    return svn_fs_base__err_no_user (trail->fs);
+
+  /* And that username better be the same as the lock's owner. */
+  if (!args->force
+      && strcmp(trail->fs->access_ctx->username, lock->owner) != 0)
+    return svn_fs_base__err_lock_owner_mismatch (trail->fs,
+             trail->fs->access_ctx->username,
+             lock->owner);
 
   SVN_ERR (svn_fs_bdb__lock_token_delete (trail->fs, lock->token, trail));
   return svn_fs_bdb__lock_delete (trail->fs, lock->path, trail);
 }
+
 
 svn_error_t *
 svn_fs_base__unlock (svn_fs_t *fs,
@@ -55,36 +95,11 @@ svn_fs_base__unlock (svn_fs_t *fs,
                      svn_boolean_t force,
                      apr_pool_t *pool)
 {
-  svn_lock_t *lock;
+  struct unlock_args args;
 
-  /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN or SVN_ERR_FS_LOCK_EXPIRED */
-  SVN_ERR (svn_fs_base__get_lock_from_token (&lock, fs, token, pool));
-
-  /* There better be a username attached to the fs. */
-  if (!fs->access_ctx || !fs->access_ctx->username)
-    return svn_fs_base__err_no_user (fs);
-
-  /* And that username better be the same as the lock's owner. */
-  if (!force && strcmp(fs->access_ctx->username, lock->owner) != 0)
-    return svn_fs_base__err_lock_owner_mismatch (fs,
-                                                 fs->access_ctx->username,
-                                                 lock->owner);
-
-  return svn_fs_base__retry_txn (fs, txn_body_expire_lock,
-                                 lock, pool);
-}
-
-
-static svn_error_t *
-check_lock_expired (svn_lock_t *lock, trail_t *trail)
-{
-  if (! lock->expiration_date
-      || (lock->expiration_date > apr_time_now()))   
-    return SVN_NO_ERROR;
-
-  SVN_ERR (txn_body_expire_lock (lock, trail));
-  
-  return svn_error_create (SVN_ERR_FS_LOCK_EXPIRED, 0, "Lock expired.");
+  args.token = token;
+  args.force = force;
+  return svn_fs_base__retry_txn (fs, txn_body_unlock, &args, pool);
 }
 
 
@@ -100,13 +115,31 @@ txn_body_get_lock_from_path (void *baton, trail_t *trail)
 {
   const char *lock_token;
   struct lock_token_get_args *args = baton;
+  svn_error_t *err;
   
-  SVN_ERR (svn_fs_bdb__lock_token_get (&lock_token, trail->fs,
-                                       args->path, trail));
+  err = svn_fs_bdb__lock_token_get (&lock_token, trail->fs,
+                                    args->path, trail);
+  if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_LOCK)
+    {
+      svn_error_clear (err);
+      *args->lock_p = NULL;
+      return SVN_NO_ERROR;
+    }
+  else
+    SVN_ERR (err);
+
   SVN_ERR (svn_fs_bdb__lock_get (args->lock_p, trail->fs,
                                  lock_token, trail));
 
-  return check_lock_expired (*args->lock_p, trail);
+  err = check_lock_expired (*args->lock_p, trail);
+  if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_LOCK)
+    {
+      svn_error_clear (err);
+      *args->lock_p = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  return err;
 }
 
 
@@ -123,17 +156,8 @@ svn_fs_base__get_lock_from_path (svn_lock_t **lock,
   
   args.path = path;
   args.lock_p = lock;  
-  err = svn_fs_base__retry_txn (fs, txn_body_get_lock_from_path,
-                                &args, pool);
-  if (err
-      && (err->apr_err == SVN_ERR_FS_NO_SUCH_LOCK
-          || err->apr_err == SVN_ERR_FS_LOCK_EXPIRED))
-    {
-      svn_error_clear (err);
-      *lock = NULL;
-      return SVN_NO_ERROR;
-    }
-  
+  return svn_fs_base__retry_txn (fs, txn_body_get_lock_from_path,
+                                 &args, pool);
   return err;
 }
 

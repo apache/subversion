@@ -27,7 +27,7 @@ extern "C" {
 /* These functions implement some of the calls in the FS loader
    library's fs vtables. */
 
-svn_error_t *svn_fs_fs__lock (const char **token,
+svn_error_t *svn_fs_fs__lock (svn_lock_t **lock,
                               svn_fs_t *fs,
                               const char *path,
                               svn_boolean_t force,

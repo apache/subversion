@@ -781,11 +781,11 @@ svn_fs_set_uuid (svn_fs_t *fs, const char *uuid, apr_pool_t *pool)
 }
 
 svn_error_t *
-svn_fs_lock (const char **token, svn_fs_t *fs, const char *path,
+svn_fs_lock (svn_lock_t **lock, svn_fs_t *fs, const char *path,
              svn_boolean_t force, long int timeout,
              const char *current_token, apr_pool_t *pool)
 {
-  return fs->vtable->lock (token, fs, path, force, timeout,
+  return fs->vtable->lock (lock, fs, path, force, timeout,
                            current_token, pool);  
 }
 
