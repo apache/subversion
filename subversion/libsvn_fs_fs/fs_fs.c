@@ -3460,8 +3460,8 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
   const char *start_node_id, *start_copy_id;
   svn_revnum_t old_rev, new_rev;
   apr_pool_t *subpool = svn_pool_create (pool);
-  apr_file_t *rev_file;
-  apr_off_t  changed_path_offset, offset;
+  apr_file_t *proto_file;
+  apr_off_t changed_path_offset, offset;
   char *buf;
 
   /* First grab a write lock. */
@@ -3486,44 +3486,44 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
   /* We are going to be one better than this puny old revision. */
   new_rev = old_rev + 1;
 
-  old_rev_filename = path_rev (fs, old_rev, subpool);
-  rev_filename = path_rev (fs, new_rev, subpool);
-  proto_filename = path_txn_proto_rev (fs, txn->id, subpool);
-
-  SVN_ERR (move_into_place (proto_filename, rev_filename, old_rev_filename,
-                            subpool));
-
   /* Get a write handle on the proto revision file. */
-  SVN_ERR (svn_io_file_open (&rev_file, rev_filename,
+  proto_filename = path_txn_proto_rev (fs, txn->id, subpool);
+  SVN_ERR (svn_io_file_open (&proto_file, proto_filename,
                              APR_WRITE | APR_APPEND,
                              APR_OS_DEFAULT, subpool));
 
   offset = 0;
-  SVN_ERR (svn_io_file_seek (rev_file, APR_END, &offset, pool));
+  SVN_ERR (svn_io_file_seek (proto_file, APR_END, &offset, pool));
 
   /* Write out all the node-revisions and directory contents. */
   root_id = svn_fs_fs__id_txn_create ("0", "0", txn->id, subpool);
-  SVN_ERR (write_final_rev (&new_root_id, rev_file, new_rev, fs, root_id,
+  SVN_ERR (write_final_rev (&new_root_id, proto_file, new_rev, fs, root_id,
                             start_node_id, start_copy_id, subpool));
 
   /* Write the changed-path information. */
-  SVN_ERR (write_final_changed_path_info (&changed_path_offset, rev_file, fs,
+  SVN_ERR (write_final_changed_path_info (&changed_path_offset, proto_file, fs,
                                           txn->id, subpool));
 
   /* Write the final line. */
   buf = apr_psprintf(subpool, "\n%" APR_OFF_T_FMT " %" APR_OFF_T_FMT "\n",
                      svn_fs_fs__id_offset (new_root_id),
                      changed_path_offset);
-  SVN_ERR (svn_io_file_write_full (rev_file, buf, strlen (buf), NULL,
+  SVN_ERR (svn_io_file_write_full (proto_file, buf, strlen (buf), NULL,
                                    subpool));
 
-  SVN_ERR (svn_io_file_flush_to_disk (rev_file, subpool));
+  SVN_ERR (svn_io_file_flush_to_disk (proto_file, subpool));
   
-  SVN_ERR (svn_io_file_close (rev_file, subpool));
+  SVN_ERR (svn_io_file_close (proto_file, subpool));
 
+  /* Move the finished rev file into place. */
+  old_rev_filename = path_rev (fs, old_rev, subpool);
+  rev_filename = path_rev (fs, new_rev, subpool);
+  SVN_ERR (move_into_place (proto_filename, rev_filename, old_rev_filename,
+                            subpool));
+
+  /* Move the revprops file into place. */
   revprop_filename = path_txn_props (fs, txn->id, subpool);
   final_revprop = path_revprops (fs, new_rev, subpool);
-
   SVN_ERR (move_into_place (revprop_filename, final_revprop, old_rev_filename,
                             subpool));
   
