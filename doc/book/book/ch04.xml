@@ -180,13 +180,13 @@ Checked out revision 340.
 
 <screen>
 $ cd bigwc
-$ svn copy trunk/ branches/my-calc-branch
+$ svn copy trunk branches/my-calc-branch
 $ svn status
 A  +   branches/my-calc-branch
 </screen>
 
       <para>In this case, the <command>svn copy</command> command
-        recursively copies the <filename>trunk/</filename> working
+        recursively copies the <filename>trunk</filename> working
         directory to a new working directory,
         <filename>branches/my-calc-branch</filename>.  As you can see
         from the <command>svn status</command> command, the new
@@ -1507,7 +1507,7 @@ Committed revision 351.
 
 <screen>
 $ ls
-./    ../   my-working-copy/
+my-working-copy/
 
 $ svn copy my-working-copy http://svn.example.com/repos/calc/tags/mytag
 

@@ -315,7 +315,7 @@ A  calc/Makefile
 A  calc/integer.c
 A  calc/button.c
 
-$ ls -a calc
+$ ls -A calc
 Makefile  integer.c  button.c  .svn/
 </screen>
 
@@ -456,7 +456,7 @@ Committed revision 57.
 $ pwd
 /home/sally/calc
 
-$ ls -a 
+$ ls -A 
 .svn/ Makefile integer.c button.c
 
 $ svn update
