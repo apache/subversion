@@ -68,7 +68,7 @@ To be fixed by sussman:
   - in httpd.conf setup, remind people not to put the svn <Location>
     within an existing DocumentRoot, else the 301 error.
 
-
+  - rewrite whole chapter 4 example to use project-root layout???
 
 --------------------------------------------------------------
 

@@ -1476,7 +1476,6 @@ $ ls sandwich.*
 sandwich.txt  sandwich.txt.mine  sandwich.txt.r2  sandwich.txt.r1
 $ cp sandwich.txt.r2 sandwich.txt
 $ svn resolved sandwich.txt
-$ svn commit -m "Go ahead and use Sally's sandwich, discarding my edits."
         </screen>
 
       </sect3>
