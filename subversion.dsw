@@ -411,7 +411,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "tests_libsvn_subr_string"=.\subversion\libsvn_subr\tests\sting_test.dsp - Package Owner=<4>
+Project: "tests_libsvn_subr_string"=.\subversion\libsvn_subr\tests\string_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{

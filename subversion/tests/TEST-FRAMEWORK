@@ -91,10 +91,10 @@ otherwise, it should return one.
 
 Once you've got a .c file with a bunch of tests and a `test_funcs'
 array, you should link it against the `libsvn_tests_main.la' libtool
-library, in this directory, `subversion/tests-common'.  That library
-provides a `main' function which will check the command-line
-arguments, pick the appropriate tests to run from your `test_funcs'
-array, and print the results in the standard way.
+library, in this directory, `subversion/tests'.  That library provides
+a `main' function which will check the command-line arguments, pick
+the appropriate tests to run from your `test_funcs' array, and print
+the results in the standard way.
 
 
 When to write new tests
