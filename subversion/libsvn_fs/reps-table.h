@@ -68,11 +68,11 @@ svn_error_t *svn_fs__delete_rep (svn_fs_t *fs,
 
 
 
-/* Return the string key pointed to by REP.  
+/* Return the string key pointed to by REP, allocated in POOL.
    ### todo:
    The behavior of this function on non-fulltext representations is
    undefined at present.  */
-const char *svn_fs__string_key_from_rep (skel_t *rep);
+const char *svn_fs__string_key_from_rep (skel_t *rep, apr_pool_t *pool);
 
 
 /* Set STR->data to the fulltext string for REP in FS, and STR->len to
