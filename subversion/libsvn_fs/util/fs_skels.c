@@ -853,16 +853,26 @@ svn_fs__unparse_transaction_skel (skel_t **skel_p,
     {
     case svn_fs__transaction_kind_committed:
       header_skel = svn_fs__str_atom ("committed", pool);
+      if ((transaction->base_id) 
+          || (! SVN_IS_VALID_REVNUM (transaction->revision)))
+        return skel_err ("transaction");
       break;
     case svn_fs__transaction_kind_dead:
       header_skel = svn_fs__str_atom ("dead", pool);
+      if ((! transaction->base_id) 
+          || (SVN_IS_VALID_REVNUM (transaction->revision)))
+        return skel_err ("transaction");
       break;
     case svn_fs__transaction_kind_normal:
       header_skel = svn_fs__str_atom ("transaction", pool);
+      if ((! transaction->base_id) 
+          || (SVN_IS_VALID_REVNUM (transaction->revision)))
+        return skel_err ("transaction");
       break;
     default:
       return skel_err ("transaction");
     }
+
 
   /* COPIES */
   copies_skel = svn_fs__make_empty_list (pool);

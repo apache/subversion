@@ -310,6 +310,7 @@ svn_fs__txn_make_committed (svn_fs_t *fs,
     return svn_fs__err_txn_not_mutable (fs, txn_name);
 
   /* Convert TXN to a committed transaction. */
+  txn->base_id = NULL;
   txn->revision = revision;
   txn->kind = svn_fs__transaction_kind_committed;
   return put_txn (fs, txn, txn_name, trail);
@@ -662,7 +663,7 @@ txn_body_open_txn (void *baton,
   svn_revnum_t base_rev = SVN_INVALID_REVNUM;
 
   SVN_ERR (get_txn (&fstxn, trail->fs, args->name, FALSE, trail));
-  if (fstxn->kind == svn_fs__transaction_kind_normal)
+  if (fstxn->kind != svn_fs__transaction_kind_committed)
     SVN_ERR (svn_fs__txn_get_revision (&base_rev, trail->fs,
                                        svn_fs__id_txn_id (fstxn->base_id), 
                                        trail));
@@ -891,6 +892,9 @@ txn_body_abort_txn (void *baton, trail_t *trail)
   /* Get the transaction by its id, set it to "dead", and store the
      transaction. */
   SVN_ERR (get_txn (&fstxn, txn->fs, txn->id, FALSE, trail));
+  if (fstxn->kind != svn_fs__transaction_kind_normal)
+    return svn_fs__err_txn_not_mutable (txn->fs, txn->id);
+
   fstxn->kind = svn_fs__transaction_kind_dead;
   return put_txn (txn->fs, fstxn, txn->id, trail);
 }
