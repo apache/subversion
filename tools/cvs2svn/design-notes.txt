@@ -1,9 +1,181 @@
-This file contains (very old) design notes for the cvs2svn repository
-converter.  We've not yet deleted them, because they may contain
-suggestions for future improvements in design.
+                       How cvs2svn.py Works
+                      =====================
 
-=====================================================
+A cvs2svn run consists of 4 passes.  Every pass but the last saves its
+data to a file on disk, so that a) we don't hold huge amounts of state
+in memory, and b) the conversion process is resumable.  The final pass
+makes the actual Subversion commits.
 
+Pass 1:
+=======
+
+The goal of this pass is to get a summary of all the revisions for
+each file written out to 'cvs2svn-data.revs'; at the end of this
+stage, revisions will be grouped by RCS file, not by logical commits.
+
+We walk over the repository, processing each RCS file with with
+rcsparse.parse(), using cvs2svn's CollectData class, which is a
+subclass of rcsparse.Sink(), the parser's callback class.  For each
+RCS file, the first thing the parser encounters is the administrative
+header, including the head revision, the principal branch, symbolic
+names, RCS comments, etc.  The main thing that happens here is that
+CollectData.define_tag() is invoked on each symbolic name and its
+attached revision, so all the tags and branches of this file get
+collected.
+
+Next, the parser hits the revision summary section.  That's the part
+of the RCS file that looks like this:
+
+   1.6
+   date	2002.06.12.04.54.12;	author captnmark;	state Exp;
+   branches
+   	1.6.2.1;
+   next	1.5;
+   
+   1.5
+   date	2002.05.28.18.02.11;	author captnmark;	state Exp;
+   branches;
+   next	1.4;
+
+   [...]
+
+For each revision summary, CollectData.define_revision() is invoked,
+recording that revision's metadata in the self.rev_data[] tree.
+
+After finishing the revision summaries, the parser invokes
+CollectData.tree_completed(), which loops over the revisions in
+self.rev_data, determining if there are instances where a higher
+revision was committed "before" a lower one (rare, but it can happen
+when there was clock skew on the repository machine).  If there are
+any, it "resyncs" the timestamp of the higher rev to be just after
+that of the lower rev, but saves the original timestamp in
+self.rev_data[blah][3], so we can later write out a record to the
+resync file indicating that an adjustment was made (this makes it
+possible to catch the other parts of this commit and resync them
+similarly, more details below).
+
+Next, the parser encounters the *real* revision data, which has the
+log messages and file contents.  For each revision, it invokes
+CollectData.set_revision_info(), which writes a new line to
+cvs2svn-data.revs, like this:
+
+   3dc32955 5afe9b4ba41843d8eb52ae7db47a43eaa9573254 C 1.2 * 0 0 foo/bar,v
+
+The fields are:
+
+   1. a fixed-width timestamp
+   2. a digest of the log message + author
+   3. the type of change ("C"hange, or "D"elete)
+   4. the revision number
+   5. the branch name, or "*" if none
+   6. the number of tags (followed by the tag names, space-delimited)
+   7. the number of branches (followed by the branch names, space-delimited)
+   8. the path of the RCS file in the repository
+
+(Of course, in the above example, fields 6 and 7 are "0", so they have
+no additional data.)
+
+Also, for resync'd revisions, a line like this is written out to
+'cvs2svn-data.resync':
+
+   3d6c1329 18a215a05abea1c6c155dcc7283b88ae7ce23502 3d6c1328
+
+The fields are:
+
+   NEW_TIMESTAMP   DIGEST   OLD_TIMESTAMP
+
+(The resync file will be explained later.)
+
+That's it -- the RCS file is done.
+
+When every RCS file is done, Pass 1 is complete, and:
+
+   - cvs2svn-data.revs contains a summary of every RCS file's
+     revisions.  All the revisions for a given RCS file are grouped
+     together, but note that the groups are in no particular order.
+     In other words, you can't yet identify the commits from looking
+     at these lines; a multi-file commit will be scattered all over
+     the place.
+
+   - cvs2svn-data.resync contains a small amount of resync data, in
+     no particular order.
+
+Pass 2:
+=======
+
+This is where the resync file is used.  The goal of this pass is to
+convert cvs2svn-data.revs to a new file, 'cvs2svn-data.c-revs' (clean
+revs).  It's the same as the original file, except for some resync'd
+timestamps.
+
+First, read the whole resync file into a hash table that maps each
+author+log digest to a list of lists.  Each sublist represents one of
+the timestamp adjustments from Pass 1, and looks like this:
+
+   [old_time_lower, old_time_upper, new_time]
+
+The reason to map each digest to a list of sublists, instead of to one
+list, is that sometimes you'll get the same digest for unrelated
+commits (for example, the same author commits many times using the
+empty log message, or a log message that just says "Doc tweaks.").  So
+each digest may need to "fan out" to cover multiple commits, but
+without accidentally unifying those commits.
+
+Now we loop over cvs2svn-data.revs, writing each line out to
+'cvs2svn-data.c-revs'.  Most lines are written out unchanged, but
+those whose digest matches some resync entry, and appear to be part of
+the same commit as one of the sublists in that entry, get tweaked.
+The tweak is to adjust the commit time of the line to the new_time,
+which is taken from the resync hash and results from the adjustment
+described in Pass 1.
+
+The way we figure out whether a given line needs to be tweaked is to
+loop over all the sublists, seeing if this commit's original time
+falls within the old<-->new time range for the current sublist.  If it
+does, we tweak the line before writing it out, and then conditionally
+adjust the sublist's range to account for the timestamp we just
+adjusted (since it could be an outlier).  Note that this could, in
+theory, result in separate commits being accidentally unified, since
+we might gradually the two sides of the range such that they are
+eventually more than COMMIT_THRESHOLD seconds apart.  However, this is
+really a case of CVS not recording enough information to disambiguate
+the commits; we'd know we have a time range that exceeds the
+COMMIT_THRESHOLD, but we wouldn't necessarily know where to divide it
+up.  We could try some clever heuristic, but for now it's not
+important -- after all, we're talking about commits that weren't
+important enough to have a distinctive log message anyway, so does it
+really matter if a couple of them accidentally get unified?  Probably
+not.
+
+Pass 3:
+=======
+
+This is where we deduce the changesets, that is, the grouping of file
+changes into single commits.
+
+It's very simple -- run 'sort' on cvs2svn-data.c-revs, converting it
+to 'cvs2svn-data.s-revs'.  Because of the way the data is laid out,
+this causes commits with the same digest (that is, the same author and
+log message) to be grouped together.  Poof!  We now have the CVS
+changes grouped by logical commit.
+
+Pass 4:
+=======
+
+This is where stuff actually gets committed to Subversion.
+
+It's pretty self-explanatory code, and is probably where most flux is
+about to happen (particularly with regards to tags and branches), so I
+won't bother to describe it here.  But if you understand how passes
+1-3 work, you should have no trouble understanding the code of pass 4.
+
+
+-*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
+
+Some older notes and ideas about cvs2svn.  Not deleted, because they
+may contain suggestions for future improvements in design.
+
+-----------------------------------------------------------------------
 
 An email from John Gardiner Myers <jgmyers@speakeasy.net> about some
 considerations for the tool.
@@ -39,7 +211,7 @@ the more relaxed conversion procedure:
 You may forward this message or parts of it as you seem fit.
 ------
 
-------------------------------------------------------------------------
+-----------------------------------------------------------------------
 
 Further design thoughts from Greg Stein <gstein@lyra.org>
 
@@ -60,25 +232,6 @@ Further design thoughts from Greg Stein <gstein@lyra.org>
   during reading, and the mtime has changed, then restart the file. if
   the read is successful, but the mtime changed, then restart the
   file.
-
-* dump file metadata to a separate log file(s). in particular, we want 
-  the following items for each commit:
-  - MD5 hash of the commit message
-  - author
-  - timestamp
-
-  The above three items are used to coalesce the commit. Remember to
-  use a fudge factor for the timestamp. (the fudge cannot be fixed
-  because a commit could occur over an arbitrary length of time, based
-  on size of commit and the network connection used for the commit;
-  figure out an algorithm here)
-
-  All other metadata needs to be preserved, but that can probably
-  happen when we re-read the file to generate the SVN revisions.
-
-  We would sort the log file generated above (GNU sort can handle
-  arbitrarily large files). Then scan the file progressively,
-  generating the commit groups.
 
 * use a separate log to track unique branches and non-branched forks
   of revision history (Q: is it possible to create, say, 1.4.1.3
