@@ -815,6 +815,7 @@ svn_repos_dump_fs (svn_repos_t *repos,
                    svn_stream_t *feedback_stream,
                    svn_revnum_t start_rev,
                    svn_revnum_t end_rev,
+                   svn_boolean_t incremental,
                    apr_pool_t *pool)
 {
   const svn_delta_editor_t *dump_editor;
@@ -823,25 +824,35 @@ svn_repos_dump_fs (svn_repos_t *repos,
   svn_revnum_t i;  
   svn_fs_t *fs = svn_repos_fs (repos);
   apr_pool_t *subpool = svn_pool_create (pool);
+  svn_revnum_t youngest;
+
+  /* Determine the current youngest revision of the filesystem. */
+  SVN_ERR (svn_fs_youngest_rev (&youngest, fs, pool));
 
   /* Use default vals if necessary. */
   if (! SVN_IS_VALID_REVNUM(start_rev))
     start_rev = 0;
   if (! SVN_IS_VALID_REVNUM(end_rev))
-    SVN_ERR (svn_fs_youngest_rev (&end_rev, fs, pool));
+    end_rev = youngest;
 
-  /* ### todo: validate the starting and ending revs: do they exist? */
-
-  /* sanity check */
+  /* Validate the revisions. */
   if (start_rev > end_rev)
     return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, 0, NULL, pool,
                               "start_rev %ld is greater than end_rev %ld",
                               start_rev, end_rev);
+  if (end_rev > youngest)
+    return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, 0, NULL, pool,
+                              "end_rev %ld is invalid (youngest rev is %ld)",
+                              end_rev, youngest);
+  if ((start_rev == 0) && incremental)
+    incremental = FALSE; /* revision 0 looks the same regardless of
+                            whether or not this is an incremental
+                            dump, so just simplify things. */
 
   /* Write out "general" metadata for the dumpfile.  In this case, a
-     magic string followed by a dumpfile format version. */
+     magic header followed by a dumpfile format version. */
   SVN_ERR (svn_stream_printf (stream, pool, SVN_REPOS_DUMPFILE_MAGIC_HEADER
-                              ": %d\n\n", SVN_REPOS_DUMPFILE_FORMAT_VERSION));
+                              ": %d\n", SVN_REPOS_DUMPFILE_FORMAT_VERSION));
                    
   /* Main loop:  we're going to dump revision i.  */
   for (i = start_rev; i <= end_rev; i++)
@@ -852,7 +863,7 @@ svn_repos_dump_fs (svn_repos_t *repos,
       /* Special-case the initial revision dump: it needs to contain
          *all* nodes, because it's the foundation of all future
          revisions in the dumpfile. */
-      if (i == start_rev)
+      if ((i == start_rev) && (! incremental))
         {
           /* Special-special-case a dump of revision 0. */
           if (i == 0)

@@ -540,12 +540,17 @@ enum svn_node_action
 
    If START_REV is SVN_INVALID_REVNUM, then start dumping at revision 0.
    If END_REV is SVN_INVALID_REVNUM, then dump through the HEAD revision.
+
+   If INCREMENTAL is TRUE, the first revision dumped will be a diff
+   against the previous revision (usually it looks like a full dump of
+   the tree).
 */
 svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
                                 svn_stream_t *dumpstream,
                                 svn_stream_t *feedback_stream,
                                 svn_revnum_t start_rev,
                                 svn_revnum_t end_rev,
+                                svn_boolean_t incremental,
                                 apr_pool_t *pool);
 
 
