@@ -572,6 +572,20 @@ A and B must be line-info's."
         (while (re-search-forward "\r$" (point-max) t)
           (replace-match "" nil nil))))))
 
+(defun svn-status-file-name-sans-versions (name &optional keep-backup-version)
+  "Strip the version info from a psvn revision file name."
+  (string-match "\\(.+\\)\\.~.+~" name)
+  (or (match-string-no-properties 1 name) name))
+
+(defun svn-revision-normal-mode ()
+  "Run normal-mode in a svn revision file."
+  (interactive)
+  (flet ((file-name-sans-versions
+          (name &optional keep-backup-version)
+          (svn-status-file-name-sans-versions name keep-backup-version)))
+    (normal-mode)))
+  
+
 (condition-case nil
     ;;(easy-menu-add-item nil '("tools") ["SVN Status" svn-status t] "PCL-CVS")
     (easy-menu-add-item nil '("tools") ["SVN Status" svn-status t])
@@ -1573,10 +1587,16 @@ When called with a prefix argument add the command line switch --force."
 ;; Getting older revisions
 ;; --------------------------------------------------------------------------------
 
-(defun svn-status-get-specific-revision (&optional only-actual-file arg)
+(defun svn-status-get-specific-revision (arg)
   "Retrieve older revisions.
-The older revisions are stored in backup files named F.~REVISION~."
-  (interactive)
+The older revisions are stored in backup files named F.~REVISION~.
+
+When the function is called without a prefix argument: get all marked files.
+Otherwise get only the actual file."
+  (interactive "P")
+  (svn-status-get-specific-revision-internal (not arg) t))
+
+(defun svn-status-get-specific-revision-internal (&optional only-actual-file arg)
   (let* ((file-names (if only-actual-file
                          (list (svn-status-line-info->filename (svn-status-get-line-information)))
                        (svn-status-marked-file-names)))
@@ -1594,6 +1614,7 @@ The older revisions are stored in backup files named F.~REVISION~."
         (find-file file-name-with-revision)
         (setq buffer-read-only nil)
         (delete-region (point-min) (point-max))
+        (svn-revision-normal-mode)
         (svn-run-svn nil t 'cat (append (list "cat" "-r" revision) (list file-name)))
         ;;todo: error processing
         ;;svn: Filesystem has no item
@@ -1608,18 +1629,16 @@ The older revisions are stored in backup files named F.~REVISION~."
 
 
 (defun svn-status-ediff-with-revision (arg)
-  "Run ediff on the current file with a previous revision."
+  "Run ediff on the current file with a previous revision.
+If ARG then prompt for revision to diff against."
   (interactive "P")
-  (flet ((file-name-sans-versions (name &optional keep-backup-version)
-                                  (string-match "\\(.+\\)\\.~.+~" name)
-                                  (or (match-string-no-properties 1 name) name)))
-    (svn-status-get-specific-revision t arg)
-    (let* ((ediff-after-quit-destination-buffer (current-buffer))
-           (my-buffer (find-file-noselect (caar svn-status-get-specific-revision-file-info)))
-           (base-buff (find-file-noselect (cdar svn-status-get-specific-revision-file-info)))
-           (svn-transient-buffers (list base-buff ))
-           (startup-hook '(svn-ediff-startup-hook)))
-      (ediff-buffers my-buffer base-buff  startup-hook))))
+  (svn-status-get-specific-revision-internal t arg)
+  (let* ((ediff-after-quit-destination-buffer (current-buffer))
+         (my-buffer (find-file-noselect (caar svn-status-get-specific-revision-file-info)))
+         (base-buff (find-file-noselect (cdar svn-status-get-specific-revision-file-info)))
+         (svn-transient-buffers (list base-buff ))
+         (startup-hook '(svn-ediff-startup-hook)))
+    (ediff-buffers my-buffer base-buff  startup-hook)))
 
 (defun svn-ediff-startup-hook ()
   (add-hook 'ediff-after-quit-hook-internal
