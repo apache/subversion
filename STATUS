@@ -12,7 +12,7 @@ Candidate changes:
   * r8846
     Add an example wrapper to help svn+ssh users using setgid svnserve.
     Votes:
-      +1: epg, sussman
+      +1: epg, sussman, breser
       +0: dionisos
 
   * r8867, r8868, r8902
