@@ -93,39 +93,26 @@ void svn_fs_set_warning_func (svn_fs_t *fs,
 
 
 
-/** Subversion filesystems based on Berkeley DB.
- * 
- * There are many possible ways to implement the Subversion filesystem
- * interface.  You could implement it directly using ordinary POSIX
- * filesystem operations; you could build it using an SQL server as a
- * back end; you could build it on RCS; and so on.
+
+/** Create a new, empty Subversion filesystem, stored in the directory
+ * @a path.  Make @a fs refer to this new filesystem.  @a path must
+ * not currently exist, but its parent must exist.
  *
- * The functions on this page create filesystem objects that use
- * Berkeley DB (http://www.sleepycat.com) to store their data.
- * Berkeley DB supports transactions and recoverability, making it
- * well-suited for Subversion.
+ * If @a FSAP_NAME is not @a NULL, it determines the filesystem
+ * abstract provider used for the new filesystem.  Currently defined
+ * values are:
  *
- * A Berkeley DB ``environment'' is a Unix directory containing
- * database files, log files, backing files for shared memory buffers,
- * and so on --- everything necessary for a complex database
- * application.  Each Subversion filesystem lives in a single Berkeley
- * DB environment.
+ *   "baseline"  Berkeley-DB implementation
+ *   "fsfs"      Native-filesystem implementation
  *
- * @defgroup svn_fs_bdb berkeley db filesystems
- * @{
+ * If @a FSAP_NAME is @a NULL, the baseline abstract provider is
+ * assumed.  Once the filesystem is created, its type will be recorded
+ * so that other functions will know how to operate on it.
  */
+svn_error_t *svn_fs_create (svn_fs_t *fs, const char *path,
+                            const char *fsap_name, apr_pool_t *pool);
 
-/** Create a new, empty Subversion filesystem, stored in a Berkeley DB
- * environment under @a path, a utf8-encoded path.  Make @a fs refer to 
- * this new filesystem.  @a fs provides the memory pool, warning function,
- * etc.  If @a path exists, it must be an empty directory.
- */
-svn_error_t *svn_fs_create_berkeley (svn_fs_t *fs, const char *path);
-
-
-/** Make @a fs refer to the Berkeley DB-based Subversion filesystem at
- * @a path.  @a path is utf8-encoded, and must refer to a file or directory
- * created by @c svn_fs_create_berkeley.
+/** Make @a fs refer to the filesystem at @a path.
  *
  * Only one thread may operate on any given filesystem object at once.
  * Two threads may access the same filesystem simultaneously only if
@@ -135,16 +122,33 @@ svn_error_t *svn_fs_create_berkeley (svn_fs_t *fs, const char *path);
  * if it's immediately preceded by a call to @c svn_fs_new().  Take a
  * look at @c svn_repos_open() instead.
  */
-svn_error_t *svn_fs_open_berkeley (svn_fs_t *fs, const char *path);
+svn_error_t *svn_fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool);
 
-
-/** Return the utf8-encoded path to @a fs's repository, allocated in
- * @a pool.  Note: this is just what was passed to
- * @c svn_fs_create_berkeley() or @a svn_fs_open_berkeley() -- might be
- * absolute, might not.
+/** Return the path to @a fs's repository, allocated in @a pool.
+ * Note: this is just what was passed to @c svn_fs_create() or
+ * @a svn_fs_open() -- might be absolute, might not.
  */
-const char *svn_fs_berkeley_path (svn_fs_t *fs, apr_pool_t *pool);
+const char *svn_fs_path (svn_fs_t *fs, apr_pool_t *pool, apr_pool_t *pool);
 
+/** Delete the filesystem at @a path. */
+svn_error_t *svn_fs_delete (const char *path, apr_pool_t *pool);
+
+/** Copy a possibly live Subversion filesystem from @a src_path to
+ * @a dest_path.  If @a clean is @c TRUE, perform cleanup on the
+ * source filesystem as part of the copy operation; currently, this
+ * means deleting copied, unused logfiles for a Berkeley DB source
+ * filesystem.
+ */
+svn_error_t *svn_fs_hotcopy (const char *src_path, const char *dest_path,
+                             svn_boolean_t clean, apr_pool_t *pool);
+
+/** Subversion filesystems based on Berkeley DB.
+ *
+ * The following functions are specific to Berkeley DB filesystems.
+ *
+ * @defgroup svn_fs_bdb berkeley db filesystems
+ * @{
+ */
 
 /** Register an error handling function for Berkeley DB error messages.
  * If a Berkeley DB error occurs, the filesystem will call @a handler
@@ -163,23 +167,6 @@ const char *svn_fs_berkeley_path (svn_fs_t *fs, apr_pool_t *pool);
 svn_error_t *svn_fs_set_berkeley_errcall (svn_fs_t *fs, 
                                           void (*handler) (const char *errpfx,
                                                            char *msg));
-
-/** Delete the Berkeley DB-based filesystem @a path.  This deletes the
- * database files, log files, shared memory segments, etc.  @a path should
- * refer to a file or directory created by @c svn_fs_create_berkeley.
- */
-svn_error_t *svn_fs_delete_berkeley (const char *path, apr_pool_t *pool);
-
-
-/** Hot copy Subversion filesystem, stored in a Berkeley DB environment under 
- * @a src_path to @a dest_path. If @a clean_logs is used is @c TRUE, 
- * delete copied, unused log files from source repository at @a src_path
- * Using @a pool for any necessary memory allocations.
- */
-svn_error_t *svn_fs_hotcopy_berkeley (const char *src_path, 
-                                      const char *dest_path, 
-                                      svn_boolean_t clean_logs,
-                                      apr_pool_t *pool);
 
 /** Perform any necessary non-catastrophic recovery on a Berkeley
  * DB-based Subversion filesystem, stored in the environment @a path.
@@ -224,6 +211,18 @@ svn_error_t *svn_fs_berkeley_logfiles (apr_array_header_t **logfiles,
                                        svn_boolean_t only_unused,
                                        apr_pool_t *pool);
 
+
+/** The following functions are just like their generic counterparts,
+  * but only work on Berkeley DB filesystems.  They are provided for
+  * compatibility with the Subversion 1.0 API. */
+svn_error_t *svn_fs_create_berkeley (svn_fs_t *fs, const char *path);
+svn_error_t *svn_fs_open_berkeley (svn_fs_t *fs, const char *path);
+const char *svn_fs_berkeley_path (svn_fs_t *fs, apr_pool_t *pool);
+svn_error_t *svn_fs_delete_berkeley (const char *path, apr_pool_t *pool);
+svn_error_t *svn_fs_hotcopy_berkeley (const char *src_path, 
+                                      const char *dest_path, 
+                                      svn_boolean_t clean_logs,
+                                      apr_pool_t *pool);
 
 /** @} */
 

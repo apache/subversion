@@ -27,18 +27,32 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* --- vtable types for the three abstract FS objects --- */
+typedef struct fs_library_vtable_t
+{
+  svn_error_t *(*create) (svn_fs_t *fs, const char *path, apr_pool_t *pool);
+  svn_error_t *(*open) (svn_fs_t *fs, const char *path, apr_pool_t *pool);
+  svn_error_t *(*delete_fs) (const char *path, apr_pool_t *pool);
+  svn_error_t *(*hotcopy) (const char *src_path, const char *dest_path,
+                           svn_boolean_t clean, apr_pool_t *pool);
+
+  /* Provider-specific functions should go here, even if they could go
+     in an object vtable, so that they are all kept together. */
+  svn_error_t *(*bdb_set_errcall) (svn_fs_t *fs,
+                                   void (*handler) (const char *errpfx,
+                                                    char *msg));
+  svn_error_t *(*bdb_recover) (const char *path, apr_pool_t *pool);
+  svn_error_t *(*bdb_logfiles) (apr_array_header_t **logfiles,
+                                const char *path, svn_boolean_t only_unused,
+                                apr_pool_t *pool);
+} fs_library_vtable_t;
+
+/* --- vtable types for the abstract FS objects --- */
 
 typedef struct fs_vtable_t
 {
-  svn_error_t *(*create) (svn_fs_t *fs, const char *path, svn_config_t *cfg);
-  svn_error_t *(*open) (svn_fs_t *fs, const char *path, const int flag,
-			   svn_config_t *cfg);
   void (*set_warning_func) (svn_fs_t *fs,svn_fs_warning_callback_t warning,
                             void *warning_baton);
   const char *(*get_path) (svn_fs_t *fs, apr_pool_t *pool);
-  svn_error_t *(*delete_fs) (const char *PATH, apr_pool_t *pool);
-  svn_error_t *(*recover) (const char *path, apr_pool_t *pool);
   svn_error_t *(*youngest_rev) (svn_revnum_t *youngest_p, svn_fs_t *fs,
                                 apr_pool_t *pool);
   svn_error_t *(*revision_prop) (svn_string_t **value_p, svn_fs_t *fs,
@@ -82,7 +96,7 @@ typedef struct txn_vtable_t
 			apr_pool_t *pool);
 };
 
-struct root_vtable_t
+typedef struct root_vtable_t
 {
   /* Determining what has changed in a root */
   svn_error_t *(*paths_changed) (apr_hash_t **changed_paths_p,
@@ -174,10 +188,10 @@ struct root_vtable_t
                          svn_fs_root_t *ancestor_root,
                          const char *ancestor_path,
                          apr_pool_t *pool);
-};
+} root_vtable_t;
 
 
-/* --- Definitions of the three abstract FS object types --- */
+/* --- Definitions of the abstract FS object types --- */
 
 struct svn_fs_t
 {

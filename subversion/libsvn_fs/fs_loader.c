@@ -18,9 +18,13 @@
 
 
 #include "svn_fs.h"
+#include "svn_path.h"
 #include "svn_private_config.h"
 
 #include "fs.h"
+
+#define DEFAULT_FSAP_NAME "baseline"
+#define FSAP_NAME_FILENAME "fsap-name"
 
 /* The implementation of this library is deliberately not separated
    into multiple files, to avoid circular dependency problems with
@@ -29,9 +33,97 @@
    twice. */
 
 
+/* --- Utility functions for the loader --- */
+
+extern fs_library_vtable_t *svn_fs_bl__vtable;
+extern fs_library_vtable_t *svn_fs_fs__vtable;
+
+/* Fetch a library vtable by name. */
+static svn_error_t *
+get_library_vtable (fs_library_vtable_t **vtable, const char *fsap_name,
+                    apr_pool_t *pool)
+{
+  /* XXX Placeholder implementation.  The real implementation should
+     support DSO-loading of back-end libraries and should return an
+     error rather than aborting if fsap_name is unrecognized. */
+  if (strcmp(fsap_name, "baseline") == 0)
+    *vtable = svn_fs_bl__vtable;
+  else if (strcmp(fsap_name, "fsfs") == 0)
+    *vtable = svn_fs_fs__vtable;
+  else
+    abort();
+  return SVN_NO_ERROR;
+}
+
+/* Fetch the library vtable for an existing FS. */
+static svn_error_t *
+fs_library_vtable (fs_library_vtable_t **vtable, const char *path,
+                   apr_pool_t *pool)
+{
+  const char *fsap_path, *fsap_name;
+  char buf[128];
+  svn_error_t *err;
+  apr_file_t *file;
+  apr_size_t len;
+
+  /* Read the fsap-name file to get the FSAP name, or assume the default. */
+  fsap_path = svn_path_join (path, FSAP_NAME_FILENAME, pool);
+  err = svn_io_file_open (&file, fsap_path, APR_READ|APR_BUFFERED, 0, pool);
+  if (err && APR_STATUS_IS_ENOENT (err->apr_err))
+    {
+      svn_error_clear (err);
+      fsap_name = DEFAULT_FSAP_NAME;
+    }
+  else if (err)
+    return err;
+  else
+    {
+      len = sizeof(buf);
+      SVN_ERR (svn_io_read_length_line (file, buf, &len, pool));
+      SVN_ERR (svn_io_file_close (file, pool));
+      fsap_name = buf;
+    }
+
+  /* Fetch the library vtable by name, now that we've chosen one. */
+  return get_library_vtable (vtable, fsap_name, pool);
+}
+
+static svn_error_t *
+write_fsap_name (const char *path, const char *fsap_name, apr_pool_t *pool)
+{
+  const char *fsap_filename;
+  apr_file_t *file;
+
+  SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT));
+  fsap_filename = svn_path_join (path, FSAP_NAME_FILENAME, pool);
+  SVN_ERR (svn_io_file_open (&file, fsap_filename,
+                             APR_WRITE|APR_CREATE|APR_TRUNCATE|APR_BUFFERED,
+                             APR_OS_DEFAULT));
+  SVN_ERR (svn_io_file_write_full (file, fsap_name, strlen(fsap_name), NULL,
+                                   pool));
+  SVN_ERR (svn_io_file_write_full (file, "\n", 1, NULL, pool));
+  SVN_ERR (svn_io_file_close (file, pool));
+  return SVN_NO_ERROR;
+}
+
+
+/* --- Functions for operating on filesystems by pathname --- */
+
 svn_fs_t *
 svn_fs_new (apr_hash_t *fs_config, apr_pool_t *pool)
 {
+  svn_fs_t *fs;
+  apr_pool_t *subpool = svn_pool_create (pool);
+
+  fs = apr_palloc (subpool, sizeof (*fs));
+  fs->pool = subpool;
+  fs->path = NULL;
+  fs->warning = NULL;
+  fs->warning_baton = NULL;
+  fs->config = fs_config;
+  fs->vtable = NULL;
+  fs->fsap_data = NULL;
+  return fs;
 }
 
 void
@@ -43,41 +135,126 @@ svn_fs_set_warning_func (svn_fs_t *fs, svn_fs_warning_callback_t warning,
 }
 
 svn_error_t *
+svn_fs_create (svn_fs_t *fs, const char *path, const char *fsap_name,
+               apr_pool_t *pool)
+{
+  fs_library_vtable_t *vtable;
+
+  if (fsap_name == NULL)
+    fsap_name = DEFAULT_FSAP_NAME;
+  SVN_ERR (get_library_vtable (&vtable, fsap_name, pool));
+
+  /* Create the FS directory and write out the fsap-name file. */
+  SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, pool));
+  SVN_ERR (write_fsap_name (path, fsap_name, pool));
+
+  /* Perform the actual creation. */
+  return vtable->create (fs, path);
+}
+
+svn_error_t *
+svn_fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
+{
+  fs_library_vtable_t *vtable;
+
+  SVN_ERR (fs_library_vtable (&vtable, path, pool));
+  return vtable->open (fs, path, pool);
+}
+
+const char *
+svn_fs_path (svn_fs_t *fs, apr_pool_t *pool, apr_pool_t *pool)
+{
+  return apr_pstrdup (pool, fs->path);
+}
+
+svn_error_t *
+svn_fs_delete (const char *path, apr_pool_t *pool)
+{
+  fs_library_vtable_t *vtable;
+
+  SVN_ERR (fs_library_vtable (&vtable, path, pool));
+  return vtable->delete_fs (path, pool);
+}
+
+svn_error_t *
+svn_fs_hotcopy (const char *src_path, const char *dest_path,
+                svn_boolean_t clean, apr_pool_t *pool)
+{
+  fs_library_vtable_t *vtable;
+
+  SVN_ERR (fs_library_vtable (&vtable, src_path, pool));
+  return vtable->hotcopy (src_path, dest_path, clean, pool);
+}
+
+
+/* --- Berkeley-specific functions --- */
+
+svn_error_t *
 svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 {
+  fs_library_vtable_t *vtable;
+
+  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FSAP_NAME, fs->pool));
+
+  /* Create the FS directory and write out the fsap-name file. */
+  SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, fs->pool));
+  SVN_ERR (write_fsap_name (path, fsap_name, fs->pool));
+
+  /* Perform the actual creation. */
+  return vtable->create (fs, path, fs->pool);
 }
 
 svn_error_t *
 svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
 {
+  fs_library_vtable_t *vtable;
+
+  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FSAP_NAME, fs->pool));
+  return vtable->open (fs, path, fs->pool);
 }
 
 const char *
 svn_fs_berkeley_path (svn_fs_t *fs, apr_pool_t *pool)
 {
+  return svn_fs_path (fs, pool);
+}
+
+svn_error_t *
+svn_fs_delete_berkeley (const char *path, apr_pool_t *pool)
+{
+  fs_library_vtable_t *vtable;
+
+  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FSAP_NAME, fs->pool));
+  return vtable->delete_fs (path, pool);
+}
+
+svn_error_t *
+svn_fs_hotcopy_berkeley (const char *src_path, const char *dest_path,
+                         svn_boolean_t clean_logs, apr_pool_t *pool)
+{
+  fs_library_vtable_t *vtable;
+
+  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FSAP_NAME, fs->pool));
+  return vtable->hotcopy (src_path, dest_path, clean_logs, pool);
+}
+
+svn_error_t *
+svn_fs_berkeley_recover (const char *path, apr_pool_t *pool)
+{
+  fs_library_vtable_t *vtable;
+
+  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FSAP_NAME, fs->pool));
+  return vtable->bdb_recover (path, pool);
 }
 
 svn_error_t *
 svn_fs_set_berkeley_errcall (svn_fs_t *fs,
                              void (*handler) (const char *errpfx, char *msg))
 {
-}
+  fs_library_vtable_t *vtable;
 
-svn_error_t *
-svn_fs_delete_berkeley (const char *path, apr_pool_t *pool)
-{
-}
-
-svn_error_t *svn_fs_hotcopy_berkeley (const char *src_path,
-                                      const char *dest_path,
-                                      svn_boolean_t clean_logs,
-                                      apr_pool_t *pool)
-{
-}
-
-svn_error_t *
-svn_fs_berkeley_recover (const char *path, apr_pool_t *pool)
-{
+  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FSAP_NAME, fs->pool));
+  return vtable->bdb_set_errcall (fs, handler);
 }
 
 svn_error_t *
@@ -86,6 +263,10 @@ svn_fs_berkeley_logfiles (apr_array_header_t **logfiles,
                           svn_boolean_t only_unused,
                           apr_pool_t *pool)
 {
+  fs_library_vtable_t *vtable;
+
+  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FSAP_NAME, fs->pool));
+  return vtable->bdb_logfiles (logfiles, path, only_unused, pool);
 }
 
 
