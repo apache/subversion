@@ -114,8 +114,8 @@ apr_hash_sorted_keys (apr_hash_t *ht,
  *
  * Note that if your application does not strictly need the new
  * element to be at the head of the array, consider using the much
- * more efficient function apr_array_push() (which will add your new
- * element at the tail of the array.
+ * more efficient function, apr_array_push() (which will add your new
+ * element at the tail of the array).
  *
  * NOTE:
  * This function should go over to APR. 
