@@ -313,7 +313,7 @@ svn_ra_local__change_rev_prop (void *session_baton,
 }
 
 
-svn_error_t *
+static svn_error_t *
 svn_ra_local__rev_proplist (void *session_baton,
                             svn_revnum_t rev,
                             apr_hash_t **props)
