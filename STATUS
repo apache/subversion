@@ -93,3 +93,9 @@ Candidate changes:
       One-liner that is good for pathnames with non-ASCII chars.
     Votes:
       +1: lundblad
+
+  * r10473
+    Fix OS X build.
+    Justification: Should work out of the tarball.
+    Votes:
+      +1: breser
