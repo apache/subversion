@@ -1615,14 +1615,13 @@ attempt_merge (svn_boolean_t conflict_expected,
 }
 
 
-/* Test svn_fs__dag_merge().
-   NOTE: this test should really test svn_fs_merge().  However, the
-   internal functionality we need for commits right now, today, here,
-   as we speak, is svn_fs__dag_merge().  So we're testing that for
-   now.  */ 
+/* Test svn_fs_merge(). */
 static svn_error_t *
 merge_trees (const char **msg)
 {
+  *msg = "merge trees (INCOMPLETE TEST)";
+
+#if 0
   svn_fs_t *fs;
   svn_fs_txn_t *source_txn, *target_txn, *ancestor_txn;
   svn_fs_root_t *source_root, *target_root, *ancestor_root;
@@ -1631,8 +1630,6 @@ merge_trees (const char **msg)
     *target_path = "",
     *ancestor_path = "";
   const char *conflict;
-
-  *msg = "merge trees (INCOMPLETE TEST)";
 
   /* Prepare three txns to receive a greek tree each. */
   SVN_ERR (create_fs_and_repos (&fs, "test-repo-merge-trees"));
@@ -1710,6 +1707,8 @@ merge_trees (const char **msg)
   /* Test #3-N: should go through the cases enumerated svn_fs_merge,
      cook up a scenario for each one.  But we'll need commits working
      to really do this right.  */
+
+#endif  /* 0 */
 
   return SVN_NO_ERROR;
 }

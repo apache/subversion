@@ -130,9 +130,6 @@ svn_error_t *svn_fs__err_path_syntax (svn_fs_t *fs, const char *path);
 /* SVN_ERR_FS_NO_SUCH_TRANSACTION: there is no transaction named TXN in FS.  */
 svn_error_t *svn_fs__err_no_such_txn (svn_fs_t *fs, const char *txn);
 
-/* SVN_ERR_FS_TXN_NOT_PRISTINE: TXN in FS has already been cloned.  */
-svn_error_t *svn_fs__err_txn_not_pristine (svn_fs_t *fs, const char *txn);
-
 /* SVN_ERR_FS_NOT_DIRECTORY: PATH does not refer to a directory in FS.  */
 svn_error_t *svn_fs__err_not_directory (svn_fs_t *fs, const char *path);
 

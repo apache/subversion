@@ -147,6 +147,14 @@ svn_error_t *svn_fs__dag_txn_root (dag_node_t **node_p,
                                    trail_t *trail);
 
 
+/* Set *NODE_P to the base root of transaction TXN in FS, as part
+   of TRAIL.  Allocate the node in TRAIL->pool.  */
+svn_error_t *svn_fs__dag_txn_base_root (dag_node_t **node_p,
+                                        svn_fs_t *fs,
+                                        const char *txn,
+                                        trail_t *trail);
+
+
 /* Clone the root directory of SVN_TXN in FS, and update the
    `transactions' table entry to point to it, unless this has been
    done already.  In either case, set *ROOT_P to a reference to the
@@ -155,26 +163,6 @@ svn_error_t *svn_fs__dag_txn_root (dag_node_t **node_p,
 svn_error_t *svn_fs__dag_clone_root (dag_node_t **root_p,
                                      svn_fs_t *fs,
                                      const char *svn_txn,
-                                     trail_t *trail);
-
-
-/* Change one or both roots of an as-yet-unmodified transaction.
-   (Assume that TXN below refers to the txn named by TXN_NAME.)
-
-   If ID refers to an immutable node, then re-base TXN by setting both
-   of its roots to ID.
-   
-   If ID refers to a mutable node, then make a new mutable root for
-   TXN and *copy* ID's content over, because we certainly wouldn't
-   want to share ID with some other txn.  TXN's base remains
-   unchanged.
-
-   If TXN is not pristine (i.e., already has a mutable root), return
-   the error SVN_ERR_FS_TXN_NOT_PRISTINE.
-*/
-svn_error_t *svn_fs__dag_reroot_txn (svn_fs_t *fs,
-                                     const char *svn_txn,
-                                     svn_fs_id_t *id,
                                      trail_t *trail);
 
 
@@ -396,32 +384,31 @@ svn_error_t *svn_fs__dag_get_copy (svn_revnum_t *rev_p,
                                    trail_t *trail);
 
 
-/* Given nodes SOURCE and TARGET, and a common ancestor ANCESTOR,
-   modify TARGET to contain all the changes made between ANCESTOR and
-   SOURCE, as well as the changes made between ANCESTOR and TARGET.
-   TARGET must be a different node revision from ANCESTOR.
-
-   SOURCE, TARGET, and ANCESTOR are generally directories; this
-   function recursively merges the directories' contents.  If they are
-   files, this function simply returns an error whenever SOURCE,
-   TARGET, and ANCESTOR are all distinct node revisions.
-
-   TARGET_PATH is the path to TARGET; it can be empty, but not null.
-   If there are differences between ANCESTOR and SOURCE that conflict
-   with changes between ANCESTOR and TARGET, this function returns an
-   SVN_ERR_FS_CONFLICT error, and sets *CONFLICT_P to the name
-   (i.e., TARGET_PATH + entry name) of the node in TARGET which
-   couldn't be merged.  If there are no conflicting differences,
-   *CONFLICT_P is set to null.
-
-   Do any necessary temporary allocation in POOL.  */
-svn_error_t *
-svn_fs__dag_merge (const char **conflict_p,
-                   const char *target_path,
-                   dag_node_t *source,
-                   dag_node_t *target,
-                   dag_node_t *ancestor,
-                   trail_t *trail);
+/* Merge changes between ANCESTOR and SOURCE into TARGET, as part of
+ * TRAIL.  ANCESTOR and TARGET must be distinct node revisions, and
+ * TARGET must be mutable. 
+ *
+ * SOURCE, TARGET, and ANCESTOR are generally directories; this
+ * function recursively merges the directories' contents.  If any are
+ * files, this function simply returns an error whenever SOURCE,
+ * TARGET, and ANCESTOR are all distinct node revisions.
+ *
+ * If there are differences between ANCESTOR and SOURCE that conflict
+ * with changes between ANCESTOR and TARGET, this function returns an
+ * SVN_ERR_FS_CONFLICT error, and sets *CONFLICT_P to the name of the
+ * conflicting node in TARGET, with TARGET_PATH prepended as a path.
+ *
+ * If there are no conflicting differences, *CONFLICT_P is set to
+ * null. 
+ *
+ * Do any necessary temporary allocation in TRAIL->pool.
+ */
+svn_error_t *svn_fs__dag_merge (const char **conflict_p,
+                                const char *target_path,
+                                dag_node_t *source,
+                                dag_node_t *target,
+                                dag_node_t *ancestor,
+                                trail_t *trail);
 
 
 #endif /* SVN_LIBSVN_FS_DAG_H */
