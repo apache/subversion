@@ -213,6 +213,12 @@ If you write a new python-script, be sure to add to to the
 [test-scripts] section.
 
 
+Testing Over DAV
+----------------
+
+Please see subversion/tests/clients/cmdline/README for how to run the
+command-line client test suite against a remote repository.
+
 Conclusion
 ----------
 
@@ -221,7 +227,7 @@ Our test suite...
 
   1.  ...must be easy to run.
 
-      * run `make check` at any level of the tree
+      * run `make check`
 
   2.  ...must be easy to understand the results.
 
@@ -233,8 +239,3 @@ Our test suite...
 
       * add your own sub-test to an existing test program, or
       * add a new test program using template C or python code.
-
-
-
-
-
