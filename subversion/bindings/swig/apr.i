@@ -176,6 +176,7 @@ apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
 
 %typemap(python, in) apr_file_t * {
   $1 = svn_swig_py_make_file($input, _global_pool);
+  if (!$1) SWIG_fail;
 }
 
 %typemap(perl5, in) apr_file_t * {
