@@ -56,7 +56,9 @@ class MailedOutput:
     self.prefix_param = prefix_param
 
   def start(self, group, params):
-    self.to_addr = self.cfg.get('to_addr', group, params)
+    # whitespace-separated list of addresses; split into a clean list:
+    self.to_addrs = \
+        filter(None, string.split(self.cfg.get('to_addr', group, params)))
     self.from_addr = self.cfg.get('from_addr', group, params) \
                      or self.repos.author or 'no_author'
     self.reply_to = self.cfg.get('reply_to', group, params)
@@ -72,7 +74,7 @@ class MailedOutput:
            'Subject: %s\n' \
            'MIME-Version: 1.0\n' \
            'Content-Type: text/plain; charset=UTF-8\n' \
-           % (self.from_addr, self.to_addr, subject)
+           % (self.from_addr, string.join(self.to_addrs, ', '), subject)
     if self.reply_to:
       hdrs = '%sReply-To: %s\n' % (hdrs, self.reply_to)
     return hdrs + '\n'
@@ -103,7 +105,7 @@ class SMTPOutput(MailedOutput):
     if self.cfg.is_set('general.smtp_username'):
       server.login(self.cfg.general.smtp_username,
                    self.cfg.general.smtp_password)
-    server.sendmail(self.from_addr, [ self.to_addr ], self.buffer.getvalue())
+    server.sendmail(self.from_addr, self.to_addrs, self.buffer.getvalue())
     server.quit()
 
 
@@ -159,7 +161,7 @@ class PipeOutput(MailedOutput):
 
     ### gotta fix this. this is pretty specific to sendmail and qmail's
     ### mailwrapper program. should be able to use option param substitution
-    cmd = self.cmd + [ '-f', self.from_addr, self.to_addr ]
+    cmd = self.cmd + [ '-f', self.from_addr ] + self.to_addrs
 
     # construct the pipe for talking to the mailer
     self.pipe = popen2.Popen3(cmd)
