@@ -52,6 +52,7 @@ struct string_baton
 };
 
 
+#if 0 /* left in for cannibalization */
 static svn_error_t *
 string_read (void *baton, char *buffer, apr_size_t *len)
 {
@@ -84,8 +85,10 @@ string_read (void *baton, char *buffer, apr_size_t *len)
 
   return SVN_NO_ERROR;
 }
+#endif /* 0 */
 
 
+#if 0 /* left in for cannibalization */
 static svn_error_t *
 string_write (void *baton, const char *data, apr_size_t *len)
 {
@@ -110,6 +113,7 @@ string_write (void *baton, const char *data, apr_size_t *len)
 
   return SVN_NO_ERROR;
 }
+#endif /* 0 */
 
 
 svn_error_t *
@@ -150,47 +154,42 @@ svn_fs__string_size (apr_size_t *size,
 
 
 svn_error_t *
-svn_fs__read_string_stream (svn_stream_t **stream,
-                            svn_fs_t *fs,
-                            const char *key,
-                            trail_t *trail)
+svn_fs__string_read (svn_fs_t *fs,
+                     const char *key,
+                     apr_off_t offset,
+                     apr_size_t *len,
+                     char *buf,
+                     trail_t *trail)
 {
-  struct string_baton *baton = apr_pcalloc (trail->pool, sizeof (*baton));
-  svn_stream_t *s = svn_stream_create (baton, trail->pool);
-
-  baton->fs     = fs;
-  baton->key    = key;
-  baton->offset = 0;
-  baton->trail  = trail;
-  
-  svn_stream_set_read (s, string_read);
-
-  *stream = s;
+  /* ### implement ### */
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_fs__write_string_stream (svn_stream_t **stream,
-                             svn_fs_t *fs,
-                             const char *key,
-                             trail_t *trail)
+svn_fs__string_append (svn_fs_t *fs,
+                       const char **key,
+                       apr_size_t len,
+                       const char *buf,
+                       trail_t *trail)
 {
-  struct string_baton *baton = apr_pcalloc (trail->pool, sizeof (*baton));
-  svn_stream_t *s = svn_stream_create (baton, trail->pool);
-
-  baton->fs     = fs;
-  baton->key    = key;
-  baton->offset = 0;
-  baton->trail  = trail;
-  
-  svn_stream_set_write (s, string_write);
-
-  *stream = s;
+  /* ### implement ### */
   return SVN_NO_ERROR;
 }
 
 
+svn_error_t *
+svn_fs__string_clear (svn_fs_t *fs,
+                      const char *key,
+                      trail_t *trail)
+{
+  /* ### implement ### */
+  return SVN_NO_ERROR;
+}
+
+
+#if 0
+/* Left this code to help with implementation of string_append() above. */
 svn_error_t *
 svn_fs__append_string_stream (svn_stream_t **stream,
                               svn_fs_t *fs,
@@ -226,6 +225,7 @@ svn_fs__append_string_stream (svn_stream_t **stream,
   *stream = s;
   return SVN_NO_ERROR;
 }
+#endif /* 0 */
 
 
 svn_error_t *
