@@ -83,7 +83,7 @@ encode_group (const unsigned char *in, unsigned char *out)
 {
   out[0] = base64tab[in[0] >> 2];
   out[1] = base64tab[((in[0] & 0x3) << 4) | (in[1] >> 4)];
-  out[2] = base64tab[((in[1] & 0xf) << 4) | (in[2] >> 6)];
+  out[2] = base64tab[((in[1] & 0xf) << 2) | (in[2] >> 6)];
   out[3] = base64tab[in[2] & 0x3f];
 }
 
@@ -171,7 +171,7 @@ svn_base64_encode (svn_write_fn_t *output, void *output_baton,
   eb->output_baton = output_baton;
   eb->buflen = 0;
   eb->linelen = 0;
-  eb->pool = pool;
+  eb->pool = subpool;
   *encode = encode_data;
   *encode_baton = eb;
 }
@@ -278,7 +278,7 @@ svn_base64_decode (svn_write_fn_t *output, void *output_baton,
   db->output_baton = output_baton;
   db->buflen = 0;
   db->done = FALSE;
-  db->pool = pool;
+  db->pool = subpool;
   *decode = decode_data;
   *decode_baton = db;
 }
