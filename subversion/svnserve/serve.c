@@ -958,7 +958,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(nn(!", "success",
                                  (apr_uint64_t) 1, (apr_uint64_t) 2));
   SVN_ERR(send_mechs(conn, pool, tunnel));
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)())"));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(w))",
+                                 SVN_RA_SVN_CAP_EDIT_PIPELINE));
 
   /* Read client response.  Because the client response form changed
    * between version 1 and version 2, we have to do some of this by
@@ -976,6 +977,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
        * capability list, and happens before the client URL is received. */
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, pool, "nw(?c)l",
                                      &ver, &mech, &mecharg, &caplist));
+      SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
       SVN_ERR(auth(conn, pool, tunnel, believe_username, mech, mecharg,
                    &success, &b.user));
       if (!success)
@@ -997,6 +999,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
        * URL, and then we do an auth request. */
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, pool, "nlc", &ver,
                                      &caplist, &b.url));
+      SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
       err = find_repos(b.url, root, &b.repos, &b.repos_url, &b.fs_path, pool);
       if (err)
         {

@@ -217,8 +217,9 @@ static svn_error_t *auth_response(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   svn_boolean_t compat)
 {
   if (compat)
-    return svn_ra_svn_write_tuple(conn, pool, "nw(?c)()", (apr_uint64_t) 1,
-                                  mech, mech_arg);
+    return svn_ra_svn_write_tuple(conn, pool, "nw(?c)(w)", (apr_uint64_t) 1,
+                                  mech, mech_arg,
+                                  SVN_RA_SVN_CAP_EDIT_PIPELINE);
   else
     return svn_ra_svn_write_tuple(conn, pool, "w(?c)", mech, mech_arg);
 }
@@ -547,6 +548,7 @@ static svn_error_t *ra_svn_open(void **baton, const char *url,
     return svn_error_createf(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
                              "Server requires minimum version %d",
                              (int) minver);
+  SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
 
   sess = apr_palloc(pool, sizeof(*sess));
   sess->conn = conn;
@@ -575,8 +577,8 @@ static svn_error_t *ra_svn_open(void **baton, const char *url,
     }
   else
     {
-      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n()c",
-                                     (apr_uint64_t) 2, url));
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(w)c", (apr_uint64_t) 2,
+                                     SVN_RA_SVN_CAP_EDIT_PIPELINE, url));
       SVN_ERR(handle_auth_request(sess, pool));
     }
 
