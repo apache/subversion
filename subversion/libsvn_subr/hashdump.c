@@ -155,7 +155,7 @@ svn_hash_write (apr_hash_t *hash,
   err = apr_file_write_full (destfile, "END\n", 4, NULL);
   if (err) return err;
 
-  return SVN_NO_ERROR;
+  return APR_SUCCESS;
 }
 
 
@@ -185,7 +185,7 @@ read_length_line (apr_file_t *file, char *buf, apr_size_t *limit)
       {
         buf[i] = '\0';
         *limit = i;
-        return SVN_NO_ERROR;
+        return APR_SUCCESS;
       }
     else
       {
@@ -223,7 +223,7 @@ svn_hash_read (apr_hash_t *hash,
       if ((err == APR_EOF) && first_time)
         /* We got an EOF on our very first attempt to read, which
            means it's a zero-byte file.  No problem, just go home. */        
-        return SVN_NO_ERROR;
+        return APR_SUCCESS;
       else if (err)
         /* Any other circumstance is a genuine error. */
         return err;
@@ -235,7 +235,7 @@ svn_hash_read (apr_hash_t *hash,
           && (buf[1] == 'N')       /* dumped hash table, so leave.  */
           && (buf[2] == 'D'))
         {
-          return SVN_NO_ERROR;
+          return APR_SUCCESS;
         }
       else if ((buf[0] == 'K') && (buf[1] == ' '))
         {
