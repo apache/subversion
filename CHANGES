@@ -1,7 +1,37 @@
-Version 0.24.0 (released XX XXX XXXX, revision XXXX, branches/release-0.24)
+Version 0.24.0 (released 15 June 2003, revision XXXX, branches/release-0.24.0)
 
  User-visible changes:
- * new 'svn diff [--old OLD] [--new NEW]' syntax
+ * new 'svn diff [--old OLD] [--new NEW]' syntax (#1142)
+ * new --relocate option for svn switch (#951)
+ * new --version option for svnadmin and svnlook
+ * new path-based authorization module for apache
+ * make 'svn checkout' and not just 'svn update' resume a checkout
+ * .svn directories now hidden on Windows
+ * config variable 'store-password = no' now actually works
+ * fix 'svn merge --dry-run'
+ * fix 'properties hanging after a rename' issue (#1303)
+ * fix odd behavior of 'svn up -r PREV filename' (#1304)
+ * fix delete-tracking bug (#1348)
+ * fix dump and load corner cases (#1290)
+ * ra_dav server more resilient for foreign deltaV clients
+ * numerous ra_svn changes - must update clients and servers
+ * fix export over ra_svn (#1318)
+ * fix ra_svn error transmission bug (#1146)
+ * fix ra_svn corruption in tunnel mode (#1145)
+ * make svnserve multi-threaded on non-fork platforms
+ * remove svnserve -F and -S options
+ * various memory use improvements (#1323)
+ * various performance improvements for all protocols
+ * various performance improvements for 'svnadmin dump' and svnlook
+ * various subversion book updates (you have read the book right?)
+ * more cvs2svn.py improvements (and more to follow)
+ * new debugging script normalize-dump.py to normalize dump output
+
+ Developer-visible changes:
+ * path-based editor drivers
+ * no more RA->do_checkout()
+ * update python and java bindings
+ * various windows build fixes
 
 
 Version 0.23.0 (released 16 May 2003, revision 5962, branches/release-0.23.0)
