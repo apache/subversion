@@ -1195,7 +1195,7 @@ def commit_in_dir_scheduled_for_addition(sbox):
   return svntest.actions.run_and_verify_commit (wc_dir,
                                                 None,
                                                 None,
-                                                "unversioned",
+                                                "not versioned",
                                                 None, None,
                                                 None, None,
                                                 bloo_path)
@@ -1566,7 +1566,10 @@ def commit_nonrecursive(sbox):
     { file1_path                    : Item(verb='Adding'),
       dir1_path                     : Item(verb='Adding'),
       file2_path                    : Item(verb='Adding'),
-      file3_path                    : Item(verb='Adding'), }
+      file3_path                    : Item(verb='Adding'),
+      dir2_path                     : Item(verb='Adding'),
+      file4_path                    : Item(verb='Adding'),
+      }
     )
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -1576,13 +1579,8 @@ def commit_nonrecursive(sbox):
     dir1_path    : Item(status='  ', repos_rev=2, wc_rev=2),
     file2_path   : Item(status='  ', repos_rev=2, wc_rev=2),
     file3_path   : Item(status='  ', repos_rev=2, wc_rev=2),
-
-    # ### If you reverse commented and uncommented here, the test
-    # ### "passes" because of the bug:
     dir2_path    : Item(status='  ', repos_rev=2, wc_rev=2),
     file4_path   : Item(status='  ', repos_rev=2, wc_rev=2),
-    # dir2_path    : Item(status='A ', repos_rev=2, wc_rev=0),
-    # file4_path   : Item(status='A ', repos_rev=2, wc_rev=0),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -1780,7 +1778,7 @@ test_list = [ None,
               commit_with_lock,
               commit_current_dir,
               commit_multiple_wc,
-              XFail(commit_nonrecursive),
+              commit_nonrecursive,
               XFail(failed_commit),
               Skip(commit_symlink, (os.name != 'posix')),
               commit_out_of_date_deletions,

@@ -226,38 +226,37 @@ svn_path_split_if_file(const char *path,
                        const char **pfile,
                        apr_pool_t *pool);
 
-/** Find the common prefix of the paths in @a targets, and remove redundancies.
+/** Find the common prefix of some paths and maybe remove redundant
+ * paths.
  *
- * Find the common prefix of the paths in @a targets, and remove redundancies.
+ * Find the common prefix of the paths in @a targets, and remove
+ * redundant paths if @a remove_redundancies is true.  The elements in
+ * @a targets must be existing files or directories (as const char *).
  *
  * Each of the elements in @a targets must be a URL, or an existing file or 
  * directory (as const char *).
  *
- * If there are multiple targets, or exactly one target and it's not a
- * directory, then 
+ *   - Set @a *pbasename to the absolute path of the common parent
+ *     directory of all of the targets (if the targets are
+ *     files/directories), or the common URL prefix of the targets (if
+ *     they are URLs)
  *
- *   - @a *pbasename is set to the absolute path of the common parent
- *     directory of those targets (if the targets are files/directories), 
- *     or the common URL prefix of the targets (if they are URLs).
- *
- *   - If @a pcondensed_targets is non-null, @a *pcondensed_targets is set
- *     to an array of targets relative to @a *pbasename, with
- *     redundancies removed (meaning that none of these targets will
- *     be the same as, nor have an ancestor/descendant relationship
- *     with, any of the other targets; nor will any of them be the
- *     same as @a *pbasename).  Else if @a pcondensed_targets is null, it is
- *     left untouched.
+ *   - If @a pcondensed_targets is non-null, set @a *pcondensed_targets
+ *     to an array of targets relative to @a *pbasename, and if 
+ *     @a remove_redundancies is true, omit any paths that are
+ *     descendants of another path in @a targets.  Else if @a
+ *     pcondensed_targets is null, leave it alone.
  *
  * Else if there is exactly one directory target, then
  *
- *   - @a *pbasename is set to that directory, and
+ *   - Set @a *pbasename to that directory, and
  *
- *   - If @a pcondensed_targets is non-null, @a *pcondensed_targets is set
+ *   - If @a pcondensed_targets is non-null, set @a *pcondensed_targets
  *     to an array containing zero elements.  Else if
- *     @a pcondensed_targets is null, it is left untouched.
+ *     @a pcondensed_targets is null, leave it alone.
  *
- * If there are no items in @a targets, @a *pbasename and (if applicable)
- * @a *pcondensed_targets will be @c NULL.
+ * If there are no items in @a targets, set @a *pbasename and (if
+ * applicable) @a *pcondensed_targets to @c NULL.
  *
  * NOTE: There is no guarantee that @a *pbasename is within a working
  * copy.
@@ -266,6 +265,7 @@ svn_error_t *
 svn_path_condense_targets (const char **pbasename,
                            apr_array_header_t **pcondensed_targets,
                            const apr_array_header_t *targets,
+                           svn_boolean_t remove_redundancies,
                            apr_pool_t *pool);
 
 
