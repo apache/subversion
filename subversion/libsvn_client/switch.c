@@ -79,7 +79,7 @@ svn_client_switch (const svn_delta_editor_t *before_editor,
   if (! entry)
     return svn_error_createf
       (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
-       "svn_client_update: %s is not under revision control", path);
+       "svn_client_switch: %s is not under revision control", path);
 
   if (entry->kind == svn_node_file)
     {
@@ -90,7 +90,7 @@ svn_client_switch (const svn_delta_editor_t *before_editor,
       if (! entry)
         return svn_error_createf
           (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
-           "svn_client_update: %s is not under revision control", path);
+           "svn_client_switch: %s is not under revision control", path);
     }
   else if (entry->kind == svn_node_dir)
     {

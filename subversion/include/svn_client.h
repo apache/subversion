@@ -254,15 +254,25 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
    If REVISION does not meet these requirements, return the error
    SVN_ERR_CLIENT_BAD_REVISION.
 
-   During an update, files may be restored from the text-base if they
-   have been removed from the working copy.  When this happens,
-   NOTIFY_FUNC will be called with NOTIFY_BATON and the (relative)
-   path of the file that has been restored.  NOTIFY_FUNC may be
-   NULL if this information is not required.
+   ### Begin temporary notification kluge. ###
+
+          TODO: Soon, the before and after editors will go away, 
+          and the notify system will be used for everything.
+          But for the moment, we're keeping the composition
+          editors, to avoid dealing with possible output changes,
+          and adding the notification callback for external items
+          only.
+
+   If NOTIFY_FUNC is non-null, invoke NOTIFY_FUNC with NOTIFY_BATON
+   on files restored from text-base.  (Update does not yet handle
+   external modules, but when it does, it will call this notifier for
+   updates or checkouts of external items too.)
 
    BEFORE_EDITOR, BEFORE_EDIT_BATON and AFTER_EDITOR, AFTER_EDIT_BATON
    are pre- and post-update hook editors.  They are optional; pass
    four NULLs if you don't need them.
+
+   ### End temporary notification kluge. ###
 
    If XML_SRC is non-NULL, it is an xml file to update from.  If
    REVISION is svn_client_revision_unspecified, then the revision

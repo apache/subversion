@@ -82,11 +82,12 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   if (! entry)
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
-       "svn_client_update: %s is not under revision control", anchor);
+       "add_update_info_to_status_hash: %s is not under revision control",
+       anchor);
   if (! entry->url)
     return svn_error_createf
       (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool,
-       "svn_client_update: entry '%s' has no URL", anchor);
+       "add_update_info_to_status_hash: entry '%s' has no URL", anchor);
   URL = apr_pstrdup (pool, entry->url);
 
   /* Get the RA library that handles URL. */
