@@ -116,6 +116,12 @@ typedef struct
   apr_hash_t *node_cache;
   const char *node_cache_keys[SVN_FS_NODE_CACHE_MAX_KEYS];
   int node_cache_idx;
+
+  /* Cache structure for mapping const char * PATH to const char
+     *COPYFROM_STRING, so that paths_changed can remember all the
+     copyfrom information in the changes file. */
+  apr_hash_t *copyfrom_cache;
+  
 } fs_root_data_t;
 
 /* Declared here to resolve the circular dependencies. */
@@ -908,7 +914,10 @@ get_dag (dag_node_t **dag_node_p,
    TXN_ID, and indicated that a change of kind CHANGE_KIND occurred on
    PATH (whose node revision id is--or was, in the case of a
    deletion--NODEREV_ID), and optionally that TEXT_MODs or PROP_MODs
-   occurred.  Do all this as part of POOL.  */
+   occurred.  If the change resulted from a copy, COPYFROM_REV and
+   COPYFROM_PATH specify under which revision and path the node was
+   copied from.  If this was not part of a copy, COPYFROM_REV should
+   be SVN_INVALID_REVNUM.  Do all this as part of POOL.  */
 static svn_error_t *
 add_change (svn_fs_t *fs,
             const char *txn_id,
@@ -917,11 +926,14 @@ add_change (svn_fs_t *fs,
             svn_fs_path_change_kind_t change_kind,
             svn_boolean_t text_mod,
             svn_boolean_t prop_mod,
+            svn_revnum_t copyfrom_rev,
+            const char *copyfrom_path,
             apr_pool_t *pool)
 {
   SVN_ERR (svn_fs_fs__add_change (fs, txn_id,
                                   svn_fs__canonicalize_abspath (path, pool),
                                   noderev_id, change_kind, text_mod, prop_mod,
+                                  copyfrom_rev, copyfrom_path,
                                   pool));
 
   return SVN_NO_ERROR;
@@ -1126,7 +1138,8 @@ fs_change_node_prop (svn_fs_root_t *root,
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
                        path, svn_fs_fs__dag_get_id (parent_path->node),
-                       svn_fs_path_change_modify, 0, 1, pool));
+                       svn_fs_path_change_modify, 0, 1, SVN_INVALID_REVNUM,
+                       NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1246,11 +1259,13 @@ undelete_change (svn_fs_t *fs,
       /* If so, reset the changes and re-add everything except the
          deletion. */
       SVN_ERR (add_change (fs, txn_id, path, NULL,
-                           svn_fs_path_change_reset, 0, 0, pool));
+                           svn_fs_path_change_reset, 0, 0, SVN_INVALID_REVNUM,
+                           NULL, pool));
       if (this_change->change_kind == svn_fs_path_change_replace)
         {
           SVN_ERR (add_change (fs, txn_id, path, NULL,
-                               svn_fs_path_change_reset, 0, 0, pool));
+                               svn_fs_path_change_reset, 0, 0,
+                               SVN_INVALID_REVNUM, NULL, pool));
         }
     }
   else
@@ -2183,7 +2198,8 @@ fs_make_dir (svn_fs_root_t *root,
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
                        path, svn_fs_fs__dag_get_id (sub_dir),
-                       svn_fs_path_change_add, 0, 0, pool));
+                       svn_fs_path_change_add, 0, 0, SVN_INVALID_REVNUM, NULL,
+                       pool));
 
   return SVN_NO_ERROR;
 }
@@ -2218,7 +2234,8 @@ fs_delete_node (svn_fs_root_t *root,
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
                        path, svn_fs_fs__dag_get_id (parent_path->node),
-                       svn_fs_path_change_delete, 0, 0, pool));
+                       svn_fs_path_change_delete, 0, 0, SVN_INVALID_REVNUM,
+                       NULL, pool));
   
   return SVN_NO_ERROR;
 }
@@ -2290,7 +2307,9 @@ copy_helper (svn_fs_root_t *from_root,
       SVN_ERR (get_dag (&new_node, to_root, to_path, pool));
       SVN_ERR (add_change (svn_fs_root_fs (to_root), txn_id, 
                            to_path, svn_fs_fs__dag_get_id (new_node),
-                           kind, 0, 0, pool));
+                           kind, 0, 0,
+                           svn_fs_revision_root_revision (from_root),
+                           from_path, pool));
     }
   else
     {
@@ -2354,13 +2373,41 @@ fs_copied_from (svn_revnum_t *rev_p,
                 apr_pool_t *pool)
 {
   dag_node_t *node;
-  const char *copyfrom_path;
+  const char *copyfrom_path, *copyfrom_str;
   svn_revnum_t copyfrom_rev;
+  fs_root_data_t *frd = root->fsap_data;
+  char *str, *last_str, *buf;
 
-  SVN_ERR (get_dag (&node, root, path, pool));
-  SVN_ERR (svn_fs_fs__dag_get_copyfrom_rev (&copyfrom_rev, node, pool));
-  SVN_ERR (svn_fs_fs__dag_get_copyfrom_path (&copyfrom_path, node, pool));
-
+  /* Check to see if there is a cached version of this copyfrom
+     entry. */
+  copyfrom_str = apr_hash_get (frd->copyfrom_cache, path, APR_HASH_KEY_STRING);
+  if (copyfrom_str)
+    {
+      if (strlen (copyfrom_str) == 0)
+        {
+          /* We have a cached entry that says there is no copyfrom
+             here. */
+          copyfrom_rev = SVN_INVALID_REVNUM;
+          copyfrom_path = NULL;
+        }
+      else
+        {
+          /* Parse the copyfrom string for our cached entry. */
+          buf = apr_pstrdup (pool, copyfrom_str);
+          str = apr_strtok (buf, " ", &last_str);
+          copyfrom_rev = atol (str);
+          copyfrom_path = last_str;
+        }
+    }
+  else
+    {
+      /* There is no cached entry, look it up the old-fashioned
+         way. */
+      SVN_ERR (get_dag (&node, root, path, pool));
+      SVN_ERR (svn_fs_fs__dag_get_copyfrom_rev (&copyfrom_rev, node, pool));
+      SVN_ERR (svn_fs_fs__dag_get_copyfrom_path (&copyfrom_path, node, pool));
+    }
+      
   *rev_p  = copyfrom_rev;
   *path_p = copyfrom_path;
 
@@ -2403,7 +2450,8 @@ fs_make_file (svn_fs_root_t *root,
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
                        path, svn_fs_fs__dag_get_id (child),
-                       svn_fs_path_change_add, 0, 0, pool));
+                       svn_fs_path_change_add, 0, 0, SVN_INVALID_REVNUM, NULL,
+                       pool));
 
   return SVN_NO_ERROR;
 }
@@ -2646,7 +2694,8 @@ apply_textdelta (void *baton, apr_pool_t *pool)
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (tb->root), txn_id, 
                        tb->path, svn_fs_fs__dag_get_id (tb->node),
-                       svn_fs_path_change_modify, 1, 0, pool));
+                       svn_fs_path_change_modify, 1, 0, SVN_INVALID_REVNUM,
+                       NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2790,7 +2839,8 @@ apply_text (void *baton, apr_pool_t *pool)
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (tb->root), txn_id, 
                        tb->path, svn_fs_fs__dag_get_id (tb->node),
-                       svn_fs_path_change_modify, 1, 0, pool));
+                       svn_fs_path_change_modify, 1, 0, SVN_INVALID_REVNUM,
+                       NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2914,9 +2964,10 @@ fs_paths_changed (apr_hash_t **changed_paths_p,
                   apr_pool_t *pool)
 {
   apr_hash_t *changed_paths;
+  fs_root_data_t *frd = root->fsap_data;
 
   SVN_ERR (svn_fs_fs__paths_changed (&changed_paths, root->fs, root->rev,
-                                     pool));
+                                     frd->copyfrom_cache, pool));
   
   *changed_paths_p = changed_paths;
   return SVN_NO_ERROR;
@@ -3334,8 +3385,9 @@ make_root (svn_fs_t *fs,
   root->pool = subpool;
 
   /* Init the node ID cache. */
-  frd->node_cache = apr_hash_make (pool);
+  frd->node_cache = apr_hash_make (subpool);
   frd->node_cache_idx = 0;
+  frd->copyfrom_cache = apr_hash_make (subpool);
   root->vtable = &root_vtable;
   root->fsap_data = frd;
 

@@ -257,6 +257,10 @@ typedef struct
   svn_boolean_t text_mod;
   svn_boolean_t prop_mod;
 
+  /* Copyfrom revision and path. */
+  svn_revnum_t copyfrom_rev;
+  const char * copyfrom_path;
+
 } change_t;
 
 

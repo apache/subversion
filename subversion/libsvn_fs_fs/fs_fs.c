@@ -1716,19 +1716,31 @@ svn_fs_fs__rep_copy (representation_t *rep,
 
 /* Merge the internal-use-only CHANGE into a hash of public-FS
    svn_fs_path_change_t CHANGES, collapsing multiple changes into a
-   single summarical (is that real word?) change per path. */
+   single summarical (is that real word?) change per path.  Also keep
+   the COPYFROM_HASH up to date with new adds and replaces.  */
 static svn_error_t *
 fold_change (apr_hash_t *changes,
-             const change_t *change)
+             const change_t *change,
+             apr_hash_t *copyfrom_hash)
 {
   apr_pool_t *pool = apr_hash_pool_get (changes);
+  apr_pool_t *copyfrom_pool = apr_hash_pool_get (copyfrom_hash);
   svn_fs_path_change_t *old_change, *new_change;
-  const char *path;
+  const char *path, *copyfrom_string, *copyfrom_path = NULL;
 
   if ((old_change = apr_hash_get (changes, change->path, APR_HASH_KEY_STRING)))
     {
       /* This path already exists in the hash, so we have to merge
          this change into the already existing one. */
+
+      /* Get the existing copyfrom entry for this path. */
+      copyfrom_string = apr_hash_get (copyfrom_hash, change->path,
+                                      APR_HASH_KEY_STRING);
+
+      /* If this entry existed in the copyfrom hash, we don't need to
+         copy it. */
+      if (copyfrom_string)
+        copyfrom_path = change->path;
 
       /* Since the path already exists in the hash, we don't have to
          dup the allocation for the path itself. */
@@ -1768,6 +1780,7 @@ fold_change (apr_hash_t *changes,
           /* A reset here will simply remove the path change from the
              hash. */
           old_change = NULL;
+          copyfrom_string = NULL;
           break;
 
         case svn_fs_path_change_delete:
@@ -1785,6 +1798,7 @@ fold_change (apr_hash_t *changes,
               old_change->text_mod = change->text_mod;
               old_change->prop_mod = change->prop_mod;
             }
+          copyfrom_string = NULL;
           break;
 
         case svn_fs_path_change_add:
@@ -1795,6 +1809,16 @@ fold_change (apr_hash_t *changes,
           old_change->node_rev_id = svn_fs__id_copy (change->noderev_id, pool);
           old_change->text_mod = change->text_mod;
           old_change->prop_mod = change->prop_mod;
+          if (change->copyfrom_rev == SVN_INVALID_REVNUM)
+            {
+              copyfrom_string = apr_pstrdup (copyfrom_pool, "");
+            }
+          else
+            {
+              copyfrom_string = apr_psprintf (copyfrom_pool, "%" SVN_REVNUM_T_FMT
+                                              " %s", change->copyfrom_rev,
+                                              change->copyfrom_path);
+            }
           break;
 
         case svn_fs_path_change_modify:
@@ -1819,17 +1843,40 @@ fold_change (apr_hash_t *changes,
       new_change->change_kind = change->kind;
       new_change->text_mod = change->text_mod;
       new_change->prop_mod = change->prop_mod;
+      if (change->copyfrom_rev != SVN_INVALID_REVNUM)
+        {
+          copyfrom_string = apr_psprintf (copyfrom_pool, "%" SVN_REVNUM_T_FMT
+                                          " %s", change->copyfrom_rev,
+                                          change->copyfrom_path);
+        }
+      else
+        {
+          copyfrom_string = apr_pstrdup (copyfrom_pool, "");
+        }
       path = apr_pstrdup (pool, change->path);
     }
 
   /* Add (or update) this path. */
   apr_hash_set (changes, path, APR_HASH_KEY_STRING, new_change);
 
+  /* If we don't yet have a path string allocated in the copyfrom_hash
+     get something to use.  If we are adding an entry, allocate
+     something new, otherwise we just need a key and the one allocated
+     for the changes hash will work. */
+  if (! copyfrom_path)
+    {
+      copyfrom_path = copyfrom_string ? apr_pstrdup (copyfrom_pool, path)
+        : path;
+    }
+  
+  apr_hash_set (copyfrom_hash, copyfrom_path, APR_HASH_KEY_STRING,
+                copyfrom_string);
+
   return SVN_NO_ERROR;
 }
 
 
-/* Read the next line in the changes record from file FILE and store
+/* Read the next entry in the changes record from file FILE and store
    the resulting change in *CHANGE_P.  If there is no next record,
    store NULL there.  Perform all allocations from POOL. */
 static svn_error_t *
@@ -1946,6 +1993,30 @@ read_change (change_t **change_p,
   /* Get the changed path. */
   change->path = apr_pstrdup (pool, last_str);
 
+
+  /* Read the next line, the copyfrom line. */
+  SVN_ERR (svn_io_read_length_line (file, buf, &len, pool));
+
+  if (len == 0)
+    {
+      change->copyfrom_rev = SVN_INVALID_REVNUM;
+      change->copyfrom_path = NULL;
+    }
+  else
+    {
+      str = apr_strtok (buf, " ", &last_str);
+      if (! str)
+        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                 "Invalid changes line in rev-file");
+      change->copyfrom_rev = atol (str);
+
+      if (! last_str)
+        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                 "Invalid changes line in rev-file");
+
+      change->copyfrom_path = apr_pstrdup (pool, last_str);
+    }
+  
   *change_p = change;
 
   return SVN_NO_ERROR;
@@ -1953,14 +2024,21 @@ read_change (change_t **change_p,
 
 /* Fetch all the changed path entries from FILE and store then in
  *CHANGED_PATHS.  Folding is done to remove redundant or unnecessary
- *data.  Do all allocations in POOL. */
+ *data.  Store a hash of paths to copyfrom revisions/paths in
+ COPYFROM_HASH if it is non-NULL.  Do all allocations in POOL. */
 static svn_error_t *
 fetch_all_changes (apr_hash_t *changed_paths,
+                   apr_hash_t *copyfrom_hash,
                    apr_file_t *file,
                    apr_pool_t *pool)
 {
   change_t *change;
   apr_pool_t *iterpool = svn_pool_create (pool);
+  apr_hash_t *my_hash;
+
+  /* If we are passed a NULL copyfrom hash, manufacture one for the
+     duration of this call. */
+  my_hash = copyfrom_hash ? copyfrom_hash : apr_hash_make (pool);
   
   /* Read in the changes one by one, folding them into our local hash
      as necessary. */
@@ -1969,7 +2047,7 @@ fetch_all_changes (apr_hash_t *changed_paths,
 
   while (change)
     {
-      SVN_ERR (fold_change (changed_paths, change));
+      SVN_ERR (fold_change (changed_paths, change, my_hash));
 
       /* Now, if our change was a deletion or replacement, we have to
          blow away any changes thus far on paths that are (or, were)
@@ -2035,7 +2113,7 @@ svn_fs_fs__txn_changes_fetch (apr_hash_t **changed_paths_p,
   SVN_ERR (svn_io_file_open (&file, changes, APR_READ | APR_BUFFERED,
                              APR_OS_DEFAULT, pool));
 
-  SVN_ERR (fetch_all_changes (changed_paths, file, pool));
+  SVN_ERR (fetch_all_changes (changed_paths, NULL, file, pool));
 
   SVN_ERR (svn_io_file_close (file, pool));
 
@@ -2048,6 +2126,7 @@ svn_error_t *
 svn_fs_fs__paths_changed (apr_hash_t **changed_paths_p,
                           svn_fs_t *fs,
                           svn_revnum_t rev,
+                          apr_hash_t *copyfrom_cache,
                           apr_pool_t *pool)
 {
   char *revision_filename;
@@ -2072,7 +2151,8 @@ svn_fs_fs__paths_changed (apr_hash_t **changed_paths_p,
 
   changed_paths = apr_hash_make (pool);
 
-  SVN_ERR (fetch_all_changes (changed_paths, revision_file, pool));
+  SVN_ERR (fetch_all_changes (changed_paths, copyfrom_cache, revision_file,
+                              pool));
   
   /* Close the revision file. */
   SVN_ERR (svn_io_file_close (revision_file, pool));
@@ -2516,6 +2596,8 @@ svn_fs_fs__add_change (svn_fs_t *fs,
                        svn_fs_path_change_kind_t change_kind,
                        svn_boolean_t text_mod,
                        svn_boolean_t prop_mod,
+                       svn_revnum_t copyfrom_rev,
+                       const char *copyfrom_path,
                        apr_pool_t *pool)
 {
   apr_file_t *file;
@@ -2569,6 +2651,16 @@ svn_fs_fs__add_change (svn_fs_t *fs,
                               text_mod ? SVN_FS_FS__TRUE : SVN_FS_FS__FALSE,
                               prop_mod ? SVN_FS_FS__TRUE : SVN_FS_FS__FALSE,
                               path));
+
+  if (copyfrom_rev != SVN_INVALID_REVNUM)
+    {
+      SVN_ERR (svn_stream_printf (stream, pool, "%" SVN_REVNUM_T_FMT " %s\n",
+                                  copyfrom_rev, copyfrom_path));
+    }
+  else
+    {
+      SVN_ERR (svn_stream_printf (stream, pool, "\n"));
+    }
 
   SVN_ERR (svn_stream_close (stream));
 
@@ -3298,6 +3390,15 @@ write_final_changed_path_info (apr_off_t *offset_p,
 
       SVN_ERR (svn_io_file_write_full (file, buf->data, buf->len, NULL,
                                        iterpool));
+
+      /* Read the copyfrom line. */
+      SVN_ERR (svn_stream_readline (changes_stream, &line, "\n", &eof,
+                                    iterpool));
+      
+      SVN_ERR (svn_io_file_write_full (file, line->data, line->len, NULL,
+                                       iterpool));
+
+      SVN_ERR (svn_io_file_write_full (file, "\n", 1, NULL, iterpool));
     }
 
   svn_pool_destroy (iterpool);

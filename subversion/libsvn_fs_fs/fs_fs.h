@@ -144,11 +144,13 @@ svn_error_t *svn_fs_fs__file_checksum (unsigned char digest[],
                                        apr_pool_t *pool);
 
 /* Find the paths which were changed in revision REV of filesystem FS
-   and store them in *CHANGED_PATHS_P.  Get any temporary allocations
+   and store them in *CHANGED_PATHS_P.  Cached copyfrom information
+   will be stored in *COPYFROM_CACHE.  Get any temporary allocations
    from POOL. */
 svn_error_t *svn_fs_fs__paths_changed (apr_hash_t **changed_paths_p,
                                        svn_fs_t *fs,
                                        svn_revnum_t rev,
+                                       apr_hash_t *copyfrom_cache,
                                        apr_pool_t *pool);
 
 /* Create a new transaction in filesystem FS, based on revision REV,
@@ -205,8 +207,11 @@ svn_error_t *svn_fs_fs__set_entry (svn_fs_t *fs,
 /* Add a change to the changes record for filesystem FS in transaction
    TXN_ID.  Mark path PATH, having node-id ID, as changed according to
    the type in CHANGE_KIND.  If the text representation was changed
-   set TEXT_MOD to TRUE, and likewise for PROP_MOD.  Perform any
-   temporary allocations from POOL. */
+   set TEXT_MOD to TRUE, and likewise for PROP_MOD.  If this change
+   was the result of a copy, set COPYFROM_REV and COPYFROM_PATH to the
+   revision and path of the copy source, otherwise they should be set
+   to SVN_INVALID_REVNUM and NULL.  Perform any temporary allocations
+   from POOL. */
 svn_error_t *svn_fs_fs__add_change (svn_fs_t *fs,
                                     const char *txn_id,
                                     const char *path,
@@ -214,6 +219,8 @@ svn_error_t *svn_fs_fs__add_change (svn_fs_t *fs,
                                     svn_fs_path_change_kind_t change_kind,
                                     svn_boolean_t text_mod,
                                     svn_boolean_t prop_mod,
+                                    svn_revnum_t copyfrom_rev,
+                                    const char *copyfrom_path,
                                     apr_pool_t *pool);
 
 /* Return a writable stream in *STREAM that allows storing the text
