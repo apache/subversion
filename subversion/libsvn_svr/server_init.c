@@ -93,7 +93,7 @@ svn_svr_init (svn_string_t *config_file, ap_pool_t *pool)
   */
 
 
-  return &my_policies;
+  return my_policies;
 }
 
 
