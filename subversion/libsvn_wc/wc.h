@@ -286,14 +286,6 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 
 /** Log actions. **/
 
-/* Merge the mods saved in SVN_WC__LOG_ATTR_SAVED_MODS into the
-   working file SVN_WC__LOG_ATTR_NAME. */
-#define SVN_WC__LOG_MERGE_TEXT          "merge-text"
-
-/* Merge property changes for SVN_WC__LOG_ATTR_NAME.  todo: not yet
-   done. */
-#define SVN_WC__LOG_MERGE_PROPS         "merge-props"
-
 /* Merge property changes for SVN_WC__LOG_ATTR_NAME.  todo: not yet
    done. */
 #define SVN_WC__LOG_REPLACE_PROP_BASE   "replace-prop-base"
