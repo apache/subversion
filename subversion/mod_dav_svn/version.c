@@ -19,9 +19,15 @@
 #include <apr_tables.h>
 
 #include "svn_fs.h"
+#include "svn_xml.h"
 
 #include "dav_svn.h"
 
+
+static const dav_report_elem avail_reports[] = {
+  { SVN_XML_NAMESPACE, "update-report" },
+  { NULL },
+};
 
 static dav_error *open_txn(svn_fs_txn_t **ptxn, svn_fs_t *fs,
                            const char *txn_name, apr_pool_t *pool)
@@ -289,13 +295,26 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
             }
 
           if (invalid)
-            return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
-                                 "The version resource does not correspond "
-                                 "to the resource within the transaction. "
-                                 "Either the requested version resource is "
-                                 "out of date (needs to be updated), or the "
-                                 "requested version resource is newer than "
-                                 "the transaction root (restart the commit).");
+            {
+#if 1
+              return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
+                                   "The version resource does not correspond "
+                                   "to the resource within the transaction. "
+                                   "Either the requested version resource is "
+                                   "out of date (needs to be updated), or the "
+                                   "requested version resource is newer than "
+                                   "the transaction root (restart the "
+                                   "commit).");
+#else
+              svn_string_t *r_id = svn_fs_unparse_id(resource->info->node_id,
+                                                     resource->pool);
+              svn_string_t *t_id = svn_fs_unparse_id(res_id, resource->pool);
+              const char *msg = apr_psprintf(resource->pool,
+                                             "id mismatch: r=%s  t=%s",
+                                             r_id->data, t_id->data);
+              return dav_new_error(resource->pool, HTTP_CONFLICT, 0, msg);
+#endif
+            }
         }
     }
 
@@ -322,8 +341,14 @@ static dav_error *dav_svn_checkin(dav_resource *resource,
 static dav_error *dav_svn_avail_reports(const dav_resource *resource,
                                         const dav_report_elem **reports)
 {
-  return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
-                       "REPORT is not yet implemented.");
+  /* ### further restrict to the public space? */
+  if (resource->type != DAV_RESOURCE_TYPE_REGULAR) {
+    *reports = NULL;
+    return NULL;
+  }
+
+  *reports = avail_reports;
+  return NULL;
 }
 
 static int dav_svn_report_label_header_allowed(const ap_xml_doc *doc)
@@ -336,8 +361,17 @@ static dav_error *dav_svn_get_report(request_rec *r,
                                      const ap_xml_doc *doc,
                                      ap_text_header *report)
 {
-  return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
-                       "REPORT is not yet implemented.");
+  int ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
+
+  if (doc->root->ns != ns
+      || strcmp(doc->root->name, "update-report") != 0)
+    {
+      /* ### what is a good error for an unknown report? */
+      return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
+                           "The requested report is unknown.");
+    }
+
+  return dav_svn__update_report(resource, doc, report);
 }
 
 static int dav_svn_can_be_activity(const dav_resource *resource)

@@ -17,8 +17,8 @@
 #define DAV_SVN_H
 
 #include <httpd.h>
-#include <util_xml.h>
 #include <apr_tables.h>
+#include <apr_xml.h>
 #include <mod_dav.h>
 
 #include "svn_error.h"
@@ -170,7 +170,7 @@ int dav_svn_find_liveprop(const dav_resource *resource,
                           const char *ns_uri, const char *name,
                           const dav_hooks_liveprop **hooks);
 void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
-                                  dav_prop_insert what, ap_text_header *phdr);
+                                  dav_prop_insert what, apr_text_header *phdr);
 void dav_svn_register_uris(apr_pool_t *p);
 
 const char * dav_svn_getetag(const dav_resource *resource);
@@ -284,6 +284,12 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
                                     svn_revnum_t new_rev,
                                     apr_xml_elem *prop_elem,
                                     apr_pool_t *pool);
+
+dav_error * dav_svn__update_report(const dav_resource *resource,
+				   const apr_xml_doc *doc,
+				   apr_text_header *report);
+
+int dav_svn_find_ns(apr_array_header_t *namespaces, const char *uri);
 
 #endif /* DAV_SVN_H */
 

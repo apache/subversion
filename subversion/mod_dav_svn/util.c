@@ -12,6 +12,7 @@
  * ====================================================================
  */
 
+#include <apr_xml.h>
 #include <mod_dav.h>
 
 #include "svn_error.h"
@@ -199,6 +200,18 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
                           "dav_svn_parse_uri does not support that "
                           "URI form yet.");
 }
+
+/* ### move this into apr_xml */
+int dav_svn_find_ns(apr_array_header_t *namespaces, const char *uri)
+{
+  int i;
+
+  for (i = 0; i < namespaces->nelts; ++i)
+    if (strcmp(APR_XML_GET_URI_ITEM(namespaces, i), uri) == 0)
+      return i;
+  return -1;
+}
+
 
 
 /* 

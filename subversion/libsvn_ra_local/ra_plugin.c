@@ -240,30 +240,22 @@ do_update (void *session_baton,
            void *update_baton)
 {
   svn_revnum_t revnum_to_update_to;
-  svn_repos_report_baton_t *rbaton;
-  svn_ra_local__session_baton_t *sbaton = 
-    (svn_ra_local__session_baton_t *) session_baton;
-  svn_revnum_t *rev_ptr = apr_pcalloc (sbaton->pool, sizeof(*rev_ptr));
+  svn_ra_local__session_baton_t *sbaton = session_baton;
   
   if (! SVN_IS_VALID_REVNUM(update_revision))
     SVN_ERR (get_latest_revnum (sbaton, &revnum_to_update_to));
   else
     revnum_to_update_to = update_revision;
 
-  /* Build a reporter baton. */
-  rbaton = apr_pcalloc (sbaton->pool, sizeof(*rbaton));
-  rbaton->revnum_to_update_to = revnum_to_update_to;
-  rbaton->update_editor = update_editor;
-  rbaton->update_edit_baton = update_baton;
-  rbaton->path_rev_hash = apr_hash_make (sbaton->pool);
-  rbaton->fs = sbaton->fs;
-  rbaton->base_path = sbaton->fs_path;
-  rbaton->pool = sbaton->pool;
-  
-  /* Hand reporter back to client. */
+  /* Pass back our reporter */
   *reporter = &ra_local_reporter;
-  *report_baton = rbaton;
-  return SVN_NO_ERROR;
+
+  /* Build a reporter baton. */
+  return svn_repos_begin_report (report_baton,
+                                 revnum_to_update_to,
+                                 sbaton->fs, sbaton->fs_path,
+                                 update_editor, update_baton,
+                                 sbaton->pool);
 }
 
 

@@ -144,15 +144,24 @@ svn_error_t * svn_ra_dav__get_activity_url(svn_string_t **activity_url,
 enum {
   /* DAV elements */
   ELEM_activity_coll_set = DAV_ELM_207_UNUSED,
+  ELEM_add_directory,
+  ELEM_add_file,
   ELEM_baseline,
   ELEM_baseline_coll,
   ELEM_checked_in,
   ELEM_collection,
+  ELEM_delete_entry,
+  ELEM_fetch_file,
+  ELEM_fetch_props,
   ELEM_ignored_set,
   ELEM_merge_response,
   ELEM_merged_set,
   ELEM_options_response,
+  ELEM_replace_directory,
+  ELEM_replace_file,
   ELEM_resourcetype,
+  ELEM_target_revision,
+  ELEM_update_report,
   ELEM_updated_set,
   ELEM_vcc,
   ELEM_version_name,
@@ -170,6 +179,15 @@ svn_error_t * svn_ra_dav__merge_activity(
     svn_ra_close_commit_func_t close_commit,
     void *close_baton,
     apr_pool_t *pool);
+
+
+/* Make a buffer for repeated use with svn_string_set().
+   ### it would be nice to start this buffer with N bytes, but there isn't
+   ### really a way to do that in the string interface (yet), short of
+   ### initializing it with a fake string (and copying it) */
+#define MAKE_BUFFER(p) svn_string_ncreate("", 0, (p))
+
+void svn_ra_dav__copy_href(svn_string_t *dst, const char *src);
 
 #endif  /* RA_DAV_H */
 

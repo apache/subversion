@@ -17,6 +17,37 @@
 #include "svn_path.h"
 
 
+/* A structure used by the routines within the `reporter' vtable,
+   driven by the client as it describes its working copy revisions. */
+typedef struct svn_repos_report_baton_t
+{
+  /* The transaction being built in the repository, a mirror of the
+     working copy. */
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+
+  /* The location under which all reporting will happen (in the fs) */
+  svn_string_t *base_path;
+
+  /* finish_report() calls svn_fs_dir_delta(), and uses this arg to
+     decide which revision to compare the transaction against. */
+  svn_revnum_t revnum_to_update_to;
+
+  /* The working copy editor driven by svn_fs_dir_delta(). */
+  const svn_delta_edit_fns_t *update_editor;
+  void *update_edit_baton;
+
+  /* This hash describes the mixed revisions in the transaction; it
+     maps pathnames (char *) to revision numbers (svn_revnum_t). */
+  apr_hash_t *path_rev_hash;
+
+  /* Pool from the session baton. */
+  apr_pool_t *pool;
+
+} svn_repos_report_baton_t;
+
+
 svn_error_t *
 svn_repos_set_path (void *report_baton,
                     svn_string_t *path,
@@ -24,14 +55,14 @@ svn_repos_set_path (void *report_baton,
 {
   svn_fs_root_t *from_root;
   svn_string_t *from_path;
-  svn_repos_report_baton_t *rbaton = (svn_repos_report_baton_t *) report_baton;
+  svn_repos_report_baton_t *rbaton = report_baton;
   svn_revnum_t *rev_ptr = apr_palloc (rbaton->pool, sizeof(*rev_ptr));
 
   /* If this is the very first call, no txn exists yet. */
   if (! rbaton->txn)
     {
-      /* Sanity check: make sure that PATH is really the target dir. */
-      if (! svn_string_compare (path, svn_string_create ("", rbaton->pool)))
+      /* Sanity check: make sure that PATH is really the target dir (""). */
+      if (path->len != 0)
         return 
           svn_error_create
           (SVN_ERR_RA_BAD_REVISION_REPORT, 0, NULL, rbaton->pool,
@@ -91,7 +122,10 @@ svn_repos_finish_report (void *report_baton)
                                 rbaton->update_editor,             
                                 rbaton->update_edit_baton,
                                 rbaton->pool));
-  
+
+  /* All done with the edit. */
+  SVN_ERR ((*rbaton->update_editor->close_edit) (rbaton->update_edit_baton));
+
   /* Still here?  Great!  Throw out the transaction. */
   SVN_ERR (svn_fs_abort_txn (rbaton->txn));
 
@@ -99,14 +133,35 @@ svn_repos_finish_report (void *report_baton)
 }
 
 
+svn_error_t *
+svn_repos_begin_report (void **report_baton,
+                        svn_revnum_t revnum,
+                        svn_fs_t *fs,
+                        svn_string_t *fs_base,
+                        const svn_delta_edit_fns_t *update_editor,
+                        void *update_baton,
+                        apr_pool_t *pool)
+{
+  svn_repos_report_baton_t *rbaton;
+
+  /* Build a reporter baton. */
+  rbaton = apr_pcalloc (pool, sizeof(*rbaton));
+  rbaton->revnum_to_update_to = revnum;
+  rbaton->update_editor = update_editor;
+  rbaton->update_edit_baton = update_baton;
+  rbaton->path_rev_hash = apr_hash_make (pool);
+  rbaton->fs = fs;
+  rbaton->base_path = fs_base;
+  rbaton->pool = pool;
+  
+  /* Hand reporter back to client. */
+  *report_baton = rbaton;
+  return SVN_NO_ERROR;
+}
 
 
+
 /* ----------------------------------------------------------------
  * local variables:
  * eval: (load-file "../svn-dev.el")
  * end: */
-
-
-
-
-

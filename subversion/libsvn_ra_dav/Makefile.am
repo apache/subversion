@@ -4,7 +4,7 @@
 lib_LTLIBRARIES = libsvn_ra_dav.la
 
 libsvn_ra_dav_la_SOURCES = session.c fetch.c commit.c ra_dav.h props.c \
-			   options.c merge.c
+			   options.c merge.c util.c
 
 ### this is a hack, but we can't pass libneon.la (et al) to libtool when
 ### shared libs are being built. libtool barfs on us. we need to upgrade
@@ -12,7 +12,8 @@ libsvn_ra_dav_la_SOURCES = session.c fetch.c commit.c ra_dav.h props.c \
 libsvn_ra_dav_la_LIBADD = \
 	-L$(top_builddir)/neon/src/.libs -lneon
 
-INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_NEON_INCLUDES@
+INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_NEON_INCLUDES@ \
+           @SVN_EXPAT_INCLUDES@
 
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent

@@ -108,12 +108,8 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
 
       /* Drive the reporter structure, describing the revisions within
          PATH.  When we call reporter->finish_report, the
-         update_editor will be driven by svn_fs_dir_delta. */
+         update_editor will be driven by svn_repos_dir_delta. */
       SVN_ERR (svn_wc_crawl_revisions (path, reporter, report_baton, pool));
-
-      /* svn_fs_dir_delta doesn't call close_edit(), though, so we
-         must do it here.  */
-      SVN_ERR (update_editor->close_edit (update_edit_baton));
 
       /* Close the RA session. */
       SVN_ERR (ra_lib->close (session));
