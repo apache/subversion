@@ -183,7 +183,7 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
     for filename in filenames:
       path = os.path.join(files_dir, filename)
       if cmd == 'import':
-        tmp_params = parameters + [path, os.path.join(repos_url, filename)]
+        tmp_params = parameters + [path, repos_url + '/' + filename]
       else:
         tmp_params = parameters + [path]
       svntest.main.run_svn(None, *tmp_params)

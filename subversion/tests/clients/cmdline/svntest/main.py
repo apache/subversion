@@ -224,6 +224,7 @@ def run_command(command, error_expected, binary_mode=0, *varargs):
 
   if (not error_expected) and (stderr_lines):
     map(sys.stdout.write, stderr_lines)
+    raise Failure
 
   return stdout_lines, stderr_lines
 
