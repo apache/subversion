@@ -1334,9 +1334,12 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
 
   /* assert: collection resource. isdir == TRUE. repos_path != NULL. */
 
-  /* append "/" to the paths, in preparation for appending child names */
-  svn_string_appendcstr(ctx->info.uri_path, "/");
-  svn_string_appendcstr(ctx->repos_path, "/");
+  /* append "/" to the paths, in preparation for appending child names.
+     don't add "/" if the paths are simply "/" */
+  if (ctx->info.uri_path->data[ctx->info.uri_path->len - 1] != '/')
+    svn_string_appendcstr(ctx->info.uri_path, "/");
+  if (ctx->repos_path->data[ctx->repos_path->len - 1] != '/')
+    svn_string_appendcstr(ctx->repos_path, "/");
 
   /* NOTE: the URI should already have a trailing "/" */
 
