@@ -306,11 +306,9 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
       apr_hash_index_t *hi;
       apr_pool_t *subpool = svn_pool_create (pool);
 
-      /* We ask for the deleted entries if there is a write lock on the
-         basis that we will eventually need these when we come to write.
-         Getting them now avoids a second file parse.  However if we don't
-         ever write it does use more memory. */
-      SVN_ERR (svn_wc_entries_read (&entries, lock, write_lock, subpool));
+      /* Ask for the deleted entries because most operations request them
+         at some stage, getting them now avoids a second file parse. */
+      SVN_ERR (svn_wc_entries_read (&entries, lock, TRUE, subpool));
 
       /* Use a temporary hash until all children have been opened. */
       if (associated)
