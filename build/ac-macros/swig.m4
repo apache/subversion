@@ -269,7 +269,7 @@ AC_DEFUN(SVN_FIND_SWIG,
       SWIG_RB_COMPILE="$ac_cv_ruby_compile"
 
       AC_CACHE_CHECK([for linking Ruby extensions], [ac_cv_ruby_link],[
-        ac_cv_ruby_link="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(LDSHARED))'`"
+        ac_cv_ruby_link="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(LDSHARED)).sub(/^\w+/, Config::CONFIG.fetch(%q(CC)) + %q( -shrext .) + Config::CONFIG.fetch(%q(DLEXT)))'`"
       ])
       SWIG_RB_LINK="$ac_cv_ruby_link"
 
