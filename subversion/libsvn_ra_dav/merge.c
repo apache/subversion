@@ -37,13 +37,13 @@ static const struct hip_xml_elm merge_elements[] =
   { "DAV:", "checked-in", ELEM_checked_in, 0 },
   { "DAV:", "response", DAV_ELM_response, 0 },
   { "DAV:", "propstat", DAV_ELM_propstat, 0 },
-  { "DAV:", "status", DAV_ELM_status, 0 },
-  { "DAV:", "responsedescription", DAV_ELM_responsedescription, 0 },
+  { "DAV:", "status", DAV_ELM_status, HIP_XML_CDATA },
+  { "DAV:", "responsedescription", DAV_ELM_responsedescription, HIP_XML_CDATA },
   { "DAV:", "prop", DAV_ELM_prop, 0 },
   { "DAV:", "resourcetype", ELEM_resourcetype, 0 },
   { "DAV:", "collection", ELEM_collection, 0 },
   { "DAV:", "baseline", ELEM_baseline, 0 },
-  { "DAV:", "version-name", ELEM_version_name, 0 },
+  { "DAV:", "version-name", ELEM_version_name, HIP_XML_CDATA },
 
   { NULL }
 };
@@ -158,6 +158,9 @@ static svn_error_t * handle_resource(merge_ctx_t *mc)
                                "(%d) for the DAV:response element within the "
                                "MERGE response", mc->response_parent);
     }
+#if 0
+  /* ### right now, the server isn't sending everything for all resources.
+     ### just skip this requirement. */
   if (mc->href->len == 0
       || mc->vsn_name->len == 0
       || mc->vsn_url->len == 0
@@ -171,6 +174,7 @@ static svn_error_t * handle_resource(merge_ctx_t *mc)
                                "properties that we asked for (and need to "
                                "complete the commit.", mc->href->data);
     }
+#endif
 
   if (mc->rtype == RTYPE_BASELINE)
     {
@@ -248,7 +252,7 @@ static int validate_element(hip_xml_elmid parent, hip_xml_elmid child)
     {
     case HIP_ELM_root:
       if (child == ELEM_merge_response)
-        return HIP_XML_DECLINE; /* valid, but we don't need to see it */
+        return HIP_XML_VALID;
       else
         return HIP_XML_INVALID;
 
@@ -274,7 +278,6 @@ static int validate_element(hip_xml_elmid parent, hip_xml_elmid child)
         return HIP_XML_DECLINE; /* ignore if something else was in there */
 
     case DAV_ELM_response:
-      /* ### check these child elements against the RFC */
       if (child == DAV_ELM_href
           || child == DAV_ELM_status
           || child == DAV_ELM_propstat)
@@ -444,6 +447,13 @@ static int end_element(void *userdata, const struct hip_xml_elm *elm,
                 mc->response_has_error = TRUE;
               }
           }
+        if (mc->response_has_error && mc->err == NULL)
+          {
+            /* ### fix this error value */
+            mc->err = svn_error_create(APR_EGENERAL, 0, NULL, mc->pool,
+                                       "The MERGE property response had an "
+                                       "error status.");
+          }
       }
       break;
 
@@ -533,6 +543,10 @@ svn_error_t * svn_ra_dav__merge_activity(
   mc.base_href = repos_url;
   mc.base_len = strlen(repos_url);
   mc.rev = SVN_INVALID_REVNUM;
+
+  mc.set_prop = set_prop;
+  mc.close_commit = close_commit;
+  mc.close_baton = close_baton;
 
   /* ### it would be nice to create these with N bytes of storage, and
      ### avoid copying anything into them. */
