@@ -1332,7 +1332,7 @@ rep_read_contents (void *baton,
               if (! rb->src_state)
                 return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                                          _("svndiff data requested "
-                                           "non-existant source."));
+                                           "non-existent source."));
               rs = rb->src_state;
               sbuf = apr_pcalloc (rb->pool, window->sview_len);
               if (! ((rs->start + window->sview_offset) < rs->end))
