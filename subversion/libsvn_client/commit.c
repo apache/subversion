@@ -179,7 +179,6 @@ import_dir (const svn_delta_editor_t *editor,
   apr_pool_t *subpool = svn_pool_create (pool);  /* iteration pool */
   apr_hash_t *dirents;
   apr_hash_index_t *hi;
-  apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
   apr_array_header_t *ignores;
 
   SVN_ERR (svn_wc_get_default_ignores (&ignores, ctx->config, pool));
@@ -521,7 +520,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
   const char *log_msg = "";
   const svn_delta_editor_t *editor;
   void *edit_baton;
@@ -529,6 +528,13 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   svn_ra_plugin_t *ra_lib;
   apr_hash_t *excludes = apr_hash_make (pool);
   const char *new_entry = NULL;
+  svn_node_kind_t kind;
+  const char *base_dir = path;
+  apr_array_header_t *dirs = NULL;
+  const char *temp;
+  const char *dir;
+  apr_pool_t *subpool;
+
 
   /* Create a new commit item and add it to the array. */
   if (ctx->log_msg_func)
@@ -559,74 +565,62 @@ svn_client_import (svn_client_commit_info_t **commit_info,
         }
     }
 
-  /* We're importing to an RA layer. */
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  if (kind == svn_node_file)
+    svn_path_split (path, &base_dir, NULL, pool);
+
+  subpool = svn_pool_create (pool);
+  do
     {
-      svn_node_kind_t kind;
-      const char *base_dir = path;
-      apr_array_header_t *dirs = NULL;
-      const char *temp;
-      const char *dir;
-      apr_pool_t *subpool;
+      svn_pool_clear (subpool);
 
-      SVN_ERR (svn_io_check_path (path, &kind, pool));
-      if (kind == svn_node_file)
-        svn_path_split (path, &base_dir, NULL, pool);
+      /* See if the user is interested in cancelling this operation. */
+      if (ctx->cancel_func)
+        SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
 
-      err = NULL;
-      subpool = svn_pool_create (pool);
-
-      do
+      if (err)
         {
-          svn_pool_clear (subpool);
-
-          /* See if the user is interested in cancelling this operation. */
-          if (ctx->cancel_func)
-            SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
-
-          if (err)
-            {
-              /* If get_ra_editor below failed we either tried to open
-                 an invalid url, or else some other kind of error.  In case
-                 the url was bad we back up a directory and try again. */
-
-              if (err->apr_err != SVN_ERR_FS_NO_SUCH_ENTRY)
-                return err;
-              else
-                svn_error_clear (err);
-
-              if (! dirs)
-                dirs = apr_array_make (pool, 1, sizeof (const char *));
-
-              svn_path_split (url, &temp, &dir, pool);
-              *((const char **)apr_array_push (dirs)) = dir;
-              url = temp;
-            }
+          /* If get_ra_editor below failed we either tried to open
+             an invalid url, or else some other kind of error.  In case
+             the url was bad we back up a directory and try again. */
+          
+          if (err->apr_err != SVN_ERR_FS_NO_SUCH_ENTRY)
+            return err;
+          else
+            svn_error_clear (err);
+          
+          if (! dirs)
+            dirs = apr_array_make (pool, 1, sizeof (const char *));
+          
+          svn_path_split (url, &temp, &dir, pool);
+          *((const char **)apr_array_push (dirs)) = dir;
+          url = temp;
         }
-      while ((err = get_ra_editor (&ra_baton, &session, &ra_lib, NULL,
-                                   &editor, &edit_baton, ctx, url, base_dir,
-                                   NULL, log_msg, NULL, commit_info,
-                                   FALSE, subpool)));
-
-      /* If there were some intermediate directories that needed to be
-         created, we'll tack those */
-      if (dirs && dirs->nelts)
-        {
-          const char **child;
-          new_entry = *((const char **)apr_array_pop (dirs));
-          while ((child = (const char **)apr_array_pop (dirs)))
-            {
-              new_entry = svn_path_join (new_entry, *child, pool);
-            }
-        }
-
-      /* NEW_ENTRY == NULL means the first call to get_ra_editor()
-         above succeeded.  That means that URL corresponds to an
-         already existing filesystem entity. */
-      if (kind == svn_node_file && (! new_entry))
-        return svn_error_createf
-          (SVN_ERR_ENTRY_EXISTS, NULL,
-           "Path '%s' already exists", url);
     }
+  while ((err = get_ra_editor (&ra_baton, &session, &ra_lib, NULL,
+                               &editor, &edit_baton, ctx, url, base_dir,
+                               NULL, log_msg, NULL, commit_info,
+                               FALSE, subpool)));
+
+  /* If there were some intermediate directories that needed to be
+     created, we'll tack those */
+  if (dirs && dirs->nelts)
+    {
+      const char **child;
+      new_entry = *((const char **)apr_array_pop (dirs));
+      while ((child = (const char **)apr_array_pop (dirs)))
+        {
+          new_entry = svn_path_join (new_entry, *child, pool);
+        }
+    }
+  
+  /* NEW_ENTRY == NULL means the first call to get_ra_editor()
+     above succeeded.  That means that URL corresponds to an
+     already existing filesystem entity. */
+  if (kind == svn_node_file && (! new_entry))
+    return svn_error_createf
+      (SVN_ERR_ENTRY_EXISTS, NULL,
+       "Path '%s' already exists", url);
 
   /* The repository doesn't know about the reserved. */
   if (new_entry && (strcmp (new_entry, SVN_WC_ADM_DIR_NAME) == 0))
