@@ -56,6 +56,9 @@ my $opt_svn_password;
 # Verbosity level.
 my $opt_verbose;
 
+# Path to already checked-out working copy.
+my $opt_existing_wc_dir;
+
 # This is the character used to separate regular expressions occuring
 # in the tag directory path from the path itself.
 my $REGEX_SEP_CHAR = '@';
@@ -70,7 +73,8 @@ GetOptions('no_user_input'           => \$opt_no_user_input,
            'svn_password=s'          => \$opt_svn_password,
            'svn_username=s'          => \$opt_svn_username,
            'tag_location=s'          => \$opt_import_tag_location,
-           'verbose+'                => \$opt_verbose)
+           'verbose+'                => \$opt_verbose,
+           'wc=s'                    => \$opt_existing_wc_dir)
   or &usage;
 &usage("$0: too few arguments") if @ARGV < 2;
 
@@ -130,6 +134,21 @@ if (defined $opt_import_tag_location and $opt_import_tag_location =~ m|^/|)
   {
     die "$0: repos tagrelative directory path $opt_import_tag_location ",
         "cannot start with /.\n";
+  }
+
+if (defined $opt_existing_wc_dir)
+  {
+    unless (-e $opt_existing_wc_dir)
+      {
+        die "$0: working copy `$opt_existing_wc_dir' does not exist.\n";
+      }
+
+    unless (-d $opt_existing_wc_dir)
+      {
+        die "$0: working copy `$opt_existing_wc_dir' is not a directory.\n";
+      }
+
+    $opt_existing_wc_dir = Cwd::abs_path($opt_existing_wc_dir)
   }
 
 # Convert the string URL into a URI object.
@@ -259,8 +278,11 @@ if (defined $property_config_filename and length $property_config_filename)
     exit 1 unless $ok;
   }
 
-# Check that the svn base URL works by running svn log on it.
-read_from_process($svn, 'log', @svn_use_repos_cmd_opts, $repos_base_uri);
+# Check that the svn base URL works by running svn log on it.  Only
+# get the HEAD revision log message; there's no need to waste
+# bandwidth seeing all of the log messages.
+read_from_process($svn, 'log', '-r', 'HEAD',
+                  @svn_use_repos_cmd_opts, $repos_base_uri);
 
 my $orig_cwd = cwd;
 
@@ -284,7 +306,8 @@ my $repos_base_path_segment;
       $repos_root_uri_path = shift @path_segments;
       push(@r_path_segments, $repos_root_uri_path);
       $r->path_segments(@r_path_segments);
-      if (safe_read_from_pipe($svn, 'log', @svn_use_repos_cmd_opts, $r) == 0)
+      if (safe_read_from_pipe($svn, 'log', '-r', 'HEAD',
+                              @svn_use_repos_cmd_opts, $r) == 0)
         {
           $repos_root_uri = $r;
           last;
@@ -329,27 +352,46 @@ $SIG{PIPE} = \&catch_signal;
 # measures that do not clean up the .svn directories.
 my $temp_dir_cleanup = Temp::Delete->new;
 
-chdir($temp_dir)
-  or die "$0: cannot chdir `$temp_dir': $!\n";
-
 # Determine the native end of line style for this system.  Do this the
 # most portable way, by writing a file with a single \n in non-binary
 # mode and then reading the file in binary mode.
 my $native_eol = &determine_native_eol;
 
-# Now check out the svn repository starting at the svn URL into a
-# fixed directory name.
-my $checkout_dir_name = 'ZZZ';
-print "Checking out $repos_base_uri into $temp_dir/$checkout_dir_name\n";
-read_from_process($svn, 'checkout',
-                  @svn_use_repos_cmd_opts,
-                  $repos_base_uri, $checkout_dir_name);
+# Either checkout a new working copy from the repository or use an
+# existing working copy.
+if (defined $opt_existing_wc_dir)
+  {
+    # Update an already existing working copy.
+    print "Not checking out anything; using existing working directory at\n";
+    print "$opt_existing_wc_dir\n";
 
-# Change into the top level directory of the repository and record the
-# absolute path to this location because the script will come back
-# here.
-chdir($checkout_dir_name)
-  or die "$0: cannot chdir `$checkout_dir_name': $!\n";
+    chdir($opt_existing_wc_dir)
+      or die "$0: cannot chdir `$opt_existing_wc_dir': $!\n";
+
+    read_from_process($svn, 'update', @svn_use_repos_cmd_opts);
+  }
+else
+  {
+    # Check out the svn repository starting at the svn URL into a
+    # fixed directory name.
+    my $checkout_dir_name = 'my_working_copy';
+
+    print "Checking out $repos_base_uri into $temp_dir/$checkout_dir_name\n";
+
+    chdir($temp_dir)
+      or die "$0: cannot chdir `$temp_dir': $!\n";
+
+    read_from_process($svn, 'checkout',
+                      @svn_use_repos_cmd_opts,
+                      $repos_base_uri, $checkout_dir_name);
+
+    chdir($checkout_dir_name)
+      or die "$0: cannot chdir `$checkout_dir_name': $!\n";
+  }
+
+# At this point, the current working directory is the top level
+# directory of the working copy.  Record the absolute path to this
+# location because the script will chdir back here later on.
 my $wc_top_dir_cwd = cwd;
 
 # Check if all the directories exist to load the directories into the
@@ -1144,7 +1186,9 @@ sub usage
       "  -svn_username  username to perform commits as\n",
       "  -svn_password  password to supply to svn commit\n",
       "  -t tag_dir     create a tag copy in tag_dir, relative to svn_url\n",
-      "  -v             increase program verbosity\n";
+      "  -v             increase program verbosity, multiple -v's allowed\n",
+      "  -wc path       use the already checked-out working copy at path\n",
+      "                 instead of checkout out a fresh working copy\n";
 }
 
 # Get the next directory to load, either from the command line or from
