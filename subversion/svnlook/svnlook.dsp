@@ -45,7 +45,7 @@ RSC=rc.exe
 # ADD CPP /nologo /MD /W3 /GX /O2 /I "..\include" /I "..\..\apr\include" /I "..\..\expat-lite" /I "..\.." /D "NDEBUG" /D "APR_DECLARE_STATIC" /D "WIN32" /D "_WINDOWS_CONSOLE" /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x424 /d "NDEBUG"
-# ADD RSC /l 0x424 /d "NDEBUG"
+# ADD RSC /l 0x424 /d "NDEBUG" /d SVN_FILE_NAME="\"svnlook.exe\"" /d SVN_FILE_DESCRIPTION="\"Subversion Repository Browser\""
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
@@ -70,7 +70,7 @@ LINK32=link.exe
 # ADD CPP /nologo /MDd /W3 /GX /ZI /Od /I "..\include" /I "..\..\apr\include" /I "..\..\expat-lite" /I "..\.." /D "SVN_DEBUG" /D "_DEBUG" /D "APR_DECLARE_STATIC" /D "WIN32" /D "_WINDOWS_CONSOLE" /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x424 /d "_DEBUG"
-# ADD RSC /l 0x424 /d "_DEBUG"
+# ADD RSC /l 0x424 /d "_DEBUG" /d SVN_FILE_NAME="\"svnlook.exe\"" /d SVN_FILE_DESCRIPTION="\"Subversion Repository Browser\""
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
@@ -91,6 +91,10 @@ LINK32=link.exe
 # Begin Source File
 
 SOURCE=.\main.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\clients\win32\svn.rc
 # End Source File
 # End Group
 # Begin Group "Header Files"
