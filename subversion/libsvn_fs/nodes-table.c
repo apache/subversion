@@ -576,6 +576,25 @@ svn_fs__new_successor_id (svn_fs_id_t **successor_p,
 
 
 
+/* Removing node revisions.  */
+svn_error_t *
+svn_fs__delete_node_revision (svn_fs_t *fs,
+                              const svn_fs_id_t *id,
+                              trail_t *trail)
+{
+  DBT key;
+  
+  SVN_ERR (DB_WRAP (fs, "deleting entry from `nodes' table",
+                    fs->nodes->del (fs->nodes,
+                                    trail->db_txn,
+                                    svn_fs__id_to_dbt (&key, id, trail->pool),
+                                    0)));
+  
+  return SVN_NO_ERROR;
+}
+
+
+
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")

@@ -61,6 +61,21 @@ svn_error_t *svn_fs__new_node_id (svn_fs_id_t **id_p,
                                   trail_t *trail);
 
 
+/* Delete node revision ID from FS's `nodes' table, as part of TRAIL.
+   WARNING: This does not check that the node revision is mutable!
+   Callers should do that check themselves.
+
+   todo: Jim and Karl are both not sure whether it would be better for
+   this to check mutability or not.  On the one hand, having the
+   lowest level do that check would seem intuitively good.  On the
+   other hand, we'll need a way to delete even immutable nodes someday
+   -- for example, someone accidentally commits NDA-protected data to
+   a public repository and wants to remove it.  Thoughts?  */
+svn_error_t *svn_fs__delete_node_revision (svn_fs_t *fs,
+                                           const svn_fs_id_t *id,
+                                           trail_t *trail);
+
+
 /* Set *SUCCESSOR_P to the ID of an immediate successor to node
    revision ID in FS that does not exist yet, as part of TRAIL.
    Allocate *SUCCESSOR_P in TRAIL->pool.
