@@ -319,26 +319,23 @@ svn_error_t *svn_wc__entry_set (svn_string_t *path,
                                 ...);
 
 
-/* For a given ENTRYNAME in PATH's entries file, get its
-   version into *VERSION, and get other XML attributes via varargs:
-   key, *value, key, *value, etc. -- where names are char *'s and
-   values are svn_string_t **'s.  
-   
-   Caller should terminate the vararg list with NULL.  
+/* For a given ENTRYNAME in PATH's entries file:
+          get its version into *VERSION,
+          get its file/dir kind into *KIND,
+          and return all other xml attributes in **HASH.
 */
 svn_error_t *svn_wc__entry_get (svn_string_t *path,
                                 apr_pool_t *pool,
-                                const char *entryname, /* Ben, svn_string_t? */
+                                svn_string_t *entryname, 
                                 svn_vernum_t *version,
-                                /* int *kind, */
-                                ...);  /* Ben, hash here? */
+                                int *kind,
+                                apr_hash_t **hash);
 
 
 /* Remove ENTRYNAME from PATH's `entries' file. */
 svn_error_t *svn_wc__entry_remove (svn_string_t *path,
                                    apr_pool_t *pool,
-                                   /* Ben, svn_string_t below? */
-                                   const char *entryname);
+                                   svn_string_t *entryname);
 
 
 #if 0  /* Ben, have at it. */
@@ -355,12 +352,15 @@ svn_error_t *svn_wc__entries_start (struct svn_wc__entries_index **idx,
                                     apr_pool_t *pool);
 
 
-/* Loop over the entries file, returning the name of each entry. 
-   When there are no more entries, *ENTRYNAME will be set to null. */
+/* Loop over the entries file, returning the name of each entry, as
+   well as all the other information normally returned by
+   svn_wc__entry_get().  When there are no more entries, *ENTRYNAME
+   will be set to null. */
 svn_error_t *svn_wc__entries_next (struct svn_wc__entries_index *idx,
                                    svn_string_t **entryname,
                                    svn_vernum_t *version,
-                                   int kind);
+                                   int *kind,
+                                   apr_hash_t **hash)
 #endif /* 0 */
 
 
