@@ -94,9 +94,9 @@ svn_wc_set_revision (void *baton,
                      svn_string_t *target,
                      svn_revnum_t new_revnum)
 {
+  svn_error_t *err;
   apr_status_t apr_err;
   svn_string_t *log_parent, *logtag, *basename;
-  enum svn_node_kind kind;
   apr_file_t *log_fp = NULL;
   struct svn_wc_close_commit_baton *bumper =
     (struct svn_wc_close_commit_baton *) baton;
@@ -108,36 +108,25 @@ svn_wc_set_revision (void *baton,
   svn_path_add_component (path, target, svn_path_local_style);
 
   /* Write a log file in the adm dir of path. */
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
 
-  switch (kind)
+  /* (First, try to write a logfile directly in PATH.) */
+  log_parent = path;
+  basename = svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
+  err = svn_wc__open_adm_file (&log_fp, log_parent, SVN_WC__ADM_LOG,
+                               (APR_WRITE | APR_APPEND | APR_CREATE),
+                               pool);
+  if (err)
     {
-    case svn_node_file:
-      {
-        svn_path_split (path, &log_parent, &basename,
-                        svn_path_local_style, pool);
-        break;
-      }
-      
-    case svn_node_dir:
-      {
-        log_parent = path;
-        basename = svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
-        break;
-      }
-      
-    default:  /* probably svn_node_none */
-      {
-        return 
-          svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
-                             "can't construct logfile for %s", path->data);
-      }
+      /* (Ah, PATH must be a file.  So create a logfile in its
+         parent instead.) */      
+      svn_path_split (path, &log_parent, &basename,
+                      svn_path_local_style, pool);
+      SVN_ERR (svn_wc__open_adm_file (&log_fp, log_parent, SVN_WC__ADM_LOG,
+                                      (APR_WRITE|APR_APPEND|APR_CREATE),
+                                      pool));
     }
-
-  SVN_ERR (svn_wc__open_adm_file (&log_fp, log_parent, SVN_WC__ADM_LOG,
-                                  (APR_WRITE | APR_APPEND | APR_CREATE),
-                                  pool));
-      
+  
+  logtag = svn_string_create ("", pool);
   svn_xml_make_open_tag (&logtag, pool, svn_xml_self_closing,
                          SVN_WC__LOG_COMMITTED,
                          SVN_WC__LOG_ATTR_NAME, basename,
@@ -145,7 +134,6 @@ svn_wc_set_revision (void *baton,
                          svn_string_create (revstr, pool),
                          NULL);
       
-
   apr_err = apr_file_write_full (log_fp, logtag->data, logtag->len, NULL);
   if (apr_err)
     {

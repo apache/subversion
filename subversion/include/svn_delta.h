@@ -25,6 +25,7 @@ extern "C" {
 
 #include <apr_pools.h>
 #include <apr_file_io.h>
+#include <apr_tables.h>
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -547,6 +548,7 @@ typedef struct svn_delta_edit_fns_t
 svn_delta_edit_fns_t *svn_delta_default_editor (apr_pool_t *pool);
 
 
+
 /* Compose EDITOR_1 and its baton with EDITOR_2 and its baton.
  *
  * Returns a new editor in E which each function FUN calls
@@ -604,6 +606,17 @@ svn_delta_get_xml_editor (svn_stream_t *output,
                           const svn_delta_edit_fns_t **editor,
                           void **edit_baton,
                           apr_pool_t *pool);
+
+
+
+/* Return an *EDITOR (and *EDIT_BATON) which notices paths that are
+   committed.  Each commited path is pushed onto ARRAY, allocated from
+   POOL.  ARRAY must be initialized to store (svn_string_t *) objects.  */
+svn_error_t *
+svn_delta_get_commit_track_editor (svn_delta_edit_fns_t **editor,
+                                   void **edit_baton,
+                                   apr_pool_t *pool,
+                                   apr_array_header_t *array);
 
 
 

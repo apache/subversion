@@ -13,13 +13,19 @@
  */
 
 #include "ra_local.h"
-
+#include "svn_ra.h"
 
 
 /*----------------------------------------------------------------*/
 
-/** The commit cleanup routine passed as a "hook" to the filesystem
-    editor **/
+/** Callbacks **/
+
+/* This routine is originally passed as a "hook" to the filesystem
+   commit editor.  When we get here, the track-editor has already
+   stored committed targets inside the baton.
+   
+   Loop over all committed target paths within BATON, calling the
+   clients' close_func() with NEW_REV. */
 
 /* (This is a routine of type svn_fs_commit_hook_t) */
 static svn_error_t *
@@ -196,23 +202,23 @@ get_commit_editor (void *session_baton,
   closer->target_array = apr_array_make (sess_baton->pool, 1,
                                          sizeof(svn_string_t *));
                                          
-
   /* Get the filesystem commit-editor */     
   SVN_ERR (svn_fs_get_editor (&commit_editor, &commit_editor_baton,
                               sess_baton->fs, 
                               base_revision, base_path,
                               log_msg,
-                              cleanup_commit, closer,
+                              cleanup_commit, closer, /* fs will call
+                                                         this when done.*/
                               sess_baton->pool));
 
   /* Get the commit `tracking' editor, telling it to store committed
      targets inside our `closer' object. */
-  SVN_ERR (svn_ra_local__get_commit_track_editor (&tracking_editor,
-                                                  &tracking_editor_baton,
-                                                  sess_baton->pool,
-                                                  closer));
+  SVN_ERR (svn_delta_get_commit_track_editor (&tracking_editor,
+                                              &tracking_editor_baton,
+                                              sess_baton->pool,
+                                              closer->target_array));
 
-  /* Set up a pipeline between the editors, creating a wrapper editor. */
+  /* Set up a pipeline between the editors, creating a composed editor. */
   svn_delta_compose_editors (&composed_editor, &composed_editor_baton,
                              commit_editor, commit_editor_baton,
                              tracking_editor, tracking_editor_baton,
