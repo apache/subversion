@@ -311,7 +311,7 @@ svn_error_t *svn_fs__fs_write_revision_zero (svn_fs_t *fs);
 #define SVN_FS_FS__FILE              "file"   /* node-rev kind for file */
 #define SVN_FS_FS__DIR               "dir"    /* node-rev kind for directory */
 
-#define SVN_FS_FS__SOFT              "soft"
-#define SVN_FS_FS__HARD              "hard"
+#define SVN_FS_FS__PLAIN             "PLAIN"
+#define SVN_FS_FS__DELTA             "DELTA"
 
 #endif
