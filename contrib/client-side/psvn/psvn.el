@@ -63,6 +63,8 @@
 ;; * ?   - svn-status-mark-unknown
 ;; * A   - svn-status-mark-added
 ;; * M   - svn-status-mark-modified
+;; * D   - svn-status-mark-deleted
+;; * *   - svn-status-mark-changed
 ;; .     - svn-status-goto-root-or-return
 ;; f     - svn-status-find-file
 ;; o     - svn-status-find-file-other-window
@@ -348,8 +350,9 @@ If ARG then pass the -u argument to `svn status'."
          (dir (read-from-minibuffer "svn-status on directory: "
                               (cadr svn-status-directory-history)
                               nil nil 'hist)))
-    (when (file-directory-p dir)
-      (svn-status dir))))
+    (if (file-directory-p dir)
+        (svn-status dir)
+      (error "%s is not a directory" dir))))
 
 (defun svn-run-svn (run-asynchron clear-process-buffer cmdtype &rest arglist)
   "Run svn with arguments ARGLIST.
@@ -410,7 +413,7 @@ for  example: '(\"revert\" \"file1\"\)"
            (cond ((eq svn-process-cmd 'status)
                   ;;(message "svn status finished")
                   (if (eq system-type 'windows-nt)
-                      ;; convert path separator as UNIX style
+                      ;; convert path separator to UNIX style
                       (save-excursion
                         (goto-char (point-min))
                         (while (search-forward "\\" nil t)
@@ -649,6 +652,7 @@ A and B must be line-info's."
   (suppress-keymap svn-status-mode-map)
   ;; Don't use (kbd "<return>"); it's unreachable with GNU Emacs 21.3 on a TTY.
   (define-key svn-status-mode-map (kbd "RET") 'svn-status-find-file-or-examine-directory)
+  (define-key svn-status-mode-map (kbd "<mouse-2>") 'svn-status-mouse-find-file-or-examine-directory)
   (define-key svn-status-mode-map (kbd "^") 'svn-status-examine-parent)
   (define-key svn-status-mode-map (kbd "s") 'svn-status-show-process-buffer)
   (define-key svn-status-mode-map (kbd "f") 'svn-status-find-files)
@@ -716,6 +720,8 @@ A and B must be line-info's."
   (define-key svn-status-mode-mark-map (kbd "?") 'svn-status-mark-unknown)
   (define-key svn-status-mode-mark-map (kbd "A") 'svn-status-mark-added)
   (define-key svn-status-mode-mark-map (kbd "M") 'svn-status-mark-modified)
+  (define-key svn-status-mode-mark-map (kbd "D") 'svn-status-mark-deleted)
+  (define-key svn-status-mode-mark-map (kbd "*") 'svn-status-mark-changed)
   (define-key svn-status-mode-mark-map (kbd "V") 'svn-status-resolved)
   (define-key svn-status-mode-mark-map (kbd "u") 'svn-status-show-svn-diff-for-marked-files))
 (when (not svn-status-mode-property-map)
@@ -792,13 +798,16 @@ A and B must be line-info's."
     "---"
     ["Edit Next SVN Cmd Line" svn-status-toggle-edit-cmd-flag t]
     ["Work Directory History..." svn-status-use-history t]
-    ["Mark" svn-status-set-user-mark t]
-    ["Unmark" svn-status-unset-user-mark t]
     ("Mark / Unmark"
+     ["Mark" svn-status-set-user-mark t]
+     ["Unmark" svn-status-unset-user-mark t]
      ["Unmark all" svn-status-unset-all-usermarks t]
+     "---"
      ["Mark/Unmark unknown" svn-status-mark-unknown t]
      ["Mark/Unmark added" svn-status-mark-added t]
      ["Mark/Unmark modified" svn-status-mark-modified t]
+     ["Mark/Unmark deleted" svn-status-mark-deleted t]
+     ["Mark/Unmark modified/added/deleted" svn-status-mark-changed t]
      )
     ["Hide Unknown" svn-status-toggle-hide-unknown
      :style toggle :selected svn-status-hide-unknown]
@@ -865,15 +874,21 @@ At the moment the following commands are implemented:
   (force-mode-line-update))
 
 (defun svn-status-bury-buffer (arg)
-  "Bury the *svn-status* buffer.
-When called with a prefix argument, switch back to the window configuration that was
+  "Bury the buffers used by psvn.el
+Currently this is:
+  *svn-status*
+  *svn-log-edit*
+  *svn-property-edit*
+  *svn-log*
+  *svn-process*
+When called with a prefix argument, ARG, switch back to the window configuration that was
 in use before `svn-status' was called."
   (interactive "P")
   (cond (arg
          (when svn-status-initial-window-configuration
            (set-window-configuration svn-status-initial-window-configuration)))
         (t
-         (let ((bl '("*svn-log-edit*" "*svn-property-edit*" "*svn-process*")))
+         (let ((bl '("*svn-log-edit*" "*svn-property-edit*" "*svn-log*" "*svn-process*")))
            (while bl
              (when (get-buffer (car bl))
                (bury-buffer (car bl)))
@@ -917,6 +932,13 @@ Otherwise run `find-file'."
   "Run `svn-status' on the parent of the current directory."
   (interactive)
   (svn-status (expand-file-name "../")))
+
+(defun svn-status-mouse-find-file-or-examine-directory (event)
+  "Move point to where EVENT occurred, and do `svn-status-find-file-or-examine-directory'
+EVENT could be \"mouse clicked\" or similar."
+  (interactive "e")
+  (mouse-set-point event)
+  (svn-status-find-file-or-examine-directory))
 
 (defun svn-status-line-info->ui-status (line-info) (nth 0 line-info))
 
@@ -1451,21 +1473,49 @@ used in the check."
 These are the files marked with '?' in the *svn-status* buffer.
 If the function is called with a prefix arg, unmark all these files."
   (interactive "P")
-  (svn-status-apply-usermark-checked '(lambda (info) (eq (svn-status-line-info->filemark info) ??)) (not arg)))
+  (svn-status-apply-usermark-checked
+   '(lambda (info) (eq (svn-status-line-info->filemark info) ??)) (not arg)))
 
 (defun svn-status-mark-added (arg)
   "Mark all added files.
 These are the files marked with 'A' in the *svn-status* buffer.
-If the function is called with a prefix arg, unmark all these files."
+If the function is called with a prefix ARG, unmark all these files."
   (interactive "P")
-  (svn-status-apply-usermark-checked '(lambda (info) (eq (svn-status-line-info->filemark info) ?A)) (not arg)))
+  (svn-status-apply-usermark-checked
+   '(lambda (info) (eq (svn-status-line-info->filemark info) ?A)) (not arg)))
 
 (defun svn-status-mark-modified (arg)
   "Mark all modified files.
 These are the files marked with 'M' in the *svn-status* buffer.
-If the function is called with a prefix arg, unmark all these files."
+If the function is called with a prefix ARG, unmark all these files."
   (interactive "P")
-  (svn-status-apply-usermark-checked '(lambda (info) (eq (svn-status-line-info->filemark info) ?M)) (not arg)))
+  (svn-status-apply-usermark-checked
+   '(lambda (info) (or (eq (svn-status-line-info->filemark info) ?M)
+                       (eq (svn-status-line-info->filemark info)
+                           svn-status-file-modified-after-save-flag)))
+   (not arg)))
+
+(defun svn-status-mark-deleted (arg)
+  "Mark all files scheduled for deletion.
+These are the files marked with 'D' in the *svn-status* buffer.
+If the function is called with a prefix ARG, unmark all these files."
+  (interactive "P")
+  (svn-status-apply-usermark-checked
+   '(lambda (info) (eq (svn-status-line-info->filemark info) ?D)) (not arg)))
+
+(defun svn-status-mark-changed (arg)
+  "Mark all files that could be committed.
+This means we mark
+* all modified files
+* all files scheduled for addition
+* all files scheduled for deletion
+
+The last two categories include all copied and moved files.
+If called with a prefix ARG, unmark all such files."
+  (interactive "P")
+  (svn-status-mark-added arg)
+  (svn-status-mark-modified arg)
+  (svn-status-mark-deleted arg))
 
 (defun svn-status-unset-all-usermarks ()
   (interactive)
@@ -1565,11 +1615,12 @@ or (if no files were marked) the file under point."
 
 (defun svn-status-show-svn-log (arg)
   "Run `svn log' on selected files.
-When called with a prefix argument add the following command switches:
- no prefix:              use whatever is in the string `svn-status-default-log-arguments'
- prefix argument of -1:  use no arguments
- prefix argument of 0:   use the -q switch (quiet)
- other prefix arguments: use the -v switch (verbose)
+The output is put into the *svn-log* buffer
+The optional prefix argument ARG determines which switches are passed to `svn log':
+ no prefix               --- use whatever is in the string `svn-status-default-log-arguments'
+ prefix argument of -1   --- use no arguments
+ prefix argument of 0:   --- use the -q switch (quiet)
+ other prefix arguments: --- use the -v switch (verbose)
 
 See `svn-status-marked-files' for what counts as selected."
   (interactive "P")
@@ -1577,7 +1628,6 @@ See `svn-status-marked-files' for what counts as selected."
                       ((eq arg -1) "")
                       (arg        "-v")
                       (t          svn-status-default-log-arguments))))
-    ;;(message "show log info for: %S" (svn-status-marked-files))
     (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
     (if (> (length switch) 0)
         (svn-run-svn t t 'log "log" "--targets" svn-status-temp-arg-file switch)
@@ -1842,8 +1892,8 @@ See `svn-status-marked-files' for what counts as selected."
 ;; --------------------------------------------------------------------------------
 
 (defvar svn-status-file-modified-after-save-flag ?m
-  "The flag, that is shown, in the *svn-status* buffer, after
-a file is changed and saved in emacs.
+  "Flag shown whenever a file is modified and saved in Emacs.
+The flag is shown in the *svn-status* buffer.
 Recommended values are ?m or ?M.")
 (defun svn-status-after-save-hook ()
   "Set a modified indication, when a file is saved from a svn working copy."
