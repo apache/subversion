@@ -97,14 +97,3 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: maxb, sussman, dionisos
 
-  * r13090
-    javahl binding cleanup of usage of path and url.
-    Justification:
-      javahl binding change only to be more stable on input path and url.
-    Notes:
-      does not apply cleanly to 1.1.*. Please use the patch for issue 2232
-      instead.
-    Votes:
-      +1: pmayweg
-      +0: dionisos
-
