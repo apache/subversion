@@ -2647,19 +2647,22 @@ static svn_error_t * reporter_set_path(void *report_baton,
   report_baton_t *rb = report_baton;
   const char *entry;
   svn_stringbuf_t *qpath = NULL;
+  const char *tokenstring = "";
 
-  /* ### sussman TODO: Pass lock token as extra attribute. */
+  if (lock_token)
+    tokenstring = apr_psprintf (pool, "lock-token=\"%s\"", lock_token);
+
   svn_xml_escape_cdata_cstring (&qpath, path, pool);
   if (start_empty)
     entry = apr_psprintf(pool,
-                         "<S:entry rev=\"%ld\""
+                         "<S:entry rev=\"%ld\" %s"
                          " start-empty=\"true\">%s</S:entry>" DEBUG_CR,
-                         revision, qpath->data);
+                         revision, tokenstring, qpath->data);
   else
     entry = apr_psprintf(pool,
-                         "<S:entry rev=\"%ld\">"
+                         "<S:entry rev=\"%ld\" %s>"
                          "%s</S:entry>" DEBUG_CR,
-                         revision, qpath->data);
+                         revision, tokenstring, qpath->data);
 
   return svn_io_file_write_full(rb->tmpfile, entry, strlen(entry), NULL, pool);
 }
@@ -2677,6 +2680,10 @@ static svn_error_t * reporter_link_path(void *report_baton,
   const char *entry;
   svn_stringbuf_t *qpath = NULL, *qlinkpath = NULL;
   svn_string_t bc_relative;
+  const char *tokenstring = "";
+
+  if (lock_token)
+    tokenstring = apr_psprintf (pool, "lock-token=\"%s\"", lock_token);
 
   /* Convert the copyfrom_* url/rev "public" pair into a Baseline
      Collection (BC) URL that represents the revision -- and a
@@ -2692,15 +2699,15 @@ static svn_error_t * reporter_link_path(void *report_baton,
   /* ### sussman TODO: Pass lock token as extra attribute. */
   if (start_empty)
     entry = apr_psprintf(pool,
-                         "<S:entry rev=\"%ld\""
+                         "<S:entry rev=\"%ld\" %s"
                          " linkpath=\"/%s\" start-empty=\"true\""
                          ">%s</S:entry>" DEBUG_CR,
-                         revision, qlinkpath->data, qpath->data);
+                         revision, tokenstring, qlinkpath->data, qpath->data);
   else
     entry = apr_psprintf(pool,
-                         "<S:entry rev=\"%ld\""
+                         "<S:entry rev=\"%ld\" %s"
                          " linkpath=\"/%s\">%s</S:entry>" DEBUG_CR,
-                         revision, qlinkpath->data, qpath->data);
+                         revision, tokenstring,  qlinkpath->data, qpath->data);
 
   return svn_io_file_write_full(rb->tmpfile, entry, strlen(entry), NULL, pool);
 }

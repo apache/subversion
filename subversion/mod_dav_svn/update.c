@@ -1306,6 +1306,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             const char *path;
             svn_revnum_t rev = SVN_INVALID_REVNUM;
             const char *linkpath = NULL;
+            const char *locktoken = NULL;
             svn_boolean_t start_empty = FALSE;
             apr_xml_attr *this_attr = child->attr;
 
@@ -1317,6 +1318,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                   linkpath = this_attr->value;
                 else if (! strcmp(this_attr->name, "start-empty"))
                   start_empty = TRUE;
+                else if (! strcmp(this_attr->name, "lock-token"))
+                  locktoken = this_attr->value;
 
                 this_attr = this_attr->next;
               }
@@ -1338,11 +1341,11 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             path = dav_xml_get_cdata(child, subpool, 1);
             
             if (! linkpath)
-              serr = svn_repos_set_path(rbaton, path, rev,
-                                        start_empty, subpool);
+              serr = svn_repos_set_path2(rbaton, path, rev,
+                                         start_empty, locktoken, subpool);
             else
-              serr = svn_repos_link_path(rbaton, path, linkpath, rev,
-                                         start_empty, subpool);
+              serr = svn_repos_link_path2(rbaton, path, linkpath, rev,
+                                          start_empty, locktoken, subpool);
             if (serr != NULL)
               {
                 derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
