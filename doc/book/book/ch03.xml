@@ -1915,7 +1915,7 @@ Index: rules.txt
 -Freedom = Chocolate Ice Cream
 +Freedom = Responsibility
  Everything in moderation
- Chew with your mouth closed 
+ Chew with your mouth open
 $
 </screen>
           
@@ -1949,7 +1949,7 @@ $ svn cat --revision 2 rules.txt
 Be kind to others
 Freedom = Chocolate Ice Cream
 Everything in moderation
-Chew with your mouth closed
+Chew with your mouth open
 $
 </screen>
 
