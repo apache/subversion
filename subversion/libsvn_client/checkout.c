@@ -34,6 +34,103 @@
 
 
 
+/* Check out the external items described by EXTERNALS into PATH.
+ * Use POOL for any temporary allocation.
+ *
+ * EXTERNALS is a series of lines, such as:
+ *
+ *   localdir1   http://url.for.external.source/etc/
+ *   localdir2   http://another.url/blah/blah/blah
+ *   localdir3   http://and.so.on/and/so/forth
+ *
+ * (I.e., the format for values of the directory property
+ * SVN_PROP_EXTERNALS.)
+ */
+static svn_error_t *
+handle_externals_description (const char *externals,
+                              const char *path,
+                              apr_pool_t *pool)
+{
+  apr_array_header_t *description_lines = NULL;
+  int i;
+
+  svn_cstring_split (&description_lines, externals, "\n\r", TRUE, pool);
+  
+  for (i = 0; i < description_lines->nelts; i++)
+    {
+#if 0      
+      /* ### in progress */
+
+      const char *target_dir;
+      const char *url;
+
+      const char *this_line
+        = APR_ARRAY_IDX (description_lines, i, (const char *));
+#endif /* 0 */
+      
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Walk newly checked-out tree PATH looking for directories that have
+   the "svn:externals" property set.  For each one, read the external
+   items from in the property value, and check them out as subdirs
+   of the directory that had the property.
+
+   Use POOL for temporary allocation.
+   
+   Notes: This is done _after_ the entire initial checkout is complete
+   so that fetching external items (and any errors therefrom) doesn't
+   delay the primary checkout.  */
+static svn_error_t *
+process_externals (svn_stringbuf_t *path, apr_pool_t *pool)
+{
+  const svn_string_t *externals;
+
+  SVN_ERR (svn_wc_get_wc_prop (path->data, SVN_PROP_EXTERNALS,
+                               &externals, pool));
+
+
+  if (externals)
+    {
+      /* handle_externals_description() needs non-const input */
+      svn_stringbuf_t *dup = svn_stringbuf_create (externals->data, pool);
+      SVN_ERR (handle_externals_description (dup->data, path->data, pool));
+    }
+
+  /* Recurse. */
+  {
+    apr_hash_t *entries;
+    apr_hash_index_t *hi;
+    
+    SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));
+    for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
+      {
+        const void *key;
+        apr_ssize_t klen;
+        void *val;
+        svn_wc_entry_t *ent;
+        
+        apr_hash_this (hi, &key, &klen, &val);
+        ent = (svn_wc_entry_t *) val;
+
+        if ((ent->kind == svn_node_dir)
+            && (strcmp (ent->name->data, SVN_WC_ENTRY_THIS_DIR) != 0))
+          {
+            svn_path_add_component (path, ent->name);
+            SVN_ERR (process_externals (path, pool));
+            svn_path_remove_component (path);
+          }
+      }
+  }
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /*** Public Interfaces. ***/
 
 
@@ -163,6 +260,8 @@ svn_client_checkout (const svn_delta_editor_t *before_editor,
       /* Close XML file. */
       apr_file_close (in);
     }
+
+  SVN_ERR (process_externals (path, pool));
 
   return SVN_NO_ERROR;
 }

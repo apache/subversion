@@ -54,14 +54,14 @@ static void add_default_ignores (apr_array_header_t *patterns)
 }
 
 
-/* Helper routine: add to a *PATTERNS list patterns from the value of
+/* Helper routine: add to *PATTERNS patterns from the value of
    the SVN_PROP_IGNORE property set on DIRPATH.  If there is no such
    property, or the property contains no patterns, do nothing.
    Otherwise, add to *PATTERNS a list of (const char *) patterns to
    match. */
 static svn_error_t *
 add_ignore_patterns (const char *dirpath,
-                     apr_array_header_t *patterns,
+                     apr_array_header_t **patterns,
                      apr_pool_t *pool)
 {
   const svn_string_t *value;
@@ -70,21 +70,8 @@ add_ignore_patterns (const char *dirpath,
   SVN_ERR (svn_wc_prop_get (&value, SVN_PROP_IGNORE, dirpath, pool));
 
   if (value != NULL)
-    {
-      static const char sep[3] = "\n\r";
-      char *last;
-      char *pats = apr_pstrdup (pool, value->data);
-      char *p = apr_strtok (pats, sep, &last);
+    svn_cstring_split (patterns, value->data, "\n\r", FALSE, pool);
 
-      while (p)
-        {
-          if (p[0] != '\0')
-            {
-              (*((const char **) apr_array_push (patterns))) = p;
-            }
-          p = apr_strtok (NULL, sep, &last);
-        } 
-    }    
   return SVN_NO_ERROR;
 }                  
 
@@ -316,7 +303,7 @@ add_unversioned_items (svn_stringbuf_t *path,
   /* Try to load any '.svnignore' file that may be present. */
   patterns = apr_array_make (subpool, 1, sizeof(const char *));
   add_default_ignores (patterns);
-  SVN_ERR (add_ignore_patterns (path->data, patterns, subpool));
+  SVN_ERR (add_ignore_patterns (path->data, &patterns, subpool));
 
   /* Add empty status structures for each of the unversioned things. */
   for (hi = apr_hash_first (subpool, dirents); hi; hi = apr_hash_next (hi))
