@@ -9,7 +9,7 @@ this point. -->
       using Subversion. This includes the command line client
       (<command>svn</command>) and all its commands, repository
       administration programs (<command>svnadmin</command> and
-      <command>svnlook</command> and their respective commands,
+      <command>svnlook</command>) and their respective commands,
       repository configuration files, commit hooks, client
       configuration files, and working copy administrative areas.
     </para>
