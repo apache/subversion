@@ -60,7 +60,7 @@ svn_cl__add( int argc, char** argv, apr_pool_t* pool )
   svn_boolean_t force = 0;
   svn_error_t *err = NULL;
 
-  svn_cl__parse_options (argc, argv, ADD_COMMAND,
+  svn_cl__parse_options (argc, argv, svn_cl__add_command,
                  &xml_file, &target, &revision, &ancestor_path, &force,
                  pool);
 

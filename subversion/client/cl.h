@@ -58,31 +58,50 @@
 #include "svn_wc.h"
 #include "svn_string.h"
 
-/* All client command procedures conform to this prototype */
-typedef svn_error_t * (svn_cl__t_cmd_proc) (int argc, char** argv, apr_pool_t*);
 
-/* Structure type for the command dispatch table.
-   tOptions is a place-holder */
-typedef struct {
-  const char          *cmd_name;
-  size_t               name_len;
-  svn_boolean_t        fork_first;
-  svn_cl__t_cmd_proc  *cmd_func;
-} svn_cl__t_cmd_desc;
+
+/*** Command dispatch. ***/
+
+/* All client command procedures conform to this prototype */
+typedef svn_error_t *(svn_cl__cmd_proc_t) (int argc, char **argv, apr_pool_t*);
+
+
+/* One element of the command dispatch table. */
+typedef struct svn_cl__cmd_desc_t
+{
+  /* The name of this command.  Might be a full name, such as
+     "commit", or a short name, such as "ci". */
+  const char *cmd_name;
+
+  /* If cmd_name is a short synonym, such as "ci", then full_name
+     would be what it abbreviates, "commit", else if cmd_name is not an
+     abbreviation, then full_name is NULL.  This allows us to identify
+     groups of `the same' command automatically, and list them all
+     under one canonical name when appropriate. */
+  const char *full_name;
+
+  /* Bruce: you can document this more accurately than I.  -kff */
+  svn_boolean_t fork_first;
+
+  /* The function this command invokes. */
+  svn_cl__cmd_proc_t *cmd_func;
+} svn_cl__cmd_desc_t;
+
 
 typedef enum {
-  NULL_COMMAND = 0,
-  ADD_COMMAND,
-  COMMIT_COMMAND,
-  CHECKOUT_COMMAND,
-  DELETE_COMMAND,
-  HELP_COMMAND,
-  PROPFIND_COMMAND,
-  STATUS_COMMAND,
-  UPDATE_COMMAND
+  svn_cl__null_command = 0,
+  svn_cl__add_command,
+  svn_cl__commit_command,
+  svn_cl__checkout_command,
+  svn_cl__delete_command,
+  svn_cl__help_command,
+  svn_cl__propfind_command,
+  svn_cl__status_command,
+  svn_cl__update_command
 } svn_cl__te_command;
 
-svn_cl__t_cmd_proc
+
+svn_cl__cmd_proc_t
   svn_cl__add,
   svn_cl__commit,
   svn_cl__checkout,
@@ -92,7 +111,10 @@ svn_cl__t_cmd_proc
   svn_cl__status,
   svn_cl__update;
 
+
 
+/*** Command-line output functions -- printing to the user. ***/
+
 /* Print PATH's status line using STATUS. */
 void svn_cl__print_status (svn_string_t *path, svn_wc_status_t *status);
 
@@ -110,6 +132,10 @@ svn_error_t *svn_cl__get_trace_editor (const svn_delta_edit_fns_t **editor,
                                        void **edit_baton,
                                        svn_string_t *initial_path,
                                        apr_pool_t *pool);
+
+
+
+/*** Option parsing. ***/
 
 /* Until there is something else, this is it */
 void
