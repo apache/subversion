@@ -18,22 +18,12 @@
 
 
 
-#ifdef SVN_WIN32
-#include <winsock2.h>
-#else
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <unistd.h>
-#endif
-
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 #include <apr_general.h>
 #include <apr_lib.h>
 #include <apr_strings.h>
+#include <apr_network_io.h>
 
 #include "svn_types.h"
 #include "svn_string.h"
@@ -45,10 +35,6 @@
 #include "svn_ra_svn.h"
 
 #include "ra_svn.h"
-
-#ifndef SVN_WIN32
-#define closesocket(s) close(s)
-#endif
 
 typedef struct {
   svn_ra_svn_conn_t *conn;
@@ -73,7 +59,7 @@ static int parse_url(const char *url, const char **user, unsigned short *port,
   const char *p;
 
   *user = NULL;
-  *port = htons(SVN_RA_SVN_PORT);
+  *port = SVN_RA_SVN_PORT;
   *hostname = NULL;
 
   if (strncmp(url, "svn://", 6) != 0)
@@ -91,7 +77,7 @@ static int parse_url(const char *url, const char **user, unsigned short *port,
           if (!*hostname)
             *hostname = apr_pstrmemdup(pool, url, p - url);
           else
-            *port = htons(atoi(url));
+            *port = atoi(url);
           break;
         }
       else
@@ -107,45 +93,27 @@ static int parse_url(const char *url, const char **user, unsigned short *port,
 }
 
 static svn_error_t *make_connection(const char *hostname, unsigned short port,
-                                    int *sock, apr_pool_t *pool)
+                                    apr_socket_t **sock, apr_pool_t *pool)
 {
-  struct hostent *host;
-  char **addr;
-  struct sockaddr_in si;
+  apr_sockaddr_t *sa;
+  apr_status_t status;
 
-  /* Look up the hostname. */
-  host = gethostbyname(hostname);
-  if (host == NULL)
-    return svn_error_createf(SVN_ERR_RA_SVN_CONNECTION_FAILURE, 0, NULL,
-                             "Unknown hostname %s", hostname);
+  /* Resolve the hostname. */
+  status = apr_sockaddr_info_get(&sa, hostname, APR_INET, port, 0, pool);
+  if (status)
+    return svn_error_createf(status, 0, NULL, "Unknown hostname %s", hostname);
 
-  *sock = socket(PF_INET, SOCK_STREAM, 0);
-  if (*sock == -1)
-    return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_FAILURE, errno, NULL,
-                            "Cannot create socket");
+  /* Create the socket. */
+  status = apr_socket_create(sock, APR_INET, SOCK_STREAM, pool);
+  if (status)
+    return svn_error_create(status, 0, NULL, "Can't create socket");
 
-  for (addr = host->h_addr_list; *addr; addr++)
-    {
-      si.sin_family = AF_INET;
-      memcpy(&si.sin_addr, *addr, sizeof(si.sin_addr));
-      si.sin_port = port;
-      if (connect(*sock, (struct sockaddr *) &si, sizeof(si)) == 0)
-        return SVN_NO_ERROR;
-    }
+  status = apr_connect(*sock, sa);
+  if (status)
+    return svn_error_createf(status, 0, NULL, "Can't connect to host %s",
+                             hostname);
 
-  closesocket(*sock);
-  return svn_error_createf(SVN_ERR_RA_SVN_CONNECTION_FAILURE, errno, NULL,
-                           "Cannot connect to host %s", hostname);
-}
-
-static apr_status_t cleanup_conn(void *arg)
-{
-  svn_ra_svn_conn_t *conn = arg;
-
-  if (conn->sock != -1)
-    closesocket(conn->sock);
-  conn->sock = -1;
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
 /* Convert a property list received from the server into a hash table. */
@@ -292,7 +260,7 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
                                 apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn;
-  int sock;
+  apr_socket_t *sock;
   const char *hostname, *user, *status;
   unsigned short port;
   apr_uint64_t minver, maxver;
@@ -306,27 +274,19 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
   SVN_ERR(make_connection(hostname, port, &sock, pool));
 
   conn = svn_ra_svn_create_conn(sock, pool);
-  apr_pool_cleanup_register(pool, conn, cleanup_conn, apr_pool_cleanup_null);
 
   /* Read server's greeting. */
   SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "nnll", &minver, &maxver,
                                 &mechlist, &caplist));
+  /* We only support protocol version 1. */
   if (minver > 1)
-    {
-      /* We only support protocol version 1. */
-      cleanup_conn(conn);
-      return svn_error_createf(SVN_ERR_RA_SVN_BAD_VERSION, 0, NULL,
-                               "Server requires minimum version %d",
-                               (int) minver);
-    }
+    return svn_error_createf(SVN_ERR_RA_SVN_BAD_VERSION, 0, NULL,
+                             "Server requires minimum version %d",
+                             (int) minver);
   if (!find_mech(mechlist, "ANONYMOUS"))
-    {
-      /* We only support anonymous authentication right now. */
-      cleanup_conn(conn);
-      return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, 0, NULL,
-                              "Client can only do anonymous authorization, "
-                              "which server does not allow");
-    }
+    return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, 0, NULL,
+                            "Client can only do anonymous authorization, "
+                            "which server does not allow");
 
   /* Write client response to greeting, picking version 1 and the
    * anonymous authentication mechanism with an empty argument. */
@@ -338,12 +298,9 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
    * notification with no parameter. */
   SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "wl", &status, &status_param));
   if (strcmp(status, "success") != 0)
-    {
-      cleanup_conn(conn);
-      return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, 0, NULL,
-                              "Unexpected server response to anonymous "
-                              "authorization.");
-    }
+    return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, 0, NULL,
+                            "Unexpected server response to anonymous "
+                            "authorization.");
 
   /* This is where the security layer would go into effect if we
    * supported security layers, which is a ways off. */
@@ -360,9 +317,7 @@ static svn_error_t *ra_svn_close(void *sess)
 {
   svn_ra_svn_conn_t *conn = sess;
 
-  if (conn->sock == -1)
-    return SVN_NO_ERROR;
-  closesocket(conn->sock);
+  apr_socket_close(conn->sock);
   return SVN_NO_ERROR;
 }
 

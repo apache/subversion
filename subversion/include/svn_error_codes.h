@@ -546,28 +546,24 @@ SVN_ERROR_START
               SVN_ERR_RA_SVN_CATEGORY_START + 1,
               "Unknown svn protocol command")
 
-  SVN_ERRDEF (SVN_ERR_RA_SVN_CONNECTION_FAILURE,
-              SVN_ERR_RA_SVN_CATEGORY_START + 2,
-              "Cannot connect to repository host")
-
   SVN_ERRDEF (SVN_ERR_RA_SVN_CONNECTION_CLOSED,
-              SVN_ERR_RA_SVN_CATEGORY_START + 3,
+              SVN_ERR_RA_SVN_CATEGORY_START + 2,
               "Network connection closed unexpectedly")
 
   SVN_ERRDEF (SVN_ERR_RA_SVN_IO_ERROR,
-              SVN_ERR_RA_SVN_CATEGORY_START + 4,
+              SVN_ERR_RA_SVN_CATEGORY_START + 3,
               "Network read/write error")
 
   SVN_ERRDEF (SVN_ERR_RA_SVN_MALFORMED_DATA,
-              SVN_ERR_RA_SVN_CATEGORY_START + 5,
+              SVN_ERR_RA_SVN_CATEGORY_START + 4,
               "Malformed network data")
 
   SVN_ERRDEF (SVN_ERR_RA_SVN_REPOS_NOT_FOUND,
-              SVN_ERR_RA_SVN_CATEGORY_START + 6,
+              SVN_ERR_RA_SVN_CATEGORY_START + 5,
               "Couldn't find a repository")
 
   SVN_ERRDEF (SVN_ERR_RA_SVN_BAD_VERSION,
-              SVN_ERR_RA_SVN_CATEGORY_START + 7,
+              SVN_ERR_RA_SVN_CATEGORY_START + 6,
               "Client/server version mismatch")
 
   /* svndiff errors */

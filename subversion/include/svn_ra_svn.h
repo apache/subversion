@@ -22,6 +22,7 @@
 #ifndef SVN_RA_SVN_H
 #define SVN_RA_SVN_H
 
+#include <apr_network_io.h>
 #include <svn_delta.h>
 
 #ifdef __cplusplus
@@ -75,9 +76,9 @@ typedef struct {
 
 typedef svn_error_t *(*svn_ra_svn_edit_callback)(void *baton);
 
-/* Initialize a connection structure for the given socket.  (On Unix,
- * SOCK may be any file descriptor; on Windows it must be a socket.) */
-svn_ra_svn_conn_t *svn_ra_svn_create_conn(int sock, apr_pool_t *pool);
+/* Initialize a connection structure for the given socket. */
+svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
+                                          apr_pool_t *pool);
 
 /* Write simple data items over the net.  Writes will be buffered until
  * the next read or flush. */

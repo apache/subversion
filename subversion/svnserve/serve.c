@@ -23,6 +23,7 @@
 #include <apr_general.h>
 #include <apr_lib.h>
 #include <apr_strings.h>
+#include <apr_network_io.h>
 
 #include <svn_types.h>
 #include <svn_string.h>
@@ -874,7 +875,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *serve(int sock, const char *root, apr_pool_t *pool)
+svn_error_t *serve(apr_socket_t *sock, const char *root, apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn;
   svn_error_t *err;
