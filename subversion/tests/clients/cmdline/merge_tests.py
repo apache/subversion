@@ -243,7 +243,7 @@ def textual_merges_galore(sbox):
                       + "=======\n"
                       + expected_disk.desc['A/D/G/tau'].contents
                       + tau_text
-                      + ">>>>>>> .r3\n")
+                      + ">>>>>>> .merge-right.r3\n")
 
   expected_status = svntest.actions.get_virginal_state(other_wc, 1)
   expected_status.tweak(repos_rev=3)
@@ -334,11 +334,11 @@ def textual_merges_galore(sbox):
                       + "=======\n"
                       + expected_disk.desc['tau'].contents
                       + tau_text
-                      + ">>>>>>> .r3\n"
+                      + ">>>>>>> .merge-right.r3\n"
                       + "=======\n"
                       + expected_disk.desc['tau'].contents
                       + tau_text
-                      + ">>>>>>> .r3\n"
+                      + ">>>>>>> .merge-right.r3\n"
                       )
 
   expected_status = wc.State(os.path.join(other_wc, 'A', 'D', 'G'),
