@@ -100,10 +100,10 @@ See the 1.1 release notes for a more verbose overview of the changes since
 
 
 Version 1.0.6
-(?? July 2004, from /branches/?)
-http://svn.collab.net/repos/svn/tags/??
+(15 July 2004, from /branches/1.0.x)
+http://svn.collab.net/repos/svn/tags/1.0.6
 
- User-visible-changes:\
+ User-visible-changes:
  * fixed: crash in status command, caused by race (r10144)
  * fixed: crashes when deleting a revision-prop (r10148, r10185, r10192)
  * fixed: mod_authz_svn allows COPY method on repos with space in name (#1837)
