@@ -27,6 +27,8 @@ from svn import fs, util, repos
 class SVNShell:
   def __init__(self, pool, path):
     """initialize an SVNShell object"""
+    if path[-1] == '/':
+      path = path[:-1]
     self.pool = pool
     self.taskpool = util.svn_pool_create(pool)
     self.fs_ptr = repos.svn_repos_fs(repos.svn_repos_open(path, pool))
@@ -42,7 +44,7 @@ class SVNShell:
     print "Available commands:"
     print "  cd DIR       : change the current working directory to DIR"
     print "  exit         : exit the shell"
-    print "  ls           : list the contents of the current directory"
+    print "  ls [PATH]    : list the contents of the current directory"
     print "  lstxns       : list the transactions available for browsing"
     print "  setrev REV   : set the current revision to browse"
     print "  settxn TXN   : set the current transaction to browse"
@@ -53,26 +55,7 @@ class SVNShell:
     args = args[0]
     if len(args) < 1:
       return
-    newpath = string.join(filter(None, string.split(args[0], '/')), '/')
-    if args[0][0] == '/' or self.path == '/':
-      newpath = '/' + newpath
-    else:
-      newpath = self.path + '/' + newpath
-
-    # cleanup '.' and '..'
-    parts = filter(None, string.split(newpath, '/'))
-    finalparts = []
-    for part in parts:
-      if part == '.':
-        pass
-      elif part == '..':
-        if len(finalparts) == 0:
-          return
-        else:
-          finalparts.pop(-1)
-      else:
-        finalparts.append(part)
-    newpath = '/' + string.join(finalparts, '/')
+    newpath = self._parse_path(args[0])
     
     # make sure that path actually exists in the filesystem as a directory
     kind = fs.check_path(self.root, newpath, self.taskpool)
@@ -83,14 +66,41 @@ class SVNShell:
     util.svn_pool_clear(self.taskpool)
 
   def cmd_ls(self, *args):
-    """list the contents of the current directory"""
-    entries = fs.dir_entries(self.root, self.path, self.taskpool)
+    """list the contents of the current directory or provided path"""
+    args = args[0]
+    parent = self.path
+    if not len(args):
+      # no args -- show a listing for the current directory.
+      entries = fs.dir_entries(self.root, self.path, self.taskpool)
+    else:
+      # args?  show a listing of that path.
+      newpath = self._parse_path(args[0])
+      kind = fs.check_path(self.root, newpath, self.taskpool)
+      if kind == util.svn_node_dir:
+        parent = newpath
+        entries = fs.dir_entries(self.root, parent, self.taskpool)
+      elif kind == util.svn_node_file:
+        parts = self._path_to_parts(newpath)
+        name = parts.pop(-1)
+        parent = self._parts_to_path(parts)
+        print parent + ':' + name
+        tmpentries = fs.dir_entries(self.root, parent, self.taskpool)
+        if not tmpentries.get(name, None):
+          return
+        entries = {}
+        entries[name] = tmpentries[name]
+      else:
+        print "Path not found: " + newpath
+        return
+      
     keys = entries.keys()
     keys.sort()
-    print "   REV   AUTHOR  NODE-REV-ID     SIZE         DATE NAME"
+
+    print "   REV    AUTHOR  NODE-REV-ID     SIZE         DATE NAME"
     print "----------------------------------------------------------------------------"
+
     for entry in keys:
-      fullpath = self.path + '/' + entry
+      fullpath = parent + '/' + entry
       size = ''
       is_dir = fs.is_dir(self.root, fullpath, self.taskpool)
       if is_dir:
@@ -107,7 +117,7 @@ class SVNShell:
                               util.SVN_PROP_REVISION_DATE, self.taskpool)
       date = self._format_date(date, self.taskpool)
      
-      print "%6s %8s <%10s> %8s %12s %s" % (created_rev, author,
+      print "%6s %8s <%10s> %8s %12s %s" % (created_rev, author[:8],
                                             node_id, size, date, name)
     util.svn_pool_clear(self.taskpool)
   
@@ -139,7 +149,7 @@ class SVNShell:
     self.rev = rev
     self.is_rev = 1
     self._do_path_landing()
-    
+
   def cmd_settxn(self, *args):
     """set the current transaction to view"""
     args = args[0]
@@ -162,6 +172,37 @@ class SVNShell:
     print rev
     util.svn_pool_clear(self.taskpool)
 
+  def _path_to_parts(self, path):
+    return filter(None, string.split(path, '/'))
+
+  def _parts_to_path(self, parts):
+    return '/' + string.join(parts, '/')
+
+  def _parse_path(self, path):
+    # cleanup leading, trailing, and duplicate '/' characters
+    newpath = self._parts_to_path(self._path_to_parts(path))
+
+    # if PATH is absolute, use it, else append it to the existing path.
+    if path[0] == '/' or self.path == '/':
+      newpath = '/' + newpath
+    else:
+      newpath = self.path + '/' + newpath
+
+    # cleanup '.' and '..'
+    parts = self._path_to_parts(newpath)
+    finalparts = []
+    for part in parts:
+      if part == '.':
+        pass
+      elif part == '..':
+        if len(finalparts) != 0:
+          finalparts.pop(-1)
+      else:
+        finalparts.append(part)
+
+    # finally, return the calculated path
+    return self._parts_to_path(finalparts)
+    
   def _format_date(self, date, pool):
     date = util.svn_time_from_nts(date, pool)
     date = time.asctime(time.localtime(date / 1000000))
@@ -176,9 +217,9 @@ class SVNShell:
       if kind == util.svn_node_dir:
         not_found = 0
       else:
-        parts = filter(None,string.split(newpath, '/'))
+        parts = self._path_to_parts(newpath)
         parts.pop(-1)
-        newpath = '/' + string.join(parts, '/')
+        newpath = self._parts_to_path(parts)
     self.path = newpath
     util.svn_pool_clear(self.taskpool)
 
@@ -239,8 +280,10 @@ def main():
     usage(1)
 
   try:
+    # try to map the erase character to the backspace key
     import termios
     attrs = termios.tcgetattr(sys.stdin)
+    attrs[6][termios.VERASE] = '\x08'
     termios.tcsetattr(sys.stdin, termios.TCSANOW, attrs)
   except:
     pass
