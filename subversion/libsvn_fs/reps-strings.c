@@ -246,11 +246,58 @@ window_handler (svn_txdelta_window_t *window, void *baton)
      slow. :-)  And anyway, we're going to do things differently. */
 
   {
+    char *tbuf;       /* Reconstructed target data. */
     char *sbuf;       /* Reconstructed source data. */
     apr_size_t slen;  /* Length of source data. */
 
     slen = window->sview_len;
     sbuf = apr_palloc (wb->pool, slen);
+    tbuf = apr_palloc (wb->pool, window->tview_len);
+
+    /* Q: Why is there a target buf allocated inside this function?
+          Why not just use the output buffer directly?
+
+       A: A given window (say, the current one) contains all the data
+          necessary to reproduce a contiguous range of bytes.  If that
+          range of bytes is entirely outside the range the caller
+          requested, the window is ignored.  If, however, any overlap
+          occurs between the window's "target view" and the requested
+          range, this window must be processed.  When considering
+          overlap, we have exactly one of the following situations:
+
+             1. target window and requested range have the same
+                starting offset.
+
+             2. target window starting offset is greater than the
+                starting offset of the requested range.
+
+             3. target window starting offset is less than the
+                starting offset of the requested range.
+
+          Case 1 and Case 2 and fairly simple to deal with.  Case 1 is
+          super-trivial.  Case 2 can be treated like a special Case 1
+          because the "overlapped" came from a previous window(s).
+
+          Case 3 is the weird one.  In this case, we have some amount
+          of data coming out of the window op handling that needs to
+          be discarded before we actually get to data that we care
+          about.  Now, one might be tempted to just literally discard
+          that data, and then actually begin writing to the output
+          buffer at the proper time.  This would be fine if the only
+          op types were svn_txdelta_source (which reads from a source
+          buffer) and svn_txdelta_new (which reads from a "new data"
+          buffer).  But the svn_txdelta_target op also exists, and it
+          reads from the target buffer.  With this op type comes the
+          risk that we will be asked to read from an offset that
+          exists in the "overlap" region -- which we just discarded!
+
+          So, in order to safeguard against the svn_txdelta_target op
+          making requests for data which we no longer have, we need to
+          "play out" this window into a temporary buffer, then copy
+          the range requested by the caller into the output buffer
+          once we're finished.
+    */
+
 
     /* ### todo: this is the core of the naive algorithm, and is what
        has to go when we have a true delta combiner. */
@@ -265,27 +312,24 @@ window_handler (svn_txdelta_window_t *window, void *baton)
        makes more sense than trying to use the functions in
        svn_delta.h.  We'd spend a lot of effort packing things up
        right, for not much gain. */
+
     {
       svn_txdelta_op_t *op;
       int i;
-      apr_size_t max_len;
+      apr_size_t len_read = 0;
+      apr_size_t copy_amt;
 
+      /* For each op, we must check to see what portion of that op's output
+         is meant for the "discard pile."  */
       for (i = 0; i < window->num_ops; i++)
         {
           op = window->ops + i;
-          max_len = ((op->length < wb->len_req - wb->len_read) 
-                     ? op->length 
-                     : wb->len_req - wb->len_read);
-
           switch (op->action_code)
             {
             case svn_txdelta_source:
               {
-
-                memcpy (wb->buf + wb->len_read,
-                        sbuf + op->offset,
-                        max_len);
-                wb->len_read += max_len;
+                memcpy (tbuf + len_read, sbuf + op->offset, op->length);
+                len_read += op->length;
               }
               break;
             case svn_txdelta_target:
@@ -293,16 +337,16 @@ window_handler (svn_txdelta_window_t *window, void *baton)
                 /* This could be done in bigger blocks, at the expense
                    of some more complexity. */
                 int t;
-                for (t = op->offset; t < op->offset + max_len; t++)
-                  wb->buf[(wb->len_read)++] = wb->buf[t];
+                for (t = op->offset; t < op->offset + op->length; t++)
+                  tbuf[len_read++] = tbuf[t];
               }
               break;
             case svn_txdelta_new:
               {
-                memcpy (wb->buf + wb->len_read,
+                memcpy (tbuf + len_read,
                         window->new_data->data + op->offset,
-                        max_len);
-                wb->len_read += max_len;
+                        op->length);
+                len_read += op->length;
               }
               break;
             default:
@@ -312,15 +356,28 @@ window_handler (svn_txdelta_window_t *window, void *baton)
                  op->action_code);
             }
         }
+
+      /* Figure out how much data to copy into the output buffer. */
+      copy_amt = len_read;
+      copy_amt -= (wb->req_offset - wb->cur_offset);
+      if (copy_amt >= (wb->len_req - wb->len_read))
+        copy_amt = wb->len_req - wb->len_read;
+
+      /* Copy our requested range into the output buffer. */
+      memcpy (wb->buf + wb->len_read,
+              tbuf + (wb->req_offset - wb->cur_offset),
+              copy_amt);
+      wb->len_read += copy_amt;
     }
-
-    svn_pool_clear (wb->pool);
   }
-
+    
   /* If this window looks past relevant data, then we're done. */
   wb->cur_offset += window->tview_len;
   if (wb->cur_offset >= (wb->req_offset + wb->len_req))
     wb->done = TRUE;
+    
+  /* Clear out the window baton's pool. */
+  svn_pool_clear (wb->pool);
 
   return SVN_NO_ERROR;
 }
@@ -728,7 +785,7 @@ svn_fs__rep_contents (svn_string_t *str,
   if (len != str->len)
     return svn_error_createf
       (SVN_ERR_FS_CORRUPT, 0, NULL, trail->pool,
-       "svn_fs__rep_read_contents: failure reading ren \"%s\"", rep);
+       "svn_fs__rep_read_contents: failure reading rep \"%s\"", rep);
 
   return SVN_NO_ERROR;
 }
