@@ -95,7 +95,7 @@ delta_string_keys (apr_array_header_t **keys,
       svn_fs__rep_delta_chunk_t *chunk = 
         (((svn_fs__rep_delta_chunk_t **) chunks->elts)[i]);
       
-      key = apr_pstrdup (pool, chunk->window->string_key);
+      key = apr_pstrdup (pool, chunk->string_key);
       (*((const char **)(apr_array_push (*keys)))) = key;
     }
 
@@ -503,7 +503,7 @@ rep_read_range (svn_fs_t *fs,
 
           /* Get the offset and size of this window from the skel. */
           this_off = this_chunk->offset;
-          this_len = this_chunk->window->size;
+          this_len = this_chunk->size;
 
           /* If this window is irrelevant because it reconstructs text
              that is entirely before the range we're interested in,
@@ -522,12 +522,12 @@ rep_read_range (svn_fs_t *fs,
 
           /* Get this string key which holds this window's data. 
              ### todo: make sure this is an `svndiff' DIFF skel here. */
-          str_key = this_chunk->window->string_key;
+          str_key = this_chunk->string_key;
 
           /* Finish initializing our baton with window-specific
              stuff. */
           wb.cur_offset = this_off;
-          wb.base_rep = this_chunk->window->rep_key;
+          wb.base_rep = this_chunk->rep_key;
 
           /* Run through the svndiff data, at least as far as necessary. */
           off = 0;
@@ -779,7 +779,7 @@ svn_fs__rep_contents_size (apr_size_t *size_p,
 
       last_chunk 
         = (((svn_fs__rep_delta_chunk_t **) chunks->elts)[chunks->nelts - 1]);
-      *size_p = last_chunk->offset + last_chunk->window->size;
+      *size_p = last_chunk->offset + last_chunk->size;
     }
   else /* unknown kind */
     abort ();
@@ -1434,14 +1434,13 @@ svn_fs__rep_deltify (svn_fs_t *fs,
         /* Allocate a chunk and its window */
         chunk = apr_palloc (pool, sizeof (*chunk));
         chunk->offset = ww->text_off;
-        chunk->window = apr_palloc (pool, sizeof (*chunk->window));
 
         /* Populate the window */
-        chunk->window->string_key = ww->key;
-        chunk->window->size = ww->text_len;
-        memcpy (&(chunk->window->checksum), digest, 
+        chunk->string_key = ww->key;
+        chunk->size = ww->text_len;
+        memcpy (&(chunk->checksum), digest, 
                 (MD5_DIGESTSIZE / sizeof (*digest)));
-        chunk->window->rep_key = source;
+        chunk->rep_key = source;
 
         /* Add this chunk to the array. */
         (*((svn_fs__rep_delta_chunk_t **)(apr_array_push (chunks)))) = chunk;

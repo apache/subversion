@@ -31,8 +31,8 @@ extern "C" {
 
 /*** The filesystem structure.  ***/
 
-struct svn_fs_t {
-
+struct svn_fs_t 
+{
   /* A pool managing this filesystem.  Freeing this pool must
      completely clean up the filesystem, including any database
      or system resources it holds.  */
@@ -105,20 +105,11 @@ typedef struct
 } svn_fs__transaction_t;
 
 
-/*** Node Revision Kind ***/
-typedef enum
-{
-  svn_fs__node_revision_kind_file = 1, /* file */
-  svn_fs__node_revision_kind_dir       /* dir */
-
-} svn_fs__node_revision_kind_t;
-
-
-/*** Node Revision Header ***/
+/*** Node-Revision ***/
 typedef struct
 {
   /* node kind */
-  svn_fs__node_revision_kind_t kind;
+  svn_node_kind_t kind;
 
   /* revision in which this node was committed (< 1 here means this node
      is mutable -- not yet committed */
@@ -128,43 +119,16 @@ typedef struct
   const char *ancestor_path;
   svn_revnum_t ancestor_rev;
 
-} svn_fs__node_revision_header_t;
+  /* representation key for this node's properties. */
+  const char *prop_key;
 
+  /* representation key for this node's text data (files) or entries
+     list (dirs). */
+  const char *data_key;
 
-/*** Node-Revision ***/
-typedef struct
-{
-  /* node revision header */
-  svn_fs__node_revision_header_t *header;
+  /* representation key for this node's text-data-in-progess (files only). */
+  const char *edit_data_key;
 
-  /* node-specific stuff */
-  union 
-  {
-    /* file stuff */
-    struct 
-    {
-      /* representation key for this node's properties. */
-      const char *prop_key;
-
-      /* representation key for this node's text data. */
-      const char *data_key;
-
-      /* representation key for this node's text-data-in-progess. */
-      const char *edit_data_key;
-
-    } file;
-
-    /* dir stuff */
-    struct 
-    {
-      /* representation key for this node's properties. */
-      const char *prop_key;
-
-      /* representation key for this node's dirent list. */
-      const char *entries_key;
-
-    } dir;
-  } contents;
 } svn_fs__node_revision_t;
 
 
@@ -177,9 +141,12 @@ typedef enum
 } svn_fs__rep_kind_t;
 
 
-/*** "Delta" Window ***/
-typedef struct
+/*** "Delta" Offset/Window Chunk ***/
+typedef struct 
 {
+  /* starting offset of the data represented by this chunk */
+  apr_size_t offset;
+
   /* string-key to which this representation points. */
   const char *string_key; 
 
@@ -194,18 +161,6 @@ typedef struct
   const char *rep_key;
 
   /* apr_off_t rep_offset;  ### not implemented */
-
-} svn_fs__rep_delta_window_t;
-
-
-/*** "Delta" Offset/Window Chunk ***/
-typedef struct 
-{
-  /* starting offset of the data represented by this chunk */
-  apr_size_t offset;
-
-  /* diff data window */
-  svn_fs__rep_delta_window_t *window;
 
 } svn_fs__rep_delta_chunk_t;
 
