@@ -4,15 +4,12 @@ TODO for locking
 This is a summary of the current state of the locking implementation.
 
 * svn info URL (sussman)
-* svn update removes defunct locks svn status -u shows locking info from repo
-  - Rev reporter in libsvn_repos (lundblad)
-  - Rev svn_ra_reporter and RA APIs (lundblad)
-    + ra_dav
-    + ra_svn/svnserve
-    + ra_local
-  - Rev svn_wc_notify_func_t (!)
+* svn update removes defunct locks
+  - Send lock tokens over ra_dav (sussman?)
   - WC stuff (lundblad)
   - Client changes
+* Rev svn_wc_notify_func_t (on trunk) (lundblad)
+* svn status -u shows lock info from repos.
 * client test cases (fitz) [broad cases done]
 * Fix svn_fs_access_t handling in svnserve
 * Fix svn_ra_unlock force==true for ra_dav.
