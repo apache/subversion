@@ -85,10 +85,13 @@ copy_versioned_files (const char *from,
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *dirents;
+  svn_wc_adm_access_t *adm_access;
   svn_wc_entry_t *entry;
   svn_error_t *err;
 
-  err = svn_wc_entry (&entry, from, FALSE, subpool);
+  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, from, FALSE, FALSE, pool));
+  err = svn_wc_entry (&entry, from, adm_access, FALSE, subpool);
+  SVN_ERR (svn_wc_adm_close (adm_access));
 
   if (err && err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
     return err;
@@ -136,7 +139,8 @@ copy_versioned_files (const char *from,
               const char *copy_from = svn_path_join (from, item, subpool);
               const char *copy_to = svn_path_join (to, item, subpool);
 
-              err = svn_wc_entry (&entry, copy_from, FALSE, subpool);
+              err = svn_wc_entry (&entry, copy_from, adm_access, FALSE,
+                                  subpool);
 
               if (err && err->apr_err != SVN_ERR_WC_NOT_FILE)
                 return err;

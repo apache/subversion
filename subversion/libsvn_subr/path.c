@@ -982,31 +982,25 @@ svn_path_split_if_file(const char *path,
   /* assert (is_canonical_nts (path, strlen (path)));  ### Expensive strlen */
 
   err = svn_io_stat(&finfo, path, APR_FINFO_TYPE, pool);
+  if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))
+    return err;
 
-  if (err != SVN_NO_ERROR)
+  if (err || finfo.filetype == APR_REG)
     {
-      return svn_error_createf(SVN_ERR_BAD_FILENAME, 0, err, pool,
-                               "Couldn't determine if %s was "
-                               "a file or directory.",
-                               path);
+      if (err)
+        svn_error_clear_all (err);
+      svn_path_split_nts(path, pdirectory, pfile, pool);
     }
-  else
+  else if (finfo.filetype == APR_DIR)
     {
-      if (finfo.filetype == APR_DIR)
-        {
-          *pdirectory = path;
-          *pfile = SVN_EMPTY_PATH;
-        }
-      else if (finfo.filetype == APR_REG)
-        {
-          svn_path_split_nts(path, pdirectory, pfile, pool);
-        }
-      else 
-        {
-          return svn_error_createf(SVN_ERR_BAD_FILENAME, 0, NULL, pool,
-                                  "%s is neither a file nor a directory name.",
-                                  path);
-        }
+      *pdirectory = path;
+      *pfile = SVN_EMPTY_PATH;
+    }
+  else 
+    {
+      return svn_error_createf(SVN_ERR_BAD_FILENAME, 0, NULL, pool,
+                               "%s is neither a file nor a directory name.",
+                               path);
     }
 
   return SVN_NO_ERROR;

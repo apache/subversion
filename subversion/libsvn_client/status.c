@@ -60,6 +60,7 @@ static svn_error_t *
 add_update_info_to_status_hash (apr_hash_t *statushash,
                                 svn_revnum_t *youngest,
                                 const char *path,
+                                svn_wc_adm_access_t *adm_access,
                                 svn_client_auth_baton_t *auth_baton,
                                 svn_boolean_t descend,
                                 apr_pool_t *pool)
@@ -72,13 +73,21 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   void *wrap_edit_baton;
   const svn_ra_reporter_t *reporter;
   const char *anchor, *target, *URL;
+  svn_wc_adm_access_t *anchor_access;
   svn_wc_entry_t *entry;
 
   /* Use PATH to get the update's anchor and targets. */
   SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
 
+  if (strlen (anchor) != strlen (path))
+    /* Using pool cleanup to close it */
+    SVN_ERR (svn_wc_adm_open (&anchor_access, NULL, anchor, FALSE, FALSE,
+                              pool));
+  else
+    anchor_access = adm_access;
+
   /* Get full URL from the ANCHOR. */
-  SVN_ERR (svn_wc_entry (&entry, anchor, FALSE, pool));
+  SVN_ERR (svn_wc_entry (&entry, anchor, anchor_access, FALSE, pool));
   if (! entry)
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
@@ -96,13 +105,13 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
 
   /* Open a repository session to the URL. */
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
-                                        NULL, TRUE, TRUE, TRUE, 
+                                        anchor_access, NULL, TRUE, TRUE, TRUE, 
                                         auth_baton, pool));
 
   /* Tell RA to drive a status-editor; this will fill in the
      repos_status_* fields in each status struct. */
   SVN_ERR (svn_wc_get_status_editor (&status_editor, &status_edit_baton,
-                                     path, descend, statushash,
+                                     path, adm_access, descend, statushash,
                                      youngest, pool));
 
   /* ### todo:  This is a TEMPORARY wrapper around our editor so we
@@ -118,7 +127,7 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
      status_editor will be driven by svn_repos_dir_delta. */
-  SVN_ERR (svn_wc_crawl_revisions (path, reporter, report_baton, 
+  SVN_ERR (svn_wc_crawl_revisions (path, adm_access, reporter, report_baton, 
                                    FALSE, /* don't restore missing files */
                                    descend,
                                    NULL, NULL, /* notification is N/A */
@@ -150,22 +159,30 @@ svn_client_status (apr_hash_t **statushash,
                    apr_pool_t *pool)
 {
   apr_hash_t *hash = apr_hash_make (pool);
+  svn_wc_adm_access_t *adm_access;
+
+  /* Need to lock the tree as even a non-recursive status requires the
+     immediate directories to be locked. */
+  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, FALSE, TRUE, pool));
 
   /* Ask the wc to give us a list of svn_wc_status_t structures.
      These structures contain nothing but information found in the
      working copy. */
-  SVN_ERR (svn_wc_statuses (hash, path, descend, get_all, no_ignore, pool));
+  SVN_ERR (svn_wc_statuses (hash, path, adm_access,
+                            descend, get_all, no_ignore, pool));
 
-  /* If the caller wants us to contact the repository also... */
   if (update)    
     {
       /* Add "dry-run" update information to our existing structures.
          (Pass the DESCEND flag here, since we may want to ignore update
          info that is below PATH.)  */
-      SVN_ERR (add_update_info_to_status_hash (hash, youngest, path,
+      SVN_ERR (add_update_info_to_status_hash (hash, youngest, path, adm_access,
                                                auth_baton, descend, pool));
     }
 
+  SVN_ERR (svn_wc_adm_close (adm_access));
+
+  /* If the caller wants us to contact the repository also... */
   *statushash = hash;
 
   return SVN_NO_ERROR;

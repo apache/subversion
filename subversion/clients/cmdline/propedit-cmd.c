@@ -65,6 +65,7 @@ svn_cl__propedit (apr_getopt_t *os,
       const char *new_propval;
       const char *base_dir = target;
       const char *target_native;
+      svn_wc_adm_access_t *adm_access;
       svn_wc_entry_t *entry;
 
       /* Fetch the current property. */
@@ -76,7 +77,9 @@ svn_cl__propedit (apr_getopt_t *os,
         propval = svn_string_create ("", pool);
 
       /* Split the path if it is a file path. */
-      SVN_ERR (svn_wc_entry (&entry, target, FALSE, pool));
+      SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target, FALSE, FALSE,
+                                      pool));
+      SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
       if (! entry)
         return svn_error_create (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
                                  pool, target);

@@ -36,6 +36,7 @@ extern "C" {
 
 /* Modify the entry of working copy PATH, presumably after an update
    completes.   If PATH doesn't exist, this routine does nothing.
+   ADM_ACCESS must be an access baton for PATH (assuming it existed).
 
    Set the entry's 'url' and 'working revision' fields to BASE_URL and
    NEW_REVISION.  If BASE_URL is null, the url field is untouched; if
@@ -50,6 +51,7 @@ extern "C" {
    all urls to be "telescoping" children of the base_url.
 */
 svn_error_t *svn_wc__do_update_cleanup (const char *path,
+                                        svn_wc_adm_access_t *adm_access,
                                         const svn_boolean_t recursive,
                                         const char *base_url,
                                         const svn_revnum_t new_revision,

@@ -37,26 +37,24 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_wc__remove_wcprops (const char *path, apr_pool_t *pool)
+svn_wc__remove_wcprops (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   const char *wcprop_path;
   apr_pool_t *subpool = svn_pool_create (pool);
-  enum svn_node_kind kind;
-  
-  SVN_ERR (svn_io_check_path (path, &kind, subpool));
-  if (kind != svn_node_dir)
-    return svn_error_createf
-      (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, pool,
-       "svn_wc__remove_wcprops: '%s' is not a directory.", path);
+  svn_error_t *err;
 
   /* Read PATH's entries. */
-  SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, subpool));
+  SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, subpool));
 
   /* Remove this_dir's wcprops */
-  SVN_ERR (svn_wc__wcprop_path (&wcprop_path, path, 0, subpool));
-  (void) svn_io_remove_file (wcprop_path, subpool);
+  SVN_ERR (svn_wc__wcprop_path (&wcprop_path,
+                                svn_wc_adm_access_path (adm_access),
+                                0, subpool));
+  err = svn_io_remove_file (wcprop_path, subpool);
+  if (err)
+    svn_error_clear_all (err);
 
   /* Recursively loop over all children. */
   for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
@@ -75,13 +73,16 @@ svn_wc__remove_wcprops (const char *path, apr_pool_t *pool)
       if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR))
         continue;
 
-      child_path = svn_path_join (path, name, subpool);
+      child_path = svn_path_join (svn_wc_adm_access_path (adm_access), name,
+                                  subpool);
 
       /* If a file, remove it from wcprops. */
       if (current_entry->kind == svn_node_file)
         {
           SVN_ERR (svn_wc__wcprop_path (&wcprop_path, child_path, 0, subpool));
-          (void) svn_io_remove_file (wcprop_path, subpool);
+          err = svn_io_remove_file (wcprop_path, subpool);
+          if (err)
+            svn_error_clear_all (err);
           /* ignoring any error value from the removal; most likely,
              apr_file_remove will complain about trying to a remove a
              file that's not there.  But this more efficient than
@@ -91,7 +92,12 @@ svn_wc__remove_wcprops (const char *path, apr_pool_t *pool)
 
       /* If a dir, recurse. */
       else if (current_entry->kind == svn_node_dir)
-          SVN_ERR (svn_wc__remove_wcprops (child_path, subpool));
+        {
+          svn_wc_adm_access_t *child_access;
+          SVN_ERR (svn_wc_adm_retrieve (&child_access, adm_access, child_path,
+                                        subpool));
+          SVN_ERR (svn_wc__remove_wcprops (child_access, subpool));
+        }
     }
 
   /* Cleanup */
@@ -115,6 +121,7 @@ svn_wc__remove_wcprops (const char *path, apr_pool_t *pool)
  */
 static svn_error_t *
 copy_file_administratively (const char *src_path, 
+                            svn_wc_adm_access_t *src_access,
                             svn_wc_adm_access_t *dst_parent,
                             const char *dst_basename,
                             svn_wc_notify_func_t notify_copied,
@@ -139,7 +146,7 @@ copy_file_administratively (const char *src_path,
      may be scheduled for deletion, or the user may simply have removed the
      working copy.  Since we are going to write to DST_PATH text-base and
      prop-base we need to detect such cases and abort. */
-  SVN_ERR (svn_wc_entry (&dst_entry, dst_path, FALSE, pool));
+  SVN_ERR (svn_wc_entry (&dst_entry, dst_path, dst_parent, FALSE, pool));
   if (dst_entry && dst_entry->kind == svn_node_file)
     {
       if (dst_entry->schedule == svn_wc_schedule_delete)
@@ -156,7 +163,7 @@ copy_file_administratively (const char *src_path,
   /* Sanity check:  you cannot make a copy of something that's not
      in the repository.  See comment at the bottom of this file for an
      explanation. */
-  SVN_ERR (svn_wc_entry (&src_entry, src_path, FALSE, pool));
+  SVN_ERR (svn_wc_entry (&src_entry, src_path, src_access, FALSE, pool));
   if (! src_entry)
     {
       return svn_error_createf 
@@ -227,7 +234,7 @@ copy_file_administratively (const char *src_path,
     svn_revnum_t copyfrom_rev;
 
     SVN_ERR (svn_wc_get_ancestry (&copyfrom_url, &copyfrom_rev,
-                                  src_path, pool));
+                                  src_path, src_access, pool));
     
     SVN_ERR (svn_wc_add (dst_path, dst_parent,
                          copyfrom_url, copyfrom_rev,
@@ -236,8 +243,6 @@ copy_file_administratively (const char *src_path,
 
   return SVN_NO_ERROR;
 }
-
-
 
 
 /* This function effectively creates and schedules a dir for
@@ -253,6 +258,7 @@ copy_file_administratively (const char *src_path,
  */
 static svn_error_t *
 copy_dir_administratively (const char *src_path, 
+                           svn_wc_adm_access_t *src_access,
                            svn_wc_adm_access_t *dst_parent,
                            const char *dst_basename,
                            svn_wc_notify_func_t notify_copied,
@@ -260,6 +266,7 @@ copy_dir_administratively (const char *src_path,
                            apr_pool_t *pool)
 {
   svn_wc_entry_t *src_entry;
+  svn_wc_adm_access_t *adm_access;
 
   /* The 'dst_path' is simply dst_parent/dst_basename */
   const char *dst_path = svn_path_join (svn_wc_adm_access_path (dst_parent),
@@ -268,7 +275,7 @@ copy_dir_administratively (const char *src_path,
   /* Sanity check:  you cannot make a copy of something that's not
      in the repository.  See comment at the bottom of this file for an
      explanation. */
-  SVN_ERR (svn_wc_entry (&src_entry, src_path, FALSE, pool));
+  SVN_ERR (svn_wc_entry (&src_entry, src_path, src_access, FALSE, pool));
   if ((src_entry->schedule == svn_wc_schedule_add)
       || (! src_entry->url))
     return svn_error_createf 
@@ -277,19 +284,29 @@ copy_dir_administratively (const char *src_path,
        "Try committing first.",
        src_path);
 
-  /* Recursively copy the whole directory over. 
-     
-      (This gets us all text-base, props, base-props, as well as entries,
-      local mods, schedulings, existences, etc.) */
+  /* Recursively copy the whole directory over.  This gets us all
+     text-base, props, base-props, as well as entries, local mods,
+     schedulings, existences, etc.
+
+      ### Should we be copying unversioned items within the directory? */
   SVN_ERR (svn_io_copy_dir_recursively (src_path,
                                         svn_wc_adm_access_path (dst_parent),
                                         dst_basename,
                                         TRUE, pool));
 
-  /* Remove all wcprops in the directory, because they're all bogus
-     now.  After the commit, ra_dav should regenerate them and
-     re-store them as an optimization. */
-  SVN_ERR (svn_wc__remove_wcprops (dst_path, pool));
+  /* If this is part of a move, the copied directory will be locked,
+     because the source directory was locked.  Running cleanup will remove
+     the locks, even though this directory is not yet been added to the
+     parent. */
+  SVN_ERR (svn_wc_cleanup (dst_path, NULL, pool));
+
+  /* Remove all wcprops in the directory, because they're all bogus now.
+     After the commit, ra_dav should regenerate them and re-store them as
+     an optimization.  Note we use the normal locking mechanism here, even
+     though this directory has not yet been added to the parent. */
+  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, dst_path, TRUE, TRUE, pool));
+  SVN_ERR (svn_wc__remove_wcprops (adm_access, pool));
+  SVN_ERR (svn_wc_adm_close (adm_access));
 
   /* Schedule the directory for addition in both its parent and itself
      (this_dir) -- WITH HISTORY.  This function should leave the
@@ -299,7 +316,7 @@ copy_dir_administratively (const char *src_path,
     svn_revnum_t copyfrom_rev;
     
     SVN_ERR (svn_wc_get_ancestry (&copyfrom_url, &copyfrom_rev,
-                                  src_path, pool));
+                                  src_path, src_access, pool));
     
     SVN_ERR (svn_wc_add (dst_path, dst_parent,
                          copyfrom_url, copyfrom_rev,
@@ -321,17 +338,25 @@ svn_wc_copy (const char *src_path,
              void *notify_baton,
              apr_pool_t *pool)
 {
+  svn_wc_adm_access_t *adm_access;
   enum svn_node_kind src_kind;
+
+  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, src_path, FALSE, TRUE,
+                                  pool));
 
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
   
   if (src_kind == svn_node_file)
-    SVN_ERR (copy_file_administratively (src_path, dst_parent, dst_basename,
+    SVN_ERR (copy_file_administratively (src_path, adm_access,
+                                         dst_parent, dst_basename,
                                          notify_func, notify_baton, pool));
 
   else if (src_kind == svn_node_dir)
-    SVN_ERR (copy_dir_administratively (src_path, dst_parent, dst_basename,
+    SVN_ERR (copy_dir_administratively (src_path, adm_access,
+                                        dst_parent, dst_basename,
                                         notify_func, notify_baton, pool));
+
+  SVN_ERR (svn_wc_adm_close (adm_access));
 
 
   return SVN_NO_ERROR;

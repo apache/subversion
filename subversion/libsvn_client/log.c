@@ -61,6 +61,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
   const char *path;
   const char *URL;
   const char *base_name = NULL;
+  svn_wc_adm_access_t *adm_access;
   apr_array_header_t *condensed_targets;
   svn_revnum_t start_revnum, end_revnum;
   svn_error_t *err;
@@ -118,7 +119,9 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
       if (condensed_targets->nelts == 0)
         (*((const char **)apr_array_push (condensed_targets))) = "";
 
-      SVN_ERR (svn_wc_entry (&entry, base_name, FALSE, pool));
+      SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, base_name,
+                                      FALSE, FALSE, pool));
+      SVN_ERR (svn_wc_entry (&entry, base_name, adm_access, FALSE, pool));
       if (! entry)
         return svn_error_createf
           (SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL, pool,
@@ -139,10 +142,10 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
      do_auth/use_admin to open the ra_session.  */
   if (NULL != base_name)
     SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, base_name,
-                                          NULL, TRUE, TRUE, TRUE, 
+                                          adm_access, NULL, TRUE, TRUE, TRUE, 
                                           auth_baton, pool));
   else
-    SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL, 
+    SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL, NULL,
                                           NULL, FALSE, FALSE, TRUE, 
                                           auth_baton, pool));
 
@@ -196,6 +199,9 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
 
   /* We're done with the RA session. */
   SVN_ERR (ra_lib->close (session));
+
+  if (base_name)
+    SVN_ERR (svn_wc_adm_close (adm_access));
 
   return err;
 }

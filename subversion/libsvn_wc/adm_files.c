@@ -1033,9 +1033,15 @@ check_adm_exists (svn_boolean_t *exists,
 
   if (wc_exists)
     {
+      /* This is a bit odd.  We have to open an access baton, which relies
+         on this being a working copy, in order to determine if this is a
+         working copy! */
+      svn_wc_adm_access_t *adm_access;
       svn_wc_entry_t *entry;
 
-      SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
+      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, path, FALSE, FALSE, pool));
+      SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
+      SVN_ERR (svn_wc_adm_close (adm_access));
       if (!entry)
         return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
                                   "no entry for '%s'", path);

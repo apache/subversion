@@ -50,7 +50,7 @@ svn_wc_merge (const char *left,
   svn_path_split_nts (merge_target, &mt_pt, &mt_bn, pool);
 
   /* Sanity check:  the merge target must be under revision control. */
-  SVN_ERR (svn_wc_entry (&entry, merge_target, FALSE, pool));
+  SVN_ERR (svn_wc_entry (&entry, merge_target, adm_access, FALSE, pool));
   if (! entry)
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
@@ -64,7 +64,8 @@ svn_wc_merge (const char *left,
       /* Make sure a temporary copy of 'target' is available with keywords
          contracted and line endings in repository-normal (LF) form.
          This is the file that diff3 will read as the 'mine' file.  */
-      SVN_ERR (svn_wc_translated_file (&tmp_target, merge_target, pool));
+      SVN_ERR (svn_wc_translated_file (&tmp_target, merge_target, adm_access,
+                                       pool));
       if (tmp_target == merge_target)  /* contraction didn't happen */
         {
           /* The target is already in repository form, so we just need to
@@ -207,7 +208,7 @@ svn_wc_merge (const char *left,
 
           /* Create LEFT and RIGHT backup files, in expanded form.
              We use merge_target's current properties to do the translation. */
-          SVN_ERR (svn_wc__get_keywords (&keywords, merge_target,
+          SVN_ERR (svn_wc__get_keywords (&keywords, merge_target, adm_access,
                                          NULL, pool));
           SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol,
                                           merge_target,
@@ -248,7 +249,7 @@ svn_wc_merge (const char *left,
 
       /* Unconditionally replace MERGE_TARGET with the new merged file,
          expanding. */
-      SVN_ERR (svn_wc__get_keywords (&keywords, merge_target,
+      SVN_ERR (svn_wc__get_keywords (&keywords, merge_target, adm_access,
                                      NULL, pool));
       SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol, merge_target,
                                       pool));

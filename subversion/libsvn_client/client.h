@@ -94,6 +94,7 @@ typedef struct
      time. When callbacks specify a relative path, they are joined with
      this base directory. */
   const char *base_dir;
+  svn_wc_adm_access_t *base_access;
 
   /* Record whether we should attempt store the user/pass into the WC.
      If true, then store the username, and consult the run-time config
@@ -143,6 +144,7 @@ svn_error_t * svn_client__open_ra_session (void **session_baton,
                                            const svn_ra_plugin_t *ra_lib,
                                            const char *base_url,
                                            const char *base_dir,
+                                           svn_wc_adm_access_t *base_access,
                                            apr_array_header_t *commit_items,
                                            svn_boolean_t do_store,
                                            svn_boolean_t use_admin,
@@ -178,7 +180,9 @@ svn_client_commit_info_t *svn_client__make_commit_info (svn_revnum_t revision,
 /* Verify that the path can be deleted without losing stuff, i.e. ensure
    that there are no modified or unversioned resources under PATH.  This is
    similar to checking the output of the status command. */
-svn_error_t * svn_client__can_delete (const char *path, apr_pool_t *pool);
+svn_error_t * svn_client__can_delete (const char *path,
+                                      svn_wc_adm_access_t *adm_access,
+                                      apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
 
@@ -341,7 +345,7 @@ svn_client__get_diff_editor (const char *target,
    found in TARGETS will not be crawled for modifications.  */
 svn_error_t *
 svn_client__harvest_committables (apr_hash_t **committables,
-                                  const char *parent_dir,
+                                  svn_wc_adm_access_t *parent_dir,
                                   apr_array_header_t *targets,
                                   svn_boolean_t nonrecursive,
                                   apr_pool_t *pool);
@@ -357,6 +361,7 @@ svn_error_t *
 svn_client__get_copy_committables (apr_hash_t **committables,
                                    const char *new_url,
                                    const char *target,
+                                   svn_wc_adm_access_t *adm_access,
                                    apr_pool_t *pool);
                
 
@@ -400,6 +405,7 @@ svn_client__condense_commit_items (const char **base_url,
 svn_error_t *
 svn_client__do_commit (const char *base_url,
                        apr_array_header_t *commit_items,
+                       svn_wc_adm_access_t *adm_access,
                        const svn_delta_editor_t *editor,
                        void *edit_baton,
                        svn_wc_notify_func_t notify_func,

@@ -600,6 +600,7 @@ read_entries (apr_hash_t *entries,
 svn_error_t *
 svn_wc_entry (svn_wc_entry_t **entry,
               const char *path,
+              svn_wc_adm_access_t *adm_access,
               svn_boolean_t show_deleted,
               apr_pool_t *pool)
 {
@@ -623,10 +624,26 @@ svn_wc_entry (svn_wc_entry_t **entry,
       SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
       if (is_wc)
         {
-          SVN_ERR (svn_wc_entries_read (&entries, path, show_deleted, pool));
+          svn_wc_adm_access_t *dir_access;
+          svn_error_t *err;
+          err = svn_wc_adm_retrieve (&dir_access, adm_access, path, pool);
+          if (err)
+            {
+              if (err->apr_err != SVN_ERR_WC_NOT_LOCKED)
+                return err;
+              svn_error_clear_all (err);
 
-          *entry = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR,
-                                 APR_HASH_KEY_STRING);
+              /* It could be that this is a versioned file that has
+                 been replaced by a unversioned directory. */
+              is_wc = FALSE;
+            }
+          else
+            {
+              SVN_ERR (svn_wc_entries_read (&entries, dir_access, show_deleted,
+                                            pool));
+              *entry = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR,
+                                     APR_HASH_KEY_STRING);
+            }
         }
     }
 
@@ -636,10 +653,14 @@ svn_wc_entry (svn_wc_entry_t **entry,
          which case PATH may also be a file that is deleted or scheduled
          for deletion.
          
+         Or PATH could be a versioned directory that has been removed from
+         the filesystem, and possibly replaced by an unversioned file. In
+         this case there is partial entry information in the parent.
+
          Or maybe we're here because PATH is a regular file.
-         
-         Either way, if PATH is a versioned entity, it is versioned as
-         a file.  So look split and look in parent for entry info. */
+
+         Whatever, if PATH is a versioned entity, it has an entry in the
+         parent.  So split and look in parent for entry info. */
 
       const char *dir, *base_name;
       svn_path_split_nts (path, &dir, &base_name, pool);
@@ -651,10 +672,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
            "svn_wc_entry: %s is not a working copy directory",
            kind == svn_node_dir ? path : dir);
 
-      /* ### it would be nice to avoid reading all of these. or maybe read
-         ### them into a subpool and copy the one that we need up to the
-         ### specified pool. */
-      SVN_ERR (svn_wc_entries_read (&entries, dir, show_deleted, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, adm_access, show_deleted, pool));
       
       *entry = apr_hash_get (entries, base_name, APR_HASH_KEY_STRING);
     }
@@ -769,15 +787,29 @@ check_entries (apr_hash_t *entries,
 
 svn_error_t *
 svn_wc_entries_read (apr_hash_t **entries,
-                     const char *path,
+                     svn_wc_adm_access_t *adm_access,
                      svn_boolean_t show_deleted,
                      apr_pool_t *pool)
 {
   apr_hash_t *new_entries;
 
-  new_entries = apr_hash_make (pool);
+  new_entries = svn_wc__adm_access_entries (adm_access, show_deleted);
+  if (! new_entries)
+    {
+      /* ### If the entries for show_deleted are available, but those for
+         ### not show_deleted are not, it may be quicker to construct the
+         ### latter from the former, rather than parsing the entries
+         ### file. */
 
-  SVN_ERR (read_entries (new_entries, path, show_deleted, pool));
+#if SVN_WC_ADM_CACHE_ENTRIES
+      pool = svn_wc_adm_access_pool (adm_access);
+#endif
+      new_entries = apr_hash_make (pool);
+
+      SVN_ERR (read_entries (new_entries, svn_wc_adm_access_path (adm_access),
+                             show_deleted, pool));
+      svn_wc__adm_access_set_entries (adm_access, show_deleted, new_entries);
+    }
 
   *entries = new_entries;
   return SVN_NO_ERROR;
@@ -991,7 +1023,7 @@ write_entry (svn_stringbuf_t **output,
 
 svn_error_t *
 svn_wc__entries_write (apr_hash_t *entries,
-                       const char *path,
+                       svn_wc_adm_access_t *adm_access,
                        apr_pool_t *pool)
 {
   svn_error_t *err = NULL, *err2 = NULL;
@@ -1001,6 +1033,8 @@ svn_wc__entries_write (apr_hash_t *entries,
   apr_hash_index_t *hi;
   svn_wc_entry_t *this_dir;
 
+  SVN_ERR (svn_wc_adm_write_check (adm_access));
+
   /* Get a copy of the "this dir" entry for comparison purposes. */
   this_dir = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, 
                            APR_HASH_KEY_STRING);
@@ -1009,10 +1043,11 @@ svn_wc__entries_write (apr_hash_t *entries,
   if (! this_dir)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
                               "No default entry in directory `%s'", 
-                              path);
+                              svn_wc_adm_access_path (adm_access));
 
   /* Open entries file for writing. */
-  SVN_ERR (svn_wc__open_adm_file (&outfile, path, SVN_WC__ADM_ENTRIES,
+  SVN_ERR (svn_wc__open_adm_file (&outfile, svn_wc_adm_access_path (adm_access),
+                                  SVN_WC__ADM_ENTRIES,
                                   (APR_WRITE | APR_CREATE | APR_EXCL),
                                   pool));
 
@@ -1051,10 +1086,17 @@ svn_wc__entries_write (apr_hash_t *entries,
   if (apr_err)
     err = svn_error_createf (apr_err, 0, NULL, pool,
                              "svn_wc__entries_write: %s",
-                             path);
+                             svn_wc_adm_access_path (adm_access));
       
-  /* Close & sync. */
-  err2 = svn_wc__close_adm_file (outfile, path, SVN_WC__ADM_ENTRIES, 1, pool);
+  /* Close & sync. ### BUG? Why do we sync if the write failed? */
+  err2 = svn_wc__close_adm_file (outfile, svn_wc_adm_access_path (adm_access),
+                                 SVN_WC__ADM_ENTRIES, 1, pool);
+
+  /* ### We would like to use entries to populate the access baton cache,
+     ### but it's not yet always allocated from the correct pool */
+  svn_wc__adm_access_set_entries (adm_access, TRUE, NULL);
+  svn_wc__adm_access_set_entries (adm_access, FALSE, NULL);
+
   if (err)
     return err;
   else if (err2)
@@ -1422,17 +1464,20 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
   apr_hash_t *entries;
   svn_boolean_t entry_was_deleted_p = FALSE;
 
-
   /* ENTRY is rather necessary, and ENTRY->kind is required to be valid! */
   assert (entry);
 
   /* Load PATH's whole entries file. */
-  SVN_ERR (svn_wc_entries_read (&entries, svn_wc_adm_access_path (adm_access),
-                                TRUE, pool));
+  SVN_ERR (svn_wc_entries_read (&entries, adm_access, TRUE, pool));
 
   /* Ensure that NAME is valid. */
   if (name == NULL)
     name = SVN_WC_ENTRY_THIS_DIR;
+
+#if SVN_WC_ADM_CACHE_ENTRIES
+  pool = svn_wc_adm_access_pool (adm_access);
+  name = apr_pstrdup (pool, name);
+#endif
 
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
     {
@@ -1463,8 +1508,12 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
     fold_entry (entries, name, modify_flags, entry, pool);
 
   /* Sync changes to disk. */
-  return svn_wc__entries_write (entries, svn_wc_adm_access_path (adm_access),
-                                pool);
+  SVN_ERR (svn_wc__entries_write (entries, adm_access, pool));
+
+  /* ### We really want svn_wc__entries_write to do this */
+  svn_wc__adm_access_set_entries (adm_access, TRUE, entries);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -1541,6 +1590,7 @@ svn_wc__tweak_entry (apr_hash_t *entries,
 /* A recursive entry-walker, helper for svn_wc_walk_entries */
 static svn_error_t *
 walker_helper (const char *dirpath,
+               svn_wc_adm_access_t *adm_access,
                const svn_wc_entry_callbacks_t *walk_callbacks,
                void *walk_baton,
                svn_boolean_t show_deleted,
@@ -1551,7 +1601,7 @@ walker_helper (const char *dirpath,
   apr_hash_index_t *hi;
   svn_wc_entry_t *dot_entry;
 
-  SVN_ERR (svn_wc_entries_read (&entries, dirpath, show_deleted, subpool));
+  SVN_ERR (svn_wc_entries_read (&entries, adm_access, show_deleted, subpool));
   
   /* As promised, always return the '.' entry first. */
   dot_entry = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, 
@@ -1582,8 +1632,14 @@ walker_helper (const char *dirpath,
                                             walk_baton));
 
       if (current_entry->kind == svn_node_dir)
-        SVN_ERR (walker_helper (entrypath, walk_callbacks, walk_baton,
-                                show_deleted, subpool));
+        {
+          svn_wc_adm_access_t *entry_access;
+          SVN_ERR (svn_wc_adm_retrieve (&entry_access, adm_access, entrypath,
+                                        subpool));
+          SVN_ERR (walker_helper (entrypath, entry_access,
+                                  walk_callbacks, walk_baton,
+                                  show_deleted, subpool));
+        }
     }
 
   svn_pool_destroy (subpool);
@@ -1594,6 +1650,7 @@ walker_helper (const char *dirpath,
 /* The public function */
 svn_error_t *
 svn_wc_walk_entries (const char *path,
+                     svn_wc_adm_access_t *adm_access,
                      const svn_wc_entry_callbacks_t *walk_callbacks,
                      void *walk_baton,
                      svn_boolean_t show_deleted,
@@ -1601,7 +1658,7 @@ svn_wc_walk_entries (const char *path,
 {
   svn_wc_entry_t *entry;
   
-  SVN_ERR (svn_wc_entry (&entry, path, show_deleted, pool));
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, show_deleted, pool));
 
   if (! entry)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL, pool,
@@ -1611,7 +1668,7 @@ svn_wc_walk_entries (const char *path,
     return walk_callbacks->found_entry (path, entry, walk_baton);
 
   else if (entry->kind == svn_node_dir)
-    return walker_helper (path, walk_callbacks, walk_baton,
+    return walker_helper (path, adm_access, walk_callbacks, walk_baton,
                           show_deleted, pool);
 
   else

@@ -1046,11 +1046,17 @@ main (int argc, const char * const *argv)
           }
         /* Find out if log message file is under revision control. */
         {
+          svn_wc_adm_access_t *adm_access;
           svn_wc_entry_t *e;
 
-          err = svn_wc_entry (&e, utf8_opt_arg, FALSE, pool);
+          err = svn_wc_adm_probe_open (&adm_access, NULL, utf8_opt_arg, FALSE,
+                                       FALSE, pool);
+          if (! err)
+            err = svn_wc_entry (&e, utf8_opt_arg, adm_access, FALSE, pool);
           if ((err == SVN_NO_ERROR) && e)
             log_under_version_control = TRUE;
+          if (err)
+            svn_error_clear_all (err);
         }
         break;
       case svn_cl__targets_opt:

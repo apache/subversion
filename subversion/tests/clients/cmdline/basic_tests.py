@@ -701,8 +701,28 @@ def basic_revert(sbox):
 
   # Finally, check that reverted file is not readonly
   os.remove(beta_path)
-  svntest.main.run_svn(None, 'revert', beta_path)
+  outlines, errlines = svntest.main.run_svn(None, 'revert', beta_path)
+  if errlines:
+    return 1
   if not (open(beta_path, 'rw+')):
+    return 1
+
+  # Check that a directory scheduled to be added, but physically
+  # removed, can be reverted.
+  X_path = os.path.join(wc_dir, 'X')
+  outlines, errlines = svntest.main.run_svn(None, 'mkdir', X_path)
+  if errlines:
+    return 1
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'X' : Item(status='A ', wc_rev=0, repos_rev=1),
+    })
+  if svntest.actions.run_and_verify_status (wc_dir, expected_status):
+    return 1
+  svntest.main.remove_wc(X_path)
+  outlines, errlines = svntest.main.run_svn(None, 'revert', beta_path)
+  expected_status.remove('X')
+  if svntest.actions.run_and_verify_status (wc_dir, expected_status):
     return 1
     
 

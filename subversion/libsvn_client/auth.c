@@ -204,19 +204,27 @@ get_user_and_pass (char **username,
 static svn_error_t *
 store_auth_info (const char *filename,
                  const char *data,
-                 const char *wc_path,
-                 apr_pool_t *pool)
+                 svn_client__callback_baton_t *cb)
 {
-  enum svn_node_kind kind;
+  svn_wc_adm_access_t *adm_access;
 
-  /* Sanity check -- store only in a directory. */
-  SVN_ERR (svn_io_check_path (wc_path, &kind, pool));
-  if (kind != svn_node_dir)
-    return SVN_NO_ERROR;  /* ### is this really not an error? */
+  /* ### Fragile!  For a checkout we have no access baton before the checkout
+     starts, so base_access is NULL.  However checkout closes it's batons
+     before storing auth info so we can open a new baton here. */
+
+  if (! cb->base_access)
+    SVN_ERR (svn_wc_adm_open (&adm_access, NULL, cb->base_dir, TRUE, TRUE,
+                              cb->pool));
+  else
+    adm_access = cb->base_access;
 
   /* Do a recursive store. */
-  SVN_ERR (svn_wc_set_auth_file (wc_path, TRUE, filename, 
-                                 svn_stringbuf_create (data, pool), pool));
+  SVN_ERR (svn_wc_set_auth_file (adm_access, TRUE, filename, 
+                                 svn_stringbuf_create (data, cb->pool),
+                                 cb->pool));
+
+  if (! cb->base_access)
+    SVN_ERR (svn_wc_adm_close (adm_access));
 
   return SVN_NO_ERROR;
 }
@@ -228,8 +236,7 @@ maybe_store_username (const char *username, void *baton)
   svn_client__callback_baton_t *cb = baton;
   
   if (cb->auth_baton->store_auth_info)
-    return store_auth_info (SVN_CLIENT_AUTH_USERNAME, username,
-                            cb->base_dir, cb->pool);
+    return store_auth_info (SVN_CLIENT_AUTH_USERNAME, username, cb);
   else
     return SVN_NO_ERROR;
 }
@@ -252,8 +259,7 @@ maybe_store_password (const char *password, void *baton)
       
       /* ### Oh, are we really case-sensitive? */
       if (strcmp (val, "yes") == 0)
-        return store_auth_info (SVN_CLIENT_AUTH_PASSWORD, password,
-                                cb->base_dir, cb->pool);
+        return store_auth_info (SVN_CLIENT_AUTH_PASSWORD, password, cb);
     }
 
   return SVN_NO_ERROR;

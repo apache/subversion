@@ -467,6 +467,7 @@ get_ra_editor (void **ra_baton,
                svn_client_auth_baton_t *auth_baton,
                const char *base_url,
                const char *base_dir,
+               svn_wc_adm_access_t *base_access,
                const char *log_msg,
                apr_array_header_t *commit_items,
                svn_revnum_t *committed_rev,
@@ -482,7 +483,7 @@ get_ra_editor (void **ra_baton,
   
   /* Open an RA session to URL. */
   SVN_ERR (svn_client__open_ra_session (session, *ra_lib,
-                                        base_url, base_dir,
+                                        base_url, base_dir, base_access,
                                         commit_items, is_commit,
                                         is_commit, !is_commit,
                                         auth_baton, pool));
@@ -572,8 +573,8 @@ svn_client_import (svn_client_commit_info_t **commit_info,
         svn_path_split_nts (path, &base_dir, NULL, pool);
       SVN_ERR (get_ra_editor (&ra_baton, &session, &ra_lib, 
                               &editor, &edit_baton, auth_baton, url, base_dir,
-                              log_msg, NULL, &committed_rev, &committed_date,
-                              &committed_author, FALSE, pool));
+                              NULL, log_msg, NULL, &committed_rev,
+                              &committed_date, &committed_author, FALSE, pool));
     }
 
   /* If an error occured during the commit, abort the edit and return
@@ -737,21 +738,12 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   svn_error_t *cmt_err = NULL, *unlock_err = NULL;
   svn_error_t *bump_err = NULL, *cleanup_err = NULL;
   svn_boolean_t use_xml = (xml_dst && xml_dst[0]) ? TRUE : FALSE;
-  svn_boolean_t is_root, commit_in_progress = FALSE;
+  svn_boolean_t commit_in_progress = FALSE;
   const char *display_dir = "";
   int i;
 
   /* Condense the target list. */
   SVN_ERR (svn_path_condense_targets (&base_dir, &rel_targets, targets, pool));
-
-  SVN_ERR (svn_wc_is_wc_root (&is_root, base_dir, pool));
-  if (is_root)
-    SVN_ERR (svn_wc_adm_open (&base_dir_access, NULL, base_dir, TRUE, TRUE,
-                              pool));
-  else
-    SVN_ERR (svn_wc_adm_open (&base_dir_access, NULL,
-                              svn_path_remove_component_nts (base_dir, pool),
-                              TRUE, TRUE, pool));
 
   /* If we calculated only a base_dir and no relative targets, this
      must mean that we are being asked to commit a single directory.
@@ -779,9 +771,12 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
         }
     }
 
+  SVN_ERR (svn_wc_adm_open (&base_dir_access, NULL, base_dir, TRUE, TRUE,
+                            pool));
+
   /* Crawl the working copy for commit items. */
   if ((cmt_err = svn_client__harvest_committables (&committables, 
-                                                   base_dir,
+                                                   base_dir_access,
                                                    rel_targets, 
                                                    nonrecursive,
                                                    pool)))
@@ -832,8 +827,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
 
       if ((cmt_err = get_ra_editor (&ra_baton, &session, &ra_lib, 
                                     &editor, &edit_baton, auth_baton,
-                                    base_url, base_dir, log_msg,
-                                    commit_items, &committed_rev, 
+                                    base_url, base_dir, base_dir_access,
+                                    log_msg, commit_items, &committed_rev, 
                                     &committed_date, &committed_author, 
                                     TRUE, pool)))
         goto cleanup;
@@ -878,7 +873,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   display_dir = svn_path_get_longest_ancestor (display_dir, base_dir, pool);
 
   /* Perform the commit. */
-  cmt_err = svn_client__do_commit (base_url, commit_items, editor, edit_baton, 
+  cmt_err = svn_client__do_commit (base_url, commit_items, base_dir_access,
+                                   editor, edit_baton, 
                                    notify_func, notify_baton,
                                    display_dir,
                                    &tempfiles, pool);

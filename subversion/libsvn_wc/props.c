@@ -331,21 +331,21 @@ append_prop_conflict (apr_file_t *fp,
 /* ### not used outside this file. make it static? */
 svn_error_t *
 svn_wc__get_existing_prop_reject_file (const char **reject_file,
-                                       const char *path,
+                                       svn_wc_adm_access_t *adm_access,
                                        const char *name,
                                        apr_pool_t *pool)
 {
   apr_hash_t *entries;
   svn_wc_entry_t *the_entry;
 
-  SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));
+  SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
   the_entry = apr_hash_get (entries, name, APR_HASH_KEY_STRING);
 
   if (! the_entry)
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
        "get_existing_reject_prop_reject_file: can't find entry '%s' in '%s'",
-       name, path);
+       name, svn_wc_adm_access_path (adm_access));
 
   *reject_file = the_entry->prejfile 
                  ? apr_pstrdup (pool, the_entry->prejfile)
@@ -373,7 +373,7 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
   svn_stringbuf_t *log_accum;
   apr_file_t *log_fp = NULL;
 
-  SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
   if (entry == NULL)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
                               "Can't merge props into '%s':"
@@ -403,7 +403,7 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
      prepping tempfiles and writing log commands.  */
   SVN_ERR (svn_wc__merge_prop_diffs (state,
                                      &ignored_conflicts,
-                                     parent,
+                                     adm_access,
                                      base_name,
                                      propchanges,
                                      pool,
@@ -430,7 +430,7 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
 svn_error_t *
 svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
                           apr_hash_t **conflicts,
-                          const char *path,
+                          svn_wc_adm_access_t *adm_access,
                           const char *name,
                           const apr_array_header_t *propchanges,
                           apr_pool_t *pool,
@@ -468,14 +468,15 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
     {
       /* We must be merging props on the directory PATH  */
       entryname = SVN_WC_ENTRY_THIS_DIR;
-      full_path = path;
+      full_path = svn_wc_adm_access_path (adm_access);
       is_dir = TRUE;
     }
   else
     {
       /* We must be merging props on the file PATH/NAME */
       entryname = name;
-      full_path = svn_path_join (path, name, pool);
+      full_path = svn_path_join (svn_wc_adm_access_path (adm_access), name,
+                                 pool);
       is_dir = FALSE;
     }
 
@@ -752,7 +753,7 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
       /* Now try to get the name of a pre-existing .prej file from the
          entries file */
       SVN_ERR (svn_wc__get_existing_prop_reject_file (&reject_path,
-                                                      path,
+                                                      adm_access,
                                                       entryname,
                                                       pool));
 
@@ -763,12 +764,10 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
           const char *reserved_path;
           const char *full_reject_path;
 
-          if (is_dir)
-            full_reject_path = svn_path_join (path,
-                                              SVN_WC__THIS_DIR_PREJ,
-                                              pool);
-          else
-            full_reject_path = svn_path_join (path, name, pool);
+          full_reject_path
+            = svn_path_join (svn_wc_adm_access_path (adm_access),
+                             is_dir ? SVN_WC__THIS_DIR_PREJ : name,
+                             pool);
 
           SVN_ERR (svn_io_open_unique_file (&reject_fp,
                                             &reserved_path,
@@ -1067,6 +1066,7 @@ svn_error_t *
 svn_wc_prop_set (const char *name,
                  const svn_string_t *value,
                  const char *path,
+                 svn_wc_adm_access_t *adm_access,
                  apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -1117,7 +1117,8 @@ svn_wc_prop_set (const char *name,
    * from the old one.
    */
   if (kind == svn_node_file && strcmp (name, SVN_PROP_KEYWORDS) == 0)
-    SVN_ERR (svn_wc__get_keywords (&old_keywords, path, NULL, pool));
+    SVN_ERR (svn_wc__get_keywords (&old_keywords, path, adm_access, NULL,
+                                   pool));
 
   /* ### darned stringbuf */
   valuebuf = value ? svn_stringbuf_create_from_string (value, pool) : NULL;
@@ -1147,26 +1148,23 @@ svn_wc_prop_set (const char *name,
   if (kind == svn_node_file && strcmp (name, SVN_PROP_KEYWORDS) == 0)
     {
       svn_wc_keywords_t *new_keywords;
-      SVN_ERR (svn_wc__get_keywords (&new_keywords, path, NULL, pool));
+      SVN_ERR (svn_wc__get_keywords (&new_keywords, path, adm_access, NULL,
+                                     pool));
 
       if (svn_wc_keywords_differ (old_keywords, new_keywords, FALSE))
         {
-          const char *pdir, *base_name;
+          const char *base_name;
           svn_wc_entry_t tmp_entry;
-          svn_wc_adm_access_t *adm_access;
 
           /* If we changed the keywords or newlines, void the entry
              timestamp for this file, so svn_wc_text_modified_p() does
              a real (albeit slow) check later on. */
-          svn_path_split_nts (path, &pdir, &base_name, pool);
-          SVN_ERR (svn_wc_adm_open (&adm_access, NULL, pdir, TRUE, FALSE,
-                                    pool));
+          svn_path_split_nts (path, NULL, &base_name, pool);
           tmp_entry.kind = svn_node_file;
           tmp_entry.text_time = 0;
           SVN_ERR (svn_wc__entry_modify (adm_access, base_name, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_TEXT_TIME,
                                          pool));
-          SVN_ERR (svn_wc_adm_close (adm_access));
         }
     }
 
@@ -1289,6 +1287,7 @@ svn_wc__has_props (svn_boolean_t *has_props,
 svn_error_t *
 svn_wc_props_modified_p (svn_boolean_t *modified_p,
                          const char *path,
+                         svn_wc_adm_access_t *adm_access,
                          apr_pool_t *pool)
 {
   svn_boolean_t bempty, wempty;
@@ -1309,7 +1308,7 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   /* If something is scheduled for replacement, we do *not* want to
      pay attention to any base-props;  they might be residual from the
      old deleted file. */
-  SVN_ERR (svn_wc_entry (&entry, path, TRUE, subpool));  
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, TRUE, subpool));  
   if (entry 
       && ((entry->schedule == svn_wc_schedule_replace)
           || (entry->schedule == svn_wc_schedule_add)))
@@ -1371,7 +1370,7 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
       
   /* See if the local file's prop timestamp is the same as the one
      recorded in the administrative directory.  */
-  SVN_ERR (svn_wc__timestamps_equal_p (&equal_timestamps, path,
+  SVN_ERR (svn_wc__timestamps_equal_p (&equal_timestamps, path, adm_access,
                                        svn_wc__prop_time, subpool));
   if (equal_timestamps)
     {

@@ -31,38 +31,44 @@
 
 struct svn_wc_adm_access_t
 {
-   /* PATH to directory which contains the administrative area */
-   const char *path;
+  /* PATH to directory which contains the administrative area */
+  const char *path;
 
-   enum svn_wc__adm_access_type {
+  enum svn_wc__adm_access_type {
 
-      /* SVN_WC__ADM_ACCESS_UNLOCKED indicates no lock is held allowing
-         read-only access */
-      svn_wc__adm_access_unlocked,
+    /* SVN_WC__ADM_ACCESS_UNLOCKED indicates no lock is held allowing
+       read-only access */
+    svn_wc__adm_access_unlocked,
 
-      /* SVN_WC__ADM_ACCESS_WRITE_LOCK indicates that a write lock is held
-         allowing read-write access */
-      svn_wc__adm_access_write_lock,
+    /* SVN_WC__ADM_ACCESS_WRITE_LOCK indicates that a write lock is held
+       allowing read-write access */
+    svn_wc__adm_access_write_lock,
 
-      /* SVN_WC__ADM_ACCESS_CLOSED indicates that the baton has been
-         closed. */
-      svn_wc__adm_access_closed
+    /* SVN_WC__ADM_ACCESS_CLOSED indicates that the baton has been
+       closed. */
+    svn_wc__adm_access_closed
 
-   } type;
+  } type;
 
-   /* LOCK_EXISTS is set TRUE when the write lock exists */
-   svn_boolean_t lock_exists;
+  /* LOCK_EXISTS is set TRUE when the write lock exists */
+  svn_boolean_t lock_exists;
 
-   /* SET_OWNER is TRUE if SET is allocated from this access baton */
-   svn_boolean_t set_owner;
+  /* SET_OWNER is TRUE if SET is allocated from this access baton */
+  svn_boolean_t set_owner;
 
-   /* SET is a hash of svn_wc_adm_access_t* keyed on char* representing the
-      path to directories that are open. */
-   apr_hash_t *set;
+  /* SET is a hash of svn_wc_adm_access_t* keyed on char* representing the
+     path to directories that are open. */
+  apr_hash_t *set;
 
-   /* POOL is used to allocate cached items, they need to persist for the
-      lifetime of this access baton */
-   apr_pool_t *pool;
+  /* ENTRIES is the cached entries for PATH, without those in state
+     deleted. ENTRIES_DELETED is the cached entries including those in
+     state deleted. Either may be NULL. */
+  apr_hash_t *entries;
+  apr_hash_t *entries_deleted;
+
+  /* POOL is used to allocate cached items, they need to persist for the
+     lifetime of this access baton */
+  apr_pool_t *pool;
 
 };
 
@@ -161,6 +167,8 @@ adm_access_alloc (enum svn_wc__adm_access_type type,
 {
   svn_wc_adm_access_t *lock = apr_palloc (pool, sizeof (*lock));
   lock->type = type;
+  lock->entries = NULL;
+  lock->entries_deleted = NULL;
   lock->set = NULL;
   lock->lock_exists = FALSE;
   lock->set_owner = FALSE;
@@ -183,6 +191,27 @@ adm_ensure_set (svn_wc_adm_access_t *adm_access)
                     adm_access);
     }
 }
+
+static svn_error_t *
+probe (const char **dir,
+       const char *path,
+       apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+  int is_wc;
+
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  if (kind == svn_node_dir)
+    SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
+
+  if (kind != svn_node_dir || ! is_wc)
+    *dir = svn_path_remove_component_nts (path, pool);
+  else
+    *dir = path;
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_wc__adm_steal_write_lock (svn_wc_adm_access_t **adm_access,
@@ -249,8 +278,8 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
     }
   else
     {
-      /* ### Read-lock not yet implemented. Since no physical lock gets
-         ### created we must check PATH is not a file. */
+      /* Since no physical lock gets created we must check PATH is not a
+         file. */
       enum svn_node_kind node_kind;
       SVN_ERR (svn_io_check_path (path, &node_kind, pool));
       if (node_kind != svn_node_dir)
@@ -264,12 +293,11 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
 
   if (tree_lock)
     {
-      /* ### Use this code to initialise the cache? */
       apr_hash_t *entries;
       apr_hash_index_t *hi;
       apr_pool_t *subpool = svn_pool_create (pool);
 
-      SVN_ERR (svn_wc_entries_read (&entries, lock->path, FALSE, subpool));
+      SVN_ERR (svn_wc_entries_read (&entries, lock, FALSE, subpool));
 
       /* Use a temporary hash until all children have been opened. */
       if (associated)
@@ -344,6 +372,25 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
+                       svn_wc_adm_access_t *associated,
+                       const char *path,
+                       svn_boolean_t write_lock,
+                       svn_boolean_t tree_lock,
+                       apr_pool_t *pool)
+{
+  const char *dir;
+
+  SVN_ERR (probe (&dir, path, pool));
+  SVN_ERR (svn_wc_adm_open (adm_access, associated, dir, write_lock, tree_lock,
+                            pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
                      svn_wc_adm_access_t *associated,
@@ -362,6 +409,22 @@ svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
                               path);
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_wc_adm_probe_retrieve (svn_wc_adm_access_t **adm_access,
+                           svn_wc_adm_access_t *associated,
+                           const char *path,
+                           apr_pool_t *pool)
+{
+  const char *dir;
+
+  SVN_ERR (probe (&dir, path, pool));
+  SVN_ERR (svn_wc_adm_retrieve (adm_access, associated, dir, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Does the work of closing the access baton ADM_ACCESS.  Any physical
    locks are removed from the working copy if PRESERVE_LOCK is FALSE, or
@@ -467,7 +530,6 @@ svn_wc_adm_write_check (svn_wc_adm_access_t *adm_access)
     }
   else
     {
-      /* ### Could try to upgrade the read lock to a write lock here? */
       return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, 0, NULL,
                                 adm_access->pool, 
                                 "no write-lock in: %s", adm_access->path); 
@@ -504,6 +566,7 @@ svn_wc_adm_access_path (svn_wc_adm_access_t *adm_access)
   return adm_access->path;
 }
 
+
 apr_pool_t *
 svn_wc_adm_access_pool (svn_wc_adm_access_t *adm_access)
 {
@@ -527,6 +590,27 @@ svn_wc__adm_is_cleanup_required (svn_boolean_t *cleanup,
   return SVN_NO_ERROR;
 }
 
+
+void
+svn_wc__adm_access_set_entries (svn_wc_adm_access_t *adm_access,
+                                svn_boolean_t show_deleted,
+                                apr_hash_t *entries)
+{
+#if SVN_WC_ADM_CACHE_ENTRIES
+  if (show_deleted)
+    adm_access->entries_deleted = entries;
+  else
+    adm_access->entries = entries;
+#endif
+}
+
+
+apr_hash_t *
+svn_wc__adm_access_entries (svn_wc_adm_access_t *adm_access,
+                            svn_boolean_t show_deleted)
+{
+  return show_deleted ? adm_access->entries_deleted : adm_access->entries;
+}
 
 
 /* 

@@ -73,8 +73,8 @@ wc_to_wc_copy (const char *src_path,
                apr_pool_t *pool)
 {
   svn_node_kind_t src_kind, dst_kind;
-  const char *parent = dst_path, *base_name;
-  svn_wc_adm_access_t *adm_access;
+  const char *dst_parent, *base_name;
+  svn_wc_adm_access_t *adm_access, *src_access;
 
   /* Verify that SRC_PATH exists. */
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
@@ -90,40 +90,16 @@ wc_to_wc_copy (const char *src_path,
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
   if (dst_kind == svn_node_none)
     {
-      svn_path_split_nts (dst_path, &parent, &base_name, pool);
+      svn_path_split_nts (dst_path, &dst_parent, &base_name, pool);
     }
   else if (dst_kind == svn_node_dir)
-    svn_path_split_nts (src_path, NULL, &base_name, pool);
+    {
+      svn_path_split_nts (src_path, NULL, &base_name, pool);
+      dst_parent = dst_path;
+    }
   else
     return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL, pool,
                               "file `%s' already exists.", dst_path);
-
-  if (is_move && !force)
-    {
-      /* Ensure there are no "awkward" files. */
-      SVN_ERR_W (svn_client__can_delete (src_path, pool),
-                 "Pass --force to override this restriction");
-    }
-
-  /* Perform the copy and (optionally) delete. */
-
-  if (! optional_adm_access)
-    {
-      if (dst_kind == svn_node_none)
-        SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent, TRUE, FALSE,
-                                  pool));
-      else
-        SVN_ERR (svn_wc_adm_open (&adm_access, NULL, dst_path, TRUE, FALSE,
-                                  pool));
-    }
-  else
-    adm_access = optional_adm_access;
-                              
-  SVN_ERR (svn_wc_copy (src_path, adm_access, base_name,
-                        notify_func, notify_baton, pool));
-
-  if (! optional_adm_access)
-    SVN_ERR (svn_wc_adm_close (adm_access));
 
   if (is_move)
     {
@@ -134,14 +110,50 @@ wc_to_wc_copy (const char *src_path,
 
       svn_path_split_nts (src_path, &src_parent, NULL, pool);
 
-      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, src_parent, TRUE,
-                                src_kind == svn_node_dir, pool));
+      SVN_ERR (svn_wc_adm_open (&src_access, NULL, src_parent, TRUE,
+                                src_kind == svn_node_dir,
+                                pool));
 
-      SVN_ERR (svn_wc_delete (src_path, adm_access,
+      /* Need to avoid attempting to open the same dir twice when source
+         and destination overlap. */
+      if (strcmp (src_parent, dst_parent) == 0)
+        adm_access = src_access;
+      else
+        SVN_ERR (svn_wc_adm_open (&adm_access, NULL, dst_parent, TRUE, FALSE,
+                                  pool));
+
+      if (!force)
+        /* Ensure there are no "awkward" files. */
+        SVN_ERR_W (svn_client__can_delete (src_path, src_access, pool),
+                   "Pass --force to override this restriction");
+    }
+  else if (! optional_adm_access)
+    SVN_ERR (svn_wc_adm_open (&adm_access, NULL, dst_parent, TRUE, FALSE,
+                              pool));
+  else
+    adm_access = optional_adm_access;
+                              
+  /* Perform the copy and (optionally) delete. */
+
+  /* ### If this is not a move, we won't have locked the source, so we
+     ### won't detect any outstanding locks. If the source is locked and
+     ### requires cleanup should we abort the copy? */
+
+  SVN_ERR (svn_wc_copy (src_path, adm_access, base_name,
+                        notify_func, notify_baton, pool));
+
+
+  if (is_move)
+    {
+      SVN_ERR (svn_wc_delete (src_path, src_access,
                               notify_func, notify_baton, pool));
 
-      SVN_ERR (svn_wc_adm_close (adm_access));
+      if (adm_access != src_access)
+        SVN_ERR (svn_wc_adm_close (adm_access));
+      SVN_ERR (svn_wc_adm_close (src_access));
     }
+  else if (! optional_adm_access)
+    SVN_ERR (svn_wc_adm_close (adm_access));
 
   return SVN_NO_ERROR;
 }
@@ -238,7 +250,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files or store the auth data. */
-  SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, top_url, NULL,
+  SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, top_url, NULL, NULL,
                                         NULL, FALSE, FALSE, TRUE, 
                                         auth_baton, pool));
 
@@ -517,8 +529,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   /* Split the SRC_PATH into a parent and basename. */
   svn_path_split_nts (src_path, &parent, &base_name, pool);
 
-  /* ### Do we need locks for a wc->repos copy? */
-  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent, TRUE, TRUE, pool));
+  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent, FALSE, TRUE, pool));
 
   /* Split the DST_URL into an anchor and target. */
   svn_path_split_nts (dst_url, &anchor, &target, pool);
@@ -529,7 +540,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Open an RA session for the anchor URL. */
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, parent,
-                                        NULL, TRUE, TRUE, TRUE, 
+                                        adm_access, NULL, TRUE, TRUE, TRUE, 
                                         auth_baton, pool));
 
   /* Figure out the basename that will result from this operation. */
@@ -570,6 +581,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   if ((cmt_err = svn_client__get_copy_committables (&committables, 
                                                     base_url,
                                                     base_path,
+                                                    adm_access,
                                                     pool)))
     goto cleanup;
 
@@ -591,8 +603,8 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Open an RA session to BASE_URL. */
   if ((cmt_err = svn_client__open_ra_session (&session, ra_lib, base_url, NULL,
-                                              commit_items, TRUE, TRUE, TRUE,
-                                              auth_baton, pool)))
+                                              NULL, commit_items, TRUE, TRUE,
+                                              TRUE, auth_baton, pool)))
     goto cleanup;
 
   /* Fetch RA commit editor. */
@@ -605,7 +617,8 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   commit_in_progress = TRUE;
 
   /* Perform the commit. */
-  cmt_err = svn_client__do_commit (base_url, commit_items, editor, edit_baton, 
+  cmt_err = svn_client__do_commit (base_url, commit_items, adm_access,
+                                   editor, edit_baton, 
                                    notify_func, notify_baton,
                                    0, /* ### any notify_path_offset needed? */
                                    &tempfiles, pool);
@@ -671,7 +684,7 @@ repos_to_wc_copy (const char *src_url,
      working copy, so we don't have a corresponding path and tempfiles
      cannot go into the admin area. We do want to store the resulting
      auth data, though, once the WC is built. */
-  SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, src_url, NULL,
+  SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, src_url, NULL, NULL,
                                         NULL, TRUE, FALSE, TRUE, 
                                         auth_baton, pool));
       
@@ -739,6 +752,12 @@ repos_to_wc_copy (const char *src_url,
     return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
                               "`%s' is in the way", dst_path);
 
+  if (! optional_adm_access)
+    SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, dst_path, TRUE, FALSE,
+                                    pool));
+  else
+    adm_access = optional_adm_access;
+                              
   if (src_kind == svn_node_dir)
     {    
       const svn_delta_editor_t *editor;
@@ -774,7 +793,7 @@ repos_to_wc_copy (const char *src_url,
           /* We just did a checkout; whatever revision we just got, that
              should be the copyfrom_revision when we commit later. */
           svn_wc_entry_t *d_entry;
-          SVN_ERR (svn_wc_entry (&d_entry, dst_path, FALSE, pool));
+          SVN_ERR (svn_wc_entry (&d_entry, dst_path, adm_access, FALSE, pool));
           src_revnum = d_entry->revision;
         }
 
@@ -826,21 +845,6 @@ repos_to_wc_copy (const char *src_url,
      rewritten, wcprops removed, and everything marked as 'copied'.
      See comment in svn_wc_add()'s doc about whether svn_wc_add is the
      appropriate place for this. */
-  if (! optional_adm_access)
-    {
-      const char *parent_path;
-      if (dst_kind == svn_node_dir)
-        parent_path = dst_path;
-      else
-        {
-          parent_path = svn_path_remove_component_nts (dst_path, pool);
-        }
-      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, FALSE,
-                                pool));
-    }
-  else
-    adm_access = optional_adm_access;
-                              
   SVN_ERR (svn_wc_add (dst_path, adm_access, src_url, src_revnum,
                        notify_func, notify_baton, pool));
 
@@ -863,7 +867,7 @@ repos_to_wc_copy (const char *src_url,
              processing).  */
           kind = svn_property_kind (NULL, key);
           if (kind == svn_prop_regular_kind)
-            SVN_ERR (svn_wc_prop_set (key, val, dst_path, pool));
+            SVN_ERR (svn_wc_prop_set (key, val, dst_path, adm_access, pool));
         }
     }
 
@@ -900,15 +904,16 @@ setup_copy (svn_client_commit_info_t **commit_info,
   src_is_url = svn_path_is_url (src_path);
   dst_is_url = svn_path_is_url (dst_path);
 
+  if (svn_path_is_child (src_path, dst_path, pool))
+    return svn_error_createf
+      (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+       "cannot copy path '%s' into its own child '%s'",
+       src_path, dst_path);
+
   if (is_move)
     {
       if (src_is_url == dst_is_url)
         {
-          if (svn_path_is_child (src_path, dst_path, pool))
-            return svn_error_createf
-              (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
-               "cannot move path '%s' into its own child '%s'",
-               src_path, dst_path);
           if (strcmp (src_path, dst_path) == 0)
             return svn_error_createf
               (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
@@ -947,8 +952,13 @@ setup_copy (svn_client_commit_info_t **commit_info,
             {
               /* We can convert the working copy path to a URL based on the
                  entries file. */
+              svn_wc_adm_access_t *adm_access;  /* ### FIXME local */
               svn_wc_entry_t *entry;
-              SVN_ERR (svn_wc_entry (&entry, src_path, FALSE, pool));
+              SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, src_path,
+                                              FALSE, FALSE, pool));
+              SVN_ERR (svn_wc_entry (&entry, src_path, adm_access, FALSE,
+                                     pool));
+              SVN_ERR (svn_wc_adm_close (adm_access));
               src_path = entry->url;
               src_is_url = TRUE;
             }

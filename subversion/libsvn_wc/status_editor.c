@@ -42,6 +42,7 @@ struct edit_baton
   /* For status, the "destination" of the edit  and whether to honor
      any paths that are 'below'.  */
   const char *path;
+  svn_wc_adm_access_t *adm_access;
   svn_boolean_t descend;
 
   /* The youngest revision in the repository.  This is a reference
@@ -78,6 +79,7 @@ struct edit_baton
 static svn_error_t *
 tweak_statushash (void *edit_baton,
                   const char *path,
+                  svn_boolean_t is_dir,
                   enum svn_wc_status_kind repos_text_status,
                   enum svn_wc_status_kind repos_prop_status)
 {
@@ -117,9 +119,19 @@ tweak_statushash (void *edit_baton,
     {
       /* Need a path with the same lifetime as the hash */
       const char *path_dup = apr_pstrdup (pool, path);
+      svn_wc_adm_access_t *adm_access;
+      if (repos_text_status == svn_wc_status_added)
+        adm_access = NULL;
+      else if (is_dir)
+        SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, path, pool));
+      else
+        SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
+                                      svn_path_remove_component_nts (path,
+                                                                     pool),
+                                      pool));
 
       /* Use the public API to get a statstruct: */
-      SVN_ERR (svn_wc_status (&statstruct, path, pool));
+      SVN_ERR (svn_wc_status (&statstruct, path, adm_access, pool));
 
       /* Put the path/struct into the hash. */
       apr_hash_set (statushash, path_dup, APR_HASH_KEY_STRING, statstruct);
@@ -307,6 +319,9 @@ delete_entry (const char *path,
   apr_hash_t *entries;
   const char *name = svn_path_basename (path, pool);
   const char *full_path = svn_path_join (eb->path, path, pool);
+  const char *dir_path;
+  svn_node_kind_t kind;
+  svn_wc_adm_access_t *adm_access;
 
   /* Note:  when something is deleted, it's okay to tweak the
      statushash immediately.  No need to wait until close_file or
@@ -317,15 +332,21 @@ delete_entry (const char *path,
      versioned in this working copy, it was probably deleted via this
      working copy.  No need to report such a thing. */
   /* ### use svn_wc_entry() instead? */
-  SVN_ERR (svn_wc_entries_read (&entries, db->path, FALSE, pool));
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  if (kind == svn_node_dir)
+    dir_path = full_path;
+  else
+    dir_path = svn_path_remove_component_nts (full_path, pool);
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, dir_path, pool));
+  SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
   if (apr_hash_get (entries, name, APR_HASH_KEY_STRING))
     SVN_ERR (tweak_statushash (db->edit_baton,
-                               full_path,
+                               full_path, kind == svn_node_dir,
                                svn_wc_status_deleted, 0));
 
   /* Mark the parent dir regardless -- it lost an entry. */
   SVN_ERR (tweak_statushash (db->edit_baton,
-                             db->path,
+                             db->path, kind == svn_node_dir,
                              svn_wc_status_modified, 0));
 
   return SVN_NO_ERROR;
@@ -395,14 +416,14 @@ close_directory (void *dir_baton)
   /* If this directory was added, add the directory to the status hash. */
   if (db->added)
     SVN_ERR (tweak_statushash (db->edit_baton,
-                               db->path,
+                               db->path, TRUE,
                                svn_wc_status_added,
                                db->prop_changed ? svn_wc_status_added : 0));
 
   /* Else, mark the existing directory in the statushash. */
   else
     SVN_ERR (tweak_statushash (db->edit_baton,
-                               db->path,
+                               db->path, TRUE,
                                db->text_changed ? svn_wc_status_modified : 0,
                                db->prop_changed ? svn_wc_status_modified : 0));
   
@@ -491,13 +512,13 @@ close_file (void *file_baton)
   /* If this is a new file, add it to the statushash. */
   if (fb->added)
     SVN_ERR (tweak_statushash (fb->edit_baton,
-                               fb->path,
+                               fb->path, FALSE,
                                svn_wc_status_added, 
                                fb->prop_changed ? svn_wc_status_added : 0));
   /* Else, mark the existing file in the statushash. */
   else
     SVN_ERR (tweak_statushash (fb->edit_baton,
-                               fb->path,
+                               fb->path, FALSE,
                                fb->text_changed ? svn_wc_status_modified : 0,
                                fb->prop_changed ? svn_wc_status_modified : 0));
 
@@ -524,6 +545,7 @@ svn_error_t *
 svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                           void **edit_baton,
                           const char *path,
+                          svn_wc_adm_access_t *adm_access,
                           svn_boolean_t descend,
                           apr_hash_t *statushash,
                           svn_revnum_t *youngest,
@@ -541,6 +563,7 @@ svn_wc_get_status_editor (const svn_delta_editor_t **editor,
   eb->statushash        = statushash;
   eb->descend           = descend;
   eb->youngest_revision = youngest;
+  eb->adm_access        = adm_access;
 
   /* Anchor target analysis, to make this editor able to match
      hash-keys already in the hash.  (svn_wc_statuses is ignorant of

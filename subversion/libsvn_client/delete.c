@@ -37,12 +37,21 @@
 
 svn_error_t *
 svn_client__can_delete (const char *path,
+                        svn_wc_adm_access_t *adm_access,
                         apr_pool_t *pool)
 {
   apr_hash_t *hash = apr_hash_make (pool);
   apr_hash_index_t *hi;
+  svn_node_kind_t kind;
+  svn_wc_adm_access_t *dir_access;
 
-  SVN_ERR (svn_wc_statuses (hash, path, TRUE, FALSE, FALSE, pool));
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  if (kind == svn_node_dir)
+    SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, path, pool));
+  else
+    dir_access = adm_access;
+
+  SVN_ERR (svn_wc_statuses (hash, path, dir_access, TRUE, FALSE, FALSE, pool));
   for (hi = apr_hash_first (pool, hash); hi; hi = apr_hash_next (hi))
     {
       const void *key;
@@ -148,7 +157,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       /* Open an RA session for the URL. Note that we don't have a local
          directory, nor a place to put temp files or store the auth data. */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, NULL,
-                                            NULL, FALSE, FALSE, TRUE,
+                                            NULL, NULL, FALSE, FALSE, TRUE,
                                             auth_baton, pool));
 
       /* Verify that the thing to be deleted actually exists. */
@@ -185,11 +194,6 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       return SVN_NO_ERROR;
     }
   
-  if (!force)
-    {
-      /* Verify that there are no "awkward" files */
-      SVN_ERR (svn_client__can_delete (path, pool));
-    }
 
   if (! optional_adm_access)
     {
@@ -201,6 +205,12 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
     }
   else
     adm_access = optional_adm_access;
+
+  if (!force)
+    {
+      /* Verify that there are no "awkward" files */
+      SVN_ERR (svn_client__can_delete (path, adm_access, pool));
+    }
 
   /* Mark the entry for commit deletion and perform wc deletion */
   SVN_ERR (svn_wc_delete (path, adm_access, notify_func, notify_baton, pool));
