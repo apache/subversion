@@ -23,7 +23,8 @@ import marshal
 # Make sure this Python is recent enough.
 import sys
 if sys.hexversion < 0x2000000:
-  sys.stderr.write('Python 2.0 or higher is required; see www.python.org.\n')
+  sys.stderr.write("'%s: Python 2.0 or higher required, "
+                   "see www.python.org.\n" % error_prefix)
   sys.exit(1)
 
 # Don't settle for less.
@@ -117,7 +118,7 @@ class CollectData(rcsparse.Sink):
     else:
       sys.stderr.write("%s: in '%s':\n"
                        "   branch '%s' already has name '%s',\n"
-                       "   cannot also have name '%s', ignoring the latter\n" \
+                       "   cannot also have name '%s', ignoring the latter\n"
                        % (warning_prefix, self.fname, revision,
                           self.branch_names[revision], name))
 
@@ -166,10 +167,9 @@ class CollectData(rcsparse.Sink):
     inspection, and record it in the right places."""
     if not symbolic_name_re.match(name):
       sys.stderr.write("%s: in '%s':\n"
-                       "   '%s' is not a valid tag or branch name.\n" \
-                       % (error_prefix, self.fname, name))
-      sys.exit(1)
-    if branch_tag.match(revision):
+                       "   '%s' is not a valid tag or branch name, ignoring\n"
+                       % (warning_prefix, self.fname, name))
+    elif branch_tag.match(revision):
       self.add_cvs_branch(revision, name)
     elif vendor_tag.match(revision):
       self.set_branch_name(revision, name)
@@ -303,8 +303,10 @@ def make_path(ctx, path, branch_name = None, tag_name = None):
   # and the surrounding thread, for why what people really want is a
   # way of specifying an in-repository prefix path, not interpolation.
 
+  # Check caller sanity.
   if branch_name and tag_name:
-    sys.stderr.write('make_path() miscalled: both branch and tag given.\n')
+    sys.stderr.write("%s: make_path() miscalled: both branch and tag given.\n"
+                     % error_prefix)
     sys.exit(1)
 
   if branch_name:
@@ -332,8 +334,8 @@ def relative_name(cvsroot, fname):
     if fname[l] == os.sep:
       return string.replace(fname[l+1:], os.sep, '/')
     return string.replace(fname[l:], os.sep, '/')
-  sys.stderr.write("relative_path('%s', '%s'): fname is not a sub-path of"
-                   " cvsroot\n" % (cvsroot, fname))
+  sys.stderr.write("%s: relative_path('%s', '%s'): fname is not a sub-path of"
+                   " cvsroot\n" % (error_prefix, cvsroot, fname))
   sys.exit(1)
 
 
@@ -596,6 +598,8 @@ class RepositoryMirror:
     If ONLY_IF_ALREADY_EXISTS is set, then do a no-op, rather than an add,
     if the path does not exist. This is to allow pruning using EXPECTED_ENTRIES
     without risking erroneously adding a path."""
+
+    # Check caller sanity.
     if ((copyfrom_rev and not copyfrom_path) or
         (copyfrom_path and not copyfrom_rev)):
       sys.stderr.write("%s: change_path() called with one copyfrom "
@@ -827,6 +831,7 @@ class RepositoryMirror:
     # Install the new root entry.
     self.revs_db[str(self.youngest)] = new_key
 
+    # Sanity check -- this should be a "can't happen".
     if pruned_count > len(components):
       sys.stderr.write("%s: deleting '%s' tried to prune %d components.\n"
                        % (error_prefix, path, pruned_count))
@@ -1304,9 +1309,10 @@ class SymbolicNameTracker:
         print "  " * i,
         print "'%s' key: %s, val:" % (last_component, parent_key), parent
 
+      # Check for a "can't happen."
       if not parent.has_key(component):
-        sys.stderr.write("SYM PROBE FAILED: '%s' does not contain '%s'\n" \
-                         % (last_component, component))
+        sys.stderr.write("%s: sym probe failed: '%s' does not contain '%s'\n"
+                         % (error_prefix, last_component, component))
         sys.exit(1)
 
       this_entry_key = parent[component]
@@ -1434,10 +1440,11 @@ class SymbolicNameTracker:
       for component in components:
         self.bump_rev_count(parent_key, svn_rev, closing_key)
         parent = marshal.loads(self.db[parent_key])
+        # Check for a "can't happen".
         if not parent.has_key(component):
-          sys.stderr.write("In path '%s', value for parent key '%s' "
-                           "does not have entry '%s'\n" \
-                           % (svn_path, parent_key, component))
+          sys.stderr.write("%s: in path '%s', value for parent key '%s' "
+                           "does not have entry '%s'\n"
+                           % (error_prefix, svn_path, parent_key, component))
           sys.exit(1)
         this_entry_key = parent[component]
         this_entry_val = marshal.loads(self.db[this_entry_key])
@@ -1634,11 +1641,14 @@ class SymbolicNameTracker:
     parent_key = self.root_key
     parent = marshal.loads(self.db[parent_key])
 
+    # If there are no origin records, then we must've messed up earlier.
     if not parent.has_key(name):
       if is_tag:
-        sys.stderr.write("No origin records for tag '%s'.\n" % name)
+        sys.stderr.write("%s: no origin records for tag '%s'.\n"
+                         % (error_prefix, name))
       else:
-        sys.stderr.write("No origin records for branch '%s'.\n" % name)
+        sys.stderr.write("%s: no origin records for branch '%s'.\n"
+                         % (error_prefix, name))
       sys.exit(1)
 
     parent_key = parent[name]
@@ -1848,14 +1858,16 @@ class Commit:
                 'svn:log' : unicode_log.encode('utf8'),
                 'svn:date' : date }
     except UnicodeError:
-      print '%s: problem encoding author or log message:' % error_prefix
+      print '%s: problem encoding author or log message:' % warning_prefix
       print "  author: '%s'" % author
       print "  log:    '%s'" % log
       print "  date:   '%s'" % date
       for rcs_file, cvs_rev, br, tags, branches in self.changes:
         print "    rev %s of '%s'" % (cvs_rev, rcs_file)
-      print 'Try rerunning with (for example) \"--encoding=latin1\".'
-      sys.exit(1)
+      print 'Consider rerunning with (for example) \"--encoding=latin1\".'
+      # Just fall back to the original data.
+      props = { 'svn:author' : author, 'svn:log' : log, 'svn:date' : date }
+      
 
     # Tells whether we actually wrote anything to the dumpfile.
     svn_rev = SVN_INVALID_REVNUM
@@ -2302,11 +2314,11 @@ def main():
   if ((string.find(ctx.trunk_base, '/') > -1)
       or (string.find(ctx.tags_base, '/') > -1)
       or (string.find(ctx.branches_base, '/') > -1)):
-    sys.stderr.write(error_prefix + ": cannot pass multicomponent path to ")
-    sys.stderr.write("--trunk, --tags, or --branches yet.\n")
-    sys.stderr.write("  See http://subversion.tigris.org/issues/show_bug.cgi?")
-    sys.stderr.write("id=1409 ")
-    sys.stderr.write("for details.\n")
+    sys.stderr.write("%s: cannot pass multicomponent path to "
+                     "--trunk, --tags, or --branches yet.\n"
+                     "  See http://subversion.tigris.org/issues/show_bug.cgi?"
+                     "id=1409 "
+                     "for details.\n" % error_prefix)
     sys.exit(1)
 
   ctx.cvsroot = args[0]
