@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.4 $ of this document.)
+              ($Revision: 1.5 $ of this document.)
 
 * Introduction
 
@@ -405,6 +405,8 @@ A look at its table description below will make things clearer...
              (never null)          to.
      VERSION int                   The version number of this commit.
              (never null)          Initial import gets 1.
+     USER    string                Whodunnit.
+             (never null)          
      LOG_MSG text                  The log message for this commit.
 
 
@@ -493,183 +495,301 @@ them. :-)
 
 --------------------8-<-------cut-here---------8-<-----------------------
 
-From: Jason Elliot Robbins <jrobbins@collab.net>
-Subject: Inversion feature outline (was: for meeting w/ Rational)
-To: kfogel@red-bean.com
-cc: jrobbins@collab.net, npm@collab.net, brian@collab.net, jon@collab.net
-Date: Thu, 02 Mar 2000 19:02:47 -0800
+>From: Jason Elliot Robbins <jrobbins@collab.net>
+>Subject: Inversion feature outline (was: for meeting w/ Rational)
+>To: kfogel@red-bean.com
+>cc: jrobbins@collab.net, npm@collab.net, brian@collab.net, jon@collab.net
+>Date: Thu, 02 Mar 2000 19:02:47 -0800
+>
+>Hi Karl,
+>
+>Here are some comments I came up with while reading your Inversion
+>document on my last plane trip.  Overall this document looks like a
+>good start, but there is a lot to work out.
+>
+>When would you like to put this document on the inversion.tigris.org
+>web site?
+>
+>
+>Here are my comments:
+>
+>I know this is long, the best comments are 1, 7, 12, 14, and 17.
+>
+>1. We should plan for web integration.  That could mean a lot of
+>things.  One idea off the top of my head is to actually use a URL for
+>the CVSROOT: I would make it an actual http:// scheme, rather than
+>some new ivn: scheme, so that there is a clear place to host a web
+>page with instructions about that repository.  Alternatively, we could
+>use a new scheme like ivn:argouml.tigris.org, so long as the CVSROOT
+>is very memorable to people who know the web address. Right now the
+>maping between projects (e.g., www.webmacro.org, or java.tigris.org)
+>and their CVSROOT varies a lot from site to site.  It would be nice to
+>make this a no brainer.
 
-Hi Karl,
+Well, I'm not so sure... The reason this mapping (www<-->repository)
+varies so much is political, not technical.
 
-Here are some comments I came up with while reading your Inversion
-document on my last plane trip.  Overall this document looks like a
-good start, but there is a lot to work out.
+For example, it so happens that the hostname argouml.tigris.org hosts
+one repository with one project in it, so there would be no ambiguity
+in referencing that project by the hostname.  But there are many
+servers that host multiple projects, and not all of those projects
+have their own domains.  In many (most?) cases, the repository server
+is on a different host from the Web server.  Or: sometimes people want
+to deliberately associate their project with an organization, so they
+don't want a strong link between the project's name and its Web
+address.
 
-When would you like to put this document on the inversion.tigris.org
-web site?
+Also, as far as I can tell, people don't really have trouble figuring
+out a project's web site given a working copy, or vice-versa.  They
+may have trouble *using* CVS to get the working copy, but that's a
+different matter...
 
+I think it's actually not our place to make assumptions about how
+people want to present their project to the world.  It *is* our place
+to make sure that our system provides no obstacles to whatever method
+a user chooses to make her project web-visible, but "no obstacles"
+doesn't mean special support for anything in particular.
 
-Here are my comments:
+If someone wants to keep their project's web pages in the project's
+source tree, and point their web server at the right place, there's
+nothing stopping them from doing that.  If they arrange it so the
+names are the same, that's great -- and if they don't, there might be
+a reason for that.
 
-I know this is long, the best comments are 1, 7, 12, 14, and 17.
+Hmmm, I can go into greater detail on this if you want; my hands are
+tired of typing right now so I'll leave this question here.
 
-1. We should plan for web integration.  That could mean a lot of
-things.  One idea off the top of my head is to actually use a URL for
-the CVSROOT: I would make it an actual http:// scheme, rather than
-some new ivn: scheme, so that there is a clear place to host a web
-page with instructions about that repository.  Alternatively, we could
-use a new scheme like ivn:argouml.tigris.org, so long as the CVSROOT
-is very memorable to people who know the web address. Right now the
-maping between projects (e.g., www.webmacro.org, or java.tigris.org)
-and their CVSROOT varies a lot from site to site.  It would be nice to
-make this a no brainer.
+>2. I would like to make the difficult things in CVS easier in Ivn.  I
+>think you mention that you would like to make things like moving files
+>and directories, etc. easier.  Actually, the second paragraph in
+>Meta-implementation is definately the right idea.  Looking at all the
+>multi-step proceedures outlined in your CVS book and making them one
+>step in Ivn would be great.
 
-2. I would like to make the difficult things in CVS easier in Ivn.  I
-think you mention that you would like to make things like moving files
-and directories, etc. easier.  Actually, the second paragraph in
-Meta-implementation is definately the right idea.  Looking at all the
-multi-step proceedures outlined in your CVS book and making them one
-step in Ivn would be great.
+Oh gosh you bet! :-)
 
-3. The concept of assigning a new version number to every file
-everytime there is a commit is rather foreign to me.  Is this used in
-other vc systems?  Are other people familiar with this practice?  Does
-that mean that it would be very awkward to verbally tell someone to
-check out a certain version (e.g., version 2378812, instead of 4.7)?
-Would it be possible to tell at a glance how many versions a file has
-gone through?
+>3. The concept of assigning a new version number to every file
+>everytime there is a commit is rather foreign to me.  Is this used in
+>other vc systems?  Are other people familiar with this practice?  Does
+>that mean that it would be very awkward to verbally tell someone to
+>check out a certain version (e.g., version 2378812, instead of 4.7)?
+>Would it be possible to tell at a glance how many versions a file has
+>gone through?
 
-4. Why make keyword expansion off by default.   If I want to do it I
-will have to search through the documentation to find the right
-option.  I realize that it might mess up binary files, is there
-another way to make that safe.
+I don't know; I don't know; no I don't think so; and yes. :-)
 
-5. I really like the decision to make client/server the normal way of
-doing things.  We need to concentrate on VC for open source projects
-which are inheritently distributed.
+Perhaps we could make a distinction between a file's commit count and
+its project's commit count -- i.e., two kinds of version numbers,
+treated equally; which one you use depends on circumstances.  Let's
+mull on that.  I do worry about the potential for confusion, though...
 
-6. I really like the concept of making a "copy" for every branch.
-Actually, in object oriented design this concept is known as a
-"virtual copy" and many operating systems (such as mach) support the
-concept of "copy on write".  I think this concept leads very natually
-to my next suggestion.
+How big do project version numbers get?  Well, to give you an idea,
+the entire CVS tree (dating from 3 Dec 1994) has 4254 commits.  4254
+isn't such a bad version number -- I wouldn't mind having to deal with
+a few more digits than that, personally.
 
-7. How about the idea of "local branches" that are stored on a
-developer's working machine in addition to the local working copy of
-the checked out files.  This is basically a fraction of the total
-repository stored on each client.  The local reposiroty would be
-filled in on demand, e.g., if you do a diff against an old version,
-that version would be stored in your local repository.  Developers
-could also commit to the local branch several times before eventually
-merging into the central servers main branch.  If local branches are
-accessable via the internet then we could basically do away with
-patches.  If a developer does work that he wants to contribute back to
-an open source project, he could just email the URL of his local
-server.  Also, the concept of local branches could be generalized to
-build a higherachy of servers with the global project home server at
-the top and various mirrors in the middle, LAN servers near the
-bottom, and each developers' local server at the bottom.  This has the
-advantage that every developer can have commit access to some
-repository, we get a range of trust rather than a boolean permisssion
-to commit to the central server or not.
+I don't think of it as assigning a new version number to every file on
+every commit -- that's not what's happening inside anyway.  Instead, I
+think of it as a single version number for every *commit*, and a
+commit involves certain files.  As for files not involved in that
+commit, if you ask for one of them at that version number, you'll just
+get the most recent version not exceeding the one in question.
 
-8. I would like to have some kind of plug-in permission system.  I am
-wary of yet another set of user account records and permissions.  We
-have found that half the tools we want to integrate into tigris has its
-own user account system, and that makes a lot of duplicate data that
-needs to be kept in synch.
+[My table description may seem not match what I'm saying here, but
+that table desc is just a draft and will be updated.]
 
-9. Some of the data in your tables is not as normalized as it cood
-be.  I know this may not be a priority, but here are some that I
-noticed.: the names of entities and their states could be in separate
-tables.  Line mods could be a table of line ranges rather than text, I
-guess it depends on what format you were thinking of for that text
-field, but it seems like you might do a lot of parsing.  The names of
-properties in key value pairs could be stored in a properties names
-table.
+>4. Why make keyword expansion off by default.   If I want to do it I
+>will have to search through the documentation to find the right
+>option.  I realize that it might mess up binary files, is there
+>another way to make that safe.
 
-10.  I am a little concerned about storing the parent container
-referenace and a basename.  I would like to have permissions limited
-to a given scope that matches the complete path.  For example, I would
-like to grant a particular developer the ability to commit
-.*/dist/.*\.html but not any .java files or any file not in a
-subdirectory of some dir named named api.  You have some of this in
-your ACCESSES table.  For the sourcexchange.com web site we developed
-a much more general permission scheme that you can read about at
-http://joist.tigris.org. 
+Well, right now, if you don't want to do it, you have to search
+through the documentation to turn it off. :-)
 
-11. I would like to see some audit mechanism.  I think in this version
-of the document you left off the basic ability to see who did each
-commit.   More generally, we should consider the repositiory
-administrator role in all its glory.  I dont want to require a lot of
-administration work, but whatever needs to be done should be put under
-the same "evaluation across operations" as we do for developer
-operations.
+Seriously, I'm by no means sure that off is better, I just lean that
+way because I've been screwed several times in the past by not turning
+it off when I should have (not talking about binary files, I mean text
+files that happened to have text that matched keywords, but I didn't
+want that text to be expanded).
 
-12.  It would be nice if the server could be installed without root
-access.  This would allow a lot more people to set up servers for
-their local work group etc.  As a student, I never had root access to
-a big machine, and a lto of people working on OS are students.  Some
-small local server is also important to the local branch idea.  Apache
-can be installed without having root access, and so can ezmlm mailing
-lists, I really like that power for everyone.  The security
-implications are good and it would surely simplify installation.
+[todo: more to say here, fingers falling off, will respond more
+later.]
 
-13. We should consider the following levels of internet connectivity:
-high speed, low speed, disconnected (e.g., laptops and modems), flaky
-connection.  Low speed constant connections (e.g., in distant
-contries) might benefit from background filling in of their local
-repository history.  Flaky connections might benefit from a resume
-capability (I guess that comes for free in CVS, but we need to make
-sure there are never any remaining lock files left on either end).
+>7. How about the idea of "local branches" that are stored on a
+>developer's working machine in addition to the local working copy of
+>the checked out files.  This is basically a fraction of the total
+>repository stored on each client.  The local reposiroty would be
+>filled in on demand, e.g., if you do a diff against an old version,
+>that version would be stored in your local repository.  Developers
+>could also commit to the local branch several times before eventually
+>merging into the central servers main branch.  If local branches are
+>accessable via the internet then we could basically do away with
+>patches.  If a developer does work that he wants to contribute back to
+>an open source project, he could just email the URL of his local
+>server.  Also, the concept of local branches could be generalized to
+>build a higherachy of servers with the global project home server at
+>the top and various mirrors in the middle, LAN servers near the
+>bottom, and each developers' local server at the bottom.  This has the
+>advantage that every developer can have commit access to some
+>repository, we get a range of trust rather than a boolean permisssion
+>to commit to the central server or not.
 
-14. Would you consider implementing Inversion in Java.  The advantage
-is that it runs on all platforms, and JDBC connects to all database,
-and RMI would make the client-server implementation easier.  Web
-integration with java servles would certainly be easier.  Speed is
-somewhat of an issue, but java is pretty fast now and a lot of the
-speed will be determined by the database rather than our code.  I am
-not concerned about CPU-bound speed problems because processors are
-getting insanely fast and we can have fast machines in our racks.
-Speed could be a problem for small (student) projects that dont have
-good machines, but then again "small project" implies that they
-probably dont have that many concurrent accesses anyway.  I think
-selling inversion as "version control that you actually want to use"
-trumps speed claims anyway, we should make it easy in use and easy to
-enhance.  Java would also give us no-brainer internationalization
-support.  
+Sure!
 
-15. Compression.  It would be great if the protocol batched up all the
-files that need to be transfered for a given transaction and then
-compressed the whole set of files using a standard zip algorithm or
-something.  Typically compressing many similar files can give better
-results than compressing each indepently.  This is assuming
-dictionary-based compression, I think.
+I think what we have to do is design this in such a way that it
+doesn't take any special support from us to create this concept.
+That is, if one knows the client/server protocol, one can implement
+local branches without us changing anything.
 
-16. What is the import/export format for this?  Would I just do a
-mysqldump? Should there be an XML file format for versions and log
-entries and such?
+So, we should think about this as we go, but I don't think we should
+actually make it part of the first release.  We should just try to
+have a design that doesn't make this feature impossible.
 
-17. It would be nice to have scripts executed for any possible
-action.  CVS has scripts that run on many actions, e.g., commit and
-tagging.    Actually, if we use java it would be possible to define a
-sandbox to run these scripts safely.  That would allow developers to
-upload "inversion agents" that are .class files invoked whenever an
-action is taken on the server and do some kind of testing or
-notification on behalf of that particular developer.  This could be a
-good hook for integrating Inversion with a server-farm build system,
-implementing the hierarchy of servers described in suggestion #7.
+[There are some "theoretical" problems that come up in schemes like
+this, having to do with conflict resolution of course, which we have
+to think through.  So we may have to back down from this idea to an
+arbitrary degree... I hope not too much though, 'cause it's neat.]
 
-18.  You have specified that the contents of the source files should
-be in the database.  An alternative woulf be to just have the name of
-some file in the file system.  Could you explore/explain that tradeoff?
+>8. I would like to have some kind of plug-in permission system.  I am
+>wary of yet another set of user account records and permissions.  We
+>have found that half the tools we want to integrate into tigris has its
+>own user account system, and that makes a lot of duplicate data that
+>needs to be kept in synch.
 
+Yeah, some way of saying "default to the system users and access
+methods on this host", and then you can add inversion-only users as
+necessary. (?)
 
+>9. Some of the data in your tables is not as normalized as it cood
+>be.  I know this may not be a priority, but here are some that I
+>noticed.: the names of entities and their states could be in separate
+>tables.  Line mods could be a table of line ranges rather than text, I
+>guess it depends on what format you were thinking of for that text
+>field, but it seems like you might do a lot of parsing.  The names of
+>properties in key value pairs could be stored in a properties names
+>table.
 
+Yup, thanks.  Still a draft, we'll normalize.
 
-jason!
+>10.  I am a little concerned about storing the parent container
+>referenace and a basename.  I would like to have permissions limited
+>to a given scope that matches the complete path.  For example, I would
+>like to grant a particular developer the ability to commit
+>.*/dist/.*\.html but not any .java files or any file not in a
+>subdirectory of some dir named named api.  You have some of this in
+>your ACCESSES table.  For the sourcexchange.com web site we developed
+>a much more general permission scheme that you can read about at
+>http://joist.tigris.org. 
 
-======================================================================
-Jason Robbins, Ph.D.      Collab.Net is hiring open source developers!
-Senior Software Engineer                    http://www.collab.net/jobs
-======================================================================
+I'll look into this.
+
+>11. I would like to see some audit mechanism.  I think in this version
+>of the document you left off the basic ability to see who did each
+>commit.   More generally, we should consider the repositiory
+>administrator role in all its glory.  I dont want to require a lot of
+>administration work, but whatever needs to be done should be put under
+>the same "evaluation across operations" as we do for developer
+>operations.
+
+Oops... the problem referred to in your second sentence is due to an
+error in transferring my tables from paper to disk.  Fixed now. :-)
+
+In general, yes, I think I see what you mean about admin role.
+
+>12.  It would be nice if the server could be installed without root
+>access.  This would allow a lot more people to set up servers for
+>their local work group etc.  As a student, I never had root access to
+>a big machine, and a lto of people working on OS are students.  Some
+>small local server is also important to the local branch idea.  Apache
+>can be installed without having root access, and so can ezmlm mailing
+>lists, I really like that power for everyone.  The security
+>implications are good and it would surely simplify installation.
+
+No reason why this can't happen.  Nothing in the design as it stands
+right now requires root, AFAIK.
+
+>13. We should consider the following levels of internet connectivity:
+>high speed, low speed, disconnected (e.g., laptops and modems), flaky
+>connection.  Low speed constant connections (e.g., in distant
+>contries) might benefit from background filling in of their local
+>repository history.  Flaky connections might benefit from a resume
+>capability (I guess that comes for free in CVS, but we need to make
+>sure there are never any remaining lock files left on either end).
+
+Well, we will make sure that locking can handle connections broken at
+any point, by doing things carefully ("carefully" in the same sense as
+a filesystem that guarantees mv to be atomic even if the power goes
+out).
+
+>14. Would you consider implementing Inversion in Java.  The advantage
+>is that it runs on all platforms, and JDBC connects to all database,
+>and RMI would make the client-server implementation easier.  Web
+>integration with java servles would certainly be easier.  Speed is
+>somewhat of an issue, but java is pretty fast now and a lot of the
+>speed will be determined by the database rather than our code.  I am
+>not concerned about CPU-bound speed problems because processors are
+>getting insanely fast and we can have fast machines in our racks.
+>Speed could be a problem for small (student) projects that dont have
+>good machines, but then again "small project" implies that they
+>probably dont have that many concurrent accesses anyway.  I think
+>selling inversion as "version control that you actually want to use"
+>trumps speed claims anyway, we should make it easy in use and easy to
+>enhance.  Java would also give us no-brainer internationalization
+>support.  
+
+In my experience (not nearly as great as yours) Java is the least
+portable language: it is unusual in requiring *both* a compiler and a
+run-time, and naturally I've had problems with both.  Maybe things are
+different now...
+
+I do think (as a political thing) that when people hear Java they
+shudder in anticipation of the problems they're going to have getting
+the thing running.  Even though they may be wrong, this reaction is
+something to take into account.
+
+I mean, I guess I can't say "No, I wouldn't even consider implementing
+this in Java", but I certainly do lean against
+it... Internationalization support would be nice, but is it that hard
+in other languages, even C?
+
+>15. Compression.  It would be great if the protocol batched up all the
+>files that need to be transfered for a given transaction and then
+>compressed the whole set of files using a standard zip algorithm or
+>something.  Typically compressing many similar files can give better
+>results than compressing each indepently.  This is assuming
+>dictionary-based compression, I think.
+
+Good idea!
+
+>16. What is the import/export format for this?  Would I just do a
+>mysqldump? Should there be an XML file format for versions and log
+>entries and such?
+
+Dunno. :)
+
+>17. It would be nice to have scripts executed for any possible
+>action.  CVS has scripts that run on many actions, e.g., commit and
+>tagging.    Actually, if we use java it would be possible to define a
+>sandbox to run these scripts safely.  That would allow developers to
+>upload "inversion agents" that are .class files invoked whenever an
+>action is taken on the server and do some kind of testing or
+>notification on behalf of that particular developer.  This could be a
+>good hook for integrating Inversion with a server-farm build system,
+>implementing the hierarchy of servers described in suggestion #7.
+
+Yeah; one of the things I want to do is go over the commit process
+step-by-step and figure out every possible place where we can give
+users a hook to run a script.  CVS offers a few good places; we can
+offer more, I think.
+
+>18.  You have specified that the contents of the source files should
+>be in the database.  An alternative woulf be to just have the name of
+>some file in the file system.  Could you explore/explain that tradeoff?
+
+Yes -- we'll do whichever is better. :-)
+
+Seriously, I don't know how various databases perform with big text
+chunks.  Unless it's a serious hit, though, I think we should try to
+stay in the database.  I mean, why use it unless we're going to use
+it?  The only reason I can see to implement an extra level of
+indirection here would be if it gave us some big performance boost.
