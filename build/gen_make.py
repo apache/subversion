@@ -20,8 +20,6 @@ class MakefileGenerator(gen_base.GeneratorBase):
     ('exe', 'object'): '.o',
     ('lib', 'target'): '.la',
     ('lib', 'object'): '.lo',
-    ('script', 'target'): '',
-    ('script', 'object'): '',
     }
 
   def __init__(self, fname, verfname, oname):
@@ -31,28 +29,28 @@ class MakefileGenerator(gen_base.GeneratorBase):
     self.ofile.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n\n')
 
   def write(self):
-    # write this into the file first so the RA_FOO_DEPS variables are
+    # write various symbols at the top of the file so they will be
     # defined before their use in dependency lines.
-    self.write_ra_modules()
+    self.write_symbols()
 
-    for target in self.target_names:
-      target_ob = self.targets[target]
+    for target_ob in self.graph.get_all_sources(gen_base.DT_INSTALL):
 
-      if target_ob.type == 'script':
+      if isinstance(target_ob, gen_base.TargetScript):
         # there is nothing to build
         continue
 
-      if target_ob.type == 'swig':
+      if isinstance(target_ob, gen_base.SWIGLibrary):
         ### nothing defined yet
         continue
 
+      target = target_ob.name
       path = target_ob.path
 
       # get the source items (.o and .la) for the link unit
       objects = [ ]
       deps = [ ]
       for source in self.graph.get_sources(gen_base.DT_LINK, target):
-        if isinstance(source, gen_base._Target):
+        if isinstance(source, gen_base.Target):
           # append the output of the target to our stated dependencies
           deps.append(source.output)
         else:
@@ -96,17 +94,7 @@ class MakefileGenerator(gen_base.GeneratorBase):
            targ_varname, string.join(libs))
         )
 
-      if custom == 'apache-mod':
-        # special build, needing Apache includes
-        self.ofile.write('# build these special -- use APACHE_INCLUDES\n')
-        for obj in objects:
-          ### we probably shouldn't take only the first source, but do
-          ### this for back-compat right now
-          ### note: this is duplicative with the header dep rules
-          src = self.graph.get_sources(gen_base.DT_OBJECT, obj)[0]
-          self.ofile.write('%s: %s\n\t$(COMPILE_APACHE_MOD)\n' % (obj, src))
-        self.ofile.write('\n')
-      elif custom == 'swig-py':
+      if custom == 'swig-py':
         self.ofile.write('# build this with -DSWIGPYTHON\n')
         for obj in objects:
           ### we probably shouldn't take only the first source, but do
@@ -130,10 +118,12 @@ class MakefileGenerator(gen_base.GeneratorBase):
       self.ofile.write('%s: %s\n\n' % (itype, string.join(outputs)))
 
     cfiles = [ ]
+    ### switch to use GRAPH
     for target in self.targets.values():
       # .la files are handled by the standard 'clean' rule; clean all the
       # other targets
-      if target.type != 'script' and target.output[-3:] != '.la':
+      if not isinstance(target, gen_base.TargetScript) \
+         and target.output[-3:] != '.la':
         cfiles.append(target.output)
     self.ofile.write('CLEAN_FILES = %s\n\n' % string.join(cfiles))
 
@@ -158,7 +148,7 @@ class MakefileGenerator(gen_base.GeneratorBase):
 
         for apmod in inst_targets:
           for source in self.graph.get_sources(gen_base.DT_LINK, apmod.name,
-                                               gen_base._Target):
+                                               gen_base.Target):
             bt = source.output
             if bt[-3:] == '.la':
               la_tweaked[bt + '-a'] = None
@@ -204,7 +194,8 @@ class MakefileGenerator(gen_base.GeneratorBase):
                               os.path.join('$(%sdir)' % area_var, fname)))
         self.ofile.write('\n')
 
-    includedir = os.path.join('$(includedir)', 'subversion-%s' % self.version)
+    includedir = os.path.join('$(includedir)',
+                              'subversion-%s' % self.cfg.version)
     self.ofile.write('install-include: %s\n'
                      '\t$(MKDIR) $(DESTDIR)%s\n'
                      % (string.join(self.includes), includedir))
@@ -214,9 +205,11 @@ class MakefileGenerator(gen_base.GeneratorBase):
                           os.path.join(includedir, os.path.basename(file))))
 
     self.ofile.write('\n# handy shortcut targets\n')
-    for name, target in self.targets.items():
-      if target.type != 'script':
-        self.ofile.write('%s: %s\n' % (name, target.output))
+    for target in self.graph.get_all_sources(gen_base.DT_INSTALL):
+      ### come up with a shortcut name for the SWIG libraries
+      if not isinstance(target, gen_base.TargetScript) \
+         and not isinstance(target, gen_base.SWIGLibrary):
+        self.ofile.write('%s: %s\n' % (target.name, target.output))
     self.ofile.write('\n')
 
     self.ofile.write('BUILD_DIRS = %s\n\n' % string.join(self.build_dirs))
@@ -235,30 +228,50 @@ class MakefileGenerator(gen_base.GeneratorBase):
 
     for objname, sources in self.graph.get_deps(gen_base.DT_OBJECT):
       deps = string.join(sources)
-      if 0 and isinstance(objname, gen_base.ApacheObject):
+      if isinstance(objname, gen_base.ApacheObject):
         self.ofile.write('%s: %s\n\t$(COMPILE_APACHE_MOD)\n' % (objname, deps))
+      elif isinstance(objname, gen_base.SWIGObject):
+        self.ofile.write('%s: %s\n\t$(COMPILE_%s_WRAPPER)\n'
+                         % (objname, deps, string.upper(objname.lang_abbrev)))
       else:
         self.ofile.write('%s: %s\n' % (objname, deps))
 
-  def write_ra_modules(self):
-    for target in self.target_names:
-      if self.parser.get(target, 'custom') != 'ra-module':
-        continue
+  def write_symbols(self):
+    wrappers = { }
+    for lang in self.cfg.swig_lang:
+      wrappers[lang] = [ ]
 
-      mod = self.targets[target]
-      name = string.upper(mod.name[7:])  # strip 'libsvn_' and upper-case it
+    for target in self.graph.get_all_sources(gen_base.DT_INSTALL):
+      if getattr(target, 'custom', '') == 'ra-module':
+        # name of the RA module: strip 'libsvn_' and upper-case it
+        name = string.upper(target.name[7:])
 
-      # construct a list of the other .la libs to link against
-      retreat = gen_base._retreat_dots(mod.path)
-      deps = [ mod.output ]
-      link = [ os.path.join(retreat, mod.output) ]
-      for source in self.graph.get_sources(gen_base.DT_LINK, mod.name,
-                                           gen_base._Target):
-        deps.append(source.output)
-        link.append(os.path.join(retreat, source.output))
-      self.ofile.write('%s_DEPS = %s\n'
-                       '%s_LINK = %s\n\n' % (name, string.join(deps, ' '),
-                                             name, string.join(link, ' ')))
+        # construct a list of the other .la libs to link against
+        retreat = gen_base._retreat_dots(target.path)
+        deps = [ target.output ]
+        link = [ os.path.join(retreat, target.output) ]
+        for source in self.graph.get_sources(gen_base.DT_LINK, target.name,
+                                             gen_base.TargetLib):
+          deps.append(source.output)
+          link.append(os.path.join(retreat, source.output))
+
+        self.ofile.write('%s_DEPS = %s\n'
+                         '%s_LINK = %s\n\n' % (name, string.join(deps, ' '),
+                                               name, string.join(link, ' ')))
+
+      elif isinstance(target, gen_base.SWIGLibrary):
+        wrappers[target.lang].append(target)
+
+    ### not yet
+    return
+
+    for lang in self.cfg.swig_lang:
+      libs = wrappers[lang]
+      if libs:
+        libs.sort()
+        self.ofile.write('SWIG_%s_LIBS = %s\n\n'
+                         % (string.upper(gen_base.lang_abbrev[lang]),
+                            string.join(map(str, libs), ' ')))
 
 
 ### End of file.

@@ -31,13 +31,15 @@ class GeneratorBase:
     self.parser = ConfigParser.ConfigParser(_cfg_defaults)
     self.parser.read(fname)
 
-    # extract some basic information
+    self.cfg = Config()
+    self.cfg.swig_lang = string.split(self.parser.get('options',
+                                                      'swig-languages'))
 
     # Version comes from a header file since it is used in the code.
     try:
       parser = getversion.Parser()
       parser.search('SVN_VER_LIBRARY', 'libver')
-      self.version = parser.parse(verfname).libver
+      self.cfg.version = parser.parse(verfname).libver
     except:
       raise GenError('Unable to extract version.')
 
@@ -57,10 +59,6 @@ class GeneratorBase:
     for target in self.target_names:
       install = self.parser.get(target, 'install')
       type = self.parser.get(target, 'type')
-      if type == 'lib' and install != 'apache-mod':
-        vsn = self.version
-      else:
-        vsn = None
 
       target_class = _build_types.get(type)
       if not target_class:
@@ -69,15 +67,11 @@ class GeneratorBase:
       target_ob = target_class(target,
                                self.parser.get(target, 'path'),
                                install,
-                               type,
                                self.parser.get(target, 'custom'), ### bogus
-                               vsn,
+                               self.cfg,
                                self._extension_map)
 
       self.targets[target] = target_ob
-
-      # the specified install area depends upon this target
-      self.graph.add(DT_INSTALL, target_ob.install, target_ob)
 
       # find all the sources involved in building this target
       target_ob.find_sources(self.parser.get(target, 'sources'))
@@ -108,8 +102,8 @@ class GeneratorBase:
                                           os.path.dirname(pattern))] = None
 
     # compute intra-library dependencies
-    for name in self.targets.keys():
-      if type != 'script' and type != 'swig':
+    for name, target in self.targets.items():
+      if isinstance(target, TargetLinked):
         for libname in string.split(self.parser.get(name, 'libs')):
           if self.targets.has_key(libname):
             self.graph.add(DT_LINK, name, self.targets[libname])
@@ -160,6 +154,12 @@ class GeneratorBase:
         include_deps.update(more_deps)
 
     for objname, sources in self.graph.get_deps(DT_OBJECT):
+      if isinstance(objname, SWIGObject):
+        ### the .c file is generated, so we can't scan it. this isn't a
+        ### very good test. ideally, the test would be to look for a
+        ### dependency node for the source, meaning it is generated, and
+        ### punt on it then.
+        continue
       assert len(sources) == 1
       hdrs = [ ]
       for short in _find_includes(sources[0], include_deps):
@@ -173,8 +173,6 @@ class MsvcProjectGenerator(GeneratorBase):
     ('exe', 'object'): '.obj',
     ('lib', 'target'): '.dll',
     ('lib', 'object'): '.obj',
-    ('script', 'target'): '',
-    ('script', 'object'): '',
     }
 
   def __init__(self, fname, oname):
@@ -189,7 +187,7 @@ class DependencyGraph:
 
   See the DT_* values for the different dependency types. For each type,
   the target and source objects recorded will be different. They could
-  be file names, _Target objects, install types, etc.
+  be file names, Target objects, install types, etc.
   """
 
   def __init__(self):
@@ -212,6 +210,13 @@ class DependencyGraph:
       if isinstance(src, cls):
         filtered.append(src)
     return filtered
+
+  def get_all_sources(self, type):
+    sources = [ ]
+    for group in self.deps[type].values():
+      sources.extend(group)
+    sources.sort()  # ensures consistency between runs
+    return sources
 
   def get_targets(self, type):
     targets = self.deps[type].keys()
@@ -258,52 +263,62 @@ class SWIGObject(ObjectFile):
   def __init__(self, fname, lang):
     ObjectFile.__init__(self, fname)
     self.lang = lang
+    self.lang_abbrev = lang_abbrev[lang]
+
+class SWIGLibrary(DependencyNode):
+  def __init__(self, fname, lang):
+    DependencyNode.__init__(self, fname)
+    self.lang = lang
+    self.lang_abbrev = lang_abbrev[lang]
+
+    ### maybe tweak to avoid these duplicate attrs
+    self.output = fname
+    self.name = fname
+
+lang_abbrev = {
+  'python' : 'py',
+  'java' : 'java',
+  'perl' : 'pl',
+  'ruby' : 'rb',
+  'tcl' : 'tcl',
+  ### what others?
+  }
 
 
-class _Target:
-  def __init__(self, name, path, install, type, custom, vsn, extmap):
+class Target:
+  def __init__(self, name, path, install, custom, cfg, extmap):
     self.name = name
     self.path = path
-    self.type = type
+    self.cfg = cfg
 
-    ### we should move this into .type
+    ### should choose a Target class instead of this
     self.custom = custom
 
     if not install:
       try:
         install = self.default_install
       except AttributeError:
-        raise GenError('build type "%s" has no default install location'
-                       % self.type)
-
-    if type == 'doc':
-      ### dunno what yet
-      pass
-    elif type == 'swig':
-      ### this isn't right, but just fill something in for now
-      tfile = name
-    else:
-      # type == 'lib' or type == 'exe' or type == 'script'
-      if vsn:
-        # the target file is the name, vsn, and appropriate extension
-        tfile = '%s-%s%s' % (name, vsn, extmap[(type, 'target')])
-      else:
-        tfile = name + extmap[(type, 'target')]
-      self.objext = extmap[(type, 'object')]
-
+        raise GenError('Class "%s" has no default install location'
+                       % self.__class__.__name__)
     self.install = install
-    self.output = os.path.join(path, tfile)
+
+    # default output name; subclasses can/should change this
+    self.output = os.path.join(path, name)
 
   def find_sources(self, patterns):
     if not patterns:
       try:
         patterns = self.default_sources
       except AttributeError:
-        raise GenError('build type "%s" has no default sources' % self.type)
+        raise GenError('Class "%s" has no default sources'
+                       % self.__class__.__name__)
     self._sources = _collect_paths(patterns, self.path)
     self._sources.sort()
 
   def add_dependencies(self, graph):
+    # the specified install area depends upon this target
+    graph.add(DT_INSTALL, self.install, self)
+
     for src in self._sources:
       if src[-2:] == '.c':
         objname = src[:-2] + self.objext
@@ -320,9 +335,12 @@ class _Target:
         raise GenError('ERROR: unknown file extension on ' + src)
 
   def write_dsp(self):
-    if self.type == 'exe':
+    ### we should have class attrs for template names, but I don't want
+    ### to monkey this too much while somebody else is working on the
+    ### .dsp generation stuff...
+    if isinstance(self, TargetExe):
       template = open('build/win32/exe-template', 'rb').read()
-    elif self.type == 'lib':
+    elif isinstance(self, TargetLib):
       template = open('build/win32/dll-template', 'rb').read()
     else:
       raise GenError('unknown build type -- cannot generate a .dsp')
@@ -342,11 +360,25 @@ class _Target:
     fname = os.path.join(self.path, self.name + '.dsp-test')
     open(fname, 'wb').write(dsp)
 
-class _TargetExe(_Target):
+  def __cmp__(self, ob):
+    if isinstance(ob, Target):
+      return cmp(self.name, ob.name)
+    return cmp(self.name, ob)
+
+class TargetLinked(Target):
+  pass
+
+class TargetExe(TargetLinked):
   default_install = 'bin'
   default_sources = '*.c'
 
-class _TargetScript(_Target):
+  def __init__(self, name, path, install, custom, cfg, extmap):
+    Target.__init__(self, name, path, install, custom, cfg, extmap)
+
+    self.objext = extmap['exe', 'object']
+    self.output = os.path.join(path, name + extmap['exe', 'target'])
+
+class TargetScript(Target):
   default_install = 'bin'
   # no default_sources
 
@@ -358,32 +390,84 @@ class _TargetScript(_Target):
 
   def add_dependencies(self, graph):
     # we don't need to "compile" the sources, so there are no dependencies
-    # to add here.
-    pass
+    # to add here, except to get the script installed in the proper area.
+    graph.add(DT_INSTALL, self.install, self)
 
-class _TargetLib(_Target):
+class TargetLib(TargetLinked):
   default_install = 'lib'
   default_sources = '*.c'
 
-class _TargetDoc(_Target):
+  def __init__(self, name, path, install, custom, cfg, extmap):
+    Target.__init__(self, name, path, install, custom, cfg, extmap)
+
+    self.objext = extmap['lib', 'object']
+
+    if install != 'apache-mod':
+      # the target file is the name, version, and appropriate extension
+      tfile = '%s-%s%s' % (name, cfg.version, extmap['lib', 'target'])
+    else:
+      tfile = name + extmap['lib', 'target']
+    self.output = os.path.join(path, tfile)
+
+class TargetDoc(Target):
   # no default_install
   default_sources = '*.texi'
 
-class _TargetSWIG(_Target):
+class TargetSWIG(Target):
   default_install = 'swig'
   # no default_sources
 
+  def __init__(self, name, path, install, custom, cfg, extmap):
+    Target.__init__(self, name, path, install, custom, cfg, extmap)
+
+    self.objext = extmap['lib', 'object']
+    self.libext = extmap['lib', 'target']
+
   def add_dependencies(self, graph):
-    ### incomplete
-    pass
+    ### simple assertions for now
+    assert len(self._sources) == 1
+
+    ifile = self._sources[0]
+    assert ifile[-2:] == '.i'
+
+    dir, iname = os.path.split(ifile)
+    cname = iname[:-2] + '.c'
+    oname = iname[:-2] + self.objext
+
+    ### we should really extract the %module line
+    if iname[:4] == 'svn_':
+      libname = iname[3:-2] + self.libext
+    else:
+      libname = '_' + iname[:-2] + self.libext
+
+    for lang in self.cfg.swig_lang:
+      # the .c file depends upon the .i file
+      cfile = os.path.join(dir, lang, cname)
+      graph.add(DT_SWIG_C, cfile, ifile)
+
+      # the object depends upon the .c file
+      ofile = os.path.join(dir, lang, oname)
+      graph.add(DT_OBJECT, SWIGObject(ofile, lang), cfile)
+
+      # the library depends upon the object
+      library = SWIGLibrary(os.path.join(dir, lang, libname), lang)
+      graph.add(DT_LINK, library, ofile)
+
+      # the specified install area depends upon the library
+      graph.add(DT_INSTALL, self.install + '-' + lang_abbrev[lang], library)
 
 _build_types = {
-  'exe' : _TargetExe,
-  'script' : _TargetScript,
-  'lib' : _TargetLib,
-  'doc' : _TargetDoc,
-  'swig' : _TargetSWIG,
+  'exe' : TargetExe,
+  'script' : TargetScript,
+  'lib' : TargetLib,
+  'doc' : TargetDoc,
+  'swig' : TargetSWIG,
   }
+
+
+class Config:
+  pass
+
 
 class GenError(Exception):
   pass
@@ -511,7 +595,7 @@ def _sorted_files(graph, area):
   while targets:
     # find a target that has no dependencies in our current targets list.
     for t in targets:
-      for d in graph.get_sources(DT_LINK, t.name, _Target):
+      for d in graph.get_sources(DT_LINK, t.name, Target):
         if d in targets:
           break
       else:
