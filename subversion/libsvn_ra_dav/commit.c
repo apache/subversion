@@ -122,16 +122,6 @@ typedef struct
   resource_baton_t *file;
 } put_baton_t;
 
-/*
-** singleton_delete_prop:
-**
-** The address of this integer is used as a "singleton" value to mark
-** properties which must be deleted. Properties which are changed/added
-** will use their new values.
-*/
-static const int singleton_delete_prop = 0;
-#define DELETE_THIS_PROP (&singleton_delete_prop)
-
 /* this property will be fetched from the server when we don't find it
    cached in the WC property store. */
 static const ne_propname fetch_props[] =

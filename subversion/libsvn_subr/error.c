@@ -31,8 +31,10 @@
 #include "svn_io.h"
 #include "svn_utf.h"
 
+#ifdef SVN_DEBUG
 /* file_line for the non-debug case. */
 static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
+#endif /* SVN_DEBUG */
 
 
 
