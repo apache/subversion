@@ -52,8 +52,7 @@ generate_status_code (enum svn_wc_status_kind status)
 }
 
 /* Print STATUS and PATH in a format determined by DETAILED and
-   SHOW_LAST_COMMITTED
-   ### NOTE: This function can't fail, so we just ignore any print errors. */
+   SHOW_LAST_COMMITTED. */
 static svn_error_t *
 print_status (const char *path,
               svn_boolean_t detailed,
@@ -61,16 +60,9 @@ print_status (const char *path,
               svn_wc_status_t *status,
               apr_pool_t *pool)
 {
-  char lock_status;
-
-  if (status->entry && status->entry->lock_token)
-    lock_status = 'K';
-  else
-    lock_status = ' ';
-
   if (detailed)
     {
-      char ood_status;
+      char ood_status, lock_status;
       const char *working_rev;
 
       if (! status->entry)
@@ -87,6 +79,24 @@ print_status (const char *path,
         ood_status = '*';
       else
         ood_status = ' ';
+
+      if (status->repos_lock)
+        {
+          if (status->entry && status->entry->lock_token)
+            {
+              if (strcmp (status->repos_lock->token, status->entry->lock_token)
+                  == 0)
+                lock_status = 'K';
+              else
+                lock_status = 'T';
+            }
+          else
+            lock_status = 'O';
+        }
+      else if (status->entry && status->entry->lock_token)
+        lock_status = 'B';
+      else
+        lock_status = ' ';
 
       if (show_last_committed)
         {
@@ -143,7 +153,8 @@ print_status (const char *path,
                            status->locked ? 'L' : ' ',
                            status->copied ? '+' : ' ',
                            status->switched ? 'S' : ' ',
-                           lock_status,
+                           ((status->entry && status->entry->lock_token)
+                            ? 'K' : ' '),
                            path));
 
   return SVN_NO_ERROR;

@@ -463,6 +463,13 @@ typedef svn_error_t *(*svn_lock_callback_t) (void *baton,
                                              const svn_lock_t *lock,
                                              svn_error_t *ra_err);
 
+/** @since New in 1.2.
+ *
+ * Return a deep copy of @a lock, allocated in @a pool.
+ */
+svn_lock_t *
+svn_lock_dup (const svn_lock_t *lock, apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

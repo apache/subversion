@@ -72,7 +72,7 @@ typedef struct report_baton_t {
   void *wrapped_report_baton;
   /* The common ancestor URL of all paths included in the report. */
   char *ancestor;
-  void *edit_baton;
+  void *set_locks_baton;
   svn_client_ctx_t *ctx;
   /* Pool to store locks in. */
   apr_pool_t *pool;
@@ -146,8 +146,8 @@ reporter_finish_report (void *report_baton, apr_pool_t *pool)
   /* Close the RA session. */
   svn_pool_destroy (subpool);
 
-  SVN_ERR (svn_wc_status_set_repos_locks (rb->edit_baton, locks, repos_root,
-                                          rb->pool));
+  SVN_ERR (svn_wc_status_set_repos_locks (rb->set_locks_baton, locks,
+                                          repos_root, rb->pool));
 
   return rb->wrapped_reporter->finish_report (rb->wrapped_report_baton, pool);
 }
@@ -191,7 +191,7 @@ svn_client_status2 (svn_revnum_t *result_rev,
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
   const char *anchor, *target;
   const svn_delta_editor_t *editor;
-  void *edit_baton;
+  void *edit_baton, *set_locks_baton;
   const svn_wc_entry_t *entry;
   struct status_baton sb;
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
@@ -208,11 +208,12 @@ svn_client_status2 (svn_revnum_t *result_rev,
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
-  SVN_ERR (svn_wc_get_status_editor (&editor, &edit_baton, &edit_revision,
-                                     anchor_access, target, ctx->config,
-                                     descend, get_all, no_ignore, tweak_status,
-                                     &sb, ctx->cancel_func, ctx->cancel_baton,
-                                     traversal_info, pool));
+  SVN_ERR (svn_wc_get_status_editor2 (&editor, &edit_baton, &set_locks_baton,
+                                      &edit_revision, anchor_access, target,
+                                      ctx->config, descend, get_all, no_ignore,
+                                      tweak_status, &sb, ctx->cancel_func,
+                                      ctx->cancel_baton, traversal_info,
+                                      pool));
 
   /* If we want to know about out-of-dateness, we crawl the working copy and
      let the RA layer drive the editor for real.  Otherwise, we just close the
@@ -286,7 +287,7 @@ svn_client_status2 (svn_revnum_t *result_rev,
 
           /* Init the report baton. */
           rb.ancestor = apr_pstrdup (pool, URL);
-          rb.edit_baton = edit_baton;
+          rb.set_locks_baton = set_locks_baton;
           rb.ctx = ctx;
           rb.pool = pool;
           

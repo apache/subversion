@@ -1433,7 +1433,9 @@ typedef void (*svn_wc_status_func_t) (void *baton,
                                       svn_wc_status_t *status);
 
 
-/** Set @a *editor and @a *edit_baton to an editor that generates @c
+/** @since New in 1.2.
+ *
+ * Set @a *editor and @a *edit_baton to an editor that generates @c
  * svn_wc_status_t structures and sends them through @a status_func /
  * @a status_baton.  @a anchor is an access baton, with a tree lock,
  * for the local path to the working copy which will be used as the
@@ -1441,6 +1443,9 @@ typedef void (*svn_wc_status_func_t) (void *baton,
  * entry in the @a anchor path which is the subject of the editor
  * drive (otherwise, the @a anchor is the subject).
  * 
+ * If @a set_locks_baton is non-@c NULL, it will be set to a baton that can
+ * be used in a call to the @c svn_wc_status_set_repos_locks function.
+ *
  * Callers drive this editor to describe working copy out-of-dateness
  * with respect to the repository.  If this information is not
  * available or not desired, callers should simply call the
@@ -1477,6 +1482,27 @@ typedef void (*svn_wc_status_func_t) (void *baton,
  * Allocate the editor itself in @a pool, but the editor does temporary
  * allocations in a subpool of @a pool.
  */
+svn_error_t *svn_wc_get_status_editor2 (const svn_delta_editor_t **editor,
+                                        void **edit_baton,
+                                        void **set_locks_baton,
+                                        svn_revnum_t *edit_revision,
+                                        svn_wc_adm_access_t *anchor,
+                                        const char *target,
+                                        apr_hash_t *config,
+                                        svn_boolean_t descend,
+                                        svn_boolean_t get_all,
+                                        svn_boolean_t no_ignore,
+                                        svn_wc_status_func_t status_func,
+                                        void *status_baton,
+                                        svn_cancel_func_t cancel_func,
+                                        void *cancel_baton,
+                                        svn_wc_traversal_info_t *traversal_info,
+                                        apr_pool_t *pool);
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ * Same as svn_wc_get_status_editor2, but with @a set_locks_baton set
+ * to @c NULL. */
 svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        svn_revnum_t *edit_revision,
@@ -1497,16 +1523,16 @@ svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
  *
  * Associate @a locks, a hash table mapping <tt>const char*</tt>
  * absolute repository paths to <tt>svn_lock_t</tt objects with an
- * @a edit_baton returned by an earlier call to @c svn_wc_get_status_editor.
- * @a repos_root is the URL of the repository root.  Perform all allocations
- * in @a pool.
+ * @a set_locks_baton returned by an earlier call to
+ * @c svn_wc_get_status_editor2.  @a repos_root is the repository root URL.
+ * Perform all allocations in @a pool.
  *
  * @note @a locks will not be copied, so it must be valid throughout the
  * edit.  @a pool must also not be destroyed or cleared before the edit is
  * finished.
  */
 svn_error_t *
-svn_wc_status_set_repos_locks (void *edit_baton,
+svn_wc_status_set_repos_locks (void *set_Locks_baton,
                                apr_hash_t *locks,
                                const char *repos_root,
                                apr_pool_t *pool);
