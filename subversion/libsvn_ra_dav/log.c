@@ -381,7 +381,7 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
   lb.err = NULL;
   reset_log_item (&lb);
 
-  SVN_ERR( svn_ra_dav__parsed_request(ras,
+  SVN_ERR( svn_ra_dav__parsed_request(ras->sess,
                                       "REPORT",
                                       ras->root.path,
                                       request_body->data,

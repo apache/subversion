@@ -246,7 +246,7 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
 
 
 
-svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
+svn_error_t *svn_ra_dav__parsed_request(ne_session *sess,
                                         const char *method,
                                         const char *url,
                                         const char *body,
@@ -266,13 +266,14 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
   ne_xml_parser *error_parser;
   int rv;
   int decompress_rv;
-  int decompress_on = ras->compression;
   int code;
   const char *msg;
   svn_error_t *err = SVN_NO_ERROR;
+  svn_ra_ne_session_baton_t *sess_baton =
+    ne_get_session_private(sess, SVN_RA_NE_SESSION_ID);
 
   /* create/prep the request */
-  req = ne_request_create(ras->sess, method, url);
+  req = ne_request_create(sess, method, url);
 
   if (body != NULL)
     ne_set_request_body_buffer(req, body, strlen(body));
@@ -308,7 +309,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
 
   /* Register the "main" accepter and body-reader with the request --
      the one to use when the HTTP status is 2XX */
-  if (decompress_on)
+  if (sess_baton->compression)
     {
       decompress_main = ne_decompress_reader(req, ne_accept_2xx,
                                              ne_xml_parse_v, success_parser);
@@ -322,7 +323,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
 
   /* Register the "error" accepter and body-reader with the request --
      the one to use when HTTP status is *not* 2XX */
-  if (decompress_on)
+  if (sess_baton->compression)
     {
       decompress_err = ne_decompress_reader(req, ra_dav_error_accepter,
                                             ne_xml_parse_v, error_parser);
@@ -365,7 +366,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
       || rv != NE_OK)
     {
       msg = apr_psprintf(pool, "%s of '%s'", method, url);
-      err = svn_ra_dav__convert_error(ras->sess, msg, rv);
+      err = svn_ra_dav__convert_error(sess, msg, rv);
       goto error;
     }
 

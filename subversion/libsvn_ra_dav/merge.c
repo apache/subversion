@@ -566,11 +566,11 @@ svn_error_t * svn_ra_dav__merge_activity(
                       "</D:prop>"
                       "</D:merge>", activity_url);
 
-  SVN_ERR( svn_ra_dav__parsed_request(ras, "MERGE", repos_url, body, 0,
+  SVN_ERR( svn_ra_dav__parsed_request(ras->sess, "MERGE", repos_url, body, 0,
                                       merge_elements, validate_element,
                                       start_element, end_element, &mc,
                                       extra_headers, pool) );
-
+  
   /* is there an error stashed away in our context? */
   if (mc.err != NULL)
     return mc.err;
