@@ -80,6 +80,28 @@ entries file, instead of just detecting PATH among the entries."
 	      (kill-buffer nil)))
 	found)))))
 
+
+(defun svn-text-base-path (file)
+  "Return the path to the text base for FILE (a string).
+If FILE is a directory or not under revision control, return nil."
+  (cond
+   ((not (svn-controlled-path-p file)) nil)
+   ((file-directory-p file)            nil)
+   (t
+    (let* ((pdir (file-name-directory file))
+           (base (file-name-nondirectory file)))
+      (format "%s%s/text-base/%s.svn-base" (or pdir "") svn-adm-area base)))))
+
+
+(defun svn-ediff (file)
+  "Ediff FILE against its text base."
+  (interactive "fsvn ediff: ")
+  (let ((tb (svn-text-base-path file)))
+    (if (not tb)
+        (error "No text base for %s" file)
+      (ediff-files file tb))))
+
+
 (defun svn-find-file-hook ()
   "Function for find-file-hooks.
 Inhibit backup files unless `vc-make-backup-files' is non-nil."
