@@ -58,6 +58,7 @@ for developers interacing with the subversion package.
 Group: Utilities/System
 Summary: Apache server module for Subversion server.
 Requires: apache-devel >= 2.0.16
+Requires: perl
 Requires: subversion = %{version}-%{release}
 BuildPreReq: apache-devel >= 2.0.16
 %description server
@@ -123,12 +124,20 @@ cp subversion/libsvn_ra/.libs/libsvn_ra.so.0.0.0 $RPM_BUILD_ROOT/usr/lib/libsvn_
 
 %post server
 # Load subversion server into apache configuration.
-cd /usr/lib/apache
-/usr/sbin/apxs -i -a -n dav_svn libmod_dav_svn.la > /dev/null 2>&1
+CONF=/etc/httpd/conf/httpd.conf
+perl -e '
+while ( <> )
+   {
+   $first = 1 if ( ! $first && /^LoadModule/ );
+   $found = 1, print "LoadModule dav_svn_module modules/libmod_dav_svn.so\n"
+      if ( $first && ! $found && ! /^LoadModule/ );
+   print;
+   }
+' < $CONF > $CONF.new && mv $CONF $CONF.bak && mv $CONF.new $CONF
 
 # Conditionally add subversion example configuration.
-if [ "`grep -i svnpath /etc/httpd/conf/httpd.conf`"x = "x" ]; then
-   cat >> /etc/httpd/conf/httpd.conf <<EOF
+if [ "`grep -i svnpath $CONF`"x = "x" ]; then
+   cat >> $CONF <<EOF
 
 # Begin Subversion server configuration - Please don't delete this line.
 #<Location /svn/repos>
