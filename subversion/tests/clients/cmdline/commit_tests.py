@@ -1503,10 +1503,6 @@ def commit_multiple_wc(sbox):
 def commit_symlink(sbox):
   "committing a symlink should fail"
 
-  # Symlinks are a Unix phenonenon anyway.
-  if svntest.main.windows:
-    return 0
-
   if sbox.build():
     return 1
 
@@ -1558,7 +1554,7 @@ test_list = [ None,
               commit_current_dir,
               commit_multiple_wc,
               XFail(failed_commit),
-              commit_symlink,
+              Skip(commit_symlink, (os.name != 'posix')),
              ]
 
 if __name__ == '__main__':
