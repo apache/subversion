@@ -30,9 +30,11 @@
 
 /* Helper for svn_config_{read|write}_auth_data.  Return a path to a
    file within ~/.subversion/auth/ that holds CRED_KIND credentials
-   within REALMSTRING.  */
-static const char *
-auth_file_path (const char *cred_kind,
+   within REALMSTRING.  If no path is available *PATH will be set to
+   NULL. */
+static svn_error_t *
+auth_file_path (const char **path,
+                const char *cred_kind,
                 const char *realmstring,
                 const char *config_dir,
                 apr_pool_t *pool)
@@ -43,16 +45,23 @@ auth_file_path (const char *cred_kind,
   /* Construct the path to the directory containing the creds files,
      e.g. "~/.subversion/auth/svn.simple".  The last component is
      simply the cred_kind.  */
-  svn_config__user_config_path (config_dir, &authdir_path,
-                                SVN_CONFIG__AUTH_SUBDIR, pool);
-  authdir_path = svn_path_join (authdir_path, cred_kind, pool);
+  SVN_ERR (svn_config__user_config_path (config_dir, &authdir_path,
+                                         SVN_CONFIG__AUTH_SUBDIR, pool));
+  if (authdir_path)
+    {
+      authdir_path = svn_path_join (authdir_path, cred_kind, pool);
 
-  /* Construct the basename of the creds file.  It's just the
-     realmstring converted into an md5 hex string.  */
-  apr_md5 (digest, realmstring, strlen(realmstring));
-  hexname = svn_md5_digest_to_cstring (digest, pool);
+      /* Construct the basename of the creds file.  It's just the
+         realmstring converted into an md5 hex string.  */
+      apr_md5 (digest, realmstring, strlen(realmstring));
+      hexname = svn_md5_digest_to_cstring (digest, pool);
 
-  return svn_path_join (authdir_path, hexname, pool);
+      *path = svn_path_join (authdir_path, hexname, pool);
+    }
+  else
+    *path = NULL;
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -64,8 +73,14 @@ svn_config_read_auth_data (apr_hash_t **hash,
                            apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  const char *auth_path = auth_file_path (cred_kind, realmstring, config_dir,
-                                          pool);
+  const char *auth_path;
+
+  *hash = NULL;
+
+  SVN_ERR (auth_file_path (&auth_path, cred_kind, realmstring, config_dir,
+                           pool));
+  if (! auth_path)
+    return SVN_NO_ERROR;
 
   SVN_ERR (svn_io_check_path (auth_path, &kind, pool));
   if (kind == svn_node_file)
@@ -90,10 +105,6 @@ svn_config_read_auth_data (apr_hash_t **hash,
         return svn_error_createf (status, NULL,
                                   "can't close `%s'", auth_path);
     }
-  else
-    {
-      *hash = NULL;
-    }
 
   return SVN_NO_ERROR;
 }
@@ -108,8 +119,13 @@ svn_config_write_auth_data (apr_hash_t *hash,
 {
   apr_status_t status;
   apr_file_t *authfile = NULL;
-  const char *auth_path = auth_file_path (cred_kind, realmstring, config_dir,
-                                          pool);
+  const char *auth_path;
+
+  SVN_ERR (auth_file_path (&auth_path, cred_kind, realmstring, config_dir,
+                           pool));
+  if (! auth_path)
+    return svn_error_create (SVN_ERR_NO_AUTH_FILE_PATH, NULL,
+                             "unable to locate auth file");
 
   /* Add the realmstring to the hash, so programs (or users) can
      verify exactly which set of credentials this file holds.  */
