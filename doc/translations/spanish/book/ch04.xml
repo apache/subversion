@@ -747,12 +747,13 @@ U   my-calc-branch/integer.c
           Debería poder usar esta información para automatizar las
           fusiones tanto como sea posible.</para>
 
-        <para>Unfortunately, Subversion is not such a system.  Like
-          CVS, Subversion 1.0 does not yet record any information
-          about merge operations.  When you commit local
-          modifications, the repository has no idea whether those
-          changes came from running <command>svn merge</command>, or
-          from just hand-editing the files.</para>
+        <para>Desafortunadamente, Subversion no es tal sistema. Al
+          igual que CVS, Subversion 1.0 no almacena ninguna
+          información sobre operaciones de fusionado. Cuando envía
+          sus cambios locales, el repositorio no tiene idea si esos
+          cambios vinieron de una ejecución del comando <command>svn
+          merge</command>, o de una modificación manual de los
+          ficheros.</para>
 
         <para>What does this mean to you, the user?  It means that
           until the day Subversion grows this feature, you'll have to
