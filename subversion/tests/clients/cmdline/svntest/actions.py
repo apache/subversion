@@ -406,7 +406,7 @@ def run_and_verify_merge(dir, rev1, rev2, url,
     out_dry, err_dry = main.run_svn(error_re_string, *dry_run_command)
     post_disk = tree.build_tree_from_wc(dir)
     try:
-      tree.compare_trees(pre_disk, post_disk)
+      tree.compare_trees(post_disk, pre_disk)
     except tree.SVNTreeError:
       print "============================================================="
       print "Dry-run merge altered working copy"
@@ -451,7 +451,7 @@ def run_and_verify_merge(dir, rev1, rev2, url,
     raise Failure
 
   myskiptree = tree.build_tree_from_skipped(out)
-  tree.compare_trees(skip_tree, myskiptree,
+  tree.compare_trees(myskiptree, skip_tree,
                      extra_skip, None, missing_skip, None)
 
   mytree = tree.build_tree_from_checkout(out)
@@ -573,14 +573,14 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
       output.append(lastline)
     
   # Convert the output into a tree.
-  expected_tree = tree.build_tree_from_commit (output)
+  mytree = tree.build_tree_from_commit (output)
     
   # Verify actual output against expected output.
   try:
-    tree.compare_trees (expected_tree, output_tree)
+    tree.compare_trees (mytree, output_tree)
   except tree.SVNTreeError:
       display_trees("Output of commit is unexpected.",
-                    "OUTPUT TREE", expected_tree, output_tree)
+                    "OUTPUT TREE", output_tree, mytree)
       raise
     
   # Verify via 'status' command too, if possible.
