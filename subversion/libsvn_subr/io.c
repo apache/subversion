@@ -90,9 +90,10 @@ svn_io_open_unique_file (apr_file_t **f,
      that the iterating portion changes instead.  Taking the pointer
      as an unsigned short int has more or less this effect. */
   int random_portion_width;
-  char *random_portion = apr_psprintf (pool, "%hu%n",
-                                       unique_name,
-                                       &random_portion_width);
+  char *random_portion = apr_psprintf 
+    (pool, "%hu%n",
+     (unsigned int)unique_name,
+     &random_portion_width);
 
   *unique_name = svn_string_dup (path, pool);
 
