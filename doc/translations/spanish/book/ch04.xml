@@ -1280,13 +1280,14 @@ Removed real.c because code now in double.c.
         que sabe lo que quiere recuperar, tiene dos posibles
         opciones.</para>
       
-      <para>One option is to use <command>svn merge</command> to apply
-        revision 808 <quote>in reverse</quote>.  (We've already
-        discussed how to undo changes, see <xref
-        linkend="svn-ch-4-sect-4.2"/>.)  This would have the effect of
-        re-adding <filename>real.c</filename> as a local modification.
-        The file would be scheduled for addition, and after a commit,
-        the file would again exist in <literal>HEAD</literal>.</para>
+      <para>Una de las opciones es usar el comando <command>svn
+        merge</command> para aplicar la revisión 808 <quote>al
+        revés</quote>.  (Ya hemos discutido cómo deshacer cambios,
+        lea <xref linkend="svn-ch-4-sect-4.2"/>.) Esto tendría
+        el efecto de reañadir <filename>real.c</filename> como
+        modificación local.  El fichero se programaría para ser
+        añadido, y tras enviar los cambios, el fichero existiría
+        de nuevo en <literal>HEAD</literal>.</para>
 
       <para>In this particular example, however, this is probably not
         the best strategy.  Reverse-applying revision 808 would not
