@@ -35,6 +35,7 @@ svn_error_t *svn_fs__create_txn (char **txn_id_p,
    Allocate *ROOT_ID_P and *BASE_ROOT_ID_P in TRAIL->pool.  */
 svn_error_t *svn_fs__get_txn (svn_fs_id_t **root_id_p,
 			      svn_fs_id_t **base_root_id_p,
+			      svn_fs_t *fs,
 			      const char *svn_txn,
 			      trail_t *trail);
 

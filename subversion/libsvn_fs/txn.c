@@ -21,6 +21,7 @@
 #include "trail.h"
 #include "rev-table.h"
 #include "txn-table.h"
+#include "tree.h"
 
 
 /* The private structure underlying the public svn_fs_txn_t typedef.  */
@@ -108,3 +109,42 @@ svn_fs_begin_txn (svn_fs_txn_t **txn_p,
   *txn_p = txn;
   return 0;
 }
+
+
+struct open_txn_root_args
+{
+  svn_fs_node_t **dir_p;
+  svn_fs_txn_t *txn;
+};
+
+
+static svn_error_t *
+txn_body_open_txn_root (void *baton,
+			trail_t *trail)
+{
+  struct open_txn_root_args *args = baton;
+  svn_fs_node_t *root;
+
+  SVN_ERR (svn_fs__txn_root_node (&root, args->txn->fs, args->txn->id, trail));
+
+  *args->dir_p = root;
+  return 0;
+}
+
+
+svn_error_t *
+svn_fs_open_txn_root (svn_fs_node_t **dir_p,
+		      svn_fs_txn_t *txn,
+		      apr_pool_t *pool)
+{
+  svn_fs_node_t *dir;
+  struct open_txn_root_args args;
+
+  args.dir_p = &dir;
+  args.txn   = txn;
+  SVN_ERR (svn_fs__retry_txn (txn->fs, txn_body_open_txn_root, &args, pool));
+
+  *dir_p = dir;
+  return 0;
+}
+
