@@ -1066,6 +1066,10 @@ close_file (void *file_baton)
              other merge programs.  And quote the arguments like civilized
              programmers. */
           
+          apr_proc_t diff_proc;
+          apr_procattr_t *diffproc_attr;
+          char *diff_args[6];
+
           apr_file_t *received_diff_file;
           svn_string_t *tmp_txtb_full_path
             = svn_wc__text_base_path (fb->path, 1, fb->pool);
@@ -1083,100 +1087,65 @@ close_file (void *file_baton)
           if (err)
             return err;
           
-
-          /* Replace 0 with 1 when things are working.  Until then, we
-             continue to use the old style, in which `diff' is driven
-             by a call to system() and the redirection is done through
-             the shell. */
-#if 0
-          {
-            /* kff todo: trying to drive diff the apr way */
-            apr_proc_t diff_proc;
-            apr_procattr_t *diffproc_attr;
-            char *diff_args[6]; /* "diff" "-c" "--" "f1" "f2" null */
-            
-            /* Create the process attributes. */
-            apr_err = apr_createprocattr_init (&diffproc_attr, fb->pool); 
-            if (! APR_STATUS_IS_SUCCESS (apr_err))
-              return svn_error_create 
-                (apr_err, 0, NULL, fb->pool,
-                 "close_file: error creating diff process attributes");
-            
-            /* Set io style. */
-            apr_err = apr_setprocattr_io (diffproc_attr, 0, 
-                                          APR_CHILD_BLOCK, APR_CHILD_BLOCK);
-            if (! APR_STATUS_IS_SUCCESS (apr_err))
-              return svn_error_create
-                (apr_err, 0, NULL, fb->pool,
-                 "close_file: error setting diff process io attributes");
-            
-            /* Tell it to send output to the diff file. */
-            apr_err = apr_setprocattr_childout (diffproc_attr,
-                                                received_diff_file,
-                                                NULL);
-            if (! APR_STATUS_IS_SUCCESS (apr_err))
-              return svn_error_create 
-                (apr_err, 0, NULL, fb->pool,
-                 "close_file: error setting diff process child output");
-            
-            /* Build the diff command. */
-            diff_args[0] = "diff";
-            diff_args[1] = "-c";
-            diff_args[2] = "--";
-            diff_args[3] = txtb_full_path->data;
-            diff_args[4] = tmp_txtb_full_path->data;
-            diff_args[5] = NULL;
-            
-            /* Start the diff command. */
-            apr_err = apr_create_process (&diff_proc,
-                                          "diff",
-                                          diff_args,
-                                          NULL,
-                                          diffproc_attr,
-                                          fb->pool);
-            if (! APR_STATUS_IS_SUCCESS (apr_err))
-              return svn_error_createf 
-                (apr_err, 0, NULL, fb->pool,
-                 "close_file: error starting diff process");
-            
-            /* Wait for the diff command to finish. */
-            apr_err = apr_wait_proc (&diff_proc, APR_WAIT);
-            if (APR_STATUS_IS_CHILD_NOTDONE (apr_err))
-              return svn_error_createf
-                (apr_err, 0, NULL, fb->pool,
-                 "close_file: error waiting for diff process");
-            
-            /* fooo; Have a beer. */
-            
-          }
-#else /* old-style diff -- invoke a shell line via system() */
-          {
-            svn_string_t *diff_cmd;
-            int diff_status;
-            
-            /* Needs an empty, closed diff file to start out with. */
-            apr_err = apr_close (received_diff_file);
-            if (apr_err)
-              return svn_error_createf (apr_err, 0, NULL, fb->pool,
-                                        "close_file: error closing %s",
-                                        received_diff_filename->data);
-            
-            /* Build and run the diff command. */
-            diff_cmd = svn_string_create ("diff -c -- ", fb->pool);
-            svn_string_appendstr (diff_cmd, txtb_full_path);
-            svn_string_appendcstr (diff_cmd, " ");
-            svn_string_appendstr (diff_cmd, tmp_txtb_full_path);
-            svn_string_appendcstr (diff_cmd, " > ");
-            svn_string_appendstr (diff_cmd, received_diff_filename);
-            diff_status = system (diff_cmd->data);
-            if (diff_status & 255)
-              return svn_error_createf
-                (0, diff_status, NULL, fb->pool,
-                 "close_file: error diffing %s with %s, outputting to %s",
-                 tmp_txtb_full_path->data, txtb_full_path->data,
-                 received_diff_filename->data);
-          }
-#endif /* 1/0 */
+          /* Create the process attributes. */
+          apr_err = apr_createprocattr_init (&diffproc_attr, fb->pool); 
+          if (! APR_STATUS_IS_SUCCESS (apr_err))
+            return svn_error_create 
+              (apr_err, 0, NULL, fb->pool,
+               "close_file: error creating diff process attributes");
+          
+          /* Make sure we invoke diff directly, not through a shell. */
+          apr_err = apr_setprocattr_cmdtype (diffproc_attr, APR_PROGRAM);
+          if (! APR_STATUS_IS_SUCCESS (apr_err))
+            return svn_error_create 
+              (apr_err, 0, NULL, fb->pool,
+               "close_file: error setting diff process cmdtype");
+          
+          /* Set io style. */
+          apr_err = apr_setprocattr_io (diffproc_attr, 0, 
+                                        APR_CHILD_BLOCK, APR_CHILD_BLOCK);
+          if (! APR_STATUS_IS_SUCCESS (apr_err))
+            return svn_error_create
+              (apr_err, 0, NULL, fb->pool,
+               "close_file: error setting diff process io attributes");
+          
+          /* Tell it to send output to the diff file. */
+          apr_err = apr_setprocattr_childout (diffproc_attr,
+                                              received_diff_file,
+                                              NULL);
+          if (! APR_STATUS_IS_SUCCESS (apr_err))
+            return svn_error_create 
+              (apr_err, 0, NULL, fb->pool,
+               "close_file: error setting diff process child output");
+          
+          /* Build the diff command. */
+          diff_args[0] = "diff";
+          diff_args[1] = "-c";
+          diff_args[2] = "--";
+          diff_args[3] = txtb_full_path->data;
+          diff_args[4] = tmp_txtb_full_path->data;
+          diff_args[5] = NULL;
+          
+          /* Start the diff command.  kff todo: path to diff program
+             should be determined through various levels of fallback,
+             of course, not hardcoded. */ 
+          apr_err = apr_create_process (&diff_proc,
+                                        "/usr/local/bin/diff",
+                                        diff_args,
+                                        NULL,
+                                        diffproc_attr,
+                                        fb->pool);
+          if (! APR_STATUS_IS_SUCCESS (apr_err))
+            return svn_error_createf 
+              (apr_err, 0, NULL, fb->pool,
+               "close_file: error starting diff process");
+          
+          /* Wait for the diff command to finish. */
+          apr_err = apr_wait_proc (&diff_proc, APR_WAIT);
+          if (APR_STATUS_IS_CHILD_NOTDONE (apr_err))
+            return svn_error_createf
+              (apr_err, 0, NULL, fb->pool,
+               "close_file: error waiting for diff process");
         }
       
       /* Move new text base over old text base. */
