@@ -1,3 +1,11 @@
+/************************************************************************/
+/* Custom style-sheet stuffs for the Subversion book in HTML form.      */
+/*                                                                      */
+/* If you prefer sans-serif fonts, just replace all the instances of    */
+/* 'times new roman,times,serif' with 'arial,helvetica,sans-serif'.     */
+/************************************************************************/
+
+
 /* Generic tag-level style definitions */
 
 BODY
@@ -42,7 +50,7 @@ H4
     color: black;
 }
 
-P,LI,UL,OL,DD,DT
+P,LI,UL,OL,DD,DT,TD
 {
     font-family: times new roman,times,serif;
     font-size: 12pt;
