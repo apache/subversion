@@ -1456,7 +1456,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
 
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */
-  if (((apr_err = ap_fflush(output, uc.bb))) && (! derr))
+  if ((! derr) && ((apr_err = ap_fflush(output, uc.bb))))
     derr = dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
                                HTTP_INTERNAL_SERVER_ERROR,
                                "Error flushing brigade.",
