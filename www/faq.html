@@ -1500,10 +1500,13 @@ out how to modify their <tt>PATH</tt> so that they can run <tt>svnserve</tt>.</a
 
       <p>For each user who needs svn+ssh access, generate a new ssh
         public-key pair which they will use <em>only</em> for
-        subversion&mdash;not for logging in normally.  Have them add this
-        key to their <tt>~/.ssh/authorized_keys</tt> file.  But they
-        must insert a bit of magic at the beginning of the line before
-        the word <tt>ssh-rsa</tt> or <tt>ssh-dss</tt>, like this:</p>
+        subversion&mdash;not for logging in normally.  Have them give
+        the keypair a distinctive name, like
+        <tt>~/.ssh/id_dsa.subversion</tt>.  Add the public part of the
+        key to their <tt>~/.ssh/authorized_keys</tt> file on the
+        server machine, after first inserting a bit of magic at the
+        beginning of the line before the word <tt>ssh-rsa</tt> or
+        <tt>ssh-dss</tt>, like this:</p>
 
       <table>
         <tr><th>before</th></tr>
@@ -1512,16 +1515,31 @@ ssh-dss AAAAB3Nblahblahblahblah
       </pre></td></tr>
         <tr><th>after</th></tr>
         <tr><td><pre>
-command="/opt/subversion/bin/svnserve" ssh-dss AAAAB3Nblahblahblahblah
+command="/opt/subversion/bin/svnserve -t" ssh-dss AAAAB3Nblahblahblahblah
       </pre></td></tr>
 </table>
 
-      (Obviously, replace <tt>/opt/subversion/bin/svnserve</tt> with
-      whatever is appropriate for your system.)
+      <p>Obviously, replace <tt>/opt/subversion/bin/svnserve</tt> with
+      whatever is appropriate for your system.  You also might want to
+      specify the full path to the subversion repository in the
+      command, to save your users some typing.</p>
       
-      <p>Now whenever they use that new key for anything, ssh on the
-        remote machine will invoke <tt>svnserve</tt>, even if they try to run
-      some other command.</p>
+      <p>The <tt>command=</tt> magic causes sshd on the remote machine
+        to invoke <tt>svnserve</tt>, even if your user tries to run
+        some other command.  See the sshd(8) man page (section
+        <tt>AUTHORIZED_KEYS FILE FORMAT</tt>) for details.</p>
+      
+      <p>Now when your users run the subversion client, make sure they
+      have an <tt>SVN_SSH</tt> environment variable that "points to"
+      the private half of their keypair, by doing something like this
+      (for the Bourne Again shell):
+<pre>
+SVN_SSH="ssh -i $HOME/.ssh/id_dsa.subversion"
+export SVN_SSH
+</pre>
+      </p>
+      
+      
 
 <![CDATA[=========================================================]]>
 
