@@ -122,7 +122,7 @@ copy_file_administratively (const char *src_path,
                             apr_pool_t *pool)
 {
   enum svn_node_kind dst_kind;
-  svn_wc_entry_t *src_entry;
+  svn_wc_entry_t *src_entry, *dst_entry;
 
   /* The 'dst_path' is simply dst_parent/dst_basename */
   const char *dst_path
@@ -134,6 +134,24 @@ copy_file_administratively (const char *src_path,
     return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL, pool,
                               "'%s' already exists and is in the way.",
                               dst_path);
+
+  /* Even if DST_PATH doesn't exist it may still be a versioned file; it
+     may be scheduled for deletion, or the user may simply have removed the
+     working copy.  Since we are going to write to DST_PATH text-base and
+     prop-base we need to detect such cases and abort. */
+  SVN_ERR (svn_wc_entry (&dst_entry, dst_path, FALSE, pool));
+  if (dst_entry && dst_entry->kind == svn_node_file)
+    {
+      if (dst_entry->schedule == svn_wc_schedule_delete)
+        return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL, pool,
+                                  "'%s' is scheduled for deletion, it must"
+                                  " be commited before being overwritten",
+                                  dst_path);
+      else
+        return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL, pool,
+                                  "There is already a versioned item '%s'",
+                                  dst_path);
+    }
 
   /* Sanity check:  you cannot make a copy of something that's not
      in the repository.  See comment at the bottom of this file for an
