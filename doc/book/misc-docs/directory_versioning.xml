@@ -40,9 +40,9 @@
       numbers of the same versioned item do <emphasis>not</emphasis>
       imply different contents.</para>
 
-    <para>Nevertheless, the contents of <filename>foo.c:4</filename>
+    <para>Nevertheless, the content of <filename>foo.c:4</filename>
       is still well-defined.  The file <filename>foo.c</filename> in
-      revision 4 has a specific text and properties.</para>
+      revision 4 has specific text and properties.</para>
 
     <para>Suppose, now, that we extend this concept to directories.
       If we have a directory <filename>DIR</filename>, define
@@ -55,7 +55,7 @@
       seems fine in the repository&mdash;the repository is very
       theoretically pure anyway.  However, because working copies
       allow mixed revisions, it's easy to create problematic
-      use-cases.  </para>
+      use-cases.</para>
 
   </sect1>
 

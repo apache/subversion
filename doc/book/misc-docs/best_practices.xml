@@ -213,7 +213,7 @@ $ svn commit -m 'Merged branch'
     <sect2 id="misc-docs-best_practices-sect-1.3">
       <title>Line Endings</title>
       
-      <para>Different platforms (Unix, Windows, MacOS) have different
+      <para>Different platforms (Unix, Windows, Mac OS) have different
         conventions for marking the line endings of text files. Simple
         editors may rewrite line endings, causing problems with diff and
         merge. This is a subset of the formatting problems.</para>
@@ -221,7 +221,7 @@ $ svn commit -m 'Merged branch'
       <para>Subversion has built-in support for normalizing line
         endings. To enable it, set the <command>svn:eol-style</command>
         property to ``native''. See Properties in the Subversion
-        book. for more information</para>
+        book for more information.</para>
 
     </sect2>
 
@@ -250,7 +250,7 @@ $ svn commit -m 'Merged branch'
       </listitem>
 
       <listitem>
-        <para> You can not easily remove revisions. (There is no
+        <para> You cannot easily remove revisions. (There is no
           equivalent to <command>cvs admin -o</command>.) If you might
           not want something to be in the repository, make sure it is
           not included in your commit.  Check for sensitive
