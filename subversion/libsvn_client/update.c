@@ -132,7 +132,8 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
 
       /* Get the client callbacks for auth stuffs. */
       SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton,
-                                             auth_baton, anchor, TRUE, pool));
+                                             auth_baton, anchor, TRUE,
+                                             TRUE, pool));
       SVN_ERR (ra_lib->open (&session, URL, ra_callbacks, cb_baton, pool));
 
       /* If TM is given, convert the time into a revision number. */

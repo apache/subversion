@@ -89,7 +89,8 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
 
       /* Open an RA session to URL. */
       SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton,
-                                             auth_baton, path, TRUE, pool));
+                                             auth_baton, path, TRUE,
+                                             FALSE, pool));
       SVN_ERR (ra_lib->open (&session, URL,
                              ra_callbacks, cb_baton, pool));
 

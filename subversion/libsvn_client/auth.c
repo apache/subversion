@@ -29,6 +29,7 @@
 #include "svn_wc.h"
 #include "svn_error.h"
 #include "svn_io.h"
+#include "svn_path.h"
 
 #include "client.h"
 
@@ -40,8 +41,8 @@
 
 
 static svn_error_t *
-open_tmp_file (apr_file_t **fp,
-               void *callback_baton)
+open_admin_tmp_file (apr_file_t **fp,
+                     void *callback_baton)
 {
   svn_client_auth_baton_t *cb = 
     (svn_client_auth_baton_t *) callback_baton;
@@ -52,6 +53,24 @@ open_tmp_file (apr_file_t **fp,
 }
   
 
+static svn_error_t *
+open_tmp_file (apr_file_t **fp,
+               void *callback_baton)
+{
+  svn_client_auth_baton_t *cb = (svn_client_auth_baton_t *) callback_baton;
+  svn_stringbuf_t *truepath = svn_stringbuf_dup (cb->path, cb->pool);
+  svn_stringbuf_t *ignored_filename;
+
+  /* Tack on a made-up filename. */
+  svn_path_add_component_nts (truepath, "tempfile", svn_path_local_style);
+
+  /* Open a unique file;  use APR_DELONCLOSE. */  
+  SVN_ERR (svn_io_open_unique_file (fp, &ignored_filename,
+                                    cb->path, ".tmp", TRUE, cb->pool));
+
+  return SVN_NO_ERROR;
+}
+  
 
 static svn_error_t *
 get_username (char **username,
@@ -311,12 +330,13 @@ svn_client__get_ra_callbacks (svn_ra_callbacks_t **callbacks,
                               svn_client_auth_baton_t *auth_baton,
                               svn_stringbuf_t *path,
                               svn_boolean_t do_store,
+                              svn_boolean_t use_admin,
                               apr_pool_t *pool)
 {
   svn_ra_callbacks_t *cbtable = 
     (svn_ra_callbacks_t *) apr_pcalloc (pool, sizeof(*cbtable));
   
-  cbtable->open_tmp_file = open_tmp_file;
+  cbtable->open_tmp_file = use_admin ? open_admin_tmp_file : open_tmp_file;
   cbtable->get_authenticator = get_authenticator;
 
   /* Just copy the PATH and DO_STORE into the baton, so callbacks can
