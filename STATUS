@@ -22,18 +22,27 @@ Candidate changes:
     Justification:
       blame is totally broken with more than 2 revisions on win32.
     Votes:
-      +1: lundblad, sussman
+      +1: lundblad, sussman, brane
 
   * r10385:
     Make svnserve CRAM-MD5 work for usernames containing spaces.
     Justification:
       one-line fix, and it's a silly bug.
     Votes:
-      +1: ghudson, sussman
+      +1: ghudson, sussman, brane
 
   * r10394:
     Make svnserve use repos UUID as default realm.
     Justification:
       fixes 'changing realm' bug in path computation.
     Votes:
-      +1: ghudson, sussman
+      +1: ghudson, sussman, brane
+
+  * r10398:
+    Don't always patch the apr-util files for BDB when generating
+    Windows build scripts.
+    Justification:
+      trivial fix, avoids breaking the apr-util build by mistake,
+      will make my life easier as long as the branch 1.1.x is live.
+    Votes:
+      +3: brane. That should be enough :-)
