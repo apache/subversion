@@ -45,12 +45,12 @@ AC_DEFUN(SVN_FIND_SWIG,
     SWIG_VERSION="`$SWIG -version 2>&1 | sed -ne 's/^.*Version \(.*\)$/\1/p'`"
     AC_MSG_RESULT([$SWIG_VERSION])
     case $SWIG_VERSION in
-        [1.3.1[23]*])
+        [1.3.1[45]*])
           SWIG_SUITABLE=yes
           ;;
         *)
           SWIG_SUITABLE=no
-          AC_MSG_WARN([swig bindings require 1.3.12.])
+          AC_MSG_WARN([swig bindings require 1.3.15.])
           ;;
     esac
     if test "$PYTHON" != "none" -a "$SWIG_SUITABLE" = "yes"; then

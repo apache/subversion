@@ -31,7 +31,7 @@
 %typemap(ignore) SWIGTYPE **OUTPARAM ($*1_type temp) {
     $1 = ($1_ltype)&temp;
 }
-%typemap(python, argout) SWIGTYPE **OUTPARAM {
+%typemap(python, argout, fragment="t_output_helper") SWIGTYPE **OUTPARAM {
     $result = t_output_helper($result,
                               SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
 }

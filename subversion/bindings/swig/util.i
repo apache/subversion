@@ -104,7 +104,7 @@
 /* ### need to use freearg or somesuch to ensure the string is freed.
    ### watch out for 'return' anywhere in the binding code. */
 
-%typemap(python, argout) (char *buffer, apr_size_t *len) {
+%typemap(python, argout, fragment="t_output_helper") (char *buffer, apr_size_t *len) {
     $result = t_output_helper($result, PyString_FromStringAndSize($1, *$2));
     free($1);
 }
@@ -123,7 +123,7 @@
     $2 = ($2_ltype)&temp;
 }
 
-%typemap(python, argout) (const char *data, apr_size_t *len) {
+%typemap(python, argout, fragment="t_output_helper") (const char *data, apr_size_t *len) {
     $result = t_output_helper($result, PyInt_FromLong(*$2));
 }
 

@@ -59,7 +59,7 @@ typedef apr_int32_t time_t;
 %typemap(ignore) apr_time_t * (apr_time_t temp) {
     $1 = &temp;
 }
-%typemap(python,argout) apr_time_t * {
+%typemap(python,argout,fragment="t_output_helper") apr_time_t * {
     $result = t_output_helper($result, PyLong_FromLongLong(*$1));
 }
 
@@ -101,7 +101,7 @@ typedef apr_int32_t time_t;
 %typemap(ignore) apr_file_t ** (apr_file_t *temp) {
     $1 = &temp;
 }
-%typemap(python,argout) apr_file_t ** {
+%typemap(python,argout,fragment="t_output_helper") apr_file_t ** {
     $result = t_output_helper(
         $result,
         SWIG_NewPointerObj(*$1, $*1_descriptor, 0));

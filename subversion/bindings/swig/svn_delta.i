@@ -41,7 +41,10 @@
 /* -----------------------------------------------------------------------
    handle the ptr/len params of svn_delta_xml_parsebytes()
 */
-%typemap(python, in) (const char *buffer, apr_size_t len) {
+/* ### hack. force the fragment's inclusion. t_output_helper is required
+   ### by the application of an OUTPARAM, but the fragment doesn't get
+   ### brought into this compilation unit. force it here. */
+%typemap(python, in,fragment="t_output_helper") (const char *buffer, apr_size_t len) {
     if (!PyString_Check($input)) {
         PyErr_SetString(PyExc_TypeError, "expecting a string");
         return NULL;
