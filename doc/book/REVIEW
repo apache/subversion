@@ -29,6 +29,12 @@ Overall Book Comments
                 --- c   (revision 10)
                 +++ c   (working copy)
 
+        #3) naked
+
+            Usage of spaces around &mdash; is inconsistent - but I
+            guess these kind of problems are fixed by O'Reilly in any
+            case.
+
 Chapter 3
 
         #1) ghudson (also affects ch 9 a little bit)
@@ -51,7 +57,65 @@ Chapter 3
 	    designation, and of course the time zone designation may
 	    be "-hh[:mm]" instead of "+hh[:mm]".
 
+    Section svn-ch-3-sect-3.3
+
+        #1) naked
+
+            Possibly mention the obvious pitfall that if the dates on
+            revisions are not in order, date lookups will fail
+            miserably. This happens when clocks are jumped or cvs2svn
+            is used.
+
+    Section svn-ch-3-sect-4.3.1
+
+        #1) naked
+
+            "svn status -u" output has the additional line:
+
+              Status against revision:   9026
+
+            This is not in the examples given. Even though this is
+            just a brief introduction, it could be confusing for the
+            user to see unexpected output there.
+
+    Section svn-ch-3-sect-5.1
+
+        #1) naked
+
+            In "Why Does svn log Give Me an Empty Response" it is
+            said:
+
+              As a result, if you're operating in a subdirectory of
+              your working copy and attempt to log a revision where
+              nothing beneath your current directory changed,
+              Subversion will give you an empty log. If you want to
+              see what changed in that revision, try running the same
+              command from the top directory of your working copy.
+
+            It is ofcourse not terribly incorrect, but the user may
+            become confused when still not getting anything when
+            issuing the command at the top of their working copy - if
+            the change is outside their entire checked out working
+            copy.
+
+    Section svn-ch-3-sect-7.1
+
+        #1) naked
+
+            Working copies do not remain locked anymore after issuing
+            Control-C. Fingers crossed and all.
+
 Chapter 5
+
+    Section svn-ch-5-sect-2.1
+
+        #1) naked
+
+            It's almost said but not quite: the text on
+            'pre-revprop-change' hook should probably mention the fact
+            that revision properties cannot be changed at all unless
+            this hook exists :-) This is properly mentioned section
+            3.2 however.
 
     Section svn-ch-5-sect-3.4
 
@@ -100,3 +164,97 @@ Chapter 6
             server at all (i.e. file://) or if you use tunnel mode.
             Some of it is important only when you don't have a server.
             Not terribly important, but the name could be better.
+Chapter 7
+
+    Section svn-ch-7-sect-1.3.2
+
+        #1) naked
+
+            When describing the "config" file options "diff" and
+            "diff3", should mention that Subversion uses an internal
+            diff library nowadays and that these options override that
+            with an external program.
+
+    Section svn-ch-7-sect-2
+
+         #1) naked
+
+             I really don't recall what eventually came out of it all,
+             but the encoding for properties eludes me. I do remember
+             that log messages are UTF8 natively, but does that mean:
+
+               1) log messages are special, only they use encoding
+               2) revision properties are special, only they use encoding
+               3) all properties use encoding
+
+             And at the moment, I would guess 3). What does that have
+             to do with the book then?
+
+             Well, the book talks constantly about how properties can
+             even contain binary data - which is not true in any sane
+             way if the files are converted from/to UTF8 based on
+             locale.
+
+Chapter 8
+
+    Section svn-ch-8-table-1
+
+        #1) naked
+
+            Does not mention 'mod_authz_svn'.
+
+    Section svn-ch-8-sect-2.3
+
+         #1) naked
+
+             The book claims:
+
+               Currently, it is Subversion's Python bindings that are
+               the most complete. Some attention is also being given
+               to the Java bindings.
+
+             But lately some little birds have been chittering about
+             the elevated state of the Perl bindings, so I wonder if
+             this is still true.
+
+Chapter 9
+
+    Section svn-ch-9-sect-1.2
+
+        #1) naked
+
+            "svn diff" synopsis differs from actual usage and there is
+            no explanation or examples of the --old and --new
+            arguments which are bound to be confusing.
+
+        #2) naked
+
+            "svn merge" has the same problem as above.
+
+        #3) naked
+
+            "svn status --show-updates" no longer says:
+
+              Head revision:   981
+
+            but:
+
+              Status against revision:     42
+
+    Section svn-ch-9-sect-2.2
+        
+        #1) naked
+
+            "svnadmin list-dblogs" and "svnadmin list-unused-dblogs"
+            both refer to the section called "svnshell.py" for more
+            information. Well, er, um. I could swear some renumbering
+            has happened somewhere...
+
+Appendix A
+
+    Section svn-app-a-sect-4
+
+        #1) naked
+
+            Again, "svn status --show-updates" output has changed for
+            the final line.

@@ -93,7 +93,7 @@
       copies of the <quote>calc</quote> project.  Specifically, you
       each have a working copy of <filename>/calc/trunk</filename>.
       All the files for the project are in this subdirectory (rather
-      than in <filename>/calc</filename>itself, because your team has
+      than in <filename>/calc</filename> itself, because your team has
       decided that <filename>/calc/trunk</filename> is where the
       <quote>main line</quote> of development is going to take
       place.</para>
