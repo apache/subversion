@@ -4,10 +4,7 @@ the best solution for now, even though there's also a real preface in
 ch00.xml. -->
 
 <preface id="svn-foreword">
-    <title>Foreword</title>
-
-    <!-- Hey O'Reilly, should we use some other tag here? -->
-    <para><emphasis>by Karl Fogel</emphasis></para>
+  <title>Foreword</title>
 
   <simplesect>
 
@@ -76,7 +73,7 @@ ch00.xml. -->
     about Subversion, but about its existing documentation. </para>
 
     <para>During the entire time they wrote this book, Ben, Mike, and
-    Fitz haunted the Subversion mailing lists and chat rooms
+    Brian haunted the Subversion mailing lists and chat rooms
     incessantly, carefully noting the problems real people were having
     in real situations.  The book they produced reflects this.
     Grounded firmly in the bedrock of experience, not in the shifting
@@ -113,6 +110,12 @@ ch00.xml. -->
     </para>
 
     <para>Let this book be your first companion. </para>
+
+    <para>&mdash;
+      <author>
+        <firstname>Karl</firstname>
+        <surname>Fogel</surname>
+      </author>, Chicago, 14 March, 2004</para>
 
   </simplesect>
 
