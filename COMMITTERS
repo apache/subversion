@@ -61,3 +61,4 @@ Commit access for specific areas:
              kon   Kalle Olavi Niemitalo <kon@iki.fi>          (Emacs Lisp)
          patrick   Patrick Mayweg <mayweg@qint.de>             (Java bindings)
              djh   D.J. Heap <dj@shadyvale.net>                (Win32 build)
+            rey4   Russell Yanofsky <rey4@columbia.edu>        (bindings)
