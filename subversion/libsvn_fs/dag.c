@@ -924,7 +924,7 @@ make_entry (dag_node_t **child_p,
       (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
        "Attempted to create a node with an illegal name `%s'", name);
 
-  /* Create and store the new node. */
+  /* Create the new node's NODE-REVISION skel */
   {
     skel_t *header_skel;
     skel_t *flag_skel;
@@ -935,8 +935,8 @@ make_entry (dag_node_t **child_p,
     
     /* Create a new skel for our new node, the format of which is
        (HEADER KIND-SPECIFIC).  If we are making a directory, the
-       HEADER is (dir PROPLIST (mutable PARENT-ID)).  If not, then
-       this is a file, whose HEADER is (file PROPLIST (mutable
+       HEADER is (`dir' PROPLIST (`mutable' PARENT-ID)).  If not, then
+       this is a file, whose HEADER is (`file' PROPLIST (`mutable'
        PARENT-ID)).  KIND-SPECIFIC is an empty atom for files, an
        empty list for directories. */
     
@@ -946,7 +946,7 @@ make_entry (dag_node_t **child_p,
                      flag_skel);
     svn_fs__prepend (svn_fs__str_atom ((char *) "mutable", trail->pool), 
                      flag_skel);
-    /* Now we have a FLAG skel: (mutable PARENT-ID) */
+    /* Now we have a FLAG skel: (`mutable' PARENT-ID) */
     
     /* Step 2: create the HEADER skel. */
     header_skel = svn_fs__make_empty_list (trail->pool);
@@ -963,7 +963,7 @@ make_entry (dag_node_t **child_p,
         svn_fs__prepend (svn_fs__str_atom ((char *) "file", trail->pool),
                          header_skel);
       }
-    /* Now we have a HEADER skel: (file-or-dir () FLAG) */
+    /* Now we have a HEADER skel: (`file'-or-`dir' () FLAG) */
     
     /* Step 3: assemble the NODE-REVISION skel. */
     new_node_skel = svn_fs__make_empty_list (trail->pool);
@@ -981,12 +981,12 @@ make_entry (dag_node_t **child_p,
     /* All done, skel-wise.  We have a NODE-REVISION skel as described
        far above. */
     
-    /* Time to actually create our new node */
+    /* Time to actually create our new node in the filesystem */
     SVN_ERR (svn_fs__create_node (&new_node_id, parent->fs,
                                   new_node_skel, trail));
   }
 
-  /* Create our new node */
+  /* Create a new node_dag_t for our new node */
   SVN_ERR (create_node (child_p, svn_fs__dag_get_fs (parent),
                         new_node_id, trail));
 
@@ -1296,6 +1296,16 @@ svn_error_t *svn_fs__dag_make_copy (dag_node_t **child_p,
                                     const char *source_path,
                                     trail_t *trail)
 {
+  skel_t *new_node_skel;
+  svn_fs_id_t *new_node_id;
+
+  /* Make sure that parent is a directory */
+  if (! svn_fs__dag_is_directory (parent))
+    return 
+      svn_error_createf 
+      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL, trail->pool,
+       "Attempted to create entry in non-directory parent");
+    
   {
     svn_boolean_t is_mutable;
     
@@ -1308,6 +1318,20 @@ svn_error_t *svn_fs__dag_make_copy (dag_node_t **child_p,
          "Attempted to make a copy node under a non-mutable parent");
   }
 
+  /* Check that parent does not already have an entry named NAME. */
+  {
+    skel_t *entry_skel;
+
+    SVN_ERR (find_dir_entry (&entry_skel, parent, name, trail));
+    if (entry_skel)
+      {
+        return 
+          svn_error_createf 
+          (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL, trail->pool,
+           "Attempted to create entry that already exists");
+      }
+  }
+
   /* Make sure that NAME is a single path component. */
   if (! svn_fs__is_single_path_component (name))
     return 
@@ -1315,6 +1339,96 @@ svn_error_t *svn_fs__dag_make_copy (dag_node_t **child_p,
       (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
        "Attempted to make a copy node with an illegal name `%s'", name);
     
+  /* cmpilato todo: Need to validate SOURCE_REVISION and SOURCE_PATH
+     with some degree of intelligence, I'm sure.  Should we make sure
+     that SOURCE_REVISION is an existing revising?  Should we traverse
+     the SOURCE_PATH in that revision to make sure that it really
+     exists? */
+  if (! SVN_IS_VALID_REVNUM(source_revision))
+    return 
+      svn_error_createf 
+      (SVN_ERR_FS_GENERAL, 0, NULL, trail->pool,
+       "Attempted to make a copy node with an invalid source revision");
+
+  if ((! source_path) || (! strlen (source_path)))
+    return 
+      svn_error_createf 
+      (SVN_ERR_FS_GENERAL, 0, NULL, trail->pool,
+       "Attempted to make a copy node with an invalid source path");
+
+  /* Create the new node's NODE-REVISION skel */
+  {
+    skel_t *header_skel;
+    skel_t *flag_skel;
+    skel_t *base_path_skel;
+    svn_string_t *id_str;
+    svn_string_t *rev;
+
+    /* Create a string containing the SOURCE_REVISION */
+    rev = svn_string_createf (trail->pool, "%lu", 
+                              (unsigned long) source_revision);
+
+    /* Get a string representation of the PARENT's node ID */
+    id_str = svn_fs_unparse_id (parent->id, trail->pool);
+    
+    /* Create a new skel for our new copy node, the format of which is
+       (HEADER SOURCE-REVISION (NAME ...)).  HEADER is (`copy'
+       PROPLIST (`mutable' PARENT-ID)).  The list of NAMEs describes
+       the path to the source file, described as a series of single
+       path components (imagine a '/' between each successive NAME in
+       thelist, if you will). */
+    
+    /* Step 1: create the FLAG skel. */
+    flag_skel = svn_fs__make_empty_list (trail->pool);
+    svn_fs__prepend (svn_fs__str_atom (id_str->data, trail->pool),
+                     flag_skel);
+    svn_fs__prepend (svn_fs__str_atom ((char *) "mutable", trail->pool), 
+                     flag_skel);
+    /* Now we have a FLAG skel: (`mutable' PARENT-ID) */
+    
+    /* Step 2: create the HEADER skel. */
+    header_skel = svn_fs__make_empty_list (trail->pool);
+    svn_fs__prepend (flag_skel, header_skel);
+    /* cmpilato todo:  Find out of this is supposed to be an empty
+       PROPLIST, or a copy of the PROPLIST from the source file. */
+    svn_fs__prepend (svn_fs__make_empty_list (trail->pool),
+                     header_skel);
+    svn_fs__prepend (svn_fs__str_atom ((char *) "copy", trail->pool),
+                     header_skel);
+    /* Now we have a HEADER skel: (`copy' () FLAG) */
+
+    /* Step 3: assemble the source path list. */
+    base_path_skel = svn_fs__make_empty_list (trail->pool);
+    /* cmpilato todo: Need to find out more on the topic of base
+       paths.  Can they be relative, or only absolute, and what's the
+       format of the skel in either case? */
+    /* We now have a list of path components, (NAME ...) */
+
+    /* Step 4: assemble the NODE-REVISION skel. */
+    new_node_skel = svn_fs__make_empty_list (trail->pool);
+    svn_fs__prepend (base_path_skel, new_node_skel);
+    svn_fs__prepend (svn_fs__str_atom (rev->data, trail->pool), 
+                     new_node_skel);
+    svn_fs__prepend (header_skel, new_node_skel);
+    /* All done, skel-wise.  We have a NODE-REVISION skel as described
+       far above. */
+    
+    /* Time to actually create our new node in the filesystem */
+    SVN_ERR (svn_fs__create_node (&new_node_id, parent->fs,
+                                  new_node_skel, trail));
+  }
+
+  /* Create a new node_dag_t for our new node */
+  SVN_ERR (create_node (child_p, svn_fs__dag_get_fs (parent),
+                        new_node_id, trail));
+
+  /* We can safely call add_new_entry because we already know that
+     PARENT is mutable, and we just created CHILD, so we know it has
+     no ancestors (therefore, PARENT cannot be an ancestor of CHILD) */
+  SVN_ERR (add_new_entry (parent, *child_p, name, trail ));
+
+  return SVN_NO_ERROR;
+
   abort();
   /* NOTREACHED */
   return NULL;
