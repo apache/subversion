@@ -50,6 +50,10 @@ add_dir_recursive (const char *dirname,
   svn_wc_adm_access_t *dir_access;
   apr_array_header_t *ignores;
 
+  /* Check cancellation; note that this catches recursive calls too. */
+  if (ctx->cancel_func)
+    SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
+
   /* Add this directory to revision control. */
   SVN_ERR (svn_wc_add (dirname, adm_access,
                        NULL, SVN_INVALID_REVNUM,
