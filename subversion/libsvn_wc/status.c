@@ -766,9 +766,19 @@ get_dir_status (struct edit_baton *eb,
      directory.  */
   if (entry)
     {
-      /* If ENTRY is unversioned, send its unversioned status. */
-      if (apr_hash_get (dirents, entry, APR_HASH_KEY_STRING)
-          && (! apr_hash_get (entries, entry, APR_HASH_KEY_STRING)))
+      const svn_wc_entry_t *entry_entry;
+      entry_entry = apr_hash_get (entries, entry, APR_HASH_KEY_STRING);
+
+      /* If ENTRY is versioned, send its versioned status. */
+      if (entry_entry)
+        {
+          SVN_ERR (handle_dir_entry (eb, adm_access, entry, dir_entry, 
+                                     entry_entry, ignores, descend, get_all, 
+                                     no_ignore, status_func, status_baton, 
+                                     cancel_func, cancel_baton, subpool));
+        }
+      /* Otherwise, if it exists, send its unversioned status. */
+      else if (apr_hash_get (dirents, entry, APR_HASH_KEY_STRING))
         {
           svn_node_kind_t kind;
           fullpath = svn_path_join (path, entry, subpool);
@@ -776,16 +786,6 @@ get_dir_status (struct edit_baton *eb,
           SVN_ERR (send_unversioned_item (entry, kind, adm_access, 
                                           patterns, eb->externals, no_ignore, 
                                           status_func, status_baton, subpool));
-        }
-      /* Otherwise, send its versioned status. */
-      else
-        {
-          const svn_wc_entry_t *entry_entry;
-          entry_entry = apr_hash_get (entries, entry, APR_HASH_KEY_STRING);
-          SVN_ERR (handle_dir_entry (eb, adm_access, entry, dir_entry, 
-                                     entry_entry, ignores, descend, get_all, 
-                                     no_ignore, status_func, status_baton, 
-                                     cancel_func, cancel_baton, subpool));
         }
 
       /* Regardless, we're done here.  Let's go home. */
