@@ -45,14 +45,6 @@ Candidate changes:
        -1: brane [until someone explains to me why this should be a
                   Unix-only change]
 
-  * r10868, r10884
-    Improve handling of path to SWIG in configure.
-    Justification:
-      Handles passing the path to the executable and gives an error if
-      they explicitly asked for SWIG but we are unable to find it. 
-    Votes:
-      +1: breser, ghudson
-
   * r10894
     Allow cancelation during recursive addition of a dir without subdirs.
     Justification:
