@@ -19,7 +19,7 @@ Candidate changes:
     Justification:  reported by a user, an unnecessary restriction.
     Notes:  change just sets a flag differently for this case.  See #830.
     Votes:
-      +1: sussman, jszakmeister
+      +1: sussman, jszakmeister, kfogel
       +0: dlr, gstein
 
   * r8616,r8912
@@ -48,18 +48,21 @@ Candidate changes:
   * r8838
     Finish issue #1750 -- svn export [url] doesn't export any svn:externals
     Votes:
-      +1: cmpilato, jszakmeister
+      +1: cmpilato, jszakmeister, kfogel
 
-  * r8839
+  * r8839,r8932
     Finish Issue #1756 -- import doesn't handle svn:eol-style or svn:keywords
     Justification:  Allows malformed data into the repository.
     Votes:
+      +1: kfogel
+    Old votes (for r8839 alone):
       +1: cmpilato, jszakmeister
+      -1: kfogel (doc string bug, fixed in r8932)
 
   * r8842
     Finish Issue #1741 - svn status -v shows unwanted status of externals.
     Votes:
-      +1: cmpilato, jszakmeister
+      +1: cmpilato, jszakmeister, kfogel
       +0: dlr
 
   * r8846
@@ -93,9 +96,13 @@ Candidate changes:
     filesystem per connection.
     Votes:
       +1: striker
+      -0: kfogel  (Reviewed the change; it's not *so* trivial, and I'm
+                   not sure an optimization like this belongs in a
+                   patch release.)
 
   * r8933
     Comply with our license per clause 3.
     Justification: Avoids any problems with downstream packagers having to
     work to comply with our license.
     Votes:
+      +1: kfogel
