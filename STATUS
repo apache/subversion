@@ -59,15 +59,6 @@ Candidate changes:
     Votes:
       +1: lundblad, sussman
 
-  * Issue #2046
-    Add placeholder svn_utf_initialize().
-    Justification: Releasing 1.1 with a performance regression is bad;
-     it could cause people to stick with 1.0 clients.  The fix is too
-     complex for 1.1.0, but can go into 1.1.1 if we add a placeholder
-     to the 1.1.0 API.
-    Votes:
-      +1: ghudson, jpieper, sussman
-
   * r10772, r10858
     Allow 'svn commit' to delete schedule-delete symlinks. (issue 2045)
     Justification:

@@ -37,6 +37,15 @@
 #define SVN_UTF_NTOU_XLATE_HANDLE "svn-utf-ntou-xlate-handle"
 #define SVN_UTF_UTON_XLATE_HANDLE "svn-utf-uton-xlate-handle"
 
+/* This is a placeholder; the implementation is complex and has not
+   received enough testing for the 1.1.0 release, and will (according
+   to current plan) be present in the 1.1.1 release. */
+void
+svn_utf_initialize (apr_pool_t *pool)
+{
+}
+
+
 /* Return an apr_xlate handle for converting from FROMPAGE to
    TOPAGE. Create one if it doesn't exist in USERDATA_KEY. If
    unable to find a handle, or unable to create one because
