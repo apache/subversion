@@ -212,14 +212,31 @@ svn_wc_process_committed (const char *path,
   if (base_name)
     {
       /* PATH must be some sort of file */
-      const char *tmp_text_base;
+      const char *latest_base;
       svn_node_kind_t kind;
 
       /* There may be a new text base is sitting in the adm tmp area by
          now, because the commit succeeded.  A file that is copied, but not
-         otherwise modified, doesn't have a new text base. */
-      tmp_text_base = svn_wc__text_base_path (path, TRUE, pool);
-      SVN_ERR (svn_io_check_path (tmp_text_base, &kind, pool));
+         otherwise modified, doesn't have a new text base, so we use
+         the unmodified text base.
+
+         ### Does this mean that a file committed with only prop mods
+         ### will still get its text base checksum recomputed?  Yes it
+         ### does, sadly.  But it's not enough to just check for that
+         ### condition, because in the case of an added file, there
+         ### may not be a pre-existing checksum in the entry.
+         ### Probably the best solution is to compute (or copy) the
+         ### checksum at 'svn add' (or 'svn cp') time, instead of
+         ### waiting until commit time.
+      */
+      latest_base = svn_wc__text_base_path (path, TRUE, pool);
+      SVN_ERR (svn_io_check_path (latest_base, &kind, pool));
+      if (kind == svn_node_none)
+        {
+          latest_base = svn_wc__text_base_path (path, FALSE, pool);
+          SVN_ERR (svn_io_check_path (latest_base, &kind, pool));
+        }
+
       if (kind == svn_node_file)
         {
           /* It would be more efficient to compute the checksum as part of
@@ -233,7 +250,7 @@ svn_wc_process_committed (const char *path,
 
              So instead we just do the checksum from scratch.  Ick. */
           unsigned char digest[MD5_DIGESTSIZE];
-          SVN_ERR (svn_io_file_checksum (digest, tmp_text_base, pool));
+          SVN_ERR (svn_io_file_checksum (digest, latest_base, pool));
           hex_digest = svn_md5_digest_to_cstring (digest, pool);
         }
 
