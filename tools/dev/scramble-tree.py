@@ -133,7 +133,7 @@ talented scramble-tree.py script.
   def _make_new_file(self, dir):
     i = 0
     path = None
-    for i in range(1):
+    for i in range(99999):
       path = os.path.join(dir, "newfile.%05d.txt" % i)
       if not os.path.exists(path):
         open(path, 'w').write(self.greeking)
