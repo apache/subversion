@@ -17,7 +17,6 @@ usage: svn log [URL] [PATH1 [PATH2] ...]
 
 Valid options:
   -r [--revision] arg      : specify revision number ARG (or X:Y range)
-  -D [--date] arg          : specify a date ARG (instead of a revision)
   -v [--verbose]           : print extra information
   --targets arg            : pass contents of file "ARG" as additional args
   --username arg           : specify a username ARG
@@ -35,7 +34,6 @@ usage: switch REPOS_URL [TARGET]
 
 Valid options:
   -r [--revision] arg      : specify revision number ARG (or X:Y range)
-  -D [--date] arg          : specify a date ARG (instead of a revision)
   -N [--nonrecursive]      : operate on single directory only
   -q [--quiet]             : print as little as possible
   --username arg           : specify a username ARG
