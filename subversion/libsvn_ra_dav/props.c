@@ -984,13 +984,9 @@ do_setprop(ne_buffer *body,
     }
   else
     {
-#ifdef SVN_DAV_FEATURE_BINARY_PROPS
       const svn_string_t *base64ed = svn_base64_encode_string(value, pool);
       encoding = " V:encoding=\"base64\"";
       xml_safe = base64ed->data;
-#else /* SVN_DAV_FEATURE_BINARY_PROPS */
-      xml_safe = value->data;
-#endif /* SVN_DAV_FEATURE_BINARY_PROPS */
     }
 
   ne_buffer_concat(body, "<", xml_tag_name, encoding, ">", 
