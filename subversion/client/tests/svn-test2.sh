@@ -8,7 +8,7 @@ if test "$#" != 1; then
 fi
 
 SVN_PROG=../svn
-XML_DIR=$1
+XML_DIR=$1/subversion/tests/xml
 TEST_DIR_1=t1
 TEST_DIR_2=t2
 COMMIT_RESULTFILE_NAME=commit2
