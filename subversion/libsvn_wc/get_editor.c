@@ -1154,7 +1154,8 @@ close_file (void *file_baton)
       else if (wfile_kind == svn_node_file)
         {
           /* Patch repos changes into an existing local file. */
-          svn_string_t *patch_cmd = svn_string_create ("patch", fb->pool);
+          svn_string_t *patch_cmd = svn_string_create (SVN_CLIENT_PATCH,
+                                                       fb->pool);
           apr_file_t *reject_file = NULL;
           svn_string_t *reject_filename = NULL;
           
@@ -1177,20 +1178,6 @@ close_file (void *file_baton)
                                           reject_filename->data);
             }
 
-          /* Build the patch command, for text files anyway. */
-          svn_string_appendcstr (patch_cmd, " ");
-          svn_string_appendcstr (patch_cmd, "-r");
-          svn_string_appendcstr (patch_cmd, " ");
-          svn_string_appendstr (patch_cmd, reject_filename);
-#if 0 /* kff todo: activate quietness when development stabilizes */
-          svn_string_appendcstr (patch_cmd, " ");
-          svn_string_appendcstr (patch_cmd, "--quiet");
-#endif /* 0 */
-          svn_string_appendcstr (patch_cmd, " ");
-          svn_string_appendstr (patch_cmd, fb->path);
-          svn_string_appendcstr (patch_cmd, " < ");
-          svn_string_appendstr (patch_cmd, received_diff_filename);
-          
           /* Log the patch command. */
           svn_xml_make_open_tag (&entry_accum,
                                  fb->pool,
@@ -1198,6 +1185,18 @@ close_file (void *file_baton)
                                  SVN_WC__LOG_RUN_CMD,
                                  SVN_WC__LOG_ATTR_NAME,
                                  patch_cmd,
+                                 SVN_WC__LOG_ATTR_ARG_1,
+                                 svn_string_create ("-r", fb->pool),
+                                 SVN_WC__LOG_ATTR_ARG_2,
+                                 reject_filename,
+                                 SVN_WC__LOG_ATTR_ARG_3,
+                                 fb->path,
+#if 0 /* kff todo: activate quietness when development stabilizes */
+                                 SVN_WC__LOG_ATTR_ARG_4,
+                                 svn_string_create ("--quiet", fb->pool),
+#endif /* 0 */
+                                 SVN_WC__LOG_ATTR_INFILE,
+                                 received_diff_filename,
                                  NULL);
         }
       else
