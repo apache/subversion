@@ -167,6 +167,10 @@
 (defvar svn-status-base-info nil)
 (defvar svn-status-initial-window-configuration nil)
 (defvar svn-status-default-column 23)
+(defvar svn-status-default-revision-width 4)
+(defvar svn-status-default-author-width 9)
+(defvar svn-status-line-format " %c%c %4s %4s %-9s")
+(defvar svn-status-short-mod-flag-p t)
 (defvar svn-status-files-to-commit nil)
 (defvar svn-status-pre-commit-window-configuration nil)
 (defvar svn-status-pre-propedit-window-configuration nil)
@@ -191,6 +195,7 @@
 (defface svn-status-marked-face
   '((((type tty) (class color)) (:foreground "green" :weight light))
     (((class color) (background light)) (:foreground "green3"))
+    (((class color) (background dark)) (:foreground "palegreen2"))
     (t (:weight bold)))
   "Face to highlight the mark for user marked files in svn status buffers"
   :group 'psvn-faces)
@@ -198,6 +203,7 @@
 (defface svn-status-modified-external-face
   '((((type tty) (class color)) (:foreground "magenta" :weight light))
     (((class color) (background light)) (:foreground "magenta"))
+    (((class color) (background dark)) (:foreground "yellow"))
     (t (:weight bold)))
   "Face to highlight the externaly modified phrase in svn status buffers"
   :group 'psvn-faces)
@@ -206,6 +212,7 @@
 (defface svn-status-directory-face
   '((((type tty) (class color)) (:foreground "lightblue" :weight light))
     (((class color) (background light)) (:foreground "blue4"))
+    (((class color) (background dark)) (:foreground "lightskyblue1"))
     (t (:weight bold)))
   "Face for directories in svn status buffers.
 See `svn-status--line-info->directory-p' for what counts as a directory."
@@ -213,9 +220,8 @@ See `svn-status--line-info->directory-p' for what counts as a directory."
 
 ;based on font-lock-comment-face
 (defface svn-status-filename-face
-  '((((class color)
-      (background light))
-     (:foreground "chocolate")))
+  '((((class color) (background light)) (:foreground "chocolate"))
+    (((class color) (background dark)) (:foreground "beige")))
   "Face for non-directories in svn status buffers.
 See `svn-status--line-info->directory-p' for what counts as a directory."
   :group 'psvn-faces)
@@ -409,9 +415,9 @@ for  example: '(\"revert\" \"file1\"\)"
                  ((eq svn-process-cmd 'propdel)
                   (svn-status-update))))
           ((string= event "killed\n")
-           (message "Svn process killed"))
+           (message "svn process killed"))
           (t
-           (message "svn-process had unknown event: %s" event))
+           (message "svn process had unknown event: %s" event))
           ;;(message (format "SVN Error: :%s:" event))
           (svn-status-show-process-buffer-internal t))))
 
@@ -436,7 +442,9 @@ for  example: '(\"revert\" \"file1\"\)"
           (last-change-rev)
           (author)
           (path)
-          (user-elide nil))
+          (user-elide nil)
+          (revision-width svn-status-default-revision-width)
+          (author-width svn-status-default-author-width))
       (set-buffer "*svn-process*")
       (setq svn-status-info nil)
       (goto-char (point-min))
@@ -446,7 +454,8 @@ for  example: '(\"revert\" \"file1\"\)"
             (setq svn-status-head-revision (match-string 1))
           (setq svn-marks (buffer-substring (point) (+ (point) 8))
                 svn-file-mark (elt svn-marks 0) ; 1st column
-                svn-property-mark (elt svn-marks 1)) ; 2nd column
+                svn-property-mark (elt svn-marks 1) ; 2nd column
+                svn-update-mark (elt svn-marks 7)) ; 8th column
 
           (when (eq svn-property-mark ?\ ) (setq svn-property-mark nil))
           (when (eq svn-update-mark ?\ ) (setq svn-update-mark nil))
@@ -476,10 +485,22 @@ for  example: '(\"revert\" \"file1\"\)"
                                             author
                                             svn-update-mark
                                             user-elide)
-                                      svn-status-info)))
+                                      svn-status-info))
+          (setq revision-width
+                (max revision-width
+                     (length (number-to-string local-rev))
+                     (length (number-to-string last-change-rev))))
+          (setq author-width (max author-width (length author))))
         (forward-line 1))
       ;; With subversion 0.29.0 and above, `svn -u st' returns files in
       ;; a random order (especially if we have a mixed revision wc)
+      (setq svn-status-default-column
+            (+ 6 revision-width revision-width author-width
+               (if svn-status-short-mod-flag-p 3 0)))
+      (setq svn-status-line-format (format " %%c%%c %%%ds %%%ds %%-%ds"
+                                           revision-width
+                                           revision-width
+                                           author-width))
       (setq svn-status-info (sort svn-status-info 'svn-status-sort-predicate)))))
 
 ;;(string-lessp "." "%") => nil
@@ -543,6 +564,10 @@ A and B must be line-info's"
   (define-key svn-status-mode-map [(control ?=)] 'svn-status-show-svn-diff-for-marked-files)
   (define-key svn-status-mode-map [?~] 'svn-status-get-specific-revision)
   (define-key svn-status-mode-map [?E] 'svn-status-ediff-with-revision)
+  (define-key svn-status-mode-map "\C-n" 'svn-status-next-line)
+  (define-key svn-status-mode-map "\C-p" 'svn-status-previous-line)
+  (define-key svn-status-mode-map [down] 'svn-status-next-line)
+  (define-key svn-status-mode-map [up] 'svn-status-previous-line)
   (setq svn-status-mode-mark-map (make-sparse-keymap))
   (define-key svn-status-mode-map "*" svn-status-mode-mark-map)
   (define-key svn-status-mode-mark-map "!" 'svn-status-unset-all-usermarks)
@@ -564,7 +589,7 @@ A and B must be line-info's"
 
 (easy-menu-define svn-status-mode-menu svn-status-mode-map
   "'svn-status-mode' menu"
-  '("Svn"
+  '("SVN"
     ["svn status" svn-status-update t]
     ["svn update" svn-status-update-cmd t]
     ["svn commit" svn-status-commit-file t]
@@ -597,7 +622,7 @@ A and B must be line-info's"
      ["Set svn:keywords List" svn-status-property-set-keyword-list t]
      )
     "---"
-    ["Edit Next Svn Cmd Line" svn-status-toggle-edit-cmd-flag t]
+    ["Edit Next SVN Cmd Line" svn-status-toggle-edit-cmd-flag t]
     ["Work Directory History..." svn-status-use-history t]
     ["Mark" svn-status-set-user-mark t]
     ["Unmark" svn-status-unset-user-mark t]
@@ -811,8 +836,11 @@ Symbolic links to directories count as directories (see `file-directory-p')."
   "Format line-info and insert the result in the current buffer."
   (let ((usermark (if (svn-status-line-info->has-usermark line-info) "*" " "))
         (external (if (svn-status-line-info->modified-external line-info)
-                      (svn-add-face " (modified external)" 'svn-status-modified-external-face)
-                    ""))
+                      (svn-add-face (if svn-status-short-mod-flag-p
+                                        "** "
+                                      " (modified external)")
+                                    'svn-status-modified-external-face)
+                    (if svn-status-short-mod-flag-p "   " "")))
         ;; To add indentation based on the
         ;; directory that the file is in, we just insert 2*(number of "/" in
         ;; filename) spaces, which is rather hacky (but works)!
@@ -831,17 +859,17 @@ Symbolic links to directories count as directories (see `file-directory-p')."
     (insert (svn-status-maybe-add-face
              (svn-status-line-info->has-usermark line-info)
              (concat usermark
-                     (format " %c%c %4s %4s %-9s"
+                     (format svn-status-line-format
                              (svn-status-line-info->filemark line-info)
                              (or (svn-status-line-info->propmark line-info) ? )
                              (or (svn-status-line-info->localrev line-info) "")
                              (or (svn-status-line-info->lastchangerev line-info) "")
-                             (svn-status-line-info->author line-info))
-                     filename
-                     external
-                     elide-hint
-                     "\n")
-             'svn-status-marked-face))))
+                             (svn-status-line-info->author line-info)))
+             'svn-status-marked-face)
+            (if svn-status-short-mod-flag-p external filename)
+            (if svn-status-short-mod-flag-p filename external)
+            elide-hint
+            "\n")))
 
 (defun svn-status-update-buffer ()
   (interactive)
@@ -955,8 +983,16 @@ This hides the repository information again."
     (svn-status-goto-file-name ".")))
 
 (defun svn-status-next-line (nr-of-lines)
+  (interactive "p")
   (next-line nr-of-lines)
-  (goto-char (+ (point-at-bol) svn-status-default-column)))
+  (when (svn-status-get-line-information)
+    (goto-char (+ (point-at-bol) svn-status-default-column))))
+
+(defun svn-status-previous-line (nr-of-lines)
+  (interactive "p")
+  (previous-line nr-of-lines)
+  (when (svn-status-get-line-information)
+    (goto-char (+ (point-at-bol) svn-status-default-column))))
 
 (defun svn-status-update (&optional arg)
   (interactive "P")
@@ -1410,7 +1446,7 @@ The older revisions are stored in backup files named F.~REVISION~."
   (read-string prompt default-value))
 
 ;; --------------------------------------------------------------------------------
-;; Svn process handling
+;; SVN process handling
 ;; --------------------------------------------------------------------------------
 
 (defun svn-process-kill ()
@@ -1668,7 +1704,7 @@ When called with a prefix argument, it is possible to enter a new property."
 
 (easy-menu-define svn-prop-edit-mode-menu svn-prop-edit-mode-map
 "'svn-prop-edit-mode' menu"
-                  '("Svn-PropEdit"
+                  '("SVN-PropEdit"
                     ["Commit" svn-prop-edit-done t]
                     ["Show Diff" svn-prop-edit-svn-diff t]
                     ["Show Status" svn-prop-edit-svn-status t]
@@ -1747,7 +1783,7 @@ Commands:
 
 (easy-menu-define svn-log-edit-mode-menu svn-log-edit-mode-map
 "'svn-log-edit-mode' menu"
-                  '("Svn-Log"
+                  '("SVN-Log"
                     ["Save to disk" svn-log-edit-save-message t]
                     ["Commit" svn-log-edit-done t]
                     ["Show Diff" svn-log-edit-svn-diff t]
