@@ -687,6 +687,94 @@ Original appended text for rho>>>>>>> .r2
   return svntest.actions.run_and_verify_status (wc_backup,
                                                 expected_status_tree)
 
+#----------------------------------------------------------------------
+
+def expect_extra_files(node, extra_files):
+  """singleton handler for expected singletons"""
+
+  for pattern in extra_files:
+    mo = re.match(pattern, node.name)
+    if mo:
+      extra_files.pop(extra_files.index(pattern))
+      return 0
+  print "Found unexpected disk object:", node.name
+  raise svntest.tree.SVNTreeUnequal
+
+def update_delete_modified_files(sbox):
+  "update that deletes modifed files"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Delete a file
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', alpha_path)
+  if len(stderr_lines) != 0:
+    print "deleting alpha failed"
+    return 1
+
+  # Delete a directory containing files
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', G_path)
+  if len(stderr_lines) != 0:
+    print "deleting G failed"
+    return 1
+
+  # Commit
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'ci', wc_dir)
+  if len(stderr_lines) != 0:
+    print "commiting deletes failed"
+    return 1
+
+  # ### Update before backdating to avoid obstructed update error for G
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'up', wc_dir)
+  if len(stderr_lines) != 0:
+    print "updating after commit failed"
+    return 1
+  # ### Bug! Directory is not deleted (issue #611). Use brute force
+  shutil.rmtree(G_path)
+
+  # Backdate to restore deleted items
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'up', '-r1', wc_dir)
+  if len(stderr_lines) != 0:
+    print "backdating failed"
+    return 1
+
+  # Modify the file to be deleted, and a file in the directory to be deleted
+  svntest.main.file_append(alpha_path, 'appended alpha text')
+  pi_path = os.path.join(G_path, 'pi')
+  svntest.main.file_append(pi_path, 'appended pi text')
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  for item in status_list:
+    item[3]['repos_rev'] = '2'
+    if (item[0] == alpha_path) or (item[0] == pi_path):
+      item[3]['status'] = 'M '
+  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+  if svntest.actions.run_and_verify_status (wc_dir, expected_output_tree):
+    return 1
+
+  # Update that 'deletes' modified files
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'up', wc_dir)
+  if len(stderr_lines) != 0:
+    print "updating failed"
+    return 1
+
+  # Modified files should still exist but are now unversioned
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+  extra_files = [ 'alpha', 'G' ]
+  if svntest.actions.run_and_verify_status (wc_dir, expected_output_tree,
+                                            None, None,
+                                            expect_extra_files, extra_files):
+    print "status failed"
+    return 1
+  if len(extra_files) != 0 or not os.path.exists(pi_path):
+    print "modified files not present"
+    return 1
+
+
 ########################################################################
 # Run the tests
 
@@ -699,6 +787,7 @@ test_list = [ None,
               update_to_rev_zero,
               receive_overlapping_same_change,
               update_to_revert_text_conflicts,
+              update_delete_modified_files,
               # update_missing,
              ]
 
