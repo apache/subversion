@@ -201,7 +201,8 @@ svn_error_t *svn_fs__fs_set_contents (svn_stream_t **stream,
 
    COPY_ID, if non-NULL, is a key into the `copies' table, and
    indicates that this new node is being created as the result of a
-   copy operation, and specifically which operation that was.
+   copy operation, and specifically which operation that was.  If
+   COPY_ID is NULL, then re-use the copy ID from the predecessor node.
 
    TXN_ID is the Subversion transaction under which this occurs.
 
