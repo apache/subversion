@@ -631,7 +631,7 @@ close_directory (void *dir_baton)
 
       /* Set revision. */
       revision_str = apr_psprintf (db->pool,
-                                   "%d",
+                                   "%ld",
                                    db->edit_baton->target_revision);
       
       /* Write a log entry to bump the directory's revision. */
@@ -1215,7 +1215,7 @@ close_file (void *file_baton)
 
   /* Set revision. */
   revision_str = apr_psprintf (fb->pool,
-                              "%d",
+                              "%ld",
                               fb->dir_baton->edit_baton->target_revision);
 
   /* Write log entry which will bump the revision number:  */
