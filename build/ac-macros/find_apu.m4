@@ -52,7 +52,7 @@ dnl If apu_found is "yes" or "reconfig", then the caller should use the
 dnl value of apu_config to fetch any necessary build/link information.
 dnl
 
-AC_DEFUN(APR_FIND_APU, [
+AC_DEFUN([APR_FIND_APU], [
   apu_found="no"
 
   if test "$ac_cv_emxos2" = "yes"; then
@@ -117,7 +117,6 @@ AC_DEFUN(APR_FIND_APU, [
     if test -d "$1"; then
       apu_temp_abs_srcdir="`cd $1 && pwd`"
       apu_found="reconfig"
-      echo "sed -n '/#define.*APU_MAJOR_VERSION/s/^[^0-9]*\([0-9]*\).*$/\1/p' \"$1/include/apu_version.h\""
       apu_bundled_major="`sed -n '/#define.*APU_MAJOR_VERSION/s/^[^0-9]*\([0-9]*\).*$/\1/p' \"$1/include/apu_version.h\"`"
       case $apu_bundled_major in
         "")

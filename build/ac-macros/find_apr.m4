@@ -43,7 +43,7 @@ dnl If apr_found is "yes" or "reconfig", then the caller should use the
 dnl value of apr_config to fetch any necessary build/link information.
 dnl
 
-AC_DEFUN(APR_FIND_APR, [
+AC_DEFUN([APR_FIND_APR], [
   apr_found="no"
 
   if test "$ac_cv_emxos2" = "yes"; then
@@ -107,7 +107,6 @@ AC_DEFUN(APR_FIND_APR, [
     if test -d "$1"; then
       apr_temp_abs_srcdir="`cd $1 && pwd`"
       apr_found="reconfig"
-      echo "sed -n '/#define.*APR_MAJOR_VERSION/s/^[^0-9]*\([0-9]*\).*$/\1/p' \"$1/include/apr_version.h\""
       apr_bundled_major="`sed -n '/#define.*APR_MAJOR_VERSION/s/^[^0-9]*\([0-9]*\).*$/\1/p' \"$1/include/apr_version.h\"`"
       case $apr_bundled_major in
         "")
