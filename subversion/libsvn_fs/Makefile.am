@@ -3,8 +3,6 @@
 
 lib_LTLIBRARIES = libsvn_fs.la
 libsvn_fs_la_SOURCES =				\
-			clones-table.c		\
-                        clones-table.h          \
 			convert-size.c		\
                         convert-size.h          \
 			dag.c			\
