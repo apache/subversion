@@ -101,7 +101,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
                                            int propid, dav_prop_insert what,
                                            apr_text_header *phdr)
 {
-  const char *value;
+  const char *value = NULL;
   const char *s;
   apr_pool_t *response_pool = resource->pool;
   apr_pool_t *p = resource->info->pool;
