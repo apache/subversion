@@ -461,6 +461,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             serr = svn_repos_set_path(rbaton, pathstr, rev);
             if (serr != NULL)
               {
+                /* ### This removes the fs txn.  todo: check error. */
+                svn_repos_abort_report(rbaton);
                 return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                            "A failure occurred while "
                                            "recording one of the items of "
@@ -477,6 +479,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             serr = svn_repos_delete_path(rbaton, pathstr);
             if (serr != NULL)
               {
+                /* ### This removes the fs txn.  todo: check error. */
+                svn_repos_abort_report(rbaton);
                 return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                            "A failure occurred while "
                                            "recording one of the (missing) "
@@ -490,6 +494,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   serr = svn_repos_finish_report(rbaton);
   if (serr != NULL)
     {
+      /* ### This removes the fs txn.  todo: check error. */
+      svn_repos_abort_report(rbaton);
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
 				 "A failure occurred during the completion "
 				 "and response generation for the update "
