@@ -435,6 +435,16 @@ svn_wc_statuses (apr_hash_t *statushash,
     {
       apr_hash_t *entries;
       apr_hash_index_t *hi;
+      svn_boolean_t is_wc;
+
+      /* Sanity check to make sure that we're being called on a working copy.
+         This isn't strictly necessary, since svn_wc_entries_read will fail 
+         anyway, but it lets us return a more meaningful error. */ 
+      SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
+      if (! is_wc)
+        return svn_error_createf
+          (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, pool,
+           "svn_wc_statuses: %s is not a working copy directory", path);
 
       /* Load entries file for the directory into the requested pool. */
       SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));
