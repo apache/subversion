@@ -261,17 +261,17 @@ check: $(TEST_DEPS) @FS_TEST_DEPS@
 # First, set up Apache as documented in
 # subversion/tests/clients/cmdline/README.
 davcheck: 
-	@make check BASE_URL=http://localhost
+	@$(MAKE) check BASE_URL=http://localhost
 
 # First, run:
 #   subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline
 svncheck: 
-	@make check BASE_URL=svn://localhost
+	@$(MAKE) check BASE_URL=svn://localhost
 
 # First make sure you can ssh to localhost and that "svnserve" is in
 # the path of the resulting shell.
 svnsshcheck:
-	@make check \
+	@$(MAKE) check \
 	  BASE_URL=svn+ssh://localhost`pwd`/subversion/tests/clients/cmdline
 
 check-clean:
@@ -362,20 +362,20 @@ doc-design-pdf: doc/programmer/design/svn-design.pdf
 # Different outputs for the main Subversion 'book', written in docbook.
 # Assumes you have {xsltproc, fop, stylesheets} installed.
 doc-book-html:
-	cd ${BOOK_TOP} && make book-html
+	cd ${BOOK_TOP} && $(MAKE) book-html
 doc-book-pdf:
-	cd ${BOOK_TOP} && make book-pdf
+	cd ${BOOK_TOP} && $(MAKE) book-pdf
 doc-book-ps:
-	cd ${BOOK_TOP} && make book-ps
+	cd ${BOOK_TOP} && $(MAKE) book-ps
 
 # Different outputs for the misc docs.
 # Assumes you have {xsltproc, fop, stylesheets} installed.
 doc-misc-docs-html:
-	cd ${BOOK_TOP} && make misc-docs-html
+	cd ${BOOK_TOP} && $(MAKE) misc-docs-html
 doc-misc-docs-pdf:
-	cd ${BOOK_TOP} && make misc-docs-pdf
+	cd ${BOOK_TOP} && $(MAKE) misc-docs-pdf
 doc-misc-docs-ps:
-	cd ${BOOK_TOP} && make misc-docs-ps
+	cd ${BOOK_TOP} && $(MAKE) misc-docs-ps
 
 
 doc-clean:
