@@ -407,7 +407,7 @@ This function returns a status of either 0 (no differences found), or
           1 0))))
 
 (defun vc-svn-find-version (file rev buffer)
-  (apply 'vc-do-command buffer 0 vc-svn-program-name file 
-         "cat" (list "-r" rev)))
+  (vc-do-command buffer 0 vc-svn-program-name file 
+         "cat" "-r" rev))
 
 (provide 'vc-svn)
