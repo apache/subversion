@@ -336,13 +336,6 @@ typedef enum svn_errno_t {
 apr_status_t svn_error_init_pool (apr_pool_t *top_pool);
 
 
-/* Calculate and return the size in bytes of all allocations in POOL,
- * including its possible tree of subpools.
- */
-apr_size_t svn_pool_get_size (apr_pool_t *pool);
-
-
-
 #ifndef SVN_POOL_DEBUG
 /* Return a new pool.  If PARENT_POOL is non-null, then the new
  * pool will be a subpool of it, and will inherit the containing
