@@ -222,6 +222,7 @@ Possible values are: commit, revert.")
 (defvar svn-status-temp-arg-file (concat svn-status-temp-dir "svn.arg" svn-temp-suffix))
 (defvar svn-status-options nil)
 (defvar svn-status-commit-rev-number nil)
+(defvar svn-status-operated-on-dot nil)
 
 ;;; faces
 (defface svn-status-marked-face
@@ -1091,6 +1092,10 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
                (setq action 'unknown)))
         (unless done
           (forward-char 15)
+          (when svn-status-operated-on-dot
+            ;; when the commit used . as argument, delete the trailing directory
+            ;; from the svn output
+            (search-forward "/"))
           (setq name (buffer-substring-no-properties (point) (point-at-eol)))
           ;;(message "%S %S" action name)
           (setq result (cons (list name action)
@@ -2357,6 +2362,8 @@ Commands:
     (write-region (point-min) (point-max)
                   (concat svn-status-temp-dir "svn-log-edit.txt" svn-temp-suffix) nil 1))
   (when svn-status-files-to-commit ; there are files to commit
+    (setq svn-status-operated-on-dot (and (= 1 (length svn-status-files-to-commit))
+         (string= "." (svn-status-line-info->filename (car svn-status-files-to-commit)))))
     (svn-status-create-arg-file svn-status-temp-arg-file ""
                                 svn-status-files-to-commit "")
     (setq svn-status-files-to-commit nil)
