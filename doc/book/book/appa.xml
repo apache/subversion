@@ -365,7 +365,7 @@ X    eXternal
     <para>Subversion solves this problem by making conflicts more
       tangible.  It remembers that a file is in a state of conflict,
       and won't allow you to commit your changes until you run
-      <command>svn resolve</command>.  See <xref
+      <command>svn resolved</command>.  See <xref
       linkend="svn-ch-3-sect-4.4"/> for more details.</para>
   </sect1>
 

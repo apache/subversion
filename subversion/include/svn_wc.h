@@ -1262,14 +1262,14 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
  * property conflict resolution was requested, and it was successful, then 
  * success gets reported.
  */
-svn_error_t *svn_wc_resolve_conflict (const char *path,
-                                      svn_wc_adm_access_t *adm_access,
-                                      svn_boolean_t resolve_text,
-                                      svn_boolean_t resolve_props,
-                                      svn_boolean_t recursive,
-                                      svn_wc_notify_func_t notify_func,
-                                      void *notify_baton,
-                                      apr_pool_t *pool);
+svn_error_t *svn_wc_resolved_conflict (const char *path,
+                                       svn_wc_adm_access_t *adm_access,
+                                       svn_boolean_t resolve_text,
+                                       svn_boolean_t resolve_props,
+                                       svn_boolean_t recursive,
+                                       svn_wc_notify_func_t notify_func,
+                                       void *notify_baton,
+                                       apr_pool_t *pool);
 
 
 /* Commits. */

@@ -451,7 +451,7 @@ Checked out revision 2499.
             <para><command>svn merge</command></para>
           </listitem>
           <listitem>
-            <para><command>svn resolve</command></para>
+            <para><command>svn resolved</command></para>
           </listitem>
         </itemizedlist>
       </listitem>
@@ -1353,7 +1353,7 @@ svn: Aborting commit: '/home/sally/svn-work/sandwich.txt' remains in conflict.
         </itemizedlist>
 
       <para>Once you've resolved the conflict, you need to let
-        Subversion know by running <command>svn resolve</command>.
+        Subversion know by running <command>svn resolved</command>.
         This removes the three temporary files and Subversion no
         longer considers the file to be in a state of
         conflict.<footnote><para>You can always remove the temporary
@@ -1362,7 +1362,7 @@ svn: Aborting commit: '/home/sally/svn-work/sandwich.txt' remains in conflict.
         </footnote></para>
 
       <screen>
-$ svn resolve sandwich.txt
+$ svn resolved sandwich.txt
 Resolved conflicted state of sandwich.txt
       </screen>
 
@@ -1448,11 +1448,11 @@ Creole Mustard
 Bottom piece of bread
         </screen>
 
-        <para>Now run <command>svn resolve</command> and you're now
+        <para>Now run <command>svn resolved</command> and you're now
           ready to commit your changes:</para>
 
         <screen>
-$ svn resolve sandwich.txt
+$ svn resolved sandwich.txt
 $ svn commit -m "Go ahead and use my sandwich, discarding Sally's edits."
         </screen>
 
@@ -1479,7 +1479,7 @@ Updated to revision 2.
 $ ls sandwich.*
 sandwich.txt  sandwich.txt.mine  sandwich.txt.r2  sandwich.txt.r1
 $ cp sandwich.txt.r2 sandwich.txt
-$ svn resolve
+$ svn resolved
 $ svn commit -m "Go ahead and use Sally's sandwich, discarding my edits."
         </screen>
 
@@ -1500,15 +1500,15 @@ sandwich.txt
         </screen>
 
         <para>Note that when you revert a conflicted file, you don't
-        have to run <command>svn resolve</command>.</para>
+        have to run <command>svn resolved</command>.</para>
 
       </sect3>
 
       <para>Now you're ready to check in your changes.  Note that
-        <command>svn resolve</command>, unlike most of the other
+        <command>svn resolved</command>, unlike most of the other
         commands we've dealt with in this chapter, requires an
         argument.  In any case, you want to be careful and only run
-        <command>svn resolve</command> when you're certain that you've
+        <command>svn resolved</command> when you're certain that you've
         fixed the conflict in your file&mdash;once the temporary files
         are removed, Subversion will let you commit the file even if
         it still contains conflict markers.</para>

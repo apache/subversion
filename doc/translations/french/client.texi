@@ -528,7 +528,7 @@ pour perdre tous vos modifications.
 
 Une fois que vous avez résolu les conflits, vous devez en informer 
 Subversion en supprimant les trois fichiers tmp*.  La commande
-@samp{svn resolve} est un racourçi qui ne fait rien sinon supprimer les
+@samp{svn resolved} est un racourçi qui ne fait rien sinon supprimer les
 trois fichiers tmp* pour vous. Lorsque les fichiers tmp* sont supprimés
 Subversion ne considère plus le fichier en état de conflit.
 
