@@ -371,7 +371,7 @@ static svn_error_t *ra_svn_handle_target_rev(svn_ra_svn_conn_t *conn,
   svn_revnum_t rev;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "r", &rev));
-  CMD_ERR(ds->editor->set_target_revision(ds->edit_baton, rev, pool));
+  SVN_CMD_ERR(ds->editor->set_target_revision(ds->edit_baton, rev, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
 }
@@ -389,7 +389,8 @@ static svn_error_t *ra_svn_handle_open_root(svn_ra_svn_conn_t *conn,
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "[r]", &rev));
   subpool = svn_pool_create(conn->pool);
-  CMD_ERR(ds->editor->open_root(ds->edit_baton, rev, subpool, &root_baton));
+  SVN_CMD_ERR(ds->editor->open_root(ds->edit_baton, rev, subpool,
+                                    &root_baton));
   token = make_token(ds, root_baton, 'd', subpool);
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "c", token));
   return SVN_NO_ERROR;
@@ -406,8 +407,8 @@ static svn_error_t *ra_svn_handle_delete_entry(svn_ra_svn_conn_t *conn,
   ra_svn_token_entry_t *entry;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c[r]c", &path, &rev, &token));
-  CMD_ERR(lookup_token(ds, token, &entry, pool));
-  CMD_ERR(ds->editor->delete_entry(path, rev, entry->baton, entry->pool));
+  SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
+  SVN_CMD_ERR(ds->editor->delete_entry(path, rev, entry->baton, entry->pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
 }
@@ -426,10 +427,10 @@ static svn_error_t *ra_svn_handle_add_dir(svn_ra_svn_conn_t *conn,
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc[cr]", &path, &token,
                                  &copy_path, &copy_rev));
-  CMD_ERR(lookup_token(ds, token, &entry, pool));
+  SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
   subpool = svn_pool_create(entry->pool);
-  CMD_ERR(ds->editor->add_directory(path, entry->baton, copy_path, copy_rev,
-				    subpool, &child_baton));
+  SVN_CMD_ERR(ds->editor->add_directory(path, entry->baton, copy_path,
+                                        copy_rev, subpool, &child_baton));
   child_token = make_token(ds, child_baton, 'd', subpool);
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "c", child_token));
   return SVN_NO_ERROR;
@@ -448,9 +449,9 @@ static svn_error_t *ra_svn_handle_open_dir(svn_ra_svn_conn_t *conn,
   void *child_baton;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc[r]", &path, &token, &rev));
-  CMD_ERR(lookup_token(ds, token, &entry, pool));
+  SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
   subpool = svn_pool_create(entry->pool);
-  CMD_ERR(ds->editor->open_directory(path, entry->baton, rev, subpool,
+  SVN_CMD_ERR(ds->editor->open_directory(path, entry->baton, rev, subpool,
 				     &child_baton));
   child_token = make_token(ds, child_baton, 'd', subpool);
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "c", child_token));
@@ -469,8 +470,9 @@ static svn_error_t *ra_svn_handle_change_dir_prop(svn_ra_svn_conn_t *conn,
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc[s]", &token, &name,
                                  &value));
-  CMD_ERR(lookup_token(ds, token, &entry, pool));
-  CMD_ERR(ds->editor->change_dir_prop(entry->baton, name, value, entry->pool));
+  SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
+  SVN_CMD_ERR(ds->editor->change_dir_prop(entry->baton, name, value,
+                                          entry->pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
 }
@@ -485,8 +487,8 @@ static svn_error_t *ra_svn_handle_close_dir(svn_ra_svn_conn_t *conn,
   ra_svn_token_entry_t *entry;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &token));
-  CMD_ERR(lookup_token(ds, token, &entry, pool));
-  CMD_ERR(ds->editor->close_directory(entry->baton, pool));
+  SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
+  SVN_CMD_ERR(ds->editor->close_directory(entry->baton, pool));
   apr_hash_set(ds->tokens, token, APR_HASH_KEY_STRING, NULL);
   apr_pool_destroy(entry->pool);
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
@@ -507,11 +509,11 @@ static svn_error_t *ra_svn_handle_add_file(svn_ra_svn_conn_t *conn,
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc[cr]", &path, &token,
                                  &copy_path, &copy_rev));
-  CMD_ERR(lookup_token(ds, token, &entry, pool));
+  SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
 
   /* File may outlive parent directory, so use ds->pool here. */
   subpool = svn_pool_create(ds->pool);
-  CMD_ERR(ds->editor->add_file(path, entry->baton, copy_path, copy_rev,
+  SVN_CMD_ERR(ds->editor->add_file(path, entry->baton, copy_path, copy_rev,
                                subpool, &file_baton));
   file_token = make_token(ds, file_baton, 'f', subpool);
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "c", file_token));
@@ -531,11 +533,11 @@ static svn_error_t *ra_svn_handle_open_file(svn_ra_svn_conn_t *conn,
   void *file_baton;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc[r]", &path, &token, &rev));
-  CMD_ERR(lookup_token(ds, token, &entry, pool));
+  SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
 
   /* File may outlive parent directory, so use ds->pool here. */
   subpool = svn_pool_create(ds->pool);
-  CMD_ERR(ds->editor->open_file(path, entry->baton, rev, subpool,
+  SVN_CMD_ERR(ds->editor->open_file(path, entry->baton, rev, subpool,
                                 &file_baton));
   file_token = make_token(ds, file_baton, 'f', subpool);
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "c", file_token));
@@ -558,8 +560,8 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
 
   /* Parse arguments, make the editor call, and respond. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &token));
-  CMD_ERR(lookup_token(ds, token, &entry, pool));
-  CMD_ERR(ds->editor->apply_textdelta(entry->baton, pool, &wh, &wh_baton));
+  SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
+  SVN_CMD_ERR(ds->editor->apply_textdelta(entry->baton, pool, &wh, &wh_baton));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "b", (wh != NULL)));
 
   /* If we said we didn't want text delta information, we're done. */
@@ -578,7 +580,7 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
         break;
       /* Maybe we should operate in lock-step, and send a response
          after each string is received.  Then the following could be a
-         CMD_ERR and the client could learn of errors in svndiff
+         SVN_CMD_ERR and the client could learn of errors in svndiff
          processing.  But that could be a big performance penalty, so
          for now we won't operate that way. */
       SVN_ERR(svn_stream_write(stream, item->u.string->data,
@@ -602,9 +604,9 @@ static svn_error_t *ra_svn_handle_change_file_prop(svn_ra_svn_conn_t *conn,
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc[s]", &token, &name,
                                  &value));
-  CMD_ERR(lookup_token(ds, token, &entry, pool));
-  CMD_ERR(ds->editor->change_file_prop(entry->baton, name, value,
-                                       entry->pool));
+  SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
+  SVN_CMD_ERR(ds->editor->change_file_prop(entry->baton, name, value,
+                                           entry->pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
 }
@@ -619,8 +621,8 @@ static svn_error_t *ra_svn_handle_close_file(svn_ra_svn_conn_t *conn,
   ra_svn_token_entry_t *entry;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &token));
-  CMD_ERR(lookup_token(ds, token, &entry, pool));
-  CMD_ERR(ds->editor->close_file(entry->baton, pool));
+  SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
+  SVN_CMD_ERR(ds->editor->close_file(entry->baton, pool));
   apr_hash_set(ds->tokens, token, APR_HASH_KEY_STRING, NULL);
   apr_pool_destroy(entry->pool);
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
@@ -636,7 +638,7 @@ static svn_error_t *ra_svn_handle_close_edit(svn_ra_svn_conn_t *conn,
 
   if (ds->aborted)
     *ds->aborted = FALSE;
-  CMD_ERR(ds->editor->close_edit(ds->edit_baton, pool));
+  SVN_CMD_ERR(ds->editor->close_edit(ds->edit_baton, pool));
   return svn_ra_svn_write_cmd_response(conn, pool, "");
 }
 
@@ -649,7 +651,7 @@ static svn_error_t *ra_svn_handle_abort_edit(svn_ra_svn_conn_t *conn,
 
   if (ds->aborted)
     *ds->aborted = TRUE;
-  CMD_ERR(ds->editor->abort_edit(ds->edit_baton, pool));
+  SVN_CMD_ERR(ds->editor->abort_edit(ds->edit_baton, pool));
   return svn_ra_svn_write_cmd_response(conn, pool, "");
 }
 

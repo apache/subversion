@@ -73,7 +73,7 @@ static svn_error_t *set_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t rev;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cr", &path, &rev));
-  CMD_ERR(svn_repos_set_path(b->report_baton, path, rev));
+  SVN_CMD_ERR(svn_repos_set_path(b->report_baton, path, rev));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
 }
@@ -85,7 +85,7 @@ static svn_error_t *delete_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *path;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &path));
-  CMD_ERR(svn_repos_delete_path(b->report_baton, path));
+  SVN_CMD_ERR(svn_repos_delete_path(b->report_baton, path));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
 }
@@ -111,7 +111,7 @@ static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       /* Wrap error so that it gets reported back to the client. */
       return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, 0, err, NULL);
     }
-  CMD_ERR(svn_repos_link_path(b->report_baton, path, url + len, rev));
+  SVN_CMD_ERR(svn_repos_link_path(b->report_baton, path, url + len, rev));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
 }
@@ -136,7 +136,7 @@ static svn_error_t *abort_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   report_driver_baton_t *b = baton;
 
   /* No arguments to parse. */
-  CMD_ERR(svn_repos_abort_report(b->report_baton));
+  SVN_CMD_ERR(svn_repos_abort_report(b->report_baton));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
 }
@@ -238,7 +238,7 @@ static svn_error_t *get_latest_rev(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   server_baton_t *b = baton;
   svn_revnum_t rev;
 
-  CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
+  SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "r", rev));
   return SVN_NO_ERROR;
 }
@@ -252,8 +252,8 @@ static svn_error_t *get_dated_rev(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *timestr;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &timestr));
-  CMD_ERR(svn_time_from_cstring(&tm, timestr, pool));
-  CMD_ERR(svn_repos_dated_revision(&rev, b->repos, tm, pool));
+  SVN_CMD_ERR(svn_time_from_cstring(&tm, timestr, pool));
+  SVN_CMD_ERR(svn_repos_dated_revision(&rev, b->repos, tm, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "r", rev));
   return SVN_NO_ERROR;
 }
@@ -267,8 +267,8 @@ static svn_error_t *change_rev_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_string_t *value;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "rcs", &rev, &name, &value));
-  CMD_ERR(svn_repos_fs_change_rev_prop(b->repos, rev, b->user, name, value,
-                                       pool));
+  SVN_CMD_ERR(svn_repos_fs_change_rev_prop(b->repos, rev, b->user, name, value,
+                                           pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
 }
@@ -281,7 +281,7 @@ static svn_error_t *rev_proplist(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_hash_t *props;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "r", &rev));
-  CMD_ERR(svn_fs_revision_proplist(&props, b->fs, rev, pool));
+  SVN_CMD_ERR(svn_fs_revision_proplist(&props, b->fs, rev, pool));
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
   SVN_ERR(svn_ra_svn_write_word(conn, pool, "success"));
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
@@ -301,7 +301,7 @@ static svn_error_t *rev_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_string_t *value;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "rc", &rev, &name));
-  CMD_ERR(svn_fs_revision_prop(&value, b->fs, rev, name, pool));
+  SVN_CMD_ERR(svn_fs_revision_prop(&value, b->fs, rev, name, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "[s]", value));
   return SVN_NO_ERROR;
 }
@@ -332,9 +332,9 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   ccb.new_rev = &new_rev;
   ccb.date = &date;
   ccb.author = &author;
-  CMD_ERR(svn_repos_get_commit_editor(&editor, &edit_baton, b->repos,
-                                      b->repos_url, b->fs_path, b->user,
-                                      log_msg, commit_done, &ccb, pool));
+  SVN_CMD_ERR(svn_repos_get_commit_editor(&editor, &edit_baton, b->repos,
+                                          b->repos_url, b->fs_path, b->user,
+                                          log_msg, commit_done, &ccb, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   SVN_ERR(svn_ra_svn_drive_editor(conn, pool, editor, edit_baton, FALSE,
                                   &aborted));
@@ -360,15 +360,15 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c[r]bb", &path, &rev,
                                  &want_props, &want_contents));
   if (!SVN_IS_VALID_REVNUM(rev))
-    CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
+    SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   full_path = svn_path_join(b->fs_path, path, pool);
 
   /* Fetch the properties and a stream for the contents. */
-  CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
+  SVN_CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
   if (want_props)
-    CMD_ERR(get_props(&props, root, full_path, pool));
+    SVN_CMD_ERR(get_props(&props, root, full_path, pool));
   if (want_contents)
-    CMD_ERR(svn_fs_file_contents(&contents, root, full_path, pool));
+    SVN_CMD_ERR(svn_fs_file_contents(&contents, root, full_path, pool));
 
   /* Send successful command response with revision and props. */
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
@@ -422,20 +422,20 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c[r]bb", &path, &rev,
                                  &want_props, &want_contents));
   if (!SVN_IS_VALID_REVNUM(rev))
-    CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
+    SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   full_path = svn_path_join(b->fs_path, path, pool);
 
   /* Fetch the root of the appropriate revision. */
-  CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
+  SVN_CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
 
   /* Fetch the directory properties if requested. */
   if (want_props)
-    CMD_ERR(get_props(&props, root, full_path, pool));
+    SVN_CMD_ERR(get_props(&props, root, full_path, pool));
 
   /* Fetch the directory entries if requested. */
   if (want_contents)
     {
-      CMD_ERR(svn_fs_dir_entries(&entries, root, full_path, pool));
+      SVN_CMD_ERR(svn_fs_dir_entries(&entries, root, full_path, pool));
 
       /* Transform the hash table's FS entries into dirents.  This probably
        * belongs in libsvn_repos. */
@@ -450,27 +450,28 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           entry = apr_pcalloc(pool, sizeof(*entry));
 
           /* kind */
-          CMD_ERR(svn_fs_is_dir(&is_dir, root, file_path, subpool));
+          SVN_CMD_ERR(svn_fs_is_dir(&is_dir, root, file_path, subpool));
           entry->kind = is_dir ? svn_node_dir : svn_node_file;
 
           /* size */
           if (is_dir)
             entry->size = 0;
           else
-            CMD_ERR(svn_fs_file_length(&entry->size, root, file_path,
+            SVN_CMD_ERR(svn_fs_file_length(&entry->size, root, file_path,
                                        subpool));
 
           /* has_props */
-          CMD_ERR(svn_fs_node_proplist(&file_props, root, file_path, subpool));
+          SVN_CMD_ERR(svn_fs_node_proplist(&file_props, root, file_path,
+                                           subpool));
           entry->has_props = (apr_hash_count(file_props) > 0) ? TRUE : FALSE;
 
           /* created_rev, last_author, time */
-          CMD_ERR(svn_repos_get_committed_info(&entry->created_rev, &cdate,
+          SVN_CMD_ERR(svn_repos_get_committed_info(&entry->created_rev, &cdate,
                                                &cauthor, root, file_path,
                                                subpool));
           entry->last_author = apr_pstrdup (pool, cauthor);
           if (cdate)
-            CMD_ERR(svn_time_from_cstring(&entry->time, cdate, subpool));
+            SVN_CMD_ERR(svn_time_from_cstring(&entry->time, cdate, subpool));
           else
             entry->time = (time_t) -1;
 
@@ -522,7 +523,7 @@ static svn_error_t *checkout(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Parse the arguments. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "[r]b", &rev, &recurse));
   if (!SVN_IS_VALID_REVNUM(rev))
-    CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
+    SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
 
   /* Write an empty command-reponse, signalling that we will start editing. */
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
@@ -550,14 +551,14 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (svn_path_is_empty(target))
     target = NULL;  /* ### Compatibility hack, shouldn't be needed */
   if (!SVN_IS_VALID_REVNUM(rev))
-    CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
+    SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
 
   /* Make an svn_repos report baton.  Tell it to drive the network editor
    * when the report is complete. */
   svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
-  CMD_ERR(svn_repos_begin_report(&report_baton, rev, b->user, b->repos,
-                                 b->fs_path, target, NULL, TRUE, recurse,
-                                 editor, edit_baton, pool));
+  SVN_CMD_ERR(svn_repos_begin_report(&report_baton, rev, b->user, b->repos,
+                                     b->fs_path, target, NULL, TRUE, recurse,
+                                     editor, edit_baton, pool));
 
   /* Write an empty command-reponse, telling the client to start reporting. */
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
@@ -586,7 +587,7 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (svn_path_is_empty(target))
     target = NULL;  /* ### Compatibility hack, shouldn't be needed */
   if (!SVN_IS_VALID_REVNUM(rev))
-    CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
+    SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
 
   /* Verify that switch_url is in the same repository and get its fs path. */
   switch_url = svn_path_uri_decode(switch_url, pool);
@@ -605,9 +606,9 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Make an svn_repos report baton.  Tell it to drive the network editor
    * when the report is complete. */
   svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
-  CMD_ERR(svn_repos_begin_report(&report_baton, rev, b->user, b->repos,
-                                 b->fs_path, target, switch_path, TRUE,
-                                 recurse, editor, edit_baton, pool));
+  SVN_CMD_ERR(svn_repos_begin_report(&report_baton, rev, b->user, b->repos,
+                                     b->fs_path, target, switch_path, TRUE,
+                                     recurse, editor, edit_baton, pool));
 
   /* Write an empty command-reponse, telling the client to start reporting. */
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
@@ -634,11 +635,11 @@ static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   /* Make an svn_repos report baton.  Tell it to drive the network editor
    * when the report is complete. */
-  CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
+  SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
-  CMD_ERR(svn_repos_begin_report(&report_baton, rev, b->user, b->repos,
-                                 b->fs_path, target, NULL, FALSE, recurse,
-                                 editor, edit_baton, pool));
+  SVN_CMD_ERR(svn_repos_begin_report(&report_baton, rev, b->user, b->repos,
+                                     b->fs_path, target, NULL, FALSE, recurse,
+                                     editor, edit_baton, pool));
 
   /* Write an empty command-reponse, telling the client to start reporting. */
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
@@ -667,7 +668,7 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (svn_path_is_empty(target))
     target = NULL;  /* ### Compatibility hack, shouldn't be needed */
   if (!SVN_IS_VALID_REVNUM(rev))
-    CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
+    SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
 
   /* Verify that versus_url is in the same repository and get its fs path. */
   versus_url = svn_path_uri_decode(versus_url, pool);
@@ -686,9 +687,9 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Make an svn_repos report baton.  Tell it to drive the network editor
    * when the report is complete. */
   svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
-  CMD_ERR(svn_repos_begin_report(&report_baton, rev, b->user, b->repos,
-                                 b->fs_path, target, versus_path, FALSE,
-                                 recurse, editor, edit_baton, pool));
+  SVN_CMD_ERR(svn_repos_begin_report(&report_baton, rev, b->user, b->repos,
+                                     b->fs_path, target, versus_path, FALSE,
+                                     recurse, editor, edit_baton, pool));
 
   /* Write an empty command-reponse, telling the client to start reporting. */
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
@@ -810,7 +811,7 @@ static svn_error_t *check_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   full_path = svn_path_join(b->fs_path, path, pool);
-  CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
+  SVN_CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
   kind = svn_fs_check_path(root, full_path, pool);
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "w", kind_word(kind)));
   return SVN_NO_ERROR;

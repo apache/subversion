@@ -39,7 +39,7 @@ extern "C" {
  * be passed back to the other side of the connection.  Use this macro
  * when performing the requested operation; use the regular SVN_ERR
  * when performing I/O with the client. */
-#define CMD_ERR(expr)                                         \
+#define SVN_CMD_ERR(expr)                                     \
   do {                                                        \
     svn_error_t *svn_err__temp = (expr);                      \
     if (svn_err__temp)                                        \
