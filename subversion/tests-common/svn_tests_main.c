@@ -101,7 +101,7 @@ do_test_num (const char *progname, int test_num)
   /* Check our array bounds! */
   if ((test_num > array_size) || (test_num <= 0))
     {
-      char *msg = (char *) apr_psprintf (pool, "%s %d: NO SUCH TEST",
+      char *msg = (char *) apr_psprintf (pool, "%s %3d: NO SUCH TEST",
                                          progname, test_num);
       printf ("FAIL: ");
       printf ("%s\n", msg);
