@@ -20,6 +20,7 @@ http://svn.collab.net/repos/svn/tags/???
  * fixed: broken win32 python-swig bindings compilation.
  * fixed: bug in libsvn_fs changes-table change-folding code.
  * fixed: perl bindings: wrap root->paths_changed, apply_txdelta return values
+ * added VC7 support and defines for including debug symbol files.
 
 
 Version 1.0.1
