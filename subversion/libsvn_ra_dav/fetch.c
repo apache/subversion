@@ -1351,8 +1351,7 @@ static int getlocks_start_element(void *userdata, int parent_state,
         return NE_XML_ABORT;
       else
         /* allocate a new svn_lock_t in the permanent pool */
-        baton->current_lock = apr_pcalloc(baton->pool,
-                                          sizeof(*(baton->current_lock)));
+        baton->current_lock = svn_lock_create(baton->pool);
     }
 
   else if (elm->id == ELEM_lock_path

@@ -1,5 +1,5 @@
 /*
- * lock.c:  routine for svn_lock_t objects.
+ * lock.c:  routines for svn_lock_t objects.
  *
  * ====================================================================
  * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
@@ -28,6 +28,12 @@
 
 
 /*** Code. ***/
+
+svn_lock_t *
+svn_lock_create (apr_pool_t *pool)
+{
+  return apr_pcalloc (pool, sizeof (svn_lock_t));
+}
 
 svn_lock_t *
 svn_lock_dup (const svn_lock_t *lock, apr_pool_t *pool)

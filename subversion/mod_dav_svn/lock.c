@@ -172,7 +172,7 @@ dav_lock_to_svn_lock(svn_lock_t **slock,
                          DAV_ERR_LOCK_SAVE_LOCK,
                          "Only exclusive locks are supported.");
 
-  lock = apr_pcalloc(pool, sizeof(*lock));
+  lock = svn_lock_create (pool);
   lock->path = apr_pstrdup(pool, path);
   lock->token = apr_pstrdup(pool, dlock->locktoken->uuid_str);
 
