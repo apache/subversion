@@ -1,5 +1,5 @@
 %define apache_version 2.0.40-0.5
-%define neon_version 0.21.2
+%define neon_version 0.21.3
 %define apache_dir /usr/local/apache2
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
