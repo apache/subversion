@@ -299,6 +299,75 @@ svn_error_t *svn_wc__entries_init (svn_string_t *path,
                                    apr_pool_t *pool);
 
 
+#define BRAVE_NEW_INTERFACE 0  /* Temporary toggle for development. */
+#if BRAVE_NEW_INTERFACE
+
+/* A data structure representing an entry from the `entries' file. */
+typedef struct svn_wc__entry_t
+{
+  /* Note that the entry's name is not stored here, because it is the
+     hash key for which this is the value. */
+
+  svn_vernum_t version;        /* Base version.  (Required) */
+  svn_string_t *path;          /* Full path to this entry.  (Required) */
+  enum svn_node_kind kind;     /* Is it a file, a dir, or... ? (Required) */
+
+  svn_string_t *ancestor_path; /* Full path of entry's ancestor.  (Required) */
+  
+  int flags;                   /* Is entry marked for addition, deletion? */
+
+  apr_time_t timestamp;        /* When the entries file thinks the
+                                  local working file last changed.
+                                  (NULL means not available) */ 
+
+  apr_hash_t *attributes;      /* All xml attributes, including ones
+                                  which already parsed to fill in the
+                                  fields above, and others that may
+                                  not appear above.  (Required) */
+} svn_wc__entry_t;
+
+
+/* (Bitmasks). */
+#define SVN_WC__ENTRY_ADD     1
+#define SVN_WC__ENTRY_DELETE  2
+
+
+/* Parse the `entries' file for PATH and return a hash ENTRIES, whose
+   keys are entry names and values are (svn_wc__entry_t *). */
+svn_error_t *svn_wc__entries_read (apr_hash_t **entries,
+                                   svn_string_t *path,
+                                   apr_pool_t *pool);
+
+/* Create or overwrite an `entries' file for PATH using the contents
+   of ENTRIES. */
+svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
+                                    svn_string_t *path,
+                                    apr_pool_t *pool);
+
+
+/* Create a new entry NAME in ENTRIES with appropriate fields.
+   Varargs specify any other xml attributes, in the form of
+   alternating pairs (char *), (svn_string_t *). 
+
+   An error SVN_ERR_WC_ENTRY_EXISTS is returned if the entry already
+   exists. */
+svn_error_t *svn_wc__entry_add (apr_hash_t *entries,
+                                apr_pool_t *pool,
+                                svn_string_t *name,
+                                svn_vernum_t version,
+                                enum svn_node_kind kind,
+                                int flags,
+                                apr_time_t timestamp,
+                                ...);
+
+
+/* Remove entry NAME from ENTRIES. */
+svn_error_t *svn_wc__entry_remove (apr_hash_t *entries,
+                                   svn_string_t *name);
+
+
+#else /* ! BRAVE_NEW_INTERFACE */
+
 /* For a given ENTRYNAME in PATH, set its version to VERSION in the
    `entries' file.  Set KIND to svn_file_kind or svn_dir_kind; also
    set other XML attributes via varargs: key, value, key, value,
@@ -358,80 +427,6 @@ svn_error_t *svn_wc__entry_remove (svn_string_t *path,
                                    apr_pool_t *pool);
 
 
-/* Set this to use the new entiers interface while it's being developed. */
-#define BRAVE_NEW_INTERFACE 0
-#ifdef BRAVE_NEW_INTERFACE
-
-/* A data structure representing an entry from the `entries' file. */
-typedef struct svn_wc__entry_t
-{
-  svn_string_t *entryname;     /* the name of the entry (required) */
-  svn_vernum_t version;        /* (required) */
-  svn_string_t *path;          /* full path to this entry, (required) */
-  enum svn_node_kind kind;     /* (required) */
-
-  svn_string_t *ancestor_path; /* full path of entry's ancestor (required) */
-  
-  int flags;                   /* has the entry been marked for
-                                  addition or deletion? */
-
-  apr_time_t timestamp;        /* when the entries file thinks it last
-                                  changed (NULL means not available) */
-
-  apr_hash_t *attributes;      /* ALL of the xml attributes,
-                                  including the ones which were
-                                  parsed to fill in the fields
-                                  above.  (required) */
-} svn_wc__entry_t;
-
-
-#define SVN_WC__ENTRY_ADD_FLAG     1
-#define SVN_WC__ENTRY_DELETE_FLAG  2
-/* Add future flags here */
-
-
-
-/* Initialize contents of `entries' for a new adm area. */
-svn_error_t *svn_wc__entries_init (svn_string_t *path,
-                                   svn_string_t *ancestor_path,
-                                   apr_pool_t *pool);
-
-
-/* Parse the `entries' file for PATH and return an ENTRIES hash whose
-   keys are entry names and values are (svn_wc__entry_t *). */
-svn_error_t *svn_wc__entries_read (apr_hash_t **entries,
-                                   svn_string_t *path,
-                                   apr_pool_t *pool);
-
-/* Overwrite (or create) an `entries' file for PATH using the contents
-   of ENTRIES. */
-svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
-                                    svn_string_t *path,
-                                    apr_pool_t *pool);
-
-
-/* Create a new entry NAME in ENTRIES with appropriate fields.
-   Varargs specify any other xml attributes, in the form of
-   alternating pairs (char *), (svn_string_t *). */
-svn_error_t *svn_wc__entry_add (apr_hash_t *entries,
-                                apr_pool_t *pool,
-                                svn_string_t *name,
-                                svn_vernum_t version,
-                                enum svn_node_kind kind,
-                                int flags,
-                                apr_time_t timestamp,
-                                ...);
-
-
-/* Remove NAME from ENTRIES. */
-svn_error_t *svn_wc__entry_remove (apr_hash_t *entries,
-                                   svn_string_t *name);
-
-
-#endif /* BRAVE_NEW_INTERFACE */
-
-
-
 /* Contains info about an entry, used by our xml parser and by the crawler. */
 typedef struct svn_wc__entry_baton_t
 {
@@ -478,6 +473,8 @@ svn_error_t *svn_wc__entry_get_ancestry (svn_string_t *path,
                                          svn_string_t **ancestor_path,
                                          svn_vernum_t *ancestor_ver,
                                          apr_pool_t *pool);
+
+#endif /* BRAVE_NEW_INTERFACE */
 
 
 
