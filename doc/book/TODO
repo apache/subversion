@@ -31,6 +31,9 @@ To be fixed by cmpilato:
     application *have* to set up in the cxt_t in order to call an
     svn_client_foo() function?
 
+  - ch07:  'global-ignores' affects 'svn import', but book only
+    mentions the effect on 'status' and 'add'
+
   - ch07: clarify that svn:externals can only point to directories.
 
 --------------------------------------------------------------
@@ -52,6 +55,8 @@ To be fixed by sussman:
 
   - rewrite whole chapter 4 example to use project-root layout???
 
+  - add architecture diagram to ch01 or ch02, now that's been updated
+    and deemed inappropriate for ch07.
 
 --------------------------------------------------------------
 
