@@ -4,9 +4,10 @@
 #
 # Dictionary:
 #
-# checkout - hente ut
+# checkout - hente ut, uthenting
 # client - klient
-# commit - sende inn
+# commit - sende inn, innsending
+# destination - mål
 # directory - katalog
 # item - element
 # merge - flette
@@ -18,17 +19,19 @@
 # revision - revisjon
 # server - tjener
 # socket - sokkel
+# source - kilde
 # stack - stabel
 # subcommand - delkommando
 # target - mål
 # URL - URL
+# usage - bruk
 # working copy - arbeidskopi
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-07-26 07:28+0200\n"
+"POT-Creation-Date: 2004-07-28 10:23+0200\n"
 "PO-Revision-Date: 2004-07-13 11:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -101,7 +104,7 @@ msgstr ""
 "Subversion er et verktøy for versjonshåndtering\n"
 "Se http://subversion.tigris.org/ for mer informasjon\n"
 
-#: clients/cmdline/help-cmd.c:63
+#: clients/cmdline/help-cmd.c:64
 msgid ""
 "The following repository access (RA) modules are available:\n"
 "\n"
@@ -611,10 +614,10 @@ msgid ""
 msgstr ""
 "Vis forskjellene mellom to stier.\n"
 "bruk: 1. diff [-r N[:M]] [MÅL[@REV]...]\n"
-"      2. diff [-r N[:M]] --old=GAMMEL-TGT[@GAMMELREV] [--new=NY-TGT[@NYREV]] "
+"      2. diff [-r N[:M]] --old=GML-MÅL[@GMLREV] [--new=NYTT-MÅL[@NYREV]] "
 "\\\n"
 "              [STI...]\n"
-"      3. diff GAMMEL-URL[@GAMMELREV] NY-URL[@NYREV]\n"
+"      3. diff GML-URL[@GMLREV] NY-URL[@NYREV]\n"
 "\n"
 "  1. Vis endringene gjort til MÅL slik de fremstår i REV mellom to\n"
 "     revisjoner. MÅL kan være arbeidskopier eller URL-er.\n"
@@ -624,19 +627,19 @@ msgstr ""
 "     arbeidsversjonen hvis et vilkårlig MÅL er en sti til en arbeidskopi,\n"
 "     eller HEAD hvis ikke.\n"
 "\n"
-"  2. Vis endringene mellom GAMMEL-TGT slik det var i GAMMELREV og NY-TGT "
+"  2. Vis endringene mellom GML-MÅL slik det var i GMLREV og NYTT-MÅL "
 "slik det\n"
-"     var i NYREV. STIer, hvis angitt, er relative til GAMMEL-TGT og NY-TGT,\n"
-"     og begrenser utdataene til endringer for de angitte stiene. GAMMEL-TGT "
+"     var i NYREV. STIer, hvis angitt, er relative til GML-MÅL og NYTT-MÅL,\n"
+"     og begrenser utdataene til endringer for de angitte stiene. GML-MÅL "
 "og\n"
-"     NY-TGT kan være arbeidskopi-stier eller URL[@REV]. NY-TGT sin\n"
-"     standardverdi er GAMMEL-TGT hvis ikke angitt. -r N setter GAMMELREV "
+"     NYTT-MÅL kan være arbeidskopi-stier eller URL[@REV]. NYTT-MÅL sin\n"
+"     standardverdi er GML-MÅL hvis ikke angitt. -r N setter GMLREV "
 "sin\n"
-"     standardverdi til N, mens -r N:M setter GAMMELREV sin standardverdi til "
+"     standardverdi til N, mens -r N:M setter GMLREV sin standardverdi til "
 "N\n"
 "     og NYREV sin til M.\n"
 "\n"
-"  3. Kortform for 'svn diff --old=GAMMEL-URL[@GAMMELREV] --new=NY-URL"
+"  3. Kortform for 'svn diff --old=GML-URL[@GMLREV] --new=NY-URL"
 "[@NYREV]'.\n"
 "\n"
 "  Bruk bare 'svn diff' for å vise lokale endringer i en arbeidskopi.\n"
@@ -1228,9 +1231,9 @@ msgid ""
 msgstr ""
 "Oppdater arbeidskopien til en annen nettadresse.\n"
 "bruk: 1. switch URL [STI]\n"
-"      2. switch --relocate FROM TO [STI...]\n"
+"      2. switch --relocate FRA TIL [STI...]\n"
 "\n"
-"  1. Oppdater arbeidskopien slik at den gjenspeiler en annen URL innom\n"
+"  1. Oppdater arbeidskopien slik at den gjenspeiler en annen URL innenfor\n"
 "     depotet. Denne virkemåten ligner 'svn update' og er en metode\n"
 "     for å flytte en arbeidskopi til en annen forgrening eller merke\n"
 "     innenfor det samme depotet.\n"
@@ -1278,40 +1281,44 @@ msgstr ""
 "  Et tegn i den første kolonnen viser hva som er gjort med selve filen,\n"
 "  mens den andre viser oppdateringer i filens egenskaper.\n"
 
-#: clients/cmdline/main.c:724 svnadmin/main.c:56
+#: clients/cmdline/main.c:674
+msgid "Print client version info\n"
+msgstr "Vis versjonsinformasjon for klienten\n"
+
+#: clients/cmdline/main.c:728 svnadmin/main.c:56
 msgid "Caught signal"
 msgstr "Fanget signal"
 
-#: clients/cmdline/main.c:820 svnadmin/main.c:941
+#: clients/cmdline/main.c:824 svnadmin/main.c:941
 msgid ""
 "Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
 msgstr ""
 "Flere revisjonsargument ble brukt. Prøv '-r M:N' i stedet for '-r M -r N'"
 
-#: clients/cmdline/main.c:832 svnadmin/main.c:958
+#: clients/cmdline/main.c:836 svnadmin/main.c:958
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Syntaksfeil i revisjonsargumentet '%s'"
 
-#: clients/cmdline/main.c:978 clients/cmdline/main.c:988
+#: clients/cmdline/main.c:982 clients/cmdline/main.c:992
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props og --no-auto-props utelukker hverandre gjensidig"
 
-#: clients/cmdline/main.c:1004
+#: clients/cmdline/main.c:1008
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "Syntaksfeil i 'native-eol'-argumentet '%s'"
 
-#: clients/cmdline/main.c:1047
+#: clients/cmdline/main.c:1051
 msgid "Subcommand argument required\n"
 msgstr "Delkommandoen må ha et argument\n"
 
-#: clients/cmdline/main.c:1065 svnadmin/main.c:1075 svnlook/main.c:1971
+#: clients/cmdline/main.c:1069 svnadmin/main.c:1075 svnlook/main.c:1971
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Ukjent kommando: '%s'\n"
 
-#: clients/cmdline/main.c:1098
+#: clients/cmdline/main.c:1102
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -1320,13 +1327,13 @@ msgstr ""
 "Delkommandoen '%s' godtar ikke valget '%s'\n"
 "Skriv 'svn help %s' for bruksområde.\n"
 
-#: clients/cmdline/main.c:1132
+#: clients/cmdline/main.c:1136
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr ""
 "Loggmeldingsfilen er under versjonskontroll. Bruk '--force-log' for å "
 "overstyre"
 
-#: clients/cmdline/main.c:1150
+#: clients/cmdline/main.c:1154
 msgid ""
 "The log message is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -1334,7 +1341,7 @@ msgstr ""
 "Loggmeldingen er en filsti (ville du bruke -F?). Bruk '--force-log' for å\n"
 "overstyre"
 
-#: clients/cmdline/main.c:1345
+#: clients/cmdline/main.c:1349
 msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
 "details)\n"
@@ -1504,38 +1511,38 @@ msgstr "Erstatter        %s\n"
 msgid "Transmitting file data "
 msgstr "Sender fildata "
 
-#: clients/cmdline/prompt.c:87
+#: clients/cmdline/prompt.c:96
 msgid "Can't open stdin"
 msgstr "Kan ikke åpne standardinndata"
 
-#: clients/cmdline/prompt.c:105 clients/cmdline/prompt.c:109
+#: clients/cmdline/prompt.c:114 clients/cmdline/prompt.c:118
 msgid "Can't read stdin"
 msgstr "Kan ikke lese fra standardinndata"
 
-#: clients/cmdline/prompt.c:146 libsvn_ra_svn/client.c:304
+#: clients/cmdline/prompt.c:155 libsvn_ra_svn/client.c:304
 msgid "Can't get password"
 msgstr "Kan ikke hente passord"
 
-#: clients/cmdline/prompt.c:168
+#: clients/cmdline/prompt.c:177
 #, c-format
 msgid "Authentication realm: %s\n"
 msgstr "Autentiseringsområde: %s\n"
 
-#: clients/cmdline/prompt.c:194 clients/cmdline/prompt.c:217
+#: clients/cmdline/prompt.c:203 clients/cmdline/prompt.c:226
 msgid "Username: "
 msgstr "Brukernavn: "
 
-#: clients/cmdline/prompt.c:196
+#: clients/cmdline/prompt.c:205
 #, c-format
 msgid "Password for '%s': "
 msgstr "Passord for '%s': "
 
-#: clients/cmdline/prompt.c:239
+#: clients/cmdline/prompt.c:248
 #, c-format
 msgid "Error validating server certificate for '%s':\n"
 msgstr "Feil under godkjenning av tjener-sertifikat for '%s':\n"
 
-#: clients/cmdline/prompt.c:245
+#: clients/cmdline/prompt.c:254
 msgid ""
 " - The certificate is not issued by a trusted authority. Use the\n"
 "   fingerprint to validate the certificate manually!\n"
@@ -1543,23 +1550,23 @@ msgstr ""
 " - Sertifikatet er ikke utstedt av en kreditert autoritet. Bruk\n"
 "   fingeravtrykket for å godkjenne det manuelt.\n"
 
-#: clients/cmdline/prompt.c:252
+#: clients/cmdline/prompt.c:261
 msgid " - The certificate hostname does not match.\n"
 msgstr " - Sertifikatets tjenernavn stemmer ikke\n"
 
-#: clients/cmdline/prompt.c:258
+#: clients/cmdline/prompt.c:267
 msgid " - The certificate is not yet valid.\n"
 msgstr " - Sertifikatet er ikke gyldig ennå.\n"
 
-#: clients/cmdline/prompt.c:264
+#: clients/cmdline/prompt.c:273
 msgid " - The certificate has expired.\n"
 msgstr " - Sertifikatet er utgått.\n"
 
-#: clients/cmdline/prompt.c:270
+#: clients/cmdline/prompt.c:279
 msgid " - The certificate has an unknown error.\n"
 msgstr " - Sertifikatet har en ukjent feil.\n"
 
-#: clients/cmdline/prompt.c:275
+#: clients/cmdline/prompt.c:284
 #, c-format
 msgid ""
 "Certificate information:\n"
@@ -1574,19 +1581,19 @@ msgstr ""
 " - Utsteder: %s\n"
 " - Fingeravtrykk%s\n"
 
-#: clients/cmdline/prompt.c:290
+#: clients/cmdline/prompt.c:299
 msgid "(R)eject, accept (t)emporarily or accept (p)ermanently? "
 msgstr "Fo(r)kaste, god(t)a midlertidig eller godta (p)ermanent? "
 
-#: clients/cmdline/prompt.c:294
+#: clients/cmdline/prompt.c:303
 msgid "(R)eject or accept (t)emporarily? "
 msgstr "Fo(r)kaste eller god(t)a midlertidig? "
 
-#: clients/cmdline/prompt.c:332
+#: clients/cmdline/prompt.c:341
 msgid "Client certificate filename: "
 msgstr "Filnavn for klientsertifikat: "
 
-#: clients/cmdline/prompt.c:355
+#: clients/cmdline/prompt.c:364
 #, c-format
 msgid "Passphrase for '%s': "
 msgstr "adgangsfrase/-setning for '%s': "
@@ -4297,7 +4304,7 @@ msgstr ""
 #, c-format
 msgid "'%s' is marked as absent, so it cannot be scheduled for addition"
 msgstr ""
-"'%s' er merket som fraværende så den kan ikke forberedes for å bli lagt til"
+"'%s' er merket som fraværende, så den kan ikke forberedes for å bli lagt til"
 
 #: libsvn_wc/entries.c:1445
 #, c-format
@@ -5419,13 +5426,13 @@ msgid ""
 "\n"
 "Valid options:\n"
 msgstr ""
-"bruk: svnversion [VALG] WC_PATH [TRAIL_URL]\n"
+"bruk: svnversion [VALG] WC_STI [TRAIL_URL]\n"
 "\n"
-"  Lager et kompakt \"versjonsnummer\" for filstien WC_PATH i en "
+"  Lager et kompakt \"versjonsnummer\" for filstien WC_STI i en "
 "arbeidskopi.\n"
 "  TRAIL_URL er den avsluttende delen av nettadressen (URL) som brukes for å\n"
-"  avgjøre om selve WC_PATH er blitt byttet (TRAIL_URL behøves ikke for å\n"
-"  oppdage byttinger innenfor WC_PATH). Versjonsnummeret er skrevet til\n"
+"  avgjøre om selve WC_STI er blitt byttet (TRAIL_URL behøves ikke for å\n"
+"  oppdage byttinger innenfor WC_STI). Versjonsnummeret er skrevet til\n"
 "  standard ut. Eksempel:\n"
 "\n"
 "    $ svnversion . /repos/svn/trunk \n"
