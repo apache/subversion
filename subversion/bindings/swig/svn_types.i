@@ -316,7 +316,7 @@
 %typemap(perl5, in) (svn_commit_callback_t callback, void *callback_baton) {
     $1 = svn_swig_pl_thunk_commit_callback;
     $2 = (void *)$input;
-    SvREFCNT_inc($input);
+    svn_swig_pl_hold_ref_in_pool (_global_pool, $input);
 };
 
 /* -----------------------------------------------------------------------

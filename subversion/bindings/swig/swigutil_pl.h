@@ -217,6 +217,8 @@ svn_error_t *svn_swig_pl_blame_func (void *baton,
                                      const char *line,
                                      apr_pool_t *pool);
 
+/* Thunked config enumerator */
+svn_boolean_t svn_swig_pl_thunk_config_enumerator (const char *name, const char *value, void *baton);
 
 /* helper for making the editor */
 void svn_delta_make_editor(svn_delta_editor_t **editor,
@@ -231,6 +233,7 @@ SV *svn_swig_pl_from_stream (svn_stream_t *stream);
 /* apr_file_t * */
 apr_file_t *svn_swig_pl_make_file (SV *file, apr_pool_t *pool);
 
+void svn_swig_pl_hold_ref_in_pool (apr_pool_t *pool, SV *sv);
 
 #ifdef __cplusplus
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 5;
+use Test::More tests => 6;
 use File::Temp qw(tempdir);
 use File::Path qw(rmtree);
 use strict;
@@ -64,15 +64,20 @@ is_deeply (\@history, [['/tags/foo/filea',2],['/trunk/filea',1]],
 	   'repos_history');
 
 {
+my $pool = SVN::Pool->new_default;
+my $something = bless {}, 'something';
 $editor = SVN::Delta::Editor->
     new (SVN::Repos::get_commit_editor($repos, "file://$repospath",
-				       '/', 'root', 'FOO', \&committed));
+				       '/', 'root', 'FOO', sub {committed(@_);
+                                                                $something;
+                                                            }));
 
 my $rootbaton = $editor->open_root(2);
 $editor->delete_entry('tags', 2, $rootbaton);
 
 $editor->close_edit();
 }
+ok ($main::something_destroyed, 'callback properly destroyed');
 
 cmp_ok($fs->youngest_rev, '==', 3);
 
@@ -80,3 +85,11 @@ END {
 diag "cleanup";
 rmtree($repospath);
 }
+
+package something;
+
+sub DESTROY {
+    $main::something_destroyed++;
+}
+
+1;

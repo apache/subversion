@@ -1,5 +1,6 @@
 package SVN::Ra;
 use SVN::Base qw(Ra svn_ra_);
+use File::Temp;
 
 =head1 NAME
 
@@ -63,26 +64,25 @@ require SVN::Client;
 
 my $ralib = init_ra_libs;
 
+# Ra methods that returns reporter
+my %reporter = map { $_ => 1 } qw(do_diff do_switch do_status do_update);
 our $AUTOLOAD;
 
 sub AUTOLOAD {
     my $class = ref($_[0]);
-    $AUTOLOAD =~ s/^${class}::(SUPER::)?//;
-    return if $AUTOLOAD =~ m/^[A-Z]/;
+    my $method = $AUTOLOAD;
+    $method =~ s/.*:://;
+    return unless $method =~ m/[^A-Z]/;
 
     my $self = shift;
     no strict 'refs';
 
     die "no such method $AUTOLOAD"
-	unless $self->can("plugin_invoke_$AUTOLOAD");
+	unless $self->can("plugin_invoke_$method");
 
-    my @ret = &{"plugin_invoke_$AUTOLOAD"}(@{$self}{qw/ra session/}, @_,
-					   $self->{pool});
-
-    return $ret[0] unless $#ret;
-
-    return ($AUTOLOAD eq 'get_commit_editor') ? @ret :
-	bless [@ret], 'SVN::Ra::Reporter';
+    my @ret = &{"plugin_invoke_$method"}(@{$self}{qw/ra session/}, @_);
+    return bless [@ret], 'SVN::Ra::Reporter' if $reporter{$method};
+    return $#ret == 0 ? $ret[0] : @ret;
 }
 
 sub new {
@@ -106,7 +106,7 @@ sub new {
                              [SVN::Client::get_username_provider()]);
     }
 
-    my $pool = $self->{pool} ||= SVN::Core::pool_create(undef);
+    my $pool = $self->{pool} ||= SVN::Pool->new;
 
     $self->{ra} = get_ra_library ($ralib, $self->{url});
     my $callback = 'SVN::Ra::Callbacks';
@@ -177,9 +177,13 @@ sub new {
 }
 
 sub open_tmp_file {
+    local $^W; # silence the warning for unopened temp file
     my $self = shift;
-    my ($fd, $name) = SVN::Core::io_open_unique_file
-	('/tmp/foobar', 'tmp', 1, $self->{pool});
+    my ($fd, $name) = SVN::Core::io_open_unique_file(
+        ( File::Temp::tempfile(
+            'XXXXXXXX', OPEN => 0, DIR => File::Spec->tmpdir
+        ))[1], 'tmp', 1, $self->{pool}
+    );
     return $fd;
 }
 

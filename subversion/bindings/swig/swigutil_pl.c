@@ -1209,6 +1209,20 @@ svn_error_t *svn_swig_pl_blame_func (void *baton,
     return ret_val;
 }
 
+/* Thunked config enumerator */
+svn_boolean_t svn_swig_pl_thunk_config_enumerator (const char *name, const char *value, void *baton)
+{
+    SV *result;
+    if (!SvOK((SV *)baton))
+	return 0;
+
+    svn_swig_pl_callback_thunk (CALL_SV, baton, &result,
+			        "ss", name, value);
+
+    return SvOK(result);
+}
+
+
 /* default pool support */
 apr_pool_t *current_pool;
 
@@ -1384,4 +1398,17 @@ apr_file_t *svn_swig_pl_make_file (SV *file, apr_pool_t *pool)
             return NULL;
     }
     return apr_file;
+}
+
+static apr_status_t cleanup_refcnt (void *data)
+{
+    SV *sv = data;
+    SvREFCNT_dec (sv);
+    return APR_SUCCESS;
+}
+
+void svn_swig_pl_hold_ref_in_pool (apr_pool_t *pool, SV *sv)
+{
+    SvREFCNT_inc(sv);
+    apr_pool_cleanup_register (pool, sv, cleanup_refcnt, apr_pool_cleanup_null);
 }

@@ -4,27 +4,19 @@ use Test::More tests => 2;
 require SVN::Core;
 require SVN::Delta;
 
-SKIP: {
-    eval { require IO::String };
+my ($srctext, $tgttext, $result) = ('abcd===eflfjgjkx', 'abcd=--ef==lfjffgjx', '');
 
-    skip "IO::String not installed", 2 if $@;
-    my $srctext = 'abcd===eflfjgjkx';
-    my $tgttext = 'abcd=--ef==lfjffgjx';
+open my $source, '<', \$srctext;
+open my $target, '<', \$tgttext;
+open my $aresult, '>', \$result;
 
-    my $source = IO::String->new ($srctext);
-    my $target = IO::String->new ($tgttext);
+my $txstream = SVN::TxDelta::new ($source, $target);
 
-    my $result = '';
-    my $aresult = IO::String->new (\$result);
+isa_ok ($txstream, '_p_svn_txdelta_stream_t');
+open my $asource, '<', \$srctext;
+my $handle = [SVN::TxDelta::apply ($asource, $aresult, undef, undef)];
 
-    my $txstream = SVN::TxDelta::new ($source, $target);
+SVN::TxDelta::send_txstream ($txstream, @$handle);
 
-    isa_ok ($txstream, '_p_svn_txdelta_stream_t');
-    my $handle = [SVN::TxDelta::apply (IO::String->new ($srctext),
-				       $aresult, undef, undef)];
+is ($result, $tgttext, 'delta self test');
 
-    SVN::TxDelta::send_txstream ($txstream, @$handle);
-
-    is ($result, $tgttext, 'delta self test');
-
-}

@@ -17,16 +17,3 @@ Candidate changes:
       +1: pmayweg
       +0: breser
 
-  * r10112, r10113, r10215, r10440, r10441, r10458, r10711, r10775
-    Backport Perl bindings fixes from the 1.1.x branch
-    Justification:
-      Completeless and many leak fixes.  Note that FreeBSD ports has been using
-      this diff and several people tested it.
-    Notes:
-      Merging directly would fail since there has been tree reoreganization.
-      Patches that applies to 1.0.x are at:
-        http://wagner.elixus.org/~clkao/svnperl-1.0.x.diff
-        http://wagner.elixus.org/~clkao/svnperl-1.0.x_1.diff
-    Votes:
-       +1: clkao, breser
-

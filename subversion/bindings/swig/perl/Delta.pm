@@ -143,8 +143,8 @@ sub AUTOLOAD {
     return unless $_[0]->{_editor};
     my $class = ref($_[0]);
     my $func = $AUTOLOAD;
-    $func =~ s/^${class}::(SUPER::)?//;
-    return if $func =~ m/^[A-Z]/;
+    $func =~ s/.*:://;
+    return unless $func =~ m/[^A-Z]/;
 
     my %ebaton = ( set_target_revision => 1,
 		   open_root => 1,
