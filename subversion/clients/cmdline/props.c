@@ -48,6 +48,7 @@ svn_cl__revprop_no_rev_error (apr_pool_t *pool)
 
 svn_error_t *
 svn_cl__print_prop_hash (apr_hash_t *prop_hash,
+                         svn_boolean_t names_only,
                          apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
@@ -64,33 +65,17 @@ svn_cl__print_prop_hash (apr_hash_t *prop_hash,
       pname = key;
       propval = val;
 
-      /* Distinguish between svn: and non-svn: props -- the former are
-         stored in UTF-8, the latter are stored as binary values.  All
-         property names, however, are stored in UTF-8.  */
       if (svn_prop_needs_translation (pname))
         SVN_ERR (svn_subst_detranslate_string (&propval, propval,
                                                pool));
 
       SVN_ERR (svn_utf_cstring_from_utf8 (&pname_native, pname, pool));
-      printf ("  %s : %s\n", pname_native, propval->data);
-    } 
-  return SVN_NO_ERROR;
-}
 
+      if (names_only)
+        printf ("  %s\n", pname_native);
+      else
+        printf ("  %s : %s\n", pname_native, propval->data);
+    }
 
-svn_error_t *
-svn_cl__print_prop_names (apr_hash_t *prop_hash,
-                          apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-
-  for (hi = apr_hash_first (pool, prop_hash); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      const char *key_native;
-      apr_hash_this (hi, &key, NULL, NULL);
-      SVN_ERR (svn_utf_cstring_from_utf8 (&key_native, key, pool));
-      printf ("  %s\n", key_native);
-    } 
   return SVN_NO_ERROR;
 }
