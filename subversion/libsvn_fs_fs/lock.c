@@ -80,9 +80,9 @@ make_digest (const char *str,
 static void
 hash_store (apr_hash_t *hash,
             const char *key,
-            apr_size_t key_len,
+            apr_ssize_t key_len,
             const char *value,
-            apr_size_t value_len,
+            apr_ssize_t value_len,
             apr_pool_t *pool)
 {
   if (! (key && value))

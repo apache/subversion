@@ -1057,9 +1057,14 @@ do_item_commit (void **dir_baton,
           else
             notify->prop_state = svn_wc_notify_state_unchanged;
         }
+      else
+        notify = NULL;
 
-      notify->kind = item->kind;
-      (*ctx->notify_func2) (ctx->notify_baton2, notify, pool);
+      if (notify)
+        {
+          notify->kind = item->kind;
+          (*ctx->notify_func2) (ctx->notify_baton2, notify, pool);
+        }
     }
 
   /* If this item is supposed to be deleted, do so. */
