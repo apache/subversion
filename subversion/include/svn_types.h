@@ -281,7 +281,7 @@ typedef struct svn_ancestor_t
 } svn_ancestor_t;
 
 
-/* A change is an action and some content.  This is the content. */
+/* An edit is an action and some content.  This is the content. */
 typedef struct svn_edit_content_t
 {
   enum { 
@@ -294,17 +294,17 @@ typedef struct svn_edit_content_t
 } svn_edit_content_t;
 
 
-/* A tree delta is a list of changes.  This is a change. */
+/* A tree delta is a list of edits.  This is an edit. */
 typedef struct svn_edit_t
 {
   enum { 
-    svn_delta_action_delete = 1,  /* Delete the file or directory. */
-    svn_delta_action_new,         /* Create a new file or directory. */
-    svn_delta_action_replace,     /* Replace an existing file or dir */
+    action_delete = 1,            /* Delete a file or directory. */
+    action_new,                   /* Create a new file or directory. */
+    action_replace,               /* Replace an existing file or dir */
   } kind;
   svn_delta_action_t action;      /* One of the enumerated values. */
   svn_string_t *name;             /* name to add/del/replace */
-  svn_change_content_t *content;  /* the object we're adding/replacing */
+  svn_edit_content_t *content;    /* the object we're adding/replacing */
   struct svn_edit_t *next;        /* Next one in the list, or NULL. */
 } svn_edit_t;
 
