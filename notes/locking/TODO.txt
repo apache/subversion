@@ -45,12 +45,6 @@ These are in the format of
        ### avoid a race.  We don't want the write lock grabbed just
        ### to get a lock. */ (cmpilato)
 
-* subversion/tests/libsvn_fs_base/fs-test.c:18
-    /* TODO clean */ (fitz)
-
-* subversion/tests/libsvn_fs/locks-test.c:18
-    /* TODO how many of these can I get rid of? */ (fitz)
-
 * subversion/libsvn_repos/hooks.c:443
     /* TODO Shouldn't this find its way into libsvn_subr? */ (fitz)
       (Yes, it should.  It can be improved later.)
