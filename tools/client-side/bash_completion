@@ -50,7 +50,7 @@ _svn()
 	fi
 
 	pOpts="--username --password --no-auth-cache --non-interactive"
-	mOpts="-m --message -F --file --encoding"
+	mOpts="-m --message -F --file --encoding --force-log"
 	rOpts="-r --revision"
 	qOpts="-q --quiet"
 	nOpts="-N --non-recursive"
@@ -73,8 +73,7 @@ _svn()
 	cleanup)
 		;;
 	commit|ci)
-		cmdOpts="$mOpts $qOpts $nOpts --targets --force --editor-cmd \
-		         $pOpts"
+		cmdOpts="$mOpts $qOpts $nOpts --targets --editor-cmd $pOpts"
 		;;
 	copy|cp)
 		cmdOpts="$mOpts $rOpts $qOpts --editor-cmd $pOpts"
@@ -90,8 +89,7 @@ _svn()
 		cmdOpts="$rOpts $qOpts $pOpts"
 		;;
 	import)
-		cmdOpts="$mOpts $qOpts $nOpts --targets --force --editor-cmd \
-		         $pOpts"
+		cmdOpts="$mOpts $qOpts $nOpts --targets --editor-cmd $pOpts"
 		;; 
 	info)
 		cmdOpts="--targets -R --recursive"
