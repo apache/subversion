@@ -249,7 +249,7 @@ typedef svn_error_t *(svn_prop_change_chunk_handler_t)
 
 
 /* A pdelta parser object.  */
-typedef struct svn_pdelta_parser_t 
+typedef struct svn_pdelta_chunk_parser_t
 {
   /* Once this parser has enough data buffered to create a propchange
      "chunk", it passes the window to the caller's consumer routine.  */
@@ -266,7 +266,7 @@ typedef struct svn_pdelta_parser_t
   /* The actual parser data buffer, living within subpool. */
   svn_string_t *buffer;
 
-} svn_pdelta_parser_t;
+} svn_pdelta_chunk_parser_t;
 
 
 
@@ -314,16 +314,16 @@ typedef struct svn_delta_walk_t
      how property names are set in XML as well, since names are
      currently XML attributes and therefore can't really be streamed
      at parse time anyway). */
-  svn_error_t *(apply_dir_propchange) (svn_propchange_t *propchange,
-                                       void *walk_baton, void *parent_baton);
-
-  svn_error_t *(apply_file_propchange) (svn_propchange_t *propchange,
+  svn_error_t *(*apply_dir_propchange) (svn_propchange_t *propchange,
                                         void *walk_baton, void *parent_baton);
-
-  svn_error_t *(apply_dirent_propchange) (svn_propchange_t *propchange,
-                                          void *walk_baton,
-                                          void *parent_baton);
-                                   
+  
+  svn_error_t *(*apply_file_propchange) (svn_propchange_t *propchange,
+                                         void *walk_baton, void *parent_baton);
+  
+  svn_error_t *(*apply_dirent_propchange) (svn_propchange_t *propchange,
+                                           void *walk_baton,
+                                           void *parent_baton);
+  
   /* We are going to add a new subdirectory named NAME.  We will use
      the value this callback stores in *CHILD_BATON as the
      PARENT_BATON for further changes in the new subdirectory.  The
