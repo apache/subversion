@@ -508,13 +508,7 @@ erase_unversioned_from_wc (const char *path,
       break;
 
     case svn_node_dir:
-      {
-        /* We can remove the whole tree with no further checking */
-        apr_status_t status = apr_dir_remove_recursively (path, pool);
-        if (!APR_STATUS_IS_SUCCESS(status))
-          return svn_error_createf (status, 0, NULL, pool,
-                                    "failed removing directory '%s'", path);
-      }
+      SVN_ERR (svn_io_remove_dir (path, pool));
       break;
     }
 
