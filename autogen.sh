@@ -72,7 +72,15 @@ fi
 # Create the file detailing all of the build outputs for SVN.
 #
 # Note: this dependency on Python is fine: only SVN developers use autogen.sh
-#       and we can state that dev people need Python on their machine
+#       and we can state that dev people need Python on their machine. Note
+#       that running gen-make.py requires Python 1.X or newer.
+
+OK=`python -c 'print "OK"'`
+if test "${OK}" != "OK" ; then
+  echo "Python check failed, make sure python is installed and on the PATH"
+  exit 1
+fi
+
 if test "$1" = "-s"; then
   echo "Creating build-outputs.mk (no dependencies)..."
   ./gen-make.py -s build.conf ;
@@ -82,7 +90,7 @@ else
 fi
 
 if test "$?" != "0"; then
-  echo "gen-make.py failed, is python really installed?"
+  echo "gen-make.py failed"
   exit 1
 fi
 

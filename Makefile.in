@@ -116,6 +116,7 @@ check: $(TEST_DEPS) @FS_TEST_DEPS@
 	@logfile=`pwd`/tests.log ; \
 	echo > $$logfile ; \
 	failed=no ; \
+	$(PYTHON) $(top_srcdir)/pycheck.py ; \
 	list='$(TEST_PROGRAMS) @FS_TEST_PROGRAMS@'; for prog in $$list; do \
 	    chmod a+x $$prog ; \
 	    progbase=`echo $$prog | sed 's?.*/??'` ; \
