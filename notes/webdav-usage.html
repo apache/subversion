@@ -28,6 +28,7 @@
       replicated here.
     </p>
 
+    <hr width="80&#37;">
     <h2>Basic Concepts</h2>
     <p>
       Subversion uses a tree-based format to describe a change set
@@ -73,6 +74,7 @@
       <code>LABEL</code> and <code>COPY</code> methods as appropriate.
     </p>
 
+    <hr width="80&#37;">
     <h2>Subversion Projects as URLs</h2>
     <p>
       The very first concept to define is how a project is exposed to
@@ -105,6 +107,7 @@
       <code>http://subversion.tigris.org/example/sub/file.c</code>.
     </p>
 
+    <hr width="80&#37;">
     <h2>Committing a Change Set</h2>
     <p>
       Change sets are modelled using the "activity" concept from
@@ -411,6 +414,7 @@
       </li>
     </ul>
 
+    <hr width="80&#37;">
     <h2>URL Layout</h2>
     <p>
       The Subversion server exposes projects at user-defined URLs. For
@@ -545,10 +549,88 @@
       </dd>
     </dl>
 
+    <hr width="80&#37;">
     <h2>Property Management (and History/Log Reporting)</h2>
+    <p>
+      As mentioned before, Subversion properties map onto WebDAV
+      properties. There are particular properties that the WebDAV code 
+      wants to take particular care of:
+    </p>
+    <dl>
+      <dt><code>DAV:comment</code></dt>
+      <dd>
+	This is the standard property for specifying a checkin
+	comment. These properties will be attached to the project
+	version resources in the <code>/$svn/ver/</code> collection.
+	<p></p>
+      </dd>
+      <dt><code>DAV:creator-displayname</code></dt>
+      <dd>
+	This is a live property that is generated from Subversion's
+	concept of the "user" who made a particular change. It is a
+	read-only property.
+	<p></p>
+      </dd>
+      <dt><code>DAV:checkin-date</code></dt>
+      <dd>
+	This is a read-only live property maintained by the server on
+	version resources. Strictly speaking, it is only maintained on 
+	the project-version resources, but the Delta-V specification
+	states that it is exposed on every version resource.
+      </dd>
+    </dl>
+    <p>
+      The history for a specified file will be generated using the
+      <code>REPORT</code> method and a
+      <code>DAV:property-report</code> report. A typical history will
+      fetch the three properties mentioned above for each version of
+      the file/directory.
+    </p>
+    <p>
+      Based on the client design, it may be important to specify other 
+      read-only live properties for information about versions. For
+      examply, how many lines were added/removed in a particular
+      checkin for a file? Creating these live properties will be quite 
+      straight-forward, and driven by the client design over time.
+    </p>
 
+    <hr width="80&#37;">
     <h2>Fetching Status and Updates</h2>
+    <p>
+      The Subversion design discusses the use of skeleton deltas and
+      deltas to return status and update information (see
+      <code>ra_get_status()</code> and
+      <code>ra_get_update()</code>). However, the appropriate
+      mechanism to use in WebDAV is a <code>PROPFIND</code> on a file,
+      directory, or tree to fetch the <code>DAV:target</code>
+      property. The <code>DAV:target</code> property will specify the
+      URL of the version the version-selector is referring to. If the
+      URL matches the value stored in the working copy, then no
+      changes were made in the repository.
+    </p>
+    <p>
+      It is presumed that the working copy library can detect local
+      modifications to a file, and local tree structure changes. The
+      important part is when the local library needs to consult the
+      server to look for server-side changes.
+    </p>
+    <p>
+      Updates are handled similarly, then followed by a sequence of
+      <code>GET</code> operations to fetch the new files. All
+      <code>GET</code> operations will include the <code>Accept</code>
+      HTTP header. The client will specify that
+      <code>text/vnd.svn-vcdiff</code> is an acceptable media type for
+      the response (with q=1). As a secondary accepted format, it will
+      accept <code>*/*</code> (with q=0.1).
+    </p>
+    <p>
+      <small>
+	Note: it will also be interesting to implement the gzip
+	content-coding on both sides of the connection.
+      </small>
+    </p>
 
+    <hr width="80&#37;">
     <h2>Tags and Branches</h2>
     <p>
       The current Subversion design specification is not entirely
@@ -602,10 +684,9 @@
       forward.
     </p>
 
+    <hr width="80&#37;">
     <h2>Server Requirements</h2>
     <p>
-      <code>DAV:repository-report</code>
-      <br>
       Retain activity information. Activities have user-specified
       names, mapping to the server-side records.
       <br>
@@ -620,17 +701,22 @@
       <br>
       <var>project-id</var> must be generated and kept permanently
       with a Subversion project.
-    </p>
-    <p>
+      <br>
       Discuss timeouts and auto-purge of activities (and the related
       working resources).
+      <br>
+      <code>DAV:repository-report</code>
+      <br>
+      <code>DAV:property-report</code>
+      <br>
+      <code>DAV:compare-report</code>
     </p>
 
     <hr>
     <address><a href="mailto:gstein@lyra.org">Greg Stein</a></address>
 <!-- Created: Thu Aug 10 19:14:20 PDT 2000 -->
 <!-- hhmts start -->
-Last modified: Mon Aug 14 21:14:22 PDT 2000
+Last modified: Tue Aug 15 01:58:57 PDT 2000
 <!-- hhmts end -->
   </body>
 </html>
