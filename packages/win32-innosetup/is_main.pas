@@ -352,6 +352,27 @@ begin
 end;
 
 // ****************************************************************************
+// Name:    ApacheCopyModules
+// Purpose: Extracting Apache's modules and the Berkeley DB from the
+//          installation file and copy them to Apache's module directory
+procedure ApacheCopyModules();
+var
+    sTPathTmp: String;
+begin
+    sTPathTmp := ExpandConstant('{tmp}');
+    // extract the files from the setup to the current IS Temp folder
+
+    ExtractTemporaryFile('libdb42.dll');
+    ExtractTemporaryFile('mod_dav_svn.so');
+    ExtractTemporaryFile('mod_authz_svn.so');
+
+    //Copy the files from the temp dir to Apache's module foder
+    FileCopy (sTPathTmp + '\libdb42.dll', g_sApachePathModules + '\libdb42.dll', False);
+    FileCopy (sTPathTmp + '\mod_dav_svn.so', g_sApachePathModules + '\mod_dav_svn.so', False);
+    FileCopy (sTPathTmp + '\mod_authz_svn.so', g_sApachePathModules + '\mod_authz_svn.so', False);
+end;
+
+// ****************************************************************************
 // Name:    ApacheVersion
 // Purpose: Returns apache.exe's version with the last number stripped.
 function ApacheVersion(): String;
@@ -512,7 +533,6 @@ begin
     g_bMsVcpNotFound := VCRuntimeNotFound;
     g_bShFolderNotFound := ShFolderDllNotFound;
     g_bHandleApache:= False;
-
     Result := True;
 end;
 
@@ -525,7 +545,10 @@ begin
 
         wpInstalling: // Event before setup is copying destination files
             if g_bHandleApache then
+            begin
                 ApacheServiceUninstall;
+                ApacheCopyModules;
+            end;
     end;
 end;
 
