@@ -134,6 +134,7 @@ def run_and_verify_update(wc_dir_name,
                           a_baton = None,
                           singleton_handler_b = None,
                           b_baton = None,
+                          check_props = 0,
                           *args):
   """Update WC_DIR_NAME into a new directory WC_DIR_NAME.  *ARGS are
   any extra optional args to the update subcommand.
@@ -144,6 +145,7 @@ def run_and_verify_update(wc_dir_name,
   compared.  (This is a good way to check that revision numbers were
   bumped.)  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
   tree.compare_trees - see that function's doc string for more details.
+  If CHECK_PROPS is set, then disk comparison will examine props.
   Return 0 if successful."""
 
   # Update and make a tree of the output.
@@ -155,12 +157,12 @@ def run_and_verify_update(wc_dir_name,
     return 1
 
   # Create a tree by scanning the working copy
-  mytree = tree.build_tree_from_wc (wc_dir_name)
+  mytree = tree.build_tree_from_wc (wc_dir_name, check_props)
 
   # Verify expected disk against actual disk.
   if tree.compare_trees (mytree, disk_tree,
-                                 singleton_handler_a, a_baton,
-                                 singleton_handler_b, b_baton):
+                         singleton_handler_a, a_baton,
+                         singleton_handler_b, b_baton):
     return 1
 
   # Verify via 'status' command too, if possible.
