@@ -274,6 +274,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_REPOS_HOOK_FAILURE,
               "A repository hook failed.")
 
+  SVN_ERRDEF (SVN_ERR_EXTERNAL_PROGRAM,
+              "Error calling external program")
+
   SVN_ERRDEF (SVN_ERR_BERKELEY_DB,
               "Berkeley DB error")
 

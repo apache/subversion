@@ -34,7 +34,7 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_pools.h"
-
+#include "svn_private_config.h" /* for SVN_CLIENT_DIFF */
 
 
 struct svn_stream_t {
@@ -1581,6 +1581,75 @@ svn_io_run_cmd (const char *path,
       (apr_err, 0, NULL, pool,
        "run_cmd_in_directory: error waiting for %s process",
        cmd);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_io_run_diff (const char *dir, 
+                 const char *const *user_args,
+                 const int num_user_args, 
+                 const char *label,
+                 const char *from,
+                 const char *to,
+                 int *pexitcode, 
+                 apr_file_t *outfile, 
+                 apr_file_t *errfile, 
+                 apr_pool_t *pool)
+{
+  const char **args;
+  int i; 
+  int exitcode;
+  int nargs = 4; /* the diff command itself, two paths, plus a trailing NULL */
+
+  apr_pool_t *subpool = svn_pool_create (pool);
+
+  if (pexitcode == NULL)
+    pexitcode = &exitcode;
+
+  if (user_args != NULL)
+    nargs += num_user_args;
+  else
+    nargs += 1; /* -u */
+
+  if (label != NULL)
+    nargs += 2; /* the -L and the label itself */
+
+  args = apr_palloc(subpool, nargs * sizeof(char *));
+
+  i = 0;
+  args[i++] = SVN_CLIENT_DIFF;
+
+  if (user_args != NULL)
+    {
+      int j;
+      for (j = 0; j < num_user_args; ++j)
+        args[i++] = user_args[j];
+    }
+  else
+    args[i++] = "-u"; /* assume -u if the user didn't give us any args */
+
+  if (label != NULL)
+    {
+      args[i++] = "-L";
+      args[i++] = label;
+    }
+
+  args[i++] = from;
+  args[i++] = to;
+  args[i++] = NULL;
+
+  assert (i == nargs);
+
+  SVN_ERR(svn_io_run_cmd (dir, SVN_CLIENT_DIFF, args, pexitcode, NULL, NULL, 
+                          outfile, errfile, subpool));
+
+  if (*pexitcode < 0 || *pexitcode > 2)
+    return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, 0, NULL, subpool, 
+                              "Error calling %s.", SVN_CLIENT_DIFF);
+
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }

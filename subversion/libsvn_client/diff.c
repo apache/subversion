@@ -35,7 +35,6 @@
 #include "svn_io.h"
 #include "svn_pools.h"
 #include "client.h"
-#include "svn_private_config.h"         /* for SVN_CLIENT_DIFF */
 #include <assert.h>
 
 struct diff_cmd_baton {
@@ -54,7 +53,6 @@ svn_client__diff_cmd (svn_stringbuf_t *path1,
   apr_status_t status;
   const char **args;
   int i, nargs, exitcode;
-  apr_exit_why_e exitwhy;
   apr_file_t *outhandle, *errhandle;
 
   /* Use a subpool here because the pool comes right through from the top
@@ -74,17 +72,13 @@ svn_client__diff_cmd (svn_stringbuf_t *path1,
 
   /* Execute local diff command on these two paths, print to stdout. */
 
-  nargs = 4; /* Eek! A magic number! It's checked by a later assert */
-  if (label)
-    nargs += 2; /* Another magic number checked by the later assert */
-  if (diff_cmd_baton->options->nelts)
-    nargs += diff_cmd_baton->options->nelts;
-  else
-    ++nargs;
-  args = apr_palloc(subpool, nargs*sizeof(char*));
+  nargs = diff_cmd_baton->options->nelts;
+  if (nargs)
+    args = apr_palloc(subpool, nargs*sizeof(char*));
+  else 
+    args = NULL;
 
   i = 0;
-  args[i++] = SVN_CLIENT_DIFF;  /* the autoconfiscated system diff program */
   if (diff_cmd_baton->options->nelts)
     {
       /* Add the user specified diff options to the diff command line. */
@@ -93,19 +87,6 @@ svn_client__diff_cmd (svn_stringbuf_t *path1,
         args[i++]
           = ((svn_stringbuf_t **)(diff_cmd_baton->options->elts))[j]->data;
     }
-  else
-    {
-      /* The user didn't specify any options, default to unified diff. */
-      args[i++] = "-u";
-    }
-  if (label)
-    {
-      args[i++] = "-L";
-      args[i++] = label->data;
-    }
-  args[i++] = path1->data;
-  args[i++] = path2->data;
-  args[i++] = NULL;
   assert (i==nargs);
 
   /* ### TODO: This printf is NOT "my final answer" -- placeholder for
@@ -116,8 +97,9 @@ svn_client__diff_cmd (svn_stringbuf_t *path1,
     apr_file_printf (outhandle, "Index: %s\n", path1->data);
   apr_file_printf (outhandle, "===================================================================\n");
 
-  SVN_ERR(svn_io_run_cmd (".", SVN_CLIENT_DIFF, args, &exitcode, &exitwhy, NULL,
-                          outhandle, errhandle, subpool));
+  SVN_ERR(svn_io_run_diff 
+    (".", args, nargs, label ? label->data : NULL, path1->data, path2->data, 
+     &exitcode, outhandle, errhandle, subpool));
 
   /* TODO: Handle exit code == 2 (i.e. errors with diff) here */
   

@@ -34,7 +34,6 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_time.h"
-#include "svn_private_config.h"         /* for SVN_CLIENT_DIFF */
 
 
 /*** Some convenience macros and types. ***/
@@ -469,9 +468,9 @@ print_diff_tree (svn_fs_root_t *root,
 
   if (orig_path && new_path)
     {
-      const char *args[5];
       apr_file_t *outhandle;
       apr_status_t apr_err;
+      int exitcode;
 
       printf ("%s: %s\n", 
               ((tmp_node->action == 'A') ? "Added" : 
@@ -482,12 +481,6 @@ print_diff_tree (svn_fs_root_t *root,
 ===============\n");
       fflush (stdout);
 
-      args[0] = SVN_CLIENT_DIFF;
-      args[1] = "-u";
-      args[2] = orig_path->data;
-      args[3] = new_path->data;
-      args[4] = NULL;
-
       /* Get an apr_file_t representing stdout, which is where we'll have
          the diff program print to. */
       apr_err = apr_file_open_stdout (&outhandle, pool);
@@ -496,8 +489,9 @@ print_diff_tree (svn_fs_root_t *root,
           (apr_err, 0, NULL, pool,
            "print_diff_tree: can't open handle to stdout");
 
-      SVN_ERR(svn_io_run_cmd (".", SVN_CLIENT_DIFF, args, NULL, NULL,
-                              NULL, outhandle, NULL, pool));
+      SVN_ERR(svn_io_run_diff 
+        (".", NULL, 0, NULL, orig_path->data, new_path->data, &exitcode, 
+         outhandle, NULL, pool));
 
       /* TODO: Handle exit code == 2 (i.e. diff error) here. */
 
