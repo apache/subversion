@@ -32,6 +32,7 @@
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_config.h"
 #include "svn_delta.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
@@ -46,7 +47,8 @@ typedef struct {
 
   const char *url;                      /* original, unparsed session url */
   ne_uri root;                          /* parsed version of above */
-
+  svn_config_t *cfg;                    /* servers configuration */
+  const char *server_group;             /* group w/server-specific overrides */
   ne_session *sess;                     /* HTTP session to server */
   ne_session *sess2;
   

@@ -25,7 +25,7 @@
 #include <apr_pools.h>
 
 #include "svn_types.h"
-
+#include "ne_session.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -165,6 +165,44 @@ typedef struct
 
 } svn_auth_cred_username_t;
 
+/** SSL client authentication - this provider just uses neon to load
+    in a cert, and sets @a loaded to nonzero if it has done so */
+#define SVN_AUTH_CRED_CLIENT_SSL "svn:ssl:client-cert"
+typedef struct
+{
+  int loaded;
+} svn_auth_cred_client_ssl_t;
+
+/** SSL client passphrase.
+ *
+ * @a password gets set with the appropriate password for the
+ * certificate.
+ */
+#define SVN_AUTH_CRED_CLIENT_PASS_SSL "svn:ssl:client-passphrase"
+typedef struct
+{
+  const char *password;
+
+} svn_auth_cred_client_ssl_pass_t;
+
+/** SSL server verification.
+ *
+ *  @a cert contains two inner structures representing fields from the
+ *  server and issuer certificates, as well as the start and expiry
+ *  times.  @a failures_allow is set for each flag allowed.
+ *
+ *  failures flags defined within neon:
+ *  * NE_SSL_NOTYETVALID : certificate is not yet valid
+ *  * NE_SSL_EXPIRED     : certificate has expired
+ *  * NE_SSL_CNMISMATCH  : name on certificate does not match server
+ *  * NE_SSL_UNKNOWNCA   : certificate is signed by an untrusted authority
+ */
+#define SVN_AUTH_CRED_SERVER_SSL "svn:ssl:server"
+typedef struct
+{
+  int failures_allow;
+
+} svn_auth_cred_server_ssl_t;
 
 
 
@@ -226,6 +264,10 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
     Property value is irrelevant; only property's existence matters. */
 #define SVN_AUTH_PARAM_NO_AUTH_CACHE  SVN_AUTH_PARAM_PREFIX "no-auth-cache"
 
+/** Needed for ssl server and client cert providers, provides @c
+    ne_ssl_dname*  */
+#define SVN_AUTH_PARAM_SSL_SERVER_DNAME SVN_AUTH_PARAM_PREFIX "ssl:dname"
+#define SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN SVN_AUTH_PARAM_PREFIX "ssl:failures"
 
 /** Get an initial set of credentials.
  *
