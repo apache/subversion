@@ -123,6 +123,11 @@ class Generator(gen_win.WinGeneratorBase):
     # because we need them already assigned on the dependencies for
     # each target we work with.
     for target in install_targets:
+      # These aren't working yet
+      if isinstance(target, gen_base.TargetScript)      \
+         or isinstance(target, gen_base.TargetExternal) \
+         or isinstance(target, gen_base.TargetSWIG):
+        continue    
       guids[target.name] = self.makeguid(target.name)
 
     self.gen_proj_names(install_targets)
