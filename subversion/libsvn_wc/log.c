@@ -1347,7 +1347,7 @@ svn_wc_cleanup (const char *path,
   if (wc_format_version == 0)
     return svn_error_createf
       (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-       "svn_wc_cleanup: %s is not a working copy directory", path);
+       "svn_wc_cleanup: '%s' is not a working copy directory", path);
 
   /* Lock this working copy directory, or steal an existing lock */
   SVN_ERR (svn_wc__adm_steal_write_lock (&adm_access, optional_adm_access, 

@@ -1090,7 +1090,7 @@ add_or_open_file (const char *path,
   if (! is_wc)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       "add_or_open_file: %s is not a working copy directory",
+       "add_or_open_file: '%s' is not a working copy directory",
        pb->path);
 
   /* ### todo:  right now the incoming copyfrom* args are being
