@@ -84,6 +84,9 @@ Package=<4>
     Project_Dep_Name tests_libsvn_delta_diff3
     End Project Dependency
     Begin Project Dependency
+    Project_Dep_Name tests_libsvn_delta_diff_diff3
+    End Project Dependency
+    Begin Project Dependency
     Project_Dep_Name tests_libsvn_fs_skel
     End Project Dependency
     Begin Project Dependency
@@ -679,6 +682,18 @@ Package=<4>
 ###############################################################################
 
 Project: "tests_libsvn_delta_diff3"=.\subversion\tests\libsvn_delta\diff3_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_delta_diff_diff3"=.\subversion\tests\libsvn_delta\diff_diff3_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{

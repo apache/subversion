@@ -53,7 +53,7 @@ BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386
+# ADD BASE LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib rpcrt4.lib /nologo /dll /machine:I386
 # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ..\..\..\httpd-2.0\Release\libhttpd.lib ..\..\..\httpd-2.0\srclib\apr\Release\libapr.lib ..\..\..\httpd-2.0\srclib\apr-util\Release\libaprutil.lib ..\..\..\httpd-2.0\modules\dav\main\Release\mod_dav.lib ..\..\db4-win32\lib\libdb40.lib ..\..\apr-util\xml\expat\lib\LibR\xml.lib /nologo /dll /machine:I386 /out:"Release/mod_dav_svn.so"
 
 !ELSEIF  "$(CFG)" == "mod_dav_svn - Win32 Debug"
@@ -80,7 +80,7 @@ BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
+# ADD BASE LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib rpcrt4.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
 # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ..\..\..\httpd-2.0\Debug\libhttpd.lib ..\..\..\httpd-2.0\srclib\apr\Debug\libapr.lib ..\..\..\httpd-2.0\srclib\apr-util\Debug\libaprutil.lib ..\..\..\httpd-2.0\modules\dav\main\Debug\mod_dav.lib ..\..\db4-win32\lib\libdb40d.lib ..\..\apr-util\xml\expat\lib\LibD\xml.lib /nologo /dll /debug /machine:I386 /out:"Debug/mod_dav_svn.so" /pdbtype:sept
 
 !ENDIF 
@@ -154,6 +154,23 @@ SOURCE=.\dav_svn.h
 # Begin Group "Source Files - libsvn_subr"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
+# Begin Source File
+
+SOURCE=..\libsvn_subr\cmdline.c
+
+!IF  "$(CFG)" == "mod_dav_svn - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\libsvn_subr"
+# ADD CPP /I "..\libsvn_subr" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\..\httpd-2.0\srclib\apr-util\xml\expat\lib" /I "..\include" /I "..\.."
+
+!ELSEIF  "$(CFG)" == "mod_dav_svn - Win32 Debug"
+
+# PROP Intermediate_Dir "Debug\obj\libsvn_subr"
+# ADD CPP /I "..\libsvn_subr" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\..\httpd-2.0\srclib\apr-util\xml\expat\lib" /I "..\include" /I "..\.."
+
+!ENDIF 
+
+# End Source File
 # Begin Source File
 
 SOURCE=..\libsvn_subr\config.c
@@ -1023,6 +1040,23 @@ SOURCE="..\libsvn_fs\bdb\txn-table.c"
 !ENDIF 
 
 # End Source File
+# Begin Source File
+
+SOURCE="..\libsvn_fs\bdb\uuids-table.c"
+
+!IF  "$(CFG)" == "mod_dav_svn - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\libsvn_fs\bdb"
+# ADD CPP /I "..\libsvn_fs" /I "..\..\db4-win32\include" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\..\httpd-2.0\srclib\apr-util\xml\expat\lib" /I "..\include" /I "..\.."
+
+!ELSEIF  "$(CFG)" == "mod_dav_svn - Win32 Debug"
+
+# PROP Intermediate_Dir "Debug\obj\libsvn_fs\bdb"
+# ADD CPP /I "..\libsvn_fs" /I "..\..\db4-win32\include" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\..\httpd-2.0\srclib\apr-util\xml\expat\lib" /I "..\include" /I "..\.."
+
+!ENDIF 
+
+# End Source File
 # End Group
 # Begin Source File
 
@@ -1203,6 +1237,22 @@ SOURCE=..\libsvn_fs\tree.c
 # Begin Source File
 
 SOURCE=..\libsvn_fs\txn.c
+
+!IF  "$(CFG)" == "mod_dav_svn - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\libsvn_fs"
+# ADD CPP /I "..\libsvn_fs" /I "..\..\db4-win32\include" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\..\httpd-2.0\srclib\apr-util\xml\expat\lib" /I "..\include" /I "..\.."
+
+!ELSEIF  "$(CFG)" == "mod_dav_svn - Win32 Debug"
+
+# ADD CPP /I "..\..\db4-win32\include" /I "..\libsvn_fs" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\..\httpd-2.0\srclib\apr-util\xml\expat\lib" /I "..\include" /I "..\.."
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\libsvn_fs\uuid.c
 
 !IF  "$(CFG)" == "mod_dav_svn - Win32 Release"
 

@@ -14,6 +14,7 @@ tests = ['subversion/tests/libsvn_subr/hashdump-test.exe',
          'subversion/tests/libsvn_subr/stream-test.exe',
          'subversion/tests/libsvn_subr/time-test.exe',
          'subversion/tests/libsvn_wc/translate-test.exe',
+         'subversion/tests/libsvn_delta/diff-diff3-test.exe',
          'subversion/tests/libsvn_delta/random-test.exe',
          'subversion/tests/libsvn_subr/target-test.py']
 
