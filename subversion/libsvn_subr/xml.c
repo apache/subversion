@@ -63,8 +63,38 @@
 static svn_string_t *
 escape_string (svn_string_t *string, apr_pool_t *pool)
 {
-  /* kff todo: do real quoting soon. */
-  return svn_string_dup (string, pool);
+  const char *start = string->data, *end = start + string->len;
+  const char *p = start, *q;
+  svn_string_t *newstr;
+
+  newstr = svn_string_create ("", pool);
+  p = start;
+  while (1)
+    {
+      /* Find a character which needs to be quoted and append bytes up
+         to that point.  Strictly speaking, '>' only needs to be
+         quoted if it follows "]]", but it's easier to quote it all
+         the time.  */
+      q = p;
+      while (q < end && *q != '&' && *q != '<' && *q != '>')
+        q++;
+      svn_string_appendbytes (newstr, p, q - p, pool);
+
+      /* We may already be a winner.  */
+      if (q == end)
+        break;
+
+      /* Append the entity reference for the character.  */
+      if (*q == '&')
+        svn_string_appendcstr (newstr, "&amp;", pool);
+      else if (*q == '<')
+        svn_string_appendcstr (newstr, "&lt;", pool);
+      else if (*q == '>')
+        svn_string_appendcstr (newstr, "&gt;", pool);
+
+      p = q + 1;
+    }
+  return newstr;
 }
 
 
