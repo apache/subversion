@@ -209,13 +209,119 @@ typedef int svn_boolean_t;
 #endif /* FALSE */
 
 
-/* temporary placeholders, till we write the real thing!  */
-typedef unsigned long                 svn_token_t;
-typedef int                           svn_skelta_t;
-typedef int                           svn_delta_t;
-typedef int                           svn_diff_t;
+typedef unsigned long svn_token_t;
 
 
+
+/* ******** Deltas and friends. ******** */
+
+/* These are the in-memory tree deltas; you can convert them to and
+ * from XML.
+ * 
+ * The XML representation has certain space optimizations.  For
+ * example, if an ancestor is omitted, it means the same path at the
+ * same version (taken from the surrounding delta context).  We may
+ * well decide to use corresponding optimizations here -- an absent
+ * svn_ancestor_t object means use the path and ancestor from the
+ * delta, etc -- or we may not.  In any case it doesn't affect the
+ * definitions of these data structures.  However, once we do know
+ * what interpretive conventions we're using in code, we should
+ * probably record them here.
+ */
+
+/* todo: We'll need a way to stream these, so when you do a checkout
+ * of comp-tools, the client doesn't wait for an entire 200 meg tree
+ * delta to arrive before doing anything.
+ * 
+ * Proposal:
+ * 
+ * A caller (say, the working copy library) is given the tree delta as
+ * soon as there is at least one svn_change_t in its list ready to
+ * use.  The callee may continue to append svn_change_t objects to the
+ * list even while the caller is using the ones already there.  The
+ * callee signals that it is done by adding a change of the special
+ * type `done' (see the enumeration `svn_change_action_t' below).
+ *
+ * Since the caller can tell by inspection whether or not it's done
+ * yet, the callee could tack on new change objects in an unscheduled
+ * fashion (i.e., as a separate thread), or the caller could make an
+ * explicit call each time it finishes available changes.  Either way
+ * works; the important thing is to give the network time to catch up.
+ */
+
+typedef size_t svn_version_t;   /* Would they ever need to be signed? */
+typedef int pdelta_t;           /* todo: for now */
+typedef int vdelta_t;           /* todo: for now */
+
+typedef enum { 
+  delete_action = 1,      /* Delete the file or directory. */
+  new_action,             /* Create a new file or directory. */
+  replace_action,         /* Commit to an existing file or directory. */
+  changes_done            /* End of change chain -- no more action. */
+} svn_change_action_t;
+
+typedef enum { 
+  file_type = 1,
+  directory_type
+} svn_change_content_type_t;
+
+
+/* Change content is delta(s) against ancestors.  This is one kind of delta. */
+typedef struct svn_pdelta_t {
+  int todo;
+} svn_pdelta_t;
+
+
+/* Change content is delta(s) against ancestors.  This is one kind of delta. */
+typedef struct svn_vdelta_t {
+  int todo;
+} svn_vdelta_t;
+
+
+/* Change content is delta(s) against ancestors.  This is an ancestor. */
+typedef struct svn_ancestor_t
+{
+  svn_string_t *path;
+  svn_version_t version;
+  svn_boolean_t new;
+} svn_ancestor_t;
+
+
+/* A change is an action and some content.  This is the content. */
+typedef struct svn_change_content_t
+{
+  svn_change_content_type_t type;   /* One of the enumerated values. */
+  svn_ancestor_t *ancestor;         /* "Hoosier paw?!" */
+  svn_pdelta_t *pdelta;             /* Change to property list, or NULL. */
+  svn_vdelta_t *vdelta;             /* Change to file contents, or NULL. */
+} svn_change_content_t;
+
+
+/* A tree delta is a list of changes.  This is a change. */
+typedef struct svn_change_t
+{
+  svn_change_action_t action;     /* One of the enumerated values. */
+  svn_string_t *new_name;         /* Only for `new' and `replace'. */
+  svn_change_content_t *content;
+  struct svn_change_t *next;      /* Next one in the list, or NULL. */
+} svn_change_t;
+
+
+/* This is a tree delta. */
+typedef struct svn_delta_t
+{
+  svn_version_t version;       /* Directory to which this delta applies */
+  svn_string_t *source_root;   /* Indicates a particular version of... */
+  svn_string_t *source_dir;    /* ...this, which we're modifying to yield... */
+  svn_string_t *target_dir;    /* ...the directory we're constructing. */
+} svn_delta_t;
+
+
+/* A skelta is just a tree delta with empty pdeltas and vdeltas. */
+typedef svn_delta_t svn_skelta_t;
+
+/* A line-based diff is just a huge wad of text. */
+typedef svn_string_t svn_diff_t;
 
 #endif  /* __SVN_TYPES_H__ */
 
