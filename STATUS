@@ -141,10 +141,7 @@ Bindings changes that don't affect the build system:
     * r8398, r8432
      Use LIBS rather than OTHERLDFLAGS in Makefile.PL.
      Votes:
-      +1: epg
-     Invalidated by r8432:
-      -1: breser (See http://marc.theaimsgroup.com/?l=subversion-dev&m=107471006923406&w=2
-                  MSGID: 20040121183409.GC25614@occipital.brain.org)
+      +1: epg, breser
 
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
