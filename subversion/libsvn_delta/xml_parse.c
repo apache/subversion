@@ -1,5 +1,5 @@
 /*
- * delta_parse.c:  parse an Subversion "tree-delta" XML stream
+ * xml_parse.c:  parse an Subversion "tree-delta" XML stream
  *
  * ================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
