@@ -32,18 +32,22 @@ struct dag_node_t
   /* The filesystem this dag node came from. */
   svn_fs_t *fs;
 
-  /* The node revision ID for this dag node.  */
+  /* The pool in which this dag_node_t was allocated.  Unlike
+     filesystem and root pools, this is not a private pool for this
+     structure!  The caller may have allocated other objects of their
+     own in it.  */
+  apr_pool_t *pool;
+
+  /* The node revision ID for this dag node, allocated in POOL.  */
   svn_fs_id_t *id;
 
   /* The node's NODE-REVISION skel.  
      jimb todo: the contents of mutable nodes could be changed by
      other processes, so we should fetch them afresh within each
-     trail.  */
+     trail. 
+     jimb todo: What pool is this allocated in?  Chaos!  */
   skel_t *contents;
 
-  /* The transaction trail pool in which this dag_node_t was
-     allocated. */
-  apr_pool_t *pool;
 };
 
 
