@@ -892,27 +892,27 @@ check_adm_exists (svn_boolean_t *exists,
                                   _("No entry for '%s'"),
                                   svn_path_local_style (path, pool));
 
-      /* When the directory exists and is scheduled for deletion do not
-       * check the revision or the URL.  The revision can be any 
-       * arbitrary revision and the URL may differ if the add is
-       * being driven from a merge which will have a different URL. */
-      if (entry->schedule != svn_wc_schedule_delete)
-        {
-          if (entry->revision != revision)
-            return
-              svn_error_createf
-              (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-               _("Revision %ld doesn't match existing revision %ld in '%s'"),
-               revision, entry->revision, path);
+      /* The revisions must match except when adding a directory with a
+         name that matches a directory scheduled for deletion. That's
+         because the deleted directory's administrative dir will still be
+         in place but will have an arbitrary revision. */
+      if (entry->revision != revision
+          && !(entry->schedule == svn_wc_schedule_delete && revision == 0))
+        return
+          svn_error_createf
+          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+           _("Revision %ld doesn't match existing revision %ld in '%s'"),
+           revision, entry->revision,
+           svn_path_local_style (path, pool));
 
-          /** ### comparing URLs, should they be canonicalized first? */
-          if (strcmp (entry->url, url) != 0)
-            return
-              svn_error_createf
-              (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-               _("URL '%s' doesn't match existing URL '%s' in '%s'"),
-               url, entry->url, path);
-	}
+      /** ### comparing URLs, should they be canonicalized first? */
+      if (strcmp (entry->url, url) != 0)
+        return
+          svn_error_createf
+          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+           _("URL '%s' doesn't match existing URL '%s' in '%s'"),
+           url, entry->url,
+           svn_path_local_style (path, pool));
     }
 
   *exists = wc_exists;
