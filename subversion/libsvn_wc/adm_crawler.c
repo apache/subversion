@@ -1002,29 +1002,39 @@ report_local_mods (svn_string_t *path,
   /**                                                           **/
   /** Cleanup -- ready to "pop up" a level in the working copy. **/
   /**                                                           **/
-  
-  /* If the current dir (or any of its children) reported changes to
-     the editor, then we must remember to close the current dir baton. */
-  if ((*stack)->baton)
+
+  /* If we only committed one file in this dir, do *not* close the
+     directory baton or pop the current stackframe.  We may be
+     entering in here again in just a minute, attempting to commit a
+     sibling file.  */
+  if (filename)
     {
-      err = editor->close_directory ((*stack)->baton);
-      if (err) return err;
+      svn_pool_destroy (subpool);
+      return SVN_NO_ERROR;
     }
+  
+  else  /* We're finishing a level of recursive descent. */ 
+    {
+      /* If the current dir (or any of its children) reported changes to
+         the editor, then we must close the current dir baton. */
+      if ((*stack)->baton)
+        SVN_ERR (editor->close_directory ((*stack)->baton));
+      
+      /* If stack has no previous pointer, then we'd be removing the base
+         stackframe.  We don't want to do this, however;
+         svn_wc_crawl_local_mods() needs to examine it to determine if any
+         changes were ever made at all. */
+      if (! (*stack)->previous)
+        return SVN_NO_ERROR;
+  
+      /* Discard top of stack */
+      pop_stack (stack);
+      
+      /* Free all memory used when processing this subdir. */
+      svn_pool_destroy (subpool);
 
-  /* If stack has no previous pointer, then we'd be removing the base
-     stackframe.  We don't want to do this, however;
-     svn_wc_crawl_local_mods() needs to examine it to determine if any
-     changes were ever made at all. */
-  if (! (*stack)->previous)
-    return SVN_NO_ERROR;
-
-  /* Discard top of stack */
-  pop_stack (stack);
-
-  /* Free all memory used when processing this subdir. */
-  svn_pool_destroy (subpool);
-
-  return SVN_NO_ERROR;
+      return SVN_NO_ERROR;
+    }
 }
 
 
@@ -1300,7 +1310,24 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
              directory batons will be automatically generated as needed
              and stored in the stack.  File batons for postfix textdeltas
              will be continually added to AFFECTED_TARGETS, and locked
-             directories will be appended to LOCKED_DIRS. */
+             directories will be appended to LOCKED_DIRS. 
+
+             For the perplexed:  here is the behavior that this
+             routine believes report_local_mods() will follow:
+
+               IF COMMITTING A DIR TARGET:
+                   1. the target dir will be pushed onto the stack
+                   2. after recursing, the target dir will be 'closed'.
+                   3. the target dir will be popped from the stack.
+
+               IF COMMITTING A FILE TARGET:
+                   1. no stackframe will be pushed.  (the file's
+                      parent is already on the stack).
+                   2. no dir_batons will be closed at all (in case we
+                      need to commit more files in this parent.)
+                   3. no stackframe will be popped.
+
+          */
           err = report_local_mods (filename ? ptarget : target,
                                    stack->baton, filename,
                                    edit_fns, edit_baton,
@@ -1320,13 +1347,8 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
       SVN_ERR (do_dir_closures (parent_dir, &stack, edit_fns));
 
       /* Don't forget to close the root-dir baton on the bottom
-         stackframe, if one exists. 
-         
-         Note that if we only had one target (which *must* have been a
-         file, see earlier comment), then report_local_mods() has
-         already closed the directory on the stack.  Check for this
-         case. */
-      if ((stack->baton) && (condensed_targets->nelts != 1))
+         stackframe, if one exists. */
+      if (stack->baton)        
         SVN_ERR (edit_fns->close_directory (stack->baton));
 
     }  /* End of multi-target section */
