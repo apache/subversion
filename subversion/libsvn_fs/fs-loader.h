@@ -20,6 +20,7 @@
 #ifndef LIBSVN_FS_FS_H
 #define LIBSVN_FS_FS_H
 
+#include "svn_version.h"
 #include "svn_fs.h"
 
 #ifdef __cplusplus
@@ -56,14 +57,11 @@ extern "C" {
 
 /*** Top-level library vtable type ***/
 
-/* This number will change when the ABI between the loader library and
-   FS modules changes incompatibly, to make sure that old FS modules
-   don't get accidently linked into a newer version of Subversion, or
-   vice versa. */
-#define FS_ABI_VERSION 1
-
 typedef struct fs_library_vtable_t
 {
+  /* This field should always remain first in the vtable. */
+  const svn_version_t *(*get_version) (void);
+
   svn_error_t *(*create) (svn_fs_t *fs, const char *path, apr_pool_t *pool);
   svn_error_t *(*open) (svn_fs_t *fs, const char *path, apr_pool_t *pool);
   svn_error_t *(*delete_fs) (const char *path, apr_pool_t *pool);
@@ -90,15 +88,22 @@ typedef struct fs_library_vtable_t
 } fs_library_vtable_t;
 
 /* This is the type of symbol an FS module defines to fetch the
-   library vtable. */
-typedef svn_error_t *(*fs_init_func_t) (fs_library_vtable_t **vtable,
-                                        int abi_version);
+   library vtable. The LOADER_VERSION parameter must remain first in
+   the list, and the function must use the C calling convention on all
+   platforms, so that the init functions can safely read the version
+   parameter.
+
+   ### need to force this to be __cdecl on Windows... how?? */
+typedef svn_error_t *(*fs_init_func_t) (const svn_version_t *loader_version,
+                                        fs_library_vtable_t **vtable);
 
 /* Here are the declarations for the FS module init functions.  If we
    are using DSO loading, they won't actually be linked into
    libsvn_fs. */
-svn_error_t *svn_fs_base__init (fs_library_vtable_t **vtable, int abi_version);
-svn_error_t *svn_fs_fs__init (fs_library_vtable_t **vtable, int abi_version);
+svn_error_t *svn_fs_base__init (const svn_version_t *loader_version,
+                                fs_library_vtable_t **vtable);
+svn_error_t *svn_fs_fs__init (const svn_version_t *loader_version,
+                              fs_library_vtable_t **vtable);
 
 
 

@@ -110,6 +110,8 @@ get_library_vtable (fs_library_vtable_t **vtable, const char *fs_type,
   const struct fs_type_defn *fst;
   const char *fsap_name;
   fs_init_func_t initfunc = NULL;
+  const svn_version_t *my_version = svn_fs_version();
+  const svn_version_t *fs_version;
 
   for (fst = fs_modules; fst->fs_type; fst++)
     {
@@ -129,7 +131,19 @@ get_library_vtable (fs_library_vtable_t **vtable, const char *fs_type,
     return svn_error_createf (SVN_ERR_FS_UNKNOWN_FS_TYPE, NULL,
                               _("Unknown FS type '%s'"), fs_type);
 
-  return initfunc (vtable, FS_ABI_VERSION);
+  SVN_ERR (initfunc (my_version, vtable));
+  fs_version = (*vtable)->get_version();
+  if (!svn_ver_compatible (my_version, fs_version))
+    return svn_error_createf (SVN_ERR_VERSION_MISMATCH, NULL,
+                              _("Mismatched FS module version for '%s':"
+                                " found %d.%d.%d%s,"
+                                " expected %d.%d.%d%s"),
+                              fs_type,
+                              my_version->major, my_version->minor,
+                              my_version->patch, my_version->tag,
+                              fs_version->major, fs_version->minor,
+                              fs_version->patch, fs_version->tag);
+  return SVN_NO_ERROR;
 }
 
 /* Fetch the library vtable for an existing FS. */

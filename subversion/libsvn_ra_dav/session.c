@@ -33,6 +33,7 @@
 #include "svn_error.h"
 #include "svn_ra.h"
 #include "svn_config.h"
+#include "svn_delta.h"
 #include "svn_version.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
@@ -832,6 +833,11 @@ static svn_error_t *svn_ra_dav__do_get_uuid(void *session_baton,
 }
 
 
+static const svn_version_t *
+ra_dav_version (void)
+{
+  SVN_VERSION_BODY;
+}
 
 static const svn_ra_plugin_t dav_plugin = {
   "ra_dav",
@@ -854,7 +860,8 @@ static const svn_ra_plugin_t dav_plugin = {
   svn_ra_dav__do_get_uuid,
   svn_ra_dav__get_repos_root,
   svn_ra_dav__get_locations,
-  svn_ra_dav__get_file_revs
+  svn_ra_dav__get_file_revs,
+  ra_dav_version
 };
 
 
@@ -862,18 +869,26 @@ svn_error_t *svn_ra_dav_init(int abi_version,
                              apr_pool_t *pconf,
                              apr_hash_t *hash)
 {
+  static const svn_version_checklist_t checklist[] =
+    {
+      { "svn_subr",  svn_subr_version },
+      { "svn_delta", svn_delta_version },
+      { NULL, NULL }
+    };
+
   if (abi_version < 1
       || abi_version > SVN_RA_ABI_VERSION)
     return svn_error_createf (SVN_ERR_RA_UNSUPPORTED_ABI_VERSION, NULL,
                               _("Unsupported RA plugin ABI version (%d) "
                                 "for ra_dav"), abi_version);
+  SVN_ERR(svn_ver_check_list(ra_dav_version(), checklist));
 
   apr_hash_set (hash, "http", APR_HASH_KEY_STRING, &dav_plugin);
 
   if (ne_supports_ssl())
     {
       /* Only add this if neon is compiled with SSL support. */
-      apr_hash_set (hash, "https", APR_HASH_KEY_STRING, &dav_plugin);
+      apr_hash_set(hash, "https", APR_HASH_KEY_STRING, &dav_plugin);
     }
 
   return SVN_NO_ERROR;
