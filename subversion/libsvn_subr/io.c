@@ -99,7 +99,7 @@
 static svn_error_t *
 io_check_path (const char *path,
                svn_boolean_t resolve_symlinks,
-               svn_boolean_t expand_special,
+               svn_boolean_t *is_special_p,
                svn_node_kind_t *kind,
                apr_pool_t *pool)
 {
@@ -107,6 +107,7 @@ io_check_path (const char *path,
   apr_finfo_t finfo;
   apr_status_t apr_err;
   const char *path_apr;
+  svn_boolean_t is_special = FALSE;
 
   /* Make path appropriate for error messages in advance. */
   path = svn_path_local_style (path, pool);
@@ -117,7 +118,7 @@ io_check_path (const char *path,
 
   flags = resolve_symlinks ? APR_FINFO_MIN : (APR_FINFO_MIN | APR_FINFO_LINK);
   apr_err = apr_stat (&finfo, path_apr, flags, pool);
-
+  
   if (APR_STATUS_IS_ENOENT (apr_err))
     *kind = svn_node_none;
   else if (APR_STATUS_IS_ENOTDIR (apr_err))
@@ -131,10 +132,15 @@ io_check_path (const char *path,
   else if (finfo.filetype == APR_DIR)
     *kind = svn_node_dir;
   else if (finfo.filetype == APR_LNK)
-    *kind = expand_special ? svn_node_special : svn_node_file;
+    {
+      is_special = TRUE;
+      *kind = svn_node_file;
+    }
   else
     *kind = svn_node_unknown;
 
+  *is_special_p = is_special;
+  
   return SVN_NO_ERROR;
 }
 
@@ -144,7 +150,8 @@ svn_io_check_resolved_path (const char *path,
                             svn_node_kind_t *kind,
                             apr_pool_t *pool)
 {
-  return io_check_path (path, TRUE, FALSE, kind, pool);
+  svn_boolean_t ignored;
+  return io_check_path (path, TRUE, &ignored, kind, pool);
 }
 
 svn_error_t *
@@ -152,15 +159,17 @@ svn_io_check_path (const char *path,
                    svn_node_kind_t *kind,
                    apr_pool_t *pool)
 {
-  return io_check_path (path, FALSE, FALSE, kind, pool);
+  svn_boolean_t ignored;
+  return io_check_path (path, FALSE, &ignored, kind, pool);
 }
 
 svn_error_t *
 svn_io_check_special_path (const char *path,
                            svn_node_kind_t *kind,
+                           svn_boolean_t *is_special,
                            apr_pool_t *pool)
 {
-  return io_check_path (path, FALSE, TRUE, kind, pool);
+  return io_check_path (path, FALSE, is_special, kind, pool);
 }
 
 svn_error_t *

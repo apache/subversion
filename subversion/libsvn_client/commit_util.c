@@ -190,6 +190,7 @@ harvest_committables (apr_hash_t *committables,
   const char *cf_url = NULL;
   svn_revnum_t cf_rev = entry->copyfrom_rev;
   const svn_string_t *propval;
+  svn_boolean_t is_special;
 
   /* Early out if the item is already marked as committable. */
   if (look_up_committable (committables, path, pool))
@@ -211,12 +212,11 @@ harvest_committables (apr_hash_t *committables,
     return svn_error_createf
       (SVN_ERR_NODE_UNKNOWN_KIND, NULL, _("Unknown entry kind for '%s'"), path);
 
-  SVN_ERR (svn_io_check_special_path (path, &kind, pool));
+  SVN_ERR (svn_io_check_special_path (path, &kind, &is_special, pool));
 
   if ((kind != svn_node_file)
       && (kind != svn_node_dir)
-      && (kind != svn_node_none)
-      && (kind != svn_node_special))
+      && (kind != svn_node_none))
     {
       return svn_error_createf
         (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
@@ -230,7 +230,7 @@ harvest_committables (apr_hash_t *committables,
 
   if ((entry->kind == svn_node_file)
       && (! propval)
-      && (kind == svn_node_special))
+      && (is_special))
     {
       return svn_error_createf
         (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,

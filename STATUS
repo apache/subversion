@@ -82,14 +82,6 @@ Candidate changes:
       +0: breser (without r10517)
       +0: kfogel (with r10517, since r10505 is now approved)
 
-  * r10505
-    Remove 'svn_node_special' from svn_node_kind_t.
-    Justification:
-      A simple API clensing; we don't want svn 1.1 to have this
-      junk.  If it does, we'll have to support it until 2.0.
-    Votes:
-      +1: sussman, ghudson, cmpilato
-
   * r10528
      Fix bug in overzealous out-of-dateness commit checks.
      (Allows 'svn cp wc URL' to work correctly. (issue #1994))

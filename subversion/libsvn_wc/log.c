@@ -437,15 +437,18 @@ log_do_file_timestamp (struct log_runner *loggy,
 
   const char *timestamp_string
     = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_TIMESTAMP, atts);
+  svn_boolean_t is_special;
+  
   if (! timestamp_string)
     return svn_error_createf (pick_error_code (loggy), NULL,
                               _("Missing 'timestamp' attribute in '%s'"),
                               svn_wc_adm_access_path (loggy->adm_access));
 
   /* Do not set the timestamp on special files. */
-  SVN_ERR (svn_io_check_special_path (full_path, &kind, loggy->pool));
+  SVN_ERR (svn_io_check_special_path (full_path, &kind, &is_special,
+                                      loggy->pool));
   
-  if (kind != svn_node_special)
+  if (! is_special)
     {
       SVN_ERR (svn_time_from_cstring (&timestamp, timestamp_string,
                                       loggy->pool));

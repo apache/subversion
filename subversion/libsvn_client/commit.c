@@ -173,14 +173,15 @@ import_file (const svn_delta_editor_t *editor,
   apr_hash_t* properties;
   apr_hash_index_t *hi;
   svn_node_kind_t kind;
+  svn_boolean_t is_special;
 
   /* Add the file, using the pool from the FILES hash. */
   SVN_ERR (editor->add_file (edit_path, dir_baton, NULL, SVN_INVALID_REVNUM, 
                              pool, &file_baton));
 
-  SVN_ERR (svn_io_check_special_path (path, &kind, pool));
+  SVN_ERR (svn_io_check_special_path (path, &kind, &is_special, pool));
 
-  if (kind != svn_node_special)
+  if (! is_special)
     {
       /* add automatic properties */
       SVN_ERR (svn_client__get_auto_props (&properties, &mimetype, path, ctx,
@@ -214,7 +215,7 @@ import_file (const svn_delta_editor_t *editor,
   /* If this is a special file, we need to set the svn:special
      property and create a temporary detranslated version in order to
      send to the server. */
-  if (kind == svn_node_special)
+  if (is_special)
     {
       apr_hash_set (properties, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING,
                     svn_string_create (SVN_PROP_SPECIAL_VALUE, pool));

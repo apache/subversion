@@ -206,6 +206,7 @@ add_file (const char *path,
   apr_hash_index_t *hi;
   const char *mimetype;
   svn_node_kind_t kind;
+  svn_boolean_t is_special;
 
   /* add the file */
   SVN_ERR (svn_wc_add (path, adm_access, NULL, SVN_INVALID_REVNUM,
@@ -213,9 +214,9 @@ add_file (const char *path,
                        NULL, NULL, pool));
 
   /* Check to see if this is a special file. */
-  SVN_ERR (svn_io_check_special_path (path, &kind, pool));
+  SVN_ERR (svn_io_check_special_path (path, &kind, &is_special, pool));
 
-  if (kind == svn_node_special)
+  if (is_special)
     {
       /* This must be a special file. */
       SVN_ERR (svn_wc_prop_set (SVN_PROP_SPECIAL,
