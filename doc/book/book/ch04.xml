@@ -157,7 +157,7 @@
         new directory,
         <filename>/calc/branches/my-calc-branch</filename>, which
         begins its life as a copy of
-        <filename>/calc/trunk</filename>. </para>
+        <filename>/calc/trunk</filename>.</para>
 
       <para>There are two different ways to make a copy.  We'll
         demonstrate the messy way first, just to make the concept
@@ -271,7 +271,7 @@ Committed revision 341.
           sharing data are hidden from the user, who simply sees
           copies of trees.  The main point here is that copies are
           cheap, both in time and space.  Make branches as often as
-          you want. </para>
+          you want.</para>
       </sidebar>
 
     </sect2>
@@ -675,7 +675,7 @@ done
       <para>If you want changes applied somewhere else, you'll
         need to say so.  For example, if you're sitting in the parent
         directory of your working copy, you'll have to specify the
-        target directory to receive the changes: </para>
+        target directory to receive the changes:</para>
       
 <screen>
 $ svn merge -r 343:344 http://svn.example.com/repos/calc/trunk my-calc-branch
@@ -893,7 +893,7 @@ $ svn status
         that you've finished working on your private branch; the
         feature or bugfix is finally complete, and now you want to
         merge all of your branch changes back into the trunk for
-        others to enjoy.  </para>
+        others to enjoy.</para>
 
       <para>So how do we use <command>svn merge</command> in this
         scenario?  Remember that this command compares two trees, and

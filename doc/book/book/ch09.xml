@@ -98,7 +98,7 @@ $ svn status -v myfile
           <listitem>
             <para>Goes through all the motions of running a command,
               but makes no actual changes&mdash;either on disk or in
-              the repository. </para>
+              the repository.</para>
           </listitem>
         </varlistentry>
       
@@ -1394,7 +1394,7 @@ D         over-there
           <variablelist>
 
             <varlistentry>
-              <term><command>--revision N:M</command></term>
+              <term><option>--revision N:M</option></term>
               <listitem>
                 <para>The server compares
                 <replaceable>TARGET</replaceable>@<replaceable>N</replaceable>
@@ -1404,7 +1404,7 @@ D         over-there
             </varlistentry>
 
             <varlistentry>
-              <term><command>--revision N</command></term>
+              <term><option>--revision N</option></term>
               <listitem>
                 <para>The client compares
                   <replaceable>TARGET</replaceable>@<replaceable>N</replaceable>
@@ -1413,7 +1413,7 @@ D         over-there
             </varlistentry>
 
             <varlistentry>
-              <term><command>(no --revision)</command></term>
+              <term>(no <option>--revision</option>)</term>
               <listitem>
                 <para>The client compares base and working copies of
                   <replaceable>TARGET</replaceable>.</para>
@@ -2536,7 +2536,7 @@ D         foo.c
 </screen>
 
           <para>Move a file in the repository (an immediate commit,
-            so it requires a commit message): </para>
+            so it requires a commit message):</para>
 
           <screen>
 $ svn move -m "Move a file" http://svn.red-bean.com/repos/foo.c \
@@ -2941,8 +2941,8 @@ property 'owner' set on 'foo.c'
 
           <para>If you made a mistake in a log message for a
             particular revision and want to change it, use
-            <option>--revprop</option> and set svn:log to the new
-            log message:</para>
+            <option>--revprop</option> and set <literal>svn:log</literal>
+            to the new log message:</para>
 
           <screen>
 $ svn propset --revprop -r 25 svn:log "Journaled about trip to New York."
@@ -3239,7 +3239,7 @@ $ svn status
               <term>'I'</term>
               <listitem>
                 <para>Item is being ignored (e.g. with the 
-                  svn:ignore property).</para>
+                  <literal>svn:ignore</literal> property).</para>
               </listitem>
             </varlistentry>
 
@@ -3985,7 +3985,7 @@ $ svnadmin create /usr/local/svn/repos --fs-type fsfs
             given, dump all revision trees.  If only
             <replaceable>LOWER</replaceable> is given, dump that one
             revision tree.  See <xref linkend="svn-ch-5-sect-3.5"/>
-            for a practical use. </para>
+            for a practical use.</para>
             </refsect1>
         <refsect1>
           <title>Switches</title>
@@ -4014,7 +4014,7 @@ Content-length: 56
 </screen>
 
           <para>Incrementally dump a single transaction from your
-            repository: </para>
+            repository:</para>
 
           <screen>
 $ svnadmin dump /usr/local/svn/repos -r 21 --incremental 
@@ -4072,7 +4072,7 @@ Content-length: 101
           <para>This subcommand makes a full <quote>hot</quote> backup
           of your repository, including all hooks, configuration
           files, and, of course, database files.  If you pass the
-          <literal>--clean-logs</literal> switch,
+          <option>--clean-logs</option> switch,
           <command>svnadmin</command> will perform a hotcopy of your
           repository, and then remove unused Berkeley DB logs from the
           original repository.  You can run this command at any time and make
@@ -4518,7 +4518,7 @@ $ svnadmin verify /usr/local/svn/repos/
             (<option>-t</option>)</term>
           <listitem>
             <para>Specify a particular transaction ID that you wish to
-              examine. </para>
+              examine.</para>
           </listitem>
         </varlistentry>
 
@@ -5327,7 +5327,7 @@ $ svnlook youngest /tmp/repos/
         <varlistentry>
           <term><option>--tunnel-user=NAME</option></term>
           <listitem>
-            <para>Used in conjuction with --tunnel switch; tells
+            <para>Used in conjuction with <option>--tunnel</option> switch; tells
               svnserve to assume that NAME is the authenticated user,
               rather than the UID of the svnserve process. Useful for
               users wishing to share a single system account over SSH,

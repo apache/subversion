@@ -306,7 +306,7 @@
         with locking or reserving resources, but it doesn't; it simply
         creates a private copy of the project for you.) For example,
         if you check out <filename>/calc</filename>, you will get a
-        working copy like this: </para>
+        working copy like this:</para>
 
 <screen>
 $ svn checkout http://svn.example.com/repos/calc
@@ -608,7 +608,7 @@ calc/Makefile:6
           to the repository since its working revision.  A
           <command>svn commit</command> of the file will do nothing,
           and an <command>svn update</command> of the file will do
-          nothing. </para></listitem>
+          nothing.</para></listitem>
         </varlistentry>
         
         <varlistentry>

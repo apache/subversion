@@ -597,7 +597,7 @@ collabnet = svn.collab.net
                 <filename>config</filename> file.  Lastly, don't
                 forget to set <literal>enable-auto-props</literal> to
                 <literal>yes</literal> if you want to enable
-                auto-props. </para>
+                auto-props.</para>
             </listitem>            
           </varlistentry>
 
@@ -1286,7 +1286,7 @@ $ svn status
           forgot to add to version control.</para>
 
         <para>If you want to see the ignored files, you can pass the 
-          <command>--no-ignore</command> option to Subversion:</para>
+          <option>--no-ignore</option> option to Subversion:</para>
 
 <screen>
 $ svn status --no-ignore
