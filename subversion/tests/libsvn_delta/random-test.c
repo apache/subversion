@@ -34,7 +34,7 @@
 
 /* Initialize parameters for the random tests. */
 extern int test_argc;
-extern char **test_argv;
+extern const char **test_argv;
 
 static void init_params (unsigned long *seed,
                          int *maxlen, int *iterations,
@@ -153,7 +153,7 @@ copy_tempfile (FILE *fp)
 
 
 
-svn_error_t *
+static svn_error_t *
 random_test (const char **msg,
              svn_boolean_t msg_only,
              apr_pool_t *pool)
