@@ -591,6 +591,82 @@ def inappropriate_props(sbox):
     return 1
 
 
+#----------------------------------------------------------------------
+
+# Issue #976.  When copying a file, do not determine svn:executable
+# and svn:mime-type values as though the file is brand new, instead
+# use the copied file's property values.
+
+def copy_should_use_copied_executable_and_mime_type_values(sbox):
+  "copying a file should use the original svn:executable and svn:mime-type"
+
+  # Bootstrap
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  orig_mime_type = 'image/fake_image'
+
+  # Create two paths
+  new_path1 = os.path.join(wc_dir, 'new_file1.bin')
+  new_path2 = os.path.join(wc_dir, 'new_file2.bin')
+
+  # Create the first path as a binary file.  To have svn treat the
+  # file as binary, have a 0x00 in the file.
+  svntest.main.file_append(new_path1, "binary file\000")
+  svntest.main.run_svn(None, 'add', new_path1)
+
+  # Add initial svn:mime-type to the file
+  svntest.main.run_svn(None, 'propset', 'svn:mime-type', orig_mime_type,
+                       new_path1)
+
+  # Set the svn:executable property on the file if this is a system
+  # that can handle chmod, in which case svn will turn on the
+  # executable bits on the file.  Then remove the executable bits
+  # manually on the file and see the value of svn:executable in the
+  # copied file.
+  if os.name == 'posix':
+    svntest.main.run_svn(None, 'propset', 'svn:executable', 'on', new_path1)
+    os.chmod(new_path1, 0644)
+
+  # Commit the file
+  svntest.main.run_svn(None, 'ci', '-m', 'create file and set svn:mime-type',
+                       wc_dir)
+
+  # Copy the file
+  svntest.main.run_svn(None, 'cp', new_path1, new_path2)
+
+  status = 0
+
+  # Check the svn:mime-type
+  actual_stdout, actual_stderr = svntest.main.run_svn(None,
+                                                      'pg',
+                                                      'svn:mime-type',
+                                                      new_path2)
+  expected_stdout = [orig_mime_type + '\n']
+  if actual_stdout != expected_stdout:
+    print "svn pg svn:mime-type output does not match expected."
+    print "Expected standard output: ", expected_stdout, "\n"
+    print "Actual standard output: ", actual_stdout, "\n"
+    status = 1
+
+  # Check the svn:executable value.
+  if os.name == 'posix':
+    actual_stdout, actual_stderr = svntest.main.run_svn(None,
+                                                        'pg',
+                                                        'svn:executable',
+                                                        new_path2)
+    expected_stdout = ['on\n']
+    if actual_stdout != expected_stdout:
+      print "svn pg svn:executable output does not match expected."
+      print "Expected standard output: ", expected_stdout, "\n"
+      print "Actual standard output: ", actual_stdout, "\n"
+      status = 1
+
+  return status
+
+
 ########################################################################
 # Run the tests
 
@@ -606,6 +682,7 @@ test_list = [ None,
               commit_replacement_props,
               revert_replacement_props,
               inappropriate_props,
+              copy_should_use_copied_executable_and_mime_type_values,
              ]
 
 if __name__ == '__main__':
