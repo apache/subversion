@@ -81,15 +81,20 @@ analogous to CVS/ sudirs:
        format                   /* Contains wc adm format version. */
        repository               /* Where this stuff came from. */
        entries                  /* Various adm info for each directory entry */
-       properties               /* Properties for this directory */
+       dir-props                /* Working properties for this directory */
+       dir-prop-base            /* Pristine properties for this directory */
        lock                     /* Optional, tells others this dir is busy */
        log                      /* Ops log (for rollback/crash-recovery) */
        text-base/               /* Pristine repos versions of the files... */
             foo.c
             bar.c
             baz.c
-       prop-base/               /* Pristine repos hashdumps of these files
-            foo.c                  /* Stores bar.c's file properties */
+       props/                   /* Working properties for files in this dir */
+            foo.c                  /* Stores foo.c's working properties
+            bar.c
+            baz.c
+       prop-base/               /* Pristine properties for files in this dir */
+            foo.c                  /* Stores foo.c's pristine properties */
             bar.c
             baz.c
        tmp/                     /* Local tmp area */
@@ -168,9 +173,10 @@ analogous to CVS/ sudirs:
    information about the child directory is stored in its own SVN/
    subdir.
 
-`properties'
+`dir-props'
 
-   Properties for this directory.  
+   Properties for this directory.  These are the "working" properties
+   that may be changed by the user.
 
    For now, this file is in svn hashdump format, because it's
    convenient and its performance is good enough for now.  May move to
@@ -179,6 +185,12 @@ analogous to CVS/ sudirs:
    hand its easy to parse it streamily, unlike hashdump format, which
    generally results in a complete data structure in memory before you
    can do anything at all.
+
+`dir-prop-base'
+
+  Same as `dir-props', except this is the pristine copy;  analagous to
+  the "text-base" versions of files.  The last up-to-date copy of the
+  directory's properties live here. 
 
 `lock'
 
@@ -265,6 +277,10 @@ analogous to CVS/ sudirs:
    props.  Or may store them some other way; think this will be best
    answered after having the rest of the library working.
 
+`props/'
+
+   The non-pristine (working copy) of each file's properties.  These
+   are where local modifications to properties live.
 
 ------------------------
 todo: some loose ends
