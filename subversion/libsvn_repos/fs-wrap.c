@@ -404,6 +404,7 @@ svn_error_t *
 svn_repos_fs_lock (svn_lock_t **lock,
                    svn_repos_t *repos,
                    const char *path,
+                   const char *comment,
                    svn_boolean_t force,
                    long int timeout,
                    apr_pool_t *pool)
@@ -426,7 +427,7 @@ svn_repos_fs_lock (svn_lock_t **lock,
   SVN_ERR (svn_repos__hooks_pre_lock (repos, path, username, pool));
 
   /* Lock. */
-  SVN_ERR (svn_fs_lock (lock, repos->fs, path, force,
+  SVN_ERR (svn_fs_lock (lock, repos->fs, path, comment, force,
                         timeout, pool));
 
   /* Run post-lock hook. */

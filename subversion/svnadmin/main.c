@@ -965,6 +965,7 @@ subcommand_lock (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Create the lock. */
   SVN_ERR (svn_fs_lock (&lock, fs,
                         opt_state->path_to_lock,
+                        "lock created by svnadmin",
                         0,      /* don't steal an existing lock. */
                         0,      /* no expiration time. */
                         pool));
@@ -1022,6 +1023,9 @@ subcommand_lslocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                    _("     UUID Token: %s\n"), lock->token));
       SVN_ERR (svn_cmdline_printf (pool,
                                    _("          Owner: %s\n"), lock->owner));
+      SVN_ERR (svn_cmdline_printf (pool,
+                                   _("        Comment: %s\n"),
+                                   lock->comment ? lock->comment : "none"));
       SVN_ERR (svn_cmdline_printf (pool,
                                    _("        Created: %s\n"), cr_date));
       SVN_ERR (svn_cmdline_printf (pool,

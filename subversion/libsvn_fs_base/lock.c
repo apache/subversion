@@ -36,6 +36,7 @@ static svn_error_t *
 generate_new_lock (svn_lock_t **lock_p,
                    const char *path,
                    const char *owner,
+                   const char *comment,
                    long int timeout,
                    apr_pool_t *pool)
 {
@@ -44,8 +45,8 @@ generate_new_lock (svn_lock_t **lock_p,
   svn_lock_t *lock = apr_pcalloc (pool, sizeof(*lock));
   
   lock->path = apr_pstrdup (pool, path);
-  
   lock->owner = apr_pstrdup (pool, owner);
+  lock->comment = apr_pstrdup (pool, comment);
   
   apr_uuid_get (&uuid);
   apr_uuid_format (uuid_str, &uuid);
@@ -65,6 +66,7 @@ struct lock_args
 {
   svn_lock_t **lock_p;
   const char *path;
+  const char *comment;
   svn_boolean_t force;
   long int timeout;
 };
@@ -126,7 +128,7 @@ txn_body_lock (void *baton, trail_t *trail)
 
   /* Create a new lock, and add it to the tables. */    
   SVN_ERR (generate_new_lock (&new_lock, args->path, fs_username,
-                              args->timeout, trail->pool));
+                              args->comment, args->timeout, trail->pool));
   SVN_ERR (svn_fs_bdb__lock_add (trail->fs, new_lock->token,
                                  new_lock, trail));
   SVN_ERR (svn_fs_bdb__lock_token_add (trail->fs, args->path, kind,
@@ -142,6 +144,7 @@ svn_error_t *
 svn_fs_base__lock (svn_lock_t **lock,
                    svn_fs_t *fs,
                    const char *path,
+                   const char *comment,
                    svn_boolean_t force,
                    long int timeout,
                    apr_pool_t *pool)
@@ -152,6 +155,7 @@ svn_fs_base__lock (svn_lock_t **lock,
 
   args.lock_p = lock;
   args.path = svn_fs_base__canonicalize_abspath (path, pool);
+  args.comment = comment;
   args.force =  force;
   args.timeout = timeout;
 

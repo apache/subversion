@@ -902,6 +902,7 @@ svn_error_t *svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
 svn_error_t *svn_repos_fs_lock (svn_lock_t **lock,
                                 svn_repos_t *repos,
                                 const char *path,
+                                const char *comment,
                                 svn_boolean_t force,
                                 long int timeout,
                                 apr_pool_t *pool);

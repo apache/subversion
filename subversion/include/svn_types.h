@@ -424,6 +424,7 @@ typedef struct svn_lock_t
   const char *path;             /* the path this lock applies to */
   const char *token;            /* UUID of the lock */
   const char *owner;            /* the username which owns the lock */
+  const char *comment;          /* (optional) description of lock  */
   apr_time_t creation_date;     /* when lock was made */
   apr_time_t expiration_date;   /* (optional) when lock will expire;
                                    If value is 0, lock will never expire. */

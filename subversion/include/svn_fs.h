@@ -1455,6 +1455,8 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  * svn_fs_access_t), else return @c SVN_ERR_FS_NO_USER.  Set the
  * 'owner' field in the new lock to the fs username.
  *
+ * @a comment is optional: it may describe the lock, or it may be NULL.
+ *
  * If path is already locked by a different user, then return @c
  * SVN_ERR_FS_PATH_LOCKED.  If @a force is true, then "steal" the
  * existing lock anyway, even if the FS access-context's username does
@@ -1472,6 +1474,7 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
 svn_error_t *svn_fs_lock (svn_lock_t **lock,
                           svn_fs_t *fs,
                           const char *path,
+                          const char *comment,
                           svn_boolean_t force,
                           long int timeout,
                           apr_pool_t *pool);

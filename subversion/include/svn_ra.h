@@ -843,6 +843,8 @@ typedef struct svn_ra_plugin_t
    * this function will have to "pull" a username from the client, if
    * it hasn't done so already.
    *
+   * @a comment is optional: it may describe the lock, or it may be NULL.
+   *
    * If path is already locked by a different user, then return error.
    * If @a force is true, then "steal" the existing lock anyway, even
    * if the RA username does not match the current lock's owner.
@@ -855,6 +857,7 @@ typedef struct svn_ra_plugin_t
   svn_error_t *(*lock) (void *session_baton,
                         svn_lock_t **lock,
                         const char *path,
+                        const char *comment,
                         svn_boolean_t force,
                         apr_pool_t *pool);
 

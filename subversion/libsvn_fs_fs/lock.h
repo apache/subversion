@@ -30,6 +30,7 @@ extern "C" {
 svn_error_t *svn_fs_fs__lock (svn_lock_t **lock,
                               svn_fs_t *fs,
                               const char *path,
+                              const char *comment,
                               svn_boolean_t force,
                               long int timeout,
                               apr_pool_t *pool);

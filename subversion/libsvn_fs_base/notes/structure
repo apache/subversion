@@ -580,7 +580,7 @@ The `locks' table is a btree whose key is a UUID string (also known as
 a "lock-token"), and whose value is a skel representing a lock.  The
 fields in the skel mirror those of an svn_lock__t (see svn_types.h):
 
-    ("lock" PATH UUID OWNER CREATION-DATE EXPIRATION-DATE)
+    ("lock" PATH UUID OWNER COMMENT CREATION-DATE EXPIRATION-DATE)
 
 where:
 
@@ -590,6 +590,9 @@ where:
      as the lock-token.  This is the same as the row's key.
 
    * OWNER is the authenticated username that "owns" the lock.
+
+   * COMMENT is a string describing the lock.  It may be empty, or it
+     might describe the rationale for locking.
 
    * CREATION-DATE is a string representation of the date/time when
      the lock was created.  (see svn_time_to_cstring())
@@ -777,8 +780,8 @@ Berkeley DB tables
               "strings" : btree(STR -> STRING, "next-id" -> STR)
       "representations" : btree(REP -> REPRESENTATION, "next-id" -> REP)
                 "uuids" : recno(UUID)
-                "locks" : btree(LOCK-TOKEN -> LOCK)
-           "lock-nodes" : btree(PATH -> LOCK-TOKEN)
+                "locks" : btree(TOKEN -> LOCK)
+          "lock-tokens" : btree(PATH -> TOKEN)
 
 Syntactic elements
 ------------------
@@ -790,7 +793,7 @@ Table keys:
                     CPY ::= number-36 ;
                     STR ::= number-36 ;
                     REP ::= number-36 ;
-             LOCK-TOKEN ::= uuid ;
+                  TOKEN ::= uuid ;
 
 Property lists:
 
@@ -895,13 +898,13 @@ UUIDs:
 
 Locks:
 
-                   LOCK ::= ("lock" PATH LOCK-TOKEN OWNER CR-DATE [EXP-DATE]) ;
+                   LOCK ::= ("lock" PATH TOKEN OWNER COMMENT CR-DATE [X-DATE]);
                    PATH ::= atom ;
                   OWNER ::= atom ;
                 CR-DATE ::= atom ;
-               EXP-DATE ::= atom ;
+                 X-DATE ::= atom ;
 
-Lock nodes:
+Lock tokens:
 
                (the value is just a lock-token, which is a uuid)
 

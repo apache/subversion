@@ -55,7 +55,9 @@ svn_lock_to_dav_lock(dav_lock **dlock,
   token->uuid_str = apr_pstrdup(pool, slock->token);
   lock->locktoken = token;
 
-  /* ### todo:  map lock->comment to lock->owner. */
+  /* the svn_lock_t 'comment' is the equivalent of the 'DAV:owner'
+     field, just a scratch-space for notes abotu the lock. */
+  lock->owner = apr_pstrdup(pool, slock->comment);
 
   /* the svn_lock_t 'owner' is the actual authenticated owner of the lock. */
   lock->auth_user = apr_pstrdup(pool, slock->owner);
@@ -106,7 +108,8 @@ dav_lock_to_svn_lock(svn_lock_t **slock,
   if (dlock->auth_user)
     lock->owner = apr_pstrdup(pool, dlock->auth_user);
   
-  /* ### todo:  if (dlock->owner) --> store in lock->comment */
+  if (dlock->owner)
+    lock->comment = apr_pstrdup(pool, dlock->owner);
 
   if (dlock->timeout)
     lock->expiration_date = (apr_time_t)dlock->timeout * APR_USEC_PER_SEC;

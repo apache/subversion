@@ -136,8 +136,9 @@ typedef struct fs_vtable_t
                                      svn_fs_t *fs, apr_pool_t *pool);
   svn_error_t *(*deltify) (svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool);
   svn_error_t *(*lock) (svn_lock_t **lock, svn_fs_t *fs,
-                        const char *path, svn_boolean_t force,
-                        long int timeout, apr_pool_t *pool);
+                        const char *path, const char *comment,
+                        svn_boolean_t force, long int timeout,
+                        apr_pool_t *pool);
   svn_error_t *(*attach_lock) (svn_lock_t *lock, svn_fs_t *fs,
                                apr_pool_t *pool);
   svn_error_t *(*unlock) (svn_fs_t *fs, const char *token,
