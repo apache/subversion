@@ -78,7 +78,7 @@ Content-Transfer-Encoding: base64
 Content-Disposition: inline; filename="tests.log.gz"
 
 EOF
-    $BASE64_E "$TESTS_LOG_FILE" - >> "$MAILFILE"
+    $BASE64_E < "$TESTS_LOG_FILE" >> "$MAILFILE"
     $RM_F "$TESTS_LOG_FILE"
     $CAT <<EOF >> "$MAILFILE"
 --------------NextPart--
