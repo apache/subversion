@@ -26,12 +26,12 @@ Requires: python2
 BuildPreReq: apache >= %{apache_version}
 BuildPreReq: apache-devel >= %{apache_version}
 BuildPreReq: apache-libapr-devel >= %{apache_version}
-BuildPreReq: autoconf >= 2.53
+BuildPreReq: autoconf253 >= 2.53
 BuildPreReq: db4-devel >= 4.0.14
 BuildPreReq: docbook-style-xsl >= 1.58.1
 BuildPreReq: doxygen
 BuildPreReq: expat-devel
-BuildPreReq: libtool >= 1.4.2-12
+BuildPreReq: libtool >= 1.4.2
 BuildPreReq: libxslt >= 1.0.27
 BuildPreReq: neon-devel >= %{neon_version}
 BuildPreReq: openssl-devel
@@ -105,6 +105,11 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sun Mar 27 2005 David Summers <david@summersoft.fay.ar.us> r13716
+- Fixed dependencies to use libtool and autoconf253 that already comes
+  with RedHat 7.3.  I obviously didn't do my homework a couple of years ago.
+  No need to support updated/custom versions of these.
+
 * Sun Mar 27 2005 David Summers <david@summersoft.fay.ar.us> r13714
 - Changed swig-1.3.19-3 RPM package to co-exist with swig package that comes
   with Redhat.
