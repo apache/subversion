@@ -860,8 +860,7 @@ def hudson_part_2_1(sbox):
 def hook_test(sbox):
   "hook testing"
 
-  if sbox.build():
-    return 1
+  sbox.build()
 
   # Get paths to the working copy and repository
   wc_dir = sbox.wc_dir
@@ -894,17 +893,12 @@ def hook_test(sbox):
   # filesystem will report an absolute path because that's the way the
   # filesystem is created by this test suite.
   abs_repo_dir = os.path.abspath (repo_dir)
-  expected_output = (abs_repo_dir + "\n",
+  expected_output = [abs_repo_dir + "\n",
                      abs_repo_dir + " 1\n",
-                     abs_repo_dir + " 2\n")
-  output, errput = svntest.main.run_svn (None, 'ci', '--quiet',
-                                         '-m', 'log msg', wc_dir)
-
-  # Make sure we got the right output.
-  if output != expected_output:
-    return 1
-    
-  return 0
+                     abs_repo_dir + " 2\n"]
+  svntest.actions.run_and_verify_svn (None, expected_output, None,
+                                      'ci', '--quiet',
+                                      '-m', 'log msg', wc_dir)
 
 
 #----------------------------------------------------------------------
