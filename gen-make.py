@@ -110,7 +110,7 @@ def _usage_exit():
   print "           configure APR-Util to use Berkeley DB"
   print
   print "  --vsnet-version=VER"
-  print "           generate for VS.NET version VER (2002 or 2003)"
+  print "           generate for VS.NET version VER (2002, 2003, or 2005)"
   print "           [only valid in combination with '-t vcproj']"
   sys.exit(0)
 

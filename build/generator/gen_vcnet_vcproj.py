@@ -72,6 +72,7 @@ class Generator(gen_win.WinGeneratorBase):
                                             gen_base.TargetProject)),
       'instrument_apr_pools' : self.instrument_apr_pools,
       'instrument_purify_quantify' : self.instrument_purify_quantify,
+      'version' : self.vsnet_proj_ver,
       }
 
     self.write_with_template(fname, 'vcnet_vcproj.ezt', data)
