@@ -232,6 +232,14 @@ Possible values are: commit, revert.")
   "Face to highlight the mark for user marked files in svn status buffers."
   :group 'psvn-faces)
 
+(defface svn-status-marked-popup-face
+  '((((type tty) (class color)) (:foreground "green" :weight light))
+    (((class color) (background light)) (:foreground "green3"))
+    (((class color) (background dark)) (:foreground "palegreen2"))
+    (t (:weight bold)))
+  "Face to highlight the actual file, if a popup menu is activated."
+  :group 'psvn-faces)
+
 (defface svn-status-modified-external-face
   '((((type tty) (class color)) (:foreground "magenta" :weight light))
     (((class color) (background light)) (:foreground "magenta"))
@@ -698,6 +706,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "C-p") 'svn-status-previous-line)
   (define-key svn-status-mode-map (kbd "<down>") 'svn-status-next-line)
   (define-key svn-status-mode-map (kbd "<up>") 'svn-status-previous-line)
+  (define-key svn-status-mode-map [down-mouse-3] 'svn-status-popup-menu)
   (setq svn-status-mode-mark-map (make-sparse-keymap))
   (define-key svn-status-mode-map (kbd "*") svn-status-mode-mark-map)
   (define-key svn-status-mode-mark-map (kbd "!") 'svn-status-unset-all-usermarks)
@@ -793,6 +802,36 @@ A and B must be line-info's."
     ["Hide Unmodified" svn-status-toggle-hide-unmodified
      :style toggle :selected svn-status-hide-unmodified]
     ))
+
+
+(defun svn-status-popup-menu (event)
+  (interactive "e")
+  (mouse-set-point event)
+  (let* ((line-info (svn-status-get-line-information))
+         (name (svn-status-line-info->filename line-info)))
+    (when line-info
+      (easy-menu-define svn-status-actual-popup-menu nil nil
+        (list name
+               ["svn diff" svn-status-show-svn-diff t]
+               ["svn commit" svn-status-commit-file t]
+               ["svn log" svn-status-show-svn-log t]
+               ["svn info" svn-status-info t]
+               ["svn blame" svn-status-blame t]))
+      (svn-status-face-set-temporary-during-popup
+       'svn-status-marked-popup-face (line-beginning-position) (line-end-position)
+       svn-status-actual-popup-menu))))
+
+(defun svn-status-face-set-temporary-during-popup (face begin end menu &optional prefix)
+  "Put FACE on BEGIN and END in the buffer during Popup MENU.
+PREFIX is passed to `popup-menu'."
+  (let (o)
+    (unwind-protect
+        (progn
+          (setq o (make-overlay begin end))
+          (overlay-put o 'face face)
+          (sit-for 0)
+          (popup-menu menu prefix))
+      (delete-overlay o))))
 
 (defun svn-status-mode ()
   "Major mode used by  psvn.el to process the output of \"svn status\".
