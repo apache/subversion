@@ -423,16 +423,24 @@ prep_directory (svn_string_t *path,
 /*** The callbacks we'll plug into an svn_delta_edit_fns_t structure. ***/
 
 static svn_error_t *
-replace_root (svn_string_t *ancestor_path,
-              svn_vernum_t ancestor_version,
-              void *edit_baton,
+replace_root (void *edit_baton,
               void **dir_baton)
 {
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
   struct dir_baton *d;
   svn_error_t *err;
+  svn_vernum_t ancestor_version;
+  svn_string_t *ancestor_path;
 
   *dir_baton = d = make_dir_baton (NULL, eb, NULL, eb->pool);
+
+  err = svn_wc__get_entry_ancestry (d->path,
+                                    NULL,
+                                    &ancestor_path,
+                                    &ancestor_version,
+                                    eb->pool);
+  if (err)
+    return err;
 
   err = prep_directory (d->path,
                         eb->repository,
@@ -441,7 +449,7 @@ replace_root (svn_string_t *ancestor_path,
                         1, /* force */
                         d->pool);
   if (err)
-    return (err);
+    return err;
 
   return SVN_NO_ERROR;
 }

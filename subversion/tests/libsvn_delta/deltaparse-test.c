@@ -22,6 +22,7 @@ apr_pool_t *globalpool;
 struct edit_baton
 {
   int indentation; /* just an indentation count */
+  svn_string_t *root_path;
   apr_pool_t *pool;
 };
 
@@ -125,15 +126,13 @@ test_delete (svn_string_t *filename, void *parent_baton)
 
 
 static svn_error_t *
-test_replace_root (svn_string_t *base_path,
-                   svn_vernum_t base_version,
-                   void *edit_baton,
+test_replace_root (void *edit_baton,
                    void **root_baton)
 {
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
   struct dir_baton *d = apr_palloc (eb->pool, sizeof (*d));
 
-  d->path = (svn_string_t *) svn_string_dup (base_path, globalpool);
+  d->path = (svn_string_t *) svn_string_dup (eb->root_path, globalpool);
   d->edit_baton = eb;
   *root_baton = d;
 
@@ -485,6 +484,7 @@ main (int argc, char *argv[])
   /* Set up the edit baton. */
   my_edit_baton = apr_pcalloc (globalpool, sizeof (*my_edit_baton));
   my_edit_baton->pool = globalpool;
+  my_edit_baton->root_path = base_path;
 
   /* Fire up the XML parser */
   err = svn_delta_xml_auto_parse (my_read_func, source_baton, 

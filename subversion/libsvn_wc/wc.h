@@ -365,12 +365,14 @@ svn_error_t *svn_wc__entries_next (struct svn_wc__entries_index *idx,
 
 
 
-/* Examine the entries file for ENTRYNAME in PATH; return the ancestor
-   in ANCESTOR_VER and ANCESTOR_PATH */
+/* Set *ANCESTOR_VER and *ANCESTOR_PATH appropriately for the
+   ENTRY in directory PATH.  If ENTRY is null, then PATH itself is
+   meant. */
 svn_error_t *svn_wc__get_entry_ancestry (svn_string_t *path,
-                                         svn_string_t *entryname,
+                                         svn_string_t *entry,
+                                         svn_string_t **ancestor_path,
                                          svn_vernum_t *ancestor_ver,
-                                         svn_string_t **ancestor_path);
+                                         apr_pool_t *pool);
 
 
 

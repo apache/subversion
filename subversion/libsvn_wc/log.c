@@ -134,9 +134,11 @@ set_entry (svn_string_t *path,
            svn_vernum_t version,
            apr_pool_t *pool)
 {
+  svn_string_t *sname = svn_string_create (name, pool);
+
   /* This operation is idempotent, so just do it without worrying
      whether it's been done before. */
-  return svn_wc__entry_set (path, name, version, svn_file_kind, pool, NULL);
+  return svn_wc__entry_set (path, sname, version, svn_file_kind, pool, NULL);
 }
 
 
