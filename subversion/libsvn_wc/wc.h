@@ -298,8 +298,11 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 /* Move a file from one place to another */
 #define SVN_WC__LOG_MV                  "mv"
 
-/* Move a file from one place to another */
+/* Copy a file from one place to another */
 #define SVN_WC__LOG_CP                  "cp"
+
+/* Append one file onto another */
+#define SVN_WC__LOG_APPEND              "append"
 
 
 /* A commit completed successfully, so:  
@@ -377,6 +380,7 @@ svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);
 #define SVN_WC__ENTRIES_ATTR_MERGED    "merged"
 #define SVN_WC__ENTRIES_ATTR_CONFLICT  "conflict"
 #define SVN_WC__ENTRIES_ATTR_ANCESTOR  "ancestor"
+#define SVN_WC__ENTRIES_ATTR_REJFILE   "reject-file"
 
 
 /* A data structure representing an entry from the `entries' file. */
@@ -578,11 +582,38 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
                                apr_pool_t *pool);
 
 
-/* Given two propchange objects, return TRUE iff they conflict. */
-svn_boolean_t
-svn_wc__conflicting_propchanges_p (svn_propdelta_t *change1,
-                                   svn_propdelta_t *change2);
 
+/* Given two propchange objects, return TRUE iff they conflict.  If
+   there's a conflict, DESCRIPTION will contain an english description
+   of the problem. */
+
+/* For note, here's the table being implemented:
+
+              |  update set     |    update delete   |
+  ------------|-----------------|--------------------|
+  user set    | conflict iff    |      conflict      |
+              |  vals differ    |                    |
+  ------------|-----------------|--------------------|
+  user delete |   conflict      |      merge         |
+              |                 |    (no problem)    |
+  ----------------------------------------------------
+
+*/
+svn_boolean_t
+svn_wc__conflicting_propchanges_p (svn_string_t **description,
+                                   svn_propdelta_t *local,
+                                   svn_propdelta_t *update,
+                                   apr_pool_t *pool);
+
+/* Look up the entry NAME within PATH and see if it has a `current'
+   reject file describing a state of conflict.  If such a file exists,
+   return the name of the file in REJECT_FILE.  If no such file exists,
+   return (REJECT_FILE = NULL). */
+svn_error_t *
+svn_wc__get_existing_reject_file (svn_string_t **reject_file,
+                                  svn_string_t *path,
+                                  svn_string_t *name,
+                                  apr_pool_t *pool);
 
 /* If PROPFILE_PATH exists (and is a file), assume it's full of
    properties and load this file into HASH.  Otherwise, leave HASH
