@@ -13,7 +13,7 @@ javac -classpath $CLASSPATH:tests tests/*.java
 
 # second step: build the JNI header
 javah -classpath . -o svn_jni.h org.tigris.subversion.lib.ClientImpl
-javah -classpath tests -o svn_jni_tests.h NativeWrapper
+javah -classpath tests -o tests/nativewrapper.h NativeWrapper
 
 # third step: give some extra information
 echo "to run the tests, start them with:"
