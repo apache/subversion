@@ -186,42 +186,45 @@ typedef struct svn_wc__version_baton_t
   const char *entryname;   /* The name of the entry we're looking for. */
   svn_vernum_t version;    /* The version we will get or set. */
 
-  va_list ap;              /* The attribute list we want to set or get. */
+  apr_hash_t *attributes;  /* The attribute list we want to set or
+                              get.  If the former, the values are
+                              svn_string_t *'s; if the latter, then
+                              the values are svn_string_t **'s. */
 
 } svn_wc__version_baton_t;
 
 
 
-/* Search through ATTS and fill in each attribute in BATON->ap.
-   It's assumed that the ap contains pairs of arguments in the
-   form:
-
-        {char *attribute_name, svn_string_t **attribute_value}
-
-   This function will _set_ the latter value by dereferencing the
-   double pointer.
+/* Search through ATTS and fill in BATON->attributes appropriately.
+   BATON->attributes is a hash whose keys are char *'s and values are
+   svn_string_t **'s, which will be set to point to new strings
+   representing the values discovered in ATTS.
 
    Also, BATON->version will be set appropriately.
-
  */
 static void
 get_entry_attributes (const char **atts,
                       svn_vernum_t *version,
-                      va_list ap, 
+                      apr_hash_t *desired_attrs,
                       apr_pool_t *pool)
 {
-  const char *name;
+  apr_hash_index_t *hi;
 
   /* Handle version specially. */
   *version = (svn_vernum_t) atoi (svn_xml_get_attr_value ("version", atts));
 
-  /* Now loop through the va_list setting values by reference. */
-  while ((name = va_arg (ap, char *)) != NULL)
+  /* Now loop through the requested attributes, setting by reference. */
+  for (hi = apr_hash_first (desired_attrs); hi; hi = apr_hash_next (hi))
     {
-      const char *val = svn_xml_get_attr_value (name, atts);
-      svn_string_t **receiver = va_arg (ap, svn_string_t **);
-
+      const char *key;
+      size_t keylen;
+      const char *val; 
+      svn_string_t **receiver;
+      
+      apr_hash_this (hi, (const void **) &key, &keylen, (void **) &receiver);
       assert (receiver != NULL);
+
+      val = svn_xml_get_attr_value (key, atts);
       *receiver = (val ? svn_string_create (val, pool) : NULL);
     }
 }
@@ -249,16 +252,16 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
 
           if (baton->outfile) /* we're writing out a changed tag */
             {
-              apr_hash_t *attr_hash
-                = svn_xml_make_att_hash_overlaying (atts,
-                                                    baton->ap,
-                                                    baton->pool);
               char *verstr = apr_psprintf (baton->pool,
                                            "%ld",
                                            (long int) baton->version);
 
+              svn_xml_hash_atts_preserving (atts,
+                                            baton->attributes,
+                                            baton->pool);
+
               /* Version has to be stored specially. */
-              apr_hash_set (attr_hash,
+              apr_hash_set (baton->attributes,
                             "version",
                             strlen ("version"),
                             svn_string_create (verstr, baton->pool));
@@ -267,7 +270,7 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
                                             baton->pool,
                                             svn_xml__self_close_tag,
                                             SVN_WC__VERSIONS_ENTRY,
-                                            attr_hash);
+                                            baton->attributes);
               if (err)
                 {
                   svn_xml_signal_bailout (err, baton->parser);
@@ -277,7 +280,7 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
           else  /* just reading attribute values, not writing a new tag */
             get_entry_attributes (atts,
                                   &(baton->version),
-                                  baton->ap,
+                                  baton->attributes,
                                   baton->pool);
         }
       else  /* An entry tag, but not the one we're looking for. */
@@ -419,11 +422,15 @@ do_parse (svn_wc__version_baton_t *baton)
 
 /*** Getting and setting versions entries. ***/
 
-svn_error_t *svn_wc__set_versions_entry (svn_string_t *path,
-                                         apr_pool_t *pool,
-                                         const char *entryname,
-                                         svn_vernum_t version,
-                                         ...)
+/* Common code for set_versions_entry and get_versions_entry. */
+static
+svn_error_t *do_versions_entry (svn_string_t *path,
+                                apr_pool_t *pool,
+                                const char *entryname,
+                                svn_vernum_t version,
+                                svn_vernum_t *version_receiver,
+                                svn_boolean_t setting,
+                                va_list ap)
 {
   svn_error_t *err;
   apr_file_t *infile = NULL;
@@ -439,23 +446,26 @@ svn_error_t *svn_wc__set_versions_entry (svn_string_t *path,
   if (err)
     return err;
 
-  /* Open a new `tmp/versions' file for writing */
-  err = svn_wc__open_adm_file (&outfile, path,
-                               SVN_WC__ADM_VERSIONS,
-                               (APR_WRITE | APR_CREATE | APR_EXCL), pool);
-  if (err)
-    return err;
+  if (setting)
+    {
+      /* Open a new `tmp/versions' file for writing */
+      err = svn_wc__open_adm_file (&outfile, path,
+                                   SVN_WC__ADM_VERSIONS,
+                                   (APR_WRITE | APR_CREATE | APR_EXCL), pool);
+      if (err)
+        return err;
+    }
 
-  /* Fill in our userdata structure */
-  baton->pool      = pool;
-  baton->infile    = infile;
-  baton->outfile   = outfile;
-  baton->entryname = entryname;
-  baton->version   = version;
+  /* Fill in the userdata structure */
+  baton->pool       = pool;
+  baton->infile     = infile;
+  baton->outfile    = outfile;
+  baton->entryname  = entryname;
+  baton->version    = version;
+  baton->attributes = svn_xml_ap_to_hash (ap, pool);
 
-  va_start (baton->ap, version);
+  /* Set the att. */
   err = do_parse (baton);
-  va_end (baton->ap);
   if (err)
     return err;
 
@@ -465,23 +475,40 @@ svn_error_t *svn_wc__set_versions_entry (svn_string_t *path,
   if (err)
     return err;
   
-  /* Close the outfile and *sync* it, so it replaces the original
-     infile. */
-  err = svn_wc__close_adm_file (outfile, path,
-                                SVN_WC__ADM_VERSIONS, 1, pool);
-  if (err)
-    return err;
-
+  if (setting)
+    {
+      /* Close the outfile and *sync* it, so it replaces the original
+         infile. */
+      err = svn_wc__close_adm_file (outfile, path,
+                                    SVN_WC__ADM_VERSIONS, 1, pool);
+      if (err)
+        return err;
+    }
+  else
+    *version_receiver = baton->version;
 
   return SVN_NO_ERROR;
 }
 
 
+svn_error_t *svn_wc__set_versions_entry (svn_string_t *path,
+                                         apr_pool_t *pool,
+                                         const char *entryname,
+                                         svn_vernum_t version,
+                                         ...)
+{
+  svn_error_t *err;
+  va_list ap;
 
-/* For a given ENTRYNAME in PATH, read the `version's file and get its
-   version into VERSION.  Also get other XML attributes via varargs:
-   name, value, name, value, etc. -- where names are char *'s and
-   values are svn_string_t **'s.  Terminate list with NULL.  */
+  va_start (ap, version);
+  err = do_versions_entry (path, pool, entryname, version, NULL, 1, ap);
+  va_end (ap);
+
+  return err;
+}
+
+
+
 svn_error_t *svn_wc__get_versions_entry (svn_string_t *path,
                                          apr_pool_t *pool,
                                          const char *entryname,
@@ -489,37 +516,13 @@ svn_error_t *svn_wc__get_versions_entry (svn_string_t *path,
                                          ...)
 {
   svn_error_t *err;
-  apr_file_t *infile = NULL;
+  va_list ap;
 
-  svn_wc__version_baton_t *baton 
-    = apr_pcalloc (pool, sizeof (svn_wc__version_baton_t));
+  va_start (ap, version);
+  err = do_versions_entry (path, pool, entryname, 0, version, 0, ap);
+  va_end (ap);
 
-  /* Open current versions file for reading */
-  err = svn_wc__open_adm_file (&infile, path,
-                               SVN_WC__ADM_VERSIONS,
-                               APR_READ, pool);
-  if (err)
-    return err;
-
-  /* Fill in our userdata structure */
-  baton->pool      = pool;
-  baton->infile    = infile;
-  baton->entryname = entryname;
-  baton->version   = *version;
-
-  va_start (baton->ap, version);
-  err = do_parse (baton);
-  va_end (baton->ap);
-  if (err)
-    return err;
-
-  /* Close infile */
-  err = svn_wc__close_adm_file (infile, path,
-                                SVN_WC__ADM_VERSIONS, 0, pool);
-  if (err)
-    return err;
-  
-  return SVN_NO_ERROR;
+  return err;
 }
 
 

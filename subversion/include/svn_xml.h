@@ -131,7 +131,17 @@ void svn_xml_signal_bailout (svn_error_t *error,
 const char *svn_xml_get_attr_value (const char *name, const char **atts);
 
 
-/* Create a hash that corresponds to xml attribute list ATTS.
+
+/*** Converting between Expat attribute lists and APR hash tables. ***/
+
+
+/* Create an attribute hash from va_list AP. 
+ * The contents of AP are alternating char *'s and svn_string_t *'s,
+ * terminated by a final null falling on an odd index (zero-based).
+ */
+apr_hash_t *svn_xml_ap_to_hash (va_list ap, apr_pool_t *pool);
+
+/* Create a hash that corresponds to Expat xml attribute list ATTS.
  * The hash's keys will be char *'s, the values svn_string_t *'s.
  *
  * ATTS may be null, in which case you just get an empty hash back
@@ -140,13 +150,17 @@ const char *svn_xml_get_attr_value (const char *name, const char **atts);
 apr_hash_t *svn_xml_make_att_hash (const char **atts, apr_pool_t *pool);
 
 
-/* Like svn_xml_make_att_hash(), but overlay the hash with new values
- * from va_list AP if any.  AP may be null, in which case this behaves
- * exactly like svn_xml_make_att_hash().
- */
-apr_hash_t *svn_xml_make_att_hash_overlaying (const char **atts,
-                                              va_list ap,
-                                              apr_pool_t *pool);
+/* Like svn_xml_make_att_hash(), but takes a hash and preserves any
+   key/value pairs already in it. */
+void svn_xml_hash_atts_preserving (const char **atts,
+                                   apr_hash_t *ht,
+                                   apr_pool_t *pool);
+
+/* Like svn_xml_make_att_hash(), but takes a hash and overwrites
+   key/value pairs already in it that also appear in ATTS. */
+void svn_xml_hash_atts_overlaying (const char **atts,
+                                   apr_hash_t *ht,
+                                   apr_pool_t *pool);
 
 
 
