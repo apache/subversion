@@ -2443,62 +2443,75 @@ svn-tunnel-agent = ssh
 
     <para>You've seen how a repository can be accessed in many
       different ways.  But is it possible&mdash;or safe&mdash; for
-      your repository to be accessed by multiple RA methods
-      simultaneously?  The answer is yes, provided you use a bit of
-      foresight.</para>
+      your repository to be accessed by multiple repository access
+      methods simultaneously?  The answer is yes, provided you use a
+      bit of foresight.</para>
 
-    <para>At any given time, these processes may require read/write
-      access to your repository:</para>
+    <para>At any given time, these processes may require read and/or
+      write access to your repository:</para>
 
     <itemizedlist>
       <listitem>
-        regular system users using an svn client (as themselves) to
-        access the repository directly via ra_local;
+        <para>regular system users using a Subversion client (as
+          themselves) to access the repository directly;</para>
       </listitem>
-
       <listitem>
-        regular system users using ra_svn and SSH to spawn private
-        'svnserve' processes (running as themselves) which access the
-        repository;
+        <para>regular system users connecting to SSH-spawned private
+          <command>svnserve</command> processes (running as
+          themselves) which access the repository;</para>
       </listitem>
-
       <listitem>
-        an svnserve process, either a daemon or launched by inetd,
-        running as a particular fixed user;
+        <para>an <command>svnserve</command> process&mdash;either a
+          daemon or one launched by
+          <command>inetd</command>&mdash;running as a particular fixed
+          user;</para>
       </listitem>
-
       <listitem>
-        an Apache httpd process, running as a particular fixed user.
+        <para>an Apache <command>httpd</command> process, running as a
+          particular fixed user.</para>
       </listitem>
-
     </itemizedlist>
 
     <para>The most common problem adminstrators run into is repository
-      ownership and permissions.  Does every process-user in the
+      ownership and permissions.  Does every process (or user) in the
       previous list have the rights to read and write the Berkeley DB
       files?  Assuming you have a Unix-like operating system, a
       straightforward approach might be to place every potential
-      repository-user into a new <quote>svn</quote> group, and make
-      the repository wholly owned by that group.  But even that's not
-      enough, because a process may write to the db files using an
-      unfriendly umask&mdash;one which prevents access by other
-      users.</para>
+      repository user into a new <literal>svn</literal> group, and
+      make the repository wholly owned by that group.  But even that's
+      not enough, because a process may write to the database files
+      using an unfriendly umask&mdash;one which prevents access by
+      other users.</para>
 
-    <para>So the next step beyond the "group" solution is to force
-      every repository-accessing process to use a sane umask.  For
-      ra_local users, you can make the <command>svn</command> program
-      into a wrapper script that first sets <command>umask
-      002</command> and then runs the real svn client.  You can write
-      a similar wrapper script for the svnserve program, as well as
-      add a <command>umask 002</command> command to Apache's own
-      startup script,
-      <filename>/usr/local/apache2/bin/apachectl</filename>.</para>
+    <para>So the next step beyond setting up a common group for
+      repository users is to force every repository-accessing process
+      to use a sane umask.  For users accessing the repository
+      directly, you can make the <command>svn</command> program into a
+      wrapper script that first sets <command>umask 002</command> and
+      then runs the real <command>svn</command> client program.  You
+      can write a similar wrapper script for the
+      <command>svnserve</command> program, and add a <command>umask
+      002</command> command to Apache's own startup script,
+      <filename>apachectl</filename>.</para>
 
     <para>Once you've jumped through these hoops, your repository
       should be accessible by all the necessary processes.  It may
-      seem a bit messy and hackish, but then so is the age-old problem
-      of having multiple users share write-access to common files!</para>
+      seem a bit messy and complicated, but the problems of having
+      multiple users sharing write-access to common files are classic
+      ones that are not often elegantly solved.</para>
 
+    <para>Fortunately, most repository administrators will never
+      <emphasis>need</emphasis> to have such a complex configuration.
+      Users who wish to access repositories that live on the same
+      machine are not limited to using <literal>file://</literal>
+      access URLs&mdash;they can typically contact the Apache HTTP
+      server or <command>svnserve</command> using
+      <literal>localhost</literal> for the server name in their
+      <literal>http://</literal> or <literal>svn://</literal> URLs.
+      And to maintain multiple server processes for your Subversion
+      repositories is likely to be more of a headache than necessary.
+      We recommend you chooose the server which best meets your needs
+      and stick with it!</para>
 
   </sect1>
 
