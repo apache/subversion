@@ -1597,7 +1597,6 @@ The ls command lets you find what files are in a repository directory.
 
 @example
 $ svn ls http://svn.collab.net/repos/svn
-http://svn.collab.net/repos/svn:
 README
 branches/
 clients/
@@ -1610,7 +1609,6 @@ will get output like this.
 
 @example
 $ svn ls -v http://svn.collab.net/repos/svn
-http://svn.collab.net/repos/svn:
 _    2755   kfogel     1331 Jul 28 02:07 README
 _    2773  sussman        0 Jul 29 15:07 branches/
 _    2769 cmpilato        0 Jul 29 12:07 clients/
