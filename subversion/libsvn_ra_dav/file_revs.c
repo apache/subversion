@@ -350,7 +350,8 @@ svn_ra_dav__get_file_revs (svn_ra_session_t *session,
   err = svn_ra_dav__parsed_request (ras->sess, "REPORT", final_bc_url,
                                     request_body->data, NULL, NULL,
                                     start_element, cdata_handler, end_element,
-                                    &rb, NULL, &http_status, ras->pool);
+                                    &rb, NULL, &http_status, FALSE,
+                                    ras->pool);
 
   /* Map status 501: Method Not Implemented to our not implemented error.
      1.0.x servers and older don't support this report. */
