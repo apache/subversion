@@ -1,11 +1,47 @@
-Version 0.28.0 (in-progress)
+Version 0.28.0 (released 24 August 2003, rev XXXX, branches/release-0.28)
+
+#####################################################################
+##  WARNING  WARNING  WARNING  WARNING  WARNING  WARNING  WARNING  ##
+#####################################################################
+##                                                                 ##
+##  This release makes an incompatible change to the Subversion    ##
+##  repository filesystem schema.  Repositories created with       ##
+##  Subversion code prior to this release will unable to operate   ##
+##  with this new code.  To maintain the ability to use said       ##
+##  repositories, you must use a version 'svnadmin dump' prior to  ##
+##  this change to dump your repository to a dumpfile, then use    ##
+##  this new Subversion code to create, and load your dumpfile     ##
+##  a new repository using 'svnadmin load'.  And don't forget to   ##
+##  copy over any custom configuration/hooks from the old to the   ##
+##  new repository.                                                ##
+##                                                                 ##
+#####################################################################
 
  User-visible changes:
  * fs schema change, see issue #1003 **NOTE: repos dump/load cycle required!**
- * svnadmin 'lsdblogs' is now two commands: 'list-dblogs', 'list-unused-dblogs'
+ * command-line options
+  - changed  'lsdblogs' is now 2 commands 'list-dblogs', 'list-unused-dblogs'
+  - removed  '--only-unread' option 
+  - new      'list-unused-dblogs'
+  - new      '--config-dir' allows svn config to live outside ~/.subversion 
+  - new      (r6811)
+    - svn-status-get-specific-revision (interface to svn cat)
+    - svn-ediff-with-revision (run ediff w/ a file wc and a specified rev)
+ * fixed 'mod_dav_svn' segfault bug caused by foreign DeltaV requests (r6725)
+ * fixed 'svn switch' bug which could result in corrupted repo (#1316,r6746)
+ * fixed items now marked as 'deleted' if they no longer exist (#919,r6748)
+ * fixed 'merge' no longer adds file/dir if schema differs from wc. (#1321)
+ * fixed Handle \r correctly when prompting on Windows. (r6792,#1307)
+ * 'svn merge' now 'skip's when it hits unversioned obstructions (r6810,#1425)
+ * fixed repos->wc of file w/ svn:keywords set caused segfault (r6818,#1473)
+ * fixed 'svn diff -r PREV:HEAD" failed if tmp/ exists in cwd (r6838,#1487)
 
  Developer-visible changes:
- * none
+ * svn Perl bindings are ready - see swig/INSTALL
+ * dumpfile format changed (see warning above!) (r6752,#1003,#1248,#1438)
+ * internal changes to treat swig libraries more like normal libraries (r6761)
+ * improved handling of errors opening a repository over ra_svn (r6841)
+
 
 
 Version 0.27.0 (released 12 August 2003, rev 6707, branches/release-0.27.0)
