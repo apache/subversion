@@ -264,10 +264,21 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
     Property value is irrelevant; only property's existence matters. */
 #define SVN_AUTH_PARAM_NO_AUTH_CACHE  SVN_AUTH_PARAM_PREFIX "no-auth-cache"
 
-/** Needed for ssl server and client cert providers, provides @c
-    ne_ssl_dname*  */
+/** Available for ssl client cert providers, provides a @c ne_ssl_dname*  */
 #define SVN_AUTH_PARAM_SSL_SERVER_DNAME SVN_AUTH_PARAM_PREFIX "ssl:dname"
+/** Available for ssl server cert providers, provides a @c ne_ssl_certificate* */
+#define SVN_AUTH_PARAM_SSL_SERVER_CERTIFICATE SVN_AUTH_PARAM_PREFIX "ssl:server-cert"
+
+/** The following are provided for ssl server cert providers. These
+    provide the detected failures, as well as the failures masked by
+    any previous providers in the chain */
 #define SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN SVN_AUTH_PARAM_PREFIX "ssl:failures"
+#define SVN_AUTH_PARAM_SSL_SERVER_FAILURES_MASKED SVN_AUTH_PARAM_PREFIX "ssl:masked-failures"
+
+/** Some providers need access to the @c svn_config_t configuration
+    for individual servers in order to properly operate */
+#define SVN_AUTH_PARAM_CONFIG SVN_AUTH_PARAM_PREFIX "config"
+#define SVN_AUTH_PARAM_SERVER_GROUP SVN_AUTH_PARAM_PREFIX "server-group"
 
 /** Get an initial set of credentials.
  *

@@ -151,22 +151,20 @@ server_ssl_file_first_credentials(void **credentials,
 				  apr_pool_t *pool)
 {
   const char *temp_setting;
-  svn_ra_session_t *ras = provider_baton;
-  ne_ssl_dname *server = apr_hash_get(parameters,
-				      SVN_AUTH_PARAM_SSL_SERVER_DNAME,
-				      APR_HASH_KEY_STRING);
-  assert(server);
+  svn_config_t *cfg = apr_hash_get(parameters, SVN_AUTH_PARAM_CONFIG, APR_HASH_KEY_STRING);
+  const char *server_group = apr_hash_get(parameters, SVN_AUTH_PARAM_SERVER_GROUP, APR_HASH_KEY_STRING);
+
   svn_auth_cred_server_ssl_t *cred =
     apr_palloc(pool, sizeof(svn_auth_cred_server_ssl_t));
 
   cred->failures_allow = 0;
-  temp_setting = get_server_setting(ras->cfg, ras->server_group, 
+  temp_setting = get_server_setting(cfg, server_group, 
 				    "ignore-ssl-unknown-ca", NULL);
   cred->failures_allow = temp_setting ? NE_SSL_UNKNOWNCA : 0;
-  temp_setting = get_server_setting(ras->cfg, ras->server_group, 
+  temp_setting = get_server_setting(cfg, server_group, 
 				    "ignore-ssl-host-mismatch", NULL);
   cred->failures_allow |= temp_setting ? NE_SSL_CNMISMATCH : 0;
-  temp_setting = get_server_setting(ras->cfg, ras->server_group, 
+  temp_setting = get_server_setting(cfg, server_group, 
 				    "ignore-ssl-invalid-date", NULL);
   cred->failures_allow |= temp_setting ? (NE_SSL_NOTYETVALID|NE_SSL_EXPIRED) : 0;
   return NULL;
@@ -263,6 +261,11 @@ server_ssl_callback(void *userdata,
   apr_pool_t *pool;
   svn_error_t *error;
   int failures_allowed;
+  // int failures_mask;
+  
+  svn_auth_set_parameter(ras->callbacks->auth_baton, SVN_AUTH_PARAM_SSL_SERVER_CERTIFICATE, cert);
+  svn_auth_set_parameter(ras->callbacks->auth_baton, SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN, (void*)failures);
+  svn_auth_set_parameter(ras->callbacks->auth_baton, SVN_AUTH_PARAM_SSL_SERVER_FAILURES_MASKED, (void*)0);
 
   apr_pool_create(&pool, ras->pool);
   error = svn_auth_first_credentials((void**)&credentials, &state,
@@ -642,6 +645,46 @@ svn_ra_dav__open (void **session_baton,
       }
   }
 
+#if 0
+  /* Turn off persistent connections. */
+  ne_set_persist(sess, 0);
+  ne_set_persist(sess2, 0);
+#endif
+
+  /* make sure we will eventually destroy the session */
+  apr_pool_cleanup_register(pool, sess, cleanup_session, apr_pool_cleanup_null);
+  apr_pool_cleanup_register(pool, sess2, cleanup_session, apr_pool_cleanup_null);
+
+  ne_set_useragent(sess, "SVN/" SVN_VERSION);
+  ne_set_useragent(sess2, "SVN/" SVN_VERSION);
+
+  /* clean up trailing slashes from the URL */
+  len = strlen(uri.path);
+  if (len > 1 && uri.path[len - 1] == '/')
+    uri.path[len - 1] = '\0';
+
+  /* Create and fill a session_baton. */
+  ras = apr_pcalloc(pool, sizeof(*ras));
+  ras->pool = pool;
+  ras->url = apr_pstrdup (pool, repos_URL);
+  ras->root = uri; /* copies uri pointer members, they get free'd in __close. */
+  ras->sess = sess;
+  ras->sess2 = sess2;  
+  ras->callbacks = callbacks;
+  ras->callback_baton = callback_baton;
+  ras->compression = compression;
+  /* save config and server group in the auth parameter hash */
+  svn_auth_set_parameter(ras->callbacks->auth_baton, SVN_AUTH_PARAM_CONFIG, cfg);
+  svn_auth_set_parameter(ras->callbacks->auth_baton, SVN_AUTH_PARAM_SERVER_GROUP, server_group);
+
+  /* note that ras->username and ras->password are still NULL at this
+     point. */
+
+
+  /* Register an authentication 'pull' callback with the neon sessions */
+  ne_set_server_auth(sess, request_auth, ras);
+  ne_set_server_auth(sess2, request_auth, ras);
+
   if (is_ssl_session)
     {
       const char *authorities_file;
@@ -668,45 +711,6 @@ svn_ra_dav__open (void **session_baton,
       ne_ssl_keypw_prompt(sess, client_ssl_keypw_callback, ras);
       ne_ssl_keypw_prompt(sess2, client_ssl_keypw_callback, ras);
     }
-
-#if 0
-  /* Turn off persistent connections. */
-  ne_set_persist(sess, 0);
-  ne_set_persist(sess2, 0);
-#endif
-
-  /* make sure we will eventually destroy the session */
-  apr_pool_cleanup_register(pool, sess, cleanup_session, apr_pool_cleanup_null);
-  apr_pool_cleanup_register(pool, sess2, cleanup_session, apr_pool_cleanup_null);
-
-  ne_set_useragent(sess, "SVN/" SVN_VERSION);
-  ne_set_useragent(sess2, "SVN/" SVN_VERSION);
-
-  /* clean up trailing slashes from the URL */
-  len = strlen(uri.path);
-  if (len > 1 && uri.path[len - 1] == '/')
-    uri.path[len - 1] = '\0';
-
-  /* Create and fill a session_baton. */
-  ras = apr_pcalloc(pool, sizeof(*ras));
-  ras->pool = pool;
-  ras->url = apr_pstrdup (pool, repos_URL);
-  ras->cfg = cfg;
-  ras->server_group = server_group;
-  ras->root = uri; /* copies uri pointer members, they get free'd in __close. */
-  ras->sess = sess;
-  ras->sess2 = sess2;  
-  ras->callbacks = callbacks;
-  ras->callback_baton = callback_baton;
-  ras->compression = compression;
-
-  /* note that ras->username and ras->password are still NULL at this
-     point. */
-
-
-  /* Register an authentication 'pull' callback with the neon sessions */
-  ne_set_server_auth(sess, request_auth, ras);
-  ne_set_server_auth(sess2, request_auth, ras);
 
 
   *session_baton = ras;

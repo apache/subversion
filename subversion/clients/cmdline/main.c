@@ -44,6 +44,7 @@
 #include "svn_time.h"
 #include "svn_utf.h"
 #include "svn_auth.h"
+#include "svn_ra_dav.h"
 #include "cl.h"
 
 
@@ -961,6 +962,15 @@ main (int argc, const char * const *argv)
     svn_auth_provider_object_t *username_wc_provider 
       = apr_pcalloc (pool, sizeof(*username_wc_provider));
 
+#ifndef NO_SSL
+    svn_auth_provider_object_t *ssl_server_file_provider
+      = apr_pcalloc (pool, sizeof(*ssl_server_file_provider));
+    svn_auth_provider_object_t *ssl_client_cred_file_provider
+      = apr_pcalloc (pool, sizeof(*ssl_client_cred_file_provider));
+    svn_auth_provider_object_t *ssl_client_pw_file_provider
+      = apr_pcalloc (pool, sizeof(*ssl_client_pw_file_provider));
+#endif
+
     svn_wc_get_simple_provider (&(simple_wc_provider->vtable),
                                 &(simple_wc_provider->provider_baton), pool);
     *(svn_auth_provider_object_t **)apr_array_push (providers) 
@@ -972,6 +982,29 @@ main (int argc, const char * const *argv)
     *(svn_auth_provider_object_t **)apr_array_push (providers) 
       = username_wc_provider;
 
+#ifndef NO_SSL
+    svn_ra_dav_get_ssl_server_file_provider
+      (&ssl_server_file_provider->vtable,
+       &ssl_server_file_provider->provider_baton,
+       pool);
+    *(svn_auth_provider_object_t **)apr_array_push (providers)
+      = ssl_server_file_provider;
+
+    svn_ra_dav_get_ssl_client_file_provider
+      (&ssl_client_cred_file_provider->vtable,
+       &ssl_client_cred_file_provider->provider_baton,
+       pool);
+    *(svn_auth_provider_object_t **)apr_array_push (providers)
+      = ssl_client_cred_file_provider;
+
+    svn_ra_dav_get_ssl_client_password_file_provider
+      (&ssl_client_pw_file_provider->vtable,
+       &ssl_client_pw_file_provider->provider_baton,
+       pool);
+    *(svn_auth_provider_object_t **)apr_array_push (providers)
+      = ssl_client_pw_file_provider;
+    
+#endif
     if (opt_state.non_interactive == FALSE)
       {
         /* Two prompting providers, one for username/password, one for
