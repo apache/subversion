@@ -873,8 +873,8 @@ do_diff (const apr_array_header_t *options,
       path_str.len = path1->len;
       if (svn_path_is_url (&path_str))
         {
-          return svn_error_create (SVN_ERR_INCORRECT_PARAMS, 0, NULL, pool,
-                                   "do_diff: path isn't a working-copy path.");
+          err = svn_error_create (SVN_ERR_INCORRECT_PARAMS, 0, NULL, pool,
+                                  "do_diff: path isn't a working-copy path.");
           goto polite_error;
         }
 
@@ -897,8 +897,8 @@ do_diff (const apr_array_header_t *options,
       path_str.len = path2->len;
       if (svn_path_is_url (&path_str))
         {
-          return svn_error_create (SVN_ERR_INCORRECT_PARAMS, 0, NULL, pool,
-                                   "do_diff: path isn't a working-copy path.");
+          err = svn_error_create (SVN_ERR_INCORRECT_PARAMS, 0, NULL, pool,
+                                  "do_diff: path isn't a working-copy path.");
           goto polite_error;
         }
 
