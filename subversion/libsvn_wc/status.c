@@ -1238,15 +1238,15 @@ add_directory (const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *new_db;
 
-  SVN_ERR (make_dir_baton ((void **)(&new_db), path, eb, pb, pool));
+  SVN_ERR (make_dir_baton (child_baton, path, eb, pb, pool));
 
   /* Make this dir as added. */
+  new_db = *child_baton;
   new_db->added = TRUE;
 
   /* Mark the parent as changed;  it gained an entry. */
   pb->text_changed = TRUE;
 
-  *child_baton = new_db;
   return SVN_NO_ERROR;
 }
 
