@@ -72,7 +72,16 @@ The directory given to --with-apr-util does not specify a prefix for an
 installed APU, nor an APR-util build directory.])
     fi
   ],[
-    if test -n "$3" && test "$3" = "1"; then
+    dnl if we have a bundled source directory, use it
+    if test -d "$1"; then
+      apu_found="reconfig"
+      if test -n "$2"; then
+        apu_config="$2/apu-config"
+      else
+        apu_config="$1/apu-config"
+      fi
+    fi
+    if test "$apu_found" = "no" && test -n "$3" && test "$3" = "1"; then
       if apu-config --help > /dev/null 2>&1 ; then
         apu_found="yes"
         apu_config="apu-config"
@@ -85,25 +94,6 @@ installed APU, nor an APR-util build directory.])
             break
           fi
         done
-      fi
-    fi
-    dnl if we have a bundled source directory, then we may have more work
-    if test -d "$1"; then
-      apu_temp_abs_srcdir="`cd $1 && pwd`"
-      if test "$apu_found" = "yes" \
-         && test "`$apu_config --srcdir`" = "$apu_temp_abs_srcdir"; then
-        dnl the installed apu-config represents our source directory, so
-        dnl pretend we didn't see it and just use our bundled source
-        apu_found="no"
-      fi
-      dnl We could not find an apu-config; use the bundled one
-      if test "$apu_found" = "no"; then
-        apu_found="reconfig"
-        if test -n "$2"; then
-          apu_config="$2/apu-config"
-        else
-          apu_config="$1/apu-config"
-        fi
       fi
     fi
   ])
