@@ -369,7 +369,7 @@
           used by a single server process running as one
           user&mdash;such as Apache's <command>httpd</command> or
           <command>svnserve</command> (see <xref
-          linkend="svn-ch-6"/>)&mdash; rather than accessing it as
+          linkend="svn-ch-6"/>)&mdash;rather than accessing it as
           many different users via <literal>file:///</literal> or
           <literal>svn+ssh://</literal> URLs.  If using a Berkeley DB
           repository directly as multiple users, be sure to read <xref

@@ -212,7 +212,7 @@
 
       <para>Happily, the Subversion client has a remedy for this: a
         built-in system for caching authentication credentials on
-        disk.  By default, whenever the commandline client
+        disk.  By default, whenever the command-line client
         successfully authenticates itself to a server, it saves the
         credentials in the user's private runtime configuration
         area&mdash;in <filename>~/.subversion/auth/</filename> on
@@ -346,7 +346,7 @@ END
       <orderedlist>
         <listitem>
           <para>Check whether the user specified any credentials as
-            commandline options, via <option>--username</option>
+            command-line options, via <option>--username</option>
             and/or <option>--password</option>.  If not, or if these
             options fail to authenticate successfully, then</para>
         </listitem>
@@ -1284,7 +1284,7 @@ $
           <firstterm>certifying authority</firstterm> (CA).  If
           OpenSSL is unable to automatically trust the CA, or if some
           other problem occurs (such as an expired certificate or
-          hostname mismatch), the Subversion commandline client will
+          hostname mismatch), the Subversion command-line client will
           ask you whether you want to trust the server certificate
           anyway:</para>
 
@@ -1358,7 +1358,7 @@ Passphrase for '/path/to/my/cert.p12':  ********
           Subversion, it must be in PKCS#12 format, which is a
           portable standard.  Most web browsers are already able to
           import and export certificates in that format.   Another
-          option is to use the OpenSSL commandline tools to convert
+          option is to use the OpenSSL command-line tools to convert
           existing certificates into PKCS#12.</para>
 
         <para>Again, the runtime <filename>servers</filename> file

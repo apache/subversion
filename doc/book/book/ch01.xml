@@ -174,7 +174,7 @@
             Additionally, in CVS you cannot replace a versioned file
             with some new thing of the same name without the new item
             inheriting the history of the old&mdash;perhaps completely
-            unrelated&mdash; file.  With Subversion, you can add,
+            unrelated&mdash;file.  With Subversion, you can add,
             delete, copy, and rename both files and directories.  And
             every newly added file begins with a fresh, clean
             history all its own.</para>
@@ -197,7 +197,7 @@
         <term>Versioned metadata</term>
         <listitem>
           <para>Each file and directory has a set of
-            properties&mdash;keys and their values&mdash; associated
+            properties&mdash;keys and their values&mdash;associated
             with it.  You can create and store any arbitrary key/value
             pairs you wish.  Properties are versioned over time, just
             like file contents.</para>
@@ -433,7 +433,7 @@
 
     <note>
       <para>The following example assumes that you have
-      <command>svn</command>, the Subversion commandline client, and
+      <command>svn</command>, the Subversion command-line client, and
       <command>svnadmin</command>, the administrative tool, ready to
       go.  It also assumes that your <command>svn</command> client has
       been compiled against Berkeley DB.  To verify this, run
