@@ -19,7 +19,6 @@
 
 
 #include <httpd.h>
-#include <http_request.h>
 #include <http_protocol.h>
 #include <http_log.h>
 #include <http_core.h>  /* for ap_construct_url */
@@ -1724,37 +1723,15 @@ static dav_error * dav_svn_set_headers(request_rec *r,
 
   /* ### what to do for collections, activities, etc */
 
-  if (resource->type == DAV_RESOURCE_TYPE_VERSION)
-    {
-      /* Send 'Last-Modified', 'Expires', and 'Cache-Control' headers. */
-      apr_time_t tyme;
-      int retval;
+  /* make sure the proper mtime is in the request record */
+#if 0
+  ap_update_mtime(r, resource->info->finfo.mtime);
+#endif
 
-      retval = dav_svn_get_last_modified_time (NULL, &tyme, resource,
-                                               0, resource->pool);
-      if (retval)
-        {
-          ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL,
-                        r, "dav_svn_get_last_modified_time('%s') failed",
-                        resource->info->repos_path);
-        }
-      else
-        {
-          ap_update_mtime(r, tyme);
-          ap_set_last_modified(r);
-        }
-
-      /* HTTP 1.0, old n' busted... */
-      apr_table_setn(r->headers_out,
-                     "Expires", "Thu, 31 Dec 2037 00:00:00 GMT");
-      /* ...HTTP 1.1, new hotness: */
-      apr_table_setn(r->headers_out,
-                     "Cache-Control", "max-age=1000000000");
-      /* Technically, RFC 2616 says that overflows must be handled by
-         dropping to 2147483648, so more digits would be safe.  But
-         why go out of our way to test the limits of clients?  Same
-         deal with the year 2037. */ 
-    }
+  /* ### note that these use r->filename rather than <resource> */
+#if 0
+  ap_set_last_modified(r);
+#endif
 
   /* generate our etag and place it into the output */
   apr_table_setn(r->headers_out, "ETag",
