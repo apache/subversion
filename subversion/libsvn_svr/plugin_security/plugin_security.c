@@ -86,6 +86,7 @@ char
 svn_internal_authorization (svn_string_t *repos,
                             svn_user_t *user,
                             svr_action_t requested_action,
+                            unsigned long ver,
                             svn_string_t *path)
 {
 
