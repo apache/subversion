@@ -251,6 +251,7 @@ sync:
 	@echo If there are no local changes, press ENTER...
 	@read
 	svnversion . >HEADREV
+	$(MAKE) editmode
 	svn merge -r$$(cat LAST_UPDATED):$$(cat HEADREV) $(COLLAB)/trunk/doc/book .
 	mv HEADREV LAST_UPDATED
 	rmdir sync.LOCK
