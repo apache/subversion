@@ -299,7 +299,7 @@ check_ancestry_of_peg_path (svn_boolean_t *is_ancestor,
       SVN_ERR (svn_fs_history_location (&path, &revision, history, currpool));
 
       if (!fs_path)
-        fs_path = path;
+        fs_path = apr_pstrdup (pool, path);
 
       if (revision <= peg_revision)
         break;
