@@ -179,3 +179,8 @@ wrapper -> envoltorio
     Normalmente una función o librería que engloba o asimila otra
     menor, con el propósito de extender su funcionalidad o hacerla
     más fácil de usar de cara al usuario.
+
+namespace -> espacio de nombrado,
+    Tecnicismo del C++, obtenido de la traducción del libro
+    "Pensar en C++", en concreto la sección 3.2 disponible en
+    http://arco.inf-cr.uclm.es/~dvilla/pensar_en_C++/ch02s03.html#id2589039.
