@@ -50,10 +50,6 @@ svn_cl__merge (apr_getopt_t *os,
   svn_wc_notify_func_t notify_func = NULL;
   void *notify_baton;
 
-  svn_client_ctx_set_auth_baton (ctx,
-                                 svn_cl__make_auth_baton (opt_state, pool),
-                                 svn_cl__create_auth_baton (opt_state, pool));
-
   /* If the first opt_state revision is filled in at this point, then
      we know the user must have used the '-r' switch. */
   if (opt_state->start_revision.kind != svn_opt_revision_unspecified)

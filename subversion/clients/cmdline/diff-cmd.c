@@ -49,10 +49,6 @@ svn_cl__diff (apr_getopt_t *os,
   apr_status_t status;
   int i;
 
-  svn_client_ctx_set_auth_baton (ctx,
-                                 svn_cl__make_auth_baton (opt_state, pool),
-                                 svn_cl__create_auth_baton (opt_state, pool));
-
   options = svn_cstring_split (opt_state->extensions, " \t\n\r", TRUE, pool);
 
   /* Get an apr_file_t representing stdout and stderr, which is where

@@ -104,11 +104,6 @@ svn_cl__propset (apr_getopt_t *os,
          us find the right repository. */
       svn_opt_push_implicit_dot_target (targets, pool);
 
-      svn_client_ctx_set_auth_baton (ctx,
-                                     svn_cl__make_auth_baton (opt_state, pool),
-                                     svn_cl__create_auth_baton (opt_state,
-                                                                pool));
-
       /* Either we have a URL target, or an implicit wc-path ('.')
          which needs to be converted to a URL. */
       if (targets->nelts <= 0)

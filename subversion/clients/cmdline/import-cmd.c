@@ -50,11 +50,6 @@ svn_cl__import (apr_getopt_t *os,
   void *notify_baton = NULL;
   void *log_msg_baton;
 
-  /* Build an authentication object to give to libsvn_client. */
-  svn_client_ctx_set_auth_baton (ctx,
-                                 svn_cl__make_auth_baton (opt_state, pool),
-                                 svn_cl__create_auth_baton (opt_state, pool));
-
   /* Import takes up to three arguments, for example
    *
    *   $ svn import  file:///home/jrandom/repos  ./myproj  myproj

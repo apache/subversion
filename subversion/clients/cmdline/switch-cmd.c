@@ -92,11 +92,6 @@ svn_cl__switch (apr_getopt_t *os,
       (SVN_ERR_ENTRY_NOT_FOUND, NULL, 
        "`%s' does not appear to be a working copy path", target);
   
-  /* Build an authentication baton to give to libsvn_client. */
-  svn_client_ctx_set_auth_baton (ctx, 
-                                 svn_cl__make_auth_baton (opt_state, pool),
-                                 svn_cl__create_auth_baton (opt_state, pool));
-
   /* We want the switch to print the same letters as a regular update. */
   if (entry->kind == svn_node_file)
     SVN_ERR (svn_wc_get_actual_target (target, &parent_dir, &base_tgt, pool));
