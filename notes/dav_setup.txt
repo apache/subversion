@@ -17,8 +17,8 @@
 2.  cd httpd-2.0/srclib/, and checkout the "apr" and "apr-util"
     modules into this directory:
 
-      cvs -d :pserver:anoncvs@apache.org:/home/cvspublic co apr
-      cvs -d :pserver:anoncvs@apache.org:/home/cvspublic co apr-util
+      cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co apr
+      cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co apr-util
 
 3.  At the top of the httpd-2.0 tree:
 
