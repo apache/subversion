@@ -261,15 +261,15 @@ properties of a file, dirent, or dir.
 @subsubsection Difference Queries
 
 @table @code
-@item delta get_delta (user, versionX, pathX, versionY, pathY)
- return a delta object which converts subtree X into subtree Y
-@item diff get_diff (user, versionX, pathX, versionY, pathY)
- return a diff between any two files in the repository
 @item skelta status (user, skelta)
  walk the latest tree in the repository, compare to the skelta tree, and
  return any version differences in a new skelta
 @item delta update (user, skelta)
  same as status, but returns a filled delta object
+@item delta get_delta (user, versionX, pathX, versionY, pathY)
+ return a delta object which converts subtree X into subtree Y
+@item diff get_diff (user, versionX, pathX, versionY, pathY)
+ return a diff between any two files in the repository
 @end table
 
 
