@@ -1423,37 +1423,39 @@ if __name__ == '__main__':
   <!-- *** SECTION 5:  PROGRAMMING WITH MEMORY POOLS                   *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-8-sect-5">
-    <title>Programming with Memory Pools</title>
+    <title>Programando con áreas de memoria</title>
 
-    <para>Almost every developer who has used the C programming
-      language has at some point sighed at the daunting task of
-      managing memory usage.  Allocating enough memory to use, keeping
-      track of those allocations, freeing the memory when you no
-      longer need it&mdash;these tasks can be quite complex.  And of
-      course, failure to do those things properly can result in a
-      program that crashes itself, or worse, crashes the computer.
-      Fortunately, the APR library that Subversion depends on for
-      portability provides the <structname>apr_pool_t</structname>
-      type, which represents a pool from which the application may
-      allocate memory.</para>
+    <para>Casi todo desarrollador que ha usado el lenguaje de
+      programación C se ha exasperado ante la desalentadora tarea de
+      gestionar la memoria. Reservar suficiente memoria para un uso,
+      llevar la pista de estas reservas, liberar la memoria cuando
+      ya no se necesita&mdash;estas tareas pueden ser bastante
+      complejas. Y por supuesto, errar en estas operaciones puede
+      llevar a un programa que se cuelga, o peor, que cuelga todo el
+      ordenador. Afortunadamente, la librería APR, de la que depende
+      Subversion para su portabilidad, proporciona el tipo de dato
+      <structname>apr_pool_t</structname>, el cual representa un
+      área de la cual la aplicación puede reservar memoria.</para>
 
-    <para>A memory pool is an abstract representation of a chunk of
-      memory allocated for use by a program.  Rather than requesting
-      memory directly from the OS using the standard
-      <function>malloc()</function> and friends, programs that link
-      against APR can simply request that a pool of memory be created
-      (using the <function>apr_pool_create()</function> function).
-      APR will allocate a moderately sized chunk of memory from the
-      OS, and that memory will be instantly available for use by the
-      program.  Any time the program needs some of the pool memory, it
-      uses one of the APR pool API functions, like
-      <function>apr_palloc()</function>, which returns a generic
-      memory location from the pool.  The program can keep requesting
-      bits and pieces of memory from the pool, and APR will keep
-      granting the requests.  Pools will automatically grow in size to
-      accommodate programs that request more memory than the original
-      pool contained, until of course there is no more memory
-      available on the system.</para>
+    <para>Un área de memoria es una representación abstracta de
+      un bloque de memoria reservado para ser usado por un
+      programa. En lugar de pedir memoria directamente al SO
+      usando las funciones estándar <function>malloc()</function> y
+      compañía, los programas que enlazan con APR pueden simplemente
+      solicitar que se cree un área de memoria (usando la función
+      <function>apr_pool_create()</function>).  APR reservará un
+      trozo de memoria de tamaño moderado del SO, y esa memoria será
+      disponible instantáneamente para ser usada por el programa.
+      En cualquier momento que el programa necesite algo de memoria,
+      usará una de las funciones de área de memoria de la API APR,
+      como <function>apr_palloc()</function>, la cual devuelve una
+      dirección genérica de memoria que apunta dentro del área. El
+      programa puede seguir pidiendo bits y trozos de memoria del
+      área, y APR seguirá accediendo a las demandas. Las áreas
+      de memoria crecen automáticamente en tamaño para acomodarse
+      a los programas que solicitan más memoria que la contenida
+      inicialmente por el área, hasta que por supuesto, no quede
+      más memoria disponible en el sistema.</para>
 
     <para>Now, if this were the end of the pool story, it would hardly
       have merited special attention.  Fortunately, that's not the
