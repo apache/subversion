@@ -403,7 +403,7 @@ static svn_error_t *
 subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   const char *header =
-    "general usage: %s SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
+    "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
     "Type \"svnadmin help <subcommand>\" for help on a specific subcommand.\n"
     "\n"
     "Available subcommands:\n";
