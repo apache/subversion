@@ -873,37 +873,35 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 apr_file_t *svn_swig_py_make_file (PyObject *py_file,
                                    apr_pool_t *pool)
 {
-  apr_file_t *apr_file;
+  apr_file_t *apr_file = NULL;
   apr_status_t status;
   FILE *file;
-  int fd = -1;
+  apr_os_file_t *osfile;
 
   if (py_file == NULL || py_file == Py_None)
     return NULL;
 
-  if (PyString_Check (py_file))
+  if (PyString_Check(py_file))
     {
-      fd = open (PyString_AS_STRING (py_file),
-                 O_CREAT | O_RDWR,
-                 S_IRUSR | S_IWUSR);
+      /* input is a path -- just open an apr_file_t */
+      apr_file_open(&apr_file, PyString_AS_STRING(py_file),
+                    APR_CREATE | APR_READ | APR_WRITE,
+                    APR_OS_DEFAULT,
+                    pool);
     }
   else if (PyFile_Check (py_file))
     {
-      file = PyFile_AsFile (py_file);
-      fd = fileno (file);
+      /* input is a file object -- convert to apr_file_t */
+      file = PyFile_AsFile(py_file);
+#ifdef WIN32
+      osfile = (apr_os_file_t *)_get_osfhandle(_fileno(file));
+#else
+      osfile = (apr_os_file_t *)fileno(file);
+#endif
+      status = apr_os_file_put (&apr_file, osfile, O_CREAT | O_WRONLY, pool);
+      if (status)
+        return NULL;
     }
-  else if (PyInt_Check (py_file))
-    {
-      fd = PyInt_AsLong (py_file);
-    }
-
-  if (fd >= 0) 
-    {  
-      status = apr_os_file_put (&apr_file, &fd, O_CREAT | O_WRONLY, pool);
-    }
-
-  /* FIXME: We shouldn't just silently fail. */
-
   return apr_file;
 }
 
