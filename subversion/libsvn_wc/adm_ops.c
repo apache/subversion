@@ -1667,22 +1667,35 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
 /*** Resolving a conflict automatically ***/
 
 
-/* Helper for resolve_conflict_on_entry */
+/* Helper for resolve_conflict_on_entry.  Delete the file BASE_NAME in
+   PARENT_DIR if it exists.  Set WAS_PRESENT to TRUE if the file existed,
+   and to FALSE otherwise. */
 static svn_error_t *
 attempt_deletion (const char *parent_dir,
                   const char *base_name,
+                  svn_boolean_t *was_present,
                   apr_pool_t *pool)
 {
   const char *full_path = svn_path_join (parent_dir, base_name, pool);
-  return remove_file_if_present (full_path, pool);
+  svn_node_kind_t kind;
+
+  SVN_ERR (svn_io_check_path (full_path, &kind, pool));
+  *was_present = kind != svn_node_none;
+  if (! *was_present)
+    return SVN_NO_ERROR;
+
+  return svn_io_remove_file (full_path, pool);
 }
 
 
-/* Does the main resolution work.  PATH is the path to the item to be
-   changed, BASE_NAME is the basename of PATH, and CONFLICT_DIR is the
-   access baton for PATH.  ORIG_ENTRY is the entry prior to resolution.
-   RESOLVE_TEXT and RESOLVE_PROPS are TRUE if text and property conficts
-   respectively are to be resolved. */
+/* Conflict resolution involves removing the conflict files, if they exist,
+   and clearing the conflict filenames from the entry.  The latter needs to
+   be done whether or not the conflict files exist.
+
+   PATH is the path to the item to be resolved, BASE_NAME is the basename
+   of PATH, and CONFLICT_DIR is the access baton for PATH.  ORIG_ENTRY is
+   the entry prior to resolution. RESOLVE_TEXT and RESOLVE_PROPS are TRUE
+   if text and property conficts respectively are to be resolved. */
 static svn_error_t *
 resolve_conflict_on_entry (const char *path,
                            const svn_wc_entry_t *orig_entry,
@@ -1694,74 +1707,74 @@ resolve_conflict_on_entry (const char *path,
                            void *notify_baton,
                            apr_pool_t *pool)
 {
-  svn_boolean_t text_conflict, prop_conflict;
+  svn_boolean_t was_present, need_feedback = FALSE;
   apr_uint32_t modify_flags = 0;
   svn_wc_entry_t *entry = svn_wc_entry_dup (orig_entry, pool);
 
-  /* Sanity check: see if libsvn_wc thinks this item is in a state of
-     conflict that we have asked to resolve.   If not, just go home.*/
-  SVN_ERR (svn_wc_conflicted_p (&text_conflict, &prop_conflict,
-                                svn_wc_adm_access_path (conflict_dir), entry,
-                                pool));
-  if (!(resolve_text && text_conflict) && !(resolve_props && prop_conflict))
-    return SVN_NO_ERROR;
-
   /* Yes indeed, being able to map a function over a list would be nice. */
-  if (resolve_text && text_conflict && entry->conflict_old)
+  if (resolve_text && entry->conflict_old)
     {
       SVN_ERR (attempt_deletion (svn_wc_adm_access_path (conflict_dir),
-                                 entry->conflict_old, pool));
+                                 entry->conflict_old, &was_present, pool));
       modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_OLD;
       entry->conflict_old = NULL;
+      need_feedback |= was_present;
     }
-  if (resolve_text && text_conflict && entry->conflict_new)
+  if (resolve_text && entry->conflict_new)
     {
       SVN_ERR (attempt_deletion (svn_wc_adm_access_path (conflict_dir),
-                                 entry->conflict_new, pool));
+                                 entry->conflict_new, &was_present, pool));
       modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_NEW;
       entry->conflict_new = NULL;
+      need_feedback |= was_present;
     }
-  if (resolve_text && text_conflict && entry->conflict_wrk)
+  if (resolve_text && entry->conflict_wrk)
     {
       SVN_ERR (attempt_deletion (svn_wc_adm_access_path (conflict_dir),
-                                 entry->conflict_wrk, pool));
+                                 entry->conflict_wrk, &was_present, pool));
       modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_WRK;
       entry->conflict_wrk = NULL;
+      need_feedback |= was_present;
     }
-  if (resolve_props && prop_conflict && entry->prejfile)
+  if (resolve_props && entry->prejfile)
     {
       SVN_ERR (attempt_deletion (svn_wc_adm_access_path (conflict_dir),
-                                 entry->prejfile, pool));
+                                 entry->prejfile, &was_present, pool));
       modify_flags |= SVN_WC__ENTRY_MODIFY_PREJFILE;
       entry->prejfile = NULL;
+      need_feedback |= was_present;
     }
 
-  /* ### FIXME: Should this be using log files?
-
-     Although removing the files is sufficient to indicate that the
-     conflict is resolved, if we update the entry as well future checks
-     for conflict state will be more efficient. */
-  SVN_ERR (svn_wc__entry_modify
-           (conflict_dir,
-            (entry->kind == svn_node_dir ? NULL : base_name),
-            entry, modify_flags, pool));
-
-  if (notify_func)
+  if (modify_flags)
     {
-      /* Sanity check:  see if libsvn_wc *still* thinks this item is in a
-         state of conflict that we have asked to resolve.  If not, report
-         the successful resolution.  */     
-      SVN_ERR (svn_wc_conflicted_p (&text_conflict, &prop_conflict,
-                                    svn_wc_adm_access_path (conflict_dir),
-                                    entry, pool));
-      if ((! (resolve_text && text_conflict))
-          && (! (resolve_props && prop_conflict)))
-        (*notify_func) (notify_baton, path, svn_wc_notify_resolve,
-                        svn_node_unknown,
-                        NULL,
-                        svn_wc_notify_state_unknown,
-                        svn_wc_notify_state_unknown,
-                        SVN_INVALID_REVNUM);
+      /* Although removing the files is sufficient to indicate that the
+         conflict is resolved, if we update the entry as well future checks
+         for conflict state will be more efficient. */
+      SVN_ERR (svn_wc__entry_modify
+               (conflict_dir,
+                (entry->kind == svn_node_dir ? NULL : base_name),
+                entry, modify_flags, pool));
+
+      /* No feedback if no files were deleted and all we did was change the
+         entry, such a file did not appear as a conflict */
+      if (need_feedback && notify_func)
+        {
+          /* Sanity check:  see if libsvn_wc *still* thinks this item is in a
+             state of conflict that we have asked to resolve.  If not, report
+             the successful resolution.  */     
+          svn_boolean_t text_conflict, prop_conflict;
+          SVN_ERR (svn_wc_conflicted_p (&text_conflict, &prop_conflict,
+                                        svn_wc_adm_access_path (conflict_dir),
+                                        entry, pool));
+          if ((! (resolve_text && text_conflict))
+              && (! (resolve_props && prop_conflict)))
+            (*notify_func) (notify_baton, path, svn_wc_notify_resolve,
+                            svn_node_unknown,
+                            NULL,
+                            svn_wc_notify_state_unknown,
+                            svn_wc_notify_state_unknown,
+                            SVN_INVALID_REVNUM);
+        }
     }
           
   return SVN_NO_ERROR;
