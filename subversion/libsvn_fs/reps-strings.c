@@ -1343,6 +1343,79 @@ svn_fs__rep_deltify (svn_fs_t *fs,
 }
 
 
+svn_error_t *
+svn_fs__rep_undeltify (svn_fs_t *fs,
+                       const char *rep,
+                       trail_t *trail)
+{
+#if DELTIFYING
+  svn_stream_t *source_stream; /* stream to read the source */
+  svn_stream_t *target_stream; /* stream to write the fulltext */
+  struct write_string_baton target_baton;
+  const char *orig_str_key; /* original string key */
+  skel_t *rep_skel;
+  unsigned char buf[65536];
+  apr_size_t len;
+
+  /* Read the rep skel. */
+  SVN_ERR (svn_fs__read_rep (&rep_skel, fs, rep, trail));
+
+  /* If REP is a fulltext rep, there's nothing to do. */
+  if (rep_is_fulltext (rep_skel))
+    return SVN_NO_ERROR;
+
+  /* Get the original string key from REP (so we can delete it after
+     we write our new one out. */
+  SVN_ERR (string_key (&orig_str_key, rep_skel, trail->pool));
+  
+  /* Set up a string to receive the svndiff data. */
+  target_baton.fs = fs;
+  target_baton.trail = trail;
+  target_baton.key = NULL;
+  target_stream = svn_stream_create (&target_baton, trail->pool);
+  svn_stream_set_write (target_stream, write_string);
+
+  /* Set up the source stream. */
+  source_stream = svn_fs__rep_contents_read_stream (fs, rep, 0,
+                                                    trail, trail->pool);
+  do
+    {
+      apr_size_t len_read;
+
+      len = sizeof (buf);
+      SVN_ERR (svn_stream_read (source_stream, buf, &len));
+      len_read = len;
+      SVN_ERR (svn_stream_write (target_stream, buf, &len));
+      if (len_read != len)
+        return svn_error_createf 
+          (SVN_ERR_FS_GENERAL, 0, NULL, trail->pool,
+           "svn_fs__rep_undeltify: Error writing fulltext contents");
+    }
+  while (len);
+
+
+  /* Now `target_baton.key' has the key of the new string.  We
+     should hook it into the representation. */
+  {
+    skel_t *header = svn_fs__make_empty_list (trail->pool);
+    skel_t *rskel = svn_fs__make_empty_list (trail->pool);
+
+    /* The header. */
+    svn_fs__prepend (svn_fs__str_atom ("fulltext", trail->pool), header);
+    
+    /* The rep. */
+    svn_fs__prepend (svn_fs__str_atom (target_baton.key, trail->pool), rskel);
+    svn_fs__prepend (header, rskel);
+
+    /* Write out the new representation, and remove the old string. */
+    SVN_ERR (svn_fs__write_rep (fs, rep, rskel, trail));
+    SVN_ERR (svn_fs__string_delete (fs, orig_str_key, trail));
+  }
+#endif /* ! DELTIFYING */
+
+  return SVN_NO_ERROR;
+}
+
 
 /* 
  * local variables:

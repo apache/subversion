@@ -867,7 +867,46 @@ svn_error_t *svn_fs_is_different (int *is_different,
                                   svn_fs_root_t *root2,
                                   const char *path2,
                                   apr_pool_t *pool);
-                                  
+
+
+
+/* Deltification of Storage.  */
+
+
+/* Examine the data associated with PATH under ROOT, and offer the
+   filesystem a chance store that data in a deltified fashion.
+
+   If PATH represents a directory, deltify PATH's properties and list
+   of entries, and if RECURSIVE is non-zero, perform this operation
+   recursively on PATH's children.
+
+   If PATH represents a file, deltify PATH's properties and text
+   contents (and ignore the RECURSIVE argument).
+
+   Use POOL for all necessary allocations. */
+svn_error_t *svn_fs_deltify (svn_fs_root_t *root,
+                             const char *path,
+                             int recursive,
+                             apr_pool_t *pool);
+
+
+/* Ensure that the data associated with PATH under ROOT is stored as
+   fulltext (that is, in an undeltified fashion).  If this is already
+   the case, do nothing.
+
+   If PATH represents a directory, un-deltify PATH's properties and list
+   of entries, and if RECURSIVE is non-zero, perform this operation
+   recursively on PATH's children.
+
+   If PATH represents a file, un-deltify PATH's properties and text
+   contents (and ignore the RECURSIVE argument).
+
+   Use POOL for all necessary allocations. */
+svn_error_t *svn_fs_undeltify (svn_fs_root_t *root,
+                               const char *path,
+                               int recursive,
+                               apr_pool_t *pool);
+
 
 
 /* Directories.  */

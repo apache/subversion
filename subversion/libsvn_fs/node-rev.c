@@ -167,6 +167,158 @@ deltify (svn_fs_id_t *target_id,
 }
 
 
+/* In FS, change ID's representation to be a fulltext representation
+   as part of TRAIL.  If ID does not exist, do nothing and return
+   success. */
+static svn_error_t *
+undeltify (svn_fs_id_t *id,
+           svn_fs_t *fs,
+           trail_t *trail)
+{
+  skel_t *node_rev;
+  const char *prop_key = NULL, *data_key = NULL;
+  skel_t *pkey_skel, *dkey_skel;
+
+  /* Turn ID into a skel so we can get the rep keys. */
+  SVN_ERR (svn_fs__get_node_revision (&node_rev, fs, id, trail));
+
+  /* Check that target exists.  If not, no big deal -- just do
+     nothing. */
+  if (node_rev == NULL)
+    return SVN_NO_ERROR;
+
+  /* Get the property key. */
+  pkey_skel = SVN_FS__NR_PROP_KEY (node_rev);
+  if (pkey_skel->len != 0)
+    prop_key = apr_pstrndup (trail->pool, pkey_skel->data, pkey_skel->len);
+
+  /* Get the data key. */
+  dkey_skel = SVN_FS__NR_DATA_KEY (node_rev);
+  if (dkey_skel->len != 0)
+    data_key = apr_pstrndup (trail->pool, dkey_skel->data, dkey_skel->len);
+
+  /* Undeltify the properties. */
+  if (prop_key)
+    SVN_ERR (svn_fs__rep_undeltify (fs, prop_key, trail));
+
+  /* Undeltify the data (entries list for directories, file contents
+     for files). */
+  if (data_key)
+    SVN_ERR (svn_fs__rep_undeltify (fs, data_key, trail));
+
+  return SVN_NO_ERROR;
+}
+
+
+struct deltify_args {
+  svn_fs_t *fs;
+  svn_fs_root_t *root;
+  const char *path;
+  int recursive;
+};
+
+
+static svn_error_t *
+txn_body_deltify (void *baton, trail_t *trail)
+{
+  /* ### todo: We can't just blindly deltify against the head
+     revision.  After all, this node may not EXIST in the head
+     revision!  So we need a better plan here.  We could do an
+     exhaustive (linear) search from the youngest revision to
+     ARGS->root's revision to find the youngest fulltext in existence,
+     but this could be losing if the node was renamed prior to the
+     next fulltext storage of it. 
+
+     ### todo II:  write up a sweet new id-searching method.
+  */
+  struct deltify_args *args = baton;
+  svn_fs_id_t *source_id, *target_id;
+  svn_revnum_t youngest;
+  svn_fs_root_t *y_root;
+
+  
+  /* ### todo:  Don't abort.  Currently, however, this function is
+     work-in-progress.  */
+  abort();
+
+
+  /* We're going to deltify against the head revision, which is known
+     to be fulltext. */
+  SVN_ERR (svn_fs_youngest_rev (&youngest, args->fs, trail->pool));
+  SVN_ERR (svn_fs_revision_root (&y_root, args->fs, youngest, trail->pool));
+  SVN_ERR (svn_fs_node_id (&source_id, y_root, args->path, trail->pool));
+
+  /* Get the ID of the target, which is the node we're changing. */
+  SVN_ERR (svn_fs_node_id (&target_id, args->root, args->path, trail->pool));
+
+  /* Perform the deltification step. */
+  SVN_ERR (deltify (target_id, source_id, args->fs, trail));
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_deltify (svn_fs_root_t *root,
+                const char *path,
+                int recursive,
+                apr_pool_t *pool)
+{
+  struct deltify_args args;
+
+  /* ### todo:  Support recursiveness. */
+  if (recursive)
+    return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+                             "Recursive deltification is not implemented");
+
+  args.fs = svn_fs_root_fs (root);
+  args.root = root;
+  args.path = path;
+  args.recursive = recursive;
+
+  SVN_ERR (svn_fs__retry_txn (args.fs, txn_body_deltify, &args, pool));
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+txn_body_undeltify (void *baton, trail_t *trail)
+{
+  struct deltify_args *args = baton;
+  svn_fs_id_t *id;
+
+  /* Get the ID of the target, which is the node we're changing. */
+  SVN_ERR (svn_fs_node_id (&id, args->root, args->path, trail->pool));
+
+  /* Perform the un-deltification step. */
+  SVN_ERR (undeltify (id, args->fs, trail));
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_undeltify (svn_fs_root_t *root,
+                  const char *path,
+                  int recursive,
+                  apr_pool_t *pool)
+{
+  struct deltify_args args;
+
+  /* ### todo:  Support recursiveness. */
+  if (recursive)
+    return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+                             "Recursive undeltification is not implemented");
+
+  args.fs = svn_fs_root_fs (root);
+  args.root = root;
+  args.path = path;
+  args.recursive = recursive;
+
+  SVN_ERR (svn_fs__retry_txn (args.fs, txn_body_undeltify, &args, pool));
+  return SVN_NO_ERROR;
+}
+
+
+
 svn_error_t *
 svn_fs__stable_node (svn_fs_t *fs,
                      svn_fs_id_t *id,
@@ -179,6 +331,7 @@ svn_fs__stable_node (svn_fs_t *fs,
 
   return SVN_NO_ERROR;
 }
+
 
 
 
