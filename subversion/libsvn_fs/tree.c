@@ -3070,9 +3070,16 @@ typedef struct txdelta_baton_t
 
 
 /* A trail-ready wrapper around svn_fs__dag_finalize_edits. 
-   This closes BATON->target_stream. */
+ * This closes BATON->target_stream.
+ *
+ * Note: If you're confused about how this function relates to another
+ * of similar name, think of it this way:
+ *
+ * svn_fs_apply_textdelta() ==> ... ==> txn_body_txdelta_finalize_edits()
+ * svn_fs_apply_text()      ==> ... ==> txn_body_fulltext_finalize_edits()
+ */
 static svn_error_t *
-txn_body_finalize_edits (void *baton, trail_t *trail)
+txn_body_txdelta_finalize_edits (void *baton, trail_t *trail)
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
 
@@ -3148,7 +3155,8 @@ window_consumer (svn_txdelta_window_t *window, void *baton)
      dag subsystem that we're finished with our edits. */
   if (! window)
     SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (tb->root),
-                                txn_body_finalize_edits, tb, tb->pool));
+                                txn_body_txdelta_finalize_edits, tb,
+                                tb->pool));
 
 
   return SVN_NO_ERROR;
@@ -3278,9 +3286,17 @@ struct text_baton_t
 };
 
 
-/* A different trail-ready wrapper around svn_fs__dag_finalize_edits. */
+/* A trail-ready wrapper around svn_fs__dag_finalize_edits, but for
+ * fulltext data, not text deltas.  Closes BATON->file_stream. 
+ *
+ * Note: If you're confused about how this function relates to another
+ * of similar name, think of it this way:
+ *
+ * svn_fs_apply_textdelta() ==> ... ==> txn_body_txdelta_finalize_edits()
+ * svn_fs_apply_text()      ==> ... ==> txn_body_fulltext_finalize_edits()
+ */
 static svn_error_t *
-another_txn_body_finalize_edits (void *baton, trail_t *trail)
+txn_body_fulltext_finalize_edits (void *baton, trail_t *trail)
 {
   struct text_baton_t *tb = baton;
 
@@ -3316,7 +3332,7 @@ text_stream_closer (void *baton)
 
   /* Need to tell fs that we're done sending text */
   SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (tb->root),
-                              another_txn_body_finalize_edits, tb, tb->pool));
+                              txn_body_fulltext_finalize_edits, tb, tb->pool));
 
   return SVN_NO_ERROR;
 }
