@@ -90,12 +90,9 @@ DIST_SANDBOX=.dist_sandbox
 DISTPATH="$DIST_SANDBOX/$DISTNAME"
 
 echo "Distribution will be named: $DISTNAME"
-echo "  relase branch's revision: $REVISION"
+echo " release branch's revision: $REVISION"
 echo "     executable's revision: $REVISION_SVN"
 echo "     constructed from path: /$REPOS_PATH"
-
-echo "Building new design docs in docs/ ..."
-make doc-design
 
 rm -rf "$DIST_SANDBOX"
 mkdir "$DIST_SANDBOX"
@@ -127,16 +124,15 @@ find "$DISTPATH" -name config.nice -print | xargs rm -f
 echo "Running ./autogen.sh in sandbox, to create ./configure ..."
 (cd "$DISTPATH" && ./autogen.sh --release) || exit 1
 
-echo "Copying new docs into sandbox..."
-for name in doc/programmer/design/svn-design.info   \
-            doc/programmer/design/svn-design.info-* \
-            doc/programmer/design/svn-design.html   \
-            doc/programmer/design/svn-design.txt    \
-            doc/book/book/*.html                    \
-            doc/book/book/*.pdf                     
-do
-   cp "$name" "$DISTPATH/$name"
-done
+echo "Downloading book into sandbox..."
+
+wget http://svnbook.red-bean.com/book.pdf \
+  -O "$DISTPATH/doc/book/book/book.pdf" ||
+  echo "ERROR: Problem getting the book.pdf file." && exit 1
+
+wget http://svnbook.red-bean.com/book.html \
+  -O "$DISTPATH/doc/book/book/book.html" ||
+  echo "ERROR: Problem getting the book.html file." && exit 1
 
 cat > "$DISTPATH/ChangeLog.CVS" <<EOF
 The old CVS ChangeLog is kept at 
@@ -150,14 +146,15 @@ EOF
 
 ver_major=`echo $VERSION | cut -d '.' -f 1`
 ver_minor=`echo $VERSION | cut -d '.' -f 2`
-ver_micro=`echo $VERSION | cut -d '.' -f 3`
+ver_patch=`echo $VERSION | cut -d '.' -f 3`
 
 vsn_file="$DISTPATH/subversion/include/svn_version.h"
 
 sed \
  -e "/#define *SVN_VER_MAJOR/s/[0-9]\+/$ver_major/" \
  -e "/#define *SVN_VER_MINOR/s/[0-9]\+/$ver_minor/" \
- -e "/#define *SVN_VER_MICRO/s/[0-9]\+/$ver_micro/" \
+ -e "/#define *SVN_VER_PATCH/s/[0-9]\+/$ver_patch/" \
+ -e "/#define *SVN_VER_MICRO/s/[0-9]\+/$ver_patch/" \
  -e "/#define *SVN_VER_TAG/s/dev build/r$REVISION_SVN/" \
  -e '/#define *SVN_VER_NUMTAG/s/".*"/""/' \
  -e "/#define *SVN_VER_REVISION/s/0/$REVISION_SVN/" \
