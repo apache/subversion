@@ -308,12 +308,14 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "mkdir", svn_cl__mkdir, {0},
     "Create a new directory under revision control.\n"
-    "usage: mkdir TARGET [TARGET [TARGET ... ]]\n\n"
-    "  Create a directory with a name given by the final component of\n"
-    "  TARGET.  If TARGET is a working copy path the directory is scheduled\n"
-    "  for addition in the working copy.  If TARGET is an URL the directory\n"
-    "  is created in the repository via an immediate commit.  In both cases\n"
-    "  all the intermediate directories must already exist.\n",
+    "usage: 1. mkdir PATH [PATH ... ]\n"
+    "       2. mkdir URL [URL ...]\n\n"
+    "  Create version controlled directories.\n\n"
+    "  If run on a working copy PATHs, each directory is scheduled for\n"
+    "  addition upon the next commit.\n\n"
+    "  If run on URLs, the directories are created in the repository via an\n"
+    "  immediate commit.\n\n"
+    "  In both cases, all the intermediate directories must already exist.\n",
     {'m', 'F', 'q', SVN_CL__AUTH_OPTIONS, svn_cl__editor_cmd_opt,
      svn_cl__encoding_opt} },
 
