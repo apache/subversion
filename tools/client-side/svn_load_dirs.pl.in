@@ -413,7 +413,7 @@ my $wc_top_dir_cwd = cwd;
       # Copy $load_tag otherwise the s/// will modify @load_tags.
       my $l =  $load_tag;
       $l    =~ s#/[^/]*$##;
-        push(@load_tags_without_last_segment, $l);
+      push(@load_tags_without_last_segment, $l);
     }
   
   foreach my $dir ($repos_load_rel_path, @load_tags_without_last_segment)
