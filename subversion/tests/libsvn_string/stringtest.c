@@ -123,6 +123,21 @@ static int
 test4()
 {
   a = svn_string_create (phrase_1, pool);
+  svn_string_appendcstr (a, "new bytes to append", pool);
+  
+  /* Test that length, data, and null-termination are correct. */
+  if (svn_string_compare 
+      (a, svn_string_create ("hello, new bytes to append", pool)))
+    return 0; /* PASS */
+  else
+    return 1; /* FAIL */
+}
+
+
+static int
+test5()
+{
+  a = svn_string_create (phrase_1, pool);
   svn_string_appendbytes (a, "new bytes to append", 9, pool);
   
   /* Test that length, data, and null-termination are correct. */
@@ -135,7 +150,7 @@ test4()
 
 
 static int
-test5()
+test6()
 {
   a = svn_string_create (phrase_1, pool);
   b = svn_string_create (phrase_2, pool);
@@ -150,7 +165,7 @@ test5()
 
 
 static int
-test6()
+test7()
 {
   char *tmp;
   size_t tmp_len;
@@ -173,7 +188,7 @@ test6()
 
 
 static int
-test7()
+test8()
 {
   c = svn_string_create (phrase_2, pool);  
   
@@ -187,7 +202,7 @@ test7()
 
 
 static int
-test8()
+test9()
 {
   a = svn_string_create (phrase_1, pool);
 
@@ -204,7 +219,7 @@ test8()
 
 
 static int
-test9()
+test10()
 {
   svn_string_t *s;
   
@@ -240,7 +255,7 @@ test9()
 
 
 static int 
-test10()
+test11()
 {
   svn_string_t *s, *t;
   size_t len_1 = 0;
@@ -293,6 +308,7 @@ int (*test_funcs[])() =
   test8,
   test9,
   test10,
+  test11,
   NULL
 };
 
@@ -304,13 +320,14 @@ char *descriptions[] =
   "1: make svn_string_t from cstring",
   "2: make svn_string_t from substring of cstring",
   "3: append svn_string_t to svn_string_t",
-  "4: append bytes, then compare two strings",
-  "5: dup two strings, then compare",
-  "6: chopping a string",
-  "7: emptying a string",
-  "8: fill string with hashmarks",
-  "9: chop_back_to_char",
-  "10: block initialization and growth",
+  "4: append C string to svn_string_t",
+  "5: append bytes, then compare two strings",
+  "6: dup two strings, then compare",
+  "7: chopping a string",
+  "8: emptying a string",
+  "9: fill string with hashmarks",
+  "10: chop_back_to_char",
+  "11: block initialization and growth",
   NULL
 };
 
