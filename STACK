@@ -9,27 +9,15 @@ short-term tasks to it, if that's helpful.
 
 ------------------------------------------------------------------------
 
-Everyone:
-   - Discuss implementation of editor "hooks".  It would be nice to
-     get feedback from the editor for debugging purposes.  [Karl sez:
-     not just debugging purposes; possibly we've got ourselves a
-     generic hook interface for free now!  Mmm, except are windows a
-     convenient enough way to pass content?  Well, probably... after
-     all, they're good enough for the rest of Subversion.]
-
-     This needs a more formal writeup, then to the list.
-
 Ben todo:
    - UPDATE the SPEC!!!
    - finish implementing properties.  it's 95% done already.  :)
 
 Karl working copy todo:
-   - Preserve local mods on update!!!
    - write the log/lock recovery function.
    - with Ben, review locking protocol in wc adm directories for sanity.
-   - make "svn status" work right now, because it's really useful for testing
+   - fix robustitude of trace editor in the obvious way
    - check apr_open calls, do they assume failure implies null handle?
-   - work on properties, or work with someone on props
    - fix working copy identification/allergy code
    - make sure type-changing replacements work right
 
@@ -37,14 +25,13 @@ Ben and Karl more later:
    - xml dtd, for both xml deltas and wc formats
 
    - CURRENT BUGS of the evening:
-        * merge_sync can't use varargs; it needs a hash.  When log.c
-          tries to execute LOG_MODIFY_ENTRY, it needs to pass "extra"
-          attributes (like "reject-file") to merge_sync.
-        * for some reason merge_sync isn't setting flags -- at least
-          not when flags == 16.  (?)
         * when do we put timestamps into entries?  always?  they're
           being put on "added" files, but not "updated" files right
           now.
+        kff thunks: we make sure that log items to write a working
+                    file always come before log items to update an
+                    entry, and then we set the timestamp according to
+                    the working file when we write the new entry.
 
 Greg:
    - mod_dav_svn:
