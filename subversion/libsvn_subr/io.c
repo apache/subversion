@@ -506,20 +506,6 @@ write_handler_apr (void *baton, const char *data, apr_size_t *len,
 }
 
 
-static svn_error_t *
-close_handler_apr (void *baton)
-{
-  struct baton_apr *btn = baton;
-  apr_status_t status;
-
-  status = apr_close (btn->file);
-  if (!APR_STATUS_IS_SUCCESS(status))
-    return svn_error_create (status, 0, NULL, btn->pool, "closing file");
-  else
-    return SVN_NO_ERROR;
-}
-
-
 svn_stream_t *
 svn_stream_from_aprfile (apr_file_t *file, apr_pool_t *pool)
 {
@@ -534,7 +520,6 @@ svn_stream_from_aprfile (apr_file_t *file, apr_pool_t *pool)
   stream = svn_stream_create (baton, pool);
   svn_stream_set_read (stream, read_handler_apr);
   svn_stream_set_write (stream, write_handler_apr);
-  svn_stream_set_close (stream, close_handler_apr);
   return stream;
 }
 
@@ -579,18 +564,6 @@ write_handler_stdio (void *baton, const char *data, apr_size_t *len,
 }
 
 
-static svn_error_t *
-close_handler_stdio (void *baton)
-{
-  struct baton_stdio *btn = baton;
-
-  if (fclose (btn->fp) != 0)
-    return svn_error_create (0, errno, NULL, btn->pool, "closing file");
-  else
-    return SVN_NO_ERROR;
-}
-
-
 svn_stream_t *svn_stream_from_stdio (FILE *fp, apr_pool_t *pool)
 {
   struct baton_stdio *baton;
@@ -604,7 +577,6 @@ svn_stream_t *svn_stream_from_stdio (FILE *fp, apr_pool_t *pool)
   stream = svn_stream_create (baton, pool);
   svn_stream_set_read (stream, read_handler_stdio);
   svn_stream_set_write (stream, write_handler_stdio);
-  svn_stream_set_close (stream, close_handler_stdio);
   return stream;
 }
 

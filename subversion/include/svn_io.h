@@ -195,7 +195,10 @@ svn_stream_t *svn_stream_empty (apr_pool_t *pool);
 
 /* Convenience functions for creating streams which operate on APR
    files or on stdio files.  For convenience, if FILE or FP is NULL
-   then svn_stream_empty(pool) is returned.  */
+   then svn_stream_empty(pool) is returned.  Note that the stream
+   returned by these operations is not considered to "own" the
+   underlying file, meaning that svn_stream_close() on the stream will
+   not close the file.  */
 
 svn_stream_t *svn_stream_from_aprfile (apr_file_t *file, apr_pool_t *pool);
 
