@@ -25,6 +25,10 @@ Karl working copy todo:
      Should result in no code changes, as none of the code folded
      redundant version information anyway.
    - fix working copy identification/allergy code
+   - an xml-writing editor (should be 2 to 3 hours tops)
+   - oh my goodness, what is *up* with that bug in free_file_baton?
+   - timestamps
+   - checksums?
 
 Karl/all todo:
    - ancestry args to replace_root go away?  Think about this.
