@@ -46,29 +46,37 @@ my__realloc (char *data, const apr_size_t oldsize, const apr_size_t request,
   return new_area;
 }
 
-
-svn_string_t *
-svn_string_ncreate (const char *bytes, const apr_size_t size, 
-                    apr_pool_t *pool)
+static svn_string_t *create_string (char *data, apr_size_t size,
+                                    apr_pool_t *pool)
 {
   svn_string_t *new_string;
 
   new_string = (svn_string_t *) apr_palloc (pool, sizeof (*new_string)); 
 
-  /* +1 to account for null terminator. */
-  new_string->data = (char *) apr_palloc (pool, size + 1);
+  new_string->data = data;
   new_string->len = size;
-  new_string->blocksize = size + 1;
+  new_string->blocksize = size + 1;	/* we know there is a null-term */
   new_string->pool = pool;
 
-  memcpy (new_string->data, bytes, size);
+  return new_string;
+}
+
+svn_string_t *
+svn_string_ncreate (const char *bytes, const apr_size_t size, 
+                    apr_pool_t *pool)
+{
+  char *data;
+
+  data = apr_palloc (pool, size + 1);
+  memcpy (data, bytes, size);
 
   /* Null termination is the convention -- even if we suspect the data
      to be binary, it's not up to us to decide, it's the caller's
      call.  Heck, that's why they call it the caller! */
-  new_string->data[new_string->len] = '\0';
+  data[size] = '\0';
 
-  return new_string;
+  /* wrap an svn_string_t around the new data */
+  return create_string (data, size, pool);
 }
 
 
@@ -82,11 +90,10 @@ svn_string_create (const char *cstring, apr_pool_t *pool)
 svn_string_t *
 svn_string_createv (apr_pool_t *pool, const char *fmt, va_list ap)
 {
-  /* fixme: annoying to dup the storage like this.  Need to split
-     svn_string_ncreate() into an allocator and a constructor, then
-     this could share the constructor. */
-  char *src_str = apr_pvsprintf (pool, fmt, ap);
-  return svn_string_create (src_str, pool);
+  char *data = apr_pvsprintf (pool, fmt, ap);
+
+  /* wrap an svn_string_t around the new data */
+  return create_string (data, strlen (data), pool);
 }
 
 
