@@ -325,12 +325,10 @@ svn_wc_close_commit (svn_string_t *path,
                      apr_pool_t *pool);
 
 
-/* The "soul" of a working copy commit:
+/* Crawl a tree depth-first, to import new data or commit changes.
 
-   Do a depth-first crawl of the local changes in a working copy,
-   beginning at ROOT_DIRECTORY.  Communicate all local changes (both
-   textual and tree) to the supplied EDIT_FNS object (coupled with the
-   supplied EDIT_BATON).
+   Start the crawl at ROOT_DIRECTORY, communicate all local changes (both
+   textual and tree) to EDIT_FNS and EDIT_BATON.
 
    Any items (files or dirs) that were found to be modified, and were
    therefore committed, are stored in TARGETS as full paths. */
@@ -342,9 +340,7 @@ svn_wc_crawl_local_mods (apr_hash_t **targets,
                          apr_pool_t *pool);
 
 
-/* The "soul" of a working copy update:
-
-   Do a depth-first crawl in a working copy, beginning at
+/* Do a depth-first crawl in a working copy, beginning at
    ROOT_DIRECTORY.  Communicate the `state' of the working copy's
    revisions to REPORTER/REPORT_BATON.  
 
