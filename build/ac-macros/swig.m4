@@ -161,9 +161,12 @@ AC_DEFUN(SVN_FIND_SWIG,
 #      SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-java-lib"
 #      SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-java-lib"
 
-      dnl For now, we'll cheat and just use the compile and link from python.
+      dnl For now, use the compile and link from python as a base.
       SWIG_JAVA_COMPILE="$SWIG_PY_COMPILE"
-      SWIG_JAVA_LINK="$SWIG_PY_LINK"
+      dnl To relink our generated native binding libraries against
+      dnl libsvn_swig_java, we must include the latter's library path.
+      dnl ### Eventually reference somewhere under $(DESTDIR)?
+      SWIG_JAVA_LINK="$SWIG_PY_LINK -L\$(SWIG_BUILD_DIR)/.libs"
       SWIG_JAVA_INCLUDES="$JNI_INCLUDES"
     fi
 
