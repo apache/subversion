@@ -316,6 +316,36 @@ beautify_list()
     RETURN_VALUE="${TEMP}"
 }
 
+# Subroutine to convert working copy path or repo URL $1 to a repo URL
+target_to_url()
+{
+    if [ -d "$1" -a -d "$1/.svn" ]; then
+        RETURN_VALUE=`"${SVN_MERGE_SVN}" info "$1" \
+            | grep ^URL: | sed -e 's/^URL: \(.*\)$/\1/g'`
+    else
+        RETURN_VALUE="$1"
+    fi
+}
+
+# Subroutine to compute the root repo URL given wc path or repo URL $1.
+# Constrained to svn command line tools, we are stuck with this ugly trial-
+# and-error implementation.  It could be made faster with a binary search.
+get_repo_root()
+{
+    target_to_url "$1"
+    while TEMP=`dirname ${RETURN_VALUE}` &&
+            "${SVN_MERGE_SVN}" proplist "${TEMP}" >/dev/null 2>&1; do
+        RETURN_VALUE="${TEMP}"
+    done
+}
+
+# Subroutine to convert repo URL $1 to a repo-local path
+url_to_rlpath()
+{
+    get_repo_root $1
+    RETURN_VALUE="${1#${RETURN_VALUE}}"
+}
+
 # The "init" action
 init()
 {
@@ -337,7 +367,7 @@ init()
 
     # Set properties
     svn_command propset -q "${SVN_MERGE_HEAD_PROP}" \
-      "${HEAD_URL}" "${BRANCH_DIR}"
+      "${HEAD_PATH}" "${BRANCH_DIR}"
     svn_command propset -q "${SVN_MERGE_REVS_PROP}" \
       "${REVS}" "${BRANCH_DIR}"
 
@@ -433,7 +463,7 @@ merge()
     if [ "${SVN_MERGE_COMMIT_FILE}" != "" ]; then
         echo "Merged revisions ${BREVS} via ${NAME} from" \
           > "${SVN_MERGE_COMMIT_FILE}"
-        echo "${HEAD_URL}" >> "${SVN_MERGE_COMMIT_FILE}"
+        echo "${HEAD_PATH}" >> "${SVN_MERGE_COMMIT_FILE}"
         report wrote commit message to "${SVN_MERGE_COMMIT_FILE}"
     fi
 
@@ -581,14 +611,12 @@ if "${SVN_MERGE_SVN}" proplist "${BRANCH_DIR}" | grep -qw svnmerge-head; then
     exit 1
 fi
 
-# In the --init case, convert ${HEAD} into ${HEAD_URL}
+# In the --init case, convert ${HEAD} into ${HEAD_URL} and ${HEAD_PATH}
 if [ "${ACTION}" = "init" ]; then
-    if [ -d "${HEAD}" -a -d "${HEAD}/.svn" ]; then
-        HEAD_URL=`"${SVN_MERGE_SVN}" info "${HEAD}" \
-          | grep ^URL: | sed -e 's/^URL: \(.*\)$/\1/g'`
-    else
-        HEAD_URL="${HEAD}"
-    fi
+    target_to_url "${HEAD}"
+    HEAD_URL="${RETURN_VALUE}"
+    url_to_rlpath "${HEAD_URL}"
+    HEAD_PATH="${RETURN_VALUE}"
 fi
 
 # Determine which label to use
@@ -626,7 +654,20 @@ SVN_MERGE_REVS_PROP="${NAME}-${SVN_MERGE_LABEL}-revs"
 # If already initialized, retrieve ${HEAD_URL} from the corresponding property
 if [ "${ACTION}" != "init" ]; then
     get_prop "${SVN_MERGE_HEAD_PROP}" "${BRANCH_DIR}"
-    HEAD_URL="${RETURN_VALUE}"
+    HEAD_PATH="${RETURN_VALUE}"
+    # handle old metadata scheme which used repository URL's
+    if echo "${HEAD_PATH}" | grep -qE '^[[:alpha:]][-+.[:alnum:]]*://'; then
+        echo "${NAME}: old head property value detected; an upgrade is required."
+        echo
+        url_to_rlpath "${HEAD_PATH}"
+        echo "Please execute and commit this change to upgrade:"
+        echo
+        echo "  svn propset ${SVN_MERGE_HEAD_PROP} ${RETURN_VALUE} ${BRANCH_DIR}"
+        echo
+        exit 1
+    fi
+    get_repo_root "${BRANCH_DIR}"
+    HEAD_URL="${RETURN_VALUE}${HEAD_PATH}"
 fi
 
 # Sanity check ${HEAD_URL}
