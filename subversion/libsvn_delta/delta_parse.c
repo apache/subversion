@@ -56,17 +56,21 @@
   svn_delta_stackframe_t structure from a stream containing
   Subversion's XML delta representation.
 
-  To use this library, see "deltaparse-test.c" in tests/.
-  
   Essentially, one must 
   
-  * create an XML_Parser
-  * register the callbacks (below) with the parser
-  * call XML_Parse() on a bytestream
+  * create an Subversion-specific XML_Parser with svn_delta_xml_parser()
+
+  * call XML_Parse(parser) on a bytestream
   
 */
 
-#include "delta_parse.h"
+#include <stdio.h>
+#include <string.h>
+#include "svn_types.h"
+#include "svn_string.h"
+#include "svn_delta.h"
+#include "xmlparse.h"
+
 
 
 
@@ -74,7 +78,7 @@
 
 /* Loop through expat's ATTS variable and fill in relevant fields in
    our stackframe FRAME. */
-void
+static void
 svn_fill_attributes (apr_pool_t *pool,
                      svn_delta_stackframe_t *frame,
                      char **atts)
@@ -118,7 +122,7 @@ svn_fill_attributes (apr_pool_t *pool,
    text_delta or prop_delta flag. 
 
 */
-void
+static void
 svn_twiddle_edit_content_flags (svn_delta_stackframe_t *d, 
                                 svn_boolean_t value,
                                 svn_boolean_t text_p)
@@ -137,32 +141,13 @@ svn_twiddle_edit_content_flags (svn_delta_stackframe_t *d,
 
 
 
-/* Recursively walk down delta D.  (PARENT is used for recursion purposes.)
-
-   Return the bottommost object in BOTTOM_OBJ and BOTTOM_KIND.
-      (Needed later for appending objects to the delta.)
-
-   The penultimate object is returned in PENULT_OBJ and PENULT_KIND. 
-      (Needed later for removing objects from the delta.)
-*/
-
-void
-svn_walk_delta (svn_delta_t *delta,
-                fish see-prototype-for-callback,
-                void *user_data)
-{
-  /* kff todo: finish this, then implement svn_find_delta_bottom()
-     with it. */
-}
-
-
 /* Heh, by creating our "stackframe" structure, this routine has been
    reduced to a trivial nothingness, like a lisp routine or something.
    :) */
 
 
 /* Return the last frame of a delta stack. */
-svn_delta_stackframe_t *
+static svn_delta_stackframe_t *
 svn_find_delta_bottom (svn_delta_stackframe_t *frame)
 {
   if (frame->next == NULL)
@@ -173,7 +158,7 @@ svn_find_delta_bottom (svn_delta_stackframe_t *frame)
 
 
 /* If we get malformed XML, return an informative error saying so. */
-svn_error_t *
+static svn_error_t *
 svn_XML_typeerror (apr_pool_t *pool, char *name, svn_boolean_t destroy_p)
 {
   if (destroy_p)
@@ -210,7 +195,7 @@ svn_XML_typeerror (apr_pool_t *pool, char *name, svn_boolean_t destroy_p)
 
 */
 
-svn_error_t *
+static svn_error_t *
 svn_starpend_delta (svn_delta_digger_t *digger,
                     svn_delta_stackframe_t *new_frame,
                     char *tagname,
@@ -286,7 +271,7 @@ svn_starpend_delta (svn_delta_digger_t *digger,
 
 */  
       
-void
+static void
 svn_xml_handle_start (void *userData, const char *name, const char **atts)
 {
   int i;
@@ -440,7 +425,8 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
 
 /*  Callback:  called whenever we find a close tag (close paren) */
 
-void svn_xml_handle_end (void *userData, const char *name)
+static void 
+svn_xml_handle_end (void *userData, const char *name)
 {
   svn_error_t *err;
   svn_delta_digger_t *my_digger = (svn_delta_digger_t *) userData;
@@ -489,7 +475,8 @@ void svn_xml_handle_end (void *userData, const char *name)
 /* Callback: called whenever we find data within a tag.  
    (Of course, we only care about data within the "text-delta" tag.)  */
 
-void svn_xml_handle_data (void *userData, const char *data, int len)
+static void 
+svn_xml_handle_data (void *userData, const char *data, int len)
 {
   svn_delta_digger_t *my_digger = (svn_delta_digger_t *) userData;
 
@@ -504,7 +491,9 @@ void svn_xml_handle_data (void *userData, const char *data, int len)
 }
 
 
-
+/* The one public interface in this file: return an expat parser
+   object which uses our svn_xml_* routines above as callbacks.  */
+
 XML_Parser
 svn_delta_make_xml_parser (svn_delta_digger_t *diggy)
 {
