@@ -29,6 +29,18 @@
 /*** Code. ***/
 
 /* Our timestamp strings look like this:
+ *
+ *    "2002-05-07Thh:mm:ss.uuuuuuZ"
+ *
+ * The format is conformant with ISO-8601 and the date format required
+ * by RFC2518 for creationdate. It is a direct converision between
+ * apr_time_t and a string, so converting to string and back retains
+ * the exact value.
+ */
+static const char * const timestamp_format =
+"%04d-%02d-%02dT%02d:%02d:%02d.%06dZ";
+
+/* Our old timestamp strings looked like this:
  * 
  *    "Tue 3 Oct 2000 HH:MM:SS.UUU (day 277, dst 1, gmt_off -18000)"
  *
@@ -37,12 +49,10 @@
  * to completely fill in an apr_time_exp_t: tm_yday, tm_isdst,
  * and tm_gmtoff.
  *
- * kff todo: what about portability problems resulting from the
- * plain int assumptions below, though?  Using apr_strftime() would
- * fix that, but converting the strings back is still a problem (see
- * the comment in svn_wc__time_to_string()).
+ * This format is still recognized on input, for backward
+ * compatibility, but no longer generated.
  */
-static const char * const timestamp_format =
+static const char * const old_timestamp_format =
 "%s %d %s %d %02d:%02d:%02d.%06d (day %03d, dst %d, gmt_off %06d)";
 
 
@@ -58,14 +68,31 @@ svn_time_to_nts (apr_time_t t, apr_pool_t *pool)
      furthermore their current implementations can only return success
      anyway. */
 
-  apr_time_exp_lt (&exploded_time, t);
+  /* We get the date in GMT now -- and expect the tm_gmtoff and
+     tm_isdst to be not set. We also ignore the weekday and yearday,
+     since those are not needed. */
 
-  /* It would be nice to use apr_strftime(), but APR doesn't give a way
-     to convert back, so we wouldn't be able to share the format string
-     between the writer and reader.  Sigh.  Also, apr_strftime() doesn't
-     offer format codes for its special tm_usec and tm_gmtoff fields. */
+  apr_time_exp_gmt (&exploded_time, t);
+
+  /* It would be nice to use apr_strftime(), but APR doesn't give a
+     way to convert back, so we wouldn't be able to share the format
+     string between the writer and reader. */
+  /* XXX: Enable this bit of code and remove the one below when a
+     bootstrap tarball has been released with this change included.
+
   t_cstr = apr_psprintf (pool,
                          timestamp_format,
+                         exploded_time.tm_year + 1900,
+                         exploded_time.tm_mon + 1,
+                         exploded_time.tm_mday,
+                         exploded_time.tm_hour,
+                         exploded_time.tm_min,
+                         exploded_time.tm_sec,
+                         exploded_time.tm_usec);
+  */
+
+  t_cstr = apr_psprintf (pool,
+                         old_timestamp_format,
                          apr_day_snames[exploded_time.tm_wday],
                          exploded_time.tm_mday,
                          apr_month_snames[exploded_time.tm_mon],
@@ -95,30 +122,6 @@ find_matching_string (char *str, const char strings[][4])
 }
 
 
-/* ### todo:
-
-   Recently Branko changed svn_time_from_string (or rather, he changed
-   svn_wc__string_to_time, but the function's name has changed since
-   then) to use apr_implode_gmt.  So now that function is using GMT,
-   but its inverse above, svn_time_to_string, is using localtime.
-
-   I'm not sure what the right thing to do is; see issue #404.  See
-   also the thread entitled "apr_implode_time and time zones" in the
-   APR dev mailing list archives:
-
-      http://apr.apache.org/mail/dev/200106.gz
-
-   That discussion between Branko and David Reid is directly
-   relevant.
-
-   Note that Subversion repositories probably want to record commit
-   dates in GMT.  Maybe we should just make Subversion's string
-   representation for times always use GMT -- that's good for
-   repositories, and for working copies it doesn't really matter since
-   humans don't have to read the timestamps in SVN/entries files much
-   (and when they do, they can easily do the conversion).  */
-
-
 apr_time_t
 svn_time_from_nts (const char *data)
 {
@@ -126,26 +129,56 @@ svn_time_from_nts (const char *data)
   char wday[4], month[4];
   apr_time_t when;
 
-  sscanf (data,
-          timestamp_format,
-          wday,
-          &exploded_time.tm_mday,
-          month,
-          &exploded_time.tm_year,
-          &exploded_time.tm_hour,
-          &exploded_time.tm_min,
-          &exploded_time.tm_sec,
-          &exploded_time.tm_usec,
-          &exploded_time.tm_yday,
-          &exploded_time.tm_isdst,
-          &exploded_time.tm_gmtoff);
-  
-  exploded_time.tm_year -= 1900;
-  exploded_time.tm_yday -= 1;
-  exploded_time.tm_wday = find_matching_string (wday, apr_day_snames);
-  exploded_time.tm_mon = find_matching_string (month, apr_month_snames);
+  /* First try the new timestamp format. */
+  if (sscanf (data,
+              timestamp_format,
+              &exploded_time.tm_year,
+              &exploded_time.tm_mon,
+              &exploded_time.tm_mday,
+              &exploded_time.tm_hour,
+              &exploded_time.tm_min,
+              &exploded_time.tm_sec,
+              &exploded_time.tm_usec) == 7)
+    {
+      exploded_time.tm_year -= 1900;
+      exploded_time.tm_mon -= 1;
+      exploded_time.tm_wday = 0;
+      exploded_time.tm_yday = 0;
+      exploded_time.tm_isdst = 0;
+      exploded_time.tm_gmtoff = 0;
 
-  apr_implode_gmt (&when, &exploded_time);
+      apr_implode_gmt (&when, &exploded_time);
+    }
+  /* Then try the compatibility option. */
+  else if (sscanf (data,
+                   old_timestamp_format,
+                   wday,
+                   &exploded_time.tm_mday,
+                   month,
+                   &exploded_time.tm_year,
+                   &exploded_time.tm_hour,
+                   &exploded_time.tm_min,
+                   &exploded_time.tm_sec,
+                   &exploded_time.tm_usec,
+                   &exploded_time.tm_yday,
+                   &exploded_time.tm_isdst,
+                   &exploded_time.tm_gmtoff) == 11)
+    {
+      exploded_time.tm_year -= 1900;
+      exploded_time.tm_yday -= 1;
+      exploded_time.tm_wday = find_matching_string (wday, apr_day_snames);
+      exploded_time.tm_mon = find_matching_string (month, apr_month_snames);
+
+      apr_implode_gmt (&when, &exploded_time);
+    }
+  /* Timestamp is something we do not recognize. */
+  else
+    {
+      /* XXX: fix this function to return real error codes and all the
+         places that use it. */
+      /* Better zero than something random. */
+      when = 0;
+    }
 
   return when;
 }
