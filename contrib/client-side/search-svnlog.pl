@@ -3,16 +3,9 @@
 # ====================================================================
 # Show log messages matching a certain pattern.  Usage:
 #
-#    search-svnlog.pl [-f LOGFILE] REGEXP
+#    search-svnlog.pl [-v] [-f LOGFILE] REGEXP
 #
-# It will print only log messages matching REGEXP.  If -f LOGFILE is
-# passed, then instead of running "svn log", the log data will be
-# read from LOGFILE (which should be in the same format as the
-# output of "svn log").
-#
-# Note:
-# In the future, this may take pathnames and/or revision numbers as
-# arguments.
+# See &usage() for details.
 #
 # ====================================================================
 # Copyright (c) 2000-2004 CollabNet.  All rights reserved.
@@ -32,9 +25,10 @@ use strict;
 use Getopt::Long;
 
 my $log_file;
+my $invert = 0;
 
-GetOptions('file=s' => \$log_file) or
-  &usage;
+GetOptions('f|file=s' => \$log_file,
+           'v|invert' => \$invert) or &usage;
 
 &usage("$0: too few arguments") unless @ARGV;
 &usage("$0: too many arguments") if @ARGV > 1;
@@ -70,7 +64,7 @@ while (<LOGDATA>)
       die "$0: wrong number of lines for log message!\n${this_entry_accum}\n";
     }
 
-    if ($this_entry_accum =~ /$filter/og)
+    if ($this_entry_accum =~ /$filter/og ^ $invert)
     {
       print "${this_entry_accum}${log_separator}";
     }
@@ -107,10 +101,12 @@ exit 0;
 
 sub usage {
   warn "@_\n" if @_;
-  die "usage: $0: [-f LOGFILE] REGEXP\n",
-      "This script will print only log messages matching REGEXP by\n",
-      "running `svn log' in the current working directory.  If\n",
-      "-f LOGFILE is passed, then instead of running `svn log', the\n",
-      "log data will be read from LOGFILE (which should be in the\n",
-      "same format as the output of `svn log').\n";
+  die "usage: $0: [-v] [-f LOGFILE] REGEXP\n",
+      "\n",
+      "Print only log messages matching REGEXP, either by running 'svn log'\n",
+      "in the current working directory, or if '-f LOGFILE' is passed, then\n",
+      "read the log data from LOGFILE (which should be in the same format\n",
+      "as the output of 'svn log').\n",
+      "\n",
+      "If '-v' is given, the matching is inverted (like 'grep -v').\n";
 }
