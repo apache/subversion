@@ -110,8 +110,7 @@ typedef svn_error_t *svn_write_fn_t (void *baton,
 
 /* A posix-like read function of type svn_read_fn_t (see above).
    Given an already-open APR FILEHANDLE, read LEN bytes into BUFFER.  
-   (notice that FILEHANDLE is still input as a void *).
-   (why? -kff)
+   (Notice that FILEHANDLE is void *, to match svn_io_read_fn_t).
 
    As a convenience, if FILEHANDLE is null, then this function will
    set *LEN to 0 and do nothing to BUFFER every time.
@@ -124,8 +123,7 @@ svn_error_t *svn_io_file_reader (void *filehandle,
 
 /* A posix-like write function of type svn_write_fn_t (see svn_io.h).
    Given an already-open APR FILEHANDLE, write LEN bytes out of BUFFER.
-   (notice that FILEHANDLE is still input as a void *)
-   (why? -kff)
+   (Notice that FILEHANDLE is void *, to match svn_io_write_fn_t).
 */
 svn_error_t *svn_io_file_writer (void *filehandle,
                                  const char *buffer,
