@@ -504,6 +504,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
   svn_error_t *err;
   enum svn_node_kind kind;
   apr_hash_t *entries = apr_make_hash (pool);
+  svn_boolean_t is_wc;
 
   *entry = NULL;
 
@@ -520,9 +521,14 @@ svn_wc_entry (svn_wc_entry_t **entry,
 
   if (kind == svn_node_dir)
     {
-      err = svn_wc__check_wc (path, pool);
+      err = svn_wc__check_wc (path, &is_wc, pool);
       if (err)
         return err;
+      else if (! is_wc)
+        return svn_error_createf
+          (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
+           "svn_wc_entry: %s is not a working copy directory", path->data);
+
 
       err = svn_wc__entries_read (&entries, path, pool);
       if (err)
@@ -548,9 +554,13 @@ svn_wc_entry (svn_wc_entry_t **entry,
       svn_string_t *dir, *basename;
       svn_path_split (path, &dir, &basename, svn_path_local_style, pool);
       
-      err = svn_wc__check_wc (dir, pool);
+      err = svn_wc__check_wc (dir, &is_wc, pool);
       if (err)
         return err;
+      else if (! is_wc)
+        return svn_error_createf
+          (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
+           "svn_wc_entry: %s is not a working copy directory", path->data);
       
       err = svn_wc__entries_read (&entries, dir, pool);
       if (err)

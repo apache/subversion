@@ -752,6 +752,7 @@ add_or_replace_file (svn_string_t *name,
   svn_error_t *err;
   apr_hash_t *entries = NULL;
   svn_wc_entry_t *entry;
+  svn_boolean_t is_wc;
 
   err = svn_wc__entries_read (&entries,
                               parent_dir_baton->path,
@@ -782,9 +783,15 @@ add_or_replace_file (svn_string_t *name,
         
   /* Make sure we've got a working copy to put the file in. */
   /* kff todo: need stricter logic here */
-  err = svn_wc__check_wc (parent_dir_baton->path, parent_dir_baton->pool);
+  err = svn_wc__check_wc (parent_dir_baton->path, &is_wc,
+                          parent_dir_baton->pool);
   if (err)
     return err;
+  else if (! is_wc)
+    return svn_error_createf
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, parent_dir_baton->pool,
+       "add_or_replace_file: %s is not a working copy directory",
+       parent_dir_baton->path->data);
 
   /* Set up the file's baton. */
   fb = make_file_baton (parent_dir_baton, name);
