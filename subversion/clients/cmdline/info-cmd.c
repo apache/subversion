@@ -38,7 +38,7 @@ svn_cl__info_print_time (apr_time_t atime,
                          const char *desc,
                          apr_pool_t *pool)
 {
-  printf ("%s: %s\n", desc, svn_time_to_human_nts (atime,pool));
+  printf ("%s: %s\n", desc, svn_time_to_human_cstring (atime,pool));
 }
 
 

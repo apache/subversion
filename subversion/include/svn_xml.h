@@ -67,9 +67,9 @@ void svn_xml_escape_string (svn_stringbuf_t **outstr,
 /* Same as `svn_xml_escape_stringbuf', but STRING is a null-terminated
  * C string.
  */
-void svn_xml_escape_nts (svn_stringbuf_t **outstr,
-                         const char *string,
-                         apr_pool_t *pool);
+void svn_xml_escape_cstring (svn_stringbuf_t **outstr,
+                             const char *string,
+                             apr_pool_t *pool);
 
 
 /* Create or append in *OUTSTR the unescaped version of the
@@ -97,9 +97,9 @@ void svn_xml_unescape_string (svn_stringbuf_t **outstr,
 /* Same as `svn_xml_unescape_stringbuf', but STRING is a
  * null-terminated C string.
  */
-void svn_xml_unescape_nts (svn_stringbuf_t **outstr,
-                           const char *string,
-                           apr_pool_t *pool);
+void svn_xml_unescape_cstring (svn_stringbuf_t **outstr,
+                               const char *string,
+                               apr_pool_t *pool);
 
 
 

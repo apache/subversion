@@ -32,16 +32,16 @@ extern "C" {
 
 
 /* Convert WHEN to a const char * representation allocated in POOL.
-   Use svn_time_from_nts() for the reverse conversion. */
-const char *svn_time_to_nts (apr_time_t when, apr_pool_t *pool);
+   Use svn_time_from_cstring() for the reverse conversion. */
+const char *svn_time_to_cstring (apr_time_t when, apr_pool_t *pool);
 
 /* Convert TIMESTR to an apr_time_t. */
-svn_error_t *svn_time_from_nts(apr_time_t *when, const char *data,
-                               apr_pool_t *pool);
+svn_error_t *svn_time_from_cstring(apr_time_t *when, const char *data,
+                                   apr_pool_t *pool);
 
 /* Convert WHEN to a const char * representation allocated in POOL,
    suitable for human display. */
-const char *svn_time_to_human_nts (apr_time_t when, apr_pool_t *pool);
+const char *svn_time_to_human_cstring (apr_time_t when, apr_pool_t *pool);
 
 
 /* Needed by getdate.y parser */

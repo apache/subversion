@@ -3667,7 +3667,7 @@ commit_date (const char **msg,
       (SVN_ERR_FS_GENERAL, 0, NULL,
        "failed to get datestamp of committed revision");
 
-  SVN_ERR (svn_time_from_nts (&at_commit, datestamp->data, pool));
+  SVN_ERR (svn_time_from_cstring (&at_commit, datestamp->data, pool));
 
   if (at_commit < before_commit)
     return svn_error_create

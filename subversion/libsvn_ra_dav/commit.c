@@ -1189,7 +1189,7 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
 
   /* XML-Escape the log message. */
   xml_data = NULL;           /* Required by svn_xml_escape_*. */
-  svn_xml_escape_nts(&xml_data, log_msg, cc->ras->pool);
+  svn_xml_escape_cstring(&xml_data, log_msg, cc->ras->pool);
 
   po[0].name = &log_message_prop;
   po[0].type = ne_propset;

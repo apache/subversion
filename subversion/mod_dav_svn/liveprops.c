@@ -219,7 +219,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
             const char *nicedate;
 
             /* convert the ISO8601 date into an apr_time_t */
-            serr = svn_time_from_nts(&timeval, committed_date->data, p);
+            serr = svn_time_from_cstring(&timeval, committed_date->data, p);
             if (serr != NULL)
               {
                 value = "###error###";

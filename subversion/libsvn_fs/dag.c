@@ -393,7 +393,7 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
   SVN_ERR (svn_fs__txn_make_committed (fs, txn_id, rev, trail));
 
   /* Set a date on revision 0. */
-  date.data = svn_time_to_nts (apr_time_now(), trail->pool);
+  date.data = svn_time_to_cstring (apr_time_now(), trail->pool);
   date.len = strlen (date.data);
   return svn_fs__set_rev_prop (fs, 0, SVN_PROP_REVISION_DATE, &date, trail);
 }
@@ -1591,7 +1591,7 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
 
   /* Set a date on the commit.  We wait until now to fetch the date,
      so it's definitely newer than any previous revision's date. */
-  date.data = svn_time_to_nts (apr_time_now(), trail->pool);
+  date.data = svn_time_to_cstring (apr_time_now(), trail->pool);
   date.len = strlen (date.data);
   SVN_ERR (svn_fs__set_rev_prop (fs, *new_rev, SVN_PROP_REVISION_DATE, 
                                  &date, trail));

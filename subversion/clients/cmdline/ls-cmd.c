@@ -74,8 +74,8 @@ print_dirents (apr_hash_t *dirents,
                                               dirent->last_author, pool));
 
           {
-            /* svn_time_to_human_nts gives us something *way* to long to use 
-               for this, so we have to roll our own. */
+            /* svn_time_to_human_cstring gives us something *way* to long
+               to use for this, so we have to roll our own. */
             apr_time_exp_t exp_time;
             apr_status_t apr_err;
             apr_size_t size;

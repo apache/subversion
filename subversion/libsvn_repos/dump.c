@@ -763,8 +763,8 @@ write_revision_record (svn_stream_t *stream,
                                             APR_HASH_KEY_STRING);
     if (datevalue)
       {
-        SVN_ERR (svn_time_from_nts (&timetemp, datevalue->data, pool));
-        datevalue = svn_string_create (svn_time_to_nts (timetemp, pool),
+        SVN_ERR (svn_time_from_cstring (&timetemp, datevalue->data, pool));
+        datevalue = svn_string_create (svn_time_to_cstring (timetemp, pool),
                                        pool);
         apr_hash_set (props,
                       SVN_PROP_REVISION_DATE,

@@ -150,7 +150,7 @@ svn_ra_pipe__get_dated_revision (void *session_baton,
   svn_xml_make_open_tag (&buf, sess->pool, svn_xml_self_closing,
                          SVN_RA_PIPE__LATEST_REVNUM_TAG,
                          SVN_RA_PIPE__ATT_DATE,
-                         svn_time_to_nts (tm, sess->pool),
+                         svn_time_to_cstring (tm, sess->pool),
                          NULL);
   svn_xml_make_close_tag (&buf, sess->pool, SVN_RA_PIPE__REQUEST_TAG);
 
@@ -180,7 +180,7 @@ svn_ra_pipe__get_commit_editor (void *session_baton,
   svn_stringbuf_t *logbuf = NULL;
   apr_status_t apr_err;
 
-  svn_xml_escape_nts (&logbuf, log_msg, sess->pool);
+  svn_xml_escape_cstring (&logbuf, log_msg, sess->pool);
 
   svn_xml_make_header (&buf, sess->pool);
   svn_xml_make_open_tag (&buf, sess->pool, svn_xml_normal,
@@ -371,8 +371,8 @@ svn_ra_pipe__get_log (void *session_baton,
   for (i = 0; i < paths->nelts; ++i)
     {
       svn_stringbuf_t *pathbuf = NULL;
-      svn_xml_escape_nts (&pathbuf, ((const char **)paths->elts)[i],
-                          sess->pool);
+      svn_xml_escape_cstring (&pathbuf, ((const char **)paths->elts)[i],
+                              sess->pool);
       svn_xml_make_open_tag (&buf, sess->pool, svn_xml_self_closing,
                              SVN_RA_PIPE__PATH_TAG,
                              SVN_RA_PIPE__ATT_VALUE,
@@ -404,7 +404,7 @@ svn_ra_pipe__do_check_path (svn_node_kind_t *kind,
   svn_stringbuf_t *pathbuf = NULL;
   apr_status_t apr_err;
 
-  svn_xml_escape_nts (&pathbuf, path, sess->pool);
+  svn_xml_escape_cstring (&pathbuf, path, sess->pool);
 
   svn_xml_make_header (&buf, sess->pool);
   svn_xml_make_open_tag (&buf, sess->pool, svn_xml_normal,
@@ -444,7 +444,7 @@ svn_ra_pipe__get_file (void *session_baton,
   svn_stringbuf_t *pathbuf = NULL;
   apr_status_t apr_err;
 
-  svn_xml_escape_nts (&pathbuf, path, sess->pool);
+  svn_xml_escape_cstring (&pathbuf, path, sess->pool);
 
   svn_xml_make_header (&buf, sess->pool);
   svn_xml_make_open_tag (&buf, sess->pool, svn_xml_normal,

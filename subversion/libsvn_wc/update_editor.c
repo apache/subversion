@@ -755,7 +755,7 @@ change_dir_prop (void *dir_baton,
         }
       else if ((! strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE)) && value)
         {
-          SVN_ERR (svn_time_from_nts (&entry.cmt_date, value->data, pool));
+          SVN_ERR (svn_time_from_cstring (&entry.cmt_date, value->data, pool));
           modify_flags = SVN_WC__ENTRY_MODIFY_CMT_DATE;
         }
       else if ((! strcmp (name, SVN_PROP_ENTRY_LAST_AUTHOR)) && value)
