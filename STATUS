@@ -64,15 +64,6 @@ section for approved changes.)
            Message-ID: <20040107033850.A9399@lyra.org>
 
 
-   * r8055, r8085, r8104, r8105
-     RPM Documentation build patch and added svnserve.conf and snvserve man
-        pages.  Also require correct apr/apr-util, and apache RPM versions.
-     Justification: Packaging fixes and additions.
-     Votes:
-      +1 (concept): gstein
-      +1: kfogel, david, striker
-
-
    * Issue #1682
      'svn blame' should adjust to max username width
      Justification: Improved blame display, API change, low risk.
@@ -352,6 +343,15 @@ the section for unapproved changes.)
      Justification: Negligible risk, API cleanliness and stability.
      Votes:
       +1: ghudson, kfogel, dlr, striker
+
+
+   * r8055, r8085, r8104, r8105
+     RPM Documentation build patch and added svnserve.conf and snvserve man
+        pages.  Also require correct apr/apr-util, and apache RPM versions.
+     Justification: Packaging fixes and additions.
+     Votes:
+      +1 (concept): gstein
+      +1: kfogel, david, striker
 
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
