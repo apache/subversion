@@ -1,5 +1,6 @@
 /*
- * global configuration of the java / subversion binding
+ * utility functions to handle the java class
+ * org.tigris.subversion.lib.Status
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -16,12 +17,17 @@
  * ====================================================================
  */
 
-#ifndef SVN_JNI_GLOBAL_H
-#define SVN_JNI_GLOBAL_H
+#ifndef SVN_JNI_STATUS_H
+#define SVN_JNI_STATUS_H
 
-/*** Defines ***/
-#define SVN_JNI_SUBVERSION_EXCEPTION \
-"org/tigris/subversion/SubversionException"
+/*** Includes ***/
+#include <jni.h>
+#include <svn_wc.h>
+
+/*** Code ***/
+jobject
+status__create(JNIEnv *env, svn_wc_status_t *status, 
+               jboolean *hasException);
 
 #endif
 
@@ -30,10 +36,6 @@
  * eval: (load-file "../../../svn-dev.el")
  * end: 
  */
-
-
-
-
 
 
 

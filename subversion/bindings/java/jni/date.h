@@ -1,5 +1,6 @@
 /*
- * global configuration of the java / subversion binding
+ * utility functions to handle the java class
+ * java.util.Date
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -16,30 +17,23 @@
  * ====================================================================
  */
 
-#ifndef SVN_JNI_GLOBAL_H
-#define SVN_JNI_GLOBAL_H
+#ifndef SVN_JNI_DATE_H
+#define SVN_JNI_DATE_H
 
-/*** Defines ***/
-#define SVN_JNI_SUBVERSION_EXCEPTION \
-"org/tigris/subversion/SubversionException"
+/* includes */
+#include <jni.h>
+
+/* functions */
+jobject 
+date__apr_to_j(JNIEnv *env, jboolean *hasException,
+			apr_time_t time);
 
 #endif
-
 /* 
  * local variables:
  * eval: (load-file "../../../svn-dev.el")
  * end: 
  */
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -1,5 +1,5 @@
 /*
- * status.c utility functions to handle the java class
+ * utility functions to handle the java class
  * org.tigris.subversion.lib.Status
  *
  * ====================================================================
@@ -17,40 +17,49 @@
  * ====================================================================
  */
 
+/*** Includes ***/
 #include <jni.h>
 #include <svn_wc.h>
+#include "j.h"
 
-#define SVN_JNI_STATUS__CONSTRUCTOR \
+/*** Defines ***/
+#define SVN_JNI_STATUS__CLASS "org/tigris/subversion/lib/Status"
+#define SVN_JNI_STATUS__SIG \
 "(Lorg/tigris/subversion/lib/Entry;IIIZII)V"
 
 jobject
-svn_jni_status__create(JNIEnv *env, svn_wc_status_t *status, 
-		       jboolean *hasException)
+status__create(JNIEnv *env, svn_wc_status_t *status, 
+               jboolean *hasException)
 {
   jobject jstatus = NULL;
   jobject jentry = NULL;
   jboolean _hasException = JNI_FALSE;
 
 #ifdef SVN_JNI__VERBOSE
-  fprintf(stderr, "svn_jni__create_status\n");
+  fprintf(stderr, "status__create\n");
 #endif
 
+  /* 
+   * needed references:
+   * - statusClass
+   * - statusConstructor
+   * - jentry
+   * - jstatus
+   * = 4
+   */
   if( (*env)->PushLocalFrame(env, 4) >= 0 )
     {
       jclass statusClass = NULL;
       jmethodID statusConstructor = NULL;
 
-      statusClass = (*env)->FindClass(env, 
-				      "org/tigris/subversion/lib/Status");
-      if( statusClass == NULL )
+      statusClass = j__get_class(env, &_hasException,
+                                SVN_JNI_STATUS__CLASS);
+     if( !_hasException )
 	{
-	  _hasException = JNI_TRUE;
-	}
-      else
-	{
-	  statusConstructor = 
-	      (*env)->GetMethodID(env, statusClass,
-				  "<init>", SVN_JNI_STATUS__CONSTRUCTOR);
+	  statusConstructor = j__get_method(env, &_hasException,
+                                            statusClass,
+                                            "<init>", 
+                                            SVN_JNI_STATUS__SIG);
 
 	  if( statusConstructor == NULL )
 	  {
@@ -60,7 +69,7 @@ svn_jni_status__create(JNIEnv *env, svn_wc_status_t *status,
 
       if( !_hasException )
         {
-            //
+            //TO DO
         }
 
       if( !_hasException )
@@ -91,5 +100,9 @@ svn_jni_status__create(JNIEnv *env, svn_wc_status_t *status,
 /* 
  * local variables:
  * eval: (load-file "../../../svn-dev.el")
- * end: */
+ * end: 
+ */
+
+
+
 

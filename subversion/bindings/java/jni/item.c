@@ -1,5 +1,5 @@
 /*
- * svn_jni_item.c utility functions to handle the class
+ * utility functions to handle the class
  * org.tigris.subversion.lib.Item
  *
  * ====================================================================
@@ -27,8 +27,8 @@
  * utility function to create a java Item
  */
 jobject
-svn_jni_item__create(JNIEnv *env, jobject jpath, jobject jstatus, 
-		     jboolean *hasException)
+item__create(JNIEnv *env, jobject jpath, jobject jstatus, 
+	     jboolean *hasException)
 {
   jobject jitem = NULL;
   jboolean _hasException = JNI_FALSE;
@@ -72,12 +72,13 @@ svn_jni_item__create(JNIEnv *env, jobject jpath, jobject jstatus,
   }
 
   return jitem;
-}
-					       
+}				       
 
-/* local variables:
+/* 
+ * local variables:
  * eval: (load-file "../../../svn-dev.el")
- * end: */
+ * end: 
+ */
 
 
 

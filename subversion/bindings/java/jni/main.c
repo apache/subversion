@@ -1,6 +1,6 @@
 /*
- * svn_jni.c:  native implementation of the functions declared in
- *             the Java class org.tigris.subversion.lib.ClientImpl
+ * native implementation of the functions declared in
+ * the Java class org.tigris.subversion.lib.ClientImpl
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -28,8 +28,15 @@
 #include <malloc.h>
 #include <svn_pools.h>
 #include <svn_client.h>
+#include <svn_string.h>
 #include "svn_jni.h"
-#include "svn_jni_global.h"
+#include "global.h"
+#include "status.h"
+#include "string.h"
+#include "misc.h"
+#include "hashtable.h"
+#include "item.h"
+#include "entry.h"
 
 /*** Defines. ***/
 #define SVN_JNI__VERBOSE
@@ -41,7 +48,7 @@
 /*
  * some local variables
  */
-apr_pool_t *svn_jni__pool;
+static apr_pool_t *main__pool;
 
 
 
@@ -58,8 +65,8 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
   fprintf(stderr, "JNI_OnLoad\n");
 #endif
   apr_initialize();
-  svn_jni__pool = NULL;
-  svn_jni__pool = svn_pool_create(NULL);
+  main__pool = NULL;
+  main__pool = svn_pool_create(NULL);
 
   return JNI_VERSION_1_2;
   
@@ -142,41 +149,41 @@ Java_org_tigris_subversion_lib_ClientImpl_status
 #endif
 
   /* do all the type conversion stuff */
-  target_string = svn_jni_string__j_to_svn(env, 
-                                           jtarget, &hasException,
-                                           svn_jni__pool);
+  target_string = string__j_to_svn_string(env, 
+                                   jtarget, &hasException,
+                                   main__pool);
 
   if( !hasException )
     {
       target_stringbuf = 
 	svn_stringbuf_create_from_string(target_string, 
-					 svn_jni__pool);
+					 main__pool);
 
       if( target_stringbuf == NULL )
 	{
 	  /* seems like the conversion didnt succeed */
 	  hasException = JNI_TRUE;
-	  svn_jni__throw_exception_by_name(env, 
-					   SVN_JNI__SUBVERSION_EXCEPTION,
-					   SVN_JNI__ERROR_CREATE_STRINGBUF);
+	  misc__throw_exception_by_name(env, 
+                                        SVN_JNI__SUBVERSION_EXCEPTION,
+                                        SVN_JNI__ERROR_CREATE_STRINGBUF);
 	}
 
     }
 
   if( !hasException )
     {
-      auth_baton = svn_jni_misc__make_auth_baton(env, jobj);
+      auth_baton = misc__make_auth_baton(env, jobj);
 
       if( svn_client_status(&statushash, target_stringbuf, auth_baton,
 			    descend, get_all, update, 
-			    svn_jni__pool) < 0 
+			    main__pool) < 0 
 	  )
 	{
 	  /* in the case of an error, throw a java exception */
 	  hasException = JNI_TRUE;
-	  svn_jni__throw_exception_by_name(env, 
-					   SVN_JNI__SUBVERSION_EXCEPTION,
-					   SVN_JNI__ERROR_CLIENT_STATUS);
+	  misc__throw_exception_by_name(env, 
+                                        SVN_JNI__SUBVERSION_EXCEPTION,
+                                        SVN_JNI__ERROR_CLIENT_STATUS);
 	}
     }
 
@@ -185,14 +192,14 @@ Java_org_tigris_subversion_lib_ClientImpl_status
       if( (*env)->PushLocalFrame(env, 1) >= 0 )
 	{
 	  jboolean hasException = JNI_FALSE;
-	  jobject hashtable = svn_jni_hashtable__create(env, &hasException);
+	  jobject hashtable = hashtable__create(env, &hasException);
 
 	  /* now we do have a fresh new hashtable */
 	  if( !hasException )
 	    {
 	      /* iterate through apr hashtable and
 	       * insert each item into java hashtable */
-	      apr_hash_index_t *index = apr_hash_first(svn_jni__pool, 
+	      apr_hash_index_t *index = apr_hash_first(main__pool, 
 						       statushash);
 	      while( (index != NULL) && (!hasException ) )
 		{
@@ -208,29 +215,29 @@ Java_org_tigris_subversion_lib_ClientImpl_status
 		  status = item->data;
 
 		  /* convert native string to java string */
-		  jpath = svn_jni_string_c_to_j(env, path, &hasException);
+		  jpath = string__c_to_j(env, path, &hasException);
 
 		  /* convert svn_wc_status_t to java class Status */
 		  if( !hasException )
 		    {
-		      jstatus = svn_jni_status__create(env, status, 
-						       &hasException);
+		      jstatus = status__create(env, status, 
+                                               &hasException);
 		    }
 
 		  /* now create the java class Item */
 		  if( !hasException )
 		    {
-		      jitem = svn_jni_item__create(env,
-						   jpath,
-						   jstatus,
-						   &hasException);
+		      jitem = item__create(env,
+                                           jpath,
+                                           jstatus,
+                                           &hasException);
 		    }
 
 		  /* put entry into java hashtable */
 		  if( !hasException )
 		    {
-		      svn_jni__hashtable_put(env, hashtable, jpath, jitem, 
-					     &hasException);
+		      hashtable__put(env, hashtable, jpath, jitem, 
+                                     &hasException);
 		    }
 		  
 		  if( !hasException )
@@ -266,7 +273,8 @@ Java_org_tigris_subversion_lib_ClientImpl_cleanup
 /* 
  * local variables:
  * eval: (load-file "../../../svn-dev.el")
- * end: */
+ * end: 
+ */
 
 
 
