@@ -129,6 +129,9 @@ struct edit_baton {
   /* Target revision */
   svn_revnum_t revnum;
 
+  /* Was the root opened? */
+  svn_boolean_t root_opened;
+
   /* The callbacks and callback argument that implement the file comparison
      functions */
   const svn_wc_diff_callbacks_t *callbacks;
@@ -757,6 +760,7 @@ open_root (void *edit_baton,
   struct edit_baton *eb = edit_baton;
   struct dir_baton *b;
 
+  eb->root_opened = TRUE;
   b = make_dir_baton (eb->anchor_path, NULL, eb, FALSE, dir_pool);
   *root_baton = b;
 
@@ -1267,22 +1271,15 @@ static svn_error_t *
 close_edit (void *edit_baton,
             apr_pool_t *pool)
 {
-  /* ### TODO: If the root has not been replaced, then we need to do this
-     to pick up local changes. Can this happen? Well, at the moment, it
-     does if I replace a file with a directory, but I don't know if that is
-     supposed to be supported yet. I would do something like this...
-  */
-# if 0
   struct edit_baton *eb = edit_baton;
 
-  if (!eb->root_replaced)
+  if (!eb->root_opened)
     {
       struct dir_baton *b;
 
       b = make_dir_baton (eb->anchor_path, NULL, eb, FALSE, eb->pool);
       SVN_ERR (directory_elements_diff (b, FALSE));
     }
-#endif
 
   return SVN_NO_ERROR;
 }

@@ -2042,6 +2042,12 @@ static int end_element(void *userdata,
       rb->current_wcprop_path = NULL;
       break;
 
+    case ELEM_update_report:
+      /* End of report; close up the editor. */
+      CHKERR( (*rb->editor->close_edit)(rb->edit_baton, rb->ras->pool) );
+      rb->edit_baton = NULL;
+      break;
+
     case ELEM_add_directory:
     case ELEM_open_directory:
 
@@ -2057,16 +2063,6 @@ static int end_element(void *userdata,
                                              TOP_DIR(rb).pool) );
       svn_pool_destroy(TOP_DIR(rb).pool);
       apr_array_pop(rb->dirs);
-
-      /* If we just popped the last directory from the stack, we can
-         close the edit. */
-      if (rb->dirs->nelts == 0)
-        {
-          /* we got the whole HTTP response thing done. now wrap up the update
-             process with a close_edit call. */
-          CHKERR( (*rb->editor->close_edit)(rb->edit_baton, rb->ras->pool) );
-          rb->edit_baton = NULL;
-        }
       break;
 
     case ELEM_add_file:
