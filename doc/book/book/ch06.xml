@@ -1134,7 +1134,7 @@ $ svn status calc
           case, the latest <filename>calculator</filename> program
           that you've compiled from your source code, a source file
           named <filename>data.c</filename>, and a set of debugging
-          output logfiles.  Now, you know that your build system
+          output log files.  Now, you know that your build system
           always results in the <filename>calculator</filename>
           program being generated.
           <footnote>

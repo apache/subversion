@@ -815,7 +815,7 @@ Available subcommands:
             <listitem>
               <para>Lists the paths of Berkeley DB log files
                 associated with the repository.  This list includes
-                all logfiles&mdash;those still in use by Subversion, as
+                all log files&mdash;those still in use by Subversion, as
                 well as those no longer in use.</para>
             </listitem>
           </varlistentry>
@@ -825,7 +825,7 @@ Available subcommands:
             <listitem>
               <para>Lists the paths of Berkeley DB log files
                 associated with, but no longer used by, the
-                repository.  You may safely remove these logfiles from
+                repository.  You may safely remove these log files from
                 the repository layout, possibly archiving them for use
                 in the event that you ever need to perform a
                 catastrophic recovery of the repository.</para>
@@ -1064,13 +1064,13 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
         <para>Subversion's own repository uses a
           <literal>post-commit</literal> hook script, which, after
           performing a <quote>hot backup</quote> of the repository,
-          removes these excess logfiles.  In the Subversion source
+          removes these excess log files.  In the Subversion source
           tree, the script
           <filename>tools/backup/hot-backup.py</filename> illustrates
           the safe way to perform a backup of a Berkeley DB database
           environment while it's being actively accessed:  recursively
           copy the entire repository directory, then re-copy the
-          logfiles listed by <command>db_archive -l</command>.</para>
+          log files listed by <command>db_archive -l</command>.</para>
             
         <para>Generally speaking, only the truly paranoid would need
           to backup their entire repository every time a commit
@@ -1684,7 +1684,7 @@ close LASTDUMPED;
         necessary steps for backing up your live
         repository&mdash;without requiring that you bar public
         repository access at all&mdash;and then will clean out the
-        dead Berkeley logfiles from your live repository.</para>
+        dead Berkeley log files from your live repository.</para>
 
       <para>Even if you also have an incremental backup, you might want to run
         this program on a regular basis.  For example, you might
