@@ -421,6 +421,16 @@ svn_error_t *svn_wc__adm_destroy (svn_stringbuf_t *path,
 /* Copy file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
 #define SVN_WC__LOG_CP                  "cp"
 
+/* Copy file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST, but
+   expand any keywords and use any eol-style defined by properties of
+   the DEST. */
+#define SVN_WC__LOG_CP_AND_TRANSLATE    "cp-and-translate"
+
+/* Copy file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST, but
+   contract any keywords and convert to LF eol, according to
+   properties of NAME. */
+#define SVN_WC__LOG_CP_AND_DETRANSLATE    "cp-and-detranslate"
+
 /* Remove file SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_RM                  "rm"
 
@@ -446,18 +456,20 @@ svn_error_t *svn_wc__adm_destroy (svn_stringbuf_t *path,
 #define SVN_WC__LOG_COMMITTED           "committed"
 
 
-/* A log command which effectively runs svn_wc_merge().
+/* A log command which runs svn_wc_merge().
    See its documentation for details.
 
    Here is a map of entry-attributes to svn_wc_merge arguments:
 
-         SVN_WC__LOG_ATTR_1       : LEFT
-         SVN_WC__LOG_ATTR_2       : RIGHT
-         SVN_WC__LOG_ATTR_3       : MERGE_TARGET
+         SVN_WC__LOG_NAME         : MERGE_TARGET
+         SVN_WC__LOG_ATTR_ARG_1   : LEFT
+         SVN_WC__LOG_ATTR_ARG_2   : RIGHT
+         SVN_WC__LOG_ATTR_ARG_3   : LEFT_LABEL
+         SVN_WC__LOG_ATTR_ARG_4   : RIGHT_LABEL
+         SVN_WC__LOG_ATTR_ARG_5   : TARGET_LABEL
 
-   The labels are predetermined by the log function.  Of course, these
-   three attributes should be paths that are *relative* to the
-   directory in which the log is running, as with all other log
+   Of course, these attributes should be paths that are *relative* to
+   the directory in which the log is running, as with all other log
    commands.
  */
 #define SVN_WC__LOG_MERGE        "merge"
@@ -469,12 +481,6 @@ svn_error_t *svn_wc__adm_destroy (svn_stringbuf_t *path,
 #define SVN_WC__LOG_ATTR_REVISION       "revision"
 #define SVN_WC__LOG_ATTR_TEXT_REJFILE   "text-rejfile"
 #define SVN_WC__LOG_ATTR_PROP_REJFILE   "prop-rejfile"
-#define SVN_WC__LOG_ATTR_EOL_STR        "eol-str"
-#define SVN_WC__LOG_ATTR_DATE           "date"
-#define SVN_WC__LOG_ATTR_AUTHOR         "author"
-#define SVN_WC__LOG_ATTR_URL            "url"
-#define SVN_WC__LOG_ATTR_REPAIR         "repair"
-#define SVN_WC__LOG_ATTR_EXPAND         "expand"
 /* The rest are for SVN_WC__LOG_RUN_CMD.  Extend as necessary. */
 #define SVN_WC__LOG_ATTR_INFILE         "infile"
 #define SVN_WC__LOG_ATTR_OUTFILE        "outfile"

@@ -883,9 +883,12 @@ revert_error (svn_error_t *err,
 }
 
 
-/* Revert ENTRY in directory PARENT_DIR, trusting that it is of kind
-   KIND, and using POOL for any necessary allocations.  Set REVERTED
-   to TRUE if anything was modified, FALSE otherwise. */
+/* Revert ENTRY for NAME in directory PARENT_DIR, altering
+   *MODIFY_FLAGS to indicate what parts of the entry were reverted
+   (for example, if property changes were reverted, then set the
+   SVN_WC__ENTRY_MODIFY_PROP_TIME bit in MODIFY_FLAGS).
+
+   Use POOL for any temporary allocations.*/
 static svn_error_t *
 revert_admin_things (svn_stringbuf_t *parent_dir,
                      svn_stringbuf_t *name,
@@ -976,35 +979,54 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
         }
     }
 
+  /* Remove conflict state (and conflict files), if any. */
   if (entry->conflicted)
     {
-      svn_stringbuf_t *rej_file, *rmfile;
-
-      /* Remove the rej-file if the entry lists one (and it exists) */
-      if ((rej_file = apr_hash_get (entry->attributes, 
-                                    SVN_WC_ENTRY_ATTR_REJFILE,
+      svn_stringbuf_t *old_file, *new_file, *wrk_file, *rmfile, *prej_file;
+    
+      /* Handle the three possible text conflict files. */
+      if ((old_file = apr_hash_get (entry->attributes, 
+                                    SVN_WC_ENTRY_ATTR_CONFLICT_OLD,
                                     APR_HASH_KEY_STRING)))
         {
           rmfile = svn_stringbuf_dup (parent_dir, pool);
-          svn_path_add_component (rmfile, rej_file);
+          svn_path_add_component (rmfile, old_file);
           SVN_ERR (remove_file_if_present (rmfile, pool));
           *modify_flags |= SVN_WC__ENTRY_MODIFY_ATTRIBUTES;
         }
-
+    
+      if ((new_file = apr_hash_get (entry->attributes, 
+                                    SVN_WC_ENTRY_ATTR_CONFLICT_NEW,
+                                    APR_HASH_KEY_STRING)))
+        {
+          rmfile = svn_stringbuf_dup (parent_dir, pool);
+          svn_path_add_component (rmfile, new_file);
+          SVN_ERR (remove_file_if_present (rmfile, pool));
+          *modify_flags |= SVN_WC__ENTRY_MODIFY_ATTRIBUTES;
+        }
+    
+      if ((wrk_file = apr_hash_get (entry->attributes, 
+                                    SVN_WC_ENTRY_ATTR_CONFLICT_WRK,
+                                    APR_HASH_KEY_STRING)))
+        {
+          rmfile = svn_stringbuf_dup (parent_dir, pool);
+          svn_path_add_component (rmfile, wrk_file);
+          SVN_ERR (remove_file_if_present (rmfile, pool));
+          *modify_flags |= SVN_WC__ENTRY_MODIFY_ATTRIBUTES;
+        }
+    
       /* Remove the prej-file if the entry lists one (and it exists) */
-      if ((rej_file = apr_hash_get (entry->attributes, 
-                                    SVN_WC_ENTRY_ATTR_PREJFILE,
-                                    APR_HASH_KEY_STRING)))
+      if ((prej_file = apr_hash_get (entry->attributes, 
+                                     SVN_WC_ENTRY_ATTR_PREJFILE,
+                                     APR_HASH_KEY_STRING)))
         {
           rmfile = svn_stringbuf_dup (parent_dir, pool);
-          svn_path_add_component (rmfile, rej_file);
+          svn_path_add_component (rmfile, prej_file);
           SVN_ERR (remove_file_if_present (rmfile, pool));
           *modify_flags |= SVN_WC__ENTRY_MODIFY_ATTRIBUTES;
         }
 
-      /* Modify our entry structure. */
       *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICTED;
-      entry->conflicted = FALSE;
     }
 
   return SVN_NO_ERROR;
@@ -1109,17 +1131,22 @@ svn_wc_revert (svn_stringbuf_t *path,
      update our entries files. */
   if (modify_flags)
     {
-      const char *remove1 = NULL, *remove2 = NULL;
+      const char
+        *remove1 = NULL,
+        *remove2 = NULL,
+        *remove3 = NULL,
+        *remove4 = NULL;
 
       /* Reset the schedule to normal. */
       if (! wc_root)
         {
           if (modify_flags & SVN_WC__ENTRY_MODIFY_ATTRIBUTES)
             {
-              /* This *should* be the removal of the .rej and .prej
-                 directives. */
-              remove1 = SVN_WC_ENTRY_ATTR_REJFILE;
-              remove2 = SVN_WC_ENTRY_ATTR_PREJFILE;
+              /* ### Should we remove these files from disk, too? */
+              remove1 = SVN_WC_ENTRY_ATTR_CONFLICT_OLD;
+              remove2 = SVN_WC_ENTRY_ATTR_CONFLICT_NEW;
+              remove3 = SVN_WC_ENTRY_ATTR_CONFLICT_WRK;
+              remove4 = SVN_WC_ENTRY_ATTR_PREJFILE;
             }
 
           SVN_ERR (svn_wc__entry_modify
@@ -1137,6 +1164,8 @@ svn_wc_revert (svn_stringbuf_t *path,
                     pool,
                     remove1,
                     remove2,
+                    remove3,
+                    remove4,
                     NULL));
         }
 
@@ -1149,8 +1178,7 @@ svn_wc_revert (svn_stringbuf_t *path,
 
           if (modify_flags & SVN_WC__ENTRY_MODIFY_ATTRIBUTES)
             {
-              /* This *should* be the removal of the .rej and .prej
-                 directives. */
+              /* ### Should we remove this file from disk, too? */
               remove1 = SVN_WC_ENTRY_ATTR_PREJFILE;
             }
 

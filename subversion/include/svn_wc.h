@@ -177,20 +177,22 @@ typedef struct svn_wc_entry_t
 } svn_wc_entry_t;
 
 
-#define SVN_WC_ENTRY_ATTR_NAME        "name"
-#define SVN_WC_ENTRY_ATTR_REVISION    "revision"
-#define SVN_WC_ENTRY_ATTR_KIND        "kind"
-#define SVN_WC_ENTRY_ATTR_TEXT_TIME   "text-time"
-#define SVN_WC_ENTRY_ATTR_PROP_TIME   "prop-time"
-#define SVN_WC_ENTRY_ATTR_CHECKSUM    "checksum"
-#define SVN_WC_ENTRY_ATTR_SCHEDULE    "schedule"
-#define SVN_WC_ENTRY_ATTR_CONFLICTED  "conflicted"
-#define SVN_WC_ENTRY_ATTR_COPIED      "copied"
-#define SVN_WC_ENTRY_ATTR_URL         "url"
-#define SVN_WC_ENTRY_ATTR_REJFILE     "text-reject-file"
-#define SVN_WC_ENTRY_ATTR_PREJFILE    "prop-reject-file"
-#define SVN_WC_ENTRY_ATTR_COPYFROM_URL "copyfrom-url"
-#define SVN_WC_ENTRY_ATTR_COPYFROM_REV "copyfrom-rev"
+#define SVN_WC_ENTRY_ATTR_NAME          "name"
+#define SVN_WC_ENTRY_ATTR_REVISION      "revision"
+#define SVN_WC_ENTRY_ATTR_KIND          "kind"
+#define SVN_WC_ENTRY_ATTR_TEXT_TIME     "text-time"
+#define SVN_WC_ENTRY_ATTR_PROP_TIME     "prop-time"
+#define SVN_WC_ENTRY_ATTR_CHECKSUM      "checksum"
+#define SVN_WC_ENTRY_ATTR_SCHEDULE      "schedule"
+#define SVN_WC_ENTRY_ATTR_CONFLICTED    "conflicted"
+#define SVN_WC_ENTRY_ATTR_COPIED        "copied"
+#define SVN_WC_ENTRY_ATTR_URL           "url"
+#define SVN_WC_ENTRY_ATTR_CONFLICT_OLD  "conflict-old" /* saved old file */
+#define SVN_WC_ENTRY_ATTR_CONFLICT_NEW  "conflict-new" /* saved new file */
+#define SVN_WC_ENTRY_ATTR_CONFLICT_WRK  "conflict-wrk" /* saved working file */
+#define SVN_WC_ENTRY_ATTR_PREJFILE      "prop-reject-file"
+#define SVN_WC_ENTRY_ATTR_COPYFROM_URL  "copyfrom-url"
+#define SVN_WC_ENTRY_ATTR_COPYFROM_REV  "copyfrom-rev"
 
 /* Attribute values */
 #define SVN_WC_ENTRY_VALUE_ADD        "add"
@@ -924,11 +926,15 @@ svn_error_t *svn_wc_diff (svn_stringbuf_t *anchor,
                           apr_pool_t *pool);
 
 
-/* Given full paths to three files, merge the differences between LEFT
-   and RIGHT into MERGE_TARGET.  (It may help to know that LEFT,
-   RIGHT, and MERGE_TARGET correspond to "OLDER", "YOURS", and "MINE",
-   respectively, in the diff3 documentation.)  Keywords and line
-   endings are in repository form during the merge.
+/* Given three basenames within a common PARENT directory, merge the
+   differences between LEFT and RIGHT into MERGE_TARGET.  (It may help
+   to know that LEFT, RIGHT, and MERGE_TARGET correspond to "OLDER",
+   "YOURS", and "MINE", respectively, in the diff3 documentation.)
+
+   This function assumes that LEFT and RIGHT are in repository-normal
+   form (linefeeds, with keywords contracted); if necessary,
+   MERGE_TARGET is temporarily converted to this form to receive the
+   changes, then translated back again.
 
    MERGE_TARGET must be under version control; if it is not, return
    SVN_ERR_NO_SUCH_ENTRY.
@@ -938,7 +944,8 @@ svn_error_t *svn_wc_diff (svn_stringbuf_t *anchor,
 
      * Put conflict markers around the conflicting regions in
        MERGE_TARGET, labeled with LEFT_LABEL, RIGHT_LABEL, and
-       TARGET_LABEL.
+       TARGET_LABEL.  (If any of these labels are NULL, default values
+       will be used.)
  
      * Copy LEFT, RIGHT, and the original MERGE_TARGET to unique names
        in the same directory as MERGE_TARGET, ending with the suffixes
@@ -952,7 +959,8 @@ svn_error_t *svn_wc_diff (svn_stringbuf_t *anchor,
 
    Use POOL for any temporary allocation. 
 */
-svn_error_t *svn_wc_merge (const char *left,
+svn_error_t *svn_wc_merge (const char *parent,
+                           const char *left,
                            const char *right,
                            const char *merge_target,
                            const char *left_label,

@@ -46,37 +46,30 @@ struct log_runner
 
 /* Used by file_xfer_under_path(). */
 enum svn_wc__xfer_action {
-  svn_wc__xfer_append,
   svn_wc__xfer_cp,
   svn_wc__xfer_mv,
+  svn_wc__xfer_append,
+  svn_wc__xfer_cp_and_translate,
+  svn_wc__xfer_cp_and_detranslate,
 };
 
+/* Perform some sort of copy-related ACTION on NAME and DEST:
 
-
-/* Copy (or rename, if RENAME is non-zero) NAME to DEST, assuming that
-   PATH is the common parent of both locations. 
-
-   If ACTION is 'cp', then do translation IFF either EOL_STR or
-   KEYWORDS is non-NULL.  
-
-   When doing translation:
-
-     - setting REPAIR indicates that inconsistent line endings in SRC
-       are translated to EOL_STR; else error is returned.  (For more
-       info, read the docstring of svn_wc_copy_and_translate).  
-
-     - setting EXPAND indicates a desire to expand keywords, else you
-       wish to contract them.  
+      svn_wc__xfer_cp:                 just do a copy of NAME to DEST.
+      svn_wc__xfer_mv:                 do a copy, then remove NAME.
+      svn_wc__xfer_append:             append contents of NAME to DEST
+      svn_wc__xfer_cp_and_translate:   copy NAME to DEST, doing any eol
+                                       and keyword expansion according to
+                                       the current property vals of DEST.
+      svn_wc__xfer_cp_and_detranslate: copy NAME to DEST, converting to LF
+                                       and contracting keywords according to
+                                       the current property vals of NAME.
 */
 static svn_error_t *
 file_xfer_under_path (svn_stringbuf_t *path,
                       const char *name,
                       const char *dest,
                       enum svn_wc__xfer_action action,
-                      const char *eol_str,
-                      svn_boolean_t repair,
-                      svn_wc_keywords_t *keywords,
-                      svn_boolean_t expand,
                       apr_pool_t *pool)
 {
   apr_status_t status;
@@ -94,13 +87,49 @@ file_xfer_under_path (svn_stringbuf_t *path,
       return svn_io_append_file (full_from_path, full_dest_path, pool);
       
     case svn_wc__xfer_cp:
-      return svn_wc_copy_and_translate (full_from_path->data,
-                                        full_dest_path->data,
-                                        eol_str,
-                                        repair,
-                                        keywords,
-                                        expand,
-                                        pool);
+      return svn_io_copy_file (full_from_path->data,
+                               full_dest_path->data, NULL, pool);
+
+    case svn_wc__xfer_cp_and_translate:
+      {
+        /* This action is currently only used by svn_wc_install_file,
+           when loggily translating some text-base (NAME) to a working
+           file (DEST). */
+
+        /* Get eol-style and keywords from the current properties of DEST. */
+        svn_wc_keywords_t *keywords;
+        const char *eol_str;
+        enum svn_wc__eol_style style;
+        SVN_ERR (svn_wc__get_keywords (&keywords, full_dest_path->data,
+                                       NULL, pool));
+        SVN_ERR (svn_wc__get_eol_style (&style, &eol_str, full_dest_path->data,
+                                        pool));
+
+        return svn_wc_copy_and_translate (full_from_path->data,
+                                          full_dest_path->data,
+                                          eol_str,
+                                          TRUE,
+                                          keywords,
+                                          TRUE,
+                                          pool);
+      }
+
+    case svn_wc__xfer_cp_and_detranslate:
+      {
+        /* I don't think this has any callers yet, but my conscience
+           says that this option should be here anyway. :-) */
+        svn_wc_keywords_t *keywords;
+        SVN_ERR (svn_wc__get_keywords (&keywords, full_from_path->data,
+                                       NULL, pool));
+        
+        return svn_wc_copy_and_translate (full_from_path->data,
+                                          full_dest_path->data,
+                                          "\n", /* repository-normal EOL */
+                                          TRUE,  
+                                          keywords,
+                                          FALSE, /* contract keywords */
+                                          pool);
+      }
 
     case svn_wc__xfer_mv:
       /* Remove read-only flag on destination. */
@@ -108,7 +137,10 @@ file_xfer_under_path (svn_stringbuf_t *path,
 
       status = apr_file_rename (full_from_path->data,
                               full_dest_path->data, pool);
-      if (status)
+
+      /* If we got an ENOENT, that's ok;  the move has probably
+         already completed in an earlier run of this log.  */
+      if (status && (! APR_STATUS_IS_ENOENT(status)))
         return svn_error_createf (status, 0, NULL, pool,
                                   "file_xfer_under_path: "
                                   "can't move %s to %s",
@@ -322,17 +354,58 @@ log_do_run_cmd (struct log_runner *loggy,
 
 
 static svn_error_t *
+log_do_merge (struct log_runner *loggy,
+              const char *name,
+              const XML_Char **atts)
+{
+  const char *left, *right;
+  const char *left_label, *right_label, *target_label;
+  svn_error_t *err;
+
+  /* NAME is the basename of our merge_target.  Pull out LEFT and RIGHT. */
+  left = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_1, atts);
+  if (! left)
+    return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                              "missing 'left' attr in %s", loggy->path->data);
+  right = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_2, atts);
+  if (! right)
+    return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                              "missing 'right' attr in %s", loggy->path->data);
+
+  /* Grab all three labels too.  If non-existent, we'll end up passing
+     NULLs to svn_wc_merge, which is fine -- it will use default
+     labels. */
+  left_label = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_3, atts);
+  right_label = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_4, atts);
+  target_label = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_5, atts);
+
+  /* Now do the merge with our full paths. */
+  err = svn_wc_merge (loggy->path->data,
+                      left, right, name,
+                      left_label, right_label, target_label,
+                      loggy->pool);
+
+  if (err && (err->apr_err != SVN_ERR_WC_CONFLICT))
+    /* Got a *real* error. */
+    return svn_error_quick_wrap 
+      (err, "svn_wc_merge() returned an unexpected error");
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 log_do_file_xfer (struct log_runner *loggy,
                   const char *name,
                   enum svn_wc__xfer_action action,
                   const XML_Char **atts)
 {
   svn_error_t *err;
-  enum svn_wc__eol_style style;
-  const char *dest = NULL, *eol_str_val = NULL, *eol_str = NULL;
-  const char *revision = NULL, *date = NULL, *author = NULL, *url = NULL;
-  const char *repair = NULL, *expand = NULL;
-  svn_wc_keywords_t *keywords = NULL;
+  svn_stringbuf_t *full_path;
+  const char *dest = NULL;
+
+  full_path = svn_stringbuf_dup (loggy->path, loggy->pool);
+  svn_path_add_component_nts (full_path, name);
 
   /* We have the name (src), and the destination is absolutely required. */
   dest = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_DEST, atts);
@@ -340,48 +413,7 @@ log_do_file_xfer (struct log_runner *loggy,
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
                               "missing dest attr in %s", loggy->path->data);
 
-  /* Optional: try to get any other translation-related attributes. */
-  revision = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_REVISION, atts);
-  date = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_DATE, atts);
-  author = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_AUTHOR, atts);
-  url = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_URL, atts);
-  repair = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_REPAIR, atts);
-  expand = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_EXPAND, atts);
-
-  /* Look for an EOL attribute.  Note that we can't pass an actual LF
-     or CRLF in the xml, because expat will convert them into a space!
-     Thus our xml contains the same codes used in the values of
-     svn:eol-style, and thus we use the same parser to get back a real
-     eol. */
-  eol_str_val = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_EOL_STR, atts);
-  if (eol_str_val)
-    svn_wc__eol_style_from_value (&style, /* ignored */
-                                  &eol_str, eol_str_val); 
-  else
-    eol_str = NULL;
-
-  /* Conditionally build a keywords structure. */
-  if (revision || date || author || url)
-    {
-      keywords = apr_palloc (loggy->pool, sizeof (*keywords));
-      keywords->revision = revision ? 
-        svn_string_create (revision, loggy->pool) :
-        NULL;
-      keywords->date = date ? 
-        svn_wc__friendly_date (date, loggy->pool) :
-        NULL;
-      keywords->author = author ?
-        svn_string_create (author, loggy->pool) :
-        NULL;
-      keywords->url = url ? 
-        svn_string_create (url, loggy->pool) :
-        NULL;
-    }
-  err = file_xfer_under_path (loggy->path, name, dest, action, eol_str, 
-                              repair ? TRUE : FALSE, 
-                              keywords, 
-                              expand ? TRUE : FALSE,
-                              loggy->pool);
+  err = file_xfer_under_path (loggy->path, name, dest, action, loggy->pool);
   if (err)
     signal_error (loggy, err);
 
@@ -424,53 +456,79 @@ log_do_rm (struct log_runner *loggy, const char *name)
 }
 
 
-/* Remove file NAME in log's CWD iff it's zero bytes in size. */
+/* Determine if an in-progress update of NAME in directory LOGGY->path
+   resulted in a conflict, by looking for any conflict files named in
+   ATTS.  If there is a conflict, record it in NAME's entry. */
 static svn_error_t *
 log_do_detect_conflict (struct log_runner *loggy,
                         const char *name,
                         const XML_Char **atts)                        
 {
   svn_error_t *err;
-  apr_status_t apr_err;
-  apr_finfo_t finfo;
   svn_stringbuf_t *full_path;
-
-  const char *rejfile =
-    svn_xml_get_attr_value (SVN_WC_ENTRY_ATTR_REJFILE, atts);
-
-  if (! rejfile)
-    return 
-      svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
-                         "log_do_detect_conflict: no text-rejfile attr in %s",
-                         loggy->path->data);
-
+  enum svn_node_kind kind;
+  const char *old_file, *new_file, *wrk_file;
+  svn_boolean_t found_a_conflict_file = FALSE;
 
   full_path = svn_stringbuf_dup (loggy->path, loggy->pool);
-  svn_path_add_component_nts (full_path, rejfile);
 
-  apr_err = apr_stat (&finfo, full_path->data, APR_FINFO_MIN, loggy->pool);
-  if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL, loggy->pool,
-                              "log_do_detect_conflict: couldn't stat %s",
-                              full_path->data);
 
-  if (finfo.size == 0)
+  old_file = svn_xml_get_attr_value (SVN_WC_ENTRY_ATTR_CONFLICT_OLD, atts);
+  if (old_file)
     {
-      /* the `patch' program created an empty .rej file.  clean it
-         up. */
-      apr_err = apr_file_remove (full_path->data, loggy->pool);
-      if (apr_err)
-        return svn_error_createf (apr_err, 0, NULL, loggy->pool,
-                                  "log_do_detect_conflict: couldn't rm %s", 
-                                  name);
+      svn_path_add_component_nts (full_path, old_file);
+      SVN_ERR (svn_io_check_path (full_path, &kind, loggy->pool));
+      if (kind == svn_node_file)
+        found_a_conflict_file = TRUE;
+      else
+        {
+          return svn_error_createf
+            (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+             "log_do_detect_conflict: alleged conflict file `%s' not found ",
+             full_path->data);
+        }
+
+      svn_path_remove_component (full_path);
     }
 
-  else 
+  new_file = svn_xml_get_attr_value (SVN_WC_ENTRY_ATTR_CONFLICT_NEW, atts);
+  if (new_file)
     {
-      /* size > 0, there must be an actual text conflict.   Mark the
-         entry as conflicted! */
-      apr_hash_t *atthash = svn_xml_make_att_hash (atts, loggy->pool);
+      svn_path_add_component_nts (full_path, new_file);
+      SVN_ERR (svn_io_check_path (full_path, &kind, loggy->pool));
+      if (kind == svn_node_file)
+        found_a_conflict_file = TRUE;
+      else
+        {
+          return svn_error_createf
+            (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+             "log_do_detect_conflict: alleged conflict file `%s' not found ",
+             full_path->data);
+        }
+      
+      svn_path_remove_component (full_path);
+    }
 
+  wrk_file = svn_xml_get_attr_value (SVN_WC_ENTRY_ATTR_CONFLICT_WRK, atts);
+  if (wrk_file)
+    {
+      svn_path_add_component_nts (full_path, wrk_file);
+      SVN_ERR (svn_io_check_path (full_path, &kind, loggy->pool));
+      if (kind == svn_node_file)
+        found_a_conflict_file = TRUE;
+      else
+        {
+          return svn_error_createf
+            (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+             "log_do_detect_conflict: alleged conflict file `%s' not found ",
+             full_path->data);
+        }
+    }
+
+  if (found_a_conflict_file)
+    {
+      apr_hash_t *atthash = svn_xml_make_att_hash (atts, loggy->pool);
+      
       err = svn_wc__entry_modify
         (loggy->path,
          svn_stringbuf_create (name, loggy->pool),
@@ -478,19 +536,17 @@ log_do_detect_conflict (struct log_runner *loggy,
          SVN_INVALID_REVNUM,
          svn_node_none,
          svn_wc_schedule_normal,
-         TRUE, FALSE,
+         TRUE, FALSE,           /* mark entry Conflicted */
          0,
          0,
          NULL,
-         atthash, /* contains SVN_WC_ATTR_REJFILE */
+         atthash, /* contains SVN_WC_ATTR_CONFLICT_* files */
          loggy->pool,
          NULL);
     }
-
+  
   return SVN_NO_ERROR;
 }
-
-
 
 
 static svn_error_t *
@@ -906,7 +962,7 @@ log_do_committed (struct log_runner *loggy,
           
 
           /* Files have been moved, and timestamps are found.  Time
-             for The Big Merge Sync. */
+             for The Big Entry Modification. */
           err = svn_wc__entry_modify
             (loggy->path,
              sname,
@@ -926,8 +982,10 @@ log_do_committed (struct log_runner *loggy,
              prop_time,
              NULL, NULL,
              loggy->pool,
-             /* Remove all attributes below this comment... */
-             SVN_WC_ENTRY_ATTR_REJFILE,
+             /* Remove all these attributes: */
+             SVN_WC_ENTRY_ATTR_CONFLICT_OLD,   /* ### should we remove */
+             SVN_WC_ENTRY_ATTR_CONFLICT_NEW,   /*     these files from */
+             SVN_WC_ENTRY_ATTR_CONFLICT_WRK,   /*     disk as well?    */
              SVN_WC_ENTRY_ATTR_PREJFILE,
              SVN_WC_ENTRY_ATTR_COPYFROM_URL,
              SVN_WC_ENTRY_ATTR_COPYFROM_REV,
@@ -935,7 +993,7 @@ log_do_committed (struct log_runner *loggy,
           if (err)
             return svn_error_createf
               (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
-               "error merge_syncing %s", name);
+               "error modifying entry %s", name);
 
           /* Also, if this is a directory, don't forget to reset the
              state in the parent's entry for this directory. */
@@ -1027,6 +1085,9 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
   else if (strcmp (eltname, SVN_WC__LOG_RM) == 0) {
     err = log_do_rm (loggy, name);
   }
+  else if (strcmp (eltname, SVN_WC__LOG_MERGE) == 0) {
+    err = log_do_merge (loggy, name, atts);
+  }
   else if (strcmp (eltname, SVN_WC__LOG_DETECT_CONFLICT) == 0) {
     err = log_do_detect_conflict (loggy, name, atts);
   }
@@ -1035,6 +1096,12 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
   }
   else if (strcmp (eltname, SVN_WC__LOG_CP) == 0) {
     err = log_do_file_xfer (loggy, name, svn_wc__xfer_cp, atts);
+  }
+  else if (strcmp (eltname, SVN_WC__LOG_CP_AND_TRANSLATE) == 0) {
+    err = log_do_file_xfer (loggy, name,svn_wc__xfer_cp_and_translate, atts);
+  }
+  else if (strcmp (eltname, SVN_WC__LOG_CP_AND_DETRANSLATE) == 0) {
+    err = log_do_file_xfer (loggy, name,svn_wc__xfer_cp_and_detranslate, atts);
   }
   else if (strcmp (eltname, SVN_WC__LOG_APPEND) == 0) {
     err = log_do_file_xfer (loggy, name, svn_wc__xfer_append, atts);
@@ -1058,7 +1125,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
     signal_error
       (loggy, svn_error_createf
        (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
-        "start_handler: error processing element %s in %s",
+        "start_handler: error processing command '%s' in %s",
         eltname, loggy->path->data));
   
   return;

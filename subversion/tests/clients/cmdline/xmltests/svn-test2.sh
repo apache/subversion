@@ -143,8 +143,8 @@ ${SVN_PROG} commit --xml-file ${COMMIT_RESULTFILE_NAME}-1.xml \
 
 
 ### Clean up the standard textual reject files.
-echo "Remove all .rej files..."
-rm -f ${TEST_DIR_1}/A/D/G/*.rej
+echo "Remove all conflict backup files..."
+rm -f ${TEST_DIR_1}/A/D/G/pi.*
 check_status 13
 
 ### Examine status; there should only be local mods now, not conflicts.

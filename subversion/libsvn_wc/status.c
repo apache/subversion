@@ -180,8 +180,6 @@ assemble_status (svn_wc_status_t **status,
   
   if (entry->conflicted)
     {
-      /* We must decide if either component is still "conflicted",
-         based on whether reject files continue to exist. */
       svn_boolean_t text_conflict_p, prop_conflict_p;
       svn_stringbuf_t *parent_dir;
       
@@ -201,7 +199,6 @@ assemble_status (svn_wc_status_t **status,
       if (prop_conflict_p)
         final_prop_status = svn_wc_status_conflicted;
     }
-
    
   /* 2. Possibly overwrite the the text_status variable with
         "scheduled" states from the entry (A, D, R).  As a group,
