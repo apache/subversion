@@ -319,7 +319,6 @@ SILENT_FLAG :=  \%undefine silent_flag
 PATCH       := svn-install.patch $(BOOKPATCH)
 SILENT_TGT  := all_noisy
 endif
-JAVA_PATCH  := svn-java.patch
 ifeq ($(NO_ACTIVATION),1)
 MOD_ACTIVATE := --disable-mod-activation
 else
@@ -443,7 +442,6 @@ build_sources: $(TARBALL) $(RPMBITS)
 	cat $(PATCH) > $(SOURCE_RPM_DIR)/svn-install.patch-$(NAMEVER)
 	if [ "$(DOCBOOK_PATH)" != "" ] ; then sh make-fo-patch $(ORG_DOCBOOK) >> $(SOURCE_RPM_DIR)/svn-install.patch-$(NAMEVER) ; fi
 	sh make-version-patch $(VERSION_FILE) $(RELEASE) $(MDK_RELEASE) $(LONGVER) $(BLESS) > $(SOURCE_RPM_DIR)/svn-version.patch-$(NAMEVER)
-	cat $(JAVA_PATCH) > $(SOURCE_RPM_DIR)/svn-java.patch-$(NAMEVER)
 	sed -e 's/@MDK_RELEASE@/$(MDK_RELEASE)/' \
 		-e 's/@REPOS_REV@/$(RELEASE)/' \
 		-e 's/@NAMEVER@/$(NAMEVER)/' \
