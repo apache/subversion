@@ -58,7 +58,8 @@ Markup Guide
   tree and in ftp://ftp.oreilly.com/pub/dblite/
 
 - You should *always* validate your xml before checking in. Do not
-  check in xml that is not well-formed.
+  check in xml that is not well-formed. See the README for how to
+  validate your xml.
 
 - All markup should be properly indented, with the exception of
   <screen></screen> blocks, which should be aligned all the way to the

@@ -164,6 +164,13 @@ In addition to everything in section II:
    http://www.jclark.com/sp/nsgmls.  It's nice to check that the XML
    you write has matching tags, and follows the DTD correctly.
 
+   Here is one command you can use to validate your xml:
+
+   $ SP_CHARSET_FIXED=YES SP_ENCODING=XML nsgmls -wxml \
+       -mdeclaration/xml.soc  -ges                     \
+       /path/to/your/declaration/xml.dcl book.xml
+
+
 
 3. Read about the DocBook lite tags.
 
