@@ -123,11 +123,11 @@ SVN_LIB_BERKELEY_DB($SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MINOR,
                     $SVN_FS_WANT_DB_PATCH)
 
 # Only add *_APACHE_RULE if we also have db, since mod_dav_svn depends on it.
-INSTALL_RULES="install-lib install-bin install-include install-docs"
-BUILD_RULES="lib bin test"
+INSTALL_RULES="install-base-lib install-lib install-bin install-include install-docs"
+BUILD_RULES="base-lib lib bin test"
 if test "$svn_lib_berkeley_db" = "yes"; then
-  BUILD_RULES="lib fs-lib bin fs-bin $BUILD_APACHE_RULE test fs-test"
-  INSTALL_RULES="install-lib install-fs-lib install-bin install-fs-bin $INSTALL_APACHE_RULE install-include install-docs"
+  BUILD_RULES="base-lib fs-lib lib bin fs-bin $BUILD_APACHE_RULE test fs-test"
+  INSTALL_RULES="install-base-lib install-fs-lib install-lib install-bin install-fs-bin $INSTALL_APACHE_RULE install-include install-docs"
   FS_TEST_DEPS="\$(FS_TEST_DEPS)"
   FS_TEST_PROGRAMS="\$(FS_TEST_PROGRAMS)"
 fi
@@ -273,7 +273,18 @@ fi
 AC_SUBST(INSTALL_INFO)
 
 dnl decide whether we want to link against the RA libraries
-if test "$enable_shared" = "no"; then
+AC_ARG_ENABLE(dso,
+[  --enable-dso              Turn on DSO loading of RA libraries],
+[
+    if test "$enableval" = "yes"; then
+      enable_dso=yes
+      if test "$enable_shared" = "no"; then
+        AC_MSG_ERROR([--enable-dso conflicts with --disable-shared])
+      fi
+    fi
+])
+
+if test "$enable_shared" = "no" -o "$enable_dso" != "yes"; then
   AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_DAV, 1,
         [Defined if libsvn_client should link against libsvn_ra_dav])
   SVN_RA_LIB_DEPS="subversion/libsvn_ra_dav/libsvn_ra_dav.la"

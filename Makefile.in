@@ -22,6 +22,7 @@ LIBS = @LIBS@
 prefix = @prefix@
 exec_prefix = @exec_prefix@
 libdir = @libdir@
+base_libdir = @libdir@
 fs_libdir= @libdir@
 bindir = @bindir@
 fs_bindir=@bindir@
@@ -70,6 +71,7 @@ LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(LT_LDFLAGS) $(COMPILE) $(LDFLAGS) -rp
 
 INSTALL = @INSTALL@
 INSTALL_LIB = $(LIBTOOL) --mode=install $(INSTALL)
+INSTALL_BASE_LIB = $(INSTALL_LIB)
 INSTALL_FS_LIB = $(INSTALL_LIB)
 INSTALL_BIN = $(LIBTOOL) --mode=install $(INSTALL)
 INSTALL_FS_BIN = $(INSTALL_BIN)
