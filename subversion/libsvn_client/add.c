@@ -59,9 +59,9 @@ add_dir_recursive (const char *dirname,
   /* Read the directory entries one by one and add those things to
      revision control. */
   SVN_ERR (svn_io_dir_open (&dir, dirname, pool));
-  for (err = svn_io_dir_read (&this_entry, flags, dir, pool);
+  for (err = svn_io_dir_read (&this_entry, flags, dir, subpool);
        err == SVN_NO_ERROR;
-       err = svn_io_dir_read (&this_entry, flags, dir, pool))
+       err = svn_io_dir_read (&this_entry, flags, dir, subpool))
     {
       const char *fullpath;
 
@@ -70,8 +70,9 @@ add_dir_recursive (const char *dirname,
         continue;
 
       /* Skip entries for this dir and its parent.  */
-      if ((strcmp (this_entry.name, ".") == 0)
-          || (strcmp (this_entry.name, "..") == 0))
+      if (this_entry.name[0] == '.'
+          && (this_entry.name[1] == '\0'
+              || (this_entry.name[1] == '.' && this_entry.name[2] == '\0')))
         continue;
 
       /* Construct the full path of the entry. */

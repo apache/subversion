@@ -32,6 +32,7 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_path.h"
+#include "svn_utf.h"
 
 #include "client.h"
 
@@ -110,7 +111,11 @@ get_username (char **username,
           if (status)
             return svn_error_create(status, 0, NULL, pool,
                                     "Error in UID->username.");
-          *username = un;                       
+
+          /* ### Be nice to avoid this cast... */
+          SVN_ERR (svn_utf_cstring_to_utf8 (un,
+                                            (const char **)username,
+                                            pool));
         }
 
       /* Store a copy of the username in the auth_baton too. */

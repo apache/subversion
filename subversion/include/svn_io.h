@@ -37,29 +37,17 @@ extern "C" {
 
 
 
-/* ### NOTE: Some functions mention that when the rest of Marcus
-   Comsted's patch is applied, they will handle charset conversion
-   too, and to see issue #494 for details.  Other functions do not say
-   this. 
-
-   In fact, all svn_io_foo() functions will handle charset conversion.
-   The ones that explicitly warn of this impending feature are those
-   contributed by Marcus Comstedt as part of the aforementioned patch.
-   Those functions have been added to Subversion, but with their
-   charset handling code excised.  That way we could the framework
-   change into the trunk right away, and deal with the charset
-   conversion code separately.
-
-   So when we apply the rest of the patch, all functions here will
-   state explicitly how they do charset conversion.  For some
-   functions, that will mean changing the "### NOTE:" to reflect that
-   the feature is now present; for others, it will mean adding
-   completely new material about charset conversion to their
-   documentation.  */
+/* ### NOTE: Although all svn_io functions claim to conversion from/to
+   UTF-8, in fact they only do this if Subversion was configured with
+   the `--enable-utf8' flag.  We expect (?) this flag to go away
+   soon, because UTF-8 can't really be optional if it's to be
+   depended on for interoperability.  The flag is only there so that
+   development of the UTF-8 code doesn't affect others until said
+   code is ready for prime time.  */
 
 
-/* If PATH exists, set *KIND to the appropriate kind, else set it to
- * svn_node_unknown. 
+/* If utf8-encoded PATH exists, set *KIND to the appropriate kind,
+ * else set it to svn_node_unknown. 
  *
  * If PATH is a file, *KIND is set to svn_node_file.
  *
@@ -76,11 +64,11 @@ svn_error_t *svn_io_check_path (const char *path,
                                 apr_pool_t *pool);
 
 
-/* Open a new file (for writing) with a unique name based on PATH, in the
- * same directory as PATH.  The file handle is returned in *F, and the
- * name, which ends with SUFFIX, is returned in *UNIQUE_NAME.  If
- * DELETE_ON_CLOSE is set, then the APR_DELONCLOSE flag will be used when
- * opening the file.
+/* Open a new file (for writing) with a unique name based on utf-8
+ * encoded PATH, in the same directory as PATH.  The file handle is
+ * returned in *F, and the name, which ends with SUFFIX, is returned
+ * in *UNIQUE_NAME, also utf8-encoded.  If DELETE_ON_CLOSE is set,
+ * then the APR_DELONCLOSE flag will be used when opening the file.
  *
  * The name will include as much of PATH as possible, then a dot,
  * then a random portion, then another dot, then an iterated attempt
@@ -130,18 +118,21 @@ svn_error_t *svn_io_open_unique_file (apr_file_t **f,
                                       apr_pool_t *pool);
 
 
-/* Copy SRC to DST.  DST will be overwritten if it exists, else it will be
-   created. If COPY_PERMS is set the file permissions of DST will be set to
-   match those of SRC, this will happen before the contents are copied. */
+/* Copy SRC to DST.  DST will be overwritten if it exists, else it
+   will be created.  If COPY_PERMS is set the file permissions of DST
+   will be set to match those of SRC, this will happen before the
+   contents are copied.  Both SRC and DST are utf8-encoded. */
 svn_error_t *svn_io_copy_file (const char *src,
                                const char *dst,
                                svn_boolean_t copy_perms,
                                apr_pool_t *pool);
 
+
 /* Recursively copy directory SRC into DST_PARENT, as a new entry named
    DST_BASENAME.  If DST_BASENAME already exists in DST_PARENT, return
-   error. COPY_PERMS will be passed through to svn_io_copy_file when any
-   files are copied. */
+   error.  COPY_PERMS will be passed through to svn_io_copy_file when
+   any files are copied.  SRC, DST_PARENT, and DST_BASENAME are all
+   utf8-encoded. */ 
 svn_error_t *svn_io_copy_dir_recursively (const char *src,
                                           const char *dst_parent,
                                           const char *dst_basename,
@@ -152,7 +143,7 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
 
 /* Create directory PATH on the file system, creating intermediate
  * directories as required, like 'mkdir -p'.  Report no error if PATH
- * already exists.
+ * already exists.  PATH is utf8-encoded.
  *
  * This is essentially a wrapper for apr_dir_make_recursive(), passing
  * APR_OS_DEFAULT as the permissions.
@@ -161,8 +152,8 @@ svn_error_t *svn_io_make_dir_recursively (const char *path, apr_pool_t *pool);
 
 
 /* Set *IS_EMPTY_P to true if directory PATH is empty, else to false
- * if it is not empty.  PATH must be a directory.  Use POOL for
- * temporary allocation.
+ * if it is not empty.  PATH must be a directory, and is
+ * utf8-encoded.  Use POOL for temporary allocation.
  */
 svn_error_t *
 svn_io_dir_empty (svn_boolean_t *is_empty_p,
@@ -171,30 +162,32 @@ svn_io_dir_empty (svn_boolean_t *is_empty_p,
 
 
 /* Append SRC to DST.  DST will be appended to if it exists, else it
-   will be created. */
+   will be created.  Both SRC and DST are utf8-encoded. */
 svn_error_t *svn_io_append_file (const char *src,
                                  const char *dst,
                                  apr_pool_t *pool);
 
+
 /* Make a file as read-only as the operating system allows.
-   PATH is the path to the file. If IGNORE_ENOENT is TRUE,
-   don't fail if the target file doesn't exist. */
+   PATH is the utf8-encoded path to the file. If IGNORE_ENOENT is
+   TRUE, don't fail if the target file doesn't exist. */
 svn_error_t *svn_io_set_file_read_only (const char *path,
                                         svn_boolean_t ignore_enoent,
                                         apr_pool_t *pool);
 
+
 /* Make a file as writable as the operating system allows.
-   PATH is the path to the file. If IGNORE_ENOENT is TRUE,
-   don't fail if the target file doesn't exist. */
+   PATH is the utf8-encoded path to the file.  If IGNORE_ENOENT is
+   TRUE, don't fail if the target file doesn't exist. */
 svn_error_t *svn_io_set_file_read_write (const char *path,
                                          svn_boolean_t ignore_enoent,
                                          apr_pool_t *pool);
 
 /* Toggle a file's "executability", as much as the operating system
-   allows.  PATH is the path to the file.  If EXECUTABLE is TRUE, then
-   make the file executable.  If FALSE, make in non-executable.  If
-   IGNORE_ENOENT is TRUE, don't fail if the target file doesn't
-   exist.  */
+   allows.  PATH is the utf8-encoded path to the file.  If EXECUTABLE
+   is TRUE, then make the file executable.  If FALSE, make in
+   non-executable.  If IGNORE_ENOENT is TRUE, don't fail if the target
+   file doesn't exist.  */
 svn_error_t *svn_io_set_file_executable (const char *path,
                                          svn_boolean_t executable,
                                          svn_boolean_t ignore_enoent,
@@ -214,6 +207,7 @@ svn_io_read_length_line (apr_file_t *file, char *buf, apr_size_t *limit);
 
 
 /* Set *APR_TIME to the later of PATH's (a regular file) mtime or ctime.
+ * PATH is utf8-encoded.
  *
  * Unix traditionally distinguishes between "mod time", which is when
  * someone last modified the contents of the file, and "change time",
@@ -232,7 +226,7 @@ svn_error_t *svn_io_file_affected_time (apr_time_t *apr_time,
 
 
 /* Set *DIFFERENT_P to non-zero if FILE1 and FILE2 have different
- * sizes, else set to zero.
+ * sizes, else set to zero.  Both FILE1 and FILE2 are utf8-encoded.
  *
  * Setting *DIFFERENT_P to zero does not mean the files definitely
  * have the same size, it merely means that the sizes are not
@@ -247,8 +241,8 @@ svn_error_t *svn_io_filesizes_different_p (svn_boolean_t *different_p,
 
 
 /* Store a base64-encoded MD5 checksum of FILE's contents in
-   *CHECKSUM_P.  Allocate CHECKSUM_P in POOL, and use POOL for any
-   temporary allocation. */
+   *CHECKSUM_P.  FILE is utf8-encoded.  Allocate CHECKSUM_P in POOL,
+   *and use POOL for any temporary allocation. */
 svn_error_t *svn_io_file_checksum (svn_stringbuf_t **checksum_p,
                                    const char *file,
                                    apr_pool_t *pool);
@@ -370,7 +364,8 @@ svn_stream_readline (svn_stream_t *stream,
                      svn_stringbuf_t **stringbuf,
                      apr_pool_t *pool);
 
-/* Sets *RESULT to a string containing the contents of FILENAME. */
+/* Sets *RESULT to a string containing the contents of FILENAME, a
+   utf8-encoded path. */
 svn_error_t *svn_string_from_file (svn_stringbuf_t **result, 
                                    const char *filename, 
                                    apr_pool_t *pool);
@@ -382,26 +377,26 @@ svn_error_t *svn_string_from_aprfile (svn_stringbuf_t **result,
                                       apr_file_t *file,
                                       apr_pool_t *pool);
 
-/* Remove a file.  This wraps apr_file_remove(), converting any error
-   to a Subversion error. */
+/* Remove file PATH, a utf8-encoded path.  This wraps
+   apr_file_remove(), converting any error to a Subversion error. */
 svn_error_t *svn_io_remove_file (const char *path, apr_pool_t *pool);
 
-/* Recursively remove directory PATH. */
+/* Recursively remove directory PATH.  PATH is utf8-encoded. */
 svn_error_t *svn_io_remove_dir (const char *path, apr_pool_t *pool);
 
 
-/* Read all of the disk entries in directory PATH.  Return a DIRENTS
-   hash mapping dirent names (char *) to enumerated dirent filetypes
-   (enum svn_node_kind *).
+/* Read all of the disk entries in directory PATH, a utf8-encoded
+   path.  Return a DIRENTS hash mapping dirent names (char *) to
+   enumerated dirent filetypes (enum svn_node_kind *).
 
    Note:  the `.' and `..' directories normally returned by
-   apr_dir_read will NOT be returned in the hash. */
+   apr_dir_read are NOT returned in the hash. */
 svn_error_t *svn_io_get_dirents (apr_hash_t **dirents,
                                  const char *path,
                                  apr_pool_t *pool);
 
 
-/* Invoke CMD with ARGS, using PATH as working directory.
+/* Invoke CMD with ARGS, using utf8-encoded PATH as working directory.
    Connect CMD's stdin, stdout, and stderr to INFILE, OUTFILE, and
    ERRFILE, except where they are null.
 
@@ -411,8 +406,9 @@ svn_error_t *svn_io_get_dirents (apr_hash_t **dirents,
    not set and the exit code is non-zero, then an SVN_ERR_EXTERNAL_PROGRAM
    error will be returned.
 
-   ARGS is a list of (const char *)'s, terminated by NULL.  ARGS[0] is
-   the name of the program, though it need not be the same as CMD.
+   ARGS is a list of utf8-encoded (const char *)'s, terminated by
+   NULL.  ARGS[0] is the name of the program, though it need not be
+   the same as CMD.
 
    INHERIT sets whether the invoked program shall inherit its environment or
    run "clean". */
@@ -427,17 +423,21 @@ svn_error_t *svn_io_run_cmd (const char *path,
                              apr_file_t *errfile,
                              apr_pool_t *pool);
 
-/* Invoke SVN_CLIENT_DIFF, with USER_ARGS (which is an array of NUM_USER_ARGS 
-   arguments), if they are specified, or "-u" if they are not.  
+/* Invoke SVN_CLIENT_DIFF, with USER_ARGS (an array of utf8-encoded
+   NUM_USER_ARGS arguments), if they are specified, or "-u" if they
+   are not.
 
-   Diff runs in DIR, and its exit status is stored in EXITCODE, if it is not 
-   NULL.  
+   Diff runs in utf8-encoded DIR, and its exit status is stored in
+   EXITCODE, if it is not NULL.  
 
-   If LABEL is given, it will be passed in as the argument to the "-L" option.
+   If LABEL is given, it will be passed in as the argument to the "-L"
+   option.  LABEL is also in utf8, and will be converted to native
+   charset along with the other args.
 
-   FROM is the first file passed to diff, and TO is the second.  The stdout of 
-   diff will be sent to OUTFILE, and the stderr to ERRFILE.  All memory will be 
-   allocated using POOL.  */
+   FROM is the first file passed to diff, and TO is the second.  The
+   stdout of diff will be sent to OUTFILE, and the stderr to ERRFILE.
+
+   Do all allocation in POOL.  */
 svn_error_t *svn_io_run_diff (const char *dir,
                               const char *const *user_args,
                               const int num_user_args,
@@ -450,20 +450,22 @@ svn_error_t *svn_io_run_diff (const char *dir,
                               apr_pool_t *pool);
 
 
-/*  Invoke SVN_CLIENT_DIFF3 in DIR like this:
+/*  Invoke SVN_CLIENT_DIFF3 in utf8-encoded DIR like this:
 
             diff3 -Em MINE OLDER YOURS > MERGED
 
    (See the diff3 documentation for details.)
 
-   MINE, OLDER, and YOURS are paths, relative to DIR, to three files
-   that already exist.  MERGED is an open file handle, and is left
-   open after the merge result is written to it. (MERGED should *not*
-   be the same file as MINE, or nondeterministic things may happen!)
+   MINE, OLDER, and YOURS are utf8-encoded paths, relative to DIR, to
+   three files that already exist.  MERGED is an open file handle, and
+   is left open after the merge result is written to it. (MERGED
+   should *not* be the same file as MINE, or nondeterministic things
+   may happen!)
 
-   MINE_LABEL, OLDER_LABEL, YOURS_LABEL are label parameters for
-   diff3's -L option.  Any of them may be NULL, in which case the
-   corresponding MINE, OLDER, or YOURS parameter is used instead.
+   MINE_LABEL, OLDER_LABEL, YOURS_LABEL are utf8-encoded label
+   parameters for diff3's -L option.  Any of them may be NULL, in
+   which case the corresponding MINE, OLDER, or YOURS parameter is
+   used instead.
 
    Set *EXITCODE to diff3's exit status.  If *EXITCODE is anything
    other than 0 or 1, then return SVN_ERR_EXTERNAL_PROGRAM.  (Note the
@@ -483,67 +485,57 @@ svn_error_t *svn_io_run_diff3 (const char *dir,
                                apr_pool_t *pool);
 
 
-/* Examine FILE to determine if it can be described by a known (as in,
-   known by this function) Multipurpose Internet Mail Extension (MIME)
-   type.  If so, set MIMETYPE to a character string describing the
-   MIME type, else set it to NULL.  Use POOL for any necessary
-   allocations.  */
+/* Examine utf8-encoded FILE to determine if it can be described by a
+   known (as in, known by this function) Multipurpose Internet Mail
+   Extension (MIME) type.  If so, set MIMETYPE to a character string
+   describing the MIME type, else set it to NULL.  Use POOL for any
+   necessary allocations.  */
 svn_error_t *svn_io_detect_mimetype (const char **mimetype,
                                      const char *file,
                                      apr_pool_t *pool);
                                       
 
-/* Wrapper for apr_file_open(), which see.
-   ### NOTE: when the rest of Marcus Comsted's patch is applied, this
-   will handle charset conversion too, see issue #494 for details.  */ 
+/* Wrapper for apr_file_open(), which see.  FNAME is utf8-encoded. */
 svn_error_t *
 svn_io_file_open (apr_file_t **new_file, const char *fname,
                   apr_int32_t flag, apr_fileperms_t perm,
                   apr_pool_t *pool);
 
 
-/* Wrapper for apr_stat(), which see.
-   ### NOTE: when the rest of Marcus Comsted's patch is applied, this
-   will handle charset conversion too, see issue #494 for details.  */ 
+/* Wrapper for apr_stat(), which see.  FNAME is utf8-encoded. */
 svn_error_t *
 svn_io_stat (apr_finfo_t *finfo, const char *fname,
              apr_int32_t wanted, apr_pool_t *pool);
 
 
-/* Wrapper for apr_file_rename(), which see.
-   ### NOTE: when the rest of Marcus Comsted's patch is applied, this
-   will handle charset conversion too, see issue #494 for details.  */ 
+/* Wrapper for apr_file_rename(), which see.  FROM_PATH and TO_PATH
+   are utf8-encoded. */
 svn_error_t *
 svn_io_file_rename (const char *from_path, const char *to_path,
                     apr_pool_t *pool);
 
 
-/* Wrapper for apr_dir_make(), which see.
-   ### NOTE: when the rest of Marcus Comsted's patch is applied, this
-   will handle charset conversion too, see issue #494 for details.  */ 
+/* Wrapper for apr_dir_make(), which see.  PATH is utf8-encoded. */
 svn_error_t *
 svn_io_dir_make (const char *path, apr_fileperms_t perm, apr_pool_t *pool);
 
 
-/* Wrapper for apr_dir_open(), which see.
-   ### NOTE: when the rest of Marcus Comsted's patch is applied, this
-   will handle charset conversion too, see issue #494 for details.  */ 
+/* Wrapper for apr_dir_open(), which see.  DIRNAME is utf8-encoded. */
 svn_error_t *
 svn_io_dir_open (apr_dir_t **new_dir, const char *dirname, apr_pool_t *pool);
 
 
-/* Wrapper for apr_dir_remove(), which see.  Given this name to avoid
-   confusion with svn_io_remove_dir, which is recursive.
-   ### NOTE: when the rest of Marcus Comsted's patch is applied, this
-   will handle charset conversion too, see issue #494 for details.  */ 
+/* Wrapper for apr_dir_remove(), which see.  DIRNAME is utf8-encoded.
+   Note: this function has this name to avoid confusion with
+   svn_io_remove_dir, which is recursive. */
 svn_error_t *
 svn_io_dir_remove_nonrecursive (const char *dirname, apr_pool_t *pool);
 
 
-/* Wrapper for apr_dir_read, which see.  Use POOL only for error
-   allocation.
-   ### NOTE: when the rest of Marcus Comsted's patch is applied, this
-   will handle charset conversion too, see issue #494 for details.  */ 
+/* Wrapper for apr_dir_read, which see.  Ensures that FINFO->name is
+   utf8-encoded, which means allocating FINFO->name in POOL, which may
+   or may not be the same as FINFO's pool.
+   Use POOL for error allocation as well. */
 svn_error_t *
 svn_io_dir_read (apr_finfo_t *finfo,
                  apr_int32_t wanted,
@@ -551,9 +543,9 @@ svn_io_dir_read (apr_finfo_t *finfo,
                  apr_pool_t *pool);
 
 
-/* Wrapper for apr_file_printf(), which see.
-   ### NOTE: when the rest of Marcus Comsted's patch is applied, this
-   will handle charset conversion too, see issue #494 for details.  */ 
+/* Wrapper for apr_file_printf(), which see.  FORMAT is a utf8-encoded
+   string after it is formatted, so this function can convert it to
+   native encoding before printing. */
 svn_error_t *
 svn_io_file_printf (apr_file_t *fptr, const char *format, ...);
 
