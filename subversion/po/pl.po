@@ -1397,7 +1397,7 @@ msgstr ""
 
 #: clients/cmdline/merge-cmd.c:64
 msgid "Second revision required"
-msgstr "Wymagane jest podanie drugiego numeru wersji\n"
+msgstr "Wymagane jest podanie drugiego numeru wersji"
 
 #: clients/cmdline/merge-cmd.c:88 clients/cmdline/merge-cmd.c:113
 msgid "Wrong number of paths given"
@@ -3731,7 +3731,7 @@ msgstr "Nieznany rodzaj obiektu: '%s' z serwera"
 #: libsvn_ra_svn/client.c:263 libsvn_ra_svn/client.c:317
 #, c-format
 msgid "Authentication error from server: %s"
-msgstr "Błąd autoryzacji na serwerze: %s\n"
+msgstr "Błąd autoryzacji na serwerze: %s"
 
 #: libsvn_ra_svn/client.c:266 libsvn_ra_svn/cram.c:196
 #: libsvn_ra_svn/cram.c:214
