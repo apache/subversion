@@ -238,13 +238,13 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     # Generate a fake depaprutil project
     options = {'path': 'build/win32'}
     utility = gen_base.TargetUtility
-    self.sections['depsubr'] = utility.Section(options, utility)
-    self.sections['depdelta'] = utility.Section(options, utility)
+    self.sections['libsvn_subr_fake'] = utility.Section(options, utility)
+    self.sections['libsvn_delta_fake'] = utility.Section(options, utility)
 
-    self.sections['depsubr'].create_targets(self.graph, 'depsubr', self.cfg, 
+    self.sections['libsvn_subr_fake'].create_targets(self.graph, 'libsvn_subr_fake', self.cfg, 
                                             self._extension_map)
 
-    self.sections['depdelta'].create_targets(self.graph, 'depdelta', self.cfg,
+    self.sections['libsvn_delta_fake'].create_targets(self.graph, 'libsvn_delta_fake', self.cfg,
                                              self._extension_map)
 
     install_targets = self.graph.get_all_sources(gen_base.DT_PROJECT)   \
@@ -347,16 +347,16 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       if target.name == 'mod_authz_svn':
         depends.extend(self.sections['mod_dav_svn'].get_dep_targets(target))
       pass
-    elif name == 'depdelta':
+    elif name == 'libsvn_delta_fake':
       depends.extend(self.sections['libsvn_delta'].get_dep_targets(target))
     elif name == 'libsvn_wc':
-      depends.extend(self.sections['depdelta'].get_dep_targets(target))
-    elif name == 'depsubr':
+      depends.extend(self.sections['libsvn_delta_fake'].get_dep_targets(target))
+    elif name == 'libsvn_subr_fake':
       depends.extend(self.sections['libsvn_subr'].get_dep_targets(target))
     elif name == 'libsvn_ra_svn':
-      depends.extend(self.sections['depsubr'].get_dep_targets(target))
+      depends.extend(self.sections['libsvn_subr_fake'].get_dep_targets(target))
     elif name == 'libsvn_ra_dav':
-      depends.extend(self.sections['depsubr'].get_dep_targets(target))
+      depends.extend(self.sections['libsvn_subr_fake'].get_dep_targets(target))
       depends.extend(self.sections['neon'].get_dep_targets(target))
     elif isinstance(target, gen_base.TargetExe):
       depends.extend(self.get_win_depends(target, 1,
