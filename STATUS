@@ -16,6 +16,8 @@ Candidate changes:
     Votes:
       +1: maxb
       (r12075 only) +1: dionisos, ghudson
+      -0: bliss (because the patch is non-trivial and there is only a
+                 single known pre-0.14 user)
 
   * r11050
     Add install dependencies for libsvn_fs and libsvn_fs_base.
