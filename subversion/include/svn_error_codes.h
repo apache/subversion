@@ -304,6 +304,25 @@ SVN_ERROR_START
  
   /* End of ra_local errors */
 
+  /* BEGIN svndiff errors */
+
+  SVN_ERRDEF (SVN_ERR_SVNDIFF_INVALID_HEADER,
+              "Svndiff data has invalid header")
+
+  SVN_ERRDEF (SVN_ERR_SVNDIFF_CORRUPT_WINDOW,
+              "Svndiff data contains corrupt window")
+
+  SVN_ERRDEF (SVN_ERR_SVNDIFF_BACKWARD_VIEW,
+              "Svndiff data contains backward-sliding source view")
+
+  SVN_ERRDEF (SVN_ERR_SVNDIFF_INVALID_OPS,
+              "Svndiff data contains invalid instruction")
+
+  SVN_ERRDEF (SVN_ERR_SVNDIFF_UNEXPECTED_END,
+              "Svndiff data ends unexpectedly")
+
+  /* END svndiff errors */
+
   SVN_ERRDEF (SVN_ERR_BAD_CONTAINING_POOL,
               "Bad parent pool passed to svn_make_pool()")
 
