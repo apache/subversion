@@ -98,3 +98,9 @@ Candidate changes:
     of author during a single commit is prevented.
     Votes:
       +1: striker
+
+  * r9099
+    Issue 1794: recursive propset can corrupt the entries file
+    Justification: very hard for the user to recover
+    Votes:
+      +1: philip
