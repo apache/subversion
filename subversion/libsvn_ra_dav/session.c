@@ -24,12 +24,14 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 #include <apr_general.h>
+#include <apr_xml.h>
 
 #include <ne_socket.h>
 #include <ne_request.h>
 #include <ne_uri.h>
 #include <ne_auth.h>
 #include <ne_locks.h>
+#include <ne_alloc.h>
 
 #include "svn_error.h"
 #include "svn_ra.h"
