@@ -37,30 +37,77 @@
 
 /*** Hook drivers. ***/
 
+/* NAME, CMD and ARGS are the name, path to and arguments for the hook
+   program that is to be run.  If CHECK_EXITCODE is TRUE then the hook's
+   exit status will be checked, and if an error occurred the hook's stderr
+   output will be added to the returned error.  If CHECK_EXITCODE is FALSE
+   the hook's exit status will be ignored. */
 static svn_error_t *
-run_cmd_with_output (const char *cmd,
-                     const char **args,
-                     int *exitcode,
-                     apr_exit_why_e *exitwhy,
-                     apr_pool_t *pool)
+run_hook_cmd (const char *name,
+              const char *cmd,
+              const char **args,
+              svn_boolean_t check_exitcode,
+              apr_pool_t *pool)
 {
-  apr_file_t *outhandle, *errhandle;
+  apr_file_t *read_errhandle, *write_errhandle;
   apr_status_t apr_err;
-  
-  /* Get an apr_file_t representing stdout and stderr. */
-  apr_err = apr_file_open_stdout (&outhandle, pool);
-  if (apr_err)
-    return svn_error_create 
-      (apr_err, 0, NULL, pool,
-       "run_cmd_with_output: can't open handle to stdout");
-  apr_err = apr_file_open_stderr (&errhandle, pool);
-  if (apr_err)
-    return svn_error_create 
-      (apr_err, 0, NULL, pool,
-       "run_cmd_with_output: can't open handle to stderr");
+  svn_error_t *err;
+  int exitcode;
+  apr_exit_why_e exitwhy;
 
-  return svn_io_run_cmd (".", cmd, args, exitcode, exitwhy, FALSE,
-                         NULL, outhandle, errhandle, pool);
+  /* Create a pipe to access stderr of the child. */
+  apr_err = apr_file_pipe_create(&read_errhandle, &write_errhandle, pool);
+  if (apr_err)
+    return svn_error_createf
+      (apr_err, 0, NULL, pool,
+       "can't create pipe for %s hook", cmd);
+
+  err = svn_io_run_cmd (".", cmd, args, &exitcode, &exitwhy, FALSE,
+                        NULL, NULL, write_errhandle, pool);
+
+  /* This seems to be done automatically if we pass the third parameter of
+     apr_procattr_child_in/out_set(), but svn_io_run_cmd()'s interface does
+     not support those parameters. */
+  apr_err = apr_file_close(write_errhandle);
+  if (!err && apr_err)
+    return svn_error_create
+      (apr_err, 0, NULL, pool,
+       "can't close write end of stderr pipe");
+
+  /* Function failed. */
+  if (err)
+    {
+      err = svn_error_createf
+        (SVN_ERR_REPOS_HOOK_FAILURE, 0, err, pool,
+         "failed to run %s hook", cmd);
+    }
+
+  if (!err && check_exitcode)
+    {
+      /* Command failed. */
+      if (! APR_PROC_CHECK_EXIT (exitwhy) || exitcode != 0)
+        {
+          svn_stringbuf_t *error;
+
+          /* Read the file's contents into a stringbuf, allocated in POOL. */
+          SVN_ERR (svn_string_from_aprfile (&error, read_errhandle, pool));
+
+          err = svn_error_createf
+              (SVN_ERR_REPOS_HOOK_FAILURE, 0, err, pool,
+               "%s hook failed with error output:\n%s",
+               name, error->data);
+        }
+    }
+
+  /* Hooks are falible, and so hook failure is "expected" to occur at
+     times.  When such a failure happens we still want to close the pipe */
+  apr_err = apr_file_close(read_errhandle);
+  if (!err && apr_err)
+    return svn_error_create
+      (apr_err, 0, NULL, pool,
+       "can't close read end of stdout pipe");
+
+  return err;
 }
 
 
@@ -77,7 +124,6 @@ run_start_commit_hook (svn_repos_t *repos,
   if ((! svn_io_check_path (hook, &kind, pool)) 
       && (kind == svn_node_file))
     {
-      svn_error_t *err;
       const char *args[4];
 
       args[0] = hook;
@@ -85,12 +131,7 @@ run_start_commit_hook (svn_repos_t *repos,
       args[2] = user;
       args[3] = NULL;
 
-      if ((err = run_cmd_with_output (hook, args, NULL, NULL, pool)))
-        {
-          return svn_error_createf 
-            (SVN_ERR_REPOS_HOOK_FAILURE, 0, err, pool,
-             "run_start_commit_hook: error running cmd `%s'", hook);
-        }
+      SVN_ERR (run_hook_cmd ("start-commit", hook, args, TRUE, pool));
     }
 
   return SVN_NO_ERROR;
@@ -110,9 +151,6 @@ run_pre_commit_hook (svn_repos_t *repos,
   if ((! svn_io_check_path (hook, &kind, pool)) 
       && (kind == svn_node_file))
     {
-      svn_error_t *err;
-      int exitcode;
-      apr_exit_why_e exitwhy;
       const char *args[4];
 
       args[0] = hook;
@@ -120,18 +158,7 @@ run_pre_commit_hook (svn_repos_t *repos,
       args[2] = txn_name;
       args[3] = NULL;
 
-      if ((err = run_cmd_with_output (hook, args, &exitcode, &exitwhy, pool)))
-        {
-          return svn_error_createf 
-            (SVN_ERR_REPOS_HOOK_FAILURE, 0, err, pool,
-             "run_pre_commit_hook: error running cmd `%s'", hook);
-        }
-      if (! APR_PROC_CHECK_EXIT (exitwhy) || exitcode != 0)
-        {
-          return svn_error_create
-              (SVN_ERR_REPOS_HOOK_FAILURE, 0, err, pool,
-               "pre-commit hook return non-zero status.  Aborting txn.");
-        }
+      SVN_ERR (run_hook_cmd ("pre-commit", hook, args, TRUE, pool));
     }
 
   return SVN_NO_ERROR;
@@ -151,7 +178,6 @@ run_post_commit_hook (svn_repos_t *repos,
   if ((! svn_io_check_path (hook, &kind, pool)) 
       && (kind == svn_node_file))
     {
-      svn_error_t *err;
       const char *args[4];
 
       args[0] = hook;
@@ -159,12 +185,7 @@ run_post_commit_hook (svn_repos_t *repos,
       args[2] = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
       args[3] = NULL;
 
-      if ((err = run_cmd_with_output (hook, args, NULL, NULL, pool)))
-        {
-          return svn_error_createf 
-            (SVN_ERR_REPOS_HOOK_FAILURE, 0, err, pool,
-             "run_post_commit_hook: error running cmd `%s'", hook);
-        }
+      SVN_ERR (run_hook_cmd ("post-commit", hook, args, FALSE, pool));
     }
 
   return SVN_NO_ERROR;
