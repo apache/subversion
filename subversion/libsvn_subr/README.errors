@@ -44,12 +44,8 @@ typedef struct svn_error_t
     b) Throw the error upwards, unmodified:
 
         error = some_routine (foo);
-        SVN_RETURN_IF_ERROR(error);
-
-       This macro is defined as...
-
-         #define SVN_RETURN_IF_ERROR(err) if (err) return (err)
-
+        if (error)
+          return (error);
         
     c) Throw the error upwards, wrapping it in a new error structure:
 
@@ -74,8 +70,3 @@ typedef struct svn_error_t
           {
            return (svn_quick_wrap_error (error, "Authorization failed.");
           }
- 
-        And of course, the whole last chunk is macroed too:
-
-        error = some_routine (foo);
-        SVN_RETURN_WRAPPERED_ERROR(error, "Authorization failed.");

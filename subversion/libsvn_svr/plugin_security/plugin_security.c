@@ -126,7 +126,8 @@ plugin_security_init (svn_svr_policies_t *policy,
 
   /* Finally, register the new plugin in the server's global policy struct */
   err = svn_svr_register_plugin (policy, newplugin);
-  SVN_RETURN_WRAPPED_ERROR(err, "Can't register plugin_security.");
+  if (err)
+    return (svn_quick_wrap_error (err, "Can't register plugin_security."));
 
   return SVN_SUCCESS;
 }
@@ -135,6 +136,6 @@ plugin_security_init (svn_svr_policies_t *policy,
 
 /* --------------------------------------------------------------
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../svn-dev.el")
  * end:
  */

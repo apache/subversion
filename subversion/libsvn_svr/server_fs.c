@@ -138,7 +138,8 @@ svn_svr_plugin_authorize (svn_svr_policies_t *policy,
           /* Call the authorization routine, giving it a chance to
              kill our authorization assumption */
           err = (*my_hook) (repos, user, action, ver, path);
-          SVN_RETURN_IF_ERROR(err);
+          if (err)
+            return (err);
         }
     }
 
@@ -212,10 +213,14 @@ svn_svr_authorize (svn_svr_policies_t *policy,
   svn_error_t *err;
   
   err = svn_svr_policy_authorize (policy, repos, user, action, ver, path);
-  SVN_RETURN_WRAPPED_ERROR(err, "Global server policy denied authorization.");
+  if (err)
+    return (svn_quick_wrap_error
+            (err, "Global server policy denied authorization.");
 
   err = svn_svr_plugin_authorize (policy, repos, user, action, ver, path);
-  SVN_RETURN_WRAPPED_ERROR(err, "A plugin denied authorization.");
+  if (err)
+    return (svn_quick_wrap_error
+            (err, "A plugin denied authorization.");
 
   return SVN_SUCCESS;  /* successfully authorized! */
 }
@@ -247,9 +252,10 @@ svn_svr_latest (svn_ver_t **latest_ver,
 
   /* Check authorization, both server policy & auth hooks */
   svn_svr_action_t my_action = svn_action_latest;
-  svn_error_t *error = svn_svr_authorize (policy, repository, user, 
-                                          my_action, NULL, NULL);
-  SVN_RETURN_WRAPPED_ERROR(error, "svn_svr_authorize() failed.");
+  svn_error_t *err = svn_svr_authorize (policy, repository, user, 
+                                        my_action, NULL, NULL);
+  if (error)
+    return (error, "svn_svr_authorize() failed.");
  
   /* Do filesystem call with "canonical" username */
   return  (svn_fs_latest (latest_ver,
