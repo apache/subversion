@@ -1416,42 +1416,7 @@ svn_error_t *svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
                                        apr_pool_t *pool);
 
 
-/** Like @c svn_wc_get_update_editor(), except that:
- *
- * @a dest will be created as a working copy, if it does not exist
- * already.  It is not an error for it to exist; if it does, checkout
- * just behaves like update.
- *
- * It is the caller's job to make sure that @a dest is not some other
- * working copy, or that if it is, it will not be damaged by the
- * application of this delta.  The wc library tries to detect
- * such a case and do as little damage as possible, but makes no
- * promises.
- *
- * The editor invokes @a notify_func with @a notify_baton as the checkout
- * progresses, if @a notify_func is non-null.
- *
- * If @a cancel_func is non-null, it gets called, with @a cancel_baton as 
- * the checkout progresses, to determine if it should continue.
- *
- * @a ancestor_url is the repository string to be recorded in this
- * working copy.
- */
-svn_error_t *svn_wc_get_checkout_editor (const char *dest,
-                                         const char *ancestor_url,
-                                         svn_revnum_t target_revision,
-                                         svn_boolean_t recurse,
-                                         svn_wc_notify_func_t notify_func,
-                                         void *notify_baton,
-                                         svn_cancel_func_t cancel_func,
-                                         void *cancel_baton,
-                                         const svn_delta_editor_t **editor,
-                                         void **edit_baton,
-                                         svn_wc_traversal_info_t *ti,
-                                         apr_pool_t *pool);
-
-
-/** Another variant of @c svn_wc_get_update_editor().
+/** A variant of @c svn_wc_get_update_editor().
  *
  * Set @a *editor and @a *edit_baton to an editor and baton for "switching"
  * a working copy to a new @a switch_url.  (Right now, this URL must be
