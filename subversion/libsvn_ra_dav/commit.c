@@ -26,9 +26,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
-#if APR_HAVE_STDLIB
 #include <stdlib.h>     /* for free() */
-#endif
 #include <assert.h>
 
 #include <ne_socket.h>
