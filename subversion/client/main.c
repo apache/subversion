@@ -226,14 +226,14 @@ parse_command_options (int argc,
    reinvent the wheel: */  
 void
 svn_cl__parse_options (int argc,
-               char **argv,
-               svn_cl__te_command command,
-               svn_string_t **xml_file,
-               svn_string_t **target,   /* dest_dir or file to add */
-               svn_revnum_t *revision,  /* ancestral or new */
-               svn_string_t **ancestor_path,
-               svn_boolean_t *force,
-               apr_pool_t *pool)
+                       char **argv,
+                       enum svn_cl__command command,
+                       svn_string_t **xml_file,
+                       svn_string_t **target,   /* dest_dir or file to add */
+                       svn_revnum_t *revision,  /* ancestral or new */
+                       svn_string_t **ancestor_path,
+                       svn_boolean_t *force,
+                       apr_pool_t *pool)
 {
   char *s = argv[0];  /* svn progname */
 

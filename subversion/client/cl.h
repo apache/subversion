@@ -107,7 +107,7 @@ typedef struct svn_cl__cmd_desc_t
 /*  These are all the command procedures we currently know about.
     The "null" entry is simply an enumerated invalid entry that makes
     initializations easier */
-typedef enum {
+enum svn_cl__command {
   svn_cl__null_command = 0,
   svn_cl__add_command,
   svn_cl__commit_command,
@@ -117,7 +117,7 @@ typedef enum {
   svn_cl__proplist_command,
   svn_cl__status_command,
   svn_cl__update_command
-} svn_cl__te_command;
+};
 
 
 /* Declare all the command procedures */
@@ -161,7 +161,7 @@ svn_error_t *svn_cl__get_trace_editor (const svn_delta_edit_fns_t **editor,
 void
 svn_cl__parse_options (int argc,
                        char **argv,
-                       svn_cl__te_command command,
+                       enum svn_cl__command command,
                        svn_string_t **xml_file,
                        svn_string_t **target,  /* dest_dir or file to add */
                        svn_revnum_t *revision,  /* ancestral or new */
