@@ -364,6 +364,35 @@ svn_io_read_link (svn_string_t **dest,
 #endif  
 }
 
+
+svn_error_t *
+svn_io_copy_link (const char *src,
+                  const char *dst,
+                  apr_pool_t *pool)
+
+{
+#ifdef HAVE_READLINK
+  svn_string_t *link_dest;
+  const char *dst_tmp;
+
+  /* Notice what the link is pointing at... */
+  SVN_ERR (svn_io_read_link (&link_dest, src, pool));
+
+  /* Make a tmp-link pointing at the same thing. */
+  SVN_ERR (svn_io_create_unique_link (&dst_tmp, dst, link_dest->data,
+                                      ".tmp", pool));
+  
+  /* Move the tmp-link to link. */
+  return svn_io_file_rename (dst_tmp, dst, pool);
+
+#else
+  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                           "Symbolic links are not supported on this "
+                           "platform");
+#endif
+}
+
+
 #if 1 /* TODO: Remove this code when APR 0.9.6 is released. */
 #include "apr_env.h"
 
@@ -574,10 +603,11 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
 {
   svn_node_kind_t kind;
   apr_status_t status;
-  apr_hash_t *dirents;
-  apr_hash_index_t *hi;
   const char *dst_path;
   const char *dst_path_apr;
+  apr_dir_t *this_dir;
+  apr_finfo_t this_entry;
+  apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
 
   /* Make a subpool for recursion */
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -616,50 +646,76 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
                               dst_path);
 
   /* Loop over the dirents in SRC.  ('.' and '..' are auto-excluded) */
-  SVN_ERR (svn_io_get_dirents (&dirents, src, subpool));
+  SVN_ERR (svn_io_dir_open (&this_dir, src, subpool));
 
-  for (hi = apr_hash_first (subpool, dirents); hi; hi = apr_hash_next (hi))
+  for (status = apr_dir_read (&this_entry, flags, this_dir);
+       status == APR_SUCCESS;
+       status = apr_dir_read (&this_entry, flags, this_dir))
     {
-      const void *key;
-      void *val;
-      const char *entryname;
-      svn_node_kind_t *entrykind;
-      const char *src_target;
-
-      /* Get next entry and its kind */
-      apr_hash_this (hi, &key, NULL, &val);
-      entryname = key;
-      entrykind = val;
-
-      if (cancel_func)
-        SVN_ERR (cancel_func (cancel_baton));
-
-      /* Telescope the entryname onto the source dir. */
-      src_target = svn_path_join (src, entryname, subpool);
-
-      /* If it's a file, just copy it over. */
-      if (*entrykind == svn_node_file)
+      if ((this_entry.name[0] == '.')
+          && ((this_entry.name[1] == '\0')
+              || ((this_entry.name[1] == '.')
+                  && (this_entry.name[2] == '\0'))))
         {
-          /* Telescope and de-telescope the dst_target in here */
-          const char *dst_target
-            = svn_path_join (dst_path, entryname, subpool);
-          SVN_ERR (svn_io_copy_file (src_target, dst_target,
-                                     copy_perms, subpool));
+          continue;
         }
-      else if (*entrykind == svn_node_dir)  /* recurse */
+      else
         {
-          SVN_ERR (svn_io_copy_dir_recursively (src_target,
-                                                dst_path,
-                                                entryname,
-                                                copy_perms,
-                                                cancel_func,
-                                                cancel_baton,
-                                                subpool));
-        }
+          const char *src_target, *src_target_utf8, *dst_target_utf8;
 
-      /* ### someday deal with other node kinds? */
+          if (cancel_func)
+            SVN_ERR (cancel_func (cancel_baton));
+
+          /* Telescope the entryname onto the source dir. */
+          src_target = svn_path_join (src, this_entry.name, subpool);
+          SVN_ERR (svn_path_cstring_to_utf8 (&src_target_utf8, src_target,
+                                             subpool));
+          
+          if (this_entry.filetype == APR_REG) /* regular file */
+            {
+              const char *dst_target = svn_path_join (dst_path,
+                                                      this_entry.name,
+                                                      subpool);
+              SVN_ERR (svn_path_cstring_to_utf8 (&dst_target_utf8, dst_target,
+                                                 subpool));
+              SVN_ERR (svn_io_copy_file (src_target_utf8, dst_target_utf8,
+                                         copy_perms, subpool));
+            }
+          else if (this_entry.filetype == APR_LNK) /* symlink */
+            {
+              const char *dst_target = svn_path_join (dst_path,
+                                                      this_entry.name,
+                                                      subpool);
+              SVN_ERR (svn_path_cstring_to_utf8 (&dst_target_utf8, dst_target,
+                                                 subpool));
+              SVN_ERR (svn_io_copy_link (src_target_utf8, dst_target_utf8,
+                                         subpool));
+            }
+          else if (this_entry.filetype == APR_DIR) /* recurse */
+            {
+              const char *entryname_utf8;
+              SVN_ERR (svn_path_cstring_to_utf8 (&entryname_utf8,
+                                                 this_entry.name, subpool));
+              SVN_ERR (svn_io_copy_dir_recursively 
+                       (src_target_utf8,
+                        dst_path,
+                        entryname_utf8,
+                        copy_perms,
+                        cancel_func,
+                        cancel_baton,
+                        subpool));
+            }
+          /* ### support other APR node types someday?? */
+
+        }
     }
-    
+
+  if (! (APR_STATUS_IS_ENOENT (status)))
+    return svn_error_wrap_apr (status, "Can't read directory '%s'", src);
+
+  status = apr_dir_close (this_dir);
+  if (status)
+    return svn_error_wrap_apr (status, "Error closing directory '%s'", src);
 
   /* Free any memory used by recursion */
   apr_pool_destroy (subpool);
