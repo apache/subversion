@@ -1482,14 +1482,25 @@ svn_error_t *svn_fs_unlock (svn_fs_t *fs,
 
 
 /** If @a path is locked in @a fs, set @a *lock to an svn_lock_t which
- * points to the lock, allocated in @a pool.
+ *  represents the lock, allocated in @a pool.
  *  
  * If @a path is not locked, set @a *lock to NULL.
  */
-svn_error_t *svn_fs_get_lock (svn_lock_t **lock,
-                              svn_fs_t *fs,
-                              const char *path,
-                              apr_pool_t *pool);
+svn_error_t *svn_fs_get_lock_from_path (svn_lock_t **lock,
+                                        svn_fs_t *fs,
+                                        const char *path,
+                                        apr_pool_t *pool);
+
+
+/** If @a token points to a lock in @a fs, set @a *lock to an
+ * svn_lock_t which represents the lock, allocated in @a pool.
+ *  
+ * If @a token dosen't point to a lock, set @a *lock to NULL.
+ */
+svn_error_t *svn_fs_get_lock_from_token (svn_lock_t **lock,
+                                        svn_fs_t *fs,
+                                        const char *token,
+                                        apr_pool_t *pool);
 
 
 /** Set @a *locks to a hashtable which represents all locks on or

@@ -523,7 +523,8 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__deltify,
   svn_fs_base__lock,
   svn_fs_base__unlock,
-  svn_fs_base__get_lock,
+  svn_fs_base__get_lock_from_path,
+  svn_fs_base__get_lock_from_token,
   svn_fs_base__get_locks
 };
 
