@@ -609,7 +609,7 @@ sally = barpassword
 
       </sect3>
 
-      <sect3 id="svn-ch-6-sect-3.2.1">
+      <sect3 id="svn-ch-6-sect-3.2.2">
         <title>Set access controls</title>
 
         <para>There are two more variables to set in the
