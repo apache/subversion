@@ -948,12 +948,11 @@ svn_wc__entries_write (apr_hash_t *entries,
   this_dir = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, 
                            APR_HASH_KEY_STRING);
 
-  /* If there is no "this dir" entry, we can only assume that this
-     directory is no longer under revision control.  We'll blow away
-     the administrative subdirectory altogether.  ### todo: this
-     should probably do a recursive cleanup of some sort.  */
+  /* If there is no "this dir" entry, something is wrong. */
   if (! this_dir)
-    return svn_wc__adm_destroy (path, pool);
+    return svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+                              "No default entry in directory `%s'", 
+                              path->data);
 
   /* Open entries file for writing. */
   SVN_ERR (svn_wc__open_adm_file (&outfile, path, SVN_WC__ADM_ENTRIES,
