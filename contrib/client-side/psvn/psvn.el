@@ -186,7 +186,7 @@ If this variale is nil, and the file is out of date then the longer phrase
 
 In either case the mark gets the face
 `svn-status-update-available-face', and will only be visible if
-`\[svn-status-update]' is run with a prefix argument")
+`\\[svn-status-update]' is run with a prefix argument")
 
 ;;; default arguments to pass to svn commands
 (defvar svn-status-default-log-arguments ""
@@ -443,8 +443,8 @@ is prompted for give extra arguments, which are appended to ARGLIST."
           (setq arglist (append arglist
                                 (split-string
                                  (read-from-minibuffer
-                                  (format "Run `svn %s %s' with extra arguments: "
-                                          cmdtype (mapconcat 'identity arglist " "))))))
+                                  (format "Run `svn %s' with extra arguments: "
+                                          (mapconcat 'identity arglist " "))))))
           (when (eq svn-status-edit-svn-command t)
             (svn-status-toggle-edit-cmd-flag t))
           (message "svn-run-svn %s: %S" cmdtype arglist))
@@ -1088,7 +1088,7 @@ repository than the working copy."
   "Return whether LINE-INFO represents a locked file.
 This is column three of the `svn status' output.
 The result will be nil or \"L\".
-\(A file becomes locked when an operation is interupted; run \[svn-status-cleanup]'
+\(A file becomes locked when an operation is interupted; run \\[svn-status-cleanup]'
 to unlock it.\)"
   (nth 8 line-info))
 (defun svn-status-line-info->historymark (line-info)
@@ -1428,11 +1428,11 @@ Symbolic links to directories count as directories (see `file-directory-p')."
       (insert (concat "Repository: " (svn-status-base-info->url) "\n")))
     (when svn-status-hide-unknown
       (insert
-       (format "%d Unknown file(s) are hidden - press ? to toggle hiding\n"
+       (format "%d Unknown file(s) are hidden - press `?' to toggle hiding\n"
                unknown-count)))
     (when svn-status-hide-unmodified
       (insert
-       (format "%d Unmodified file()s are hidden - press _ to toggle hiding\n"
+       (format "%d Unmodified file(s) are hidden - press `_' to toggle hiding\n"
                unmodified-count)))
     (when (> user-elide-count 0)
       (insert (format "%d file(s) elided\n" user-elide-count)))
@@ -1577,7 +1577,6 @@ directory itself, in all other cases find the parent directory"
     ;;The next `or' is because (file-name-directory "file") returns nil
     (or (file-name-directory (svn-status-line-info->filename line-info))
         ".")))
-
 
 (defun svn-status-set-user-mark (arg)
   "Set a user mark on the current file or directory.
