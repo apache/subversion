@@ -14,18 +14,14 @@ Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: apr >= 2001.10.24
 Requires: db3 >= 3.3.11
 Requires: expat
-Requires: libxml
 Requires: neon = %{neon_version}
-Requires: w3c-libwww
 BuildPreReq: apr-devel >= 2001.10.24
 BuildPreReq: autoconf >= 2.52
 BuildPreReq: db3-devel >= 3.3.11
 BuildPreReq: expat-devel
 BuildPreReq: libtool >= 1.4.2
-BuildPreReq: libxml-devel
 BuildPreReq: neon = %{neon_version}
 BuildPreReq: python
-BuildPreReq: w3c-libwww-devel
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 Prefix: /usr
 %description
@@ -71,7 +67,14 @@ the Apache directories and configuration.
 %patch0 -p1
 
 sh autogen.sh
-rm -rf expat-lite
+
+# EXPAT is external so get rid of all except (patched) xmlparse.h
+rm -rf expat-lite/[a-w]*.[ch]
+rm -rf expat-lite/xmldef.h
+rm -rf expat-lite/xmlparse.c
+rm -rf expat-lite/xmlrole*
+rm -rf expat-lite/xmltok*
+
 ./configure --prefix=/usr
 
 # Fix up mod_dav_svn installation.
@@ -114,7 +117,11 @@ fi
 
 %preun server
 # Take subversion configuration out of apache configuration file.
-cd /etc/httpd/conf && sed -e 's/^LoadModule dav_svn_module/#LoadModule dav_svn_module/' -e '/^# Begin Subversion server/,/^# End Subversion server/s/^/#/' < httpd.conf > httpd.conf.new && mv httpd.conf httpd.conf.bak && mv httpd.conf.new httpd.conf
+# Only take it out if this package is being erased and not upgraded.
+if [ "$1" = "0" ];
+   then
+   cd /etc/httpd/conf && sed -e 's/^LoadModule dav_svn_module/#LoadModule dav_svn_module/' -e '/^# Begin Subversion server/,/^# End Subversion server/s/^/#/' < httpd.conf > httpd.conf.new && mv httpd.conf httpd.conf.bak && mv httpd.conf.new httpd.conf
+fi
 
 %postun server
 # Restart apache server if needed.

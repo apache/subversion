@@ -5,7 +5,7 @@
  
  install-mods-shared: subversion/mod_dav_svn/libmod_dav_svn.la
 -	cd subversion/mod_dav_svn ; $(INSTALL_MOD_SHARED) -n dav_svn libmod_dav_svn.la
-+	cd subversion/mod_dav_svn ; ($(INSTALL_MOD_SHARED) -n dav_svn libmod_dav_svn.la || true); mkdir -p $(libexecdir); cp ./.libs/libmod_dav_svn.soT $(libexecdir)/libmod_dav_svn.so; cp ./libmod_dav_svn.la $(libexecdir)
++	cd subversion/mod_dav_svn ; ($(INSTALL_MOD_SHARED) -n dav_svn libmod_dav_svn.la || true); mkdir -p $(libexecdir); cp ./.libs/libmod_dav_svn.so $(libexecdir)/libmod_dav_svn.so; cp ./libmod_dav_svn.la $(libexecdir)
 +#$(INSTALL_MOD_SHARED) -n dav_svn libmod_dav_svn.la
  
  install-mods-static: subversion/libsvn_delta/libsvn_delta.la-a subversion/libsvn_fs/libsvn_fs.la-a subversion/libsvn_subr/libsvn_subr.la-a subversion/mod_dav_svn/libmod_dav_svn.la-a subversion/libsvn_repos/libsvn_repos.la-a subversion/mod_dav_svn/static/config.m4 subversion/mod_dav_svn/static/Makefile.in
