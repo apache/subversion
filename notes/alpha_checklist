@@ -1,67 +1,82 @@
    -*- text -*-
 
-Issues to discuss/prioritize POST Milestone 2
-=============================================
-
-(NOT YET PRIORITIZED)
+The road to feature-completeness
+================================
 
 
-I. Implementation Issues
-------------------------
+I. Implementation Questions
+---------------------------
 
 A. How does svn_wc_cleanup() get used?  exposed as a user command?
 
-B. Optimizations that *should* be in effect, but aren't yet:
+    Answer:  yes.  as 'svn cleanup' .... but *not* as an auto-run
+    feature before each subcommand.
+
+    ACTION: Karl will do.
+
+B. Filesystem improvements -- just a matter of doing them now:
 
     1. need deltified storage of node-revisions in the filesystem
-       (representation skels)
+       (representation skels).  checksums too.
+
+       ACTION: who will do?
 
     2. svn_fs_dir_delta should use the "copyfrom" args if possible; it
        should know which pieces of an update are already possessed by
-       the working copy.
+       the working copy.  (might be post-1.0)
+
+       ACTION: Mike will do.
 
     3. file contents are being held entirely in RAM -- on *both*
-       client and server sides -- even though we already have a whole
-       streamy system in place to make this unnecessary!
+       client and server sides.  Do real streams.
 
-    4. While building an fs txn during a commit, we should call
-       merge() very often to test for skeletal node-rev-id conflicts.
-       Otherwise, what's the point of driving commits in "postfix
-       text-delta" style?
+       ACTION: who will do?
 
-C. Copy nodes (or props).  we need better history tracking when making
+    4. Move file contents into own table
+
+       ACTION: who will do?
+
+    5. Merge:  prevent node-rev-id strings from growing absurdly long.
+
+       ACTION: Karl will do.
+
+
+C. Copy nodes (or props).  We need better history tracking when making
    cheap copies in the fs, else we lose copy history information.
 
-D. Need more descriptive error messages all around.  Perhaps a table
-   that maps errnos to strings.  (We'll need this anyway once we
-   internationalize.) 
+   ACTION: must discuss.
 
-E. Binary files: how do we deal with diffing/patching binary files?
-   (like, say, if someone wants to keep an MS Word file under revision
-   control.)  Let me clarify:  when the client receives a binary diff
-   from the server, the new file is reconstructed in SVN/tmp/.  How do
-   we 'patch' the visible working file so as not to lose local
-   changes?
+D. Auto-detection of text/binary file types.  Use it for keyword
+   substitution, line-ending conversion, and merging.
 
-F. The Fate of ra_local: should it be relegated to "useful test
-   module", and hidden from end-users?  Or do we allow it to become
-   The Standard Method of accessing a local repos?  On the one hand,
-   it's nice to have to support one code-path (http).  On the other
-   hand, a lot of users might (and already have) objected to being
-   forced to install Apache.
+   ACTION: discuss the heuristic
 
-G  commit-methodology:  ra_dav and ra_local need to agree on one
-   methodology for performing a commit.  Right now, it looks like they
-   agree that a new fs function is needed.
+E. Locking issues with the filesystem: mod_dav_svn (as well as
+   ra_local) need to observe DB_RUN_RECOVERY errors.
+
+   ACTION: discuss now, Greg & Ben implement.
 
 H. Change #6:  inverting the text-delta interface.  Should we do it?
+ 
+   Answer: driver will provide editor with a struct that contains a
+   "menu" of ways to produce a textdelta... i.e. a pair of filenames,
+   and/or a pair of svn_stream_t's, and/or an svn_txdelta_stream.  Let
+   the editor select what it wants to use.
 
+   ACTION:  who will do?
+
+I. Greg and Ben think that ra_local should adapt to ra_dav's style of
+   committing.
+
+   ACTION: discuss.
 
 
 II. Missing Features (that are needed to match CVS)
 --------------------
 
 A. All client commands need to accept multiple targets.
+
+   ACTION:  Fitz and Ben/Karl/Mike will do.
 
 B. Authentication & authorization system.
 
@@ -74,51 +89,95 @@ B. Authentication & authorization system.
       * has a consistent user interface for *all* present and future
         authentication mechanisms.
 
-C. Who is going to write a gui design/whitepaper?  Who will write
-   them?
+   ACTION: discuss.
 
-D. svn import?  annotate?  log?  other commands that are still missing
-   that are part of CVS?
+C. Subcommands that still need to be written:
 
-E. How will we present branches and tags to the user?  Show them as
-   subdirs, or hide them under a cvs-compatible command interface?
+   svn log, export, diff, rdiff, blame (annotate).
 
-F. Still need a sh/perl/python external test framework of some kind.
+   We are purposely ignoring:  history, edit, watch, editors.
 
-G. Hook system. need pre-post commit hooks.  Other hooks?  How will we
-   implement?  How will we make them available to users?
+   ACTION: Fitz/Ben/Karl/Mike will do.
 
-H. Need built-in patch/diff functionality, instead of relying on
+D. How will we present branches and tags to the user?  Show them as
+   subdirs, or hide them under a cvs-like interface?
+
+      Answer:  we won't hide the implementation... BUT: we will not
+      call them "branches" and "tags".  We'll only talk about "copies"
+      instead and try to educate the public this way.
+
+      Answer:  'svn cp' will take 2 args, each can be a local path
+      *or* a URL.  This means it may be a checkout or commit in
+      disguise.
+
+      Answer:  'svn branch' is a special case of 'svn cp' that munges
+      your wc to move to this new location.
+
+      Answer:  'svn tag' is special case of 'svn cp' that interprets
+      args slightly differently.
+
+   ACTION: re-explain 4th answer.
+
+   ACTION: Ben and Fitz will write.
+
+E. Hook system. How will we implement?  How will we make them
+   available to users?
+
+   Answer:  independent library, which fs callers must call into.
+   All cooperative callers of libsvn_fs (mod_dav_svn, ra_local) will
+   call pre/post hooks.  The interfaces in the hook layer will be
+   very similar to those in svn_fs.h.
+
+   ACTION:  discuss and design specifics.
+
+F. Need built-in patch/diff functionality, instead of relying on
    external tools.
 
+   ACTION:  discuss priority.
+
+G. Define M3 to be self-hosting.
+
+H. Need lots of user docs, and updated technical/design spec too.
+
+   ACTION: get volunteers working on docs.  discuss.
 
 
-III. Missing Features (that surpass CVS)
----------------------
+
+III. Better than CVS, and part of 1.0  ("low hanging fruit")
+-------------------------------------
 
 A. Commands that make us *better* than CVS, need to be written:
-     
+
      svn mv, svn cp 
-     svn revert 
+     svn revert, svn rollback
      svn unadd, svn undel
+     svn obliterate
 
-B. External diff program invocation via client-side plugins.
+   ACTION:  Fitz et al. will write.
 
-C. Who is going to write the cvs2svn converter (using cvs2cl's code)?
-   Who is going to write a lossy svn2cvs converter?
+B. Necessary:  cvs2svn converter (borrowing cvs2cl's code, probably).
 
-D. svnadmin app.  What does it need to do?  who will write?
-
-E. Chris wants to talk about distributed repositories: read-only
-   repositories that have data "pushed" at them via hierarchy, while
-   only the Master repo can accept commits.
-    
-F. 90% solution to the "repeated merge" problem?  genetic merging?
-   how much changeset metadata should we be tracking?
-
-G. i18n plans?  Mulitlingual plans?
+   ACTION:  who will write?
 
 
+IV.  Post 1.0 stuff
+-------------------
+
+ACTION:  general theoretical discussion on all these topics.
+  
+A. Genetic merging: solution to the "repeated merge" problem?.
+   Start tracking changeset metadata.
+
+B. i18n/multilingual development.
+
+C. GUI clients.
+
+D. Read-only mirrored repositories.
+
+
+
+
+ 
 
 
 
