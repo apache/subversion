@@ -189,7 +189,7 @@ remove_file (const char *fname, apr_pool_t *pool)
 }
 
 
-/* Set up, run, and verify the results of a substutition.
+/* Set up, run, and verify the results of a substitution.
  *
  * Create a file TEST_NAME.src using global `lines' as the initial
  * data, with SRC_EOL as the line separator, then convert it to file
