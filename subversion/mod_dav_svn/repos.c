@@ -1431,17 +1431,13 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
      let us, but mostly that we have an id root only to deal with Version
      Resources, and those are read only. */
 
-  serr = svn_fs_delete_tree(resource->info->root.root,
-                            resource->info->repos_path,
-                            resource->pool);
-  if (serr && (serr->apr_err != SVN_ERR_FS_NO_SUCH_ENTRY))
+  if ((serr = svn_fs_delete_tree(resource->info->root.root,
+                                 resource->info->repos_path,
+                                 resource->pool)) != NULL)
     {
-      /* If the filesystem tells us that the entry is already missing,
-         just ignore it and move on.  Deletion is idempotent here,
-         just as it is in svn_fs_merge(). */ 
+      /* ### need a better error */
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "Could not delete the resource.");
-      /* ### need a better error */
     }
 
   /* ### fill this in */
