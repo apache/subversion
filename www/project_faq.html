@@ -407,16 +407,19 @@ schema is supported by running <tt>svn --version</tt>.</p>
     Subversion.  What can I do if I still want remote usage?</h3>
 
 <p>If you previously used CVS, you may have used SSH to login to the
-CVS server.  The preferred solution would be to use ra_dav combined
+CVS server.  The ra_svn Subversion access method is the equivalent way of doing
+this with Subversion.  Just use the "svn+ssh" prefix to your Subversion
+repository URL.
+<pre>
+$ svn checkout svn+ssh://your.domain.com/full/path/to/repository
+</pre>
+</p>
+
+<p>The preferred solution would be to use ra_dav combined
 with an Apache HTTP server configured with mod_ssl and appropriate
 authentication support.  This should provide enough security for most
 users.  However, we realize that there are places that do not allow
 adding servers of any kind with external connectivity.</p>
-
-<p>There has been work on a ra_pipe implementation that would work
-similarly to the CVS_RSH mechanism, but it is not currently complete.
-If you wish to contribute to its development, you are more than
-welcome to do so!</p>
 
 <p>However, another solution that can be used instead is to leverage
 SSH port forwarding to connect to the protected server via ra_dav.
