@@ -435,16 +435,19 @@ svn_error_t *svn_stream_printf (svn_stream_t *stream,
                                 ...)
        __attribute__ ((format(printf, 3, 4)));
 
-/** Allocate @a *stringbuf in @a pool, and read one line from @a stream 
- * into it. The '\\n' is read from the stream, but is not added to the end 
- * of the stringbuf.  Instead, the stringbuf ends with a usual '\\0'.
+/** Allocate @a *stringbuf in @a pool, and read into it one line (terminated
+ * by @a eol) from @a stream. The line-terminator is read from the stream,
+ * but is not added to the end of the stringbuf.  Instead, the stringbuf
+ * ends with a usual '\\0'.
  *
- * If @a stream runs out of bytes before encountering a '\\n', then set
- * @a *stringbuf to @c NULL and return no error.
+ * If @a stream runs out of bytes before encountering a line-terminator,
+ * then set @a *eof to @c TRUE, otherwise set @a *eof to FALSE.
  */
 svn_error_t *
 svn_stream_readline (svn_stream_t *stream,
                      svn_stringbuf_t **stringbuf,
+                     const char *eol,
+                     svn_boolean_t *eof,
                      apr_pool_t *pool);
 
 /** @} */

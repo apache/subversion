@@ -137,9 +137,12 @@ svn_stream_printf (svn_stream_t *stream,
 svn_error_t *
 svn_stream_readline (svn_stream_t *stream,
                      svn_stringbuf_t **stringbuf,
+                     const char *eol,
+                     svn_boolean_t *eof,
                      apr_pool_t *pool)
 {
   apr_size_t numbytes;
+  const char *match;
   char c;
   svn_stringbuf_t *str = svn_stringbuf_create ("", pool);
 
@@ -149,23 +152,29 @@ svn_stream_readline (svn_stream_t *stream,
      80 chars.  */
   svn_stringbuf_ensure (str, 80);
 
-  while (1)
+  match = eol;
+  while (*match)
     {
       numbytes = 1;
       SVN_ERR (svn_stream_read (stream, &c, &numbytes));
       if (numbytes != 1)
         {
           /* a 'short' read means the stream has run out. */
-          *stringbuf = NULL;
+          *eof = TRUE;
+          *stringbuf = str;
           return SVN_NO_ERROR;
         }
 
-      if ((c == '\n'))
-        break;
+      if (c == *match)
+        match++;
+      else
+        match = eol;
 
       svn_stringbuf_appendbytes (str, &c, 1);
     }
-  
+
+  *eof = FALSE;
+  svn_stringbuf_chop (str, match - eol);
   *stringbuf = str;
   return SVN_NO_ERROR;
 }
