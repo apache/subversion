@@ -48,7 +48,7 @@ svn_cl__copy (apr_getopt_t *os,
   svn_boolean_t src_is_url, dst_is_url;
   svn_client_commit_info_t *commit_info = NULL;
 
-  targets = svn_cl__args_to_target_array (os, opt_state, pool);
+  targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
   if (targets->nelts != 2)
     {
       svn_cl__subcommand_help ("copy", pool);

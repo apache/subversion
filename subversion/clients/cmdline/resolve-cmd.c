@@ -44,7 +44,7 @@ svn_cl__resolve (apr_getopt_t *os,
   apr_array_header_t *targets;
   int i;
 
-  targets = svn_cl__args_to_target_array (os, opt_state, pool);
+  targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
 
   if (targets->nelts)
     {

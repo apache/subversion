@@ -41,7 +41,7 @@ svn_cl__proplist (apr_getopt_t *os,
   apr_array_header_t *targets;
   int i;
 
-  targets = svn_cl__args_to_target_array (os, opt_state, pool);
+  targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
 
   /* Add "." if user passed 0 arguments */
   svn_cl__push_implicit_dot_target(targets, pool);

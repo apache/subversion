@@ -59,7 +59,7 @@ svn_cl__switch (apr_getopt_t *os,
   /* This command should discover (or derive) exactly two cmdline
      arguments: a local path to update ("target"), and a new url to
      switch to ("switch_url"). */
-  targets = svn_cl__args_to_target_array (os, opt_state, pool);
+  targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
   if (targets->nelts == 0)
     {
       svn_cl__subcommand_help ("switch", pool);

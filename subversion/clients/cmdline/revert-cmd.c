@@ -41,7 +41,7 @@ svn_cl__revert (apr_getopt_t *os,
   int i;
   svn_boolean_t recursive = opt_state->recursive;
 
-  targets = svn_cl__args_to_target_array (os, opt_state, pool);
+  targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
 
   /* Revert has no implicit dot-target `.', so don't you put that code
      here! */

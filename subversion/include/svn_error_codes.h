@@ -418,6 +418,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_CL_ARG_PARSING_ERROR,
               "Client error in parsing arguments")
 
+  SVN_ERRDEF (SVN_ERR_CL_INSUFFICIENT_ARGS,
+              "Not enough args provided")
+
   SVN_ERRDEF (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS,
               "Mutually exclusive arguments specified.")                   
 

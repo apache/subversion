@@ -40,6 +40,7 @@
 #include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_io.h"
+#include "svn_pools.h"
 #include "cl.h"
 
 
@@ -125,18 +126,72 @@ svn_cl__parse_all_args (apr_getopt_t *os,
   return SVN_NO_ERROR;
 }
 
+
+/* Parse a working-copy or url PATH, looking for an "@" sign, e.g.
+
+         foo/bar/baz@13
+         http://blah/bloo@27
+         blarg/snarf@HEAD
+
+   If an "@" is found, return the two halves in *TRUEPATH and *REV,
+   allocating in POOL.
+
+   If no "@" is found, set *TRUEPATH to PATH and *REV to kind 'unspecified'.
+*/
+static svn_error_t *
+parse_path (svn_client_revision_t *rev,
+            svn_stringbuf_t **truepath,
+            svn_stringbuf_t *path,
+            apr_pool_t *pool)
+{
+  int i;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  svn_cl__opt_state_t *os = apr_pcalloc (subpool, sizeof(*os));
+
+  /* scanning from right to left, just to be friendly to any
+     screwed-up filenames that might *actually* contain @-signs.  :-) */
+  for (i = (path->len - 1); i >= 0; i--)
+    {
+      if (path->data[i] == '@')
+        {
+          if (svn_cl__parse_revision (os, path->data + i + 1, subpool))
+            return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR,
+                                      0, NULL, subpool,
+                                      "Syntax error parsing revision \"%s\"",
+                                      path->data + 1);
+
+          *truepath = svn_stringbuf_ncreate (path->data, i, pool);
+          rev->kind = os->start_revision.kind;
+          rev->value = os->start_revision.value;
+
+          svn_pool_destroy (subpool);
+          return SVN_NO_ERROR;
+        }
+    }
+
+  /* Didn't find an @-sign. */
+  *truepath = path;
+  rev->kind = svn_client_revision_unspecified;
+
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
+
+
 /* Create a targets array and add all the remaining arguments
  * to it. We also process arguments passed in the --target file, if
  * specified, just as if they were passed on the command line.  */
 apr_array_header_t*
 svn_cl__args_to_target_array (apr_getopt_t *os,
 			      svn_cl__opt_state_t *opt_state,
+                              svn_boolean_t extract_revisions,
                               apr_pool_t *pool)
 {
+  svn_client_revision_t *firstrev = NULL, *secondrev = NULL;
   apr_array_header_t *targets =
     apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (svn_stringbuf_t *));
  
-  /* Command line args take precendence.  */
+  /* Command line args take precedence.  */
   for (; os->ind < os->argc; os->ind++)
     {
       svn_stringbuf_t *target = svn_stringbuf_create (os->argv[os->ind], pool);
@@ -162,6 +217,7 @@ svn_cl__args_to_target_array (apr_getopt_t *os,
         {
           svn_path_canonicalize (target);
         }
+
       (*((svn_stringbuf_t **) apr_array_push (targets))) = target;
     }
 
@@ -171,7 +227,53 @@ svn_cl__args_to_target_array (apr_getopt_t *os,
 
   /* kff todo: need to remove redundancies from targets before
      passing it to the cmd_func. */
-     
+
+  if (extract_revisions)
+    {
+      int i;
+      for (i = 0; i < targets->nelts; i++)
+        {
+          svn_stringbuf_t *truepath;
+          svn_client_revision_t temprev; 
+          svn_stringbuf_t *path = 
+            ((svn_stringbuf_t **) (targets->elts))[i];
+
+          parse_path (&temprev, &truepath, path, pool);
+
+          if (temprev.kind != svn_client_revision_unspecified)
+            {
+              ((svn_stringbuf_t **) (targets->elts))[i] = truepath;
+
+              if (! firstrev)
+                {
+                  firstrev = apr_pcalloc (pool, sizeof (*firstrev));
+                  firstrev->kind = temprev.kind;
+                  firstrev->value = temprev.value;
+                }
+              else if (! secondrev)
+                {
+                  secondrev = apr_pcalloc (pool, sizeof (*secondrev));
+                  secondrev->kind = temprev.kind;
+                  secondrev->value = temprev.value;
+                }
+              else
+                break;
+            }
+        }
+
+      if (firstrev)
+        {
+          opt_state->start_revision.kind = firstrev->kind;
+          opt_state->start_revision.value = firstrev->value;
+        }
+      
+      if (secondrev)
+        {
+          opt_state->end_revision.kind = secondrev->kind;
+          opt_state->end_revision.value = secondrev->value;
+        }
+    }
+  
   return targets;
 }
 
