@@ -832,6 +832,147 @@ def update_binary_file():
 
   return 0
 
+#----------------------------------------------------------------------
+
+def update_binary_file_2():
+  "update to an old revision of a binary files"
+
+  sbox = sandbox(update_binary_file_2)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  
+  if svntest.actions.make_repo_and_wc(sbox):
+    return 1
+
+  # Suck up contents of a test .png file.
+  fp = open("theta.png")
+  theta_contents = fp.read()  
+  fp.close()
+
+  # 102400 is svn_txdelta_window_size.  We're going to make sure we
+  # have at least 102401 bytes of data in our second binary file (for
+  # no reason other than we have had problems in the past with getting
+  # svndiff data out of the repository for files > 102400 bytes).
+  # How?  Well, we'll just keep doubling the binary contents of the
+  # original theta.png until we're big enough.
+  zeta_contents = theta_contents
+  while(len(zeta_contents) < 102401):
+    zeta_contents = zeta_contents + zeta_contents
+
+  # Write our two files' contents out to disk, in A/theta and A/zeta.
+  theta_path = os.path.join(wc_dir, 'A', 'theta')
+  fp = open(theta_path, 'w')
+  fp.write(theta_contents)    
+  fp.close()
+  zeta_path = os.path.join(wc_dir, 'A', 'zeta')
+  fp = open(zeta_path, 'w')
+  fp.write(zeta_contents)
+  fp.close()
+
+  # Now, `svn add' those two files.
+  svntest.main.run_svn(None, 'add', theta_path, zeta_path)  
+
+  # Created expected output tree for 'svn ci'
+  output_list = [ [theta_path, None, {}, {'verb' : 'Adding' }],
+                  [zeta_path, None, {}, {'verb' : 'Adding' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected status tree
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    item[3]['wc_rev'] = '1'
+  status_list.append([theta_path, None, {},
+                      {'status' : '__',
+                       'locked' : ' ',
+                       'wc_rev' : '2',
+                       'repos_rev' : '2'}])
+  status_list.append([zeta_path, None, {},
+                      {'status' : '__',
+                       'locked' : ' ',
+                       'wc_rev' : '2',
+                       'repos_rev' : '2'}])
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  # Commit the new binary filea, creating revision 2.
+  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
+                                            expected_status_tree, None,
+                                            None, None, None, None, wc_dir):
+    return 1
+
+  # Make some mods to the binary files.
+  svntest.main.file_append (theta_path, "foobar")
+  new_theta_contents = theta_contents + "foobar"
+  svntest.main.file_append (zeta_path, "foobar")
+  new_zeta_contents = zeta_contents + "foobar"
+  
+  # Created expected output tree for 'svn ci'
+  output_list = [ [theta_path, None, {}, {'verb' : 'Sending' }],
+                  [zeta_path, None, {}, {'verb' : 'Sending' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected status tree
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '3')
+  for item in status_list:
+    item[3]['wc_rev'] = '1'
+  status_list.append([theta_path, None, {},
+                      {'status' : '__',
+                       'locked' : ' ',
+                       'wc_rev' : '3',
+                       'repos_rev' : '3'}])
+  status_list.append([zeta_path, None, {},
+                      {'status' : '__',
+                       'locked' : ' ',
+                       'wc_rev' : '3',
+                       'repos_rev' : '3'}])
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  # Commit original working copy again, creating revision 3.
+  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
+                                            expected_status_tree, None,
+                                            None, None, None, None, wc_dir):
+    return 1
+
+  # Create expected output tree for an update of wc_backup.
+  output_list = [ [theta_path, None, {}, {'status' : 'U '}],
+                  [zeta_path, None, {}, {'status' : 'U '}] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected disk tree for the update -- 
+  #    look!  binary contents, and a binary property!
+  my_greek_tree = svntest.main.copy_greek_tree()
+  my_greek_tree.append(['A/theta',
+                        theta_contents,
+                        {'svn:mime-type' : 'application/octet-stream'}, {}])
+  my_greek_tree.append(['A/zeta',
+                        zeta_contents,
+                        {'svn:mime-type' : 'application/octet-stream'}, {}])
+  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+
+  # Create expected status tree for the update.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '3')
+  for item in status_list:
+    item[3]['wc_rev'] = '2'
+  status_list.append([theta_path, None, {},
+                      {'status' : '__',
+                       'locked' : ' ',
+                       'wc_rev' : '2',
+                       'repos_rev' : '3'}])  
+  status_list.append([zeta_path, None, {},
+                      {'status' : '__',
+                       'locked' : ' ',
+                       'wc_rev' : '2',
+                       'repos_rev' : '3'}])  
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  # Do an update from revision 2 and make sure that our binary file
+  # gets reverted to its original contents.
+  return svntest.actions.run_and_verify_update(wc_dir,
+                                               expected_output_tree,
+                                               expected_disk_tree,
+                                               expected_status_tree,
+                                               None, None,
+                                               None, None, 1,
+                                               '-r', '2')
+
 ########################################################################
 # Run the tests
 
@@ -850,6 +991,7 @@ test_list = [ None,
               basic_cleanup,
               basic_revert,
               update_binary_file
+              # update_binary_file_2
              ]
 
 if __name__ == '__main__':
