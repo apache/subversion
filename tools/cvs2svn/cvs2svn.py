@@ -678,9 +678,24 @@ class Commit:
 
     # get the metadata for this commit
     author, log, date = self.get_metadata()
-    props = { 'svn:author' : unicode(author, ctx.encoding).encode('utf8'),
-              'svn:log' : unicode(log, ctx.encoding).encode('utf8'),
-              'svn:date' : date }
+    try: 
+      ### FIXME: The 'replace' behavior should be an option, like
+      ### --encoding is.
+      unicode_author = unicode(author, ctx.encoding, 'replace')
+      unicode_log = unicode(log, ctx.encoding, 'replace')
+      props = { 'svn:author' : unicode_author.encode('utf8'),
+                'svn:log' : unicode_log.encode('utf8'),
+                'svn:date' : date }
+    except UnicodeError:
+      print 'Problem encoding author or log message:'
+      print "  author: '%s'" % author
+      print "  log:    '%s'" % log
+      print "  date:   '%s'" % date
+      for rcs_file, cvs_rev, br, tags, branches in self.changes:
+        print "    rev %s of '%s'" % (cvs_rev, rcs_file)
+      print 'Try rerunning with (for example) \"--encoding=latin1\".'
+      sys.exit(1)
+
     dump.start_revision(props)
 
     for rcs_file, cvs_rev, br, tags, branches in self.changes:
