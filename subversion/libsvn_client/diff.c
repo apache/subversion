@@ -42,10 +42,13 @@
 
 
 /*
- * This string is used anywhere diff output is printed.
+ * Constant separator strings
  */
 static const char equal_string[] = 
   "===================================================================";
+static const char under_string[] =
+  "___________________________________________________________________";
+
 
 /*-----------------------------------------------------------------*/
 
@@ -66,9 +69,7 @@ display_prop_diffs (const apr_array_header_t *propchanges,
   SVN_ERR (svn_io_file_printf (file,
                                APR_EOL_STR "Property changes on: %s"
                                APR_EOL_STR, path));
-  apr_file_printf (file, 
-     "___________________________________________________________________"
-     APR_EOL_STR);
+  apr_file_printf (file, "%s" APR_EOL_STR, under_string);
 
   for (i = 0; i < propchanges->nelts; i++)
     {
