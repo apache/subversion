@@ -31,6 +31,51 @@
 #include "props.h"
 
 
+/* Relocate the main URL and the copyfrom URL for ENTRY by changing FROM to
+ * TO.  ADM_ACCESS is the access baton for ENTRY.  If DO_SYNC is set then
+ * the new entry will be written to disk immediately, otherwise only the
+ * entries cache will be affected.  Calls VALIDATOR passing VALIDATOR_BATON
+ * to validate new URLs.
+ */
+static svn_error_t *
+relocate_entry (svn_wc_adm_access_t *adm_access,
+                const svn_wc_entry_t *entry,
+                const char *from,
+                const char *to,
+                svn_wc_relocation_validator_t validator,
+                void *validator_baton,
+                svn_boolean_t do_sync,
+                apr_pool_t *pool)
+{
+  svn_wc_entry_t entry2;
+  apr_uint32_t flags = 0;
+  int from_len = strlen (from);
+
+  if (entry->url && ! strncmp (entry->url, from, from_len))
+    {
+      entry2.url = apr_psprintf (svn_wc_adm_access_pool (adm_access),
+                                 "%s%s", to, entry->url + from_len);
+      if (entry->uuid)
+        SVN_ERR (validator (validator_baton, entry->uuid, entry2.url));
+      flags |= SVN_WC__ENTRY_MODIFY_URL;
+    }
+
+  if (entry->copyfrom_url && ! strncmp (entry->copyfrom_url, from, from_len))
+    {
+      entry2.copyfrom_url = apr_psprintf (svn_wc_adm_access_pool (adm_access),
+                                          "%s%s", to,
+                                          entry->copyfrom_url + from_len);
+      if (entry->uuid)
+        SVN_ERR (validator (validator_baton, entry->uuid, entry2.copyfrom_url));
+      flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
+    }
+
+  if (flags)
+    SVN_ERR (svn_wc__entry_modify (adm_access, entry->name,
+                                   &entry2, flags, do_sync, pool));
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc_relocate (const char *path,
                  svn_wc_adm_access_t *adm_access,
@@ -41,55 +86,31 @@ svn_wc_relocate (const char *path,
                  void *validator_baton,
                  apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
-  apr_hash_t *entries = NULL;
+  apr_hash_t *entries;
   apr_hash_index_t *hi;
-  int from_len;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
 
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, TRUE, pool));
+  if (! entry)
+    return svn_error_create (SVN_ERR_ENTRY_NOT_FOUND, NULL, NULL);
 
-  from_len = strlen (from);
-
-  SVN_ERR (svn_wc_entries_read (&entries, adm_access, TRUE, pool));
-
-  if (kind == svn_node_file)
+  if (entry->kind == svn_node_file)
     {
-      const char *base = svn_path_basename (path, pool);
-
-      entry = apr_hash_get (entries, base, APR_HASH_KEY_STRING);
-      if (! entry)
-        return svn_error_create (SVN_ERR_ENTRY_NOT_FOUND, NULL, NULL);
-      if (! entry->url)
-        return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                                  "Entry '%s' has no URL", path);
-
-      if (! strncmp (entry->url, from, from_len))
-        {
-          const char *url = apr_psprintf (svn_wc_adm_access_pool (adm_access),
-                                          "%s%s", to, entry->url + from_len);
-          if (entry->uuid)
-            SVN_ERR (validator (validator_baton, entry->uuid, url));
-          entry->url = url;
-          SVN_ERR (svn_wc__entries_write (entries, adm_access, pool));
-        }
-
+      SVN_ERR (relocate_entry (adm_access, entry, from, to,
+                               validator, validator_baton, TRUE /* sync */,
+                               pool));
       return SVN_NO_ERROR;
     }
 
   /* Relocate THIS_DIR first, in order to pre-validate the relocated URL
-     of all of the other entries.  This is technically cheating, but it
+     of all of the other entries.  This is technically cheating because
+     it relies on knowledge of the libsvn_client implementation, but it
      significantly cuts down on the number of expensive validations the
-     validator has to do. */
+     validator has to do.  ### Should svn_wc.h document the ordering? */
+  SVN_ERR (svn_wc_entries_read (&entries, adm_access, TRUE, pool));
   entry = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
-  if (entry->url && (strncmp (entry->url, from, from_len) == 0)) 
-    {
-      const char *url = apr_psprintf (svn_wc_adm_access_pool (adm_access),
-                                      "%s%s", to, entry->url + from_len);
-      if (entry->uuid)
-        SVN_ERR (validator (validator_baton, entry->uuid, url));
-      entry->url = url;
-    }
+  SVN_ERR (relocate_entry (adm_access, entry, from, to,
+                           validator, validator_baton, FALSE, pool));
 
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
@@ -114,15 +135,8 @@ svn_wc_relocate (const char *path,
                                     recurse, validator, 
                                     validator_baton, pool));
         }
-
-      if (entry->url && (strncmp (entry->url, from, from_len) == 0)) 
-        {
-          char *url = apr_psprintf (svn_wc_adm_access_pool (adm_access),
-                                    "%s%s", to, entry->url + from_len);
-          if (entry->uuid)
-            SVN_ERR (validator (validator_baton, entry->uuid, url));
-          entry->url = url;
-        }
+      SVN_ERR (relocate_entry (adm_access, entry, from, to,
+                               validator, validator_baton, FALSE, pool));
     }
 
   SVN_ERR (svn_wc__remove_wcprops (adm_access, FALSE, pool));
