@@ -66,6 +66,9 @@ Package=<4>
     Project_Dep_Name tests_libsvn_fs_skel
     End Project Dependency
     Begin Project Dependency
+    Project_Dep_Name tests_libsvn_fs_fs
+    End Project Dependency
+    Begin Project Dependency
     Project_Dep_Name tests_libsvn_subr_hashdump
     End Project Dependency
     Begin Project Dependency
@@ -334,6 +337,21 @@ Package=<4>
 ###############################################################################
 
 Project: "tests_libsvn_fs_skel"=.\subversion\libsvn_fs\tests\skel_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_fs_fs"=.\subversion\libsvn_fs\tests\fs_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
