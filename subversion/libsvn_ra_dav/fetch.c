@@ -2968,10 +2968,26 @@ make_reporter (svn_ra_session_t *session,
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, data, strlen(data),
                                       NULL, pool) );
     }
+
   /* If we want a resource walk to occur, note that now. */
   if (resource_walk)
     {
       const char *data = "<S:resource-walk>yes</S:resource-walk>" DEBUG_CR;
+      SVN_ERR( svn_io_file_write_full(rb->tmpfile, data, strlen(data),
+                                      NULL, pool) );
+    }
+
+  /* When in 'send-all' mode, mod_dav_svn will assume that it should
+     calculate and transmit real text-deltas (instead of empty windows
+     that merely indicate "text is changed") unless it finds this
+     element.  When not in 'send-all' mode, mod_dav_svn will never
+     send text-deltas at all.
+  
+     NOTE: Do NOT count on servers actually obeying this, as some exist
+     which obey send-all, but do not check for this directive at all! */
+  if (send_all && (! fetch_content))
+    {
+      const char *data = "<S:text-deltas>no</S:text-deltas>" DEBUG_CR;
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, data, strlen(data),
                                       NULL, pool) );
     }
