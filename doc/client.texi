@@ -22,7 +22,7 @@ copies.
 @node What working copies look like
 @subsection What working copies look like
 
-meaningless tweak fish
+fish
 
 @c -----------------------------------------------------------------------
 @node The working copy management library

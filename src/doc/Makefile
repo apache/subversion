@@ -14,6 +14,9 @@ html:
 	makeinfo --no-headers --no-validate --html svn-design.texi \
                  > svn-design.html
 
+html-web: html
+	cp ./svn-design.html ../../www
+
 dvi: 
 	tex svn-design.texi 
 
