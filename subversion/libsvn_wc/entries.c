@@ -724,14 +724,14 @@ svn_wc__entries_write (apr_hash_t *entries,
       this_entry = val;
 
       /* Don't rewrite the "this dir" entry! */
-      if (! strcmp ((const char *)key, SVN_WC_ENTRY_THIS_DIR ))
+      if (! strcmp (key, SVN_WC_ENTRY_THIS_DIR ))
         continue;
 
       /* Normalize this entry */
       normalize_entry (this_entry, pool);
 
       /* Append the entry to BIGSTR */
-      write_entry (&bigstr, this_entry, (const char *)key, this_dir, pool);
+      write_entry (&bigstr, this_entry, key, this_dir, pool);
     }
 
   svn_xml_make_close_tag (&bigstr, pool, SVN_WC__ENTRIES_TOPLEVEL);
