@@ -513,7 +513,7 @@ get_creds (const char **username,
     {
       prompt_username = def_username;
     }
-  else
+  else if (username)
     {
       SVN_ERR (pb->prompt_func (&prompt_username, "username: ",
                                 FALSE, /* screen echo ok */
@@ -529,7 +529,7 @@ get_creds (const char **username,
     {
       prompt_password = def_password;
     }
-  else
+  else if (password)
     {
       const char *prompt = apr_psprintf (pool, "%s's password: ", 
                                          prompt_username);
