@@ -30,9 +30,11 @@ class _Predicate:
 
   def __init__(self, func):
     if isinstance(func, _Predicate):
-      self.func = func.func
-      self.cond = func.cond
-      self.text = func.text
+      # Whee, this is better than blessing objects in Perl!
+      # For the unenlightened: What we're doing here is adopting the
+      # identity *and class* of 'func'
+      self.__dict__ = func.__dict__
+      self.__class__ = func.__class__
     else:
       self.func = func
       self.cond = 0
@@ -58,10 +60,7 @@ class TestCase:
   runing the test and test list output."""
 
   def __init__(self, func, index):
-    if isinstance(func, _Predicate):
-      self.pred = func
-    else:
-      self.pred = _Predicate(func)
+    self.pred = _Predicate(func)
     self.index = index
 
   def func_code(self):
