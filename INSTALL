@@ -978,3 +978,34 @@ III.  BUILDING A SUBVERSION SERVER
       environment variable, or you can define new tunnel schemes in
       the [tunnels] section of ~/.subversion/config.  By default, only
       the "ssh" scheme is allowed.
+
+
+
+IV.   PLATFORM-SPECIFIC ISSUES
+      ========================
+
+  A.  Windows XP
+      ----------
+
+      There is an error in the Windows XP TCP/IP stack which causes
+      corruption in certain cases.  This problem is exposed only
+      through ra_dav.
+
+      The root of the matter is caused by duplicating file handles
+      between parent and child processes.  The httpd Apache group
+      explains this a lot better:
+
+          http://www.apache.org/dist/httpd/binaries/win32/#xpbug
+
+      And there's an item about this in the Subversion FAQ:
+
+          http://subversion.tigris.org/project_faq.html#windows-xp-server
+
+      The only known workaround for now is to update to Windows XP
+      SP1 (or higher).
+
+
+  B.  Mac OS X
+      --------
+
+      [TBD: Describe BDB 4.0.x problem]
