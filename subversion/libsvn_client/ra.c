@@ -580,11 +580,6 @@ svn_client__repos_locations (const char **start_url,
         }
     }
     
-  /* If the peg revision is at least as big as our ending revision, we
-     don't need to search for a path in that peg revision. */
-  if (peg_revnum >= end_revnum)
-    lrb.peg_path = lrb.last_path;
-
   /* Build a one-item TARGETS array, as input to ra->get_log() */
   targets = apr_array_make (pool, 1, sizeof (const char *));
   APR_ARRAY_PUSH (targets, const char *) = "";
