@@ -16,6 +16,7 @@
 ######################################################################
 
 import os
+import types
 
 import svntest.tree
 
@@ -31,15 +32,21 @@ class State:
 
   def __init__(self, wc_dir, desc):
     "Create a State using the specified description."
+    assert isinstance(desc, types.DictionaryType)
+
     self.wc_dir = wc_dir
-    self.desc = desc
+    self.desc = desc      # dictionary: path -> StateItem
 
   def add(self, more_desc):
+    "Add more state items into the State."
+    assert isinstance(more_desc, types.DictionaryType)
+
     self.desc.update(more_desc)
 
-  def remove(self, path):
+  def remove(self, *paths):
     "Remove a path from the state (the path must exist)."
-    del self.desc[path]
+    for path in paths:
+      del self.desc[path]
 
   def copy(self):
     "Make a deep copy of self."
@@ -48,15 +55,25 @@ class State:
       desc[path] = item.copy()
     return State(self.wc_dir, desc)
 
-  def tweak(self, filter=None, **kw):
-    "Tweak the items' values, optional restricting based on a filter."
-    for path, item in self.desc.items():
-      if not filter or filter(path, item):
+  def tweak(self, *args, **kw):
+    """Tweak the items' values, optional restricting based on a filter.
+
+    The general form of this method is .tweak(paths..., key=value). If
+    one or paths are provided, then those items' values are modified.
+    If no paths are given, then all items are modified.
+    """
+    if args:
+      for path in args:
+        apply(self.desc[path].tweak, (), kw)
+    else:
+      for item in self.desc.values():
         apply(item.tweak, (), kw)
 
-  def tweak_one(self, path, **kw):
-    "Tweak one state item at the given path (which must exist)."
-    apply(self.desc[path].tweak, (), kw)
+  def tweak_some(self, filter, **kw):
+    "Tweak the items for which the filter returns true."
+    for path, item in self.desc.items():
+      if filter(path, item):
+        apply(item.tweak, (), kw)
 
   def old_tree(self):
     "Return an old-style tree (for compatibility purposes)."
