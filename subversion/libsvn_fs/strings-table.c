@@ -134,10 +134,10 @@ svn_fs__string_append (svn_fs_t *fs,
       SVN_ERR (DB_WRAP (fs, "bumping next string key", db_err));
     }
 
-  /* Get the currently size of the record. */
+  /* Get the current size of the record. */
   SVN_ERR (svn_fs__string_size (&offset, fs, *key, trail));
 
-  /* Store the new rep skel. */
+  /* Append to it. */
   svn_fs__clear_dbt (&result);
   result.data = (char *) buf;
   result.size = len;
@@ -145,12 +145,11 @@ svn_fs__string_append (svn_fs_t *fs,
   result.dlen = len;
   result.flags |= (DB_DBT_USERMEM | DB_DBT_PARTIAL);
 
-  db_err = fs->strings->put (fs->strings, trail->db_txn,
-                             svn_fs__str_to_dbt (&query, (char *) (*key)),
-                             &result, 0);
-
-  /* Handle any other error conditions.  */
-  SVN_ERR (DB_WRAP (fs, "appending string", db_err));
+  SVN_ERR (DB_WRAP (fs, "appending string",
+                    fs->strings->put
+                    (fs->strings, trail->db_txn,
+                     svn_fs__str_to_dbt (&query, (char *) (*key)),
+                     &result, 0)));
 
   return SVN_NO_ERROR;
 }
