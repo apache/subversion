@@ -119,9 +119,9 @@ svn_time_to_nts (apr_time_t t, apr_pool_t *pool)
 
 
 static int
-find_matching_string (char *str, size_t size, const char strings[][4])
+find_matching_string (char *str, apr_size_t size, const char strings[][4])
 {
-  int i;
+  apr_size_t i;
 
   for (i = 0; i < size; i++)
     if (strings[i] && (strcmp (str, strings[i]) == 0))
