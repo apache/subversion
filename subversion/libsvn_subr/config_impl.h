@@ -63,6 +63,9 @@ svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
                                          const char *file,
                                          svn_boolean_t must_exist);
 
+/* ### It's unclear to me whether this registry stuff should get the
+   double underscore or not, and if so, where the extra underscore
+   would go.  Thoughts?  -kff */
 #  define SVN_REGISTRY_PREFIX "REGISTRY:"
 #  define SVN_REGISTRY_PREFIX_LEN ((sizeof (SVN_REGISTRY_PREFIX)) - 1)
 #  define SVN_REGISTRY_HKLM "HKLM\\"
@@ -71,30 +74,31 @@ svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
 #  define SVN_REGISTRY_HKCU_LEN ((sizeof (SVN_REGISTRY_HKCU)) - 1)
 #  define SVN_REGISTRY_PATH "Software\\Tigris.org\\Subversion\\"
 #  define SVN_REGISTRY_PATH_LEN ((sizeof (SVN_REGISTRY_PATH)) - 1)
-#  define SVN_REGISTRY_CONFIG_KEY "Config"
-#  define SVN_REGISTRY_SYS_CONFIG_PATH \
+#  define SVN_REGISTRY_CONFIG_PROXY_KEY "Proxies"
+#  define SVN_REGISTRY_SYS_CONFIG_PROXY_PATH \
                                SVN_REGISTRY_PREFIX     \
                                SVN_REGISTRY_HKLM       \
                                SVN_REGISTRY_PATH       \
-                               SVN_REGISTRY_CONFIG_KEY
-#  define SVN_REGISTRY_USR_CONFIG_PATH \
+                               SVN_REGISTRY_CONFIG_PROXY_KEY
+#  define SVN_REGISTRY_USR_CONFIG_PROXY_PATH \
                                SVN_REGISTRY_PREFIX     \
                                SVN_REGISTRY_HKCU       \
                                SVN_REGISTRY_PATH       \
-                               SVN_REGISTRY_CONFIG_KEY
+                               SVN_REGISTRY_CONFIG_PROXY_KEY
 
 #else  /* ! SVN_WIN32 */
 
-/* System-wide configuration file.  ### should be build-time configured. */
-#  define SVN_CONFIG__SYS_FILE "/etc/subversion.conf"
+/* System-wide configuration directory. */
+#  define SVN_CONFIG__SYS_DIRECTORY "/etc/subversion"
+#  define SVN_CONFIG__SYS_PROXY_PATH  SVN_CONFIG__SYS_DIRECTORY "/" "proxies"
 
 #endif /* SVN_WIN32 */
 
 /* Subversion's config subdir in the user's home directory. */
-#define SVN_CONFIG__DIRECTORY ".subversion"
+#define SVN_CONFIG__USR_DIRECTORY     ".subversion"
 
 /* The config file in SVN_CONFIG__DIRECTORY. */
-#define SVN_CONFIG__FILE      "config"
+#define SVN_CONFIG__USR_PROXY_PATH    "proxies"
 
 
 #endif /* SVN_CONFIG_IMPL_H */

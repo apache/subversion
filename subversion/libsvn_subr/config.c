@@ -104,69 +104,109 @@ svn_config_read (svn_config_t **cfgp, const char *file,
 }
 
 
-svn_error_t *
-svn_config_read_all (svn_config_t **cfgp, apr_pool_t *pool)
+
+/* Set *PATH_P to the path to config file FNAME in the user's personal
+   configuration area.  Allocated *PATH_P in POOL.  */
+static svn_error_t *
+user_config_path (const char **path_p, const char *fname, apr_pool_t *pool)
 {
-  /* Read things in this order, with later reads overriding the
-   * results of earlier ones:
-   *
-   *    1. Windows registry system config or global config file,
-   *       whichever applies (can't have both).
-   *
-   *    2. Windows registry user config, if any.
-   *
-   *    3. User's config file, if any.
-   */
-
-#ifdef SVN_WIN32
-  svn_config_read (cfgp, SVN_REGISTRY_SYS_CONFIG_PATH, FALSE, pool);
-  svn_config_merge (*cfgp, SVN_REGISTRY_USR_CONFIG_PATH, FALSE);
-#else  /* ! SVN_WIN32 */
-  svn_config_read (cfgp, SVN_CONFIG__SYS_FILE, FALSE, pool);
-#endif  /* SVN_WIN32 */
-
-  /* Check for user config file in both Windows and non-Windows. */
-  {
-    apr_status_t apr_err;
-    
-    /* ### Are there any platforms where APR_HAS_USER is not defined?
-       This code won't compile without it.  */
-    
-    char *usr_cfg_path;
-    apr_uid_t uid;
-    apr_gid_t gid;
-    char *username;
-    char *homedir;
-   
-    /* ### Will these calls fail under Windows sometimes?  If so,
-       we shouldn't error, we should just fall fack to registry. */
-   
-    apr_err = apr_current_userid (&uid, &gid, pool);
-    if (apr_err)
-      return svn_error_create
-        (apr_err, 0, NULL, pool,
-         "svn_config_read_all: unable to get current userid.");
-   
-    apr_err = apr_get_username (&username, uid, pool);
-    if (apr_err)
-      return svn_error_create
-        (apr_err, 0, NULL, pool,
-         "svn_config_read_all: unable to get username.");
-   
-    apr_err = apr_get_home_directory (&homedir, username, pool);
-    if (apr_err)
-      return svn_error_createf
-        (apr_err, 0, NULL, pool,
-         "svn_config_read_all: unable to get home dir for user %s.", username);
-
-    /* ### No compelling reason to use svn's path lib here. */
-    usr_cfg_path = apr_psprintf
-      (pool, "%s/%s/%s", homedir, SVN_CONFIG__DIRECTORY, SVN_CONFIG__FILE);
-
-    SVN_ERR (svn_config_merge (*cfgp, usr_cfg_path, FALSE));
-  }
+  apr_status_t apr_err;
+  
+  /* ### Are there any platforms where APR_HAS_USER is not defined?
+     This code won't compile without it.  */
+  
+  apr_uid_t uid;
+  apr_gid_t gid;
+  char *username;
+  char *homedir;
+  
+  /* ### Will these calls fail under Windows sometimes?  If so, maybe
+     we shouldn't error, since the caller just falls back to registry. */
+  
+  apr_err = apr_current_userid (&uid, &gid, pool);
+  if (apr_err)
+    return svn_error_create
+      (apr_err, 0, NULL, pool,
+       "svn_config_read_all: unable to get current userid.");
+  
+  apr_err = apr_get_username (&username, uid, pool);
+  if (apr_err)
+    return svn_error_create
+      (apr_err, 0, NULL, pool,
+       "svn_config_read_all: unable to get username.");
+  
+  apr_err = apr_get_home_directory (&homedir, username, pool);
+  if (apr_err)
+    return svn_error_createf
+      (apr_err, 0, NULL, pool,
+       "svn_config_read_all: unable to get home dir for user %s.", username);
+  
+  /* ### No compelling reason to use svn's path lib here. */
+  *path_p = apr_psprintf
+    (pool, "%s/%s/%s", homedir, SVN_CONFIG__USR_DIRECTORY, fname);
 
   return SVN_NO_ERROR;
+}
+
+
+/* Read various configuration sources into *CFGP, in this order, so
+ * that later reads overriding the results of earlier ones:
+ *
+ *    1. SYS_REGISTRY_PATH, or SYS_FILE_PATH whichever applies (can't
+ *       have both)
+ *
+ *    2. USR_REGISTRY_PATH
+ *
+ *    3. USR_FILE_PATH
+ *
+ * Allocate *CFGP in POOL.
+ */
+static svn_error_t *
+read_all (svn_config_t **cfgp,
+#ifdef SVN_WIN32
+          const char *sys_registry_path,
+          const char *usr_registry_path,
+#else  /* ! SVN_WIN32 */
+          const char *sys_file_path,
+#endif /* SVN_WIN32 */
+          const char *usr_file_path,
+          apr_pool_t *pool)
+{
+
+#ifdef SVN_WIN32
+  svn_config_read (cfgp, sys_registry_path, FALSE, pool);
+  svn_config_merge (*cfgp, usr_registry_path, FALSE);
+#else  /* ! SVN_WIN32 */
+  svn_config_read (cfgp, sys_file_path, FALSE, pool);
+#endif  /* SVN_WIN32 */
+
+  /* Try user config file in both Windows and non-Windows. */
+  SVN_ERR (svn_config_merge (*cfgp, usr_file_path, FALSE));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_config_read_proxies (svn_config_t **cfgp, apr_pool_t *pool)
+{
+  svn_error_t *err;
+  const char *usr_cfg_path;
+
+  SVN_ERR (user_config_path (&usr_cfg_path, SVN_CONFIG__USR_PROXY_PATH, pool));
+
+  /* Can't use #ifdefs inside SVN_ERR, so catch error manually */
+  err = read_all (cfgp,
+#ifdef SVN_WIN32
+                  SVN_REGISTRY_SYS_CONFIG_PROXY_PATH,
+                  SVN_REGISTRY_USR_CONFIG_PROXY_PATH,
+#else  /* ! SVN_WIN32 */
+                  SVN_CONFIG__SYS_PROXY_PATH,
+#endif /* SVN_WIN32 */
+                  usr_cfg_path,
+                  pool);
+
+  return err;
 }
 
 
