@@ -203,35 +203,6 @@ svn_wc__make_adm_thing (svn_wc_adm_access_t *adm_access,
 
 
 
-/* Copy SRC to DST if SRC exists, else create DST empty. */
-static svn_error_t *
-maybe_copy_file (const char *src, const char *dst, apr_pool_t *pool)
-{
-  svn_node_kind_t kind;
-
-  /* First test if SRC exists. */
-  SVN_ERR (svn_io_check_path (src, &kind, pool));
-  if (kind == svn_node_none)
-    {
-      /* SRC doesn't exist, create DST empty. */
-      apr_file_t *f = NULL;
-      SVN_ERR (svn_io_file_open (&f,
-                                 dst,
-                                 (APR_WRITE | APR_CREATE),
-                                 APR_OS_DEFAULT,
-                                 pool));
-      SVN_ERR (svn_io_file_close (f, pool));
-    }
-  else /* SRC exists, so copy it to DST. */
-    {    
-      SVN_ERR (svn_io_copy_file (src, dst, FALSE, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-
 /*** Syncing files in the adm area. ***/
 
 static svn_error_t *
@@ -432,7 +403,8 @@ open_adm_file (apr_file_t **handle,
         {
           /* We don't handle append.  To do so we would need to copy the
              contents into the apr_file_t once it has been opened. */
-          assert (FALSE);
+          return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                   "APR_APPEND not supported for adm files");
         }
 
       /* Need to own the temporary file, so don't reuse an existing one. */
