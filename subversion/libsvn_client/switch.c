@@ -155,6 +155,7 @@ svn_client_switch (const char *path,
       SVN_ERR (svn_wc_get_switch_editor (adm_access, target,
                                          revnum, switch_url, recurse,
                                          ctx->notify_func, ctx->notify_baton,
+                                         ctx->cancel_func, ctx->cancel_baton,
                                          &switch_editor, &switch_edit_baton,
                                          traversal_info, pool));
 

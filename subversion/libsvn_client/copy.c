@@ -800,6 +800,7 @@ repos_to_wc_copy (const char *src_url,
       /* Get a checkout editor and wrap it. */
       SVN_ERR (svn_wc_get_checkout_editor (dst_path, src_url, src_revnum, 1,
                                            ctx->notify_func, ctx->notify_baton,
+                                           ctx->cancel_func, ctx->cancel_baton,
                                            &editor, &edit_baton,
                                            NULL, pool));
       

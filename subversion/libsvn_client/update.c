@@ -91,6 +91,7 @@ svn_client__update_internal (const char *path,
                                      revnum,
                                      recurse,
                                      ctx->notify_func, ctx->notify_baton,
+                                     ctx->cancel_func, ctx->cancel_baton,
                                      &update_editor, &update_edit_baton,
                                      traversal_info,
                                      pool));
