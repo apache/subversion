@@ -1409,17 +1409,13 @@ static svn_error_t *
 txn_body_merge (void *baton, trail_t *trail)
 {
   struct merge_args *args = baton;
-  dag_node_t *youngish_node, *txn_root_node, *txn_base_root_node;
-  const svn_fs_id_t *youngish_id;
+  dag_node_t *source_node, *txn_root_node, *txn_base_root_node;
+  const svn_fs_id_t *source_id;
   svn_fs_t *fs = svn_fs__txn_fs (args->txn);
   const char *txn_name = svn_fs__txn_id (args->txn);
 
-  /* This was the root of the youngest revision when we prepared to
-     call txn_body_merge.  There is no guarantee that this is still
-     the youngest revision in the repository, hence it is "youngish"
-     but not necessarily youngest. */
-  youngish_node = args->node;
-  youngish_id = svn_fs__dag_get_id (youngish_node);
+  source_node = args->node;
+  source_id = svn_fs__dag_get_id (source_node);
   
   SVN_ERR (svn_fs__dag_txn_root (&txn_root_node, fs, txn_name, trail));
   SVN_ERR (svn_fs__dag_txn_base_root (&txn_base_root_node, fs, txn_name,
@@ -1430,15 +1426,15 @@ txn_body_merge (void *baton, trail_t *trail)
     {
       /* If no changes have been made in TXN since its current base,
          then it can't conflict with any changes since that base.  So
-         we just set *both* its base and root to youngish, making TXN
-         in effect a repeat of youngish. */
+         we just set *both* its base and root to source, making TXN
+         in effect a repeat of source. */
       
       /* ### kff todo: this would, of course, be a mighty silly thing
          for the caller to do, and we might want to consider whether
          this response is really appropriate. */
       
-      SVN_ERR (svn_fs__set_txn_base (fs, txn_name, youngish_id, trail));
-      SVN_ERR (svn_fs__set_txn_root (fs, txn_name, youngish_id, trail));
+      SVN_ERR (svn_fs__set_txn_base (fs, txn_name, source_id, trail));
+      SVN_ERR (svn_fs__set_txn_root (fs, txn_name, source_id, trail));
     }
   else
     {
@@ -1448,11 +1444,11 @@ txn_body_merge (void *baton, trail_t *trail)
       SVN_ERR (merge (&(args->conflict),
                       target_root,
                       "",
-                      youngish_node,
+                      source_node,
                       txn_base_root_node,
                       trail));
       
-      SVN_ERR (svn_fs__set_txn_base (fs, txn_name, youngish_id, trail));
+      SVN_ERR (svn_fs__set_txn_base (fs, txn_name, source_id, trail));
     }
   
   return SVN_NO_ERROR;
