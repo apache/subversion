@@ -356,15 +356,13 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
 
   ne_propfind_destroy(pc.dph);
 
-  if (rv != NE_OK)
+  if (rv != NE_OK
+      /* No error if any 2XX status code is returned. */
+      || !(200 <= status_code && status_code <= 299))
     {
       const char *msg = apr_psprintf(pool, "PROPFIND of %s", url);
       return svn_ra_dav__convert_error(sess, msg, rv);
     }
-
-  if (404 == status_code)
-    return svn_error_createf(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
-                             "Failed to fetch props for '%s'", url);
 
   *results = pc.props;
 
