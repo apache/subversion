@@ -198,6 +198,20 @@ AC_ARG_ENABLE(debug,
     fi
 ])
 
+MOD_ACTIVATION="-a"
+AC_ARG_ENABLE(mod-activation,
+[  --disable-mod-activation  Do not enable mod_dav_svn in httpd.conf],
+[
+    if test "$enableval" = "no" ; then
+      MOD_ACTIVATION=""
+      AC_MSG_NOTICE([Disabling apache module activation])
+    else
+      AC_MSG_NOTICE([Enabling apache module activation])
+    fi
+])
+AC_SUBST(MOD_ACTIVATION)
+
+
 AC_ARG_ENABLE(maintainer-mode,
 [  --enable-maintainer-mode  Turn on debugging and very strict compile-time
                           warnings],
