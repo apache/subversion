@@ -117,7 +117,7 @@ typedef struct svn_string_t svn_string_t;
 */
 
 /* ### note that SWIG drops the const in the arg decl, so we must cast */
-%typemap(in, numinputs=0) const char **OUTPUT (const char *temp)
+%typemap(in, numinputs=0) const char **OUTPUT (const char *temp = NULL)
     "$1 = (char **)&temp;"
 
 %typemap(python,argout,fragment="t_output_helper") const char **OUTPUT {
