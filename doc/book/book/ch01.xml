@@ -30,7 +30,7 @@
       version control system as a sort of <quote>time
       machine</quote>.</para>
     
-    <!-- ### something about subversion facilitating communication
+    <!-- ### something about Subversion facilitating communication
     between developers?? -->
 
     <para>Some version control systems are also software configuration
@@ -152,7 +152,7 @@
             interoperability, and provides various key features for
             free: authentication, authorization, wire compression, and
             repository browsing, for example.  A smaller, standalone
-            svn server process is also available.  This server speaks
+            Subversion server process is also available.  This server speaks
             a custom protocol which can be easily tunneled over ssh.
           </para>
         </listitem>
@@ -174,7 +174,7 @@
         <term>Efficient branching and tagging</term>
         <listitem>
           <para>
-            There's no need for branching/tagging to be proportional to
+            The cost of branching and tagging need not be proportional to the
             project size.  Subversion creates branches and tags by
             simply copying the project, using a mechanism similar to a
             hard-link.  Thus these operations take only a very small,
@@ -212,8 +212,8 @@
       on: Windows, Linux, all flavors of BSD, Mac OS X, Netware, and
       others. </para>
 
-    <para>The easiest way to get Subversion is to find a binary
-      package of some sort for your operating system.  Subversion's
+    <para>The easiest way to get Subversion is to download a binary
+      package built for your operating system.  Subversion's
       website (<systemitem
       class="url">http://subversion.tigris.org</systemitem>) often has
       binaries available for download, posted by volunteers.  The site
@@ -291,7 +291,7 @@
         <term>svnserve</term>
         <listitem>
           <para>A standalone server program, runnable as a daemon
-            process or invokable by ssh; another way to make your
+            process or invokable by SSH; another way to make your
             repository available to others over a network.  Discussed
             in Chapter 5.</para>
         </listitem>
@@ -310,7 +310,8 @@
 
     <para>Assuming you have Subversion installed correctly, you should
       be ready to start.  The next two chapters will walk you through
-      the usage of the command-line client program. </para>
+      the use of <command>svn</command>, Subversion's command-line client 
+      program.</para>
 
   </sect1>
 
