@@ -161,7 +161,7 @@ svn_repos_update (svn_fs_root_t *target_root,
 
   /* The Supertrivial case: we have no SOURCE_ENTRY.  Just deltify,
      anchored at parent (which is known to be a directory). */
-  if (! entry)
+  if ((! entry) || (! entry->len))
     {
       return (svn_repos_dir_delta 
               (source_root,
@@ -240,45 +240,53 @@ svn_repos_update (svn_fs_root_t *target_root,
                                     pool),
             &root_baton));
 
-      
   /* Construct the full path of the update item. */
   full_path = svn_string_dup (parent_dir, pool);
   if (entry && entry->len > 0)
     svn_path_add_component (full_path, entry, 
                             svn_path_repos_style);
-  
+
   /* Get the node ids for the source and target paths. */
   SVN_ERR (svn_fs_node_id (&source_id, source_root, 
                            full_path->data, pool));
   SVN_ERR (svn_fs_node_id (&target_id, target_root, 
                            full_path->data, pool));
   
-  /* Use the distance between the node ids to determine the best
-     way to update. */
-  distance = svn_fs_id_distance (source_id, target_id);
-  if (distance == 0)
+  if (entry && entry->len > 0)
     {
-      /* They're the same node!  No-op (you gotta love those). */
-    }
-  else if (distance == -1)
-    {
-      /* The nodes are not related at all.  Delete the one, and
+      /* Use the distance between the node ids to determine the best
+         way to update the requested entry. */
+      distance = svn_fs_id_distance (source_id, target_id);
+      if (distance == 0)
+        {
+          /* They're the same node!  No-op (you gotta love those). */
+        }
+      else if (distance == -1)
+        {
+          /* The nodes are not related at all.  Delete the one, and
              add the other. */
-      SVN_ERR (delete (&c, root_baton, entry, pool));
-      SVN_ERR (add_file_or_dir 
-               (&c, root_baton, parent_dir, entry,
-                0, 0, pool));
+          SVN_ERR (delete (&c, root_baton, entry, pool));
+          SVN_ERR (add_file_or_dir 
+                   (&c, root_baton, parent_dir, entry,
+                    0, 0, pool));
+        }
+      else
+        {
+          /* The nodes are at least related.  Just replace the one
+             with the other. */
+          SVN_ERR (replace_file_or_dir (&c, root_baton,
+                                        parent_dir,
+                                        entry,
+                                        parent_dir,
+                                        entry,
+                                        pool));
+        }
     }
   else
     {
-      /* The nodes are at least related.  Just replace the one
-         with the other. */
-      SVN_ERR (replace_file_or_dir (&c, root_baton,
-                                    parent_dir,
-                                    entry,
-                                    parent_dir,
-                                    entry,
-                                    pool));
+      /* There is no entry given, so update the whole parent
+         directory. */
+      SVN_ERR (delta_dirs (&c, root_baton, full_path, full_path, pool));
     }
 
   /* Make sure we close the root directory we opened above. */
