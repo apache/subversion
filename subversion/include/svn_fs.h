@@ -888,13 +888,12 @@ svn_error_t *svn_fs_change_rev_prop (svn_fs_t *fs,
    revision root (which has a single global revision value).  So,
    currently, TARGET_ROOT is required to be a revision root.
 
-   To assist in providing the base_revision arguments of those editor
-   calls that need them, the caller should supply the hash
-   SOURCE_REV_DIFFS, whose keys are paths, and whose values are the
-   base_revision associated with each path.  This hash need only
-   contain the base_revision for the top of the tree (the path ""),
-   and then those paths that have a base_revision that differs from
-   that of their parent directory.
+   SOURCE_REV_DIFFS is a hash (whose keys are character string paths,
+   and whose values are pointers to svn_revnum_t's) which describes
+   the base revisions of the items in the SOURCE_PATH tree.  This hash
+   need only contain the base revision for the top of the tree, and
+   then those paths that have a base revision that differs from that
+   of their parent directory.
 
    The caller must call editor->close_edit on EDIT_BATON;
    svn_fs_dir_delta does not close the edit itself.

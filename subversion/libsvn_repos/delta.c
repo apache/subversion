@@ -79,19 +79,9 @@ static svn_error_t *change_file_prop (struct context *c,
 
 
 /* Constructing deltas for properties of files and directories.  */
-static svn_error_t *delta_file_props (struct context *c,
-                                      void *file_baton,
-                                      svn_string_t *source_path,
-                                      svn_string_t *target_path);
-
-static svn_error_t *delta_dir_props (struct context *c,
-                                     void *file_baton,
-                                     svn_string_t *source_path,
-                                     svn_string_t *target_path);
-
 static svn_error_t *delta_proplists (struct context *c,
-                                     apr_hash_t *s_props,
-                                     apr_hash_t *t_props,
+                                     svn_string_t *source_path,
+                                     svn_string_t *target_path,
                                      proplist_change_fn_t *change_fn,
                                      void *object);
 
@@ -156,24 +146,6 @@ svn_fs_dir_delta (svn_fs_root_t *source_root,
   svn_string_t *source_path_str;
   svn_string_t *target_path_str;
 
-  /* If our target here is a revision, we'll call set_target_revision
-     to set the global target revision for our edit.  Else, we'll
-     whine like babies because we don't want to deal with txn root
-     targets right now.  */
-  if (svn_fs_is_revision_root (target_root))
-    {
-      SVN_ERR (editor->set_target_revision 
-               (edit_baton, 
-                svn_fs_revision_root_revision (target_root)));
-    }
-  else
-    {
-      return
-        svn_error_create
-        (SVN_ERR_FS_NOT_REVISION_ROOT, 0, 0, pool,
-         "directory delta target not a revision root");
-    }      
-
   if (! source_path)
     {
       return
@@ -208,12 +180,29 @@ svn_fs_dir_delta (svn_fs_root_t *source_root,
          "directory delta target path is not a directory");
   }      
     
+  /* If our target here is a revision, call set_target_revision to set
+     the global target revision for our edit.  Else, whine like a baby
+     because we don't want to deal with txn root targets right now.  */
+  if (svn_fs_is_revision_root (target_root))
+    {
+      SVN_ERR (editor->set_target_revision 
+               (edit_baton, 
+                svn_fs_revision_root_revision (target_root)));
+    }
+  else
+    {
+      return
+        svn_error_create
+        (SVN_ERR_FS_NOT_REVISION_ROOT, 0, 0, pool,
+         "directory delta target not a revision root");
+    }      
+
   source_path_str = svn_string_create (source_path, pool);
   target_path_str = svn_string_create (target_path, pool);
 
-  /* Setup our pseudo-global structure here.  These variables are
-     needed throughout the deltafication process, so we'll just pass
-     them around by reference to all the helper functions. */
+  /* Setup our pseudo-global structure here.  We need these variables
+     throughout the deltafication process, so pass them around by
+     reference to all the helper functions. */
   c.editor = editor;
   c.source_root = source_root;
   c.source_rev_diffs = source_rev_diffs;
@@ -275,9 +264,9 @@ svn_fs_file_delta (svn_txdelta_stream_t **stream_p,
 /* Retrieving the base revision from the path/revision hash.  */
 
 
-/* Look through a HASH (with paths as keys, and revision numbers as
-   values) for the revision associated with the given PATH.  All
-   necessary memory allocations will be performed in POOL.  */
+/* Look through a HASH (with paths as keys, and pointers to revision
+   numbers as values) for the revision associated with the given PATH.
+   Perform all necessary memory allocations in POOL.  */
 static svn_revnum_t
 get_revision_from_hash (apr_hash_t *hash, svn_string_t *path,
                         apr_pool_t *pool)
@@ -350,77 +339,33 @@ change_file_prop (struct context *c, void *object,
 /* Constructing deltas for properties of files and directories.  */
 
 
-/* Generate the appropriate change_file_prop calls to turn the properties
-   of ANCESTOR_FILE into those of TARGET_FILE.  If ANCESTOR_FILE is zero, 
-   treat it as if it were a file with no properties.  */
-static svn_error_t *
-delta_file_props (struct context *c,
-                  void *file_baton,
-                  svn_string_t *source_path,
-                  svn_string_t *target_path)
-{
-  apr_hash_t *source_props = 0;
-  apr_hash_t *target_props = 0;
-
-  /* Get the source file's properties */
-  if (source_path)
-    SVN_ERR (svn_fs_node_proplist 
-             (&source_props, c->source_root, source_path->data,
-              c->pool));
-
-  /* Get the target file's properties */
-  if (target_path)
-    SVN_ERR (svn_fs_node_proplist 
-             (&target_props, c->target_root, target_path->data,
-              c->pool));
-
-  /* Return the result of the property delta routine */
-  return delta_proplists (c, source_props, target_props,
-                          change_file_prop, file_baton);
-}
-
-
-/* Generate the appropriate change_dir_prop calls to turn the properties
-   of ANCESTOR_FILE into those of TARGET_FILE.  If ANCESTOR_FILE is zero, 
-   treat it as if it were a file with no properties.  */
-static svn_error_t *
-delta_dir_props (struct context *c,
-                 void *file_baton,
-                 svn_string_t *source_path,
-                 svn_string_t *target_path)
-{
-  apr_hash_t *source_props = 0;
-  apr_hash_t *target_props = 0;
-
-  /* Get the source file's properties */
-  if (source_path)
-    SVN_ERR (svn_fs_node_proplist 
-             (&source_props, c->source_root, source_path->data,
-              c->pool));
-
-  /* Get the target file's properties */
-  if (target_path)
-    SVN_ERR (svn_fs_node_proplist 
-             (&target_props, c->target_root, target_path->data,
-              c->pool));
-
-  /* Return the result of the property delta routine */
-  return delta_proplists (c, source_props, target_props,
-                          change_dir_prop, file_baton);
-}
-
-
-/* Compare the two property lists SOURCE_PROPS and TARGET_PROPS.  For
-   every difference found, generate an appropriate call to CHANGE_FN,
-   on OBJECT.  */
+/* Generate the appropriate property editing calls to turn the
+   properties of SOURCE_PATH into those of TARGET_PATH.  If
+   SOURCE_PATH is NULL, treat it as if it were a file with no
+   properties.  Pass OBJECT on to the editor function wrapper
+   CHANGE_FN. */
 static svn_error_t *
 delta_proplists (struct context *c,
-                 apr_hash_t *s_props,
-                 apr_hash_t *t_props,
+                 svn_string_t *source_path,
+                 svn_string_t *target_path,
                  proplist_change_fn_t *change_fn,
                  void *object)
 {
+  apr_hash_t *s_props = 0;
+  apr_hash_t *t_props = 0;
   apr_hash_index_t *hi;
+
+  /* Get the source file's properties */
+  if (source_path)
+    SVN_ERR (svn_fs_node_proplist 
+             (&s_props, c->source_root, source_path->data,
+              c->pool));
+
+  /* Get the target file's properties */
+  if (target_path)
+    SVN_ERR (svn_fs_node_proplist 
+             (&t_props, c->target_root, target_path->data,
+              c->pool));
 
   for (hi = apr_hash_first (t_props); hi; hi = apr_hash_next (hi))
     {
@@ -429,17 +374,17 @@ delta_proplists (struct context *c,
       void *val;
       apr_size_t klen;
           
-      /* KEY will be the property name in target, VAL the value */
+      /* KEY is property name in target, VAL the value */
       apr_hash_this (hi, &key, &klen, &val);
       t_name = svn_string_ncreate (key, klen, c->pool);
       t_value = val;
 
-      /* See if this property existed in the source */
+      /* See if this property existed in the source.  If so, and if
+         the values in source and target differ, replace the value in
+         target with the one in source. */
       if (s_props 
           && ((s_value = apr_hash_get (s_props, key, klen)) != 0))
         {
-          /* If the value is not the same in the source as it is in
-             the target, we have a replace event. */
           if (svn_string_compare (s_value, t_value))
             SVN_ERR (change_fn (c, object, t_name, t_value));
 
@@ -466,7 +411,7 @@ delta_proplists (struct context *c,
           void *val;
           apr_size_t klen;
           
-          /* KEY will be the property name in target, VAL the value */
+          /* KEY is property name in target, VAL the value */
           apr_hash_this (hi, &key, &klen, &val);
           s_name = svn_string_ncreate (key, klen, c->pool);
           s_value = val;
@@ -485,7 +430,7 @@ delta_proplists (struct context *c,
 
 
 /* Change the contents of FILE_BATON in C->editor, according to the
-   text delta from in DELTA_STREAM.  */
+   text delta from DELTA_STREAM.  */
 static svn_error_t *
 send_text_delta (struct context *c,
                  void *file_baton,
@@ -512,7 +457,7 @@ send_text_delta (struct context *c,
 
 
 /* Make the appropriate edits on FILE_BATON to change its contents and
-   properties from those on ANCESTOR_FILE to those on TARGET_FILE.  */
+   properties from those in SOURCE_PATH to those in TARGET_PATH. */
 static svn_error_t *
 delta_files (struct context *c, void *file_baton,
              svn_string_t *source_path,
@@ -521,7 +466,8 @@ delta_files (struct context *c, void *file_baton,
   svn_txdelta_stream_t *delta_stream;
 
   /* Compare the files' property lists.  */
-  SVN_ERR (delta_file_props (c, file_baton, source_path, target_path));
+  SVN_ERR (delta_proplists (c, source_path, target_path,
+                            change_file_prop, file_baton));
 
   if (source_path)
     {
@@ -555,7 +501,7 @@ delta_files (struct context *c, void *file_baton,
 /* Generic directory deltafication routines.  */
 
 
-/* Emit a delta to delete the entry named NAME from DIR_BATON.  */
+/* Emit a delta to delete the entry named TARGET_NAME from DIR_BATON.  */
 static svn_error_t *
 delete (struct context *c, void *dir_baton, svn_string_t *target_name)
 {
@@ -563,7 +509,9 @@ delete (struct context *c, void *dir_baton, svn_string_t *target_name)
 }
 
 
-/* Emit a delta to create the entry named NAME in DIR_BATON.  */
+/* Emit a delta to create the entry named TARGET_NAME in the directory
+   TARGET_PATH.  Pass DIR_BATON through to editor functions that
+   require it.  */
 static svn_error_t *
 add_file_or_dir (struct context *c, void *dir_baton,
                  svn_string_t *target_path,
@@ -612,9 +560,9 @@ add_file_or_dir (struct context *c, void *dir_baton,
 /* Modify the directory TARGET_PATH (which is associated with
    DIR_BATON) by adding (if TARGET_NAME is NULL) or replacing (if
    TARGET_NAME is non-NULL) a file or directory.  If SOURCE_PATH and
-   SOURCE_NAME are both non-NULL, the add/replace will occur with
-   deltas against the source path, else we will be adding/replacing
-   "from scratch". */
+   SOURCE_NAME are both non-NULL, the add/replace occurs with deltas
+   against the source path, else the entry is created "from
+   scratch". */
 static svn_error_t *
 replace_file_or_dir (struct context *c, void *dir_baton,
                      svn_string_t *target_path, svn_string_t *target_name,
@@ -683,6 +631,12 @@ replace_file_or_dir (struct context *c, void *dir_baton,
 
 
 #if 0
+/* This is currently decommissioned temporarily (is this ever true?)
+   while we opt for a more straightforward "replace = delete + add"
+   editor-driving philosophy.  When copies and moves of files and
+   directories are examined in the future, this search for a related
+   node will take on new significance. */
+
 /* Do a `replace' edit in DIR_BATON turning the entry named
    T_ENTRY->name in SOURCE_PATH into the corresponding entry in
    TARGET_PATH.  Emit a replace_dir or replace_file as needed.  Choose
@@ -775,7 +729,8 @@ delta_dirs (struct context *c, void *dir_baton,
   apr_hash_index_t *hi;
 
   /* Compare the property lists.  */
-  SVN_ERR (delta_dir_props (c, dir_baton, source_path, target_path));
+  SVN_ERR (delta_proplists (c, source_path, target_path,
+                            dir_baton, change_dir_prop));
 
   /* Get the list of entries in each of source and target.  */
   if (target_path)
@@ -796,12 +751,14 @@ delta_dirs (struct context *c, void *dir_baton,
     }
 
   /* Loop over the hash of entries in the target, searching for its
-     partner in the source.  If the partner is found, determine if we
-     need to replace the one in target with a new version or not, then
-     remove that entry from the source entries hash.  If the partner
-     is not found, the entry must be added to the target.   When all the
-     existing target entries have been handled, those entries still
-     remaining in the source hash are ones that need to be deleted
+     partner in the source.  If we find the matching partner entry,
+     use editor calls to replace the one in target with a new version
+     if necessary, then remove that entry from the source entries
+     hash.  If we can't find a related node in the source, we use
+     editor calls to add the entry as a new item in the target.
+     Having handled all the entries that exist in target, any entries
+     still remaining the source entries hash represent entries that no
+     longer exist in target.  Use editor calls to delete those entries
      from the target tree. */
   for (hi = apr_hash_first (t_entries); hi; hi = apr_hash_next (hi))
     {
@@ -810,7 +767,7 @@ delta_dirs (struct context *c, void *dir_baton,
       void *val;
       apr_size_t klen;
           
-      /* KEY will be the entry name in target, VAL the dirent */
+      /* KEY is the entry name in target, VAL the dirent */
       apr_hash_this (hi, &key, &klen, &val);
       t_entry = val;
           
@@ -821,12 +778,19 @@ delta_dirs (struct context *c, void *dir_baton,
         {
           int distance;
 
-          /* Check the distance between the ids.  0 means they are the
-             same id, and this is a noop.  -1 means they are
-             unrelated, so we'll try to find a relative somewhere else
-             in the directory.  Any other positive value means they
-             are related through ancestry, so we'll go ahead and
-             do the replace directly.  */
+          /* Check the distance between the ids.  
+
+             0 means they are the same id, and this is a noop.
+
+             -1 means they are unrelated, so delete this entry and add
+             a new one of the same name.  In the future, we should try
+             to find a relative somewhere else in the directory, or
+             perhaps elsewhere in the tree.  This will theoretically
+             reduce the size of the deltas.
+
+             Any other positive value means the nodes are related
+             through ancestry, so go ahead and do the replace
+             directly.  */
           distance = svn_fs_id_distance (s_entry->id, t_entry->id);
           if (distance == 0)
             {
@@ -875,8 +839,8 @@ delta_dirs (struct context *c, void *dir_baton,
         }
     }
 
-  /* All that should be left in the source entries hash are things
-     that need to be deleted. */
+  /* All that is left in the source entries hash are things that need
+     to be deleted.  Delete them.  */
   if (s_entries)
     {
       for (hi = apr_hash_first (s_entries); hi; hi = apr_hash_next (hi))
@@ -886,7 +850,7 @@ delta_dirs (struct context *c, void *dir_baton,
           void *val;
           apr_size_t klen;
           
-          /* KEY will be the entry name in source, VAL the dirent */
+          /* KEY is the entry name in source, VAL the dirent */
           apr_hash_this (hi, &key, &klen, &val);
           s_entry = val;
           
