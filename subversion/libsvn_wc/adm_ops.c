@@ -1131,20 +1131,6 @@ svn_wc_add (const char *path,
 */
 
 
-/* Return a new wrapping of error ERR regarding the revert subcommand,
-   while doing VERB on PATH.  Use POOL for allocations.
-*/
-static svn_error_t *
-revert_error (svn_error_t *err,
-              const char *path,
-              const char *verb,
-              apr_pool_t *pool)
-{
-  return svn_error_quick_wrap 
-    (err, apr_psprintf (pool, _("Error '%s' for '%s'"), verb, path));
-}
-
-
 /* Revert ENTRY for NAME in directory represented by ADM_ACCESS, altering
    *MODIFY_FLAGS to indicate what parts of the entry were reverted
    (for example, if property changes were reverted, then set the
@@ -1193,10 +1179,14 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
         {
           if ((working_props_kind == svn_node_file)
               && (err = svn_wc__prep_file_for_replacement (thing, FALSE, pool)))
-            return revert_error (err, fullpath, _("restoring props"), pool);
+            return svn_error_quick_wrap 
+              (err, apr_psprintf (pool, _("Error restoring props for '%s'"),
+                                  fullpath));
 
           if ((err = svn_io_copy_file (base_thing, thing, FALSE, pool)))
-            return revert_error (err, fullpath, _("restoring props"), pool);
+            return svn_error_quick_wrap 
+              (err, apr_psprintf (pool, _("Error restoring props for '%s'"),
+                                  fullpath));
 
           SVN_ERR (svn_io_file_affected_time (&tstamp, thing, pool));
           entry->prop_time = tstamp;
@@ -1204,7 +1194,9 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
       else if (working_props_kind == svn_node_file)
         {
           if ((err = svn_io_remove_file (thing, pool)))
-            return revert_error (err, fullpath, _("removing props"), pool);
+            return svn_error_quick_wrap 
+              (err, apr_psprintf (pool, _("Error removing props for '%s'"),
+                                  fullpath));
         }
 
       /* Modify our entry structure. */
@@ -1228,7 +1220,9 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
       if (kind == svn_node_file)
         {
           if ((err = svn_io_copy_file (base_thing, thing, FALSE, pool)))
-            return revert_error (err, fullpath, _("restoring props"), pool);
+            return svn_error_quick_wrap 
+              (err, apr_psprintf (pool, _("Error restoring props for '%s'"),
+                                  fullpath));
       
           SVN_ERR (svn_io_file_affected_time (&tstamp, thing, pool));
           entry->prop_time = tstamp;
@@ -1268,7 +1262,9 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
                                                    keywords,
                                                    TRUE, /* expand keywords */
                                                    pool)))
-            return revert_error (err, fullpath, _("restoring text"), pool);
+            return svn_error_quick_wrap 
+              (err, apr_psprintf (pool, _("Error restoring text for '%s'"),
+                                  fullpath));
 
           /* If necessary, tweak the new working file's executable bit. */
           SVN_ERR (svn_wc__maybe_set_executable (NULL, fullpath, adm_access,

@@ -912,28 +912,29 @@ validate_prop_against_node_kind (const char *name,
                                  SVN_PROP_MIME_TYPE,
                                  NULL };
   const char **node_kind_prohibit;
-  const char *node_kind_text;
 
   switch (node_kind)
     {
     case svn_node_dir:
       node_kind_prohibit = dir_prohibit;
-      node_kind_text = _("directory");
+      while (*node_kind_prohibit)
+        if (strcmp (name, *node_kind_prohibit++) == 0)
+          return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, NULL,
+                                    _("Cannot set '%s' on a directory (%s)"),
+                                    name, path);
       break;
     case svn_node_file:
       node_kind_prohibit = file_prohibit;
-      node_kind_text = _("file");
+      while (*node_kind_prohibit)
+        if (strcmp (name, *node_kind_prohibit++) == 0)
+          return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, NULL,
+                                    _("Cannot set '%s' on a file (%s)"),
+                                    name, path);
       break;
     default:
       return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                                 _("'%s' is not a file or directory"), path);
     }
-
-  while (*node_kind_prohibit)
-    if (strcmp (name, *node_kind_prohibit++) == 0)
-      return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, NULL,
-                                _("Cannot set '%s' on a %s (%s)"),
-                                name, node_kind_text, path);
 
   return SVN_NO_ERROR;
 }                             

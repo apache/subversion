@@ -178,23 +178,43 @@ notify (void *baton,
             if (SVN_IS_VALID_REVNUM (revision))
               {
                 if (nb->is_export)
-                  printf ("Exported %srevision %ld.\n",
-                          nb->in_external ? "external at " : "",
-                          revision);
+                  {
+                    if (nb->in_external)
+                      printf ("Exported external at revision %ld.\n",
+                              revision);
+                    else
+                      printf ("Exported revision %ld.\n",
+                              revision);
+                  }
                 else if (nb->is_checkout)
-                  printf ("Checked out %srevision %ld.\n",
-                          nb->in_external ? "external at " : "",
-                          revision);
+                  {
+                    if (nb->in_external)
+                      printf ("Checked out external at revision %ld.\n",
+                              revision);
+                    else
+                      printf ("Checked out revision %ld.\n",
+                              revision);
+                  }
                 else
                   {
                     if (nb->received_some_change)
-                      printf ("Updated %sto revision %ld.\n",
-                              nb->in_external ? "external " : "",
-                              revision);
+                      {
+                        if (nb->in_external)
+                          printf ("Updated external to revision %ld.\n",
+                                  revision);
+                        else
+                          printf ("Updated to revision %ld.\n",
+                                  revision);
+                      }
                     else
-                      printf ("%st revision %ld.\n",
-                              nb->in_external ? "External a" : "A",
-                              revision);
+                      {
+                        if (nb->in_external)
+                          printf ("External at revision %ld.\n",
+                                  revision);
+                        else
+                          printf ("At revision %ld.\n",
+                                  revision);
+                      }
                   }
               }
             else  /* no revision */
@@ -203,11 +223,19 @@ notify (void *baton,
                   printf (nb->in_external ? _("External export complete.\n") : 
                                             _("Export complete.\n"));
                 else if (nb->is_checkout)
-                  printf ("%sheckout complete.\n",
-                          nb->in_external ? "External c" : "C");
+                  {
+                    if (nb->in_external)
+                      printf ("External checkout complete.\n");
+                    else
+                      printf ("Checkout complete.\n");
+                  }
                 else
-                  printf ("%spdate complete.\n", 
-                          nb->in_external ? "External u" : "U");
+                  {
+                    if (nb->in_external)
+                      printf ("External update complete.\n");
+                    else
+                      printf ("Update complete.\n");
+                  }
               }
           }
       }
