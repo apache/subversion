@@ -1116,19 +1116,20 @@ Committed revision 481.
     </sect2>
 
     <sect2 id="svn-ch-4-sect-4.2">
-      <title>Undoing Changes</title>
+      <title>Deshaciendo cambios</title>
 
-      <para>Another common use for <command>svn merge</command> is to
-        roll back a change that has already been committed.  Suppose
-        you're working away happily on a working copy of
-        <filename>/calc/trunk</filename>, and you discover that the
-        change made way back in revision 303, which changed
-        <filename>integer.c</filename>, is completely wrong.  It never
-        should have been committed.  You can use <command>svn
-        merge</command> to <quote>undo</quote> the change in your
-        working copy, and then commit the local modification to the
-        repository.  All you need to do is to specify a
-        <emphasis>reverse</emphasis> difference:</para>
+      <para>Otro uso común de <command>svn merge</command>
+        es deshacer un cambio que acaba de ser enviado al
+        repositorio. Suponga que está trabajando felizmente en
+        su copia local de <filename>/calc/trunk</filename>,
+        y descubre que el cambio realizado hace tiempo en la
+        revisión 303, que modificó <filename>integer.c</filename>,
+        está completamente mal.  Nunca debería haber llegado al
+        repositorio. Puede usar <command>svn merge</command>
+        para <quote>deshacer</quote> el cambio en su copia
+        local, y entonces enviar las modificaciones locales al
+        repositorio. Todo lo que necesita hacer es especificar la
+        diferencia <emphasis>al revés</emphasis>:</para>
 
 
 <screen>
