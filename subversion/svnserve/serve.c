@@ -1164,7 +1164,9 @@ repos_path_valid(const char *path)
       /* Check for '..'. */
 #if WIN32
       /* On Windows, don't allow sequences of more than one character
-         consisting of just dots and spaces. */
+         consisting of just dots and spaces.  Win32 functions treat
+         paths such as ".. " and "......." inconsistently.  Make sure
+         no one can escape out of the root. */
       if (path - s >= 2 && strspn(s, ". ") == path - s)
         return FALSE;
 #else  /* ! WIN32 */
