@@ -96,6 +96,17 @@ svn_ra_local__split_URL (svn_string_t **repos_path,
 
 
 
+
+/* Recursively walk over REVNUM:PATH inside an already-open repository
+   FS, and drive a checkout EDITOR.  Allocate all data in POOL. */
+svn_error_t *
+svn_ra_local__checkout (svn_fs_t *fs, 
+                        svn_revnum_t revnum, 
+                        svn_string_t *fs_path,
+                        const svn_delta_edit_fns_t *editor, 
+                        void *edit_baton,
+                        apr_pool_t *pool);
+
 
 
 
