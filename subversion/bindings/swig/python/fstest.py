@@ -42,12 +42,12 @@ def dump_tree(fsob, root, pool, path, indent=0):
       dump_tree(fsob, root, subpool, child, indent+2)
     else:
       rev = fs.node_created_rev(root, child, subpool)
-      author = fs.revision_prop(fsob, rev, 'svn:author', pool)
+      author = fs.revision_prop(fsob, rev, 'svn:author', subpool)
       print line, author, rev
 
     _util.svn_pool_clear(subpool)
 
-  _util.svn_pool_destroy(subpool)
+  util.svn_pool_destroy(subpool)
 
 def usage():
   print 'USAGE: %s DBHOME' % sys.argv[0]
