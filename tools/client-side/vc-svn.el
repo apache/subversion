@@ -364,7 +364,15 @@ repository) as the older version; if REV2 is nil, use the current
 workfile contents as the newer version.
 This function returns a status of either 0 (no differences found), or
 1 (either non-empty diff or the diff is run asynchronously)."
-  (let* ((diff-switches-list (vc-diff-switches-list svn))
+  (let* ((diff-switches-list
+          ;; In Emacs 21.2, the `vc-diff-switches-list' macro started
+          ;; requiring its symbol argument to be quoted.
+          (if (<= 21.2 (string-to-number
+                        (save-match-data
+                          (string-match "[0-9]+\\.[0-9]+" emacs-version)
+                          (match-string 0 emacs-version))))
+              (vc-diff-switches-list 'SVN)
+            (vc-diff-switches-list svn)))
          (status (vc-svn-run-status file))
          (local (elt status 1))
          (changed (elt status 2))
