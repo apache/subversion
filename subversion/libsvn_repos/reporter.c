@@ -170,6 +170,20 @@ svn_repos_finish_report (void *report_baton)
 }
 
 
+
+svn_error_t *
+svn_repos_abort_report (void *report_baton)
+{
+  svn_repos_report_baton_t *rbaton = (svn_repos_report_baton_t *) report_baton;
+
+  SVN_ERR (svn_fs_abort_txn (rbaton->txn));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
 svn_error_t *
 svn_repos_begin_report (void **report_baton,
                         svn_revnum_t revnum,

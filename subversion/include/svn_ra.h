@@ -78,6 +78,10 @@ typedef struct svn_ra_reporter_t
      baseline revision originally passed into do_update(). */
   svn_error_t *(*finish_report) (void *report_baton);
 
+  /* If an error occurs during a report, this routine should cause the
+     filesystem transaction to be aborted & cleaned up. */
+  svn_error_t *(*abort_report) (void *report_baton);
+
 } svn_ra_reporter_t;
 
 

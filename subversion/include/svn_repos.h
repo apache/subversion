@@ -110,8 +110,11 @@ svn_error_t *svn_repos_delete_path (void *report_baton,
 /* Make the filesystem compare the transaction to a revision and have
    it drive an update editor (using svn_repos_delta_dirs()).  Then
    abort the transaction. */
-svn_error_t *
-svn_repos_finish_report (void *report_baton);
+svn_error_t *svn_repos_finish_report (void *report_baton);
+
+
+/* The report-driver is bailing, so abort the fs transaction. */
+svn_error_t *svn_repos_abort_report (void *report_baton);
 
 
 
