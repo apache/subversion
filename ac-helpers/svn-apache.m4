@@ -30,8 +30,8 @@ AC_ARG_WITH(apache,
 		INSTALL_IT="mkdir -p $TARGET; cp $BINNAME mod_dav.c mod_dav.exp Makefile.tmpl Makefile.libdir libdav.module dav_shared_stub.c $extra_copy $TARGET"
 		AC_MSG_RESULT(yes - Apache 2.0.x)
 	else
-		AC_MSG_RESULT(no - Unable to locate $withval/src/modules/dav/main/mod_dav.h)
-		FAIL_STATIC=1
+		dnl if they pointed us at the wrong place, then just bail
+		AC_MSG_ERROR(no - Unable to locate $withval/src/modules/dav/main/mod_dav.h)
 	fi
 ],[
     AC_MSG_RESULT(no)
@@ -52,9 +52,10 @@ AC_ARG_WITH(apxs,
     else
       APXS="$withval"
     fi
+    APXS_EXPLICIT=1
 ])
 
-if test "$BINNAME" = "" -a "$APXS" = "" -a "$FAIL_STATIC" = ""; then
+if test "$BINNAME" = "" -a "$APXS" = ""; then
   for i in /usr/sbin /usr/local/apache/bin ; do
     if test -f "$i/apxs"; then
       APXS="$i/apxs"
@@ -66,6 +67,9 @@ if test -n "$APXS"; then
     APXS_INCLUDE="`$APXS -q INCLUDEDIR`"
     if test -r $APXS_INCLUDE/mod_dav.h; then
         AC_MSG_RESULT(found at $APXS)
+    elif test "$APXS_EXPLICIT" != ""; then
+	AC_MSG_ERROR(no - APXS refers to an old version of Apache
+                     Unable to locate $APXS_INCLUDE/mod_dav.h)
     else
 	AC_MSG_RESULT(no - Unable to locate $APXS_INCLUDE/mod_dav.h)
 	APXS=""
@@ -76,7 +80,7 @@ fi
 
 if test -n "$APXS"; then
     BINNAME=mod_dav_svn.so
-    INSTALL_IT="\$(APXS) -i -a -n dav $BINNAME"
+    INSTALL_IT="\$(APXS) -i -a -n dav_svn $BINNAME"
 
     APXS_CC="`$APXS -q CC`"
     INCLUDE="$INCLUDE -I$APXS_INCLUDE"
@@ -88,12 +92,10 @@ fi
 
 # If we did not find a way to build/install mod_dav, then bail out.
 if test "$BINNAME" = ""; then
-	if test "$FAIL_STATIC" = ""; then
-		echo "WARNING: skipping the build of mod_dav_svn"
-                echo "         --with-apxs or --with-apache must be used"
-	else
-		AC_MSG_ERROR(You need to point --with-apache at the base Apache source code directory)
-	fi
+    echo "=================================================================="
+    echo "WARNING: skipping the build of mod_dav_svn"
+    echo "         --with-apxs or --with-apache must be used"
+    echo "=================================================================="
 else
     APACHE_MODULES=mod_dav_svn
 fi
