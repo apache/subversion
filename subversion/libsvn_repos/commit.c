@@ -1,4 +1,4 @@
-/* commit-editor.c --- editor for commiting changes to a filesystem.
+/* commit.c --- editor for commiting changes to a filesystem.
  *
  * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
@@ -27,7 +27,6 @@
 #include "svn_delta.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
-#include "ra_local.h"
 
 
 
@@ -39,9 +38,6 @@ struct edit_baton
 
   /** Supplied when the editor is created: **/
 
-  /* The active RA session */
-  svn_ra_local__session_baton_t *session;
-
   /* The user doing the commit.  Presumably, some higher layer has
      already authenticated this user. */
   const char *user;
@@ -49,12 +45,15 @@ struct edit_baton
   /* Commit message for this commit. */
   const char *log_msg;
 
-  /* Hook to run when the commit is done. */
-  svn_ra_local__commit_hook_t *hook;
-  void *hook_baton;
+  /* Callback to run when the commit is done. */
+  svn_repos_commit_callback_t *callback;
+  void *callback_baton;
 
   /* The already-open svn repository to commit to. */
   svn_repos_t *repos;
+
+  /* URL to the root of the open repository. */
+  const char *repos_url;
 
   /* The filesystem associated with the REPOS above (here for
      convenience). */
@@ -216,10 +215,10 @@ add_directory (const char *path,
 
   if (copy_path)
     {
-      const char *repos_path;
       const char *fs_path;
       svn_fs_root_t *copy_root;
       svn_node_kind_t kind;
+      int repos_url_len;
 
       /* Check PATH in our transaction.  Make sure it does not exist
          unless its parent directory was copied (in which case, the
@@ -229,17 +228,17 @@ add_directory (const char *path,
       if ((kind != svn_node_none) && (! pb->was_copied))
         return out_of_date (full_path, eb->txn_name, subpool);
 
-      /* This add has history.  Let's split the copy_url. */
-      SVN_ERR (svn_ra_local__split_URL 
-               (&repos_path, &fs_path, copy_path, subpool));
-
       /* For now, require that the url come from the same repository
          that this commit is operating on. */
-      if (strcmp (eb->session->repos_path, repos_path) != 0)
+      copy_path = svn_path_uri_decode (copy_path, subpool);
+      repos_url_len = strlen (eb->repos_url);
+      if (strncmp (copy_path, eb->repos_url, repos_url_len) != 0)
         return svn_error_createf 
           (SVN_ERR_FS_GENERAL, 0, NULL, subpool,
            "add_dir `%s': copy_url is from different repo", full_path);
-      
+
+      fs_path = apr_pstrdup (subpool, copy_path + repos_url_len);
+
       /* Now use the "fs_path" as an absolute path within the
          repository to make the copy from. */      
       SVN_ERR (svn_fs_revision_root (&copy_root, eb->fs,
@@ -341,10 +340,10 @@ add_file (const char *path,
 
   if (copy_path)
     {      
-      const char *repos_path; 
       const char *fs_path;
       svn_fs_root_t *copy_root;
       svn_node_kind_t kind;
+      int repos_url_len;
 
       /* Check PATH in our transaction.  Make sure it does not exist
          unless its parent directory was copied (in which case, the
@@ -354,17 +353,17 @@ add_file (const char *path,
       if ((kind != svn_node_none) && (! pb->was_copied))
         return out_of_date (full_path, eb->txn_name, subpool);
 
-      /* This add has history.  Let's split the copyfrom_url. */
-      SVN_ERR (svn_ra_local__split_URL 
-               (&repos_path, &fs_path, copy_path, subpool));
-
       /* For now, require that the url come from the same repository
          that this commit is operating on. */
-      if (strcmp (eb->session->repos_path, repos_path) != 0)
+      copy_path = svn_path_uri_decode (copy_path, subpool);
+      repos_url_len = strlen (eb->repos_url);
+      if (strncmp (copy_path, eb->repos_url, repos_url_len) != 0)
             return svn_error_createf 
               (SVN_ERR_FS_GENERAL, 0, NULL, eb->pool,
                "add_file `%s': copy_url is from different repo", full_path);
       
+      fs_path = apr_pstrdup (subpool, copy_path + repos_url_len);
+
       /* Now use the "fs_path" as an absolute path within the
          repository to make the copy from. */      
       SVN_ERR (svn_fs_revision_root (&copy_root, eb->fs,
@@ -489,9 +488,7 @@ close_edit (void *edit_baton)
       return err;
     }
 
-  /* Pass new revision information to the caller's hook.  Note that
-     this hook is unrelated to the standard repository post-commit
-     hooks.  See svn_repos.h for more on this. */
+  /* Pass new revision information to the caller's callback. */
   {
     svn_string_t *date, *author;
 
@@ -503,8 +500,8 @@ close_edit (void *edit_baton)
                                    new_revision, SVN_PROP_REVISION_AUTHOR,
                                    eb->pool));
 
-    SVN_ERR ((*eb->hook) (new_revision, date->data, author->data,
-                          eb->hook_baton));
+    SVN_ERR ((*eb->callback) (new_revision, date->data, author->data,
+                              eb->callback_baton));
   }
 
   return SVN_NO_ERROR;
@@ -525,13 +522,16 @@ abort_edit (void *edit_baton)
 /*** Public interface. ***/
 
 svn_error_t *
-svn_ra_local__get_editor (const svn_delta_editor_t **editor,
-                          void **edit_baton,
-                          svn_ra_local__session_baton_t *session,
-                          const char *log_msg,
-                          svn_ra_local__commit_hook_t *hook,
-                          void *hook_baton,
-                          apr_pool_t *pool)
+svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
+                             void **edit_baton,
+                             svn_repos_t *repos,
+                             const char *repos_url,
+                             const char *base_path,
+                             const char *user,
+                             const char *log_msg,
+                             svn_repos_commit_callback_t *callback,
+                             void *callback_baton,
+                             apr_pool_t *pool)
 {
   svn_delta_editor_t *e = svn_delta_default_editor (pool);
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -552,14 +552,14 @@ svn_ra_local__get_editor (const svn_delta_editor_t **editor,
 
   /* Set up the edit baton. */
   eb->pool = subpool;
-  eb->user = apr_pstrdup (subpool, session->username);
+  eb->user = apr_pstrdup (subpool, user);
   eb->log_msg = apr_pstrdup (subpool, log_msg);
-  eb->hook = hook;
-  eb->hook_baton = hook_baton;
-  eb->base_path = apr_pstrdup (subpool, session->fs_path);
-  eb->session = session;
-  eb->repos = session->repos;
-  eb->fs = svn_repos_fs (session->repos);
+  eb->callback = callback;
+  eb->callback_baton = callback_baton;
+  eb->base_path = apr_pstrdup (subpool, base_path);
+  eb->repos = repos;
+  eb->repos_url = repos_url;
+  eb->fs = svn_repos_fs (repos);
   eb->txn = NULL;
 
   *edit_baton = eb;

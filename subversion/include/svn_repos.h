@@ -268,6 +268,48 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
 
 /* ---------------------------------------------------------------*/
 
+/*** Making commits. */
+
+/* Callback function type for commits.  When a filesystem commit
+ * succeeds, an instance of this is invoked on the NEW_REVISION, DATE,
+ * and AUTHOR of the commit, along with the BATON closure. */
+typedef svn_error_t *svn_repos_commit_callback_t (svn_revnum_t new_revision,
+                                                  const char *date,
+                                                  const char *author,
+                                                  void *baton);
+
+/* Return an EDITOR and EDIT_BATON to commit changes to SESSION->fs,
+ * beginning at location 'rev:BASE_PATH', where "rev" is the argument
+ * given to open_root().  Store USER as the author of the commit and
+ * LOG_MSG as the commit message.
+ *
+ * REPOS is a previously opened repository.  REPOS_URL is the decoded
+ * URL to the base of the repository, and is used to check copyfrom
+ * paths.
+ *
+ * Calling (*EDITOR)->close_edit completes the commit.  Before
+ * close_edit returns, but after the commit has succeeded, it will
+ * invoke CALLBACK with the new revision number, the commit date (as a
+ * const char *), commit author (as a const char *), and
+ * CALLBACK_BATON as arguments.  If CALLBACK returns an error, that
+ * error will be returned from close_edit, otherwise close_edit will
+ * return successfully (unless it encountered an error before invoking
+ * CALLBACK).
+ */
+svn_error_t *svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
+                                          void **edit_baton,
+                                          svn_repos_t *repos,
+                                          const char *repos_url,
+                                          const char *base_path,
+                                          const char *user,
+                                          const char *log_msg,
+                                          svn_repos_commit_callback_t *hook,
+                                          void *callback_baton,
+                                          apr_pool_t *pool);
+
+
+/* ---------------------------------------------------------------*/
+
 /*** Finding particular revisions. */
 
 /* Set *REVISION to the revision number in REPOS's filesystem that was

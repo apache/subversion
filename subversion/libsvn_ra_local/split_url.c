@@ -23,7 +23,8 @@
 #include "svn_private_config.h"
 
 svn_error_t *
-svn_ra_local__split_URL (const char **repos_path,
+svn_ra_local__split_URL (svn_repos_t **repos,
+                         const char **repos_url,
                          const char **fs_path,
                          const char *URL,
                          apr_pool_t *pool)
@@ -31,8 +32,6 @@ svn_ra_local__split_URL (const char **repos_path,
   svn_error_t *err;
   const char *candidate_url;
   const char *hostname, *path;
-  apr_pool_t *subpool = svn_pool_create (pool);
-  svn_repos_t *repos;
 
   /* Decode the URL, as we only use its parts as filesystem paths
      anyway. */
@@ -61,7 +60,7 @@ svn_ra_local__split_URL (const char **repos_path,
 
   /* Currently, the only hostnames we are allowing are the empty
      string and 'localhost' */
-  if ((hostname != path) && (strncmp (hostname, "localhost", 9) != 0))
+  if ((hostname != path) && (strncmp (hostname, "localhost/", 10) != 0))
     return svn_error_createf
       (SVN_ERR_RA_ILLEGAL_URL, 0, NULL, pool, 
        "svn_ra_local__split_URL: URL contains unsupported hostname\n"
@@ -70,7 +69,7 @@ svn_ra_local__split_URL (const char **repos_path,
 
   /* Duplicate the URL, starting at the top of the path */
 #ifndef SVN_WIN32
-  candidate_url = apr_pstrdup (subpool, path);
+  candidate_url = apr_pstrdup (pool, path);
 #else  /* SVN_WIN32 */
   /* On Windows, we'll typically have to skip the leading / if the
      path starts with a drive letter.  Like most Web browsers, We
@@ -90,13 +89,13 @@ svn_ra_local__split_URL (const char **repos_path,
        && (path[2] == ':' || path[2] == '|')
        && path[3] == '/')
      {
-       char *const dup_path = apr_pstrdup (subpool, ++path);
+       char *const dup_path = apr_pstrdup (pool, ++path);
        if (dup_path[1] == '|')
          dup_path[1] = ':';
        candidate_url = dup_path;
      }
    else
-     candidate_url = apr_pstrdup (subpool, path);
+     candidate_url = apr_pstrdup (pool, path);
  }
 #endif /* SVN_WIN32 */
 
@@ -105,7 +104,7 @@ svn_ra_local__split_URL (const char **repos_path,
   while (1)
     {
       /* Attempt to open a repository at URL. */
-      err = svn_repos_open (&repos, candidate_url, subpool);
+      err = svn_repos_open (repos, candidate_url, pool);
 
       /* Hey, cool, we were successful.  Stop looping. */
       if (err == SVN_NO_ERROR)
@@ -134,7 +133,7 @@ svn_ra_local__split_URL (const char **repos_path,
       /* We didn't successfully open the repository, and we haven't
          hacked this path down to a bare nub yet, so we'll chop off
          the last component of this path. */
-      candidate_url = svn_path_remove_component_nts (candidate_url, subpool);
+      candidate_url = svn_path_remove_component_nts (candidate_url, pool);
     }
 
   /* If we are still sitting in an error-ful state, we must not have
@@ -145,18 +144,10 @@ svn_ra_local__split_URL (const char **repos_path,
        "svn_ra_local__split_URL: Unable to find valid repository\n"
        "   (%s)", URL);
 
-  /* We apparently found a repository.  Let's close it since we aren't
-     really going to do anything with it. */
-  SVN_ERR (svn_repos_close (repos));
-
   /* What remains of URL after being hacked at in the previous step is
-     REPOS_PATH.  FS_PATH is what we've hacked off in the process.  We
-     need to make sure these are allocated in the -original- pool. */
-  *repos_path = apr_pstrdup (pool, candidate_url);
+     REPOS_URL.  FS_PATH is what we've hacked off in the process. */
   *fs_path = apr_pstrdup (pool, path + strlen (candidate_url));
-
-  /* Destroy our temporary memory pool. */
-  svn_pool_destroy (subpool);
+  *repos_url = apr_pstrmemdup (pool, URL, strlen(URL) - strlen(*fs_path));
 
   return SVN_NO_ERROR;
 }
