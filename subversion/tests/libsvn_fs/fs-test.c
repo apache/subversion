@@ -619,7 +619,8 @@ create_greek_tree_transaction (const char **msg)
 static svn_error_t *
 verify_entry (apr_hash_t *entries, const char *key)
 {
-  svn_fs_dirent_t *ent = apr_hash_get (entries, key, strlen (key));
+  svn_fs_dirent_t *ent = apr_hash_get (entries, key, 
+                                       APR_HASH_KEY_STRING);
 
   if (ent == NULL)
     return svn_error_createf
@@ -803,7 +804,7 @@ revision_props (const char **msg)
            found, return an error. */
         prop_value = apr_hash_get (proplist, 
                                    final_props[i][0],
-                                   strlen (final_props[i][0]));
+                                   APR_HASH_KEY_STRING);
         if (! prop_value)
           return svn_error_createf
             (SVN_ERR_FS_GENERAL, 0, NULL, pool,
@@ -922,7 +923,7 @@ node_props (const char **msg)
            found, return an error. */
         prop_value = apr_hash_get (proplist, 
                                    final_props[i][0],
-                                   strlen (final_props[i][0]));
+                                   APR_HASH_KEY_STRING);
         if (! prop_value)
           return svn_error_createf
             (SVN_ERR_FS_GENERAL, 0, NULL, pool,
@@ -958,7 +959,7 @@ check_entry (svn_fs_root_t *root,
   svn_fs_dirent_t *ent;
 
   SVN_ERR (svn_fs_dir_entries (&entries, root, path, pool));
-  ent = apr_hash_get (entries, name, strlen (name));
+  ent = apr_hash_get (entries, name, APR_HASH_KEY_STRING);
 
   if (ent)
     *present = TRUE;
