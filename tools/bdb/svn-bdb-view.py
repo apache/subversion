@@ -69,18 +69,28 @@ def am_changes(ctx):
   "changes"
   cur = ctx.changes_db.cursor()
   try:
-    rec = cur.first()
-    prevtxn = None
-    while rec:
-      ch = skel.Change(rec[1])
-      lead = "txn %s:" % rec[0]
-      if prevtxn == rec[0]:
-        lead = " " * len(lead)
-      print "%s %s %s %s %s %s%s" % (lead, opmap[ch.kind], ch.path, ch.node,
-          ch.textmod and "T" or "-", ch.propmod and "P" or "-",
-          (not ctx.nodes_db.has_key(ch.node)) and "*** MISSING NODE ***" or "")
-      prevtxn = rec[0]
-      rec = cur.next()
+    current_txnid_len = 0
+    maximum_txnid_len = 0
+    while current_txnid_len <= maximum_txnid_len:
+      current_txnid_len += 1
+      rec = cur.first()
+      prevtxn = None
+      while rec:
+        if len(rec[0]) != current_txnid_len:
+          rec = cur.next()
+          continue
+        ch = skel.Change(rec[1])
+        lead = "txn %s:" % rec[0]
+        if prevtxn == rec[0]:
+          lead = " " * len(lead)
+        print "%s %s %s %s %s %s%s" % (lead, opmap[ch.kind], ch.path, ch.node,
+            ch.textmod and "T" or "-", ch.propmod and "P" or "-",
+            (not ctx.nodes_db.has_key(ch.node)) \
+                and "*** MISSING NODE ***" or "")
+        prevtxn = rec[0]
+        if len(rec[0]) > maximum_txnid_len:
+          maximum_txnid_len = len(rec[0])
+        rec = cur.next()
   finally:
     cur.close()
 
