@@ -1137,8 +1137,8 @@ C  ./bar.c
               <term><filename>filename.*.rOLDREV</filename></term>
               <listitem>
                 <para>This is the file that was the BASE revision
-                  before you updated your working copy.  That is, it
-                  the file that you checked out before you made your
+                  before you updated your working copy.  That is, the
+                  file that you checked out before you made your
                   latest edits.</para>
               </listitem>
             </varlistentry>
