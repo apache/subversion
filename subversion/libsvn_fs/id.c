@@ -106,7 +106,7 @@ distance_from_prefix (const svn_fs_id_t *a, int prefix)
   int d = 0;
 
   for (i = 0; a[prefix + i] != -1; i += 2)
-    d += a[prefix + i + 1] - 1;
+    d += a[prefix + i + 1];
 
   return d;
 }
