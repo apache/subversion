@@ -74,7 +74,9 @@ dnl Configure neon --------------------------
           NEON_LIBS="$NEON_LIBS $NEON_LIBS_NEW"
           # Also find out which macros neon defines (but ignore extra include paths):
           # this will include -DNEON_SSL if neon was built with SSL support
+          changequote(<<, >>)dnl
           CFLAGS="$CFLAGS `$SHELL $abs_builddir/neon/neon-config --cflags | sed -e "s/-I[^ ]*//g"`"
+          changequote([, ])dnl
         fi
 
 	SVN_SUBDIRS="$SVN_SUBDIRS neon"
@@ -91,9 +93,11 @@ dnl Configure neon --------------------------
           echo "but Subversion needs neon $NEON_WANTED."
           SVN_DOWNLOAD_NEON()
         else
+          changequote(<<, >>)dnl
           SVN_NEON_INCLUDES=`$neon_config --cflags | sed -e 's/-D[^ ]*//g'`
           NEON_LIBS=`$neon_config --libs | sed -e 's/-lneon//g'`
           CFLAGS="$CFLAGS `$neon_config --cflags | sed -e 's/-I[^ ]*//g'`"
+          changequote([, ])dnl
           NEON_LIBS="$NEON_LIBS "`$neon_config --prefix `"/lib/libneon.la"
         fi
       else
