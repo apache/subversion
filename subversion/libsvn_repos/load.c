@@ -197,6 +197,9 @@ stream_malformed (void)
    PARSE_FNS->set_*_property on RECORD_BATON (depending on the value
    of IS_NODE.)
 
+   Set *ACTUAL_LENGTH to the number of bytes consumed from STREAM.
+   If an error is returned, the value of *ACTUAL_LENGTH is undefined.
+
    Use POOL for all allocations.  */
 static svn_error_t *
 parse_property_block (svn_stream_t *stream,
