@@ -43,9 +43,3 @@ Candidate changes:
     Justifcation: javahl binding only fix to prevent a crash
     Votes:
       +1: pmayweg
-
-  * r9890
-    Fix crash with svn blame -v and lines with missing blame information.
-    Justification: Fixes an ugly crash.
-    Votes:
-      +1: lundblad
