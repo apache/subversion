@@ -57,11 +57,13 @@ svn_wc_translated_file (const char **xlated_p,
   svn_subst_eol_style_t style;
   const char *eol;
   svn_subst_keywords_t *keywords;
+  svn_boolean_t special;
   
   SVN_ERR (svn_wc__get_eol_style (&style, &eol, vfile, adm_access, pool));
   SVN_ERR (svn_wc__get_keywords (&keywords, vfile, adm_access, NULL, pool));
+  SVN_ERR (svn_wc__get_special (&special, vfile, adm_access, pool));
 
-  if ((style == svn_subst_eol_style_none) && (! keywords))
+  if ((style == svn_subst_eol_style_none) && (! keywords) && (! special))
     {
       /* Translation would be a no-op, so return the original file. */
       *xlated_p = vfile;
@@ -91,33 +93,36 @@ svn_wc_translated_file (const char **xlated_p,
       
       if (style == svn_subst_eol_style_fixed)
         {
-          SVN_ERR (svn_subst_copy_and_translate (vfile,
-                                                 tmp_vfile,
-                                                 eol,
-                                                 TRUE,
-                                                 keywords,
-                                                 FALSE,
-                                                 pool));
+          SVN_ERR (svn_subst_copy_and_translate2 (vfile,
+                                                  tmp_vfile,
+                                                  eol,
+                                                  TRUE,
+                                                  keywords,
+                                                  FALSE,
+                                                  special,
+                                                  pool));
         }
       else if (style == svn_subst_eol_style_native)
         {
-          SVN_ERR (svn_subst_copy_and_translate (vfile,
-                                                 tmp_vfile,
-                                                 SVN_WC__DEFAULT_EOL_MARKER,
-                                                 force_repair,
-                                                 keywords,
-                                                 FALSE,
-                                                 pool));
+          SVN_ERR (svn_subst_copy_and_translate2 (vfile,
+                                                  tmp_vfile,
+                                                  SVN_WC__DEFAULT_EOL_MARKER,
+                                                  force_repair,
+                                                  keywords,
+                                                  FALSE,
+                                                  special,
+                                                  pool));
         }
       else if (style == svn_subst_eol_style_none)
         {
-          SVN_ERR (svn_subst_copy_and_translate (vfile,
-                                                 tmp_vfile,
-                                                 NULL,
-                                                 force_repair,
-                                                 keywords,
-                                                 FALSE,
-                                                 pool));
+          SVN_ERR (svn_subst_copy_and_translate2 (vfile,
+                                                  tmp_vfile,
+                                                  NULL,
+                                                  force_repair,
+                                                  keywords,
+                                                  FALSE,
+                                                  special,
+                                                  pool));
         }
       else
         {
@@ -215,6 +220,24 @@ svn_wc__get_keywords (svn_subst_keywords_t **keywords,
 
   *keywords = apr_pmemdup (pool, &tmp_keywords, sizeof (tmp_keywords));
       
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__get_special (svn_boolean_t *special,
+                     const char *path,
+                     svn_wc_adm_access_t *adm_access,
+                     apr_pool_t *pool)
+{
+  const svn_string_t *propval;
+
+  /* Get the property value. */
+  SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_SPECIAL, path, adm_access,
+                            pool));
+
+  *special = propval ? TRUE : FALSE;
+
   return SVN_NO_ERROR;
 }
 

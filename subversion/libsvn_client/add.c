@@ -205,27 +205,44 @@ add_file (const char *path,
   apr_hash_t* properties;
   apr_hash_index_t *hi;
   const char *mimetype;
+  svn_node_kind_t kind;
 
   /* add the file */
   SVN_ERR (svn_wc_add (path, adm_access, NULL, SVN_INVALID_REVNUM,
                        ctx->cancel_func, ctx->cancel_baton,
                        NULL, NULL, pool));
-  /* get automatic properties */
-  SVN_ERR (svn_client__get_auto_props (&properties, &mimetype, path, ctx,
-                                       pool));
-  if (properties)
-    {
-      /* loop through the hashtable and add the properties */
-      for (hi = apr_hash_first (pool, properties);
-           hi != NULL; hi = apr_hash_next (hi))
-        {
-          const void *pname;
-          void *pval;
 
-          apr_hash_this (hi, &pname, NULL, &pval);
-          SVN_ERR (svn_wc_prop_set (pname, pval, path, adm_access, pool));
+  /* Check to see if this is a special file. */
+  SVN_ERR (svn_io_check_special_path (path, &kind, pool));
+
+  if (kind == svn_node_special)
+    {
+      /* This must be a special file. */
+      SVN_ERR (svn_wc_prop_set (SVN_PROP_SPECIAL,
+                                svn_string_create (SVN_PROP_SPECIAL_VALUE, pool),
+                                path, adm_access, pool));
+      mimetype = NULL;
+    }
+  else
+    {
+      /* get automatic properties */
+      SVN_ERR (svn_client__get_auto_props (&properties, &mimetype, path, ctx,
+                                           pool));
+      if (properties)
+        {
+          /* loop through the hashtable and add the properties */
+          for (hi = apr_hash_first (pool, properties);
+               hi != NULL; hi = apr_hash_next (hi))
+            {
+              const void *pname;
+              void *pval;
+          
+              apr_hash_this (hi, &pname, NULL, &pval);
+              SVN_ERR (svn_wc_prop_set (pname, pval, path, adm_access, pool));
+            }
         }
     }
+
   /* Report the addition to the caller. */
   if (ctx->notify_func != NULL)
     (*ctx->notify_func) (ctx->notify_baton, path, svn_wc_notify_add,
@@ -304,7 +321,7 @@ add_dir_recursive (const char *dirname,
           SVN_ERR (add_dir_recursive (fullpath, dir_access, force,
                                       ctx, subpool));
         }
-      else if (this_entry.filetype == APR_REG)
+      else if (this_entry.filetype != APR_UNKFILE)
         {
           err = add_file (fullpath, ctx, dir_access, subpool);
           if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)

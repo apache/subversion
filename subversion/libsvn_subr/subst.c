@@ -43,6 +43,13 @@
 #include "svn_subst.h"
 #include "svn_pools.h"
 
+/**
+ * The textual elements of a detranslated special file.  One of these
+ * strings must appear as the first element of any special file as it
+ * exists in the repository or the text base.
+ */
+#define SVN_SUBST__SPECIAL_LINK_STR "link"
+
 void 
 svn_subst_eol_style_from_value (svn_subst_eol_style_t *style,
                                 const char **eol,
@@ -706,11 +713,162 @@ svn_subst_copy_and_translate (const char *src,
                               svn_boolean_t expand,
                               apr_pool_t *pool)
 {
+  return svn_subst_copy_and_translate2 (src, dst, eol_str, repair, keywords,
+                                        expand, FALSE, pool);
+}
+
+/* Given a file containing a repository representation of a special
+   file in SRC, create the appropriate special file at location DST.
+   Perform all allocations in POOL. */
+static svn_error_t *
+create_special_file (const char *src,
+                     const char *dst,
+                     apr_pool_t *pool)
+{
+  svn_stringbuf_t *contents;
+  char *identifier, *remainder;
+  const char *dst_tmp;
+  svn_error_t *err;
+
+  /* Read in the detranslated file. */
+  SVN_ERR (svn_stringbuf_from_file (&contents, src, pool));
+
+  /* Separate off the identifier.  The first space character delimits
+     the identifier, after which any remaining characters are specific
+     to the actual special device being created. */
+  identifier = contents->data;
+  for (remainder = identifier; *remainder; remainder++)
+    {
+      if (*remainder == ' ')
+        {
+          *remainder = '\0';
+          remainder++;
+          break;
+        }
+    }
+           
+  if (! strcmp (identifier, SVN_SUBST__SPECIAL_LINK_STR))
+    {
+      /* For symlinks, the type specific data is just a filesystem
+         path that the symlink should reference. */
+      err = svn_io_create_unique_link (&dst_tmp, dst, remainder,
+                                       ".tmp", pool);
+    }
+  else
+    {
+      /* We should return a valid error here. */
+      return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                "Unsupported special file type '%s'",
+                                identifier);
+    }
+
+  /* If we had an error, check to see if it was because this type of
+     special device is not supported. */
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
+        {
+          apr_file_t *fp;
+          
+          svn_error_clear (err);
+          /* Fall back to just copying the text-base. */
+          SVN_ERR (svn_io_open_unique_file (&fp, &dst_tmp, dst, ".tmp", FALSE,
+                                            pool));
+          SVN_ERR (svn_io_file_close (fp, pool));
+          SVN_ERR (svn_io_copy_file (src, dst_tmp, TRUE, pool));
+        }
+      else
+        return err;
+    }
+
+  /* Do the atomic rename from our temporary location. */
+  SVN_ERR (svn_io_file_rename (dst_tmp, dst, pool));
+  
+  return SVN_NO_ERROR;
+}
+
+
+/* Given a special file at SRC, generate a textual representation of
+   it in a normal file at DST.  Perform all allocations in POOL. */
+static svn_error_t *
+detranslate_special_file (const char *src,
+                          const char *dst,
+                          apr_pool_t *pool)
+{
+  const char *dst_tmp;
+  svn_string_t *buf;
+  apr_file_t *s, *d;
+  svn_stream_t *src_stream, *dst_stream;
+  apr_finfo_t finfo;
+  
+  /* First determine what type of special file we are
+     detranslating. */
+  SVN_ERR (svn_io_stat (&finfo, src, APR_FINFO_MIN | APR_FINFO_LINK, pool));
+
+  /* Open a temporary destination that we will eventually atomically
+     rename into place. */
+  SVN_ERR (svn_io_open_unique_file (&d, &dst_tmp, dst,
+                                    ".tmp", FALSE, pool));
+
+  dst_stream = svn_stream_from_aprfile (d, pool);
+  
+  switch (finfo.filetype) {
+  case APR_REG:
+    /* Nothing special to do here, just copy the original file's
+       contents. */
+    SVN_ERR (svn_io_file_open (&s, src, APR_READ | APR_BUFFERED,
+                               APR_OS_DEFAULT, pool));
+    src_stream = svn_stream_from_aprfile (d, pool);
+
+    SVN_ERR (svn_stream_copy (src_stream, dst_stream, pool));
+    break;
+  case APR_LNK:
+    /* Determine the destination of the link. */
+    SVN_ERR (svn_io_read_link (&buf, src, pool));
+
+    SVN_ERR (svn_stream_printf (dst_stream, pool, "link %s",
+                                buf->data));
+    break;
+  default:
+    abort ();
+  }
+
+  SVN_ERR (svn_io_file_close (d, pool));
+
+  /* Do the atomic rename from our temporary location. */
+  SVN_ERR (svn_io_file_rename (dst_tmp, dst, pool));
+  
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_subst_copy_and_translate2 (const char *src,
+                               const char *dst,
+                               const char *eol_str,
+                               svn_boolean_t repair,
+                               const svn_subst_keywords_t *keywords,
+                               svn_boolean_t expand,
+                               svn_boolean_t special,
+                               apr_pool_t *pool)
+{
   const char *dst_tmp = NULL;
   svn_stream_t *src_stream, *dst_stream;
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
   svn_error_t *err;
   apr_pool_t *subpool;
+
+  if (special)
+    {
+      /* If this is a 'special' file, we may need to create it or
+         detranslate it. */
+      if (expand)
+        SVN_ERR (create_special_file (src, dst, pool));
+      else
+        SVN_ERR (detranslate_special_file (src, dst, pool));
+      
+      return SVN_NO_ERROR;
+    }
 
   /* The easy way out:  no translation needed, just copy. */
   if (! (eol_str || keywords))

@@ -86,7 +86,10 @@ typedef enum
   svn_node_dir,
 
   /* something's here, but we don't know what */
-  svn_node_unknown
+  svn_node_unknown,
+
+  /* a special file */
+  svn_node_special
 
 } svn_node_kind_t;
 

@@ -57,6 +57,7 @@
 #include "svn_pools.h"
 #include "svn_utf.h"
 #include "svn_config.h"
+#include "svn_private_config.h"
 
 
 /*
@@ -98,6 +99,7 @@
 static svn_error_t *
 io_check_path (const char *path,
                svn_boolean_t resolve_symlinks,
+               svn_boolean_t expand_special,
                svn_node_kind_t *kind,
                apr_pool_t *pool)
 {
@@ -128,10 +130,8 @@ io_check_path (const char *path,
     *kind = svn_node_file;
   else if (finfo.filetype == APR_DIR)
     *kind = svn_node_dir;
-#if 0
-  else if (finfo.filetype == APR_LINK)
-    *kind = svn_node_symlink;  /* we support symlinks someday, but not yet */
-#endif /* 0 */
+  else if (finfo.filetype == APR_LNK)
+    *kind = expand_special ? svn_node_special : svn_node_file;
   else
     *kind = svn_node_unknown;
 
@@ -144,7 +144,7 @@ svn_io_check_resolved_path (const char *path,
                             svn_node_kind_t *kind,
                             apr_pool_t *pool)
 {
-  return io_check_path (path, TRUE, kind, pool);
+  return io_check_path (path, TRUE, FALSE, kind, pool);
 }
 
 svn_error_t *
@@ -152,9 +152,16 @@ svn_io_check_path (const char *path,
                    svn_node_kind_t *kind,
                    apr_pool_t *pool)
 {
-  return io_check_path (path, FALSE, kind, pool);
+  return io_check_path (path, FALSE, FALSE, kind, pool);
 }
 
+svn_error_t *
+svn_io_check_special_path (const char *path,
+                           svn_node_kind_t *kind,
+                           apr_pool_t *pool)
+{
+  return io_check_path (path, FALSE, TRUE, kind, pool);
+}
 
 svn_error_t *
 svn_io_open_unique_file (apr_file_t **f,
@@ -240,6 +247,121 @@ svn_io_open_unique_file (apr_file_t **f,
   return svn_error_createf (SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
                             NULL,
                             "Unable to make name for '%s'", path);
+}
+
+svn_error_t *
+svn_io_create_unique_link (const char **unique_name_p,
+                           const char *path,
+                           const char *dest,
+                           const char *suffix,
+                           apr_pool_t *pool)
+{
+#ifdef HAVE_SYMLINK  
+  unsigned int i;
+  const char *unique_name;
+  const char *unique_name_apr;
+  int rv;
+
+  for (i = 1; i <= 99999; i++)
+    {
+      apr_status_t apr_err;
+
+      /* Special case the first attempt -- if we can avoid having a
+         generated numeric portion at all, that's best.  So first we
+         try with just the suffix; then future tries add a number
+         before the suffix.  (A do-while loop could avoid the repeated
+         conditional, but it's not worth the clarity loss.)
+
+         If the first attempt fails, the first number will be "2".
+         This is good, since "1" would misleadingly imply that
+         the second attempt was actually the first... and if someone's
+         got conflicts on their conflicts, we probably don't want to
+         add to their confusion :-). */
+      if (i == 1)
+        unique_name = apr_psprintf (pool, "%s%s", path, suffix);
+      else
+        unique_name = apr_psprintf (pool, "%s.%u%s", path, i, suffix);
+
+      /* Hmmm.  Ideally, we would append to a native-encoding buf
+         before starting iteration, then convert back to UTF-8 for
+         return. But I suppose that would make the appending code
+         sensitive to i18n in a way it shouldn't be... Oh well. */
+      SVN_ERR (svn_path_cstring_from_utf8 (&unique_name_apr, unique_name,
+                                           pool));
+
+      do {
+        rv = symlink (dest, unique_name_apr);
+      } while (rv == -1 && APR_STATUS_IS_EINTR (apr_get_os_error ()));
+      
+      apr_err = apr_get_os_error();
+      
+      if (APR_STATUS_IS_EEXIST (apr_err))
+        continue;
+      else if (rv == -1 && apr_err)
+        {
+          /* On Win32, CreateFile failswith an "Access Denied" error
+             code, rather than "File Already Exists", if the colliding
+             name belongs to a directory. */
+          if (APR_STATUS_IS_EACCES (apr_err))
+            {
+              apr_finfo_t finfo;
+              apr_status_t apr_err_2 = apr_stat (&finfo, unique_name_apr,
+                                                 APR_FINFO_TYPE, pool);
+
+              if (APR_STATUS_IS_SUCCESS (apr_err_2)
+                  && (finfo.filetype == APR_DIR))
+                continue;
+
+              /* Else ignore apr_err_2; better to fall through and
+                 return the original error. */
+            }
+
+          *unique_name_p = NULL;
+          return svn_error_wrap_apr (apr_err, "Can't open '%s'", unique_name);
+        }
+      else
+        {
+          *unique_name_p = unique_name;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  *unique_name_p = NULL;
+  return svn_error_createf (SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
+                            NULL,
+                            "Unable to make name for '%s'", path);
+#else
+  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                           "Symbolic links are not supported on this "
+                           "platform");
+#endif  
+}
+
+svn_error_t *
+svn_io_read_link (svn_string_t **dest,
+                  const char *path,
+                  apr_pool_t *pool)
+{
+#ifdef HAVE_READLINK  
+  char buf[1024];
+  int rv;
+  
+  do {
+    rv = readlink (path, buf, sizeof(buf));
+  } while (rv == -1 && APR_STATUS_IS_EINTR (apr_get_os_error ()));
+
+  if (rv == -1)
+    return svn_error_wrap_apr
+      (apr_get_os_error (), "Can't read contents of link");
+
+  *dest = svn_string_ncreate (buf, rv, pool);
+  
+  return SVN_NO_ERROR;
+#else
+  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                           "Symbolic links are not supported on this "
+                           "platform");
+#endif  
 }
 
 #if 1 /* TODO: Remove this code when APR 0.9.6 is released. */
@@ -635,7 +757,7 @@ svn_io_file_affected_time (apr_time_t *apr_time,
 {
   apr_finfo_t finfo;
 
-  SVN_ERR (svn_io_stat (&finfo, path, APR_FINFO_MIN, pool));
+  SVN_ERR (svn_io_stat (&finfo, path, APR_FINFO_MIN | APR_FINFO_LINK, pool));
 
   *apr_time = finfo.mtime;
 
@@ -1317,7 +1439,6 @@ svn_io_get_dirents (apr_hash_t **dirents,
   /* These exist so we can use their addresses as hash values! */
   static const svn_node_kind_t static_svn_node_file = svn_node_file;
   static const svn_node_kind_t static_svn_node_dir = svn_node_dir;
-  static const svn_node_kind_t static_svn_node_unknown = svn_node_unknown;
 
   *dirents = apr_hash_make (pool);
   
@@ -1350,7 +1471,7 @@ svn_io_get_dirents (apr_hash_t **dirents,
             /* ### symlinks, etc. will fall into this category for now.
                someday subversion will recognize them. :)  */
             apr_hash_set (*dirents, name, APR_HASH_KEY_STRING,
-                          &static_svn_node_unknown);
+                          &static_svn_node_file);
         }
     }
 
