@@ -318,7 +318,7 @@ def status_with_new_files_pending(sbox):
 
 
 def status_for_unignored_file(sbox):
-  "status for unignored file"
+  "status for unignored file and directory"
 
   sbox.build()
 
@@ -329,33 +329,23 @@ def status_for_unignored_file(sbox):
 
   try:
     svntest.main.file_append('newfile', 'this is a new file')
-    svntest.main.run_svn(None, 'propset', 'svn:ignore', 'newfile', '.')
+    os.makedirs('newdir')
+    svntest.main.run_svn(None, 'propset', 'svn:ignore', 'new*', '.')
 
     # status on the directory with --no-ignore
-    stat_output, err_output = svntest.main.run_svn(None, 'status', 
-                                                   '--no-ignore', '.')
-    if err_output:
-      raise svntest.Failure
-    status = 1
-    for line in stat_output:
-      if re.match("I +newfile", line):
-        status = 0
-
-    if (status == 1):
-      raise svntest.Failure
+    svntest.actions.run_and_verify_svn(None,
+                                       [' M     .\n',
+                                        'I      newdir\n',
+                                        'I      newfile\n'],
+                                       [],
+                                       'status', '--no-ignore', '.')
 
     # status specifying the file explicitly on the command line
-    stat_output, err_output = svntest.main.run_svn(None, 'status', 'newfile')
-
-    if err_output:
-      raise svntest.Failure
-    status = 1
-    for line in stat_output:
-      if re.match("I +newfile", line):
-        status = 0
-
-    if (status == 1):
-      raise svntest.Failure
+    svntest.actions.run_and_verify_svn(None,
+                                       ['I      newdir\n',
+                                        'I      newfile\n'],
+                                       [],
+                                       'status', 'newdir', 'newfile')
   
   finally:
     os.chdir(was_cwd)
