@@ -47,14 +47,19 @@ static apr_status_t cleanup_session(void *sess)
 /* A neon-session callback to 'pull' authentication data when
    challenged.  In turn, this routine 'pulls' the data from the client
    callbacks if needed.  */
-static int request_auth(void *userdata, const char *realm,
-                        char **username, char **password)
+static int request_auth(void *userdata, const char *realm, int attempt,
+                        char *username, char *password)
 {
-  apr_size_t l;
   void *a, *auth_baton;
   char *uname, *pword;
   svn_ra_simple_password_authenticator_t *authenticator = NULL;
   svn_ra_session_t *ras = userdata;
+
+  if (attempt > 1) 
+    {
+      /* Only use two retries. */
+      return -1;
+    }
 
   /* ### my only worry is that we're not catching any svn_errors from
      get_authenticator, get_username, get_password... */
@@ -67,22 +72,13 @@ static int request_auth(void *userdata, const char *realm,
   authenticator->get_user_and_pass (&uname, &pword,
                                     auth_baton, 
                                     /* possibly force a user-prompt: */
-                                    ras->number_of_tries ? TRUE : FALSE,
+                                    attempt ? TRUE : FALSE,
                                     ras->pool);
 
-  /* send a malloc'd copy of the username to neon */
-  l = strlen(uname) + 1;
-  *username = malloc(l);
-  memcpy(*username, uname, l);
-  
-  /* send a malloc'd copy of the password to neon */
-  l = strlen(pword) + 1;
-  *password = malloc(l);
-  memcpy(*password, pword, l);
+  /* ### silently truncates username/password to 256 chars. */
+  apr_cpystrn(username, uname, NE_ABUFSIZ);
+  apr_cpystrn(password, pword, NE_ABUFSIZ);
 
-  /* remember that we made another attempt to get auth info */
-  ras->number_of_tries++;
-  
   return 0;
 }
 
