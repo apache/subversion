@@ -1143,9 +1143,32 @@ The older revisions are stored in backup files named F.~REVISION~."
   "Run ediff on the actual file with a previous revision."
   (interactive "P")
   (svn-status-get-specific-revision t arg)
-  (ediff-files
-   (cdr (car svn-status-get-specific-revision-file-info))
-   (car (car svn-status-get-specific-revision-file-info))))
+  (let* ((ediff-after-quit-destination-buffer (current-buffer))
+	 (my-buffer (find-file-noselect (cdr (car svn-status-get-specific-revision-file-info))))
+	 (base-buff (find-file-noselect (car (car svn-status-get-specific-revision-file-info))))
+	 (svn-transient-buffers (list base-buff ))
+	 (startup-hook '(svn-ediff-startup-hook)))
+    (ediff-buffers my-buffer base-buff  startup-hook)))
+
+(defun svn-ediff-startup-hook ()
+  (add-hook 'ediff-after-quit-hook-internal
+	    `(lambda ()
+	       (svn-ediff-exit-hook
+		',ediff-after-quit-destination-buffer ',svn-transient-buffers))
+	    nil 'local))
+
+(defun svn-ediff-exit-hook (svn-buf tmp-bufs)
+  ;; kill the temp buffers (and their associated windows)
+  (dolist (tb tmp-bufs)
+    (when (and tb (buffer-live-p tb) (not (buffer-modified-p tb)))
+      (let ((win (get-buffer-window tb t)))
+	(when win (delete-window win))
+	(kill-buffer tb))))
+  ;; switch back to the *svn* buffer
+  (when (and svn-buf (buffer-live-p svn-buf)
+	     (not (get-buffer-window svn-buf t)))
+    (ignore-errors (switch-to-buffer svn-buf))))
+
 
 (defun svn-status-read-revision-string (prompt &optional default-value)
   "Prompt the user for a svn revision number."
@@ -1268,10 +1291,13 @@ When called with a prefix argument, it is possible to enter a new property."
            (setq prop-name
                  (completing-read "Delete Property - Name: " (mapcar 'list pl) nil t))
            (unless (string= prop-name "")
-             (let ((file-names (svn-status-marked-file-names)))
-               (when file-names
-                 (svn-run-svn t t 'propdel
-                              (append (list "propdel" prop-name) file-names)))))))))
+             (save-excursion
+               (set-buffer "*svn-status*")
+               (let ((file-names (svn-status-marked-file-names)))
+                 (when file-names
+                   (message "Going to delete prop %s for %s" prop-name file-names)
+                   (svn-run-svn t t 'propdel
+                                (append (list "propdel" prop-name) file-names))))))))))
 
 (defun svn-status-property-edit (file-info-list prop-name &optional new-prop-value)
   (let* ((commit-buffer (get-buffer-create "*svn-property-edit*"))
