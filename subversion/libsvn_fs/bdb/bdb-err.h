@@ -65,8 +65,19 @@ svn_error_t *svn_fs__bdb_wrap_db (svn_fs_t *fs,
                                   int db_err);
 
 
-/* A terse wrapper for svn_fs__check_db.  */
+/* A terse wrapper for svn_fs__bdb_wrap_db.  */
 #define BDB_WRAP(fs, op, err) (svn_fs__bdb_wrap_db ((fs), (op), (err)))
+
+/* If EXPR returns a non-zero value, pass that value to
+   svn_fs__bdb_dberr and return that function's value.  This is like
+   SVN_ERR, but is used by functions that return a Subversion error
+   and call other functions that return a Berkeley DB error code. */
+#define SVN_BDB_ERR(expr)                       \
+  do {                                          \
+    int db_err__temp = (expr);                  \
+    if (db_err__temp)                           \
+      return svn_fs__bdb_dberr (expr);          \
+  } while (0)
 
 
 /* If EXPR returns a non-zero value, return it.  This is like SVN_ERR,
