@@ -69,6 +69,9 @@ svn_fs__bdb_open_strings_table (DB **strings_p,
 
 /*** Storing and retrieving strings.  ***/
 
+/* Allocate *CURSOR and advance it to first row in the set of rows
+   whose key is defined by QUERY.  Set *LENGTH to the size of that
+   first row.  */
 static svn_error_t *
 locate_key (apr_size_t *length,
             DBC **cursor,
@@ -117,8 +120,12 @@ locate_key (apr_size_t *length,
          we need to re-run the operation to make it happen. */
       svn_fs__clear_dbt (&rerun);
       rerun.flags |= DB_DBT_USERMEM | DB_DBT_PARTIAL;
-      SVN_ERR (BDB_WRAP (fs, "rerunning cursor move",
-                        (*cursor)->c_get (*cursor, query, &rerun, DB_SET)));
+      db_err = (*cursor)->c_get (*cursor, query, &rerun, DB_SET);
+      if (db_err)
+        {
+          (*cursor)->c_close (*cursor);
+          return BDB_WRAP (fs, "rerunning cursor move", db_err);
+        }
     }
 
   /* ### this cast might not be safe? */
@@ -127,6 +134,10 @@ locate_key (apr_size_t *length,
   return SVN_NO_ERROR;
 }
 
+
+/* Advance CURSOR by a single row in the set of rows whose keys match
+   CURSOR's current location.  Set *LENGTH to the size of that next
+   row.  If any error occurs, CURSOR will be destroyed.  */
 static int
 get_next_length (apr_size_t *length, DBC *cursor, DBT *query)
 {
@@ -158,6 +169,8 @@ get_next_length (apr_size_t *length, DBC *cursor, DBT *query)
       svn_fs__clear_dbt (&rerun);
       rerun.flags |= DB_DBT_USERMEM | DB_DBT_PARTIAL;
       db_err = cursor->c_get (cursor, query, &rerun, DB_NEXT_DUP);
+      if (db_err)
+        cursor->c_close (cursor);
     }
 
   /* ### this cast might not be safe? */
