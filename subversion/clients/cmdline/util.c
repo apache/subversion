@@ -401,7 +401,7 @@ truncate_buffer_at_prefix (apr_size_t *new_len,
 }
 
 
-#define EDITOR_EOF_PREFIX  "--This line, and those below, will be ignored--"
+#define EDITOR_EOF_PREFIX  _("--This line, and those below, will be ignored--")
 
 /* This function is of type svn_client_get_commit_log_t. */
 svn_error_t *
@@ -411,11 +411,15 @@ svn_cl__get_log_message (const char **log_msg,
                          void *baton,
                          apr_pool_t *pool)
 {
-  const char *default_msg =
-    APR_EOL_STR EDITOR_EOF_PREFIX APR_EOL_STR APR_EOL_STR;
+  svn_stringbuf_t *default_msg = NULL;
   struct log_msg_baton *lmb = baton;
   svn_stringbuf_t *message = NULL;
-  
+
+  /* Set default message.  */
+  default_msg = svn_stringbuf_create(APR_EOL_STR, pool);
+  svn_stringbuf_appendcstr(default_msg, EDITOR_EOF_PREFIX);
+  svn_stringbuf_appendcstr(default_msg, APR_EOL_STR APR_EOL_STR);
+
   *tmp_file = NULL;
   if (lmb->message)
     {
@@ -448,7 +452,7 @@ svn_cl__get_log_message (const char **log_msg,
          get one.  Note that svn_cl__edit_externally will still return
          a UTF-8'ized log message. */
       int i;
-      svn_stringbuf_t *tmp_message = svn_stringbuf_create (default_msg, pool);
+      svn_stringbuf_t *tmp_message = svn_stringbuf_dup (default_msg, pool);
       svn_error_t *err = SVN_NO_ERROR;
       const char *msg2 = NULL;  /* ### shim for svn_cl__edit_externally */
 

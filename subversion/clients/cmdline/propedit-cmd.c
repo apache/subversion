@@ -33,6 +33,7 @@
 #include "svn_error.h"
 #include "svn_utf.h"
 #include "svn_subst.h"
+#include "svn_private_config.h"
 #include "cl.h"
 
 
@@ -248,16 +249,16 @@ svn_cl__propedit (apr_getopt_t *os,
                 if (opt_state->encoding)
                   return svn_error_create 
                     (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                     "Bad encoding option: prop value not stored as UTF8");
+                     _("Bad encoding option: prop value not stored as UTF8"));
               
               SVN_ERR (svn_client_propset (pname_utf8, propval, target, 
                                            FALSE, subpool));
-              printf ("Set new value for property '%s' on '%s'\n",
+              printf (_("Set new value for property '%s' on '%s'\n"),
                       pname, target_stdout);
             }
           else
             {
-              printf ("No changes to property '%s' on '%s'\n",
+              printf (_("No changes to property '%s' on '%s'\n"),
                       pname, target_stdout);
             }
         }
