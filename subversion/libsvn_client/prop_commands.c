@@ -209,7 +209,7 @@ svn_client_propset (const char *propname,
                     svn_boolean_t recurse,
                     apr_pool_t *pool)
 {
-  return svn_client_propset2 (propname, propval, target, recurse, 0, pool);
+  return svn_client_propset2 (propname, propval, target, recurse, FALSE, pool);
 }
 
 

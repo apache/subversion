@@ -124,7 +124,7 @@ svn_cl__propdel (apr_getopt_t *os,
              opt_state->force doesn't apply to this command anyway. */
           SVN_ERR (svn_client_propset2 (pname_utf8, NULL, target,
                                         opt_state->recursive,
-                                        0, subpool));
+                                        FALSE, subpool));
           if (! opt_state->quiet) 
             {
               SVN_ERR (svn_cmdline_printf

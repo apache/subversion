@@ -1159,7 +1159,7 @@ svn_wc_prop_set (const char *name,
                  svn_wc_adm_access_t *adm_access,
                  apr_pool_t *pool)
 {
-  return svn_wc_prop_set2 (name, value, path, adm_access, 0, pool);
+  return svn_wc_prop_set2 (name, value, path, adm_access, FALSE, pool);
 }
 
 
