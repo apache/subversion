@@ -821,7 +821,7 @@ remove_redundancies (apr_array_header_t **punique_targets,
   apr_array_header_t *abs_targets;
   apr_array_header_t *rel_targets;
   int i;
-                                                                                                                                                                                                   
+ 
   if ((nonrecursive_targets->nelts <= 0) || (! punique_targets))
     {
       /* No targets or no place to store our work means this function
@@ -833,7 +833,7 @@ remove_redundancies (apr_array_header_t **punique_targets,
 
   /* Initialize our temporary pool. */
   temp_pool = svn_pool_create (pool);
-                                                                                                                                                                                                   
+ 
   /* Create our list of absolute paths for our "keepers" */
   abs_targets = apr_array_make (temp_pool, nonrecursive_targets->nelts,
                                 sizeof (const char *));
@@ -841,12 +841,14 @@ remove_redundancies (apr_array_header_t **punique_targets,
   /* Create our list of absolute paths for our recursive targets */
   if (recursive_targets)
     {
-      abs_recursive_targets = apr_array_make (temp_pool, recursive_targets->nelts,
+      abs_recursive_targets = apr_array_make (temp_pool, 
+                                              recursive_targets->nelts,
                                               sizeof (const char *));
 
       for (i = 0; i < recursive_targets->nelts; i++)
         {
-          const char *rel_path = APR_ARRAY_IDX (recursive_targets, i, const char *);
+          const char *rel_path = 
+            APR_ARRAY_IDX (recursive_targets, i, const char *);
           const char *abs_path;
 
           /* Get the absolute path for this target. */
@@ -855,19 +857,18 @@ remove_redundancies (apr_array_header_t **punique_targets,
           APR_ARRAY_PUSH (abs_recursive_targets, const char *) = abs_path;
         }
     }
-                                                                                                                                                                                                   
+ 
   /* Create our list of untainted paths for our "keepers" */
   rel_targets = apr_array_make (pool, nonrecursive_targets->nelts,
                                 sizeof (const char *));
-                                                                                                                                                                                                   
+ 
   /* For each target in our list we do the following:
-                                                                                                                                                                                                   
-     1.  Calculate its absolute path (ABS_PATH).
-     2.  See if any of the keepers in RECURSIVE_TARGETS is a parent of, or
-         is the same path as, ABS_PATH.  If so, we ignore this
-         target.  If not, however, add this target's original path to
-         REL_TARGETS.
-  */
+ 
+     1. Calculate its absolute path (ABS_PATH).
+     2. See if any of the keepers in RECURSIVE_TARGETS is a parent of, or
+        is the same path as, ABS_PATH.  If so, we ignore this
+        target.  If not, however, add this target's original path to
+        REL_TARGETS. */
   for (i = 0; i < nonrecursive_targets->nelts; i++)
     {
       const char *rel_path = APR_ARRAY_IDX (nonrecursive_targets, i,
@@ -875,10 +876,10 @@ remove_redundancies (apr_array_header_t **punique_targets,
       const char *abs_path;
       int j;
       svn_boolean_t keep_me;
-                                                                                                                                                                                                   
+ 
       /* Get the absolute path for this target. */
       SVN_ERR (svn_path_get_absolute (&abs_path, rel_path, temp_pool));
-                                                                                                                                                                                                   
+ 
       /* For each keeper in ABS_TARGETS, see if this target is the
          same as or a child of that keeper. */
       keep_me = TRUE;
@@ -889,7 +890,7 @@ remove_redundancies (apr_array_header_t **punique_targets,
             {
               const char *keeper = APR_ARRAY_IDX (abs_recursive_targets, j,
                                                   const char *);
-                                                                                                                                                                                                   
+ 
               /* Quit here if we find this path already in the keepers. */
               if (strcmp (keeper, abs_path) == 0)
                 {
@@ -910,8 +911,9 @@ remove_redundancies (apr_array_header_t **punique_targets,
         {
           for (j = 0; j < abs_targets->nelts; j++)
             {
-              const char *keeper = APR_ARRAY_IDX (abs_targets, j, const char *);
-                                                                                                                                                                                                   
+              const char *keeper = 
+                APR_ARRAY_IDX (abs_targets, j, const char *);
+ 
               /* Quit here if we find this path already in the keepers. */
               if (strcmp (keeper, abs_path) == 0)
                 {
@@ -920,7 +922,7 @@ remove_redundancies (apr_array_header_t **punique_targets,
                 }
             }
         }
-                                                                                                                                                                                                   
+ 
       /* If this is a new keeper, add its absolute path to ABS_TARGETS
          and its original path to REL_TARGETS. */
       if (keep_me)
@@ -929,13 +931,13 @@ remove_redundancies (apr_array_header_t **punique_targets,
           APR_ARRAY_PUSH (abs_targets, const char *) = abs_path;
         }
     }
-                                                                                                                                                                                                   
+ 
   /* Destroy our temporary pool. */
   svn_pool_destroy (temp_pool);
-                                                                                                                                                                                                   
+ 
   /* Make sure we return the list of untainted keeper paths. */
   *punique_targets = rel_targets;
-                                                                                                                                                                                                   
+ 
   return SVN_NO_ERROR;
 }
 
@@ -981,7 +983,8 @@ adjust_rel_targets (const char **pbase_dir,
              of the former one. */
           base_dir = apr_pstrdup (pool, parent_dir);
 
-          new_rel_targets = apr_array_make (pool, rel_targets->nelts, sizeof (name));
+          new_rel_targets = apr_array_make (pool, rel_targets->nelts, 
+                                            sizeof (name));
           for (i = 0; i < rel_targets->nelts; i++)
             {
               target = APR_ARRAY_IDX (rel_targets, i, const char *);
@@ -1103,8 +1106,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
           target = svn_path_join (base_dir,
                                   APR_ARRAY_IDX (rel_targets, i, const char *),
                                   pool);
-          SVN_ERR (svn_wc_get_actual_target (target, &parent_dir, &name,
-                                             pool));
+          SVN_ERR (svn_wc_get_actual_target (target, &parent_dir, 
+                                             &name, pool));
 
           if (name)
             {
@@ -1114,13 +1117,16 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
           
               SVN_ERR (svn_io_check_path (target, &kind, pool));
 
-              /* If the final target is a dir, we want to recursively lock it */
+              /* If the final target is a dir, we want to recursively
+                 lock it */
               if (kind == svn_node_dir)
                 {
                   if (nonrecursive)
-                    APR_ARRAY_PUSH (dirs_to_lock, const char *) = target;
+                    APR_ARRAY_PUSH (dirs_to_lock, 
+                                    const char *) = target;
                   else
-                    APR_ARRAY_PUSH (dirs_to_lock_recursive, const char *) = target;
+                    APR_ARRAY_PUSH (dirs_to_lock_recursive, 
+                                    const char *) = target;
                 }
             }
 
