@@ -164,14 +164,6 @@ static svn_error_t *delta_dir_props (struct context *c,
 				     void *dir_baton,
 				     svn_fs_dir_t *source,
 				     svn_fs_dir_t *target);
-static svn_error_t *delta_dirent_props (struct context *c, void *dir_baton,
-					svn_fs_dir_t *source,
-					svn_fs_dir_t *target,
-					svn_string_t *name);
-static svn_error_t *change_dirent_plist (void *object,
-					 svn_string_t *name,
-					 svn_string_t *value);
-
 
 /* Emit deltas to turn SOURCE into TARGET_DIR.  Assume that DIR_BATON
    represents the directory we're constructing to the editor in the
@@ -211,13 +203,6 @@ delta_dirs (struct context *c, void *dir_baton,
          target?  */
       if (name_cmp == 0)
 	{
-	  /* Both the source and the target have a directory entry by
-	     the same name.  Note any changes to the directory entry's
-	     properties.  */
-	  SVN_ERR (delta_dirent_props (c, dir_baton,
-				       source, target,
-				       source_entries[si]->name));
-
 	  /* Compare the node numbers.  */
 	  if (! svn_fs_id_eq (source_entries[si]->id, target_entries[ti]->id))
 	    {
@@ -284,44 +269,6 @@ struct dirent_plist_baton {
   svn_string_t *entry_name;
 };
 
-
-/* Given that both SOURCE and TARGET have a directory entry named
-   NAME, compare the two entries' property lists.  Emit whatever edits
-   are necessary to turn SOURCE's entry's property list into TARGET's
-   entry's property list.  DIR_BATON is the directory baton
-   corresponding to the target directory.  */
-static svn_error_t *
-delta_dirent_props (struct context *c, void *dir_baton,
-		    svn_fs_dir_t *source, svn_fs_dir_t *target,
-		    svn_string_t *name)
-{
-  svn_fs_proplist_t *source_props;
-  svn_fs_proplist_t *target_props;
-  struct dirent_plist_baton dirent;
-
-  SVN_ERR (svn_fs_dirent_proplist (&source_props, source, name));
-  SVN_ERR (svn_fs_dirent_proplist (&target_props, target, name));
-
-  dirent.editor = c->editor;
-  dirent.dir_baton = dir_baton;
-  dirent.entry_name = name;
-
-  return delta_proplists (c, source_props, target_props,
-			  change_dirent_plist, &dirent);
-}
-
-
-static svn_error_t *
-change_dirent_plist (void *object,
-		     svn_string_t *name,
-		     svn_string_t *value)
-{
-  struct dirent_plist_baton *dirent = (struct dirent_plist_baton *) object;
-
-  return dirent->editor->change_dirent_prop (dirent->dir_baton,
-					     dirent->entry_name,
-					     name, value);
-}
 
 
 /* Doing replaces.  */

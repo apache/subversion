@@ -654,7 +654,6 @@ svn_error_t *svn_fs_file_delta (svn_txdelta_stream_t **stream,
      svn_fs_replace_file        svn_fs_replace_dir
      svn_fs_apply_textdelta    
      svn_fs_change_file_prop    svn_fs_change_dir_prop
-                                svn_fs_change_dirent_prop
 
    Any of these functions may return an SVN_ERR_FS_CONFLICT error.
    This means that the change you requested conflicts with some other
@@ -776,18 +775,6 @@ svn_error_t *svn_fs_replace_dir (svn_fs_dir_t **child,
 svn_error_t *svn_fs_change_dir_prop (svn_fs_dir_t *dir,
 				     svn_string_t *name,
 				     svn_string_t *value);
-
-
-/* Change the value of a directory entry's property.
-   - DIR is the mutable directory whose entry's property should change.
-   - ENTRY is the name of the entry in DIR whose property should change.
-   - NAME is the name of the property to change.
-   - VALUE is the new value of the property, or zero if the property
-     should be removed altogether.  */
-svn_error_t *svn_fs_change_dirent_prop (svn_fs_dir_t *dir,
-					svn_string_t *entry,
-					svn_string_t *name,
-					svn_string_t *value);
 
 
 /* Create a new file named NAME in the directory DIR, and set *FILE to

@@ -522,22 +522,6 @@ change_dir_prop (void *dir_baton,
 
 
 static svn_error_t *
-change_dirent_prop (void *dir_baton,
-                    svn_string_t *entry,
-                    svn_string_t *name,
-                    svn_string_t *value)
-{
-#if 0
-  struct dir_baton *this_dir_baton = (struct dir_baton *) dir_baton;
-#endif /* 0 */
-
-  /* FIXME */
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
 close_directory (void *dir_baton)
 {
 #if 0
@@ -646,7 +630,6 @@ static const svn_delta_edit_fns_t tree_editor =
   add_directory,
   replace_directory,
   change_dir_prop,
-  change_dirent_prop,
   close_directory,
   add_file,
   replace_file,
