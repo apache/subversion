@@ -80,15 +80,6 @@ Candidate changes:
     Votes:
       +1: josander
 
-  * r11689
-    Ensure paths passed to external diff and diff3 commands are correct
-    for a given platform.
-    Justification:
-      Without this, 'svn diff --diff-cmd' and 'svn merge --diff3-cmd' are
-      broken on the Windows platform.
-    Votes:
-      +1: jszakmeister, lundblad, dionisos
-
   * r11701
     Fix pool usage in svn_io_remove_dir.
     Justification:
