@@ -300,7 +300,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "propedit", svn_cl__propedit, {"pedit", "pe"},
     "Edit property PROPNAME with $EDITOR on targets.\n"
-    "usage: 1. propedit PROPNAME [WC_TARGETS]\n"
+    "usage: 1. propedit PROPNAME TARGET1 [TARGET2 ...]\n"
     "       2. propedit PROPNAME -r REV [URL]\n\n"
     "First usage edits versioned props in working copy.\n"
     "Second usage edits unversioned remote prop on repos revision.\n\n",
@@ -324,7 +324,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "propset", svn_cl__propset, {"pset", "ps"},
     "Set PROPNAME to PROPVAL on files, dirs, or revisions.\n\n"
-    "usage: 1. propset PROPNAME [PROPVAL | -F VALFILE] [WC_TARGETS]\n"
+    "usage: 1. propset PROPNAME [PROPVAL | -F VALFILE] TARGET1 [TARGET2 ...]\n"
     "       2. propset PROPNAME [PROPVAL | -F VALFILE] -r REV [URL]\n\n"
     "First usage creates a versioned, local propchange in working copy.\n"
     "Second usage creates an unversioned, remote propchange on repos revision.\n\n"
