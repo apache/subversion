@@ -80,7 +80,7 @@ document "aaaabbbbcccc" and the target document "aaaaccccdddddddd":
 	00000000				Source view offset 0
 	00001100				Source view length 12
 	00010000				Target view length 16
-	00001000				Instruction length 8
+	00000111				Instruction length 7
 	00000001				New data length 1
 
 	00000100 00000000			Source, len 4, offset 0
