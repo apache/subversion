@@ -634,7 +634,8 @@ def simple_property_merges(sbox):
   B_url = os.path.join(svntest.main.current_repo_url, 'A', 'B')
   B2_url = os.path.join(svntest.main.current_repo_url, 'A', 'B2')
 
-  outlines,errlines = svntest.main.run_svn(None, 'copy', B_url, B2_url)
+  outlines,errlines = svntest.main.run_svn(None, 'copy', '-m', 'fumble',
+                                           B_url, B2_url)
   if errlines:
     return 1
   outlines, errlines = svntest.main.run_svn(None, 'up', wc_dir)
