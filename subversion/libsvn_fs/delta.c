@@ -136,7 +136,7 @@ svn_fs_dir_delta (svn_fs_dir_t *source,
 
   source_path.len = 0;
 
-  svn_err = editor->replace_root (edit_baton, &root_baton);
+  svn_err = editor->replace_root (NULL, NULL, edit_baton, &root_baton);
   if (svn_err) goto error;
 
   c.editor = editor;
@@ -573,7 +573,7 @@ add (struct context *c, void *dir_baton,
      svn_fs_dir_t *source, svn_string_t *source_path,
      svn_fs_dir_t *target, svn_string_t *name)
 {
-  ...;
+  /* ...; */
 }
 
 
@@ -815,5 +815,5 @@ dir_from_scratch (struct context *c,
 		  void *dir_baton,
 		  svn_fs_dir_t *target)
 {
-  ...;
+  /* ...; */
 }
