@@ -1385,7 +1385,7 @@ svn_wc__entry_modify (svn_stringbuf_t *path,
 
 
 svn_wc_entry_t *
-svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
+svn_wc_entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   svn_wc_entry_t *dupentry = apr_pcalloc (pool, sizeof(*dupentry));

@@ -258,7 +258,7 @@ assemble_status (svn_wc_status_t **status,
   /* 6. Build and return a status structure. */
 
   stat = apr_pcalloc (pool, sizeof(**status));
-  stat->entry = svn_wc__entry_dup (entry, pool);
+  stat->entry = svn_wc_entry_dup (entry, pool);
   stat->text_status = final_text_status;       
   stat->prop_status = final_prop_status;    
   stat->repos_text_status = svn_wc_status_none;   /* default */
