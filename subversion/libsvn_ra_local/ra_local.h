@@ -91,20 +91,6 @@ svn_ra_local__split_URL (svn_repos_t **repos,
 
 
 
-/* Recursively walk over REVNUM:PATH inside an already-open repository
-   FS, and drive a checkout EDITOR.  URL is the base ancestry that
-   will be stored in the working copy.  Allocate all data in POOL. */
-svn_error_t *
-svn_ra_local__checkout (svn_fs_t *fs, 
-                        svn_revnum_t revnum, 
-                        svn_boolean_t recurse,
-                        const char *URL,
-                        const char *fs_path,
-                        const svn_delta_editor_t *editor, 
-                        void *edit_baton,
-                        apr_pool_t *pool);
-
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

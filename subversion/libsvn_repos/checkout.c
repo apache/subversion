@@ -16,8 +16,10 @@
  * ====================================================================
  */
 
-#include "ra_local.h"
 #include <assert.h>
+#include "svn_repos.h"
+#include "svn_delta.h"
+#include "svn_path.h"
 #include "svn_pools.h"
 
 
@@ -237,14 +239,14 @@ walk_tree (svn_fs_root_t *root,
 
 /* The main editor driver.  Short and elegant! */
 svn_error_t *
-svn_ra_local__checkout (svn_fs_t *fs, 
-                        svn_revnum_t revnum, 
-                        svn_boolean_t recurse,
-                        const char *URL,
-                        const char *fs_path,
-                        const svn_delta_editor_t *editor, 
-                        void *edit_baton,
-                        apr_pool_t *pool)
+svn_repos_checkout (svn_fs_t *fs, 
+                    svn_revnum_t revnum, 
+                    svn_boolean_t recurse,
+                    const char *URL,
+                    const char *fs_path,
+                    const svn_delta_editor_t *editor, 
+                    void *edit_baton,
+                    apr_pool_t *pool)
 {
   svn_fs_root_t *root;
   void *baton;
