@@ -1267,52 +1267,59 @@ if __name__ == '__main__':
 </programlisting>
       </example>
 
-      <para>As you can see, the entries file is essentially a list of
-        entries.  Each <sgmltag>entry</sgmltag> tag represents one of
-        three things: the working copy directory itself (called the
-        <quote>this directory</quote> entry, and noted as having an
-        empty value for its <structfield>name</structfield>
-        attribute), a file in that working copy directory (noted by
-        having its <structfield>kind</structfield> attribute set to
-        <literal>"file"</literal>), or a subdirectory in that working
-        copy (<structfield>kind</structfield> here is set to
-        <literal>"dir"</literal>).  The files and subdirectories whose
-        entries are stored in this file are either already under
-        version control, or (as in the case of the file named
-        <filename>zeta</filename> above) are scheduled to be added to
-        version control when the user next commits this working copy
-        directory's changes.  Each entry has a unique name, and each
-        entry has a node kind.</para>
+      <para>Tal y como puede ver, el fichero entries es esencialmente
+        una lista de entradas. Cada etiqueta <sgmltag>entry</sgmltag>
+        representa una de tres posibles cosas: el propio directorio
+        de la copia local (entrada conocida como <quote>este
+        directorio</quote>, y caracterizada por tener un valor
+        vacío para su atributo <structfield>name</structfield>),
+        un fichero en esa copia local (caracterizado por tener
+        en su atributo <structfield>kind</structfield> el valor
+        <literal>"file"</literal>), o un subdirectorio en esa
+        copia local (<structfield>kind</structfield> en este caso
+        tendrá el valor <literal>"dir"</literal>). Los ficheros
+        y subdirectorios cuyas entradas ya están almacenadas en
+        este fichero estan o bien bajo control de versiones, o
+        (como en el caso del fichero <filename>zeta</filename> más
+        arriba) están programados para ser puestos bajo control
+        de versiones la siguiente vez que el usuario envíe los
+        cambios de este directorio al repositorio. Cada entrada
+        tiene un nombre único, y cada entrada es de tipo nodo <!--
+        TODO seguro?-->.</para>
 
-      <para>Developers should be aware of some special rules that
-        Subversion uses when reading and writing its
-        <filename>entries</filename> files.  While each entry has a
-        revision and URL associated with it, note that not every
-        <sgmltag>entry</sgmltag> tag in the sample file has explicit
-        <structfield>revision</structfield> or
-        <structfield>url</structfield> attributes attached to it.
-        Subversion allows entries to not explicitly store those two
-        attributes when their values are the same as (in the
-        <structfield>revision</structfield> case) or trivially
-        calculable from
+      <para>Los desarrolladores deben tener presentes algunas
+        reglas especiales que Subversion usa cuando lee y escribe
+        sus ficheros <filename>entries</filename>. Aunque cada
+        entrada tiene asociada una revisión y URL, fíjese que no toda
+        etiqueta <sgmltag>entry</sgmltag> en el fichero de ejemplo
+        tiene un atributo <structfield>revision</structfield> o
+        <structfield>url</structfield> asociado a ella.  Subversion
+        permite que las entradas no almacenen explícitamente esos
+        dos atributos cuando sus valores son iguales que (en el
+        caso de <structfield>revision</structfield>) o triviales
+        de calcular a partir de
         <footnote>
-          <para>That is, the URL for the entry is the same as the
-            concatenation of the parent directory's URL and the
-            entry's name.</para>
+          <para>Es decir, la URL de la entrada es igual que la
+            concatenación de la URL del directorio padre y el nombre
+            de la entrada.</para>
         </footnote>
-        (in the <structfield>url</structfield> case) the data stored
-        in the <quote>this directory</quote> entry.  Note also that
-        for subdirectory entries, Subversion stores only the crucial
-        attributes&mdash;name, kind, url, revision, and schedule.  In
-        an effort to reduce duplicated information, Subversion
-        dictates that the method for determining the full set of
-        information about a subdirectory is to traverse down into that
-        subdirectory, and read the <quote>this directory</quote> entry
-        from its own <filename>.svn/entries</filename> file.  However,
-        a reference to the subdirectory is kept in its parent's
-        <filename>entries</filename> file, with enough information to
-        permit basic versioning operations in the event that the
-        subdirectory itself is actually missing from disk.</para>
+        (en el caso de <structfield>url</structfield>)
+        los datos almacenados en la entrada <quote>este
+        directorio</quote>. Tenga también en cuenta que para
+        las entradas de subdirectorios, Subversion almacena
+        únicamente los atributos cruciales&mdash;nombre, tipo, url,
+        revisión, y acción programada. En un esfuerzo para reducir
+        información duplicada, Subversion dicta que el método para
+        determinar el conjunto completo de información sobre un
+        subdirectorio es descender dentro de ese subdirectorio, y
+        leer la entrada <quote>este directorio</quote> de su propio
+        fichero <filename>.svn/entries</filename>.  No obstante,
+        se mantiene una referencia al subdirectorio en el fichero
+        <filename>entries</filename> del padre, con suficiente
+        información para permitir operaciones básicas de versionado
+        en el evento de que el propio subdirectorio no esté presente
+        en el disco<!--TODO aquí la traducción de disco quizás
+        pierde calidad, pues se refiere a disco duro-->.</para>
 
     </sect2>
 
