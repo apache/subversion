@@ -10,35 +10,33 @@
 _svn()
 {
 	local cur cmds cmdOpts pOpts mOpts rOpts qOpts nOpts optsParam opt
+	local helpCmds optBase
 
 	COMPREPLY=()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
 	cmds='add cat checkout co cleanup commit ci copy cp delete del \
-	      remove rm diff di export import info h help list ls log merge \
+	      remove rm diff di export import info ? h help list ls log merge \
 	      mkdir move mv rename ren propdel pdel propedit pedit pe propget \
 	      pget pg proplist plist pl propset pset ps revert resolve status \
-	      stat st switch sw update up --version'
+	      stat st switch sw update up'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
-		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
+		COMPREPLY=( $( compgen -W \
+		               "$cmds -h --help --version -\?" -- $cur ) )
 		return 0
 	else
-		# if we're completing for 'svn help' or 'svn h', then just 
-		# complete on any valid svn command
-		case ${COMP_WORDS[1]} in
-		help|h|\?)
+		# for 'svn help' complete on the valid commands
+		helpCmds='help|--help|h|-h|\?|-\?'
+		if [[ ${COMP_WORDS[1]} == @($helpCmds) ]] ; then
 			COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
 			return 0
-			;;
-		*)
-			;;
-		esac
+		fi
 	fi
 
 	# options that require a parameter
 	# note: continued lines must end '|' continuing lines must start '|'
-	optsParam="-r|--revision|--username|--password|--targets|\
+	optsParam="-r|--revision|--username|--password|--targets|
 	           |-x|--extensions|-m|--message|-F|--file|--encoding|
 	           |--diff-cmd|--diff3-cmd|--editor-cmd|--old|--new"
 
@@ -62,7 +60,7 @@ _svn()
 		cmdOpts="$qOpts"
 		;;
 	add)
-		cmdOpts="--targets -$nOpts $qOpts"
+		cmdOpts="--targets $nOpts $qOpts"
 		;;
 	cat)
 		cmdOpts="$rOpts $pOpts"
@@ -71,6 +69,7 @@ _svn()
 		cmdOpts="$rOpts $qOpts $nOpts $pOpts"
 		;;
 	cleanup)
+		cmdOpts="--diff3-cmd"
 		;;
 	commit|ci)
 		cmdOpts="$mOpts $qOpts $nOpts --targets --editor-cmd $pOpts"
@@ -89,7 +88,7 @@ _svn()
 		cmdOpts="$rOpts $qOpts $pOpts --force"
 		;;
 	import)
-		cmdOpts="$mOpts $qOpts $nOpts --targets --editor-cmd $pOpts"
+		cmdOpts="$mOpts $qOpts $nOpts --editor-cmd $pOpts"
 		;; 
 	info)
 		cmdOpts="--targets -R --recursive"
@@ -99,7 +98,7 @@ _svn()
 		;;
 	log)
 		cmdOpts="$rOpts -v --verbose --targets $pOpts --strict \
-		         --incremental --xml"
+		         --incremental --xml $qOpts"
 		;;
 	merge)
 		cmdOpts="$rOpts $nOpts $qOpts --force --dry-run --diff3-cmd \
@@ -115,7 +114,8 @@ _svn()
 		cmdOpts="$qOpts -R --recursive $rOpts --revprop $pOpts"
 		;;
 	propedit|pedit|pe)
-		cmdOpts="$rOpts --revprop --encoding --editor-cmd $pOpts"
+		cmdOpts="$rOpts --revprop --encoding --editor-cmd $pOpts \
+		         --force"
 		;;
 	propget|pget|pg)
 		cmdOpts="-R --recursive $rOpts --revprop --strict $pOpts"
@@ -126,7 +126,7 @@ _svn()
 		;;
 	propset|pset|ps)
 		cmdOpts="-F --file $qOpts --targets -R --recursive --revprop \
-		         --encoding $pOpts"
+		         --encoding $pOpts $rOpts --force"
 		;;
 	revert)
 		cmdOpts="--targets -R --recursive $qOpts"
@@ -139,10 +139,10 @@ _svn()
 		         --no-ignore"
 		;;
 	switch|sw)
-		cmdOpts="--relocate $rOpts $nOpts $qOpts $pOpts"
+		cmdOpts="--relocate $rOpts $nOpts $qOpts $pOpts --diff3-cmd"
 		;;
 	update|up)
-		cmdOpts="$rOpts $nOpts $qOpts $pOpts"
+		cmdOpts="$rOpts $nOpts $qOpts $pOpts --diff3-cmd"
 		;;
 	*)
 		;;
@@ -151,11 +151,17 @@ _svn()
 	# take out options already given
 	for (( i=2; i<=$COMP_CWORD-1; ++i )) ; do
 		opt=${COMP_WORDS[$i]}
+
+		case $opt in
+		--*)    optBase=${opt/=*/} ;;
+		-*)     optBase=${opt} ;;
+		esac
+
 		cmdOpts=" $cmdOpts "
-		cmdOpts=${cmdOpts/ ${opt} / }
+		cmdOpts=${cmdOpts/ ${optBase} / }
 
 		# take out alternatives
-		case $opt in
+		case $optBase in
 		-v)              cmdOpts=${cmdOpts/ --verbose / } ;;
 		--verbose)       cmdOpts=${cmdOpts/ -v / } ;;
 		-N)              cmdOpts=${cmdOpts/ --non-recursive / } ;;
