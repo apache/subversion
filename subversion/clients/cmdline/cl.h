@@ -130,7 +130,8 @@ svn_opt_subcommand_t
   svn_cl__resolve,
   svn_cl__status,
   svn_cl__switch,
-  svn_cl__update;
+  svn_cl__update,
+  svn_cl__cat;
 
 
 /* See definition in main.c for documentation. */

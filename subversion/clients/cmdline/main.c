@@ -117,6 +117,13 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "usage: svn add TARGETS\n", 
     {svn_cl__targets_opt, 'R', 'q'} },
 
+  { "cat", svn_cl__cat, {0},
+    "Output the content of specified files or URLs.\n"
+    "usage: svn cat TARGET [TARGET...]\n\n"
+    "  Note: If TARGET is a working copy path the content of the base\n"
+    "  revision will be displayed.\n",
+    {'r'} },
+
   { "checkout", svn_cl__checkout, {"co"},
     "Check out a working copy from a repository.\n"
     "usage: svn checkout REPOS_URL [REPOS_URL...] [DESTINATION]\n"

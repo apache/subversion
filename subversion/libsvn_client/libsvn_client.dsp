@@ -95,6 +95,10 @@ SOURCE=.\auth.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\cat.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\checkout.c
 # End Source File
 # Begin Source File

@@ -8,6 +8,7 @@ default.
 
 Available subcommands:
    add
+   cat
    checkout (co)
    cleanup
    commit (ci)

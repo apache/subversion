@@ -95,6 +95,10 @@ SOURCE=".\add-cmd.c"
 # End Source File
 # Begin Source File
 
+SOURCE=".\cat-cmd.c"
+# End Source File
+# Begin Source File
+
 SOURCE=".\checkout-cmd.c"
 # End Source File
 # Begin Source File
