@@ -1278,7 +1278,7 @@ public class BasicTests extends SVNTests
         LogMessage lm[] = client.logMessages(thisTest.getWCPath(), null,
                 null, false, true);
         assertEquals("wrong number of objects", 1, lm.length);
-        assertEquals("wrong message", "Log Mesage", lm[0].getMessage());
+        assertEquals("wrong message", "Log Message", lm[0].getMessage());
         assertEquals("wrong revision", 1, lm[0].getRevisionNumber());
         assertEquals("wrong user", "jrandom", lm[0].getAuthor());
         assertNotNull("changed paths set", lm[0].getChangedPaths());
