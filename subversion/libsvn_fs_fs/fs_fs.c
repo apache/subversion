@@ -2106,50 +2106,56 @@ create_new_txn_noderev_from_rev (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Create a unique directory for a transaction in FS based on revision
+   REV.  Return the ID for this transaction in *ID_P. */
+static svn_error_t *
+create_txn_dir (const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
+                apr_pool_t *pool)
+{
+  unsigned int i;
+  apr_pool_t *subpool;
+  const char *unique_path, *name, *prefix;
+
+  /* Try to create directories named "<txndir>/<rev>-<uniquifier>.txn". */
+  subpool = svn_pool_create (pool);
+  prefix = svn_path_join_many (subpool, fs->path, PATH_TXNS_DIR,
+                               apr_psprintf (pool, "%ld", rev), NULL);
+  for (i = 1; i <= 99999; i++)
+    {
+      svn_error_t *err;
+
+      svn_pool_clear (subpool);
+      unique_path = apr_psprintf (subpool, "%s-%u" PATH_EXT_TXN, prefix, i);
+      err = svn_io_dir_make (unique_path, APR_OS_DEFAULT, subpool);
+      if (! err)
+        break;
+      if (! APR_STATUS_IS_EEXIST (err->apr_err))
+        return err;
+      svn_error_clear (err);
+    }
+
+  /* We succeeded.  Return the basename minus the ".txn" extension. */
+  name = svn_path_basename (unique_path, subpool);
+  *id_p = apr_pstrndup (pool, name, strlen (name) - strlen (PATH_EXT_TXN));
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_fs__create_txn (svn_fs_txn_t **txn_p,
                        svn_fs_t *fs,
                        svn_revnum_t rev,
                        apr_pool_t *pool)
 {
-  apr_file_t *txn_file, *next_ids_file;
+  apr_file_t *next_ids_file;
   svn_stream_t *next_ids_stream;
   svn_fs_txn_t *txn;
   svn_fs_id_t *root_id;
-  const char *txn_filename, *txn_tmpfile_orig;
-  char *txn_tmpfile;
-  int i;
-
-  /* Create a temporary file so that we have a unique txn_id, then
-     make a directory based on this name.  They will both be removed
-     when the transaction is aborted or removed. */
-  txn_filename = svn_path_join_many (pool, fs->path, PATH_TXNS_DIR,
-                                     apr_psprintf (pool, "%ld", rev), NULL);
-  SVN_ERR (svn_io_open_unique_file (&txn_file, &txn_tmpfile_orig, txn_filename,
-                                    "", FALSE, pool));
-
-  /* If the temporary file had a "." in it, we need to subsitute a "_"
-     in its place, since transaction IDs cannot have periods in
-     them. */
-  txn_tmpfile = apr_pstrdup (pool, txn_tmpfile_orig);
-  for (i = (strlen (txn_tmpfile) - 1); i >= 0; --i)
-    {
-      if (txn_tmpfile[i] == '.')
-        txn_tmpfile[i] = '_';
-      if (txn_tmpfile[i] == '/')
-        break;
-    }
 
   txn = apr_pcalloc (pool, sizeof (*txn));
 
   /* Get the txn_id. */
-  txn->id = svn_path_basename (txn_tmpfile, pool);
-
-  /* Create the transaction directory based on this temporary file. */
-  SVN_ERR (svn_io_make_dir_recursively (path_txn_dir (fs, txn->id, pool),
-                                        pool));
-
-  SVN_ERR (svn_io_file_close (txn_file, pool));
+  SVN_ERR (create_txn_dir (&txn->id, fs, rev, pool));
 
   txn->fs = fs;
   txn->base_rev = rev;
@@ -2389,50 +2395,8 @@ svn_fs_fs__purge_txn (svn_fs_t *fs,
                       const char *txn_id,
                       apr_pool_t *pool)
 {
-  char *txn_name;
-  svn_error_t *err;
-  int i;
-  
-  txn_name = svn_path_join_many (pool, fs->path, PATH_TXNS_DIR, txn_id, NULL);
-
-  /* First remove the temporary directory associated with this
-     transaction.  If this fails, we need to keep going and try and
-     remove the file too, just in case one of them got deleted without
-     the other.  Removing the directory first is necessary to prevent
-     race conditions when creating new transactions. */
-
-  err = svn_io_remove_dir (path_txn_dir (fs, txn_id, pool), pool);
-  if (err)
-    {
-      if (! APR_STATUS_IS_ENOENT (err->apr_err))
-        return err;
-      svn_error_clear (err);
-    }
-
-  /* Now try to remove the temporary file. */
-
-  /* First convert any _ characters in the name back into .'s. */
-  for (i = strlen (txn_name) - 1; i >= 0; --i)
-    {
-      if (txn_name[i] == '_')
-        txn_name[i] = '.';
-      if (txn_name[i] == '/')
-        break;
-    }
-
-  err = svn_io_remove_file (txn_name, pool);
-
-  /* Umm, we really have no way to determine the difference between a
-     transaction not existing, and a transaction not being mutable.
-     We'll just always return not-mutable and hope no one passes us
-     bogus transaction IDs. */
-  if (err && APR_STATUS_IS_ENOENT (err->apr_err))
-    {
-      svn_error_clear (err);
-      return svn_fs_fs__err_txn_not_mutable (fs, txn_id);
-    }
-  
-  return err;
+  /* Remove the directory associated with this transaction. */
+  return svn_io_remove_dir (path_txn_dir (fs, txn_id, pool), pool);
 }
 
 static const char *
@@ -3612,7 +3576,7 @@ svn_fs_fs__list_transactions (apr_array_header_t **names_p,
 {
   const char *txn_dir;
   apr_hash_t *dirents;
-  apr_hash_index_t *this;
+  apr_hash_index_t *hi;
   apr_array_header_t *names;
 
   names = apr_array_make (pool, 1, sizeof (const char *));
@@ -3623,33 +3587,24 @@ svn_fs_fs__list_transactions (apr_array_header_t **names_p,
   /* Now find a listing of this directory. */
   SVN_ERR (svn_io_get_dirents (&dirents, txn_dir, pool));
 
-  /* Loop through all the entries, and return anything that ends with
-     a '.txn' and has the correct length. */
-  for (this = apr_hash_first (pool, dirents); this;
-       this = apr_hash_next (this))
+  /* Loop through all the entries and return anything that ends with '.txn'. */
+  for (hi = apr_hash_first (pool, dirents); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      void *val;
-      apr_ssize_t keylen;
-      const char *name;
+      const char *name, *id;
+      apr_ssize_t klen;
 
-      apr_hash_this (this, &key, &keylen, &val);
+      apr_hash_this (hi, &key, &klen, NULL);
+      name = key;
 
-      name = (const char *) key;
+      /* The name must end with ".txn" to be considered a transaction. */
+      if (klen <= strlen (PATH_EXT_TXN)
+          || (strcmp (name + klen - strlen (PATH_EXT_TXN), PATH_EXT_TXN)) != 0)
+        continue;
 
-      /* If this entry is exactly the right length, and ends with the
-         '.txn' extension, we'll count it as a transaction. */
-      if ((strlen (name) == (6 + strlen (PATH_EXT_TXN)))
-          && (strcmp (name + 6, PATH_EXT_TXN) == 0))
-        {
-          char *txn_id;
-
-          /* Truncate the extension. */
-          txn_id = apr_pcalloc (pool, 7);
-          memcpy (txn_id, name, 6);
-          txn_id[6] = '\0';
-          APR_ARRAY_PUSH (names, const char *) = txn_id;
-        }
+      /* Truncate the ".txn" extension and store the ID. */
+      id = apr_pstrndup (pool, name, strlen (name) - strlen (PATH_EXT_TXN));
+      APR_ARRAY_PUSH (names, const char *) = id;
     }
 
   *names_p = names;
