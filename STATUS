@@ -38,15 +38,6 @@ Candidate changes:
       +1: dlr
       +1: breser
 
-  * r9104, r9197
-    Do not turn /s in URLS to \s on Windows. 
-    Justification: The paths are for URLS they should be copyable for use on
-    repo URLS.
-    Notes: In r9393, kfogel reformatted a bit of r9197, but is not
-           nominating r9393 for 1.0.x, as it's not functionally important. 
-    Votes:
-      +1: breser, sussman, kfogel
-
   * r9212, r9231
     Added VC7 support and defines for including debug symbol files.
     Justification: The setup in 1.0.x branch is useless if VC7 is used
