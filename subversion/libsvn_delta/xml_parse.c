@@ -226,8 +226,9 @@ maybe_derive_ancestry (svn_delta__stackframe_t *dest_frame, apr_pool_t *pool)
                */
 
               dest_frame->ancestor_path
-                = svn_path_add_component (p->ancestor_path, this_name,
-                                          SVN_PATH_REPOS_STYLE, pool);
+                = svn_string_dup (p->ancestor_path, pool);
+              svn_path_add_component (dest_frame->ancestor_path, this_name,
+                                      SVN_PATH_REPOS_STYLE, pool);
             }
 
           /* If ancestor_version not set, and see it here, then set it. */

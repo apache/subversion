@@ -82,18 +82,37 @@ adm_subdir (apr_pool_t *pool)
 }
 
 
-/* Make name of wc admin file ADM_FILE by appending to directory PATH. */
-static svn_string_t *
-make_adm_path (svn_string_t *path,
-               char *adm_file,
-               apr_pool_t *pool)
+/* Make name of wc admin file ADM_FILE by appending to directory PATH. 
+ * 
+ * IMPORTANT: chances are you will want to call chop_admin_name() to
+ * restore PATH to its original value before exiting anything that
+ * calls this.  If you exit, say by returning an error, before calling
+ * chop_admin_name(), then PATH will still be in its extended state.
+ *
+ * So, safest recipe:
+ *
+ * Callers of extend_with_admin_name() always have exactly one return
+ * statement, and that return occurs *after* an unconditional call to
+ * chop_admin_name().
+ */
+static void
+extend_with_admin_name (svn_string_t *path,
+                        char *adm_file,
+                        apr_pool_t *pool)
 {
-  svn_string_t *result;
-  result = svn_path_add_component (path, adm_subdir (pool), 
-                                   SVN_PATH_LOCAL_STYLE, pool);
-  result = svn_path_add_component_nts (result, adm_file, 
-                                       SVN_PATH_LOCAL_STYLE, pool);
-  return result;
+  svn_path_add_component     (path, adm_subdir (pool), 
+                              SVN_PATH_LOCAL_STYLE, pool);
+  svn_path_add_component_nts (path, adm_file, 
+                              SVN_PATH_LOCAL_STYLE, pool);
+}
+
+
+/* Restore PATH to what it was before an adm filename was appended to it. */
+static void
+chop_admin_name (svn_string_t *path)
+{
+  svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
+  svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
 }
 
 
@@ -107,38 +126,40 @@ svn_wc__make_adm_thing (svn_string_t *path,
   svn_error_t *err = NULL;
   apr_file_t *f = NULL;
   apr_status_t apr_err = 0;
-  svn_string_t *thing_path;
 
-  thing_path = make_adm_path (path, thing, pool);
+  extend_with_admin_name (path, thing, pool);
 
   if (type == svn_file_kind)
     {
-      apr_err = apr_open (&f, thing_path->data,
+      apr_err = apr_open (&f, path->data,
                           (APR_WRITE | APR_CREATE | APR_EXCL),
                           APR_OS_DEFAULT,
                           pool);
 
       if (apr_err)
-        err = svn_create_error (apr_err, 0, thing_path->data, NULL, pool);
+        err = svn_create_error (apr_err, 0, path->data, NULL, pool);
       else
         {
           /* Creation succeeded, so close immediately. */
           apr_err = apr_close (f);
           if (apr_err)
-            err = svn_create_error (apr_err, 0, thing_path->data, NULL, pool);
+            err = svn_create_error (apr_err, 0, path->data, NULL, pool);
         }
     }
   else if (type == svn_directory_kind)
     {
-      apr_err = apr_make_dir (thing_path->data, APR_OS_DEFAULT, pool);
+      apr_err = apr_make_dir (path->data, APR_OS_DEFAULT, pool);
       if (apr_err)
-        err = svn_create_error (apr_err, 0, thing_path->data, NULL, pool);
+        err = svn_create_error (apr_err, 0, path->data, NULL, pool);
     }
   else   /* unknown type argument, wrongness */
     {
       err = svn_create_error 
         (0, 0, "init_admin_thing: bad type indicator", NULL, pool);
     }
+
+  /* Restore path to its original state no matter what. */
+  chop_admin_name (path);
 
   return err;
 }
@@ -153,13 +174,16 @@ svn_wc__open_adm_file (apr_file_t **handle,
 {
   svn_error_t *err = NULL;
   apr_status_t apr_err = 0;
-  svn_string_t *newpath;
 
-  newpath = make_adm_path (path, fname, pool);
+  extend_with_admin_name (path, fname, pool);
 
-  apr_err = apr_open (handle, newpath->data, flags, APR_OS_DEFAULT, pool);
+  apr_err = apr_open (handle, path->data, flags, APR_OS_DEFAULT, pool);
+
   if (apr_err)
-    err = svn_create_error (apr_err, 0, newpath->data, NULL, pool);
+    err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+
+  /* Restore path to its original state no matter what. */
+  chop_admin_name (path);
 
   return err;
 }
@@ -173,13 +197,16 @@ svn_wc__close_adm_file (apr_file_t *fp,
 {
   svn_error_t *err = NULL;
   apr_status_t apr_err = 0;
-  svn_string_t *newpath;
 
-  newpath = make_adm_path (path, fname, pool);
+  extend_with_admin_name (path, fname, pool);
 
   apr_err = apr_close (fp);
+
   if (apr_err)
-    err = svn_create_error (apr_err, 0, newpath->data, NULL, pool);
+    err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+
+  /* Restore path to its original state no matter what. */
+  chop_admin_name (path);
 
   return err;
 }
@@ -193,13 +220,15 @@ svn_wc__remove_adm_thing (svn_string_t *path,
 {
   svn_error_t *err = NULL;
   apr_status_t apr_err = 0;
-  svn_string_t *thing_path;
 
-  thing_path = make_adm_path (path, thing, pool);
+  extend_with_admin_name (path, thing, pool);
 
-  apr_err = apr_remove_file (thing_path->data, pool);
+  apr_err = apr_remove_file (path->data, pool);
   if (apr_err)
-    err = svn_create_error (apr_err, 0, thing_path->data, NULL, pool);
+    err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+
+  /* Restore path to its original state no matter what. */
+  chop_admin_name (path);
 
   return err;
 }

@@ -96,11 +96,11 @@ svn_wc__ensure_directory (svn_string_t *path, apr_pool_t *pool)
         {
           /* Okay, so the problem is a missing intermediate
              directory.  We don't know which one, so we recursively
-             back up and try again. */
-          svn_string_t *shorter_path
-            = svn_path_remove_component (npath, SVN_PATH_LOCAL_STYLE, pool);
+             back up one level and try again. */
+          svn_string_t *shorter = svn_string_dup (npath, pool);
+          svn_path_remove_component (shorter, SVN_PATH_LOCAL_STYLE);
 
-          if (svn_string_isempty (shorter_path))
+          if (svn_string_isempty (shorter))
             {
               /* A weird and probably rare situation. */
               return svn_create_error (0, 0,
@@ -109,7 +109,7 @@ svn_wc__ensure_directory (svn_string_t *path, apr_pool_t *pool)
             }
           else  /* We have a valid path, so recursively ensure it. */
             {
-              svn_error_t *err = svn_wc__ensure_directory (shorter_path, pool);
+              svn_error_t *err = svn_wc__ensure_directory (shorter, pool);
           
               if (err)
                 return (err);
