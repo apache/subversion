@@ -66,10 +66,26 @@ svn_error_t *svn_io_check_path (svn_string_t *path,
                                 apr_pool_t *pool);
 
 
-/* Set *TMP_NAME to a unique filename in the same directory as PATH.
- * The name will include as much of PATH as possible, plus a random
- * portion, plus an iterated portion (00001 for the first name, 00002
- * for the second, etc), and end with SUFFIX.
+/* Open a new file (for writing) with a unique name based on PATH, in the
+ * same directory as PATH.  The file handle is returned in *TMP_FILE,
+ * and the name is returned in *TMP_NAME.
+ *
+ * The name will include as much of PATH as possible, then a dot,
+ * then a random portion, then another dot, then an iterated attempt
+ * number (00001 for the first try, 00002 for the second, etc), and
+ * end with SUFFIX.  For example, if PATH is
+ *
+ *    tests/t1/A/D/G/pi
+ *
+ * then svn_io_tmp_file(&f, &tmpname, PATH, ".tmp", pool) might pick
+ *
+ *    tests/t1/A/D/G/pi.3221223676.00001.tmp
+ *
+ * the first time, then
+ *
+ *    tests/t1/A/D/G/pi.3221223676.00002.tmp
+ *
+ * if called again while the first tmp file still exists.
  *
  * It doesn't matter if PATH is a file or directory, the tmp name will
  * be in PATH's parent either way.
@@ -77,20 +93,25 @@ svn_error_t *svn_io_check_path (svn_string_t *path,
  * *TMP_NAME will never be exactly the same as PATH, even if PATH does
  * not exist.
  * 
- * *TMP_NAME is allocated in POOL.
+ * *TMP_FILE and *TMP_NAME are allocated in POOL.
  *
- * Since there's no guarantee how long the tmp name will remain unique
- * after it is chosen, a part of the name is generated semi-randomly;
- * this makes on-disk collisions less likely, though it doesn't
- * eliminate them entirely.
- * 
- * Justification for Claim of Historical Inevitability: this function
- * was written because
+ * If no unique name can be found, SVN_ERR_IO_TMP_NAMES_EXHAUSTED is
+ * the error returned.
+ *
+ * Claim of Historical Inevitability: this function was written
+ * because 
  *
  *    tmpnam() is not thread-safe.
  *    tempname() tries standard system tmp areas first.
+ *
+ * Claim of Historical Evitability: the random portion of the name is
+ * there because someday, someone will have a directory full of files
+ * whose names match the iterating portion and suffix (say, a
+ * database's holding area).  The random portion is a safeguard
+ * against that case.
  */
-svn_error_t *svn_io_tmp_name (svn_string_t **tmp_name,
+svn_error_t *svn_io_tmp_file (apr_file_t **f,
+                              svn_string_t **tmp_name,
                               const svn_string_t *path,
                               const char *suffix,
                               apr_pool_t *pool);
