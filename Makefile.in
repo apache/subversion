@@ -71,8 +71,8 @@ APACHE_LIBEXECDIR = $(DESTDIR)@APACHE_LIBEXECDIR@
 
 SWIG = @SWIG@
 SWIG_PY_INCLUDES = @SWIG_PY_INCLUDES@
+SWIG_PY_SETUP_LDFLAGS = @SWIG_PY_SETUP_LDFLAGS@
 SWIG_JAVA_INCLUDES = @SWIG_JAVA_INCLUDES@
-SWIG_LDFLAGS = @SWIG_LDFLAGS@
 
 SVN_APR_INCLUDES = @SVN_APR_INCLUDES@
 SVN_APR_PREFIX = @SVN_APR_PREFIX@
@@ -130,7 +130,7 @@ PYTHON_DISTUTIL = setup.py                                               \
                   -L../../../libsvn_wc/.libs                             \
                   -L../../../libsvn_subr/.libs                           \
                   -L../../../bindings/swig/.libs                         \
-                  $(SWIG_LDFLAGS)
+                  $(SWIG_PY_SETUP_LDFLAGS)
 
 all: external-all local-all
 clean: external-clean local-clean
