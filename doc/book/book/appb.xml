@@ -1,10 +1,10 @@
-  <appendix id="svn-ap-c">
+  <appendix id="svn-ap-b">
     <title>Troubleshooting</title>
 
   <!-- ================================================================= -->
   <!-- ======================== SECTION 1 ============================== -->
   <!-- ================================================================= -->
-  <sect1 id="svn-ap-c-sect-1">
+  <sect1 id="svn-ap-b-sect-1">
       <title>Common Problems</title>
 
       <para>There are a number of problems you may run into in the
@@ -94,10 +94,10 @@
       </itemizedlist>
 
       
-      <sect2 id="svn-ap-c-sect-1.2">
+      <sect2 id="svn-ap-b-sect-1.2">
         <title>Problems Using Subversion</title>
 
-      <sect3 id="svn-ap-c-sect-1.2.1">
+      <sect3 id="svn-ap-b-sect-1.2.1">
           <title>Every Time I Try to Access My Repository, My
           Subversion Client Just Hangs.</title>
 
@@ -134,7 +134,7 @@ $ svnadmin recover /path/to/repos
         </sect3>
 
 
-        <sect3 id="svn-ap-c-sect-1.2.2">
+        <sect3 id="svn-ap-b-sect-1.2.2">
           <title>Every Time I Try to Run <command>svn</command>, It
             Says My Working Copy is Locked.</title>
 
@@ -160,23 +160,23 @@ $ svn cleanup working-copy
         </sect3>
 
 
-        <sect3 id="svn-ap-c-sect-1.2.3">
+        <sect3 id="svn-ap-b-sect-1.2.3">
           <title>I'm Getting Errors Finding or Opening a Repository,
             but I Know My Repository URL is Correct.</title>
 
-          <para>See <xref linkend="svn-ap-c-sect-1.2.1"/>.</para>
+          <para>See <xref linkend="svn-ap-b-sect-1.2.1"/>.</para>
 
         </sect3>
 
 
-        <sect3 id="svn-ap-c-sect-1.2.4">
+        <sect3 id="svn-ap-b-sect-1.2.4">
           <title>How can I specify a Windows drive letter in a
             <literal>file://</literal> URL?</title>
 
           <para>See <xref linkend="svn-ch-02-sidebar-1"/>.</para>
         </sect3>
 
-        <sect3 id="svn-ap-c-sect-1.2.5">
+        <sect3 id="svn-ap-b-sect-1.2.5">
           <title>I'm Having Trouble Doing Write Operations to a
             Subversion Repository over a Network</title>
           
@@ -212,7 +212,7 @@ The specified activity does not exist.
         </sect3>
 
 
-        <sect3 id="svn-ap-c-sect-1.2.6">
+        <sect3 id="svn-ap-b-sect-1.2.6">
           <title>Under Windows XP, the Subversion Server Sometimes
             Seems to Send Out Corrupted Data.</title>
 
@@ -224,7 +224,7 @@ The specified activity does not exist.
         </sect3>
 
 
-        <sect3 id="svn-ap-c-sect-1.2.7">
+        <sect3 id="svn-ap-b-sect-1.2.7">
           <title>What is the Best Method of Doing a Network Trace of
             the Conversation Between a Subversion Client and
             Server?</title>
@@ -292,10 +292,10 @@ The specified activity does not exist.
       </sect2>
 
 
-      <sect2 id="svn-ap-c-sect-1.3">
+      <sect2 id="svn-ap-b-sect-1.3">
         <title>Problems Building Subversion</title>
 
-        <sect3 id="svn-ap-c-sect-1.3.1">
+        <sect3 id="svn-ap-b-sect-1.3.1">
           <title>I Just Built the Distribution Binary, and When I Try
             to Check Out Subversion, I Get an Error About an
             <quote>Unrecognized URL Scheme</quote></title>
@@ -332,7 +332,7 @@ The specified activity does not exist.
         </sect3>
 
 
-        <sect3 id="svn-ap-c-sect-1.3.2">
+        <sect3 id="svn-ap-b-sect-1.3.2">
           <title>When I Run <command>configure</command>, I Get Errors
             Like <literal>subs-1.sed line 38: Unterminated `s'
             command</literal></title>
@@ -347,7 +347,7 @@ The specified activity does not exist.
         </sect3>
 
 
-        <sect3 id="svn-ap-c-sect-1.3.3">
+        <sect3 id="svn-ap-b-sect-1.3.3">
           <title>I'm Having Trouble Building Subversion Under Windows
           with MSVC++ 6.0.</title>
 
