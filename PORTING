@@ -58,6 +58,22 @@ i386-unknown-freebsd4.3:
 
      Notes:
 
+i386-unknown-freebsd4.4:
+     Client:     Build OK, Check OK
+     Filesystem: Build OK, Check OK
+     Last Check: 7 November 2001
+     Porter:     Ben Collins-Sussman <sussman@collab.net>
+
+     Notes:
+
+i686-pc-cygwin
+     Client:     Build OK, Check OK
+     Filesystem: Build OK, Check OK
+     Last Check: 25 October 2001
+     Porter:     Ben Collins-Sussman <sussman@collab.net>
+
+     Notes:  Using cygwin 1.3 on Win2K.
+
 i686-pc-linux-gnu:
      Client:     Build OK, Check OK.
      Filesystem: ?
