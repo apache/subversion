@@ -96,7 +96,7 @@ locate_key (apr_size_t *length,
       (*cursor)->c_close (*cursor);
       return svn_error_createf
         (SVN_ERR_FS_NO_SUCH_STRING, 0, 0, fs->pool,
-         "locate_key: no such string `%s'", query->data);
+         "locate_key: no such string `%s'", (const char *)query->data);
     }
   if (db_err)
     {
