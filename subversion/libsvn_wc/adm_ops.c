@@ -1678,11 +1678,15 @@ attempt_deletion (const char *parent_dir,
 }
 
 
-/* Does the main resolution work: */
+/* Does the main resolution work.  PATH is the path to the item to be
+   changed, BASE_NAME is the basename of PATH, and CONFLICT_DIR is the
+   access baton for PATH.  ORIG_ENTRY is the entry prior to resolution.
+   RESOLVE_TEXT and RESOLVE_PROPS are TRUE if text and property conficts
+   respectively are to be resolved. */
 static svn_error_t *
 resolve_conflict_on_entry (const char *path,
                            const svn_wc_entry_t *orig_entry,
-                           const char *conflict_dir,
+                           svn_wc_adm_access_t *conflict_dir,
                            const char *base_name,
                            svn_boolean_t resolve_text,
                            svn_boolean_t resolve_props,
@@ -1693,59 +1697,54 @@ resolve_conflict_on_entry (const char *path,
   svn_boolean_t text_conflict, prop_conflict;
   apr_uint32_t modify_flags = 0;
   svn_wc_entry_t *entry = svn_wc_entry_dup (orig_entry, pool);
-#if 0  /* See below */
-  svn_wc_adm_access_t *adm_access;
-#endif
 
   /* Sanity check: see if libsvn_wc thinks this item is in a state of
      conflict that we have asked to resolve.   If not, just go home.*/
   SVN_ERR (svn_wc_conflicted_p (&text_conflict, &prop_conflict,
-                                conflict_dir, entry, pool));
+                                svn_wc_adm_access_path (conflict_dir), entry,
+                                pool));
   if (!(resolve_text && text_conflict) && !(resolve_props && prop_conflict))
     return SVN_NO_ERROR;
 
   /* Yes indeed, being able to map a function over a list would be nice. */
   if (resolve_text && text_conflict && entry->conflict_old)
     {
-      SVN_ERR (attempt_deletion (conflict_dir, entry->conflict_old, pool));
+      SVN_ERR (attempt_deletion (svn_wc_adm_access_path (conflict_dir),
+                                 entry->conflict_old, pool));
       modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_OLD;
       entry->conflict_old = NULL;
     }
   if (resolve_text && text_conflict && entry->conflict_new)
     {
-      SVN_ERR (attempt_deletion (conflict_dir, entry->conflict_new, pool));
+      SVN_ERR (attempt_deletion (svn_wc_adm_access_path (conflict_dir),
+                                 entry->conflict_new, pool));
       modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_NEW;
       entry->conflict_new = NULL;
     }
   if (resolve_text && text_conflict && entry->conflict_wrk)
     {
-      SVN_ERR (attempt_deletion (conflict_dir, entry->conflict_wrk, pool));
+      SVN_ERR (attempt_deletion (svn_wc_adm_access_path (conflict_dir),
+                                 entry->conflict_wrk, pool));
       modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_WRK;
       entry->conflict_wrk = NULL;
     }
   if (resolve_props && prop_conflict && entry->prejfile)
     {
-      SVN_ERR (attempt_deletion (conflict_dir, entry->prejfile, pool));
+      SVN_ERR (attempt_deletion (svn_wc_adm_access_path (conflict_dir),
+                                 entry->prejfile, pool));
       modify_flags |= SVN_WC__ENTRY_MODIFY_PREJFILE;
       entry->prejfile = NULL;
     }
 
-#if 0
-  /* ### FIXME: Now that update has locked the working copy we cannot get a
-     ### lock here.  We either need to get the access baton passed in or we
-     ### need to do this somewhere else.  Should this be using log files?
+  /* ### FIXME: Should this be using log files?
 
      Although removing the files is sufficient to indicate that the
      conflict is resolved, if we update the entry as well future checks
      for conflict state will be more efficient. */
-  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, conflict_dir, TRUE, FALSE,
-                            pool));
   SVN_ERR (svn_wc__entry_modify
-           (adm_access,
+           (conflict_dir,
             (entry->kind == svn_node_dir ? NULL : base_name),
             entry, modify_flags, pool));
-  SVN_ERR (svn_wc_adm_close (adm_access));
-#endif
 
   if (notify_func)
     {
@@ -1753,7 +1752,8 @@ resolve_conflict_on_entry (const char *path,
          state of conflict that we have asked to resolve.  If not, report
          the successful resolution.  */     
       SVN_ERR (svn_wc_conflicted_p (&text_conflict, &prop_conflict,
-                                    conflict_dir, entry, pool));
+                                    svn_wc_adm_access_path (conflict_dir),
+                                    entry, pool));
       if ((! (resolve_text && text_conflict))
           && (! (resolve_props && prop_conflict)))
         (*notify_func) (notify_baton, path, svn_wc_notify_resolve,
@@ -1771,8 +1771,13 @@ resolve_conflict_on_entry (const char *path,
 
 struct resolve_callback_baton
 {
+  /* TRUE if text conflicts are to be resolved. */
   svn_boolean_t resolve_text;
+  /* TRUE if property conflicts are to be resolved. */
   svn_boolean_t resolve_props;
+  /* An access baton for the tree, with write access */
+  svn_wc_adm_access_t *adm_access;
+  /* Notification function and baton */
   svn_wc_notify_func_t notify_func;
   void *notify_baton;
   apr_pool_t *pool;
@@ -1785,6 +1790,7 @@ resolve_found_entry_callback (const char *path,
 {
   struct resolve_callback_baton *baton = walk_baton;
   const char *conflict_dir, *base_name = NULL;
+  svn_wc_adm_access_t *adm_access;
 
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only print
@@ -1798,8 +1804,10 @@ resolve_found_entry_callback (const char *path,
     conflict_dir = path;
   else
     svn_path_split (path, &conflict_dir, &base_name, baton->pool);
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, baton->adm_access, conflict_dir,
+                                baton->pool));
 
-  return resolve_conflict_on_entry (path, entry, conflict_dir, base_name,
+  return resolve_conflict_on_entry (path, entry, adm_access, base_name,
                                     baton->resolve_text, baton->resolve_props,
                                     baton->notify_func, baton->notify_baton,
                                     baton->pool);
@@ -1815,6 +1823,7 @@ resolve_walk_callbacks =
 /* The public function */
 svn_error_t *
 svn_wc_resolve_conflict (const char *path,
+                         svn_wc_adm_access_t *adm_access,
                          svn_boolean_t resolve_text,
                          svn_boolean_t resolve_props,
                          svn_boolean_t recursive,
@@ -1823,16 +1832,13 @@ svn_wc_resolve_conflict (const char *path,
                          apr_pool_t *pool)
 {
   struct resolve_callback_baton *baton = apr_pcalloc (pool, sizeof(*baton));
-  svn_wc_adm_access_t *adm_access;
 
   baton->resolve_text = resolve_text;
   baton->resolve_props = resolve_props;
+  baton->adm_access = adm_access;
   baton->notify_func = notify_func;
   baton->notify_baton = notify_baton;
   baton->pool = pool;
-
-  /* ### Will probably need to have write access eventually */
-  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, FALSE, TRUE, pool));
 
   if (! recursive)
     {
@@ -1851,7 +1857,7 @@ svn_wc_resolve_conflict (const char *path,
                                     FALSE, pool));
 
     }
-  SVN_ERR (svn_wc_adm_close (adm_access));
+
   return SVN_NO_ERROR;
 }
 

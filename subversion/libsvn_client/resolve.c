@@ -41,6 +41,15 @@ svn_client_resolve (const char *path,
                     svn_boolean_t recursive,
                     apr_pool_t *pool)
 {
-  return svn_wc_resolve_conflict (path, TRUE, TRUE, recursive,
-                                  notify_func, notify_baton, pool);
+  svn_wc_adm_access_t *adm_access;
+
+  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, TRUE, recursive,
+                                  pool));
+
+  SVN_ERR (svn_wc_resolve_conflict (path, adm_access, TRUE, TRUE, recursive,
+                                    notify_func, notify_baton, pool));
+
+  SVN_ERR (svn_wc_adm_close (adm_access));
+
+  return SVN_NO_ERROR;
 }

@@ -81,7 +81,7 @@ restore_file (const char *file_path,
   SVN_ERR (svn_wc__maybe_set_executable (NULL, file_path, pool));
 
   /* Remove any text conflict */
-  SVN_ERR (svn_wc_resolve_conflict (file_path, TRUE, FALSE, FALSE,
+  SVN_ERR (svn_wc_resolve_conflict (file_path, adm_access, TRUE, FALSE, FALSE,
                                     NULL, NULL, pool));
 
   /* ### hey guys, shouldn't we recording the 'restored'
