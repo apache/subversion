@@ -2,12 +2,21 @@ This is a -*- text -*- file.
 
 Here is a list of all the things that the Subversion Book DOESN'T yet cover.
 
-  - certificate support in the client.  how to configure
-    ~/.subversion/servers, manage certs, etc.
+--------------------------------------------------------------
 
-  - the auth data now lives in ~/.subversion/auth.  explain exactly
-    when stuff gets cached, how to prevent it from being cached, and
-    how to invalidate a cache.
+Stuff that needs more discussion:
+
+  - 'svn diff/merge --ignore-ancestry'.  Demonstrate how this switch
+    can be used as an alternate strategy for vendor branching (instead
+    of using svn_load_dirs.pl): just import each new vendor release
+    unrelatedly, and apply the diffs to your vendor-branch working copy.
+
+  - (perhaps) suggest the use of environment variables to represent
+    long repository URLs.  useful for lots of branching/tagging commands.
+
+--------------------------------------------------------------
+
+To be fixed by cmpilato:
 
   - define a 'project root', recommend 'standard' repos layout beneath
     such roots.
@@ -15,47 +24,11 @@ Here is a list of all the things that the Subversion Book DOESN'T yet cover.
   - svndumpfilter.  in particular, show how to "migrate" a subdir in
     one repos to a subdir in another one.
 
-  - 'svn diff/merge --ignore-ancestry'.  Demonstrate how this switch
-    can be used as an alternate strategy for vendor branching (instead
-    of using svn_load_dirs.pl): just import each new vendor release
-    unrelatedly, and apply the diffs to your vendor-branch working copy.
-
-  - appendix A: how authentication differs from CVS.  Explain that the
-    server challenges, rather than the client explicitly "logging in".
-
-    Also, in 'branches are dirs' section, stress that users would NOT
-    want to ever checkout the root of an svn repository.... it would
-    be humongous.  Some CVS users have been confused by this.
-
-  - some folks want a glossary.  that's good, since we have a
-    glossary.xml anyway.  :-)  probably something we do at the last minute.
-
   - ch07: maybe a explanation for the person writing a new main()
     application... what are all those callbacks in the ctx_t used for?
     people have asked this in irc.  what sort of things does an
     application *have* to set up in the cxt_t in order to call an
     svn_client_foo() function?
-
-  - document how to use 'svn co' to restart an interrupted checkout.
-
-  - document new 'svn st' symbol for incomplete directories
-
-  - new 'svn diff' UI (when it's done) -- affects ch03, ch08, and
-    maybe other chapters.
-
-  - svn merge --dry-run   (different than 'svn diff')
-
-  - mention that killing $EDITOR without saving changes gives the
-    option to abort a commit.
-
-  - (perhaps) suggest the use of environment variables to represent
-    long repository URLs.  useful for lots of branching/tagging commands.
-
-  - 'svn rm URL URL URL [...]' is now a single commit.  Same with 'svn
-    mkdir dir1 dir2 dir3 [...]'
-
-  - clarify that 'svn copy/move' *only* works within a single
-    repository.  cross-repository copying is a post-1.0 feature.
 
   - I think we need to add  a *bit* more background on "how berkeley db"
     works.  It's not clear to most readers 1) what the db logfiles are,
@@ -69,20 +42,70 @@ Here is a list of all the things that the Subversion Book DOESN'T yet cover.
     think this level of information is the exact right level of BDB
     knowledge that users/admins need to use svn well.
 
+--------------------------------------------------------------
+
+To be fixed by fitz:
+
+  - appendix A: how authentication differs from CVS.  Explain that the
+    server challenges, rather than the client explicitly "logging in".
+
+    Also, in 'branches are dirs' section, stress that users would NOT
+    want to ever checkout the root of an svn repository.... it would
+    be humongous.  Some CVS users have been confused by this.
+
+  - some folks want a glossary.  that's good, since we have a
+    glossary.xml anyway.  :-)  probably something we do at the last minute.
+
+  - document how to use 'svn co' to restart an interrupted checkout.
+
+  - document new 'svn st' symbol for incomplete directories ("!")
+
+  - mention that killing $EDITOR without saving changes gives the
+    option to abort a commit.
+
+  - 'svn rm URL URL URL [...]' is now a single commit.  Same with 'svn
+    mkdir dir1 dir2 dir3 [...]'
+
+  - clarify that 'svn copy/move' *only* works within a single
+    repository.  cross-repository copying is a post-1.0 feature.
+
   - document 'svn switch --relocate'.
-
-  - cvs2svn.py is a lot more complex now, with many more switches,
-    especially since it now converts branches and tags.  Need to
-    expand our coverage of this in Appendix B.
-
-  - ch06:  document the [tunnels] section of ~/.subversion/config
-
-  - document mod_authz_svn!  and don't forget to mention it in the
-    'svnserve vs. apache' comparison section of ch05.
 
   - 'svn import' syntax changed... right?  it's not updated everywhere.
 
   - clarify that 'svn st -u' only adds an asterisk;  it does *not*
     make the entire record reflect the repository's version of the
     file.
+
+
+--------------------------------------------------------------
+
+To be fixed by sussman:
+
+  - certificate support in the client.  how to configure
+    ~/.subversion/servers, manage certs, etc.
+
+  - the auth data now lives in ~/.subversion/auth.  explain exactly
+    when stuff gets cached, how to prevent it from being cached, and
+    how to invalidate a cache.
+
+  - new 'svn diff' UI (when it's done) -- affects ch03, ch08, and
+    maybe other chapters.
+
+  - svn merge --dry-run   (different than 'svn diff')
+
+  - ch06:  document the [tunnels] section of ~/.subversion/config
+
+  - document mod_authz_svn!  and don't forget to mention it in the
+    'svnserve vs. apache' comparison section of ch05.
+
+--------------------------------------------------------------
+
+To be fixed by kfogel:
+
+  - cvs2svn.py is a lot more complex now, with many more switches,
+    especially since it now converts branches and tags.  Need to
+    expand our coverage of this in Appendix B.
+
+
 
