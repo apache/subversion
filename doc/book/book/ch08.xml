@@ -979,7 +979,7 @@ Committed revision 13.
 $ svn delete myfile
 D         myfile
 
-$ svn ci -m "Deleted file 'myfile'."
+$ svn commit -m "Deleted file 'myfile'."
 Deleting       myfile
 Transmitting file data .
 Committed revision 14.
