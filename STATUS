@@ -139,4 +139,8 @@ Bindings changes that affect the build system:
      
 Bindings changes that don't affect the build system:
 
-   [none pending right now]
+     * r8344
+     Fix perl bindings to work with new date format. 
+     Justification: Perl bindings won't even build now without this.
+     Votes:
+      +1: breser
