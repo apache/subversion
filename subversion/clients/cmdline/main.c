@@ -333,7 +333,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "        will fail, and a recursive attempt will set the property only\n"
     "        on the file children of the directory.\n"
     "      svn:eol-style  - One of 'native', 'LF', 'CR', 'CRLF'. \n"
-    "      svn:mimetype   - The mimetype of the file.  Used to determine\n"
+    "      svn:mime-type   - The mimetype of the file.  Used to determine\n"
     "        whether to merge the file, and how to serve it from Apache.\n"
     "        A mimetype beginning with 'text/' (or an absent mimetype) is\n"
     "        treated as text.  Anything else is treated as binary.\n",
