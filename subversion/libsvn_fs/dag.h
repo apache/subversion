@@ -222,9 +222,22 @@ svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
    must finish using it while both of those remain live.  If the
    caller needs the directory enttry list to live longer, it can use
    svn_fs__copy_skel to make its own copy.  */
-svn_error_t *svn_fs__dag_dir_entries (skel_t **entries_p,
-                                      dag_node_t *node,
-                                      trail_t *trail);
+svn_error_t *svn_fs__dag_dir_entries_skel (skel_t **entries_p,
+                                           dag_node_t *node,
+                                           trail_t *trail);
+
+
+/* Set *ENTRIES_P to a hash table of NODE's entries, as part of
+   TRAIL.  The keys of the table are entry names, and the values are
+   svn_fs_dirent_t's.
+
+   The returned table is allocated in *either* TRAIL->pool or the pool
+   NODE was allocated in, at this function's discretion; the caller
+   must finish using it while both of those remain live.  If the
+   caller needs the table to live longer, it should copy the hash.  */
+svn_error_t *svn_fs__dag_dir_entries_hash (apr_hash_t **entries_p,
+                                           dag_node_t *node,
+                                           trail_t *trail);
 
 
 /* Set ENTRY_NAME in NODE to point to ID, as part of TRAIL.
@@ -379,6 +392,34 @@ svn_error_t *svn_fs__dag_get_copy (svn_revnum_t *rev_p,
                                    char **path_p,
                                    dag_node_t *node,
                                    trail_t *trail);
+
+
+/* Given nodes SOURCE and TARGET, and a common ancestor ANCESTOR,
+   modify TARGET to contain all the changes made between ANCESTOR and
+   SOURCE, as well as the changes made between ANCESTOR and TARGET.
+   TARGET must be a different node revision from ANCESTOR.
+
+   SOURCE, TARGET, and ANCESTOR are generally directories; this
+   function recursively merges the directories' contents.  If they are
+   files, this function simply returns an error whenever SOURCE,
+   TARGET, and ANCESTOR are all distinct node revisions.
+
+   TARGET_PATH is the path to TARGET; it can be empty, but not null.
+   If there are differences between ANCESTOR and SOURCE that conflict
+   with changes between ANCESTOR and TARGET, this function returns an
+   SVN_ERR_FS_CONFLICT error, and sets *CONFLICT_P to the name
+   (i.e., TARGET_PATH + entry name) of the node in TARGET which
+   couldn't be merged.  If there are no conflicting differences,
+   *CONFLICT_P is set to null.
+
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *
+svn_fs__dag_merge (const char **conflict_p,
+                   const char *target_path,
+                   dag_node_t *source,
+                   dag_node_t *target,
+                   dag_node_t *ancestor,
+                   trail_t *trail);
 
 
 #endif /* SVN_LIBSVN_FS_DAG_H */
