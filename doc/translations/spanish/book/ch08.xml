@@ -531,30 +531,32 @@ make_new_directory (const char *repos_path,
 
     <!-- ****************************************************************** -->
     <sect2 id="svn-ch-8-sect-1.2">
-      <title>Repository Access Layer</title>
+      <title>Capa de acceso al repositorio</title>
 
-      <para>If the Subversion Repository Layer is at <quote>the other
-        end of the line</quote>, the Repository Access Layer is the
-        line itself.  Charged with marshalling data between the client
-        libraries and the repository, this layer includes the
-        libsvn_ra module loader library, the RA modules themselves
-        (which currently includes libsvn_ra_dav, libsvn_ra_local, and
-        libsvn_ra_svn), and any additional libraries needed by one or
-        more of those RA modules, such as the mod_dav_svn Apache
-        module with which libsvn_ra_dav communicates or
-        libsvn_ra_svn's server, <command>svnserve</command>.</para>
+      <para>Si la capa de repositorio de Subversion está <quote>al
+        otro lado de la línea</quote>, la capa de acceso al
+        repositorio está en la propia línea.  Destinada a serializar
+        los datos entre las librerías cliente y el repositorio, esta
+        capa incluye la librería cargadora del módulo libsvn_ra,
+        los propios módulos RA (que por ahora son libsvn_ra_dav,
+        libsvn_ra_local, y libsvn_ra_svn), y cualquier librería
+        adicional necesaria por uno o varios de esos módulos RA,
+        como por ejemplo el módulo mod_dav_svn de Apache que se
+        comunica con libsvn_ra_dav o el servidor de libsvn_ra_svn,
+        <command>svnserve</command>.</para>
 
-      <para>Since Subversion uses URLs to identify its repository
-        resources, the protocol portion of the URL schema (usually
-        <literal>file:</literal>, <literal>http:</literal>,
-        <literal>https:</literal>, or <literal>svn:</literal>) is used
-        to determine which RA module will handle the communications.
-        Each module registers a list of the protocols it knows how to
-        <quote>speak</quote> so that the RA loader can, at runtime,
-        determine which module to use for the task at hand.  You can
-        determine which RA modules are available to the Subversion
-        command-line client, and what protocols they claim to support,
-        by running <command>svn --version</command>:</para>
+      <para>Dado que Subversion usa URLs para identificar los
+        recursos del repositorio, la porción de protocolo del
+        esquema URL (normalmente <literal>file:</literal>,
+        <literal>http:</literal>, <literal>https:</literal>, o
+        <literal>svn:</literal>) es usada para determinar qué módulo
+        RA se encargará de las comunicaciones.  Cada módulo registra
+        una lista de los protocolos que sabe <quote>hablar</quote>
+        por lo que el cargador de RA puede, en tiempo de ejecución,
+        determinar qué modulo usar para cada tarea concreta. Puede
+        determinar qué módulos RA están disponibles en el cliente
+        de línea de comando de Subversion, y qué protocolos dice
+        soportar, ejecutando <command>svn --version</command>:</para>
      
       <screen>
 $ svn --version
@@ -577,31 +579,37 @@ The following repository access (RA) modules are available:
 </screen>
     
       <sect3 id="svn-ch-8-sect-1.2.1">
-        <title>RA-DAV (Repository Access Using HTTP/DAV)</title>
+        <title>RA-DAV (Acceso al repositorio usando HTTP/DAV)</title>
 
-        <para>The libsvn_ra_dav library is designed for use by clients
-          that are being run on different machines than the servers
-          with which they communicating, specifically servers reached
-          using URLs that contain the <literal>http:</literal> or
-          <literal>https:</literal> protocol portions.  To understand
-          how this module works, we should first mention a couple of
-          other key components in this particular configuration of the
-          Repository Access Layer&mdash;the powerful Apache HTTP
-          Server, and the Neon HTTP/WebDAV client library.</para>
+        <para>La librería libsvn_ra_dav está diseñada para ser
+          usada por clientes que están siendo ejecutado en diferentes
+          máquinas que los servidores con los que se comunican,
+          específicamente servidores a los que se ha alcanzado
+          usando URLs que contienen las porciones de protocolo
+          <literal>http:</literal> o <literal>https:</literal>. Para
+          entender cómo funciona este módulo, deberíamos mencionar
+          primero un grupo de componentes clave en esta configuración
+          particular de capa de acceso al repositorio&mdash;el
+          poderoso servidor HTTP Apache, y la librería cliente Neon
+          HTTP/WebDAV.</para>
   
-        <para>Subversion's primary network server is the Apache HTTP
-          Server.  Apache is a time-tested, extensible open-source
-          server process that is ready for serious use.  It can
-          sustain a high network load and runs on many platforms.  The
-          Apache server supports a number of different standard
-          authentication protocols, and can be extended through the
-          use of modules to support many others.  It also supports
-          optimizations like network pipelining and caching.  By using
-          Apache as a server, Subversion gets all of these features
-          for free.  And since most firewalls already allow HTTP
-          traffic to pass through, sysadmins typically don't even have
-          to change their firewall configurations to allow Subversion
-          to work.</para>
+        <para>El servidor principal de red de Subversion es el
+          servidor HTTP Apache.  Apache es un proceso servidor
+          open-source extensible probado por mucho tiempo, preparado
+          para uso serio. Puede soportar una elevada carga de red
+          y se ejecuta en muchas plataformas. El servidor Apache
+          soporta una variedad de protocolos de autenticación
+          estandar, y puede expandirse por medio de módulos para
+          soportar muchos más. También soporta optimizaciones de
+          red como pipelining y caching.  <!--TODO revisar en
+          la documentación traducida de Mozilla o Apache cómo
+          traducen pipelining y caching--> Usando Apache como
+          servidor, Subversion obtiene todas estas características
+          gratuítamente. Y dado que la mayoría de los cortafuegos
+          ya permiten que pase el tráfico HTTP, los administradores
+          de sistemas normalmente no tienen que cambiar siquiera
+          la configuración de su cortafuegos para permitir que
+          Subversion funcione.</para>
   
         <para>Subversion uses HTTP and WebDAV (with DeltaV) to
           communicate with an Apache server.  You can read more about
