@@ -238,7 +238,8 @@ svn_client_log (const apr_array_header_t *targets,
                                    discover_changed_paths,
                                    strict_node_history,
                                    receiver,
-                                   receiver_baton);
+                                   receiver_baton,
+                                   pool);
             if (err)
               break;
           }
@@ -252,7 +253,8 @@ svn_client_log (const apr_array_header_t *targets,
                                discover_changed_paths,
                                strict_node_history,
                                receiver,
-                               receiver_baton);
+                               receiver_baton,
+                               pool);
       }
     
     /* Special case: If there have been no commits, we'll get an error

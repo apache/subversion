@@ -293,7 +293,8 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
                                   svn_boolean_t discover_changed_paths,
                                   svn_boolean_t strict_node_history,
                                   svn_log_message_receiver_t receiver,
-                                  void *receiver_baton)
+                                  void *receiver_baton,
+                                  apr_pool_t *pool)
 {
   /* The Plan: Send a request to the server for a log report.
    * Somewhere in mod_dav_svn, there will be an implementation, R, of
