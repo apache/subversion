@@ -1208,6 +1208,21 @@ def commit_in_dir_scheduled_for_addition(sbox):
 
   out, err = svntest.main.run_svn(1, 'commit', '-m', '"logmsg"', mu_path)
 
+  ### FIXME:
+  #
+  # In commit 1275, sussman fixed subversion/libsvn_client/copy.c, and
+  # said:
+  # 
+  #    This was causing commit_test #15 to fail, but this test was
+  #    written only to expect generic failure, so it still passing, so
+  #    it looked as though 'make check' was passing.  If you ran
+  #    commit_tests.py by hand, though, you'd see the extra stderr
+  #    output.  The moral of the story is that commit_test #15 should
+  #    be using run_and_verify_commit() to look for a *specific*
+  #    expected errorstring.  Anyone wanna fix it?
+  #
+  # This is the test that needs to be fixed, right?
+
   if len(err) == 0: 
     return 1 
 
