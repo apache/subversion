@@ -209,6 +209,7 @@ static int auth_checker(request_rec *r)
     svn_config_t *access_conf = NULL;
     svn_error_t *svn_err;
     int status = OK;
+    const char *cache_key;
 
     if (!conf->access_file)
         return DECLINED;
@@ -259,12 +260,22 @@ static int auth_checker(request_rec *r)
     if (repos_path)
         repos_path = svn_path_join("/", repos_path, r->pool);
 
-    svn_err = svn_config_read(&access_conf, conf->access_file, FALSE, r->pool);
-    if (svn_err) {
-        ap_log_rerror(APLOG_MARK, APLOG_ERR, svn_err->apr_err, r,
-            "%s", svn_err->message);
+    /* Retrieve/cache authorization file */
+    cache_key = apr_pstrcat(r->pool, "mod_authz_svn:", repos_path, NULL);
+    apr_pool_userdata_get((void **)&access_conf, cache_key, r->connection->pool);
+    if (access_conf == NULL) {
+        svn_err = svn_config_read(&access_conf, conf->access_file, FALSE,
+                                  r->connection->pool);
+        if (svn_err) {
+            ap_log_rerror(APLOG_MARK, APLOG_ERR, svn_err->apr_err, r,
+                          "%s", svn_err->message);
 
-        return conf->authoritative ? HTTP_UNAUTHORIZED: DECLINED;
+            return conf->authoritative ? HTTP_UNAUTHORIZED: DECLINED;
+        }
+
+        /* Cache the open repos for the next request on this connection */
+        apr_pool_userdata_set(access_conf, cache_key,
+                              NULL, r->connection->pool);
     }
 
     if (!check_access(access_conf,
