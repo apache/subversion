@@ -51,12 +51,12 @@ AC_DEFUN(SVN_FIND_SWIG,
     #   packages/rpm/redhat-7.x/subversion.spec
     #   packages/rpm/redhat-8.x/subversion.spec
     case $SWIG_VERSION in
-        [1.3.1[67]*])
+        [1.3.1[679]*])
           SWIG_SUITABLE=yes
           ;;
         *)
           SWIG_SUITABLE=no
-          AC_MSG_WARN([swig bindings require 1.3.16.])
+          AC_MSG_WARN([swig bindings require 1.3.19.])
           ;;
     esac
     if test "$PYTHON" != "none" -a "$SWIG_SUITABLE" = "yes"; then
