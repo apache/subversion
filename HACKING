@@ -598,10 +598,15 @@ A patch submission should contain one logical change; please don't mix
 N unrelated changes in one submission -- send N separate emails
 instead.
 
-The patch should be in unified diff format, inserted directly into the
-body of your mail message (i.e., not MIME-attached, uuencoded, or
-otherwise opaqified).  Be sure to start off with a log message, as
-described in "Writing log entries" above.
+The email message should start off with a log message, as described in
+"Writing log entries" above.  The patch itself should be in unified
+diff format, preferably inserted directly into the body of your
+message (rather than MIME-attached, uuencoded, or otherwise
+opaqified).  If your mailer wraps long lines, then you will need to
+attach your patch.  Please ensure the MIME type of the attachment is
+text/plain (some mailers allow you to set the MIME type; for some
+others, you might have to use a .txt extension on your patch file). Do
+not compress or otherwise encode the attached patch.
 
 If the patch implements a new feature, make sure to describe the
 feature completely in your mail; if the patch fixes a bug, describe
