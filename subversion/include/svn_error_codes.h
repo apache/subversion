@@ -255,7 +255,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_ENTRY_MISSING_URL,
               SVN_ERR_ENTRY_CATEGORY_START + 4,
-              "Entry has no url")
+              "Entry has no URL")
 
   SVN_ERRDEF (SVN_ERR_ENTRY_ATTRIBUTE_INVALID,
               SVN_ERR_ENTRY_CATEGORY_START + 5,

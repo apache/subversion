@@ -43,7 +43,7 @@ get_dir_contents (apr_hash_t *dirents,
                               NULL, NULL, pool));
   else
     return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
-                             "No get_dir() available for url schema.");
+                             "No get_dir() available for URL schema.");
 
   for (hi = apr_hash_first (pool, tmpdirents);
        hi;
@@ -136,7 +136,7 @@ svn_client_ls (apr_hash_t **dirents,
                                   NULL, NULL, pool));
       else
         return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
-                                 "No get_dir() available for url schema.");
+                                 "No get_dir() available for URL schema.");
 
       /* Copy the relevant entry into the caller's hash. */
       *dirents = apr_hash_make (pool);

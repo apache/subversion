@@ -542,7 +542,7 @@ resolve_to_defaults (apr_hash_t *entries,
   if (! default_entry->url)
     return svn_error_create (SVN_ERR_ENTRY_MISSING_URL,
                              NULL,
-                             "default entry missing url");
+                             "default entry missing URL");
   
     
   /* Then use it to fill in missing information in other entries. */

@@ -68,7 +68,7 @@ print_entry (const char *target,
   if (entry->url) 
     {
       SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->url, pool));
-      printf ("Url: %s\n", native);
+      printf ("URL: %s\n", native);
     }
            
   if (entry->repos) 
@@ -141,7 +141,7 @@ print_entry (const char *target,
         {
           SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->copyfrom_url,
                                               pool));
-          printf ("Copied From Url: %s\n", native);
+          printf ("Copied From URL: %s\n", native);
         }
  
       if (SVN_IS_VALID_REVNUM (entry->copyfrom_rev))

@@ -824,7 +824,7 @@ main (int argc, const char * const *argv)
       else if (svn_path_is_url (repos_path))
         {
           fprintf (stderr,
-                   "'%s' is a url when it should be a path\n",
+                   "'%s' is a URL when it should be a path\n",
                    repos_path);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;

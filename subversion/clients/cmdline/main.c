@@ -120,7 +120,7 @@ const apr_getopt_option_t svn_cl__options[] =
     {"revprop",       svn_cl__revprop_opt, 0,
                       "operate on a revision property (use with -r)"},
     {"relocate",      svn_cl__relocate_opt, 0,
-                      "relocate via url-rewriting"},
+                      "relocate via URL-rewriting"},
     {"config-dir",    svn_cl__config_dir_opt, 1,
                       "read user configuration files from directory ARG"},
     {0,               0, 0, 0}

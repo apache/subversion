@@ -825,8 +825,8 @@ Committed revision 350.
 <screen>
 $ cd calc
 
-$ svn info | grep Url
-Url: http://svn.example.com/trunk/calc
+$ svn info | grep URL
+URL: http://svn.example.com/trunk/calc
 
 $ svn switch http://svn.example.com/branches/calc/my-calc-branch
 U   integer.c
@@ -834,8 +834,8 @@ U   button.c
 U   Makefile
 Updated to revision 341.
 
-$ svn info | grep Url
-Url: http://svn.example.com/branches/calc/my-calc-branch
+$ svn info | grep URL
+URL: http://svn.example.com/branches/calc/my-calc-branch
 </screen>
 
     <para>After "switching" to the branch, your working copy is no

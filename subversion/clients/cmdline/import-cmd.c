@@ -83,7 +83,7 @@ svn_cl__import (apr_getopt_t *os,
   if (targets->nelts < 1)
     return svn_error_create
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       "repository url required when importing");
+       "repository URL required when importing");
   else if (targets->nelts > 2)
     return svn_error_create
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
@@ -102,7 +102,7 @@ svn_cl__import (apr_getopt_t *os,
   if (! svn_path_is_url (url))
     return svn_error_createf
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       "invalid url '%s'", url);
+       "invalid URL '%s'", url);
 
   if (! opt_state->quiet)
     svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton,

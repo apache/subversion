@@ -129,7 +129,7 @@ svn_client__checkout_internal (const char *URL,
           SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
           SVN_ERR (svn_wc_adm_close (adm_access));
 
-          /* If PATH's existing url matches the incoming one, then
+          /* If PATH's existing URL matches the incoming one, then
              just update.  This allows 'svn co' to restart an
              interrupted checkout. */
           if (entry->url && (strcmp (entry->url, URL) == 0))
@@ -141,7 +141,7 @@ svn_client__checkout_internal (const char *URL,
               const char *errmsg;
               errmsg = apr_psprintf 
                 (pool,
-                 "'%s' is already a working copy for a different url", path);
+                 "'%s' is already a working copy for a different URL", path);
               if (entry->incomplete)
                 errmsg = apr_pstrcat
                   (pool, errmsg, "; run 'svn update' to complete it.", NULL);
