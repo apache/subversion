@@ -53,6 +53,7 @@ sinclude(ac-helpers/find_apu.m4)
 sinclude(ac-helpers/aprutil.m4)
 sinclude(ac-helpers/java.m4)
 sinclude(ac-helpers/swig.m4)
+sinclude(ac-helpers/gnu-diff.m4)
 
 dnl Grab the libtool macros
 sinclude(ac-helpers/libtool.m4)
@@ -290,51 +291,8 @@ else
   fi
 fi
 
-dnl Find a diff that supports the "-u" flag
-AC_MSG_CHECKING([for diff])
-SVN_CLIENT_DIFF="`${abs_srcdir}/ac-helpers/check-diff.sh ${abs_srcdir}/ac-helpers`"
-if test "$SVN_CLIENT_DIFF" = "";  then
-  AC_MSG_ERROR([not found
-
-Cannot find a diff in your PATH that supports the -u flag.
-We recommend GNU diff (version 2.7 or later).
-You can get it from ftp://ftp.gnu.org/pub/gnu/diffutils.
- ])
- fi
-AC_MSG_RESULT([$SVN_CLIENT_DIFF])
-AC_DEFINE_UNQUOTED(SVN_CLIENT_DIFF, "$SVN_CLIENT_DIFF", 
-        [Define to be the full path to diff])
-
-dnl Find a (non-broken) version of GNU diff3
-AC_MSG_CHECKING([for non-broken GNU diff3])
-SVN_CLIENT_DIFF3="`$SHELL ${abs_srcdir}/ac-helpers/gnu-diff3.sh ${abs_srcdir}/ac-helpers`"
-if test "$SVN_CLIENT_DIFF3" = "";  then
-  AC_MSG_ERROR([not found
-
-Cannot find an unbroken GNU diff3 program in your PATH.
-Please make sure you have GNU diff (version 2.7 or later) installed.  
-You can get it from ftp://ftp.gnu.org/pub/gnu/diffutils.
-
-(Note that FreeBSD uses a modified version of GNU diff that is unable
-to handle certain types of text files.  Since diff3 uses GNU diff to do
-the actual diffing, this effectively breaks diff3 as well.  If you are
-using FreeBSD, please install the /usr/ports/textproc/diffutils port.)
-])
-fi
-AC_MSG_RESULT([$SVN_CLIENT_DIFF3])
-AC_DEFINE_UNQUOTED(SVN_CLIENT_DIFF3, "$SVN_CLIENT_DIFF3", 
-	[Define to be the full path to your GNU diff3 program])
-
-dnl Determine whether diff3 supports the --diff-program arg.
-AC_MSG_CHECKING([whether diff3 supports --diff-program arg])
-$SVN_CLIENT_DIFF3 --diff-program=$SVN_CLIENT_DIFF ${0} ${0} ${0} > /dev/null 2>&1
-if test "$?" = "0"; then
-  AC_MSG_RESULT([yes])
-  AC_DEFINE_UNQUOTED(SVN_DIFF3_HAS_DIFF_PROGRAM_ARG, 1, 
-        [Defined if diff3 supports the --diff-program argument])
-else
-  AC_MSG_RESULT([no])
-fi
+dnl Find suitable diff utilities
+SVN_LIB_DIFFUTILS(${abs_srcdir}/ac-helpers)
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'
 AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',
