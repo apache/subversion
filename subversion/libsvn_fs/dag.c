@@ -163,7 +163,7 @@ int svn_fs__dag_is_mutable (dag_node_t *node)
      itself a list. */
   skel_t *header = node->contents->children;
   
-  /* The 3nd element of the header, IF it exists, is the header's
+  /* The 3rd element of the header, IF it exists, is the header's
      first `flag'.  It could be NULL.  */
   skel_t *flag = header->children->next->next;
   
