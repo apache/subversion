@@ -257,7 +257,7 @@ Reglas mínimas para traductores
     Book Spanish. Translated two paragraphs.
 
   Si se nos olvida, siempre se puede modificar el log de un cambio
-  antiguo con el subcomando propset. Ejemplo:
+  antiguo con el subcomando propset o propedit. Ejemplo:
 
     svn propedit svn:log -r113 --revprop
 
