@@ -32,6 +32,7 @@ MDOCS_DIR = ${BOOK_TOP}/misc-docs
 DOC_DIRS = $(DESIGN_DIR) $(BOOK_DIR) $(MDOCS_DIR) 
 
 SWIG_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig
+SWIG_BUILD_DIR = $(abs_builddir)/subversion/bindings/swig
 
 ### these should go away; gen-make should place this into BUILD_DIRS
 SWIG_DIRS = subversion/bindings/swig/python     \
@@ -169,7 +170,10 @@ INSTALL_SWIG_JAVA_LIB = $(INSTALL_LIB)
 # additional installation rules for the SWIG wrappers
 INSTALL_EXTRA_SWIG_PY=\
    $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_SRC_DIR}/python" "$(DESTDIR)$(swig_pydir)" ; \
-   $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_SRC_DIR}/python/svn" "$(DESTDIR)$(swig_pydir_extra)"
+   $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_SRC_DIR}/python/svn" "$(DESTDIR)$(swig_pydir_extra)"; \
+   if test $(abs_srcdir) != $(abs_builddir); then \
+       $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_BUILD_DIR}/python" "$(DESTDIR)$(swig_pydir)" ; \
+   fi
 INSTALL_EXTRA_SWIG_JAVA=:
 
 APXS = @APXS@ 
