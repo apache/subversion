@@ -1,4 +1,4 @@
-Subversion on Berkeley DB
+Subversion on Berkeley DB                                    -*- text -*-
 
 There are many different ways to implement the Subversion filesystem
 interface.  You could implement it directly using ordinary POSIX
@@ -132,6 +132,8 @@ where:
 KIND must be one of the following:
 - "file", indicating that the node is a file (see FILE below).
 - "dir", indicating that the node is a directory (see DIR below).
+- "copy", indeicating that the node is a copy of anoter node (see COPY
+  below).
 
 A FLAG has one of the following forms:
 
@@ -183,6 +185,18 @@ The list (ENTRY ...) gives the directory entries; each ENTRY has the form:
 where:
   - NAME is the name of the directory entry, in UTF-8, and
   - ID is the ID of the node revision to which this entry refers
+
+
+COPY: how copied nodes are represented.
+
+If the header's KIND is "copy", then the node-revision skel represente
+a copy of another node, and has the form:
+
+    (HEADER SOURCE-REVISION (NAME ...))
+
+where SOURCE-REVISION is a filesystem revision, and (NAME ...) is a
+list of directory entry names (the path) that identifies the copy
+source in this revision. The copy source may not be a mutable node.
 
 
 PROPLIST: property lists for nodes and directory entries
@@ -384,6 +398,49 @@ to allocate ID's for new transactions.
 The `transactions' table is a btree, with no particular sort order.
 
 
+Copying
+
+[xbc todo: hammer some sense out of this. For now, this is only copied
+           out of STACK.
+[[
+   The Way It Works Now:
+      When we copy (or move) a node in the filesystem, we're currently
+      losing information about where it came from.  Our "lazy cloning"
+      model goes a long way, but in the end we get just a bunch of
+      duplicated pointers to the same node revision numbers.
+   
+      E.g.: if a node A points to the same node revision that two others
+      (B and C) point to, there's no way to know whether A was copied
+      from B or C.
+   
+   Proposed Changes:
+      1.  In the filesystem model, create a 3rd node type called a "copy"
+          node.  (This is in addition to our "file" and "dir" nodes.)
+   
+          A copy node contains a pointer to a revision and a path.
+   
+          When we create node B as a "copy" of node A, we create a new
+          copy node.  This copy node allows us to discover the proper
+          node-revision, but it also tracks the history of the copy.
+   
+      2.  Remember that a copy command is really just an "add with
+          history", and a move command is really just a "delete, followed
+          by an add with history".  Thus it's the *add* command, which,
+          when given an ancestor path and revision, creates a copy node.
+          (If there's no history given, then the add command creates a
+          regular node.)
+   
+          For clarity sake, the history arguments to the editor's add()
+          function should reflect this copying.  Instead of
+          "ancestor_path" and "ancestor_revision", we'd like to call the
+          arguments "copyfrom_url" and "copyfrom_revision".
+      
+   Rationale:
+      I think it's all been explained above.  Other folks, feel free to
+      add to this explanation.
+]]]
+
+
 Merge rules
 
 The Subversion filesystem must provide the following characteristics:
@@ -416,9 +473,9 @@ ANCESTOR:
       - E doesn't exist in ANCESTOR, and has been added to A.
       - E exists in ANCESTOR, but has been deleted from A.
       - E exists in both ANCESTOR and A ...
-	- but refers to different nodes.
-	- but refers to different revisions of the same node.
-	- and refers to the same node revision.
+        - but refers to different nodes.
+        - but refers to different revisions of the same node.
+        - and refers to the same node revision.
 
     The same set of possible relationships with ANCESTOR holds for B,
     so there are thirty-six combinations.  The matrix is symmetrical
@@ -427,10 +484,10 @@ ANCESTOR:
 
     - (6) E exists in neither ANCESTOR nor A:
       - (1) E exists in neither ANCESTOR nor B.  Can't occur, by assumption
-	   that E exists in either A, B, or ancestor.
+           that E exists in either A, B, or ancestor.
       - (1) E has been added to B.  Add E in the merged result. ***
       - (1) E has been deleted from B.  Can't occur, by assumption that E
-	doesn't exist in ANCESTOR.
+        doesn't exist in ANCESTOR.
       - (3) E exists in both ANCESTOR and B.  Can't occur, by assumption that
         E doesn't exist in ancestor.
     - (5) E doesn't exist in ANCESTOR, and has been added to A.
@@ -487,32 +544,32 @@ before it.
 
 skel.c, id.c, dbt.c, convert-size.c
 
-		Low-level utility functions.
+                Low-level utility functions.
 
-fs.c		Creating and destroying filesystem objects.
+fs.c            Creating and destroying filesystem objects.
 
-err.c		Error handling.
+err.c           Error handling.
 
 nodes-table.c, txn-table.c, rev-table.c
 
-		Create and open particular database tables.
-		Responsible for intra-record consistency.
+                Create and open particular database tables.
+                Responsible for intra-record consistency.
 
 node-rev.c      Creating, reading, and writing node revisions.
-		This will handle delta-based node revision storage,
-		Responsible for consistency of 
+                This will handle delta-based node revision storage,
+                Responsible for consistency of 
 
-dag.c		Operations on the DAG filesystem.  "DAG" because the
-		interface exposes the filesystem's sharing structure.
-		Enforce inter-record consistency.
+dag.c           Operations on the DAG filesystem.  "DAG" because the
+                interface exposes the filesystem's sharing structure.
+                Enforce inter-record consistency.
 
-tree.c		Operations on the tree filesystem.  This layer is
-		built on top of dag.c, but transparently distinguishes
-		virtual copies, making the underlying DAG look like a
-		real tree.  This makes incomplete transactions behave
-		like ordinary mutable filesystems.
+tree.c          Operations on the tree filesystem.  This layer is
+                built on top of dag.c, but transparently distinguishes
+                virtual copies, making the underlying DAG look like a
+                real tree.  This makes incomplete transactions behave
+                like ordinary mutable filesystems.
 
-delta.c		Computing deltas.
+delta.c         Computing deltas.
 
 
 Appendix: Filesystem structure summary
@@ -561,17 +618,19 @@ Transactions:
 
 Node revisions:
 
-          NODE-REVISION ::= FILE | DIR ;
+          NODE-REVISION ::= FILE | DIR | COPY ;
                    FILE ::= (HEADER DATA) ;
                     DIR ::= (HEADER (ENTRY ...)) ;
+                   COPY ::= (HEADER SOURCE-REVISION (NAME ...)) ;
                   ENTRY ::= (NAME ID) ;
                    NAME ::= atom ;
 
 
                  HEADER ::= (KIND PROPLIST FLAG ...) ;
-                   KIND ::= "file" | "dir" ;
+                   KIND ::= "file" | "dir" | "copy" ;
                    FLAG ::= ("mutable" PARENT-ID) ;
-	      PARENT-ID ::= node.revision-id ;
+              PARENT-ID ::= node.revision-id ;
+        SOURCE-REVISION ::= number ;
 
 
 
