@@ -15,32 +15,21 @@
  * ====================================================================
  */
 
-/* TODO clean */
 #include <stdlib.h>
 #include <string.h>
 #include <apr_pools.h>
-#include <apr_time.h>
-#include <apr_md5.h>
 
 #include "svn_pools.h"
-#include "svn_error.h"
 #include "svn_time.h"
+#include "svn_string.h"
+#include "svn_test.h"
 #include "svn_fs.h"
-#include "svn_path.h"
-#include "svn_delta.h"
 #include "svn_md5.h"
-#include "svn_props.h"
 
 #include "../fs-helpers.h"
 
-#include "../../libsvn_fs/fs-loader.h"
-
-#include "../../libsvn_fs_base/fs.h"
-#include "../../libsvn_fs_base/dag.h"
-#include "../../libsvn_fs_base/node-rev.h"
 #include "../../libsvn_fs_base/trail.h"
 
-#include "../../libsvn_fs_base/bdb/rev-table.h"
 #include "../../libsvn_fs_base/bdb/txn-table.h"
 #include "../../libsvn_fs_base/bdb/nodes-table.h"
 
