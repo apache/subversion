@@ -277,7 +277,7 @@ compare_and_verify (svn_boolean_t *modified_p,
   SVN_ERR (svn_wc_translated_file (&tmp_vfile, versioned_file, adm_access,
                                    TRUE, pool));
 
-  /* Compare the files, while calculating the base file's checksum. */
+  /* Compare the files, while maybe calculating the base file's checksum. */
   {
     /* "v_" means versioned_file, "b_" means base_file. */
     svn_error_t *v_err = SVN_NO_ERROR;
@@ -291,13 +291,13 @@ compare_and_verify (svn_boolean_t *modified_p,
     int identical = TRUE;
     unsigned char digest[APR_MD5_DIGESTSIZE];
     apr_md5_ctx_t context;
-    const char *checksum;
 
     SVN_ERR (svn_io_file_open (&v_file_h, tmp_vfile,
                                APR_READ, APR_OS_DEFAULT, pool));
     SVN_ERR (svn_io_file_open (&b_file_h, base_file, APR_READ, APR_OS_DEFAULT,
                                pool));
-    apr_md5_init (&context);
+    if (entry->checksum)
+      apr_md5_init (&context);
 
     loop_pool = svn_pool_create (pool);
     do
@@ -318,7 +318,8 @@ compare_and_verify (svn_boolean_t *modified_p,
         if (b_err && !APR_STATUS_IS_EOF(b_err->apr_err))
           return b_err;
         
-        apr_md5_update (&context, b_buf, b_file_bytes_read);
+        if (entry->checksum)
+          apr_md5_update (&context, b_buf, b_file_bytes_read);
 
         if ((v_err && (! b_err))
             || (v_file_bytes_read != b_file_bytes_read)
@@ -338,17 +339,20 @@ compare_and_verify (svn_boolean_t *modified_p,
     SVN_ERR (svn_io_file_close (v_file_h, pool));
     SVN_ERR (svn_io_file_close (b_file_h, pool));
 
-    apr_md5_final (digest, &context);
-
-    checksum = svn_md5_digest_to_cstring (digest, pool);
-    if (entry->checksum && strcmp (checksum, entry->checksum) != 0)
+    if (entry->checksum)
       {
-        return svn_error_createf
-          (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-           _("Checksum mismatch indicates corrupt text base: '%s'\n"
-             "   expected:  %s\n"
-             "     actual:  %s\n"),
-           base_file, entry->checksum, checksum);
+        const char *checksum;
+        apr_md5_final (digest, &context);
+        checksum = svn_md5_digest_to_cstring (digest, pool);
+        if (strcmp (checksum, entry->checksum) != 0)
+          {
+            return svn_error_createf
+              (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+               _("Checksum mismatch indicates corrupt text base: '%s'\n"
+                 "   expected:  %s\n"
+                 "     actual:  %s\n"),
+               base_file, entry->checksum, checksum);
+          }
       }
 
     *modified_p = ! identical;
