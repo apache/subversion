@@ -74,39 +74,6 @@
 
 
 
-/* kff todo: all these constructors need corresponding destructors. */
-
-/* kff todo: path, version, new? */
-svn_ancestor_t * svn_delta_ancestor_create (apr_pool_t *pool);
-
-
-/* kff todo: kind, ancestor, etc? */
-svn_edit_content_t * svn_delta_edit_content_create (apr_pool_t *pool);
-
-
-/* kff todo: action name, content? */
-svn_edit_t * svn_delta_edit_create (apr_pool_t *pool);
-
-
-/* kff todo: perhaps should take the context args, source_root &
-   base_version, and set them in the new delta */
-svn_delta_t * svn_delta_create (apr_pool_t *pool);
-
-
-/* kff todo: again, take the callbacks, and set them?  Need a policy
-   w.r.t. constructors such as this. */
-svn_delta_digger_t * svn_delta_digger_create (apr_pool_t *pool);
-
-
-/* Walk down a delta, append object to the end of it, whereever that
-   may be.  :)   Cast the object when we attach it.  */
-svn_error_t * svn_append_to_delta (svn_delta_t *d,
-                                   void *object,
-                                   svn_XML_elt_t elt_kind);
-
-
-
-
 /* Callback:  called whenever we find a new tag (open paren).
 
     The *name argument contains the name of the tag,

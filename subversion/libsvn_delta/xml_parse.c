@@ -69,61 +69,6 @@
 
 
 
-/* kff todo: all these constructors need corresponding destructors. */
-
-/* kff todo: path, version, new? */
-svn_ancestor_t *
-svn_delta_ancestor_create (apr_pool_t *pool)
-{
-  svn_ancestory_t *annie;
-  anny = apr_pcalloc (pool, sizeof (*anny));
-  return anny;
-}
-
-/* kff todo: kind, ancestor, etc? */
-svn_edit_content_t *
-svn_delta_edit_content_create (apr_pool_t *pool)
-{
-  svn_edit_content_t *e;
-  e = apr_pcalloc (pool, sizeof (*e));
-  e->prop_delta = FALSE;
-  e->text_delta = FALSE;
-  e->tree_delta = NULL;
-  return e;
-}
-
-/* kff todo: action name, content? */
-svn_edit_t *
-svn_delta_edit_create (apr_pool_t *pool)
-{
-  svn_edit_t *eddy;
-  eddy = apr_pcalloc (pool, sizeof (*eddy));
-  eddy->content = NULL;
-  return eddy;
-}
-
-/* kff todo: perhaps should take the context args, source_root &
-   base_version, and set them in the new delta */
-svn_delta_t *
-svn_delta_create (apr_pool_t *pool)
-{
-  svn_delta_t *d;
-  d = apr_pcalloc (pool, sizeof (*d));
-  d->edit = NULL;
-  return d;
-}
-
-
-/* kff todo: again, take the callbacks, and set them?  Need a policy
-   w.r.t. constructors such as this. */
-svn_delta_digger_t *
-svn_delta_digger_create (apr_pool_t *pool)
-{
-  svn_delta_digger_t *diggy;
-  diggy = apr_pcalloc (pool, sizeof (*diggy));
-  return diggy;
-}
-
 
 
 /* Walk down a delta, append object to the end of it, whereever that
@@ -229,7 +174,8 @@ svn_xml_startElement(void *userData, const char *name, const char **atts)
       /* Found a new tree-delta element */
 
       /* Create new svn_delta_t structure here, filling in attributes */
-      svn_delta_t *new_delta = svn_delta_create (my_digger->pool);
+      svn_delta_t *new_delta = apr_pcalloc (my_digger->pool, 
+                                            sizeof (svn_delta_t *));
 
       /* TODO: <tree-delta> doesn't take any attributes right now, but
          our svn_delta_t structure still has src_root and base_ver
@@ -289,7 +235,8 @@ svn_xml_startElement(void *userData, const char *name, const char **atts)
       svn_error_t *err;
       /* Found a new svn_edit_t */
       /* Build a new edit struct */
-      svn_edit_t *new_edit = svn_delta_edit_create (my_digger->pool);
+      svn_edit_t *new_edit = apr_pcalloc (my_digger->pool, 
+                                          sizeof (svn_edit_t *));
       new_edit->kind = action_new;
 
       /* Our three edit tags currently only have one attribute: "name" */
@@ -312,7 +259,9 @@ svn_xml_startElement(void *userData, const char *name, const char **atts)
       svn_error_t *err;
       /* Found a new svn_edit_t */
       /* Build a new edit struct */
-      svn_edit_t *new_edit = svn_delta_edit_create (my_digger->pool);
+      svn_edit_t *new_edit = apr_pcalloc (my_digger->pool, 
+                                          sizeof (svn_edit_t *));
+
       new_edit->kind = action_replace;
 
       /* Our three edit tags currently only have one attribute: "name" */
@@ -336,7 +285,8 @@ svn_xml_startElement(void *userData, const char *name, const char **atts)
       svn_error_t *err;
       /* Found a new svn_edit_t */
       /* Build a new edit struct */
-      svn_edit_t *new_edit = svn_delta_edit_create (my_digger->pool);
+      svn_edit_t *new_edit = apr_pcalloc (my_digger->pool, 
+                                          sizeof (svn_edit_t *));
       new_edit->kind = action_delete;
 
       /* Our three edit tags currently only have one attribute: "name" */
@@ -360,8 +310,10 @@ svn_xml_startElement(void *userData, const char *name, const char **atts)
       svn_error_t *err;
       /* Found a new svn_edit_content_t */
       /* Build a edit_content_t */
-      svn_edit_content_t *this_edit_content = 
-        svn_delta_edit_content_create (my_digger->pool);
+      svn_edit_content_t *this_edit_content 
+        = apr_pcalloc (my_digger->pool, 
+                       sizeof (svn_edit_content_t *));
+
       this_edit_content->kind = file_type;
       
       /* Build an ancestor object out of **atts */
@@ -403,8 +355,10 @@ svn_xml_startElement(void *userData, const char *name, const char **atts)
       svn_error_t *err;
       /* Found a new svn_edit_content_t */
       /* Build a edit_content_t */
-      svn_edit_t *this_edit_content = 
-        svn_delta_edit_content_create (my_digger->pool);
+      svn_edit_content_t *this_edit_content 
+        = apr_pcalloc (my_digger->pool, 
+                       sizeof (svn_edit_content_t *));
+
       this_edit_content->kind = directory_type;
       
       /* Build an ancestor object out of **atts */
@@ -412,7 +366,6 @@ svn_xml_startElement(void *userData, const char *name, const char **atts)
         {
           char *attr_name = *atts++;
           char *attr_value = *atts++;
-          svn_ancestor_t *annie = svn_delta_ancestor_create (my_digger->pool);
 
           if (strcmp (attr_name, "ancestor") == 0)
             {
