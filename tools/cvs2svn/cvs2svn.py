@@ -429,7 +429,8 @@ class Change:
   The fields are
 
     op:
-       'A' if path was added, 'C' if changed, or '-' if no action.
+       OP_ADD path was added, OP_CHANGE if changed, or OP_NOOP if no
+       action.
 
     closed_tags:
        List of tags that this path can no longer be the source of,
@@ -588,11 +589,11 @@ class RepositoryMirror:
 
     If COPYFROM_REV and COPYFROM_PATH are not None, then they are a
     revision and path to record as the copyfrom sources of this node.
-    Since this implies an 'A'dd, it would be reasonable to error and
-    exit if the copyfrom args are present but the node also already
-    exists.  Reasonable -- but not what we do :-).  The most useful
-    behavior for callers is instead to report that nothing was done,
-    by returning '-' for Change.op, so that's what we do.
+    Since this implies an add (OP_ADD), it would be reasonable to
+    error and exit if the copyfrom args are present but the node also
+    already exists.  Reasonable -- but not what we do :-).  The most
+    useful behavior for callers is instead to report that nothing was
+    done, by returning OP_NOOP for Change.op, so that's what we do.
 
     It is an error for only one copyfrom argument to be present.
 
@@ -1044,7 +1045,7 @@ class Dumper:
                                            self.add_dir,
                                            svn_src_path, svn_src_rev,
                                            entries)
-    if change.op == 'A':
+    if change.op == OP_ADD:
       if change.copyfrom_rev >= self.revision:
         sys.stderr.write("%s: invalid copyfrom revision %d used while\n"
                          "creating revision %d in dumpfile.\n"
