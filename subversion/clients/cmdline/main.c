@@ -1071,6 +1071,23 @@ main (int argc, const char * const *argv)
         }
     }
 
+  /* Only a few commands can accept a revision range; the rest can take at
+     most one revision number. */
+  if (subcommand->cmd_func != svn_cl__blame
+      && subcommand->cmd_func != svn_cl__diff
+      && subcommand->cmd_func != svn_cl__log
+      && subcommand->cmd_func != svn_cl__merge)
+    {
+      if (opt_state.end_revision.kind != svn_opt_revision_unspecified)
+        {
+          svn_handle_error
+            (svn_error_create (SVN_ERR_CLIENT_REVISION_RANGE, NULL, NULL),
+             stderr, FALSE);
+          svn_pool_destroy (pool);
+          return EXIT_FAILURE;
+        }
+    }
+
   /* Create a client context object. */
   command_baton.opt_state = &opt_state;
   command_baton.ctx = &ctx;
