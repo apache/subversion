@@ -9,7 +9,7 @@ short-term tasks to it, if that's helpful.
 
 ------------------------------------------------------------------------
 
-Ben and Karl and Jim:
+Everyone:
    - Discuss implementation of editor "hooks".  It would be nice to
      get feedback from the editor for debugging purposes.  [Karl sez:
      not just debugging purposes; possibly we've got ourselves a
