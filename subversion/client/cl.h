@@ -58,6 +58,39 @@
 #include "svn_wc.h"
 #include "svn_string.h"
 
+/* All client command procedures conform to this prototype */
+typedef svn_error_t * (svn_cl__t_cmd_proc) (int argc, char** argv, apr_pool_t*);
+
+/* Structure type for the command dispatch table.
+   tOptions is a place-holder */
+typedef struct {
+  const char          *cmd_name;
+  size_t               name_len;
+  svn_boolean_t        fork_first;
+  svn_cl__t_cmd_proc  *cmd_func;
+} svn_cl__t_cmd_desc;
+
+typedef enum {
+  NULL_COMMAND = 0,
+  ADD_COMMAND,
+  COMMIT_COMMAND,
+  CHECKOUT_COMMAND,
+  DELETE_COMMAND,
+  HELP_COMMAND,
+  PROP_FIND_COMMAND,
+  STATUS_COMMAND,
+  UPDATE_COMMAND
+} svn_cl__te_command;
+
+svn_cl__t_cmd_proc
+  svn_cl__add,
+  svn_cl__commit,
+  svn_cl__checkout,
+  svn_cl__delete,
+  svn_cl__help,
+  svn_cl__prop_find,
+  svn_cl__status,
+  svn_cl__update;
 
 
 /* Print PATH's status line using STATUS. */
@@ -78,6 +111,17 @@ svn_error_t *svn_cl__get_trace_editor (const svn_delta_edit_fns_t **editor,
                                        svn_string_t *initial_path,
                                        apr_pool_t *pool);
 
+/* Until there is something else, this is it */
+void
+svn_cl__parse_options (int argc,
+                       char **argv,
+                       svn_cl__te_command command,
+                       svn_string_t **xml_file,
+                       svn_string_t **target,  /* dest_dir or file to add */
+                       svn_revnum_t *revision,  /* ancestral or new */
+                       svn_string_t **ancestor_path,
+                       svn_boolean_t *force,
+                       apr_pool_t *pool);
 #endif /* SVN_CL_H */
 
 
