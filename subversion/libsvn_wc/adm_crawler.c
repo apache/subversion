@@ -642,7 +642,7 @@ verify_deleted_tree (svn_string_t *dir,
 
 
 
-/* A recursive working-copy "crawler", used for commits.
+/* A recursive working-copy "crawler", used to drive commits.
 
    Enter directory PATH and recursively report any local changes to
    EDITOR.
@@ -683,6 +683,8 @@ report_local_mods (svn_string_t *path,
   apr_hash_index_t *entry_index;  /* holds loop-state */
   svn_wc_entry_t *this_dir;       /* represents current working dir */
   void *new_dir_baton = NULL;     /* potential child dir baton */
+  int only_add_entries = FALSE;   /* whether we should only notice
+                                     added things. */
 
   /**                                                   **/
   /** Setup -- arrival in a new subdir of working copy. **/
@@ -703,7 +705,13 @@ report_local_mods (svn_string_t *path,
     return
       svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, subpool,
                          "Can't find `.' entry in %s", path->data);
-                              
+
+  /* If the `.' entry is marked as ADDED, then we *only* want to
+     notice child entries that are also added.  It makes no sense to
+     look for deletes or local mods in an added directory. */
+  if (this_dir->state & SVN_WC_ENTRY_ADD)
+    only_add_entries = TRUE;
+                             
   /**                           **/
   /** Main Logic                **/
   /**                           **/
@@ -777,7 +785,7 @@ report_local_mods (svn_string_t *path,
       
       /* DELETION CHECK */
       if ((current_entry->state & SVN_WC_ENTRY_DELETE)
-          && (current_entry_name))
+          && (current_entry_name) && (! only_add_entries))
         {
           /* Do what's necessary to get a baton for current directory */
           if (! dir_baton)
@@ -903,7 +911,7 @@ report_local_mods (svn_string_t *path,
   
 
       /* LOCAL MOD CHECK */
-      else
+      else if (! only_add_entries)
         {
           svn_boolean_t text_modified_p, prop_modified_p;
           
@@ -979,12 +987,16 @@ report_local_mods (svn_string_t *path,
 
         }  /* END LOCAL MOD CHECK */
   
-      /* Finally: if the current entry is a directory (and not `.'),
-         and has been either not deleted, or deleted and re-added, we must
-         recurse! */
+      /* Finally, decide whether or not to recurse. Recurse only if
+         all these things are true:
+
+           * current_entry is a directory and not `.'
+           * current_entry is not *only* marked for deletion
+             (if marked for deletion and addition both, we want to recurse.)
+      */
       if ((current_entry->kind == svn_node_dir) 
           && (current_entry_name)
-          && (! (current_entry->state & SVN_WC_ENTRY_DELETE)))
+          && (current_entry->state != SVN_WC_ENTRY_DELETE))
         /* Recurse, using new_dir_baton, which will most often be
            NULL (unless the entry is a newly added directory.)  Why
            NULL?  Because that will later force a call to
