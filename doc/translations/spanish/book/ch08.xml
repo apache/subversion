@@ -466,32 +466,33 @@ make_new_directory (const char *repos_path,
 </programlisting>
       </example>
 
-      <para>In the previous code segment, calls were made to both the
-        repository and filesystem interfaces.  We could just as easily
-        have committed the transaction using
-        <function>svn_fs_commit_txn</function>.  But the filesystem
-        API knows nothing about the repository library's hook
-        mechanism.  If you want your Subversion repository to
-        automatically perform some set of non-Subversion tasks every
-        time you commit a transaction (like, for example, sending an
-        email that describes all the changes made in that transaction
-        to your developer mailing list), you need to use the
-        libsvn_repos-wrapped version of that
-        function&mdash;<function>svn_repos_fs_commit_txn</function>.
-        This function will actually first run the
-        <literal>pre-commit</literal> hook script if one exists, then
-        commit the transaction, and finally will run a
-        <literal>post-commit</literal> hook script.  The hooks provide
-        a special kind of reporting mechanism that does not really
-        belong in the core filesystem library itself.  (For more
-        information regarding Subversion's repository hooks, see <xref
-        linkend="svn-ch-5-sect-2.1" />.)</para>
+      <para>En el segmento de código anterior, se hacen llamadas
+        tanto a las interfaces de repositorio como de sistema de
+        ficheros. Igualmente podríamos haber enviado la transacción
+        usando <function>svn_fs_commit_txn</function>. Pero la API
+        del sistema de ficheros no sabe nada sobre los mecanismos
+        de enganche de la librería del repositorio. Si quiere que
+        su repositorio de Subversion realice automáticamente un
+        conjunto de tareas no relacionadas con Subversion cada vez
+        que envía una transacción (como por ejemplo, enviar un email
+        que describe los cambios realizados en esa transacción
+        a su lista de correo de desarrolladores), necesita
+        usar la versión envoltorio de la función libsvn_repos
+        apropiada&mdash;<function>svn_repos_fs_commit_txn</function>.
+        Esta función en realidad ejecutará primero el script de
+        enganche <literal>pre-commit</literal> si existe, entonces
+        enviará la transacción, y finalmente ejecutará el script
+        de enganche <literal>post-commit</literal>.  Los ganchos
+        proporcionan un mecanismo especial de información que no
+        pertenece a la librería del núcleo del sistema de ficheros.
+        (Para más información sobre los ganchos de repositorio de
+        Subversion, lea <xref linkend="svn-ch-5-sect-2.1" />.)</para>
       
-      <para>The hook mechanism requirement is but one of the reasons
-        for the abstraction of a separate repository library from the
-        rest of the filesystem code.  The libsvn_repos API provides
-        several other important utilities to Subversion.  These
-        include the abilities to:</para>
+      <para>El requisito del mecanismo de enganches es una de las
+        razones para abstraer la librería de repositorio del código
+        del sistema de ficheros.  La API libsvn_repos proporciona
+        algunas otras utilidades importantes para Subversion. Entre
+        ellas está la capacidad para:</para>
 
       <orderedlist>
         <listitem>
