@@ -63,7 +63,7 @@ svn_wc_merge (const char *left,
        "svn_wc_merge: `%s' not under revision control", merge_target);
 
   /* Decide if the merge target is a text or binary file. */
-  SVN_ERR (svn_wc_has_binary_prop (&is_binary, merge_target, pool));
+  SVN_ERR (svn_wc_has_binary_prop (&is_binary, merge_target, adm_access, pool));
   
   if (! is_binary)              /* this is a text file */
     {
@@ -236,7 +236,8 @@ svn_wc_merge (const char *left,
              We use merge_target's current properties to do the translation. */
           SVN_ERR (svn_wc__get_keywords (&keywords, merge_target, adm_access,
                                          NULL, pool));
-          SVN_ERR (svn_wc__get_eol_style (NULL, &eol, merge_target, pool));
+          SVN_ERR (svn_wc__get_eol_style (NULL, &eol, merge_target, adm_access,
+                                          pool));
           SVN_ERR (svn_subst_copy_and_translate (left, 
                                                  left_copy,
                                                  eol, eol ? TRUE : FALSE, 
@@ -290,7 +291,8 @@ svn_wc_merge (const char *left,
           /* replace MERGE_TARGET with the new merged file, expanding. */
           SVN_ERR (svn_wc__get_keywords (&keywords, merge_target, adm_access,
                                          NULL, pool));
-          SVN_ERR (svn_wc__get_eol_style (NULL, &eol, merge_target, pool));
+          SVN_ERR (svn_wc__get_eol_style (NULL, &eol, merge_target, adm_access,
+                                          pool));
           SVN_ERR (svn_subst_copy_and_translate (result_target, merge_target,
                                                  eol, eol ? TRUE : FALSE, 
                                                  keywords, TRUE, pool));
@@ -377,7 +379,8 @@ svn_wc_merge (const char *left,
   /* Merging is complete.  Regardless of text or binariness, we might
      need to tweak the executable bit on the new working file.  */
   if (! dry_run)
-    SVN_ERR (svn_wc__maybe_set_executable (NULL, merge_target, pool));
+    SVN_ERR (svn_wc__maybe_set_executable (NULL, merge_target, adm_access,
+                                           pool));
 
   return SVN_NO_ERROR;
 }
