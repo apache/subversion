@@ -172,12 +172,12 @@ svn_string_ensure (svn_string_t *str,
       else
         while (str->blocksize < minimum_size)
           str->blocksize *= 2;
-    }
 
-  str->data = (char *) my__realloc (str->data, 
-                                    str->len,
-                                    str->blocksize,
-                                    str->pool); 
+      str->data = (char *) my__realloc (str->data, 
+                                        str->len,
+                                        str->blocksize,
+                                        str->pool); 
+    }
 }
 
 
