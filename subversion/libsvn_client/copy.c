@@ -61,10 +61,8 @@ static svn_error_t *
 wc_to_wc_copy (svn_stringbuf_t *src_path,
                svn_stringbuf_t *dst_path,
                svn_boolean_t is_move,
-               svn_wc_notify_func_t notify_add,
-               void *notify_add_baton,
-               svn_wc_notify_func_t notify_delete,
-               void *notify_delete_baton,
+               svn_wc_notify_func_t notify_func,
+               void *notify_baton,
                apr_pool_t *pool)
 {
   svn_node_kind_t src_kind, dst_kind;
@@ -92,10 +90,10 @@ wc_to_wc_copy (svn_stringbuf_t *src_path,
 
   /* Perform the copy and (optionally) delete. */
   SVN_ERR (svn_wc_copy (src_path, parent, basename,
-                        notify_add, notify_add_baton, pool));
+                        notify_func, notify_baton, pool));
   if (is_move)
     SVN_ERR (svn_wc_delete (src_path,
-                            notify_delete, notify_delete_baton, pool));
+                            notify_func, notify_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -413,7 +411,7 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
                   void *before_edit_baton,
                   const svn_delta_edit_fns_t *after_editor,
                   void *after_edit_baton,
-                  svn_wc_notify_func_t notify_added,
+                  svn_wc_notify_func_t notify_func,
                   void *notify_baton,
                   apr_pool_t *pool)
 {
@@ -597,7 +595,7 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
      See comment in svn_wc_add()'s doc about whether svn_wc_add is the
      appropriate place for this. */
   SVN_ERR (svn_wc_add (dst_path, src_url, src_rev,
-                       notify_added, notify_baton, pool));
+                       notify_func, notify_baton, pool));
 
 
   return SVN_NO_ERROR;
@@ -616,10 +614,8 @@ setup_copy (svn_client_commit_info_t **commit_info,
             const svn_delta_edit_fns_t *after_editor,
             void *after_edit_baton,
             svn_boolean_t is_move,
-            svn_wc_notify_func_t notify_add,
-            void *notify_add_baton,
-            svn_wc_notify_func_t notify_delete,
-            void *notify_delete_baton,
+            svn_wc_notify_func_t notify_func,
+            void *notify_baton,
             apr_pool_t *pool)
 {
   svn_boolean_t src_is_url, dst_is_url;
@@ -669,8 +665,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
   /* Now, call the right handler for the operation. */
   if ((! src_is_url) && (! dst_is_url))
     SVN_ERR (wc_to_wc_copy (src_path, dst_path, is_move,
-                            notify_add, notify_add_baton,
-                            notify_delete, notify_delete_baton,
+                            notify_func, notify_baton,
                             pool));
 
   else if ((! src_is_url) && (dst_is_url))
@@ -685,7 +680,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
                                dst_path, auth_baton, message,
                                before_editor, before_edit_baton,
                                after_editor, after_edit_baton,
-                               notify_add, notify_add_baton,
+                               notify_func, notify_baton,
                                pool));
 
   else
@@ -710,7 +705,7 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
                  void *before_edit_baton,
                  const svn_delta_edit_fns_t *after_editor,
                  void *after_edit_baton,
-                 svn_wc_notify_func_t notify_added,
+                 svn_wc_notify_func_t notify_func,
                  void *notify_baton,
                  apr_pool_t *pool)
 {
@@ -719,7 +714,7 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
                      before_editor, before_edit_baton,
                      after_editor, after_edit_baton,
                      FALSE /* is_move */,
-                     notify_added, notify_baton, NULL, NULL,
+                     notify_func, notify_baton,
                      pool);
 }
 
@@ -731,10 +726,8 @@ svn_client_move (svn_client_commit_info_t **commit_info,
                  svn_stringbuf_t *dst_path,
                  svn_client_auth_baton_t *auth_baton,
                  svn_stringbuf_t *message,
-                 svn_wc_notify_func_t notify_add,
-                 void *notify_add_baton,
-                 svn_wc_notify_func_t notify_delete,
-                 void *notify_delete_baton,
+                 svn_wc_notify_func_t notify_func,
+                 void *notify_baton,
                  apr_pool_t *pool)
 {
   return setup_copy (commit_info,
@@ -742,8 +735,7 @@ svn_client_move (svn_client_commit_info_t **commit_info,
                      NULL, NULL,  /* no before_editor, before_edit_baton */
                      NULL, NULL,  /* no after_editor, after_edit_baton */
                      TRUE /* is_move */,
-                     notify_add, notify_add_baton,
-                     notify_delete, notify_delete_baton,
+                     notify_func, notify_baton,
                      pool);
 }
 

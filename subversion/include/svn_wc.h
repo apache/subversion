@@ -65,7 +65,19 @@ extern "C" {
    reporting mechanism, rather than an opportunity for the caller to
    alter the operation of the WC library.
 */
-typedef void (*svn_wc_notify_func_t) (void *baton, const char *path);
+typedef enum svn_wc_notify_action_t
+{
+  svn_wc_notify_add = 0,
+  svn_wc_notify_copy,
+  svn_wc_notify_delete,
+  svn_wc_notify_restore,
+  svn_wc_notify_revert
+  
+} svn_wc_notify_action_t;
+
+typedef void (*svn_wc_notify_func_t) (void *baton, 
+                                      svn_wc_notify_action_t action,
+                                      const char *path);
 
 
 
@@ -405,8 +417,8 @@ svn_error_t *svn_wc_get_status_editor (svn_delta_edit_fns_t **editor,
    DST_BASENAME will be the name of the copied item, and it must not
    exist already.
 
-   For each file or directory copied, NOTIFY_COPIED will be called
-   with its path and the NOTIFY_BATON. NOTIFY_COPIED may be NULL if
+   For each file or directory copied, NOTIFY_FUNC will be called
+   with its path and the NOTIFY_BATON. NOTIFY_FUNC may be NULL if
    you are not interested in this information.
 
    Important: this is a variant of svn_wc_add.  No changes will happen
@@ -415,7 +427,7 @@ svn_error_t *svn_wc_get_status_editor (svn_delta_edit_fns_t **editor,
 svn_error_t *svn_wc_copy (svn_stringbuf_t *src,
                           svn_stringbuf_t *dst_parent,
                           svn_stringbuf_t *dst_basename,
-                          svn_wc_notify_func_t notify_copied,
+                          svn_wc_notify_func_t notify_func,
                           void *notify_baton,
                           apr_pool_t *pool);
 
@@ -426,11 +438,11 @@ svn_error_t *svn_wc_copy (svn_stringbuf_t *src,
 
    If PATH refers to a directory, then a recursive deletion will occur.
 
-   For each path marked for deletion, NOTIFY_DELETE will be called with
-   the NOTIFY_BATON and that path. The NOTIFY_DELETE callback may be
+   For each path marked for deletion, NOTIFY_FUNC will be called with
+   the NOTIFY_BATON and that path. The NOTIFY_FUNC callback may be
    NULL if notification is not needed.  */
 svn_error_t *svn_wc_delete (svn_stringbuf_t *path,
-                            svn_wc_notify_func_t notify_delete,
+                            svn_wc_notify_func_t notify_func,
                             void *notify_baton,
                             apr_pool_t *pool);
 
@@ -446,7 +458,7 @@ svn_error_t *svn_wc_delete (svn_stringbuf_t *path,
    `copyfrom' args.  This is for copy operations, where one wants
    to schedule PATH for addition with a particular history.
 
-   When the PATH has been added, then NOTIFY_ADDED will be called
+   When the PATH has been added, then NOTIFY_FUNC will be called
    (if it is not NULL) with the NOTIFY_BATON and the path.
 
    ### This function currently does double duty -- it is also
@@ -477,7 +489,7 @@ svn_error_t *svn_wc_delete (svn_stringbuf_t *path,
 svn_error_t *svn_wc_add (svn_stringbuf_t *path,
                          svn_stringbuf_t *copyfrom_url,
                          svn_revnum_t copyfrom_rev,
-                         svn_wc_notify_func_t notify_added,
+                         svn_wc_notify_func_t notify_func,
                          void *notify_baton,
                          apr_pool_t *pool);
 
@@ -628,8 +640,8 @@ svn_wc_crawl_as_copy (svn_stringbuf_t *parent,
 
    If RESTORE_FILES is set, then unexpectedly missing working files
    will be restored from the administrative directory's cache. For each
-   file restored, the NOTIFY_RESTORE function will be called with the
-   NOTIFY_BATON and the path of the restored file. NOTIFY_RESTORE may
+   file restored, the NOTIFY_FUNC function will be called with the
+   NOTIFY_BATON and the path of the restored file. NOTIFY_FUNC may
    be NULL if this notification is not required. */
 svn_error_t *
 svn_wc_crawl_revisions (svn_stringbuf_t *path,
@@ -637,7 +649,7 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
                         void *report_baton,
                         svn_boolean_t restore_files,
                         svn_boolean_t recurse,
-                        svn_wc_notify_func_t notify_restore,
+                        svn_wc_notify_func_t notify_func,
                         void *notify_baton,
                         apr_pool_t *pool);
 
@@ -885,13 +897,13 @@ svn_wc_cleanup (svn_stringbuf_t *path, apr_pool_t *pool);
 /* Revert changes to PATH (perhaps in a RECURSIVE fashion).  Perform
    necessary allocations in POOL.
 
-   For each item reverted, NOTIFY_REVERT will be called with NOTIFY_BATON
-   and the path of the reverted item. NOTIFY_REVERT may be NULL if this
+   For each item reverted, NOTIFY_FUNC will be called with NOTIFY_BATON
+   and the path of the reverted item. NOTIFY_FUNC may be NULL if this
    notification is not needed.  */
 svn_error_t *
 svn_wc_revert (svn_stringbuf_t *path, 
                svn_boolean_t recursive, 
-               svn_wc_notify_func_t notify_revert,
+               svn_wc_notify_func_t notify_func,
                void *notify_baton,
                apr_pool_t *pool);
 

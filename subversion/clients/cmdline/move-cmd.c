@@ -69,10 +69,8 @@ svn_cl__move (apr_getopt_t *os,
            (&commit_info, 
             src_path, opt_state->start_revision, dst_path, auth_baton, 
             message ? message : svn_stringbuf_create ("", pool),
-            (opt_state->quiet ? NULL : svn_cl__notify_added),
-            pool,  /* notify_baton */
-            (opt_state->quiet ? NULL : svn_cl__notify_deleted),
-            NULL,  /* no notify baton */
+            SVN_CL_NOTIFY(opt_state),
+            svn_cl__make_notify_baton (pool),
             pool));
 
   if (commit_info)

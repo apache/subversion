@@ -293,7 +293,7 @@ svn_error_t *
 svn_wc_copy (svn_stringbuf_t *src_path,
              svn_stringbuf_t *dst_parent,
              svn_stringbuf_t *dst_basename,
-             svn_wc_notify_func_t notify_copied,
+             svn_wc_notify_func_t notify_func,
              void *notify_baton,
              apr_pool_t *pool)
 {
@@ -303,12 +303,12 @@ svn_wc_copy (svn_stringbuf_t *src_path,
   
   if (src_kind == svn_node_file)
     SVN_ERR (copy_file_administratively (src_path, dst_parent, dst_basename,
-                                         notify_copied, notify_baton, pool));
+                                         notify_func, notify_baton, pool));
 
   else if (src_kind == svn_node_dir)
 
     SVN_ERR (copy_dir_administratively (src_path, dst_parent, dst_basename,
-                                        notify_copied, notify_baton, pool));
+                                        notify_func, notify_baton, pool));
 
 
   return SVN_NO_ERROR;

@@ -64,8 +64,8 @@ svn_cl__mkdir (apr_getopt_t *os,
         SVN_ERR (svn_client_mkdir
                  (&commit_info, target, auth_baton, 
                   message,
-                  (opt_state->quiet ? NULL : svn_cl__notify_added),
-                  pool,  /* notify_baton */
+                  SVN_CL_NOTIFY(opt_state),
+                  svn_cl__make_notify_baton (pool),
                   pool));
         if (commit_info)
           svn_cl__print_commit_info (commit_info);

@@ -41,7 +41,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
                    svn_boolean_t force, 
                    svn_client_auth_baton_t *auth_baton,
                    svn_stringbuf_t *log_msg,
-                   svn_wc_notify_func_t notify_delete,
+                   svn_wc_notify_func_t notify_func,
                    void *notify_baton,
                    apr_pool_t *pool)
 {
@@ -102,7 +102,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
     }
   
   /* Mark the entry for deletion. */
-  SVN_ERR (svn_wc_delete (path, notify_delete, notify_baton, pool));
+  SVN_ERR (svn_wc_delete (path, notify_func, notify_baton, pool));
 
   if (force)
     {

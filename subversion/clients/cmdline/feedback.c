@@ -32,16 +32,8 @@
 #include "cl.h"
 
 
-
-/* When the cmd-line client sees an unversioned item during an update,
-   print a question mark (`?'), just like CVS does. */
-void svn_cl__notify_unversioned (void *baton, const char *path)
-{
-  printf ("?  %s\n", path);
-}
-
-
-void svn_cl__notify_added (void *baton, const char *path)
+static void 
+notify_added (void *baton, const char *path)
 {
   apr_pool_t *pool = baton;
   svn_stringbuf_t *spath = svn_stringbuf_create (path, pool);
@@ -83,23 +75,56 @@ void svn_cl__notify_added (void *baton, const char *path)
 }
 
 
-void svn_cl__notify_deleted (void *baton, const char *path)
+static void 
+notify_deleted (void *baton, const char *path)
 {
   printf ("D  %s\n", path);
 }
 
 
-void svn_cl__notify_restored (void *baton, const char *path)
+static void 
+notify_restored (void *baton, const char *path)
 {
   printf ("Restored %s\n", path);
 }
 
 
-void svn_cl__notify_reverted (void *baton, const char *path)
+static void 
+notify_reverted (void *baton, const char *path)
 {
   printf ("Reverted %s\n", path);
 }
  
+
+void svn_cl__notify_func (void *baton, 
+                          svn_wc_notify_action_t action, 
+                          const char *path)
+{
+  switch (action)
+    {
+    case svn_wc_notify_add:
+      return notify_added (baton, path);
+
+    case svn_wc_notify_delete:
+      return notify_deleted (baton, path);
+
+    case svn_wc_notify_restore:
+      return notify_restored (baton, path);
+
+    case svn_wc_notify_revert:
+      return notify_reverted (baton, path);
+
+    default:
+      break;
+    }
+  return;
+}
+
+
+void *svn_cl__make_notify_baton (apr_pool_t *pool)
+{
+  return (void *)pool;
+}
 
 
 /* 

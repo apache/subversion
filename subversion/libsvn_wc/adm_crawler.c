@@ -1801,7 +1801,7 @@ restore_file (svn_stringbuf_t *file_path,
    missing from disk, report its absence to REPORTER.  
 
    If RESTORE_FILES is set, then unexpectedly missing working files
-   will be restored from text-base and NOTIFY_RESTORE/NOTIFY_BATON
+   will be restored from text-base and NOTIFY_FUNC/NOTIFY_BATON
    will be called to report the restoration. */
 static svn_error_t *
 report_revisions (svn_stringbuf_t *wc_path,
@@ -1809,7 +1809,7 @@ report_revisions (svn_stringbuf_t *wc_path,
                   svn_revnum_t dir_rev,
                   const svn_ra_reporter_t *reporter,
                   void *report_baton,
-                  svn_wc_notify_func_t notify_restore,
+                  svn_wc_notify_func_t notify_func,
                   void *notify_baton,
                   svn_boolean_t restore_files,
                   svn_boolean_t recurse,
@@ -1892,8 +1892,10 @@ report_revisions (svn_stringbuf_t *wc_path,
                   SVN_ERR (restore_file (long_file_path, pool));
 
                   /* Report the restoration to the caller. */
-                  if (notify_restore != NULL)
-                    (*notify_restore) (notify_baton, long_file_path->data);
+                  if (notify_func != NULL)
+                    (*notify_func) (notify_baton, 
+                                    svn_wc_notify_restore,
+                                    long_file_path->data);
                 }
 
               /* Possibly report a differing revision. */
@@ -1944,7 +1946,7 @@ report_revisions (svn_stringbuf_t *wc_path,
                                            full_entry_path,
                                            subdir_entry->revision,
                                            reporter, report_baton,
-                                           notify_restore, notify_baton,
+                                           notify_func, notify_baton,
                                            restore_files, recurse,
                                            subpool));
               }
@@ -2219,7 +2221,7 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
                         void *report_baton,
                         svn_boolean_t restore_files,
                         svn_boolean_t recurse,
-                        svn_wc_notify_func_t notify_restore,
+                        svn_wc_notify_func_t notify_func,
                         void *notify_baton,
                         apr_pool_t *pool)
 {
@@ -2283,7 +2285,7 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
                                   svn_stringbuf_create ("", pool),
                                   base_rev,
                                   reporter, report_baton,
-                                  notify_restore, notify_baton,
+                                  notify_func, notify_baton,
                                   restore_files, recurse, pool);
           if (err)
             {
@@ -2306,8 +2308,8 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
           SVN_ERR (restore_file (path, pool));
 
           /* Report the restoration to the caller. */
-          if (notify_restore != NULL)
-            (*notify_restore) (notify_baton, path->data);
+          if (notify_func != NULL)
+            (*notify_func) (notify_baton, svn_wc_notify_restore, path->data);
         }
 
       if (entry->revision != base_rev)

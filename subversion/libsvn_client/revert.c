@@ -37,12 +37,12 @@
 svn_error_t *
 svn_client_revert (svn_stringbuf_t *path,
                    svn_boolean_t recursive,
-                   svn_wc_notify_func_t notify_revert,
+                   svn_wc_notify_func_t notify_func,
                    void *notify_baton,
                    apr_pool_t *pool)
 {
   svn_error_t *err = svn_wc_revert (path, recursive,
-                                    notify_revert, notify_baton,
+                                    notify_func, notify_baton,
                                     pool);
 
   /* Sleep for one second to ensure timestamp integrity. */
