@@ -101,6 +101,13 @@ section for approved changes.)
        +1: cmpilato
 
 
+    * Issue #1647
+      Unnecessary NULL guarantees in some string/uri APIs.
+      Justification: Tiny change, avoid unnecessary interface guarantees.
+      Votes:
+       +1: kfogel
+      
+
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
 the section for unapproved changes.)
