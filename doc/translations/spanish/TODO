@@ -1,16 +1,6 @@
-TAREA CON PRIORIDAD: Recoger y aprobar en grupo un conjunto de reglas
-que definan las responsabilidades del coordinador de proyecto,
-su elección, su destitución, etc. Estas reglas deben incluir los
-deberes del coordinador respecto a la comunidad de traductores y
-la comunidad de desarrolladores (debido a que la traducción está
-alojada en el mismo repositorio). Las reglas han sido propuestas,
-se espera la respuesta de la comunidad Subversion y nuestra fecha
-límite de respuesta será el uno de febrero del 2005.
-
-Poner bajo control de aspell los meta ficheros de
-proyecto. Convendría echarle un vistazo a la lista de correo de
-aspell para preguntar por mejoras, tipo cómo mantener texto inglés y
-español mezclado, y que aspell no se líe (¿múltiples diccionarios?).
+Convendría echarle un vistazo a la lista de correo de aspell para
+preguntar por mejoras, tipo cómo mantener texto inglés y español
+mezclado, y que aspell no se líe (¿múltiples diccionarios?).
 
 Mejorar el script que envía un informe de estado con un porcentaje
 estimado para completar la traducción. Automatizar envío del mismo
@@ -37,3 +27,5 @@ Licencias creative commons en español. ¿Merece la pena pegarse
 por esto?
  http://creativecommons.org/license/results-one?lang=en&jurisdiction=es&license_code=by
  http://creativecommons.org/licenses/by/2.0/es/legalcode.es
+
+Intentar seguir contactando con Anaya.
