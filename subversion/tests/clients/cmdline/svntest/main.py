@@ -25,6 +25,7 @@ import stat    # for ST_MODE
 import string  # for atof()
 import copy    # for deepcopy()
 import time    # for time()
+import getopt
 
 from svntest import Failure
 from svntest import Skip
@@ -320,7 +321,7 @@ def create_repos(path):
     os.makedirs(path) # this creates all the intermediate dirs, if neccessary
 
   stdout, stderr = run_command(svnadmin_binary, 1, 0, "create", path,
-                               "--bdb-txn-nosync", "--fs-type", fs_type)
+                               "--bdb-txn-nosync", "--fs-type="+fs_type)
 
   # Skip tests if we can't create the repository (most likely, because
   # Subversion was built without BDB and this is a default test run).
@@ -551,11 +552,13 @@ def run_tests(test_list):
   # log message will fail rather than invoke an editor.
   os.environ['SVN_EDITOR'] = ''
 
-  url_re = re.compile('^(?:--url|BASE_URL)=(.+)')
-  fstype_re = re.compile('^--fs-type=(.+)')
+  try:
+    opts, args = getopt.getopt(sys.argv[1:], 'v',
+                               ['url=', 'fs-type=', 'verbose', 'cleanup'])
+  except getopt.GetoptError:
+    args = []
 
-  for arg in sys.argv:
-
+  for arg in args:
     if arg == "list":
       print "Test #  Mode   Test Description"
       print "------  -----  ----------------"
@@ -567,33 +570,26 @@ def run_tests(test_list):
       # done. just exit with success.
       sys.exit(0)
 
-    elif arg == "--url":
-      index = sys.argv.index(arg)
-      test_area_url = sys.argv[index + 1]
+    if arg.startswith('BASE_URL='):
+      test_area_url = arg[9:]
+    else:
+      try:
+        testnum = int(arg)
+      except ValueError:
+        pass
 
-    elif arg == "--fs-type":
-      index = sys.argv.index(arg)
-      fs_type = sys.argv[index + 1]
+  for opt, val in opts:
+    if opt == "--url":
+      test_area_url = val
 
-    elif arg == "-v" or arg == "--verbose":
+    elif opt == "--fs-type":
+      fs_type = val
+
+    elif opt == "-v" or opt == "--verbose":
       verbose_mode = 1
 
-    elif arg == "--cleanup":
+    elif opt == "--cleanup":
       cleanup_mode = 1
-
-    else:
-      match = url_re.search(arg)
-      if match:
-        test_area_url = match.group(1)
-      match = fstype_re.search(arg)
-      if match:
-        fs_type = match.group(1)
-
-      else:
-        try:
-          testnum = int(arg)
-        except ValueError:
-          pass
 
   exit_code = _internal_run_tests(test_list, testnum)
 

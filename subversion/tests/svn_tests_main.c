@@ -289,7 +289,7 @@ main (int argc, char *argv[])
               else if (argv[i][0] != '-')
                 {
                   /* (probably) a source directory pathname */
-                  printf ("notice: ignoring argument %d\n", i);
+                  printf ("notice: ignoring argument %d: '%s'\n", i, argv[i]);
                 }
             }
         }
