@@ -233,16 +233,16 @@ contents_identical_p (svn_boolean_t *identical_p,
        "contents_identical_p: apr_open failed on `%s'", file2->data);
 
   *identical_p = TRUE;  /* assume TRUE, until disproved below */
-  while (status != APR_EOF)
+  while (!APR_STATUS_IS_EOF(status))
     {
       status = apr_full_read (file1_h, buf1, BUFSIZ, &bytes_read1);
-      if (status && (status != APR_EOF))
+      if (status && !APR_STATUS_IS_EOF(status))
         return svn_error_createf
           (status, 0, NULL, pool,
            "contents_identical_p: apr_full_read() failed on %s.", file1->data);
 
       status = apr_full_read (file2_h, buf2, BUFSIZ, &bytes_read2);
-      if (status && (status != APR_EOF))
+      if (status && !APR_STATUS_IS_EOF(status))
         return svn_error_createf
           (status, 0, NULL, pool,
            "contents_identical_p: apr_full_read() failed on %s.", file2->data);

@@ -171,7 +171,7 @@ remove_from_revision_control (struct log_runner *loggy, svn_string_t *name)
     text_base_path
       = svn_wc__text_base_path (file_full_path, 0, loggy->pool);
     err = svn_io_check_path (text_base_path, &kind, loggy->pool);
-    if (err && (err->apr_err == APR_ENOENT))
+    if (err && APR_STATUS_IS_ENOENT(err->apr_err))
       return SVN_NO_ERROR;
     else if (err)
       return err;
@@ -191,7 +191,7 @@ remove_from_revision_control (struct log_runner *loggy, svn_string_t *name)
                                                file_full_path,
                                                text_base_path,
                                                loggy->pool);
-          if (err && (err->apr_err != APR_ENOENT))
+          if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
             return err;
           else if (! err)
             {
@@ -632,7 +632,7 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
     buf_len = sizeof (buf);
 
     apr_err = apr_read (f, buf, &buf_len);
-    if (apr_err && (apr_err != APR_EOF))
+    if (apr_err && !APR_STATUS_IS_EOF(apr_err))
       {
         apr_close (f);
         return svn_error_createf (apr_err, 0, NULL, pool,
@@ -647,7 +647,7 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
         return err;
       }
 
-    if (apr_err == APR_EOF)
+    if (APR_STATUS_IS_EOF(apr_err))
       {
         /* Not an error, just means we're done. */
         apr_close (f);
@@ -763,7 +763,7 @@ svn_wc__cleanup (svn_string_t *path,
       if (! bail_on_lock)
         {
           err = svn_wc__unlock (path, pool);
-          if (err && (err->apr_err != APR_ENOENT))
+          if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
             return err;
         }
     }
