@@ -202,7 +202,7 @@ trivial_transaction (const char **msg)
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
-  char *txn_name;
+  const char *txn_name;
 
   *msg = "begin a txn, check its name, then close it";
 
@@ -233,7 +233,7 @@ reopen_trivial_transaction (const char **msg)
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
-  char *txn_name;
+  const char *txn_name;
 
   *msg = "open an existing transaction by name";
 
@@ -293,7 +293,7 @@ verify_txn_list (const char **msg)
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn1, *txn2;
-  char *name1, *name2;
+  const char *name1, *name2;
   char **txn_list;
 
   *msg = "create 2 txns, list them, and verify the list.";
