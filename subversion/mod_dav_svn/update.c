@@ -1010,6 +1010,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   const char *dst_path = NULL;
   const dav_svn_repos *repos = resource->info->repos;
   const char *target = "";
+  svn_boolean_t text_deltas = TRUE;
   svn_boolean_t recurse = TRUE;
   svn_boolean_t resource_walk = FALSE;
   svn_boolean_t ignore_ancestry = FALSE;
@@ -1172,9 +1173,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
               SVN_DAV_ERROR_TAG);
 
           /* ### assume no white space, no child elems, etc */
-          ignore_ancestry = TRUE;
-          if (strcmp(child->first_cdata.first->text, "no") == 0)
-            ignore_ancestry = FALSE;
+          if (strcmp(child->first_cdata.first->text, "no") != 0)
+            ignore_ancestry = TRUE;
         }
       if (child->ns == ns && strcmp(child->name, "resource-walk") == 0)
         {
@@ -1188,6 +1188,19 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           /* ### assume no white space, no child elems, etc */
           if (strcmp(child->first_cdata.first->text, "no") != 0)
             resource_walk = TRUE;
+        }
+      if (child->ns == ns && strcmp(child->name, "text-deltas") == 0)
+        {
+          if (! child->first_cdata.first)
+            return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+              "The request's 'text-deltas' element contains empty cdata; "
+              "there is a problem with the client.",
+              SVN_DAV_ERROR_NAMESPACE,
+              SVN_DAV_ERROR_TAG);
+
+          /* ### assume no white space, no child elems, etc */
+          if (strcmp(child->first_cdata.first->text, "no") == 0)
+            text_deltas = FALSE;
         }
     }
 
@@ -1272,6 +1285,12 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                  resource->pool);
     }
 
+  /* If the client did *not* request 'send-all' mode, then we will be
+     sending only a "skelta" of the difference, which will not need to
+     contain actual text deltas. */
+  if (! uc.send_all)
+    text_deltas = FALSE;
+
   /* When we call svn_repos_finish_report, it will ultimately run
      dir_delta() between REPOS_PATH/TARGET and TARGET_PATH.  In the
      case of an update or status, these paths should be identical.  In
@@ -1280,7 +1299,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      repos->repos, 
                                      src_path, target,
                                      dst_path,
-                                     uc.send_all,
+                                     text_deltas,
                                      recurse,
                                      ignore_ancestry,
                                      editor, &uc,
