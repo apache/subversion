@@ -480,8 +480,48 @@ svn_error_t *svn_repos_node_editor (const svn_delta_edit_fns_t **editor,
 svn_repos_node_t *svn_repos_node_from_baton (void *edit_baton);
 
 
-
 
+/* ---------------------------------------------------------------*/
+
+/*** Dumping and loading filesystem data ***/
+
+/*  The filesystem 'dump' format contains nothing but the abstract
+    structure of the filesystem -- independent of any internal node-id
+    schema or database back-end.  All of the data in the dumpfile is
+    acquired by public function calls into svn_fs.h.  Similarly, the
+    parser which reads the dumpfile is able to reconstruct the
+    filesystem using only public svn_fs.h routines.
+
+    Thus the dump/load feature's main purpose is for *migrating* data
+    from one svn filesystem to another -- presumably two filesystems
+    which have different internal implementations.
+
+    If you simply want to backup your filesystem, you're probably
+    better off using the built-in facilities of the DB backend (using
+    Berkeley DB's hot-backup feature, for example.)
+*/
+
+
+/* Dump the contents of already-open filesystem FS into already-open FILE.
+   Begin at revision START_REV, and dump every revision up through END_REV.
+
+   If START_REV is SVN_INVALID_REVNUM, then start dumping at revision 0.
+   If END_REV is SVN_INVALID_REVNUM, then dump through the HEAD revision.
+   
+   Use POOL for all allocation.
+*/
+svn_error_t *svn_repos_dump_fs (svn_fs_t *fs,
+                                apr_file_t *file,
+                                svn_revnum_t start_rev,
+                                svn_revnum_t end_rev,
+                                apr_pool_t *pool);
+
+
+
+
+
+
+
 #endif /* SVN_REPOS_H */
 
 #ifdef __cplusplus
