@@ -124,45 +124,45 @@ deltify (svn_fs_id_t *target_id,
       *source_pkey_skel,
       *source_dkey_skel;
 
+    /* Target property key. */
     target_pkey_skel = SVN_FS__NR_PROP_KEY (target_nr);
     if (target_pkey_skel->len != 0) {
       target_pkey = apr_pstrndup (trail->pool,
                                   target_pkey_skel->data,
                                   target_pkey_skel->len);
     }
-    else {
+    else
       target_pkey = NULL;
-    }
 
+    /* Target data key. */
     target_dkey_skel = SVN_FS__NR_DATA_KEY (target_nr);
     if (target_dkey_skel->len != 0) {
       target_dkey = apr_pstrndup (trail->pool,
                                   target_dkey_skel->data,
                                   target_dkey_skel->len);
     }
-    else {
+    else
       target_dkey = NULL;
-    }
     
-
+    /* Source property key. */
+    source_pkey_skel = SVN_FS__NR_PROP_KEY (source_nr);
     if (source_pkey_skel->len != 0) {
       source_pkey = apr_pstrndup (trail->pool,
                                   source_pkey_skel->data,
                                   source_pkey_skel->len);
     }
-    else {
+    else
       source_pkey = NULL;
-    }
 
-
+    /* Source data key. */
+    source_dkey_skel = SVN_FS__NR_DATA_KEY (source_nr);
     if (source_dkey_skel->len != 0) {
       source_dkey = apr_pstrndup (trail->pool,
                                   source_dkey_skel->data,
                                   source_dkey_skel->len);
     }
-    else {
+    else
       source_dkey = NULL;
-    }
   }
 
   /* Let's just do data deltification for now, no props. */
