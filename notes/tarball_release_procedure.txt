@@ -29,3 +29,5 @@ Subversion Tarball Release Procedure
 8. Update status webpage.
 
 9. Post news item, send announcement to dev and announce lists.
+
+10. Make a tag in http://svn.collab.net/repos/svn/tags/
