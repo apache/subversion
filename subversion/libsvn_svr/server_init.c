@@ -209,7 +209,7 @@ svn_svr_init (svn_svr_policies_t **policy,
 
   /* A policy structure has its own private memory pool, a sub-pool of
      the pool passed in.  */
-  *policy->pool = svn_pool_create (pool, NULL);
+  *policy->pool = svn_pool_create (pool);
 
   return SVN_NO_ERROR;
 }

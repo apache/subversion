@@ -124,7 +124,7 @@ svn_xml_make_parser (void *userData,
   XML_SetElementHandler (parser, start_handler, end_handler); 
   XML_SetCharacterDataHandler (parser, data_handler);
 
-  subpool = svn_pool_create (pool, NULL);
+  subpool = svn_pool_create (pool);
 
   svn_parser = apr_pcalloc (subpool, sizeof (svn_xml_parser_t));
 
@@ -370,7 +370,7 @@ svn_xml_make_open_tag_v (svn_string_t **str,
                          const char *tagname,
                          va_list ap)
 {
-  apr_pool_t *subpool = svn_pool_create (pool, NULL);
+  apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *ht = svn_xml_ap_to_hash (ap, subpool);
 
   svn_xml_make_open_tag_hash (str, pool, style, tagname, ht);

@@ -237,7 +237,7 @@ main (int argc, char **argv)
   enum command command = 0;
 
   apr_initialize ();
-  pool = svn_pool_create (NULL, NULL);
+  pool = svn_pool_create (NULL);
 
   parse_options (argc, argv, &command,
                  &xml_file, &target, &version, &ancestor_path, &force,

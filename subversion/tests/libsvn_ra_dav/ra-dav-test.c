@@ -75,7 +75,7 @@ main (int argc, char **argv)
   svn_vernum_t version;
 
   apr_initialize ();
-  pool = svn_pool_create (NULL, NULL);
+  pool = svn_pool_create (NULL);
 
   if (argc != 3)
     {

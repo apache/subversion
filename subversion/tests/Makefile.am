@@ -5,7 +5,7 @@ libsvn_tests_main_la_SOURCES = svn_tests_main.c
 
 ## Flags needed when compiling:
 CFLAGS = @CFLAGS@ -pthread
-INCLUDES = -I../../apr/include
+INCLUDES = -I../../apr/include -I../include
 
 
 ## Make libtool be quiet

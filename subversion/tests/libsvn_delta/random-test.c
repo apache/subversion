@@ -165,7 +165,7 @@ main (int argc, char **argv)
   apr_initialize();
 
   /* Read options.  */
-  pool = svn_pool_create (NULL, NULL);
+  pool = svn_pool_create (NULL);
   apr_initopt (&opt, NULL, argc, argv);
   while ((status = apr_getopt (opt, "s:l:n:", &optch, &optarg)) == APR_SUCCESS)
     {
@@ -211,7 +211,7 @@ main (int argc, char **argv)
          svndiff format, parse it back into delta format, and apply it
          to a copy of the source file to see if we get the same target
          back.  */
-      pool = svn_pool_create (NULL, NULL);
+      pool = svn_pool_create (NULL);
 
       /* Make stage 4: apply the text delta.  */
       err = svn_txdelta_apply (read_from_file, source_copy,

@@ -378,7 +378,7 @@ svn_fs_open_root (svn_fs_dir_t **dir,
 {
   svn_fs_id_t *id;
   svn_fs_node_t *root;
-  apr_pool_t *pool = svn_pool_create (fs->pool, 0);
+  apr_pool_t *pool = svn_pool_create (fs->pool);
 
   SVN_ERR (svn_fs__version_root (&id, fs, v, pool));
   SVN_ERR (svn_fs__open_node_by_id (&root, fs, id));

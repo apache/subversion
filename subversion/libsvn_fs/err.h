@@ -79,10 +79,6 @@ svn_error_t *svn_fs__dberrf (apr_pool_t *pool, int db_err,
 			     char *fmt, ...);
 
 
-/* A dumb abort function for use with pools.  */
-int svn_fs__pool_abort (int retcode);
-
-
 /* Check the return status from the Berkeley DB operation.  If the
    operation succeeded, return zero.  Otherwise, construct an
    appropriate Subversion error object describing what went wrong.
