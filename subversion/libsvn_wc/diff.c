@@ -580,9 +580,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_edit_fns_t editor function. The root of the comparison
- * hierarchy
- */
+/* An editor function. */
 static svn_error_t *
 set_target_revision (void *edit_baton, svn_revnum_t target_revision)
 {
@@ -592,9 +590,7 @@ set_target_revision (void *edit_baton, svn_revnum_t target_revision)
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_edit_fns_t editor function. The root of the comparison
- * hierarchy
- */
+/* An editor function. The root of the comparison hierarchy */
 static svn_error_t *
 open_root (void *edit_baton,
            svn_revnum_t base_revision,
@@ -610,8 +606,7 @@ open_root (void *edit_baton,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_edit_fns_t editor function.
- */
+/* An editor function. */
 static svn_error_t *
 delete_entry (const char *path,
               svn_revnum_t base_revision,
@@ -657,8 +652,7 @@ delete_entry (const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_edit_fns_t editor function.
- */
+/* An editor function. */
 static svn_error_t *
 add_directory (const char *path,
                void *parent_baton,
@@ -680,8 +674,7 @@ add_directory (const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_edit_fns_t editor function.
- */
+/* An editor function. */
 static svn_error_t *
 open_directory (const char *path,
                 void *parent_baton,
@@ -700,11 +693,10 @@ open_directory (const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_edit_fns_t editor function.  When a directory is closed,
- * all the directory elements that have been added or replaced will already
- * have been diff'd. However there may be other elements in the working
- * copy that have not yet been considered.
- */
+/* An editor function.  When a directory is closed, all the directory
+ * elements that have been added or replaced will already have been
+ * diff'd. However there may be other elements in the working copy
+ * that have not yet been considered.  */
 static svn_error_t *
 close_directory (void *dir_baton)
 {
@@ -736,8 +728,7 @@ close_directory (void *dir_baton)
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_edit_fns_t editor function.
- */
+/* An editor function. */
 static svn_error_t *
 add_file (const char *path,
           void *parent_baton,
@@ -764,8 +755,7 @@ add_file (const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_edit_fns_t editor function.
- */
+/* An editor function. */
 static svn_error_t *
 open_file (const char *path,
            void *parent_baton,
@@ -823,9 +813,7 @@ temp_file_cleanup_handler_remover (void *arg)
   return APR_SUCCESS;
 }
 
-/* An svn_delta_edit_fns_t editor function.  Do the work of applying the
- * text delta.
- */
+/* An editor function.  Do the work of applying the text delta. */
 static svn_error_t *
 window_handler (svn_txdelta_window_t *window,
                 void *window_baton)
@@ -853,8 +841,7 @@ window_handler (svn_txdelta_window_t *window,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_edit_fns_t editor function.
- */
+/* An editor function. */
 static svn_error_t *
 apply_textdelta (void *file_baton,
                  svn_txdelta_window_handler_t *handler,
@@ -898,10 +885,9 @@ apply_textdelta (void *file_baton,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_edit_fns_t editor function.  When the file is closed we
- * have a temporary file containing a pristine version of the repository
- * file. This can be compared against the working copy.
- */
+/* An editor function.  When the file is closed we have a temporary
+ * file containing a pristine version of the repository file. This can
+ * be compared against the working copy.  */
 static svn_error_t *
 close_file (void *file_baton)
 {
@@ -999,8 +985,7 @@ change_file_prop (void *file_baton,
 }
 
 
-/* An svn_delta_edit_fns_t editor function.
- */
+/* An editor function. */
 static svn_error_t *
 change_dir_prop (void *dir_baton,
                  const char *name,
@@ -1032,8 +1017,7 @@ change_dir_prop (void *dir_baton,
 }
 
 
-/* An svn_delta_edit_fns_t editor function.
- */
+/* An editor function. */
 static svn_error_t *
 close_edit (void *edit_baton)
 {
