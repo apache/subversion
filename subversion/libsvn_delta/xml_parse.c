@@ -81,7 +81,7 @@
 
    It allows us to do rapid strcmp() comparisons.  We terminate with
    NULL so that we have the ability to loop over the array easily. */
-static char *svn_delta__tagmap[] =
+static const char * const svn_delta__tagmap[] =
 {
   "tree-delta",
   "add",
