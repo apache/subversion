@@ -469,6 +469,9 @@ class TargetLib(TargetLinked):
     tfile = '%s-%s%s' % (name, cfg.version, extmap['lib', 'target'])
     self.filename = os.path.join(self.path, tfile)
 
+    # Is a library referencing symbols which are undefined at link time.
+    self.undefined_lib_symbols = options.get('undefined-lib-symbols') == 'yes'
+
     self.msvc_static = options.get('msvc-static') == 'yes' # is a static lib
     self.msvc_fake = options.get('msvc-fake') == 'yes' # has fake target
 
