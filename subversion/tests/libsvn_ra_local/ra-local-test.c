@@ -105,7 +105,8 @@ make_and_open_local_repos (svn_ra_plugin_t **plugin,
 
 /* Open an RA session to a local repository. */
 static svn_error_t *
-open_ra_session (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
+open_ra_session (const char **msg, svn_boolean_t msg_only, svn_test_opts_t *opts,
+                 apr_pool_t *pool)
 {
   svn_ra_plugin_t *plugin;
   void *session;
@@ -124,7 +125,8 @@ open_ra_session (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
 
 /* Discover the youngest revision in a repository.  */
 static svn_error_t *
-get_youngest_rev (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
+get_youngest_rev (const char **msg, svn_boolean_t msg_only,
+                  svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_ra_plugin_t *plugin;
   void *session;
@@ -171,7 +173,8 @@ try_split_url (const char *url, apr_pool_t *pool)
 
 
 static svn_error_t *
-split_url_test_1 (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
+split_url_test_1 (const char **msg, svn_boolean_t msg_only,
+                  svn_test_opts_t *opts, apr_pool_t *pool)
 {
   apr_status_t apr_err;
   
@@ -264,7 +267,8 @@ check_split_url (const char *repos_path,
 
 
 static svn_error_t *
-split_url_test_2 (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
+split_url_test_2 (const char **msg, svn_boolean_t msg_only,
+                  svn_test_opts_t *opts, apr_pool_t *pool)
 {
   *msg = "test svn_ra_local__split_URL's URL validation (2)";
 
