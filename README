@@ -104,6 +104,12 @@ IV.   QUICKSTART GUIDE
       rights to modify the .db files.
 
 
+      Note: The repository should NOT be on a remote filesystem like
+      NFS or AFS.  For details see:
+
+          http://www.sleepycat.com/docs/ref/env/remote.html
+
+
       3.  CREATING A SUBVERSION SERVER
 
       Subversion uses Apache 2.0 as its network server.  Apache's

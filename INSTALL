@@ -98,7 +98,7 @@ I.    BUILD REQUIREMENTS
       with the Apache HTTP 2.0 server, you could run:
 
           $ ./configure --with-apr=/usr/local/apache2 \
-	       --with-apr-util=/usr/local/apache2  ...
+            --with-apr-util=/usr/local/apache2  ...
 
 
       2.  autoconf 2.50 or newer (Unix only)
