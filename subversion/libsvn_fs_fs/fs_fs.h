@@ -208,7 +208,23 @@ svn_error_t *svn_fs__fs_create_successor (const svn_fs_id_t **new_id_p,
                                           const char *copy_id,
                                           const char *txn_id,
                                           apr_pool_t *pool);
-                                                   
+
+/* Write a new property list PROPLIST for node-revision NODEREV in
+   filesystem FS.  Perform any temporary allocations in POOL. */
+svn_error_t *svn_fs__fs_set_proplist (svn_fs_t *fs,
+                                      svn_fs__node_revision_t *noderev,
+                                      apr_hash_t *proplist,
+                                      apr_pool_t *pool);
+
+/* Commit the transaction TXN in filesystem FS and return it's new
+   revision number in *REV.  If the transaction is out of date, return
+   the error SVN_ERR_FS_TXN_OUT_OF_DATE.  Use POOL for temporary
+   allocations. */
+svn_error_t *svn_fs__fs_commit (svn_revnum_t *new_rev_p,
+                                svn_fs_t *fs,
+                                svn_fs_txn_t *txn,
+                                apr_pool_t *pool);
+                                
 
 /* Following are defines that specify the textual elements of the
    native filesystem directories and revision files. */
@@ -216,6 +232,7 @@ svn_error_t *svn_fs__fs_create_successor (const svn_fs_id_t **new_id_p,
 /* Names of special files in the fs_fs filesystem. */
 #define SVN_FS_FS__UUID              "uuid"     /* Contains UUID */
 #define SVN_FS_FS__CURRENT           "current"  /* Youngest revision */
+#define SVN_FS_FS__LOCK_FILE         "write-lock" /* Revision lock file */
 
 #define SVN_FS_FS__REVS_DIR          "revs"     /* Directory of revisions */
 #define SVN_FS_FS__REVPROPS_DIR      "revprops" /* Directory of revprops */

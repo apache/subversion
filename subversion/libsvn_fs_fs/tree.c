@@ -1971,74 +1971,11 @@ txn_body_merge (void *baton, apr_pool_t *pool)
 }
 
 
-struct commit_args
-{
-  svn_fs_txn_t *txn;
-  svn_revnum_t new_rev;
-};
-
-
-/* Commit ARGS->txn, setting ARGS->new_rev to the resulting new
- * revision, if ARGS->txn is up-to-date with respect to the repository.
- *
- * Up-to-date means that ARGS->txn's base root is the same as the root
- * of the youngest revision.  If ARGS->txn is not up-to-date, the
- * error SVN_ERR_FS_TXN_OUT_OF_DATE is returned, and the commit fails: no
- * new revision is created, and ARGS->new_rev is not touched.
- *
- * If the commit succeeds, ARGS->txn is destroyed.
- */
-static svn_error_t *
-txn_body_commit (void *baton, apr_pool_t *pool)
-{
-  struct commit_args *args = baton;
-
-  svn_fs_txn_t *txn = args->txn;
-  svn_fs_t *fs = txn->fs;
-  const char *txn_name = txn->id;
-
-  svn_revnum_t youngest_rev;
-  const svn_fs_id_t *y_rev_root_id;
-  dag_node_t *txn_base_root_node;
-
-  abort ();
-  /* Getting the youngest revision locks the revisions table until
-     this trail is done. */
-
-  /*
-  SVN_ERR (svn_fs__bdb_youngest_rev (&youngest_rev, fs, trail));
-  */
-
-  /* If the root of the youngest revision is the same as txn's base,
-     then no further merging is necessary and we can commit. */
-  SVN_ERR (svn_fs__rev_get_root (&y_rev_root_id, fs, youngest_rev, pool));
-  SVN_ERR (svn_fs__dag_txn_base_root (&txn_base_root_node, fs, txn_name,
-                                      pool));
-  /* ### kff todo: it seems weird to grab the ID for one, and the node
-     for the other.  We can certainly do the comparison we need, but
-     it would be nice to grab the same type of information from the
-     start, instead of having to transform one of them. */ 
-  if (! svn_fs__id_eq (y_rev_root_id, svn_fs__dag_get_id (txn_base_root_node)))
-    {
-      svn_string_t *id_str = svn_fs_unparse_id (y_rev_root_id, pool);
-      return svn_error_createf
-        (SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
-         "Transaction '%s' out of date with respect to revision '%s'",
-         txn_name, id_str->data);
-    }
-  
-  /* Else, commit the txn. */
-  SVN_ERR (svn_fs__dag_commit_txn (&(args->new_rev), fs, txn_name, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Note:  it is acceptable for this function to call back into
    public FS API interfaces because it does not itself use trails.  */
 svn_error_t *
 svn_fs_commit_txn (const char **conflict_p,
-                   svn_revnum_t *new_rev, 
+                   svn_revnum_t *new_rev_p, 
                    svn_fs_txn_t *txn,
                    apr_pool_t *pool)
 {
@@ -2083,10 +2020,11 @@ svn_fs_commit_txn (const char **conflict_p,
    */
 
   svn_error_t *err;
+  svn_revnum_t new_rev;
   svn_fs_t *fs = txn->fs;
 
   /* Initialize output params. */
-  *new_rev = SVN_INVALID_REVNUM;
+  new_rev = SVN_INVALID_REVNUM;
   if (conflict_p)
     *conflict_p = NULL;
 
@@ -2094,7 +2032,6 @@ svn_fs_commit_txn (const char **conflict_p,
     {
       struct get_root_args get_root_args;
       struct merge_args merge_args;
-      struct commit_args commit_args;
       svn_revnum_t youngish_rev;
       svn_fs_root_t *youngish_root;
       dag_node_t *youngish_root_node;
@@ -2137,8 +2074,7 @@ svn_fs_commit_txn (const char **conflict_p,
         }
       
       /* Try to commit. */
-      commit_args.txn = txn;
-      err = svn_fs__retry_txn (fs, txn_body_commit, &commit_args, pool);
+      err = svn_fs__fs_commit (&new_rev, fs, txn, pool);
       if (err && (err->apr_err == SVN_ERR_FS_TXN_OUT_OF_DATE))
         {
           /* Did someone else finish committing a new revision while we
@@ -2160,7 +2096,7 @@ svn_fs_commit_txn (const char **conflict_p,
       else
         {
           /* Set the return value -- our brand spankin' new revision! */
-          *new_rev = commit_args.new_rev;
+          *new_rev_p = new_rev;
           return SVN_NO_ERROR;
         }
     }
