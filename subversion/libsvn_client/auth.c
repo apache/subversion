@@ -162,12 +162,10 @@ get_password (char **password,
       
       else
         {
-          char promptbuf[100];
-          
-          snprintf(promptbuf, 100, "%s's password: ", username);
+          char *prompt = apr_psprintf (pool, "%s's password: ", username);
 
           /* No file cache?  Then prompt the user. */
-          SVN_ERR (ab->prompt_callback (password, promptbuf,
+          SVN_ERR (ab->prompt_callback (password, prompt,
                                         TRUE, /* don't echo to the screen */
                                         ab->prompt_baton, pool));
 
