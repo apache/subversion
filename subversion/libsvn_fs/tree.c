@@ -1146,7 +1146,10 @@ struct deltify_committed_args
    benefit until the number of predecessors gets large.  So, stop at
    redeltifying the parent if the number of predecessors is less than
    32, and also skip the second level (redeltifying two predecessors
-   back), since that doesn't help much. */
+   back), since that doesn't help much.  Also, don't redeltify the
+   oldest node-revision; it's potentially expensive and doesn't help
+   retrieve any other revision.  (Retrieving the oldest node-revision
+   will still be fast, just not as blindingly so.)  */
 static svn_error_t *
 txn_deltify (dag_node_t *node, int pred_count, int props_only, trail_t *trail)
 {
@@ -1165,6 +1168,10 @@ txn_deltify (dag_node_t *node, int pred_count, int props_only, trail_t *trail)
           pred_count /= 2;
           nlevels++;
         }
+
+      /* Don't redeltify the oldest revision. */
+      if (1 << (nlevels - 1) == pred_count)
+        nlevels--;
     }
 
   /* Redeltify the desired number of predecessors. */
