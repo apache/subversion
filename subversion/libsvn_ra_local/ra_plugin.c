@@ -111,6 +111,13 @@ open (void **session_baton,
                                  subpool);
   if (err) return err;
 
+  /* Temporary... for debugging only.  Obviously, this library should
+     never print to stdout! */
+  printf ("Repos: %s, Path: %s\n",
+          baton->repos_path->data,
+          baton->fs_path->data);
+
+
   /* Open the filesystem at located at environment `repos_path' */
   err = svn_fs_open_berkeley (baton->fs, baton->repos_path->data);
   if (err) return err;
@@ -154,7 +161,7 @@ get_latest_revnum (void *session_baton,
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
 
-  err = svn_fs_youngest_rev (baton->fs, latest_revnum);
+  /* Temporary: err = svn_fs_youngest_rev (latest_revnum, baton->fs); */
   if (err) return err;
 
   return SVN_NO_ERROR;
@@ -193,15 +200,14 @@ get_commit_editor (void *session_baton,
                                           sizeof(*(hook_baton->target_array)));
 
   /* Get the filesystem commit-editor */     
-  err = svn_fs_get_editor (&commit_editor,
+  /*  err = svn_fs_get_editor (&commit_editor,
                            &commit_editor_baton,
                            sess_baton->fs,
                            base_revision,
                            log_msg,
-                           /* our post-commit hook: */
                            cleanup_commit, 
                            hook_baton,
-                           sess_baton->pool);
+                           sess_baton->pool); */
   if (err) return err;
 
   /* Get the commit `tracking' editor, telling it to store committed
@@ -296,10 +302,7 @@ svn_ra_local_init (int abi_version,
                    apr_pool_t *pool,
                    const svn_ra_plugin_t **plugin)
 {
-  svn_ra_plugin_t *p = apr_pcalloc (pool, sizeof (*p));
-  memcpy (p, &ra_local_plugin, sizeof (ra_local_plugin));
-
-  *plugin = p;
+  *plugin = &ra_local_plugin;
 
   /* are we ever going to care about abi_version? */
 

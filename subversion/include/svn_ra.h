@@ -187,6 +187,14 @@ typedef svn_error_t *svn_ra_init_func_t (int abi_version,
 
 
 
+
+/** Public **/
+svn_error_t *svn_ra_local_init (int abi_version,
+                                apr_pool_t *pool,
+                                const svn_ra_plugin_t **plugin);
+
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
