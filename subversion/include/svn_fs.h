@@ -873,8 +873,8 @@ typedef svn_error_t *svn_fs_commit_hook_t (svn_revnum_t new_revision,
 
 
 /* Return an EDITOR and EDIT_BATON to commit changes to FS, beginning
- * at location BASE_REVISION:BASE_PATH.  Store LOG_MSG as the commit
- * message. 
+ * at location BASE_REVISION:BASE_PATH.  (BASE_PATH is an *absolute*
+ * path in FS.) Store LOG_MSG as the commit message.
  *
  * FS is assumed to be a previously opened file system.
  *
