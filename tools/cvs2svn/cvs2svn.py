@@ -326,7 +326,9 @@ def relative_name(cvsroot, fname):
     if fname[l] == '/':
       return fname[l+1:]
     return fname[l:]
-  return l
+  sys.stderr.write('relative_path("%s", "%s"): fname is not a sub-path of'
+                   ' cvsroot\n' % (cvsroot, fname))
+  sys.exit(1)
 
 
 def visit_file(arg, dirname, files):
