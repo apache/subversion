@@ -315,7 +315,7 @@ svn_error_t * svn_ra_dav__get_log2(void *session_baton,
    */
 
   int i;
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session_baton;
   svn_stringbuf_t *request_body = svn_stringbuf_create("", ras->pool);
   struct log_baton lb;
   svn_string_t bc_url, bc_relative;

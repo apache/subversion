@@ -131,7 +131,7 @@ typedef struct {
 } dir_item_t;
 
 typedef struct {
-  svn_ra_session_t *ras;
+  svn_ra_dav__session_t *ras;
 
   apr_file_t *tmpfile;
 
@@ -385,7 +385,8 @@ static svn_error_t *custom_get_request(ne_session *sess,
   svn_error_t *err;
   int code;
   int decompress_rv;
-  svn_ra_session_t *ras = ne_get_session_private(sess, SVN_RA_NE_SESSION_ID);
+  svn_ra_dav__session_t *ras = ne_get_session_private(sess,
+                                                     SVN_RA_NE_SESSION_ID);
 
   if (use_base)
     {
@@ -744,7 +745,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
 {
   svn_ra_dav_resource_t *rsrc;
   const char *final_url;
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session_baton;
   const char *url = svn_path_url_add_component (ras->url, path, pool);
 
   /* If the revision is invalid (head), then we're done.  Just fetch
@@ -858,7 +859,7 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
   apr_hash_t *resources;
   const char *final_url;
   apr_size_t final_url_n_components;
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session_baton;
   const char *url = svn_path_url_add_component (ras->url, path, pool);
 
   /* If the revision is invalid (head), then we're done.  Just fetch
@@ -1003,7 +1004,7 @@ svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
                                            svn_revnum_t *latest_revnum,
                                            apr_pool_t *pool)
 {
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session_baton;
 
   /* ### should we perform an OPTIONS to validate the server we're about
      ### to talk to? */
@@ -1064,7 +1065,7 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
                                              apr_time_t timestamp,
                                              apr_pool_t *pool)
 {
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session_baton;
   const char *body;
   const char *vcc_url;
   svn_error_t *err;
@@ -1103,7 +1104,7 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
 }
 
 typedef struct {
-  svn_ra_session_t *ras;
+  svn_ra_dav__session_t *ras;
   apr_hash_t *hash;
   apr_pool_t *pool;
 } get_locations_baton_t;
@@ -1170,7 +1171,7 @@ svn_ra_dav__get_locations(void *session_baton,
                           apr_array_header_t *location_revisions,
                           apr_pool_t *pool)
 {
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session_baton;
   svn_stringbuf_t *request_body;
   svn_error_t *err;
   get_locations_baton_t request_baton;
@@ -1247,7 +1248,7 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
                                           const svn_string_t *value,
                                           apr_pool_t *pool)
 {
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session_baton;
   svn_ra_dav_resource_t *baseline;
   svn_error_t *err;
   apr_hash_t *prop_changes = NULL;
@@ -1316,7 +1317,7 @@ svn_error_t *svn_ra_dav__rev_proplist (void *session_baton,
                                        apr_hash_t **props,
                                        apr_pool_t *pool)
 {
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session_baton;
   svn_ra_dav_resource_t *baseline;
 
   *props = apr_hash_make (pool);
@@ -2455,7 +2456,7 @@ make_reporter (void *session_baton,
                svn_boolean_t fetch_content,
                apr_pool_t *pool)
 {
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session_baton;
   report_baton_t *rb;
   const char *s;
 
