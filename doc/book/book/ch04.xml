@@ -1053,9 +1053,9 @@ Committed revision 350.
         specific coordinate pair.</para>
 
       <para>Subversion has no "attic" directory like CVS does
-        <footnote>Because CVS doesn't version trees, it creates an
+        <footnote><para>Because CVS doesn't version trees, it creates an
         "attic" area within each repository directory as a way of
-        remembering deleted files.</footnote>, so you need to use
+        remembering deleted files.</para></footnote>, so you need to use
         <command>svn log</command> to discover the exact coordinate
         pair you wish to resurrect.  A good strategy is to run
         <command>svn log --verbose</command> in a directory which used

@@ -3621,34 +3621,48 @@ Updated to revision 30.
       <variablelist>
         
         <varlistentry>
+          <term><option>--bdb-log-keep</option></term>
+          <listitem>
+            <para>(Berkeley DB specific) Disable automatic log removal
+              of database log files.</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term><option>--bdb-txn-nosync</option></term>
+          <listitem>
+            <para>(Berkeley DB specific) Disables fsync when
+              committing database transactions.</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
           <term><option>--bypass-hooks</option></term>
           <listitem>
             <para>Bypass the repository hook system.</para>
           </listitem>
         </varlistentry>
-        
+
+        <!-- TODO config-dir? Is it really used? -->
+
         <varlistentry>
-          <term><option>--copies</option></term>
+          <term><option>--force--uuid</option></term>
           <listitem>
-            <para>Follow copy history when examining a path.</para>
+            <para>By default, when loading data into repository that
+            already contains revisions, <command>svnadmin</command>
+            will ignore the <literal>UUID</literal> from the dump
+            stream.  This switch will cause the repository's UUID to
+            be set to the UUID from the stream.</para>
           </listitem>
         </varlistentry>
-        
+
         <varlistentry>
-          <term><option>--in-repos-template ARG</option></term>
+          <term><option>--ignore--uuid</option></term>
           <listitem>
-            <para>Specify a template for the repository structure when
-              creating a new repository.</para>
-            
-            <para>The <quote>in-repository</quote> templates specify
-              the layout of the repository itself (which lives in
-              Berkeley DB files inside the db/ directory) like
-              /trunk, /branches, etc.  These templates can be used
-              by an administrator or application to do an initial
-              load of the repository (without invoking hooks). There
-              is no default; the repository is built
-              <quote>empty</quote> unless you tell it otherwise.
-            </para>
+            <para>By default, when loading an empty repository,
+            <command>svnadmin</command> will use the
+            <literal>UUID</literal> from the dump stream.  This switch
+            will cause that UUID to be ignored.</para>
           </listitem>
         </varlistentry>
 
@@ -3662,46 +3676,14 @@ Updated to revision 30.
         </varlistentry>
 
         <varlistentry>
-          <term><option>--on-disk-template <replaceable>ARG</replaceable></option></term>
+          <term><option>--parent-dir
+          <replaceable>DIR</replaceable></option></term>
           <listitem>
-
-            <para>Specify a template to use for the on-disk
-              structure (i.e. <filename>conf/</filename>,
-              <filename>hooks/</filename>, etc.) of the repository
-              you want to create.</para>
-
-            <para>The <quote>on-disk</quote> templates describe the
-        repository directory itself. Each of the templates have a
-        name, and the <quote>default</quote> on-disk template
-        contains:</para>
-
-            <itemizedlist>
-              <listitem><para>default/</para></listitem>
-              <listitem><para>README.txt</para></listitem>
-              <listitem><para>dav/</para></listitem>
-              <listitem><para>format</para></listitem>
-              <listitem><para>hooks/</para></listitem>
-              <listitem><para>post-commit.tmpl</para></listitem>
-              <listitem><para>post-revprop-change.tmpl</para></listitem>
-              <listitem><para>pre-commit.tmpl</para></listitem>
-              <listitem><para>pre-revprop-change.tmpl</para></listitem>
-              <listitem><para>start-commit.tmpl</para></listitem>
-              <listitem><para>locks/</para></listitem>
-              <listitem><para>db.lock</para></listitem>
-            </itemizedlist>
-
-            <para>The typical usage for the on-disk structures is to
-              predefine the hook scripts that will be created. For
-              example, you could prepopulate the
-              <literal>post-commit</literal> script with a commit
-              mailer and backup script. Then, each time the
-              administrator creates a new repository, she can refer
-              to this new template which automagically includes all
-              of the hooks.</para>
-
+            <para>When loading a dumpfile, root paths at
+            <replaceable>DIR</replaceable> instead of
+            <replaceable>/</replaceable>.</para>
           </listitem>
         </varlistentry>
-
 
         <varlistentry>
           <term><option>--revision</option> (<option>-r</option>)
@@ -3711,51 +3693,20 @@ Updated to revision 30.
               on.</para>
           </listitem>
         </varlistentry>
+
+        <varlistentry>
+          <term><option>--quiet</option></term>
+          <listitem>
+            <para>Do not show normal progress&mdash;show only
+            errors.</para>
+          </listitem>
+        </varlistentry>
       </variablelist>
     </sect2>
 
     <!-- ================================================================= -->
     <sect2 id="svn-ch-9-sect-2.2">
       <title><command>svnadmin</command> Subcommands</title>
-
-      <refentry>
-        <refnamediv>
-          <refname>svnadmin list-unused-dblogs</refname>
-          <refpurpose>Ask Berkeley DB which log files can be safely
-          deleted.</refpurpose>
-        </refnamediv>
-        <refsect1>
-          <title>Synopsis</title>
-          <programlisting>svnadmin list-unused-dblogs REPOS_PATH</programlisting>
-        </refsect1>
-        <refsect1>
-          <title>Description</title>
-
-            <para>Berkeley DB creates logs of all changes to the
-            repository, which allow it to recover in the face of
-            catastrophe.  Over time, the log files accumulate, although
-            most are no longer used and can be deleted to reclaim disk
-            space. See <xref linkend="svn-ch-5-sect-3.1.4"/> for more
-            information. </para>
-          </refsect1>
-
-        <refsect1>
-          <title>Examples</title>
-          
-          <para>Remove all unused log files from a repository:</para>
-
-        <screen>
-$ svnadmin list-unused-dblogs /path/to/repos
-/path/to/repos/log.0000000031
-/path/to/repos/log.0000000032
-/path/to/repos/log.0000000033
-
-$ svnadmin list-unused-dblogs /path/to/repos | xargs rm
-## disk space reclaimed!
-        </screen>
-
-        </refsect1>
-      </refentry>
 
       <!-- ================================================================= -->
       <refentry>
@@ -3772,15 +3723,18 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
 
             <para>Create a new, empty repository at the path provided.
               If the provided directory does not exist, it will be
-              created for you.</para>
+              created for you.<footnote><para>Remember,
+              <command>svnadmin</command> works only with local
+              <emphasis>paths</emphasis>, not
+              <emphasis>URL</emphasis>s.</para></footnote></para>
           </refsect1>
 
         <refsect1>
           <title>Switches</title>
 
           <screen>
---on-disk-template arg
---in-repos-template arg
+--bdb-txn-nosync
+--bdb-log-keep
           </screen>
         </refsect1>
 
@@ -3823,6 +3777,7 @@ $ svnadmin create /usr/local/svn/repos
           <screen>
 --revision (-r)
 --incremental
+--quiet
           </screen>
         </refsect1>
         
@@ -3866,12 +3821,87 @@ Content-length: 101
           <title>Synopsis</title>
           <programlisting>svnadmin help [SUBCOMMAND...]</programlisting>
         </refsect1>
+
         <refsect1>
           <title>Description</title>
 
           <para>This subcommand is useful when you're trapped on a
             desert island with neither a net connection nor a copy of
             this book.</para>
+
+        </refsect1>
+
+        <refsect1>
+          <title>Alternate Names</title>
+          <para>?, h</para>
+        </refsect1>
+
+      </refentry>
+
+      <!-- ================================================================= -->
+      <refentry>
+        <refnamediv>
+          <refname>svnadmin list-dblogs</refname>
+          <refpurpose>Ask Berkeley DB which log files exist for a given
+          svn repository.</refpurpose>
+        </refnamediv>
+        <refsect1>
+          <title>Synopsis</title>
+          <programlisting>svnadmin list-dblogs REPOS_PATH</programlisting>
+        </refsect1>
+        <refsect1>
+          <title>Description</title>
+
+            <para>Berkeley DB creates logs of all changes to the
+            repository, which allow it to recover in the face of
+            catastrophe.  Unless you enable
+            <literal>DB_LOGS_AUTOREMOVE</literal>, the log files
+            accumulate, although most are no longer used and can be
+            deleted to reclaim disk space. See <xref
+            linkend="svn-ch-5-sect-3.1.4"/> for more
+            information. </para>
+          </refsect1>
+
+      </refentry>
+
+      <!-- ================================================================= -->
+      <refentry>
+        <refnamediv>
+          <refname>svnadmin list-unused-dblogs</refname>
+          <refpurpose>Ask Berkeley DB which log files can be safely
+          deleted.</refpurpose>
+        </refnamediv>
+        <refsect1>
+          <title>Synopsis</title>
+          <programlisting>svnadmin list-unused-dblogs REPOS_PATH</programlisting>
+        </refsect1>
+        <refsect1>
+          <title>Description</title>
+
+            <para>Berkeley DB creates logs of all changes to the
+            repository, which allow it to recover in the face of
+            catastrophe.  Unless you enable
+            <literal>DB_LOGS_AUTOREMOVE</literal>, the log files
+            accumulate, although most are no longer used and can be
+            deleted to reclaim disk space. See <xref
+            linkend="svn-ch-5-sect-3.1.4"/> for more
+            information. </para>
+          </refsect1>
+
+        <refsect1>
+          <title>Examples</title>
+          
+          <para>Remove all unused log files from a repository:</para>
+
+        <screen>
+$ svnadmin list-unused-dblogs /path/to/repos
+/path/to/repos/log.0000000031
+/path/to/repos/log.0000000032
+/path/to/repos/log.0000000033
+
+$ svnadmin list-unused-dblogs /path/to/repos | xargs rm
+## disk space reclaimed!
+        </screen>
 
         </refsect1>
       </refentry>
@@ -3896,6 +3926,17 @@ Content-length: 101
         </refsect1>
 
         <refsect1>
+          <title>Switches</title>
+          
+          <screen>
+--quiet (-q)
+--ignore-uuid
+--force--uuid
+--parent-dir
+          </screen>
+        </refsect1>
+
+        <refsect1>
           <title>Example</title>
 
           <para>This shows the beginning of loading a repository from
@@ -3904,6 +3945,16 @@ Content-length: 101
 
           <screen>
 $ svnadmin load /usr/local/svn/restored &lt; repos-backup
+&lt;&lt;&lt; Started new txn, based on original revision 1
+     * adding path : test ... done.
+     * adding path : test/a ... done.
+&hellip;
+          </screen>
+
+          <para>Or if you want to load into a subdirectory:</para>
+
+          <screen>
+$ svnadmin load --parent-dir new/subdir/for/project /usr/local/svn/restored &lt; repos-backup
 &lt;&lt;&lt; Started new txn, based on original revision 1
      * adding path : test ... done.
      * adding path : test/a ... done.
@@ -3962,14 +4013,6 @@ $ svnadmin lstxns /usr/local/svn/repos/
 
           <para>Run this command if you get an error indicating that
             your repository needs to be recovered.</para>
-
-          <warning>
-            <para>Only run this when you are <emphasis>absolutely
-              certain</emphasis> you're the only process accessing the
-              repository&mdash;it requires exclusive access.  See
-              <xref linkend="svn-ch-5-sect-3.3"/> for a detailed
-              explanation of repository recovery.</para>
-          </warning>
         </refsect1>
 
         <refsect1>
@@ -4005,6 +4048,14 @@ The latest repos revision is 34.
           <para>Deletes outstanding transactions from a repository.
             This is covered in detail in <xref
             linkend="svn-ch-5-sect-3.2"/></para>
+        </refsect1>
+
+        <refsect1>
+          <title>Switches</title>
+          
+          <screen>
+--quiet (-q)
+          </screen>
         </refsect1>
 
         <refsect1>
@@ -4064,6 +4115,15 @@ $ svnadmin rmtxns /usr/local/svn/repos/  `svnadmin lstxns /usr/local/svn/repos/`
 
         <refsect1>
           <title>Switches</title>
+          
+          <screen>
+--revision (-r)
+--bypass-hooks
+          </screen>
+        </refsect1>
+
+        <refsect1>
+          <title>Switches</title>
 
           <screen>
 --revision (-r) ARG
@@ -4079,6 +4139,38 @@ $ svnadmin rmtxns /usr/local/svn/repos/  `svnadmin lstxns /usr/local/svn/repos/`
 
           <screen>
 $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
+          </screen>
+
+        </refsect1>
+      </refentry>
+
+      <!-- ================================================================= -->
+      <refentry>
+        <refnamediv>
+          <refname>svnadmin verify</refname>
+          <refpurpose>Verifies the data stored in the repository.</refpurpose>
+        </refnamediv>
+        <refsect1>
+          <title>Synopsis</title>
+          <programlisting>svnadmin verify REPOS_PATH</programlisting>
+        </refsect1>
+        <refsect1>
+          <title>Description</title>
+
+          <para>Run this command if you wish to verify the integrity
+          of your repository.  This basically iterates through all
+          revisions in the repository by internally dumping all
+          revisions and discarding the output.</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Examples</title>
+          
+          <para>Verify a hung repository:</para>
+
+          <screen>
+$ svnadmin verify /usr/local/svn/repos/ 
+* Verified revision 1729.
           </screen>
 
         </refsect1>
@@ -4165,7 +4257,7 @@ $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
 
     <!-- ================================================================= -->
     <sect2 id="svn-ch-9-sect-3.2">
-      <title><command>svnlook</command> Subcommands</title>
+      <title><command>svnlook</command></title>
 
       <refentry>
         <refnamediv>
