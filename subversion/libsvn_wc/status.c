@@ -110,9 +110,9 @@ add_status_structure (apr_hash_t *statushash,
 
 
 svn_error_t *
-svn_wc_get_status (apr_hash_t *statushash,
-                   svn_string_t *path,
-                   apr_pool_t *pool)
+svn_wc_statuses (apr_hash_t *statushash,
+                 svn_string_t *path,
+                 apr_pool_t *pool)
 {
   svn_error_t *err;
   enum svn_node_kind kind;
@@ -147,7 +147,7 @@ svn_wc_get_status (apr_hash_t *statushash,
         entry = (svn_wc_entry_t *) value;
       else
         return svn_error_createf (SVN_ERR_BAD_FILENAME, 0, NULL, pool,
-                                  "svn_wc_get_status:  bogus path `%s'",
+                                  "svn_wc_statuses:  bogus path `%s'",
                                   path->data);
 
       /* Convert the entry into a status structure, store in the hash */
@@ -184,7 +184,7 @@ svn_wc_get_status (apr_hash_t *statushash,
           /* Recurse on the dirent, provided it's not "."  */
           if (strcmp (basename, SVN_WC_ENTRY_THIS_DIR))
             {
-              err = svn_wc_get_status (statushash, fullpath, pool);
+              err = svn_wc_statuses (statushash, fullpath, pool);
               if (err) return err;
             }
           else

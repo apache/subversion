@@ -74,7 +74,7 @@
 
 
 
-/*** Entries. ***/
+/*** Entries and status. ***/
 
 /* A working copy entry -- that is, revision control information about
    one versioned entity. */
@@ -145,15 +145,12 @@ typedef struct svn_wc_status_t
 } svn_wc_status_t;
 
 
-/* Given a PATH to a working copy files or dir, return a STATUSHASH
-   which maps names to status structures.  For each struct, all fields
-   will be filled in _except_ for the field containing the current
-   repository revision; this will be filled in by svn_client_status(),
-   the primary caller of this routine. */
-/* kff todo: this is gonna change real soon now. */
-svn_error_t *svn_wc_get_status (apr_hash_t *statushash,
-                                svn_string_t *path,
-                                apr_pool_t *pool);
+/* Under PATH, fill STATUSHASH to map paths to svn_wc_status_t
+   structures.  For each struct, all fields will be filled in except
+   for repos_rev; this would presumably be filled in by the caller. */
+svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
+                              svn_string_t *path,
+                              apr_pool_t *pool);
 
 
 
