@@ -57,7 +57,7 @@ svn_client__update_internal (svn_revnum_t *result_rev,
   svn_error_t *err;
   svn_revnum_t revnum;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
-  svn_wc_adm_access_t *adm_access;
+  svn_wc_adm_access_t *adm_access, *target_anchor;
   svn_boolean_t use_commit_times;
   svn_boolean_t sleep_here = FALSE;
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
@@ -74,9 +74,9 @@ svn_client__update_internal (svn_revnum_t *result_rev,
   assert (path);
 
   /* Use PATH to get the update's anchor and targets and get a write lock */
-  SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
-  SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, anchor, TRUE, -1,
-                             pool));
+  SVN_ERR (svn_wc_adm_open_anchor (&adm_access, &target_anchor, &target, path,
+                                   TRUE, recurse ? -1 : 0, pool));
+  anchor = svn_wc_adm_access_path (adm_access);
 
   /* Get full URL from the ANCHOR. */
   SVN_ERR (svn_wc_entry (&entry, anchor, adm_access, FALSE, pool));

@@ -162,6 +162,31 @@ svn_error_t *svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
                                     svn_boolean_t tree_lock,
                                     apr_pool_t *pool);
 
+/**
+ * @since New in 1.2
+ *
+ * Open access batons for @c path and return in @c *anchor_access and
+ * @c *target the anchor and target required to drive an editor.  Return
+ * in @c *target_access the access baton for the target, which may be the
+ * same as @c *anchor_access.  All the access batons will be in the
+ * @c *anchor_access set.
+ *
+ * @c depth determines the depth used when opening @c path if @c path is a
+ * versioned directory, @c depth is ignored otherwise.  If @c write_lock is
+ * @c TRUE the access batons will hold write locks.
+ *
+ * This function is essentially a combination of svn_wc_adm_open2 and
+ * svn_wc_get_actual_target, with the emphasis on reducing physical IO.
+ */
+svn_error_t *
+svn_wc_adm_open_anchor (svn_wc_adm_access_t **anchor_access,
+                        svn_wc_adm_access_t **target_access,
+                        const char **target,
+                        const char *path,
+                        svn_boolean_t write_lock,
+                        int depth,
+                        apr_pool_t *pool);
+
 /** Return, in @a *adm_access, a pointer to an existing access baton associated
  * with @a path.  @a path must be a directory that is locked as part of the 
  * set containing the @a associated access baton.

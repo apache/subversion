@@ -718,6 +718,199 @@ svn_wc_adm_probe_try2 (svn_wc_adm_access_t **adm_access,
   return err;
 }
 
+/* A helper for svn_wc_adm_open_anchor.  Add all the access batons in the
+   T_ACCESS set, including T_ACCESS, to the P_ACCESS set. */
+static void join_batons (svn_wc_adm_access_t *p_access,
+                         svn_wc_adm_access_t *t_access,
+                         apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+
+  adm_ensure_set (p_access);
+  if (! t_access->set)
+    {
+      t_access->set = p_access->set;
+      apr_hash_set (p_access->set, t_access->path, APR_HASH_KEY_STRING,
+                    t_access);
+      return;
+    }
+
+  for (hi = apr_hash_first (pool, t_access->set); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      svn_wc_adm_access_t *adm_access;
+      apr_hash_this (hi, &key, NULL, &val);
+      adm_access = val;
+      if (adm_access != &missing)
+        adm_access->set = p_access->set;
+      apr_hash_set (p_access->set, key, APR_HASH_KEY_STRING, adm_access);
+    }
+  t_access->set_owner = FALSE;
+}
+
+svn_error_t *
+svn_wc_adm_open_anchor (svn_wc_adm_access_t **anchor_access,
+                        svn_wc_adm_access_t **target_access,
+                        const char **target,
+                        const char *path,
+                        svn_boolean_t write_lock,
+                        int depth,
+                        apr_pool_t *pool)
+{
+  const char *base_name = svn_path_basename (path, pool);
+
+  /* ### This check looks out of place here, perhaps it should be in
+     svn_path_canonicalize */
+  if ((strcmp (base_name, "..") == 0) || (strcmp (base_name, ".") == 0))
+    return svn_error_createf
+      (SVN_ERR_WC_BAD_PATH, NULL,
+       _("Path '%s' ends in '%s', which is unsupported for this operation"),
+       svn_path_local_style (path, pool), base_name);
+
+  if (svn_path_is_empty (path) || ! strcmp (path, "/"))
+    {
+      SVN_ERR (do_open (anchor_access, NULL, path, write_lock, depth, FALSE,
+                        pool));
+      *target_access = *anchor_access;
+      *target = "";
+    }
+  else
+    {
+      svn_error_t *err;
+      svn_wc_adm_access_t *p_access, *t_access;
+      const char *parent = svn_path_dirname (path, pool);
+      svn_error_t *p_access_err = SVN_NO_ERROR;
+
+      /* Try to open parent of PATH to setup P_ACCESS */
+      err = do_open (&p_access, NULL, parent, write_lock, 0, FALSE, pool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
+            {
+              svn_error_clear (err);
+              p_access = NULL;
+            }
+          else if (write_lock && (err->apr_err == SVN_ERR_WC_LOCKED
+                                  || APR_STATUS_IS_EACCES (err->apr_err)))
+            {
+              /* If P_ACCESS isn't to be returned then a read-only baton
+                 will do for now, but keep the error in case we need it. */
+              svn_error_t *err2 = do_open (&p_access, NULL, parent, FALSE, 0,
+                                           FALSE, pool);
+              if (err2)
+                {
+                  svn_error_clear (err2);
+                  return err;
+                }
+              p_access_err = err;
+            }
+          else
+            return err;
+        }
+
+      /* Try to open PATH to setup T_ACCESS */
+      err = do_open (&t_access, NULL, path, write_lock, depth, FALSE, pool);
+      if (err)
+        {
+          if (! p_access || err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
+            {
+              if (p_access)
+                svn_error_clear (do_close (p_access, FALSE));
+              svn_error_clear (p_access_err);
+              return err;
+            }
+
+          svn_error_clear (err);
+          t_access = NULL;
+        }
+
+      /* At this stage might have P_ACCESS, T_ACCESS or both */
+
+      /* Check for switched or disjoint P_ACCESS and T_ACCESS */
+      if (p_access && t_access)
+        {
+          const svn_wc_entry_t *t_entry, *p_entry, *t_entry_in_p;
+
+          err = svn_wc_entry (&t_entry_in_p, path, p_access, FALSE, pool);
+          if (! err)
+            err = svn_wc_entry (&t_entry, path, t_access, FALSE, pool);
+          if (! err)
+            err = svn_wc_entry (&p_entry, parent, p_access, FALSE, pool);
+          if (err)
+            {
+              svn_error_clear (p_access_err);
+              svn_error_clear (do_close (p_access, FALSE));
+              svn_error_clear (do_close (t_access, FALSE));
+              return err;
+            }
+
+          /* Disjoint won't have PATH in P_ACCESS, switched will have
+             incompatible URLs */
+          if (! t_entry_in_p
+              ||
+              (p_entry->url && t_entry->url
+               && (strcmp (svn_path_dirname (t_entry->url, pool), p_entry->url)
+                   || strcmp (svn_path_uri_encode (base_name, pool), 
+                              svn_path_basename (t_entry->url, pool)))))
+            {
+              /* Switched or disjoint, so drop P_ACCESS */
+              err = do_close (p_access, FALSE);
+              if (err)
+                {
+                  svn_error_clear (p_access_err);
+                  svn_error_clear (do_close (t_access, FALSE));
+                  return err;
+                }
+              p_access = NULL;
+            }
+        }
+
+      if (p_access)
+        {
+          if (p_access_err)
+            {
+              /* Need P_ACCESS, so the read-only temporary won't do */
+              if (t_access)
+                svn_error_clear (do_close (t_access, FALSE));
+              svn_error_clear (do_close (p_access, FALSE));
+              return p_access_err;
+            }
+          else if (t_access)
+            join_batons (p_access, t_access, pool);
+        }
+      svn_error_clear (p_access_err);
+
+      if (! t_access)
+        {
+          const svn_wc_entry_t *t_entry;
+          err = svn_wc_entry (&t_entry, path, p_access, FALSE, pool);
+          if (err)
+            {
+              if (p_access)
+                svn_error_clear (do_close (p_access, FALSE));
+              return err;
+            }
+          if (t_entry && t_entry->kind == svn_node_dir)
+            {
+              adm_ensure_set (p_access);
+              apr_hash_set (p_access->set, apr_pstrdup (p_access->pool, path),
+                            APR_HASH_KEY_STRING, &missing);
+            }
+        }
+
+      *anchor_access = p_access ? p_access : t_access;
+      *target_access = t_access ? t_access : p_access;
+
+      if (! p_access)
+        *target = "";
+      else
+        *target = base_name;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Does the work of closing the access baton ADM_ACCESS.  Any physical
    locks are removed from the working copy if PRESERVE_LOCK is FALSE, or
