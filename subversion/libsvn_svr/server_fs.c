@@ -219,7 +219,7 @@ svn_svr_latest (svn_svr_policies_t *policy,
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = foo;  /* TODO:  fix this */
+  svn_svr_action_t my_action = latest;
   authorized = svr__authorize (policy, repository, user, my_action, NULL);
   /* TODO: should *path be NULL for this?  Or should it be version # ? */
 
@@ -234,40 +234,123 @@ svn_svr_latest (svn_svr_policies_t *policy,
   else
     {
       /* Do filesystem call with "canonical" username */
-      return (svn_fs_latest (repository, user->svn_username));
+      return (svn_fs_latest (repository, 
+                             user->svn_username));
     }
 }
 
 
 
-/* Return the value of a property for a specific version */
+/* Given a version, return a certain property value */
 
 svn_string_t * 
-svn_svr_get_ver_prop (svn_string_t *repos, 
+svn_svr_get_ver_prop (svn_svr_policies_t *policy,
+                      svn_string_t *repos, 
                       svn_string_t *user, 
                       svn_ver_t *ver, 
                       svn_string_t *propname)
 {
+  /* Convert "repos" into real pathname */
+  svn_string_t *repository = svr__expand_repos_name (policy, repos);
 
+  /* Check authorization, both server policy & auth hooks */
+  svn_boolean_t authorized = FALSE;
+  svn_svr_action_t my_action = get_ver_prop;
+  authorized = svr__authorize (policy, repository, user, my_action, NULL);
+  /* TODO: should *path be NULL for this?  Or should it be version # ? */
+
+  if (! authorized)
+    {
+      /* Generate CUSTOM Subversion errno: */
+      svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
+                                          FALSE,
+                                          policy->pool));
+      return FALSE;
+    }
+  else
+    {
+      /* Do filesystem call with "canonical" username */
+      return (svn_get_ver_prop (repository, 
+                                user->svn_username,
+                                ver,
+                                propname));
+    }
 }
 
 
 
+/* Retrieve entire proplist of a version */
 
 svn_proplist_t * 
-svn_svr_get_ver_proplist (svn_string_t *repos, svn_string_t *user, 
+svn_svr_get_ver_proplist (svn_svr_policies_t *policy,
+                          svn_string_t *repos, 
+                          svn_string_t *user, 
                           svn_ver_t *ver)
 {
+  /* Convert "repos" into real pathname */
+  svn_string_t *repository = svr__expand_repos_name (policy, repos);
 
+  /* Check authorization, both server policy & auth hooks */
+  svn_boolean_t authorized = FALSE;
+  svn_svr_action_t my_action = get_ver_proplist;
+  authorized = svr__authorize (policy, repository, user, my_action, NULL);
+  /* TODO: should *path be NULL for this?  Or should it be version # ? */
+
+  if (! authorized)
+    {
+      /* Generate CUSTOM Subversion errno: */
+      svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
+                                          FALSE,
+                                          policy->pool));
+      return FALSE;
+    }
+  else
+    {
+      /* Do filesystem call with "canonical" username */
+      return (svn_get_ver_proplist (repository, 
+                                    user->svn_username,
+                                    ver));
+    }
 }
 
 
 
+/* Return the property names of a version.
+   TODO:  Should this return something other than a proplist?
+          If not, how is it any different than get_ver_proplist()? 
+*/
+
+
 svn_proplist_t * 
-svn_svr_get_ver_propnames (svn_string_t *repos, svn_string_t *user, 
+svn_svr_get_ver_propnames (svn_svr_policies_t *policy,
+                           svn_string_t *repos, 
+                           svn_string_t *user, 
                            svn_ver_t *ver)
 {
+  /* Convert "repos" into real pathname */
+  svn_string_t *repository = svr__expand_repos_name (policy, repos);
 
+  /* Check authorization, both server policy & auth hooks */
+  svn_boolean_t authorized = FALSE;
+  svn_svr_action_t my_action = get_ver_propnames;
+  authorized = svr__authorize (policy, repository, user, my_action, NULL);
+  /* TODO: should *path be NULL for this?  Or should it be version # ? */
+
+  if (! authorized)
+    {
+      /* Generate CUSTOM Subversion errno: */
+      svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
+                                          FALSE,
+                                          policy->pool));
+      return FALSE;
+    }
+  else
+    {
+      /* Do filesystem call with "canonical" username */
+      return (svn_get_ver_propnames (repository, 
+                                     user->svn_username,
+                                     ver));
+    }
 }
 
 
