@@ -52,7 +52,7 @@ generate_status_codes (char *str_status,
       text_statuschar = 'A';
       break;
     case svn_wc_status_absent:
-      text_statuschar = '?';
+      text_statuschar = '!';
       break;
     case svn_wc_status_deleted:
       text_statuschar = 'D';
