@@ -27,12 +27,5 @@ Candidate changes:
       +1: ghudson, jerenkrantz
       Nominated by: David James <james82@gmail.com>
 
-  * r12397
-    Properly invoke ra_callbacks->open_tmp_file in Perl with pool.
-    Justification:
-      Sanitize perl bindings pool usage and avoid potential memory leak.
-    Votes:
-      +1: clkao, breser
-
 Approved changes (further review is welcome, but not required):
 
