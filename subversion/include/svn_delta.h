@@ -556,25 +556,25 @@ typedef struct svn_delta_edit_fns_t
 
 
 
-/* An opaque object that represents a Subversion XML parser. */
+/* An opaque object that represents a Subversion Delta XML parser. */
 
-typedef struct svn_xml_parser_t svn_xml_parser_t;
+typedef struct svn_delta_xml_parser_t svn_delta_xml_parser_t;
 
 /* Given a precreated svn_delta_edit_fns_t EDITOR, return a custom xml
    PARSER that will call into it (and feed EDIT_BATON to its
    callbacks.)  Additionally, this XML parser will use BASE_PATH and
    BASE_VERSION as default "context variables" when computing ancestry
    within a tree-delta. */
-svn_error_t  *svn_make_xml_parser (svn_xml_parser_t **parser,
-                                   const svn_delta_edit_fns_t *editor,
-                                   svn_string_t *base_path, 
-                                   svn_vernum_t base_version,
-                                   void *edit_baton,
-                                   apr_pool_t *pool);
+svn_error_t  *svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
+                                         const svn_delta_edit_fns_t *editor,
+                                         svn_string_t *base_path, 
+                                         svn_vernum_t base_version,
+                                         void *edit_baton,
+                                         apr_pool_t *pool);
 
 
-/* Destroy an svn_xml_parser_t when finished with it. */
-void svn_free_xml_parser (svn_xml_parser_t *parser);
+/* Destroy an svn_delta_xml_parser_t when finished with it. */
+void svn_delta_free_xml_parser (svn_delta_xml_parser_t *parser);
 
 
 /* Push LEN bytes of xml data in BUFFER at SVN_XML_PARSER.  As xml is
@@ -582,8 +582,8 @@ void svn_free_xml_parser (svn_xml_parser_t *parser);
    and batons that were used to create the parser.)  If this is the
    final parser "push", ISFINAL must be set to true.  */
 svn_error_t *
-svn_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal, 
-                    svn_xml_parser_t *svn_xml_parser);
+svn_delta_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal, 
+                          svn_delta_xml_parser_t *svn_xml_parser);
 
 
 /* Create a internal parser that consumes XML data from SOURCE_FN and
@@ -592,7 +592,7 @@ svn_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal,
    traversal.  DIR_BATON is a data passthrough for the root directory;
    the callbacks can establish new DIR_BATON values for
    subdirectories.  Use POOL for allocations.  */
-extern svn_error_t *svn_xml_auto_parse (svn_read_fn_t *source_fn,
+extern svn_error_t *svn_delta_xml_auto_parse (svn_read_fn_t *source_fn,
                                         void *source_baton,
                                         const svn_delta_edit_fns_t *editor,
                                         svn_string_t *base_path,

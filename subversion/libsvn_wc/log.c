@@ -52,22 +52,49 @@
 #include <apr_pools.h>
 #include <apr_strings.h>
 #include "svn_wc.h"
+#include "svn_xml.h"
 #include "wc.h"
 
 
 
+/*** Setting up the XML parser for the log file. ***/
+
+static void
+start_handler (void *userData, const XML_Char *name, const XML_Char **atts)
+{
+  /* kff todo */
+}
+
+
+static void
+end_handler (void *userData, const XML_Char *name)
+{
+  /* kff todo */
+}
+
+
+
+/*** Using the parser to run the log file. ***/
+
 svn_error_t *
 svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
+  XML_Parser parser;
+  int placeholder;
 
+  parser = svn_xml_make_parser (&placeholder,
+                                start_handler,
+                                end_handler,
+                                NULL);  /* no data handler for log files */
+  
   /* kff todo: pretend everything worked for now. */
   err = svn_wc__remove_adm_thing (path, SVN_WC__ADM_LOG, pool);
 
+  XML_ParserFree (parser);
+
   return err;
 }
-
-
 
 
 

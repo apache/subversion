@@ -51,6 +51,21 @@
 #ifndef SVN_XML_H
 #define SVN_XML_H
 
+#include "xmlparse.h"
+
+
+
+/*** Setting up a parser. ***/
+
+XML_Parser
+svn_xml_make_parser (void *userData,
+                     XML_StartElementHandler  start_handler,
+                     XML_EndElementHandler    end_handler,
+                     XML_CharacterDataHandler data_handler);
+
+
+
+/*** Helpers for dealing with the data Expat gives us. ***/
 
 /* Return the value associated with NAME in expat attribute array ATTS,
  * else return NULL.  (There could never be a NULL attribute value in

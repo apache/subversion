@@ -54,6 +54,27 @@
 
 
 
+/*** Making a parser. ***/
+
+XML_Parser
+svn_xml_make_parser (void *userData,
+                     XML_StartElementHandler start_handler,
+                     XML_EndElementHandler end_handler,
+                     XML_CharacterDataHandler data_handler)
+{
+  XML_Parser parser = XML_ParserCreate (NULL);
+
+  XML_SetUserData (parser, userData);
+  XML_SetElementHandler (parser, start_handler, end_handler); 
+  XML_SetCharacterDataHandler (parser, data_handler);
+
+  return parser;
+}
+
+
+
+
+/*** Attribute walking. ***/
 
 /* See svn_xml.h for details. */
 const char *
