@@ -111,4 +111,8 @@
 #ifdef SWIGJAVA
 #include "swigutil_java.h"
 #endif
+
+#ifdef SWIGPERL
+#include "swigutil_pl.h"
+#endif
 %}

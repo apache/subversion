@@ -80,6 +80,9 @@
 
 %ignore apr_check_dir_empty;
 
+/* bad pool convention */
+%ignore svn_opt_print_generic_help;
+
 /* scripts can do the printf, then write to a stream. we can't really
    handle the variadic, so ignore it. */
 %ignore svn_stream_printf;
@@ -143,7 +146,9 @@
     $2 = ($2_ltype)&temp;
 }
 %typemap(perl5, in) (char *buffer, apr_size_t *len) ($*2_type temp) {
-    /* ### FIXME-perl */
+    temp = SvIV($input);
+    $1 = malloc(temp);
+    $2 = ($2_ltype)&temp;
 }
 
 /* ### need to use freearg or somesuch to ensure the string is freed.
@@ -154,7 +159,10 @@
     free($1);
 }
 %typemap(perl5, argout) (char *buffer, apr_size_t *len) {
-    /* ### FIXME-perl */
+    $result = sv_newmortal();
+    sv_setpvn ($result, $1, *$2);
+    free($1);
+    argvi++;
 }
 
 /* -----------------------------------------------------------------------
@@ -171,7 +179,8 @@
     $2 = ($2_ltype)&temp;
 }
 %typemap(perl5, in) (const char *data, apr_size_t *len) ($*2_type temp) {
-    /* ### FIXME-perl */
+    $1 = SvPV($input, temp);
+    $2 = ($2_ltype)&temp;
 }
 
 %typemap(python, argout, fragment="t_output_helper") (const char *data, apr_size_t *len) {
@@ -179,8 +188,16 @@
 }
 
 %typemap(perl5, argout, fragment="t_output_helper") (const char *data, apr_size_t *len) {
-    /* ### FIXME-perl */
+    $result = newSViv(*$2);
+
 }
+
+/* auth provider convertors */
+
+%typemap(perl5, in) apr_array_header_t *providers {
+    $1 = (apr_array_header_t *) svn_swig_pl_objs_to_array($input, SWIGTYPE_p_svn_auth_provider_object_t, _global_pool);
+}
+
 
 /* -----------------------------------------------------------------------
    describe how to pass a FILE* as a parameter (svn_stream_from_stdio)
@@ -193,7 +210,30 @@
     }
 }
 %typemap(perl5, in) FILE * {
-    /* ### FIXME-perl */
+    dSP ;
+    int count, fd ;
+
+    ENTER ;
+    SAVETMPS;
+
+    PUSHMARK(SP) ;
+    XPUSHs($input);
+    PUTBACK ;
+
+    count = call_pv("fileno", G_SCALAR);
+    SPAGAIN ;
+
+    if (count != 1)
+        croak("Big trouble\n") ;
+
+    if (fd = POPi < 0)
+        croak("not an accessible filehandle");
+
+    $1 = fdopen (fd, "r+");
+
+    PUTBACK ;
+    FREETMPS ;
+    LEAVE ;
 }
 
 /* -----------------------------------------------------------------------
@@ -219,6 +259,18 @@ apr_status_t apr_time_ansi_put(apr_time_t *result, time_t input);
 
 void apr_pool_destroy(apr_pool_t *p);
 
+apr_status_t *apr_file_open_stdout (apr_file_t **out, apr_pool_t *pool);
+apr_status_t *apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
+
+/* -----------------------------------------------------------------------
+   wrap config functions
+*/
+
+%typemap(perl5,in,numinputs=0) apr_hash_t **cfg_hash = apr_hash_t **OUTPUT;
+%typemap(perl5,argout) apr_hash_t **cfg_hash {
+    ST(argvi++) = svn_swig_pl_convert_hash(*$1, SWIGTYPE_p_svn_config_t);
+}
+
 /* ----------------------------------------------------------------------- */
 
 %include svn_types.h
@@ -228,6 +280,8 @@ void apr_pool_destroy(apr_pool_t *p);
 %include svn_props.h
 %include svn_opt.h
 %include svn_auth.h
+%include svn_config.h
+
 
 /* SWIG won't follow through to APR's defining this to be empty, so we
    need to do it manually, before SWIG sees this in svn_io.h. */
@@ -246,6 +300,7 @@ void apr_pool_destroy(apr_pool_t *p);
 #include "svn_props.h"
 #include "svn_opt.h"
 #include "svn_auth.h"
+#include "svn_config.h"
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
@@ -255,4 +310,7 @@ void apr_pool_destroy(apr_pool_t *p);
 #include "swigutil_java.h"
 #endif
 
+#ifdef SWIGPERL
+#include "swigutil_pl.h"
+#endif
 %}

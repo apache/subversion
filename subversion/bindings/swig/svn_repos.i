@@ -41,25 +41,25 @@
 };
 
 /* -----------------------------------------------------------------------
-   get_logs takes a callback function, so we have to thunk it
-*/
-%typemap(python, in) (svn_log_message_receiver_t receiver, 
-                      void *receiver_baton) {
-    $1 = svn_swig_py_thunk_log_receiver;
-    $2 = (void *)$input;
-}
-%typemap(perl5, in) (svn_log_message_receiver_t receiver, 
-                      void *receiver_baton) {
-    /* ### FIXME-perl */
-}
-
-/* -----------------------------------------------------------------------
    handle the 'paths' parameter appropriately
 */
 %apply const apr_array_header_t *STRINGLIST {
     const apr_array_header_t *paths
 };
 
+/* -----------------------------------------------------------------------
+   commit editor support	
+*/
+%apply SWIGTYPE **OUTPARAM {
+    const svn_delta_editor_t **editor,
+    void **edit_baton
+};
+
+%typemap(perl5, in) (svn_repos_commit_callback_t hook, void *callback_baton) {
+    $1 = svn_swig_pl_thunk_commit_callback;
+    $2 = (void *)$input;
+    SvREFCNT_inc($input);
+};
 
 /* ----------------------------------------------------------------------- */
 
@@ -73,5 +73,9 @@
 
 #ifdef SWIGJAVA
 #include "swigutil_java.h"
+#endif
+
+#ifdef SWIGPERL
+#include "swigutil_pl.h"
 #endif
 %}
