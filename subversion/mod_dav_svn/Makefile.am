@@ -7,7 +7,8 @@
 
 lib_LTLIBRARIES = libmod_dav_svn.la
 
-libmod_dav_svn_la_SOURCES = dav_svn.h deadprops.c liveprops.c mod_dav_svn.c \
+libmod_dav_svn_la_SOURCES = dav_svn.h activity.c deadprops.c liveprops.c \
+				mod_dav_svn.c \
 				repos.c util.c version.c 
 
 ### this is a hack, but we can't pass libsvn_fs.la (et al) to libtool when
