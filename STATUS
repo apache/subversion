@@ -160,3 +160,10 @@ Candidate changes:
     Notes:  This has the potential to burn a whole lot of new users.
     Votes:
       +1: sussman, brane
+
+  * r8681
+    Fix issue 1692: obscure bugs in formatting of time/date strings.
+    Justification: Simple fix; affects all "svn log" output in time zone
+      "Canada/Newfoundland".
+    Votes:
+      +1: julianfoad
