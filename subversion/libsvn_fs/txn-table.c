@@ -88,7 +88,7 @@ put_txn (svn_fs_t *fs,
 
 
 /* Allocate a Subversion transaction ID in FS, as part of TRAIL.  Set
-   *ID_P to the new transaction ID.  */
+   *ID_P to the new transaction ID, allocated in TRAIL->pool.  */
 static svn_error_t *
 allocate_txn_id (char **id_p,
 		 svn_fs_t *fs,
@@ -150,11 +150,7 @@ svn_fs__create_txn (char **txn_id_p,
   SVN_ERR (allocate_txn_id (&svn_txn, fs, trail));
   SVN_ERR (put_txn (fs, svn_txn, root_id, root_id, trail));
 
-  /* I believe it's proper to share the string here instead of
-     allocating new storage.  If this is wrong, please throw something
-     heavy in my direction, such as a clue.  -kff */
   *txn_id_p = svn_txn; 
-
   return 0;
 }
 

@@ -28,7 +28,7 @@ int svn_fs__open_transactions_table (DB **transactions_p,
 
 /* Create a new transaction in FS as part of TRAIL, with an initial
    root and base root ID of ROOT_ID.  Set *TXN_ID_P to the ID of the new
-   transaction.  */
+   transaction, allocated in TRAIL->pool.  */
 svn_error_t *svn_fs__create_txn (char **txn_id_p,
 				 svn_fs_t *fs,
 				 const svn_fs_id_t *root_id,
