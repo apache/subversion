@@ -95,13 +95,13 @@ set_any_props (svn_fs_root_t *root,
 
 
 
-/* A depth-first recursive walk of PATH under ROOT.  Create subpools
-   in POOL for temporary allocation during the walk.  When this
-   function returns, all subpools will be freed.
+/* A depth-first recursive walk of DIR_PATH under a fs ROOT that adds
+   dirs and files via EDITOR and DIR_BATON.   URL represents the
+   current repos location, and is stored in DIR_BATON's working copy.
 
-   Note: we're conspicuously creating a subpool and freeing it at each
-   level of subdir recursion; this is a safety measure that protects
-   us when checking out outrageously large or deep trees.
+   Note: we're conspicuously creating a subpool in POOL and freeing it
+   at each level of subdir recursion; this is a safety measure that
+   protects us when checking out outrageously large or deep trees.
 
    Note: we aren't driving EDITOR with "postfix" text deltas; that
    style only exists to recognize skeletal conflicts as early as
@@ -113,6 +113,7 @@ walk_tree (svn_fs_root_t *root,
            void *dir_baton,
            const svn_delta_edit_fns_t *editor, 
            void *edit_baton,
+           svn_string_t *URL,
            apr_pool_t *pool)
 {
   apr_hash_t *dirents;
@@ -130,12 +131,14 @@ walk_tree (svn_fs_root_t *root,
       apr_size_t klen;
       svn_fs_dirent_t *dirent;
       svn_string_t *dirent_name;
+      svn_string_t *URL_path = svn_string_dup (URL, subpool);
       svn_string_t *dirent_path = svn_string_dup (dir_path, subpool);
 
       apr_hash_this (hi, &key, &klen, &val);
       dirent = (svn_fs_dirent_t *) val;
       dirent_name = svn_string_create (dirent->name, subpool);
       svn_path_add_component (dirent_path, dirent_name, svn_path_repos_style);
+      svn_path_add_component (URL_path, dirent_name, svn_path_url_style);
 
       /* What is dirent? */
       SVN_ERR (svn_fs_is_dir (&is_dir, root, dirent_path->data, subpool));
@@ -146,12 +149,12 @@ walk_tree (svn_fs_root_t *root,
           void *new_dir_baton;
 
           SVN_ERR (editor->add_directory (dirent_name, dir_baton,
-                                          NULL, NULL, &new_dir_baton));
+                                          URL_path, NULL, &new_dir_baton));
           SVN_ERR (set_any_props (root, dirent_path, new_dir_baton,
                                   editor, 1, subpool));
           /* Recurse */
           SVN_ERR (walk_tree (root, dirent_path, new_dir_baton,
-                              editor, edit_baton, subpool));
+                              editor, edit_baton, URL_path, subpool));
         }
         
       else if (is_file)
@@ -159,7 +162,7 @@ walk_tree (svn_fs_root_t *root,
           void *file_baton;
 
           SVN_ERR (editor->add_file (dirent_name, dir_baton,
-                                     NULL, NULL, &file_baton));          
+                                     URL_path, NULL, &file_baton));          
           SVN_ERR (set_any_props (root, dirent_path, file_baton,
                                   editor, 0, subpool));
           SVN_ERR (send_file_contents (root, dirent_path, file_baton,
@@ -188,6 +191,7 @@ walk_tree (svn_fs_root_t *root,
 svn_error_t *
 svn_ra_local__checkout (svn_fs_t *fs, 
                         svn_revnum_t revnum, 
+                        svn_string_t *URL,
                         svn_string_t *fs_path,
                         const svn_delta_edit_fns_t *editor, 
                         void *edit_baton,
@@ -203,7 +207,7 @@ svn_ra_local__checkout (svn_fs_t *fs,
                                  &root_dir_baton));
 
   SVN_ERR (walk_tree (root, fs_path, root_dir_baton,
-                      editor, edit_baton, pool));
+                      editor, edit_baton, URL, pool));
 
   SVN_ERR (editor->close_edit (edit_baton));
 

@@ -254,6 +254,7 @@ do_checkout (void *session_baton,
 
   SVN_ERR (svn_ra_local__checkout (baton->fs,
                                    revnum_to_fetch,
+                                   baton->repository_URL,
                                    baton->fs_path,
                                    editor, edit_baton, baton->pool));
 
