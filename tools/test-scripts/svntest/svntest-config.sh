@@ -60,6 +60,11 @@ ERROR_TO="brane@hermes.si"
 REPLY_TO="dev@subversion.tigris.org"
 
 #
+# Revision number prefix for the e-mail subject
+#
+REVPREFIX="rev "
+
+#
 # Path to utilities
 #
 BIN="/bin"
@@ -182,24 +187,24 @@ FAIL_LOG() {
 # ii) Ramdisk isn't already mounted
 mount_ramdisk() {
     local mount_dir="$1"
-    if test "xyes" == "x$RAMDISK";
+    if test "xyes" = "x$RAMDISK";
     then
         test -z "$mount_dir" && return 1
-        
+
         test -f "$mount_dir/.ramdisk" && {
             echo "Warning: ramdisk exists"
             return 0
         }
-    
+
         $MOUNT "$mount_dir" || return 1
         $TOUCH "$mount_dir/.ramdisk" || return 1
-    fi 
+    fi
     return 0
 }
 
 umount_ramdisk() {
     local mount_dir="$1"
-    if test "xyes" == "x$RAMDISK";
+    if test "xyes" = "x$RAMDISK";
     then
         test -z "$mount_dir" && return 1
 
@@ -209,4 +214,3 @@ umount_ramdisk() {
     fi
     return 0
 }
-

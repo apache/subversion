@@ -27,7 +27,7 @@ if [ ! -f $LOG_FILE ]
 then
     $SENDMAIL -t <<EOF
 From: $FROM
-Subject: "ERROR: svn rev $REV ($TEST)
+Subject: "ERROR: svn $REVPREFIX$REV ($TEST)
 To: $ERROR_TO
 
 Missing log file: $LOG_FILE
@@ -40,7 +40,7 @@ if [ "$BUILD_STAT" != "PASS" -a "$BUILD_STAT" != "FAIL" ]
 then
     $SENDMAIL -t <<EOF
 From: $FROM
-Subject: "ERROR: svn rev $REV ($TEST)
+Subject: "ERROR: svn $REVPREFIX$REV ($TEST)
 To: $ERROR_TO
 
 Invalid build status: $BUILD_STAT
@@ -54,7 +54,7 @@ if [ "$BUILD_STAT" = "PASS" ]
 then
     $CAT <<EOF > "$MAILFILE"
 From: $FROM
-Subject: svn rev $REV: $BUILD_STAT ($TEST)
+Subject: svn $REVPREFIX$REV: $BUILD_STAT ($TEST)
 Reply-To: $REPLY_TO
 To: $TO
 
@@ -65,7 +65,7 @@ else
     TESTS_LOG_FILE="$TEST_ROOT/tests.$BUILD_TYPE.$RA_TYPE.$FS_TYPE.log.gz"
     $CAT <<EOF > "$MAILFILE"
 From: $FROM
-Subject: svn rev $REV: $BUILD_STAT ($TEST)
+Subject: svn $REVPREFIX$REV: $BUILD_STAT ($TEST)
 Reply-To: $REPLY_TO
 To: $TO
 Content-Type: multipart/mixed; boundary="$NEXT_PART"

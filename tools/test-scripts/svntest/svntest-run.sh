@@ -71,7 +71,7 @@ test -x $TEST_ROOT/$OBJ/subversion/svnversion/svnversion || FAIL; PASS
 # Build has initially mounted ramdisk for us, but this
 # script will at the end to do unmount, so check if it is mounted or not
 # and if it is not, do initial fire up for it
-if test "xyes" == "x$RAMDISK";
+if test "xyes" = "x$RAMDISK";
 then
     test -x $TEST_ROOT/$OBJ/subversion/tests/clients || {
         START "re-initializing ramdisk" "Re-initializing ramdisk"
@@ -156,7 +156,7 @@ ts_start=`$DATE +"%s"`
 START "make $CHECK_TARGET" "Testing $RA_TYPE on $FS_TYPE..."
 CHECK_LOG_FILE="$TEST_ROOT/LOG_svn_check_${BUILD_TYPE}_${RA_TYPE}_${FS_TYPE}"
 cd $TEST_ROOT/$OBJ
-if test $CHECK_TARGET == davcheck ;
+if test "$CHECK_TARGET" = "davcheck";
 then
     # At the moment we can't give repository url with
     # make davcheck, so use check & BASE_URL here for the present
