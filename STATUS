@@ -79,7 +79,7 @@ Candidate changes:
     Fix issue #1752 - 'svn propget url' doesn't work over ra_svn.
     Justification: Simple one-line fix to a shallow bug.
     Votes:
-      +1: bliss, rooneg
+      +1: bliss, rooneg, sussman
 
   * r8794
     Fix memory corruption bug in mod_dav_svn.
@@ -92,4 +92,11 @@ Candidate changes:
     Remove hopelessly obsolete authentication provider examples.
     Justification: Not needed and too obsolete/incorrect.
     Votes:
-      +1: bliss
+      +1: bliss, sussman
+
+  * r8828
+    Fix issue #1759 -- merge fails if URL contains 'user@host'
+    Justification:  Really obvious bug that blocks functionality.
+    Notes:  a teeny-tiny fix.
+    Votes:
+      +1: cmpilato, sussman
