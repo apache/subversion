@@ -103,9 +103,7 @@ notify (void *baton,
       /* We *should* only get the MIME_TYPE if PATH is a file.  If we
          do get it, and the mime-type is not in the "text/" grouping,
          note that this is a binary addition.  */
-      if (mime_type
-          && ((strlen (mime_type)) > 5)
-          && ((strncmp (mime_type, "text/", 5)) != 0))
+      if (mime_type && (svn_mime_type_is_binary (mime_type)))
         printf ("A  (bin)  %s\n", path_native);
       else
         printf ("A         %s\n", path_native);

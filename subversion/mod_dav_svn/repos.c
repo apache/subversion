@@ -1628,7 +1628,7 @@ static dav_error * dav_svn_set_headers(request_rec *r,
 
       mimetype = value ? value->data : "text/plain";
 
-      serr = svn_validate_mime_type (mimetype, resource->pool);
+      serr = svn_mime_type_validate (mimetype, resource->pool);
       if (serr)
         {
           /* Probably serr->apr == SVN_ERR_BAD_MIME_TYPE, but

@@ -36,7 +36,7 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_validate_mime_type (const char *mime_type, apr_pool_t *pool)
+svn_mime_type_validate (const char *mime_type, apr_pool_t *pool)
 {
   if (strchr (mime_type, '/') == NULL)
     return svn_error_createf
@@ -59,6 +59,17 @@ svn_validate_mime_type (const char *mime_type, apr_pool_t *pool)
   }
 
   return SVN_NO_ERROR;
+}
+
+
+svn_boolean_t
+svn_mime_type_is_binary (const char *mime_type)
+{
+  return (! (   (mime_type[0] == 't')
+             && (mime_type[1] == 'e')
+             && (mime_type[2] == 'x')
+             && (mime_type[3] == 't')
+             && (mime_type[4] == '/')));
 }
 
 

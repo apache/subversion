@@ -435,15 +435,9 @@ svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
   const svn_string_t *value;
   apr_pool_t *subpool = svn_pool_create (pool);
 
-  /* The heuristic here is simple;  a file is of type `binary' iff it
-     has the `svn:mime-type' property and its value does *not* start
-     with `text/'. */
-
   SVN_ERR (svn_wc_prop_get (&value, SVN_PROP_MIME_TYPE, path, subpool));
  
-  if (value
-      && (value->len > 5) 
-      && (strncmp (value->data, "text/", 5)))
+  if (value && (svn_mime_type_is_binary (value->data)))
     *has_binary_prop = TRUE;
   else
     *has_binary_prop = FALSE;
