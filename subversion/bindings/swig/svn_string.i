@@ -55,7 +55,14 @@ typedef struct svn_string_t svn_string_t;
 	$result = &PL_sv_undef;
     argvi++;
 }
-
+%typemap(ruby,argout,fragment="output_helper") RET_STRING
+{
+  if (*$1) {
+    $result = output_helper($result, rb_str_new((*$1)->data, (*$1)->len));
+  } else {
+    $result = output_helper($result, Qnil);
+  }
+}
 %typemap(java,out) RET_STRING {
     /* FIXME: This is just a stub -- implement JNI code for returning a string! */
     $output = NULL;
@@ -137,6 +144,16 @@ typedef struct svn_string_t svn_string_t;
         $1 = NULL;
     }
 }
+%typemap(ruby,in) const svn_string_t * (svn_string_t value)
+{
+  if (NIL_P($input)) {
+    $1 = NULL;
+  } else {
+    value.data = StringValuePtr($input);
+    value.len = RSTRING($input)->len;
+    $1 = &value;
+  }
+}
 
 /* when storing an svn_string_t* into a structure, we must allocate the
    svn_string_t structure on the heap. */
@@ -146,6 +163,9 @@ typedef struct svn_string_t svn_string_t;
 %typemap(perl5,memberin) const svn_string_t * {
     $1 = svn_string_dup($input, _global_pool);
 }
+%typemap(ruby,memberin) const svn_string_t * {
+    $1 = svn_string_dup($input, _global_pool);
+}
 
 %typemap(python,out) svn_string_t * {
     $result = PyString_FromStringAndSize($1->data, $1->len);
@@ -153,6 +173,13 @@ typedef struct svn_string_t svn_string_t;
 %typemap(perl5,out) svn_string_t * {
     $result = sv_2mortal(newSVpv($1->data, $1->len));
     ++argvi;
+}
+%typemap(ruby,out) svn_string_t * {
+  if ($1) {
+    $result = rb_str_new($1->data, $1->len);
+  } else {
+    $result = Qnil;
+  }
 }
 
 /* -----------------------------------------------------------------------
@@ -185,6 +212,15 @@ typedef struct svn_string_t svn_string_t;
     ++argvi;
 }
 
+%typemap(ruby,argout,fragment="output_helper") const char **OUTPUT
+{
+  if (*$1) {
+    $result = output_helper($result, rb_str_new2(*$1));
+  } else {
+    $result = output_helper($result, Qnil);
+  }
+}
+
 /* -----------------------------------------------------------------------
    define a general INPUT param of an array of const char * items.
  */
@@ -198,6 +234,10 @@ typedef struct svn_string_t svn_string_t;
 %typemap(perl5,in) const apr_array_header_t *STRINGLIST {
     $1 = (apr_array_header_t *) svn_swig_pl_strings_to_array($input,
                                                              _global_pool);
+}
+
+%typemap(ruby,in) const apr_array_header_t *STRINGLIST {
+  $1 = svn_swig_rb_strings_to_apr_array($input, _global_pool);
 }
 
 %typemap(jni) const apr_array_header_t *STRINGLIST "jobjectArray"

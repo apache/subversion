@@ -12,6 +12,12 @@ STATUS OF THE SWIG BINDINGS
   The Perl bindings are complete, with the exception of SVN::Wc, on which
   very little work has been done.
 
+* Ruby
+
+  The Ruby bindins are .....
+
+  ### Could someone who knows, fill in this section?
+
 * Java
 
   The SWIG-Java bindings are very incomplete, and are almost an abandoned 

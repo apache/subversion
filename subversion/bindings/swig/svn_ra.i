@@ -16,8 +16,10 @@
  * ====================================================================
  */
 
-#ifdef SWIGPERL
+#if defined(SWIGPERL)
 %module "SVN::_Ra"
+#elif defined(SWIGRUBY)
+%module "svn::ext::ra"
 #else
 %module ra
 #endif
@@ -124,4 +126,10 @@
 
 #ifdef SWIGPERL
 %include ra_reporter.hi
+#endif
+
+#ifdef SWIGRUBY
+REMOVE_DESTRUCTOR(svn_ra_reporter_t)
+REMOVE_DESTRUCTOR(svn_ra_callbacks_t)
+REMOVE_DESTRUCTOR(svn_ra_plugin_t)
 #endif

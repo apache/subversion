@@ -16,8 +16,10 @@
  * ====================================================================
  */
 
-#ifdef SWIGPERL
+#if defined(SWIGPERL)
 %module "SVN::_Wc"
+#elif defined(SWIGRUBY)
+%module "svn::ext::wc"
 #else
 %module wc
 #endif
@@ -139,3 +141,12 @@
 %}
 
 %include svn_wc.h
+
+#ifdef SWIGRUBY
+REMOVE_DESTRUCTOR(svn_wc_external_item_t)
+REMOVE_DESTRUCTOR(svn_wc_diff_callbacks2_t)
+REMOVE_DESTRUCTOR(svn_wc_diff_callbacks_t)
+REMOVE_DESTRUCTOR(svn_wc_entry_t)
+REMOVE_DESTRUCTOR(svn_wc_entry_callbacks_t)
+REMOVE_DESTRUCTOR(svn_wc_status_t)
+#endif
