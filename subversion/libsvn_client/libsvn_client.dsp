@@ -119,6 +119,10 @@ SOURCE=..\clients\cmdline\feedback.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\revert.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\status.c
 # End Source File
 # Begin Source File

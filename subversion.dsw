@@ -273,7 +273,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "subversion_client"=.\subversion\client\subversion_client.dsp - Package Owner=<4>
+Project: "subversion_client"=.\subversion\clients\cmdline\subversion_client.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -386,6 +386,18 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name libsvn_ra_local
     End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "svnlook"=.\subversion\svnlook\svnlook.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
 }}}
 
 ###############################################################################

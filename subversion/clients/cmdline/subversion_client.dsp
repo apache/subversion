@@ -150,6 +150,10 @@ SOURCE=".\propset-cmd.c"
 # End Source File
 # Begin Source File
 
+SOURCE=".\revert-cmd.c"
+# End Source File
+# Begin Source File
+
 SOURCE=".\status-cmd.c"
 # End Source File
 # Begin Source File
