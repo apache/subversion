@@ -275,7 +275,7 @@ read_length_line (ap_file_t *file, char *buf, size_t *limit)
 
 ap_status_t
 hash_read (ap_hash_t **hash, 
-           void *(*pack_func) (size_t len, const char *val, ap_pool_t *pool),
+           void * (*pack_func) (size_t len, const char *val, ap_pool_t *pool),
            ap_file_t *srcfile,
            ap_pool_t *pool)
 {
@@ -287,9 +287,8 @@ hash_read (ap_hash_t **hash,
 
   while (1)
     {
-      int len = SVN_KEYLINE_MAXLEN;
-
       /* Read a key length line.  Might be END, though. */
+      int len = SVN_KEYLINE_MAXLEN;
       err = read_length_line (srcfile, buf, &len);
       if (err) return err;
 
@@ -316,13 +315,14 @@ hash_read (ap_hash_t **hash,
           if (c != '\n') return SVN_ERR_MALFORMED_FILE;
 
           /* Read a val length line */
+          len = SVN_KEYLINE_MAXLEN;
           err = read_length_line (srcfile, buf, &len);
           if (err) return err;
 
           if ((buf[0] == 'V') && (buf[1] == ' '))
             {
               /* Get the length of the value */
-              size_t vallen = (size_t) atoi (buf + 2);
+              int vallen = atoi (buf + 2);
 
               /* Now read that many bytes into a buffer */
               void *valbuf = ap_palloc (pool, vallen);
@@ -333,12 +333,12 @@ hash_read (ap_hash_t **hash,
               err = ap_getc (&c, srcfile);
               if (err) return err;
               if (c != '\n') return SVN_ERR_MALFORMED_FILE;
-              
+
               /* Send the val data for packaging... */
               package = (void *) (*pack_func) (vallen, valbuf, pool);
 
               /* The Grand Moment:  add a new hash entry! */
-              ap_hash_set (*hash, keybuf, keylen, valbuf);
+              ap_hash_set (*hash, keybuf, keylen, package);
             }
           else
             {

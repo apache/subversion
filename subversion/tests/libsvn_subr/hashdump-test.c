@@ -1,5 +1,5 @@
 /*
- * hashdump.c :  dumping and reading hash tables to/from files.
+ * hashdump-test.c :  testing the reading/writing of hashes
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
@@ -65,9 +65,10 @@ int
 main (void)
 {
   ap_pool_t *pool = NULL;
-  ap_hash_t *proplist;
+  ap_hash_t *proplist, *new_proplist;
   svn_string_t *key;
   ap_file_t *f = NULL;     /* init to NULL very important! */
+  ap_status_t err;
 
   /* Our longest piece of test data. */
   char *review =
@@ -78,12 +79,15 @@ main (void)
     "carburator fluid.  Its confident finish is marred only by a barely\n"
     "detectable suggestion of rancid squid ink.";
 
+  /* Set up APR */
+
   ap_initialize ();
   ap_create_pool (&pool, NULL);
 
+
+  /* Build a hash in memory, and fill it with test data. */
+
   proplist = ap_make_hash (pool);
-  
-  /* Fill it in with test data. */
 
   key = svn_string_create ("color", pool);
   ap_hash_set (proplist, key->data, key->len,
@@ -105,12 +109,39 @@ main (void)
                svn_string_create ("This is the SECOND value.", pool));
 
 
-  /* Dump it. */
+  /* Dump the hash to a file. */
   ap_open (&f, "hashdump.out", (APR_WRITE | APR_CREATE), APR_OS_DEFAULT, pool);
   hash_write (proplist, svn_unpack_bytestring, f);
   ap_close (f);
-  ap_destroy_pool (pool);
 
+
+  /* Now create a new hash, and read the file back into it. */
+
+  new_proplist = ap_make_hash (pool);
+
+  ap_open (&f, "hashdump.out", APR_READ, APR_OS_DEFAULT, pool);
+  err = hash_read (&new_proplist, svn_pack_bytestring, f, pool);
+  ap_close (f);
+  
+  if (err)
+    {
+      svn_error_t *readerr = svn_create_error (err, NULL, 
+                                               "hash_read() failed.",
+                                               NULL, pool);
+      svn_handle_error (readerr, stderr);
+    }
+
+
+  /* Now dump the new hash into a SECOND file; an external script will
+     compare the two output files.  */
+
+  ap_open (&f, "hashdump2.out", (APR_WRITE | APR_CREATE),APR_OS_DEFAULT, pool);
+  hash_write (new_proplist, svn_unpack_bytestring, f);
+  ap_close (f);
+
+
+  /* Clean up and exit */
+  ap_destroy_pool (pool);
   return 0;
 }
 
