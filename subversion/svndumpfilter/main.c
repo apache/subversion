@@ -680,7 +680,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      {svndumpfilter__drop_empty_revs, svndumpfilter__renumber_revs} },
 
     {"include", subcommand_include, {0},
-     "usage: svndumpfilter exclude PATH_PREFIX [PATH_PREFIX ...]\n\n"
+     "usage: svndumpfilter include PATH_PREFIX [PATH_PREFIX ...]\n\n"
      "Filter out nodes without given prefixes from dumpstream.\n",
      {svndumpfilter__drop_empty_revs, svndumpfilter__renumber_revs} },
 
