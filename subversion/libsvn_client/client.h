@@ -485,11 +485,6 @@ svn_client__condense_commit_items (const char **base_url,
    COMMIT_ITEMS should have been run through (and BASE_URL generated
    by) svn_client__condense_commit_items.
 
-   REVNUM_FN/REV_BATON allows this routine to query the repository for
-   the latest revision.  It is used (temporarily) for checking that
-   directories are "up-to-date" when a dir-propchange is discovered.
-   We don't expect it to be here forever.  :-) 
-
    CTX->NOTIFY_FUNC/CTX->BATON will be called as the commit progresses, as 
    a way of describing actions to the application layer (if non NULL).
 

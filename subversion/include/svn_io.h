@@ -40,15 +40,6 @@ extern "C" {
 
 
 
-/* ### NOTE: Although all svn_io functions claim to conversion from/to
-   UTF-8, in fact they only do this if Subversion was configured with
-   the `--enable-utf8' flag.  We expect (?) this flag to go away
-   soon, because UTF-8 can't really be optional if it's to be
-   depended on for interoperability.  The flag is only there so that
-   development of the UTF-8 code doesn't affect others until said
-   code is ready for prime time.  */
-
-
 /** Determine the @a kind of @a path.
  *
  * If utf8-encoded @a path exists, set @a *kind to the appropriate kind,
@@ -86,7 +77,7 @@ svn_error_t *svn_io_check_resolved_path (const char *path,
  *
  * The first attempt will just append @a suffix.  If the result is not
  * a unique name, then subsequent attempts will append a dot,
- * followed by an iteration number ("1", then "2", and so on),
+ * followed by an iteration number ("2", then "3", and so on),
  * followed by the suffix.  For example, if @a path is
  *
  *    tests/t1/A/D/G/pi
