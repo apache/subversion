@@ -97,7 +97,13 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
     dbdir=`cd db/dist ; pwd`
     SVN_DB_INCLUDES="-I$dbdir"
     svn_lib_berkeley_db=yes
-    SVN_DB_LIBS="$dbdir/libdb-4.0.la"
+    # Linking directly to the .la is broken with --disable-shared
+    # because Berkeley db does not seem to generate a .la library.
+    if test "$enable_shared" = "yes"; then
+        SVN_DB_LIBS="$dbdir/libdb-4.0.la"
+    else
+        SVN_DB_LIBS="-L$dbdir -ldb"
+    fi
   elif test "$status" = "skip"; then
     svn_lib_berkeley_db=no
   else
