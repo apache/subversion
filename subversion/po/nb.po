@@ -131,19 +131,19 @@ msgstr "Revisjon: %ld\n"
 
 #: clients/cmdline/info-cmd.c:85
 msgid "Node Kind: file\n"
-msgstr "Node-type: fil\n"
+msgstr "Nodetype: fil\n"
 
 #: clients/cmdline/info-cmd.c:95
 msgid "Node Kind: directory\n"
-msgstr "Node-type: katalog\n"
+msgstr "Nodetype: katalog\n"
 
 #: clients/cmdline/info-cmd.c:101
 msgid "Node Kind: none\n"
-msgstr "Node-type: ingen\n"
+msgstr "Nodetype: ingen\n"
 
 #: clients/cmdline/info-cmd.c:106
 msgid "Node Kind: unknown\n"
-msgstr "Node-type: ukjent\n"
+msgstr "Nodetype: ukjent\n"
 
 #: clients/cmdline/info-cmd.c:113
 msgid "Schedule: normal\n"
@@ -717,7 +717,7 @@ msgstr ""
 "\n"
 "  Hvis --verbose brukes, vises status med følgende felt:\n"
 "\n"
-"    Siste innsendings revisjonsnummer\n"
+"    Siste innsendte revisjonsnummer\n"
 "    Forfatteren som gjorde siste innsending\n"
 "    Størrelse (i byte)\n"
 "    Dato og tid for siste innsending\n"
@@ -905,7 +905,7 @@ msgstr ""
 "      2. propedit PROPNAME --revprop -r REV [URL]\n"
 "\n"
 "  1. Redigerer versjonerte egenskaper i arbeidskopien.\n"
-"  2. Redigerer ikke-versjonerte revisjonsegenskap i kodelageret.\n"
+"  2. Redigerer ikke-versjonert revisjonsegenskap i kodelageret.\n"
 
 #: clients/cmdline/main.c:473
 msgid ""
@@ -1276,7 +1276,7 @@ msgstr "--auto-props og --no-auto-props utelukker hverandre gjensidig"
 #: clients/cmdline/main.c:1001
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
-msgstr "Syntaksfeil i native-eol-argumentet '%s'"
+msgstr "Syntaksfeil i 'native-eol'-argumentet '%s'"
 
 #: clients/cmdline/main.c:1044
 msgid "Subcommand argument required\n"
@@ -1552,11 +1552,11 @@ msgstr ""
 
 #: clients/cmdline/prompt.c:248
 msgid "(R)eject, accept (t)emporarily or accept (p)ermanently? "
-msgstr "Fo(R)kaste, god(t)a midlertidig eller godta (p)ermanent? "
+msgstr "Fo(r)kaste, god(t)a midlertidig eller godta (p)ermanent? "
 
 #: clients/cmdline/prompt.c:252
 msgid "(R)eject or accept (t)emporarily? "
-msgstr "Fo(R)kaste eller god(t)a midlertidig? "
+msgstr "Fo(r)kaste eller god(t)a midlertidig? "
 
 #: clients/cmdline/prompt.c:289
 msgid "Client certificate filename: "
@@ -1788,7 +1788,7 @@ msgstr "<delta-pkg> mangler opprinnelse"
 
 #: include/svn_error_codes.h:186
 msgid "Unrecognized binary data encoding; can't decode"
-msgstr "Ukjent binær datakoding, kan ikke avkode"
+msgstr "Ukjent binær datakoding, kan ikke dekode"
 
 #: include/svn_error_codes.h:190
 msgid "XML data was not well-formed"
@@ -1841,7 +1841,7 @@ msgstr "Ukjent svn_node_kind"
 
 #: include/svn_error_codes.h:244
 msgid "Unexpected node kind found"
-msgstr "En uventet node-type ble funnet"
+msgstr "En uventet nodetype ble funnet"
 
 #: include/svn_error_codes.h:250
 msgid "Can't find an entry"
@@ -1940,7 +1940,7 @@ msgstr "Tekstbasen i arbeidskopien er ødelagt"
 
 #: include/svn_error_codes.h:346
 msgid "Cannot change node kind"
-msgstr "Kan ikke forandre node-type"
+msgstr "Kan ikke forandre nodetype"
 
 #: include/svn_error_codes.h:350
 msgid "Invalid operation on the current working directory"
@@ -2892,7 +2892,7 @@ msgstr "Ingen innsendinger i kodelageret"
 
 #: libsvn_client/ls.c:48 libsvn_client/ls.c:122
 msgid "No get_dir() available for URL schema"
-msgstr "Ingen get(dir) tilgjengelig for URL-klasse"
+msgstr "Ingen get_dir() tilgjengelig for URL-klasse"
 
 #: libsvn_client/ls.c:129 libsvn_client/ls.c:136
 #, c-format
@@ -2921,7 +2921,7 @@ msgstr "Verdien blir ikke satt uten tvang"
 #: libsvn_client/prop_commands.c:441 libsvn_client/prop_commands.c:689
 #, c-format
 msgid "Unknown node kind for '%s'"
-msgstr "Ukjent node-type for '%s'"
+msgstr "Ukjent nodetype for '%s'"
 
 #: libsvn_client/ra.c:130
 #, c-format
@@ -3805,13 +3805,13 @@ msgstr "Kan ikke tilbakestille: '%s' er ikke under versjonskontroll"
 #: libsvn_wc/adm_ops.c:1398
 #, c-format
 msgid "Cannot revert '%s': unsupported entry node kind"
-msgstr "Kan ikke tilbakestille '%s': Node-typen er ikke støttet"
+msgstr "Kan ikke tilbakestille '%s': Nodetypen er ikke støttet"
 
 #: libsvn_wc/adm_ops.c:1408
 #, c-format
 msgid "Cannot revert '%s': unsupported node kind in working copy"
 msgstr ""
-"Kan ikke tilbakestille '%s': Node-typen i arbeidskopien er ikke støttet"
+"Kan ikke tilbakestille '%s': Nodetypen i arbeidskopien er ikke støttet"
 
 #: libsvn_wc/adm_ops.c:1455
 msgid ""
@@ -3878,7 +3878,7 @@ msgstr "Feil under skriving av postfil for '%s'"
 #: libsvn_wc/entries.c:220
 #, c-format
 msgid "Entry '%s' has invalid node kind"
-msgstr "Posten '%s' har ugyldig node-type"
+msgstr "Posten '%s' har ugyldig nodetype"
 
 #: libsvn_wc/entries.c:245 libsvn_wc/entries.c:295 libsvn_wc/entries.c:335
 #: libsvn_wc/entries.c:362 libsvn_wc/entries.c:389
@@ -4782,7 +4782,7 @@ msgstr "Vær detaljert"
 
 #: svnlook/main.c:107
 msgid "show node revision ids for each path"
-msgstr "Vis node-revisjons-IDer for hver filsti"
+msgstr "Vis noderevisjons-IDer for hver filsti"
 
 #: svnlook/main.c:122
 msgid ""
@@ -4920,7 +4920,7 @@ msgstr ""
 "bruk: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n"
 "\n"
 "Viser treet, begynnende med PATH_IN_REPOS (hvis angitt, ellers begynner\n"
-"man med roten til treet). Kan om ønskelig vise node-revisjons-ID også.\n"
+"man med roten til treet). Kan om ønskelig vise noderevisjons-ID også.\n"
 
 #: svnlook/main.c:192
 msgid ""
