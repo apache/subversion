@@ -499,7 +499,7 @@ svn_client_switch (const char *path,
  *
  * Important:  this is a *scheduling* operation.  No changes will
  * happen to the repository until a commit occurs.  This scheduling
- * can be removed with svn_client_revert.
+ * can be removed with svn_client_undo.
  */
 svn_error_t *
 svn_client_add (const char *path,
@@ -546,7 +546,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
  * the repository.  Each path's parent must be under revision control.
  * This is just a *scheduling* operation.  No changes will happen to
  * the repository until a commit occurs.  This scheduling can be
- * removed with @c svn_client_revert. If a path is a file it is
+ * removed with @c svn_client_undo. If a path is a file it is
  * immediately removed from the working copy. If the path is a
  * directory it will remain in the working copy but all the files, and
  * all unversioned items, it contains will be removed. If @a force is
@@ -883,17 +883,16 @@ svn_client_relocate (const char *dir,
  * undoing any local mods.  If @a path is a directory, and @a recursive 
  * is @a true, this will be a recursive operation.
  *
- * If @a ctx->notify_func is non-null, then for each item reverted, call
- * @a ctx->notify_func with @a ctx->notify_baton and the path of the reverted 
- * item.
+ * If @a ctx->notify_func is non-null, then for each item affected, call
+ * @a ctx->notify_func with @a ctx->notify_baton and the path of the item.
  *
  * If @a path is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
  */
 svn_error_t *
-svn_client_revert (const char *path,
-                   svn_boolean_t recursive,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool);
+svn_client_undo (const char *path,
+                 svn_boolean_t recursive,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
 
 
 /** Remove the 'conflicted' state on a working copy @a path.  This will
@@ -935,7 +934,7 @@ svn_client_resolve (const char *path,
  * variant of @c svn_client_add, where the @a dst_path items are scheduled
  * for addition as copies.  No changes will happen to the repository
  * until a commit occurs.  This scheduling can be removed with
- * @c svn_client_revert.
+ * @c svn_client_undo.
  *
  * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that
  * this function can use to query for a commit log message when one is
@@ -982,7 +981,7 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
  *
  *   - This is a scheduling operation.  No changes will happen to the
  *     repository until a commit occurs.  This scheduling can be removed
- *     with @c svn_client_revert.  If @a src_path is a file it is removed 
+ *     with @c svn_client_undo.  If @a src_path is a file it is removed 
  *     from the working copy immediately.  If @a src_path is a directory it 
  *     will remain n the working copy but all the files, and unversioned 
  *     items, it contains will be removed.

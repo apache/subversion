@@ -414,7 +414,7 @@ Checked out revision 2499.
             <para><command>svn diff</command></para>
           </listitem>
           <listitem>
-            <para><command>svn revert</command></para>
+            <para><command>svn undo</command></para>
           </listitem>
         </itemizedlist>
       </listitem>
@@ -697,14 +697,14 @@ Updated to revision 2.
         examining your changes before you commit, you cannot only
         make a more accurate log message, but you may discover that
         you've inadvertently changed a file, and this gives you a
-        chance to revert those changes before committing.
+        chance to undo those changes before committing.
         Additionally, this is a good opportunity to review and
         scrutinize changes before publishing them.  You can see
         exactly what changes you've made by using <command>svn
         status</command>, <command>svn diff</command>, and
-        <command>svn revert</command>.  You will usually use the first
+        <command>svn undo</command>.  You will usually use the first
         two commands to find out what files have changed in your
-        working copy, and then perhaps the third to revert some (or
+        working copy, and then perhaps the third to undo some (or
         all) of those changes.</para>
       
       <!-- pll - Fri 07 Feb 2003 12:55:07                                   -->
@@ -836,7 +836,7 @@ C      ./stuff/loot/lump.c   # this file has conflicts from an update
                 it can be incomplete if you happened to interrupt a
                 checkout or update.  A quick <command>svn
                 update</command> will refetch the file or directory
-                from the repository, or <command>svn revert
+                from the repository, or <command>svn undo
                 file</command> will restore a missing file.</para>
             </listitem>
           </varlistentry>
@@ -1054,7 +1054,7 @@ $ svn diff > patchfile
       </sect3>
 
       <sect3 id="svn-ch-3-sect-4.3.3">
-        <title><command>svn revert</command></title>
+        <title><command>svn undo</command></title>
 
         <para>Now suppose you see the above diff output, and realize
           that your changes to <filename>README</filename> are a
@@ -1062,17 +1062,17 @@ $ svn diff > patchfile
           wrong file in your editor.</para>
       
         <para>This is a perfect opportunity to use <command>svn
-          revert</command>.</para>
+          undo</command>.</para>
            
         <screen>
-$ svn revert README
-Reverted ./README
+$ svn undo README
+Undid ./README
         </screen>
         
-        <para>Subversion reverts the file to its pre-modified state by
+        <para>Subversion undos the file to its pre-modified state by
           overwriting it with the cached <quote>pristine</quote> copy
           from the <filename>.svn</filename> area.  But also note that
-          <command>svn revert</command> can undo
+          <command>svn undo</command> can undo
           <emphasis>any</emphasis> scheduled operations&mdash;for
           example, you might decide that you don't want to add a new
           file after all:</para>
@@ -1084,8 +1084,8 @@ $ svn status foo
 $ svn add foo
 A         foo
 
-$ svn revert foo
-Reverted foo
+$ svn undo foo
+Undid foo
 
 $ svn status foo
 ?      foo
@@ -1101,8 +1101,8 @@ $ svn status README
 $ svn delete README 
 D         README
 
-$ svn revert README
-Reverted README
+$ svn undo README
+Undid README
 
 $ svn status README
        README
@@ -1115,7 +1115,7 @@ $ svn status README
 
         <para>All three of these commands (<command>svn
           status</command>, <command>svn diff</command>, and
-          <command>svn revert</command>) can be used without any
+          <command>svn undo</command>) can be used without any
           network access.  This makes it easy to manage your
           changes-in-progress when you are somewhere without a network
           connection such as traveling on an airplane, riding a
@@ -1124,7 +1124,7 @@ $ svn status README
         <para>Subversion does this by keeping private caches of
           pristine versions of each versioned file inside of the
           <filename>.svn</filename> administrative areas.  This allows
-          Subversion to report&mdash;and revert&mdash;local
+          Subversion to report&mdash;and undo&mdash;local
           modifications to those files <emphasis>without network
           access</emphasis>.  This cache (called the "text-base") also
           allows Subversion to send the user's local modifications
@@ -1288,7 +1288,7 @@ svn: Aborting commit: '/home/sally/svn-work/sandwich.txt' remains in conflict.
           </listitem>
 
           <listitem>
-            <para>Run <command>svn revert &lt;filename&gt;</command>
+            <para>Run <command>svn undo &lt;filename&gt;</command>
               to throw away all of your local changes.</para>
           </listitem>
 
@@ -1425,20 +1425,20 @@ $ svn commit -m "Go ahead and use Sally's sandwich, discarding my edits."
       </sect3>
 
       <sect3 id="svn-ch-3-sect-4.4.3">
-        <title>Punting: Using <command>svn revert</command></title>
+        <title>Punting: Using <command>svn undo</command></title>
 
         <para>If you get a conflict, and upon examination decide that
         you want to throw out your changes and start your edits again,
-        just revert your changes:</para>
+        just undo your changes:</para>
 
         <screen>
-$ svn revert sandwich.txt
-Reverted sandwich.txt
+$ svn undo sandwich.txt
+Undid sandwich.txt
 $ ls sandwich.*
 sandwich.txt
         </screen>
 
-        <para>Note that when you revert a conflicted file, you don't
+        <para>Note that when you undo a conflicted file, you don't
         have to run <command>svn resolve</command>.</para>
 
       </sect3>

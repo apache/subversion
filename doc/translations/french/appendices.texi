@@ -85,7 +85,7 @@ Vous montre les details de vos modifications
 @item @samp{svn ci}
 Envoit les différences au dépôts (CVS envoit toujours les fichiers
 complets !)
-@item @samp{svn revert}
+@item @samp{svn undo}
 Supprime vos modifications.
 @end itemize
 

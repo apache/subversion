@@ -139,11 +139,11 @@ Notify::onNotify (
 	case svn_wc_notify_restore:
 		jAction = org_tigris_subversion_javahl_Notify_Action_restore;
 		break;
-	case svn_wc_notify_revert:
-		jAction = org_tigris_subversion_javahl_Notify_Action_revert;
+	case svn_wc_notify_undo:
+		jAction = org_tigris_subversion_javahl_Notify_Action_undo;
 		break;
-	case svn_wc_notify_failed_revert:
-		jAction = org_tigris_subversion_javahl_Notify_Action_failed_revert;
+	case svn_wc_notify_failed_undo:
+		jAction = org_tigris_subversion_javahl_Notify_Action_failed_undo;
 		break;
 	case svn_wc_notify_resolve:
 		jAction = org_tigris_subversion_javahl_Notify_Action_resolve;

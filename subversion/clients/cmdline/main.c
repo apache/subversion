@@ -406,9 +406,9 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {'F', 'q', 'r', svn_cl__targets_opt, 'R', svn_cl__revprop_opt,
      SVN_CL__AUTH_OPTIONS, svn_cl__encoding_opt} },
   
-  { "revert", svn_cl__revert, {0},
+  { "undo", svn_cl__undo, {0},
     "Restore pristine working copy file (undo all local edits)\n"
-    "usage: revert PATH [PATH [PATH ... ]]\n\n"
+    "usage: undo PATH [PATH [PATH ... ]]\n\n"
     "  Note:  this routine does not require network access, and \n"
     "  resolves any conflicted states.\n",
     {svn_cl__targets_opt, 'R', 'q'} },

@@ -41,7 +41,7 @@ III. Guided Tour
       4.  basic workcycle:
            a. svn update
            b. make changes:  edit directly, svn add, rm, cp, mv
-           c. examine changes:  svn status, info, diff, revert
+           c. examine changes:  svn status, info, diff, undo
            d. resolve conflicts:  svn up, resolve
            e. svn commit
       5.  examining history:  svn log, diff

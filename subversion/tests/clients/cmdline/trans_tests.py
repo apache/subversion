@@ -88,7 +88,7 @@ def _tweak_paths(list):
 #      try to check out head somewhere else.  See seg fault.
 #    
 #   2. Mike encountered this:
-#      Add the keyword property to a file, svn revert the file, see
+#      Add the keyword property to a file, svn undo the file, see
 #      error.
 #
 #   3. Another one from Ben:

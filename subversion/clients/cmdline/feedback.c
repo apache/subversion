@@ -95,12 +95,13 @@ notify (void *baton,
       printf ("Restored %s\n", path_native);
       break;
 
-    case svn_wc_notify_revert:
-      printf ("Reverted %s\n", path_native);
+    case svn_wc_notify_undo:
+      printf ("Undid %s\n", path_native);
       break;
 
-    case svn_wc_notify_failed_revert:
-      printf ("Failed to revert %s -- try updating instead.\n", path_native);
+    case svn_wc_notify_failed_undo:
+      printf ("Failed to undo changes to %s -- try updating instead.\n",
+              path_native);
       break;
 
     case svn_wc_notify_resolve:

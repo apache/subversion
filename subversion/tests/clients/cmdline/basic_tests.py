@@ -600,8 +600,8 @@ def basic_cleanup(sbox):
 
 #----------------------------------------------------------------------
 
-def basic_revert(sbox):
-  "basic revert command"
+def basic_undo(sbox):
+  "basic undo command"
 
   sbox.build()
 
@@ -629,18 +629,18 @@ def basic_revert(sbox):
 
   svntest.actions.run_and_verify_status (wc_dir, expected_output)
 
-  # Run revert (### todo: revert doesn't currently print anything)
-  svntest.actions.run_and_verify_svn("Revert command", None, [],
-                                     'revert', beta_path)
+  # Run undo (### todo: undo doesn't currently print anything)
+  svntest.actions.run_and_verify_svn("Undo command", None, [],
+                                     'undo', beta_path)
 
-  svntest.actions.run_and_verify_svn("Revert command", None, [],
-                                     'revert', iota_path)
+  svntest.actions.run_and_verify_svn("Undo command", None, [],
+                                     'undo', iota_path)
 
-  svntest.actions.run_and_verify_svn("Revert command", None, [],
-                                     'revert', rho_path)
+  svntest.actions.run_and_verify_svn("Undo command", None, [],
+                                     'undo', rho_path)
 
-  svntest.actions.run_and_verify_svn("Revert command", None, [],
-                                     'revert', zeta_path)
+  svntest.actions.run_and_verify_svn("Undo command", None, [],
+                                     'undo', zeta_path)
   
   # Verify unmodified status.
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -651,17 +651,17 @@ def basic_revert(sbox):
   fp = open(beta_path, 'r')
   lines = fp.readlines()
   if not ((len (lines) == 1) and (lines[0] == "This is the file 'beta'.")):
-    print "Revert failed to restore original text."
+    print "Undo failed to restore original text."
     raise svntest.Failure
   fp = open(iota_path, 'r')
   lines = fp.readlines()
   if not ((len (lines) == 1) and (lines[0] == "This is the file 'iota'.")):
-    print "Revert failed to restore original text."
+    print "Undo failed to restore original text."
     raise svntest.Failure
   fp = open(rho_path, 'r')
   lines = fp.readlines()
   if not ((len (lines) == 1) and (lines[0] == "This is the file 'rho'.")):
-    print "Revert failed to restore original text."
+    print "Undo failed to restore original text."
     raise svntest.Failure
   fp = open(zeta_path, 'r')
   lines = fp.readlines()
@@ -669,14 +669,14 @@ def basic_revert(sbox):
     ### we should raise a less generic error here. which?
     raise svntest.Failure
 
-  # Finally, check that reverted file is not readonly
+  # Finally, check that undone file is not readonly
   os.remove(beta_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', beta_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'undo', beta_path)
   if not (open(beta_path, 'rw+')):
     raise svntest.Failure
 
   # Check that a directory scheduled to be added, but physically
-  # removed, can be reverted.
+  # removed, can be undone.
   X_path = os.path.join(wc_dir, 'X')
 
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', X_path)
@@ -688,13 +688,13 @@ def basic_revert(sbox):
   svntest.actions.run_and_verify_status (wc_dir, expected_status)
   svntest.main.safe_rmtree(X_path)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', X_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'undo', X_path)
 
   expected_status.remove('X')
   svntest.actions.run_and_verify_status (wc_dir, expected_status)
 
   # Check that a directory scheduled for deletion, but physically
-  # removed, can be reverted.
+  # removed, can be undone.
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
 
@@ -710,7 +710,7 @@ def basic_revert(sbox):
     ### we should raise a less generic error here. which?
     raise svntest.Failure
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', E_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'undo', E_path)
 
   expected_status.tweak('A/B/E', status='  ')
   extra_files = ['E']
@@ -1548,7 +1548,7 @@ test_list = [ None,
               basic_merging_update,
               basic_conflict,
               basic_cleanup,
-              basic_revert,
+              basic_undo,
               basic_switch,
               basic_delete,
               basic_checkout_deleted,
