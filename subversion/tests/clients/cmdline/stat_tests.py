@@ -65,6 +65,76 @@ def stat_unversioned_file_in_current_dir(sbox):
 
 #----------------------------------------------------------------------
 
+# regression for issue #590
+
+def status_update_with_nested_adds(sbox):
+  "run 'status -u' when nested additions are pending"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Make a backup copy of the working copy
+  wc_backup = wc_dir + 'backup'
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+  
+  # Create newdir and newfile
+  newdir_path = os.path.join(wc_dir, 'newdir')
+  newfile_path = os.path.join(wc_dir, 'newdir', 'newfile')
+  os.makedirs(newdir_path)
+  svntest.main.file_append (newfile_path, 'new text')
+
+  # Schedule newdir and newfile for addition
+  svntest.main.run_svn(None, 'add', newdir_path)
+  svntest.main.run_svn(None, 'add', newfile_path)
+
+  # Created expected output tree for commit
+  output_list = [ [newdir_path, None, {}, {'verb' : 'Adding' }],
+                  [newfile_path, None, {}, {'verb' : 'Adding' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected status tree; all local revisions should be at 1,
+  # but newdir and newfile should be at revision 2.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    item[3]['wc_rev'] = '1'
+  status_list.append([newdir_path, None, {},
+                      {'status' : '_ ', 'wc_rev' : '2', 'repos_rev' : '2' }])
+  status_list.append([newfile_path, None, {},
+                      {'status' : '_ ', 'wc_rev' : '2', 'repos_rev' : '2' }])
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  # Commit.
+  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
+                                            expected_status_tree, None,
+                                            None, None, None, None, wc_dir):
+    return 1
+
+  # Now we go to the backup working copy, still at revision 1.
+  # We will run 'svn st -u', and make sure that newdir/newfile is reported
+  # as a nonexistent (but pending) path.
+
+  # Create expected status tree; all local revisions should be at 1,
+  # but newdir and newfile should be present with 'blank' attributes.
+  status_list = svntest.actions.get_virginal_status_list(wc_backup, '2')
+  for item in status_list:
+    item[3]['wc_rev'] = '1'
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  
+  # Verify status.  Notice that we're running status *without* the
+  # --quiet flag, so the unversioned items will appear.
+  # Unfortunately, the regexp that we currently use to parse status
+  # output is unable to parse a line that has no working revision!  If
+  # an error happens, we'll catch it here.  So that's a good enough
+  # regression test for now.  Someday, though, it would be nice to
+  # positively match the mostly-empty lines.
+  return svntest.actions.run_and_verify_unquiet_status(wc_backup,
+                                                       expected_status_tree)
+
+
+
+
 
 ########################################################################
 # Run the tests
@@ -73,6 +143,7 @@ def stat_unversioned_file_in_current_dir(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               stat_unversioned_file_in_current_dir,
+              status_update_with_nested_adds,
              ]
 
 if __name__ == '__main__':

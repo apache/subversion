@@ -373,7 +373,15 @@ svn_wc_status (svn_wc_status_t **status,
   svn_wc_status_t *s;
   svn_wc_entry_t *entry = NULL;
 
-  SVN_ERR (svn_wc_entry (&entry, path, pool));
+  /* Don't check for error;  PATH may be unversioned, or nonexistent
+     (in the case of 'svn st -u' being told about as-yet-unknnown
+     paths), and either condition will cause svn_wc_entry to return an
+     error.  If this routine returns error, then a NULL entry will be
+     passed to assemble_status() below, which is fine -- a blank
+     status structure will be returned with either 'unversioned' or
+     'absent' status filled in. */
+  svn_wc_entry (&entry, path, pool);
+
   SVN_ERR (assemble_status (&s, path, entry, TRUE, pool));
   *status = s;
   return SVN_NO_ERROR;
