@@ -53,7 +53,7 @@ enum {
 	{ DAV_SVN_NAMESPACE_URI, #name, SVN_PROPID_##sym, 1 }
 
 enum {
-  SVN_PROPID_baseline_relative_path
+  SVN_PROPID_baseline_relative_path = 1
 };
 
 static const dav_liveprop_spec dav_svn_props[] =
@@ -158,7 +158,8 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       if (resource->type != DAV_RESOURCE_TYPE_VERSION || !resource->baselined)
         return DAV_PROP_INSERT_NOTSUPP;
       value = dav_svn_build_uri(resource, DAV_SVN_BUILD_URI_BC,
-                                resource->info->root.rev, NULL, p);
+                                resource->info->root.rev, NULL,
+                                1 /* add_href */, p);
       break;
 
     case DAV_PROPID_checked_in:
@@ -179,7 +180,8 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
               break;
             }
           value = dav_svn_build_uri(resource, DAV_SVN_BUILD_URI_BASELINE,
-                                    revnum, NULL, p);
+                                    revnum, NULL,
+                                    1 /* add_href */, p);
                                     
         }
       else if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
@@ -201,7 +203,8 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
         return DAV_PROP_INSERT_NOTSUPP;
       value = dav_svn_build_uri(resource, DAV_SVN_BUILD_URI_VCC,
-                                SVN_IGNORED_REVNUM, NULL, p);
+                                SVN_IGNORED_REVNUM, NULL,
+                                1 /* add_href */, p);
       break;
 
     case DAV_PROPID_version_name:
