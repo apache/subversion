@@ -29,7 +29,7 @@
 
 //DO YOU WANT TO DEBUG THIS CODE?
 //JUST UNCOMMENT THE FOLLOWING LINE
-#define SVN_JNI_STATUSKIND__DEBUG
+//#define SVN_JNI_STATUSKIND__DEBUG
 
 jobject 
 statuskind__create(JNIEnv *env, jboolean *hasException, jint statuskind)
