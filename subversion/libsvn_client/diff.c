@@ -54,7 +54,7 @@ display_prop_diffs (const apr_array_header_t *propchanges,
 {
   int i;
 
-  apr_file_printf (file, "\nProperty changes on: %s\n", path);
+  svn_io_file_printf (file, "\nProperty changes on: %s\n", path);
   apr_file_printf (file, 
      "___________________________________________________________________\n");
 
@@ -71,7 +71,7 @@ display_prop_diffs (const apr_array_header_t *propchanges,
       else
         original_value = NULL;
       
-      apr_file_printf (file, "Name: %s\n", propchange->name);
+      svn_io_file_printf (file, "Name: %s\n", propchange->name);
 
       if (original_value != NULL)
         apr_file_printf (file, "   - %s\n", original_value->data);
@@ -136,7 +136,7 @@ diff_file_changed (svn_wc_notify_state_t *state,
     }
 
   /* Print out the diff header. */
-  apr_file_printf (outfile, "Index: %s\n", label ? label : tmpfile1);
+  svn_io_file_printf (outfile, "Index: %s\n", label ? label : tmpfile1);
   apr_file_printf (outfile, 
      "===================================================================\n");
 

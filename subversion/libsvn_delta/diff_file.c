@@ -29,6 +29,7 @@
 #include "svn_diff.h"
 #include "svn_types.h"
 #include "svn_string.h"
+#include "svn_io.h"
 
 
 typedef struct svn_diff__file_token_t
@@ -82,20 +83,12 @@ svn_diff__file_datasource_open(void *baton,
 {
   svn_diff__file_baton_t *file_baton = baton;
   int idx;
-  apr_status_t rv;
 
   idx = svn_diff__file_datasource_to_index(datasource);
-
   file_baton->length[idx] = 0;
 
-  rv = apr_file_open(&file_baton->file[idx], file_baton->path[idx],
-                     APR_READ, APR_OS_DEFAULT, file_baton->pool);
-  if (rv != APR_SUCCESS)
-    {
-      return svn_error_createf(rv, 0, NULL, file_baton->pool, 
-                               "failed to open file '%s'.",
-                               file_baton->path[idx]);
-    }
+  SVN_ERR( svn_io_file_open(&file_baton->file[idx], file_baton->path[idx],
+                            APR_READ, APR_OS_DEFAULT, file_baton->pool) );
 
   return NULL;
 }
@@ -581,7 +574,7 @@ svn_diff__file_output_unified_default_hdr(apr_pool_t *pool,
   char time_buffer[64];
   apr_size_t time_len;
 
-  apr_stat(&file_info, path, APR_FINFO_MTIME, pool);
+  svn_io_stat(&file_info, path, APR_FINFO_MTIME, pool);
   apr_time_exp_lt(&exploded_time, file_info.mtime);
           
   apr_strftime(time_buffer, &time_len, sizeof(time_buffer) - 1,
@@ -609,7 +602,6 @@ svn_diff_file_output_unified(apr_file_t *output_file,
                              apr_pool_t *pool)
 {
   svn_diff__file_output_baton_t baton;
-  apr_status_t rv;
   int i;
     
   if (svn_diff_contains_diffs(diff)) 
@@ -623,14 +615,8 @@ svn_diff_file_output_unified(apr_file_t *output_file,
 
       for (i = 0; i < 2; i++)
         { 
-          rv = apr_file_open(&baton.file[i], baton.path[i],
-                             APR_READ, APR_OS_DEFAULT, pool);
-          if (rv != APR_SUCCESS)
-            {
-              return svn_error_createf(rv, 0, NULL, pool, 
-                                       "failed to open file '%s'.",
-                                       baton.path[i]);
-            }
+          SVN_ERR( svn_io_file_open(&baton.file[i], baton.path[i],
+                                    APR_READ, APR_OS_DEFAULT, pool) );
         }
 
       if (original_header == NULL)
@@ -645,10 +631,10 @@ svn_diff_file_output_unified(apr_file_t *output_file,
             svn_diff__file_output_unified_default_hdr(pool, modified_path);
         }
 
-      apr_file_printf(output_file,
-                      "--- %s\n"
-                      "+++ %s\n",
-                      original_header, modified_header);
+      svn_io_file_printf(output_file,
+                         "--- %s\n"
+                         "+++ %s\n",
+                         original_header, modified_header);
 
       SVN_ERR(svn_diff_output(diff, &baton,
                               &svn_diff__file_output_unified_vtable));
@@ -656,7 +642,7 @@ svn_diff_file_output_unified(apr_file_t *output_file,
 
       for (i = 0; i < 2; i++)
         { 
-          rv = apr_file_close(baton.file[i]);
+          apr_status_t rv = apr_file_close(baton.file[i]);
           if (rv != APR_SUCCESS)
             {
               return svn_error_createf(rv, 0, NULL, pool, 
