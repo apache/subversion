@@ -2436,9 +2436,76 @@ svn-tunnel-agent = ssh
   </sect1>
 
   <!-- ******************************************************************* -->
-  <!-- *** SECTION 5:  ADDING PROJECTS                                 *** -->
+  <!-- *** SECTION 5:  REPOSITORY PERMISSIONS                          *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-5-sect-5">
+    <title>Repository Permissions</title>
+
+    <para>You've seen how a repository can be accessed in many
+      different ways.  But is it possible&mdash;or safe&mdash; for
+      your repository to be accessed by multiple RA methods
+      simultaneously?  The answer is yes, provided you use a bit of
+      foresight.</para>
+
+    <para>At any given time, these processes may require read/write
+      access to your repository:</para>
+
+    <itemizedlist>
+      <listitem>
+        regular system users using an svn client (as themselves) to
+        access the repository directly via ra_local;
+      </listitem>
+
+      <listitem>
+        regular system users using ra_svn and SSH to spawn private
+        'svnserve' processes (running as themselves) which access the
+        repository;
+      </listitem>
+
+      <listitem>
+        an svnserve process, either a daemon or launched by inetd,
+        running as a particular fixed user;
+      </listitem>
+
+      <listitem>
+        an Apache httpd process, running as a particular fixed user.
+      </listitem>
+
+    </itemizedlist>
+
+    <para>The most common problem adminstrators run into is repository
+      ownership and permissions.  Does every process-user in the
+      previous list have the rights to read and write the Berkeley DB
+      files?  Assuming you have a Unix-like operating system, a
+      straightforward approach might be to place every potential
+      repository-user into a new <quote>svn</quote> group, and make
+      the repository wholly owned by that group.  But even that's not
+      enough, because a process may write to the db files using an
+      unfriendly umask&mdash;one which prevents access by other
+      users.</para>
+
+    <para>So the next step beyond the "group" solution is to force
+      every repository-accessing process to use a sane umask.  For
+      ra_local users, you can make the <command>svn</command> program
+      into a wrapper script that first sets <command>umask
+      002</command> and then runs the real svn client.  You can write
+      a similar wrapper script for the svnserve program, as well as
+      add a <command>umask 002</command> command to Apache's own
+      startup script,
+      <filename>/usr/local/apache2/bin/apachectl</filename>.</para>
+
+    <para>Once you've jumped through these hoops, your repository
+      should be accessible by all the necessary processes.  It may
+      seem a bit messy and hackish, but then so is the age-old problem
+      of having multiple users share write-access to common files!</para>
+
+
+  </sect1>
+
+  <!-- ******************************************************************* -->
+  <!-- *** SECTION 6:  ADDING PROJECTS                                 *** -->
+  <!-- ******************************************************************* -->
+  <sect1 id="svn-ch-5-sect-6">
     <title>Adding projects</title>
 
     <para>Once your repository is created and configured, all that
@@ -2453,7 +2520,7 @@ svn-tunnel-agent = ssh
       that layout.</para>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-5.1">
+    <sect2 id="svn-ch-5-sect-6.1">
       <title>Choosing a Repository Layout</title>
 
       <para>While Subversion allows you to move around versioned files
@@ -2543,7 +2610,7 @@ svn-tunnel-agent = ssh
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-5.2">
+    <sect2 id="svn-ch-5-sect-6.2">
       <title>Creating the Layout, and Importing Initial Data</title>
           
       <para>After deciding how to arrange the projects in your
@@ -2601,9 +2668,9 @@ $
   </sect1>
 
   <!-- ******************************************************************* -->
-  <!-- *** SECTION 6:  SUMMARY                                         *** -->
+  <!-- *** SECTION 7:  SUMMARY                                         *** -->
   <!-- ******************************************************************* -->
-  <sect1 id="svn-ch-5-sect-6">
+  <sect1 id="svn-ch-5-sect-7">
     <title>Summary</title>
 
     <para>By now you should have a basic understanding of how to
