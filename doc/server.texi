@@ -210,22 +210,28 @@ files;  they're attached to directory entries and versions too.
 @subsection Deltas
 
 (expound) A @dfn{delta} object is a specific data structure used by the
-Subversion server and client.  It's used to 
+Subversion server and client.  It's used to do stuff.
 
 @table @code
 @item delta (versionA, pathA, versionB, pathB)
  return a delta object (which converts subtree A into subtree B)
 @end table
 
-@subsection foo
+@subsection Reading Filesystem Information
+
+Here are functions to retrieve information from the filesystem.
 
 @table @code
-
 @item latest ()
  returns the latest global version of the repository
 @item read (version, path)
  if path is a file, return full text (which includes property stream);@*
  if path is a directory, return list of directory entries.
+@end table
+
+@subsection Writing Filesystem Information
+
+@table @code
 @item submit (delta)
  ask filesystem's lock manager for approval of delta; returns token (or
 failure)
@@ -235,6 +241,8 @@ failure)
  tell lock manager that the delta will @emph{not} be written (despite
  previous approval)
 @end table
+
+For a fuller description of write-locking, @xref{Locking}.
 
 @c ----------------------------------------------------------------
 
@@ -246,6 +254,66 @@ failure)
 
 @node Locking
 @section Locking
+
+The Subversion Filesystem has a locking mechanism built into it.
+
+The locking system was designed to have these features:
+
+@enumerate
+@item
+    There can any number of concurrent filesystem @dfn{readers}, and a
+    reader @emph{never} has to wait for any other process.
+@item
+    There can any number of concurrent filesystem writers, provided that
+    their changes do not directly conflict.  When writers @emph{do} need
+    to wait, the waiting is kept to an absolute minimum.
+@end enumerate
+
+@subsection Reading
+
+Reading is easy; if a server process wants to execute a @code{read()}
+call into the filesystem, it goes right through.  The design of the
+versioning filesystem (@xref{Model}.) allows a reader to simply skip
+down the version history, locate the correct "root" node, and then
+follow the particular tree downwards to the file or directory it wishes
+to read.  Any number of readers can follow this algorithm without
+interfering with another; and because writers don't link to the version
+history until they're finished writing everything, there's no way for a
+reader to accidentally stumble upon an unfinished tree.
+
+@subsection Writing
+
+Each Subversion filesystem has a process called a @dfn{lock manager}.
+The lock manager isn't always running;  when a server process wishes to
+execute a @code{write()} on the filesystem, it must first determine if a
+lock manager is running.  If not, it starts one.
+
+After the lock manager is up, the server process first sends it a
+@code{submit()} call containing the delta it would like to write.  
+
+The lock manager contains a pool of "approved changes".  This pool is a
+set of deltas which have been okayed for concurrent application to the
+filesystem.  After receiving a delta from @code{submit()}, the lock
+manager determines if it is safe to apply the new delta at the same time
+as the other ones in progress.@footnote{This rule is actually quite
+simple:  a set of deltas may be concurrently written @emph{if and only
+if} the order in which they are applied does not matter!}
+
+If the lock manager decides that the requested delta conflicts with
+other deltas being applied at that moment, it returns a failure to the
+server, and the server must wait and try again with another
+@code{submit()} request.
+
+If the lock manager decides that the requested delta does not conflict,
+it returns a transaction token to the server.  The server then uses this
+token to execute a @code{write()} on the filesystem.
+
+After the @code{write()} is completed, the delta is removed from the
+lock manager's concurrency pool, and the server closes its connection.
+
+When the lock manager has no more open server connections, it dies.
+
+
 
 
 @c ----------------------------------------------------------------
