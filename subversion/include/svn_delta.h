@@ -170,27 +170,6 @@ typedef svn_error_t *svn_delta_read_fn_t (void *baton,
 typedef svn_error_t *(svn_text_delta_window_handler_t)
      (svn_delta_window_t *window, void *baton);
 
-/* A vcdiff parser object.  */
-typedef struct svn_vcdiff_parser_t 
-{
-  /* Once the vcdiff parser has enough data buffered to create a
-     "window", it passes this window to the caller's consumer routine.  */
-  svn_text_delta_window_handler_t *consumer_func;
-  void *consumer_baton;
-
-  /* Pool to create subpools from; each developing window will be a
-     subpool */
-  apr_pool_t *pool;
-
-  /* The current subpool which contains our current window-buffer */
-  apr_pool_t *subpool;
-
-  /* The actual vcdiff data buffer, living within subpool. */
-  svn_string_t *buffer;
-
-} svn_vcdiff_parser_t;
-
-
 
 
 /* Property deltas.  */
