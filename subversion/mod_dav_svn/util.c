@@ -152,20 +152,22 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
                               "repository, so it is unusable.");
     }
 
+  /* prep the return value */
+  memset(info, 0, sizeof(*info));
+  info->rev = SVN_INVALID_REVNUM;
+
   path += len2; /* now points to "/" or "\0" */
   len1 -= len2;
 
-  /* ### we don't handle http://host/repos or http://host/repos/ yet */
   if (len1 <= 1)
-    goto unhandled_form;
+    {
+      info->repos_path = "/";
+      return NULL;
+    }
 
   /* skip over the leading "/" */
   ++path;
   --len1;
-
-  /* prep the return value */
-  memset(info, 0, sizeof(*info));
-  info->rev = SVN_INVALID_REVNUM;
 
   /* is this a special URI? */
   len2 = strlen(relative->info->repos->special_uri);
