@@ -74,7 +74,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 shfolder.lib /nologo
+# ADD LIB32 shell32.lib /nologo
 
 !ENDIF 
 
@@ -85,10 +85,6 @@ LIB32=link.exe -lib
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
-# Begin Source File
-
-SOURCE=.\svn_base64.c
-# End Source File
 # Begin Source File
 
 SOURCE=.\config.c
@@ -140,6 +136,10 @@ SOURCE=.\sorts.c
 # Begin Source File
 
 SOURCE=.\subst.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\svn_base64.c
 # End Source File
 # Begin Source File
 
