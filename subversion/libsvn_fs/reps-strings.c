@@ -219,13 +219,16 @@ svn_fs__delete_rep_if_mutable (svn_fs_t *fs,
 }
 
 
-svn_error_t *
-svn_fs__rep_read_range (svn_fs_t *fs,
-                        const char *rep_key,
-                        char *buf,
-                        apr_size_t offset,
-                        apr_size_t *len,
-                        trail_t *trail)
+/* Copy into BUF *LEN bytes starting at OFFSET from the string
+   represented via REP_KEY in FS, as part of TRAIL.
+   The number of bytes actually copied is stored in *LEN.  */
+static svn_error_t *
+rep_read_range (svn_fs_t *fs,
+                const char *rep_key,
+                char *buf,
+                apr_size_t offset,
+                apr_size_t *len,
+                trail_t *trail)
 {
   skel_t *rep;
         
@@ -241,6 +244,84 @@ svn_fs__rep_read_range (svn_fs_t *fs,
   else
     abort ();  /* We don't do undeltification yet. */
 
+  return SVN_NO_ERROR;
+}
+
+
+
+/*** Retrieving data. ***/
+
+struct read_rep_args
+{
+  svn_fs__rep_read_baton_t *rb;   /* The data source.             */
+  char *buf;                      /* Where to put what we read.   */
+  apr_size_t *len;                /* How much to read / was read. */
+};
+
+
+/* BATON is of type `read_rep_args':
+
+   Read into BATON->rb->buf the *(BATON->len) bytes starting at
+   BATON->rb->offset from the data represented at BATON->rb->rep_key
+   in BATON->rb->fs, as part of TRAIL.
+
+   Afterwards, *(BATON->len) is the number of bytes actually read, and
+   BATON->rb->offset is incremented by that amount.
+   
+   If BATON->rb->rep_key is null, this is assumed to mean the file's
+   contents have no representation, i.e., the file has no contents.
+   In that case, if BATON->rb->offset > 0, return the error
+   SVN_ERR_FS_FILE_CONTENTS_CHANGED, else just set *(BATON->len) to
+   zero and return.  */
+static svn_error_t *
+txn_body_read_rep (void *baton, trail_t *trail)
+{
+  struct read_rep_args *args = baton;
+
+  if (args->rb->rep_key)
+    {
+      SVN_ERR (rep_read_range (args->rb->fs,
+                               args->rb->rep_key,
+                               args->buf,
+                               args->rb->offset,
+                               args->len,
+                               trail));
+
+      args->rb->offset += *(args->len);
+    }
+  else if (args->rb->offset > 0)
+    {
+      return
+        svn_error_create
+        (SVN_ERR_FS_REP_CHANGED, 0, NULL, trail->pool,
+         "txn_body_read_rep: null rep, but offset past zero already");
+    }
+  else
+    *(args->len) = 0;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs__rep_read_contents (void *baton, char *buf, apr_size_t *len)
+{
+  svn_fs__rep_read_baton_t *rb = baton;
+  struct read_rep_args args;
+
+  args.rb = rb;
+  args.buf = buf;
+  args.len = len;
+
+  /* If we got a trail, use it; else make one. */
+  if (rb->trail)
+    SVN_ERR (txn_body_read_rep (&args, rb->trail));
+  else
+    SVN_ERR (svn_fs__retry_txn (rb->fs,
+                                txn_body_read_rep,
+                                &args,
+                                rb->pool));
+  
   return SVN_NO_ERROR;
 }
 

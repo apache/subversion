@@ -80,16 +80,55 @@ svn_error_t *svn_fs__delete_rep_if_mutable (svn_fs_t *fs,
                                             trail_t *trail);
 
 
-/* Copy into BUF *LEN bytes starting at OFFSET from the string
-   represented via REP_KEY in FS, as part of TRAIL.
-   
-   The number of bytes actually copied is stored in *LEN.  */
-svn_error_t *svn_fs__rep_read_range (svn_fs_t *fs,
-                                     const char *rep_key,
-                                     char *buf,
-                                     apr_size_t offset,
-                                     apr_size_t *len,
-                                     trail_t *trail);
+
+
+/*** Stream-based reading. ***/
+
+typedef struct svn_fs__rep_read_baton_t
+{
+  /* The FS from which we're reading. */
+  svn_fs_t *fs;
+
+  /* The representation skel whose contents we want to read.  If this
+     is null, the rep has never had any contents, so all reads fetch 0
+     bytes.
+
+     Formerly, we cached the entire rep skel here, not just the key.
+     That way we didn't have to fetch the rep from the db every time
+     we want to read a little bit more of the file.  Unfortunately,
+     this has a problem: if, say, a file's representation changes
+     while we're reading (changes from fulltext to delta, for
+     example), we'll never know it.  So for correctness, we now
+     refetch the representation skel every time we want to read
+     another chunk.  */
+  const char *rep_key;
+  
+  /* How many bytes have been read already. */
+  apr_size_t offset;
+
+  /* If present, the read will be done as part of this trail, and the
+     trail's pool will be used.  Otherwise, see `pool' below.  */
+  trail_t *trail;
+
+  /* Used for temporary allocations, iff `trail' (above) is null.  */
+  apr_pool_t *pool;
+
+} svn_fs__rep_read_baton_t;
+
+
+/* Stream read func (matches the `svn_read_func_t' type);
+   BATON is an `svn_fs__rep_read_baton_t'.
+
+   Read LEN bytes into BUF starting at BATON->offset in the data
+   represented by BATON->rep_key, in BATON->FS.  Set *LEN to the
+   amount read and add that amount to BATON->offset.  
+
+   If BATON->trail is non-null, then do the read as part of that
+   trail, and use the trail's pool for all allocations.  Otherwise,
+   do the read in its own internal trail, and use BATON->pool for all
+   allocations.  */
+svn_error_t *
+svn_fs__rep_read_contents (void *baton, char *buf, apr_size_t *len);
 
 
 /* stabilize_rep */
