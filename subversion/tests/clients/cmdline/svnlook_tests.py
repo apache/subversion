@@ -84,7 +84,7 @@ def test_misc(sbox):
 
   # give the repo a new UUID
   uuid = "01234567-89ab-cdef-89ab-cdef01234567"
-  svntest.main.run_command_stdin(svntest.main.svnadmin_binary, None, 0,
+  svntest.main.run_command_stdin(svntest.main.svnadmin_binary, None, 1,
                            ["SVN-fs-dump-format-version: 2\n",
                             "\n",
                             "UUID: ", uuid, "\n",
