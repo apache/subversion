@@ -48,26 +48,33 @@
  */
 
 
+#include <svn_types.h>
+#include <svn_svr.h>
+
+
 /* Makes the server library re-load `/etc/svn.conf'.  Network layers
    *must* call this routine when first loaded!  
 
-   Returns failure (NULL) or success (non-NULL).
-*/
+   Returns a pointer to a server policy structure; this pointer must
+   be passed to *all* server routines!  */
 
-char 
+svn_svr_policies_t *
 svn_svr_init (svn_string_t *config_file)
 {
+  svn_svr_policies_t my_policies;
 
   /* read config_file and... */
 
-  /* keep a list of repository aliases, */
+  /* builds a list of repository aliases, */
 
-  /* keep a list of general security policies, */
+  /* builds a list of general security policies, */
 
-  /* use libltdl to load all server plugins, calling
-     svn_register_plugin() within each library and saving them in a
-     list */
+  /* use libltdl to load all server plugins, then look up the address
+     of each plugin structure in each plugin library, and store them
+     in a list */
 
+
+  return &my_policies;
 }
 
 

@@ -100,28 +100,15 @@ svn_internal_authorization (svn_string_t *repos,
 }
 
 
-/* ALL server plugins MUST have this routine; svn_svr_init() calls
-   this function to register the plugin after loading it. 
-   
-   It simply creates a plugin structure and returns a pointer to it.
-
- */
-
-svn_svr_plugin *
-svn_register_plugin ()
-{
-  svn_svr_plugin plugin_basic_security = 
-  { 
-    svn_internal_authorization,         /* authorization hook */
-    NULL                                /* conflict resolution hook */
-  };
-
-  return (&plugin_basic_security);
-}
+/* Now create a plugin structure; the server will automatically look
+   for a plugin structure named after the plugin library.  */
 
 
-
-
+svn_svr_plugin_t plugin_security = 
+{ 
+  svn_internal_authorization,         /* authorization hook */
+  NULL                                /* conflict resolution hook */
+};
 
 
 
