@@ -94,8 +94,9 @@ typedef struct svn_auth_provider_t
    * *iter_baton to context that allows a subsequent call to @c
    * next_credentials, in case the first credentials fail to
    * authenticate.  @a provider_baton is general context for the
-   * vtable, and @a parameters contains any run-time data that the
-   * provider may need.
+   * vtable, @a parameters contains any run-time data that the
+   * provider may need, and @a realmstring comes from the @c
+   * svn_auth_first_credentials call.
    */
   svn_error_t * (*first_credentials) (void **credentials,
                                       void **iter_baton,
@@ -110,12 +111,16 @@ typedef struct svn_auth_provider_t
    * @a iter_baton as the context from previous call to first_credentials
    * or next_credentials).  If no more credentials are available, set
    * @a **credentials to NULL.  If the provider only has one set of
-   * credentials, this function pointer should simply be NULL.  @a
-   * parameters contains any run-time data that the provider may need.
+   * credentials, this function pointer should simply be NULL. @a
+   * provider_baton is general context for the vtable, @a parameters
+   * contains any run-time data that the provider may need, and @a
+   * realmstring comes from the @c svn_auth_first_credentials call.
    */
   svn_error_t * (*next_credentials) (void **credentials,
                                      void *iter_baton,
+                                     void *provider_baton,
                                      apr_hash_t *parameters,
+                                     const char *realmstring,
                                      apr_pool_t *pool);
   
   /** Save credentials.
@@ -126,12 +131,14 @@ typedef struct svn_auth_provider_t
    * the save happened, or false if not.  The provider is not required
    * to save; if it refuses or is unable to save for non-fatal
    * reasons, return false.  If the provider never saves data, then
-   * this function pointer should simply be NULL.
+   * this function pointer should simply be NULL. @a realmstring comes
+   * from the @c svn_auth_first_credentials call.
    */
   svn_error_t * (*save_credentials) (svn_boolean_t *saved,
                                      void *credentials,
                                      void *provider_baton,
                                      apr_hash_t *parameters,
+                                     const char *realmstring,
                                      apr_pool_t *pool);
   
 } svn_auth_provider_t;
