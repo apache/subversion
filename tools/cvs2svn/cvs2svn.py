@@ -104,6 +104,7 @@ class CollectData(rcsparse.Sink):
     self.branch_names = {}
     self.taglist = {}
     self.branchlist = {}
+    self.default_branch = None
 
   def set_branch_name(self, revision, name):
     """Record that REVISION is the branch number for branch NAME, and
