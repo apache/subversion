@@ -79,7 +79,7 @@ Commit access for specific areas:
        mthelen   Michael W Thelen <thelenm@cs.utah.edu>      (doc)
   jeremybettis   Jeremy Bettis <jeremy@deadbeef.com>         (hook script)
       martinto   Martin Tomes <lists@tomes.org>              (hook script)
-    khmarbaise   Karl Heinz Marbaise <khmarbaise@gmx.de>     (German docs)
+    khmarbaise   Karl Heinz Marbaise <khmarbaise@gmx.de>     (docs: de)
       oyvindmo   Øyvind Møll <svn@moll.no>                   (doc, po: nb)
       sunny256   Øyvind A. Holm <sunny@sunbase.org>          (doc, po: nb)
           nori   KOBAYASHI Noritada <nori1@dolphin.c.u-tokyo.ac.jp> (po: ja)
@@ -96,6 +96,7 @@ Commit access for specific areas:
         gradha   Grzegorz A. Hankiewicz <gradha@titanium.sabren.com> (doc: es)
          ruben   Ruben Gomez <rugoli@euskalnet.net>          (doc: es)
         danpat   Daniel Patterson <danpat@danpat.net>        (svn-graph.pl)
+  gerhardoettl   Gerhard Oettl <gerhard.oettl.ml@oesoft.at>  (doc: de)
 
 Committers who have asked to be listed as dormant:
 
