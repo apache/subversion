@@ -17,6 +17,7 @@
  */
 
 #include <stdio.h>
+#include <svn_pools.h>
 #include <svn_io.h>
 #include <apr_general.h>
 #include "svn_test.h"
@@ -28,20 +29,19 @@ test_stream_from_string (const char **msg,
                          apr_pool_t *pool)
 {
   int i;
+  apr_pool_t *subpool = svn_pool_create (pool);
 
-#define NUM_TEST_STRINGS 5
+#define NUM_TEST_STRINGS 4
 #define TEST_BUF_SIZE 10
 
   static const char * const strings[NUM_TEST_STRINGS] = { 
     /* 0 */
-    NULL,
-    /* 1 */
     "",
-    /* 2 */
+    /* 1 */
     "This is a string.",
-    /* 3 */
+    /* 2 */
     "This is, by comparison to the previous string, a much longer string.",
-    /* 4 */
+    /* 3 */
     "And if you thought that last string was long, you just wait until "
     "I'm finished here.  I mean, how can a string really claim to be long "
     "when it fits on a single line of 80-columns?  Give me a break. "
@@ -55,17 +55,17 @@ test_stream_from_string (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+  /* Test svn_stream_from_stringbuf() as a readable stream. */
   for (i = 0; i < NUM_TEST_STRINGS; i++)
     {
       svn_stream_t *stream;
       char buffer[TEST_BUF_SIZE];
-      svn_stringbuf_t *stringbuf;
-      int orig_len;
+      svn_stringbuf_t *inbuf, *outbuf;
       apr_size_t len;
 
-      orig_len = strings[i] ? strlen (strings[i]) : 0;
-      stream = svn_stream_from_string (strings[i], orig_len, pool);
-      stringbuf = svn_stringbuf_create ("", pool);
+      inbuf = svn_stringbuf_create (strings[i], subpool);
+      outbuf = svn_stringbuf_create ("", subpool);
+      stream = svn_stream_from_stringbuf (inbuf, subpool);
       len = TEST_BUF_SIZE;
       while (len == TEST_BUF_SIZE)
         {
@@ -73,20 +73,48 @@ test_stream_from_string (const char **msg,
           SVN_ERR (svn_stream_read (stream, buffer, &len));
 
           /* ... and append the chunk to the stringbuf. */
-          svn_stringbuf_appendbytes (stringbuf, buffer, len);
+          svn_stringbuf_appendbytes (outbuf, buffer, len);
         }
       
-      if (orig_len != stringbuf->len)
+      if (! svn_stringbuf_compare (inbuf, outbuf))
         return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL,
-                                 "Result had unexpected length.");
-      if (strings[i] && (strcmp (stringbuf->data, strings[i]) != 0))
+                                 "Got unexpected result.");
+
+      svn_pool_clear (subpool);
+    }
+
+  /* Test svn_stream_from_stringbuf() as a writable stream. */
+  for (i = 0; i < NUM_TEST_STRINGS; i++)
+    {
+      svn_stream_t *stream;
+      svn_stringbuf_t *inbuf, *outbuf;
+      apr_size_t amt_read, len;
+
+      inbuf = svn_stringbuf_create (strings[i], subpool);
+      outbuf = svn_stringbuf_create ("", subpool);
+      stream = svn_stream_from_stringbuf (outbuf, subpool);
+      amt_read = 0;
+      while (amt_read < inbuf->len)
+        {
+          /* Write a chunk ... */
+          len = TEST_BUF_SIZE < (inbuf->len - amt_read) 
+                  ? TEST_BUF_SIZE 
+                  : inbuf->len - amt_read;
+          SVN_ERR (svn_stream_write (stream, inbuf->data + amt_read, &len));
+          amt_read += len;
+        }
+      
+      if (! svn_stringbuf_compare (inbuf, outbuf))
         return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL,
-                                 "Result had unexpected contents.");
+                                 "Got unexpected result.");
+
+      svn_pool_clear (subpool);
     }
 
 #undef NUM_TEST_STRINGS
 #undef TEST_BUF_SIZE
 
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
