@@ -100,7 +100,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
      file (using what we have found thus far as the default in case no
      config option exists). */
   SVN_ERR (svn_config_read_config (&cfg, pool));
-  svn_config_get (cfg, &editor, "helpers", "editor_cmd", editor);
+  svn_config_get (cfg, &editor, "helpers", "editor-cmd", editor);
 
   /* Abort if there is no editor specified */
   if (! editor)

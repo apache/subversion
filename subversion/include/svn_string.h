@@ -263,6 +263,15 @@ void svn_cstring_split_append (apr_array_header_t *array,
                                apr_pool_t *pool);
 
 
+/* Return true iff STR matches any of the elements of LIST, a list of
+ * one or more glob patterns separated by commas and optional
+ * whitespace.  Use POOL for temporary allocation.
+ */
+svn_boolean_t svn_cstring_match_glob_list (const char *str,
+                                           const char *list,
+                                           apr_pool_t *pool);
+
+
 
 #ifdef __cplusplus
 }
