@@ -341,6 +341,7 @@ svn_diff__file_datasource_get_next_token(apr_uint32_t *hash, void **token,
         }
 
       length = endp - curp;
+      file_token->length += length;
       h = svn_diff__adler32(h, curp, length);
 
       curp = endp = file_baton->buffer[idx];
@@ -355,7 +356,6 @@ svn_diff__file_datasource_get_next_token(apr_uint32_t *hash, void **token,
   length = eol - curp;
   file_token->length += length;
   *hash = svn_diff__adler32(h, curp, length);
-  *hash = 0;
 
   file_baton->curp[idx] = eol;
   *token = file_token;
@@ -429,7 +429,7 @@ svn_diff__file_token_compare(void *baton,
             {
               /* Read a chunk from disk into a buffer */
               bufp[i] = buffer[i];
-              length[i] = COMPARE_CHUNK_SIZE;
+              length[i] = total_length > COMPARE_CHUNK_SIZE ? COMPARE_CHUNK_SIZE : total_length;
 
               SVN_ERR(read_chunk(file_baton->file[idx[i]],
                                  file_baton->path[idx[i]],
