@@ -5,8 +5,66 @@ TODO for locking
 MUST HAVE
 ---------
 
-* scan the whole patch for TODO items introduced on the branch 
-  (fitz doing triage right now)
+These are in the format of
+
+* FILENAME:LINE NUMBER
+    CONTENTS OF THE LINE(S) IN QUESTION (ASSIGNED COMMITTER)
+      OTHER COMMENTS
+
+
+* subversion/libsvn_fs_base/tree.c:2580
+    ### WHEW!  We have no reliable way to determine the node kind (cmpilato)
+
+* subversion/libsvn_wc/entries.c:1734
+    /* ### Rest of lock fields. */
+
+* subversion/libsvn_wc/status.c:916
+    /* ### lundblad TODO Loop over lock children for this path and add (lundblad)
+
+* subversion/libsvn_wc/status.c:982
+    /* ### lundblad TODO: Make sure lock info is added. */ (lundblad)
+
+* subversion/libsvn_ra_local/ra_plugin.c:166
+    /* ### What could go wrong here? Currently, it always succeeds. */
+      (NOTE: See subversion/svnserve/serve.c:153 for how to do this)
+
+* subversion/libsvn_ra_local/ra_plugin.c:445
+    ### What about the other errors? Collecting them all could mean
+    ### a lot of errors for the user. Should we just collect the first
+    ### error and continue? */
+* subversion/svnserve/serve.c:704
+    ### What is the best thing to do with other errors (see comment
+    ### libsvn_ra_local/ra_plugin.c. */
+      These need to be discussed--ra_local and svnserve are just
+      throwing these errors away ATM. Perhaps we could do the following:
+      - mod_dav_svn: log the error in the error_log
+      - svn_serve: place a TODO comment in the code that when logging 
+        is implemented, this should be logged as a warning
+      - ra_local: Throw a warning somehow?
+
+* subversion/clients/cmdline/lock-cmd.c:66
+    /* ### Should we do this in a loop like for the commit message? */ (lundblad)
+
+* subversion/libsvn_fs_fs/fs_fs.c:3708
+    ### WHEW!  We have no reliable way to determine the node kind (cmpilato)
+
+* subversion/libsvn_fs_fs/lock.c:523 
+    /* ### TODO:  We need the write lock here, but some callers
+       ### already has it.  Also, we need to reread the lock to
+       ### avoid a race.  We don't want the write lock grabbed just
+       ### to get a lock. */ (cmpilato)
+
+* subversion/tests/libsvn_fs_base/fs-test.c:18
+    /* TODO clean */ (fitz)
+
+* subversion/tests/libsvn_fs/locks-test.c:18
+    /* TODO how many of these can I get rid of? */ (fitz)
+
+* subversion/libsvn_repos/hooks.c:443
+    /* TODO Shouldn't this find its way into libsvn_subr? */ (fitz)
+      (Yes, it should.  It can be improved later.)
+
+
 
 NICE TO HAVE
 ------------
