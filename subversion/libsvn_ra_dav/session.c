@@ -986,9 +986,10 @@ pre_send_hook(ne_request *req,
 }
 
 
-
+/* ###TODO: Send all locks to the server at once by using a custom POST.
+   Ben, this shim's for you. */
 static svn_error_t *
-svn_ra_dav__lock(svn_ra_session_t *session,
+shim_svn_ra_dav__lock(svn_ra_session_t *session,
                  svn_lock_t **lock,
                  const char *path,
                  const char *comment,
@@ -1075,6 +1076,53 @@ svn_ra_dav__lock(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+svn_ra_dav__lock(svn_ra_session_t *session,
+                 apr_array_header_t **locks_p,
+                 apr_hash_t *path_revs,
+                 const char *comment,
+                 svn_boolean_t force,
+                 svn_lock_callback_t lock_func, 
+                 void *lock_baton,
+                 apr_pool_t *pool)
+{
+  apr_array_header_t *locks;
+  apr_hash_index_t *hi;
+
+  locks = apr_array_make(pool, apr_hash_count (path_revs), 
+                         sizeof (svn_lock_t *));
+
+  /* ###TODO send all the locks over the wire at once.  This loop is
+        just a temporary shim. */
+  for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
+    {
+      svn_lock_t *lock;
+      const void *key;
+      const char *path;
+      apr_ssize_t keylen;
+      void *val;
+      svn_revnum_t *revnum;
+
+      apr_hash_this(hi, &key, &keylen, &val);
+      path = key;
+      revnum = val;
+
+      shim_svn_ra_dav__lock(session, &lock, path, comment, 
+                            force, *revnum, pool);
+
+      /* Run the lock callback if we have one. */
+      if (lock_func)
+        SVN_ERR(lock_func(lock_baton, path, lock));
+
+      /* Add lock to the array of locks */
+      APR_ARRAY_PUSH(locks, svn_lock_t *) = lock;
+    }
+
+  *locks_p = locks;
+
+  return SVN_NO_ERROR;
+}
 
 
 static svn_error_t *

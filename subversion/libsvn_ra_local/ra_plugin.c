@@ -1053,25 +1053,53 @@ svn_ra_local__get_locations (svn_ra_session_t *session,
 
 static svn_error_t *
 svn_ra_local__lock (svn_ra_session_t *session,
-                    svn_lock_t **lock,
-                    const char *path,
+                    apr_array_header_t **locks_p,
+                    apr_hash_t *path_revs,
                     const char *comment,
                     svn_boolean_t force,
-                    svn_revnum_t current_rev,
+                    svn_lock_callback_t lock_func, 
+                    void *lock_baton,
                     apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  const char *abs_path;
+  apr_array_header_t *locks;
+  apr_hash_index_t *hi;
+
+  locks = apr_array_make (pool, apr_hash_count (path_revs), 
+                          sizeof (svn_lock_t *));
 
   /* A username is absolutely required to lock a path. */
   SVN_ERR (get_username (session, pool));
 
-  /* Get the absolute path. */
-  abs_path = svn_path_join (sess->fs_path, path, pool);
+  for (hi = apr_hash_first (pool, path_revs); hi; hi = apr_hash_next (hi))
+    {
+      svn_lock_t *lock;
+      const void *key;
+      const char *path;
+      apr_ssize_t keylen;
+      void *val;
+      svn_revnum_t *revnum;
+      const char *abs_path;
+ 
+      apr_hash_this (hi, &key, &keylen, &val);
+      path = key;
+      revnum = val;
 
-  /* This wrapper will call pre- and post-lock hooks. */
-  SVN_ERR (svn_repos_fs_lock (lock, sess->repos, abs_path, comment, force,
-                              0 /* no timeout */, current_rev, pool));
+      abs_path = svn_path_join (sess->fs_path, path, pool);
+
+      /* This wrapper will call pre- and post-lock hooks. */
+      SVN_ERR (svn_repos_fs_lock (&lock, sess->repos, abs_path, comment, force,
+                                  0 /* no timeout */, *revnum, pool));
+
+      /* Run the lock callback if we have one. */
+      if (lock_func)
+        SVN_ERR (lock_func (lock_baton, path, lock));
+
+      /* Add lock to the array of locks */
+      APR_ARRAY_PUSH (locks, svn_lock_t *) = lock;
+    }
+
+  *locks_p = locks;
 
   return SVN_NO_ERROR;
 }
@@ -1094,7 +1122,7 @@ svn_ra_local__unlock (svn_ra_session_t *session,
   /* Get the absolute path. */
   abs_path = svn_path_join (sess->fs_path, path, pool);
 
-  /* This warrper will call pre- and post-unlock hooks. */
+  /* This wrapper will call pre- and post-unlock hooks. */
   SVN_ERR (svn_repos_fs_unlock (sess->repos, abs_path, token, force, pool));
 
   return SVN_NO_ERROR;

@@ -2169,7 +2169,7 @@ svn_error_t *svn_wc_add_lock(const char *path, const svn_lock_t *lock,
 
   if (! entry)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                              _("'%s' is not udner version control"), path);
+                              _("'%s' is not under version control"), path);
 
   newentry.lock_token = lock->token;
   newentry.lock_owner = lock->owner;
@@ -2206,7 +2206,7 @@ svn_error_t *svn_wc_remove_lock(const char *path,
 
   if (! entry)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                              _("'%s' is not udner version control"), path);
+                              _("'%s' is not under version control"), path);
 
   newentry.lock_token = newentry.lock_owner = newentry.lock_comment = NULL;
   newentry.lock_crt_date = 0;

@@ -900,8 +900,11 @@ svn_error_t *svn_ra_get_file_revs (svn_ra_session_t *session,
 /**
  * @since New in 1.2.
  *
- * Lock @a path and set @a *lock to a lock representing the new
- * lock, allocated in @a pool.
+ * @a path_revs is a hash whose keys are the paths to be locked, and
+ * whose values are the corresponding base revisions for each path.
+ * 
+ * Lock each path in @a path_revs and set @a *locks to an array of
+ * locks representing the new locks, allocated in @a pool.
  *
  * Note that locking is never anonymous, so any server implementing
  * this function will have to "pull" a username from the client, if
@@ -909,23 +912,25 @@ svn_error_t *svn_ra_get_file_revs (svn_ra_session_t *session,
  *
  * @a comment is optional: it may describe the lock, or it may be NULL.
  *
- * If path is already locked by a different user, then return error.
- * If @a force is true, then "steal" the existing lock anyway, even
- * if the RA username does not match the current lock's owner.
- * Delete any lock on @a path, and unconditionally create a new
- * lock.
+ * If any path is already locked by a different user, then return
+ * error.  If @a force is true, then "steal" the existing lock(s)
+ * anyway, even if the RA username does not match the current lock's
+ * owner.  Delete any lock on the path, and unconditionally create a
+ * new lock.
  *
- * If @a current_rev is a valid revnum, then do an out-of-dateness
- * check.  If the revnum is less than the last-changed-revision of @a
- * path (or if @a path doesn't exist in HEAD), return SVN_ERR_RA_OUT_OF_DATE.
+ * For each path, if its base revision (in @a path_revs) is a valid
+ * revnum, then do an out-of-dateness check.  If the revnum is less
+ * than the last-changed-revision of any path (or if a path doesn't
+ * exist in HEAD), return SVN_ERR_RA_OUT_OF_DATE.
  *
  */
 svn_error_t *svn_ra_lock (svn_ra_session_t *session,
-                          svn_lock_t **lock,
-                          const char *path,
+                          apr_array_header_t **locks,
+                          apr_hash_t *path_revs,
                           const char *comment,
                           svn_boolean_t force,
-                          svn_revnum_t current_rev,
+                          svn_lock_callback_t lock_func, 
+                          void *lock_baton,
                           apr_pool_t *pool);
 
 /**

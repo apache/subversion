@@ -1374,26 +1374,60 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
 }
 
 static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
-                                svn_lock_t **lock,
-                                const char *path,
+                                apr_array_header_t **locks_p,
+                                apr_hash_t *path_revs,
                                 const char *comment,
                                 svn_boolean_t force,
-                                svn_revnum_t current_rev,
+                                svn_lock_callback_t lock_func, 
+                                void *lock_baton,
                                 apr_pool_t *pool)
 {
   ra_svn_session_baton_t *sess = session->priv;
   svn_ra_svn_conn_t* conn = sess->conn;
   apr_array_header_t *list;
+  apr_array_header_t *locks;
+  apr_hash_index_t *hi;
 
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "lock", "c(?c)b(?r)", path, comment,
-                               force, current_rev));
+  locks = apr_array_make(pool, apr_hash_count (path_revs), 
+                         sizeof (svn_lock_t *));
 
-  /* Servers before 1.2 doesn't support locking.  Check this here. */
-  SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
-                                 _("Server doesn't support the lock command")));
+  /* ###TODO send all the locks over the wire at once.  This loop is
+        just a temporary shim. */
+  for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
+    {
+      svn_lock_t *lock;
+      const void *key;
+      const char *path;
+      apr_ssize_t keylen;
+      void *val;
+      svn_revnum_t *revnum;
 
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l", &list));
-  SVN_ERR(parse_lock(list, pool, lock));
+      apr_hash_this(hi, &key, &keylen, &val);
+      path = key;
+      revnum = val;
+
+      SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "lock", "c(?c)b(?r)", 
+                                   path, comment,
+                                   force, revnum));
+
+      /* Servers before 1.2 doesn't support locking.  Check this here. */
+      SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
+                                     _("Server doesn't support "
+                                       "the lock command")));
+
+      SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l", &list));
+      SVN_ERR(parse_lock(list, pool, &lock));
+
+      /* Run the lock callback if we have one. */
+      if (lock_func)
+        SVN_ERR(lock_func(lock_baton, path, lock));
+
+      /* Add lock to the array of locks */
+      APR_ARRAY_PUSH(locks, svn_lock_t *) = lock;
+    }
+
+  *locks_p = locks;
+
   return SVN_NO_ERROR;
 }
 

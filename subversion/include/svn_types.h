@@ -439,6 +439,19 @@ typedef struct svn_lock_t
 } svn_lock_t;
 
 
+/** 
+ * @since New in 1.2.
+ *
+ * Callback function type for locking and unlocking actions.
+ * 
+ * @a lock is a lock for @a path.
+ *
+ * @a baton is a closure object; it should be provided by the
+ * implementation, and passed by the caller.
+ */
+typedef svn_error_t *(*svn_lock_callback_t) (void *baton,
+                                             const char *path,
+                                             const svn_lock_t *lock);
 
 #ifdef __cplusplus
 }

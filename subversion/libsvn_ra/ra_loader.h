@@ -178,11 +178,12 @@ typedef struct svn_ra__vtable_t {
                                  void *handler_baton,
                                  apr_pool_t *pool);
   svn_error_t *(*lock) (svn_ra_session_t *session,
-                        svn_lock_t **lock,
-                        const char *path,
+                        apr_array_header_t **locks,
+                        apr_hash_t *targets,
                         const char *comment,
                         svn_boolean_t force,
-                        svn_revnum_t current_rev,
+                        svn_lock_callback_t lock_func, 
+                        void *lock_baton,
                         apr_pool_t *pool);
   svn_error_t *(*unlock) (svn_ra_session_t *session,
                           const char *path,

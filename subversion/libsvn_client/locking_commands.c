@@ -78,47 +78,174 @@ static svn_error_t *check_out_of_date (svn_ra_plugin_t *ra_lib, void *session,
 }
 #endif
 
+/* For use with store_locks_callback, below. */
+struct lock_baton
+{
+  svn_lock_callback_t nested_callback;
+  svn_wc_adm_access_t *adm_access;
+  void *nested_baton;
+  apr_pool_t *pool;
+};
+
+
+/* This callback is called by the ra_layer with BATON, the PATH being
+ * locked, and the LOCK itself.  This function stores the locks in the
+ * working copy.
+ */
+static svn_error_t *
+store_locks_callback (void *baton, 
+                      const char *path, 
+                      const svn_lock_t *lock)
+{
+  struct lock_baton *lb = baton;
+  svn_wc_adm_access_t *adm_access;
+  const char *abs_path;
+  
+  abs_path = svn_path_join (svn_wc_adm_access_path (lb->adm_access), 
+                            path, lb->pool);
+  
+  SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, lb->adm_access,
+                                      abs_path, lb->pool));
+
+  SVN_ERR (svn_wc_add_lock (abs_path, lock, adm_access, lb->pool));
+
+  /* Call our callback, if we've got one. */
+  if (lb->nested_callback)
+    SVN_ERR (lb->nested_callback (lb->nested_baton, path, lock));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Determine the nearest common parent of all paths in TARGETS,
+ * setting PARENT_ENTRY_P and PARENT_ADM_ACCESS_P to the entry and
+ * adm_access of the common parent.  PARENT_ADM_ACCESS_P is associated
+ * with all other adm_access's that are locked in the working copy
+ * while we lock the path in the repository.
+ *
+ * Each key in PATH_REVS_P is a path (relative to the common parent),
+ * and each value is the corresponding base revision in the working
+ * copy.
+ */
+static svn_error_t *
+open_lock_targets (const svn_wc_entry_t **parent_entry_p,
+                   svn_wc_adm_access_t **parent_adm_access_p,
+                   apr_hash_t **path_revs_p,
+                   apr_array_header_t *targets,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  int i;
+  const char *common_parent;
+  apr_array_header_t *paths = apr_array_make(pool, 1, sizeof(const char *));
+  apr_hash_t *path_revs = apr_hash_make(pool);
+
+  /* Get the common parent and all relative paths */
+  SVN_ERR (svn_path_condense_targets (&common_parent, &paths, targets, 
+                                      FALSE, pool));
+
+  /* svn_path_condense_targets leaves PATHS empty if TARGETS only had
+     1 member, so we special case that. */
+  if (apr_is_empty_array (paths))
+    {
+      char *basename = svn_path_basename (common_parent, pool);
+      common_parent = svn_path_dirname (common_parent, pool);
+
+      APR_ARRAY_PUSH(paths, char *) = basename;
+    }
+
+  /* Open the common parent. */
+  SVN_ERR (svn_wc_adm_probe_open3 (parent_adm_access_p, NULL, common_parent, 
+                                   TRUE, 0, ctx->cancel_func, 
+                                   ctx->cancel_baton, pool));  
+
+  SVN_ERR (svn_wc_entry (parent_entry_p, common_parent, 
+                         *parent_adm_access_p, FALSE, pool));
+
+  /* Verify all paths. */
+  for (i = 0; i < paths->nelts; i++)
+    {
+      svn_wc_adm_access_t *adm_access;
+      svn_revnum_t *revnum;
+      const svn_wc_entry_t *entry;
+      const char *target = ((const char **) (targets->elts))[i];
+      const char *abs_path;
+
+      if (svn_path_is_url (target))
+        return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                  _("Locking non-local target '%s' "
+                                    "not supported"),
+                                  target);
+
+      abs_path = svn_path_join (svn_wc_adm_access_path (*parent_adm_access_p), 
+                                target, pool);
+
+      SVN_ERR (svn_wc_adm_probe_try3 (&adm_access, *parent_adm_access_p,
+                                      abs_path, TRUE, 0, ctx->cancel_func,
+                                      ctx->cancel_baton, pool));
+
+      SVN_ERR (svn_wc_entry (&entry, abs_path, adm_access, FALSE, pool));
+
+      if (! entry)
+        return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                                  _("'%s' is not under version control"), 
+                                  svn_path_local_style (target, pool));
+      if (! entry->url)
+        return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
+                                  _("'%s' has no URL"),
+                                  svn_path_local_style (target, pool));
+
+      revnum = apr_palloc (pool, sizeof (* revnum));
+      *revnum = entry->revision;
+
+      apr_hash_set (path_revs, apr_pstrdup (pool, target),
+                    APR_HASH_KEY_STRING, revnum);
+    }
+
+  *path_revs_p = path_revs;
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
-svn_client_lock (const svn_lock_t **lock_p, const char *path,
+svn_client_lock (apr_array_header_t **locks_p, apr_array_header_t *targets,
                  const char *comment, svn_boolean_t force,
+                 svn_lock_callback_t lock_func, void *lock_baton,
                  svn_client_ctx_t *ctx, apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
   svn_ra_session_t *ra_session;
-  svn_lock_t *lock;
+  apr_array_header_t *locks;
+  apr_hash_t *path_revs;
+  struct lock_baton cb;
 
-  if (svn_path_is_url (path))
-    return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                              _("Locking non-local target '%s' not supported"),
-                              path);
+  SVN_ERR (open_lock_targets (&entry, &adm_access, &path_revs, 
+                              targets, ctx, pool));
 
-  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, path, TRUE, 0, pool));
-  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
-  if (! entry)
-    return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                              _("'%s' is not under version control"), 
-                              svn_path_local_style (path, pool));
-  if (! entry->url)
-    return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                              _("'%s' has no URL"),
-                              svn_path_local_style (path, pool));
-
-  /* Open an RA session. */
+  /* Open an RA session to the common parent of TARGETS. */
   SVN_ERR (svn_client__open_ra_session (&ra_session, entry->url,
                                         svn_wc_adm_access_path (adm_access),
-                                        adm_access, NULL, FALSE, FALSE,
+                                        NULL, NULL, FALSE, FALSE,
                                         ctx, pool));
 
-  /* Lock the path. */
-  SVN_ERR (svn_ra_lock (ra_session, &lock, "", comment, force,
-                        entry->revision,  pool));
+  cb.pool = pool;
+  cb.nested_callback = lock_func;
+  cb.nested_baton = lock_baton;
+  cb.adm_access = adm_access;
 
-  /* Store the lock token in the entry and optionally make file writeable. */
-  SVN_ERR (svn_wc_add_lock (path, lock, adm_access, pool));
+  /* Lock the paths. */
+  SVN_ERR (svn_ra_lock (ra_session, &locks, path_revs, comment, 
+                        force, store_locks_callback, &cb, pool));
 
-  *lock_p = lock;
+  /* Unlock the wc. */
+  svn_wc_adm_close (adm_access);
+
+ /* ###TODO Since we've got callbacks all over the place, is there
+    still any point in providing the list of locks back to our
+    caller? */
+  *locks_p = locks;
 
   return SVN_NO_ERROR;
 }
