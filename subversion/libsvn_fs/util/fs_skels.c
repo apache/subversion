@@ -161,7 +161,7 @@ is_valid_representation_skel (skel_t *skel)
      optionally a CHECKSUM (which is a list form). */
   header = skel->children;
   header_len = svn_fs__list_length (header);
-  if (! (((header_len == 2)     /* 2 means checksum absent */
+  if (! (((header_len == 2)     /* 2 means old repository, checksum absent */
           && (header->children->is_atom)
           && (header->children->next->is_atom))
          || ((header_len == 3)  /* 3 means checksum present */
@@ -478,9 +478,16 @@ svn_fs__parse_representation_skel (svn_fs__representation_t **rep_p,
   
   /* CHECKSUM */
   if (header_skel->children->next->next)
-    rep->checksum = apr_pstrmemdup (pool,
-                                    header_skel->children->next->next->data,
-                                    header_skel->children->next->next->len);
+    {
+      memcpy (rep->checksum,
+              header_skel->children->next->next->children->next->data,
+              MD5_DIGESTSIZE);
+    }
+  else
+    {
+      /* Older repository, no checksum, so manufacture an all-zero checksum */
+      memset (rep->checksum, 0, MD5_DIGESTSIZE);
+    }
   
   /* KIND-SPECIFIC stuff */
   if (rep->kind == svn_fs__rep_kind_fulltext)
@@ -888,17 +895,15 @@ svn_fs__unparse_representation_skel (skel_t **skel_p,
       those parts first. **/
   
   /* CHECKSUM */
-  if (rep->checksum)
-    {
-      skel_t *checksum_skel = svn_fs__make_empty_list (pool);
-      
-      svn_fs__prepend (svn_fs__mem_atom
-                       (rep->checksum,
-                        MD5_DIGESTSIZE / sizeof (*(rep->checksum)), pool),
-                       checksum_skel);
-      svn_fs__prepend (svn_fs__str_atom ("md5", pool), checksum_skel);
-      svn_fs__prepend (checksum_skel, header_skel);
-    }
+  {
+    skel_t *checksum_skel = svn_fs__make_empty_list (pool);
+    svn_fs__prepend (svn_fs__mem_atom
+                     (rep->checksum,
+                      MD5_DIGESTSIZE / sizeof (*(rep->checksum)), pool),
+                     checksum_skel);
+    svn_fs__prepend (svn_fs__str_atom ("md5", pool), checksum_skel);
+    svn_fs__prepend (checksum_skel, header_skel);
+  }
   
   /* TXN */
   if (rep->txn_id)

@@ -56,13 +56,43 @@ static int rep_is_mutable (svn_fs__representation_t *rep, const char *txn_id)
 }
 
 
-/* Return a `fulltext' representation which references the string
-   STR_KEY, performing allocations in POOL.  If TXN_ID is non-zero and
-   non-NULL, make the representation mutable under that TXN_ID.  If
-   non-NULL, STR_KEY will be copied into an allocation of POOL.  */
+/* The MD5 digest for the empty string. */
+static const char empty_digest[] = {
+  212, 29, 140, 217, 143, 0, 178, 4, 233, 128, 9, 152, 236, 248, 66, 126
+};
+
+
+/* Compare digests D1 and D2, each MD5_DIGESTSIZE bytes long.  If
+ * neither is all zeros, and they do not match, then return false.
+ * Else return true.
+ */
+static svn_boolean_t
+checksums_match (unsigned const char d1[], unsigned const char d2[])
+{
+  auto unsigned char zeros[MD5_DIGESTSIZE] = { 0 };
+
+  return ((memcmp (d1, zeros, MD5_DIGESTSIZE) == 0)
+          || (memcmp (d2, zeros, MD5_DIGESTSIZE) == 0)
+          || (memcmp (d1, d2, MD5_DIGESTSIZE) == 0));
+}
+
+
+/* Return a `fulltext' representation, allocated in POOL, which
+ * references the string STR_KEY.
+ * 
+ * If TXN_ID is non-zero and non-NULL, make the representation mutable
+ * under that TXN_ID.
+ * 
+ * If STR_KEY is non-null, copy it into an allocation from POOL.
+ * 
+ * If CHECKSUM is non-null, use it as the checksum for the new rep;
+ * else initialize the rep with an all-zero (i.e., always successful)
+ * checksum.
+ */
 static svn_fs__representation_t *
 make_fulltext_rep (const char *str_key, 
                    const char *txn_id,
+                   const unsigned char *checksum,
                    apr_pool_t *pool)
 
 {
@@ -70,6 +100,12 @@ make_fulltext_rep (const char *str_key,
   if (txn_id && *txn_id)
     rep->txn_id = apr_pstrdup (pool, txn_id);
   rep->kind = svn_fs__rep_kind_fulltext;
+
+  if (checksum)
+    memcpy (rep->checksum, checksum, MD5_DIGESTSIZE);
+  else
+    memset (rep->checksum, 0, MD5_DIGESTSIZE);
+
   rep->contents.fulltext.string_key 
     = str_key ? apr_pstrdup (pool, str_key) : NULL;
   return rep;
@@ -540,6 +576,11 @@ svn_fs__get_mutable_rep (const char **new_rep_key,
           apr_pool_t *subpool;
           char *buf;
 
+          struct apr_md5_ctx_t context;
+          unsigned char digest[MD5_DIGESTSIZE];
+
+          apr_md5_init (&context);
+
           SVN_ERR (svn_fs__rep_contents_size (&size, fs, rep_key, trail));
 
           subpool = svn_pool_create (trail->pool);
@@ -554,12 +595,16 @@ svn_fs__get_mutable_rep (const char **new_rep_key,
 
               SVN_ERR (rep_read_range (fs, rep_key, buf,
                                        offset, &amount, trail));
+              apr_md5_update (&context, buf, amount);
               SVN_ERR (svn_fs__bdb_string_append (fs, &new_str, amount, buf,
                                                   trail));
             }
 
           svn_pool_destroy (subpool);
-          rep = make_fulltext_rep (new_str, txn_id, trail->pool);
+
+          apr_md5_final (digest, &context);
+
+          rep = make_fulltext_rep (new_str, txn_id, digest, trail->pool);
         }
       else /* unknown kind */
         abort ();
@@ -567,8 +612,9 @@ svn_fs__get_mutable_rep (const char **new_rep_key,
   else    /* no key, so make a new, empty, mutable, fulltext rep */
     {
       const char *new_str = NULL;
+
       SVN_ERR (svn_fs__bdb_string_append (fs, &new_str, 0, NULL, trail));
-      rep = make_fulltext_rep (new_str, txn_id, trail->pool);
+      rep = make_fulltext_rep (new_str, txn_id, empty_digest, trail->pool);
     }
 
   /* If we made it here, there's a new rep to store in the fs. */
@@ -1038,6 +1084,7 @@ svn_fs__rep_contents_clear (svn_fs_t *fs,
 
       /* Else, clear the string the rep has. */
       SVN_ERR (svn_fs__bdb_string_clear (fs, str_key, trail));
+      memcpy (rep->checksum, empty_digest, MD5_DIGESTSIZE);
     }
   else if (rep->kind == svn_fs__rep_kind_delta)
     {
@@ -1052,7 +1099,7 @@ svn_fs__rep_contents_clear (svn_fs_t *fs,
          behind it, and replace it in the filesystem. */
       str_key = NULL;
       SVN_ERR (svn_fs__bdb_string_append (fs, &str_key, 0, NULL, trail));
-      rep = make_fulltext_rep (str_key, txn_id, trail->pool);
+      rep = make_fulltext_rep (str_key, txn_id, empty_digest, trail->pool);
       SVN_ERR (svn_fs__bdb_write_rep (fs, rep_key, rep, trail));
 
       /* Now delete those old strings. */
@@ -1231,6 +1278,9 @@ svn_fs__rep_deltify (svn_fs_t *fs,
   /* TARGET's original string keys */
   apr_array_header_t *orig_str_keys;
   
+  /* The digest for the representation's fulltext contents. */
+  unsigned char rep_digest[MD5_DIGESTSIZE];
+
   /* MD5 digest */
   const unsigned char *digest;
 
@@ -1349,6 +1399,9 @@ svn_fs__rep_deltify (svn_fs_t *fs,
       SVN_ERR (delta_string_keys (&orig_str_keys, old_rep, pool));
     else /* unknown kind */
       abort ();
+
+    /* Save the checksum, since the new rep needs it. */
+    memcpy (rep_digest, old_rep->checksum, MD5_DIGESTSIZE);
   }
 
   /* Hook the new strings we wrote into the rest of the filesystem by
@@ -1361,7 +1414,10 @@ svn_fs__rep_deltify (svn_fs_t *fs,
 
     new_rep.kind = svn_fs__rep_kind_delta;
     new_rep.txn_id = NULL;
-    new_rep.checksum = NULL;
+
+    /* Migrate the old rep's checksum to the new rep. */
+    memcpy (new_rep.checksum, rep_digest, MD5_DIGESTSIZE);
+
     chunks = apr_array_make (pool, windows->nelts, sizeof (chunk));
 
     /* Loop through the windows we wrote, creating and adding new
@@ -1404,7 +1460,8 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
                        const char *rep_key,
                        trail_t *trail)
 {
-  /* ### todo:  Make this thing `delta'-aware! */
+  /* ### todo:  Make this thing `delta'-aware!   */
+  /* (Uh, what does that mean?  -kfogel, 6 Jan 2003) */
   svn_fs__representation_t *rep;
   svn_stream_t *source_stream; /* stream to read the source */
   svn_stream_t *target_stream; /* stream to write the fulltext */
@@ -1414,6 +1471,8 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
   apr_pool_t *subpool;
   char *buf;
 
+  struct apr_md5_ctx_t context;
+  unsigned char digest[MD5_DIGESTSIZE];
 
   /* Read the rep skel. */
   SVN_ERR (svn_fs__bdb_read_rep (&rep, fs, rep_key, trail));
@@ -1439,6 +1498,7 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
   source_stream = svn_fs__rep_contents_read_stream (fs, rep_key, 0,
                                                     trail, trail->pool);
 
+  apr_md5_init (&context);
   subpool = svn_pool_create (trail->pool);
   buf = apr_palloc (subpool, SVN_STREAM_CHUNK_SIZE);
   do
@@ -1447,6 +1507,7 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
 
       len = SVN_STREAM_CHUNK_SIZE;
       SVN_ERR (svn_stream_read (source_stream, buf, &len));
+      apr_md5_update (&context, buf, len);
       len_read = len;
       SVN_ERR (svn_stream_write (target_stream, buf, &len));
       if (len_read != len)
@@ -1457,10 +1518,17 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
   while (len);
   svn_pool_destroy (subpool);
 
+  apr_md5_final (digest, &context);
+
+  if (! checksums_match (rep->checksum, digest))
+    svn_error_createf
+      (SVN_ERR_FS_CORRUPT, NULL,
+       "svn_fs__rep_undeltify: checksum mismatch");
+
   /* Now `target_baton.key' has the key of the new string.  We
      should hook it into the representation.  So we make a new rep,
      write it out... */
-  rep = make_fulltext_rep (target_baton.key, NULL, trail->pool);
+  rep = make_fulltext_rep (target_baton.key, NULL, digest, trail->pool);
   SVN_ERR (svn_fs__bdb_write_rep (fs, rep_key, rep, trail));
 
   /* ...then we delete our original strings. */
