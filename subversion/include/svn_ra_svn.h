@@ -187,10 +187,15 @@ svn_error_t *svn_ra_svn_flush(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
  * </pre>
  *
  * Inside the optional part of a tuple, 'r' values may be @c
- * SVN_INVALID_REVNUM and 's', 'c', and 'w' values may be @c NULL; in
- * these cases no data will be written.  'n', 'b', and '(' may not
- * appear in the optional part of a tuple.  Either all or none of the
- * optional values should be valid.
+ * SVN_INVALID_REVNUM, 'n' values may be
+ * SVN_RA_SVN_UNSPECIFIED_NUMBER, and 's', 'c', and 'w' values may be
+ * @c NULL; in these cases no data will be written.  'b' and '(' may
+ * not appear in the optional part of a tuple.  Either all or none of
+ * the optional values should be valid.
+ *
+ * (If we ever have a need for an optional boolean value, we should
+ * invent a 'B' specifier which stores a boolean into an int, using -1
+ * for unspecified.  Right now there is no need for such a thing.)
  *
  * Use the '!' format specifier to write partial tuples when you have
  * to transmit an array or other unusual data.  For example, to write
@@ -236,12 +241,13 @@ svn_error_t *svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
  *</pre>
  *
  * Note that a tuple is only allowed to end precisely at a '?', or at
- * the end of the specification, of course.  So if @a fmt is "c?cc"
- * and @a list contains two elements, an error will result.
+ * the end of the specification.  So if @a fmt is "c?cc" and @a list
+ * contains two elements, an error will result.
  *
  * If an optional part of a tuple contains no data, 'r' values will be
- * set to @c SVN_INVALID_REVNUM and 's', 'c', 'w', and 'l' values will
- * be set to @c NULL.  'n' and 'b' may not appear inside an optional
+ * set to @c SVN_INVALID_REVNUM, 'n' values will be set to
+ * SVN_RA_SVN_UNSPECIFIED_NUMBER, and 's', 'c', 'w', and 'l' values
+ * will be set to @c NULL.  'b' may not appear inside an optional
  * tuple specification.
  */
 svn_error_t *svn_ra_svn_parse_tuple(apr_array_header_t *list,
