@@ -109,7 +109,7 @@ svn_fs__getsize (const char *data, apr_size_t len,
 int
 svn_fs__putsize (char *data, apr_size_t len, apr_size_t value)
 {
-  int i;
+  int i = 0;
 
   /* Generate the digits, least-significant first.  */
   do 
