@@ -288,7 +288,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "       2. merge -r N:M TARGET [PATH]\n\n"
     "  1. In the first form, URL1 and URL2 are URLs specified at revisions\n"
     "     N and M.  These are the two sources to be compared.  The revisions\n"
-    "     default to HEAD if omitted.\n\n"
+    "     defaults to HEAD if omitted.\n\n"
     "  2. In the second form TARGET can be an URL, or it can be a working copy\n"
     "     path in which case the corresponding URL is used.  This URL, at\n"
     "     revisions N and M, defines the two sources to be compared.\n\n"
