@@ -116,7 +116,8 @@ const apr_getopt_option_t svn_cl__options[] =
            distressingly typical.  Thoughts? :-) */
     {"revprop",       svn_cl__revprop_opt, 0,
                       "operate on a revision property (use with -r)"},
-
+    {"relocate",      svn_cl__relocate_opt, 0,
+                      "relocate via url-rewriting"},
     {0,               0, 0, 0}
   };
 
@@ -473,9 +474,11 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "switch", svn_cl__switch, {"sw"},
     "Update working copy to mirror a new URL\n"
-    "usage: switch URL [PATH]\n\n"
-    "  Note:  this is the way to move a working copy to a new branch.\n",
-    { 'r', 'N', 'q', svn_cl__merge_cmd_opt, SVN_CL__AUTH_OPTIONS} },
+    "usage: switch URL [PATH]   or\n"
+    "       switch --relocate FROM TO [PATH ... ]\n\n"
+    "   Note:  this is the way to move a working copy to a new branch.\n",
+    { 'r', 'N', 'q', svn_cl__merge_cmd_opt, svn_cl__relocate_opt,
+      SVN_CL__AUTH_OPTIONS} },
  
   { "update", svn_cl__update, {"up"}, 
     "Bring changes from the repository into the working copy.\n"
@@ -758,6 +761,9 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__ignore_ancestry_opt:
         opt_state.ignore_ancestry = TRUE;
+        break;
+      case svn_cl__relocate_opt:
+        opt_state.relocate = TRUE;
         break;
       case 'x':
         err = svn_utf_cstring_to_utf8 (&opt_state.extensions, opt_arg,

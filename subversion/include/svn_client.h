@@ -858,6 +858,25 @@ svn_client_cleanup (const char *dir,
                     apr_pool_t *pool);
 
 
+/**
+ * Modify a working copy directory @a dir, changing any
+ * repository URLs that begin with @a from to begin with @a to instead,
+ * recursing into subdirectories if @a recurse is true.
+ *
+ * @param dir Working copy directory
+ * @param from Original URL
+ * @param to New URL
+ * @param recurse Whether to recurse
+ * @param pool The pool from which to perform memory allocations
+ */
+svn_error_t *
+svn_client_relocate (const char *dir,
+                     const char *from,
+                     const char *to,
+                     svn_boolean_t recurse,
+                     apr_pool_t *pool);
+
+
 /** Restore the pristine version of a working copy @a path, effectively
  * undoing any local mods.  If @a path is a directory, and @a recursive 
  * is @a true, this will be a recursive operation.

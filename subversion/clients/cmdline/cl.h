@@ -59,6 +59,7 @@ typedef enum {
   svn_cl__non_interactive_opt,
   svn_cl__no_diff_deleted,
   svn_cl__dry_run_opt,
+  svn_cl__relocate_opt
   svn_cl__revprop_opt,
   svn_cl__diff_cmd_opt,
   svn_cl__merge_cmd_opt,
@@ -111,6 +112,7 @@ typedef struct svn_cl__opt_state_t
   const char *diff_cmd;          /* the external diff command to use */
   const char *merge_cmd;         /* the external merge command to use */
   const char *editor_cmd;        /* external editor command. */
+  svn_boolean_t relocate;        /* rewrite urls (svn switch) */
 } svn_cl__opt_state_t;
 
 
