@@ -1360,7 +1360,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
         }
     }
 
-  /* if a locktoken header is present, push the token into the FS */
+  /* Look for locktokens in the "If:" request header. */
   err = dav_get_locktoken_list(r, &ltl);
   
   /* ### dav_get_locktoken_list claims to return a NULL list when no
@@ -1369,9 +1369,12 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   if (err && (err->error_id != DAV_ERR_IF_ABSENT))
     return err;
 
+  /* If one or more locktokens are present in the header, push them
+     into the filesystem access context. */
   if (ltl)
     {
       svn_fs_access_t *access_ctx;
+      dav_locktoken_list *list = ltl;
 
       serr = svn_fs_get_access (&access_ctx, repos->fs);
       if (serr)
@@ -1388,12 +1391,16 @@ static dav_error * dav_svn_get_resource(request_rec *r,
                                       r->pool);
         }
 
-      serr = svn_fs_access_add_lock_token (access_ctx,
-                                           ltl->locktoken->uuid_str);
-      if (serr)
-        return dav_svn_convert_err (serr, HTTP_INTERNAL_SERVER_ERROR,
-                                    "Error pushing token into filesystem.",
-                                    r->pool);
+      do {
+        serr = svn_fs_access_add_lock_token (access_ctx,
+                                             list->locktoken->uuid_str);
+        if (serr)
+          return dav_svn_convert_err (serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "Error pushing token into filesystem.",
+                                      r->pool);
+        list = list->next;
+
+      } while (list);
     }
 
 

@@ -34,6 +34,19 @@
 
 
 
+
+struct dav_lockdb_private
+{
+  /* These represent 'custom' request hearders only sent by svn clients: */
+  svn_boolean_t force;
+  svn_boolean_t want_creationdate;
+  svn_revnum_t working_revnum;
+
+  /* The original request, so we can set 'custom' output headers. */
+  request_rec *r;
+};
+
+
 /* Helper func:  convert an svn_lock_t to a dav_lock, allocated in
    pool.  EXISTS_P indicates whether slock->path actually exists or not.
  */
@@ -267,11 +280,35 @@ dav_svn_open_lockdb(request_rec *r,
                     int force,
                     dav_lockdb **lockdb)
 {
+  const char *svn_client_options, *version_name;
   dav_lockdb *db = apr_pcalloc(r->pool, sizeof(*db));
+  dav_lockdb_private *info = apr_pcalloc(r->pool, sizeof(*info));
 
+  info->r = r;
+
+  /* Check to see if an svn client sent any custom X-SVN-* headers in
+     the request. */
+  svn_client_options = apr_table_get(r->headers_in, SVN_DAV_OPTIONS_HEADER);
+  if (svn_client_options)
+    {
+      /* 'svn [lock | unlock] --force' */
+      if (ap_strstr_c(svn_client_options, SVN_DAV_OPTION_FORCE))
+        info->force = TRUE;
+
+      /* 'svn info URL' and other commands want *all* svn_lock_t fields */
+      if (ap_strstr_c(svn_client_options, SVN_DAV_OPTION_WANT_CREATIONDATE))
+        info->want_creationdate = TRUE;
+    }
+
+  /* 'svn lock' wants to make svn_fs_lock() do an out-of-dateness check. */
+  version_name = apr_table_get(r->headers_in, SVN_DAV_VERSION_NAME_HEADER);
+  info->working_revnum = version_name ? 
+                         SVN_STR_TO_REV(version_name): SVN_INVALID_REVNUM;
+
+  /* The generic lockdb structure.  */
   db->hooks = &dav_svn_hooks_locks;
   db->ro = ro;
-  db->info = NULL; /* we could add private context someday. */
+  db->info = info;
 
   *lockdb = db;
   return 0;
@@ -527,13 +564,11 @@ dav_svn_append_locks(dav_lockdb *lockdb,
                      int make_indirect,
                      const dav_lock *lock)
 {
+  dav_lockdb_private *info = lockdb->info;
   svn_lock_t *slock;
   svn_error_t *serr;
   dav_error *derr;
   svn_boolean_t readable = FALSE;
-
-  /* ### TODO:  somehow get {current_rev, force flag, creation_date}
-     from ra_dav into this function.  Probably via the dav_lockdb context. */
 
   /* If the resource's fs path is unreadable, we don't allow a lock to
      be created on it. */
@@ -558,13 +593,14 @@ dav_svn_append_locks(dav_lockdb *lockdb,
   if (derr)
     return derr;
 
+  /* #### ARGHHHH, need to pass 'force' arg to svn_fs_attach_lock!!*/
+
   /* Now use the svn_lock_t to actually perform the lock. */
   serr = svn_repos_fs_attach_lock(slock,
                                   resource->info->repos->repos,
-                                  SVN_INVALID_REVNUM, /* ### CHANGE ME */
+                                  info->working_revnum,
                                   resource->pool);
 
-  /* dav_svn_get_resource() should have filled in r->user already. */
   if (serr && serr->apr_err == SVN_ERR_FS_NO_USER)
     return dav_new_error(resource->pool, HTTP_UNAUTHORIZED,
                          DAV_ERR_LOCK_SAVE_LOCK,
@@ -573,6 +609,15 @@ dav_svn_append_locks(dav_lockdb *lockdb,
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Failed to create new lock.",
                                resource->pool);
+
+
+  /* A standard webdav LOCK response doesn't include any information
+     about the creation date.  We send it in a custom header, so that
+     svn clients can fill in svn_lock_t->creation_date.  A generic DAV
+     client should just ignore the header. */
+  apr_table_setn(info->r->headers_out, SVN_DAV_CREATIONDATE_HEADER,
+                 svn_time_to_human_cstring (slock->creation_date,
+                                            resource->pool));
 
   return 0;
 }
@@ -589,12 +634,12 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
                     const dav_resource *resource,
                     const dav_locktoken *locktoken)
 {
+  dav_lockdb_private *info = lockdb->info;
   svn_error_t *serr;
   dav_error *derr;
   svn_boolean_t readable = FALSE;
-
-  /* ### TODO:  marshall the RA->unlock() 'force' flag in here?? */
-
+  svn_lock_t *slock;
+  const char *token = NULL;
 
   /* If the resource's fs path is unreadable, we don't allow a lock to
      be removed from it. */
@@ -610,9 +655,7 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
 
   if (locktoken == NULL)
     {
-      /* Check to see if the path has a lock at all;  if so, forcibly
-         break it. */
-      svn_lock_t *slock;
+      /* Need to manually discover any lock on the resource. */     
       serr = svn_fs_get_lock_from_path(&slock,
                                        resource->info->repos->fs,
                                        resource->info->repos_path,
@@ -622,32 +665,23 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
                                    "Failed to check path for a lock.",
                                    resource->pool);
       if (slock)
-        {
-          serr = svn_repos_fs_unlock(resource->info->repos->repos,
-                                     slock->token,
-                                     FALSE, /* don't forcibly break */
-                                     resource->pool);
-
-          /* dav_svn_get_resource() should have filled in r->user already. */
-          if (serr && serr->apr_err == SVN_ERR_FS_NO_USER)
-            return dav_new_error(resource->pool, HTTP_UNAUTHORIZED,
-                                 DAV_ERR_LOCK_SAVE_LOCK,
-                                 "Anonymous lock removal is not allowed.");
-          else if (serr)
-            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                       "Failed to remove a lock.",
-                                       resource->pool);
-        }
+        token = slock->token;
     }
   else
     {
-      /* We have a passed-in token, so use it to unlock. */
+      token = locktoken->uuid_str;
+    }
+
+  if (token)
+    {
+      /* Notice that a generic DAV client is unable to forcibly
+         'break' a lock, because info->force will always be FALSE.  An
+         svn client, however, can request a 'forced' break.*/
       serr = svn_repos_fs_unlock(resource->info->repos->repos,
-                                 locktoken->uuid_str,
-                                 FALSE, /* don't forcibly break */
+                                 token,
+                                 info->force,
                                  resource->pool);
 
-      /* dav_svn_get_resource() should have filled in r->user already. */
       if (serr && serr->apr_err == SVN_ERR_FS_NO_USER)
         return dav_new_error(resource->pool, HTTP_UNAUTHORIZED,
                              DAV_ERR_LOCK_SAVE_LOCK,
