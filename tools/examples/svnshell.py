@@ -230,7 +230,7 @@ class SVNShell:
     return self._parts_to_path(finalparts)
     
   def _format_date(self, date, pool):
-    date = util.svn_time_from_nts(date, pool)
+    date = util.svn_time_from_cstring(date, pool)
     date = time.asctime(time.localtime(date / 1000000))
     return date[4:-8]
   

@@ -125,14 +125,14 @@ test_time_invariant (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  timestring = svn_time_to_cstring(current_timestamp,pool);
+  timestring = svn_time_to_cstring(current_timestamp, pool);
   SVN_ERR (svn_time_from_cstring (&timestamp, timestring, pool));
 
   if (timestamp != current_timestamp)
     {
       return svn_error_createf
         (SVN_ERR_TEST_FAILED, 0, NULL,
-         "svn_time_from_cstring ( svn_time_to_nts (n) ) returned time '%" APR_TIME_T_FMT
+         "svn_time_from_cstring ( svn_time_to_cstring (n) ) returned time '%" APR_TIME_T_FMT
          "' instead of '%" APR_TIME_T_FMT "'",
          timestamp,current_timestamp);
     }

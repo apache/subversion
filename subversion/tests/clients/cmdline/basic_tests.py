@@ -1397,13 +1397,14 @@ def nonexistent_repository(sbox):
   # would go into an infinite loop, instead of failing immediately as
   # it should.  The loop was because svn_ra_local__split_URL() used
   # svn_path_split() to lop off components and look for a repository
-  # in each shorter path in turn, depending on svn_path_is_empty_nts()
+  # in each shorter path in turn, depending on svn_path_is_empty()
   # to test if it had reached the end.  Somewhere along the line we
   # changed the path functions (perhaps revision 3113?), and
   # svn_path_split() stopped cooperating with svn_path_is_empty() in
   # this particular context -- svn_path_split() would reach "/",
-  # svn_path_empty() would correctly claim that "/" is not empty, the
-  # next svn_path_split() would return "/" again, and so on, forever.
+  # svn_path_is_empty() would correctly claim that "/" is not empty,
+  # the next svn_path_split() would return "/" again, and so on,
+  # forever.
   #
   # This bug was fixed in revision 3150, by checking for "/"
   # explicitly in svn_ra_local__split_URL().  By the time you read
