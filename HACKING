@@ -56,7 +56,7 @@ In addition to the GNU standards, Subversion uses these conventions:
         svn_fs_get_ver_prop ()       /* Part of published API. */
         svn_fs__parse_props ()       /* For internal use only. */
 
-   * Put a comment at the bottom of new source files to make Emacs
+   * Put this comment at the bottom of new source files to make Emacs
      automatically load svn-dev.el:
 
         /* 
@@ -65,4 +65,5 @@ In addition to the GNU standards, Subversion uses these conventions:
          * end:
          */
 
-     (This assumes the C file is located in subversion/subversion/.)
+     (This assumes the C file is located in subversion/subversion/,
+     where svn-dev.el is.)
