@@ -1401,7 +1401,83 @@ def update_to_future_add(sbox):
                                         None, None, None, None, 0,
                                         A_path);
 
+#----------------------------------------------------------------------
 
+def nested_in_read_only(sbox):
+  "update a nested wc in a read-only wc"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Delete/commit a file
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', alpha_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(verb='Deleting'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.remove('A/B/E/alpha')
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_status.tweak(wc_rev=2)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Delete/commit a directory that used to contain the deleted file
+  B_path = os.path.join(wc_dir, 'A', 'B')      
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', B_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B' : Item(verb='Deleting'),
+    })
+  expected_status.tweak(repos_rev=3)
+  expected_status.remove('A/B', 'A/B/lambda', 'A/B/E', 'A/B/E/beta', 'A/B/F')
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_status.tweak(wc_rev=3)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Replace the deleted directory with a new checkout of an old
+  # version of the directory, this gives it a "plausible" URL that
+  # could be part of the containing wc
+  B_url = svntest.main.current_repo_url + '/A/B'
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout', '-r', '1', B_url, B_path)
+  expected_status = svntest.wc.State(B_path, {
+    ''           : Item(),
+    'lambda'     : Item(),
+    'E'          : Item(),
+    'E/alpha'    : Item(),
+    'E/beta'     : Item(),
+    })
+  expected_status.tweak(wc_rev=1, repos_rev='?', status='  ')
+  svntest.actions.run_and_verify_status(B_path, expected_status)
+
+  # Make enclosing wc read only
+  os.chmod(os.path.join(wc_dir, 'A', svntest.main.get_admin_name()), 0555)
+  
+  # Update of nested wc should still work
+  expected_output = svntest.wc.State(B_path, {
+    'E/alpha' : Item(status='D '),
+    })
+  expected_disk = wc.State('', {
+    'lambda'  : wc.StateItem("This is the file 'lambda'."),
+    'E'       : wc.StateItem(),
+    'E/beta'  : wc.StateItem("This is the file 'beta'."),
+    'F'       : wc.StateItem(),
+    })
+  expected_status.remove('E/alpha')
+  expected_status.tweak(wc_rev=2)
+  svntest.actions.run_and_verify_update(B_path,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 0,
+                                        '-r', '2', B_path)
 
 ########################################################################
 # Run the tests
@@ -1431,6 +1507,7 @@ test_list = [ None,
               update_deletion_inside_out,
               update_schedule_add_dir,
               update_to_future_add,
+              nested_in_read_only,
              ]
 
 if __name__ == '__main__':
