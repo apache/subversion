@@ -752,6 +752,39 @@ svn_error_t *svn_wc_get_switch_editor (const char *anchor,
                                        apr_pool_t *pool);
 
 
+/* Set *EXTERNALS_NEW and *EXTERNALS_OLD to hash tables representing
+ * changes to values of the svn:externals property on directories
+ * traversed by EDIT_BATON.
+ *
+ * EDIT_BATON must be obtained from svn_wc_get_update_editor(),
+ * svn_wc_get_checkout_editor(), or svn_wc_get_switch_editor().
+ *
+ * Each hash maps `const char *' directory names onto `const char *'
+ * values of the externals property for that directory.  The dir names
+ * are full paths -- that is, anchor plus target, not target alone.
+ * The values are not parsed, they are simply copied raw, and are
+ * never null: directories that acquired or lost the property are
+ * simply omitted from the appropriate table.  Directories whose value
+ * of the property did not change are not included in either hash.
+ *
+ * The hashes, keys, and values have the same lifetime as EDIT_BATON.
+ *
+ * ### Ben and I were talking about whether it's tasteful to have a
+ * public function that acts on the editor baton like this.  I think
+ * he persuaded me that it's fine, as long as the doc string says
+ * which kinds of edit_baton are acceptable.  My alternative was not
+ * to add a new editor function, but instead to add a new
+ * `**function_pointer' return-by-reference parameter to the three
+ * functions that return this kind of editor and baton.  So when you
+ * get the editor and edit_baton, you'd also get an anonymous function
+ * that knows how to retrieve certain information from the baton.
+ * But that's overkill, right?  -kff
+ */
+void svn_wc_edited_externals (apr_hash_t **externals_new,
+                              apr_hash_t **externals_old,
+                              void *edit_baton);
+
+
 /* Given a FILE_PATH already under version control, fully "install" a
    NEW_REVISION of the file.  
 

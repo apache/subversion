@@ -74,6 +74,23 @@ struct edit_baton
   /* Non-null if this is a 'switch' operation. */
   const char *switch_url;
 
+  /* The before and after values of the SVN_PROP_EXTERNALS property,
+   * for each directory on which that property changed.  These have
+   * the same layout as those returned by svn_wc_edited_externals(). 
+   *
+   * The hashes, their keys, and their values are allocated in this
+   * baton's pool.
+   *
+   * Implementation notes (3 June 2002): These values are gathered
+   * here because it's most efficient if the libsvn_wc update editor
+   * gathers them while walking over dirs anyway.  It's libsvn_client
+   * that will actually use the information; it just didn't make sense
+   * to have libsvn_client make a separate pass over the tree after
+   * this editor had already done so.
+   */
+  apr_hash_t *externals_old;
+  apr_hash_t *externals_new;
+
   apr_pool_t *pool;
 };
 
@@ -716,6 +733,24 @@ change_dir_prop (void *dir_baton,
 
 
 
+/* If any of the svn_prop_t objects in PROPCHANGES represents a change
+   to the SVN_PROP_EXTERNALS property, return that change, else return
+   null.  If PROPCHANGES contains more than one such change, return
+   the first. */
+static const svn_prop_t *
+externals_prop_changed (apr_array_header_t *propchanges)
+{
+  int i;
+
+  for (i = 0; i < propchanges->nelts; i++)
+    {
+      const svn_prop_t *p = &(APR_ARRAY_IDX(propchanges, i, svn_prop_t));
+      if (strcmp (p->name, SVN_PROP_EXTERNALS) == 0)
+        return p;
+    }
+
+  return NULL;
+}
 
 
 static svn_error_t *
@@ -745,6 +780,47 @@ close_directory (void *dir_baton)
                                       SVN_WC__ADM_LOG,
                                       (APR_WRITE | APR_CREATE), /* not excl */
                                       db->pool));
+
+      /* If the SVN_PROP_EXTERNALS property on this directory changed,
+         then record before and after for the change. */
+      {
+        const svn_prop_t *change = externals_prop_changed (db->propchanges);
+
+        if (change)
+          {
+            const char *new_value = change->value->data;
+            const char *old_value;
+            const svn_string_t *old_value_s;
+
+            SVN_ERR (svn_wc_prop_get
+                     (&old_value_s, SVN_PROP_EXTERNALS,
+                      db->path, db->pool));
+
+            old_value = old_value_s->data;
+
+            if ((new_value == NULL) && (old_value == NULL))
+              ; /* No value before, no value after... so do nothing. */
+            else if (new_value && old_value
+                     && (strcmp (old_value, new_value) == 0))
+              ; /* Value did not change... so do nothing. */
+            else
+              {
+                struct edit_baton *eb = db->edit_baton;
+
+                if (old_value)
+                  apr_hash_set (eb->externals_old,
+                                apr_pstrdup (eb->pool, db->path),
+                                APR_HASH_KEY_STRING,
+                                apr_pstrdup (eb->pool, old_value));
+
+                if (new_value)
+                  apr_hash_set (eb->externals_new,
+                                apr_pstrdup (eb->pool, db->path),
+                                APR_HASH_KEY_STRING,
+                                apr_pstrdup (eb->pool, new_value));
+              }
+          }
+      }
 
       /* Merge pending properties into temporary files and detect
          conflicts. */
@@ -1695,6 +1771,8 @@ make_editor (const char *anchor,
   eb->anchor          = anchor;        /* ### Why not copied? */
   eb->target          = target;        /* ### Why not copied? */
   eb->recurse         = recurse;
+  eb->externals_old   = apr_hash_make (eb->pool);
+  eb->externals_new   = apr_hash_make (eb->pool);
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
@@ -1764,6 +1842,19 @@ svn_wc_get_switch_editor (const char *anchor,
                       FALSE, NULL, switch_url,
                       recurse, editor, edit_baton, pool);
 }
+
+
+void
+svn_wc_edited_externals (apr_hash_t **externals_new,
+                         apr_hash_t **externals_old,
+                         void *edit_baton)
+{
+  struct edit_baton *eb = edit_baton;
+
+  *externals_new = eb->externals_new;
+  *externals_old = eb->externals_old;
+}
+
 
 
 /* THE GOAL
