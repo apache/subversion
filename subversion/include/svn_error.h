@@ -150,6 +150,9 @@ typedef enum svn_errno_t {
   /* The name given does not refer to a directory.  */
   SVN_ERR_FS_NOT_DIRECTORY,
 
+  /* The name given does not refer to a file.  */
+  SVN_ERR_FS_NOT_FILE,
+
   /* The caller attempted to change a node which is not mutable.  */
   SVN_ERR_FS_NOT_MUTABLE,
 
