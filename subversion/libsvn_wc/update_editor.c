@@ -67,8 +67,11 @@ struct edit_baton
   /* ADM_ACCESS is an access baton that includes the ANCHOR directory */
   svn_wc_adm_access_t *adm_access;
 
-  /* The revision we're targeting...or something like that. */
-  svn_revnum_t target_revision;
+  /* The revision we're targeting...or something like that.  This
+     starts off as a pointer to the revision to which we are updating,
+     or SVN_INVALID_REVNUM, but by the end of the edit, should be
+     pointing to the final revision. */
+  svn_revnum_t *target_revision;
 
   /* Whether this edit will descend into subdirs */
   svn_boolean_t recurse;
@@ -395,7 +398,7 @@ complete_directory (struct edit_baton *eb,
          mentioned the item, so the entry should be removed. */
       if ((current_entry->deleted)
           || (current_entry->absent
-              && (current_entry->revision != eb->target_revision)))
+              && (current_entry->revision != *(eb->target_revision))))
         {
           svn_wc__entry_remove (entries, name);
         }
@@ -721,7 +724,7 @@ set_target_revision (void *edit_baton,
   struct edit_baton *eb = edit_baton;
 
   /* Stashing a target_revision in the baton */
-  eb->target_revision = target_revision;
+  *(eb->target_revision) = target_revision;
   return SVN_NO_ERROR;
 }
 
@@ -747,7 +750,7 @@ open_root (void *edit_baton,
       svn_wc_entry_t tmp_entry;
 
       /* Mark directory as being at target_revision, but incomplete. */  
-      tmp_entry.revision = eb->target_revision;
+      tmp_entry.revision = *(eb->target_revision);
       tmp_entry.url = d->new_URL;
       tmp_entry.incomplete = TRUE;
       SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
@@ -876,7 +879,7 @@ do_entry_deletion (struct edit_baton *eb,
       && (strcmp (path, eb->target) == 0))
     {
       tgt_rev_str = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
-                                  eb->target_revision);
+                                  *(eb->target_revision));
 
       svn_xml_make_open_tag (&log_item, pool, svn_xml_self_closing,
                              SVN_WC__LOG_MODIFY_ENTRY,
@@ -991,7 +994,8 @@ add_directory (const char *path,
                void **child_baton)
 {
   struct dir_baton *pb = parent_baton;
-  struct dir_baton *db = make_dir_baton (path, pb->edit_baton, pb, TRUE, pool);
+  struct edit_baton *eb = pb->edit_baton;
+  struct dir_baton *db = make_dir_baton (path, eb, pb, TRUE, pool);
   svn_node_kind_t kind;
 
   /* Semantic check.  Either both "copyfrom" args are valid, or they're
@@ -1038,7 +1042,7 @@ add_directory (const char *path,
       /* Extra check:  a directory by this name may not exist, but there
          may still be one scheduled for addition.  That's a genuine
          tree-conflict.  */
-      SVN_ERR (svn_wc_adm_retrieve (&adm_access, pb->edit_baton->adm_access,
+      SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
                                     pb->path, db->pool));
       SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, db->pool));
       dir_entry = apr_hash_get (entries, db->name, APR_HASH_KEY_STRING);
@@ -1067,20 +1071,20 @@ add_directory (const char *path,
 
   SVN_ERR (prep_directory (db,
                            db->new_URL,
-                           pb->edit_baton->target_revision,
+                           *(eb->target_revision),
                            db->pool));
 
   *child_baton = db;
 
-  if (db->edit_baton->notify_func)
-    (*db->edit_baton->notify_func) (db->edit_baton->notify_baton,
-                                    db->path,
-                                    svn_wc_notify_update_add,
-                                    svn_node_dir,
-                                    NULL,
-                                    svn_wc_notify_state_unknown,
-                                    svn_wc_notify_state_unknown,
-                                    SVN_INVALID_REVNUM);
+  if (eb->notify_func)
+    (*eb->notify_func) (eb->notify_baton,
+                        db->path,
+                        svn_wc_notify_update_add,
+                        svn_node_dir,
+                        NULL,
+                        svn_wc_notify_state_unknown,
+                        svn_wc_notify_state_unknown,
+                        SVN_INVALID_REVNUM);
 
   return SVN_NO_ERROR;
 }
@@ -1093,8 +1097,8 @@ open_directory (const char *path,
                 apr_pool_t *pool,
                 void **child_baton)
 {
-  struct dir_baton *parent_dir_baton = parent_baton;
-  struct edit_baton *eb = parent_dir_baton->edit_baton;
+  struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
   svn_wc_entry_t tmp_entry;
   svn_wc_adm_access_t *adm_access;
 
@@ -1102,18 +1106,16 @@ open_directory (const char *path,
      its not there?  Yes, all this and more...  And ancestor_url and
      ancestor_revision need to get used. */
 
-  struct dir_baton *this_dir_baton = make_dir_baton (path, eb, 
-                                                     parent_dir_baton, FALSE,
-                                                     pool);
-  *child_baton = this_dir_baton;
+  struct dir_baton *db = make_dir_baton (path, eb, pb, FALSE, pool);
+  *child_baton = db;
 
   /* Mark directory as being at target_revision and URL, but incomplete. */
-  tmp_entry.revision = eb->target_revision;
-  tmp_entry.url = this_dir_baton->new_URL;
+  tmp_entry.revision = *(eb->target_revision);
+  tmp_entry.url = db->new_URL;
   tmp_entry.incomplete = TRUE;
 
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
-                                this_dir_baton->path, pool));  
+                                db->path, pool));  
   SVN_ERR (svn_wc__entry_modify (adm_access, NULL /* THIS_DIR */,
                                  &tmp_entry,
                                  SVN_WC__ENTRY_MODIFY_REVISION |
@@ -1333,6 +1335,7 @@ absent_file_or_dir (const char *path,
 {
   const char *name = svn_path_basename (path, pool);
   struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
   svn_wc_adm_access_t *adm_access;
   apr_hash_t *entries;
   const svn_wc_entry_t *ent;
@@ -1341,8 +1344,7 @@ absent_file_or_dir (const char *path,
   /* Extra check: an item by this name may not exist, but there may
      still be one scheduled for addition.  That's a genuine
      tree-conflict.  */
-  SVN_ERR (svn_wc_adm_retrieve (&adm_access, pb->edit_baton->adm_access,
-                                pb->path, pool));
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, pb->path, pool));
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
   ent = apr_hash_get (entries, name, APR_HASH_KEY_STRING);
   if (ent && (ent->schedule == svn_wc_schedule_add))
@@ -1364,7 +1366,7 @@ absent_file_or_dir (const char *path,
 
   /* Post-update processing knows to leave this entry if its revision
      is equal to the target revision of the overall update. */
-  tmp_entry.revision = pb->edit_baton->target_revision;
+  tmp_entry.revision = *(eb->target_revision);
 
   /* And, of course, marking as absent is the whole point. */
   tmp_entry.absent = TRUE;
@@ -1409,6 +1411,7 @@ add_or_open_file (const char *path,
                   apr_pool_t *pool)
 {
   struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
   struct file_baton *fb;
   const svn_wc_entry_t *entry;
   svn_node_kind_t kind;
@@ -1428,7 +1431,7 @@ add_or_open_file (const char *path,
      aren't actually doing any "work" or fetching any persistent data. */
 
   SVN_ERR (svn_io_check_path (fb->path, &kind, subpool));
-  SVN_ERR (svn_wc_adm_retrieve (&adm_access, pb->edit_baton->adm_access,
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, 
                                 pb->path, subpool));
   SVN_ERR (svn_wc_entry (&entry, fb->path, adm_access, FALSE, subpool));
   
@@ -1516,6 +1519,7 @@ apply_textdelta (void *file_baton,
                  void **handler_baton)
 {
   struct file_baton *fb = file_baton;
+  struct edit_baton *eb = fb->edit_baton;
   apr_pool_t *handler_pool = svn_pool_create (fb->pool);
   struct handler_baton *hb = apr_palloc (handler_pool, sizeof (*hb));
   svn_error_t *err;
@@ -1541,7 +1545,7 @@ apply_textdelta (void *file_baton,
   /* Before applying incoming svndiff data to text base, make sure
      text base hasn't been corrupted, and that its checksum
      matches the expected base checksum. */
-  SVN_ERR (svn_wc_adm_retrieve (&adm_access, fb->edit_baton->adm_access,
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
                                 svn_path_dirname (fb->path, pool), pool));
   SVN_ERR (svn_wc_entry (&ent, fb->path, adm_access, FALSE, pool));
       
@@ -1661,6 +1665,7 @@ change_file_prop (void *file_baton,
                   apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
+  struct edit_baton *eb = fb->edit_baton;
   svn_prop_t *propchange;
 
   /* Push a new propchange to the file baton's array of propchanges */
@@ -1674,7 +1679,7 @@ change_file_prop (void *file_baton,
 
   /* Special case: if the file is added during a checkout, cache the
      last-changed-date propval for future use. */
-  if (fb->edit_baton->use_commit_times
+  if (eb->use_commit_times
       && (strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0))
     fb->last_changed_date = apr_pstrdup (fb->pool, value->data);
 
@@ -2301,6 +2306,7 @@ close_file (void *file_baton,
             apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
+  struct edit_baton *eb = fb->edit_baton;
   const char *new_text_path = NULL, *parent_path;
   apr_array_header_t *propchanges = NULL;
   svn_wc_notify_state_t content_state, prop_state;
@@ -2331,14 +2337,14 @@ close_file (void *file_baton,
 
   parent_path = svn_path_dirname (fb->path, pool);
     
-  SVN_ERR (svn_wc_adm_retrieve (&adm_access, fb->edit_baton->adm_access,
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, 
                                 parent_path, pool));
 
   SVN_ERR (install_file (&content_state,
                          &prop_state,
                          adm_access,
                          fb->path,
-                         fb->edit_baton->target_revision,
+                         (*eb->target_revision),
                          new_text_path,
                          propchanges,
                          FALSE, /* -not- a full proplist */
@@ -2346,28 +2352,26 @@ close_file (void *file_baton,
                          FALSE,
                          NULL,
                          SVN_INVALID_REVNUM,
-                         fb->edit_baton->diff3_cmd,
+                         eb->diff3_cmd,
                          fb->last_changed_date,
                          pool));
 
   /* We have one less referrer to the directory's bump information. */
-  SVN_ERR (maybe_bump_dir_info (fb->edit_baton,
-                                fb->bump_info,
-                                pool));
+  SVN_ERR (maybe_bump_dir_info (eb, fb->bump_info, pool));
 
   if ((content_state != svn_wc_notify_state_unchanged) ||
       (prop_state != svn_wc_notify_state_unchanged))
     {
-      if (fb->edit_baton->notify_func)
-        (*fb->edit_baton->notify_func)
-          (fb->edit_baton->notify_baton,
-           fb->path,
-           fb->added ? svn_wc_notify_update_add : svn_wc_notify_update_update,
-           svn_node_file,
-           NULL,  /* ### if install_file() gives mimetype, use it here */
-           content_state,
-           prop_state,
-           SVN_INVALID_REVNUM);
+      if (eb->notify_func)
+        (*eb->notify_func) (eb->notify_baton,
+                            fb->path,
+                            fb->added ? svn_wc_notify_update_add 
+                                      : svn_wc_notify_update_update,
+                            svn_node_file,
+                            NULL,  /* ### use install_file() mimetype here */
+                            content_state,
+                            prop_state,
+                            SVN_INVALID_REVNUM);
     }
   return SVN_NO_ERROR;  
 }
@@ -2422,23 +2426,12 @@ close_edit (void *edit_baton,
                                         eb->adm_access,
                                         eb->recurse,
                                         eb->switch_url,
-                                        eb->target_revision,
+                                        *(eb->target_revision),
                                         eb->notify_func,
                                         eb->notify_baton,
                                         TRUE,
                                         eb->pool));
 
-  /* Let everyone know we're finished here. */
-  if (eb->notify_func)
-    (*eb->notify_func) (eb->notify_baton,
-                        eb->anchor,
-                        svn_wc_notify_update_completed,
-                        svn_node_none,
-                        NULL,
-                        svn_wc_notify_state_inapplicable,
-                        svn_wc_notify_state_inapplicable,
-                        eb->target_revision);
-  
   /* The edit is over, free its pool.
      ### No, this is wrong.  Who says this editor/baton won't be used
      again?  But the change is not merely to remove this call.  We
@@ -2456,10 +2449,10 @@ close_edit (void *edit_baton,
 
 /* Helper for the three public editor-supplying functions. */
 static svn_error_t *
-make_editor (svn_wc_adm_access_t *adm_access,
+make_editor (svn_revnum_t *target_revision,
+             svn_wc_adm_access_t *adm_access,
              const char *anchor,
              const char *target,
-             svn_revnum_t target_revision,
              svn_boolean_t use_commit_times,
              const char *switch_url,
              svn_boolean_t recurse,
@@ -2524,9 +2517,9 @@ make_editor (svn_wc_adm_access_t *adm_access,
 
 
 svn_error_t *
-svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
+svn_wc_get_update_editor (svn_revnum_t *target_revision,
+                          svn_wc_adm_access_t *anchor,
                           const char *target,
-                          svn_revnum_t target_revision,
                           svn_boolean_t use_commit_times,
                           svn_boolean_t recurse,
                           svn_wc_notify_func_t notify_func,
@@ -2539,18 +2532,17 @@ svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
                           svn_wc_traversal_info_t *traversal_info,
                           apr_pool_t *pool)
 {
-  return make_editor (anchor, svn_wc_adm_access_path (anchor),
-                      target, target_revision, use_commit_times, NULL,
-                      recurse, notify_func, notify_baton,
-                      cancel_func, cancel_baton, diff3_cmd,
+  return make_editor (target_revision, anchor, svn_wc_adm_access_path (anchor),
+                      target, use_commit_times, NULL, recurse, notify_func, 
+                      notify_baton, cancel_func, cancel_baton, diff3_cmd,
                       editor, edit_baton, traversal_info, pool);
 }
 
 
 svn_error_t *
-svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
+svn_wc_get_switch_editor (svn_revnum_t *target_revision,
+                          svn_wc_adm_access_t *anchor,
                           const char *target,
-                          svn_revnum_t target_revision,
                           const char *switch_url,
                           svn_boolean_t use_commit_times,
                           svn_boolean_t recurse,
@@ -2566,12 +2558,10 @@ svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
 {
   assert (switch_url);
 
-  return make_editor (anchor, svn_wc_adm_access_path (anchor),
-                      target, target_revision, use_commit_times, switch_url,
-                      recurse, notify_func, notify_baton,
-                      cancel_func, cancel_baton, diff3_cmd,
-                      editor, edit_baton,
-                      traversal_info, pool);
+  return make_editor (target_revision, anchor, svn_wc_adm_access_path (anchor),
+                      target, use_commit_times, switch_url, recurse, 
+                      notify_func, notify_baton, cancel_func, cancel_baton, 
+                      diff3_cmd, editor, edit_baton, traversal_info, pool);
 }
 
 svn_wc_traversal_info_t *

@@ -1551,17 +1551,18 @@ svn_error_t *svn_wc_get_actual_target (const char *path,
  * If @a diff3_cmd is non-null, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.
  *
- * @a target_revision is the repository revision that results from this set
- * of changes.
+ * @a target_revision is a pointer to a revision location which, after
+ * successful completion of the drive of this editor, will be
+ * populated with the revision to which the working copy was updated.
  *
  * If @a use_commit_times is TRUE, then all edited/added files will
  * have their working timestamp set to the last-committed-time.  If
  * FALSE, the working files will be touched with the 'now' time.
  *
  */
-svn_error_t *svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
+svn_error_t *svn_wc_get_update_editor (svn_revnum_t *target_revision,
+                                       svn_wc_adm_access_t *anchor,
                                        const char *target,
-                                       svn_revnum_t target_revision,
                                        svn_boolean_t use_commit_times,
                                        svn_boolean_t recurse,
                                        svn_wc_notify_func_t notify_func,
@@ -1603,17 +1604,18 @@ svn_error_t *svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
  * If @a diff3_cmd is non-null, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.
  *
- * @a target_revision is the repository revision that results from this set
- * of changes.
+ * @a target_revision is a pointer to a revision location which, after
+ * successful completion of the drive of this editor, will be
+ * populated with the revision to which the working copy was updated.
  *
  * If @a use_commit_times is TRUE, then all edited/added files will
  * have their working timestamp set to the last-committed-time.  If
  * FALSE, the working files will be touched with the 'now' time.
  *
  */
-svn_error_t *svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
+svn_error_t *svn_wc_get_switch_editor (svn_revnum_t *target_revision,
+                                       svn_wc_adm_access_t *anchor,
                                        const char *target,
-                                       svn_revnum_t target_revision,
                                        const char *switch_url,
                                        svn_boolean_t use_commit_times,
                                        svn_boolean_t recurse,

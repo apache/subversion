@@ -60,6 +60,14 @@ svn_client__update_internal (const char *path,
   svn_boolean_t sleep_here = FALSE;
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   const char *diff3_cmd;
+  const char *commit_time_str;
+  void *ra_baton, *session;
+  svn_ra_plugin_t *ra_lib;
+  svn_node_kind_t kind;
+  svn_wc_adm_access_t *dir_access;
+  svn_config_t *cfg = ctx->config ? apr_hash_get (ctx->config, 
+                                                  SVN_CONFIG_CATEGORY_CONFIG,
+                                                  APR_HASH_KEY_STRING) : NULL;
   
   /* Sanity check.  Without this, the update is meaningless. */
   assert (path);
@@ -71,54 +79,51 @@ svn_client__update_internal (const char *path,
   /* Get full URL from the ANCHOR. */
   SVN_ERR (svn_wc_entry (&entry, anchor, adm_access, FALSE, pool));
   if (! entry)
-    return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       "'%s' is not under version control", anchor);
+    return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL, 
+                              "'%s' is not under version control", anchor);
   if (! entry->url)
-    return svn_error_createf
-      (SVN_ERR_ENTRY_MISSING_URL, NULL,
-       "Entry '%s' has no URL", anchor);
+    return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
+                              "Entry '%s' has no URL", anchor);
   URL = apr_pstrdup (pool, entry->url);
 
   /* Get revnum set to something meaningful, so we can fetch the
      update editor. */
   if (revision->kind == svn_opt_revision_number)
-    revnum = revision->value.number; /* do the trivial conversion manually */
+    revnum = revision->value.number;
   else
-    revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */
+    revnum = SVN_INVALID_REVNUM;
 
-  /* Look for run-time config variables that affect behavior. */
-  {
-    const char *commit_time_str;
+  /* Get the external diff3, if any. */    
+  svn_config_get (cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
+                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
 
-    svn_config_t *cfg = ctx->config
-      ? apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,  
-                      APR_HASH_KEY_STRING)
-      : NULL;
+  /* See if the user wants last-commit timestamps instead of current ones. */
+  svn_config_get (cfg, &commit_time_str, SVN_CONFIG_SECTION_MISCELLANY,
+                  SVN_CONFIG_OPTION_USE_COMMIT_TIMES, NULL);
+  if (commit_time_str)
+    use_commit_times = (strcasecmp (commit_time_str, "yes") == 0) 
+                       ? TRUE : FALSE;
+  else
+    use_commit_times = FALSE;
 
-    /* Get the external diff3, if any. */    
-    svn_config_get (cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
-                    SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
+  /* Get the RA vtable that matches URL. */
+  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
 
-    /* See if the user wants last-commit timestamps instead of current ones. */
-    svn_config_get (cfg, &commit_time_str, SVN_CONFIG_SECTION_MISCELLANY,
-                    SVN_CONFIG_OPTION_USE_COMMIT_TIMES, NULL);
-    if (commit_time_str)
-      use_commit_times = (strcasecmp (commit_time_str, "yes") == 0)
-                          ? TRUE : FALSE;
-    else
-      use_commit_times = FALSE;
-  }
+  /* Open an RA session for the URL */
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor, 
+                                        adm_access, NULL, TRUE, TRUE, 
+                                        ctx, pool));
 
-
+  /* ### todo: shouldn't svn_client__get_revision_number be able
+     to take a url as easily as a local path?  */
+  SVN_ERR (svn_client__get_revision_number
+           (&revnum, ra_lib, session, revision, path, pool));
 
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
-  SVN_ERR (svn_wc_get_update_editor (adm_access,
-                                     target,
-                                     revnum,
-                                     use_commit_times,
-                                     recurse,
+  SVN_ERR (svn_wc_get_update_editor (&revnum, adm_access, target,
+                                     use_commit_times, recurse,
                                      ctx->notify_func, ctx->notify_baton,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      diff3_cmd,
@@ -126,75 +131,61 @@ svn_client__update_internal (const char *path,
                                      traversal_info,
                                      pool));
 
-    {
-      void *ra_baton, *session;
-      svn_ra_plugin_t *ra_lib;
-      svn_node_kind_t kind;
-      svn_wc_adm_access_t *dir_access;
+  /* Tell RA to do a update of URL+TARGET to REVISION; if we pass an
+     invalid revnum, that means RA will use the latest revision.  */
+  SVN_ERR (ra_lib->do_update (session,
+                              &reporter, &report_baton,
+                              revnum,
+                              target,
+                              recurse,
+                              update_editor, update_edit_baton, pool));
 
-      /* Get the RA vtable that matches URL. */
-      SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
-
-      /* Open an RA session for the URL */
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
-                                            adm_access, NULL,
-                                            TRUE, TRUE, 
-                                            ctx, pool));
-
-      /* ### todo: shouldn't svn_client__get_revision_number be able
-         to take a url as easily as a local path?  */
-      SVN_ERR (svn_client__get_revision_number
-               (&revnum, ra_lib, session, revision, path, pool));
-
-      /* Tell RA to do a update of URL+TARGET to REVISION; if we pass an
-         invalid revnum, that means RA will use the latest revision.  */
-      SVN_ERR (ra_lib->do_update (session,
-                                  &reporter, &report_baton,
-                                  revnum,
-                                  target,
-                                  recurse,
-                                  update_editor, update_edit_baton, pool));
-
-      SVN_ERR (svn_io_check_path (path, &kind, pool));
-      SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access,
-                                    (kind == svn_node_dir
-                                     ? path
-                                     : svn_path_dirname (path, pool)),
-                                    pool));
-
-      /* Drive the reporter structure, describing the revisions within
-         PATH.  When we call reporter->finish_report, the
-         update_editor will be driven by svn_repos_dir_delta. */
-      err = svn_wc_crawl_revisions (path, dir_access, reporter, report_baton,
-                                    TRUE, recurse, use_commit_times,
-                                    ctx->notify_func, ctx->notify_baton,
-                                    traversal_info, pool);
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access,
+                                (kind == svn_node_dir ? path 
+                                 : svn_path_dirname (path, pool)),
+                                pool));
+  
+  /* Drive the reporter structure, describing the revisions within
+     PATH.  When we call reporter->finish_report, the
+     update_editor will be driven by svn_repos_dir_delta. */
+  err = svn_wc_crawl_revisions (path, dir_access, reporter, report_baton,
+                                TRUE, recurse, use_commit_times,
+                                ctx->notify_func, ctx->notify_baton,
+                                traversal_info, pool);
       
-      if (err)
-        {
-          /* Don't rely on the error handling to handle the sleep later, do
-             it now */
-          svn_sleep_for_timestamps ();
-          return err;
-        }
-      *use_sleep = TRUE;
-    }      
+  if (err)
+    {
+      /* Don't rely on the error handling to handle the sleep later, do
+         it now */
+      svn_sleep_for_timestamps ();
+      return err;
+    }
+  *use_sleep = TRUE;
   
   /* We handle externals after the update is complete, so that
      handling external items (and any errors therefrom) doesn't delay
      the primary operation.  */
   if (recurse)
-    SVN_ERR (svn_client__handle_externals (traversal_info,
+    SVN_ERR (svn_client__handle_externals (traversal_info, 
                                            TRUE, /* update unchanged ones */
-                                           use_sleep,
-                                           ctx,
-                                           pool));
+                                           use_sleep, ctx, pool));
 
   if (sleep_here)
     svn_sleep_for_timestamps ();
 
   SVN_ERR (svn_wc_adm_close (adm_access));
+
+  /* Let everyone know we're finished here. */
+  if (ctx->notify_func)
+    (*ctx->notify_func) (ctx->notify_baton,
+                         anchor,
+                         svn_wc_notify_update_completed,
+                         svn_node_none,
+                         NULL,
+                         svn_wc_notify_state_inapplicable,
+                         svn_wc_notify_state_inapplicable,
+                         revnum);
 
   return SVN_NO_ERROR;
 }
@@ -206,5 +197,6 @@ svn_client_update (const char *path,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  return svn_client__update_internal (path, revision, recurse, NULL, ctx, pool);
+  return svn_client__update_internal (path, revision, recurse, 
+                                      NULL, ctx, pool);
 }
