@@ -524,7 +524,7 @@ AC_CONFIG_FILES([Makefile])
 
 SVN_CONFIG_SCRIPT(svn-config)
 SVN_CONFIG_SCRIPT(tools/backup/hot-backup.py)
-SVN_CONFIG_SCRIPT(tools/client-side/svn_load_dirs.pl)
+SVN_CONFIG_SCRIPT(contrib/client-side/svn_load_dirs.pl)
 SVN_CONFIG_SCRIPT(tools/hook-scripts/commit-access-control.pl)
 SVN_CONFIG_SCRIPT(tools/hook-scripts/commit-email.pl)
 SVN_CONFIG_SCRIPT(tools/hook-scripts/propchange-email.pl)
