@@ -62,9 +62,6 @@ static const elem_defn elem_definitions[] =
 
   /* SVN elements */
   { ELEM_baseline_relpath, SVN_RA_DAV__PROP_BASELINE_RELPATH, 1 },
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-  { ELEM_baseline_relpath_old, SVN_RA_DAV__PROP_BASELINE_RELPATH_OLD, 1 },
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
   { ELEM_md5_checksum, SVN_RA_DAV__PROP_MD5_CHECKSUM, 1 },
   { ELEM_repository_uuid, SVN_RA_DAV__PROP_REPOSITORY_UUID, 1 },
   { 0 }
@@ -85,10 +82,6 @@ static const struct ne_xml_elm neon_descriptions[] =
   /* SVN elements */
   { SVN_DAV_PROP_NS_DAV, "baseline-relative-path", ELEM_baseline_relpath,
     NE_XML_CDATA },
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-  { SVN_PROP_PREFIX, "baseline-relative-path", ELEM_baseline_relpath_old,
-    NE_XML_CDATA },
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
   { SVN_DAV_PROP_NS_DAV, "md5-checksum", ELEM_md5_checksum,
     NE_XML_CDATA },
   { SVN_DAV_PROP_NS_DAV, "repository-uuid", ELEM_repository_uuid,
@@ -115,9 +108,6 @@ static const ne_propname starting_props[] =
   { "DAV:", "version-controlled-configuration" },
   { "DAV:", "resourcetype" },
   { SVN_DAV_PROP_NS_DAV, "baseline-relative-path" },
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-  { SVN_PROP_PREFIX, "baseline-relative-path" },
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
   { NULL }
 };
 
@@ -221,9 +211,6 @@ static int validate_element(void *userdata, ne_xml_elmid parent, ne_xml_elmid ch
           {
           case ELEM_baseline_coll:
           case ELEM_baseline_relpath:
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-          case ELEM_baseline_relpath_old:
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
           case ELEM_md5_checksum:
           case ELEM_repository_uuid:
           case ELEM_checked_in:
@@ -579,49 +566,9 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
   /* Allocate our own bc_relative path. */
   my_bc_relative = "";
   {
-    const char *relative_path;
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-    const char *relative_path_old;
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
-    
-    relative_path = apr_hash_get(rsrc->propset,
-                                 SVN_RA_DAV__PROP_BASELINE_RELPATH,
-                                 APR_HASH_KEY_STRING);
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-    relative_path_old = apr_hash_get(rsrc->propset,
-                                     SVN_RA_DAV__PROP_BASELINE_RELPATH_OLD,
-                                     APR_HASH_KEY_STRING);
-    if (relative_path_old == NULL)
-      {
-        if (relative_path == NULL)
-          {
-            /* ### better error reporting... */        
-            /* ### need an SVN_ERR here */
-            return svn_error_create(APR_EGENERAL, NULL,
-                                    "The relative-path property was not "
-                                    "found on the resource.");
-          }
-        else
-          {
-            /* cool. keep the new relative_path. */
-          }
-      }
-    else
-      {
-        if ((relative_path == NULL) || (! *relative_path))
-          {
-            /* no relative path (or an empty one ### this is a hack
-               around a neon bug that keeps us from getting the status
-               code for our complex properties)?  fall back to old
-               relative path. */
-            relative_path = relative_path_old;
-          }
-        else
-          {
-            /* cool. keep the new relative_path. */
-          }
-      }
-#else /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+    const char *relative_path = apr_hash_get(rsrc->propset,
+                                             SVN_RA_DAV__PROP_BASELINE_RELPATH,
+                                             APR_HASH_KEY_STRING);
     if (relative_path == NULL)
       {
         /* ### better error reporting... */        
@@ -630,7 +577,6 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
                                 "The relative-path property was not "
                                 "found on the resource.");
       }
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
     
     /* don't forget to tack on the parts we lopped off in order
        to find the VCC... */
