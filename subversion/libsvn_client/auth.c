@@ -458,7 +458,7 @@ server_ssl_file_first_credentials (void **credentials,
   int failures_allow = 0;
 
   temp_setting = svn_config_get_server_setting (cfg, server_group, 
-                                                "ssl-ignore-unknown-ca",
+                                                SVN_CONFIG_OPTION_SSL_IGNORE_UNKNOWN_CA,
                                                 "false");
   if (strcasecmp (temp_setting, "true") == 0)
     {
@@ -466,7 +466,7 @@ server_ssl_file_first_credentials (void **credentials,
     }
 
   temp_setting = svn_config_get_server_setting (cfg, server_group, 
-                                                "ssl-ignore-host-mismatch",
+                                                SVN_COFNIG_OPTION_SSL_IGNORE_HOST_MISMATCH,
                                                 "false");
   if (strcasecmp (temp_setting, "true") == 0)
     {
@@ -474,7 +474,7 @@ server_ssl_file_first_credentials (void **credentials,
     }
 
   temp_setting = svn_config_get_server_setting (cfg, server_group, 
-                                                "ssl-ignore-invalid-date",
+                                                SVN_CONFIG_OPTION_SSL_IGNORE_INVALID_DATE,
                                                 "false");
   if (strcasecmp (temp_setting, "true") == 0)
     {
@@ -516,7 +516,7 @@ client_ssl_cert_file_first_credentials (void **credentials,
   const char *cert_file, *key_file, *cert_type;
 
   cert_file = svn_config_get_server_setting (cfg, server_group,
-                                             "ssl-client-cert-file",
+                                             SVN_CONFIG_OPTION_SSL_CLIENT_CERT_FILE,
                                              NULL);
 
   if (cert_file != NULL)
@@ -525,9 +525,10 @@ client_ssl_cert_file_first_credentials (void **credentials,
         apr_palloc (pool, sizeof(svn_auth_cred_client_ssl_t));
       
       key_file = svn_config_get_server_setting (cfg, server_group,
-                                                "ssl-client-key-file", NULL);
+                                                SVN_CONFIG_OPTION_SSL_CLIENT_KEY_FILE,
+                                                NULL);
       cert_type = svn_config_get_server_setting (cfg, server_group,
-                                                 "ssl-client-cert-type",
+                                                 SVN_CONFIG_OPTION_SSL_CLIENT_CERT_TYPE,
                                                  "pem");
       cred->cert_file = cert_file;
       cred->key_file = key_file;
@@ -574,7 +575,8 @@ client_ssl_pw_file_first_credentials (void **credentials,
 
   const char *password =
       svn_config_get_server_setting (cfg, server_group,
-                                     "ssl-client-cert-password", NULL);
+                                     SVN_CONFIG_OPTION_SSL_CLIENT_CERT_PASSWORD,
+                                     NULL);
   if (password)
     {
       svn_auth_cred_client_ssl_pass_t *cred =
