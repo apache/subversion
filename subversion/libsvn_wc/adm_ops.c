@@ -174,19 +174,6 @@ svn_wc__do_update_cleanup (const char *path,
 }
 
 
-
-/* ### todo: Might just make more sense to expose the
-   svn_wc_wcprop_get/set functions themselves than to have mindless
-   wrappers around them. */
-svn_error_t *
-svn_wc_get_wc_prop (const char *path,
-                    const char *name,
-                    const svn_string_t **value,
-                    apr_pool_t *pool)
-{
-  return svn_wc__wcprop_get (value, name, path, pool);
-}
-
 svn_error_t *
 svn_wc_set_wc_prop (const char *path,
                     const char *name,

@@ -984,15 +984,30 @@ svn_wc_prop_get (const svn_string_t **value,
   svn_error_t *err;
   apr_hash_t *prophash;
 
-  /* Boy, this is an easy routine! */
-  err = svn_wc_prop_list (&prophash, path, pool);
-  if (err)
-    return
-      svn_error_quick_wrap
-      (err, "svn_wc_prop_get: failed to load props from disk.");
+  enum svn_prop_kind kind = svn_property_kind (NULL, name);
 
-  *value = apr_hash_get (prophash, name, APR_HASH_KEY_STRING);
-  return SVN_NO_ERROR;
+  if (kind == svn_prop_wc_kind)
+    {
+      return svn_wc__wcprop_get (value, name, path, pool);
+    }
+  if (kind == svn_prop_entry_kind)
+    {
+      return svn_error_createf   /* we don't do entry properties here */
+        (SVN_ERR_BAD_PROP_KIND, 0, NULL, pool,
+         "property '%s' is an entry property", name);
+    }
+  else  /* regular prop */
+    {
+      err = svn_wc_prop_list (&prophash, path, pool);
+      if (err)
+        return
+          svn_error_quick_wrap
+          (err, "svn_wc_prop_get: failed to load props from disk.");
+      
+      *value = apr_hash_get (prophash, name, APR_HASH_KEY_STRING);
+
+      return SVN_NO_ERROR;
+    }
 }
 
 
@@ -1054,8 +1069,18 @@ svn_wc_prop_set (const char *name,
   apr_file_t *fp = NULL;
   svn_wc_keywords_t *old_keywords;
   svn_node_kind_t kind;
+  enum svn_prop_kind prop_kind = svn_property_kind (NULL, name);
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
+
+  if (prop_kind == svn_prop_wc_kind)
+    return svn_wc__wcprop_set (name, value, path, pool);
+  else if (prop_kind == svn_prop_entry_kind)
+    return svn_error_createf   /* we don't do entry properties here */
+      (SVN_ERR_BAD_PROP_KIND, 0, NULL, pool,
+       "property '%s' is an entry property", name);
+
+  /* Else, handle a regular property: */
 
   /* Setting an inappropriate property is not allowed, deleting such a
      property is allowed since older clients allowed (and other clients
@@ -1148,48 +1173,24 @@ svn_wc_prop_set (const char *name,
 svn_boolean_t
 svn_wc_is_normal_prop (const char *name)
 {
-  apr_size_t namelen = strlen(name);
-  apr_size_t wc_prefix_len = sizeof (SVN_PROP_WC_PREFIX) - 1;
-  apr_size_t entry_prefix_len = sizeof (SVN_PROP_ENTRY_PREFIX) - 1;
-
-  /* quick answer */
-  if ((namelen < wc_prefix_len) && (namelen < entry_prefix_len))
-    return TRUE;
-
-  if ((strncmp (name, SVN_PROP_WC_PREFIX, wc_prefix_len) == 0)
-      || (strncmp (name, SVN_PROP_ENTRY_PREFIX, entry_prefix_len) == 0))
-    return FALSE;
-  else
-    return TRUE;
+  enum svn_prop_kind kind = svn_property_kind (NULL, name);
+  return (kind == svn_prop_regular_kind);
 }
-
 
 
 svn_boolean_t
 svn_wc_is_wc_prop (const char *name)
 {
-  apr_size_t namelen = strlen(name);
-  apr_size_t prefix_len = sizeof (SVN_PROP_WC_PREFIX) - 1;
-
-  if ((namelen < prefix_len)
-      || (strncmp (name, SVN_PROP_WC_PREFIX, prefix_len) != 0))
-    return FALSE;
-  else
-    return TRUE;
+  enum svn_prop_kind kind = svn_property_kind (NULL, name);
+  return (kind == svn_prop_wc_kind);
 }
 
 
 svn_boolean_t
 svn_wc_is_entry_prop (const char *name)
 {
-  apr_size_t namelen = strlen(name);
-  apr_size_t prefix_len = sizeof (SVN_PROP_ENTRY_PREFIX) - 1;
-
-  if ((namelen < prefix_len)
-      || (strncmp (name, SVN_PROP_ENTRY_PREFIX, prefix_len) != 0))
-    return FALSE;
-  else
-    return TRUE;
+  enum svn_prop_kind kind = svn_property_kind (NULL, name);
+  return (kind == svn_prop_entry_kind);
 }
 
 
