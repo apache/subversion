@@ -26,13 +26,22 @@ MUST HAVE
 
 * remove auto-force behaviour for svn unlock URL.
 
-* ra_dav bugs;
+* decide if/how to handle locking of schedule-add paths.
+  also decide if/how 'svn lock/unlock URL' should work on nonexistent paths.
 
-      - 'svn lock nonexistentURL' works fine, but then
-        'svn unlock nonexistentURL' fails, because ra_dav can't PROPFIND
-          on the imaginary path.  Yet the DAV spec says a locked,
-          nonexistent path ("lock-null") *should* respond to a PROPFIND.
-          At a minimum, it should have lock properties attached.
+   --> related bugs (?):
+
+      - 'svn lock schedule-add-path' currently fails because it's
+        sending working rev of '0', which the fs tries to check against.
+
+      - 'svn unlock http://nonexistentURL' fails, because ra_dav
+          can't PROPFIND on the imaginary path.  Yet the DAV spec says
+          a locked, nonexistent path ("lock-null") *should* respond to
+          a PROPFIND.  At a minimum, it should have lock properties
+          attached.
+
+      - 'svn unlock svn://nonexistentURL' also fails (but not file:///)
+          ("doesn't exist in HEAD" error)
 
 * scan the whole patch for TODO items introduced on the branch. (all, please)
 
