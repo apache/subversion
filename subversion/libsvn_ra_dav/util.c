@@ -226,7 +226,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
 
   SVN_ERR( svn_config_read_config(&cfg, pool) );
 
-  svn_config_get(cfg, &do_compression, "miscellany", "do_compression", "yes");
+  svn_config_get(cfg, &do_compression, "miscellany", "compression", "yes");
   if (strcasecmp(do_compression, "yes") == 0) {
     decompress_on = 1;
   }                              

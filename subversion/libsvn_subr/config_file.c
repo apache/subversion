@@ -766,14 +766,17 @@ svn_config_ensure (apr_pool_t *pool)
 #endif
         "\n"
         "### Section for configuring miscelleneous Subversion options.\n"
+        "# [miscellany]\n"
         "### Set global_ignores to a set of whitespace-delimited globs\n"
         "###   which Subversion will ignore in its `status' output.  By\n"
         "###   default, this value is '*.o *.lo *.la #*# *.rej *~ .#*'. \n"
         "###   To turn off global ignores, simply set the value to be\n"
         "###   empty (as in \"global_ignores = \").\n"
-        "# [miscellany]\n"
         "# global_ignores = *.o *.lo *.la #*# *.rej *~ .#*"
         "\n"
+        "### Set compression to 'no' to avoid compressing requests\n"
+        "###   to a DAV-enabled Subversion server.  It defaults to 'yes'.\n"   
+        "# compression = yes\n"
         "### See http://subversion.tigris.org/issues/show_bug.cgi?id=668\n"
         "### for what else will soon be customized in this file.\n";
         
