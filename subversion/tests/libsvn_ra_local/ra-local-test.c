@@ -53,16 +53,17 @@ current_directory_url (const char **url,
 {
   /* 8KB is a lot, but it almost guarantees that any path will fit. */
   char curdir[8192];
-  const char *utf8_curdir, *unencoded_url;
+  const char *utf8_ls_curdir, *utf8_is_curdir, *unencoded_url;
   
   if (! getcwd (curdir, sizeof(curdir)))
     return svn_error_create (SVN_ERR_BASE, NULL, "getcwd() failed");
 
-  SVN_ERR (svn_utf_cstring_to_utf8 (&utf8_curdir, curdir, pool));
+  SVN_ERR (svn_utf_cstring_to_utf8 (&utf8_ls_curdir, curdir, pool));
+  utf8_is_curdir = svn_path_internal_style (utf8_ls_curdir, pool);
 
   unencoded_url = apr_psprintf (pool, "file://%s%s%s%s",
-                                (utf8_curdir[0] != '/') ? "/" : "",
-                                utf8_curdir,
+                                (utf8_is_curdir[0] != '/') ? "/" : "",
+                                utf8_is_curdir,
                                 (suffix[0] && suffix[0] != '/') ? "/" : "",
                                 suffix);
 
