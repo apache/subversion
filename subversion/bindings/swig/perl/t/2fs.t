@@ -50,8 +50,6 @@ is(<$stream>, $text, 'content verified');
 is($root->file_md5_checksum ($path), 'dd2314129f81675e95b940ff94ddc935',
    'md5 verified');
 }
-ok (eq_array(SVN::Repos::revisions_changed ($fs, 'trunk/filea', 0, 1, 0), [1]),
-    'revisions_changed');
 
 is ($fs->revision_prop(1, 'not:exists'), undef, 'nonexisting property');
 

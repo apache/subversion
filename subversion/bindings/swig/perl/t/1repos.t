@@ -52,6 +52,14 @@ $editor->close_edit();
 }
 cmp_ok($fs->youngest_rev, '==', 2);
 
+my @history;
+
+SVN::Repos::history ($fs, 'tags/foo/filea',
+		     sub {push @history, [@_[0,1]]}, 0, 2, 1);
+
+is_deeply (\@history, [['/tags/foo/filea',2],['/trunk/filea',1]],
+	   'repos_history');
+
 {
 $editor = SVN::Delta::Editor->
     new (SVN::Repos::get_commit_editor($repos, "file://$repospath",

@@ -74,6 +74,12 @@
   $2 = $input; /* our function is the baton. */
 }
 
+%typemap(perl5,in) (svn_repos_history_func_t history_func, void *history_baton) {
+
+  $1 = svn_swig_pl_thunk_history_func;
+  $2 = $input; /* our function is the baton. */
+}
+
 /* ----------------------------------------------------------------------- */
 
 %include svn_repos.h

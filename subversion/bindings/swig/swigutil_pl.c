@@ -659,6 +659,24 @@ svn_error_t *svn_swig_pl_thunk_log_receiver(void *baton,
     return SVN_NO_ERROR;
 }
 
+svn_error_t *svn_swig_pl_thunk_history_func(void *baton,
+                                            const char *path,
+                                            svn_revnum_t revision,
+                                            apr_pool_t *pool)
+{
+    SV *func = baton, *result;
+    swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
+
+    if (!SvOK(func))
+	return SVN_NO_ERROR;
+
+    perl_callback_thunk (CALL_SV,
+			 func, NULL,
+			 "siS", path, revision, pool, poolinfo);
+
+    return SVN_NO_ERROR;
+}
+
 svn_error_t *svn_swig_pl_thunk_commit_callback(svn_revnum_t new_revision,
 					       const char *date,
 					       const char *author,
