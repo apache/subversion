@@ -34,6 +34,15 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/** @since New in 1.1.
+ * Initialize the UTF-8 encoding/decoding routines.
+ * NOTE: It is optional to call this function, but if it is used, no other
+ * svn function may be in use in other threads during the call of this
+ * function.
+ * Initializing the UTF-8 routines will improve performance.
+ */
+void svn_utf_initialize (void);
+
 /** Set @a *dest to a utf8-encoded stringbuf from native stringbuf @a src;
  * allocate @a *dest in @a pool.
  */

@@ -127,6 +127,9 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
       return EXIT_FAILURE;
     }
 
+  /* Initialize the UTF-8 subsystem. */
+  svn_utf_initialize ();
+
 #ifdef ENABLE_NLS
 #ifdef WIN32
   {
