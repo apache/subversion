@@ -294,7 +294,19 @@ fi
 dnl try to find "swig" to build the SWIG bindings
 AC_PATH_PROG(SWIG, swig, none)
 if test "$SWIG" != "none"; then
-  if test "$PYTHON" != "none"; then
+  AC_MSG_CHECKING([swig version])
+  SWIG_VERSION="`$SWIG -version 2>&1 | sed -ne 's/^.*Version \(.*\)$/\1/p'`"
+  AC_MSG_RESULT([$SWIG_VERSION])
+  case $SWIG_VERSION in
+      [1.3.1[23]*])
+        SWIG_SUITABLE=yes
+        ;;
+      *)
+        SWIG_SUITABLE=no
+        AC_MSG_WARN([swig bindings require 1.3.12.])
+        ;;
+  esac
+  if test "$PYTHON" != "none" -a "$SWIG_SUITABLE" = "yes"; then
     SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-py-lib"
     SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-py-lib"
 
