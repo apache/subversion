@@ -621,6 +621,114 @@ ra_do_update (int argc, VALUE *argv, VALUE self)
   }
 }
 
+struct log_receiver_baton_t
+{
+  VALUE proc;
+  apr_pool_t *pool;
+};
+
+static svn_error_t *
+log_receiver (void *baton,
+	      apr_hash_t *changed_paths,
+	      svn_revnum_t revision,
+	      const char *author,
+	      const char *date,
+	      const char *message)
+{
+  struct log_receiver_baton_t *bt = baton;
+  VALUE paths;
+  int error;
+  VALUE args[7];
+
+  args[0] = bt->proc;
+  args[1] = (VALUE) "call";
+  args[3] = LONG2NUM (revision);
+  args[4] = rb_str_new2 (author);
+  args[5] = rb_str_new2 (date);
+  args[6] = rb_str_new2 (message);
+
+  if (changed_paths)
+    {
+      apr_hash_index_t *hi;
+      paths = rb_hash_new ();
+
+      for (hi = apr_hash_first (bt->pool, changed_paths); hi;
+	   hi = apr_hash_next (hi))
+	{
+	  const void *key;
+	  void *val;
+	  apr_ssize_t key_len;
+	  char action;
+
+	  apr_hash_this (hi, &key, &key_len, &val);
+	  action = (char) ((int) val);
+	  rb_hash_aset (paths, rb_str_new (key, key_len),
+			rb_str_new (&action, 1));
+
+	}
+    }
+  else
+    paths = Qnil;
+    
+  args[2] = paths;
+
+  rb_protect (svn_ruby_protect_call5, (VALUE) args, &error);
+
+  if (error)
+    return svn_ruby_error ("message receiver", bt->pool);
+
+  return SVN_NO_ERROR;
+}
+
+static VALUE
+ra_get_log (int argc, VALUE *argv, VALUE self)
+{
+  VALUE aPaths, aStart, aEnd, discover_changed_paths, receiver;
+  svn_ruby_ra_t *ra;
+  apr_array_header_t *paths;
+  svn_revnum_t start, end;
+  apr_pool_t *pool;
+  svn_error_t *err;
+  int i;
+  struct log_receiver_baton_t baton;
+
+  Data_Get_Struct (self, svn_ruby_ra_t, ra);
+
+  if (ra->closed)
+    rb_raise (rb_eRuntimeError, "not opened");
+
+  rb_scan_args (argc, argv, "40&", &aPaths, &aStart, &aEnd,
+		&discover_changed_paths, &receiver);
+  if (receiver == Qnil)
+    rb_raise (rb_eRuntimeError, "no block is given");
+
+  Check_Type (aPaths, T_ARRAY);
+  for (i = 0; i < RARRAY (aPaths)->len; i++)
+    Check_Type (RARRAY (aPaths)->ptr[i], T_STRING);
+
+  start = NUM2LONG (aStart);
+  end = NUM2LONG (aEnd);
+  pool = svn_pool_create (NULL);
+  paths = apr_array_make (pool, RARRAY (aPaths)->len,
+			  sizeof (svn_stringbuf_t *));
+  for (i = 0; i < RARRAY (aPaths)->len; i++)
+    (*((svn_stringbuf_t **) apr_array_push (paths))) =
+      svn_stringbuf_create (StringValuePtr (RARRAY (aPaths)->ptr[i]), pool);
+
+  rb_iv_set (self, "@receiver", receiver);
+  baton.proc = receiver;
+  baton.pool = pool;
+  err = ra->plugin->get_log (ra->session_baton,
+			     paths, start, end,
+			     RTEST (discover_changed_paths),
+			     log_receiver,
+			     (void *)&baton);
+  apr_pool_destroy (pool);
+  if (err)
+    svn_ruby_raise (err);
+
+  return Qnil;
+}
 
 
 void
@@ -648,4 +756,5 @@ svn_ruby_init_ra (void)
   rb_define_method (cSvnRa, "getCommitEditor", ra_get_commit_editor, -1);
   rb_define_method (cSvnRa, "doCheckout", ra_do_checkout, 2);
   rb_define_method (cSvnRa, "doUpdate", ra_do_update, -1);
+  rb_define_method (cSvnRa, "getLog", ra_get_log, -1);
 }
