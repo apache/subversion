@@ -9,6 +9,12 @@ Status of 1.0.2:
 
 Candidate changes:
 
+  * r9045
+    Fix bug in the changes table change-folding code.
+    Justification: Historical correctness issue.
+    Votes:
+      +1: cmpilato
+
   * r9013
     Add --version to svndumpfilter, svnserve, and svnversion
     Justification: Furthers compliance with our license and is nice to have.
