@@ -126,8 +126,65 @@ pop_stack (struct stack_object **stack)
 }
 
 
+/* Attempt to grab a lock in PATH.  If we succeed, store PATH in LOCKS
+   and return success.  If we fail to grab a lock, remove all locks in
+   LOCKS and return error. */
+static svn_error_t *
+do_lock (svn_string_t *path, apr_hash_t *locks, apr_pool_t *pool)
+{
+  svn_error_t *err;
+  char *msg;
+      
+  err = svn_wc__lock (path, 0, pool);
+  if (err)
+    {
+      /* Couldn't lock */
+      
+      /* Remove _all_ previous commit locks */
+      apr_hash_index_t *hi;
+      for (hi = apr_hash_first (locks); hi; hi = apr_hash_next (hi))
+        {
+          const void *key;
+          void *val;
+          apr_size_t klen;
+          svn_string_t *unlock_path;
+
+          apr_hash_this (hi, &key, &klen, &val);
+          unlock_path = svn_string_create ((char *)key, pool);
+          
+          err = svn_wc__unlock (unlock_path, pool);
+          if (err) 
+            {
+              char *message =
+                apr_psprintf (pool,
+                              "commit-crawler failed to lock %s;\n
+                               but couldn't unlock previously-locked %s",
+                              path->data, unlock_path->data);
+              return svn_error_quick_wrap (err, message);
+            }          
+        }
+            
+      /* Return a wrapped error */
+      msg =
+        apr_psprintf (pool,
+                      "commit-crawler failed to lock %s;\n
+                       removed all previous commit locks.", path->data);
+      return svn_error_quick_wrap (err, msg);
+    }
+  
+  /* Lock succeeded */
+
+  apr_hash_set (locks, path->data, APR_HASH_KEY_STRING, "<locked>");
+
+  return SVN_NO_ERROR;
+}
+
+
+
 
 /* A posix-like read function of type svn_read_fn_t (see svn_io.h).
+
+   (Needed so we can pass file-streams to svn_txdelta().)
 
    Given an already-open APR FILEHANDLE, read LEN bytes into BUFFER.  */
 static svn_error_t *
@@ -159,12 +216,16 @@ posix_file_reader (void *filehandle,
 /* Given the path on the top of STACK, store (and return) NEWEST_BATON
    -- which allows one to edit entries there.  Fetch and store (in
    STACK) any previous directory batons necessary to create the one
-   for path (..using calls from EDITOR.)  */
+   for path (..using calls from EDITOR.)  For every directory baton
+   generated, lock the directory as well and store in LOCKS using
+   TOP_POOL.  */
 static svn_error_t *
 do_dir_replaces (void **newest_baton,
                  struct stack_object *stack,
                  svn_delta_edit_fns_t *editor,
                  void *edit_baton,
+                 apr_hash_t *locks,
+                 apr_pool_t *top_pool,
                  apr_pool_t *pool)
 
 {
@@ -185,9 +246,12 @@ do_dir_replaces (void **newest_baton,
 
       else
         {
-          /* Can't descend?  We must be at stack bottom.  Fetch the
-             root baton here. */
+          /* Can't descend?  We must be at stack bottom.  Lock the
+             root directory and fetch the root baton. */
           void *root_baton;
+
+          err = do_lock (stackptr->path, locks, top_pool);
+          if (err) return err;
           
           err = editor->replace_root (edit_baton, &root_baton);  
           if (err) return err;
@@ -210,6 +274,10 @@ do_dir_replaces (void **newest_baton,
 
           /* Move up the stack */
           stackptr = stackptr->next;
+
+          /* Lock this directory */
+          err = do_lock (stackptr->path, locks, top_pool);
+          if (err) return err;
 
           /* We only want the last component of the path; that's what
              the editor's replace_directory() expects from us. */
@@ -266,21 +334,29 @@ do_apply_textdelta (svn_string_t *filename,
   apr_file_t *localfile = NULL;
   apr_file_t *textbasefile = NULL;
 
-  /* Apply a textdelta to the file baton, getting a window
-     consumer routine and baton */
+  svn_string_t *local_tmp_path;
+
+  /* Tell the editor that we're about to apply a textdelta to the file
+     baton; the editor returns to us a window consumer routine and
+     baton. */
   err = editor->apply_textdelta (file_baton,
                                  &window_handler,
                                  &window_handler_baton);
   if (err) return err;
 
-  /* Open two filehandles, one for local file and one for text-base file. */
-  status = apr_open (&localfile, filename->data,
+  /* Copy the local file to the administrative temp area. */
+  local_tmp_path = svn_wc__text_base_path (filename, TRUE, pool);
+  svn_wc__copy_file (filename, local_tmp_path, pool);
+
+  /* Open two filehandles, one for tmp local file and one for
+     text-base file. */
+  status = apr_open (&localfile, local_tmp_path->data,
                      APR_READ, APR_OS_DEFAULT, pool);
   if (status)
     return
       svn_error_createf (status, 0, NULL, pool,
                          "do_apply_textdelta: error opening '%s'",
-                         filename->data);
+                         local_tmp_path->data);
 
   err = svn_wc__open_text_base (&textbasefile, filename, APR_READ, pool);
   if (err) return err;
@@ -383,6 +459,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
                       svn_delta_edit_fns_t *editor, void *edit_baton,
                       struct stack_object **stack,
                       apr_hash_t *filehash,
+                      apr_hash_t *locks,
                       apr_pool_t *top_pool,
                       apr_pool_t *pool)                      
 {
@@ -458,7 +535,8 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
           if (! dir_baton)
             {
               err = do_dir_replaces (&dir_baton,
-                                     *stack, editor, edit_baton, subpool);
+                                     *stack, editor, edit_baton,
+                                     locks, top_pool, subpool);
               if (err) return err;
             }
           
@@ -513,7 +591,8 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
               
               err = process_subdirectory (new_path, new_dir_baton,
                                           editor, edit_baton,
-                                          stack, filehash, top_pool, subpool);
+                                          stack, filehash, locks,
+                                          top_pool, subpool);
               if (err) return err;              
             }
         }
@@ -525,7 +604,8 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
           if (! dir_baton)
             {
               err = do_dir_replaces (&dir_baton,
-                                     *stack, editor, edit_baton, subpool);
+                                     *stack, editor, edit_baton,
+                                     locks, top_pool, subpool);
               if (err) return err;
             }
           
@@ -548,7 +628,8 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
               if (! dir_baton)
                 {
                   err = do_dir_replaces (&dir_baton,
-                                         *stack, editor, edit_baton, subpool);
+                                         *stack, editor, edit_baton,
+                                         locks, top_pool, subpool);
                   if (err) return err;
                 }
               
@@ -569,7 +650,8 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
               
               err = process_subdirectory (new_path, new_dir_baton,
                                           editor, edit_baton,
-                                          stack, filehash, top_pool, subpool);
+                                          stack, filehash, locks,
+                                          top_pool, subpool);
               if (err) return err;
             }
       
@@ -583,7 +665,8 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
               if (! dir_baton)
                 {
                   err = do_dir_replaces (&dir_baton,
-                                         *stack, editor, edit_baton, subpool);
+                                         *stack, editor, edit_baton,
+                                         locks, top_pool, subpool);
                   if (err) return err;
                 }
               
@@ -627,7 +710,8 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
               if (! dir_baton)
                 {
                   err = do_dir_replaces (&dir_baton,
-                                         *stack, editor, edit_baton, subpool);
+                                         *stack, editor, edit_baton,
+                                         locks, top_pool, subpool);
                   if (err) return err;
                 }
           
@@ -661,7 +745,8 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
              _correct_ dir baton for the child directory. */
           err = process_subdirectory (full_path_to_entry, NULL,
                                       editor, edit_baton,
-                                      stack, filehash, top_pool, subpool);
+                                      stack, filehash, locks,
+                                      top_pool, subpool);
           if (err) return err;
         }
      
@@ -726,6 +811,7 @@ svn_wc_crawl_local_mods (svn_string_t *root_directory,
 
   struct stack_object *stack = NULL;
   apr_hash_t *filehash = apr_make_hash (pool);
+  apr_hash_t *locks = apr_make_hash (pool);
 
   /* Start the crawler! 
 
@@ -733,7 +819,8 @@ svn_wc_crawl_local_mods (svn_string_t *root_directory,
      object onto the stack with PATH="root_directory" and BATON=NULL.  */
   err = process_subdirectory (root_directory, NULL,
                               edit_fns, edit_baton,
-                              &stack, filehash, pool, pool);
+                              &stack, filehash, locks,
+                              pool, pool);
   if (err) return err;
 
   /* The crawler has returned, so filehash potentially has some
