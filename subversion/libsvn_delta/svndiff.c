@@ -74,51 +74,36 @@ struct encoder_baton {
    integer format.  Return the incremented value of P after the
    encoded bytes have been written.
 
-   BITS_IN_FIRST_BYTE should be 7 (NORMAL_BITS) except when we're
-   encoding a length, in which case it's 5 (LENGTH_BITS) to leave room
-   for the instruction selector.  Bytes after the first byte always
-   use seven bits per byte.  Data bits go into the lowest-order bits
-   of each byte, with the next-higher-order bit acting as a
-   continuation bit.  High-order data bits are encoded first, followed
-   by lower-order bits, so the value can be reconstructed by
-   concatenating the data bits from left to right and interpreting the
-   result as a binary number.
+   This encoding uses the high bit of each byte as a continuation bit
+   and the other seven bits as data bits.  High-order data bits are
+   encoded first, followed by lower-order bits, so the value can be
+   reconstructed by concatenating the data bits from left to right and
+   interpreting the result as a binary number.  Examples (brackets
+   denote byte boundaries, spaces are for clarity only):
 
-   Examples with BITS_IN_FIRST_BYTE being 7 (brackets denote byte
-   boundaries, spaces are for clarity only):
            1 encodes as [0 0000001]
           33 encodes as [0 0100001]
          129 encodes as [1 0000001] [0 0000001]
         2000 encodes as [1 0001111] [0 1010000]
-
-   Examples with BITS_IN_FIRST_BYTE being 5:
-           1 encodes as [00 0 00001]
-          33 encodes as [00 1 00000][0 0100001]
-         129 encodes as [00 1 00001][0 0000001]
-        2000 encodes as [00 1 01111][0 1010000] */
+*/
 
 static char *
-encode_int (unsigned char *p, apr_off_t val, int bits_in_first_byte)
+encode_int (unsigned char *p, apr_off_t val)
 {
   int n;
   apr_off_t v;
-  unsigned char firstmask = (0x1 << bits_in_first_byte) - 1;
   unsigned char cont;
 
   assert (val >= 0);
 
-  /* Figure out how many bytes we'll need after the first one.  */
-  v = val >> bits_in_first_byte;
-  n = 0;
+  /* Figure out how many bytes we'll need.  */
+  v = val >> 7;
+  n = 1;
   while (v > 0)
     {
       v = v >> 7;
       n++;
     }
-
-  /* Encode the first byte.  */
-  cont = ((n > 0) ? 0x1 : 0x0) << bits_in_first_byte;
-  *p++ = ((val >> (n * 7)) & firstmask) | cont;
 
   /* Encode the remaining bytes; n is always the number of bytes
      coming after the one we're encoding.  */
@@ -132,14 +117,13 @@ encode_int (unsigned char *p, apr_off_t val, int bits_in_first_byte)
 }
 
 
-/* Append an integer encoded (using the normal number of bits in the
-   first byte) to a string.  */
+/* Append an encoded integer to a string.  */
 static void
 append_encoded_int (svn_string_t *header, apr_off_t val, apr_pool_t *pool)
 {
   char buf[128], *p;
 
-  p = encode_int (buf, val, NORMAL_BITS);
+  p = encode_int (buf, val);
   svn_string_appendbytes (header, buf, p - buf, pool);
 }
 
@@ -169,14 +153,19 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   for (op = window->ops; op < window->ops + window->num_ops; op++)
     {
       /* Encode the action code and length.  */
-      ip = encode_int (ibuf, op->length, LENGTH_BITS);
+      ip = ibuf;
       switch (op->action_code)
         {
-        case svn_txdelta_source: break;
-        case svn_txdelta_target: *ibuf |= (0x1 << 6); break;
-        case svn_txdelta_new:    *ibuf |= (0x2 << 6); break;
+        case svn_txdelta_source: *ip = 0; break;
+        case svn_txdelta_target: *ip = (0x1 << 6); break;
+        case svn_txdelta_new:    *ip = (0x2 << 6); break;
         }
-      ip = encode_int (ip, op->offset, NORMAL_BITS);
+      if (op->length >> 6 == 0)
+        *ip++ |= op->length;
+      else
+        ip = encode_int (ip + 1, op->length);
+      if (op->action_code != svn_txdelta_new)
+        ip = encode_int (ip, op->offset);
       svn_string_appendbytes (instructions, ibuf, ip - ibuf, pool);
     }
 
@@ -260,30 +249,18 @@ struct decode_baton
 };
 
 
-/* Decode an svndiff-encoded integer into VAL.  The bytes to be
-   encoded live in the range [P..END-1].  BITS_IN_FIRST_BYTE should be
-   7 (NORMAL_BITS) unless we're decoding a length, in which case it's
-   5 (LENGTH_BITS) because the two high bits of the first length byte
-   are taken up by the instruction selector.  See the comment for
-   encode_int earlier in this file for more detail on the encoding
-   format.  */
+/* Decode an svndiff-encoded integer into VAL and return a pointer to
+   the byte after the integer.  The bytes to be decoded live in the
+   range [P..END-1].  See the comment for encode_int earlier in this
+   file for more detail on the encoding format.  */
 
 static const unsigned char *
 decode_int (apr_off_t *val,
             const unsigned char *p,
-            const unsigned char *end,
-            int bits_in_first_byte)
+            const unsigned char *end)
 {
-  unsigned char firstmask = (0x1 << bits_in_first_byte) - 1;
-
-  /* Decode the first byte.  */
-  if (p == end)
-    return NULL;
-  *val = *p & firstmask;
-  if (((*p++ >> bits_in_first_byte) & 0x1) == 0)
-    return p;
-
   /* Decode bytes until we're done.  */
+  *val = 0;
   while (p < end)
     {
       *val = (*val << 7) | (*p & 0x7f);
@@ -293,6 +270,10 @@ decode_int (apr_off_t *val,
   return NULL;
 }
 
+
+/* Decode an instruction into OP, returning a pointer to the text
+   after the instruction.  Note that if the action code is
+   svn_txdelta_new, the opcode field of *OP will not be set.  */
 
 static const unsigned char *
 decode_instruction (svn_txdelta_op_t *op,
@@ -314,14 +295,21 @@ decode_instruction (svn_txdelta_op_t *op,
     }
 
   /* Decode the length and offset.  */
-  p = decode_int (&val, p, end, LENGTH_BITS);
-  if (p == NULL)
-    return NULL;
-  op->length = val;
-  p = decode_int (&val, p, end, NORMAL_BITS);
-  if (p == NULL)
-    return NULL;
-  op->offset = val;
+  op->length = *p++ & 0x3f;
+  if (op->length == 0)
+    {
+      p = decode_int (&val, p, end);
+      if (p == NULL)
+        return NULL;
+      op->length = val;
+    }
+  if (op->action_code != svn_txdelta_new)
+    {
+      p = decode_int (&val, p, end);
+      if (p == NULL)
+        return NULL;
+      op->offset = val;
+    }
 
   return p;
 }
@@ -339,27 +327,27 @@ count_and_verify_instructions (const unsigned char *p,
 {
   int n = 0;
   svn_txdelta_op_t op;
-  apr_size_t tpos = 0;
+  apr_size_t tpos = 0, npos = 0;
 
   while (p < end)
     {
       p = decode_instruction (&op, p, end);
-      if (p == NULL || op.offset < 0 || op.length < 0
-          || op.length > tview_len - tpos)
+      if (p == NULL || op.length < 0 || op.length > tview_len - tpos)
         return -1;
       switch (op.action_code)
         {
         case svn_txdelta_source:
-          if (op.length > sview_len - op.offset)
+          if (op.offset < 0 || op.length > sview_len - op.offset)
             return -1;
           break;
         case svn_txdelta_target:
-          if (op.offset >= tpos)
+          if (op.offset < 0 || op.offset >= tpos)
             return -1;
           break;
         case svn_txdelta_new:
-          if (op.length > new_len - op.offset)
+          if (op.length > new_len - npos)
             return -1;
+          npos += op.length;
           break;
         }
       tpos += op.length;
@@ -367,7 +355,7 @@ count_and_verify_instructions (const unsigned char *p,
         return -1;
       n++;
     }
-  if (tpos != tview_len)
+  if (tpos != tview_len || npos != new_len)
     return -1;
   return n;
 }
@@ -381,10 +369,11 @@ write_handler (void *baton,
   struct decode_baton *db = (struct decode_baton *) baton;
   const unsigned char *p, *end;
   apr_off_t val, sview_offset;
-  apr_size_t sview_len, tview_len, inslen, newlen, remaining;
+  apr_size_t sview_len, tview_len, inslen, newlen, remaining, npos;
   svn_txdelta_window_t *window;
   svn_error_t *err;
-  int ninst, i;
+  svn_txdelta_op_t *op;
+  int ninst;
 
   if (*len == 0)
     {
@@ -418,28 +407,27 @@ write_handler (void *baton,
   p = (const unsigned char *) db->buffer->data;
   end = (const unsigned char *) db->buffer->data + db->buffer->len;
 
-  p = decode_int (&val, p, end, 7);
+  p = decode_int (&val, p, end);
   if (p == NULL)
     return SVN_NO_ERROR;
   sview_offset = val;
 
-  p = decode_int (&val, p, end, 7);
+  p = decode_int (&val, p, end);
   if (p == NULL)
     return SVN_NO_ERROR;
   sview_len = val;
 
-  p = decode_int (&val, p, end, 7);
+  p = decode_int (&val, p, end);
   if (p == NULL)
     return SVN_NO_ERROR;
   tview_len = val;
 
-
-  p = decode_int (&val, p, end, 7);
+  p = decode_int (&val, p, end);
   if (p == NULL)
     return SVN_NO_ERROR;
   inslen = val;
 
-  p = decode_int (&val, p, end, 7);
+  p = decode_int (&val, p, end);
   if (p == NULL)
     return SVN_NO_ERROR;
   newlen = val;
@@ -458,15 +446,11 @@ write_handler (void *baton,
     return svn_error_create (SVN_ERR_MALFORMED_FILE, 0, NULL, pool,
                              "svndiff has backwards-sliding source views");
 
-  /* Now that we've read the header, we can determine the number of
-     bytes in the rest of the window.  If we don't have that many,
-     wait for more data.  */
+  /* Wait for more data if we don't have enough bytes for the whole window.  */
   if (end - p < inslen + newlen)
     return SVN_NO_ERROR;
 
-  /* Count the instructions and perform validity checks.  Return an
-     error if there are invalid instructions, if there are any integer
-     overflows, or if the source view slides backwards.  */
+  /* Count the instructions and make sure they are all valid.  */
   end = p + inslen;
   ninst = count_and_verify_instructions (p, end, sview_len, tview_len, newlen);
   if (ninst == -1)
@@ -481,8 +465,16 @@ write_handler (void *baton,
   window->num_ops = ninst;
   window->ops_size = ninst;
   window->ops = apr_palloc (db->subpool, ninst * sizeof (*window->ops));
-  for (i = 0; i < window->num_ops; i++)
-    p = decode_instruction (&window->ops[i], p, end);
+  npos = 0;
+  for (op = window->ops; op < window->ops + ninst; op++)
+    {
+      p = decode_instruction (op, p, end);
+      if (op->action_code == svn_txdelta_new)
+        {
+          op->offset = npos;
+          npos += op->length;
+        }
+    }
   window->new = svn_string_ncreate ((const char *) p, newlen, db->subpool);
   window->pool = db->subpool;
 
@@ -504,24 +496,6 @@ write_handler (void *baton,
   svn_txdelta_free_window (window);
 
   return err;
-}
-
-void window_compare (svn_txdelta_window_t *w1, svn_txdelta_window_t *w2)
-{
-  int i;
-
-  assert (w1->sview_offset == w2->sview_offset);
-  assert (w1->sview_len == w2->sview_len);
-  assert (w1->tview_len == w2->tview_len);
-  assert (w1->num_ops == w2->num_ops);
-  for (i = 0; i < w1->num_ops; i++)
-    {
-      assert (w1->ops[i].action_code == w2->ops[i].action_code);
-      assert (w1->ops[i].offset == w2->ops[i].offset);
-      assert (w1->ops[i].length == w2->ops[i].length);
-    }
-  assert (w1->new->len == w2->new->len);
-  assert (memcmp (w1->new->data, w2->new->data, w1->new->len) == 0);
 }
 
 svn_error_t *
