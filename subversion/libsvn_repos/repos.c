@@ -69,6 +69,12 @@ svn_repos_db_lockfile (svn_repos_t *repos, apr_pool_t *pool)
 
 
 const char *
+svn_repos_db_logs_lockfile (svn_repos_t *repos, apr_pool_t *pool)
+{
+  return svn_path_join (repos->lock_path, SVN_REPOS__DB_LOGS_LOCKFILE, pool);
+}
+
+const char *
 svn_repos_hook_dir (svn_repos_t *repos, apr_pool_t *pool)
 {
   return apr_pstrdup (pool, repos->hook_path);
@@ -137,30 +143,35 @@ create_repos_dir (const char *path, apr_pool_t *pool)
   return err;
 }
 
-
+/* Create the DB logs lockfile. */
 static svn_error_t *
-create_locks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
-{
-  apr_status_t apr_err;
+create_db_logs_lock (svn_repos_t *repos, apr_pool_t *pool) {
+  const char *contents;
+  const char *lockfile_path;
 
-  /* Create the locks directory. */
-  SVN_ERR_W (create_repos_dir (path, pool),
-             "creating lock dir");
+  lockfile_path = svn_repos_db_logs_lockfile (repos, pool);
+  contents = 
+    "DB logs lock file, representing locks on the versioned filesystem logs.\n"
+    "\n"
+    "All log manipulators of the repository's\n"
+    "Berkeley DB environment take out exclusive locks on this file\n"
+    "to ensure that only one accessor manupulates the logs at the time.\n"
+    "\n"
+    "You should never have to edit or remove this file.\n";
 
-  /* Create the DB lockfile under that directory. */
-  {
-    apr_file_t *f = NULL;
-    apr_size_t written;
+  SVN_ERR_W (svn_io_file_create (lockfile_path, contents, pool),
+             "creating db logs lock file");
+
+  return SVN_NO_ERROR;
+}
+
+/* Create the DB lockfile. */
+static svn_error_t *
+create_db_lock (svn_repos_t *repos, apr_pool_t *pool) {
     const char *contents;
     const char *lockfile_path;
 
     lockfile_path = svn_repos_db_lockfile (repos, pool);
-    SVN_ERR_W (svn_io_file_open (&f, lockfile_path,
-                                 (APR_WRITE | APR_CREATE | APR_EXCL),
-                                 APR_OS_DEFAULT,
-                                 pool),
-               "creating lock file");
-    
     contents = 
       "DB lock file, representing locks on the versioned filesystem.\n"
       "\n"
@@ -173,31 +184,33 @@ create_locks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "\n"
       "You should never have to edit or remove this file.\n";
     
-    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
-    if (apr_err)
-      return svn_error_createf (apr_err, NULL,
-                                "writing lock file '%s'", lockfile_path);
+  SVN_ERR_W (svn_io_file_create (lockfile_path, contents, pool),
+             "creating db lock file");
     
-    apr_err = apr_file_close (f);
-    if (apr_err)
-      return svn_error_createf (apr_err, NULL,
-                                "closing lock file '%s'", lockfile_path);
-  }
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+create_locks (svn_repos_t *repos, apr_pool_t *pool)
+{
+  /* Create the locks directory. */
+  SVN_ERR_W (create_repos_dir (repos->lock_path, pool),
+             "creating lock dir");
+
+  SVN_ERR (create_db_lock (repos, pool));
+  SVN_ERR (create_db_logs_lock (repos, pool));
 
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
+create_hooks (svn_repos_t *repos, apr_pool_t *pool)
 {
   const char *this_path, *contents;
-  apr_status_t apr_err;
-  apr_file_t *f;
-  apr_size_t written;
 
   /* Create the hook directory. */
-  SVN_ERR_W (create_repos_dir (path, pool),
+  SVN_ERR_W (create_repos_dir (repos->hook_path, pool),
              "creating hook directory");
 
   /*** Write a default template for each standard hook file. */
@@ -207,12 +220,6 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
     this_path = apr_psprintf (pool, "%s%s",
                               svn_repos_start_commit_hook (repos, pool),
                               SVN_REPOS__HOOK_DESC_EXT);
-    
-    SVN_ERR_W (svn_io_file_open (&f, this_path,
-                                 (APR_WRITE | APR_CREATE | APR_EXCL),
-                                 APR_OS_DEFAULT,
-                                 pool),
-               "creating hook file");
     
     contents = 
       "#!/bin/sh"
@@ -298,15 +305,8 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "exit 0"
       APR_EOL_STR;
 
-    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
-    if (apr_err)
-      return svn_error_createf (apr_err, NULL,
-                                "writing hook file '%s'", this_path);
-
-    apr_err = apr_file_close (f);
-    if (apr_err)
-      return svn_error_createf (apr_err, NULL,
-                                "closing hook file '%s'", this_path);
+    SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
+              "creating start-commit hook");
   }  /* end start-commit hook */
 
   /* Pre-commit hook. */
@@ -314,12 +314,6 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
     this_path = apr_psprintf (pool, "%s%s",
                               svn_repos_pre_commit_hook (repos, pool),
                               SVN_REPOS__HOOK_DESC_EXT);
-
-    SVN_ERR_W (svn_io_file_open (&f, this_path,
-                                 (APR_WRITE | APR_CREATE | APR_EXCL),
-                                 APR_OS_DEFAULT,
-                                 pool),
-               "creating hook file");
 
     contents =
       "#!/bin/sh"
@@ -433,15 +427,8 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "exit 0"
       APR_EOL_STR;
     
-    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
-    if (apr_err)
-      return svn_error_createf (apr_err, NULL,
-                                "writing hook file '%s'", this_path);
-
-    apr_err = apr_file_close (f);
-    if (apr_err)
-      return svn_error_createf (apr_err, NULL,
-                                "closing hook file '%s'", this_path);
+    SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
+               "creating pre-commit hook");
   }  /* end pre-commit hook */
 
 
@@ -450,12 +437,6 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
     this_path = apr_psprintf (pool, "%s%s",
                               svn_repos_pre_revprop_change_hook (repos, pool),
                               SVN_REPOS__HOOK_DESC_EXT);
-
-    SVN_ERR_W (svn_io_file_open (&f, this_path,
-                                 (APR_WRITE | APR_CREATE | APR_EXCL),
-                                 APR_OS_DEFAULT,
-                                 pool),
-               "creating hook file");
 
     contents =
       "#!/bin/sh"
@@ -562,15 +543,8 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "exit 1"
       APR_EOL_STR;
     
-    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
-    if (apr_err)
-      return svn_error_createf (apr_err, NULL,
-                                "writing hook file '%s'", this_path);
-
-    apr_err = apr_file_close (f);
-    if (apr_err)
-      return svn_error_createf (apr_err, NULL,
-                                "closing hook file '%s'", this_path);
+    SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
+              "creating pre-revprop-change hook");
   }  /* end pre-revprop-change hook */
 
 
@@ -580,12 +554,6 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
                               svn_repos_post_commit_hook (repos, pool),
                               SVN_REPOS__HOOK_DESC_EXT);
 
-    SVN_ERR_W (svn_io_file_open (&f, this_path,
-                                 (APR_WRITE | APR_CREATE | APR_EXCL),
-                                 APR_OS_DEFAULT,
-                                 pool),
-               "creating hook file");
-    
     contents =
       "#!/bin/sh"
       APR_EOL_STR
@@ -665,15 +633,8 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "log-commit.py --repository \"$REPOS\" --revision \"$REV\""
       APR_EOL_STR;
 
-    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
-    if (apr_err)
-      return svn_error_createf (apr_err, NULL,
-                                "writing hook file '%s'", this_path);
-
-    apr_err = apr_file_close (f);
-    if (apr_err)
-      return svn_error_createf (apr_err, NULL,
-                                "closing hook file '%s'", this_path);
+    SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
+               "creating post-commit hook");
   } /* end post-commit hook */
 
 
@@ -683,12 +644,6 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
                               svn_repos_post_revprop_change_hook (repos, pool),
                               SVN_REPOS__HOOK_DESC_EXT);
 
-    SVN_ERR_W (svn_io_file_open (&f, this_path,
-                                 (APR_WRITE | APR_CREATE | APR_EXCL),
-                                 APR_OS_DEFAULT,
-                                 pool),
-               "creating hook file");
-    
     contents =
       "#!/bin/sh"
       APR_EOL_STR
@@ -776,60 +731,12 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "propchange-email.pl \"$REPOS\" \"$REV\" \"$USER\" \"$PROPNAME\" watchers@example.org"
       APR_EOL_STR;
 
-    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
-    if (apr_err)
-      return svn_error_createf (apr_err, NULL,
-                                "writing hook file '%s'", this_path);
-
-    apr_err = apr_file_close (f);
-    if (apr_err)
-      return svn_error_createf (apr_err, NULL,
-                                "closing hook file '%s'", this_path);
+    SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
+               "creating post-revprop-change hook");
   } /* end post-revprop-change hook */
 
   return SVN_NO_ERROR;
 }
-
-
-/* This code manages repository locking, which is motivated by the
- * need to support DB_RUN_RECOVERY.  Here's how it works:
- *
- * Every accessor of a repository's database takes out a shared lock
- * on the repository -- both readers and writers get shared locks, and
- * there can be an unlimited number of shared locks simultaneously.
- *
- * Sometimes, a db access returns the error DB_RUN_RECOVERY.  When
- * this happens, we need to run svn_fs_berkeley_recover() on the db
- * with no other accessors present.  So we take out an exclusive lock
- * on the repository.  From the moment we request the exclusive lock,
- * no more shared locks are granted, and when the last shared lock
- * disappears, the exclusive lock is granted.  As soon as we get it,
- * we can run recovery.
- *
- * We assume that once any berkeley call returns DB_RUN_RECOVERY, they
- * all do, until recovery is run.
- */
-
-/* Clear all outstanding locks on ARG, an open apr_file_t *. */
-static apr_status_t
-clear_and_close (void *arg)
-{
-  apr_status_t apr_err;
-  apr_file_t *f = arg;
-
-  /* Remove locks. */
-  apr_err = apr_file_unlock (f);
-  if (apr_err)
-    return apr_err;
-
-  /* Close the file. */
-  apr_err = apr_file_close (f);
-  if (apr_err)
-    return apr_err;
-
-  return 0;
-}
-
 
 static void
 init_repos_dirs (svn_repos_t *repos, const char *path, apr_pool_t *pool)
@@ -856,15 +763,13 @@ create_repos_structure (svn_repos_t *repos,
              "creating DAV sandbox dir");
 
   /* Create the lock directory.  */
-  SVN_ERR (create_locks (repos, repos->lock_path, pool));
+  SVN_ERR (create_locks (repos, pool));
 
   /* Create the hooks directory.  */
-  SVN_ERR (create_hooks (repos, repos->hook_path, pool));
+  SVN_ERR (create_hooks (repos, pool));
 
   /* Write the top-level README file. */
   {
-    apr_status_t apr_err;
-    apr_file_t *readme_file = NULL;
     const char *readme_file_name 
       = svn_path_join (path, SVN_REPOS__README, pool);
     static const char * const readme_contents =
@@ -889,20 +794,8 @@ create_repos_structure (svn_repos_t *repos,
       "Visit http://subversion.tigris.org/ for more information."
       APR_EOL_STR;
 
-    SVN_ERR (svn_io_file_open (&readme_file, readme_file_name,
-                               APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
-                               pool));
-
-    apr_err = apr_file_write_full (readme_file, readme_contents,
-                                   strlen (readme_contents), NULL);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0,
-                                "writing to '%s'", readme_file_name);
-    
-    apr_err = apr_file_close (readme_file);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0,
-                                "closing '%s'", readme_file_name);
+    SVN_ERR_W (svn_io_file_create (readme_file_name, readme_contents, pool),
+               "creating readme file");
   }
 
   /* Write the top-level FORMAT file. */
@@ -1024,7 +917,6 @@ get_repos (svn_repos_t **repos_p,
            svn_boolean_t open_fs,
            apr_pool_t *pool)
 {
-  apr_status_t apr_err;
   svn_repos_t *repos;
 
   /* Verify the validity of our repository format. */
@@ -1043,37 +935,15 @@ get_repos (svn_repos_t **repos_p,
   /* Locking. */
   {
     const char *lockfile_path;
-    apr_file_t *lockfile_handle;
-    apr_int32_t flags;
+    svn_boolean_t exclusive = FALSE;
 
     /* Get a filehandle for the repository's db lockfile. */
     lockfile_path = svn_repos_db_lockfile (repos, pool);
-    flags = APR_READ;
     if (locktype == APR_FLOCK_EXCLUSIVE)
-      flags |= APR_WRITE;
-    SVN_ERR_W (svn_io_file_open (&lockfile_handle, lockfile_path,
-                                 flags, APR_OS_DEFAULT, pool),
+      exclusive = TRUE;
+
+    SVN_ERR_W (svn_io_file_lock (lockfile_path, exclusive, pool),
                "get_repos: error opening db lockfile");
-    
-    /* Get some kind of lock on the filehandle. */
-    apr_err = apr_file_lock (lockfile_handle, locktype);
-    if (apr_err)
-      {
-        const char *lockname = "unknown";
-        if (locktype == APR_FLOCK_SHARED)
-          lockname = "shared";
-        if (locktype == APR_FLOCK_EXCLUSIVE)
-          lockname = "exclusive";
-        
-        return svn_error_createf
-          (apr_err, NULL,
-           "get_repos: %s db lock on repository '%s' failed",
-           lockname, path);
-      }
-    
-    /* Register an unlock function for the lock. */
-    apr_pool_cleanup_register (pool, lockfile_handle, clear_and_close,
-                               apr_pool_cleanup_null);
   }
 
   /* Open up the Berkeley filesystem only after obtaining the lock. */
@@ -1146,6 +1016,25 @@ svn_repos_fs (svn_repos_t *repos)
   return repos->fs;
 }
 
+
+/* This code uses repository locking, which is motivated by the
+ * need to support DB_RUN_RECOVERY.  Here's how it works:
+ *
+ * Every accessor of a repository's database takes out a shared lock
+ * on the repository -- both readers and writers get shared locks, and
+ * there can be an unlimited number of shared locks simultaneously.
+ *
+ * Sometimes, a db access returns the error DB_RUN_RECOVERY.  When
+ * this happens, we need to run svn_fs_berkeley_recover() on the db
+ * with no other accessors present.  So we take out an exclusive lock
+ * on the repository.  From the moment we request the exclusive lock,
+ * no more shared locks are granted, and when the last shared lock
+ * disappears, the exclusive lock is granted.  As soon as we get it,
+ * we can run recovery.
+ *
+ * We assume that once any berkeley call returns DB_RUN_RECOVERY, they
+ * all do, until recovery is run.
+ */
 
 svn_error_t *
 svn_repos_recover (const char *path,
@@ -1245,3 +1134,149 @@ svn_error_t *svn_repos_db_logfiles (apr_array_header_t **logfiles,
 
   return SVN_NO_ERROR;
 }
+
+/** Hot copy structure copy context.
+ */
+struct hotcopy_ctx_t {
+  const char *dest;     /* target location to construct */
+  unsigned int src_len; /* len of the source path*/
+};
+
+/** Called by (svn_io_dir_walk).
+ * Copies the repository structure with exception of
+ * @c SVN_REPOS__DB_DIR and @c SVN_REPOS__LOCK_DIR.
+ * Those directories are handled separetly.
+ * @a baton is a pointer to (struct hotcopy_ctx_t) specifying
+ * destination path to copy to and the length of the source path.
+ *  
+ * @copydoc svn_io_dir_walk()
+ */
+static svn_error_t *hotcopy_structure (void *baton,
+                                       const char *path,
+                                       const apr_finfo_t *finfo,
+                                       apr_pool_t *pool)
+{
+  const struct hotcopy_ctx_t *ctx = ((struct hotcopy_ctx_t *) baton);
+  const char *sub_path;
+  const char *target;
+
+  if (strlen (path) == ctx->src_len)
+    {
+      sub_path = "";
+    } 
+  else
+    {
+      sub_path = &path[ctx->src_len+1];
+
+      /* Check if we are inside db directory and if so skip it */
+      if (svn_path_compare_paths(
+            svn_path_get_longest_ancestor (SVN_REPOS__DB_DIR, sub_path, pool), 
+                                           SVN_REPOS__DB_DIR) == 0)
+        return SVN_NO_ERROR;
+
+      if (svn_path_compare_paths(
+            svn_path_get_longest_ancestor (SVN_REPOS__LOCK_DIR, sub_path, pool),
+                                           SVN_REPOS__LOCK_DIR) == 0)
+        return SVN_NO_ERROR;
+    }
+
+  target = svn_path_join (ctx->dest, sub_path, pool);
+
+  if (finfo->filetype == APR_DIR)
+    {
+      SVN_ERR (create_repos_dir (target, pool));
+    } 
+  else if (finfo->filetype == APR_REG)
+    {
+    
+      SVN_ERR(svn_io_copy_file(path, target, TRUE, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/** Obtain a lock on db logs lock file. Create one if it does not exist.
+ */
+static svn_error_t *
+lock_db_logs_file (svn_repos_t *repos,
+                   svn_boolean_t exclusive,
+                   apr_pool_t *pool)
+{
+  const char * lock_file = svn_repos_db_logs_lockfile (repos, pool);
+
+  /* Try to create a lock file, in case if it is missing. As in case of the
+     repositories created before hotcopy functionality.  */
+  svn_error_clear (create_db_logs_lock (repos, pool));
+
+  SVN_ERR (svn_io_file_lock (lock_file, exclusive, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Make a copy of a repository with hot backup of fs. */
+svn_error_t *
+svn_repos_hotcopy (const char *src_path,
+                   const char *dst_path,
+                   svn_boolean_t clean_logs,
+                   apr_pool_t *pool)
+{
+  svn_repos_t *src_repos;
+  svn_repos_t *dst_repos;
+  struct hotcopy_ctx_t hotcopy_context;
+  
+  /* Try to open original repository */
+  SVN_ERR (get_repos (&src_repos, src_path,
+                      APR_FLOCK_SHARED,
+                      FALSE,    /* don't try to open the db yet. */
+                      pool));
+
+  /* If we are going to clean logs, then get an exclusive lock on
+     db-logs.lock, to ensure that no one else will work with logs.
+
+     If we are just copying, then get a shared lock to ensure that 
+     no one else will clean logs while we copying them */
+  
+  SVN_ERR (lock_db_logs_file (src_repos, clean_logs, pool));
+
+  /* Copy the repository to a new path, with exception of 
+     specially handled directories */
+
+  hotcopy_context.dest = dst_path;
+  hotcopy_context.src_len = strlen (src_path);
+  SVN_ERR (svn_io_dir_walk (src_path,
+                            0,
+                            hotcopy_structure,
+                            &hotcopy_context,
+                            pool));
+
+  /* Prepare dst_repos object so that we may create locks,
+     so that we may open repository */
+
+  dst_repos = apr_pcalloc (pool, sizeof (*dst_repos));
+
+  init_repos_dirs (dst_repos, dst_path, pool);
+
+  SVN_ERR (create_locks (dst_repos, pool));
+
+  SVN_ERR (create_repos_dir (dst_repos->db_path, pool));
+
+  /* Open repository, since before we only initialized the directories. 
+     Above is a work around because lock creation functions expect a
+     pointer to (svn_repos_t) with initialized paths. */
+
+  /* Exclusively lock the new repository.  
+     No one should be accessing it at the moment */ 
+  SVN_ERR (get_repos (&dst_repos, dst_path,
+                      APR_FLOCK_EXCLUSIVE,
+                      FALSE,    /* don't try to open the db yet. */
+                      pool));
+
+
+  SVN_ERR (svn_fs_hotcopy_berkeley (src_repos->db_path, dst_repos->db_path,
+                                    clean_logs, pool));
+
+  return SVN_NO_ERROR;
+}
+

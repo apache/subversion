@@ -203,7 +203,7 @@ svn_io_open_unique_file (apr_file_t **f,
 
 
 
-/*** Copying and appending files. ***/
+/*** Creating, copying and appending files. ***/
 
 svn_error_t *
 svn_io_copy_file (const char *src,
@@ -484,6 +484,43 @@ svn_io_make_dir_recursively (const char *path, apr_pool_t *pool)
 #endif
 }
 
+svn_error_t *svn_io_file_create (const char *file,
+                                 const char *contents,
+                                 apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+  apr_file_t *f;
+  apr_size_t written;
+
+  SVN_ERR (svn_io_file_open (&f, file,
+                             (APR_WRITE | APR_CREATE | APR_EXCL),
+                             APR_OS_DEFAULT,
+                             pool));
+
+  apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
+  if (apr_err)
+    return svn_error_createf
+      (apr_err, NULL, "svn_io_file_create: error writing '%s'", file);
+
+  apr_err = apr_file_close (f);
+  if (apr_err)
+    return svn_error_createf (apr_err, NULL,
+                              "svn_io_file_create: error closing '%s'", file);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_io_dir_file_copy (const char *src_path, 
+                                   const char *dest_path, 
+                                   const char *file,
+                                   apr_pool_t *pool)
+{
+  const char *file_dest_path = svn_path_join (dest_path, file, pool);
+  const char *file_src_path = svn_path_join (src_path, file, pool);
+
+  SVN_ERR (svn_io_copy_file (file_src_path, file_dest_path, TRUE, pool));
+
+  return SVN_NO_ERROR;
+}
 
 
 /*** Modtime checking. ***/
@@ -740,6 +777,71 @@ svn_io_is_file_executable(svn_boolean_t *executable,
   *executable = FALSE;
 #endif
 
+  return SVN_NO_ERROR;
+}
+
+
+/*** File locking. ***/
+/* Clear all outstanding locks on ARG, an open apr_file_t *. */
+static apr_status_t
+svn_io__file_clear_and_close (void *arg)
+{
+  apr_status_t apr_err;
+  apr_file_t *f = arg;
+
+  /* Remove locks. */
+  apr_err = apr_file_unlock (f);
+  if (apr_err)
+    return apr_err;
+
+  /* Close the file. */
+  apr_err = apr_file_close (f);
+  if (apr_err)
+    return apr_err;
+
+  return 0;
+}
+
+
+svn_error_t *svn_io_file_lock (const char *lock_file,
+                               svn_boolean_t exclusive,
+                               apr_pool_t *pool)
+{
+  int locktype = APR_FLOCK_SHARED;
+  apr_file_t *lockfile_handle;
+  apr_int32_t flags;
+  apr_status_t apr_err;
+
+  if(exclusive == TRUE)
+    locktype = APR_FLOCK_EXCLUSIVE;
+
+  flags = APR_READ;
+  if (locktype == APR_FLOCK_EXCLUSIVE)
+    flags |= APR_WRITE;
+
+  SVN_ERR (svn_io_file_open (&lockfile_handle, lock_file, flags,
+                             APR_OS_DEFAULT,
+                             pool));
+
+  /* Get lock on the filehandle. */
+  apr_err = apr_file_lock (lockfile_handle, locktype);
+  if (apr_err)
+    {
+      const char *lockname = "unknown";
+      if (locktype == APR_FLOCK_SHARED)
+        lockname = "shared";
+      if (locktype == APR_FLOCK_EXCLUSIVE)
+        lockname = "exclusive";
+    
+      return svn_error_createf
+        (apr_err, NULL, "svn_io_file_lock: %s lock on file `%s' failed",
+         lockname, lock_file);
+    }
+  
+  apr_pool_cleanup_register (pool, lockfile_handle, 
+                             svn_io__file_clear_and_close,
+                             apr_pool_cleanup_null);
+                             
   return SVN_NO_ERROR;
 }
 

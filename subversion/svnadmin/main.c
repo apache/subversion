@@ -52,11 +52,45 @@ create_stdio_stream (svn_stream_t **stream,
   return SVN_NO_ERROR;   
 }
 
+/** Helper to parse local repository path. 
+ * Try parsing next parameter of @a os as a local path to repository.
+ * If successfull *@a repos_path will contain internal style path to
+ * the repository.
+ */
+static svn_error_t *
+parse_local_repos_path(apr_getopt_t *os, const char ** repos_path, 
+                       apr_pool_t *pool)
+{
+  *repos_path = NULL;
+
+  /* Check to see if there is one more paramater. */
+  if (os->ind < os->argc)
+    {
+      const char * path = os->argv[os->ind++];
+      SVN_ERR (svn_utf_cstring_to_utf8 (repos_path, path, pool));
+      *repos_path = svn_path_internal_style (*repos_path, pool);
+    }
+
+  if (*repos_path == NULL)
+    {
+      return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL, 
+                               "repository argument required\n");
+    }
+  else if (svn_path_is_url (*repos_path))
+    {
+      return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                "'%s' is an url when it should be a path\n",
+                                *repos_path);
+    }
+
+  return SVN_NO_ERROR;   
+}
 
 
 /** Subcommands. **/
 
 static svn_opt_subcommand_t
+  subcommand_hotcopy,
   subcommand_create,
   subcommand_dump,
   subcommand_help,
@@ -77,8 +111,9 @@ enum
     svnadmin__force_uuid,
     svnadmin__parent_dir,
     svnadmin__bdb_txn_nosync,
+    svnadmin__config_dir,
     svnadmin__bypass_hooks,
-    svnadmin__config_dir
+    svnadmin__clean_logs
   };
 
 /* Option codes and descriptions.
@@ -126,6 +161,9 @@ static const apr_getopt_option_t options_table[] =
     {"config-dir", svnadmin__config_dir, 1,
      "read user configuration files from directory ARG"},
 
+    {"clean-logs", svnadmin__clean_logs, 0,
+     "delete copied, unused log files from the source repository."},
+
     {NULL}
   };
 
@@ -154,6 +192,11 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "usage: svnadmin help [SUBCOMMAND...]\n\n"
      "Describe the usage of this program or its subcommands.\n",
      {svnadmin__version} },
+
+    {"hotcopy", subcommand_hotcopy, {0},
+     "usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n\n"
+     "Makes a hot copy of a repository.\n\n",
+     {svnadmin__clean_logs} },
 
     {"load", subcommand_load, {0},
      "usage: svnadmin load REPOS_PATH\n\n"
@@ -219,12 +262,14 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
 struct svnadmin_opt_state
 {
   const char *repository_path;
+  const char *new_repository_path;                  /* hotcopy dest. path */
   svn_opt_revision_t start_revision, end_revision;  /* -r X[:Y] */
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t version;                            /* --version */
   svn_boolean_t incremental;                        /* --incremental */
   svn_boolean_t quiet;                              /* --quiet */
   svn_boolean_t bdb_txn_nosync;                     /* --bdb-txn-nosync */
+  svn_boolean_t clean_logs;                         /* --clean-logs */
   svn_boolean_t bypass_hooks;                       /* --bypass-hooks */
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
                                                        --force-uuid */
@@ -580,6 +625,21 @@ subcommand_verify (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 }
 
 
+/* This implements `svn_opt_subcommand_t'. */
+svn_error_t *
+subcommand_hotcopy (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+
+  SVN_ERR (svn_repos_hotcopy (opt_state->repository_path, 
+                              opt_state->new_repository_path,
+                              opt_state->clean_logs,
+                              pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /** Main. **/
 
@@ -720,6 +780,9 @@ main (int argc, const char * const *argv)
       case svnadmin__bypass_hooks:
         opt_state.bypass_hooks = TRUE;
         break;
+      case svnadmin__clean_logs:
+        opt_state.clean_logs = TRUE;
+        break;
       case svnadmin__config_dir:
         opt_state.config_dir = 
           apr_pstrdup (pool, svn_path_canonicalize (opt_arg, pool));
@@ -770,36 +833,36 @@ main (int argc, const char * const *argv)
      here and store it in opt_state. */
   if (subcommand->cmd_func != subcommand_help)
     {
-      const char *repos_path = NULL;
-
-      if (os->ind < os->argc)
+      err = parse_local_repos_path (os, 
+                                    &(opt_state.repository_path), 
+                                    pool);
+      if(err)
         {
-          opt_state.repository_path = os->argv[os->ind++];
-          SVN_INT_ERR (svn_utf_cstring_to_utf8 (&(opt_state.repository_path),
-                                                opt_state.repository_path,
-                                                pool));
-          repos_path 
-            = svn_path_internal_style (opt_state.repository_path, pool);
-        }
-
-      if (repos_path == NULL)
-        {
-          fprintf (stderr, "repository argument required\n");
-          subcommand_help (NULL, NULL, pool);
-          svn_pool_destroy (pool);
-          return EXIT_FAILURE;
-        }
-      else if (svn_path_is_url (repos_path))
-        {
-          fprintf (stderr,
-                   "'%s' is a URL when it should be a path\n",
-                   repos_path);
+          svn_handle_error (err, stderr, 0);
+          svn_opt_subcommand_help (subcommand->name, cmd_table,
+                                   options_table, pool);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }
 
-      /* Copy repos path into the OPT_STATE structure. */
-      opt_state.repository_path = repos_path;      
+    }
+
+
+  /* If command is hot copy the third argument will be the new 
+     repository path. */
+  if (subcommand->cmd_func == subcommand_hotcopy)
+    {
+      err = parse_local_repos_path (os,
+                                    &(opt_state.new_repository_path), 
+                                    pool);
+      if(err)
+        {
+          svn_handle_error (err, stderr, 0);
+          svn_opt_subcommand_help (subcommand->name, cmd_table,
+                                   options_table, pool);
+          svn_pool_destroy (pool);
+          return EXIT_FAILURE;
+        }
     }
 
   /* Check that the subcommand wasn't passed any inappropriate options. */

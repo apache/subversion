@@ -167,6 +167,16 @@ svn_error_t *svn_fs_set_berkeley_errcall (svn_fs_t *fs,
 svn_error_t *svn_fs_delete_berkeley (const char *path, apr_pool_t *pool);
 
 
+/** Hot copy Subversion filesystem, stored in a Berkeley DB environment under 
+ * @a src_path to @a dest_path. If @a clean_logs is used is @c TRUE, 
+ * delete copied, unused log files from source repository at @a src_path
+ * Using @a pool for any necessary memory allocations.
+ */
+svn_error_t *svn_fs_hotcopy_berkeley (const char *src_path, 
+                                      const char *dest_path, 
+                                      svn_boolean_t clean_logs,
+                                      apr_pool_t *pool);
+
 /** Perform any necessary non-catastrophic recovery on a Berkeley
  * DB-based Subversion filesystem, stored in the environment @a path.
  * Do any necessary allocation within @a pool.
