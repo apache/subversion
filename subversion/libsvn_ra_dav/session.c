@@ -254,9 +254,10 @@ svn_error_t *svn_ra_dav_init(int abi_version,
 
   apr_hash_set (hash, "http", APR_HASH_KEY_STRING, &dav_plugin);
 
-  /* ### should ask neon whether it supports SSL or not, and skip this
-     ### if it doesn't. */
+#ifdef NEON_SSL
+  /* Only add this if neon is compiled with SSL support. */
   apr_hash_set (hash, "https", APR_HASH_KEY_STRING, &dav_plugin);
+#endif
 
   return NULL;
 }
