@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-04-03 17:16-0300\n"
-"PO-Revision-Date: 2005-04-03 17:18-0300\n"
+"POT-Creation-Date: 2005-04-03 19:53-0300\n"
+"PO-Revision-Date: 2005-04-03 19:54-0300\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Spanish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -340,7 +340,7 @@ msgstr "mostrar ayuda de un subcomando"
 
 #: clients/cmdline/main.c:68
 msgid "specify commit message ARG"
-msgstr "especificar PAR como mensaje de commit"
+msgstr "especifica PAR como mensaje de commit"
 
 #: clients/cmdline/main.c:69
 msgid "print as little as possible"
@@ -555,7 +555,7 @@ msgstr ""
 "conjuntamente con la información sobre el autor y la revisión.\n"
 "uso: blame OBJETIVO[@REV]...\n"
 "\n"
-"  Si se especifica, REV determina la revisión en la qué el objetivo\n"
+"  Si se especifica, REV determina la revisión en la que el objetivo\n"
 "  se busca primero.\n"
 
 #: clients/cmdline/main.c:198
@@ -569,7 +569,7 @@ msgstr ""
 "Envía a la salida el contenido de los archivos o URLs.\n"
 "uso: cat OBJETIVO[@REV]...\n"
 "\n"
-"  Si se especifica, REV determina la revisión en la qué el objetivo\n"
+"  Si se especifica, REV determina la revisión en la que el objetivo\n"
 "  se busca primero.\n"
 
 #: clients/cmdline/main.c:206
@@ -588,7 +588,7 @@ msgstr ""
 "Obtiene una copia de trabajo desde un repositorio.\n"
 "uso: checkout URL[@REV]... [RUTA]\n"
 "\n"
-"  Si se especifica, REV determina la revisión en la qué el objetivo\n"
+"  Si se especifica, REV determina la revisión en la que el objetivo\n"
 "  se busca primero.\n"
 "\n"
 "  Si se omite la ruta, se usará el nombre base del URL como destino.\n"
@@ -769,7 +769,7 @@ msgstr ""
 "     REV se preservarán todos los cambios locales, aunque no se copiarán\n"
 "     archivos que no estén bajo control de versiones.\n"
 "\n"
-"  Si se especifica, REVPEG determina la revisión en la qué el objetivo\n"
+"  Si se especifica, REVPEG determina la revisión en la que el objetivo\n"
 "  se busca primero.\n"
 
 #: clients/cmdline/main.c:335
@@ -836,7 +836,7 @@ msgstr ""
 "  Lista cada archivo OBJETIVO y los contenidos de cada directorio OBJETIVO\n"
 "  tal como existan en el repositorio.  Si OBJETIVO es una ruta de una copia\n"
 "  de trabajo, se usará el URL de repositorio respectivo. Si se especifica,\n"
-"  REV determina la revisión en la qué el objetivo se busca primero.\n"
+"  REV determina la revisión en la que el objetivo se busca primero.\n"
 "\n"
 "  El OBJETIVO por defecto es '.', lo que significa el URL de repositorio\n"
 "  correspondiente al directorio de trabajo actual.\n"
@@ -857,7 +857,7 @@ msgid ""
 "  Use --force to steal the lock from another user or working copy.\n"
 msgstr ""
 "Bloquea rutas de la copia de trabajo o URLs en el repositorio\n"
-"de modo que ningún otro usuario no pueda hacer commit de nuevos cambios\n"
+"de modo que ningún otro usuario pueda hacer commit de nuevos cambios\n"
 "en ellos.\n"
 "uso: lock RUTA...\n"
 "\n"
@@ -1079,7 +1079,7 @@ msgstr ""
 "     2. propget NOMBREPROP --revprop -r REV [URL]\n"
 "\n"
 "  1. Muestra propiedades versionadas. Si se especifica, REV determina\n"
-"     la revisión en la qué el objetivo se busca primero.\n"
+"     la revisión en la que el objetivo se busca primero.\n"
 "  2. Muestra propiedades remotas no versionadas en la revisión del\n"
 "     repositorio.\n"
 "\n"
@@ -1106,7 +1106,7 @@ msgstr ""
 "     2. proplist --revprop -r REV [URL]\n"
 "\n"
 "  1. Lista propiedades versionadas. Si se especifica, REV determina\n"
-"     la revisión en la qué el objetivo se busca primero.\n"
+"     la revisión en la que el objetivo se busca primero.\n"
 "  2. Lista propiedades remotas no versionadas en la revisión del\n"
 "     repositorio.\n"
 
@@ -1356,7 +1356,7 @@ msgstr ""
 "  Los campos restantes son de ancho variable y están delimitados por "
 "espacios:\n"
 "    La revisión de trabajo (con -u o -v)\n"
-"    La ultima revisión y el último autor que efectuaron commit (con -v)\n"
+"    La ultima revisión que se hizo commit y su autor(con -v)\n"
 "    La ruta de copia de trabajo siempre es el último campo, para que\n"
 "    pueda contener espacios en blanco.\n"
 "\n"
@@ -4522,8 +4522,9 @@ msgid ""
 "Protocol error: the MERGE response for the '%s' resource did not return all "
 "of the properties that we asked for (and need to complete the commit)"
 msgstr ""
-"Error de protocolo: la respuesta MERGE para el recurso '%s' no devolvió todas "
-"las propiedades que solicitamos (y que necesitamos para completar el commit)"
+"Error de protocolo: la respuesta MERGE para el recurso '%s' no devolvió "
+"todas las propiedades que solicitamos (y que necesitamos para completar el "
+"commit)"
 
 #: libsvn_ra_dav/merge.c:260
 #, c-format
@@ -6745,7 +6746,7 @@ msgstr "mostrar información de la versión"
 
 #: svnadmin/main.c:236
 msgid "specify revision number ARG (or X:Y range)"
-msgstr "especificar PAR como número de revisión (o rango X:Y)"
+msgstr "especifica el número de revisión (o rango X:Y) PAR"
 
 #: svnadmin/main.c:239
 msgid "dump incrementally"
@@ -6765,11 +6766,15 @@ msgstr "no mostrar progreso (sólo errores) en stderr"
 
 #: svnadmin/main.c:251
 msgid "ignore any repos UUID found in the stream"
-msgstr "ignorar cualquier UUID de repositorio encontrado en el flujo"
+msgstr ""
+"ignorar cualquier UUID de repositorio\n"
+"                             encontrado en el flujo"
 
 #: svnadmin/main.c:254
 msgid "set repos UUID to that found in stream, if any"
-msgstr "asignar al repos el UUID encontrado en el flujo, si lo hay"
+msgstr ""
+"asignar al repos el UUID encontrado\n"
+"                             en el flujo, si lo hay"
 
 #: svnadmin/main.c:257
 msgid "type of repository: 'bdb' or 'fsfs'"
@@ -6777,11 +6782,15 @@ msgstr "tipo de repositorio: 'bdb' o 'fsfs'"
 
 #: svnadmin/main.c:260
 msgid "load at specified directory in repository"
-msgstr "cargar en el directorio especificado en el repositorio"
+msgstr ""
+"cargar en el directorio especificado\n"
+"                             en el repositorio"
 
 #: svnadmin/main.c:263
 msgid "disable fsync at transaction commit [Berkeley DB]"
-msgstr "desactivar fsync en el commit de las transacciones [Berkeley DB]"
+msgstr ""
+"desactivar fsync en el commit de las\n"
+"                             transacciones [Berkeley DB]"
 
 #: svnadmin/main.c:266
 msgid "disable automatic log file removal [Berkeley DB]"
@@ -6789,15 +6798,21 @@ msgstr "desactivar borrado automático de los archivos de log [Berkeley DB]"
 
 #: svnadmin/main.c:272
 msgid "remove redundant log files from source repository"
-msgstr "remover archivos de log redundantes del repositorio fuente"
+msgstr ""
+"remover archivos de log redundantes\n"
+"                             del repositorio fuente"
 
 #: svnadmin/main.c:275
 msgid "call pre-commit hook before committing revisions"
-msgstr "llamar al hook pre-commit antes de hacer commit en las revisiones"
+msgstr ""
+"llamar al hook pre-commit antes de hacer\n"
+"                             commit en las revisiones"
 
 #: svnadmin/main.c:278
 msgid "call post-commit hook after committing revisions"
-msgstr "llamar al hook post-commit después de hacer commit en las revisiones"
+msgstr ""
+"llamar al hook post-commit después de\n"
+"                             hacer commit en las revisiones"
 
 #: svnadmin/main.c:281
 msgid ""
@@ -6850,10 +6865,10 @@ msgstr ""
 "\n"
 "Vuelca el contenido del sistema de archivos a la salida estándar en un\n"
 "formato portable, enviando feedback a la salida de error.  Vuelca las\n"
-"revisiones entre INFERIOR y :SUPERIOR.  Si sólo se especifica INFERIOR\n"
-"se vuelca ese árbol de revisión.  Si se usa --incremental la primera\n"
-"revisión volcada será la diferencia entre la versión previa, en vez\n"
-"del contenido completo.\n"
+"revisiones entre INFERIOR y SUPERIOR.  Si no se especifican revisiones\n"
+"vuelca todas.  Si sólo se especifica INFERIOR se vuelca el árbol de esa\n"
+"revisión.  Si se usa --incremental la primera revisión volcada será la\n"
+"diferencia respecto de la versión previa, en vez del contenido completo.\n"
 
 #: svnadmin/main.c:320
 msgid ""
@@ -7298,11 +7313,11 @@ msgstr ""
 
 #: svnlook/main.c:99
 msgid "specify revision number ARG"
-msgstr "especificar PAR como número de revisión"
+msgstr "especifica PAR como número de revisión"
 
 #: svnlook/main.c:102
 msgid "specify transaction name ARG"
-msgstr "especificar PAR como nombre de transacción"
+msgstr "especifica PAR como nombre de transacción"
 
 #: svnlook/main.c:105
 msgid "be verbose"
