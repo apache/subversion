@@ -308,7 +308,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
           value = "text/plain"; /* assume default */        
         else
           {
-            serr = svn_validate_mime_type (pval->data, p);
+            serr = svn_mime_type_validate (pval->data, p);
             if (serr)
               {
                 /* Probably serr->apr == SVN_ERR_BAD_MIME_TYPE, but

@@ -1099,7 +1099,7 @@ svn_wc_prop_set (const char *name,
     }
   else if ((strcmp (name, SVN_PROP_MIME_TYPE) == 0) && value)
     {
-      SVN_ERR (svn_validate_mime_type (value->data, pool));
+      SVN_ERR (svn_mime_type_validate (value->data, pool));
     }
 
   err = svn_wc_prop_list (&prophash, path, pool);
