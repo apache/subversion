@@ -321,7 +321,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "usage: 1. propdel PROPNAME [PATH [PATH ... ]]\n"
     "       2. propdel PROPNAME --revprop -r REV [URL]\n\n"
     "  1. Removes versioned props in working copy.\n"
-    "  2. Removes unversioned remote prop on repos revision.\n",
+    "  2. Removes unversioned remote prop on repos revision.\n\n",
     {'q', 'R', 'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS} },
   
   { "propedit", svn_cl__propedit, {"pedit", "pe"},
@@ -329,7 +329,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "usage: 1. propedit PROPNAME PATH [PATH [PATH ... ]]\n"
     "       2. propedit PROPNAME --revprop -r REV [URL]\n\n"
     "  1. Edits versioned props in working copy.\n"
-    "  2. Edits unversioned remote prop on repos revision.\n",
+    "  2. Edits unversioned remote prop on repos revision.\n\n",
     {'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__encoding_opt, svn_cl__editor_cmd_opt} },
   
@@ -338,22 +338,15 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "usage: 1. propget PROPNAME [PATH [PATH ... ]]\n"
     "       2. propget PROPNAME --revprop -r REV [URL]\n\n"
     "  1. Prints versioned prop in working copy.\n"
-    "  2. Prints unversioned remote prop on repos revision.\n\n"
-    "  By default, this subcommand will add an extra newline to the end\n"
-    "  of the property values so that the output looks pretty.  Also,\n"
-    "  whenever there are multiple paths involved, each property value\n"
-    "  is prefixed with the path with which it is associated.  Use\n"
-    "  the --strict option to disable these beautifications (useful,\n"
-    "  for example, when redirecting binary property values to a file).\n",
-    {'R', 'r', svn_cl__revprop_opt, svn_cl__strict_opt, 
-     SVN_CL__AUTH_OPTIONS} },
+    "  2. Prints unversioned remote prop on repos revision.\n\n",
+    {'R', 'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS} },
   
   { "proplist", svn_cl__proplist, {"plist", "pl"},
     "List all properties on files, dirs, or revisions.\n"
     "usage: 1. proplist [PATH [PATH ... ]]\n"
     "       2. proplist --revprop -r REV [URL]\n\n"
     "  1. Lists versioned props in working copy.\n"
-    "  2. Lists unversioned remote props on repos revision.\n",
+    "  2. Lists unversioned remote props on repos revision.\n\n",
     {'v', 'R', 'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS} },
   
   { "propset", svn_cl__propset, {"pset", "ps"},
