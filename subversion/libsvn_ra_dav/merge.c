@@ -240,7 +240,7 @@ static svn_error_t * handle_resource(merge_ctx_t *mc)
       svn_error_t *err = NULL;
 
       /* cool. the DAV:version-name tells us the new revision */
-      mc->rev = atol(mc->vsn_name->data);
+      mc->rev = (svn_revnum_t) atol(mc->vsn_name->data);
 
       /* that's all we need from the baseline. replay everything in "hold"
          to commit the resources. */

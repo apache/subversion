@@ -234,7 +234,7 @@ static int dav_svn_parse_vcc_uri(dav_resource_combined *comb,
 
       if (label != NULL)
         {
-          revnum = atoi(label); /* assume slash terminates conversion */
+          revnum = (svn_revnum_t) atol(label); /* assume slash terminates */
           if (!SVN_IS_VALID_REVNUM(revnum))
             return TRUE;        /* ### be nice to get better feedback */
         }
@@ -284,7 +284,7 @@ static int dav_svn_parse_baseline_coll_uri(dav_resource_combined *comb,
                            ### it would imply two slashes, yet those are
                            ### cleaned out within get_resource */
 
-  revnum = atoi(path);  /* assume slash terminates conversion */
+  revnum = (svn_revnum_t) atol(path);  /* assume slash terminates conversion */
   if (!SVN_IS_VALID_REVNUM(revnum))
     return TRUE;        /* ### be nice to get better feedback */
 
@@ -311,7 +311,7 @@ static int dav_svn_parse_baseline_uri(dav_resource_combined *comb,
 
   /* ### what to do with LABEL and USE_CHECKED_IN ?? */
 
-  revnum = atoi(path);
+  revnum = (svn_revnum_t) atol(path);
   if (!SVN_IS_VALID_REVNUM(revnum))
     return TRUE;        /* ### be nice to get better feedback */
 
@@ -355,7 +355,7 @@ static int dav_svn_parse_wrk_baseline_uri(dav_resource_combined *comb,
 
   comb->priv.root.activity_id = apr_pstrndup(comb->res.pool, path,
                                              slash - path);
-  comb->priv.root.rev = atoi(slash + 1);
+  comb->priv.root.rev = (svn_revnum_t) atol(slash + 1);
 
   /* NOTE: comb->priv.repos_path == NULL */
 

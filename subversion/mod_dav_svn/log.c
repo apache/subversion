@@ -161,12 +161,12 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
       if (strcmp(child->name, "start-revision") == 0)
         {
           /* ### assume no white space, no child elems, etc */
-          start = atol(child->first_cdata.first->text);
+          start = (svn_revnum_t) atol(child->first_cdata.first->text);
         }
       else if (strcmp(child->name, "end-revision") == 0)
         {
           /* ### assume no white space, no child elems, etc */
-          end = atol(child->first_cdata.first->text);
+          end = (svn_revnum_t) atol(child->first_cdata.first->text);
         }
       else if (strcmp(child->name, "discover-changed-paths") == 0)
         {

@@ -1023,7 +1023,7 @@ report_single_mod (const char *name,
                                           SVN_WC_ENTRY_ATTR_COPYFROM_REV,
                                           APR_HASH_KEY_STRING);
       if (copyfrom_rev_str)
-        copyfrom_rev = atoi(copyfrom_rev_str->data);
+        copyfrom_rev = (svn_revnum_t) atol(copyfrom_rev_str->data);
     }
   
   /* If the entry is part of a 'copied' subtree, and isn't scheduled

@@ -461,7 +461,7 @@ do_directory_callback (svn_xml__digger_t *digger,
     youngest_frame->ancestor_path = svn_stringbuf_create (ancestor, digger->pool);
   ver = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_REV, atts);
   if (ver)
-    youngest_frame->ancestor_revision = atoi (ver);
+    youngest_frame->ancestor_revision = (svn_revnum_t) atol (ver);
 
   /* Call our editor's callback. */
   if (open_p)
@@ -515,7 +515,7 @@ do_delete_dirent (svn_xml__digger_t *digger,
   /* Get the revision from the tag attributes. */
   ver = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_REV, atts);
   if (ver)
-    revision = atoi (ver);
+    revision = (svn_revnum_t) atol (ver);
 
   /* Call our editor's callback */
   err = digger->editor->delete_entry (dirent_name, 
@@ -557,7 +557,7 @@ do_file_callback (svn_xml__digger_t *digger,
     youngest_frame->ancestor_path = svn_stringbuf_create (ancestor, digger->pool);
   ver = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_REV, atts);
   if (ver)
-    youngest_frame->ancestor_revision = atoi (ver);
+    youngest_frame->ancestor_revision = (svn_revnum_t) atol (ver);
 
   /* Call our editor's callback, and get back a window handler & baton. */
   if (open_p)
@@ -982,7 +982,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
          in ATTS */
       value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_COPYFROM_REV, atts);
       if (value)
-        new_frame->ancestor_revision = atoi (value);
+        new_frame->ancestor_revision = (svn_revnum_t) atol (value);
     }
   else
     {
@@ -996,7 +996,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
          in ATTS */
       value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_REV, atts);
       if (value)
-        new_frame->ancestor_revision = atoi (value);
+        new_frame->ancestor_revision = (svn_revnum_t) atol (value);
     }  
   
   /* Set "id" in frame, if there's any such attribute in ATTS */
@@ -1031,7 +1031,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
           value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_TARGET_REV, 
                                           atts);
           if (value)
-            target_rev = atoi (value);
+            target_rev = (svn_revnum_t) atol (value);
         }
       else
         target_rev = my_digger->base_revision;
