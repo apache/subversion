@@ -673,6 +673,68 @@ generate_label (const char **label,
 }
 
 
+
+/* Helper function to display differences in properties of a file */
+static svn_error_t *
+display_prop_diffs (const apr_array_header_t *prop_diffs,
+                    apr_hash_t *orig_props,
+                    const char *path,
+                    apr_pool_t *pool)
+{
+  int i;
+
+  printf ("\nProperty changes on: %s\n", path);
+  printf ("___________________________________________________________________________\n");
+
+  for (i = 0; i < prop_diffs->nelts; i++)
+    {
+      const svn_string_t *orig_value;
+      const svn_prop_t *pc = &APR_ARRAY_IDX (prop_diffs, i, svn_prop_t);
+
+      if (orig_props)
+        orig_value = apr_hash_get (orig_props, pc->name, APR_HASH_KEY_STRING);
+      else
+        orig_value = NULL;
+
+      printf ("Name: %s\n", pc->name);
+
+      /* For now, we have a rather simple heuristic: if this is an
+         "svn:" property, then assume the value is UTF-8 and must
+         therefore be converted before printing.  Otherwise, just
+         print whatever's there and hope for the best. */
+      {
+        svn_boolean_t val_to_utf8 = svn_prop_is_svn_prop (pc->name);
+        const char *printable_val;
+
+        if (orig_value != NULL)
+          {
+            if (val_to_utf8)
+              SVN_ERR (svn_utf_cstring_from_utf8 (&printable_val, 
+                                                  orig_value->data, pool));
+            else
+              printable_val = orig_value->data;
+            printf ("   - %s\n", printable_val);
+          }
+
+        if (pc->value != NULL)
+          {
+            if (val_to_utf8)
+              SVN_ERR (svn_utf_cstring_from_utf8
+                       (&printable_val, pc->value->data, pool));
+            else
+              printable_val = pc->value->data;
+            printf ("   + %s\n", printable_val);
+          }
+      }
+    }
+
+  printf ("\n");
+  fflush (stdout);
+  return SVN_NO_ERROR;
+}
+
+
+
 /* Recursively print all nodes in the tree that have been modified
    (do not include directories affected only by "bubble-up"). */
 static svn_error_t *
@@ -722,7 +784,7 @@ print_diff_tree (svn_fs_root_t *root,
                                      node->copyfrom_rev, pool));
     }
 
-  /* First, we'll just print file content diffs. */
+  /*** First, we'll just print file content diffs. ***/
   if (node->kind == svn_node_file)
     {
       /* Here's the generalized way we do our diffs:
@@ -785,7 +847,7 @@ print_diff_tree (svn_fs_root_t *root,
           svn_diff_t *diff;
 
           printf ("===========================================================\
-===================\n");
+===============\n");
           fflush (stdout);
 
           if (binary)
@@ -827,12 +889,32 @@ print_diff_tree (svn_fs_root_t *root,
     {
       printf ("\n");
     }
-    
-  /* Now, delete any temporary files. */
+
+  /* Make sure we delete any temporary files. */
   if (orig_path)
     svn_io_remove_file (orig_path, pool);
   if (new_path)
     svn_io_remove_file (new_path, pool);
+
+  /*** Now handle property diffs ***/
+  if ((node->prop_mod) && (node->action != 'D'))
+    {
+      apr_hash_t *local_proptable;
+      apr_hash_t *base_proptable;
+      apr_array_header_t *propchanges, *props;
+
+      SVN_ERR (svn_fs_node_proplist (&local_proptable, root, path, pool));
+      if (node->action == 'A')
+        base_proptable = apr_hash_make (pool);
+      else
+        SVN_ERR (svn_fs_node_proplist (&base_proptable, base_root, 
+                                       base_path, pool));
+      SVN_ERR (svn_prop_diffs (&propchanges, local_proptable, 
+                               base_proptable, pool));
+      SVN_ERR (svn_categorize_props (propchanges, NULL, NULL, &props, pool));
+      if (props->nelts > 0)
+        SVN_ERR (display_prop_diffs (props, base_proptable, path, pool));
+    }
 
   /* Return here if the node has no children. */
   node = node->child;
