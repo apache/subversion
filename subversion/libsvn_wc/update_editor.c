@@ -627,7 +627,6 @@ add_directory (const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct dir_baton *db = make_dir_baton (path, pb->edit_baton, pb, TRUE, pool);
-  char *basename;
   svn_node_kind_t kind;
 
   /* Semantic check.  Either both "copyfrom" args are valid, or they're
