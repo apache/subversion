@@ -11,24 +11,24 @@ $LastChangedDate$
 
 TABLE OF CONTENTS
 
-  * Participating in the community
-  * Theory and documentation
-  * What to read
-  * Directory layout
-  * Coding style
-  * Document everything
-  * Using page breaks
-  * Other conventions
-  * APR status codes
-  * Automated tests
-  * Writing test cases before code
-  * Debugging the server
-  * Writing log entries
-  * Patch submission guidelines
-  * The Configuration/Build System Under Unix
-  * Building from a working copy - Unix
-  * Building from a working copy - Win32
-  * How to create a distribution tarball
+   * Participating in the community
+   * Theory and documentation
+   * What to read
+   * Directory layout
+   * Coding style
+   * Document everything
+   * Using page breaks
+   * Other conventions
+   * APR status codes
+   * Automated tests
+   * Writing test cases before code
+   * Debugging the server
+   * Writing log entries
+   * Patch submission guidelines
+   * The Configuration/Build System Under Unix
+   * Building from a working copy - Unix
+   * Building from a working copy - Win32
+   * How to create a distribution tarball
 
 
 
@@ -47,22 +47,22 @@ repository:
 
 Go to http://subversion.tigris.org and
 
-    * Join the "dev", "svn", and "announce" mailing lists.
+   *  Join the "dev", "svn", and "announce" mailing lists.
       The dev list, dev@subversion.tigris.org, is where almost all
       discussion takes place.  All questions should go there, though
       you might want to check the list archives first.  The "svn"
       list receives automated commit emails.
 
-    * Print out and digest the Spec.  (The postscript might look
+   *  Print out and digest the Spec.  (The postscript might look
       better than the PDF.)  The Spec will give you a theoretical
       overview of Subversion's design.
 
 If you'd like to contribute code, then look at:
 
-    * The bugs/issues database
+   *  The bugs/issues database
       http://subversion.tigris.org/servlets/ProjectIssues
 
-    * The bite-sized tasks page
+   *  The bite-sized tasks page
       http://subversion.tigris.org/project_tasks.html
 
 To submit code, simply send your patches to dev@subversion.tigris.org.
@@ -74,8 +74,7 @@ patches to dev@subversion.tigris.org. :-)
 Theory and documentation
 ========================
 
-  A.  DESIGN
-
+   1. DESIGN
       A design spec was written in June 2000, and is a bit out of
       date.  But it still gives a good theoretical introduction to the
       inner workings of the repository, and to Subversion's various
@@ -83,22 +82,19 @@ Theory and documentation
       versions posted on the Subversion website.
 
 
-  B.  WEBDAV
-
+   2. WEBDAV
       Greg Stein has written an introduction Subversion's network
       protocol, which is an extended dialect of HTTP.  The document is
       'www/webdav-usage.html', and is also posted on the website.
 
 
-  C.  USER MANUAL
-
+   3. USER MANUAL
       We've started documenting some of the behavior of the client;
       it's only a small beginning, but it may help.  Look at
       doc/user/manual/ for this project.
 
 
-  D.  SYSTEM NOTES
-
+   4. SYSTEM NOTES
       A lot of the design ideas for particular aspects of the system
       have been documented in individual files in the notes directory.
 
@@ -118,15 +114,15 @@ comments.  If you read through these, you'll have a pretty good
 understanding of the implementation details.  Here's a suggested
 perusal order:
 
-   * the basic building blocks:  svn_string.h, svn_error.h, svn_types.h
+   *  the basic building blocks:  svn_string.h, svn_error.h, svn_types.h
 
-   * useful utilities:  svn_io.h, svn_path.h, svn_hash.h, svn_xml.h
+   *  useful utilities:  svn_io.h, svn_path.h, svn_hash.h, svn_xml.h
 
-   * the critical interface:  svn_delta.h
+   *  the critical interface:  svn_delta.h
 
-   * client-side interfaces:  svn_ra.h, svn_wc.h, svn_client.h
+   *  client-side interfaces:  svn_ra.h, svn_wc.h, svn_client.h
 
-   * the repository and versioned filesystem:  svn_repos.h svn_fs.h
+   *  the repository and versioned filesystem:  svn_repos.h svn_fs.h
 
 
 Subversion tries to stay portable by using only ANSI/ISO C and by
@@ -138,11 +134,11 @@ Because Subversion depends so heavily on APR, it may be hard to
 understand Subversion without first glancing over certain header files
 in APR (look in apr/include/):
 
-   * memory pools:  apr_pools.h
+   *  memory pools:  apr_pools.h
 
-   * filesystem access:  apr_file_io.h
+   *  filesystem access:  apr_file_io.h
 
-   * hashes and arrays:  apr_hash.h, apr_tables.h
+   *  hashes and arrays:  apr_hash.h, apr_tables.h
 
 
  
@@ -290,46 +286,46 @@ Other Conventions:
 
 In addition to the GNU standards, Subversion uses these conventions:
 
-   * Use only spaces for indenting code, never tabs.  Tab display
-     width is not standardized enough, and anyway it's easier to
-     manually adjust indentation that uses spaces.
+   *  Use only spaces for indenting code, never tabs.  Tab display
+      width is not standardized enough, and anyway it's easier to
+      manually adjust indentation that uses spaces.
 
-   * Stay within 80 columns, the width of a minimal standard display
-     window.
+   *  Stay within 80 columns, the width of a minimal standard display
+      window.
 
-   * Signify internal variables by two underscores after the prefix.
-     That is, when a symbol must (for technical reasons) reside in the
-     global namespace despite not being part of a published interface,
-     then use two underscores following the module prefix.  For
-     example:
+   *  Signify internal variables by two underscores after the prefix.
+      That is, when a symbol must (for technical reasons) reside in the
+      global namespace despite not being part of a published interface,
+      then use two underscores following the module prefix.  For
+      example:
 
-        svn_fs_get_rev_prop ()       /* Part of published API. */
-        svn_fs__parse_props ()       /* For internal use only. */
+         svn_fs_get_rev_prop ()       /* Part of published API. */
+         svn_fs__parse_props ()       /* For internal use only. */
 
-   * Put this comment at the bottom of new source files to make Emacs
-     automatically load svn-dev.el:
+   *  Put this comment at the bottom of new source files to make Emacs
+      automatically load svn-dev.el:
 
-        /*
-         * local variables:
-         * eval: (load-file "../svn-dev.el")
-         * end:
-         */
+         /*
+          * local variables:
+          * eval: (load-file "../svn-dev.el")
+          * end:
+          */
 
-     (This assumes the C file is located in a subdirectory of
-     subversion/subversion/, which most are.)
+      (This assumes the C file is located in a subdirectory of
+      subversion/subversion/, which most are.)
 
-   * We have a tradition of not marking files with the names of
-     individual authors (i.e., we don't put lines like "Author: foo"
-     or "@author foo" in a special position at the top of a source
-     file).  This is to discourage territoriality -- even when a file
-     has only one author, we want to make sure others feel free to
-     make changes.  People might be unnecessarily hesitant if someone
-     appears to have staked ownership on the file.
+   *  We have a tradition of not marking files with the names of
+      individual authors (i.e., we don't put lines like "Author: foo"
+      or "@author foo" in a special position at the top of a source
+      file).  This is to discourage territoriality -- even when a file
+      has only one author, we want to make sure others feel free to
+      make changes.  People might be unnecessarily hesitant if someone
+      appears to have staked ownership on the file.
 
-   * There are many other unspoken conventions maintained througout
-     the code, that are only noticed when someone unintentionally
-     fails to follow them.  Just try to have a sensitive eye for the
-     way things are done, and when in doubt, ask.
+   *  There are many other unspoken conventions maintained througout
+      the code, that are only noticed when someone unintentionally
+      fails to follow them.  Just try to have a sensitive eye for the
+      way things are done, and when in doubt, ask.
 
 
 
@@ -398,11 +394,11 @@ able to set breakpoints in advance when you start Apache in a debugger
 such as GDB.  Instead, you'll need to start up, then interrupt httpd,
 set your breakpoint, and continue:
 
-  % gdb httpd
-  (gdb) run -X
-  ^C
-  (gdb) break some_func_in_mod_dav_svn
-  (gdb) continue
+   % gdb httpd
+   (gdb) run -X
+   ^C
+   (gdb) break some_func_in_mod_dav_svn
+   (gdb) continue
 
 The -X switch is equivalent to -DONE_PROCESS and -DNO_DETACH, which
 ensure that httpd runs as a single thread and remains attached to the
@@ -491,8 +487,8 @@ should consider carefully whether your text doesn't actually belong in
 a comment, alongside the code it explains.  Here's an example of doing
 it right:
 
-       (consume_count): If `count' is unreasonable, return 0 and don't
-       advance input pointer.
+   (consume_count): If `count' is unreasonable, return 0 and don't
+   advance input pointer.
 
 And then, in `consume_count' in `cplus-dem.c':
 
@@ -516,13 +512,13 @@ This is why a new function, for example, needs only a log entry saying
 There are some common-sense exceptions to the need to name everything
 that was changed:
 
-   * If you have made a change which requires trivial changes
-     throughout the rest of the program (e.g., renaming a variable),
-     you needn't name all the functions affected.
+   *  If you have made a change which requires trivial changes
+      throughout the rest of the program (e.g., renaming a variable),
+      you needn't name all the functions affected.
 
-   * If you have rewritten a file completely, the reader understands
-     that everything in it has changed, so your log entry may simply
-     give the file name, and say "Rewritten".
+   *  If you have rewritten a file completely, the reader understands
+      that everything in it has changed, so your log entry may simply
+      give the file name, and say "Rewritten".
 
 In general, there is a tension between making entries easy to find by
 searching for identifiers, and wasting time or producing unreadable
@@ -852,15 +848,15 @@ Building in a non-working copy directory - Unix
 It is possible to configure and build Subversion on Unix in a
 directory other than the working copy. For example
 
-    $ svn co http://svn.collab.net/trunk/repos -d svn
-    $ cd svn
-    $ # get neon/db/apr as required
-    $ chmod +x autogen.sh
-    $ ./autogen.sh
-    $ mkdir ../obj
-    $ cd ../obj
-    $ ../svn/configure [...with options as appropriate...]
-    $ make
+   $ svn co http://svn.collab.net/trunk/repos -d svn
+   $ cd svn
+   $ # get neon/db/apr as required
+   $ chmod +x autogen.sh
+   $ ./autogen.sh
+   $ mkdir ../obj
+   $ cd ../obj
+   $ ../svn/configure [...with options as appropriate...]
+   $ make
 
 puts the Subversion working copy in the directory svn and builds it in
 a separate, parallel directory obj.
@@ -868,20 +864,21 @@ a separate, parallel directory obj.
 Why would you want to do this? Well there are a number of
 reasons...
 
-  You may prefer to avoid "polluting" the working copy with files
-  generated during the build.
+   *  You may prefer to avoid "polluting" the working copy with files
+      generated during the build.
 
-  You may want to put the build directory and the working copy on
-  different physical disks to improve performance.
+   *  You may want to put the build directory and the working copy on
+      different physical disks to improve performance.
 
-  You may want to separate source and object code and only backup the
-  source.
+   *  You may want to separate source and object code and only backup
+      the source.
 
-  You may want to remote mount the working copy on multiple machines,
-  and build for different machines from the same working copy.
+   *  You may want to remote mount the working copy on multiple
+      machines, and build for different machines from the same working
+      copy.
 
-  You may want to build multiple configurations from the same working
-  copy.
+   *  You may want to build multiple configurations from the same
+      working copy.
 
 The last reason above is possibly the most useful.  For instance you
 can have separate debug and optimised builds each using the same
@@ -903,7 +900,7 @@ time.
 To build the client components, you'll need a copy of neon 0.18.2. The
 sources are available at
 
-    http://www.webdav.org/neon/neon-0.18.2.tar.gz
+   http://www.webdav.org/neon/neon-0.18.2.tar.gz
 
 Unpack the distribution into the root directory of the Subversion
 source tree and rename the directory neon-0.18.2 to neon.  The MSVC
@@ -919,16 +916,16 @@ reading.)  You'll get the pre-built libneon.lib and libneonD.lib, as
 well as the modified project files used to build them, the config.hw
 file and the complete (unmodified) neon/src directory.
 
-    IMPORTANT NOTE: These neon libraries should *only* be used when
-         building Subversion. They were build to depend on the verson
-         of expat-lite in the Subversion sources.
+   IMPORTANT NOTE: These neon libraries should *only* be used when
+      building Subversion. They were build to depend on the verson
+      of expat-lite in the Subversion sources.
 
 If you want to build the server components, you'll also need a copy of
 Berkeley DB, version 4.0.14 or newer. The sources are available at
 http://www.sleepycat.com. There is a binary distibution on the Subversion
 downloads page, named
 
-    db-4.0.14-win32.zip
+   db-4.0.14-win32.zip
 
 Unpack the distribution into the root directory of the Subversion source
 tree as <SVN>\db4-win32. It's a good idea to add <SVN>\db4-win32\bin to
