@@ -29,7 +29,7 @@ const unsigned char svn_md5_empty_string_digest[] = {
 
 
 const char *
-svn_md5_digest_to_cstring (unsigned char digest[], apr_pool_t *pool)
+svn_md5_digest_to_cstring (const unsigned char digest[], apr_pool_t *pool)
 {
   static const unsigned char zeros_digest[MD5_DIGESTSIZE] = { 0 };
 

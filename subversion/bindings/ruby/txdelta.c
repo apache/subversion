@@ -198,7 +198,7 @@ send_stream (VALUE self, VALUE aStream)
   pool = svn_pool_create (delta->pool);
 
   SVN_RB_ERR (svn_txdelta_send_stream (stream, delta->handler,
-                                       delta->handler_baton, pool),
+                                       delta->handler_baton, NULL, pool),
               pool);
 
   svn_pool_destroy (pool);

@@ -49,7 +49,8 @@ send_file_contents (svn_fs_root_t *root,
                                     &handler, &handler_baton));
 
   /* Send the file's contents to the delta-window handler. */
-  SVN_ERR (svn_txdelta_send_stream (contents, handler, handler_baton, pool));
+  SVN_ERR (svn_txdelta_send_stream (contents, handler, handler_baton,
+                                    NULL, pool));
 
   return SVN_NO_ERROR;
 }
