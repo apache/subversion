@@ -88,7 +88,7 @@ already know about.)
 
    * r8021
      'svn revert' performance improvement (timestamp sleep once, not N times)
-     Justification: presumably that it's small & safe?  Mike?  Anyone?
+     Justification: it's small & safe, and it's an API change.
      Votes: 
 
 
