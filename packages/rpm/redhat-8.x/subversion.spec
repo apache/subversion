@@ -1,4 +1,4 @@
-%define apache_version 2.0.43-0.1
+%define apache_version 2.0.44-0.1
 %define neon_version 0.23.2
 %define apache_dir /usr
 # If you don't have 360+ MB of free disk space or don't want to run checks then
@@ -84,6 +84,11 @@ Converts CVS repositories to Subversion repositories.
 See /usr/share/doc/subversion*/tools/cvs2svn directory for more information.
 
 %changelog
+* Thu Jan 16 2003 David Summers <david@summersoft.fay.ar.us> 0.16.1-4405
+- Now requires httpd >= 2.0.44-0.1 (APACHE_2_0_BRANCH) which contains the new
+  version of APR/APR-UTILS as of 2003.01.15.
+- Added svnversion command.
+
 * Tue Dec 31 2002 David Summers <david@summersoft.fay.ar.us> 0.16.0-4218
 - Create a svnadmin.static which is copied to svnadmin-version-release
   when the package is erased, so users can still dump/load their repositories
@@ -283,7 +288,7 @@ fi
 
 %preun
 # Save current copy of svnadmin.static
-echo "Saving current svnadmin-%{version}-%{release}.static as svnadmin-%{version}-%{release}"
+echo "Saving current svnadmin-%{version}-%{release}.static as svnadmin-%{version}-%{release}."
 echo "Erase this program only after you make sure you won't need to dump/reload"
 echo "any of your repositories to upgrade to a new version of the database."
 cp /usr/bin/svnadmin-%{version}-%{release}.static /usr/bin/svnadmin-%{version}-%{release}
@@ -323,6 +328,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/bin/svnadmin-%{version}-%{release}.static
 /usr/bin/svnlook
 /usr/bin/svnserve
+/usr/bin/svnversion
 /usr/lib/libsvn_auth*so*
 /usr/lib/libsvn_client*so*
 /usr/lib/libsvn_delta*so*
