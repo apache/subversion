@@ -91,8 +91,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-02-23 20:28+0900\n"
-"PO-Revision-Date: 2005-02-23 20:28+0900\n"
+"POT-Creation-Date: 2005-02-24 23:26+0900\n"
+"PO-Revision-Date: 2005-02-24 23:24+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -5972,7 +5972,7 @@ msgstr "'%s' は URL です。そこはパスで指定するべきです"
 # * Description for 'svn{admin,dumpfilter,look,version} --revision'.
 # * 29 one-byte characters are displayed on the left.
 #: svnadmin/main.c:230 svndumpfilter/main.c:761 svnlook/main.c:95
-#: svnserve/main.c:111 svnversion/main.c:200
+#: svnserve/main.c:111 svnversion/main.c:212
 msgid "show version information"
 msgstr "バージョン情報を表示します"
 
@@ -6895,9 +6895,9 @@ msgstr ""
 msgid "run in foreground (useful for debugging)"
 msgstr "フォアグラウンドで実行します (デバッグに便利です)"
 
-# * Description for 'svnserve --help'.
+# * Description for 'svn{serve,version} --help'.
 # * 29 one-byte characters are displayed on the left.
-#: svnserve/main.c:109
+#: svnserve/main.c:109 svnversion/main.c:211
 msgid "display this help"
 msgstr "このヘルプを表示します"
 
@@ -7003,7 +7003,11 @@ msgstr "アドレス情報を取得できません: %s\n"
 msgid "Can't bind server socket: %s\n"
 msgstr "サーバソケットをバインドできません: %s\n"
 
-#: svnversion/main.c:125
+#: svnversion/main.c:123
+msgid "Type 'svnversion --help' for usage.\n"
+msgstr "使用方法を知りたいときは 'svnversion --help' と打ってください。\n"
+
+#: svnversion/main.c:134
 msgid ""
 "usage: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n"
 "\n"
@@ -7063,24 +7067,24 @@ msgstr ""
 
 # * Description for 'svnversion -n'.
 # * 29 one-byte characters are displayed on the left.
-#: svnversion/main.c:198
+#: svnversion/main.c:209
 msgid "do not output the trailing newline"
 msgstr "出力の末尾に改行をつけません"
 
 # * Description for 'svnversion -c'.
 # * 29 one-byte characters are displayed on the left
-#: svnversion/main.c:199
+#: svnversion/main.c:210
 msgid "last changed rather than current revisions"
 msgstr ""
 "現在のリビジョンの代わりに、最後に変更が加えられた\n"
 "                             リビジョンを表示します"
 
-#: svnversion/main.c:286
+#: svnversion/main.c:301
 #, c-format
 msgid "exported%s"
 msgstr "エクスポートされたものです%s"
 
-#: svnversion/main.c:295
+#: svnversion/main.c:310
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' はバージョン管理下になく、エクスポートされたものでもありません\n"
