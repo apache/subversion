@@ -345,8 +345,126 @@ collabnet = svn.collab.net
       <sect3 id="svn-ch-6-sect-1.3.2">
         <title>Config</title>
 
-        <para>### WRITE THIS ###</para>
+        <para>The <filename>config</filename> file contains the rest
+          of the currently available Subversion run-time options,
+          those not related to networking.  There are only a few
+          options in use at this time, but they are again group into
+          sections in expectation of future additions.</para>
 
+        <para>The <literal>auth</literal> section contains settings
+          related to Subversion's authentication and authorization
+          against the repository.  It contains:</para>
+
+        <variablelist>
+          <varlistentry>
+            <term><literal>store-password</literal></term>
+            <listitem>
+              <para>This instructs Subversion to cache, or not to
+                cache, passwords that are supplied by the user in
+                response to server authentication challenges.  The
+                default value is <literal>yes</literal>.  Set this to
+                <literal>no</literal> to disable this on-disk password
+                caching.</para>
+            </listitem>
+          </varlistentry>
+        </variablelist>
+
+        <para>The <literal>helpers</literal> section controls which
+          external applications Subversion uses to accomplish its
+          tasks.  Valid options in this section are:</para>
+
+        <variablelist>
+          <varlistentry>
+            <term><literal>editor-cmd</literal></term>
+            <listitem>
+              <para>This specifies the program Subversion will use to
+                query the user for a commit log.  This program is also
+                used with the <command>svn propedit</command>
+                command&mdash;a temporary file is populated with the
+                current value of the property the user wishes to edit,
+                and the edits take places right in the editor program
+                (see <xref linkend="svn-ch-6-sect-2" />).  This
+                option's default value is empty.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>diff-cmd</literal></term>
+            <listitem>
+              <para>This specifies the absolute path of a differencing
+                program, used when Subversion generates
+                <quote>diff</quote> output (such as when using the
+                <command>svn diff</command> command).  The default
+                value is the path of the GNU diff utility, as
+                determined by the Subversion source code build
+                system.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>diff3-cmd</literal></term>
+            <listitem>
+              <para>This specifies the absolute path of a three-way
+                differencing program.  Subversion uses this program
+                merge changes made by the user with those received
+                from the repository.  The default value is the path of
+                the GNU diff3 utility, as determined by the Subversion
+                source code build system.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>diff3-has-program-arg</literal></term>
+            <listitem>
+              <para>This flag should be set to <literal>true</literal>
+              if the program specified by the
+              <literal>diff3-cmd</literal> option accepts a
+              <option>--diff-program</option> command-line parameter.
+              Since the <literal>diff3-cmd</literal> option's default
+              value is determined at compilation time, the default
+              value for the <literal>diff3-has-program-arg</literal>
+              is, too.</para>
+            </listitem>
+          </varlistentry>
+        </variablelist>
+
+        <para>The <literal>miscellany</literal> section is where
+          everything that doesn't belong elsewhere winds up.
+          <footnote>
+            <para>Anyone for potluck dinner?</para> 
+          </footnote>
+          In this section, you can find:</para>
+
+        <variablelist>
+          <varlistentry>
+            <term><literal>global-ignores</literal></term>
+            <listitem>
+              <para>When running the <command>svn status</command>
+                command, Subversion lists unversioned files and
+                directories along with the versioned ones, annotating
+                them with a <literal>?</literal> character (see <xref
+                linkend="svn-ch-3-sect-4.3.1" />).  Sometimes, it can
+                be annoying to see uninteresting, unversioned
+                items&mdash;for example, object files that result from
+                a program's compilation&mdash;in this display.  The
+                <literal>global-ignores</literal> option is a list of
+                whitespace-delimited globs which describe the names of
+                files and directories that Subversion should not
+                display unless they are versioned.  The default value
+                is <literal>*.o *.lo *.la #*# .*.rej *.rej .*~ *~
+                .#*</literal>.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>compression</literal></term>
+            <listitem>
+              <para>This specifies whether or not Subversion should
+                attempt to compress network requests made to DAV-ready
+                servers.  The default value is 'yes' (though
+                compression will only occur if that capability is
+                compiled into the network layer).  Set this to 'no' to
+                disable compression, such as when debugging network
+                transmissions.</para>
+            </listitem>
+          </varlistentry>
+        </variablelist>
       </sect3>
     </sect2>
   </sect1>
