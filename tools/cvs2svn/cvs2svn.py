@@ -101,9 +101,9 @@ class CollectData(rcsparse.Sink):
     # revision -> [timestamp, author, operation, old-timestamp]
     self.rev_data = { }
     self.prev = { }
-    self.branch_names = {}
-    self.taglist = {}
-    self.branchlist = {}
+    self.branch_names = { }
+    self.taglist = { }
+    self.branchlist = { }
     self.default_branch = None
 
   def set_branch_name(self, revision, name):
