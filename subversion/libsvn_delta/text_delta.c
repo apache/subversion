@@ -176,7 +176,7 @@ svn_txdelta__insert_op (svn_txdelta_window_t *window,
 
 /* Allocate a delta stream descriptor. */
 
-svn_error_t *
+void
 svn_txdelta (svn_txdelta_stream_t **stream,
              svn_read_fn_t *source_fn,
              void *source_baton,
@@ -197,7 +197,6 @@ svn_txdelta (svn_txdelta_stream_t **stream,
   (*stream)->pos = 0;
   (*stream)->sbuf = apr_palloc (subpool, svn_txdelta__window_size);
   (*stream)->sbuf_len = 0;
-  return SVN_NO_ERROR;
 }
 
 
@@ -286,7 +285,6 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
           return SVN_NO_ERROR;
         }
 
-#if 0 /* Reenable when we can encode arbitrary windows. */
       /* Create the delta window */
       *window = svn_txdelta__make_window (stream->pool);
       (*window)->sview_offset = stream->pos - source_total;
@@ -295,23 +293,6 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
       svn_txdelta__vdelta (*window, buffer,
                            source_total, target_len,
                            temp_pool);
-#else
-      /* Although we know how to generate optimized windows, we can't
-         encode or decode them yet.  Right now we "encode" and
-         "decode" windows by spitting out new data.  So, to be
-         consistent with that, generate a trivial window which just
-         inserts the new text. */
-      *window = svn_txdelta__make_window (stream->pool);
-      (*window)->tview_len = target_len;
-      svn_string_appendbytes ((*window)->new, buffer + source_total,
-                              target_len, (*window)->pool);
-      (*window)->num_ops = 1;
-      (*window)->ops = apr_palloc ((*window)->pool,
-                                   sizeof (*(*window)->ops));
-      (*window)->ops[0].action_code = svn_txdelta_new;
-      (*window)->ops[0].offset = 0;
-      (*window)->ops[0].length = target_len;
-#endif
 
       /* That's it. */
       apr_destroy_pool (temp_pool);
@@ -475,7 +456,7 @@ apply_window (svn_txdelta_window_t *window, void *baton)
 }
 
 
-svn_error_t *
+void
 svn_txdelta_apply (svn_read_fn_t *source_fn,
                    void *source_baton,
                    svn_write_fn_t *target_fn,
@@ -502,7 +483,6 @@ svn_txdelta_apply (svn_read_fn_t *source_fn,
   ab->tbuf_size = 0;
   *handler = apply_window;
   *handler_baton = ab;
-  return SVN_NO_ERROR;
 }
 
 

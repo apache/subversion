@@ -42,6 +42,7 @@ main (int argc, char **argv)
   svn_txdelta_window_handler_t *handler;
   void *baton;
   apr_size_t new_data = 0, total = 0;
+  int num_ops = 0, nwindows = 0;
 
   source_file = fopen (argv[1], "rb");
   target_file = fopen (argv[2], "rb");
@@ -55,7 +56,11 @@ main (int argc, char **argv)
     svn_txdelta_next_window (&window, stream);
     handler (window, baton);
     if (window != NULL)
-      new_data += window->new->len;
+      {
+        new_data += window->new->len;
+        num_ops += window->num_ops;
+        nwindows++;
+      }
     svn_txdelta_free_window (window);
   } while (window != NULL);
 
@@ -63,7 +68,8 @@ main (int argc, char **argv)
   fclose (source_file);
   fclose (target_file);
 
-  printf("%lu %lu\n", (unsigned long) new_data, (unsigned long) total);
+  printf("%d %d %lu %lu\n", nwindows, num_ops, (unsigned long) new_data,
+         (unsigned long) total);
 
   apr_terminate();
   exit (0);

@@ -640,7 +640,8 @@ do_close_file (svn_xml__digger_t *digger)
     }
 
   /* Drop the current parsers and file_baton. */
-  digger->vcdiff_parser = NULL;
+  digger->svndiff_write = NULL;
+  digger->svndiff_baton = NULL;
   digger->file_baton = NULL;
 
   return SVN_NO_ERROR;
@@ -675,10 +676,10 @@ lookup_file_baton (void **file_baton,
 
 
 
-/* When we find a new text-delta, a editor callback returns to us a
-   vcdiff-window-consumption routine that we use to create a unique
-   vcdiff parser.  (The vcdiff parser knows how to "push" windows of
-   vcdata to the consumption routine.)  */
+/* When we find a new text-delta, a editor callback returns to us an
+   svndiff-window-consumption routine that we use to create a unique
+   svndiff parser.  (The svndiff parser knows how to "push" windows of
+   svndiff to the consumption routine.)  */
 static svn_error_t *
 do_begin_textdelta (svn_xml__digger_t *digger)
 {
@@ -738,10 +739,11 @@ do_begin_textdelta (svn_xml__digger_t *digger)
   if (err)
     return err;
 
-  /* Now create a vcdiff parser based on the consumer/baton we got. */  
-  digger->vcdiff_parser = svn_make_vcdiff_parser (window_consumer,
-                                                  consumer_baton,
-                                                  digger->pool);
+  /* Now create an svndiff parser based on the consumer/baton we got. */
+  svn_txdelta_parse_svndiff (window_consumer, consumer_baton,
+                             digger->pool,
+                             &digger->svndiff_write, &digger->svndiff_baton);
+  
   return SVN_NO_ERROR;
 }
 
@@ -1164,12 +1166,14 @@ xml_handle_end (void *userData, const char *name)
   /* EVENT: when we get a </text-delta>, do major cleanup.  */
   if (strcmp (name, "text-delta") == 0)
     {
-      if (digger->vcdiff_parser)
+      if (digger->svndiff_write != NULL)
         {     
-          /* (length = 0) implies that we're done parsing vcdiff stream.
+          /* (length = 0) implies that we're done parsing svndiff stream.
              Let the parser flush its buffer, clean up, whatever it wants
              to do. */
-          err = svn_vcdiff_parse (digger->vcdiff_parser, NULL, 0);
+          apr_size_t len = 0;
+          err = digger->svndiff_write (digger->svndiff_baton, NULL, &len,
+                                       digger->pool);
           if (err)
             svn_xml_signal_bailout (err, digger->svn_parser);
         }
@@ -1264,20 +1268,20 @@ xml_handle_data (void *userData, const char *data, int len)
     {
       svn_error_t *err;
       
-      /* Check that we have a vcdiff parser to deal with this data. */
-      if (! digger->vcdiff_parser)
+      /* Check that we have an svndiff parser to deal with this data. */
+      if (digger->svndiff_write == NULL)
         return;
 
-      /* Pass the data to our current vcdiff parser.  When the vcdiff
-         parser has received enough bytes to make a "window", it
-         pushes the window to the uber-caller's own window-consumer
-         routine. */
-      err = svn_vcdiff_parse (digger->vcdiff_parser, data, length);
+      /* Pass the data to our current svndiff parser.  When the parser
+         has received enough bytes to make a "window", it pushes the
+         window to the uber-caller's own window-consumer routine. */
+      err = digger->svndiff_write (digger->svndiff_baton, data, &length,
+                                   digger->pool);
       if (err)
         {
           svn_xml_signal_bailout
             (svn_error_quick_wrap
-             (err, "xml_handle_data: vcdiff parser choked."),
+             (err, "xml_handle_data: svndiff parser choked."),
              digger->svn_parser);
           return;
         }                          
@@ -1376,7 +1380,8 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
   digger->rootdir_baton    = rootdir_baton;
   digger->dir_baton        = rootdir_baton;
   digger->validation_error = SVN_NO_ERROR;
-  digger->vcdiff_parser    = NULL;
+  digger->svndiff_write    = NULL;
+  digger->svndiff_baton    = NULL;
   digger->postfix_hash     = apr_make_hash (main_subpool);
 
   /* Create an expat parser */

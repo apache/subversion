@@ -66,6 +66,7 @@
 struct encoder_baton {
   svn_write_fn_t *write_fn;
   void *write_baton;
+  svn_boolean_t header_done;
   apr_pool_t *pool;
 };
 
@@ -140,6 +141,16 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   svn_error_t *err;
   apr_size_t len;
 
+  /* Make sure we write the header.  */
+  if (eb->header_done == FALSE)
+    {
+      len = 4;
+      err = eb->write_fn (eb->write_baton, "SVN\0", &len, pool);
+      if (err != SVN_NO_ERROR)
+        return err;
+      eb->header_done = TRUE;
+    }
+
   if (window == NULL)
     {
       /* We're done; pass the word on to the output function and clean up.  */
@@ -194,7 +205,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   return err;
 }
 
-svn_error_t *
+void
 svn_txdelta_to_svndiff (svn_write_fn_t *write_fn,
 			void *write_baton,
 			apr_pool_t *pool,
@@ -202,18 +213,16 @@ svn_txdelta_to_svndiff (svn_write_fn_t *write_fn,
 			void **handler_baton)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
-  apr_size_t len = 4;
   struct encoder_baton *eb;
 
   eb = apr_palloc (subpool, sizeof (*eb));
   eb->write_fn = write_fn;
   eb->write_baton = write_baton;
+  eb->header_done = FALSE;
   eb->pool = subpool;
 
   *handler = window_handler;
   *handler_baton = eb;
-
-  return write_fn(write_baton, "SVN\0", &len, subpool);
 }
 
 
@@ -378,7 +387,6 @@ write_handler (void *baton,
   if (*len == 0)
     {
       /* We're done.  Or we should be, anyway.  */
-      /* XXX Check that db->buffer->len == 0 */
       if (db->header_bytes < 4 || db->buffer->len != 0)
         return svn_error_create (SVN_ERR_MALFORMED_FILE, 0, NULL, pool,
                                  "unexpected end of svndiff input");
@@ -498,7 +506,7 @@ write_handler (void *baton,
   return err;
 }
 
-svn_error_t *
+void
 svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t *handler,
                            void *handler_baton,
                            apr_pool_t *pool,
@@ -518,7 +526,6 @@ svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t *handler,
   db->header_bytes = 0;
   *write_fn = write_handler;
   *write_baton = db;
-  return SVN_NO_ERROR;
 }
 
 

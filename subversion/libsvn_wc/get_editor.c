@@ -657,10 +657,8 @@ apply_textdelta (void *file_baton,
     goto error;
 
   /* Prepare to apply the delta.  */
-  err = svn_txdelta_apply (read_from_file, hb->source, write_to_file, hb->dest,
-                           subpool, &hb->apply_handler, &hb->apply_baton);
-  if (err != SVN_NO_ERROR)
-    goto error;
+  svn_txdelta_apply (read_from_file, hb->source, write_to_file, hb->dest,
+                     subpool, &hb->apply_handler, &hb->apply_baton);
 
   hb->pool = subpool;
   hb->fb = fb;
