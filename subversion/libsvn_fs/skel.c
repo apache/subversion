@@ -536,6 +536,11 @@ svn_fs__list_length (skel_t *skel)
 int
 svn_fs__skels_are_equal (skel_t *skel1, skel_t *skel2)
 {
+  if (skel1 == skel2)
+    return 1;
+
+  /* Else not `eq', but might still be `equal'. */
+
   if (skel1->is_atom && skel2->is_atom)
     {
       if ((skel1->len == skel2->len)
