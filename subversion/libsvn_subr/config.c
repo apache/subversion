@@ -56,10 +56,10 @@ struct cfg_option_t
   const char *hash_key;
 
   /* The unexpanded option value. */
-  svn_stringbuf_t *value;
+  const char *value;
 
   /* The expanded option value. */
-  svn_stringbuf_t *x_value;
+  const char *x_value;
 
   /* Expansion flag. If this is TRUE, this value has already been expanded.
      In this case, if x_value is NULL, no expansions were necessary,
@@ -211,7 +211,7 @@ for_each_option (svn_config_t *cfg, void *baton, apr_pool_t *pool,
 static svn_boolean_t
 merge_callback (void *baton, cfg_section_t *section, cfg_option_t *option)
 {
-  svn_config_set (baton, section->name, option->name, option->value->data);
+  svn_config_set (baton, section->name, option->name, option->value);
   return FALSE;
 }
 
@@ -322,9 +322,9 @@ make_string_from_option (const char **valuep,
      C strings now, so below we ignore length and use only data. */ 
 
   if (opt->x_value)
-    *valuep = opt->x_value->data;
+    *valuep = opt->x_value;
   else
-    *valuep = opt->value->data;
+    *valuep = opt->value;
 }
 
 
@@ -357,7 +357,7 @@ svn_config_set (svn_config_t *cfg,
   if (opt != NULL)
     {
       /* Replace the option's value. */
-      svn_stringbuf_set (opt->value, value);
+      opt->value = apr_pstrdup (cfg->pool, value);
       opt->expanded = FALSE;
       return;
     }
@@ -367,7 +367,7 @@ svn_config_set (svn_config_t *cfg,
   opt->name = apr_pstrdup (cfg->pool, option);
   opt->hash_key = make_hash_key (apr_pstrdup (cfg->pool, option));
 
-  opt->value = svn_stringbuf_create (value, cfg->pool);
+  opt->value = apr_pstrdup (cfg->pool, value);
   opt->x_value = NULL;
   opt->expanded = FALSE;
 
