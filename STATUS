@@ -27,7 +27,7 @@ Candidate changes:
     Notes:
       r10487 really doesn't need a vote, but I included it for completness.
     Votes:
-      +1: breser, kfogel
+      +1: breser, kfogel, maxb, ghudson
 
   * r10573
     Update documentation and batch file slightly for zip files.
