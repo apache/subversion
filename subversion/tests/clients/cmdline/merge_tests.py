@@ -900,7 +900,7 @@ test_list = [ None,
               add_with_history,
               delete_file_and_dir,
               simple_property_merges,
-              XFail(merge_one_file),
+              # XFail(merge_one_file),   ### Suspended, while Karl thinks.
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.
