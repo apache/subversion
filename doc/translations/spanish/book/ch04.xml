@@ -869,18 +869,19 @@ $ svn status
           repositorio: si ambos están relacionados, entonces se dice
           que un objeto es el ancestro del otro.</para>
 
-        <para>For example, suppose you commit revision 100, which
-          includes a change to a file <filename>foo.c</filename>.
-          Then <filename>foo.c@99</filename> is an
-          <quote>ancestor</quote> of <filename>foo.c@100</filename>.
-          On the other hand, suppose you commit the deletion of
-          <filename>foo.c</filename> in revision 101, and then add a
-          new file by the same name in revision 102.  In this case,
-          <filename>foo.c@99</filename> and
-          <filename>foo.c@102</filename> may appear to be related
-          (they have the same path), but in fact are completely
-          different objects in the repository.  They share no history
-          or <quote>ancestry</quote>.</para>
+        <para>Por ejemplo, suponga que envía cambios al repositorio
+          en la revisión 100, los cuales incluyen un
+          cambio al fichero <filename>foo.c</filename>.
+          Entonces <filename>foo.c@99</filename> es un
+          <quote>ancestro</quote> de <filename>foo.c@100</filename>.
+          Por otro lado, suponga que hace efectivo el borrado
+          de <filename>foo.c</filename> en la revisión 101, y
+          entonces añade un nuevo fichero con el mismo nombre en la
+          revisión 102. En este caso, <filename>foo.c@99</filename> y
+          <filename>foo.c@102</filename> pueden parecer relacionados
+          (tienen la misma ruta), pero de hecho son objetos
+          completamente diferentes en el repositorio. No comparten
+          historial o <quote>ascendencia</quote>.</para>
 
         <para>The reason for bringing this up is to point out an
           important difference between <command>svn diff</command> and
