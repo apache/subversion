@@ -40,7 +40,8 @@
 static svn_error_t *
 run_cmd_with_output (const char *cmd,
                      const char **args,
-                     apr_wait_t *status,
+                     int *exitcode,
+                     apr_exit_why_e *exitwhy,
                      apr_pool_t *pool)
 {
   apr_file_t *outhandle, *errhandle;
@@ -58,7 +59,7 @@ run_cmd_with_output (const char *cmd,
       (apr_err, 0, NULL, pool,
        "run_cmd_with_output: can't open handle to stderr");
 
-  return svn_io_run_cmd (".", cmd, args, status, NULL, outhandle,
+  return svn_io_run_cmd (".", cmd, args, exitcode, exitwhy, NULL, outhandle,
                          errhandle, pool);
 }
 
@@ -76,7 +77,6 @@ run_start_commit_hook (svn_fs_t *fs,
   if ((! svn_io_check_path (svn_stringbuf_create (hook, pool), &kind, pool)) 
       && (kind == svn_node_file))
     {
-      apr_wait_t status;
       svn_error_t *err;
       const char *args[4];
 
@@ -85,7 +85,7 @@ run_start_commit_hook (svn_fs_t *fs,
       args[2] = user;
       args[3] = NULL;
 
-      if ((err = run_cmd_with_output (hook, args, &status, pool)))
+      if ((err = run_cmd_with_output (hook, args, NULL, NULL, pool)))
         {
           return svn_error_createf 
             (SVN_ERR_REPOS_HOOK_FAILURE, 0, err, pool,
@@ -111,7 +111,8 @@ run_pre_commit_hook (svn_fs_t *fs,
       && (kind == svn_node_file))
     {
       svn_error_t *err;
-      apr_wait_t status;
+      int exitcode;
+      apr_exit_why_e exitwhy;
       const char *args[4];
 
       args[0] = hook;
@@ -119,13 +120,13 @@ run_pre_commit_hook (svn_fs_t *fs,
       args[2] = txn_name;
       args[3] = NULL;
 
-      if ((err = run_cmd_with_output (hook, args, &status, pool)))
+      if ((err = run_cmd_with_output (hook, args, &exitcode, &exitwhy, pool)))
         {
           return svn_error_createf 
             (SVN_ERR_REPOS_HOOK_FAILURE, 0, err, pool,
              "run_pre_commit_hook: error running cmd `%s'", hook);
         }
-      if (status != 0)
+      if (! APR_PROC_CHECK_EXIT (exitwhy) || exitcode != 0)
         {
           return svn_error_create
               (SVN_ERR_REPOS_HOOK_FAILURE, 0, err, pool,
@@ -151,7 +152,6 @@ run_post_commit_hook (svn_fs_t *fs,
       && (kind == svn_node_file))
     {
       svn_error_t *err;
-      apr_wait_t status;
       const char *args[4];
 
       args[0] = hook;
@@ -159,7 +159,7 @@ run_post_commit_hook (svn_fs_t *fs,
       args[2] = apr_psprintf (pool, "%lu", rev);
       args[3] = NULL;
 
-      if ((err = run_cmd_with_output (hook, args, &status, pool)))
+      if ((err = run_cmd_with_output (hook, args, NULL, NULL, pool)))
         {
           return svn_error_createf 
             (SVN_ERR_REPOS_HOOK_FAILURE, 0, err, pool,

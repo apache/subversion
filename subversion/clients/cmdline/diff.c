@@ -107,7 +107,6 @@ svn_cl__print_file_diff (svn_stringbuf_t *path,
   apr_status_t status;
   svn_stringbuf_t *pristine_copy_path;
   svn_boolean_t text_is_modified = FALSE;
-  apr_wait_t proc_status;
   const char **args;
   int i = 0;
 
@@ -159,10 +158,10 @@ svn_cl__print_file_diff (svn_stringbuf_t *path,
   apr_file_printf (outhandle, "Index: %s\n", path->data);
   apr_file_printf (outhandle, "===================================================================\n");
 
-  SVN_ERR(svn_io_run_cmd (".", SVN_CLIENT_DIFF, args, &proc_status,
+  SVN_ERR(svn_io_run_cmd (".", SVN_CLIENT_DIFF, args, NULL, NULL,
                         NULL, outhandle, NULL, pool));
 
-  /* TODO: Handle proc_status == 2 (i.e. errors with diff) here */
+  /* TODO: Handle exit code == 2 (i.e. errors with diff) here */
   
   /* TODO:  someday we'll need to worry about two things here:
 

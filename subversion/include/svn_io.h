@@ -25,6 +25,7 @@
 #include <apr.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
+#include <apr_thread_proc.h>
 
 #include "svn_types.h"
 #include "svn_error.h"
@@ -279,14 +280,16 @@ svn_error_t *svn_io_get_dirents (apr_hash_t **dirents,
    Connect PROGRAM's stdin, stdout, and stderr to INFILE, OUTFILE, and
    ERRFILE, except where they are null.
 
-   STATUS will contain the exit code of the process upon return.
-  
+   EXITCODE will contain the exit code of the process upon return, and
+   EXITWHY will indicate why the process terminated.
+
    ARGS is a list of (const char *)'s, terminated by NULL.  ARGS[0] is
    the name of the program, though it need not be the same as CMD.  */
 svn_error_t *svn_io_run_cmd (const char *path,
                              const char *cmd,
                              const char *const *args,
-                             apr_wait_t *status,
+                             int *exitcode,
+                             apr_exit_why_e *exitwhy,
                              apr_file_t *infile,
                              apr_file_t *outfile,
                              apr_file_t *errfile,

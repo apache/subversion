@@ -1276,7 +1276,7 @@ close_file (void *file_baton)
                        "close_file: error starting diff process");
                   
                   /* Wait for the diff command to finish. */
-                  apr_err = apr_proc_wait (&diff_proc, NULL, APR_WAIT);
+                  apr_err = apr_proc_wait (&diff_proc, NULL, NULL, APR_WAIT);
                   if (APR_STATUS_IS_CHILD_NOTDONE (apr_err))
                     return svn_error_createf
                       (apr_err, 0, NULL, fb->pool,
