@@ -275,12 +275,15 @@ side) is the same, except that it will not host a BDB repository
 on Win9x platforms (Win95/Win98/WinME), because <a
 href="http://www.sleepycat.com">Berkeley DB</a> has
 shared-memory segment problems on Win9x.  FSFS repositories
-(introduced in version 1.1) do not have this restriction.</p>
+(introduced in version 1.1) do not have this restriction; however, due
+to a limitation in Win9x's file-locking support, they also don't work
+in Win9x.  That limitation will hopefully be worked around in
+1.1.2.</p>
 
 <p>To reiterate, the Subversion client can be run on any platform
 where APR runs. The Subversion server can also be run on any
-platform where APR runs, but cannot host a BDB repository
-on Win95/Win98/WinMe.</p>
+platform where APR runs, but cannot host a repository on
+Win95/Win98/WinMe.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
