@@ -38,6 +38,7 @@
 #include "../../libsvn_fs/id.h"
 
 #include "../../libsvn_fs/bdb/rev-table.h"
+#include "../../libsvn_fs/bdb/txn-table.h"
 #include "../../libsvn_fs/bdb/nodes-table.h"
 
 #include "../../libsvn_delta/delta.h"
@@ -5556,6 +5557,97 @@ skip_deltas (const char **msg,
 }
 
 
+/* Trail-ish helpers for redundant_copy(). */
+struct get_txn_args
+{
+  svn_fs__transaction_t **txn;
+  const char *txn_name;
+  svn_fs_t *fs;
+};
+
+static svn_error_t *
+txn_body_get_txn (void *baton, trail_t *trail)
+{
+  struct get_txn_args *args = baton;
+  return svn_fs__bdb_get_txn (args->txn, args->fs, args->txn_name, trail);
+}
+
+
+static svn_error_t *
+redundant_copy (const char **msg,
+                svn_boolean_t msg_only,
+                apr_pool_t *pool)
+{ 
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  const char *txn_name;
+  svn_fs__transaction_t *transaction;
+  svn_fs_root_t *txn_root, *rev_root;
+  const svn_fs_id_t *old_D_id, *new_D_id;
+  svn_revnum_t youngest_rev = 0;
+  struct get_txn_args args;
+  
+  *msg = "ensure no-op for redundant copies";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create a filesystem and repository. */
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-redundant-copy", pool));
+
+  /* Create the greek tree in revision 1. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /* In a transaction, copy A to Z. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
+  SVN_ERR (svn_fs_txn_name (&txn_name, txn, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, pool));
+  SVN_ERR (svn_fs_copy (rev_root, "A", txn_root, "Z", pool));
+
+  /* Now, examine the transaction.  There should have been only one
+     copy there. */
+  args.fs = fs;
+  args.txn_name = txn_name;
+  args.txn = &transaction;
+  SVN_ERR (svn_fs__retry (fs, txn_body_get_txn, &args, 1, pool));
+  if (transaction->copies->nelts != 1)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
+                              "Expected 1 copy; got %d",
+                              transaction->copies->nelts);
+
+  /* Get the node-rev-id for A/D (the reason will be clear a little later). */
+  SVN_ERR (svn_fs_node_id (&old_D_id, txn_root, "A/D", pool));
+
+  /* Now copy A/D/G Z/D/G. */
+  SVN_ERR (svn_fs_copy (rev_root, "A/D/G", txn_root, "Z/D/G", pool));
+
+  /* Now, examine the transaction.  There should still only have been
+     one copy operation that "took". */
+  SVN_ERR (svn_fs__retry (fs, txn_body_get_txn, &args, 1, pool));
+  if (transaction->copies->nelts != 1)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
+                              "Expected only 1 copy; got %d",
+                              transaction->copies->nelts);
+
+  /* Finally, check the node-rev-id for "Z/D" -- it should never have
+     been made mutable (since the second copy should not have taken
+     place). */
+  SVN_ERR (svn_fs_node_id (&new_D_id, txn_root, "A/D", pool));
+  if (! svn_string_compare (svn_fs_unparse_id (old_D_id, pool),
+                            svn_fs_unparse_id (new_D_id, pool)))
+    return svn_error_create 
+      (SVN_ERR_TEST_FAILED, NULL,
+       "Expected equivalent node-rev-ids; got differing ones");
+
+  return SVN_NO_ERROR;
+}
+
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -5600,5 +5692,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (branch_test),
     SVN_TEST_PASS (verify_checksum),
     SVN_TEST_PASS (skip_deltas),
+    SVN_TEST_PASS (redundant_copy),
     SVN_TEST_NULL
   };

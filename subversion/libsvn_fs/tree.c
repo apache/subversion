@@ -2921,6 +2921,16 @@ txn_body_copy (void *baton,
   SVN_ERR (open_path (&to_parent_path, to_root, to_path, 
                       open_path_last_optional, trail));
 
+
+  /* If the destination node already exists as the same node as the
+     source (in other words, this operation would result in nothing
+     happening at all), just do nothing an return successfully,
+     proud that you saved yourself from a tiresome task. */
+  if ((to_parent_path->node)
+      && (svn_fs_compare_ids (svn_fs__dag_get_id (from_node),
+                              svn_fs__dag_get_id (to_parent_path->node)) == 0))
+    return SVN_NO_ERROR;
+
   if (svn_fs_is_revision_root (from_root))
     {
       svn_fs_path_change_kind_t kind;
