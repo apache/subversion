@@ -107,12 +107,23 @@ restore_file (const char *file_path,
   SVN_ERR (svn_wc_entry (&entry, file_path, adm_access, FALSE, pool));
   assert(entry != NULL);
 
-  /* Possibly set timestamp to last-commit-time. */
+  /* Possibly set timestamp to last-commit-time or, if defined,
+   * the last modification-time. */
   if (use_commit_times && (! special))
     {
-      SVN_ERR (svn_io_set_file_affected_time (entry->cmt_date,
-                                              file_path, pool));
+      const svn_string_t *mtime;
+
+      SVN_ERR (svn_wc_prop_get (&mtime, SVN_PROP_TEXT_TIME, 
+                                file_path, adm_access, pool));
+
+      if (mtime)
+        SVN_ERR (svn_time_from_cstring (&tstamp, mtime->data, pool));
+      else
       tstamp = entry->cmt_date;
+
+
+      SVN_ERR (svn_io_set_file_affected_time (tstamp,
+                                              file_path, pool));
     }
   else
     {

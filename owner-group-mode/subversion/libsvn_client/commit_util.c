@@ -418,7 +418,28 @@ harvest_committables (apr_hash_t *committables,
 
   /* Set text/prop modification flags accordingly. */
   if (text_mod)
+    {
     state_flags |= SVN_CLIENT_COMMIT_ITEM_TEXT_MODS;
+
+      SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_TEXT_TIME, path, adm_access,
+                                pool));
+      /* If the text has been modified AND the modification time
+       * should be recorded, there's an property modification too. */
+      if (propval)
+        {
+          apr_time_t mtime;
+
+          SVN_ERR (svn_io_file_affected_time (&mtime, path, pool) );
+          propval=svn_string_create( 
+                                    svn_time_to_cstring (mtime, pool),
+                                    pool );
+          SVN_ERR (svn_wc_prop_set (SVN_PROP_TEXT_TIME, 
+                                    propval, path, adm_access, pool) );
+          state_flags |= SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+        }
+
+    }
+
   if (prop_mod)
     state_flags |= SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
 

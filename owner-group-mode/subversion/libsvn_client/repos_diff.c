@@ -907,7 +907,22 @@ change_file_prop (void *file_baton,
 
   propchange = apr_array_push (b->propchanges);
   propchange->name = apr_pstrdup (b->pool, name);
+
+  /* if the svn:text-time property is set, use the current file
+   * date instead of the value */
+  if (strcmp (name, SVN_PROP_TEXT_TIME) == 0)
+    {
+      apr_time_t mtime;
+
+      SVN_ERR (svn_io_file_affected_time (&mtime, b->path, b->pool) );
+      propchange->value=svn_string_create( 
+                                          svn_time_to_cstring (mtime, b->pool),
+                                          b->pool );
+    }
+  else
+    {
   propchange->value = value ? svn_string_dup (value, b->pool) : NULL;
+    }
   
   return SVN_NO_ERROR;
 }

@@ -188,6 +188,9 @@ svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
 /** The value to force the special property to when set. */
 #define SVN_PROP_SPECIAL_VALUE "*"
 
+/** The files' last modification time */
+#define SVN_PROP_TEXT_TIME  SVN_PROP_PREFIX "text-time"
+
 /** Describes external items to check out into this directory. 
  *
  * The format is a series of lines, such as:
