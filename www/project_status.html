@@ -10,41 +10,9 @@ Last updated:  27 February 2001
 
 (taken from our <a href="project_docs.html">design document</a>)
 
-
-<pre>
-                    +--------------------+
-                    | commandline or GUI |
-                    |    client app      |
-         +----------+--------------------+----------+ <=== Client interface
-         |              Client Library              |
-         |                                          |
-         |        +----+                            |
-         |        |    |                            |
- +-------+--------+    +--------------+--+----------+ <=== Network interface
- | Working Copy   |    |    Remote    |  | Local    |
- | Management lib |    | Repos Access |  | Repos    |
- +----------------+    +--------------+  | Access   |
-                       |     neon     |  |          |
-                       +--------------+  |          |
-                          ^              |          |
-                         /               |          |
-                   DAV  /                |          |
-                       /                 |          |
-                      v                  |          |
-              +---------+                |          |
-              |         |                |          |
-              | Apache  |                |          |
-              |         |                |          |
-              +---------+                |          |
-              | mod_DAV |                |          |
-            +-------------+              |          |
-            | mod_DAV_SVN |              |          |
- +----------+-------------+--------------+----------+ <=== Filesystem interface
- |                                                  |
- |               Subversion Filesystem              |
- |                                                  |
- +--------------------------------------------------+
-</pre>
+<p>
+<img src="subversion-diagram.gif">
+<p>
 
 <br><br>
 
