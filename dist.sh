@@ -23,12 +23,12 @@
 # Rolling block.
 DIST_SANDBOX=.dist_sandbox
 
-# The tarball's basename, also the name of the subdirectory into which
-# it should unpack.
-DISTNAME=subversion
-
 # The "X.Y" part of ${DISTNAME}-X.Y.tar.gz
 VERSION=`grep SVN_VERSION configure.in | cut -f 2 -d ' ' | sed -e 's/"//g' | sed -e 's/,//g'`
+
+# The tarball's basename, also the name of the subdirectory into which
+# it should unpack.
+DISTNAME=subversion-${VERSION}
 
 ### Clean up the old docs so we're guaranteed the latest ones.
 # This is necessary only because "make clean" doesn't appear
@@ -101,14 +101,14 @@ does not do what you need, please send in a patch!
 EOF
 
 # Make the tarball.
-echo "Rolling ${DISTNAME}-${VERSION}.tar.gz ..."
-(cd ${DIST_SANDBOX}; tar zcvpf ${DISTNAME}-${VERSION}.tar.gz ${DISTNAME})
+echo "Rolling ${DISTNAME}.tar.gz ..."
+(cd ${DIST_SANDBOX}; tar zcvpf ${DISTNAME}.tar.gz ${DISTNAME})
 
 # Copy it upstairs and clean up.
-cp ${DIST_SANDBOX}/${DISTNAME}-${VERSION}.tar.gz .
+cp ${DIST_SANDBOX}/${DISTNAME}.tar.gz .
 rm -rf ${DIST_SANDBOX}
 
 echo ""
 echo "Done:"
-ls -l ${DISTNAME}-${VERSION}.tar.gz
+ls -l ${DISTNAME}.tar.gz
 echo ""
