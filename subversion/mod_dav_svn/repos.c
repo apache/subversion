@@ -1777,7 +1777,9 @@ static dav_error * dav_svn_set_headers(request_rec *r,
         }
     }
 
-  if (mimetype == NULL)
+  if ((mimetype == NULL)
+      && (resource->type == DAV_RESOURCE_TYPE_VERSION)
+      && (resource->info->repos_path != NULL))
     {
       svn_string_t *value;
 
