@@ -106,7 +106,7 @@ static svn_error_t * log_receiver(void *baton,
                          " copyfrom-rev=\"%" SVN_REVNUM_T_FMT "\">"
                          "%s</S:added-path>" DEBUG_CR,
                          apr_xml_quote_string(pool, log_item->copyfrom_path, 
-                                              1)); /* escape quotes */
+                                              1), /* escape quotes */
                          log_item->copyfrom_rev,
                          apr_xml_quote_string(pool, path, 0));
               else
@@ -123,7 +123,7 @@ static svn_error_t * log_receiver(void *baton,
                          " copyfrom-rev=\"%" SVN_REVNUM_T_FMT "\">"
                          "%s</S:replaced-path>" DEBUG_CR,
                          apr_xml_quote_string(pool, log_item->copyfrom_path, 
-                                              1)); /* escape quotes */
+                                              1), /* escape quotes */
                          log_item->copyfrom_rev,
                          apr_xml_quote_string(pool, path, 0));
               else
