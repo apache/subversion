@@ -138,8 +138,10 @@ def get_post_commit_hook_path(repo_dir):
 
 
 # For running subversion and returning the output
-def run_svn(*varargs):
-  "Run svn with VARARGS; return stdout, stderr as lists of lines."
+def run_svn(error_expected, *varargs):
+  """Run svn with VARARGS; return stdout, stderr as lists of lines.
+ 
+     If ERROR_EXPECTED is None, any stderr also will be printed. """
 
   command = svn_binary
   for arg in varargs:
@@ -153,7 +155,7 @@ def run_svn(*varargs):
   infile.close()
   errfile.close()
 
-  if stderr_lines:
+  if (not error_expected) and (stderr_lines):
     print stderr_lines
 
   return stdout_lines, stderr_lines

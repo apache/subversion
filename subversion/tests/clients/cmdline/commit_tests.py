@@ -101,45 +101,45 @@ def make_standard_slew_of_changes(wc_dir):
 
   # Add a directory
   os.mkdir('Q')
-  svntest.main.run_svn('add', 'Q')
+  svntest.main.run_svn(None, 'add', 'Q')
   
   # Remove two directories
-  svntest.main.run_svn('rm', os.path.join('A', 'B', 'E'))
-  svntest.main.run_svn('rm', os.path.join('A', 'C'))
+  svntest.main.run_svn(None, 'rm', os.path.join('A', 'B', 'E'))
+  svntest.main.run_svn(None, 'rm', os.path.join('A', 'C'))
   
   # Replace one of the removed directories
-  svntest.main.run_svn('add', os.path.join('A', 'B', 'E'))
+  svntest.main.run_svn(None, 'add', os.path.join('A', 'B', 'E'))
   
   # Make property mods to two directories
-  svntest.main.run_svn('propset', 'foo', 'bar', os.curdir)
-  svntest.main.run_svn('propset', 'foo2', 'bar2', os.path.join('A', 'D'))
+  svntest.main.run_svn(None, 'propset', 'foo', 'bar', os.curdir)
+  svntest.main.run_svn(None, 'propset', 'foo2', 'bar2', os.path.join('A', 'D'))
   
   # Add three files
   svntest.main.file_append(os.path.join('A', 'B', 'E', 'bloo'), "hi")
   svntest.main.file_append(os.path.join('A', 'D', 'H', 'gloo'), "hello")
   svntest.main.file_append(os.path.join('Q', 'floo'), "yo")
-  svntest.main.run_svn('add', os.path.join('A', 'B', 'E', 'bloo'))
-  svntest.main.run_svn('add', os.path.join('A', 'D', 'H', 'gloo'))
-  svntest.main.run_svn('add', os.path.join('Q', 'floo'))
+  svntest.main.run_svn(None, 'add', os.path.join('A', 'B', 'E', 'bloo'))
+  svntest.main.run_svn(None, 'add', os.path.join('A', 'D', 'H', 'gloo'))
+  svntest.main.run_svn(None, 'add', os.path.join('Q', 'floo'))
   
   # Remove three files
-  svntest.main.run_svn('rm', os.path.join('A', 'D', 'G', 'rho'))
-  svntest.main.run_svn('rm', os.path.join('A', 'D', 'H', 'chi'))
-  svntest.main.run_svn('rm', os.path.join('A', 'D', 'gamma'))
+  svntest.main.run_svn(None, 'rm', os.path.join('A', 'D', 'G', 'rho'))
+  svntest.main.run_svn(None, 'rm', os.path.join('A', 'D', 'H', 'chi'))
+  svntest.main.run_svn(None, 'rm', os.path.join('A', 'D', 'gamma'))
   
   # Replace one of the removed files
-  svntest.main.run_svn('add', os.path.join('A', 'D', 'H', 'chi'))
+  svntest.main.run_svn(None, 'add', os.path.join('A', 'D', 'H', 'chi'))
   
   # Make textual mods to two files
   svntest.main.file_append(os.path.join('A', 'B', 'lambda'), "new ltext")
   svntest.main.file_append(os.path.join('A', 'D', 'H', 'omega'), "new otext")
   
   # Make property mods to three files
-  svntest.main.run_svn('propset', 'blue', 'azul',
+  svntest.main.run_svn(None, 'propset', 'blue', 'azul',
                        os.path.join('A', 'D', 'H', 'omega'))  
-  svntest.main.run_svn('propset', 'green', 'verde',
+  svntest.main.run_svn(None, 'propset', 'green', 'verde',
                        os.path.join('Q', 'floo'))
-  svntest.main.run_svn('propset', 'red', 'rojo',
+  svntest.main.run_svn(None, 'propset', 'red', 'rojo',
                        os.path.join('A', 'D', 'G', 'pi'))  
 
   # Restore the CWD.
@@ -392,13 +392,13 @@ def nested_dir_replacements():
   if svntest.actions.make_repo_and_wc(sbox): return 1
 
   # Delete and re-add A/D (a replacement), and A/D/H (another replace).
-  svntest.main.run_svn('rm', os.path.join(wc_dir, 'A', 'D'))
-  svntest.main.run_svn('add', os.path.join(wc_dir, 'A', 'D'))
-  svntest.main.run_svn('add', os.path.join(wc_dir, 'A', 'D', 'H'))
+  svntest.main.run_svn(None, 'rm', os.path.join(wc_dir, 'A', 'D'))
+  svntest.main.run_svn(None, 'add', os.path.join(wc_dir, 'A', 'D'))
+  svntest.main.run_svn(None, 'add', os.path.join(wc_dir, 'A', 'D', 'H'))
                        
   # For kicks, add new file A/D/bloo.
   svntest.main.file_append(os.path.join(wc_dir, 'A', 'D', 'bloo'), "hi")
-  svntest.main.run_svn('add', os.path.join(wc_dir, 'A', 'D', 'bloo'))
+  svntest.main.run_svn(None, 'add', os.path.join(wc_dir, 'A', 'D', 'bloo'))
   
   # Verify pre-commit status:
   #    - A/D and A/D/H should both be scheduled as "R" at rev 0
@@ -491,7 +491,7 @@ def hudson_part_1():
 
   # Remove gamma from the working copy.
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma') 
-  svntest.main.run_svn('rm', gamma_path)
+  svntest.main.run_svn(None, 'rm', gamma_path)
 
   # Create expected commit output.
   output_list = [ [gamma_path, None, {}, {'verb' : 'Deleting' }] ]
@@ -550,7 +550,7 @@ def hudson_part_1_variation_1():
 
   # Remove H from the working copy.
   H_path = os.path.join(wc_dir, 'A', 'D', 'H') 
-  svntest.main.run_svn('rm', H_path)
+  svntest.main.run_svn(None, 'rm', H_path)
 
   # Create expected commit output.
   output_list = [ [H_path, None, {}, {'verb' : 'Deleting' }] ]
@@ -619,7 +619,7 @@ def hudson_part_1_variation_2():
 
   # Remove gamma from the working copy.
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma') 
-  svntest.main.run_svn('rm', gamma_path)
+  svntest.main.run_svn(None, 'rm', gamma_path)
 
   # Create expected commit output.
   output_list = [ [gamma_path, None, {}, {'verb' : 'Deleting' }] ]
@@ -642,7 +642,7 @@ def hudson_part_1_variation_2():
 
   # Now gamma should be marked as `deleted' under the hood.
   # Go ahead and re-add gamma, so that is *also* scheduled for addition.
-  svntest.main.run_svn('add', gamma_path)
+  svntest.main.run_svn(None, 'add', gamma_path)
 
   # For sanity, examine status: it should show a revision 2 tree with
   # gamma scheduled for addition.
@@ -695,7 +695,7 @@ def hudson_part_2():
 
   # Remove gamma from the working copy.
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma') 
-  svntest.main.run_svn('rm', gamma_path)
+  svntest.main.run_svn(None, 'rm', gamma_path)
 
   # Create expected commit output.
   output_list = [ [gamma_path, None, {}, {'verb' : 'Deleting' }] ]
@@ -720,7 +720,7 @@ def hudson_part_2():
   # revision 2.  Meanwhile, A/D is still lagging at revision 1.
 
   # Make a propchange on A/D
-  svntest.main.run_svn('ps', 'foo', 'bar', os.path.join(wc_dir, 'A', 'D'))
+  svntest.main.run_svn(None, 'ps', 'foo', 'bar', os.path.join(wc_dir, 'A', 'D'))
 
   # Commit and *expect* a repository Merge failure:
   return svntest.actions.run_and_verify_commit (wc_dir,

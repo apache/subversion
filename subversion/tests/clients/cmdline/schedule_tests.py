@@ -53,7 +53,7 @@ def add_files():
   svntest.main.file_append (zeta_path, "This is the file 'zeta'.")
   svntest.main.file_append (epsilon_path, "This is the file 'epsilon'.")
   
-  svntest.main.run_svn('add', delta_path, zeta_path, epsilon_path)
+  svntest.main.run_svn(None, 'add', delta_path, zeta_path, epsilon_path)
   
   # Make sure the adds show up as such in status
   status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
@@ -98,7 +98,7 @@ def add_directories():
   os.mkdir (Y_path)
   os.mkdir (Z_path)
   
-  svntest.main.run_svn('add', X_path, Y_path, Z_path)
+  svntest.main.run_svn(None, 'add', X_path, Y_path, Z_path)
   
   # Make sure the adds show up as such in status
   status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
@@ -164,7 +164,7 @@ def nested_adds():
   svntest.main.file_append (zeta_path, "This is the file 'zeta'.")
 
   # Finally, let's try some recursive adds of our new files and directories
-  svntest.main.run_svn('add', '--recursive', X_path, Y_path, Z_path)
+  svntest.main.run_svn(None, 'add', '--recursive', X_path, Y_path, Z_path)
     
   # Make sure the adds show up as such in status
   status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')

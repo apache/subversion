@@ -213,7 +213,7 @@ def get_props(path):
   # respecting the black-box paradigm.
 
   props = {}
-  output, errput = main.run_svn("proplist", path)
+  output, errput = main.run_svn(None, "proplist", path)
 
   for line in output:
     name, value = line.split(' : ')

@@ -44,15 +44,15 @@ def make_local_props():
     return 1
 
   # Add properties to one file and one directory
-  svntest.main.run_svn('propset', 'blue', 'azul',
+  svntest.main.run_svn(None, 'propset', 'blue', 'azul',
                        os.path.join(wc_dir, 'A', 'mu'))
-  svntest.main.run_svn('propset', 'green', 'verde',
+  svntest.main.run_svn(None, 'propset', 'green', 'verde',
                        os.path.join(wc_dir, 'A', 'mu'))  
-  svntest.main.run_svn('propset', 'red', 'rojo',
+  svntest.main.run_svn(None, 'propset', 'red', 'rojo',
                        os.path.join(wc_dir, 'A', 'D', 'G'))  
-  svntest.main.run_svn('propset', 'red', 'rojo',
+  svntest.main.run_svn(None, 'propset', 'red', 'rojo',
                        os.path.join(wc_dir, 'A', 'D', 'G'))  
-  svntest.main.run_svn('propset', 'yellow', 'amarillo',
+  svntest.main.run_svn(None, 'propset', 'yellow', 'amarillo',
                        os.path.join(wc_dir, 'A', 'D', 'G'))
 
   # Make sure they show up as local mods in status
@@ -68,7 +68,7 @@ def make_local_props():
     return 1
 
   # Remove one property
-  svntest.main.run_svn('propdel', 'yellow',
+  svntest.main.run_svn(None, 'propdel', 'yellow',
                        os.path.join(wc_dir, 'A', 'D', 'G'))  
 
   # What we expect the disk tree to look like:
@@ -102,8 +102,8 @@ def commit_props():
   # Add a property to a file and a directory
   mu_path = os.path.join(wc_dir, 'A', 'mu') 
   H_path = os.path.join(wc_dir, 'A', 'D', 'H') 
-  svntest.main.run_svn('propset', 'blue', 'azul', mu_path)
-  svntest.main.run_svn('propset', 'red', 'rojo', H_path)
+  svntest.main.run_svn(None, 'propset', 'blue', 'azul', mu_path)
+  svntest.main.run_svn(None, 'propset', 'red', 'rojo', H_path)
 
   # Create expected output tree.
   output_list = [ [mu_path, None, {}, {'verb' : 'Sending'}],
@@ -147,8 +147,8 @@ def update_props():
   # Add a property to a file and a directory
   mu_path = os.path.join(wc_dir, 'A', 'mu') 
   H_path = os.path.join(wc_dir, 'A', 'D', 'H') 
-  svntest.main.run_svn('propset', 'blue', 'azul', mu_path)
-  svntest.main.run_svn('propset', 'red', 'rojo', H_path)
+  svntest.main.run_svn(None, 'propset', 'blue', 'azul', mu_path)
+  svntest.main.run_svn(None, 'propset', 'red', 'rojo', H_path)
 
   # Create expected output tree.
   output_list = [ [mu_path, None, {}, {'verb' : 'Sending'}],
@@ -216,7 +216,7 @@ def downdate_props():
 
   # Add a property to a file
   iota_path = os.path.join(wc_dir, 'iota') 
-  svntest.main.run_svn('propset', 'cash-sound', 'cha-ching!', iota_path)
+  svntest.main.run_svn(None, 'propset', 'cash-sound', 'cha-ching!', iota_path)
 
   # Create expected output tree.
   output_list = [ [iota_path, None, {}, {'verb' : 'Sending'}] ]
