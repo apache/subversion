@@ -27,8 +27,8 @@ Please either remove that subdir or don't use the --with-apr-libs option.])
     if test "$withval" = "yes" ; then
       AC_MSG_ERROR([--with-apr-libs requires an argument.])
     else
-      APRVARS=$withval/APRVARS
-      APR_LIBS=$withval
+      APRVARS="$withval/APRVARS"
+      APR_LIBS="$withval"
     fi
   ])
   
@@ -44,7 +44,7 @@ Please either remove that subdir or don't use the --with-apr-includes option.])
     if test "$withval" = "yes" ; then
       AC_MSG_ERROR([--with-apr-includes requires an argument.])
     else
-      APR_INCLUDES=$withval
+      APR_INCLUDES="$withval"
     fi
   ])
   
@@ -57,10 +57,10 @@ Please either remove that subdir or don't use the --with-apr-includes option.])
 Please either remove that subdir or don't use the --with-apr option.])
     fi
 
-    if [ "$withval" != "yes" ]; then
-      APR_INCLUDES=$withval/include
-      APRVARS=$withval/lib/APRVARS
-      APR_LIBS=$withval/lib
+    if test "$withval" != "yes" ; then
+      APR_INCLUDES="$withval/include"
+      APRVARS="$withval/lib/APRVARS"
+      APR_LIBS="$withval/lib"
     fi
   ])
 
@@ -108,14 +108,26 @@ dnl SVN_FIND_APR()
 dnl Look in standard places for APRVARS, apr.h, and -lapr.
 AC_DEFUN(SVN_FIND_APR,
 [
-  AC_CHECK_HEADER(apr.h)
-  dirs="/etc /usr/lib /usr/local/lib /opt/apr/lib"
-  for dir in $dirs; do
-    if test -f $dir/APRVARS ; then
+  CPPFLAGS_save=$CPPFLAGS
+  if test -n "$APR_INCLUDES" ; then
+    CPPFLAGS="$CPPFLAGS -I$APR_INCLUDES"
+  fi
+  AC_CHECK_HEADER(apr.h, apr_h="yes", apr_h="no")
+  if test "$apr_h" = "no" ; then
+    echo "Couldn't find apr.h"
+    SVN_DOWNLOAD_APR
+  fi
+
+  CPPFLAGS=$CPPFLAGS_save
+  if test -z $APRVARS ; then
+    dirs="/etc /usr/lib /usr/local/lib /opt/apr/lib"
+    for dir in $dirs; do
+      if test -f $dir/APRVARS ; then
         APRVARS=$dir/APRVARS
         break
-    fi
-  done
+      fi
+    done
+  fi
 ])
 
 
