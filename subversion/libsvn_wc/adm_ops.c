@@ -829,6 +829,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
   enum svn_node_kind kind;
   svn_boolean_t modified_p;
   svn_error_t *err;
+  apr_status_t apr_err;
   apr_time_t tstamp;
 
   full_path = svn_stringbuf_dup (parent_dir, pool);
@@ -840,17 +841,30 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
     {
       SVN_ERR (svn_wc__prop_path (&thing, full_path, 0, pool)); 
       SVN_ERR (svn_wc__prop_base_path (&pristine_thing, full_path, 0, pool));
-      err = svn_io_copy_file (pristine_thing->data, thing->data, pool);
-      if (err)
-        return svn_error_createf 
-          (err->apr_err, 0, NULL, pool,
-           "revert_admin_things:  Error restoring pristine props for '%s'", 
-           full_path->data);
-      SVN_ERR (svn_io_file_affected_time (&tstamp, thing, pool));
+      svn_io_check_path (pristine_thing, &kind, pool);
+      if (kind == svn_node_file)
+        {
+          err = svn_io_copy_file (pristine_thing->data, thing->data, pool);
+          if (err)
+            return svn_error_createf 
+              (err->apr_err, 0, NULL, pool,
+               "revert_admin_things:  Error restoring props for `%s'", 
+               full_path->data);
+          SVN_ERR (svn_io_file_affected_time (&tstamp, thing, pool));
+          entry->prop_time = tstamp;
+        }
+      else
+        {
+          apr_err = apr_file_remove (thing->data, pool);
+          if (apr_err)
+            return svn_error_createf 
+              (apr_err, 0, NULL, pool,
+               "revert_admin_things:  Error removing props for `%s'", 
+               full_path->data);
+        }
 
       /* Modify our entry structure. */
       *modify_flags |= SVN_WC__ENTRY_MODIFY_PROP_TIME;
-      entry->prop_time = tstamp;
     }
 
   if (entry->kind == svn_node_file)
@@ -886,7 +900,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
           if (err)
             return svn_error_createf 
               (err->apr_err, 0, NULL, pool,
-               "revert_admin_things:  Error restoring pristine text for '%s'", 
+               "revert_admin_things:  Error restoring text for '%s'", 
                full_path->data);
           SVN_ERR (svn_io_file_affected_time (&tstamp, full_path, pool));
 
@@ -899,7 +913,6 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
   if (entry->conflicted)
     {
       svn_stringbuf_t *rej_file = NULL, *prej_file = NULL, *rmfile;
-      apr_status_t apr_err;
 
       /* Get the names of the reject files. */
       rej_file = apr_hash_get (entry->attributes, 
@@ -914,6 +927,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
         {
           rmfile = svn_stringbuf_dup (parent_dir, pool);
           svn_path_add_component (rmfile, rej_file, svn_path_local_style);
+          
           apr_err = apr_file_remove (rmfile->data, pool);
           if (apr_err)
             return svn_error_createf
