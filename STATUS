@@ -166,4 +166,4 @@ Candidate changes:
     contents in 'svnadmin verify' (r10508,r10509).
     Justification: Must keeps the precious data nice and safe
     Votes:
-     +1: ghudson
+     +1: ghudson, kfogel
