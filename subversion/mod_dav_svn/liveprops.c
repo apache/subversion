@@ -221,7 +221,13 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
           }
 
         /* Check if we have access to this path and return NOTDEF if
-           we don't. */
+           we don't.  It is enough to determine if we have read access
+           to the current path because the rules dictate that svn:date
+           is accessible if at least one changed path is accessible.
+           While it's possible that the property is accessible even
+           though the current path is inaccessible (because another
+           path in the same revision is accessible), it's a silly
+           situation worth ignoring to gain the extra performance. */
         arb.r = resource->info->r;
         arb.repos = resource->info->repos;
         serr = dav_svn_authz_read(&allowed,
@@ -238,8 +244,8 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
         if (! allowed)
           return DAV_PROP_INSERT_NOTDEF;
 
-        /* Get the date property of the created revision. The authz is
-           already performed, so we don't need to do it here too. */
+        /* Get the svn:author property of the created revision. The authz
+           is already performed, so we don't need to do it here too. */
         serr = svn_repos_fs_revision_prop(&last_author,
                                           resource->info->repos->repos,
                                           committed_rev,
@@ -689,7 +695,13 @@ int dav_svn_get_last_modified_time (const char **datestring,
     return 0;
 
   /* Check if we have access to this path and return NOTDEF if we
-     don't. */
+     don't.  It is enough to determine if we have read access to the
+     current path because the rules dictate that svn:date is
+     accessible if at least one changed path is accessible.  While
+     it's possible that the property is accessible even though the
+     current path is inaccessible (because another path in the same
+     revision is accessible), it's a silly situation worth ignoring to
+     gain the extra performance. */
   arb.r = resource->info->r;
   arb.repos = resource->info->repos;
   serr = dav_svn_authz_read(&allowed,
