@@ -38,7 +38,7 @@
 # Global stuff
 
 import sys   # for argv[]
-import os    # for system()
+import os    # for popen2()
 
 # Global:  set this to the location of the svn binary
 svn_binary = '../../../client/svn'
@@ -47,15 +47,23 @@ svn_binary = '../../../client/svn'
 # Utilities shared by the tests
 
 def run_svn(*varargs):
-  "Run the subversion command with the supplied args."
+  "Run svn with VARARGS, and return stdout as a list of lines."
 
   command = svn_binary
   for arg in varargs:
-    command = command + " " + `arg`
-  return os.system(command)
+    command = command + " " + `arg`    # build the command string
+  infile, outfile = os.popen2(command) # run command, get 2 file descriptors
+  return outfile.readlines()           # convert stdout to list of lines
 
 
 #  -- put more shared routines here --
+
+# Need a routine which creates a repository containing a greek tree
+
+# Need a routine which creates a working copy of a certain name,
+# by copying a 'pristine' one.  (And which creates the pristine one via
+# checkout if necessary.)
+
 
 ######################################################################
 # Main functions
