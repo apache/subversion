@@ -338,6 +338,12 @@ Et voila!  Subversion knew enough, via the `representations' and
 because of the node revision's "file" type, to interpret the result as
 file contents, not as a directory entry list.
 
+(Note that the `strings' table stores multiple DB values per key.
+That is, although it's accurate to say there is one string per key,
+the string may be divided into multiple consecutive blocks, all
+sharing that key.  You use a Berkeley DB cursor to find the desired
+value[s], when retrieving a particular offset+len in a string.)
+
 Representations know nothing about ancestry -- the `representations'
 table never refers to node revision id's, only to strings or to other
 representations.  In other words, while the `nodes' table allows
@@ -712,7 +718,7 @@ Strings:
 
                  STRING ::= RAWTEXT | LISTTEXT | DIFFTEXT
                 RAWTEXT ::= /{anything.class}*/ ;
-               SKELTEXT ::= list ;
+               LISTTEXT ::= list ;
                DIFFTEXT ::= /{anything.class}*/ ;
 
 
