@@ -1165,8 +1165,8 @@ apply_textdelta (void *file_baton,
                  void **handler_baton)
 {
   struct file_baton *fb = file_baton;
-  apr_pool_t *subpool = svn_pool_create (fb->pool);
-  struct handler_baton *hb = apr_palloc (subpool, sizeof (*hb));
+  apr_pool_t *handler_pool = svn_pool_create (fb->pool);
+  struct handler_baton *hb = apr_palloc (handler_pool, sizeof (*hb));
   svn_error_t *err;
 
   /* Open the text base for reading, unless this is a checkout. */
@@ -1194,9 +1194,9 @@ apply_textdelta (void *file_baton,
         const svn_wc_entry_t *ent;
 
         SVN_ERR (svn_wc_adm_retrieve (&adm_access, fb->edit_baton->adm_access,
-                                      svn_path_dirname (fb->path, subpool),
-                                      subpool));
-        SVN_ERR (svn_wc_entry (&ent, fb->path, adm_access, FALSE, subpool));
+                                      svn_path_dirname (fb->path, pool),
+                                      pool));
+        SVN_ERR (svn_wc_entry (&ent, fb->path, adm_access, FALSE, pool));
 
         /* Only compare checksums this file has an entry, and the
            entry has a checksum.  If there's no entry, it just means
@@ -1210,8 +1210,8 @@ apply_textdelta (void *file_baton,
             const char *hex_digest;
             const char *tb;
 
-            tb = svn_wc__text_base_path (fb->path, FALSE, subpool);
-            SVN_ERR (svn_io_file_checksum (digest, tb, subpool));
+            tb = svn_wc__text_base_path (fb->path, FALSE, pool);
+            SVN_ERR (svn_io_file_checksum (digest, tb, pool));
             hex_digest = svn_md5_digest_to_cstring (digest, pool);
             
             /* Compare the base_checksum here, rather than in the
@@ -1251,17 +1251,19 @@ apply_textdelta (void *file_baton,
           }
       }
 
-      err = svn_wc__open_text_base (&hb->source, fb->path, APR_READ, subpool);
+      err = svn_wc__open_text_base (&hb->source, fb->path, APR_READ,
+                                    handler_pool);
       if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
         {
           if (hb->source)
             {
-              svn_error_t *err2 = svn_wc__close_text_base (hb->source, fb->path,
-                                                           0, subpool);
+              svn_error_t *err2 = svn_wc__close_text_base (hb->source,
+                                                           fb->path,
+                                                           0, handler_pool);
               if (err2)
                 svn_error_clear (err2);
             }
-          svn_pool_destroy (subpool);
+          svn_pool_destroy (handler_pool);
           return err;
         }
       else if (err)
@@ -1275,12 +1277,12 @@ apply_textdelta (void *file_baton,
   hb->dest = NULL;
   err = svn_wc__open_text_base (&hb->dest, fb->path,
                                 (APR_WRITE | APR_TRUNCATE | APR_CREATE),
-                                subpool);
+                                handler_pool);
   if (err)
     {
       if (hb->dest)
-        svn_wc__close_text_base (hb->dest, fb->path, 0, subpool);
-      svn_pool_destroy (subpool);
+        svn_wc__close_text_base (hb->dest, fb->path, 0, handler_pool);
+      svn_pool_destroy (handler_pool);
       return err;
     }
   
@@ -1289,13 +1291,13 @@ apply_textdelta (void *file_baton,
     const char *tmp_path;
 
     apr_file_name_get (&tmp_path, hb->dest);
-    svn_txdelta_apply (svn_stream_from_aprfile (hb->source, subpool),
-                       svn_stream_from_aprfile (hb->dest, subpool),
-                       fb->digest, tmp_path, subpool,
+    svn_txdelta_apply (svn_stream_from_aprfile (hb->source, handler_pool),
+                       svn_stream_from_aprfile (hb->dest, handler_pool),
+                       fb->digest, tmp_path, handler_pool,
                        &hb->apply_handler, &hb->apply_baton);
   }
   
-  hb->pool = subpool;
+  hb->pool = handler_pool;
   hb->fb = fb;
   
   /* We're all set.  */
@@ -1833,7 +1835,7 @@ close_file (void *file_baton,
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
   if (fb->text_changed)
     {
-      new_text_path = svn_wc__text_base_path (fb->path, TRUE, fb->pool);
+      new_text_path = svn_wc__text_base_path (fb->path, TRUE, pool);
 
       if (text_checksum)
         {
@@ -1853,10 +1855,10 @@ close_file (void *file_baton,
   if (fb->prop_changed)
     propchanges = fb->propchanges;
 
-  parent_path = svn_path_dirname (fb->path, fb->pool);
+  parent_path = svn_path_dirname (fb->path, pool);
     
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, fb->edit_baton->adm_access,
-                                parent_path, fb->pool));
+                                parent_path, pool));
 
   SVN_ERR (svn_wc_install_file (&content_state,
                                 &prop_state,
@@ -1868,12 +1870,12 @@ close_file (void *file_baton,
                                 FALSE, /* -not- a full proplist */
                                 fb->new_URL,
                                 fb->edit_baton->diff3_cmd,
-                                fb->pool));
+                                pool));
 
   /* We have one less referrer to the directory's bump information. */
   SVN_ERR (maybe_bump_dir_info (fb->edit_baton,
                                 fb->bump_info,
-                                fb->pool));
+                                pool));
 
   if ((content_state != svn_wc_notify_state_unchanged) ||
       (prop_state != svn_wc_notify_state_unchanged))

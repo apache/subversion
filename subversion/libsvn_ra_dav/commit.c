@@ -122,6 +122,7 @@ typedef struct
   apr_hash_t *prop_changes; /* name/values pairs of new/changed properties. */
   apr_array_header_t *prop_deletes; /* names of properties to delete. */
   svn_boolean_t created; /* set if this is an add rather than an update */
+  apr_pool_t *pool; /* the pool from open_foo() / add_foo() */
   put_baton_t *put_baton;  /* baton for this file's PUT request */
 } resource_baton_t;
 
@@ -604,6 +605,7 @@ static svn_error_t * commit_open_root(void *edit_baton,
   apr_hash_set(cc->resources, rsrc->url, APR_HASH_KEY_STRING, rsrc);
 
   root = apr_pcalloc(dir_pool, sizeof(*root));
+  root->pool = dir_pool;
   root->cc = cc;
   root->rsrc = rsrc;
   root->created = FALSE;
@@ -676,6 +678,7 @@ static svn_error_t * commit_add_dir(const char *path,
 
   /* create a child object that contains all the resource urls */
   child = apr_pcalloc(dir_pool, sizeof(*child));
+  child->pool = dir_pool;
   child->cc = parent->cc;
   child->created = TRUE;
   SVN_ERR( add_child(&child->rsrc, parent->cc, parent->rsrc,
@@ -748,6 +751,7 @@ static svn_error_t * commit_open_dir(const char *path,
   resource_baton_t *child = apr_pcalloc(dir_pool, sizeof(*child));
   const char *name = svn_path_basename(path, dir_pool);
 
+  child->pool = dir_pool;
   child->cc = parent->cc;
   child->created = FALSE;
   SVN_ERR( add_child(&child->rsrc, parent->cc, parent->rsrc,
@@ -824,6 +828,7 @@ static svn_error_t * commit_add_file(const char *path,
 
   /* Construct a file_baton that contains all the resource urls. */
   file = apr_pcalloc(file_pool, sizeof(*file));
+  file->pool = file_pool;
   file->cc = parent->cc;
   file->created = TRUE;
   SVN_ERR( add_child(&file->rsrc, parent->cc, parent->rsrc,
@@ -938,6 +943,7 @@ static svn_error_t * commit_open_file(const char *path,
   const char *name = svn_path_basename(path, file_pool);
 
   file = apr_pcalloc(file_pool, sizeof(*file));
+  file->pool = file_pool;
   file->cc = parent->cc;
   file->created = FALSE;
   SVN_ERR( add_child(&file->rsrc, parent->cc, parent->rsrc,
@@ -982,11 +988,11 @@ commit_apply_txdelta(void *file_baton,
   put_baton_t *baton;
   svn_stream_t *stream;
 
-  baton = apr_pcalloc(file->cc->ras->pool, sizeof(*baton));
+  baton = apr_pcalloc(file->pool, sizeof(*baton));
   file->put_baton = baton;
 
   if (base_checksum)
-    baton->base_checksum = apr_pstrdup (file->cc->ras->pool, base_checksum);
+    baton->base_checksum = apr_pstrdup (file->pool, base_checksum);
   else
     baton->base_checksum = NULL;
 
@@ -1040,17 +1046,18 @@ static svn_error_t * commit_close_file(void *file_baton,
 {
   resource_baton_t *file = file_baton;
   commit_ctx_t *cc = file->cc;
-  const char *url = file->rsrc->wr_url;
-  ne_request *req;
-  int code;
-  svn_error_t *err;
 
   if (file->put_baton)
     {
+      ne_session *sess = cc->ras->sess;
       put_baton_t *pb = file->put_baton;
+      const char *url = file->rsrc->wr_url;
+      ne_request *req;
+      int code;
+      svn_error_t *err;
 
       /* create/prep the request */
-      req = ne_request_create(cc->ras->sess, "PUT", url);
+      req = ne_request_create(sess, "PUT", url);
       if (req == NULL)
         {
           return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
@@ -1077,11 +1084,10 @@ static svn_error_t * commit_close_file(void *file_baton,
         }
       
       /* run the request and get the resulting status code (and svn_error_t) */
-      err = svn_ra_dav__request_dispatch(&code, req, cc->ras->sess,
-                                         "PUT", url,
+      err = svn_ra_dav__request_dispatch(&code, req, sess, "PUT", url,
                                          201 /* Created */,
                                          204 /* No Content */,
-                                         cc->ras->pool);
+                                         pool);
       
       /* we're done with the file.  this should delete it. */
       (void) apr_file_close(pb->tmpfile);
@@ -1092,7 +1098,7 @@ static svn_error_t * commit_close_file(void *file_baton,
 
   /* Perform all of the property changes on the file. Note that we
      checked out the file when the first prop change was noted. */
-  SVN_ERR( do_proppatch(file->cc->ras, file->rsrc, file, pool) );
+  SVN_ERR( do_proppatch(cc->ras, file->rsrc, file, pool) );
 
   return SVN_NO_ERROR;
 }

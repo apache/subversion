@@ -466,8 +466,8 @@ close_file (void *file_baton,
       const char *hex_digest;
 
       SVN_ERR (svn_fs_file_md5_checksum
-               (digest, fb->edit_baton->txn_root, fb->path, fb->pool));
-      hex_digest = svn_md5_digest_to_cstring (digest, fb->pool);
+               (digest, fb->edit_baton->txn_root, fb->path, pool));
+      hex_digest = svn_md5_digest_to_cstring (digest, pool);
       
       if (strcmp (text_checksum, hex_digest) != 0)
         {
