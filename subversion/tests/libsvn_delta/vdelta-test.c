@@ -85,7 +85,7 @@ open_binary_read (const char *path, apr_pool_t *pool)
   apr_err = apr_file_open (&fp, path, (APR_READ | APR_BINARY),
                            APR_OS_DEFAULT, pool);
 
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
+  if (apr_err)
     {
       fprintf (stderr, "unable to open \"%s\" for reading\n", path);
       exit (1);

@@ -3268,10 +3268,10 @@ move_into_place (const char *old_filename, const char *new_filename,
   
   /* Match the perms on the old file to the perms reference file. */
   status = apr_stat (&finfo, perms_reference, APR_FINFO_PROT, pool);
-  if (! APR_STATUS_IS_SUCCESS (status))
+  if (status)
     return svn_error_wrap_apr (status, _("Can't stat '%s'"), perms_reference);
   status = apr_file_perms_set (old_filename, finfo.protection);
-  if (! APR_STATUS_IS_SUCCESS (status))
+  if (status)
     return svn_error_wrap_apr (status, _("Can't chmod '%s'"), old_filename);
 #endif
 
