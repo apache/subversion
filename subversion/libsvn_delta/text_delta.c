@@ -100,30 +100,29 @@ struct apply_baton {
 
 /* Allocate a delta window. */
 
-svn_error_t *
-svn_txdelta__init_window (svn_txdelta_window_t **window,
-                          svn_txdelta_stream_t *stream)
+svn_txdelta_window_t *
+svn_txdelta__make_window (apr_pool_t *pool)
 {
-  apr_pool_t *pool = svn_pool_create (stream->pool);
-  assert (pool != NULL);
+  apr_pool_t *subpool = svn_pool_create (pool);
+  svn_txdelta_window_t *window;
 
-  (*window) = apr_palloc (pool, sizeof (**window));
-  (*window)->sview_offset = 0;
-  (*window)->sview_len = 0;
-  (*window)->tview_len = 0;
-  (*window)->num_ops = 0;
-  (*window)->ops_size = 0;
-  (*window)->ops = NULL;
-  (*window)->new = svn_string_create ("", pool);
-  (*window)->pool = pool;
-  return SVN_NO_ERROR;
+  window = apr_palloc (subpool, sizeof (*window));
+  window->sview_offset = 0;
+  window->sview_len = 0;
+  window->tview_len = 0;
+  window->num_ops = 0;
+  window->ops_size = 0;
+  window->ops = NULL;
+  window->new = svn_string_create ("", subpool);
+  window->pool = subpool;
+  return window;
 }
 
 
 
 /* Insert a delta op into a delta window. */
 
-svn_error_t *
+void
 svn_txdelta__insert_op (svn_txdelta_window_t *window,
                         int opcode,
                         apr_off_t offset,
@@ -171,7 +170,6 @@ svn_txdelta__insert_op (svn_txdelta_window_t *window,
     }
 
   ++window->num_ops;
-  return SVN_NO_ERROR;
 }
 
 
@@ -262,11 +260,14 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
       memcpy (buffer, stream->sbuf, stream->sbuf_len);
 
       /* Read the source and target streams. */
-      stream->source_fn (stream->source_baton, buffer + stream->sbuf_len,
-                         &source_len, NULL/*FIXME:*/);
-      stream->target_fn (stream->target_baton,
-                         buffer + stream->sbuf_len + source_len,
-                         &target_len, NULL/*FIXME:*/);
+      err = stream->source_fn (stream->source_baton, buffer + stream->sbuf_len,
+                               &source_len, temp_pool);
+      if (err == SVN_NO_ERROR)
+        err = stream->target_fn (stream->target_baton,
+                                 buffer + stream->sbuf_len + source_len,
+                                 &target_len, temp_pool);
+      if (err != SVN_NO_ERROR)
+        return err;
       stream->pos += source_len;
 
       /* Stash the last window's worth of data from the source view. */
@@ -287,35 +288,29 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
 
 #if 0 /* Reenable when we can encode arbitrary windows. */
       /* Create the delta window */
-      err = svn_txdelta__init_window (window, stream);
-      if (err == SVN_NO_ERROR)
-        {
-          (*window)->sview_offset = stream->pos - source_total;
-          (*window)->sview_len = source_total;
-          (*window)->tview_len = target_len;
-          err = svn_txdelta__vdelta (*window, buffer,
-                                     source_total, target_len,
-                                     temp_pool);
-        }
+      *window = svn_txdelta__make_window (stream->pool);
+      (*window)->sview_offset = stream->pos - source_total;
+      (*window)->sview_len = source_total;
+      (*window)->tview_len = target_len;
+      svn_txdelta__vdelta (*window, buffer,
+                           source_total, target_len,
+                           temp_pool);
 #else
       /* Although we know how to generate optimized windows, we can't
          encode or decode them yet.  Right now we "encode" and
          "decode" windows by spitting out new data.  So, to be
          consistent with that, generate a trivial window which just
          inserts the new text. */
-      err = svn_txdelta__init_window (window, stream);
-      if (err == SVN_NO_ERROR)
-        {
-          (*window)->tview_len = target_len;
-          svn_string_appendbytes ((*window)->new, buffer + source_total,
-                                  target_len, (*window)->pool);
-          (*window)->num_ops = 1;
-          (*window)->ops = apr_palloc ((*window)->pool,
-                                       sizeof (*(*window)->ops));
-          (*window)->ops[0].action_code = svn_txdelta_new;
-          (*window)->ops[0].offset = 0;
-          (*window)->ops[0].length = target_len;
-        }
+      *window = svn_txdelta__make_window (stream->pool);
+      (*window)->tview_len = target_len;
+      svn_string_appendbytes ((*window)->new, buffer + source_total,
+                              target_len, (*window)->pool);
+      (*window)->num_ops = 1;
+      (*window)->ops = apr_palloc ((*window)->pool,
+                                   sizeof (*(*window)->ops));
+      (*window)->ops[0].action_code = svn_txdelta_new;
+      (*window)->ops[0].offset = 0;
+      (*window)->ops[0].length = target_len;
 #endif
 
       /* That's it. */
