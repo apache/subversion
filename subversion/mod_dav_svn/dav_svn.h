@@ -303,7 +303,7 @@ const char *dav_svn_get_xslt_uri(request_rec *r);
 
    NOTE: this function destroys (cleanly, of course) SERR after it has
    copied/converted its data to the new DAV error. */
-dav_error * dav_svn_convert_err(const svn_error_t *serr, int status,
+dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
                                 const char *message, apr_pool_t *pool);
 
 /* activity functions for looking up, storing, and deleting
