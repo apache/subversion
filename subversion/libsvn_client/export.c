@@ -36,7 +36,9 @@
 /*** Code. ***/
 
 static svn_error_t *
-remove_admin_dirs (const char *dir, apr_pool_t *pool)
+remove_admin_dirs (const char *dir,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *dirents;
@@ -56,6 +58,12 @@ remove_admin_dirs (const char *dir, apr_pool_t *pool)
       item = key;
       type = val;
 
+      if (ctx->cancel_func)
+        SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
+
+      /* ### We could also invoke ctx->notify_func somewhere in
+         ### here... Is it called for, though?  Not sure. */ 
+
       if (*type == svn_node_dir)
         {
           const char *dir_path = svn_path_join (dir, key, subpool);
@@ -66,7 +74,7 @@ remove_admin_dirs (const char *dir, apr_pool_t *pool)
             }
           else
             {
-              SVN_ERR (remove_admin_dirs (dir_path, subpool));
+              SVN_ERR (remove_admin_dirs (dir_path, ctx, subpool));
             } 
         }
 
@@ -81,6 +89,7 @@ remove_admin_dirs (const char *dir, apr_pool_t *pool)
 static svn_error_t *
 copy_versioned_files (const char *from,
                       const char *to,
+                      svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -120,6 +129,12 @@ copy_versioned_files (const char *from,
           item = key;
           type = val;
 
+          if (ctx->cancel_func)
+            SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
+
+          /* ### We could also invoke ctx->notify_func somewhere in
+             ### here... Is it called for, though?  Not sure. */ 
+
           if (*type == svn_node_dir)
             {
               if (strcmp (item, SVN_WC_ADM_DIR_NAME) == 0)
@@ -131,7 +146,8 @@ copy_versioned_files (const char *from,
                   const char *new_from = svn_path_join (from, key, subpool);
                   const char *new_to = svn_path_join (to, key, subpool);
 
-                  SVN_ERR (copy_versioned_files (new_from, new_to, subpool));
+                  SVN_ERR (copy_versioned_files (new_from, new_to,
+                                                 ctx, subpool));
                 }
             }
           else if (*type == svn_node_file)
@@ -184,12 +200,12 @@ svn_client_export (const char *from,
                                     pool));
 
       /* walk over the wc and remove the administrative directories. */
-      SVN_ERR (remove_admin_dirs (to, pool));
+      SVN_ERR (remove_admin_dirs (to, ctx, pool));
     }
   else
     {
       /* just copy the contents of the working copy into the target path. */
-      SVN_ERR (copy_versioned_files (from, to, pool));
+      SVN_ERR (copy_versioned_files (from, to, ctx, pool));
     }
 
   return SVN_NO_ERROR;
