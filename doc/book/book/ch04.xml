@@ -446,7 +446,7 @@ rev 98:  sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
       change made by Sally in revision 344:</para>
 
 <screen>
-$ svn diff -r343:344 http://svn.example.com/repos/trunk/calc
+$ svn diff -r 343:344 http://svn.example.com/repos/trunk/calc
 
 Index: integer.c
 ===================================================================
@@ -496,7 +496,7 @@ Index: integer.c
       modifications</emphasis>:</para>
     
 <screen>
-$ svn merge -r343:344 http://svn.example.com/repos/trunk/calc
+$ svn merge -r 343:344 http://svn.example.com/repos/trunk/calc
 U  integer.c
 
 $ svn status
@@ -534,7 +534,7 @@ M  integer.c
         For example:</para>
 
 <screen>
-$ svn diff -r343:344 http://svn.example.com/repos/trunk/calc > patchfile
+$ svn diff -r 343:344 http://svn.example.com/repos/trunk/calc > patchfile
 $ patch -p0  &lt; patchfile
 Patching file integer.c using Plan A...
 Hunk #1 succeeded at 147.
@@ -578,7 +578,7 @@ done
       need to say so:</para>
 
 <screen>
-$ svn merge -r343:344 http://svn.example.com/repos/trunk/calc my-calc-branch
+$ svn merge -r 343:344 http://svn.example.com/repos/trunk/calc my-calc-branch
 U   my-calc-branch/integer.c
 </screen>
 
@@ -843,7 +843,7 @@ Committed revision 351.
         somebody else may have committed changes to the project when
         you weren't looking.  So if you know that revision 350 of
         <filename>/trunk/calc</filename> is exactly the snapshot you
-        want, you can specify it by passing <option>-r350</option>
+        want, you can specify it by passing <option>-r 350</option>
         to the <command>svn copy</command> command.</para>
 
       <para>But wait a moment: isn't this tag-creation procedure the
@@ -1032,8 +1032,8 @@ Committed revision 375.
         copy -r</command> to copy it from the old revision:</para>
 
 <screen>
-$ svn copy -r374 http://svn.example.com/repos/branches/calc/my-calc-branch \
-                 http://svn.example.com/repos/branches/calc/my-calc-branch
+$ svn copy -r 374 http://svn.example.com/repos/branches/calc/my-calc-branch \
+                  http://svn.example.com/repos/branches/calc/my-calc-branch
 
 Committed revision 376.
 </screen>

@@ -85,7 +85,7 @@ num_lines (const char *msg)
  *
  * Here is an example of the output:
  *
- * $ svn log -r1847:1846
+ * $ svn log -r 1847:1846
  * ------------------------------------------------------------------------
  * rev 1847:  cmpilato | Wed 1 May 2002 15:44:26 | 7 lines
  * 
@@ -229,7 +229,7 @@ log_message_receiver (void *baton,
  * Here is an example of the output; note that the "<log>" and
  * "</log>" tags are not emitted by this function:
  * 
- * $ svn log --xml -r1648:1649
+ * $ svn log --xml -r 1648:1649
  * <log>
  * <logentry
  *    revision="1648">

@@ -98,10 +98,10 @@ static const apr_getopt_option_t options_table[] =
      "specify revision number ARG (or X:Y range)"},
 
     {"incremental",   svnadmin__incremental, 0,
-     "Dump incrementally."},
+     "dump incrementally"},
 
     {"copies",   svnadmin__follow_copies, 0,
-     "Follow copy history."},
+     "follow copy history"},
 
     {0,               0, 0, 0}
   };
@@ -118,12 +118,12 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      {0} },
     
     {"createtxn", subcommand_createtxn, {0},
-     "usage: svnadmin createtxn REPOS_PATH -rREVISION\n\n"
+     "usage: svnadmin createtxn REPOS_PATH -r REVISION\n\n"
      "Create a new transaction based on REVISION.\n",
      {'r'} },
     
     {"dump", subcommand_dump, {0},
-     "usage: svnadmin dump REPOS_PATH [-rLOWER[:UPPER]] [--incremental]\n\n"
+     "usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n\n"
      "Dump the contents of filesystem to stdout in a 'dumpfile'\n"
      "portable format, sending feedback to stderr.  Dump revisions\n"
      "LOWER rev through UPPER rev.  If no revisions are given, dump all\n"
@@ -174,7 +174,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      {0} },
 
     {"setlog", subcommand_setlog, {0},
-     "usage: svnadmin setlog REPOS_PATH -rREVISION FILE\n\n"
+     "usage: svnadmin setlog REPOS_PATH -r REVISION FILE\n\n"
      "Set the log-message on revision REVISION to the contents of FILE.\n"
      "(Note that revision properties are not historied, so this command\n"
      "will permanently overwrite the previous log message.)\n",
@@ -188,7 +188,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
 struct svnadmin_opt_state
 {
   const char *repository_path;
-  svn_opt_revision_t start_revision, end_revision;  /* -rX[:Y] */
+  svn_opt_revision_t start_revision, end_revision;  /* -r X[:Y] */
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t incremental;                        /* --incremental */
   svn_boolean_t follow_copies;                      /* --copies */
@@ -606,7 +606,7 @@ main (int argc, const char * const *argv)
                                 (SVN_ERR_CL_ARG_PARSING_ERROR,
                                  0, NULL,
                                  "Multiple revision arguments encountered; "
-                                 "try '-rM:N' instead of '-rM -rN'"),
+                                 "try '-r M:N' instead of '-r M -r N'"),
                                 stderr, FALSE);
               svn_pool_destroy (pool);
               return EXIT_FAILURE;

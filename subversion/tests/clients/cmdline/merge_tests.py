@@ -457,7 +457,7 @@ def add_with_history(sbox):
   #  print "merge failed"
   #  return 1
 
-  outlines,errlines = svntest.main.run_svn(None, 'merge', '-r1:2', F_url,
+  outlines,errlines = svntest.main.run_svn(None, 'merge', '-r', '1:2', F_url,
                                            C_path)
   if errlines:
     print "merge failed"
@@ -576,7 +576,7 @@ def delete_file_and_dir(sbox):
     return 1
 
   # Merge rev 3 into B2
-  outlines, errlines = svntest.main.run_svn(None, 'merge', '-r2:3', B_url,
+  outlines, errlines = svntest.main.run_svn(None, 'merge', '-r', '2:3', B_url,
                                             B2_path)
   if errlines:
     print "merge failed"
@@ -695,9 +695,9 @@ def simple_property_merges(sbox):
   expected_status.tweak(wc_rev=4)
   expected_status.tweak('A/B2/E', 'A/B2/E/alpha', status=' M')
   dry_out, dry_err = svntest.main.run_svn(None, 'merge', '--dry-run',
-                                          '-r3:4', B_url, B2_path)
+                                          '-r', '3:4', B_url, B2_path)
   std_out, std_err = svntest.main.run_svn(None, 'merge',
-                                          '-r3:4', B_url, B2_path)
+                                          '-r', '3:4', B_url, B2_path)
   if dry_err or std_err or dry_out != std_out:
     return 1
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
@@ -715,9 +715,9 @@ def simple_property_merges(sbox):
   # Merge B 2:1 into B2
   expected_status.tweak('A/B2/E', 'A/B2/E/alpha', status=' M')
   dry_out, dry_err = svntest.main.run_svn(None, 'merge', '--dry-run',
-                                          '-r2:1', B_url, B2_path)
+                                          '-r', '2:1', B_url, B2_path)
   std_out, std_err = svntest.main.run_svn(None, 'merge',
-                                          '-r2:1', B_url, B2_path)
+                                          '-r', '2:1', B_url, B2_path)
   if dry_err or std_err or dry_out != std_out:
     return 1
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
@@ -730,9 +730,9 @@ def simple_property_merges(sbox):
   expected_status.tweak(wc_rev=4)
   expected_status.tweak('A/B2/E', 'A/B2/E/alpha', status=' C')
   dry_out, dry_err = svntest.main.run_svn(None, 'merge', '--dry-run',
-                                          '-r3:4', B_url, B2_path)
+                                          '-r', '3:4', B_url, B2_path)
   std_out, std_err = svntest.main.run_svn(None, 'merge',
-                                          '-r3:4', B_url, B2_path)
+                                          '-r', '3:4', B_url, B2_path)
   if dry_err or std_err or dry_out != std_out:
     return 1
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):

@@ -1134,7 +1134,7 @@ def basic_checkout_deleted(sbox):
   url = os.path.join(svntest.main.test_area_url,
                      svntest.main.current_repo_dir, 'A', 'D')
   wc2 = os.path.join (sbox.wc_dir, 'new_D')
-  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'co', '-r1',
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'co', '-r', '1',
                                                     url, wc2)
   if stderr_lines:
     print "error checking out r1 of A/D:"

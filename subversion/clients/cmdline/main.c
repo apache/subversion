@@ -274,7 +274,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   { "merge", svn_cl__merge, {0},
     "apply the differences between two URLs to a working copy path.\n"
     "usage: 1. merge URL1[@N] URL2[@M] [PATH]\n"
-    "       2. merge -rN:M TARGET [PATH]\n\n"
+    "       2. merge -r N:M TARGET [PATH]\n\n"
     "  1. In the first form, URL1 and URL2 are URLs specified at revisions\n"
     "     N and M.  These are the two sources to be compared.  The revisons\n"
     "     default to HEAD if omitted.\n\n"
@@ -374,8 +374,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    svn:externals  - A newline separated list of module specifiers,\n"
     "      each of which consists of a relative directory path, optional\n"
     "      revision flags, and an URL.  For example\n"
-    "        foo            http://example.com/repos/zig\n"
-    "        foo/bar -r1234 http://example.com/repos/zag\n",
+    "        foo             http://example.com/repos/zig\n"
+    "        foo/bar -r 1234 http://example.com/repos/zag\n",
     {'F', 'q', 'r', svn_cl__targets_opt, 'R', svn_cl__revprop_opt,
       svn_cl__encoding_opt} },
   
@@ -587,7 +587,7 @@ main (int argc, const char * const *argv)
                               (SVN_ERR_CL_ARG_PARSING_ERROR,
                                0, NULL,
                                "Multiple revision arguments encountered; "
-                               "try '-rM:N' instead of '-rM -rN'"),
+                               "try '-r M:N' instead of '-r M -r N'"),
                               stderr, FALSE);
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
