@@ -1,11 +1,17 @@
 #!/bin/sh
 
+if test "$#" != 1; then
+  echo "ERROR: not enough arguments. Must supply SOURCE-DIR."
+  exit 1
+fi
+
 SVN_PROG=../svn
 XML_DIR=$1
 TEST_DIR_1=t1
 TEST_DIR_2=t2
 COMMIT_RESULTFILE_NAME=commit
-ANCESTOR_PATH=anni       # See if Greg Stein notices. :-) 
+ANCESTOR_PATH=anni       # See if Greg Stein notices. :-)
+			 # notice what? everything seems fine here. ;-)
 
 check_status()
 {
