@@ -132,7 +132,7 @@ def guarantee_greek_repository(path):
 
 def run_and_verify_svnversion(message, wc_dir, repo_url,
                               expected_stdout, expected_stderr):
-  "Run svnversion command and check it's output"
+  "Run svnversion command and check its output"
 
   out, err = main.run_svnversion(wc_dir, repo_url)
   
