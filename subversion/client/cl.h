@@ -39,25 +39,6 @@ typedef enum {
 
 /*** Command dispatch. ***/
 
-/*  These are all the command procedures we currently know about.
-    The "null" entry is simply an enumerated invalid entry that makes
-    initializations easier */
-enum svn_cl__command_id {
-  svn_cl__null_command = 0,
-  svn_cl__add_command,
-  svn_cl__checkout_command,
-  svn_cl__commit_command,
-  svn_cl__delete_command,
-  svn_cl__help_command,
-  svn_cl__proplist_command,
-  svn_cl__propget_command,
-  svn_cl__propset_command,
-  svn_cl__status_command,
-  svn_cl__diff_command,
-  svn_cl__update_command
-};
-
-
 /* Hold results of option processing that are shared by multiple
    commands. */
 typedef struct svn_cl__opt_state_t
@@ -97,14 +78,6 @@ typedef struct svn_cl__cmd_desc_t
      is set `TRUE'.  If it is the base command entry, then `FALSE'.
      The alias entries will always immediately follow the base entry. */
   svn_boolean_t is_alias;
-
-
-  /* TODO Get rid of svn_cl__command_id so that you won't get back
-   * into the trap of main() having to know about specific
-   * commands. TODO -Fitz */
-
-  /* A unique identifying number for this command.  0 if alias. */
-  enum svn_cl__command_id cmd_code;
 
   /* The function this command invokes.  NULL if alias. */
   svn_cl__cmd_proc_t *cmd_func;
