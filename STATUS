@@ -105,15 +105,6 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: maxb, epg, rooneg
 
-  * r12046
-    Fix issue 2142 - svndumpfilter mislabels output as version 3.
-    Justification:
-      Prevents chaining of multiple svndumpfilter runs.
-      (This is a regression from 1.0.x)
-      Trivial change.
-    Votes:
-      +1: maxb, epg, kfogel, dionisos
-
   * r11936
     Fixes a 'working copy not locked' error.
     Justification:
