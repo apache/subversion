@@ -3,7 +3,7 @@
 <center>
 <img src="/subversion.jpg">
 <h2>Weekly Status</h2>
-$Date: 2001-07-05 15:31:20 $
+$Date: 2001-07-06 23:54:38 $
 </center>
 
 <!-- ------------------------------------------------------------- -->
@@ -23,13 +23,13 @@ $Date: 2001-07-05 15:31:20 $
 <p>
 <font color="green"><b>Upcoming</b></font>:
 <p>
-<li> <b>Milestone 3</b> (Thu 16 August 2001): self-hosting.
+<li> <b>Milestone 3</b> (Wed 15 August 2001): self-hosting.
 </li>
-<li> <b>Alpha</b> (Mon 17 September 2001): feature-complete.
+<li> <b>Alpha</b> (Fri 14 September 2001): feature-complete.
 </li>
-<li> <b>Beta</b> (Mon 15 October 2001): release candidate, heavy testing.
+<li> <b>Beta</b> (Fri 12 October 2001): release candidate, heavy testing.
 </li>
-<li> <b>1.0 Release</b> (Fri 16 Nov 2001): get some sleep
+<li> <b>1.0 Release</b> (Thu 15 Nov 2001): get some sleep
 </li>
 </ul>
 
@@ -50,7 +50,7 @@ $Date: 2001-07-05 15:31:20 $
     <td>
         <table cellspacing="0" cellpadding="0" border=0><tr>
           <td width=340 bgcolor="0000FF" align=right>
-          <font color=FFFFFF>85%</font></td>
+          <font color=FFFFFF>88%</font></td>
           <td width=60 bgcolor="FF0000">&nbsp;</td>
         </tr></table>
     </td>
@@ -61,7 +61,7 @@ $Date: 2001-07-05 15:31:20 $
     <td>
         <table cellspacing="0" cellpadding="0" border=0><tr>
           <td width=340 bgcolor="0000FF" align=right>
-          <font color=FFFFFF>85%</font></td>
+          <font color=FFFFFF>86%</font></td>
           <td width=60 bgcolor="FF0000">&nbsp;</td>
         </tr></table>
     </td>
@@ -105,7 +105,7 @@ $Date: 2001-07-05 15:31:20 $
     <td>
         <table cellspacing="0" cellpadding="0" border=0><tr>
           <td width=60 bgcolor="0000FF" align=right>
-          <font color=FFFFFF>15%</font></td>
+          <font color=FFFFFF>50%</font></td>
           <td width=340 bgcolor="FF0000">&nbsp;</td>
         </tr></table>
     </td>
@@ -121,18 +121,19 @@ $Date: 2001-07-05 15:31:20 $
 <h3>Recent Activities</h3>
 
 <p>
-Mike P. and Ben continue to work on thorny issues related to
-versioning directories.  They've been put off for a long time, but now
-we're needing to complexify the working copy library to properly deal
-with them.  Working copy behaviors are being documented in a user manual.
+Ben Collins-Sussman has been dealing with all the random issues, plus
+working on the test framework, client code, and configuration issues.
+On a lark, Ben and Karl also implemented commit datestamping.
 <p>
-Karl is now working on adding deltified storage to the repository
-filesystem. 
+Mo DeJong (plus others?) have been making conf patches.
 <p>
-Greg Stein replaced our recursive-make build system (based on
-'automake') with a new, single-Makefile system.
+Joe Orton has taken on the properties-over-DAV work.
 <p>
-Mike Sussman continues to write new python tests.
+Karl and Brane are working on making the repository do deltified
+storage.  Delta production is done, undeltification is next.
+<p>
+Mike Pilato is on vacation 2-6 July.
+<p>
 
 
 <!----------------------------------------------------------------->
@@ -140,12 +141,12 @@ Mike Sussman continues to write new python tests.
 <h3>What People Are Currently Working On</h3>
 
 <ul>
-<li><b>Filesystem</b>: brane, kfogel </li>
+<li><b>Filesystem</b>: brane, kfogel, cmpilato </li>
 <li><b>Repository Access layers</b>:  gstein, sussman </li>
 <li><b>Client libs</b>: sussman, cmpilato, fitz </li>
 <li><b>Migration tools</b>:  gstein </li>
 <li><b>Docs</b>: sussman </li>
-<li><b>Testing/QA</b>: msussman </li>
+<li><b>Testing/QA</b>: sussman </li>
 </ul>
 
 <!----------------------------------------------------------------->
