@@ -158,8 +158,8 @@ svn_cl__print_status_list (apr_hash_t *statushash,
       svn_wc_status_t *status;
       
       item = (((svn_item_t **)(statusarray)->elts)[i]);
-      path = (const char *) item->key;
-      status = (svn_wc_status_t *) item->data;
+      path = item->key;
+      status = item->data;
 
       if (print_modified_only)
         {
