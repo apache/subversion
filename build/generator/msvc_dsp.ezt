@@ -72,7 +72,6 @@ InputPath=[sources.path]
 [sources.custom_target] : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
 [if-any sources.custom_build]	[sources.custom_build]
 [end]
-
 # End Custom Build
 
 [end]

@@ -22,14 +22,21 @@ class Generator(gen_base.GeneratorBase):
     return os.path.splitext(os.path.basename(conf_path))[0] + '-outputs.mk'
 
   def write(self, oname):
+    install_deps = self.graph.get_deps(gen_base.DT_INSTALL)
+    install_sources = self.graph.get_all_sources(gen_base.DT_INSTALL)
+
+    # ensure consistency between runs
+    install_deps.sort()
+    install_sources.sort(lambda s1, s2: cmp(s1.name, s2.name))
+
     self.ofile = open(oname, 'w')
     self.ofile.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n\n')
 
     # write various symbols at the top of the file so they will be
     # defined before their use in dependency lines.
-    self.write_symbols()
+    self.write_symbols(install_sources)
 
-    for target_ob in self.graph.get_all_sources(gen_base.DT_INSTALL):
+    for target_ob in install_sources:
 
       if isinstance(target_ob, gen_base.TargetScript):
         # there is nothing to build
@@ -130,26 +137,29 @@ class Generator(gen_base.GeneratorBase):
           )
 
     # for each install group, write a rule to install its outputs
-    for itype, i_targets in self.graph.get_deps(gen_base.DT_INSTALL):
+    for itype, i_targets in install_deps:
       outputs = [ ]
       for t in i_targets:
-        outputs.append(t.filename)
+        if not isinstance(t, gen_base.TargetI18N) \
+           and not isinstance(t, gen_base.TargetJava):
+          outputs.append(t.filename)
       self.ofile.write('%s: %s\n\n' % (itype, string.join(outputs)))
 
     cfiles = [ ]
-    for target in self.graph.get_all_sources(gen_base.DT_INSTALL):
+    for target in install_sources:
       # .la files are handled by the standard 'clean' rule; clean all the
       # other targets
       if not isinstance(target, gen_base.TargetScript) \
          and not isinstance(target, gen_base.TargetProject) \
          and not isinstance(target, gen_base.TargetI18N) \
+         and not isinstance(target, gen_base.TargetJava) \
          and not target.external_lib \
          and target.filename[-3:] != '.la':
         cfiles.append(target.filename)
     cfiles.sort()
     self.ofile.write('CLEAN_FILES = %s\n\n' % string.join(cfiles))
 
-    for area, inst_targets in self.graph.get_deps(gen_base.DT_INSTALL):
+    for area, inst_targets in install_deps:
       # get the output files for these targets, sorted in dependency order
       files = gen_base._sorted_files(self.graph, area)
 
@@ -239,9 +249,10 @@ class Generator(gen_base.GeneratorBase):
                           os.path.join(includedir, os.path.basename(file))))
 
     self.ofile.write('\n# handy shortcut targets\n')
-    for target in self.graph.get_all_sources(gen_base.DT_INSTALL):
+    for target in install_sources:
       if not isinstance(target, gen_base.TargetScript) and \
-         not isinstance(target, gen_base.TargetJava):
+         not isinstance(target, gen_base.TargetJava) and \
+         not isinstance(target, gen_base.TargetI18N):
         self.ofile.write('%s: %s\n' % (target.name, target.filename))
     self.ofile.write('\n')
 
@@ -282,14 +293,20 @@ class Generator(gen_base.GeneratorBase):
     manpages = self.graph.get_sources(gen_base.DT_LIST, gen_base.LT_MANPAGES)
     self.ofile.write('MANPAGES = %s\n\n' % string.join(manpages))
 
-    for objname, sources in self.graph.get_deps(gen_base.DT_SWIG_C):
+    swig_c_deps = self.graph.get_deps(gen_base.DT_SWIG_C)
+    swig_c_deps.sort(lambda (t1, s1), (t2, s2): cmp(t1.filename, t2.filename))
+
+    for objname, sources in swig_c_deps:
       deps = string.join(map(str, sources))
       source = os.path.join('$(abs_srcdir)', str(sources[0]))
       self.ofile.write('%s: %s\n\t$(RUN_SWIG_%s) %s\n'
                        % (objname, deps, string.upper(objname.lang_abbrev),
                           source))
 
-    for objname, sources in self.graph.get_deps(gen_base.DT_OBJECT):
+    obj_deps = self.graph.get_deps(gen_base.DT_OBJECT)
+    obj_deps.sort(lambda (t1, s1), (t2, s2): cmp(t1.filename, t2.filename))
+
+    for objname, sources in obj_deps:
       deps = string.join(map(str, sources))
       self.ofile.write('%s: %s\n' % (objname, deps))
       cmd = objname.compile_cmd
@@ -300,12 +317,12 @@ class Generator(gen_base.GeneratorBase):
         else:
           self.ofile.write('\t%s %s\n' % (cmd, sources[0]))
 
-  def write_symbols(self):
+  def write_symbols(self, install_sources):
     wrappers = { }
     for lang in self.cfg.swig_lang:
       wrappers[lang] = [ ]
 
-    for target in self.graph.get_all_sources(gen_base.DT_INSTALL):
+    for target in install_sources:
       if isinstance(target, gen_base.TargetRaModule) or \
          isinstance(target, gen_base.TargetFsModule):
         # name of the module: strip 'libsvn_' and upper-case it
