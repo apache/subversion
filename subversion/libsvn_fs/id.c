@@ -46,6 +46,7 @@
  * individuals on behalf of Collab.Net.
  */
 
+#include <math.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -144,13 +145,6 @@ distance_from_prefix (svn_fs_id_t *a, int prefix)
     d += a[prefix + i + 1] - 1;
 
   return d;
-}
-
-
-static int
-abs (int n)
-{
-  return (n < 0) ? -n : n;
 }
 
 
