@@ -41,6 +41,8 @@ class SVNTreeNode:
     self.contents = contents
     self.props = props
 
+# TODO: Check to make sure contents and children are mutually exclusive
+
   def add_child(self, newchild):
     if self.children is None:  # if you're a file,
       self.children = []     # become an empty dir.
@@ -85,6 +87,14 @@ class SVNTreeError(Exception): pass
 
 class SVNTreeUnequal(Exception): pass
 
+# Exception raised if one node is file and other is dir
+
+class SVNTypeMismatch(Exception): pass
+
+# Exceptiono raised if get_child is passed a file.
+
+class SVNTreeIsNotDirectory(Exception): pass
+
 
 # helper func
 def add_elements_as_path(top_node, element_list):
@@ -119,20 +129,17 @@ def node_is_greater(a, b):
     return -1
 
 
-# Comparison:  are two tree nodes the same?
-def compare_nodes(a, b):
-  "Compare two nodes' contents, ignoring children.  Return 0 if the same."
-
+# Helper for compare_trees
+def compare_file_nodes(a, b):
+  """Compare two nodes' names, contents, and properties, ignoring
+  children.  Return 0 if the same, 1 otherwise.""" 
   if a.name != b.name:
     return 1
   if a.contents != b.contents:
     return 1
-  if a.props != b.props:  ## is it legal to compare hashes like this?!?
+  if a.props != b.props:
     return 1
-  
-  # We don't need to compare lists of children, since that's being
-  # done recursively by compare_trees() -- to which this function is a
-  # helper.
+
 
 # Internal utility used by most build_tree_from_foo() routines.
 #
@@ -239,7 +246,23 @@ def handle_dir(path, current_parent, load_props, ignore_svn):
     handle_dir(d, new_dir_node, load_props, ignore_svn)
     current_parent.add_child(new_dir_node)
 
+def get_child(node, name):
+  """If SVNTreeNode NODE contains a child named NAME, return child;
+  else, return None. If SVNTreeNode is not a directory, raise a
+  SVNTreeIsNotDirectory exception"""
+  if node.children == None:
+    raise SVNTreeIsNotDirectory
+  for n in node.children:
+    if (name == n.name):
+      return n
+  return None
 
+
+# Helper for compare_trees
+def default_singleton_handler(a):
+  "Printing SVNTreeNode A's name, then raise SVNTreeUnequal."
+  print "Got singleton", a.name
+  raise SVNTreeUnequal
 
 
 ###########################################################################
@@ -249,26 +272,59 @@ def handle_dir(path, current_parent, load_props, ignore_svn):
 
 # Main tree comparison routine!  
 
-def compare_trees(a, b):
-  "Return 0 iff two trees are identical."
-  
+def compare_trees(a, b,
+                  singleton_handler_a=default_singleton_handler,
+                  singleton_handler_b=default_singleton_handler):
+  """Compare SVNTreeNodes A and B, expressing differences using FUNC_A
+  and FUNC_B.  FUNC_A and FUNC_B are functions of one argument, an
+  SVNTreeNode, and may raise exception SVNTreeUnequal.  Their return
+  value is ignored.
+
+  If A and B are both files, then return 0 if their contents,
+  properties, and names are all the same; else raise a SVNTreeUnequal.
+  If A is a file and B is a directory, raise a SVNTypeMismatch; same
+  vice-versa.  If both are directories, then for each entry that
+  exists in both, call compare_trees on the two entries; otherwise, if
+  the entry exists only in A, invoke FUNC_A on it, and likewise for
+  B with FUNC_B."""
   try:
-    if compare_nodes(a, b):
-      print "Error: '%s' differs from '%s'." % (a.name, b.name)
-      a.pprint()
-      b.pprint()
-      raise SVNTreeUnequal
-    if a.children is None:
-      if b.children is None:
-        return 0
-      else:
+    # A and B are both files.
+    if ((a.children is None) and (b.children is None)):
+      if compare_file_nodes(a, b):
+        print "Unequal nodes from actual",a.name,"and expected",b.name
+        a.pprint()
+        b.pprint()
         raise SVNTreeUnequal
-    if b.children is None:
-      raise SVNTreeUnequal
-    a.children.sort(node_is_greater)
-    b.children.sort(node_is_greater)
-    for i in range(max(len(a.children), len(b.children))):
-      compare_trees(a.children[i], b.children[i])
+    # One is a file, one is a directory.
+    elif (((a.children is None) and (b.children is not None))
+          or ((a.children is not None) and (b.children is None))):
+      raise SVNTypeMismatch
+    # They're both directories.
+    else:
+      accounted_for = []
+      # For each child of A, check and see if it's in B.  If so, run
+      # compare_trees on the two children and add b's child to
+      # accounted_for.  If not, run FUNC_A on the child.  Next, for each
+      # child of B, check and and see if it's in accounted_for.  If it
+      # is, do nothing. If not, run FUNC_B on it.
+      for a_child in a.children:
+        b_child = get_child(b, a_child.name)
+        if b_child:
+          accounted_for.append(b_child)
+          compare_trees(a_child, b_child,
+                        singleton_handler_a, singleton_handler_b)
+        else:
+          singleton_handler_a(a_child)
+      for b_child in b.children:
+        if (b_child not in accounted_for):
+          singleton_handler_b(b_child)
+      return 0
+  except SVNTypeMismatch:
+    print 'Unequal Types: one Node is a file, the other is a directory'
+    raise SVNTreeUnequal
+  except SVNTreeIsNotDirectory:
+    print "Error: Foolish call to get_child."
+    sys.exit(1)
   except IndexError:
     print "Error: unequal number of children"
     raise SVNTreeUnequal
@@ -279,6 +335,8 @@ def compare_trees(a, b):
       print "Unequal at node %s" % a.name
       raise SVNTreeUnequal
   return 0
+
+
 
 
 # Visually show a tree's structure
