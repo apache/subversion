@@ -87,7 +87,16 @@ svn_wc__adm_subdir (apr_pool_t *pool)
  * for readability.
  */
 
-/* Make name of wc admin file ADM_FILE by appending to directory PATH. */
+/* Make name of wc admin file ADM_FILE by appending to directory PATH. 
+ * 
+ * IMPORTANT: chances are you will want to call chop_admin_name() to
+ * restore PATH to its original value before exiting anything that
+ * calls this.  If you exit, say by returning an error, before calling
+ * chop_admin_name(), then PATH will still be in its extended state.
+ * So for safety, always do this: callers of extend_with_admin_name()
+ * should have only one `return' statement, and that return occurs
+ * *after* an unconditional call to chop_admin_name().  
+ */
 static void
 extend_with_admin_name (svn_string_t *path,
                         char *adm_file,
@@ -156,11 +165,13 @@ make_adm_thing (svn_string_t *path, char *thing, int type, apr_pool_t *pool)
 
       if (apr_err)
         err = svn_create_error (apr_err, 0, path->data, NULL, pool);
-
-      /* Else creation succeeded, so close immediately. */
-      apr_err = apr_close (f);
-      if (apr_err)
-        err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+      else
+        {
+          /* Creation succeeded, so close immediately. */
+          apr_err = apr_close (f);
+          if (apr_err)
+            err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+        }
     }
   else if (type == svn_directory_kind)
     {
@@ -356,11 +367,9 @@ svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
     err = make_adm_thing (path, SVN_WC__ADM_LOCK, svn_file_kind, pool);
     if (err)
       {
-        /* kff todo: should check that the error was an existence
-           error here, too.  Ask how; APR_EEXIST didn't do the trick
-           -- it was not what err->apr_err was set to. */
-        if (wait)
+        if (wait && (err->apr_err == APR_EEXIST))
           {
+            /* kff todo: hey, apr_sleep() is broken. */
             apr_sleep (1000);  /* micro-seconds */
             wait--;
             continue;
