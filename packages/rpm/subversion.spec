@@ -1,4 +1,4 @@
-%define apache_version 2.0.40-0.8
+%define apache_version 2.0.40-0.9
 %define neon_version 0.21.3
 %define apache_dir /usr/local/apache2
 # If you don't have 360+ MB of free disk space or don't want to run checks then
@@ -68,6 +68,9 @@ The subversion-server package adds the Subversion server Apache module to
 the Apache directories and configuration.
 
 %changelog
+* Thu Aug 08 2002 David Summers <david@summersoft.fay.ar.us> 0.14.0-2919
+- Updated to APR/APR-UTIL 2002-08-08.
+
 * Tue Jun 25 2002 David Summers <david@summersoft.fay.ar.us> 0.13.0-2332
 - Updated to APACHE/APR/APR-UTIL 2002-06-25.
 - Previous version had a few problems because of missing apache error/ files.
