@@ -868,13 +868,9 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 
   /* make sure the URI does not have a trailing "/" */
   len1 = strlen(uri);
-  if (len1 > 1 && uri[len1 - 1] == '/')
-    {
-      had_slash = 1;
-      uri[len1 - 1] = '\0';
-    }
-  else
-    had_slash = 0;
+  had_slash = (len1 > 0 && uri[len1 - 1] == '/');
+  if (len1 > 1 && had_slash)
+    uri[len1 - 1] = '\0';
 
   comb->res.uri = uri;
 
