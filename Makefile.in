@@ -149,9 +149,9 @@ RUN_SWIG_PL = $(SWIG) -c -perl $(SWIG_INCLUDES) $(SWIG_PL_INCLUDES) -o $@
 RUN_SWIG_JAVA = cd ${SWIG_SRC_DIR}/java/org/tigris/subversion/swig && $(SWIG) -c -java -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o ${abs_builddir}/$@
 
 # Compilation of SWIG-generated C source code
-COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@
+COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(CPPFLAGS) $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@
 COMPILE_JAVA_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_JAVA_COMPILE) -DSWIGJAVA $(SWIG_INCLUDES) $(SWIG_JAVA_INCLUDES) -prefer-pic -c -o $@
-COMPILE_PL_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PL_COMPILE) $(SWIG_INCLUDES) $(SWIG_PL_INCLUDES) -prefer-pic -c -o $@
+COMPILE_PL_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PL_COMPILE) $(CPPFLAGS) $(SWIG_INCLUDES) $(SWIG_PL_INCLUDES) -prefer-pic -c -o $@
 
 # these commands link the wrapper objects into an extension library/module
 LINK_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_PY_LINK) $(SWIG_LDFLAGS) -rpath $(swig_pydir) -avoid-version -module
