@@ -1154,6 +1154,8 @@ svn_wc_install_file (const char *file_path,
                                       "svn_wc_install_file: "
                                       "can't move %s to %s",
                                       new_text_path, final_location->data);
+
+          new_text_path = final_location->data;
         }
     }
   
@@ -1464,8 +1466,9 @@ svn_wc_install_file (const char *file_path,
 
   if (new_text_path)
     {
-      /* Now write a log command to overwrite the old text-base file with
-         the new one. */ 
+      /* Write out log commands to set up the new text base and its
+         checksum. */
+
       svn_xml_make_open_tag (&log_accum,
                              pool,
                              svn_xml_self_closing,
@@ -1476,7 +1479,6 @@ svn_wc_install_file (const char *file_path,
                              txtb,
                              NULL);
       
-      /* Make text-base readonly */
       svn_xml_make_open_tag (&log_accum,
                              pool,
                              svn_xml_self_closing,
@@ -1484,6 +1486,20 @@ svn_wc_install_file (const char *file_path,
                              SVN_WC__LOG_ATTR_NAME,
                              txtb,
                              NULL);
+
+      {
+        svn_stringbuf_t *checksum;
+        SVN_ERR (svn_io_file_checksum (&checksum, new_text_path, pool));
+        svn_xml_make_open_tag (&log_accum,
+                               pool,
+                               svn_xml_self_closing,
+                               SVN_WC__LOG_MODIFY_ENTRY,
+                               SVN_WC__LOG_ATTR_NAME,
+                               basename,
+                               SVN_WC__ENTRY_ATTR_CHECKSUM,
+                               checksum,
+                               NULL);
+      }
     }
 
   /* Write our accumulation of log entries into a log file */
