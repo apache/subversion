@@ -127,7 +127,8 @@ log_start_element(void *userdata,
                   const char **atts)
 {
   struct log_baton *lb = userdata;
-  const char *copyfrom_path, *copyfrom_rev;
+  const char *copyfrom_path, *copyfrom_revstr;
+  svn_revnum_t copyfrom_rev;
 
   switch (elm->id)
     {
@@ -147,14 +148,14 @@ log_start_element(void *userdata,
           lb->this_path_item->action 
             = (elm->id == ELEM_added_path) ? 'A' : 'R';
           copyfrom_path = get_attr(atts, "copyfrom-path");
-          copyfrom_rev = get_attr(atts, "copyfrom-rev");
-          if (copyfrom_path 
-              && copyfrom_rev 
-              && SVN_IS_VALID_REVNUM (copyfrom_rev))
+          copyfrom_revstr = get_attr(atts, "copyfrom-rev");
+          if (copyfrom_path && copyfrom_revstr
+              && (SVN_IS_VALID_REVNUM
+                  (copyfrom_rev = SVN_STR_TO_REV (copyfrom_revstr))))
             {
               lb->this_path_item->copyfrom_path = apr_pstrdup(lb->subpool,
                                                               copyfrom_path);
-              lb->this_path_item->copyfrom_rev = atoi(copyfrom_rev);
+              lb->this_path_item->copyfrom_rev = copyfrom_rev;
             }
         }
       else if (elm->id == ELEM_deleted_path)

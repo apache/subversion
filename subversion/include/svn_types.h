@@ -72,7 +72,7 @@ typedef enum svn_node_kind
 typedef long int svn_revnum_t;
 
 /* Valid revision numbers begin at 0 */
-#define SVN_IS_VALID_REVNUM(n) (n >= 0)
+#define SVN_IS_VALID_REVNUM(n) ((n) >= 0)
 
 /* The 'official' invalid revision num */
 #define SVN_INVALID_REVNUM ((svn_revnum_t) -1)
