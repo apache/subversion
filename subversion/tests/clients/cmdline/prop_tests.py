@@ -521,6 +521,66 @@ def revert_replacement_props(sbox):
                                                None, None, None, None, None,
                                                1)
 
+#----------------------------------------------------------------------
+
+def inappropriate_props(sbox):
+  "try to set inappropriate props"
+
+  # Bootstrap
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  A_path = os.path.join(wc_dir, 'A')
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+
+  # These should produce an error
+  outlines,errlines = svntest.main.run_svn('Illegal target', 'propset',
+                                           'svn:executable', 'on',
+                                           A_path)
+  if not errlines:
+    return 1
+  outlines,errlines = svntest.main.run_svn('Illegal target', 'propset',
+                                           'svn:keywords', 'LastChangedDate',
+                                           A_path)
+  if not errlines:
+    return 1
+  outlines,errlines = svntest.main.run_svn('Illegal target', 'propset',
+                                           'svn:eol-style', 'native',
+                                           A_path)
+  if not errlines:
+    return 1
+  outlines,errlines = svntest.main.run_svn('Illegal target', 'propset',
+                                           'svn:mime-type', 'image/png',
+                                           A_path)
+  if not errlines:
+    return 1
+  outlines,errlines = svntest.main.run_svn('Illegal target', 'propset',
+                                           'svn:ignore', '*.o',
+                                           iota_path)
+  if not errlines:
+    return 1
+
+  # Status unchanged
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+
+  # Recursive setting of inappropriate dir prop should work on files
+  outlines,errlines = svntest.main.run_svn(None, 'propset', '-R',
+                                           'svn:executable', 'on',
+                                           E_path)
+  if errlines:
+    return 1
+
+  expected_status.tweak('A/B/E/alpha', 'A/B/E/beta', status='_M')
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+
 
 ########################################################################
 # Run the tests
@@ -536,6 +596,7 @@ test_list = [ None,
               update_conflict_props,
               commit_replacement_props,
               revert_replacement_props,
+              inappropriate_props,
              ]
 
 if __name__ == '__main__':
