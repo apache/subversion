@@ -63,6 +63,8 @@
 */
 %apply int *OUTPUT { int * };
 
+%apply enum SWIGTYPE *OUTENUM { svn_node_kind_t * };
+
 /* -----------------------------------------------------------------------
    define the data/len pair of svn_fs_parse_id to be a single argument
 */
