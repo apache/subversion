@@ -1,7 +1,8 @@
 dnl
-dnl  SVN_LIB_APR(wanted_regex)
+dnl  SVN_LIB_APR(wanted_regex, alt_wanted_regex)
 dnl
-dnl  'wanted_regex' is a regex that the apr version string must match.
+dnl  'wanted_regex' and 'alt_wanted_regex are regular expressions
+dnl  that the apr version string must match.
 dnl
 dnl  Check configure options and assign variables related to
 dnl  the Apache Portable Runtime (APR) library.
@@ -10,6 +11,7 @@ dnl
 AC_DEFUN(SVN_LIB_APR,
 [
   APR_WANTED_REGEX="$1"
+  APR_WANTED_REXEX_TOO="$2"
 
   AC_MSG_NOTICE([Apache Portable Runtime (APR) library configuration])
 
@@ -34,8 +36,9 @@ AC_DEFUN(SVN_LIB_APR,
   fi
   AC_MSG_RESULT([$apr_version])
 
-  if test `expr $apr_version : $APR_WANTED_REGEX` -eq 0; then
-    echo "wanted regex is $APR_WANTED_REGEX"
+  if test `expr $apr_version : $APR_WANTED_REGEX` -eq 0 \
+       -a `expr $apr_version : $APR_WANTED_REGEX_TOO` -eq 0; then
+    echo "wanted regex is $APR_WANTED_REGEX or $APR_WANTED_REGEX_TOO"
     AC_MSG_ERROR([invalid apr version found])
   fi
 

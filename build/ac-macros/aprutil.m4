@@ -1,6 +1,7 @@
-dnl  SVN_LIB_APRUTIL(wanted_regex)
+dnl  SVN_LIB_APRUTIL(wanted_regex, alt_wanted_regex)
 dnl
-dnl  'wanted_regex' is a regex that the aprutil version string must match.
+dnl  'wanted_regex' and 'alt_wanted_regex are regular expressions 
+dnl  that the aprutil version string must match.
 dnl
 dnl  Check configure options and assign variables related to
 dnl  the Apache Portable Runtime Utilities (APRUTIL) library.
@@ -15,6 +16,7 @@ dnl
 AC_DEFUN(SVN_LIB_APRUTIL,
 [
   APRUTIL_WANTED_REGEX="$1"
+  APRUTIL_WANTED_REGEX_TOO="$2"
 
   AC_MSG_NOTICE([Apache Portable Runtime Utility (APRUTIL) library configuration])
 
@@ -47,8 +49,9 @@ AC_DEFUN(SVN_LIB_APRUTIL,
   fi
   AC_MSG_RESULT([$apu_version])
 
-  if test `expr $apu_version : $APRUTIL_WANTED_REGEX` -eq 0; then
-    echo "wanted regex is $APRUTIL_WANTED_REGEX"
+  if test `expr $apu_version : $APRUTIL_WANTED_REGEX` -eq 0 \
+       -a `expr $apu_version : $APRUTIL_WANTED_REGEX_TOO` -eq 0; then
+    echo "wanted regex is $APRUTIL_WANTED_REGEX or $APRUTIL_WANTED_REGEX_TOO"
     AC_MSG_ERROR([invalid apr-util version found])
   fi
 
