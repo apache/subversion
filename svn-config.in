@@ -44,8 +44,8 @@ Known values for OPTION are:
   --ldflags         print linker flags
   --libs            print library information
   --srcdir          print SVN source directory
-  --link-ld         print link switch(es) for linking to SVN    [not impl]
-  --link-libtool    print the libtool inputs for linking to SVN [not impl]
+  --link-ld         [NOT IMPL] print link switch(es) for linking to SVN
+  --link-libtool    [NOT IMPL] print the libtool inputs for linking to SVN
   --help            print this help
 
 When linking with libtool, an application should do something like:
