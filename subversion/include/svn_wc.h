@@ -355,31 +355,6 @@ svn_error_t *svn_wc_set_wc_prop (void *baton,
                                  svn_string_t *name,
                                  svn_string_t *value);
 
-/* Recursively import PATH to a repository using EDITOR and
- * EDIT_BATON.  PATH can be a file or directory.
- * 
- * NEW_ENTRY is the name to use in the repository.  If PATH is a
- * directory, NEW_ENTRY may be null, which creates as many new entries
- * in the top repository target directory as there are entries in the
- * top of PATH; but if NEW_ENTRY is non-null, it is the name of a new
- * subdirectory in the repository to hold the import.  If PATH is a
- * file, NEW_ENTRY may not be null.
- * 
- * NEW_ENTRY can never be the empty string.
- * 
- * Use POOL for any temporary allocation.
- *
- * Note: the repository directory receiving the import was specified
- * when the editor was fetched.  (I.e, when EDITOR->replace_root() is
- * called, it returns a directory baton for that directory, which is
- * not necessarily the root.)
- */ 
-svn_error_t *svn_wc_import (svn_string_t *path,
-                            svn_string_t *new_entry,
-                            const svn_delta_edit_fns_t *editor,
-                            void *edit_baton,
-                            apr_pool_t *pool);
-
 
 /* Crawl a tree depth-first, committing changes.
    Start the crawl at ROOT_DIRECTORY, communicate all local changes (both
