@@ -56,7 +56,7 @@ svn_wc__remove_wcprops (const char *path, apr_pool_t *pool)
 
   /* Remove this_dir's wcprops */
   SVN_ERR (svn_wc__wcprop_path (&wcprop_path, path, 0, subpool));
-  (void) apr_file_remove (wcprop_path, subpool);
+  (void) svn_io_remove_file (wcprop_path, subpool);
 
   /* Recursively loop over all children. */
   for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
