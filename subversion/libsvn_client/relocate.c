@@ -66,7 +66,6 @@ validator_func (void *baton,
   void *sess;
   struct validator_baton_t *b = baton;
   const char *ra_uuid;
-  const char *auth_dir;
 
   apr_hash_t *uuids = b->url_uuids;
   apr_pool_t *pool = b->pool;
@@ -102,8 +101,7 @@ validator_func (void *baton,
      by destroying the subpool. */
   subpool = svn_pool_create (pool); 
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, b->ra_baton, url, subpool));
-  SVN_ERR (svn_client__default_auth_dir (&auth_dir, b->path, subpool));
-  SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, url, auth_dir,
+  SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, url, NULL,
                                         NULL, NULL, FALSE, TRUE,
                                         b->ctx, subpool));
   SVN_ERR (ra_lib->get_uuid (sess, &ra_uuid, subpool));

@@ -82,9 +82,8 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
 
       /* Open an RA session to URL. Note that we do not have an admin area
-         for storing temp files.  We do, however, want to store auth data
-         after the checkout builds the WC. */
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, path,
+         for storing temp files. */
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
                                             NULL, NULL, FALSE, TRUE,
                                             ctx, pool));
 
