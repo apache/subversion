@@ -61,7 +61,7 @@ Candidate changes:
                     of whether largefile support is compiled into APR.
     Notes:  many users have hit this problem (issue #1819).
     Votes:
-      +1: sussman, ghudson
+      +1: sussman, ghudson, bliss
 
   * r10616, r10638, r10642
     Work around directory creation bug in APR shipped with httpd 2.0.50.
@@ -72,3 +72,15 @@ Candidate changes:
       repositories.
     Votes:
 
+  * r10819, r10855
+    Avoid repository corruption if executed with closed std{in,out,err}
+    Justification:
+      Simple fix for a nasty problem that has bitten at least one user.
+    Votes:
+       +1: bliss
+
+  * Issue #1862
+    Fix the 'file not found' update error.
+    Justification: Lots and lots of TSVN users are hit by this.
+    Votes:
+      +1: bliss
