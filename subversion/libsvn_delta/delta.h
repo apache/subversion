@@ -51,6 +51,7 @@
 
 
 #include "apr_pools.h"
+#include "apr_hash.h"
 #include "xmlparse.h"
 
 #ifndef DELTA_H
@@ -116,6 +117,10 @@ typedef struct svn_delta__stackframe_t
 
   void *baton;           /* holds caller data for the _current_ subdirectory */
   void *file_baton;      /* holds caller data for the _current_ file */
+
+  apr_hash_t *namespace; /* if this frame represents a tree-delta, use
+                            this hash to detect collisions in the
+                            dirent-namespace */
 
   struct svn_delta__stackframe_t *next;
   struct svn_delta__stackframe_t *previous;
