@@ -31,7 +31,8 @@
 #define SVN_ERROR_POOL_ROOTED_HERE  "svn-error-pool-rooted-here"
 
 /* Key for the svn_stream_t used for non-fatal feedback. */
-#define SVN_ERROR_STREAM            "svn-error-stream"
+#define SVN_ERROR_FEEDBACK_VTABLE   "svn-error-feedback-vtable"
+
 
 
 /*** helpers for creating errors ***/
@@ -176,22 +177,44 @@ svn_pool__inherit_error_pool (apr_pool_t *p)
 }
 
 
-svn_stream_t *
-svn_pool_get_feedback_stream (apr_pool_t *p)
+
+/* These are dummy functions that are the defaults for a newly created
+   svn_pool_feedback_t structure. */
+static apr_status_t 
+report_unversioned_item (const char *path)
 {
-  svn_stream_t *feedback_stream;
-
-  apr_pool_userdata_get ((void **)&feedback_stream, SVN_ERROR_STREAM, p);
-  return feedback_stream;
+  return APR_SUCCESS;
 }
 
+static apr_status_t 
+report_warning (const char *warning)
+{
+  return APR_SUCCESS;
+}
 
+static apr_status_t 
+report_progress (const char *action, int percentage)
+{
+  return APR_SUCCESS;
+}
+
+/* Here's a function for retrieving the pointer to the vtable so the
+   functions can be overridden. */
+svn_pool_feedback_t *
+svn_pool_get_feedback_vtable (apr_pool_t *p)
+{
+  svn_pool_feedback_t *retval;
+  apr_pool_userdata_get ((void **)&retval, SVN_ERROR_FEEDBACK_VTABLE, p);
+  return retval;
+}
+
+
 apr_status_t
 svn_error_init_pool (apr_pool_t *top_pool)
 {
   void *check;
   apr_pool_t *error_pool;
-  svn_stream_t *feedback_stream;
+  svn_pool_feedback_t *feedback_vtable;
   apr_status_t apr_err;
 
   /* just return if an error pool already exists */
@@ -205,11 +228,20 @@ svn_error_init_pool (apr_pool_t *top_pool)
       svn_error__set_error_pool (top_pool, error_pool, 1);
     }
   
-  apr_pool_userdata_get (&check, SVN_ERROR_STREAM, top_pool);
+  apr_pool_userdata_get (&check, SVN_ERROR_FEEDBACK_VTABLE, top_pool);
   if (check == NULL)
     {
-      feedback_stream = svn_stream_create (NULL, top_pool);
-      apr_pool_userdata_set (feedback_stream, SVN_ERROR_STREAM, 
+      /* Alloc a vtable */
+      feedback_vtable = apr_palloc (top_pool, sizeof
+                                    (*feedback_vtable));
+
+      /* Stuff it with default useless functions. */
+      feedback_vtable->report_unversioned_item = report_unversioned_item;
+      feedback_vtable->report_warning = report_warning;
+      feedback_vtable->report_progress = report_progress;
+
+      /* And put the vtable into our pool's userdata. */
+      apr_pool_userdata_set (feedback_vtable, SVN_ERROR_FEEDBACK_VTABLE,
                              apr_pool_cleanup_null, top_pool);
     }
 
@@ -260,11 +292,12 @@ svn_pool_create_debug (apr_pool_t *parent_pool,
     }
   else
     {
-      /* Inherit the error pool and feedback stream from the parent. */
-      svn_stream_t *stream;
+      /* Inherit the error pool and feedback vtable from the parent. */
+      svn_pool_feedback_t *vtable;
       svn_pool__inherit_error_pool (ret_pool);
-      apr_pool_userdata_get ((void **)&stream, SVN_ERROR_STREAM, parent_pool);
-      apr_pool_userdata_set (stream, SVN_ERROR_STREAM, 
+      apr_pool_userdata_get ((void **)&vtable, 
+                             SVN_ERROR_FEEDBACK_VTABLE, parent_pool);
+      apr_pool_userdata_set (vtable, SVN_ERROR_FEEDBACK_VTABLE,
                              apr_pool_cleanup_null, ret_pool);
     }
 
@@ -291,8 +324,7 @@ svn_pool_clear_debug (apr_pool_t *p,
 {
   apr_pool_t *parent;
   apr_pool_t *error_pool;
-  apr_pool_t *tmp_pool;
-  svn_stream_t *stream, *stream_copy;
+  svn_pool_feedback_t *vtable, vtable_tmp;
   svn_boolean_t subpool_of_p_p;  /* That's "predicate" to you, bud. */
     
 #ifdef SVN_POOL_DEBUG
@@ -318,15 +350,15 @@ svn_pool_clear_debug (apr_pool_t *p,
       subpool_of_p_p = 1;   /* The only possibility. */
     }
 
-  /* Get the feedback stream */
-  apr_pool_userdata_get ((void **)&stream, SVN_ERROR_STREAM, p);
+  /* Get the feedback vtable */
+  apr_pool_userdata_get ((void **)&vtable, SVN_ERROR_FEEDBACK_VTABLE, p);
 
   if (subpool_of_p_p)
     {
       /* Here we have a problematic situation.  We're getting ready to
          clear this pool P, which will invalidate all its userdata.
          The problem is that as far as we can tell, the error pool and
-         feedback stream on this pool are copies of the originals,
+         feedback vtable on this pool are copies of the originals,
          they *are* the originals.  We need to be able to re-create
          them in this pool after it has been cleared.
 
@@ -335,19 +367,11 @@ svn_pool_clear_debug (apr_pool_t *p,
          pool -- we can just initialize a new error pool to stuff into
          P here after it's been cleared.
 
-         The feedback stream doesn't offer quite the luxury.  We can't
-         really afford to just create a new feedback stream, since the
-         caller may have already set up the stream functions and baton
-         and such on this stream.  The svn_stream_t structure is
-         opaque, else we could just copy the stream into a static
-         structure temporarily.  So the only real course of action
-         here is to allocate a new global pool, dupe the stream in
-         this new global pool, then dup it back after we've cleared
-         P. */
-      apr_pool_create (&tmp_pool, NULL);
-      
-      /* Dupe the feedback stream in our temporary pool. */
-      stream_copy = svn_stream_dup (stream, tmp_pool);
+         The feedback vtable doesn't offer quite the luxury.  We can't
+         really afford to just create a new feedback vtable, since the
+         caller may have already overridden the functions therein.
+         So, we have to copy out those function pointers temporarily. */
+      vtable_tmp = *vtable;
     }
  
   /* Clear the pool.  All userdata of this pool is now invalid. */
@@ -358,16 +382,14 @@ svn_pool_clear_debug (apr_pool_t *p,
       /* Make new error pool. */
       svn_error__make_error_pool (p, &error_pool);
 
-      /* Dupe our squirreled-away stream back into P... */
-      stream = svn_stream_dup (stream_copy, p);
-
-      /* ...and clean up our mess. */
-      apr_pool_destroy (tmp_pool);
+      /* Dupe our squirreled-away vtable back into P... */
+      vtable = apr_palloc (p, sizeof (*vtable));
+      *vtable = vtable_tmp;
     }
 
   /* Now, reset the error pool and feedback stream on P. */
   svn_error__set_error_pool (p, error_pool, subpool_of_p_p);
-  apr_pool_userdata_set (stream, SVN_ERROR_STREAM, 
+  apr_pool_userdata_set (vtable, SVN_ERROR_FEEDBACK_VTABLE,
                          apr_pool_cleanup_null, p);
   
 }

@@ -98,18 +98,29 @@ extern "C" {
 apr_status_t svn_error_init_pool (apr_pool_t *top_pool);
 
 
-/* Return the feedback stream associated with pool P.  This stream,
-   like the error pool, exists at the top-level Subversion pool, and
-   is referred to by all subpools of that top-level pool.  A caller
-   can set the i/o functions on this stream, as well as the baton,
-   using the svn_stream_t functions in svn_io.h.  This mechanism
-   provides a way for real-time, non-terminative information (such as
-   warnings) to be passed back to those who care.
+/* The convention here is that the recipient of the feedback has the
+   option of returning an APR error value that indicates whether or
+   not the calling code should treat the feedback condition as a fatal
+   situation. */
+typedef struct svn_pool_feedback_t
+{
+  /* Report items present in the working copy that are apparently not
+     under revision control, a'la CVS's "? foobar.c" */
+  apr_status_t (*report_unversioned_item) (const char *path);
 
-   In the future, this mechanism may be replaced with the broader
-   concept of function v-table (some of who functions could surely do
-   the same thing that this stream's functions do). */
-svn_stream_t *svn_pool_get_feedback_stream (apr_pool_t *p);
+  /* Generic human-readable we-think-it's-non-fatal warning. */
+  apr_status_t (*report_warning) (const char *warning);
+
+  /* Progress indication, yielding what PERCENTAGE (from 0-100) of a
+     given ACTION has been completed. */
+  apr_status_t (*report_progress) (const char *action,
+                                   int percentage);
+
+} svn_pool_feedback_t;
+
+/* Retrieve a pointer to the global feedback vtable structure, which
+   lives in top-level Subversion pools. */
+svn_pool_feedback_t *svn_pool_get_feedback_vtable (apr_pool_t *p);
 
 
 #ifndef SVN_POOL_DEBUG
