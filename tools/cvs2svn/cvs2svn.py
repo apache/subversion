@@ -359,7 +359,7 @@ class Commit:
         f = os.path.join(dirname, 'Attic', fname)
         statcache.stat(f)
 
-      pipe = os.popen('co -q -p%s %s' % (r, f), 'r', 102400)
+      pipe = os.popen('co -q -p%s \'%s\'' % (r, f), 'r', 102400)
 
       # if we just made the file, we can send it in one big hunk, rather
       # than streaming it in.
@@ -377,7 +377,7 @@ class Commit:
         # revision from co, or else the delta won't be correct because
         # the contents in the repo won't have changed yet.
         if repos_path == lastcommit[0]:
-          infile2 = os.popen("co -q -p%s %s" % (lastcommit[1], f), "r", 102400)
+          infile2 = os.popen("co -q -p%s \'%s\'" % (lastcommit[1], f), "r", 102400)
           stream1 = util.svn_stream_from_stdio(infile2, f_pool)
         else:
           stream1 = fs.file_contents(root, repos_path, f_pool)
