@@ -20,7 +20,8 @@ import java.io.IOException;
  * @endcopyright
  */
 /**
- * Interface for data to be inputed into subversion
+ * Interface for data to be received from subversion
+ * used for SVNAdmin.load and SVNAdmin.dump
  */
 public interface InputInterface
 {

@@ -26,18 +26,44 @@ import java.util.Locale;
  */
 public class Revision
 {
+    /**
+     * kind of revision specified
+     */
     protected int revKind;
 
+    /**
+     * Create a new revision
+     * @deprecated
+     * @param kind  kind of revision
+     */
     public Revision(int kind)
     {
         revKind = kind;
     }
 
+    /**
+     * Internally create a new revision
+     * @param kind      kind of revision
+     * @param marker    marker to differtiate from the public deprecated version
+     */
+    protected Revision(int kind, boolean marker)
+    {
+        revKind = kind;
+    }
+
+    /**
+     * Returns the kind of the Revsion
+     * @return kind
+     */
     public int getKind()
     {
         return revKind;
     }
 
+    /**
+     * return the textual representation of the revision
+     * @return english text
+     */
     public String toString()
     {
         switch(revKind) {
@@ -50,6 +76,11 @@ public class Revision
         return super.toString();
     }
 
+    /**
+     * compare to revision objects
+     * @param target
+     * @return if both object have equal content
+     */
     public boolean equals(Object target) {
         if (this == target)
             return true;
@@ -59,33 +90,77 @@ public class Revision
         return ((Revision)target).revKind == revKind;        
     }
 
-    public static final Revision HEAD = new Revision(Kind.head);
-    public static final Revision START = new Revision(Kind.unspecified);
-    public static final Revision COMMITTED = new Revision(Kind.committed);
-    public static final Revision PREVIOUS = new Revision(Kind.previous);
-    public static final Revision BASE = new Revision(Kind.base);
-    public static final Revision WORKING = new Revision(Kind.working);
+    /**
+     * last commited revision
+     */
+    public static final Revision HEAD = new Revision(Kind.head, true);
+    /**
+     * first existing revision
+     */
+    public static final Revision START = new Revision(Kind.unspecified, true);
+    /**
+     * last committed revision, needs working copy
+     */
+    public static final Revision COMMITTED = new Revision(Kind.committed, true);
+    /**
+     * previous committed revision, needs working copy
+     */
+    public static final Revision PREVIOUS = new Revision(Kind.previous, true);
+    /**
+     * base revision of working copy
+     */
+    public static final Revision BASE = new Revision(Kind.base, true);
+    /**
+     * working version in working copy
+     */
+    public static final Revision WORKING = new Revision(Kind.working, true);
+    /**
+     * Marker revision number for no real revision
+     */
     public static final int SVN_INVALID_REVNUM = -1;
 
+    /**
+     * class to specify a Revision by number
+     */
     public static class Number extends Revision
     {
+        /**
+         * the revision number
+         */
         protected long revNumber;
 
+        /**
+         * create a revision by number object
+         * @param number the number
+         */
         public Number(long number)
         {
-            super(Kind.number);
+            super(Kind.number, true);
             revNumber = number;
         }
 
+        /**
+         * Returns the revision number
+         * @return number
+         */
         public long getNumber()
         {
             return revNumber;
         }
 
+        /**
+         * return the textual representation of the revision
+         * @return english text
+         */
         public String toString() {
             return Long.toString(revNumber);
         }
-        
+
+        /**
+         * compare to revision objects
+         * @param target
+         * @return if both object have equal content
+         */
         public boolean equals(Object target) {
             if (!super.equals(target))
                 return false;
@@ -94,25 +169,49 @@ public class Revision
         }
     }
 
+    /**
+     * class to specify a revision by a date
+     */
     public static class DateSpec extends Revision
     {
+        /**
+         * the date
+         */
         protected Date revDate;
+
+        /**
+         * create a revision by date object
+         * @param date
+         */
         public DateSpec(Date date)
         {
-            super(Kind.date);
+            super(Kind.date, true);
             revDate = date;
         }
+        /**
+         * Returns the date of the revision
+         * @return the date
+         */
         public Date getDate()
         {
             return revDate;
         }
 
+        /**
+         * return the textual representation of the revision
+         * @return english text
+         */
         public String toString() {
             
             SimpleDateFormat dateFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z", Locale.US); 
             return '{'+dateFormat.format(revDate)+'}';
         }
 
+        /**
+         * compare to revision objects
+         * @param target
+         * @return if both object have equal content
+         */
         public boolean equals(Object target) {
             if (!super.equals(target))
                 return false;
@@ -122,8 +221,7 @@ public class Revision
         
     }
 
-    /** Various ways of specifying revisions.
-     *
+    /**
      * Various ways of specifying revisions.
      *
      * Note:
@@ -131,6 +229,8 @@ public class Revision
      * refers to the uncommitted "working" revision, which may be modified
      * with respect to its base revision.  In other contexts, `working'
      * should behave the same as `committed' or `current'.
+     *
+     * the values are defined in RevisionKind because of building reasons
      */
     public static final class Kind implements RevisionKind
     {

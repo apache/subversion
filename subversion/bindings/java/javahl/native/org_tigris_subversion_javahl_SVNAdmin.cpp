@@ -80,10 +80,11 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_finalize
 /*
  * Class:     org_tigris_subversion_javahl_SVNAdmin
  * Method:    create
- * Signature: (Ljava/lang/String;ZZLjava/lang/String;)V
+ * Signature: (Ljava/lang/String;ZZLjava/lang/String;Ljava/lang/String;)V
  */
 JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_create
-  (JNIEnv *env, jobject jthis, jstring jpath, jboolean jdisableFsyncCommit, jboolean jkeepLog, jstring jconfigpath)
+  (JNIEnv *env, jobject jthis, jstring jpath, jboolean jdisableFsyncCommit, 
+  jboolean jkeepLog, jstring jconfigpath, jstring jfstype)
 {
 	JNIEntry(SVNAdmin, create);
 	SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
@@ -105,7 +106,14 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_create
 		return;
 	}
 
-	cl->create(path, jdisableFsyncCommit? true : false, jkeepLog? true : false, configpath);
+	JNIStringHolder fstype(jfstype);
+	if(JNIUtil::isExceptionThrown())
+	{
+		return;
+	}
+
+	cl->create(path, jdisableFsyncCommit? true : false, jkeepLog? true : false, 
+        configpath, fstype);
 }
 
 /*

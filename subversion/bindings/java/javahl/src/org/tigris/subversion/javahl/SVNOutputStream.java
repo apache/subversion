@@ -1,7 +1,3 @@
-package org.tigris.subversion.javahl;
-
-import java.io.*;
-
 /**
  * @copyright
  * ====================================================================
@@ -19,9 +15,25 @@ import java.io.*;
  * ====================================================================
  * @endcopyright
  */
+package org.tigris.subversion.javahl;
+
+import java.io.*;
+/**
+ * This class connects a java.io.PipedOutputStream to a InputInterface.
+ * The outherside of the Pipe must written by another thread, or deadlocks
+ * will occure
+ */
 public class SVNOutputStream extends PipedOutputStream
 {
+    /**
+     * my connection to receive data into subversion
+     */
     Inputer myInputer;
+    /**
+     * Creates a SVNOutputStream so that it is connected with an internal
+     * PipedInputStream
+     * @throws IOException
+     */
     public SVNOutputStream() throws IOException
     {
         myInputer = new Inputer(this);
@@ -39,12 +51,32 @@ public class SVNOutputStream extends PipedOutputStream
         myInputer.closed = true;
         super.close();
     }
-
-    public static class Inputer implements InputInterface
+    /**
+     * Get the Interface to connect to SVNAdmin
+     * @return the connetion interface
+     */
+    public InputInterface getInputer()
     {
+        return myInputer;
+    }
+    /**
+     * this class implements the connection to SVNAdmin
+     */
+    public class Inputer implements InputInterface
+    {
+        /**
+         * my side of the pipe
+         */
         PipedInputStream myStream;
+        /**
+         * flag that the other side of the pipe has been closed
+         */
         boolean closed;
-
+        /**
+         * build a new connection object
+         * @param myMaster  the other side of the pipe
+         * @throws IOException
+         */
         Inputer(SVNOutputStream myMaster) throws IOException
         {
             myStream = new PipedInputStream(myMaster);

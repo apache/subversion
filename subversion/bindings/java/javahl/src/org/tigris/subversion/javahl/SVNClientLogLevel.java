@@ -16,10 +16,25 @@
  * @endcopyright
  */
 package org.tigris.subversion.javahl;
+/**
+ * class for the constants of the logging levels.
+ */
 public interface SVNClientLogLevel
 {
+    /**
+     * Log nothing
+     */
     public static final int NoLog = 0;
+    /**
+     * Log fatal error
+     */
     public static final int ErrorLog = 1;
+    /**
+     * Log exceptions thrown
+     */
     public static final int ExceptionLog = 2;
+    /**
+     * Log the entry and exits of the JNI code
+     */
     public static final int EntryLog = 3;
 }

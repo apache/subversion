@@ -19,13 +19,36 @@ import java.util.Date;
  * ====================================================================
  * @endcopyright
  */
+/**
+ * this class describes a single subversion revision with log message,
+ * author and date
+ */
 public class LogMessage
 {
+    /**
+     * the log message for the revision
+     */
     private String message;
+    /**
+     * the date of the commit
+     */
     private Date date;
+    /**
+     * the number of the revision
+     */
     private long revision;
+    /**
+     * the author of the commit
+     */
     private String author;
 
+    /**
+     * this constructor is only called only from JNI code
+     * @param m     the log message text
+     * @param d     the date of the commit
+     * @param r     the number of the revision
+     * @param a     the author of the commit
+     */
     LogMessage(String m, Date d, long r, String a)
     {
         message = m;
@@ -33,26 +56,46 @@ public class LogMessage
         revision = r;
         author = a;
     }
+    /**
+     * Return the log message text
+     * @return the log message text
+     */
     public String getMessage()
     {
         return message;
     }
 
+    /**
+     * Returns the date of the commit
+     * @return the date of the commit
+     */
     public Date getDate()
     {
         return date;
     }
 
+    /**
+     * Returns the revision as a Revision object
+     * @return the revision number as a Revision object
+     */
     public Revision.Number getRevision()
     {
         return new Revision.Number(revision);
     }
 
+    /**
+     * Returns the revision as a long  integer
+     * @return the revision number as a long integer
+     */
     public long getRevisionNumber()
     {
         return revision;
     }
 
+    /**
+     * Returns the author of the commit
+     * @return the author of the commit
+     */
     public String getAuthor()
     {
         return author;

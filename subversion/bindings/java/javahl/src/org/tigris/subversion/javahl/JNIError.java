@@ -22,6 +22,10 @@ package org.tigris.subversion.javahl;
  */
 public class JNIError extends Error
 {
+    /**
+     * this constructor is only called by the JNI code
+     * @param message   the error message
+     */
     JNIError (String message)
     {
         super(message);

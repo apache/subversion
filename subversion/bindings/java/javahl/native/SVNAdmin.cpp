@@ -84,7 +84,9 @@ void SVNAdmin::finalize()
 	JNIUtil::putFinalizedClient(this);
 }
 
-void SVNAdmin::create(const char *path, bool disableFsyncCommits, bool keepLogs, const char *configPath)
+void SVNAdmin::create(const char *path, bool disableFsyncCommits, 
+                      bool keepLogs, const char *configPath,
+                      const char *fstype)
 {
   Pool subpool;
     if(path == NULL)
@@ -106,6 +108,9 @@ void SVNAdmin::create(const char *path, bool disableFsyncCommits, bool keepLogs,
   apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE,
                 APR_HASH_KEY_STRING,
                 (keepLogs ? "0" : "1"));
+  apr_hash_set (fs_config, SVN_FS_CONFIG_FS_TYPE,
+                  APR_HASH_KEY_STRING,
+                  fstype);
 
   svn_error_t *err = svn_config_get_config (&config, configPath, subpool.pool());
   if(err != SVN_NO_ERROR)

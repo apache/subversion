@@ -1,4 +1,3 @@
-package org.tigris.subversion.javahl;
 /**
  * @copyright
  * ====================================================================
@@ -16,6 +15,10 @@ package org.tigris.subversion.javahl;
  * ====================================================================
  * @endcopyright
  */
+package org.tigris.subversion.javahl;
+/**
+ * This class offers the same commands as the svnadmin commandline client
+ */
 public class SVNAdmin
 {
     /**
@@ -24,7 +27,7 @@ public class SVNAdmin
     static
     {
         /*
-         * first try to load the library by the new name.
+         * first try to load the library by the new names.
          * if that fails, try to load the library by the old name.
          */
         try
@@ -65,18 +68,32 @@ public class SVNAdmin
      */
     protected native void finalize();
     /**
-     * slot for the adress of the native peer
+     * slot for the adress of the native peer. The JNI code is the only user
+     * of this member
      */
     protected long cppAddr;
     /**
+     * Filesystem in a Berkeley DB
+     */
+    public static final String BDB = "bdb";
+    /**
+     * Filesystem in the filesystem
+     */
+    public static final String FSFS = "fsfs";
+
+    /**
      * create a subversion repository.
-     * @param path                  the path where the repository will been created.
+     * @param path                  the path where the repository will been 
+     *                              created.
      * @param disableFsyncCommit    disable to fsync at the commit (BDB).
      * @param keepLog               keep the log files (BDB).
      * @param configPath            optional path for user configuration files.
+     * @param fstype                the type of the filesystem (BDB or FSFS)
      * @throws ClientException  throw in case of problem
      */
-    public native void create(String path, boolean disableFsyncCommit, boolean keepLog, String configPath) throws ClientException;
+    public native void create(String path, boolean disableFsyncCommit, 
+                              boolean keepLog, String configPath,
+                              String fstype) throws ClientException;
     /**
      * deltify the revisions in the repository
      * @param path              the path to the repository

@@ -16,22 +16,30 @@
  * @endcopyright
  */
 package org.tigris.subversion.javahl;
-
-import java.util.Date;
-
 /**
- * this interface is used to receive every single line for a file on a
- * the SVNClientinterface.blame call.
+ * the constants in this interface describe the changes to an item
+ * to be commited
  */
-public interface BlameCallback
+public interface CommitItemStateFlags
 {
     /**
-     * the method will be called for every line in a file.
-     * @param changed   the date of the last change.
-     * @param revision  the revision of the last change.
-     * @param author    the author of the last change.
-     * @param line      the line in the file
+     * the item has been added
      */
-    public void singleLine(Date changed, long revision, String author,
-                           String line);
+    public static final int Add=1;
+    /**
+     * the item has been deleted
+     */
+    public static final int Delete=2;
+    /**
+     * the item has text modifications
+     */
+    public static final int TextMods=4;
+    /**
+     * the item has property modifications
+     */
+    public static final int PropMods=8;
+    /**
+     * the item has been copied
+     */
+    public static final int IsCopy=16;
 }
