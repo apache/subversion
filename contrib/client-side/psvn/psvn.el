@@ -21,8 +21,8 @@
 
 ;;; Commentary
 
-;; psvn.el is tested with GNU Emacs 21.3 on windows, debian linux
-;; with svn 1.03
+;; psvn.el is tested with GNU Emacs 21.3 on windows, debian linux,
+;; freebsd5 with svn 1.05
 
 ;; psvn.el is an interface for the revision control tool subversion
 ;; (see http://subversion.tigris.org)
@@ -40,7 +40,8 @@
 ;; V     - svn-status-resolved              run 'svn resolved'
 ;; U     - svn-status-update-cmd            run 'svn update'
 ;; c     - svn-status-commit-file           run 'svn commit'
-;; a     - svn-status-add-file              run 'svn add'
+;; a     - svn-status-add-file              run 'svn add --non-recursive'
+;; A     - svn-status-add-file-recursively  run 'svn add'
 ;; +     - svn-status-make-directory        run 'svn mkdir'
 ;; R     - svn-status-mv                    run 'svn mv'
 ;; C-d   - svn-status-rm                    run 'svn rm'
@@ -659,6 +660,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "?") 'svn-status-toggle-hide-unknown)
   (define-key svn-status-mode-map (kbd "_") 'svn-status-toggle-hide-unmodified)
   (define-key svn-status-mode-map (kbd "a") 'svn-status-add-file)
+  (define-key svn-status-mode-map (kbd "A") 'svn-status-add-file-recursively)
   (define-key svn-status-mode-map (kbd "+") 'svn-status-make-directory)
   (define-key svn-status-mode-map (kbd "R") 'svn-status-mv)
   (define-key svn-status-mode-map (kbd "D") 'svn-status-rm)
@@ -1435,14 +1437,26 @@ If ARG then prompt for revision to diff against, else compare working copy with 
   (interactive)
   (svn-status-show-process-buffer-internal))
 
-(defun svn-status-add-file (arg)
+(defun svn-status-add-file-recursively (arg)
   "Run `svn add' on all selected files.
+When a directory is added, add files recursively.
 See `svn-status-marked-files' for what counts as selected.
 When this function is called with a prefix argument, use the actual file instead."
   (interactive "P")
   (message "adding: %S" (svn-status-get-file-list-names (not arg)))
   (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-get-file-list (not arg)) "")
   (svn-run-svn t t 'add "add" "--targets" svn-status-temp-arg-file))
+
+(defun svn-status-add-file (arg)
+  "Run `svn add' on all selected files.
+When a directory is added, don't add the files of the directory
+ (svn add --non-recursive <file-list> is called).
+See `svn-status-marked-files' for what counts as selected.
+When this function is called with a prefix argument, use the actual file instead."
+  (interactive "P")
+  (message "adding: %S" (svn-status-get-file-list-names (not arg)))
+  (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-get-file-list (not arg)) "")
+  (svn-run-svn t t 'add "add" "--non-recursive" "--targets" svn-status-temp-arg-file))
 
 (defun svn-status-make-directory (dir)
   "Run `svn mkdir DIR'."
