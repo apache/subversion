@@ -230,7 +230,7 @@ fold_change (apr_hash_t *changes,
       path = apr_pstrdup (pool, change->path);
     }
 
-  /* Add (or update) this path, removing any leading slash that might exist. */
+  /* Add (or update) this path. */
   apr_hash_set (changes, path, APR_HASH_KEY_STRING, new_change);
 
   return SVN_NO_ERROR;
