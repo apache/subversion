@@ -53,8 +53,9 @@ Item = svntest.wc.StateItem
 #                        Therefore, we can simply parse transaction headers.
 #
 #   'svnadmin dump':     A couple regression tests that ensure dump doesn't
-#                        error out. The actual contents of the dump aren't
-#                        verified at all.
+#                        error out, and one to check that the --quiet option
+#                        really does what it's meant to do. The actual
+#                        contents of the dump aren't verified at all.
 #
 #  ### TODO:  someday maybe we could parse the contents of trees too.
 #
@@ -194,6 +195,18 @@ def dump_move_dir_modify_child(sbox):
                "* Dumped revision 1.\n",
                "* Dumped revision 2.\n"], errput)
 
+#----------------------------------------------------------------------
+
+def dump_quiet(sbox):
+  "test 'svnadmin dump --quiet'"
+  if sbox.build():
+    return 1
+
+  output, errput = svntest.main.run_svnadmin("dump", sbox.repo_dir, '--quiet')
+  return svntest.actions.compare_and_display_lines(
+    "Output of 'svnadmin dump --quiet' is unexpected.",
+    'STDERR', [], errput)
+
 
 ########################################################################
 # Run the tests
@@ -205,7 +218,8 @@ test_list = [ None,
               create_txn,
               remove_txn,
               dump_copied_dir,
-              dump_move_dir_modify_child
+              dump_move_dir_modify_child,
+              dump_quiet,
              ]
 
 if __name__ == '__main__':
