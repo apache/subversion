@@ -970,32 +970,12 @@ svn_fs__rep_contents_read_stream (svn_fs_t *fs,
   return rs;
 }
 
-                                       
-svn_stream_t *
-svn_fs__rep_contents_write_stream (svn_fs_t *fs,
-                                   const char *rep_key,
-                                   const char *txn_id,
-                                   trail_t *trail,
-                                   apr_pool_t *pool)
-{
-  struct rep_write_baton *wb
-    = rep_write_get_baton (fs, rep_key, txn_id, trail, pool);
 
-  svn_stream_t *ws = svn_stream_create (wb, pool);
-  svn_stream_set_write (ws, rep_write_contents);
-
-  if (trail && svn_fs__rep_contents_clear (fs, rep_key, txn_id, trail))
-    return NULL;
-
-  return ws;
-}
-
-
-svn_error_t *
-svn_fs__rep_contents_clear (svn_fs_t *fs,
-                            const char *rep_key,
-                            const char *txn_id,
-                            trail_t *trail)
+static svn_error_t *
+rep_contents_clear (svn_fs_t *fs,
+                    const char *rep_key,
+                    const char *txn_id,
+                    trail_t *trail)
 {
   svn_fs__representation_t *rep;
   const char *str_key;
@@ -1019,6 +999,30 @@ svn_fs__rep_contents_clear (svn_fs_t *fs,
       memcpy (rep->checksum, empty_digest, MD5_DIGESTSIZE);
     }
   return SVN_NO_ERROR;
+}
+
+
+                                       
+svn_stream_t *
+svn_fs__rep_contents_write_stream (svn_fs_t *fs,
+                                   const char *rep_key,
+                                   const char *txn_id,
+                                   trail_t *trail,
+                                   apr_pool_t *pool)
+{
+  struct rep_write_baton *wb
+    = rep_write_get_baton (fs, rep_key, txn_id, trail, pool);
+
+  svn_stream_t *ws = svn_stream_create (wb, pool);
+  svn_stream_set_write (ws, rep_write_contents);
+
+  /* ### todo: This is yicky, but should be fixed in a forthcoming
+     commit by kfogel, who is making this function return an
+     svn_error_t *. */
+  if (trail && rep_contents_clear (fs, rep_key, txn_id, trail))
+    return NULL;
+
+  return ws;
 }
 
 

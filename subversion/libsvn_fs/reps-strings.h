@@ -98,12 +98,11 @@ svn_stream_t *svn_fs__rep_contents_read_stream (svn_fs_t *fs,
                                                 apr_pool_t *pool);
 
                                        
-/* Return a stream to write the contents of REP_KEY.  Allocate the
+/* Return a stream to write new contents of REP_KEY.  Allocate the
    stream in POOL.  TXN_ID is the id of the Subversion transaction
    under which this occurs.
 
-   If the rep already has contents, the stream will append.  You can
-   use svn_fs__rep_contents_clear() to clear the contents first.
+   If the rep already has contents, they will be cleared.
 
    If TRAIL is non-null, the stream's writes are part of TRAIL;
    otherwise, each write happens in an internal, one-off trail.
@@ -116,17 +115,6 @@ svn_stream_t *svn_fs__rep_contents_write_stream (svn_fs_t *fs,
                                                  const char *txn_id,
                                                  trail_t *trail,
                                                  apr_pool_t *pool);
-
-
-/* Clear the contents of REP_KEY, so that it represents the empty
-   string, as part of TRAIL.  TXN_ID is the id of the Subversion
-   transaction under which this occurs.  If REP_KEY is not mutable,
-   return the error SVN_ERR_FS_REP_NOT_MUTABLE.  */
-svn_error_t *svn_fs__rep_contents_clear (svn_fs_t *fs,
-                                         const char *rep_key,
-                                         const char *txn_id,
-                                         trail_t *trail);
-
 
 
 /*** Deltified storage. ***/
