@@ -25,6 +25,7 @@
 
 #include "dav_svn.h"
 #include "svn_pools.h"
+#include "svn_time.h"
 
 
 /*
@@ -67,14 +68,12 @@ static const dav_liveprop_spec dav_svn_props[] =
 #if 0
   /* WebDAV properties */
   SVN_RO_DAV_PROP(getcontentlanguage),  /* ### make this r/w? */
+#endif
   SVN_RO_DAV_PROP(getcontentlength),
   SVN_RO_DAV_PROP(getcontenttype),      /* ### make this r/w? */
-#endif
   SVN_RO_DAV_PROP(getetag),
   SVN_RO_DAV_PROP(creationdate),
-#if 0
   SVN_RO_DAV_PROP(getlastmodified),
-#endif
 
   /* DeltaV properties */
   SVN_RO_DAV_PROP2(baseline_collection, baseline-collection),
@@ -126,8 +125,18 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
 
   switch (propid)
     {
+    case DAV_PROPID_getlastmodified:
     case DAV_PROPID_creationdate:
       {
+        /* In subversion terms, the date attached to a file's CR is
+           the true "last modified" time.  However, we're defining
+           creationdate in the same way.  IMO, the "creationdate" is
+           really the date attached to the revision in which the item
+           *first* came into existence; this would found by tracing
+           back through the log of the file -- probably via
+           svn_fs_revisions_changed.  gstein, is it a bad thing that
+           we're currently using 'creationdate' to mean the same thing
+           as 'last modified date'?  */
         svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
         svn_string_t *committed_date = NULL;
         
@@ -158,7 +167,50 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
         if (committed_date == NULL)
           return DAV_PROP_INSERT_NOTDEF;
 
-        value = apr_xml_quote_string(p, committed_date->data, 1);
+        if (propid == DAV_PROPID_creationdate)
+          {
+            /* Return an ISO8601 date; this is what the svn client
+               expects, and rfc2518 demands it. */
+
+            /* Revision datestamps are already ISO8601 format. */
+            value = apr_xml_quote_string(p, committed_date->data, 1);
+          }
+
+        else if (propid == DAV_PROPID_getlastmodified)
+          {
+            /* Return an rfc1123 date string, as rfc2518 demands an
+               'http date' for this property.  */
+            apr_time_t timeval;
+            apr_time_exp_t tms;
+            apr_status_t status;
+            const char *nicedate;
+
+            /* convert the ISO8601 date into an apr_time_t */
+            serr = svn_time_from_nts(&timeval, committed_date->data, p);
+            if (serr != NULL)
+              {
+                value = "###error###";
+                break;
+              }
+            
+            /* convert the apr_time_t into a apr_time_exp_t */
+            status = apr_time_exp_gmt(&tms, timeval);
+            if (status != APR_SUCCESS)
+              {
+                value = "###error###";
+                break;
+              }
+              
+            /* stolen from dav/fs/repos.c   :-)  */
+            nicedate = apr_psprintf(p, "%s, %.2d %s %d %.2d:%.2d:%.2d GMT",
+                                    apr_day_snames[tms.tm_wday],
+                                    tms.tm_mday, apr_month_snames[tms.tm_mon],
+                                    tms.tm_year + 1900,
+                                    tms.tm_hour, tms.tm_min, tms.tm_sec);
+
+            value = apr_xml_quote_string(p, nicedate, 1);
+          }
+
         break;
       }
 
@@ -204,27 +256,45 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       break;
 
     case DAV_PROPID_getcontentlength:
-      /* our property, but not defined on collection resources */
-      if (resource->collection)
-        return DAV_PROP_INSERT_NOTSUPP;
+      {
+        apr_off_t len = 0;
+        
+        /* our property, but not defined on collection resources */
+        if (resource->collection)
+          return DAV_PROP_INSERT_NOTSUPP;
+        
+        serr = svn_fs_file_length(&len, resource->info->root.root,
+                                  resource->info->repos_path, p);
+        if (serr != NULL)
+          {
+            value = "0";  /* ### what to do? */
+            break;
+          }
 
-      /* ### call svn_fs_file_length() */
-      value = "0";
-      break;
+        value = apr_psprintf(p, "%ld", (long int) len);
+        break;
+      }
 
     case DAV_PROPID_getcontenttype:
-      /* ### need something here */
-      /* ### maybe application/octet-stream and text/plain? */
-      return DAV_PROP_INSERT_NOTSUPP;
-      break;
+      {
+        /* The subversion client assumes that any file without an
+           svn:mime-type property is of type text/plain.  So it seems
+           safe (and consistent) to assume the same on the server.  */
+        svn_string_t *pval;
+        serr = svn_fs_node_prop (&pval, resource->info->root.root,
+                                 resource->info->repos_path,
+                                 SVN_PROP_MIME_TYPE, p);
+
+        if ((serr != NULL) || (pval == NULL))
+          value = "text/plain"; /* assume default */        
+        else
+          value = pval->data;
+
+        break;
+      }
 
     case DAV_PROPID_getetag:
       value = dav_svn_getetag(resource);
-      break;
-
-    case DAV_PROPID_getlastmodified:
-      /* ### need a modified date */
-      return DAV_PROP_INSERT_NOTSUPP;
       break;
 
     case DAV_PROPID_baseline_collection:
