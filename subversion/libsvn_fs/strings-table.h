@@ -69,15 +69,14 @@ svn_error_t *svn_fs__string_size (apr_size_t *size,
 /* Append LEN bytes from BUF to string *KEY in FS, as part of TRAIL.
  *
  * If *KEY is null, then create a new string and store the new key in
- * *KEY, and write LEN bytes from BUF as the initial contents of the
- * string.
+ * *KEY (allocating it in TRAIL->pool), and write LEN bytes from BUF
+ * as the initial contents of the string.
  *
  * If *KEY is not null but there is no string named *KEY, return
  * SVN_ERR_FS_NO_SUCH_STRING.
  *
  * Note: to overwrite the old contents of a string, call
- * svn_fs__string_clear() and then svn_fs__string_append().
- */
+ * svn_fs__string_clear() and then svn_fs__string_append().  */
 svn_error_t *svn_fs__string_append (svn_fs_t *fs,
                                     const char **key,
                                     apr_size_t len,
