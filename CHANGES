@@ -1,3 +1,10 @@
+Version 0.28.1
+(released 28 Aug 2003,http://svn.collab.net/repos/svn/tags/0.28.1)
+
+  There are no changes in this release.
+  It is strictly an updated release, build with the correct version
+  of autoconf; autconf-2.57
+
 Version 0.28.0 (released 27 August 2003, rev 6894, branches/release-0.28)
 (http://svn.collab.net/repos/svn/tags/0.28)
 
