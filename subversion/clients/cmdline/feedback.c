@@ -77,7 +77,6 @@ notify (void *baton,
     }
   switch (action)
     {
-    case svn_wc_notify_delete:
     case svn_wc_notify_update_delete:
       nb->received_some_change = TRUE;
       printf ("D  %s\n", path_native);
@@ -110,6 +109,11 @@ notify (void *baton,
         printf ("A  (bin)  %s\n", path_native);
       else
         printf ("A         %s\n", path_native);
+      break;
+
+    case svn_wc_notify_delete:
+      nb->received_some_change = TRUE;
+      printf ("D         %s\n", path_native);
       break;
 
     case svn_wc_notify_update_update:
