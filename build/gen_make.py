@@ -93,17 +93,20 @@ class MakefileGenerator(gen_base.GeneratorBase):
       if custom == 'apache-mod':
         # special build, needing Apache includes
         self.ofile.write('# build these special -- use APACHE_INCLUDES\n')
-        for src in target_ob.sources:
-          if src[-2:] == '.c':
-            self.ofile.write('%s%s: %s\n\t$(COMPILE_APACHE_MOD)\n'
-                             % (src[:-2], target_ob.objext, src))
+        for obj in objects:
+          ### we probably shouldn't take only the first source, but do
+          ### this for back-compat right now
+          ### note: this is duplicative with the header dep rules
+          src = self.graph.get(gen_base.DT_OBJECT, obj)[0]
+          self.ofile.write('%s: %s\n\t$(COMPILE_APACHE_MOD)\n' % (obj, src))
         self.ofile.write('\n')
       elif custom == 'swig-py':
         self.ofile.write('# build this with -DSWIGPYTHON\n')
-        for src in target_ob.sources:
-          if src[-2:] == '.c':
-            self.ofile.write('%s%s: %s\n\t$(COMPILE_SWIG_PY)\n'
-                             % (src[:-2], target_ob.objext, src))
+        for obj in objects:
+          ### we probably shouldn't take only the first source, but do
+          ### this for back-compat right now
+          src = self.graph.get(gen_base.DT_OBJECT, obj)[0]
+          self.ofile.write('%s: %s\n\t$(COMPILE_SWIG_PY)\n' % (obj, src))
         self.ofile.write('\n')
 
     # for each install group, write a rule to install its outputs
