@@ -453,7 +453,6 @@ dump_node (struct edit_baton *eb,
          content within the content-block. */
       len = 2;
       return svn_stream_write (eb->stream, "\n\n", &len); /* ### needed? */
-      return SVN_NO_ERROR;
     }
 
   /*** Start prepping content to dump... ***/
