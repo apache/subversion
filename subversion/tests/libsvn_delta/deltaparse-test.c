@@ -36,8 +36,8 @@ main (int argc, char *argv[])
   apr_file_t *file = NULL;
   apr_status_t status;
   void *edit_baton;
+  svn_stream_t *out_stream;
 
-  svn_revnum_t base_revision;
   svn_string_t *base_path;
 
 
@@ -45,7 +45,7 @@ main (int argc, char *argv[])
   if (argc != 2)
     {
       printf 
-        ("\nUsage: %s [filename], where [filename] contains an XML tree-delta",
+        ("Usage: %s [filename], where [filename] contains an XML tree-delta\n",
          argv[0]);
       exit (1);
     }
@@ -56,28 +56,31 @@ main (int argc, char *argv[])
 
   /* Open a file full of XML, create "source baton" (the filehandle)
      that my_read_func() will slurp XML from. */
-  status = apr_file_open (&file, argv[1], APR_READ, APR_OS_DEFAULT, globalpool);
+  status = apr_file_open (&file, argv[1], APR_READ,
+                          APR_OS_DEFAULT, globalpool);
   if (status)
     {
       printf ("Error opening %s\n.", argv[1]);
       exit (1);
     }
-    
 
-  /* Set context variables for evaluating a tree-delta */
-  base_revision = 37;
+  /* Set context variable for evaluating a tree-delta */
   base_path = svn_string_create ("/root", globalpool);
-  
+
+  /* Set up a stream to print to stdout. */
+  out_stream = svn_stream_from_stdio (stdout, globalpool);
+
   /* Grab the "test" editor and baton */
   err = svn_test_get_editor (&editor, &edit_baton,
-                             base_path, base_revision, globalpool);
+                             out_stream, 3,
+                             base_path, globalpool);
   
   /* Fire up the XML parser */
   err = svn_delta_xml_auto_parse (svn_stream_from_aprfile (file, globalpool),
                                   editor,
                                   edit_baton,
                                   base_path,
-                                  base_revision,
+                                  37,    /* random base revision */
                                   globalpool);
 
   apr_file_close (file);
@@ -90,5 +93,6 @@ main (int argc, char *argv[])
     }
 
   apr_pool_destroy (globalpool);
+
   exit (0);
 }
