@@ -19,8 +19,8 @@
 
 apr_size_t
 svn_fs__getsize (const char *data, apr_size_t len,
-		 const char **endptr,
-		 apr_size_t max)
+                 const char **endptr,
+                 apr_size_t max)
 {
   /* We can't detect overflow by simply comparing value against max,
      since multiplying value by ten can overflow in strange ways if
@@ -48,11 +48,11 @@ svn_fs__getsize (const char *data, apr_size_t len,
 
       /* Check for overflow.  */
       if (value > max_prefix
-	  || (value == max_prefix && digit > max_digit))
-	{
-	  *endptr = 0;
-	  return 0;
-	}
+          || (value == max_prefix && digit > max_digit))
+        {
+          *endptr = 0;
+          return 0;
+        }
 
       value = (value * 10) + digit;
     }
@@ -83,7 +83,7 @@ svn_fs__putsize (char *data, apr_size_t len, apr_size_t value)
   do 
     {
       if (i >= len)
-	return 0;
+        return 0;
 
       data[i] = (value % 10) + '0';
       value /= 10;
@@ -97,11 +97,19 @@ svn_fs__putsize (char *data, apr_size_t len, apr_size_t value)
 
     for (left = 0, right = i-1; left < right; left++, right--)
       {
-	char t = data[left];
-	data[left] = data[right];
-	data[right] = t;
+        char t = data[left];
+        data[left] = data[right];
+        data[right] = t;
       }
   }
 
   return i;
 }
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

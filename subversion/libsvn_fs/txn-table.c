@@ -25,24 +25,24 @@ static const char next_id_key[] = "next-id";
 
 int
 svn_fs__open_transactions_table (DB **transactions_p,
-				 DB_ENV *env,
-				 int create)
+                                 DB_ENV *env,
+                                 int create)
 {
   DB *txns;
 
   DB_ERR (db_create (&txns, env, 0));
   DB_ERR (txns->open (txns, "transactions", 0, DB_BTREE,
-		      create ? (DB_CREATE | DB_EXCL) : 0,
-		      0666));
+                      create ? (DB_CREATE | DB_EXCL) : 0,
+                      0666));
 
   /* Create the `next-id' table entry.  */
   {
     DBT key, value;
 
     DB_ERR (txns->put (txns, 0,
-		       svn_fs__str_to_dbt (&key, (char *) next_id_key),
-		       svn_fs__str_to_dbt (&value, (char *) "0"),
-		       0));
+                       svn_fs__str_to_dbt (&key, (char *) next_id_key),
+                       svn_fs__str_to_dbt (&value, (char *) "0"),
+                       0));
   }
 
   *transactions_p = txns;
@@ -54,10 +54,10 @@ svn_fs__open_transactions_table (DB **transactions_p,
    part of TRAIL.  */
 static svn_error_t *
 put_txn (svn_fs_t *fs,
-	 const char *svn_txn,
-	 const svn_fs_id_t *root_id,
-	 const svn_fs_id_t *base_root_id,
-	 trail_t *trail)
+         const char *svn_txn,
+         const svn_fs_id_t *root_id,
+         const svn_fs_id_t *base_root_id,
+         trail_t *trail)
 {
   apr_pool_t *pool = trail->pool;
   svn_string_t *unparsed_root_id = svn_fs_unparse_id (root_id, pool);
@@ -66,13 +66,13 @@ put_txn (svn_fs_t *fs,
   DBT key, value;
 
   svn_fs__prepend (svn_fs__mem_atom (unparsed_root_id->data,
-				     unparsed_root_id->len,
-				     pool),
-		   txn_skel);
+                                     unparsed_root_id->len,
+                                     pool),
+                   txn_skel);
   svn_fs__prepend (svn_fs__mem_atom (unparsed_base_root_id->data,
-				     unparsed_base_root_id->len,
-				     pool),
-		   txn_skel);
+                                     unparsed_base_root_id->len,
+                                     pool),
+                   txn_skel);
   svn_fs__prepend (svn_fs__str_atom ((char *) "transaction", pool), txn_skel);
 
   /* Only in the context of this function do we know that the DB call
@@ -80,8 +80,8 @@ put_txn (svn_fs_t *fs,
   svn_fs__str_to_dbt (&key, (char *) svn_txn);
   svn_fs__skel_to_dbt (&value, txn_skel, pool);
   SVN_ERR (DB_WRAP (fs, "storing transaction record",
-		    fs->transactions->put (fs->transactions, trail->db_txn,
-					   &key, &value, 0)));
+                    fs->transactions->put (fs->transactions, trail->db_txn,
+                                           &key, &value, 0)));
 
   return 0;
 }
@@ -91,8 +91,8 @@ put_txn (svn_fs_t *fs,
    *ID_P to the new transaction ID, allocated in TRAIL->pool.  */
 static svn_error_t *
 allocate_txn_id (char **id_p,
-		 svn_fs_t *fs,
-		 trail_t *trail)
+                 svn_fs_t *fs,
+                 trail_t *trail)
 {
   DBT key, value;
   apr_size_t next_id;
@@ -103,10 +103,10 @@ allocate_txn_id (char **id_p,
   /* Get the current value associated with the `next-id' key in the
      transactions table.  */
   SVN_ERR (DB_WRAP (fs, "allocating new transaction ID (getting `next-id')",
-		    fs->transactions->get (fs->transactions, trail->db_txn,
-					   &key,
-					   svn_fs__result_dbt (&value),
-					   0)));
+                    fs->transactions->get (fs->transactions, trail->db_txn,
+                                           &key,
+                                           svn_fs__result_dbt (&value),
+                                           0)));
 
   /* That's the value we want to return.  */
   next_id_str = apr_pstrndup (trail->pool, value.data, value.size);
@@ -127,11 +127,11 @@ allocate_txn_id (char **id_p,
 
     buf_len = svn_fs__putsize (buf, sizeof (buf), next_id + 1);
     SVN_ERR (DB_WRAP (fs, "allocating new transaction ID (setting `next-id')",
-		      fs->transactions->put (fs->transactions, trail->db_txn,
-					     &key,
-					     svn_fs__set_dbt (&value, 
-							      buf, buf_len),
-					     0)));
+                      fs->transactions->put (fs->transactions, trail->db_txn,
+                                             &key,
+                                             svn_fs__set_dbt (&value, 
+                                                              buf, buf_len),
+                                             0)));
   }
 
   *id_p = next_id_str;
@@ -141,9 +141,9 @@ allocate_txn_id (char **id_p,
 
 svn_error_t *
 svn_fs__create_txn (char **txn_id_p,
-		    svn_fs_t *fs,
-		    const svn_fs_id_t *root_id,
-		    trail_t *trail)
+                    svn_fs_t *fs,
+                    const svn_fs_id_t *root_id,
+                    trail_t *trail)
 {
   char *svn_txn;
 
@@ -172,10 +172,10 @@ is_valid_transaction (skel_t *skel)
 
 svn_error_t *
 svn_fs__get_txn (svn_fs_id_t **root_id_p,
-		 svn_fs_id_t **base_root_id_p,
-		 svn_fs_t *fs,
-		 const char *svn_txn,
-		 trail_t *trail)
+                 svn_fs_id_t **base_root_id_p,
+                 svn_fs_t *fs,
+                 const char *svn_txn,
+                 trail_t *trail)
 {
   DBT key, value;
   int db_err;
@@ -203,11 +203,11 @@ svn_fs__get_txn (svn_fs_id_t **root_id_p,
     skel_t *root_id_skel = transaction->children->next;
     skel_t *base_root_id_skel = transaction->children->next->next;
     svn_fs_id_t *root_id = svn_fs_parse_id (root_id_skel->data,
-					    root_id_skel->len,
-					    trail->pool);
+                                            root_id_skel->len,
+                                            trail->pool);
     svn_fs_id_t *base_root_id = svn_fs_parse_id (base_root_id_skel->data,
-						 base_root_id_skel->len,
-						 trail->pool);
+                                                 base_root_id_skel->len,
+                                                 trail->pool);
     if (! root_id || ! base_root_id)
       return svn_fs__err_corrupt_txn (fs, svn_txn);
 
@@ -220,9 +220,9 @@ svn_fs__get_txn (svn_fs_id_t **root_id_p,
 
 svn_error_t *
 svn_fs__set_txn_root (svn_fs_t *fs,
-		      const char *svn_txn,
-		      const svn_fs_id_t *root_id,
-		      trail_t *trail)
+                      const char *svn_txn,
+                      const svn_fs_id_t *root_id,
+                      trail_t *trail)
 {
   svn_fs_id_t *old_root_id, *base_root_id;
 

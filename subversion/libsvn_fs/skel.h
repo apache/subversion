@@ -107,7 +107,7 @@ typedef struct skel_t skel_t;
    *we* won't change it --- we don't want to prevent the caller from
    changing it --- but C's type system doesn't allow us to say that.  */
 skel_t *svn_fs__parse_skel (char *data, apr_size_t len,
-			    apr_pool_t *pool);
+                            apr_pool_t *pool);
 
 
 /* Create an atom skel whose contents are the C string STR, allocated

@@ -34,7 +34,7 @@ compare_ids (svn_fs_id_t *a, svn_fs_id_t *b)
   while (a[i] == b[i])
     {
       if (a[i] == -1)
-	return 0;
+        return 0;
       i++;
     }
 
@@ -128,16 +128,16 @@ compare_nodes_keys (const DBT *ak, const DBT *bk)
 
 int
 svn_fs__open_nodes_table (DB **nodes_p,
-			  DB_ENV *env,
-			  int create)
+                          DB_ENV *env,
+                          int create)
 {
   DB *nodes;
 
   DB_ERR (db_create (&nodes, env, 0));
   DB_ERR (nodes->set_bt_compare (nodes, compare_nodes_keys));
   DB_ERR (nodes->open (nodes, "nodes", 0, DB_BTREE,
-		       create ? (DB_CREATE | DB_EXCL) : 0,
-		       0666));
+                       create ? (DB_CREATE | DB_EXCL) : 0,
+                       0666));
 
   *nodes_p = nodes;
   return 0;
@@ -169,19 +169,19 @@ is_valid_header (skel_t *skel, skel_t **kind_p)
   if (len >= 2)
     {
       if (skel->children->is_atom
-	  && svn_fs__is_valid_proplist (skel->children->next))
-	{
-	  skel_t *flag;
+          && svn_fs__is_valid_proplist (skel->children->next))
+        {
+          skel_t *flag;
 
-	  for (flag = skel->children->next->next;
-	       flag;
-	       flag = flag->next)
-	    if (! is_valid_flag (flag))
-	      return 0;
+          for (flag = skel->children->next->next;
+               flag;
+               flag = flag->next)
+            if (! is_valid_flag (flag))
+              return 0;
 
-	  *kind_p = skel->children;
-	  return 1;
-	}
+          *kind_p = skel->children;
+          return 1;
+        }
     }
 
   return 0;
@@ -199,40 +199,40 @@ is_valid_node_revision (skel_t *skel)
       skel_t *kind;
 
       if (is_valid_header (header, &kind))
-	{
-	  if (svn_fs__is_atom (kind, "file")
-	      && len == 2
-	      && header->next->is_atom)
-	    return 1;
-	  else if (svn_fs__is_atom (kind, "dir")
-		   && len == 2)
-	    {
-	      skel_t *entry_list = header->next;
+        {
+          if (svn_fs__is_atom (kind, "file")
+              && len == 2
+              && header->next->is_atom)
+            return 1;
+          else if (svn_fs__is_atom (kind, "dir")
+                   && len == 2)
+            {
+              skel_t *entry_list = header->next;
 
-	      if (! entry_list->is_atom)
-		{
-		  skel_t *entry;
+              if (! entry_list->is_atom)
+                {
+                  skel_t *entry;
 
-		  for (entry = entry_list->children; 
-		       entry;
-		       entry = entry->next)
-		    {
-		      int entry_len = svn_fs__list_length (entry);
+                  for (entry = entry_list->children; 
+                       entry;
+                       entry = entry->next)
+                    {
+                      int entry_len = svn_fs__list_length (entry);
 
-		      if ((entry_len == 2 || entry_len == 3)
-			  && entry->children->is_atom
-			  && entry->children->next->is_atom
-			  && (! entry->children->next->next
-			      || entry->children->next->next->is_atom))
-			;
-		      else
-			return 0;
-		    }
-		  
-		  return 1;
-		}
-	    }
-	}
+                      if ((entry_len == 2 || entry_len == 3)
+                          && entry->children->is_atom
+                          && entry->children->next->is_atom
+                          && (! entry->children->next->next
+                              || entry->children->next->next->is_atom))
+                        ;
+                      else
+                        return 0;
+                    }
+                  
+                  return 1;
+                }
+            }
+        }
     }
 
   return 0;
@@ -249,15 +249,15 @@ is_valid_representation (skel_t *skel)
       skel_t *type = skel->children;
 
       if (svn_fs__is_atom (type, "fulltext")
-	  && len == 2
-	  && is_valid_node_revision (type->next))
-	return 1;
+          && len == 2
+          && is_valid_node_revision (type->next))
+        return 1;
 #if 0
       else if (svn_fs__is_atom (type, "younger")
-	       && len == 3
-	       && is_valid_delta (type->next)
-	       && is_valid_checksum (type->next->next))
-	return 1;
+               && len == 3
+               && is_valid_delta (type->next)
+               && is_valid_checksum (type->next->next))
+        return 1;
 #endif
     }
 
@@ -271,19 +271,19 @@ is_valid_representation (skel_t *skel)
 
 svn_error_t *
 svn_fs__get_rep (skel_t **skel_p,
-		 svn_fs_t *fs,
-		 const svn_fs_id_t *id,
-		 DB_TXN *db_txn,
-		 apr_pool_t *pool)
+                 svn_fs_t *fs,
+                 const svn_fs_id_t *id,
+                 DB_TXN *db_txn,
+                 apr_pool_t *pool)
 {
   int db_err;
   DBT key, value;
   skel_t *skel;
 
   db_err = fs->nodes->get (fs->nodes, db_txn,
-			   svn_fs__id_to_dbt (&key, id, pool),
-			   svn_fs__result_dbt (&value),
-			   0);
+                           svn_fs__id_to_dbt (&key, id, pool),
+                           svn_fs__result_dbt (&value),
+                           0);
 
   /* If there's no such node, return an appropriately specific error.  */
   if (db_err == DB_NOTFOUND)
@@ -308,10 +308,10 @@ svn_fs__get_rep (skel_t **skel_p,
 
 svn_error_t *
 svn_fs__put_rep (svn_fs_t *fs,
-		 const svn_fs_id_t *id, 
-		 skel_t *skel,
-		 DB_TXN *db_txn,
-		 apr_pool_t *pool)
+                 const svn_fs_id_t *id, 
+                 skel_t *skel,
+                 DB_TXN *db_txn,
+                 apr_pool_t *pool)
 {
   DBT key, value;
 
@@ -319,10 +319,10 @@ svn_fs__put_rep (svn_fs_t *fs,
     return svn_fs__err_corrupt_representation (fs, id);
 
   SVN_ERR (DB_WRAP (fs, "storing node representation",
-		    fs->nodes->put (fs->nodes, db_txn,
-				    svn_fs__id_to_dbt (&key, id, pool),
-				    svn_fs__skel_to_dbt (&value, skel, pool),
-				    0)));
+                    fs->nodes->put (fs->nodes, db_txn,
+                                    svn_fs__id_to_dbt (&key, id, pool),
+                                    svn_fs__skel_to_dbt (&value, skel, pool),
+                                    0)));
 
   return 0;
 }
@@ -334,9 +334,9 @@ svn_fs__put_rep (svn_fs_t *fs,
 
 svn_error_t *
 svn_fs__new_node_id (svn_fs_id_t **id_p,
-		     svn_fs_t *fs,
-		     DB_TXN *db_txn,
-		     apr_pool_t *pool)
+                     svn_fs_t *fs,
+                     DB_TXN *db_txn,
+                     apr_pool_t *pool)
 {
   int db_err;
   DBC *cursor = 0;
@@ -345,30 +345,30 @@ svn_fs__new_node_id (svn_fs_id_t **id_p,
 
   /* Create a database cursor.  */
   SVN_ERR (DB_WRAP (fs, "choosing new node ID (creating cursor)",
-		    fs->nodes->cursor (fs->nodes, db_txn, &cursor, 0)));
+                    fs->nodes->cursor (fs->nodes, db_txn, &cursor, 0)));
 
   /* Find the last entry in the `nodes' table, and increment its node
      number.  */
   db_err = cursor->c_get (cursor,
-			  svn_fs__result_dbt (&key),
-			  svn_fs__nodata_dbt (&value),
-			  DB_LAST);
+                          svn_fs__result_dbt (&key),
+                          svn_fs__nodata_dbt (&value),
+                          DB_LAST);
   if (db_err)
     {
       /* Free the cursor.  Ignore any error value --- the error above
-	 is more interesting.  */
+         is more interesting.  */
       cursor->c_close (cursor);
 
       if (db_err == DB_NOTFOUND)
-	/* The root directory should always be present, at least.  */
-	return
-	  svn_error_createf
-	  (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
-	   "root directory missing from `nodes' table, in filesystem `%s'",
-	   fs->env_path);
+        /* The root directory should always be present, at least.  */
+        return
+          svn_error_createf
+          (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
+           "root directory missing from `nodes' table, in filesystem `%s'",
+           fs->env_path);
       
       SVN_ERR (DB_WRAP (fs, "choosing new node ID (finding last entry)",
-			db_err));
+                        db_err));
     }
   svn_fs__track_dbt (&key, pool);
 
@@ -383,7 +383,7 @@ svn_fs__new_node_id (svn_fs_id_t **id_p,
 
   /* We've got the value; close the cursor.  */
   SVN_ERR (DB_WRAP (fs, "choosing new node ID (closing cursor)",
-		    cursor->c_close (cursor)));
+                    cursor->c_close (cursor)));
 
   /* Given the ID of the last node revision, what's the ID of the
      first revision of an entirely new node?  */
@@ -406,8 +406,8 @@ svn_fs__new_node_id (svn_fs_id_t **id_p,
    Berkeley DB transaction.  */
 static int
 last_key_before (DB *db,
-		 DB_TXN *db_txn,
-		 DBT *key)
+                 DB_TXN *db_txn,
+                 DBT *key)
 {
   int db_err;
   DBC *cursor;
@@ -436,7 +436,7 @@ last_key_before (DB *db,
      after KEY, so the record we want must be the last record in the
      table.  */
   db_err = cursor->c_get (cursor, key, svn_fs__nodata_dbt (&value),
-			  db_err == DB_NOTFOUND ? DB_LAST : DB_PREV);
+                          db_err == DB_NOTFOUND ? DB_LAST : DB_PREV);
   if (db_err)
     {
       cursor->c_close (cursor);
@@ -452,10 +452,10 @@ last_key_before (DB *db,
 
 svn_error_t *
 svn_fs__new_successor_id (svn_fs_id_t **successor_p,
-			  svn_fs_t *fs,
-			  const svn_fs_id_t *id,
-			  DB_TXN *db_txn, 
-			  apr_pool_t *pool)
+                          svn_fs_t *fs,
+                          const svn_fs_id_t *id,
+                          DB_TXN *db_txn, 
+                          apr_pool_t *pool)
 {
   int id_len = svn_fs_id_length (id);
   svn_fs_id_t *new_id;
@@ -470,13 +470,13 @@ svn_fs__new_successor_id (svn_fs_id_t **successor_p,
      extra room, in case we need to construct a branch ID below.  */
   new_id = apr_palloc (pool, sizeof (*new_id) * (id_len + 3) * sizeof (*id));
   memcpy (new_id, id, (id_len + 1) * sizeof (*id)); /* copy the -1 */
-  new_id[id_len - 1]++;		/* increment the revision number */
+  new_id[id_len - 1]++;         /* increment the revision number */
 
   /* Check to see if there already exists a node whose ID is NEW_ID.  */
   db_err = fs->nodes->get (fs->nodes, db_txn,
-			   svn_fs__id_to_dbt (&key, new_id, pool),
-			   svn_fs__nodata_dbt (&value),
-			   0);
+                           svn_fs__id_to_dbt (&key, new_id, pool),
+                           svn_fs__nodata_dbt (&value),
+                           0);
   if (db_err == DB_NOTFOUND)
     {
       /* NEW_ID isn't currently in use, so return that.  */
@@ -504,8 +504,8 @@ svn_fs__new_successor_id (svn_fs_id_t **successor_p,
   new_id[id_len + 1] = 1;
   new_id[id_len + 2] = -1;
   SVN_ERR (DB_WRAP (fs, "checking for next node branch",
-		    last_key_before (fs->nodes, db_txn,
-				     svn_fs__result_dbt (&key))));
+                    last_key_before (fs->nodes, db_txn,
+                                     svn_fs__result_dbt (&key))));
   svn_fs__track_dbt (&key, pool);
 
   {
@@ -526,29 +526,29 @@ svn_fs__new_successor_id (svn_fs_id_t **successor_p,
        yet.  */
     if (last_branch_len == id_len)
       {
-	/* The first branch from N.V is N.V.1.1.  */
-	memcpy (new_id, id, id_len * sizeof (*id));
-	new_id[id_len + 0] = 1;
-	new_id[id_len + 1] = 1;
-	new_id[id_len + 2] = -1;
+        /* The first branch from N.V is N.V.1.1.  */
+        memcpy (new_id, id, id_len * sizeof (*id));
+        new_id[id_len + 0] = 1;
+        new_id[id_len + 1] = 1;
+        new_id[id_len + 2] = -1;
 
-	*successor_p = new_id;
-	return 0;
+        *successor_p = new_id;
+        return 0;
       }
 
     /* If the last key before NEW_ID is a branch off of ID, then
        choose the next branch number.  */
     else if (last_branch_len > id_len)
       {
-	/* The last key has the form N.V.B... so the first revision
-	   on our new branch is N.V.(B+1).1.  */
-	memcpy (new_id, last_branch_id, (id_len + 1) * sizeof (*id));
-	new_id[id_len + 0]++;
-	new_id[id_len + 1] = 1;
-	new_id[id_len + 2] = -1;
+        /* The last key has the form N.V.B... so the first revision
+           on our new branch is N.V.(B+1).1.  */
+        memcpy (new_id, last_branch_id, (id_len + 1) * sizeof (*id));
+        new_id[id_len + 0]++;
+        new_id[id_len + 1] = 1;
+        new_id[id_len + 2] = -1;
 
-	*successor_p = new_id;
-	return 0;
+        *successor_p = new_id;
+        return 0;
       }
 
     /* Otherwise, something strange is going on.  */
@@ -556,3 +556,11 @@ svn_fs__new_successor_id (svn_fs_id_t **successor_p,
       return svn_fs__err_corrupt_nodes_key (fs);
   }
 }
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

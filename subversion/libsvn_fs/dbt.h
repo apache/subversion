@@ -90,3 +90,11 @@ DBT *svn_fs__str_to_dbt (DBT *dbt, char *str);
 
 
 #endif /* SVN_LIBSVN_FS_DBT_H */
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

@@ -14,7 +14,7 @@
 #ifndef SVN_LIBSVN_FS_FS_H
 #define SVN_LIBSVN_FS_FS_H
 
-#include "db.h"			/* Berkeley DB interface */
+#include "db.h"                 /* Berkeley DB interface */
 #include "apr_pools.h"
 #include "apr_hash.h"
 #include "svn_fs.h"
@@ -71,3 +71,11 @@ struct svn_fs_t {
 
 
 #endif /* SVN_LIBSVN_FS_FS_H */
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

@@ -54,8 +54,8 @@ struct svn_fs_txn_t
    transaction ID is ID.  ID is not copied.  */
 static svn_fs_txn_t *
 make_txn (svn_fs_t *fs,
-	  const char *id,
-	  apr_pool_t *pool)
+          const char *id,
+          apr_pool_t *pool)
 {
   apr_pool_t *new_pool = svn_pool_create (pool);
   svn_fs_txn_t *txn = apr_pcalloc (new_pool, sizeof (*txn));
@@ -66,7 +66,7 @@ make_txn (svn_fs_t *fs,
 
   return txn;
 }
-	  
+          
 
 struct begin_txn_args
 {
@@ -78,7 +78,7 @@ struct begin_txn_args
 
 static svn_error_t *
 txn_body_begin_txn (void *baton,
-		    trail_t *trail)
+                    trail_t *trail)
 {
   struct begin_txn_args *args = baton;
   svn_fs_id_t *root_id;
@@ -96,9 +96,9 @@ txn_body_begin_txn (void *baton,
 
 svn_error_t *
 svn_fs_begin_txn (svn_fs_txn_t **txn_p,
-		  svn_fs_t *fs,
-		  svn_revnum_t rev,
-		  apr_pool_t *pool)
+                  svn_fs_t *fs,
+                  svn_revnum_t rev,
+                  apr_pool_t *pool)
 {
   svn_fs_txn_t *txn;
   struct begin_txn_args args;
@@ -197,7 +197,7 @@ struct open_txn_root_args
 
 static svn_error_t *
 txn_body_open_txn_root (void *baton,
-			trail_t *trail)
+                        trail_t *trail)
 {
   struct open_txn_root_args *args = baton;
   svn_fs_node_t *root;
@@ -211,8 +211,8 @@ txn_body_open_txn_root (void *baton,
 
 svn_error_t *
 svn_fs_open_txn_root (svn_fs_node_t **dir_p,
-		      svn_fs_txn_t *txn,
-		      apr_pool_t *pool)
+                      svn_fs_txn_t *txn,
+                      apr_pool_t *pool)
 {
   svn_fs_node_t *dir;
   struct open_txn_root_args args;

@@ -60,8 +60,8 @@ svn_fs__is_valid_proplist (skel_t *skel)
       skel_t *elt;
 
       for (elt = skel->children; elt; elt = elt->next)
-	if (! elt->is_atom)
-	  return 0;
+        if (! elt->is_atom)
+          return 0;
 
       return 1;
     }

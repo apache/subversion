@@ -19,8 +19,15 @@
 
 /* Return true iff PARENT is a direct ancestor of CHILD.  */
 int svn_fs__is_parent (const svn_fs_id_t *parent,
-		       const svn_fs_id_t *child);
+                       const svn_fs_id_t *child);
 
 
 #endif /* SVN_LIBSVN_FS_ID_H */
 
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

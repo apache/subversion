@@ -59,19 +59,19 @@ static const enum char_type skel_char_type[256] = {
 
 
 static skel_t *parse (char *data, apr_size_t len,
-		      apr_pool_t *pool);
+                      apr_pool_t *pool);
 static skel_t *list (char *data, apr_size_t len,
-		     apr_pool_t *pool);
+                     apr_pool_t *pool);
 static skel_t *implicit_atom (char *data, apr_size_t len,
-			      apr_pool_t *pool);
+                              apr_pool_t *pool);
 static skel_t *explicit_atom (char *data, apr_size_t len,
-			      apr_pool_t *pool);
+                              apr_pool_t *pool);
 
 
 skel_t *
 svn_fs__parse_skel (char *data,
-		    apr_size_t len,
-		    apr_pool_t *pool)
+                    apr_size_t len,
+                    apr_pool_t *pool)
 {
   return parse (data, len, pool);
 }
@@ -133,36 +133,36 @@ list (char *data,
 
     for (;;)
       {
-	skel_t *element;
+        skel_t *element;
 
-	/* Skip any whitespace.  */
-	while (data < end
-	       && skel_char_type[(unsigned char) *data] == type_space)
-	  data++;
+        /* Skip any whitespace.  */
+        while (data < end
+               && skel_char_type[(unsigned char) *data] == type_space)
+          data++;
 
-	/* End of data, but no closing paren?  */
-	if (data >= end)
-	  return 0;
+        /* End of data, but no closing paren?  */
+        if (data >= end)
+          return 0;
 
-	/* End of list?  */
-	if (*data == ')')
-	  {
-	    data++;
-	    break;
-	  }
+        /* End of list?  */
+        if (*data == ')')
+          {
+            data++;
+            break;
+          }
 
-	/* Parse the next element in the list.  */
-	element = parse (data, end - data, pool);
-	if (! element)
-	  return 0;
+        /* Parse the next element in the list.  */
+        element = parse (data, end - data, pool);
+        if (! element)
+          return 0;
 
-	/* Link that element into our list.  */
-	element->next = 0;
-	*tail = element;
-	tail = &element->next;
+        /* Link that element into our list.  */
+        element->next = 0;
+        *tail = element;
+        tail = &element->next;
 
-	/* Advance past that element.  */
-	data = element->data + element->len;
+        /* Advance past that element.  */
+        data = element->data + element->len;
       }
 
     /* Construct the return value.  */
@@ -185,8 +185,8 @@ list (char *data,
    character, terminated by whitespace, '(', ')', or end-of-data.  */
 static skel_t *
 implicit_atom (char *data,
-	       apr_size_t len,
-	       apr_pool_t *pool)
+               apr_size_t len,
+               apr_pool_t *pool)
 {
   char *start = data;
   char *end = data + len;
@@ -218,8 +218,8 @@ implicit_atom (char *data,
    length, as a decimal ASCII number.  */
 static skel_t *
 explicit_atom (char *data,
-	       apr_size_t len,
-	       apr_pool_t *pool)
+               apr_size_t len,
+               apr_pool_t *pool)
 {
   char *end = data + len;
   const char *next;
@@ -258,7 +258,7 @@ explicit_atom (char *data,
 
 static apr_size_t estimate_unparsed_size (skel_t *, int);
 static svn_string_t *unparse (skel_t *, svn_string_t *, int,
-			      apr_pool_t *);
+                              apr_pool_t *);
 
 
 svn_string_t *
@@ -286,12 +286,12 @@ estimate_unparsed_size (skel_t *skel, int depth)
   if (skel->is_atom)
     {
       if (skel->len < 100)
-	/* If we have to use the explicit-length form, that'll be
-	   two bytes for the length, one byte for the space, and 
-	   the contents.  */
-	return skel->len + 3;
+        /* If we have to use the explicit-length form, that'll be
+           two bytes for the length, one byte for the space, and 
+           the contents.  */
+        return skel->len + 3;
       else
-	return skel->len + 30;
+        return skel->len + 30;
     }
   else
     {
@@ -307,7 +307,7 @@ estimate_unparsed_size (skel_t *skel, int depth)
       /* For each element, allow for some indentation, and a following
          newline.  */
       for (child = skel->children; child; child = child->next)
-	total_len += estimate_unparsed_size (child, depth) + (depth * 2) + 1;
+        total_len += estimate_unparsed_size (child, depth) + (depth * 2) + 1;
 
       return total_len;
     }
@@ -337,7 +337,7 @@ use_implicit (skel_t *skel)
     for (i = 1; i < skel->len; i++)
       if (skel_char_type[(unsigned char) skel->data[i]] == type_space
           || skel_char_type[(unsigned char) skel->data[i]] == type_paren)
-	return 0;
+        return 0;
   }
 
   /* If we can't reject it for any of the above reasons, then we can
@@ -356,28 +356,28 @@ unparse (skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
     {
       /* Append an atom to STR.  */
       if (use_implicit (skel))
-	{
-	  svn_string_appendbytes (str, skel->data, skel->len);
-	  svn_string_appendbytes (str, " ", 1);
-	}
+        {
+          svn_string_appendbytes (str, skel->data, skel->len);
+          svn_string_appendbytes (str, " ", 1);
+        }
       else
-	{
-	  /* Append the length to STR.  */
-	  char buf[200];
-	  int length_len;
+        {
+          /* Append the length to STR.  */
+          char buf[200];
+          int length_len;
 
-	  length_len = svn_fs__putsize (buf, sizeof (buf), skel->len);
-	  if (! length_len)
-	    abort ();
+          length_len = svn_fs__putsize (buf, sizeof (buf), skel->len);
+          if (! length_len)
+            abort ();
 
-	  /* Make sure we have room for the length, the space, and the
+          /* Make sure we have room for the length, the space, and the
              atom's contents.  */
-	  svn_string_ensure (str,
-			     str->len + length_len + 1 + skel->len);
-	  svn_string_appendbytes (str, buf, length_len);
-	  str->data[str->len++] = '\n';
-	  svn_string_appendbytes (str, skel->data, skel->len);
-	}
+          svn_string_ensure (str,
+                             str->len + length_len + 1 + skel->len);
+          svn_string_appendbytes (str, buf, length_len);
+          str->data[str->len++] = '\n';
+          svn_string_appendbytes (str, skel->data, skel->len);
+        }
     }
   else
     {
@@ -393,26 +393,26 @@ unparse (skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
 
       /* Append each element.  */
       for (child = skel->children; child; child = child->next)
-	{
-	  /* Add a newline, and indentation.  */
-	  svn_string_ensure (str, str->len + 1 + depth * 2);
-	  str->data[str->len++] = '\n';
-	  for (i = 0; i < depth * 2; i++)
-	    str->data[str->len++] = ' ';
-	  unparse (child, str, depth, pool);
-	}
+        {
+          /* Add a newline, and indentation.  */
+          svn_string_ensure (str, str->len + 1 + depth * 2);
+          str->data[str->len++] = '\n';
+          for (i = 0; i < depth * 2; i++)
+            str->data[str->len++] = ' ';
+          unparse (child, str, depth, pool);
+        }
 
       depth--;
       
       /* Add a newline, indentation, and a closing paren.
 
-	 There should be no newline after a closing paren; a skel must
-	 entirely fill its string.  If we're part of a parent list,
-	 the parent will take care of adding that.  */
+         There should be no newline after a closing paren; a skel must
+         entirely fill its string.  If we're part of a parent list,
+         the parent will take care of adding that.  */
       svn_string_ensure (str, str->len + 1 + depth * 2 + 1);
       str->data[str->len++] = '\n';
       for (i = 0; i < depth * 2; i++)
-	str->data[str->len++] = ' ';
+        str->data[str->len++] = ' ';
       str->data[str->len++] = ')';
     }
 
@@ -438,8 +438,8 @@ svn_fs__str_atom (char *str, apr_pool_t *pool)
 
 skel_t *
 svn_fs__mem_atom (char *addr, 
-		  apr_size_t len,
-		  apr_pool_t *pool)
+                  apr_size_t len,
+                  apr_pool_t *pool)
 {
   skel_t *skel = apr_palloc (pool, sizeof (*skel));
   skel->is_atom = 1;
@@ -483,7 +483,7 @@ svn_fs__is_atom (skel_t *skel, const char *str)
       int len = strlen (str);
 
       return (skel->len == len
-	      && ! memcmp (skel->data, str, len));
+              && ! memcmp (skel->data, str, len));
     }
   else
     return 0;
@@ -539,12 +539,12 @@ svn_fs__copy_skel (skel_t *skel, apr_pool_t *pool)
 
       copy_child_ptr = &copy->children;
       for (skel_child = skel->children;
-	   skel_child;
-	   skel_child = skel_child->next)
-	{
-	  *copy_child_ptr = svn_fs__copy_skel (skel_child, pool);
-	  copy_child_ptr = &(*copy_child_ptr)->next;
-	}
+           skel_child;
+           skel_child = skel_child->next)
+        {
+          *copy_child_ptr = svn_fs__copy_skel (skel_child, pool);
+          copy_child_ptr = &(*copy_child_ptr)->next;
+        }
       *copy_child_ptr = 0;
     }
 
