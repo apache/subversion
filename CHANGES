@@ -1,3 +1,12 @@
+Version 0.19.1 (released 12 Mar 2003, revision 5301)
+
+ User-visible changes:
+ * fix svnserve tunnel mode pipe close bug
+
+ Developer-visible changes:
+ * none
+
+
 Version 0.19.0 (released 10 Mar 2003, revision 5240)
 
  User-visible changes:
