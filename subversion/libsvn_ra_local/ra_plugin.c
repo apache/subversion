@@ -1075,11 +1075,16 @@ svn_ra_local__lock (void *session_baton,
 
 static svn_error_t *
 svn_ra_local__unlock (void *session_baton,
+                      const char *path,
                       const char *token,
                       svn_boolean_t force,
                       apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session_baton;
+
+  /* Note: path arg isn't used, since svn_repos_fs_unlock() doesn't
+     need it.  But ra_dav->unlock() needs the path arg for an http
+     UNLOCK request. */
 
   /* A username is absolutely required to unlock a path. */
   SVN_ERR (get_username (sess, pool));

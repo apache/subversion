@@ -1034,12 +1034,56 @@ svn_ra_dav__lock(void *session_baton,
 
 static svn_error_t *
 svn_ra_dav__unlock(void *session_baton,
+                   const char *path,
                    const char *token,
                    svn_boolean_t force,
                    apr_pool_t *pool)
 {
-  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
-                           "Function not yet implemented.");
+  svn_ra_session_t *ras = session_baton;
+  int rv;
+  const char *url;
+  struct lock_request_baton *lrb;
+  struct ne_lock *nlock;
+
+  /* Build context for neon callbacks and then register them. */
+  lrb = apr_pcalloc(pool, sizeof(*lrb));
+  lrb->force = force;
+  lrb->pool = pool;
+  ne_hook_create_request(ras->sess, create_request_hook, lrb);
+  ne_hook_pre_send(ras->sess, pre_send_hook, lrb);
+
+  /* Make a neon lock structure containing token and full URL to unlock. */
+  nlock = ne_lock_create();
+  nlock->token = ne_strdup(token);
+  url = svn_path_url_add_component (ras->url, path, pool);  
+  if ((rv = ne_uri_parse(url, &(nlock->uri))))
+    return svn_ra_dav__convert_error(ras->sess, "Failed to parse URI",
+                                     rv, pool);
+
+  /* Issue UNLOCK request. */
+  rv = ne_unlock(ras->sess, nlock);
+
+  /* Did we get a <D:error> response? */
+  if (lrb->err)
+    {
+      ne_lock_destroy(nlock);
+      if (lrb->error_parser)
+        ne_xml_destroy(lrb->error_parser);
+
+      return lrb->err;
+    }
+
+  /* Did we get some other sort of neon error? */
+  if (rv)
+    return svn_ra_dav__convert_error(ras->sess,
+                                     "Lock request failed", rv, pool);
+  
+  /* Free neon things. */
+  ne_lock_destroy(nlock);
+  if (lrb->error_parser)
+    ne_xml_destroy(lrb->error_parser);
+
+  return SVN_NO_ERROR;
 }
 
 

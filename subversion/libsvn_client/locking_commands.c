@@ -184,7 +184,7 @@ svn_client_unlock (const char *path, svn_boolean_t force,
   /* We don't have a lock token if force is specified, but the path wasn't
      locked in the repository. */
   if (lock_token)
-    SVN_ERR (ra_lib->unlock (session, lock_token, force, pool));
+    SVN_ERR (ra_lib->unlock (session, "", lock_token, force, pool));
 
   /* Remove any lock token from the WC. */
   SVN_ERR (svn_wc_remove_lock (path, adm_access, pool));

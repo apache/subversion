@@ -843,7 +843,7 @@ typedef struct svn_ra_plugin_t
   /**
    * @since New in 1.2.
    *
-   * Remove lock on the path represented by @a token.
+   * Remove lock on @a path represented by @a token.
    *
    * Note that unlocking is never anonymous, so any server
    * implementing this function will have to "pull" a username from
@@ -857,6 +857,7 @@ typedef struct svn_ra_plugin_t
    * Use @a pool for temporary allocations.
    */
   svn_error_t *(*unlock) (void *session_baton,
+                          const char *path,
                           const char *token,
                           svn_boolean_t force,
                           apr_pool_t *pool);

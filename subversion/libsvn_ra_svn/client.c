@@ -1375,12 +1375,17 @@ static svn_error_t *ra_svn_lock(void *session_baton,
 }
 
 static svn_error_t *ra_svn_unlock(void *session_baton,
+                                  const char *path,
                                   const char *token,
                                   svn_boolean_t force,
                                   apr_pool_t *pool)
 {
   ra_svn_session_baton_t *sess = session_baton;
   svn_ra_svn_conn_t* conn = sess->conn;
+
+  /* Note: path arg isn't used, since svnserve calls
+     svn_repos_fs_unlock(), which doesn't need it.  But
+     ra_dav->unlock() needs the path arg for an http UNLOCK request. */
 
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "unlock", "cb", token, force));
 
