@@ -16,15 +16,22 @@
 # cleanup                 掃除
 # commit                  コミット
 # conflict                衝突
+# contents                内容
 # copyfrom                コピー元
+# creating ...            〜を作成しています
 # datestamp               タイムスタンプ
 # delta                   差分
 # deltification           差分化
 # destination             コピー先 / 移動先
+# dumpstream              ダンプストリーム
 # end revision            終了リビジョン
 # entry                   エントリ
+# error ...ing            〜する際にエラーが発生しました / 〜中にエラーが
+#                         発生しました
+# expected                予想される
 # export                  エクスポート
 # external item           外部項目
+# ... failed              〜に失敗しました / 〜が失敗しました
 # HEAD                    HEAD
 # help                    ヘルプ
 # import                  インポート
@@ -33,25 +40,37 @@
 # last changed            最終変更
 # last updated            最終更新
 # local                   ローカル
+# malformed               不正な
 # merge                   マージ
 # MIME type               MIME タイプ
 # modified                修正された
 # node kind               ノード種別
 # node revision id        ノードリビジョン識別番号
+# null                    空の
 # out of date             リポジトリ側と比べて古くなった
+# post-commit hook        post-commit フック
+# post-revprop-change hook    post-revprop-change フック
+# pre-commit hook         pre-commit フック
+# pre-revprop-change hook     pre-revprop-change フック
 # property                属性
 # RA layer                RA 層
 # RA plugin ABI version   RA プラグイン ABI バージョン
+# read-only               読み取り専用
+# recode                  再エンコードする
+# recovery                復旧
 # remote                  リモート
 # remove lock             ロックを解除する
 # representation          表現
 # revision                リビジョン
+# root of edit            編集用ルートパス
 # scheduled for ...       〜準備中の
 # source                  コピー元 / 移動元 / マージ元
+# start-commit hook       start-commit フック
 # start revision          開始リビジョン
 # stderr                  標準エラー出力
 # stdin                   標準入力
 # stdout                  標準出力
+# store                   格納する
 # text-base               テキストベース
 # transaction             トランザクション
 # unversioned             バージョン管理されていない
@@ -61,8 +80,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-12-22 17:38+0900\n"
-"PO-Revision-Date: 2004-12-23 01:30+0900\n"
+"POT-Creation-Date: 2005-02-19 13:52+0900\n"
+"PO-Revision-Date: 2005-02-19 12:11+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -286,7 +305,7 @@ msgstr ""
 "%s:  (バージョン管理されていないリソースです)\n"
 "\n"
 
-#: clients/cmdline/log-cmd.c:91 include/svn_error_codes.h:220
+#: clients/cmdline/log-cmd.c:91 include/svn_error_codes.h:223
 #: libsvn_subr/cmdline.c:335 libsvn_subr/cmdline.c:352
 msgid "Write error"
 msgstr "書き込みエラーです"
@@ -455,7 +474,7 @@ msgstr ""
 # * 29 one-byte characters are displayed on the left.
 #: clients/cmdline/main.c:100
 msgid "pass contents of file ARG as additional args"
-msgstr "ファイル ARG の中身を引数に追加して渡します"
+msgstr "ファイル ARG の内容を引数に追加して渡します"
 
 # * Description for 'svn --xml'.
 # * 29 one-byte characters are displayed on the left.
@@ -909,7 +928,7 @@ msgstr ""
 "リポジトリ内のディレクトリのエントリを一覧表示します。\n"
 "使用方法: list [<対象>[@<REV>]...]\n"
 "\n"
-"  各 <対象> ファイルおよび各 <対象> ディレクトリの中身を、ディレクトリにあ"
+"  各 <対象> ファイルおよび各 <対象> ディレクトリの内容を、ディレクトリにあ"
 "る\n"
 "  とおり一覧表示します。<対象> が作業コピーのパスである場合は、対応する\n"
 "  リポジトリ URL が処理に用いられます。\n"
@@ -2074,663 +2093,663 @@ msgstr "改行文字スタイルが一貫していません"
 msgid "Unrecognized line ending style"
 msgstr "改行文字形式を認識できません"
 
-#: include/svn_error_codes.h:204
+#: include/svn_error_codes.h:205
 msgid "Line endings other than expected"
-msgstr "改行文字が期待したものと異なります"
+msgstr "改行文字が予想したものと異なります"
 
-#: include/svn_error_codes.h:208
+#: include/svn_error_codes.h:209
 msgid "Ran out of unique names"
 msgstr "固有の名称を使い果たしました"
 
-#: include/svn_error_codes.h:212
+#: include/svn_error_codes.h:214
 msgid "Framing error in pipe protocol"
 msgstr "パイププロトコルのフレーミングエラーです"
 
-#: include/svn_error_codes.h:216
+#: include/svn_error_codes.h:219
 msgid "Read error in pipe"
 msgstr "パイプの読み込みエラーです"
 
-#: include/svn_error_codes.h:226
+#: include/svn_error_codes.h:229
 msgid "Unexpected EOF on stream"
 msgstr "予想外の EOF がストリーム中にあります"
 
-#: include/svn_error_codes.h:230
+#: include/svn_error_codes.h:233
 msgid "Malformed stream data"
 msgstr "異常なストリームデータです"
 
-#: include/svn_error_codes.h:234
+#: include/svn_error_codes.h:237
 msgid "Unrecognized stream data"
 msgstr "認識できないストリームデータです"
 
-#: include/svn_error_codes.h:240
+#: include/svn_error_codes.h:243
 msgid "Unknown svn_node_kind"
 msgstr "未知の svn_node_kind です"
 
-#: include/svn_error_codes.h:244
+#: include/svn_error_codes.h:247
 msgid "Unexpected node kind found"
 msgstr "予想外のノード種別が見つかりました"
 
-#: include/svn_error_codes.h:250
+#: include/svn_error_codes.h:253
 msgid "Can't find an entry"
 msgstr "エントリが見つかりません"
 
-#: include/svn_error_codes.h:256
+#: include/svn_error_codes.h:259
 msgid "Entry already exists"
 msgstr "エントリが既に存在します"
 
-#: include/svn_error_codes.h:260
+#: include/svn_error_codes.h:263
 msgid "Entry has no revision"
 msgstr "エントリにリビジョンがありません"
 
-#: include/svn_error_codes.h:264
+#: include/svn_error_codes.h:267
 msgid "Entry has no URL"
 msgstr "エントリに URL がありません"
 
-#: include/svn_error_codes.h:268
+#: include/svn_error_codes.h:271
 msgid "Entry has an invalid attribute"
 msgstr "エントリが不正な属性をもっています"
 
-#: include/svn_error_codes.h:274
+#: include/svn_error_codes.h:277
 msgid "Obstructed update"
 msgstr "更新が妨害されました"
 
-#: include/svn_error_codes.h:278
+#: include/svn_error_codes.h:282
 msgid "Mismatch popping the WC unwind stack"
 msgstr "作業コピーアンワインドスタックに対してポップする際に不一致があります"
 
-#: include/svn_error_codes.h:282
+#: include/svn_error_codes.h:287
 msgid "Attempt to pop empty WC unwind stack"
 msgstr "空の作業コピーアンワインドスタックに対してポップしようとしています"
 
-#: include/svn_error_codes.h:286
+#: include/svn_error_codes.h:292
 msgid "Attempt to unlock with non-empty unwind stack"
 msgstr "空でないアンワインドスタックのロックを解除しようとしています"
 
-#: include/svn_error_codes.h:290
+#: include/svn_error_codes.h:296
 msgid "Attempted to lock an already-locked dir"
 msgstr "既にロックされたディレクトリをロックしようとしました"
 
-#: include/svn_error_codes.h:294
+#: include/svn_error_codes.h:300
 msgid "Working copy not locked"
 msgstr "作業コピーがロックされていません"
 
-#: include/svn_error_codes.h:298
+#: include/svn_error_codes.h:305
 msgid "Invalid lock"
 msgstr "ロックが不正です"
 
-#: include/svn_error_codes.h:302
+#: include/svn_error_codes.h:309
 msgid "Path is not a working copy directory"
 msgstr "パスは作業コピーのディレクトリではありません"
 
-#: include/svn_error_codes.h:306
+#: include/svn_error_codes.h:313
 msgid "Path is not a working copy file"
 msgstr "パスは作業コピーのファイルではありません"
 
-#: include/svn_error_codes.h:310
+#: include/svn_error_codes.h:317
 msgid "Problem running log"
 msgstr "ログの実行中に問題が起きました"
 
-#: include/svn_error_codes.h:314
+#: include/svn_error_codes.h:321
 msgid "Can't find a working copy path"
 msgstr "作業コピーパスが見つかりません"
 
-#: include/svn_error_codes.h:318
+#: include/svn_error_codes.h:325
 msgid "Working copy is not up-to-date"
 msgstr "作業コピーが最新ではありません"
 
-#: include/svn_error_codes.h:322
+#: include/svn_error_codes.h:329
 msgid "Left locally modified or unversioned files"
 msgstr ""
 "ローカルで修正されたファイルやバージョン管理下にないファイルを残しました"
 
-#: include/svn_error_codes.h:326
+#: include/svn_error_codes.h:333
 msgid "Unmergeable scheduling requested on an entry"
 msgstr "エントリに対してマージできない準備をするよう要求されました"
 
-#: include/svn_error_codes.h:330
+#: include/svn_error_codes.h:337
 msgid "Found a working copy path"
 msgstr "作業コピーのパスが見つかりました"
 
-#: include/svn_error_codes.h:334
+#: include/svn_error_codes.h:341
 msgid "A conflict in the working copy obstructs the current operation"
 msgstr "作業ディレクトリ内に衝突があり、実行中の操作が妨害されました"
 
-#: include/svn_error_codes.h:338
+#: include/svn_error_codes.h:345
 msgid "Working copy is corrupt"
 msgstr "作業コピーが壊れています"
 
 # ? text base
-#: include/svn_error_codes.h:342
+#: include/svn_error_codes.h:349
 msgid "Working copy text base is corrupt"
 msgstr "作業コピーのテキストベースが壊れています"
 
-#: include/svn_error_codes.h:346
+#: include/svn_error_codes.h:353
 msgid "Cannot change node kind"
 msgstr "ノード種別を変更できません"
 
-#: include/svn_error_codes.h:350
+#: include/svn_error_codes.h:357
 msgid "Invalid operation on the current working directory"
 msgstr "現在の作業ディレクトリに対する不正な操作です"
 
-#: include/svn_error_codes.h:354
+#: include/svn_error_codes.h:361
 msgid "Problem on first log entry in a working copy"
 msgstr "作業コピー中の最初のログエントリに問題があります"
 
-#: include/svn_error_codes.h:358
+#: include/svn_error_codes.h:365
 msgid "Unsupported working copy format"
 msgstr "サポートされていない作業コピーの形式です"
 
 # ? in this context
-#: include/svn_error_codes.h:362
+#: include/svn_error_codes.h:369
 msgid "Path syntax not supported in this context"
 msgstr "この操作ではパスの構文はサポートされていません"
 
-#: include/svn_error_codes.h:367
+#: include/svn_error_codes.h:374
 msgid "Invalid schedule"
 msgstr "準備内容が不正です"
 
-#: include/svn_error_codes.h:373
+#: include/svn_error_codes.h:380
 msgid "General filesystem error"
 msgstr "一般的なファイルシステムエラーです"
 
-#: include/svn_error_codes.h:377
+#: include/svn_error_codes.h:384
 msgid "Error closing filesystem"
 msgstr "ファイルシステムを閉じる際にエラーがありました"
 
-#: include/svn_error_codes.h:381
+#: include/svn_error_codes.h:388
 msgid "Filesystem is already open"
 msgstr "ファイルシステムが既に開いています"
 
-#: include/svn_error_codes.h:385
+#: include/svn_error_codes.h:392
 msgid "Filesystem is not open"
 msgstr "ファイルシステムが開いていません"
 
-#: include/svn_error_codes.h:389
+#: include/svn_error_codes.h:396
 msgid "Filesystem is corrupt"
 msgstr "ファイルシステムが壊れています"
 
-#: include/svn_error_codes.h:393
+#: include/svn_error_codes.h:400
 msgid "Invalid filesystem path syntax"
 msgstr "ファイルシステムのパスの構文が不正です。"
 
-#: include/svn_error_codes.h:397
+#: include/svn_error_codes.h:404
 msgid "Invalid filesystem revision number"
 msgstr "ファイルシステムのリビジョン番号が不正です。"
 
-#: include/svn_error_codes.h:401
+#: include/svn_error_codes.h:408
 msgid "Invalid filesystem transaction name"
 msgstr "ファイルシステムのトランザクション名が不正です。"
 
-#: include/svn_error_codes.h:405
+#: include/svn_error_codes.h:412
 msgid "Filesystem directory has no such entry"
 msgstr "ファイルシステムのディレクトリにはそのようなエントリはありません"
 
-#: include/svn_error_codes.h:409
+#: include/svn_error_codes.h:416
 msgid "Filesystem has no such representation"
 msgstr "そのような表現はファイルシステムにありません"
 
-#: include/svn_error_codes.h:413
+#: include/svn_error_codes.h:420
 msgid "Filesystem has no such string"
 msgstr "そのような文字列はファイルシステムにありません"
 
-#: include/svn_error_codes.h:417
+#: include/svn_error_codes.h:424
 msgid "Filesystem has no such copy"
 msgstr "そのようなコピーはファイルシステムにありません"
 
-#: include/svn_error_codes.h:421
+#: include/svn_error_codes.h:428
 msgid "The specified transaction is not mutable"
 msgstr "指定されたトランザクションは変更できません"
 
-#: include/svn_error_codes.h:425
+#: include/svn_error_codes.h:432
 msgid "Filesystem has no item"
 msgstr "ファイルシステムに項目がありません"
 
-#: include/svn_error_codes.h:429
+#: include/svn_error_codes.h:436
 msgid "Filesystem has no such node-rev-id"
 msgstr "ファイルシステムにそのようなノードリビジョン識別番号はありません"
 
-#: include/svn_error_codes.h:433
+#: include/svn_error_codes.h:440
 msgid "String does not represent a node or node-rev-id"
 msgstr "文字列がノードやノードリビジョン識別番号を表していません"
 
-#: include/svn_error_codes.h:437
+#: include/svn_error_codes.h:444
 msgid "Name does not refer to a filesystem directory"
 msgstr "名前がファイルシステムのディレクトリを参照していません"
 
-#: include/svn_error_codes.h:441
+#: include/svn_error_codes.h:448
 msgid "Name does not refer to a filesystem file"
 msgstr "名前がファイルシステムのファイルを参照していません"
 
 # ? single path component
-#: include/svn_error_codes.h:445
+#: include/svn_error_codes.h:452
 msgid "Name is not a single path component"
 msgstr "名前は一階層のパス成分ではありません"
 
-#: include/svn_error_codes.h:449
+#: include/svn_error_codes.h:456
 msgid "Attempt to change immutable filesystem node"
 msgstr "ファイルシステムの、変更できないノードを変更しようとしました"
 
-#: include/svn_error_codes.h:453
+#: include/svn_error_codes.h:460
 msgid "Item already exists in filesystem"
 msgstr "項目は既にファイルシステムに存在しています"
 
-#: include/svn_error_codes.h:457
+#: include/svn_error_codes.h:464
 msgid "Attempt to remove or recreate fs root dir"
 msgstr ""
 "ファイルシステムのルートディレクトリを削除または再作成しようとしています"
 
 # ? transaction root
-#: include/svn_error_codes.h:461
+#: include/svn_error_codes.h:468
 msgid "Object is not a transaction root"
 msgstr "対象はトランザクションルートではありません"
 
 # ? revision root
-#: include/svn_error_codes.h:465
+#: include/svn_error_codes.h:472
 msgid "Object is not a revision root"
 msgstr "対象はリビジョンルートではありません"
 
-#: include/svn_error_codes.h:469
+#: include/svn_error_codes.h:476
 msgid "Merge conflict during commit"
 msgstr "コミット中にマージの衝突がありました"
 
-#: include/svn_error_codes.h:473
+#: include/svn_error_codes.h:480
 msgid "A representation vanished or changed between reads"
 msgstr "読んでいる際に表現が消えたか変更されたかしています"
 
-#: include/svn_error_codes.h:477
+#: include/svn_error_codes.h:484
 msgid "Tried to change an immutable representation"
 msgstr "変更できない表現を変更しようとしました"
 
-#: include/svn_error_codes.h:481
+#: include/svn_error_codes.h:488
 msgid "Malformed skeleton data"
 msgstr "不正なスケルトンデータです"
 
-#: include/svn_error_codes.h:485
+#: include/svn_error_codes.h:492
 msgid "Transaction is out of date"
 msgstr "トランザクションはリポジトリ側と比べて古くなっています"
 
-#: include/svn_error_codes.h:489
+#: include/svn_error_codes.h:496
 msgid "Berkeley DB error"
 msgstr "Berkeley DB のエラーです"
 
-#: include/svn_error_codes.h:493
+#: include/svn_error_codes.h:500
 msgid "Berkeley DB deadlock error"
 msgstr "Berkeley DB のデッドロックエラーです"
 
-#: include/svn_error_codes.h:497
+#: include/svn_error_codes.h:504
 msgid "Transaction is dead"
 msgstr "トランザクションが死んでいます"
 
-#: include/svn_error_codes.h:501
+#: include/svn_error_codes.h:508
 msgid "Transaction is not dead"
 msgstr "トランザクションは死んでいません"
 
-#: include/svn_error_codes.h:506
+#: include/svn_error_codes.h:513
 msgid "Unknown FS type"
 msgstr "未知のファイルシステム形式です"
 
-#: include/svn_error_codes.h:512
+#: include/svn_error_codes.h:519
 msgid "The repository is locked, perhaps for db recovery"
 msgstr "リポジトリはロックされています。おそらく DB の復旧中です"
 
-#: include/svn_error_codes.h:516
+#: include/svn_error_codes.h:523
 msgid "A repository hook failed"
 msgstr "リポジトリフックの実行が失敗しました"
 
-#: include/svn_error_codes.h:520
+#: include/svn_error_codes.h:527
 msgid "Incorrect arguments supplied"
 msgstr "不正な変数が入力されました"
 
-#: include/svn_error_codes.h:524
+#: include/svn_error_codes.h:531
 msgid "A report cannot be generated because no data was supplied"
 msgstr "データが入力されなかったので報告を作成できませんでした"
 
-#: include/svn_error_codes.h:528
+#: include/svn_error_codes.h:535
 msgid "Bogus revision report"
 msgstr "不正なリビジョン報告です"
 
-#: include/svn_error_codes.h:532
+#: include/svn_error_codes.h:539
 msgid "Unsupported repository version"
 msgstr "サポートされていないリポジトリのバージョンです"
 
-#: include/svn_error_codes.h:536
+#: include/svn_error_codes.h:543
 msgid "Disabled repository feature"
 msgstr "このリポジトリ機能は無効になりました"
 
-#: include/svn_error_codes.h:540
+#: include/svn_error_codes.h:547
 msgid "Error running post-commit hook"
-msgstr "コミット後、フックの実行中にエラーが発生しました"
+msgstr "post-commit フックの実行中にエラーが発生しました"
 
-#: include/svn_error_codes.h:546
+#: include/svn_error_codes.h:553
 msgid "Bad URL passed to RA layer"
 msgstr "不正な URL が RA 層に渡されました"
 
-#: include/svn_error_codes.h:550
+#: include/svn_error_codes.h:557
 msgid "Authorization failed"
 msgstr "認証に失敗しました"
 
-#: include/svn_error_codes.h:554
+#: include/svn_error_codes.h:561
 msgid "Unknown authorization method"
 msgstr "未知の認証方法です"
 
-#: include/svn_error_codes.h:558
+#: include/svn_error_codes.h:565
 msgid "Repository access method not implemented"
 msgstr "リポジトリアクセス方法が実装されていません"
 
-#: include/svn_error_codes.h:562
+#: include/svn_error_codes.h:569
 msgid "Item is out-of-date"
 msgstr "項目はリポジトリ側と比べて古くなっています"
 
-#: include/svn_error_codes.h:566
+#: include/svn_error_codes.h:573
 msgid "Repository has no UUID"
 msgstr "リポジトリに UUID がありません"
 
-#: include/svn_error_codes.h:570
+#: include/svn_error_codes.h:577
 msgid "Unsupported RA plugin ABI version"
 msgstr "RA プラグイン ABI バージョンはサポートされていません"
 
-#: include/svn_error_codes.h:576
+#: include/svn_error_codes.h:583
 msgid "RA layer failed to init socket layer"
 msgstr "RA 層はソケット層を開始できませんでした"
 
-#: include/svn_error_codes.h:580
+#: include/svn_error_codes.h:587
 msgid "RA layer failed to create HTTP request"
 msgstr "RA 層は HTTP リクエストの作成できませんでした"
 
-#: include/svn_error_codes.h:584
+#: include/svn_error_codes.h:591
 msgid "RA layer request failed"
 msgstr "RA 層のリクエストは失敗しました"
 
-#: include/svn_error_codes.h:588
+#: include/svn_error_codes.h:595
 msgid "RA layer didn't receive requested OPTIONS info"
 msgstr "RA 層は、リクエストした OPTIONS 情報を受け取ることができませんでした"
 
-#: include/svn_error_codes.h:592
+#: include/svn_error_codes.h:599
 msgid "RA layer failed to fetch properties"
 msgstr "RA 層は属性を取得できませんでした"
 
-#: include/svn_error_codes.h:596
+#: include/svn_error_codes.h:603
 msgid "RA layer file already exists"
 msgstr "RA 層のファイルは既にあります"
 
-#: include/svn_error_codes.h:600
+#: include/svn_error_codes.h:607
 msgid "Invalid configuration value"
 msgstr "不正な設定値です"
 
-#: include/svn_error_codes.h:604
+#: include/svn_error_codes.h:611
 msgid "HTTP Path Not Found"
 msgstr "HTTP パスが見つかりません"
 
-#: include/svn_error_codes.h:608
+#: include/svn_error_codes.h:615
 msgid "Failed to excute WebDAV PROPPATCH"
 msgstr "WebDAV PROPPATCH を実行できませんでした"
 
-#: include/svn_error_codes.h:615 include/svn_error_codes.h:644
+#: include/svn_error_codes.h:622 include/svn_error_codes.h:651
 msgid "Couldn't find a repository"
 msgstr "リポジトリが見つかりません"
 
-#: include/svn_error_codes.h:619
+#: include/svn_error_codes.h:626
 msgid "Couldn't open a repository"
 msgstr "リポジトリを開けません"
 
-#: include/svn_error_codes.h:624
+#: include/svn_error_codes.h:631
 msgid "Special code for wrapping server errors to report to client"
 msgstr "クライアントに報告するサーバのエラーを包み込むための特殊なコードです"
 
-#: include/svn_error_codes.h:628
+#: include/svn_error_codes.h:635
 msgid "Unknown svn protocol command"
 msgstr "未知の svn プロトコルコマンドです"
 
-#: include/svn_error_codes.h:632
+#: include/svn_error_codes.h:639
 msgid "Network connection closed unexpectedly"
 msgstr "ネットワーク接続が突然切られました"
 
-#: include/svn_error_codes.h:636
+#: include/svn_error_codes.h:643
 msgid "Network read/write error"
 msgstr "ネットワークの読み込み / 書き込みエラーです"
 
-#: include/svn_error_codes.h:640 libsvn_ra_svn/marshal.c:592
+#: include/svn_error_codes.h:647 libsvn_ra_svn/marshal.c:592
 #: libsvn_ra_svn/marshal.c:700 libsvn_ra_svn/marshal.c:727
 msgid "Malformed network data"
 msgstr "不正なネットワークデータです"
 
-#: include/svn_error_codes.h:648
+#: include/svn_error_codes.h:655
 msgid "Client/server version mismatch"
 msgstr "クライアントとサーバーのバージョンが一致しません"
 
-#: include/svn_error_codes.h:656
+#: include/svn_error_codes.h:663
 msgid "Credential data unavailable"
 msgstr "利用できる信任データがありません"
 
-#: include/svn_error_codes.h:660
+#: include/svn_error_codes.h:667
 msgid "No authentication provider available"
 msgstr "利用できる認証供給者がありません"
 
-#: include/svn_error_codes.h:664 include/svn_error_codes.h:668
+#: include/svn_error_codes.h:671 include/svn_error_codes.h:675
 msgid "All authentication providers exhausted"
 msgstr "認証供給者はすべて使い果たされています"
 
-#: include/svn_error_codes.h:674
+#: include/svn_error_codes.h:681
 msgid "Read access denied for root of edit"
-msgstr "編集のルートへの読み込みアクセスが拒否されました"
+msgstr "編集用ルートパスへの読み込みアクセスが拒否されました"
 
-#: include/svn_error_codes.h:679
+#: include/svn_error_codes.h:686
 msgid "Item is not readable."
 msgstr "項目が読み込み可能でありません。"
 
-#: include/svn_error_codes.h:684
+#: include/svn_error_codes.h:691
 msgid "Item is partially readable."
 msgstr "項目の一部だけが読み込み可能です。"
 
-#: include/svn_error_codes.h:691
+#: include/svn_error_codes.h:698
 msgid "Svndiff data has invalid header"
 msgstr "svndiff データに不正なヘッダがあります"
 
 # ? corrupt window
-#: include/svn_error_codes.h:695
+#: include/svn_error_codes.h:702
 msgid "Svndiff data contains corrupt window"
 msgstr "snvdiff データに壊れた window が含まれています"
 
-#: include/svn_error_codes.h:699
+#: include/svn_error_codes.h:706
 msgid "Svndiff data contains backward-sliding source view"
 msgstr "svndiff データに、逆方向にスライドするソースビューが含まれています"
 
-#: include/svn_error_codes.h:703
+#: include/svn_error_codes.h:710
 msgid "Svndiff data contains invalid instruction"
 msgstr "svndiff データに不正な命令が含まれています"
 
-#: include/svn_error_codes.h:707
+#: include/svn_error_codes.h:714
 msgid "Svndiff data ends unexpectedly"
 msgstr "svndiff データが突然終わりました"
 
-#: include/svn_error_codes.h:713
+#: include/svn_error_codes.h:720
 msgid "Apache has no path to an SVN filesystem"
 msgstr "Apache に SVN ファイルシステムへのパスがありません"
 
-#: include/svn_error_codes.h:717
+#: include/svn_error_codes.h:724
 msgid "Apache got a malformed URI"
 msgstr "Apache が不正な URI を受け取りました"
 
-#: include/svn_error_codes.h:721
+#: include/svn_error_codes.h:728
 msgid "Activity not found"
 msgstr "作業が見つかりません"
 
-#: include/svn_error_codes.h:725
+#: include/svn_error_codes.h:732
 msgid "Baseline incorrect"
 msgstr "ベースラインが不正です"
 
-#: include/svn_error_codes.h:729
+#: include/svn_error_codes.h:736
 msgid "Input/output error"
 msgstr "入出力エラーです"
 
-#: include/svn_error_codes.h:735
+#: include/svn_error_codes.h:742
 msgid "A path under version control is needed for this operation"
 msgstr "この操作ではバージョン管理下にあるパスが必要です"
 
-#: include/svn_error_codes.h:739
+#: include/svn_error_codes.h:746
 msgid "Repository access is needed for this operation"
 msgstr "この操作ではリポジトリへのアクセスが必要です。"
 
-#: include/svn_error_codes.h:743
+#: include/svn_error_codes.h:750
 msgid "Bogus revision information given"
 msgstr "不正なリビジョン情報を指定されました"
 
-#: include/svn_error_codes.h:747
+#: include/svn_error_codes.h:754
 msgid "Attempting to commit to a URL more than once"
 msgstr "URL に複数回コミットしようとしています"
 
-#: include/svn_error_codes.h:751
+#: include/svn_error_codes.h:758
 msgid "Operation does not apply to binary file"
 msgstr "バイナリファイルには適用できない操作です"
 
-#: include/svn_error_codes.h:757
+#: include/svn_error_codes.h:764
 msgid "Format of an svn:externals property was invalid"
 msgstr "属性 svn:external の形式が不正です"
 
-#: include/svn_error_codes.h:761
+#: include/svn_error_codes.h:768
 msgid "Attempting restricted operation for modified resource"
 msgstr "修正されているリソースに対し、制限のある操作をしようとしています"
 
-#: include/svn_error_codes.h:765
+#: include/svn_error_codes.h:772
 msgid "Operation does not apply to directory"
 msgstr "ディレクトリに対しては操作を適用できません"
 
-#: include/svn_error_codes.h:769
+#: include/svn_error_codes.h:776
 msgid "Revision range is not allowed"
 msgstr "リビジョン範囲は適用できません"
 
-#: include/svn_error_codes.h:773
+#: include/svn_error_codes.h:780
 msgid "Inter-repository relocation not allowed"
 msgstr "参照リポジトリの変更は、異なるリポジトリの間ではできません"
 
-#: include/svn_error_codes.h:777
+#: include/svn_error_codes.h:784
 msgid "Author name cannot contain a newline"
 msgstr "変更者の名前に改行文字を入れてはいけません"
 
-#: include/svn_error_codes.h:781
+#: include/svn_error_codes.h:788
 msgid "Bad property name"
 msgstr "不正な属性名です"
 
-#: include/svn_error_codes.h:786
+#: include/svn_error_codes.h:793
 msgid "Two versioned resources are unrelated"
 msgstr "バージョン管理下にある 2 つのリソースは関係がありません"
 
-#: include/svn_error_codes.h:793
+#: include/svn_error_codes.h:800
 msgid "A problem occurred; see later errors for details"
 msgstr "エラーが発生しました。詳しくは次のエラーメッセージを参照してください"
 
-#: include/svn_error_codes.h:797
+#: include/svn_error_codes.h:804
 msgid "Failure loading plugin"
 msgstr "プラグインをロードできませんでした"
 
-#: include/svn_error_codes.h:801
+#: include/svn_error_codes.h:808
 msgid "Malformed file"
 msgstr "不正なファイルです"
 
-#: include/svn_error_codes.h:805
+#: include/svn_error_codes.h:812
 msgid "Incomplete data"
 msgstr "不完全なデータです"
 
-#: include/svn_error_codes.h:809
+#: include/svn_error_codes.h:816
 msgid "Incorrect parameters given"
 msgstr "不正なパラメータを指定しました"
 
-#: include/svn_error_codes.h:813
+#: include/svn_error_codes.h:820
 msgid "Tried a versioning operation on an unversioned resource"
 msgstr ""
 "バージョン管理下にないリソースにバージョン管理操作を実行しようとしました"
 
-#: include/svn_error_codes.h:817
+#: include/svn_error_codes.h:824
 msgid "Test failed"
 msgstr "テストが失敗しました"
 
-#: include/svn_error_codes.h:821
+#: include/svn_error_codes.h:828
 msgid "Trying to use an unsupported feature"
 msgstr "サポートされていない機能を使おうとしています"
 
-#: include/svn_error_codes.h:825
+#: include/svn_error_codes.h:832
 msgid "Unexpected or unknown property kind"
 msgstr "予想外または未知の属性種別です"
 
-#: include/svn_error_codes.h:829
+#: include/svn_error_codes.h:836
 msgid "Illegal target for the requested operation"
 msgstr "要求された操作の対象としては不正です"
 
-#: include/svn_error_codes.h:833
+#: include/svn_error_codes.h:840
 msgid "MD5 checksum is missing"
 msgstr "MD5 チェックサムがありません"
 
-#: include/svn_error_codes.h:837
+#: include/svn_error_codes.h:844
 msgid "Directory needs to be empty but is not"
 msgstr "ディレクトリは空でなければなりませんが、そうではありません"
 
-#: include/svn_error_codes.h:841
+#: include/svn_error_codes.h:848
 msgid "Error calling external program"
 msgstr "外部プログラムの呼び出し中にエラーが発生しました"
 
-#: include/svn_error_codes.h:845
+#: include/svn_error_codes.h:852
 msgid "Python exception has been set with the error"
 msgstr "エラーに対して Python の例外が設定されました"
 
-#: include/svn_error_codes.h:849
+#: include/svn_error_codes.h:856
 msgid "A checksum mismatch occurred"
 msgstr "チェックサムの不一致が生じました"
 
-#: include/svn_error_codes.h:853
+#: include/svn_error_codes.h:860
 msgid "The operation was interrupted"
 msgstr "操作が中断されました"
 
-#: include/svn_error_codes.h:857
+#: include/svn_error_codes.h:864
 msgid "The specified diff option is not supported"
 msgstr "指定された差分表示 (diff) オプションはサポートされていません"
 
-#: include/svn_error_codes.h:861
+#: include/svn_error_codes.h:868
 msgid "Property not found"
 msgstr "属性が見つかりません"
 
-#: include/svn_error_codes.h:865
+#: include/svn_error_codes.h:872
 msgid "No auth file path available"
 msgstr "利用できる認証ファイルパスがありません"
 
-#: include/svn_error_codes.h:870
+#: include/svn_error_codes.h:877
 msgid "Incompatible library version"
 msgstr "ライブラリのバージョンは互換性がありません"
 
-#: include/svn_error_codes.h:876
+#: include/svn_error_codes.h:883
 msgid "Client error in parsing arguments"
 msgstr "クライアントが引数を解析しているときにエラーが生じました"
 
-#: include/svn_error_codes.h:880
+#: include/svn_error_codes.h:887
 msgid "Not enough args provided"
 msgstr "指定する引数が不十分です"
 
-#: include/svn_error_codes.h:884
+#: include/svn_error_codes.h:891
 msgid "Mutually exclusive arguments specified"
 msgstr "互いに排他的な引数が指定されています"
 
-#: include/svn_error_codes.h:888
+#: include/svn_error_codes.h:895
 msgid "Attempted command in administrative dir"
 msgstr "管理用ディレクトリでコマンドを実行しようとしました"
 
-#: include/svn_error_codes.h:892
+#: include/svn_error_codes.h:899
 msgid "The log message file is under version control"
 msgstr "ログメッセージファイルはバージョン管理下にあります"
 
-#: include/svn_error_codes.h:896
+#: include/svn_error_codes.h:903
 msgid "The log message is a pathname"
 msgstr "ログメッセージはパス名です"
 
-#: include/svn_error_codes.h:900
+#: include/svn_error_codes.h:907
 msgid "Committing in directory scheduled for addition"
 msgstr "追加準備状態にあるディレクトリにコミットしています"
 
-#: include/svn_error_codes.h:904
+#: include/svn_error_codes.h:911
 msgid "No external editor available"
 msgstr "利用できる外部エディタがありません"
 
-#: include/svn_error_codes.h:908
+#: include/svn_error_codes.h:915
 msgid "Something is wrong with the log message's contents"
-msgstr "ログメッセージの中身に不正な箇所があります"
+msgstr "ログメッセージの内容に不正な箇所があります"
 
 #: libsvn_client/add.c:354
 #, c-format
@@ -3283,6 +3302,11 @@ msgstr "リポジトリ '%s' の UUID は '%s' ですが、作業コピーのも
 msgid "Unrecognized revision type requested for '%s'"
 msgstr "'%s' に要求されたリビジョン形式を認識できません"
 
+#: libsvn_diff/diff_file.c:1169
+#, c-format
+msgid "Failed to delete mmap '%s'"
+msgstr "メモリへのマップ '%s' を削除できませんでした"
+
 #: libsvn_fs/fs-loader.c:99 libsvn_ra/ra_loader.c:122
 #, c-format
 msgid "'%s' does not define '%s()'"
@@ -3589,11 +3613,11 @@ msgstr "現在のファイルは壊れています"
 msgid "Can't chmod '%s'"
 msgstr "chmod '%s' はできません"
 
-#: libsvn_fs_fs/fs_fs.c:3483
+#: libsvn_fs_fs/fs_fs.c:3486
 msgid "Transaction out of date"
 msgstr "トランザクションはリポジトリ側と比べて古くなっています"
 
-#: libsvn_fs_fs/fs_fs.c:3722
+#: libsvn_fs_fs/fs_fs.c:3726
 msgid "No such transaction"
 msgstr "そのようなトランザクションはありません"
 
@@ -4136,6 +4160,51 @@ msgstr "エラーリストが不正です"
 msgid "Unknown status '%s' in command response"
 msgstr "コマンドへのレスポンス内に未知のステータス '%s' があります"
 
+#: libsvn_repos/commit.c:117
+#, c-format
+msgid "Out of date: '%s' in transaction '%s'"
+msgstr "'%s' (トランザクション '%s' 中) はリポジトリ側と比べて古くなっています"
+
+#: libsvn_repos/commit.c:224 libsvn_repos/commit.c:356
+#, c-format
+msgid "Got source path but no source revision for '%s'"
+msgstr "'%s' は、ソースパスはありますがソースリビジョンがありません"
+
+#: libsvn_repos/commit.c:248 libsvn_repos/commit.c:380
+#, c-format
+msgid "Source url '%s' is from different repository"
+msgstr ""
+"コピー元 (もしくは移動元) の URL '%s' は異なるリポジトリに由来するものです"
+
+#: libsvn_repos/commit.c:486
+#, c-format
+msgid ""
+"Checksum mismatch for resulting fulltext\n"
+"(%s):\n"
+"   expected checksum:  %s\n"
+"   actual checksum:    %s\n"
+msgstr ""
+"結果として得られるフルテキスト (%s) のチェックサムが一致しませんでした:\n"
+"   予想されるチェックサム:  %s\n"
+"   実際のチェックサム:      %s\n"
+
+#: libsvn_repos/delta.c:179
+msgid "Unable to open root of edit"
+msgstr "編集用ルートパスを開けませんでした"
+
+#: libsvn_repos/delta.c:230
+msgid "Invalid target path"
+msgstr "対象のパスが不正です"
+
+#: libsvn_repos/delta.c:256
+msgid ""
+"Invalid editor anchoring; at least one of the input paths is not a directory "
+"and there was no source entry"
+msgstr ""
+"エディタのアンカリングが不正です。\n"
+"入力パスのうち少なくとも一つがディレクトリではなく、ソースエントリがありませ"
+"ん"
+
 #: libsvn_repos/dump.c:416
 #, c-format
 msgid ""
@@ -4164,19 +4233,133 @@ msgstr "終了リビジョン %ld が不正です (最新のリビジョンは %
 msgid "* %s revision %ld.\n"
 msgstr "* %s リビジョン %ld。\n"
 
-#: libsvn_repos/load.c:826
+#: libsvn_repos/fs-wrap.c:56
+msgid "Commit succeeded, but post-commit hook failed"
+msgstr "コミットには成功しましたが、post-commit フックに失敗しました"
+
+#: libsvn_repos/fs-wrap.c:155
+#, c-format
+msgid ""
+"Storage of non-regular property '%s' is disallowed through the repository "
+"interface, and could indicate a bug in your client"
+msgstr ""
+"標準外の属性 '%s' を格納するのをリポジトリインタフェースが拒否しました。\n"
+"おそらくこれは、使用しているクライアントにバグがあることを意味しています。"
+
+#: libsvn_repos/fs-wrap.c:294
+#, c-format
+msgid "Write denied:  not authorized to read all of revision %ld."
+msgstr ""
+"書き込みが拒否されました。リビジョン %ld のすべてを読めるようには認証されてい"
+"ません"
+
+#: libsvn_repos/hooks.c:65
+#, c-format
+msgid "Can't create pipe for hook '%s'"
+msgstr "フック '%s' 用のパイプを作成できません"
+
+# ? null stdout
+#: libsvn_repos/hooks.c:72
+#, c-format
+msgid "Can't create null stdout for hook '%s'"
+msgstr "フック '%s' 用の空の標準出力を作成できません"
+
+#: libsvn_repos/hooks.c:84
+msgid "Error closing write end of stderr pipe"
+msgstr "標準エラー出力パイプの書き込みの終点を閉じる際にエラーが発生しました"
+
+#: libsvn_repos/hooks.c:90
+#, c-format
+msgid "Failed to run '%s' hook"
+msgstr "'%s' フックの実行に失敗しました"
+
+#: libsvn_repos/hooks.c:105
+#, c-format
+msgid ""
+"'%s' hook failed with error output:\n"
+"%s"
+msgstr ""
+"'%s' フックが次のようなエラーを出力して失敗しました:\n"
+"%s"
+
+#: libsvn_repos/hooks.c:116
+msgid "Error closing read end of stderr pipe"
+msgstr "標準エラー出力パイプの読み込みの終点を閉じる際にエラーが発生しました"
+
+#: libsvn_repos/hooks.c:120
+msgid "Error closing null file"
+msgstr "空のファイルを閉じる際にエラーが発生しました"
+
+#: libsvn_repos/hooks.c:202
+#, c-format
+msgid "Failed to run '%s' hook; broken symlink"
+msgstr "'%s' フックを実行できませんでした。シンボリックリンクが壊れています"
+
+#: libsvn_repos/hooks.c:343
+msgid ""
+"Repository has not been enabled to accept revision propchanges;\n"
+"ask the administrator to create a pre-revprop-change hook"
+msgstr ""
+"リポジトリが、リビジョン属性を変更できるようにはなっていません。\n"
+"管理者に pre-revprop-change フックを作成するよう頼んでください"
+
+#: libsvn_repos/load.c:155 libsvn_repos/load.c:167
+msgid "Found malformed header block in dumpfile stream"
+msgstr "ダンプストリーム中に不正なヘッダブロックが見つかりました"
+
+#: libsvn_repos/load.c:185
+msgid "Premature end of content data in dumpstream"
+msgstr "ダンプストリーム中のデータが途中で終わっています"
+
+#: libsvn_repos/load.c:192
+msgid "Dumpstream data appears to be malformed"
+msgstr "ダンプストリームデータが不正なようです"
+
+#: libsvn_repos/load.c:227
+msgid "Incomplete or unterminated property block"
+msgstr "不完全または未終了の属性ブロックです"
+
+#: libsvn_repos/load.c:420
+msgid "Unexpected EOF writing contents"
+msgstr "内容を書き込む際に予想外の EOF がありました"
+
+#: libsvn_repos/load.c:449
+msgid "Malformed dumpfile header"
+msgstr "不正なダンプファイルヘッダです"
+
+#: libsvn_repos/load.c:455 libsvn_repos/load.c:497
+#, c-format
+msgid "Unsupported dumpfile version: %d"
+msgstr "ダンプファイルのバージョン %d はサポートされていません"
+
+#: libsvn_repos/load.c:595
+msgid "Unrecognized record type in stream"
+msgstr "ストリーム中の記録形式を認識できません"
+
+#: libsvn_repos/load.c:827
 #, c-format
 msgid "<<< Started new transaction, based on original revision %ld\n"
 msgstr ""
 "<<< オリジナルのリビジョン %ld に基づき、新しいトランザクションを開始しまし"
 "た\n"
 
-#: libsvn_repos/load.c:871
+#: libsvn_repos/load.c:872
 #, c-format
 msgid "Relative source revision %ld is not available in current repository"
 msgstr "現在のリポジトリでは、相対ソースリビジョン %ld は利用できません"
 
-#: libsvn_repos/load.c:1143
+#: libsvn_repos/load.c:921
+msgid "Malformed dumpstream: Revision 0 must not contain node records"
+msgstr ""
+"ダンプストリームが不正です。リビジョン 0 にはノードの記録が含まれていてはいけ"
+"ません"
+
+#: libsvn_repos/load.c:965
+#, c-format
+msgid "Unrecognized node-action on node '%s'"
+msgstr "ノード '%s' におけるノードアクションを認識できません"
+
+#: libsvn_repos/load.c:1144
 #, c-format
 msgid ""
 "\n"
@@ -4187,7 +4370,7 @@ msgstr ""
 "------- リビジョン %ld をコミットしました >>>\n"
 "\n"
 
-#: libsvn_repos/load.c:1149
+#: libsvn_repos/load.c:1150
 #, c-format
 msgid ""
 "\n"
@@ -4199,6 +4382,116 @@ msgstr ""
 "の)\n"
 "        をコミットしました >>>\n"
 "\n"
+
+#: libsvn_repos/node_tree.c:238
+#, c-format
+msgid "'%s' not found in filesystem"
+msgstr "'%s' はファイルシステムに見つかりません"
+
+#: libsvn_repos/replay.c:159
+#, c-format
+msgid "Filesystem path '%s' is neither a file nor a directory"
+msgstr "ファイルシステムのパス '%s' はファイルでもディレクトリでもありません"
+
+#: libsvn_repos/reporter.c:624
+#, c-format
+msgid "Working copy path '%s' does not exist in repository"
+msgstr "作業コピーパス '%s' がリポジトリに存在しません"
+
+#: libsvn_repos/reporter.c:827
+msgid "Not authorized to open root of edit operation"
+msgstr "編集用ルートパスを開く操作が認証されていません"
+
+#: libsvn_repos/reporter.c:848
+msgid "Cannot replace a directory from within"
+msgstr "ディレクトリを内側から置換することはできません"
+
+#: libsvn_repos/reporter.c:891
+msgid "Invalid report for top level of working copy"
+msgstr "作業コピーのトップレベルについての報告が不正です"
+
+#: libsvn_repos/reporter.c:906
+msgid "Two top-level reports with no target"
+msgstr "対象がないのにトップレベルの報告が 2 つあります"
+
+#: libsvn_repos/repos.c:148
+#, c-format
+msgid "'%s' exists and is non-empty"
+msgstr "'%s' は存在します。そして空ではありません"
+
+#: libsvn_repos/repos.c:172
+msgid "Creating db logs lock file"
+msgstr "DB ログロックファイルを作成しています"
+
+#: libsvn_repos/repos.c:197
+msgid "Creating db lock file"
+msgstr "DB ロックファイルを作成しています"
+
+#: libsvn_repos/repos.c:207
+msgid "Creating lock dir"
+msgstr "ロック用のディレクトリを作成しています"
+
+#: libsvn_repos/repos.c:223
+msgid "Creating hook directory"
+msgstr "フック用のディレクトリを作成しています"
+
+#: libsvn_repos/repos.c:324
+msgid "Creating start-commit hook"
+msgstr "start-commit フックを作成しています"
+
+#: libsvn_repos/repos.c:456
+msgid "Creating pre-commit hook"
+msgstr "pre-commit フックを作成しています"
+
+#: libsvn_repos/repos.c:583
+msgid "Creating pre-revprop-change hook"
+msgstr "pre-revprop-change フックを作成しています"
+
+#: libsvn_repos/repos.c:679
+msgid "Creating post-commit hook"
+msgstr "post-commit フックを作成しています"
+
+#: libsvn_repos/repos.c:786
+msgid "Creating post-revprop-change hook"
+msgstr "post-revprop-change フックを作成しています"
+
+#: libsvn_repos/repos.c:796
+msgid "Creating conf directory"
+msgstr "設定用のディレクトリを作成しています"
+
+#: libsvn_repos/repos.c:848
+msgid "Creating svnserve.conf file"
+msgstr "svnserve.conf ファイルを作成しています"
+
+#: libsvn_repos/repos.c:873
+msgid "Creating passwd file"
+msgstr "パスワードファイルを作成しています"
+
+#: libsvn_repos/repos.c:899
+msgid "Could not create top-level directory"
+msgstr "トップレベルのディレクトリを作成できませんでした"
+
+#: libsvn_repos/repos.c:903
+msgid "Creating DAV sandbox dir"
+msgstr "DAV サンドボックスディレクトリを作成しています"
+
+#: libsvn_repos/repos.c:946
+msgid "Creating readme file"
+msgstr "readme ファイルを作成しています"
+
+#: libsvn_repos/repos.c:977
+msgid "Repository creation failed"
+msgstr "リポジトリの作成に失敗しました"
+
+#: libsvn_repos/repos.c:1039
+#, c-format
+msgid "Expected version '%d' of repository; found version '%d'"
+msgstr ""
+"リポジトリの予想されるバージョンは '%d' ですが、実際のバージョンは '%d' です"
+
+#: libsvn_repos/repos.c:1084
+msgid "Error opening db lockfile"
+msgstr "DB ロックファイルを開く際にエラーが発生しました"
 
 #: libsvn_repos/rev_hunt.c:63
 #, c-format
@@ -4300,7 +4593,7 @@ msgstr "シンボリックリンクはこのプラットフォームではサポ
 
 #: libsvn_subr/io.c:375
 msgid "Can't read contents of link"
-msgstr "リンクの中身を読めません"
+msgstr "リンクの内容を読めません"
 
 #: libsvn_subr/io.c:517 libsvn_subr/io.c:527
 msgid "Can't find a temporary directory"
@@ -4705,10 +4998,12 @@ msgstr "ネイティブパスのエンコーディングを決定できません
 msgid "File '%s' has inconsistent newlines"
 msgstr "ファイル '%s' は改行文字が一貫していません"
 
+# ? charset translation mutex
 #: libsvn_subr/utf.c:147
 msgid "Can't lock charset translation mutex"
 msgstr "文字コード変換ミューテックスにロックをかけられません"
 
+# ? charset translation mutex
 #: libsvn_subr/utf.c:165 libsvn_subr/utf.c:215
 msgid "Can't unlock charset translation mutex"
 msgstr "文字コード変換ミューテックスのロックを解除できません"
@@ -5670,7 +5965,7 @@ msgstr ""
 "使用方法: svnadmin dump <リポジトリパス> [-r <下限>[:<上限>]] [--"
 "incremental]\n"
 "\n"
-"ファイルシステムの中身を「ダンプファイル」可搬形式で標準出力にダンプし、\n"
+"ファイルシステムの内容を「ダンプファイル」可搬形式で標準出力にダンプし、\n"
 "その際フィードバックを標準エラー出力に送信します。ダンプは、リビジョン <下限"
 ">\n"
 "からリビジョン <上限> まで行います。リビジョンの指定がないときは、リビジョ"
@@ -5798,7 +6093,7 @@ msgid ""
 msgstr ""
 "使用方法: svnadmin setlog <リポジトリパス> -r <リビジョン> <ファイル>\n"
 "\n"
-"<ファイル> の中身を、リビジョン <リビジョン> のログメッセージに設定します。\n"
+"<ファイル> の内容を、リビジョン <リビジョン> のログメッセージに設定します。\n"
 "リビジョン属性に関連したフックを動作させないためには、--bypass-hooks を用い"
 "て\n"
 "ください (例えば、post-revprop-change フックからのメールによる通知を必要と\n"
@@ -6110,7 +6405,7 @@ msgid ""
 msgstr ""
 "使用方法: svnlook cat <リポジトリパス> <ファイルパス>\n"
 "\n"
-"ファイルの中身を表示します。<ファイルパス> を '/' で始めるかは任意です。\n"
+"ファイルの内容を表示します。<ファイルパス> を '/' で始めるかは任意です。\n"
 
 #: svnlook/main.c:131
 msgid ""
@@ -6702,7 +6997,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "リポジトリ内のディレクトリのエントリを一覧表示します。\n"
 #~ "使用方法: list [<対象>...]\n"
 #~ "\n"
-#~ "  各 <対象> ファイルおよび各 <対象> ディレクトリの中身を、ディレクトリにあ"
+#~ "  各 <対象> ファイルおよび各 <対象> ディレクトリの内容を、ディレクトリにあ"
 #~ "る\n"
 #~ "  とおり一覧表示します。<対象> が作業コピーのパスである場合は、対応する\n"
 #~ "  リポジトリ URL が処理に用いられます。\n"
