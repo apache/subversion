@@ -26,8 +26,8 @@ class SVNLook:
   def __init__(self, pool, path, cmd, rev, txn):
     self.pool = pool
 
-    repos_ptr = repos.svn_repos_open(path, pool)
-    self.fs_ptr = repos.svn_repos_fs(repos_ptr)
+    repos_ptr = repos.open(path, pool)
+    self.fs_ptr = repos.fs(repos_ptr)
 
     if txn:
       self.txn_ptr = fs.open_txn(self.fs_ptr, txn, pool)
@@ -126,8 +126,8 @@ class SVNLook:
     # compute the delta, printing as we go
     def authz_cb(root, path, pool):
       return 1
-    repos.svn_repos_dir_delta(base_root, '', '', root, '',
-                              e_ptr, e_baton, authz_cb, 0, 1, 0, 0, self.pool)
+    repos.dir_delta(base_root, '', '', root, '',
+		    e_ptr, e_baton, authz_cb, 0, 1, 0, 0, self.pool)
 
 
 class Editor(delta.Editor):

@@ -144,8 +144,8 @@ def parse_node_skel(skel):
 
 def get_node_id(pool, repos_path, path, revision):
     # Open the repository and filesystem.
-    repos_ptr = repos.svn_repos_open(repos_path, pool)
-    fs_ptr = repos.svn_repos_fs(repos_ptr)
+    repos_ptr = repos.open(repos_path, pool)
+    fs_ptr = repos.fs(repos_ptr)
 
     # Fetch the node revision ID of interest
     rev_root = fs.revision_root(fs_ptr, int(revision), pool)

@@ -92,14 +92,14 @@ def check_po(pool, repos_path, txn):
   def authz_cb(root, path, pool):
     return 1
 
-  fs_ptr = repos.svn_repos_fs(repos.svn_repos_open(repos_path, pool))
+  fs_ptr = repos.fs(repos.open(repos_path, pool))
   txn_ptr = fs.open_txn(fs_ptr, txn, pool)
   txn_root = fs.txn_root(txn_ptr, pool)
   base_root = fs.revision_root(fs_ptr, fs.txn_base_revision(txn_ptr), pool)
   editor = ChangeReceiver(txn_root, base_root, pool)
   e_ptr, e_baton = delta.make_editor(editor, pool)
-  repos.svn_repos_dir_delta(base_root, '', '', txn_root, '',
-                            e_ptr, e_baton, authz_cb, 0, 1, 0, 0, pool)
+  repos.dir_delta(base_root, '', '', txn_root, '',
+		  e_ptr, e_baton, authz_cb, 0, 1, 0, 0, pool)
 
 
 if __name__ == '__main__':

@@ -239,7 +239,7 @@ class Commit(Messenger):
     # get all the changes and sort by path
     editor = svn.repos.ChangeCollector(repos.fs_ptr, repos.root_this, self.pool)
     e_ptr, e_baton = svn.delta.make_editor(editor, self.pool)
-    svn.repos.svn_repos_replay(repos.root_this, e_ptr, e_baton, self.pool)
+    svn.repos.replay(repos.root_this, e_ptr, e_baton, self.pool)
 
     self.changelist = editor.get_changes().items()
     self.changelist.sort()
@@ -549,8 +549,8 @@ class Repository:
     self.rev = rev
     self.pool = pool
 
-    self.repos_ptr = svn.repos.svn_repos_open(repos_dir, pool)
-    self.fs_ptr = svn.repos.svn_repos_fs(self.repos_ptr)
+    self.repos_ptr = svn.repos.open(repos_dir, pool)
+    self.fs_ptr = svn.repos.fs(self.repos_ptr)
 
     self.roots = { }
 
