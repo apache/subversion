@@ -1021,7 +1021,6 @@ apr_pool_t *svn_swig_pl_make_pool (SV *obj)
 typedef struct  {
     SV *obj;
     IO *io;
-    apr_pool_t *pool;
 } io_baton_t;
 
 static svn_error_t *io_handle_read (void *baton,
@@ -1075,10 +1074,16 @@ static svn_error_t *io_handle_close (void *baton)
     }
     else {
 	PerlIO_close (IoIFP (io->io));
-	SvREFCNT_dec (io->obj);
     }
-    apr_pool_destroy (io->pool);
+
     return SVN_NO_ERROR;
+}
+
+static apr_status_t io_handle_cleanup (void *baton)
+{
+    io_baton_t *io = baton;
+    SvREFCNT_dec (io->obj);
+    return APR_SUCCESS;
 }
 
 svn_error_t *svn_swig_pl_make_stream (svn_stream_t **stream, SV *obj)
@@ -1107,16 +1112,18 @@ svn_error_t *svn_swig_pl_make_stream (svn_stream_t **stream, SV *obj)
 
     if (obj && SvROK(obj) && SvTYPE(SvRV(obj)) == SVt_PVGV &&
 	(io = GvIO(SvRV(obj)))) {
-	apr_pool_t *pool = svn_pool_create (NULL);
+	apr_pool_t *pool = current_pool;
 	io_baton_t *iob = apr_palloc (pool, sizeof(io_baton_t));
 	SvREFCNT_inc (obj);
 	iob->obj = obj;
 	iob->io = io;
-	iob->pool = pool;
 	*stream = svn_stream_create (iob, pool);
 	svn_stream_set_read (*stream, io_handle_read);
 	svn_stream_set_write (*stream, io_handle_write);
 	svn_stream_set_close (*stream, io_handle_close);
+	apr_pool_cleanup_register (pool, iob, io_handle_cleanup,
+                                   io_handle_cleanup);
+
     }
     else
 	croak ("unknown type for svn_stream_t");
