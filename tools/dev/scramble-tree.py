@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.2
+#!/usr/bin/env python2
 #
 # Usage: scramble-tree.py <dir> [SEED]
 #
@@ -34,8 +34,6 @@
 
 import os
 import sys
-import pre
-import pwd
 import random
 import md5
 import base64
