@@ -109,25 +109,16 @@ copy_one_versioned_file (const char *from,
   svn_boolean_t local_mod = FALSE;
   apr_time_t tm;
           
-  err = svn_wc_entry (&entry, from, adm_access, FALSE, pool);
-  if (err)
-    {
-      if (err->apr_err != SVN_ERR_WC_NOT_FILE)
-        return err;
-      svn_error_clear (err);
-    }
-  
+  SVN_ERR (svn_wc_entry (&entry, from, adm_access, FALSE, pool));
+
   /* Only export 'added' files when the revision is WORKING.
      Otherwise, skip the 'added' files, since they didn't exist
      in the BASE revision and don't have an associated text-base.
 
      Don't export 'deleted' files and directories unless it's a
      revision other than WORKING.  These files and directories
-     don't really exists in WORKING.
-
-     Finally, don't export an unversioned item. */
-  if (! entry ||
-      (revision->kind != svn_opt_revision_working &&
+     don't really exists in WORKING. */
+  if ((revision->kind != svn_opt_revision_working &&
        entry->schedule == svn_wc_schedule_add) ||
       (revision->kind == svn_opt_revision_working &&
        entry->schedule == svn_wc_schedule_delete))
@@ -239,20 +230,18 @@ copy_versioned_files (const char *from,
   SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, from, FALSE,
                                    0, ctx->cancel_func, ctx->cancel_baton,
                                    pool));
-  err = svn_wc_entry (&entry, from, adm_access, FALSE, pool);
-  if (err)
-    {
-      if (err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
-        return err;
-      else
-        svn_error_clear (err);
-    }
 
-  /* We don't want to copy some random non-versioned item */
+  SVN_ERR (svn_wc_entry (&entry, from, adm_access, FALSE, pool));
+
+  /* Bail if we're trying to export something that doesn't exist,
+     or isn't under version control. */
   if (! entry)
     {
       SVN_ERR (svn_wc_adm_close (adm_access));
-      return SVN_NO_ERROR;
+      return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                                _("'%s' is not under version control "
+                                  "or doesn't exist"),
+                                svn_path_local_style (from, pool));
     }
 
   /* Only export 'added' files when the revision is WORKING.
@@ -261,7 +250,7 @@ copy_versioned_files (const char *from,
 
      Don't export 'deleted' files and directories unless it's a
      revision other than WORKING.  These files and directories
-     don't really exists in WORKING. */
+     don't really exist in WORKING. */
   if ((revision->kind != svn_opt_revision_working &&
        entry->schedule == svn_wc_schedule_add) ||
       (revision->kind == svn_opt_revision_working &&
