@@ -39,6 +39,7 @@ svn_cl__commit (apr_getopt_t *os,
   svn_string_t *message;
   svn_string_t *base_dir;
   svn_string_t *cur_dir;
+  svn_string_t *remainder;
   svn_string_t *trace_dir;
   const svn_delta_edit_fns_t *trace_editor;
   void *trace_edit_baton;
@@ -63,17 +64,20 @@ svn_cl__commit (apr_getopt_t *os,
   SVN_ERR (svn_path_condense_targets (&base_dir,
                                       &condensed_targets,
                                       targets,
+                                      svn_path_local_style,
                                       pool));
 
   /* ...so we can have a common parent path to pass to the trace
      editor.  Note that what we are actually passing here is the
      difference between the absolute path of the current working
      directory and the absolute path of the common parent directory
-     used in the commit (give or take a slash :-). */
-  if (cur_dir->len < base_dir->len)
-    trace_dir = svn_string_create (&(base_dir->data[cur_dir->len + 1]), pool);
+     used in the commit (if there is a concise difference). */
+  remainder = svn_path_is_child (cur_dir, base_dir,
+                                 svn_path_local_style, pool);
+  if (remainder)
+    trace_dir = remainder;
   else
-    trace_dir = svn_string_create ("", pool);
+    trace_dir = base_dir;
 
   SVN_ERR (svn_cl__get_trace_commit_editor 
            (&trace_editor,

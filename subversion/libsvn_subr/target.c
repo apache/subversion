@@ -121,6 +121,7 @@ svn_error_t *
 svn_path_condense_targets (svn_string_t **pbasedir,
                            apr_array_header_t ** pcondensed_targets,
                            const apr_array_header_t *targets,
+                           enum svn_path_style style,
                            apr_pool_t *pool)
 {
   if (targets->nelts <=0)
@@ -152,15 +153,18 @@ svn_path_condense_targets (svn_string_t **pbasedir,
                                       ((svn_string_t **) targets->elts)[0],
                                       pool));
       
-      (*((svn_string_t**)apr_array_push(abs_targets))) = *pbasedir;
+      (*((svn_string_t**)apr_array_push (abs_targets))) = *pbasedir;
       
       for (i = 1; i < targets->nelts; ++i)
         {
           svn_string_t *rel = ((svn_string_t **)targets->elts)[i];
           svn_string_t *absolute;
-          SVN_ERR(svn_path_get_absolute(&absolute, rel, pool));
-          (*((svn_string_t **)apr_array_push(abs_targets))) = absolute;
-          *pbasedir = svn_path_get_longest_ancestor(*pbasedir, absolute, pool);
+          SVN_ERR (svn_path_get_absolute (&absolute, rel, pool));
+          (*((svn_string_t **)apr_array_push (abs_targets))) = absolute;
+          *pbasedir = svn_path_get_longest_ancestor (*pbasedir, 
+                                                     absolute, 
+                                                     style,
+                                                     pool);
         }
       
       /* If we need to find the targets, find the common part of each pair
@@ -173,35 +177,39 @@ svn_path_condense_targets (svn_string_t **pbasedir,
              another non-removed target, remove the child. */
           for (i = 0; i < abs_targets->nelts; ++i)
             {
-              if (!removed[i])
+              if (removed[i])
+                continue;
+
+              for (j = i + 1; j < abs_targets->nelts; ++j)
                 {
-                  for (j = i + 1; j < abs_targets->nelts; ++j)
+                  svn_string_t *abs_targets_i;
+                  svn_string_t *abs_targets_j;
+                  svn_string_t *ancestor;
+
+                  if (removed[j])
+                    continue;
+
+                  abs_targets_i = 
+                    ((svn_string_t **)abs_targets->elts)[i];
+
+                  abs_targets_j = 
+                    ((svn_string_t **)abs_targets->elts)[j];
+
+                  ancestor = svn_path_get_longest_ancestor 
+                    (abs_targets_i, abs_targets_j, style, pool);
+
+                  if (! ancestor)
+                    continue;
+
+                  if (svn_string_compare (ancestor, abs_targets_i))
                     {
-                      if (!removed[j])
-                        {
-                          svn_string_t *abs_targets_i = ((svn_string_t **)
-                                                         abs_targets->elts)[i];
-                          svn_string_t *abs_targets_j = ((svn_string_t **)
-                                                         abs_targets->elts)[j];
-                          svn_string_t *ancestor
-                            = svn_path_get_longest_ancestor (abs_targets_i,
-                                                             abs_targets_j,
-                                                             pool);
-                          if (ancestor != NULL)
-                            {
-                              if (svn_string_compare (ancestor, abs_targets_i))
-                                {
-                                  removed[j] = TRUE;
-                                  num_condensed--;
-                                }
-                              else if (svn_string_compare (ancestor,
-                                                           abs_targets_j))
-                                {
-                                  removed[i] = TRUE;
-                                  num_condensed--;
-                                }
-                            }
-                        }
+                      removed[j] = TRUE;
+                      num_condensed--;
+                    }
+                  else if (svn_string_compare (ancestor, abs_targets_j))
+                    {
+                      removed[i] = TRUE;
+                      num_condensed--;
                     }
                 }
             }
@@ -226,15 +234,17 @@ svn_path_condense_targets (svn_string_t **pbasedir,
           
           for (i = 0; i < abs_targets->nelts; ++i)
             {
-              if (!removed[i])
-                {
-                  char *rel_item
-                    = ((svn_string_t**)abs_targets->elts)[i]->data;
+              char *rel_item;
 
-                  rel_item += (*pbasedir)->len + 1;
-                  (*((svn_string_t**)apr_array_push(*pcondensed_targets)))
-                    = svn_string_create (rel_item, pool);
-                }
+              if (removed[i])
+                continue;
+
+              rel_item = ((svn_string_t**)abs_targets->elts)[i]->data;
+
+              rel_item += (*pbasedir)->len + 1;
+
+              (*((svn_string_t**)apr_array_push (*pcondensed_targets)))
+                = svn_string_create (rel_item, pool);
             }
         }
       
@@ -245,7 +255,7 @@ svn_path_condense_targets (svn_string_t **pbasedir,
         {
           /* If there was just one target, and it was a file, then
              return it as the sole condensed target. */
-          (*((svn_string_t**)apr_array_push(*pcondensed_targets))) = file;
+          (*((svn_string_t**)apr_array_push (*pcondensed_targets))) = file;
         }
     }
   
@@ -256,6 +266,7 @@ svn_path_condense_targets (svn_string_t **pbasedir,
 svn_error_t *
 svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
                               const apr_array_header_t *targets,
+                              enum svn_path_style style,
                               apr_pool_t *pool)
 {
   apr_pool_t *temp_pool;
@@ -316,7 +327,7 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
             }
           
           /* Quit here if this path is a child of one of the keepers. */
-          if (svn_path_is_child (keeper, abs_path, temp_pool))
+          if (svn_path_is_child (keeper, abs_path, style, temp_pool))
             { 
               keep_me = FALSE;
               break;

@@ -581,6 +581,7 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
   SVN_ERR (svn_path_condense_targets (&base_dir,
                                       &condensed_targets,
                                       targets,
+                                      svn_path_local_style,
                                       pool));
 
   SVN_ERR (send_to_repos (before_editor, before_edit_baton,
