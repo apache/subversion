@@ -62,6 +62,9 @@ typedef struct {
   /* are we doing a resource walk? */
   svn_boolean_t resource_walk;
 
+  /* True iff we've already sent the open tag for the update. */
+  svn_boolean_t started_update;
+
 } update_ctx_t;
 
 typedef struct {
@@ -419,12 +422,16 @@ static svn_error_t * upd_set_target_revision(void *edit_baton,
   update_ctx_t *uc = edit_baton;
 
   if (! uc->resource_walk)
-    send_xml(uc,
-             DAV_XML_HEADER DEBUG_CR
-             "<S:update-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
-             "xmlns:D=\"DAV:\">" DEBUG_CR
-             "<S:target-revision rev=\"%" SVN_REVNUM_T_FMT "\"/>" DEBUG_CR,
-             target_revision);
+    {
+      send_xml(uc,
+               DAV_XML_HEADER DEBUG_CR
+               "<S:update-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+               "xmlns:D=\"DAV:\">" DEBUG_CR
+               "<S:target-revision rev=\"%" SVN_REVNUM_T_FMT "\"/>" DEBUG_CR,
+               target_revision);
+
+      uc->started_update = TRUE;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -924,8 +931,10 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
         }
     }
 
-  /* Now close the report body completely. */
-  send_xml(&uc, "</S:update-report>" DEBUG_CR);
+  /* Close the report body, unless some error prevented it from being
+     started in the first place. */
+  if (uc.started_update)
+    send_xml(&uc, "</S:update-report>" DEBUG_CR);
 
   /* flush the contents of the brigade */
   ap_fflush(output, uc.bb);
