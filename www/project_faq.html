@@ -93,6 +93,8 @@
   keyword do what I want?  It expands to the file's last-changed
   revision, but I want something that will expand to the file's
   current revision.</a></li>
+<li><a href="#log-in-source">Does Subversion have a keyword which behaves
+  like $Log$ in CVS?</a></li>
 <li><a href="#ignore-commit">I have a file in my project that every
 developer must change, but I don't want those local mods to ever be
 committed.  How can I make 'svn commit' ignore the file?</a></li>
@@ -1315,6 +1317,38 @@ href='http://tortoisesvn.tigris.org/download.html'>TortoiseSVN
 download page</a>; it replaces all <tt>$WCREV$</tt> tags in a given
 file with the current working copy revision.
 </p>
+
+<![CDATA[=========================================================]]>
+
+<h3><a name="log-in-source">Does Subversion have a keyword which
+behaves like $Log$ in CVS?</a></h3>
+
+<p>No.  There is no equivalent for the $Log$ keyword in CVS.  If you
+want to retrieve a log for a specific file, you can run
+'svn log your-file-name' or 'svn log url-to-your-file'.
+From the mailing list some explanations why $Log$ is bad:</p>
+
+<pre>"$Log$ is a total horror the moment you start merging changes
+between branches. You're practiallly guaranteed to get conflicts there,
+which -- because of the nature of this keyword -- simply cannot be
+resolved automatically."</pre>
+
+<p>And:</p>
+
+<pre>Subversion log messages are mutable, they can be changed by setting
+the svn:log revision property. So the expansion of $Log:$ in any
+given file could be out of date. Update may well need to retrieve the
+appropriate log message for each occurrence of the $Log:$ keyword,
+even if the file that contained it was not otherwise updated.</pre>
+
+<p><i>I don't care about that.  I want to use it anyway.
+Will you implement it?</i></p>
+
+<p>No.  There are no plans to implement it ourselves or accept patches
+which implement this feature.  If you want to distribute your files
+with some kind of changelog included, you might be able to work
+around this limitation in your build system.</p>
+
 
 <![CDATA[=========================================================]]>
 
