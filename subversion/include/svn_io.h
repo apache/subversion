@@ -153,6 +153,16 @@ svn_error_t *svn_io_set_file_read_write (const char *path,
                                          svn_boolean_t ignore_enoent,
                                          apr_pool_t *pool);
 
+/* Toggle a file's "executability", as much as the operating system
+   allows.  PATH is the path to the file.  If EXECUTABLE is TRUE, then
+   make the file executable.  If FALSE, make in non-executable.  If
+   IGNORE_ENOENT is TRUE, don't fail if the target file doesn't
+   exist.  */
+svn_error_t *svn_io_set_file_executable (const char *path,
+                                         svn_boolean_t executable,
+                                         svn_boolean_t ignore_enoent,
+                                         apr_pool_t *pool);
+
 
 /* Read a line from FILE into BUF, but not exceeding *LIMIT bytes.
  * Does not include newline, instead '\0' is put there.

@@ -997,6 +997,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
              missing altogether), copy the text-base out into
              the working copy, and update the timestamp in the entries
              file. */
+          svn_boolean_t toggled;
           svn_wc_keywords_t *keywords;
           enum svn_wc__eol_style eol_style;
           const char *eol;
@@ -1018,6 +1019,10 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
                                                 TRUE, /* expand keywords */
                                                 pool)))
             return revert_error (err, fullpath, "restoring text", pool);
+
+          /* If necessary, tweak the new working file's executable bit. */
+          SVN_ERR (svn_wc__maybe_toggle_working_executable_bit 
+                   (&toggled, fullpath->data, pool));
 
           /* Modify our entry structure. */
           SVN_ERR (svn_io_file_affected_time (&tstamp, fullpath, pool));

@@ -175,6 +175,9 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 /* The "activated" keywords (for keyword substitution) for a given file. */
 #define SVN_PROP_KEYWORDS  SVN_PROP_PREFIX "keywords"
 
+/* Set to either TRUE or FALSE if we want a file to be executable or not. */
+#define SVN_PROP_EXECUTABLE  SVN_PROP_PREFIX "executable"
+
 /* The character set of a given file. */
 #define SVN_PROP_CHARSET  SVN_PROP_PREFIX "charset"
 
