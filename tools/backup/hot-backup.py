@@ -77,6 +77,17 @@ print "Youngest revision is", youngest
 # Step 2:  copy the whole repository structure.
 
 backup_subdir = os.path.join(backup_dir, repo + "-" + youngest)
+
+# If there is already a backup of this revision, append an increment
+# to the path.  (We still need to do a backup, because the repos might
+# have changed despite no new revision having been created.)
+try_count = 1
+while os.path.exists(backup_subdir):
+   backup_subdir = os.path.join(backup_dir, repo + "-"
+                                + youngest + "-" + `try_count`)
+   try_count += 1
+
+
 print "Backing up repository to '" + backup_subdir + "'..."
 shutil.copytree(repo_dir, backup_subdir)
 print "Done."
@@ -158,10 +169,22 @@ os.unlink(lockpath)
 print "Lock removed.  Cleanup complete."
 
 # Step 8:  finally, remove the repository back that's NUM_BACKUPS older
-# than the one we just created.
+# than the one we just created.  If there are multiple versions of
+# this repos backup, remove them too.
 
 kill_rev = int(youngest) - num_backups
 old_backup_subdir = os.path.join(backup_dir, repo + "-" + `kill_rev`)
 if os.path.exists(old_backup_subdir):
   print "Removing old backup: " + old_backup_subdir
   shutil.rmtree(old_backup_subdir)
+  try_count = 1
+  old_backup_subdir = os.path.join(backup_dir, repo + "-" + `kill_rev`
+                                   + "-" + `try_count`)
+  while os.path.exists(old_backup_subdir):
+     print "Removing old backup: " + old_backup_subdir
+     shutil.rmtree(old_backup_subdir)
+     try_count += 1
+     old_backup_subdir = os.path.join(backup_dir, repo + "-" + `kill_rev`
+                                      + "-" + `try_count`)
+
+
