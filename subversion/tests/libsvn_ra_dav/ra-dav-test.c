@@ -85,13 +85,19 @@ main (int argc, char **argv)
 
   err = svn_ra_open(&ras, url, pool);
   if (err)
-    svn_handle_error (err, stdout);
+    {
+      svn_handle_error (err, stdout);
+      return 1;
+    }
 
   repos = svn_string_create(url, pool);
   err = svn_wc_get_change_walker(NULL, repos, 1,
                                  &walker, &walk_baton, &dir_baton, pool);
   if (err)
-    svn_handle_error (err, stdout);
+    {
+      svn_handle_error (err, stdout);
+      return 1;
+    }
 
   err = svn_ra_checkout(ras, "", 1, walker, walk_baton, dir_baton, pool);
 
