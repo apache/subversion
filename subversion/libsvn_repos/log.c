@@ -205,10 +205,11 @@ history_to_revs_array (void *baton,
 
 
 svn_error_t *
-svn_repos_get_logs2 (svn_repos_t *repos,
+svn_repos_get_logs3 (svn_repos_t *repos,
                      const apr_array_header_t *paths,
                      svn_revnum_t start,
                      svn_revnum_t end,
+                     int limit,
                      svn_boolean_t discover_changed_paths,
                      svn_boolean_t strict_node_history,
                      svn_repos_authz_func_t authz_read_func,
@@ -221,6 +222,7 @@ svn_repos_get_logs2 (svn_repos_t *repos,
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_fs_t *fs = repos->fs;
   apr_array_header_t *revs = NULL;
+  int count = 0;
 
   SVN_ERR (svn_fs_youngest_rev (&head, fs, pool));
 
@@ -415,6 +417,9 @@ svn_repos_get_logs2 (svn_repos_t *repos,
                             date ? date->data : NULL,
                             message ? message->data : NULL,
                             subpool));
+
+      if (++count == limit)
+        break;
       
       svn_pool_clear (subpool);
     }
@@ -422,6 +427,25 @@ svn_repos_get_logs2 (svn_repos_t *repos,
   svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_repos_get_logs2 (svn_repos_t *repos,
+                     const apr_array_header_t *paths,
+                     svn_revnum_t start,
+                     svn_revnum_t end,
+                     svn_boolean_t discover_changed_paths,
+                     svn_boolean_t strict_node_history,
+                     svn_repos_authz_func_t authz_read_func,
+                     void *authz_read_baton,
+                     svn_log_message_receiver_t receiver,
+                     void *receiver_baton,
+                     apr_pool_t *pool)
+{
+  return svn_repos_get_logs3 (repos, paths, start, end, 0,
+                              discover_changed_paths, strict_node_history,
+                              authz_read_func, authz_read_baton, receiver,
+                              receiver_baton, pool);
 }
 
 
@@ -437,7 +461,7 @@ svn_repos_get_logs (svn_repos_t *repos,
                     void *receiver_baton,
                     apr_pool_t *pool)
 {
-  return svn_repos_get_logs2 (repos, paths, start, end,
+  return svn_repos_get_logs3 (repos, paths, start, end, 0,
                               discover_changed_paths, strict_node_history,
                               NULL, NULL, /* no authz stuff */
                               receiver, receiver_baton, pool);

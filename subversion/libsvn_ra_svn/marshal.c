@@ -680,6 +680,9 @@ static svn_error_t *vparse_tuple(apr_array_header_t *list, apr_pool_t *pool,
             case 'l':
               *va_arg(*ap, apr_array_header_t **) = NULL;
               break;
+            case 'n':
+              *va_arg(*ap, apr_uint64_t *) = SVN_RA_SVN_UNSPECIFIED_NUMBER;
+              break;
             case '(':
               list_level++;
               break;

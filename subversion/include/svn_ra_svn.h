@@ -42,6 +42,11 @@ extern "C" {
 /** Currently-defined capabilities. */
 #define SVN_RA_SVN_CAP_EDIT_PIPELINE "edit-pipeline"
 
+/** A value used to indicate an optional number element in a tuple that was
+ * not received.
+ */
+#define SVN_RA_SVN_UNSPECIFIED_NUMBER ~((apr_uint64_t) 0)
+
 /** A specialized form of @c SVN_ERR to deal with errors which occur in an
  * @c svn_ra_svn_command_handler.
  *

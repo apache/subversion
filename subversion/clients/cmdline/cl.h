@@ -89,6 +89,9 @@ typedef struct svn_cl__opt_state_t
      end_revision remains `svn_opt_revision_unspecified'. */
   svn_opt_revision_t start_revision, end_revision;
 
+  /* Max number of log messages to get back from svn_client_log2. */
+  int limit;
+
   /* Note: these next two flags only reflect switches given on the
      commandline.  For example, 'svn up' (with no options) will *not*
      set either of these flags, but will be recursive anyway */

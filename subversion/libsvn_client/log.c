@@ -47,15 +47,16 @@
 
 
 svn_error_t *
-svn_client_log (const apr_array_header_t *targets,
-                const svn_opt_revision_t *start,
-                const svn_opt_revision_t *end,
-                svn_boolean_t discover_changed_paths,
-                svn_boolean_t strict_node_history,
-                svn_log_message_receiver_t receiver,
-                void *receiver_baton,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
+svn_client_log2 (const apr_array_header_t *targets,
+                 const svn_opt_revision_t *start,
+                 const svn_opt_revision_t *end,
+                 int limit,
+                 svn_boolean_t discover_changed_paths,
+                 svn_boolean_t strict_node_history,
+                 svn_log_message_receiver_t receiver,
+                 void *receiver_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
 {
   svn_ra_plugin_t *ra_lib;  
   void *ra_baton, *session;
@@ -248,30 +249,32 @@ svn_client_log (const apr_array_header_t *targets,
               SVN_ERR (svn_client__get_revision_number
                        (&end_revnum, ra_lib, session, end, target, pool));
 
-            err = ra_lib->get_log (session,
-                                   condensed_targets,
-                                   start_revnum,
-                                   end_revnum,
-                                   discover_changed_paths,
-                                   strict_node_history,
-                                   receiver,
-                                   receiver_baton,
-                                   pool);
+            err = ra_lib->get_log2 (session,
+                                    condensed_targets,
+                                    start_revnum,
+                                    end_revnum,
+                                    limit,
+                                    discover_changed_paths,
+                                    strict_node_history,
+                                    receiver,
+                                    receiver_baton,
+                                    pool);
             if (err)
               break;
           }
       }
     else  /* both revisions are static, so no loop needed */
       {
-        err = ra_lib->get_log (session,
-                               condensed_targets,
-                               start_revnum,
-                               end_revnum,
-                               discover_changed_paths,
-                               strict_node_history,
-                               receiver,
-                               receiver_baton,
-                               pool);
+        err = ra_lib->get_log2 (session,
+                                condensed_targets,
+                                start_revnum,
+                                end_revnum,
+                                limit,
+                                discover_changed_paths,
+                                strict_node_history,
+                                receiver,
+                                receiver_baton,
+                                pool);
       }
     
     /* Special case: If there have been no commits, we'll get an error
@@ -309,4 +312,20 @@ svn_client_log (const apr_array_header_t *targets,
   }
   
   return err;
+}
+
+svn_error_t *
+svn_client_log (const apr_array_header_t *targets,
+                const svn_opt_revision_t *start,
+                const svn_opt_revision_t *end,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_log_message_receiver_t receiver,
+                void *receiver_baton,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  return svn_client_log2 (targets, start, end, 0, discover_changed_paths,
+                          strict_node_history, receiver, receiver_baton, ctx,
+                          pool);
 }

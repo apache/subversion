@@ -34,6 +34,7 @@ Valid options:
                                 "PREV"       revision just before COMMITTED
   -q [--quiet]             : print as little as possible
   -v [--verbose]           : print extra information
+  -l [--limit] arg         : maximum number of log entries
   --targets arg            : pass contents of file ARG as additional args
   --stop-on-copy           : do not cross copies while traversing history
   --incremental            : give output suitable for concatenation
