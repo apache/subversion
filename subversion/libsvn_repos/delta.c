@@ -505,10 +505,7 @@ static svn_error_t *delta_file_props (struct context *c,
 				      svn_fs_file_t *target_file);
 static svn_error_t *send_text_delta (struct context *c,
 				     void *file_baton,
-				     svn_read_fn_t *ancestor_read_fn,
-				     void *ancestor_read_baton,
-				     svn_read_fn_t *target_read_fn,
-				     void *target_read_baton);
+				     svn_txdelta_stream_t *delta_stream);
 static svn_error_t *null_read_fn (void *baton,
 				  char *buffer, apr_size_t *len,
 				  apr_pool_t *pool);
@@ -521,21 +518,18 @@ delta_files (struct context *c, void *file_baton,
 	     svn_fs_file_t *ancestor_file,
 	     svn_fs_file_t *target_file)
 {
-  svn_read_fn_t *ancestor_read_fn, *target_read_fn;
-  void *ancestor_read_baton, *target_read_baton;
+  svn_txdelta_stream_t *stream;
 
   /* Compare the files' property lists.  */
   SVN_ERR (delta_file_props (c, file_baton, ancestor_file, target_file));
 
-  /* Get read functions for the file contents.  */
-  SVN_ERR (svn_fs_file_contents (&ancestor_read_fn, ancestor_read_baton,
-				 ancestor_file, c->pool));
-  SVN_ERR (svn_fs_file_contents (&target_read_fn, target_read_baton,
-				 target_file, c->pool));
+  /* Get a delta stream turning ANCESTOR_FILE's contents into
+     TARGET_FILE's contents.  */
+  SVN_ERR (svn_fs_file_delta (&stream, ancestor_file, target_file, c->pool));
 
-  SVN_ERR (send_text_delta (c, file_baton,
-			    ancestor_read_fn, ancestor_read_baton,
-			    target_read_fn, target_read_baton));
+  SVN_ERR (send_text_delta (c, file_baton, stream));
+
+  svn_txdelta_free (delta_stream);
 
   return 0;
 }
@@ -549,19 +543,17 @@ file_from_scratch (struct context *c,
 		   void *file_baton,
 		   svn_fs_file_t *target_file)
 {
-  svn_read_fn_t *target_read_fn;
-  void *target_read_baton;
+  svn_txdelta_stream_t *delta_stream;
 
   /* Put the right properties on there.  */
   SVN_ERR (delta_file_props (c, file_baton, 0, target_file));
 
-  /* Get a read function for the target file's contents.  */
-  SVN_ERR (svn_fs_file_contents (&target_read_fn, target_read_baton,
-				 target_file, c->pool));
+  /* Get a text delta turning the empty string into TARGET_FILE.  */
+  SVN_ERR (svn_fs_file_delta (&delta_stream, 0, target_file, c->pool));
 
-  SVN_ERR (send_text_delta (c, file_baton,
-			    null_read_fn, 0,
-			    target_read_fn, target_read_baton));
+  SVN_ERR (send_text_delta (c, file_baton, delta_stream));
+
+  svn_txdelta_free (delta_stream);
 
   return 0;
 }
@@ -601,27 +593,15 @@ null_read_fn (void *baton,
 }
 
 
-/* Generate a text delta that will turn the stream represented by
-   ANCESTOR_READ_FN and ANCESTOR_READ_BATON into the stream
-   represented by TARGET_READ_FN and TARGET_READ_BATON.  Apply that
-   text delta to FILE_BATON.  */
+/* Change the contents of FILE_BATON in C->editor, according to the
+   text delta from in DELTA_STREAM.  */
 static svn_error_t *
 send_text_delta (struct context *c,
 		 void *file_baton,
-		 svn_read_fn_t *ancestor_read_fn,
-		 void *ancestor_read_baton,
-		 svn_read_fn_t *target_read_fn,
-		 void *target_read_baton)
+		 svn_txdelta_stream_t *delta_stream)
 {
-  svn_txdelta_stream_t *delta_stream;
   svn_txdelta_window_handler_t *delta_handler;
   void *delta_handler_baton;
-
-  /* Create a delta stream that turns the ancestor into the target.  */
-  SVN_ERR (svn_txdelta (&delta_stream,
-			ancestor_read_fn, ancestor_read_baton,
-			target_read_fn, target_read_baton,
-			c->pool));
 
   /* Get a handler that will apply the delta to the file.  */
   SVN_ERR (c->editor->apply_textdelta (file_baton,
@@ -637,8 +617,6 @@ send_text_delta (struct context *c,
       }
     while (window);
   }
-
-  svn_txdelta_free (delta_stream);
 
   return 0;
 }
@@ -744,4 +722,40 @@ dir_from_scratch (struct context *c,
 {
   /* ...; */
   return SVN_NO_ERROR;
+}
+
+
+
+/* Computing file text deltas.  */
+
+svn_error_t *
+svn_fs_file_delta (svn_txdelta_stream_t **stream,
+		   svn_fs_file_t *source_file,
+		   svn_fs_file_t *target_file,
+		   apr_pool_t *pool)
+{
+  svn_read_fn_t *source_read_fn, *target_read_fn;
+  void *source_read_baton, *target_read_baton;
+  svn_txdelta_stream_t *delta_stream;
+
+  /* Get read functions for the file contents.  */
+  if (source_file)
+    SVN_ERR (svn_fs_file_contents (&source_read_fn, &source_read_baton,
+				   source_file, pool));
+  else
+    {
+      source_read_fn = null_read_fn;
+      source_read_baton = 0;
+    }
+  SVN_ERR (svn_fs_file_contents (&target_read_fn, &target_read_baton,
+				 target_file, pool));
+
+  /* Create a delta stream that turns the ancestor into the target.  */
+  SVN_ERR (svn_txdelta (&delta_stream,
+			source_read_fn, source_read_baton,
+			target_read_fn, target_read_baton,
+			pool));
+
+  *stream = delta_stream;
+  return 0;
 }
