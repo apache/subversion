@@ -425,7 +425,6 @@ svn_error_t *svn_wc__set_versions_entry (svn_string_t *path,
                                          svn_vernum_t version,
                                          ...)
 {
-  va_list ap;
   svn_error_t *err;
   apr_file_t *infile = NULL;
   apr_file_t *outfile = NULL;
@@ -454,10 +453,9 @@ svn_error_t *svn_wc__set_versions_entry (svn_string_t *path,
   baton->entryname = entryname;
   baton->version   = version;
 
-  va_start (ap, version);
-  baton->ap = ap;
+  va_start (baton->ap, version);
   err = do_parse (baton);
-  va_end (ap);
+  va_end (baton->ap);
   if (err)
     return err;
 
@@ -490,7 +488,6 @@ svn_error_t *svn_wc__get_versions_entry (svn_string_t *path,
                                          svn_vernum_t *version,
                                          ...)
 {
-  va_list ap;
   svn_error_t *err;
   apr_file_t *infile = NULL;
 
@@ -510,10 +507,9 @@ svn_error_t *svn_wc__get_versions_entry (svn_string_t *path,
   baton->entryname = entryname;
   baton->version   = *version;
 
-  va_start (ap, version);
-  baton->ap = ap;
+  va_start (baton->ap, version);
   err = do_parse (baton);
-  va_end (ap);
+  va_end (baton->ap);
   if (err)
     return err;
 
