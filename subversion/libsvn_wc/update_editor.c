@@ -76,10 +76,6 @@ struct edit_baton
   /* Was the root actually opened (was this a non-empty edit)? */
   svn_boolean_t root_opened;
 
-  /* These used only in checkouts. */
-  svn_boolean_t is_checkout;
-  const char *ancestor_url;
-
   /* Non-null if this is a 'switch' operation. */
   const char *switch_url;
 
@@ -234,16 +230,7 @@ make_dir_baton (const char *path,
     d->name = NULL;
 
   /* Figure out the new_URL for this directory. */
-  if (eb->is_checkout)
-    {
-      /* for checkouts, telescope the new_URL normally.  no such thing as
-         disjoint urls.   */
-      if (pb)
-        d->new_URL = svn_path_url_add_component (pb->new_URL, d->name, pool);
-      else
-        d->new_URL = apr_pstrdup (pool, eb->ancestor_url);
-    }
-  else if (eb->switch_url)
+  if (eb->switch_url)
     {
       if (pb)
         d->new_URL = svn_path_url_add_component (pb->new_URL, d->name, pool);
@@ -379,7 +366,7 @@ make_file_baton (struct dir_baton *pb,
   f->name = svn_path_basename (path, pool);
 
   /* Figure out the new_URL for this file. */
-  if (pb->edit_baton->is_checkout || pb->edit_baton->switch_url)
+  if (pb->edit_baton->switch_url)
     {
       f->new_URL = svn_path_url_add_component (pb->new_URL, f->name, pool);
     }
@@ -421,7 +408,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 
   /* Either we're done (window is NULL) or we had an error.  In either
      case, clean up the handler.  */
-  if ((! fb->edit_baton->is_checkout) && hb->source)
+  if (hb->source)
     {
       err2 = svn_wc__close_text_base (hb->source, fb->path, 0, fb->pool);
       if (err2 != SVN_NO_ERROR && err == SVN_NO_ERROR)
@@ -591,13 +578,8 @@ open_root (void *edit_baton,
      edit run. */
   eb->root_opened = TRUE;
 
-  *dir_baton = d = make_dir_baton (NULL, eb, NULL, eb->is_checkout, pool);
-  if (eb->is_checkout)
-    {
-      SVN_ERR (prep_directory (d, eb->ancestor_url,
-                               eb->target_revision, pool));
-    }
-  else if (! eb->target)
+  *dir_baton = d = make_dir_baton (NULL, eb, NULL, FALSE, pool);
+  if (! eb->target)
     {
       /* For an update with a NULL target, this is equivalent to open_dir(): */
       svn_wc_adm_access_t *adm_access;
@@ -711,11 +693,9 @@ add_directory (const char *path,
       || ((! copyfrom_path) && (SVN_IS_VALID_REVNUM (copyfrom_revision))))
     abort();
 
-  /* The directory may exist if this is a checkout, otherwise there should
-     be nothing with this name. */
+  /* There should be nothing with this name. */
   SVN_ERR (svn_io_check_path (db->path, &kind, db->pool));
-  if (kind != svn_node_none
-      && !(pb->edit_baton->is_checkout && kind == svn_node_dir))
+  if (kind != svn_node_none)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        "failed to add directory '%s': object of the same name already exists",
@@ -822,13 +802,9 @@ open_directory (const char *path,
      its not there?  Yes, all this and more...  And ancestor_url and
      ancestor_revision need to get used. */
 
-  struct dir_baton *this_dir_baton
-    = make_dir_baton (path,
-                      parent_dir_baton->edit_baton,
-                      parent_dir_baton,
-                      FALSE,
-                      pool);
-
+  struct dir_baton *this_dir_baton = make_dir_baton (path, eb, 
+                                                     parent_dir_baton, FALSE,
+                                                     pool);
   *child_baton = this_dir_baton;
 
   /* Mark directory as being at target_revision, but incomplete. */
@@ -1082,11 +1058,8 @@ add_or_open_file (const char *path,
   
   /* Sanity checks. */
 
-  /* If adding there may be a file with this name if this is a checkout,
-     otherwise there should be nothing with this name. */
-  if (adding
-      && kind != svn_node_none
-      && !(fb->edit_baton->is_checkout && kind == svn_node_file))
+  /* If adding, there should be nothing with this name. */
+  if (adding && (kind != svn_node_none))
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        "failed to add file '%s': object of the same name already exists",
@@ -1170,111 +1143,104 @@ apply_textdelta (void *file_baton,
   apr_pool_t *handler_pool = svn_pool_create (fb->pool);
   struct handler_baton *hb = apr_palloc (handler_pool, sizeof (*hb));
   svn_error_t *err;
+  svn_wc_adm_access_t *adm_access;
+  const svn_wc_entry_t *ent;
 
   /* Open the text base for reading, unless this is a checkout. */
   hb->source = NULL;
-  if (! fb->edit_baton->is_checkout)
+
+  /* 
+     kff todo: what we really need to do here is:
+       
+     1. See if there's a file or dir by this name already here.
+     2. See if it's under revision control.
+     3. If both are true, open text-base.
+     4. If only 1 is true, bail, because we can't go destroying user's
+        files (or as an alternative to bailing, move it to some tmp
+        name and somehow tell the user, but communicating with the
+        user without erroring is a whole callback system we haven't
+        finished inventing yet.)
+  */
+
+  /* Before applying incoming svndiff data to text base, make sure
+     text base hasn't been corrupted, and that its checksum
+     matches the expected base checksum. */
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, fb->edit_baton->adm_access,
+                                svn_path_dirname (fb->path, pool), pool));
+  SVN_ERR (svn_wc_entry (&ent, fb->path, adm_access, FALSE, pool));
+      
+  /* Only compare checksums this file has an entry, and the entry has
+     a checksum.  If there's no entry, it just means the file is
+     created in this update, so there won't be any previously recorded
+     checksum to compare against.  If no checksum, well, for backwards
+     compatibility we assume that no checksum always matches. */
+  if (ent && ent->checksum)
     {
-      /* 
-         kff todo: what we really need to do here is:
-         
-         1. See if there's a file or dir by this name already here.
-         2. See if it's under revision control.
-         3. If both are true, open text-base.
-         4. If only 1 is true, bail, because we can't go destroying
-            user's files (or as an alternative to bailing, move it to
-            some tmp name and somehow tell the user, but communicating
-            with the user without erroring is a whole callback system
-            we haven't finished inventing yet.)
-      */
-
-      /* Before applying incoming svndiff data to text base, make sure
-         text base hasn't been corrupted, and that its checksum
-         matches the expected base checksum. */
-      {
-        svn_wc_adm_access_t *adm_access;
-        const svn_wc_entry_t *ent;
-
-        SVN_ERR (svn_wc_adm_retrieve (&adm_access, fb->edit_baton->adm_access,
-                                      svn_path_dirname (fb->path, pool),
-                                      pool));
-        SVN_ERR (svn_wc_entry (&ent, fb->path, adm_access, FALSE, pool));
-
-        /* Only compare checksums this file has an entry, and the
-           entry has a checksum.  If there's no entry, it just means
-           the file is created in this update, so there won't be any
-           previously recorded checksum to compare against.  If no
-           checksum, well, for backwards compatibility we assume that
-           no checksum always matches. */
-        if (ent && ent->checksum)
-          {
-            unsigned char digest[MD5_DIGESTSIZE];
-            const char *hex_digest;
-            const char *tb;
-
-            tb = svn_wc__text_base_path (fb->path, FALSE, pool);
-            SVN_ERR (svn_io_file_checksum (digest, tb, pool));
-            hex_digest = svn_md5_digest_to_cstring (digest, pool);
-            
-            /* Compare the base_checksum here, rather than in the
-               window handler, because there's no guarantee that the
-               handler will see every byte of the base file. */
-            if (base_checksum)
-              {
-                if (strcmp (hex_digest, base_checksum) != 0)
-                  return svn_error_createf
-                    (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-                     "apply_textdelta: checksum mismatch for '%s':\n"
-                     "   expected checksum:  %s\n"
-                     "   actual checksum:    %s\n",
-                     tb, base_checksum, hex_digest);
-              }
-
-            if (strcmp (hex_digest, ent->checksum) != 0)
-              {
-                /* Compatibility hack: working copies created before
-                   13 Jan 2003 may have entry checksums stored in
-                   base64.  See svn_io_file_checksum_base64()'s doc
-                   string for details. */ 
-                const char *base64_digest
-                  = (svn_base64_from_md5 (digest, pool))->data;
-
-                if (strcmp (base64_digest, ent->checksum) != 0)
-                  {
-                    return svn_error_createf
-                      (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-                       "apply_textdelta: checksum mismatch for '%s':\n"
-                       "   recorded checksum:        %s\n"
-                       "   actual checksum (hex):    %s\n"
-                       "   actual checksum (base64): %s\n",
-                       tb, ent->checksum, hex_digest, base64_digest);
-                  }
-              }
-          }
-      }
-
-      err = svn_wc__open_text_base (&hb->source, fb->path, APR_READ,
-                                    handler_pool);
-      if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
+      unsigned char digest[MD5_DIGESTSIZE];
+      const char *hex_digest;
+      const char *tb;
+      
+      tb = svn_wc__text_base_path (fb->path, FALSE, pool);
+      SVN_ERR (svn_io_file_checksum (digest, tb, pool));
+      hex_digest = svn_md5_digest_to_cstring (digest, pool);
+      
+      /* Compare the base_checksum here, rather than in the window
+         handler, because there's no guarantee that the handler will
+         see every byte of the base file. */
+      if (base_checksum)
         {
-          if (hb->source)
-            {
-              svn_error_t *err2 = svn_wc__close_text_base (hb->source,
-                                                           fb->path,
-                                                           0, handler_pool);
-              if (err2)
-                svn_error_clear (err2);
-            }
-          svn_pool_destroy (handler_pool);
-          return err;
+          if (strcmp (hex_digest, base_checksum) != 0)
+            return svn_error_createf
+              (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+               "apply_textdelta: checksum mismatch for '%s':\n"
+               "   expected checksum:  %s\n"
+               "   actual checksum:    %s\n",
+               tb, base_checksum, hex_digest);
         }
-      else if (err)
+      
+      if (strcmp (hex_digest, ent->checksum) != 0)
         {
-          svn_error_clear (err);
-          hb->source = NULL;  /* make sure */
+          /* Compatibility hack: working copies created before 13 Jan
+             2003 may have entry checksums stored in base64.  See
+             svn_io_file_checksum_base64()'s doc string for
+             details. */ 
+          const char *base64_digest 
+            = (svn_base64_from_md5 (digest, pool))->data;
+              
+          if (strcmp (base64_digest, ent->checksum) != 0)
+            {
+              return svn_error_createf
+                (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+                 "apply_textdelta: checksum mismatch for '%s':\n"
+                 "   recorded checksum:        %s\n"
+                 "   actual checksum (hex):    %s\n"
+                 "   actual checksum (base64): %s\n",
+                 tb, ent->checksum, hex_digest, base64_digest);
+            }
         }
     }
-
+  
+  err = svn_wc__open_text_base (&hb->source, fb->path, APR_READ,
+                                handler_pool);
+  if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      if (hb->source)
+        {
+          svn_error_t *err2 = svn_wc__close_text_base (hb->source,
+                                                       fb->path,
+                                                       0, handler_pool);
+          if (err2)
+            svn_error_clear (err2);
+        }
+      svn_pool_destroy (handler_pool);
+      return err;
+    }
+  else if (err)
+    {
+      svn_error_clear (err);
+      hb->source = NULL;  /* make sure */
+    }
+  
   /* Open the text base for writing (this will get us a temporary file).  */
   hb->dest = NULL;
   err = svn_wc__open_text_base (&hb->dest, fb->path,
@@ -1911,7 +1877,7 @@ close_edit (void *edit_baton,
 
   /* Do nothing for checkout;  all urls and working revs are fine.
      Updates and switches, though, have to be cleaned up.  */
-  if ((! eb->is_checkout) && eb->root_opened)
+  if (eb->root_opened)
     {
       /* Make sure our update target now has the new working revision.
          Also, if this was an 'svn switch', then rewrite the target's
@@ -1940,11 +1906,6 @@ close_edit (void *edit_baton,
                         svn_wc_notify_state_inapplicable,
                         eb->target_revision);
 
-  /* ### Would really like to pass this back to the caller, but there is no
-     ### easy way to do it. So we close it. */
-  if (eb->is_checkout)
-    SVN_ERR (svn_wc_adm_close (eb->adm_access));
-
   /* The edit is over, free its pool.
      ### No, this is wrong.  Who says this editor/baton won't be used
      again?  But the change is not merely to remove this call.  We
@@ -1966,8 +1927,6 @@ make_editor (svn_wc_adm_access_t *adm_access,
              const char *anchor,
              const char *target,
              svn_revnum_t target_revision,
-             svn_boolean_t is_checkout,
-             const char *ancestor_url,
              const char *switch_url,
              svn_boolean_t recurse,
              svn_wc_notify_func_t notify_func,
@@ -1984,15 +1943,10 @@ make_editor (svn_wc_adm_access_t *adm_access,
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_delta_editor_t *tree_editor = svn_delta_default_editor (subpool);
 
-  if (is_checkout)
-    assert (ancestor_url != NULL);
-
   /* Construct an edit baton. */
   eb = apr_pcalloc (subpool, sizeof (*eb));
   eb->pool            = subpool;
-  eb->is_checkout     = is_checkout;
   eb->target_revision = target_revision;
-  eb->ancestor_url    = ancestor_url;
   eb->switch_url      = switch_url;
   eb->adm_access      = adm_access;
   eb->anchor          = anchor;
@@ -2046,8 +2000,7 @@ svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
                           apr_pool_t *pool)
 {
   return make_editor (anchor, svn_wc_adm_access_path (anchor),
-                      target, target_revision, 
-                      FALSE, NULL, NULL,
+                      target, target_revision, NULL,
                       recurse, notify_func, notify_baton,
                       cancel_func, cancel_baton, diff3_cmd,
                       editor, edit_baton, traversal_info, pool);
@@ -2073,8 +2026,7 @@ svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
   assert (switch_url);
 
   return make_editor (anchor, svn_wc_adm_access_path (anchor),
-                      target, target_revision,
-                      FALSE, NULL, switch_url,
+                      target, target_revision, switch_url,
                       recurse, notify_func, notify_baton,
                       cancel_func, cancel_baton, diff3_cmd,
                       editor, edit_baton,
