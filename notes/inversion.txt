@@ -1,0 +1,967 @@
+<title>
+Inversion (CVS II): A Version Control System You Actually Want To Use
+</title>
+
+<html>
+<body bgcolor="#FFFFFF" fgcolor="#000000">
+
+<center>
+<h1>
+Inversion (CVS II): A Version Control System You Actually Want To Use
+</h2>
+</center>
+
+<p>
+<hr>
+<p>
+
+<h2>Introduction</h2>
+
+This document describes Inversion, a replacement for CVS.  We may
+sometimes call it "Ivn", to save space.  (This is version $Revision: 1.1 $ of
+this document.)
+
+<p>
+
+Inversion will be described largely in terms of how it differs, or
+doesn't differ, from CVS.  So if you don't already know CVS, this
+document will be pretty unreadable.
+
+<p>
+
+Where you see the word "version", it means the same thing "revision"
+does in the CVS documentation.  Everyone always ends up saying
+"version" anyway, then correcting themselves, so let's just give up
+already.  Besides, it's shorter to type.
+
+<p>
+
+"Project" and "Repository" mean what you think they do -- a repository
+is a place where multiple projects are stored.  Sometimes I might slip
+and say "repository" where I should have said "project", because CVS
+uses the r-word for both.  Bear with me.
+
+<p>
+<hr>
+<p>
+
+<h2>Requirements</h2>
+
+<ul>
+
+<li>All CVS features are supported.
+
+<p>
+
+Everything CVS has, we want.  Versioning, folding of non-conflicting
+changes, detection of conflicting changes, branching, merging,
+historical diffs, log messages, line-by-line history ("cvs annotate"),
+the works.
+
+<p>
+
+Generally, Inversion's conceptual interface to a particular feature
+will be as similar to CVS's as possible, except when there's a
+compelling reason to do otherwise.
+
+</li>
+
+<p>
+
+<li>Version numbers are project-wide and atomic.
+
+<p>
+
+Unlike CVS, each Inversion commit results in a single new version
+number, which applies to the project as a whole (i.e., it applies to
+every object in the project, whether changed or not).  There are no
+longer separate per-file version numbers, at least not user-visible
+ones.
+
+<p>
+
+Commits are atomic -- either the entire commit succeeded, or the
+entire commit failed.  No one can ever retrieve a project tree in an
+inconsistent state.
+
+<p>
+
+A commit may block on another commits (though only briefly, and only
+when absolutely necessary -- that is, when the same files would be
+affected).  But readers never cause locks nor wait for locks.  The
+repository is always readable.
+
+</li>
+
+<p>
+
+<li>Directories, renames, and file meta-data are versioned.
+
+<p>
+
+Naturally!
+
+<p>
+
+By the way, rename support means you can trace through ancestry by
+name <i>or</i> by entity.  For example, if you say "Give me version 12
+of foo.c", you might mean version 12 of the file whose name is
+<i>now</i> foo.c (but perhaps it was named bar.c back at version 12),
+or you might mean the file whose name was foo.c in version 12 (perhaps
+that file no longer exists, or has a different name now).  Inversion
+offers a way to specify which interpretation you want, while
+defaulting to the most reasonable interpretation in context.  We
+haven't decided what "reasonable" means yet, but we're working on
+that.
+
+</li>
+
+<p>
+
+<li>Binary files are handled just like anything else.
+
+<p>
+
+That's right, no more "-kb" flag. <tt>:-)</tt>
+
+<p>
+
+Whether Inversion is able to merge changes into a file gracefully, or
+show diffs, depends on whether diffing and/or merging tools are
+defined for that type of file.  Right now, we know that text files are
+supported.  (How does Inversion know whether something's text file or
+not?  Well, you can tell it the type explicitly, or ask it to deduce
+on the fly.)
+
+<p>
+
+Also, for text files, Inversion can do platform-specific end-of-line
+conversion (CRLF vs LF, etc), just like CVS.
+
+<p>
+
+Regarding keyword expansion: Inversion does support it, but only on
+request.  By default, keyword expansion is off -- if you do not ask
+for expansion for a given file or group of files, Inversion will not
+modify content.
+
+</li>
+
+<p>
+
+<li>I18N/Multilingual support: non-ASCII encodings can be treated as text.
+
+<p>
+
+Inversion does not assume that anything not 7-bit ASCII must therefore
+be opaque binary -- it tries very hard to treat things as UTF-* text,
+for purposes of diffing and annotation, whenever possible.
+
+</li>
+
+<p>
+
+<li>Branching and tagging are constant-time operations in Inversion.
+
+<p>
+
+CVS makes an unnecessary distinction between branches and tags, and
+then goes on to implement them in an inefficient way.
+
+<p>
+
+Inversion supports them both with one efficient operation: `copy'.  To
+copy a project is to create another project exactly like it, except
+that the new project "knows" that the old project is its ancestor.
+Version numbers in the new project start at the ancestor's version
+number.
+
+<p>
+
+Clearly, at the moment of creation, a copy requires only a tiny amount
+of constant space -- the copy is like an "alias" for the old project.
+And if you never commit anything on the copy, then it's just like a
+CVS tag.
+
+<p>
+
+If you start committing on the copy, then it's a branch.  Voila!
+
+<p>
+
+By default, inversion uses per-project namespaces for copies, to avoid
+cross-project name conflicts.
+
+<p>
+
+[Thanks to Jim Blandy &lt;jimb@red-bean.com&gt; for pointing out that
+`copy' is a clean way to get both tagging and branching.]
+
+</li>
+
+<p>
+
+<li>Repeated merges are handled gracefully.
+
+<p>
+
+Inversion merges are the same, in principle, as CVS merges: merging
+means taking the differences between version A and B, and applying
+those differences as a patch to version X (which may simply be the
+working copy, rather than a formal repository version).
+
+<p>
+
+BUT, Ivn remembers what has already been merged, and doesn't merge
+anything twice unless forced to.  So if you merge the differences
+between &lt;Branch A, Version N&gt; and &lt;Branch A, Tip&gt; into
+&lt;Branch B&gt;, and then you do it again a month later, the second
+merge will only get the changes from &lt;Branch A, Previous Tip&gt; to
+&lt;Branch A, Current Tip&gt;, <i>not</i> from &lt;Branch A, Version
+N&gt; to &lt;Branch A, Current Tip&gt;.
+
+<p>
+
+<i>This will require a more complete specification, of course, but
+above is the general idea.  Note that per-object merge records will
+need to be maintained on the server side, since people often need to
+merge project subsets.</i>
+
+</li>
+
+<p>
+
+<li>Inversion does not set log message policy.
+
+<p>
+
+A small matter, but one dear to our hearts...
+
+<p>
+
+Log messages are a matter of project policy, not VC software policy.
+If you leave off a log message, then Inversion defaults to an empty
+message -- unless the project admin sets the right bit, in which case
+log messages will be required <i>for that project only</i>.
+
+<p>
+
+(CVS tries to require log messages, but fails: we've all seen
+thousands of empty log messages in CVS, where the user did
+<tt>commit&nbsp;-m&nbsp;""</tt> or whatever, so let's please stop the
+madness now.)
+
+</li>
+
+<p>
+
+<li>Conflicts do not munge working files (unless requested).
+
+<p>
+
+CVS's conflict resolution mechanism folds repository changes into the
+working files, even when they conflict with changes there.  This is
+often winning, in text files, but it doesn't work for binary files and
+sometimes it's not so great for text either.
+
+<p>
+
+Inversion only does it that way if asked to; otherwise, it puts the
+repository version of the file somewhere nearby, and the user can use
+whatever comparison tools she wants to resolve the conflict.  When
+Inversion <i>does</i> munge the working file, it first preserves an
+unmunged copy somewhere nearby, in case the user regrets the update.
+
+<p>
+
+Inversion can optionally make educated guesses about what's binary and
+what's text, so the user gets the right conflict resolution mechanism
+for the context.
+
+</li>
+
+<p>
+
+<li>Support for plug-in client-side diff programs
+
+<p>
+
+There is no need for Inversion to have every possible diff mechanism
+built in (or even any mechanism built in).  Instead, it invokes the
+appropriate client-side diff'er on the two versions of the file(s)
+locally.  For text files, the appropriate diff'er is the system `diff'
+program, or maybe "emacs -f ediff".  For image files, it might be some
+fancy visual comparison product.
+
+<p>
+
+Maybe if no good client-side program is available, Ivn can get
+sophisticated and send the working file to the server, who will try to
+do the diff and send it back.  But that's for the future.
+
+</li>
+
+</ul>
+
+<p>
+<hr>
+<p>
+
+<h2>Implementation</h2>
+
+<ul>
+
+<li>Repository uses diffy storage, of course.
+
+<p>
+
+The Ivn repository does diff storage like CVS, with the full-text of
+most recent version of a file, and then reverse diffs going back in
+time.  But Ivn does not use RCS format, and it uses a binary differ of
+course (XDelta?), not a text differ.
+
+<p>
+
+In order to preserve the "cvs annotate" information, line-number
+change information is stored along with the binary diff.  [Thanks
+again to Jim Blandy for this trick.]
+
+<p>
+
+</li>
+
+<li>Natively client/server.
+
+<p>
+
+Even when accessing a local repository, the ivn client connects to a
+ivn server and talks the ivn protocol.  This is for maintainability --
+in CVS, it's easy to write a bug by implementing something correctly
+for either the client/server or the standalone but not both (and more
+often neither, but that's another story).
+
+<p>
+
+The protocol may be DAV, if DAV turns out to be suitable.  Still under
+investigation.
+
+</li>
+
+<p>
+
+<li>The client/server protocol sends diffs in both directions
+
+<p>
+
+Inversion transmits diffs both ways (unlike CVS, which transmits diffs
+from server to client, but full files going the other way, thus using
+more bandwidth than necessary).  Ivn accomplishes this either by
+keeping pristine copies locally, or using the rsync algorithm; which
+way we do it is an implementation detail that hasn't been decided yet.
+
+</li>
+
+<p>
+
+<li>The server stores projects in a database
+
+<p>
+
+It turns out that project history storage falls neatly into a
+relational model; furthermore, using a real database gives us a lot of
+the locking behavior we need for free, and allows us to speed up
+crucial read operations by creating the right indexes.
+
+<p>
+
+In short, this is one wheel we don't want to reinvent.
+
+<p>
+
+A database makes it easy to have multiple repositories on one machine,
+with different admins for each repository -- each repository is simply
+a database (i.e., a namespace within which one can create tables) in
+the system.  Ultimate admin permissions are obtained through the usual
+database administration entry points.
+
+<p>
+
+</li>
+
+<li>Data design
+
+<p>
+
+So what's the "thingum" in this database, the core object (i.e, table)
+around which everything else revolves?  For lack of a better name,
+we'll call it the "entity" table, where "entity" means a file or
+directory that's under version control.
+
+<p>
+
+A look at its table description below will make things clearer...
+
+<p>
+
+<ol>
+
+<li>The ENTITIES table
+
+<p>
+
+<table border=1>
+ <tr>
+  <td valign=top>PKEY 
+  </td>
+  <td valign=top><tt>int</tt>
+      <br><tt>(never&nbsp;null)</tt>
+  </td>
+  <td>
+      Internal unique identifier for this entity.  Users never see the
+      pkey, only people trying to debug a problem in Inversion.
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>NAME 
+  </td>
+  <td valign=top><tt>string</tt>
+  </td>
+  <td>
+      The name of this file or directory (a basename).  Of course,
+      this is only the name <i>in this version</i>.  Names are versioned
+      like anything else.
+   <p>
+      If null, then this version's state (see below) must be "dead" or
+      something similar.
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>PROJECT 
+  </td>
+  <td valign=top><tt>int&nbsp;[fkey]</tt>
+      <br><tt>(never&nbsp;null)</tt>
+  </td>
+  <td>
+      Foreign key into the projects table.
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>VERSION 
+  </td>
+  <td valign=top><tt>int</tt>
+      <br><tt>(never&nbsp;null)</tt>
+  </td>
+  <td>
+      What version of the project this row is associated with.
+   <p>
+      Remember that every other entity in this commit has the same
+      version number.
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>NEXT_VERSION 
+  </td>
+  <td valign=top><tt>int</tt>
+  </td>
+  <td>
+      The next different version of this entity.
+   <p>
+      Null means there is no different future version. (?)
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>PREV_VERSION 
+  </td>
+  <td valign=top><tt>int</tt>
+  </td>
+  <td>
+      The previous <i>different</i> version of this entity  (i.e.,
+      not necessarily VERSION - 1).  May cross projects (see the
+      `ancestor' column in the `projects' table).
+   <p>
+      Null means this is the first version of this entity.
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>STATE 
+  </td>
+  <td valign=top><tt>string</tt>
+      <br><tt>(never&nbsp;null)</tt>
+  </td>
+  <td>
+      The state of this entity.  This is primarily for death and
+      resurrection support, but may also be used to record other
+      states, if we can think of any.
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>CONTENTS 
+  </td>
+  <td valign=top><tt>text</tt>
+  </td>
+  <td>
+      The contents of this version of the entity.
+   <p>
+      If this row is at the most recent version in the project, then
+      this is simply the full contents of the object: in the case of a
+      regular file, then obviously it's the file's contents; if a
+      directory, then it's a list (format to be determined) of the
+      entities in the directory; if a symlink, the target of the
+      symlink; if device, the device parameters; and so on.
+   <p>
+      If this is not the most recent version, then the "contents" are
+      stored as a reverse binary diff from the contents of the next
+      version.  For directories, that diff is a list of adds, deletes,
+      and renames (again, format details to be determined).
+   <p>
+      Null means this version does not differ from the next version.
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>LINE_MODS 
+  </td>
+  <td valign=top><tt>text</tt>
+  </td>
+  <td>
+      For text files, change line-numbers are recorded (as for text
+      diffs), so that deriving "cvs annotate" information is cheap.
+   <p>
+      Null means this information is unavailable or not applicable.
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>TYPE 
+  </td>
+  <td valign=top><tt>string</tt>
+      <br><tt>(never&nbsp;null)</tt>
+  </td>
+  <td>
+      Regular file, or directory, or symlink, or hard link, or device,
+      etc.
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>PROPERTIES 
+  </td>
+  <td valign=top><tt>text</tt>
+  </td>
+  <td>
+      Meta-data, stored in a format to be determined (probably
+      key=value pairs, like environment strings).  This is how
+      permission information is preserved, among other things.
+   <p>
+      Null means there are no properties, though this is probably
+      rare.
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>PARENT_DIR 
+  </td>
+  <td valign=top><tt>int&nbsp;[pkey]</tt>
+  </td>
+  <td>
+      The parent entity of this entity, in this version (it had better
+      be a directory!).
+   <p>
+      Null means this is the root entity.
+   <p>
+      Note: this way of recording tree-structure is questionable;
+      certain operations (tree-building!) might be too expensive if we
+      do things this way.  Another possibility is that the `name'
+      column is not a basename, but a complete relative path within
+      the project.  Still thinking about this issue; see the
+      Meta-Implementation section farther down.
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>MERGE_METHOD 
+  </td>
+  <td valign=top><tt>string</tt>
+  </td>
+  <td>
+      The name of a merge method that Inversion understands (right now
+      Inversion only knows how to do text merges.)  Normally, merging
+      is only possible between two versions which are of the same
+      TYPE.
+   <p>
+      Null means merges are not possible with this entity.
+  </td>
+ </tr>
+
+</table>
+
+</li>
+
+<p>
+
+<li>The PROJECTS table
+
+<p>
+
+<table border=1>
+
+ <tr>
+  <td valign=top>PKEY 
+  </td>
+  <td valign=top><tt>int</tt>
+  </td>
+  <td>
+      Internal unique identifier for this project.  Users never see the
+      pkey, only people trying to debug a problem in Inversion.
+   <p>
+      This pkey may actually not be necessary; if not, then note that
+      the `project' column in the `entities' table (see above) would
+      reference projects by name (string) instead of fkey (int).
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>NAME 
+  </td>
+  <td valign=top><tt>string</tt>
+  </td>
+  <td>
+      The name of this project.
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>DESCRIPTION 
+  </td>
+  <td valign=top><tt>string</tt>
+  </td>
+  <td>
+      What's this project all about (for anon accessors).
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>HIGHEST_VERSION 
+  </td>
+  <td valign=top><tt>int</tt>
+      <br><tt>(never&nbsp;null)</tt>
+  </td>
+  <td>
+      Just what you think it is.  Also known as the "tip".
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>LOWEST_VERSION 
+  </td>
+  <td valign=top><tt>int</tt>
+      <br><tt>(never&nbsp;null)</tt>
+  </td>
+  <td>
+      Also what you think it is.  Usually 1, but could be higher for
+      projects with a non-null ancestor.
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>ANCESTOR 
+  </td>
+  <td valign=top><tt>int&nbsp;[fkey]</tt> or <tt>string</tt></tt>
+  </td>
+  <td>
+      If not null, then this project is a "copy" (tag or branch) of
+      some other project.
+   <p>
+      One reason to use a string instead of an fkey would be to allow
+      off-site ancestors.  This would enable private, third-party
+      branching -- way cool, although a few other things in this
+      design would need to be tweaked to allow for that.  We'll make
+      sure that happens in the second design pass; this is still a
+      rough draft.
+   <p>
+      Also, debugging gets easier the fewer pkeys we use.  Something
+      to keep in mind...
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>LOG_MSG_POLICY 
+  </td>
+  <td valign=top><tt>bool</tt>
+  </td>
+  <td>
+      True iff log messages are required for this project.
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>PUBLIC
+  </td>
+  <td valign=top><tt>bool</tt>
+  </td>
+  <td>
+      True iff this project allows anon access.
+  </td>
+ </tr>
+
+</table>
+
+</li>
+
+<p>
+
+<li>The COMMITS table
+
+<p>
+
+This table is the last thing to get updated in a commit -- if you
+don't see it here, then the commit isn't done yet.  (Actually, the
+timing issues may well be handled for free, if we use built-in
+database transaction support and the appropriately-named SQL "commit"
+command).
+
+<p>
+
+<table border=1>
+
+ <tr>
+  <td valign=top>PROJECT 
+  </td>
+  <td valign=top><tt>int&nbsp;[fkey]</tt> or <tt>string</tt>
+      <br><tt>(never&nbsp;null)</tt>
+  </td>
+  <td>
+      Which project this commit belongs to.
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>VERSION 
+  </td>
+  <td valign=top><tt>int</tt>
+      <br><tt>(never&nbsp;null)</tt>
+  </td>
+  <td>
+      The version number of this commit.
+      Initial import gets 1. 
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>LOG_MSG
+  </td>
+  <td valign=top><tt>text</tt>
+  </td>
+  <td>
+      The log message for this commit.
+  </td>
+ </tr>
+
+</table>
+
+</li>
+
+<p>
+
+<li>The USERS table
+
+<p>
+
+<table border=1>
+
+ <tr>
+  <td valign=top>USERNAME 
+  </td>
+  <td valign=top><tt>string</tt>
+  </td>
+  <td>
+      You know what this is.
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>REALNAME 
+  </td>
+  <td valign=top><tt>string</tt>
+  </td>
+  <td>
+      Same.
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>EMAIL 
+  </td>
+  <td valign=top><tt>string</tt>
+  </td>
+  <td>
+      Same.
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>USE_SYSTEM 
+  </td>
+  <td valign=top><tt>bool</tt>
+  </td>
+  <td>
+      Permit fall-back to system authentication or not.
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>PASSPHRASE or PUBLIC_KEY
+  </td>
+  <td valign=top><tt>?</tt>
+  </td>
+  <td>
+      We're still figuring out how authentication works.  We know that
+      repository users do not require system accounts, at least.
+  </td>
+ </tr>
+
+</table>
+
+</li>
+
+<p>
+
+<li>The ACCESSES table
+
+<p>
+
+<table border=1>
+
+ <tr>
+  <td valign=top>USER 
+  </td>
+  <td valign=top><tt>string</tt>
+  </td>
+  <td>
+      A username.
+  </td>
+ </tr>
+
+ <tr>
+  <td valign=top>PROJECT 
+  </td>
+  <td valign=top><tt>int</tt> or <tt>string</tt>
+  </td>
+  <td>
+      Projects this user is allowed to access, and what kind of access
+      is allowed for each.  Format to be determined.
+      (Referenced by fkey or name?  See similar discussions above.)
+  </td>
+ </tr>
+    
+ <tr>
+  <td valign=top>ACCESS_TYPE 
+  </td>
+  <td valign=top><tt>?</tt>
+  </td>
+  <td>
+       Format and meaning to be determined.  We can have anything from
+       a simple read-only vs read-write dichotomy, all the way to
+       listing the exact operations that are permitted.
+  </td>
+ </tr>
+
+</table>
+
+<p>
+
+<li>The INVERSION table
+
+<p>
+
+Records a few server-specific things about this repository.  Right
+now, we only know one column:
+
+<p>
+
+<table border=1>
+
+ <tr>
+  <td valign=top>IVN_RELEASE
+ 
+  </td>
+  <td valign=top><tt>?</tt></td>
+  <td>
+      The release number (version, in the wider sense) of the
+      Inversion server that created or last upgraded this repository.
+      For compatibility: if we add new columns, or new interpretations
+      of old columns, an upgraded server can tell what it needs to do
+      to upgrade the repository tables, for example.
+  </td>
+ </tr>
+
+</table>
+
+</ol>
+
+</ul>
+
+<p>
+<hr>
+<p>
+
+<h2>Meta-implementation</h2>
+
+<p>
+
+This section describes the process of implementing Inversion -- what
+order we do things in, and how.
+
+<p>
+
+The design needs to be evaluated across common operations, such as:
+updating a project, updating <i>part</i> of a project, committing from
+an up-to-date-working copy, committing from a non-up-to-date working
+copy where the locally modified files are up-to-date, the same but
+where the locally modified files are not up-to-date, the same but with
+conflicts, tagging/branching, ... etc.  I am accumulating a list of
+such operations; contributions welcome.
+
+<p>
+
+For each such operation, we need to step through what would happen in
+the repository, so we'll discover bottlenecks in the design.
+
+<p>
+
+Once the design is ready, the parallizable parts of the software
+should be determined, and tasks divvied up.  At this point or very
+soon after, the client/server protocol needs to be designed too.  We
+will evaluate WebDAV (using the same examination-under-common-ops
+technique as with the data design); if WebDAV is suitable, it would be
+a good choice, because it already has some political acceptability.
+
+<p>
+
+During the initial coding phase, everything that can be farmed out to
+external programs will be.  For example, the diff routines will just
+invoke xdelta and diff (or whatever), and the client side will invoke
+an external patch.  In the long run, these things will very likely be
+internalized for speed, but their semantics won't change when we do
+that, and it's more important to get the stuff up and running as soon
+as we can, and optimize afterwards.
+
+<p>
+
+There should be an automated test-suite.  It should not be written in
+Bourne shell script (we can at least learn this lesson from CVS!).
+
+<p>
+
+Authentication questions will be put off until most of the software is
+working, since they probably don't affect the rest of the design much.
+
+</body>
+</html>
