@@ -1200,7 +1200,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
       if (kind == svn_node_file)
         {
           if ((working_props_kind == svn_node_file)
-              && (err = svn_io_set_file_read_write (thing, FALSE, pool)))
+              && (err = svn_wc__prep_file_for_replacement (thing, FALSE, pool)))
             return revert_error (err, fullpath, "restoring props", pool);
 
           if ((err = svn_io_copy_file (base_thing, thing, FALSE, pool)))

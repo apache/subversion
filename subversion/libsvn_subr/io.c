@@ -764,17 +764,6 @@ svn_io_set_file_read_write (const char *path,
                             svn_boolean_t ignore_enoent,
                             apr_pool_t *pool)
 {
-#ifdef WIN32
-/* This function exists to allow us to remove, rename or replace
-   files on Windows.  It is not necessary to do this on Unix operating
-   systems.
-  
-   On Unix a read-only file can still be removed, because
-   removal is really an edit of the parent directory, not of the
-   file itself.  Windows apparently has different semantics, and so
-   when the svn_io_set_file_read_write() call below was temporarily
-   removed in revision 5663, Subversion stopped working on Windows. */
-
   apr_status_t status;
   const char *path_apr;
 
@@ -789,7 +778,7 @@ svn_io_set_file_read_write (const char *path,
     if (!ignore_enoent || !APR_STATUS_IS_ENOENT(status))
       return svn_error_wrap_apr (status,
                                  "Can't set file '%s' read-write", path);
-#endif /* WIN32 */
+
   return SVN_NO_ERROR;
 }
 
@@ -1020,7 +1009,11 @@ svn_io_remove_file (const char *path, apr_pool_t *pool)
   apr_status_t apr_err;
   const char *path_apr;
 
+#ifdef WIN32
+  /* Set the file writable but only on Windows, because Windows
+     will not allow us to remove files that are read-only. */
   SVN_ERR (svn_io_set_file_read_write (path, TRUE, pool));
+#endif /* WIN32 */
 
   SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, path, pool));
 
@@ -2081,8 +2074,11 @@ svn_io_write_version_file (const char *path,
   /* ...and close the file. */
   SVN_ERR (svn_io_file_close (format_file, pool));
 
-  /* make the destination writable */
+#ifdef WIN32
+  /* make the destination writable, but only on Windows, because
+     Windows does not let us replace read-only files. */
   SVN_ERR (svn_io_set_file_read_write (path, TRUE, pool));
+#endif /* WIN32 */
 
   /* rename the temp file as the real destination */
   SVN_ERR (svn_io_file_rename (path_tmp, path, pool));
