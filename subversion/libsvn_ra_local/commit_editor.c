@@ -474,7 +474,10 @@ close_edit (void *edit_baton)
          aborted completely.  No second chances;  the user simply
          needs to update and commit again  :) */
 
-      SVN_ERR (svn_fs_abort_txn (eb->txn));
+      /* We don't care about the error return here, we want to return the
+         orignal error. There's likely something seriously wrong already, and
+         we don't want to cover it up.  */
+      svn_fs_abort_txn (eb->txn);
       return err;
     }
 
