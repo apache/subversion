@@ -143,15 +143,15 @@ class SVNLook:
         if received_kwargs.has_key("txn"):
             txn = received_kwargs.get("txn")
             if txn is not None:
-                cmd_args += ["txn", txn]
+                cmd_args += ["-t", txn]
         elif self.txn is not None:
-            cmd_args += ["txn", self.txn]
+            cmd_args += ["-t", self.txn]
         if received_kwargs.has_key("rev"):
             rev = received_kwargs.get("rev")
             if rev is not None:
-                cmd_args += ["rev", rev]
+                cmd_args += ["-r", rev]
         elif self.rev is not None:
-            cmd_args += ["rev", self.rev]
+            cmd_args += ["-r", self.rev]
 
     def changed(self, **kwargs):
         status, output = self._execsvnlook("changed", **kwargs)
