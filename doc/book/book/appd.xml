@@ -195,6 +195,14 @@
       </varlistentry>
 
       <varlistentry>
+        <term>Scmbug (<systemitem
+          class="url">http://freshmeat.net/projects/scmbug/</systemitem>)</term>
+        <listitem><para>Integration of Software Configuration
+          Management with bug-tracking, supporting
+          Subversion</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term>Subissue (<systemitem
           class="url">http://subissue.tigris.org/</systemitem>)</term>
         <listitem><para>Track issues directly in your 
