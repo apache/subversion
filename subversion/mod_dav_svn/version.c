@@ -397,7 +397,7 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
     }
 
   /* process the response for the new revision. */
-  return dav_svn__merge_response(output, source->info->repos->fs, new_rev,
+  return dav_svn__merge_response(output, source->info->repos, new_rev,
                                  prop_elem, pool);
 }
 
