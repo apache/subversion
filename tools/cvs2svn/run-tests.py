@@ -601,7 +601,7 @@ def simple_tags():
     }:
     raise svntest.Failure
 
-  rev = 38
+  rev = 39
   if not logs.has_key(rev):
     raise svntest.Failure
   if not logs[rev].changed_paths == {
@@ -617,6 +617,13 @@ def simple_tags():
     raise svntest.Failure
   if not logs[rev].changed_paths == {
     '/branches/vendorbranch/proj (from /trunk/proj:16)': 'A',
+    '/branches/vendorbranch/proj/default': 'M',
+    '/branches/vendorbranch/proj/sub1/default': 'M',
+    '/branches/vendorbranch/proj/sub1/subsubA/default': 'M',
+    '/branches/vendorbranch/proj/sub1/subsubB/default': 'M',
+    '/branches/vendorbranch/proj/sub2/default': 'M',
+    '/branches/vendorbranch/proj/sub2/subsubA/default': 'M',
+    '/branches/vendorbranch/proj/sub3/default': 'M',
     }:
     raise svntest.Failure
 
@@ -789,9 +796,8 @@ def enroot_race():
   "never use the rev-in-progress as a copy source"
   # See issue #1427 and r8544.
   repos, wc, logs = ensure_conversion('enroot-race')
-  if not ((logs[6].changed_paths.get('/branches') == 'A')
-          and (logs[6].changed_paths.get('/branches/mybranch (from /trunk:5)')
-               == 'A')
+  if not ((logs[6].changed_paths.get('/branches/mybranch (from /trunk:5)')
+           == 'A')
           and (logs[6].changed_paths.get('/branches/mybranch/proj/c.txt')
                == 'M')
           and (logs[6].changed_paths.get('/trunk/proj/a.txt') == 'M')
