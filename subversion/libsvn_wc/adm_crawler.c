@@ -214,7 +214,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
       apr_ssize_t klen;
       void *val;
       const svn_wc_entry_t *current_entry; 
-      svn_node_kind_t *dirent_kind, dirent_kind_storage;
+      svn_node_kind_t *dirent_kind;
       svn_boolean_t missing = FALSE;
 
       /* Clear the iteration subpool here because the loop has a bunch
@@ -254,12 +254,14 @@ report_revisions (svn_wc_adm_access_t *adm_access,
           /* It is possible on a case insensitive system that the
              entry is not really missing, so we call our trusty but
              expensive friend svn_io_check_path to be sure. */
-          SVN_ERR (svn_io_check_path (this_full_path, &dirent_kind_storage,
+          dirent_kind = apr_palloc (iterpool, sizeof(*dirent_kind)); 
+          SVN_ERR (svn_io_check_path (this_full_path, dirent_kind,
                                       iterpool));
-          if (dirent_kind_storage == svn_node_none)
-            missing = TRUE;
-          else
-            dirent_kind = &dirent_kind_storage;
+          if (*dirent_kind == svn_node_none)
+            {
+              dirent_kind = NULL;
+              missing = TRUE;
+            }
         }
       
       /* From here on out, ignore any entry scheduled for addition */
