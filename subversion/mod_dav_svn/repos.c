@@ -1273,6 +1273,13 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   /* Remember who is making this request */
   repos->username = r->user;
 
+  /* Remember if the requesting client is a Subversion client */
+  {
+    const char *ua = apr_table_get(r->headers_in, "User-Agent");
+    if (ua && (ap_strstr_c(ua, "SVN/") == ua))
+      repos->is_svn_client = TRUE;
+  }
+  
   /* Retrieve/cache open repository */
   repos_key = apr_pstrcat(r->pool, "mod_dav_svn:", fs_path, NULL);
   apr_pool_userdata_get((void **)&repos->repos, repos_key, r->connection->pool);

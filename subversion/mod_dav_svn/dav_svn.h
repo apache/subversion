@@ -105,6 +105,9 @@ typedef struct {
   /* the user operating against this repository */
   const char *username;
 
+  /* is the client a Subversion client? */
+  svn_boolean_t is_svn_client;
+
 } dav_svn_repos;
 
 
