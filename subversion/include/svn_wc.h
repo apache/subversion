@@ -64,7 +64,7 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
 
 /* Return, in *ADM_ACCESS, a pointer to a new access baton for the working
    copy administrative area associated with the directory PATH.  If
-   WRITE_LOCK is set the baton will include a write lock, otherwise the
+   WRITE_LOCK is true the baton will include a write lock, otherwise the
    baton can only be used for read access.  If PATH refers to a directory
    that is already locked then the error SVN_ERR_WC_LOCKED will be
    returned.
@@ -430,7 +430,7 @@ typedef struct svn_wc_entry_t
 
 
 /* Set *ENTRY to an entry for PATH, allocated in POOL.  If
- * SHOW_DELETED is set, return the entry even if it's in 'deleted'
+ * SHOW_DELETED is true, return the entry even if it's in 'deleted'
  * state.  If PATH is not under revision control, or if entry is
  * 'deleted', not scheduled for re-addition, and SHOW_DELETED is
  * false, then set *ENTRY to NULL.
@@ -450,7 +450,7 @@ svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
    *).  Allocate ENTRIES, and its keys and values, in POOL.
    
    Entries that are in a 'deleted' state (and not scheduled for
-   re-addition) are not returned in the hash, unless SHOW_DELETED is set.
+   re-addition) are not returned in the hash, unless SHOW_DELETED is true.
 
    Important note: only the entry structures representing files and
    SVN_WC_ENTRY_THIS_DIR contain complete information.  The entry
@@ -513,7 +513,7 @@ typedef struct svn_wc_entry_callbacks_t
 
    Like our other entries interfaces, entries that are in a 'deleted'
    state (and not scheduled for re-addition) are not discovered,
-   unless SHOW_DELETED is set.
+   unless SHOW_DELETED is true.
 
    When a new directory is entered, SVN_WC_ENTRY_THIS_DIR will always
    be returned first.
@@ -648,11 +648,11 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  *
  * Assuming PATH is a directory, then:
  * 
- * If GET_ALL is unset, then only locally-modified entries will be
- * returned.  If set, then all entries will be returned.
+ * If GET_ALL is false, then only locally-modified entries will be
+ * returned.  If true, then all entries will be returned.
  *
- * If DESCEND is unset, statushash will contain statuses for PATH and
- * its entries.  Else if DESCEND is set, statushash will contain
+ * If DESCEND is false, statushash will contain statuses for PATH and
+ * its entries.  Else if DESCEND is true, statushash will contain
  * statuses for PATH and everything below it, including
  * subdirectories.  In other words, a full recursion. */
 svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
@@ -790,11 +790,11 @@ svn_error_t *svn_wc_add (const char *path,
    *all* the administrative areas anywhere in the tree below ADM_ACCESS.
 
    Normally, only adminstrative data is removed.  However, if
-   DESTROY_WF is set, then all working file(s) and dirs are deleted
+   DESTROY_WF is true, then all working file(s) and dirs are deleted
    from disk as well.  When called with DESTROY_WF, any locally
    modified files will *not* be deleted, and the special error
    SVN_ERR_WC_LEFT_LOCAL_MOD might be returned.  (Callers only need to
-   check for this special return value if DESTROY_WF is set.)
+   check for this special return value if DESTROY_WF is true.)
 
    WARNING:  This routine is exported for careful, measured use by
    libsvn_client.  Do *not* call this routine unless you really
@@ -807,9 +807,9 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
 
 
 /* Assuming PATH is under version control and in a state of conflict, then
-   take PATH *out* of this state.  If RESOLVE_TEXT is set then any text
-   conflict is resolved, if RESOLVE_PROPS is set then any property
-   conflicts are resolved.  If RECURSIVE is set, then search
+   take PATH *out* of this state.  If RESOLVE_TEXT is true then any text
+   conflict is resolved, if RESOLVE_PROPS is true then any property
+   conflicts are resolved.  If RECURSIVE is true, then search
    recursively for conflicts to resolve.
 
    Needless to say, this function doesn't touch conflict markers or
@@ -846,7 +846,7 @@ svn_error_t *svn_wc_resolve_conflict (const char *path,
    date and author of the new revision; one or both may be NULL.
    ADM_ACCESS must hold a write lock appropriate for PATH.
 
-   If RECURSE is set and PATH is a directory, then bump every
+   If RECURSE is true and PATH is a directory, then bump every
    versioned object at or under PATH.  This is usually done for
    copied trees.  */
 svn_error_t *svn_wc_process_committed (const char *path,
@@ -952,7 +952,7 @@ void svn_wc_edited_externals (apr_hash_t **externals_old,
    copy.  Thus the return value may very well reflect the result of
    the update!
 
-   If RESTORE_FILES is set, then unexpectedly missing working files
+   If RESTORE_FILES is true, then unexpectedly missing working files
    will be restored from the administrative directory's cache. For each
    file restored, the NOTIFY_FUNC function will be called with the
    NOTIFY_BATON and the path of the restored file. NOTIFY_FUNC may
@@ -1132,11 +1132,11 @@ svn_error_t *svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
    instead.  This argument is an array of svn_prop_t structures, and
    can be interpreted in one of two ways:
 
-      - if IS_FULL_PROPLIST is set, then the array represents the
+      - if IS_FULL_PROPLIST is true, then the array represents the
         complete list of all properties for the file.  It is the new
         'pristine' proplist.
 
-      - if IS_FULL_PROPLIST is unset, then the array represents a set of
+      - if IS_FULL_PROPLIST is false, then the array represents a set of
         *differences* against the file's existing pristine proplist.
         (A deletion is represented by setting an svn_prop_t's 'value'
         field to NULL.)  
@@ -1461,7 +1461,7 @@ svn_wc_get_auth_file (const char *path,
    area of PATH's administrative directory.  PATH must be a working
    copy directory.  If no such file exists, it will be created.  If
    the file exists already, it will be completely overwritten with the
-   new contents.  If RECURSE is set, this file will be stored in every
+   new contents.  If RECURSE is true, this file will be stored in every
    administrative area below PATH as well. 
 
    Note: CONTENTS is a stringbuf because maybe we'll need to store
@@ -1507,9 +1507,9 @@ typedef struct svn_wc_keywords_t
 
 /* Return TRUE if A and B do not hold the same keywords.
  *
- * If COMPARE_VALUES is set, "same" means that the A and B contain
+ * If COMPARE_VALUES is true, "same" means that the A and B contain
  * exactly the same set of keywords, and the values of corresponding
- * keywords match as well.  Else if COMPARE_VALUES is not set, then
+ * keywords match as well.  Else if COMPARE_VALUES is false, then
  * "same" merely means that A and B hold the same set of keywords,
  * although those keywords' values might differ.
  *
