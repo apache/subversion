@@ -146,9 +146,9 @@ svn_wc_merge (const char *left,
           const char *left_marker;
           const char *right_marker;
 
-          SVN_ERR (svn_diff3_file (&diff,
-                                   tmp_left, tmp_target, tmp_right,
-                                   pool));
+          SVN_ERR (svn_diff_file_diff3 (&diff,
+                                        tmp_left, tmp_target, tmp_right,
+                                        pool));
 
           /* Labels fall back to sensible defaults if not specified. */
           if (target_label)
@@ -166,15 +166,15 @@ svn_wc_merge (const char *left,
           else
             right_marker = ">>>>>>> .new";
 
-          SVN_ERR (svn_diff3_file_output (result_f, diff,
-                                          tmp_left, tmp_target, tmp_right,
-                                          left_marker,
-                                          target_marker,
-                                          right_marker,
-                                          "=======", /* seperator */
-                                          FALSE, /* display original */
-                                          FALSE, /* resolve conflicts */
-                                          pool));
+          SVN_ERR (svn_diff_file_output_merge (result_f, diff,
+                                               tmp_left, tmp_target, tmp_right,
+                                               left_marker,
+                                               target_marker,
+                                               right_marker,
+                                               "=======", /* seperator */
+                                               FALSE, /* display original */
+                                               FALSE, /* resolve conflicts */
+                                               pool));
 
           contains_conflicts = svn_diff_contains_conflicts (diff);
         }

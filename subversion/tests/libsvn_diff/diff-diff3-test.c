@@ -153,18 +153,18 @@ three_way_merge (const char *filename1,
   SVN_ERR (make_file (filename2, contents2, pool));
   SVN_ERR (make_file (filename3, contents3, pool));
 
-  SVN_ERR (svn_diff3_file (&diff, filename1, filename2, filename3, pool));
+  SVN_ERR (svn_diff_file_diff3 (&diff, filename1, filename2, filename3, pool));
   status = apr_file_open (&output, merge_name,
                           APR_WRITE | APR_CREATE | APR_TRUNCATE, APR_OS_DEFAULT,
                           pool);
   if (status)
     return svn_error_createf (status, NULL, "failed to open '%s'", merge_name);
-  SVN_ERR (svn_diff3_file_output (output, diff,
-                                  filename1, filename2, filename3,
-                                  NULL, NULL, NULL, NULL,
-                                  FALSE,
-                                  FALSE,
-                                  pool));
+  SVN_ERR (svn_diff_file_output_merge (output, diff,
+                                       filename1, filename2, filename3,
+                                       NULL, NULL, NULL, NULL,
+                                       FALSE,
+                                       FALSE,
+                                       pool));
   status = apr_file_close (output);
   if (status)
     return svn_error_createf (status, NULL, "failed to close '%s'", merge_name);
@@ -211,7 +211,7 @@ two_way_diff (const char *filename1,
 
   /* Check that two-way diff between contents1 and contents2 produces
      expected output. */
-  SVN_ERR (svn_diff_file (&diff, filename1, filename2, pool));
+  SVN_ERR (svn_diff_file_diff (&diff, filename1, filename2, pool));
   status = apr_file_open (&output, diff_name,
                           APR_WRITE | APR_CREATE | APR_TRUNCATE, APR_OS_DEFAULT,
                           pool);
