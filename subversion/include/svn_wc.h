@@ -1397,8 +1397,8 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
 
 
 
-/** A callback for reporting an @c svn_wc_status_t * item @a status
-    for @a path.  @a baton is provided to the */
+/** A callback for reporting an @c svn_wc_status_t item @a status for
+    @a path. */
 typedef void (*svn_wc_status_func_t) (void *baton,
                                       const char *path,
                                       svn_wc_status_t *status);
