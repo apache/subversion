@@ -333,21 +333,26 @@ class PropChange(Messenger):
     self.author = author
     self.propname = propname
 
+    ### hunh. this code isn't actually needed for StandardOutput. refactor?
+    # collect the set of groups and the unique sets of params for the options
+    self.groups = { }
+    for (group, params) in self.cfg.which_groups(''):
+      # turn the params into a hashable object and stash it away
+      param_list = params.items()
+      param_list.sort()
+      self.groups[group, tuple(param_list)] = params
+
     self.output.subject = 'r%d - %s' % (repos.rev, propname)
 
-
   def generate(self):
-    self.output.start([], [], override_author = author)
-
-    self.output.write('Author: %s\nRevision: %s\nProperty Name: %s\n\n'
-                      % (self.author, self.repos.rev, self.propname))
-
-    propvalue = self.repos.get_rev_prop(self.propname)
-
-    self.output.write('New Property Value:\n')
-    self.output.write(propvalue)
-
-    self.output.finish()
+    for (group, param_tuple), params in self.groups.items():
+      self.output.start(group, params, override_author = author)
+      self.output.write('Author: %s\nRevision: %s\nProperty Name: %s\n\n'
+                        % (self.author, self.repos.rev, self.propname))
+      propvalue = self.repos.get_rev_prop(self.propname)
+      self.output.write('New Property Value:\n')
+      self.output.write(propvalue)
+      self.output.finish()
 
 
 def generate_content(output, cfg, repos, changelist, group, params, pool):
