@@ -601,7 +601,7 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
           err = svn_wc_remove_from_revision_control (adm_access,
                                                      SVN_WC_ENTRY_THIS_DIR,
                                                      TRUE, /* destroy */
-                                                     TRUE, /* instant_error */
+                                                     FALSE, /* instant_error */
                                                      NULL, NULL,
                                                      loggy->pool);
         }
@@ -610,12 +610,18 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
     {
       err = svn_wc_remove_from_revision_control (loggy->adm_access, name,
                                                  TRUE, /* destroy */
-                                                 TRUE, /* instant_error */
+                                                 FALSE, /* instant_error */
                                                  NULL, NULL,
                                                  loggy->pool);
     }
 
-  return err;
+    if ((err) && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
+      {
+        svn_error_clear (err);
+        return SVN_NO_ERROR;
+      }
+    else
+        return err;
 }
 
 /* Note:  assuming that svn_wc__log_commit() is what created all of
