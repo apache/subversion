@@ -138,11 +138,15 @@ SOURCE=.\main.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\mkdir-cmd.c
+SOURCE=".\merge-cmd.c"
 # End Source File
 # Begin Source File
 
-SOURCE=.\move-cmd.c
+SOURCE=".\mkdir-cmd.c"
+# End Source File
+# Begin Source File
+
+SOURCE=".\move-cmd.c"
 # End Source File
 # Begin Source File
 
@@ -151,6 +155,10 @@ SOURCE=.\prompt.c
 # Begin Source File
 
 SOURCE=".\propdel-cmd.c"
+# End Source File
+# Begin Source File
+
+SOURCE=".\propedit-cmd.c"
 # End Source File
 # Begin Source File
 
@@ -166,10 +174,6 @@ SOURCE=.\props.c
 # End Source File
 # Begin Source File
 
-SOURCE=".\propedit-cmd.c"
-# End Source File
-# Begin Source File
-
 SOURCE=".\propset-cmd.c"
 # End Source File
 # Begin Source File
@@ -182,15 +186,15 @@ SOURCE=".\status-cmd.c"
 # End Source File
 # Begin Source File
 
-SOURCE=".\switch-cmd.c"
-# End Source File
-# Begin Source File
-
 SOURCE=.\status.c
 # End Source File
 # Begin Source File
 
 SOURCE=..\win32\svn.rc
+# End Source File
+# Begin Source File
+
+SOURCE=".\switch-cmd.c"
 # End Source File
 # Begin Source File
 
