@@ -109,11 +109,16 @@ class GeneratorBase:
               self.fs_test_progs.append(target_ob.output)
 
         # collect all the paths where stuff might get built
+        ### we should collect this from the dependency nodes rather than
+        ### the sources. "what dir are you going to put yourself into?"
         self.target_dirs[target_ob.path] = None
         for pattern in string.split(parser.get(target, 'sources')):
-          if string.find(pattern, os.sep) != -1:
+          idx = string.rfind(pattern, '/')
+          if idx != -1:
+            ### hmm. probably shouldn't be os.path.join() right here
+            ### (at this point in the control flow; defer to output)
             self.target_dirs[os.path.join(target_ob.path,
-                                          os.path.dirname(pattern))] = None
+                                          pattern[:idx])] = None
 
     # compute intra-library dependencies
     for name, target in self.targets.items():
@@ -182,7 +187,7 @@ class GeneratorBase:
         continue
       assert len(sources) == 1
       hdrs = [ ]
-      for short in _find_includes(sources[0], include_deps):
+      for short in _find_includes(sources[0].fname, include_deps):
         self.graph.add(DT_OBJECT, objname, include_deps[short][0])
 
 
@@ -272,6 +277,11 @@ class SWIGObject(ObjectFile):
     ### hmm. this is Makefile-specific
     self.build_cmd = '$(COMPILE_%s_WRAPPER)' % string.upper(self.lang_abbrev)
     self.source_generated = 1
+
+class SourceFile(DependencyNode):
+  def __init__(self, fname, reldir):
+    DependencyNode.__init__(self, fname)
+    self.reldir = reldir
 
 # the SWIG utility libraries
 class SWIGUtilPython(ObjectFile):
@@ -363,7 +373,7 @@ class TargetLinked(Target):
     # the specified install area depends upon this target
     graph.add(DT_INSTALL, self.install, self)
 
-    for src in self._get_sources(src_patterns):
+    for src, reldir in self._get_sources(src_patterns):
       if src[-2:] != '.c':
         raise GenError('ERROR: unknown file extension on ' + src)
 
@@ -372,7 +382,7 @@ class TargetLinked(Target):
       ofile = self.object_cls(objname)
 
       # object depends upon source
-      graph.add(DT_OBJECT, ofile, src)
+      graph.add(DT_OBJECT, ofile, SourceFile(src, reldir))
 
       # target (a linked item) depends upon object
       graph.add(DT_LINK, self.name, ofile)
@@ -457,7 +467,7 @@ class TargetSWIG(Target):
     ### simple assertions for now
     assert len(sources) == 1
 
-    ifile = sources[0]
+    ifile, reldir = sources[0]
     assert ifile[-2:] == '.i'
 
     dir, iname = os.path.split(ifile)
@@ -571,13 +581,31 @@ def _filter_targets(t):
 
 def _collect_paths(pats, path=None):
   result = [ ]
-  for pat in string.split(pats):
+  for base_pat in string.split(pats):
     if path:
-      pat = os.path.join(path, pat)
-    files = glob.glob(pat)
+      ### these paths are actually '/'-based
+      pattern = os.path.join(path, base_pat)
+    else:
+      pattern = base_pat
+    files = glob.glob(pattern)
     if not files:
-      raise GenError('ERROR: "%s" found no files.' % pat)
-    result.extend(files)
+      raise GenError('ERROR: "%s" found no files.' % pattern)
+
+    if path is None:
+      # just append the names to the result list
+      result.extend(files)
+    else:
+      # if we have paths, then we need to record how each source is located
+      # relative to the specified path
+      idx = string.rfind(base_pat, '/')
+      if idx == -1:
+        reldir = ''
+      else:
+        reldir = base_pat[:idx]
+        assert not glob.has_magic(reldir)
+      for file in files:
+        result.append((file, reldir))
+
   return result
 
 def _strip_path(path, files):

@@ -55,7 +55,14 @@ LINK32=link.exe
 [for platforms][for configs]# Name "[target.name] - [platforms] [configs.name]"
 [end][end][for sources]# Begin Source File
 
-SOURCE=[sources]
+SOURCE=[sources.path][if-any sources.reldir]
+[for platforms][for configs]
+![if-index platforms first][if-index configs first][else]ELSE[end][else]ELSE[end]IF  "$(CFG)" == "[target.name] - [platforms] [configs.name]"
+
+# PROP Intermediate_Dir "[configs.name]\[target.name]\[sources.reldir]"
+[end][end]
+!ENDIF
+[end]
 # End Source File
 [end]# End Target
 # End Project
