@@ -38,6 +38,7 @@ public class AllTests {
 	    suite.addTestSuite( DateTests.class );
 	    suite.addTestSuite( EntryTests.class );
 	    suite.addTestSuite( VectorTests.class );
+	    suite.addTestSuite( HashtableTests.class );
 
 	    return suite;
 	}
