@@ -29,6 +29,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_hash.h"
+#include "svn_io.h"
 #include "svn_path.h"
 #include "svn_wc.h"
 #include "wc.h"
@@ -141,6 +142,29 @@ svn_wc__adm_path (svn_string_t *path,
 
   return newpath;
 }
+
+
+svn_boolean_t
+svn_wc__adm_path_exists (svn_string_t *path,
+                         svn_boolean_t tmp,
+                         apr_pool_t *pool, 
+                         ...)
+{
+  enum svn_node_kind kind;
+  svn_string_t *newpath = svn_string_dup (path, pool);
+  va_list ap;
+
+  va_start (ap, pool);
+  v_extend_with_adm_name (newpath, tmp, pool, ap);
+  va_end (ap);
+
+  svn_io_check_path (newpath, &kind, pool);
+  if (kind == svn_node_none)
+    return FALSE;
+  else
+    return TRUE;
+}
+
 
 
 /* Restore PATH to what it was before a call to
@@ -1216,9 +1240,6 @@ svn_wc__ensure_adm (svn_string_t *path,
 svn_error_t *
 svn_wc__adm_destroy (svn_string_t *path, apr_pool_t *pool)
 {
-  /* cmpilato todo:  make this not suck.  */
-
-#if 0 
   /* Try to lock the admin directory, hoping that this function will
      eject an error if we're already locked (which is fine, cause if
      it is already locked, we certainly don't want to blow it away. */
@@ -1226,29 +1247,22 @@ svn_wc__adm_destroy (svn_string_t *path, apr_pool_t *pool)
 
   /* Well, I think the coast is clear for blowing away this directory
      (which should also remove the lock file we created above) */
-    {
-      apr_status_t apr_err;
-      svn_string_t *adm_path = svn_string_dup (path, pool);
+  {
+    apr_status_t apr_err;
+    svn_string_t *adm_path = svn_string_dup (path, pool);
 
-      svn_path_add_component (adm_path, svn_wc__adm_subdir (pool), 
-                              svn_path_local_style);
-      /* Can't just call apr_dir_remove() here, because that requires
-         that the directory be empty.  todo: svn_io_tree_remove? */
-      apr_err = apr_dir_remove (adm_path->data, pool);
-      if (apr_err)
-        return svn_error_createf 
-          (apr_err, 0, NULL, pool,
-           "error removing administrative directory for %s",
-           path->data);
-    }
+    svn_path_add_component (adm_path, svn_wc__adm_subdir (pool), 
+                            svn_path_local_style);
+
+    apr_err = apr_dir_remove_recursively (adm_path->data, pool);
+    if (apr_err)
+      return svn_error_createf 
+        (apr_err, 0, NULL, pool,
+         "error removing administrative directory for %s",
+         path->data);
+  }
 
   return SVN_NO_ERROR;
-#endif /* 0 */
-
-  /* We don't have an easy way to remove an entire non-empty
-     directory, so until we do, let's just remove the README file from
-     the administrative directory. */
-  return svn_wc__remove_adm_file (path, pool, SVN_WC__ADM_README, NULL);
 }
 
 

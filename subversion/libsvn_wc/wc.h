@@ -95,6 +95,7 @@ svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
 #define SVN_WC__ADM_WCPROPS             "wcprops"
 #define SVN_WC__ADM_DIR_WCPROPS         "dir-wcprops"
 #define SVN_WC__ADM_LOG                 "log"
+#define SVN_WC__ADM_KILLME              "KILLME"
 
 /* The basename of the ".prej" file, if a directory ever has property
    conflicts.  This .prej file will appear *within* the conflicted
@@ -113,6 +114,13 @@ svn_string_t * svn_wc__adm_path (svn_string_t *path,
                                  svn_boolean_t tmp,
                                  apr_pool_t *pool,
                                  ...);
+
+/* Return TRUE if a thing in the administratve area exists, FALSE
+   otherwise. */
+svn_boolean_t svn_wc__adm_path_exists (svn_string_t *path,
+                                       svn_boolean_t tmp,
+                                       apr_pool_t *pool,
+                                       ...);
 
 
 /* Make `PATH/<adminstrative_subdir>/THING'. */

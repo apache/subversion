@@ -553,9 +553,9 @@ def update_from_wc_top():
 
   # Create expected output tree for an update of the wc_backup.
   output_list = [[os.path.join(wc_backup, 'A', 'mu'),
-                  None, {'status' : 'G '}],
+                  None, {'status' : 'U '}],
                  [os.path.join(wc_backup, 'A', 'D', 'G', 'rho'),
-                   None, {'status' : 'G '}]]
+                   None, {'status' : 'U '}]]
   expected_output_tree = svn_tree.build_generic_tree(output_list)
 
   # Create expected disk tree for the update.

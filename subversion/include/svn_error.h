@@ -111,6 +111,10 @@ typedef enum svn_errno_t {
   /* Working copy is not up-to-date w.r.t. the repository. */
   SVN_ERR_WC_NOT_UP_TO_DATE,
 
+  /* A recursive directory removal left locally modified files
+     behind. */
+  SVN_ERR_WC_LEFT_LOCAL_MOD,
+
   /* No unique names available for tmp files. */
   SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
 
