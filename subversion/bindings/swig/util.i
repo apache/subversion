@@ -116,16 +116,23 @@
 apr_status_t apr_initialize(void);
 void apr_terminate(void);
 
+apr_status_t apr_ansi_time_to_apr_time(apr_time_t *result, time_t input);
+
 /* ----------------------------------------------------------------------- */
 
 %include svn_io.h
 %include svn_pools.h
 %include svn_version.h
+%include svn_time.h
+
 %{
 #include <apr.h>
 #include <apr_general.h>
+
 #include "svn_io.h"
 #include "svn_pools.h"
 #include "svn_version.h"
+#include "svn_time.h"
+
 #include "swigutil.h"
 %}
