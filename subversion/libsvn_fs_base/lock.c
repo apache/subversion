@@ -23,6 +23,7 @@
 #include "apr_uuid.h"
 
 #include "lock.h"
+#include "tree.h"
 #include "err.h"
 #include "bdb/locks-table.h"
 #include "bdb/lock-tokens-table.h"
@@ -84,9 +85,7 @@ txn_body_lock (void *baton, trail_t *trail)
   svn_lock_t *existing_lock;
   const char *fs_username;
 
-  /* ### Figure out the node kind of path.  Call a helper that
-     takes a trail. */
-
+  SVN_ERR (svn_fs_base__get_path_kind (&kind, args->path, trail));
 
   /* Until we implement directory locks someday: */
   if (kind != svn_node_file)
@@ -219,14 +218,9 @@ txn_body_unlock (void *baton, trail_t *trail)
   svn_node_kind_t kind = svn_node_none;
   svn_lock_t *lock;
 
-
   /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN or SVN_ERR_FS_LOCK_EXPIRED. */
   SVN_ERR (svn_fs_bdb__lock_get (&lock, trail->fs, args->token, trail));
   
-  /* ### Figure out the node kind of lock->path.  Call a helper that
-     takes a trail. */
-  
-
   /* There better be a username attached to the fs. */
   if (!trail->fs->access_ctx || !trail->fs->access_ctx->username)
     return svn_fs_base__err_no_user (trail->fs);
@@ -240,6 +234,7 @@ txn_body_unlock (void *baton, trail_t *trail)
 
   /* Remove a row from each of the locking tables. */
   SVN_ERR (svn_fs_bdb__lock_delete (trail->fs, lock->token, trail));
+  SVN_ERR (svn_fs_base__get_path_kind (&kind, lock->path, trail));
   return svn_fs_bdb__lock_token_delete (trail->fs, lock->path, kind, trail);
 }
 
@@ -313,9 +308,7 @@ txn_body_get_lock_from_path (void *baton, trail_t *trail)
   struct lock_token_get_args *args = baton;
   svn_node_kind_t kind = svn_node_none;
 
-  /* ### Figure out the node kind of lock->path.  Call a helper that
-     takes a trail. */
-
+  SVN_ERR (svn_fs_base__get_path_kind (&kind, args->path, trail));
 
   return svn_fs_base__get_lock_from_path_helper (args->lock_p,
                                                  args->path, kind, trail);
@@ -399,9 +392,7 @@ txn_body_get_locks (void *baton, trail_t *trail)
   struct locks_get_args *args = baton;
   svn_node_kind_t kind = svn_node_none;
 
-  /* ### Figure out the node kind of lock->path.  Call a helper that
-     takes a trail. */
-
+  SVN_ERR (svn_fs_base__get_path_kind (&kind, args->path, trail));
 
   return svn_fs_base__get_locks_helper (args->locks_p, args->path,
                                         kind, trail);

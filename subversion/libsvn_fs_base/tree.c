@@ -4299,3 +4299,28 @@ make_txn_root (svn_fs_t *fs,
 
   return root;
 }
+
+
+svn_error_t *
+svn_fs_base__get_path_kind (svn_node_kind_t *kind,
+                            const char *path,
+                            trail_t *trail)
+{
+  svn_revnum_t head_rev;
+  svn_fs_root_t *root;
+  dag_node_t *root_dir, *path_node;
+
+  /* Get HEAD revision, */
+  SVN_ERR (svn_fs_bdb__youngest_rev (&head_rev, trail->fs, trail));
+
+  /* Then convert it into a root_t, */
+  SVN_ERR (svn_fs_base__dag_revision_root (&root_dir, trail->fs, head_rev,
+                                           trail));
+  root = make_revision_root (trail->fs, head_rev, root_dir, trail->pool);
+
+  /* And get the dag_node for path in the root_t. */
+  SVN_ERR (get_dag (&path_node, root, path, trail));
+
+  *kind = svn_fs_base__dag_node_kind (path_node);
+  return SVN_NO_ERROR;
+}
