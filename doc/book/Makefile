@@ -69,9 +69,9 @@ $(BOOK_VERSION_SOURCE): book-version
 
 book-version:
 	@if $(SVNVERSION) . > /dev/null; then \
-	echo '<!ENTITY svn.version "Draft Revision '`$(SVNVERSION) .`'">' > $(BOOK_VERSION_SOURCE).tmp; \
+	echo '<!ENTITY svn.version "Revision '`$(SVNVERSION) .`'">' > $(BOOK_VERSION_SOURCE).tmp; \
 	else \
-	echo '<!ENTITY svn.version "Draft">' > $(BOOK_VERSION_SOURCE).tmp; \
+	echo '<!ENTITY svn.version "">' > $(BOOK_VERSION_SOURCE).tmp; \
 	fi
 	@if cmp -s $(BOOK_VERSION_SOURCE) $(BOOK_VERSION_SOURCE).tmp; then \
 	rm $(BOOK_VERSION_SOURCE).tmp; \
