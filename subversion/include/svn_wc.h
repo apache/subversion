@@ -1586,8 +1586,8 @@ svn_boolean_t svn_wc_keywords_differ (const svn_wc_keywords_t *a,
                                       svn_boolean_t compare_values);
 
 
-/* Copy the contents of SRC to DST, overwriting DST if it exists,
-   possibly performing line ending and keyword translations.
+/* Copy the contents of SRC to DST atomically, overwriting DST if it
+   exists, possibly performing line ending and keyword translations.
 
    If EOL_STR is non-NULL, replace whatever bytestring SRC uses to
    denote line endings with EOL_STR in the output.  If SRC has an
