@@ -159,13 +159,13 @@ sub status_update_commit
     while ( <COMMIT_ERR_READ> )
       {
 	print STDERR;
-	$acceptable_error = 1 if ( /^svn_error[^<]*<
+	$acceptable_error = 1 if ( /^svn:[ ]
 				   (
 				    Transaction[ ]is[ ]out[ ]of[ ]date
 				    |
 				    Merge[ ]conflict[ ]during[ ]commit
 				   )
-				   >/x );
+				   $/x );
       }
     close COMMIT_ERR_READ or die "close COMMIT_ERR_READ: $!\n";
 
