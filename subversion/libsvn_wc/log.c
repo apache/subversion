@@ -1274,6 +1274,9 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
   char buf[BUFSIZ];
   apr_size_t buf_len;
   apr_file_t *f = NULL;
+  const char *logfile_path;
+  int log_number;
+  apr_pool_t *iterpool = svn_pool_create (pool);
 
   /* kff todo: use the tag-making functions here, now. */
   const char *log_start
@@ -1293,27 +1296,45 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
      a ghost open tag. */
   SVN_ERR (svn_xml_parse (parser, log_start, strlen (log_start), 0));
 
-  /* Parse the log file's contents. */
-  SVN_ERR_W (svn_wc__open_adm_file (&f, svn_wc_adm_access_path (adm_access),
-                                    SVN_WC__ADM_LOG, APR_READ, pool),
-             _("Couldn't open log"));
-  
-  do {
-    buf_len = sizeof (buf);
-
-    err = svn_io_file_read (f, buf, &buf_len, pool);
-    if (err && !APR_STATUS_IS_EOF(err->apr_err))
-      return svn_error_createf
-        (err->apr_err, err,
-         _("Error reading administrative log file in '%s'"),
-         svn_wc_adm_access_path (adm_access));
-
-    SVN_ERR (svn_xml_parse (parser, buf, buf_len, 0));
-
-  } while (! err);
-
-  svn_error_clear (err);
-  SVN_ERR (svn_io_file_close (f, pool));
+  for (log_number = 0; ; log_number++)
+    {
+      svn_pool_clear (iterpool);
+      logfile_path = apr_psprintf (iterpool, SVN_WC__ADM_LOG "%s",
+                                   (log_number == 0) ? ""
+                                   : apr_psprintf (pool, ".%d", log_number));
+      /* Parse the log file's contents. */
+      err = svn_wc__open_adm_file (&f, svn_wc_adm_access_path (adm_access),
+                                   logfile_path, APR_READ, iterpool);
+      if (err)
+        {
+          if (APR_STATUS_IS_ENOENT (err->apr_err))
+            {
+              svn_error_clear (err);
+              break;
+            }
+          else
+            {
+              SVN_ERR_W (err, _("Couldn't open log"));
+            }
+        }
+      
+      do {
+        buf_len = sizeof (buf);
+        
+        err = svn_io_file_read (f, buf, &buf_len, iterpool);
+        if (err && !APR_STATUS_IS_EOF(err->apr_err))
+          return svn_error_createf
+            (err->apr_err, err,
+             _("Error reading administrative log file in '%s'"),
+             svn_wc_adm_access_path (adm_access));
+        
+        SVN_ERR (svn_xml_parse (parser, buf, buf_len, 0));
+        
+      } while (! err);
+      
+      svn_error_clear (err);
+      SVN_ERR (svn_io_file_close (f, iterpool));
+    }
 
 
   /* Pacify Expat with a pointless closing element tag. */
@@ -1336,9 +1357,18 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
     }
   else
     {
-      /* No 'killme'?  Remove the logfile;  its commands have been executed. */
-      SVN_ERR (svn_wc__remove_adm_file (svn_wc_adm_access_path (adm_access),
-                                        pool, SVN_WC__ADM_LOG, NULL));
+      for (log_number--; log_number >= 0; log_number--)
+        {
+          svn_pool_clear (iterpool);
+          logfile_path = apr_psprintf (iterpool, SVN_WC__ADM_LOG "%s",
+                                       (log_number == 0) ? ""
+                                       : apr_psprintf (pool, ".%d",
+                                                       log_number));
+          
+          /* No 'killme'?  Remove the logfile;  its commands have been executed. */
+          SVN_ERR (svn_wc__remove_adm_file (svn_wc_adm_access_path (adm_access),
+                                            iterpool, logfile_path, NULL));
+        }
     }
 
   return SVN_NO_ERROR;
