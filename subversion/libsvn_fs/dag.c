@@ -771,6 +771,46 @@ svn_error_t *svn_fs__dag_make_dir (dag_node_t **child_p,
 }
 
 
+svn_error_t *
+svn_fs__dag_set_contents (dag_node_t *file,
+                          svn_string_t *contents,
+                          trail_t *trail)
+{
+  /* This whole routine will have to be reincarnated as a "streamy"
+     interface someday. */
+  skel_t *content_skel;
+
+  /* Make sure our node is a file. */
+  if (! svn_fs__dag_is_file (file))
+    return 
+      svn_error_createf 
+      (SVN_ERR_FS_NOT_FILE, 0, NULL, trail->pool,
+       "Attempted to set textual contents of a *non*-file node.");
+  
+  /* Stash the file's new contents in the db. */
+
+  /* ben todo: once dag_node_t no longer has a `contents' field, call
+     into node-rev.c to get the "fresh" content skel for our trail. */
+  content_skel = file->contents;
+  
+  /* NOTE: When we create a new "text" skel from the svn_string_t,
+     allocate it in the *node's* pool.  As long as node->contents is
+     allocated in node->pool, all of its subcomponents should be
+     too.  */
+  /* ben todo: once dag_node_t no longer has a `contents' field,
+     reverse what I said above and do the allocation in trail->pool.
+     (No need to fill node->pool with junk.) */
+  content_skel->children->next = svn_fs__str_atom (contents->data,
+                                                   file->pool);
+
+  SVN_ERR (svn_fs__put_node_revision (file->fs, file->id,
+                                      content_skel, trail));
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* THE LAND OF CMPILATO */
 /* cmpilato todo:  all this stuff down here. */
 
