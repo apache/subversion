@@ -214,7 +214,9 @@
                     (void **)&$1, $1_descriptor, SWIG_POINTER_EXCEPTION | 0);
     _global_pool = $1;
 }
-%typemap(perl5, in) apr_pool_t *pool "";
+%typemap(perl5, in) apr_pool_t * {
+    $1 = svn_swig_pl_make_pool ($input);
+};
 %typemap(perl5, default) apr_pool_t *pool(apr_pool_t *_global_pool) {
     _global_pool = $1 = svn_swig_pl_make_pool (ST(items-1));
 }
