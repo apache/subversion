@@ -1,44 +1,77 @@
 								-*-text-*-
 
+STATUS OF THE SWIG BINDINGS
+
+* Python
+
+  The Python bindings are fairly well developed, although there are some
+  missing parts, most notably, there is no useful wrapping of the svn_ra APIs.
+
+* Perl
+
+  The Perl bindings are complete, with the exception of SVN::Wc, on which
+  very little work has been done.
+
+* Java
+
+  The SWIG-Java bindings are very incomplete, and are almost an abandoned 
+  project.  See subversion/bindings/java for a more mature alternative, which
+  is built using JavaHL, not SWIG.
+
+
 BUILDING SWIG BINDINGS FOR SVN ON UNIX
 
 
-Step 1:  Build & install the proper version of SWIG (which is
-         currently swig versions 1.3.19 - 1.3.21) .
+Step 1:  Install a suitable version of SWIG (which is
+         currently swig versions 1.3.19 - 1.3.21, or 1.3.24 or above).
 
-    * Go to http://www.swig.org/, download the sourceball, unpack.
+    * Perhaps your distribution packages a suitable version - if it does
+      install it, and skip to the last bullet point in this section.
 
-    * In the SWIG-X.X.X directory, run ./configure.
+    * Go to http://www.swig.org/, download the source tarball, and unpack.
 
-       If you plan to build the python bindings, and have a system
-       with more than one version of python installed, you may need
-       to pass
+    * In the SWIG-1.3.xx directory, run ./configure.
+
+        If you plan to build the python bindings, and have a system
+        with more than one version of python installed, you may need
+        to pass
 
              --with-python=/path/to/correct/python/binary
 
-       to the configure script.  You certainly don't want to use any
-       version of python older than 2.0.
+        to the configure script.  You need Python 2.0 or above.
 
-       If you plan to build the perl bindings, and have a system
-       with more than one version of perl installed, you may need
-       to pass
+        If you plan to build the perl bindings, and have a system
+        with more than one version of perl installed, you may need
+        to pass
 
              --with-perl5=/path/to/correct/perl/binary
 
-       to the configure script.  You need Perl 5.8.0 or above.
+        to the configure script.  You need Perl 5.8.0 or above.
 
-    * run 'make && make runtime && make install && make install-runtime'
+    * Build and install.
 
-    * To verify you have the goodz installed, check that these things
-      were created, assuming your $PREFIX was /usr/local/lib:
+        For SWIG 1.3.24 or above:
+          Run 'make && make install'
 
-           - /usr/local/lib/swig1.3/*.i
-           - /usr/local/lib/libswig*.so
-           - /usr/local/bin/swig
+        For SWIG 1.3.19 - 1.3.21:
+          Run 'make && make runtime && make install && make install-runtime'
 
-      In particular, you want to make sure that libswigpy.so (if you want to
-      use Python) and/or libswigpl.so (if you want to use Perl) was/were
-      built and installed.
+    * To verify you have SWIG installed correctly, check that these things
+      were created, assuming your $PREFIX was /usr/local:
+
+        For SWIG 1.3.24 or above:
+          - /usr/local/bin/swig
+          - /usr/local/share/swig/1.3.xx/ (containing lots of .i files)
+
+        For SWIG 1.3.19 - 1.3.21:
+          - /usr/local/bin/swig
+          - /usr/local/lib/swig1.3/ (containing lots of .i files)
+          - /usr/local/lib/libswigpy.so (for Python)
+          - /usr/local/lib/libswigpl.so (for Perl)
+
+          In particular, you want to make sure that
+          libswigpy.so (if you want to use Python) and/or
+          libswigpl.so (if you want to use Perl) was/were built and installed.
 
 
 Step 2:  Build and Install Subversion.
@@ -55,18 +88,21 @@ Step 2:  Build and Install Subversion.
        ./configure PYTHON2=/usr/bin/python2.2 PERL=/usr/bin/perl5.8.0
 
   If Subversion's ./configure finds a SWIG that it's happy with, then
-  it will build a special glue library to link svn to the swig-python
-  bindings:  libsvn_swig_py.so (as well as any other languages).
+  it will build special glue libraries to link svn to the swig bindings:
+    libsvn_swig_py.so (for Python)
+    libsvn_swig_perl.so (for Perl)
 
 
 Step 3:  Install Specific Language Bindings
 
 *  Python
 
-   1.  Run 'make swig-py' from the top of the
-       Subversion source tree.  This will invoke SWIG on the *.i
-       files, resulting in a collection of .c source files.  It will
-       then compile and link those .c files into Python libraries.
+   1.  Run 'make swig-py' from the top of the Subversion source tree,
+       to build the bindings.
+
+       (This will invoke SWIG on the *.i files, resulting in a collection
+       of .c source files.  It will then compile and link those .c files into
+       Python libraries.)
 
    2.  Run 'make install-swig-py' (as root, typically)
        from the top of the Subversion source tree.  This will copy
@@ -84,9 +120,12 @@ Step 3:  Install Specific Language Bindings
 
    3.  Make sure that whatever directory the bindings got installed in
        is in your PYTHONPATH.  That directory depends on how you
-       installed; a typical location is /usr/local/lib/svn-python/,
-       see http://subversion.tigris.org/issues/show_bug.cgi?id=1125
-       for some imminent improvements to the install process.
+       installed; a typical location is /usr/local/lib/svn-python/.
+
+       An nice way to do this is:
+       $ echo /usr/local/lib/svn-python \
+           > /usr/lib/python2.x/site-packages/subversion.pth
+
 
 *  Perl
 
@@ -297,5 +336,3 @@ TESTING AND USING SWIG BINDINGS
    The perl bindings are using the standard module testing facilities
    to do regression tests. Simply run make check-swig-pl as described in the
    install section.
-
-*  Java

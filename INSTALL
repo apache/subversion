@@ -33,7 +33,7 @@ Contents:
      A. Windows XP
      B. Mac OS X
 
-     V. SWIG LANGUAGE BINDINGS
+     V. SWIG SCRIPTING LANGUAGE BINDINGS (PYTHON, PERL)
 
 
 
@@ -1223,7 +1223,7 @@ IV.   PLATFORM-SPECIFIC ISSUES
 
 
 
-V.    SWIG LANGUAGE BINDINGS
-      ======================
+V.    SWIG SCRIPTING LANGUAGE BINDINGS (PYTHON, PERL)
+      ===============================================
       
-      (See the file ./subversion/bindings/swig/INSTALL.)
+      See the file ./subversion/bindings/swig/INSTALL.
