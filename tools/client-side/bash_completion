@@ -19,19 +19,11 @@ _svn()
 	      remove rm diff di export import info ? h help list ls log merge \
 	      mkdir move mv rename ren propdel pdel propedit pedit pe propget \
 	      pget pg proplist plist pl propset pset ps revert resolve status \
-	      stat st switch sw update up'
+	      stat st switch sw update up --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
-		COMPREPLY=( $( compgen -W \
-		               "$cmds -h --help --version -\?" -- $cur ) )
+		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
 		return 0
-	else
-		# for 'svn help' complete on the valid commands
-		helpCmds='help|--help|h|-h|\?|-\?'
-		if [[ ${COMP_WORDS[1]} == @($helpCmds) ]] ; then
-			COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
-			return 0
-		fi
 	fi
 
 	# options that require a parameter
@@ -42,7 +34,9 @@ _svn()
 
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
-	if [[ "$cur" != -* ]] || \
+	helpCmds='help|--help|h|\?'
+	if [[ ${COMP_WORDS[1]} != @($helpCmds) ]] && \
+	   [[ "$cur" != -* ]] || \
 	   [[ ${COMP_WORDS[COMP_CWORD-1]} == @($optsParam) ]] ; then
 		return 0
 	fi
@@ -86,6 +80,9 @@ _svn()
 		;;
 	export)
 		cmdOpts="$rOpts $qOpts $pOpts --force"
+		;;
+	help|h|\?)
+		cmdOpts="$cmds $qOpts"
 		;;
 	import)
 		cmdOpts="$mOpts $qOpts $nOpts --editor-cmd $pOpts"
@@ -148,13 +145,15 @@ _svn()
 		;;
 	esac
 
+	cmdOpts="$cmdOpts --help -h"
+
 	# take out options already given
 	for (( i=2; i<=$COMP_CWORD-1; ++i )) ; do
 		opt=${COMP_WORDS[$i]}
 
 		case $opt in
 		--*)    optBase=${opt/=*/} ;;
-		-*)     optBase=${opt} ;;
+		-*)     optBase=${opt:0:2} ;;
 		esac
 
 		cmdOpts=" $cmdOpts "
@@ -172,11 +171,10 @@ _svn()
 		--extensions)    cmdOpts=${cmdOpts/ -x / } ;;
 		-q)              cmdOpts=${cmdOpts/ --quiet / } ;;
 		--quiet)         cmdOpts=${cmdOpts/ -q / } ;;
-
-		-r|--revision)
-			cmdOpts=${cmdOpts/ --revision / }
-			cmdOpts=${cmdOpts/ -r / }
-			;;
+		-h)              cmdOpts=${cmdOpts/ --help / } ;;
+		--help)          cmdOpts=${cmdOpts/ -h / } ;;
+		-r)              cmdOpts=${cmdOpts/ --revision / } ;;
+		--revision)      cmdOpts=${cmdOpts/ -r / } ;;
 
 		-m|--message|-F|--file)
 			cmdOpts=${cmdOpts/ --message / }
