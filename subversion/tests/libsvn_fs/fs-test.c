@@ -87,16 +87,16 @@ create_fs_and_repos (svn_fs_t **fs_p, const char *name)
 
 
 /* Read all data from a generic read STREAM, and return it in STRING.
-   Allocate the svn_string_t in POOL.  (All data in STRING will be
-   dup'ed from STREAM using POOL too.) */
+   Allocate the svn_string_t in APRPOOL.  (All data in STRING will be
+   dup'ed from STREAM using APRPOOL too.) */
 static svn_error_t *
 stream_to_string (svn_string_t **string,
                   svn_stream_t *stream,
-                  apr_pool_t *pool)
+                  apr_pool_t *aprpool)
 {
   char buf[50];
   apr_size_t len;
-  svn_string_t *str = svn_string_create ("", pool);
+  svn_string_t *str = svn_string_create ("", aprpool);
 
   do 
     {
@@ -118,16 +118,16 @@ static svn_error_t *
 set_file_contents (svn_fs_root_t *root,
                    const char *path,
                    const char *contents,
-                   apr_pool_t *pool)
+                   apr_pool_t *aprpool)
 {
   svn_txdelta_window_handler_t *consumer_func;
   void *consumer_baton;
-  svn_string_t *wstring = svn_string_create (contents, pool);
+  svn_string_t *wstring = svn_string_create (contents, aprpool);
 
   SVN_ERR (svn_fs_apply_textdelta (&consumer_func, &consumer_baton,
-                                   root, path, pool));
+                                   root, path, aprpool));
   SVN_ERR (svn_txdelta_send_string (wstring, consumer_func,
-                                    consumer_baton, pool));
+                                    consumer_baton, aprpool));
 
   return SVN_NO_ERROR;
 }
@@ -592,6 +592,132 @@ list_directory (const char **msg)
 }
 
 
+static svn_error_t *
+revision_props (const char **msg)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  apr_hash_t *proplist;
+  svn_string_t *value;
+  int i;
+
+  const char *initial_props[4][2] = { 
+    { "color", "red" },
+    { "size", "XXL" },
+    { "favorite saturday morning cartoon", "looney tunes" },
+    { "auto", "Green 1997 Saturn SL1" }
+    };
+
+  const char *final_props[4][2] = { 
+    { "color", "violet" },
+    { "flower", "violet" },
+    { "favorite saturday morning cartoon", "looney tunes" },
+    { "auto", "Red 2000 Chevrolet Blazer" }
+    };
+
+
+  *msg = "set and get some revision properties";
+
+  /* Open the fs and transaction */
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-rev-props"));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+
+  /* Set some properties on the revision. */
+  for (i = 0; i < 4; i++)
+    {
+      SVN_ERR (svn_fs_change_rev_prop 
+               (fs, 0, 
+                svn_string_create (initial_props[i][0], pool),
+                svn_string_create (initial_props[i][1], pool), 
+                pool));
+    }
+
+  /* Change some of the above properties. */
+  SVN_ERR (svn_fs_change_rev_prop 
+           (fs, 0, 
+            svn_string_create ("color", pool),
+            svn_string_create ("violet", pool), 
+            pool));
+  SVN_ERR (svn_fs_change_rev_prop 
+           (fs, 0, 
+            svn_string_create ("auto", pool),
+            svn_string_create ("Red 2000 Chevrolet Blazer", pool), 
+            pool));
+
+  /* Remove a property altogether */
+  SVN_ERR (svn_fs_change_rev_prop 
+           (fs, 0, 
+            svn_string_create ("size", pool),
+            NULL,
+            pool));
+
+  /* Copy a property's value into a new property. */
+  SVN_ERR (svn_fs_revision_prop 
+           (&value, 
+            fs, 0, 
+            svn_string_create ("color", pool),
+            pool));
+  SVN_ERR (svn_fs_change_rev_prop 
+           (fs, 0, 
+            svn_string_create ("flower", pool),
+            value,
+            pool));
+
+  /* Obtain a list of all current properties, and make sure it matches
+     the expected values. */
+  SVN_ERR (svn_fs_revision_proplist (&proplist, fs, 0, pool));
+  {
+    apr_hash_index_t *hi;
+    int num_props = 0;
+    svn_string_t *prop_name, *prop_value;
+
+    for (hi = apr_hash_first (proplist); hi; hi = apr_hash_next (hi))
+      {
+        const void *key;
+        apr_size_t klen;
+        void *val;
+
+        /* If there are more properties than expected, this is a Bad
+           Thing */
+        if (++num_props > 4)
+          return svn_error_createf
+            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+             "more revision properties were found than were expected");
+
+        /* Get next property */
+        apr_hash_this (hi, &key, &klen, &val);
+        prop_name = svn_string_ncreate (key, klen, pool);
+        prop_value = (svn_string_t *) val;
+
+        /* Loop through our expected final properties list, hoping to
+           find the right name with the right value.  If the name is
+           missing, or the value is wrong, the whole test fails. */
+        for (i = 0; i < 4; i++)
+          {
+            if (! strcmp (prop_name->data, final_props[i][0]))
+              break;
+          }
+        if (i >= 4)
+          return svn_error_createf
+            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+             "unable to find expected revision property");
+          
+        if (strcmp (prop_value->data, final_props[i][1]))
+          return svn_error_createf
+            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+             "revision property had an unexpected value");
+      } 
+  }
+  
+  /* Close the transaction and fs. */
+  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_close_fs (fs));
+
+  return SVN_NO_ERROR;
+}
+
+
+
 
 /* The test table.  */
 
@@ -608,6 +734,7 @@ svn_error_t * (*test_funcs[]) (const char **msg) = {
   create_mini_tree_transaction,
   create_greek_tree_transaction,
   list_directory,
+  revision_props,
   verify_txn_list,
   0
 };
