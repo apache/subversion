@@ -45,7 +45,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-09-29 20:54+0200\n"
-"PO-Revision-Date: 2004-09-30 16:50+0200\n"
+"PO-Revision-Date: 2004-09-29 21:02+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -56,7 +56,7 @@ msgstr ""
 #: clients/cmdline/blame-cmd.c:162
 #, c-format
 msgid "Skipping binary file: '%s'\n"
-msgstr "Hoppar över binär fil: \"%d\"\n"
+msgstr "Hoppar över binär fil: \"%s\"\n"
 
 #: clients/cmdline/checkout-cmd.c:126
 #, c-format
