@@ -486,7 +486,22 @@ svn_fs__dag_set_proplist (dag_node_t *node,
                           const char *txn_id,
                           apr_pool_t *pool)
 {
-  abort ();
+  svn_fs__node_revision_t *noderev;
+
+  /* Sanity check: this node better be mutable! */
+  if (! svn_fs__dag_check_mutable (node, txn_id))
+    {
+      svn_string_t *idstr = svn_fs_unparse_id (node->id, node->pool);
+            return svn_error_createf
+              (SVN_ERR_FS_NOT_MUTABLE, NULL,
+               "Can't set proplist on *immutable* node-revision %s", idstr->data);
+    }
+
+  /* Go get a fresh NODE-REVISION for this node. */
+  SVN_ERR (get_node_revision (&noderev, node, pool));
+
+  /* Set the new proplist. */
+  SVN_ERR (svn_fs__fs_set_proplist (node->fs, noderev, proplist, pool));
 
   return SVN_NO_ERROR;
 }

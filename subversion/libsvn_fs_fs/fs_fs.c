@@ -2063,7 +2063,13 @@ svn_fs__fs_purge_txn (svn_fs_t *fs,
                       const char *txn_id,
                       apr_pool_t *pool)
 {
-  abort ();
+  const char *txn_dir;
+
+  txn_dir = svn_path_join_many (pool, fs->fs_path, SVN_FS_FS__TXNS_DIR,
+                                apr_pstrcat (pool, txn_id,
+                                             SVN_FS_FS__TXNS_EXT, NULL), NULL);
+
+  SVN_ERR (svn_io_remove_dir (txn_dir, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2431,5 +2437,179 @@ svn_fs__fs_create_successor (const svn_fs_id_t **new_id_p,
 
   *new_id_p = id;
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__fs_set_proplist (svn_fs_t *fs,
+                         svn_fs__node_revision_t *noderev,
+                         apr_hash_t *proplist,
+                         apr_pool_t *pool)
+{
+  svn_stream_t *out_stream;
+  
+  SVN_ERR (set_representation (&out_stream, fs, noderev, FALSE, pool));
+  SVN_ERR (hash_write (proplist, out_stream, pool));
+  SVN_ERR (svn_stream_close (out_stream));
+  
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+get_next_revision_ids (const char **node_id,
+                       const char **copy_id,
+                       svn_fs_t *fs,
+                       apr_pool_t *pool)
+{
+  apr_file_t *revision_file;
+  char buf[80];
+  apr_size_t len;
+  char *str, *last_str;
+
+  SVN_ERR (svn_io_file_open (&revision_file,
+                             svn_path_join (fs->fs_path, SVN_FS_FS__CURRENT,
+                                            pool),
+                             APR_READ, APR_OS_DEFAULT, pool));
+
+  len = sizeof (buf);
+  SVN_ERR (svn_io_file_read (revision_file, buf, &len, pool));
+  buf[len] = '\0';
+
+  str = apr_strtok (buf, " ", &last_str);
+  if (! str)
+    return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                             "Corrupt current file.");
+
+  str = apr_strtok (NULL, " ", &last_str);
+  if (! str)
+    return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                             "Corrupt current file.");
+
+  *node_id = apr_pstrdup (pool, str);
+
+  str = apr_strtok (NULL, " ", &last_str);
+  if (! str)
+    return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                             "Corrupt current file.");
+
+  *copy_id = apr_pstrdup (pool, str);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+write_final_rev (apr_off_t *offset,
+                 apr_file_t *file,
+                 svn_fs_t *fs,
+                 const svn_fs_id_t *id,
+                 const char *start_node_id,
+                 const char *start_copy_id,
+                 apr_pool_t *pool)
+{
+  abort ();
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+write_final_changed_path_info (apr_off_t *offset,
+                               apr_file_t *file,
+                               svn_fs_t *fs,
+                               const char *txn_id,
+                               apr_pool_t *pool)
+{
+  abort ();
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+write_final_current (svn_fs_t *fs,
+                     const char *txn_id)
+{
+  abort ();
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__fs_commit (svn_revnum_t *new_rev_p,
+                   svn_fs_t *fs,
+                   svn_fs_txn_t *txn,
+                   apr_pool_t *pool)
+{
+  const char *rev_filename, *proto_filename, *lock_filename;
+  const svn_fs_id_t *root_id;
+  const char *start_node_id, *start_copy_id;
+  svn_revnum_t new_rev;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_file_t *rev_file;
+  apr_off_t root_offset, changed_path_offset;
+  char *buf;
+
+  /* First grab a write lock. */
+  lock_filename = svn_path_join (fs->fs_path, SVN_FS_FS__LOCK_FILE, pool);
+  SVN_ERR (svn_io_file_create (lock_filename, "", pool));
+  SVN_ERR (svn_io_file_lock (lock_filename, TRUE, subpool));
+
+  /* Get the current youngest revision. */
+  SVN_ERR (svn_fs__fs_youngest_revision (&new_rev, fs, subpool));
+
+  /* Get the next node_id and copy_id to use. */
+  SVN_ERR (get_next_revision_ids (&start_node_id, &start_copy_id, fs,
+                                  subpool));
+
+  /* We are going to be one better than this puny old revision. */
+  new_rev++;
+
+  /* Copy the proto revision file into place. */
+  rev_filename = svn_path_join_many (subpool, fs->fs_path, SVN_FS_FS__REVS_DIR,
+                                     apr_psprintf (subpool, "%" SVN_REVNUM_T_FMT,
+                                                   new_rev),
+                                     NULL);
+
+  proto_filename = svn_path_join_many (subpool, fs->fs_path,
+                                       SVN_FS_FS__TXNS_DIR,
+                                       apr_pstrcat (subpool, txn->id,
+                                                    SVN_FS_FS__TXNS_EXT, NULL),
+                                       SVN_FS_FS__REV, NULL);
+
+  SVN_ERR (svn_io_copy_file (proto_filename, rev_filename, TRUE, subpool));
+
+  /* Get a write handle on the proto revision file. */
+  SVN_ERR (svn_io_file_open (&rev_file, rev_filename,
+                             APR_WRITE | APR_APPEND, APR_OS_DEFAULT, subpool));
+
+  /* Write out all the node-revisions and directory contents. */
+  root_id = svn_fs__create_id ("0", "0",
+                               apr_pstrcat (subpool, "t", txn->id, NULL),
+                               subpool);
+  SVN_ERR (write_final_rev (&root_offset, rev_file, fs, root_id,
+                            start_node_id, start_copy_id, subpool));
+
+  /* Write the changed-path information. */
+  SVN_ERR (write_final_changed_path_info (&changed_path_offset, rev_file, fs,
+                                          txn->id, subpool));
+
+  /* Write the final line. */
+  buf = apr_psprintf(subpool, "\n%" APR_OFF_T_FMT " %" APR_OFF_T_FMT "\n",
+                     root_offset, changed_path_offset);
+  SVN_ERR (svn_io_file_write_full (rev_file, buf, strlen (buf), NULL,
+                                   subpool));
+  
+  SVN_ERR (svn_io_file_close (rev_file, subpool));
+
+  /* Update the 'current' file. */
+  SVN_ERR (write_final_current (fs, txn->id));
+
+  /* Remove this transaction directory. */
+
+  /* Destroy our subpool and release the lock. */
+  svn_pool_destroy (subpool);
+
+  SVN_ERR (svn_io_remove_file (lock_filename, pool));
+
+  *new_rev_p = new_rev;
+  
   return SVN_NO_ERROR;
 }
