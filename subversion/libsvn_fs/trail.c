@@ -24,6 +24,13 @@
    applying the functions should undo actions in the reverse of the
    order they were performed.  */
 struct undo {
+
+  /* A bitmask indicating when this action should be run.  */
+  enum {
+    undo_on_failure = 1,
+    undo_on_success = 2,
+  } when;
+
   void (*func) (void *baton);
   void *baton;
   struct undo *prev;
@@ -35,7 +42,7 @@ begin_trail (trail_t **trail_p,
              svn_fs_t *fs,
              apr_pool_t *pool)
 {
-  trail_t *trail = apr_palloc (pool, sizeof (*trail));
+  trail_t *trail = apr_pcalloc (pool, sizeof (*trail));
 
   trail->pool = pool;
   trail->undo = 0;
@@ -53,9 +60,11 @@ abort_trail (trail_t *trail,
 {
   struct undo *undo;
 
-  /* Revert any in-memory changes we made as part of this transaction.  */
+  /* Undo those changes which should only persist when the transaction
+     succeeds.  */
   for (undo = trail->undo; undo; undo = undo->prev)
-    undo->func (undo->baton);
+    if (undo->when & undo_on_failure)
+      undo->func (undo->baton);
 
   SVN_ERR (DB_WRAP (fs, "aborting Berkeley DB transaction",
                     txn_abort (trail->db_txn)));
@@ -65,6 +74,30 @@ abort_trail (trail_t *trail,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+commit_trail (trail_t *trail,
+              svn_fs_t *fs)
+{
+  struct undo *undo;
+
+  /* Undo those changes which should persist only while the
+     transaction is active.  */
+  for (undo = trail->undo; undo; undo = undo->prev)
+    if (undo->when & undo_on_success)
+      undo->func (undo->baton);
+
+  /* According to the example in the Berkeley DB manual, txn_commit
+     doesn't return DB_LOCK_DEADLOCK --- all deadlocks are reported
+     earlier.  */
+  SVN_ERR (DB_WRAP (fs, "committing Berkeley DB transaction",
+                    txn_commit (trail->db_txn, 0)));
+
+  /* We don't destroy the pool; we assume it contains stuff which will
+     be useful beyond the transaction.  */
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_fs__retry_txn (svn_fs_t *fs,
@@ -84,13 +117,9 @@ svn_fs__retry_txn (svn_fs_t *fs,
 
       if (! svn_err)
         {
-          /* The transaction succeeded!  Commit it.
-             According to the example in the Berkeley DB manual,
-             txn_commit doesn't return DB_LOCK_DEADLOCK --- all
-             deadlocks are reported earlier.  */
-          SVN_ERR (DB_WRAP (fs,
-                            "committing Berkeley DB transaction",
-                            txn_commit (trail->db_txn, 0)));
+          /* The transaction succeeded!  Commit it.  */
+          SVN_ERR (commit_trail (trail, fs));
+
           return SVN_NO_ERROR;
         }
 
@@ -109,17 +138,37 @@ svn_fs__retry_txn (svn_fs_t *fs,
 }
 
 
+static void
+record_undo (trail_t *trail,
+             void (*func) (void *baton),
+             void *baton,
+             int when)
+{
+  struct undo *undo = apr_pcalloc (trail->pool, sizeof (*undo));
+
+  undo->when = when;
+  undo->func = func;
+  undo->baton = baton;
+  undo->prev = trail->undo;
+  trail->undo = undo;
+}
+             
+
 void
 svn_fs__record_undo (trail_t *trail,
                      void (*func) (void *baton),
                      void *baton)
 {
-  struct undo *undo = apr_palloc (trail->pool, sizeof (*undo));
+  record_undo (trail, func, baton, undo_on_failure);
+}
 
-  undo->func = func;
-  undo->baton = baton;
-  undo->prev = trail->undo;
-  trail->undo = undo;
+
+void
+svn_fs__record_completion (trail_t *trail,
+                           void (*func) (void *baton),
+                           void *baton)
+{
+  record_undo (trail, func, baton, undo_on_success | undo_on_failure);
 }
 
 
