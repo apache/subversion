@@ -643,6 +643,7 @@ svn_fs_dir_entries (apr_hash_t **entries_p, svn_fs_root_t *root,
 svn_error_t *
 svn_fs_make_dir (svn_fs_root_t *root, const char *path, apr_pool_t *pool)
 {
+  SVN_ERR (svn_path_check_valid (path, pool));
   return root->vtable->make_dir (root, path, pool);
 }
 
@@ -656,6 +657,7 @@ svn_error_t *
 svn_fs_copy (svn_fs_root_t *from_root, const char *from_path,
              svn_fs_root_t *to_root, const char *to_path, apr_pool_t *pool)
 {
+  SVN_ERR (svn_path_check_valid (to_path, pool));
   return to_root->vtable->copy (from_root, from_path, to_root, to_path, pool);
 }
 
@@ -690,6 +692,7 @@ svn_fs_file_contents (svn_stream_t **contents, svn_fs_root_t *root,
 svn_error_t *
 svn_fs_make_file (svn_fs_root_t *root, const char *path, apr_pool_t *pool)
 {
+  SVN_ERR (svn_path_check_valid (path, pool));
   return root->vtable->make_file (root, path, pool);
 }
 

@@ -246,6 +246,8 @@ path_driver_cb_func (void **dir_baton,
     }
   if (do_add)
     {
+      SVN_ERR (svn_path_check_valid (path, pool));
+
       if (cb_baton->src_kind == svn_node_file)
         {
           void *file_baton;
