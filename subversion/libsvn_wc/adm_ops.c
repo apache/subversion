@@ -1479,16 +1479,19 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
          a working copy.  If it's not, that's fine, we just move on. */
       {
         const char *parent_dir, *base_name;
-        svn_boolean_t parent_is_wc;
+        svn_boolean_t is_root;
 
-        svn_path_split_nts (full_path, &parent_dir, &base_name, pool);
-        if (svn_path_is_empty_nts (parent_dir))
-          parent_dir = ".";
+        SVN_ERR (svn_wc_is_wc_root (&is_root, full_path, pool));
 
-        SVN_ERR (svn_wc_check_wc (parent_dir, &parent_is_wc, pool));
-
-        if (parent_is_wc)
+        /* If full_path is not the top of a wc, then its parent
+           directory is also a working copy and has an entry for
+           full_path.  We need to remove that entry: */
+        if (! is_root)
           {
+            svn_path_split_nts (full_path, &parent_dir, &base_name, pool);
+            if (svn_path_is_empty_nts (parent_dir))
+              parent_dir = ".";
+            
             SVN_ERR (svn_wc_entries_read (&entries, parent_dir, FALSE, pool));
             svn_wc__entry_remove (entries, base_name);
             SVN_ERR (svn_wc__entries_write (entries, parent_dir, pool));
