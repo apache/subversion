@@ -605,7 +605,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
 {
   enum svn_node_kind kind;
   apr_hash_t *entries = apr_hash_make (pool);
-  svn_boolean_t is_wc;
+  int is_wc;
 
   *entry = NULL;
 

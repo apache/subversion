@@ -44,7 +44,7 @@ static VALUE
 check_wc (VALUE self, VALUE aPath)
 {
   svn_stringbuf_t *path;
-  svn_boolean_t is_wc;
+  int is_wc;
   apr_pool_t *pool;
   svn_error_t *err;
 

@@ -331,7 +331,7 @@ prop_path_internal (const char **prop_path,
 {
   svn_error_t *err;
   enum svn_node_kind kind;
-  svn_boolean_t is_wc;
+  int wc_format_version;
   const char *entry_name;
 
   err = svn_io_check_path (path, &kind, pool);
@@ -341,16 +341,16 @@ prop_path_internal (const char **prop_path,
   /* kff todo: some factorization can be done on most callers of
      svn_wc_check_wc()? */
 
-  is_wc = FALSE;
+  wc_format_version = FALSE;
   entry_name = NULL;
   if (kind == svn_node_dir)
     {
-      err = svn_wc_check_wc (path, &is_wc, pool);
+      err = svn_wc_check_wc (path, &wc_format_version, pool);
       if (err)
         return err;
     }
   
-  if (is_wc)  /* It's not only a dir, it's a working copy dir */
+  if (wc_format_version)  /* It's not only a dir, it's a working copy dir */
     {
       *prop_path = extend_with_adm_name
         (path,
@@ -366,23 +366,37 @@ prop_path_internal (const char **prop_path,
       if (svn_path_is_empty_nts (*prop_path))
         *prop_path = ".";
 
-      err = svn_wc_check_wc (*prop_path, &is_wc, pool);
+      err = svn_wc_check_wc (*prop_path, &wc_format_version, pool);
       if (err)
         return err;
-      else if (! is_wc)
+      else if (wc_format_version == 0)
         return svn_error_createf
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
-           "svn_wc__prop_path: %s is not a working copy directory",
+           "prop_path_internal: %s is not a working copy directory",
            *prop_path);
 
-      *prop_path = extend_with_adm_name
-        (*prop_path,
-         base ? SVN_WC__BASE_EXT : NULL,
-         tmp,
-         pool,
-         base ? SVN_WC__ADM_PROP_BASE : SVN_WC__ADM_PROPS,
-         entry_name,
-         NULL);
+      if (wc_format_version <= SVN_WC__OLD_PROPNAMES_VERSION)
+        {
+          *prop_path = extend_with_adm_name
+            (*prop_path,
+             base ? SVN_WC__BASE_EXT : NULL,
+             tmp,
+             pool,
+             base ? SVN_WC__ADM_PROP_BASE : SVN_WC__ADM_PROPS,
+             entry_name,
+             NULL);
+        }
+      else
+        {
+          *prop_path = extend_with_adm_name
+            (*prop_path,
+             base ? SVN_WC__BASE_EXT : SVN_WC__WORK_EXT,
+             tmp,
+             pool,
+             base ? SVN_WC__ADM_PROP_BASE : SVN_WC__ADM_PROPS,
+             entry_name,
+             NULL);
+        }
     }
 
   return SVN_NO_ERROR;
@@ -399,7 +413,7 @@ svn_wc__wcprop_path (const char **wcprop_path,
 {
   svn_error_t *err;
   enum svn_node_kind kind;
-  svn_boolean_t is_wc;
+  int is_wc;
   const char *entry_name;
 
   err = svn_io_check_path (path, &kind, pool);
@@ -479,13 +493,14 @@ svn_wc__prop_base_path (const char **prop_path,
 /*** Opening and closing files in the adm area. ***/
 
 /* Open a file somewhere in the adm area for directory PATH.
- * First, the adm subdir is appended as a path component, then each of
- * the varargs (they are char *'s) is appended as a path component,
- * and the resulting file opened.  
+ * First, add the adm subdir as the next component of PATH, then add
+ * each of the varargs (they are char *'s), then add EXTENSION if it
+ * is non-null, then open the resulting file as *HANDLE.
  *
- * If FLAGS indicates writing, then the file is opened in the adm tmp
- * area, whence it must be renamed, either by passing the sync flag to
- * close_adm_file() or with an explicit call to sync_adm_file().
+ * If FLAGS indicates writing, open the file in the adm tmp area.
+ * This means the file will probably need to be renamed from there,
+ * either by passing the sync flag to close_adm_file() later, or with
+ * an explicit call to sync_adm_file().
  */
 static svn_error_t *
 open_adm_file (apr_file_t **handle,
@@ -728,6 +743,8 @@ svn_wc__open_props (apr_file_t **handle,
 {
   const char *parent_dir, *base_name;
   enum svn_node_kind kind;
+  int wc_format_version;
+  svn_error_t *err;
 
   /* Check if path is a file or a dir. */
   SVN_ERR (svn_io_check_path (path, &kind, pool));
@@ -747,8 +764,16 @@ svn_wc__open_props (apr_file_t **handle,
     parent_dir = path;
   
   /* At this point, we know we need to open a file in the admin area
-     of parent_dir.  Examine the flags to know -which- kind of prop
-     file to get -- there are three types! */
+     of parent_dir.  First check that parent_dir is a working copy: */
+  err = svn_wc_check_wc (parent_dir, &wc_format_version, pool);
+  if (err)
+    return err;
+  else if (wc_format_version == 0)
+    return svn_error_createf
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
+       "svn_wc__open_props: %s is not a working copy directory", parent_dir);
+
+  /* Then examine the flags to know -which- kind of prop file to get. */
 
   if (base && wcprops)
     return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
@@ -770,9 +795,13 @@ svn_wc__open_props (apr_file_t **handle,
         return open_adm_file (handle, parent_dir, NULL, flags, pool,
                               SVN_WC__ADM_DIR_WCPROPS, NULL);
       else
-        return open_adm_file (handle, parent_dir, NULL, flags,
-                              pool, SVN_WC__ADM_WCPROPS, base_name,
-                              NULL);
+        {
+          return open_adm_file
+            (handle, parent_dir,
+             ((wc_format_version <= SVN_WC__OLD_PROPNAMES_VERSION) ?
+              NULL : SVN_WC__WORK_EXT),
+             flags, pool, SVN_WC__ADM_WCPROPS, base_name, NULL);
+        }
     }
   else /* plain old property file */
     {
@@ -780,9 +809,13 @@ svn_wc__open_props (apr_file_t **handle,
         return open_adm_file (handle, parent_dir, NULL, flags, pool,
                               SVN_WC__ADM_DIR_PROPS, NULL);
       else
-        return open_adm_file (handle, parent_dir, NULL, flags,
-                              pool, SVN_WC__ADM_PROPS, base_name,
-                              NULL);
+        {
+          return open_adm_file
+            (handle, parent_dir,
+             ((wc_format_version <= SVN_WC__OLD_PROPNAMES_VERSION) ?
+              NULL : SVN_WC__WORK_EXT),
+             flags, pool, SVN_WC__ADM_PROPS, base_name, NULL);
+        }
     }
 }
 
@@ -798,6 +831,8 @@ svn_wc__close_props (apr_file_t *fp,
 {
   const char *parent_dir, *base_name;
   enum svn_node_kind kind;
+  int wc_format_version;
+  svn_error_t *err;
 
   /* Check if path is a file or a dir. */
   SVN_ERR (svn_io_check_path (path, &kind, pool));
@@ -809,8 +844,16 @@ svn_wc__close_props (apr_file_t *fp,
     parent_dir = path;
   
   /* At this point, we know we need to open a file in the admin area
-     of parent_dir.  Examine the flags to know -which- kind of prop
-     file to get -- there are three types! */
+     of parent_dir.  First check that parent_dir is a working copy: */
+  err = svn_wc_check_wc (parent_dir, &wc_format_version, pool);
+  if (err)
+    return err;
+  else if (wc_format_version == 0)
+    return svn_error_createf
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
+       "svn_wc__close_props: %s is not a working copy directory", parent_dir);
+
+  /* Then examine the flags to know -which- kind of prop file to get. */
 
   if (base && wcprops)
     return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
@@ -831,8 +874,11 @@ svn_wc__close_props (apr_file_t *fp,
         return close_adm_file (fp, parent_dir, NULL, sync, pool,
                                SVN_WC__ADM_DIR_WCPROPS, NULL);
       else
-        return close_adm_file (fp, parent_dir, NULL, sync, pool,
-                               SVN_WC__ADM_WCPROPS, base_name, NULL);
+        return close_adm_file
+          (fp, parent_dir,
+           ((wc_format_version <= SVN_WC__OLD_PROPNAMES_VERSION) ?
+            NULL : SVN_WC__WORK_EXT),
+           sync, pool, SVN_WC__ADM_WCPROPS, base_name, NULL);
     }
   else /* plain old property file */
     {
@@ -840,10 +886,12 @@ svn_wc__close_props (apr_file_t *fp,
         return close_adm_file (fp, parent_dir, NULL, sync, pool,
                                SVN_WC__ADM_DIR_PROPS, NULL);
       else
-        return close_adm_file (fp, parent_dir, NULL, sync, pool,
-                                 SVN_WC__ADM_PROPS, base_name, NULL);
+        return close_adm_file
+          (fp, parent_dir,
+           ((wc_format_version <= SVN_WC__OLD_PROPNAMES_VERSION) ?
+            NULL : SVN_WC__WORK_EXT),
+           sync, pool, SVN_WC__ADM_PROPS, base_name, NULL);
     }
-
 }
 
 
@@ -898,7 +946,7 @@ svn_wc__sync_props (const char *path,
         return sync_adm_file (parent_dir, NULL, pool,
                               SVN_WC__ADM_DIR_PROPS, NULL);
       else
-        return sync_adm_file (parent_dir, NULL, pool,
+        return sync_adm_file (parent_dir, SVN_WC__WORK_EXT, pool,
                               SVN_WC__ADM_PROPS, base_name, NULL);
     }
 
@@ -909,10 +957,14 @@ svn_wc__sync_props (const char *path,
 
 /*** Checking for and creating administrative subdirs. ***/
 
-/* Set *EXISTS to non-zero iff there's an adm area for PATH, and it
- * matches URL and REVISION.
- * 
- * If an error occurs, just return the error and don't touch *EXISTS.
+/* Set *EXISTS to iff there's an adm area for PATH, and it matches URL
+ * and REVISION.  If there's no adm area, set *EXISTS to false; if
+ * there's an adm area but it doesn't match URL and REVISION, then
+ * return error and don't touch *EXISTS.
+ *
+ * ### These semantics are totally bizarre.  One wonders what the
+ * ### callers' real needs are.  In the long term, this function
+ * ### should probably be unified with svn_wc_check_wc.
  */
 static svn_error_t *
 check_adm_exists (svn_boolean_t *exists,
@@ -960,15 +1012,24 @@ check_adm_exists (svn_boolean_t *exists,
     }
 
   /** The directory exists, but is it a valid working copy yet?
-      Try step 2: checking that SVN_WC__ADM_README exists. **/
+      Try step 2: checking that SVN_WC__ADM_FORMAT exists and that
+      it's not too high a format version for this code.  **/
+  {
+    int wc_format;
 
-  SVN_ERR (svn_io_check_path (svn_path_join (tmp_path,
-                                             SVN_WC__ADM_README, pool),
-                              &kind, pool));
-  if (kind == svn_node_file)
-    wc_exists = TRUE;
-  else
-    wc_exists = FALSE;
+    err = svn_io_read_version_file
+      (&wc_format, svn_path_join (tmp_path, SVN_WC__ADM_FORMAT, pool), pool);
+
+    if (err)
+      {
+        svn_error_clear_all (err);
+        wc_exists = FALSE;
+      }
+    else if (wc_format > SVN_WC__VERSION)
+      wc_exists = FALSE;
+    else
+      wc_exists = TRUE;
+  }
 
   /** Step 3: now check that repos and ancestry are correct **/
 
@@ -1141,16 +1202,8 @@ init_adm (const char *path,
   
   /** Initialize each administrative file. */
 
-  /* SVN_WC__ADM_FORMAT */
-  SVN_ERR (svn_io_write_version_file 
-           (svn_path_join_many (pool, 
-                                path, adm_subdir (), SVN_WC__ADM_FORMAT, 
-                                NULL),
-            SVN_WC__VERSION, pool));
-
   /* SVN_WC__ADM_ENTRIES */
   SVN_ERR (svn_wc__entries_init (path, url, pool));
-
 
   /* SVN_WC__ADM_EMPTY_FILE exists because sometimes an readable, empty
      file is required (in the repository diff for example). Creating such a
@@ -1160,9 +1213,16 @@ init_adm (const char *path,
   SVN_ERR (svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_EMPTY_FILE,
                                    svn_node_file, APR_UREAD, 0, pool));
 
+  /* SVN_WC__ADM_README */
+  SVN_ERR (init_adm_file (path, SVN_WC__ADM_README, readme_contents, pool));
+
   /* THIS FILE MUST BE CREATED LAST: 
      After this exists, the dir is considered complete. */
-  SVN_ERR (init_adm_file (path, SVN_WC__ADM_README, readme_contents, pool));
+  SVN_ERR (svn_io_write_version_file 
+           (svn_path_join_many (pool, 
+                                path, adm_subdir (), SVN_WC__ADM_FORMAT, 
+                                NULL),
+            SVN_WC__VERSION, pool));
 
   /* Now unlock it.  It's now a valid working copy directory, that
      just happens to be at revision 0. */

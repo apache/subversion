@@ -39,16 +39,14 @@
 
 
 
-/* kff todo: make this compare repository too?  Or do so in parallel code. */
+/* ### todo: make this compare repository too?  Or do so in parallel
+   code.  See also adm_files.c:check_adm_exists(), which should
+   probably be merged with this.  */
 svn_error_t *
 svn_wc_check_wc (const char *path,
-                 svn_boolean_t *is_wc,
+                 int *wc_format,
                  apr_pool_t *pool)
 {
-  /* Nothing fancy, just check for an administrative subdir and a
-     `README' file. */ 
-
-  apr_file_t *f = NULL;
   svn_error_t *err = NULL;
   enum svn_node_kind kind;
 
@@ -61,25 +59,24 @@ svn_wc_check_wc (const char *path,
          "svn_wc_check_wc: %s does not exist", path);
     }
   else if (kind != svn_node_dir)
-    *is_wc = FALSE;
-  else
+    *wc_format = 0;
+  else  /* okay, it's a directory, but is it a working copy? */
     {
-      err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_README,
-                                   APR_READ, pool);
-      
-      /* It really doesn't matter what kind of error it is; if there
-         was an error at all, then for our purposes this is not a
-         working copy. */
-      if (err)
+      const char *format_file_path
+        = svn_wc__adm_path (path, FALSE, pool, SVN_WC__ADM_FORMAT, NULL);
+
+      err = svn_io_read_version_file (wc_format, format_file_path, pool);
+
+      if ((*wc_format > SVN_WC__VERSION) || err)
         {
-          svn_error_clear_all (err);
-          *is_wc = FALSE;
-        }
-      else
-        {
-          *is_wc = TRUE;
-          SVN_ERR (svn_wc__close_adm_file (f, path, SVN_WC__ADM_README, 0,
-                                           pool));
+          /* It really doesn't matter if it was a version mismatch or
+             an error, or if an error, what kind.  If there's anything
+             wrong at all, then for our purposes this is not a working
+             copy, so return 0. */
+          if (err)
+            svn_error_clear_all (err);
+
+          *wc_format = 0;
         }
     }
 

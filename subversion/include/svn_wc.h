@@ -323,11 +323,11 @@ typedef struct svn_wc_diff_callbacks_t
 
 /*** Asking questions about a working copy. ***/
 
-/* Set *IS_WC to true iff PATH is a valid working copy directory, else
-   set it to false.  PATH must exist, either as a file or directory,
-   else an error will be returned. */
+/* Set *IS_WC to PATH's working copy format version number if PATH
+   is a valid working copy directory, else set it to 0.  Return error
+   APR_ENOENT if PATH does not exist at all. */
 svn_error_t *svn_wc_check_wc (const char *path,
-                              svn_boolean_t *is_wc,
+                              int *wc_format,
                               apr_pool_t *pool);
 
 

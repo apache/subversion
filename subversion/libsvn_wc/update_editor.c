@@ -944,7 +944,7 @@ add_or_open_file (const char *path,
   struct dir_baton *pb = parent_baton;
   struct file_baton *fb;
   svn_wc_entry_t *entry;
-  svn_boolean_t is_wc;
+  int is_wc;
   enum svn_node_kind kind;
 
   /* the file_pool can stick around for a *long* time, so we want to use
