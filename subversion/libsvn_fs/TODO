@@ -52,3 +52,24 @@ Long term ideas:
   As people update, we're going to be recomputing text deltas for the
   most recently changed files pretty often.  It might be worthwhile to
   cache the deltas for a little while.
+
+
+Keeping repositories alive in the long term: Berkeley DB is infamous
+for changing its file format from one version to the next.  If someone
+saves a Subversion 1.0 repository on a CD somewhere, and then tries to
+read it seven years later, their chance of being able to read it with
+the latest version of Subversion is nil.  The solution:
+
+- Define a simply XML repository dump format for the complete
+  repository data.  This should be the same format we use for CVS
+  repository conversion.  We'll have an import function.
+
+- Write a program that is simple and self-contained --- does not use
+  Berkeley DB, no fancy XML tools, uses nothing but POSIX read and
+  seek --- that can dump a Subversion repository in that format.
+
+- For each version of Subversion, make a sample repository, and
+  archive a copy of it away as test data.
+
+- Write a test suite that verifies that the repository dump program
+  can handle all of the archived formats.
