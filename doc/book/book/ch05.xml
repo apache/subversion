@@ -39,9 +39,119 @@
   </simplesect>
 
   <!-- ******************************************************************* -->
-  <!-- *** SECTION 1:  REPOSITORY CREATION AND CONFIGURATION           *** -->
+  <!-- *** SECTION 1:  REPOSITORY BASICS                               *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-5-sect-1">
+    <title>Repository Basics</title>
+
+    <!-- ***************************************************************** -->
+    <sect2 id="svn-ch-5-sect-1.1">
+      <title>Understanding Transactions and Revisions</title>
+        
+      <para>Conceptually speaking, a Subversion repository is a
+        sequence of directory trees.  Each tree is a snapshot of how
+        the files and directories versioned in your repository looked
+        at various points in time.  These snapshots are created as a
+        result of client operations, and are called revisions.</para>
+
+      <para>Every revision begins life as a transaction tree.  When
+        doing a commit, a client builds a Subversion transaction that
+        mirrors their local changes (plus any additional changes that
+        might have been made to the repository since the beginning of
+        the client's commit process), and then instructs the
+        repository to store that tree as the next snapshot in the
+        sequence.  If the commit succeeds, the transaction is
+        effectively promoted into a new revision tree, and is assigned
+        a new revision number.  If the commit fails for some reason,
+        the transaction is destroyed and the client is informed of the
+        failure.</para>
+            
+      <para>At the moment, updates work in a similar way.  The client
+        builds a temporary transaction tree that mirrors the state of
+        the working copy.  The repository then compares that
+        transaction tree with the revision tree at the request
+        revision (usually the most recent, or <quote>youngest</quote>
+        tree), and sends back information that informs the client
+        about what changes are needed to transform their working copy
+        into a replica of that revision tree.  After the update
+        completes, the temporary transaction is deleted.</para>
+          
+      <para>The use of transaction trees is the only way to make
+        permanent changes to repository's versioned filesystem.
+        However, it's important to understand that the lifetime of a
+        transaction is completely flexible.  In the case of updates,
+        transactions are temporary trees that are immediately
+        destroyed.  In the case of commits, transactions are
+        transformed into permanent revisions (or removed if the commit
+        fails).  In the case of an error or bug, it's possible that a
+        transaction can be accidentally left lying around in the
+        repository (not really affecting anything, but still taking up
+        space).</para>
+
+     <para>In theory, someday whole workflow applications might
+        revolve around more fine-grained control of transaction
+        lifetime.  It is feasible to imagine a system whereby each
+        transaction slated to become a revision is left in stasis well
+        after the client finishes describing its changes to
+        repository.  This would enable each new commit to be reviewed
+        by someone else, perhaps a manager or engineering QA team, who
+        can choose to promote the transaction into a revision, or
+        abort it.</para>
+            
+      <para>What does all of this have to do with repository
+        administration?  The answer is simple: if you're administering
+        a Subversion repository, you're going to have to examine
+        revisions and transactions as part of monitoring the health of
+        your repository.</para>
+            
+    </sect2>
+
+    <!-- ***************************************************************** -->
+    <sect2 id="svn-ch-5-sect-1.2">
+      <title>Unversioned Properties</title>
+
+      <para>Transactions and revisions in the Subversion repository
+        can have properties attached to them.  These properties are
+        generic key-to-value mappings, and are used to store
+        information about the tree to which they are attached.  The
+        names and values of these properties are stored in the
+        repository's filesystem, along with the rest of your tree
+        data.</para>
+
+      <para>Revision and transaction properties are useful for
+        associating information with a tree that is not strictly
+        related to the files and directories in that tree&mdash;the
+        kind of information that isn't managed by client working
+        copies.  For example, when a new commit transaction is created
+        in the repository, Subversion adds a property to that
+        transaction named <literal>svn:date</literal>&mdash;a
+        datestamp representing the time that the transaction was
+        created.  By the time the commit process is finished, and the
+        transaction is promoted to a permanent revision, the tree has
+        also been given a property to store the username of the
+        revision's author (<literal>svn:author</literal>) and a
+        property to store the log message attached to that revision
+        (<literal>svn:log</literal>).</para>
+
+      <para>Revision and transaction properties are
+        <firstterm>unversioned properties</firstterm>&mdash;as they
+        are modified, their previous values are permanently discarded.
+        Also, while revision trees themselves are immutable, the
+        properties attached to those trees are not.  You can add,
+        remove, and modify revision properties at any time in the
+        future.  If you commit a new revision and later realize that
+        you had some misinformation or spelling error in your log
+        message, you can simply replace the value of the
+        <literal>svn:log</literal> property with a new, corrected log
+        message.</para>
+
+    </sect2>
+  </sect1>
+
+  <!-- ******************************************************************* -->
+  <!-- *** SECTION 2:  REPOSITORY CREATION AND CONFIGURATION           *** -->
+  <!-- ******************************************************************* -->
+  <sect1 id="svn-ch-5-sect-2">
     <title>Repository Creation and Configuration</title>
 
     <para>Creating a Subversion repository is an incredibly simple
@@ -152,7 +262,7 @@ conf/  dav/  db/  format  hooks/  locks/  README
       those here.</para>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-1.1">
+    <sect2 id="svn-ch-5-sect-2.1">
       <title>Hook scripts</title>
 
       <para>A <firstterm>hook</firstterm> is a program triggered by
@@ -372,7 +482,7 @@ pre-commit.tmpl           start-commit.tmpl
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-1.2">
+    <sect2 id="svn-ch-5-sect-2.2">
       <title>Berkeley DB configuration</title>
 
       <para>The Berkeley DB environment has it own set of default
@@ -413,79 +523,17 @@ pre-commit.tmpl           start-commit.tmpl
   </sect1>
 
   <!-- ******************************************************************* -->
-  <!-- *** SECTION 2:  REPOSITORY MAINTENANCE                          *** -->
+  <!-- *** SECTION 3:  REPOSITORY MAINTENANCE                          *** -->
   <!-- ******************************************************************* -->
 
-  <sect1 id="svn-ch-5-sect-2">
+  <sect1 id="svn-ch-5-sect-3">
     <title>Repository Maintenance</title>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-2.1">
-      <title>Understanding Transactions and Revisions</title>
-        
-      <para>A Subversion repository is essentially a sequence of
-        directory trees.  Each tree is a snapshot of how the files and
-        directories versioned in your repository looked at various
-        points in time.  These snapshots are created as a result of
-        client operations, and are called revisions.</para>
-
-      <para>Every revision begins life as a transaction tree.  When
-        doing a commit, a client builds a Subversion transaction that
-        mirrors their local changes (plus any additional changes that
-        might have been made to the repository since the beginning of
-        the client's commit process), and then instructs the
-        repository to store that tree as the next snapshot in the
-        sequence.  If the commit succeeds, the transaction is
-        effectively promoted into a new revision tree, and is assigned
-        a new revision number.  If the commit fails for some reason,
-        the transaction is destroyed and the client is informed of the
-        failure.</para>
-            
-      <para>At the moment, updates work in a similar way.  The client
-        builds a temporary transaction tree that mirrors the state of
-        the working copy.  The repository then compares that
-        transaction tree with the revision tree at the request
-        revision (usually the most recent, or <quote>youngest</quote>
-        tree), and sends back information that informs the client
-        about what changes are needed to transform their working copy
-        into a replica of that revision tree.  After the update
-        completes, the temporary transaction is deleted.</para>
-          
-      <para>The use of transaction trees is the only way to make
-        permanent changes to repository's versioned filesystem.
-        However, it's important to understand that the lifetime of a
-        transaction is completely flexible.  In the case of updates,
-        transactions are temporary trees that are immediately
-        destroyed.  In the case of commits, transactions are
-        transformed into permanent revisions (or removed if the commit
-        fails).  In the case of an error or bug, it's possible that a
-        transaction can be accidentally left lying around in the
-        repository (not really affecting anything, but still taking up
-        space).</para>
-
-     <para>In theory, someday whole workflow applications might
-        revolve around more fine-grained control of transaction
-        lifetime.  It is feasible to imagine a system whereby each
-        transaction slated to become a revision is left in stasis well
-        after the client finishes describing its changes to
-        repository.  This would enable each new commit to be reviewed
-        by someone else, perhaps a manager or engineering QA team, who
-        can choose to promote the transaction into a revision, or
-        abort it.</para>
-            
-      <para>What does all of this have to do with repository
-        administration?  The answer is simple: if you're administering
-        a Subversion repository, you're going to have to examine
-        revisions and transactions as part of monitoring the health of
-        your repository.</para>
-            
-    </sect2>
-
-    <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-2.2">
+    <sect2 id="svn-ch-5-sect-3.1">
       <title>An Administrator's Toolkit</title>
 
-      <sect3 id="svn-ch-5-sect-2.2.1">
+      <sect3 id="svn-ch-5-sect-3.1.1">
         <title>svnlook</title>
             
         <para><command>svnlook</command> is a tool provided by
@@ -715,7 +763,7 @@ $ svnlook tree path/to/repos --show-ids
 
       </sect3>
 
-      <sect3 id="svn-ch-5-sect-2.2.2">
+      <sect3 id="svn-ch-5-sect-3.1.2">
         <title>svnadmin</title>
 
         <para>The <command>svnadmin</command> program is the
@@ -739,7 +787,7 @@ Available subcommands:
 
         <para>We've already mentioned <command>svnadmin</command>'s
           <literal>create</literal> subcommand (see <xref
-          linkend="svn-ch-5-sect-1"/>).  Most of the others we will
+          linkend="svn-ch-5-sect-2"/>).  Most of the others we will
           cover in more detail later in this chapter.  For now, let's
           just take a quick glance at what each of the available
           subcommands offers.</para>
@@ -825,7 +873,7 @@ Available subcommands:
 
       </sect3>
 
-      <sect3 id="svn-ch-5-sect-2.2.3">
+      <sect3 id="svn-ch-5-sect-3.1.3">
         <title>svnshell.py</title>
 
         <para>The Subversion source tree also comes with a shell-like
@@ -939,7 +987,7 @@ $
 
       </sect3>
 
-      <sect3 id="svn-ch-5-sect-2.2.4">
+      <sect3 id="svn-ch-5-sect-3.1.4">
         <title>Berkeley DB Utilities</title>
 
         <para>Currently, the Subversion repository has only one
@@ -1018,7 +1066,7 @@ $
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-2.3">
+    <sect2 id="svn-ch-5-sect-3.2">
       <title>Repository Cleanup</title>
             
       <para>Your Subversion repository will generally require very
@@ -1059,14 +1107,15 @@ $
         repository is configured (using the
         <literal>pre-revprop-change</literal> and
         <literal>post-revprop-change</literal> hooks; see <xref
-        linkend=""/>) to accept changes to this log message after the
-        commit is finished, then the user can <quote>fix</quote> her
-        log message remotely using the <command>svn</command>
-        program's <literal>propset</literal> command (see <xref
-        linkend="svn-ch-8"/>).  However, because of the potential to lose
-        information forever, Subversion repositories are not, by
-        default, configured to allow changes to unversioned
-        properties&mdash; except by an administrator.</para>
+        linkend="svn-ch-5-sect-2.1"/>) to accept changes to this log
+        message after the commit is finished, then the user can
+        <quote>fix</quote> her log message remotely using the
+        <command>svn</command> program's <literal>propset</literal>
+        command (see <xref linkend="svn-ch-8"/>).  However, because of
+        the potential to lose information forever, Subversion
+        repositories are not, by default, configured to allow changes
+        to unversioned properties&mdash; except by an
+        administrator.</para>
 
       <para>If a log message needs to be changed by an administrator,
         this can be done using <command>svnadmin setlog</command>.
@@ -1140,7 +1189,7 @@ $
         of shell-scripting that can quickly generate information about
         each outstanding transaction in your repository:</para>
 
-      <example id="svn-ch-5-sect-2.3-ex-1">
+      <example id="svn-ch-5-sect-3.2-ex-1">
         <title>Reporting outstanding transactions</title>
 
         <programlisting>
@@ -1169,7 +1218,7 @@ done
         <command>/path/to/script /path/to/repos</command>.  The output
         is basically a concatenation of several chunks of
         <command>svnlook info</command> output (see <xref
-        linkend="svn-ch-5-sect-2.2.1"/>), and will look something
+        linkend="svn-ch-5-sect-3.1.1"/>), and will look something
         like:</para>
 
       <screen>
@@ -1214,7 +1263,7 @@ $
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-2.4">
+    <sect2 id="svn-ch-5-sect-3.3">
       <title>Repository recovery</title>
 
       <para>In order to protect the data in your repository, the
@@ -1305,7 +1354,7 @@ The latest repos revision is 19.
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-2.5">
+    <sect2 id="svn-ch-5-sect-3.4">
       <title>Migrating a repository</title>
     
       <para>A Subversion filesystem has its data spread throughout
@@ -1498,7 +1547,7 @@ $ svnadmin load newrepos &lt; dumpfile3
         the revisions that were added to the repository since the last
         time the script ran.</para>
 
-      <example id="svn-ch-5-sect-2.4-ex-1">
+      <example id="svn-ch-5-sect-3.4-ex-1">
         <title>Using incremental repository dumps</title>
 
         <programlisting>
@@ -1561,9 +1610,9 @@ close LASTDUMPED;
   </sect1>
 
   <!-- ******************************************************************* -->
-  <!-- *** SECTION 3:  NETWORKING A REPOSITORY                         *** -->
+  <!-- *** SECTION 4:  NETWORKING A REPOSITORY                         *** -->
   <!-- ******************************************************************* -->
-  <sect1 id="svn-ch-5-sect-3">
+  <sect1 id="svn-ch-5-sect-4">
     <title>Networking a Repository</title>
           
     <para>A Subversion repository can be accessed simultaneously by
@@ -1615,7 +1664,7 @@ close LASTDUMPED;
       otherwise.</para>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-3.1">            
+    <sect2 id="svn-ch-5-sect-4.1">            
       <title>What You Need to Network Your Repository</title>
 
       <para>To network your repository, you basically need four
@@ -1655,7 +1704,7 @@ close LASTDUMPED;
     </sect2>  
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-3.2">            
+    <sect2 id="svn-ch-5-sect-4.2">            
       <title>Basic Apache Configuration</title>
 
       <para>Once you have all the necessary components installed on
@@ -1743,7 +1792,7 @@ LoadModule dav_svn_module     modules/mod_dav_svn.so
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-3.3">            
+    <sect2 id="svn-ch-5-sect-4.3">            
       <title>Permissions, Authentication, and Authorization</title>
   
       <para>Now, at this stage, you should strongly consider the
@@ -1916,7 +1965,7 @@ $
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-3.4">
+    <sect2 id="svn-ch-5-sect-4.4">
       <title>Server Names and the COPY Request</title>
 
       <para>Subversion makes use of the <literal>COPY</literal> request
@@ -1942,7 +1991,7 @@ ServerName svn.red-bean.com
     </sect2> 
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-3.5">
+    <sect2 id="svn-ch-5-sect-4.5">
       <title>Miscellaneous Apache Features</title>
 
       <para>Several of the features already provided by Apache in its
@@ -1993,9 +2042,9 @@ ServerName svn.red-bean.com
   </sect1>
 
   <!-- ******************************************************************* -->
-  <!-- *** SECTION 4:  ADDING PROJECTS                                 *** -->
+  <!-- *** SECTION 5:  ADDING PROJECTS                                 *** -->
   <!-- ******************************************************************* -->
-  <sect1 id="svn-ch-5-sect-4">
+  <sect1 id="svn-ch-5-sect-5">
     <title>Adding projects</title>
 
     <para>Once your repository is created and configured, all that
@@ -2010,7 +2059,7 @@ ServerName svn.red-bean.com
       that layout.</para>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-4.1">
+    <sect2 id="svn-ch-5-sect-5.1">
       <title>Choosing a Repository Layout</title>
 
       <para>While Subversion allows you to move around versioned files
@@ -2074,7 +2123,7 @@ ServerName svn.red-bean.com
        <filename>branches</filename> directories immediately under
        each project directory, as demonstrated in Figure 5-1.</para>
 
-      <figure id="svn-ch5-sect4.1-dia1">
+      <figure id="svn-ch5-sect5.1-dia1">
         <title>One suggested repository layout.</title>
         <graphic fileref="images/ch05dia1.png"/>
       </figure>
@@ -2085,7 +2134,7 @@ ServerName svn.red-bean.com
        each with subdirectories for all the projects in the
        repository, as demonstrated in Figure 5-2.</para>
 
-      <figure id="svn-ch5-sect4.1-dia2">
+      <figure id="svn-ch5-sect5.1-dia2">
         <title>Another suggested repository layout.</title>
         <graphic fileref="images/ch05dia2.png"/>
       </figure>
@@ -2100,7 +2149,7 @@ ServerName svn.red-bean.com
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-4.2">
+    <sect2 id="svn-ch-5-sect-5.2">
       <title>Creating the Layout, and Importing Initial Data</title>
           
       <para>After deciding how to arrange the projects in your
