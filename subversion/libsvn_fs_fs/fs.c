@@ -39,19 +39,9 @@
 #include "../libsvn_fs/fs_loader.h"
 
 
-/* A default warning handling function.  */
 
-static void
-default_warning_func (void *baton, svn_error_t *err)
-{
-  /* The one unforgiveable sin is to fail silently.  Dumping to stderr
-     or /dev/tty is not acceptable default behavior for server
-     processes, since those may both be equivalent to /dev/null.  */
-  abort ();
-}
-
-/* If FS is already open, then return an SVN_ERR_FS_ALREADY_OPEN
-   error.  Otherwise, return zero.  */
+/* If filesystem FS is already open, then return an
+   SVN_ERR_FS_ALREADY_OPEN error.  Otherwise, return zero.  */
 static svn_error_t *
 check_already_open (svn_fs_t *fs)
 {
@@ -64,29 +54,9 @@ check_already_open (svn_fs_t *fs)
 
 
 
-/* Allocating and freeing filesystem objects.  */
 
-svn_fs_t *
-svn_fs_fs__new (apr_hash_t *fs_config, apr_pool_t *parent_pool)
-{
-  svn_fs_t *new_fs;
-  apr_pool_t *pool = svn_pool_create (parent_pool);
-
-  /* Allocate a new filesystem object in its own pool, which is a
-     subpool of POOL.  */
-  new_fs = apr_pcalloc (pool, sizeof (svn_fs_t));
-  new_fs->pool = pool;
-  new_fs->warning = default_warning_func;
-  new_fs->config = fs_config;
-
-  /*
-    apr_pool_cleanup_register (new_fs->pool, new_fs,
-    cleanup_fs_apr,
-    apr_pool_cleanup_null);
-  */
-  return new_fs;
-}
-
+/* This function is provided for Subversion 1.0.x compatibility.  It
+   has no effect for fsfs backed Subversion filesystems. */
 static svn_error_t *
 fs_set_errcall (svn_fs_t *fs,
                 void (*db_errcall_fcn) (const char *errpfx, char *msg))
@@ -95,9 +65,7 @@ fs_set_errcall (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-
-
-/* Creating a new filesystem. */
+/* The vtable associated with a specific open filesystem. */
 static fs_vtable_t fs_vtable = {
   svn_fs_fs__youngest_rev,
   svn_fs_fs__revision_prop,
@@ -113,7 +81,13 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__deltify
 };
 
-svn_error_t *
+
+/* Creating a new filesystem. */
+
+/* Create a new fsfs backed Subversion filesystem at path PATH and
+   link it to the filesystem FS.  Perform temporary allocations in
+   POOL. */
+static svn_error_t *
 fs_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   SVN_ERR (check_already_open (fs));
@@ -128,10 +102,12 @@ fs_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
 
 
-/* Gaining access to an existing Berkeley DB-based filesystem.  */
+/* Gaining access to an existing filesystem.  */
 
-
-svn_error_t *
+/* Implements the svn_fs_open API.  Opens a Subversion filesystem
+   located at PATH and sets FS to point to the correct vtable for the
+   fsfs filesystem.  All allocations are from POOL. */
+static svn_error_t *
 fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   SVN_ERR (svn_fs_fs__open (fs, path, fs->pool));
@@ -143,9 +119,12 @@ fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 }
 
 
-/* Copying a live FSFS filesystem. (Despite the name.) */
 
-svn_error_t *
+/* Copy a possibly live Subversion filesystem from SRC_PATH to
+   DEST_PATH.  The CLEAN_LOGS argument is ignored and included for
+   Subversion 1.0.x compatibility.  Perform all temporary allocations
+   in POOL. */
+static svn_error_t *
 fs_hotcopy (const char *src_path, 
             const char *dest_path, 
             svn_boolean_t clean_logs, 
@@ -157,10 +136,10 @@ fs_hotcopy (const char *src_path,
 }
 
 
-/* Running recovery on a Berkeley DB-based filesystem.  */
 
-
-svn_error_t *
+/* This function is included for Subversion 1.0.x compability.  It has
+   no effect for fsfs backed Subversion filesystems. */
+static svn_error_t *
 fs_recover (const char *path,
             apr_pool_t *pool)
 {
@@ -171,10 +150,10 @@ fs_recover (const char *path,
 
 
 
-/* Running the 'archive' command on a Berkeley DB-based filesystem.  */
 
-
-svn_error_t *
+/* This function is included for Subversion 1.0.x compatability.  It
+   has no effect for fsfs backed Subversion filesystems. */
+static svn_error_t *
 fs_logfiles (apr_array_header_t **logfiles,
              const char *path,
              svn_boolean_t only_unused,
@@ -189,10 +168,10 @@ fs_logfiles (apr_array_header_t **logfiles,
 
 
 
-/* Deleting a Berkeley DB-based filesystem.  */
 
-
-svn_error_t *
+/* Delete the filesystem located at path PATH.  Perform any temporary
+   allocations in POOL. */
+static svn_error_t *
 fs_delete_fs (const char *path,
               apr_pool_t *pool)
 {

@@ -118,8 +118,7 @@ typedef struct
   int node_cache_idx;
 } fs_root_data_t;
 
-/* Declared here to resolve the circular dependency in
-   get_copy_inheritance. */
+/* Declared here to resolve the circular dependencies. */
 static svn_error_t * get_dag (dag_node_t **dag_node_p, svn_fs_root_t *root,
                               const char *path, apr_pool_t *pool);
 
@@ -360,58 +359,6 @@ not_txn (svn_fs_root_t *root)
 
 
 
-/* Simple root operations.  */
-
-void
-svn_fs_fs__close_root (svn_fs_root_t *root)
-{
-  svn_pool_destroy (root->pool);
-}
-
-
-svn_fs_t *
-svn_fs_fs__root_fs (svn_fs_root_t *root)
-{
-  return root->fs;
-}
-
-
-svn_boolean_t
-svn_fs_fs__is_txn_root (svn_fs_root_t *root)
-{
-  return root->is_txn_root;
-}
-
-
-svn_boolean_t
-svn_fs_fs__is_revision_root (svn_fs_root_t *root)
-{
-  return (! root->is_txn_root);
-}
-
-
-const char *
-svn_fs_fs__txn_root_name (svn_fs_root_t *root,
-                          apr_pool_t *pool)
-{
-  if (root->is_txn_root)
-    return apr_pstrdup (pool, root->txn);
-  else
-    return NULL;
-}
-
-
-svn_revnum_t
-svn_fs_fs__revision_root_revision (svn_fs_root_t *root)
-{
-  if (! root->is_txn_root)
-    return root->rev;
-  else
-    return SVN_INVALID_REVNUM;
-}
-
-
-
 /* Getting dag nodes for roots.  */
 
 
@@ -499,7 +446,8 @@ typedef struct parent_path_t
 
 } parent_path_t;
 
-
+/* Return a text string describing the absolute path of parent_path
+   PARENT_PATH.  It will be allocated in POOL. */
 static const char *
 parent_path_path (parent_path_t *parent_path,
                   apr_pool_t *pool)
@@ -983,7 +931,8 @@ add_change (svn_fs_t *fs,
 
 /* Generic node operations.  */
 
-
+/* Get the id of a node referenced by path PATH in ROOT.  Return the
+   id in *ID_P allocated in POOL. */
 static svn_error_t *
 fs_node_id (const svn_fs_id_t **id_p,
             svn_fs_root_t *root,
@@ -1012,13 +961,10 @@ fs_node_id (const svn_fs_id_t **id_p,
 }
 
 
-struct node_created_rev_args {
-  svn_revnum_t revision;
-  svn_fs_root_t *root;
-  const char *path;
-};
-
-
+/* Set *REVISION to the revision in which PATH under ROOT was created.
+   Use POOL for any temporary allocations.  If PATH is in an
+   uncommitted transaction, *REVISION will be set to
+   SVN_INVALID_REVNUM. */
 static svn_error_t *
 fs_node_created_rev (svn_revnum_t *revision,
                      svn_fs_root_t *root,
@@ -1033,7 +979,8 @@ fs_node_created_rev (svn_revnum_t *revision,
   return SVN_NO_ERROR;
 }
 
-
+/* Set *CREATED_PATH to the path at which PATH under ROOT was created.
+   Return a string allocated in POOL. */
 static svn_error_t *
 fs_node_created_path (const char **created_path,
                       svn_fs_root_t *root,
@@ -1049,6 +996,8 @@ fs_node_created_path (const char **created_path,
 }
 
 
+/* Set *KIND_P to the type of node located at PATH under ROOT.
+   Perform temporary allocations in POOL. */
 static svn_error_t *
 node_kind (svn_node_kind_t *kind_p,
            svn_fs_root_t *root,
@@ -1068,7 +1017,10 @@ node_kind (svn_node_kind_t *kind_p,
   return SVN_NO_ERROR;
 }
 
-  
+
+/* Set *KIND_P to the type of node present at PATH under ROOT.  If
+   PATH does not exist under ROOT, set *KIND_P to svn_node_none.  Use
+   POOL for temporary allocation. */
 static svn_error_t *
 fs_check_path (svn_node_kind_t *kind_p,
                svn_fs_root_t *root,
@@ -1088,7 +1040,9 @@ fs_check_path (svn_node_kind_t *kind_p,
   return SVN_NO_ERROR;
 }
 
-
+/* Set *VALUE_P to the value of the property named PROPNAME of PATH in
+   ROOT.  If the node has no property by that name, set *VALUE_P to
+   zero.  Allocate the result in POOL. */
 static svn_error_t *
 fs_node_prop (svn_string_t **value_p,
               svn_fs_root_t *root,
@@ -1109,6 +1063,10 @@ fs_node_prop (svn_string_t **value_p,
 }
 
 
+/* Set *TABLE_P to the entire property list of PATH under ROOT, as an
+   APR hash table allocated in POOL.  The resulting property table
+   maps property names to pointers to svn_string_t objects containing
+   the property value. */
 static svn_error_t *
 fs_node_proplist (apr_hash_t **table_p,
                   svn_fs_root_t *root,
@@ -1126,6 +1084,11 @@ fs_node_proplist (apr_hash_t **table_p,
 }
 
 
+/* Change, add, or delete a node's property value.  The node affect is
+   PATH under ROOT, the property value to modify is NAME, and VALUE
+   points to either a string value to set the new contents to, or NULL
+   if the property should be deleted.  Perform temporary allocations
+   in POOL. */
 static svn_error_t *
 fs_change_node_prop (svn_fs_root_t *root,
                      const char *path,
@@ -1169,6 +1132,10 @@ fs_change_node_prop (svn_fs_root_t *root,
 }
 
 
+/* Determine if the properties of two path/root combinations are
+   different.  Set *CHANGED_P to TRUE if the properties at PATH1 under
+   ROOT1 differ from those at PATH2 under ROOT2, or FALSE otherwise.
+   Both roots must be in the same filesystem. */
 static svn_error_t *
 fs_props_changed (svn_boolean_t *changed_p,
                   svn_fs_root_t *root1,
@@ -1638,6 +1605,7 @@ merge (svn_stringbuf_t *conflict_p,
                   dag_node_t *s_ent_node, *t_ent_node, *a_ent_node;
                   const char *new_tpath;
                   int pred_count;
+                  svn_node_kind_t s_kind, t_kind, a_kind;
                       
                   SVN_ERR (svn_fs_fs__dag_get_node (&s_ent_node, fs,
                                                     s_entry->id, pool));
@@ -1645,10 +1613,13 @@ merge (svn_stringbuf_t *conflict_p,
                                                     t_entry->id, pool));
                   SVN_ERR (svn_fs_fs__dag_get_node (&a_ent_node, fs,
                                                     a_entry->id, pool));
+
+                  s_kind = svn_fs_fs__dag_node_kind (s_ent_node);
+                  t_kind = svn_fs_fs__dag_node_kind (t_ent_node);
+                  a_kind = svn_fs_fs__dag_node_kind (a_ent_node);
                       
-                  if ((svn_fs_fs__dag_node_kind (s_ent_node) != svn_node_dir)
-                      || (svn_fs_fs__dag_node_kind (t_ent_node) != svn_node_dir)
-                      || (svn_fs_fs__dag_node_kind (a_ent_node) != svn_node_dir))
+                  if ((s_kind != svn_node_dir) || (t_kind != svn_node_dir)
+                      || (a_kind != svn_node_dir))
                     {
                       /* Not all of these entries is a directory. Conflict. */
                       return conflict_err (conflict_p,
@@ -2027,8 +1998,13 @@ svn_fs_fs__commit_txn (const char **conflict_p,
 }
 
 
-/* Note:  it is acceptable for this function to call back into
-   public FS API interfaces because it does not itself use trails.  */
+/* Merge changes between two nodes into a third node.  Given nodes
+   SOURCE_PATH under SOURCE_ROOT, TARGET_PATH under TARGET_ROOT and
+   ANCESTOR_PATH under ANCESTOR_ROOT, modify target to contain all the
+   changes between the ancestor and source.  If there are conflicts,
+   return SVN_ERR_FS_CONFLICT and set *CONFLICT_P to a textual
+   description of the offending changes.  Perform any temporary
+   allocations in POOL. */
 static svn_error_t *
 fs_merge (const char **conflict_p,
           svn_fs_root_t *source_root,
@@ -2104,6 +2080,9 @@ svn_fs_fs__deltify (svn_fs_t *fs,
 
 /* Directories.  */
 
+/* Set *TABLE_P to an APR hash of dirent_t structures corresponding to
+   the subdirectories of PATH under ROOT.  If PATH is not a directory,
+   *TABLE_P is set to NULL.  The return hash is allocated in POOL. */
 static svn_error_t *
 get_dir_entries (apr_hash_t **table_p,
                  svn_fs_root_t *root,
@@ -2124,6 +2103,11 @@ get_dir_entries (apr_hash_t **table_p,
 }
 
 
+/* Set *TABLE_P to a newly allocated APR hash table containing the
+   entries of the directory at PATH in ROOT.  The keys of the table
+   are entry names, as byte strings, excluding the final null
+   character; the table's values are pointers to svn_fs_dirent_t
+   structures.  allocate the table and its contents in POOL. */
 static svn_error_t *
 fs_dir_entries (apr_hash_t **table_p,
                 svn_fs_root_t *root,
@@ -2165,6 +2149,10 @@ fs_dir_entries (apr_hash_t **table_p,
 }
 
 
+/* Create a new directory named PATH in ROOT.  The new directory has
+   no entries, and no properties.  ROOT must be the root of a
+   transaction, not a revision.  Do any necessary temporary allocation
+   in POOL.  */
 static svn_error_t *
 fs_make_dir (svn_fs_root_t *root,
              const char *path,
@@ -2201,6 +2189,8 @@ fs_make_dir (svn_fs_root_t *root,
 }
                               
 
+/* Delete the node at PATH under ROOT.  ROOT must be a transaction
+   root.  Perform temporary allocations in POOL. */
 static svn_error_t *
 fs_delete_node (svn_fs_root_t *root,
                 const char *path,
@@ -2234,6 +2224,9 @@ fs_delete_node (svn_fs_root_t *root,
 }
 
 
+/* Copy the node at FROM_PATH under FROM_ROOT to TO_PATH under
+   TO_ROOT.  If PRESERVE_HISTORY is set, then the copy is recorded in
+   the copies table.  Perform temporary allocations in POOL. */
 static svn_error_t *
 copy_helper (svn_fs_root_t *from_root,
              const char *from_path,
@@ -2263,9 +2256,9 @@ copy_helper (svn_fs_root_t *from_root,
      source (in other words, this operation would result in nothing
      happening at all), just do nothing an return successfully,
      proud that you saved yourself from a tiresome task. */
-  if ((to_parent_path->node)
-      && (svn_fs_compare_ids (svn_fs_fs__dag_get_id (from_node),
-                              svn_fs_fs__dag_get_id (to_parent_path->node)) == 0))
+  if ((to_parent_path->node) &&
+      (svn_fs_compare_ids (svn_fs_fs__dag_get_id (from_node),
+                           svn_fs_fs__dag_get_id (to_parent_path->node)) == 0))
     return SVN_NO_ERROR;
 
   if (svn_fs_is_revision_root (from_root))
@@ -2319,6 +2312,10 @@ copy_helper (svn_fs_root_t *from_root,
   return SVN_NO_ERROR;
 }
 
+
+/* Create a copy of FROM_PATH in FROM_ROOT named TO_PATH in TO_ROOT.
+   If FROM_PATH is a directory, copy it recursively.  Temporary
+   allocations are from POOL.*/
 static svn_error_t *
 fs_copy (svn_fs_root_t *from_root,
          const char *from_path,
@@ -2330,6 +2327,9 @@ fs_copy (svn_fs_root_t *from_root,
 }
 
 
+/* Create a copy of FROM_PATH in FROM_ROOT named TO_PATH in TO_ROOT.
+   If FROM_PATH is a directory, copy it recursively.  No history is
+   preserved.  Temporary allocations are from POOL. */
 static svn_error_t *
 fs_revision_link (svn_fs_root_t *from_root,
                   svn_fs_root_t *to_root,
@@ -2343,6 +2343,9 @@ fs_revision_link (svn_fs_root_t *from_root,
 }
 
 
+/* Discover the copy ancestry of PATH under ROOT.  Return a relevant
+   ancestor/revision combination in *PATH_P and *REV_P.  Temporary
+   allocations are in POOL. */
 static svn_error_t *
 fs_copied_from (svn_revnum_t *rev_p,
                 const char **path_p,
@@ -2368,6 +2371,8 @@ fs_copied_from (svn_revnum_t *rev_p,
 
 /* Files.  */
 
+/* Create the empty file PATH under ROOT.  Temporary allocations are
+   in POOL. */
 static svn_error_t *
 fs_make_file (svn_fs_root_t *root,
               const char *path,
@@ -2403,6 +2408,9 @@ fs_make_file (svn_fs_root_t *root,
   return SVN_NO_ERROR;
 }
 
+
+/* Set *LENGTH_P to the size of the file PATH under ROOT.  Temporary
+   allocations are in POOL. */
 static svn_error_t *
 fs_file_length (svn_filesize_t *length_p,
                 svn_fs_root_t *root,
@@ -2421,6 +2429,8 @@ fs_file_length (svn_filesize_t *length_p,
 }
 
 
+/* Set DIGEST to the MD5 checksum of PATH under ROOT.  Temporary
+   allocations are from POOL. */
 static svn_error_t *
 fs_file_md5_checksum (unsigned char digest[],
                       svn_fs_root_t *root,
@@ -2436,6 +2446,8 @@ fs_file_md5_checksum (unsigned char digest[],
 
 /* --- Machinery for svn_fs_file_contents() ---  */
 
+/* Set *CONTENTS to a readable stream that will return the contents of
+   PATH under ROOT.  The stream is allocated in POOL. */
 static svn_error_t *
 fs_file_contents (svn_stream_t **contents,
                   svn_fs_root_t *root,
@@ -2570,7 +2582,8 @@ window_consumer (svn_txdelta_window_t *window, void *baton)
   return SVN_NO_ERROR;
 }
 
-
+/* Helper function for fs_apply_textdelta.  BATON is of type
+   txdelta_baton_t. */
 static svn_error_t *
 apply_textdelta (void *baton, apr_pool_t *pool)
 {
@@ -2639,6 +2652,9 @@ apply_textdelta (void *baton, apr_pool_t *pool)
 }
 
 
+/* Set *CONTENTS_P and *CONTENTS_BATON_P to a window handler and baton
+   that will accept text delta windows to modify the contents of PATH
+   under ROOT.  Allocations are in POOL. */
 static svn_error_t *
 fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
                     void **contents_baton_p,
@@ -2745,6 +2761,8 @@ text_stream_closer (void *baton)
 }
 
 
+/* Helper function for fs_apply_text.  BATON is of type
+   text_baton_t. */
 static svn_error_t *
 apply_text (void *baton, apr_pool_t *pool)
 {
@@ -2778,6 +2796,9 @@ apply_text (void *baton, apr_pool_t *pool)
 }
 
 
+/* Return a writable stream that will set the contents of PATH under
+   ROOT.  RESULT_CHECKSUM is the MD5 checksum of the final result.
+   Temporary allocations are in POOL. */
 static svn_error_t *
 fs_apply_text (svn_stream_t **contents_p,
                svn_fs_root_t *root,
@@ -2805,8 +2826,9 @@ fs_apply_text (svn_stream_t **contents_p,
 /* --- End machinery for svn_fs_apply_text() ---  */
 
 
-/* Note:  it is acceptable for this function to call back into
-   public FS API interfaces because it does not itself use trails.  */
+/* Check if the contents of PATH1 under ROOT1 are different from the
+   contents of PATH2 under ROOT2.  If they are different set
+   *CHANGED_P to TRUE, otherwise set it to FALSE. */
 static svn_error_t *
 fs_contents_changed (svn_boolean_t *changed_p,
                      svn_fs_root_t *root1,
@@ -2882,6 +2904,10 @@ fs_get_file_delta_stream (svn_txdelta_stream_t **stream_p,
 
 /* Finding Changes */
 
+/* Set *CHANGED_PATHS_P to a newly allocated hash containing
+   descriptions of the paths changed under ROOT.  The hash is keyed
+   with const char * paths an dhas svn_fs_path_change_t * values.  Use
+   POOL for all allocations. */
 static svn_error_t *
 fs_paths_changed (apr_hash_t **changed_paths_p,
                   svn_fs_root_t *root,
@@ -2926,6 +2952,9 @@ assemble_history (svn_fs_t *fs,
                   apr_pool_t *pool);
 
 
+/* Set *HISTORY_P to an opaque node history object which represents
+   PATH under ROOT.  ROOT must be a revision root.  Use POOL for all
+   allocations. */
 static svn_error_t *
 fs_node_history (svn_fs_history_t **history_p,
                  svn_fs_root_t *root,
@@ -2970,8 +2999,8 @@ find_youngest_copyroot (svn_revnum_t *rev_p,
                                      parent_path->parent, pool));
 
   /* Find our copyroot. */
-  SVN_ERR (svn_fs_fs__dag_get_copyroot (&rev_mine, &path_mine, parent_path->node,
-                                        pool));
+  SVN_ERR (svn_fs_fs__dag_get_copyroot (&rev_mine, &path_mine,
+                                        parent_path->node, pool));
 
   if (rev_mine > rev_parent)
     {
@@ -3158,6 +3187,10 @@ history_prev (void *baton, apr_pool_t *pool)
 }
 
 
+/* Implement svn_fs_history_prev, set *PREV_HISTORY_P to a new
+   svn_fs_history_t object that represents the predecessory of
+   HISTORY.  If CROSS_COPIES is true, *PREV_HISTORY_P may be related
+   only through a copy operation.  Perform all allocations in POOL. */
 static svn_error_t *
 fs_history_prev (svn_fs_history_t **prev_history_p,
                  svn_fs_history_t *history,
@@ -3208,6 +3241,9 @@ fs_history_prev (svn_fs_history_t **prev_history_p,
   return SVN_NO_ERROR;
 }
 
+
+/* Set *PATH and *REVISION to the path and revision for the HISTORY
+   object.  Use POOL for all allocations. */
 static svn_error_t *
 fs_history_location (const char **path,
                      svn_revnum_t *revision,
@@ -3254,8 +3290,7 @@ assemble_history (svn_fs_t *fs,
   return history;
 }
 
-/* Creating root objects.  */
-
+/* The vtable associated with root objects. */
 static root_vtable_t root_vtable = {
   fs_paths_changed,
   fs_check_path,
@@ -3285,7 +3320,6 @@ static root_vtable_t root_vtable = {
 };
 
 /* Construct a new root object in FS, allocated from POOL.  */
-
 static svn_fs_root_t *
 make_root (svn_fs_t *fs,
            apr_pool_t *pool)

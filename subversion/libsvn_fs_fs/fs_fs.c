@@ -2937,7 +2937,8 @@ svn_fs_fs__create_successor (const svn_fs_id_t **new_id_p,
 
   if (! new_noderev->copyroot_path)
     {
-      new_noderev->copyroot_path = apr_pstrdup (pool, new_noderev->created_path);
+      new_noderev->copyroot_path = apr_pstrdup (pool,
+                                                new_noderev->created_path);
       new_noderev->copyroot_rev = svn_fs_fs__get_id_rev (new_noderev->id);
     }
 
@@ -3175,7 +3176,8 @@ write_final_rev (const svn_fs_id_t **new_id_p,
   
   if (noderev->id->node_id[0] == '_')
     {
-      svn_fs_fs__add_keys (start_node_id, &noderev->id->node_id[1], my_node_id);
+      svn_fs_fs__add_keys (start_node_id, &noderev->id->node_id[1],
+                           my_node_id);
     }
   else
     {
@@ -3184,7 +3186,8 @@ write_final_rev (const svn_fs_id_t **new_id_p,
 
   if (noderev->id->copy_id[0] == '_')
     {
-      svn_fs_fs__add_keys (start_copy_id, &noderev->id->copy_id[1], my_copy_id);
+      svn_fs_fs__add_keys (start_copy_id, &noderev->id->copy_id[1],
+                           my_copy_id);
     }
   else
     {

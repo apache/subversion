@@ -277,7 +277,8 @@ svn_fs_fs__dag_init_fs (svn_fs_t *fs)
   /* Set a date on revision 0. */
   date.data = svn_time_to_cstring (apr_time_now(), fs->pool);
   date.len = strlen (date.data);
-  return svn_fs_fs__set_rev_prop (fs, 0, SVN_PROP_REVISION_DATE, &date, fs->pool);
+  return svn_fs_fs__set_rev_prop (fs, 0, SVN_PROP_REVISION_DATE, &date,
+                                  fs->pool);
 }
 
 
@@ -447,7 +448,8 @@ svn_fs_fs__dag_dir_entries (apr_hash_t **entries,
   node_revision_t *noderev;
 
   SVN_ERR (get_node_revision (&noderev, node, pool));
-  return get_dir_entries (entries, svn_fs_fs__dag_get_fs (node), noderev, pool);
+  return get_dir_entries (entries, svn_fs_fs__dag_get_fs (node), noderev,
+                          pool);
 }
 
 

@@ -162,6 +162,7 @@ svn_fs_fs__txn_prop (svn_string_t **value_p,
   return SVN_NO_ERROR;
 }
 
+/* The vtable associated with an open transaction object. */
 static txn_vtable_t txn_vtable = {
   svn_fs_fs__commit_txn,
   svn_fs_fs__abort_txn,
@@ -202,22 +203,6 @@ svn_fs_fs__begin_txn (svn_fs_txn_t **txn_p,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_fs_fs__txn_name (const char **name_p,
-                     svn_fs_txn_t *txn,
-                     apr_pool_t *pool)
-{
-  *name_p = apr_pstrdup (pool, txn->id);
-  return SVN_NO_ERROR;
-}
-
-
-svn_revnum_t
-svn_fs_fs__txn_base_revision (svn_fs_txn_t *txn)
-{
-  return txn->base_rev;
-}
 
 svn_error_t *
 svn_fs_fs__abort_txn (svn_fs_txn_t *txn,
