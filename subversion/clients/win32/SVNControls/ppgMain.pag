@@ -1,0 +1,191 @@
+VERSION 5.00
+Begin VB.PropertyPage ppgMain 
+   Caption         =   "Main"
+   ClientHeight    =   4572
+   ClientLeft      =   0
+   ClientTop       =   0
+   ClientWidth     =   5160
+   PaletteMode     =   0  'Halftone
+   ScaleHeight     =   4572
+   ScaleWidth      =   5160
+   Begin VB.CheckBox chkHeaderHotTrack 
+      Caption         =   "HeaderHotTrack"
+      Height          =   285
+      Left            =   2160
+      TabIndex        =   10
+      Top             =   480
+      Width           =   2700
+   End
+   Begin VB.CheckBox chkHeaderButtons 
+      Caption         =   "HeaderButtons"
+      Height          =   285
+      Left            =   2160
+      TabIndex        =   9
+      Top             =   960
+      Width           =   2700
+   End
+   Begin VB.CheckBox chkHeaderFlat 
+      Caption         =   "HeaderFlat"
+      Height          =   285
+      Left            =   2160
+      TabIndex        =   8
+      Top             =   720
+      Width           =   2700
+   End
+   Begin VB.CheckBox chkVirtual 
+      Caption         =   "Virtual"
+      Height          =   285
+      Left            =   2160
+      TabIndex        =   7
+      Top             =   3720
+      Width           =   2700
+   End
+   Begin VB.CheckBox chkGridLines 
+      Caption         =   "GridLines"
+      Height          =   285
+      Left            =   2160
+      TabIndex        =   6
+      Top             =   3000
+      Width           =   2700
+   End
+   Begin VB.CheckBox chkRowMode 
+      Caption         =   "RowMode"
+      Height          =   285
+      Left            =   2160
+      TabIndex        =   5
+      Top             =   1680
+      Width           =   2700
+   End
+   Begin VB.CheckBox chkMultiSelect 
+      Caption         =   "MultiSelect"
+      Height          =   285
+      Left            =   2160
+      TabIndex        =   4
+      Top             =   1440
+      Width           =   2700
+   End
+   Begin VB.CheckBox chkEditable 
+      Caption         =   "Editable"
+      Height          =   285
+      Left            =   2160
+      TabIndex        =   3
+      Top             =   3240
+      Width           =   2700
+   End
+   Begin VB.CheckBox chkDisableIcons 
+      Caption         =   "DisableIcons"
+      Height          =   285
+      Left            =   2160
+      TabIndex        =   2
+      Top             =   2400
+      Width           =   2700
+   End
+   Begin VB.CheckBox chkDrawFocusRectangle 
+      Caption         =   "DrawFocusRectangle"
+      Height          =   285
+      Left            =   2160
+      TabIndex        =   1
+      Top             =   2760
+      Width           =   2700
+   End
+   Begin VB.CheckBox chkHighlightSelectedIcons 
+      Caption         =   "HighlightSelectedIcons"
+      Height          =   285
+      Left            =   2160
+      TabIndex        =   0
+      Top             =   2160
+      Width           =   2700
+   End
+End
+Attribute VB_Name = "ppgMain"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = True
+Attribute VB_PredeclaredId = False
+Attribute VB_Exposed = True
+Option Explicit
+Private Sub chkHeaderHotTrack_Click()
+    Changed = True
+End Sub
+
+
+Private Sub chkHeaderButtons_Click()
+    Changed = True
+End Sub
+
+
+Private Sub chkHeaderFlat_Click()
+    Changed = True
+End Sub
+
+
+Private Sub chkVirtual_Click()
+    Changed = True
+End Sub
+
+
+Private Sub chkGridLines_Click()
+    Changed = True
+End Sub
+
+
+Private Sub chkRowMode_Click()
+    Changed = True
+End Sub
+
+
+Private Sub chkMultiSelect_Click()
+    Changed = True
+End Sub
+
+
+Private Sub chkEditable_Click()
+    Changed = True
+End Sub
+
+
+Private Sub chkDisableIcons_Click()
+    Changed = True
+End Sub
+
+
+Private Sub chkDrawFocusRectangle_Click()
+    Changed = True
+End Sub
+
+
+Private Sub chkHighlightSelectedIcons_Click()
+    Changed = True
+End Sub
+
+
+Private Sub PropertyPage_ApplyChanges()
+    SelectedControls(0).HeaderHotTrack = (chkHeaderHotTrack.Value = vbChecked)
+    SelectedControls(0).HeaderButtons = (chkHeaderButtons.Value = vbChecked)
+    SelectedControls(0).HeaderFlat = (chkHeaderFlat.Value = vbChecked)
+    SelectedControls(0).Virtual = (chkVirtual.Value = vbChecked)
+    SelectedControls(0).GridLines = (chkGridLines.Value = vbChecked)
+    SelectedControls(0).RowMode = (chkRowMode.Value = vbChecked)
+    SelectedControls(0).MultiSelect = (chkMultiSelect.Value = vbChecked)
+    SelectedControls(0).Editable = (chkEditable.Value = vbChecked)
+    SelectedControls(0).DisableIcons = (chkDisableIcons.Value = vbChecked)
+    SelectedControls(0).DrawFocusRectangle = (chkDrawFocusRectangle.Value = vbChecked)
+    SelectedControls(0).HighlightSelectedIcons = (chkHighlightSelectedIcons.Value = vbChecked)
+End Sub
+
+
+
+Private Sub PropertyPage_SelectionChanged()
+    chkHeaderHotTrack.Value = (SelectedControls(0).HeaderHotTrack And vbChecked)
+    chkHeaderButtons.Value = (SelectedControls(0).HeaderButtons And vbChecked)
+    chkHeaderFlat.Value = (SelectedControls(0).HeaderFlat And vbChecked)
+    chkVirtual.Value = (SelectedControls(0).Virtual And vbChecked)
+    chkGridLines.Value = (SelectedControls(0).GridLines And vbChecked)
+    chkRowMode.Value = (SelectedControls(0).RowMode And vbChecked)
+    chkMultiSelect.Value = (SelectedControls(0).MultiSelect And vbChecked)
+    chkEditable.Value = (SelectedControls(0).Editable And vbChecked)
+    chkDisableIcons.Value = (SelectedControls(0).DisableIcons And vbChecked)
+    chkDrawFocusRectangle.Value = (SelectedControls(0).DrawFocusRectangle And vbChecked)
+    chkHighlightSelectedIcons.Value = (SelectedControls(0).HighlightSelectedIcons And vbChecked)
+End Sub
+
+

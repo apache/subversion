@@ -1,0 +1,26 @@
+ArticleID	Title
+1	Restrict Mouse Movement to an Area of the Desktop
+2	Get the Desktop Device Context
+3	Get a Picture of the Desktop's Contents
+4	Force an area of a Window to Repaint
+5	Prevent a window from repainting
+6	Get the state of a key at any time
+7	Read the NumLock and CapsLock key states
+8	Copy the entire contents of a PictureBox to the clipboard
+9	Start a document based on its filename
+10	"Invoke the ""Open With..."" Dialog for a file"
+11	Start a Web site or Active Channel in VB code
+12	Determine every format available on the clipboard, including custom formats
+13	Read a custom clipboard format
+14	Mark a window with a clearly identifiable property which can be detected from any other window
+15	Create a mask image (all black for the transparent colour otherwise white) from a bitmap
+16	Show and Hide a Form's Titlebar at run-time
+17	Replace one Colour with another in a Picture using BitBlt
+18	Get an RGB Colour from an OLE_COLOR
+19	How to Shutdown the System in Windows 9x <I>and</I> NT
+20	Retrieving the Error Message for a Windows API Call Error
+21	Forcing a local or remote NT system to reboot
+22	Make a ComboBox drop down when you press the down arrow key
+23	Change the drop-down width of a combo box
+24	Create a VB Picture from an API Icon Handle
+25	Create a VB Picture Object from a GDI Bitmap Handle
