@@ -123,7 +123,7 @@ class Generator(gen_win.WinGeneratorBase):
                             dsp=string.replace(fname, os.sep, '\\'),
                             depends=dep_names))
 
-    targets.sort()
+    targets.sort(lambda x, y: cmp(x.name, y.name))
     data = {
       'targets' : targets,
       }

@@ -169,7 +169,7 @@ class Generator(gen_win.WinGeneratorBase):
                             depends=deplist,
                             ))
 
-    targets.sort()
+    targets.sort(lambda x, y: cmp(x.name, y.name))
 
     configs = [ ]
     for i in range(len(self.configs)):
