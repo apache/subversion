@@ -930,11 +930,11 @@ local copy containing your local modifications.
 This script takes care of complications where Subversion requires a
 commit before renaming a file or directory twice, such as if you had a
 vendor branch that renamed @samp{foobar-1.1/docs/doc.ps} to
-{foobar-1.2/documents/doc-1.2.ps}.  Here, you would rename @samp{docs}
-to @samp{documents}, perform a commit, then rename @samp{doc.ps} to
-@samp{doc-1.2.ps}.  You could not do the two renames without the commit,
-because @samp{doc.ps} was already moved once from @samp{docs/doc.ps} to
-@samp{documents/doc.ps}.
+@samp{foobar-1.2/documents/doc-1.2.ps}.  Here, you would rename
+@samp{docs} to @samp{documents}, perform a commit, then rename
+@samp{doc.ps} to @samp{doc-1.2.ps}.  You could not do the two renames
+without the commit, because @samp{doc.ps} was already moved once from
+@samp{docs/doc.ps} to @samp{documents/doc.ps}.
 
 This script always compares the directory being imported to what
 currently exists in the Subversion repository and takes the necessary
