@@ -314,7 +314,6 @@ temp_file_cleanup_register (const char *path,
 static svn_error_t *
 get_file_from_ra (struct file_baton *b)
 {
-  apr_status_t status;
   apr_file_t *file;
   svn_stream_t *fstream;
   const char *temp_dir;
@@ -334,11 +333,7 @@ get_file_from_ra (struct file_baton *b)
                                             fstream, NULL,
                                             &(b->pristine_props),
                                             b->pool));
-
-  status = apr_file_close (file);
-  if (status)
-    return svn_error_createf (status, NULL, "failed to close file '%s'",
-                              b->path_start_revision);
+  SVN_ERR (svn_io_file_close (file, b->pool));
 
   return SVN_NO_ERROR;
 }
@@ -364,7 +359,6 @@ static svn_error_t *
 create_empty_file (const char **empty_file,
                    apr_pool_t *pool)
 {
-  apr_status_t status;
   apr_file_t *file;
   const char *temp_dir;
 
@@ -372,11 +366,8 @@ create_empty_file (const char **empty_file,
   SVN_ERR (svn_io_open_unique_file (&file, empty_file, 
                                     svn_path_join (temp_dir, "tmp", pool),
                                     "", FALSE, pool));
+  SVN_ERR (svn_io_file_close (file, pool));
 
-  status = apr_file_close (file);
-  if (status)
-    return svn_error_createf (status, NULL,
-                              "failed to create empty file '%s'", *empty_file);
   return SVN_NO_ERROR;
 }
 
@@ -686,19 +677,8 @@ window_handler (svn_txdelta_window_t *window,
 
   if (!window)
     {
-      apr_status_t status;
-
-      status = apr_file_close (b->file_start_revision);
-      if (status)
-        return svn_error_createf (status, NULL,
-                                  "failed to close file '%s'",
-                                  b->path_start_revision);
-
-      status = apr_file_close (b->file_end_revision);
-      if (status)
-        return svn_error_createf (status, NULL,
-                                  "failed to close file '%s'",
-                                  b->path_end_revision);
+      SVN_ERR (svn_io_file_close (b->file_start_revision, b->pool));
+      SVN_ERR (svn_io_file_close (b->file_end_revision, b->pool));
     }
 
   return SVN_NO_ERROR;

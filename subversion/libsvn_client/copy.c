@@ -949,7 +949,6 @@ repos_to_wc_copy (const char *src_url,
       svn_revnum_t real_rev;
       const char *new_text_path;
       apr_hash_t *new_props;
-      apr_status_t status;
 
       SVN_ERR (svn_io_open_unique_file
                (&fp, &new_text_path, dst_path, ".tmp", FALSE, pool));
@@ -958,11 +957,7 @@ repos_to_wc_copy (const char *src_url,
       SVN_ERR (ra_lib->get_file
                (sess, "", src_revnum, fstream, &real_rev, &new_props, pool));
       svn_stream_close (fstream);
-
-      status = apr_file_close (fp);
-      if (status)
-        return svn_error_createf
-          (status, NULL, "failed to close file '%s'", dst_path);
+      SVN_ERR (svn_io_file_close (fp, pool));
 
       /* If SRC_REVNUM is invalid (HEAD), then REAL_REV is now the
          revision that was actually retrieved.  This is the value we
