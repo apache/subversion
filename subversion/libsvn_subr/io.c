@@ -1692,33 +1692,95 @@ svn_io_file_open (apr_file_t **new_file, const char *fname,
   status = apr_file_open (new_file, fname_apr, flag, perm, pool);
 
   if (status)
-    return svn_error_createf (status, NULL,
-                              "svn_io_file_open: can't open '%s'", fname);
+    {
+      svn_error_t *err;
+      char errbuf[255];
+      const char *errstr;
+
+      apr_strerror (status, errbuf, sizeof(errbuf));
+      err = svn_utf_cstring_to_utf8 (&errstr, errbuf, pool);
+      errstr = (err) ? "" : apr_psprintf (pool, ": %s", errstr);
+      svn_error_clear (err);
+
+      return svn_error_createf 
+        (status, NULL, "Can't open file '%s': %s", fname, errstr);
+    }
   else
     return SVN_NO_ERROR;  
 }
 
 
+static svn_error_t *
+do_io_file_wrapper_cleanup (apr_file_t *file, apr_status_t status, 
+                            const char *op, apr_pool_t *pool)
+{
+  const char *name;
+  const char *errstr;
+  char errbuf[255];
+  svn_error_t *err;
+
+  if (! status)
+    return SVN_NO_ERROR;
+
+  err = file_name_get (&name, file, pool);
+  name = (name && ! err) ? apr_psprintf (pool, "file '%s'", name) : "stream";
+  svn_error_clear (err);
+  apr_strerror (status, errbuf, sizeof(errbuf));
+  err = svn_utf_cstring_to_utf8 (&errstr, errbuf, pool);
+  errstr = (err) ? "" : apr_psprintf (pool, ": %s", errstr);
+  svn_error_clear (err);
+
+  return svn_error_createf (status, NULL, "Can't %s %s%s", op, name, errstr);
+}
+
 svn_error_t *
 svn_io_file_close (apr_file_t *file, apr_pool_t *pool)
 {
-  apr_status_t status;
+  return do_io_file_wrapper_cleanup
+    (file, apr_file_close (file),
+      "close", pool);
+}
 
-  status = apr_file_close (file);
 
-  if (status)
-    {
-      const char *fname_utf8;
-      SVN_ERR (file_name_get (&fname_utf8, file, pool));
-      
-      if (NULL == fname_utf8)
-        fname_utf8 = "(stdin/out/err?)";
+svn_error_t *
+svn_io_file_read (apr_file_t *file, void *buf, 
+                  apr_size_t *nbytes, apr_pool_t *pool)
+{
+  return do_io_file_wrapper_cleanup
+    (file, apr_file_read (file, buf, nbytes),
+     "read", pool);
+}
 
-      return svn_error_createf (status, NULL,
-                                "svn_io_file_close: can't close '%s'",
-                                fname_utf8);
-    }
-  return SVN_NO_ERROR;  
+
+svn_error_t *
+svn_io_file_read_full (apr_file_t *file, void *buf, 
+                        apr_size_t nbytes, apr_size_t *bytes_read,
+                        apr_pool_t *pool)
+{
+  return do_io_file_wrapper_cleanup
+    (file, apr_file_read_full (file, buf, nbytes, bytes_read),
+     "read", pool);
+}
+
+
+svn_error_t *
+svn_io_file_write (apr_file_t *file, void *buf, 
+                   apr_size_t *nbytes, apr_pool_t *pool)
+{
+  return do_io_file_wrapper_cleanup
+    (file, apr_file_write (file, buf, nbytes),
+     "read", pool);
+}
+
+
+svn_error_t *
+svn_io_file_write_full (apr_file_t *file, void *buf, 
+                        apr_size_t nbytes, apr_size_t *bytes_written,
+                        apr_pool_t *pool)
+{
+  return do_io_file_wrapper_cleanup
+    (file, apr_file_write_full (file, buf, nbytes, bytes_written),
+     "read", pool);
 }
 
 

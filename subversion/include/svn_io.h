@@ -644,6 +644,32 @@ svn_error_t *
 svn_io_file_close (apr_file_t *file, apr_pool_t *pool);
 
 
+/** Wrapper for @c apr_file_read(), which see. */
+svn_error_t *
+svn_io_file_read (apr_file_t *file, void *buf, 
+                  apr_size_t *nbytes, apr_pool_t *pool);
+
+
+/** Wrapper for @c apr_file_write_full(), which see. */
+svn_error_t *
+svn_io_file_read_full (apr_file_t *file, void *buf, 
+                       apr_size_t nbytes, apr_size_t *bytes_read,
+                       apr_pool_t *pool);
+
+
+/** Wrapper for @c apr_file_write(), which see. */
+svn_error_t *
+svn_io_file_write (apr_file_t *file, void *buf, 
+                   apr_size_t *nbytes, apr_pool_t *pool);
+
+
+/** Wrapper for @c apr_file_write_full(), which see. */
+svn_error_t *
+svn_io_file_write_full (apr_file_t *file, void *buf, 
+                        apr_size_t nbytes, apr_size_t *bytes_written,
+                        apr_pool_t *pool);
+
+
 /** Wrapper for @c apr_stat(), which see.  @a fname is utf8-encoded. */
 svn_error_t *
 svn_io_stat (apr_finfo_t *finfo, const char *fname,
