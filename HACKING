@@ -19,9 +19,11 @@ TABLE OF CONTENTS
    * Secure coding guidelines
    * Document everything
    * Using page breaks
+   * Error message conventions
    * Other conventions
    * APR pool usage conventions
    * APR status codes
+   * Exception handling
    * Automated tests
    * Writing test cases before code
    * Debugging the server
@@ -371,6 +373,60 @@ C-x C-p C-h in Emacs sometime.
 
 
 
+Error message conventions
+=========================
+
+For error messages the following conventions apply:
+
+   * Provide specific error messages only when there is information 
+     to add to the general error message found in 
+     subversion/include/svn_error_codes.h
+
+   * Messages start with a capital letter.
+
+   * Try keeping messages below 70 characters.
+
+   * Don't end the error message with a '.'.
+
+   * Don't include newline characters in error messages.
+
+
+   * Quoting information is done using single quotes ('some info').
+
+   * Don't include the name of the function where the error occurs
+     in the error message. If subversion is compiled using the
+     '--enable-maintainer-mode' configure-flag, if will provide this
+     information by itself.
+
+   * When including path or filenames in the error string, be sure
+     to quote them. (i.e. "Can't find '/path/to/repos/userfile'")
+
+   * When including path or filenames in the error string, be sure
+     to convert them using 'svn_path_local_style ()' before inclusion.
+
+   * If you want to add an explanation to the error, report it
+     followed by a colon and the explanation like this:
+       "Invalid " SVN_PROP_EXTERNALS " property on '%s': "
+       "target involves '.' or '..'"
+
+   * Suggestions or other additions can be added after a semi-colon, 
+     like this:
+       "Can't write to '%s': object of same name already exists; remove "
+       "before retrying"
+
+   * Try to stay within the boundaries of these conventions, so please avoid
+     separating different parts of error messages by other separators such 
+     as '--' and others.
+
+   * Please wrap your lines in such a way that the message text (if you 
+     supply any) so that the message appears on the start of a new line.
+     Like:
+
+        svn_error_createf (SVN_ERR_FOO, NULL,
+                           "Authorisation failed for '%s'", url);
+
+
+
 Other conventions
 =================
 
@@ -558,6 +614,118 @@ APR status codes
 Always check for APR status codes (except APR_SUCCESS) with the
 APR_STATUS_IS_...() macros, not by direct comparison. This is
 required for portability to non-Unix platforms.
+
+
+
+Exception handling
+==================
+
+OK, here's how to use exceptions in Subversion.
+
+1.  Exceptions are stored in svn_error_t structures:
+
+typedef struct svn_error
+{
+  apr_status_t apr_err;      /* APR error value, possibly SVN_ custom err */
+  const char *message;       /* details from producer of error */
+  struct svn_error *child;   /* ptr to the error we "wrap" */
+  ap_pool_t *pool;           /* place to generate message strings from */
+  const char *file;          /* Only used iff SVN_DEBUG */
+  long line;                 /* Only used iff SVN_DEBUG */
+} svn_error_t;
+
+2.  If you are the *original* creator of an error, you would do
+    something like this:
+
+        return svn_create_error (SVN_ERR_FOO, NULL, 
+                                  "User not permitted to write file");
+
+
+    NOTICE the NULL field... indicating that this error has no child,
+    i.e. it is the bottom-most error.
+
+    A section on writing error messages can be found elsewhere in this 
+    document under the title 'Error message conventions'.
+
+    Subversion internally uses UTF-8 to store its data. This also applies
+    to the 'message' string. APR is assumed to return its data in the current
+    locale, so any text returned by APR needs conversion to UTF-8 before
+    inclusion in the message string.
+
+3.  If you *receive* an error, you have three choices:
+
+    a) Handle the error yourself.  Use either your own code, or just
+       call the primitive svn_handle_error(err).  (This routine unwinds
+       the error stack and prints out messages converting them from UTF-8
+       to the current locale.)
+
+       When your routine receives an error which it intends to ignore or 
+       handle itself, be sure to clean it up using svn_error_clear(). Any
+       time such an error is not cleared constitutes a *memory leak*.
+
+    b) Throw the error upwards, unmodified:
+
+        error = some_routine (foo);
+        if (error)
+          return (error);
+
+       Actually, a better way to do this would be with the SVN_ERR() macro, 
+       which does the same thing:
+
+       SVN_ERR (some_routine (foo));
+
+    c) Throw the error upwards, wrapping it in a new error structure
+       by including it as the "child" argument:
+
+        error = some_routine (foo);
+        if (error)
+          {
+           svn_error_t *wrapper = svn_create_error (SVN_ERR_FOO, error,
+                                                    "Authorization failed");
+           return wrapper;
+          }
+
+        Of course, there's a convenience routine which creates a
+        wrapper error with the same fields as the child, except for your
+        custom message:
+
+        error = some_routine (foo);
+        if (error)
+          {
+           return svn_quick_wrap_error (error, 
+                                        "Authorization failed");
+          }
+
+        The same can (and should) be done by using the SVN_ERR_W() macro:
+
+          SVN_ERR_W (some_routine (foo),
+                     "Authorization failed");
+
+    In cases (b) and (c) it is important to know that resources allocated by
+    your routine which are associated with a pool, are automatically cleaned
+    up when the pool is destroyed. This means that there is no need to
+    cleanup these resources before passing the error. There is therefore no
+    reason not to use the SVN_ERR() and SVN_ERR_W() macros.
+
+    Resources associated with pools are:
+
+      * Memory
+
+      * Files
+        All files opened with apr_file_open are closed at pool 
+        cleanup. Subversion uses this function in its svn_io_file_* api, 
+        which means that files opened with svn_io_file_* or apr_file_open
+        will be closed at pool cleanup.
+
+        Some files (lock files for example) need to be removed when an 
+        operation is finished. APR has the APR_DELONCLOSE flag for
+        this purpose. The following functions create files which are
+        removed on pool cleanup:
+        - apr_file_open and svn_io_file_open (when passed the 
+          APR_DELONCLOSE flag)
+        - svn_io_open_unique_file (when passed TRUE in its delete_on_close)
+        
+        Locked files are unlocked if they were locked using svn_io_file_lock.
 
 
 
