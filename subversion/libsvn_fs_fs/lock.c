@@ -793,6 +793,9 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
 
   SVN_ERR (svn_fs_fs__check_fs (fs));
 
+  /* Canonicalize our input path. */
+  path = svn_fs_fs__canonicalize_abspath (path, pool);
+
   SVN_ERR (svn_fs_youngest_rev (&youngest, fs, pool));
 
   SVN_ERR (svn_fs_revision_root (&root, fs, youngest, pool));
@@ -908,7 +911,8 @@ svn_fs_fs__attach_lock (svn_lock_t *lock,
   if (SVN_IS_VALID_REVNUM(current_rev))
     {
       svn_revnum_t created_rev;
-      SVN_ERR (svn_fs_fs__node_created_rev (&created_rev, root, lock->path, pool));
+      SVN_ERR (svn_fs_fs__node_created_rev (&created_rev, root, 
+                                            lock->path, pool));
 
       /* SVN_INVALID_REVNUM means the path doesn't exist.  So
          apparently somebody is trying to lock something in their
@@ -966,6 +970,8 @@ svn_fs_fs__generate_token (const char **token,
   apr_uuid_t uuid;
   char *uuid_str = apr_pcalloc (pool, APR_UUID_FORMATTED_LENGTH + 1);
 
+  SVN_ERR (svn_fs_fs__check_fs (fs));
+
   apr_uuid_get (&uuid);
   apr_uuid_format (uuid_str, &uuid);
 
@@ -986,6 +992,11 @@ svn_fs_fs__unlock (svn_fs_t *fs,
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_lock_t *existing_lock;
+
+  SVN_ERR (svn_fs_fs__check_fs (fs));
+
+  /* Canonicalize our input path. */
+  path = svn_fs_fs__canonicalize_abspath (path, pool);
 
   SVN_ERR (svn_fs_fs__get_write_lock (fs, subpool));
 
@@ -1028,6 +1039,11 @@ svn_fs_fs__get_lock (svn_lock_t **lock_p,
                      const char *path,
                      apr_pool_t *pool)
 {
+  SVN_ERR (svn_fs_fs__check_fs (fs));
+
+  /* Canonicalize our input path. */
+  path = svn_fs_fs__canonicalize_abspath (path, pool);
+
   SVN_ERR (get_lock_helper (fs, lock_p, path, pool));
   return SVN_NO_ERROR;
 }
@@ -1043,6 +1059,11 @@ svn_fs_fs__get_locks (svn_fs_t *fs,
   apr_finfo_t finfo;
   svn_error_t *err;
   const char *digest_str, *abs_path;
+
+  SVN_ERR (svn_fs_fs__check_fs (fs));
+  
+  /* Canonicalize our input path. */
+  path = svn_fs_fs__canonicalize_abspath (path, pool);
 
   /* Compose the absolute/rel path to PATH */
   SVN_ERR (abs_path_to_lock_file (&abs_path, fs, path, pool));
