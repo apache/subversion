@@ -181,9 +181,12 @@ svn_client_status (svn_revnum_t *youngest,
                                    &kind, pool));
       if (kind == svn_node_none)
         {
-          /* Note that our status target has been deleted from HEAD of
-             the repository. */
-          sb.deleted_in_repos = TRUE;
+          /* Our status target does not exist in HEAD of the
+             repository.  If we're just adding this thing, that's
+             fine.  But if it was previously versioned, then it must
+             have been deleted from the repository. */
+          if (entry->schedule != svn_wc_schedule_add)
+            sb.deleted_in_repos = TRUE;
 
           /* And now close the edit. */
           SVN_ERR (editor->close_edit (edit_baton, pool));

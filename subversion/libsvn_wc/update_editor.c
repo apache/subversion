@@ -305,33 +305,79 @@ make_dir_baton (const char *path,
    directory's 'incomplete' flag. */
 static svn_error_t *
 complete_directory (struct edit_baton *eb,
-                    struct bump_dir_info *bdi,
+                    const char *path,
+                    svn_boolean_t is_root_dir,
                     apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   apr_hash_t *entries;
   svn_wc_entry_t *entry;
   apr_hash_index_t *hi;
-  apr_pool_t *subpool = svn_pool_create (pool);;
+  apr_pool_t *subpool;
+  svn_wc_entry_t *current_entry;
+  const char *name;
 
   /* All operations are on the in-memory entries hash. */
-  SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, bdi->path, pool));
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, path, pool));
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, TRUE, pool));
 
   /* Mark THIS_DIR complete. */
   entry = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
   if (! entry)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                              "No '.' entry in: '%s'", bdi->path);
+                              "No '.' entry in: '%s'", path);
   entry->incomplete = FALSE;
 
+  /* If this is the root directory, and there was a target, we should
+     only be modifying that target!  */
+  if (is_root_dir && eb->target)
+    {
+      name = eb->target;
+      current_entry = apr_hash_get (entries, name, APR_HASH_KEY_STRING);
+      if (! current_entry)
+        goto complete;
+
+      if (current_entry->deleted)
+        {
+          /* If the target of the update is 'deleted', we leave it be.
+             see r6748, issue #919.
+             
+             For those confused: name_deleted is a global state; it
+             turns out that if we're here, the deleted entry we're
+             seeing *was* the target of the update.  close_dir() is
+             being called on the anchor directory (originally opened
+             by open_root()), and thus we're looking here at the
+             deleted 'target' of the update. */
+          if (! eb->target_deleted)
+            svn_wc__entry_remove (entries, name);
+        }
+      else if (current_entry->kind == svn_node_dir)
+        {
+          const char *child_path = svn_path_join (path, name, pool);
+          
+          if ((svn_wc__adm_missing (adm_access, child_path))
+              && (current_entry->schedule != svn_wc_schedule_add))
+            {
+              svn_wc__entry_remove (entries, name);
+              if (eb->notify_func)
+                (* eb->notify_func) (eb->notify_baton, child_path, 
+                                     svn_wc_notify_update_delete,
+                                     current_entry->kind, NULL, 
+                                     svn_wc_notify_state_unknown,
+                                     svn_wc_notify_state_unknown,
+                                     SVN_INVALID_REVNUM);
+            }
+        }
+
+      goto complete;
+    }
+
   /* Remove any deleted or missing entries. */
+  subpool = svn_pool_create (pool);
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       void *val;
-      const char *name;
-      svn_wc_entry_t *current_entry;
 
       svn_pool_clear (subpool);
       apr_hash_this (hi, &key, NULL, &val);
@@ -340,23 +386,11 @@ complete_directory (struct edit_baton *eb,
       
       if (current_entry->deleted)
         {
-          if (eb->target_deleted)
-            /* if the target of the update is 'deleted', we leave it
-               be.  see r6748, issue #919.  
-
-               For those confused: eb->target_deleted is a global
-               state; it turns out that if we're here, the deleted
-               entry we're seeing *was* the target of the update.
-               close_dir() is being called on the anchor directory
-               (originally opened by open_root()), and thus we're
-               looking here at the deleted 'target' of the update. */
-            continue;
-          else
-            svn_wc__entry_remove (entries, name);
+          svn_wc__entry_remove (entries, name);
         }
       else if (current_entry->kind == svn_node_dir)
         {
-          const char *child_path = svn_path_join (bdi->path, name, subpool);
+          const char *child_path = svn_path_join (path, name, subpool);
           
           if ((svn_wc__adm_missing (adm_access, child_path))
               && (current_entry->schedule != svn_wc_schedule_add))
@@ -364,7 +398,7 @@ complete_directory (struct edit_baton *eb,
               svn_wc__entry_remove (entries, name);
               if (eb->notify_func)
                 (* eb->notify_func) (eb->notify_baton, child_path, 
-                                     svn_wc_notify_delete,
+                                     svn_wc_notify_update_delete,
                                      current_entry->kind, NULL, 
                                      svn_wc_notify_state_unknown,
                                      svn_wc_notify_state_unknown,
@@ -372,7 +406,9 @@ complete_directory (struct edit_baton *eb,
             }
         }
     }
-  
+
+ complete:
+
   /* An atomic write of the whole entries file. */
   SVN_ERR (svn_wc__entries_write (entries, adm_access, pool));
 
@@ -402,7 +438,8 @@ maybe_bump_dir_info (struct edit_baton *eb,
 
       /* The refcount is zero, so we remove any 'dead' entries from
          the directory and mark it 'complete'.  */
-      SVN_ERR (complete_directory (eb, bdi, pool));
+      SVN_ERR (complete_directory (eb, bdi->path, 
+                                   bdi->parent ? FALSE : TRUE, pool));
     }
   /* we exited the for loop because there are no more parents */
 
@@ -760,12 +797,11 @@ leftmod_error_chain (svn_error_t *err,
 
 
 static svn_error_t *
-delete_entry (const char *path, 
-              svn_revnum_t revision, 
-              void *parent_baton,
-              apr_pool_t *pool)
+do_entry_deletion (struct edit_baton *eb,
+                   const char *parent_path,
+                   const char *path, 
+                   apr_pool_t *pool)
 {
-  struct dir_baton *pb = parent_baton;
   apr_status_t apr_err;
   apr_file_t *log_fp = NULL;
   const char *base_name = svn_path_basename (path, pool);
@@ -773,15 +809,15 @@ delete_entry (const char *path,
   svn_wc_adm_access_t *adm_access;
   svn_node_kind_t kind;
   const char *logfile_path;
-  const char *full_path = svn_path_join (pb->path, base_name, pool);
+  const char *full_path = svn_path_join (parent_path, base_name, pool);
   svn_stringbuf_t *log_item = svn_stringbuf_create ("", pool);
 
   SVN_ERR (svn_io_check_path (full_path, &kind, pool));
 
-  SVN_ERR (svn_wc_adm_retrieve (&adm_access, pb->edit_baton->adm_access,
-                                pb->path, pool));
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
+                                parent_path, pool));
 
-  logfile_path = svn_wc__adm_path (pb->path, FALSE, pool,
+  logfile_path = svn_wc__adm_path (parent_path, FALSE, pool,
                                    SVN_WC__ADM_LOG, NULL);
 
   /* If trying to delete a locally-modified file, throw an 'obstructed
@@ -802,16 +838,16 @@ delete_entry (const char *path,
     }
 
   SVN_ERR (svn_wc__open_adm_file (&log_fp,
-                                  pb->path,
+                                  parent_path,
                                   SVN_WC__ADM_LOG,
                                   (APR_WRITE | APR_CREATE), /* not excl */
                                   pool));
 
   /* Here's the deal: in the new editor interface, PATH is a full path
-     below the editor's anchor, and pb->path is the parent directory.
+     below the editor's anchor, and parent_path is the parent directory.
      That's all fine and well, but our log-system requires that all
      log commands talk *only* about paths relative (and below)
-     pb->path, i.e. where the log is being executed.  */
+     parent_path, i.e. where the log is being executed.  */
 
   svn_xml_make_open_tag (&log_item,
                          pool,
@@ -824,11 +860,11 @@ delete_entry (const char *path,
   /* If the thing being deleted is the *target* of this update, then
      we need to recreate a 'deleted' entry, so that parent can give
      accurate reports about itself in the future. */
-  if (pb->edit_baton->target
-      &&  (! strcmp(path, pb->edit_baton->target)))
+  if (eb->target
+      && (strcmp (path, eb->target) == 0))
     {
       tgt_rev_str = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
-                                  pb->edit_baton->target_revision);
+                                  eb->target_revision);
 
       svn_xml_make_open_tag (&log_item, pool, svn_xml_self_closing,
                              SVN_WC__LOG_MODIFY_ENTRY,
@@ -844,7 +880,7 @@ delete_entry (const char *path,
                              "true",
                              NULL);
 
-      pb->edit_baton->target_deleted = TRUE;
+      eb->target_deleted = TRUE;
     }
 
   apr_err = apr_file_write_full (log_fp, log_item->data, log_item->len, NULL);
@@ -853,16 +889,16 @@ delete_entry (const char *path,
       apr_file_close (log_fp);
       return svn_error_createf (apr_err, NULL,
                                 "delete error writing log file for '%s'.",
-                                pb->path);
+                                parent_path);
     }
 
   SVN_ERR (svn_wc__close_adm_file (log_fp,
-                                   pb->path,
+                                   parent_path,
                                    SVN_WC__ADM_LOG,
                                    TRUE, /* sync */
                                    pool));
     
-  if (pb->edit_baton->switch_url)
+  if (eb->switch_url)
     {
       /* The SVN_WC__LOG_DELETE_ENTRY log item will cause
        * svn_wc_remove_from_revision_control() to be run.  But that
@@ -884,7 +920,7 @@ delete_entry (const char *path,
           svn_wc_adm_access_t *child_access;
 
           SVN_ERR (svn_wc_adm_retrieve
-                   (&child_access, pb->edit_baton->adm_access,
+                   (&child_access, eb->adm_access,
                     full_path, pool));
           
           SVN_ERR (leftmod_error_chain 
@@ -893,33 +929,44 @@ delete_entry (const char *path,
                      SVN_WC_ENTRY_THIS_DIR,
                      TRUE, /* destroy */
                      TRUE, /* instant error */
-                     pb->edit_baton->cancel_func,
-                     pb->edit_baton->cancel_baton,
+                     eb->cancel_func,
+                     eb->cancel_baton,
                      pool),
-                    logfile_path, pb->path, pool));
+                    logfile_path, parent_path, pool));
         }
     }
 
   SVN_ERR (leftmod_error_chain (svn_wc__run_log (adm_access, NULL, pool),
-                                logfile_path, pb->path, pool));
+                                logfile_path, parent_path, pool));
 
   /* The passed-in `path' is relative to the anchor of the edit, so if
    * the operation was invoked on something other than ".", then
    * `path' will be wrong for purposes of notification.  However, we
-   * can always count on the pb->path being the parent of base_name,
+   * can always count on the parent_path being the parent of base_name,
    * so we just join them together to get a good notification path.
    */
-  if (pb->edit_baton->notify_func)
-    (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton,
-                                    svn_path_join (pb->path, base_name, pool),
-                                    svn_wc_notify_update_delete,
-                                    svn_node_unknown,
-                                    NULL,
-                                    svn_wc_notify_state_unknown,
-                                    svn_wc_notify_state_unknown,
-                                    SVN_INVALID_REVNUM);
+  if (eb->notify_func)
+    (*eb->notify_func) (eb->notify_baton,
+                        svn_path_join (parent_path, base_name, pool),
+                        svn_wc_notify_update_delete,
+                        svn_node_unknown,
+                        NULL,
+                        svn_wc_notify_state_unknown,
+                        svn_wc_notify_state_unknown,
+                        SVN_INVALID_REVNUM);
 
   return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+delete_entry (const char *path, 
+              svn_revnum_t revision, 
+              void *parent_baton,
+              apr_pool_t *pool)
+{
+  struct dir_baton *pb = parent_baton;
+  return do_entry_deletion (pb->edit_baton, pb->path, path, pool);
 }
 
 
@@ -2242,20 +2289,25 @@ close_edit (void *edit_baton,
             apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
+  const char *target_path = svn_path_join_many (pool, eb->anchor, 
+                                                eb->target, NULL);
 
+  /* The editor didn't even open the root; we have to take care of
+     some cleanup stuffs. */
   if (! eb->root_opened)
     {
-      svn_wc_adm_access_t *adm_access;
-      svn_wc_entry_t tmp_entry;
+      /* If there is a target and that target is missing, then it
+         apparently wasn't re-added by the update process (since the
+         root directory wasn't even opened!), so we'll pretend that
+         the editor actually did what it used to do (before a server
+         bug was fixed): open_root, delete_entry, close_dir.  The
+         helper function do_entry_deletion() will take care of the
+         necessary steps.  */
+      if ((eb->target) && (svn_wc__adm_missing (eb->adm_access, target_path)))
+        SVN_ERR (do_entry_deletion (eb, eb->anchor, eb->target, pool));
 
-      /* Ensure the wc root has no 'incomplete' flag. */
-      SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
-                                    eb->anchor, pool));
-      tmp_entry.incomplete = FALSE;      
-      SVN_ERR (svn_wc__entry_modify (adm_access, NULL /* this_dir */,
-                                     &tmp_entry,
-                                     SVN_WC__ENTRY_MODIFY_INCOMPLETE,
-                                     TRUE /* immediate write */,  pool));
+      /* We need to "un-incomplete" the root directory. */
+      SVN_ERR (complete_directory (eb, eb->anchor, TRUE, pool));
     }
 
   
@@ -2277,20 +2329,17 @@ close_edit (void *edit_baton,
      'deleted', then do *not* run cleanup on the target, as it
      will only remove the deleted entry!  */
   if (! eb->target_deleted)
-    {
-      SVN_ERR (svn_wc__do_update_cleanup
-               (svn_path_join_many (eb->pool,
-                                    eb->anchor, eb->target, NULL),
-                eb->adm_access,
-                eb->recurse,
-                eb->switch_url,
-                eb->target_revision,
-                eb->notify_func,
-                eb->notify_baton,
-                TRUE,
-                eb->pool));
-    }
+    SVN_ERR (svn_wc__do_update_cleanup (target_path,
+                                        eb->adm_access,
+                                        eb->recurse,
+                                        eb->switch_url,
+                                        eb->target_revision,
+                                        eb->notify_func,
+                                        eb->notify_baton,
+                                        TRUE,
+                                        eb->pool));
 
+  /* Let everyone know we're finished here. */
   if (eb->notify_func)
     (*eb->notify_func) (eb->notify_baton,
                         eb->anchor,

@@ -606,6 +606,7 @@ static svn_error_t * upd_apply_textdelta(void *file_baton,
   return SVN_NO_ERROR;
 }
 
+
 static svn_error_t * upd_close_file(void *file_baton,
                                     const char *text_checksum,
                                     apr_pool_t *pool)
@@ -626,6 +627,24 @@ static svn_error_t * upd_close_file(void *file_baton,
     }
 
   close_helper(FALSE /* is_dir */, file);
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t * upd_close_edit(void *edit_baton,
+                                    apr_pool_t *pool)
+{
+  update_ctx_t *uc = edit_baton;
+  
+  if (! uc->started_update)
+    {
+      send_xml(uc,
+               DAV_XML_HEADER DEBUG_CR
+               "<S:update-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+               "xmlns:V=\"" SVN_DAV_PROP_NS_DAV "\" "
+               "xmlns:D=\"DAV:\">" DEBUG_CR);
+      uc->started_update = TRUE;
+    }
   return SVN_NO_ERROR;
 }
 
@@ -800,6 +819,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   editor->apply_textdelta = upd_apply_textdelta;
   editor->change_file_prop = upd_change_xxx_prop;
   editor->close_file = upd_close_file;
+  editor->close_edit = upd_close_edit;
 
   /* If the client never sent a <src-path> element, it's sending an
      "old style" report -- so use the resource's path instead. */
