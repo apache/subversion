@@ -32,7 +32,7 @@ else
   fi
 fi
 
-EXPECTED="${PWD}/z/A: , "
+EXPECTED="${PWD}/z/A: "
 GOT=`./target-test z/A z/A z/A z/A`
 if [ $? != 0 ]; then
   echo "FAIL: target-test  2: identical dirs (non-null return)"
@@ -60,7 +60,7 @@ else
   fi
 fi
 
-EXPECTED="${PWD}/z/A: , "
+EXPECTED="${PWD}/z/A: "
 GOT=`./target-test z/A`
 if [ $? != 0 ]; then
   echo "FAIL: target-test  4: single dir (non-null return)"

@@ -54,7 +54,7 @@ int main(int argc, char **argv)
     {
       svn_string_t * target = ((svn_string_t**)condensed_targets->elts)[i];
       if (target)
-        printf("\"%s\", ",
+        printf("%s, ",
                ((svn_string_t **)condensed_targets->elts)[i]->data);
       else
         printf("NULL, "); 
