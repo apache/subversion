@@ -77,7 +77,7 @@ svn_fs__new_node_id (svn_fs_id_t **id_p,
 {
   DBT query, result;
   apr_size_t len;
-  char next_key[200];
+  char next_key[SVN_FS__MAX_KEY_SIZE];
   int db_err;
   const char *next_node_id;
 

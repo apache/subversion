@@ -25,6 +25,26 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* The alphanumeric keys passed in and out of svn_fs__next_key
+   are guaranteed never to be longer than this many bytes,
+   *including* the trailing null byte.  It is therefore safe
+   to declare a key as "char key[SVN_FS__MAX_KEY_SIZE]".
+
+   Note that this limit will be a problem if the number of
+   keys in a table ever exceeds
+
+       18217977168218728251394687124089371267338971528174
+       76066745969754933395997209053270030282678007662838
+       67331479599455916367452421574456059646801054954062
+       15017704234999886990788594743994796171248406730973
+       80736524850563115569208508785942830080999927310762
+       50733948404739350551934565743979678824151197232629
+       947748581376,
+
+   but that's a risk we'll live with for now. */
+#define SVN_FS__MAX_KEY_SIZE 200
+
+
 /* Return the value of the string of digits at DATA as an ASCII
    decimal number.  The string is at most LEN bytes long.  The value
    of the number is at most MAX.  Set *END to the address of the first

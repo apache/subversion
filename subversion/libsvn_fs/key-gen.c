@@ -15,6 +15,9 @@
  * ====================================================================
  */
 
+#include <assert.h>
+#include <string.h>
+
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 #include <stdlib.h>
@@ -166,17 +169,23 @@ svn_fs__next_key (const char *this, apr_size_t *len, char *next)
         next[i] = c;
     }
 
-  /* Do all possible null terminations in advance... */
-  next[olen] = '\0';
-  next[olen + 1] = '\0';
+  /* The new length is OLEN, plus 1 if there's a carry out of the
+     leftmost digit. */
+  *len = olen + carry;
 
-  /* ... then handle any leftover carry. */
+  /* Ensure that we haven't overrun the (ludicrous) bound on key length.
+     Note that SVN_FS__MAX_KEY_SIZE is a bound on the size *including*
+     the trailing null byte. */
+  assert (*len < SVN_FS__MAX_KEY_SIZE);
+
+  /* Now we know it's safe to add the null terminator. */
+  next[*len] = '\0';
+
+  /* Handle any leftover carry. */
   if (carry)
     {
-      for (i = (olen - 1); i >= 0; i--)
-        next[i + 1] = next[i];
+      memmove (next+1, next, olen);
       next[0] = '1';
-      *len = olen + 1;
     }
 }
 

@@ -245,7 +245,7 @@ static svn_error_t *
 get_key_and_bump (svn_fs_t *fs, const char **key, trail_t *trail)
 {
   DBC *cursor;
-  char next_key[200];
+  char next_key[SVN_FS__MAX_KEY_SIZE];
   apr_size_t key_len;
   int db_err;
   DBT query;
