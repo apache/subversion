@@ -273,3 +273,15 @@ svn_time_to_human_cstring (apr_time_t t, apr_pool_t *pool)
 
   return datestr;
 }
+
+
+void
+svn_sleep_for_timestamps (void)
+{
+  apr_time_t now, then;
+
+  /* Sleep until the next second tick, plus a tenth of a second for margin. */
+  now = apr_time_now ();
+  then = apr_time_make (apr_time_sec (now) + 1, APR_USEC_PER_SEC / 10);
+  apr_sleep (then - now);
+}

@@ -72,6 +72,12 @@ struct getdate_time {
  */
 time_t svn_parse_date (char *text, struct getdate_time *now);
 
+
+/** Sleep until the next second, to ensure that any files modified
+ * after we exit have a different timestamp than the one we recorded.
+ */
+void svn_sleep_for_timestamps (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

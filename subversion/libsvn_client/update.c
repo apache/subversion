@@ -136,8 +136,8 @@ svn_client_update (const char *path,
                                     ctx->notify_func, ctx->notify_baton,
                                     traversal_info, pool);
       
-      /* Sleep for one second to ensure timestamp integrity. */
-      apr_sleep (apr_time_from_sec(1));
+      /* Sleep to ensure timestamp integrity. */
+      svn_sleep_for_timestamps ();
 
       if (err)
         return err;
