@@ -59,8 +59,8 @@
 #include "svn_types.h"
 
 
-/* These are the in-memory tree deltas; you can convert them to and
- * from XML.
+/* These are the in-memory tree-delta stackframes; they are used to
+ * keep track of a delta's state while the XML stream is being parsed.
  * 
  * The XML representation has certain space optimizations.  For
  * example, if an ancestor is omitted, it means the same path at the
@@ -70,8 +70,7 @@
  * delta, etc -- or we may not.  In any case it doesn't affect the
  * definitions of these data structures.  However, once we do know
  * what interpretive conventions we're using in code, we should
- * probably record them here.
- */
+ * probably record them here.  */
 
 /* Note that deltas are constructed and deconstructed streamily.  That
  * way when you do a checkout of comp-tools, for example, the client
@@ -235,7 +234,7 @@ typedef struct svn_delta_digger_t
 {
   apr_pool_t *pool;
   
-  svn_delta_t *delta;
+  svn_delta_stackframe_t *stack;
 
   /* TODO: might want to declare a 
    * 
