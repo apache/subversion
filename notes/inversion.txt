@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.6 $ of this document.)
+              ($Revision: 1.7 $ of this document.)
 
 * Introduction
 
@@ -46,10 +46,10 @@ Commits are atomic -- either the entire commit succeeded, or the
 entire commit failed.  No one can ever retrieve a project tree in an
 inconsistent state.
 
-A commit may block on another commits (though only briefly, and only
-when absolutely necessary -- that is, when the same files would be
-affected).  But readers never cause locks nor wait for locks.  The
-repository is always readable.
+Lock-time is kept to a minimum.  A commit may block on another commit,
+but only briefly, and only when absolutely necessary -- that is, when
+the same files would be affected.  Readers neither cause nor wait for
+locks.
 
 ** Directories, renames, and file meta-data are versioned.
 
