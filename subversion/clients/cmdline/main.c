@@ -81,7 +81,8 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
 
   { "delete",     FALSE, svn_cl__delete,
     "Remove files and directories from version control.\n"
-    "usage: delete [TARGETS]\n" },
+    "usage: delete [TARGET]\n"
+    "       delete REPOS_URL1 [[REPOS_URL2] ... ]\n" },
   { "del",        TRUE, NULL, NULL },
   { "remove",     TRUE, NULL, NULL },
   { "rm",         TRUE, NULL, NULL },

@@ -48,8 +48,19 @@ svn_client_copy (svn_stringbuf_t *src_path,
 {
   enum svn_node_kind src_kind, dst_kind;
   svn_stringbuf_t *final_parent = NULL, *final_basename = NULL;
+  svn_string_t str;
 
   /* Part I:  Parse the types of the arguments */
+  str.data = src_path->data;
+  str.len = src_path->len;
+  if (svn_path_is_url (&str))
+    return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+                             "no support for URL copy sources");
+  str.data = dst_path->data;
+  str.len = dst_path->len;
+  if (svn_path_is_url (&str))
+    return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+                             "no support for URL copy destinations");
 
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
@@ -113,6 +124,8 @@ svn_client_move (svn_stringbuf_t *src_path,
   /* ... and a delete. */
   SVN_ERR (svn_client_delete (src_path, 
                               TRUE, /* force flag */
+                              NULL,
+                              NULL,
                               pool));
 
   /* Wasn't that easy? */
