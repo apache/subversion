@@ -1009,7 +1009,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
   else
     {
       b->pwdb = NULL;
-      b->realm = NULL;
+      b->realm = "";
     }
 
   /* Make sure it's possible for the client to authenticate. */
