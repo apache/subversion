@@ -842,9 +842,12 @@ svn_path_uri_encode (const char *path, apr_pool_t *pool)
                                    i - copied);
       
       /* Now, sprintf() in our escaped character, making sure our
-         buffer is big enough to hold the '%' and two digits. */
+         buffer is big enough to hold the '%' and two digits.  We cast
+         the C to unsigned char here because the 'X' format character
+         will be tempted to treat it as an unsigned int...which causes
+         problem when messing with 0x80-0xFF chars.  */
       svn_stringbuf_ensure (retstr, retstr->len + 3);
-      sprintf (retstr->data + retstr->len, "%%%02X", c);
+      sprintf (retstr->data + retstr->len, "%%%02X", (unsigned char)c);
       retstr->len += 3;
 
       /* Finally, update our copy counter. */
