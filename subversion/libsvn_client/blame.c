@@ -365,6 +365,9 @@ svn_client_blame (const char *target,
   lmb.eldest = NULL;
   lmb.pool = pool;
 
+  /* Accumulate revision metadata by walking the revisions
+     backwards; this allows us to follow moves/copies
+     correctly. */
   SVN_ERR (ra_lib->get_log (session,
                             condensed_targets,
                             end_revnum,
@@ -385,9 +388,13 @@ svn_client_blame (const char *target,
   db.avail = NULL;
   db.pool = pool;
 
+  /* Walk the revision list in chronological order, downloading
+     each fulltext, diffing it with its predecessor, and accumulating
+     the blame information into db.blame. */
   for (rev = lmb.eldest; rev; rev = rev->next)
     {
       const char *tmp;
+      apr_pool_clear (iterpool);
       SVN_ERR (svn_io_open_unique_file (&file, &tmp, "", ".tmp",
                                         FALSE, pool));
       stream = svn_stream_from_aprfile (file, iterpool);
@@ -402,7 +409,6 @@ svn_client_blame (const char *target,
         {
           svn_diff_t *diff;
           db.rev = rev;
-          apr_pool_clear (iterpool);
           SVN_ERR (svn_diff_file_diff (&diff, last, tmp, iterpool));
           SVN_ERR (svn_diff_output (diff, &db, &output_fns));
           apr_err = apr_file_remove (last, iterpool);
