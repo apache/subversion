@@ -1097,11 +1097,6 @@ svn_ra_dav__lock(svn_ra_session_t *session,
       path = key;
       revnum = val;
 
-      /* ### We're not using the iterpool here because neon's session
-         holds on to all hooks that are set via ne_hook_create_request
-         and there's no (public) way to clear out those hooks between
-         calls to the shim, so until we figure out how to fix this, we
-         just use the main pool. */
       err = shim_svn_ra_dav__lock(session, &lock, path, comment, 
                                   force, *revnum, iterpool);
 
