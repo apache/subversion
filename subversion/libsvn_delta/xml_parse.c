@@ -435,12 +435,6 @@ do_directory_callback (svn_xml__digger_t *digger,
   const char *ancestor, *ver;
   svn_string_t *dir_name = NULL;
 
-  /* Only proceed if the editor callback exists. */
-  if (replace_p && (! digger->editor->replace_directory))
-    return SVN_NO_ERROR;
-  if ((! replace_p) && (! digger->editor->add_directory))
-    return SVN_NO_ERROR;
-
   /* Retrieve the "name" field from the previous <new> or <replace> tag */
   dir_name = youngest_frame->previous->name;
   if (dir_name == NULL)
@@ -493,10 +487,6 @@ do_delete_dirent (svn_xml__digger_t *digger,
   svn_string_t *dirent_name = NULL;
   svn_error_t *err;
 
-  /* Only proceed if the editor callback exists. */
-  if (! (digger->editor->delete_entry))
-    return SVN_NO_ERROR;
-  
   /* Retrieve the "name" field from the current <delete> tag */
   dirent_name = youngest_frame->name;
   if (dirent_name == NULL)
@@ -527,12 +517,6 @@ do_file_callback (svn_xml__digger_t *digger,
   svn_error_t *err;
   const char *ancestor, *ver;
   svn_string_t *filename = NULL;
-
-  /* Only proceed if the editor callback exists. */
-  if (replace_p && (! digger->editor->replace_file))
-    return SVN_NO_ERROR;
-  if ((! replace_p) && (! digger->editor->add_file))
-    return SVN_NO_ERROR;
 
   /* Retrieve the "name" field from the previous <new> or <replace> tag */
   filename = youngest_frame->previous->name;
@@ -585,10 +569,6 @@ do_close_directory (svn_xml__digger_t *digger)
 {
   svn_error_t *err;
 
-  /* Only proceed if the editor callback exists. */
-  if (! (digger->editor->close_directory))
-    return SVN_NO_ERROR;
-
   /* Nothing to do but invoke the editor's callback, methinks. */
   err = digger->editor->close_directory (digger->stack->baton);
   if (err)
@@ -606,10 +586,6 @@ static svn_error_t *
 do_close_file (svn_xml__digger_t *digger)
 {
   svn_error_t *err;
-
-  /* Only proceed further if the editor callback exists. */
-  if (! (digger->editor->close_file))
-    return SVN_NO_ERROR;
 
   /* Call the editor's callback ONLY IF the frame's file_baton isn't
      stored in a hashtable!! */
@@ -668,11 +644,6 @@ do_begin_textdelta (svn_xml__digger_t *digger, svn_string_t *encoding)
   svn_stream_t *intermediate;
   void *file_baton = NULL;
   void *consumer_baton = NULL;
-
-  /* Sanity check: skip everything if the editor doesn't know how to
-     receive text-deltas in the first place.  */
-  if (digger->editor->apply_textdelta == NULL)
-    return SVN_NO_ERROR;
 
   /* Error check: if this is an "in-line" text-delta, it should NOT
      have a ref_id field.  */
@@ -891,20 +862,18 @@ do_prop_delta_callback (svn_xml__digger_t *digger)
     {
     case svn_propdelta_file:
       {
-        if (digger->editor->change_file_prop)
-          err = digger->editor->change_file_prop
-            (digger->file_baton,
-             digger->current_propdelta->name,
-             value_string);
+        err = digger->editor->change_file_prop
+          (digger->file_baton,
+           digger->current_propdelta->name,
+           value_string);
         break;
       }
     case svn_propdelta_dir:
       {
-        if (digger->editor->change_dir_prop)
-          err = digger->editor->change_dir_prop
-            (digger->dir_baton,
-             digger->current_propdelta->name,
-             value_string);
+        err = digger->editor->change_dir_prop
+          (digger->dir_baton,
+           digger->current_propdelta->name,
+           value_string);
         break;
       }
     default:
@@ -1048,11 +1017,8 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       if (SVN_IS_VALID_REVNUM(target_rev))
         {
           my_digger->base_revision = target_rev;
-          if (my_digger->editor->set_target_revision)
-            {
-              err = my_digger->editor->set_target_revision
-                (my_digger->edit_baton, target_rev);
-            }
+          err = my_digger->editor->set_target_revision
+            (my_digger->edit_baton, target_rev);
         }
       else
         {
@@ -1080,24 +1046,21 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       if (my_digger->stack->tag == svn_delta__XML_deltapkg)
         {
           /* Fetch the rootdir_baton by calling into the editor */
-          if (my_digger->editor->replace_root) 
-            {
-              void *rootdir_baton;
+          void *rootdir_baton;
 
-              err = my_digger->editor->replace_root
-                (my_digger->edit_baton, new_frame->ancestor_revision, 
-                 &rootdir_baton);
-              if (err)
-                svn_xml_signal_bailout (err, my_digger->svn_parser);
+          err = my_digger->editor->replace_root
+            (my_digger->edit_baton, new_frame->ancestor_revision, 
+             &rootdir_baton);
+          if (err)
+            svn_xml_signal_bailout (err, my_digger->svn_parser);
 
-              /* Place this rootdir_baton into the parent of the whole
-              stack, our <delta-pkg> tag.  Then, when we push the
-              <tree-delta> frame to the stack, it will automatically
-              "inherit" the baton as well.  We end up with our top two
-              stackframes both containing the root_baton, but that's
-              harmless.  */
-              my_digger->stack->baton = rootdir_baton;
-            }          
+          /* Place this rootdir_baton into the parent of the whole
+             stack, our <delta-pkg> tag.  Then, when we push the
+             <tree-delta> frame to the stack, it will automatically
+             "inherit" the baton as well.  We end up with our top two
+             stackframes both containing the root_baton, but that's
+             harmless.  */
+          my_digger->stack->baton = rootdir_baton;
         }
     }
 
@@ -1503,7 +1466,7 @@ svn_delta_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal,
     return err;
 
   /* Call `close_edit' callback if this is the final push */
-  if (isFinal && delta_parser->digger->editor->close_edit)
+  if (isFinal)
     {
       err = delta_parser->digger->editor->close_edit
         (delta_parser->digger->edit_baton);
