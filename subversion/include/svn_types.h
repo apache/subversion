@@ -306,6 +306,11 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
  * "various reasons" are actually ever relevant anymore, and if
  * they're not, it might be nice to change apr_hash_first() so
  * read-only uses of hashes can be protected via the type system.
+ *
+ * Use POOL for all allocation.  (If the caller is iterating over log
+ * messages, invoking this receiver on each, we recommend the standard
+ * pool loop recipe: create a subpool, pass it as POOL to each call,
+ * clear it after each iteration, destroy it after the loop is done.)
  */
 typedef svn_error_t *(*svn_log_message_receiver_t)
      (void *baton,
@@ -313,8 +318,8 @@ typedef svn_error_t *(*svn_log_message_receiver_t)
       svn_revnum_t revision,
       const char *author,
       const char *date,  /* use svn_time_from_string() if need apr_time_t */
-      const char *message); /* use svn_string_t if we ever have binary... */
-
+      const char *message,
+      apr_pool_t *pool);
 
 
 /* The maximum amount we (ideally) hold in memory at a time when

@@ -75,7 +75,6 @@ num_lines (const char *msg)
 struct log_message_receiver_baton
 {
   svn_boolean_t first_call;
-  apr_pool_t *pool;
 };
 
 
@@ -121,7 +120,10 @@ humanize_date (char *result, const char *date)
 
 
 /* This implements `svn_log_message_receiver_t', printing the logs in
- * a human-readable and machine-parseable format:
+ * a human-readable and machine-parseable format.  BATON is of type
+ * `struct log_message_receiver_baton *'.
+ *
+ * Here is an example of the output:
  *
  * $ svn log -r1847:1846
  * ------------------------------------------------------------------------
@@ -148,7 +150,8 @@ log_message_receiver (void *baton,
                       svn_revnum_t rev,
                       const char *author,
                       const char *date,
-                      const char *msg)
+                      const char *msg,
+                      apr_pool_t *pool)
 {
   struct log_message_receiver_baton *lb = baton;
 
@@ -189,7 +192,7 @@ log_message_receiver (void *baton,
          it doesn't become an issue later. */
 
       printf ("Changed paths:\n");
-      for (hi = apr_hash_first(lb->pool, changed_paths);
+      for (hi = apr_hash_first(pool, changed_paths);
            hi != NULL;
            hi = apr_hash_next(hi))
         {
@@ -210,8 +213,11 @@ log_message_receiver (void *baton,
 
 
 /* This implements `svn_log_message_receiver_t', printing the logs in
- * XML:
+ * XML.  BATON is ignored.
  *
+ * Here is an example of the output; note that the "<log>" and
+ * "</log>" tags are not emitted by this function:
+ * 
  * $ svn log --xml -r1648:1649
  * <log>
  * <logentry
@@ -247,33 +253,31 @@ log_message_receiver_xml (void *baton,
                           svn_revnum_t rev,
                           const char *author,
                           const char *date,
-                          const char *msg)
+                          const char *msg,
+                          apr_pool_t *pool)
 {
-  struct log_message_receiver_baton *lb = baton;
-  /* New pool for every received message. */
-  apr_pool_t *subpool = svn_pool_create (lb->pool);
   /* Collate whole log message into sb before printing. */
-  svn_stringbuf_t *sb = svn_stringbuf_create ("", subpool);
+  svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
   char *revstr;
 
-  revstr = apr_psprintf (subpool, "%" SVN_REVNUM_T_FMT, rev);
+  revstr = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
   /* <logentry revision="xxx"> */
-  svn_xml_make_open_tag (&sb, subpool, svn_xml_normal, "logentry",
-                         "revision", svn_stringbuf_create (revstr, subpool),
+  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "logentry",
+                         "revision", svn_stringbuf_create (revstr, pool),
                          NULL);
 
   /* <author>xxx</author> */
-  svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, "author",
+  svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "author",
                          NULL);
-  svn_xml_escape_nts (&sb, author, subpool);
-  svn_xml_make_close_tag (&sb, subpool, "author");
+  svn_xml_escape_nts (&sb, author, pool);
+  svn_xml_make_close_tag (&sb, pool, "author");
 
   /* Print the full, uncut, date.  This is machine output. */
   /* <date>xxx</date> */
-  svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, "date",
+  svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "date",
                          NULL);
-  svn_xml_escape_nts (&sb, date, subpool);
-  svn_xml_make_close_tag (&sb, subpool, "date");
+  svn_xml_escape_nts (&sb, date, pool);
+  svn_xml_make_close_tag (&sb, pool, "date");
 
   if (changed_paths)
     {
@@ -281,10 +285,10 @@ log_message_receiver_xml (void *baton,
       char *path;
 
       /* <paths> */
-      svn_xml_make_open_tag (&sb, subpool, svn_xml_normal, "paths",
+      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "paths",
                              NULL);
       
-      for (hi = apr_hash_first (subpool, changed_paths);
+      for (hi = apr_hash_first (pool, changed_paths);
            hi != NULL;
            hi = apr_hash_next (hi))
         {
@@ -295,33 +299,31 @@ log_message_receiver_xml (void *baton,
           apr_hash_this(hi, (void *) &path, NULL, &val);
           action = (char) ((int) val);
 
-          actionstr = apr_psprintf (subpool, "%c",
+          actionstr = apr_psprintf (pool, "%c",
                                     (action == 'R' ? 'U' : action));
           /* <path action="X">xxx</path> */
-          svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata,
+          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
                                  "path", "action",
-                                 svn_stringbuf_create(actionstr, subpool),
+                                 svn_stringbuf_create(actionstr, pool),
                                  NULL);
-          svn_xml_escape_nts (&sb, path, subpool);
-          svn_xml_make_close_tag (&sb, subpool, "path");
+          svn_xml_escape_nts (&sb, path, pool);
+          svn_xml_make_close_tag (&sb, pool, "path");
         }
 
       /* </paths> */
-      svn_xml_make_close_tag (&sb, subpool, "paths");
+      svn_xml_make_close_tag (&sb, pool, "paths");
     }
 
   /* <msg>xxx</msg> */
-  svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, "msg",
+  svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "msg",
                          NULL);
-  svn_xml_escape_nts (&sb, msg, subpool);
-  svn_xml_make_close_tag (&sb, subpool, "msg");
+  svn_xml_escape_nts (&sb, msg, pool);
+  svn_xml_make_close_tag (&sb, pool, "msg");
   
   /* </logentry> */
-  svn_xml_make_close_tag (&sb, subpool, "logentry");
+  svn_xml_make_close_tag (&sb, pool, "logentry");
 
   printf ("%s", sb->data);
-
-  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
@@ -378,7 +380,6 @@ svn_cl__log (apr_getopt_t *os,
     }
 
   lb.first_call = 1;
-  lb.pool = pool;
   if (opt_state->xml)
     {
       svn_stringbuf_t *sb;

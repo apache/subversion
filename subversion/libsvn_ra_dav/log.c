@@ -170,18 +170,13 @@ log_end_element(void *userdata,
       break;
     case ELEM_log_item:
       {
-        /* ### Naive call for now.  We still need to arrange things so
-           that last_call gets passed properly, which will
-           be... interesting.  Well, not so bad, just need to put an
-           attribute on the end element of the last item.  This is a
-           change to mod_dav_svn too. */
-        
         svn_error_t *err = (*(lb->receiver))(lb->receiver_baton,
                                              lb->changed_paths,
                                              lb->revision,
                                              lb->author,
                                              lb->date,
-                                             lb->msg);
+                                             lb->msg,
+                                             lb->subpool);
         
         reset_log_item (lb);
         
@@ -194,15 +189,50 @@ log_end_element(void *userdata,
       break;
     case ELEM_log_report:
       {
-        /* ### todo: what to do here?  We're (hopefully) going to handle
-           the whole last_call thing another way, so maybe the end of
-           the report means nothing... */
-
-        /* Yo --  we're going to take Greg's suggestion of treating
-           log_receivers the way we treat delta windows -- last call
-           is indicated by a special call with NULL (or, in this case,
-           SVN_INVALID_REVNUM), instead of combining the last_call
-           indicator with the previous, contentful call. */
+        /* Do nothing.  But...
+         *
+         * ### Possibility:
+         *
+         * Greg Stein mused that we could treat log_receivers the way
+         * we treat delta window consumers -- "no more calls" would be
+         * indicated by a special last call that passes
+         * SVN_INVALID_REVNUM as the revision number.  That would work
+         * fine, but right now most of the code just handles the
+         * first-call/last-call thing by having one-time code on
+         * either side of the iterator, which works just as well.
+         *
+         * I don't feel any compelling need to change this right now.
+         * If we do change it, the hot spots are:
+         *
+         *    - libsvn_repos/log.c:
+         *         svn_repos_get_logs() would need a new post-loop
+         *         call to (*receiver)(), passing SVN_INVALID_REVNUM.
+         *         Make sure not to destroy that subpool until
+         *         after the new call! :-)
+         *
+         *    - mod_dav_svn/log.c:
+         *        `struct log_receiver_baton' would need a first_call
+         *         flag; dav_svn__log_report() would set it up, and
+         *         then log_receiver() would be responsible for
+         *         emitting "<S:log-report>" and "</S:log-report>"
+         *         instead.
+         *
+         *    - clients/cmdline/log-cmd.c:
+         *         svn_cl__log() would no longer be responsible for
+         *         emitting the "<log>" and "</log>" elements.  The
+         *         body of this function would get a lot simpler, mmm!
+         *         Instead, log_message_receiver_xml() would pay
+         *         attention to baton->first_call, and handle
+         *         SVN_INVALID_REVNUM, to emit those elements
+         *         instead.  The old log_message_receiver() function
+         *         wouldn't need to change at all, though, I think.
+         *
+         *    - Right here:
+         *      We'd have a new call to (*(lb->receiver)), passing
+         *      SVN_INVALID_REVNUM, of course.
+         *
+         * There, I think that's the change.  Thoughts? :-)
+         */
       }
       break;
     }
