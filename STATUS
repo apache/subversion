@@ -37,3 +37,11 @@ Candidate changes:
       Tiny patch; creates a useful error message where none existed (#1988)
     Votes:
       +1: sussman
+
+  * r10608
+    Fix issue 1674: "svnadmin load" crashes on contentful rev 0.
+    Justification:
+      Trivial fix. Never crash.
+    Votes:
+      +1: maxb
+
