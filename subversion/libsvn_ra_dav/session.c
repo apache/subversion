@@ -151,13 +151,9 @@ static int request_auth(void *userdata, const char *realm, int attempt,
   return 0;
 }
 
-/* TODO: userdata needs
-   - some mechanism for passing back errors
-   - server group name
-*/
 typedef struct ssl_verify_baton_t
 {
-  svn_error_t *err;
+  svn_config_t *cfg;
   const char *server_group;
 } ssl_verify_baton_t;
 
@@ -167,37 +163,33 @@ typedef struct ssl_verify_baton_t
 static int ssl_set_verify_callback(void *userdata, int failures,
                                    const ne_ssl_certificate *cert)
 {
-  svn_config_t *cfg;
-  apr_pool_t *pool;
   const char *flag = NULL;
   ssl_verify_baton_t *baton;
 
   baton = (ssl_verify_baton_t *)userdata;
-  apr_pool_create(&pool, NULL);
-  svn_config_read_servers(&cfg, pool);
 
   /* This is a bit complex - I assume I only need to fetch a value to
      confirm that there is a 'true' failure. */
   if (failures & (NE_SSL_UNKNOWNCA))
     {
-      flag = get_server_setting(cfg, baton->server_group,
-				"ignore-ssl-unknown-ca", NULL);
+      flag = get_server_setting(baton->cfg, baton->server_group,
+                                "ignore-ssl-unknown-ca", NULL);
       if (flag == NULL)
-	return -1;
+        return -1;
     }
   if (failures & (NE_SSL_CNMISMATCH))
     {
-      flag = get_server_setting(cfg, baton->server_group,
-				"ignore-ssl-host-mismatch", NULL);
+      flag = get_server_setting(baton->cfg, baton->server_group,
+                                "ignore-ssl-host-mismatch", NULL);
       if (flag == NULL)
-	return -1;
+        return -1;
     }
   if (failures & (NE_SSL_NOTYETVALID | NE_SSL_EXPIRED))
     {
-      flag = get_server_setting(cfg, baton->server_group,
-				"ignore-ssl-invalid-date", NULL);
+      flag = get_server_setting(baton->cfg, baton->server_group,
+                                "ignore-ssl-invalid-date", NULL);
       if (flag == NULL)
-	return -1;
+        return -1;
     }
   
   return 0;
@@ -301,7 +293,7 @@ svn_ra_dav__open (void **session_baton,
     {
       ne_uri_free(&uri);
       return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
-			      "SSL is not supported");
+                              "SSL is not supported");
     }
 
   if (uri.port == 0)
@@ -402,17 +394,17 @@ svn_ra_dav__open (void **session_baton,
     {
       const char *authorities_file;
       authorities_file = get_server_setting(cfg, server_group,
-					    "ssl-authorities-file", NULL);
+                                            "ssl-authorities-file", NULL);
       
       if (authorities_file != NULL)
-	{
-	  ne_ssl_load_ca(sess, authorities_file);
-	  ne_ssl_load_ca(sess2, authorities_file);
-	}
+        {
+          ne_ssl_load_ca(sess, authorities_file);
+          ne_ssl_load_ca(sess2, authorities_file);
+        }
       ssl_verify_baton_t *baton = 
-	(ssl_verify_baton_t*)apr_palloc(pool, sizeof(ssl_verify_baton_t));
+        (ssl_verify_baton_t*)apr_palloc(pool, sizeof(ssl_verify_baton_t));
+      baton->cfg = cfg;
       baton->server_group = server_group;
-      baton->err = NULL;
       ne_ssl_set_verify(sess, ssl_set_verify_callback, baton);
       ne_ssl_set_verify(sess2, ssl_set_verify_callback, baton);
     }

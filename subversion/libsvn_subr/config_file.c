@@ -696,13 +696,17 @@ svn_config_ensure (apr_pool_t *pool)
         "# http-proxy-username = defaultusername\n"
         "# http-proxy-password = defaultpassword\n"
         "# No http-timeout, so just use the builtin default.\n"
-        "# No neon-debug-mask, so neon debugging is disabled.\n";
+        "# No neon-debug-mask, so neon debugging is disabled.\n"
+        "# ssl-authorities-file = /path/to/CAcerts.pem\n"
+        "# ignore-ssl-unknown-ca isn't set; the CA must be known and valid.\n"
+        "# ignore-ssl-host-mismatch isn't set; the cert hostname must match.\n"
+        "# ignore-ssl-invalid-date isn't set; the date range is validated.\n";
 
       apr_err = apr_file_open (&f, path,
                                (APR_WRITE | APR_CREATE | APR_EXCL),
                                APR_OS_DEFAULT,
                                pool);
-
+      
       if (! apr_err)
         {
           apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
