@@ -967,7 +967,7 @@ $ svn cleanup /path/to/working-copy
         
         <refsect1>
           <title>Alternate Names</title>
-          <para>ci (short for <quote>check in</quote> not 
+          <para>ci (short for <quote>check in</quote>; not 
             <quote>co</quote>, which is short for 
             <quote>checkout</quote>)</para>
         </refsect1>
@@ -4167,7 +4167,7 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
       <refentry id="svn-ch-9-sect-2.2-re-load">
         <refnamediv>
           <refname>svnadmin load</refname> <refpurpose>Read a
-            <quote>dumpfile-formatted</quote> stream from
+            <quote>dumpfile</quote>-formatted stream from
             stdin.</refpurpose>
         </refnamediv>
         <refsect1>

@@ -1542,8 +1542,7 @@ C      stuff/loot/lump.c   # denne filen inneholder en konflikt fra en
             <listitem>
               <para>The file, directory, or symbolic link
                 <filename>item</filename> has been scheduled for
-                addition into the repository.
-              </para>
+                addition into the repository.</para>
             </listitem>
             @ENGLISH }}} -->
             <term><computeroutput>A      element</computeroutput></term>
@@ -2444,8 +2443,7 @@ Updated to revision 46.
           <para>Here <literal>OLDREV</literal> is the revision number
             of the file in your <filename>.svn</filename> directory
             and <literal>NEWREV</literal> is the revision number of
-            the repository <literal>HEAD</literal>.
-          </para>
+            the repository <literal>HEAD</literal>.</para>
           @ENGLISH }}} -->
           <para>Her er <literal>GAMMELREV</literal> revisjonsnummeret 
             til filen i ditt <filename>.svn</filename>-omr&#229;de og 
@@ -2865,8 +2863,8 @@ Committed revision 4.
       <para>If you fail to specify either the
         <option>-&#64738;-message</option> or <option>-&#64738;-file</option> switch,
         then Subversion will automatically launch your favorite editor
-        (as defined in the environment variable
-        <literal>$EDITOR</literal>) for composing a log
+        (see the <literal>editor-cmd</literal> section in
+        <xref linkend="svn-ch-7-sect-1.3.2"/>) for composing a log
         message.</para>
       @ENGLISH }}} -->
       <para>Hvis du lar v&#230;re &#229; angi <option>--message</option>- eller 
@@ -3524,7 +3522,7 @@ trunk/
       <!-- @ENGLISH {{{
       <para>If you want a more detailed listing, pass the
         <option>-&#64738;-verbose</option> (<option>-v</option>) flag to get
-        output like this.</para>
+        output like this:</para>
       @ENGLISH }}} -->
       <para>Hvis du vil ha en mer detaljert liste, angi 
         <option>--verbose</option> (<option>-v</option>)-flagget for &#229; 
