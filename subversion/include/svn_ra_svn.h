@@ -204,13 +204,13 @@ svn_error_t *svn_ra_svn_parse_tuple(apr_array_header_t *list,
                                     const char *fmt, ...);
 
 /** Read a tuple from the network and parse it as a tuple, using the
- * format string notation from @c svn_ra_svn_parse_typle.
+ * format string notation from @c svn_ra_svn_parse_tuple.
  */
 svn_error_t *svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                    const char *fmt, ...);
 
 /** Read a command response from the network and parse it as a tuple, using 
- * the format string notation from @c svn_ra_svn_parse_typle.
+ * the format string notation from @c svn_ra_svn_parse_tuple.
  */
 svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
                                           apr_pool_t *pool,
