@@ -1293,6 +1293,7 @@ do_diff (const apr_array_header_t *options,
       const char *URL1, *URL2;
       const char *anchor1, *target1, *anchor2, *target2;
       svn_boolean_t path1_is_url, path2_is_url;
+      svn_node_kind_t path1_kind;
       svn_node_kind_t path2_kind;
       void *session2;
 
@@ -1328,6 +1329,25 @@ do_diff (const apr_array_header_t *options,
                 pool));
       callback_baton->revnum2 = end_revnum;
 
+      if (path1_is_url)
+        {
+          SVN_ERR (ra_lib->check_path (&path1_kind, session, "", start_revnum,
+                                       pool));
+
+          switch (path1_kind)
+            {
+            case svn_node_file:
+            case svn_node_dir:
+              break;
+
+            default:
+              return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
+                                        "'%s' at rev %" SVN_REVNUM_T_FMT
+                                        " wasn't found in repository.",
+                                        path1, start_revnum);
+            }
+        }
+      
       /* Now down to the -real- business.  We gotta figure out anchors
          and targets, whether things are urls or wcpaths.
 
