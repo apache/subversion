@@ -44,8 +44,12 @@ already know about.)
      Copyright notice fixes.
      Justification: Why have copyright notices at all unless legally proper?
                     And, 1.0 *will* be out in 2004!
+     Notes:
+      rooneg: This is worth it just so diffing between the branch and the 
+              trunk doesn't show differences for every damn file ;-)
      Votes:
       +1 (concept): jerenkrantz
+      +1: rooneg
 
 
    * r8053, r8054
@@ -55,8 +59,15 @@ already know about.)
       jerenkrantz: For 1.0, we'll state that svn_client_ctx_t can only add
                    members, correct?  So, I'm not sure that adding the
                    constructor buys us a lot - it's not opaque.  *shrug*
+      rooneg: Yeah, it doesn't force people to 'do the right thing', but it 
+              makes it possible for them to do so, and since 'the right thing' 
+              is clearly documented I think that's enough.  Plus, to make it 
+              100% bulletproof we'd need accessor functions and an opaque 
+              structure, and people didn't like that when I originally did it 
+              that way.
      Votes:
       +0: jerenkrantz
+      +1: rooneg
 
 
    * Issue #999
@@ -75,7 +86,7 @@ already know about.)
      Justification: Fixes arguably privacy leak in client.
      Notes: svnserve -u (believe usernames) was deprecated in 0.34.
      Votes:
-      +1: jerenkrantz
+      +1: jerenkrantz, rooneg
 
 
    * Issue #1644
@@ -92,7 +103,7 @@ already know about.)
      Fixes to make 'svn blame' work with i18n and uri-escaped filenames.
      Justification: Correctness.  [feel free to extend this, anyone.]
      Votes:
-      +1: jerenkrantz
+      +1: jerenkrantz, rooneg
 
 
    * r8048
@@ -118,7 +129,7 @@ already know about.)
      Notes:
       jerenkrantz: Also changes error returns to the correct priority.
      Votes:
-      +1: jerenkrantz
+      +1: jerenkrantz, rooneg
 
 
    * r8006
@@ -139,7 +150,7 @@ already know about.)
      Update references to BDB version in documentation.
      Justification: very low risk, and accurate documentation is good
      Votes:
-      +1: jerenkrantz
+      +1: jerenkrantz, rooneg
 
 
    * Issue #1652
@@ -174,7 +185,7 @@ already know about.)
      Return result_rev from svn_client_checkout properly.
      Justification: Conform to docstring; correctness; low risk
      Votes:
-      +1: jerenkrantz
+      +1: jerenkrantz, rooneg
 
 
    * r8098
