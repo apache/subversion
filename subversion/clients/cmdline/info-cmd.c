@@ -248,7 +248,12 @@ svn_cl__info (apr_getopt_t *os,
       if (! entry)
         {
           /* Print non-versioned message and extra newline separator. */
-          printf ("%s:  (Not a versioned resource)\n\n", target);
+
+          const char *native;
+          /* Get a non-UTF8 version of the target. */
+          SVN_ERR (svn_utf_cstring_from_utf8 (&native, target, pool));
+
+          printf ("%s:  (Not a versioned resource)\n\n", native);
           continue;
         }
 
