@@ -21,6 +21,7 @@ TABLE OF CONTENTS
    * Using page breaks
    * Other conventions
    * APR status codes
+   * APR pool usage conventions
    * Automated tests
    * Writing test cases before code
    * Debugging the server
@@ -395,6 +396,104 @@ In addition to the GNU standards, Subversion uses these conventions:
       the code, that are only noticed when someone unintentionally
       fails to follow them.  Just try to have a sensitive eye for the
       way things are done, and when in doubt, ask.
+
+
+
+APR pool usage conventions
+==========================
+
+(This assumes you already basically understand how APR pools work; see
+apr_pools.h for details.)
+
+Subversion's general pool usage strategy can be summed up in two
+principles:
+
+   1. The call level that created a pool is the only place to clear or
+      destroy that pool.
+
+   2. When iterating an unbounded number of times, create a subpool
+      before the iteration, use it inside the iteration and clear it
+      after each iteration, then destroy it after the loop is done,
+      like so:
+
+         subpool = svn_pool_create(pool);
+
+         for (i = 0; i < n; ++i)
+         {
+           do_operation(..., subpool);
+           svn_pool_clear(subpool);
+         }
+
+         svn_pool_destroy(subpool);
+  
+Except for some legacy code, which was written before these principles
+were fully understood, virtually all pool usage in Subversion follows
+the above guidelines.
+
+One such legacy pattern is a tendency to allocate an object inside a
+pool, store the pool in the object, and then free that pool (either
+directly or through a close_foo() function) to destroy the object.
+
+For example:
+
+   /*** Example of how NOT to use pools.  Don't be like this. ***/
+
+   static foo_t *
+   make_foo_object (arg1, arg2, apr_pool_t *pool)
+   {
+      apr_pool_t *subpool = svn_pool_create (pool);
+      foo_t *foo == apr_palloc (subpool, sizeof (*foo));
+
+      foo->field1 = arg1;
+      foo->field2 = arg2;
+      foo->pool   = subpool;
+   }
+
+   [...]
+
+   [Now some function calls make_foo_object() and returns, passing
+   back a new foo object.]
+
+   [...]
+
+   [Now someone, at some random call level, decides that the foo's
+   lifetime is over, and calls svn_pool_destroy(foo->pool).]
+
+This is tempting, but it defeats the point of using pools, which is to
+not worry so much about individual allocations, but rather about
+overall performance and lifetime groups.  Instead, foo_t generally
+should not have a `pool' field.  Just allocate as many foo objects as
+you need in the current pool -- when that pool gets cleared or
+destroyed, they will all go away simultaneously.
+   
+In summary:
+
+   - Objects should not have their own pools.  An object is allocated
+     into a pool defined by the constructor's caller.  The caller
+     knows the lifetime of the object and will manage it via the pool.
+
+   - Functions should not create/destroy pools for their operation;
+     they should use a pool provided by the caller.  Again, the
+     caller knows more about how the function will be used, how often,
+     how many times, etc. thus, it should be in charge of the
+     function's memory usage.
+
+     For example, the caller might know that the app will exit upon
+     the function's return. thus, the function would be created extra
+     work if it built/destroyed a pool. instead, it should use the
+     passed-in pool, which the caller is going to be tossing as part
+     of app-exit anyway.
+
+   - Whenever an unbounded iteration occurs, an iteration subpool
+     should be used.
+
+   - Given all of the above, it is pretty well mandatory to pass a
+     pool to every function.  Since objects are not recording pools
+     for themselves, and the caller is always supposed to be managing
+     memory, then each function needs a pool, rather than relying on
+     some hidden magic pool.  In limited cases, objects may record the
+     pool used for their construction so that they can construct
+     sub-parts, but these cases should be examined carefully.
 
 
 
