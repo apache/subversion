@@ -230,6 +230,22 @@ store_auth_info (const char *filename,
                  svn_client__callback_baton_t *cb)
 {
   svn_wc_adm_access_t *adm_access;
+  svn_error_t *err;
+  int wc_format;
+
+  /* Repository queries (at the moment HEAD to number, but in future date
+     to number and maybe others) prior to a checkout will attempt to store
+     auth info before the working copy exists.  */
+  err = svn_wc_check_wc (cb->base_dir, &wc_format, cb->pool);
+  if (err || ! wc_format)
+    {
+      if (err && err->apr_err == APR_ENOENT)
+        {
+          svn_error_clear_all (err);
+          err = SVN_NO_ERROR;
+        }
+      return err;
+    }
 
   /* ### Fragile!  For a checkout we have no access baton before the checkout
      starts, so base_access is NULL.  However checkout closes it's batons
