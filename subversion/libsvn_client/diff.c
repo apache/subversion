@@ -994,7 +994,7 @@ do_merge (const char *URL1,
                             URL2,
                             diff_editor, diff_edit_baton, pool));
   
-  SVN_ERR (reporter->set_path (report_baton, "", start_revnum, pool));
+  SVN_ERR (reporter->set_path (report_baton, "", start_revnum, FALSE, pool));
   
   SVN_ERR (reporter->finish_report (report_baton));
   
@@ -1600,7 +1600,8 @@ do_diff (const apr_array_header_t *options,
                                 URL2,
                                 diff_editor, diff_edit_baton, pool));
 
-      SVN_ERR (reporter->set_path (report_baton, "", start_revnum, pool));
+      SVN_ERR (reporter->set_path (report_baton, "", start_revnum,
+                                   FALSE, pool));
       SVN_ERR (reporter->finish_report (report_baton));
     }
 

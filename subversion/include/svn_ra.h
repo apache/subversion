@@ -117,7 +117,10 @@ typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)
  */
 typedef struct svn_ra_reporter_t
 {
-  /** Describe a working copy @a path as being at a particular @a revision.
+  /** Describe a working copy @a path as being at a particular @a revision.  
+   *
+   * If @a START_EMPTY is set and @a path is a directory, the
+   * implementor should assume the directory has no entries.
    *
    * This will *override* any previous @c set_path() calls made on parent
    * paths.  @a path is relative to the URL specified in @c open().
@@ -127,6 +130,7 @@ typedef struct svn_ra_reporter_t
   svn_error_t *(*set_path) (void *report_baton,
                             const char *path,
                             svn_revnum_t revision,
+                            svn_boolean_t start_empty,
                             apr_pool_t *pool);
 
   /** Describing a working copy @a path as missing.
@@ -143,12 +147,16 @@ typedef struct svn_ra_reporter_t
    * opening the RA layer), but is instead a reflection of a different
    * repository @a url at @a revision.
    *
+   * If @a START_EMPTY is set and @a path is a directory,
+   * the implementor should assume the directory has no entries.
+   *
    * All temporary allocations are done in @a pool.
    */
   svn_error_t *(*link_path) (void *report_baton,
                              const char *path,
                              const char *url,
                              svn_revnum_t revision,
+                             svn_boolean_t start_empty,
                              apr_pool_t *pool);
 
   /** WC calls this when the state report is finished; any directories

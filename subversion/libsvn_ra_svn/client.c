@@ -189,11 +189,14 @@ static svn_error_t *interpret_kind(const char *str, apr_pool_t *pool,
 /* --- REPORTER IMPLEMENTATION --- */
 
 static svn_error_t *ra_svn_set_path(void *baton, const char *path,
-                                    svn_revnum_t rev, apr_pool_t *pool)
+                                    svn_revnum_t rev,
+                                    svn_boolean_t start_empty,
+                                    apr_pool_t *pool)
 {
   ra_svn_reporter_baton_t *b = baton;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "set-path", "cr", path, rev));
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "set-path", "crb",
+                               path, rev, start_empty));
   SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, ""));
   return SVN_NO_ERROR;
 }
@@ -209,13 +212,15 @@ static svn_error_t *ra_svn_delete_path(void *baton, const char *path,
 }
     
 static svn_error_t *ra_svn_link_path(void *baton, const char *path,
-                                     const char *url, svn_revnum_t rev,
+                                     const char *url,
+                                     svn_revnum_t rev,
+                                     svn_boolean_t start_empty,
                                      apr_pool_t *pool)
 {
   ra_svn_reporter_baton_t *b = baton;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "link-path", "ccr",
-                               path, url, rev));
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "link-path", "ccrb",
+                               path, url, rev, start_empty));
   SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, ""));
   return SVN_NO_ERROR;
 }
