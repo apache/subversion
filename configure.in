@@ -387,7 +387,7 @@ SVN_CHECK_SWIG
 
 dnl try to find the "makeinfo" program
 AC_PATH_PROG(MAKEINFO, makeinfo, [echo cannot run makeinfo])
-if test "MAKEINFO" = "echo cannot run makeinfo"; then
+if test "$MAKEINFO" = "echo cannot run makeinfo"; then
         dnl we won't install/make any info pages then
 	INSTALL_INFO=""
 else
