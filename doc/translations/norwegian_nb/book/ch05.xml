@@ -3410,31 +3410,56 @@ $
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-3.2">
+      <!-- @ENGLISH {{{
       <title>Repository Cleanup</title>
+      @ENGLISH }}} -->
+      <title><!-- &#164; Er det ikke noe i samme gata en annen plass i boka? 
+        -->Depotvedlikehold</title>
             
+      <!-- @ENGLISH {{{
       <para>Your Subversion repository will generally require very
         little attention once it is configured to your liking.
         However, there are times when some manual assistance from an
         administrator might be in order.  The
         <command>svnadmin</command> utility provides some helpful
         functionality to assist you in performing such tasks as</para>
+      @ENGLISH }}} -->
+      <para>Subversiondepotet ditt vil vanligvis kreve veldig lite 
+        tilsyn n&#229;r det er konfigurert s&#229;nn som du vil ha det.
+        Det er imidlertid enkelte ganger en administrator m&#229; tr&#229; til med 
+        manuell assistanse.
+        Verkt&#248;yet <command>svnadmin </command> gir nyttig funksjonalitet 
+        for &#229; hjelpe deg med &#229; utf&#248;re oppgaver som</para>
 
       <itemizedlist>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>modifying commit log messages,</para>
+          @ENGLISH }}} -->
+          <para>modifisere loggmeldinger</para>
         </listitem>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>removing dead transactions,</para>
+          @ENGLISH }}} -->
+          <para>fjerne d&#248;de transaksjoner</para>
         </listitem>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>recovering <quote>wedged</quote> repositories, and</para>
+          @ENGLISH }}} -->
+          <para>gjenopprette <quote>fastkilte</quote> depot, og</para>
         </listitem>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>migrating repository contents to a different
             repository.</para>
+          @ENGLISH }}} -->
+          <para>flytte depotinnholdet til et annet depot.</para>
         </listitem>
       </itemizedlist>
 
+      <!-- @ENGLISH {{{
       <para>Perhaps the most commonly used of
         <command>svnadmin</command>'s subcommands is
         <literal>setlog</literal>.  When a transaction is committed to
@@ -3444,7 +3469,18 @@ $
         revision itself.  In other words, the repository remembers
         only the latest value of the property, and discards previous
         ones.</para>
+      @ENGLISH }}} -->
+      <para>Den delkommandoen som kanskje blir brukt mest i 
+        <command>svnadmin</command> er <literal>setlog</literal>.
+        N&#229;r en transaksjon er lagt inn i depotet og forfremmet til en 
+        revisjon, blir den beskrivende loggmeldingen assosiert med denne 
+        nye revisjonen <!-- &#164; &#171;(and provided by the user)&#187; Hva menes det 
+        her? --> lagret som en uversjonert egenskap vedlagt selve 
+        revisjonen.
+        Med andre ord, depotet husker bare den seneste verdien til 
+        egenskapen, og forkaster tidligere versjoner.</para>
 
+      <!-- @ENGLISH {{{
       <para>Sometimes a user will have an error in her log message (a
         misspelling or some misinformation, perhaps).  If the
         repository is configured (using the
@@ -3458,18 +3494,48 @@ $
         the potential to lose information forever, Subversion
         repositories are not, by default, configured to allow changes
         to unversioned properties&mdash;except by an administrator.</para>
+      @ENGLISH }}} -->
+      <para>Noen ganger skjer det at det blir feil i en loggmelding (en 
+        skrivefeil eller kanskje noe feilinformasjon).
+        Hvis depotet er satt opp (ved bruk av p&#229;hakningene
+        <literal>pre-rev-prop-change</literal> og 
+        <literal>post-revprop-change</literal>; se <xref 
+        linkend="svn-ch-5-sect-2.1"/>) til &#229; akseptere forandringer i 
+        denne loggmeldingen etter at innleggingen er ferdig, kan 
+        brukeren <quote>fikse</quote> loggmeldingen <!-- remotely -->fra 
+        en annen maskin ved bruk av <command>svn</command>-programmets 
+        <literal>propset</literal>-kommando (se <xref 
+        linkend="svn-ch-9"/>).
+        Men fordi det her er en potensiell sjanse for &#229; miste 
+        informasjon for alltid, er standard oppsett p&#229; et 
+        Subversiondepot &#229; ikke godta forandringer til uversjonerte 
+        egenskaper &#8212; unntatt av en administrator.</para>
 
+      <!-- @ENGLISH {{{
       <para>If a log message needs to be changed by an administrator,
         this can be done using <command>svnadmin setlog</command>.
         This command changes the log message (the
         <literal>svn:log</literal> property) on a given revision of a
         repository, reading the new value from a provided file.</para>
+      @ENGLISH }}} -->
+      <para>Hvis en loggmelding m&#229; forandres av en administrator, kan 
+        dette gj&#248;res ved &#229; bruke <command>svnadmin setlog</command>.
+        Denne kommandoen forandrer loggmeldingen 
+        (<literal>svn:log</literal>-egenskapen) p&#229; en gitt revisjoen i 
+        et depot, ved &#229; lese den nye verdien fra en fil.</para>
           
+      <!-- @ENGLISH {{{
       <screen>
 $ echo "Here is the new, correct log message" &gt; newlog.txt
 $ svnadmin setlog myrepos newlog.txt -r 388
 </screen>
+      @ENGLISH }}} -->
+      <screen>
+$ echo "Her er den nye, korrekte loggmeldingen" &gt; nylogg.txt
+$ svnadmin setlog mittdepot nylogg.txt -r 388
+</screen>
       
+      <!-- @ENGLISH {{{
       <para>The <command>svnadmin setlog</command> command alone is
         still bound by the same protections against modifying
         unversioned properties as a remote client is&mdash;the
@@ -3477,18 +3543,38 @@ $ svnadmin setlog myrepos newlog.txt -r 388
         <literal>post-revprop-change</literal> hooks are still
         triggered, and therefore must be setup to accept changes of
         this nature.  But an administrator can get around these
-        protections by passing the <option>--bypass-hooks</option>
+        protections by passing the <option>-&#64738;-bypass-hooks</option>
         option to the <command>svnadmin setlog</command> command.</para>
+      @ENGLISH }}} -->
+      <para>Kommandoen <command>svnadmin setlog</command> alene er 
+        fortsatt bundet av den samme beskyttelsen mot &#229; modifisere 
+        uversjonerte egenskaper som en klient <!-- 
+        &#171;remote&#187;-problematikken igjen -->p&#229; en annen maskin er &#8212; 
+        p&#229;hakningsskriptene <literal>pre-revprop-change</literal> og 
+        <literal>post-revprop-change</literal> blir fortsatt aktivisert 
+        og m&#229; derfor settes opp til &#229; godta denne typen forandringer.
+        Men en administrator kan g&#229; rundt denne beskyttelsen ved &#229; angi 
+        valget <option>--bypass-hooks</option> til <command>svnadmin 
+        setlog</command>-kommandoen.</para>
  
       <warning>
+        <!-- @ENGLISH {{{
         <para>Remember, though, that by bypassing the hooks, you are
           likely avoiding such things as email notifications of
           property changes, backup systems which track unversioned
           property changes, and so on.  In other words, be very
           careful about what you are changing, and how you change
           it.</para>
+        @ENGLISH }}} -->
+        <para>Men husk at ved &#229; omg&#229; p&#229;hakningsskriptene unng&#229;r du ogs&#229; 
+          ting som meldinger via email om forandringer i egenskaper, 
+          backupsystemer som f&#248;lger med p&#229; egenskapsforandringer og s&#229; 
+          videre.
+          Med andre ord, v&#230;r meget forsiktig med hva du forandrer og 
+          hvordan du forandrer det.</para>
       </warning>
 
+      <!-- @ENGLISH {{{
       <para>Another common use of <command>svnadmin</command> is to
         query the repository for outstanding&mdash;possibly
         dead&mdash;Subversion transactions.  In the event that a commit
@@ -3502,11 +3588,33 @@ $ svnadmin setlog myrepos newlog.txt -r 388
         failure might have occurred in the middle of an operation, etc.
         Regardless of the reason, these dead transactions serve only
         to clutter the repository and consume resources.</para>
+      @ENGLISH }}} -->
+      <para>En annen vanlig m&#229;te &#229; bruke <command>svnadmin</command> p&#229; 
+        er &#229; sp&#248;rre depotet om utest&#229;ende &#8212; muligens d&#248;de &#8212; 
+        Subversiontransaksjoner.
+        Hvis en innlegging feiler, blir transaksjonen vanligvis ryddet 
+        opp i.
+        Det vil si, selve transaksjonen blir fjernet fra depotet, og 
+        alle dataene assosiert med (og bare med) denne transaksjonen 
+        blir fjernet i samme slengen.
+        Men enkelte ganger kan det skje en feil p&#229; en m&#229;te som gj&#248;r at 
+        oppryddingen av transaksjonen aldri skjer.
+        Dette kan skje av flere grunner:
+        Kanskje klientoperasjonen ble uelegang avsluttet av brukeren, 
+        eller en nettverksfeil kan ha skjedd midt i en operasjon, osv.
+        Uansett grunnen, disse d&#248;de transaksjonene er bare skrot i 
+        depotet og tar opp ressurser.</para>
 
+      <!-- @ENGLISH {{{
       <para>You can use <command>svnadmin</command>'s
         <literal>lstxns</literal> command to list the names of the
         currently outstanding transactions.</para>
+      @ENGLISH }}} -->
+      <para>Du kan bruke <command>svnadmin</command>s 
+        <literal>lstxns</literal>-kommando for &#229; liste navnene p&#229; 
+        utest&#229;ende transaksjoner for &#248;yeblikket.</para>
 
+      <!-- @ENGLISH {{{
       <screen>
 $ svnadmin lstxns myrepos
 19
@@ -3514,10 +3622,19 @@ $ svnadmin lstxns myrepos
 a45
 $
 </screen>
+      @ENGLISH }}} -->
+      <screen>
+$ svnadmin lstxns mittdepot
+19
+3a1
+a45
+$
+</screen>
 
+      <!-- @ENGLISH {{{
       <para>Each item in the resultant output can then be used with
         <command>svnlook</command> (and its
-        <option>--transaction</option> option) to determine who
+        <option>-&#64738;-transaction</option> option) to determine who
         created the transaction, when it was created, what types of
         changes were made in the transaction&mdash;in other words,
         whether or not the transaction is a safe candidate for
@@ -3526,22 +3643,53 @@ $
         cleanup of the transaction.  In fact, the
         <literal>rmtxns</literal> subcommand can take its input
         directly from the output of <literal>lstxns</literal>!</para>
+      @ENGLISH }}} -->
+      <para>Hvert element i de resulterende utdataene kan deretter bli 
+        brukt sammen med <command>svnlook</command> (og dens valg 
+        <option>--transaction</option>) for &#229; finne ut hvem som lagde 
+        transaksjonen, n&#229;r den ble laget, hvilke typer forandringer som 
+        ble gjort i transaksjonen &#8212; med andre ord, om transaksjonen er 
+        eller ikke er en trygg kandidat for sletting!
+        Hvis den er det, kan transaksjonens navn leveres til 
+        <command>svnadmin rmtxns</command> som vil utf&#248;re fjerning av 
+        transaksjonen.
+        <literal>rmtxns</literal>-delkommandoen kan faktisk f&#229; dataene 
+        direkte fra det som <literal>lstxns</literal> genererer!</para>
 
+      <!-- @ENGLISH {{{
       <screen>
 $ svnadmin rmtxns myrepos `svnadmin lstxns myrepos`
 $
 </screen>
+      @ENGLISH }}} -->
+      <screen>
+$ svnadmin rmtxns mittdepot `svnadmin lstxns mittdepot`
+$
+</screen>
 
+      <!-- @ENGLISH {{{
       <para>If you use these two subcommands like this, you should
         consider making your repository temporarily inaccessible to
         clients.  That way, no one can begin a legitimate transaction
         before you start your cleanup.  The following is a little bit
         of shell-scripting that can quickly generate information about
         each outstanding transaction in your repository:</para>
+      @ENGLISH }}} -->
+      <para>Hvis du bruker disse to delkommandoene som dette, b&#248;r du 
+        vurdere &#229; gj&#248;re depotet midlertidig utilgjengelig for klienter.
+        P&#229; denne m&#229;ten kan ingen starte p&#229; en legitim transaksjon f&#248;r du 
+        starter p&#229; opprenskningen.
+        Det f&#248;lgende er en skallsnutt som raskt kan generere informasjon 
+        om hver utest&#229;ende transaksjon i depotet ditt:</para>
 
       <example id="svn-ch-5-sect-3.2-ex-1">
+        <!-- @ENGLISH {{{
         <title>txn-info.sh (Reporting Outstanding Transactions)</title>
+        @ENGLISH }}} -->
+        <title>txn-info.sh (Rapporterer utest&#229;ende 
+          transaksjoner)</title>
 
+        <!-- @ENGLISH {{{
         <programlisting>
 #!/bin/sh
 
@@ -3558,37 +3706,86 @@ if [ "x$REPOS" = x ] ; then
 fi
 
 for TXN in `${SVNADMIN} lstxns ${REPOS}`; do 
-  echo "---[ Transaction ${TXN} ]-------------------------------------------"
+  echo "-&#64738;-&#64738;-[ Transaction ${TXN} ]-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-"
+  ${SVNLOOK} info "${REPOS}" -&#64738;-transaction "${TXN}"
+done
+</programlisting>
+        @ENGLISH }}} -->
+        <programlisting>
+#!/bin/sh
+
+### Generer informasjon om alle utest&#229;ende transaksjoner i et 
+### Subversiondepot.
+
+SVNADMIN=/usr/local/bin/svnadmin
+SVNLOOK=/usr/local/bin/svnlook
+
+REPOS="${1}"
+if [ "x$REPOS" = x ] ; then
+  echo "bruk: $0 STI_TIL_DEPOT"
+  exit
+fi
+
+for TXN in `${SVNADMIN} lstxns ${REPOS}`; do 
+  echo "---[ Transaksjon ${TXN} ]-------------------------------------------"
   ${SVNLOOK} info "${REPOS}" --transaction "${TXN}"
 done
 </programlisting>
       </example>
 
+      <!-- @ENGLISH {{{
       <para>You can run the previous script using
         <command>/path/to/txn-info.sh /path/to/repos</command>.  The
         output is basically a concatenation of several chunks of
         <command>svnlook info</command> output (see <xref
         linkend="svn-ch-5-sect-3.1.1"/>), and will look something
         like:</para>
+      @ENGLISH }}} -->
+      <para>Du kan kj&#248;re det foreg&#229;ende skriptet ved &#229; bruke 
+        <command>/sti/til/txn-info.sh /sti/til/depot</command>.
+        Utdataene er hovedsaklig slere biter av utdataene fra 
+        <command>svnlook info</command> som er satt sammen (se <xref 
+        linkend="svn-ch-5-sect-3.1.1"/>), og vil se ut som noe i denne 
+        retningen:</para>
 
+      <!-- @ENGLISH {{{
       <screen>
 $ txn-info.sh myrepos
----[ Transaction 19 ]-------------------------------------------
+-&#64738;-&#64738;-[ Transaction 19 ]-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-
 sally
 2001-09-04 11:57:19 -0500 (Tue, 04 Sep 2001)
 0
----[ Transaction 3a1 ]-------------------------------------------
+-&#64738;-&#64738;-[ Transaction 3a1 ]-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-
 harry
 2001-09-10 16:50:30 -0500 (Mon, 10 Sep 2001)
 39
 Trying to commit over a faulty network.
----[ Transaction a45 ]-------------------------------------------
+-&#64738;-&#64738;-[ Transaction a45 ]-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-
+sally
+2001-09-12 11:09:28 -0500 (Wed, 12 Sep 2001)
+0
+$
+</screen>
+      @ENGLISH }}} -->
+      <screen>
+$ txn-info.sh mittdepot
+---[ Transaksjon 19 ]-------------------------------------------
+sally
+2001-09-04 11:57:19 -0500 (Tue, 04 Sep 2001)
+0
+---[ Transaksjon 3a1 ]-------------------------------------------
+harry
+2001-09-10 16:50:30 -0500 (Mon, 10 Sep 2001)
+39
+Pr&#248;ver &#229; legge inn over et skr&#248;pelig nettverk.
+---[ Transaksjon a45 ]-------------------------------------------
 sally
 2001-09-12 11:09:28 -0500 (Wed, 12 Sep 2001)
 0
 $
 </screen>
 
+      <!-- @ENGLISH {{{
       <para>Usually, if you see a dead transaction that has no log
         message attached to it, this is the result of a failed update
         (or update-like) operation.  These operations use Subversion
@@ -3600,7 +3797,23 @@ $
         datestamp can provide interesting information&mdash;for
         example, how likely is it that an operation begun nine months
         ago is still active?</para>
+      @ENGLISH }}} -->
+      <para>Vanligvis, hvis du ser en d&#248;d transaksjon som ikke har noen 
+        loggmelding sammen med den, er dette et resultat av en 
+        oppdateringsoperasjon (eller noe i likhet med en oppdatering) 
+        som har feilet.
+        Disse operasjonene bruker Subversiontransaksjoner under panseret 
+        for &#229; <!-- &#164; -->simulere tilstanden til en arbeidskopi.
+        Siden de aldri er ment &#229; bli lagt inn, krever ikke Subversion en 
+        loggmelding for disse transaksjonene.
+        Transaksjoner som har loggmeldinger vedlagt er omtent helt 
+        sikkert mislykkede innlegginger av en eller annen type.
+        I tillegg kan tidspunktet til en transaksjon bidra med 
+        interessant informasjon &#8212; for eksempel, hvor sannsynlig er det 
+        at en operasjon som begynte for ni m&#229;neder siden fortsatt er 
+        aktiv?</para>
 
+      <!-- @ENGLISH {{{
       <para>In short, transaction cleanup decisions need not be made
         unwisely.  Various sources of information&mdash;including
         Apache's error and access logs, the logs of successful
@@ -3609,6 +3822,16 @@ $
         simply communicate with a seemingly dead transaction's owner
         (via email, for example) to verify that the transaction is, in
         fact, in a zombie state.</para>
+      @ENGLISH }}} -->
+      <para>Kort sagt, er det ikke n&#248;dvendig &#229; foreta ukloke 
+        beslutninger om fjerning av transaksjoner.
+        Forskjellige kilder til informasjon &#8212; inkludert Apaches feil- og 
+        tilgangslogg, loggene med gjennomf&#248;rte Subversioninnlegginger og 
+        s&#229; videre &#8212; kan bli tatt med i beslutningsprosessen.
+        Til sist kan administratoren rett og slett kommunisere med 
+        eieren av en tilsynelatende d&#248;d transaksjon (via email, for 
+        eksempel) for &#229; fastsl&#229; at transaksjonen faktisk er i en 
+        zombietilstand.</para>
 
     </sect2>
 
