@@ -573,7 +573,7 @@ svn_ra_print_modules (svn_stringbuf_t *output,
           for (schemes = vtable->get_schemes(iterpool); *schemes != NULL;
                ++schemes)
             {
-              line = apr_psprintf (iterpool, _("  - handles '%s' schema\n"),
+              line = apr_psprintf (iterpool, _("  - handles '%s' scheme\n"),
                                    *schemes);
               svn_stringbuf_appendcstr (output, line);
             }

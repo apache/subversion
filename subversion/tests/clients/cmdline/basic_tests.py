@@ -1578,8 +1578,8 @@ def uri_syntax(sbox):
   # Revision 6638 made 'svn co http://host' seg fault, this tests the fix.
   svntest.main.safe_rmtree(wc_dir)
   url = svntest.main.current_repo_url
-  schema = url[:string.find(url, ":")]
-  url = schema + "://some_nonexistent_host_with_no_trailing_slash"
+  scheme = url[:string.find(url, ":")]
+  url = scheme + "://some_nonexistent_host_with_no_trailing_slash"
   svntest.actions.run_and_verify_svn("No error where one expected",
                                      None, SVNAnyOutput,
                                      'co', url, wc_dir)

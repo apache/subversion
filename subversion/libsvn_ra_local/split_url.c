@@ -81,7 +81,7 @@ svn_ra_local__split_URL (svn_repos_t **repos,
 #else  /* WIN32 */
   /* On Windows, we'll typically have to skip the leading / if the
      path starts with a drive letter.  Like most Web browsers, We
-     support two variants of this schema:
+     support two variants of this scheme:
 
          file:///X:/path    and
          file:///X|/path

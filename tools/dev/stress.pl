@@ -389,7 +389,7 @@ my $repo = init_repo( $cmd_opts{'R'}, $cmd_opts{'c'}, $cmd_opts{'W'},
 
 # [Windows compat]
 # Replace backslashes in the path, and tweak the number of slashes
-# in the schema separator to make the URL always correct.
+# in the scheme separator to make the URL always correct.
 my $urlsep = ($repo =~ m/^\// ? '//' : '///');
 $repo =~ s/\\/\//g;
 

@@ -54,7 +54,7 @@ usage: 1. switch URL [PATH]
      move a working copy to a branch or tag within the same repository.
 
   2. Rewrite working copy URL metadata to reflect a syntactic change only.
-     This is used when repository's root URL changes (such as a schema
+     This is used when repository's root URL changes (such as a scheme
      or hostname change) but your working copy still reflects the same
      directory within the same repository.
 

@@ -173,13 +173,13 @@ display_prop_diffs (const apr_array_header_t *propchanges,
 }
 
 
-/* Return SVN_ERR_UNSUPPORTED_FEATURE if URL's schema does not
-   match the schema of the url for ADM_ACCESS's path; return
-   SVN_ERR_BAD_URL if no schema can be found for one or both urls;
+/* Return SVN_ERR_UNSUPPORTED_FEATURE if URL's scheme does not
+   match the scheme of the url for ADM_ACCESS's path; return
+   SVN_ERR_BAD_URL if no scheme can be found for one or both urls;
    otherwise return SVN_NO_ERROR.  Use @a ADM_ACCESS's pool for
    temporary allocation. */
 static svn_error_t *
-check_schema_match (svn_wc_adm_access_t *adm_access, const char *url)
+check_scheme_match (svn_wc_adm_access_t *adm_access, const char *url)
 {
   const char *path = svn_wc_adm_access_path (adm_access);
   apr_pool_t *pool = svn_wc_adm_access_pool (adm_access);
@@ -195,26 +195,26 @@ check_schema_match (svn_wc_adm_access_t *adm_access, const char *url)
     {
       return svn_error_createf
         (SVN_ERR_BAD_URL, NULL,
-         _("URLs have no schema ('%s' and '%s')"), url, ent->url);
+         _("URLs have no scheme ('%s' and '%s')"), url, ent->url);
     }
   else if (idx1 == NULL)
     {
       return svn_error_createf
         (SVN_ERR_BAD_URL, NULL,
-         _("URL has no schema: '%s'"), url);
+         _("URL has no scheme: '%s'"), url);
     }
   else if (idx2 == NULL)
     {
       return svn_error_createf
         (SVN_ERR_BAD_URL, NULL,
-         _("URL has no schema: '%s'"), ent->url);
+         _("URL has no scheme: '%s'"), ent->url);
     }
   else if (((idx1 - url) != (idx2 - ent->url))
            || (strncmp (url, ent->url, idx1 - url) != 0))
     {
       return svn_error_createf
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-         _("Access schema mixtures not yet supported ('%s' and '%s')"),
+         _("Access scheme mixtures not yet supported ('%s' and '%s')"),
          url, ent->url);
     }
 
@@ -959,7 +959,7 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
             assert (child != NULL);
             copyfrom_url = svn_path_url_add_component (merge_b->url, child,
                                                        merge_b->pool);
-            SVN_ERR (check_schema_match (adm_access, copyfrom_url));
+            SVN_ERR (check_scheme_match (adm_access, copyfrom_url));
 
             /* Since 'mine' doesn't exist, and this is
                'merge_file_added', I hope it's safe to assume that
@@ -1131,7 +1131,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
   child = svn_path_is_child (merge_b->target, path, subpool);
   assert (child != NULL);
   copyfrom_url = svn_path_url_add_component (merge_b->url, child, subpool);
-  SVN_ERR (check_schema_match (adm_access, copyfrom_url));
+  SVN_ERR (check_scheme_match (adm_access, copyfrom_url));
 
   SVN_ERR (svn_io_check_path (path, &kind, subpool));
   switch (kind)

@@ -644,7 +644,7 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
   ne_uri parsed_url;
   const char *lopped_path = "";
 
-  /* Split the url into its component pieces (schema, host, path,
+  /* Split the url into its component pieces (scheme, host, path,
      etc).  We want the path part. */
   ne_uri_parse (url, &parsed_url);
   if (parsed_url.path == NULL)
