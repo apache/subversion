@@ -2,6 +2,18 @@
 
 SVN_PROG=../../../../clients/cmdline/svn
 XML_DIR=../../../xml
+if [ "x${1}" == "x" ]; then
+    SVN_PROG=$(pwd)/${SVN_PROG}
+else
+    # argument passed by make when builddir != srcdir
+    SVN_PROG=${1}/${SVN_PROG}
+fi
+if [ "x${2}" == "x" ]; then
+    XML_DIR=$(pwd)/${XML_DIR}
+else
+    # argument passed by make when builddir != srcdir
+    XML_DIR=${2}/${XML_DIR}
+fi
 TEST_DIR_1=t1
 TEST_DIR_2=t2
 COMMIT_RESULTFILE_NAME=commit
@@ -74,19 +86,19 @@ check_status 5
 
 ### Commit.
 echo "Committing changes in ${TEST_DIR_1}."
-(cd ${TEST_DIR_1};                                                   \
- ../${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_NAME}-2.xml \
-                --revision 2;                                        \
- )
+(cd ${TEST_DIR_1};                                                \
+ ${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_NAME}-2.xml \
+             --revision 2;                                        \
+)
 
 check_status 6
 
 ### Update.
 echo "Updating ${TEST_DIR_2} from changes in ${TEST_DIR_1}."
-(cd ${TEST_DIR_2};                                                    \
- ../${SVN_PROG} update --xml-file ../${COMMIT_RESULTFILE_NAME}-2.xml  \
-                --revision 2;                                         \
- )
+(cd ${TEST_DIR_2};                                                \
+ ${SVN_PROG} update --xml-file ../${COMMIT_RESULTFILE_NAME}-2.xml \
+             --revision 2;                                        \
+)
 
 check_status 7
 
@@ -115,20 +127,20 @@ echo "for commit rev2, tenth line in A/mu" >> ${TEST_DIR_2}/A/mu
 
 ### Commit.
 echo "Committing changes, this time from ${TEST_DIR_2}."
-(cd ${TEST_DIR_2};                                                   \
- ../${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_NAME}-3.xml \
-                --revision 3;                                        \
- )
+(cd ${TEST_DIR_2};                                                \
+ ${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_NAME}-3.xml \
+             --revision 3;                                        \
+)
 
 check_status 8
 
 
 ### Update.
 echo "Updating ${TEST_DIR_1} from changes in ${TEST_DIR_2}."
-(cd ${TEST_DIR_1};                                                   \
- ../${SVN_PROG} update --xml-file ../${COMMIT_RESULTFILE_NAME}-3.xml \
-                --revision 3;                                        \
- )
+(cd ${TEST_DIR_1};                                                \
+ ${SVN_PROG} update --xml-file ../${COMMIT_RESULTFILE_NAME}-3.xml \
+             --revision 3;                                        \
+)
 
 check_status 9
 
@@ -164,20 +176,20 @@ echo "for commit rev4, a non-conflicting change" >> ${TEST_DIR_2}/A/mu
 
 ### Commit.
 echo "Committing changes for merge, from ${TEST_DIR_1}."
-(cd ${TEST_DIR_1};                                                   \
- ../${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_NAME}-4.xml \
-                --revision 4;                                        \
- )
+(cd ${TEST_DIR_1};                                                \
+ ${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_NAME}-4.xml \
+             --revision 4;                                        \
+)
 
 check_status 10
 
 
 ### Update.
 echo "Updating ${TEST_DIR_2}, merging changes from ${TEST_DIR_1}."
-(cd ${TEST_DIR_2};                                                   \
- ../${SVN_PROG} update --xml-file ../${COMMIT_RESULTFILE_NAME}-4.xml \
-                --revision 4;                                        \
- )
+(cd ${TEST_DIR_2};                                                \
+ ${SVN_PROG} update --xml-file ../${COMMIT_RESULTFILE_NAME}-4.xml \
+             --revision 4;                                        \
+)
 
 check_status 11
 

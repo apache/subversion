@@ -127,15 +127,14 @@ check: $(TEST_DEPS) @FS_TEST_DEPS@
 	failed=no ; \
 	$(PYTHON) $(top_srcdir)/pycheck.py ; \
 	list='$(TEST_PROGRAMS) @FS_TEST_PROGRAMS@'; for prog in $$list; do \
-	    chmod a+x $$prog ; \
 	    progbase=`echo $$prog | sed 's?.*/??'` ; \
 	    progdir=`echo $$prog | sed 's?/[^/]*$$??'` ; \
 	    echo -n "Running all tests in $$progbase..." ; \
 	    echo "START: $$progbase" >> $$logfile ; \
 	    if echo $$progbase | grep \\.py$$ > /dev/null; then  \
-		runprog="$(PYTHON) $$progbase" ; \
+		runprog="$(PYTHON) $(abs_srcdir)/$$prog" ; \
 	    elif echo $$progbase | grep \\.sh$$ > /dev/null; then  \
-		runprog="$(SHELL) $$progbase" ; \
+		runprog="$(SHELL) $(abs_srcdir)/$$prog $(abs_builddir)/$$progdir $(abs_srcdir)/$$progdir" ; \
 	    elif test -x $$prog ; then \
 		runprog="./$$progbase" ; \
 	    else  \
