@@ -53,7 +53,34 @@
 #include "svn_types.h"
 #include "apr_pools.h"
 
-/*
+/* An svn_delta_digger_t is passed as *userData to Expat (and from
+ * there to registered callback functions).
+ *
+ * As the callbacks see various XML elements, they construct
+ * digger->delta.  Most elements merely require a new component of the
+ * delta to be built and hooked in, with no further action.  Other
+ * elements, such as a directory or actual file contents, require
+ * special action from the caller.  For example, if the caller is from
+ * the working copy library, it might create the directory or the file
+ * on disk; or if the caller is from the repository, it might want to
+ * start building nodes for a commit.  The digger holds function
+ * pointers for such callbacks, and the delta provides context to
+ * those callbacks -- e.g., the name of the directory or file to
+ * create.
+ *
+ *    Note ("heads we win, tails we lose"):
+ *    =====================================
+ *    A digger only stores the head of the delta, even though the
+ *    place we hook things onto is the tail.  While it would be
+ *    technically more efficient to keep a pointer to tail, it would
+ *    also be more error-prone, since it's another thing to keep track
+ *    of.  And the maximum chain length of the delta is proportional
+ *    to the max directory depth of the tree the delta represents,
+ *    since we always snip off any completed portion of the delta
+ *    (i.e., every time we encounter a closing tag, we remove what it
+ *    closed from the delta).  So cdr'ing down the chain to the end is
+ *    not so bad.  Given that deltas usually result in file IO of some
+ *    kind, a little pointer chasing should be lost in the noise.
  */
 typedef struct svn_delta_digger_t
 {
