@@ -23,6 +23,7 @@
 #include <apr_file_io.h>
 #include <apr_hash.h>
 #include <apr_time.h>
+#include "svn_pools.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -141,7 +142,7 @@ assemble_status (svn_wc_status_t **status,
         deletion.  (If something is deleted or scheduled for it, we
         don't care if the working file exists.)  */
   
-  SVN_ERR(svn_io_check_path (path, &path_kind, pool));
+  SVN_ERR( svn_io_check_path (path, &path_kind, pool));
   if ((path_kind == svn_node_none)
       && (final_text_status != svn_wc_status_deleted))
     final_text_status = svn_wc_status_absent;
@@ -162,7 +163,7 @@ assemble_status (svn_wc_status_t **status,
   /* 5. Build and return a status structure. */
 
   stat = apr_pcalloc (pool, sizeof(**status));
-  stat->entry = entry;
+  stat->entry = svn_wc__entry_dup (entry, pool);
   stat->repos_rev = SVN_INVALID_REVNUM;           /* caller fills in */
   stat->text_status = final_text_status;       
   stat->prop_status = final_prop_status;    
@@ -193,7 +194,7 @@ add_status_structure (apr_hash_t *statushash,
                       apr_pool_t *pool)
 {
   svn_wc_status_t *statstruct;
-
+  
   SVN_ERR (assemble_status (&statstruct, path, entry, get_all, pool));
 
   if (statstruct)
@@ -238,15 +239,14 @@ svn_wc_statuses (apr_hash_t *statushash,
                  svn_boolean_t get_all,
                  apr_pool_t *pool)
 {
-  svn_error_t *err;
   enum svn_node_kind kind;
   apr_hash_t *entries;
   svn_wc_entry_t *entry;
   void *value;
-  
+  apr_pool_t *subpool = svn_pool_create (pool);
+
   /* Is PATH a directory or file? */
-  err = svn_io_check_path (path, &kind, pool);
-  if (err) return err;
+  SVN_ERR (svn_io_check_path (path, &kind, subpool));
   
   /* kff todo: this has to deal with the case of a type-changing edit,
      i.e., someone removed a file under vc and replaced it with a dir,
@@ -266,11 +266,10 @@ svn_wc_statuses (apr_hash_t *statushash,
 
       /* Figure out file's parent dir */
       svn_path_split (path, &dirpath, &basename,
-                      svn_path_local_style, pool);      
+                      svn_path_local_style, subpool);      
 
       /* Load entries file for file's parent */
-      err = svn_wc_entries_read (&entries, dirpath, pool);
-      if (err) return err;
+      SVN_ERR (svn_wc_entries_read (&entries, dirpath, subpool));
 
       /* Get the entry by looking up file's basename */
       value = apr_hash_get (entries, basename->data, basename->len);
@@ -278,7 +277,7 @@ svn_wc_statuses (apr_hash_t *statushash,
       if (value)
         entry = (svn_wc_entry_t *) value;
       else
-        return svn_error_createf (SVN_ERR_BAD_FILENAME, 0, NULL, pool,
+        return svn_error_createf (SVN_ERR_BAD_FILENAME, 0, NULL, subpool,
                                   "svn_wc_statuses:  bogus path `%s'",
                                   path->data);
 
@@ -287,8 +286,7 @@ svn_wc_statuses (apr_hash_t *statushash,
          ### Notice that because we're getting one specific file,
          we're ignoring the GET_ALL flag and unconditionally fetching
          the status structure. */
-      err = add_status_structure (statushash, path, entry, TRUE, pool);
-      if (err) return err;
+      SVN_ERR (add_status_structure (statushash, path, entry, TRUE, pool));
     }
 
 
@@ -298,11 +296,10 @@ svn_wc_statuses (apr_hash_t *statushash,
       apr_hash_index_t *hi;
 
       /* Load entries file for the directory */
-      err = svn_wc_entries_read (&entries, path, pool);
-      if (err) return err;
+      SVN_ERR (svn_wc_entries_read (&entries, path, subpool));
 
       /* Loop over entries hash */
-      for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
+      for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
         {
           const void *key;
           void *val;
@@ -326,8 +323,7 @@ svn_wc_statuses (apr_hash_t *statushash,
               && (entry->schedule != svn_wc_schedule_add))
             continue;
 
-          err = svn_io_check_path (fullpath, &kind, pool);
-          if (err) return err;
+          SVN_ERR (svn_io_check_path (fullpath, &kind, subpool));
 
           /* In deciding whether or not to descend, we use the actual
              kind of the entity, not the kind claimed by the entries
@@ -359,7 +355,7 @@ svn_wc_statuses (apr_hash_t *statushash,
                      svn_wc_entry does this for us if it can.  */
                   svn_wc_entry_t *subdir;
 
-                  SVN_ERR (svn_wc_entry (&subdir, fullpath, pool));
+                  SVN_ERR (svn_wc_entry (&subdir, fullpath, subpool));
                   SVN_ERR (add_status_structure (statushash, fullpath,
                                                  subdir, get_all, pool));
                   if (descend)
@@ -379,6 +375,7 @@ svn_wc_statuses (apr_hash_t *statushash,
         }
     }
   
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
