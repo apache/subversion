@@ -39,7 +39,8 @@ enum {
   ELEM_resourcetype = DAV_ELM_207_UNUSED,
   ELEM_collection,
   ELEM_target,
-  ELEM_activity_collection_set
+  ELEM_activity_collection_set,
+  ELEM_version_name
 };
 
 static const dav_propname fetch_props[] =
@@ -47,6 +48,13 @@ static const dav_propname fetch_props[] =
   { "DAV:", "activity-collection-set" },
   { "DAV:", "resourcetype" },
   { "DAV:", "target" },
+
+  /* ### note: DAV:version-name is not necessarily located on the
+     ### version-controlled resource. We know mod_dav_svn will do this,
+     ### but this is a possible interop issue. Of course, simply the
+     ### fact that we consider DAV:version-name to contain the revision
+     ### number is pretty non-interoperable... */
+  { "DAV:", "version-name" },
   { NULL }
 };
 
@@ -57,39 +65,44 @@ static const struct hip_xml_elm fetch_elems[] =
   { "DAV:", "target", ELEM_target, 0 },
   { "DAV:", "activity-collection-set", ELEM_activity_collection_set, 0 },
   { "DAV:", "href", DAV_ELM_href, HIP_XML_CDATA },
+  { "DAV:", "version-name", ELEM_version_name, HIP_XML_CDATA },
   { NULL }
 };
 
 typedef struct {
-  const char *href;
-  const char *target_href;
-} file_rec_t;
+  /* what is the URL for this resource */
+  const char *url;
 
-typedef struct {
-  const char *href;
-  void *parent_baton;   /* baton of parent dir */
-} dir_rec_t;
+  /* URL to the version resource */
+  const char *vsn_url;
 
-typedef struct {
-  const char *href;
+  /* is this resource a collection? (from the DAV:resourcetype element) */
   int is_collection;
+
+  /* when we see a DAV:href element, what element is the parent? */
   int href_parent;
-  const char *target_href;
+
+  /* what is the dir_baton for this resource's parent collection? */
+  void *parent_baton;
+
 } resource_t;
 
 typedef struct {
   const char *cur_collection;   /* current URL on server */
   void *cur_baton;              /* current dir in WC */
 
-  apr_array_header_t *subdirs;  /* URL paths of subdirs to scan */
-  apr_array_header_t *files;
+  apr_array_header_t *subdirs;  /* subdirs to scan (resource_t *) */
+  apr_array_header_t *files;    /* files to checkout (resource_t *) */
 
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
 
   apr_pool_t *pool;
 
-  const char *activity_href;    /* where to create activities */
+  svn_string_t *activity_url;   /* where to create activities */
+
+  /* the name of the local property to hold the version resource's URL */
+  svn_string_t *vsn_url_name;
 
   /* used during fetch_dirents() */
   dav_propfind_handler *dph;
@@ -113,20 +126,23 @@ my_basename(const char *url, apr_pool_t *pool)
 }
 
 static void *
-start_resource (void *userdata, const char *href)
+start_resource (void *userdata, const char *url)
 {
   fetch_ctx_t *fc = userdata;
   resource_t *r = apr_pcalloc(fc->pool, sizeof(*r));
 
-  /* printf("start_resource: %s\n", href); */
+  /* printf("start_resource: %s\n", url); */
+
+  r->parent_baton = fc->cur_baton;
 
   /* ### mod_dav returns absolute paths in the DAV:href element. that is
      ### fine for us, since we're based on top of mod_dav. however, this
      ### will have an impact on future interopability.
 
-     ### i.e. r->href should be turned into an absolute href
+     ### i.e. r->url should be turned into an absolute path. (meaning it
+     ### begins with "/"; not that it includes the scheme/host/port)
   */
-  r->href = apr_pstrdup(fc->pool, href);
+  r->url = apr_pstrdup(fc->pool, url);
 
   return r;
 }
@@ -139,7 +155,7 @@ end_resource (void *userdata, void *resource, const char *status_line,
   resource_t *r = resource;
 
 #if 0
-  printf("end_resource: %s\n", r->href);
+  printf("end_resource: %s\n", r->url);
   if (status_line != NULL)
     printf("    status line: %s\n", status_line);
   if (status != NULL) {
@@ -153,31 +169,38 @@ end_resource (void *userdata, void *resource, const char *status_line,
 
   if (r->is_collection)
     {
-      struct uri href;
+      struct uri parsed_url;
 
-      uri_parse(r->href, &href, NULL);
-      if (uri_compare(href.path, fc->cur_collection) == 0)
+      /* parse the PATH element out of the URL (in case it is absolute) */
+      uri_parse(r->url, &parsed_url, NULL);
+      if (uri_compare(parsed_url.path, fc->cur_collection) == 0)
         {
           /* don't insert "this dir" into the set of subdirs */
+
+          /* ### it would be nice to use MSFT's "1,noroot" extension to
+             ### the Depth header */
         }
       else
         {
-          dir_rec_t *dr = apr_push_array(fc->subdirs);
-          dr->href = href.path;
-          dr->parent_baton = fc->cur_baton;
+          resource_t **subdir = apr_push_array(fc->subdirs);
+          *subdir = r;
 
-          printf("  ... pushing subdir: %s\n", href.path);
+          /* revise the URL to just be a PATH portion */
+          r->url = apr_pstrdup(fc->pool, parsed_url.path);
+
+          printf("  ... pushing subdir: %s\n", parsed_url.path);
         }
 
-      /* ### we will need r->target_href to fetch properties */
+      uri_free(&parsed_url);
+
+      /* ### we will need r->vsn_url to fetch properties */
     }
   else
     {
-      file_rec_t *fr = apr_push_array(fc->files);
-      fr->href = r->href;
-      fr->target_href = r->target_href;
+      resource_t **file = apr_push_array(fc->files);
+      *file = r;
 
-      printf("  ... found file: %s -> %s\n", r->href, r->target_href);
+      printf("  ... found file: %s -> %s\n", r->url, r->vsn_url);
     }
 }
 
@@ -194,6 +217,7 @@ validate_element (hip_xml_elmid parent, hip_xml_elmid child)
           case ELEM_target:
           case ELEM_resourcetype:
           case ELEM_activity_collection_set:
+          case ELEM_version_name:
             return HIP_XML_VALID;
           default:
             return HIP_XML_DECLINE;
@@ -285,16 +309,28 @@ end_element (void *userdata, const struct hip_xml_elm *elm, const char *cdata)
   if (elm->id == DAV_ELM_href)
     {
       if (r->href_parent == ELEM_target)
-        r->target_href = apr_pstrdup(fc->pool, cdata);
+        {
+          /* <version-name><href>...cdata...</href></version-name> */
+
+          /* Store the URL for the version resource */
+          r->vsn_url = apr_pstrdup(fc->pool, cdata);
+        }
+      /* else: assert href_parent == ELEM_activity_collection_set */
 
       /* store the activity HREF only once */
-      else if (fc->activity_href == NULL)
+      else if (fc->activity_url == NULL)
         {
           /* DAV:activity-collection-set
 
              ### should/how about dealing with multiple HREFs in here? */
-          fc->activity_href = apr_pstrdup(fc->pool, cdata);
+          fc->activity_url = svn_string_create(cdata, fc->pool);
         }
+    }
+  else if (elm->id == ELEM_version_name)
+    {
+      /* DAV:version-name */
+
+      /* ### store the revision number */
     }
 
   return 0;
@@ -318,7 +354,7 @@ fetch_dirents (svn_ra_session_t *ras,
   hip_xml_push_handler(hip, fetch_elems,
                       validate_element, start_element, end_element, fc);
 
-  if (fc->activity_href == NULL)
+  if (fc->activity_url == NULL)
     props = fetch_props;
   else
     props = fetch_props + 1;    /* don't fetch the activity href */
@@ -387,10 +423,11 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
 
 static svn_error_t *
 fetch_file (svn_ra_session_t *ras,
-            const char *url,
+            const resource_t *rsrc,
             fetch_ctx_t *fc)
 {
   svn_error_t *err;
+  svn_error_t *err2;
   svn_string_t *name;
   svn_string_t *ancestor_path;
   svn_revnum_t ancestor_revision;
@@ -401,9 +438,9 @@ fetch_file (svn_ra_session_t *ras,
   ancestor_path = svn_string_create("### ancestor_path ###", fc->pool);
   ancestor_revision = 1;
 
-  printf("fetching and saving %s\n", url);
+  printf("fetching and saving %s\n", rsrc->url);
 
-  name = my_basename(url, fc->pool);
+  name = my_basename(rsrc->url, fc->pool);
   err = (*fc->editor->add_file) (name, fc->cur_baton,
                                  ancestor_path, ancestor_revision,
                                  &file_baton);
@@ -414,9 +451,13 @@ fetch_file (svn_ra_session_t *ras,
                                         &fc->handler,
                                         &fc->handler_baton);
   if (err)
-    return svn_error_quick_wrap(err, "could not save file");
+    {
+      err = svn_error_quick_wrap(err, "could not save file");
+      /* ### do we really need to bother with closing the file_baton? */
+      goto error;
+    }
 
-  rv = http_read_file(ras->sess, url, fetch_file_reader, fc);
+  rv = http_read_file(ras->sess, rsrc->url, fetch_file_reader, fc);
   if (rv != HTTP_OK)
     {
       /* ### other GET responses? */
@@ -425,10 +466,31 @@ fetch_file (svn_ra_session_t *ras,
   /* note: handler_baton was "closed" in fetch_file_reader() */
 
   /* ### fetch properties */
-  /* ### store URL into a local, predefined property */
 
-  /* done with the file */
-  return (*fc->editor->close_file)(file_baton);
+  /* store the version URL as a property */
+  if (rsrc->vsn_url != NULL)
+    {
+      svn_string_t *vsn_url_value;
+
+      vsn_url_value = svn_string_create(rsrc->vsn_url, fc->pool);
+      err = (*fc->editor->change_file_prop)(file_baton,
+                                            fc->vsn_url_name, vsn_url_value);
+      if (err)
+        {
+          err = svn_error_quick_wrap(err,
+                                     "could not save the URL of the "
+                                     "version resource");
+          /* ### do we really need to bother with closing the file_baton? */
+          goto error;
+        }
+    }
+
+  /* all done! */
+  err = NULL;
+
+ error:
+  err2 = (*fc->editor->close_file)(file_baton);
+  return err ? err : err2;
 }
 
 svn_error_t * svn_ra_dav__checkout (void *session_baton,
@@ -441,29 +503,40 @@ svn_error_t * svn_ra_dav__checkout (void *session_baton,
 
   svn_error_t *err;
   fetch_ctx_t fc = { 0 };
-  dir_rec_t *dr;
   svn_string_t *ancestor_path;
   svn_revnum_t ancestor_revision;
-  void *dir_baton;
+  void *root_baton;
+  svn_string_t *act_url_name;
+  resource_t *rsrc;
+  resource_t **prsrc;
+
+  err = (*editor->replace_root)(edit_baton, &root_baton);
+  if (err != SVN_NO_ERROR)
+    return err;
 
   fc.editor = editor;
   fc.edit_baton = edit_baton;
   fc.pool = ras->pool;
-  fc.subdirs = apr_make_array(ras->pool, 5, sizeof(dir_rec_t));
-  fc.files = apr_make_array(ras->pool, 10, sizeof(file_rec_t));
+  fc.subdirs = apr_make_array(ras->pool, 5, sizeof(resource_t *));
+  fc.files = apr_make_array(ras->pool, 10, sizeof(resource_t *));
+  fc.vsn_url_name = svn_string_create(SVN_RA_DAV__LP_VSN_URL, ras->pool);
 
-  err = (*editor->replace_root)(edit_baton, &dir_baton);
-  if (err != SVN_NO_ERROR)
-    return err;
+  /* Build a directory resource for the root. We'll pop this off and fetch
+     the information for it. */
+  rsrc = apr_pcalloc(ras->pool, sizeof(*rsrc));
+  rsrc->parent_baton = root_baton;
 
   /* ### join ras->rep_root, URL */
-  dr = apr_push_array(fc.subdirs);
-  dr->href = ras->root.path;
-  dr->parent_baton = dir_baton;
+  rsrc->url = ras->root.path;
+
+  prsrc = apr_push_array(fc.subdirs);
+  *prsrc = rsrc;
 
   /* ### */
   ancestor_path = svn_string_create("### ancestor_path ###", ras->pool);
   ancestor_revision = 1;
+
+  act_url_name = svn_string_create(SVN_RA_DAV__LP_ACTIVITY_URL, ras->pool);
 
   do
     {
@@ -477,13 +550,14 @@ svn_error_t * svn_ra_dav__checkout (void *session_baton,
       /* pop a subdir off the stack */
       while (1)
         {
-          dr = &((dir_rec_t *)fc.subdirs->elts)[fc.subdirs->nelts - 1];
-          url = dr->href;
-          parent_baton = dr->parent_baton;
+          rsrc = ((resource_t **)fc.subdirs->elts)[fc.subdirs->nelts - 1];
+          url = rsrc->url;
+          parent_baton = rsrc->parent_baton;
           --fc.subdirs->nelts;
 
           if (url != NULL)
             break;
+          /* sentinel reached. close the dir. possibly done! */
 
           err = (*editor->close_directory) (parent_baton);
           if (err)
@@ -492,17 +566,6 @@ svn_error_t * svn_ra_dav__checkout (void *session_baton,
           if (fc.subdirs->nelts == 0)
             return SVN_NO_ERROR;
         }
-
-      /* add a placeholder. this will be used to signal a close_directory
-         for this directory's baton. */
-      dr = apr_push_array(fc.subdirs);
-      dr->href = NULL;
-      dr->parent_baton = NULL;
-      idx = fc.subdirs->nelts - 1;
-
-      err = fetch_dirents(ras, url, &fc);
-      if (err)
-        return svn_error_quick_wrap(err, "could not fetch directory entries");
 
       if (strlen(url) > strlen(ras->root.path))
         {
@@ -519,25 +582,44 @@ svn_error_t * svn_ra_dav__checkout (void *session_baton,
       else 
         {
           /* We are operating in the root of the repository */
-          this_baton = dir_baton;
+          this_baton = root_baton;
         }
+      fc.cur_baton = this_baton;
 
-      /* for each new directory added (including our marker), set its
-         parent_baton */
-      for (i = fc.subdirs->nelts; i-- > idx; )
+      /* add a sentinel. this will be used to signal a close_directory
+         for this directory's baton. */
+      rsrc = apr_pcalloc(ras->pool, sizeof(*rsrc));
+      rsrc->parent_baton = this_baton;
+      prsrc = apr_push_array(fc.subdirs);
+      *prsrc = rsrc;
+
+      idx = fc.subdirs->nelts - 1;
+
+      err = fetch_dirents(ras, url, &fc);
+      if (err)
+        return svn_error_quick_wrap(err, "could not fetch directory entries");
+
+      /* we should have successfully fetched an activity URL */
+      if (fc.activity_url != NULL)
         {
-          dr = &((dir_rec_t *)fc.subdirs->elts)[i];
-          dr->parent_baton = this_baton;
+          /* store the activity URL as a property */
+          err = (*editor->change_dir_prop)(this_baton,
+                                           act_url_name, fc.activity_url);
+          if (err)
+            /* ### should we close the dir batons first? */
+            return svn_error_quick_wrap(err,
+                                        "could not save the URL to indicate "
+                                        "where to create activities");
         }
 
       /* process each of the files that were found */
-      fc.cur_baton = this_baton;
       for (i = fc.files->nelts; i--; )
         {
-          file_rec_t *fr = &((file_rec_t *)fc.files->elts)[i];
+          rsrc = ((resource_t **)fc.files->elts)[i];
 
-          err = fetch_file(ras, fr->href, &fc);
+          err = fetch_file(ras, rsrc, &fc);
           if (err)
+            /* ### should we close the dir batons first? */
             return svn_error_quick_wrap(err, "could not checkout a file");
         }
       /* reset the list of files */
