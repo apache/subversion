@@ -98,8 +98,8 @@
       sammensetningen i et depot b&#229;de fra et logisk perspektiv &#8212; det &#229; 
       styre med hvordan data er representert i depotet &#8212; og fra et 
       fysisk skrue-og-mutter-perspektiv &#8212; hvordan et depot ser ut og 
-      oppf&#248;rer seg i sammenheng med verkt&#248;y <!-- &#164; -->som ikke h&#248;rer med til 
-      Subversion-pakken.</para>
+      oppf&#248;rer seg i sammenheng med verkt&#248;y <!-- &#164; -->som ikke h&#248;rer med 
+      til Subversion-pakken.</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-1.1">
@@ -247,6 +247,7 @@
         Navnene og verdiene til disse egenskapene er lagret i depotets 
         filsystem, sammen med resten av dataene for treet.</para>
 
+      <!-- @ENGLISH {{{
       <para>Revision and transaction properties are useful for
         associating information with a tree that is not strictly
         related to the files and directories in that tree&mdash;the
@@ -261,7 +262,23 @@
         revision's author (<literal>svn:author</literal>) and a
         property to store the log message attached to that revision
         (<literal>svn:log</literal>).</para>
+      @ENGLISH }}} -->
+      <para>Revisjons- og transaksjonsegenskaper er nyttige for &#229; 
+        assosiere informasjon sammen med et tre som ikke er spesifikt 
+        relatert til filene og katalogene i dette treet &#8213; den typen 
+        informasjon som ikke er behandlet av arbeidskopier for klienten.
+        For eksempel, n&#229;r en ny innleggingstransaksjon er opprettet i 
+        depotet, legger Subversion en egenskap til denne transaksjonen 
+        kalt <literal>svn:date</literal> &#8212; et tidsmerke som 
+        representerer tidspunktet transaksjonen ble opprettet.
+        N&#229;r innleggingsprosessen er fullf&#248;rt, og transaksjonen blir 
+        forfremmet til en permanent revisjon, har treet ogs&#229; f&#229;tt en 
+        egenskap for &#229; lagre brukernavnet til revisjonens forafatter 
+        (<literal>svn:author</literal>) og en egenskap for &#229; lagre 
+        loggmeldingen som h&#248;rer til denne revisjonen 
+        <literal>svn:log</literal>.</para>
 
+      <!-- @ENGLISH {{{
       <para>Revision and transaction properties are
         <firstterm>unversioned properties</firstterm>&mdash;as they
         are modified, their previous values are permanently discarded.
@@ -273,13 +290,29 @@
         message, you can simply replace the value of the
         <literal>svn:log</literal> property with a new, corrected log
         message.</para>
+      @ENGLISH }}} -->
+      <para>Revisjons- og transaksjonsegenskaper er 
+        <firstterm>uversjonerte egenskaper</firstterm> &#8212; n&#229;r de blir 
+        modifisert blir den foreg&#229;ende verdien permanent forkastet.
+        Selv om revisjonstr&#230;r er uforanderlige, gjelder ikke dette 
+        egenskapene som er vedlagt disse tr&#230;rne.
+        Du kan legge til, fjerne, og modifisere revisjonsegenskaper til 
+        enhver tid i fremtide.
+        Hvis du legger inn en ny revisjon og senere finner ut at du la 
+        inn feil informasjon eller skrivefeil i loggmeldingen, kan du 
+        enkelt forandre verdien i <literal>svn:log</literal>-egenskapen 
+        med en ny, rettet loggmelding.</para>
 
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-1.3">
+      <!-- @ENGLISH {{{
       <title>Repository Data-Stores</title>
+      @ENGLISH }}} -->
+      <title>Datalagring i depotet</title>
 
+      <!-- @ENGLISH {{{
       <para>As of Subversion 1.1, there are two options for storing
         data in a Subversion repository.  One type of repository
         stores everything in a Berkeley DB database; the other kind
@@ -290,7 +323,21 @@
         <firstterm>FSFS</firstterm>: that is, it's a versioned
         filesystem implementation that uses the native OS filesystem
         to store data.</para>
+      @ENGLISH }}} -->
+      <para>I Subversion 1.1 er det to valg for &#229; lagre data i et 
+        Subversiondepot.
+        En depottype lagrer alt i en Berkeley DB-database; den andre 
+        typen lagrer data som ordin&#230;re <quote>flate filer</quote> i et 
+        tilpasset format.
+        Fordi Subversionutvilkere ofte referer til et depot som 
+        <quote>det [versjonerte] filsystemet</quote>, har de lagt seg 
+        til vanen med &#229; refere til den sistnevnte typen depot som 
+        <firstterm>FSFS</firstterm>:
+        Det vil si, det er en versjonert filsystemimplementasjon som 
+        bruker det vanlige filsystemet til operativsystemet for &#229; lagre 
+        data.</para>
 
+      <!-- @ENGLISH {{{
       <para>When a repository is created, an administrator must decide
         whether it will use Berkeley DB or FSFS.  There are advantages
         and disadvantages to each, which we'll describe in a bit.
@@ -299,113 +346,230 @@
         this implementation detail.  Programs have no idea how a
         repository is storing data; they only see revision and
         transaction trees through the repository API.</para>
+      @ENGLISH }}} -->
+      <para>N&#229;r et depot er opprettet, m&#229; administratoren bestemme om 
+        Berkeley DB eller FSFS skal brukes.
+        Det er fordeler og ulemper med begge to, som vi vil g&#229; gjennom 
+        ganske snart.
+        Ingen av de bakenforliggende depotene er mer 
+        <quote>offisielt</quote> enn det andre, og programmer som 
+        aksesserer depotet er isolert fra denne implementasjonsdetaljen.
+        Programmer har ingen formening om hvordan depotet lagrer data; 
+        de ser bare revisjons- og transaksjonstr&#230;r gjennom 
+        depotgrensesnittet.</para>
 
+      <!-- @ENGLISH {{{
       <para>Here is a table that gives a comparative overview of
         Berkeley DB and FSFS repositories.  The next sections go into
         detail.</para>
+      @ENGLISH }}} -->
+      <para>Her er en tabell som gir en oversikt over forskjellene 
+        mellom depoter av typen Berkeley DB og FSFS.
+        De neste seksjonene g&#229;r inn i detalj.</para>
 
       <table id="svn-ch-5-table-1">
+        <!-- @ENGLISH {{{
         <title>Repository Data-Store Comparison</title>
+        @ENGLISH }}} -->
+        <title>Sammenligning av datalagring i <!-- &#164; &#171;depot&#187; i flertall. 
+          Vil gjerne skrive &#171;depoter&#187;, men er det noe som heter det? 
+          -->depot</title>
         <tgroup cols="3">
           <thead>
             <row>
+              <!-- @ENGLISH {{{
               <entry>Feature</entry>
+              <entry>Berkeley DB</entry>
+              <entry>FSFS</entry>
+              @ENGLISH }}} -->
+              <entry>Funksjonalitet</entry>
               <entry>Berkeley DB</entry>
               <entry>FSFS</entry>
             </row>
           </thead>
           <tbody>
             <row>
+              <!-- @ENGLISH {{{
               <entry>Sensitivity to interruptions</entry>
+              @ENGLISH }}} -->
+              <entry>F&#248;lsom for avbrytelser</entry>
               
+              <!-- @ENGLISH {{{
               <entry>very;  crashes and permission problems can leave the
                 database <quote>wedged</quote>, requiring journaled
                 recovery procedures.</entry>
+              @ENGLISH }}} -->
+              <entry>veldig;
+              krasj og problemer med rettigheter kan etterlate databasen 
+              i en <quote>fastkilt</quote> (Engelsk: 
+              <foreignphrase>wedged</foreignphrase>) tilstand som krever 
+              <!-- &#164; -->prosedyrer for journalgjenoppretting.</entry>
               
+              <!-- @ENGLISH {{{
               <entry>quite insensitive.</entry>
+              @ENGLISH }}} -->
+              <entry>ganske uf&#248;lsom.</entry>
             </row>
             
             <row>
+              <!-- @ENGLISH {{{
               <entry>Usable from a read-only mount</entry>
               
               <entry>no</entry>
               
               <entry>yes</entry>
+              @ENGLISH }}} -->
+              <entry>Kan brukes fra et ikke-skrivbart medium</entry>
+
+              <entry>nei</entry>
+
+              <entry>ja</entry>
             </row>
             
             <row>
+              <!-- @ENGLISH {{{
               <entry>Platform-independent storage</entry>
               
               <entry>no</entry>
               
               <entry>yes</entry>
+              @ENGLISH }}} -->
+              <entry>Plattformuavhengig lagring</entry>
+
+              <entry>nei</entry>
+
+              <entry>ja</entry>
             </row>
             
             <row>
+              <!-- @ENGLISH {{{
               <entry>Usable over network filesystems</entry>
               
               <entry>no</entry>
               
               <entry>yes</entry>
+              @ENGLISH }}} -->
+              <entry>Brukbar over nettverksfilsystem</entry>
+
+              <entry>nei</entry>
+
+              <entry>yes</entry>
             </row>
             
             <row>
+              <!-- @ENGLISH {{{
               <entry>Repository size</entry>
               
               <entry>slightly larger</entry>
               
               <entry>slightly smaller</entry>
+              @ENGLISH }}} -->
+              <entry>Depotst&#248;rrelse</entry>
+
+              <entry>litt st&#248;rre</entry>
+
+              <entry>litt mindre</entry>
             </row>
 
             <row>
+              <!-- @ENGLISH {{{
               <entry>Scalability: number of revision trees</entry>
               
               <entry>database;  no problems</entry>
               
               <entry>some older native filesystems don't scale well with
                 thousands of entries in a single directory.</entry>
+              @ENGLISH }}} -->
+              <entry>Skalerbarhet:
+                Antall revisjonstr&#230;r</entry>
+
+              <entry>database; ingen problemer</entry>
+
+              <entry>ytelsen p&#229; noen eldre filsystemer blir d&#229;rligere 
+                med tusenvis av elementer i en katalog.</entry>
             </row>
 
             <row>
+              <!-- @ENGLISH {{{
               <entry>Scalability: directories with many files</entry>
               
               <entry>slower</entry>
               
               <entry>faster</entry>
+              @ENGLISH }}} -->
+              <entry>Skalerbarhet:
+                Kataloger med mange filer</entry>
+
+              <entry>langsommere</entry>
+
+              <entry>raskere</entry>
             </row>
                         
             <row>
+              <!-- @ENGLISH {{{
               <entry>Speed:  checking out latest code</entry>
               
               <entry>faster</entry>
               
               <entry>slower</entry>
+              @ENGLISH }}} -->
+              <entry>Hastighet:
+                Uthenting av nyeste kode</entry>
+
+              <entry>raskere</entry>
+
+              <entry>langsommere</entry>
             </row>
             
             <row>
+              <!-- @ENGLISH {{{
               <entry>Speed:  large commits</entry>
               
               <entry>slower, but work is spread throughout commit</entry>
               
               <entry>faster, but finalization delay may cause client
                 timeouts</entry>
+              @ENGLISH }}} -->
+              <entry>Hastighet:
+                Store innlegginger</entry>
+
+              <entry>langsommere, men arbeidet blir spredt ut over 
+                innleggingen</entry>
+
+              <entry>raskere, men forsinkelse i avslutningen kan 
+                for&#229;rsake tidsavbrudd for klienten.</entry>
             </row>
             
             <row>
+              <!-- @ENGLISH {{{
               <entry>Group permissions handling</entry>
               
               <entry>sensitive to user umask problems;  best if accessed
                 by only one user.</entry>
               
               <entry>works around umask problems</entry>
+              @ENGLISH }}} -->
+              <entry>Behandling av grupperettigheter</entry>
+
+              <entry>f&#248;lsom for problemer med umask; det beste er om den 
+                blir aksessert av bare en bruker.</entry>
+
+              <entry>jobber seg rundt problemer med umask</entry>
             </row>
 
             <row>
+              <!-- @ENGLISH {{{
               <entry>Code maturity</entry>
               
               <entry>in use since 2001</entry>
               
               <entry>in use since 2004</entry>
+              @ENGLISH }}} -->
+              <entry><!-- &#164; -->Kodemodenhet</entry>
+
+              <entry>i bruk siden 2001</entry>
+
+              <entry>i bruk siden 2004</entry>
             </row>
 
           </tbody>
@@ -416,13 +580,21 @@
       <sect3 id="svn-ch-5-sect-1.3.1">
         <title>Berkeley DB</title>
         
+        <!-- @ENGLISH {{{
         <para>When the initial design phase of Subversion was in
           progress, the developers decided to use Berkeley DB for a
           variety of reasons, including its open-source license,
           transaction support, reliability, performance, API
           simplicity, thread-safety, support for cursors, and so
           on.</para>
+        @ENGLISH }}} -->
+        <para>I den innledende designfasen av Subversion bestemte 
+          utviklerne seg for &#229; bruke Berkeley DB av diverse grunner, 
+          blant annet dens &#229;pne lisens, transaksjonsst&#248;tte, stabilitet, 
+          effektivitet, enkelt grensesnitt, tr&#229;dsikkerhet, st&#248;tte for 
+          &#164;cursors og s&#229; videre.</para>
 
+        <!-- @ENGLISH {{{
         <para>Berkeley DB provides real transaction
           support&mdash;perhaps its most powerful feature.  Multiple
           processes accessing your Subversion repositories don't have
@@ -437,7 +609,22 @@
           it never happened, and Subversion gracefully retries the
           operation against a new, updated (and yet still static) view
           of the database.</para>
+        @ENGLISH }}} -->
+        <para>Berkeley DB tilbyr reell st&#248;tte for transaksjoner &#8212; 
+          kanskje dens kraftigste funksjonalitet.
+          Flere prosesser som aksesserer Subversiondepotene dine trenger 
+          ikke &#229; tenke p&#229; faren ved &#229; rote til hverandres data.
+          Isolasjonen som transaksjonssystemet tilbyr er slik at for 
+          enhver operasjon ser et statisk bilde av en database &#8212; ikke en 
+          database som konstant forandres av en annen prosess &#8212; og kan 
+          foreta avgj&#248;relser basert p&#229; dette bildet.
+          Hvis avgj&#248;relsen kommer i konflikt med det en annen prosess 
+          gj&#248;r, blir hele operasjonen rullet tilbake som om den aldri 
+          skjedde, og Subversion pr&#248;ver <!-- &#164; -->forsiktig operasjonen  
+          mot et nytt, oppdatert (og fortsatt statisk) bilde av 
+          databasen.</para>
 
+        <!-- @ENGLISH {{{
         <para>Another great feature of Berkeley DB is <firstterm>hot
           backups</firstterm>&mdash;the ability to backup the database
           environment without taking it <quote>offline</quote>.  We'll
@@ -445,7 +632,17 @@
           linkend="svn-ch-5-sect-3.6"/>, but the benefits of being
           able to make fully functional copies of your repositories
           without any downtime should be obvious.</para>
+        @ENGLISH }}} -->
+        <para>En annen fin funksjonalitet med Berkeley DB er 
+          <firstterm>varme backuper</firstterm> (<foreignphrase>hot 
+          backups</foreignphrase>) &#8212; muligeten til &#229; ta sikkerhetskopi 
+          av databasen uten &#229; ta den ned.
+          Vi vil diskuter hvordan du tar backup av depotet i <xref 
+          linkend="svn-ch-5-sect-3.6"/>, men fordelene med &#229; kunne ta 
+          fullstendige fungerende kopier av depotene dine uten noe 
+          nedetid er innlysende.</para>
 
+        <!-- @ENGLISH {{{
         <para>Berkeley DB is also a very reliable database system.
           Subversion uses Berkeley DB's logging facilities, which
           means that the database first writes to on-disk log files a
@@ -457,7 +654,19 @@
           replay transactions until the data is restored to a usable
           state.  See <xref linkend="svn-ch-5-sect-3.3"/> for more
           about Berkeley DB log files.</para>
+        @ENGLISH }}} -->
+        <para>Berkeley DV er ogs&#229; et veldig sikkert databasesystem.
+          Subversion bruker Berkeley DBs loggefasiliteter, som betyr at 
+          databasen f&#248;rst skriver en beskrivelse til loggfiler p&#229; disken 
+          om hva den er i ferd med &#229; gj&#248;re, og gj&#248;r deretter selve 
+          modifiseringen.
+          Dette er for &#229; forsikre om at i tilfelle noe g&#229;r galt, kan 
+          databasesystemet hente tilbake et tidligere 
+          <firstterm>sjekkpunkt</firstterm> &#8212; en posisjon i loggfilene 
+          som den vet ikke er &#248;delagt &#8212; <xref 
+          linkend="svn-ch-5-sect-3.3"/></para>
 
+        <!-- @ENGLISH {{{
         <para>But every rose has its thorn, and so we must note some
           known limitations of Berkeley DB.  First, Berkeley DB
           environments are not portable.  You cannot simply copy a
@@ -473,7 +682,25 @@
           to behave correctly on network shares that meet a particular
           set of specifications, almost no known shares actually meet
           all those specifications.</para>
+        @ENGLISH }}} -->
+        <para>Men alle roser har torner, og derfor m&#229; vi v&#230;re klar over 
+          noen kjente begrensninger i Berkeley DB.
+          For det f&#248;rste er ikke Berkeley DB-milj&#248;er portable.
+          Du kan ikke bare kopiere et Subversiondepot som er laget p&#229; et 
+          UNIX-system til et Windows-system og forvente at det skal 
+          virke.
+          Selv om mye av Berkely DB-formatet er arkitekturuavhengig, er 
+          det andre aspekter med milj&#248;et som ikke er det.
+          For det andre bruker Subersion Berkeley DB p&#229; en m&#229;te som ikke 
+          vil fungere i Windows 95/98 &#8212; hvis du m&#229; ha depotet p&#229; en 
+          Windowsmaskin, bruk Windows 2000 eller Windows XP.
+          Legg heller aldri et Berkeley DB-depot p&#229; en nettverksdisk.
+          Selv om Berkeley DB lover &#229; oppf&#248;re seg korrekt p&#229; 
+          nettverksdisker som oppfyller spesielle kriterier, er det 
+          nesten ingen kjente nettverksdelinger som faktisk oppfyller 
+          alle disse spesifikasjonene.</para>
 
+        <!-- @ENGLISH {{{
         <para>Finally, because Berkeley DB is a library linked
           directly into Subversion, it's more sensitive to
           interruptions than a typical relational database system.
@@ -502,6 +729,41 @@
           <literal>svn+ssh://</literal> URLs.  If using a Berkeley DB
           repository directly as multiple users, be sure to read <xref
           linkend="svn-ch-6-sect-5"/>.</para>
+        @ENGLISH }}} -->
+        <para>Til sist, fordi Berkeley DB er et bibliotek linket direkte 
+          inn i Subversion, er det mer sensibelt for avbrudd enn et 
+          typisk relasjonsdatabesestystem.
+          De fleste SQL-systemer har for eksempel en dedikert 
+          tjenerprosess som fordeler all tilgang til tabeller.
+          Hvis et program som aksesserer databasen krasjer av en eller 
+          annen grunn, oppdager daemonen som styrer databasen dette og 
+          ordner opp i eventuelt rot som blir liggende igjen.
+          Og fordi databasedaemonen er den eneste prosessen som 
+          aksesserer tabellene, trenger ikke applikasjoner &#229; tenke p&#229; 
+          rettighetskonflikter.
+          Disse tingene er imidlertid ikke tilfelle med Berkeley DB.
+          Subversion (og programmer som bruker Subversionbiblioteker) 
+          aksesserer databasetabellene direkte, noe som betyr at et 
+          programkrasj kan etterlate databasen i en midlertidig, 
+          utilgjengelig tilstand.
+          N&#229;r dette skjer, m&#229; en administrator be Berkeley DB om 
+          gjenoppretting til et sjekkpunnkt, noe som er litt plagsomt.
+          Andre ting kan f&#248;re til at et depot <quote>kiler seg 
+          fast</quote> 
+          (<quote><foreignphrase>wedge</foreignphrase></quote>) sammen 
+          med krasjede prosesser, som for eksempel programmer som kommer 
+          i konflikt ang&#229;ende eierskap og tilgang til databasefilene.
+          S&#229; mens et Berkeley DB-depot er ganske raskt og skalerbart, 
+          fungerer det best n&#229;r det kun blir brukt av &#233;n enkelt 
+          tjenerprosess som kj&#248;rer som &#233;n bruker &#8212; som for eksempel 
+          Apaches <command>httpd</command> eller 
+          <command>svnserve</command> (se <xref linkend="svn-ch-6"/>) &#8212; 
+          istedenfor &#229; aksessere det med mange forskjellige brukere via 
+          <literal>file:///</literal> eller 
+          <literal>svn+ssh://</literal>-URLer.
+          Hvis et Berkeley DB-depot blir brukt direkte med flere 
+          forskjellige brukere, pass p&#229; at du har lest <xref 
+          linkend="svn-ch-6-sect-5"/>.</para>
 
       </sect3>
       
@@ -509,6 +771,7 @@
       <sect3 id="svn-ch-5-sect-1.3.2">
         <title>FSFS</title>
 
+        <!-- @ENGLISH {{{
         <para>In mid-2004, a second type of repository storage system
           came into being: one which doesn't use a database at all.
           An FSFS repository stores a revision tree in a single file,
@@ -520,7 +783,21 @@
           atomic.  And because a revision file is permanent and
           unchanging, the repository also can be backed up while
           <quote>hot</quote>, just like a Berkeley DB repository.</para>
+        @ENGLISH }}} -->
+        <para>I midten av 2004 ble et nytt lagringsformat for depotet 
+          laget, et som ikke bruker en database i det hele tatt.
+          Et FSFS-depot lagrer et revisjonstre i en enkelt fil, og alle 
+          depotets revisjoner kan finnes dermed i en enkelt underkatalog 
+          full av nummererte filer.
+          Transaksjoner blir opprettet i separate underkataloger.
+          N&#229;r den er komplett, blir en enkelt transaksjonsfil opprettet 
+          og flyttet til revisjonskatalogen og garanterer dermed at 
+          innleggingen blir atomisk.
+          Og fordi en revisjonsfil er permanent og uforanderlig, kan 
+          depotet ogs&#229; bli tatt backup av mens det er i bruk, akkurat 
+          som et Berkeley DB-depot.</para>
 
+        <!-- @ENGLISH {{{
         <para>The revision-file format represents a revision's
           directory structure, file contents, and deltas against files
           in other revision trees.  Unlike a Berkeley DB database,
@@ -531,7 +808,21 @@
           and examined in a read-only environment.  The lack of
           database overhead also means that the overall repository
           size is a bit smaller.</para>
+        @ENGLISH }}} -->
+        <para>Revisjonsfilformatet representerer en revisjons 
+          katalogstruktur, filinnhold, og forskjeller i forhold til 
+          filer i andre revisjonstr&#230;r.
+          Ulikt en Berkeley DB-database, er dette lagringsformatet 
+          portabelt mellom forskjellige operativsystemer og er ikke 
+          sensitiv til CPU-arkitektur.
+          Fordi det ikke blir brukt journalfiler eller filer som bruker 
+          delt hukommelse, kan depotet trygt aksesseres via et 
+          nettverksfilsystem og bli utforsket i et skrivebeskyttet 
+          milj&#248;.
+          Mangelen p&#229; databaseoverhead betyr ogs&#229; at den samlede 
+          depotst&#248;rrelsen blir en del mindre.</para>
 
+        <!-- @ENGLISH {{{
         <para>FSFS has different performance characteristics too.
           When committing a directory with a huge number of files, FSFS
           uses an O(N) algorithm to append entries, while Berkeley DB
@@ -543,7 +834,22 @@
           also has a longer delay when finalizing a commit, which
           could in extreme cases cause clients to time-out when
           waiting for a response.</para>
+        @ENGLISH }}} -->
+        <para>FSFS har ogs&#229; forskjellige karakteristikker n&#229;r det 
+          gjelder <!-- &#164; -->hastighet. N&#229;r en katalog med mange filer 
+          legges inn, bruker FSFS en O(N) algoritme for &#229; legge til 
+          poster, mens Berkeley DB bruker en O(N^2) algoritme for &#229; 
+          skrive hele katalogen en gang til.
+          P&#229; den annen side skriver FSFS den seneste versjonen av en fil 
+          som en delta (forskjell) mot en tidligere versjon, noe som 
+          betyr at det &#229; hente ut det seneste treet er litt langsommere 
+          enn &#229; hente fullteksten lagret i en HEAD-revisjon i Berkeley 
+          DB.
+          FSFS har ogs&#229; en lengre forsinkelse n&#229;r en innlegging skal 
+          fullf&#248;res, noe som i ekstreme tilfeller kan f&#248;re til at 
+          klienter f&#229;r et tidsavbrudd under venting p&#229; respons.</para>
 
+        <!-- @ENGLISH {{{
         <para>The most important distinction, however, is FSFS's
           inability to be <quote>wedged</quote> when something goes
           wrong.  If a process using a Berkeley DB database runs into
@@ -552,7 +858,18 @@
           same scenarios happen to a process using an FSFS repository,
           the repository isn't affected at all.  At worst, some
           transaction data is left behind.</para>
+        @ENGLISH }}} -->
+        <para>Men den viktigste forskjellen er FSFSs evne til &#229; ikke bli 
+          <quote>fastkilt</quote> hvis noe g&#229;r galt.
+          Hvis en prosess som bruker en Berkeley DB-database f&#229;r 
+          problemer med rettigheter eller plutselig krasjer, er ikke 
+          databasen brukbar f&#248;r en administrator gjenoppretter den.
+          Hvis det samme skjer med en prosess som bruker et FSFS-depot, 
+          blir ikke depotet p&#229;virket i det hele tatt.
+          I verste fall blir bare noen transaksjonsdata liggende 
+          igjen.</para>
 
+        <!-- @ENGLISH {{{
         <para>The only real argument against an FSFS is its relative
           immaturity compared to Berkeley DB.  It hasn't been used or
           stress-tested nearly as much, and so a lot of these
@@ -561,6 +878,17 @@
           lower barrier to entry for new administrators and is less
           susceptible to problems.  In practice, only time will
           tell.</para>
+        @ENGLISH }}} -->
+        <para>Det eneste virkelige argumentet mot et FSFS-depot er 
+          fartstiden det har hatt i forhold til Berkeley DB.
+          Det er ikke like mye brukt og har ikke blitt stresstestet like 
+          mye, s&#229; derfor er mange av disse antakelsene om hastighet og 
+          skalerbarhet nettopp det:
+          Antakelser, basert p&#229; gode gjetninger.
+          I teorien lover den en lavere barriere &#229; forsere for nye 
+          administratorer &#229; forsere og er forventet &#229; skape mindre 
+          problemer.
+          I praksis vil bare tiden vise om dette stemmer.</para>
 
       </sect3>
     </sect2>
