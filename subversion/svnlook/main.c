@@ -673,6 +673,14 @@ generate_label (const char **label,
 }
 
 
+/*
+ * Constant diff output separator strings
+ */
+static const char equal_string[] = 
+  "===================================================================";
+static const char under_string[] =
+  "___________________________________________________________________";
+
 
 /* Helper function to display differences in properties of a file */
 static svn_error_t *
@@ -683,8 +691,7 @@ display_prop_diffs (const apr_array_header_t *prop_diffs,
 {
   int i;
 
-  printf ("\nProperty changes on: %s\n", path);
-  printf ("___________________________________________________________________________\n");
+  printf ("\nProperty changes on: %s\n%s\n", path, under_string);
 
   for (i = 0; i < prop_diffs->nelts; i++)
     {
@@ -846,8 +853,7 @@ print_diff_tree (svn_fs_root_t *root,
         {
           svn_diff_t *diff;
 
-          printf ("===========================================================\
-===============\n");
+          printf ("%s\n", equal_string);
           fflush (stdout);
 
           if (binary)

@@ -137,6 +137,47 @@ def delete_file_in_moved_dir(sbox):
     raise svntest.Failure
 
 
+#----------------------------------------------------------------------
+# Issue 1241
+def test_print_property_diffs(sbox):
+  "test the printing of property diffs"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  # Add a bogus property to iota
+  iota_path = os.path.join(wc_dir, 'iota')
+  output, errput = svntest.main.run_svn(None, 'propset',
+                                        'bogus_prop', 'bogus_val', iota_path)
+  if errput: raise svntest.Failure
+
+  # commit the change
+  output, errput = svntest.main.run_svn(None, 'ci', '-m', '""', iota_path)
+  if errput: raise svntest.Failure
+
+  # Grab the diff
+  expected_output, errput = svntest.main.run_svn(None, 'diff', '-r',
+                                                 'PREV', iota_path)
+  if errput: raise svntest.Failure
+
+  output, errput = svntest.main.run_svnlook("diff", repo_dir)
+  if errput:
+    raise svntest.Failure
+
+  # Okay.  No failure, but did we get the right output?
+  if len(output) != len(expected_output):
+    raise svntest.Failure
+
+  # Replace all occurences of wc_dir/iota with iota in svn diff output
+  reiota = re.compile(iota_path)
+
+  for i in xrange(len(expected_output)):
+    expected_output[i] = reiota.sub('iota', expected_output[i])
+
+  svntest.actions.compare_and_display_lines('', '', expected_output, output)
+
+
 ########################################################################
 # Run the tests
 
@@ -145,6 +186,7 @@ def delete_file_in_moved_dir(sbox):
 test_list = [ None,
               test_youngest,
               delete_file_in_moved_dir,
+              test_print_property_diffs,
              ]
 
 if __name__ == '__main__':
