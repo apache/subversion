@@ -984,6 +984,7 @@ main (int argc, const char * const *argv)
 
   /* Initialize context variable. */
   c.fs = NULL;
+  c.repos = NULL;
   c.rev_id = SVN_INVALID_REVNUM;
   c.is_revision = FALSE;
   c.txn = NULL;
