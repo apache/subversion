@@ -186,10 +186,11 @@ I.    BUILD REQUIREMENTS
 
       5.  Berkeley DB 4.X
 
-      Berkeley DB is needed to build a Subversion server, or to access
-      a repository on local disk.  If you are only interested in
-      building a Subversion client that speaks to a remote (networked)
-      repository, you don't need it.
+      Berkeley DB is needed to build a Subversion server that supports
+      the bdb repository filesystem, or to access a bdb repository on
+      local disk.  If you will only use the fsfs repository filesystem,
+      or if you are building a Subversion client that will only speak
+      to remote (networked) repositories, you don't need it.
 
       You should try to use the latest version of BerkeleyDB 4.X.  At
       the time of writing, 4.2.52 is the latest version; we *strongly*
