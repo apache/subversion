@@ -111,21 +111,26 @@ enum svn_recurse_kind
    particularly on the client-side.  There is no "unknown" kind; if
    there's nothing special about a property name, the default category
    is `svn_prop_regular_kind'. */ 
-enum svn_prop_kind
-  {
-    svn_prop_entry_kind,   /* In .svn/entries, i.e., author, date, etc. */
-    svn_prop_wc_kind,      /* Client-side only, stored by specific RA layer. */
-    svn_prop_regular_kind  /* Seen if user does "svn proplist"; note
-                              that this includes some "svn:" props and
-                              all user props, i.e. ones stored in the
-                              repository fs. */
-  };
+typedef enum svn_prop_kind
+{
+  svn_prop_entry_kind,   /* In .svn/entries, i.e., author, date, etc. */
+  svn_prop_wc_kind,      /* Client-side only, stored by specific RA layer. */
+  svn_prop_regular_kind  /* Seen if user does "svn proplist"; note
+                            that this includes some "svn:" props and
+                            all user props, i.e. ones stored in the
+                            repository fs. */
+} svn_prop_kind_t;
 
-/* Return the prop kind of a property named NAME, and set *PREFIX_LEN
-   to the length of the prefix of NAME that was sufficient to
-   distinguish its kind. */
-enum svn_prop_kind svn_property_kind (int *prefix_len,
-                                      const char *prop_name);
+/* Return the prop kind of a property named NAME, and (if PREFIX_LEN
+   is non-NULL) set *PREFIX_LEN to the length of the prefix of NAME
+   that was sufficient to distinguish its kind. */
+svn_prop_kind_t svn_property_kind (int *prefix_len,
+                                   const char *prop_name);
+
+
+/* Return TRUE iff PROP_NAME represents the name of a Subversion
+   property. */
+svn_boolean_t svn_prop_is_svn_prop (const char *prop_name);
 
 
 /* Given an PROPLIST array of svn_prop_t structures, allocate three
@@ -154,6 +159,7 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 
 /* All Subversion property names start with this. */
 #define SVN_PROP_PREFIX "svn:"
+
 
 /* --------------------------------------------------------------------- */
 /** VISIBLE PROPERTIES **/

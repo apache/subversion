@@ -778,7 +778,6 @@ repos_to_wc_copy (const char *src_url,
         {
           const void *key;
           void *val;
-          int len;
           enum svn_prop_kind kind;
 
           apr_hash_this (hi, &key, NULL, &val);
@@ -788,7 +787,7 @@ repos_to_wc_copy (const char *src_url,
              an addition), and we're ignoring entry props (they're
              written to the entries file as part of the post-commit
              processing).  */
-          kind = svn_property_kind (&len, key);
+          kind = svn_property_kind (NULL, key);
           if (kind == svn_prop_regular_kind)
             SVN_ERR (svn_wc_prop_set (key, val, dst_path, pool));
         }

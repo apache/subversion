@@ -68,36 +68,30 @@ typedef struct svn_cl__opt_state_t
      end_revision remains `svn_client_revision_unspecified'. */
   svn_client_revision_t start_revision, end_revision;
 
-  const char *message;  /* log message */
-
-  const char *xml_file;  /* F in "svn blah --xml-file F" */ /* UTF-8! */
-
-  const char *target;  /* Target dir, T in "svn co -d T" */ /* UTF-8! */
-
-  const char *ancestor_path;  /* ### todo: who sets this? */
-
-  svn_boolean_t force;  /* Be more forceful, as in "svn rm -f ..." */
-
   /* Note: these next two flags only reflect switches given on the
      commandline.  For example, 'svn up' (with no options) will *not*
      set either of these flags, but will be recursive anyway */
-  svn_boolean_t recursive;
-  svn_boolean_t nonrecursive;
+  svn_boolean_t recursive, nonrecursive;
 
-  svn_boolean_t quiet;
-  svn_boolean_t version;
-  svn_boolean_t verbose;
-  svn_boolean_t very_verbose;
-  svn_boolean_t update;
-  svn_boolean_t strict;
-  apr_array_header_t *args;      /* UTF-8! */
-  svn_stringbuf_t *filedata;
-  svn_boolean_t help;
-  const char *auth_username;     /* UTF-8! */
-  const char *auth_password;     /* UTF-8! */
-  const char *extensions;        /* for extension args to subprocesses */ /* UTF-8! */
-  apr_array_header_t *targets;   /* when target list supplied from file */ /* UTF-8! */
+  const char *message;           /* log message */
+  const char *xml_file;          /* xml source/target file */ /* UTF-8! */
+  const char *target;            /* target, T in "svn co -d T" */ /* UTF-8! */
+  const char *ancestor_path;     /* ### todo: who sets this? */
+  svn_boolean_t force;           /* be more forceful, as in "svn rm -f ..." */
+  svn_boolean_t quiet;           /* sssh...avoid unnecessary output */
+  svn_boolean_t version;         /* print version information */
+  svn_boolean_t verbose;         /* be verbose */
+  svn_boolean_t very_verbose;    /* be obnoxious, or at least really verbose */
+  svn_boolean_t update;          /* contact the server for the full story */
+  svn_boolean_t strict;          /* do strictly what was requested */
+  svn_stringbuf_t *filedata;     /* contents of file used as option data */
+  svn_boolean_t help;            /* print usage message */
+  const char *auth_username;     /* auth username */ /* UTF-8! */
+  const char *auth_password;     /* auth password */ /* UTF-8! */
+  const char *extensions;        /* subprocess extension args */ /* UTF-8! */
+  apr_array_header_t *targets;   /* target list from file */ /* UTF-8! */
   svn_boolean_t xml;             /* output in xml, e.g., "svn log --xml" */
+
 } svn_cl__opt_state_t;
 
 
@@ -172,39 +166,53 @@ void svn_cl__push_svn_string (apr_array_header_t *array,
                               apr_pool_t *pool);
 
 /* Subcommands call this to pull any args left into the array of targets.
-   This includes any extra args passed in the file specified by
-   --targets.
+   This includes any extra args passed in the file specified by --targets.
 
    If EXTRACT_REVISIONS is set, then this function will attempt to
-  look for trailing "@rev" syntax on the paths.   If one @rev is
-  found, it will overwrite the value of opt_state->start_revision.  If
-  a second one is found, it will overwrite opt_state->end_revision.
-  (Extra revisions beyond that are ignored.)
+   look for trailing "@rev" syntax on the paths.  If one @rev is
+   found, it will overwrite the value of opt_state->start_revision.
+   If a second one is found, it will overwrite opt_state->end_revision.  
+   (Extra revisions beyond that are ignored.)
 
-   The array of targets will be in UTF-8 format.
-  */
-apr_array_header_t*
-svn_cl__args_to_target_array (apr_getopt_t *os,
+   The items in the array of targets *TARGETS_P will be in UTF-8
+   format. */
+svn_error_t *
+svn_cl__args_to_target_array (apr_array_header_t **targets_p,
+                              apr_getopt_t *os,
 			      svn_cl__opt_state_t *opt_state,
                               svn_boolean_t extract_revisions,
                               apr_pool_t *pool);
 
+
+/* If no targets exist in *TARGETS, add `.' as the lone target. */
 void svn_cl__push_implicit_dot_target (apr_array_header_t *targets,
                                        apr_pool_t *pool);
 
+
+/* Parse NUM_ARGS arguments from the list of arguments stored in
+   OS->argv, returning them in an array *ARGS_P of const char * non-UTF8
+   values. */
 svn_error_t *
-svn_cl__parse_num_args (apr_getopt_t *os,
+svn_cl__parse_num_args (apr_array_header_t **args_p,
+                        apr_getopt_t *os,
                         svn_cl__opt_state_t *opt_state,
                         const char *subcommand,
                         int num_args,
                         apr_pool_t *pool);
 
+
+/* Parse all remaining arguments from the list of arguments stored in
+   OS->argv, returning them in an array *ARGS_P of const char * non-UTF8
+   values. */
 svn_error_t *
-svn_cl__parse_all_args (apr_getopt_t *os,
+svn_cl__parse_all_args (apr_array_header_t **args_p,
+                        apr_getopt_t *os,
                         svn_cl__opt_state_t *opt_state,
                         const char *subcommand,
                         apr_pool_t *pool);
 
+
+/* Print the usage message for SUBCOMMAND. */
 void
 svn_cl__subcommand_help (const char *subcommand,
                          apr_pool_t *pool);
@@ -260,12 +268,15 @@ void svn_cl__print_status_list (apr_hash_t *statushash,
                                 apr_pool_t *pool);
 
 /* Print a hash that maps property names (char *) to property values
-   (svn_stringbuf_t *). */
+   (svn_stringbuf_t *).  The names are assumed to be in UTF-8 format;
+   the values are either in UTF-8 (the special Subversion props) or
+   plain binary values.  */
 svn_error_t *
 svn_cl__print_prop_hash (apr_hash_t *prop_hash, apr_pool_t *pool);
 
 /* Print out the property names in a hash that maps property names (char *) 
-   to property values (svn_stringbuf_t *). */
+   to property values (svn_stringbuf_t *).  The names are assumed to
+   be in UTF-8 format.  */
 svn_error_t *
 svn_cl__print_prop_names (apr_hash_t *prop_hash, apr_pool_t *pool);
 

@@ -825,10 +825,13 @@ main (int argc, const char * const *argv)
      (Actually, this is a no-op; according to the C standard, "C" is
      the default locale at program startup.) */
   setlocale (LC_ALL, "C");
+
   /* For APR_LOCALE_CHARSET to do the right thing, we need to at least
      let LC_CTYPE be set from the environment. */
   setlocale (LC_CTYPE, "");
 
+  /* Initialize the APR subsystem, and register an atexit() function
+     to Uninitialize that subsystem at program exit. */
   apr_err = apr_initialize ();
   if (apr_err)
     {
@@ -841,9 +844,12 @@ main (int argc, const char * const *argv)
       fprintf (stderr, "error: atexit returned %d\n", err2);
       return EXIT_FAILURE;
     }
-  pool = svn_pool_create (NULL);
-  memset (&opt_state, 0, sizeof (opt_state));
 
+  /* Create our top-level pool. */
+  pool = svn_pool_create (NULL);
+
+  /* Begin processing arguments. */
+  memset (&opt_state, 0, sizeof (opt_state));
   opt_state.start_revision.kind = svn_client_revision_unspecified;
   opt_state.end_revision.kind = svn_client_revision_unspecified;
   
@@ -883,7 +889,7 @@ main (int argc, const char * const *argv)
       case 'm':
         {
           apr_finfo_t finfo;
-          if (apr_stat(&finfo, opt_arg, APR_FINFO_MIN, pool) == APR_SUCCESS)
+          if (apr_stat (&finfo, opt_arg, APR_FINFO_MIN, pool) == APR_SUCCESS)
             {
               /* woah! that log message is a file. I doubt the user
                  intended that. */
@@ -1156,7 +1162,7 @@ main (int argc, const char * const *argv)
                    "\nError: subcommand '%s' doesn't accept option '%s'\n\n",
                    subcommand->name, optstr);
           svn_cl__subcommand_help (subcommand->name, pool);
-          svn_pool_destroy(pool);
+          svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }
     }

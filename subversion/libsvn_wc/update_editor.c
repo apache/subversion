@@ -1357,10 +1357,9 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
           const char *propval;
           enum svn_prop_kind kind;
           const char *entry_field = NULL;
-          int prefix_len;
 
           prop = &APR_ARRAY_IDX (entry_props, i, svn_prop_t);
-          kind = svn_property_kind (&prefix_len, prop->name);
+          kind = svn_property_kind (NULL, prop->name);
 
           /* A prop value of NULL means the information was not
              available.  We don't remove this field from the entries

@@ -47,8 +47,9 @@
 
 #define DEFAULT_ARRAY_SIZE 5
 
-/* Hmm. This should probably find its way into libsvn_subr -Fitz */
-/* Create a SVN string from the char* and add it to the array */
+
+/* Create a SVN string from the char* and add it to the array.  
+   ### todo: Hmm. This should probably find its way into libsvn_subr -Fitz */
 static void 
 array_push_str (apr_array_header_t *array,
                 const char *str,
@@ -61,18 +62,6 @@ array_push_str (apr_array_header_t *array,
      depending on? */
 
   (*((const char **) apr_array_push (array))) = apr_pstrdup (pool, str);
-}
-
-/* Same as above, but make UTF-8 while we're at it */
-static svn_error_t *
-array_push_str_utf8 (apr_array_header_t *array,
-                const char *str,
-                apr_pool_t *pool)
-{
-  const char *str_utf8;
-  SVN_ERR (svn_utf_cstring_to_utf8 (str, &str_utf8, pool));
-  (*((const char **) apr_array_push (array))) = str_utf8;
-  return SVN_NO_ERROR;
 }
 
 
@@ -92,16 +81,16 @@ svn_cl__push_implicit_dot_target (apr_array_header_t *targets,
  * command line args passed in by the user. Put them
  * into the opt_state args array */
 svn_error_t *
-svn_cl__parse_num_args (apr_getopt_t *os,
+svn_cl__parse_num_args (apr_array_header_t **args_p,
+                        apr_getopt_t *os,
                         svn_cl__opt_state_t *opt_state,
                         const char *subcommand,
                         int num_args,
                         apr_pool_t *pool)
 {
   int i;
-  
-  opt_state->args = apr_array_make (pool, DEFAULT_ARRAY_SIZE, 
-                                    sizeof (const char *));
+  apr_array_header_t *args 
+    = apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (const char *));
 
   /* loop for num_args and add each arg to the args array */
   for (i = 0; i < num_args; i++)
@@ -111,10 +100,10 @@ svn_cl__parse_num_args (apr_getopt_t *os,
           return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 
                                    0, 0, pool, "");
         }
-      SVN_ERR (array_push_str_utf8 (opt_state->args,
-                                    os->argv[os->ind++], pool));
+      array_push_str (args, os->argv[os->ind++], pool);
     }
 
+  *args_p = args;
   return SVN_NO_ERROR;
 }
 
@@ -122,25 +111,25 @@ svn_cl__parse_num_args (apr_getopt_t *os,
  * passed in by the user. Put them into the opt_state
  * args array */
 svn_error_t *
-svn_cl__parse_all_args (apr_getopt_t *os,
+svn_cl__parse_all_args (apr_array_header_t **args_p,
+                        apr_getopt_t *os,
                         svn_cl__opt_state_t *opt_state,
                         const char *subcommand,
                         apr_pool_t *pool)
 {
-  opt_state->args = apr_array_make (pool, DEFAULT_ARRAY_SIZE, 
-                                    sizeof (const char *));
+  apr_array_header_t *args 
+    = apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (const char *));
 
-  if (os->ind >= os->argc)
+  if (os->ind > os->argc)
     {
       return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
     }
-
   while (os->ind < os->argc)
     {
-      SVN_ERR (array_push_str_utf8 (opt_state->args,
-                                    os->argv[os->ind++], pool));
+      array_push_str (args, os->argv[os->ind++], pool);
     }
 
+  *args_p = args;
   return SVN_NO_ERROR;
 }
 
@@ -204,8 +193,9 @@ parse_path (svn_client_revision_t *rev,
 /* Create a targets array and add all the remaining arguments
  * to it. We also process arguments passed in the --target file, if
  * specified, just as if they were passed on the command line.  */
-apr_array_header_t*
-svn_cl__args_to_target_array (apr_getopt_t *os,
+svn_error_t *
+svn_cl__args_to_target_array (apr_array_header_t **targets_p, 
+                              apr_getopt_t *os,
 			      svn_cl__opt_state_t *opt_state,
                               svn_boolean_t extract_revisions,
                               apr_pool_t *pool)
@@ -246,7 +236,7 @@ svn_cl__args_to_target_array (apr_getopt_t *os,
 
   /* Now args from --targets, if any */
   if (NULL != opt_state->targets)
-    apr_array_cat(targets, opt_state->targets);
+    apr_array_cat (targets, opt_state->targets);
 
   /* kff todo: need to remove redundancies from targets before
      passing it to the cmd_func. */
@@ -296,7 +286,8 @@ svn_cl__args_to_target_array (apr_getopt_t *os,
         }
     }
   
-  return targets;
+  *targets_p = targets;
+  return SVN_NO_ERROR;
 }
 
 

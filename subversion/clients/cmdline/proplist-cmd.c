@@ -42,10 +42,11 @@ svn_cl__proplist (apr_getopt_t *os,
   apr_array_header_t *targets;
   int i;
 
-  targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
+  SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
+                                         FALSE, pool));
 
   /* Add "." if user passed 0 arguments */
-  svn_cl__push_implicit_dot_target(targets, pool);
+  svn_cl__push_implicit_dot_target (targets, pool);
 
   for (i = 0; i < targets->nelts; i++)
     {
@@ -53,13 +54,13 @@ svn_cl__proplist (apr_getopt_t *os,
       apr_array_header_t *props;
       int j;
 
-      SVN_ERR (svn_client_proplist(&props, target, opt_state->recursive,
-                                   pool));
+      SVN_ERR (svn_client_proplist (&props, target, 
+                                    opt_state->recursive, pool));
 
       for (j = 0; j < props->nelts; ++j)
         {
           svn_client_proplist_item_t *item 
-              = ((svn_client_proplist_item_t **)props->elts)[j];
+            = ((svn_client_proplist_item_t **)props->elts)[j];
           const char *node_name_native;
           SVN_ERR (svn_utf_cstring_from_utf8_stringbuf (item->node_name,
                                                         &node_name_native,

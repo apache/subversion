@@ -131,7 +131,16 @@ apr_hash_sorted_keys (apr_hash_t *ht,
 
 /** Sorting properties **/
 
-enum svn_prop_kind 
+svn_boolean_t
+svn_prop_is_svn_prop (const char *prop_name)
+{
+  return strncmp (prop_name, SVN_PROP_PREFIX, (sizeof (SVN_PROP_PREFIX) - 1)) 
+         ? FALSE 
+         : TRUE;
+}
+
+
+svn_prop_kind_t
 svn_property_kind (int *prefix_len,
                    const char *prop_name)
 {
@@ -140,18 +149,21 @@ svn_property_kind (int *prefix_len,
 
   if (strncmp (prop_name, SVN_PROP_WC_PREFIX, wc_prefix_len) == 0)
     {
-      *prefix_len = wc_prefix_len;
+      if (prefix_len)
+        *prefix_len = wc_prefix_len;
       return svn_prop_wc_kind;     
     }
 
   if (strncmp (prop_name, SVN_PROP_ENTRY_PREFIX, entry_prefix_len) == 0)
     {
-      *prefix_len = entry_prefix_len;
+      if (prefix_len)
+        *prefix_len = entry_prefix_len;
       return svn_prop_entry_kind;     
     }
 
   /* else... */
-  *prefix_len = 0;
+  if (prefix_len)
+    *prefix_len = 0;
   return svn_prop_regular_kind;
 }
 
@@ -163,18 +175,18 @@ svn_categorize_props (const apr_array_header_t *proplist,
                       apr_array_header_t **regular_props,
                       apr_pool_t *pool)
 {
-  int i, len;
-  *entry_props = apr_array_make (pool, 1, sizeof(svn_prop_t));
-  *wc_props = apr_array_make (pool, 1, sizeof(svn_prop_t));
-  *regular_props = apr_array_make (pool, 1, sizeof(svn_prop_t));
+  int i;
+  *entry_props = apr_array_make (pool, 1, sizeof (svn_prop_t));
+  *wc_props = apr_array_make (pool, 1, sizeof (svn_prop_t));
+  *regular_props = apr_array_make (pool, 1, sizeof (svn_prop_t));
 
   for (i = 0; i < proplist->nelts; i++)
     {
       svn_prop_t *prop, *newprop;
       enum svn_prop_kind kind;
       
-      prop = &APR_ARRAY_IDX(proplist, i, svn_prop_t);      
-      kind = svn_property_kind (&len, prop->name);
+      prop = &APR_ARRAY_IDX (proplist, i, svn_prop_t);      
+      kind = svn_property_kind (NULL, prop->name);
 
       if (kind == svn_prop_regular_kind)
         newprop = apr_array_push (*regular_props);
