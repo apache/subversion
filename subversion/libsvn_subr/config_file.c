@@ -901,7 +901,7 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "# http-proxy-port = 7000\n"
         "# http-proxy-username = defaultusername\n"
         "# http-proxy-password = defaultpassword\n"
-        "# http-compression = yes\n"
+        "# http-compression = no\n"
         "# No http-timeout, so just use the builtin default.\n"
         "# No neon-debug-mask, so neon debugging is disabled.\n"
         "# ssl-authority-files = /path/to/CAcert.pem;/path/to/CAcert2.pem\n";
