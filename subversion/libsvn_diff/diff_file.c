@@ -756,7 +756,8 @@ svn_diff__file_output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
 
   /* Output the hunk content */
   hunk_len = baton->hunk->len;
-  rv = apr_file_write(baton->output_file, baton->hunk->data, &hunk_len);
+  rv = apr_file_write_full(baton->output_file,
+                           baton->hunk->data, hunk_len, NULL);
   if (rv != APR_SUCCESS)
     {
       return svn_error_create(rv, NULL,
