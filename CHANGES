@@ -8,7 +8,7 @@ http://svn.collab.net/repos/svn/tags/??
  * fixed: working copies now shareable by multiple users (issue #1509)
  * fixed: diff and other subcommands correctly follow renames (issue #1093)
      - new 'peg' syntax for diff/merge:  'svn diff -r X:Y TARGET@REV'
- * new framework for localized error messages, with initial translations:
+ * new framework for localized error/info/help messages, initial translations:
      - German, Spanish, Polish, Swedish, Norwegian Bokmål
  * speed improvements:
      - faster 'svn up' on complex working copies -- no more repos txns (r8840)
@@ -28,8 +28,7 @@ http://svn.collab.net/repos/svn/tags/??
        'svndumpfilter --version'
  * svnadmin dump/deltify now understand -r{DATE} (r9805)
  * allow update of non-existent target entry (partial issue #1902 fix)
- * assume XML svn:mime-type is text, not binary (issue #1920)
- * 'svnadmin create' now sets sgid bit on repos/db/
+ * 'svnadmin create' now sets sgid bit on repos/db/  (unix systems only)
  * increase default neon (ra_dav) timeout from 120 to 3600 seconds (r9568)
  * fixed: don't bail when 'svn up' refuses to delete local mods (issue #1806)
  * fixed: process svn:externals in defined order (issue #1788)
@@ -63,7 +62,7 @@ http://svn.collab.net/repos/svn/tags/??
 
  Developer-visible changes:
  * libsvn_fs now loads either bdb (libsvn_fs_base) or fsfs (libsvn_fs_fs)
- * new console-printing API:  svn_cmdline_printf() family of functions.
+ * new console-printing API:  svn_cmdline_printf() family checks for errors.
  * new library-version querying API:
      - new svn_[libname]_version() in each library
      - svn_ver_*() family of functions
@@ -77,7 +76,7 @@ http://svn.collab.net/repos/svn/tags/??
        svn_io_file_flush_to_disk, svn_repos_trace_node_locations(),
        svn_repos_get_file_revs(), RA->get_locations(), RA->get_file_revs,
        RA->get_version()
- * SVN_REVNUM_FMT_T deprecated;  now just use %ld (r9691)
+ * SVN_REVNUM_FMT_T usage replaced with %ld (r9691)
  * neon 0.24.7 now required (fixes wire compression bugs) (r10159)
  * cache mod_authz_svn authz file per connection (r8867)
  * validate hex digits in % escape (issue #1947)
