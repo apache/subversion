@@ -676,7 +676,7 @@ static svn_error_t *ra_svn_handle_abort_edit(svn_ra_svn_conn_t *conn,
   return svn_ra_svn_write_cmd_response(conn, pool, "");
 }
 
-static svn_ra_svn_cmd_entry_t ra_svn_edit_commands[] = {
+static const svn_ra_svn_cmd_entry_t ra_svn_edit_commands[] = {
   { "target-rev",       ra_svn_handle_target_rev },
   { "open-root",        ra_svn_handle_open_root },
   { "delete-entry",     ra_svn_handle_delete_entry },

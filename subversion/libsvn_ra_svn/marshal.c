@@ -614,7 +614,7 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
 
 svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
                                         apr_pool_t *pool,
-                                        svn_ra_svn_cmd_entry_t *commands,
+                                        const svn_ra_svn_cmd_entry_t *commands,
                                         void *baton,
                                         svn_boolean_t pass_through_errors)
 {
