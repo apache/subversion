@@ -453,6 +453,10 @@ main (int argc, char *argv[])
       exit (err->apr_err);
     }
 
+  /* Close the edit */
+  err = my_editor.close_edit (my_edit_baton);
+  if (err) return err;
+
   apr_destroy_pool (globalpool);
   exit (0);
 }
