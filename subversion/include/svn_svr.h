@@ -67,11 +67,51 @@
 
 */
 
-#ifndef __SVN_SVR__
-#define __SVN_SVR__
+#ifndef __SVN_SVR_H__
+#define __SVN_SVR_H__
 
 
 #include <svn_types.h>
+
+
+
+
+/******************************************
+
+   The API for server-side "plug-ins"  (modeled after Apache)
+
+******************************************/
+
+
+/* 
+   A "plug-in" object is a list which describes exactly where custom
+   routines should be called from within the server.  We define broad
+   categories of hooks as necessary here, expanding as we go.
+
+   Each plugin object fills in these fields with either a well-defined
+   routine of its own, or a NULL value.
+*/
+
+typedef struct svn_svr_plugin_t
+{
+  /* An authorization function should return NULL (failure) or
+     non-NULL (success).  If successful, it should fill in the
+     "canonical" filesystem name in the user structure.  */
+
+  char (* authorization_hook) (svn_string_t *repos,
+                               svn_user_t *user,
+                               svn_svr_action_t action,
+                               svn_string_t *path);
+
+  /* This hook isn't fully fleshed out yet */
+
+  (svn_delta_t *) (* conflict_resolve_hook) (svn_delta_t *rejected_delta,
+                                             int rejection_rationale);
+
+} svn_svr_plugin_t;
+
+
+
 
 
 /******************************************
@@ -80,34 +120,36 @@
 
 ******************************************/
 
-/* This object holds three lists that describe the information read in
-   from a `svn.conf' file.  Every svn_svr_ routine requires a pointer
-   to one of these! */
+/* 
+   This object holds three lists that describe the information read in
+   from a `svn.conf' file.  Every svn_svr_* routine requires a pointer
+   to one of these.  (It's similar to the "global context" objects
+   used by APR.)  
+*/
 
 
 typedef struct svn_svr_policies_t
 {
-  svn_prop_t *repository_aliases;    /* an array of props (key/value)
-                                        stores aliases for repositories */
-  unsigned long repos_len;           /* length of this array */
+  svn_proplist_t *repos_aliases;    /* an array of props (key/value):
+                                       stores aliases for repositories */
 
   svn_string_t *global_restrictions; /* an array of strings describes
                                         global security restrictions
                                         (these are parsed individually) */
-  unsigned long restrict_len;        /* length of this array */
+  unsigned long restrict_len;        /* number of restrictions  */
 
   svn_svr_plugin_t *plugins;         /* an array of loaded plugin types */
-  unsigned long plugin_len;          /* length of this array */
+  unsigned long plugin_len;          /* number of plugins  */
 
 } svn_svr_policies_t;
 
 
 
-/* Makes the server library load a specified config file.  Network
-   layers *must* call this routine when first loaded.
+/* 
+   Makes the server library load a specified config file.  Network
+   layers *must* call this routine before using the rest of libsvn_svr.
 
-   Returns a svn_svr_policies object to be used with *all* server routines. 
-
+   Returns a svn_svr_policies_t to be used with all server routines. 
 */
 
 svn_svr_policies_t svn_svr_init (svn_string_t *config_file);
@@ -252,46 +294,9 @@ svn_delta_t * svn_svr_get_update (svn_svr_policies_t *policy,
 
 
 
-/******************************************
-
-   The API for server-side "plug-ins"  (modeled after Apache)
-
-******************************************/
 
 
-/* A "plug-in" object is a list which describes exactly where custom
-   routines should be called from within the server.  We define broad
-   categories of hooks as necessary here.
-
-   Each plugin object fills in these fields with either a well-defined
-   routine of its own, or a NULL value.
-
-*/
-
-typedef struct svn_svr_plugin_t
-{
-  /* An authorization function should return NULL (failure) or
-     non-NULL (success).  If successful, it should fill in the
-     "canonical" filesystem name in the user structure.  */
-
-  char (* authorization_hook) (svn_string_t *repos,
-                               svn_user_t *user,
-                               svn_svr_action_t action,
-                               svn_string_t *path);
-
-  /* This hook isn't fully fleshed out yet */
-
-  (svn_delta_t *) (* conflict_resolve_hook) (svn_delta_t *rejected_delta,
-                                             int rejection_rationale);
-
-} svn_svr_plugin_t;
-
-
-
-
-
-
-#endif  /* __SVN_SVR__ */
+#endif  /* __SVN_SVR_H__ */
 
 /* --------------------------------------------------------------
  * local variables:

@@ -48,7 +48,6 @@
  */
 
 
-#include <svn_types.h>
 #include <svn_svr.h>
 
 
@@ -87,7 +86,8 @@ void
 svn_svr_register_plugin (svn_svr_policies_t *policy,
                          svn_svr_plugin_t *new_plugin)
 {
-  /* add new_plugin to policy->plugins[] */
+  policy->plugin_len +=1
+
 }
 
 

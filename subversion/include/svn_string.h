@@ -53,8 +53,8 @@
 #define __SVN_STRING_H__
 
 
-#include <svn_types.h>       /* defines svn_string_t and svn_boolean_t */
-#include <apr_pools.h>       /* defines ap_pool_t (apr memory pools) */
+#include <svn_types.h>
+
 
 
 /* Create a new bytestring containing a C string (null-terminated), or
