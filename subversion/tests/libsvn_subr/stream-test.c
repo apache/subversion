@@ -124,7 +124,7 @@ generate_test_bytes(int num_bytes, apr_pool_t *pool)
 {
   svn_stringbuf_t *buffer = svn_stringbuf_create("", pool);
   int total, repeat, repeat_iter;
-  unsigned char c;
+  char c;
   
   for (total = 0, repeat = repeat_iter = 1, c = 0; total < num_bytes; total++)
     {
@@ -133,9 +133,9 @@ generate_test_bytes(int num_bytes, apr_pool_t *pool)
       repeat_iter--;
       if (repeat_iter == 0)
         {
-          if (c == 255)
+          if (c == 127)
             repeat++;
-          c = (c + 1) % 255;
+          c = (c + 1) % 127;
           repeat_iter = repeat;
         }
     }
