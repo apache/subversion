@@ -155,7 +155,7 @@ make_dir_baton (svn_string_t *name,
                 apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool, NULL);
-  struct dir_baton *d = apr_pcalloc (subpool, sizeof (*d));
+  struct dir_baton *d = apr_palloc (subpool, sizeof (*d));
   svn_string_t *parent_path
     = parent_baton ? parent_baton->path : edit_baton->dest_dir;
   svn_string_t *path = svn_string_dup (parent_path, subpool);
@@ -639,7 +639,7 @@ apply_textdelta (void *file_baton,
 {
   struct file_baton *fb = (struct file_baton *) file_baton;
   apr_pool_t *subpool = svn_pool_create (fb->pool, NULL);
-  struct handler_baton *hb = apr_pcalloc (subpool, sizeof (*hb));
+  struct handler_baton *hb = apr_palloc (subpool, sizeof (*hb));
   svn_error_t *err;
 
   /* Open the text base for reading, unless this is a checkout. */
@@ -969,7 +969,7 @@ make_editor (svn_string_t *dest,
       assert (repos != NULL);
     }
 
-  eb = apr_pcalloc (subpool, sizeof (*edit_baton));
+  eb = apr_palloc (subpool, sizeof (*edit_baton));
   eb->dest_dir       = dest;
   eb->pool           = subpool;
   eb->is_checkout    = is_checkout;
