@@ -4,20 +4,27 @@
 
 Tasks:
 
-- post instructions for downloading tarball, building
-- especially, put dav_setup.txt up!
-- basic subversion checkout instructions
-- update status page
-- Put the old CVS ChangeLog up
+* Increment VERSION in configure.in
 
-- enable password-protected committing
+* Tag M3 when ready.
 
-- make a backup system
+* Public Website
+   + Replace bite-sized tasks announcement with a Mike-style
+     yellow-backgrounded thingy about self-hosting and where to get
+     the tarball.  Include basic checkout instructions.
+   + Update status page.
+   + update the setup.html page
+   - Make a new News entry
+   - Add the tarball to the Downloads section
+   - Put dav_setup.txt and the old CVS ChangeLog on the web site ?
+   - Eventually, get the Source navbar link fixed
 
-- don't forget to increment VERSION in configure.in :-)
+* New repository
+   - import the tree; remember to remove APR, neon, built docs first
+   - enable password-protected committing
+   - make a backup system
+   - enable commit emails
 
-- when importing the new repository, don't forget to remove APR and
-  neon first. :-)
-
-- immediately post-M3, write up release procedure, lucas@collab.net
-  has volunteered to review it, among others.
+* Post M3:
+  - Write up release procedure.  lucas@collab.net has volunteered to
+    review it, among others.
