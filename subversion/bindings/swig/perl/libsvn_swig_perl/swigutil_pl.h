@@ -40,8 +40,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#ifdef _MSC_VER
-#define strtoll(str, endptr, base) atoi(str)
+#if _MSC_VER >= 1300 && _INTEGRAL_MAX_BITS >= 64
+#  define strtoll _strtoi64
+#elif defined(_MSC_VER)
+#  define strtoll(str, endptr, base) _atoi64(str)
 #endif
 
 
