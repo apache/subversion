@@ -1888,12 +1888,17 @@ svn_io_read_version_file (int *version,
   apr_file_t *format_file;
   svn_stream_t *format_stream;
   svn_stringbuf_t *version_str;
+  apr_status_t apr_err;
 
   SVN_ERR (svn_io_file_open (&format_file, path, APR_READ, 
                              APR_OS_DEFAULT, pool));
   format_stream = svn_stream_from_aprfile (format_file, pool);
   SVN_ERR (svn_stream_readline (format_stream, &version_str, pool));
   *version = atoi (version_str->data);
+  apr_err = apr_file_close (format_file);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, 0, pool,
+                              "closing `%s'", format_file);
   return SVN_NO_ERROR;
 }
 
