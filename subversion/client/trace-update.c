@@ -62,6 +62,7 @@
 struct edit_baton
 {
   apr_pool_t *pool;
+  svn_string_t *initial_path;
 };
 
 
@@ -93,7 +94,7 @@ replace_root (void *edit_baton, void **root_baton)
 
   rb->edit_baton = eb;
   rb->parent_dir_baton = NULL;
-  rb->path = svn_string_create ("", eb->pool);
+  rb->path = eb->initial_path;
 
   *root_baton = rb;
 
@@ -308,9 +309,11 @@ static const svn_delta_edit_fns_t trace_editor =
 svn_error_t *
 svn_cl__get_trace_editor (const svn_delta_edit_fns_t **editor,
                           void **edit_baton,
+                          svn_string_t *initial_path,
                           apr_pool_t *pool)
 {
   struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
+  eb->initial_path = initial_path;
   eb->pool = pool;
 
   *edit_baton = eb;
