@@ -1,4 +1,21 @@
 @ECHO OFF
+REM #######################################################################
+REM FILE       mk_htmlhelp.bat
+REM PURPOSE    General Interface for making a Windows distribution
+REM ====================================================================
+REM Copyright (c) 2000-2005 CollabNet.  All rights reserved.
+REM
+REM This software is licensed as described in the file COPYING, which
+REM you should have received as part of this distribution.  The terms
+REM are also available at http://subversion.tigris.org/license-1.html.
+REM If newer versions of this license are posted there, you may use a
+REM newer version instead, at your option.
+REM
+REM This software consists of voluntary contributions made by many
+REM individuals.  For exact contribution history, see the revision
+REM history and logs, available at http://subversion.tigris.org/.
+REM ====================================================================
+
 SET BOOKNAME=book
 cd %BOOKNAME%
 SET XLSPARAMS=--param suppress.navigation 0 --param htmlhelp.hhc.binary 1
