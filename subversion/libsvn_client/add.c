@@ -30,22 +30,16 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client_add (svn_string_t *file, apr_pool_t *pool)
+svn_client_add (svn_string_t *path, apr_pool_t *pool)
 {
-  svn_error_t *err;
-  apr_status_t apr_err;
-  apr_file_t *f = NULL;
+  enum svn_node_kind kind;
 
-  /* todo: write a wrapper for existence-checking */
-  apr_err = apr_file_open (&f, file->data, APR_READ, APR_OS_DEFAULT, pool);
-  if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL, pool,
-                              "svn_client_add: existence check failed for %s",
-                              file->data);
-
-  err = svn_wc_add_file (file, pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  
+  if (kind == svn_node_file)
+    SVN_ERR (svn_wc_add_file (path, pool));
+  else if (kind == svn_node_dir)
+    SVN_ERR (svn_wc_add_directory (path, pool));
 
   return SVN_NO_ERROR;
 }
