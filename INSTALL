@@ -62,7 +62,9 @@ I.    BUILD REQUIREMENTS
       Whenever you want to build any part of Subversion, you need the
       Apache Portable Runtime (APR) and the APR Utility (APRUTIL)
       libraries. At the time of this writing, there were no official
-      release versions of APR/APRUTIL available.
+      release versions of APR/APRUTIL available, but Subversion tries
+      to stay compatible with the versions bundled within the latest
+      httpd-2.0 release.
 
       If you already have the APR libraries compiled and do not wish to
       regenerate them from source code, then Subversion needs to be
@@ -89,19 +91,20 @@ I.    BUILD REQUIREMENTS
           $ ./configure --with-apr=/usr/local/apache2 \
             --with-apr-util=/usr/local/apache2  ...
 
-      If you want Subversion to build the APR libraries from source code
-      as part of the Subversion build process, you can put their source
-      code into the "./apr" and "./apr-util" directories. The Subversion
-      tarball comes with copies of the libraries' source code stored in
-      these subdirectories which you could copy or link to. To be safe,
-      however, you should check out the latest version from the Apache CVS
-      repository, since the latest Subversion may well rely on the latest
-      changes to APR and APRUTIL.
+      If you want Subversion to build the APR libraries from source
+      code as part of the Subversion build process, you can put their
+      source code into the "./apr" and "./apr-util" directories. The
+      Subversion tarball comes with copies of the libraries' source
+      code stored in these subdirectories which you could copy or link
+      to.  At any given moment, Subversion tries to be compatible with
+      the latest released versions of APR and APRUTIL, in particular,
+      the ones that come bundled within the latest released version of
+      Apache httpd.
 
-      You can get the latest version of APR and APRUTIL with the following
-      two commands. If you run them from the directory where you've
-      checked out Subversion, then the APR source code will be in "./apr"
-      and "./apr-util", where Subversion wants it:
+      If you need the latest CVS versions, however, you can use the
+      following two commands. If you run them from the directory where
+      you've checked out Subversion, then the APR source code will be
+      in "./apr" and "./apr-util", where Subversion wants it:
 
           $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic login
           (password: 'anoncvs')
@@ -667,10 +670,16 @@ III.  BUILDING A SUBVERSION SERVER
 
       1.  Obtaining and Installing Apache 2.0
 
-      Checkout the "httpd-2.0" cvs module from apache.org.  If you have
-      questions about the Apache 2.0 build, please consult the HTTPD
-      install documentation: http://httpd.apache.org/docs-2.0/install.html
-      Place this module wherever you wish; it's an independent project.
+      Subversion tries to compile against the latest released version
+      of Apache httpd-2.0.  The easiest thing for you to do is
+      download a source tarball of the latest release and unpack that.
+
+      Alternately, if you'd rather use the latest CVS versions of
+      everything, checkout the "httpd-2.0" cvs module from apache.org.
+      If you have questions about the Apache 2.0 build, please consult
+      the HTTPD install documentation:
+      http://httpd.apache.org/docs-2.0/install.html.  Place this
+      module wherever you wish; it's an independent project.
 
           $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic login
           (password 'anoncvs')
