@@ -47,7 +47,7 @@ package.
 %package devel
 Group: Utilities/System
 Summary: Development package for Subversion developers.
-Requires: %{name} = %{version}-${release}
+Requires: subversion = %{version}-%{release}
 %description devel
 The subversion-devel package includes the static libraries and include files
 for developers interacing with the subversion package.
@@ -56,7 +56,7 @@ for developers interacing with the subversion package.
 Group: Utilities/System
 Summary: Apache server module for Subversion server.
 Requires: apache-devel >= 2.0.16
-Requires: subversion
+Requires: subversion = %{version}-%{release}
 BuildPreReq: apache-devel >= 2.0.16
 %description server
 The subversion-server package adds the Subversion server Apache module to
@@ -114,7 +114,7 @@ mv $RPM_BUILD_ROOT/usr/info $RPM_BUILD_ROOT/usr/share/info
 %post server
 # Load subversion server into apache configuration.
 cd /usr/lib/apache
-/usr/sbin/apxs -i -a -n dav_svn libmod_dav_svn.la
+/usr/sbin/apxs -i -a -n dav_svn libmod_dav_svn.la > /dev/null 2>&1
 
 # Conditionally add subversion example configuration.
 if [ "`grep -i svnpath /etc/httpd/conf/httpd.conf`"x = "x" ]; then
