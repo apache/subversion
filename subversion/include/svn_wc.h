@@ -646,8 +646,9 @@ svn_wc_revert (svn_stringbuf_t *path, apr_pool_t *pool);
 
 
 /* Get the *CONTENTS of FILENAME in the authentcation area of PATH's
-   administrative directory, allocated in POOL.  If file does not
-   exist, SVN_ERR_WC_PATH_NOT_FOUND is returned. */
+   administrative directory, allocated in POOL.  PATH must be a
+   working copy directory. If file does not exist,
+   SVN_ERR_WC_PATH_NOT_FOUND is returned. */
 svn_error_t *
 svn_wc_get_auth_file (svn_stringbuf_t *path,
                       const char *filename,
@@ -656,11 +657,11 @@ svn_wc_get_auth_file (svn_stringbuf_t *path,
 
 
 /* Store a file named FILENAME with CONTENTS in the authentication
-   area of PATH's administrative directory.  If no such file exists,
-   it will be created.  If the file exists already, it will be
-   completely overwritten with the new contents.  If RECURSE is set,
-   this file will be stored in every administrative area below PATH as
-   well. */
+   area of PATH's administrative directory.  PATH must be a working
+   copy directory.  If no such file exists, it will be created.  If
+   the file exists already, it will be completely overwritten with the
+   new contents.  If RECURSE is set, this file will be stored in every
+   administrative area below PATH as well. */
 svn_error_t *
 svn_wc_set_auth_file (svn_stringbuf_t *path,
                       svn_boolean_t recurse,

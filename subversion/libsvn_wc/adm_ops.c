@@ -1012,36 +1012,22 @@ svn_wc_set_auth_file (svn_stringbuf_t *path,
   apr_file_t *fp;
   apr_size_t sz;
 
-  svn_stringbuf_t *full_path_to_file =
-    svn_wc__adm_path (path, 0, pool, SVN_WC__ADM_AUTH_DIR, filename, NULL);
+  svn_stringbuf_t *file = svn_stringbuf_create (filename, pool);
 
-
-  /* Create or overwrite the file in PATH's administrative area. */
-  status = apr_file_open (&fp, full_path_to_file->data,
-                          (APR_WRITE | APR_CREATE), APR_OS_DEFAULT, pool);
-  if (status) 
-    return svn_error_createf (status, 0, NULL, pool,
-                              "error opening '%s' for writing",
-                              full_path_to_file->data);
+  /* Create/overwrite the file in PATH's administrative area.
+     (In reality, this opens a file 'path/SVN/tmp/auth/filename'.) */
+  SVN_ERR (svn_wc__open_auth_file (&fp, path, file,
+                                   (APR_WRITE | APR_CREATE | APR_TRUNCATE),
+                                   pool));
 
   status = apr_file_write_full (fp, contents->data, contents->len, &sz);
   if (status) 
     return svn_error_createf (status, 0, NULL, pool,
-                              "error writing data to '%s'",
-                              full_path_to_file->data);
+                              "error writing to auth file '%s' in '%s'",
+                              filename, path->data);
 
-  status = apr_file_trunc (fp, (apr_off_t) contents->len);
-  if (status) 
-    return svn_error_createf (status, 0, NULL, pool,
-                              "error truncating file '%s'",
-                              full_path_to_file->data);
+  SVN_ERR (svn_wc__close_auth_file (fp, path, file, TRUE /* sync */, pool));
   
-  status = apr_file_close (fp);
-  if (status) 
-    return svn_error_createf (status, 0, NULL, pool,
-                              "error closing file '%s'",
-                              full_path_to_file->data);
-
   if (recurse)
     {
       /* Loop over PATH's entries, and recurse into directories. */
