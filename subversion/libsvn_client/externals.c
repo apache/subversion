@@ -288,6 +288,8 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
 {
   struct handle_external_item_change_baton *ib = baton;
   struct external_item *old_item, *new_item;
+  const char *path = svn_path_join (ib->parent_dir,
+                                    (const char *) key, ib->pool);
 
   /* Don't bother to check status, since we'll get that for free by
      attempting to retrieve the hash values anyway.  */
@@ -329,14 +331,11 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
 
   if (! old_item)
     {
-      const char *checkout_path
-        = svn_path_join (ib->parent_dir, new_item->target_dir, ib->pool);
-
       /* The target dir might have multiple components.  Guarantee
          the path leading down to the last component. */
       {
         const char *checkout_parent;
-        svn_path_split_nts (checkout_path, &checkout_parent, NULL, ib->pool);
+        svn_path_split_nts (path, &checkout_parent, NULL, ib->pool);
         SVN_ERR (svn_io_make_dir_recursively (checkout_parent, ib->pool));
       }
 
@@ -349,7 +348,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
 
       /* First notify that we're about to handle an external. */
       (*ib->notify_func) (ib->notify_baton,
-                          checkout_path,
+                          path,
                           svn_wc_notify_update_external,
                           svn_node_unknown,
                           NULL,
@@ -361,7 +360,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                (ib->notify_func, ib->notify_baton,
                 ib->auth_baton,
                 new_item->url,
-                checkout_path,
+                path,
                 &(new_item->revision),
                 TRUE, /* recurse */
                 NULL,
@@ -380,8 +379,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
          going to need this directory, and therefore it's better to
          leave stuff where the user expects it. */
       err = svn_wc_remove_from_revision_control
-        (svn_path_join (ib->parent_dir, old_item->target_dir, ib->pool),
-         SVN_WC_ENTRY_THIS_DIR, TRUE, ib->pool);
+        (path, SVN_WC_ENTRY_THIS_DIR, TRUE, ib->pool);
 
       if (err && (err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD))
         return err;
@@ -396,16 +394,11 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
          in the "-r REV" portion, for example, we could do an update
          here instead of a relegation followed by full checkout. */
 
-      const char *checkout_path
-        = svn_path_join (ib->parent_dir, new_item->target_dir, ib->pool);
-
-      SVN_ERR (relegate_external
-               (svn_path_join (ib->parent_dir, old_item->target_dir, ib->pool),
-                ib->pool));
+      SVN_ERR (relegate_external (path, ib->pool));
       
       /* First notify that we're about to handle an external. */
       (*ib->notify_func) (ib->notify_baton,
-                          checkout_path,
+                          path,
                           svn_wc_notify_update_external,
                           svn_node_unknown,
                           NULL,
@@ -417,7 +410,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                (ib->notify_func, ib->notify_baton,
                 ib->auth_baton,
                 new_item->url,
-                checkout_path,
+                path,
                 &(new_item->revision),
                 TRUE, /* recurse */
                 NULL,
@@ -428,8 +421,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
       /* Exact same item is present in both hashes, and caller wants
          to update such unchanged items. */
 
-      const char *path
-        = svn_path_join (ib->parent_dir, new_item->target_dir, ib->pool);
+      svn_error_t *err;
 
       /* First notify that we're about to handle an external. */
       (*ib->notify_func) (ib->notify_baton,
@@ -442,42 +434,38 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                           SVN_INVALID_REVNUM);
 
       /* Try an update, but if no such dir, then check out instead. */
-      {
-        svn_error_t *err;
+      err = svn_client_update (ib->auth_baton,
+                               path,
+                               NULL,
+                               &(new_item->revision),
+                               TRUE, /* recurse */
+                               ib->notify_func, ib->notify_baton,
+                               ib->pool);
 
-        err = svn_client_update (ib->auth_baton,
-                                 path,
-                                 NULL,
-                                 &(new_item->revision),
-                                 TRUE, /* recurse */
-                                 ib->notify_func, ib->notify_baton,
-                                 ib->pool);
-
-        if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND))
+      if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND))
+        {
+          /* No problem.  Probably user added this external item, but
+             hasn't updated since then, so they don't actually have a
+             working copy of it yet.  Just check it out. */
+          
+          /* The target dir might have multiple components.  Guarantee
+             the path leading down to the last component. */
           {
-            /* No problem.  Probably user added this external item, but
-               hasn't updated since then, so they don't actually have a
-               working copy of it yet.  Just check it out. */
-               
-            /* The target dir might have multiple components.  Guarantee
-               the path leading down to the last component. */
-            {
-              const char *parent;
-              svn_path_split_nts (path, &parent, NULL, ib->pool);
-              SVN_ERR (svn_io_make_dir_recursively (parent, ib->pool));
-            }
-
-            SVN_ERR (svn_client_checkout
-                     (ib->notify_func, ib->notify_baton,
-                      ib->auth_baton,
-                      new_item->url,
-                      path,
-                      &(new_item->revision),
-                      TRUE, /* recurse */
-                      NULL,
-                      ib->pool));
+            const char *parent;
+            svn_path_split_nts (path, &parent, NULL, ib->pool);
+            SVN_ERR (svn_io_make_dir_recursively (parent, ib->pool));
           }
-      }
+          
+          SVN_ERR (svn_client_checkout
+                   (ib->notify_func, ib->notify_baton,
+                    ib->auth_baton,
+                    new_item->url,
+                    path,
+                    &(new_item->revision),
+                    TRUE, /* recurse */
+                    NULL,
+                    ib->pool));
+        }
     }
 
   return SVN_NO_ERROR;
