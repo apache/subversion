@@ -880,6 +880,16 @@ add_or_open_file (const char *path,
        "Can't add '%s':\n object of same name already exists in '%s'",
        fb->name->data, pb->path->data);
 
+  /* sussman sez: If we're trying to add a file that's already in
+     `entries' (but not on disk), that's okay.  It's probably because
+     the user deleted the working version and ran 'svn up' as a means
+     of getting the file back.  
+
+     It certainly doesn't hurt to re-add the file.  We can't possibly
+     get the entry showing up twice in `entries', since it's a hash;
+     and we know that we won't lose any local mods.  Let the existing
+     entry be overwritten. */
+
   /* If replacing, make sure the .svn entry already exists. */
   if ((! adding) && (! entry))
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, subpool,
@@ -2166,6 +2176,8 @@ close_edit (void *edit_baton)
                                           eb->pool));
     }
 
+  /* The edit is over, free its pool. */
+  svn_pool_destroy (eb->pool);
   return SVN_NO_ERROR;
 }
 

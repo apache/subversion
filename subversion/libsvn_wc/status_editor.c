@@ -270,16 +270,6 @@ make_file_baton (struct dir_baton *parent_dir_baton,
 /*** The callbacks we'll plug into an svn_delta_edit_fns_t structure. ***/
 
 static svn_error_t *
-window_handler (svn_txdelta_window_t *window, 
-                void *baton)
-{
-  /* This is a deliberate no-op.  In theory, this function should only
-     receive a single empty window from svn_repos_dir_delta. */
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
 set_target_revision (void *edit_baton, 
                      svn_revnum_t target_revision)
 {
@@ -468,9 +458,9 @@ apply_textdelta (void *file_baton,
   /* Mark file as having textual mods. */
   fb->text_changed = TRUE;
 
-  /* Send back a no-op window handler. */
+  /* Send back a NULL window handler -- we don't need the actual diffs. */
   *handler_baton = NULL;
-  *handler = window_handler;
+  *handler = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -511,6 +501,15 @@ close_file (void *file_baton)
                                fb->text_changed ? svn_wc_status_modified : 0,
                                fb->prop_changed ? svn_wc_status_modified : 0));
 
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+close_edit (void *edit_baton)
+{
+  /* The edit is over, free its pool. */
+  svn_pool_destroy (((struct edit_baton *) edit_baton)->pool);
   return SVN_NO_ERROR;
 }
 
@@ -569,6 +568,7 @@ svn_wc_get_status_editor (const svn_delta_editor_t **editor,
   tree_editor->apply_textdelta = apply_textdelta;
   tree_editor->change_file_prop = change_file_prop;
   tree_editor->close_file = close_file;
+  tree_editor->close_edit = close_edit;
 
   *edit_baton = eb;
   *editor = tree_editor;
