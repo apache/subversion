@@ -100,8 +100,8 @@ SWIG_PY_INCLUDES = @SWIG_PY_INCLUDES@
 SWIG_PY_COMPILE = @SWIG_PY_COMPILE@
 SWIG_PY_LINK = @SWIG_PY_LINK@
 SWIG_JAVA_INCLUDES = @SWIG_JAVA_INCLUDES@
-SWIG_JAVA_COMPILE = $(CC) -DNDEBUG -g -O3 -Wall -Wstrict-prototypes -fPIC
-SWIG_JAVA_LINK = $(CC) -shared
+SWIG_JAVA_COMPILE = @SWIG_JAVA_COMPILE@
+SWIG_JAVA_LINK = @SWIG_JAVA_LINK@
 SWIG_PL_INCLUDES = @SWIG_PL_INCLUDES@
 SWIG_PL_COMPILE = @SWIG_PL_COMPILE@
 SWIG_PL_LINK = @SWIG_PL_LINK@
@@ -136,7 +136,7 @@ LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS
 ### should we protect against swig not being available?
 RUN_SWIG_PY = $(SWIG) -c -python $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -o $@
 RUN_SWIG_PL = $(SWIG) -c -perl $(SWIG_INCLUDES) $(SWIG_PL_INCLUDES) -o $@
-RUN_SWIG_JAVA = cd ${SWIG_SRC_DIR}/java/org/tigris/subversion/swig && $(SWIG) -c -java -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o ${abs_builddir}/$@
+RUN_SWIG_JAVA = cd ${SWIG_BUILD_DIR}/java/org/tigris/subversion/swig && $(SWIG) -c -java -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o ${abs_builddir}/$@
 
 # Compilation of SWIG-generated C source code
 COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(CPPFLAGS) $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@
@@ -176,7 +176,23 @@ INSTALL_EXTRA_SWIG_PY=\
    if test $(abs_srcdir) != $(abs_builddir); then \
        $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_BUILD_DIR}/python" "$(DESTDIR)$(swig_pydir)" ; \
    fi
-INSTALL_EXTRA_SWIG_JAVA=:
+
+# These are for the SWIG generated bindings
+SWIG_JAVA_DIR = $(abs_builddir)/subversion/bindings/swig/java
+# These are the 'extra' classes which complement SWIG's generated bindings
+SWIG_EXTRA_JAVA_DIR = $(abs_srcdir)/subversion/bindings/java
+SWIG_JAVA_SOURCES = $(SWIG_EXTRA_JAVA_DIR)/org/tigris/subversion/*.java \
+                    $(SWIG_EXTRA_JAVA_DIR)/org/tigris/subversion/auth/*.java \
+                    $(SWIG_EXTRA_JAVA_DIR)/org/tigris/subversion/client/*.java \
+                    $(SWIG_EXTRA_JAVA_DIR)/org/tigris/subversion/opt/*.java \
+                    $(SWIG_EXTRA_JAVA_DIR)/org/tigris/subversion/wc/*.java \
+                    $(SWIG_JAVA_DIR)/org/tigris/subversion/swig/*.java
+
+INSTALL_EXTRA_SWIG_JAVA=\
+	if [ ! -d $(SWIG_JAVA_DIR)/build ]; then mkdir $(SWIG_JAVA_DIR)/build; fi; \
+	$(JAVAC) -g -d $(SWIG_JAVA_DIR)/build $(SWIG_JAVA_SOURCES); \
+	$(JAR) cf $(SWIG_JAVA_DIR)/build/svn-api.jar -C $(SWIG_JAVA_DIR)/build org; \
+	$(INSTALL_DATA) $(SWIG_JAVA_DIR)/build/svn-api.jar $(DESTDIR)$(swig_javadir);
 
 APXS = @APXS@ 
 
@@ -285,8 +301,10 @@ check-clean:
 mkdir-init:
 	@list='$(BUILD_DIRS) $(DOC_DIRS)';                  \
         for i in $$list doc; do                         \
-            echo "mkdir $$i" ;                          \
-            $(MKDIR) $$i ;                              \
+            if [ ! -d $$i ]; then                       \
+                echo "mkdir $$i" ;                      \
+                $(MKDIR) $$i ;                          \
+            fi;                                         \
         done
 
 # recursive targets to handle external projects (e.g. APR, Neon)
@@ -386,42 +404,6 @@ doc-clean:
                    *.tp *.vr                                \
                    *.dvi *.txt *.html *.ps *.pdf *.fo);     \
         done
-
-
-### Migrate Java build targets to build-outputs.mk when needed to
-### build other pure Java code.
-
-JAVA_API_DIR = $(abs_srcdir)/subversion/bindings/java
-JAVA_API_SOURCES = org/tigris/subversion/*.java \
-                   org/tigris/subversion/auth/*.java \
-                   org/tigris/subversion/client/*.java \
-                   org/tigris/subversion/opt/*.java \
-                   org/tigris/subversion/wc/*.java
-
-java-api:
-	@if [ ! -d $(JAVA_API_DIR)/build ]; then mkdir $(JAVA_API_DIR)/build; fi
-	cd $(JAVA_API_DIR) && \
-      $(JAVAC) -g -d $(JAVA_API_DIR)/build $(JAVA_API_SOURCES)
-	$(JAR) cf $(JAVA_API_DIR)/build/svn-api.jar -C $(JAVA_API_DIR)/build org
-
-java-api-clean:
-	@rm -rf $(JAVA_API_DIR)/build
-
-
-SWIG_JAVA_DIR = $(abs_srcdir)/subversion/bindings/swig/java
-SWIG_JAVA_SOURCES = org/tigris/subversion/client/*.java \
-                    org/tigris/subversion/swig/*.java \
-                    org/tigris/subversion/util/*.java
-
-swig-java-jar:
-	@if [ ! -d $(SWIG_JAVA_DIR)/build ]; then \
-        mkdir $(SWIG_JAVA_DIR)/build; \
-    fi
-	cd $(SWIG_JAVA_DIR) && \
-    $(JAVAC) -classpath $(JAVA_API_DIR)/build/svn-api.jar -g \
-      -d $(SWIG_JAVA_DIR)/build $(SWIG_JAVA_SOURCES)
-	$(JAR) cf $(SWIG_JAVA_DIR)/build/svn-swig.jar \
-      -C $(SWIG_JAVA_DIR)/build/org .
 
 #
 # Implicit rules for creating outputs from input files

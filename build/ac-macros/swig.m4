@@ -100,10 +100,14 @@ AC_DEFUN(SVN_FIND_SWIG,
     fi
 
     if test "$JDK" != "none" -a "$SWIG_SUITABLE" = "yes"; then
+      SWIG_JAVA_INCLUDES='-I$(JDK)/include'
       list="`find "$JDK/include" -type d -print`"
       for dir in $list; do
         SWIG_JAVA_INCLUDES="$SWIG_JAVA_INCLUDES -I$dir"
       done
+      dnl For now, we'll cheat and just use the compile and link from python.
+      SWIG_JAVA_COMPILE="$SWIG_PY_COMPILE"
+      SWIG_JAVA_LINK="$SWIG_PY_LINK"
     fi
 
     if test "$PERL" != "none" -a "$SWIG_SUITABLE" = "yes"; then
@@ -119,6 +123,8 @@ AC_DEFUN(SVN_FIND_SWIG,
   AC_SUBST(SWIG_PY_COMPILE)
   AC_SUBST(SWIG_PY_LINK)
   AC_SUBST(SWIG_JAVA_INCLUDES)
+  AC_SUBST(SWIG_JAVA_COMPILE)
+  AC_SUBST(SWIG_JAVA_LINK)
   AC_SUBST(SWIG_PL_INCLUDES)
   AC_SUBST(SWIG_PL_COMPILE)
   AC_SUBST(SWIG_PL_LINK)
