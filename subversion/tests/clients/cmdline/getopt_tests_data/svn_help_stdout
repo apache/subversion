@@ -35,6 +35,7 @@ Available subcommands:
    status (stat, st)
    switch (sw)
    update (up)
+   version (ver)
 
 Subversion is a tool for version control.
 For additional information, see http://subversion.tigris.org/

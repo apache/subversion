@@ -50,6 +50,37 @@ const char svn_cl__help_footer[] =
 
 /*** Code. ***/
 
+/* Print help or version information. If PRINT_VERSION, print version
+   info rather than help. Be less verbose if QUIET. OS is the
+   command-line options context, do any allocations from POOL. */
+static svn_error_t *
+print_help (apr_getopt_t *os,
+            svn_boolean_t print_version,
+            svn_boolean_t quiet,
+            apr_pool_t *pool)
+{
+  void *ra_baton;
+  const char *ra_desc_start
+    = _("The following repository access (RA) modules are available:\n\n");
+  svn_stringbuf_t *ra_desc_body, *ra_desc_all;
+
+  ra_desc_all = svn_stringbuf_create (ra_desc_start, pool);
+  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+  SVN_ERR (svn_ra_print_ra_libraries (&ra_desc_body, ra_baton, pool));
+  svn_stringbuf_appendstr (ra_desc_all, ra_desc_body);
+
+  return svn_opt_print_help (os,
+                             "svn",   /* ### erm, derive somehow? */
+                             print_version,
+                             quiet,
+                             ra_desc_all->data,
+                             gettext (svn_cl__help_header),
+                             svn_cl__cmd_table,
+                             svn_cl__options,
+                             gettext (svn_cl__help_footer),
+                             pool);
+}
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__help (apr_getopt_t *os,
@@ -58,31 +89,31 @@ svn_cl__help (apr_getopt_t *os,
 {
   svn_cl__opt_state_t *opt_state;
 
-  void *ra_baton;
-  const char *ra_desc_start
-    = _("The following repository access (RA) modules are available:\n\n");
-  svn_stringbuf_t *ra_desc_body, *ra_desc_all;
-
   if (baton)
     opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   else
     opt_state = NULL;
 
-  ra_desc_all = svn_stringbuf_create (ra_desc_start, pool);
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_print_ra_libraries (&ra_desc_body, ra_baton, pool));
-  svn_stringbuf_appendstr (ra_desc_all, ra_desc_body);
+  return print_help (os,
+                     opt_state ? opt_state->version : FALSE,
+                     opt_state ? opt_state->quiet : FALSE,
+                     pool);
+}
 
-  SVN_ERR (svn_opt_print_help (os,
-                               "svn",   /* ### erm, derive somehow? */
-                               opt_state ? opt_state->version : FALSE,
-                               opt_state ? opt_state->quiet : FALSE,
-                               ra_desc_all->data,
-                               gettext (svn_cl__help_header),
-                               svn_cl__cmd_table,
-                               svn_cl__options,
-                               gettext (svn_cl__help_footer),
-                               pool));
+/* This implements the `svn_opt_subcommand_t' interface. */
+svn_error_t *
+svn_cl__version (apr_getopt_t *os,
+                 void *baton,
+                 apr_pool_t *pool)
+{
+  svn_boolean_t quiet = FALSE;
 
-  return SVN_NO_ERROR;
+  if (baton)
+    {
+      const svn_cl__opt_state_t *const opt_state =
+        ((svn_cl__cmd_baton_t *) baton)->opt_state;
+      quiet = opt_state->quiet;
+    }
+
+  return print_help (os, TRUE, quiet, pool);
 }
