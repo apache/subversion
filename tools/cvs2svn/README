@@ -53,7 +53,7 @@ revision svn repository.  It took about 30 minutes.
 
 * Basic usage:
 
-  To create a new Subversion repository by creating an existing CVS
+  To create a new Subversion repository by converting an existing CVS
   repository, run the script like this:
 
      $ cvs2svn.py --create -s NEW_SVNREPOS CVSREPOS
