@@ -125,7 +125,7 @@ typedef struct svn_wc_entry_t
      you really need it, look in the attributes. */
 
   svn_revnum_t revision;       /* Base revision.  (Required) */
-  svn_stringbuf_t *ancestor;      /* Base path.  (Required) */
+  svn_stringbuf_t *url;        /* Base path.  (Required) */
   enum svn_node_kind kind;     /* Is it a file, a dir, or... ? (Required) */
 
   /* State information. */
@@ -156,7 +156,7 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_ATTR_SCHEDULE    "schedule"
 #define SVN_WC_ENTRY_ATTR_EXISTENCE   "existence"
 #define SVN_WC_ENTRY_ATTR_CONFLICTED  "conflicted"
-#define SVN_WC_ENTRY_ATTR_ANCESTOR    "ancestor"
+#define SVN_WC_ENTRY_ATTR_URL         "url"
 #define SVN_WC_ENTRY_ATTR_REJFILE     "text-reject-file"
 #define SVN_WC_ENTRY_ATTR_PREJFILE    "prop-reject-file"
 #define SVN_WC_ENTRY_ATTR_COPYFROM_URL "copyfrom-url"

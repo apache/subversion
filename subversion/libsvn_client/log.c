@@ -76,11 +76,11 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
     return svn_error_createf
       (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
        "svn_client_update: entry '%s' has been deleted", basename->data);
-  if (! entry->ancestor)
+  if (! entry->url)
     return svn_error_createf
-      (SVN_ERR_WC_ENTRY_MISSING_ANCESTRY, 0, NULL, pool,
+      (SVN_ERR_WC_ENTRY_MISSING_URL, 0, NULL, pool,
        "svn_client_update: entry '%s' has no URL", basename->data);
-  URL = svn_stringbuf_create (entry->ancestor->data, pool);
+  URL = svn_stringbuf_dup (entry->url, pool);
 
   /* Do RA interaction here to figure out what is out of date with
      respect to the repository.  All RA errors are non-fatal!! */

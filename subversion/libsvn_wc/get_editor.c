@@ -567,8 +567,7 @@ add_directory (svn_stringbuf_t *name,
       SVN_ERR (svn_wc_entry (&parent_entry,
                              parent_dir_baton->path,
                              parent_dir_baton->pool));
-      new_URL = svn_stringbuf_dup (parent_entry->ancestor, 
-                                   this_dir_baton->pool);
+      new_URL = svn_stringbuf_dup (parent_entry->url, this_dir_baton->pool);
       svn_path_add_component (new_URL, name, svn_path_url_style);
 
       copyfrom_path = new_URL;
@@ -1817,20 +1816,19 @@ svn_wc_is_wc_root (svn_boolean_t *wc_root,
   if (err || ! p_entry)
     return SVN_NO_ERROR;
   
-  /* If the parent directory has no ancestry information, something is
+  /* If the parent directory has no url information, something is
      messed up.  Bail with an error. */
-  if (! p_entry->ancestor)
+  if (! p_entry->url)
     return svn_error_createf 
-      (SVN_ERR_WC_ENTRY_MISSING_ANCESTRY, 0, NULL, pool,
+      (SVN_ERR_WC_ENTRY_MISSING_URL, 0, NULL, pool,
        "svn_wc_is_wc_root: %s has no ancestry information.", 
        parent->data);
 
   /* If PATH's parent in the WC is not its parent in the repository,
      PATH is a WC root. */
-  expected_url = svn_stringbuf_dup (p_entry->ancestor, pool);
+  expected_url = svn_stringbuf_dup (p_entry->url, pool);
   svn_path_add_component (expected_url, basename, svn_path_url_style);
-  if (entry->ancestor 
-      && (! svn_stringbuf_compare (expected_url, entry->ancestor)))
+  if (entry->url && (! svn_stringbuf_compare (expected_url, entry->url)))
     return SVN_NO_ERROR;
 
   /* If we have not determined that PATH is a WC root by now, it must

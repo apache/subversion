@@ -626,7 +626,7 @@ add_to_revision_control (svn_stringbuf_t *path,
     {
       /* Here's where we create and set the copyfrom_* args */
       SVN_ERR (svn_wc_entry (&anc_entry, ancestor_path, pool));
-      copyfrom_url = svn_stringbuf_dup (anc_entry->ancestor, pool);
+      copyfrom_url = svn_stringbuf_dup (anc_entry->url, pool);
       copyfrom_rev = svn_stringbuf_createf (pool, "%ld", anc_entry->revision);
       apr_hash_set (atts, 
                     SVN_WC_ENTRY_ATTR_COPYFROM_URL, APR_HASH_KEY_STRING,
@@ -687,7 +687,7 @@ add_to_revision_control (svn_stringbuf_t *path,
       SVN_ERR (svn_wc_entry (&p_entry, parent_dir, pool));
   
       /* Derive the parent path for our new addition here. */
-      p_path = svn_stringbuf_dup (p_entry->ancestor, pool);
+      p_path = svn_stringbuf_dup (p_entry->url, pool);
       svn_path_add_component (p_path, basename, svn_path_url_style);
   
       /* Make sure this new directory has an admistrative subdirectory
@@ -728,7 +728,7 @@ add_to_revision_control (svn_stringbuf_t *path,
           /* Figure out what the new url should be. */
           svn_stringbuf_t *url;
           SVN_ERR (svn_wc_entry (&parent_entry, parent_dir, pool));
-          url = svn_stringbuf_dup (parent_entry->ancestor, pool);
+          url = svn_stringbuf_dup (parent_entry->url, pool);
           svn_path_add_component (url, basename, svn_path_url_style);
 
           /* Change the entry-urls recursively. */

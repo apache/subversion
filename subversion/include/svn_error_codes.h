@@ -157,8 +157,8 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_WC_ENTRY_MISSING_REVISION,
               "Entry has no revision")
 
-  SVN_ERRDEF (SVN_ERR_WC_ENTRY_MISSING_ANCESTRY,
-              "Entry has no ancestor")
+  SVN_ERRDEF (SVN_ERR_WC_ENTRY_MISSING_URL,
+              "Entry has no url")
 
   SVN_ERRDEF (SVN_ERR_WC_ENTRY_ATTRIBUTE_INVALID,
               "Entry has an invalid attribute")
