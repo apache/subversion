@@ -391,12 +391,12 @@ svn_ra_local__do_checkout (void *session_baton,
   else
     revnum_to_fetch = revision;
 
-  SVN_ERR (svn_ra_local__checkout (sbaton->fs,
-                                   revnum_to_fetch,
-                                   recurse,
-                                   sbaton->repository_URL,
-                                   sbaton->fs_path,
-                                   editor, edit_baton, sbaton->pool));
+  SVN_ERR (svn_repos_checkout (sbaton->fs,
+                               revnum_to_fetch,
+                               recurse,
+                               sbaton->repository_URL,
+                               sbaton->fs_path,
+                               editor, edit_baton, sbaton->pool));
 
   return SVN_NO_ERROR;
 }
