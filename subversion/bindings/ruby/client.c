@@ -550,21 +550,33 @@ cl_revert (VALUE class, VALUE aPath, VALUE recursive)
 
 
 static VALUE
-cl_copy (VALUE class, VALUE srcPath, VALUE dstPath)
+cl_copy (int argc, VALUE *argv, VALUE self)
 {
-  svn_stringbuf_t *src_path, *dst_path;
+  VALUE srcPath, srcRev, dstPath, aMessage;
+  svn_stringbuf_t *src_path, *dst_path, *message;
+  svn_client_auth_baton_t *auth_baton;
+  svn_revnum_t src_rev;
   apr_pool_t *pool;
-
   svn_error_t *err;
 
+  rb_scan_args (argc, argv, "31", &srcPath, &srcRev, &dstPath, &aMessage);
   Check_Type (srcPath, T_STRING);
   Check_Type (dstPath, T_STRING);
+  if (aMessage != Qnil)
+    Check_Type (aMessage, T_STRING);
 
-  rb_notimplement ();
+  Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
+  src_rev = NUM2LONG (srcRev);
   pool = svn_pool_create (NULL);
   src_path = svn_stringbuf_create (StringValuePtr (srcPath), pool);
   dst_path = svn_stringbuf_create (StringValuePtr (dstPath), pool);
-  err = svn_client_copy (src_path, dst_path, pool);
+  if (aMessage == Qnil)
+    message = NULL;
+  else
+    message = svn_stringbuf_ncreate (StringValuePtr (aMessage),
+				     RSTRING (aMessage)->len, pool);
+  err = svn_client_copy (src_path, src_rev, dst_path,
+			 auth_baton, message, pool);
 
   apr_pool_destroy (pool);
   if (err)
@@ -589,5 +601,5 @@ void svn_ruby_init_client (void)
   rb_define_singleton_method (cSvnClient, "fileDiff", cl_file_diff, 1);
   rb_define_singleton_method (cSvnClient, "cleanup", cl_cleanup, 1);
   rb_define_singleton_method (cSvnClient, "revert", cl_revert, 2);
-  rb_define_singleton_method (cSvnClient, "copy", cl_copy, 2);
+  rb_define_method (cSvnClient, "copy", cl_copy, -1);
 }
