@@ -70,6 +70,58 @@
 
 
 
+/* kff todo: path, version, new? */
+svn_ancestor_t *
+svn_delta_ancestor_create (apr_pool_t *pool)
+{
+  svn_ancestory_t *annie;
+  anny = apr_pcalloc (pool, sizeof (*anny));
+  return anny;
+}
+
+/* kff todo: kind, ancestor, etc? */
+svn_edit_content_t *
+svn_delta_edit_content_create (apr_pool_t *pool)
+{
+  svn_edit_content_t *e;
+  e = apr_pcalloc (pool, sizeof (*e));
+  e->prop_delta = FALSE;
+  e->text_delta = FALSE;
+  e->tree_delta = NULL;
+  return e;
+}
+
+/* kff todo: action name, content? */
+svn_edit_t *
+svn_delta_edit_create (apr_pool_t *pool)
+{
+  svn_edit_t *eddy;
+  eddy = apr_pcalloc (pool, sizeof (*eddy));
+  eddy->content = NULL;
+  return eddy;
+}
+
+/* kff todo: perhaps should take the context args, source_root &
+   base_version, and set them in the new delta */
+svn_delta_t *
+svn_delta_create (apr_pool_t *pool)
+{
+  svn_delta_t *d;
+  d = apr_pcalloc (pool, sizeof (*d));
+  d->edit = NULL;
+  return d;
+}
+
+
+/* kff todo: again, take the callbacks, and set them?  Need a policy
+   w.r.t. constructors such as this. */
+svn_delta_digger_t *
+svn_delta_digger_create (apr_pool_t *pool)
+{
+  svn_delta_digger_t *diggy;
+  diggy = apr_pcalloc (pool, sizeof (*diggy));
+  return diggy;
+}
 
 /* Walk down a delta, append object to the end of it, whereever that
    may be.  :)   Cast the object when we attach it.  */
@@ -443,6 +495,26 @@ void svn_xml_DataHandler(void *userData, const char *data, int len)
 
   (* (my_digger->data_handler)) (my_digger, data, len);
 
+}
+
+
+
+XML_Parser
+svn_delta_make_xml_parser (svn_delta_digger_t *diggy)
+{
+  /* Create the parser */
+  XML_Parser parser = XML_ParserCreate (NULL);
+
+  /* All callbacks should receive the delta_digger structure. */
+  XML_SetUserData (parser, diggy);
+
+  /* Register subversion-specific callbacks with the parser */
+  XML_SetElementHandler (parser,
+                         svn_xml_handle_start,
+                         svn_xml_handle_end); 
+  XML_SetCharacterDataHandler (parser, svn_xml_handle_data);
+
+  return parser;
 }
 
 

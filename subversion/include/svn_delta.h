@@ -229,7 +229,7 @@ typedef struct svn_delta_digger_t
 
 
 /* Creates a parser with the common callbacks and userData registered. */
-XML_Parser svn_xml_make_parser (svn_delta_digger_t *diggy);
+XML_Parser svn_delta_make_xml_parser (svn_delta_digger_t *diggy);
 
 
 #endif  /* SVN_DELTA_H */
