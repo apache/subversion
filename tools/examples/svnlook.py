@@ -241,7 +241,7 @@ class ChangedEditor(delta.Editor):
   def open_file(self, path, parent_baton, base_revision, file_pool):
     return [ '_', ' ', path ]
 
-  def apply_textdelta(self, file_baton, base_checksum, result_checksum):
+  def apply_textdelta(self, file_baton, base_checksum):
     file_baton[0] = 'U'
 
     # no handler
@@ -250,7 +250,7 @@ class ChangedEditor(delta.Editor):
   def change_file_prop(self, file_baton, name, value, pool):
     file_baton[1] = 'U'
 
-  def close_file(self, file_baton):
+  def close_file(self, text_checksum, file_baton):
     text_mod, prop_mod, path = file_baton
     # test the path. it will be None if we added this file.
     if path:
@@ -302,7 +302,7 @@ class DiffEditor(delta.Editor):
   def open_file(self, path, parent_baton, base_revision, file_pool):
     return [ '_', ' ', path, file_pool ]
 
-  def apply_textdelta(self, file_baton, base_checksum, result_checksum):
+  def apply_textdelta(self, file_baton, base_checksum):
     if file_baton[2] is not None:
       self._do_diff(file_baton[2], file_baton[2], file_baton[3])
     return None
