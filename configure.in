@@ -89,15 +89,6 @@ AC_CHECK_FUNCS(strerror)
 
 dnl Final step:  create all Makefiles ----------------------------
 
-dnl AC_OUTPUT([Makefile                                          \
-dnl            doc/Makefile                                      \
-dnl            subversion/libsvn_subr/parsetest/Makefile         \
-dnl            subversion/libsvn_svr/Makefile                    \
-dnl            subversion/libsvn_string/Makefile                 \
-dnl            subversion/libsvn_wc/Makefile                     \
-dnl            subversion/libsvn_vcdiff/Makefile                 \
-dnl            subversion/libsvn_svr/tests/Makefile])
-
 AC_OUTPUT([Makefile                                           \
            doc/Makefile                                       \
            subversion/Makefile                                \
