@@ -79,6 +79,10 @@ typedef struct {
   svn_stringbuf_t *uri;            /* the uri within res */
   svn_stringbuf_t *repos_path;     /* the repos_path within res */
 
+  /* locks present in and under the root of the walk (or NULL if we
+     aren't paying attention to locks as part of the walk) */
+  apr_hash_t *locks;
+
 } dav_svn_walker_context;
 
 
@@ -2783,6 +2787,47 @@ static dav_error * dav_svn_move_resource(dav_resource *src,
 }
 
 
+/* Create a hash in POOL, and populate it with the subset of the LOCK
+   hash members which are immediate children of PATH.  These members
+   are *NOT* duped into POOL -- they will merely be referred to by
+   reference in the returned hash. */
+/* ### TODO:  remove items from LOCKS that are returned as children so
+   subsequent calls don't have to crawl them. */
+static apr_hash_t *get_immediate_children_locks(const char *path,
+                                                apr_hash_t *locks,
+                                                apr_pool_t *pool)
+{
+  apr_hash_t *child_locks = apr_hash_make(pool);
+  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_hash_index_t *hi;
+
+  /* iterate over the children in this collection */
+  for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+      const char *rel_path;
+
+      svn_pool_clear(subpool);
+
+      /* fetch one of the children */
+      apr_hash_this(hi, &key, &klen, &val);
+
+      /* is it at least a child? */
+      if ((rel_path = svn_path_is_child(path, key, subpool)))
+        {
+          /* and is it only a child (not a grandchild)? */
+          if (! ap_strchr_c((char *)rel_path, '/'))
+            {
+              apr_hash_set(child_locks, key, klen, val);
+            }
+        }
+    }
+  return child_locks;
+}
+
+
 static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
 {
   const dav_walk_params *params = ctx->params;
@@ -2794,6 +2839,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   apr_size_t uri_len;
   apr_size_t repos_len;
   apr_hash_t *children;
+  apr_hash_t *child_locks;
 
   /* The current resource is a collection (possibly here thru recursion)
      and this is the invocation for the collection. Alternatively, this is
@@ -2854,6 +2900,10 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
                                "could not fetch collection members",
                                params->pool);
 
+  /* fetch the immediate locked children of this resource. */
+  child_locks = get_immediate_children_locks(ctx->info.repos_path,
+                                             ctx->locks, params->pool);
+
   /* iterate over the children in this collection */
   for (hi = apr_hash_first(params->pool, children); hi; hi = apr_hash_next(hi))
     {
@@ -2876,6 +2926,11 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
       svn_stringbuf_appendbytes(ctx->info.uri_path, key, klen);
       svn_stringbuf_appendbytes(ctx->uri, key, klen);
       svn_stringbuf_appendbytes(ctx->repos_path, key, klen);
+
+      /* "forget" about the immediate locked children of this
+         resource that actually exist. */
+      apr_hash_set(child_locks, ctx->repos_path->data, 
+                   ctx->repos_path->len, NULL);
 
       /* reset the pointers since the above may have changed them */
       ctx->res.uri = ctx->uri->data;
@@ -2902,8 +2957,47 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
             return err;
 
           /* restore the data */
-          ctx->res.collection = 0;
+          ctx->res.collection = FALSE;
         }
+
+      /* chop the child off the paths and uri. NOTE: no null-term. */
+      ctx->info.uri_path->len = path_len;
+      ctx->uri->len = uri_len;
+      ctx->repos_path->len = repos_len;
+    }
+
+  /* any immediate child locks that don't exist, we'll cover here. */
+  for (hi = apr_hash_first(params->pool, child_locks); 
+       hi; 
+       hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+      svn_fs_dirent_t *dirent;
+      const char *lock_path;
+
+      /* fetch one of the children */
+      apr_hash_this(hi, &key, &klen, &val);
+      lock_path = key;
+      dirent = val;
+
+      /* append this child to our buffers */
+      svn_stringbuf_appendbytes(ctx->info.uri_path, lock_path + 1, klen - 1);
+      svn_stringbuf_appendbytes(ctx->uri, lock_path + 1, klen - 1);
+      svn_stringbuf_appendbytes(ctx->repos_path, lock_path + 1, klen - 1);
+
+      /* fill in the details of this LOCKNULL resource */
+      ctx->res.uri = ctx->uri->data;
+      ctx->res.exists = FALSE;
+
+      /* tell our driver about this resource */
+      err = (*params->func)(&ctx->wres, DAV_CALLTYPE_MEMBER);
+      if (err != NULL)
+        return err;
+
+      /* restore parameters */
+      ctx->res.exists = TRUE;
 
       /* chop the child off the paths and uri. NOTE: no null-term. */
       ctx->info.uri_path->len = path_len;
@@ -2965,6 +3059,26 @@ static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
   ctx.info.pool = svn_pool_create(params->pool);
 
   /* ### is the root already/always open? need to verify */
+
+  /* If we are paying attention to locks, and we're about to examine a
+     collection, we fetch the locks in and under the collection */
+  if (ctx.res.collection 
+      && ctx.info.repos_path
+      && (! ctx.info.repos->is_svn_client)
+      && (params->walk_type & DAV_WALKTYPE_LOCKNULL))
+    {
+      svn_error_t *serr = svn_repos_fs_get_locks(&(ctx.locks), 
+                                                 ctx.info.repos->repos,
+                                                 ctx.info.repos_path,
+                                                 NULL, NULL, params->pool);
+      if (serr)
+        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   "Unable to fetch locks", params->pool);
+    }
+  else
+    {
+      ctx.locks = apr_hash_make (params->pool);
+    }
 
   /* always return the error, and any/all multistatus responses */
   err = dav_svn_do_walk(&ctx, depth);
