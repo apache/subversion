@@ -3,7 +3,7 @@ ChangeLog entries.
 
 Although Subversion generates its ChangeLogs from cvs log data,
 instead of keeping independent ChangeLog files, most of the advice
-below is as applicable to cvs log messages as to ChangLog entries.
+below is as applicable to cvs log messages as to ChangeLog entries.
 
 
 Maintaining the ChangeLog
