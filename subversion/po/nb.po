@@ -426,12 +426,12 @@ msgstr "ikke vis forskjeller for slettede filer"
 
 #: clients/cmdline/main.c:116
 msgid "notice ancestry when calculating differences"
-msgstr "ta hensyn til opprinnelse når fletninger beregnes"
+msgstr "ta hensyn til opprinnelse når forskjeller beregnes"
 
 #: clients/cmdline/main.c:118
 msgid "ignore ancestry when calculating merges"
 msgstr ""
-"ikke ta hensyn til opprinnelse når fletninger\n"
+"ikke ta hensyn til opprinnelse når flettinger\n"
 "                             beregnes"
 
 #: clients/cmdline/main.c:120
@@ -1214,7 +1214,7 @@ msgstr ""
 "  arbeidskopien.\n"
 "  Med argumentet -v vises komplett informasjon om hvert objekt.\n"
 "\n"
-"  De første fem kolonnene har hver en bredde på et tegn:\n"
+"  De første fem kolonnene har hver en bredde på ett tegn:\n"
 "    Kolonne en: Viser om objektet er lagt til, slettet eller endret.\n"
 "      ' ' Ingen endringer\n"
 "      'A' Lagt til\n"
@@ -1455,7 +1455,7 @@ msgstr "Kunne ikke tilbakestille '%s' -- prøv heller å oppdatere.\n"
 #: clients/cmdline/notify.c:123
 #, c-format
 msgid "Resolved conflicted state of '%s'\n"
-msgstr "Konflikten med '%s' er løst\n"
+msgstr "Konflikten i '%s' er løst\n"
 
 #: clients/cmdline/notify.c:202
 #, c-format
@@ -1658,7 +1658,7 @@ msgstr "Filnavn for klientsertifikat: "
 #: clients/cmdline/prompt.c:362
 #, c-format
 msgid "Passphrase for '%s': "
-msgstr "adgangsfrase/-setning for '%s': "
+msgstr "Adgangsfrase/-setning for '%s': "
 
 #: clients/cmdline/propdel-cmd.c:78 clients/cmdline/propedit-cmd.c:85
 #: clients/cmdline/proplist-cmd.c:72 clients/cmdline/propset-cmd.c:111
@@ -1886,7 +1886,7 @@ msgstr "Feil format i versjonsfil"
 
 #: include/svn_error_codes.h:178
 msgid "No such XML tag attribute"
-msgstr "XML har ikke en slik etikett-egenskap"
+msgstr "Mangler attributt for XML-tag"
 
 #: include/svn_error_codes.h:182
 msgid "<delta-pkg> is missing ancestry"
@@ -1898,7 +1898,7 @@ msgstr "Ukjent binær datakoding, kan ikke dekode"
 
 #: include/svn_error_codes.h:190
 msgid "XML data was not well-formed"
-msgstr "XML-data var ikke grammatisk korrekt"
+msgstr "XML-data var ikke velformet"
 
 #: include/svn_error_codes.h:196
 msgid "Inconsistent line ending style"
@@ -2329,7 +2329,7 @@ msgstr "Versjon for klient/tjener samsvarer ikke"
 
 #: include/svn_error_codes.h:663
 msgid "Credential data unavailable"
-msgstr "Akkreditiv data er utilgjengelige"
+msgstr "Akkreditive data er utilgjengelige"
 
 #: include/svn_error_codes.h:667
 msgid "No authentication provider available"
