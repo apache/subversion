@@ -65,8 +65,9 @@ extern "C" {
  * parameters; any provider or library layer can set these run-time
  * parameters at any time, so that the provider has access to the
  * data.  (For example, certain run-time data may not be available
- * until an authentication challenge is made.)  Each provider must
- * document run-time parameters it requires.
+ * until an authentication challenge is made.)  Each credential type
+ * must document the run-time parameters that are made available to
+ * its providers.
  *
  * @defgroup auth_fns authentication functions
  * @{
@@ -146,81 +147,157 @@ typedef struct
 } svn_auth_provider_object_t;
 
 
-
+
 /** Specific types of credentials **/
 
-/** A simple username/password pair.  If @a may_save is TRUE, the
- *  credentials are allowed to be saved to disk. */
+/** Simple username/password pair credential kind.
+ *
+ * The following auth parameters may be available to the providers:
+ *
+ * - @c SVN_AUTH_PARAM_NO_AUTH_CACHE (@c void*)
+ * - @c SVN_AUTH_PARAM_DEFAULT_USERNAME (@c char*)
+ * - @c SVN_AUTH_PARAM_DEFAULT_PASSWORD (@c char*)
+ */
 #define SVN_AUTH_CRED_SIMPLE "svn.simple"
+
+/** @c SVN_AUTH_CRED_SIMPLE credentials. */
 typedef struct
 {
+  /** Username */
   const char *username;
+  /** Password */
   const char *password;
+  /** Indicates if the credentials may be saved (to disk). For example, a
+   * GUI prompt implementation with a remember password checkbox shall set
+   * @a may_save to TRUE if the checkbox is checked.
+   */
   svn_boolean_t may_save;
 } svn_auth_cred_simple_t;
 
-/** Just a username. If @a may_save is TRUE, the credentials are
- *  allowed to be saved on disk. */
+
+/** Username credential kind.
+ *
+ * The following optional auth parameters are relevant to the providers:
+ *
+ * - @c SVN_AUTH_PARAM_NO_AUTH_CACHE (@c void*)
+ * - @c SVN_AUTH_PARAM_DEFAULT_USERNAME (@c char*)
+ */
 #define SVN_AUTH_CRED_USERNAME "svn.username"
+
+/** @c SVN_AUTH_CRED_USERNAME credentials. */
 typedef struct
 {
+  /** Username */
   const char *username;
+  /** Indicates if the credentials may be saved (to disk). For example, a
+   * GUI prompt implementation with a remember username checkbox shall set
+   * @a may_save to TRUE if the checkbox is checked.
+   */
   svn_boolean_t may_save;
 } svn_auth_cred_username_t;
 
-/** SSL client authentication - this provides @a cert_file and
- *  optionally @a key_file (if the private key is separate) as the
- *  full paths to the files, and sets @a cert_type for the type of
- *  certificate file to load. If @a may_save is TRUE, the credentials
- *  are allowed to be saved to disk. */
+
+/** SSL client certificate credential type.
+ *
+ * The following auth parameters are available to the providers:
+ *
+ * - @c SVN_AUTH_PARAM_CONFIG (@c svn_config_t*)
+ * - @c SVN_AUTH_PARAM_SERVER_GROUP (@c char*)
+ *
+ * The following optional auth parameters are relevant to the providers:
+ *
+ * - @c SVN_AUTH_PARAM_NO_AUTH_CACHE (@c void*)
+ */
 #define SVN_AUTH_CRED_SSL_CLIENT_CERT "svn.ssl.client-cert"
+
+/** @c SVN_AUTH_CRED_SSL_CLIENT_CERT credentials. */
 typedef struct
 {
+  /** Full paths to the certificate file */
   const char *cert_file;
+  /** Indicates if the credentials may be saved (to disk). For example, a
+   * GUI prompt implementation with a remember certificate checkbox shall
+   * set @a may_save to TRUE if the checkbox is checked.
+   */
   svn_boolean_t may_save;
 } svn_auth_cred_ssl_client_cert_t;
 
-/** SSL client passphrase.
+
+/** SSL client certificate passphrase credential type.
  *
- * @a password gets set with the appropriate password for the
- * certificate.  The realmstring use with this credential type
- * must be a name that makes it possible for the user to identify
- * the certificate. If @a may_save is TRUE, the credentials are
- * allowed to be saved to disk.
+ * @note The realmstring used with this credential type must be a name that
+ * makes it possible for the user to identify the certificate.
+ *
+ * The following auth parameters are available to the providers:
+ *
+ * - @c SVN_AUTH_PARAM_CONFIG (@c svn_config_t*)
+ * - @c SVN_AUTH_PARAM_SERVER_GROUP (@c char*)
+ *
+ * The following optional auth parameters are relevant to the providers:
+ *
+ * - @c SVN_AUTH_PARAM_NO_AUTH_CACHE (@c void*)
  */
 #define SVN_AUTH_CRED_SSL_CLIENT_CERT_PW "svn.ssl.client-passphrase"
+
+/** @c SVN_AUTH_CRED_SSL_CLIENT_CERT_PW crentials. */
 typedef struct
 {
+  /** Certificate password */
   const char *password;
+  /** Indicates if the credentials may be saved (to disk). For example, a
+   * GUI prompt implementation with a remember password checkbox shall set
+   * @a may_save to TRUE if the checkbox is checked.
+   */
   svn_boolean_t may_save;
 } svn_auth_cred_ssl_client_cert_pw_t;
 
-/** SSL server verification.
+
+/** SSL server verification credential type.
  *
- *  @a accepted_failures is a bit mask of the accepted failures.  If
- *  @a may_save is TRUE, the credentials are allowed to be saved to
- *  disk.
+ * The following auth parameters are available to the providers:
+ *
+ * - @c SVN_AUTH_PARAM_CONFIG (@c svn_config_t*)
+ * - @c SVN_AUTH_PARAM_SERVER_GROUP (@c char*)
+ * - @c SVN_AUTH_PARAM_SSL_SERVER_FAILURES (@c apr_uint32_t*)
+ * - @c SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO
+ *      (@c svn_auth_ssl_server_cert_info_t*)
+ *
+ * The following optional auth parameters are relevant to the providers:
+ *
+ * - @c SVN_AUTH_PARAM_NO_AUTH_CACHE (@c void*)
  */
 #define SVN_AUTH_CRED_SSL_SERVER_TRUST "svn.ssl.server"
+
+/** SSL server certificate information used by @c
+ * SVN_AUTH_CRED_SSL_SERVER_TRUST providers.
+ */
+typedef struct {
+  /** Primary CN */
+  const char *hostname;
+  /** ASCII fingerprint */
+  const char *fingerprint;
+  /** ASCII date from which the certificate is valid */
+  const char *valid_from;
+  /** ASCII date until which the certificate is valid */
+  const char *valid_until;
+  /** DN of the certificate issuer */
+  const char *issuer_dname;
+  /** Base-64 encoded DER certificate representation */
+  const char *ascii_cert;
+} svn_auth_ssl_server_cert_info_t;
+
+/** @c SVN_AUTH_CRED_SSL_SERVER_TRUST credentials. */
 typedef struct
 {
+  /** Indicates if the credentials may be saved (to disk). For example, a
+   * GUI prompt implementation with a checkbox to accept the certificate
+   * permanently shall set @a may_save to TRUE if the checkbox is checked.
+   */
   svn_boolean_t may_save;
+  /** Bit mask of the accepted failures */
   apr_uint32_t accepted_failures;
 } svn_auth_cred_ssl_server_trust_t;
 
-
-/** SSL server certificate information.
- */
-typedef struct {
-  const char *hostname;
-  const char *fingerprint;
-  const char *valid_from;
-  const char *valid_until;
-  const char *issuer_dname;
-
-  /* The full certificate as base-64 encoded DER */
-  const char *ascii_cert;
-} svn_auth_ssl_server_cert_info_t;
 
 
 /** Credential-constructing prompt functions. **/
@@ -247,7 +324,13 @@ typedef struct {
  * username and password.  For example, a typical usage would be to
  * pass @a username on the first call, but then leave it null for
  * subsequent calls, on the theory that if credentials failed, it's
- * as likely to be due to incorrect username as incorrect password. 
+ * as likely to be due to incorrect username as incorrect password.
+ *
+ * If @a may_save is FALSE, the auth system does not allow the credentials
+ * to be saved (to disk). A prompt function shall not ask the user if the
+ * credentials shall be saved if @a may_save is FALSE. For example, a GUI
+ * client with a remember password checkbox would grey out the checkbox if
+ * @a may_save is FALSE.
  */
 typedef svn_error_t *
 (*svn_auth_simple_prompt_func_t) (svn_auth_cred_simple_t **cred,
@@ -262,6 +345,12 @@ typedef svn_error_t *
  * @a baton is an implementation-specific closure.
  *
  * If @a realm is non-null, maybe use it in the prompt string.
+ *
+ * If @a may_save is FALSE, the auth system does not allow the credentials
+ * to be saved (to disk). A prompt function shall not ask the user if the
+ * credentials shall be saved if @a may_save is FALSE. For example, a GUI
+ * client with a remember username checkbox would grey out the checkbox if
+ * @a may_save is FALSE.
  */
 typedef svn_error_t *
 (*svn_auth_username_prompt_func_t) (svn_auth_cred_username_t **cred,
@@ -270,6 +359,26 @@ typedef svn_error_t *
                                     svn_boolean_t may_save,
                                     apr_pool_t *pool);
 
+
+/** @name SSL server certificate failure bits
+ *
+ * @note These values are stored in the on disk auth cache by the SSL
+ * server certificate auth provider, so the meaning of these bits must
+ * not be changed.
+ * @{
+ */
+/** Certificate is not yet valid. */
+#define SVN_AUTH_SSL_NOTYETVALID 0x00000001
+/** Certificate has expired. */
+#define SVN_AUTH_SSL_EXPIRED     0x00000002
+/** Certificate's CN (hostname) does not match the remote hostname. */
+#define SVN_AUTH_SSL_CNMISMATCH  0x00000004
+/** @brief Certificate authority is unknown (i.e. not trusted) */
+#define SVN_AUTH_SSL_UNKNOWNCA   0x00000008
+/** @brief Other failure. This can happen if neon has introduced a new
+ * failure bit that we do not handle yet. */
+#define SVN_AUTH_SSL_OTHER       0x40000000
+/** @} */
 
 /** Set @a *cred by prompting the user, allocating @a *cred in @a pool.
  * @a baton is an implementation-specific closure.
@@ -280,16 +389,12 @@ typedef svn_error_t *
  * (See the #define error flag values below.)  @a realm is a string
  * that can be used in the prompt string.
  *
- * Note that these values are stored in the on disk auth cache by the
- * SSL server certificate auth provider, so the meaning of these bits
- * must not be changed without careful consideration.
+ * If @a may_save is FALSE, the auth system does not allow the credentials
+ * to be saved (to disk). A prompt function shall not ask the user if the
+ * credentials shall be saved if @a may_save is FALSE. For example, a GUI
+ * client with a trust permanently checkbox would grey out the checkbox if
+ * @a may_save is FALSE.
  */
-#define SVN_AUTH_SSL_NOTYETVALID 0x00000001
-#define SVN_AUTH_SSL_EXPIRED     0x00000002
-#define SVN_AUTH_SSL_CNMISMATCH  0x00000004
-#define SVN_AUTH_SSL_UNKNOWNCA   0x00000008
-#define SVN_AUTH_SSL_OTHER       0x40000000
-
 typedef svn_error_t *(*svn_auth_ssl_server_trust_prompt_func_t) (
   svn_auth_cred_ssl_server_trust_t **cred,
   void *baton,
@@ -303,6 +408,12 @@ typedef svn_error_t *(*svn_auth_ssl_server_trust_prompt_func_t) (
 /** Set @a *cred by prompting the user, allocating @a *cred in @a pool.
  * @a baton is an implementation-specific closure.  @a realm is a string
  * that can be used in the prompt string.
+ *
+ * If @a may_save is FALSE, the auth system does not allow the credentials
+ * to be saved (to disk). A prompt function shall not ask the user if the
+ * credentials shall be saved if @a may_save is FALSE. For example, a GUI
+ * client with a remember certificate checkbox would grey out the checkbox
+ * if @a may_save is FALSE.
  */
 typedef svn_error_t *(*svn_auth_ssl_client_cert_prompt_func_t) (
   svn_auth_cred_ssl_client_cert_t **cred,
@@ -315,6 +426,12 @@ typedef svn_error_t *(*svn_auth_ssl_client_cert_prompt_func_t) (
 /** Set @a *cred by prompting the user, allocating @a *cred in @a pool.
  * @a baton is an implementation-specific closure.  @a realm is a string
  * identifying the certificate, and can be used in the prompt string.
+ *
+ * If @a may_save is FALSE, the auth system does not allow the credentials
+ * to be saved (to disk). A prompt function shall not ask the user if the
+ * credentials shall be saved if @a may_save is FALSE. For example, a GUI
+ * client with a remember password checkbox would grey out the checkbox if
+ * @a may_save is FALSE.
  */
 typedef svn_error_t *(*svn_auth_ssl_client_cert_pw_prompt_func_t) (
   svn_auth_cred_ssl_client_cert_pw_t **cred,
@@ -366,41 +483,46 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
     application is responsible for placing them into the auth_baton
     hash. */
 
-/** The auth-hash prefix indicating that the parameter is global */
+/** The auth-hash prefix indicating that the parameter is global. */
 #define SVN_AUTH_PARAM_PREFIX "svn:auth:"
 
-/** Any 'default' credentials that came in through the application
-    itself, (e.g. --username and --password options).  Property values
-    are const char *.  */
+/** @brief Any 'default' credentials that came in through the application
+ * itself, (e.g. --username and --password options).  Property values are
+ * const char *.  */
 #define SVN_AUTH_PARAM_DEFAULT_USERNAME  SVN_AUTH_PARAM_PREFIX "username"
 #define SVN_AUTH_PARAM_DEFAULT_PASSWORD  SVN_AUTH_PARAM_PREFIX "password"
 
-/** The application doesn't want any providers to prompt users.
-    Property value is irrelevant; only property's existence matters. */
+/** @brief The application doesn't want any providers to prompt
+ * users. Property value is irrelevant; only property's existence
+ * matters. */
 #define SVN_AUTH_PARAM_NON_INTERACTIVE  SVN_AUTH_PARAM_PREFIX "non-interactive"
 
-/** The application doesn't want any providers to save credentials to disk.
-    Property value is irrelevant; only property's existence matters. */
+/** @brief The application doesn't want any providers to save credentials
+ * to disk. Property value is irrelevant; only property's existence
+ * matters. */
 #define SVN_AUTH_PARAM_NO_AUTH_CACHE  SVN_AUTH_PARAM_PREFIX "no-auth-cache"
 
-/** The following property is for ssl server cert providers. This
-    provides the detected failures by the certificate validator */
+/** @brief The following property is for SSL server cert providers. This
+ * provides a pointer to an @c apr_uint32_t containing the failures
+ * detected by the certificate validator. */
 #define SVN_AUTH_PARAM_SSL_SERVER_FAILURES SVN_AUTH_PARAM_PREFIX \
   "ssl:failures"
 
-/** The following property is for ssl server cert providers. This
-    provides the cert info (svn_auth_ssl_server_cert_info_t). */
+/** @brief The following property is for SSL server cert providers. This
+ * provides the cert info (svn_auth_ssl_server_cert_info_t). */
 #define SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO SVN_AUTH_PARAM_PREFIX \
   "ssl:cert-info"
 
-/** Some providers need access to the @c svn_config_t configuration
-    for individual servers in order to properly operate */
+/** Some providers need access to the @c svn_config_t configuration. */
 #define SVN_AUTH_PARAM_CONFIG SVN_AUTH_PARAM_PREFIX "config"
+
+/** The current server group. */
 #define SVN_AUTH_PARAM_SERVER_GROUP SVN_AUTH_PARAM_PREFIX "server-group"
 
-/** A configuration directory that overrides the default 
-    ~/.subversion. */
+/** @brief A configuration directory that overrides the default
+ * ~/.subversion. */
 #define SVN_AUTH_PARAM_CONFIG_DIR SVN_AUTH_PARAM_PREFIX "config-dir"
+
 
 /** Get an initial set of credentials.
  *
