@@ -1034,7 +1034,8 @@ main (int argc, const char * const *argv)
     svn_config_get (cfg, &store_password_val,
                     SVN_CONFIG_SECTION_AUTH, SVN_CONFIG_OPTION_STORE_PASSWORD,
                     NULL);
-    if (opt_state.no_auth_cache || store_password_val)
+    if (opt_state.no_auth_cache
+        || (store_password_val && (strcmp (store_password_val, "no") == 0)))
       svn_auth_set_parameter(ab, SVN_AUTH_PARAM_NO_AUTH_CACHE,
                              (void *) "");
   }
