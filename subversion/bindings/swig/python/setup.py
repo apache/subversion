@@ -138,6 +138,7 @@ core.setup(name="Subversion",
 
            packages=['svn'],
 
+           package_dir={"":source_dir+'/python'},
            include_dirs=include_dirs,
 
            ext_package="svn",
