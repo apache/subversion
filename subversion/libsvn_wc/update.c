@@ -109,7 +109,6 @@ check_existence (svn_string_t path, apr_status_t err_to_report)
 static svn_string_t *
 delta_stack_to_path (svn_delta_stackframe_t *stack, apr_pool_t *pool)
 {
-  svn_delta_stackframe_t *p = stack;
   svn_string_t *path;
 
   path = svn_string_create ("", pool);
@@ -117,13 +116,13 @@ delta_stack_to_path (svn_delta_stackframe_t *stack, apr_pool_t *pool)
   /* Recursive, but not tail-recursive.  
      Oh, wait -- this is C, there's no difference (thud). */
 
-  if (p->kind == svn_XML_content)  /* either "<dir ...>" or "<file ...>" */
+  if (stack->kind == svn_XML_content) /* either "<dir ...>" or "<file ...>" */
     {
-      if (p->content_kind == svn_content_dir)   /* it's "<dir ...>" */
+      if (stack->content_kind == svn_content_dir)   /* it's "<dir ...>" */
         {
           char dirsep = SVN_DIR_SEPARATOR;
           path = svn_string_appendbytes (path, &dirsep, 1, pool);
-          path = svn_string_appendstr (path, p->name, pool);
+          path = svn_string_appendstr (path, stack->name, pool);
           
           if (stack->next)
             {
@@ -135,7 +134,7 @@ delta_stack_to_path (svn_delta_stackframe_t *stack, apr_pool_t *pool)
           else
             return path;
         }
-      if (p->content_kind == svn_content_file)  /* it's "<file ...>" */
+      if (stack->content_kind == svn_content_file)  /* it's "<file ...>" */
         {
           /* Don't recurse past a non-directory, just return. */
           return svn_string_appendstr (path, stack->name, pool);
