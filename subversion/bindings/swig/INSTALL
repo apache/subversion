@@ -79,7 +79,8 @@ Step 3:  Install Specific Language Bindings
    The build process of the Perl bindings is not yet tightly
    integrated with subversion's build system. It is using the standard
    way for building and installing perl extentions. You will have to
-   install subversion before building and using it.
+   install subversion before building and using it. Perl 5.8.0 is
+   required.
 
    1.  Run 'make install-swig-pl-lib' from the top of the
        Subversion source tree.
