@@ -912,15 +912,17 @@ $ svn status
           el primero es borrado completamente, seguido de una adición
           completa del segundo!</para>
 
-        <para>In these situations, you'll want <command>svn
-          merge</command> to do a path-based comparison only, ignoring
-          any relations between files and directories.  Add the
-          <option>--ignore-ancestry</option> option to your merge
-          command, and it will behave just like <command>svn
-          diff</command>.  (And conversely, the
-          <option>--notice-ancestry</option> option will cause
-          <command>svn diff</command> to behave like the merge
-          command.)</para>
+        <para>En estas situaciones, querrá que <command>svn
+          merge</command> realice una comparación basada
+          únicamente en rutas de fichero, ignorando cualquier
+          relación existente entre ficheros y directorios. Añada
+          la opción <option>--ignore-ancestry</option> a su
+          comando de fusionado, y se comportará del mismo
+          modo que <command>svn diff</command>. (Y de modo
+          similar, <!-- TODO conversely? Buscar expresión? -->
+          la opción <option>--notice-ancestry</option> hará que
+          <command>svn diff</command> se comporte como un comando
+          de fusionado.)</para>
 
       </sect3>
 
