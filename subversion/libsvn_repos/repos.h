@@ -130,7 +130,9 @@ svn_repos__hooks_post_commit (svn_repos_t *repos,
    REV is the revision whose property is being changed.
    AUTHOR is the authenticated name of the user changing the prop.
    NAME is the name of the property being changed.  
-   VALUE is the new value of the property.
+   NEW_VALUE is the new value of the property.
+   ACTION is indicates if the property is being 'A'dded, 'M'odified,
+   or 'D'eleted.
 
    The pre-revprop-change hook will have the new property value
    written to its stdin.  If the property is being deleted, no data
@@ -141,6 +143,7 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
                                      const char *author,
                                      const char *name,
                                      const svn_string_t *new_value,
+                                     char action,
                                      apr_pool_t *pool);
 
 /* Run the pre-revprop-change hook for REPOS.  Use POOL for any
@@ -151,7 +154,8 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
    AUTHOR is the authenticated name of the user who changed the prop.
    NAME is the name of the property that was changed, and OLD_VALUE is
    that property's value immediately before the change, or null if
-   none.
+   none.  ACTION indicates if the property was 'A'dded, 'M'odified,
+   or 'D'eleted.
 
    The old value will be passed to the post-revprop hook on stdin.  If
    the property is being created, no data will be written. */
@@ -161,6 +165,7 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
                                       const char *author,
                                       const char *name,
                                       svn_string_t *old_value,
+                                      char action,
                                       apr_pool_t *pool);
 
 

@@ -292,6 +292,7 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
                                      const char *author,
                                      const char *name,
                                      const svn_string_t *new_value,
+                                     char action,
                                      apr_pool_t *pool)
 {
   const char *hook = svn_repos_pre_revprop_change_hook (repos, pool);
@@ -303,8 +304,9 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
     }
   else if (hook)
     {
-      const char *args[6];
+      const char *args[7];
       apr_file_t *stdin_handle = NULL;
+      char action_string[2];
 
       /* Pass the new value as stdin to hook */
       if (new_value)
@@ -313,12 +315,16 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
         SVN_ERR (svn_io_file_open (&stdin_handle, SVN_NULL_DEVICE_NAME,
                                    APR_READ, APR_OS_DEFAULT, pool));
 
+      action_string[0] = action;
+      action_string[1] = '\0';
+
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
       args[2] = apr_psprintf (pool, "%ld", rev);
       args[3] = author ? author : "";
       args[4] = name;
-      args[5] = NULL;
+      args[5] = action_string;
+      args[6] = NULL;
 
       SVN_ERR (run_hook_cmd ("pre-revprop-change", hook, args, TRUE,
                              stdin_handle, pool));
@@ -348,6 +354,7 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
                                       const char *author,
                                       const char *name,
                                       svn_string_t *old_value,
+                                      char action,
                                       apr_pool_t *pool)
 {
   const char *hook = svn_repos_post_revprop_change_hook (repos, pool);
@@ -359,8 +366,9 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
     }
   else if (hook)
     {
-      const char *args[6];
+      const char *args[7];
       apr_file_t *stdin_handle = NULL;
+      char action_string[2];
 
       /* Pass the old value as stdin to hook */
       if (old_value)
@@ -369,12 +377,16 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
         SVN_ERR (svn_io_file_open (&stdin_handle, SVN_NULL_DEVICE_NAME,
                                    APR_READ, APR_OS_DEFAULT, pool));
 
+      action_string[0] = action;
+      action_string[1] = '\0';
+
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
       args[2] = apr_psprintf (pool, "%ld", rev);
       args[3] = author ? author : "";
       args[4] = name;
-      args[5] = NULL;
+      args[5] = action_string;
+      args[6] = NULL;
 
       SVN_ERR (run_hook_cmd ("post-revprop-change", hook, args, FALSE,
                              stdin_handle, pool));
