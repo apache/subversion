@@ -72,25 +72,23 @@ svn_error_t *svn_vcdiff__send_terminal_window (svn_vcdiff_parser_t *parser);
 /* Private interface for text deltas. */
 
 /* Allocate and initalize a delta window. */
-svn_error_t *svn_txdelta__init_window (svn_txdelta_window_t **window,
-                                       svn_txdelta_stream_t *stream);
+svn_txdelta_window_t *svn_txdelta__make_window (apr_pool_t *pool);
 
-/* Insert a delta op into the delta window. If the opcode is
-   svn_delta_new, bytes from new_data are copied into the window
-   data and offset is ignored, as it's maintained in the winfo struct.
-   Otherwise new_data is ignored and may be NULL. */
-svn_error_t *svn_txdelta__insert_op (svn_txdelta_window_t *window,
-                                     int opcode,
-                                     apr_off_t offset,
-                                     apr_off_t length,
-                                     const char *new_data);
+/* Insert a delta op into the delta window. If OPCODE is
+   svn_delta_new, bytes from NEW_DATA are copied into the window data
+   and OFFSET is ignored.  Otherwise NEW_DATA is ignored. */
+void svn_txdelta__insert_op (svn_txdelta_window_t *window,
+                             int opcode,
+                             apr_off_t offset,
+                             apr_off_t length,
+                             const char *new_data);
 
 /* Create a vdelta window. Allocate temporary data from `pool'. */
-svn_error_t *svn_txdelta__vdelta (svn_txdelta_window_t *window,
-                                  const char *const start,
-                                  apr_size_t source_len,
-                                  apr_size_t target_len,
-                                  apr_pool_t *pool);
+void svn_txdelta__vdelta (svn_txdelta_window_t *window,
+                          const char *const start,
+                          apr_size_t source_len,
+                          apr_size_t target_len,
+                          apr_pool_t *pool);
 
 /* The delta window size. */
 extern apr_size_t svn_txdelta__window_size;

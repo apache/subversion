@@ -48,6 +48,7 @@
  */
 
 
+#include <assert.h>
 #include "svn_delta.h"
 #include "delta.h"
 
@@ -138,6 +139,7 @@ static APR_INLINE void
 store_mapping (hash_table_t *table, const char* key, apr_off_t index)
 {
   apr_uint32_t bucket = get_bucket (table, key);;
+  assert (table->slots[index].next == NULL);
   table->slots[index].next = table->buckets[bucket];
   table->buckets[bucket] = &table->slots[index];
 }
@@ -191,11 +193,11 @@ store_mapping (hash_table_t *table, const char* key, apr_off_t index)
    -boundary copies. */
 
 
-/* Fing the end of a match within the data window.
+/* Find the length of a match within the data window.
    Note that (match < from && from <= end) must always be true here. */
 
-static APR_INLINE const char *
-find_match_end (const char *match, const char *from, const char *end)
+static APR_INLINE int
+find_match_len (const char *match, const char *from, const char *end)
 {
   const char *here = from;
   while (here < end && *match == *here)
@@ -203,183 +205,113 @@ find_match_end (const char *match, const char *from, const char *end)
       ++match;
       ++here;
     }
-  return match;
+  return here - from;
 }
 
 
 /* This is the main vdelta generator. */
 
-svn_error_t *
-svn_txdelta__vdelta (svn_txdelta_window_t *window,
-                     const char *const start,
-                     apr_size_t source_len,
-                     apr_size_t target_len,
-                     apr_pool_t *pool)
+static void
+vdelta (svn_txdelta_window_t *window,
+        const char *data,
+        const char *start,
+        const char *end,
+        svn_boolean_t outputflag,
+        hash_table_t *table,
+        apr_pool_t *pool)
 {
-  /* Mark the beginning of the target data and the end of the buffer. */
-  const char *const target = start + source_len;
-  const char *const end = target + target_len;
-
   const char *here = start;     /* Current position in the buffer. */
   const char *insert_from = NULL; /* Start of byte range for insertion. */
 
-  hash_table_t *table = create_hash_table (end - start, pool);
-
   for (;;)
     {
-      const char *current_match = NULL;
-      const char *current_match_end = NULL;
+      const char *current_match, *key;
       apr_size_t current_match_len = 0;
-      hash_slot_t* slot;
+      hash_slot_t *slot;
+      svn_boolean_t progress;
 
       /* If we're near the end, just insert the last few bytes. */
       if (end - here < VD_KEY_SIZE)
         {
           const char *from = ((insert_from != NULL) ? insert_from : here);
 
-          if (from < end)       /* Don't generate zero-length inserts. */
-            return svn_txdelta__insert_op (window, svn_txdelta_new,
-                                           0, end - from, from);
-          else
-            return SVN_NO_ERROR;
+          if (outputflag && from < end)
+            svn_txdelta__insert_op (window, svn_txdelta_new, 0, end - from,
+                                    from);
+          return;
         }
 
-      /* Find the longest match at this position, or insert this byte
-         if there is no match here.  */
-      for (slot = table->buckets[get_bucket (table, here)];
-           slot != NULL;
-           slot = slot->next)
+      /* Search for the longest match.  */
+      current_match = NULL;
+      current_match_len = 0;
+      key = here;
+      do
         {
-          const char *match = &start[slot - table->slots];
-          const char *match_end = find_match_end (match, here, end);
-          apr_size_t match_len = match_end - match;
-
-          if (match_len >= VD_KEY_SIZE && match_len > current_match_len)
-            {
-              current_match = match;
-              current_match_end = match_end;
-              current_match_len = match_len;
-            }
-        }
-
-      if (current_match == NULL)
-        {
-          store_mapping (table, here, here - start);
-          if (here >= target && insert_from == NULL)
-            insert_from = here;
-          ++here;
-          continue;
-        }
-      
-      /* If the current match doesn't extend to the end of the data window,
-         check for match candidates at the end of the current match to see
-         if a longer metch is possible. */
-      while (end > here + current_match_len)
-        {
-          const char *extension_end = here + current_match_len;
-          const char *extension_key = extension_end - (VD_KEY_SIZE - 1);
-
-          apr_size_t partial_match_len = current_match_len - (VD_KEY_SIZE - 1);
-
-          const char *match = NULL;
-          const char *match_end = NULL;
-
-          for (slot = table->buckets[get_bucket (table, extension_key)];
+          /* Try to extend the current match.  Our key is the last
+             three matched bytes plus one unmatched byte if we already
+             have a current match, or just the four bytes where we are
+             if we don't have a current match yet.  See which mapping
+             yields the longest extension.  */
+          progress = FALSE;
+          for (slot = table->buckets[get_bucket (table, key)];
                slot != NULL;
                slot = slot->next)
-          {
-            const char *candidate = &start[slot - table->slots];
-            const char *candidate_end = NULL;
-
-            /* Ignore this candidate if its too close to the start of the
-               data window. */
-            if ((candidate - start) < partial_match_len)
-              continue;
-
-            /* Also ignore any hash collisions. */
-            if (0 != memcmp (candidate, extension_key, VD_KEY_SIZE))
-              continue;
-
-            /* And ignore it if it doesn't fit the current match. */
-            if (0 != memcmp (candidate - partial_match_len,
-                             current_match, partial_match_len))
-              continue;
-
-            /* Remember this candidate if it yeilds a longer extension
-               than the one we have now. */
-            candidate_end = find_match_end (candidate + VD_KEY_SIZE,
-                                            extension_key + VD_KEY_SIZE,
-                                            end);
-            if (candidate_end - candidate > extension_end - extension_key)
-              {
-                match = candidate - partial_match_len;
-                match_end = candidate_end;
-              }
-          }
-
-          /* Adjust the current match if we found a better candidate. */
-          if (match != NULL)
             {
-              current_match = match;
-              current_match_end = match_end;
-              current_match_len = match_end - match;
+              const char *match;
+              apr_size_t match_len;
+
+              if (slot - table->slots < key - here) /* Too close to start */
+                continue;
+              match = data + (slot - table->slots) - (key - here);
+              match_len = find_match_len (match, here, end);
+
+              /* We can only copy from the source or from the target, so
+                 don't let the match cross START.  */
+              if (match < start && match + match_len > start)
+                match_len = start - match;
+
+              if (match_len >= VD_KEY_SIZE && match_len > current_match_len)
+                {
+                  /* We have a longer match; record it.  */
+                  current_match = match;
+                  current_match_len = match_len;
+                  progress = TRUE;
+                }
             }
-          else
-            break;
+          if (progress)
+            key = here + current_match_len - (VD_KEY_SIZE - 1);
         }
+      while (progress && end - key >= VD_KEY_SIZE);
 
-      /* We have a best match, Commit this copy. */
-      if (here + current_match_len > target)
+      if (current_match_len < VD_KEY_SIZE)
         {
-          svn_error_t *err = SVN_NO_ERROR;
-
-          if (here < target)
-            {
-              /* The destination of the copy straddles the boundary.
-                 We have to adjust the match. */
-              current_match += (target - here);
-              current_match_len -= (target - here);
-              here = target;
-            }
-          else if (insert_from != NULL)
+          /* There is no match here; store a mapping and insert this byte. */
+          store_mapping (table, here, here - data);
+          if (insert_from == NULL)
+            insert_from = here;
+          here++;
+          continue;
+        }
+      else if (outputflag)
+        {
+          if (insert_from != NULL)
             {
               /* Commit the pending insert. */
-              err = svn_txdelta__insert_op (window, svn_txdelta_new,
-                                            0, here - insert_from,
-                                            insert_from);
-              if (err != SVN_NO_ERROR)
-                return err;
+              svn_txdelta__insert_op (window, svn_txdelta_new,
+                                      0, here - insert_from,
+                                      insert_from);
               insert_from = NULL;
             }
-
-          /* If the source of the copy straddles the boundary, we need to
-             generate two copies, because we can't represent a mixed copy
-             in the window. */
-          if (current_match < target && current_match_end > target)
-            {
-              err = svn_txdelta__insert_op (window, svn_txdelta_source,
-                                            current_match - start,
-                                            target - current_match,
-                                            NULL);
-              if (!err)
-                err = svn_txdelta__insert_op (window, svn_txdelta_target,
-                                              0 /* Yes, that's right! */,
-                                              current_match_end - target,
-                                              NULL);
-            }
-          else if (current_match_end <= target) /* Copy from source. */
-            err = svn_txdelta__insert_op (window, svn_txdelta_source,
-                                          current_match - start,
-                                          current_match_len,
-                                          NULL);
-          else                  /* Copy from target */
-            err = svn_txdelta__insert_op (window, svn_txdelta_target,
-                                          current_match - target,
-                                          current_match_len,
-                                          NULL);
-
-          if (err != SVN_NO_ERROR)
-            return err;
+          if (current_match < start) /* Copy from source. */
+            svn_txdelta__insert_op (window, svn_txdelta_source,
+                                    current_match - data,
+                                    current_match_len,
+                                    NULL);
+          else                       /* Copy from target */
+            svn_txdelta__insert_op (window, svn_txdelta_target,
+                                    current_match - start,
+                                    current_match_len,
+                                    NULL);
         }
 
       /* Adjust the current position and insert mappings for the
@@ -389,11 +321,24 @@ svn_txdelta__vdelta (svn_txdelta_window_t *window,
         {
           char const *last = here - (VD_KEY_SIZE - 1);
           for (; last < here; ++last)
-            store_mapping (table, last, last - start);
+            store_mapping (table, last, last - data);
         }
     }
+}
 
-  return SVN_NO_ERROR;
+
+void
+svn_txdelta__vdelta (svn_txdelta_window_t *window,
+                     const char *data,
+                     apr_size_t source_len,
+                     apr_size_t target_len,
+                     apr_pool_t *pool)
+{
+  hash_table_t *table = create_hash_table (source_len + target_len, pool);
+
+  vdelta (window, data, data, data + source_len, FALSE, table, pool);
+  vdelta (window, data, data + source_len, data + source_len + target_len,
+          TRUE, table, pool);
 }
 
 
