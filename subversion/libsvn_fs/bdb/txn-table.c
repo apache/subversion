@@ -219,14 +219,13 @@ svn_error_t *svn_fs__get_txn_list (apr_array_header_t **names_p,
   apr_size_t const next_id_key_len = strlen (svn_fs__next_key_key);
   apr_pool_t *subpool = svn_pool_create (trail->pool);
   apr_array_header_t *names;
-  const char *this_name;
 
   DBC *cursor;
   DBT key, value;
   int db_err, db_c_err;
 
   /* Allocate the initial names array */
-  names = apr_array_make (pool, 4, sizeof (this_name));
+  names = apr_array_make (pool, 4, sizeof (const char *));
 
   /* Create a database cursor to list the transaction names. */
   SVN_ERR (DB_WRAP (fs, "reading transaction list (opening cursor)",
