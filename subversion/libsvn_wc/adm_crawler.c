@@ -697,7 +697,8 @@ report_local_mods (svn_string_t *path,
       if (err) return err;
 
       /* Is the entry marked for deletion? */
-      if (current_entry->state & SVN_WC_ENTRY_DELETED)
+      if ((current_entry->state & SVN_WC_ENTRY_DELETED)
+          && (current_entry_name))
         {
           /* Do what's necessary to get a baton for current directory */
           if (! dir_baton)
@@ -728,7 +729,8 @@ report_local_mods (svn_string_t *path,
         }
 
       /* Is this entry marked for addition only? */
-      else if (current_entry->state & SVN_WC_ENTRY_ADDED)
+      else if ((current_entry->state & SVN_WC_ENTRY_ADDED)
+               && (current_entry_name))
         {
           /* Create an affected-target object */
           svn_string_t *longpath;
@@ -746,12 +748,20 @@ report_local_mods (svn_string_t *path,
 
           /* Adding a new directory: */
           if (current_entry->kind == svn_node_dir)
-            {
+            {             
+              /* If the directory is completely new, the wc records
+                 its pre-committed revision as "0", even though it may
+                 have a "default" URL listed.  But the delta.h
+                 docstring for add_directory() says that the copyfrom
+                 args must be either both valid or both invalid. */
+              svn_string_t *copyfrom_URL = NULL;
+              if (current_entry->revision > 0)
+                copyfrom_URL = current_entry->ancestor;
               /* Add the new directory, getting a new dir baton.  */
               err = editor->add_directory (current_entry_name,
                                            dir_baton, /* current dir
                                                          is parent */
-                                           current_entry->ancestor,
+                                           copyfrom_URL,
                                            current_entry->revision,
                                            &new_dir_baton); /* get child */
               if (err) return err;

@@ -282,11 +282,21 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
     }
 }
 
+/* Declaration to fix circular dependency between two static funcs.
+   
+   Fill ENTRIES according to PATH's entries file. */
+static svn_error_t *
+read_entries (apr_hash_t *entries,
+              svn_string_t *path,
+              svn_boolean_t get_all_missing_info,
+              apr_pool_t *pool);
 
 /* Resolve any missing information in ENTRIES by deducing from the
    directory's own entry (which must already be present in ENTRIES). */
 static svn_error_t *
-resolve_to_defaults (apr_hash_t *entries, apr_pool_t *pool)
+resolve_to_defaults (svn_string_t *path,
+                     apr_hash_t *entries,
+                     apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   svn_wc_entry_t *default_entry
@@ -322,14 +332,74 @@ resolve_to_defaults (apr_hash_t *entries, apr_pool_t *pool)
       apr_size_t keylen;
       void *val;
       svn_wc_entry_t *this_entry;
+      svn_string_t *entryname;
 
       apr_hash_this (hi, &key, &keylen, &val);
       this_entry = val;
+      entryname = svn_string_ncreate (key, keylen, pool);
 
-      if (this_entry->kind == svn_node_dir)
-        continue;
+      if (this_entry == default_entry)
+        {
+          /* THIS_DIR already has all ancestry info.  But all -flag-
+             information is living in parent's entry.  Let's go fetch
+             it (assuming the parent exists!) */
 
-      take_from_entry (default_entry, this_entry, pool);
+          /* Temporarily commented out, because if PATH == ".", we
+             currently have no way of knowing which name to look up in
+             ..'s entries file! */
+          
+          /* svn_wc_entry_t *parent_entry;
+             apr_hash_t *parent_entries = apr_hash_make (pool);
+             svn_string_t *parent_path = svn_string_create ("..", pool);
+             
+             read_entries (parent_entries, parent_path, FALSE, pool);          
+             parent_entry = 
+             (svn_wc_entry_t *) apr_hash_get (parent_entries,
+             entryname->data, 
+             entryname->len);
+
+             if (parent_entry)
+             this_entry->state |= parent_entry->state; */
+        }
+
+      else if (this_entry->kind == svn_node_dir)
+        {
+          /* it's a dir, but not THIS_DIR.  Thus the ancestry must be
+             fetched from the directory's *own* THIS_DIR entry. */
+          svn_wc_entry_t *child_entry;
+          apr_hash_t *child_entries = apr_hash_make (pool);
+          svn_string_t *child_path = svn_string_dup (path, pool);
+          svn_path_add_component (child_path, entryname, svn_path_local_style);
+
+
+          SVN_ERR (read_entries (child_entries, child_path, FALSE, pool));
+          child_entry = 
+            (svn_wc_entry_t *) apr_hash_get (child_entries,
+                                             SVN_WC_ENTRY_THIS_DIR,
+                                             APR_HASH_KEY_STRING);
+          if (! child_entry)
+            return
+              svn_error_createf 
+              (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool, 
+              "Can't open default entry for %s", child_path->data);
+
+          /* Copy all info over *except* the flag state, which
+             this_entry should already have. */
+          this_entry->revision = child_entry->revision;
+          this_entry->ancestor = child_entry->ancestor;
+          this_entry->text_time = child_entry->text_time;
+          this_entry->prop_time = child_entry->prop_time;
+          this_entry->attributes = child_entry->attributes;
+
+          /* and make sure the entry retains its name;  else it would
+             always be "". */
+          apr_hash_set (this_entry->attributes,
+                        SVN_WC_ENTRY_ATTR_NAME, APR_HASH_KEY_STRING,
+                        entryname);
+        }
+      
+      else /* it's a file, so inherit ancestry from THIS_DIR */
+        take_from_entry (default_entry, this_entry, pool);
     }
 
   return SVN_NO_ERROR;
@@ -411,7 +481,10 @@ normalize_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
 
 /* Fill ENTRIES according to PATH's entries file. */
 static svn_error_t *
-read_entries (apr_hash_t *entries, svn_string_t *path, apr_pool_t *pool)
+read_entries (apr_hash_t *entries,
+              svn_string_t *path,
+              svn_boolean_t get_all_missing_info,
+              apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_file_t *infile = NULL;
@@ -468,9 +541,8 @@ read_entries (apr_hash_t *entries, svn_string_t *path, apr_pool_t *pool)
   svn_xml_free_parser (svn_parser);
 
   /* Fill in any implied fields. */
-  err = resolve_to_defaults (entries, pool);
-  if (err)
-    return err;
+  if (get_all_missing_info)
+    SVN_ERR (resolve_to_defaults (path, entries, pool));
 
   return SVN_NO_ERROR;
 }
@@ -563,7 +635,7 @@ svn_wc_entries_read (apr_hash_t **entries,
 
   new_entries = apr_hash_make (pool);
 
-  err = read_entries (new_entries, path, pool);
+  err = read_entries (new_entries, path, TRUE, pool);
   if (err)
     return err;
 
