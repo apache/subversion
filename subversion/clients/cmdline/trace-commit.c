@@ -176,10 +176,6 @@ close_file (void *file_baton)
 static svn_error_t *
 close_edit (void *edit_baton)
 {
-  /* If we get here, then the *real* close_edit() must have
-     succeeded. */
-  /* TODO:  print final revision number here someday. */
-  printf ("Commit succeeded.\n");
   return SVN_NO_ERROR;
 }
 

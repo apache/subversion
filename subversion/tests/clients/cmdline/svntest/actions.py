@@ -64,8 +64,10 @@ def guarantee_greek_repository(path):
 
     # verify the printed output of 'svn import'.
     lastline = string.strip(output.pop())
-    if lastline != 'Commit succeeded.':
-      print "ERROR:  import did not 'succeed', while creating greek repos."
+    cm = re.compile ("(Committed|Imported) revision [0-9]+.")
+    match = cm.search (lastline)
+    if not match:
+      print "ERROR:  import did not succeed, while creating greek repos."
       print "The final line from 'svn import' was:"
       print lastline
       sys.exit(1)
@@ -228,13 +230,15 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
 
   # Else not expecting error:
 
-  # Remove the final output line, and verify that 'Commit succeeded'.
+  # Remove the final output line, and verify that the commit succeeded.
   lastline = ""
   if len(output):
     lastline = string.strip(output.pop())
     
-    if lastline != 'Commit succeeded.':
-      print "ERROR:  commit did not 'succeed'."
+    cm = re.compile ("(Committed|Imported) revision [0-9]+.")
+    match = cm.search (lastline)
+    if not match:
+      print "ERROR:  commit did not succeed."
       print "The final line from 'svn ci' was:"
       print lastline
       return 1

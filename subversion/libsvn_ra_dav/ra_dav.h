@@ -71,6 +71,9 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   void *session_baton,
   const svn_delta_edit_fns_t **editor,
   void **edit_baton,
+  svn_revnum_t *new_rev,
+  const char **committed_date,
+  const char **committed_author,
   svn_stringbuf_t *log_msg,
   svn_ra_get_wc_prop_func_t get_func,
   svn_ra_set_wc_prop_func_t set_func,
@@ -321,6 +324,9 @@ enum {
 
 /* ### docco */
 svn_error_t * svn_ra_dav__merge_activity(
+    svn_revnum_t *new_rev,
+    const char **committed_date,
+    const char **committed_author,
     svn_ra_session_t *ras,
     const char *repos_url,
     const char *activity_url,

@@ -171,6 +171,9 @@ svn_client_mkdir (svn_stringbuf_t *path,
       SVN_ERR (ra_lib->get_commit_editor
                (session,
                 &editor, &edit_baton,
+                NULL,  /* change this if ever want to return new_rev */
+                NULL,  /* change this if ever want to return commit date */
+                NULL,  /* change this if ever want to return commit author */
                 log_msg ? log_msg : svn_stringbuf_create ("", pool),
                 NULL, NULL, NULL, NULL));
 

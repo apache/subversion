@@ -473,22 +473,26 @@ struct svn_wc_close_commit_baton
   apr_pool_t *pool;
 };
 
-/* This is the callback that the RA layer uses to bump each committed
-   TARGET to NEW_REVNUM, one-at-a-time, after a commit succeeds.
+/* This is of type `svn_ra_close_commit_func_t'.
 
-   REV_DATE and REV_AUTHOR are the string values of the date &
-   author props attached to the new filesystem revision.
+   Bump each committed TARGET to NEW_REVNUM, one at a time, after a
+   commit succeeds.  REV_DATE and REV_AUTHOR are the (server-side)
+   date and author of the new revision; one or both may be NULL.
 
-   If RECURSE is set, then every child below TARGET will be bumped as
-   well.
+   BATON is of type `svn_wc_close_commit_baton'.  Use BATON->prefix_path
+   to convert TARGET, a path relative to the root of the commit, to an
+   absolute path.  Use BATON->pool for all temporary allocation during
+   the post-commit process.
 
-   This is a function of type svn_ra_close_commit_func_t.  */
+   If RECURSE is set and TARGET is a directory, then bump every
+   versioned object at or under TARGET.  This is usually done for
+   newly added trees.  */
 svn_error_t * svn_wc_process_committed (void *baton,
                                         svn_stringbuf_t *target,
                                         svn_boolean_t recurse,
                                         svn_revnum_t new_revnum,
-                                        svn_string_t *rev_date,
-                                        svn_string_t *rev_author);
+                                        const char *rev_date,
+                                        const char *rev_author);
 
 
 

@@ -713,12 +713,12 @@ svn_delta_get_xml_editor (svn_stream_t *output,
 
 
 /* A function type that can be used for bumping revision numbers. */
-typedef svn_error_t * (*svn_bump_func_t) (void *baton,
-                                          svn_stringbuf_t *path,
-                                          svn_boolean_t recurse,
-                                          svn_revnum_t new_rev,
-                                          svn_string_t *rev_date,
-                                          svn_string_t *rev_author);
+typedef svn_error_t * (*svn_delta_bump_func_t) (void *baton,
+                                                svn_stringbuf_t *path,
+                                                svn_boolean_t recurse,
+                                                svn_revnum_t new_rev,
+                                                const char *rev_date,
+                                                const char *rev_author);
 
 
 /* Return an *EDITOR (and *EDIT_BATON) which notices paths that are
@@ -736,7 +736,7 @@ svn_delta_get_commit_track_editor (svn_delta_edit_fns_t **editor,
                                    apr_pool_t *pool,
                                    apr_hash_t *committed_targets,
                                    svn_revnum_t new_rev,
-                                   svn_bump_func_t bump_func,
+                                   svn_delta_bump_func_t bump_func,
                                    void *bump_baton);
 
 

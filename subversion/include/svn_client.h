@@ -252,10 +252,16 @@ svn_client_delete (svn_stringbuf_t *path,
 
 
 /* Import a tree, using optional pre- and post-commit hook editors
- * (BEFORE_EDITOR, BEFORE_EDIT_BATON / AFTER_EDITOR,
+ * (BEFORE_EDITOR, BEFORE_EDIT_BATON, and AFTER_EDITOR,
  * AFTER_EDIT_BATON).  These editors are purely optional and exist
  * only for extensibility; pass four NULLs here if you don't need
  * them.
+ *
+ * Set *COMMITTED_REVISION, *COMMITTED_DATE, and *COMMITTED_AUTHOR to
+ * the number, server-side date, and author of the new revision,
+ * respectively.  Any of these may be NULL, in which case not touched.
+ * If not NULL, but some or all of the information is unavailable, set
+ * to SVN_INVALID_REVNUM, NULL, and/or NULL respectively.
  *
  * Store LOG_MSG as the log of the commit.
  * 
@@ -290,7 +296,10 @@ svn_client_delete (svn_stringbuf_t *path,
  * turn the tree into a working copy, or at least should offer the
  * option. However, doing so is a bit involved, and we don't need it
  * right now.  */
-svn_error_t *svn_client_import (const svn_delta_edit_fns_t *before_editor,
+svn_error_t *svn_client_import (svn_revnum_t *committed_rev,
+                                const char **committed_date,
+                                const char **committed_author,
+                                const svn_delta_edit_fns_t *before_editor,
                                 void *before_edit_baton,
                                 const svn_delta_edit_fns_t *after_editor,
                                 void *after_edit_baton, 
@@ -305,10 +314,16 @@ svn_error_t *svn_client_import (const svn_delta_edit_fns_t *before_editor,
 
 
 /* Perform an commit, providing pre- and post-commit hook editors and
-   batons (BEFORE_EDITOR, BEFORE_EDIT_BATON / AFTER_EDITOR,
+   batons (BEFORE_EDITOR, BEFORE_EDIT_BATON, and AFTER_EDITOR,
    AFTER_EDIT_BATON).  These editors are purely optional and exist
    only for extensibility; pass four NULLs here if you don't need
    them.
+
+   Set *COMMITTED_REVISION, *COMMITTED_DATE, and *COMMITTED_AUTHOR to
+   the number, server-side date, and author of the new revision,
+   respectively.  Any of these may be NULL, in which case not touched.
+   If not NULL, but some or all of the information is unavailable, set
+   to SVN_INVALID_REVNUM, NULL, and/or NULL respectively.
 
    Store LOG_MSG as the log of the commit.
 
@@ -326,7 +341,10 @@ svn_error_t *svn_client_import (const svn_delta_edit_fns_t *before_editor,
 
    This operation will use the provided memory POOL. */
 svn_error_t *
-svn_client_commit (const svn_delta_edit_fns_t *before_editor,
+svn_client_commit (svn_revnum_t *committed_rev,
+                   const char **committed_date,
+                   const char **committed_author,
+                   const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
                    void *after_edit_baton,

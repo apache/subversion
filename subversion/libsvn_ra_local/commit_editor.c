@@ -37,7 +37,7 @@ struct edit_baton
 {
   apr_pool_t *pool;
 
-  /* Supplied when the editor is created: */
+  /** Supplied when the editor is created: **/
 
   /* The active RA session */
   svn_ra_local__session_baton_t *session;
@@ -63,7 +63,7 @@ struct edit_baton
   /* Location in fs where where the edit will begin. */
   svn_stringbuf_t *base_path;
 
-  /* Created during the edit: */
+  /** Created during the edit: **/
 
   /* svn transaction associated with this edit (created in open_root). */
   svn_fs_txn_t *txn;
@@ -73,6 +73,17 @@ struct edit_baton
 
   /* The name of the transaction. */
   const char *txn_name;
+
+  /** Filled in when the edit is closed: **/
+
+  /* The new revision created by this commit. */
+  svn_revnum_t *new_rev;
+
+  /* The date (according to the repository) of this commit. */
+  const char **committed_date;
+
+  /* The author (also according to the repository) of this commit. */
+  const char **committed_author;
 };
 
 
@@ -570,10 +581,23 @@ close_edit (void *edit_baton)
       return err;
     }
 
-  /* Pass the new revision number to the caller's hook.  Note that
+  /* Pass new revision information to the caller's hook.  Note that
      this hook is unrelated to the standard repository post-commit
      hooks.  See svn_repos.h for more on this. */
-  SVN_ERR ((*eb->hook) (new_revision, eb->hook_baton));
+  {
+    svn_string_t *date, *author;
+
+    SVN_ERR (svn_fs_revision_prop (&date, svn_repos_fs (eb->repos),
+                                   new_revision, SVN_PROP_REVISION_DATE,
+                                   eb->pool));
+
+    SVN_ERR (svn_fs_revision_prop (&author, svn_repos_fs (eb->repos),
+                                   new_revision, SVN_PROP_REVISION_AUTHOR,
+                                   eb->pool));
+
+    SVN_ERR ((*eb->hook) (new_revision, date->data, author->data,
+                          eb->hook_baton));
+  }
 
   return SVN_NO_ERROR;
 }

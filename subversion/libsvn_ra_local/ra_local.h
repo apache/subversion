@@ -59,43 +59,12 @@ typedef struct svn_ra_local__session_baton_t
 
 
 
-/* A device to record the targets of commits, and ensuring that proper
-   commit closure happens on them (namely, revision setting and wc
-   property setting).  This is passed to the `commit hook' routine by
-   svn_fs_get_editor.  (   ) */
-typedef struct svn_ra_local__commit_closer_t
-{
-  /* Allocation for this baton, as well as all committed_targets */
-  apr_pool_t *pool;
-
-  /* Target paths that are considered committed */
-  apr_hash_t *committed_targets;
-
-  /* The filesystem that we just committed to. */
-  svn_fs_t *fs;
-
-  /* A function given to RA by the client;  allows RA to bump WC
-     revision numbers of targets. */
-  svn_ra_close_commit_func_t close_func;
-  
-  /* A function given to RA by the client;  allows RA to store WC
-     properties on targets.  (Wonder if ra_local will ever use this?!?) */
-  svn_ra_set_wc_prop_func_t set_func;
-
-  /* The baton to use with above functions */
-  void *close_baton;
-
-} svn_ra_local__commit_closer_t;
-
-
-
 
 /*** Making changes to a filesystem, editor-style.  */
 
-/* Hook function type for commits.  When a filesystem commit happens,
- * one of these should be invoked on the NEW_REVISION that resulted
- * from the commit, and the BATON that was provided with the hook
- * originally.
+/* Hook function type for commits.  When a filesystem commit succeeds,
+ * an instance of this is invoked on the NEW_REVISION, DATE, and
+ * AUTHOR of the commit, along with the BATON closure.
  *
  * See also svn_ra_local__get_editor.
  *
@@ -105,6 +74,8 @@ typedef struct svn_ra_local__commit_closer_t
  * they're talking about those, not about this function type.
  */
 typedef svn_error_t *svn_ra_local__commit_hook_t (svn_revnum_t new_revision,
+                                                  const char *date,
+                                                  const char *author,
                                                   void *baton);
 
 
@@ -154,10 +125,11 @@ svn_ra_local__checkout (svn_fs_t *fs,
  *
  * Calling (*EDITOR)->close_edit completes the commit.  Before
  * close_edit returns, but after the commit has succeeded, it will
- * invoke HOOK with the new revision number and HOOK_BATON as
- * arguments.  If HOOK returns an error, that error will be returned
- * from close_edit, otherwise close_edit will return successfully
- * (unless it encountered an error before invoking HOOK).
+ * invoke HOOK with the new revision number, the commit date (as a
+ * const char *), commit author (as a const char *), and HOOK_BATON
+ * as arguments.  If HOOK returns an error, that error will be
+ * returned from close_edit, otherwise close_edit will return
+ * successfully (unless it encountered an error before invoking HOOK).
  *
  * NOTE: this HOOK is not related to the standard repository hooks
  * run before and after commits, which are configured in the

@@ -30,54 +30,113 @@
 
 /** Callbacks **/
 
-/* This routine is originally passed as a "hook" to the filesystem
-   commit editor.  When we get here, the track-editor has already
-   stored committed targets inside the baton.
-   
-   Loop over all committed target paths within BATON, calling the
-   clients' close_func() with NEW_REV. */
+/* A device to record the targets of commits, and ensuring that proper
+   commit closure happens on them (namely, revision setting and wc
+   property setting).  This is passed to the `commit hook' routine by
+   svn_fs_get_editor.  (   ) */
+struct commit_cleanup_baton
+{
+  /* Allocation for this baton, as well as all committed_targets */
+  apr_pool_t *pool;
 
-/* (This is a routine of type svn_repos_commit_hook_t) */
+  /* Target paths that are considered committed */
+  apr_hash_t *committed_targets;
+
+  /* The filesystem that we just committed to. */
+  svn_fs_t *fs;
+
+  /* A function given to RA by the client;  allows RA to bump WC
+     revision numbers of targets. */
+  svn_ra_close_commit_func_t close_func;
+  
+  /* A function given to RA by the client;  allows RA to store WC
+     properties on targets.  (Wonder if ra_local will ever use this?!?) */
+  svn_ra_set_wc_prop_func_t set_func;
+
+  /* The baton to use with above functions */
+  void *close_baton;
+
+  /* If non-null, store the new revision here. */
+  svn_revnum_t *new_rev;
+
+  /* If non-null, store the repository date of the commit here. */
+  const char **committed_date;
+
+  /* If non-null, store the repository author of the commit here. */
+  const char **committed_author;
+};
+
+
+/* An instance of svn_ra_local__commit_hook_t.
+ * 
+ * BATON is `struct commit_cleanup_baton *'.  Loop over all committed
+ * target paths in BATON->committed_targets, invoking
+ * BATON->close_func() on each one with NEW_REV.
+ *
+ * Set *(BATON->new_rev) to NEW_REV, and copy COMMITTED_DATE and
+ * COMMITTED_AUTHOR to *(BATON->committed_date) and
+ * *(BATON->committed_date) respectively, allocating the new storage
+ * in BATON->pool.
+ *
+ * This routine is originally passed as a "hook" to the filesystem
+ * commit editor.  When we get here, the track-editor has already
+ * stored committed targets inside the baton.
+ */
 static svn_error_t *
-cleanup_commit (svn_revnum_t new_rev, void *baton)
+cleanup_commit (svn_revnum_t new_rev,
+                const char *committed_date,
+                const char *committed_author,
+                void *baton)
 {
   apr_hash_index_t *hi;
-  svn_string_t *date;
-  svn_string_t *author;
 
   /* Recover our hook baton: */
-  svn_ra_local__commit_closer_t *closer = 
-    (svn_ra_local__commit_closer_t *) baton;
+  struct commit_cleanup_baton *cb = baton;
 
-  if (! closer->close_func)
-    return SVN_NO_ERROR;
-  
-  /* Get the fs revision properties attached to NEW_REV. */
-  SVN_ERR (svn_fs_revision_prop (&date, closer->fs, new_rev,
-                                 SVN_PROP_REVISION_DATE, closer->pool));
-  SVN_ERR (svn_fs_revision_prop (&author, closer->fs, new_rev,
-                                 SVN_PROP_REVISION_AUTHOR, closer->pool));
-
-  for (hi = apr_hash_first (closer->pool, closer->committed_targets);
-       hi;
-       hi = apr_hash_next (hi))
+  if (cb->close_func)
     {
-      char *path;
-      apr_size_t ignored_len;
-      void *val;
-      svn_stringbuf_t path_str;
-      enum svn_recurse_kind r;
-
-      apr_hash_this (hi, (void *) &path, &ignored_len, &val);
-
-      /* Oh yes, the flogging ritual, how could I forget. */
-      path_str.data = path;
-      path_str.len = strlen (path);
-      r = (enum svn_recurse_kind) val;
-
-      SVN_ERR (closer->close_func (closer->close_baton, &path_str, 
+      for (hi = apr_hash_first (cb->pool, cb->committed_targets);
+           hi;
+           hi = apr_hash_next (hi))
+        {
+          char *path;
+          apr_size_t ignored_len;
+          void *val;
+          svn_stringbuf_t path_str;
+          enum svn_recurse_kind r;
+          
+          apr_hash_this (hi, (void *) &path, &ignored_len, &val);
+          
+          /* Oh yes, the flogging ritual, how could I forget. */
+          path_str.data = path;
+          path_str.len = strlen (path);
+          r = (enum svn_recurse_kind) val;
+          
+          SVN_ERR (cb->close_func (cb->close_baton, &path_str, 
                                    (r == svn_recursive) ? TRUE : FALSE,
-                                   new_rev, date, author));
+                                   new_rev, committed_date, committed_author));
+        }
+    }
+
+  /* Store the new revision information in the baton. */
+
+  if (cb->new_rev)
+    *(cb->new_rev) = new_rev;
+
+  if (cb->committed_date)
+    {
+      if (committed_date)
+        *(cb->committed_date) = apr_pstrdup (cb->pool, committed_date);
+      else
+        *(cb->committed_date) = NULL;
+    }
+
+  if (cb->committed_author)
+    {
+      if (committed_author)
+        *(cb->committed_author) = apr_pstrdup (cb->pool, committed_author);
+      else
+        *(cb->committed_author) = NULL;
     }
 
   return SVN_NO_ERROR;
@@ -213,6 +272,9 @@ static svn_error_t *
 get_commit_editor (void *session_baton,
                    const svn_delta_edit_fns_t **editor,
                    void **edit_baton,
+                   svn_revnum_t *new_rev,
+                   const char **committed_date,
+                   const char **committed_author,
                    svn_stringbuf_t *log_msg,
                    svn_ra_get_wc_prop_func_t get_func,
                    svn_ra_set_wc_prop_func_t set_func,
@@ -226,32 +288,33 @@ get_commit_editor (void *session_baton,
   svn_ra_local__session_baton_t *sess_baton = 
     (svn_ra_local__session_baton_t *) session_baton;
 
-  /* Construct a Magick commit-hook baton */
-  svn_ra_local__commit_closer_t *closer
-    = apr_pcalloc (sess_baton->pool, sizeof(*closer));
-
-  closer->pool = sess_baton->pool;
-  closer->close_func = close_func;
-  closer->set_func = set_func;
-  closer->close_baton = close_baton;
-  closer->fs = sess_baton->fs;
-  closer->committed_targets = apr_hash_make (sess_baton->pool);
+  /* Construct a commit cleanup baton */
+  struct commit_cleanup_baton *cb
+    = apr_pcalloc (sess_baton->pool, sizeof (*cb));
+  cb->pool = sess_baton->pool;
+  cb->close_func = close_func;
+  cb->set_func = set_func;
+  cb->close_baton = close_baton;
+  cb->fs = sess_baton->fs;
+  cb->committed_targets = apr_hash_make (sess_baton->pool);
+  cb->new_rev = new_rev;
+  cb->committed_date = committed_date;
+  cb->committed_author = committed_author;
                                          
   /* Get the repos commit-editor */     
   SVN_ERR (svn_ra_local__get_editor (&commit_editor, &commit_editor_baton,
                                      sess_baton,
                                      log_msg,
-                                     cleanup_commit, closer, /* fs will call
-                                                                when done.*/
+                                     cleanup_commit, cb,
                                      sess_baton->pool));
 
-  /* Get the commit `tracking' editor, telling it to store committed
-     targets inside our `closer' object, and NOT to bump revisions.
-     (The FS editor will do this for us.)  */
+  /* Get the commit tracking editor, telling it to store committed
+     targets, and NOT to bump revisions.  (The FS editor will do this
+     for us.)  */
   SVN_ERR (svn_delta_get_commit_track_editor (&tracking_editor,
                                               &tracking_editor_baton,
                                               sess_baton->pool,
-                                              closer->committed_targets,
+                                              cb->committed_targets,
                                               SVN_INVALID_REVNUM,
                                               NULL, NULL));
 
