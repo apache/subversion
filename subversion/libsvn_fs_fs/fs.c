@@ -28,6 +28,8 @@
 #include "svn_fs.h"
 #include "svn_path.h"
 #include "svn_utf.h"
+#include "svn_delta.h"
+#include "svn_version.h"
 #include "fs.h"
 #include "err.h"
 #include "dag.h"
@@ -249,11 +251,18 @@ svn_fs_fs__canonicalize_abspath (const char *path, apr_pool_t *pool)
   return newpath;
 }
 
+static const svn_version_t *
+fs_version (void)
+{
+  SVN_VERSION_BODY;
+}
+
 
 
 /* Base FS library vtable, used by the FS loader library. */
 
 static fs_library_vtable_t library_vtable = {
+  fs_version,
   fs_create,
   fs_open,
   fs_delete_fs,
@@ -264,11 +273,24 @@ static fs_library_vtable_t library_vtable = {
 };
 
 svn_error_t *
-svn_fs_fs__init (fs_library_vtable_t **vtable, int abi_version)
+svn_fs_fs__init (const svn_version_t *loader_version,
+                 fs_library_vtable_t **vtable)
 {
-  if (abi_version != FS_ABI_VERSION)
-    return svn_error_create (SVN_ERR_FS_UNKNOWN_FS_TYPE, NULL,
-                             "Mismatched FS module version");
+  static const svn_version_checklist_t checklist[] =
+    {
+      { "svn_subr",  svn_subr_version },
+      { "svn_delta", svn_delta_version },
+      { NULL, NULL }
+    };
+
+  /* Simplified version check to make sure we can safely use the
+     VTABLE parameter. The FS loader does a more exhaustive check. */
+  if (loader_version->major != SVN_VER_MAJOR)
+    return svn_error_createf (SVN_ERR_VERSION_MISMATCH, NULL,
+                              _("Unsupported FS loader version (%d) for fsfs"),
+                              loader_version->major);
+  SVN_ERR (svn_ver_check_list (fs_version(), checklist));
+
   *vtable = &library_vtable;
   return SVN_NO_ERROR;
 }

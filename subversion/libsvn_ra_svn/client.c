@@ -1276,17 +1276,26 @@ static const svn_ra_plugin_t ra_svn_plugin = {
   ra_svn_get_uuid,
   ra_svn_get_repos_root,
   ra_svn_get_locations,
-  ra_svn_get_file_revs
+  ra_svn_get_file_revs,
+  svn_ra_svn_version
 };
 
 svn_error_t *svn_ra_svn_init(int abi_version, apr_pool_t *pool,
                              apr_hash_t *hash)
 {
+  static const svn_version_checklist_t checklist[] =
+    {
+      { "svn_subr",  svn_subr_version },
+      { "svn_delta", svn_delta_version },
+      { NULL, NULL }
+    };
+
   if (abi_version < 1
       || abi_version > SVN_RA_ABI_VERSION)
     return svn_error_createf(SVN_ERR_RA_UNSUPPORTED_ABI_VERSION, NULL,
                              "Unsupported RA plugin ABI version (%d) "
                              "for ra_svn.", abi_version);
+  SVN_ERR(svn_ver_check_list(svn_ra_svn_version(), checklist));
 
   apr_hash_set(hash, "svn", APR_HASH_KEY_STRING, &ra_svn_plugin);
 
