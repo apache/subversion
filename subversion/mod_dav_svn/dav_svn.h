@@ -36,7 +36,12 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* what the one VCC is called */
 #define DAV_SVN_DEFAULT_VCC_NAME        "default"
+
+/* a pool-key for the shared dav_svn_root used by autoversioning  */
+#define DAV_SVN_AUTOVERSIONING_ACTIVITY "svn-autoversioning-activity"
+
 
 /* dav_svn_repos
  *

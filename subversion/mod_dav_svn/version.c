@@ -220,6 +220,7 @@ dav_error *dav_svn_checkout(dav_resource *resource,
 {
   const char *txn_name;
   svn_error_t *serr;
+  apr_status_t apr_err;
   dav_error *derr;
   dav_svn_uri_info parse;
 
@@ -229,6 +230,8 @@ dav_error *dav_svn_checkout(dav_resource *resource,
       dav_resource *res; /* ignored */
       apr_uuid_t uuid;
       char uuid_buf[APR_UUID_FORMATTED_LENGTH + 1];
+      void *data;
+      const char *shared_activity, *shared_txn_name = NULL;
 
       /* Baselines can be auto-checked-out -- grudgingly -- so we can
          allow clients to proppatch unversioned rev props.  See issue
@@ -258,46 +261,81 @@ dav_error *dav_svn_checkout(dav_resource *resource,
                                  SVN_DAV_ERROR_NAMESPACE,
                                  SVN_DAV_ERROR_TAG);
 
-      /* Come up with a unique activity name, put it in the resource. */
-      apr_uuid_get(&uuid);
-      apr_uuid_format(uuid_buf, &uuid);
-      resource->info->root.activity_id = uuid_buf;
+      /* See if the shared activity already exists. */
+      apr_err = apr_pool_userdata_get(&data,
+                                      DAV_SVN_AUTOVERSIONING_ACTIVITY,
+                                      resource->info->r->pool);
+      if (apr_err)
+        return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                                   HTTP_INTERNAL_SERVER_ERROR,
+                                   "Error fetching pool userdata.",
+                                   resource->pool);
+      shared_activity = data;
+
+      if (! shared_activity)
+        {
+          /* Build a shared activity for all auto-checked-out resources. */
+          apr_uuid_get(&uuid);
+          apr_uuid_format(uuid_buf, &uuid);
+          shared_activity = apr_pstrdup(resource->info->r->pool, uuid_buf);
+
+          derr = dav_svn_create_activity(resource->info->repos,
+                                         &shared_txn_name,
+                                         resource->info->r->pool);
+          if (derr) return derr;
+
+          derr = dav_svn_store_activity(resource->info->repos,
+                                        shared_activity, shared_txn_name);
+          if (derr) return derr;
+
+          /* Save the shared activity in r->pool for others to use. */         
+          apr_err = apr_pool_userdata_set(shared_activity,
+                                          DAV_SVN_AUTOVERSIONING_ACTIVITY,
+                                          NULL, resource->info->r->pool);
+          if (apr_err)
+            return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                                       HTTP_INTERNAL_SERVER_ERROR,
+                                       "Error setting pool userdata.",
+                                       resource->pool);
+        }
+
+      if (! shared_txn_name)
+        {                       
+          shared_txn_name = dav_svn_get_txn(resource->info->repos,
+                                            shared_activity);
+          if (! shared_txn_name)
+            return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                                 "Cannot look up a txn_name by activity");
+        }
+
+      /* Tweak the VCR in-place, making it into a WR.  (Ignore the
+         NULL return value.) */
+      res = dav_svn_create_working_resource(resource,
+                                            shared_activity, shared_txn_name,
+                                            TRUE /* tweak in place */);
 
       /* Remember that this resource was auto-checked-out, so that
          dav_svn_auto_versionable allows us to do an auto-checkin and
          dav_svn_can_be_activity will allow this resource to be an
          activity. */
       resource->info->auto_checked_out = TRUE;
-
-      /* Create a txn based on youngest rev, and create an associated
-         activity id in the activity database. */
-      derr = dav_svn_make_activity(resource);
-      if (derr)
-        return derr;
-      
-      /* Tweak the VCR in-place, making it into a WR.  (Ignore the
-         NULL return value.) */
-      res = dav_svn_create_working_resource(resource, uuid_buf, 
-                                            resource->info->root.txn_name,
-                                            TRUE /* tweak in place */);
-
-      /* Finally, be sure to open the txn and txn_root in the
-         resource.  Normally we only get a PUT on a WR uri, and
-         prep_working() opens the txn automatically.  We need to make
-         sure this WR is in the exact same state, ready for a PUT. */
+        
+      /* The txn and txn_root must be open and ready to go in the
+         resource's root object.  Normally prep_resource() will do
+         this automatically on a WR's root object.  We're
+         converting a VCR to WR forcibly, so it's now our job to
+         make sure it happens. */
       derr = open_txn(&resource->info->root.txn, resource->info->repos->fs,
                       resource->info->root.txn_name, resource->pool);
-      if (derr)
-        return derr;
-
+      if (derr) return derr;
+      
       serr = svn_fs_txn_root(&resource->info->root.root,
                              resource->info->root.txn, resource->pool);
       if (serr != NULL)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "Could not open the (transaction) root "
-                                   "of the repository",
+                                   "Could not open a (transaction) root "
+                                   "in the repository",
                                    resource->pool);
-        
       return NULL;
     }
   /* end of Auto-Versioning Stuff */
@@ -597,6 +635,15 @@ static dav_error *dav_svn_uncheckout(dav_resource *resource)
     svn_error_clear(svn_fs_abort_txn(resource->info->root.txn,
                                      resource->pool));
 
+  /* Attempt to destroy the shared activity. */
+  if (resource->info->root.activity_id)
+    {
+      dav_svn_delete_activity(resource->info->repos,
+                              resource->info->root.activity_id);
+      apr_pool_userdata_set(NULL, DAV_SVN_AUTOVERSIONING_ACTIVITY,
+                            NULL, resource->info->r->pool);
+    }
+
   resource->info->root.txn_name = NULL;
   resource->info->root.txn = NULL;
 
@@ -703,7 +750,10 @@ dav_error *dav_svn_checkin(dav_resource *resource,
 {
   svn_error_t *serr;
   dav_error *err;
+  apr_status_t apr_err;
   const char *uri;
+  const char *shared_activity;
+  void *data;
 
   /* ### mod_dav has a flawed architecture, in the sense that it first
      tries to auto-checkin the modified resource, then attempts to
@@ -720,79 +770,113 @@ dav_error *dav_svn_checkin(dav_resource *resource,
                              SVN_DAV_ERROR_NAMESPACE,
                              SVN_DAV_ERROR_TAG);
 
+  /* If the global autoversioning activity still exists, that means
+     nobody's committed it yet. */
+  apr_err = apr_pool_userdata_get(&data,
+                                  DAV_SVN_AUTOVERSIONING_ACTIVITY,
+                                  resource->info->r->pool);
+  if (apr_err)
+    return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                               HTTP_INTERNAL_SERVER_ERROR,
+                               "Error fetching pool userdata.",
+                               resource->pool);
+  shared_activity = data;
+
   /* Try to commit the txn if it exists. */
-  if (resource->info->root.txn_name)
+  if (shared_activity
+      && (strcmp(shared_activity, resource->info->root.activity_id) == 0))
     {
-      svn_fs_txn_t *txn;
+      const char *shared_txn_name;
       const char *conflict_msg;
       svn_revnum_t new_rev;
 
-      err = open_txn(&txn, resource->info->repos->fs,
-                     resource->info->root.txn_name, resource->pool);
+      shared_txn_name = dav_svn_get_txn(resource->info->repos,
+                                        shared_activity);
+      if (! shared_txn_name)
+        return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             "Cannot look up a txn_name by activity");
+
+      /* Sanity checks */
+      if (resource->info->root.txn_name
+          && (strcmp(shared_txn_name, resource->info->root.txn_name) != 0))
+        return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             "Internal txn_name doesn't match"
+                             " autoversioning transaction.");
+     
+      if (! resource->info->root.txn)
+        /* should already be open by dav_svn_checkout */
+        return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             "Autoversioning txn isn't open "
+                             "when it should be.");
       
-      /* If we failed to open the txn, don't worry about it.  It may
-         have already been committed when a child resource was
-         checked in.  */
-      if (! err)
+      err = set_auto_log_message(resource);
+      if (err)
+        return err;
+      
+      serr = svn_repos_fs_commit_txn(&conflict_msg,
+                                     resource->info->repos->repos,
+                                     &new_rev, 
+                                     resource->info->root.txn,
+                                     resource->pool);
+
+      if (serr != NULL)
         {
-          err = set_auto_log_message(resource);
-          if (err)
-            return err;
-
-          serr = svn_repos_fs_commit_txn(&conflict_msg,
-                                         resource->info->repos->repos,
-                                         &new_rev, 
-                                         resource->info->root.txn,
-                                         resource->pool);
-          if (serr != NULL)
+          const char *msg;
+          svn_error_clear(svn_fs_abort_txn(resource->info->root.txn,
+                                           resource->pool));
+          
+          if (serr->apr_err == SVN_ERR_FS_CONFLICT)
             {
-              const char *msg;
-              svn_error_clear(svn_fs_abort_txn(resource->info->root.txn,
-                                               resource->pool));
-              
-              if (serr->apr_err == SVN_ERR_FS_CONFLICT)
-                {
-                  msg = apr_psprintf(resource->pool,
-                                     "A conflict occurred during the CHECKIN "
-                                     "processing. The problem occurred with  "
-                                     "the \"%s\" resource.",
-                                     conflict_msg);
-                }
-              else
-                msg = "An error occurred while committing the transaction.";
-              
-              return dav_svn_convert_err(serr, HTTP_CONFLICT, msg,
-                                         resource->pool);
+              msg = apr_psprintf(resource->pool,
+                                 "A conflict occurred during the CHECKIN "
+                                 "processing. The problem occurred with  "
+                                 "the \"%s\" resource.",
+                                 conflict_msg);
             }
+          else
+            msg = "An error occurred while committing the transaction.";
 
-          /* Commit was successful, so schedule deltification. */
-          register_deltification_cleanup(resource->info->repos->repos,
-                                         new_rev,
-                                         resource->info->r->connection->pool);
-
-          /* If caller wants it, return the new VR that was created by
-             the checkin. */
-          if (version_resource)
-            {
-              uri = dav_svn_build_uri(resource->info->repos,
-                                      DAV_SVN_BUILD_URI_VERSION,
-                                      new_rev, resource->info->repos_path,
-                                      0, resource->pool);
-
-              err = dav_svn_create_version_resource(version_resource, uri,
-                                                    resource->pool);
-              if (err)
-                return err;
-            }
+          /* Attempt to destroy the shared activity. */
+          dav_svn_delete_activity(resource->info->repos, shared_activity);
+          apr_pool_userdata_set(NULL, DAV_SVN_AUTOVERSIONING_ACTIVITY,
+                                NULL, resource->info->r->pool);
+          
+          return dav_svn_convert_err(serr, HTTP_CONFLICT, msg,
+                                     resource->pool);
         }
 
-      /* whether the txn was committed, aborted, or inaccessible,
-         it's gone now.  the resource needs to lose all knowledge
-         of it. */
-      resource->info->root.txn_name = NULL;
-      resource->info->root.txn = NULL;
-    }
-
+      /* Attempt to destroy the shared activity. */
+      dav_svn_delete_activity(resource->info->repos, shared_activity);
+      apr_pool_userdata_set(NULL, DAV_SVN_AUTOVERSIONING_ACTIVITY,
+                            NULL, resource->info->r->pool);
+            
+      /* Commit was successful, so schedule deltification. */
+      register_deltification_cleanup(resource->info->repos->repos,
+                                     new_rev,
+                                     resource->info->r->connection->pool);
+      
+      /* If caller wants it, return the new VR that was created by
+         the checkin. */
+      if (version_resource)
+        {
+          uri = dav_svn_build_uri(resource->info->repos,
+                                  DAV_SVN_BUILD_URI_VERSION,
+                                  new_rev, resource->info->repos_path,
+                                  0, resource->pool);
+          
+          err = dav_svn_create_version_resource(version_resource, uri,
+                                                resource->pool);
+          if (err)
+            return err;
+        }
+    } /* end of commit stuff */
+  
+  /* The shared activity was either nonexistent to begin with, or it's
+     been committed and is only now nonexistent.  The resource needs
+     to forget about it. */
+  resource->info->root.txn_name = NULL;
+  resource->info->root.txn = NULL;
+ 
   /* Convert the working resource back into an regular one. */
   if (! keep_checked_out)
     {
