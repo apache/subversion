@@ -161,26 +161,22 @@ AC_FUNC_VPRINTF
 
 dnl Process some configuration options ----------
 
-AC_ARG_WITH(debug,
-[  --with-debug            Turn on debugging and compile time warnings],
-[
-  if test "$withval" != "no"; then
-    enable_debugging=yes
-  fi
-])
+AC_ARG_ENABLE(debug,
+[  --enable-debug            Turn on debugging and compile time warnings],
+[],
+[enable_debugging=yes])
 
-AC_ARG_WITH(maintainer-mode,
-[  --with-maintainer-mode  Turn on debugging and very strict compile-time
+AC_ARG_ENABLE(maintainer-mode,
+[  --enable-maintainer-mode  Turn on debugging and very strict compile-time
                           warnings],
+[],
 [
-  if test "$withval" != "no"; then
     enable_debugging=yes
     if test "$GCC" = "yes"; then
       dnl SVN_DEBUG enables specific features for developer builds
       dnl AP_DEBUG enables specific (Apache) features for developer builds
       CFLAGS="$CFLAGS -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Wpointer-arith -Wwrite-strings -Wshadow -DSVN_DEBUG -DAP_DEBUG";
     fi
-  fi
 ])
 
 if test "$enable_debugging" = "yes"; then
