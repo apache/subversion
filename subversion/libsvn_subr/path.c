@@ -98,7 +98,7 @@ add_component_internal (svn_string_t *path,
 /* See ../include/svn_path.h for details. */
 void
 svn_path_add_component_nts (svn_string_t *path, 
-                            char *component,
+                            const char *component,
                             int style,
                             apr_pool_t *pool)
 {
@@ -109,7 +109,7 @@ svn_path_add_component_nts (svn_string_t *path,
 /* See ../include/svn_path.h for details. */
 void
 svn_path_add_component (svn_string_t *path, 
-                        svn_string_t *component,
+                        const svn_string_t *component,
                         int style,
                         apr_pool_t *pool)
 {
@@ -160,7 +160,7 @@ svn_path_last_component (svn_string_t *path, int style, apr_pool_t *pool)
 
 /* See ../include/svn_path.h for details. */
 int
-svn_path_isempty (svn_string_t *path, int style)
+svn_path_isempty (const svn_string_t *path, int style)
 {
   /* kff todo: `style' ignored presently. */
 
