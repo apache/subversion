@@ -22,7 +22,7 @@ apr_pool_t *globalpool;
    type svn_text_delta_window_handler_t).  This will be called by the
    vcdiff parser everytime it has a window ready to go. */
 svn_error_t *
-my_vcdiff_windoweater (svn_delta_window_t *window, void *baton)
+my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
 {
   int i;
 
@@ -31,7 +31,7 @@ my_vcdiff_windoweater (svn_delta_window_t *window, void *baton)
     {
       switch (window->ops[i].action_code)
         {
-        case svn_delta_new:
+        case svn_txdelta_new:
           {
             char *startaddr = (window->new->data +
                                 (window->ops[i].offset));
@@ -40,12 +40,14 @@ my_vcdiff_windoweater (svn_delta_window_t *window, void *baton)
                                   (window->ops[i].length),
                                   globalpool);
 
-            printf ("--- new datawindow -- : [%s]\n", str->data);
+            printf ("-- got txdelta window -- : new text: [%s]\n", str->data);
           }
-        case svn_delta_source:
+        case svn_txdelta_source:
           {
           }
-        case svn_delta_target:
+        case svn_txdelta_target:
+          {
+          }
         default:
           {
           }
@@ -56,110 +58,6 @@ my_vcdiff_windoweater (svn_delta_window_t *window, void *baton)
 
   return SVN_NO_ERROR;
 }
-
-
-/* A routine which knows how to consume a propchange object for a file */
-svn_error_t *
-my_fileprop_handler (svn_propchange_t *propchange, void *baton)
-{
-  char *propname = "<none>";
-  char *propvalue = "<none>";
-
-  if (propchange->name)
-    propname = propchange->name->data;
-
-  if (propchange->value)
-    propvalue = propchange->value->data;
-
-  printf ("GOT FILE-PROPCHANGE: name = %s, value = %s, ", propname, propvalue);
-  
-  switch (propchange->kind)
-    {
-    case svn_prop_set:
-      {
-        printf ("kind = svn_prop_set\n");
-        break;
-      }
-    case svn_prop_delete:
-      {
-        printf ("kind = svn_prop_delete\n");
-        break;
-      }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-
-/* A routine which knows how to consume a propchange object for a directory */
-svn_error_t *
-my_dirprop_handler (svn_propchange_t *propchange, void *baton)
-{
-  char *propname = "<none>";
-  char *propvalue = "<none>";
-
-  if (propchange->name)
-    propname = propchange->name->data;
-
-  if (propchange->value)
-    propvalue = propchange->value->data;
-
-  printf ("GOT DIR-PROPCHANGE: name = %s, value = %s, ", propname, propvalue);
-  
-  switch (propchange->kind)
-    {
-    case svn_prop_set:
-      {
-        printf ("kind = svn_prop_set\n");
-        break;
-      }
-    case svn_prop_delete:
-      {
-        printf ("kind = svn_prop_delete\n");
-        break;
-      }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-
-/* A routine which knows how to consume a propchange object for a dirent */
-svn_error_t *
-my_direntprop_handler (svn_propchange_t *propchange, void *baton)
-{
-  char *propname = "<none>";
-  char *propvalue = "<none>";
-
-  if (propchange->name)
-    propname = propchange->name->data;
-
-  if (propchange->value)
-    propvalue = propchange->value->data;
-
-  printf ("GOT DIRENT-PROPCHANGE: name = %s, value = %s, ",
-          propname, propvalue);
-  
-  switch (propchange->kind)
-    {
-    case svn_prop_set:
-      {
-        printf ("kind = svn_prop_set\n");
-        break;
-      }
-    case svn_prop_delete:
-      {
-        printf ("kind = svn_prop_delete\n");
-        break;
-      }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 
 
 
@@ -173,6 +71,7 @@ test_delete (svn_string_t *filename, void *walk_baton, void *parent_baton)
   return SVN_NO_ERROR;         
 }
 
+
 svn_error_t *
 test_add_directory (svn_string_t *name,
                     void *walk_baton, void *parent_baton,
@@ -182,6 +81,8 @@ test_add_directory (svn_string_t *name,
 {
   printf ("ADD_DIR event:  name '%s', ancestor '%s' version %d\n",
           name->data, ancestor_path->data, ancestor_version);
+
+  /* A real callback would fill in **child_baton here */
   
   return SVN_NO_ERROR;
 }
@@ -197,12 +98,14 @@ test_replace_directory (svn_string_t *name,
   printf ("REPLACE_DIR event:  name '%s', ancestor '%s' version %d\n",
           name->data, ancestor_path->data, ancestor_version);
   
+  /* A real callback would fill in **child_baton here */
+
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-test_finish_directory (void *baton)
+test_finish_directory (void *dir_baton)
 {
   printf ("FINISH_DIR event.\n");
 
@@ -211,7 +114,7 @@ test_finish_directory (void *baton)
 
 
 svn_error_t *
-test_finish_file (void *baton)
+test_finish_file (void *file_baton)
 {
   printf ("FINISH_FILE event.\n");
 
@@ -221,10 +124,13 @@ test_finish_file (void *baton)
 
 
 svn_error_t *
-test_begin_textdelta (void *walk_baton, void *parent_baton,
-                      svn_text_delta_window_handler_t **handler,
+test_apply_textdelta (void *walk_baton, void *parent_baton, void *file_baton,
+                      svn_txdelta_window_handler_t **handler,
                       void **handler_baton)
 {
+  printf ("TEXT-DELTA event:  within file `%s'.\n", 
+          (char *) ((svn_string_t *) file_baton)->data);
+
   /* Set the value of HANDLER and HANDLER_BATON here */
   *handler        = my_vcdiff_windoweater;
   *handler_baton  = NULL;
@@ -234,41 +140,21 @@ test_begin_textdelta (void *walk_baton, void *parent_baton,
 
 
 
-svn_error_t *
-test_begin_propdelta (void *walk_baton, void *parent_baton,
-                      svn_propchange_location_t location,
-                      svn_propchange_handler_t **handler,
-                      void **baton)
-{
-  /* Set the value of HANDLER iff we're talking about the beginning of
-     a *file* pdelta. */
-
-  if (location == svn_prop_file)
-    *handler      = my_fileprop_handler;
-  else if (location == svn_prop_dir)
-    *handler      = my_dirprop_handler;
-  else if (location == svn_prop_dirent)
-    *handler      = my_direntprop_handler;
-  else
-    *handler      = NULL;
-
-  *baton = NULL;
-  
-  return SVN_NO_ERROR;
-}
-
-
 
 
 svn_error_t *
 test_add_file (svn_string_t *name,
                void *walk_baton, void *parent_baton,
                svn_string_t *ancestor_path,
-               long int ancestor_version)
+               long int ancestor_version,
+               void **file_baton)
 {
   printf ("ADD_FILE event:  name '%s', ancestor '%s' version %d\n",
           name->data, ancestor_path->data, ancestor_version);
   
+  /* Put the filename in file_baton */
+  *file_baton = (svn_string_t *) svn_string_dup (name, globalpool);
+
   return SVN_NO_ERROR;
 }
 
@@ -278,10 +164,14 @@ svn_error_t *
 test_replace_file (svn_string_t *name,
                    void *walk_baton, void *parent_baton,
                    svn_string_t *ancestor_path,
-                   long int ancestor_version)
+                   long int ancestor_version,
+                   void **file_baton)
 {
   printf ("REPLACE_FILE event:  name '%s', ancestor '%s' version %d\n",
           name->data, ancestor_path->data, ancestor_version);
+
+  /* Put the filename in file_baton */
+  *file_baton = (svn_string_t *) svn_string_dup (name, globalpool);
   
   return SVN_NO_ERROR;
 }
@@ -322,41 +212,62 @@ my_read_func (void *baton, char *buffer, apr_off_t *len, apr_pool_t *pool)
 }
 
 
-int main()
+int main(int argc, char *argv[])
 {
   svn_delta_walk_t my_walker;
   svn_error_t *err;
   apr_file_t *source_baton = NULL;
-  void *foo_baton = NULL;
-  void *bar_baton = NULL;
+  apr_status_t status;
+  void *my_walk_baton = NULL;
+  void *my_parent_baton = NULL;
+
+  /* Process args */
+  if (argc != 2)
+    {
+      printf 
+        ("\nUsage: %s [filename], where [filename] contains an XML tree-delta",
+         argv[0]);
+      exit (1);
+    }
 
   /* Init global memory pool */
   apr_initialize ();
   apr_create_pool (&globalpool, NULL);
 
-
   /* Open a file full of XML, create "source baton" (the filehandle)
      that my_read_func() will slurp XML from. */
-  apr_open (&source_baton, "foo.delta", APR_READ, APR_OS_DEFAULT, globalpool);
-
-
-  /* Fill out a walk structure, with our own routines inside it. */
+  status = apr_open (&source_baton, argv[1],
+                     APR_READ, APR_OS_DEFAULT, globalpool);
+  if (status)
+    {
+      printf ("Error opening %s\n.", argv[1]);
+      exit (1);
+    }
+    
+  
+  /* Fill out a walker structure, with our own routines inside it. */
   my_walker.delete             = test_delete;
+
   my_walker.add_directory      = test_add_directory;
   my_walker.replace_directory  = test_replace_directory;
   my_walker.finish_directory   = test_finish_directory;
-  my_walker.finish_file        = test_finish_file;
+
   my_walker.add_file           = test_add_file;
   my_walker.replace_file       = test_replace_file;
-  my_walker.begin_textdelta    = test_begin_textdelta;
-  my_walker.begin_propdelta    = test_begin_propdelta;
-  my_walker.finish_textdelta   = NULL;
-  my_walker.finish_propdelta   = NULL;
+  my_walker.finish_file        = test_finish_file;
+
+  my_walker.apply_textdelta    = test_apply_textdelta;
+
+  my_walker.change_file_prop   = NULL;
+  my_walker.change_dir_prop    = NULL;
+  my_walker.change_dirent_prop = NULL;
+
 
   /* Fire up the XML parser */
   err = svn_delta_parse (my_read_func, source_baton, /* read from here */
                          &my_walker,                 /* call these callbacks */
-                         foo_baton, bar_baton,       /* with these objects */
+                         my_walk_baton,
+                         my_parent_baton,            /* with these objects */
                          globalpool);
 
   apr_close (source_baton);
