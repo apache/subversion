@@ -17,7 +17,6 @@ package org.tigris.subversion.client;
  */
 
 import org.tigris.subversion.SubversionException;
-import org.tigris.subversion.auth.AuthProvider;
 
 /**
  * The methods of this interface correspond to the types and functions
@@ -31,6 +30,6 @@ public interface ClientPrompt
      * <code>prompt</code>
      * @return The response to <code>prompt</code>.
      */
-    String[] prompt(String prompt, boolean hide)
+    String prompt(String prompt, boolean hide)
         throws SubversionException;
 }
