@@ -53,10 +53,10 @@ languages = {
                File('common.swg'),
                File('python', 'pyrun.swg')),
 
-  'perl':     (File('common.swg'),
-               If('SVN_SWIG_VERSION >= 103020'),
+  'perl':     (If('SVN_SWIG_VERSION >= 103020'),
                Include('"perl5/precommon.swg"'),
                Endif(),
+               File('common.swg'),
                File('perl5', 'perlrun.swg')),
 
   'ruby':     (File('common.swg'),
