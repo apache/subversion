@@ -1743,6 +1743,15 @@ svn_io_file_close (apr_file_t *file, apr_pool_t *pool)
 
 
 svn_error_t *
+svn_io_file_getc (char *ch, apr_file_t *file, apr_pool_t *pool)
+{
+  return do_io_file_wrapper_cleanup
+    (file, apr_file_getc (ch, file),
+     "read", pool);
+}
+
+
+svn_error_t *
 svn_io_file_read (apr_file_t *file, void *buf, 
                   apr_size_t *nbytes, apr_pool_t *pool)
 {
@@ -1764,7 +1773,7 @@ svn_io_file_read_full (apr_file_t *file, void *buf,
 
 
 svn_error_t *
-svn_io_file_write (apr_file_t *file, void *buf, 
+svn_io_file_write (apr_file_t *file, const void *buf, 
                    apr_size_t *nbytes, apr_pool_t *pool)
 {
   return do_io_file_wrapper_cleanup
@@ -1774,7 +1783,7 @@ svn_io_file_write (apr_file_t *file, void *buf,
 
 
 svn_error_t *
-svn_io_file_write_full (apr_file_t *file, void *buf, 
+svn_io_file_write_full (apr_file_t *file, const void *buf, 
                         apr_size_t nbytes, apr_size_t *bytes_written,
                         apr_pool_t *pool)
 {
