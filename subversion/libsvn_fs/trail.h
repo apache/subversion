@@ -23,6 +23,7 @@
 
 #include <apr_pools.h>
 #include "svn_fs.h"
+#include "fs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -94,8 +95,9 @@ extern "C" {
 
    This will simply invoke your function `txn_body_do_my_thing',
    passing BATON through unchanged, and providing a fresh TRAIL
-   object, containing a Berkeley DB transaction and an APR pool --- a
-   subpool of POOL --- you should use.
+   object, containing a pointer to the filesystem object, a Berkeley
+   DB transaction and an APR pool -- a subpool of POOL -- you should
+   use.
 
    If your function returns a Subversion error wrapping a Berkeley DB
    DB_LOCK_DEADLOCK error, `svn_fs__retry_txn' will abort the trail's
@@ -134,6 +136,9 @@ struct trail_t
 {
   /* A Berkeley DB transaction.  */
   DB_TXN *db_txn;
+
+  /* The filesystem object with which this trail is associated. */
+  svn_fs_t *fs;
 
   /* A pool to allocate things in as part of that transaction --- a
      subpool of the one passed to `begin_trail'.  We destroy this pool

@@ -392,7 +392,6 @@ svn_fs_txn_root (svn_fs_root_t **root_p,
 struct revision_root_args
 {
   svn_fs_root_t **root_p;
-  svn_fs_t *fs;
   svn_revnum_t rev;
 };
 
@@ -405,8 +404,8 @@ txn_body_revision_root (void *baton,
   dag_node_t *root_dir;
   svn_fs_root_t *root;
 
-  SVN_ERR (svn_fs__dag_revision_root (&root_dir, args->fs, args->rev, trail));
-  root = make_revision_root (args->fs, args->rev, root_dir, trail->pool);
+  SVN_ERR (svn_fs__dag_revision_root (&root_dir, trail->fs, args->rev, trail));
+  root = make_revision_root (trail->fs, args->rev, root_dir, trail->pool);
 
   *args->root_p = root;
   return SVN_NO_ERROR;
@@ -425,8 +424,7 @@ svn_fs_revision_root (svn_fs_root_t **root_p,
   SVN_ERR (svn_fs__check_fs (fs));
 
   args.root_p = &root;
-  args.fs     = fs;
-  args.rev    = rev;
+  args.rev = rev;
   SVN_ERR (svn_fs__retry_txn (fs, txn_body_revision_root, &args, pool));
 
   *root_p = root;
@@ -1234,7 +1232,6 @@ svn_fs_node_created_path (const char **created_path,
 
 
 struct node_kind_args {
-  svn_fs_t *fs;
   const svn_fs_id_t *id;
   svn_node_kind_t kind; /* OUT parameter */
 };
@@ -1246,7 +1243,7 @@ txn_body_node_kind (void *baton, trail_t *trail)
   struct node_kind_args *args = baton;
   dag_node_t *node;
 
-  SVN_ERR (svn_fs__dag_get_node (&node, args->fs, args->id, trail));
+  SVN_ERR (svn_fs__dag_get_node (&node, trail->fs, args->id, trail));
   args->kind = svn_fs__dag_node_kind (node);
   
   return SVN_NO_ERROR;
@@ -1267,7 +1264,6 @@ node_kind (svn_node_kind_t *kind_p,
     
   /* Use the node id to get the real kind. */
   args.id = node_id;
-  args.fs = svn_fs_root_fs (root);
   SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_node_kind, &args, pool));
 
   *kind_p = args.kind;
@@ -1547,8 +1543,6 @@ struct deltify_committed_args
 
 struct txn_deltify_args
 {
-  svn_fs_t *fs;
-
   /* The target is what we're deltifying. */
   const svn_fs_id_t *tgt_id;
 
@@ -1571,8 +1565,8 @@ txn_body_txn_deltify (void *baton, trail_t *trail)
   struct txn_deltify_args *args = baton;
   dag_node_t *tgt_node, *base_node;
 
-  SVN_ERR (svn_fs__dag_get_node (&tgt_node, args->fs, args->tgt_id, trail));
-  SVN_ERR (svn_fs__dag_get_node (&base_node, args->fs, args->base_id, trail));
+  SVN_ERR (svn_fs__dag_get_node (&tgt_node, trail->fs, args->tgt_id, trail));
+  SVN_ERR (svn_fs__dag_get_node (&base_node, trail->fs, args->base_id, trail));
   SVN_ERR (svn_fs__dag_deltify (tgt_node, base_node, args->is_dir, trail));
 
   return SVN_NO_ERROR;
@@ -1581,7 +1575,6 @@ txn_body_txn_deltify (void *baton, trail_t *trail)
 
 struct txn_pred_count_args
 {
-  svn_fs_t *fs;
   const svn_fs_id_t *id;
   int pred_count;
 };
@@ -1593,27 +1586,18 @@ txn_body_pred_count (void *baton, trail_t *trail)
   svn_fs__node_revision_t *noderev;
   struct txn_pred_count_args *args = baton;
 
-  SVN_ERR (svn_fs__bdb_get_node_revision
-           (&noderev, args->fs, args->id, trail));
-
+  SVN_ERR (svn_fs__bdb_get_node_revision (&noderev, trail->fs, 
+                                          args->id, trail));
   args->pred_count = noderev->predecessor_count;
-
   return SVN_NO_ERROR;
 }
 
 
 struct txn_pred_id_args
 {
-  svn_fs_t *fs;
-
-  /* The node id of for we want the predecessor. */
-  const svn_fs_id_t *id;
-
-  /* The returned predecessor id. */
-  const svn_fs_id_t *pred_id;
-
-  /* The pool in which to allocate pred_id. */
-  apr_pool_t *pool;
+  const svn_fs_id_t *id;      /* The node id of for we want the predecessor. */
+  const svn_fs_id_t *pred_id; /* The returned predecessor id. */
+  apr_pool_t *pool;           /* The pool in which to allocate pred_id. */
 };
 
 
@@ -1623,7 +1607,7 @@ txn_body_pred_id (void *baton, trail_t *trail)
   svn_fs__node_revision_t *nr;
   struct txn_pred_id_args *args = baton;
 
-  SVN_ERR (svn_fs__bdb_get_node_revision (&nr, args->fs, args->id, trail));
+  SVN_ERR (svn_fs__bdb_get_node_revision (&nr, trail->fs, args->id, trail));
   if (nr->predecessor_id)
     args->pred_id = svn_fs__id_copy (nr->predecessor_id, args->pool);
   else
@@ -1717,7 +1701,6 @@ deltify_mutable (svn_fs_t *fs,
     const svn_fs_id_t *pred_id;
     struct txn_pred_count_args tpc_args;
     
-    tpc_args.fs = fs;
     tpc_args.id = id;
     SVN_ERR (svn_fs__retry_txn (fs, txn_body_pred_count, &tpc_args, pool));
     pred_count = tpc_args.pred_count;
@@ -1760,7 +1743,6 @@ deltify_mutable (svn_fs_t *fs,
           {
             struct txn_pred_id_args tpi_args;
 
-            tpi_args.fs = fs;
             tpi_args.id = pred_id;
             tpi_args.pool = pool;
             SVN_ERR (svn_fs__retry_txn (fs, txn_body_pred_id, 
@@ -1775,7 +1757,6 @@ deltify_mutable (svn_fs_t *fs,
           }
 
         /* Finally, do the deltification. */
-        td_args.fs = fs;
         td_args.tgt_id = pred_id;
         td_args.base_id = id;
         td_args.is_dir = is_dir;
@@ -2792,7 +2773,6 @@ svn_fs_merge (const char **conflict_p,
 struct rev_get_txn_id_args
 {
   const char **txn_id;
-  svn_fs_t *fs;
   svn_revnum_t revision;
 };
 
@@ -2801,7 +2781,7 @@ static svn_error_t *
 txn_body_rev_get_txn_id (void *baton, trail_t *trail)
 {
   struct rev_get_txn_id_args *args = baton;
-  return svn_fs__rev_get_txn_id (args->txn_id, args->fs, 
+  return svn_fs__rev_get_txn_id (args->txn_id, trail->fs, 
                                  args->revision, trail);
 }
 
@@ -2818,7 +2798,6 @@ svn_fs_deltify_revision (svn_fs_t *fs,
   SVN_ERR (svn_fs_revision_root (&root, fs, revision, pool));
 
   args.txn_id = &txn_id;
-  args.fs = fs;
   args.revision = revision;
   SVN_ERR (svn_fs__retry_txn (fs, txn_body_rev_get_txn_id, &args, pool));
 
@@ -2888,7 +2867,6 @@ svn_fs_dir_entries (apr_hash_t **table_p,
           apr_hash_this (hi, NULL, NULL, &val);
           entry = val;
           nk_args.id = entry->id;
-          nk_args.fs = fs;
           SVN_ERR (svn_fs__retry_txn (fs, txn_body_node_kind, &nk_args, pool));
           entry->kind = nk_args.kind;
         }
@@ -4119,7 +4097,6 @@ txn_body_history_prev (void *baton, trail_t *trail)
   
   /* Construct a ROOT for the current revision. */
   rr_args.root_p = &root;
-  rr_args.fs = fs;
   rr_args.rev = revision;
   SVN_ERR (txn_body_revision_root (&rr_args, trail));
 

@@ -23,8 +23,8 @@
 #include "bdb/uuids-table.h"
 
 
-struct get_uuid_args {
-  svn_fs_t *fs;
+struct get_uuid_args 
+{
   int idx;
   const char **uuid;
 };
@@ -34,10 +34,7 @@ static svn_error_t *
 txn_body_get_uuid (void *baton, trail_t *trail)
 {
   struct get_uuid_args *args = baton;
-
-  SVN_ERR (svn_fs__bdb_get_uuid (args->fs, args->idx, args->uuid, trail));
-
-  return SVN_NO_ERROR;
+  return svn_fs__bdb_get_uuid (trail->fs, args->idx, args->uuid, trail);
 }
 
 
@@ -57,7 +54,6 @@ svn_fs_get_uuid (svn_fs_t *fs,
   else
     {
       struct get_uuid_args args;
-      args.fs = fs;
       args.idx = 1;
       args.uuid = uuid;
       SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_uuid, &args, pool));
@@ -71,8 +67,8 @@ svn_fs_get_uuid (svn_fs_t *fs,
 }
 
 
-struct set_uuid_args {
-  svn_fs_t *fs;
+struct set_uuid_args 
+{
   int idx;
   const char *uuid;
 };
@@ -82,7 +78,7 @@ static svn_error_t *
 txn_body_set_uuid (void *baton, trail_t *trail)
 {
   struct set_uuid_args *args = baton;
-  return svn_fs__bdb_set_uuid (args->fs, args->idx, args->uuid, trail);
+  return svn_fs__bdb_set_uuid (trail->fs, args->idx, args->uuid, trail);
 }
 
 
@@ -95,7 +91,6 @@ svn_fs_set_uuid (svn_fs_t *fs,
 
   SVN_ERR (svn_fs__check_fs (fs));
 
-  args.fs = fs;
   args.idx = 1;
   args.uuid = uuid;
   SVN_ERR (svn_fs__retry_txn (fs, txn_body_set_uuid, &args, pool));

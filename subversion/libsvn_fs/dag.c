@@ -342,12 +342,12 @@ svn_fs__dag_walk_predecessors (dag_node_t *node,
 
 /* Trail body for svn_fs__dag_init_fs. */
 static svn_error_t *
-txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
+txn_body_dag_init_fs (void *baton, trail_t *trail)
 {
   svn_fs__node_revision_t noderev;
   svn_fs__revision_t revision;
   svn_revnum_t rev = SVN_INVALID_REVNUM;
-  svn_fs_t *fs = fs_baton;
+  svn_fs_t *fs = trail->fs;
   svn_string_t date;
   const char *txn_id;
   const char *copy_id;
@@ -396,7 +396,7 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
 svn_error_t *
 svn_fs__dag_init_fs (svn_fs_t *fs)
 {
-  return svn_fs__retry_txn (fs, txn_body_dag_init_fs, fs, fs->pool);
+  return svn_fs__retry_txn (fs, txn_body_dag_init_fs, NULL, fs->pool);
 }
 
 
