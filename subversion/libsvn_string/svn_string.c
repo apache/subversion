@@ -113,11 +113,16 @@ svn_string_ncreate (const char *bytes, const size_t size,
   /* this alloc gives us memory filled with zeros, yum. */
   new_string = (svn_string_t *) apr_palloc (pool, sizeof(svn_string_t)); 
 
-  new_string->data = (char *) apr_palloc (pool, size);
+  new_string->data = (char *) apr_palloc (pool, size + 1);
   new_string->len = size;
-  new_string->blocksize = size;
+  new_string->blocksize = size + 1;
 
   memcpy (new_string->data, bytes, size);
+
+  /* Null termination is the convention -- even if we suspect the data
+     to be binary, it's not up to us to decide, it's the caller's
+     call.  Heck, that's why they call it the caller! */
+  new_string->data[new_string->len + 1] = '\0';
 
   return new_string;
 }
@@ -132,11 +137,7 @@ svn_string_ncreate (const char *bytes, const size_t size,
 void 
 svn_string_fillchar (svn_string_t *str, const unsigned char c)
 {
-  /* safety check */
-  if (str->len > str->blocksize)
-    str->len = str->blocksize;
-
-  memset (str->data,  (int) c, str->len);
+  memset (str->data, c, str->len);
 }
 
 
@@ -201,10 +202,14 @@ svn_string_appendbytes (svn_string_t *str, const char *bytes,
     }
 
   /* get address 1 byte beyond end of original bytestring */
-  start_address = &str->data[str->len];
+  start_address = (str->data + str->len);
 
   memcpy (start_address, (void *) bytes, count);
   str->len = total_len;
+
+  str->data[str->len + 1] = '\0';  /* We don't know if this is binary
+                                      data or not, but convention is
+                                      to null-terminate. */
 }
 
 
@@ -276,14 +281,13 @@ char *
 svn_string_2cstring (const svn_string_t *str, apr_pool_t *pool)
 {
   /* allocate memory for C string, +1 for \0 */
-  size_t size = str->len + 1;
-  char *cstring = apr_palloc (pool, size);
+  char *cstring = apr_palloc (pool, (str->len + 1));
 
   /* copy bytes over */
   memcpy (cstring, str->data, str->len);
 
   /* add the trailing NULL */
-  cstring[size - 1] = 0;
+  cstring[str->len] = '\0';
 
   return cstring;
 }
