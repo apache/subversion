@@ -421,13 +421,20 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
       svn_client_commit_item_t *item;
       const char *tmp_file;
       apr_array_header_t *commit_items 
-        = apr_array_make (pool, 1, sizeof (item));
+        = apr_array_make (pool, 2, sizeof (item));
       
       item = apr_pcalloc (pool, sizeof (*item));
       item->url = svn_path_join (top_url, dst_rel, pool);
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
       (*((svn_client_commit_item_t **) apr_array_push (commit_items))) = item;
-      
+      if (is_move && (! resurrection))
+        {
+          item = apr_pcalloc (pool, sizeof (*item));
+          item->url = svn_path_join (top_url, src_rel, pool);
+          item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
+          (*((svn_client_commit_item_t **) apr_array_push (commit_items))) = 
+            item;
+        }
       SVN_ERR ((*ctx->log_msg_func) (&message, &tmp_file, commit_items, 
                                      ctx->log_msg_baton, pool));
       if (! message)
