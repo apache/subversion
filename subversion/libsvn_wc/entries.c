@@ -396,6 +396,14 @@ sync_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
         apr_hash_set (entry->attributes,
                       SVN_WC_ENTRY_ATTR_DELETE, APR_HASH_KEY_STRING,
                       svn_string_create ("true", pool));
+      if (entry->flags & SVN_WC_ENTRY_MERGED)
+        apr_hash_set (entry->attributes,
+                      SVN_WC_ENTRY_ATTR_MERGED, APR_HASH_KEY_STRING,
+                      svn_string_create ("true", pool));
+      if (entry->flags & SVN_WC_ENTRY_CONFLICT)
+        apr_hash_set (entry->attributes,
+                      SVN_WC_ENTRY_ATTR_CONFLICT, APR_HASH_KEY_STRING,
+                      svn_string_create ("true", pool));
     }
   
   /* Timestamp. */
