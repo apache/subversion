@@ -1178,7 +1178,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
   svn_stringbuf_t *log_accum;
   svn_boolean_t is_locally_modified;
   svn_wc_adm_access_t *adm_access;
-  svn_boolean_t magic_props_changed = FALSE, magic_props_caused_tweak = FALSE;
+  svn_boolean_t magic_props_changed = FALSE;
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
     *entry_props = NULL;
 
@@ -1401,6 +1401,76 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
         }
     }
 
+  /* Has the user made local mods to the working file?  */
+  SVN_ERR (svn_wc_text_modified_p (&is_locally_modified,
+                                   file_path, pool));
+
+  if (new_text_path)   /* is there a new text-base to install? */
+    {
+      txtb     = svn_wc__text_base_path (base_name, FALSE, pool);
+      tmp_txtb = svn_wc__text_base_path (base_name, TRUE, pool);
+    }
+  else if (magic_props_changed) /* no new text base, but... */
+    {
+      /* Special edge-case: it's possible that this file installation
+         only involves propchanges, but that some of those props still
+         require a retranslation of the working file. */
+
+      const char *tmptext = svn_wc__text_base_path (base_name, TRUE, pool);
+
+      /* A log command which copies and DEtranslates the working file
+         to a tmp-text-base. */
+      svn_xml_make_open_tag (&log_accum, pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_CP_AND_DETRANSLATE,
+                             SVN_WC__LOG_ATTR_NAME, base_name,
+                             SVN_WC__LOG_ATTR_DEST, tmptext,
+                             NULL);
+
+      /* A log command that copies the tmp-text-base and REtranslates
+         the tmp-text-base back to the working file. */
+      svn_xml_make_open_tag (&log_accum, pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_CP_AND_TRANSLATE,
+                             SVN_WC__LOG_ATTR_NAME, tmptext,
+                             SVN_WC__LOG_ATTR_DEST, base_name,
+                             NULL);
+    }
+
+  /* Write log entry which will bump the revision number.  Also, just
+     in case we're overwriting an existing phantom 'deleted' entry, be
+     sure to remove the deleted-ness. */
+  revision_str = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, new_revision);
+  svn_xml_make_open_tag (&log_accum,
+                         pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_MODIFY_ENTRY,
+                         SVN_WC__LOG_ATTR_NAME,
+                         base_name,
+                         SVN_WC__ENTRY_ATTR_KIND,
+                         SVN_WC__ENTRIES_ATTR_FILE_STR,
+                         SVN_WC__ENTRY_ATTR_REVISION,
+                         revision_str,
+                         SVN_WC__ENTRY_ATTR_DELETED,
+                         "false",
+                         NULL);
+
+
+  /* Possibly install a *non*-inherited URL in the entry. */
+  if (new_URL)
+    {
+      svn_xml_make_open_tag (&log_accum,
+                             pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_MODIFY_ENTRY,
+                             SVN_WC__LOG_ATTR_NAME,
+                             base_name,
+                             SVN_WC__ENTRY_ATTR_URL,
+                             new_URL,
+                             NULL);
+    }
+
+
   /* For 'textual' merging, we implement this matrix.
 
                   Text file                   Binary File
@@ -1415,16 +1485,8 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
 
    So the first thing we do is figure out where we are in the
    matrix. */
-
-  /* Has the user made local mods to the working file?  */
-  SVN_ERR (svn_wc_text_modified_p (&is_locally_modified,
-                                   file_path, pool));
-
-  if (new_text_path)   /* is there a new text-base to install? */
+  if (new_text_path)
     {
-      txtb     = svn_wc__text_base_path (base_name, FALSE, pool);
-      tmp_txtb = svn_wc__text_base_path (base_name, TRUE, pool);
-
       if (! is_locally_modified)
         {
           /* If there are no local mods, who cares whether it's a text
@@ -1505,56 +1567,8 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
         } /* end: working file has mods */
     }  /* end:  "textual" merging process */
 
-
-  /* Special edge-case: it's possible that this file installation only
-     involves propchanges, but that some of those props still require
-     a retranslation of the working file. */
-  if ((! new_text_path) && magic_props_changed)
-    {
-      const char *tmptext = svn_wc__text_base_path (base_name, TRUE, pool);
-
-      /* A log command which copies and DEtranslates the working file
-         to a tmp-text-base. */
-      svn_xml_make_open_tag (&log_accum, pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_CP_AND_DETRANSLATE,
-                             SVN_WC__LOG_ATTR_NAME, base_name,
-                             SVN_WC__LOG_ATTR_DEST, tmptext,
-                             NULL);
-
-      /* A log command that copies the tmp-text-base and REtranslates
-         the tmp-text-base back to the working file. */
-      svn_xml_make_open_tag (&log_accum, pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_CP_AND_TRANSLATE,
-                             SVN_WC__LOG_ATTR_NAME, tmptext,
-                             SVN_WC__LOG_ATTR_DEST, base_name,
-                             NULL);
-    }
-
-  /* Write log entry which will bump the revision number.  Also, just
-     in case we're overwriting an existing phantom 'deleted' entry, be
-     sure to remove the deleted-ness. */
-  revision_str = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, new_revision);
-  svn_xml_make_open_tag (&log_accum,
-                         pool,
-                         svn_xml_self_closing,
-                         SVN_WC__LOG_MODIFY_ENTRY,
-                         SVN_WC__LOG_ATTR_NAME,
-                         base_name,
-                         SVN_WC__ENTRY_ATTR_KIND,
-                         SVN_WC__ENTRIES_ATTR_FILE_STR,
-                         SVN_WC__ENTRY_ATTR_REVISION,
-                         revision_str,
-                         SVN_WC__ENTRY_ATTR_DELETED,
-                         "false",
-                         NULL);
-
-
-  /* Possibly write log commands to tweak text/prop entry timestamps:
-     */
-
-  if (new_text_path || magic_props_caused_tweak)
+  /* Possibly write log commands to tweak text/prop entry timestamps: */
+  if (new_text_path)
     {
       /* Log entry which sets a new textual timestamp, but only if
          there are no local changes to the text. */
@@ -1593,21 +1607,6 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
                                /* use wfile time */
                                SVN_WC_TIMESTAMP_WC,
                                NULL);
-    }
-
-
-  /* Possibly install a *non*-inherited URL in the entry. */
-  if (new_URL)
-    {
-      svn_xml_make_open_tag (&log_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_MODIFY_ENTRY,
-                             SVN_WC__LOG_ATTR_NAME,
-                             base_name,
-                             SVN_WC__ENTRY_ATTR_URL,
-                             new_URL,
-                             NULL);
     }
 
   if (new_text_path)
