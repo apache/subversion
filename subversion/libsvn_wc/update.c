@@ -62,15 +62,52 @@
 
 
 
+/* If PATH exists already, return an svn error containing ERR_TO_REPORT.
+ *
+ * If PATH doesn't exist, return 0.
+ *
+ * If unable to determine whether or not PATH exists, due to another
+ * error condition, return an svn error containing that apr error.
+ */
 svn_error_t *
-svn_update_data_handler (svn_digger_t *diggy, const char *data, int len)
+check_existence (svn_string_t path, apr_status_t err_to_report)
+{
+  apr_status_t apr_err;
+  apr_file_t *tmp_f;
+
+  apr_err = apr_open (&tmp_f, path->data,
+                     (APR_CREATE | APR_APPEND | APR_EXCL),
+                     APR_OS_DEFAULT, pool);
+
+  if (apr_err == APR_EEXIST)
+    {
+      svn_error_t *err 
+        = svn_create_error (err_to_report, 0, path, NULL, pool);
+      return err;
+    }
+  else if (apr_err)  /* some error other than APR_EEXIST */
+    {
+      svn_error_t *err 
+        = svn_create_error (apr_err, 0, path, NULL, pool);
+      return err;
+    }
+  else              /* path definitely does not exist */
+    {
+      close (tmp_f);
+      return 0;
+    }
+}
+
+
+static svn_error_t *
+update_data_handler (svn_digger_t *diggy, const char *data, int len)
 {
   /* kff todo */
 }
 
 
-svn_error_t *
-svn_update_dir_handler (svn_digger_t *diggy, const char *data, int len)
+static svn_error_t *
+update_dir_handler (svn_digger_t *diggy, const char *data, int len)
 {
   /* kff todo */
 }
@@ -95,16 +132,34 @@ svn_error_t *
 update (ap_file_t *src, svn_string_t *dst, apr_pool_t *pool)
 {
   char buf[BUFSIZ];
+  apr_status_t status;
   int done;
+  apr_file_t *tmp_f;
   svn_delta_digger_t diggy;
   XML_Parser parsimonious;
 
   diggy.pool = pool;
-  diggy.data_handler = svn_update_data_handler;
-  diggy.dir_handler = svn_update_dir_handler;
+  diggy.data_handler = update_data_handler;
+  diggy.dir_handler = update_dir_handler;
 
   /* Make a parser with the usual shared handlers and diggy as userData. */
   parsimonious = svn_delta_make_xml_parser (&diggy);
+
+  /* Check existence of DST.  If present, just error out for now -- we
+     can't do real updates, only fresh checkouts. */
+  if (dst)
+    {
+      svn_error_t *err;
+      err = check_existence (dst, SVN_ERR_OBSTRUCTED_UPDATE);
+
+      /* Whether or not err->apr_err == SVN_ERR_OBSTRUCTED_UPDATE, we
+         want to return it to caller. */
+      if (err)
+        return err;
+    }
+
+
+  /* Else nothing in the way, so contine. */
 
   do {
     /* Grab some stream. */
@@ -114,15 +169,16 @@ update (ap_file_t *src, svn_string_t *dst, apr_pool_t *pool)
     /* Parse the chunk of stream. */
     if (! XML_Parse (parsimonious, buf, len, done))
     {
-      char *message
-        = apr_psprintf (pool, 
-                        "%s at line %d",
-                        XML_ErrorString (XML_GetErrorCode (parsimonious)),
-                        XML_GetCurrentLineNumber (parsimonious));
+      char *msg
+        = svn_string_create
+        (apr_psprintf (pool, "%s at line %d",
+                       XML_ErrorString (XML_GetErrorCode (parsimonious)),
+                       XML_GetCurrentLineNumber (parsimonious)),
+         pool);
 
       svn_error_t *err
-        = svn_create_error (SVN_ERR_MALFORMED_XML, 0, message, NULL, pool);
-
+        = svn_create_error (SVN_ERR_MALFORMED_XML, 0, msg, NULL, pool);
+      
       XML_ParserFree (parsimonious);
       return err;
     }
