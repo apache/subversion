@@ -1285,6 +1285,8 @@ do_diff (const apr_array_header_t *options,
       SVN_ERR (svn_wc_get_diff_editor (adm_access, target,
                                        callbacks, callback_baton,
                                        recurse,
+                                       FALSE, /* examine working files */
+                                       FALSE, /* don't do it backwards */
                                        ctx->cancel_func, ctx->cancel_baton,
                                        &diff_editor, &diff_edit_baton,
                                        pool));
@@ -1318,6 +1320,115 @@ do_diff (const apr_array_header_t *options,
       SVN_ERR (svn_wc_adm_close (adm_access));
     }
   
+  /* Next use-case:  some repos-revision compared against wcpath@BASE */
+  else if (((revision2->kind == svn_opt_revision_base)
+            && (revision1->kind != svn_opt_revision_working)
+            && (revision1->kind != svn_opt_revision_base))
+           ||
+           ((revision1->kind == svn_opt_revision_base)
+            && (revision2->kind != svn_opt_revision_working)
+            && (revision2->kind != svn_opt_revision_base)))
+    {
+      const char *URL, *wcpath, *repospath;
+      const char *url_anchor, *url_target;
+      svn_wc_adm_access_t *adm_access, *dir_access;
+      const svn_opt_revision_t *baserev, *reposrev;
+      svn_boolean_t diff_backwards = FALSE;
+      
+      if (revision1->kind == svn_opt_revision_base)
+        {
+          wcpath = path1;
+          repospath = path2;
+          baserev = revision1;
+          reposrev = revision2;
+          diff_backwards = TRUE;
+        }
+      else
+        {
+          wcpath = path2;
+          repospath = path1;
+          baserev = revision2;
+          reposrev = revision1;
+        }
+
+      /* Sanity check -- wcpath better be a working-copy path. */
+      if (svn_path_is_url (wcpath))
+        return polite_error (svn_error_create 
+                             (SVN_ERR_INCORRECT_PARAMS, NULL,
+                              "do_diff: path isn't a working-copy path."),
+                             pool);
+
+      /* Extract a URL and revision from repospath (if not already a URL) */
+      SVN_ERR (convert_to_url (&URL, repospath, pool));
+
+      /* Trickiness:  possibly split up wcpath into anchor/target.  If
+         we do so, then we must split URL as well.  We shouldn't go
+         assuming that URL is equal to wcpath's URL, as we used to. */
+      SVN_ERR (svn_wc_get_actual_target (wcpath, &anchor, &target, pool));
+      if (target)
+        {
+          svn_path_split (URL, &url_anchor, &url_target, pool);
+        }
+      else
+        {
+          url_anchor = URL;
+          url_target = NULL;
+        }
+
+      /* Establish RA session to URL's anchor */
+      SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton,
+                                      url_anchor, pool));
+
+      SVN_ERR (svn_client__default_auth_dir (&auth_dir, wcpath, pool));
+
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url_anchor,
+                                            auth_dir,
+                                            NULL, NULL, FALSE, TRUE,
+                                            ctx, pool));
+      
+      /* Set up diff editor according to wcpath's anchor/target. */
+      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, anchor, FALSE, TRUE, pool));
+      SVN_ERR (svn_wc_get_diff_editor (adm_access, target,
+                                       callbacks, callback_baton,
+                                       recurse,
+                                       TRUE, /* examine text-bases */
+                                       diff_backwards, /* set above */
+                                       ctx->cancel_func, ctx->cancel_baton,
+                                       &diff_editor, &diff_edit_baton,
+                                       pool));
+
+      /* Tell the RA layer we want a delta to change our txn to URL */
+      SVN_ERR (svn_client__get_revision_number
+               (&start_revnum, ra_lib, session, reposrev, repospath, pool));
+      callback_baton->revnum1 = start_revnum;
+      SVN_ERR (ra_lib->do_update (session,
+                                  &reporter, &report_baton,
+                                  start_revnum,
+                                  svn_path_uri_decode (url_target, pool),
+                                  recurse,                                  
+                                  diff_editor, diff_edit_baton, pool));
+
+      SVN_ERR (svn_io_check_path (wcpath, &kind, pool));
+      if (kind == svn_node_dir)
+        SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, wcpath, pool));
+      else
+        SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access,
+                                      svn_path_dirname (wcpath, pool),
+                                      pool));
+
+      /* Create a txn mirror of wcpath;  the diff editor will print
+         diffs in reverse.  :-)  */
+      SVN_ERR (svn_wc_crawl_revisions (wcpath, dir_access,
+                                       reporter, report_baton,
+                                       FALSE, recurse,
+                                       NULL, NULL, /* notification is N/A */
+                                       NULL, pool));
+
+      SVN_ERR (svn_wc_adm_close (adm_access));
+    }
+
+
   /* Last use-case:  comparing path1@rev1 and path2@rev2, where both revs
      require repository contact.  */
   else if ((revision2->kind != svn_opt_revision_working)
