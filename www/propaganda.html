@@ -144,7 +144,7 @@ organization to try Subversion, this page might help you.</p>
     <li>
     <strong><a
     href="http://subversion.tigris.org/servlets/ReadMsg?list=users&msgNo=10651"
-          >Post from Stuart Robertson of Absolute Systems,
+          >Stuart Robertson of Absolute Systems,
           Inc</a></strong>
           <tt>(5&nbsp;May&nbsp;2004)</tt>
           <br/>
@@ -179,7 +179,7 @@ organization to try Subversion, this page might help you.</p>
 
     <li><strong><a
     href="http://subversion.tigris.org/servlets/ReadMsg?list=users&msgNo=6523"
-          >Post from Gustavo Niemeyer of Conectiva Linux</a></strong>
+          >Gustavo Niemeyer of Conectiva Linux</a></strong>
           <tt>(25&nbsp;February&nbsp;2004)</tt>
           <br/>
 
@@ -220,6 +220,30 @@ organization to try Subversion, this page might help you.</p>
 
     <br/>
 
+    <li><strong><a
+    href="http://subversion.tigris.org/servlets/ReadMsg?list=users&msgNo=14575"
+          >Mark Bohlman of Teledata Communications</a></strong>
+          <tt>(21&nbsp;July&nbsp;2004)</tt>
+          <br/>
+
+      <em><p>Teledata Communications has been using Subversion for
+      storing all of the source code on all our software products for
+      the past year (since version 0.24).  I have been very happy with
+      the overall results and they way that developer impacts are
+      minimal.  We have not lost a single byte of code nor had any
+      significant issues with using Subversion since the beginning.  I
+      attribute part of the productivity gains we have see in the past
+      year to the move away from our prior system with locking (and
+      the corresponding messages back and for to have something
+      'unlocked').  We continued to expand the use of the product to
+      all groups in the company.</p>
+
+      <p>Mark Bohlman<br/>
+         Software Development Manager</p></em>
+    </li>
+
+    <br/>
+
     <li><strong><a href="http://www.asttool.com/"
         >Assenmacher Specialty Tools</a> and
         <a href="http://www.gladesoft.com/">GladeSoft</a></strong> (from
@@ -231,7 +255,7 @@ organization to try Subversion, this page might help you.</p>
       <em><p>AST makes automotive scan tools.  We keep our source code
       for both the embedded side and the Windows interface side under
       Subversion.  In addition we keep our (large) databases under
-      Subversion as well.</em></p>
+      Subversion as well.</p></em>
 
       <em><p>GladeSoft sells an embedded webserver toolkit and
       application framework. Subversion stores all of our code and
@@ -251,6 +275,84 @@ organization to try Subversion, this page might help you.</p>
 
     <br/>
 
+    <li><strong><a
+    href="http://subversion.tigris.org/servlets/ReadMsg?list=users&msgNo=14696"
+          >Robert Zeh of Error Free Software</a></strong>
+          <tt>(23&nbsp;July&nbsp;2004)</tt>
+          <br/>
+
+    <em>
+    <p>I manage a 13 member application development group for a
+    trading firm.  There are about 9 other developers outside the
+    group, and some others, so we have about 20 people using our
+    subversion repository.</p>
+
+    <p>For the past 10 years we used SCCS.  It was very frustrating
+    --- files could not be renamed or moved, developers would forget
+    about locks they had acquired, and remote development was next to
+    impossible.  SCCS also made our limited Windows development
+    painful (we are a Unix shop).</p>
+
+    <p>Since we switched to subversion things have been much better.
+    Our entire history was transported into our Subversion repository,
+    so none of our history was lost.  I wrote a Python script to
+    transform it directly from SCCS to Subversion, and it was
+    painless.</p>
+
+    <p>Conflicts have been very rare.  The ability to easily branch
+    has been very useful; developers can make commits to branches
+    without breaking other people's code.  It's easier to see what
+    people are working on as the commits hit our internal commit
+    mailing list.  Since we tag each release, we're able to determine
+    which source code contributed to a release.  TortiseSVN makes
+    Windows development easy (no more ftping files over, or trying to
+    build on a remotely mounted samba drive).</p>
+
+    <p>Robert Zeh<br/>
+       Manager, Application Development<br/>
+       Error Free Software</p>
+    </em>
+
+    </li>
+
+    <br/>
+
+    <li><strong><a
+    href="http://subversion.tigris.org/servlets/ReadMsg?list=users&msgNo=14695"
+          >Chris Wein of Mobilygen</a></strong>
+          <tt>(23&nbsp;July&nbsp;2004)</tt>
+          <br/>
+
+    <em>
+    <p>I also have had a very positive experience moving from CVS to
+    Subversion in a commercial setting.  We are a small-ish silicon
+    valley startup that used to have everything in CVS.  Shortly after
+    I joined as s/w manager I switched the s/w team to SVN (0.37) with
+    excellent results.  We have had zero loss of data, zero down time,
+    with effective branching, easy repository restructuring and
+    constant time tags as our big positives.  The entire company will
+    be moving in the near-ish future based on our pilot.  And of
+    course the support from this list is fantastic.</p>
+
+    <p><font color="red">[Fair play dictates that we also include the
+    wish-list portion of Chris's testimonial...]</font></p>
+
+    <p>As for my wishlist, it is short - completely seamless and
+    foolproof tracking of merge history at the same level as the
+    commercial tools.  I don't want to remember revision numbers, I
+    just want to branch and merge with the tool remembering common
+    base versions etc.  This is really the only thing I miss about
+    ClearCase.</p>
+
+    <p><font color="red">[We agree :-).  Better merge tracking is on
+    Subversion's long-term roadmap.]</font></p>
+
+    </em>
+
+    </li>
+
+    <br/>
+
     <li><strong>Testimonial from Martin Pittenauer of SubEthaEdit
         (<a href="http://www.codingmonkeys.de/subethaedit/"
                  >http://www.codingmonkeys.de/subethaedit/</a>)
@@ -265,33 +367,7 @@ organization to try Subversion, this page might help you.</p>
       and perforce. With Apple adding support for .svn files within
       NIBs with Xcode 1.2 we are certain that subversion is the ideal
       versioning platform for modern software development on Mac OS
-      X.</em><tt></tt></p>
-    </li>
-
-    <br/>
-
-    <li><strong><a
-    href="http://discuss.fogcreek.com/newyork/default.asp?cmd=show&ixPost=3512"
-    >Posts on Fog Creek Software's QA board</a></strong><br/>
-    Responses to a "Joel on Software" column by Joel Sposky.  Note
-    that these responses are from readers, not from Joel Sposky
-    himself.</a>
-    <tt>(9&nbsp;March&nbsp;2004)</tt>
-    <br/>
-
-      <em><p>... We're moving from CVSNT to Subversion this week. I
-       beat the crap out of it, and it's just amazing source
-       control. Every CVS weakness that I ever complained about is
-       gone, and the "changeset" concept has resulted in significantly
-       easier to understand commits, and much better performance
-       updates. ... </em><tt>(from Brad Wilson)</tt></p>
-
-      <p>Happy subversion user here. ... I *love* that moves and
-      renames are tracked correctly and update working copies
-      sensibly.  Atomic commits are one of those features where even
-      if you don't really get it when you read it on the feature list,
-      once you're used to having it you can't imagine life without
-      it. ... </em><tt>(from Ian Olsen)</tt> </p></em>
+      X.</p></em>
     </li>
 
     <br/>
@@ -333,7 +409,7 @@ organization to try Subversion, this page might help you.</p>
 
     <li><strong><a
     href="http://subversion.tigris.org/servlets/ReadMsg?list=users&msgNo=6781"
-    >Post from Sebastien Cevey</a></strong>
+    >Sebastien Cevey</a></strong>
     <tt>(28&nbsp;February&nbsp;2004)</tt>
     <br/>
 
@@ -367,4 +443,8 @@ organization to try Subversion, this page might help you.</p>
           repository. Subversion it is!</em>
     </li>
 
+    <br/>
+
   </ul>
+
+
