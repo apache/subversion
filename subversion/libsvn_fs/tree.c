@@ -1287,7 +1287,8 @@ merge (const char **conflict_p,
                   dag_node_t *tnode;
                   SVN_ERR (get_dag_mutable (&tnode, target_root,
                                             target_path, trail));
-                  SVN_ERR (svn_fs__dag_delete (tnode, t_entry->name, trail));
+                  SVN_ERR (svn_fs__dag_delete_tree (tnode, t_entry->name,
+                                                    trail));
 
                   /* Seems cleanest to remove it from the target
                      entries hash now, even though no code would break
@@ -1384,8 +1385,21 @@ merge (const char **conflict_p,
 
 struct merge_args
 {
-  dag_node_t *node;
+  /* The ancestor for the merge.  If this is null, then TXN's base is
+     used as the ancestor for the merge. */
+  dag_node_t *ancestor_node;
+
+  /* This is the SOURCE node for the merge.  It may not be null. */
+  dag_node_t *source_node;
+
+  /* This is the TARGET of the merge.  It may not be null.  If
+     ancestor_node above is null, then this txn's base is used as the
+     ancestor for the merge. */
   svn_fs_txn_t *txn;
+
+  /* If a conflict results, this is set to the path in the txn that
+     conflicted, allocated in the pool of the trail in which the
+     conflict was encountered. */
   const char *conflict;
 };
 
@@ -1397,19 +1411,24 @@ static svn_error_t *
 txn_body_merge (void *baton, trail_t *trail)
 {
   struct merge_args *args = baton;
-  dag_node_t *source_node, *txn_root_node, *txn_base_root_node;
+  dag_node_t *source_node, *txn_root_node, *ancestor_node;
   const svn_fs_id_t *source_id;
   svn_fs_t *fs = svn_fs__txn_fs (args->txn);
   const char *txn_name = svn_fs__txn_id (args->txn);
 
-  source_node = args->node;
+  source_node = args->source_node;
+  ancestor_node = args->ancestor_node;
   source_id = svn_fs__dag_get_id (source_node);
   
   SVN_ERR (svn_fs__dag_txn_root (&txn_root_node, fs, txn_name, trail));
-  SVN_ERR (svn_fs__dag_txn_base_root (&txn_base_root_node, fs, txn_name,
-                                      trail));
+
+  if (ancestor_node == NULL)
+    {
+      SVN_ERR (svn_fs__dag_txn_base_root (&ancestor_node, fs,
+                                          txn_name, trail));
+    }
   
-  if (svn_fs_id_eq (svn_fs__dag_get_id (txn_base_root_node),
+  if (svn_fs_id_eq (svn_fs__dag_get_id (ancestor_node),
                     svn_fs__dag_get_id (txn_root_node)))
     {
       /* If no changes have been made in TXN since its current base,
@@ -1433,7 +1452,7 @@ txn_body_merge (void *baton, trail_t *trail)
                       target_root,
                       "",
                       source_node,
-                      txn_base_root_node,
+                      ancestor_node,
                       trail));
       
       SVN_ERR (svn_fs__set_txn_base (fs, txn_name, source_id, trail));
@@ -1584,7 +1603,8 @@ svn_fs_commit_txn (const char **conflict_p,
          TARGET's txn will become the same as youngish_root_node, so
          any future merges will only be between that node and whatever
          the root node of the youngest rev is by then. */ 
-      merge_args.node = youngish_root_node;
+      merge_args.ancestor_node = NULL;
+      merge_args.source_node = youngish_root_node;
       merge_args.txn = txn;
       err = svn_fs__retry_txn (fs, txn_body_merge, &merge_args, pool);
       if (err)
@@ -1631,13 +1651,32 @@ svn_fs_merge (const char **conflict_p,
               const char *ancestor_path,
               apr_pool_t *pool)
 {
-  /* ### kff todo: Reimplement to share as much merging code as
-     possible with svn_fs_commit_txn; possibly a lot of the code that
-     used to be here can be salvaged for that.  Search for a log
-     message by kfogel on 2001-03-12 for revision numbers and details
-     about related potentially salvageable code that was removed at
-     the same time. */
-  abort ();
+#if 0
+
+  dag_node_t *source, *ancestor;
+  struct merge_args merge_args;
+  svn_fs_txn_t *txn;
+
+  if (! svn_fs_is_txn_root (target_root))
+    return svn_error_create
+      (SVN_ERR_FS_NOT_TXN_ROOT, 0, NULL, pool,
+       "attempt to merge into non-transaction root");
+
+  SVN_ERR (get_dag (&source, source_root, source_path, trail));
+  SVN_ERR (get_dag (&ancestor, ancestor_root, ancestor_path, trail));
+  
+  merge_args.source_node = source;
+  merge_args.ancestor_node = ancestor;
+  merge_args.txn = txn;
+  err = svn_fs__retry_txn (fs, txn_body_merge, &merge_args, pool);
+  if (err)
+    {
+      if ((err->apr_err == SVN_ERR_FS_CONFLICT) && conflict_p)
+        *conflict_p = merge_args.conflict;
+      return err;
+    }
+
+#endif /* 0 */
 
   return SVN_NO_ERROR;
 }
