@@ -39,7 +39,7 @@ svn_error_t *
 svn_cl__may_need_force (svn_error_t *err)
 {
   if (err
-      && (err->apr_err == SVN_ERR_CLIENT_UNVERSIONED ||
+      && (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE ||
           err->apr_err == SVN_ERR_CLIENT_MODIFIED))
     {
       /* Should this svn_error_compose a new error number? Probably not,

@@ -701,9 +701,7 @@ SVN_ERROR_START
               SVN_ERR_CLIENT_CATEGORY_START + 3,
               "Attempting to commit to a URL more than once")
 
-  SVN_ERRDEF (SVN_ERR_CLIENT_UNVERSIONED,
-              SVN_ERR_CLIENT_CATEGORY_START + 4,
-              "Attempting restricted operation for unversioned resource")
+  /* UNUSED error slot:                    + 4 */
 
   SVN_ERRDEF (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION,
               SVN_ERR_CLIENT_CATEGORY_START + 5,

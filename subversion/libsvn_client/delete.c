@@ -61,7 +61,7 @@ find_undeletables (void *baton,
                                  "'%s' is in the way of the resource "
                                  "actually under version control.", path);
   else if (! status->entry)
-    sb->err = svn_error_createf (SVN_ERR_CLIENT_UNVERSIONED, NULL,
+    sb->err = svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                                  "'%s' is not under version control", path);
   
   else if ((status->text_status != svn_wc_status_normal
