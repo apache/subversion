@@ -70,10 +70,10 @@ extern "C" {
  * with @a prompt_func and @a prompt_baton.  Allocate @a *provider in
  * @a pool.
  *
- * If either @c SVN_AUTH_PARAM_DEFAULT_USERNAME or
- * @c SVN_AUTH_PARAM_DEFAULT_PASSWORD is defined as a runtime
- * parameter in the @c auth_baton, then @a *provider will return the
- * default argument(s) when @c svn_auth_first_credentials is called.  If 
+ * If both @c SVN_AUTH_PARAM_DEFAULT_USERNAME and
+ * @c SVN_AUTH_PARAM_DEFAULT_PASSWORD are defined as runtime
+ * parameters in the @c auth_baton, then @a *provider will return the
+ * default arguments when @c svn_auth_first_credentials is called.  If 
  * @c svn_auth_first_credentials fails, then @a *provider will
  * re-prompt @a retry_limit times (via @c svn_auth_next_credentials).
  */
