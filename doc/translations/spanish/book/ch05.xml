@@ -147,18 +147,18 @@
         el mensaje de log <!--TODO: ¿traducir?--> adjunto a dicha
         revisión (<literal>svn:log</literal>).</para>
 
-      <para>Revision and transaction properties are
-        <firstterm>unversioned properties</firstterm>&mdash;as they
-        are modified, their previous values are permanently discarded.
-        Also, while revision trees themselves are immutable, the
-        properties attached to those trees are not.  You can add,
-        remove, and modify revision properties at any time in the
-        future.  If you commit a new revision and later realize that
-        you had some misinformation or spelling error in your log
-        message, you can simply replace the value of the
-        <literal>svn:log</literal> property with a new, corrected log
-        message.</para>
-
+      <para>Las propiedades de revisiones y transacciones son
+        <firstterm>propiedades no versinada</firstterm>&mdash;cuando
+        son modificadas, sus valores previos se descartan definitivamente.
+        Asímismo, mientras los árboles de revisiones en sí son inmutables,
+        las propiedades adjuntas de dichos árboles no lo son. Puedes añadir,
+        borrar, y modificar propiedades de revisiones en cualquier momento
+        más adelante. Si envías al repositorio una nueva revisión y más tarde
+        te das cuenta de alguna información incorrecta o un error sintáctico
+        en tu mensaje de log, puedes simplemente sustituir el valor de
+        la propiedad <literal>svn:log</literal> con un nuevo y corregido
+        mensaje de log.</para>
+	
     </sect2>
 
     <!-- ***************************************************************** -->
@@ -232,12 +232,12 @@
   <!-- *** SECTION 2:  REPOSITORY CREATION AND CONFIGURATION           *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-5-sect-2">
-    <title>Repository Creation and Configuration</title>
+    <title>Creación y Configuración de Repositorios</title>
 
-    <para>Creating a Subversion repository is an incredibly simple
-      task.  The <command>svnadmin</command> utility, provided with
-      Subversion, has a subcommand for doing just that.  To create a
-      new repository, just run:</para>
+    <para>Crear un repositorio Subversion es una tarea increíblemente
+      simple. La utilidad <command>svnadmin</command>, provista con 
+      Subversion, tiene un subcomando justo para esto. Para crear un
+      nuevo repositorio, ejecuta:</para>
           
     <screen>
 $ svnadmin create /path/to/repos
