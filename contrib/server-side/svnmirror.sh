@@ -3,7 +3,7 @@
 #
 # svnmirror.sh
 #
-VERSION="0.0.5"
+VERSION="0.0.6"
 #
 # This script syncs changes from a developer repository to a
 #             _READONLY_public_repository_
@@ -50,6 +50,8 @@ VERSION="0.0.5"
 #         - for some help with the svn commands
 #       - Bjørn Magnus Mathisen <epic@generation.no>
 #         - for pointing out i forgot to replace one ssh with $LSSH
+#       - John Belmonte <john@neggie.net>
+#         - for pointing out that we use stderr for a non-error message
 #
 # Users:
 #    our biggest users atm are Mono Project and MonoDevelop
@@ -74,6 +76,8 @@ VERSION="0.0.5"
 #
 # Changes:
 #
+#  0.0.6
+#    + print a non-error message to stdout instead of stderr.
 #  0.0.5
 #    + added DUMPPARAMS to specify the params for the svnadmin dump call
 #    + added note about svnadmin 1.1 and "--deltas" cmdline option
@@ -330,7 +334,7 @@ fi
 #
 if [ ${RVERSION} -eq ${LVERSION} ] ; then
     [ ${VERBOSE} = true ] && \
-        echo "both repositories are already at ${LVERSION}" >&2
+        echo "both repositories are already at ${LVERSION}"
     exit 0
 fi
 
