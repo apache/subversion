@@ -3198,11 +3198,42 @@ static svn_error_t *
 txn_body_copied_from (void *baton, trail_t *trail)
 {
   struct copied_from_args *args = baton;
+  const svn_fs_id_t *node_id, *pred_id;
   dag_node_t *node;
+  svn_fs_t *fs = svn_fs_root_fs (args->root);
 
+  /* Clear the return variables. */
+  args->result_path = NULL;
+  args->result_rev = SVN_INVALID_REVNUM;
+
+  /* Fetch the NODE in question. */
   SVN_ERR (get_dag (&node, args->root, args->path, trail));
-  SVN_ERR (svn_fs__dag_copied_from (&(args->result_rev), &(args->result_path),
-                                    node, trail));
+  node_id = svn_fs__dag_get_id (node);
+
+  /* Check the node's predecessor-ID.  If it doesn't have one, it
+     isn't a copy. */
+  SVN_ERR (svn_fs__dag_get_predecessor_id (&pred_id, node, trail));
+  if (! pred_id)
+    return SVN_NO_ERROR;
+
+  /* If NODE's copy-ID is the same as that of its predecessor... */
+  if (svn_fs__key_compare (svn_fs__id_copy_id (node_id), 
+                           svn_fs__id_copy_id (pred_id)) != 0)
+    {
+      /* ... then NODE was either the target of a copy operation,
+         a copied subtree item.  We examine the actual copy record
+         to determine which is the case.  */
+      svn_fs__copy_t *copy;
+      SVN_ERR (svn_fs__bdb_get_copy (&copy, fs, 
+                                     svn_fs__id_copy_id (node_id), trail));
+      if ((copy->kind == svn_fs__copy_kind_real)
+          && svn_fs__id_eq (copy->dst_noderev_id, node_id))
+        {
+          args->result_path = copy->src_path;
+          SVN_ERR (svn_fs__txn_get_revision (&(args->result_rev), fs,
+                                             copy->src_txn_id, trail));
+        }
+    }
   return SVN_NO_ERROR;
 }
 

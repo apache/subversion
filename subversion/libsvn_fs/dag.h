@@ -479,18 +479,6 @@ svn_error_t *svn_fs__dag_copy (dag_node_t *to_node,
                                trail_t *trail);
 
 
-/* If NODE was copied from some other node, set *REV_P and *PATH_P to
-   the revision and path of the other node, as part of TRAIL.
-   Allocate *PATH_P in TRAIL->pool.
-
-   Else if NODE is not a copy, set *REV_P to SVN_INVALID_REVNUM and
-   *PATH_P to null.  */
-svn_error_t *svn_fs__dag_copied_from (svn_revnum_t *rev_p,
-                                      const char **path_p,
-                                      dag_node_t *node,
-                                      trail_t *trail);
-
-
 
 /* Deltification */
 

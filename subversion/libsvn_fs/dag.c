@@ -1545,49 +1545,6 @@ svn_fs__dag_copy (dag_node_t *to_node,
 }
 
 
-svn_error_t *
-svn_fs__dag_copied_from (svn_revnum_t *rev_p,
-                         const char **path_p,
-                         dag_node_t *node,
-                         trail_t *trail)
-{
-  svn_fs__node_revision_t *noderev;
-  const svn_fs_id_t *id = svn_fs__dag_get_id (node), *pred_id;
-  
-  /* Initialize the return values to mean "not a copy". */
-  *rev_p = SVN_INVALID_REVNUM;
-  *path_p = NULL;
-  
-  SVN_ERR (get_node_revision (&noderev, node, trail));
-  if ((pred_id = noderev->predecessor_id))
-    {
-      const char *id_copy_id = svn_fs__id_copy_id (id);
-      const char *pred_copy_id = svn_fs__id_copy_id (pred_id);
-      
-      /* If NODE's copy id differs from that of its predecessor... */
-      if (strcmp (id_copy_id, pred_copy_id))
-        {
-          /* ... then NODE was either the target of a copy operation,
-             a copied subtree item.  We examine the actual copy record
-             to determine which is the case.  */
-          svn_fs__copy_t *copy;
-          SVN_ERR (svn_fs__bdb_get_copy (&copy, svn_fs__dag_get_fs (node),
-                                         id_copy_id, trail));
-          if (svn_fs__id_eq (copy->dst_noderev_id, id))
-            {
-
-              *path_p = copy->src_path;
-              SVN_ERR (svn_fs__txn_get_revision (rev_p, 
-                                                 svn_fs__dag_get_fs (node),
-                                                 copy->src_txn_id, trail));
-            }
-        }
-    }
-  
-  return SVN_NO_ERROR;
-}
-
-
 
 /*** Deltification ***/
 
