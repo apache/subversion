@@ -72,6 +72,9 @@ svn_cl__print_prop_hash (apr_hash_t *prop_hash,
 
       SVN_ERR (svn_cmdline_cstring_from_utf8 (&pname_stdout, pname, pool));
 
+      /* ### We leave these printfs for now, since if propval wasn't translated
+       * above, we don't know anything about its encoding.  In fact, it
+       * might be binary data... */
       if (names_only)
         printf ("  %s\n", pname_stdout);
       else

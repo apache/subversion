@@ -191,8 +191,10 @@ svn_error_t *svn_cl__check_cancel (void *baton);
 
 /*** Command-line output functions -- printing to the user. ***/
 
-/* Print out commit information found in COMMIT_INFO to the console. */
-void svn_cl__print_commit_info (svn_client_commit_info_t *commit_info);
+/* Print out commit information found in COMMIT_INFO to the console.
+ * POOL is used for temporay allocations. */
+svn_error_t *svn_cl__print_commit_info (svn_client_commit_info_t *commit_info,
+                                        apr_pool_t *pool);
 
 
 /* Print STATUS for PATH to stdout for human consumption.  Prints in
@@ -203,7 +205,7 @@ void svn_cl__print_commit_info (svn_client_commit_info_t *commit_info);
 
    If SKIP_UNRECOGNIZED is TRUE, this function will not print out
    unversioned items found in the working copy. */
-void svn_cl__print_status (const char *path,
+svn_error_t *svn_cl__print_status (const char *path,
                            svn_wc_status_t *status,
                            svn_boolean_t detailed,
                            svn_boolean_t show_last_committed,

@@ -114,8 +114,9 @@ svn_cl__propset (apr_getopt_t *os,
       target = ((const char **) (targets->elts))[0];
       SVN_ERR (svn_client_url_from_path (&URL, target, pool));  
       if (URL == NULL)
-        return svn_error_create(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                "Either a URL or versioned item is required");
+        return svn_error_create (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                                 _("Either a URL or versioned item is"
+                                   " required"));
 
       /* Let libsvn_client do the real work. */
       SVN_ERR (svn_client_revprop_set (pname_utf8, propval,
@@ -123,8 +124,10 @@ svn_cl__propset (apr_getopt_t *os,
                                        &rev, opt_state->force, ctx, pool));
       if (! opt_state->quiet) 
         {
-          printf (_("property '%s' set on repository revision %ld\n"),
-                  pname, rev);
+          SVN_ERR
+            (svn_cmdline_printf
+             (pool, _("property '%s' set on repository revision %ld\n"),
+              pname_utf8, rev));
         }      
     }
   else if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
@@ -185,16 +188,12 @@ svn_cl__propset (apr_getopt_t *os,
 
           if (! opt_state->quiet) 
             {
-              const char *pname_stdout;
-              const char *target_stdout;
-              SVN_ERR (svn_cmdline_cstring_from_utf8 (&pname_stdout,
-                                                      pname_utf8, subpool));
-              SVN_ERR (svn_cmdline_path_local_style_from_utf8
-                       (&target_stdout, target, subpool));
-              printf ("property '%s' set%s on '%s'\n",
-                      pname_stdout,
-                      opt_state->recursive ? " (recursively)" : "",
-                      target_stdout);
+              SVN_ERR
+                (svn_cmdline_printf
+                 (pool, opt_state->recursive
+                  ? _("property '%s' set (recursively) on '%s'\n")
+                  : _("property '%s' set on '%s'\n"),
+                  pname, target));
             }
         }
       svn_pool_destroy (subpool);

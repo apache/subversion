@@ -35,6 +35,7 @@
 
 #include "svn_wc.h"
 #include "svn_client.h"
+#include "svn_cmdline.h"
 #include "svn_string.h"
 #include "svn_path.h"
 #include "svn_delta.h"
@@ -50,15 +51,16 @@
 
 
 
-void
-svn_cl__print_commit_info (svn_client_commit_info_t *commit_info)
+svn_error_t *
+svn_cl__print_commit_info (svn_client_commit_info_t *commit_info,
+                           apr_pool_t *pool)
 {
   if ((commit_info) 
       && (SVN_IS_VALID_REVNUM (commit_info->revision)))
-    printf (_("\nCommitted revision %ld.\n"),
-            commit_info->revision);
+    SVN_ERR (svn_cmdline_printf (pool, _("\nCommitted revision %ld.\n"),
+                                 commit_info->revision));
 
-  return;
+  return SVN_NO_ERROR;
 }
 
 

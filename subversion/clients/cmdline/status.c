@@ -26,6 +26,7 @@
 #include "svn_cmdline.h"
 #include "svn_sorts.h"
 #include "svn_wc.h"
+#include "svn_path.h"
 #include "cl.h"
 
 
@@ -54,8 +55,9 @@ generate_status_code (enum svn_wc_status_kind status)
 }
 
 /* Print STATUS and PATH in a format determined by DETAILED and
-   SHOW_LAST_COMMITTED */
-static void 
+   SHOW_LAST_COMMITTED
+   ### NOTE: This function can't fail, so we just ignore any print errors. */
+static svn_error_t *
 print_status (const char *path,
               svn_boolean_t detailed,
               svn_boolean_t show_last_committed,
@@ -95,58 +97,51 @@ print_status (const char *path,
             commit_rev = "";
 
           if (status->entry && status->entry->cmt_author)
-            {
-              const char *const author_utf8 = status->entry->cmt_author;
-              svn_error_t *err =
-                svn_cmdline_cstring_from_utf8 (&commit_author, author_utf8,
-                                               pool);
-              if (err)
-                {
-                  svn_error_clear (err);
-                  commit_author =
-                    svn_cmdline_cstring_from_utf8_fuzzy (author_utf8, pool);
-                }
-            }
+            commit_author = status->entry->cmt_author;
           else if (status->entry)
             commit_author = " ? ";
           else
             commit_author = "";
 
-          printf ("%c%c%c%c%c  %c   %6s   %6s %-12s %s\n",
-                  generate_status_code (status->text_status),
-                  generate_status_code (status->prop_status),
-                  status->locked ? 'L' : ' ',
-                  status->copied ? '+' : ' ',
-                  status->switched ? 'S' : ' ',
-                  ood_status,
-                  working_rev,
-                  commit_rev,
-                  commit_author,
-                  path);
+          SVN_ERR
+            (svn_cmdline_printf (pool,
+                                 "%c%c%c%c%c  %c   %6s   %6s %-12s %s\n",
+                                 generate_status_code(status->text_status),
+                                 generate_status_code (status->prop_status),
+                                 status->locked ? 'L' : ' ',
+                                 status->copied ? '+' : ' ',
+                                 status->switched ? 'S' : ' ',
+                                 ood_status,
+                                 working_rev,
+                                 commit_rev,
+                                 commit_author,
+                                 path));
         }
       else
-        printf ("%c%c%c%c%c  %c   %6s   %s\n",
-                generate_status_code (status->text_status),
-                generate_status_code (status->prop_status),
-                status->locked ? 'L' : ' ',
-                status->copied ? '+' : ' ',
-                status->switched ? 'S' : ' ',
-                ood_status,
-                working_rev,
-                path);
+        SVN_ERR
+          (svn_cmdline_printf (pool, "%c%c%c%c%c  %c   %6s   %s\n",
+                               generate_status_code (status->text_status),
+                               generate_status_code (status->prop_status),
+                               status->locked ? 'L' : ' ',
+                               status->copied ? '+' : ' ',
+                               status->switched ? 'S' : ' ',
+                               ood_status,
+                               working_rev,
+                               path));
     }
   else
-    printf ("%c%c%c%c%c  %s\n",
-            generate_status_code (status->text_status),
-            generate_status_code (status->prop_status),
-            status->locked ? 'L' : ' ',
-            status->copied ? '+' : ' ',
-            status->switched ? 'S' : ' ',
-            path);
+    SVN_ERR
+      (svn_cmdline_printf (pool, "%c%c%c%c%c  %s\n",
+                           generate_status_code (status->text_status),
+                           generate_status_code (status->prop_status),
+                           status->locked ? 'L' : ' ',
+                           status->copied ? '+' : ' ',
+                           status->switched ? 'S' : ' ',
+                           path));
 }
 
 /* Called by status-cmd.c */
-void
+svn_error_t *
 svn_cl__print_status (const char *path,
                       svn_wc_status_t *status,
                       svn_boolean_t detailed,
@@ -154,21 +149,12 @@ svn_cl__print_status (const char *path,
                       svn_boolean_t skip_unrecognized,
                       apr_pool_t *pool)
 {
-  svn_error_t *err;
-  const char *path_stdout;
-
   if (! status 
       || (skip_unrecognized && ! status->entry)
       || (status->text_status == svn_wc_status_none
           && status->repos_text_status == svn_wc_status_none))
-    return;
+    return SVN_NO_ERROR;
 
-  err = svn_cmdline_path_local_style_from_utf8 (&path_stdout, path, pool);
-  if (err)
-    {
-      svn_handle_error (err, stderr, FALSE);
-      svn_error_clear (err);
-    }
-
-  print_status (path_stdout, detailed, show_last_committed, status, pool);
+  SVN_ERR (print_status (svn_path_local_style (path, pool),
+                         detailed, show_last_committed, status, pool));
 }

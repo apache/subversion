@@ -1039,7 +1039,9 @@ main (int argc, const char * const *argv)
     {
       if (os->ind >= os->argc)
         {
-          fprintf (stderr, _("Subcommand argument required\n"));
+          svn_error_clear
+            (svn_cmdline_fprintf (stderr, pool,
+                                  _("Subcommand argument required\n")));
           svn_cl__help (NULL, NULL, pool);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
@@ -1051,7 +1053,14 @@ main (int argc, const char * const *argv)
                                                          first_arg);
           if (subcommand == NULL)
             {
-              fprintf (stderr, _("Unknown command: '%s'\n"), first_arg);
+              const char *first_arg_utf8;
+              err = svn_utf_cstring_to_utf8 (&first_arg_utf8, first_arg, pool);
+              if (err)
+                return error_exit (err, stderr, FALSE, pool);
+              svn_error_clear
+                (svn_cmdline_fprintf (stderr, pool,
+                                      _("Unknown command: '%s'\n"),
+                                      first_arg_utf8));
               svn_cl__help (NULL, NULL, pool);
               svn_pool_destroy (pool);
               return EXIT_FAILURE;
@@ -1073,14 +1082,19 @@ main (int argc, const char * const *argv)
 
       if (! svn_opt_subcommand_takes_option (subcommand, opt_id))
         {
-          const char *optstr;
+          const char *optstr, *optstr_utf8, *cmdname_utf8;
           const apr_getopt_option_t *badopt = 
             svn_opt_get_option_from_code (opt_id, svn_cl__options);
           svn_opt_format_option (&optstr, badopt, FALSE, pool);
-          fprintf (stderr,
-                   _("Subcommand '%s' doesn't accept option '%s'\n"
-                     "Type 'svn help %s' for usage.\n"),
-                   subcommand->name, optstr, subcommand->name);
+          if ((err = svn_utf_cstring_to_utf8 (&optstr_utf8, optstr, pool))
+              || (err = svn_utf_cstring_to_utf8 (&cmdname_utf8,
+                                                 subcommand->name, pool)))
+            return error_exit (err, stderr, FALSE, pool);
+          svn_error_clear
+            (svn_cmdline_fprintf
+             (stderr, pool, _("Subcommand '%s' doesn't accept option '%s'\n"
+                              "Type 'svn help %s' for usage.\n"),
+              cmdname_utf8, optstr_utf8, cmdname_utf8));
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }
@@ -1324,8 +1338,10 @@ main (int argc, const char * const *argv)
       for (tmp_err = err; tmp_err; tmp_err = tmp_err->child)
         if (tmp_err->apr_err == SVN_ERR_WC_LOCKED)
           {
-            fputs (_("svn: run 'svn cleanup' to remove locks"
-                     " (type 'svn help cleanup' for details)\n"), stderr);
+            svn_error_clear
+              (svn_cmdline_fputs (_("svn: run 'svn cleanup' to remove locks "
+                                    "(type 'svn help cleanup' for details)\n"),
+                                  stderr, pool));
             break;
           }
 

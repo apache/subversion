@@ -77,7 +77,7 @@ svn_cl__mkdir (apr_getopt_t *os,
     }
 
   if (commit_info && ! opt_state->quiet)
-    svn_cl__print_commit_info (commit_info);
+    SVN_ERR (svn_cl__print_commit_info (commit_info, subpool));
 
   return SVN_NO_ERROR;
 }

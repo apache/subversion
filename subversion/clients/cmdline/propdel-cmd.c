@@ -31,6 +31,7 @@
 #include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_utf.h"
+#include "svn_path.h"
 #include "cl.h"
 
 
@@ -92,11 +93,10 @@ svn_cl__propdel (apr_getopt_t *os,
                                        &rev, FALSE, ctx, pool));
       if (! opt_state->quiet) 
         {
-          const char *pname_stdout;
-          SVN_ERR (svn_cmdline_cstring_from_utf8 (&pname_stdout,
-                                                  pname_utf8, pool));
-          printf (_("property '%s' deleted from repository revision %ld\n"),
-                  pname_stdout, rev);
+          SVN_ERR (svn_cmdline_printf (pool,
+                                       _("property '%s' deleted from"
+                                         " repository revision %ld\n"),
+                                       pname_utf8, rev));
         }      
     }
   else if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
@@ -121,15 +121,11 @@ svn_cl__propdel (apr_getopt_t *os,
                                        opt_state->recursive, subpool));
           if (! opt_state->quiet) 
             {
-              const char *pname_stdout;
-              const char *target_stdout;
-              SVN_ERR (svn_cmdline_cstring_from_utf8 (&pname_stdout,
-                                                      pname_utf8, subpool));
-              SVN_ERR (svn_cmdline_path_local_style_from_utf8
-                       (&target_stdout, target, subpool));
-              printf ("property '%s' deleted%sfrom '%s'.\n", pname_stdout,
-                      opt_state->recursive ? " (recursively) " : " ",
-                      target_stdout);
+              SVN_ERR (svn_cmdline_printf
+                       (subpool, opt_state->recursive
+                        ? _("property '%s' deleted (recursively) from '%s'.\n")
+                        : _("property '%s' deleted from '%s'.\n"),
+                        pname_utf8, svn_path_local_style (target, subpool)));
             }
         }
       svn_pool_destroy (subpool);

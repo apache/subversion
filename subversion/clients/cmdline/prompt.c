@@ -50,7 +50,6 @@ prompt (const char **result,
   apr_status_t status;
   apr_file_t *fp;
   char c;
-  const char *prompt_stdout;
 
   svn_stringbuf_t *strbuf = svn_stringbuf_create ("", pool);
 
@@ -58,12 +57,10 @@ prompt (const char **result,
   if (status)
     return svn_error_wrap_apr (status, _("Can't open stdin"));
 
-  SVN_ERR (svn_cmdline_cstring_from_utf8 (&prompt_stdout, prompt_msg, pool));
-
   if (! hide)
     {
       svn_boolean_t saw_first_half_of_eol = FALSE;
-      fprintf (stderr, "%s", prompt_stdout);
+      SVN_ERR (svn_cmdline_fputs (prompt_msg, stderr, pool));
       fflush (stderr);
 
       while (1)
@@ -99,7 +96,10 @@ prompt (const char **result,
     }
   else
     {
+      const char *prompt_stdout;
       size_t bufsize = 300;
+      SVN_ERR (svn_cmdline_cstring_from_utf8 (&prompt_stdout, prompt_msg,
+                                              pool));
       svn_stringbuf_ensure (strbuf, bufsize);
 
       status = apr_password_get (prompt_stdout, strbuf->data, &bufsize);
@@ -123,12 +123,10 @@ prompt (const char **result,
 static svn_error_t *
 maybe_print_realm (const char *realm, apr_pool_t *pool)
 {
-  const char *realm_native;
-
   if (realm)
     {
-      SVN_ERR (svn_cmdline_cstring_from_utf8 (&realm_native, realm, pool));
-      fprintf (stderr, _("Authentication realm: %s\n"), realm_native);
+      SVN_ERR (svn_cmdline_fprintf (stderr, pool,
+                                    _("Authentication realm: %s\n"), realm));
       fflush (stderr);
     }
 

@@ -86,8 +86,10 @@ svn_cl__proplist (apr_getopt_t *os,
                                         URL, &(opt_state->start_revision),
                                         &rev, ctx, pool));
       
-      printf(_("Unversioned properties on revision %ld:\n"),
-             rev);
+      SVN_ERR
+        (svn_cmdline_printf (pool,
+                             _("Unversioned properties on revision %ld:\n"),
+                             rev));
 
       SVN_ERR (svn_cl__print_prop_hash
                (proplist, (! opt_state->verbose), pool));
@@ -128,20 +130,16 @@ svn_cl__proplist (apr_getopt_t *os,
             {
               svn_client_proplist_item_t *item 
                 = ((svn_client_proplist_item_t **)props->elts)[j];
-              const char *name_stdout;
+              const char *name_local;
 
               if (! is_url)
-                {
-                  SVN_ERR (svn_cmdline_path_local_style_from_utf8
-                           (&name_stdout, item->node_name->data, subpool));
-                }
+                name_local = svn_path_local_style (item->node_name->data,
+                                                   subpool);
               else
-                {
-                  SVN_ERR (svn_cmdline_cstring_from_utf8
-                           (&name_stdout, item->node_name->data, subpool));
-                }
+                name_local = item->node_name->data;
 
-              printf("Properties on '%s':\n", name_stdout);
+              SVN_ERR (svn_cmdline_printf(subpool, "Properties on '%s':\n",
+                                          name_local));
               SVN_ERR (svn_cl__print_prop_hash
                        (item->prop_hash, (! opt_state->verbose), subpool));
             }

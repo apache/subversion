@@ -85,7 +85,7 @@ svn_cl__delete (apr_getopt_t *os,
   SVN_ERR (svn_cl__cleanup_log_msg (ctx->log_msg_baton, err));
 
   if (commit_info && ! opt_state->quiet)
-    svn_cl__print_commit_info (commit_info);
+    SVN_ERR (svn_cl__print_commit_info (commit_info, pool));
       
   return SVN_NO_ERROR;
 }

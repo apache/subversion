@@ -22,14 +22,13 @@
 
 /*** Includes. ***/
 
-#include <stdio.h>
-
 #define APR_WANT_STDIO
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
 #include "svn_cmdline.h"
 #include "svn_pools.h"
+#include "svn_path.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -44,12 +43,15 @@ struct notify_baton
   svn_boolean_t suppress_final_line;
   svn_boolean_t sent_first_txdelta;
   svn_boolean_t in_external;
+  svn_boolean_t had_print_error; /* Used to not keep printing error messages
+                                    when we've already had one print error. */
   apr_pool_t *pool; /* this pool is cleared after every notification,
                        so don't keep anything here! */
 };
 
 
-/* This implements `svn_wc_notify_func_t'. */
+/* This implements `svn_wc_notify_func_t'.
+ * ### NOTE: This function can't fail, so we just ignore any print errors. */
 static void
 notify (void *baton,
         const char *path,
@@ -62,51 +64,65 @@ notify (void *baton,
 {
   struct notify_baton *nb = baton;
   char statchar_buf[3] = "  ";
-  const char *path_stdout;
+  const char *path_local;
   svn_error_t *err;
 
-  err = svn_cmdline_path_local_style_from_utf8 (&path_stdout, path, nb->pool);
-  if (err)
-    {
-      printf (_("WARNING: error decoding UTF-8 for ?\n"));
-      svn_pool_clear (nb->pool);
-      svn_error_clear (err);
-      return;
-    }
+  path_local = svn_path_local_style (path, nb->pool);
+
   switch (action)
     {
     case svn_wc_notify_skip:
       if (content_state == svn_wc_notify_state_missing)
-        printf (_("Skipped missing target: '%s'\n"), path_stdout);
+        {
+          if ((err = svn_cmdline_printf
+               (nb->pool, _("Skipped missing target: '%s'\n"),
+                path_local)))
+            goto print_error;
+        }
       else
-        printf (_("Skipped '%s'\n"), path_stdout);
+        {
+          if ((err = svn_cmdline_printf
+               (nb->pool, _("Skipped '%s'\n"), path_local)))
+            goto print_error;
+        }
       break;
 
     case svn_wc_notify_update_delete:
       nb->received_some_change = TRUE;
-      printf ("D  %s\n", path_stdout);
+      if ((err = svn_cmdline_printf (nb->pool, "D  %s\n", path_local)))
+        goto print_error;
       break;
 
     case svn_wc_notify_update_add:
       nb->received_some_change = TRUE;
-      printf ("A  %s\n", path_stdout);
+      if ((err = svn_cmdline_printf (nb->pool, "A  %s\n", path_local)))
+        goto print_error;
       break;
 
     case svn_wc_notify_restore:
-      printf (_("Restored '%s'\n"), path_stdout);
+      if ((err = svn_cmdline_printf (nb->pool, _("Restored '%s'\n"),
+                                     path_local)))
+        goto print_error;
       break;
 
     case svn_wc_notify_revert:
-      printf (_("Reverted '%s'\n"), path_stdout);
+      if ((err = svn_cmdline_printf (nb->pool, _("Reverted '%s'\n"),
+                                     path_local)))
+        goto print_error;
       break;
 
     case svn_wc_notify_failed_revert:
-      printf (_("Failed to revert '%s' -- try updating instead.\n"), 
-              path_stdout);
+      if (( err = svn_cmdline_printf (nb->pool, _("Failed to revert '%s' -- "
+                                                  "try updating instead.\n"), 
+                                      path_local)))
+        goto print_error;
       break;
 
     case svn_wc_notify_resolved:
-      printf (_("Resolved conflicted state of '%s'\n"), path_stdout);
+      if ((err = svn_cmdline_printf (nb->pool,
+                                     _("Resolved conflicted state of '%s'\n"),
+                                     path_local)))
+        goto print_error;
       break;
 
     case svn_wc_notify_add:
@@ -114,14 +130,24 @@ notify (void *baton,
          do get it, and the mime-type is not textual, note that this
          is a binary addition. */
       if (mime_type && (svn_mime_type_is_binary (mime_type)))
-        printf ("A  (bin)  %s\n", path_stdout);
+        {
+          if ((err = svn_cmdline_printf (nb->pool, "A  (bin)  %s\n",
+                                         path_local)))
+            goto print_error;
+        }
       else
-        printf ("A         %s\n", path_stdout);
+        {
+          if ((err = svn_cmdline_printf (nb->pool, "A         %s\n",
+                                         path_local)))
+            goto print_error;
+        }
       break;
 
     case svn_wc_notify_delete:
       nb->received_some_change = TRUE;
-      printf ("D         %s\n", path_stdout);
+      if ((err = svn_cmdline_printf (nb->pool, "D         %s\n",
+                                     path_local)))
+        goto print_error;
       break;
 
     case svn_wc_notify_update_update:
@@ -157,18 +183,25 @@ notify (void *baton,
                     || content_state == svn_wc_notify_state_unknown)
                    && (prop_state == svn_wc_notify_state_unchanged
                        || prop_state == svn_wc_notify_state_unknown)))
-              printf ("%s %s\n", statchar_buf, path_stdout);
+              {
+                if ((err = svn_cmdline_printf (nb->pool, "%s %s\n",
+                                               statchar_buf, path_local)))
+                  goto print_error;
+              }
           }
       }
       break;
 
     case svn_wc_notify_update_external:
-      /* Currently this is used for checkouts and switches too.  If we
-         want different output, we'll have to add new actions. */
-      printf (_("\nFetching external item into '%s'\n"), path_stdout);
-
       /* Remember that we're now "inside" an externals definition. */
       nb->in_external = TRUE;
+
+      /* Currently this is used for checkouts and switches too.  If we
+         want different output, we'll have to add new actions. */
+      if ((err = svn_cmdline_printf (nb->pool,
+                                     _("\nFetching external item into '%s'\n"),
+                                     path_local)))
+        goto print_error;
       break;
 
     case svn_wc_notify_update_completed:
@@ -179,109 +212,145 @@ notify (void *baton,
               {
                 if (nb->is_export)
                   {
-                    if (nb->in_external)
-                      printf (_("Exported external at revision %ld.\n"),
-                              revision);
-                    else
-                      printf (_("Exported revision %ld.\n"),
-                              revision);
+                    if ((err = svn_cmdline_printf
+                         (nb->pool, nb->in_external
+                          ? _("Exported external at revision %ld.\n")
+                          : _("Exported revision %ld.\n"),
+                          revision)))
+                      goto print_error;
                   }
                 else if (nb->is_checkout)
                   {
-                    if (nb->in_external)
-                      printf (_("Checked out external at revision %ld.\n"),
-                              revision);
-                    else
-                      printf (_("Checked out revision %ld.\n"),
-                              revision);
+                    if ((err = svn_cmdline_printf
+                         (nb->pool, nb->in_external
+                          ? _("Checked out external at revision %ld.\n")
+                          : _("Checked out revision %ld.\n"),
+                          revision)))
+                      goto print_error;
                   }
                 else
                   {
                     if (nb->received_some_change)
                       {
-                        if (nb->in_external)
-                          printf (_("Updated external to revision %ld.\n"),
-                                  revision);
-                        else
-                          printf (_("Updated to revision %ld.\n"),
-                                  revision);
+                        if ((err = svn_cmdline_printf
+                             (nb->pool, nb->in_external
+                              ? _("Updated external to revision %ld.\n")
+                              : _("Updated to revision %ld.\n"),
+                              revision)))
+                          goto print_error;
                       }
                     else
                       {
-                        if (nb->in_external)
-                          printf (_("External at revision %ld.\n"),
-                                  revision);
-                        else
-                          printf (_("At revision %ld.\n"),
-                                  revision);
+                        if ((err = svn_cmdline_printf
+                             (nb->pool, nb->in_external
+                              ? _("External at revision %ld.\n")
+                              : _("At revision %ld.\n"),
+                              revision)))
+                          goto print_error;
                       }
                   }
               }
             else  /* no revision */
               {
                 if (nb->is_export)
-                  printf (nb->in_external ? _("External export complete.\n") : 
-                                            _("Export complete.\n"));
+                  {
+                    if ((err = svn_cmdline_printf
+                         (nb->pool, nb->in_external
+                          ? _("External export complete.\n")
+                          : _("Export complete.\n"))))
+                      goto print_error;
+                  }
                 else if (nb->is_checkout)
                   {
-                    if (nb->in_external)
-                      printf ("External checkout complete.\n");
-                    else
-                      printf ("Checkout complete.\n");
+                    if ((err = svn_cmdline_printf
+                         (nb->pool, nb->in_external
+                          ? _("External checkout complete.\n")
+                          : _("Checkout complete.\n"))))
+                      goto print_error;
                   }
                 else
                   {
-                    if (nb->in_external)
-                      printf ("External update complete.\n");
-                    else
-                      printf ("Update complete.\n");
+                    if ((err = svn_cmdline_printf
+                         (nb->pool, nb->in_external
+                          ? _("External update complete.\n")
+                          : _("Update complete.\n"))))
+                      goto print_error;
                   }
               }
           }
       }
       if (nb->in_external)
-        printf ("\n");
-      nb->in_external = FALSE;
+        {
+          nb->in_external = FALSE;
+          if ((err = svn_cmdline_printf (nb->pool, "\n")))
+            goto print_error;
+        }
       break;
 
     case svn_wc_notify_status_external:
-      printf (_("\nPerforming status on external item at '%s'\n"), 
-              path_stdout);
+        if ((err = svn_cmdline_printf
+             (nb->pool, _("\nPerforming status on external item at '%s'\n"), 
+              path_local)))
+          goto print_error;
       break;
 
     case svn_wc_notify_status_completed:
       if (SVN_IS_VALID_REVNUM (revision))
-        printf ("Status against revision: %6ld\n", revision);
+          if ((err = svn_cmdline_printf (nb->pool,
+                                         _("Status against revision: %6ld\n"),
+                                         revision)))
+            goto print_error;
       break;
 
     case svn_wc_notify_commit_modified:
       /* xgettext: Align the %s's on this and the following 4 messages */
-      printf (_("Sending        %s\n"), path_stdout);
+      if ((err = svn_cmdline_printf (nb->pool,
+                                     _("Sending        %s\n"),
+                                     path_local)))
+        goto print_error;
       break;
 
     case svn_wc_notify_commit_added:
       if (mime_type && svn_mime_type_is_binary (mime_type))
-        printf (_("Adding  (bin)  %s\n"), path_stdout);
+        {
+        if ((err = svn_cmdline_printf (nb->pool,
+                                       _("Adding  (bin)  %s\n"),
+                                       path_local)))
+          goto print_error;
+        }
       else
-        printf (_("Adding         %s\n"), path_stdout);
+        {
+          if ((err = svn_cmdline_printf (nb->pool,
+                                         _("Adding         %s\n"),
+                                         path_local)))
+            goto print_error;
+        }
       break;
 
     case svn_wc_notify_commit_deleted:
-      printf (_("Deleting       %s\n"), path_stdout);
+      if ((err = svn_cmdline_printf (nb->pool, _("Deleting       %s\n"),
+                                     path_local)))
+        goto print_error;
       break;
 
     case svn_wc_notify_commit_replaced:
-      printf (_("Replacing      %s\n"), path_stdout);
+      if ((err = svn_cmdline_printf (nb->pool,
+                                     _("Replacing      %s\n"),
+                                     path_local)))
+        goto print_error;
       break;
 
     case svn_wc_notify_commit_postfix_txdelta:
       if (! nb->sent_first_txdelta)
         {
-          printf (_("Transmitting file data "));
           nb->sent_first_txdelta = TRUE;
+          if ((err = svn_cmdline_printf (nb->pool,
+                                         _("Transmitting file data "))))
+            goto print_error;
         }
 
-      printf (".");
+      if ((err = svn_cmdline_printf (nb->pool, ".")))
+        goto print_error;
       fflush (stdout);
       break;
 
@@ -290,6 +359,20 @@ notify (void *baton,
     }
 
   svn_pool_clear (nb->pool);
+  return;
+
+ print_error:
+  /* If we had no errors before, print this error to stderr. Else, don't print
+     anything.  The user already knows there were some output errors,
+     so there is no point in flooding her with an error per notification. */
+  if (!nb->had_print_error)
+    {
+      nb->had_print_error = TRUE;
+      svn_handle_error (err, stderr, FALSE);
+      svn_error_clear (err);
+    }
+
+  svn_pool_clear(nb->pool);
 }
 
 
@@ -309,6 +392,7 @@ svn_cl__get_notifier (svn_wc_notify_func_t *notify_func_p,
   nb->is_export = is_export;
   nb->suppress_final_line = suppress_final_line;
   nb->in_external = FALSE;
+  nb->had_print_error = FALSE;
   nb->pool = svn_pool_create (pool);
 
   *notify_func_p = notify;

@@ -45,7 +45,7 @@ print_dirents (apr_hash_t *dirents,
   
   for (i = 0; i < array->nelts; ++i)
     {
-      const char *utf8_entryname, *stdout_entryname;
+      const char *utf8_entryname;
       svn_dirent_t *dirent;
       svn_sort__item_t *item;
      
@@ -55,23 +55,15 @@ print_dirents (apr_hash_t *dirents,
 
       dirent = apr_hash_get (dirents, utf8_entryname, item->klen);
 
-      SVN_ERR (svn_cmdline_cstring_from_utf8 (&stdout_entryname,
-                                              utf8_entryname, pool));
       if (verbose)
         {
           apr_time_t now = apr_time_now();
           apr_time_exp_t exp_time;
           apr_status_t apr_err;
           apr_size_t size;
-          const char *stdout_author = NULL;
           char timestr[20];
-          const char *sizestr;
+          const char *sizestr, *utf8_timestr;
           
-          if (dirent->last_author)
-            SVN_ERR (svn_cmdline_cstring_from_utf8 (&stdout_author,
-                                                    dirent->last_author,
-                                                    pool));
-
           /* svn_time_to_human_cstring gives us something *way* too long
              to use for this, so we have to roll our own.  We include
              the year if the entry's time is not within half a year. */
@@ -92,20 +84,25 @@ print_dirents (apr_hash_t *dirents,
           if (apr_err)
             timestr[0] = '\0';
 
+          /* we need it in UTF-8. */
+          SVN_ERR (svn_utf_cstring_to_utf8 (&utf8_timestr, timestr, pool));
+
           sizestr = apr_psprintf (pool, "%" SVN_FILESIZE_T_FMT, dirent->size);
 
-          printf ("%7ld %-8.8s %10s %12s %s%s\n",
-                  dirent->created_rev,
-                  stdout_author ? stdout_author : " ? ",
-                  (dirent->kind == svn_node_file) ? sizestr : "",
-                  timestr,
-                  stdout_entryname,
-                  (dirent->kind == svn_node_dir) ? "/" : "");
+          SVN_ERR (svn_cmdline_printf
+                   (pool, "%7ld %-8.8s %10s %12s %s%s\n",
+                    dirent->created_rev,
+                    dirent->last_author ? dirent->last_author : " ? ",
+                    (dirent->kind == svn_node_file) ? sizestr : "",
+                    timestr,
+                    utf8_entryname,
+                    (dirent->kind == svn_node_dir) ? "/" : ""));
         }
       else
         {
-          printf ("%s%s\n", stdout_entryname, 
-                  (dirent->kind == svn_node_dir) ? "/" : "");
+          SVN_ERR (svn_cmdline_printf (pool, "%s%s\n", utf8_entryname, 
+                                       (dirent->kind == svn_node_dir)
+                                       ? "/" : ""));
         }
     }
 
