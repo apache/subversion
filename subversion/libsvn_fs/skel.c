@@ -432,11 +432,7 @@ svn_fs__mem_atom (char *addr,
 skel_t *
 svn_fs__make_empty_list (apr_pool_t *pool)
 {
-  skel_t *skel = apr_palloc (pool, sizeof (*skel));
-
-  skel->is_atom = 0;
-  skel->children = 0;
-
+  skel_t *skel = apr_pcalloc (pool, sizeof (*skel));
   return skel;
 }
 
