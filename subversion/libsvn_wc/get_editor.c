@@ -281,48 +281,13 @@ struct file_baton
      the code that syncs up the adm dir and working copy. */
   svn_boolean_t text_changed;
 
-  /* This gets set if there's a conflict while merging the
-     repository's file into the locally changed working file */
-  svn_boolean_t text_conflict;
-
   /* This gets set if the file underwent a prop change, which guides
      the code that syncs up the adm dir and working copy. */
   svn_boolean_t prop_changed;
 
-  /* This gets set if a "wc" prop was stored. */
-  svn_boolean_t wcprop_changed;
-
-  /* This gets set if an "entry" prop was stored. */
-  svn_boolean_t entryprop_changed;
-
-  /* This gets set if SVN_PROP_EOL_STYLE was set to some value during
-     the update.  close_file() needs to know this, because it needs to
-     detect a possibly property conflict before this property is ever
-     officially written to disk. */
-  svn_boolean_t got_new_eol_style;
-  enum svn_wc__eol_style new_style;
-  svn_stringbuf_t *new_value;
-  const char *new_eol;
-
-  /* Same case as above, but for SVN_PROP_KEYWORDS property. */
-  svn_boolean_t got_new_keywords_value;
-  const svn_string_t *new_keywords_value;
-
-  /* This gets set if there's a conflict when merging a prop-delta
-     into the locally modified props.  */
-  svn_boolean_t prop_conflict;
-
   /* An array of svn_prop_t structures, representing all the property
      changes to be applied to this file. */
   apr_array_header_t *propchanges;
-
-  /* An array of svn_prop_t structures, representing all the "wc" property
-     changes to be stored for this file. */
-  apr_array_header_t *wcpropchanges;
-
-  /* An array of svn_prop_t structures, representing all the "entry"
-     property changes to be stored for this file. */
-  apr_array_header_t *entrypropchanges;
 
 };
 
@@ -346,11 +311,8 @@ make_file_baton (struct dir_baton *parent_dir_baton,
   /* copy the name into *our* subpool; who knows what the caller may plan
      to do with the darned thing. */
   f->name       = svn_stringbuf_dup (name, subpool);
-
   f->path       = path;
   f->propchanges = apr_array_make (subpool, 1, sizeof(svn_prop_t));
-  f->wcpropchanges = apr_array_make (subpool, 1, sizeof(svn_prop_t));
-  f->entrypropchanges = apr_array_make (subpool, 1, sizeof(svn_prop_t));
 
   parent_dir_baton->ref_count++;
 
@@ -782,9 +744,9 @@ close_directory (void *dir_baton)
 
       /* Merge pending properties into temporary files and detect
          conflicts. */
-      err = svn_wc__do_property_merge (db->path->data, NULL,
-                                       db->propchanges, db->pool,
-                                       &entry_accum, &conflicts);
+      err = svn_wc__merge_prop_diffs (db->path->data, NULL,
+                                      db->propchanges, db->pool,
+                                      &entry_accum, &conflicts);
       if (err) 
         return 
           svn_error_quick_wrap (err, "close_dir: couldn't do prop merge.");
@@ -831,7 +793,7 @@ close_directory (void *dir_baton)
       
       /* Write our accumulation of log entries into a log file */
       apr_err = apr_file_write_full (log_fp, entry_accum->data,
-                                entry_accum->len, NULL);
+                                     entry_accum->len, NULL);
       if (apr_err)
         {
           apr_file_close (log_fp);
@@ -1075,30 +1037,6 @@ change_file_prop (void *file_baton,
   else
     local_value = NULL;
 
-  /* If this is a 'wc' prop, store it in a different array. */
-  if (svn_wc_is_wc_prop (name->data))
-    {
-      propchange = apr_array_push (fb->wcpropchanges);
-      propchange->name = local_name;
-      propchange->value = local_value;
-      
-      fb->wcprop_changed = 1;
-      return SVN_NO_ERROR;
-    }
-  
-  /* If this is an 'entry' prop, store it a different array. */
-  else if (svn_wc_is_entry_prop (name->data))
-    {
-      propchange = apr_array_push (fb->entrypropchanges);
-      propchange->name = local_name;
-      propchange->value = local_value;
-      
-      fb->entryprop_changed = 1;
-      return SVN_NO_ERROR;
-    }
-
-  /* Else, it's a normal property... */
-
   /* Push a new propchange to the file baton's array of propchanges */
   propchange = apr_array_push (fb->propchanges);
   propchange->name = local_name;
@@ -1107,22 +1045,6 @@ change_file_prop (void *file_baton,
   /* Let close_file() know that propchanges are waiting to be
      applied. */
   fb->prop_changed = 1;
-
-  /* If the eol-style was set, remember info for close_file(). */
-  if (! strcmp (local_name, SVN_PROP_EOL_STYLE))
-    {
-      svn_wc__eol_style_from_value (&fb->new_style, &fb->new_eol, 
-                                    value ? value->data : NULL);
-      fb->got_new_eol_style = TRUE;
-    }
-
-  /* If the keywords property was set, remember info for close_file(). */
-  if (! strcmp (local_name, SVN_PROP_KEYWORDS))
-    {
-      fb->new_keywords_value = local_value;
-      fb->got_new_keywords_value = TRUE;
-    }
-
 
   return SVN_NO_ERROR;
 }
@@ -1312,14 +1234,23 @@ latest_keyword_data (const apr_array_header_t *props,
 }
 
 
-static svn_error_t *
-close_file (void *file_baton)
+
+/* This is the small planet.  It has the complex responsibility of
+   "integrating" a new revision of a file into a working copy.  It's
+   used extensively by the update-editor, as well as by
+   svn_client_switch(), when switching a single file in-place. */
+svn_error_t *
+svn_wc_install_file (const char *file_path,
+                     svn_revnum_t new_revision,
+                     const char *new_text_path,
+                     const apr_array_header_t *props,
+                     svn_boolean_t is_full_proplist,
+                     apr_pool_t *pool)
 {
-  struct file_baton *fb = file_baton;
   apr_file_t *log_fp = NULL;
-  svn_error_t *err;
   apr_status_t apr_err;
   char *revision_str = NULL;
+  svn_stringbuf_t *file_path_str, *parent_dir, *basename;
   svn_stringbuf_t *entry_accum, *txtb, *tmp_txtb, *tmp_loc;
   svn_stringbuf_t *tmp_txtb_full_path, *txtb_full_path;
   svn_boolean_t has_binary_prop, is_locally_modified;
@@ -1327,27 +1258,28 @@ close_file (void *file_baton)
   enum svn_wc__eol_style eol_style;
   const char *eol_str;
   svn_wc_keywords_t *keywords = NULL;
+  apr_array_header_t *regular_props = NULL, *wc_props = NULL,
+    *entry_props = NULL;
 
-  /* Lock the working directory while we change things. */
-  SVN_ERR (svn_wc__lock (fb->dir_baton->path, 0, fb->pool));
+  /* Start by splitting FILE_PATH. */
+  file_path_str = svn_stringbuf_create (file_path, pool);
+  svn_path_split (file_path_str, &parent_dir, &basename, pool);
+
+  /* Lock the parent directory while we change things.  If for some
+     reason the parent isn't under version control, this function will
+     bomb out.  */
+  SVN_ERR (svn_wc__lock (parent_dir, 0, pool));
 
   /*
-     When we reach close_file() for file `F', the following are
-     true:
+     When this function is called on file F, we assume the following
+     things are true:
 
-         - The new pristine text of F, if any, is present in
-           .svn/tmp/text-base/F.svn-base, and the file_baton->text_changed
-           is set if necessary.
+         - The new pristine text of F, if any, is present at
+           NEW_TEXT_PATH.           
 
-         - The new pristine props for F, if any, are present in
-           the file_baton->propchanges array, and
-           file_baton->prop_changed is set.
-
-         - The .svn/entries file still reflects the old F.
+         - The .svn/entries file still reflects the old version of F.
 
          - .svn/text-base/F.svn-base is the old pristine F.
-
-         - .svn/prop-base/F.svn-base is the old pristine F props.
 
       The goal is to update the local working copy of F to reflect
       the changes received from the repository, preserving any local
@@ -1382,74 +1314,129 @@ close_file (void *file_baton)
   /* Open a log file.  This is safe because the adm area is locked
      right now. */
   SVN_ERR (svn_wc__open_adm_file (&log_fp,
-                                  fb->dir_baton->path,
+                                  parent_dir,
                                   SVN_WC__ADM_LOG,
                                   (APR_WRITE | APR_CREATE), /* not excl */
-                                  fb->pool));
+                                  pool));
 
   /* Accumulate log commands in this buffer until we're ready to close
      and run the log.  */
-  entry_accum = svn_stringbuf_create ("", fb->pool);
+  entry_accum = svn_stringbuf_create ("", pool);
 
-  /* MERGE ANY PROPERTY CHANGES, if they exist. */
-  if (fb->prop_changed)
+  
+  /* Sort the property list into three arrays, based on kind. */
+  if (props)
+    SVN_ERR (svn_categorize_props (props,
+                                   &entry_props, &wc_props, &regular_props,
+                                   pool));
+
+  /* Merge the 'regular' props into the existing working proplist. */
+  if (regular_props)
     {
+      apr_array_header_t *propchanges;
+      apr_hash_t *old_pristine_props, *new_pristine_props;
+      
+      if (is_full_proplist)
+        {         
+          /* If the caller passed a definitive list that represents all
+             of the file's properties, we need to compare it to the
+             current 'pristine' list and deduce the differences. */
+          svn_stringbuf_t *pristine_prop_path;
+          int i;
+          old_pristine_props = apr_hash_make (pool);
+          new_pristine_props = apr_hash_make (pool);
+          
+          /* Get the current pristine props. */
+          SVN_ERR (svn_wc__prop_base_path (&pristine_prop_path,
+                                           file_path_str, 0, pool));
+          SVN_ERR (svn_wc__load_prop_file (pristine_prop_path->data,
+                                           old_pristine_props, pool));
+          
+          /* Convert the given array into hash of 'new' pristine props. */
+          for (i = 0; i < regular_props->nelts; i++)
+            {
+              svn_stringbuf_t *value_buf;
+              const svn_prop_t *prop = NULL;
+              
+              prop = &APR_ARRAY_IDX(regular_props, i, svn_prop_t);
+              value_buf = svn_stringbuf_create_from_string (prop->value, pool);
+              
+              apr_hash_set (new_pristine_props,
+                            prop->name, APR_HASH_KEY_STRING, value_buf);
+            }
+          
+          /* Deduce changes. */
+          SVN_ERR (svn_wc__get_local_propchanges (&propchanges,
+                                                  new_pristine_props,
+                                                  old_pristine_props,
+                                                  pool));
+        }
+      else
+        /* The user gave us a list prop diffs directly, yay. */
+        propchanges = regular_props;
+      
+      /* Now that we have the list of diffs... */
+      
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged
          props. It also returns any conflicts to us in a hash, which
          we'll need to know before attempting any textual merging.
          (The textual merging process cares about conflicts on the
          eol-style and keywords properties.) */
-      err = svn_wc__do_property_merge (fb->dir_baton->path->data,
-                                       fb->name->data,
-                                       fb->propchanges, fb->pool,
-                                       &entry_accum, &prop_conflicts);
-      if (err) 
-        return
-          svn_error_quick_wrap (err, "close_file: couldn't do prop merge.");
+      SVN_ERR (svn_wc__merge_prop_diffs (parent_dir->data, basename->data,
+                                         propchanges, pool,
+                                         &entry_accum, &prop_conflicts));
     }
-
+  
   /* If there are any ENTRY PROPS, make sure those get appended to the
      growing log as fields for the file's entry.  This needs to happen
      before we do any textual merging, because that process might
-     expand keywords, and we want the keyword info to be up-to-date. */
-  if (fb->entryprop_changed)
+     expand keywords, and we want the keyword info to be up-to-date.
+
+     Note that no merging needs to happen; these kinds of props aren't
+     versioned, so the value of IS_FULL_PROPLIST is irrelevant -- if
+     the property is present, we overwrite the value. */  
+  if (entry_props)
     {
       int i;
-
+      
       /* foreach entry prop... */
-      for (i = 0; i < fb->entrypropchanges->nelts; i++)
+      for (i = 0; i < entry_props->nelts; i++)
         {
           const svn_prop_t *prop;
           svn_stringbuf_t *propname;
           svn_stringbuf_t *propval;
+          enum svn_prop_kind kind;
+          int prefix_len;
 
-          prop = &APR_ARRAY_IDX(fb->entrypropchanges, i, svn_prop_t);
-
-          /* strip the 'svn:wc:entry:' prefix from the property name. */
-          propname = svn_stringbuf_create (prop->name, fb->pool);
-          svn_wc__strip_entry_prefix (propname);
-
+          prop = &APR_ARRAY_IDX(entry_props, i, svn_prop_t);
+          propname = svn_stringbuf_create (prop->name, pool);
+          kind = svn_property_kind (&prefix_len, prop->name);
+                    
           if (prop->value)
-            propval = svn_stringbuf_create_from_string(prop->value, fb->pool);
+            propval = svn_stringbuf_create_from_string(prop->value, pool);
           else
-            propval = svn_stringbuf_create ("", fb->pool);
-
-          /* append a command to the log which will append the
-             property as a entry attribute. */
+            /* a NULL-valued entry prop means the information was not
+               available.  We don't remove this field from the entries
+               file; we have convention just leave it empty. */
+            propval = svn_stringbuf_create ("", pool);
+          
+          /* append a command to the log which will write the
+             property as a entry attribute on the file. */
           svn_xml_make_open_tag (&entry_accum,
-                                 fb->pool,
+                                 pool,
                                  svn_xml_self_closing,
                                  SVN_WC__LOG_MODIFY_ENTRY,
                                  SVN_WC__LOG_ATTR_NAME,
-                                 fb->name,
-                                 propname->data,
+                                 basename,
+                                 /* strip 'svn:entry:' prefix */
+                                 (propname->data + prefix_len),
                                  propval,
                                  NULL);         
         }
     }
 
-  /* We implement this matrix:
+  /* For 'textual' merging, we implement this matrix:
 
                   Text file                Binary File
                --------------------------------------------
@@ -1463,27 +1450,41 @@ close_file (void *file_baton)
    So the first thing we do is figure out where we are in the
    matrix. */
 
-  if (fb->text_changed)
+  if (new_text_path)
     {
       /* Text or Binary File?  Note that this is not a definitive test of
          whether the file is actually text or binary, just whether it has
          a mime-type that "marks" the file as binary. */
-      SVN_ERR (svn_wc_has_binary_prop (&has_binary_prop, fb->path, fb->pool));
+      SVN_ERR (svn_wc_has_binary_prop (&has_binary_prop, file_path_str, pool));
       
-      /* Local textual mods?  (We can ignore local prop-mods;  those will
-         be automagically merged later on in this routine.) */
+      /* Has the user made local mods to the working file?  */
       SVN_ERR (svn_wc_text_modified_p (&is_locally_modified,
-                                       fb->path, fb->pool));
+                                       file_path_str, pool));
 
-      /* Decide which value of eol-style to use.  This is complex! */
+      /* Decide which value of eol-style to use.  This is complex... */
       {
-        /* Did we get an eol-style during this update?
-           If not, use whatever style is currently in our props. */        
-        if (! fb->got_new_eol_style)
+        /* Did we get a new eol-style passed into this routine? */
+        int i;
+        svn_stringbuf_t *fresh_eol_style = NULL;
+        
+        /* Rats, here's one case where it would be *nice* to have a
+           hash instead of an array.  */
+        if (regular_props)
+          for (i = 0; i < regular_props->nelts; i++)
+            {
+              const svn_prop_t *prop;
+              prop = &APR_ARRAY_IDX(entry_props, i, svn_prop_t);
+              if (strcmp (prop->name, SVN_PROP_EOL_STYLE) == 0)
+                fresh_eol_style = 
+                  svn_stringbuf_create_from_string (prop->value, pool);
+            }
+        
+        /* If not, use whatever style is currently in our working props. */ 
+        if (! fresh_eol_style)
           SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol_str,
-                                          fb->path->data, fb->pool));      
+                                          file_path, pool));      
 
-        else  /* got a new eol-style from the server */
+        else  /* got a fresh eol-style passed in */
           {            
             /* Check to see if the new property conflicted. */
             const svn_prop_t *conflict = apr_hash_get (prop_conflicts,
@@ -1493,12 +1494,12 @@ close_file (void *file_baton)
             if (conflict)
               /* Use our current locally-modified style. */
               SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol_str,
-                                              fb->path->data, fb->pool));      
+                                              file_path, pool));      
             else
               {
-                /* Go ahead and use the new style from the repository. */
-                eol_style = fb->new_style;
-                eol_str = fb->new_eol;
+                /* Go ahead and use the new style that was passed in. */
+                svn_wc__eol_style_from_value (&eol_style, &eol_str, 
+                                              fresh_eol_style->data);
 
                 /* We're not writing out the latest value of the
                    property, because text_modified_p should still be
@@ -1518,15 +1519,30 @@ close_file (void *file_baton)
 
       }
 
-      /* Decide which value of 'svn:keywords' to use. */
+      /* Decide which value of 'svn:keywords' to use.  Same complex logic... */
       {
-        /* Did we get a new keywords value during this update?
-           If not, use whatever value is currently in our props. */        
-        if (! fb->got_new_keywords_value)
-          SVN_ERR (svn_wc__get_keywords (&keywords,
-                                         fb->path->data, NULL, fb->pool));
+        /* Did we get a new keywords value passed into this routine? */
+        int i;
+        svn_stringbuf_t *fresh_keywords_value;
 
-        else  /* got a new keywords value from the server */
+        /* Rats, here's one case where it would be *nice* to have a
+           hash instead of an array.  */
+        if (regular_props)
+          for (i = 0; i < regular_props->nelts; i++)
+            {
+              const svn_prop_t *prop;
+              prop = &APR_ARRAY_IDX(entry_props, i, svn_prop_t);
+              if (strcmp (prop->name, SVN_PROP_KEYWORDS) == 0)
+                fresh_keywords_value = 
+                  svn_stringbuf_create_from_string (prop->value, pool);
+            }
+
+        /* If not, use whatever value is currently in our working props. */
+        if (! fresh_keywords_value)
+          SVN_ERR (svn_wc__get_keywords (&keywords,
+                                         file_path, NULL, pool));
+        
+        else  /* got a fresh keywords value passed in */
           {            
             /* Check to see if the new property conflicted. */
             const svn_prop_t *conflict = apr_hash_get (prop_conflicts,
@@ -1534,20 +1550,20 @@ close_file (void *file_baton)
                                                        APR_HASH_KEY_STRING);
 
             if (conflict)
-              /* Use our current locally-modified style. */
+              /* Use our current locally-modified value. */
               SVN_ERR (svn_wc__get_keywords (&keywords,
-                                             fb->path->data, NULL, fb->pool));
+                                             file_path, NULL, pool));
             else
               {
-                /* Go ahead and use the new style from the repository.
+                /* Go ahead and use the new style passed in.
                    NOTICE: we're passing an explicit value to parse
                    here, because the 'latest' value isn't yet in the
                    props. */
-                if (fb->new_keywords_value)
+                if (fresh_keywords_value)
                   SVN_ERR (svn_wc__get_keywords (&keywords,
-                                                 fb->path->data, 
-                                                 fb->new_keywords_value->data,
-                                                 fb->pool));
+                                                 file_path,
+                                                 fresh_keywords_value->data,
+                                                 pool));
                 else
                   keywords = NULL;
 
@@ -1562,18 +1578,51 @@ close_file (void *file_baton)
            keywords aren't yet in the entries file.  This routine
            might overwrite any values in KEYWORDS by examining fresh
            data cached in fb->entrypropchanges. */
-        latest_keyword_data (fb->entrypropchanges, keywords, fb->pool);
+        latest_keyword_data (entry_props, keywords, pool);
 
       }
 
-
+      
       /* Before doing any logic, we *know* that the first thing the
          logfile should do is overwrite the old text-base file with the
-         newly received one in tmp/.  */
-      tmp_txtb = svn_wc__text_base_path (fb->name, 1, fb->pool);
-      txtb     = svn_wc__text_base_path (fb->name, 0, fb->pool);
+         new one waiting at the NEW_TEXT_PATH location.
+
+         However, log commands can only operate on paths that are
+         below the parent_dir.  Thus if NEW_TEXT_PATH is somewhere
+         *outside* of FILE_PATH's parent directory, we can't write a
+         log command to do a move from one location to another.  So
+         the solution, then, is to simply move NEW_TEXT_PATH to
+         .svn/tmp/text-base/ immediately -- that's where the rest of
+         this code wants it to be anyway. */
+      {
+        svn_stringbuf_t *final_location =
+          svn_wc__text_base_path (file_path_str, 1, pool);
+
+        /* Only do the 'move' if NEW_TEXT_PATH isn't -already-
+           pointing to parent_dir/.svn/tmp/text-base/basename.  */
+        if (strcmp (final_location->data, new_text_path))
+          {
+            apr_err = apr_file_rename (new_text_path, final_location->data,
+                                       pool);
+            if (apr_err)
+              return svn_error_createf (apr_err, 0, NULL, pool,
+                                        "svn_wc_install_file: "
+                                        "can't move %s to %s",
+                                        new_text_path, final_location->data);
+          }
+      }
+
+      txtb     = svn_wc__text_base_path (basename, 0, pool);
+      tmp_txtb = svn_wc__text_base_path (basename, 1, pool);
+
+      /* Great, so from here on out, we assume that the NEW_TEXT_PATH
+         can be found at TMP_TXTB.  Write a log command to move the
+         new text-base (TMP_TXTB) on top of the old text-base (TXTB).
+         Of course, this won't actually happen till we run the
+         log... which means we can still do diffs on TMP_TXTB for a
+         little while.  */
       svn_xml_make_open_tag (&entry_accum,
-                             fb->pool,
+                             pool,
                              svn_xml_self_closing,
                              SVN_WC__LOG_MV,
                              SVN_WC__LOG_ATTR_NAME,
@@ -1582,53 +1631,56 @@ close_file (void *file_baton)
                              txtb,
                              NULL);
 
-      if ( (! is_locally_modified)
-           || (fb->dir_baton->edit_baton->is_checkout) )
+      if (! is_locally_modified)
         {
-          /* If there are no local mods (or we're doing an initial
-             checkout), who cares whether it's a text or binary file!
-             Just overwrite any working file with the new one.  If
-             newline conversion or keyword substitution is activated,
-             this will happen as well during the copy. */
+          /* If there are no local mods, who cares whether it's a text
+             or binary file!  Just overwrite any working file with the
+             new text-base.  If newline conversion or keyword
+             substitution is activated, this will happen as well
+             during the copy. */
           make_translation_open_tag (&entry_accum,
-                                     fb->pool,
+                                     pool,
                                      svn_xml_self_closing,
                                      SVN_WC__LOG_CP,
                                      txtb,
-                                     fb->name,
+                                     basename,
                                      eol_str,
                                      FALSE, /* repair */
                                      keywords,
                                      TRUE); /* expand */
         }
   
-      else   /* file is locally modified, and this is an update. */
+      else   /* working file is locally modified... */    
         {
-          if (! has_binary_prop)  /* type text */
+          if (! has_binary_prop)  /* and is of type text... */
             {
               enum svn_node_kind wfile_kind = svn_node_unknown;
               svn_stringbuf_t *received_diff_filename;
               apr_file_t *reject_file = NULL;
               svn_stringbuf_t *reject_filename = NULL;
               
-              SVN_ERR (svn_io_check_path (fb->path, &wfile_kind, fb->pool));
+              SVN_ERR (svn_io_check_path (file_path_str, &wfile_kind, pool));
               if (wfile_kind == svn_node_none)
                 {
                   /* If the working file is missing, then just copy
-                     the new base text to the working file. */
+                     the new text-base to the working file, and be done.*/
                   make_translation_open_tag (&entry_accum,
-                                             fb->pool,
+                                             pool,
                                              svn_xml_self_closing,
                                              SVN_WC__LOG_CP,
                                              txtb,
-                                             fb->name,
+                                             basename,
                                              eol_str,
                                              FALSE, /* repair */
                                              keywords,
                                              TRUE); /* expand */
                 }
-              else  /* working file exists */
+              else  /* working file exists, with local mods.*/
                 {                  
+                  /* Now we need to use diff/patch to contextually
+                     merge the textual changes into the working file.
+                     Put on seat belts. */
+
                   /* Run the external `diff' command immediately and
                      create a temporary patch.  Note that we -always-
                      create the patchfile by diffing two LF versions
@@ -1640,29 +1692,29 @@ close_file (void *file_baton)
                   
                   /* Reserve a filename for the patchfile we'll create. */
                   tmp_loc
-                    = svn_wc__adm_path (fb->dir_baton->path, 1, fb->pool, 
-                                        fb->name->data, NULL);
+                    = svn_wc__adm_path (parent_dir, 1, pool, 
+                                        basename->data, NULL);
                   SVN_ERR (svn_io_open_unique_file (&received_diff_file,
                                                     &received_diff_filename,
                                                     tmp_loc,
                                                     SVN_WC__DIFF_EXT,
                                                     FALSE,
-                                                    fb->pool));
+                                                    pool));
                   
                   /* Reserve filenames for temporary LF-converted textbases. */
                   tmp_txtb_full_path
-                    = svn_wc__text_base_path (fb->path, 1, fb->pool);
+                    = svn_wc__text_base_path (file_path_str, 1, pool);
                   txtb_full_path
-                    = svn_wc__text_base_path (fb->path, 0, fb->pool);
+                    = svn_wc__text_base_path (file_path_str, 0, pool);
                   
                   SVN_ERR (svn_io_open_unique_file (&tr_txtb_fp,
                                                     &tr_txtb,
                                                     tmp_loc, SVN_WC__BASE_EXT,
-                                                    FALSE, fb->pool));
+                                                    FALSE, pool));
                   SVN_ERR (svn_io_open_unique_file (&tr_tmp_txtb_fp,
                                                     &tr_tmp_txtb,
                                                     tmp_loc, SVN_WC__BASE_EXT,
-                                                    FALSE, fb->pool));
+                                                    FALSE, pool));
 
                   /* Copy *LF-translated* text-base files to these
                      reserved locations. */
@@ -1672,7 +1724,7 @@ close_file (void *file_baton)
                                                       TRUE, /* repair */
                                                       keywords,
                                                       FALSE,
-                                                      fb->pool));
+                                                      pool));
                   
                   SVN_ERR (svn_wc_copy_and_translate (tmp_txtb_full_path->data,
                                                       tr_tmp_txtb->data,
@@ -1680,32 +1732,33 @@ close_file (void *file_baton)
                                                       TRUE, /* repair */ 
                                                       keywords,
                                                       FALSE,
-                                                      fb->pool));
+                                                      pool));
 
                   /* Build the diff command. */
                   diff_args[0] = "-c";
                   diff_args[1] = "--";
 
                   SVN_ERR(svn_io_run_diff
-                    (".", diff_args, 2, NULL, tr_txtb->data, tr_tmp_txtb->data, 
-                     NULL, received_diff_file, NULL, fb->pool));
+                    (".", diff_args, 2, NULL,
+                     tr_txtb->data, tr_tmp_txtb->data, 
+                     NULL, received_diff_file, NULL, pool));
 
                   /* Write log commands to remove the two tmp text-bases. */
                   
                   /* (gack, we need the paths to be relative to log's
                      working directory)  */ 
                   tr_txtb = svn_stringbuf_ncreate 
-                    (tr_txtb->data + fb->dir_baton->path->len + 1,
-                     tr_txtb->len - fb->dir_baton->path->len - 1,
-                     fb->pool);
+                    (tr_txtb->data + parent_dir->len + 1,
+                     tr_txtb->len - parent_dir->len - 1,
+                     pool);
 
                   tr_tmp_txtb = svn_stringbuf_ncreate 
-                    (tr_tmp_txtb->data + fb->dir_baton->path->len + 1,
-                     tr_tmp_txtb->len - fb->dir_baton->path->len - 1,
-                     fb->pool);
+                    (tr_tmp_txtb->data + parent_dir->len + 1,
+                     tr_tmp_txtb->len - parent_dir->len - 1,
+                     pool);
                   
                   svn_xml_make_open_tag (&entry_accum,
-                                         fb->pool,
+                                         pool,
                                          svn_xml_self_closing,
                                          SVN_WC__LOG_RM,
                                          SVN_WC__LOG_ATTR_NAME,
@@ -1713,7 +1766,7 @@ close_file (void *file_baton)
                                          NULL);
 
                   svn_xml_make_open_tag (&entry_accum,
-                                         fb->pool,
+                                         pool,
                                          svn_xml_self_closing,
                                          SVN_WC__LOG_RM,
                                          SVN_WC__LOG_ATTR_NAME,
@@ -1729,13 +1782,13 @@ close_file (void *file_baton)
                   /* kff todo: code dup with above, abstract it? */
                   SVN_ERR (svn_io_open_unique_file (&reject_file,
                                                     &reject_filename,
-                                                    fb->path,
+                                                    file_path_str,
                                                     SVN_WC__TEXT_REJ_EXT,
                                                     FALSE,
-                                                    fb->pool));
+                                                    pool));
                   apr_err = apr_file_close (reject_file);
                   if (apr_err)
-                    return svn_error_createf (apr_err, 0, NULL, fb->pool,
+                    return svn_error_createf (apr_err, 0, NULL, pool,
                                               "close_file: error closing %s",
                                               reject_filename->data);
 
@@ -1752,16 +1805,16 @@ close_file (void *file_baton)
                      
                      Sometimes I think I think too much.  I think. */ 
                   reject_filename = svn_stringbuf_ncreate
-                    (reject_filename->data + fb->dir_baton->path->len + 1,
-                     reject_filename->len - fb->dir_baton->path->len - 1,
-                     fb->pool);
+                    (reject_filename->data + parent_dir->len + 1,
+                     reject_filename->len - parent_dir->len - 1,
+                     pool);
                   
                   received_diff_filename = svn_stringbuf_ncreate
                     (received_diff_filename->data
-                     + fb->dir_baton->path->len + 1,
+                     + parent_dir->len + 1,
                      received_diff_filename->len
-                     - fb->dir_baton->path->len - 1,
-                     fb->pool);
+                     - parent_dir->len - 1,
+                     pool);
 
                   if ((eol_style == svn_wc__eol_style_none) && (! keywords))
                     {
@@ -1770,10 +1823,10 @@ close_file (void *file_baton)
                          apply the LF patchfile directly to the
                          working file.  No big deal. */
                       make_patch_open_tag (&entry_accum,
-                                           fb->name,
+                                           basename,
                                            reject_filename,
                                            received_diff_filename,
-                                           fb->pool);
+                                           pool);
                     }
                   else  /* keyword expansion or EOL translation is
                            active */
@@ -1787,7 +1840,7 @@ close_file (void *file_baton)
                                                         tmp_loc,
                                                         SVN_WC__TMP_EXT,
                                                         FALSE,
-                                                        fb->pool));
+                                                        pool));
 
                       /* Copy the working file to tmp-working with
                          LF's, and any keywords contracted. */
@@ -1799,10 +1852,10 @@ close_file (void *file_baton)
                          and an update is a 'checkpoint' just like a
                          commit. */
                       make_translation_open_tag (&entry_accum,
-                                                 fb->pool,
+                                                 pool,
                                                  svn_xml_self_closing,
                                                  SVN_WC__LOG_CP,
-                                                 fb->name,
+                                                 basename,
                                                  tmp_working,
                                                  "LF",
                                                  TRUE, /* repair */
@@ -1814,7 +1867,7 @@ close_file (void *file_baton)
                                            tmp_working,
                                            reject_filename,
                                            received_diff_filename,
-                                           fb->pool);
+                                           pool);
 
                       /* We already know that the latest eol-style
                          must be either 'native' or 'fixed', and is
@@ -1822,11 +1875,11 @@ close_file (void *file_baton)
                          the merged tmp_working back to working with
                          this style.  Also, re-expand keywords. */
                       make_translation_open_tag (&entry_accum,
-                                                 fb->pool,
+                                                 pool,
                                                  svn_xml_self_closing,
                                                  SVN_WC__LOG_CP,
                                                  tmp_working,
-                                                 fb->name,
+                                                 basename,
                                                  eol_str,
                                                  FALSE, /* repair */
                                                  keywords,
@@ -1834,7 +1887,7 @@ close_file (void *file_baton)
                       
                       /* Remove tmp_working. */
                       svn_xml_make_open_tag (&entry_accum,
-                                             fb->pool,
+                                             pool,
                                              svn_xml_self_closing,
                                              SVN_WC__LOG_RM,
                                              SVN_WC__LOG_ATTR_NAME,
@@ -1844,7 +1897,7 @@ close_file (void *file_baton)
                   
                   /* Remove the patchfile. */
                   svn_xml_make_open_tag (&entry_accum,
-                                         fb->pool,
+                                         pool,
                                          svn_xml_self_closing,
                                          SVN_WC__LOG_RM,
                                          SVN_WC__LOG_ATTR_NAME,
@@ -1858,11 +1911,11 @@ close_file (void *file_baton)
                      conflicted!  Yes, this is a complex log
                      command. :-) */
                   svn_xml_make_open_tag (&entry_accum,
-                                         fb->pool,
+                                         pool,
                                          svn_xml_self_closing,
                                          SVN_WC__LOG_DETECT_CONFLICT,
                                          SVN_WC__LOG_ATTR_NAME,
-                                         fb->name,
+                                         basename,
                                          SVN_WC_ENTRY_ATTR_REJFILE,
                                          reject_filename,
                                          NULL);                  
@@ -1878,45 +1931,45 @@ close_file (void *file_baton)
               /* Rename the working file. */
               SVN_ERR (svn_io_open_unique_file (&renamed_fp,
                                                 &renamed_path,
-                                                fb->path,
+                                                file_path_str,
                                                 ".orig",
                                                 FALSE,
-                                                fb->pool));
+                                                pool));
               apr_err = apr_file_close (renamed_fp);
               if (apr_err)
-                return svn_error_createf (apr_err, 0, NULL, fb->pool,
+                return svn_error_createf (apr_err, 0, NULL, pool,
                                           "close_file: error closing %s",
                                           renamed_path->data);
               
               renamed_basename
-                = svn_path_last_component (renamed_path, fb->pool);
+                = svn_path_last_component (renamed_path, pool);
 
               svn_xml_make_open_tag (&entry_accum,
-                                     fb->pool,
+                                     pool,
                                      svn_xml_self_closing,
                                      SVN_WC__LOG_CP,
                                      SVN_WC__LOG_ATTR_NAME,
-                                     fb->name,
+                                     basename,
                                      SVN_WC__LOG_ATTR_DEST,
                                      renamed_basename,
                                      NULL);
               
               /* Copy the new file out into working area. */
               svn_xml_make_open_tag (&entry_accum,
-                                     fb->pool,
+                                     pool,
                                      svn_xml_self_closing,
                                      SVN_WC__LOG_CP,
                                      SVN_WC__LOG_ATTR_NAME,
                                      txtb,
                                      SVN_WC__LOG_ATTR_DEST,
-                                     fb->name,
+                                     basename,
                                      NULL);
             }
         }
 
       /* Make text-base readonly */
       svn_xml_make_open_tag (&entry_accum,
-                             fb->pool,
+                             pool,
                              svn_xml_self_closing,
                              SVN_WC__LOG_READONLY,
                              SVN_WC__LOG_ATTR_NAME,
@@ -1926,65 +1979,65 @@ close_file (void *file_baton)
     }  /* End  of "textual" merging process */
   
 
-  /* Set revision. */
-  revision_str = apr_psprintf (fb->pool,
-                               "%ld",
-                               fb->dir_baton->edit_baton->target_revision);
-
   /* Write log entry which will bump the revision number:  */
+  revision_str = apr_psprintf (pool, "%ld", new_revision);
   svn_xml_make_open_tag (&entry_accum,
-                         fb->pool,
+                         pool,
                          svn_xml_self_closing,
                          SVN_WC__LOG_MODIFY_ENTRY,
                          SVN_WC__LOG_ATTR_NAME,
-                         fb->name,
+                         basename,
                          SVN_WC_ENTRY_ATTR_KIND,
                          svn_stringbuf_create (SVN_WC__ENTRIES_ATTR_FILE_STR, 
-                                               fb->pool),
+                                               pool),
                          SVN_WC_ENTRY_ATTR_REVISION,
-                         svn_stringbuf_create (revision_str, fb->pool),
+                         svn_stringbuf_create (revision_str, pool),
                          NULL);
 
-  if (fb->text_changed)
+
+  /* Possibly write log commands to tweak text/prop entry timestamps:
+     */
+
+  if (new_text_path)
     {
       /* Log entry which sets a new textual timestamp, but only if
          there are no local changes to the text. */
       if (! is_locally_modified)
         svn_xml_make_open_tag (&entry_accum,
-                               fb->pool,
+                               pool,
                                svn_xml_self_closing,
                                SVN_WC__LOG_MODIFY_ENTRY,
                                SVN_WC__LOG_ATTR_NAME,
-                               fb->name,
+                               basename,
                                SVN_WC_ENTRY_ATTR_TEXT_TIME,
                                /* use wfile time */
                                svn_stringbuf_create (SVN_WC_TIMESTAMP_WC,
-                                                     fb->pool),
+                                                     pool),
                                NULL);
     }
 
-  if (fb->prop_changed)
+  if (props)
     {
       svn_boolean_t prop_modified;
 
       /* Are the working file's props locally modified? */
       SVN_ERR (svn_wc_props_modified_p (&prop_modified,
-                                        fb->path,
-                                        fb->pool));
+                                        file_path_str,
+                                        pool));
 
       /* Log entry which sets a new property timestamp, but only if
          there are no local changes to the props. */
       if (! prop_modified)
         svn_xml_make_open_tag (&entry_accum,
-                               fb->pool,
+                               pool,
                                svn_xml_self_closing,
                                SVN_WC__LOG_MODIFY_ENTRY,
                                SVN_WC__LOG_ATTR_NAME,
-                               fb->name,
+                               basename,
                                SVN_WC_ENTRY_ATTR_PROP_TIME,
                                /* use wfile time */
                                svn_stringbuf_create (SVN_WC_TIMESTAMP_WC,
-                                                     fb->pool),
+                                                     pool),
                                NULL);
     }
 
@@ -1994,50 +2047,65 @@ close_file (void *file_baton)
   if (apr_err)
     {
       apr_file_close (log_fp);
-      return svn_error_createf (apr_err, 0, NULL, fb->pool,
-                                "close_file: error writing %s's log file",
-                                fb->path->data);
+      return svn_error_createf (apr_err, 0, NULL, pool,
+                                "svn_wc_install_file: error writing %s's log",
+                                file_path);
     }
 
-  /* The log is ready to run, close it. */
-  err = svn_wc__close_adm_file (log_fp,
-                                fb->dir_baton->path,
-                                SVN_WC__ADM_LOG,
-                                1, /* sync */
-                                fb->pool);
-  if (err)
-    return err;
+  /* The log is ready to run.  Close it and run it! */
+  SVN_ERR (svn_wc__close_adm_file (log_fp, parent_dir, SVN_WC__ADM_LOG,
+                                   1, /* sync */ pool));
+  SVN_ERR (svn_wc__run_log (parent_dir, pool));
 
-  /* Run the log. */
-  err = svn_wc__run_log (fb->dir_baton->path, fb->pool);
-  if (err)
-    return err;
-
-  /* Dump any stored-up "wc" props, now that the file really exists. */
-  if (fb->wcprop_changed)
+  /* Now that the file's text, props, and entries are fully installed,
+     we dump any "wc" props. */
+  if (wc_props)
     {
       int i;
-      for (i = 0; i < fb->wcpropchanges->nelts; i++)
+      for (i = 0; i < wc_props->nelts; i++)
         {
           const svn_prop_t *prop;
 
-          prop = &APR_ARRAY_IDX(fb->wcpropchanges, i, svn_prop_t);
+          prop = &APR_ARRAY_IDX(wc_props, i, svn_prop_t);
           SVN_ERR (svn_wc__wcprop_set (prop->name, prop->value,
-                                       fb->path->data, fb->pool));
+                                       file_path, pool));
         }
     }
 
-  /* Unlock, we're done with this whole file-update. */
-  err = svn_wc__unlock (fb->dir_baton->path, fb->pool);
-  if (err)
-    return err;
-
-  /* Tell the directory it has one less thing to worry about. */
-  err = free_file_baton (fb);
-  if (err)
-    return err;
+  /* Unlock the parent dir, we're done with this file installation. */
+  SVN_ERR (svn_wc__unlock (parent_dir, pool));
 
   return SVN_NO_ERROR;
+}
+
+
+
+/* Mostly a wrapper around svn_wc_install_file. */
+static svn_error_t *
+close_file (void *file_baton)
+{
+  struct file_baton *fb = file_baton;
+  svn_stringbuf_t *new_text_path = NULL;
+  apr_array_header_t *propchanges = NULL;
+
+  /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
+  if (fb->text_changed)
+    new_text_path = svn_wc__text_base_path (fb->path, 1, fb->pool);
+
+  if (fb->prop_changed)
+    propchanges = fb->propchanges;
+
+  SVN_ERR (svn_wc_install_file (fb->path->data,
+                                fb->dir_baton->edit_baton->target_revision,
+                                new_text_path ? new_text_path->data : NULL,
+                                propchanges,
+                                FALSE, /* -not- a full proplist */
+                                fb->pool));
+
+  /* Tell the parent directory it has one less thing to worry about. */
+  SVN_ERR (free_file_baton (fb));
+
+  return SVN_NO_ERROR;  
 }
 
 

@@ -66,7 +66,7 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
   void *switch_edit_baton;
   const svn_ra_reporter_t *reporter;
   void *report_baton;
-  svn_wc_entry_t *entry;
+  svn_wc_entry_t *entry, *session_entry;
   svn_stringbuf_t *URL, *anchor, *target;
   svn_error_t *err;
   void *ra_baton, *session;
@@ -89,8 +89,8 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
     {
       SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
       
-      /* 'entry' now refers to parent dir */
-      SVN_ERR (svn_wc_entry (&entry, anchor, pool));
+      /* get the parent entry */
+      SVN_ERR (svn_wc_entry (&session_entry, anchor, pool));
       if (! entry)
         return svn_error_createf
           (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
@@ -106,15 +106,14 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
          exactly what we want. */
       anchor = path;
       target = NULL;
-      
-      /* 'entry' still refers to PATH */
+      session_entry = entry;
     }
 
-  if (! entry->url)
+  if (! session_entry->url)
     return svn_error_createf
       (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool,
        "svn_client_switch: entry '%s' has no URL", path->data);
-  URL = svn_stringbuf_dup (entry->url, pool);
+  URL = svn_stringbuf_dup (session_entry->url, pool);
 
   /* Get revnum set to something meaningful, so we can fetch the
      switch editor. */
@@ -123,54 +122,120 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
   else
     revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */
 
-  /* Fetch the switch (update) editor.  If REVISION is invalid, that's
-     okay; the RA driver will call editor->set_target_revision() later
-     on. */
-  SVN_ERR (svn_wc_get_switch_editor (anchor,
-                                     target,
-                                     revnum,
-                                     switch_url,
-                                     recurse,
-                                     &switch_editor,
-                                     &switch_edit_baton,
-                                     pool));
-
-  /* Wrap it up with outside editors. */
-  svn_delta_wrap_editor (&switch_editor, &switch_edit_baton,
-                         before_editor, before_edit_baton,
-                         switch_editor, switch_edit_baton,
-                         after_editor, after_edit_baton, pool);
-
   /* Get the RA vtable that matches working copy's current URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
+    
+  if (entry->kind == svn_node_dir)
+    {
+      /* Open an RA session to 'source' URL */
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, path,
+                                            TRUE, TRUE, auth_baton, pool));
+      SVN_ERR (svn_client__get_revision_number
+               (&revnum, ra_lib, session, revision, path->data, pool));
+
+      /* Fetch the switch (update) editor.  If REVISION is invalid, that's
+         okay; the RA driver will call editor->set_target_revision() later
+         on. */
+      SVN_ERR (svn_wc_get_switch_editor (anchor, target,
+                                         revnum, switch_url, recurse,
+                                         &switch_editor, &switch_edit_baton,
+                                         pool));
+      
+      /* Wrap it up with outside editors. */
+      svn_delta_wrap_editor (&switch_editor, &switch_edit_baton,
+                             before_editor, before_edit_baton,
+                             switch_editor, switch_edit_baton,
+                             after_editor, after_edit_baton, pool);
+
+      /* Tell RA to do a update of URL+TARGET to REVISION; if we pass an
+         invalid revnum, that means RA will use the latest revision. */
+      SVN_ERR (ra_lib->do_switch (session,
+                                  &reporter, &report_baton,
+                                  revnum,
+                                  target,
+                                  recurse,
+                                  switch_url,
+                                  switch_editor, switch_edit_baton));
+      
+      /* Drive the reporter structure, describing the revisions within
+         PATH.  When we call reporter->finish_report, the
+         update_editor will be driven by svn_repos_dir_delta. */ 
+      err = svn_wc_crawl_revisions (path, reporter, report_baton,
+                                    TRUE, recurse,
+                                    notify_func, notify_baton,
+                                    pool);
+    }
   
-  /* Open an RA session to this URL */
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, path,
-                                        TRUE, TRUE, auth_baton, pool));
-  
-  SVN_ERR (svn_client__get_revision_number
-           (&revnum, ra_lib, session, revision, path->data, pool));
+  else if (entry->kind == svn_node_file)
+    {
+      /* If switching a single file, just fetch the file directly and
+         "install" it into the working copy just like the
+         update-editor does.  */
 
-  /* ### Note: the whole RA interface below will probably change soon. */ 
+      apr_array_header_t *proparray;
+      apr_hash_t *prophash;
+      apr_hash_index_t *hi;
+      apr_file_t *fp;
+      svn_stringbuf_t *new_text_path;
+      svn_stream_t *file_stream;
+      svn_revnum_t fetched_rev = 1; /* this will be set by get_file() */
 
-  /* Tell RA to do a update of URL+TARGET to REVISION; if we pass an
-     invalid revnum, that means RA will use the latest revision. */
-  SVN_ERR (ra_lib->do_switch (session,
-                              &reporter, &report_baton,
-                              revnum,
-                              target,
-                              recurse,
-                              switch_url,
-                              switch_editor, switch_edit_baton));
+      /* Create a unique file */
+      SVN_ERR (svn_io_open_unique_file (&fp, &new_text_path,
+                                        path, ".new-text-base",
+                                        FALSE, /* don't delete on close */
+                                        pool));
 
-  /* Drive the reporter structure, describing the revisions within
-     PATH.  When we call reporter->finish_report, the
-     update_editor will be driven by svn_repos_dir_delta. */ 
-  err = svn_wc_crawl_revisions (path, reporter, report_baton,
-                                TRUE, recurse,
-                                notify_func, notify_baton,
-                                pool);
+      /* Create a generic stream that operates on this file.  */
+      file_stream = svn_stream_from_aprfile (fp, pool);
+
+      /* Open an RA session to 'target' file URL. */      
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, switch_url, path,
+                                            TRUE, TRUE, auth_baton, pool));
+      SVN_ERR (svn_client__get_revision_number
+               (&revnum, ra_lib, session, revision, path->data, pool));
+
+      /* Passing "" as a relative path, since we opened the file URL.
+         This pushes the text of the file into our file_stream, which
+         means it ends up in our unique tmpfile.  We also get the full
+         proplist. */
+      SVN_ERR (ra_lib->get_file (session, "", revnum, file_stream,
+                                 &fetched_rev, &prophash));
+      SVN_ERR (svn_stream_close (file_stream));
+
+      /* Convert the prophash into an array, which is what
+         svn_wc_install_file (and its helpers) want.  */
+      proparray = apr_array_make (pool, 1, sizeof(svn_prop_t));
+      for (hi = apr_hash_first (pool, prophash); hi; hi = apr_hash_next (hi))
+        {
+          const void *key;
+          apr_ssize_t klen;
+          void *val;
+          svn_prop_t *prop;
+          
+          apr_hash_this (hi, &key, &klen, &val);
+
+          prop = apr_array_push (proparray);
+          prop->name = (const char *) key;
+          prop->value = svn_string_create_from_buf ((svn_stringbuf_t *) val,
+                                                    pool);
+        }
+
+      /* This the same code as the update-editor's close_file(). */
+      SVN_ERR (svn_wc_install_file (path->data, revnum,
+                                    new_text_path->data,
+                                    proparray, TRUE, /* is full proplist */
+                                    pool));
+      
+      /* ### shouldn't the user see a 'U' somehow?  we have no trace
+         editor here!  Think about this... */
+
+      /* ### don't forget that copy.c:repos_to_wc_copy needs to filter
+         the props as well now.  ??? should it ignore entryprops and
+         wcprops? */
+
+    }  
   
   /* Sleep for one second to ensure timestamp integrity. */
   apr_sleep (APR_USEC_PER_SEC * 1);
@@ -180,7 +245,6 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
 
   /* Close the RA session. */
   SVN_ERR (ra_lib->close (session));
-
 
   return SVN_NO_ERROR;
 }

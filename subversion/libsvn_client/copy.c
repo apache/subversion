@@ -577,10 +577,19 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
         {
           const void *key;
           void *val;
+          int len;
+          enum svn_prop_kind kind;
 
           apr_hash_this (hi, &key, NULL, &val);
 
-          SVN_ERR (svn_wc_prop_set (key, val, dst_path->data, pool));
+          /* We only want to set 'normal' props.  For now, we're
+             ignoring any wc props (they're not needed when we commit
+             an addition), and we're ignoring entry props (they're
+             written to the entries file as part of the post-commit
+             processing).  */
+          kind = svn_property_kind (&len, key);
+          if (kind == svn_prop_regular_kind)
+            SVN_ERR (svn_wc_prop_set (key, val, dst_path->data, pool));
         }
 
       /* Close the file. */

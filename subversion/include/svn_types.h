@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
+#include <apr_tables.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -95,6 +96,50 @@ enum svn_recurse_kind
   svn_nonrecursive = 1,
   svn_recursive
 };
+
+
+
+
+/* Subversion distinguishes among several kinds of properties,
+   particularly on the client-side.  There is no "unknown" kind; if
+   there's nothing special about a property name, the default category
+   is `svn_prop_regular_kind'. */ 
+enum svn_prop_kind
+  {
+    svn_prop_entry_kind,   /* In .svn/entries, i.e., author, date, etc. */
+    svn_prop_wc_kind,      /* Client-side only, stored by specific RA layer. */
+    svn_prop_regular_kind  /* Seen if user does "svn proplist"; note
+                              that this includes some "svn:" props and
+                              all user props, i.e. ones stored in the
+                              repository fs. */
+  };
+
+/* Return the prop kind of a property named NAME, and set *PREFIX_LEN
+   to the length of the prefix of NAME that was sufficient to
+   distinguish its kind. */
+enum svn_prop_kind svn_property_kind (int *prefix_len,
+                                      const char *prop_name);
+
+
+/* Given an PROPLIST array of svn_prop_t structures, allocate three
+   new arrays in POOL.  Categorize each property and then create new
+   svn_prop_t structures in the proper lists.  Each new svn_prop_t
+   structure's fields will point to the same data within PROPLIST's
+   structures.
+
+   If no props exist in a certain category, then the array will come
+   back with ->nelts == 0.
+
+   ### Hmmm, maybe a better future interface is to return an array of
+       arrays, where the index into the array represents the index
+       into enum svn_prop_kind.  That way we can add more prop kinds
+       in the future without changing this interface...
+ */
+svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
+                                   apr_array_header_t **entry_props,
+                                   apr_array_header_t **wc_props,
+                                   apr_array_header_t **regular_props,
+                                   apr_pool_t *pool);
 
 
 
