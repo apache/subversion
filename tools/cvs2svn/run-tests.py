@@ -617,13 +617,6 @@ def simple_tags():
     raise svntest.Failure
   if not logs[rev].changed_paths == {
     '/branches/vendorbranch/proj (from /trunk/proj:16)': 'A',
-    '/branches/vendorbranch/proj/default': 'M',
-    '/branches/vendorbranch/proj/sub1/default': 'M',
-    '/branches/vendorbranch/proj/sub1/subsubA/default': 'M',
-    '/branches/vendorbranch/proj/sub1/subsubB/default': 'M',
-    '/branches/vendorbranch/proj/sub2/default': 'M',
-    '/branches/vendorbranch/proj/sub2/subsubA/default': 'M',
-    '/branches/vendorbranch/proj/sub3/default': 'M',
     }:
     raise svntest.Failure
 
@@ -868,6 +861,59 @@ def nonascii_filenames():
                      current_locale)
     
 
+def vendor_branch_sameness():
+  "avoid spurious changes for initial revs "
+  repos, wc, logs = ensure_conversion('vendor-branch-sameness')
+
+  # There are four files in the repository:
+  #
+  #    a.txt: Imported in the traditional way; 1.1 and 1.1.1.1 have
+  #           the same contents, the file's default branch is 1.1.1,
+  #           and both revisions are in state 'Exp'.
+  #
+  #    b.txt: Like a.txt, except that 1.1.1.1 has a real change from
+  #           1.1 (the addition of a line of text).
+  #
+  #    c.txt: Like a.txt, except that 1.1.1.1 is in state 'dead'.
+  #
+  #    d.txt: This file was created by 'cvs add' instead of import, so
+  #           it has only 1.1 -- no 1.1.1.1, and no default branch.
+  #           The timestamp on the add is exactly the same as for the
+  #           imports of the other files.
+  #
+  # (Log messages for the same revisions are the same in all files.)
+  #
+  # What we expect to see is everyone added in r1, then trunk/proj
+  # copied in r2.  In the copy, only a.txt should be left untouched;
+  # b.txt should be 'M'odified, and (for different reasons) c.txt and
+  # d.txt should be 'D'eleted.
+
+  if logs[1].msg.find('Initial revision') != 0:
+    raise svntest.Failure
+
+  if not logs[1].changed_paths == {
+    '/trunk' : 'A',
+    '/trunk/proj' : 'A',
+    '/trunk/proj/a.txt' : 'A',
+    '/trunk/proj/b.txt' : 'A',
+    '/trunk/proj/c.txt' : 'A',
+    '/trunk/proj/d.txt' : 'A',
+    }:
+    raise svntest.Failure
+
+  if logs[2].msg.find('First vendor branch revision.') != 0:
+    raise svntest.Failure
+
+  if not logs[2].changed_paths == {
+    '/branches' : 'A',
+    '/branches/vbranchA (from /trunk:1)' : 'A',
+    '/branches/vbranchA/proj/b.txt' : 'M',
+    '/branches/vbranchA/proj/c.txt' : 'D',
+    '/branches/vbranchA/proj/d.txt' : 'D',
+    }:
+    raise svntest.Failure
+
+
 #----------------------------------------------------------------------
 
 ########################################################################
@@ -899,6 +945,7 @@ test_list = [ None,
               enroot_race,
               branch_delete_first,
               nonascii_filenames,
+              vendor_branch_sameness,
              ]
 
 if __name__ == '__main__':

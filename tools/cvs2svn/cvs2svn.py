@@ -1885,15 +1885,22 @@ class SymbolicNameTracker:
 class Commit:
   def __init__(self):
     self.files = { }
+
+    # For consistency, the elements of both lists are of the form
+    #
+    #   (file, rev, deltatext_code, branch_name, tags, branches)
+    #
+    # even though self.deletes doesn't use the deltatext_code.
     self.changes = [ ]
     self.deletes = [ ]
+
     self.t_min = 1<<30
     self.t_max = 0
 
   def has_file(self, fname):
     return self.files.has_key(fname)
 
-  def add(self, t, op, file, rev, branch_name, tags, branches):
+  def add(self, t, op, file, rev, deltatext_code, branch_name, tags, branches):
     # Record the time range of this commit.
     #
     # ### ISSUE: It's possible, though unlikely, that the time range
@@ -1908,10 +1915,12 @@ class Commit:
       self.t_max = t
 
     if op == OP_CHANGE:
-      self.changes.append((file, rev, branch_name, tags, branches))
+      self.changes.append((file, rev, deltatext_code, branch_name,
+                           tags, branches))
     else:
       # OP_DELETE
-      self.deletes.append((file, rev, branch_name, tags, branches))
+      self.deletes.append((file, rev, deltatext_code, branch_name,
+                           tags, branches))
     self.files[file] = 1
 
   def get_metadata(self):
@@ -1919,10 +1928,10 @@ class Commit:
     # items that went into this commit. therefore, just grab any item from
     # our record of changes/deletes.
     if self.changes:
-      file, rev, br, tags, branches = self.changes[0]
+      file, rev, dt_code, br, tags, branches = self.changes[0]
     else:
       # there better be one...
-      file, rev, br, tags, branches = self.deletes[0]
+      file, rev, dt_code, br, tags, branches = self.deletes[0]
 
     # now, fetch the author/log from the ,v file
     rip = RevInfoParser()
@@ -1943,11 +1952,11 @@ class Commit:
             % (warning_prefix, COMMIT_THRESHOLD)
 
     if ctx.dry_run:
-      for f, r, br, tags, branches in self.changes:
+      for f, r, dt_code, br, tags, branches in self.changes:
         # compute a repository path, dropping the ,v from the file name
         svn_path = make_path(ctx, relative_name(ctx.cvsroot, f[:-2]), br)
         print "    adding or changing '%s' : '%s'" % (r, svn_path)
-      for f, r, br, tags, branches in self.deletes:
+      for f, r, dt_code, br, tags, branches in self.deletes:
         # compute a repository path, dropping the ,v from the file name
         svn_path = make_path(ctx, relative_name(ctx.cvsroot, f[:-2]), br)
         print "    deleting '%s' : '%s'" % (r, svn_path)
@@ -1971,7 +1980,7 @@ class Commit:
       print "  author: '%s'" % author
       print "  log:    '%s'" % log
       print "  date:   '%s'" % date
-      for rcs_file, cvs_rev, br, tags, branches in self.changes:
+      for rcs_file, cvs_rev, dt_code, br, tags, branches in self.changes:
         print "    rev %s of '%s'" % (cvs_rev, rcs_file)
       print "Consider rerunning with (for example) '--encoding=latin1'."
       # Just fall back to the original data.
@@ -1981,7 +1990,7 @@ class Commit:
     # Tells whether we actually wrote anything to the dumpfile.
     svn_rev = SVN_INVALID_REVNUM
 
-    for rcs_file, cvs_rev, br, tags, branches in self.changes:
+    for rcs_file, cvs_rev, dt_code, br, tags, branches in self.changes:
       # compute a repository path, dropping the ,v from the file name
       cvs_path = relative_name(ctx.cvsroot, rcs_file[:-2])
       svn_path = make_path(ctx, cvs_path, br)
@@ -2000,18 +2009,31 @@ class Commit:
         if not dumper.probe_path(svn_path):
           sym_tracker.fill_branch(dumper, ctx, br)
       print "    adding or changing %s : '%s'" % (cvs_rev, svn_path)
-      closed_tags, closed_branches = \
-                   dumper.add_or_change_path(cvs_path,
-                                             svn_path,
-                                             cvs_rev,
-                                             rcs_file,
-                                             tags,
-                                             branches,
-                                             ctx.cvs_revnums)
-      sym_tracker.close_tags(svn_path, svn_rev, closed_tags)
-      sym_tracker.close_branches(svn_path, svn_rev, closed_branches)
 
-    for rcs_file, cvs_rev, br, tags, branches in self.deletes:
+      # Only make a change if we need to.  When 1.1.1.1 has an empty
+      # deltatext, the explanation is almost always that we're looking
+      # at an imported file whose 1.1 and 1.1.1.1 are identical.  On
+      # such imports, CVS creates an RCS file where 1.1 has the
+      # content, and 1.1.1.1 has an empty deltatext, i.e, the same
+      # content as 1.1.  There's no reason to reflect this non-change
+      # in the repository, so we want to do nothing in this case.  (If
+      # we were really paranoid, we could make sure 1.1's log message
+      # is the CVS-generated "Initial revision\n", but I think the
+      # conditions below are strict enough.)
+      if not ((dt_code == DELTATEXT_EMPTY) and (cvs_rev == "1.1.1.1")
+              and dumper.probe_path(svn_path)):
+        closed_tags, closed_branches = \
+                     dumper.add_or_change_path(cvs_path,
+                                               svn_path,
+                                               cvs_rev,
+                                               rcs_file,
+                                               tags,
+                                               branches,
+                                               ctx.cvs_revnums)
+        sym_tracker.close_tags(svn_path, svn_rev, closed_tags)
+        sym_tracker.close_branches(svn_path, svn_rev, closed_branches)
+
+    for rcs_file, cvs_rev, dt_code, br, tags, branches in self.deletes:
       # compute a repository path, dropping the ,v from the file name
       cvs_path = relative_name(ctx.cvsroot, rcs_file[:-2])
       svn_path = make_path(ctx, cvs_path, br)
@@ -2252,7 +2274,8 @@ def pass4(ctx):
       c = commits[id]
     else:
       c = commits[id] = Commit()
-    c.add(timestamp, op, fname, rev, branch_name, tags, branches)
+    c.add(timestamp, op, fname, rev, deltatext_code, branch_name,
+          tags, branches)
 
   # End of the sorted revs file.  Flush any remaining commits:
   if commits:
