@@ -1384,7 +1384,7 @@ unsupported_diff_error (svn_error_t *child_err)
    PATH1 and PATH2 are both working copy paths.  REVISION1 and
    REVISION2 are their respective revisions.
 
-   All other options are the same as thos passed to svn_client_diff(). */
+   All other options are the same as those passed to svn_client_diff(). */
 static svn_error_t *
 diff_wc_wc (const apr_array_header_t *options,
             const char *path1,
@@ -1440,12 +1440,12 @@ diff_wc_wc (const apr_array_header_t *options,
 }
 
 
-/* Perform a diff between two working-copy paths.  
+/* Perform a diff between two repository paths.  
    
    PATH1 and PATH2 may be either URLs or the working copy paths.
    REVISION1 and REVISION2 are their respective revisions.
 
-   All other options are the same as thos passed to svn_client_diff(). */
+   All other options are the same as those passed to svn_client_diff(). */
 static svn_error_t *
 diff_repos_repos (const apr_array_header_t *options,
                   const char *path1,
@@ -1599,13 +1599,13 @@ diff_repos_repos (const apr_array_header_t *options,
 }
 
 
-/* Perform a diff between two working-copy paths.  
+/* Perform a diff between a repository path and a working-copy path.
    
-   PATH1 may be either a URL or a working copy paths.  PATH2 is a
+   PATH1 may be either a URL or a working copy path.  PATH2 is a
    working copy path.  REVISION1 and REVISION2 are their respective
    revisions.  If REVERSE is TRUE, the diff will be done in reverse.
 
-   All other options are the same as thos passed to svn_client_diff(). */
+   All other options are the same as those passed to svn_client_diff(). */
 static svn_error_t *
 diff_repos_wc (const apr_array_header_t *options,
                const char *path1,
@@ -1819,7 +1819,7 @@ do_diff (const apr_array_header_t *options,
    these input will be one of the following:
 
    - a repository URL at a given revision.
-   - a working copy path, ignoring no local mods.
+   - a working copy path, ignoring local mods.
    - a working copy path, including local mods.
 
    We can establish a matrix that shows the nine possible types of

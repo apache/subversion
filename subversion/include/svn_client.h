@@ -54,7 +54,7 @@ extern "C" {
     it's kind of losing to have the client application loop over
     targets and call svn_client_update() on each one;  each call to
     update initializes a whole new repository session (network
-    overhead, etc.)  On the other hand, it's this is a very simple
+    overhead, etc.)  On the other hand, it's a very simple
     implementation, and allows for the possibility that different
     targets may come from different repositories.  */
 
@@ -649,8 +649,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
  * structures which describe the status of @a path and its children.
  *
  *    - If @a descend is non-zero, recurse fully, else do only immediate
- *      children.  This (inversely) corresponds to the "-n"
- *      (--nonrecursive) flag in the commandline client app.
+ *      children.  This (inversely) corresponds to the "-N"
+ *      (--non-recursive) flag in the commandline client app.
  *
  *    - If @a get_all is set, then all entries are retrieved; otherwise
  *      only "interesting" entries (local mods and/or out-of-date)

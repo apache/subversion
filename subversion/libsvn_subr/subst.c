@@ -534,7 +534,6 @@ svn_subst_keywords_differ (const svn_subst_keywords_t *a,
 }
 
 
-/* ### for docstring:  a translation request MUST be set! */
 svn_error_t *
 svn_subst_translate_stream (svn_stream_t *s, /* src stream */
                             svn_stream_t *d, /* dst stream */

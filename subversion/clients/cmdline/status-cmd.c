@@ -95,10 +95,7 @@ svn_cl__status (apr_getopt_t *os,
       const char *target = ((const char **) (targets->elts))[i];
 
       /* Retrieve a hash of status structures with the information
-         requested by the user.
-
-         svn_client_status directly understands the three commandline
-         switches (-n, -u, -[vV]) : */
+         requested by the user. */
 
       sb.detailed = (opt_state->verbose || opt_state->update);
       sb.show_last_committed = opt_state->verbose;

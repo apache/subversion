@@ -179,7 +179,7 @@ struct file_baton
    ENTRY will be stored directly, not copied.
 
    PARENT_ENTRY is the entry for the parent directory of PATH, it may be
-   NULL if entry is NULL or if PATH is a working copy root.  The lifetime
+   NULL if ENTRY is NULL or if PATH is a working copy root.  The lifetime
    of PARENT_ENTRY's pool is not important.
 
    PATH_KIND is the node kind of PATH as determined by the caller.

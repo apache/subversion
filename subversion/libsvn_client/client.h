@@ -133,7 +133,7 @@ typedef struct
       - USE_ADMIN indicates that the RA layer should create tempfiles
         in the administrative area instead of in the working copy itself.
 
-      - READ_ONLY_WC indicates that the RA layer should not attempt
+      - READ_ONLY_WC indicates that the RA layer should not attempt to
         modify the WC props directly.
 
    BASE_DIR may be NULL if the RA operation does not correspond to a

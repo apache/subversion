@@ -79,7 +79,7 @@ print_dirents (apr_hash_t *dirents,
                                                     dirent->last_author,
                                                     pool));
 
-          /* svn_time_to_human_cstring gives us something *way* to long
+          /* svn_time_to_human_cstring gives us something *way* too long
              to use for this, so we have to roll our own.  We include
              the year if the entry's time is not within half a year. */
           apr_time_exp_lt (&exp_time, dirent->time);

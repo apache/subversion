@@ -68,7 +68,7 @@ print_status (const char *path,
   char commit_rev_buf[21];
   const char *working_rev = working_rev_buf;
   const char *commit_rev = commit_rev_buf;
-  const char *commit_author = NULL; /* Silence a gcc unitialised warning */
+  const char *commit_author = NULL; /* Silence a gcc uninitialised warning */
 
   if (detailed)
     {

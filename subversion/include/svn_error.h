@@ -74,7 +74,7 @@ char *svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize);
  *
  * Notes: Errors are always allocated in a subpool of the global pool,
  *        since an error's lifetime is generally not related to the
- *        lifetime of the any convenient pool.  Errors must be freed
+ *        lifetime of any convenient pool.  Errors must be freed
  *        with @c svn_error_clear().
  *
  *        If creating the "bottommost" error in a chain, pass @c NULL for
