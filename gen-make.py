@@ -19,39 +19,57 @@ sys.path.insert(1, 'build')
 gen_modules = {
   'make' : ('gen_make', 'Makefiles for POSIX systems'),
   'dsp' : ('gen_msvc_dsp', 'MSVC 6.x project files'),
-  'nmake-msvc' : ('gen_msvc_nmake', '### need description'),
-  'mingw' : ('gen_mingw', 'Makefiles for mingw'),
   'vcproj' : ('gen_vcnet_vcproj', 'VC.Net project files'),
-  'nmake-vcnet' : ('gen_vcnet_nmake', '### need description'),
-  'bpr' : ('gen_bcpp_bpr', '### need description'),
-  'make-bcpp' : ('gen_bcpp_make', '### need description'),
   }
 
-def main(fname, gentype, verfname=None, oname=None,
+def main(fname, gentype, verfname=None,
          skip_depends=0, other_options=None):
   if verfname is None:
     verfname = os.path.join('subversion', 'include', 'svn_version.h')
 
-  try:
-    gen_module = __import__(gen_modules[gentype][0])
-  except ImportError:
-    print 'ERROR: the "%s" generator is not yet implemented.' % gentype
-    sys.exit(1)
+  gen_module = __import__(gen_modules[gentype][0])
 
   generator = gen_module.Generator(fname, verfname, other_options)
+
   if not skip_depends:
     generator.compute_hdr_deps()
 
-  if oname is None:
-    oname = generator.default_output(fname)
+  generator.write()
 
-  generator.write(oname)
+  if other_options and ('--debug', '') in other_options:
+    for dep_type, target_dict in generator.graph.deps.items():
+      sorted_targets = target_dict.keys(); sorted_targets.sort()
+      for target in sorted_targets:
+        print dep_type + ": " + _objinfo(target)
+        for source in target_dict[target]:
+          print "  " + _objinfo(source)
+      print "=" * 72
+    gen_keys = generator.__dict__.keys()
+    gen_keys.sort()
+    for name in gen_keys:
+      value = generator.__dict__[name]
+      if type(value) == type([]):
+        print name + ": "
+        for i in value:
+          print "  " + _objinfo(i)
+        print "=" * 72
+
+
+def _objinfo(o):
+  if type(o) == type(''):
+    return repr(o)
+  else:
+    t = o.__class__.__name__
+    n = getattr(o, 'name', '-')
+    f = getattr(o, 'filename', '-')
+    return "%s: %s %s" % (t,n,f)
 
 
 def _usage_exit():
   "print usage, exit the script"
   print "USAGE:  gen-make.py [options...] [conf-file]"
   print "  -s       skip dependency generation"
+  print "  --debug  print lots of stuff only developers care about"
   print "  -t TYPE  use the TYPE generator; can be one of:"
   items = gen_modules.items()
   items.sort()
@@ -153,6 +171,7 @@ if __name__ == '__main__':
                                 'enable-nls',
                                 'enable-bdb-in-apr-util',
                                 'vsnet-version=',
+                                'debug',
                                 ])
     if len(args) > 1:
       _usage_exit()

@@ -152,6 +152,33 @@
          subversion/clients/cmdline/svn co \
                         https://svn.collab.net/repos/svn/trunk
 
+     i) Verify that the perl and python swig bindings at least compile.
+        If you can't do this, then have another developer verify.
+
+         (see bindings/swig/INSTALL for details)
+
+         Ensure that ./configure detected a suitable version of swig,
+         perl, and python.  Then:
+
+            make swig-py
+            sudo make install-swig-py
+
+            make swig-pl
+            make check-swig-pl
+            sudo make install-swig-pl
+
+     j) Verify that the javahl bindings at least compile.
+        If you can't do this, then have another developer verify.
+
+         (see bindings/java/javahl/README for details)
+
+        Ensure that ./configure detected a suitable jdk, and then
+        possibly re-run with '--enable-javahl' and '--with-jdk=':
+              
+            make javahl
+            sudo make install-javahl
+            make check-javahl
+
 10. Use GPG to sign release. 
 
    [Details to be filled in later].

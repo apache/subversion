@@ -34,21 +34,13 @@
 #include "svn_client.h"
 #include "svn_repos.h"
 
-#if SVN_SWIG_VERSION >= 103020
-#include "python/precommon.swg"
-#ifndef SWIG_ConvertPtr
-#define SWIG_ConvertPtr SWIG_Python_ConvertPtr
-#endif
-#ifndef SWIG_NewPointerObj
-#define SWIG_NewPointerObj SWIG_Python_NewPointerObj
-#endif
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
 
+
+#if SVN_SWIG_VERSION < 103024
 /* If this file is being included outside of a wrapper file, then need to
    create stubs for some of the SWIG types. */
 
@@ -60,12 +52,25 @@ extern "C" {
 
 #ifdef SVN_NEED_SWIG_TYPES
 
+#if SVN_SWIG_VERSION >= 103020
+#include "python/precommon.swg"
+#ifndef SWIG_ConvertPtr
+#define SWIG_ConvertPtr SWIG_Python_ConvertPtr
+#endif
+#ifndef SWIG_NewPointerObj
+#define SWIG_NewPointerObj SWIG_Python_NewPointerObj
+#endif
+#endif
+
 typedef struct _unnamed swig_type_info;
+
 PyObject *SWIG_NewPointerObj(void *, swig_type_info *, int own);
 swig_type_info *SWIG_TypeQuery(const char *name);
 int SWIG_ConvertPtr(PyObject *, void **, swig_type_info *, int flags);
 
 #endif /* SVN_NEED_SWIG_TYPES */
+#endif /* SVN_SWIG_VERSION < 103024 */
+
 
 /* Functions to manage python's global interpreter lock */
 void svn_swig_py_release_py_lock(void);

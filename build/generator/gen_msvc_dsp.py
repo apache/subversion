@@ -18,9 +18,6 @@ class Generator(gen_win.WinGeneratorBase):
     gen_win.WinGeneratorBase.__init__(self, fname, verfname, options,
                                       'msvc-dsp')
 
-  def default_output(self, conf_path):
-    return 'subversion_msvc.dsw'
-
   def quote(self, str):
     return '"%s"' % str
 
@@ -83,7 +80,7 @@ class Generator(gen_win.WinGeneratorBase):
 
     self.write_with_template(fname, 'msvc_dsp.ezt', data)
 
-  def write(self, oname):
+  def write(self):
     "Write a Workspace (.dsw)"
 
     self.write_neon_project_file('neon.dsp')
@@ -126,7 +123,7 @@ class Generator(gen_win.WinGeneratorBase):
       'targets' : targets,
       }
 
-    self.write_with_template(oname, 'msvc_dsw.ezt', data)
+    self.write_with_template('subversion_msvc.dsw', 'msvc_dsw.ezt', data)
 
 
 # compatibility with older Pythons:

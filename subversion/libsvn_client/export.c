@@ -91,6 +91,125 @@ get_eol_style (svn_subst_eol_style_t *style,
 }
 
 static svn_error_t *
+copy_one_versioned_file (const char *from,
+                         const char *to,
+                         svn_wc_adm_access_t *adm_access,
+                         svn_opt_revision_t *revision,
+                         const char *native_eol,
+                         apr_pool_t *pool)
+{
+  const svn_wc_entry_t *entry;
+  svn_error_t *err;
+  svn_subst_keywords_t kw = { 0 };
+  svn_subst_eol_style_t style;
+  apr_hash_t *props;
+  const char *base;
+  svn_string_t *eol_style, *keywords, *executable, *externals, *special;
+  const char *eol = NULL;
+  svn_boolean_t local_mod = FALSE;
+  apr_time_t tm;
+          
+  err = svn_wc_entry (&entry, from, adm_access, FALSE, pool);
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_NOT_FILE)
+        return err;
+      svn_error_clear (err);
+    }
+  
+  /* Only export 'added' files when the revision is WORKING.
+     Otherwise, skip the 'added' files, since they didn't exist
+     in the BASE revision and don't have an associated text-base. */
+  if (! entry || (revision->kind != svn_opt_revision_working &&
+                  entry->schedule == svn_wc_schedule_add))
+    return SVN_NO_ERROR;
+
+  if (revision->kind != svn_opt_revision_working)
+    {
+      SVN_ERR (svn_wc_get_pristine_copy_path (from, &base, 
+                                              pool));
+      SVN_ERR (svn_wc_get_prop_diffs (NULL, &props, from, 
+                                      adm_access, pool));
+    }
+  else
+    {
+      svn_wc_status_t *status;
+      
+      base = from;
+      SVN_ERR (svn_wc_prop_list (&props, from, 
+                                 adm_access, pool));
+      SVN_ERR (svn_wc_status (&status, from, 
+                              adm_access, pool));
+      if (status->text_status != svn_wc_status_normal)
+        local_mod = TRUE;
+    }
+  
+  eol_style = apr_hash_get (props, SVN_PROP_EOL_STYLE,
+                            APR_HASH_KEY_STRING);
+  keywords = apr_hash_get (props, SVN_PROP_KEYWORDS,
+                           APR_HASH_KEY_STRING);
+  executable = apr_hash_get (props, SVN_PROP_EXECUTABLE,
+                             APR_HASH_KEY_STRING);
+  externals = apr_hash_get (props, SVN_PROP_EXTERNALS,
+                            APR_HASH_KEY_STRING);
+  special = apr_hash_get (props, SVN_PROP_SPECIAL,
+                          APR_HASH_KEY_STRING);
+  
+  if (eol_style)
+    SVN_ERR (get_eol_style (&style, &eol, eol_style->data, native_eol));
+  
+  if (local_mod && (! special))
+    {
+      /* Use the modified time from the working copy if
+         the file */
+      SVN_ERR (svn_io_file_affected_time (&tm, from, pool));
+    }
+  else
+    {
+      tm = entry->cmt_date;
+    }
+
+  if (keywords)
+    {
+      const char *fmt;
+      const char *author;
+
+      if (local_mod)
+        {
+          /* For locally modified files, we'll append an 'M'
+             to the revision number, and set the author to
+             "(local)" since we can't always determine the
+             current user's username */
+          fmt = "%ldM";
+          author = _("(local)");
+        }
+      else
+        {
+          fmt = "%ld";
+          author = entry->cmt_author;
+        }
+      
+      SVN_ERR (svn_subst_build_keywords 
+               (&kw, keywords->data, 
+                apr_psprintf (pool, fmt, entry->cmt_rev),
+                entry->url, tm, author, pool));
+    }
+
+  SVN_ERR (svn_subst_copy_and_translate2 (base, to, eol, FALSE,
+                                          &kw, TRUE,
+                                          special ? TRUE : FALSE,
+                                          pool));
+  if (executable)
+    SVN_ERR (svn_io_set_file_executable (to, TRUE, 
+                                         FALSE, pool));
+
+  if (! special)
+    SVN_ERR (svn_io_set_file_affected_time (tm, to, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 copy_versioned_files (const char *from,
                       const char *to,
                       svn_opt_revision_t *revision,
@@ -118,187 +237,94 @@ copy_versioned_files (const char *from,
         svn_error_clear (err);
     }
 
-  /* We don't want to copy some random non-versioned directory. */
+  /* We don't want to copy some random non-versioned item */
   if (! entry)
     {
       SVN_ERR (svn_wc_adm_close (adm_access));
       return SVN_NO_ERROR;
     }
 
-  /* Only export directories with the 'added' status if revision
+  /* Only export entries with the 'added' status if revision
      is WORKING.  Otherwise, skip it, as it doesn't exist in any
      revision other than WORKING. */
   if (revision->kind != svn_opt_revision_working &&
       entry->schedule == svn_wc_schedule_add)
     return SVN_NO_ERROR;
 
-  /* Try to make the new directory.  If this fails because the
-     directory already exists, check our FORCE flag to see if we
-     care. */
-  SVN_ERR (svn_io_stat (&finfo, from, APR_FINFO_PROT, pool));
-  err = svn_io_dir_make (to, finfo.protection, pool);
-  if (err)
+  if (entry->kind == svn_node_dir)
     {
-      if (! APR_STATUS_IS_EEXIST (err->apr_err))
-        return err;
-      if (! force)
-        SVN_ERR_W (err, _("Destination directory exists, and will not be "
-                          "overwritten unless forced"));
-      else
-        svn_error_clear (err);
-    }
-
-  SVN_ERR (svn_io_get_dirents (&dirents, from, pool));
-
-  iterpool = svn_pool_create (pool);
-  for (hi = apr_hash_first (pool, dirents); hi; hi = apr_hash_next (hi))
-    {
-      const svn_node_kind_t *type;
-      const char *item;
-      const void *key;
-      void *val;
-      
-      svn_pool_clear (iterpool);
-
-      apr_hash_this (hi, &key, NULL, &val);
-      
-      item = key;
-      type = val;
-      
-      if (ctx->cancel_func)
-        SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
-      
-      /* ### We could also invoke ctx->notify_func somewhere in
-         ### here... Is it called for, though?  Not sure. */ 
-      
-      if (*type == svn_node_dir)
+      /* Try to make the new directory.  If this fails because the
+         directory already exists, check our FORCE flag to see if we
+         care. */
+      SVN_ERR (svn_io_stat (&finfo, from, APR_FINFO_PROT, pool));
+      err = svn_io_dir_make (to, finfo.protection, pool);
+      if (err)
         {
-          if (strcmp (item, SVN_WC_ADM_DIR_NAME) == 0)
-            {
-              ; /* skip this, it's an administrative directory. */
-            }
+          if (! APR_STATUS_IS_EEXIST (err->apr_err))
+            return err;
+          if (! force)
+            SVN_ERR_W (err, _("Destination directory exists, and will not be "
+                              "overwritten unless forced"));
           else
-            {
-              const char *new_from = svn_path_join (from, key, iterpool);
-              const char *new_to = svn_path_join (to, key, iterpool);
-              
-              SVN_ERR (copy_versioned_files (new_from, new_to, revision,
-                                             force, native_eol, ctx,
-                                             iterpool));
-            }
+            svn_error_clear (err);
         }
-      else if (*type == svn_node_file)
+
+      SVN_ERR (svn_io_get_dirents (&dirents, from, pool));
+
+      iterpool = svn_pool_create (pool);
+      for (hi = apr_hash_first (pool, dirents); hi; hi = apr_hash_next (hi))
         {
-          const char *copy_from = svn_path_join (from, item, iterpool);
-          const char *copy_to = svn_path_join (to, item, iterpool);
-          svn_subst_keywords_t kw = { 0 };
-          svn_subst_eol_style_t style;
-          apr_hash_t *props;
-          const char *base;
-          svn_string_t *eol_style, *keywords, *executable, *externals, *special;
-          const char *eol = NULL;
-          svn_boolean_t local_mod = FALSE;
-          apr_time_t tm;
-                  
-          err = svn_wc_entry (&entry, copy_from, adm_access, FALSE, iterpool);
-          if (err)
-            {
-              if (err->apr_err != SVN_ERR_WC_NOT_FILE)
-                return err;
-              svn_error_clear (err);
-            }
+          const svn_node_kind_t *type;
+          const char *item;
+          const void *key;
+          void *val;
           
-          /* Only export 'added' files when the revision is WORKING.
-             Otherwise, skip the 'added' files, since they didn't exist
-             in the BASE revision and don't have an associated text-base. */
-          if (! entry || (revision->kind != svn_opt_revision_working &&
-                          entry->schedule == svn_wc_schedule_add))
-            continue;
-    
-          if (revision->kind != svn_opt_revision_working)
-            {
-              SVN_ERR (svn_wc_get_pristine_copy_path (copy_from, &base, 
-                                                      iterpool));
-              SVN_ERR (svn_wc_get_prop_diffs (NULL, &props, copy_from, 
-                                              adm_access, iterpool));
-            }
-          else
-            {
-              svn_wc_status_t *status;
-              
-              base = copy_from;
-              SVN_ERR (svn_wc_prop_list (&props, copy_from, 
-                                         adm_access, iterpool));
-              SVN_ERR (svn_wc_status (&status, copy_from, 
-                                      adm_access, iterpool));
-              if (status->text_status != svn_wc_status_normal)
-                local_mod = TRUE;
-            }
-          
-          eol_style = apr_hash_get (props, SVN_PROP_EOL_STYLE,
-                                    APR_HASH_KEY_STRING);
-          keywords = apr_hash_get (props, SVN_PROP_KEYWORDS,
-                                   APR_HASH_KEY_STRING);
-          executable = apr_hash_get (props, SVN_PROP_EXECUTABLE,
-                                     APR_HASH_KEY_STRING);
-          externals = apr_hash_get (props, SVN_PROP_EXTERNALS,
-                                    APR_HASH_KEY_STRING);
-          special = apr_hash_get (props, SVN_PROP_SPECIAL,
-                                  APR_HASH_KEY_STRING);
-          
-          if (eol_style)
-            SVN_ERR (get_eol_style (&style, &eol, eol_style->data, native_eol));
-          
-          if (local_mod && (! special))
-            {
-              /* Use the modified time from the working copy if
-                 the file */
-              SVN_ERR (svn_io_file_affected_time (&tm, copy_from, iterpool));
-            }
-          else
-            {
-              tm = entry->cmt_date;
-            }
+          svn_pool_clear (iterpool);
 
-          if (keywords)
+          apr_hash_this (hi, &key, NULL, &val);
+          
+          item = key;
+          type = val;
+          
+          if (ctx->cancel_func)
+            SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
+          
+          /* ### We could also invoke ctx->notify_func somewhere in
+             ### here... Is it called for, though?  Not sure. */ 
+          
+          if (*type == svn_node_dir)
             {
-              const char *fmt;
-              const char *author;
-
-              if (local_mod)
+              if (strcmp (item, SVN_WC_ADM_DIR_NAME) == 0)
                 {
-                  /* For locally modified files, we'll append an 'M'
-                     to the revision number, and set the author to
-                     "(local)" since we can't always determine the
-                     current user's username */
-                  fmt = "%ldM";
-                  author = _("(local)");
+                  ; /* skip this, it's an administrative directory. */
                 }
               else
                 {
-                  fmt = "%ld";
-                  author = entry->cmt_author;
+                  const char *new_from = svn_path_join (from, item, iterpool);
+                  const char *new_to = svn_path_join (to, item, iterpool);
+                  
+                  SVN_ERR (copy_versioned_files (new_from, new_to, revision,
+                                                 force, native_eol, ctx,
+                                                 iterpool));
                 }
-              
-              SVN_ERR (svn_subst_build_keywords 
-                       (&kw, keywords->data, 
-                        apr_psprintf (iterpool, fmt, entry->cmt_rev),
-                        entry->url, tm, author, iterpool));
             }
-
-          SVN_ERR (svn_subst_copy_and_translate2 (base, copy_to, eol, FALSE,
-                                                  &kw, TRUE,
-                                                  special ? TRUE : FALSE,
-                                                  iterpool));
-          if (executable)
-            SVN_ERR (svn_io_set_file_executable (copy_to, TRUE, 
-                                                 FALSE, iterpool));
-
-          if (! special)
-            SVN_ERR (svn_io_set_file_affected_time (tm, copy_to, iterpool));
+          else if (*type == svn_node_file)
+            {
+              const char *new_from = svn_path_join (from, item, iterpool);
+              const char *new_to = svn_path_join (to, item, iterpool);
+                  
+              SVN_ERR (copy_one_versioned_file (new_from, new_to, adm_access,
+                                                revision, native_eol,
+                                                iterpool));
+            }
         }
+      svn_pool_destroy (iterpool);
     }
-  svn_pool_destroy (iterpool);
+  else if (entry->kind == svn_node_file)
+    {
+      SVN_ERR (copy_one_versioned_file (from, to, adm_access, revision,
+                                        native_eol, pool));
+    }
 
   SVN_ERR (svn_wc_adm_close (adm_access));
   return SVN_NO_ERROR;
@@ -733,16 +759,16 @@ svn_client_export3 (svn_revnum_t *result_rev,
       svn_revnum_t revnum;
       void *session;
       svn_ra_plugin_t *ra_lib;
-      void *edit_baton;
       svn_node_kind_t kind;
-      const svn_delta_editor_t *export_editor;
-      const svn_ra_reporter_t *reporter;
-      void *report_baton;
       struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
-      svn_delta_editor_t *editor = svn_delta_default_editor (pool);
-      svn_boolean_t use_sleep = FALSE;
 
+      /* Get the RA connection. */
+      SVN_ERR (svn_client__ra_lib_from_path (&ra_lib, &session, &revnum,
+                                             &url, from, peg_revision,
+                                             revision, ctx, pool));
+      
       eb->root_path = to;
+      eb->root_url = url;
       eb->force = force;
       eb->target_revision = &edit_revision;
       eb->notify_func = ctx->notify_func;
@@ -750,61 +776,115 @@ svn_client_export3 (svn_revnum_t *result_rev,
       eb->externals = apr_hash_make (pool);
       eb->native_eol = native_eol; 
 
-      editor->set_target_revision = set_target_revision;
-      editor->open_root = open_root;
-      editor->add_directory = add_directory;
-      editor->add_file = add_file;
-      editor->apply_textdelta = apply_textdelta;
-      editor->close_file = close_file;
-      editor->change_file_prop = change_file_prop;
-      editor->change_dir_prop = change_dir_prop;
+      SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
+
+      if (kind == svn_node_file)
+        {
+          apr_hash_t *props;
+          apr_hash_index_t *hi;
+          struct file_baton *fb = apr_pcalloc (pool, sizeof(*fb));
+
+          /* Since you cannot actually root an editor at a file, we 
+           * manually drive a few functions of our editor. */
+
+          /* This is the equivalent of a parentless add_file(). */
+          fb->edit_baton = eb;
+          fb->path = eb->root_path;
+          fb->url = eb->root_url;
+          fb->pool = pool;
+          
+          /* Copied from apply_textdelta(). */
+          SVN_ERR (svn_io_open_unique_file (&fb->tmp_file, &(fb->tmppath),
+                                            fb->path, ".tmp", FALSE,
+                                            fb->pool));
+
+          /* Step outside the editor-likeness for a moment, to actually talk
+           * to the repository. */
+          SVN_ERR(ra_lib->get_file (session, "", revnum,
+                                    svn_stream_from_aprfile (fb->tmp_file,
+                                                             pool),
+                                    NULL, &props, pool));
+
+          /* Push the props into change_file_prop(), to update the file_baton
+           * with information. */
+          for (hi = apr_hash_first (pool, props); hi; hi = apr_hash_next (hi))
+            {
+              const char *propname;
+              svn_string_t *propval;
+              const void *key;
+              void *val;
+
+              apr_hash_this (hi, &key, NULL, &val);
+
+              propname = key;
+              propval = val;
+
+              SVN_ERR (change_file_prop (fb, propname, propval, pool));
+            }
+          
+          /* And now just use close_file() to do all the keyword and EOL
+           * work, and put the file into place. */
+          SVN_ERR (close_file (fb, NULL, pool));
+        }
+      else if (kind == svn_node_dir)
+        {
+          void *edit_baton;
+          const svn_delta_editor_t *export_editor;
+          const svn_ra_reporter_t *reporter;
+          void *report_baton;
+          svn_delta_editor_t *editor = svn_delta_default_editor (pool);
+          svn_boolean_t use_sleep = FALSE;
+
+          editor->set_target_revision = set_target_revision;
+          editor->open_root = open_root;
+          editor->add_directory = add_directory;
+          editor->add_file = add_file;
+          editor->apply_textdelta = apply_textdelta;
+          editor->close_file = close_file;
+          editor->change_file_prop = change_file_prop;
+          editor->change_dir_prop = change_dir_prop;
+          
+          SVN_ERR (svn_delta_get_cancellation_editor (ctx->cancel_func,
+                                                      ctx->cancel_baton,
+                                                      editor,
+                                                      eb,
+                                                      &export_editor,
+                                                      &edit_baton,
+                                                      pool));
       
-      SVN_ERR (svn_delta_get_cancellation_editor (ctx->cancel_func,
-                                                  ctx->cancel_baton,
-                                                  editor,
-                                                  eb,
-                                                  &export_editor,
-                                                  &edit_baton,
-                                                  pool));
-  
-      /* Get the RA connection. */
-      SVN_ERR (svn_client__ra_lib_from_path (&ra_lib, &session, &revnum,
-                                             &url, from, peg_revision,
-                                             revision, ctx, pool));
       
-      eb->root_url = url;
-      
-      /* Manufacture a basic 'report' to the update reporter. */
-      SVN_ERR (ra_lib->do_update (session,
-                                  &reporter, &report_baton,
-                                  revnum,
-                                  "", /* no sub-target */
-                                  TRUE, /* recurse */
-                                  export_editor, edit_baton, pool));
+          /* Manufacture a basic 'report' to the update reporter. */
+          SVN_ERR (ra_lib->do_update (session,
+                                      &reporter, &report_baton,
+                                      revnum,
+                                      "", /* no sub-target */
+                                      TRUE, /* recurse */
+                                      export_editor, edit_baton, pool));
 
-      SVN_ERR (reporter->set_path (report_baton, "", revnum,
-                                   TRUE, /* "help, my dir is empty!" */
-                                   pool));
+          SVN_ERR (reporter->set_path (report_baton, "", revnum,
+                                       TRUE, /* "help, my dir is empty!" */
+                                       pool));
 
-      SVN_ERR (reporter->finish_report (report_baton, pool));               
+          SVN_ERR (reporter->finish_report (report_baton, pool));               
 
-      /* Special case: Due to our sly export/checkout method of
-       * updating an empty directory, no target will have been created
-       * if the exported item is itself an empty directory
-       * (export_editor->open_root never gets called, because there
-       * are no "changes" to make to the empty dir we reported to the
-       * repository).
-       *
-       * So we just create the empty dir manually; but we do it via
-       * open_root_internal(), in order to get proper notification.
-       */
-      SVN_ERR (svn_io_check_path (to, &kind, pool));
-      if (kind == svn_node_none)
-        SVN_ERR (open_root_internal
-                 (to, force, ctx->notify_func, ctx->notify_baton, pool));
+          /* Special case: Due to our sly export/checkout method of
+           * updating an empty directory, no target will have been created
+           * if the exported item is itself an empty directory
+           * (export_editor->open_root never gets called, because there
+           * are no "changes" to make to the empty dir we reported to the
+           * repository).
+           *
+           * So we just create the empty dir manually; but we do it via
+           * open_root_internal(), in order to get proper notification.
+           */
+          SVN_ERR (svn_io_check_path (to, &kind, pool));
+          if (kind == svn_node_none)
+            SVN_ERR (open_root_internal
+                     (to, force, ctx->notify_func, ctx->notify_baton, pool));
 
-      SVN_ERR (svn_client__fetch_externals (eb->externals, TRUE, 
-                                            &use_sleep, ctx, pool));
+          SVN_ERR (svn_client__fetch_externals (eb->externals, TRUE, 
+                                                &use_sleep, ctx, pool));
+        }
     }
   else
     {

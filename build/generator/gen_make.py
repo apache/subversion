@@ -20,10 +20,7 @@ class Generator(gen_base.GeneratorBase):
     ('lib', 'object'): '.lo',
     }
 
-  def default_output(self, conf_path):
-    return os.path.splitext(os.path.basename(conf_path))[0] + '-outputs.mk'
-
-  def write(self, oname):
+  def write(self):
     install_deps = self.graph.get_deps(gen_base.DT_INSTALL)
     install_sources = self.graph.get_all_sources(gen_base.DT_INSTALL)
 
@@ -31,7 +28,7 @@ class Generator(gen_base.GeneratorBase):
     install_deps.sort()
     install_sources.sort(lambda s1, s2: cmp(s1.name, s2.name))
 
-    self.ofile = open(oname, 'w')
+    self.ofile = open('build-outputs.mk', 'w')
     self.ofile.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n\n')
 
     # write various symbols at the top of the file so they will be
@@ -330,44 +327,27 @@ class Generator(gen_base.GeneratorBase):
     self.ofile.write('\n')
 
     # write a list of directories in which things are built
-    #   get target directories
-    target_dirs = self.graph.get_sources(gen_base.DT_LIST, 
-                                         gen_base.LT_TARGET_DIRS)
-
     #   get all the test scripts' directories
     script_dirs = map(build_path_dirname, self.scripts + self.bdb_scripts)
 
     #   remove duplicate directories between targets and tests
-    build_dirs = gen_base.unique(target_dirs + script_dirs + self.swig_dirs)
+    build_dirs = gen_base.unique(self.target_dirs + script_dirs + self.swig_dirs)
 
     self.ofile.write('BUILD_DIRS = %s\n\n' % string.join(build_dirs))
 
     # write lists of test files
     # deps = all, progs = not including those marked "testing = skip"
-    test_progs = self.graph.get_sources(gen_base.DT_LIST,
-                                        gen_base.LT_TEST_PROGS)
-
-    test_deps = self.graph.get_sources(gen_base.DT_LIST,
-                                       gen_base.LT_TEST_DEPS)
-
-    bdb_test_progs = self.graph.get_sources(gen_base.DT_LIST,
-       	                                    gen_base.LT_BDB_TEST_PROGS)
-
-    bdb_test_deps = self.graph.get_sources(gen_base.DT_LIST,
-                                           gen_base.LT_BDB_TEST_DEPS)
-
     self.ofile.write('BDB_TEST_DEPS = %s\n\n' %
-                     string.join(bdb_test_deps + self.bdb_scripts))
+                     string.join(self.bdb_test_deps + self.bdb_scripts))
     self.ofile.write('BDB_TEST_PROGRAMS = %s\n\n' %
-                     string.join(bdb_test_progs + self.bdb_scripts))
+                     string.join(self.bdb_test_progs + self.bdb_scripts))
     self.ofile.write('TEST_DEPS = %s\n\n' %
-                     string.join(test_deps + self.scripts))
+                     string.join(self.test_deps + self.scripts))
     self.ofile.write('TEST_PROGRAMS = %s\n\n' %
-                     string.join(test_progs + self.scripts))
+                     string.join(self.test_progs + self.scripts))
 
     # write list of all manpages
-    manpages = self.graph.get_sources(gen_base.DT_LIST, gen_base.LT_MANPAGES)
-    self.ofile.write('MANPAGES = %s\n\n' % string.join(manpages))
+    self.ofile.write('MANPAGES = %s\n\n' % string.join(self.manpages))
 
     # write dependencies and build rules for generated .c files
     swig_c_deps = self.graph.get_deps(gen_base.DT_SWIG_C)

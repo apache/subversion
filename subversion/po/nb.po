@@ -1,9 +1,10 @@
 # Norwegian Bokmål translations for the subversion package
-# Copyright (C) 2004-2005 Collab Net.
+# Copyright (C) 2004–2005 Collab Net.
 # This file is distributed under the same license as the subversion package.
 #
 # Dictionary:
 #
+# '' - «»
 # checkout - hente ut, uthenting
 # client - klient
 # commit - sende inn, innsending
@@ -37,7 +38,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-01-08 17:22+0100\n"
+"POT-Creation-Date: 2005-01-13 17:32+0100\n"
 "PO-Revision-Date: 2004-07-13 11:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -266,10 +267,6 @@ msgstr ""
 msgid "Write error"
 msgstr "Feil ved skriving"
 
-#: clients/cmdline/log-cmd.c:211
-msgid "No commit for revision 0.\n"
-msgstr "Ingen innsending for revisjon 0.\n"
-
 #: clients/cmdline/log-cmd.c:217
 msgid "(no author)"
 msgstr "(mangler forfatter)"
@@ -304,7 +301,7 @@ msgid "force validity of log message source"
 msgstr "godkjenn angitt kilde for loggmelding"
 
 #: clients/cmdline/main.c:65 clients/cmdline/main.c:66 svnadmin/main.c:222
-#: svnadmin/main.c:225 svndumpfilter/main.c:697 svndumpfilter/main.c:700
+#: svnadmin/main.c:225 svndumpfilter/main.c:755 svndumpfilter/main.c:758
 #: svnlook/main.c:89 svnlook/main.c:92
 msgid "show help on a subcommand"
 msgstr "vis hjelp for en delkommando"
@@ -1347,13 +1344,13 @@ msgstr "Vis versjonsinformasjon for klienten\n"
 msgid "Caught signal"
 msgstr "Fanget signal"
 
-#: clients/cmdline/main.c:848 svnadmin/main.c:1007
+#: clients/cmdline/main.c:848 svnadmin/main.c:1042
 msgid ""
 "Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
 msgstr ""
 "Flere revisjonsargument ble brukt. Prøv «-r M:N» i stedet for «-r M -r N»"
 
-#: clients/cmdline/main.c:860 svnadmin/main.c:1024
+#: clients/cmdline/main.c:860 svnadmin/main.c:1059
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Syntaksfeil i revisjonsargumentet «%s»"
@@ -1371,7 +1368,7 @@ msgstr "Syntaksfeil i «native-eol»-argumentet «%s»"
 msgid "Subcommand argument required\n"
 msgstr "Delkommandoen må ha et argument\n"
 
-#: clients/cmdline/main.c:1092 svnadmin/main.c:1144 svnlook/main.c:2016
+#: clients/cmdline/main.c:1092 svnadmin/main.c:1179 svnlook/main.c:2016
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Ukjent kommando: «%s»\n"
@@ -2957,25 +2954,25 @@ msgstr "«%s» har ingen nettadresse"
 msgid "'%s' is not a valid EOL value"
 msgstr "«%s» er ikke en gyldig EOL-verdi"
 
-#: libsvn_client/export.c:145
-msgid "Destination directory exists, and will not be overwritten unless forced"
-msgstr "Målkatalogen finnes allerede og vil ikke bli overskrevet uten tvang"
-
-#: libsvn_client/export.c:275
+#: libsvn_client/export.c:184
 msgid "(local)"
 msgstr "(lokal)"
 
-#: libsvn_client/export.c:333 libsvn_client/export.c:477
+#: libsvn_client/export.c:266
+msgid "Destination directory exists, and will not be overwritten unless forced"
+msgstr "Målkatalogen finnes allerede og vil ikke bli overskrevet uten tvang"
+
+#: libsvn_client/export.c:359 libsvn_client/export.c:503
 #, c-format
 msgid "'%s' exists and is not a directory"
 msgstr "«%s» finnes og er ikke en katalog"
 
-#: libsvn_client/export.c:337 libsvn_client/export.c:481
+#: libsvn_client/export.c:363 libsvn_client/export.c:507
 #, c-format
 msgid "'%s' already exists"
 msgstr "«%s» finnes allerede"
 
-#: libsvn_client/export.c:653 libsvn_wc/update_editor.c:1592
+#: libsvn_client/export.c:679 libsvn_wc/update_editor.c:1592
 #: libsvn_wc/update_editor.c:2339
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
@@ -2991,7 +2988,7 @@ msgstr "Mangler påkrevet revisjonsspesifikasjon"
 msgid "Entry '%s' has no URL"
 msgstr "Posten «%s» mangler nettadresse"
 
-#: libsvn_client/log.c:300
+#: libsvn_client/log.c:325
 msgid "No commits in repository."
 msgstr "Ingen innsendinger i depotet"
 
@@ -3486,25 +3483,25 @@ msgstr "bruker loggmelding på %s"
 msgid "Could not save the URL of the version resource"
 msgstr "Kunne ikke lagre adressen på den versjonerte ressursen"
 
-#: libsvn_ra_dav/fetch.c:407
+#: libsvn_ra_dav/fetch.c:408
 #, c-format
 msgid "Could not create a GET request for '%s'"
 msgstr "Kunne ikke lage GET-forespørsel for «%s»"
 
-#: libsvn_ra_dav/fetch.c:471
+#: libsvn_ra_dav/fetch.c:472
 #, c-format
 msgid "GET request failed for '%s'"
 msgstr "GET-forespørsel feilet for «%s»"
 
-#: libsvn_ra_dav/fetch.c:594
+#: libsvn_ra_dav/fetch.c:595
 msgid "Could not save file"
 msgstr "Kunne ikke lagre filen"
 
-#: libsvn_ra_dav/fetch.c:643
+#: libsvn_ra_dav/fetch.c:644
 msgid "Error writing to stream: unexpected EOF"
 msgstr "Feil under skriving til strøm, forventet EOF"
 
-#: libsvn_ra_dav/fetch.c:828 libsvn_ra_svn/client.c:851
+#: libsvn_ra_dav/fetch.c:829 libsvn_ra_svn/client.c:851
 #, c-format
 msgid ""
 "Checksum mismatch for '%s':\n"
@@ -3515,19 +3512,19 @@ msgstr ""
 "   forventet kontrollsum:  %s\n"
 "   gjeldende kontrollsum:  %s\n"
 
-#: libsvn_ra_dav/fetch.c:1093
+#: libsvn_ra_dav/fetch.c:1094
 msgid "Server does not support date-based operations"
 msgstr "Tjeneren støtter ikke datobaserte operasjoner"
 
-#: libsvn_ra_dav/fetch.c:1100
+#: libsvn_ra_dav/fetch.c:1101
 msgid "Invalid server response to dated-rev request"
 msgstr "Ugyldig tjenersvar på forespørsel for dated-rev"
 
-#: libsvn_ra_dav/fetch.c:1239
+#: libsvn_ra_dav/fetch.c:1240
 msgid "get-locations REPORT not implemented"
 msgstr "get-locations REPORT er ikke implementert"
 
-#: libsvn_ra_dav/fetch.c:1307
+#: libsvn_ra_dav/fetch.c:1308
 msgid ""
 "DAV request failed; it's possible that the repository's pre-revprop-change "
 "hook either failed or is non-existent"
@@ -3535,17 +3532,17 @@ msgstr ""
 "DAV-forespørsel feilet. Det er mulig at haken til depotets pre-revprop-"
 "change enten feilet eller ikke finnes"
 
-#: libsvn_ra_dav/fetch.c:2025
+#: libsvn_ra_dav/fetch.c:2026
 #, c-format
 msgid "Error writing to '%s': unexpected EOF"
 msgstr "Feil under skriving til «%s»: Uventet EOF"
 
-#: libsvn_ra_dav/fetch.c:2162
+#: libsvn_ra_dav/fetch.c:2163
 #, c-format
 msgid "Unknown XML encoding: '%s'"
 msgstr "Ukjent XML-koding: «%s»"
 
-#: libsvn_ra_dav/fetch.c:2423
+#: libsvn_ra_dav/fetch.c:2424
 msgid "REPORT response handling failed to complete the editor drive"
 msgstr ""
 "REPORT-responsens håndtering kunne ikke fullføre kjøringen av "
@@ -3720,24 +3717,24 @@ msgstr "Overskred tidsgrensen under venting på tjener"
 msgid "Can't calculate the request body size"
 msgstr "Kan ikke regne ut størrelsen på forespørselsinnholdet"
 
-#: libsvn_ra_dav/util.c:651
+#: libsvn_ra_dav/util.c:652
 #, c-format
 msgid "'%s' path not found"
 msgstr "stien «%s» ble ikke funnet"
 
 #. We either have a neon error, or some other error
 #. that we didn't expect.
-#: libsvn_ra_dav/util.c:656 libsvn_ra_dav/util.c:799
+#: libsvn_ra_dav/util.c:657 libsvn_ra_dav/util.c:800
 #, c-format
 msgid "%s of '%s'"
 msgstr "%s av «%s»"
 
-#: libsvn_ra_dav/util.c:667
+#: libsvn_ra_dav/util.c:668
 #, c-format
 msgid "The %s request returned invalid XML in the response: %s (%s)"
 msgstr "Forespørselen %s returnerte ugyldig XML i svaret: %s (%s)"
 
-#: libsvn_ra_dav/util.c:681
+#: libsvn_ra_dav/util.c:682
 #, c-format
 msgid "%s request failed on '%s'"
 msgstr "Forespørselen %s feilet på «%s»"
@@ -4150,26 +4147,30 @@ msgstr "Ustøttet dumpfilversjon: %d"
 msgid "Unrecognized record type in stream"
 msgstr "Ukjent posttype i strøm"
 
-#: libsvn_repos/load.c:855
+#: libsvn_repos/load.c:710
+msgid "Sum of subblock sizes larger than total block content length"
+msgstr "Summen av delblokkstørrelser er større enn total lengde av blokkinnhold"
+
+#: libsvn_repos/load.c:889
 #, c-format
 msgid "<<< Started new transaction, based on original revision %ld\n"
 msgstr "<<< Startet ny transaksjon, basert på opprinnelig revisjon %ld\n"
 
-#: libsvn_repos/load.c:900
+#: libsvn_repos/load.c:934
 #, c-format
 msgid "Relative source revision %ld is not available in current repository"
 msgstr "Relativ kilderevisjon %ld er ikke tilgjengelig i gjeldende depot"
 
-#: libsvn_repos/load.c:949
+#: libsvn_repos/load.c:983
 msgid "Malformed dumpstream: Revision 0 must not contain node records"
 msgstr "Misdannet dumpstrøm: Revisjon 0 kan ikke inneholde nodeposter"
 
-#: libsvn_repos/load.c:993
+#: libsvn_repos/load.c:1027
 #, c-format
 msgid "Unrecognized node-action on node '%s'"
 msgstr "Ukjent nodehendelse i node «%s»"
 
-#: libsvn_repos/load.c:1182
+#: libsvn_repos/load.c:1216
 #, c-format
 msgid ""
 "\n"
@@ -4180,7 +4181,7 @@ msgstr ""
 "------- Revisjon %ld lagt inn >>>\n"
 "\n"
 
-#: libsvn_repos/load.c:1188
+#: libsvn_repos/load.c:1222
 #, c-format
 msgid ""
 "\n"
@@ -5617,7 +5618,7 @@ msgstr "Argument kreves for depot"
 msgid "'%s' is an URL when it should be a path"
 msgstr "«%s» er en nettadresse men skulle vært en filsti"
 
-#: svnadmin/main.c:228 svndumpfilter/main.c:703 svnlook/main.c:95
+#: svnadmin/main.c:228 svndumpfilter/main.c:761 svnlook/main.c:95
 #: svnserve/main.c:111 svnversion/main.c:200
 msgid "show version information"
 msgstr "vis versjonsinformasjon"
@@ -5870,7 +5871,7 @@ msgstr ""
 "\n"
 "Kontrollerer data lagret i depotet.\n"
 
-#: svnadmin/main.c:497 svnadmin/main.c:552
+#: svnadmin/main.c:497 svnadmin/main.c:578
 msgid "First revision cannot be higher than second"
 msgstr "Den første revisjonen kan ikke være høyere enn den andre"
 
@@ -5883,7 +5884,7 @@ msgstr "Deltifiserer revisjon %ld..."
 msgid "done.\n"
 msgstr "ferdig.\n"
 
-#: svnadmin/main.c:579
+#: svnadmin/main.c:609
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
 "Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
@@ -5895,7 +5896,7 @@ msgstr ""
 "\n"
 "Tilgjengelige delkommandoer:\n"
 
-#: svnadmin/main.c:654
+#: svnadmin/main.c:689
 msgid ""
 "Repository lock acquired.\n"
 "Please wait; recovering the repository may take some time...\n"
@@ -5903,7 +5904,7 @@ msgstr ""
 "Depotlåsen er overtatt.\n"
 "Vennligst vent, gjenoppretting av depotet kan ta lang tid...\n"
 
-#: svnadmin/main.c:689
+#: svnadmin/main.c:724
 msgid ""
 "Failed to get exclusive repository access; perhaps another process\n"
 "such as httpd, svnserve or svn has it open?"
@@ -5911,11 +5912,11 @@ msgstr ""
 "Klarte ikke å få eksklusiv tilgang til depotet. Kanskje en annen\n"
 "prosess som for eksempel httpd, svnserve eller svn holder det åpent?"
 
-#: svnadmin/main.c:694
+#: svnadmin/main.c:729
 msgid "Waiting on repository lock; perhaps another process has it open?\n"
 msgstr "Venter på depotlås; kanskje en annen prosess har åpnet depotet?\n"
 
-#: svnadmin/main.c:701
+#: svnadmin/main.c:736
 msgid ""
 "\n"
 "Recovery completed.\n"
@@ -5923,33 +5924,33 @@ msgstr ""
 "\n"
 "Gjenoppretting er fullført.\n"
 
-#: svnadmin/main.c:708
+#: svnadmin/main.c:743
 #, c-format
 msgid "The latest repos revision is %ld.\n"
 msgstr "Siste depotrevisjon er %ld.\n"
 
-#: svnadmin/main.c:816
+#: svnadmin/main.c:851
 #, c-format
 msgid "Transaction '%s' removed.\n"
 msgstr "Transaksjonen «%s» er fjernet.\n"
 
-#: svnadmin/main.c:840
+#: svnadmin/main.c:875
 msgid "Missing revision"
 msgstr "Mangler revisjon"
 
-#: svnadmin/main.c:843
+#: svnadmin/main.c:878
 msgid "Only one revision allowed"
 msgstr "Kun én revisjon er tillatt"
 
-#: svnadmin/main.c:849
+#: svnadmin/main.c:884
 msgid "Exactly one file argument required"
 msgstr "Kun ett filargument behøves"
 
-#: svnadmin/main.c:1122 svndumpfilter/main.c:1108 svnlook/main.c:1993
+#: svnadmin/main.c:1157 svndumpfilter/main.c:1166 svnlook/main.c:1993
 msgid "subcommand argument required\n"
 msgstr "Delkommandoen må ha et argument\n"
 
-#: svnadmin/main.c:1212
+#: svnadmin/main.c:1247
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -5958,48 +5959,52 @@ msgstr ""
 "delkommandoen «%s» tar ikke argumentet «%s»\n"
 "Skriv «svnadmin help %s» for bruk.\n"
 
-#: svndumpfilter/main.c:373
-#, c-format
-msgid "Invalid copy source path '%s'"
-msgstr "Ugyldig kildesti «%s» for kopi"
-
-#: svndumpfilter/main.c:412
-msgid "Node with dropped parent sneaked in"
-msgstr "Node med droppet forelder sneket inn"
-
-#: svndumpfilter/main.c:584
+#: svndumpfilter/main.c:324
 msgid "This is an empty revision for padding."
 msgstr "Dette er en tom revisjon brukt som fyll."
 
-#: svndumpfilter/main.c:639
+#: svndumpfilter/main.c:377
 #, c-format
 msgid "Revision %ld committed as %ld.\n"
 msgstr "Revisjon %ld innsendt som %ld.\n"
 
-#: svndumpfilter/main.c:647
+#: svndumpfilter/main.c:385
 #, c-format
 msgid "Revision %ld skipped.\n"
 msgstr "Hoppet over revisjon %ld.\n"
 
-#: svndumpfilter/main.c:705
+#: svndumpfilter/main.c:488
+#, c-format
+msgid "Invalid copy source path '%s'"
+msgstr "Ugyldig kildesti «%s» for kopi"
+
+#: svndumpfilter/main.c:531
+msgid "Node with dropped parent sneaked in"
+msgstr "Node med droppet forelder sneket inn"
+
+#: svndumpfilter/main.c:637
+msgid "Delta property block detected - not supported by svndumpfilter"
+msgstr "Fant delta-egenskapsblokk -- er ikke støttet av svndumpfilter"
+
+#: svndumpfilter/main.c:763
 msgid "Do not display filtering statistics."
 msgstr "Ikke vis filtreringsstatistikk."
 
-#: svndumpfilter/main.c:707
+#: svndumpfilter/main.c:765
 msgid "Remove revisions emptied by filtering."
 msgstr "Fjern revisjoner som tømmes ved filtrering."
 
-#: svndumpfilter/main.c:709
+#: svndumpfilter/main.c:767
 msgid "Renumber revisions left after filtering."
 msgstr ""
 "Renummerer revisjoner som er til overs etter\n"
 "                             filtrering."
 
-#: svndumpfilter/main.c:711
+#: svndumpfilter/main.c:769
 msgid "Don't filter revision properties."
 msgstr "Ikke filtrer revisjonsegenskaper."
 
-#: svndumpfilter/main.c:722
+#: svndumpfilter/main.c:780
 msgid ""
 "Filter out nodes with given prefixes from dumpstream.\n"
 "usage: svndumpfilter exclude PATH_PREFIX...\n"
@@ -6007,7 +6012,7 @@ msgstr ""
 "Filtrer bort noder med angitte prefikser fra dumpstrømmen.\n"
 "bruk: svndumpfilter exclude STIPREFIKS...\n"
 
-#: svndumpfilter/main.c:728
+#: svndumpfilter/main.c:786
 msgid ""
 "Filter out nodes without given prefixes from dumpstream.\n"
 "usage: svndumpfilter include PATH_PREFIX...\n"
@@ -6015,7 +6020,7 @@ msgstr ""
 "Filtrer bort noder uten angitte prefikser fra dumpstrømmen.\n"
 "bruk: svndumpfilter include STIPREFIKS...\n"
 
-#: svndumpfilter/main.c:734
+#: svndumpfilter/main.c:792
 msgid ""
 "Describe the usage of this program or its subcommands.\n"
 "usage: svndumpfilter help [SUBCOMMAND...]\n"
@@ -6023,7 +6028,7 @@ msgstr ""
 "Bruksanvisning for dette programmet eller dets delkommandoer.\n"
 "bruk: svndumpfilter help [DELKOMMANDO...]\n"
 
-#: svndumpfilter/main.c:804
+#: svndumpfilter/main.c:862
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
@@ -6036,23 +6041,23 @@ msgstr ""
 "\n"
 "Tilgjengelige delkommandoer:\n"
 
-#: svndumpfilter/main.c:859
+#: svndumpfilter/main.c:917
 msgid "Excluding (and dropping empty revisions for) prefixes:\n"
 msgstr "Ekskluderer (og dropper tomme revisjoner for) prefikser:\n"
 
-#: svndumpfilter/main.c:861
+#: svndumpfilter/main.c:919
 msgid "Excluding prefixes:\n"
 msgstr "Ekskluderer prefikser:\n"
 
-#: svndumpfilter/main.c:863
+#: svndumpfilter/main.c:921
 msgid "Including (and dropping empty revisions for) prefixes:\n"
 msgstr "Inkluderer (og dropper tomme revisjoner for) prefikser:\n"
 
-#: svndumpfilter/main.c:865
+#: svndumpfilter/main.c:923
 msgid "Including prefixes:\n"
 msgstr "Inkluderer prefikser:\n"
 
-#: svndumpfilter/main.c:892
+#: svndumpfilter/main.c:950
 #, c-format
 msgid ""
 "Dropped %d revision(s).\n"
@@ -6061,26 +6066,26 @@ msgstr ""
 "Droppet %d revisjon(er).\n"
 "\n"
 
-#: svndumpfilter/main.c:898
+#: svndumpfilter/main.c:956
 msgid "Revisions renumbered as follows:\n"
 msgstr "Revisjoner renummerert slik:\n"
 
-#: svndumpfilter/main.c:926
+#: svndumpfilter/main.c:984
 #, c-format
 msgid "   %ld => (dropped)\n"
 msgstr "   %ld => (droppet)\n"
 
-#: svndumpfilter/main.c:941
+#: svndumpfilter/main.c:999
 #, c-format
 msgid "Dropped %d node(s):\n"
 msgstr "Droppet %d node(r):\n"
 
-#: svndumpfilter/main.c:1130
+#: svndumpfilter/main.c:1188
 #, c-format
 msgid "unknown command: '%s'\n"
 msgstr "ukjent kommando: «%s»\n"
 
-#: svndumpfilter/main.c:1149
+#: svndumpfilter/main.c:1207
 msgid ""
 "\n"
 "Error: no prefixes supplied.\n"
@@ -6088,7 +6093,7 @@ msgstr ""
 "\n"
 "Feil: Ingen prefikser oppgitt.\n"
 
-#: svndumpfilter/main.c:1192
+#: svndumpfilter/main.c:1250
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"

@@ -35,6 +35,12 @@
 
 #include "svn_private_config.h" /* for SVN_APR_INT64_T_PYCFMT */
 
+#if SVN_SWIG_VERSION >= 103024
+#include <swigrun.swg>
+#include <python/pyrun.swg>
+#include <runtime.swg>
+#endif
+
 #include "swigutil_py.h"
 
 

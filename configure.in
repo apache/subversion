@@ -567,16 +567,33 @@ AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',
 AC_DEFINE_UNQUOTED(SVN_NULL_DEVICE_NAME, "/dev/null",
         [Defined to be the null device for the system])
 
-dnl Find a python 2.X binary, test cases will not run with Python 1.X
-AC_PATH_PROG(PYTHON2, python2, none)
-if test "$PYTHON2" = "none"; then
-	AC_PATH_PROG(PYTHON, python, none)
-else
-	PYTHON=$PYTHON2
+
+# Scripting and Bindings languages
+
+# Python: Used for testsuite, and bindings
+
+# For compatibility with Subversion 1.1.3 and earlier,
+# which recommended setting PYTHON2, not PYTHON.
+if test "${PYTHON2+set}" = set -a test "${PYTHON+set}" != set; then
+  PYTHON="$PYTHON2"
 fi
+
+AC_PATH_PROGS(PYTHON, python2 python, none)
 if test "$PYTHON" != "none"; then
-  echo "checking for Python 2.0 or newer"
-  ${PYTHON} "${abs_srcdir}/build/pycheck.py"
+  AC_MSG_CHECKING([that the Python found is at least version 2.0])
+  if "$PYTHON" -c 'import sys;sys.exit((sys.hexversion < 0x2000000) and 1 or 0)'; then
+    AC_MSG_RESULT([yes])
+  else
+    PYTHON="none"
+    AC_MSG_RESULT([no])
+    AC_MSG_WARN([The detected Python is too old for Subversion to use])
+    AC_MSG_WARN([At least Python 2.0 is required to run the testsuite])
+    AC_MSG_WARN([or to use the Subversion Python bindings])
+    AC_MSG_WARN([])
+    AC_MSG_WARN([If you have a suitable Python installed, but not on the])
+    AC_MSG_WARN([PATH, set the environment variable PYTHON to the full path])
+    AC_MSG_WARN([to the Python executable, and re-run configure])
+  fi
 fi
 
 # SVN_CHECK_JDK sets $JAVA_CLASSPATH

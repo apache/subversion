@@ -92,7 +92,6 @@ svn_path_local_style (const char *path, apr_pool_t *pool)
 
 
 
-#ifndef NDEBUG
 static svn_boolean_t
 is_canonical (const char *path,
               apr_size_t len)
@@ -100,7 +99,13 @@ is_canonical (const char *path,
   return (! SVN_PATH_IS_PLATFORM_EMPTY (path, len)
           && (len <= 1 || path[len-1] != '/'));
 }
-#endif
+
+
+svn_boolean_t
+svn_path_is_canonical (const char *path)
+{
+  return is_canonical(path, strlen (path));
+}
 
 
 char *svn_path_join (const char *base,
