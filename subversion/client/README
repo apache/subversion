@@ -10,21 +10,21 @@ not preserved in updates.
 
 So:
 
-   svn checkout -d TARGETDIR --xml-file FILE.XML \
-                --ancestor-path blah --revision N
+   svn checkout URL://repository/path/baz/bat   \
+                -d DESTINATION --xml-file FILE.XML --revision N
    svn add FILE
    svn delete [--force] FILE
    svn commit --xml-file FILE.XML --revision N
    svn update --xml-file FILE.XML --revision N
 
-You may be wondering why the --ancestor-path and --revision are on the
-command line.  Don't worry, they won't be in a real-life client.  The
-issue right now is that the client and server aren't actually talking
-to one another, so information that they would have exchanged has to
-be passed manually, by a human (excuse me, I mean by a developer).
+You may be wondering why --revision is on the command line.  Don't
+worry, they won't be in a real-life client.  The issue right now is
+that the client and server aren't actually talking to one another, so
+information that they would have exchanged has to be passed manually,
+by a human (excuse me, I mean by a developer).
 
-If you check out into TARGETDIR, that directory must exist and be
-empty.
+If you check out into DESTINATION, that directory must not exist, or
+be empty if it does exist.
 
 Also, because update is taking input only from an XML file, it doesn't
 yet know enough to be able to update the revision numbers of
@@ -39,8 +39,8 @@ of entities that received updates, and their ancestors.  Obviously,
 things will be more sophisticated when we have selective updates.
 
 If you want to see the milestone 1 client in action, run "make check"
-in this directory.  That runs the tests/svn-test.sh script, which see
-for details of piping to and from xml files.
+in this directory.  That runs the tests/svn-test.sh script, which you
+ca examine for details of piping to and from xml files.
 
 
 
@@ -67,7 +67,8 @@ The CVS custom of switching on a subcommand seems to work out pretty
 well, so we'll do the same thing.  But many people have mentioned that
 having separate global versus command-local option namespaces is
 confusing.  So each subversion subcommand will have one option name
-space and all options come after the subcommand.
+space. Options can come anywhere on the command line (except after
+"--").
 
    svn  [<subcommand>]  [<option> ...]  [<argument> ...]
 
@@ -75,12 +76,6 @@ Notes: the subcommand is marked as optional because there are a few
 cases where Subversion can do something meaningful without the
 command.  Specifically, `svn --help' is supported, along with the
 short option equivalents of `svn -h', `svn -?' and `svn -H'.
-
-Also, it would be nice for options and arguments to be mixable, but
-it's not necessary (CVS doesn't permit this, for example).  We
-shouldn't block on that functionality right now, as it can always be
-added later without breaking backwards-compatibility.
-  
 
 
 Behaviors
@@ -92,6 +87,8 @@ conversion.  These two filters are completely independent of one another.
 
 * Keyword substitution (on/OFF) per filesystem object. Children of
   directories inherit this property.
+
+STOPPED HERE -Fitz $Date: 2001-03-19 06:39:23 $
 
 * End-of-line conversion (on/OFF) per filesystem object. Children of
   directories inherit this property.
