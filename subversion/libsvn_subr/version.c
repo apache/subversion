@@ -48,7 +48,7 @@ svn_boolean_t svn_ver_compatible (const svn_version_t *my_version,
   else
     /* General compatibility rules for released versions. */
     return (my_version->major == lib_version->major
-            && my_version->minor >= lib_version->minor);
+            && my_version->minor <= lib_version->minor);
 }
 
 
