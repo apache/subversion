@@ -44,11 +44,11 @@ struct diff_cmd_baton {
   apr_file_t *errfile;
 };
 
-/* This is an svn_wc_diff_cmd_t callback */
+/* This is an svn_diff_cmd_t callback */
 static svn_error_t *
-diff_cmd (svn_stringbuf_t *path1,
-          svn_stringbuf_t *path2,
-          svn_stringbuf_t *label,
+diff_cmd (const char *path1,
+          const char *path2,
+          const char *label,
           void *baton)
 {
   struct diff_cmd_baton *diff_cmd_baton = baton;
@@ -73,13 +73,12 @@ diff_cmd (svn_stringbuf_t *path1,
     }
 
   /* Print out the diff header. */
-  apr_file_printf (outfile, "Index: %s\n", label ? label->data : path1->data);
+  apr_file_printf (outfile, "Index: %s\n", label ? label : path1);
   apr_file_printf (outfile, 
      "===================================================================\n");
 
-  SVN_ERR (svn_io_run_diff (".", args, nargs, 
-                            label ? label->data : NULL, 
-                            path1->data, path2->data, 
+  SVN_ERR (svn_io_run_diff (".", args, nargs, label, 
+                            path1, path2, 
                             &exitcode, outfile, errfile, subpool));
 
   /* ### todo: Handle exit code == 2 (i.e. errors with diff) here */
@@ -96,27 +95,25 @@ diff_cmd (svn_stringbuf_t *path1,
 
 
 #if 0  /* avoid "unused function" warning */
-/* This is not an svn_wc_diff_cmd_t callback, but may be soon.
+/* This is not really an svn_diff_cmd_t callback yet, but may be soon.
  * 
  * ### Explanation:
  * 
- * The issue is that `svn_wc_diff_cmd_t' does not currently have any
+ * The issue is that `svn_diff_cmd_t' does not currently have any
  * need to take three paths, as for diff3, but this merge callback
  * does; since we'd like it to be driven by the same editors as
  * diff_cmd is, it would be nice if they could share a prototype.
  *
- * The solution I have in mind is to move svn_wc_diff_cmd_t out of
- * libsvn_wc (not sure it really belongs there anyway) and into
- * svn_types.h and libsvn_subr; then generalize it to handle 3-way
- * diffs, by taking three paths instead of two.  Whether the regular 
- * "svn diff" should just pass NULL for one of the paths is an open
- * question; probably it should, I don't see any point showing
- * conflicts in "svn diff".
+ * The solution I have in mind is to move generalize svn_diff_cmd_t to
+ * handle 3-way  diffs, by taking three paths instead of two.  Whether
+ * the regular "svn diff" should just pass NULL for one of the paths
+ * is an open question; probably it should, I don't see any point
+ * showing conflicts in "svn diff".
  */
 static svn_error_t *
-merge_cmd (svn_stringbuf_t *path1,
-           svn_stringbuf_t *path2,
-           svn_stringbuf_t *label,
+merge_cmd (const char *path1,
+           const char *path2,
+           const char *label,
            void *baton)
 {
   abort ();
@@ -154,7 +151,7 @@ diff_or_merge (const apr_array_header_t *options,
                svn_stringbuf_t *path2,
                const svn_client_revision_t *revision2,
                svn_boolean_t recurse,
-               svn_wc_diff_cmd_t cmd,
+               svn_diff_cmd_t cmd,
                void *cmd_baton,
                apr_pool_t *pool)
 {
