@@ -1417,8 +1417,8 @@ svn_client_revprop_set (const char *propname,
  * path, or from the repository head if @a target is a URL.  Else get
  * the properties as of @a revision.  The actual node revision
  * selected is determined by the path as it exists in @a peg_revision.
- * If @a peg_revision is @c svn_opt_revision_unspecified, then it
- * defaults to @c svn_opt_revision_head for URLs or @c
+ * If @a peg_revision->kind is @c svn_opt_revision_unspecified, then
+ * it defaults to @c svn_opt_revision_head for URLs or @c
  * svn_opt_revision_working for WC targets.  Use the authentication
  * baton in @a ctx for authentication if contacting the repository.
  *
