@@ -49,7 +49,7 @@
 
 
 
-#include <stdio.h>       /* for sprintf() */
+#include <stdio.h>       /* temporary, for printf() */
 #include <stdlib.h>
 #include <string.h>
 #include <apr_pools.h>
@@ -176,7 +176,7 @@ add_directory (svn_string_t *name,
   struct w_baton *wb = (struct w_baton *) walk_baton;
 
   path_add_component (path, name, wb->pool);
-  printf ("entering directory: %s\n", path->data);
+  printf ("%s/\n", path->data);
 
   /* kff todo: we're going to be doing this a lot.  Maybe we should
      have a wrapper around apr_make_dir().  But Yet Another
@@ -217,9 +217,6 @@ static svn_error_t *
 window_handler (svn_delta_window_t *window, void *baton)
 {
   int i;
-  svn_string_t *filename = (svn_string_t *) baton;
-
-  printf ("   ......... FILE: %s\n", filename->data);
 
   for (i = 0; i < window->num_ops; i++)
     {
@@ -227,11 +224,11 @@ window_handler (svn_delta_window_t *window, void *baton)
       switch (this_op.action_code)
         {
         case svn_delta_source:
-          printf ("action_code: svn_delta_source\n");
+          /* todo */
           break;
 
         case svn_delta_target:
-          printf ("action_code: svn_delta_target\n");
+          /* todo */
           break;
 
         case svn_delta_new:
@@ -258,8 +255,7 @@ add_file (svn_string_t *name,
 
   path_add_component (path, name, wb->pool);
 
-  printf ("add file \"%s\" (%s, %ld)\n",
-          path->data, ancestor_path->data, ancestor_version);
+  printf ("%s\n   ", path->data);
 
   return 0;
 }
@@ -282,6 +278,7 @@ finish_file (void *child_baton)
 {
   svn_string_t *fname = (svn_string_t *) child_baton;
 
+  printf ("\n");
   /* Lop off the filename, so baton is the parent directory again. */
   path_remove_component (fname);
   return 0;

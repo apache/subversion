@@ -91,39 +91,33 @@ main (int argc, char **argv)
   svn_error_t *err = NULL;
   svn_string_t *target = NULL;  /* init to NULL also important here,
                                    because NULL implies delta's top dir */
+  char *src_file = NULL;
 
   apr_initialize ();
   apr_create_pool (&pool, NULL);
 
-  if (argc > 2)
+  if ((argc < 2) || (argc > 3))
     {
-      fprintf (stderr, "usage: %s [TARGET]\n", argv[0]);
+      fprintf (stderr, "usage: %s DELTA_SRC_FILE [TARGET_NAME]", argv[0]);
       return 1;
     }
+  else
+    src_file = argv[1];
 
-  /* On Tue, Aug 08, 2000 at 09:50:33PM -0500, Karl Fogel wrote:
-   * > Greg, I've got a stupid question for you:
-   * > 
-   * > How do I get an (apr_file_t *) that reads from stdin?  And one writing
-   * > to stdout?
-   * 
-   * Check out apr_put_os_file() in apr_portable.h
-   */
-
-  apr_err = apr_open (&src, "checkout-1.delta",
+  apr_err = apr_open (&src, src_file,
                       (APR_READ | APR_CREATE),
                       APR_OS_DEFAULT,
                       pool);
 
   if (apr_err)
     {
-      fprintf (stderr, "error opening checkout-1.delta: %s",
-               apr_canonical_error (apr_err));
+      fprintf (stderr, "error opening %s: %s",
+               src_file, apr_canonical_error (apr_err));
       exit (1);
     }
 
-  if (argc == 2)
-    target = svn_string_create (argv[1], pool);
+  if (argc == 3)
+    target = svn_string_create (argv[2], pool);
 
   err = svn_wc_apply_delta (src, test_read_fn, target, pool);
 
