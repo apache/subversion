@@ -325,20 +325,6 @@ make_parent_path (dag_node_t *node,
 }
 
 
-/* Free the dag nodes in PARENT_PATH.  It isn't strictly necessary to
-   do this, since it's all allocated in pools, but it would be nice to
-   clean the memory up a little sooner when we can.  */
-static void
-free_parent_path (parent_path_t *parent_path)
-{
-  while (parent_path)
-    {
-      svn_fs__dag_close (parent_path->node);
-      parent_path = parent_path->parent;
-    }
-}
-
-
 /* Return a null-terminated copy of the first component of PATH,
    allocated in POOL.  If path is empty, or consists entirely of
    slashes, return the empty string.
@@ -485,10 +471,7 @@ open_path (parent_path_t **parent_path_p,
 
       /* The path isn't finished yet; we'd better be in a directory.  */
       if (! svn_fs__dag_is_directory (child))
-        {
-          free_parent_path (parent_path);
-          return svn_fs__err_not_directory (fs, path);
-        }
+        return svn_fs__err_not_directory (fs, path);
 
       rest = next;
       here = child;
@@ -564,7 +547,6 @@ txn_body_node_prop (void *baton,
 
   SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
   SVN_ERR (svn_fs__dag_get_proplist (&proplist, parent_path->node, trail));
-  free_parent_path (parent_path);
   
   /* Search the proplist for a property with the right name.  */
   for (prop = proplist->children; prop; prop = prop->next->next)
