@@ -558,17 +558,17 @@ typedef struct svn_delta_edit_fns_t
 
 typedef struct svn_xml_parser_t svn_xml_parser_t;
 
-/* Given a precreated svn_delta_edit_fns_t EDITOR, return an XML
-   parser that will use it (and feed EDIT_BATON and DIR_BATON to its
+/* Given a precreated svn_delta_edit_fns_t EDITOR, return a custom xml
+   PARSER that will call into it (and feed EDIT_BATON to its
    callbacks.)  Additionally, this XML parser will use BASE_PATH and
-   BASE_VERSION as general "context variables" when evaluating a
-   tree-delta. */
-svn_xml_parser_t *svn_make_xml_parser (const svn_delta_edit_fns_t *editor,
-                                       svn_string_t *base_path, 
-                                       svn_vernum_t base_version,
-                                       void *edit_baton,
-                                       void *dir_baton,
-                                       apr_pool_t *pool);
+   BASE_VERSION as default "context variables" when computing ancestry
+   within a tree-delta. */
+svn_error_t  *svn_make_xml_parser (svn_xml_parser_t **parser,
+                                   const svn_delta_edit_fns_t *editor,
+                                   svn_string_t *base_path, 
+                                   svn_vernum_t base_version,
+                                   void *edit_baton,
+                                   apr_pool_t *pool);
 
 
 /* Destroy an svn_xml_parser_t when finished with it. */
@@ -596,7 +596,6 @@ extern svn_error_t *svn_xml_auto_parse (svn_read_fn_t *source_fn,
                                         svn_string_t *base_path,
                                         svn_vernum_t base_version,
                                         void *edit_baton,
-                                        void *dir_baton,
                                         apr_pool_t *pool);
 
 
