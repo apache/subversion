@@ -145,9 +145,10 @@ IV.   QUICKSTART GUIDE
 
       Here are some simple examples of how one might use the svn
       client.  In general, things are designed to be similar to CVS.
-      But many things are different.  *PLEASE* read the 'SVN for CVS
-      Users' document (in docs/, or on the website) to understand the
-      broader concepts of what's going on!
+      But many things are different.  *PLEASE* read the Subversion
+      Handbook (in doc/handbook/, or on the website) -- in particular
+      the 'SVN for CVS Users' appendix -- to understand the broader
+      concepts of what's going on!
 
           # Checkout a working copy.  This can either be a file: or
           #  http: url, depending on which RA modules are available.
