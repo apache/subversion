@@ -96,6 +96,9 @@ void svn_path_split (const svn_string_t *path,
                      apr_pool_t *pool);
 
 
+/* Return non-zero iff PATH represents the current directory */
+int svn_path_is_thisdir (const svn_string_t *path, enum svn_path_style style);
+
 /* Return non-zero iff PATH is empty or represents the current
    directory -- that is, if it is NULL or if prepending it as a
    component to an existing path would result in no meaningful
