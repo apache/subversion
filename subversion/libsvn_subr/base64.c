@@ -116,10 +116,10 @@ encode_partial_group (svn_string_t *str, const char *extra, int len,
 
 /* Write handler for svn_base64_encode.  */
 static svn_error_t *
-encode_data (void *baton, const char *data, apr_size_t *len, apr_pool_t *pool)
+encode_data (void *baton, const char *data, apr_size_t *len)
 {
   struct encode_baton *eb = baton;
-  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_pool_t *subpool = svn_pool_create (eb->pool);
   svn_string_t *encoded = svn_string_create ("", subpool);
   apr_size_t enclen;
   svn_error_t *err = SVN_NO_ERROR;
@@ -257,7 +257,7 @@ decode_bytes (svn_string_t *str, const char *data, apr_size_t len,
 
 /* Write handler for svn_base64_decode.  */
 static svn_error_t *
-decode_data (void *baton, const char *data, apr_size_t *len, apr_pool_t *pool)
+decode_data (void *baton, const char *data, apr_size_t *len)
 {
   struct decode_baton *db = baton;
   apr_pool_t *subpool;
@@ -266,7 +266,7 @@ decode_data (void *baton, const char *data, apr_size_t *len, apr_pool_t *pool)
   svn_error_t *err = SVN_NO_ERROR;
 
   /* Decode this block of data.  */
-  subpool = svn_pool_create (pool);
+  subpool = svn_pool_create (db->pool);
   decoded = svn_string_create ("", subpool);
   decode_bytes (decoded, data, *len, db->buf, &db->buflen, &db->done);
 

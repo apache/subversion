@@ -334,8 +334,7 @@ count_and_verify_instructions (const unsigned char *p,
 static svn_error_t *
 write_handler (void *baton,
                const char *buffer,
-               apr_size_t *len,
-               apr_pool_t *pool)
+               apr_size_t *len)
 {
   struct decode_baton *db = (struct decode_baton *) baton;
   const unsigned char *p, *end;
@@ -353,7 +352,7 @@ write_handler (void *baton,
       if (nheader > *len)
         nheader = *len;
       if (memcmp (buffer, "SVN\0" + db->header_bytes, nheader) != 0)
-        return svn_error_create (SVN_ERR_MALFORMED_FILE, 0, NULL, pool,
+        return svn_error_create (SVN_ERR_MALFORMED_FILE, 0, NULL, db->pool,
                                  "svndiff has invalid header");
       *len -= nheader;
       buffer += nheader;
@@ -396,14 +395,14 @@ write_handler (void *baton,
      into invalid pointer games using negative numbers).  */
   if (sview_offset < 0 || sview_len < 0 || tview_len < 0 || inslen < 0
       || newlen < 0 || inslen + newlen < 0 || sview_offset + sview_len < 0)
-    return svn_error_create (SVN_ERR_MALFORMED_FILE, 0, NULL, pool,
+    return svn_error_create (SVN_ERR_MALFORMED_FILE, 0, NULL, db->pool,
                              "svndiff contains corrupt window header");
 
   /* Check for source windows which slide backwards.  */
   if (sview_offset < db->last_sview_offset
       || (sview_offset + sview_len
           < db->last_sview_offset + db->last_sview_len))
-    return svn_error_create (SVN_ERR_MALFORMED_FILE, 0, NULL, pool,
+    return svn_error_create (SVN_ERR_MALFORMED_FILE, 0, NULL, db->pool,
                              "svndiff has backwards-sliding source views");
 
   /* Wait for more data if we don't have enough bytes for the whole window.  */
@@ -414,7 +413,7 @@ write_handler (void *baton,
   end = p + inslen;
   ninst = count_and_verify_instructions (p, end, sview_len, tview_len, newlen);
   if (ninst == -1)
-    return svn_error_create (SVN_ERR_MALFORMED_FILE, 0, NULL, pool,
+    return svn_error_create (SVN_ERR_MALFORMED_FILE, 0, NULL, db->pool,
                              "svndiff contains invalid instructions");
 
   /* Build the window structure.  */
