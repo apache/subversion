@@ -3,7 +3,7 @@
 # FILE       mk_svndoc
 # PURPOSE    Making MS HTML-help from the Subversion source documentation
 # ====================================================================
-# Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
