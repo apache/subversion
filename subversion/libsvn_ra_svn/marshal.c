@@ -587,15 +587,15 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
     {
       /* Rebuild the error list from the end, to avoid reversing the order. */
       if (params->nelts == 0)
-        return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
-                                 "Empty error list", status);
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
+                                "Empty error list");
       err = NULL;
       for (i = params->nelts - 1; i >= 0; i--)
         {
           elt = &((svn_ra_svn_item_t *) params->elts)[i];
           if (elt->kind != SVN_RA_SVN_LIST)
-            return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
-                                     "Malformed error list", status);
+            return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
+                                    "Malformed error list");
           SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "nccn", &apr_err,
                                           &message, &file, &line));
           err = svn_error_create(apr_err, 0, err, message);

@@ -60,7 +60,7 @@ int main(int argc, const char *const *argv)
   char opt, errbuf[256];
   const char *arg, *root = "/";
   apr_status_t status;
-#if APR_HAS_PROC
+#if APR_HAS_FORK
   apr_proc_t proc;
 #endif
 
