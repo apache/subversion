@@ -73,9 +73,8 @@ section for approved changes.)
       now.  Creates crashes with the perl bindings.
       Notes: breser (I'd vote for this but I don't think my
                      vote counts).
-             ghudson (svn_io_file_seek needs a little more work)
       Votes:
-       +0: ghudson
+       +1: ghudson
 
     * r8394
       Add capability to build Subversion Perl bindings RPM.
@@ -89,13 +88,13 @@ section for approved changes.)
       Justification: What's the point of the RA plugin ABI version if
       the 1.0 plugins don't check it?
       Votes:
-       +1: bliss
+       +1: bliss, ghudson
 
     * r8384
       Fix the SIGHUP typo.
       Justification: Handle SIGHUP as intended by r8222.
       Votes:
-       +1: bliss
+       +1: bliss, ghudson
 
     * Issue #1710
       The auth provider next/save functions need the realmstring.
@@ -108,7 +107,7 @@ section for approved changes.)
       for svnadmin, svnlook and svn.
       Justification: Uncontrolled shutdowns are bad, bad, bad.
       Votes:
-       +1: bliss
+       +1: bliss, ghudson
 
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
