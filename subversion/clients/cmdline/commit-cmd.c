@@ -84,7 +84,8 @@ svn_cl__commit (apr_getopt_t *os,
     }
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool);
+    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, FALSE,
+			  pool);
 
   /* Commit. */
   log_msg_baton = svn_cl__make_log_msg_baton (opt_state, base_dir, pool);

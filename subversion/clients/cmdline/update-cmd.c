@@ -65,7 +65,8 @@ svn_cl__update (apr_getopt_t *os,
                                          pool));
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool);
+    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, FALSE,
+			  pool);
 
   for (i = 0; i < condensed_targets->nelts; i++)
     {

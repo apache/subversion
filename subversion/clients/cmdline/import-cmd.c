@@ -116,7 +116,7 @@ svn_cl__import (apr_getopt_t *os,
   
   if (! opt_state->quiet)
     svn_cl__get_notifier (&notify_func, &notify_baton,
-                          FALSE, FALSE, pool);
+                          FALSE, FALSE, FALSE, pool);
 
   log_msg_baton = svn_cl__make_log_msg_baton (opt_state, NULL, pool);
   SVN_ERR (svn_cl__cleanup_log_msg 
