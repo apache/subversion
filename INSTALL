@@ -921,7 +921,7 @@ III.  BUILDING A SUBVERSION SERVER
   E. Alternative:  'svnserve' and ra_svn
      -----------------------------------
 
-      As of svn 0.16, we have new repository-access implementation,
+      As of svn 0.16, we have a new repository-access implementation,
       libsvn_ra_svn (on the client side) and the 'svnserve' process on
       the server.  This is a simple network layer that speaks a custom
       protocol over plain TCP (documented in libsvn_ra_svn/protocol):
