@@ -713,6 +713,7 @@ add_file_or_dir (struct context *c, void *dir_baton,
   svn_stringbuf_t *target_full_path;
   svn_revnum_t copied_from_revision = SVN_INVALID_REVNUM;
   const char *copied_from_path = NULL;
+  struct context *context = c;
 
   /* ### Upgrade this driver to the svn_delta_editor_t interface! */
   svn_stringbuf_t *namebuf;
@@ -742,14 +743,11 @@ add_file_or_dir (struct context *c, void *dir_baton,
 
   if ((SVN_IS_VALID_REVNUM (copied_from_revision)) && copied_from_path)
     {
-      struct context *new_context
-        = apr_palloc (pool, sizeof (*new_context));
-      
-      *new_context = *c;
-      SVN_ERR (svn_fs_revision_root (&(c->source_root),
-                                     svn_fs_root_fs (c->target_root),
+      context = apr_palloc (pool, sizeof (*context));
+      *context = *c;
+      SVN_ERR (svn_fs_revision_root (&(context->source_root),
+                                     svn_fs_root_fs (context->target_root),
                                      copied_from_revision, pool));
-      c = new_context;
       
       /* ### Also deal with legacy interface. */
       copied_path_buf = svn_stringbuf_create (copied_from_path, pool);
@@ -759,23 +757,23 @@ add_file_or_dir (struct context *c, void *dir_baton,
     {
       void *subdir_baton;
 
-      SVN_ERR (c->editor->add_directory 
+      SVN_ERR (context->editor->add_directory 
                (namebuf, dir_baton,
                 copied_path_buf, copied_from_revision, &subdir_baton));
-      SVN_ERR (delta_dirs (c, subdir_baton,
+      SVN_ERR (delta_dirs (context, subdir_baton,
                            copied_from_path, target_full_path->data, pool));
-      SVN_ERR (c->editor->close_directory (subdir_baton));
+      SVN_ERR (context->editor->close_directory (subdir_baton));
     }
   else
     {
       void *file_baton;
 
-      SVN_ERR (c->editor->add_file 
+      SVN_ERR (context->editor->add_file 
                (namebuf, dir_baton,
                 copied_path_buf, copied_from_revision, &file_baton));
-      SVN_ERR (delta_files (c, file_baton,
+      SVN_ERR (delta_files (context, file_baton,
                             copied_from_path, target_full_path->data, pool));
-      SVN_ERR (c->editor->close_file (file_baton));
+      SVN_ERR (context->editor->close_file (file_baton));
     }
 
   return SVN_NO_ERROR;

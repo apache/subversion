@@ -143,11 +143,8 @@ generate_delta_tree (svn_repos_node_t **tree,
                                   base_root, root, pool, edit_pool));
   
   /* Drive our editor. */
-  /* ### Change the last FALSE to TRUE to get the copyfrom behavior.
-     But don't do it yet, unless you're debugging, since not all cases
-     are handled perfectly a.t.m. */
   SVN_ERR (svn_repos_dir_delta (base_root, "", NULL, src_revs, root, "",
-                                editor, edit_baton, FALSE, TRUE, FALSE, FALSE,
+                                editor, edit_baton, FALSE, TRUE, FALSE, TRUE,
                                 edit_pool));
 
   /* Return the tree we just built. */
@@ -412,7 +409,8 @@ print_diff_tree (svn_fs_root_t *root,
   svn_repos_node_t *tmp_node;
   svn_stringbuf_t *orig_path = NULL, *new_path = NULL;
   apr_file_t *fh1, *fh2;
-      
+  svn_boolean_t is_copy = FALSE;
+
   if (! node)
     return SVN_NO_ERROR;
 
@@ -423,6 +421,9 @@ print_diff_tree (svn_fs_root_t *root,
   if ((SVN_IS_VALID_REVNUM (tmp_node->copyfrom_rev))
       && (tmp_node->copyfrom_path != NULL))
     {
+      /* This is ... a copy. */
+      is_copy = TRUE;
+
       /* Propagate the new base.  Copyfrom paths usually start with a
          slash; we remove it for consistency with the target path.
          ### Yes, it would be *much* better for something in the path
@@ -432,11 +433,7 @@ print_diff_tree (svn_fs_root_t *root,
       else
         base_path = svn_stringbuf_create (tmp_node->copyfrom_path, pool);
 
-      /* However, here we use leading slashes, because this output
-         doesn't have to be feedable into diff, and the slashes help
-         clarify that these are paths, especially when there's only
-         one component (as in a top-level copy). */
-      printf ("Copied /%s (from rev %" SVN_REVNUM_T_FMT ", /%s)\n\n",
+      printf ("Copied: %s (from rev %" SVN_REVNUM_T_FMT ", %s)\n",
               tmp_node->name, tmp_node->copyfrom_rev, base_path->data);
 
       SVN_ERR (svn_fs_revision_root (&base_root,
@@ -482,7 +479,7 @@ print_diff_tree (svn_fs_root_t *root,
                    (fh2, base_root, base_path, pool));
           apr_file_close (fh2);
         }
-      if (tmp_node->action == 'A')
+      if ((tmp_node->action == 'A') && (tmp_node->text_mod))
         {
           new_path = svn_stringbuf_create (SVNLOOK_TMPDIR, pool);
           svn_path_add_component (new_path, path);
@@ -518,11 +515,14 @@ print_diff_tree (svn_fs_root_t *root,
       svn_stringbuf_t *abs_path;
       int exitcode;
 
-      printf ("%s: %s\n", 
-              ((tmp_node->action == 'A') ? "Added" : 
-               ((tmp_node->action == 'D') ? "Deleted" :
-                ((tmp_node->action == 'R') ? "Modified" : "Index"))),
-              path->data);
+      if (! is_copy)
+        {
+          printf ("%s: %s\n", 
+                  ((tmp_node->action == 'A') ? "Added" : 
+                   ((tmp_node->action == 'D') ? "Deleted" :
+                    ((tmp_node->action == 'R') ? "Modified" : "Index"))),
+                path->data);
+        }
       printf ("===============================================================\
 ===============\n");
       fflush (stdout);
@@ -546,7 +546,11 @@ print_diff_tree (svn_fs_root_t *root,
       printf ("\n");
       fflush (stdout);
     }
-  
+  else if (is_copy)
+    {
+      printf ("\n");
+    }
+    
   /* Now, delete any temporary files. */
   if (orig_path)
     apr_file_remove (orig_path->data, pool);
