@@ -510,8 +510,10 @@ static svn_boolean_t search_groups (const char *name,
                                     void *baton)
 {
   struct search_groups_baton *b = baton;
+  apr_array_header_t *list;
 
-  if (svn_cstring_match_glob_list (b->key, value, b->pool))
+  list = svn_cstring_split (value, ",", TRUE, b->pool);
+  if (svn_cstring_match_glob_list (b->key, list))
     {
       /* Fill in the match and return false, to stop enumerating. */
       b->match = apr_pstrdup (b->pool, name);

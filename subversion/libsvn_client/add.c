@@ -81,7 +81,7 @@ add_dir_recursive (const char *dirname,
               || (this_entry.name[1] == '.' && this_entry.name[2] == '\0')))
         continue;
 
-      if (svn_wc_is_ignored (this_entry.name, ignores))
+      if (svn_cstring_match_glob_list (this_entry.name, ignores))
         continue;
 
       /* Construct the full path of the entry. */

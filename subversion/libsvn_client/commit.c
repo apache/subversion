@@ -266,7 +266,7 @@ import_dir (apr_hash_t *files,
         }
       else if (finfo.filetype == APR_REG)
         {
-          if (svn_wc_is_ignored (finfo.name, ignores))
+          if (svn_cstring_match_glob_list (finfo.name, ignores))
             continue;
 
           /* Import a file. */
@@ -356,7 +356,7 @@ import (const char *path,
   if (kind == svn_node_file)
     {
       SVN_ERR (svn_wc_get_default_ignores (&ignores, pool));
-      if (!svn_wc_is_ignored (path, ignores))
+      if (!svn_cstring_match_glob_list (path, ignores))
         {
           if (! new_entry)
             return svn_error_create

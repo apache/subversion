@@ -2044,12 +2044,6 @@ svn_error_t *svn_wc_transmit_prop_deltas (const char *path,
 svn_error_t *svn_wc_get_default_ignores (apr_array_header_t **patterns,
                                          apr_pool_t *pool);
 
-/** Determine whether a @a path matches the run-time configured list
- * of ignore patterns, specified by the array @a ignores.
- */
-svn_boolean_t svn_wc_is_ignored (const char *path,
-                                 apr_array_header_t *ignores);
-
 
 
 #ifdef __cplusplus
