@@ -24,6 +24,7 @@
 #include "nodes-table.h"
 #include "node-rev.h"
 #include "reps-strings.h"
+#include "dag.h"
 
 
 /* Stable nodes and deltification.  */
@@ -35,6 +36,7 @@ static svn_error_t *
 deltify (svn_fs_id_t *target_id,
          svn_fs_id_t *source_id,
          svn_fs_t *fs,
+         int props_only,
          trail_t *trail)
 {
   skel_t
@@ -46,6 +48,12 @@ deltify (svn_fs_id_t *target_id,
     *target_dkey,         /* target data rep key      */
     *source_pkey,         /* source property rep key  */
     *source_dkey;         /* source data rep key      */
+
+  skel_t
+    *target_pkey_skel,    /* target property rep key skel */
+    *target_dkey_skel,    /* target data rep key skel */
+    *source_pkey_skel,    /* source property rep key skel */
+    *source_dkey_skel;    /* source data rep key skel */
 
   /* Turn those IDs into skels, so we can get the rep keys. */
   SVN_ERR (svn_fs__get_node_revision (&target_nr, fs, target_id, trail));
@@ -59,11 +67,6 @@ deltify (svn_fs_id_t *target_id,
 
   /* We have a target and a source.  Get all the rep keys... */
   {
-    skel_t
-      *target_pkey_skel,
-      *target_dkey_skel,
-      *source_pkey_skel,
-      *source_dkey_skel;
 
     /* Target property key. */
     target_pkey_skel = SVN_FS__NR_PROP_KEY (target_nr);
@@ -110,7 +113,7 @@ deltify (svn_fs_id_t *target_id,
       && (strcmp (target_pkey, source_pkey)))
     SVN_ERR (svn_fs__rep_deltify (fs, target_pkey, source_pkey, trail));
 
-  if ((target_dkey && source_dkey)
+  if ((target_dkey && source_dkey) && (! props_only)
       && (strcmp (target_dkey, source_dkey)))     
    SVN_ERR (svn_fs__rep_deltify (fs, target_dkey, source_dkey, trail));
 
@@ -253,7 +256,7 @@ txn_body_deltify (void *baton, trail_t *trail)
 
   /* If we found a valid source ID, perform the deltification step. */
   if (source_id)
-    SVN_ERR (deltify (target_id, source_id, args->fs, trail));
+    SVN_ERR (deltify (target_id, source_id, args->fs, 0, trail));
 
   return SVN_NO_ERROR;
 }
@@ -333,9 +336,14 @@ svn_fs__stable_node (svn_fs_t *fs,
                      trail_t *trail)
 {
   svn_fs_id_t *predecessor_id = svn_fs_predecessor_id (id, trail->pool);
+  int is_dir = 0;
+  dag_node_t *node;
+
+  SVN_ERR (svn_fs__dag_get_node (&node, fs, id, trail));
+  is_dir = svn_fs__dag_is_directory (node);
 
   if (predecessor_id != NULL)
-    SVN_ERR (deltify (predecessor_id, id, fs, trail));
+    SVN_ERR (deltify (predecessor_id, id, fs, is_dir ? 1 : 0, trail));
 
   return SVN_NO_ERROR;
 }
