@@ -47,12 +47,16 @@
       - DO_STORE indicates whether the RA layer should attempt to
         store authentication info.
 
+      - USE_ADMIN indicates that the RA layer should create tempfiles
+        in the administrative area instead of in the working copy itself.
+
 */
 svn_error_t *svn_client__get_ra_callbacks (svn_ra_callbacks_t **callbacks,
                                            void **callback_baton,
                                            svn_client_auth_baton_t *auth_baton,
                                            svn_stringbuf_t *path,
                                            svn_boolean_t do_store,
+                                           svn_boolean_t use_admin,
                                            apr_pool_t *pool);
 
 

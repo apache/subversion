@@ -501,6 +501,7 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
       SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton,
                                              auth_baton, base_dir, 
                                              is_import ? FALSE : TRUE,
+                                             is_import ? FALSE : TRUE,
                                              pool));
       SVN_ERR (ra_lib->open (&session, url,
                              ra_callbacks, cb_baton, pool));

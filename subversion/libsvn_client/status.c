@@ -96,7 +96,8 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
 
   /* Open a repository session to the URL. */
   SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton,
-                                         auth_baton, anchor, TRUE, pool));
+                                         auth_baton, anchor, TRUE,
+                                         TRUE, pool));
   SVN_ERR (ra_lib->open (&session, URL, ra_callbacks, cb_baton, pool));
 
 
@@ -108,7 +109,7 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
                                      statushash, pool));
   SVN_ERR (ra_lib->do_update (session,
                               &reporter, &report_baton,
-                              SVN_INVALID_REVNUM, /* head revision */
+                              SVN_INVALID_REVNUM,
                               target,
                               status_editor, edit_baton));
 
