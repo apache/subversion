@@ -439,7 +439,8 @@ static svn_error_t *ra_svn_change_rev_prop(void *sess, svn_revnum_t rev,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *ra_svn_get_uuid(void *sess, const char **uuid)
+static svn_error_t *ra_svn_get_uuid(void *sess, const char **uuid,
+                                    apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = sess;
   *uuid = conn->uuid;
