@@ -1,6 +1,9 @@
-Version 1.1.0-beta1
+Version 1.1.0
 (?? July 2004, from /branches/1.1.x)
 http://svn.collab.net/repos/svn/tags/??
+
+See the 1.1 release notes for a more verbose overview of the changes since
+1.0.x: http://subversion.tigris.org/svn_1.1_releasenotes.html
 
  User-visible-changes:
  * new non-database repository back-end (libsvn_fs_fs)
