@@ -95,7 +95,7 @@ svn_wc__ensure_uniform_revision (svn_stringbuf_t *dir_path,
     {
       const void *key;
       const char *keystring;
-      apr_size_t klen;
+      apr_ssize_t klen;
       void *val;
       svn_stringbuf_t *current_entry_name;
       svn_wc_entry_t *current_entry; 
@@ -250,7 +250,7 @@ svn_wc_set_revision (void *baton,
                 FALSE,
                 0, 
                 0, 
-                NULL, 
+                NULL, NULL,
                 pool, 
                 NULL));
     }
@@ -290,8 +290,6 @@ svn_wc_set_revision (void *baton,
   return SVN_NO_ERROR;
 }
 
-
-
 svn_error_t *svn_wc_get_wc_prop (void *baton,
                                  svn_stringbuf_t *target,
                                  svn_stringbuf_t *name,
@@ -328,6 +326,7 @@ svn_error_t *svn_wc_set_wc_prop (void *baton,
 
   return SVN_NO_ERROR;
 }
+
 
 
 /* Remove FILE if it exists and is a file.  If it does not exist, do
@@ -391,7 +390,7 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_size_t klen;
+      apr_ssize_t klen;
       void *val;
       svn_stringbuf_t *basename;
       svn_wc_entry_t *entry; 
@@ -425,7 +424,7 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
                     SVN_INVALID_REVNUM, entry->kind,
                     svn_wc_schedule_delete,
                     svn_wc_existence_normal,
-                    FALSE, 0, 0, NULL, subpool, NULL));
+                    FALSE, 0, 0, NULL, NULL, subpool, NULL));
           if (fbtable)
             {
               apr_status_t apr_err;
@@ -454,7 +453,7 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
               SVN_INVALID_REVNUM, svn_node_dir,
               svn_wc_schedule_delete,
               svn_wc_existence_normal,
-              FALSE, 0, 0, NULL, pool, NULL));
+              FALSE, 0, 0, NULL, NULL, pool, NULL));
 
   /* Destroy our per-iteration pool. */
   svn_pool_destroy (subpool);
@@ -499,7 +498,7 @@ svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
             SVN_INVALID_REVNUM, entry->kind,
             svn_wc_schedule_delete,
             svn_wc_existence_normal,
-            FALSE, 0, 0, NULL, pool, NULL));
+            FALSE, 0, 0, NULL, NULL, pool, NULL));
 
   /* Now, call our client feedback function. */
   {
@@ -528,10 +527,11 @@ add_to_revision_control (svn_stringbuf_t *path,
 {
   svn_stringbuf_t *parent_dir, *basename;
   svn_stringbuf_t *copyfrom_url, *copyfrom_rev;
-  svn_wc_entry_t *orig_entry, *anc_entry;
+  svn_wc_entry_t *orig_entry, *anc_entry, *parent_entry;
   svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
   apr_status_t apr_err;
   apr_hash_t *atts = apr_hash_make (pool);
+  svn_stringbuf_t *url = NULL;
 
   /* Get the original entry for this path if one exists (perhaps
      this is actually a replacement of a previously deleted thing). */
@@ -577,7 +577,6 @@ add_to_revision_control (svn_stringbuf_t *path,
   if (ancestor_path)
     {
       /* Here's where we create and set the copyfrom_* args */
-
       SVN_ERR (svn_wc_entry (&anc_entry, ancestor_path, pool));
       copyfrom_url = svn_stringbuf_dup (anc_entry->ancestor, pool);
       copyfrom_rev = svn_stringbuf_createf (pool, "%ld", anc_entry->revision);
@@ -590,15 +589,14 @@ add_to_revision_control (svn_stringbuf_t *path,
 
       if (kind == svn_node_dir)
         {        
-          /* ### Add here: need to set SVN_WC_ENTRY_ATTR_ANCESTOR in the
-             hash too, to reflect the real url.  Normally,
+          /* Need to set SVN_WC_ENTRY_ATTR_ANCESTOR in the hash too,
+             to reflect the copied directory's final url.  Normally,
              __ensure_adm() would create this url.  But because the
              copied directory already has an .svn area, the function
              doesn't touch it. */
-          
-          /* ### split path into parent and basename,
-             get parent's url, add basename, set the hash. */
-
+          SVN_ERR (svn_wc_entry (&parent_entry, parent_dir, pool));
+          url = svn_stringbuf_dup (parent_entry->ancestor, pool);
+          svn_path_add_component (url, basename, svn_path_url_style);
         }
     }
 
@@ -615,7 +613,7 @@ add_to_revision_control (svn_stringbuf_t *path,
             0, kind,
             svn_wc_schedule_add,
             svn_wc_existence_normal,
-            FALSE, 0, 0, 
+            FALSE, 0, 0, NULL,
             atts,  /* may or may not contain copyfrom args */
             pool, NULL));
 
@@ -645,6 +643,7 @@ add_to_revision_control (svn_stringbuf_t *path,
     {
       svn_wc_entry_t *p_entry;
       svn_stringbuf_t *p_path;
+      apr_uint16_t flags;
 
       /* Get the entry for this directory's parent.  We need to snatch
          the ancestor path out of there. */
@@ -657,23 +656,32 @@ add_to_revision_control (svn_stringbuf_t *path,
       /* Make sure this new directory has an admistrative subdirectory
          created inside of it */
       SVN_ERR (svn_wc__ensure_adm (path, p_path, 0, pool));
+      
+      /* Things we plan to change in this_dir. */
+      flags = (SVN_WC__ENTRY_MODIFY_SCHEDULE
+               | SVN_WC__ENTRY_MODIFY_REVISION 
+               | SVN_WC__ENTRY_MODIFY_KIND
+               | SVN_WC__ENTRY_MODIFY_ATTRIBUTES
+               | SVN_WC__ENTRY_MODIFY_FORCE);
+
+      /* If we had to manually calculate a copied directory's ancestor
+         url, add to the flags. */
+      if (url)
+        flags |= SVN_WC__ENTRY_MODIFY_ANCESTOR;
 
       /* And finally, make sure this entry is marked for addition in
          its own administrative directory. */
       SVN_ERR (svn_wc__entry_modify
                (path, NULL,
-                (SVN_WC__ENTRY_MODIFY_SCHEDULE
-                 | SVN_WC__ENTRY_MODIFY_REVISION 
-                 | SVN_WC__ENTRY_MODIFY_KIND
-                 | SVN_WC__ENTRY_MODIFY_ATTRIBUTES
-                 | SVN_WC__ENTRY_MODIFY_FORCE),
+                flags,
                 0, svn_node_dir,
                 ((orig_entry 
                   && orig_entry->schedule == svn_wc_schedule_delete) 
                  ? svn_wc_schedule_replace 
                  : svn_wc_schedule_add),
                 svn_wc_existence_normal,
-                FALSE, 0, 0, 
+                FALSE, 0, 0,
+                url,   /* may or may not be null */
                 atts,  /* may or may not contain copyfrom args */
                 pool, NULL));
     }
@@ -835,7 +843,7 @@ revert_admin_things (svn_boolean_t *reverted,
                 FALSE, 
                 tstamp, 
                 pstamp, 
-                NULL, 
+                NULL, NULL,
                 pool, 
                 NULL));
 
@@ -949,7 +957,7 @@ svn_wc_revert (svn_stringbuf_t *path,
                     TRUE,
                     0,
                     0,
-                    NULL,
+                    NULL, NULL,
                     pool,
                     NULL));
         }
@@ -973,7 +981,7 @@ svn_wc_revert (svn_stringbuf_t *path,
                     TRUE,
                     0,
                     0,
-                    NULL,
+                    NULL, NULL,
                     pool,
                     NULL));
         }
@@ -1004,7 +1012,7 @@ svn_wc_revert (svn_stringbuf_t *path,
         {
           const void *key;
           const char *keystring;
-          apr_size_t klen;
+          apr_ssize_t klen;
           void *val;
           
           /* Get the next entry */
@@ -1133,7 +1141,7 @@ svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
            hi = apr_hash_next (hi))
         {
           const void *key;
-          apr_size_t klen;
+          apr_ssize_t klen;
           void *val;
           svn_stringbuf_t *current_entry_name;
           svn_wc_entry_t *current_entry; 
@@ -1272,7 +1280,7 @@ svn_wc_set_auth_file (svn_stringbuf_t *path,
       for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
         {
           const void *key;
-          apr_size_t keylen;
+          apr_ssize_t keylen;
           void *val;
 
           apr_hash_this (hi, &key, &keylen, &val);
