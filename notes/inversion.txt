@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.29 $ of this document.)
+              ($Revision: 1.30 $ of this document.)
 
 * Introduction
 
@@ -824,11 +824,10 @@ store anything in inv_props, only Inversion handles that.
    typedef struct node
    {
       int type;                      /* File, directory, symlink, etc */
-      struct node **parent_list;     /* Can have multiple parents. */
       BOOL diffy;                    /* Holds full text or diff? */
       plist *inv_props;              /* Properties managed by Inversion. */
       plist *usr_props;              /* Properties ignored by Inversion. */
-      lock *lock;                    /* See section on locking above. */
+      lock *lock;                    /* See notes about locking above. */
       union contents {
         struct dir_entry **dir_entries;
         char *data;
@@ -837,13 +836,10 @@ store anything in inv_props, only Inversion handles that.
 
 None of this is set in stone, of course; the boolean `diffy' might
 instead be a string `diff_method', for which null means full contents
-at this node.  The contents might be a char array even when this node
+at this node.  The contents might be a string even when this node
 represents a directory -- a special line-by-line texty format would
 list its dir entries, and that could make it easier for us to store
 directory changes in a diffy way.
-
-I believe we will need to point back up to parents for foolproof
-locking, but am not sure yet.  More on this later.
 
 ** Other miscellaneous design goals
 
