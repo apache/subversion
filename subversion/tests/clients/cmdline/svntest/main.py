@@ -68,6 +68,27 @@ pristine_dir = os.path.join(temp_dir, "repos")
 greek_dump_dir = os.path.join(temp_dir, "greekfiles")
 
 
+# Global variable:  are we running in "ra_dav" mode?
+#
+#    If this variable is set, these things are assumed:   
+#
+#       - an svn-aware httpd is running locally on port 80.
+#
+#       - httpd.conf maps /svn/repositories to the abs. path value of
+#         general_repo_dir above, which right below these tests.
+#           (e.g. /path/to/tests/repositories)
+#
+#       - httpd.conf maps /svn/tmp/repo to the abs. path value of 
+#         pristine_dir above.
+#           (e.g. /path/to/tests/local_tmp/repos)
+#
+DAV_mode = 0
+
+
+# Name of the .htaccess file used by DAV_mode:
+htaccess_file = os.path.join(general_repo_dir, '.htaccess')
+
+
 # Our pristine greek tree, used to assemble 'expected' trees.
 # This is in the form
 #
@@ -252,6 +273,7 @@ def run_one_test(n, test_list):
 def run_tests(test_list):
   "Main routine to run all tests in TEST_LIST."
 
+  global DAV_mode
   testnum = 0
   # Parse commandline arg, list tests or run one test
   if (len(sys.argv) > 1):
@@ -263,7 +285,11 @@ def run_tests(test_list):
         print " ", n, "      ", x.__doc__
         n = n+1
       return 0
+    elif (sys.argv[1] == 'dav'):
+      DAV_mode = 1
     else:
+      if (len(sys.argv) > 2) and (sys.argv[2] == 'dav'):
+        DAV_mode = 1
       try:
         testnum = int(sys.argv[1])        
         return run_one_test(testnum, test_list)
