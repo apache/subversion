@@ -94,7 +94,7 @@ section for approved changes.)
      Justification: Avoids uncontrolled termination resulting in
         wedged repositories. API change. Low risk.
      Votes:
-      +1: bliss
+      +1: bliss, rooneg
 
 
 Core changes that already have three +1 votes and no vetos.  (If you
