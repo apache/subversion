@@ -62,10 +62,10 @@
 
 /* REALLY USEFUL macros for throwing errors quickly and easily! */
 #define SVN_RETURN_IF_ERROR(err) \
-if (err) return (err)
+	if (err) return (err); else
 
 #define SVN_RETURN_WRAPPED_ERROR(err, msg) \
-if (err) return (svn_quick_wrap_error((err),(msg)))
+	if (err) return (svn_quick_wrap_error((err),(msg))); else
 
 
 #define SVN_SUCCESS   0
