@@ -90,7 +90,7 @@ typedef struct {
   apr_file_t *tmpfile;
   svn_stringbuf_t *fname;
 
-  svn_boolean_t is_status;
+  svn_boolean_t fetch_content;
   svn_boolean_t fetch_props;
 
   const svn_delta_edit_fns_t *editor;
@@ -1105,7 +1105,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       break;
       
     case ELEM_fetch_props:
-      if (rb->is_status)
+      if (!rb->fetch_content)
         {
           /* If this is just a status check, the specifics of the
              property change are uninteresting.  Simply call our
@@ -1131,7 +1131,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
     case ELEM_fetch_file:
       /* assert: rb->href->len > 0 */
       CHKERR( simple_fetch_file(rb->ras->sess2, rb->href->data, 
-                                rb->is_status ? FALSE : TRUE,
+                                rb->fetch_content,
                                 rb->file_baton, rb->editor, rb->ras->pool) );
       break;
 
@@ -1164,8 +1164,8 @@ add_node_props (report_baton_t *rb)
 {
   svn_ra_dav_resource_t *rsrc;
 
-  /* Do nothing for status commands.  */
-  if (rb->is_status)
+  /* Do nothing if we aren't fetching content.  */
+  if (!rb->fetch_content)
     return SVN_NO_ERROR;
 
   if (rb->file_baton)
@@ -1235,7 +1235,7 @@ static int end_element(void *userdata,
 
       /* fetch file */
       CHKERR( simple_fetch_file(rb->ras->sess2, rb->href->data, 
-                                rb->is_status ? FALSE : TRUE,
+                                rb->fetch_content,
                                 rb->file_baton, rb->editor, rb->ras->pool) );
 
 
@@ -1251,8 +1251,8 @@ static int end_element(void *userdata,
       break;
 
     case NE_ELM_href:
-      /* do nothing during a status update. */
-      if (rb->is_status)
+      /* do nothing if we aren't fetching content. */
+      if (!rb->fetch_content)
         break;
 
       /* record the href that we just found */
@@ -1461,7 +1461,7 @@ make_reporter (void *session_baton,
                svn_boolean_t recurse,
                const svn_delta_edit_fns_t *editor,
                void *edit_baton,
-               svn_boolean_t is_status)
+               svn_boolean_t fetch_content)
 {
   svn_ra_session_t *ras = session_baton;
   report_baton_t *rb;
@@ -1475,7 +1475,7 @@ make_reporter (void *session_baton,
   rb->ras = ras;
   rb->editor = editor;
   rb->edit_baton = edit_baton;
-  rb->is_status = is_status;
+  rb->fetch_content = fetch_content;
 
   /* Neon "pulls" request body content from the caller. The reporter is
      organized where data is "pushed" into self. To match these up, we use
@@ -1573,7 +1573,7 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
                         recurse,
                         wc_update,
                         wc_update_baton,
-                        FALSE); /* is_status */
+                        TRUE); /* fetch_content */
 }
 
 
@@ -1593,7 +1593,7 @@ svn_error_t * svn_ra_dav__do_status(void *session_baton,
                         recurse,
                         wc_status,
                         wc_status_baton,
-                        TRUE); /* is_status */
+                        FALSE); /* fetch_content */
 }
 
 
