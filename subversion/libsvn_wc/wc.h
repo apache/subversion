@@ -360,8 +360,17 @@ svn_error_t *svn_wc__entries_next (struct svn_wc__entries_index *idx,
                                    svn_string_t **entryname,
                                    svn_vernum_t *version,
                                    int *kind,
-                                   apr_hash_t **hash)
+                                   apr_hash_t **hash);
 #endif /* 0 */
+
+
+
+/* Examine the entries file for ENTRYNAME in PATH; return the ancestor
+   in ANCESTOR_VER and ANCESTOR_PATH */
+svn_error_t *svn_wc__get_entry_ancestry (svn_string_t *path,
+                                         svn_string_t *entryname,
+                                         svn_vernum_t *ancestor_ver,
+                                         svn_string_t **ancestor_path);
 
 
 
