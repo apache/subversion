@@ -94,6 +94,11 @@ svn_wc__file_affected_time (apr_time_t *apr_time,
  * first part, and then in parentheses comes everything else required
  * to completely fill in an apr_exploded_time_t: tm_yday, tm_isdst,
  * and tm_gmtoff.
+ *
+ * kff todo: what about portability problems resulting from the
+ * plain int assumptions below, though?  Using apr_strftime() would
+ * fix that, but converting the strings back is still a problem (see
+ * the comment in svn_wc__time_to_string()).
  */
 static const char *timestamp_format =
 "%s %d %s %d %02d:%02d:%02d.%03d (day %03d, dst %d, gmt_off %06d)";
