@@ -563,8 +563,9 @@ add_directory (svn_stringbuf_t *name,
       SVN_ERR (svn_wc_entry (&parent_entry,
                              parent_dir_baton->path,
                              parent_dir_baton->pool));
-      new_URL = svn_stringbuf_dup (parent_entry->ancestor, this_dir_baton->pool);
-      svn_path_add_component (new_URL, name, svn_path_local_style);
+      new_URL = svn_stringbuf_dup (parent_entry->ancestor, 
+                                   this_dir_baton->pool);
+      svn_path_add_component (new_URL, name, svn_path_url_style);
 
       copyfrom_path = new_URL;
       copyfrom_revision = parent_dir_baton->edit_baton->target_revision;      
@@ -1831,7 +1832,7 @@ svn_wc_get_actual_target (svn_stringbuf_t *path,
           svn_stringbuf_t *my_ancestry = svn_stringbuf_dup (p_entry->ancestor, 
                                                             pool);
 
-          svn_path_add_component (my_ancestry, basename, svn_path_repos_style);
+          svn_path_add_component (my_ancestry, basename, svn_path_url_style);
           
           if (svn_stringbuf_compare (my_ancestry, my_entry->ancestor))
             {
