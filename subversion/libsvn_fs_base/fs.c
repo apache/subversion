@@ -936,7 +936,7 @@ svn_fs_base__canonicalize_abspath (const char *path, apr_pool_t *pool)
 
 /* Base FS library vtable, used by the FS loader library. */
 
-fs_library_vtable_t svn_fs_base__vtable = {
+static fs_library_vtable_t library_vtable = {
   base_create,
   base_open,
   base_delete_fs,
@@ -946,3 +946,13 @@ fs_library_vtable_t svn_fs_base__vtable = {
   base_bdb_logfiles,
   svn_fs_base__id_parse
 };
+
+svn_error_t *
+svn_fs_base__init (fs_library_vtable_t **vtable, int abi_version)
+{
+  if (abi_version != FS_ABI_VERSION)
+    return svn_error_create (SVN_ERR_FS_UNKNOWN_FS_TYPE, NULL,
+                             "Mismatched FS module version");
+  *vtable = &library_vtable;
+  return SVN_NO_ERROR;
+}

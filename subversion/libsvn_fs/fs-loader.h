@@ -56,6 +56,12 @@ extern "C" {
 
 /*** Top-level library vtable type ***/
 
+/* This number will change when the ABI between the loader library and
+   FS modules changes incompatibly, to make sure that old FS modules
+   don't get accidently linked into a newer version of Subversion, or
+   vice versa. */
+#define FS_ABI_VERSION 1
+
 typedef struct fs_library_vtable_t
 {
   svn_error_t *(*create) (svn_fs_t *fs, const char *path, apr_pool_t *pool);
@@ -82,6 +88,17 @@ typedef struct fs_library_vtable_t
   svn_fs_id_t *(*parse_id) (const char *data, apr_size_t len,
                             apr_pool_t *pool);
 } fs_library_vtable_t;
+
+/* This is the type of symbol an FS module defines to fetch the
+   library vtable. */
+typedef svn_error_t *(*fs_init_func_t) (fs_library_vtable_t **vtable,
+                                        int abi_version);
+
+/* Here are the declarations for the FS module init functions.  If we
+   are using DSO loading, they won't actually be linked into
+   libsvn_fs. */
+svn_error_t *svn_fs_base__init (fs_library_vtable_t **vtable, int abi_version);
+svn_error_t *svn_fs_fs__init (fs_library_vtable_t **vtable, int abi_version);
 
 
 

@@ -43,25 +43,22 @@
 
 /* --- Utility functions for the loader --- */
 
-extern fs_library_vtable_t svn_fs_base__vtable;
-extern fs_library_vtable_t svn_fs_fs__vtable;
-
 static const struct fs_type_defn {
   const char *fs_type;
   const char *fsap_name;
-  fs_library_vtable_t *vtable;
+  fs_init_func_t initfunc;
 } fs_modules[] = {
   {
     SVN_FS_TYPE_BDB, "base",
 #ifdef SVN_LIBSVN_FS_LINKS_FS_BASE
-    &svn_fs_base__vtable
+    svn_fs_base__init
 #endif
   },
 
   {
     SVN_FS_TYPE_FSFS, "fs",
 #ifdef SVN_LIBSVN_FS_LINKS_FS_FS
-    &svn_fs_fs__vtable
+    svn_fs_fs__init
 #endif
   },
 
@@ -69,9 +66,9 @@ static const struct fs_type_defn {
 };
 
 static svn_error_t *
-load_vtable (fs_library_vtable_t **vtable, const char *name, apr_pool_t *pool)
+load_module (fs_init_func_t *initfunc, const char *name, apr_pool_t *pool)
 {
-  *vtable = NULL;
+  *initfunc = NULL;
 
 #if APR_HAS_DSO
   {
@@ -83,7 +80,7 @@ load_vtable (fs_library_vtable_t **vtable, const char *name, apr_pool_t *pool)
 
     libname = apr_psprintf (pool, "libsvn_fs_%s-%d.so.0",
                             name, SVN_VER_LIBRARY);
-    funcname = apr_psprintf (pool, "svn_fs_%s__vtable", name);
+    funcname = apr_psprintf (pool, "svn_fs_%s__init", name);
 
     /* Find/load the specified library.  If we get an error, assume
        the library doesn't exist.  The library will be unloaded when
@@ -98,7 +95,7 @@ load_vtable (fs_library_vtable_t **vtable, const char *name, apr_pool_t *pool)
       return svn_error_wrap_apr (status, _("'%s' does not define '%s()'"),
                                  libname, funcname);
 
-    *vtable = (fs_library_vtable_t *) symbol;
+    *initfunc = (fs_init_func_t) symbol;
   }
 #endif /* APR_HAS_DSO */
 
@@ -112,8 +109,7 @@ get_library_vtable (fs_library_vtable_t **vtable, const char *fs_type,
 {
   const struct fs_type_defn *fst;
   const char *fsap_name;
-
-  *vtable = NULL;
+  fs_init_func_t initfunc = NULL;
 
   for (fst = fs_modules; fst->fs_type; fst++)
     {
@@ -124,15 +120,16 @@ get_library_vtable (fs_library_vtable_t **vtable, const char *fs_type,
   if (fst->fs_type)
     {
       fsap_name = fst->fsap_name;
-      *vtable = fst->vtable;
-      if (! *vtable)
-        SVN_ERR (load_vtable (vtable, fsap_name, pool));
+      initfunc = fst->initfunc;
+      if (! initfunc)
+        SVN_ERR (load_module (&initfunc, fsap_name, pool));
     }
 
-  if (! *vtable)
+  if (! initfunc)
     return svn_error_createf (SVN_ERR_FS_UNKNOWN_FS_TYPE, NULL,
                               _("Unknown FS type '%s'"), fs_type);
-  return SVN_NO_ERROR;
+
+  return initfunc (vtable, FS_ABI_VERSION);
 }
 
 /* Fetch the library vtable for an existing FS. */
