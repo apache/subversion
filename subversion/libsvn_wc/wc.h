@@ -381,6 +381,31 @@ svn_error_t *svn_wc__entry_merge_sync (svn_string_t *path,
 void svn_wc__entry_remove (apr_hash_t *entries, svn_string_t *name);
 
 
+/** Recursion on entries **/
+#define BEN_TURN_THIS_ON 0
+#if BEN_TURN_THIS_ON
+typedef svn_error_t *svn_wc__recurse_enter_dir_t (svn_string_t *path,
+                                                  void *baton);
+
+typedef svn_error_t *svn_wc__recurse_leave_dir_t (svn_string_t *path,
+                                                  void *baton);
+
+typedef svn_error_t *svn_wc__recurse_handle_file_t (svn_string_t *dir,
+                                                    svn_string_t *basename,
+                                                    void *baton);
+
+svn_error_t *
+svn_wc__entries_recurse (svn_string_t *path,
+                         apr_hash_t *named_targets,
+                         svn_wc__recurse_enter_dir_t *enter_dir,
+                         svn_wc__recurse_leave_dir_t *leave_dir,
+                         svn_wc__recurse_handle_file_t *handle_file,
+                         void *baton,
+                         apr_pool_t *pool);
+
+#endif /* BEN_TURN_THIS_ON */
+
+
 
 /*** General utilities that may get moved upstairs at some point. */
 
