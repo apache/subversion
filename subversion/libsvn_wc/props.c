@@ -1018,7 +1018,49 @@ svn_wc_prop_get (const svn_string_t **value,
 }
 
 
+/* The special Subversion properties are not valid for all node kinds.
+   Return an error if NAME is an invalid Subversion property for PATH which
+   is of kind NODE_KIND. */
+static svn_error_t *
+validate_prop_against_node_kind (const char *name,
+                                 const char *path,
+                                 svn_node_kind_t node_kind,
+                                 apr_pool_t *pool)
+{
 
+  const char *file_prohibit[] = { SVN_PROP_IGNORE,
+                                  NULL };
+  const char *dir_prohibit[] = { SVN_PROP_EXECUTABLE,
+                                 SVN_PROP_KEYWORDS,
+                                 SVN_PROP_EOL_STYLE,
+                                 SVN_PROP_MIME_TYPE,
+                                 NULL };
+  const char **node_kind_prohibit;
+  const char *node_kind_text;
+
+  switch (node_kind)
+    {
+    case svn_node_dir:
+      node_kind_prohibit = dir_prohibit;
+      node_kind_text = "directory";
+      break;
+    case svn_node_file:
+      node_kind_prohibit = file_prohibit;
+      node_kind_text = "file";
+      break;
+    default:
+      return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, 0, NULL, pool,
+                                "%s is not a file or directory", path);
+    }
+
+  while (*node_kind_prohibit)
+    if (strcmp (name, *node_kind_prohibit++) == 0)
+      return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, 0, NULL, pool,
+                                "Cannot set %s on a %s (%s)",
+                                name, node_kind_text, path);
+
+  return SVN_NO_ERROR;
+}                             
 
 svn_error_t *
 svn_wc_prop_set (const char *name,
@@ -1031,30 +1073,28 @@ svn_wc_prop_set (const char *name,
   apr_hash_t *prophash;
   apr_file_t *fp = NULL;
   svn_wc_keywords_t *old_keywords;
+  svn_node_kind_t kind;
 
   /* ### argh */
   svn_stringbuf_t *valuebuf;
 
-  if (strcmp (name, SVN_PROP_EXECUTABLE) == 0)
-    {
-      enum svn_node_kind kind;
-      SVN_ERR (svn_io_check_path (path, &kind, pool));
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
 
-      if ((kind == svn_node_dir) && (value != NULL))
-        /* Setting the executable bit doesn't make sense for dirs. (And
-           don't try and tell me Unix does it...) */
-        return svn_error_create (SVN_ERR_ILLEGAL_TARGET, 0, NULL, pool,
-                                 "Cannot set svn:executable on a directory");
+  /* Setting an inappropriate property is not allowed, deleting such a
+     property is allowed since older clients allowed (and other clients
+     possibly still allow) setting it. */
+  if (value)
+    SVN_ERR (validate_prop_against_node_kind (name, path, kind, pool));
+
+  if (kind == svn_node_file && strcmp (name, SVN_PROP_EXECUTABLE) == 0)
+    {
+      /* If the svn:executable property was set, then chmod +x.
+         If the svn:executable property was deleted (NULL value passed
+         in), then chmod -x. */
+      if (value == NULL)
+        SVN_ERR (svn_io_set_file_executable (path, FALSE, TRUE, pool));
       else
-        {
-          /* If the svn:executable property was set, then chmod +x.
-             If the svn:executable property was deleted (NULL value passed
-             in), then chmod -x. */
-          if (value == NULL)
-            SVN_ERR (svn_io_set_file_executable (path, FALSE, TRUE, pool));
-          else
-            SVN_ERR (svn_io_set_file_executable (path, TRUE, TRUE, pool));
-        }
+        SVN_ERR (svn_io_set_file_executable (path, TRUE, TRUE, pool));
     }
   else if ((strcmp (name, SVN_PROP_MIME_TYPE) == 0) && value)
     {
@@ -1075,7 +1115,7 @@ svn_wc_prop_set (const char *name,
    * property is set, we'll grab the new list and see if it differs
    * from the old one.
    */
-  if ((strcmp (name, SVN_PROP_KEYWORDS)) == 0)
+  if (kind == svn_node_file && strcmp (name, SVN_PROP_KEYWORDS) == 0)
     SVN_ERR (svn_wc__get_keywords (&old_keywords, path, NULL, pool));
 
   /* ### darned stringbuf */
@@ -1103,7 +1143,7 @@ svn_wc_prop_set (const char *name,
                                 1, /* sync! */
                                 pool));
 
-  if ((strcmp (name, SVN_PROP_KEYWORDS)) == 0)
+  if (kind == svn_node_file && strcmp (name, SVN_PROP_KEYWORDS) == 0)
     {
       svn_wc_keywords_t *new_keywords;
       SVN_ERR (svn_wc__get_keywords (&new_keywords, path, NULL, pool));
