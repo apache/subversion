@@ -433,8 +433,8 @@ def update_lose_external(sbox):
 
 #----------------------------------------------------------------------
 
-def update_modify_external(sbox):
-  "Update to receive a change to an external module."
+def update_change_pristine_external(sbox):
+  "Update to receive a change to an unmodifed external module."
 
   if externals_test_setup(sbox):
     return 1
@@ -489,6 +489,70 @@ def update_modify_external(sbox):
   return 0
 
 
+def update_change_modified_external(sbox):
+  "Update to receive a change to a modified external module."
+
+  if externals_test_setup(sbox):
+    return 1
+
+  wc_dir         = sbox.wc_dir
+  other_wc_dir   = wc_dir + ".other"
+  repo_dir       = sbox.repo_dir
+  repo_url       = os.path.join(svntest.main.test_area_url, repo_dir)
+  other_repo_url = repo_url + ".other"
+
+  # Checkout two working copies.
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'checkout', repo_url, '-d', wc_dir)
+  if err_lines: return 1
+
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'checkout', repo_url, '-d', other_wc_dir)
+  if err_lines: return 1
+
+  # Make a couple of mods in the "x/y/z/blah/" external.
+  alpha_path = os.path.join(other_wc_dir, "A", "D",
+                            "x", "y", "z", "blah", "alpha")
+  svntest.main.file_append(alpha_path, "\nSome new text in alpha.")
+  new_file = os.path.join(other_wc_dir, "A", "D",
+                          "x", "y", "z", "blah", "fish.txt")
+  svntest.main.file_append(new_file, "This is an unversioned file.")
+
+  # Change the "x/y/z/blah" external on A/D to point to a different
+  # URL.  There are some local mods under the old checked-out external,
+  # so the old dir should be saved under a new name.
+  new_externals_desc = \
+           "exdir_A           " + os.path.join(other_repo_url, "A")     + \
+           "\n"                                                         + \
+           "exdir_A/G         " + os.path.join(other_repo_url, "A/D/G") + \
+           "\n"                                                         + \
+           "exdir_A/H   -r 1  " + os.path.join(other_repo_url, "A/D/H") + \
+           "\n"                                                         + \
+           "x/y/z/blah        " + os.path.join(other_repo_url, "A/B/F") + \
+           "\n"
+
+  # Set and commit the property
+  change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
+
+  # Update other working copy, see if get the right change.
+  out_lines, err_lines = svntest.main.run_svn (None, 'up', other_wc_dir)
+  if err_lines: return 1
+
+  xyzb_path = os.path.join(other_wc_dir, "x", "y", "z", "blah")
+
+  alpha_path = os.path.join(xyzb_path, "alpha")
+  if (os.path.exists(alpha_path)):
+    print alpha_path, "unexpectedly still exists."
+    return 1
+
+  beta_path = os.path.join(xyzb_path, "beta")
+  if (os.path.exists(beta_path)):
+    print beta_path, "unexpectedly still exists."
+    return 1
+
+  return 0
+
+
 ########################################################################
 # Run the tests
 
@@ -498,7 +562,8 @@ test_list = [ None,
               checkout_with_externals,
               update_receive_new_external,
               update_lose_external,
-              update_modify_external,
+              update_change_pristine_external,
+              update_change_modified_external,
              ]
 
 if __name__ == '__main__':

@@ -237,6 +237,26 @@ relegate_external (const char *path, apr_pool_t *pool)
                (&f, &new_path, path, ".OLD", FALSE, pool));
       apr_file_close (f);  /* toss error */
 
+      /* ### Sigh...  We must fall ever so slightly from grace.
+
+         Ideally, there would be no window, however brief, when we
+         don't have a reservation on the new name.  Unfortunately,
+         at least in the Unix (Linux?) version of apr_file_rename(),
+         you can't rename a directory over a file, because it's just
+         calling stdio rename(), which says:
+
+            ENOTDIR
+              A  component used as a directory in oldpath or newpath
+              path is not, in fact, a directory.  Or, oldpath  is
+              a directory, and newpath exists but is not a directory
+
+         So instead, we get the name, then remove the file (ugh), then
+         rename the directory, hoping that nobody has gotten that name
+         in the meantime -- which would never happen in real life, so
+         no big deal.
+      */
+      apr_file_remove (new_path, pool);  /* toss error */
+
       /* Rename. */
       apr_err = apr_file_rename (path, new_path, pool);
       if (apr_err)
