@@ -134,7 +134,7 @@ AC_DEFUN(SVN_FIND_SWIG,
       AC_CACHE_CHECK([for Python includes], [ac_cv_python_includes],[
         ac_cv_python_includes="`$PYTHON ${abs_srcdir}/build/get-py-info.py --includes`"
       ])
-      SWIG_PY_INCLUDES="$ac_cv_python_includes"
+      SWIG_PY_INCLUDES="\$(SWIG_INCLUDES) $ac_cv_python_includes"
 
       AC_CACHE_CHECK([for compiling Python extensions], [ac_cv_python_compile],[
         ac_cv_python_compile="`$PYTHON ${abs_srcdir}/build/get-py-info.py --compile`"
