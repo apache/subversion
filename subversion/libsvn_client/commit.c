@@ -1358,7 +1358,8 @@ svn_client_commit2 (svn_client_commit_info_t **commit_info,
         svn_client_commit_item_t *item;
         item = APR_ARRAY_IDX (commit_items, i, svn_client_commit_item_t *);
         
-        if (item->state_flags != SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN) {
+        if (item->state_flags != SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN) 
+          {
           found_changed_path = TRUE;
           break;
         }
