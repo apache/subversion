@@ -21,7 +21,26 @@ import string
 import os.path
 
 import main  # the general svntest routines in this module.
+from svntest import Failure
 
+# Tree Exceptions.
+
+# All tree exceptions should inherit from SVNTreeError
+class SVNTreeError(Failure):
+  "Exception raised if you screw up in the tree module."
+  pass
+
+class SVNTreeUnequal(SVNTreeError):
+  "Exception raised if two trees are unequal."
+  pass
+
+class SVNTreeIsNotDirectory(SVNTreeError):
+  "Exception raised if get_child is passed a file."
+  pass
+
+class SVNTypeMismatch(SVNTreeError):
+  "Exception raised if one node is file and other is dir"
+  pass
 
 #========================================================================
 
@@ -241,7 +260,8 @@ def create_from_path(path, contents=None, props={}, atts={}):
   # each of these will be a child of the former
   elements = path.split("/")
   if len(elements) == 0:
-    raise main.SVNTreeError
+    ### we should raise a less generic error here. which?
+    raise SVNTreeError
 
   root_node = SVNTreeNode(elements[0], None)
 
@@ -336,9 +356,9 @@ def handle_dir(path, current_parent, load_props, ignore_svn):
 def get_child(node, name):
   """If SVNTreeNode NODE contains a child named NAME, return child;
   else, return None. If SVNTreeNode is not a directory, raise a
-  main.SVNTreeIsNotDirectory exception"""
+  SVNTreeIsNotDirectory exception"""
   if node.children == None:
-    raise main.SVNTreeIsNotDirectory
+    raise SVNTreeIsNotDirectory
   for n in node.children:
     if (name == n.name):
       return n
@@ -347,16 +367,16 @@ def get_child(node, name):
 
 # Helpers for compare_trees
 def default_singleton_handler_a(a, baton):
-  "Printing SVNTreeNode A's name, then raise main.SVNTreeUnequal."
+  "Printing SVNTreeNode A's name, then raise SVNTreeUnequal."
   print "Got singleton from actual tree:", a.name
   a.pprint()
-  raise main.SVNTreeUnequal
+  raise SVNTreeUnequal
 
 def default_singleton_handler_b(b, baton):
-  "Printing SVNTreeNode B's name, then raise main.SVNTreeUnequal."
+  "Printing SVNTreeNode B's name, then raise SVNTreeUnequal."
   print "Got singleton from expected tree:", b.name
   b.pprint()
-  raise main.SVNTreeUnequal
+  raise SVNTreeUnequal
 
 
 ###########################################################################
@@ -374,11 +394,11 @@ def compare_trees(a, b,
   """Compare SVNTreeNodes A and B, expressing differences using FUNC_A
   and FUNC_B.  FUNC_A and FUNC_B are functions of two arguments (a
   SVNTreeNode and a context baton), and may raise exception
-  main.SVNTreeUnequal.  Their return value is ignored.
+  SVNTreeUnequal.  Their return value is ignored.
 
   If A and B are both files, then return if their contents,
-  properties, and names are all the same; else raise a main.SVNTreeUnequal.
-  If A is a file and B is a directory, raise a main.SVNTypeMismatch; same
+  properties, and names are all the same; else raise a SVNTreeUnequal.
+  If A is a file and B is a directory, raise a SVNTypeMismatch; same
   vice-versa.  If both are directories, then for each entry that
   exists in both, call compare_trees on the two entries; otherwise, if
   the entry exists only in A, invoke FUNC_A on it, and likewise for
@@ -408,18 +428,18 @@ def compare_trees(a, b,
     if ((a.children is None) and (b.children is None)):
       if compare_file_nodes(a, b):
         display_nodes(a, b)
-        raise main.SVNTreeUnequal
+        raise SVNTreeUnequal
     # One is a file, one is a directory.
     elif (((a.children is None) and (b.children is not None))
           or ((a.children is not None) and (b.children is None))):
       display_nodes(a, b)
-      raise main.SVNTypeMismatch
+      raise SVNTypeMismatch
     # They're both directories.
     else:
       # First, compare the directories' two hashes.
       if (a.props != b.props) or (a.atts != b.atts):
         display_nodes(a, b)
-        raise main.SVNTreeUnequal
+        raise SVNTreeUnequal
 
       accounted_for = []
       # For each child of A, check and see if it's in B.  If so, run
@@ -439,21 +459,21 @@ def compare_trees(a, b,
       for b_child in b.children:
         if (b_child not in accounted_for):
           singleton_handler_b(b_child, b_baton)
-  except main.SVNTypeMismatch:
+  except SVNTypeMismatch:
     print 'Unequal Types: one Node is a file, the other is a directory'
-    raise main.SVNTreeUnequal
-  except main.SVNTreeIsNotDirectory:
+    raise SVNTreeUnequal
+  except SVNTreeIsNotDirectory:
     print "Error: Foolish call to get_child."
     sys.exit(1)
   except IndexError:
     print "Error: unequal number of children"
-    raise main.SVNTreeUnequal
-  except main.SVNTreeUnequal:
+    raise SVNTreeUnequal
+  except SVNTreeUnequal:
     if a.name == root_node_name:
-      raise main.SVNTreeUnequal
+      raise SVNTreeUnequal
     else:
       print "Unequal at node %s" % a.name
-      raise main.SVNTreeUnequal
+      raise SVNTreeUnequal
 
 
 

@@ -84,7 +84,7 @@ def guarantee_greek_repository(path):
 
     try:
       tree.compare_trees(output_tree, expected_output_tree)
-    except main.SVNTreeUnequal:
+    except tree.SVNTreeUnequal:
       display_trees("ERROR:  output of import command is unexpected.",
                     'OUTPUT TREE', expected_output_tree, output_tree)
       sys.exit(1)
@@ -303,9 +303,10 @@ def run_and_verify_merge(dir, rev1, rev2, url,
       match = rm.search(line)
       if match:
         return
-    raise SVNUnmatchedError
+    raise main.SVNUnmatchedError
   elif err:
-    return Failure(err)
+    ### we should raise a less generic error here. which?
+    raise Failure(err)
 
   if dry_out != out:
     print "============================================================="
@@ -317,14 +318,15 @@ def run_and_verify_merge(dir, rev1, rev2, url,
     print "The merge output:"
     map(sys.stdout.write, out)
     print "============================================================="
-    return Failure
+    ### we should raise a less generic error here. which?
+    raise Failure
 
   mytree = tree.build_tree_from_checkout(out)
-  return verify_update (mytree, dir,
-                        output_tree, disk_tree, status_tree,
-                        singleton_handler_a, a_baton,
-                        singleton_handler_b, b_baton,
-                        check_props)
+  verify_update (mytree, dir,
+                 output_tree, disk_tree, status_tree,
+                 singleton_handler_a, a_baton,
+                 singleton_handler_b, b_baton,
+                 check_props)
 
 
 def run_and_verify_switch(wc_dir_name,
@@ -406,7 +408,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
       match = rm.search(line)
       if match:
         return
-    raise SVNUnmatchedError
+    raise main.SVNUnmatchedError
 
   # Else not expecting error:
 
@@ -421,7 +423,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
       print "ERROR:  commit did not succeed."
       print "The final line from 'svn ci' was:"
       print lastline
-      raise SVNCommitFailure
+      raise main.SVNCommitFailure
 
   # The new 'final' line in the output is either a regular line that
   # mentions {Adding, Deleting, Sending, ...}, or it could be a line
@@ -443,7 +445,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
   # Verify actual output against expected output.
   try:
     tree.compare_trees (expected_tree, output_tree)
-  except Failure:
+  except tree.SVNTreeError:
       display_trees("Output of commit is unexpected.",
                     "OUTPUT TREE", expected_tree, output_tree)
       raise
@@ -479,13 +481,13 @@ def run_and_verify_status(wc_dir_name, output_tree,
       tree.compare_trees (mytree, output_tree,
                           singleton_handler_a, a_baton,
                           singleton_handler_b, b_baton)
-    except Failure:
+    except tree.SVNTreeError:
       display_trees(None, 'OUTPUT TREE', output_tree, mytree)
       raise
   else:
     try:
       tree.compare_trees (mytree, output_tree)
-    except Failure:
+    except tree.SVNTreeError:
       display_trees(None, 'OUTPUT TREE', output_tree, mytree)
       raise
 

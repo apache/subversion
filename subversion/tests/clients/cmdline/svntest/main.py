@@ -52,41 +52,24 @@ from svntest import wc
 #####################################################################
 # Global stuff
 
+### Grandfather in SVNTreeUnequal, which used to live here.  If you're
+# ever feeling saucy, you could go through the testsuite and change
+# main.SVNTreeUnequal to test.SVNTreeUnequal.
+import tree
+SVNTreeUnequal = tree.SVNTreeUnequal
 
-# Exception raised if you screw up in the tree module.
-class SVNTreeError(Failure):
-  def __init__(self):
-    Failure.__init__(self, self.__class__)
-
-# Exception raised if two trees are unequal
-class SVNTreeUnequal(Failure):
-  def __init__(self):
-    Failure.__init__(self, self.__class__)
-
-# Exception raised if two lines are unequal
 class SVNLineUnequal(Failure):
-  def __init__(self):
-    Failure.__init__(self, self.__class__)
+  "Exception raised if two lines are unequal"
+  pass
 
-# Exception raised if an expected error is not found
 class SVNUnmatchedError(Failure):
-  def __init__(self):
-    Failure.__init__(self, self.__class__)
+  "Exception raised if an expected error is not found"
+  pass
 
-# Exception raised if a commit failed
 class SVNCommitFailure(Failure):
-  def __init__(self):
-    Failure.__init__(self, self.__class__)
+  "Exception raised if a commit failed"
+  pass
 
-# Exception raised if one node is file and other is dir
-class SVNTypeMismatch(Failure):
-  def __init__(self):
-    Failure.__init__(self, self.__class__)
-
-# Exception raised if get_child is passed a file.
-class SVNTreeIsNotDirectory(Failure):
-  def __init__(self):
-    Failure.__init__(self, self.__class__)
 
 # Windows specifics
 if sys.platform == 'win32':
