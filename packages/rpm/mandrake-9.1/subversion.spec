@@ -33,7 +33,6 @@
 %define relver       @RELVER@
 
 @MAKE_DOC@
-@FOP_PATH@
 @NOT_JUST_DOCS@
 @BLESSED@
 @RELEASE_MODE@
@@ -48,8 +47,14 @@
 @SILENT@
 @SILENT_FLAG@
 @USE_APACHE2@
+@FOP_SRC@
+@FOP_ARC@
+@FOP_DIR@
+@FOP_PATH@
+@FOP_OPTS@
 
 %define create_doc %{?docbook:1}%{!?docbook:0}
+%define fop_install %{?fop_src:1}%{!?fop_src:0}
 
 %define name subversion
 %define version      @VERSION@
@@ -76,6 +81,9 @@ URL:		http://subversion.tigris.org
 Source0:	%{tarball}
 Source1:	%{mod_conf}
 Source2:	%{rc_file}
+%if %{fop_install}
+Source3: %{?fop_src}
+%endif
 Patch0:		%{svn_patch}
 Patch1:		%{svn_version}
 Packager:	Shamim Islam <files@poetryunlimited.com>
@@ -127,11 +135,11 @@ components.
 %if %{create_doc}
 %package doc
 Provides: %{name}-doc = %{fullver}
-Group:    Development/Other
-Summary:  Documentation for subversion
 BuildRequires: libxslt-proc >= 1.0.0
 BuildRequires: libxslt1     >= 1.0.0
 BuildRequires: docbook-style-xsl >= 1.6.0
+Group:    Development/Other
+Summary:  Documentation for subversion
 %description doc
 This package contains all the compiled documentation.
 %endif
@@ -331,7 +339,18 @@ LDFLAGS="-L%{lib_dir}/libsvn_client/.libs \
 DESTDIR="$RPM_BUILD_ROOT" %make %{?silent_flag}
 %endif
 %if %{create_doc}
-PATH="%{?fop}$PATH" JAVA_HOME="$JAVA_HOME" XSL_DIR="%{docbook}" DESTDIR="$RPM_BUILD_ROOT" INSTALL_DIR="%{_docdir}/%{fullname}" %make -C doc/book %{?silent_flag}
+%if %{fop_install}
+%{fop_arc} -C doc/book/tools
+cd doc/book/tools
+ln -s %{fop_dir} fop
+cd ../../..
+%endif
+if which java 2>/dev/null ; then
+  JAVACMD=`which java`
+else
+  JAVACMD="$JAVA_HOME/bin/java"
+fi
+FOP_OPTS=%{?fop_opts} JAVACMD="$JAVACMD" XSL_DIR="%{docbook}" DESTDIR="$RPM_BUILD_ROOT" INSTALL_DIR="%{_docdir}/%{fullname}" %make -C doc/book %{?silent_flag}
 %endif
 
 ################################
@@ -394,8 +413,18 @@ rm -rf $RPM_BUILD_ROOT
 %post client-svn -p /sbin/ldconfig
 %postun client-svn -p /sbin/ldconfig
 
+%preun repos
+# Save current copy of svnadmin.static
+echo "Saving current svnadmin-%{version}-%{release}.static as svnadmin-%{version}-%{release}."
+echo "Erase this program only after you make sure you won't need to dump/reload"
+echo "any of your repositories to upgrade to a new version of the database."
+cp /usr/bin/svnadmin-%{version}-%{release}.static /usr/bin/svnadmin-%{version}-%{release}
+
+%post server
+# Restart apache server if needed.
 %post repos -p /sbin/ldconfig
 %postun repos -p /sbin/ldconfig
+
 
 %pre server
 APACHECTL=/usr/sbin/apachectl
