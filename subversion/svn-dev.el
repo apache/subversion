@@ -14,8 +14,7 @@
 
 (c-set-style "gnu")
 (setq indent-tabs-mode nil)
-
-(progn (message "loaded") (sit-for 1))
+(setq angry-mob-with-torches-and-pitchforks t)
 
 
 
@@ -147,3 +146,6 @@ Same for the ANSI bold and normal escape sequences."
     (setenv "PAGER" savepg)
     (display-buffer outbuf)))
 
+
+
+(message "loaded svn-dev.el")
