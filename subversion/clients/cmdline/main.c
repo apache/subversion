@@ -337,6 +337,8 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "        Date, LastChangedDate    - The date/time the object was last "
     "modified.\n"
     "        Rev, LastChangedRevision - The last revision the object changed.\n"
+    "        Id                       - A compressed summary of the previous\n"
+    "                                   4 keywords.\n"
     "      svn:executable - If present, make the file executable. This\n"
     "        property cannot be set on a directory.  A non-recursive attempt\n"
     "        will fail, and a recursive attempt will set the property only\n"
