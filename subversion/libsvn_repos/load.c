@@ -816,7 +816,7 @@ close_revision (void *baton)
 {
   struct revision_baton *rb = baton;
   struct parse_baton *pb = rb->pb;
-  const char *conflict_msg;
+  const char *conflict_msg = NULL;
   svn_revnum_t new_rev;
   svn_error_t *err;
 
@@ -828,7 +828,10 @@ close_revision (void *baton)
   if (err)
     {
       svn_fs_abort_txn (rb->txn);
-      return svn_error_quick_wrap (err, conflict_msg);
+      if (conflict_msg)
+        return svn_error_quick_wrap (err, conflict_msg);
+      else
+        return err;
     }
 
   /* Grrr, svn_fs_commit_txn rewrites the datestamp property to the
