@@ -1681,6 +1681,9 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
     {
       svn_wc_entry_t *entry;
       svn_boolean_t tc, pc;
+
+      /* Initialize the state of our returned value. */
+      *content_state = svn_wc_notify_state_unchanged;
       
       /* ### There should be a more efficient way of finding out whether
          or not the file is modified|merged|conflicted.  If the
@@ -1706,8 +1709,8 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
           else
             *content_state = svn_wc_notify_state_modified;
         }
-      else
-        *content_state = svn_wc_notify_state_unknown;
+      else if (is_locally_modified)
+        *content_state = svn_wc_notify_state_modified;
     }
 
   /* Unlock the parent dir, we're done with this file installation. */
@@ -1749,17 +1752,20 @@ close_file (void *file_baton)
                                     fb->bump_info,
                                     fb->pool));
 
-  if (fb->edit_baton->notify_func)
-    (*fb->edit_baton->notify_func)
-      (fb->edit_baton->notify_baton,
-       fb->path,
-       fb->added ? svn_wc_notify_update_add : svn_wc_notify_update_update,
-       svn_node_file,
-       NULL,  /* ### if svn_wc_install_file gave mimetype, we could use here */
-       content_state,
-       prop_state,
-       SVN_INVALID_REVNUM);
-
+  if ((content_state != svn_wc_notify_state_unchanged) ||
+      (prop_state != svn_wc_notify_state_unchanged))
+    {
+      if (fb->edit_baton->notify_func)
+        (*fb->edit_baton->notify_func)
+          (fb->edit_baton->notify_baton,
+           fb->path,
+           fb->added ? svn_wc_notify_update_add : svn_wc_notify_update_update,
+           svn_node_file,
+           NULL,  /* ### if svn_wc_install_file gives mimetype, use it here */
+           content_state,
+           prop_state,
+           SVN_INVALID_REVNUM);
+    }
   return SVN_NO_ERROR;  
 }
 
