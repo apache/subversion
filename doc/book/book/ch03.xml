@@ -1930,7 +1930,7 @@ $
     </sect2>
 
     <sect2 id="svn-ch-3-sect-6.3">
-       <title><command>svn cat</command></title>
+      <title><command>svn cat</command></title>
 
       <para>If you want to examine an earlier version of a file and
         not necessarily the differences between two files, you can use
