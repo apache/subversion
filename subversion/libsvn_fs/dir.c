@@ -403,6 +403,7 @@ svn_fs_open_node (svn_fs_node_t **child,
 		  svn_fs_dir_t *parent_dir,
 		  svn_string_t *name)
 {
+  svn_error_t *svn_err;
   svn_fs_t *fs = parent_dir->node.fs;
   svn_fs_dir_t *dir;
   svn_fs_node_t *node;
@@ -424,7 +425,7 @@ svn_fs_open_node (svn_fs_node_t **child,
      we've traversed it, but we don't want to close PARENT_DIR ---
      that's the caller's object.  Bumping the open count has the same
      effect as re-opening the directory ourselves, so we have the
-     right to close it.
+     right to close it --- once.
 
      Perhaps it would be a good idea to have a "reopen" call in the
      public interface, and just use that.  */
@@ -452,7 +453,10 @@ svn_fs_open_node (svn_fs_node_t **child,
 	
       /* Yes, but is it a *valid* filename component?  */
       if (! is_valid_dirent_name (start, scan - start))
-	return path_syntax (fs, name);
+	{
+	  svn_fs_close_dir (dir);
+	  return path_syntax (fs, name);
+	}
 
       /* Try to find a matching entry in dir.  */
       for (entry = dir->entries; *entry; entry++)
@@ -462,24 +466,35 @@ svn_fs_open_node (svn_fs_node_t **child,
 
       /* If we didn't find a matching entry, then return an error.  */
       if (! *entry)
-	return path_not_found (fs, name);
+	{
+	  svn_fs_close_dir (dir);
+	  return path_not_found (fs, name);
+	}
 
       /* Try to open that node.  */
-      SVN_ERR (svn_fs__open_node_by_id (&node, fs, (*entry)->id));
+      svn_err = svn_fs__open_node_by_id (&node, fs, (*entry)->id);
+      if (svn_err)
+	{
+	  svn_fs_close_dir (dir);
+	  return svn_err;
+	}
+
+      /* Close the parent directory.  */ 
+      svn_fs_close_dir (dir);
 
       /* Are we done with the name?  */
       if (scan >= name_end)
 	break;
-
-      /* Close the old directory.  */ 
-      svn_fs_close_dir (dir);
 
       /* The new node is now our current directory...  */
       dir = svn_fs_node_to_dir (node);
 
       /* ... so it had better actually be a directory.  */
       if (! dir)
-	return not_a_directory (fs, name->data, scan - name->data);
+	{
+	  svn_fs_close_node (node);
+	  return not_a_directory (fs, name->data, scan - name->data);
+	}
 
       /* Skip however many slashes we're looking at.  */
       while (scan < name_end && *scan == '/')
