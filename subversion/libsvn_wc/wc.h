@@ -126,7 +126,18 @@ svn_error_t *svn_wc__make_adm_thing (svn_string_t *path,
 
 
 /* Open `PATH/<adminstrative_subdir>/FNAME'.  *HANDLE must be NULL, as
-   with apr_open(). */
+ * with apr_open().
+ *
+ * Always use svn_wc__close_adm_file() to close files opened with this
+ * function.  Here's why:
+ *
+ * If the flags include APR_WRITE, then a temporary file is opened
+ * instead (and if the flags also include APR_APPEND, then the
+ * temporary file starts out as a copy of the original file).  When
+ * you svn_wc__close_adm_thing() the file, make sure you pass the
+ * WRITE argument, and the tmp file will be atomically renamed to the
+ * original file.
+ */
 svn_error_t *svn_wc__open_adm_file (apr_file_t **handle,
                                     svn_string_t *path,
                                     char *fname,
@@ -134,11 +145,21 @@ svn_error_t *svn_wc__open_adm_file (apr_file_t **handle,
                                     apr_pool_t *pool);
 
 
-/* Close `PATH/<adminstrative_subdir>/FNAME'.  The only reason this
-   takes PATH and FNAME is so any error will have the correct path. */
+/* Close `PATH/<adminstrative_subdir>/FNAME'.
+ *
+ * If WRITE is non-zero, then this must be the matching close() for an
+ * open_adm_file() whose flags included APR_WRITE, in which case
+ * closing also causes the tmp file to be renamed atomically to the
+ * real file.  If the file was opened for writing, then you *must*
+ * pass WRITE when you close it.
+ *
+ * In other words, the adm code can only write files adm atomically,
+ * it knows no other way.
+ */
 svn_error_t *svn_wc__close_adm_file (apr_file_t *fp,
                                      svn_string_t *path,
                                      char *fname,
+                                     int write,
                                      apr_pool_t *pool);
 
 /* Remove `PATH/<adminstrative_subdir>/THING'. 
@@ -160,7 +181,6 @@ svn_error_t *svn_wc__remove_adm_thing (svn_string_t *path,
  */
 svn_error_t *svn_wc__ensure_prepare_wc (svn_string_t *path,
                                         svn_string_t *repository,
-                                        svn_vernum_t version,
                                         apr_pool_t *pool);
 
 
@@ -175,7 +195,6 @@ svn_error_t *svn_wc__ensure_prepare_wc (svn_string_t *path,
  */
 svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
                                  svn_string_t *repository,
-                                 svn_vernum_t version,
                                  int *exists_already,
                                  apr_pool_t *pool);
 

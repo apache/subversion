@@ -165,7 +165,7 @@ get_delta_here_contents (svn_string_t **str,
       svn_string_appendbytes (localmod_buffer, buf, bytes_read, pool);
     }
   err = svn_wc__close_adm_file (filehandle, dir,
-                                SVN_WC__ADM_DELTA_HERE, pool);
+                                SVN_WC__ADM_DELTA_HERE, 0, pool);
   if (err)
     return err;
 
@@ -294,7 +294,10 @@ svn_wc_crawl_local_mods (svn_string_t *root_directory,
   svn_xml_parser_t *xml_parser;
   svn_string_t *xml_buffer;
 
-  xml_parser = svn_make_xml_parser (edit_fns, NULL, NULL, pool);
+  /* kff todo: I added NULL and 0 arguments to the call to
+     svn_make_xml_parser() below, because am not sure how to give it
+     the base_path and base_version args.  Take it away, Ben... :-) */
+  xml_parser = svn_make_xml_parser (edit_fns, NULL, 0, NULL, NULL, pool);
   xml_buffer = svn_string_create ("", pool);
 
 

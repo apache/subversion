@@ -66,11 +66,11 @@ svn_error_t *
 svn_wc__working_copy_p (int *answer, svn_string_t *path, apr_pool_t *pool)
 {
   /* Nothing fancy, just check for an administrative subdir and a
-     `repository' file. */ 
+     `README' file. */ 
   apr_file_t *f = NULL;
   svn_error_t *err = NULL;
 
-  err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_REPOSITORY,
+  err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_README,
                                APR_READ, pool);
   if (err)
     {
@@ -83,7 +83,7 @@ svn_wc__working_copy_p (int *answer, svn_string_t *path, apr_pool_t *pool)
   /* Else. */
 
   *answer = 1;
-  err = svn_wc__close_adm_file (f, path, SVN_WC__ADM_REPOSITORY, pool);
+  err = svn_wc__close_adm_file (f, path, SVN_WC__ADM_README, 0, pool);
   return err;
 }
 

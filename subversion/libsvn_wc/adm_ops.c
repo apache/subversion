@@ -70,13 +70,12 @@
 svn_error_t *
 svn_wc__ensure_prepare_wc (svn_string_t *path,
                            svn_string_t *repository,
-                           svn_vernum_t version,
                            apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
   int existed_already;
 
-  err = svn_wc__ensure_adm (path, repository, version, &existed_already, pool);
+  err = svn_wc__ensure_adm (path, repository, &existed_already, pool);
   if (err)
     return err;
 
