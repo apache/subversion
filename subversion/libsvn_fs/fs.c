@@ -117,26 +117,30 @@ cleanup_fs_db (svn_fs_t *fs, DB **db_ptr, const char *name)
 static svn_error_t *
 cleanup_fs (svn_fs_t *fs)
 {
-  int db_err;
-
   /* Close the databases.  */
   SVN_ERR (cleanup_fs_db (fs, &fs->revisions, "revisions"));
   SVN_ERR (cleanup_fs_db (fs, &fs->nodes, "nodes"));
   SVN_ERR (cleanup_fs_db (fs, &fs->transactions, "transactions"));
 
-  /* Checkpoint any changes.  */
-  db_err = txn_checkpoint (fs->env, 0, 0, 0);
-  while (db_err == DB_INCOMPLETE)
+  if (fs->env != NULL)
     {
-      apr_sleep (1000000L);
-      db_err = txn_checkpoint (fs->env, 0, 0, 0);
-    }
-  SVN_ERR (DB_WRAP (fs, "checkpointing environment", db_err));
+      DB_ENV *env = fs->env;
+      int db_err;
+
+      /* Checkpoint any changes.  */
+      db_err = txn_checkpoint (env, 0, 0, 0);
+      while (db_err == DB_INCOMPLETE)
+        {
+          apr_sleep (1000000L);
+          db_err = txn_checkpoint (env, 0, 0, 0);
+        }
+      SVN_ERR (DB_WRAP (fs, "checkpointing environment", db_err));
       
-  /* Finally, close the environment.  */
-  if (fs->env)
-    SVN_ERR (DB_WRAP (fs, "closing environment",
-		      fs->env->close (fs->env, 0)));
+      /* Finally, close the environment.  */
+      fs->env = NULL;
+      SVN_ERR (DB_WRAP (fs, "closing environment",
+                        env->close (env, 0)));
+    }
 
   return 0;
 }
@@ -315,7 +319,7 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
   SVN_ERR (check_already_open (fs));
 
   svn_err = allocate_env (fs);
-  if (svn_err) goto error;
+  if (svn_err) goto error_env;
 
   /* Open the Berkeley DB environment.  */
   svn_err = DB_WRAP (fs, "opening environment",
@@ -325,7 +329,7 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
 				     | DB_INIT_MPOOL
 				     | DB_INIT_TXN),
 				    0666));
-  if (svn_err) goto error;
+  if (svn_err) goto error_env;
 
   /* Open the various databases.  */
   svn_err = svn_fs__open_revisions (fs);
@@ -337,6 +341,10 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
 
   return 0;
   
+ error_env:
+  fs->env = NULL;
+  /* FALLTHRU */
+
  error:
   cleanup_fs (fs);
   return svn_err;
