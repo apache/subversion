@@ -1163,7 +1163,13 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
   /* all righty... commit the bugger. */
   serr = svn_repos_fs_commit_txn(&conflict, source->info->repos->repos,
                                  &new_rev, txn, pool);
-  if (serr != NULL)
+
+  /* If the error was just a post-commit hook failure, we ignore it.
+     Otherwise, we deal with it.
+     ### TODO: Figure out if the MERGE response can grow a means by
+     which to marshal back both the success of the commit (and its
+     commit info) and the failure of the post-commit hook.  */
+  if (serr && (serr->apr_err != SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED))
     {
       const char *msg;
       svn_error_clear(svn_fs_abort_txn(txn, pool));
@@ -1182,6 +1188,8 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
 
       return dav_svn_convert_err(serr, HTTP_CONFLICT, msg, pool);
     }
+  else if (serr)
+    svn_error_clear(serr);
 
   /* Commit was successful, so schedule deltification. */
   register_deltification_cleanup(source->info->repos->repos, new_rev,
