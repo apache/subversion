@@ -160,7 +160,7 @@ log_message_receiver (void *baton,
   {
     /* Convert log message from UTF8/LF to native locale and eol-style. */
     svn_string_t *logmsg = svn_string_create (msg, pool);
-    svn_cl__detranslate_string (&logmsg, logmsg, pool);
+    svn_subst_detranslate_string (&logmsg, logmsg, pool);
     msg_native = logmsg->data;
   }
 

@@ -195,3 +195,16 @@ svn_categorize_props (const apr_array_header_t *proplist,
 
   return SVN_NO_ERROR;
 }
+
+
+svn_boolean_t
+svn_prop_needs_translation (const char *propname)
+{
+  /* ### Someday, we may want to be picky and choosy about which
+     properties require UTF8 and EOL conversion.  For now, all "svn:"
+     props need it.  */
+
+  return svn_prop_is_svn_prop (propname);
+}
+
+

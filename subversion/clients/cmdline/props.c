@@ -30,6 +30,7 @@
 #include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_utf.h"
+#include "svn_subst.h"
 #include "cl.h"
 
 
@@ -66,9 +67,9 @@ svn_cl__print_prop_hash (apr_hash_t *prop_hash,
       /* Distinguish between svn: and non-svn: props -- the former are
          stored in UTF-8, the latter are stored as binary values.  All
          property names, however, are stored in UTF-8.  */
-      if (svn_cl__prop_needs_translation (pname))
-        SVN_ERR (svn_cl__detranslate_string (&propval, propval,
-                                             pool));
+      if (svn_prop_needs_translation (pname))
+        SVN_ERR (svn_subst_detranslate_string (&propval, propval,
+                                               pool));
 
       SVN_ERR (svn_utf_cstring_from_utf8 (&pname_native, pname, pool));
       printf ("  %s : %s\n", pname_native, propval->data);

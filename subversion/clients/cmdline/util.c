@@ -470,7 +470,7 @@ svn_cl__get_log_message (const char **log_msg,
       if (msg2)
         {
           svn_string_t *new_logval = svn_string_create (msg2, pool);
-          SVN_ERR (svn_cl__translate_string (&new_logval, new_logval,
+          SVN_ERR (svn_subst_translate_string (&new_logval, new_logval,
                                              NULL,pool));
           msg2 = new_logval->data;
         }        
@@ -584,87 +584,3 @@ svn_cl__get_url_from_target (const char **URL,
 }
 
 
-svn_boolean_t
-svn_cl__prop_needs_translation (const char *propname)
-{
-  /* ### Someday, we may want to be picky and choosy about which
-     properties require UTF8 and EOL conversion.  For now, all "svn:"
-     props need it.  */
-
-  return svn_prop_is_svn_prop (propname);
-}
-
-
-svn_error_t *
-svn_cl__translate_string (svn_string_t **new_value,
-                          const svn_string_t *value,
-                          const char *encoding,
-                          apr_pool_t *pool)
-{
-  const char *val_utf8;
-  const char *val_utf8_lf;
-  apr_xlate_t *xlator = NULL;
-
-  if (value == NULL)
-    {
-      *new_value = NULL;
-      return SVN_NO_ERROR;
-    }
-
-  if (encoding)
-    {
-      apr_status_t apr_err =  
-        apr_xlate_open (&xlator, "UTF-8", encoding, pool);
-      if (apr_err != APR_SUCCESS)
-        return svn_error_create (apr_err, 0, NULL,
-                                 "failed to create a converter to UTF-8");
-    }
-
-  SVN_ERR (svn_utf_cstring_to_utf8 (&val_utf8, value->data, xlator, pool));
-  SVN_ERR (svn_subst_translate_cstring (val_utf8,
-                                        &val_utf8_lf,
-                                        "\n",  /* translate to LF */
-                                        FALSE, /* no repair */
-                                        NULL,  /* no keywords */
-                                        FALSE, /* no expansion */
-                                        pool));
-  
-  *new_value = svn_string_create (val_utf8_lf, pool);
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_cl__detranslate_string (svn_string_t **new_value,
-                            const svn_string_t *value,
-                            apr_pool_t *pool)
-{
-  svn_error_t *err;
-  const char *val_nlocale;
-  const char *val_nlocale_neol;
-
-  if (value == NULL)
-    {
-      *new_value = NULL;
-      return SVN_NO_ERROR;
-    }
-
-  err = svn_utf_cstring_from_utf8 (&val_nlocale, value->data, pool);
-  if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
-    val_nlocale = svn_utf_cstring_from_utf8_fuzzy (value->data, pool);
-  else if (err)
-    return err;
-
-  SVN_ERR (svn_subst_translate_cstring (val_nlocale,
-                                        &val_nlocale_neol,
-                                        APR_EOL_STR,  /* 'native' eol */
-                                        FALSE, /* no repair */
-                                        NULL,  /* no keywords */
-                                        FALSE, /* no expansion */
-                                        pool));
-  
-  *new_value = svn_string_create (val_nlocale_neol, pool);
-
-  return SVN_NO_ERROR;
-}
