@@ -174,6 +174,14 @@ svn_wc__entry_get_ancestry (svn_string_t *path,
                                &h);
       if (err)
         return err;
+
+      default_ancestor = apr_hash_get (h,
+                                       SVN_WC__ENTRIES_ATTR_ANCESTOR,
+                                       strlen (SVN_WC__ENTRIES_ATTR_ANCESTOR));
+      if (! default_ancestor)
+        return svn_error_create (SVN_ERR_WC_ENTRY_MISSING_ANCESTRY, 0,
+                                 NULL, pool,
+                                 "entry_get_ancestry: `.' has no ancestor");
       
       if (! ancestor)
         {
@@ -351,7 +359,10 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
       if (baton->looping)
         {
           /* Store the entry's name in the entrybaton */
-          baton->entryname = svn_string_create (entry, baton->pool);
+          if (entry)
+            baton->entryname = svn_string_create (entry, baton->pool);
+          else
+            baton->entryname = svn_string_create (".", baton->pool);
 
           /* Fill in all the other fields in the entrybaton */
           get_entry_attributes (atts,

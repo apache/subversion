@@ -187,7 +187,7 @@ posix_file_reader (void *filehandle,
    Return these flags by setting the value of NEW_P, MODIFIED_P, or
    DELETE_P. */
 static svn_error_t *
-set_entry_flags (svn_string_t *current_entry_name,
+set_entry_flags (svn_string_t *filename,
                  int current_entry_type,
                  apr_hash_t *current_entry_hash,
                  apr_pool_t *pool,
@@ -213,7 +213,7 @@ set_entry_flags (svn_string_t *current_entry_name,
 
   /* Call external routine to decide if this file has been locally
      modified.   The routine is called svn_wc__file_modified_p().  */
-  svn_wc__file_modified_p (modified_p, current_entry_name, pool);
+  svn_wc__file_modified_p (modified_p, filename, pool);
 
   return SVN_NO_ERROR;
 }
@@ -565,7 +565,10 @@ entry_callback (void *loop_baton,
   apr_hash_t *current_entry_hash        = entrybaton->attributes;
 
   /* Find out if this entry has been added, deleted, or modified. */
-  err = set_entry_flags (current_entry_name,
+  svn_string_t *full_path_to_entry = svn_string_dup (path, pool);
+  svn_path_add_component (full_path_to_entry, current_entry_name,
+                          svn_path_local_style, pool);
+  err = set_entry_flags (full_path_to_entry,
                          current_entry_type,
                          current_entry_hash,
                          pool,
@@ -753,7 +756,7 @@ svn_wc_crawl_local_mods (svn_string_t *root_directory,
   crawlbaton->path       = root_directory;
   crawlbaton->dir_baton  = NULL;
   crawlbaton->editor     = edit_fns;
-  crawlbaton->edit_baton = NULL;
+  crawlbaton->edit_baton = edit_baton;
   crawlbaton->stack      = NULL;
   crawlbaton->pool       = pool;
   crawlbaton->filehash   = apr_make_hash (pool);
