@@ -1459,14 +1459,16 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  * svn_fs_access_t), else return @c SVN_ERR_FS_NO_USER.  Set the
  * 'owner' field in the new lock to the fs username.
  *
- * If path is already locked by a different user, then return @c
- * SVN_ERR_FS_PATH_LOCKED.  If path is already locked by the same
- * user, and @a current_token points to the same lock, then "refresh"
- * the lock and return a new token in @a *token.
+ * If path is already locked by the same user, and @a current_token
+ * points to the same lock, then "refresh" the lock and return a new
+ * lock in @a *lock.  (If @a current_token doesn't match the existing
+ * lock, don't refresh, return SVN_ERR_FS_BAD_LOCK_TOKEN.)
  *
- * If @a force is true, then "steal" any existing lock, even if the FS
- * access context username does not match the current lock owner.
- * Delete any lock on @a path, and unconditionally create a new lock.
+ * If path is already locked by a different user, then return @c
+ * SVN_ERR_FS_PATH_LOCKED.  If @a force is true, then "steal" the
+ * existing lock anyway, even if the FS access-context's username does
+ * not match the current lock's owner.  Delete any lock on @a path,
+ * and unconditionally create a new lock.
  *
  * If @a timeout is zero, then create a non-expiring lock.  Else, the
  * lock will expire in @a timeout seconds after creation.

@@ -223,6 +223,17 @@ svn_fs_base__err_not_directory (svn_fs_t *fs, const char *path)
 
 
 svn_error_t *
+svn_fs_base__err_not_file (svn_fs_t *fs, const char *path)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_NOT_FILE, 0,
+     "'%s' is not a file in filesystem '%s'",
+     path, fs->path);
+}
+
+
+svn_error_t *
 svn_fs_base__err_bad_lock_token (svn_fs_t *fs, const char *lock_token)
 {
   return
@@ -285,4 +296,16 @@ svn_fs_base__err_lock_owner_mismatch (svn_fs_t *fs,
     (SVN_ERR_FS_LOCK_OWNER_MISMATCH, 0,
      "User '%s' is trying to use a lock owned by '%s' in filesystem '%s'",
      username, lock_owner, fs->path);
+}
+
+
+svn_error_t *
+svn_fs_base__err_path_locked (svn_fs_t *fs,
+                              svn_lock_t *lock)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_PATH_LOCKED, 0,
+     "Path '%s' is locked by user '%s' in filesystem '%s'",
+     lock->path, lock->owner, fs->path);
 }
