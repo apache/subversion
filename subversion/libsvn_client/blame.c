@@ -276,7 +276,8 @@ log_message_receiver (void *baton,
          our path that has copyfrom information. */
       for (i = paths->nelts; i > 0; i--)
         {
-          const char *ch_path = APR_ARRAY_IDX (paths, i - 1, const char *);
+          svn_item_t item = APR_ARRAY_IDX (paths, i - 1, svn_item_t);
+          const char *ch_path = item.key;
           int len = strlen (ch_path);
 
           /* See if our path is the child of this change path. */
