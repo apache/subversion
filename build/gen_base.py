@@ -43,7 +43,6 @@ class GeneratorBase:
     self.test_deps = [ ]
     self.fs_test_progs = [ ]
     self.fs_test_deps = [ ]
-    self.file_deps = [ ]
     self.target_dirs = { }
     self.manpages = [ ]
     self.infopages = [ ]
@@ -78,6 +77,20 @@ class GeneratorBase:
       # find all the sources involved in building this target
       target_ob.find_sources(self.parser.get(target, 'sources'))
 
+      # compute the object files for each source file
+      if type != 'script' and type != 'swig':
+        for src in target_ob.sources:
+          if src[-2:] == '.c':
+            objname = src[:-2] + target_ob.objext
+
+            # object depends upon source
+            self.graph.add(DT_OBJECT, objname, src)
+
+            # target (a linked item) depends upon object
+            self.graph.add(DT_LINK, target, objname)
+          else:
+            raise GenError('ERROR: unknown file extension on ' + src)
+
       self.manpages.extend(string.split(self.parser.get(target, 'manpages')))
       self.infopages.extend(string.split(self.parser.get(target, 'infopages')))
 
@@ -107,13 +120,6 @@ class GeneratorBase:
     for d in script_dirs:
       build_dirs[d] = None
     self.build_dirs = build_dirs.keys()
-
-    # collect the outputs for each install type
-    self.inst_outputs = { }
-    for itype, i_targets in self.graph.get_deps(DT_INSTALL):
-      self.inst_outputs[itype] = outputs = [ ]
-      for t in i_targets:
-        outputs.append(t.output)
 
 
 class MsvcProjectGenerator(GeneratorBase):
@@ -168,10 +174,10 @@ class DependencyGraph:
 
 # dependency types
 dep_types = [
-  'DT_INSTALL',
-  'DT_OBJECT',
-  'DT_SWIG_C',
-  'DT_LIBRARY',
+  'DT_INSTALL',  # install areas. e.g. 'lib', 'base-lib', 'fs-lib'
+  'DT_OBJECT',   # an object filename, depending upon .c filenames
+  'DT_SWIG_C',   # a swig-generated .c file, depending upon .i filename(s)
+  'DT_LINK',     # a libtool-linked filename, depending upon object fnames
   ]
 
 # create some variables for these
