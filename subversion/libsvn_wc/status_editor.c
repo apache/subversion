@@ -44,6 +44,9 @@ struct edit_baton
   const char *path;
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t descend;
+
+  /* True if we should report status for the root node of this editor
+     drive, false if we should not. */
   svn_boolean_t report_root;
 
   /* The youngest revision in the repository.  This is a reference
