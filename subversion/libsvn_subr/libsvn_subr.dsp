@@ -87,10 +87,6 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=.\svn_base64.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\config.c
 # End Source File
 # Begin Source File
@@ -119,6 +115,10 @@ SOURCE=.\io.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\md5.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\opt.c
 # End Source File
 # Begin Source File
@@ -140,6 +140,10 @@ SOURCE=.\sorts.c
 # Begin Source File
 
 SOURCE=.\subst.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\svn_base64.c
 # End Source File
 # Begin Source File
 
