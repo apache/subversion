@@ -98,7 +98,7 @@ vector__create(JNIEnv *env, jboolean *hasException)
   fprintf(stderr, "\n<<<vector__create\n");
 #endif
               
-  /* return wether an exception has occurred */
+  /* return whether an exception has occurred */
   if( (hasException != NULL) && _hasException )
     {
       (*hasException) = JNI_TRUE;
@@ -169,7 +169,7 @@ vector__add(JNIEnv *env, jobject vector, jobject value,
   fprintf(stderr, ")\n");
 #endif
 
-  /* check wether an exception has occurred */
+  /* check whether an exception has occurred */
   if( (hasException != NULL) && _hasException )
     {
       (*hasException) = JNI_TRUE;
