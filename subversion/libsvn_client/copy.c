@@ -705,6 +705,8 @@ repos_to_wc_copy (const char *src_url,
   svn_wc_adm_access_t *adm_access;
   apr_hash_t *props = NULL;
   apr_hash_index_t *hi;
+  const char *src_uuid, *dst_uuid;
+  svn_boolean_t same_repositories;
   const char *auth_dir;
 
   /* Get the RA vtable that matches URL. */
@@ -790,7 +792,22 @@ repos_to_wc_copy (const char *src_url,
                                     pool));
   else
     adm_access = optional_adm_access;
-                              
+
+  /* Get the repository uuid of SRC_URL */
+  SVN_ERR (ra_lib->get_uuid (sess, &src_uuid, pool));
+
+  /* Get the repository uuid for the *parent* of the destination,
+     since dst_path doesn't actually exist yet. */
+  {
+    const char *parent;
+    svn_path_split (dst_path, &parent, NULL, pool);
+    SVN_ERR (svn_client_uuid_from_path (&dst_uuid, parent, adm_access,
+                                        ctx, pool));
+  }
+
+  /* And compare uuids. */
+  same_repositories = (strcmp (src_uuid, dst_uuid) == 0) ? TRUE : FALSE;
+
   if (src_kind == svn_node_dir)
     {    
       const svn_delta_editor_t *editor;
@@ -809,7 +826,8 @@ repos_to_wc_copy (const char *src_url,
                                     editor,
                                     edit_baton, pool));
 
-      if (! SVN_IS_VALID_REVNUM (src_revnum))
+      if ((! SVN_IS_VALID_REVNUM (src_revnum))
+          && same_repositories)
         {
           /* If we just checked out from the "head" revision, that's fine,
              but we don't want to pass a '-1' as a copyfrom_rev to
@@ -872,16 +890,37 @@ repos_to_wc_copy (const char *src_url,
       if (! SVN_IS_VALID_REVNUM (src_revnum))
         src_revnum = fetched_rev;
     }
-
-  /* Schedule the new item for addition-with-history.
-
+  
+  /* Schedule the new item for addition, or addition-with-history.
+     
      If the new item is a directory, the URLs will be recursively
-     rewritten, wcprops removed, and everything marked as 'copied'.
+     rewritten, wcprops removed, and everything marked as 'copied',
+     assuming that the src and dst are from the same repository.
      See comment in svn_wc_add()'s doc about whether svn_wc_add is the
      appropriate place for this. */
-  SVN_ERR (svn_wc_add (dst_path, adm_access, src_url, src_revnum,
-                       ctx->cancel_func, ctx->cancel_baton, 
-                       ctx->notify_func, ctx->notify_baton, pool));
+  if (same_repositories)
+    {
+      /* Schedule dst_path for addition in parent, with copy history.
+         (This function also recursively puts a 'copied' flag on every
+         entry) */
+      SVN_ERR (svn_wc_add (dst_path, adm_access, src_url, src_revnum,
+                           ctx->cancel_func, ctx->cancel_baton, 
+                           ctx->notify_func, ctx->notify_baton, pool));
+    }
+  else
+    {
+      if (src_kind == svn_node_dir)
+        {
+          /* Turn the checkout into an export; we don't want the
+             administrative data from a foreign repository.  The tree
+             should be totally unversioned. */
+          SVN_ERR (svn_client__remove_admin_dirs (dst_path, ctx, pool));
+        }
+      
+      /* Recursively schedule unversioned tree for addition, sans history. */
+      SVN_ERR (svn_client__add (dst_path, TRUE /* recursive */,
+                                adm_access, ctx, pool));
+    }
 
   /* If any properties were fetched (in the file case), apply those
      changes now. */

@@ -130,18 +130,16 @@ add_dir_recursive (const char *dirname,
 }
 
 
+/* The main body of svn_client_add;  uses an existing access baton. */
 svn_error_t *
-svn_client_add (const char *path, 
+svn_client__add (const char *path, 
                 svn_boolean_t recursive,
+                svn_wc_adm_access_t *adm_access,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  svn_error_t *err, *err2;
-  svn_wc_adm_access_t *adm_access;
-  const char *parent_path = svn_path_dirname (path, pool);
-
-  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, TRUE, pool));
+  svn_error_t *err;
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   if ((kind == svn_node_dir) && recursive)
@@ -151,6 +149,26 @@ svn_client_add (const char *path,
                       ctx->cancel_func, ctx->cancel_baton,
                       ctx->notify_func, ctx->notify_baton, pool);
 
+  return err;
+}
+
+
+
+svn_error_t *
+svn_client_add (const char *path, 
+                svn_boolean_t recursive,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  svn_error_t *err, *err2;
+  svn_wc_adm_access_t *adm_access;
+  const char *parent_path = svn_path_dirname (path, pool);
+
+  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path,
+                            TRUE, TRUE, pool));
+
+  err = svn_client__add (path, recursive, adm_access, ctx, pool);
+  
   err2 = svn_wc_adm_close (adm_access);
   if (err2)
     {

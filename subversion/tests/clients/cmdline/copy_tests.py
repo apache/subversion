@@ -937,6 +937,80 @@ def wc_to_repos(sbox):
     return 1
 
 #----------------------------------------------------------------------
+# Issue 1090: various use-cases of 'svn cp URL wc' where the
+# repositories might be different, or be the same repository.
+
+def repos_to_wc(sbox):
+  "repository to working-copy copy"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  # We have a standard repository and working copy.  Now we create a
+  # second repository with the same greek tree, but different UUID.
+  repo_dir       = sbox.repo_dir
+  repo_url       = sbox.repo_url
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 1)
+
+  # URL->wc copy:
+  # copy a file and a directory from the same repository.
+  # we should get some scheduled additions *with history*.
+  E_url = svntest.main.current_repo_url + "/A/B/E"
+  pi_url = svntest.main.current_repo_url + "/A/D/G/pi"
+
+  output, errput = svntest.main.run_svn(None, 'copy', E_url, wc_dir)  
+  if errput:
+    raise svntest.Failure
+  output, errput = svntest.main.run_svn(None, 'copy', pi_url, wc_dir)  
+  if errput:
+    raise svntest.Failure
+
+  expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_output.add({
+    'pi' : Item(status='A ', copied='+', wc_rev='-', repos_rev=1),
+    'E' :  Item(status='A ', copied='+', wc_rev='-', repos_rev=1),
+    'E/alpha' :  Item(status='  ', copied='+', wc_rev='-', repos_rev=1),
+    'E/beta'  :  Item(status='  ', copied='+', wc_rev='-', repos_rev=1),
+    })
+  svntest.actions.run_and_verify_status (wc_dir, expected_output)
+  
+  # Revert everything and verify.
+  output, errput = svntest.main.run_svn(None, 'revert', '-R', wc_dir)  
+  if errput:
+    raise svntest.Failure
+
+  svntest.main.safe_rmtree(os.path.join(wc_dir, 'E'))
+  os.unlink(os.path.join(wc_dir, 'pi'))
+
+  expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_status (wc_dir, expected_output)
+
+  # URL->wc copy:
+  # copy a file and a directory from a foreign repository.
+  # we should get some scheduled additions *without history*.
+  E_url = other_repo_url + "/A/B/E"
+  pi_url = other_repo_url + "/A/D/G/pi"
+
+  output, errput = svntest.main.run_svn(None, 'copy', E_url, wc_dir)  
+  if errput:
+    raise svntest.Failure
+  output, errput = svntest.main.run_svn(None, 'copy', pi_url, wc_dir)  
+  if errput:
+    raise svntest.Failure
+
+  expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_output.add({
+    'pi' : Item(status='A ',  wc_rev='0', repos_rev=1),
+    'E' :  Item(status='A ',  wc_rev='0', repos_rev=1),
+    'E/alpha' :  Item(status='A ',  wc_rev='0', repos_rev=1),
+    'E/beta'  :  Item(status='A ',  wc_rev='0', repos_rev=1),
+    })
+  svntest.actions.run_and_verify_status (wc_dir, expected_output)
+
+
+#----------------------------------------------------------------------
 # Issue 1084: ra_svn move/copy bug
 
 def copy_to_root(sbox):
@@ -979,6 +1053,7 @@ test_list = [ None,
               mv_and_revert_directory,
               Skip(copy_preserve_executable_bit, (os.name != 'posix')),
               wc_to_repos,
+              repos_to_wc,
               copy_to_root,
              ]
 

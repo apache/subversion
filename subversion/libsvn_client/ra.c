@@ -22,6 +22,7 @@
 #include <assert.h>
 
 #include "svn_error.h"
+#include "svn_pools.h"
 #include "svn_string.h"
 #include "svn_ra.h"
 #include "svn_wc.h"
@@ -278,6 +279,66 @@ svn_client__open_ra_session (void **session_baton,
 
   SVN_ERR (ra_lib->open (session_baton, base_url, cbtable, cb, ctx->config,
                          pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
+svn_client_uuid_from_url (const char **uuid,
+                          const char *url,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *pool)
+{
+  svn_ra_plugin_t *ra_lib;  
+  void *ra_baton, *session;
+  apr_pool_t *subpool = svn_pool_create (pool);
+
+  /* use subpool to create a temporary RA session */
+  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, subpool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url, subpool));
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url,
+                                        NULL, /* no base dir */
+                                        NULL, NULL, FALSE, TRUE, 
+                                        ctx, subpool));
+
+  /* Allocate the uuid in the passed-in pool. */
+  ra_lib->get_uuid (session, uuid, pool);
+
+  /* destroy the RA session */
+  svn_pool_destroy (subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client_uuid_from_path (const char **uuid,
+                           const char *path,
+                           svn_wc_adm_access_t *adm_access,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *pool)
+{
+  const svn_wc_entry_t *entry;
+
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access,
+                         TRUE,  /* show deleted */ pool));
+
+  if (! entry)
+    return svn_error_createf (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                              "svn_client_uuid_from_path: "
+                              "can't find entry for `%s'", path);
+
+  if (entry->uuid)
+    {
+      *uuid = entry->uuid;
+    }
+  else
+    {
+      /* fallback to using the network. */
+      SVN_ERR (svn_client_uuid_from_url (uuid, entry->url, ctx, pool));
+    }
 
   return SVN_NO_ERROR;
 }

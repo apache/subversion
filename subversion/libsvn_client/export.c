@@ -35,10 +35,10 @@
 
 /*** Code. ***/
 
-static svn_error_t *
-remove_admin_dirs (const char *dir,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
+svn_error_t *
+svn_client__remove_admin_dirs (const char *dir,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *dirents;
@@ -74,7 +74,7 @@ remove_admin_dirs (const char *dir,
             }
           else
             {
-              SVN_ERR (remove_admin_dirs (dir_path, ctx, subpool));
+              SVN_ERR (svn_client__remove_admin_dirs (dir_path, ctx, subpool));
             } 
         }
 
@@ -200,7 +200,7 @@ svn_client_export (const char *from,
                                     pool));
 
       /* walk over the wc and remove the administrative directories. */
-      SVN_ERR (remove_admin_dirs (to, ctx, pool));
+      SVN_ERR (svn_client__remove_admin_dirs (to, ctx, pool));
     }
   else
     {

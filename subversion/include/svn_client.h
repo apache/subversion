@@ -1233,6 +1233,45 @@ svn_client_url_from_path (const char **url,
                           const char *path_or_url,
                           apr_pool_t *pool);
 
+
+
+
+/* Fetching repository UUIDs. */
+
+/** Get repository @a uuid for @a url.
+ *
+ * Use a @a pool to open a temporary RA session to @a url, discover the
+ * repository uuid, and free the session.  Return the uuid in @a uuid,
+ * allocated in @a pool.  @a ctx is required for possible repository
+ * authentication.
+ */
+svn_error_t *
+svn_client_uuid_from_url (const char **uuid,
+                          const char *url,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *pool);
+
+
+/** Return the repository @a uuid for working-copy @a path, allocated
+ *  in @a pool, using network if required.
+ *
+ * Return the repository @a uuid for working-copy @a path, allocated
+ * in @a pool.  Use @a adm_access to retrieve the uuid from @a path's
+ * entry; if not present in the entry, then call
+ * svn_client_uuid_from_url() to retrieve, using the entry's url.  @a
+ * ctx is required for possible repository authentication.
+ *
+ * NOTE:  the only reason this function falls back on
+ * @c svn_client_uuid_from_url is for compatibility purposes.  Old
+ * working copies may not have uuids in the entries file.
+ */
+svn_error_t *
+svn_client_uuid_from_path (const char **uuid,
+                           const char *path,
+                           svn_wc_adm_access_t *adm_access,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -310,7 +310,7 @@ def create_repos(path):
   chmod_tree(path, 0666, 0666)
 
 # For copying a repository
-def copy_repos(src_path, dst_path, head_revision):
+def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
   "Copy the repository SRC_PATH, with head revision HEAD_REVISION, to DST_PATH"
 
   # A BDB hot-backup procedure would be more efficient, but that would
@@ -319,6 +319,9 @@ def copy_repos(src_path, dst_path, head_revision):
   create_repos(dst_path)
   dump_args = ' dump "' + src_path + '"'
   load_args = ' load "' + dst_path + '"'
+
+  if (ignore_uuid):
+    load_args = load_args + " --ignore-uuid"
   if verbose_mode:
     print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
           '|', os.path.basename(svnadmin_binary) + load_args,
