@@ -136,7 +136,6 @@ main (int argc, char **argv)
       svn_txdelta_window_t *window_AB = NULL;
       int count_AB = 0;
       apr_off_t len_AB = 0;
-      apr_off_t sview_offset = 0;
 
       putc('\n', stdout);
       do_one_diff (source_file_B, target_file_B,
@@ -159,17 +158,20 @@ main (int argc, char **argv)
 
       for (count_AB = 0; count_AB < count_B; ++count_AB)
         {
+          svn_txdelta__compose_ctx_t context = { 0 };
           svn_txdelta_next_window (&window_A, stream_A, wpool);
           svn_txdelta_next_window (&window_B, stream_B, wpool);
 
           /* Note: It's not possible that window_B is null, we already
              counted the number of windows in the second delta. */
-          if (window_A)
-            window_AB =
-              svn_txdelta__compose_windows (window_A, window_B, &sview_offset,
-                                            wpool);
-          if (window_AB == NULL)
-            window_AB = window_B;
+          window_AB =
+            svn_txdelta__compose_windows (window_A, window_B, &context, wpool);
+          if (!window_AB && context.use_second)
+            {
+              window_AB = window_B;
+              window_AB->sview_offset = context.sview_offset;
+              window_AB->sview_len = context.sview_len;
+            }
           len_AB += print_delta_window (window_AB, "AB", quiet, stdout);
           svn_pool_clear (wpool);
         }
