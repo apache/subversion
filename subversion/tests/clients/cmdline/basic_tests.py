@@ -113,6 +113,14 @@ def basic_status(sbox):
   output = svntest.actions.get_virginal_state(wc_dir, 1)
 
   svntest.actions.run_and_verify_status(wc_dir, output)
+
+  current_dir = os.getcwd()
+  try:
+    os.chdir(os.path.join(wc_dir, 'A'))
+    output = svntest.actions.get_virginal_state("..", 1)
+    svntest.actions.run_and_verify_status("..", output)
+  finally:
+    os.chdir(current_dir)
   
 #----------------------------------------------------------------------
 
