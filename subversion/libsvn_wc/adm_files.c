@@ -544,7 +544,14 @@ open_adm_file (apr_file_t **handle,
 
   apr_err = apr_open (handle, path->data, flags, APR_OS_DEFAULT, pool);
   if (apr_err)
-    err = svn_error_create (apr_err, 0, NULL, pool, path->data);
+    {
+      /* Oddly enough, APR will set *HANDLE even if the open failed.
+         You'll get a filehandle whose descriptor is -1.  There must
+         be a reason this is useful... Anyway, we don't want the
+         handle. */
+      *handle = NULL;
+      err = svn_error_create (apr_err, 0, NULL, pool, path->data);
+    }
 
   /* Restore path to its original state no matter what. */
   chop_admin_name (path, components_added);
