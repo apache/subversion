@@ -1,0 +1,119 @@
+
+Goal: I want a single unified user manual, much in the spirit of the
+excellent FreeBSD Handbook, probably called the "Subversion Handbook".
+
+Like the FreeBSD Handbook, it should be compact and to-the-point, and
+cover 95% of all topics that users run into.  It should explain
+expected behaviors, and give short sample 'recipes'.  
+
+Most importantly, it shouldn't be so detailed as to preclude a *real*
+book, like the one Karl and Fitz writing for O'Reilly.  (Someday that
+book will be included in our source tree too.)
+
+
+--------------------------------------------------------
+Outline of the FreeBSD Handbook
+
+Preface
+
+I. Getting Started
+
+  1. Intro -- overview of capabilities, about the project
+  2. Installation 
+  3. Unix Basics
+  4. Packages/ports
+  5. X windows
+
+II. Administration
+
+  6. Configuration/tuning
+  7. Boot process
+  8. account management
+  9. Building a kernel
+ 10. security
+ 11. printing
+ 12. storage
+ 13. i18n/l10n
+ 14. sound
+ 15. serial
+ 16. ppp/slip
+ 17. advanced networking
+ 18. email
+ 19. updating
+
+III. Appendices
+
+  1. obtaining freebsd
+  2. biliography
+  3. net resources
+
+*Indices of Tables/Figures/Examples*
+
+
+-------------------------------------------------------
+Possible Outline of the Subversion Handbook
+
+
+Preface
+
+I. Getting Started
+
+  1. Intro  [from the LJ article]
+       a. 'revision control' system vs. 'SCM' system
+       b. why svn exists
+       c. overview of features
+
+  2. Design overview
+       [very quick tour of library 'layers' -- from LJ article]
+
+  3. Installation
+       [various ways of installing binary packages for different platforms]
+       [pointer to appendix 3]
+
+  4. Subversion Basics
+      [put pointer to appendix 1, so CVS users can read the 'diff']
+       a. The non-locking model
+             [Jim's great conversational explanation]   
+       b. Quick walkthrough
+             [explanation of ra_local vs. ra_dav]
+             [repos creation/tour/walkthrough from our README doc]
+
+
+II. Client Cookbook
+
+  1. checkout
+  2. basic work cycle  
+       1. making changes:  editing, rm, add, revert
+       2. examining the wc:  status, info
+       3. sending changes:  commit
+       3. receiving changes:  update, resolve (conflicts)
+  3. history:  diff/log
+  4. branches and tags:  cp/switch/merge
+  5. properties
+      a. general use:  pl/pg/ps/pe/pd
+      b. "magic" properties:  eol-style, keywords, executable
+  6. modules:  svn:externals
+  7. other commands:  import/export/mkdir/cleanup
+
+
+III.  Repository Administration
+
+   [run over tasks solved by 'svnadmin' and 'svnlook' features]
+
+  1. Creating a repository
+  2. Repository hooks
+  3. DB maintenance
+       a. Berkeley DB maintenance:  db_recover, ptrs to their site
+       b. [someday SQL pointers]
+  4. Repository tweaking:  undeltify, setlog, ls/rmtxns
+  5. Networking the repository [httpd config]
+  6. Repository migration: dump/load
+
+IV. Appendices
+
+  1. SVN for CVS users
+  2. Compiling from source
+  3. Contributing to the project
+  4. Quickref sheet [can this be ported from latex?]
+  5. Links:  pointers to FAQ, WebDAV docs
+  6. License
