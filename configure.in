@@ -54,6 +54,13 @@ else
   AC_MSG_ERROR([Must configure APR before Subversion.])
 fi
 
+
+dnl Set module library lists for libtool ---------------------
+
+SVN_APR_LIBS="`pwd`/apr/libapr.la $LIBTOOL_LIBS"
+AC_SUBST(SVN_APR_LIBS)
+
+
 dnl Check for programs ---------------------
 
 dnl Look for a C compiler
