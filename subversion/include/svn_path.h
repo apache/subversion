@@ -258,6 +258,11 @@ svn_stringbuf_t *svn_path_is_child (const svn_stringbuf_t *path1,
                                     enum svn_path_style style,
                                     apr_pool_t *pool);
 
+/* Compare PATH to an array of const char * URL SCHEMES (like "file",
+   "http", etc.) to determine if PATH looks like a URL.  If so, return
+   the matching scheme used by PATH, else return NULL.  Returned
+   values point to the allocations in SCHEMES. */
+svn_boolean_t svn_path_is_url (const svn_string_t *path);
 
 /* Return TRUE if PATH is URI-safe, FALSE otherwise. */
 svn_boolean_t svn_path_is_uri_safe (const svn_string_t *path);

@@ -152,21 +152,33 @@ svn_cl__args_to_target_array (apr_getopt_t *os,
 {
   apr_array_header_t *targets =
     apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (svn_stringbuf_t *));
-
+  
   for (; os->ind < os->argc; os->ind++)
     {
       svn_stringbuf_t *target = svn_stringbuf_create (os->argv[os->ind], pool);
       svn_stringbuf_t *basename;
+      svn_string_t tstr;
 
       svn_path_canonicalize (target, svn_path_local_style);
-      basename = svn_path_last_component (target, svn_path_local_style, pool);
 
-      /* If this target is not a Subversion administrative directory,
-         add it to the target list.  TODO: Perhaps this check should
-         not call the target a SVN admin dir unless svn_wc_check_wc
-         passes on the target, too? */
-      if (strcmp (basename->data, SVN_WC_ADM_DIR_NAME))
-        (*((svn_stringbuf_t **) apr_array_push (targets))) = target;
+      /* If this path looks like it would work as a URL in one of the
+         currently available RA libraries, we add it unconditionally
+         to the target array. */
+      tstr.data = target->data;
+      tstr.len  = target->len;
+      if (! svn_path_is_url (&tstr))
+        {
+          /* If this target is a Subversion administrative directory,
+             skip it.  TODO: Perhaps this check should not call the
+             target a SVN admin dir unless svn_wc_check_wc passes on
+             the target, too? */
+          basename = svn_path_last_component (target, 
+                                              svn_path_local_style, pool);
+          if (! strcmp (basename->data, SVN_WC_ADM_DIR_NAME))
+            continue;
+        }
+
+      (*((svn_stringbuf_t **) apr_array_push (targets))) = target;
     }
 
   /* kff todo: need to remove redundancies from targets before
