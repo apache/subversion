@@ -159,7 +159,11 @@ svn_fs_t *svn_repos_fs (svn_repos_t *repos);
 /** Make a hot copy of the Subversion repository found at @a src_path 
  * to @a dst_path. 
  *
- * @copydoc svn_fs_hotcopy_berkeley()
+ * Copy a possibly live Subversion repository from @a src_path to
+ * @a dst_path.  If @a clean_logs is @c TRUE, perform cleanup on the
+ * source filesystem as part of the copy operation; currently, this
+ * means deleting copied, unused logfiles for a Berkeley DB source
+ * repository.
  */
 svn_error_t * svn_repos_hotcopy (const char *src_path,
                                  const char *dst_path,
