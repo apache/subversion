@@ -60,6 +60,81 @@
 #include <mod_dav.h>
 
 #include "svn_error.h"
+#include "svn_fs.h"
+
+
+/* dav_svn_repos
+ *
+ * Record information about the repository that a resource belongs to.
+ * This structure will be shared between multiple resources so that we
+ * can optimized our FS access.
+ *
+ * Note that we do not refcount this structure. Presumably, we will need
+ * it throughout the life of the request. Therefore, we can just leave it
+ * for the request pool to cleanup/close.
+ *
+ * Also, note that it is possible that two resources may have distinct
+ * dav_svn_repos structures, yet refer to the same repository. This is
+ * allowed by the SVN FS interface.
+ *
+ * ### should we attempt to merge them when we detect this situation in
+ * ### places like is_same_resource, is_parent_resource, or copy/move?
+ * ### I say yes: the FS will certainly have an easier time if there is
+ * ### only a single FS open; otherwise, it will have to work a bit harder
+ * ### to keep the things in sync.
+ */
+typedef struct {
+  apr_pool_t *pool;     /* request_rec -> pool */
+
+  /* Remember the root URL path of this repository (just a path; no
+     scheme, host, or port).
+
+     Example: the URI is "http://host/repos/file", this will be "/repos".
+  */
+  const char *root_uri;
+
+  /* This records the filesystem path to the SVN FS */
+  const char *fs_path;
+
+  /* the open repository */
+  svn_fs_t *fs;
+
+  /* NOTE: root_rev and root_dir may be 0/NULL if we don't open the root
+     of the repository (e.g. we're dealing with activity resources) */
+  /* ### these fields may make better sense elsewhere; a repository may
+     ### need two roots open for some operations(?) */
+
+  /* what revision did we open for the root? */
+  svn_revnum_t root_rev;
+
+  /* the root of the revision tree */
+  svn_fs_dir_t *root_dir;
+  
+} dav_svn_repos;
+
+/* internal structure to hold information about this resource */
+struct dav_resource_private {
+  apr_pool_t *pool;     /* request_rec -> pool */
+
+  /* Path from the SVN repository root to this resource. This value has
+     a leading slash. It will never have a trailing slash, even if the
+     resource represents a collection.
+
+     For example: URI is http://host/repos/file -- path will be "/file".
+
+     Note that the SVN FS does not like absolute paths, so we
+     generally skip the first char when talking with the FS.
+  */
+  svn_string_t *path;
+
+  /* resource-type-specific data */
+  const char *object_name;      /* ### not really defined right now */
+
+  /* for REGULAR resources: an open node for the revision */
+  svn_fs_node_t *node;
+
+  dav_svn_repos *repos;
+};
 
 
 void dav_svn_gather_propsets(apr_array_header_t *uris);

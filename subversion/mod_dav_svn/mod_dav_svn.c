@@ -92,6 +92,7 @@ static void dav_svn_init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp,
 {
     ap_add_version_component(p, "SVN/" SVN_VERSION);
 }
+
 static int dav_svn_header_parser(request_rec *r)
 {
     /* Use this hook to initialize the request pool as SVN's "top-most"
