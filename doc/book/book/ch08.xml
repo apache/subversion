@@ -1277,10 +1277,10 @@ if __name__ == '__main__':
       respectively).</para>
 
     <para>How does all of this apply to Subversion?  The mod_dav_svn
-      Apache module uses HTTP, extended by WebDAV and DeltaV, as its
-      one of its network protocols.  Subversion uses mod_dav_svn to
-      map between Subversion's versioning concepts and those of RFCs
-      2518 and 3253.
+      Apache module uses HTTP, extended by WebDAV and DeltaV, as one
+      of its network protocols.  Subversion uses mod_dav_svn to map
+      between Subversion's versioning concepts and those of RFCs 2518
+      and 3253.
     </para>
 
     <para>For a more thorough discussion of WebDAV, how it works, and
