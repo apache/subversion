@@ -65,21 +65,24 @@ svn_cl__print_commit_info (svn_client_commit_info_t *commit_info,
 
 
 svn_error_t *
-svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
+svn_cl__edit_externally (svn_string_t **edited_contents /* UTF-8! */,
                          const char **tmpfile_left /* UTF-8! */,
                          const char *editor_cmd,
                          const char *base_dir /* UTF-8! */,
-                         const char *contents /* UTF-8! */,
+                         const svn_string_t *contents /* UTF-8! */,
                          const char *prefix,
                          apr_hash_t *config,
+                         svn_boolean_t as_text,
+                         const char *encoding,
                          apr_pool_t *pool)
 {
   const char *editor = NULL;
   const char *cmd;
   apr_file_t *tmp_file;
   const char *tmpfile_name;
-  const char *contents_native, *tmpfile_native;
+  const char *tmpfile_native;
   const char *tmpfile_apr, *base_dir_apr;
+  svn_string_t *translated_contents;
   apr_status_t apr_err, apr_err2;
   apr_size_t written;
   apr_finfo_t finfo_before, finfo_after;
@@ -125,8 +128,25 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
        _("None of the environment variables SVN_EDITOR, VISUAL or EDITOR is "
          "set, and no 'editor-cmd' run-time configuration option was found"));
 
-  /* Convert file contents from UTF-8 */
-  SVN_ERR (svn_utf_cstring_from_utf8 (&contents_native, contents, pool));
+  /* Convert file contents from UTF-8/LF if desired. */
+  if (as_text)
+    {
+      const char *translated;
+      SVN_ERR (svn_subst_translate_cstring (contents->data, &translated,
+                                            APR_EOL_STR, FALSE,
+                                            NULL, FALSE, pool));
+      translated_contents = svn_string_create ("", pool);
+      if (encoding)
+        SVN_ERR (svn_utf_cstring_from_utf8_ex (&translated_contents->data,
+                                               translated, encoding, NULL,
+                                               pool));
+      else
+        SVN_ERR (svn_utf_cstring_from_utf8 (&translated_contents->data,
+                                            translated, pool));
+      translated_contents->len = strlen (translated_contents->data);
+    }
+  else
+    translated_contents = svn_string_dup (contents, pool);
 
   /* Move to BASE_DIR to avoid getting characters that need quoting
      into tmpfile_name */
@@ -159,8 +179,8 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
        the file we just created!! ***/
 
   /* Dump initial CONTENTS to TMP_FILE. */
-  apr_err = apr_file_write_full (tmp_file, contents_native, 
-                                 strlen (contents_native), &written);
+  apr_err = apr_file_write_full (tmp_file, translated_contents->data,
+                                 translated_contents->len, &written);
 
   apr_err2 = apr_file_close (tmp_file);
   if (! apr_err)
@@ -221,7 +241,16 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
       if (err)
         goto cleanup;
 
-      *edited_contents = edited_contents_s->data;
+      *edited_contents = svn_string_create_from_buf (edited_contents_s, pool);
+
+      /* Translate back to UTF8/LF if desired. */
+      if (as_text)
+        {
+          err = svn_subst_translate_string (edited_contents, *edited_contents,
+                                            encoding, pool);
+          if (err)
+            goto cleanup;
+        }
     }
   else
     {
@@ -456,7 +485,7 @@ svn_cl__get_log_message (const char **log_msg,
       int i;
       svn_stringbuf_t *tmp_message = svn_stringbuf_dup (default_msg, pool);
       svn_error_t *err = SVN_NO_ERROR;
-      const char *msg2 = NULL;  /* ### shim for svn_cl__edit_externally */
+      svn_string_t *msg_string = svn_string_create ("", pool);
 
       for (i = 0; i < commit_items->nelts; i++)
         {
@@ -497,23 +526,14 @@ svn_cl__get_log_message (const char **log_msg,
           svn_stringbuf_appendcstr (tmp_message, APR_EOL_STR);
         }
 
-      /* Use the external edit to get a log message. */
-      err = svn_cl__edit_externally (&msg2, &lmb->tmpfile_left,
-                                     lmb->editor_cmd, lmb->base_dir,
-                                     tmp_message->data, "svn-commit",
-                                     lmb->config, pool);
+      msg_string->data = tmp_message->data;
+      msg_string->len = tmp_message->len;
 
-      /* Clean up the log message into UTF8/LF before giving it to
-         libsvn_client. */
-      if (msg2)
-        {
-          svn_string_t *new_logval = svn_string_create ("", pool);
-          new_logval->data = msg2;
-          new_logval->len = strlen (msg2);
-          SVN_ERR (svn_subst_translate_string (&new_logval, new_logval,
-                                               NULL, pool));
-          msg2 = new_logval->data;
-        }        
+      /* Use the external edit to get a log message. */
+      err = svn_cl__edit_externally (&msg_string, &lmb->tmpfile_left,
+                                     lmb->editor_cmd, lmb->base_dir,
+                                     msg_string, "svn-commit",
+                                     lmb->config, TRUE, NULL, pool);
 
       /* Dup the tmpfile path into its baton's pool. */
       *tmp_file = lmb->tmpfile_left = apr_pstrdup (lmb->pool, 
@@ -530,8 +550,8 @@ svn_cl__get_log_message (const char **log_msg,
           return err;
         }
 
-      if (msg2)
-        message = svn_stringbuf_create (msg2, pool);
+      if (msg_string)
+        message = svn_stringbuf_create_from_string (msg_string, pool);
 
       /* Strip the prefix from the buffer. */
       if (message)
