@@ -738,7 +738,7 @@ static svn_error_t * commit_add_dir(const char *path,
         {
           const char *msg = apr_psprintf(dir_pool, "COPY of %s", path);
           return svn_ra_dav__convert_error(parent->cc->ras->sess,
-                                           msg, status);
+                                           msg, status, dir_pool);
         }
     }
 
@@ -928,7 +928,7 @@ static svn_error_t * commit_add_file(const char *path,
         {
           const char *msg = apr_psprintf(file_pool, "COPY of %s", path);
           return svn_ra_dav__convert_error(parent->cc->ras->sess,
-                                           msg, status);
+                                           msg, status, file_pool);
         }
     }
 
@@ -1220,7 +1220,7 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
     {
       const char *msg = apr_psprintf(pool, _("applying log message to %s"),
                                      baseline_rsrc.wr_url);
-      return svn_ra_dav__convert_error(cc->ras->sess, msg, rv);
+      return svn_ra_dav__convert_error(cc->ras->sess, msg, rv, pool);
     }
 
   return SVN_NO_ERROR;
