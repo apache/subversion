@@ -245,7 +245,8 @@ get_file_mime_types (const char **mimetype1,
           propchange = &APR_ARRAY_IDX(b->propchanges, i, svn_prop_t);
           if (strcmp (propchange->name, SVN_PROP_MIME_TYPE) == 0)
             {
-              *mimetype2 = propchange->value->data;
+              if (propchange->value)
+                *mimetype2 = propchange->value->data;
               break;
             }
         }
