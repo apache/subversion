@@ -55,6 +55,8 @@
 <li><a href="#reposperms">How do I set repository permissions correctly?</a></li>
 <li><a href="#readonly">Why do read-only operations still need repository write access?</a></li>
 <li><a href="#removal">How do I completely remove a file from the repository's history?</a></li>
+<li><a href="#change-log-msg">How do I change the log message for a revision
+    after it's been committed?</a></li>
 <li><a href="#patch">How do I submit a patch for Subversion?</a></li>
 <li><a href="#in-place-import">How can I do an in-place 'import'
     (i.e. add a tree to subversion without moving or deleting the
@@ -857,6 +859,56 @@ repository, then pipe the dumpfile through <b>svndumpfilter</b>
 href="http://svnbook.red-bean.com/html-chunk/ch05.html">chapter 5</a>
 of the Subversion book for details about this.</p>
 
+<![CDATA[=========================================================]]>
+
+<h3><a name="change-log-msg">
+How do I change the log message for a revision after it's been committed?
+</a></h3>
+
+<p>Log messages are kept in the repository as properties attached to each
+revision.  By default, the log message property (<em>svn:log</em>) cannot be
+edited once it is committed.  That is because changes to <a
+href="http://svnbook.red-bean.com/svnbook/ch05.html#svn-ch-5-sect-1.2">revision
+properties</a> (of which <em>svn:log</em> is one) cause the property's
+previous value to be permanently discarded, and Subversion tries to prevent
+you from doing this accidentally.  However, there are a couple of ways to get
+Subversion to change a revision property.</p>
+
+<p>The first way is for the repository administrator to enable revision
+property modifications.  This is done by creating a hook called
+"pre-revprop-change" (see <a
+href="http://svnbook.red-bean.com/svnbook/ch05s02.html#svn-ch-5-sect-2.1">this
+section</a> in the Subversion book for more details about how to do this).
+The "pre-revprop-change" hook has access to the old log message before it is
+changed, so it can preserve it in some way (for example, by sending an email).
+Once revision property modifications are enabled, you can change a revision's
+log message by passing the --revprop switch to <b>svn propedit</b> or <b>svn
+propset</b>, like either one of these:</p>
+
+<pre>
+$ svn propedit -r N --revprop svn:log URL
+$ svn propset -r N --revprop svn:log "new log message" URL
+</pre>
+
+<p>where N is the revision number whose log message you wish to change, and
+URL is the location of the repository.  If you run this command from within a
+working copy, you can leave off the URL.</p>
+
+<p>The second way of changing a log message is to use <b>svnadmin setlog</b>.
+This must be done by referring to the repository's location on the filesystem.
+You cannot modify a remote repository using this command.</p>
+
+<pre>
+$ svnadmin setlog REPOS_PATH -r N FILE
+</pre>
+
+<p>where REPOS_PATH is the repository location, N is the revision number whose
+log message you wish to change, and FILE is a file containing the new log
+message.  If the "pre-revprop-change" hook is not in place (or you want to
+bypass the hook script for some reason), you can also use the --bypass-hooks
+option.  However, if you decide to use this option, be very careful.  You may
+be bypassing such things as email notifications of the change, or backup
+systems that keep track of revision properties.</p>
 
 <![CDATA[=========================================================]]>
 
