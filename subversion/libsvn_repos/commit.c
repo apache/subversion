@@ -438,7 +438,8 @@ change_file_prop (void *file_baton,
 {
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->edit_baton;
-  return svn_fs_change_node_prop (eb->txn_root, fb->path, name, value, pool);
+  return svn_repos_fs_change_node_prop (eb->txn_root, fb->path, 
+                                        name, value, pool);
 }
 
 
@@ -450,7 +451,8 @@ change_dir_prop (void *dir_baton,
 {
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->edit_baton;
-  return svn_fs_change_node_prop (eb->txn_root, db->path, name, value, pool);
+  return svn_repos_fs_change_node_prop (eb->txn_root, db->path, 
+                                        name, value, pool);
 }
 
 

@@ -493,6 +493,30 @@ svn_error_t *svn_repos_fs_change_rev_prop (svn_repos_t *repos,
 
 /* ---------------------------------------------------------------*/
 
+/*** Prop-changing wrappers for libsvn_fs routines. ***/
+
+/* NOTE: svn_repos_fs_change_rev_prop() also exists, but is located
+   above with the hook-related functions. */
+
+
+/* Validating wrapper for svn_fs_change_node_prop() (which see for
+   argument descriptions).  */
+svn_error_t *svn_repos_fs_change_node_prop (svn_fs_root_t *root,
+                                            const char *path,
+                                            const char *name,
+                                            const svn_string_t *value,
+                                            apr_pool_t *pool);
+
+/* Validating wrapper for svn_fs_change_txn_prop() (which see for
+   argument descriptions).  */
+svn_error_t *svn_repos_fs_change_txn_prop (svn_fs_txn_t *txn,
+                                           const char *name,
+                                           const svn_string_t *value,
+                                           apr_pool_t *pool);
+
+
+/* ---------------------------------------------------------------*/
+
 /*** Data structures and editor things for repository inspection. ***/
 
 /* As it turns out, the svn_repos_dir_delta() interface can be

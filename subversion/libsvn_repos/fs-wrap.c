@@ -147,6 +147,48 @@ svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
 
 /*** Property change wrappers ***/
 
+/* Validate that property NAME is valid for use in a Subversion
+   repository. */
+static svn_error_t *
+validate_prop (const char *name,
+               apr_pool_t *pool)
+{
+  svn_prop_kind_t kind = svn_property_kind (NULL, name);
+  if (kind != svn_prop_regular_kind)
+    return svn_error_createf 
+      (SVN_ERR_REPOS_BAD_ARGS, NULL,
+       "Storage of non-regular property '%s' is disallowed through the "
+       "repository interface, and could indicate a bug in your client.", 
+       name);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_repos_fs_change_node_prop (svn_fs_root_t *root,
+                               const char *path,
+                               const char *name,
+                               const svn_string_t *value,
+                               apr_pool_t *pool)
+{
+  /* Validate the property, then call the wrapped function. */
+  SVN_ERR (validate_prop (name, pool));
+  return svn_fs_change_node_prop (root, path, name, value, pool);
+}
+
+
+svn_error_t *
+svn_repos_fs_change_txn_prop (svn_fs_txn_t *txn,
+                              const char *name,
+                              const svn_string_t *value,
+                              apr_pool_t *pool)
+{
+  /* Validate the property, then call the wrapped function. */
+  SVN_ERR (validate_prop (name, pool));
+  return svn_fs_change_txn_prop (txn, name, value, pool);
+}
+
+
 svn_error_t *
 svn_repos_fs_change_rev_prop (svn_repos_t *repos,
                               svn_revnum_t rev,
@@ -155,14 +197,15 @@ svn_repos_fs_change_rev_prop (svn_repos_t *repos,
                               const svn_string_t *value,
                               apr_pool_t *pool)
 {
-  svn_fs_t *fs = repos->fs;
+  /* Validate the property. */
+  SVN_ERR (validate_prop (name, pool));
 
   /* Run pre-revprop-change hook */
   SVN_ERR (svn_repos__hooks_pre_revprop_change (repos, rev, author, name, 
                                                 value, pool));
 
   /* Change the revision prop. */
-  SVN_ERR (svn_fs_change_rev_prop (fs, rev, name, value, pool));
+  SVN_ERR (svn_fs_change_rev_prop (repos->fs, rev, name, value, pool));
 
   /* Run post-revprop-change hook */
   SVN_ERR (svn_repos__hooks_post_revprop_change (repos, rev, author, 
