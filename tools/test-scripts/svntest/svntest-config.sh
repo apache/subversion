@@ -46,12 +46,14 @@ CVS="$LOCALBIN/cvs"
 # Path to config.guess (used for generating the mail subject line)
 GUESS="/usr/local/share/libtool/config.guess"
 
+# Path to sendmail
+SENDMAIL="/usr/lib/sendmail"
+
 # Other stuff
 CAT="$BIN/cat"
 CP="$BIN/cp"
 CP_F="$BIN/cp -f"
 CUT="$BIN/cut"
-MAILX="$BIN/mailx"
 MAKE="$LOCALBIN/make"
 MKDIR="$BIN/mkdir"
 NICE="$BIN/nice"
@@ -60,7 +62,6 @@ RM_F="$BIN/rm -f"
 RM_RF="$BIN/rm -rf"
 SED="$BIN/sed"
 TAIL="$BIN/tail"
-TEE="$BIN/tee"
 
 #
 # Helper functions

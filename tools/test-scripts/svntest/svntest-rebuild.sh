@@ -40,8 +40,8 @@ echo "$TEST_ROOT/$CONFIG_PREFIX.$BUILD_TYPE:" >> $LOG_FILE
 $CAT "$TEST_ROOT/$CONFIG_PREFIX.$BUILD_TYPE" >> $LOG_FILE
 
 cd $TEST_ROOT/$OBJ
-$TEST_ROOT/$CONFIG_PREFIX.$BUILD_TYPE 2>&1 | \
-    $TEE "$TEST_ROOT/LOG_svn_configure_$BUILD_TYPE"
+$TEST_ROOT/$CONFIG_PREFIX.$BUILD_TYPE \
+    > "$TEST_ROOT/LOG_svn_configure_$BUILD_TYPE" 2>&1
 test $? = 0 || {
     FAIL_LOG "$TEST_ROOT/LOG_svn_configure_$BUILD_TYPE"
     FAIL
@@ -51,7 +51,7 @@ PASS
 # Build
 START "build" "Building..."
 cd $TEST_ROOT/$OBJ
-$MAKE 2>&1 | $TEE "$TEST_ROOT/LOG_svn_build_$BUILD_TYPE"
+$MAKE > "$TEST_ROOT/LOG_svn_build_$BUILD_TYPE" 2>&1
 test $? = 0 || {
     FAIL_LOG "$TEST_ROOT/LOG_svn_build_$BUILD_TYPE"
     FAIL
@@ -61,7 +61,7 @@ PASS
 # Test
 START "check" "Testing..."
 cd $TEST_ROOT/$OBJ
-$MAKE check 2>&1 | $TEE "$TEST_ROOT/LOG_svn_check_$BUILD_TYPE"
+$MAKE check > "$TEST_ROOT/LOG_svn_check_$BUILD_TYPE" 2>&1
 test $? = 0 || {
     FAIL_LOG "$TEST_ROOT/LOG_svn_check_$BUILD_TYPE"
     $CP "tests.log" "$LOG_FILE_PREFIX.log.$BUILD_TYPE.$REV.failed" \

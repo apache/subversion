@@ -35,7 +35,7 @@ PASS
 
 # Update svn
 START "update subversion" "Updating Subversion..."
-cd $SVN_REPO && $SVN update 2>&1 | $TEE "$TEST_ROOT/LOG_up_svn"
+cd $SVN_REPO && $SVN update > "$TEST_ROOT/LOG_up_svn" 2>&1
 test $? = 0 || {
     FAIL_LOG "$TEST_ROOT/LOG_up_svn"
     FAIL
@@ -44,7 +44,7 @@ PASS
 
 # Run autogen.sh
 START "autogen.sh" "Running autogen.sh..."
-cd $SVN_REPO && ./autogen.sh 2>&1 | $TEE "$TEST_ROOT/LOG_svn_autogen"
+cd $SVN_REPO && ./autogen.sh > "$TEST_ROOT/LOG_svn_autogen" 2>&1
 test $? = 0 || {
     FAIL_LOG "$TEST_ROOT/LOG_svn_autogen"
     FAIL
