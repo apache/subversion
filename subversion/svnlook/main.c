@@ -1658,7 +1658,7 @@ subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       "Note: any subcommand which takes the '--revision' and '--transaction'\n"
       "      options will, if invoked without one of those options, act on\n"
       "      the repository's youngest revision.\n"
-      "Type \"svnlook help <subcommand>\" for help on a specific subcommand.\n"
+      "Type 'svnlook help <subcommand>' for help on a specific subcommand.\n"
       "\n"
       "Available subcommands:\n");
 

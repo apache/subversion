@@ -124,7 +124,7 @@ usage(const apr_getopt_option_t *options, apr_pool_t *pool)
     (svn_cmdline_fprintf
      (stderr, pool,
       _("usage: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n\n"
-        "  Produce a compact \"version number\" for the working copy path\n"
+        "  Produce a compact 'version number' for the working copy path\n"
         "  WC_PATH.  TRAIL_URL is the trailing portion of the URL used to\n"
         "  determine if WC_PATH itself is switched (detection of switches\n"
         "  within WC_PATH does not rely on TRAIL_URL).  The version number\n"
@@ -144,7 +144,7 @@ usage(const apr_getopt_option_t *options, apr_pool_t *pool)
         "   4123:4168MS   mixed revision, modified, switched working copy\n"
         "\n"
         "  If invoked on a directory that is not a working copy, an\n"
-        "  exported directory say, the program will output \"exported\".\n"
+        "  exported directory say, the program will output 'exported'.\n"
         "\n"
         "Valid options:\n")));
   while (options->description)
