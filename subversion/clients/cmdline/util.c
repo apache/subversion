@@ -159,8 +159,6 @@ svn_cl__args_to_target_array (apr_getopt_t *os,
       svn_stringbuf_t *basename;
       svn_string_t tstr;
 
-      svn_path_canonicalize (target, svn_path_local_style);
-
       /* If this path looks like it would work as a URL in one of the
          currently available RA libraries, we add it unconditionally
          to the target array. */
@@ -172,12 +170,16 @@ svn_cl__args_to_target_array (apr_getopt_t *os,
              skip it.  TODO: Perhaps this check should not call the
              target a SVN admin dir unless svn_wc_check_wc passes on
              the target, too? */
+          svn_path_canonicalize (target, svn_path_local_style);
           basename = svn_path_last_component (target, 
                                               svn_path_local_style, pool);
           if (! strcmp (basename->data, SVN_WC_ADM_DIR_NAME))
             continue;
         }
-
+      else
+        {
+          svn_path_canonicalize (target, svn_path_url_style);
+        }
       (*((svn_stringbuf_t **) apr_array_push (targets))) = target;
     }
 

@@ -226,12 +226,17 @@ svn_client_add (svn_stringbuf_t *path,
    then PATH itself will be recursively removed as well; otherwise
    PATH simply stops being tracked by the working copy.
 
-   Important:  this is a *scheduling* operation.  No changes will
-   happen to the repository until a commit occurs.  This scheduling
-   can be removed with svn_client_revert. */
+   If PATH is a URL, use the AUTH_BATON and MESSAGE to immediately
+   attempt to commit a deletion of the URL from the repository.
+
+   If PATH is, however, NOT a URL, then this is just a *scheduling*
+   operation.  No changes will happen to the repository until a commit
+   occurs.  This scheduling can be removed with svn_client_revert. */
 svn_error_t *
 svn_client_delete (svn_stringbuf_t *path,
                    svn_boolean_t force,
+                   svn_client_auth_baton_t *auth_baton,
+                   svn_stringbuf_t *message,
                    apr_pool_t *pool);
 
 

@@ -602,7 +602,8 @@ svn_error_t * svn_ra_dav__merge_activity(
       svn_stringbuf_set(path_str,
                      APR_ARRAY_IDX(deleted_entries, i, const char *));
 
-      SVN_ERR( (*close_commit)(close_baton, path_str, FALSE, mc.rev) );
+      if (close_commit)
+        SVN_ERR( (*close_commit)(close_baton, path_str, FALSE, mc.rev) );
     }
 
   return NULL;
