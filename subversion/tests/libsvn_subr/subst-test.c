@@ -372,10 +372,10 @@ verify_substitution (const char *fname,
       idx += strlen (eol_str);
     }
 
-  SVN_ERR (remove_file (fname, pool));
-
   /* ### todo fooo working here:
    *
+   * SVN_ERR (remove_file (fname, pool)); ...
+   * 
    * The next step is to take src file too, and src_eol, do the
    * expansion here, then remove both src and dst here.  This function
    * will both set up and verify the test, so that the test functions
