@@ -28,13 +28,29 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Open a `locks' table in ENV.  If CREATE is non-zero, create
-   one if it doesn't exist.  Set *LOCKS_P to the new table.
+/* Open a `lock-nodes' table in ENV.  If CREATE is non-zero, create
+   one if it doesn't exist.  Set *LOCK_NODES_P to the new table.
    Return a Berkeley DB error code.  */
-int svn_fs_bdb__open_lock_nodes_table (DB **locks_p,
+int svn_fs_bdb__open_lock_nodes_table (DB **locks_nodes_p,
                                        DB_ENV *env,
                                        svn_boolean_t create);
 
+svn_error_t *
+svn_fs_bdb__lock_node_add (svn_fs_t *fs,
+                           const char **lock_node_id,
+                           lock_node_t *lock_node,
+                           trail_t *trail);
+
+svn_error_t *
+svn_fs_bdb__lock_node_delete (svn_fs_t *fs,
+                              const char *lock_node_id,
+                              trail_t *trail);
+
+svn_error_t *
+svn_fs_bdb__lock_node_get (lock_node_t **lock_node_p,
+                           svn_fs_t *fs,
+                           const char *lock_node_id,
+                           trail_t *trail);
 
 #ifdef __cplusplus
 }
