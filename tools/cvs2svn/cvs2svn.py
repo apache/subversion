@@ -1894,7 +1894,7 @@ class Commit:
     self.changes = [ ]
     self.deletes = [ ]
 
-    self.t_min = 1<<30
+    self.t_min = 1L<<32
     self.t_max = 0
 
   def has_file(self, fname):
