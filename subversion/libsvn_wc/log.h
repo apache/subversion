@@ -147,19 +147,6 @@ extern "C" {
 #define SVN_WC__LOG_ATTR_ARG_9          "arg9"
 
 
-/* Starting at PATH, write out log entries indicating that a commit
- * succeeded, using REVISION as the new revision number.  run_log will
- * use these log items to complete the commit. 
- * 
- * Targets is a hash of files/dirs that actually got committed --
- * these are the only ones who we can write log items for, and whose
- * revision numbers will get set.
- */
-svn_error_t *svn_wc__log_commit (const char *path,
-                                 apr_hash_t *targets,
-                                 svn_revnum_t revision,
-                                 apr_pool_t *pool);
-
 
 /* Process the instructions in the log file for ADM_ACCESS. */
 svn_error_t *svn_wc__run_log (svn_wc_adm_access_t *adm_access,
