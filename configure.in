@@ -90,10 +90,8 @@ SVN_NEON_LIBS='$(top_builddir)/neon/src/libneon.la'
 AC_SUBST(SVN_NEON_LIBS)
 
 dnl tests
-SVN_TESTS_MAIN_LIBS='$(top_builddir)/subversion/tests/libsvn_tests_main.la'
+SVN_TESTS_MAIN_LIBS='$(top_builddir)/subversion/tests/libsvn_test.la'
 AC_SUBST(SVN_TESTS_MAIN_LIBS)
-SVN_TESTS_EDITOR_LIBS='$(top_builddir)/subversion/tests/libsvn_test_editor.la'
-AC_SUBST(SVN_TESTS_EDITOR_LIBS)
 
 
 dnl Check for programs ---------------------
@@ -123,12 +121,18 @@ SVN_FS_WANT_DB_MINOR=2
 SVN_FS_WANT_DB_PATCH=9
 SVN_LIB_BERKELEY_DB($SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MINOR,
                     $SVN_FS_WANT_DB_PATCH)
+
+# Make this conditional so it can be used by modules who simply want to
+# know if the filesystem stuff is expected to be available to build upon.
+AM_CONDITIONAL(BUILD_FS_STUFF, test "$svn_lib_berkeley_db" = "yes")
+
 if test "$svn_lib_berkeley_db" = "yes"; then
   FS_BASED_DIRS="libsvn_fs libsvn_repos libsvn_ra_local svnadmin"
   FS_BASED_TESTS="libsvn_fs libsvn_ra_local"
 fi
 AC_SUBST(FS_BASED_DIRS)
 AC_SUBST(FS_BASED_TESTS)
+
 AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MAJOR,
                    [The desired major version for the Berkeley DB])
 AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_MINOR, $SVN_FS_WANT_DB_MINOR,
@@ -277,3 +281,4 @@ build the Subversion client code only, and skip the server.
 You can find latest version of Berkeley DB at http://www.sleepycat.com.])
   ;;
 esac
+

@@ -1,8 +1,21 @@
 ## Makefile.in is generated from this by automake.
 
-lib_LTLIBRARIES = libsvn_tests_main.la libsvn_test_editor.la
-libsvn_tests_main_la_SOURCES = svn_tests_main.c
-libsvn_test_editor_la_SOURCES = svn_test_editor.c
+## The `LTLIBRARIES' primary variable is specifically used for
+## indicating shared libraries to build using `libtool'.
+
+# List of libraries to build and install in `libdir'
+lib_LTLIBRARIES = libsvn_test.la
+
+## Sources needed to build each library (names canonicalized)
+## Using automake conditions to decide whether or not to include
+## the filesystem utility code.
+if BUILD_FS_STUFF
+libsvn_test_la_SOURCES = \
+	svn_tests_main.c svn_test_editor.c fs-helpers.c
+else
+libsvn_test_la_SOURCES = \
+	svn_tests_main.c svn_test_editor.c
+endif
 
 ## Flags needed when compiling:
 INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@

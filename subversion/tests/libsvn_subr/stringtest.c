@@ -26,12 +26,9 @@
 #include "svn_string.h"   /* This includes <apr_*.h> */
 
 
-/* Required global, initialized by included main() */
-apr_pool_t *pool;
-
 /* A quick way to create error messages.  */
 static svn_error_t *
-fail (const char *fmt, ...)
+fail (apr_pool_t *pool, const char *fmt, ...)
 {
   va_list ap;
   char *msg;
@@ -54,7 +51,7 @@ const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
 
 
 static svn_error_t *
-test1 (const char **msg)
+test1 (const char **msg, apr_pool_t *pool)
 {
   *msg = "make svn_string_t from cstring";
   a = svn_string_create (phrase_1, pool);
@@ -63,12 +60,12 @@ test1 (const char **msg)
   if ((a->len == strlen (phrase_1)) && ((strcmp (a->data, phrase_1)) == 0))
     return SVN_NO_ERROR;
   else
-    return fail ("test failed");
+    return fail (pool, "test failed");
 }
 
 
 static svn_error_t *
-test2 (const char **msg)
+test2 (const char **msg, apr_pool_t *pool)
 {
   *msg = "make svn_string_t from substring of cstring";
   b = svn_string_ncreate (phrase_2, 16, pool);
@@ -77,12 +74,12 @@ test2 (const char **msg)
   if ((b->len == 16) && ((strncmp (b->data, phrase_2, 16)) == 0))
     return SVN_NO_ERROR;
   else
-    return fail ("test failed");
+    return fail (pool, "test failed");
 }
 
 
 static svn_error_t *
-test3 (const char **msg)
+test3 (const char **msg, apr_pool_t *pool)
 {
   char *tmp;
   size_t old_len;
@@ -102,12 +99,12 @@ test3 (const char **msg)
   if ((a->len == (old_len + b->len)) && ((strcmp (a->data, tmp)) == 0))
     return SVN_NO_ERROR;
   else
-    return fail ("test failed");
+    return fail (pool, "test failed");
 }
 
 
 static svn_error_t *
-test4 (const char **msg)
+test4 (const char **msg, apr_pool_t *pool)
 {
   a = svn_string_create (phrase_1, pool);
   svn_string_appendcstr (a, "new bytes to append");
@@ -119,12 +116,12 @@ test4 (const char **msg)
       (a, svn_string_create ("hello, new bytes to append", pool)))
     return SVN_NO_ERROR;
   else
-    return fail ("test failed");
+    return fail (pool, "test failed");
 }
 
 
 static svn_error_t *
-test5 (const char **msg)
+test5 (const char **msg, apr_pool_t *pool)
 {
   a = svn_string_create (phrase_1, pool);
   svn_string_appendbytes (a, "new bytes to append", 9);
@@ -136,12 +133,12 @@ test5 (const char **msg)
       (a, svn_string_create ("hello, new bytes", pool)))
     return SVN_NO_ERROR;
   else
-    return fail ("test failed");
+    return fail (pool, "test failed");
 }
 
 
 static svn_error_t *
-test6 (const char **msg)
+test6 (const char **msg, apr_pool_t *pool)
 {
   a = svn_string_create (phrase_1, pool);
   b = svn_string_create (phrase_2, pool);
@@ -153,12 +150,12 @@ test6 (const char **msg)
   if ((svn_string_compare (a, c)) && (! svn_string_compare (b, c)))
     return SVN_NO_ERROR;
   else
-    return fail ("test failed");
+    return fail (pool, "test failed");
 }
 
 
 static svn_error_t *
-test7 (const char **msg)
+test7 (const char **msg, apr_pool_t *pool)
 {
   char *tmp;
   size_t tmp_len;
@@ -178,12 +175,12 @@ test7 (const char **msg)
       && (c->data[c->len] == '\0'))
     return SVN_NO_ERROR;
   else
-    return fail ("test failed");
+    return fail (pool, "test failed");
 }
 
 
 static svn_error_t *
-test8 (const char **msg)
+test8 (const char **msg, apr_pool_t *pool)
 {
   c = svn_string_create (phrase_2, pool);  
   
@@ -194,12 +191,12 @@ test8 (const char **msg)
   if ((c->len == 0) && (c->data[0] == '\0'))
     return SVN_NO_ERROR;
   else
-    return fail ("test failed");
+    return fail (pool, "test failed");
 }
 
 
 static svn_error_t *
-test9 (const char **msg)
+test9 (const char **msg, apr_pool_t *pool)
 {
   a = svn_string_create (phrase_1, pool);
 
@@ -213,12 +210,12 @@ test9 (const char **msg)
       && (a->data[(a->len)] == '\0'))
     return SVN_NO_ERROR;
   else
-    return fail ("test failed");
+    return fail (pool, "test failed");
 }
 
 
 static svn_error_t *
-test10 (const char **msg)
+test10 (const char **msg, apr_pool_t *pool)
 {
   svn_string_t *s;
   
@@ -251,12 +248,12 @@ test10 (const char **msg)
       && (num_chopped_3 == strlen ("chop from slash")))
     return SVN_NO_ERROR;
   else
-    return fail ("test failed");
+    return fail (pool, "test failed");
 }
 
 
 static svn_error_t *
-test11 (const char **msg)
+test11 (const char **msg, apr_pool_t *pool)
 {
   svn_string_t *s, *t;
   size_t len_1 = 0;
@@ -285,12 +282,12 @@ test11 (const char **msg)
         && (((block_len_2 / block_len_1) % 2) == 0))
     return SVN_NO_ERROR;
   else
-    return fail ("test failed");
+    return fail (pool, "test failed");
 }
 
 
 static svn_error_t *
-test12 (const char **msg)
+test12 (const char **msg, apr_pool_t *pool)
 {
   svn_string_t *s;
   
@@ -304,7 +301,7 @@ test12 (const char **msg)
   if (strcmp (s->data, "This string is used in test 12.") == 0)
     return SVN_NO_ERROR;
   else
-    return fail ("test failed");
+    return fail (pool, "test failed");
 }
 
 
@@ -316,7 +313,7 @@ test12 (const char **msg)
 */
 
 /* An array of all test functions */
-svn_error_t *(*test_funcs[])(const char **msg) =
+svn_error_t *(*test_funcs[])(const char **msg, apr_pool_t *pool) =
 {
   NULL,
   test1,
