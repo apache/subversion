@@ -1699,11 +1699,10 @@ diff_repos_wc (const apr_array_header_t *options,
                svn_client_ctx_t *ctx,
                apr_pool_t *pool)
 {
-  const char *url1, *url2;
-  const char *anchor2, *target2;
-  const char *remote_anchor2, *remote_target2;
+  const char *url1, *anchor, *anchor_url, *target;
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access, *dir_access;
+  const svn_wc_entry_t *entry;
   svn_revnum_t rev;
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
@@ -1716,34 +1715,18 @@ diff_repos_wc (const apr_array_header_t *options,
   /* Assert that we have valid input. */
   assert (! svn_path_is_url (path2));
 
-  /* Figure out URLs. */
+  /* Convert path1 to a URL to feed to do_diff. */
   SVN_ERR (convert_to_url (&url1, path1, pool));
-  SVN_ERR (convert_to_url (&url2, path2, pool));
 
-  /* Possibly split up PATH2 into anchor/target.  If we do so, then we
-     must split URL2 as well. */
-  anchor2 = path2;
-  remote_anchor2 = url2;
-  target2 = "";
-  remote_target2 = "";
+  /* Use path2 to get the diff's anchor and target. */
+  SVN_ERR (svn_wc_get_actual_target (path2, &anchor, &target, pool));
+
+  /* Get a write-lock on the anchor and target.  ### There should
+     really be a helper function for this. */
+  SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, anchor, FALSE,
+                             (recurse && (! *target)) ? -1 : 0, pool));
   SVN_ERR (svn_io_check_path (path2, &kind, pool));
-  if (kind == svn_node_file)
-    {
-      svn_path_split (path2, &anchor2, &target2, pool);
-      svn_path_split (url2, &remote_anchor2, &remote_target2, pool);
-    }
-
-  /* Establish RA session to URL1's anchor */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, remote_anchor2, pool));
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, remote_anchor2,
-                                        NULL, NULL, NULL, FALSE, TRUE,
-                                        ctx, pool));
-      
-  /* Set up diff editor according to path2's anchor/target. */
-  SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, anchor2, FALSE,
-                             (recurse && (! *target2)) ? -1 : 0, pool));
-  if (*target2 && (kind == svn_node_dir))
+  if (*target && (kind == svn_node_dir))
     {
       /* Associate a potentially tree-locked access baton for the
          target with the anchor's access baton.  Note that we don't
@@ -1755,7 +1738,24 @@ diff_repos_wc (const apr_array_header_t *options,
                                  FALSE, recurse ? -1 : 0, pool));
     }
 
-  SVN_ERR (svn_wc_get_diff_editor2 (adm_access, target2,
+  /* Fetch the URL of the anchor directory. */
+  SVN_ERR (svn_wc_entry (&entry, anchor, adm_access, FALSE, pool));
+  if (! entry)
+    return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                              _("'%s' is not under version control"), anchor);
+  if (! entry->url)
+    return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
+                              _("Directory '%s' has no URL"), anchor);
+  anchor_url = apr_pstrdup (pool, entry->url);
+        
+  /* Establish RA session to path2's anchor */
+  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, anchor_url, pool));
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor_url,
+                                        NULL, NULL, NULL, FALSE, TRUE,
+                                        ctx, pool));
+      
+  SVN_ERR (svn_wc_get_diff_editor2 (adm_access, target,
                                     callbacks, callback_baton,
                                     recurse,
                                     ignore_ancestry,
@@ -1773,9 +1773,7 @@ diff_repos_wc (const apr_array_header_t *options,
   SVN_ERR (ra_lib->do_diff (session,
                             &reporter, &report_baton,
                             rev,
-                            (remote_target2 ?
-                             svn_path_uri_decode (remote_target2, pool)
-                             : NULL),
+                            target ? svn_path_uri_decode (target, pool) : NULL,
                             recurse,
                             ignore_ancestry,
                             url1,
