@@ -104,15 +104,19 @@ Greg:
 
       - vsn hooks: ???  REPORT and MKACTIVITY first
         REPORT: need the SVN:status-report
-        need: CHECKOUT
 	need: MERGE (activity)
 	validate proper support for VERSION-CONTROL. this would be the 
 	  missing piece for DeltaV "Core" support.
 
+      - MKACTIVITY should begin a txn
+      - version resource URL prep should look up the node
+      - CHECKOUT of a VR URL should verify the node ID of the
+        REPOS_PATH in the latest revision matches the node ID in the
+	VR URL (if not, they are checking out an old copy)
+
    - mod_dav: no apparent changes until vsn comes in
-      - need: MKACTIVITY, MERGE
-      - verify Vasta's work against our needs: CHECKOUT, REPORT, LABEL
-      - defer LABEL support
+      - need: MERGE
+      - verify Vasta's work against our needs: REPORT, LABEL
       - probably need BASELINE-CONTROL
 
    - libsvn_ra_dav:
