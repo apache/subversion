@@ -75,12 +75,8 @@ svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
       return SVN_NO_ERROR;
   } while (wait > 0);
 
-  /* If haven't returned by now, then must have encountered a lock. */
-  {
-    svn_string_t *msg = svn_string_create ("working copy locked: ", pool);
-    svn_string_appendstr (msg, path, pool);
-    return svn_error_create (SVN_ERR_WC_LOCKED, 0, NULL, pool, msg->data);
-  }
+  return svn_error_createf (SVN_ERR_WC_LOCKED, 0, NULL, pool, 
+                            "working copy locked: %s", path->data); 
 }
 
 
