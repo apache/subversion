@@ -288,7 +288,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "a working copy.\n"),
     {'r', svn_cl__old_cmd_opt, svn_cl__new_cmd_opt, 'x', 'N',
      svn_cl__diff_cmd_opt, svn_cl__no_diff_deleted,
-     svn_cl__notice_ancestry_opt, SVN_CL__AUTH_OPTIONS,
+     svn_cl__notice_ancestry_opt, svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
 
   { "export", svn_cl__export, {0},

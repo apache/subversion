@@ -837,7 +837,8 @@ svn_client_blame (const char *path_or_url,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
 
-/** Produce diff output which describes the delta between
+/** @since New in 1.2.
+ * Produce diff output which describes the delta between
  * @a path1/@a revision1 and @a path2/@a revision2.  Print the output 
  * of the diff to @a outfile, and any errors to @a errfile.  @a path1 
  * and @a path2 can be either working-copy paths or URLs.
@@ -861,6 +862,9 @@ svn_client_blame (const char *path_or_url,
  *
  * If @a no_diff_deleted is true, then no diff output will be
  * generated on deleted files.
+ *
+ * Diff output will not be generated for binary files, unless @a force is true,
+ * in which case diffs will be shown regardless of the content types.
  * 
  * @a diff_options (an array of <tt>const char *</tt>) is used to pass 
  * additional command line options to the diff processes invoked to compare
@@ -868,6 +872,26 @@ svn_client_blame (const char *path_or_url,
  *
  * The authentication baton cached in @a ctx is used to communicate with 
  * the repository.
+ */
+svn_error_t *svn_client_diff2 (const apr_array_header_t *diff_options,
+                               const char *path1,
+                               const svn_opt_revision_t *revision1,
+                               const char *path2,
+                               const svn_opt_revision_t *revision2,
+                               svn_boolean_t recurse,
+                               svn_boolean_t ignore_ancestry,
+                               svn_boolean_t no_diff_deleted,
+                               svn_boolean_t force,
+                               apr_file_t *outfile,
+                               apr_file_t *errfile,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.0 API.
+ *
+ * Similar to svn_client_diff2(), but with the @a force parameter always set
+ * to @c FALSE.
  */
 svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
                               const char *path1,
@@ -882,9 +906,8 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool);
 
-
 /**
- * @since New in 1.1.
+ * @since New in 1.2.
  *
  * Produce diff output which describes the delta between the
  * filesystem object @a path in peg revision @a peg_revision, as it
@@ -892,7 +915,28 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
  * the diff to @a outfile, and any errors to @a errfile.  @a path can
  * be either a working-copy path or URL.
  *
- * All other options are handled identically to svn_client_diff.
+ * All other options are handled identically to svn_client_diff2.
+ */
+svn_error_t *svn_client_diff_peg2 (const apr_array_header_t *diff_options,
+                                   const char *path,
+                                   const svn_opt_revision_t *peg_revision,
+                                   const svn_opt_revision_t *start_revision,
+                                   const svn_opt_revision_t *end_revision,
+                                   svn_boolean_t recurse,
+                                   svn_boolean_t ignore_ancestry,
+                                   svn_boolean_t no_diff_deleted,
+                                   svn_boolean_t force,
+                                   apr_file_t *outfile,
+                                   apr_file_t *errfile,
+                                   svn_client_ctx_t *ctx,
+                                   apr_pool_t *pool);
+
+/**
+ * @since New in 1.1.
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_client_diff_peg2(), but with the @a force parameter always
+ * set to @c FALSE.
  */
 svn_error_t *svn_client_diff_peg (const apr_array_header_t *diff_options,
                                   const char *path,
@@ -907,6 +951,18 @@ svn_error_t *svn_client_diff_peg (const apr_array_header_t *diff_options,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool);
 
+svn_error_t *svn_client_diff_peg (const apr_array_header_t *diff_options,
+                                  const char *path,
+                                  const svn_opt_revision_t *peg_revision,
+                                  const svn_opt_revision_t *start_revision,
+                                  const svn_opt_revision_t *end_revision,
+                                  svn_boolean_t recurse,
+                                  svn_boolean_t ignore_ancestry,
+                                  svn_boolean_t no_diff_deleted,
+                                  apr_file_t *outfile,
+                                  apr_file_t *errfile,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *pool);
 
 /** Merge changes from @a source1/@a revision1 to @a source2/@a revision2 into 
  * the working-copy path @a target_wcpath.
