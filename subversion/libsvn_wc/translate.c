@@ -122,7 +122,7 @@ svn_wc_translated_file (const char **xlated_p,
         {
           return svn_error_createf
             (SVN_ERR_IO_INCONSISTENT_EOL, NULL,
-             "svn_wc_translated_file: '%s' has unknown eol style property",
+             "'%s' has unknown value for svn:eol-style property",
              vfile);
         }
 

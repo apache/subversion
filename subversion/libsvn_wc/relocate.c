@@ -59,11 +59,10 @@ svn_wc_relocate (const char *path,
 
       entry = apr_hash_get (entries, base, APR_HASH_KEY_STRING);
       if (! entry)
-        return svn_error_create (SVN_ERR_ENTRY_NOT_FOUND, NULL, 
-                                 "missing entry");
+        return svn_error_create (SVN_ERR_ENTRY_NOT_FOUND, NULL, NULL);
       if (! entry->url)
         return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                                  "entry '%s' has no URL", path);
+                                  "Entry '%s' has no URL", path);
 
       if (! strncmp (entry->url, from, from_len))
         {

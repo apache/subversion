@@ -168,9 +168,7 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
       if (err)
         {
           if (! APR_STATUS_IS_ENOENT(err->apr_err))
-            return svn_error_quick_wrap (err,
-                                         "file_xfer_under_path: "
-                                         "can't move from to dest");
+            return svn_error_quick_wrap (err, "Can't move source to dest");
           svn_error_clear (err);
         }
     }
@@ -309,7 +307,7 @@ signal_error (struct log_runner *loggy, svn_error_t *err)
 {
   svn_xml_signal_bailout
     (svn_error_createf (pick_error_code (loggy), err,
-                        "in directory '%s'",
+                        "In directory '%s'",
                         svn_wc_adm_access_path (loggy->adm_access)),
      loggy->parser);
 }
@@ -333,12 +331,12 @@ log_do_merge (struct log_runner *loggy,
   left = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_1, atts);
   if (! left)
     return svn_error_createf (pick_error_code (loggy), NULL,
-                              "missing 'left' attr in '%s'",
+                              "Missing 'left' attribute in '%s'",
                               svn_wc_adm_access_path (loggy->adm_access));
   right = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_2, atts);
   if (! right)
     return svn_error_createf (pick_error_code (loggy), NULL,
-                              "missing 'right' attr in '%s'",
+                              "Missing 'right' attribute in '%s'",
                               svn_wc_adm_access_path (loggy->adm_access));
 
   /* Grab all three labels too.  If non-existent, we'll end up passing
@@ -379,7 +377,7 @@ log_do_file_xfer (struct log_runner *loggy,
   dest = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_DEST, atts);
   if (! dest)
     return svn_error_createf (pick_error_code (loggy), NULL,
-                              "missing dest attr in '%s'",
+                              "Missing 'dest' attribute in '%s'",
                               svn_wc_adm_access_path (loggy->adm_access));
 
   err = file_xfer_under_path (loggy->adm_access, name, dest, action,
@@ -420,7 +418,7 @@ log_do_file_timestamp (struct log_runner *loggy,
     = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_TIMESTAMP, atts);
   if (! timestamp_string)
     return svn_error_createf (pick_error_code (loggy), NULL,
-                              "missing timestamp attribute in '%s'",
+                              "Missing 'timestamp' attribute in '%s'",
                               svn_wc_adm_access_path (loggy->adm_access));
   
   SVN_ERR (svn_time_from_cstring (&timestamp, timestamp_string, loggy->pool));
@@ -485,13 +483,13 @@ log_do_modify_entry (struct log_runner *loggy,
       if (err)
         return svn_error_createf
           (pick_error_code (loggy), err,
-           "error checking path '%s'", tfile);
+           "Error checking path '%s'", tfile);
           
       err = svn_io_file_affected_time (&text_time, tfile, loggy->pool);
       if (err)
         return svn_error_createf
           (pick_error_code (loggy), err,
-           "error getting file affected time on '%s'", tfile);
+           "Error getting 'affected time' on '%s'", tfile);
 
       entry->text_time = text_time;
     }
@@ -516,13 +514,13 @@ log_do_modify_entry (struct log_runner *loggy,
       if (err)
         return svn_error_createf
           (pick_error_code (loggy), err,
-           "error checking path '%s'", pfile);
+           "Error checking path '%s'", pfile);
       
       err = svn_io_file_affected_time (&prop_time, pfile, loggy->pool);
       if (err)
         return svn_error_createf
           (pick_error_code (loggy), NULL,
-           "error getting file affected time on '%s'", pfile);
+           "Error getting 'affected time' on '%s'", pfile);
 
       entry->prop_time = prop_time;
     }
@@ -532,7 +530,7 @@ log_do_modify_entry (struct log_runner *loggy,
                               entry, modify_flags, FALSE, loggy->pool);
   if (err)
     return svn_error_createf (pick_error_code (loggy), err,
-                              "error merge_syncing entry '%s'", name);
+                              "Error modifying entry for '%s'", name);
   loggy->entries_modified = TRUE;
 
   return SVN_NO_ERROR;
@@ -656,7 +654,7 @@ log_do_committed (struct log_runner *loggy,
   /* If no new post-commit revision was given us, bail with an error. */
   if (! rev)
     return svn_error_createf (pick_error_code (loggy), NULL,
-                              "missing revision attr for '%s'", name);
+                              "Missing 'revision' attribute for '%s'", name);
       
   /* Read the entry for the affected item.  If we can't find the
      entry, or if the entry states that our item is not either "this
@@ -668,7 +666,8 @@ log_do_committed (struct log_runner *loggy,
   if ((! orig_entry)
       || ((! is_this_dir) && (orig_entry->kind != svn_node_file)))
     return svn_error_createf (pick_error_code (loggy), NULL,
-                              "log command for dir '%s' is mislocated", name);
+                              "Log command for directory '%s' is mislocated", 
+			      name);
 
   entry = svn_wc_entry_dup (orig_entry, pool);
 
@@ -835,7 +834,7 @@ log_do_committed (struct log_runner *loggy,
       tmpf = svn_wc__text_base_path (wf, 1, pool);
       if ((err = svn_io_check_path (tmpf, &kind, pool)))
         return svn_error_createf (pick_error_code (loggy), err,
-                                  "error checking existence: %s", name);
+                                  "Error checking existence of '%s'", name);
       if (kind == svn_node_file)
         {
           svn_boolean_t modified;
@@ -846,7 +845,7 @@ log_do_committed (struct log_runner *loggy,
                                                       loggy->adm_access,
                                                       tmpf, pool)))
             return svn_error_createf (pick_error_code (loggy), err,
-                                      "error comparing '%s' and '%s'",
+                                      "Error comparing '%s' and '%s'",
                                       wf, tmpf);
 
           /* If they are the same, use the working file's timestamp,
@@ -856,7 +855,7 @@ log_do_committed (struct log_runner *loggy,
           /* Get the timestamp from our chosen file. */
           if ((err = svn_io_file_affected_time (&text_time, chosen, pool)))
             return svn_error_createf (pick_error_code (loggy), err,
-                                      "error getting affected time: %s",
+                                      "Error getting 'affected time' for '%s'",
                                       chosen);
         }
     }
@@ -905,7 +904,7 @@ log_do_committed (struct log_runner *loggy,
               loggy->adm_access, TRUE, pool));
     if ((err = svn_io_check_path (tmpf, &kind, pool)))
       return svn_error_createf (pick_error_code (loggy), err,
-                                "error checking existence: %s", name);
+                                "Error checking existence of '%s'", name);
     if (kind == svn_node_file)
       {
         svn_boolean_t same;
@@ -915,7 +914,7 @@ log_do_committed (struct log_runner *loggy,
            did with text-time above. */
         if ((err = svn_io_files_contents_same_p (&same, wf, tmpf, pool)))
           return svn_error_createf (pick_error_code (loggy), err,
-                                    "error comparing '%s' and '%s'",
+                                    "Error comparing '%s' and '%s'",
                                     wf, tmpf);
 
         /* If they are the same, use the working file's timestamp,
@@ -925,7 +924,7 @@ log_do_committed (struct log_runner *loggy,
         /* Get the timestamp of our chosen file. */
         if ((err = svn_io_file_affected_time (&prop_time, chosen, pool)))
           return svn_error_createf (pick_error_code (loggy), err,
-                                    "error getting affected time: %s",
+                                    "Error getting 'affected time' of '%s'",
                                     chosen);
 
         /* Examine propchanges here before installing the new
@@ -970,7 +969,7 @@ log_do_committed (struct log_runner *loggy,
       if ((err = install_committed_file
            (&overwrote_working, loggy->adm_access, name, pool)))
         return svn_error_createf (pick_error_code (loggy), err,
-                                  "error replacing text-base: %s", name);
+                                  "Error replacing text-base of '%s'", name);
 
       /* The previous call will have run +x if the executable property
          was added or already present.  But if this property was
@@ -990,7 +989,7 @@ log_do_committed (struct log_runner *loggy,
       if (overwrote_working)
         if ((err = svn_io_file_affected_time (&text_time, full_path, pool)))
           return svn_error_createf (pick_error_code (loggy), err,
-                                    "error getting affected time: %s",
+                                    "Error getting 'affected time' of '%s'",
                                     full_path);
     }
     
@@ -1030,7 +1029,7 @@ log_do_committed (struct log_runner *loggy,
                                    FALSE, pool)))
     return svn_error_createf
       (pick_error_code (loggy), err,
-       "error modifying entry: %s", name);
+       "Error modifying entry of '%s'", name);
   loggy->entries_modified = TRUE;
 
   /* If we aren't looking at "this dir" (meaning we are looking at a
@@ -1078,7 +1077,7 @@ log_do_committed (struct log_runner *loggy,
                                           | SVN_WC__ENTRY_MODIFY_FORCE),
                                          TRUE, pool)))
           return svn_error_createf (pick_error_code (loggy), err,
-                                    "error merge_syncing '%s'", name);
+                                    "Error modifying entry of '%s'", name);
       }
 
     if (unassociated)
@@ -1137,7 +1136,7 @@ start_handler (void *userData, const char *eltname, const char **atts)
       signal_error
         (loggy, svn_error_createf 
          (pick_error_code (loggy), NULL,
-          "log entry missing name attribute (entry '%s' for dir '%s')",
+          "Log entry missing 'name' attribute (entry '%s' for directory '%s')",
           eltname, svn_wc_adm_access_path (loggy->adm_access)));
       return;
     }
@@ -1190,9 +1189,9 @@ start_handler (void *userData, const char *eltname, const char **atts)
       signal_error
         (loggy, svn_error_createf (pick_error_code (loggy),
                                    NULL,
-                                   "unrecognized logfile element in '%s': '%s'",
-                                   svn_wc_adm_access_path (loggy->adm_access),
-                                   eltname));
+                                   "Unrecognized logfile element '%s' in '%s'",
+                                   eltname,
+				   svn_wc_adm_access_path (loggy->adm_access)));
       return;
     }
 
@@ -1200,7 +1199,7 @@ start_handler (void *userData, const char *eltname, const char **atts)
     signal_error
       (loggy, svn_error_createf
        (pick_error_code (loggy), err,
-        "start_handler: error processing command '%s' in '%s'",
+        "Error processing command '%s' in '%s'",
         eltname, svn_wc_adm_access_path (loggy->adm_access)));
   
   return;
@@ -1245,7 +1244,7 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
   err = svn_wc__open_adm_file (&f, svn_wc_adm_access_path (adm_access),
                                SVN_WC__ADM_LOG, APR_READ, pool);
   if (err)
-    return svn_error_quick_wrap (err, "svn_wc__run_log: couldn't open log.");
+    return svn_error_quick_wrap (err, "Couldn't open log");
   
   do {
     buf_len = sizeof (buf);
@@ -1254,9 +1253,10 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
     if (apr_err && !APR_STATUS_IS_EOF(apr_err))
       {
         apr_file_close (f);
-        return svn_error_createf (apr_err, NULL,
-                                 "error reading adm log file in '%s'",
-                                  svn_wc_adm_access_path (adm_access));
+        return 
+          svn_error_createf (apr_err, NULL,
+                             "Error reading administrative log file in '%s'",
+                             svn_wc_adm_access_path (adm_access));
       }
 
     err = svn_xml_parse (parser, buf, buf_len, 0);
@@ -1372,7 +1372,7 @@ svn_wc_cleanup (const char *path,
   if (wc_format_version == 0)
     return svn_error_createf
       (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-       "svn_wc_cleanup: '%s' is not a working copy directory", path);
+       "'%s' is not a working copy directory", path);
 
   /* Lock this working copy directory, or steal an existing lock */
   SVN_ERR (svn_wc__adm_steal_write_lock (&adm_access, optional_adm_access, 
@@ -1419,7 +1419,7 @@ svn_wc_cleanup (const char *path,
         {
           return svn_error_createf
             (SVN_ERR_WC_BAD_ADM_LOG, NULL,
-             "svn_wc_cleanup: '%s' should be a file, but is not", log_path);
+             "'%s' should be a file, but is not", log_path);
         }
     }
 
