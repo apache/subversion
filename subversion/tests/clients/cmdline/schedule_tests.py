@@ -186,11 +186,11 @@ def add_executable(sbox):
       return expected != svntest.main.run_svn(None, 'propget',
                                               "svn:executable", fileName)
     test_cases = [
-      ("all_exe",  0777, True),
-      ("none_exe", 0666, False),
-      ("user_exe", 0766, True),
-      ("group_exe", 0676, False),
-      ("other_exe", 0667, False),
+      ("all_exe",   0777, 1),
+      ("none_exe",  0666, 0),
+      ("user_exe",  0766, 1),
+      ("group_exe", 0676, 0),
+      ("other_exe", 0667, 0),
       ]
     for test_case in test_cases:
       if runTest(sbox.wc_dir, *test_case):
