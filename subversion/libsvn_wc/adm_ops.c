@@ -163,6 +163,9 @@ svn_wc_set_revision (void *baton,
          parent instead.) */      
       svn_path_split (path, &log_parent, &basename,
                       svn_path_local_style, pool);
+      if (svn_path_is_empty (log_parent, svn_path_local_style))
+        svn_string_set (log_parent, ".");
+
       SVN_ERR (svn_wc__open_adm_file (&log_fp, log_parent, SVN_WC__ADM_LOG,
                                       (APR_WRITE|APR_APPEND|APR_CREATE),
                                       pool));
@@ -174,8 +177,17 @@ svn_wc_set_revision (void *baton,
        *attributes. */
       svn_string_t *pdir, *bname;
       svn_string_t *parentdir = svn_string_dup (log_parent, pool);
-      svn_path_split (parentdir, &pdir, &bname,
-                      svn_path_local_style, pool);
+
+      if (svn_path_is_empty (parentdir, svn_path_local_style))
+        {
+          pdir = svn_string_create (".", pool);
+          bname = svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
+        }
+      else
+        {
+          svn_path_split (parentdir, &pdir, &bname,
+                          svn_path_local_style, pool);
+        }
 
       SVN_ERR (svn_wc__entry_fold_sync (pdir, bname, new_revnum,
                                         svn_node_none, 
