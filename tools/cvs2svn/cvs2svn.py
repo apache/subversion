@@ -309,16 +309,12 @@ def ensure_directories(path, root, dumpfile):
   of PATH's basename.  Leading slash(es) on PATH are optional."""
   path_so_far = None
   components = filter(None, string.split(path, '/'))
-  last_idx = len(components) - 1
   this_node = root
 
-  i = 0
-  while (i < last_idx):
-
-    component = components[i]
+  for component in components[:-1]:
 
     if path_so_far:
-      path_so_far = path + '/' + component
+      path_so_far = path_so_far + '/' + component
     else:
       path_so_far = component
 
@@ -335,28 +331,15 @@ def ensure_directories(path, root, dumpfile):
       dumpfile.write("\n")
     this_node = this_node.children[component]
 
-    i = i + 1
-
   return this_node
 
-
-def get_md5(path):
-  """Return the hex md5 digest of file PATH."""
-  f = open(path, 'r')
-  checksum = md5.new()
-  buf = f.read(102400)
-  while buf:
-    checksum.update(buf)
-    buf = f.read(102400)
-  return checksum.hexdigest()
-    
 
 class Dump:
   def __init__(self, dumpfile_path, revision):
     'Open DUMPFILE_PATH, and initialize revision to REVISION.'
     self.dumpfile_path = dumpfile_path
     self.revision = revision
-    self.dumpfile = open(dumpfile_path, 'w')
+    self.dumpfile = open(dumpfile_path, 'wb')
 
     # Keep track of what paths exist in the repository.
     self.root = Node()
