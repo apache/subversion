@@ -29,8 +29,11 @@
 #include "dav_svn.h"
 
 
+/* ### should move these report names to a public header to share with
+   ### the client (and third parties). */
 static const dav_report_elem avail_reports[] = {
   { SVN_XML_NAMESPACE, "update-report" },
+  { SVN_XML_NAMESPACE, "log-report" },
   { NULL },
 };
 
@@ -368,15 +371,23 @@ static dav_error *dav_svn_get_report(request_rec *r,
 {
   int ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
 
-  if (doc->root->ns != ns
-      || strcmp(doc->root->name, "update-report") != 0)
+  if (doc->root->ns == ns)
     {
-      /* ### what is a good error for an unknown report? */
-      return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
-                           "The requested report is unknown.");
+      /* ### note that these report names should have symbols... */
+
+      if (strcmp(doc->root->name, "update-report") == 0)
+        {
+          return dav_svn__update_report(resource, doc, report);
+        }
+      if (strcmp(doc->root->name, "log-report") == 0)
+        {
+          return dav_svn__log_report(resource, doc, report);
+        }
     }
 
-  return dav_svn__update_report(resource, doc, report);
+  /* ### what is a good error for an unknown report? */
+  return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
+                       "The requested report is unknown.");
 }
 
 static int dav_svn_can_be_activity(const dav_resource *resource)
