@@ -35,12 +35,22 @@ svn_cl__print_file_diff (svn_string_t *path,
   apr_status_t status;
   svn_error_t *err;
   svn_string_t *pristine_copy_path;
+  svn_boolean_t text_is_modified = FALSE;
   const char *args[5];
 
   apr_file_t *outhandle = NULL;
 
   /* We already have a path to the working version of our file, that's
      PATH. */
+
+  /* We don't want to run the external diff process unless we can
+     intelligently determine this will be worth our effort.  In other
+     words, if we *know* that the text hasn't been modified, the
+     external display of those (non-existant) changes is a NOOP. */
+  err = svn_wc_text_modified_p (&text_is_modified,
+                                path, pool);
+  if (err) return err;
+  if (!text_is_modified) return SVN_NO_ERROR;
 
   /* Get a PRISTINE_COPY_PATH to compare against.  */
   err = svn_client_file_diff (path, &pristine_copy_path, pool);
@@ -60,6 +70,11 @@ svn_cl__print_file_diff (svn_string_t *path,
   args[2] = path->data;
   args[3] = pristine_copy_path->data;
   args[4] = NULL;
+
+  /* todo: This printf is NOT "my final answer" -- placeholder for
+     real work to be done. */ 
+  printf( "Index: %s\n", path->data );
+  printf( "===================================================================\n", path->data );
 
   err = svn_wc_run_cmd_in_directory (svn_string_create (".", pool), 
                                      SVN_CLIENT_DIFF,
