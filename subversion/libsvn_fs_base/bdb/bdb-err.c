@@ -89,7 +89,7 @@ svn_fs_bdb__wrap_db (svn_fs_t *fs, const char *operation, int db_err)
   if (! db_err)
     return SVN_NO_ERROR;
 
-  bfd = (base_fs_data_t *) fs->fsap_data;
+  bfd = fs->fsap_data;
   return svn_fs_bdb__dberrf (bfd->errcall_baton, db_err,
                              "Berkeley DB error while %s for filesystem %s:\n",
                              operation, fs->path ? fs->path : "(none)");
