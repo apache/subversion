@@ -846,11 +846,11 @@ read_rep_line (struct rep_args **rep_args_p,
 
   str = apr_strtok (NULL, " ", &last_str);
   if (! str) goto err;
-  rep_args->base_offset = apr_atoi64 (str);
+  rep_args->base_offset = (apr_off_t) apr_atoi64 (str);
 
   str = apr_strtok (NULL, " ", &last_str);
   if (! str) goto err;
-  rep_args->base_length = apr_atoi64 (str);
+  rep_args->base_length = (apr_size_t) apr_atoi64 (str);
 
   *rep_args_p = rep_args;
   return SVN_NO_ERROR;
@@ -1281,7 +1281,7 @@ rep_read_contents (void *baton,
       copy_len = remaining;
       rs = rb->src_state;
       if (((apr_off_t) copy_len) > rs->end - rs->off)
-        copy_len = rs->end - rs->off;
+        copy_len = (apr_size_t) (rs->end - rs->off);
       SVN_ERR (svn_io_file_read_full (rs->file, cur, copy_len, NULL,
                                       rb->pool));
       rs->off += copy_len;
