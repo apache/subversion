@@ -51,7 +51,6 @@ class GeneratorBase:
     self.infopages = [ ]
 
     # PASS 1: collect the targets and some basic info
-    errors = 0
     self.target_names = _filter_targets(self.parser.sections())
     for target in self.target_names:
       install = self.parser.get(target, 'install')
@@ -63,21 +62,14 @@ class GeneratorBase:
 
       target_class = _build_types.get(type)
       if not target_class:
-        print 'ERROR: unknown build type:', type
-        errors = 1
-        continue
+        raise GenError('ERROR: unknown build type: ' + type)
 
-      try:
-        target_ob = target_class(target,
-                                 self.parser.get(target, 'path'),
-                                 install,
-                                 type,
-                                 vsn,
-                                 self._extension_map)
-      except GenError, e:
-        print 'ERROR:', e
-        errors = 1
-        continue
+      target_ob = target_class(target,
+                               self.parser.get(target, 'path'),
+                               install,
+                               type,
+                               vsn,
+                               self._extension_map)
 
       self.targets[target] = target_ob
 
@@ -87,6 +79,12 @@ class GeneratorBase:
       else:
         self.install[itype] = [ target_ob ]
 
+      # find all the sources involved in building this target
+      target_ob.find_sources(self.parser.get(target, 'sources'))
+
+      self.manpages.extend(string.split(self.parser.get(target, 'manpages')))
+      self.infopages.extend(string.split(self.parser.get(target, 'infopages')))
+
       # collect all the paths where stuff might get built
       if type != 'script':
         self.target_dirs[target_ob.path] = None
@@ -95,8 +93,31 @@ class GeneratorBase:
             self.target_dirs[os.path.join(target_ob.path,
                                           os.path.dirname(pattern))] = None
 
-    if errors:
-      raise GenError('Target generation failed.')
+    # collect various files
+    self.includes = _collect_paths(self.parser.get('options', 'includes'))
+    self.apache_files = _collect_paths(self.parser.get('static-apache',
+                                                       'paths'))
+
+    # collect all the test scripts
+    self.scripts = _collect_paths(self.parser.get('test-scripts', 'paths'))
+    self.fs_scripts = _collect_paths(self.parser.get('fs-test-scripts',
+                                                     'paths'))
+
+    # get all the test scripts' directories
+    script_dirs = map(os.path.dirname, self.scripts + self.fs_scripts)
+
+    # remove duplicate directories between targets and tests
+    build_dirs = self.target_dirs.copy()
+    for d in script_dirs:
+      build_dirs[d] = None
+    self.build_dirs = build_dirs.keys()
+
+    # collect the outputs for each install type
+    self.inst_outputs = { }
+    for itype, i_targets in self.install.items():
+      self.inst_outputs[itype] = outputs = [ ]
+      for t in i_targets:
+        outputs.append(t.output)
 
 
 class MsvcProjectGenerator(GeneratorBase):
@@ -155,9 +176,8 @@ class _Target:
         patterns = self.default_sources
       except AttributeError:
         raise GenError('build type "%s" has no default sources' % self.type)
-    self.sources, errors = _collect_paths(patterns, self.path)
+    self.sources = _collect_paths(patterns, self.path)
     self.sources.sort()
-    return errors
 
   def write_dsp(self):
     if self.type == 'exe':
@@ -241,18 +261,15 @@ def _filter_targets(t):
   return t
 
 def _collect_paths(pats, path=None):
-  errors = 0
   result = [ ]
   for pat in string.split(pats):
     if path:
       pat = os.path.join(path, pat)
     files = glob.glob(pat)
     if not files:
-      print 'ERROR:', pat, 'not found.'
-      errors = 1
-      continue
+      raise GenError('ERROR: "%s" found no files.' % pat)
     result.extend(files)
-  return result, errors
+  return result
 
 def _strip_path(path, files):
   "Strip the given path from each file."
