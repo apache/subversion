@@ -723,6 +723,17 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
   const char *copyfrom_url;
   const char *child;
 
+  /* Easy out:  if we have no adm_access for the parent directory,
+     then this portion of the tree-delta "patch" must be inapplicable.
+     Send a 'missing' state back;  the repos-diff editor should then
+     send a 'skip' notification. */
+  if (! adm_access)
+    {
+      if (state)
+        *state = svn_wc_notify_state_missing;
+      return SVN_NO_ERROR;
+    }
+
   SVN_ERR (svn_io_check_path (mine, &kind, subpool));
   switch (kind)
     {
@@ -810,6 +821,17 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
   const char *parent_path;
   svn_error_t *err;
 
+  /* Easy out:  if we have no adm_access for the parent directory,
+     then this portion of the tree-delta "patch" must be inapplicable.
+     Send a 'missing' state back;  the repos-diff editor should then
+     send a 'skip' notification. */
+  if (! adm_access)
+    {
+      if (state)
+        *state = svn_wc_notify_state_missing;
+      return SVN_NO_ERROR;
+    }
+
   SVN_ERR (svn_io_check_path (mine, &kind, subpool));
   switch (kind)
     {
@@ -858,6 +880,17 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
   svn_node_kind_t kind;
   const svn_wc_entry_t *entry;
   const char *copyfrom_url, *child;
+
+  /* Easy out:  if we have no adm_access for the parent directory,
+     then this portion of the tree-delta "patch" must be inapplicable.
+     Send a 'missing' state back;  the repos-diff editor should then
+     send a 'skip' notification. */
+  if (! adm_access)
+    {
+      if (state)
+        *state = svn_wc_notify_state_missing;
+      return SVN_NO_ERROR;
+    }
 
   child = svn_path_is_child (merge_b->target, path, subpool);
   assert (child != NULL);
@@ -923,6 +956,17 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
   svn_wc_adm_access_t *parent_access;
   const char *parent_path;
       svn_error_t *err;
+
+  /* Easy out:  if we have no adm_access for the parent directory,
+     then this portion of the tree-delta "patch" must be inapplicable.
+     Send a 'missing' state back;  the repos-diff editor should then
+     send a 'skip' notification. */
+  if (! adm_access)
+    {
+      if (state)
+        *state = svn_wc_notify_state_missing;
+      return SVN_NO_ERROR;
+    }
   
   SVN_ERR (svn_io_check_path (path, &kind, subpool));
   switch (kind)
@@ -971,15 +1015,29 @@ merge_props_changed (svn_wc_adm_access_t *adm_access,
   apr_array_header_t *props;
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
+  svn_error_t *err;
 
   SVN_ERR (svn_categorize_props (propchanges, NULL, NULL, &props, subpool));
 
   /* We only want to merge "regular" version properties:  by
      definition, 'svn merge' shouldn't touch any data within .svn/  */
   if (props->nelts)
-    SVN_ERR (svn_wc_merge_prop_diffs (state, path, adm_access, props,
-                                      FALSE, merge_b->dry_run, subpool));
- 
+    {
+      err = svn_wc_merge_prop_diffs (state, path, adm_access, props,
+                                     FALSE, merge_b->dry_run, subpool);
+      if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND))
+        {
+          /* if the entry doesn't exist in the wc, just 'skip' over
+             this part of the tree-delta. */
+          if (state)
+            *state = svn_wc_notify_state_missing;
+          svn_error_clear (err);
+          return SVN_NO_ERROR;        
+        }
+      else if (err)
+        return err;
+    }
+
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
