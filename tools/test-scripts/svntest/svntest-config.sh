@@ -52,7 +52,8 @@ RA_DAV_CHECK_ARGS="BASE_URL=http://localhost:42024"
 #
 # Log file name prefix
 #
-LOG_FILE_PREFIX="$TEST_ROOT/LOG_svntest"
+LOG_FILE_DIR="$TEST_ROOT/logs/$SVN_NAME"
+LOG_FILE_PREFIX="$LOG_FILE_DIR/LOG_svntest"
 
 #
 # Configure script prefix and object directory names

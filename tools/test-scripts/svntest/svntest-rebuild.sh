@@ -43,9 +43,9 @@ $CAT "$TEST_ROOT/$CONFIG_PREFIX.$BUILD_TYPE" >> $LOG_FILE
 
 cd $TEST_ROOT/$OBJ
 $TEST_ROOT/$CONFIG_PREFIX.$BUILD_TYPE \
-    > "$TEST_ROOT/LOG_svn_configure_$BUILD_TYPE" 2>&1
+    > "$LOG_FILE_DIR/LOG_svn_configure_$BUILD_TYPE" 2>&1
 test $? = 0 || {
-    FAIL_LOG "$TEST_ROOT/LOG_svn_configure_$BUILD_TYPE"
+    FAIL_LOG "$LOG_FILE_DIR/LOG_svn_configure_$BUILD_TYPE"
     FAIL
 }
 PASS
@@ -53,9 +53,9 @@ PASS
 # Build
 START "build" "Building..."
 cd $TEST_ROOT/$OBJ
-$MAKE $MAKE_OPTS > "$TEST_ROOT/LOG_svn_build_$BUILD_TYPE" 2>&1
+$MAKE $MAKE_OPTS > "$LOG_FILE_DIR/LOG_svn_build_$BUILD_TYPE" 2>&1
 test $? = 0 || {
-    FAIL_LOG "$TEST_ROOT/LOG_svn_build_$BUILD_TYPE"
+    FAIL_LOG "$LOG_FILE_DIR/LOG_svn_build_$BUILD_TYPE"
     FAIL
 }
 PASS
@@ -65,9 +65,9 @@ PASS
 START "install" "Installing..."
 cd $TEST_ROOT/$OBJ
 $RM_RF "$INST_DIR/$SVN_NAME"
-$MAKE install > "$TEST_ROOT/LOG_svn_install_$BUILD_TYPE" 2>&1
+$MAKE install > "$LOG_FILE_DIR/LOG_svn_install_$BUILD_TYPE" 2>&1
 test $? = 0 || {
-    FAIL_LOG "$TEST_ROOT/LOG_svn_build_$BUILD_TYPE"
+    FAIL_LOG "$LOG_FILE_DIR/LOG_svn_build_$BUILD_TYPE"
     FAIL
 }
 PASS
