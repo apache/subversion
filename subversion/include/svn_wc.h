@@ -446,12 +446,12 @@ svn_error_t *svn_wc_prop_set (svn_string_t *name,
 
 /*** Diffs ***/
 
-/* Given a PATH to a wc file, return a PRISTINE_COPY_PATH which points
-   to a -copy- of the pristine version of the file.  This is needed so
-   clients can do diffs.  If the WC has no text-base, return a NULL
-   instead of a path. */
+/* Given a PATH to a wc file, return a PRISTINE_PATH which points to a
+   pristine version of the file.  This is needed so clients can do
+   diffs.  If the WC has no text-base, return a NULL instead of a
+   path. */
 svn_error_t *svn_wc_get_pristine_copy_path (svn_string_t *path,
-                                            svn_string_t **pristine_copy_path,
+                                            svn_string_t **pristine_path,
                                             apr_pool_t *pool);
 
 
