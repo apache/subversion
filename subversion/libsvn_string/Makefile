@@ -1,9 +1,9 @@
 
 # Quick Hack Makefile for string library tests (assumes GCC)
 
-SVN_INCLUDE = ../include          # exported Subversion interfaces
-APR_INCLUDE = ../../apr/include   # exported APR interfaces
-APR_LIB = ../../apr               # where to find libapr.a
+SVN_INCLUDE = ../include
+APR_INCLUDE = ../../apr/include
+APR_LIB = ../../apr
 
 all: libsvn_string.so stringtest
 
