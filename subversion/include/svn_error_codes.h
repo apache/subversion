@@ -234,6 +234,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_FS_CONFLICT,
               "Merge conflict during commit")
 
+  SVN_ERRDEF (SVN_ERR_FILE_CONTENTS_CHANGED,
+              "File contents changed between subrange reads.")
+
   SVN_ERRDEF (SVN_ERR_TXN_OUT_OF_DATE,
               "Transaction is out of date")
 

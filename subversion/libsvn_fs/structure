@@ -352,16 +352,13 @@ When a representation is deltified, it is changed in place, along with
 its underlying string.  That is, the node revision referring to that
 representation will not be changed; instead, the same rep key will now
 be associated with different value.  That way, we get reader locking
-for free: if someone's trying to read a file as Subversion is
-deltifying it, one of the two sides will get a DB_DEADLOCK and
+for free: if someone is reading a file while Subversion is deltifying
+that file, one of the two sides will get a DB_DEADLOCK and
 svn_fs__retry_txn() will retry.
 
-[todo: the reps will deadlock, but not sure that the strings locking
-will happen properly as things are currently structured.  Needs to be
-investigated.]
-
-When a rep is deltified, we must also make sure that a fulltext is
-reachable from it.  For example, suppose rep "2342" looks like this:
+Also, we need to do cycle-checking.  When a rep is deltified, we must
+make sure that a fulltext is reachable from it.  For example, suppose
+rep "2342" looks like this:
 
    (("fulltext") "50956")
 

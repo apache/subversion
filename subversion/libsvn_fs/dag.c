@@ -1388,13 +1388,14 @@ typedef struct file_content_baton_t
      null, the file has never had any contents, so all reads fetch 0
      bytes.
 
-     We cache the entire rep skel, rather than the key, for
-     efficiency.  This way we don't have to fetch the rep from the db
-     every time we want to read a little bit more of the file.  So if
-     the underlying rep changes, we're just going to blunder along
-     ignorantly.  This is permissible, though; see the doc string for
-     svn_fs_file_contents().  */
-  skel_t *rep;
+     Formerly, we cached the entire rep skel here, not just the key.
+     That way we didn't have to fetch the rep from the db every time
+     we want to read a little bit more of the file.  Unfortunately,
+     this has a problem: if the file's representation changes while
+     we're reading (say, it changes from fulltext to delta), we'll
+     never know it.  So for correctness, we now refetch the
+     representation skel every time we want to read another chunk.  */
+  const char *rep_key;
   
   /* How many bytes have been read already. */
   apr_size_t offset;
@@ -1415,22 +1416,42 @@ struct read_file_contents_args
 };
 
 
+/* Read into BATON->fb->buf the *(BATON->len) bytes starting at
+   BATON->fb->offset from the data represented at BATON->fb->rep_key
+   in BATON->fb->fs, as part of TRAIL.
+
+   Afterwards, *(BATON->len) is the number of bytes actually read, and
+   BATON->fb->offset is incremented by that amount.
+   
+   If BATON->fb->rep_key is null, this is assumed to mean the file's
+   contents have no representation, i.e., the file has no contents.
+   In that case, if BATON->fb->offset > 0, return the error
+   SVN_ERR_FS_FILE_CONTENTS_CHANGED, else just set *(BATON->len) to
+   zero and return.  */
 static svn_error_t *
 txn_body_read_file_contents (void *baton, trail_t *trail)
 {
   struct read_file_contents_args *args = baton;
 
-  if (args->fb->rep)
+  if (args->fb->rep_key)
     {
       SVN_ERR (svn_fs__rep_read_range (args->fb->fs,
-                                       args->fb->rep,
+                                       args->fb->rep_key,
                                        args->buf,
                                        args->fb->offset,
                                        args->len,
                                        trail));
       args->fb->offset += *(args->len);
     }
-  /* Else do nothing. */
+  else if (args->fb->offset > 0)
+    {
+      return
+        svn_error_create
+        (SVN_ERR_FILE_CONTENTS_CHANGED, 0, NULL, trail->pool,
+         "A file changed between subrange reads.");
+    }
+  else
+    *(args->len) = 0;
 
   return SVN_NO_ERROR;
 }
@@ -1481,23 +1502,15 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
   /* Go get a fresh node-revision for FILE. */
   SVN_ERR (get_node_revision (&node_rev, file, trail));
 
-  /* Get the rep skel. */
-  {
-    const char *rep_key;
-    skel_t *rep_skel;
-    
-    if (node_rev->children->next->next->len != 0)
-      {
-        rep_key = apr_pstrndup (trail->pool,
-                                (NR_DATA_KEY (node_rev))->data,
-                                (NR_DATA_KEY (node_rev))->len);
-        
-        SVN_ERR (svn_fs__read_rep (&rep_skel, file->fs, rep_key, trail));
-        baton->rep = rep_skel;
-      }
-    else
-      baton->rep = NULL;
-  }
+  /* Get the rep key. */
+  if (node_rev->children->next->next->len != 0)
+    {
+      baton->rep_key = apr_pstrndup (trail->pool,
+                                     (NR_DATA_KEY (node_rev))->data,
+                                     (NR_DATA_KEY (node_rev))->len);
+    }
+  else
+    baton->rep_key = NULL;
 
   /* Create a stream object in trail->pool, and make it use our read
      func and baton. */
